@@ -1,14 +1,14 @@
 # Be Dino!
 An original Roblox dinosaur growth-and-collection arena inspired by Be Fish.
 
-**Stage:** desktop movement + food/growth accepted; PvP/run-ending Build 005 ready for Studio testing. **Updated:** 2026-09-17.
+**Stage:** desktop core loop accepted; Build 006 persistence tests 1–10 passed; Build 007 persistence lease verification ready. **Updated:** 2026-09-17.
 **Owner:** Znypr's Roblox account. **Studio:** installed. **Budget:** €0.
 **First milestone:** private community test with a small complete progression loop.
 
 ## Try the prototype
-Download [BeDino-Prototype.rbxlx](build/BeDino-Prototype.rbxlx) with GitHub's raw download button, open it in Studio, and press Play. No plugin is required.
+Download [BeDino-Prototype.rbxlx](build/BeDino-Prototype.rbxlx) with GitHub's raw download button, open it in Studio, and use the separate private test experience. No plugin is required.
 
-For the current build, use [Build 005 PvP/run test](docs/14-pvp-run-test.md). The general Studio workflow remains in [Studio quickstart](docs/10-studio-quickstart.md).
+For the current build, use [Build 007 persistence lease test](docs/17-persistence-lease-test.md). The general Studio workflow remains in [Studio quickstart](docs/10-studio-quickstart.md).
 
 ## Start here
 - [Project brief and roles](docs/01-project-brief.md)
@@ -31,13 +31,15 @@ Catch score is distinct from growth score. Exact balancing remains proposed.
 ## Current verified progress
 - Build 003: desktop movement, camera, dinosaur visibility, size behavior, reset isolation and two-client replication passed.
 - Build 004: food pickup, growth, respawn, simultaneous ownership, other-player growth replication and reset passed.
-- Build 005: source/build prepared for PvP, spawn protection and manual run ending; Studio acceptance pending.
-- Mobile/touch and published private-place checks remain pending.
+- Build 005: PvP, spawn safety, manual ending and terminal-race tests 1–9 passed.
+- Build 006: persistence tests 1–10 passed, including rejoin persistence, duplicate-settlement protection, fail-closed DataStore loading, Reset Character settlement and repeat-victim anti-farm behavior.
+- Build 007: DataStore lease/stale-writer self-test implemented and CI/build checks passed; Studio runtime acceptance is pending.
+- Mobile/touch remains pending.
 
 ## Working agreement
 GitHub is the single source of truth for plans and code. `docs/07-kanban.md` is the live tracker.
-Use original assets, free tools and server-owned gameplay state. Five packaging tests currently pass.
+Use original assets, free tools and server-owned gameplay state. Packaging tests run automatically in CI.
 Three species validate the first progression loop; a larger catalog follows after testing.
 
 ## Next action
-Open Build 005 and run [the 1-9 PvP/run-ending checks](docs/14-pvp-run-test.md).
+Publish Build 007 over the existing private test place and run [the four persistence lease checks](docs/17-persistence-lease-test.md).
