@@ -17,6 +17,22 @@ Lighting.Ambient = Color3.fromRGB(130, 143, 148)
 Arena.build()
 
 ProfileRepository.start()
+local leaseSelfTestStatus = if Config.PersistenceLeaseSelfTest then "RUNNING" else "DISABLED"
+if Config.PersistenceLeaseSelfTest then
+    task.spawn(function()
+        local ok, status = ProfileRepository.runLeaseSelfTest()
+        leaseSelfTestStatus = if ok then "PASS" else "FAIL: " .. status
+        for _, player in Players:GetPlayers() do
+            player:SetAttribute("LeaseSelfTest", leaseSelfTestStatus)
+        end
+        if ok then
+            print("[Be Dino] persistence lease self-test PASS")
+        else
+            warn("[Be Dino] persistence lease self-test FAIL: " .. status)
+        end
+    end)
+end
+
 RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string)
     local ok = ProfileRepository.commitRunSettlement(player, runId, catchScore)
     if not ok then
@@ -60,6 +76,7 @@ end
 
 local function setup(player: Player)
     player.CanLoadCharacterAppearance = false
+    player:SetAttribute("LeaseSelfTest", leaseSelfTestStatus)
     player.CharacterAdded:Connect(function(character)
         if player:GetAttribute("ProfileState") ~= "Loaded" then
             character:Destroy()
@@ -97,4 +114,4 @@ FoodService.start(Dinosaur)
 local PredationService = require(script.Parent.PredationService)
 PredationService.start(RunLifecycle, Dinosaur)
 
-print("[Be Dino] " .. Config.Build .. " ready. Persistent settlement test.")
+print("[Be Dino] " .. Config.Build .. " ready. Persistent lease verification test.")
