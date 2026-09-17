@@ -1,8 +1,8 @@
 {
   "format": 1,
-  "place_sha256": "b578d6e7305a6dcbbbbab059461723cf4bf4131047245b44acd556607c823755",
+  "place_sha256": "8d2d282a7e6aff1e339c2287b86969bb6be6cce615e617a4912d5d4111f55111",
   "sources": {
-    "src/shared/Config.luau": "3c404f4d7a8f02418463bcf1bef72a760bad543a8d01f5819100c775723414a3",
+    "src/shared/Config.luau": "df4eee1e275e7ff3a6c0062d349bf5d077940de9c808d8f2e8cb6c9b8c25307c",
     "src/server/Arena.luau": "d0ac46c01f2359d3939a44828c3ccc9a89a23968031ff017bbd4a5708c66a488",
     "src/server/Bootstrap.server.luau": "29ef3690bf1a6eebca4208e4189589f3b0f08a3ffb7d5c64c58beacb828efe02",
     "src/server/Dinosaur.luau": "2062354037f1671a5eaa9f70c5902d16eed87ee172e0ad56f40f65df22c3fd5e",
