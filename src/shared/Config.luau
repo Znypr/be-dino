@@ -1,7 +1,7 @@
 --!strict
 -- Prototype tuning only. Persistent economy values remain private-test values.
 return table.freeze({
-    Build = "persistence-settlement-006",
+    Build = "persistence-lease-007",
     WalkSpeed = 18,
     ArenaHalfWidth = 90,
     CameraMinZoom = 12,
@@ -43,4 +43,5 @@ return table.freeze({
     ProfileMaxAttempts = 3,
     ProfileMaxRecentOperations = 50,
     DuplicateSettlementProbe = true,
+    PersistenceLeaseSelfTest = true,
 })
