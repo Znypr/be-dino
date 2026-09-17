@@ -1,10 +1,10 @@
 {
   "format": 1,
-  "place_sha256": "e08928890e22752ab994310dbcc754be7c478a5a771fbd1f000db8445392ce38",
+  "place_sha256": "b578d6e7305a6dcbbbbab059461723cf4bf4131047245b44acd556607c823755",
   "sources": {
     "src/shared/Config.luau": "3c404f4d7a8f02418463bcf1bef72a760bad543a8d01f5819100c775723414a3",
     "src/server/Arena.luau": "d0ac46c01f2359d3939a44828c3ccc9a89a23968031ff017bbd4a5708c66a488",
-    "src/server/Bootstrap.server.luau": "edb01238e2fb868a3bc2e15918947aca0036ec46a7a03f24e1e43bc97e9e00ba",
+    "src/server/Bootstrap.server.luau": "29ef3690bf1a6eebca4208e4189589f3b0f08a3ffb7d5c64c58beacb828efe02",
     "src/server/Dinosaur.luau": "2062354037f1671a5eaa9f70c5902d16eed87ee172e0ad56f40f65df22c3fd5e",
     "src/server/FoodService.luau": "64a2bcb8e1cec7b20f1f803d8e48e5756d47da759af580b0af4f54679e8283a8",
     "src/server/PredationService.luau": "b253cf5dfed89d4ac236a6ba9a6d96c62e9b33d13eb03ecb1d1fdb49d7d90cad",

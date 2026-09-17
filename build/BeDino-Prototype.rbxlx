@@ -171,6 +171,11 @@ RunLifecycle.configureSettlement(function(player: Player, runId: string, catchSc
         end
         player:SetAttribute("LastSettlementProbe", "duplicate-ok")
     end
+
+    -- If the player vanished while this async settlement was running, release the lease now.
+    if not player.Parent then
+        ProfileRepository.release(player)
+    end
     return true
 end)
 RunLifecycle.start()
