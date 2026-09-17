@@ -1,5 +1,5 @@
 # Reward economy specification
-Updated 2026-09-17. Confirmed intent plus a reversible implementation proposal; no balance simulation has run yet.
+Updated 2026-09-17. Confirmed reward intent plus the private-alpha mechanics-test configuration. Public launch balance remains intentionally unapproved.
 
 ## Confirmed
 - Growth score and catch score are different. Catch score determines collection rewards.
@@ -7,60 +7,81 @@ Updated 2026-09-17. Confirmed intent plus a reversible implementation proposal; 
 - Chests are additional and have a separate loot table.
 - More catch score means more total copies. Higher rarity tiers award progressively fewer copies.
 - The same species can appear many times; combine duplicates into one stack.
-- Large-run examples can include 12 common species, each with roughly 12–50 copies. This is illustrative, not a guaranteed distribution or final catalog requirement.
-- The desired diminishing pattern is across rarity tiers, not a required saturating chance curve per awarded dinosaur.
+- Large-run examples can include many Common species with double-digit duplicate stacks. That is directional, not a guaranteed distribution.
+- The diminishing pattern is across rarity tiers, not a required saturating chance curve per awarded dinosaur.
 
-## Proposed calculation
-Let c be a nonnegative integer catch score.
-For the first simulation, N(c) = c: each additional catch guarantees one additional total dinosaur copy. c=0 yields no earned copies; the starter unlock is separate.
-This conversion is a candidate, not an approved balance value. If one catch means many food pickups, tune catch accrual rather than confusing growth points with rewards.
-Define maximum supported catch score and numeric bounds. A configured automatic run settlement at the limit is preferable to continuing play with a flat reward cap.
+## Private-alpha run-reward configuration
+For mechanics testing, let `c` be an integer catch score from 0 through 5000.
 
-For eligible rarity tier r starting at zero, use weight w(r) = q^r, with trial q=0.25.
-Eligibility thresholds are configuration, to be selected in BD-010. Higher tiers can become eligible at larger catch scores.
-To guarantee nondecreasing per-tier quantities for a fixed eligible set, allocate N seats sequentially using largest w(r)/(allocated(r)+1), breaking ties toward lower rarity. This produces an approximately exponential tier distribution while preserving exact total quantity.
-When eligibility changes, compare boundary outcomes explicitly. Total copies remain increasing, but individual tier counts need not.
-For each tier, allocate its copies among eligible species using configurable species weights and server RNG. Aggregate identical species/mutation keys.
+- Total immediate copies: `N(c) = c`.
+- Reaching 5000 should end/settle the run rather than flatten rewards.
+- Rarity weights: `w(r) = 0.25^r`.
+- Eligibility thresholds: Common 1, Uncommon 25, Rare 100, Epic 400, Legendary 1600.
+- Allocate `N(c)` seats sequentially using the largest value of `w(r)/(allocated(r)+1)`, breaking ties toward lower rarity.
+- The exact total therefore remains `N(c)`, and aggregate quantities decline by rarity.
+- The three-species alpha only has real species for the first three tiers. Epic/Legendary rows are synthetic fixtures until matching catalog entries exist.
+- Species allocation occurs only among configured eligible species, with server RNG, then duplicate species/mutation keys are aggregated before persistence/UI.
 
-This approach fixes the tier budget for a given score/config and randomizes species allocation. If randomized tier counts are desired later, use a constrained method preserving total quantity and agreed tier ordering.
-There is no hardcoded promise of a legendary at any specific score yet.
+This is not a promise that one catch should equal one copy at public launch. It is a deliberately transparent test conversion.
 
-## Arithmetic example, not tuned gameplay
-For N=1000 with five tiers already eligible, an approximately exponential budget is:
-| Tier | Total copies |
-|---|---:|
-| Common | 751 |
-| Uncommon | 187 |
-| Rare | 47 |
-| Epic | 12 |
-| Legendary | 3 |
-| Total | 1000 |
+## Deterministic examples
+| Catch score | Tier allocation |
+|---:|---|
+| 25 | 20 Common, 5 Uncommon |
+| 62 | 50 Common, 12 Uncommon |
+| 100 | 77 Common, 19 Uncommon, 4 Rare |
+| 400 | 303 Common, 75 Uncommon, 18 Rare, 4 Epic |
+| 1000 | 754 Common, 188 Uncommon, 47 Rare, 11 Epic |
+| 1600 | 1203 Common, 300 Uncommon, 75 Rare, 18 Epic, 4 Legendary |
+| 5000 | 3756 Common, 938 Uncommon, 234 Rare, 58 Epic, 14 Legendary |
 
-The common budget can be split across many species; a single result could include 56× Common X and 47× Common Y.
-This is separate from the owner's illustrative 12-species range. The numbers above are not a prediction for a run with 1000 growth points.
+## Repeat-victim handling
+Private-alpha proposal: the same attacker/victim pair can contribute catch score once per 60-second window. Predation may still end the victim run during that window, but repeated farming does not keep adding reward score.
 
-## Three-species test and later expansion
-Use three initial tiers/species to validate collection mechanics. Test large-stack UI with synthetic catalog fixtures, clearly marked test-only.
-After the core loop works, expand catalog and eligible tiers through config and the asset manifest. Do not invent unseen species rewards to fill a table.
+The repeat-pair ledger must be bounded and server-owned. It is temporary session state, not client input.
 
-## Chest contract
-Use independent ChestRewardConfig: chest types, grant-count distribution by catch score, contents, quantities, duration and capacity policy.
-Do not assume the run table, example weights, or score conversion apply to chest contents.
-The chest-count distribution is unresolved tuning, not a blocker for controller development.
-Chest outcomes are generated once and stored with an operation ID, either on award or first valid claim; choose one in BD-005 and preserve it through retries.
+## Separate chest contract
+`ChestRewardConfig` is independent from the run-reward table.
 
-## Mutation pacing risk
-At 50 copies per upgrade, stacks of 12–50 copies can make a mutation attainable in one good run. This follows from the proposed numbers and must be intentional.
-Simulate copies per species per hour and mutations per session before setting catch accrual. Do not silently change the 50-copy rule to compensate.
-Higher rarity and mutation stats should remain bounded so starter players retain counterplay.
+- Catch 0–9: 0 chests.
+- Catch 10–99: 1 chest.
+- Catch 100–499: 2 chests.
+- Catch 500+: 3 chests, capped at 3 per run.
+- Private-test timer: 60 seconds per chest, sequential.
+- One chest yields one species stack using its own species weights.
+- Test quantity distribution: 1 copy 70%, 2 copies 25%, 3 copies 5%.
+- Active queue capacity: 5, with a bounded pending overflow list. If both are full, prevent another reward-bearing run rather than discard an earned chest.
+- Chest outcome is generated server-side once and stored by operation ID. Retries never reroll.
 
-## Required verification, owned by GD and reviewed by QA
-1. Integer nonnegative counts and exact sum of all stacks equals N(c).
-2. For every supported adjacent score, N(c+1)>N(c); test eligibility boundaries separately.
-3. Aggregate quantities decrease across rarity tiers in the intended design; top tiers remain scarce.
-4. Seeded runs reproduce outcomes; retries of an operation return the stored outcome.
-5. Unknown/ineligible species cannot drop; no empty tier divides by zero.
-6. Multiple identical species aggregate correctly; large rewards have bounded payloads and UI work.
-7. Simulate short/medium/long runs and report unlock/mutation pacing with assumptions.
-8. Separate chest table demonstrably changes chest outcomes without changing run rewards.
-9. No balance result or Roblox test is marked passed until executed and recorded.
+Changing chest tables must never alter immediate run-copy totals.
+
+## Mutation pacing result
+The current test mutation cost remains 50 base copies.
+
+With one Common species in the three-species alpha, the deterministic run allocation reaches 50 Common copies at catch score 62. Therefore 50 copies is suitable for demonstrating Gold mutation during the private test but is not accepted long-term progression pacing.
+
+A larger catalog spreads duplicates across more species. At catch score 500, the simulation allocates 378 Common copies; evenly split over 12 Common species this averages about 31.5 copies each. At 1000 it averages about 62.8 each, so public score-to-copy conversion will likely require retuning if scores of that size are routine.
+
+## Numeric and payload limits
+- Catch score: integer 0–5000.
+- Counts: nonnegative validated integers.
+- Never instantiate one object/card per rewarded copy. Use bounded `{speciesId, mutationId, count}` stacks.
+- Unknown or ineligible species IDs are rejected.
+- Reward randomness is server-owned.
+- Persist an immutable result keyed by run/operation ID before presenting it as committed.
+
+## Verification
+`tools/economy_sim.py` and `tests/test_economy.py` execute the private-alpha math.
+
+The tests verify:
+1. exact total quantity for every catch score 0–5000;
+2. strictly increasing totals;
+3. nonincreasing rarity quantities;
+4. eligibility-boundary outcomes;
+5. the 50-copy mutation point;
+6. chest independence;
+7. invalid score rejection.
+
+Detailed results are recorded in `docs/15-economy-simulation.md`.
+
+Public balance remains a later playtest decision. BD-010 is closed only for the private mechanics-test configuration.
