@@ -1,8 +1,8 @@
 # Technical architecture
-Proposal, not implemented. Goal: small modules with explicit authority and durable progression.
+Architecture target; first movement spike implemented, persistence not implemented. Goal: small modules with explicit authority and durable progression.
 
 ## Toolchain
-Typed Luau in Git, Rojo for syncing/building into Roblox Studio, pinned tool versions selected during setup.
+Luau source in Git. Initial build uses a small Python 3.10+ standard-library packager for the checked-in source mapping; tested with Python 3.12.14. Rojo remains the optional planned live-sync route, with version pinning pending.
 Keep dependencies minimal. Run formatting/static analysis in CI, then Roblox-specific tests in Studio.
 Rojo supports filesystem-based workflows and version control: [official documentation](https://rojo.space/docs/v7/).
 Start with one Roblox place containing lobby and arena. Use separate test and production experiences/data namespaces.

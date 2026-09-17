@@ -1,5 +1,5 @@
 # Roadmap and release gates
-Estimates are effort ranges for planning, not a delivery promise. Studio is installed on Znypr's account; budget is €0. Implementation has not started. Estimates depend on integration and feedback availability.
+Estimates are effort ranges for planning, not a delivery promise. Studio is installed on Znypr's account; budget is €0. The source/build bootstrap and movement spike now exist; local Studio validation has not started. Estimates depend on integration and feedback availability.
 
 | Phase | Indicative effort | Outcome | Exit gate |
 |---|---|---|---|
@@ -64,3 +64,6 @@ The 50-copy mutation threshold and high duplicate quantities may accelerate prog
 ## Scheduling and ownership
 No firm launch date is set. ASAP means the earliest build that passes the stated gates, not skipping saving or multiplayer verification. No paid service is on the critical path.
 The next reviewable deliverable is a reproducible placeholder build, not a polished catalog. A native GitHub Projects board is not configured; the linked Markdown Kanban is the current task board.
+
+## Current handoff
+BD-004: packaging portion prepared and verified locally; private Studio place remains pending. BD-006: prototype ready for Studio review. Download and testing steps: [Studio quickstart](10-studio-quickstart.md). This does not satisfy Phase 0 or Phase 1 exit gates until actual client evidence is recorded.

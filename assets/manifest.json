@@ -1,0 +1,7 @@
+{
+  "assets": [
+    {"id": "prototype_compy", "source": "src/server/Dinosaur.luau", "method": "Original procedural Roblox parts", "external_asset_ids": [], "status": "Implemented; Studio appearance and collision checks pending"},
+    {"id": "prototype_arena", "source": "src/server/Arena.luau", "method": "Original procedural Roblox parts", "external_asset_ids": [], "status": "Implemented; traversal checks pending"},
+    {"id": "prototype_hud", "source": "src/client/Bootstrap.client.luau", "method": "Native Roblox UI", "external_asset_ids": [], "status": "Implemented; real device checks pending"}
+  ]
+}

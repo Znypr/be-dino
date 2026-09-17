@@ -1,9 +1,13 @@
 # Be Dino!
 An original Roblox dinosaur growth-and-collection arena inspired by Be Fish.
 
-**Stage:** planning updated; implementation not started. **Updated:** 2026-09-17.
+**Stage:** first movement prototype built; Studio verification pending. **Updated:** 2026-09-17.
 **Owner:** Znypr's Roblox account. **Studio:** installed. **Budget:** €0.
 **First milestone:** private community test with a small complete progression loop.
+
+## Try the prototype
+Download [BeDino-Prototype.rbxlx](build/BeDino-Prototype.rbxlx) with GitHub’s Download raw file button, open it in Studio, and press Play.
+See [Studio quickstart and test checklist](docs/10-studio-quickstart.md). No plugin required.
 
 ## Start here
 - [Project brief and roles](docs/01-project-brief.md)
@@ -25,9 +29,8 @@ Catch score is distinct from growth score. Exact balancing remains proposed.
 ## Working agreement
 GitHub is the single source of truth for plans and code. The Markdown Kanban is the live tracker, not a native GitHub Projects board.
 Use original assets, free tools and role-owned acceptance criteria. Role labels describe responsibilities, not independent staff.
-No game code, assets, Roblox place or playable build has been verified in this repository.
+Prototype source, original procedural assets and a generated place file now exist. Five packaging tests pass. Roblox execution, multiplayer behavior and publishing remain unverified.
 Three species validate the first loop; a larger catalog follows after testing.
 
 ## Next action
-Start BD-004: reproducible source workflow and private test place, followed by a one-dinosaur movement/networking prototype.
-BD-007 art brief and BD-010 reward simulation are also Ready. Remaining tuning questions do not block setup.
+Open the prototype in Studio and run the movement, size-pad and two-client checks. BD-004 awaits local Studio setup verification; BD-006 awaits movement acceptance. BD-010 economy simulation remains Ready.

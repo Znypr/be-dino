@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "place_sha256": "ebc7ff569069383ce5c2a13435772aec24543674c96661ee255b8fc6b05f7854",
+  "sources": {
+    "src/shared/Config.luau": "2865fedf5d7c9e308b2cf1dd0c07dab0bad70b04124511c0c498b795a79503e6",
+    "src/server/Arena.luau": "e20fc33c45a313969ff0116ba4d694b40f21f53924486e4c79b93018b3d0c746",
+    "src/server/Bootstrap.server.luau": "b7f1e4dfe1b57c289b50473f5fdcbf2439ffe1770913162fe6a182e913e41155",
+    "src/server/Dinosaur.luau": "2fe8f003009979057800d4aee7a6054f58e322da256e43a5d02f336ad6fe0da7",
+    "src/client/Bootstrap.client.luau": "765fd2bb39ebce6a9dcc85271a0787841183d6b2e147012bfe7d294a8f4fb9cb"
+  }
+}

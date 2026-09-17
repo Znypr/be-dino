@@ -1,10 +1,10 @@
 # Kanban and task specifications
-Updated 2026-09-17. This file is the canonical task tracker. No implementation has started.
+Updated 2026-09-17. This file is the canonical task tracker. Movement prototype source and build exist; Studio acceptance remains pending.
 
 ## Board
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-005–006, BD-008–009, BD-011–022 | BD-004 setup; BD-007 art brief; BD-010 economy | None | None | None | BD-001 research; BD-002 direction; BD-003 setup decisions |
+| BD-005, BD-008–009, BD-011–022 | BD-007 art brief; BD-010 economy | None | BD-006 movement | BD-004 Studio verification | BD-001 research; BD-002 direction; BD-003 setup decisions |
 
 Backlog tasks with unmet dependencies are not executable yet. Move to Blocked only when started work encounters an obstacle; record the obstacle and person/action needed.
 Ready means actionable now. Done means acceptance evidence exists, not merely code generated.
@@ -24,9 +24,9 @@ The two completed items are planning work, not game features. In-progress limit:
 | BD-001 | Done | P0 | PO | PO review | Research and initial project documents | None |
 | BD-002 | Done | P0 | PO | Znypr | Choose first-test direction | BD-001 |
 | BD-003 | Done | P0 | PO | Znypr | Resolve setup and design blockers | BD-002 |
-| BD-004 | Ready | P0 | REL | DEV | Bootstrap reproducible project and private test place | BD-003 |
+| BD-004 | Blocked | P0 | REL | DEV | Bootstrap reproducible project and private test place | BD-003 |
 | BD-005 | Backlog | P0 | ARCH | QA | Specify persistence and remote contracts | BD-003, BD-004 |
-| BD-006 | Backlog | P0 | DEV | QA | Prototype one dinosaur controller and camera | BD-004 |
+| BD-006 | Review / test | P0 | DEV | QA | Prototype one dinosaur controller and camera | BD-004 |
 | BD-007 | Ready | P1 | ART | Znypr | Specify original asset kit and visual sample | BD-002 |
 | BD-008 | Backlog | P0 | DEV | QA | Implement food and growth | BD-005, BD-006 |
 | BD-009 | Backlog | P0 | DEV | QA | Implement PvP, spawn safety and run ending | BD-005, BD-008 |
@@ -64,7 +64,7 @@ The two completed items are planning work, not game features. In-progress limit:
 ### BD-004: Bootstrap reproducible project and private test place
 **Done when:** Pin toolchain, define source mapping, sync/build a minimal place, document one-command build and Studio handoff; isolate test data.
 
-**Evidence / next action:** Needs account/Studio operator; no tool versions or place IDs invented.
+**Evidence / next action:** Source mapping, dependency-free Python 3.10+ packager, generated .rbxlx and five passing packaging tests are committed. Python 3.12.14 used here. Blocked on Znypr opening the build in Studio and creating/recording the private test place; Codex cannot operate local Studio from this environment. Rojo is optional and not yet pinned/verified. See docs/10-studio-quickstart.md.
 
 ### BD-005: Specify persistence and remote contracts
 **Done when:** Choose reviewed persistence approach; define session ownership, failure behavior, operation IDs, schema and remote validation matrix.
@@ -74,7 +74,7 @@ The two completed items are planning work, not game features. In-progress limit:
 ### BD-006: Prototype one dinosaur controller and camera
 **Done when:** Desktop and touch movement work; min/max visual size passes ground and obstacle tests; second client sees stable motion.
 
-**Evidence / next action:** Timebox art; fixed collider is an experiment, not a proven solution.
+**Evidence / next action:** Implemented a procedural dinosaur shell over the standard Humanoid, arena/slope/obstacles, native controller/camera, size pads and HUD. Review pending: actual Studio run, reset, 1×/2×/4× feet/camera/collision, two-client replication and touch controls. No live pass is claimed. BD-004 source preparation allowed this spike; its Studio setup gate remains open.
 
 ### BD-007: Specify original asset kit and visual sample
 **Done when:** One dinosaur silhouette/palette proposal, asset manifest template and procedural fallback are reviewable.
@@ -157,6 +157,7 @@ The two completed items are planning work, not game features. In-progress limit:
 **Evidence / next action:** No automatic public launch and no monetization dependency.
 
 ## Session log
+- 2026-09-17 implementation: BD-004 source/build preparation delivered; local Studio action blocks acceptance. BD-006 movement spike delivered for review. Five Python packaging tests pass; no Luau compiler or Roblox runtime available here. See docs/11-prototype-verification.md. Next: Znypr opens build and reports Output/movement results.
 - 2026-09-17 update: Confirmed setup and loot rules propagated. BD-003 complete; BD-004 and BD-010 Ready. Reward specification added. No implementation or live testing completed. Next: BD-004.
 - 2026-09-17: Initial research and planning completed. Znypr selected private test, cute ground arena, small full progression loop. Implementation and all live Roblox checks remain unstarted.
 

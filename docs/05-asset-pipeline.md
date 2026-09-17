@@ -1,5 +1,5 @@
 # Asset, UI and audio production
-Goal: coherent original assets that are cheap to revise and work in Roblox. No finished assets created in this planning stage.
+Goal: coherent original assets that are cheap to revise and work in Roblox. An original procedural dinosaur, arena and basic HUD now exist as movement-test placeholders; art acceptance remains pending.
 
 ## Production strategy
 Use procedural Roblox parts for the first playable dinosaur/map. Codex can generate the geometry/setup scripts directly.

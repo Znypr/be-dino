@@ -8,7 +8,7 @@ Updated 2026-09-17.
 | D02 | Approved by Znypr | Private community test first | Learn before public release |
 | D03 | Approved by Znypr | Cute simple ground arena | Lower animation/map scope |
 | D04 | Approved by Znypr | Small complete collection loop, no paid shop | Three dinos, earned rewards, egg queue, one mutation |
-| D05 | Proposed | Luau + Rojo, one place | Simple AI-editable source workflow |
+| D05 | Implemented bootstrap; Rojo pending | Luau + dependency-free Python packager, one local place file | Direct Studio opening now; optional Rojo live-sync later |
 | D06 | Approved by Znypr | Immediate run dinosaurs plus separate chest loot | Death/manual exit pays run loot immediately; chests are additional |
 | D07 | Proposed | 60-second private-test egg timer | Exercise whole loop during showcase |
 | D08 | Proposed | 10% PvP score margin and exit channel | Reduce ambiguous collisions/instant escape |
@@ -48,3 +48,6 @@ Keep proposed balancing reversible in config. Keep durable data contracts delibe
 ## Reversible working defaults to avoid blocking early development
 Use separate disposable test data, 60-second test chest timers, the existing proposed 10% eating margin and 3-second exit channel only as configurable prototypes. These are not owner-approved final rules. Preserve one usable equipped copy when proposing mutation behavior; resolve exact consume/equip semantics before BD-014 acceptance. Desktop plus touch remain targets; name and test a real phone before release.
 Do not assume a strict reward cap is compatible with 'higher catch always means more loot': define a supported catch-score range and a run-ending limit instead of silently flattening rewards.
+
+## Movement prototype status
+Generated build and quickstart are committed. No test experience/place IDs exist in project records yet. Znypr must open the build locally and perform the first Studio checks; no remote Studio-control capability is available here. No data stores are used, so this build cannot write production progression. Size stations are prototype-only and must not ship as public progression controls.

@@ -1,0 +1,345 @@
+<?xml version='1.0' encoding='utf-8'?>
+<roblox version="4">
+  <External>null</External>
+  <External>nil</External>
+  <Item class="Lighting" referent="RBX1">
+    <Properties>
+      <string name="Name">Lighting</string>
+    </Properties>
+  </Item>
+  <Item class="ReplicatedStorage" referent="RBX2">
+    <Properties>
+      <string name="Name">ReplicatedStorage</string>
+    </Properties>
+    <Item class="Folder" referent="RBX3">
+      <Properties>
+        <string name="Name">Shared</string>
+      </Properties>
+      <Item class="ModuleScript" referent="RBX4">
+        <Properties>
+          <string name="Name">Config</string>
+          <ProtectedString name="Source">--!strict
+-- Movement spike only. None of these values are final economy tuning.
+return table.freeze({
+    Build = "movement-spike-001",
+    WalkSpeed = 18,
+    ArenaHalfWidth = 90,
+    CameraMinZoom = 12,
+    CameraMaxZoom = 80,
+    TestScales = {1, 2, 4},
+})
+</ProtectedString>
+        </Properties>
+      </Item>
+    </Item>
+  </Item>
+  <Item class="ServerScriptService" referent="RBX5">
+    <Properties>
+      <string name="Name">ServerScriptService</string>
+    </Properties>
+    <Item class="Folder" referent="RBX6">
+      <Properties>
+        <string name="Name">Server</string>
+      </Properties>
+      <Item class="ModuleScript" referent="RBX7">
+        <Properties>
+          <string name="Name">Arena</string>
+          <ProtectedString name="Source">--!strict
+local Arena = {}
+
+local function block(parent: Instance, name: string, size: Vector3, position: Vector3, color: Color3): Part
+    local part = Instance.new("Part")
+    part.Name = name
+    part.Size = size
+    part.Position = position
+    part.Color = color
+    part.Material = Enum.Material.SmoothPlastic
+    part.Anchored = true
+    part.TopSurface = Enum.SurfaceType.Smooth
+    part.BottomSurface = Enum.SurfaceType.Smooth
+    part.Parent = parent
+    return part
+end
+
+function Arena.build()
+    local world = Instance.new("Folder")
+    world.Name = "BeDinoArena"
+    world.Parent = workspace
+    block(world, "Ground", Vector3.new(180, 4, 180), Vector3.new(0, -2, 0), Color3.fromRGB(111, 151, 93))
+    for _, x in {-92, 92} do
+        block(world, "Boundary", Vector3.new(4, 20, 188), Vector3.new(x, 8, 0), Color3.fromRGB(94, 113, 82))
+    end
+    for _, z in {-92, 92} do
+        block(world, "Boundary", Vector3.new(180, 20, 4), Vector3.new(0, 8, z), Color3.fromRGB(94, 113, 82))
+    end
+    local spawn = Instance.new("SpawnLocation")
+    spawn.Name = "PrototypeSpawn"
+    spawn.Size = Vector3.new(14, 1, 14)
+    spawn.Position = Vector3.new(0, 0.5, 30)
+    spawn.Anchored = true
+    spawn.Neutral = true
+    spawn.Duration = 0
+    spawn.Color = Color3.fromRGB(236, 220, 169)
+    spawn.Parent = world
+
+    -- A lane with varying obstacle widths for the fixed-collider experiment.
+    for i = 1, 5 do
+        block(world, "Rock", Vector3.new(4 + i, 2 + i, 6),
+            Vector3.new(-50 + i * 17, (2 + i) / 2, -30), Color3.fromRGB(126, 128, 115))
+    end
+    local ramp = block(world, "SlopeTest", Vector3.new(16, 2, 24), Vector3.new(-48, 3, 10), Color3.fromRGB(178, 157, 120))
+    ramp.CFrame = CFrame.new(-48, 3, 10) * CFrame.Angles(math.rad(12), 0, 0)
+
+    local pads = {}
+    for i, scale in {1, 2, 4} do
+        local pad = block(world, "Size" .. scale, Vector3.new(12, 0.4, 12),
+            Vector3.new((i - 2) * 24, 0.2, -5), Color3.fromRGB(220, 180 - i * 18, 90))
+        local gui = Instance.new("BillboardGui")
+        gui.Size = UDim2.fromOffset(140, 42)
+        gui.StudsOffset = Vector3.new(0, 3, 0)
+        gui.AlwaysOnTop = true
+        gui.MaxDistance = 120
+        gui.Parent = pad
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.fromScale(1, 1)
+        label.BackgroundTransparency = 1
+        label.Text = tostring(scale) .. "× SIZE"
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 22
+        label.TextColor3 = Color3.fromRGB(255, 255, 235)
+        label.TextStrokeTransparency = 0.4
+        label.Parent = gui
+        table.insert(pads, {part = pad, scale = scale})
+    end
+    return pads
+end
+
+return Arena
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="Script" referent="RBX8">
+        <Properties>
+          <string name="Name">Bootstrap</string>
+          <ProtectedString name="Source">--!strict
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Arena = require(script.Parent.Arena)
+local Dinosaur = require(script.Parent.Dinosaur)
+
+Lighting.ClockTime = 14
+Lighting.Brightness = 2
+Lighting.Ambient = Color3.fromRGB(130, 143, 148)
+workspace.FallenPartsDestroyHeight = -80
+local pads = Arena.build()
+
+local function setup(player: Player)
+    player.CanLoadCharacterAppearance = false
+    player.CharacterAdded:Connect(function(character)
+        Dinosaur.attach(character, Config.WalkSpeed)
+    end)
+    if player.Character then task.spawn(Dinosaur.attach, player.Character, Config.WalkSpeed) end
+end
+Players.PlayerAdded:Connect(setup)
+for _, player in Players:GetPlayers() do setup(player) end
+
+-- Server-side station checks; no client-reported size or progression.
+-- These pads are for the movement spike only and must be removed for release.
+task.spawn(function()
+    while true do
+        task.wait(0.2)
+        for _, player in Players:GetPlayers() do
+            local character = player.Character
+            local root = if character then character:FindFirstChild("HumanoidRootPart") :: BasePart? else nil
+            local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+            if character and root and humanoid and humanoid.Health &gt; 0 and character:GetAttribute("DinoAttached") then
+                for _, station in pads do
+                    local delta = root.Position - station.part.Position
+                    if math.abs(delta.X) &lt;= 6 and math.abs(delta.Z) &lt;= 6 and math.abs(delta.Y) &lt; 8 then
+                        if character:GetAttribute("VisualScale") ~= station.scale then
+                            Dinosaur.render(character, station.scale)
+                        end
+                        break
+                    end
+                end
+            end
+        end
+    end
+end)
+print("[Be Dino] " .. Config.Build .. " ready. Movement only; no progression saves.")
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX9">
+        <Properties>
+          <string name="Name">Dinosaur</string>
+          <ProtectedString name="Source">--!strict
+-- Cosmetic shell over Roblox's standard controller. Collider does NOT scale.
+local Dinosaur = {}
+local GREEN = Color3.fromRGB(100, 178, 117)
+local LIGHT = Color3.fromRGB(201, 221, 154)
+local DARK = Color3.fromRGB(63, 112, 80)
+
+function Dinosaur.render(character: Model, scale: number)
+    local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not root or not humanoid then return end
+    local old = character:FindFirstChild("DinoVisual")
+    if old then old:Destroy() end
+    local visual = Instance.new("Model")
+    visual.Name = "DinoVisual"
+    visual.Parent = character
+
+    -- Match cosmetic feet to the standard R6/R15 ground height.
+    local groundHeight = root.Size.Y / 2 + humanoid.HipHeight
+    if humanoid.RigType == Enum.HumanoidRigType.R6 then
+        local leg = character:FindFirstChild("Left Leg") :: BasePart?
+        groundHeight += if leg then leg.Size.Y else 2
+    end
+    local shift = Vector3.new(0, 3 * scale - groundHeight, 0)
+    local function piece(name: string, size: Vector3, position: Vector3, color: Color3, tilt: number?)
+        local part = Instance.new("Part")
+        part.Name = name
+        part.Size = size * scale
+        part.Color = color
+        part.Material = Enum.Material.SmoothPlastic
+        part.CanCollide = false
+        part.CanTouch = false
+        part.CanQuery = false
+        part.Massless = true
+        part.CastShadow = true
+        local offset = CFrame.new(position * scale + shift) * CFrame.Angles(tilt or 0, 0, 0)
+        part.CFrame = root.CFrame * offset
+        part.Parent = visual
+        local weld = Instance.new("Weld")
+        weld.Name = "VisualWeld"
+        weld.Part0 = root
+        weld.Part1 = part
+        weld.C0 = offset
+        weld.Parent = part
+    end
+    piece("Body", Vector3.new(2.4, 1.8, 3.2), Vector3.new(0, -0.8, 0.2), GREEN)
+    piece("Belly", Vector3.new(1.8, 0.35, 2.6), Vector3.new(0, -1.75, 0), LIGHT)
+    piece("Head", Vector3.new(2.3, 1.65, 2.1), Vector3.new(0, 0.3, -1.7), GREEN)
+    piece("Snout", Vector3.new(2.05, 0.75, 1.2), Vector3.new(0, -0.1, -3), LIGHT)
+    piece("Tail", Vector3.new(1.25, 1.0, 2.6), Vector3.new(0, -0.65, 2.7), GREEN, math.rad(-12))
+    piece("TailTip", Vector3.new(0.65, 0.65, 1.8), Vector3.new(0, -0.15, 4.55), DARK, math.rad(-18))
+    for _, side in {-1, 1} do
+        piece("Leg" .. side, Vector3.new(0.85, 1.4, 1.0), Vector3.new(side * 0.95, -2.1, 0.5), DARK)
+        piece("Foot" .. side, Vector3.new(1.0, 0.4, 1.6), Vector3.new(side * 0.95, -2.8, 0.1), GREEN)
+        piece("Arm" .. side, Vector3.new(0.5, 0.6, 1.05), Vector3.new(side * 1.3, -0.9, -1.1), GREEN)
+        piece("Eye" .. side, Vector3.new(0.13, 0.6, 0.65), Vector3.new(side * 1.18, 0.65, -2), Color3.new(1, 1, 1))
+        piece("Pupil" .. side, Vector3.new(0.15, 0.32, 0.3), Vector3.new(side * 1.25, 0.65, -2.12), Color3.fromRGB(25, 35, 31))
+    end
+    character:SetAttribute("VisualScale", scale)
+end
+
+function Dinosaur.attach(character: Model, walkSpeed: number)
+    local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
+    local root = character:WaitForChild("HumanoidRootPart", 10) :: BasePart?
+    if not humanoid or not root or not character.Parent then return end
+    if character:GetAttribute("DinoAttached") then return end
+    character:SetAttribute("DinoAttached", true)
+    local function hide(instance: Instance)
+        if instance:FindFirstAncestor("DinoVisual") then return end
+        if instance:IsA("BasePart") then instance.Transparency = 1 end
+        if instance:IsA("Decal") then instance.Transparency = 1 end
+    end
+    for _, descendant in character:GetDescendants() do hide(descendant) end
+    character.DescendantAdded:Connect(hide)
+    humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+    humanoid.WalkSpeed = walkSpeed
+    humanoid.UseJumpPower = true
+    humanoid.JumpPower = 0
+    humanoid.AutoJumpEnabled = false
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+    Dinosaur.render(character, 1)
+end
+
+return Dinosaur
+</ProtectedString>
+        </Properties>
+      </Item>
+    </Item>
+  </Item>
+  <Item class="StarterPlayer" referent="RBX10">
+    <Properties>
+      <string name="Name">StarterPlayer</string>
+    </Properties>
+    <Item class="StarterPlayerScripts" referent="RBX11">
+      <Properties>
+        <string name="Name">StarterPlayerScripts</string>
+      </Properties>
+      <Item class="Folder" referent="RBX12">
+        <Properties>
+          <string name="Name">Client</string>
+        </Properties>
+        <Item class="LocalScript" referent="RBX13">
+          <Properties>
+            <string name="Name">Bootstrap</string>
+            <ProtectedString name="Source">--!strict
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local player = Players.LocalPlayer
+player.CameraMode = Enum.CameraMode.Classic
+player.CameraMaxZoomDistance = Config.CameraMaxZoom
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "PrototypeHUD"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+local panel = Instance.new("TextLabel")
+panel.Position = UDim2.new(0.5, 0, 0, 12)
+panel.AnchorPoint = Vector2.new(0.5, 0)
+panel.Size = UDim2.new(0.9, 0, 0, 88)
+panel.BackgroundColor3 = Color3.fromRGB(32, 49, 42)
+panel.BackgroundTransparency = 0.12
+panel.TextColor3 = Color3.fromRGB(249, 243, 218)
+panel.Font = Enum.Font.GothamMedium
+panel.TextSize = 16
+panel.TextWrapped = true
+panel.Parent = gui
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = panel
+local limit = Instance.new("UISizeConstraint")
+limit.MaxSize = Vector2.new(640, 100)
+limit.Parent = panel
+
+local scaleConnection: RBXScriptConnection? = nil
+local function onCharacter(character: Model)
+    if scaleConnection then scaleConnection:Disconnect() end
+    local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
+    if not humanoid or player.Character ~= character then return end
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+    local function update()
+        local scale = character:GetAttribute("VisualScale") or 1
+        player.CameraMinZoomDistance = Config.CameraMinZoom * scale
+        humanoid.CameraOffset = Vector3.new(0, (scale - 1) * 2, 0)
+        panel.Text = "BE DINO!  •  MOVEMENT PROTOTYPE\nMove: WASD / thumbstick   •   Look: drag / right mouse\nWalk onto a size pad: 1× / 2× / 4×   •   Current: " .. tostring(scale) .. "×"
+    end
+    scaleConnection = character:GetAttributeChangedSignal("VisualScale"):Connect(update)
+    local camera = workspace.CurrentCamera
+    if camera then
+        camera.CameraType = Enum.CameraType.Custom
+        camera.CameraSubject = humanoid
+    end
+    update()
+end
+player.CharacterAdded:Connect(onCharacter)
+if player.Character then task.spawn(onCharacter, player.Character) end
+</ProtectedString>
+          </Properties>
+        </Item>
+      </Item>
+    </Item>
+  </Item>
+  <Item class="Workspace" referent="RBX14">
+    <Properties>
+      <string name="Name">Workspace</string>
+    </Properties>
+  </Item>
+</roblox>
