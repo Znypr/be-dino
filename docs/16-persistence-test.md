@@ -29,26 +29,29 @@ The build uses the isolated store name `BeDino_PrivateTest_v1`.
 - Same attacker/victim pair can add catch score only once per 60 seconds. Predation still works during the cooldown.
 - Respawn occurs only after settlement succeeds.
 - Disconnect tries to settle an active run before releasing its lease.
+- Reset Character counts as a normal run-ending death and settles the run before respawn.
 
 ## Tester checklist
 
 Use F5 first, then F7 with 2 clients where specified.
 
-| # | Test | Expected |
-|---|---|---|
-| 1 | Start with API access enabled | Character spawns; HUD shows `Profile: Loaded`; Compy starts at 1 on a new test profile |
-| 2 | End a 0-catch run | Respawn after settlement; copies do not increase; HUD shows `Idempotency: duplicate-ok` |
-| 3 | Two clients: A eats B once, then A ends run | A has 1 catch before ending; after settlement A gains exactly 1 Compy copy, not 2 |
-| 4 | Check duplicate probe after test 3 | HUD still shows only one added copy and `Idempotency: duplicate-ok` |
-| 5 | Stop Play, start again with the same account | Previously earned Compy count loads again |
-| 6 | Reset Character with a loaded profile | Run settles once, respawns, profile remains Loaded |
-| 7 | Repeat victim within 60 seconds | The second predation works, but attacker catch score does not increase again |
-| 8 | Wait over 60 seconds, eat same victim again | Catch score can increase again |
-| 9 | Disable Studio API access, then start | No playable character should spawn; profile should fail closed with a DataStore error instead of silently using a new blank profile |
-| 10 | Re-enable API access and restart | Existing saved profile loads again; no reset to starter defaults |
+| # | Test | Expected | Result |
+|---:|---|---|---|
+| 1 | Start with API access enabled | Character spawns; HUD shows `Profile: Loaded`; Compy starts at 1 on a new test profile | Passed |
+| 2 | End a 0-catch run | Respawn after settlement; copies do not increase; HUD shows `Idempotency: duplicate-ok` | Passed |
+| 3 | Two clients: A eats B once, then A ends run | A has 1 catch before ending; after settlement A gains exactly 1 Compy copy, not 2 | Passed |
+| 4 | Check duplicate probe after test 3 | HUD still shows only one added copy and `Idempotency: duplicate-ok` | Passed |
+| 5 | Stop Play, start again with the same account | Previously earned Compy count loads again | Passed |
+| 6 | Reset Character with a loaded profile | Run settles once, respawns, profile remains Loaded | Passed |
+| 7 | Repeat victim within 60 seconds | The second predation works, but attacker catch score does not increase again | Passed |
+| 8 | Wait over 60 seconds, eat same victim again | Catch score can increase again | Passed |
+| 9 | Disable Studio API access, then start | No playable character should spawn; profile should fail closed with a DataStore error instead of silently using a new blank profile | Passed |
+| 10 | Re-enable API access and restart | Existing saved profile loads again; no reset to starter defaults | Passed |
 
-For test 9, re-enable API access immediately afterward. Do not use this failure test in a production experience.
+Znypr also confirmed the Compy count can continue above 3. An apparent stop at 3 was caused by the intended repeat-victim anti-farm cooldown, not a storage/reward cap.
 
-## Evidence needed for full BD-011 acceptance
+## Evidence still needed for full BD-011 acceptance
 
-Passing tests 1–10 establishes load/save/rejoin and duplicate-settlement behavior. A separate competing-session/stale-lease test is still required before BD-011 can be marked fully Done.
+Tests 1–10 now establish load/save/rejoin, fail-closed loading, reset settlement and duplicate-settlement behavior.
+
+A separate competing-session/stale-lease test is still required before BD-011 can be marked fully Done.
