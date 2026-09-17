@@ -18,7 +18,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 local panel = Instance.new("TextLabel")
 panel.Position = UDim2.new(0.5, 0, 0, 12)
 panel.AnchorPoint = Vector2.new(0.5, 0)
-panel.Size = UDim2.new(0.94, 0, 0, 142)
+panel.Size = UDim2.new(0.94, 0, 0, 164)
 panel.BackgroundColor3 = Color3.fromRGB(32, 49, 42)
 panel.BackgroundTransparency = 0.12
 panel.TextColor3 = Color3.fromRGB(249, 243, 218)
@@ -30,7 +30,7 @@ local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 12)
 corner.Parent = panel
 local limit = Instance.new("UISizeConstraint")
-limit.MaxSize = Vector2.new(720, 150)
+limit.MaxSize = Vector2.new(720, 180)
 limit.Parent = panel
 
 local endButton = Instance.new("TextButton")
@@ -87,6 +87,8 @@ RunService.Heartbeat:Connect(function(dt)
 
     local profileValue = player:GetAttribute("ProfileState")
     local profileState = if typeof(profileValue) == "string" then profileValue else "Starting"
+    local leaseValue = player:GetAttribute("LeaseSelfTest")
+    local leaseText = if typeof(leaseValue) == "string" then leaseValue else "STARTING"
     local rewardValue = player:GetAttribute("LastRewardText")
     local probeValue = player:GetAttribute("LastSettlementProbe")
     local rewardText = if typeof(rewardValue) == "string" and rewardValue ~= "" then rewardValue else "none yet"
@@ -103,8 +105,8 @@ RunService.Heartbeat:Connect(function(dt)
     local humanoid = currentHumanoid
     if not character or player.Character ~= character or not humanoid then
         panel.Text = string.format(
-            "BE DINO!  •  PERSISTENCE TEST\nProfile: %s  •  Idempotency: %s\n%s\nLast reward: %s",
-            profileState, probeText, collectionText, rewardText
+            "BE DINO!  •  PERSISTENCE LEASE TEST\nProfile: %s  •  Idempotency: %s  •  Lease test: %s\n%s\nLast reward: %s",
+            profileState, probeText, leaseText, collectionText, rewardText
         )
         endButton.Active = false
         endButton.AutoButtonColor = false
@@ -128,8 +130,8 @@ RunService.Heartbeat:Connect(function(dt)
     local status = if protectionRemaining > 0 then string.format("SAFE %.1fs", protectionRemaining) else "PVP ACTIVE"
 
     panel.Text = string.format(
-        "BE DINO!  •  PERSISTENCE TEST\nGrowth %d  •  Catches %d  •  Size %.2fx  •  %s\nProfile: %s  •  Idempotency: %s\n%s\nLast reward: %s",
-        score, catches, scale, status, profileState, probeText, collectionText, rewardText
+        "BE DINO!  •  PERSISTENCE LEASE TEST\nGrowth %d  •  Catches %d  •  Size %.2fx  •  %s\nProfile: %s  •  Idempotency: %s  •  Lease test: %s\n%s\nLast reward: %s",
+        score, catches, scale, status, profileState, probeText, leaseText, collectionText, rewardText
     )
 
     local state = character:GetAttribute("RunState")
