@@ -1,19 +1,24 @@
 --!strict
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local player = Players.LocalPlayer
 player.CameraMode = Enum.CameraMode.Classic
 player.CameraMaxZoomDistance = Config.CameraMaxZoom
 
+local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
+local requestEndRun = remotes:WaitForChild("RequestEndRun") :: RemoteEvent
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "PrototypeHUD"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
+
 local panel = Instance.new("TextLabel")
 panel.Position = UDim2.new(0.5, 0, 0, 12)
 panel.AnchorPoint = Vector2.new(0.5, 0)
-panel.Size = UDim2.new(0.9, 0, 0, 88)
+panel.Size = UDim2.new(0.9, 0, 0, 104)
 panel.BackgroundColor3 = Color3.fromRGB(32, 49, 42)
 panel.BackgroundTransparency = 0.12
 panel.TextColor3 = Color3.fromRGB(249, 243, 218)
@@ -25,31 +30,97 @@ local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 12)
 corner.Parent = panel
 local limit = Instance.new("UISizeConstraint")
-limit.MaxSize = Vector2.new(640, 100)
+limit.MaxSize = Vector2.new(640, 116)
 limit.Parent = panel
 
+local endButton = Instance.new("TextButton")
+endButton.Name = "EndRun"
+endButton.AnchorPoint = Vector2.new(1, 1)
+endButton.Position = UDim2.new(1, -20, 1, -20)
+endButton.Size = UDim2.fromOffset(150, 52)
+endButton.BackgroundColor3 = Color3.fromRGB(143, 78, 61)
+endButton.TextColor3 = Color3.fromRGB(255, 247, 230)
+endButton.Font = Enum.Font.GothamBold
+endButton.TextSize = 16
+endButton.Text = "END RUN"
+endButton.Parent = gui
+local buttonCorner = Instance.new("UICorner")
+buttonCorner.CornerRadius = UDim.new(0, 12)
+buttonCorner.Parent = endButton
+
+endButton.Activated:Connect(function()
+    requestEndRun:FireServer()
+end)
+
 local connections: {RBXScriptConnection} = {}
+local currentCharacter: Model? = nil
+local currentHumanoid: Humanoid? = nil
+
 local function onCharacter(character: Model)
     for _, connection in connections do connection:Disconnect() end
     table.clear(connections)
+    currentCharacter = character
+    currentHumanoid = nil
     local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
     if not humanoid or player.Character ~= character then return end
+    currentHumanoid = humanoid
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
-    local function update()
-        local scale = character:GetAttribute("VisualScale") or 1
-        player.CameraMinZoomDistance = Config.CameraMinZoom * scale
-        humanoid.CameraOffset = Vector3.new(0, (scale - 1) * 2, 0)
-        local score = character:GetAttribute("GrowthScore") or 0
-        panel.Text = string.format("BE DINO!  •  FOOD & GROWTH\nEat the orange berries to grow!\nScore: %d   •   Size: %.2fx   •   Prototype: progress resets", score, scale)
-    end
-    table.insert(connections, character:GetAttributeChangedSignal("VisualScale"):Connect(update))
-    table.insert(connections, character:GetAttributeChangedSignal("GrowthScore"):Connect(update))
     local camera = workspace.CurrentCamera
     if camera then
         camera.CameraType = Enum.CameraType.Custom
         camera.CameraSubject = humanoid
     end
-    update()
 end
 player.CharacterAdded:Connect(onCharacter)
 if player.Character then task.spawn(onCharacter, player.Character) end
+
+local elapsed = 0
+RunService.Heartbeat:Connect(function(dt)
+    elapsed += dt
+    if elapsed < 0.1 then return end
+    elapsed = 0
+
+    local character = currentCharacter
+    local humanoid = currentHumanoid
+    if not character or player.Character ~= character or not humanoid then
+        panel.Text = "BE DINO!  •  PVP TEST\nRespawning..."
+        endButton.Active = false
+        endButton.AutoButtonColor = false
+        endButton.Text = "END RUN"
+        return
+    end
+
+    local scaleValue = character:GetAttribute("VisualScale")
+    local scale = if typeof(scaleValue) == "number" then scaleValue else 1
+    player.CameraMinZoomDistance = Config.CameraMinZoom * scale
+    humanoid.CameraOffset = Vector3.new(0, (scale - 1) * 2, 0)
+
+    local scoreValue = character:GetAttribute("GrowthScore")
+    local catchValue = character:GetAttribute("CatchScore")
+    local score = if typeof(scoreValue) == "number" then scoreValue else 0
+    local catches = if typeof(catchValue) == "number" then catchValue else 0
+    local now = workspace:GetServerTimeNow()
+    local protectionValue = character:GetAttribute("SpawnProtectionEndsAt")
+    local protectionEnd = if typeof(protectionValue) == "number" then protectionValue else 0
+    local protectionRemaining = math.max(0, protectionEnd - now)
+    local status = if protectionRemaining > 0 then string.format("SAFE %.1fs", protectionRemaining) else "PVP ACTIVE"
+
+    local lastReasonValue = player:GetAttribute("LastRunEndReason")
+    local lastReason = if typeof(lastReasonValue) == "string" and lastReasonValue ~= "" then "  •  Last: " .. lastReasonValue else ""
+    panel.Text = string.format(
+        "BE DINO!  •  FOOD + PVP\nEat berries. Bigger dinos can eat smaller dinos.\nGrowth: %d   •   Catches: %d   •   Size: %.2fx\n%s%s",
+        score, catches, scale, status, lastReason
+    )
+
+    local state = character:GetAttribute("RunState")
+    endButton.Active = state == "Active"
+    endButton.AutoButtonColor = state == "Active"
+    local exitValue = character:GetAttribute("ExitChannelEndsAt")
+    local exitEnd = if typeof(exitValue) == "number" then exitValue else 0
+    local exitRemaining = math.max(0, exitEnd - now)
+    if exitRemaining > 0 then
+        endButton.Text = string.format("STAY STILL %.1fs", exitRemaining)
+    else
+        endButton.Text = "END RUN"
+    end
+end)

@@ -44,7 +44,8 @@ function FoodService.start(dinosaur)
                 local character = player.Character
                 local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
                 local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
-                if character and root and root:IsA("BasePart") and humanoid and humanoid.Health > 0 and character:GetAttribute("DinoAttached") then
+                if character and root and root:IsA("BasePart") and humanoid and humanoid.Health > 0
+                    and character:GetAttribute("DinoAttached") and character:GetAttribute("RunState") == "Active" then
                     local last = previous[player]
                     local position = root.Position
                     -- Basic teleport rejection, not a complete movement/anti-cheat system.
@@ -84,12 +85,7 @@ function FoodService.start(dinosaur)
             end
             for _, candidate in candidates do
                 if candidate.gained > 0 then
-                    local score = (candidate.character:GetAttribute("GrowthScore") or 0) + candidate.gained
-                    candidate.character:SetAttribute("GrowthScore", score)
-                    local scale = math.min(4, math.sqrt(1 + score / 50))
-                    if candidate.character:GetAttribute("VisualScale") ~= scale then
-                        dinosaur.render(candidate.character, scale)
-                    end
+                    dinosaur.addGrowth(candidate.character, candidate.gained)
                 end
             end
         end

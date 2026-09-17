@@ -1,0 +1,35 @@
+name: Build generated Roblox place
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "default.project.json"
+      - "tools/build.py"
+      - "tests/**"
+      - ".github/workflows/build-generated-place.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build place
+        run: python tools/build.py
+      - name: Run packaging tests
+        run: python -m unittest discover -s tests -v
+      - name: Commit generated build
+        run: |
+          if git diff --quiet -- build/BeDino-Prototype.rbxlx build/BeDino-Prototype.manifest.json; then
+            echo "Generated build is current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add build/BeDino-Prototype.rbxlx build/BeDino-Prototype.manifest.json
+          git commit -m "build: regenerate Roblox prototype"
+          git push

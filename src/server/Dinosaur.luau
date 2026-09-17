@@ -6,6 +6,10 @@ local GREEN = Color3.fromRGB(100, 178, 117)
 local LIGHT = Color3.fromRGB(201, 221, 154)
 local DARK = Color3.fromRGB(63, 112, 80)
 
+local function scaleForScore(score: number): number
+    return math.min(4, math.sqrt(1 + math.max(0, score) / 50))
+end
+
 function Dinosaur.render(character: Model, scale: number)
     local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
     local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -58,6 +62,17 @@ function Dinosaur.render(character: Model, scale: number)
         piece("Pupil" .. side, Vector3.new(0.15, 0.32, 0.3), Vector3.new(side * 1.25, 0.65, -2.12), Color3.fromRGB(25, 35, 31))
     end
     character:SetAttribute("VisualScale", scale)
+end
+
+function Dinosaur.addGrowth(character: Model, points: number)
+    if points <= 0 or character:GetAttribute("RunState") ~= "Active" then return end
+    local current = character:GetAttribute("GrowthScore")
+    local score = (if typeof(current) == "number" then current else 0) + points
+    character:SetAttribute("GrowthScore", score)
+    local scale = scaleForScore(score)
+    if character:GetAttribute("VisualScale") ~= scale then
+        Dinosaur.render(character, scale)
+    end
 end
 
 function Dinosaur.attach(character: Model, walkSpeed: number, player: Player)
