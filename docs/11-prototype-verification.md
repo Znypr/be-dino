@@ -1,5 +1,5 @@
 # Movement prototype verification
-Build: movement-spike-001. Date: 2026-09-17.
+Build: movement-spike-002. Date: 2026-09-17.
 
 ## Executed here
 Python 3.12.14; standard library only.
@@ -37,3 +37,6 @@ Reset:
 Two clients see both dinosaurs and size changes:
 Touch:
 Pass / defect / next action:
+
+## First Studio feedback and fix
+Znypr opened build 001: client HUD ran, but server startup failed on the protected FallenPartsDestroyHeight assignment (Bootstrap line 12). Arena generation and dinosaur setup never ran, leaving the default avatar falling. Build 002 removes that unnecessary runtime write and keeps the default place setting. Rebuilt successfully; all five packaging tests pass. Studio retest is pending, not claimed successful.

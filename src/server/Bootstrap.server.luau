@@ -9,7 +9,7 @@ local Dinosaur = require(script.Parent.Dinosaur)
 Lighting.ClockTime = 14
 Lighting.Brightness = 2
 Lighting.Ambient = Color3.fromRGB(130, 143, 148)
-workspace.FallenPartsDestroyHeight = -80
+-- Keep the place's default destroy height; this setting is protected at runtime.
 local pads = Arena.build()
 
 local function setup(player: Player)
