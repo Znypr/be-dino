@@ -1,11 +1,11 @@
 # Roadmap and release gates
-Estimates are effort ranges for planning, not a delivery promise. Start date depends on Studio setup, decisions and feedback availability.
+Estimates are effort ranges for planning, not a delivery promise. Studio is installed on Znypr's account; budget is €0. Implementation has not started. Estimates depend on integration and feedback availability.
 
 | Phase | Indicative effort | Outcome | Exit gate |
 |---|---|---|---|
 | 0: Decisions and setup | 0.5-1 working day | Private test place, reproducible source workflow | One client runs the synced build; ownership/data isolation recorded |
 | 1: Core arena | 1-2 days | One dino, food, growth, PvP, run restart | Two real clients finish multiple runs without conflicting outcomes |
-| 2: Persistent loop | 1.5-3 days | Three dinos, rewards, inventory, egg queue, Gold | Reconnect and duplicate-request tests pass |
+| 2: Persistent loop | 1.5-3 days | Three dinos, stacked immediate rewards, separate chest loot/queue, Gold | Reconnect and duplicate-request tests pass |
 | 3: Presentation and hardening | 1-2 days | Original art/UI/audio and touch support | Device/performance/security gates pass |
 | 4: Invited community test | 0.5-1 day plus fixes | Small observed play session | Findings triaged, severe defects fixed before widening access |
 
@@ -48,3 +48,19 @@ Log defects separately from suggestions. P0 data loss/duplication/security or in
 - Published build matches recorded commit; asset permissions verified by a non-owner.
 - Save/error telemetry accessible; rollback procedure tested.
 - Public launch is a later decision after private results, not automatic upon code completion.
+
+## Current execution order
+1. BD-004: establish source/build workflow and private test place. Codex prepares source and instructions; Znypr performs unavailable Studio/account actions.
+2. BD-005 and BD-006: review data contracts, then prove one dinosaur moves correctly with two clients. Use placeholder art.
+3. BD-010: simulate catch-score quantity, exponential tier allocation, duplicate stacks and 50-copy mutation pacing before integrating rewards.
+4. BD-008–014: complete food, PvP, durable immediate rewards, collection, independent chests and mutation.
+5. BD-015–020: finish usable UI and original assets, test failure cases and devices, then prepare the private release.
+6. BD-021: observe the community test. Expand species and rarity breadth only after this loop works.
+
+## Additional reward gates
+Verify increasing total quantities across catch scores, tier-boundary behavior, grouped species quantities, large-reward rendering and independent chest outcomes. Test hundreds/thousands of awarded copies without spawning hundreds/thousands of UI cards.
+The 50-copy mutation threshold and high duplicate quantities may accelerate progression sharply; BD-010 must measure this before rewards are accepted.
+
+## Scheduling and ownership
+No firm launch date is set. ASAP means the earliest build that passes the stated gates, not skipping saving or multiplayer verification. No paid service is on the critical path.
+The next reviewable deliverable is a reproducible placeholder build, not a polished catalog. A native GitHub Projects board is not configured; the linked Markdown Kanban is the current task board.

@@ -59,3 +59,8 @@ Events: run_started, first_food, run_ended(reason), reward_committed, egg_claime
 Collect only operational IDs/aggregates needed for diagnostics; no free-text personal data.
 Every build references a commit. Tag a known-good build before the test and retain a tested rollback path.
 Schema changes require backwards-compatible migration tests; code rollback does not automatically undo persistent data changes.
+
+## Reward contract update (confirmed direction)
+Store catchScore separately from growthScore. Reward calculation returns a bounded list of {speciesId, mutationId, count} stacks plus chest grants, keyed by runId and rewardConfigVersion. Store counts as validated nonnegative integers and define numeric bounds before implementation.
+RunRewardConfig and ChestRewardConfig are separate tables; chest claims must not reuse or alter settled run loot. Preserve immutable outcomes through retries. Aggregate duplicates before saving or sending UI payloads; never instantiate one world object per awarded copy.
+Three-species alpha catalog uses the same contracts as the eventual multi-species, multi-rarity catalog. Reward eligibility and mutation rules must not depend on UI labels or color.

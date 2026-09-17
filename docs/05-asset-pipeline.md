@@ -5,7 +5,7 @@ Goal: coherent original assets that are cheap to revise and work in Roblox. No f
 Use procedural Roblox parts for the first playable dinosaur/map. Codex can generate the geometry/setup scripts directly.
 Then improve silhouettes with simple original low-poly meshes generated through Blender scripts or modeled manually. Reuse a rig only where anatomy supports it.
 AI image generation is useful for concept sheets, icons and texture exploration; a rendered dinosaur image is not a ready-to-use rigged 3D model.
-External AI 3D services are optional experiments after budget approval. Do not make launch depend on uncertain topology, rigging or export quality.
+Budget is €0. Use procedural Studio assets, free local tools and already available capabilities. Paid AI 3D generation, subscriptions, asset packs and contractors are outside scope. Do not depend on limited free trials.
 [Roblox's importer](https://create.roblox.com/docs/studio/importer) is the integration route; verify scale, pivot, orientation and animation in Studio.
 
 ## Minimal manifest
@@ -57,3 +57,6 @@ No scraping audio or models from Be Fish; no paid generation subscription assume
 ## Timebox and fallback
 Timebox first dinosaur visual spike to half a working day. If rigging/import stalls, keep the procedural version and focus on feel.
 Do not build all three polished models before proving the controller.
+
+## Catalog scaling
+First test: three original species and one Gold treatment. Later catalog: many species per rarity, defined through data with stable IDs. Reward UI must handle stacks without rendering one object per copy. Reuse suitable rigs and palette/material treatments, but a recolor alone is a mutation, not a new species.

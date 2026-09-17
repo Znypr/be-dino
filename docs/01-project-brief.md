@@ -1,5 +1,5 @@
 # Project brief and responsibilities
-Draft v0.1 • 2026-09-17
+Draft v0.2 • 2026-09-17
 
 ## Objective
 Build a small, reliable Roblox game that Znypr can play with an invited community group, learn from, and later launch publicly. Players become dinosaurs, collect food, grow, avoid larger players, and turn runs into persistent dinosaur collection progress.
@@ -43,3 +43,8 @@ AI writes code, procedural asset generators, configuration, tests and documentat
 Never label Studio, multiplayer or device tests passed based on code inspection alone.
 At each work session: read board and decisions, select one Ready task, move to In progress, implement, review/test, record evidence, update status and next action.
 Limit implementation work in progress to one task initially. Avoid a framework or automation platform larger than this game.
+
+## Confirmed setup and reward updates
+Znypr owns the Roblox account and has Studio installed. Target spend is €0; paid tools, assets, contractors and advertising are outside this plan. Studio installation does not establish remote Studio control from Codex.
+Immediate run dinosaur rewards and separate chest loot are confirmed. Copies stack by species/mutation, with exponentially declining quantities across rarity tiers. Catch score remains separate from growth score.
+Three species is a validation slice, not the final collection size. Support a larger catalog in data definitions without making dozens of finished models a first-test dependency.

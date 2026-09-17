@@ -4,7 +4,7 @@ Updated 2026-09-17. This file is the canonical task tracker. No implementation h
 ## Board
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-004–006, BD-008–022 | BD-003 decisions; BD-007 art brief | None | None | None | BD-001 research; BD-002 direction |
+| BD-005–006, BD-008–009, BD-011–022 | BD-004 setup; BD-007 art brief; BD-010 economy | None | None | None | BD-001 research; BD-002 direction; BD-003 setup decisions |
 
 Backlog tasks with unmet dependencies are not executable yet. Move to Blocked only when started work encounters an obstacle; record the obstacle and person/action needed.
 Ready means actionable now. Done means acceptance evidence exists, not merely code generated.
@@ -23,14 +23,14 @@ The two completed items are planning work, not game features. In-progress limit:
 |---|---|---|---|---|---|---|
 | BD-001 | Done | P0 | PO | PO review | Research and initial project documents | None |
 | BD-002 | Done | P0 | PO | Znypr | Choose first-test direction | BD-001 |
-| BD-003 | Ready | P0 | PO | Znypr | Resolve setup and design blockers | BD-002 |
-| BD-004 | Backlog | P0 | REL | DEV | Bootstrap reproducible project and private test place | BD-003 |
+| BD-003 | Done | P0 | PO | Znypr | Resolve setup and design blockers | BD-002 |
+| BD-004 | Ready | P0 | REL | DEV | Bootstrap reproducible project and private test place | BD-003 |
 | BD-005 | Backlog | P0 | ARCH | QA | Specify persistence and remote contracts | BD-003, BD-004 |
 | BD-006 | Backlog | P0 | DEV | QA | Prototype one dinosaur controller and camera | BD-004 |
 | BD-007 | Ready | P1 | ART | Znypr | Specify original asset kit and visual sample | BD-002 |
 | BD-008 | Backlog | P0 | DEV | QA | Implement food and growth | BD-005, BD-006 |
 | BD-009 | Backlog | P0 | DEV | QA | Implement PvP, spawn safety and run ending | BD-005, BD-008 |
-| BD-010 | Backlog | P0 | GD | PO | Define and simulate alpha economy | BD-003 |
+| BD-010 | Ready | P0 | GD | PO | Define and simulate alpha economy | BD-003 |
 | BD-011 | Backlog | P0 | DEV | QA | Build profile storage and idempotent settlement | BD-005, BD-009, BD-010 |
 | BD-012 | Backlog | P0 | DEV | QA | Build collection and equip | BD-011 |
 | BD-013 | Backlog | P0 | DEV | QA | Build earned egg queue | BD-010, BD-011 |
@@ -57,9 +57,9 @@ The two completed items are planning work, not game features. In-progress limit:
 **Evidence / next action:** Completed: private test, cute ground arena, small complete loop selected by Znypr.
 
 ### BD-003: Resolve setup and design blockers
-**Done when:** Record Roblox owner, Studio availability, deadline, budget, reward/egg relationship and test reset policy in decision log.
+**Done when:** Record owner, Studio availability, budget and reward relationship; distinguish remaining release/tuning decisions from setup blockers.
 
-**Evidence / next action:** Ask owner; questions are listed in docs/08-decisions-and-risks.md.
+**Evidence:** Znypr confirmed personal account, Studio installed, €0 target budget, immediate run loot plus separate chest loot, increasing totals and decreasing rarity-tier quantities with duplicate stacks. Deadline remains ASAP, without a fixed date. Timer/reset/device decisions remain release gates in docs/08-decisions-and-risks.md.
 
 ### BD-004: Bootstrap reproducible project and private test place
 **Done when:** Pin toolchain, define source mapping, sync/build a minimal place, document one-command build and Studio handoff; isolate test data.
@@ -89,12 +89,12 @@ The two completed items are planning work, not game features. In-progress limit:
 ### BD-009: Implement PvP, spawn safety and run ending
 **Done when:** Agreed size rule, spawn protection, exit and death races behave correctly with two clients; one terminal transition per run.
 
-**Evidence / next action:** Owner resolves margin/exit rules first.
+**Evidence / next action:** Prototype configurable margin/exit proposals; owner review required before gameplay acceptance.
 
 ### BD-010: Define and simulate alpha economy
-**Done when:** Config specifies score/reward conversion, weights, caps, repeated-victim handling and mutation cost; simulate rolls and estimate unlock time.
+**Done when:** Config specifies catch accrual, increasing total-copy conversion, exponential rarity quantities, eligibility thresholds, species allocation, separate chest table, numeric/run limits, repeat-victim handling and mutation cost. Simulate outcomes and estimate unlock/mutation time; verify score and tier boundaries.
 
-**Evidence / next action:** Trial 80/18/2 weights are not final; inspect early progress and snowballing.
+**Evidence / next action:** Use docs/09-reward-economy.md as a candidate, not approved tuning. Report effects of large duplicate stacks on the 50-copy upgrade threshold.
 
 ### BD-011: Build profile storage and idempotent settlement
 **Done when:** Rejoin, save failures, duplicate settlement and stale-session tests preserve committed inventory; immutable run reward outcome.
@@ -109,7 +109,7 @@ The two completed items are planning work, not game features. In-progress limit:
 ### BD-013: Build earned egg queue
 **Done when:** Queue uses server timestamps; sequential/offline behavior, duplicate claims and capacity overflow pass; test timer isolated.
 
-**Evidence / next action:** Owner confirms immediate rewards versus chest-gated rewards.
+**Evidence / next action:** Relationship confirmed: immediate run dinosaurs plus independent chest loot. Verify separate tables and immutable claim outcomes.
 
 ### BD-014: Build Gold mutation
 **Done when:** Atomic conversion handles 49/50/51 copies, double request and equipped-copy edge case; visual/stat config updated.
@@ -117,7 +117,7 @@ The two completed items are planning work, not game features. In-progress limit:
 **Evidence / next action:** Test grants exist only in isolated environment.
 
 ### BD-015: Implement core UI and first-session guidance
-**Done when:** Lobby, HUD, summary, collection and eggs usable on desktop/touch with empty/loading/error states; Play Again completes loop.
+**Done when:** Reward summary groups species as count stacks and handles large totals without one card per copy. Lobby, HUD, summary, collection and eggs usable on desktop/touch with empty/loading/error states; Play Again completes loop.
 
 **Evidence / next action:** Integrate incrementally; completion requires all core screens.
 
@@ -157,6 +157,7 @@ The two completed items are planning work, not game features. In-progress limit:
 **Evidence / next action:** No automatic public launch and no monetization dependency.
 
 ## Session log
+- 2026-09-17 update: Confirmed setup and loot rules propagated. BD-003 complete; BD-004 and BD-010 Ready. Reward specification added. No implementation or live testing completed. Next: BD-004.
 - 2026-09-17: Initial research and planning completed. Znypr selected private test, cute ground arena, small full progression loop. Implementation and all live Roblox checks remain unstarted.
 
 ## Deferred objectives

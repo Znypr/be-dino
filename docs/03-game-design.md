@@ -1,6 +1,6 @@
 # Be Dino game design draft
 Approved direction: private test, cute ground arena, small complete progression loop.
-All precise quantities and rules below are proposed tuning, not copied Be Fish behavior.
+Confirmed reward rules are identified below. Other precise quantities remain proposed tuning, not copied Be Fish behavior.
 
 ## Player journey
 Lobby -> select dinosaur -> spawn protected -> collect food / eat smaller dinosaurs -> end run or be eaten -> summary and rewards -> collection / egg queue -> next run.
@@ -8,7 +8,7 @@ Death resets run size, not owned dinosaurs. Avoid gore: a pop, dust puff and sho
 
 ## Three independent quantities
 - Growth score: temporary run power, starts fresh each run; determines eligibility to eat.
-- Run reward units: earned through validated active play; determines how many collection rolls a run grants.
+- Dinos caught (catch score): earned through validated active play; determines total immediate collection copies. This is distinct from growth score.
 - Collection counts: persistent copies by species and mutation; used for equip and upgrades.
 Do not call all three 'score' in UI or code.
 
@@ -34,20 +34,21 @@ Use three base tiers for three species initially; defer a full common-to-legenda
 One Gold mutation tier. Proposed conversion consumes 50 base copies and grants one Gold copy. Decide whether the last equipped base copy is protected before implementation.
 Keep species rarity and mutation separate data fields. Gold can add a small configured growth bonus with a total cap.
 
-## Reward proposal
-A run grants immediate collection rolls plus a chance of an earned egg. This is a proposed interpretation, pending confirmation of the desired chest relationship.
-Validated food and PvP activity increase reward progress; elapsed time alone grants nothing, avoiding an idle farming incentive.
-Before coding, GD must define a bounded conversion curve and max rolls per run. Higher activity should increase total rolls first; defer score-dependent probability changes until balance can be measured.
-Trial base roll table for three species: 80% / 18% / 2%, sum 100%. These are transparent test weights, not source-game probabilities.
-Keep randomness server-side and persist reward outcomes once. Do not re-roll after a retry.
-Use a guaranteed starter unlock and ensure short runs can earn visible progress; assess duplicate frustration with actual playtests.
+## Confirmed reward direction
+On manual run completion or being eaten, grant immediate dinosaur copies plus separately earned chests. Chests have their own loot table and do not delay or replace the run payout.
+Higher catch scores produce more total dinosaurs. Quantities fall steeply across increasing rarity tiers; duplicates are expected and displayed as stacks such as 56× Species X and 47× Species Y.
+Higher catches can reach higher rarity tiers, but top tiers remain scarce. This is not a saturating per-dinosaur rarity probability requirement.
+The example of 12 common species with 12–50 copies each at scores in the thousands describes the eventual catalog, not the three-species first test.
+See [reward specification](09-reward-economy.md) for proposed math, examples and acceptance checks.
+Randomness is server-side. Persist an immutable outcome once; retries must never reroll.
 
-## Egg queue
-One sequential earned-egg queue; earned eggs can contain dinosaur copies.
-Proposed test timer: 60 seconds per egg; release timer remains undecided. Environment configuration must visibly distinguish test and release values.
-At enqueue: readyAt = max(serverNow, previousReadyAt) + duration. Claim all completed entries; retain unfinished entries. Offline elapsed time counts.
-Trial contents: three rolls per egg, same test table initially. Cap queue/storage and specify a visible overflow outcome before implementation; never silently delete rewards.
-No paid eggs or paid timer skips for first release.
+## Chest queue (working visual theme: eggs)
+Use “chest” for the mechanic in requirements; an egg appearance is a provisional dinosaur-themed skin.
+One sequential earned-chest queue. Chest contents use a separate configurable table, quantities and random draw from run loot, even if some species overlap.
+Proposed private-test timer: 60 seconds per chest; release timer is undecided. The reference's 3-hour example is not an approved Be Dino timer.
+At enqueue: readyAt = max(serverNow, previousReadyAt) + duration. Claim completed entries; retain unfinished entries. Offline elapsed time counts.
+Do not silently discard rewards at capacity. Specify a bounded pending-batch or explicit overflow policy before implementation.
+No paid chests or paid timer skips for the first test.
 
 ## UI
 Lobby: Play, Collection, Eggs, Settings.

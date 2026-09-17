@@ -9,15 +9,19 @@ Updated 2026-09-17.
 | D03 | Approved by Znypr | Cute simple ground arena | Lower animation/map scope |
 | D04 | Approved by Znypr | Small complete collection loop, no paid shop | Three dinos, earned rewards, egg queue, one mutation |
 | D05 | Proposed | Luau + Rojo, one place | Simple AI-editable source workflow |
-| D06 | Proposed | Immediate collection rewards plus bonus eggs | Needs confirmation of intended reward relationship |
+| D06 | Approved by Znypr | Immediate run dinosaurs plus separate chest loot | Death/manual exit pays run loot immediately; chests are additional |
 | D07 | Proposed | 60-second private-test egg timer | Exercise whole loop during showcase |
 | D08 | Proposed | 10% PvP score margin and exit channel | Reduce ambiguous collisions/instant escape |
 | D09 | Proposed | Three species and equal initial speeds | Variety without major veteran speed advantage |
 
-## Questions needed before affected implementation
-1. Who owns the Roblox experience: Znypr personally or an existing group? Is Studio installed and can you perform import/publish and device test steps?
-2. What is the target date for the private test, and the total asset/tool budget? No paid purchases are assumed.
-3. Should run dinosaurs be awarded immediately with eggs as bonus, or should all collection rewards wait for eggs? Reference behavior is not fully established.
+| D10 | Approved by Znypr | €0 budget; personal account; Studio installed | Use free tools and original procedural assets |
+| D11 | Approved by Znypr | More catch score gives more copies; rarer tiers receive fewer copies; duplicates stack | Large-catalog examples are directional, not fixed tuning |
+| D12 | Proposed | Three-species test before catalog expansion | Prove mechanics before content production |
+
+## Remaining questions and resolved setup
+1. Setup resolved: Znypr's account; Studio installed. Still record the actual test experience/place IDs and verify a build can run.
+2. Budget resolved: €0. Target is ASAP; calendar test date remains unset and does not block the prototype.
+3. Reward relationship resolved: immediate dinosaur copies plus separate chest loot. Higher catch scores mean more total copies; quantities decrease exponentially across higher rarity tiers; repeated species stack.
 4. Is a 60-second egg timer acceptable for the private test, and should test progress later reset? Keep production data separate regardless.
 5. Do you accept a 10% eating margin and short vulnerable exit channel, or want strict higher-score contact eating and instant manual exit?
 6. What phone should we use as the minimum real-device target? Are controller/console controls necessary now?
@@ -40,3 +44,7 @@ Updated 2026-09-17.
 A new feature must identify which launch task it replaces or why it does not extend the critical path.
 Update this log when an owner answers; propagate to design and acceptance criteria.
 Keep proposed balancing reversible in config. Keep durable data contracts deliberate.
+
+## Reversible working defaults to avoid blocking early development
+Use separate disposable test data, 60-second test chest timers, the existing proposed 10% eating margin and 3-second exit channel only as configurable prototypes. These are not owner-approved final rules. Preserve one usable equipped copy when proposing mutation behavior; resolve exact consume/equip semantics before BD-014 acceptance. Desktop plus touch remain targets; name and test a real phone before release.
+Do not assume a strict reward cap is compatible with 'higher catch always means more loot': define a supported catch-score range and a run-ending limit instead of silently flattening rewards.
