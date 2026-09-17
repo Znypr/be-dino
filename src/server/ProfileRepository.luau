@@ -269,6 +269,139 @@ function ProfileRepository.release(player: Player)
     end)
 end
 
+function ProfileRepository.runLeaseSelfTest(): (boolean, string)
+    if not Config.PersistenceLeaseSelfTest then
+        return true, "disabled"
+    end
+
+    -- This probe never uses a player profile key. It exercises the same DataStore
+    -- lease rule with two synthetic server identities, then deletes the probe.
+    local probeKey = "__lease_probe:" .. HttpService:GenerateGUID(false)
+    local probeLeaseA = "probe-a:" .. HttpService:GenerateGUID(false)
+    local probeLeaseB = "probe-b:" .. HttpService:GenerateGUID(false)
+    local now = os.time()
+
+    local function cleanup()
+        pcall(function()
+            store:RemoveAsync(probeKey)
+        end)
+    end
+
+    local function fail(reason: string): (boolean, string)
+        cleanup()
+        return false, reason
+    end
+
+    local acquiredA = false
+    local okA = select(1, retry("lease self-test acquire A", function()
+        return store:UpdateAsync(probeKey, function(current)
+            if current ~= nil then return nil end
+            acquiredA = true
+            return {
+                kind = "lease_probe",
+                leaseId = probeLeaseA,
+                expiresAt = now + 30,
+                value = 0,
+            }
+        end)
+    end))
+    if not okA or not acquiredA then
+        return fail("acquire-a")
+    end
+
+    local blockedB = false
+    local okBlocked = select(1, retry("lease self-test block B", function()
+        return store:UpdateAsync(probeKey, function(current)
+            if typeof(current) ~= "table" then return nil end
+            if current.leaseId ~= probeLeaseB
+                and typeof(current.expiresAt) == "number"
+                and current.expiresAt > now then
+                blockedB = true
+                return nil
+            end
+            return current
+        end)
+    end))
+    if not okBlocked or not blockedB then
+        return fail("live-lease-not-blocked")
+    end
+
+    local expiredA = false
+    local okExpire = select(1, retry("lease self-test expire A", function()
+        return store:UpdateAsync(probeKey, function(current)
+            if typeof(current) ~= "table" or current.leaseId ~= probeLeaseA then
+                return nil
+            end
+            current.expiresAt = now - 1
+            expiredA = true
+            return current
+        end)
+    end))
+    if not okExpire or not expiredA then
+        return fail("expire-a")
+    end
+
+    local acquiredB = false
+    local okB = select(1, retry("lease self-test acquire B", function()
+        return store:UpdateAsync(probeKey, function(current)
+            if typeof(current) ~= "table" then return nil end
+            local expiresAt = current.expiresAt
+            if typeof(expiresAt) ~= "number" or expiresAt > now then
+                return nil
+            end
+            current.leaseId = probeLeaseB
+            current.expiresAt = now + 30
+            acquiredB = true
+            return current
+        end)
+    end))
+    if not okB or not acquiredB then
+        return fail("expired-lease-takeover")
+    end
+
+    local staleRejected = false
+    local okStale = select(1, retry("lease self-test reject stale A", function()
+        return store:UpdateAsync(probeKey, function(current)
+            if typeof(current) ~= "table" then return nil end
+            if current.leaseId ~= probeLeaseA then
+                staleRejected = true
+                return nil
+            end
+            current.value = 999
+            return current
+        end)
+    end))
+    if not okStale or not staleRejected then
+        return fail("stale-write-not-rejected")
+    end
+
+    local freshCommitted = false
+    local okFresh = select(1, retry("lease self-test write B", function()
+        return store:UpdateAsync(probeKey, function(current)
+            if typeof(current) ~= "table" or current.leaseId ~= probeLeaseB then
+                return nil
+            end
+            current.value = (current.value or 0) + 1
+            freshCommitted = true
+            return current
+        end)
+    end))
+    if not okFresh or not freshCommitted then
+        return fail("current-owner-write-failed")
+    end
+
+    local readOk, final = retry("lease self-test verify", function()
+        return store:GetAsync(probeKey)
+    end)
+    if not readOk or typeof(final) ~= "table"
+        or final.leaseId ~= probeLeaseB or final.value ~= 1 then
+        return fail("final-state-mismatch")
+    end
+
+    cleanup()
+    return true, "pass"
+end
+
 function ProfileRepository.start()
     if renewing then return end
     renewing = true
