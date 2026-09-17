@@ -22,6 +22,12 @@ jobs:
         run: python tools/build.py
       - name: Run packaging tests
         run: python -m unittest discover -s tests -v
+      - name: Upload Roblox place
+        uses: actions/upload-artifact@v4
+        with:
+          name: BeDino-Prototype
+          path: build/BeDino-Prototype.rbxlx
+          if-no-files-found: error
       - name: Commit generated build
         run: |
           if git diff --quiet -- build/BeDino-Prototype.rbxlx build/BeDino-Prototype.manifest.json; then
