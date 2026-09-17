@@ -15,9 +15,9 @@ local pads = Arena.build()
 local function setup(player: Player)
     player.CanLoadCharacterAppearance = false
     player.CharacterAdded:Connect(function(character)
-        Dinosaur.attach(character, Config.WalkSpeed)
+        Dinosaur.attach(character, Config.WalkSpeed, player)
     end)
-    if player.Character then task.spawn(Dinosaur.attach, player.Character, Config.WalkSpeed) end
+    if player.Character then task.spawn(Dinosaur.attach, player.Character, Config.WalkSpeed, player) end
 end
 Players.PlayerAdded:Connect(setup)
 for _, player in Players:GetPlayers() do setup(player) end

@@ -157,6 +157,7 @@ The two completed items are planning work, not game features. In-progress limit:
 **Evidence / next action:** No automatic public launch and no monetization dependency.
 
 ## Session log
+- 2026-09-17 tester results: Znypr passed movement/camera/respawn on 002; dinosaur and pads failed; obstacle overlap unresolved. Build 003 addresses a likely character-parenting race and adds setup diagnostics. BD-006 still Review / test; next: dinosaur/pads/reset retest.
 - 2026-09-17 Studio feedback: build 001 opened but server startup failed on a protected Workspace setting. Build 002 removes the assignment and is ready for retest; movement acceptance remains pending.
 - 2026-09-17 implementation: BD-004 source/build preparation delivered; local Studio action blocks acceptance. BD-006 movement spike delivered for review. Five Python packaging tests pass; no Luau compiler or Roblox runtime available here. See docs/11-prototype-verification.md. Next: Znypr opens build and reports Output/movement results.
 - 2026-09-17 update: Confirmed setup and loot rules propagated. BD-003 complete; BD-004 and BD-010 Ready. Reward specification added. No implementation or live testing completed. Next: BD-004.

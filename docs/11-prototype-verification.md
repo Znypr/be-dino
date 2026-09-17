@@ -1,5 +1,5 @@
 # Movement prototype verification
-Build: movement-spike-002. Date: 2026-09-17.
+Build: movement-spike-003. Date: 2026-09-17.
 
 ## Executed here
 Python 3.12.14; standard library only.
@@ -40,3 +40,11 @@ Pass / defect / next action:
 
 ## First Studio feedback and fix
 Znypr opened build 001: client HUD ran, but server startup failed on the protected FallenPartsDestroyHeight assignment (Bootstrap line 12). Arena generation and dinosaur setup never ran, leaving the default avatar falling. Build 002 removes that unnecessary runtime write and keeps the default place setting. Rebuilt successfully; all five packaging tests pass. Studio retest is pending, not claimed successful.
+
+## Build 002 user test results
+Znypr reports movement, camera and respawn working. Size pads do nothing; visible character remains the default avatar. Screenshots show avatar/block overlap; block deformation is not established. Collision remains unresolved.
+
+## Build 003 candidate fix
+Code review found character setup silently returns when CharacterAdded supplies an unparented model. Setup now waits up to 10 seconds for Workspace ancestry, cancels stale spawns, and logs attachment success or missing prerequisites. DinoAttached is set only after rendering completes. This is a likely cause, not a runtime-confirmed diagnosis. Five packaging tests pass; Studio retest is pending.
+
+Retest: green dinosaur on initial spawn; Output says Dinosaur attached; pad sequence 1/2/4/1 changes model and HUD; reset restores dinosaur at 1x. Then revisit obstacle overlap. Native avatar movement passing does not establish dinosaur movement acceptance.

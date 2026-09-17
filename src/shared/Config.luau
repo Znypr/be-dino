@@ -1,7 +1,7 @@
 --!strict
 -- Movement spike only. None of these values are final economy tuning.
 return table.freeze({
-    Build = "movement-spike-002",
+    Build = "movement-spike-003",
     WalkSpeed = 18,
     ArenaHalfWidth = 90,
     CameraMinZoom = 12,

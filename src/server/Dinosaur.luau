@@ -1,6 +1,7 @@
 --!strict
 -- Cosmetic shell over Roblox's standard controller. Collider does NOT scale.
 local Dinosaur = {}
+local RunService = game:GetService("RunService")
 local GREEN = Color3.fromRGB(100, 178, 117)
 local LIGHT = Color3.fromRGB(201, 221, 154)
 local DARK = Color3.fromRGB(63, 112, 80)
@@ -59,12 +60,26 @@ function Dinosaur.render(character: Model, scale: number)
     character:SetAttribute("VisualScale", scale)
 end
 
-function Dinosaur.attach(character: Model, walkSpeed: number)
+function Dinosaur.attach(character: Model, walkSpeed: number, player: Player)
+    -- CharacterAdded can arrive before the model is parented to Workspace.
+    -- Do not silently abandon that spawn; also stop if a newer spawn replaces it.
+    local deadline = os.clock() + 10
+    while not character:IsDescendantOf(workspace) do
+        if player.Character ~= character or not player.Parent then return end
+        if os.clock() >= deadline then
+            warn("[Be Dino] Character never entered Workspace: " .. player.Name)
+            return
+        end
+        RunService.Heartbeat:Wait()
+    end
     local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
     local root = character:WaitForChild("HumanoidRootPart", 10) :: BasePart?
-    if not humanoid or not root or not character.Parent then return end
+    if player.Character ~= character or not character:IsDescendantOf(workspace) then return end
+    if not humanoid or not root then
+        warn("[Be Dino] Missing Humanoid/root for " .. player.Name)
+        return
+    end
     if character:GetAttribute("DinoAttached") then return end
-    character:SetAttribute("DinoAttached", true)
     local function hide(instance: Instance)
         if instance:FindFirstAncestor("DinoVisual") then return end
         if instance:IsA("BasePart") then instance.Transparency = 1 end
@@ -79,6 +94,8 @@ function Dinosaur.attach(character: Model, walkSpeed: number)
     humanoid.AutoJumpEnabled = false
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
     Dinosaur.render(character, 1)
+    character:SetAttribute("DinoAttached", true)
+    print("[Be Dino] Dinosaur attached: " .. player.Name)
 end
 
 return Dinosaur
