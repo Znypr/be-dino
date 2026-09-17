@@ -1,7 +1,7 @@
 # Kanban and task specifications
 Updated 2026-09-17. This file is the canonical task tracker.
 
-Build 005 PvP/run-ending tests 1–9 passed in Studio. Build 006 persistence tests 1–10 also passed, including rejoin persistence, duplicate-settlement protection, fail-closed DataStore loading, Reset Character settlement and repeat-victim anti-farm behavior. Mobile remains untested. BD-011 now only needs the competing-session/stale-lease acceptance case.
+Build 005 PvP/run-ending tests 1–9 passed in Studio. Build 006 persistence tests 1–10 also passed, including rejoin persistence, duplicate-settlement protection, fail-closed DataStore loading, Reset Character settlement and repeat-victim anti-farm behavior. Build 007 is ready for the final BD-011 lease/stale-writer runtime verification. Mobile remains untested.
 
 ## Board
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
@@ -57,7 +57,7 @@ Done. Personal account, Studio installed, €0 target budget, immediate run dino
 ### BD-004 — reproducible project/private place
 **Done when:** source mapping/build is reproducible and the actual private test experience/place is recorded with isolated test data.
 
-Source mapping, dependency-free Python packager and generated `.rbxlx` are working. Local Studio builds have been opened and tested, but the project still does not record the private test place/experience IDs or isolated data namespace. That remains the blocker and becomes important for DataStore testing in BD-011.
+Source mapping, dependency-free Python packager and generated `.rbxlx` are working. A separate private test experience is now being used for DataStore testing, but the repository still does not record its experience/place IDs. That remains the blocker for closing BD-004.
 
 ### BD-005 — persistence and remote contracts
 Done as a specification. `docs/13-persistence-remote-contracts.md` chooses a project-owned `DataStoreService`/`UpdateAsync` repository with leases, revisions, immutable operation outcomes and explicit remote validation. Durable implementation remains BD-011.
@@ -88,7 +88,9 @@ Important finding: one Common alpha species reaches 50 copies at catch score 62.
 
 Build 006 runtime tests 1–10 passed. Confirmed: load/save/rejoin, exact +1 reward settlement, deliberate duplicate settlement does not double-grant, Reset Character settles the run, repeat-victim protection behaves as designed, disabling Studio API access fails closed with no playable dinosaur, and re-enabling access restores the prior profile. Znypr also confirmed Compy copies can increase above 3; the earlier apparent stop was the 60-second anti-farm window rather than a cap.
 
-Remaining before Done: a competing-session/stale-lease runtime test proving that a second server cannot acquire/write the same unexpired profile and that the original committed inventory remains intact.
+Build 007 adds a temporary non-player DataStore lease probe. It verifies a live lease blocks a second owner, an expired lease can be taken over, the stale owner cannot write after takeover, and the current owner can still write. The probe key is removed afterward and never uses the player profile keyspace. CI/build checks passed.
+
+Remaining before Done: Znypr runs the four checks in `docs/17-persistence-lease-test.md` and confirms the HUD reports `Lease test: PASS` while the saved Compy count remains unchanged.
 
 ### BD-012 — collection/equip
 **Done when:** three species definitions, owned/locked counts and equip survive reconnect; invalid equip is rejected.
@@ -126,9 +128,10 @@ Run the small invited session only after BD-020. Capture friction, repeat-run be
 Public scope is an evidence-based later decision. Passing code generation alone never triggers launch.
 
 ## Session log
+- 2026-09-17: Build 007 prepared for final BD-011 runtime verification. Added a temporary DataStore lease/stale-writer probe and HUD `Lease test` status. Final Build 007 CI passed and generated the test artifact.
 - 2026-09-17: Znypr reported Build 006 tests 1–10 passing. Rejoin persistence, duplicate settlement, Reset Character settlement, anti-farm behavior and fail-closed API/DataStore behavior passed. Compy copies were confirmed to continue above 3. BD-011 moved to Review / test pending the competing-session/stale-lease case.
 - 2026-09-17: Znypr reported Build 005 tests 1–9 all passing. BD-009 moved to Done for desktop multiplayer.
-- 2026-09-17: BD-010 economy simulation completed. Six deterministic tests pass across catch scores 0–5000. Private-test thresholds and chest grants are recorded in `docs/15-economy-simulation.md`; 50-copy Gold is flagged as intentionally fast test pacing. BD-011 is now Ready.
+- 2026-09-17: BD-010 economy simulation completed. Six deterministic tests pass across catch scores 0–5000. Private-test thresholds and chest grants are recorded in `docs/15-economy-simulation.md`; 50-copy Gold is flagged as intentionally fast test pacing.
 - 2026-09-17: Build 005 prepared. BD-005 specification completed. Added `RunLifecycle` and `PredationService`, one no-payload/rate-limited `RequestEndRun` remote, spawn protection, score-gated PvP, deterministic victim claim, temporary catch score, manual exit channel and a shared terminal guard. Generated build packages 8 scripts.
 - 2026-09-17: Znypr reported all Build 004 food/growth checklist cases working. BD-008 moved to Done.
 - 2026-09-17: Znypr reported all v003 desktop single-player checks and four two-client checks passed. Mobile remains untested, so BD-006 remains `Review / test`.
