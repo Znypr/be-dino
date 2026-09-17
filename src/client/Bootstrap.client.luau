@@ -28,9 +28,10 @@ local limit = Instance.new("UISizeConstraint")
 limit.MaxSize = Vector2.new(640, 100)
 limit.Parent = panel
 
-local scaleConnection: RBXScriptConnection? = nil
+local connections: {RBXScriptConnection} = {}
 local function onCharacter(character: Model)
-    if scaleConnection then scaleConnection:Disconnect() end
+    for _, connection in connections do connection:Disconnect() end
+    table.clear(connections)
     local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
     if not humanoid or player.Character ~= character then return end
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
@@ -38,9 +39,11 @@ local function onCharacter(character: Model)
         local scale = character:GetAttribute("VisualScale") or 1
         player.CameraMinZoomDistance = Config.CameraMinZoom * scale
         humanoid.CameraOffset = Vector3.new(0, (scale - 1) * 2, 0)
-        panel.Text = "BE DINO!  •  MOVEMENT PROTOTYPE\nMove: WASD / thumbstick   •   Look: drag / right mouse\nWalk onto a size pad: 1× / 2× / 4×   •   Current: " .. tostring(scale) .. "×"
+        local score = character:GetAttribute("GrowthScore") or 0
+        panel.Text = string.format("BE DINO!  •  FOOD & GROWTH\nEat the orange berries to grow!\nScore: %d   •   Size: %.2fx   •   Prototype: progress resets", score, scale)
     end
-    scaleConnection = character:GetAttributeChangedSignal("VisualScale"):Connect(update)
+    table.insert(connections, character:GetAttributeChangedSignal("VisualScale"):Connect(update))
+    table.insert(connections, character:GetAttributeChangedSignal("GrowthScore"):Connect(update))
     local camera = workspace.CurrentCamera
     if camera then
         camera.CameraType = Enum.CameraType.Custom

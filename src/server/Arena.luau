@@ -44,28 +44,7 @@ function Arena.build()
     local ramp = block(world, "SlopeTest", Vector3.new(16, 2, 24), Vector3.new(-48, 3, 10), Color3.fromRGB(178, 157, 120))
     ramp.CFrame = CFrame.new(-48, 3, 10) * CFrame.Angles(math.rad(12), 0, 0)
 
-    local pads = {}
-    for i, scale in {1, 2, 4} do
-        local pad = block(world, "Size" .. scale, Vector3.new(12, 0.4, 12),
-            Vector3.new((i - 2) * 24, 0.2, -5), Color3.fromRGB(220, 180 - i * 18, 90))
-        local gui = Instance.new("BillboardGui")
-        gui.Size = UDim2.fromOffset(140, 42)
-        gui.StudsOffset = Vector3.new(0, 3, 0)
-        gui.AlwaysOnTop = true
-        gui.MaxDistance = 120
-        gui.Parent = pad
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.fromScale(1, 1)
-        label.BackgroundTransparency = 1
-        label.Text = tostring(scale) .. "× SIZE"
-        label.Font = Enum.Font.GothamBold
-        label.TextSize = 22
-        label.TextColor3 = Color3.fromRGB(255, 255, 235)
-        label.TextStrokeTransparency = 0.4
-        label.Parent = gui
-        table.insert(pads, {part = pad, scale = scale})
-    end
-    return pads
+
 end
 
 return Arena

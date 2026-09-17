@@ -48,3 +48,6 @@ Znypr reports movement, camera and respawn working. Size pads do nothing; visibl
 Code review found character setup silently returns when CharacterAdded supplies an unparented model. Setup now waits up to 10 seconds for Workspace ancestry, cancels stale spawns, and logs attachment success or missing prerequisites. DinoAttached is set only after rendering completes. This is a likely cause, not a runtime-confirmed diagnosis. Five packaging tests pass; Studio retest is pending.
 
 Retest: green dinosaur on initial spawn; Output says Dinosaur attached; pad sequence 1/2/4/1 changes model and HUD; reset restores dinosaur at 1x. Then revisit obstacle overlap. Native avatar movement passing does not establish dinosaur movement acceptance.
+
+## v003 user acceptance
+Znypr reports all requested desktop single-player checks pass and all four two-client checks pass: both dinosaurs visible, movement replicated, size changes independently replicated, reset isolated. User-executed evidence, not an automated Roblox test. Mobile and published-place checks remain pending.

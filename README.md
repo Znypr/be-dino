@@ -1,7 +1,7 @@
 # Be Dino!
 An original Roblox dinosaur growth-and-collection arena inspired by Be Fish.
 
-**Stage:** first movement prototype built; Studio verification pending. **Updated:** 2026-09-17.
+**Stage:** desktop movement verified by Znypr; food/growth build 004 ready for testing. **Updated:** 2026-09-17.
 **Owner:** Znypr's Roblox account. **Studio:** installed. **Budget:** €0.
 **First milestone:** private community test with a small complete progression loop.
 
@@ -33,4 +33,4 @@ Prototype source, original procedural assets and a generated place file now exis
 Three species validate the first loop; a larger catalog follows after testing.
 
 ## Next action
-Open the prototype in Studio and run the movement, size-pad and two-client checks. BD-004 awaits local Studio setup verification; BD-006 awaits movement acceptance. BD-010 economy simulation remains Ready.
+Open build 004 and run [food/growth tests](docs/12-food-growth-test.md). Desktop movement and two-client replication passed on 003. Mobile and published private-place checks remain pending.

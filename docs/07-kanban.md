@@ -4,7 +4,7 @@ Updated 2026-09-17. This file is the canonical task tracker. Movement prototype 
 ## Board
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-005, BD-008–009, BD-011–022 | BD-007 art brief; BD-010 economy | None | BD-006 movement | BD-004 Studio verification | BD-001 research; BD-002 direction; BD-003 setup decisions |
+| BD-005, BD-009, BD-011–022 | BD-007 art brief; BD-010 economy | None | BD-006 mobile; BD-008 food | BD-004 Studio verification | BD-001 research; BD-002 direction; BD-003 setup decisions |
 
 Backlog tasks with unmet dependencies are not executable yet. Move to Blocked only when started work encounters an obstacle; record the obstacle and person/action needed.
 Ready means actionable now. Done means acceptance evidence exists, not merely code generated.
@@ -28,7 +28,7 @@ The two completed items are planning work, not game features. In-progress limit:
 | BD-005 | Backlog | P0 | ARCH | QA | Specify persistence and remote contracts | BD-003, BD-004 |
 | BD-006 | Review / test | P0 | DEV | QA | Prototype one dinosaur controller and camera | BD-004 |
 | BD-007 | Ready | P1 | ART | Znypr | Specify original asset kit and visual sample | BD-002 |
-| BD-008 | Backlog | P0 | DEV | QA | Implement food and growth | BD-005, BD-006 |
+| BD-008 | Review / test | P0 | DEV | QA | Implement food and growth | BD-005, BD-006 |
 | BD-009 | Backlog | P0 | DEV | QA | Implement PvP, spawn safety and run ending | BD-005, BD-008 |
 | BD-010 | Ready | P0 | GD | PO | Define and simulate alpha economy | BD-003 |
 | BD-011 | Backlog | P0 | DEV | QA | Build profile storage and idempotent settlement | BD-005, BD-009, BD-010 |
@@ -157,6 +157,7 @@ The two completed items are planning work, not game features. In-progress limit:
 **Evidence / next action:** No automatic public launch and no monetization dependency.
 
 ## Session log
+- 2026-09-17: Znypr reports all v003 desktop single-player checks and four two-client checks passed (visibility, movement replication, independent size changes, reset isolation). Mobile remains untested, so BD-006 is not fully Done. Build 004 adds food/growth for review; test-only size pads removed. See docs/12-food-growth-test.md for bounded prototype contracts and tests. Full BD-005 persistence review remains pending; this increment adds no persistent state or client remotes.
 - 2026-09-17 tester results: Znypr passed movement/camera/respawn on 002; dinosaur and pads failed; obstacle overlap unresolved. Build 003 addresses a likely character-parenting race and adds setup diagnostics. BD-006 still Review / test; next: dinosaur/pads/reset retest.
 - 2026-09-17 Studio feedback: build 001 opened but server startup failed on a protected Workspace setting. Build 002 removes the assignment and is ready for retest; movement acceptance remains pending.
 - 2026-09-17 implementation: BD-004 source/build preparation delivered; local Studio action blocks acceptance. BD-006 movement spike delivered for review. Five Python packaging tests pass; no Luau compiler or Roblox runtime available here. See docs/11-prototype-verification.md. Next: Znypr opens build and reports Output/movement results.

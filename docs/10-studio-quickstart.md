@@ -1,3 +1,5 @@
+> Current build: food-growth-004. Size pads have been replaced with berries. Follow [the current checklist](12-food-growth-test.md); movement-only instructions below describe the previous milestone.
+
 # Open the first movement prototype
 
 This is a movement test, not the complete game. It contains one original placeholder dinosaur, a walled arena, obstacles, a slope, camera/HUD and 1×/2×/4× visual-size pads. No food, combat, inventory, chests or saving yet.
