@@ -18,19 +18,19 @@ gui.Parent = player:WaitForChild("PlayerGui")
 local panel = Instance.new("TextLabel")
 panel.Position = UDim2.new(0.5, 0, 0, 12)
 panel.AnchorPoint = Vector2.new(0.5, 0)
-panel.Size = UDim2.new(0.9, 0, 0, 104)
+panel.Size = UDim2.new(0.94, 0, 0, 142)
 panel.BackgroundColor3 = Color3.fromRGB(32, 49, 42)
 panel.BackgroundTransparency = 0.12
 panel.TextColor3 = Color3.fromRGB(249, 243, 218)
 panel.Font = Enum.Font.GothamMedium
-panel.TextSize = 16
+panel.TextSize = 15
 panel.TextWrapped = true
 panel.Parent = gui
 local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 12)
 corner.Parent = panel
 local limit = Instance.new("UISizeConstraint")
-limit.MaxSize = Vector2.new(640, 116)
+limit.MaxSize = Vector2.new(720, 150)
 limit.Parent = panel
 
 local endButton = Instance.new("TextButton")
@@ -74,16 +74,38 @@ end
 player.CharacterAdded:Connect(onCharacter)
 if player.Character then task.spawn(onCharacter, player.Character) end
 
+local function numberAttr(name: string): number
+    local value = player:GetAttribute(name)
+    return if typeof(value) == "number" then value else 0
+end
+
 local elapsed = 0
 RunService.Heartbeat:Connect(function(dt)
     elapsed += dt
     if elapsed < 0.1 then return end
     elapsed = 0
 
+    local profileValue = player:GetAttribute("ProfileState")
+    local profileState = if typeof(profileValue) == "string" then profileValue else "Starting"
+    local rewardValue = player:GetAttribute("LastRewardText")
+    local probeValue = player:GetAttribute("LastSettlementProbe")
+    local rewardText = if typeof(rewardValue) == "string" and rewardValue ~= "" then rewardValue else "none yet"
+    local probeText = if typeof(probeValue) == "string" and probeValue ~= "" then probeValue else "not run yet"
+    local collectionText = string.format(
+        "Owned: Compy %d  •  Triceratops %d  •  T-Rex %d  •  Pending chests %d",
+        numberAttr("CompyCopies"),
+        numberAttr("TriceratopsCopies"),
+        numberAttr("TyrannosaurusCopies"),
+        numberAttr("PendingChestGrants")
+    )
+
     local character = currentCharacter
     local humanoid = currentHumanoid
     if not character or player.Character ~= character or not humanoid then
-        panel.Text = "BE DINO!  •  PVP TEST\nRespawning..."
+        panel.Text = string.format(
+            "BE DINO!  •  PERSISTENCE TEST\nProfile: %s  •  Idempotency: %s\n%s\nLast reward: %s",
+            profileState, probeText, collectionText, rewardText
+        )
         endButton.Active = false
         endButton.AutoButtonColor = false
         endButton.Text = "END RUN"
@@ -105,16 +127,15 @@ RunService.Heartbeat:Connect(function(dt)
     local protectionRemaining = math.max(0, protectionEnd - now)
     local status = if protectionRemaining > 0 then string.format("SAFE %.1fs", protectionRemaining) else "PVP ACTIVE"
 
-    local lastReasonValue = player:GetAttribute("LastRunEndReason")
-    local lastReason = if typeof(lastReasonValue) == "string" and lastReasonValue ~= "" then "  •  Last: " .. lastReasonValue else ""
     panel.Text = string.format(
-        "BE DINO!  •  FOOD + PVP\nEat berries. Bigger dinos can eat smaller dinos.\nGrowth: %d   •   Catches: %d   •   Size: %.2fx\n%s%s",
-        score, catches, scale, status, lastReason
+        "BE DINO!  •  PERSISTENCE TEST\nGrowth %d  •  Catches %d  •  Size %.2fx  •  %s\nProfile: %s  •  Idempotency: %s\n%s\nLast reward: %s",
+        score, catches, scale, status, profileState, probeText, collectionText, rewardText
     )
 
     local state = character:GetAttribute("RunState")
-    endButton.Active = state == "Active"
-    endButton.AutoButtonColor = state == "Active"
+    local canEnd = state == "Active" and profileState == "Loaded"
+    endButton.Active = canEnd
+    endButton.AutoButtonColor = canEnd
     local exitValue = character:GetAttribute("ExitChannelEndsAt")
     local exitEnd = if typeof(exitValue) == "number" then exitValue else 0
     local exitRemaining = math.max(0, exitEnd - now)

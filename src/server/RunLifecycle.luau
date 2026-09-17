@@ -7,6 +7,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local RunLifecycle = {}
 local lastExitRequest: {[Player]: number} = {}
 local requestEndRun: RemoteEvent? = nil
+local settleRun = nil
 
 local function activeCharacter(player: Player): Model?
     local character = player.Character
@@ -16,7 +17,12 @@ local function activeCharacter(player: Player): Model?
     return character
 end
 
+function RunLifecycle.configureSettlement(callback)
+    settleRun = callback
+end
+
 function RunLifecycle.begin(player: Player, character: Model)
+    if player:GetAttribute("ProfileState") ~= "Loaded" then return end
     if character:GetAttribute("RunId") ~= nil then return end
     character:SetAttribute("RunId", HttpService:GenerateGUID(false))
     character:SetAttribute("RunState", "Active")
@@ -44,16 +50,57 @@ function RunLifecycle.isProtected(character: Model, now: number?): boolean
     return endsAt > (now or workspace:GetServerTimeNow())
 end
 
+local function settlementSnapshot(character: Model)
+    local runId = character:GetAttribute("RunId")
+    local catchScore = character:GetAttribute("CatchScore")
+    if typeof(runId) ~= "string" then return nil end
+    if typeof(catchScore) ~= "number" or catchScore % 1 ~= 0 then return nil end
+    return {
+        runId = runId,
+        catchScore = math.clamp(catchScore, 0, Config.MaxCatchScore),
+    }
+end
+
+local function respawnAfterSettlement(player: Player, character: Model, snapshot, reason: string)
+    task.spawn(function()
+        local ok = true
+        if settleRun then
+            ok = settleRun(player, snapshot.runId, snapshot.catchScore, reason)
+        end
+        if not ok then
+            if player.Parent and player:GetAttribute("ProfileState") == "Loaded" then
+                player:SetAttribute("ProfileState", "SaveFailed")
+            end
+            return
+        end
+
+        character:SetAttribute("RunState", "Settled")
+        if not player.Parent then return end
+        task.wait(Config.RespawnDelaySeconds)
+        if player.Parent and player:GetAttribute("ProfileState") == "Loaded" then
+            local loaded, err = pcall(function()
+                player:LoadCharacterAsync()
+            end)
+            if not loaded then
+                warn("[Be Dino] respawn failed: " .. tostring(err))
+            end
+        end
+    end)
+end
+
 function RunLifecycle.tryEnd(player: Player, character: Model, reason: string, sourceUserId: number?): boolean
     if player.Character ~= character or character:GetAttribute("RunState") ~= "Active" then
         return false
     end
+    local snapshot = settlementSnapshot(character)
+    if not snapshot then
+        return false
+    end
 
-    -- The state flip happens before any yield/death signal, so competing terminal paths lose deterministically.
     character:SetAttribute("RunState", "Ending")
     character:SetAttribute("ExitChannelEndsAt", 0)
     player:SetAttribute("LastRunEndReason", reason)
-    player:SetAttribute("LastRunId", character:GetAttribute("RunId"))
+    player:SetAttribute("LastRunId", snapshot.runId)
     player:SetAttribute("LastRunEndAt", workspace:GetServerTimeNow())
     player:SetAttribute("LastPredatorUserId", sourceUserId or 0)
 
@@ -61,7 +108,31 @@ function RunLifecycle.tryEnd(player: Player, character: Model, reason: string, s
     if humanoid and humanoid.Health > 0 then
         humanoid.Health = 0
     end
+
+    respawnAfterSettlement(player, character, snapshot, reason)
     return true
+end
+
+function RunLifecycle.endForDisconnect(player: Player): string
+    local character = player.Character
+    if not character then return "none" end
+    if character:GetAttribute("RunState") == "Ending" then
+        return "busy"
+    end
+    if character:GetAttribute("RunState") ~= "Active" then
+        return "none"
+    end
+    local snapshot = settlementSnapshot(character)
+    if not snapshot then return "none" end
+
+    character:SetAttribute("RunState", "Ending")
+    character:SetAttribute("ExitChannelEndsAt", 0)
+    player:SetAttribute("LastRunEndReason", "Disconnect")
+    if settleRun then
+        local ok = settleRun(player, snapshot.runId, snapshot.catchScore, "Disconnect")
+        return if ok then "settled" else "failed"
+    end
+    return "settled"
 end
 
 local function cancelExit(character: Model)
@@ -120,8 +191,8 @@ function RunLifecycle.start()
 
     local remote = requestEndRun :: RemoteEvent
     remote.OnServerEvent:Connect(function(player: Player, ...)
-        -- This remote has no payload. Reject unexpected arguments rather than expanding the trust boundary.
         if select("#", ...) ~= 0 then return end
+        if player:GetAttribute("ProfileState") ~= "Loaded" then return end
         local now = os.clock()
         local last = lastExitRequest[player] or -math.huge
         if now - last < Config.ExitRequestCooldownSeconds then return end

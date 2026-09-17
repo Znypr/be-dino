@@ -16,13 +16,35 @@ end
 
 function PredationService.start(runLifecycle, dinosaur)
     local previous = {}
+    local recentPairs: {[number]: {[number]: number}} = {}
     local arenaParams = RaycastParams.new()
     arenaParams.FilterType = Enum.RaycastFilterType.Include
     arenaParams.FilterDescendantsInstances = {workspace.BeDinoArena}
 
     Players.PlayerRemoving:Connect(function(player)
         previous[player] = nil
+        recentPairs[player.UserId] = nil
+        for _, victims in recentPairs do
+            victims[player.UserId] = nil
+        end
     end)
+
+    local function awardCatch(attacker, victimUserId: number, now: number)
+        local victims = recentPairs[attacker.player.UserId]
+        if not victims then
+            victims = {}
+            recentPairs[attacker.player.UserId] = victims
+        end
+        local last = victims[victimUserId] or -math.huge
+        if now - last < Config.RepeatVictimCatchCooldownSeconds then
+            return
+        end
+        victims[victimUserId] = now
+        local catches = numberAttribute(attacker.character, "CatchScore", 0)
+        if catches < Config.MaxCatchScore then
+            attacker.character:SetAttribute("CatchScore", catches + 1)
+        end
+    end
 
     task.spawn(function()
         while true do
@@ -90,8 +112,7 @@ function PredationService.start(runLifecycle, dinosaur)
                 end
 
                 if winner and runLifecycle.tryEnd(victim.player, victim.character, "Eaten", winner.player.UserId) then
-                    local catches = numberAttribute(winner.character, "CatchScore", 0)
-                    winner.character:SetAttribute("CatchScore", catches + 1)
+                    awardCatch(winner, victim.player.UserId, serverNow)
                     dinosaur.addGrowth(winner.character, Config.PredationGrowthPoints)
                 end
             end
