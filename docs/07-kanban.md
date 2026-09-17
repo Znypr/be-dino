@@ -1,12 +1,12 @@
 # Kanban and task specifications
 Updated 2026-09-17. This file is the canonical task tracker.
 
-Build 005 PvP/run-ending tests 1–9 passed in Studio. Desktop movement, multiplayer replication, food/growth and PvP/run ending are accepted. Mobile remains untested. BD-010 economy simulation is complete; BD-011 persistence/settlement is now the next P0 implementation task.
+Build 005 PvP/run-ending tests 1–9 passed in Studio. Build 006 persistence tests 1–10 also passed, including rejoin persistence, duplicate-settlement protection, fail-closed DataStore loading, Reset Character settlement and repeat-victim anti-farm behavior. Mobile remains untested. BD-011 now only needs the competing-session/stale-lease acceptance case.
 
 ## Board
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-012–022 | BD-007 art brief; BD-011 persistence | None | BD-006 mobile | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-008, BD-009, BD-010 |
+| BD-012–022 | BD-007 art brief | None | BD-006 mobile; BD-011 persistence | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-008, BD-009, BD-010 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -30,7 +30,7 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 | BD-008 | Done | P0 | Implement food and growth | BD-005, BD-006 |
 | BD-009 | Done | P0 | Implement PvP, spawn safety and run ending | BD-005, BD-008 |
 | BD-010 | Done | P0 | Define and simulate alpha economy | BD-003 |
-| BD-011 | Ready | P0 | Build profile storage and idempotent settlement | BD-005, BD-009, BD-010 |
+| BD-011 | Review / test | P0 | Build profile storage and idempotent settlement | BD-005, BD-009, BD-010 |
 | BD-012 | Backlog | P0 | Build collection and equip | BD-011 |
 | BD-013 | Backlog | P0 | Build earned egg queue | BD-010, BD-011 |
 | BD-014 | Backlog | P0 | Build Gold mutation | BD-012 |
@@ -86,7 +86,9 @@ Important finding: one Common alpha species reaches 50 copies at catch score 62.
 ### BD-011 — persistence/settlement
 **Done when:** rejoin, load failures, duplicate settlement, stale sessions and competing servers preserve committed inventory and immutable run outcomes.
 
-Ready. Use the BD-005 contract and BD-010 reward configuration. Never overwrite a failed load with defaults. Actual DataStore verification requires a published private test experience with isolated test data.
+Build 006 runtime tests 1–10 passed. Confirmed: load/save/rejoin, exact +1 reward settlement, deliberate duplicate settlement does not double-grant, Reset Character settles the run, repeat-victim protection behaves as designed, disabling Studio API access fails closed with no playable dinosaur, and re-enabling access restores the prior profile. Znypr also confirmed Compy copies can increase above 3; the earlier apparent stop was the 60-second anti-farm window rather than a cap.
+
+Remaining before Done: a competing-session/stale-lease runtime test proving that a second server cannot acquire/write the same unexpired profile and that the original committed inventory remains intact.
 
 ### BD-012 — collection/equip
 **Done when:** three species definitions, owned/locked counts and equip survive reconnect; invalid equip is rejected.
@@ -124,6 +126,7 @@ Run the small invited session only after BD-020. Capture friction, repeat-run be
 Public scope is an evidence-based later decision. Passing code generation alone never triggers launch.
 
 ## Session log
+- 2026-09-17: Znypr reported Build 006 tests 1–10 passing. Rejoin persistence, duplicate settlement, Reset Character settlement, anti-farm behavior and fail-closed API/DataStore behavior passed. Compy copies were confirmed to continue above 3. BD-011 moved to Review / test pending the competing-session/stale-lease case.
 - 2026-09-17: Znypr reported Build 005 tests 1–9 all passing. BD-009 moved to Done for desktop multiplayer.
 - 2026-09-17: BD-010 economy simulation completed. Six deterministic tests pass across catch scores 0–5000. Private-test thresholds and chest grants are recorded in `docs/15-economy-simulation.md`; 50-copy Gold is flagged as intentionally fast test pacing. BD-011 is now Ready.
 - 2026-09-17: Build 005 prepared. BD-005 specification completed. Added `RunLifecycle` and `PredationService`, one no-payload/rate-limited `RequestEndRun` remote, spawn protection, score-gated PvP, deterministic victim claim, temporary catch score, manual exit channel and a shared terminal guard. Generated build packages 8 scripts.
