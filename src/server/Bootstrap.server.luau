@@ -12,6 +12,7 @@ local MutationService = require(script.Parent.MutationService)
 local MovementGuard = require(script.Parent.MovementGuard)
 local ProfileRepository = require(script.Parent.ProfileRepository)
 local RunLifecycle = require(script.Parent.RunLifecycle)
+local VisualTestService = require(script.Parent.VisualTestService)
 
 Players.CharacterAutoLoads = false
 
@@ -46,6 +47,7 @@ CollectionService.start(ProfileRepository, Dinosaur)
 ChestService.start(ProfileRepository)
 MutationService.start(ProfileRepository, Dinosaur)
 MovementGuard.start()
+VisualTestService.start(Dinosaur)
 
 local function spawnLoadedPlayer(player: Player)
     player.CanLoadCharacterAppearance = false
@@ -94,4 +96,4 @@ FoodService.start(Dinosaur)
 local PredationService = require(script.Parent.PredationService)
 PredationService.start(RunLifecycle, Dinosaur)
 
-print("[Be Dino] " .. Config.Build .. " ready. Security regression test.")
+print("[Be Dino] " .. Config.Build .. " ready. Visual kit test.")

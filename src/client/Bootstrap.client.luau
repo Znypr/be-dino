@@ -18,6 +18,9 @@ local mutateSpecies = remotes:WaitForChild("MutateSpecies") :: RemoteEvent
 local testGrantSpecies = remotes:WaitForChild("TestGrantSpecies") :: RemoteEvent
 local testGrantChests = remotes:WaitForChild("TestGrantChests") :: RemoteEvent
 local testSetMutationCopies = remotes:WaitForChild("TestSetMutationCopies") :: RemoteEvent
+local previewDinosaurArt = if Config.ArtTestHarnessEnabled
+    then remotes:WaitForChild("PreviewDinosaurArt") :: RemoteEvent
+    else nil
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "CoreUI"
@@ -590,6 +593,83 @@ teleportTest.Activated:Connect(function()
         refreshSecurityStatus()
     end)
 end)
+
+local artButton = Instance.new("TextButton")
+artButton.Position = UDim2.fromOffset(12, 92)
+artButton.Size = UDim2.fromOffset(124, 36)
+artButton.BackgroundColor3 = Color3.fromRGB(65, 91, 70)
+artButton.TextColor3 = Color3.new(1, 1, 1)
+artButton.Font = Enum.Font.GothamBold
+artButton.TextSize = 12
+artButton.Text = "ART PREVIEW"
+artButton.Visible = Config.ArtTestHarnessEnabled
+artButton.Parent = gui
+rounded(artButton, 9)
+
+local artPanel = Instance.new("Frame")
+artPanel.Position = UDim2.fromOffset(12, 136)
+artPanel.Size = UDim2.fromOffset(310, 184)
+artPanel.BackgroundColor3 = Color3.fromRGB(34, 46, 39)
+artPanel.Visible = false
+artPanel.Parent = gui
+rounded(artPanel, 12)
+
+local artTitle = Instance.new("TextLabel")
+artTitle.BackgroundTransparency = 1
+artTitle.Position = UDim2.fromOffset(10, 8)
+artTitle.Size = UDim2.new(1, -20, 0, 26)
+artTitle.Text = "BUILD 013 ART PREVIEW"
+artTitle.TextColor3 = Color3.fromRGB(244, 232, 185)
+artTitle.Font = Enum.Font.GothamBold
+artTitle.TextSize = 14
+artTitle.Parent = artPanel
+
+local artStatus = Instance.new("TextLabel")
+artStatus.BackgroundTransparency = 1
+artStatus.Position = UDim2.fromOffset(10, 34)
+artStatus.Size = UDim2.new(1, -20, 0, 24)
+artStatus.Text = "Visual only, not saved"
+artStatus.TextColor3 = Color3.fromRGB(218, 226, 214)
+artStatus.Font = Enum.Font.GothamMedium
+artStatus.TextSize = 11
+artStatus.Parent = artPanel
+
+local function artPreviewButton(x: number, y: number, w: number, textValue: string): TextButton
+    local b = Instance.new("TextButton")
+    b.Position = UDim2.fromOffset(x, y)
+    b.Size = UDim2.fromOffset(w, 34)
+    b.BackgroundColor3 = Color3.fromRGB(67, 89, 73)
+    b.TextColor3 = Color3.new(1, 1, 1)
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 11
+    b.Text = textValue
+    b.Parent = artPanel
+    rounded(b, 8)
+    return b
+end
+
+local compyPreview = artPreviewButton(10, 66, 90, "COMPY")
+local triPreview = artPreviewButton(110, 66, 90, "TRICERATOPS")
+local rexPreview = artPreviewButton(210, 66, 90, "T-REX")
+local goldPreview = artPreviewButton(10, 108, 140, "GOLD CURRENT")
+local restorePreview = artPreviewButton(160, 108, 140, "RESTORE SAVED")
+local closeArt = artPreviewButton(210, 150, 90, "CLOSE")
+
+local previewSpecies = "compy"
+local function preview(speciesId: string, gold: boolean)
+    previewSpecies = speciesId
+    if previewDinosaurArt then previewDinosaurArt:FireServer(speciesId, gold, false) end
+end
+
+artButton.Activated:Connect(function() artPanel.Visible = not artPanel.Visible end)
+compyPreview.Activated:Connect(function() preview("compy", false) end)
+triPreview.Activated:Connect(function() preview("triceratops", false) end)
+rexPreview.Activated:Connect(function() preview("tyrannosaurus", false) end)
+goldPreview.Activated:Connect(function() preview(previewSpecies, true) end)
+restorePreview.Activated:Connect(function()
+    if previewDinosaurArt then previewDinosaurArt:FireServer("compy", false, true) end
+end)
+closeArt.Activated:Connect(function() artPanel.Visible = false end)
 
 local tutorialShade = Instance.new("Frame")
 tutorialShade.Size = UDim2.fromScale(1, 1)

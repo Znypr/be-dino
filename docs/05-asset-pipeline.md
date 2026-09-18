@@ -1,5 +1,5 @@
 # Asset, UI and audio production
-Goal: coherent original assets that are cheap to revise and work in Roblox. An original procedural dinosaur, arena and basic HUD now exist as movement-test placeholders; art acceptance remains pending.
+Goal: coherent original assets that are cheap to revise and work in Roblox. Build 013 now contains the first deliberate original procedural dinosaur/map kit; runtime art acceptance is BD-016.
 
 ## Production strategy
 Use procedural Roblox parts for the first playable dinosaur/map. Codex can generate the geometry/setup scripts directly.
@@ -25,7 +25,7 @@ Budget is €0. Use procedural Studio assets, free local tools and already avail
 ## Art direction
 Cute chunky prehistoric animals, warm stone/leaf/amber palette, clean outlines in UI, readable open ground.
 Do not trace Be Fish icons or reproduce its brown panels, exact illustrations or layout.
-One concept sheet is enough before blockout. Judge the in-game camera view rather than isolated renders.
+For the procedural private-test fallback, the in-game Build 013 silhouettes serve as the visual sample. Judge the in-game camera view rather than isolated renders.
 Provisional budgets: around 2k triangles per dinosaur, one small texture atlas where feasible, limited transparent effects. These are project targets to profile, not Roblox limits.
 
 ## Reproducible pipeline

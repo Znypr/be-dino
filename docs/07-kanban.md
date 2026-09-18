@@ -1,12 +1,12 @@
 # Kanban and task specifications
 Updated 2026-09-17. This file is the canonical task tracker.
 
-Build 005 PvP/run-ending tests 1–9 passed. Build 006 persistence tests 1–10 passed. Build 007 lease/stale-writer verification and restart persistence passed in the new private test experience. BD-011 is Done. Build 008 collection/equip passed all 8 runtime tests. BD-012 is Done. Build 009 earned chest queue passed all 8 runtime tests. BD-013 is Done. Build 010 Gold mutation passed all 8 runtime tests. BD-014 is Done. Build 011 core UI passed all 8 desktop/phone-emulator tests. BD-015 is Done. Build 012 security/multiplayer regression is ready for testing. Mobile remains untested.
+Build 005 PvP/run-ending tests 1–9 passed. Build 006 persistence tests 1–10 passed. Build 007 lease/stale-writer verification and restart persistence passed in the new private test experience. BD-011 is Done. Build 008 collection/equip passed all 8 runtime tests. BD-012 is Done. Build 009 earned chest queue passed all 8 runtime tests. BD-013 is Done. Build 010 Gold mutation passed all 8 runtime tests. BD-014 is Done. Build 011 core UI passed all 8 desktop/phone-emulator tests. BD-015 is Done. Build 012 security/multiplayer regression passed all 8 runtime tests. BD-018 is Done. Build 013 original visual kit is ready for testing. Mobile remains untested.
 
 ## Board
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-016–017; BD-019–022 | BD-007 art brief | None | BD-006 mobile; BD-018 security/multiplayer | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015 |
+| BD-017; BD-019–022 | None | None | BD-006 mobile; BD-016 visual kit | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -26,7 +26,7 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 | BD-004 | Blocked | P0 | Bootstrap reproducible project and private test place | BD-003 |
 | BD-005 | Done | P0 | Specify persistence and remote contracts | BD-003 |
 | BD-006 | Review / test | P0 | Prototype one dinosaur controller and camera | BD-004 |
-| BD-007 | Ready | P1 | Specify original asset kit and visual sample | BD-002 |
+| BD-007 | Done | P1 | Specify original asset kit and visual sample | BD-002 |
 | BD-008 | Done | P0 | Implement food and growth | BD-005, BD-006 |
 | BD-009 | Done | P0 | Implement PvP, spawn safety and run ending | BD-005, BD-008 |
 | BD-010 | Done | P0 | Define and simulate alpha economy | BD-003 |
@@ -35,9 +35,9 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 | BD-013 | Done | P0 | Build earned egg queue | BD-010, BD-011 |
 | BD-014 | Done | P0 | Build Gold mutation | BD-012 |
 | BD-015 | Done | P0 | Implement core UI and first-session guidance | BD-006, BD-012, BD-013, BD-014 |
-| BD-016 | Backlog | P1 | Produce and integrate dinosaur/map kit | BD-006, BD-007 |
+| BD-016 | Review / test | P1 | Produce and integrate dinosaur/map kit | BD-006, BD-007 |
 | BD-017 | Backlog | P1 | Integrate minimal sound feedback | BD-004, BD-008, BD-013 |
-| BD-018 | Review / test | P0 | Run multiplayer, security and persistence suite | BD-011–015 |
+| BD-018 | Done | P0 | Run multiplayer, security and persistence suite | BD-011–015 |
 | BD-019 | Backlog | P0 | Run device/load and published-asset checks | BD-015–017 |
 | BD-020 | Backlog | P0 | Prepare private test release and rollback | BD-018, BD-019 |
 | BD-021 | Backlog | P0 | Observe community test and triage | BD-020 |
@@ -70,7 +70,7 @@ Desktop evidence passed: movement, camera, dinosaur visibility, size behavior, r
 ### BD-007 — asset kit
 **Done when:** one original dinosaur silhouette/palette, manifest template and procedural fallback are reviewable.
 
-Ready and non-blocking. Do not polish the whole catalog before the loop works.
+Done. `docs/23-original-asset-manifest.md` records the original procedural silhouettes, palettes, Gold treatment, arena kit, rights/source and zero external-asset dependency used by Build 013.
 
 ### BD-008 — food/growth
 Done. Znypr reported all Build 004 checklist cases working: pickup, growth, respawn, simultaneous ownership, remote growth replication and reset. The implementation remains bounded and server-owned; tuning is temporary.
@@ -113,13 +113,15 @@ Build 011 passed all eight checks. Tutorial, compact HUD, grouped collection row
 ### BD-016 — dinosaur/map kit
 **Done when:** three distinct original dinosaurs, one arena and Gold treatment pass collision/camera/permission checks. Procedural fallback is acceptable for the private test.
 
+Build 013 integrates the original procedural Compy, Triceratops, T-Rex, Gold treatment and meadow/nest environment kit. All decorative props are non-colliding and no external asset permissions are required. See `docs/24-visual-kit-test.md`.
+
 ### BD-017 — audio
 **Done when:** minimal effects work for a non-owner published tester with independent mute/volume behavior. Ambience is optional.
 
 ### BD-018 — multiplayer/security/persistence suite
 Execute the verification matrix from `docs/06-roadmap-and-testing.md`. Source inspection is not runtime evidence.
 
-Build 012 adds an exploit-oriented remote attack harness plus a server movement guard that restores the last trusted position after impossible displacement. The runtime checklist also re-runs two-client isolation, equal-size PvP, predation and end-run-vs-predation terminal races. See `docs/22-security-multiplayer-test.md`.
+Build 012 passed all eight runtime checks. Malformed/flooded remotes, impossible movement correction, normal gameplay after attacks, two-client isolation, equal-size safety, one predation outcome, end-run-vs-predation terminal race and post-restart inventory persistence all passed. BD-018 is Done.
 
 ### BD-019 — device/load/published assets
 Requires a real target phone plus the agreed multiplayer/pickup load test and non-owner asset checks.
@@ -134,6 +136,7 @@ Run the small invited session only after BD-020. Capture friction, repeat-run be
 Public scope is an evidence-based later decision. Passing code generation alone never triggers launch.
 
 ## Session log
+- 2026-09-18: Znypr reported Build 012 tests 1–8 passing; per-run Growth/Size/Catches correctly reset while persistent inventory remained. BD-018 moved to Done. BD-007 asset specification completed and Build 013 visual kit prepared for BD-016 testing.
 - 2026-09-18: Znypr reported all Build 011 core UI tests passing, including phone-landscape emulator interaction. BD-015 moved to Done. Build 012 security/multiplayer regression prepared for BD-018.
 - 2026-09-18: Znypr reported all Build 010 Gold mutation tests passing. BD-014 moved to Done. Build 011 core UI prepared for desktop and phone-landscape emulator verification.
 - 2026-09-18: Znypr reported all Build 009 chest queue tests passing. BD-013 moved to Done. Build 010 Gold mutation prepared for BD-014 runtime verification.

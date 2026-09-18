@@ -1,14 +1,14 @@
 # Be Dino!
 An original Roblox dinosaur growth-and-collection arena inspired by Be Fish.
 
-**Stage:** persistent loop + core UI accepted; Build 012 security/multiplayer regression ready for Studio testing. **Updated:** 2026-09-18.
+**Stage:** persistent loop, core UI and security regression accepted; Build 013 visual kit ready for Studio testing. **Updated:** 2026-09-18.
 **Owner:** Znypr's Roblox account. **Studio:** installed. **Budget:** €0.
 **First milestone:** private community test with a small complete progression loop.
 
 ## Try the prototype
 Download [BeDino-Prototype.rbxlx](build/BeDino-Prototype.rbxlx), open it in Studio, and use the current private test experience. No plugin is required.
 
-For the current build, use [Build 012 security/multiplayer test](docs/22-security-multiplayer-test.md). The general Studio workflow remains in [Studio quickstart](docs/10-studio-quickstart.md).
+For the current build, use [Build 013 visual kit test](docs/24-visual-kit-test.md). The general Studio workflow remains in [Studio quickstart](docs/10-studio-quickstart.md).
 
 ## Start here
 - [Project brief and roles](docs/01-project-brief.md)
@@ -38,7 +38,8 @@ Catch score is distinct from growth score. Exact balancing remains proposed.
 - Build 009: earned chest queue tests 1–8 passed.
 - Build 010: Gold mutation tests 1–8 passed.
 - Build 011: core UI tests 1–8 passed, including phone-landscape emulator.
-- Build 012: security/multiplayer regression ready for runtime verification.
+- Build 012: security/multiplayer regression tests 1–8 passed.
+- Build 013: original procedural dinosaur/map kit ready for visual runtime verification.
 - Mobile/touch remains pending.
 
 ## Working agreement
@@ -47,4 +48,4 @@ Use original assets, free tools and server-owned gameplay state.
 Three species validate the first progression loop; a larger catalog follows after testing.
 
 ## Next action
-Run the Build 012 checks in [docs/22-security-multiplayer-test.md](docs/22-security-multiplayer-test.md).
+Run the Build 013 checks in [docs/24-visual-kit-test.md](docs/24-visual-kit-test.md).
