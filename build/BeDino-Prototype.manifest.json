@@ -1,13 +1,13 @@
 {
   "format": 1,
-  "place_sha256": "8e2ca2773fc1591bbebf9541c4be28025da7370015130a2a2a38b86ed09bb3b4",
+  "place_sha256": "0212df1701a985d825b9204b3a594ca7550b59c6ec1cb468a5fcf99d2b38650e",
   "sources": {
-    "src/shared/Config.luau": "0e0a11db10b0e0fd374cf231d89b7e98ba60f1b21232bdf3eb40f7ca8ad3c765",
-    "src/server/Arena.luau": "d0ac46c01f2359d3939a44828c3ccc9a89a23968031ff017bbd4a5708c66a488",
-    "src/server/Bootstrap.server.luau": "58c86a6242200aed9667b0253d81fd79ac3763c9612335bad921107e95c71539",
+    "src/shared/Config.luau": "85f360b6eb9777f1195a1050f9e2e94d34747d29ca089e1ae772dc9b51a9d3fe",
+    "src/server/Arena.luau": "c27df6be3f3a34444194b4679268354c939f76a08464680ad81104d9e1e27af8",
+    "src/server/Bootstrap.server.luau": "7b5315055bd6080dee337c5759824f514067a74bba7acaaf86a7571cec69469c",
     "src/server/ChestService.luau": "741b4801c30a3e23088ab005d2685d6011e0d130a6aba8b00d81ad5ddd31bde1",
     "src/server/CollectionService.luau": "05ae04a12e90d6c181e3d140ac35c8347bcd15b775bdb1f2d1878bf43bf3c8ee",
-    "src/server/Dinosaur.luau": "23158f8058b31057d4ab26f848a8fd139487e9622b05339764322d8c225ed5ed",
+    "src/server/Dinosaur.luau": "bcdefb7df5b1b82e2581a4efe704f0c6ac7ca512db1a6956c21ba18079238cef",
     "src/server/FoodService.luau": "64a2bcb8e1cec7b20f1f803d8e48e5756d47da759af580b0af4f54679e8283a8",
     "src/server/MovementGuard.luau": "393bdfec1b06d038e6207bc5d3220946a8940a12058afc08ec799fafc493f9ed",
     "src/server/MutationService.luau": "771c7fb949d8b4cdb4a0b518c2778be0c9ff140a05c050d2030bb090547460c2",
@@ -15,6 +15,7 @@
     "src/server/ProfileRepository.luau": "8187f4168f3735782067d2e813d60b4838232c2b0c3fd2b515d51d17ab1042ec",
     "src/server/RewardMath.luau": "eeddcd6c722213f109a6e37a0d47e70c59f39138aca8c0ade24d1a23474708ef",
     "src/server/RunLifecycle.luau": "120ded245eb27e3cd5daf50f411d05305be748dee594ec1c0bddfb5805c7e269",
-    "src/client/Bootstrap.client.luau": "c8659d39e482c8a4f20ba00b9162d6aa75d11beae7451242a9b8455132308c5e"
+    "src/server/VisualTestService.luau": "ee48ddc907c11e5d1390483d570d9ab96fd01b3ee02493b5724a2ebcf1ef0773",
+    "src/client/Bootstrap.client.luau": "302625708c90b6d2e10f850dc6f3c8d6eb3385c0528b217236d9f696e95c436e"
   }
 }
