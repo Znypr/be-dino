@@ -15,6 +15,9 @@ local requestEndRun = remotes:WaitForChild("RequestEndRun") :: RemoteEvent
 local equipSpecies = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
 local claimChest = remotes:WaitForChild("ClaimChest") :: RemoteEvent
 local mutateSpecies = remotes:WaitForChild("MutateSpecies") :: RemoteEvent
+local testGrantSpecies = remotes:WaitForChild("TestGrantSpecies") :: RemoteEvent
+local testGrantChests = remotes:WaitForChild("TestGrantChests") :: RemoteEvent
+local testSetMutationCopies = remotes:WaitForChild("TestSetMutationCopies") :: RemoteEvent
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "CoreUI"
@@ -403,6 +406,189 @@ chestButton.Activated:Connect(function() openModal("chests") renderChests() end)
 
 endButton.Activated:Connect(function()
     requestEndRun:FireServer()
+end)
+
+local securityButton = Instance.new("TextButton")
+securityButton.Position = UDim2.fromOffset(12, 92)
+securityButton.Size = UDim2.fromOffset(124, 36)
+securityButton.BackgroundColor3 = Color3.fromRGB(91, 55, 55)
+securityButton.TextColor3 = Color3.new(1, 1, 1)
+securityButton.Font = Enum.Font.GothamBold
+securityButton.TextSize = 12
+securityButton.Text = "SECURITY TEST"
+securityButton.Visible = Config.SecurityTestHarnessEnabled
+securityButton.Parent = gui
+rounded(securityButton, 9)
+
+local securityPanel = Instance.new("Frame")
+securityPanel.Position = UDim2.fromOffset(12, 136)
+securityPanel.Size = UDim2.fromOffset(300, 168)
+securityPanel.BackgroundColor3 = Color3.fromRGB(42, 35, 35)
+securityPanel.Visible = false
+securityPanel.Parent = gui
+rounded(securityPanel, 12)
+
+local securityTitle = Instance.new("TextLabel")
+securityTitle.BackgroundTransparency = 1
+securityTitle.Position = UDim2.fromOffset(10, 8)
+securityTitle.Size = UDim2.new(1, -20, 0, 26)
+securityTitle.Text = "BUILD 012 SECURITY"
+securityTitle.TextColor3 = Color3.fromRGB(255, 220, 200)
+securityTitle.Font = Enum.Font.GothamBold
+securityTitle.TextSize = 14
+securityTitle.Parent = securityPanel
+
+local securityStatus = Instance.new("TextLabel")
+securityStatus.BackgroundTransparency = 1
+securityStatus.Position = UDim2.fromOffset(10, 38)
+securityStatus.Size = UDim2.new(1, -20, 0, 44)
+securityStatus.Text = "Remote: NOT RUN\nMovement: NOT RUN"
+securityStatus.TextColor3 = Color3.fromRGB(240, 235, 225)
+securityStatus.Font = Enum.Font.GothamMedium
+securityStatus.TextSize = 12
+securityStatus.TextWrapped = true
+securityStatus.Parent = securityPanel
+
+local remoteTest = makeButton(securityPanel, "RUN REMOTE ATTACKS", 132)
+remoteTest.Position = UDim2.fromOffset(10, 92)
+remoteTest.Size = UDim2.fromOffset(132, 42)
+
+local teleportTest = makeButton(securityPanel, "RUN TELEPORT CHECK", 138)
+teleportTest.Position = UDim2.fromOffset(152, 92)
+teleportTest.Size = UDim2.fromOffset(138, 42)
+
+local closeSecurity = Instance.new("TextButton")
+closeSecurity.AnchorPoint = Vector2.new(1, 1)
+closeSecurity.Position = UDim2.new(1, -10, 1, -8)
+closeSecurity.Size = UDim2.fromOffset(62, 22)
+closeSecurity.BackgroundTransparency = 1
+closeSecurity.Text = "CLOSE"
+closeSecurity.TextColor3 = Color3.fromRGB(205, 205, 195)
+closeSecurity.Font = Enum.Font.GothamBold
+closeSecurity.TextSize = 11
+closeSecurity.Parent = securityPanel
+
+local remoteResult = "NOT RUN"
+local movementResult = "NOT RUN"
+local function refreshSecurityStatus()
+    securityStatus.Text = "Remote: " .. remoteResult .. "\nMovement: " .. movementResult
+end
+
+securityButton.Activated:Connect(function()
+    securityPanel.Visible = not securityPanel.Visible
+end)
+closeSecurity.Activated:Connect(function() securityPanel.Visible = false end)
+
+local function securitySnapshot()
+    local character = player.Character
+    return {
+        compy = numberAttr("CompyCopies"),
+        compyGold = numberAttr("CompyGold"),
+        tri = numberAttr("TriceratopsCopies"),
+        triGold = numberAttr("TriceratopsGold"),
+        rex = numberAttr("TyrannosaurusCopies"),
+        rexGold = numberAttr("TyrannosaurusGold"),
+        equipped = stringAttr("EquippedSpeciesId", ""),
+        activeChests = numberAttr("ActiveChestCount"),
+        overflow = numberAttr("PendingChestGrants"),
+        revision = numberAttr("ProfileRevision"),
+        runState = if character then character:GetAttribute("RunState") else nil,
+    }
+end
+
+local function sameSnapshot(a, b): boolean
+    return a.compy == b.compy and a.compyGold == b.compyGold
+        and a.tri == b.tri and a.triGold == b.triGold
+        and a.rex == b.rex and a.rexGold == b.rexGold
+        and a.equipped == b.equipped
+        and a.activeChests == b.activeChests
+        and a.overflow == b.overflow
+        and a.revision == b.revision
+        and a.runState == b.runState
+end
+
+remoteTest.Activated:Connect(function()
+    if player:GetAttribute("ProfileState") ~= "Loaded" then
+        remoteResult = "FAIL: PROFILE"
+        refreshSecurityStatus()
+        return
+    end
+    remoteResult = "RUNNING"
+    refreshSecurityStatus()
+    local before = securitySnapshot()
+    local overlong = string.rep("x", 100)
+    local token = HttpService:GenerateGUID(false)
+
+    equipSpecies:FireServer(123, token)
+    equipSpecies:FireServer("unknown_species", token)
+    equipSpecies:FireServer(overlong, token)
+    equipSpecies:FireServer("compy", "", "extra")
+
+    claimChest:FireServer(123, token)
+    claimChest:FireServer("fake-chest-id", token)
+    claimChest:FireServer(overlong, token)
+    claimChest:FireServer("fake-chest-id", "", "extra")
+
+    mutateSpecies:FireServer(123, "gold", token)
+    mutateSpecies:FireServer("compy", "diamond", token)
+    mutateSpecies:FireServer("unknown_species", "gold", token)
+    mutateSpecies:FireServer("compy", "gold", "", "extra")
+
+    requestEndRun:FireServer("extra")
+    testGrantSpecies:FireServer()
+    testGrantChests:FireServer()
+    testSetMutationCopies:FireServer(50)
+
+    for _ = 1, 60 do
+        equipSpecies:FireServer("unknown_species", HttpService:GenerateGUID(false))
+    end
+
+    task.delay(1.25, function()
+        local after = securitySnapshot()
+        local character = player.Character
+        local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+        local healthy = humanoid ~= nil and humanoid.Health > 0
+        remoteResult = if sameSnapshot(before, after) and healthy then "PASS" else "FAIL: STATE CHANGED"
+        refreshSecurityStatus()
+    end)
+end)
+
+teleportTest.Activated:Connect(function()
+    local character = player.Character
+    local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+    if not root or not root:IsA("BasePart") or character:GetAttribute("RunState") ~= "Active" then
+        movementResult = "FAIL: NO ACTIVE RUN"
+        refreshSecurityStatus()
+        return
+    end
+
+    movementResult = "RUNNING"
+    refreshSecurityStatus()
+    local origin = root.Position
+    local beforeRejects = numberAttr("MovementRejectCount")
+
+    local foodFolder = workspace:FindFirstChild("Food")
+    local target = nil
+    if foodFolder then
+        for _, item in foodFolder:GetChildren() do
+            if item:IsA("BasePart") and (item.Position - origin).Magnitude > 25 then
+                target = item.Position + Vector3.new(0, 2.5, 0)
+                break
+            end
+        end
+    end
+    target = target or (origin + Vector3.new(45, 0, 0))
+    root.CFrame = CFrame.new(target)
+
+    task.delay(1, function()
+        local currentCharacter = player.Character
+        local currentRoot = if currentCharacter then currentCharacter:FindFirstChild("HumanoidRootPart") else nil
+        local rejects = numberAttr("MovementRejectCount")
+        local returned = currentRoot and currentRoot:IsA("BasePart")
+            and (currentRoot.Position - origin).Magnitude < 10
+        movementResult = if rejects > beforeRejects and returned then "PASS" else "FAIL"
+        refreshSecurityStatus()
+    end)
 end)
 
 local tutorialShade = Instance.new("Frame")

@@ -1,12 +1,12 @@
 # Kanban and task specifications
 Updated 2026-09-17. This file is the canonical task tracker.
 
-Build 005 PvP/run-ending tests 1–9 passed. Build 006 persistence tests 1–10 passed. Build 007 lease/stale-writer verification and restart persistence passed in the new private test experience. BD-011 is Done. Build 008 collection/equip passed all 8 runtime tests. BD-012 is Done. Build 009 earned chest queue passed all 8 runtime tests. BD-013 is Done. Build 010 Gold mutation passed all 8 runtime tests. BD-014 is Done. Build 011 core UI is ready for desktop + phone-emulator testing. Mobile remains untested.
+Build 005 PvP/run-ending tests 1–9 passed. Build 006 persistence tests 1–10 passed. Build 007 lease/stale-writer verification and restart persistence passed in the new private test experience. BD-011 is Done. Build 008 collection/equip passed all 8 runtime tests. BD-012 is Done. Build 009 earned chest queue passed all 8 runtime tests. BD-013 is Done. Build 010 Gold mutation passed all 8 runtime tests. BD-014 is Done. Build 011 core UI passed all 8 desktop/phone-emulator tests. BD-015 is Done. Build 012 security/multiplayer regression is ready for testing. Mobile remains untested.
 
 ## Board
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-016–022 | BD-007 art brief | None | BD-006 mobile; BD-015 core UI | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014 |
+| BD-016–017; BD-019–022 | BD-007 art brief | None | BD-006 mobile; BD-018 security/multiplayer | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -34,10 +34,10 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 | BD-012 | Done | P0 | Build collection and equip | BD-011 |
 | BD-013 | Done | P0 | Build earned egg queue | BD-010, BD-011 |
 | BD-014 | Done | P0 | Build Gold mutation | BD-012 |
-| BD-015 | Review / test | P0 | Implement core UI and first-session guidance | BD-006, BD-012, BD-013, BD-014 |
+| BD-015 | Done | P0 | Implement core UI and first-session guidance | BD-006, BD-012, BD-013, BD-014 |
 | BD-016 | Backlog | P1 | Produce and integrate dinosaur/map kit | BD-006, BD-007 |
 | BD-017 | Backlog | P1 | Integrate minimal sound feedback | BD-004, BD-008, BD-013 |
-| BD-018 | Backlog | P0 | Run multiplayer, security and persistence suite | BD-011–015 |
+| BD-018 | Review / test | P0 | Run multiplayer, security and persistence suite | BD-011–015 |
 | BD-019 | Backlog | P0 | Run device/load and published-asset checks | BD-015–017 |
 | BD-020 | Backlog | P0 | Prepare private test release and rollback | BD-018, BD-019 |
 | BD-021 | Backlog | P0 | Observe community test and triage | BD-020 |
@@ -108,7 +108,7 @@ Build 010 passed all eight runtime checks. The 49-copy rejection, exact 50 and 5
 ### BD-015 — core UI
 **Done when:** lobby, HUD, run summary, collection and chest queue are usable on desktop/touch and large duplicate stacks render as grouped counts rather than hundreds of cards.
 
-Build 011 replaces debug panels with a responsive player-facing Home/HUD/Dinos/Chests flow, first-session tutorial and run summary. Species are always grouped into one bounded row regardless of copy count. See `docs/21-core-ui-test.md`.
+Build 011 passed all eight checks. Tutorial, compact HUD, grouped collection rows, chest UI, Home, run summary and phone-landscape emulator layout/actions all worked, with development grant/setup controls absent. BD-015 is Done.
 
 ### BD-016 — dinosaur/map kit
 **Done when:** three distinct original dinosaurs, one arena and Gold treatment pass collision/camera/permission checks. Procedural fallback is acceptable for the private test.
@@ -118,6 +118,8 @@ Build 011 replaces debug panels with a responsive player-facing Home/HUD/Dinos/C
 
 ### BD-018 — multiplayer/security/persistence suite
 Execute the verification matrix from `docs/06-roadmap-and-testing.md`. Source inspection is not runtime evidence.
+
+Build 012 adds an exploit-oriented remote attack harness plus a server movement guard that restores the last trusted position after impossible displacement. The runtime checklist also re-runs two-client isolation, equal-size PvP, predation and end-run-vs-predation terminal races. See `docs/22-security-multiplayer-test.md`.
 
 ### BD-019 — device/load/published assets
 Requires a real target phone plus the agreed multiplayer/pickup load test and non-owner asset checks.
@@ -132,6 +134,7 @@ Run the small invited session only after BD-020. Capture friction, repeat-run be
 Public scope is an evidence-based later decision. Passing code generation alone never triggers launch.
 
 ## Session log
+- 2026-09-18: Znypr reported all Build 011 core UI tests passing, including phone-landscape emulator interaction. BD-015 moved to Done. Build 012 security/multiplayer regression prepared for BD-018.
 - 2026-09-18: Znypr reported all Build 010 Gold mutation tests passing. BD-014 moved to Done. Build 011 core UI prepared for desktop and phone-landscape emulator verification.
 - 2026-09-18: Znypr reported all Build 009 chest queue tests passing. BD-013 moved to Done. Build 010 Gold mutation prepared for BD-014 runtime verification.
 - 2026-09-18: Znypr reported all Build 008 collection/equip tests passing. BD-012 moved to Done. Build 009 chest queue implemented for BD-013 runtime verification.

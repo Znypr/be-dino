@@ -9,6 +9,7 @@ local ChestService = require(script.Parent.ChestService)
 local CollectionService = require(script.Parent.CollectionService)
 local Dinosaur = require(script.Parent.Dinosaur)
 local MutationService = require(script.Parent.MutationService)
+local MovementGuard = require(script.Parent.MovementGuard)
 local ProfileRepository = require(script.Parent.ProfileRepository)
 local RunLifecycle = require(script.Parent.RunLifecycle)
 
@@ -44,6 +45,7 @@ RunLifecycle.start()
 CollectionService.start(ProfileRepository, Dinosaur)
 ChestService.start(ProfileRepository)
 MutationService.start(ProfileRepository, Dinosaur)
+MovementGuard.start()
 
 local function spawnLoadedPlayer(player: Player)
     player.CanLoadCharacterAppearance = false
@@ -92,4 +94,4 @@ FoodService.start(Dinosaur)
 local PredationService = require(script.Parent.PredationService)
 PredationService.start(RunLifecycle, Dinosaur)
 
-print("[Be Dino] " .. Config.Build .. " ready. Core UI test.")
+print("[Be Dino] " .. Config.Build .. " ready. Security regression test.")

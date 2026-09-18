@@ -1,7 +1,7 @@
 --!strict
 -- Prototype tuning only. Persistent economy values remain private-test values.
 return table.freeze({
-    Build = "core-ui-011",
+    Build = "security-regression-012",
     WalkSpeed = 18,
     ArenaHalfWidth = 90,
     CameraMinZoom = 12,
@@ -76,6 +76,12 @@ return table.freeze({
     MutationRequestCooldownSeconds = 0.4,
     MutationTestSetupEnabled = false,
     MutationTestSpeciesId = "compy",
+
+    MovementGuardTickSeconds = 0.1,
+    MovementGuardSpeedTolerance = 3,
+    MovementGuardBurstStuds = 4,
+    MovementGuardRejectCooldownSeconds = 0.75,
+    SecurityTestHarnessEnabled = true,
 
     -- Build 006/007 probes passed and are disabled again.
     DuplicateSettlementProbe = false,
