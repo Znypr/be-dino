@@ -1,7 +1,7 @@
 --!strict
 -- Prototype tuning only. Persistent economy values remain private-test values.
 return table.freeze({
-    Build = "persistence-lease-007",
+    Build = "collection-equip-008",
     WalkSpeed = 18,
     ArenaHalfWidth = 90,
     CameraMinZoom = 12,
@@ -30,6 +30,12 @@ return table.freeze({
     RarityQ = 0.25,
     AlphaTierThresholds = {1, 25, 100},
     AlphaSpeciesByTier = {"compy", "triceratops", "tyrannosaurus"},
+    SpeciesOrder = {"compy", "triceratops", "tyrannosaurus"},
+    SpeciesDisplayNames = {
+        compy = "Compy",
+        triceratops = "Triceratops",
+        tyrannosaurus = "T-Rex",
+    },
     ChestThresholds = {
         {score = 10, count = 1},
         {score = 100, count = 2},
@@ -42,6 +48,12 @@ return table.freeze({
     ProfileRenewSeconds = 30,
     ProfileMaxAttempts = 3,
     ProfileMaxRecentOperations = 50,
-    DuplicateSettlementProbe = true,
-    PersistenceLeaseSelfTest = true,
+
+    EquipRequestCooldownSeconds = 0.5,
+    CollectionTestGrantEnabled = true,
+    CollectionTestGrantSpeciesId = "triceratops",
+    CollectionTestGrantVersion = 1,
+
+    -- Build 006/007 probes passed and are disabled again.
+    DuplicateSettlementProbe = false,
 })

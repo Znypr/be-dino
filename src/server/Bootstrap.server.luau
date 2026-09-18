@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Arena = require(script.Parent.Arena)
+local CollectionService = require(script.Parent.CollectionService)
 local Dinosaur = require(script.Parent.Dinosaur)
 local ProfileRepository = require(script.Parent.ProfileRepository)
 local RunLifecycle = require(script.Parent.RunLifecycle)
@@ -17,22 +18,6 @@ Lighting.Ambient = Color3.fromRGB(130, 143, 148)
 Arena.build()
 
 ProfileRepository.start()
-local leaseSelfTestStatus = if Config.PersistenceLeaseSelfTest then "RUNNING" else "DISABLED"
-if Config.PersistenceLeaseSelfTest then
-    task.spawn(function()
-        local ok, status = ProfileRepository.runLeaseSelfTest()
-        leaseSelfTestStatus = if ok then "PASS" else "FAIL: " .. status
-        for _, player in Players:GetPlayers() do
-            player:SetAttribute("LeaseSelfTest", leaseSelfTestStatus)
-        end
-        if ok then
-            print("[Be Dino] persistence lease self-test PASS")
-        else
-            warn("[Be Dino] persistence lease self-test FAIL: " .. status)
-        end
-    end)
-end
-
 RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string)
     local ok = ProfileRepository.commitRunSettlement(player, runId, catchScore)
     if not ok then
@@ -50,13 +35,11 @@ RunLifecycle.configureSettlement(function(player: Player, runId: string, catchSc
         player:SetAttribute("LastSettlementProbe", "duplicate-ok")
     end
 
-    -- If the player vanished while this async settlement was running, release the lease now.
-    if not player.Parent then
-        ProfileRepository.release(player)
-    end
+    if not player.Parent then ProfileRepository.release(player) end
     return true
 end)
 RunLifecycle.start()
+CollectionService.start(ProfileRepository, Dinosaur)
 
 local function spawnLoadedPlayer(player: Player)
     player.CanLoadCharacterAppearance = false
@@ -69,14 +52,11 @@ local function spawnLoadedPlayer(player: Player)
     local ok, err = pcall(function()
         player:LoadCharacterAsync()
     end)
-    if not ok then
-        warn("[Be Dino] initial character load failed: " .. tostring(err))
-    end
+    if not ok then warn("[Be Dino] initial character load failed: " .. tostring(err)) end
 end
 
 local function setup(player: Player)
     player.CanLoadCharacterAppearance = false
-    player:SetAttribute("LeaseSelfTest", leaseSelfTestStatus)
     player.CharacterAdded:Connect(function(character)
         if player:GetAttribute("ProfileState") ~= "Loaded" then
             character:Destroy()
@@ -89,23 +69,17 @@ local function setup(player: Player)
 end
 
 Players.PlayerAdded:Connect(setup)
-for _, player in Players:GetPlayers() do
-    setup(player)
-end
+for _, player in Players:GetPlayers() do setup(player) end
 
 Players.PlayerRemoving:Connect(function(player)
     local status = RunLifecycle.endForDisconnect(player)
-    if status ~= "busy" then
-        ProfileRepository.release(player)
-    end
+    if status ~= "busy" then ProfileRepository.release(player) end
 end)
 
 game:BindToClose(function()
     for _, player in Players:GetPlayers() do
         local status = RunLifecycle.endForDisconnect(player)
-        if status ~= "busy" then
-            ProfileRepository.release(player)
-        end
+        if status ~= "busy" then ProfileRepository.release(player) end
     end
 end)
 
@@ -114,4 +88,4 @@ FoodService.start(Dinosaur)
 local PredationService = require(script.Parent.PredationService)
 PredationService.start(RunLifecycle, Dinosaur)
 
-print("[Be Dino] " .. Config.Build .. " ready. Persistent lease verification test.")
+print("[Be Dino] " .. Config.Build .. " ready. Collection/equip test.")
