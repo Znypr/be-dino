@@ -1,6 +1,6 @@
 # Build 008: collection and equip test
 
-Build 008 validates BD-012 using the current private test experience and DataStore.
+Build 008 validates BD-012. Prefer the current private test experience, but if Roblox Studio overwrite hangs again, creating another new private test experience is acceptable. In a new experience, expect a fresh profile with 1 Compy.
 
 ## What changed
 
@@ -13,7 +13,7 @@ Build 008 validates BD-012 using the current private test experience and DataSto
 
 ## Test objectives
 
-1. Start F5. Profile says Loaded, your saved Compy count is preserved, and Compy shows EQUIPPED.
+1. Start F5. Profile says Loaded and Compy shows EQUIPPED. If this is a new experience, Compy should start at 1; if you successfully overwrote the existing test experience, the previous saved Compy count should be preserved.
 2. Click locked T-Rex. Equip result must say locked and nothing changes.
 3. Click TEST UNLOCK TRICERATOPS. Triceratops becomes exactly 1 copy. Other counts do not change.
 4. Click Triceratops. Equip result says equipped and the dinosaur changes to the blue horned placeholder.
