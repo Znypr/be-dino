@@ -414,7 +414,7 @@ function CollectionService.start(profileRepository, dinosaur)
 
         local character = player.Character
         if character and character:GetAttribute("DinoAttached") then
-            dinosaur.setSpecies(character, speciesId)
+            dinosaur.refreshForPlayer(character, player)
         end
     end)
 
@@ -2461,7 +2461,9 @@ RunService.Heartbeat:Connect(function(dt)
     for speciesId, button in speciesButtons do
         local count = countForSpecies(speciesId)
         local displayName = Config.SpeciesDisplayNames[speciesId] or speciesId
-        local stateText = if equipped == speciesId then "EQUIPPED" elseif count &gt; 0 then "OWNED" else "LOCKED"
+        local stateText = if equipped == speciesId then "EQUIPPED"
+            elseif count + goldForSpecies(speciesId) &gt; 0 then "OWNED"
+            else "LOCKED"
         button.Text = string.format(
             "%s | %d base / %d Gold | %s",
             displayName, count, goldForSpecies(speciesId), stateText
