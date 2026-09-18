@@ -497,10 +497,8 @@ summaryText.ZIndex = 32
 summaryText.Parent = summary
 
 local lastSummaryAt = 0
-local function showSummary()
-    local endAt = numberAttr("LastRunEndAt")
-    if endAt <= 0 or endAt == lastSummaryAt then return end
-    lastSummaryAt = endAt
+local function refreshSummaryText()
+    if lastSummaryAt <= 0 then return end
     local reason = stringAttr("LastRunEndReason", "Run ended")
     local catches = numberAttr("LastRunCatchScore")
     local growth = numberAttr("LastRunGrowthScore")
@@ -509,6 +507,13 @@ local function showSummary()
         "RUN COMPLETE\n\nReason: %s\nGrowth: %d   •   Catches: %d\n\nReward: %s\n\nA new run will start automatically.",
         reason, growth, catches, reward
     )
+end
+
+local function showSummary()
+    local endAt = numberAttr("LastRunEndAt")
+    if endAt <= 0 or endAt == lastSummaryAt then return end
+    lastSummaryAt = endAt
+    refreshSummaryText()
     summaryShade.Visible = true
     task.delay(3.5, function()
         if lastSummaryAt == endAt then summaryShade.Visible = false end
@@ -547,8 +552,10 @@ if camera then camera:GetPropertyChangedSignal("ViewportSize"):Connect(refreshSc
 refreshScales()
 
 local elapsed = 0
+local viewElapsed = 0
 RunService.Heartbeat:Connect(function(dt)
     elapsed += dt
+    viewElapsed += dt
     if elapsed < 0.12 then return end
     elapsed = 0
 
@@ -591,15 +598,21 @@ RunService.Heartbeat:Connect(function(dt)
         endButton.Text = "END RUN"
     end
 
-    if activeView == "home" then renderHome()
-    elseif activeView == "collection" then renderCollection()
-    elseif activeView == "chests" then renderChests()
+    if activeView ~= "" and viewElapsed >= 1 then
+        viewElapsed = 0
+        if activeView == "home" then renderHome()
+        elseif activeView == "collection" then renderCollection()
+        elseif activeView == "chests" then renderChests()
+        end
     end
 
     showSummary()
 end)
 
 player:GetAttributeChangedSignal("LastRunEndAt"):Connect(showSummary)
+player:GetAttributeChangedSignal("LastRewardText"):Connect(function()
+    if summaryShade.Visible then refreshSummaryText() end
+end)
 
 -- Keyboard convenience only; all core actions remain reachable by touch.
 UserInputService.InputBegan:Connect(function(input, processed)
