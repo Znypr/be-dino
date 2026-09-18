@@ -88,8 +88,11 @@ end
 local function syncAttributes(player: Player, profile: any)
     local collection = profile.collection
     player:SetAttribute("CompyCopies", collection.compy.base)
+    player:SetAttribute("CompyGold", collection.compy.gold)
     player:SetAttribute("TriceratopsCopies", collection.triceratops.base)
+    player:SetAttribute("TriceratopsGold", collection.triceratops.gold)
     player:SetAttribute("TyrannosaurusCopies", collection.tyrannosaurus.base)
+    player:SetAttribute("TyrannosaurusGold", collection.tyrannosaurus.gold)
     player:SetAttribute("PendingChestGrants", profile.pendingChestGrants or 0)
     player:SetAttribute("ProfileRevision", profile.revision or 0)
     player:SetAttribute("EquippedSpeciesId", profile.equippedSpeciesId)
@@ -591,6 +594,134 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
         "%dx %s", committedOutcome.count, committedOutcome.speciesId
     ))
     return true, committedOutcome, if duplicateOutcome then "duplicate" else "claimed"
+end
+
+function ProfileRepository.mutateSpecies(player: Player, speciesId: string, targetMutation: string, requestToken: string)
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
+        return false, nil, "profile_not_loaded"
+    end
+    if not knownSpecies(speciesId) then return false, nil, "unknown_species" end
+    if targetMutation ~= "gold" then return false, nil, "unknown_mutation" end
+    if typeof(requestToken) ~= "string" or #requestToken < 1 or #requestToken > 80 then
+        return false, nil, "invalid_token"
+    end
+
+    local operationId = "mutation:" .. requestToken
+    local cachedOperation = findOperation(cached, operationId)
+    if cachedOperation then
+        return true, cachedOperation.outcome, "duplicate"
+    end
+
+    local cachedEntry = cached.collection[speciesId]
+    if typeof(cachedEntry) ~= "table" or cachedEntry.base < Config.GoldMutationCost then
+        return false, nil, "insufficient_copies"
+    end
+
+    local outcome = {
+        speciesId = speciesId,
+        mutationId = "gold",
+        spentBase = Config.GoldMutationCost,
+        gainedGold = 1,
+    }
+    local duplicateOutcome = nil
+    local leaseLost = false
+    local insufficient = false
+    local now = os.time()
+
+    local ok, updated = retry("gold mutation", function()
+        return store:UpdateAsync(keyFor(player), function(profileValue)
+            if not isValidProfile(profileValue) then return nil end
+            if not ownSession(profileValue) then
+                leaseLost = true
+                return nil
+            end
+
+            local existing = findOperation(profileValue, operationId)
+            if existing then
+                duplicateOutcome = existing.outcome
+                return profileValue
+            end
+
+            local entry = profileValue.collection[speciesId]
+            if typeof(entry) ~= "table" or entry.base < Config.GoldMutationCost then
+                insufficient = true
+                return nil
+            end
+
+            entry.base -= Config.GoldMutationCost
+            entry.gold += 1
+            profileValue.revision += 1
+            profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            table.insert(profileValue.recentOperations, {
+                id = operationId,
+                kind = "mutation",
+                outcome = outcome,
+            })
+            trimOperations(profileValue)
+            return profileValue
+        end)
+    end)
+
+    if not ok or updated == nil then
+        if leaseLost then
+            player:SetAttribute("ProfileState", "LeaseLost")
+            return false, nil, "lease_lost"
+        end
+        if insufficient then return false, nil, "insufficient_copies" end
+        player:SetAttribute("ProfileState", "SaveFailed")
+        return false, nil, "save_failed"
+    end
+
+    profiles[player] = updated
+    syncAttributes(player, updated)
+    local committedOutcome = duplicateOutcome or outcome
+    return true, committedOutcome, if duplicateOutcome then "duplicate" else "mutated"
+end
+
+function ProfileRepository.setMutationTestCopies(player: Player, speciesId: string, baseCount: number): (boolean, string)
+    if not Config.MutationTestSetupEnabled then return false, "disabled" end
+    if speciesId ~= Config.MutationTestSpeciesId then return false, "bad_species" end
+    if baseCount ~= 49 and baseCount ~= 50 and baseCount ~= 51 then
+        return false, "bad_count"
+    end
+
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
+        return false, "profile_not_loaded"
+    end
+
+    local leaseLost = false
+    local now = os.time()
+    local ok, updated = retry("mutation test setup", function()
+        return store:UpdateAsync(keyFor(player), function(profileValue)
+            if not isValidProfile(profileValue) then return nil end
+            if not ownSession(profileValue) then
+                leaseLost = true
+                return nil
+            end
+            local entry = profileValue.collection[speciesId]
+            if typeof(entry) ~= "table" then return nil end
+            entry.base = baseCount
+            entry.gold = 0
+            profileValue.revision += 1
+            profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            return profileValue
+        end)
+    end)
+
+    if not ok or updated == nil then
+        if leaseLost then
+            player:SetAttribute("ProfileState", "LeaseLost")
+            return false, "lease_lost"
+        end
+        player:SetAttribute("ProfileState", "SaveFailed")
+        return false, "save_failed"
+    end
+
+    profiles[player] = updated
+    syncAttributes(player, updated)
+    return true, "set_" .. tostring(baseCount)
 end
 
 function ProfileRepository.renew(player: Player): boolean

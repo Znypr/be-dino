@@ -3,6 +3,12 @@
 local Dinosaur = {}
 local RunService = game:GetService("RunService")
 
+local GOLD_PALETTE = {
+    primary = Color3.fromRGB(239, 190, 52),
+    light = Color3.fromRGB(255, 232, 132),
+    dark = Color3.fromRGB(161, 111, 26),
+}
+
 local PALETTES = {
     compy = {
         primary = Color3.fromRGB(100, 178, 117),
@@ -32,13 +38,14 @@ local function normalizedSpecies(speciesId: any): string
     return "compy"
 end
 
-function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: string?)
+function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: string?, isGold: boolean?)
     local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if not root or not humanoid then return end
 
     local speciesId = normalizedSpecies(requestedSpeciesId or character:GetAttribute("SpeciesId"))
-    local palette = PALETTES[speciesId]
+    local gold = isGold == true
+    local palette = if gold then GOLD_PALETTE else PALETTES[speciesId]
     local old = character:FindFirstChild("DinoVisual")
     if old then old:Destroy() end
     local visual = Instance.new("Model")
@@ -57,7 +64,7 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
         part.Name = name
         part.Size = size * scale
         part.Color = color
-        part.Material = Enum.Material.SmoothPlastic
+        part.Material = if gold then Enum.Material.Metal else Enum.Material.SmoothPlastic
         part.CanCollide = false
         part.CanTouch = false
         part.CanQuery = false
@@ -114,13 +121,33 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
     end
 
     character:SetAttribute("SpeciesId", speciesId)
+    character:SetAttribute("GoldVisual", gold)
     character:SetAttribute("VisualScale", scale)
 end
 
-function Dinosaur.setSpecies(character: Model, speciesId: string)
+function Dinosaur.setSpecies(character: Model, speciesId: string, isGold: boolean?)
     local scaleValue = character:GetAttribute("VisualScale")
     local scale = if typeof(scaleValue) == "number" then scaleValue else 1
-    Dinosaur.render(character, scale, speciesId)
+    Dinosaur.render(character, scale, speciesId, isGold)
+end
+
+local function playerSpeciesCounts(player: Player, speciesId: string): (number, number)
+    if speciesId == "compy" then
+        return player:GetAttribute("CompyCopies") or 0, player:GetAttribute("CompyGold") or 0
+    elseif speciesId == "triceratops" then
+        return player:GetAttribute("TriceratopsCopies") or 0, player:GetAttribute("TriceratopsGold") or 0
+    elseif speciesId == "tyrannosaurus" then
+        return player:GetAttribute("TyrannosaurusCopies") or 0, player:GetAttribute("TyrannosaurusGold") or 0
+    end
+    return 0, 0
+end
+
+function Dinosaur.refreshForPlayer(character: Model, player: Player)
+    local equipped = player:GetAttribute("EquippedSpeciesId")
+    local speciesId = if typeof(equipped) == "string" then equipped else "compy"
+    local baseCount, goldCount = playerSpeciesCounts(player, speciesId)
+    local useGold = baseCount <= 0 and goldCount > 0
+    Dinosaur.setSpecies(character, speciesId, useGold)
 end
 
 function Dinosaur.addGrowth(character: Model, points: number)
@@ -130,7 +157,8 @@ function Dinosaur.addGrowth(character: Model, points: number)
     character:SetAttribute("GrowthScore", score)
     local scale = scaleForScore(score)
     if character:GetAttribute("VisualScale") ~= scale then
-        Dinosaur.render(character, scale)
+        local gold = character:GetAttribute("GoldVisual") == true
+        Dinosaur.render(character, scale, nil, gold)
     end
 end
 
@@ -169,7 +197,9 @@ function Dinosaur.attach(character: Model, walkSpeed: number, player: Player)
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
 
     local equipped = player:GetAttribute("EquippedSpeciesId")
-    Dinosaur.render(character, 1, if typeof(equipped) == "string" then equipped else "compy")
+    local speciesId = if typeof(equipped) == "string" then equipped else "compy"
+    local baseCount, goldCount = playerSpeciesCounts(player, speciesId)
+    Dinosaur.render(character, 1, speciesId, baseCount <= 0 and goldCount > 0)
     character:SetAttribute("DinoAttached", true)
     print("[Be Dino] Dinosaur attached: " .. player.Name)
 end

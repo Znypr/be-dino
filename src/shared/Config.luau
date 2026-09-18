@@ -1,7 +1,7 @@
 --!strict
 -- Prototype tuning only. Persistent economy values remain private-test values.
 return table.freeze({
-    Build = "chest-queue-009",
+    Build = "gold-mutation-010",
     WalkSpeed = 18,
     ArenaHalfWidth = 90,
     CameraMinZoom = 12,
@@ -58,7 +58,7 @@ return table.freeze({
     ChestQueueCapacity = 5,
     ChestOverflowCapacity = 10,
     ChestClaimRequestCooldownSeconds = 0.35,
-    ChestTestGrantEnabled = true,
+    ChestTestGrantEnabled = false,
     ChestTestGrantCount = 7,
     ChestTestGrantVersion = 1,
     ChestSpeciesWeights = {
@@ -71,6 +71,11 @@ return table.freeze({
         {count = 2, weight = 25},
         {count = 3, weight = 5},
     },
+
+    GoldMutationCost = 50,
+    MutationRequestCooldownSeconds = 0.4,
+    MutationTestSetupEnabled = true,
+    MutationTestSpeciesId = "compy",
 
     -- Build 006/007 probes passed and are disabled again.
     DuplicateSettlementProbe = false,

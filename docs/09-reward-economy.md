@@ -56,7 +56,7 @@ The repeat-pair ledger must be bounded and server-owned. It is temporary session
 Changing chest tables must never alter immediate run-copy totals.
 
 ## Mutation pacing result
-The current test mutation cost remains 50 base copies.
+The current test mutation cost remains 50 base copies. Build 010 implements this as one atomic `-50 base, +1 Gold` profile mutation.
 
 With one Common species in the three-species alpha, the deterministic run allocation reaches 50 Common copies at catch score 62. Therefore 50 copies is suitable for demonstrating Gold mutation during the private test but is not accepted long-term progression pacing.
 

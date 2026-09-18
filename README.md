@@ -1,14 +1,14 @@
 # Be Dino!
 An original Roblox dinosaur growth-and-collection arena inspired by Be Fish.
 
-**Stage:** persistence + collection/equip accepted; Build 009 chest queue ready for Studio testing. **Updated:** 2026-09-18.
+**Stage:** persistence, collection/equip and chest queue accepted; Build 010 Gold mutation ready for Studio testing. **Updated:** 2026-09-18.
 **Owner:** Znypr's Roblox account. **Studio:** installed. **Budget:** €0.
 **First milestone:** private community test with a small complete progression loop.
 
 ## Try the prototype
 Download [BeDino-Prototype.rbxlx](build/BeDino-Prototype.rbxlx), open it in Studio, and use the current private test experience. No plugin is required.
 
-For the current build, use [Build 009 chest queue test](docs/19-chest-queue-test.md). The general Studio workflow remains in [Studio quickstart](docs/10-studio-quickstart.md).
+For the current build, use [Build 010 Gold mutation test](docs/20-gold-mutation-test.md). The general Studio workflow remains in [Studio quickstart](docs/10-studio-quickstart.md).
 
 ## Start here
 - [Project brief and roles](docs/01-project-brief.md)
@@ -35,7 +35,8 @@ Catch score is distinct from growth score. Exact balancing remains proposed.
 - Build 006: DataStore save/rejoin, fail-closed loading and idempotent settlement passed.
 - Build 007: lease contention/stale-writer verification and restart persistence passed in the new private test experience.
 - Build 008: collection/equip tests 1–8 passed.
-- Build 009: earned chest queue implementation ready for runtime verification.
+- Build 009: earned chest queue tests 1–8 passed.
+- Build 010: Gold mutation implementation ready for runtime verification.
 - Mobile/touch remains pending.
 
 ## Working agreement
@@ -44,4 +45,4 @@ Use original assets, free tools and server-owned gameplay state.
 Three species validate the first progression loop; a larger catalog follows after testing.
 
 ## Next action
-Run the Build 009 checks in [docs/19-chest-queue-test.md](docs/19-chest-queue-test.md).
+Run the Build 010 checks in [docs/20-gold-mutation-test.md](docs/20-gold-mutation-test.md).

@@ -15,6 +15,8 @@ local equipSpecies = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
 local testGrantSpecies = remotes:WaitForChild("TestGrantSpecies") :: RemoteEvent
 local claimChest = remotes:WaitForChild("ClaimChest") :: RemoteEvent
 local testGrantChests = remotes:WaitForChild("TestGrantChests") :: RemoteEvent
+local mutateSpecies = remotes:WaitForChild("MutateSpecies") :: RemoteEvent
+local testSetMutationCopies = remotes:WaitForChild("TestSetMutationCopies") :: RemoteEvent
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "PrototypeHUD"
@@ -165,6 +167,75 @@ chestGrantButton.Activated:Connect(function()
     end
 end)
 
+local mutationPanel = Instance.new("Frame")
+mutationPanel.Name = "MutationPanel"
+mutationPanel.AnchorPoint = Vector2.new(0.5, 1)
+mutationPanel.Position = UDim2.new(0.5, 0, 1, -18)
+mutationPanel.Size = UDim2.fromOffset(520, 150)
+mutationPanel.BackgroundColor3 = Color3.fromRGB(65, 52, 24)
+mutationPanel.BackgroundTransparency = 0.06
+mutationPanel.Parent = gui
+local mutationCorner = Instance.new("UICorner")
+mutationCorner.CornerRadius = UDim.new(0, 12)
+mutationCorner.Parent = mutationPanel
+
+local mutationInfo = Instance.new("TextLabel")
+mutationInfo.BackgroundTransparency = 1
+mutationInfo.Position = UDim2.fromOffset(10, 6)
+mutationInfo.Size = UDim2.new(1, -20, 0, 42)
+mutationInfo.TextColor3 = Color3.fromRGB(255, 235, 153)
+mutationInfo.Font = Enum.Font.GothamBold
+mutationInfo.TextSize = 14
+mutationInfo.TextWrapped = true
+mutationInfo.Parent = mutationPanel
+
+local lastMutationToken = ""
+local function smallMutationButton(x: number, width: number, textValue: string): TextButton
+    local button = Instance.new("TextButton")
+    button.Position = UDim2.fromOffset(x, 52)
+    button.Size = UDim2.fromOffset(width, 38)
+    button.BackgroundColor3 = Color3.fromRGB(118, 88, 36)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 13
+    button.Text = textValue
+    button.Parent = mutationPanel
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 8)
+    c.Parent = button
+    return button
+end
+
+local set49 = smallMutationButton(10, 80, "SET 49")
+local set50 = smallMutationButton(96, 80, "SET 50")
+local set51 = smallMutationButton(182, 80, "SET 51")
+local mutateButton = smallMutationButton(268, 116, "MUTATE GOLD")
+local retryMutationButton = smallMutationButton(390, 120, "RETRY SAME")
+
+set49.Activated:Connect(function() testSetMutationCopies:FireServer(49) end)
+set50.Activated:Connect(function() testSetMutationCopies:FireServer(50) end)
+set51.Activated:Connect(function() testSetMutationCopies:FireServer(51) end)
+mutateButton.Activated:Connect(function()
+    lastMutationToken = HttpService:GenerateGUID(false)
+    mutateSpecies:FireServer("compy", "gold", lastMutationToken)
+end)
+retryMutationButton.Activated:Connect(function()
+    if lastMutationToken ~= "" then
+        mutateSpecies:FireServer("compy", "gold", lastMutationToken)
+    end
+end)
+
+local mutationHelp = Instance.new("TextLabel")
+mutationHelp.BackgroundTransparency = 1
+mutationHelp.Position = UDim2.fromOffset(10, 96)
+mutationHelp.Size = UDim2.new(1, -20, 0, 48)
+mutationHelp.TextColor3 = Color3.fromRGB(245, 241, 222)
+mutationHelp.Font = Enum.Font.GothamMedium
+mutationHelp.TextSize = 12
+mutationHelp.TextWrapped = true
+mutationHelp.Text = "Test helpers overwrite Compy base/Gold counts. Use a fresh private test experience."
+mutationHelp.Parent = mutationPanel
+
 local endButton = Instance.new("TextButton")
 endButton.Name = "EndRun"
 endButton.AnchorPoint = Vector2.new(1, 1)
@@ -223,6 +294,13 @@ local function countForSpecies(speciesId: string): number
     return 0
 end
 
+local function goldForSpecies(speciesId: string): number
+    if speciesId == "compy" then return numberAttr("CompyGold") end
+    if speciesId == "triceratops" then return numberAttr("TriceratopsGold") end
+    if speciesId == "tyrannosaurus" then return numberAttr("TyrannosaurusGold") end
+    return 0
+end
+
 local elapsed = 0
 RunService.Heartbeat:Connect(function(dt)
     elapsed += dt
@@ -264,10 +342,24 @@ RunService.Heartbeat:Connect(function(dt)
         local count = countForSpecies(speciesId)
         local displayName = Config.SpeciesDisplayNames[speciesId] or speciesId
         local stateText = if equipped == speciesId then "EQUIPPED" elseif count > 0 then "OWNED" else "LOCKED"
-        button.Text = string.format("%s  |  %d copies  |  %s", displayName, count, stateText)
+        button.Text = string.format(
+            "%s | %d base / %d Gold | %s",
+            displayName, count, goldForSpecies(speciesId), stateText
+        )
         button.Active = profileState == "Loaded"
         button.AutoButtonColor = profileState == "Loaded"
     end
+
+    local mutationStatus = stringAttr("LastMutationStatus", "none")
+    local setupStatus = stringAttr("LastMutationSetupStatus", "not used")
+    mutationInfo.Text = string.format(
+        "GOLD MUTATION  •  Compy %d base / %d Gold  •  %s  •  Setup: %s",
+        numberAttr("CompyCopies"), numberAttr("CompyGold"), mutationStatus, setupStatus
+    )
+    mutateButton.Active = profileState == "Loaded"
+    mutateButton.AutoButtonColor = mutateButton.Active
+    retryMutationButton.Active = profileState == "Loaded" and lastMutationToken ~= ""
+    retryMutationButton.AutoButtonColor = retryMutationButton.Active
 
     local testCount = countForSpecies(Config.CollectionTestGrantSpeciesId)
     grantButton.Visible = Config.CollectionTestGrantEnabled
@@ -276,17 +368,17 @@ RunService.Heartbeat:Connect(function(dt)
     grantButton.AutoButtonColor = grantButton.Active
 
     local collectionText = string.format(
-        "Owned: Compy %d  •  Triceratops %d  •  T-Rex %d",
-        numberAttr("CompyCopies"),
-        numberAttr("TriceratopsCopies"),
-        numberAttr("TyrannosaurusCopies")
+        "Owned: Compy %d+%dG  •  Triceratops %d+%dG  •  T-Rex %d+%dG",
+        numberAttr("CompyCopies"), numberAttr("CompyGold"),
+        numberAttr("TriceratopsCopies"), numberAttr("TriceratopsGold"),
+        numberAttr("TyrannosaurusCopies"), numberAttr("TyrannosaurusGold")
     )
 
     local character = currentCharacter
     local humanoid = currentHumanoid
     if not character or player.Character ~= character or not humanoid then
         panel.Text = string.format(
-            "BE DINO!  •  CHEST QUEUE TEST\nProfile: %s  •  Equipped: %s  •  Equip result: %s\n%s\nTest grant: %s",
+            "BE DINO!  •  GOLD MUTATION TEST\nProfile: %s  •  Equipped: %s  •  Equip result: %s\n%s\nTest grant: %s",
             profileState, equipped, equipStatus, collectionText, grantStatus
         )
         endButton.Active = false
@@ -311,7 +403,7 @@ RunService.Heartbeat:Connect(function(dt)
     local status = if protectionRemaining > 0 then string.format("SAFE %.1fs", protectionRemaining) else "PVP ACTIVE"
 
     panel.Text = string.format(
-        "BE DINO!  •  CHEST QUEUE TEST\nGrowth %d  •  Catches %d  •  Size %.2fx  •  %s\nProfile: %s  •  Equipped: %s  •  Equip result: %s\n%s\nTest grant: %s",
+        "BE DINO!  •  GOLD MUTATION TEST\nGrowth %d  •  Catches %d  •  Size %.2fx  •  %s\nProfile: %s  •  Equipped: %s  •  Equip result: %s\n%s\nTest grant: %s",
         score, catches, scale, status, profileState, equipped, equipStatus, collectionText, grantStatus
     )
 
