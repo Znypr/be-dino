@@ -1,18 +1,19 @@
 {
   "format": 1,
-  "place_sha256": "626b7728cd66e6caf497ca906dc7f54c9b13b3b52a4e478a9a2b494b6d7a0672",
+  "place_sha256": "bffeb0866e6ca8ba4b9a062bd7251881c015817f4525f648d2133e9f44100e41",
   "sources": {
-    "src/shared/Config.luau": "919957db6fae3ab45b71a20eb98c6b922397e29660c3d5dea316d33d491321e0",
+    "src/shared/Config.luau": "d222d6d1a0b09732ffd7afa41b383bab8aa592995d4e1f4a058589c15d405e1d",
     "src/server/Arena.luau": "d0ac46c01f2359d3939a44828c3ccc9a89a23968031ff017bbd4a5708c66a488",
-    "src/server/Bootstrap.server.luau": "d27ea48b0693eeac513b40b2f4f8500d031600c52e28b1610c2d649baec9e00d",
+    "src/server/Bootstrap.server.luau": "5be7b534f26696a2c444c736b622d0a64b9456b6b60f011feea4e0dbdb60aec2",
     "src/server/ChestService.luau": "741b4801c30a3e23088ab005d2685d6011e0d130a6aba8b00d81ad5ddd31bde1",
     "src/server/CollectionService.luau": "9198a09e2d97de06bf5ca16fabf5fe6b94180de5876979e585ad42190b463a2d",
-    "src/server/Dinosaur.luau": "22adbd01f45cb58759cfb36b63f39620c0ec881c884e80234ae626e2cbb5849a",
+    "src/server/Dinosaur.luau": "23158f8058b31057d4ab26f848a8fd139487e9622b05339764322d8c225ed5ed",
     "src/server/FoodService.luau": "64a2bcb8e1cec7b20f1f803d8e48e5756d47da759af580b0af4f54679e8283a8",
+    "src/server/MutationService.luau": "771c7fb949d8b4cdb4a0b518c2778be0c9ff140a05c050d2030bb090547460c2",
     "src/server/PredationService.luau": "b253cf5dfed89d4ac236a6ba9a6d96c62e9b33d13eb03ecb1d1fdb49d7d90cad",
-    "src/server/ProfileRepository.luau": "2677e68c212749945c39d9504a04644d287514fb001c19af548661057cb27bd2",
+    "src/server/ProfileRepository.luau": "d0bca25f11ce3cd8415f96f11ccb53fed1df986c0137599a802dc83b39721739",
     "src/server/RewardMath.luau": "eeddcd6c722213f109a6e37a0d47e70c59f39138aca8c0ade24d1a23474708ef",
     "src/server/RunLifecycle.luau": "bf6d3a80305f0aeb328491ec8b9d6f8ffb3803eb2f432e879c61947e8327f21c",
-    "src/client/Bootstrap.client.luau": "412cd829915519d274c86c5102473270327c325c38891dd993813960bfd43466"
+    "src/client/Bootstrap.client.luau": "2d55f66e5ba9d7eaaae9a3291278bb938df62ce5f51fdf09af609222df8c1d78"
   }
 }

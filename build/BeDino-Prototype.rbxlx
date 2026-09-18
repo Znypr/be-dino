@@ -21,7 +21,7 @@
           <ProtectedString name="Source">--!strict
 -- Prototype tuning only. Persistent economy values remain private-test values.
 return table.freeze({
-    Build = "chest-queue-009",
+    Build = "gold-mutation-010",
     WalkSpeed = 18,
     ArenaHalfWidth = 90,
     CameraMinZoom = 12,
@@ -78,7 +78,7 @@ return table.freeze({
     ChestQueueCapacity = 5,
     ChestOverflowCapacity = 10,
     ChestClaimRequestCooldownSeconds = 0.35,
-    ChestTestGrantEnabled = true,
+    ChestTestGrantEnabled = false,
     ChestTestGrantCount = 7,
     ChestTestGrantVersion = 1,
     ChestSpeciesWeights = {
@@ -91,6 +91,11 @@ return table.freeze({
         {count = 2, weight = 25},
         {count = 3, weight = 5},
     },
+
+    GoldMutationCost = 50,
+    MutationRequestCooldownSeconds = 0.4,
+    MutationTestSetupEnabled = true,
+    MutationTestSpeciesId = "compy",
 
     -- Build 006/007 probes passed and are disabled again.
     DuplicateSettlementProbe = false,
@@ -177,6 +182,7 @@ local Arena = require(script.Parent.Arena)
 local ChestService = require(script.Parent.ChestService)
 local CollectionService = require(script.Parent.CollectionService)
 local Dinosaur = require(script.Parent.Dinosaur)
+local MutationService = require(script.Parent.MutationService)
 local ProfileRepository = require(script.Parent.ProfileRepository)
 local RunLifecycle = require(script.Parent.RunLifecycle)
 
@@ -211,6 +217,7 @@ end)
 RunLifecycle.start()
 CollectionService.start(ProfileRepository, Dinosaur)
 ChestService.start(ProfileRepository)
+MutationService.start(ProfileRepository, Dinosaur)
 
 local function spawnLoadedPlayer(player: Player)
     player.CanLoadCharacterAppearance = false
@@ -259,7 +266,7 @@ FoodService.start(Dinosaur)
 local PredationService = require(script.Parent.PredationService)
 PredationService.start(RunLifecycle, Dinosaur)
 
-print("[Be Dino] " .. Config.Build .. " ready. Chest queue test.")
+print("[Be Dino] " .. Config.Build .. " ready. Gold mutation test.")
 </ProtectedString>
         </Properties>
       </Item>
@@ -440,6 +447,12 @@ return CollectionService
 local Dinosaur = {}
 local RunService = game:GetService("RunService")
 
+local GOLD_PALETTE = {
+    primary = Color3.fromRGB(239, 190, 52),
+    light = Color3.fromRGB(255, 232, 132),
+    dark = Color3.fromRGB(161, 111, 26),
+}
+
 local PALETTES = {
     compy = {
         primary = Color3.fromRGB(100, 178, 117),
@@ -469,13 +482,14 @@ local function normalizedSpecies(speciesId: any): string
     return "compy"
 end
 
-function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: string?)
+function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: string?, isGold: boolean?)
     local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if not root or not humanoid then return end
 
     local speciesId = normalizedSpecies(requestedSpeciesId or character:GetAttribute("SpeciesId"))
-    local palette = PALETTES[speciesId]
+    local gold = isGold == true
+    local palette = if gold then GOLD_PALETTE else PALETTES[speciesId]
     local old = character:FindFirstChild("DinoVisual")
     if old then old:Destroy() end
     local visual = Instance.new("Model")
@@ -494,7 +508,7 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
         part.Name = name
         part.Size = size * scale
         part.Color = color
-        part.Material = Enum.Material.SmoothPlastic
+        part.Material = if gold then Enum.Material.Metal else Enum.Material.SmoothPlastic
         part.CanCollide = false
         part.CanTouch = false
         part.CanQuery = false
@@ -551,13 +565,33 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
     end
 
     character:SetAttribute("SpeciesId", speciesId)
+    character:SetAttribute("GoldVisual", gold)
     character:SetAttribute("VisualScale", scale)
 end
 
-function Dinosaur.setSpecies(character: Model, speciesId: string)
+function Dinosaur.setSpecies(character: Model, speciesId: string, isGold: boolean?)
     local scaleValue = character:GetAttribute("VisualScale")
     local scale = if typeof(scaleValue) == "number" then scaleValue else 1
-    Dinosaur.render(character, scale, speciesId)
+    Dinosaur.render(character, scale, speciesId, isGold)
+end
+
+local function playerSpeciesCounts(player: Player, speciesId: string): (number, number)
+    if speciesId == "compy" then
+        return player:GetAttribute("CompyCopies") or 0, player:GetAttribute("CompyGold") or 0
+    elseif speciesId == "triceratops" then
+        return player:GetAttribute("TriceratopsCopies") or 0, player:GetAttribute("TriceratopsGold") or 0
+    elseif speciesId == "tyrannosaurus" then
+        return player:GetAttribute("TyrannosaurusCopies") or 0, player:GetAttribute("TyrannosaurusGold") or 0
+    end
+    return 0, 0
+end
+
+function Dinosaur.refreshForPlayer(character: Model, player: Player)
+    local equipped = player:GetAttribute("EquippedSpeciesId")
+    local speciesId = if typeof(equipped) == "string" then equipped else "compy"
+    local baseCount, goldCount = playerSpeciesCounts(player, speciesId)
+    local useGold = baseCount &lt;= 0 and goldCount &gt; 0
+    Dinosaur.setSpecies(character, speciesId, useGold)
 end
 
 function Dinosaur.addGrowth(character: Model, points: number)
@@ -567,7 +601,8 @@ function Dinosaur.addGrowth(character: Model, points: number)
     character:SetAttribute("GrowthScore", score)
     local scale = scaleForScore(score)
     if character:GetAttribute("VisualScale") ~= scale then
-        Dinosaur.render(character, scale)
+        local gold = character:GetAttribute("GoldVisual") == true
+        Dinosaur.render(character, scale, nil, gold)
     end
 end
 
@@ -606,7 +641,9 @@ function Dinosaur.attach(character: Model, walkSpeed: number, player: Player)
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
 
     local equipped = player:GetAttribute("EquippedSpeciesId")
-    Dinosaur.render(character, 1, if typeof(equipped) == "string" then equipped else "compy")
+    local speciesId = if typeof(equipped) == "string" then equipped else "compy"
+    local baseCount, goldCount = playerSpeciesCounts(player, speciesId)
+    Dinosaur.render(character, 1, speciesId, baseCount &lt;= 0 and goldCount &gt; 0)
     character:SetAttribute("DinoAttached", true)
     print("[Be Dino] Dinosaur attached: " .. player.Name)
 end
@@ -717,6 +754,111 @@ return FoodService
         </Properties>
       </Item>
       <Item class="ModuleScript" referent="RBX13">
+        <Properties>
+          <string name="Name">MutationService</string>
+          <ProtectedString name="Source">--!strict
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+
+local MutationService = {}
+local lastMutation: {[Player]: number} = {}
+local lastSetup: {[Player]: number} = {}
+
+local function getRemote(folder: Folder, name: string): RemoteEvent
+    local existing = folder:FindFirstChild(name)
+    if existing and existing:IsA("RemoteEvent") then return existing end
+    if existing then existing:Destroy() end
+    local remote = Instance.new("RemoteEvent")
+    remote.Name = name
+    remote.Parent = folder
+    return remote
+end
+
+local function allowed(bucket: {[Player]: number}, player: Player): boolean
+    local now = os.clock()
+    local last = bucket[player] or -math.huge
+    if now - last &lt; Config.MutationRequestCooldownSeconds then return false end
+    bucket[player] = now
+    return true
+end
+
+function MutationService.start(profileRepository, dinosaur)
+    local folder = ReplicatedStorage:FindFirstChild("BeDinoRemotes") :: Folder?
+    if not folder then
+        folder = Instance.new("Folder")
+        folder.Name = "BeDinoRemotes"
+        folder.Parent = ReplicatedStorage
+    end
+
+    local mutate = getRemote(folder, "MutateSpecies")
+    local setupTest = getRemote(folder, "TestSetMutationCopies")
+
+    mutate.OnServerEvent:Connect(function(player: Player, speciesId, targetMutation, requestToken, ...)
+        if select("#", ...) ~= 0 then return end
+        if typeof(speciesId) ~= "string" or #speciesId &lt; 1 or #speciesId &gt; 32 then
+            player:SetAttribute("LastMutationStatus", "invalid_species")
+            return
+        end
+        if targetMutation ~= "gold" then
+            player:SetAttribute("LastMutationStatus", "unknown_mutation")
+            return
+        end
+        if typeof(requestToken) ~= "string" or #requestToken &lt; 1 or #requestToken &gt; 80 then
+            player:SetAttribute("LastMutationStatus", "invalid_token")
+            return
+        end
+        if not allowed(lastMutation, player) then
+            player:SetAttribute("LastMutationStatus", "rate_limited")
+            return
+        end
+
+        local ok, _, status = profileRepository.mutateSpecies(player, speciesId, targetMutation, requestToken)
+        player:SetAttribute("LastMutationStatus", status)
+        if ok then
+            player:SetAttribute("LastMutationToken", requestToken)
+            local character = player.Character
+            if character and character:GetAttribute("DinoAttached") then
+                dinosaur.refreshForPlayer(character, player)
+            end
+        end
+    end)
+
+    setupTest.OnServerEvent:Connect(function(player: Player, baseCount, ...)
+        if select("#", ...) ~= 0 then return end
+        if not Config.MutationTestSetupEnabled then return end
+        if typeof(baseCount) ~= "number" or baseCount % 1 ~= 0 then
+            player:SetAttribute("LastMutationSetupStatus", "bad_count")
+            return
+        end
+        if not allowed(lastSetup, player) then
+            player:SetAttribute("LastMutationSetupStatus", "rate_limited")
+            return
+        end
+        local ok, status = profileRepository.setMutationTestCopies(
+            player, Config.MutationTestSpeciesId, baseCount
+        )
+        player:SetAttribute("LastMutationSetupStatus", status)
+        if ok then
+            local character = player.Character
+            if character and character:GetAttribute("DinoAttached") then
+                dinosaur.refreshForPlayer(character, player)
+            end
+        end
+    end)
+
+    Players.PlayerRemoving:Connect(function(player)
+        lastMutation[player] = nil
+        lastSetup[player] = nil
+    end)
+end
+
+return MutationService
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX14">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -845,7 +987,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX14">
+      <Item class="ModuleScript" referent="RBX15">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -938,8 +1080,11 @@ end
 local function syncAttributes(player: Player, profile: any)
     local collection = profile.collection
     player:SetAttribute("CompyCopies", collection.compy.base)
+    player:SetAttribute("CompyGold", collection.compy.gold)
     player:SetAttribute("TriceratopsCopies", collection.triceratops.base)
+    player:SetAttribute("TriceratopsGold", collection.triceratops.gold)
     player:SetAttribute("TyrannosaurusCopies", collection.tyrannosaurus.base)
+    player:SetAttribute("TyrannosaurusGold", collection.tyrannosaurus.gold)
     player:SetAttribute("PendingChestGrants", profile.pendingChestGrants or 0)
     player:SetAttribute("ProfileRevision", profile.revision or 0)
     player:SetAttribute("EquippedSpeciesId", profile.equippedSpeciesId)
@@ -1443,6 +1588,134 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
     return true, committedOutcome, if duplicateOutcome then "duplicate" else "claimed"
 end
 
+function ProfileRepository.mutateSpecies(player: Player, speciesId: string, targetMutation: string, requestToken: string)
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
+        return false, nil, "profile_not_loaded"
+    end
+    if not knownSpecies(speciesId) then return false, nil, "unknown_species" end
+    if targetMutation ~= "gold" then return false, nil, "unknown_mutation" end
+    if typeof(requestToken) ~= "string" or #requestToken &lt; 1 or #requestToken &gt; 80 then
+        return false, nil, "invalid_token"
+    end
+
+    local operationId = "mutation:" .. requestToken
+    local cachedOperation = findOperation(cached, operationId)
+    if cachedOperation then
+        return true, cachedOperation.outcome, "duplicate"
+    end
+
+    local cachedEntry = cached.collection[speciesId]
+    if typeof(cachedEntry) ~= "table" or cachedEntry.base &lt; Config.GoldMutationCost then
+        return false, nil, "insufficient_copies"
+    end
+
+    local outcome = {
+        speciesId = speciesId,
+        mutationId = "gold",
+        spentBase = Config.GoldMutationCost,
+        gainedGold = 1,
+    }
+    local duplicateOutcome = nil
+    local leaseLost = false
+    local insufficient = false
+    local now = os.time()
+
+    local ok, updated = retry("gold mutation", function()
+        return store:UpdateAsync(keyFor(player), function(profileValue)
+            if not isValidProfile(profileValue) then return nil end
+            if not ownSession(profileValue) then
+                leaseLost = true
+                return nil
+            end
+
+            local existing = findOperation(profileValue, operationId)
+            if existing then
+                duplicateOutcome = existing.outcome
+                return profileValue
+            end
+
+            local entry = profileValue.collection[speciesId]
+            if typeof(entry) ~= "table" or entry.base &lt; Config.GoldMutationCost then
+                insufficient = true
+                return nil
+            end
+
+            entry.base -= Config.GoldMutationCost
+            entry.gold += 1
+            profileValue.revision += 1
+            profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            table.insert(profileValue.recentOperations, {
+                id = operationId,
+                kind = "mutation",
+                outcome = outcome,
+            })
+            trimOperations(profileValue)
+            return profileValue
+        end)
+    end)
+
+    if not ok or updated == nil then
+        if leaseLost then
+            player:SetAttribute("ProfileState", "LeaseLost")
+            return false, nil, "lease_lost"
+        end
+        if insufficient then return false, nil, "insufficient_copies" end
+        player:SetAttribute("ProfileState", "SaveFailed")
+        return false, nil, "save_failed"
+    end
+
+    profiles[player] = updated
+    syncAttributes(player, updated)
+    local committedOutcome = duplicateOutcome or outcome
+    return true, committedOutcome, if duplicateOutcome then "duplicate" else "mutated"
+end
+
+function ProfileRepository.setMutationTestCopies(player: Player, speciesId: string, baseCount: number): (boolean, string)
+    if not Config.MutationTestSetupEnabled then return false, "disabled" end
+    if speciesId ~= Config.MutationTestSpeciesId then return false, "bad_species" end
+    if baseCount ~= 49 and baseCount ~= 50 and baseCount ~= 51 then
+        return false, "bad_count"
+    end
+
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
+        return false, "profile_not_loaded"
+    end
+
+    local leaseLost = false
+    local now = os.time()
+    local ok, updated = retry("mutation test setup", function()
+        return store:UpdateAsync(keyFor(player), function(profileValue)
+            if not isValidProfile(profileValue) then return nil end
+            if not ownSession(profileValue) then
+                leaseLost = true
+                return nil
+            end
+            local entry = profileValue.collection[speciesId]
+            if typeof(entry) ~= "table" then return nil end
+            entry.base = baseCount
+            entry.gold = 0
+            profileValue.revision += 1
+            profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            return profileValue
+        end)
+    end)
+
+    if not ok or updated == nil then
+        if leaseLost then
+            player:SetAttribute("ProfileState", "LeaseLost")
+            return false, "lease_lost"
+        end
+        player:SetAttribute("ProfileState", "SaveFailed")
+        return false, "save_failed"
+    end
+
+    profiles[player] = updated
+    syncAttributes(player, updated)
+    return true, "set_" .. tostring(baseCount)
+end
+
 function ProfileRepository.renew(player: Player): boolean
     if not profiles[player] or player:GetAttribute("ProfileState") ~= "Loaded" then return false end
     local leaseLost = false
@@ -1496,7 +1769,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX15">
+      <Item class="ModuleScript" referent="RBX16">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -1612,7 +1885,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX16">
+      <Item class="ModuleScript" referent="RBX17">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -1830,19 +2103,19 @@ return RunLifecycle
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX17">
+  <Item class="StarterPlayer" referent="RBX18">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX18">
+    <Item class="StarterPlayerScripts" referent="RBX19">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX19">
+      <Item class="Folder" referent="RBX20">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX20">
+        <Item class="LocalScript" referent="RBX21">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -1862,6 +2135,8 @@ local equipSpecies = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
 local testGrantSpecies = remotes:WaitForChild("TestGrantSpecies") :: RemoteEvent
 local claimChest = remotes:WaitForChild("ClaimChest") :: RemoteEvent
 local testGrantChests = remotes:WaitForChild("TestGrantChests") :: RemoteEvent
+local mutateSpecies = remotes:WaitForChild("MutateSpecies") :: RemoteEvent
+local testSetMutationCopies = remotes:WaitForChild("TestSetMutationCopies") :: RemoteEvent
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "PrototypeHUD"
@@ -2012,6 +2287,75 @@ chestGrantButton.Activated:Connect(function()
     end
 end)
 
+local mutationPanel = Instance.new("Frame")
+mutationPanel.Name = "MutationPanel"
+mutationPanel.AnchorPoint = Vector2.new(0.5, 1)
+mutationPanel.Position = UDim2.new(0.5, 0, 1, -18)
+mutationPanel.Size = UDim2.fromOffset(520, 150)
+mutationPanel.BackgroundColor3 = Color3.fromRGB(65, 52, 24)
+mutationPanel.BackgroundTransparency = 0.06
+mutationPanel.Parent = gui
+local mutationCorner = Instance.new("UICorner")
+mutationCorner.CornerRadius = UDim.new(0, 12)
+mutationCorner.Parent = mutationPanel
+
+local mutationInfo = Instance.new("TextLabel")
+mutationInfo.BackgroundTransparency = 1
+mutationInfo.Position = UDim2.fromOffset(10, 6)
+mutationInfo.Size = UDim2.new(1, -20, 0, 42)
+mutationInfo.TextColor3 = Color3.fromRGB(255, 235, 153)
+mutationInfo.Font = Enum.Font.GothamBold
+mutationInfo.TextSize = 14
+mutationInfo.TextWrapped = true
+mutationInfo.Parent = mutationPanel
+
+local lastMutationToken = ""
+local function smallMutationButton(x: number, width: number, textValue: string): TextButton
+    local button = Instance.new("TextButton")
+    button.Position = UDim2.fromOffset(x, 52)
+    button.Size = UDim2.fromOffset(width, 38)
+    button.BackgroundColor3 = Color3.fromRGB(118, 88, 36)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 13
+    button.Text = textValue
+    button.Parent = mutationPanel
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 8)
+    c.Parent = button
+    return button
+end
+
+local set49 = smallMutationButton(10, 80, "SET 49")
+local set50 = smallMutationButton(96, 80, "SET 50")
+local set51 = smallMutationButton(182, 80, "SET 51")
+local mutateButton = smallMutationButton(268, 116, "MUTATE GOLD")
+local retryMutationButton = smallMutationButton(390, 120, "RETRY SAME")
+
+set49.Activated:Connect(function() testSetMutationCopies:FireServer(49) end)
+set50.Activated:Connect(function() testSetMutationCopies:FireServer(50) end)
+set51.Activated:Connect(function() testSetMutationCopies:FireServer(51) end)
+mutateButton.Activated:Connect(function()
+    lastMutationToken = HttpService:GenerateGUID(false)
+    mutateSpecies:FireServer("compy", "gold", lastMutationToken)
+end)
+retryMutationButton.Activated:Connect(function()
+    if lastMutationToken ~= "" then
+        mutateSpecies:FireServer("compy", "gold", lastMutationToken)
+    end
+end)
+
+local mutationHelp = Instance.new("TextLabel")
+mutationHelp.BackgroundTransparency = 1
+mutationHelp.Position = UDim2.fromOffset(10, 96)
+mutationHelp.Size = UDim2.new(1, -20, 0, 48)
+mutationHelp.TextColor3 = Color3.fromRGB(245, 241, 222)
+mutationHelp.Font = Enum.Font.GothamMedium
+mutationHelp.TextSize = 12
+mutationHelp.TextWrapped = true
+mutationHelp.Text = "Test helpers overwrite Compy base/Gold counts. Use a fresh private test experience."
+mutationHelp.Parent = mutationPanel
+
 local endButton = Instance.new("TextButton")
 endButton.Name = "EndRun"
 endButton.AnchorPoint = Vector2.new(1, 1)
@@ -2070,6 +2414,13 @@ local function countForSpecies(speciesId: string): number
     return 0
 end
 
+local function goldForSpecies(speciesId: string): number
+    if speciesId == "compy" then return numberAttr("CompyGold") end
+    if speciesId == "triceratops" then return numberAttr("TriceratopsGold") end
+    if speciesId == "tyrannosaurus" then return numberAttr("TyrannosaurusGold") end
+    return 0
+end
+
 local elapsed = 0
 RunService.Heartbeat:Connect(function(dt)
     elapsed += dt
@@ -2111,10 +2462,24 @@ RunService.Heartbeat:Connect(function(dt)
         local count = countForSpecies(speciesId)
         local displayName = Config.SpeciesDisplayNames[speciesId] or speciesId
         local stateText = if equipped == speciesId then "EQUIPPED" elseif count &gt; 0 then "OWNED" else "LOCKED"
-        button.Text = string.format("%s  |  %d copies  |  %s", displayName, count, stateText)
+        button.Text = string.format(
+            "%s | %d base / %d Gold | %s",
+            displayName, count, goldForSpecies(speciesId), stateText
+        )
         button.Active = profileState == "Loaded"
         button.AutoButtonColor = profileState == "Loaded"
     end
+
+    local mutationStatus = stringAttr("LastMutationStatus", "none")
+    local setupStatus = stringAttr("LastMutationSetupStatus", "not used")
+    mutationInfo.Text = string.format(
+        "GOLD MUTATION  •  Compy %d base / %d Gold  •  %s  •  Setup: %s",
+        numberAttr("CompyCopies"), numberAttr("CompyGold"), mutationStatus, setupStatus
+    )
+    mutateButton.Active = profileState == "Loaded"
+    mutateButton.AutoButtonColor = mutateButton.Active
+    retryMutationButton.Active = profileState == "Loaded" and lastMutationToken ~= ""
+    retryMutationButton.AutoButtonColor = retryMutationButton.Active
 
     local testCount = countForSpecies(Config.CollectionTestGrantSpeciesId)
     grantButton.Visible = Config.CollectionTestGrantEnabled
@@ -2123,17 +2488,17 @@ RunService.Heartbeat:Connect(function(dt)
     grantButton.AutoButtonColor = grantButton.Active
 
     local collectionText = string.format(
-        "Owned: Compy %d  •  Triceratops %d  •  T-Rex %d",
-        numberAttr("CompyCopies"),
-        numberAttr("TriceratopsCopies"),
-        numberAttr("TyrannosaurusCopies")
+        "Owned: Compy %d+%dG  •  Triceratops %d+%dG  •  T-Rex %d+%dG",
+        numberAttr("CompyCopies"), numberAttr("CompyGold"),
+        numberAttr("TriceratopsCopies"), numberAttr("TriceratopsGold"),
+        numberAttr("TyrannosaurusCopies"), numberAttr("TyrannosaurusGold")
     )
 
     local character = currentCharacter
     local humanoid = currentHumanoid
     if not character or player.Character ~= character or not humanoid then
         panel.Text = string.format(
-            "BE DINO!  •  CHEST QUEUE TEST\nProfile: %s  •  Equipped: %s  •  Equip result: %s\n%s\nTest grant: %s",
+            "BE DINO!  •  GOLD MUTATION TEST\nProfile: %s  •  Equipped: %s  •  Equip result: %s\n%s\nTest grant: %s",
             profileState, equipped, equipStatus, collectionText, grantStatus
         )
         endButton.Active = false
@@ -2158,7 +2523,7 @@ RunService.Heartbeat:Connect(function(dt)
     local status = if protectionRemaining &gt; 0 then string.format("SAFE %.1fs", protectionRemaining) else "PVP ACTIVE"
 
     panel.Text = string.format(
-        "BE DINO!  •  CHEST QUEUE TEST\nGrowth %d  •  Catches %d  •  Size %.2fx  •  %s\nProfile: %s  •  Equipped: %s  •  Equip result: %s\n%s\nTest grant: %s",
+        "BE DINO!  •  GOLD MUTATION TEST\nGrowth %d  •  Catches %d  •  Size %.2fx  •  %s\nProfile: %s  •  Equipped: %s  •  Equip result: %s\n%s\nTest grant: %s",
         score, catches, scale, status, profileState, equipped, equipStatus, collectionText, grantStatus
     )
 
@@ -2177,7 +2542,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX21">
+  <Item class="Workspace" referent="RBX22">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>
