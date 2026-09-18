@@ -1,7 +1,7 @@
 --!strict
 -- Prototype tuning only. Persistent economy values remain private-test values.
 return table.freeze({
-    Build = "collection-equip-008",
+    Build = "chest-queue-009",
     WalkSpeed = 18,
     ArenaHalfWidth = 90,
     CameraMinZoom = 12,
@@ -50,9 +50,27 @@ return table.freeze({
     ProfileMaxRecentOperations = 50,
 
     EquipRequestCooldownSeconds = 0.5,
-    CollectionTestGrantEnabled = true,
+    CollectionTestGrantEnabled = false,
     CollectionTestGrantSpeciesId = "triceratops",
     CollectionTestGrantVersion = 1,
+
+    ChestTimerSeconds = 10,
+    ChestQueueCapacity = 5,
+    ChestOverflowCapacity = 10,
+    ChestClaimRequestCooldownSeconds = 0.35,
+    ChestTestGrantEnabled = true,
+    ChestTestGrantCount = 7,
+    ChestTestGrantVersion = 1,
+    ChestSpeciesWeights = {
+        {speciesId = "compy", weight = 70},
+        {speciesId = "triceratops", weight = 25},
+        {speciesId = "tyrannosaurus", weight = 5},
+    },
+    ChestQuantityWeights = {
+        {count = 1, weight = 70},
+        {count = 2, weight = 25},
+        {count = 3, weight = 5},
+    },
 
     -- Build 006/007 probes passed and are disabled again.
     DuplicateSettlementProbe = false,

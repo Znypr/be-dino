@@ -52,6 +52,11 @@ local function isValidProfile(profile: any): boolean
     if typeof(profile.revision) ~= "number" or profile.revision < 0 then return false end
     if typeof(profile.collection) ~= "table" then return false end
     if typeof(profile.recentOperations) ~= "table" then return false end
+    if typeof(profile.eggs) ~= "table" then return false end
+    if typeof(profile.pendingChestGrants) ~= "number"
+        or profile.pendingChestGrants < 0 or profile.pendingChestGrants % 1 ~= 0 then
+        return false
+    end
     if not knownSpecies(profile.equippedSpeciesId) then return false end
     for _, speciesId in Config.SpeciesOrder do
         local entry = profile.collection[speciesId]
@@ -88,6 +93,15 @@ local function syncAttributes(player: Player, profile: any)
     player:SetAttribute("PendingChestGrants", profile.pendingChestGrants or 0)
     player:SetAttribute("ProfileRevision", profile.revision or 0)
     player:SetAttribute("EquippedSpeciesId", profile.equippedSpeciesId)
+    player:SetAttribute("ActiveChestCount", #profile.eggs)
+    local nextChest = profile.eggs[1]
+    if typeof(nextChest) == "table" then
+        player:SetAttribute("NextChestId", nextChest.eggId)
+        player:SetAttribute("NextChestReadyAt", nextChest.readyAt)
+    else
+        player:SetAttribute("NextChestId", "")
+        player:SetAttribute("NextChestReadyAt", 0)
+    end
 end
 
 local function ownSession(profile: any): boolean
@@ -107,6 +121,37 @@ end
 local function trimOperations(profile: any)
     while #profile.recentOperations > Config.ProfileMaxRecentOperations do
         table.remove(profile.recentOperations, 1)
+    end
+end
+
+local function lastChestReadyAt(profile: any, now: number): number
+    local result = now
+    for _, chest in profile.eggs do
+        if typeof(chest) == "table" and typeof(chest.readyAt) == "number" then
+            result = math.max(result, chest.readyAt)
+        end
+    end
+    return result
+end
+
+local function availableChestCapacity(profile: any): number
+    return (Config.ChestQueueCapacity - #profile.eggs)
+        + (Config.ChestOverflowCapacity - profile.pendingChestGrants)
+end
+
+local function enqueueChestIds(profile: any, chestIds: {string}, now: number)
+    local nextReadyAt = lastChestReadyAt(profile, now)
+    for _, chestId in chestIds do
+        if #profile.eggs < Config.ChestQueueCapacity then
+            nextReadyAt += Config.ChestTimerSeconds
+            table.insert(profile.eggs, {
+                eggId = chestId,
+                kind = "alpha_chest",
+                readyAt = nextReadyAt,
+            })
+        else
+            profile.pendingChestGrants += 1
+        end
     end
 end
 
@@ -180,7 +225,13 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
 
     local outcome = RewardMath.computeRunReward(catchScore)
     local operationId = "run:" .. runId
+    local chestIds = {}
+    for _ = 1, outcome.chestCount do
+        table.insert(chestIds, HttpService:GenerateGUID(false))
+    end
+    outcome.chestIds = chestIds
     local leaseLost = false
+    local queueFull = false
     local duplicateOutcome = nil
     local now = os.time()
 
@@ -198,6 +249,11 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
                 return profileValue
             end
 
+            if outcome.chestCount > availableChestCapacity(profileValue) then
+                queueFull = true
+                return nil
+            end
+
             for _, stack in outcome.stacks do
                 local species = profileValue.collection[stack.speciesId]
                 if typeof(species) ~= "table" or typeof(species.base) ~= "number" then
@@ -206,7 +262,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
                 species.base += stack.count
             end
 
-            profileValue.pendingChestGrants = (profileValue.pendingChestGrants or 0) + outcome.chestCount
+            enqueueChestIds(profileValue, chestIds, now)
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             profileValue.lastCheckpoint = {
@@ -226,10 +282,14 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     if not ok or updated == nil then
         if leaseLost then
             player:SetAttribute("ProfileState", "LeaseLost")
-        else
-            player:SetAttribute("ProfileState", "SaveFailed")
+            return false, nil, "lease_lost"
         end
-        return false, nil, if leaseLost then "lease_lost" else "save_failed"
+        if queueFull then
+            player:SetAttribute("LastChestClaimStatus", "queue_full")
+            return false, nil, "queue_full"
+        end
+        player:SetAttribute("ProfileState", "SaveFailed")
+        return false, nil, "save_failed"
     end
 
     profiles[player] = updated
@@ -355,6 +415,182 @@ function ProfileRepository.grantCollectionTestSpecies(player: Player): (boolean,
     profiles[player] = updated
     syncAttributes(player, updated)
     return true, if duplicate then "duplicate" else "granted"
+end
+
+function ProfileRepository.grantChestTest(player: Player): (boolean, string)
+    if not Config.ChestTestGrantEnabled then return false, "disabled" end
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
+        return false, "profile_not_loaded"
+    end
+
+    local operationId = string.format("test-chests:v%d", Config.ChestTestGrantVersion)
+    local chestIds = {}
+    for _ = 1, Config.ChestTestGrantCount do
+        table.insert(chestIds, HttpService:GenerateGUID(false))
+    end
+    local duplicate = false
+    local queueFull = false
+    local leaseLost = false
+    local now = os.time()
+
+    local ok, updated = retry("chest test grant", function()
+        return store:UpdateAsync(keyFor(player), function(profileValue)
+            if not isValidProfile(profileValue) then return nil end
+            if not ownSession(profileValue) then
+                leaseLost = true
+                return nil
+            end
+            if findOperation(profileValue, operationId) then
+                duplicate = true
+                return profileValue
+            end
+            if #chestIds > availableChestCapacity(profileValue) then
+                queueFull = true
+                return nil
+            end
+
+            enqueueChestIds(profileValue, chestIds, now)
+            profileValue.revision += 1
+            profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            table.insert(profileValue.recentOperations, {
+                id = operationId,
+                kind = "chest_test_grant",
+                outcome = {count = #chestIds},
+            })
+            trimOperations(profileValue)
+            return profileValue
+        end)
+    end)
+
+    if not ok or updated == nil then
+        if leaseLost then
+            player:SetAttribute("ProfileState", "LeaseLost")
+            return false, "lease_lost"
+        end
+        if queueFull then return false, "queue_full" end
+        player:SetAttribute("ProfileState", "SaveFailed")
+        return false, "save_failed"
+    end
+
+    profiles[player] = updated
+    syncAttributes(player, updated)
+    return true, if duplicate then "duplicate" else "granted"
+end
+
+function ProfileRepository.claimChest(player: Player, chestId: string)
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
+        return false, nil, "profile_not_loaded"
+    end
+    if typeof(chestId) ~= "string" or #chestId < 1 or #chestId > 80 then
+        return false, nil, "invalid_chest_id"
+    end
+
+    local operationId = "chest:" .. chestId
+    local cachedOperation = findOperation(cached, operationId)
+    if cachedOperation then
+        return true, cachedOperation.outcome, "duplicate"
+    end
+
+    local cachedChest = nil
+    for _, chest in cached.eggs do
+        if chest.eggId == chestId then
+            cachedChest = chest
+            break
+        end
+    end
+    if not cachedChest then return false, nil, "missing" end
+
+    local now = os.time()
+    if now < cachedChest.readyAt then return false, nil, "not_ready" end
+
+    -- Generate once outside UpdateAsync so retries cannot reroll the reward.
+    local outcome = RewardMath.computeChestReward(Random.new())
+    local refillChestId = HttpService:GenerateGUID(false)
+    local duplicateOutcome = nil
+    local leaseLost = false
+    local notReady = false
+    local missing = false
+
+    local ok, updated = retry("chest claim", function()
+        return store:UpdateAsync(keyFor(player), function(profileValue)
+            if not isValidProfile(profileValue) then return nil end
+            if not ownSession(profileValue) then
+                leaseLost = true
+                return nil
+            end
+
+            local existing = findOperation(profileValue, operationId)
+            if existing then
+                duplicateOutcome = existing.outcome
+                return profileValue
+            end
+
+            local index = nil
+            local chest = nil
+            for i, candidate in profileValue.eggs do
+                if candidate.eggId == chestId then
+                    index = i
+                    chest = candidate
+                    break
+                end
+            end
+            if not index or not chest then
+                missing = true
+                return nil
+            end
+            if now < chest.readyAt then
+                notReady = true
+                return nil
+            end
+
+            table.remove(profileValue.eggs, index)
+            local species = profileValue.collection[outcome.speciesId]
+            if typeof(species) ~= "table" then return nil end
+            species.base += outcome.count
+
+            if profileValue.pendingChestGrants > 0 then
+                profileValue.pendingChestGrants -= 1
+                local readyAt = lastChestReadyAt(profileValue, now) + Config.ChestTimerSeconds
+                table.insert(profileValue.eggs, {
+                    eggId = refillChestId,
+                    kind = "alpha_chest",
+                    readyAt = readyAt,
+                })
+            end
+
+            profileValue.revision += 1
+            profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            table.insert(profileValue.recentOperations, {
+                id = operationId,
+                kind = "chest_claim",
+                outcome = outcome,
+            })
+            trimOperations(profileValue)
+            return profileValue
+        end)
+    end)
+
+    if not ok or updated == nil then
+        if leaseLost then
+            player:SetAttribute("ProfileState", "LeaseLost")
+            return false, nil, "lease_lost"
+        end
+        if notReady then return false, nil, "not_ready" end
+        if missing then return false, nil, "missing" end
+        player:SetAttribute("ProfileState", "SaveFailed")
+        return false, nil, "save_failed"
+    end
+
+    profiles[player] = updated
+    syncAttributes(player, updated)
+    local committedOutcome = duplicateOutcome or outcome
+    player:SetAttribute("LastClaimedChestId", chestId)
+    player:SetAttribute("LastChestRewardText", string.format(
+        "%dx %s", committedOutcome.count, committedOutcome.speciesId
+    ))
+    return true, committedOutcome, if duplicateOutcome then "duplicate" else "claimed"
 end
 
 function ProfileRepository.renew(player: Player): boolean

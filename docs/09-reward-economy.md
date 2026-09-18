@@ -47,7 +47,7 @@ The repeat-pair ledger must be bounded and server-owned. It is temporary session
 - Catch 10–99: 1 chest.
 - Catch 100–499: 2 chests.
 - Catch 500+: 3 chests, capped at 3 per run.
-- Private-test timer: 60 seconds per chest, sequential.
+- Planned private-test timer: 60 seconds per chest, sequential. Build 009 temporarily accelerates this to 10 seconds solely for runtime verification of queue/offline behavior.
 - One chest yields one species stack using its own species weights.
 - Test quantity distribution: 1 copy 70%, 2 copies 25%, 3 copies 5%.
 - Active queue capacity: 5, with a bounded pending overflow list. If both are full, prevent another reward-bearing run rather than discard an earned chest.

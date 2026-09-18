@@ -1,12 +1,12 @@
 # Kanban and task specifications
 Updated 2026-09-17. This file is the canonical task tracker.
 
-Build 005 PvP/run-ending tests 1–9 passed. Build 006 persistence tests 1–10 passed. Build 007 lease/stale-writer verification and restart persistence passed in the new private test experience. BD-011 is Done. Build 008 collection/equip is ready for runtime testing. Mobile remains untested.
+Build 005 PvP/run-ending tests 1–9 passed. Build 006 persistence tests 1–10 passed. Build 007 lease/stale-writer verification and restart persistence passed in the new private test experience. BD-011 is Done. Build 008 collection/equip passed all 8 runtime tests. BD-012 is Done. Build 009 earned chest queue is ready for runtime testing. Mobile remains untested.
 
 ## Board
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-014–022 | BD-007 art brief; BD-013 egg queue | None | BD-006 mobile; BD-012 collection/equip | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-008, BD-009, BD-010, BD-011 |
+| BD-015–022 | BD-007 art brief; BD-014 Gold mutation | None | BD-006 mobile; BD-013 chest queue | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-008, BD-009, BD-010, BD-011, BD-012 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -31,9 +31,9 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 | BD-009 | Done | P0 | Implement PvP, spawn safety and run ending | BD-005, BD-008 |
 | BD-010 | Done | P0 | Define and simulate alpha economy | BD-003 |
 | BD-011 | Done | P0 | Build profile storage and idempotent settlement | BD-005, BD-009, BD-010 |
-| BD-012 | Review / test | P0 | Build collection and equip | BD-011 |
-| BD-013 | Ready | P0 | Build earned egg queue | BD-010, BD-011 |
-| BD-014 | Backlog | P0 | Build Gold mutation | BD-012 |
+| BD-012 | Done | P0 | Build collection and equip | BD-011 |
+| BD-013 | Review / test | P0 | Build earned egg queue | BD-010, BD-011 |
+| BD-014 | Ready | P0 | Build Gold mutation | BD-012 |
 | BD-015 | Backlog | P0 | Implement core UI and first-session guidance | BD-006, BD-012, BD-013, BD-014 |
 | BD-016 | Backlog | P1 | Produce and integrate dinosaur/map kit | BD-006, BD-007 |
 | BD-017 | Backlog | P1 | Integrate minimal sound feedback | BD-004, BD-008, BD-013 |
@@ -93,10 +93,12 @@ Build 007 completed the final acceptance case. Znypr confirmed the lease test pa
 ### BD-012 — collection/equip
 **Done when:** three species definitions, owned/locked counts and equip survive reconnect; invalid equip is rejected.
 
-Build 008 implements persisted server-validated equip for Compy, Triceratops and T-Rex, collection counts, distinct placeholder visuals and a private-test-only one-time Triceratops grant. Runtime checks are in `docs/18-collection-equip-test.md`.
+Build 008 passed all eight runtime checks. Owned/locked counts, server rejection of locked T-Rex, one-time Triceratops test unlock, visual switching, Reset Character persistence and full reconnect persistence all worked. BD-012 is Done.
 
 ### BD-013 — earned chest queue
 **Done when:** server timestamps, offline elapsed time, duplicate claims and capacity/overflow policy pass. Chest loot remains independent from immediate run loot.
+
+Build 009 implements a five-slot active queue, bounded overflow, absolute server timestamps, persisted one-time chest outcomes and duplicate-claim replay protection. A private-test-only 7-chest grant and accelerated 10-second timer make the acceptance cases quick to exercise. See `docs/19-chest-queue-test.md`.
 
 ### BD-014 — Gold mutation
 **Done when:** atomic 50-copy conversion handles 49/50/51 copies, duplicate requests and equipped-copy semantics without negative counts.
@@ -126,6 +128,7 @@ Run the small invited session only after BD-020. Capture friction, repeat-run be
 Public scope is an evidence-based later decision. Passing code generation alone never triggers launch.
 
 ## Session log
+- 2026-09-18: Znypr reported all Build 008 collection/equip tests passing. BD-012 moved to Done. Build 009 chest queue implemented for BD-013 runtime verification.
 - 2026-09-18: Znypr reported Build 007 checks passing in a new private test experience: Profile Loaded, fresh starter state, lease test PASS, reward gain, full restart and persisted copy count. BD-011 moved to Done. Build 008 collection/equip prepared for runtime verification.
 - 2026-09-17: Build 007 prepared for final BD-011 runtime verification. Added a temporary DataStore lease/stale-writer probe and HUD `Lease test` status. Final Build 007 CI passed and generated the test artifact.
 - 2026-09-17: Znypr reported Build 006 tests 1–10 passing. Rejoin persistence, duplicate settlement, Reset Character settlement, anti-farm behavior and fail-closed API/DataStore behavior passed. Compy copies were confirmed to continue above 3. BD-011 moved to Review / test pending the competing-session/stale-lease case.

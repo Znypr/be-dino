@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Arena = require(script.Parent.Arena)
+local ChestService = require(script.Parent.ChestService)
 local CollectionService = require(script.Parent.CollectionService)
 local Dinosaur = require(script.Parent.Dinosaur)
 local ProfileRepository = require(script.Parent.ProfileRepository)
@@ -40,6 +41,7 @@ RunLifecycle.configureSettlement(function(player: Player, runId: string, catchSc
 end)
 RunLifecycle.start()
 CollectionService.start(ProfileRepository, Dinosaur)
+ChestService.start(ProfileRepository)
 
 local function spawnLoadedPlayer(player: Player)
     player.CanLoadCharacterAppearance = false
@@ -88,4 +90,4 @@ FoodService.start(Dinosaur)
 local PredationService = require(script.Parent.PredationService)
 PredationService.start(RunLifecycle, Dinosaur)
 
-print("[Be Dino] " .. Config.Build .. " ready. Collection/equip test.")
+print("[Be Dino] " .. Config.Build .. " ready. Chest queue test.")

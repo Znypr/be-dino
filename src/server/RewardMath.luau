@@ -83,4 +83,28 @@ function RewardMath.computeRunReward(catchScore: number)
     }
 end
 
+local function weightedChoice(rows, rng: Random)
+    local total = 0
+    for _, row in rows do total += row.weight end
+    local roll = rng:NextNumber(0, total)
+    local cumulative = 0
+    for _, row in rows do
+        cumulative += row.weight
+        if roll <= cumulative then return row end
+    end
+    return rows[#rows]
+end
+
+function RewardMath.computeChestReward(rng: Random?)
+    local random = rng or Random.new()
+    local speciesRow = weightedChoice(Config.ChestSpeciesWeights, random)
+    local quantityRow = weightedChoice(Config.ChestQuantityWeights, random)
+    return {
+        rewardConfigVersion = 1,
+        speciesId = speciesRow.speciesId,
+        mutationId = "base",
+        count = quantityRow.count,
+    }
+end
+
 return RewardMath

@@ -13,6 +13,8 @@ local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
 local requestEndRun = remotes:WaitForChild("RequestEndRun") :: RemoteEvent
 local equipSpecies = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
 local testGrantSpecies = remotes:WaitForChild("TestGrantSpecies") :: RemoteEvent
+local claimChest = remotes:WaitForChild("ClaimChest") :: RemoteEvent
+local testGrantChests = remotes:WaitForChild("TestGrantChests") :: RemoteEvent
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "PrototypeHUD"
@@ -22,7 +24,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 local panel = Instance.new("TextLabel")
 panel.Position = UDim2.new(0.5, 0, 0, 12)
 panel.AnchorPoint = Vector2.new(0.5, 0)
-panel.Size = UDim2.new(0.94, 0, 0, 150)
+panel.Size = UDim2.new(0.94, 0, 0, 174)
 panel.BackgroundColor3 = Color3.fromRGB(32, 49, 42)
 panel.BackgroundTransparency = 0.12
 panel.TextColor3 = Color3.fromRGB(249, 243, 218)
@@ -34,7 +36,7 @@ local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 12)
 corner.Parent = panel
 local limit = Instance.new("UISizeConstraint")
-limit.MaxSize = Vector2.new(720, 160)
+limit.MaxSize = Vector2.new(760, 184)
 limit.Parent = panel
 
 local collection = Instance.new("Frame")
@@ -89,6 +91,78 @@ grantButton.BackgroundColor3 = Color3.fromRGB(97, 82, 53)
 grantButton.Activated:Connect(function()
     if player:GetAttribute("ProfileState") ~= "Loaded" then return end
     testGrantSpecies:FireServer()
+end)
+
+local chestPanel = Instance.new("Frame")
+chestPanel.Name = "ChestPanel"
+chestPanel.AnchorPoint = Vector2.new(1, 0.5)
+chestPanel.Position = UDim2.new(1, -18, 0.5, 0)
+chestPanel.Size = UDim2.fromOffset(260, 250)
+chestPanel.BackgroundColor3 = Color3.fromRGB(55, 43, 31)
+chestPanel.BackgroundTransparency = 0.08
+chestPanel.Parent = gui
+local chestCorner = Instance.new("UICorner")
+chestCorner.CornerRadius = UDim.new(0, 12)
+chestCorner.Parent = chestPanel
+
+local chestTitle = Instance.new("TextLabel")
+chestTitle.BackgroundTransparency = 1
+chestTitle.Position = UDim2.fromOffset(10, 8)
+chestTitle.Size = UDim2.new(1, -20, 0, 30)
+chestTitle.Text = "CHEST QUEUE"
+chestTitle.TextColor3 = Color3.fromRGB(245, 241, 222)
+chestTitle.Font = Enum.Font.GothamBold
+chestTitle.TextSize = 18
+chestTitle.Parent = chestPanel
+
+local chestInfo = Instance.new("TextLabel")
+chestInfo.BackgroundTransparency = 1
+chestInfo.Position = UDim2.fromOffset(10, 42)
+chestInfo.Size = UDim2.new(1, -20, 0, 78)
+chestInfo.TextColor3 = Color3.fromRGB(245, 241, 222)
+chestInfo.Font = Enum.Font.GothamMedium
+chestInfo.TextSize = 14
+chestInfo.TextWrapped = true
+chestInfo.Parent = chestPanel
+
+local function chestButton(y: number, textValue: string): TextButton
+    local button = Instance.new("TextButton")
+    button.Position = UDim2.fromOffset(10, y)
+    button.Size = UDim2.new(1, -20, 0, 38)
+    button.BackgroundColor3 = Color3.fromRGB(102, 76, 46)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 13
+    button.Text = textValue
+    button.Parent = chestPanel
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 8)
+    c.Parent = button
+    return button
+end
+
+local claimButton = chestButton(124, "CLAIM NEXT CHEST")
+local retryClaimButton = chestButton(166, "RETRY LAST CLAIM")
+local chestGrantButton = chestButton(208, "TEST ADD 7 CHESTS")
+
+claimButton.Activated:Connect(function()
+    local chestId = player:GetAttribute("NextChestId")
+    if typeof(chestId) == "string" and chestId ~= "" then
+        claimChest:FireServer(chestId, HttpService:GenerateGUID(false))
+    end
+end)
+
+retryClaimButton.Activated:Connect(function()
+    local chestId = player:GetAttribute("LastClaimedChestId")
+    if typeof(chestId) == "string" and chestId ~= "" then
+        claimChest:FireServer(chestId, HttpService:GenerateGUID(false))
+    end
+end)
+
+chestGrantButton.Activated:Connect(function()
+    if player:GetAttribute("ProfileState") == "Loaded" then
+        testGrantChests:FireServer()
+    end
 end)
 
 local endButton = Instance.new("TextButton")
@@ -159,6 +233,32 @@ RunService.Heartbeat:Connect(function(dt)
     local equipped = stringAttr("EquippedSpeciesId", "compy")
     local equipStatus = stringAttr("LastEquipStatus", "none")
     local grantStatus = stringAttr("LastCollectionGrantStatus", "not used")
+    local chestStatus = stringAttr("LastChestClaimStatus", "none")
+    local chestGrantStatus = stringAttr("LastChestTestGrantStatus", "not used")
+    local chestReward = stringAttr("LastChestRewardText", "none")
+    local activeChests = numberAttr("ActiveChestCount")
+    local overflowChests = numberAttr("PendingChestGrants")
+    local nextReadyAt = numberAttr("NextChestReadyAt")
+    local nextChestId = stringAttr("NextChestId", "")
+    local serverNow = workspace:GetServerTimeNow()
+    local remaining = math.max(0, nextReadyAt - serverNow)
+    local nextState = if nextChestId == "" then "EMPTY"
+        elseif remaining <= 0 then "READY"
+        else string.format("%.1fs", remaining)
+
+    chestInfo.Text = string.format(
+        "Active %d / %d  •  Overflow %d\nNext: %s\nClaim: %s  •  Reward: %s",
+        activeChests, Config.ChestQueueCapacity, overflowChests, nextState, chestStatus, chestReward
+    )
+    local ready = nextChestId ~= "" and remaining <= 0 and profileState == "Loaded"
+    claimButton.Active = ready
+    claimButton.AutoButtonColor = ready
+    retryClaimButton.Active = stringAttr("LastClaimedChestId", "") ~= "" and profileState == "Loaded"
+    retryClaimButton.AutoButtonColor = retryClaimButton.Active
+    chestGrantButton.Visible = Config.ChestTestGrantEnabled
+    chestGrantButton.Active = Config.ChestTestGrantEnabled and profileState == "Loaded"
+    chestGrantButton.AutoButtonColor = chestGrantButton.Active
+    chestGrantButton.Text = "TEST ADD 7 CHESTS (" .. chestGrantStatus .. ")"
 
     for speciesId, button in speciesButtons do
         local count = countForSpecies(speciesId)
@@ -186,7 +286,7 @@ RunService.Heartbeat:Connect(function(dt)
     local humanoid = currentHumanoid
     if not character or player.Character ~= character or not humanoid then
         panel.Text = string.format(
-            "BE DINO!  •  COLLECTION TEST\nProfile: %s  •  Equipped: %s  •  Equip result: %s\n%s\nTest grant: %s",
+            "BE DINO!  •  CHEST QUEUE TEST\nProfile: %s  •  Equipped: %s  •  Equip result: %s\n%s\nTest grant: %s",
             profileState, equipped, equipStatus, collectionText, grantStatus
         )
         endButton.Active = false
@@ -211,7 +311,7 @@ RunService.Heartbeat:Connect(function(dt)
     local status = if protectionRemaining > 0 then string.format("SAFE %.1fs", protectionRemaining) else "PVP ACTIVE"
 
     panel.Text = string.format(
-        "BE DINO!  •  COLLECTION TEST\nGrowth %d  •  Catches %d  •  Size %.2fx  •  %s\nProfile: %s  •  Equipped: %s  •  Equip result: %s\n%s\nTest grant: %s",
+        "BE DINO!  •  CHEST QUEUE TEST\nGrowth %d  •  Catches %d  •  Size %.2fx  •  %s\nProfile: %s  •  Equipped: %s  •  Equip result: %s\n%s\nTest grant: %s",
         score, catches, scale, status, profileState, equipped, equipStatus, collectionText, grantStatus
     )
 
