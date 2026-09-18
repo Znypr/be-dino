@@ -100,6 +100,9 @@ function RunLifecycle.tryEnd(player: Player, character: Model, reason: string, s
     character:SetAttribute("RunState", "Ending")
     character:SetAttribute("ExitChannelEndsAt", 0)
     player:SetAttribute("LastRunEndReason", reason)
+    player:SetAttribute("LastRunCatchScore", snapshot.catchScore)
+    local growthScore = character:GetAttribute("GrowthScore")
+    player:SetAttribute("LastRunGrowthScore", if typeof(growthScore) == "number" then growthScore else 0)
     player:SetAttribute("LastRunId", snapshot.runId)
     player:SetAttribute("LastRunEndAt", workspace:GetServerTimeNow())
     player:SetAttribute("LastPredatorUserId", sourceUserId or 0)
@@ -128,6 +131,9 @@ function RunLifecycle.endForDisconnect(player: Player): string
     character:SetAttribute("RunState", "Ending")
     character:SetAttribute("ExitChannelEndsAt", 0)
     player:SetAttribute("LastRunEndReason", "Disconnect")
+    player:SetAttribute("LastRunCatchScore", snapshot.catchScore)
+    local growthScore = character:GetAttribute("GrowthScore")
+    player:SetAttribute("LastRunGrowthScore", if typeof(growthScore) == "number" then growthScore else 0)
     if settleRun then
         local ok = settleRun(player, snapshot.runId, snapshot.catchScore, "Disconnect")
         return if ok then "settled" else "failed"

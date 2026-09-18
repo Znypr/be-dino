@@ -1,7 +1,7 @@
 --!strict
 -- Prototype tuning only. Persistent economy values remain private-test values.
 return table.freeze({
-    Build = "gold-mutation-010",
+    Build = "core-ui-011",
     WalkSpeed = 18,
     ArenaHalfWidth = 90,
     CameraMinZoom = 12,
@@ -54,7 +54,7 @@ return table.freeze({
     CollectionTestGrantSpeciesId = "triceratops",
     CollectionTestGrantVersion = 1,
 
-    ChestTimerSeconds = 10,
+    ChestTimerSeconds = 60,
     ChestQueueCapacity = 5,
     ChestOverflowCapacity = 10,
     ChestClaimRequestCooldownSeconds = 0.35,
@@ -74,7 +74,7 @@ return table.freeze({
 
     GoldMutationCost = 50,
     MutationRequestCooldownSeconds = 0.4,
-    MutationTestSetupEnabled = true,
+    MutationTestSetupEnabled = false,
     MutationTestSpeciesId = "compy",
 
     -- Build 006/007 probes passed and are disabled again.

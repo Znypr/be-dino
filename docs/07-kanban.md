@@ -1,12 +1,12 @@
 # Kanban and task specifications
 Updated 2026-09-17. This file is the canonical task tracker.
 
-Build 005 PvP/run-ending tests 1–9 passed. Build 006 persistence tests 1–10 passed. Build 007 lease/stale-writer verification and restart persistence passed in the new private test experience. BD-011 is Done. Build 008 collection/equip passed all 8 runtime tests. BD-012 is Done. Build 009 earned chest queue passed all 8 runtime tests. BD-013 is Done. Build 010 Gold mutation is ready for runtime testing. Mobile remains untested.
+Build 005 PvP/run-ending tests 1–9 passed. Build 006 persistence tests 1–10 passed. Build 007 lease/stale-writer verification and restart persistence passed in the new private test experience. BD-011 is Done. Build 008 collection/equip passed all 8 runtime tests. BD-012 is Done. Build 009 earned chest queue passed all 8 runtime tests. BD-013 is Done. Build 010 Gold mutation passed all 8 runtime tests. BD-014 is Done. Build 011 core UI is ready for desktop + phone-emulator testing. Mobile remains untested.
 
 ## Board
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-016–022 | BD-007 art brief; BD-015 core UI | None | BD-006 mobile; BD-014 Gold mutation | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013 |
+| BD-016–022 | BD-007 art brief | None | BD-006 mobile; BD-015 core UI | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -33,8 +33,8 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 | BD-011 | Done | P0 | Build profile storage and idempotent settlement | BD-005, BD-009, BD-010 |
 | BD-012 | Done | P0 | Build collection and equip | BD-011 |
 | BD-013 | Done | P0 | Build earned egg queue | BD-010, BD-011 |
-| BD-014 | Review / test | P0 | Build Gold mutation | BD-012 |
-| BD-015 | Ready | P0 | Implement core UI and first-session guidance | BD-006, BD-012, BD-013, BD-014 |
+| BD-014 | Done | P0 | Build Gold mutation | BD-012 |
+| BD-015 | Review / test | P0 | Implement core UI and first-session guidance | BD-006, BD-012, BD-013, BD-014 |
 | BD-016 | Backlog | P1 | Produce and integrate dinosaur/map kit | BD-006, BD-007 |
 | BD-017 | Backlog | P1 | Integrate minimal sound feedback | BD-004, BD-008, BD-013 |
 | BD-018 | Backlog | P0 | Run multiplayer, security and persistence suite | BD-011–015 |
@@ -103,10 +103,12 @@ Build 009 passed all eight runtime checks. The five-slot active queue, two-item 
 ### BD-014 — Gold mutation
 **Done when:** atomic 50-copy conversion handles 49/50/51 copies, duplicate requests and equipped-copy semantics without negative counts.
 
-Build 010 implements atomic base-to-Gold conversion, mutation request idempotency, Gold ownership/equip handling, Gold placeholder treatment and exact 49/50/51 private-test setup helpers. See `docs/20-gold-mutation-test.md`.
+Build 010 passed all eight runtime checks. The 49-copy rejection, exact 50 and 51 conversions, duplicate mutation replay, equipped Gold-only semantics, Gold visual and reconnect persistence all worked. BD-014 is Done.
 
 ### BD-015 — core UI
 **Done when:** lobby, HUD, run summary, collection and chest queue are usable on desktop/touch and large duplicate stacks render as grouped counts rather than hundreds of cards.
+
+Build 011 replaces debug panels with a responsive player-facing Home/HUD/Dinos/Chests flow, first-session tutorial and run summary. Species are always grouped into one bounded row regardless of copy count. See `docs/21-core-ui-test.md`.
 
 ### BD-016 — dinosaur/map kit
 **Done when:** three distinct original dinosaurs, one arena and Gold treatment pass collision/camera/permission checks. Procedural fallback is acceptable for the private test.
@@ -130,6 +132,7 @@ Run the small invited session only after BD-020. Capture friction, repeat-run be
 Public scope is an evidence-based later decision. Passing code generation alone never triggers launch.
 
 ## Session log
+- 2026-09-18: Znypr reported all Build 010 Gold mutation tests passing. BD-014 moved to Done. Build 011 core UI prepared for desktop and phone-landscape emulator verification.
 - 2026-09-18: Znypr reported all Build 009 chest queue tests passing. BD-013 moved to Done. Build 010 Gold mutation prepared for BD-014 runtime verification.
 - 2026-09-18: Znypr reported all Build 008 collection/equip tests passing. BD-012 moved to Done. Build 009 chest queue implemented for BD-013 runtime verification.
 - 2026-09-18: Znypr reported Build 007 checks passing in a new private test experience: Profile Loaded, fresh starter state, lease test PASS, reward gain, full restart and persisted copy count. BD-011 moved to Done. Build 008 collection/equip prepared for runtime verification.

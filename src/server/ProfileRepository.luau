@@ -97,6 +97,15 @@ local function syncAttributes(player: Player, profile: any)
     player:SetAttribute("ProfileRevision", profile.revision or 0)
     player:SetAttribute("EquippedSpeciesId", profile.equippedSpeciesId)
     player:SetAttribute("ActiveChestCount", #profile.eggs)
+    local chestSummary = {}
+    for index, chest in profile.eggs do
+        if index > Config.ChestQueueCapacity then break end
+        table.insert(chestSummary, {
+            id = chest.eggId,
+            readyAt = chest.readyAt,
+        })
+    end
+    player:SetAttribute("ChestQueueJson", HttpService:JSONEncode(chestSummary))
     local nextChest = profile.eggs[1]
     if typeof(nextChest) == "table" then
         player:SetAttribute("NextChestId", nextChest.eggId)

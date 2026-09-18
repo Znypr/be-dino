@@ -92,4 +92,4 @@ FoodService.start(Dinosaur)
 local PredationService = require(script.Parent.PredationService)
 PredationService.start(RunLifecycle, Dinosaur)
 
-print("[Be Dino] " .. Config.Build .. " ready. Gold mutation test.")
+print("[Be Dino] " .. Config.Build .. " ready. Core UI test.")
