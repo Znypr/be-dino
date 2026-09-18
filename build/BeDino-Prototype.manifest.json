@@ -1,17 +1,18 @@
 {
   "format": 1,
-  "place_sha256": "32db86bd5b7795de9e6400c9533ee1891965231389020cefe70c527f1224c018",
+  "place_sha256": "626b7728cd66e6caf497ca906dc7f54c9b13b3b52a4e478a9a2b494b6d7a0672",
   "sources": {
-    "src/shared/Config.luau": "a2098986758cacddd8b0ce7b6569523c90750698b80cd53e1c4be3ce7b252a77",
+    "src/shared/Config.luau": "919957db6fae3ab45b71a20eb98c6b922397e29660c3d5dea316d33d491321e0",
     "src/server/Arena.luau": "d0ac46c01f2359d3939a44828c3ccc9a89a23968031ff017bbd4a5708c66a488",
-    "src/server/Bootstrap.server.luau": "16cdade063420d5717bba5a707555a77a90d08e4940fca6cf04dc289ee003943",
+    "src/server/Bootstrap.server.luau": "d27ea48b0693eeac513b40b2f4f8500d031600c52e28b1610c2d649baec9e00d",
+    "src/server/ChestService.luau": "741b4801c30a3e23088ab005d2685d6011e0d130a6aba8b00d81ad5ddd31bde1",
     "src/server/CollectionService.luau": "9198a09e2d97de06bf5ca16fabf5fe6b94180de5876979e585ad42190b463a2d",
     "src/server/Dinosaur.luau": "22adbd01f45cb58759cfb36b63f39620c0ec881c884e80234ae626e2cbb5849a",
     "src/server/FoodService.luau": "64a2bcb8e1cec7b20f1f803d8e48e5756d47da759af580b0af4f54679e8283a8",
     "src/server/PredationService.luau": "b253cf5dfed89d4ac236a6ba9a6d96c62e9b33d13eb03ecb1d1fdb49d7d90cad",
-    "src/server/ProfileRepository.luau": "1cab82a2a476dd2be21f75993775122b7bf7a69aa6a48d83297aa100d2a337b6",
-    "src/server/RewardMath.luau": "c51bb607698fd62e1376044e9c660e495e7e3aa0b06015e775e7975735258604",
+    "src/server/ProfileRepository.luau": "2677e68c212749945c39d9504a04644d287514fb001c19af548661057cb27bd2",
+    "src/server/RewardMath.luau": "eeddcd6c722213f109a6e37a0d47e70c59f39138aca8c0ade24d1a23474708ef",
     "src/server/RunLifecycle.luau": "bf6d3a80305f0aeb328491ec8b9d6f8ffb3803eb2f432e879c61947e8327f21c",
-    "src/client/Bootstrap.client.luau": "9af4109aa95f1e3ca57f0c41e63fe51a6bb55131a56547a85914801484fa56d1"
+    "src/client/Bootstrap.client.luau": "412cd829915519d274c86c5102473270327c325c38891dd993813960bfd43466"
   }
 }

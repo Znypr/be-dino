@@ -21,7 +21,7 @@
           <ProtectedString name="Source">--!strict
 -- Prototype tuning only. Persistent economy values remain private-test values.
 return table.freeze({
-    Build = "collection-equip-008",
+    Build = "chest-queue-009",
     WalkSpeed = 18,
     ArenaHalfWidth = 90,
     CameraMinZoom = 12,
@@ -70,9 +70,27 @@ return table.freeze({
     ProfileMaxRecentOperations = 50,
 
     EquipRequestCooldownSeconds = 0.5,
-    CollectionTestGrantEnabled = true,
+    CollectionTestGrantEnabled = false,
     CollectionTestGrantSpeciesId = "triceratops",
     CollectionTestGrantVersion = 1,
+
+    ChestTimerSeconds = 10,
+    ChestQueueCapacity = 5,
+    ChestOverflowCapacity = 10,
+    ChestClaimRequestCooldownSeconds = 0.35,
+    ChestTestGrantEnabled = true,
+    ChestTestGrantCount = 7,
+    ChestTestGrantVersion = 1,
+    ChestSpeciesWeights = {
+        {speciesId = "compy", weight = 70},
+        {speciesId = "triceratops", weight = 25},
+        {speciesId = "tyrannosaurus", weight = 5},
+    },
+    ChestQuantityWeights = {
+        {count = 1, weight = 70},
+        {count = 2, weight = 25},
+        {count = 3, weight = 5},
+    },
 
     -- Build 006/007 probes passed and are disabled again.
     DuplicateSettlementProbe = false,
@@ -156,6 +174,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Arena = require(script.Parent.Arena)
+local ChestService = require(script.Parent.ChestService)
 local CollectionService = require(script.Parent.CollectionService)
 local Dinosaur = require(script.Parent.Dinosaur)
 local ProfileRepository = require(script.Parent.ProfileRepository)
@@ -191,6 +210,7 @@ RunLifecycle.configureSettlement(function(player: Player, runId: string, catchSc
 end)
 RunLifecycle.start()
 CollectionService.start(ProfileRepository, Dinosaur)
+ChestService.start(ProfileRepository)
 
 local function spawnLoadedPlayer(player: Player)
     player.CanLoadCharacterAppearance = false
@@ -239,11 +259,92 @@ FoodService.start(Dinosaur)
 local PredationService = require(script.Parent.PredationService)
 PredationService.start(RunLifecycle, Dinosaur)
 
-print("[Be Dino] " .. Config.Build .. " ready. Collection/equip test.")
+print("[Be Dino] " .. Config.Build .. " ready. Chest queue test.")
 </ProtectedString>
         </Properties>
       </Item>
       <Item class="ModuleScript" referent="RBX9">
+        <Properties>
+          <string name="Name">ChestService</string>
+          <ProtectedString name="Source">--!strict
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+
+local ChestService = {}
+local lastClaim: {[Player]: number} = {}
+local lastGrant: {[Player]: number} = {}
+
+local function getRemote(folder: Folder, name: string): RemoteEvent
+    local existing = folder:FindFirstChild(name)
+    if existing and existing:IsA("RemoteEvent") then return existing end
+    if existing then existing:Destroy() end
+    local remote = Instance.new("RemoteEvent")
+    remote.Name = name
+    remote.Parent = folder
+    return remote
+end
+
+local function allowed(bucket: {[Player]: number}, player: Player): boolean
+    local now = os.clock()
+    local last = bucket[player] or -math.huge
+    if now - last &lt; Config.ChestClaimRequestCooldownSeconds then return false end
+    bucket[player] = now
+    return true
+end
+
+function ChestService.start(profileRepository)
+    local folder = ReplicatedStorage:FindFirstChild("BeDinoRemotes") :: Folder?
+    if not folder then
+        folder = Instance.new("Folder")
+        folder.Name = "BeDinoRemotes"
+        folder.Parent = ReplicatedStorage
+    end
+
+    local claimChest = getRemote(folder, "ClaimChest")
+    local testGrant = getRemote(folder, "TestGrantChests")
+
+    claimChest.OnServerEvent:Connect(function(player: Player, chestId, requestToken, ...)
+        if select("#", ...) ~= 0 then return end
+        if typeof(chestId) ~= "string" or #chestId &lt; 1 or #chestId &gt; 80 then
+            player:SetAttribute("LastChestClaimStatus", "invalid_chest_id")
+            return
+        end
+        if typeof(requestToken) ~= "string" or #requestToken &lt; 1 or #requestToken &gt; 80 then
+            player:SetAttribute("LastChestClaimStatus", "invalid_token")
+            return
+        end
+        if not allowed(lastClaim, player) then
+            player:SetAttribute("LastChestClaimStatus", "rate_limited")
+            return
+        end
+        local _, _, status = profileRepository.claimChest(player, chestId)
+        player:SetAttribute("LastChestClaimStatus", status)
+    end)
+
+    testGrant.OnServerEvent:Connect(function(player: Player, ...)
+        if select("#", ...) ~= 0 then return end
+        if not Config.ChestTestGrantEnabled then return end
+        if not allowed(lastGrant, player) then
+            player:SetAttribute("LastChestTestGrantStatus", "rate_limited")
+            return
+        end
+        local _, status = profileRepository.grantChestTest(player)
+        player:SetAttribute("LastChestTestGrantStatus", status)
+    end)
+
+    Players.PlayerRemoving:Connect(function(player)
+        lastClaim[player] = nil
+        lastGrant[player] = nil
+    end)
+end
+
+return ChestService
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX10">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -331,7 +432,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX10">
+      <Item class="ModuleScript" referent="RBX11">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -514,7 +615,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX11">
+      <Item class="ModuleScript" referent="RBX12">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -615,7 +716,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX12">
+      <Item class="ModuleScript" referent="RBX13">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -744,7 +845,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX13">
+      <Item class="ModuleScript" referent="RBX14">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -801,6 +902,11 @@ local function isValidProfile(profile: any): boolean
     if typeof(profile.revision) ~= "number" or profile.revision &lt; 0 then return false end
     if typeof(profile.collection) ~= "table" then return false end
     if typeof(profile.recentOperations) ~= "table" then return false end
+    if typeof(profile.eggs) ~= "table" then return false end
+    if typeof(profile.pendingChestGrants) ~= "number"
+        or profile.pendingChestGrants &lt; 0 or profile.pendingChestGrants % 1 ~= 0 then
+        return false
+    end
     if not knownSpecies(profile.equippedSpeciesId) then return false end
     for _, speciesId in Config.SpeciesOrder do
         local entry = profile.collection[speciesId]
@@ -837,6 +943,15 @@ local function syncAttributes(player: Player, profile: any)
     player:SetAttribute("PendingChestGrants", profile.pendingChestGrants or 0)
     player:SetAttribute("ProfileRevision", profile.revision or 0)
     player:SetAttribute("EquippedSpeciesId", profile.equippedSpeciesId)
+    player:SetAttribute("ActiveChestCount", #profile.eggs)
+    local nextChest = profile.eggs[1]
+    if typeof(nextChest) == "table" then
+        player:SetAttribute("NextChestId", nextChest.eggId)
+        player:SetAttribute("NextChestReadyAt", nextChest.readyAt)
+    else
+        player:SetAttribute("NextChestId", "")
+        player:SetAttribute("NextChestReadyAt", 0)
+    end
 end
 
 local function ownSession(profile: any): boolean
@@ -856,6 +971,37 @@ end
 local function trimOperations(profile: any)
     while #profile.recentOperations &gt; Config.ProfileMaxRecentOperations do
         table.remove(profile.recentOperations, 1)
+    end
+end
+
+local function lastChestReadyAt(profile: any, now: number): number
+    local result = now
+    for _, chest in profile.eggs do
+        if typeof(chest) == "table" and typeof(chest.readyAt) == "number" then
+            result = math.max(result, chest.readyAt)
+        end
+    end
+    return result
+end
+
+local function availableChestCapacity(profile: any): number
+    return (Config.ChestQueueCapacity - #profile.eggs)
+        + (Config.ChestOverflowCapacity - profile.pendingChestGrants)
+end
+
+local function enqueueChestIds(profile: any, chestIds: {string}, now: number)
+    local nextReadyAt = lastChestReadyAt(profile, now)
+    for _, chestId in chestIds do
+        if #profile.eggs &lt; Config.ChestQueueCapacity then
+            nextReadyAt += Config.ChestTimerSeconds
+            table.insert(profile.eggs, {
+                eggId = chestId,
+                kind = "alpha_chest",
+                readyAt = nextReadyAt,
+            })
+        else
+            profile.pendingChestGrants += 1
+        end
     end
 end
 
@@ -929,7 +1075,13 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
 
     local outcome = RewardMath.computeRunReward(catchScore)
     local operationId = "run:" .. runId
+    local chestIds = {}
+    for _ = 1, outcome.chestCount do
+        table.insert(chestIds, HttpService:GenerateGUID(false))
+    end
+    outcome.chestIds = chestIds
     local leaseLost = false
+    local queueFull = false
     local duplicateOutcome = nil
     local now = os.time()
 
@@ -947,6 +1099,11 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
                 return profileValue
             end
 
+            if outcome.chestCount &gt; availableChestCapacity(profileValue) then
+                queueFull = true
+                return nil
+            end
+
             for _, stack in outcome.stacks do
                 local species = profileValue.collection[stack.speciesId]
                 if typeof(species) ~= "table" or typeof(species.base) ~= "number" then
@@ -955,7 +1112,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
                 species.base += stack.count
             end
 
-            profileValue.pendingChestGrants = (profileValue.pendingChestGrants or 0) + outcome.chestCount
+            enqueueChestIds(profileValue, chestIds, now)
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             profileValue.lastCheckpoint = {
@@ -975,10 +1132,14 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     if not ok or updated == nil then
         if leaseLost then
             player:SetAttribute("ProfileState", "LeaseLost")
-        else
-            player:SetAttribute("ProfileState", "SaveFailed")
+            return false, nil, "lease_lost"
         end
-        return false, nil, if leaseLost then "lease_lost" else "save_failed"
+        if queueFull then
+            player:SetAttribute("LastChestClaimStatus", "queue_full")
+            return false, nil, "queue_full"
+        end
+        player:SetAttribute("ProfileState", "SaveFailed")
+        return false, nil, "save_failed"
     end
 
     profiles[player] = updated
@@ -1106,6 +1267,182 @@ function ProfileRepository.grantCollectionTestSpecies(player: Player): (boolean,
     return true, if duplicate then "duplicate" else "granted"
 end
 
+function ProfileRepository.grantChestTest(player: Player): (boolean, string)
+    if not Config.ChestTestGrantEnabled then return false, "disabled" end
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
+        return false, "profile_not_loaded"
+    end
+
+    local operationId = string.format("test-chests:v%d", Config.ChestTestGrantVersion)
+    local chestIds = {}
+    for _ = 1, Config.ChestTestGrantCount do
+        table.insert(chestIds, HttpService:GenerateGUID(false))
+    end
+    local duplicate = false
+    local queueFull = false
+    local leaseLost = false
+    local now = os.time()
+
+    local ok, updated = retry("chest test grant", function()
+        return store:UpdateAsync(keyFor(player), function(profileValue)
+            if not isValidProfile(profileValue) then return nil end
+            if not ownSession(profileValue) then
+                leaseLost = true
+                return nil
+            end
+            if findOperation(profileValue, operationId) then
+                duplicate = true
+                return profileValue
+            end
+            if #chestIds &gt; availableChestCapacity(profileValue) then
+                queueFull = true
+                return nil
+            end
+
+            enqueueChestIds(profileValue, chestIds, now)
+            profileValue.revision += 1
+            profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            table.insert(profileValue.recentOperations, {
+                id = operationId,
+                kind = "chest_test_grant",
+                outcome = {count = #chestIds},
+            })
+            trimOperations(profileValue)
+            return profileValue
+        end)
+    end)
+
+    if not ok or updated == nil then
+        if leaseLost then
+            player:SetAttribute("ProfileState", "LeaseLost")
+            return false, "lease_lost"
+        end
+        if queueFull then return false, "queue_full" end
+        player:SetAttribute("ProfileState", "SaveFailed")
+        return false, "save_failed"
+    end
+
+    profiles[player] = updated
+    syncAttributes(player, updated)
+    return true, if duplicate then "duplicate" else "granted"
+end
+
+function ProfileRepository.claimChest(player: Player, chestId: string)
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
+        return false, nil, "profile_not_loaded"
+    end
+    if typeof(chestId) ~= "string" or #chestId &lt; 1 or #chestId &gt; 80 then
+        return false, nil, "invalid_chest_id"
+    end
+
+    local operationId = "chest:" .. chestId
+    local cachedOperation = findOperation(cached, operationId)
+    if cachedOperation then
+        return true, cachedOperation.outcome, "duplicate"
+    end
+
+    local cachedChest = nil
+    for _, chest in cached.eggs do
+        if chest.eggId == chestId then
+            cachedChest = chest
+            break
+        end
+    end
+    if not cachedChest then return false, nil, "missing" end
+
+    local now = os.time()
+    if now &lt; cachedChest.readyAt then return false, nil, "not_ready" end
+
+    -- Generate once outside UpdateAsync so retries cannot reroll the reward.
+    local outcome = RewardMath.computeChestReward(Random.new())
+    local refillChestId = HttpService:GenerateGUID(false)
+    local duplicateOutcome = nil
+    local leaseLost = false
+    local notReady = false
+    local missing = false
+
+    local ok, updated = retry("chest claim", function()
+        return store:UpdateAsync(keyFor(player), function(profileValue)
+            if not isValidProfile(profileValue) then return nil end
+            if not ownSession(profileValue) then
+                leaseLost = true
+                return nil
+            end
+
+            local existing = findOperation(profileValue, operationId)
+            if existing then
+                duplicateOutcome = existing.outcome
+                return profileValue
+            end
+
+            local index = nil
+            local chest = nil
+            for i, candidate in profileValue.eggs do
+                if candidate.eggId == chestId then
+                    index = i
+                    chest = candidate
+                    break
+                end
+            end
+            if not index or not chest then
+                missing = true
+                return nil
+            end
+            if now &lt; chest.readyAt then
+                notReady = true
+                return nil
+            end
+
+            table.remove(profileValue.eggs, index)
+            local species = profileValue.collection[outcome.speciesId]
+            if typeof(species) ~= "table" then return nil end
+            species.base += outcome.count
+
+            if profileValue.pendingChestGrants &gt; 0 then
+                profileValue.pendingChestGrants -= 1
+                local readyAt = lastChestReadyAt(profileValue, now) + Config.ChestTimerSeconds
+                table.insert(profileValue.eggs, {
+                    eggId = refillChestId,
+                    kind = "alpha_chest",
+                    readyAt = readyAt,
+                })
+            end
+
+            profileValue.revision += 1
+            profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            table.insert(profileValue.recentOperations, {
+                id = operationId,
+                kind = "chest_claim",
+                outcome = outcome,
+            })
+            trimOperations(profileValue)
+            return profileValue
+        end)
+    end)
+
+    if not ok or updated == nil then
+        if leaseLost then
+            player:SetAttribute("ProfileState", "LeaseLost")
+            return false, nil, "lease_lost"
+        end
+        if notReady then return false, nil, "not_ready" end
+        if missing then return false, nil, "missing" end
+        player:SetAttribute("ProfileState", "SaveFailed")
+        return false, nil, "save_failed"
+    end
+
+    profiles[player] = updated
+    syncAttributes(player, updated)
+    local committedOutcome = duplicateOutcome or outcome
+    player:SetAttribute("LastClaimedChestId", chestId)
+    player:SetAttribute("LastChestRewardText", string.format(
+        "%dx %s", committedOutcome.count, committedOutcome.speciesId
+    ))
+    return true, committedOutcome, if duplicateOutcome then "duplicate" else "claimed"
+end
+
 function ProfileRepository.renew(player: Player): boolean
     if not profiles[player] or player:GetAttribute("ProfileState") ~= "Loaded" then return false end
     local leaseLost = false
@@ -1159,7 +1496,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX14">
+      <Item class="ModuleScript" referent="RBX15">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -1247,11 +1584,35 @@ function RewardMath.computeRunReward(catchScore: number)
     }
 end
 
+local function weightedChoice(rows, rng: Random)
+    local total = 0
+    for _, row in rows do total += row.weight end
+    local roll = rng:NextNumber(0, total)
+    local cumulative = 0
+    for _, row in rows do
+        cumulative += row.weight
+        if roll &lt;= cumulative then return row end
+    end
+    return rows[#rows]
+end
+
+function RewardMath.computeChestReward(rng: Random?)
+    local random = rng or Random.new()
+    local speciesRow = weightedChoice(Config.ChestSpeciesWeights, random)
+    local quantityRow = weightedChoice(Config.ChestQuantityWeights, random)
+    return {
+        rewardConfigVersion = 1,
+        speciesId = speciesRow.speciesId,
+        mutationId = "base",
+        count = quantityRow.count,
+    }
+end
+
 return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX15">
+      <Item class="ModuleScript" referent="RBX16">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -1469,19 +1830,19 @@ return RunLifecycle
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX16">
+  <Item class="StarterPlayer" referent="RBX17">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX17">
+    <Item class="StarterPlayerScripts" referent="RBX18">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX18">
+      <Item class="Folder" referent="RBX19">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX19">
+        <Item class="LocalScript" referent="RBX20">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -1499,6 +1860,8 @@ local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
 local requestEndRun = remotes:WaitForChild("RequestEndRun") :: RemoteEvent
 local equipSpecies = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
 local testGrantSpecies = remotes:WaitForChild("TestGrantSpecies") :: RemoteEvent
+local claimChest = remotes:WaitForChild("ClaimChest") :: RemoteEvent
+local testGrantChests = remotes:WaitForChild("TestGrantChests") :: RemoteEvent
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "PrototypeHUD"
@@ -1508,7 +1871,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 local panel = Instance.new("TextLabel")
 panel.Position = UDim2.new(0.5, 0, 0, 12)
 panel.AnchorPoint = Vector2.new(0.5, 0)
-panel.Size = UDim2.new(0.94, 0, 0, 150)
+panel.Size = UDim2.new(0.94, 0, 0, 174)
 panel.BackgroundColor3 = Color3.fromRGB(32, 49, 42)
 panel.BackgroundTransparency = 0.12
 panel.TextColor3 = Color3.fromRGB(249, 243, 218)
@@ -1520,7 +1883,7 @@ local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 12)
 corner.Parent = panel
 local limit = Instance.new("UISizeConstraint")
-limit.MaxSize = Vector2.new(720, 160)
+limit.MaxSize = Vector2.new(760, 184)
 limit.Parent = panel
 
 local collection = Instance.new("Frame")
@@ -1575,6 +1938,78 @@ grantButton.BackgroundColor3 = Color3.fromRGB(97, 82, 53)
 grantButton.Activated:Connect(function()
     if player:GetAttribute("ProfileState") ~= "Loaded" then return end
     testGrantSpecies:FireServer()
+end)
+
+local chestPanel = Instance.new("Frame")
+chestPanel.Name = "ChestPanel"
+chestPanel.AnchorPoint = Vector2.new(1, 0.5)
+chestPanel.Position = UDim2.new(1, -18, 0.5, 0)
+chestPanel.Size = UDim2.fromOffset(260, 250)
+chestPanel.BackgroundColor3 = Color3.fromRGB(55, 43, 31)
+chestPanel.BackgroundTransparency = 0.08
+chestPanel.Parent = gui
+local chestCorner = Instance.new("UICorner")
+chestCorner.CornerRadius = UDim.new(0, 12)
+chestCorner.Parent = chestPanel
+
+local chestTitle = Instance.new("TextLabel")
+chestTitle.BackgroundTransparency = 1
+chestTitle.Position = UDim2.fromOffset(10, 8)
+chestTitle.Size = UDim2.new(1, -20, 0, 30)
+chestTitle.Text = "CHEST QUEUE"
+chestTitle.TextColor3 = Color3.fromRGB(245, 241, 222)
+chestTitle.Font = Enum.Font.GothamBold
+chestTitle.TextSize = 18
+chestTitle.Parent = chestPanel
+
+local chestInfo = Instance.new("TextLabel")
+chestInfo.BackgroundTransparency = 1
+chestInfo.Position = UDim2.fromOffset(10, 42)
+chestInfo.Size = UDim2.new(1, -20, 0, 78)
+chestInfo.TextColor3 = Color3.fromRGB(245, 241, 222)
+chestInfo.Font = Enum.Font.GothamMedium
+chestInfo.TextSize = 14
+chestInfo.TextWrapped = true
+chestInfo.Parent = chestPanel
+
+local function chestButton(y: number, textValue: string): TextButton
+    local button = Instance.new("TextButton")
+    button.Position = UDim2.fromOffset(10, y)
+    button.Size = UDim2.new(1, -20, 0, 38)
+    button.BackgroundColor3 = Color3.fromRGB(102, 76, 46)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 13
+    button.Text = textValue
+    button.Parent = chestPanel
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 8)
+    c.Parent = button
+    return button
+end
+
+local claimButton = chestButton(124, "CLAIM NEXT CHEST")
+local retryClaimButton = chestButton(166, "RETRY LAST CLAIM")
+local chestGrantButton = chestButton(208, "TEST ADD 7 CHESTS")
+
+claimButton.Activated:Connect(function()
+    local chestId = player:GetAttribute("NextChestId")
+    if typeof(chestId) == "string" and chestId ~= "" then
+        claimChest:FireServer(chestId, HttpService:GenerateGUID(false))
+    end
+end)
+
+retryClaimButton.Activated:Connect(function()
+    local chestId = player:GetAttribute("LastClaimedChestId")
+    if typeof(chestId) == "string" and chestId ~= "" then
+        claimChest:FireServer(chestId, HttpService:GenerateGUID(false))
+    end
+end)
+
+chestGrantButton.Activated:Connect(function()
+    if player:GetAttribute("ProfileState") == "Loaded" then
+        testGrantChests:FireServer()
+    end
 end)
 
 local endButton = Instance.new("TextButton")
@@ -1645,6 +2080,32 @@ RunService.Heartbeat:Connect(function(dt)
     local equipped = stringAttr("EquippedSpeciesId", "compy")
     local equipStatus = stringAttr("LastEquipStatus", "none")
     local grantStatus = stringAttr("LastCollectionGrantStatus", "not used")
+    local chestStatus = stringAttr("LastChestClaimStatus", "none")
+    local chestGrantStatus = stringAttr("LastChestTestGrantStatus", "not used")
+    local chestReward = stringAttr("LastChestRewardText", "none")
+    local activeChests = numberAttr("ActiveChestCount")
+    local overflowChests = numberAttr("PendingChestGrants")
+    local nextReadyAt = numberAttr("NextChestReadyAt")
+    local nextChestId = stringAttr("NextChestId", "")
+    local serverNow = workspace:GetServerTimeNow()
+    local remaining = math.max(0, nextReadyAt - serverNow)
+    local nextState = if nextChestId == "" then "EMPTY"
+        elseif remaining &lt;= 0 then "READY"
+        else string.format("%.1fs", remaining)
+
+    chestInfo.Text = string.format(
+        "Active %d / %d  •  Overflow %d\nNext: %s\nClaim: %s  •  Reward: %s",
+        activeChests, Config.ChestQueueCapacity, overflowChests, nextState, chestStatus, chestReward
+    )
+    local ready = nextChestId ~= "" and remaining &lt;= 0 and profileState == "Loaded"
+    claimButton.Active = ready
+    claimButton.AutoButtonColor = ready
+    retryClaimButton.Active = stringAttr("LastClaimedChestId", "") ~= "" and profileState == "Loaded"
+    retryClaimButton.AutoButtonColor = retryClaimButton.Active
+    chestGrantButton.Visible = Config.ChestTestGrantEnabled
+    chestGrantButton.Active = Config.ChestTestGrantEnabled and profileState == "Loaded"
+    chestGrantButton.AutoButtonColor = chestGrantButton.Active
+    chestGrantButton.Text = "TEST ADD 7 CHESTS (" .. chestGrantStatus .. ")"
 
     for speciesId, button in speciesButtons do
         local count = countForSpecies(speciesId)
@@ -1672,7 +2133,7 @@ RunService.Heartbeat:Connect(function(dt)
     local humanoid = currentHumanoid
     if not character or player.Character ~= character or not humanoid then
         panel.Text = string.format(
-            "BE DINO!  •  COLLECTION TEST\nProfile: %s  •  Equipped: %s  •  Equip result: %s\n%s\nTest grant: %s",
+            "BE DINO!  •  CHEST QUEUE TEST\nProfile: %s  •  Equipped: %s  •  Equip result: %s\n%s\nTest grant: %s",
             profileState, equipped, equipStatus, collectionText, grantStatus
         )
         endButton.Active = false
@@ -1697,7 +2158,7 @@ RunService.Heartbeat:Connect(function(dt)
     local status = if protectionRemaining &gt; 0 then string.format("SAFE %.1fs", protectionRemaining) else "PVP ACTIVE"
 
     panel.Text = string.format(
-        "BE DINO!  •  COLLECTION TEST\nGrowth %d  •  Catches %d  •  Size %.2fx  •  %s\nProfile: %s  •  Equipped: %s  •  Equip result: %s\n%s\nTest grant: %s",
+        "BE DINO!  •  CHEST QUEUE TEST\nGrowth %d  •  Catches %d  •  Size %.2fx  •  %s\nProfile: %s  •  Equipped: %s  •  Equip result: %s\n%s\nTest grant: %s",
         score, catches, scale, status, profileState, equipped, equipStatus, collectionText, grantStatus
     )
 
@@ -1716,7 +2177,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX20">
+  <Item class="Workspace" referent="RBX21">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>
