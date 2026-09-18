@@ -43,3 +43,8 @@ The DataStore remains `BeDino_PrivateTest_v1`, so your Build 006 test profile sh
 If all four pass, the runtime evidence covers the remaining stale-session/lease-owner protection required for BD-011.
 
 If the HUD shows `FAIL`, report the exact text after `FAIL:` and do not continue progression testing on that server.
+
+
+## Result
+
+Passed 2026-09-18. Because publishing over the original test experience was affected by a Roblox Studio publishing issue, Build 007 was published to a new private test experience. Znypr confirmed Profile Loaded, starter state, Lease test PASS, reward gain, full restart, and persisted copy count. This closes the remaining BD-011 runtime requirement.
