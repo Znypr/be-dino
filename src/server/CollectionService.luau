@@ -58,7 +58,7 @@ function CollectionService.start(profileRepository, dinosaur)
 
         local character = player.Character
         if character and character:GetAttribute("DinoAttached") then
-            dinosaur.setSpecies(character, speciesId)
+            dinosaur.refreshForPlayer(character, player)
         end
     end)
 

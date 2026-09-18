@@ -341,7 +341,9 @@ RunService.Heartbeat:Connect(function(dt)
     for speciesId, button in speciesButtons do
         local count = countForSpecies(speciesId)
         local displayName = Config.SpeciesDisplayNames[speciesId] or speciesId
-        local stateText = if equipped == speciesId then "EQUIPPED" elseif count > 0 then "OWNED" else "LOCKED"
+        local stateText = if equipped == speciesId then "EQUIPPED"
+            elseif count + goldForSpecies(speciesId) > 0 then "OWNED"
+            else "LOCKED"
         button.Text = string.format(
             "%s | %d base / %d Gold | %s",
             displayName, count, goldForSpecies(speciesId), stateText
