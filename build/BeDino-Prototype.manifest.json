@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "251c70e8564ccad54e7bf81c746fc130bf60c886458775cecfa45eb7be222f19",
+  "place_sha256": "c1b63f6edcf16c87291ff1f12d8bacf1e1c872e33f5194933bc56b0deb6a69a6",
   "sources": {
     "src/shared/Config.luau": "f0ded488cc4fb392da33325d1c42c7b8e03e2d8c011d0b4529488c1a21eab33f",
     "src/server/Arena.luau": "d0ac46c01f2359d3939a44828c3ccc9a89a23968031ff017bbd4a5708c66a488",
@@ -14,6 +14,6 @@
     "src/server/ProfileRepository.luau": "8187f4168f3735782067d2e813d60b4838232c2b0c3fd2b515d51d17ab1042ec",
     "src/server/RewardMath.luau": "eeddcd6c722213f109a6e37a0d47e70c59f39138aca8c0ade24d1a23474708ef",
     "src/server/RunLifecycle.luau": "120ded245eb27e3cd5daf50f411d05305be748dee594ec1c0bddfb5805c7e269",
-    "src/client/Bootstrap.client.luau": "67e4b6d2907e7151018663581cd14d712c62d9864944240e414ab88f1dd3fa47"
+    "src/client/Bootstrap.client.luau": "54744b472f0e9a5630c58485c073ffaacf4efafc40493a826b27466161bf0a0d"
   }
 }
