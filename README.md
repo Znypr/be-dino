@@ -71,3 +71,7 @@ Mesh files must be imported through Studio; the base place uses fallback primiti
 
 ## Current Build 015
 [Inspect all 2D assets](resources/ui/README.md), [mountain-island direction](resources/concepts/mountain-island.png) and [verification details](docs/27-mountain-island.md). The large terrain, jump mechanic and crystal/egg food are implemented. Original mesh/icon data is embedded for client-local Mesh/Image API rendering with explicit permission-aware fallback. Runtime Studio playtesting remains required.
+
+## Current fixes and next systems
+
+[Build 017 completion and progression roadmap](docs/30-build017-and-progression-roadmap.md): popup cropping, missing eggs, larger dinosaur previews, sharp icons, crystal currency, Aura Shop, 60-second leap, random-weather timers and Potion Shop. Open task status: [Kanban](docs/07-kanban.md).

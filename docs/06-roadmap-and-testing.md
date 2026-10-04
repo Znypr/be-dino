@@ -49,7 +49,11 @@ Log defects separately from suggestions. P0 data loss/duplication/security or in
 - Save/error telemetry accessible; rollback procedure tested.
 - Public launch is a later decision after private results, not automatic upon code completion.
 
-## Current execution order
+## October 4 current priority
+
+Finish Build 017 user-reported regressions first (BD-023–027), then implement crystals, aura shop, leap, random weather and potions, with matching graphics (BD-028–033). The [canonical task board](07-kanban.md) holds statuses; [the detailed feature plan](30-build017-and-progression-roadmap.md) defines requirements and tests. Existing release gates still apply. Feature balance and later build numbering remain provisional.
+
+## Original execution order
 1. BD-004: establish source/build workflow and private test place. Codex prepares source and instructions; Znypr performs unavailable Studio/account actions.
 2. BD-005 and BD-006: review data contracts, then prove one dinosaur moves correctly with two clients. Use placeholder art.
 3. BD-010: simulate catch-score quantity, exponential tier allocation, duplicate stacks and 50-copy mutation pacing before integrating rewards.
