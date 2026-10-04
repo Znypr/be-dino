@@ -48,7 +48,7 @@ end
 function Dinosaur.addGrowth(character: Model, points: number)
     if points <= 0 or character:GetAttribute("RunState") ~= "Active" then return end
     local current = character:GetAttribute("GrowthScore")
-    local score = (if typeof(current) == "number" then current else 0) + points
+    local score = (if typeof(current) == "number" then current else 0) + points * math.clamp(character:GetAttribute("GrowthMultiplier") or 1,1,8)
     character:SetAttribute("GrowthScore", score)
     local scale = scaleForScore(score)
     if character:GetAttribute("VisualScale") ~= scale then

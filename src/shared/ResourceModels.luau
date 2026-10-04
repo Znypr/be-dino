@@ -32,7 +32,9 @@ function ResourceModels.clone(id: string): Model?
     -- Normalize the pivot to the ground under the bounding-box center. Keep imported -Z facing.
     copy.PrimaryPart = nil
     local box, size = copy:GetBoundingBox()
-    copy.WorldPivot = CFrame.new(box.Position - Vector3.new(0, size.Y / 2, 0))
+    local origin = box.Position - Vector3.new(0, size.Y / 2, 0)
+    copy.WorldPivot = CFrame.new(origin)
+    copy:SetAttribute("GeometryOrigin", origin)
     copy.Name = id
     return copy
 end

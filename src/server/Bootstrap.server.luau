@@ -48,6 +48,8 @@ ChestService.start(ProfileRepository)
 MutationService.start(ProfileRepository, Dinosaur)
 MovementGuard.start()
 VisualTestService.start(Dinosaur)
+require(script.Parent.ProgressionService).start(ProfileRepository)
+require(script.Parent.LeapService).start()
 
 local function spawnLoadedPlayer(player: Player)
     player.CanLoadCharacterAppearance = false

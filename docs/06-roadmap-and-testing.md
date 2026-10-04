@@ -51,7 +51,7 @@ Log defects separately from suggestions. P0 data loss/duplication/security or in
 
 ## October 4 current priority
 
-Finish Build 017 user-reported regressions first (BD-023–027), then implement crystals, aura shop, leap, random weather and potions, with matching graphics (BD-028–033). The [canonical task board](07-kanban.md) holds statuses; [the detailed feature plan](30-build017-and-progression-roadmap.md) defines requirements and tests. Existing release gates still apply. Feature balance and later build numbering remain provisional.
+Build 017 Final source/UI corrections and Build 018 progression systems (BD-028–033) are prepared. Next: execute the [Build 018 Studio acceptance checklist](31-build018-progression-test.md), starting with floor food, UI and sanctuary return, then fix findings and continue device/load and private-release gates. The [canonical task board](07-kanban.md) holds statuses; [the detailed feature plan](30-build017-and-progression-roadmap.md) defines requirements and tests. Existing release gates still apply. Feature balance and later build numbering remain provisional.
 
 ## Original execution order
 1. BD-004: establish source/build workflow and private test place. Codex prepares source and instructions; Znypr performs unavailable Studio/account actions.

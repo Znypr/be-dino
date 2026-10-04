@@ -1,6 +1,6 @@
 # Build 017 completion and progression roadmap
 
-Recorded 2026-10-04 from Znypr's playtest feedback and feature requests. Status is tracked only in [07-kanban.md](07-kanban.md). These are open tasks, not implemented or accepted features.
+Recorded 2026-10-04 from Znypr's playtest feedback and feature requests. Status is tracked only in [07-kanban.md](07-kanban.md). Implementation is now prepared in Build 017 Final and Build 018; [current implementation and local verification](31-build018-progression-test.md). Checkboxes below represent open Studio acceptance, not missing source code.
 
 ## First: finish Build 017
 
@@ -89,7 +89,7 @@ Inspect the existing [gameplay HUD](../resources/references/steal-an-egg/referen
 
 ## BD-033: matching icon and effect backlog
 
-Keep the existing dimensional, outlined, saturated art style. Save individual transparent high-resolution assets under `resources/ui/v2/icons/`; document prompts, logical keys and Roblox image bindings. This list requests assets to create later, not files already created.
+Keep the existing dimensional, outlined, saturated art style. Save individual transparent high-resolution assets under `resources/ui/v2/icons/`; document prompts, logical keys and Roblox image bindings. 20 sharp scalable assets now exist in resources/ui/v2/scalable. Tier colours are configurable variants of the shared aura/potion artwork; existing crystal artwork remains available.
 
 | Asset/key | Needed for | Reuse/new |
 |---|---|---|

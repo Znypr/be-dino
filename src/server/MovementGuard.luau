@@ -58,7 +58,7 @@ function MovementGuard.start()
                 local allowed = Config.WalkSpeed * dt * Config.MovementGuardSpeedTolerance
                     + Config.MovementGuardBurstStuds
 
-                if not MovementEnvelope.plausible(root.Position - state.position, dt, Config.MovementGuardSpeedTolerance, Config.MovementGuardBurstStuds, root.AssemblyLinearVelocity.Y) then
+                if not MovementEnvelope.plausible(root.Position - state.position, dt, Config.MovementGuardSpeedTolerance, Config.MovementGuardBurstStuds, root.AssemblyLinearVelocity.Y, character:GetAttribute("MovementSpeedLimit") or humanoid.WalkSpeed) then
                     -- Server correction: never promote the impossible location to the trusted baseline.
                     root.CFrame = state.cframe
                     root.AssemblyLinearVelocity = Vector3.zero

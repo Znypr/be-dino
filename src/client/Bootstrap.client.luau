@@ -12,6 +12,8 @@ local Config = require(Shared.Config)
 local Theme = require(Shared.UITheme)
 local Preview = require(Shared.DinosaurPreview)
 local ModelPreview = require(Shared.ModelPreview)
+local ProgressionConfig=require(Shared.ProgressionConfig)
+local ProgressionRules=require(Shared.ProgressionRules)
 local C = Theme.Colors
 local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
 local startRun = remotes:WaitForChild("RequestStartRun") :: RemoteEvent
@@ -19,6 +21,9 @@ local endRun = remotes:WaitForChild("RequestEndRun") :: RemoteEvent
 local equip = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
 local hatch = remotes:WaitForChild("ClaimChest") :: RemoteEvent
 local fuse = remotes:WaitForChild("MutateSpecies") :: RemoteEvent
+local shopAction=remotes:WaitForChild("ProgressionAction") :: RemoteEvent
+local shopResult=remotes:WaitForChild("ProgressionResult") :: RemoteEvent
+local leapRemote=remotes:WaitForChild("RequestLeap") :: RemoteEvent
 local gui = Instance.new("ScreenGui")
 gui.Name,gui.ResetOnSpawn,gui.ZIndexBehavior = "BeDinoUI",false,Enum.ZIndexBehavior.Sibling
 gui.Parent = player:WaitForChild("PlayerGui")
@@ -103,8 +108,8 @@ local function notify(text: string,color: Color3?)
 end
 local function viewportScale(): number
     local camera=workspace.CurrentCamera
-    local size=if camera then camera.ViewportSize else Vector2.new(1280,720)
-    return math.max(.24,math.min(1,(size.X-28)/860,(size.Y-64)/520))
+    local size=gui.AbsoluteSize
+    return math.max(.05,math.min(1,(size.X-40)/860,(size.Y-40)/520))
 end
 local function celebrate()
     if not motion then return end
@@ -123,7 +128,7 @@ local function open(name: string)
     body:ClearAllChildren()
     shade.Visible=true
     scale.Scale=viewportScale()*(if motion then .86 else 1)
-    TweenService:Create(scale,TweenInfo.new(if motion then .24 else 0,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Scale=viewportScale()}):Play()
+    TweenService:Create(scale,TweenInfo.new(if motion then .24 else 0,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Scale=viewportScale()}):Play()
     TweenService:Create(blur,TweenInfo.new(if motion then .18 else 0),{Size=12}):Play()
     render(name)
 end
@@ -145,13 +150,32 @@ local function queue()
     local ok,data=pcall(function() return Http:JSONDecode(str("ChestQueueJson","[]")) end)
     return if ok and typeof(data)=="table" then data else {}
 end
+local function progression()
+    local ok,data=pcall(function() return Http:JSONDecode(str("ProgressionJson","{}")) end)
+    if not ok or typeof(data)~="table" or typeof(data.auras)~="table" or typeof(data.potions)~="table" or typeof(data.buffs)~="table" then return {crystals=0,auras={},equippedAura="",potions={},buffs={}} end
+    return data
+end
+local chosenAura="meadow"
+local chosenPotion="speed_common"
+local pendingShop=nil
+local function transact(action,id,replace)
+    if pendingShop then notify("Purchase is still processing",C.gold) return end
+    local token=Http:GenerateGUID(false)
+    pendingShop={token=token,action=action,id=id,replace=replace==true,started=os.clock()}
+    shopAction:FireServer(action,id,token,replace==true)
+end
+shopResult.OnClientEvent:Connect(function(token,ok,status)
+    if pendingShop and pendingShop.token==token then pendingShop=nil end
+    notify(if ok then "Success!" else tostring(status):gsub("_"," "),if ok then C.accent else C.red)
+    if active=="auras" or active=="potions" then body:ClearAllChildren() render(active) end
+end)
 local refreshEggs
 render=function(name: string)
     if name=="home" then
         heading.Text,header.BackgroundColor3="Sanctuary",C.accent
         local heroCard=box(body,0,0,290,330,C.card,24)
         local id=str("EquippedSpeciesId","compy")
-        hero(heroCard,id,18,30,254,200)
+        hero(heroCard,id,8,8,274,230)
         label(heroCard,Config.SpeciesDisplayNames[id],0,244,290,42,30)
         label(heroCard,"Equipped dinosaur",0,296,290,26,18,C.accent)
         label(body,"Ready for an adventure?",320,0,495,58,32)
@@ -163,6 +187,63 @@ render=function(name: string)
             else close() notify("You are already exploring",C.blue) end
         end)
         
+    elseif name=="auras" then
+        heading.Text,header.BackgroundColor3="Aura Shop",C.purple
+        local p=progression()
+        label(body,"Crystals: "..num("Crystals").."  •  Equipped: "..(if p.equippedAura=="" then "None" else p.equippedAura),0,0,824,34,23,C.gold)
+        for i,item in ProgressionConfig.Auras do
+            local color=Color3.fromRGB(item.color[1],item.color[2],item.color[3])
+            local card=box(body,(i-1)*276,44,264,288,color,24)
+            label(card,item.name,6,5,252,34,25)
+            label(card,item.rarity.." • "..item.growth.."x Growth",4,42,256,30,19)
+            art(card,"aura",46,77,172)
+            hero(card,str("EquippedSpeciesId","compy"),12,78,240,135)
+            label(card,if p.auras[item.id] then "Owned" else item.price.." Crystals",4,212,256,27,21,C.gold)
+            local equipped=p.equippedAura==item.id
+            button(card,if equipped then "UNEQUIP" elseif p.auras[item.id] then "EQUIP" else "BUY",12,247,240,34,C.card,function()
+                if p.auras[item.id] then transact("equipAura",if equipped then "" else item.id)
+                else chosenAura=item.id open("auraConfirm") end
+            end)
+        end
+        label(body,"Auras boost growth when eating. One aura can be equipped at a time.",0,345,824,50,20)
+    elseif name=="auraConfirm" then
+        local item=ProgressionRules.item(ProgressionConfig.Auras,chosenAura)
+        heading.Text,header.BackgroundColor3="Buy Aura?",C.purple
+        art(body,"aura",30,25,220)
+        label(body,item.name.." • "..item.growth.."x eating growth",290,24,510,70,29)
+        label(body,item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,125,510,90,25,C.gold)
+        button(body,"BUY AURA",290,261,510,57,C.accent,function() transact("buyAura",item.id) open("auras") end)
+        button(body,"CANCEL",290,337,510,45,C.red,function() open("auras") end)
+    elseif name=="potions" then
+        heading.Text,header.BackgroundColor3="Potion Shop",C.accent
+        local p=progression()
+        label(body,"Crystals: "..num("Crystals").."  •  Select a potion to buy or use",0,0,824,32,21,C.gold)
+        for i,item in ProgressionConfig.Potions do
+            local x=((i-1)%3)*276 local y=43+math.floor((i-1)/3)*176
+            local color=if item.rarity=="Legendary" then C.gold elseif item.rarity=="Rare" then C.blue else C.accent
+            local card=box(body,x,y,264,164,C.card,24)
+            art(card,item.kind,8,14,76)
+            label(card,item.name,88,5,167,32,21,color)
+            label(card,item.rarity.." • "..item.multiplier.."x\n"..(item.duration//60).." minutes",86,39,170,50,18)
+            label(card,"Owned: "..(p.potions[item.id] or 0),86,88,170,24,17)
+            button(card,item.price.." Crystals",8,120,144,34,color,function() chosenPotion=item.id open("potionConfirm") end).TextSize=17
+            button(card,"USE",162,120,94,34,C.purple,function()
+                chosenPotion=item.id
+                local buff=p.buffs[item.kind]
+                if buff and buff.expiresAt>workspace:GetServerTimeNow() then open("potionReplace") else transact("usePotion",item.id,false) end
+            end).TextSize=18
+        end
+    elseif name=="potionConfirm" or name=="potionReplace" then
+        local item=ProgressionRules.item(ProgressionConfig.Potions,chosenPotion)
+        local replacing=name=="potionReplace"
+        heading.Text,header.BackgroundColor3=if replacing then "Replace Active Potion?" else "Buy Potion?",C.accent
+        art(body,item.kind,30,22,220)
+        label(body,item.name.." • "..item.multiplier.."x "..item.kind,290,15,510,62,28)
+        label(body,if replacing then "Your current "..item.kind.." potion ends immediately. Its remaining time is lost. Consume 1 potion for a fresh "..(item.duration//60).." minutes?" else (item.duration//60).." minutes • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
+        button(body,if replacing then "REPLACE & USE" else "BUY POTION",290,263,510,58,C.accent,function()
+            transact(if replacing then "usePotion" else "buyPotion",item.id,replacing) open("potions")
+        end)
+        button(body,"CANCEL",290,339,510,44,C.red,function() open("potions") end)
     elseif name=="collection" then
         heading.Text,header.BackgroundColor3="Dino Index",C.blue
         local unlocked=0
@@ -173,7 +254,7 @@ render=function(name: string)
             Theme.texture(card,264,328)
             label(card,Config.SpeciesDisplayNames[id],4,8,256,35,27)
             label(card,rarityNames[i],4,44,256,25,18)
-            hero(card,id,14,82,236,150,gold>0 and base==0)
+            hero(card,id,7,74,250,172,gold>0 and base==0)
             label(card,if base+gold>0 then string.format("%d %s  •  %d Gold",base,if base==1 then "copy" else "copies",gold) else "Not discovered",5,246,254,25,18)
             button(card,"VIEW DINO",12,281,240,38,C.card,function() selected=id open("detail") end)
         end
@@ -262,14 +343,14 @@ render=function(name: string)
     elseif name=="results" then
         heading.Text,header.BackgroundColor3="Run Complete!",C.gold
         art(body,"trophy",24,42,240)
-        label(body,"Growth  "..num("LastRunGrowthScore"),300,18,500,60,34,C.accent)
+        label(body,"Growth  "..math.floor(num("LastRunGrowthScore")),300,18,500,60,34,C.accent)
         label(body,"Catches  "..num("LastRunCatchScore"),300,93,500,60,34,C.blue)
         label(body,str("LastRewardText","Saving rewards..."),290,168,510,100,24,C.gold)
         label(body,"Your next adventure starts from the sanctuary.",30,302,760,40,21)
         button(body,"BACK TO SANCTUARY",212,348,400,48,C.accent,function() open("home") end)
     elseif name=="settings" then
         heading.Text,header.BackgroundColor3="Settings",C.purple
-        label(body,"Popup effects",24,24,410,56,30)
+        label(body,"Visual effects",24,24,410,56,30)
         button(body,if motion then "ON" else "OFF",560,24,230,56,if motion then C.accent else C.card,function() motion=not motion Theme.MotionEnabled=motion open("settings") end)
         label(body,"Camera distance",24,114,410,56,30)
         button(body,"RESET CAMERA",470,114,320,56,C.blue,function() player.CameraMaxZoomDistance=Config.CameraMaxZoom notify("Camera reset",C.blue) end)
@@ -314,21 +395,76 @@ local previewNotice=label(gui,"STUDIO PREVIEW • progress is not saved",0,0,390
 previewNotice.AnchorPoint,previewNotice.Position=Vector2.new(.5,0),UDim2.new(.5,0,0,8)
 previewNotice.Visible=player:GetAttribute("ProfileMode")=="Studio preview (not saved)"
 player:GetAttributeChangedSignal("ProfileMode"):Connect(function() previewNotice.Visible=player:GetAttribute("ProfileMode")=="Studio preview (not saved)" end)
-local rail=box(gui,14,0,148,320,C.panel,2)
+local rail=box(gui,14,0,186,444,C.panel,2)
 rail.AnchorPoint,rail.Position=Vector2.new(0,.5),UDim2.new(0,14,.5,0)
 local railScale=Instance.new("UIScale") railScale.Parent=rail
-for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"GOLD","fusion","fusion",C.purple},{"HOME","home","home",C.accent},{"SETTINGS","shield","settings",C.card}} do
-    local b=button(rail,entry[1],7,7+(i-1)*62,134,54,entry[4],function() open(entry[3]) end)
+for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"GOLD","fusion","fusion",C.purple},{"HOME","home","home",C.accent},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
+    local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() open(entry[3]) end)
     b.TextSize=20
     art(b,entry[2],5,6,40)
-    b.TextXAlignment=Enum.TextXAlignment.Right
+    b.Text=""
+    label(b,entry[1],52,0,114,54,19)
 end
 local hud=box(gui,0,0,390,94,C.panel,2)
 hud.AnchorPoint,hud.Position=Vector2.new(0,1),UDim2.new(0,18,1,-18)
 local hudScale=Instance.new("UIScale") hudScale.Parent=hud
-art(hud,"amber",8,12,64)
+art(hud,"leaf",8,12,64)
 local growthLabel=label(hud,"0 GROWTH",82,3,290,42,30,C.accent)
 local catchLabel=label(hud,"0 catches  •  Sanctuary",82,47,290,34,20)
+local crystalHUD=box(gui,0,0,260,48,C.panel,2)
+crystalHUD.AnchorPoint,crystalHUD.Position=Vector2.new(1,0),UDim2.new(1,-20,0,8)
+art(crystalHUD,"amber",6,4,40)
+local crystalText=label(crystalHUD,"0 Crystals",50,0,203,48,24,C.gold)
+local timers=Instance.new("Frame")
+timers.BackgroundTransparency,timers.Size,timers.AnchorPoint,timers.Position,timers.Parent=1,UDim2.fromOffset(286,220),Vector2.new(1,1),UDim2.new(1,-20,1,-100),gui
+local timerScale=Instance.new("UIScale") timerScale.Parent=timers
+local leapButton=button(timers,"LEAP [Q]",0,0,286,60,C.blue,function()
+    if shade.Visible then return end
+    leapRemote:FireServer()
+end)
+leapButton.Text=""
+art(leapButton,"leap",4,5,48)
+local leapText=label(leapButton,"LEAP [Q]",56,0,225,60,22)
+local weatherTile=box(timers,0,72,286,62,C.panel,2)
+local weatherArt=Theme.icon(weatherTile,"weather")
+if weatherArt then weatherArt.Position,weatherArt.Size=UDim2.fromOffset(4,7),UDim2.fromOffset(48,48) end
+local weatherText=label(weatherTile,"Weather in 10:00",56,0,226,62,20)
+local buffsText=label(timers,"",0,145,286,68,16,C.gold)
+local function timerText(seconds)
+    local value=math.max(0,math.ceil(seconds))
+    return string.format("%d:%02d",value//60,value%60)
+end
+local lastWeather=""
+local function refreshProgressionHUD()
+    local now=workspace:GetServerTimeNow()
+    crystalText.Text=num("Crystals").." Crystals"
+    local left=num("LeapReadyAt")-now
+    leapText.Text=if left>0 then "LEAP "..timerText(left) else "LEAP [Q] • READY"
+    leapButton.BackgroundColor3=if left>0 then C.card else C.blue
+    local c=player.Character
+    leapButton.Active=left<=0 and c~=nil and c:GetAttribute("RunState")=="Active"
+    local id=workspace:GetAttribute("WeatherId") or "clear"
+    if id~=lastWeather then
+        lastWeather=id
+        if weatherArt then weatherArt:Destroy() end
+        weatherArt=Theme.icon(weatherTile,if id=="clear" then "weather" else id)
+        if weatherArt then weatherArt.Position,weatherArt.Size=UDim2.fromOffset(4,7),UDim2.fromOffset(48,48) end
+        if id~="clear" then notify((workspace:GetAttribute("WeatherName") or id).." started!",C.blue) end
+    end
+    weatherText.Text=if id=="clear" then "Weather in "..timerText((workspace:GetAttribute("NextWeatherAt") or now)-now) else (workspace:GetAttribute("WeatherName") or id).." "..timerText((workspace:GetAttribute("WeatherEndsAt") or now)-now)
+    local p=progression() local lines={}
+    for kind,buff in p.buffs do
+        if buff.expiresAt>now then table.insert(lines,kind.." potion "..timerText(buff.expiresAt-now)) end
+    end
+    table.sort(lines)
+    table.insert(lines,string.format("Growth %.2fx • Speed %.2fx • Loot %.2fx",num("GrowthMultiplier"),num("SpeedMultiplier"),num("LootMultiplier")))
+    buffsText.Text=table.concat(lines,"\n")
+    if pendingShop and os.clock()-pendingShop.started>8 then
+        -- Retry the same operation token so a delayed result cannot charge twice.
+        pendingShop.started=os.clock()
+        shopAction:FireServer(pendingShop.action,pendingShop.id,pendingShop.token,pendingShop.replace)
+    end
+end
 local action=button(gui,"EXPLORE",0,0,244,60,C.accent,function()
     local character=player.Character
     if character and character:GetAttribute("RunState")=="Active" then open("exit")
@@ -340,8 +476,10 @@ local function scales()
     scale.Scale=viewportScale()
     local camera=workspace.CurrentCamera
     local size=if camera then camera.ViewportSize else Vector2.new(1280,720)
-    local small=math.clamp(math.min(size.X/1000,size.Y/700),.5,1)
-    railScale.Scale,hudScale.Scale,actionScale.Scale=small,small,small
+    local small=math.clamp(math.min(size.X/1000,size.Y/800),.3,1)
+    railScale.Scale,hudScale.Scale,actionScale.Scale,timerScale.Scale=small,small,small,small
+    timers.Position=UDim2.new(1,-20,1,if Input.TouchEnabled then -190 else -100)
+    action.Position=UDim2.new(1,-20,1,if Input.TouchEnabled then -120 else -22)
     action:SetAttribute("UIScaleBase",small)
     toastScale.Scale=math.min(1,(size.X-20)/440)
 end
@@ -357,6 +495,7 @@ player.CameraMaxZoomDistance=Config.CameraMaxZoom
 player.CharacterAdded:Connect(characterAdded)
 if player.Character then task.spawn(characterAdded,player.Character) end
 if workspace.CurrentCamera then workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(scales) end
+gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(scales)
 scales()
 local elapsed=0
 local exitPending=false
@@ -382,19 +521,20 @@ RunService.Heartbeat:Connect(function(dt)
         elseif exitPending then exitPending=false if state=="Active" then notify("Return cancelled: you moved",C.red) end end
     end
     if growth>lastGrowth and state=="Active" then
-        notify("+"..(growth-lastGrowth).." Growth!",C.accent)
+        notify(string.format("+%.1f Growth!",growth-lastGrowth),C.accent)
         if motion then
             hudScale.Scale*=1.06
             TweenService:Create(hudScale,TweenInfo.new(.2,Enum.EasingStyle.Back),{Scale=railScale.Scale}):Play()
         end
     end
     lastGrowth=growth
+    refreshProgressionHUD()
     if active=="eggs" and refreshEggs then refreshEggs() end
     if player:GetAttribute("ProfileState")=="Loaded" and state=="Sanctuary" and not seenTutorial then seenTutorial=true open("tutorial") end
 end)
-for _,attribute in {"EquippedSpeciesId","CompyCopies","CompyGold","TriceratopsCopies","TriceratopsGold","TyrannosaurusCopies","TyrannosaurusGold","ChestQueueJson"} do
+for _,attribute in {"EquippedSpeciesId","CompyCopies","CompyGold","TriceratopsCopies","TriceratopsGold","TyrannosaurusCopies","TyrannosaurusGold","ChestQueueJson","ProgressionJson"} do
     player:GetAttributeChangedSignal(attribute):Connect(function()
-        if table.find({"collection","detail","fusion","eggs"},active) then body:ClearAllChildren() render(active) end
+        if table.find({"collection","detail","fusion","eggs","auras","potions"},active) then body:ClearAllChildren() render(active) end
     end)
 end
 player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function() task.defer(function() open("hatch") end) end)
@@ -409,7 +549,8 @@ for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus
 end
 Input.InputBegan:Connect(function(input,processed)
     if processed then return end
-    if input.KeyCode==Enum.KeyCode.Escape then close()
+    if (input.KeyCode==Enum.KeyCode.Q or input.KeyCode==Enum.KeyCode.ButtonY) and not shade.Visible then leapRemote:FireServer()
+    elseif input.KeyCode==Enum.KeyCode.Escape then close()
     elseif input.KeyCode==Enum.KeyCode.C then open("collection")
     elseif input.KeyCode==Enum.KeyCode.B then open("eggs") end
 end)

@@ -1,4 +1,4 @@
-[Download the current clearly labelled Build 017](build/BeDino-Build017.rbxlx). The in-game BuildBadge must show `BUILD redesign-017`.
+[Download the full Build 018](build/BeDino-Build018.rbxlx). The in-game badge must show `BUILD redesign-018`. [Build 017 Final](build/BeDino-Build017-Final.rbxlx) isolates the UI fixes and shows `BUILD redesign-017-final`.
 
 ## Build 017: rebuilt UI and reliable resource delivery
 
@@ -16,7 +16,7 @@ An original Roblox dinosaur growth-and-collection arena inspired by Be Fish.
 **First milestone:** private community test with a small complete progression loop.
 
 ## Try the prototype
-Download [BeDino-Prototype.rbxlx](build/BeDino-Prototype.rbxlx), open it in Studio, and use the current private test experience. No plugin is required.
+Download [BeDino-Build018.rbxlx](build/BeDino-Build018.rbxlx), open it in Studio, and use the current private test experience. No plugin is required.
 
 For the current build, use [Build 015 checks](docs/27-mountain-island.md) and [mesh/icon import guide](resources/README.md). The general Studio workflow remains in [Studio quickstart](docs/10-studio-quickstart.md).
 
@@ -75,3 +75,5 @@ Mesh files must be imported through Studio; the base place uses fallback primiti
 ## Current fixes and next systems
 
 [Build 017 completion and progression roadmap](docs/30-build017-and-progression-roadmap.md): popup cropping, missing eggs, larger dinosaur previews, sharp icons, crystal currency, Aura Shop, 60-second leap, random-weather timers and Potion Shop. Open task status: [Kanban](docs/07-kanban.md).
+
+[Build 018 features and acceptance checks](docs/31-build018-progression-test.md) · [20 individual sharp icons](resources/ui/v2/scalable/README.md). Crystal wallet, Aura Shop, 60-second leap, random weather and Potion Shop are implemented for private testing. Studio acceptance remains open.

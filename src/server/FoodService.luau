@@ -166,7 +166,7 @@ function FoodService.start(dinosaur)
                     and character:GetAttribute("DinoAttached") and character:GetAttribute("RunState") == "Active" then
                     local last, position = previous[player], root.Position
                     local plausible = last and last.character == character
-                        and MovementEnvelope.plausible(position - last.position, now - last.time, 2, 2, root.AssemblyLinearVelocity.Y)
+                        and MovementEnvelope.plausible(position - last.position, now - last.time, 2, 2, root.AssemblyLinearVelocity.Y, character:GetAttribute("MovementSpeedLimit") or humanoid.WalkSpeed)
                     previous[player] = {character = character, position = position, time = now}
                     if plausible then table.insert(candidates, {player = player, character = character, root = root, gained = 0}) end
                 else previous[player] = nil end

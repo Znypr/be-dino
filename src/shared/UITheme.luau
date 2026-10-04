@@ -1,6 +1,6 @@
 --!strict
 local TweenService = game:GetService("TweenService")
-local Tiles = require(script.Parent.IconTiles)
+local Vectors = require(script.Parent.IconVectors)
 local Theme = {}
 Theme.BackgroundImageId = ""
 Theme.MotionEnabled = true
@@ -43,7 +43,7 @@ function Theme.texture(parent: GuiObject, width: number, height: number)
         edge.Color,edge.Transparency,edge.Thickness,edge.Parent = Color3.new(0,0,0),.85,1,stud
     end end
 end
--- Quantized exported PNG pixels rendered as merged native GUI tiles. No restricted image API.
+-- Original scalable graphics render sharply at any card size; uploaded original PNGs override them.
 function Theme.icon(parent: GuiObject,id: string): Frame?
     local uploaded = Theme.ImageIds[id]
     if uploaded and uploaded ~= "" then
@@ -54,19 +54,38 @@ function Theme.icon(parent: GuiObject,id: string): Frame?
         image.Image,image.Size,image.BackgroundTransparency,image.ZIndex,image.Parent = uploaded,UDim2.fromScale(1,1),1,root.ZIndex,root
         return root
     end
-    local data = Tiles[id]
+    if id=="amber" then
+        local root=Instance.new("Frame")
+        root.Name,root.BackgroundTransparency,root.Size="Art_amber",1,UDim2.fromOffset(42,42)
+        root.Position,root.ZIndex,root.Parent=UDim2.fromOffset(8,5),parent.ZIndex+1,parent
+        -- Reuse the original crystal model at full geometry quality without upload IDs.
+        local preview=require(script.Parent.ModelPreview).add(root,"amber")
+        preview.Size=UDim2.fromScale(1,1)
+        return root
+    end
+    local data = Vectors[id]
     if not data then return nil end
     local root = Instance.new("Frame")
     root.Name,root.BackgroundTransparency,root.Size = "Art_"..id,1,UDim2.fromOffset(42,42)
     root.Position,root.ZIndex,root.Parent = UDim2.fromOffset(8,5),parent.ZIndex+1,parent
-    for _, tile in data.tiles do
-        local pixel = Instance.new("Frame")
-        pixel.BorderSizePixel = 0
-        pixel.Position = UDim2.fromScale(tile[1]/data.size,tile[2]/data.size)
-        pixel.Size = UDim2.fromScale(tile[3]/data.size,tile[4]/data.size)
-        local c = data.colors[tile[5]]
-        pixel.BackgroundColor3 = Color3.fromRGB(c[1],c[2],c[3])
-        pixel.ZIndex,pixel.Parent = root.ZIndex,root
+    for _,shape in data do
+        local part=Instance.new("Frame")
+        part.BorderSizePixel=0
+        part.Position=UDim2.fromScale(shape.x/100,shape.y/100)
+        part.Size=UDim2.fromScale(shape.w/100,shape.h/100)
+        part.Rotation=shape.rotation
+        part.BackgroundColor3=Color3.fromHex(shape.color:sub(2))
+        part.ZIndex,part.Parent=root.ZIndex,root
+        if shape.color~="#142035" then
+            local sheen=Instance.new("UIGradient")
+            sheen.Color=ColorSequence.new(Color3.new(1,1,1),Color3.fromRGB(184,195,214))
+            sheen.Rotation,sheen.Parent=90,part
+        end
+        if shape.radius>0 then
+            local round=Instance.new("UICorner")
+            round.CornerRadius=UDim.new(shape.radius/math.min(shape.w,shape.h),0)
+            round.Parent=part
+        end
     end
     return root
 end

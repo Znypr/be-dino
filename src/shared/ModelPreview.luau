@@ -12,8 +12,9 @@ function ModelPreview.add(parent: GuiObject,id: string,empty: boolean?): Viewpor
     if model then
         for _,item in model:GetDescendants() do if item:IsA("BasePart") then item.Anchored=true end end
         model:PivotTo(CFrame.new())
-        model.Parent=viewport
-        Camera.bind(viewport,model)
+        local world=Instance.new("WorldModel") world.Parent=viewport
+        model.Parent=world
+        Camera.bind(viewport,model,if id=="egg" then nil else id)
     end
     return viewport
 end

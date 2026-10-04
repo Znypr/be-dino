@@ -6,7 +6,7 @@ Build 005 PvP/run-ending tests 1–9 passed. Build 006 persistence tests 1–10 
 ## Board
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-017; BD-019–022; BD-028–033 | BD-023–027 | None | BD-006 mobile; BD-016 visual kit | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
+| BD-017; BD-019–022 | BD-027 | None | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–033 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -43,21 +43,21 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 | BD-021 | Backlog | P0 | Observe community test and triage | BD-020 |
 | BD-022 | Backlog | P1 | Decide public alpha scope after test | BD-021 |
 
-| BD-023 | Ready | P1 | Fix cropped popups and responsive margins | Build 017 |
-| BD-024 | Ready | P1 | Restore visible egg previews | Build 017 |
-| BD-025 | Ready | P1 | Enlarge centered dinosaur previews | Build 017 |
-| BD-026 | Ready | P1 | Replace pixelated UI icon rendering everywhere | Build 017 |
+| BD-023 | Review / test | P1 | Fix cropped popups and responsive margins | Build 017 |
+| BD-024 | Review / test | P1 | Restore visible egg previews | Build 017 |
+| BD-025 | Review / test | P1 | Enlarge centered dinosaur previews | Build 017 |
+| BD-026 | Review / test | P1 | Replace pixelated UI icon rendering everywhere | Build 017 |
 | BD-027 | Ready | P0 | Verify visible floor food and close Build 017 regressions | BD-023–026 |
-| BD-028 | Backlog | P1 | Persistent crystal currency and random map pickups | BD-027, BD-011 |
-| BD-029 | Backlog | P1 | Aura shop, ownership/equip and eating-growth effects | BD-028 |
-| BD-030 | Backlog | P1 | Forward leap with 60-second cooldown and HUD | BD-027, BD-006 |
-| BD-031 | Backlog | P1 | Random weather, rarity bonuses and bottom-right timers | BD-027 |
-| BD-032 | Backlog | P1 | Crystal potion shop, timed buffs and inventory | BD-028, BD-031 |
-| BD-033 | Backlog | P1 | Matching aura, potion, leap, weather and currency icons | BD-026 |
+| BD-028 | Review / test | P1 | Persistent crystal currency and random map pickups | BD-027, BD-011 |
+| BD-029 | Review / test | P1 | Aura shop, ownership/equip and eating-growth effects | BD-028 |
+| BD-030 | Review / test | P1 | Forward leap with 60-second cooldown and HUD | BD-027, BD-006 |
+| BD-031 | Review / test | P1 | Random weather, rarity bonuses and bottom-right timers | BD-027 |
+| BD-032 | Review / test | P1 | Crystal potion shop, timed buffs and inventory | BD-028, BD-031 |
+| BD-033 | Review / test | P1 | Matching aura, potion, leap, weather and currency icons | BD-026 |
 
 ## Build 017 and next features
 
-[Detailed requirements, screen list, icon backlog and acceptance checks](30-build017-and-progression-roadmap.md). BD-023–027 must pass before adding the progression systems. Earlier Done records apply to their tested historical builds; they do not certify the redesigned Build 017.
+[Detailed requirements, screen list, icon backlog and acceptance checks](30-build017-and-progression-roadmap.md). [Build 018 implementation and recorded local checks](31-build018-progression-test.md). Build 017 source/UI corrections and an isolated final export are prepared; progression systems are now integrated in Build 018. BD-027 and Studio acceptance remain open before release. Earlier Done records apply to their tested historical builds; they do not certify the redesigned Build 017.
 
 ## Acceptance and current evidence
 

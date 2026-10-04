@@ -5,7 +5,7 @@ from PIL import Image
 ROOT=Path(__file__).resolve().parents[1]
 class DeliveryTests(unittest.TestCase):
  def test_ten_native_models_packaged_with_colours_and_noncolliding_geometry(self):
-  root=ET.parse(ROOT/'build/BeDino-Build017.rbxlx').getroot()
+  root=ET.parse(ROOT/'build/BeDino-Build018.rbxlx').getroot()
   resources=next(i for i in root.iter('Item') if i.find("Properties/string[@name='Name']") is not None and i.find("Properties/string[@name='Name']").text=='Resources')
   models=resources.findall('Item');self.assertEqual(len(models),10)
   for model in models:
@@ -24,4 +24,16 @@ class DeliveryTests(unittest.TestCase):
    self.assertEqual(im.getchannel('A').getextrema(),(0,255))
   self.assertEqual(len(list((ROOT/'resources/references/steal-an-egg').glob('*.png'))),13)
   project=(ROOT/'default.project.json').read_text();self.assertNotIn('references',project)
+ def test_scalable_icons_have_individual_sharp_exports(self):
+  icons=list((ROOT/'resources/ui/v2/scalable').glob('*.png'))
+  self.assertEqual(len(icons),20)
+  for icon in icons:
+   im=Image.open(icon)
+   self.assertEqual(im.size,(512,512))
+   self.assertEqual(im.mode,'RGBA')
+   self.assertEqual(im.getchannel('A').getextrema(),(0,255))
+   self.assertTrue(icon.with_suffix('.svg').exists())
+  theme=(ROOT/'src/shared/UITheme.luau').read_text()
+  self.assertIn('IconVectors',theme)
+  self.assertNotIn('Tiles[id]',theme)
 if __name__=='__main__':unittest.main()

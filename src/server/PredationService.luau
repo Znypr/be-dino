@@ -43,7 +43,10 @@ function PredationService.start(runLifecycle, dinosaur)
         victims[victimUserId] = now
         local catches = numberAttribute(attacker.character, "CatchScore", 0)
         if catches < Config.MaxCatchScore then
-            attacker.character:SetAttribute("CatchScore", catches + 1)
+            local bonus=(attacker.character:GetAttribute("WeatherLootCarry") or 0)+(attacker.character:GetAttribute("WeatherLootMultiplier") or 1)
+            local whole=math.floor(bonus)
+            attacker.character:SetAttribute("WeatherLootCarry",bonus-whole)
+            attacker.character:SetAttribute("CatchScore", math.min(Config.MaxCatchScore,catches+whole))
         end
     end
 
@@ -63,7 +66,7 @@ function PredationService.start(runLifecycle, dinosaur)
                     local last = previous[player]
                     local position = root.Position
                     local plausible = last and last.character == character
-                        and MovementEnvelope.plausible(position - last.position, movementNow - last.time, 2, 2, root.AssemblyLinearVelocity.Y)
+                        and MovementEnvelope.plausible(position - last.position, movementNow - last.time, 2, 2, root.AssemblyLinearVelocity.Y, character:GetAttribute("MovementSpeedLimit") or humanoid.WalkSpeed)
                     previous[player] = {character = character, position = position, time = movementNow}
                     if plausible then
                         table.insert(candidates, {

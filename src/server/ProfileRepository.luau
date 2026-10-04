@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local RewardMath = require(script.Parent.RewardMath)
+local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 
 local ProfileRepository = {}
 
@@ -81,7 +82,7 @@ local function isValidProfile(profile: any): boolean
             return false
         end
     end
-    return true
+    return ProgressionRules.valid(profile.progression)
 end
 
 local function retry(label: string, fn)
@@ -101,6 +102,10 @@ local function retry(label: string, fn)
 end
 
 local function syncAttributes(player: Player, profile: any)
+    local progress=ProgressionRules.upgrade(profile)
+    player:SetAttribute("Crystals",progress.crystals)
+    player:SetAttribute("ProgressionJson",HttpService:JSONEncode(progress))
+    player:SetAttribute("EquippedAura",progress.equippedAura)
     local collection = profile.collection
     player:SetAttribute("CompyCopies", collection.compy.base)
     player:SetAttribute("CompyGold", collection.compy.gold)
@@ -206,6 +211,7 @@ function ProfileRepository.load(player: Player): boolean
                 return nil
             end
 
+            ProgressionRules.upgrade(profileValue)
             local session = profileValue.session
             if typeof(session) == "table"
                 and session.leaseId ~= leaseId
@@ -236,9 +242,9 @@ function ProfileRepository.load(player: Player): boolean
         return false
     end
 
-    profiles[player] = updated
+    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
     player:SetAttribute("ProfileState", "Loaded")
-    syncAttributes(player, updated)
+    syncAttributes(player, profiles[player])
     return true
 end
 
@@ -320,8 +326,8 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         return false, nil, "save_failed"
     end
 
-    profiles[player] = updated
-    syncAttributes(player, updated)
+    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
+    syncAttributes(player, profiles[player])
     local committedOutcome = duplicateOutcome or outcome
     local summaryParts = {}
     for _, stack in committedOutcome.stacks do
@@ -386,8 +392,8 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string): (boo
         return false, "save_failed"
     end
 
-    profiles[player] = updated
-    syncAttributes(player, updated)
+    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
+    syncAttributes(player, profiles[player])
     return true, "equipped"
 end
 
@@ -440,8 +446,8 @@ function ProfileRepository.grantCollectionTestSpecies(player: Player): (boolean,
         return false, "save_failed"
     end
 
-    profiles[player] = updated
-    syncAttributes(player, updated)
+    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
+    syncAttributes(player, profiles[player])
     return true, if duplicate then "duplicate" else "granted"
 end
 
@@ -501,8 +507,8 @@ function ProfileRepository.grantChestTest(player: Player): (boolean, string)
         return false, "save_failed"
     end
 
-    profiles[player] = updated
-    syncAttributes(player, updated)
+    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
+    syncAttributes(player, profiles[player])
     return true, if duplicate then "duplicate" else "granted"
 end
 
@@ -611,8 +617,8 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
         return false, nil, "save_failed"
     end
 
-    profiles[player] = updated
-    syncAttributes(player, updated)
+    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
+    syncAttributes(player, profiles[player])
     local committedOutcome = duplicateOutcome or outcome
     player:SetAttribute("LastClaimedChestId", chestId)
     player:SetAttribute("LastChestRewardText", string.format(
@@ -698,8 +704,8 @@ function ProfileRepository.mutateSpecies(player: Player, speciesId: string, targ
         return false, nil, "save_failed"
     end
 
-    profiles[player] = updated
-    syncAttributes(player, updated)
+    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
+    syncAttributes(player, profiles[player])
     local committedOutcome = duplicateOutcome or outcome
     return true, committedOutcome, if duplicateOutcome then "duplicate" else "mutated"
 end
@@ -744,9 +750,49 @@ function ProfileRepository.setMutationTestCopies(player: Player, speciesId: stri
         return false, "save_failed"
     end
 
-    profiles[player] = updated
-    syncAttributes(player, updated)
+    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
+    syncAttributes(player, profiles[player])
     return true, "set_" .. tostring(baseCount)
+end
+
+function ProfileRepository.progression(player: Player)
+    if not ProfileRepository.isLoaded(player) then return nil end
+    return ProgressionRules.upgrade(profiles[player])
+end
+function ProfileRepository.progressionAction(player: Player, action: string, id: string, token: string, replace: boolean?, amount: number?)
+    if not ProfileRepository.isLoaded(player) then return false,"profile_not_loaded" end
+    local operationId="progression:"..token
+    local now=os.time()
+    local denied="save_failed"
+    local duplicate=false
+    local outcome=nil
+    local leaseLost=false
+    local ok,updated=retry("progression",function()
+        return store:UpdateAsync(keyFor(player),function(profile)
+            if not isValidProfile(profile) then denied="invalid_profile" return nil end
+            if not ownSession(profile) then leaseLost=true return nil end
+            local existing=findOperation(profile,operationId)
+            if existing then
+                if existing.outcome.action~=action or existing.outcome.item~=id then denied="token_conflict" return nil end
+                outcome=existing.outcome duplicate=true return profile
+            end
+            local applied,status=ProgressionRules.apply(profile,action,id,now,replace,amount)
+            if not applied then denied=status return nil end
+            outcome={action=action,item=id,status=status}
+            profile.revision+=1
+            profile.session.expiresAt=now+Config.ProfileLeaseSeconds
+            table.insert(profile.recentOperations,{id=operationId,kind="progression",outcome=outcome})
+            trimOperations(profile)
+            return profile
+        end)
+    end)
+    if not ok then player:SetAttribute("ProfileState","SaveFailed") return false,"save_failed" end
+    if leaseLost then player:SetAttribute("ProfileState","LeaseLost") return false,"lease_lost" end
+    if not updated then return false,denied end
+    if not player.Parent then return true,if duplicate then "duplicate" else outcome.status end
+    if not profiles[player] or updated.revision>=profiles[player].revision then profiles[player]=updated end
+    if player.Parent then syncAttributes(player,profiles[player]) end
+    return true,if duplicate then "duplicate" else outcome.status
 end
 
 function ProfileRepository.renew(player: Player): boolean
@@ -767,7 +813,7 @@ function ProfileRepository.renew(player: Player): boolean
         player:SetAttribute("ProfileState", if leaseLost then "LeaseLost" else "SaveFailed")
         return false
     end
-    profiles[player] = updated
+    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
     return true
 end
 

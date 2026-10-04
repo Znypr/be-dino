@@ -19,7 +19,7 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: boolean): Viewpor
         end
         model:PivotTo(CFrame.new())
         model.Parent=world
-        Camera.bind(viewport,model)
+        Camera.bind(viewport,model,speciesId)
     end
     return viewport
 end

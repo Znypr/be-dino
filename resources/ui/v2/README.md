@@ -16,7 +16,7 @@ Original reusable Be Dino artwork, informed by the [user-provided reference gall
 | Gold fusion | Mutation progression and confirmation | [fusion.png](icons/fusion.png) |
 | Safety shield | Settings/safety | [shield.png](icons/shield.png) |
 
-All seven PNGs have genuine alpha transparency. Generated individually with the built-in image-generation tool. Prompt specifications are in [asset-prompts.json](asset-prompts.json). Full-resolution art is available for Roblox image upload; the included local preview uses a small native GUI representation so blocked Mesh/Image APIs cannot make all icons disappear.
+All seven PNGs have genuine alpha transparency. Generated individually with the built-in image-generation tool. Prompt specifications are in [asset-prompts.json](asset-prompts.json). Full-resolution art is available for Roblox image upload; Build 018 uses the [sharp scalable graphics](scalable/README.md) and a native crystal model for reliable presentation without external image IDs.
 
 ## Reusable components
 
@@ -32,4 +32,4 @@ This is a design rendering using the actual source-model portraits, not a Roblox
 
 ## Production image binding
 
-Upload individual `icons/*.png` under the experience owner. Set `UITheme.ImageIds` logical keys to the returned `rbxassetid://...` IDs. The icon helper then renders the full-quality ImageLabel rather than the 32px native preview. No fabricated asset IDs are included.
+Upload individual `icons/*.png` under the experience owner. Set `UITheme.ImageIds` logical keys to the returned `rbxassetid://...` IDs. The icon helper then renders the full-quality ImageLabel in place of the scalable native graphics. No fabricated asset IDs are included.

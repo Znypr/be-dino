@@ -2,29 +2,42 @@
 -- Fit actual geometry, excluding controller roots and invisible humanoid parts.
 local RunService = game:GetService("RunService")
 local Theme = require(script.Parent.UITheme)
+local Geometry = require(script.Parent.ResourceGeometry)
 local PreviewCamera = {}
-function PreviewCamera.bind(viewport: ViewportFrame, model: Model)
+function PreviewCamera.bind(viewport: ViewportFrame, model: Model, geometryId: string?)
     local camera=Instance.new("Camera")
     camera.FieldOfView,camera.Parent=32,viewport
     viewport.CurrentCamera=camera
     local bounds,size=model:GetBoundingBox()
-    local target=bounds.Position
+    local points={}
+    local data=if geometryId then Geometry[geometryId] else nil
+    local origin=model:GetAttribute("GeometryOrigin") or Vector3.zero
+    if data then
+        for _,v in data.vertices do table.insert(points,model:GetPivot():PointToWorldSpace(Vector3.new(v[1],v[2],v[3])-origin)) end
+    else
+        for _,x in {-1,1} do for _,y in {-1,1} do for _,z in {-1,1} do
+            table.insert(points,bounds:PointToWorldSpace(Vector3.new(x*size.X/2,y*size.Y/2,z*size.Z/2)))
+        end end end
+    end
+    local low,high=Vector3.new(math.huge,math.huge,math.huge),Vector3.new(-math.huge,-math.huge,-math.huge)
+    for _,p in points do low=low:Min(p) high=high:Max(p) end
+    local target=(low+high)/2
     local elapsed=0
     local function frame(dt: number)
         if Theme.MotionEnabled then elapsed+=dt end
-        local direction=Vector3.new(.65+math.sin(elapsed*.5)*.06,.28,-1).Unit
+        local direction=Vector3.new(1+math.sin(elapsed*.5)*.035,.2,-.65).Unit
         local basis=CFrame.lookAt(target+direction,target)
         local pixels=viewport.AbsoluteSize
         local aspect=if pixels.Y>0 then pixels.X/pixels.Y else 1.4
         local vertical=math.tan(math.rad(camera.FieldOfView/2))
         local horizontal=vertical*math.max(.3,aspect)
         local distance=0
-        for _,x in {-1,1} do for _,y in {-1,1} do for _,z in {-1,1} do
-            local corner=bounds:PointToWorldSpace(Vector3.new(x*size.X/2,y*size.Y/2,z*size.Z/2))-target
+        for _,point in points do
+            local corner=point-target
             local depth=corner:Dot(basis.ZVector)
             distance=math.max(distance,depth+math.abs(corner:Dot(basis.XVector))/horizontal,depth+math.abs(corner:Dot(basis.YVector))/vertical)
-        end end end
-        camera.CFrame=CFrame.lookAt(target+direction*math.max(1,distance*1.16),target)
+        end
+        camera.CFrame=CFrame.lookAt(target+direction*math.max(1,distance*1.045),target)
     end
     frame(0)
     local resized=viewport:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() frame(0) end)

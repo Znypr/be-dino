@@ -1,7 +1,7 @@
 --!strict
 -- Prototype tuning only. Persistent economy values remain private-test values.
 return table.freeze({
-    Build = "redesign-017",
+    Build = "redesign-018",
     WalkSpeed = 22,
     JumpPower = 50,
     MaxSlopeAngle = 46,
