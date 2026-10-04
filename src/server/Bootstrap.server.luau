@@ -98,7 +98,12 @@ game:BindToClose(function()
 end)
 
 local FoodService = require(script.Parent.FoodService)
-FoodService.start(Dinosaur)
+local foodReady, foodError = xpcall(function() FoodService.start(Dinosaur) end, debug.traceback)
+if not foodReady then
+    workspace:SetAttribute("FoodSpawnStatus", "Failed")
+    workspace:SetAttribute("FoodStartupError", tostring(foodError))
+    warn("[Be Dino] FOOD STARTUP FAILED: " .. tostring(foodError))
+end
 local PredationService = require(script.Parent.PredationService)
 PredationService.start(RunLifecycle, Dinosaur)
 

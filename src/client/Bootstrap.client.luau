@@ -151,8 +151,8 @@ render=function(name: string)
         heading.Text,header.BackgroundColor3="Sanctuary",C.accent
         local heroCard=box(body,0,0,290,330,C.card,24)
         local id=str("EquippedSpeciesId","compy")
-        hero(heroCard,id,0,12,290,238)
-        label(heroCard,Config.SpeciesDisplayNames[id],0,250,290,42,30)
+        hero(heroCard,id,18,30,254,200)
+        label(heroCard,Config.SpeciesDisplayNames[id],0,244,290,42,30)
         label(heroCard,"Equipped dinosaur",0,296,290,26,18,C.accent)
         label(body,"Ready for an adventure?",320,0,495,58,32)
         label(body,"Eat small food clusters, jump mountain paths and avoid bigger dinosaurs.",330,74,474,85,22)
@@ -162,7 +162,7 @@ render=function(name: string)
             if character and character:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() close()
             else close() notify("You are already exploring",C.blue) end
         end)
-        art(body,"home",316,284,64)
+        
     elseif name=="collection" then
         heading.Text,header.BackgroundColor3="Dino Index",C.blue
         local unlocked=0
@@ -173,8 +173,8 @@ render=function(name: string)
             Theme.texture(card,264,328)
             label(card,Config.SpeciesDisplayNames[id],4,8,256,35,27)
             label(card,rarityNames[i],4,44,256,25,18)
-            hero(card,id,0,72,264,174,gold>0 and base==0)
-            label(card,if base+gold>0 then string.format("%d copies  •  %d Gold",base,gold) else "Not discovered",5,246,254,25,18)
+            hero(card,id,14,82,236,150,gold>0 and base==0)
+            label(card,if base+gold>0 then string.format("%d %s  •  %d Gold",base,if base==1 then "copy" else "copies",gold) else "Not discovered",5,246,254,25,18)
             button(card,"VIEW DINO",12,281,240,38,C.card,function() selected=id open("detail") end)
         end
         meter(body,0,356,600,unlocked,3,C.accent,string.format("Discovered: %d / 3",unlocked))
@@ -222,10 +222,8 @@ render=function(name: string)
             local entry=entries[slot]
             local card=box(body,(slot-1)*166,0,156,280,if entry then C.card else C.outline,24)
             label(card,"Slot "..slot,0,8,156,30,22)
-            if entry then
-                local view=ModelPreview.add(card,"egg")
-                view.Position,view.Size=UDim2.fromOffset(0,48),UDim2.fromOffset(156,160)
-            else art(card,"egg",26,74,104) end
+            local view=ModelPreview.add(card,"egg",entry==nil)
+            view.Position,view.Size=UDim2.fromOffset(18,58),UDim2.fromOffset(120,146)
             timers[slot]=label(card,if entry then "Growing..." else "Empty",3,222,150,40,22,if entry then C.gold else Color3.fromRGB(156,156,174))
         end
         refreshEggs=function()
@@ -302,6 +300,16 @@ render=function(name: string)
 end
 local buildBadge=label(gui,"BUILD "..Config.Build,0,0,250,24,15,C.blue)
 buildBadge.Name,buildBadge.AnchorPoint,buildBadge.Position="BuildBadge",Vector2.new(.5,0),UDim2.new(.5,0,0,36)
+local foodDiagnostic=label(gui,"",0,0,450,22,14,C.accent)
+foodDiagnostic.AnchorPoint,foodDiagnostic.Position,foodDiagnostic.Visible=Vector2.new(.5,0),UDim2.new(.5,0,0,62),RunService:IsStudio()
+local function refreshFoodDiagnostic()
+    local status=workspace:GetAttribute("FoodSpawnStatus") or "Starting"
+    foodDiagnostic.Text="FOOD: "..tostring(workspace:GetAttribute("FoodCount") or 0).."  •  "..tostring(status)
+    foodDiagnostic.TextColor3=if status=="Failed" or status=="No valid ground" then C.red else C.accent
+end
+workspace:GetAttributeChangedSignal("FoodSpawnStatus"):Connect(refreshFoodDiagnostic)
+workspace:GetAttributeChangedSignal("FoodCount"):Connect(refreshFoodDiagnostic)
+refreshFoodDiagnostic()
 local previewNotice=label(gui,"STUDIO PREVIEW • progress is not saved",0,0,390,25,14,C.gold)
 previewNotice.AnchorPoint,previewNotice.Position=Vector2.new(.5,0),UDim2.new(.5,0,0,8)
 previewNotice.Visible=player:GetAttribute("ProfileMode")=="Studio preview (not saved)"

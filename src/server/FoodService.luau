@@ -4,14 +4,18 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
+local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local FoodService = {}
 local TYPES = {
-    {id = "berry", weight = 78, points = 1, size = 0.5, color = Color3.fromRGB(224, 99, 118)},
-    {id = "fruit", weight = 15, points = 4, size = 0.85, color = Color3.fromRGB(244, 186, 83)},
-    {id = "egg", weight = 5, points = 15, size = 0.95, color = Color3.fromRGB(245, 230, 187)},
-    {id = "amber", weight = 2, points = 50, size = 1.3, color = Color3.fromRGB(255, 219, 139)},
+    {id = "berry", weight = 78, points = 1, size = 0.7, color = Color3.fromRGB(224, 99, 118)},
+    {id = "fruit", weight = 15, points = 4, size = 1.0, color = Color3.fromRGB(244, 186, 83)},
+    {id = "egg", weight = 5, points = 15, size = 1.3, color = Color3.fromRGB(245, 230, 187)},
+    {id = "amber", weight = 2, points = 50, size = 1.5, color = Color3.fromRGB(255, 219, 139)},
 }
 function FoodService.start(dinosaur)
+    workspace:SetAttribute("FoodSpawnStatus", "Building")
+    workspace:SetAttribute("FoodCount", 0)
+    workspace:SetAttribute("FoodStartupError", "")
     local folder = Instance.new("Folder")
     folder.Name = "Food"
     folder.Parent = workspace
@@ -19,7 +23,11 @@ function FoodService.start(dinosaur)
     local random = Random.new(Config.FoodSeed)
     local groundParams = RaycastParams.new()
     groundParams.FilterType = Enum.RaycastFilterType.Include
-    groundParams.FilterDescendantsInstances = {workspace.BeDinoArena, workspace.Terrain}
+    groundParams.FilterDescendantsInstances = {workspace.Terrain}
+    local pickupParams = RaycastParams.new()
+    pickupParams.FilterType = Enum.RaycastFilterType.Include
+    pickupParams.FilterDescendantsInstances = {workspace.BeDinoArena, workspace.Terrain}
+    local fallbackCount = 0
     local obstacleParams = RaycastParams.new()
     obstacleParams.FilterType = Enum.RaycastFilterType.Include
     obstacleParams.FilterDescendantsInstances = {workspace.BeDinoArena}
@@ -29,15 +37,22 @@ function FoodService.start(dinosaur)
         -- Safe spawn remains clear. Ground's top is y=0.
         if (Vector2.new(x, z) - Vector2.new(0, 30)).Magnitude < 11 then return nil end
         local hit = workspace:Raycast(Vector3.new(x, Config.TerrainTop + 20, z), Vector3.new(0, -Config.TerrainTop - 60, 0), groundParams)
-        if not hit or (hit.Instance ~= workspace.Terrain and hit.Instance.Name ~= "Ground")
-            or hit.Material == Enum.Material.Water or hit.Normal.Y < 0.62 then return nil end
+        local ground: Vector3
+        if hit then
+            if hit.Material == Enum.Material.Water or hit.Normal.Y < 0.62 then return nil end
+            ground = hit.Position
+        else
+            -- Same authored heightfield that produced the terrain; never silently empty the map.
+            fallbackCount += 1
+            ground = Vector3.new(x, Layout.height(x,z) + Config.TerrainResolution*.5, z)
+        end
         -- A second horizontal check keeps pickups away from solid rock/trunk edges.
         for _, direction in {Vector3.xAxis, -Vector3.xAxis, Vector3.zAxis, -Vector3.zAxis} do
-            if workspace:Raycast(hit.Position + Vector3.new(0, 1, 0), direction * 1.25, obstacleParams) then
+            if workspace:Raycast(ground + Vector3.new(0, 1, 0), direction * 1.25, obstacleParams) then
                 return nil
             end
         end
-        return hit.Position
+        return ground
     end
     local function relocate(food): boolean
         for _ = 1, 24 do
@@ -55,6 +70,8 @@ function FoodService.start(dinosaur)
         return false
     end
     local function show(food, visible: boolean)
+        local hint = food.part:FindFirstChild("FoodHint")
+        if hint and hint:IsA("BillboardGui") then hint.Enabled = visible end
         if food.visual then
             for _, item in food.visual:GetDescendants() do
                 if item:IsA("BasePart") then item.Transparency = if visible then 0 else 1 end
@@ -72,9 +89,12 @@ function FoodService.start(dinosaur)
                 local proposed = Vector2.new(random:NextNumber(minX + 3, minX + sectorWidth - 3), random:NextNumber(minZ + 3, minZ + sectorWidth - 3))
                 if groundAt(proposed.X, proposed.Y) then center = proposed break end
             end
-            for _ = 1, Config.FoodClusterItems do
+            local starter = (sx == 7 or sx == 8) and sz == 8
+            if starter then center = Vector2.new(if sx == 7 then -15 else 15, 24) end
+            for itemIndex = 1, Config.FoodClusterItems do
                 local roll, kind = random:NextInteger(1, 100), TYPES[1]
                 if roll > 98 then kind = TYPES[4] elseif roll > 93 then kind = TYPES[3] elseif roll > 78 then kind = TYPES[2] end
+                if starter then kind = if itemIndex % 3 == 0 then TYPES[2] else TYPES[1] end
                 local pickup = Instance.new("Part")
                 pickup.Name = kind.id
                 pickup.Shape = Enum.PartType.Ball
@@ -86,9 +106,17 @@ function FoodService.start(dinosaur)
                 pickup.CanTouch = false
                 pickup.CanQuery = false
                 pickup:SetAttribute("Points", kind.points)
+                pickup:SetAttribute("StarterFood", starter)
                 pickup:SetAttribute("Sector", string.format("%d:%d", sx, sz))
-                local visual = if kind.id == "egg" or kind.id == "amber" then Resources.clone(kind.id) else nil
-                if visual then visual:ScaleTo(kind.size / (if kind.id == "egg" then 2.4 else 1.3)) end
+                local visual = nil
+                if kind.id == "egg" or kind.id == "amber" then
+                    local ok, result = pcall(function()
+                        local model = Resources.clone(kind.id)
+                        if model then model:ScaleTo(kind.size / (if kind.id == "egg" then 2.4 else 1.3)) end
+                        return model
+                    end)
+                    if ok then visual = result end -- visible native pickup survives any art failure
+                end
                 local food = {part = pickup, visual = visual, readyAt = 0, hidden = false, kind = kind,
                     center = center, minX = minX, maxX = minX + sectorWidth, minZ = minZ, maxZ = minZ + sectorWidth}
                 if relocate(food) then
@@ -98,16 +126,28 @@ function FoodService.start(dinosaur)
                         for _, item in visual:GetDescendants() do
                             if item:IsA("BasePart") then item.Anchored = true end
                         end
-                        visual.Parent = folder
+                        visual.Parent = pickup
                     end
                     table.insert(foods, food)
+                    workspace:SetAttribute("FoodCount", #foods)
+                    if starter then
+                        local hint = Instance.new("BillboardGui")
+                        hint.Name, hint.Size, hint.StudsOffset = "FoodHint", UDim2.fromOffset(74,24), Vector3.new(0,1.2,0)
+                        hint.MaxDistance, hint.AlwaysOnTop, hint.Parent = 45,false,pickup
+                        local label = Instance.new("TextLabel")
+                        label.Size,label.BackgroundTransparency,label.Text = UDim2.fromScale(1,1),1,"+"..kind.points
+                        label.Font,label.TextSize,label.TextColor3 = Enum.Font.FredokaOne,16,kind.color
+                        label.TextStrokeTransparency,label.TextStrokeColor3,label.Parent = 0,Color3.new(0,0,0),hint
+                    end
                 else
                     pickup:Destroy()
                     if visual then visual:Destroy() end
                 end
             end
         end
+        task.wait() -- avoid one long startup frame while instancing pickup art
     end
+    workspace:SetAttribute("FoodPlacementFallbacks", fallbackCount)
     workspace:SetAttribute("FoodCount", #foods)
     workspace:SetAttribute("FoodSpawnStatus", if #foods > 0 then "Ready" else "No valid ground")
     if #foods == 0 then warn("[Be Dino] Food placement failed: no valid terrain hits") end
@@ -145,7 +185,7 @@ function FoodService.start(dinosaur)
                     local scale = candidate.character:GetAttribute("VisualScale") or 1
                     local radius = math.min(5, Config.FoodPickupRadius + (scale - 1) * 0.75)
                     if horizontal <= radius and math.abs(delta.Y) < 6 then
-                        local blocked = workspace:Raycast(candidate.root.Position, delta, groundParams)
+                        local blocked = workspace:Raycast(candidate.root.Position, delta, pickupParams)
                         if not blocked and (horizontal < nearest or (horizontal == nearest and winner and candidate.player.UserId < winner.player.UserId)) then
                             nearest, winner = horizontal, candidate
                         end

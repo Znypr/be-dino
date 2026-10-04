@@ -1,12 +1,12 @@
-[Download the current clearly labelled Build 016](build/BeDino-Build016.rbxlx). The in-game BuildBadge must show `BUILD redesign-016`.
+[Download the current clearly labelled Build 017](build/BeDino-Build017.rbxlx). The in-game BuildBadge must show `BUILD redesign-017`.
 
-## Build 016: rebuilt UI and reliable resource delivery
+## Build 017: rebuilt UI and reliable resource delivery
 
 - [Original UI v2 assets](resources/ui/v2/README.md)
 - [Steal an Egg reference gallery and analysis](resources/references/steal-an-egg/README.md)
 - [Individual screen/model task list and engine checks](docs/28-ui-overhaul.md)
 
-Build 016 packages native triangle resource Models, replaces the UI, corrects terrain food placement checks, and adds a separate sanctuary with explicit exploration entry. Local checks pass; Studio gameplay, visual and mobile performance verification remains required. Production MeshPart imports and full-resolution uploaded UI image bindings are documented.
+Build 017 packages native triangle resource Models, replaces the UI, corrects terrain food placement checks, and adds a separate sanctuary with explicit exploration entry. Local checks pass; Studio gameplay, visual and mobile performance verification remains required. Production MeshPart imports and full-resolution uploaded UI image bindings are documented.
 
 # Be Dino!
 An original Roblox dinosaur growth-and-collection arena inspired by Be Fish.

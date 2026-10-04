@@ -1,49 +1,20 @@
 --!strict
-local Resources = require(script.Parent.ResourceModels)
-local RuntimeMeshes = require(script.Parent.RuntimeMeshes)
-local ModelPreview = {}
-function ModelPreview.add(parent: GuiObject, id: string): ViewportFrame
-    local viewport = Instance.new("ViewportFrame")
-    viewport.Size = UDim2.fromScale(1,1)
-    viewport.BackgroundTransparency = 1
-    viewport.Ambient = Color3.fromRGB(185,209,209)
-    viewport.LightColor = Color3.fromRGB(255,242,214)
-    viewport.LightDirection = Vector3.new(-1,-1,-1)
-    viewport.ZIndex = parent.ZIndex + 1
-    viewport.Parent = parent
-    local camera = Instance.new("Camera")
-    camera.FieldOfView = 32
-    camera.CFrame = CFrame.lookAt(Vector3.new(4,3,-5),Vector3.new(0,1,0))
-    camera.Parent = viewport
-    viewport.CurrentCamera = camera
-    local current: Model? = nil
-    local function render()
-        if not viewport.Parent then return end
-        local model = Resources.clone(id)
-        if not model then return end
-        if current then current:Destroy() end
-        for _, item in model:GetDescendants() do if item:IsA("BasePart") then item.Anchored = true end end
+local Resources=require(script.Parent.ResourceModels)
+local Egg=require(script.Parent.EggPreview)
+local Camera=require(script.Parent.PreviewCamera)
+local ModelPreview={}
+function ModelPreview.add(parent: GuiObject,id: string,empty: boolean?): ViewportFrame
+    local viewport=Instance.new("ViewportFrame")
+    viewport.BackgroundTransparency,viewport.Size=1,UDim2.fromScale(1,1)
+    viewport.Ambient,viewport.LightColor,viewport.LightDirection=Color3.fromRGB(193,211,220),Color3.fromRGB(255,246,220),Vector3.new(-1,-1,-1)
+    viewport.ZIndex,viewport.Parent=parent.ZIndex+1,parent
+    local model=if id=="egg" then Egg.create(empty) else Resources.clone(id)
+    if model then
+        for _,item in model:GetDescendants() do if item:IsA("BasePart") then item.Anchored=true end end
         model:PivotTo(CFrame.new())
-        model.Parent = viewport
-        current = model
+        model.Parent=viewport
+        Camera.bind(viewport,model)
     end
-    render()
-    local ready = RuntimeMeshes.Ready.Event:Connect(function(name) if name == id then render() end end)
-    viewport.Destroying:Connect(function() ready:Disconnect() end)
-    local elapsed = 0
-    local motion = game:GetService("RunService").RenderStepped:Connect(function(dt)
-        if not require(script.Parent.UITheme).MotionEnabled then return end
-        local ancestor: Instance? = viewport
-        while ancestor do
-            if ancestor:IsA("GuiObject") and not ancestor.Visible then return end
-            ancestor = ancestor.Parent
-        end
-        elapsed += dt
-        local base = camera.CFrame.Position
-        local target = Vector3.new(0,1,0)
-        camera.CFrame = CFrame.lookAt(Vector3.new(4 + math.sin(elapsed*.7)*.35,3,-5),target)
-    end)
-    viewport.Destroying:Connect(function() motion:Disconnect() end)
     return viewport
 end
 return ModelPreview
