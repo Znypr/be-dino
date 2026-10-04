@@ -6,6 +6,9 @@ local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local TweenService = game:GetService("TweenService")
+local Theme = require(ReplicatedStorage.Shared.UITheme)
+local Preview = require(ReplicatedStorage.Shared.DinosaurPreview)
 local player = Players.LocalPlayer
 player.CameraMode = Enum.CameraMode.Classic
 player.CameraMaxZoomDistance = Config.CameraMaxZoom
@@ -30,15 +33,13 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local function rounded(instance: GuiObject, radius: number)
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, radius)
-    corner.Parent = instance
+    Theme.decorate(instance, radius)
 end
 
 local function scaleForViewport(): number
     local camera = workspace.CurrentCamera
     local size = if camera then camera.ViewportSize else Vector2.new(1280, 720)
-    return math.clamp(math.min(size.X / 1100, size.Y / 620), 0.68, 1.08)
+    return math.clamp(math.min((size.X - 24) / 660, (size.Y - 80) / 500), 0.35, 1.08)
 end
 
 local function addScale(instance: GuiObject): UIScale
@@ -51,7 +52,7 @@ end
 local function makeButton(parent: Instance, textValue: string, width: number): TextButton
     local button = Instance.new("TextButton")
     button.Size = UDim2.fromOffset(width, 44)
-    button.BackgroundColor3 = Color3.fromRGB(54, 74, 63)
+    button.BackgroundColor3 = Theme.Colors.card
     button.TextColor3 = Color3.fromRGB(250, 246, 224)
     button.Font = Enum.Font.GothamBold
     button.TextSize = 14
@@ -66,8 +67,8 @@ local hud = Instance.new("Frame")
 hud.AnchorPoint = Vector2.new(0.5, 0)
 hud.Position = UDim2.new(0.5, 0, 0, 12)
 hud.Size = UDim2.fromOffset(520, 72)
-hud.BackgroundColor3 = Color3.fromRGB(28, 45, 38)
-hud.BackgroundTransparency = 0.08
+hud.BackgroundColor3 = Theme.Colors.panel
+hud.BackgroundTransparency = 0
 hud.Parent = gui
 rounded(hud, 14)
 local hudScale = addScale(hud)
@@ -97,8 +98,8 @@ local nav = Instance.new("Frame")
 nav.AnchorPoint = Vector2.new(0.5, 1)
 nav.Position = UDim2.new(0.5, 0, 1, -16)
 nav.Size = UDim2.fromOffset(514, 54)
-nav.BackgroundColor3 = Color3.fromRGB(26, 38, 34)
-nav.BackgroundTransparency = 0.05
+nav.BackgroundColor3 = Theme.Colors.panel
+nav.BackgroundTransparency = 0
 nav.Parent = gui
 rounded(nav, 14)
 local navScale = addScale(nav)
@@ -111,9 +112,28 @@ navLayout.Parent = nav
 
 local homeButton = makeButton(nav, "HOME", 108)
 local collectionButton = makeButton(nav, "DINOS", 108)
-local chestButton = makeButton(nav, "CHESTS", 108)
+local chestButton = makeButton(nav, "EGGS", 108)
 local endButton = makeButton(nav, "END RUN", 150)
 endButton.BackgroundColor3 = Color3.fromRGB(133, 72, 57)
+Theme.icon(homeButton, "home")
+Theme.icon(collectionButton, "dinos")
+Theme.icon(chestButton, "egg")
+
+local previewNotice = Instance.new("TextLabel")
+previewNotice.AnchorPoint = Vector2.new(.5, 0)
+previewNotice.Position = UDim2.new(.5, 0, 0, 90)
+previewNotice.Size = UDim2.new(.8, 0, 0, 24)
+previewNotice.BackgroundTransparency = 1
+previewNotice.TextColor3 = Theme.Colors.gold
+previewNotice.TextSize = 13
+previewNotice.Font = Enum.Font.GothamBold
+previewNotice.Text = "STUDIO PREVIEW: PROGRESS IS NOT SAVED"
+previewNotice.Visible = false
+previewNotice.Parent = gui
+player:GetAttributeChangedSignal("ProfileMode"):Connect(function()
+    previewNotice.Visible = player:GetAttribute("ProfileMode") == "Studio preview (not saved)"
+end)
+previewNotice.Visible = player:GetAttribute("ProfileMode") == "Studio preview (not saved)"
 
 local modalShade = Instance.new("Frame")
 modalShade.Size = UDim2.fromScale(1, 1)
@@ -126,12 +146,28 @@ modalShade.Parent = gui
 local panel = Instance.new("Frame")
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
 panel.Position = UDim2.fromScale(0.5, 0.5)
-panel.Size = UDim2.fromOffset(570, 380)
-panel.BackgroundColor3 = Color3.fromRGB(31, 43, 38)
+panel.Size = UDim2.fromOffset(650, 440)
+panel.BackgroundColor3 = Theme.Colors.panel
 panel.ZIndex = 11
 panel.Parent = modalShade
 rounded(panel, 16)
 local panelScale = addScale(panel)
+local panelLip = Instance.new("Frame")
+panelLip.Name = "RaisedEdge"
+panelLip.Position = UDim2.fromOffset(8, 8)
+panelLip.Size = UDim2.new(1, -16, 1, -16)
+panelLip.BackgroundTransparency = 1
+panelLip.ZIndex = 11
+panelLip.Parent = panel
+local lipCorner = Instance.new("UICorner")
+lipCorner.CornerRadius = UDim.new(0, 12)
+lipCorner.Parent = panelLip
+local lipStroke = Instance.new("UIStroke")
+lipStroke.Color = Color3.fromRGB(121, 169, 178)
+lipStroke.Transparency = .6
+lipStroke.Thickness = 1
+lipStroke.Parent = panelLip
+
 
 local panelTitle = Instance.new("TextLabel")
 panelTitle.BackgroundTransparency = 1
@@ -139,7 +175,7 @@ panelTitle.Position = UDim2.fromOffset(18, 12)
 panelTitle.Size = UDim2.new(1, -88, 0, 34)
 panelTitle.TextColor3 = Color3.fromRGB(247, 236, 177)
 panelTitle.Font = Enum.Font.GothamBold
-panelTitle.TextSize = 22
+panelTitle.TextSize = 26
 panelTitle.TextXAlignment = Enum.TextXAlignment.Left
 panelTitle.ZIndex = 12
 panelTitle.Parent = panel
@@ -199,6 +235,9 @@ end
 local function openModal(viewName: string)
     activeView = viewName
     modalShade.Visible = true
+    local target = scaleForViewport()
+    panelScale.Scale = target * .90
+    TweenService:Create(panelScale, TweenInfo.new(.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = target}):Play()
 end
 
 local function closeModal()
@@ -241,87 +280,64 @@ end
 
 local function renderCollection()
     clearView()
-    panelTitle.Text = "DINOSAURS"
+    panelTitle.Text = "YOUR DINOSAURS"
+    local hint = track(textLine(content, "Choose a dino. Collect copies to unlock Gold.", 0, 26, 14, false))
+    local scroller = track(Instance.new("ScrollingFrame"))
+    scroller.BackgroundTransparency = 1
+    scroller.Position = UDim2.fromOffset(0, 32)
+    scroller.Size = UDim2.new(1, 0, 1, -70)
+    scroller.CanvasSize = UDim2.fromOffset(0, 292)
+    scroller.ScrollBarThickness = 4
+    scroller.ZIndex = 12
+    scroller.Parent = content
     local equipped = stringAttr("EquippedSpeciesId", "compy")
-    local y = 0
-    for _, speciesId in Config.SpeciesOrder do
+    local rarityColors = {Theme.Colors.accent, Color3.fromRGB(114, 186, 241), Theme.Colors.gold}
+    local rarities = {"COMMON", "RARE", "LEGENDARY"}
+    for index, speciesId in Config.SpeciesOrder do
         local base, gold = counts(speciesId)
         local owned = base + gold > 0
-        local row = track(Instance.new("Frame"))
-        row.Position = UDim2.fromOffset(0, y)
-        row.Size = UDim2.new(1, 0, 0, 78)
-        row.BackgroundColor3 = Color3.fromRGB(44, 59, 51)
-        row.ZIndex = 12
-        row.Parent = content
-        rounded(row, 10)
-
-        local display = Config.SpeciesDisplayNames[speciesId] or speciesId
-        local name = Instance.new("TextLabel")
-        name.BackgroundTransparency = 1
-        name.Position = UDim2.fromOffset(12, 8)
-        name.Size = UDim2.new(1, -220, 0, 24)
-        name.Text = display .. (if equipped == speciesId then "  •  EQUIPPED" else "")
-        name.TextColor3 = if owned then Color3.fromRGB(246, 238, 194) else Color3.fromRGB(156, 163, 157)
-        name.Font = Enum.Font.GothamBold
-        name.TextSize = 15
-        name.TextXAlignment = Enum.TextXAlignment.Left
-        name.ZIndex = 13
-        name.Parent = row
-
-        local countLabel = Instance.new("TextLabel")
-        countLabel.BackgroundTransparency = 1
-        countLabel.Position = UDim2.fromOffset(12, 38)
-        countLabel.Size = UDim2.new(1, -220, 0, 24)
-        countLabel.Text = string.format("%s base  •  %s Gold", tostring(base), tostring(gold))
-        countLabel.TextColor3 = Color3.fromRGB(219, 226, 215)
-        countLabel.Font = Enum.Font.GothamMedium
-        countLabel.TextSize = 14
-        countLabel.TextXAlignment = Enum.TextXAlignment.Left
-        countLabel.ZIndex = 13
-        countLabel.Parent = row
-
-        local equip = Instance.new("TextButton")
-        equip.AnchorPoint = Vector2.new(1, 0)
-        equip.Position = UDim2.new(1, -10, 0, 8)
-        equip.Size = UDim2.fromOffset(104, 28)
-        equip.Text = if equipped == speciesId then "EQUIPPED" elseif owned then "EQUIP" else "LOCKED"
-        equip.BackgroundColor3 = if owned then Color3.fromRGB(63, 91, 72) else Color3.fromRGB(66, 66, 66)
-        equip.TextColor3 = Color3.new(1, 1, 1)
-        equip.Font = Enum.Font.GothamBold
-        equip.TextSize = 12
+        local card = Instance.new("Frame")
+        card.Position = UDim2.new((index - 1) / 3, 3, 0, 0)
+        card.Size = UDim2.new(1 / 3, -8, 0, 286)
+        card.BackgroundColor3 = Theme.Colors.card
+        card.ZIndex = 12
+        card.Parent = scroller
+        rounded(card, 12)
+        local preview = Preview.add(card, speciesId, base <= 0 and gold > 0)
+        preview.Position = UDim2.fromOffset(0, 10)
+        local rarity = textLine(card, rarities[index], 8, 18, 11, true)
+        rarity.TextColor3 = rarityColors[index]
+        rarity.TextXAlignment = Enum.TextXAlignment.Center
+        rarity.ZIndex = 14
+        local name = textLine(card, Config.SpeciesDisplayNames[speciesId], 148, 24, 17, true)
+        name.TextXAlignment = Enum.TextXAlignment.Center
+        local countLabel = textLine(card, string.format("%d base   /   %d Gold", base, gold), 177, 22, 12, false)
+        countLabel.TextXAlignment = Enum.TextXAlignment.Center
+        local equip = makeButton(card, if equipped == speciesId then "EQUIPPED" elseif owned then "EQUIP" else "LOCKED", 160)
+        equip.Size = UDim2.new(1, -20, 0, 36)
+        equip.Position = UDim2.fromOffset(10, 206)
+        equip.ZIndex = 14
+        equip.BackgroundColor3 = if owned then Theme.Colors.accent else Color3.fromRGB(83, 105, 115)
+        equip.TextColor3 = Theme.Colors.outline
         equip.Active = owned and equipped ~= speciesId
         equip.AutoButtonColor = equip.Active
-        equip.ZIndex = 13
-        equip.Parent = row
-        rounded(equip, 7)
         equip.Activated:Connect(function()
-            if equip.Active then
-                equipSpecies:FireServer(speciesId, HttpService:GenerateGUID(false))
-            end
+            if equip.Active then equipSpecies:FireServer(speciesId, HttpService:GenerateGUID(false)) end
         end)
-
-        local mutate = Instance.new("TextButton")
-        mutate.AnchorPoint = Vector2.new(1, 0)
-        mutate.Position = UDim2.new(1, -10, 0, 42)
-        mutate.Size = UDim2.fromOffset(104, 28)
-        mutate.Text = if base >= Config.GoldMutationCost then "MAKE GOLD" else string.format("%d / %d", base, Config.GoldMutationCost)
-        mutate.BackgroundColor3 = if base >= Config.GoldMutationCost then Color3.fromRGB(153, 115, 35) else Color3.fromRGB(77, 72, 54)
-        mutate.TextColor3 = Color3.fromRGB(255, 243, 194)
-        mutate.Font = Enum.Font.GothamBold
+        local mutate = makeButton(card, if base >= Config.GoldMutationCost then "MAKE GOLD" else string.format("GOLD  %d / %d", base, Config.GoldMutationCost), 160)
+        mutate.Size = UDim2.new(1, -20, 0, 30)
+        mutate.Position = UDim2.fromOffset(10, 248)
+        mutate.ZIndex = 14
         mutate.TextSize = 12
+        mutate.BackgroundColor3 = Theme.Colors.gold
+        mutate.TextColor3 = Theme.Colors.outline
         mutate.Active = base >= Config.GoldMutationCost
         mutate.AutoButtonColor = mutate.Active
-        mutate.ZIndex = 13
-        mutate.Parent = row
-        rounded(mutate, 7)
         mutate.Activated:Connect(function()
-            if mutate.Active then
-                mutateSpecies:FireServer(speciesId, "gold", HttpService:GenerateGUID(false))
-            end
+            if mutate.Active then mutateSpecies:FireServer(speciesId, "gold", HttpService:GenerateGUID(false)) end
         end)
-
-        y += 86
     end
+    local status = track(textLine(content, stringAttr("LastEquipStatus", "") .. "  " .. stringAttr("LastMutationStatus", ""), 326, 26, 12, false))
 end
 
 local function parseChestQueue()
@@ -336,7 +352,7 @@ end
 
 local function renderChests()
     clearView()
-    panelTitle.Text = "CHESTS"
+    panelTitle.Text = "EGG NEST"
     local queue = parseChestQueue()
     local now = workspace:GetServerTimeNow()
     local y = 0
@@ -745,7 +761,7 @@ local summary = Instance.new("Frame")
 summary.AnchorPoint = Vector2.new(0.5, 0.5)
 summary.Position = UDim2.fromScale(0.5, 0.5)
 summary.Size = UDim2.fromOffset(460, 250)
-summary.BackgroundColor3 = Color3.fromRGB(33, 47, 40)
+summary.BackgroundColor3 = Theme.Colors.panel
 summary.ZIndex = 31
 summary.Parent = summaryShade
 rounded(summary, 16)
@@ -867,7 +883,8 @@ RunService.Heartbeat:Connect(function(dt)
     if activeView ~= "" and viewElapsed >= 1 then
         viewElapsed = 0
         if activeView == "home" then renderHome()
-        elseif activeView == "collection" then renderCollection()
+        elseif activeView == "collection" then
+            -- Collection updates are driven by attributes, not a preview rebuild timer.
         elseif activeView == "chests" then renderChests()
         end
     end
@@ -875,6 +892,17 @@ RunService.Heartbeat:Connect(function(dt)
     showSummary()
 end)
 
+local collectionRefreshQueued = false
+for _, attribute in {"EquippedSpeciesId", "CompyCopies", "CompyGold", "TriceratopsCopies", "TriceratopsGold", "TyrannosaurusCopies", "TyrannosaurusGold", "LastEquipStatus", "LastMutationStatus"} do
+    player:GetAttributeChangedSignal(attribute):Connect(function()
+        if activeView ~= "collection" or collectionRefreshQueued then return end
+        collectionRefreshQueued = true
+        task.defer(function()
+            collectionRefreshQueued = false
+            if activeView == "collection" then renderCollection() end
+        end)
+    end)
+end
 player:GetAttributeChangedSignal("LastRunEndAt"):Connect(showSummary)
 player:GetAttributeChangedSignal("LastRewardText"):Connect(function()
     if summaryShade.Visible then refreshSummaryText() end

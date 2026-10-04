@@ -60,3 +60,6 @@ Do not build all three polished models before proving the controller.
 
 ## Catalog scaling
 First test: three original species and one Gold treatment. Later catalog: many species per rarity, defined through data with stable IDs. Reward UI must handle stacks without rendering one object per copy. Reuse suitable rigs and palette/material treatments, but a recolor alone is a mutation, not a new species.
+
+## Superseding direction, 2026-10-04
+Primitive procedural art is now a fallback only. Produce editable mesh and UI sources in `resources/`, import real meshes using logical IDs, and follow [redesign](25-redesign.md). Original layered simulator-style menus with 3D previews replace the flat presentation.

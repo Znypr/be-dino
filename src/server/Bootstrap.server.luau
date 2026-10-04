@@ -60,7 +60,10 @@ local function spawnLoadedPlayer(player: Player)
     local ok, err = pcall(function()
         player:LoadCharacterAsync()
     end)
-    if not ok then warn("[Be Dino] initial character load failed: " .. tostring(err)) end
+    if not ok then
+        player:SetAttribute("CharacterState", "SpawnFailed")
+        warn("[Be Dino] initial character load failed: " .. tostring(err))
+    end
 end
 
 local function setup(player: Player)
@@ -96,4 +99,4 @@ FoodService.start(Dinosaur)
 local PredationService = require(script.Parent.PredationService)
 PredationService.start(RunLifecycle, Dinosaur)
 
-print("[Be Dino] " .. Config.Build .. " ready. Visual kit test.")
+print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")

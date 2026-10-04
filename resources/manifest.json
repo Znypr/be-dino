@@ -1,0 +1,241 @@
+{
+  "version": 1,
+  "creator": "Be Dino / Znypr",
+  "rights": "Original project-generated geometry and vector artwork; no third-party source assets.",
+  "generator": "tools/generate_resources.py",
+  "units": "Roblox studs; Y up; front -Z; origin on ground",
+  "assets": [
+    {
+      "logicalId": "compy",
+      "source": "models/compy.obj",
+      "triangles": 2044,
+      "bounds": [
+        [
+          -1.474998113193307,
+          0.04000000000000001,
+          -3.5999999999999996
+        ],
+        [
+          1.474998113193307,
+          4.45,
+          5.007518761937594
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "source-ready; Studio import required"
+    },
+    {
+      "logicalId": "triceratops",
+      "source": "models/triceratops.obj",
+      "triangles": 2968,
+      "bounds": [
+        [
+          -1.67,
+          0.04000000000000001,
+          -3.5999999999999996
+        ],
+        [
+          1.67,
+          5.390000000000001,
+          5.007518761937594
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "source-ready; Studio import required"
+    },
+    {
+      "logicalId": "tyrannosaurus",
+      "source": "models/tyrannosaurus.obj",
+      "triangles": 2044,
+      "bounds": [
+        [
+          -1.474998113193307,
+          0.04000000000000001,
+          -3.5999999999999996
+        ],
+        [
+          1.474998113193307,
+          4.45,
+          5.007518761937594
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "source-ready; Studio import required"
+    },
+    {
+      "logicalId": "tree",
+      "source": "models/tree.obj",
+      "triangles": 372,
+      "bounds": [
+        [
+          -4.737170076121953,
+          -0.06728296489124913,
+          -2.9544232590366244
+        ],
+        [
+          4.8,
+          13.56,
+          3.0589809331329616
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "source-ready; Studio import required"
+    },
+    {
+      "logicalId": "rock",
+      "source": "models/rock.obj",
+      "triangles": 66,
+      "bounds": [
+        [
+          -2.5227128301267734,
+          -0.20000000000000007,
+          -2.2423341980181943
+        ],
+        [
+          2.8,
+          3.4000000000000004,
+          2.2423341980181943
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "source-ready; Studio import required"
+    },
+    {
+      "logicalId": "fern",
+      "source": "models/fern.obj",
+      "triangles": 728,
+      "bounds": [
+        [
+          -1.8091283211299902,
+          -0.038578050048787234,
+          -1.9557843259179561
+        ],
+        [
+          2.004369137960266,
+          1.7386473112724403,
+          1.9557843259179561
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "source-ready; Studio import required"
+    },
+    {
+      "logicalId": "egg",
+      "source": "models/egg.obj",
+      "triangles": 360,
+      "bounds": [
+        [
+          -0.85,
+          0.0,
+          -0.85
+        ],
+        [
+          0.85,
+          2.4,
+          0.85
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "source-ready; Studio import required"
+    },
+    {
+      "logicalId": "berry",
+      "source": "models/berry.obj",
+      "triangles": 92,
+      "bounds": [
+        [
+          -0.21448818967509814,
+          0.0,
+          -0.2247858793920597
+        ],
+        [
+          0.22825356391083687,
+          0.6163686803201897,
+          0.22478587939205968
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "source-ready; Studio import required"
+    },
+    {
+      "logicalId": "fruit",
+      "source": "models/fruit.obj",
+      "triangles": 124,
+      "bounds": [
+        [
+          -0.44,
+          0.010000000000000009,
+          -0.4184648671698676
+        ],
+        [
+          0.44,
+          0.9600000000000001,
+          0.4184648671698676
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "source-ready; Studio import required"
+    },
+    {
+      "logicalId": "amber",
+      "source": "models/amber.obj",
+      "triangles": 20,
+      "bounds": [
+        [
+          -0.35031463461101847,
+          0.0,
+          -0.41181955177316604
+        ],
+        [
+          0.43301270189221935,
+          1.3,
+          0.411819551773166
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "source-ready; Studio import required"
+    },
+    {
+      "logicalId": "icon_dinos",
+      "source": "ui/icons/dinos.svg",
+      "robloxAssetId": null,
+      "status": "original vector; image upload required",
+      "rasterExport": "ui/icons/dinos.png"
+    },
+    {
+      "logicalId": "icon_egg",
+      "source": "ui/icons/egg.svg",
+      "robloxAssetId": null,
+      "status": "original vector; image upload required",
+      "rasterExport": "ui/icons/egg.png"
+    },
+    {
+      "logicalId": "icon_home",
+      "source": "ui/icons/home.svg",
+      "robloxAssetId": null,
+      "status": "original vector; image upload required",
+      "rasterExport": "ui/icons/home.png"
+    },
+    {
+      "logicalId": "icon_leaf",
+      "source": "ui/icons/leaf.svg",
+      "robloxAssetId": null,
+      "status": "original vector; image upload required",
+      "rasterExport": "ui/icons/leaf.png"
+    },
+    {
+      "logicalId": "icon_amber",
+      "source": "ui/icons/amber.svg",
+      "robloxAssetId": null,
+      "status": "original vector; image upload required",
+      "rasterExport": "ui/icons/amber.png"
+    },
+    {
+      "logicalId": "icon_close",
+      "source": "ui/icons/close.svg",
+      "robloxAssetId": null,
+      "status": "original vector; image upload required",
+      "rasterExport": "ui/icons/close.png"
+    }
+  ]
+}

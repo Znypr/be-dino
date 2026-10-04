@@ -51,3 +51,6 @@ Do not assume a strict reward cap is compatible with 'higher catch always means 
 
 ## Movement prototype status
 Generated build and quickstart are committed. No test experience/place IDs exist in project records yet. Znypr must open the build locally and perform the first Studio checks; no remote Studio-control capability is available here. No data stores are used, so this build cannot write production progression. Size stations are prototype-only and must not ship as public progression controls.
+
+## Superseding decisions, 2026-10-04
+Znypr requests an overall 3D/model and UI redesign. Primitive art is no longer acceptable as finished presentation. New original mesh sources and vector/raster UI artwork live in `resources/` with manifest and import status. Styled native menus remain editable; actual dinosaur models power previews. Torso footprint now follows capped visual growth, while decorative shell/tail stay non-colliding. Unpublished Studio preview can use disposable memory profiles; this never applies to published servers.

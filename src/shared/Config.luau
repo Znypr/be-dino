@@ -1,16 +1,22 @@
 --!strict
 -- Prototype tuning only. Persistent economy values remain private-test values.
 return table.freeze({
-    Build = "visual-kit-013",
+    Build = "redesign-014",
     WalkSpeed = 18,
     ArenaHalfWidth = 90,
     CameraMinZoom = 12,
     CameraMaxZoom = 80,
 
-    FoodPoints = 10,
+    FoodPoints = 1,
     FoodRespawnSeconds = 8,
-    FoodPickupRadius = 4,
-    FoodTickSeconds = 0.1,
+    FoodPickupRadius = 2.25,
+    FoodTickSeconds = 0.15,
+    FoodSectorCount = 8,
+    FoodClusterItems = 5,
+    FoodClusterRadius = 5,
+    FoodSeed = 1404,
+    StudioLocalProfilesEnabled = true, -- unpublished Studio only; never a live fallback
+    ProfileLoadWarningSeconds = 20,
 
     SpawnProtectionSeconds = 5,
     PredationScoreMultiplier = 1.10,
@@ -82,7 +88,7 @@ return table.freeze({
     MovementGuardBurstStuds = 4,
     MovementGuardRejectCooldownSeconds = 0.75,
     SecurityTestHarnessEnabled = false,
-    ArtTestHarnessEnabled = true,
+    ArtTestHarnessEnabled = false,
     ArtPreviewRequestCooldownSeconds = 0.25,
 
     -- Build 006/007 probes passed and are disabled again.

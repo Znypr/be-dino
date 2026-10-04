@@ -1,14 +1,14 @@
 # Be Dino!
 An original Roblox dinosaur growth-and-collection arena inspired by Be Fish.
 
-**Stage:** persistent loop, core UI and security regression accepted; Build 013 visual kit ready for Studio testing. **Updated:** 2026-09-18.
+**Stage:** Build 014 resource redesign and core fixes ready for Studio verification. **Updated:** 2026-10-04.
 **Owner:** Znypr's Roblox account. **Studio:** installed. **Budget:** €0.
 **First milestone:** private community test with a small complete progression loop.
 
 ## Try the prototype
 Download [BeDino-Prototype.rbxlx](build/BeDino-Prototype.rbxlx), open it in Studio, and use the current private test experience. No plugin is required.
 
-For the current build, use [Build 013 visual kit test](docs/24-visual-kit-test.md). The general Studio workflow remains in [Studio quickstart](docs/10-studio-quickstart.md).
+For the current build, use [Build 014 checks](docs/26-redesign-test.md) and [mesh/icon import guide](resources/README.md). The general Studio workflow remains in [Studio quickstart](docs/10-studio-quickstart.md).
 
 ## Start here
 - [Project brief and roles](docs/01-project-brief.md)
@@ -48,4 +48,13 @@ Use original assets, free tools and server-owned gameplay state.
 Three species validate the first progression loop; a larger catalog follows after testing.
 
 ## Next action
-Run the Build 013 checks in [docs/24-visual-kit-test.md](docs/24-visual-kit-test.md).
+Open the new build, follow [Build 014 checks](docs/26-redesign-test.md), and import [mesh resources](resources/README.md).
+
+## Build 014 redesign
+- Explicit growing torso collision; solid trees/rocks, non-solid foliage and pickups.
+- 64 map-wide sectors with small randomized berry/fruit/amber clusters and per-type values.
+- Early loading overlay with actionable failures; unpublished Studio uses disposable profiles only.
+- Layered animated modal/buttons and 3D collection previews.
+- `resources/` contains 10 original OBJ/MTL meshes, six reusable SVG/PNG icons and a real mesh render.
+
+Mesh files must be imported through Studio; the base place uses fallback primitives until import. Studio physics, multiplayer, mobile and upload-permission verification remain pending. The screenshots show a newer local map/lobby build than the committed baseline; uncommitted local code is not included here.

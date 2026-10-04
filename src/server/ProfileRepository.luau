@@ -8,7 +8,22 @@ local RewardMath = require(script.Parent.RewardMath)
 
 local ProfileRepository = {}
 
-local store = DataStoreService:GetDataStore(Config.ProfileDataStoreName)
+local RunService = game:GetService("RunService")
+local localPreview = RunService:IsStudio() and game.GameId == 0 and Config.StudioLocalProfilesEnabled
+local store: any
+if localPreview then
+    -- Unpublished F5 sessions have no DataStore. Deep copies mirror transaction boundaries.
+    local memory = {}
+    store = {UpdateAsync = function(_, key, transform)
+        local current = if memory[key] then HttpService:JSONDecode(HttpService:JSONEncode(memory[key])) else nil
+        local updated = transform(current)
+        if updated == nil then return nil end
+        memory[key] = HttpService:JSONDecode(HttpService:JSONEncode(updated))
+        return updated
+    end}
+else
+    store = DataStoreService:GetDataStore(Config.ProfileDataStoreName)
+end
 local leaseId = HttpService:GenerateGUID(false)
 local profiles: {[Player]: any} = {}
 local renewing = false
@@ -173,6 +188,7 @@ end
 
 function ProfileRepository.load(player: Player): boolean
     if profiles[player] then return true end
+    player:SetAttribute("ProfileMode", if localPreview then "Studio preview (not saved)" else "Persistent")
     player:SetAttribute("ProfileState", "Loading")
 
     local blockedByLease = false
