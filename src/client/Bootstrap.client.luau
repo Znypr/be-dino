@@ -300,6 +300,8 @@ render=function(name: string)
         button(body,"LET'S PLAY",212,324,400,62,C.accent,function() seenTutorial=true open("home") end)
     end
 end
+local buildBadge=label(gui,"BUILD "..Config.Build,0,0,250,24,15,C.blue)
+buildBadge.Name,buildBadge.AnchorPoint,buildBadge.Position="BuildBadge",Vector2.new(.5,0),UDim2.new(.5,0,0,36)
 local previewNotice=label(gui,"STUDIO PREVIEW • progress is not saved",0,0,390,25,14,C.gold)
 previewNotice.AnchorPoint,previewNotice.Position=Vector2.new(.5,0),UDim2.new(.5,0,0,8)
 previewNotice.Visible=player:GetAttribute("ProfileMode")=="Studio preview (not saved)"

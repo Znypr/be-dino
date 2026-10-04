@@ -1,3 +1,5 @@
+[Download the current clearly labelled Build 016](build/BeDino-Build016.rbxlx). The in-game BuildBadge must show `BUILD redesign-016`.
+
 ## Build 016: rebuilt UI and reliable resource delivery
 
 - [Original UI v2 assets](resources/ui/v2/README.md)

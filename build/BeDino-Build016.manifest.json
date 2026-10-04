@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "73c12efa406dc4e9fd04a1e26daf641c9644a49e1b3614888eb92e89ec1794da",
+  "place_sha256": "5c1e253e2ba56ccec2f7f8ecc6493038476ae293b9a8ad75f2cae3d189f564ed",
   "sources": {
     "src/loading/Loading.client.luau": "80d7702a45826701816f333e5cfac5a035bd8bdcfeed8b3907f343e65271b104",
     "src/shared/Config.luau": "8d1f994de9924c810ae255bc4c959d0c191f301d108bf1bb30d73d6cf8005555",
@@ -29,7 +29,7 @@
     "src/server/RewardMath.luau": "eeddcd6c722213f109a6e37a0d47e70c59f39138aca8c0ade24d1a23474708ef",
     "src/server/RunLifecycle.luau": "e5887a0d7007a151d9c9bfc7ca43934fee7aaf15de8aefe2d5febd866974ca2a",
     "src/server/VisualTestService.luau": "ee48ddc907c11e5d1390483d570d9ab96fd01b3ee02493b5724a2ebcf1ef0773",
-    "src/client/Bootstrap.client.luau": "23db7ace8b9aec3189f4b78c5d3acf53d2debdd33ebd96860324ef97270573c5",
+    "src/client/Bootstrap.client.luau": "c162dadec6c4230d5427bbb20de1a1317b39f0bbed4007b9e8f057d3a83c44d6",
     "src/client/ResourceVisuals.client.luau": "e35295589aec8692a3edaacb7a9b00609bf5e5fba912e16ba71f56c114fc07d2"
   }
 }

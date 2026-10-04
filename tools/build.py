@@ -7,6 +7,7 @@ from pathlib import Path
 import argparse
 import hashlib
 import json
+import re
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -96,7 +97,7 @@ def build(project_path=ROOT / "default.project.json"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", type=Path, default=ROOT / "build/BeDino-Prototype.rbxlx")
+    parser.add_argument("--output", type=Path, default=ROOT / ("build/BeDino-Build" + re.search(r'Build = "redesign-(\d+)"', (ROOT / "src/shared/Config.luau").read_text()).group(1) + ".rbxlx"))
     args = parser.parse_args()
     data, sources = build()
     args.output.parent.mkdir(parents=True, exist_ok=True)
