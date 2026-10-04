@@ -30,6 +30,20 @@ function ModelPreview.add(parent: GuiObject, id: string): ViewportFrame
     render()
     local ready = RuntimeMeshes.Ready.Event:Connect(function(name) if name == id then render() end end)
     viewport.Destroying:Connect(function() ready:Disconnect() end)
+    local elapsed = 0
+    local motion = game:GetService("RunService").RenderStepped:Connect(function(dt)
+        if not require(script.Parent.UITheme).MotionEnabled then return end
+        local ancestor: Instance? = viewport
+        while ancestor do
+            if ancestor:IsA("GuiObject") and not ancestor.Visible then return end
+            ancestor = ancestor.Parent
+        end
+        elapsed += dt
+        local base = camera.CFrame.Position
+        local target = Vector3.new(0,1,0)
+        camera.CFrame = CFrame.lookAt(Vector3.new(4 + math.sin(elapsed*.7)*.35,3,-5),target)
+    end)
+    viewport.Destroying:Connect(function() motion:Disconnect() end)
     return viewport
 end
 return ModelPreview

@@ -1,3 +1,7 @@
+## Current artwork: UI v2
+
+[Open the new individual assets and design review sheets](v2/README.md). [Reference screenshots and analysis](../references/steal-an-egg/README.md) are kept separately. The older artwork below remains available as historical source material.
+
 # Be Dino 2D assets
 
 **Ready to inspect:** all artwork and exports below are committed PNG/SVG files.

@@ -6,236 +6,52 @@
   "units": "Roblox studs; Y up; front -Z; origin on ground",
   "assets": [
     {
-      "logicalId": "compy",
-      "source": "models/compy.obj",
-      "triangles": 2044,
-      "bounds": [
-        [
-          -1.474998113193307,
-          0.04000000000000001,
-          -3.5999999999999996
-        ],
-        [
-          1.474998113193307,
-          4.45,
-          5.007518761937594
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "source-ready; Studio import required"
-    },
-    {
-      "logicalId": "triceratops",
-      "source": "models/triceratops.obj",
-      "triangles": 2968,
-      "bounds": [
-        [
-          -1.67,
-          0.04000000000000001,
-          -3.5999999999999996
-        ],
-        [
-          1.67,
-          5.390000000000001,
-          5.007518761937594
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "source-ready; Studio import required"
-    },
-    {
-      "logicalId": "tyrannosaurus",
-      "source": "models/tyrannosaurus.obj",
-      "triangles": 2044,
-      "bounds": [
-        [
-          -1.474998113193307,
-          0.04000000000000001,
-          -3.5999999999999996
-        ],
-        [
-          1.474998113193307,
-          4.45,
-          5.007518761937594
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "source-ready; Studio import required"
-    },
-    {
-      "logicalId": "tree",
-      "source": "models/tree.obj",
-      "triangles": 372,
-      "bounds": [
-        [
-          -4.737170076121953,
-          -0.06728296489124913,
-          -2.9544232590366244
-        ],
-        [
-          4.8,
-          13.56,
-          3.0589809331329616
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "source-ready; Studio import required"
-    },
-    {
-      "logicalId": "rock",
-      "source": "models/rock.obj",
-      "triangles": 66,
-      "bounds": [
-        [
-          -2.5227128301267734,
-          -0.20000000000000007,
-          -2.2423341980181943
-        ],
-        [
-          2.8,
-          3.4000000000000004,
-          2.2423341980181943
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "source-ready; Studio import required"
-    },
-    {
-      "logicalId": "fern",
-      "source": "models/fern.obj",
-      "triangles": 728,
-      "bounds": [
-        [
-          -1.8091283211299902,
-          -0.038578050048787234,
-          -1.9557843259179561
-        ],
-        [
-          2.004369137960266,
-          1.7386473112724403,
-          1.9557843259179561
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "source-ready; Studio import required"
-    },
-    {
-      "logicalId": "egg",
-      "source": "models/egg.obj",
-      "triangles": 360,
-      "bounds": [
-        [
-          -0.85,
-          0.0,
-          -0.85
-        ],
-        [
-          0.85,
-          2.4,
-          0.85
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "source-ready; Studio import required"
-    },
-    {
-      "logicalId": "berry",
-      "source": "models/berry.obj",
-      "triangles": 92,
-      "bounds": [
-        [
-          -0.21448818967509814,
-          0.0,
-          -0.2247858793920597
-        ],
-        [
-          0.22825356391083687,
-          0.6163686803201897,
-          0.22478587939205968
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "source-ready; Studio import required"
-    },
-    {
-      "logicalId": "fruit",
-      "source": "models/fruit.obj",
-      "triangles": 124,
-      "bounds": [
-        [
-          -0.44,
-          0.010000000000000009,
-          -0.4184648671698676
-        ],
-        [
-          0.44,
-          0.9600000000000001,
-          0.4184648671698676
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "source-ready; Studio import required"
-    },
-    {
-      "logicalId": "amber",
-      "source": "models/amber.obj",
-      "triangles": 20,
-      "bounds": [
-        [
-          -0.35031463461101847,
-          0.0,
-          -0.41181955177316604
-        ],
-        [
-          0.43301270189221935,
-          1.3,
-          0.411819551773166
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "source-ready; Studio import required"
-    },
-    {
       "logicalId": "icon_dinos",
       "source": "ui/icons/dinos.svg",
       "robloxAssetId": null,
       "status": "original vector; image upload required",
-      "rasterExport": "ui/icons/dinos.png"
+      "rasterExport": "ui/icons/dinos.png",
+      "sha256": "fcd3a5957e997063e6f7a3db69ab793eb53c3c2914eda7d8ce33328d24f38e89"
     },
     {
       "logicalId": "icon_egg",
       "source": "ui/icons/egg.svg",
       "robloxAssetId": null,
       "status": "original vector; image upload required",
-      "rasterExport": "ui/icons/egg.png"
+      "rasterExport": "ui/icons/egg.png",
+      "sha256": "d619a9775d622aec76f12c31fff669928b73085c3d9c6fa1732ab3fad6426676"
     },
     {
       "logicalId": "icon_home",
       "source": "ui/icons/home.svg",
       "robloxAssetId": null,
       "status": "original vector; image upload required",
-      "rasterExport": "ui/icons/home.png"
+      "rasterExport": "ui/icons/home.png",
+      "sha256": "5cbd9242c2b0a94bbad33c7c053a8f037b59892d5f34f870c7c54bd10adb08d1"
     },
     {
       "logicalId": "icon_leaf",
       "source": "ui/icons/leaf.svg",
       "robloxAssetId": null,
       "status": "original vector; image upload required",
-      "rasterExport": "ui/icons/leaf.png"
+      "rasterExport": "ui/icons/leaf.png",
+      "sha256": "b71d7375482e9e09bde45a7e3ed3f6f5f983e7ecd65bbe7d8e635333d042d0f3"
     },
     {
       "logicalId": "icon_amber",
       "source": "ui/icons/amber.svg",
       "robloxAssetId": null,
       "status": "original vector; image upload required",
-      "rasterExport": "ui/icons/amber.png"
+      "rasterExport": "ui/icons/amber.png",
+      "sha256": "19b59cbef9f729fb8c77a38bc9631bc90a74141c9877f8d6ccd1ac22a245b022"
     },
     {
       "logicalId": "icon_close",
       "source": "ui/icons/close.svg",
       "robloxAssetId": null,
       "status": "original vector; image upload required",
-      "rasterExport": "ui/icons/close.png"
+      "rasterExport": "ui/icons/close.png",
+      "sha256": "f2d45d5534f02b60687d76a2d238d1dac8441828a1d392725f84e601eef9257f"
     },
     {
       "logicalId": "ui_backgrounds_prehistoric-island_png",
@@ -550,22 +366,554 @@
       "source": "ui/previews/compy.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
-      "sha256": "e0f405a100d7038a6bd6492a15dd3d2803aadc4d0efaa7ad95306b42243adeee"
+      "sha256": "8f7aa4c960ae3d8246cd1b007bd85fdf7e6d52c453e3a396e8accf3b082ce904"
     },
     {
       "logicalId": "ui_previews_triceratops_png",
       "source": "ui/previews/triceratops.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
-      "sha256": "0a18978ac6a909238b381cc875f115a9c6118ab2d672aaee11e497a91519e513"
+      "sha256": "cb75463e94fbd8ddb3d621a6210f7b27d23eb01eb91369d3dd535c6adceb6c7b"
     },
     {
       "logicalId": "ui_previews_tyrannosaurus_png",
       "source": "ui/previews/tyrannosaurus.png",
       "robloxAssetId": null,
       "status": "ready for GitHub review; local raster/source asset",
-      "sha256": "8d2f4af00015194ecf5be6ecbbaea403009f78ee4f64352d8a098a86fe785ed4"
+      "sha256": "d237e2979009cf39bd93e82f055ef4608d0024a66b7774dcbda1dfdc228b0043"
+    },
+    {
+      "logicalId": "ui_v2_components_button-blue_png",
+      "source": "ui/v2/components/button-blue.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "f9415a5e781586a20189979de2b1ab2e15b810267b6f74b83349af74f3feb610"
+    },
+    {
+      "logicalId": "ui_v2_components_button-blue_svg",
+      "source": "ui/v2/components/button-blue.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "ceb42e8831b9191eb67547f8b95117d796968da193ef3715dff0fff4b3a87706"
+    },
+    {
+      "logicalId": "ui_v2_components_button-dark_png",
+      "source": "ui/v2/components/button-dark.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "495fd052d23e63d049aa0d5d0264c20098c7fd6fccb6ceb9fd926d1ee4e6391f"
+    },
+    {
+      "logicalId": "ui_v2_components_button-dark_svg",
+      "source": "ui/v2/components/button-dark.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "b565bbe564389960e2a95e4926358dc9dda2c1efd50fa29f776ccc19cd4bb070"
+    },
+    {
+      "logicalId": "ui_v2_components_button-gold_png",
+      "source": "ui/v2/components/button-gold.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "f2f6ed681b3c6b37aff7d5496c65e34ddf0c9eb23c74e7a223f7bd100efb3a07"
+    },
+    {
+      "logicalId": "ui_v2_components_button-gold_svg",
+      "source": "ui/v2/components/button-gold.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "db63a5fe9931516e42751fccd69d0f5334ba374b113d5d209ef745217591221d"
+    },
+    {
+      "logicalId": "ui_v2_components_button-green_png",
+      "source": "ui/v2/components/button-green.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "c7bcc8bbeed8f0d976ffb784c077f79786c07cdd2667c885fc762eef76fbe32f"
+    },
+    {
+      "logicalId": "ui_v2_components_button-green_svg",
+      "source": "ui/v2/components/button-green.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "fe0b73d6fb4035bf03cfb3e13ce68e5e0882206ebe467e49d7053b35eb09d088"
+    },
+    {
+      "logicalId": "ui_v2_components_button-purple_png",
+      "source": "ui/v2/components/button-purple.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "5c6ce8aed29d34a60f9f37580c1fc88ea8d55d182b9faf0dcc95d1ba2b6a9338"
+    },
+    {
+      "logicalId": "ui_v2_components_button-purple_svg",
+      "source": "ui/v2/components/button-purple.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "7316a6f6cd2fe9be2998ee7dd3a481deb54d1db5ce908699493454f03c3eda26"
+    },
+    {
+      "logicalId": "ui_v2_components_button-red_png",
+      "source": "ui/v2/components/button-red.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "87445644e90ae32b0ad8532113372df53cea9c42454597a2dc87500526129c41"
+    },
+    {
+      "logicalId": "ui_v2_components_button-red_svg",
+      "source": "ui/v2/components/button-red.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "690985345ee75636fe3a37625beb684b656299dc90cf1cb7d72a239dd03ed3ae"
+    },
+    {
+      "logicalId": "ui_v2_components_card-common_png",
+      "source": "ui/v2/components/card-common.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "552d2515326b768ceca01accb3cc0991b3abbd567d539da061c55fffc1c06e4c"
+    },
+    {
+      "logicalId": "ui_v2_components_card-common_svg",
+      "source": "ui/v2/components/card-common.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "9d63b50e75d3fda8955f7eb6579af193dafb397171fa17b01031a503709eebe1"
+    },
+    {
+      "logicalId": "ui_v2_components_card-legendary_png",
+      "source": "ui/v2/components/card-legendary.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "9d43e26cd521b6701ab6f3cdd82854d19f358ffbb2256c869875f65258b88707"
+    },
+    {
+      "logicalId": "ui_v2_components_card-legendary_svg",
+      "source": "ui/v2/components/card-legendary.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "7bd70ca31079910231591c669aa22a457390cde6960361b30e32e7fdaff724f5"
+    },
+    {
+      "logicalId": "ui_v2_components_card-rare_png",
+      "source": "ui/v2/components/card-rare.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "35c278b452cee5f2e083f035af7a3fb663ac4a392997c8a0cd0cba1478e6a53e"
+    },
+    {
+      "logicalId": "ui_v2_components_card-rare_svg",
+      "source": "ui/v2/components/card-rare.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "2763ec78e8f34d3a5fbbfae95ff11e4729277abcf7ee7d8566bc34d236e185b1"
+    },
+    {
+      "logicalId": "ui_v2_components_close_png",
+      "source": "ui/v2/components/close.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "4a4051cf4c92dd9344674192c1c49f0af943daa56b422bffc3579008426e4931"
+    },
+    {
+      "logicalId": "ui_v2_components_close_svg",
+      "source": "ui/v2/components/close.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "4e4371c794d694f337ba71c2244d96abf6aeee32645f7f2a30a8af7ee94d0e20"
+    },
+    {
+      "logicalId": "ui_v2_components_header-blue_png",
+      "source": "ui/v2/components/header-blue.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "2a8b64779523950ca1da4f42484a404a46b541f5911f5d80e4e255a5e4f65e16"
+    },
+    {
+      "logicalId": "ui_v2_components_header-blue_svg",
+      "source": "ui/v2/components/header-blue.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "49351090d8189b252bb45df86e05d47af89ac14d1db412980b311e2b1bda9a46"
+    },
+    {
+      "logicalId": "ui_v2_components_header-dark_png",
+      "source": "ui/v2/components/header-dark.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "608a061d92df50b561e600a45e44cfaa38437b949cad2f2ecfd9f8d4b0ef9d14"
+    },
+    {
+      "logicalId": "ui_v2_components_header-dark_svg",
+      "source": "ui/v2/components/header-dark.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "0c171cc1778505686bc9a11b64ffa5da1d08dae97ca1d1968d85698666f8f086"
+    },
+    {
+      "logicalId": "ui_v2_components_header-gold_png",
+      "source": "ui/v2/components/header-gold.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "4a4d3d36798830dbe17228d8cb2b9d099c099bd11f89b115e5e9ee3914d01bcf"
+    },
+    {
+      "logicalId": "ui_v2_components_header-gold_svg",
+      "source": "ui/v2/components/header-gold.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "04c2e275b80b352616518e14d6d22bcc4c1e8da7331e1dbd76b857d71bcb62c8"
+    },
+    {
+      "logicalId": "ui_v2_components_header-green_png",
+      "source": "ui/v2/components/header-green.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "f9444edbd3b1cadb19f732ad4d4c8c9693ea6d586399399b30c54e736adf98e3"
+    },
+    {
+      "logicalId": "ui_v2_components_header-green_svg",
+      "source": "ui/v2/components/header-green.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "53d44764a6ba61ffa374a5a03e4dc0bed826fc8eb2359631372c902c7ab659b1"
+    },
+    {
+      "logicalId": "ui_v2_components_header-purple_png",
+      "source": "ui/v2/components/header-purple.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "bee806d302f8c3f0c85d3e19101bd4928395ebe32c05fcd78c8a4d98103d508c"
+    },
+    {
+      "logicalId": "ui_v2_components_header-purple_svg",
+      "source": "ui/v2/components/header-purple.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "d3f978894c97bfd81fd7d58636c55b53fe82feb101042ae2c67d552e7b12284c"
+    },
+    {
+      "logicalId": "ui_v2_components_header-red_png",
+      "source": "ui/v2/components/header-red.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "0c22b3d9916efbcf3de1dd87b8d3e70e25fc7918afb2437a9cdaebf19bf136b0"
+    },
+    {
+      "logicalId": "ui_v2_components_header-red_svg",
+      "source": "ui/v2/components/header-red.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "a57760c573571222a277ea8e0703bdba97699e069175648b96f4cdb58501c726"
+    },
+    {
+      "logicalId": "ui_v2_components_popup-body_png",
+      "source": "ui/v2/components/popup-body.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "877b347228d81d7705be2fa4862669c388ce66262b65326ed515ab1a693ff965"
+    },
+    {
+      "logicalId": "ui_v2_components_popup-body_svg",
+      "source": "ui/v2/components/popup-body.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "83824e502537675e78f4a873d9ceccd716f5ea0d4843709e0c0d859af6d64e47"
+    },
+    {
+      "logicalId": "ui_v2_components_progress-track_png",
+      "source": "ui/v2/components/progress-track.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "741ece26853ae3a1d9bc37b5e5e5e423976dab453843e40af67fdfeeffca5afc"
+    },
+    {
+      "logicalId": "ui_v2_components_progress-track_svg",
+      "source": "ui/v2/components/progress-track.svg",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "41c934643ffc90a65dade20f3d2cdab4badf40b46c511327a3d230771fbe02ec"
+    },
+    {
+      "logicalId": "ui_v2_components_reward-burst_png",
+      "source": "ui/v2/components/reward-burst.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "045dc07d24805070a9a7ef4dcdf34014f440c56d5bc24201ca653a40a0a273d1"
+    },
+    {
+      "logicalId": "ui_v2_icons_amber_png",
+      "source": "ui/v2/icons/amber.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "89d78c4bfaf4995ef2cacead548ddc52a287271393cff68c677a0960d04badae"
+    },
+    {
+      "logicalId": "ui_v2_icons_dinos_png",
+      "source": "ui/v2/icons/dinos.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "aa0b4d47634c8c96ca93cae2a4ecc1e407a694f3545fe634ca808138ce0c3178"
+    },
+    {
+      "logicalId": "ui_v2_icons_egg_png",
+      "source": "ui/v2/icons/egg.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "f17763b6ed556b1f2ceb973ac2b6cf1b3d102974a0fcaaf0faef900dfc433a1c"
+    },
+    {
+      "logicalId": "ui_v2_icons_fusion_png",
+      "source": "ui/v2/icons/fusion.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "3fba294aa3862c56bd8283304122eff0370211ba6a9438501427918a8aff044e"
+    },
+    {
+      "logicalId": "ui_v2_icons_home_png",
+      "source": "ui/v2/icons/home.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "81e56fc0fb914dfede3117a68c5eea1c9cd33b73f0ed5ae6369ad9a371ff1afc"
+    },
+    {
+      "logicalId": "ui_v2_icons_shield_png",
+      "source": "ui/v2/icons/shield.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "e6741fb8223b6a0c8a0353c089674f183d840a91b5c5ff6f81d0a5764de860e5"
+    },
+    {
+      "logicalId": "ui_v2_icons_trophy_png",
+      "source": "ui/v2/icons/trophy.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "efe2c6c9fcd141dc87bf0521930a036181560ecd71f75e54d33eeb2e05832ce7"
+    },
+    {
+      "logicalId": "ui_v2_previews_asset-sheet_png",
+      "source": "ui/v2/previews/asset-sheet.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "b4317c3921a44274a84c441019662f9c4d3caf5c8c6500b71d9a9964c16fc7b1"
+    },
+    {
+      "logicalId": "ui_v2_previews_dino-index-design_png",
+      "source": "ui/v2/previews/dino-index-design.png",
+      "robloxAssetId": null,
+      "status": "ready for GitHub review; local raster/source asset",
+      "sha256": "bf94410e7723b6780e065e6333b39a08be2dfe4872cdedec2553472b7a32aeb7"
+    },
+    {
+      "logicalId": "compy",
+      "source": "models/compy.obj",
+      "triangles": 712,
+      "bounds": [
+        [
+          -1.474998113193307,
+          0.04000000000000001,
+          -3.48625
+        ],
+        [
+          1.474998113193307,
+          4.45,
+          5.007905694150421
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import",
+      "sha256": "4810ffe1c0e05a0d07d46ff8b07aff8db103ef41e3ad6cef8725e5f88e4fa8a9",
+      "packagedModel": "roblox/compy.rbxmx"
+    },
+    {
+      "logicalId": "triceratops",
+      "source": "models/triceratops.obj",
+      "triangles": 988,
+      "bounds": [
+        [
+          -1.6405255888325765,
+          0.04000000000000001,
+          -3.5074740931868367
+        ],
+        [
+          1.6405255888325765,
+          5.390000000000001,
+          5.007905694150421
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import",
+      "sha256": "8ef0ce7a3f7c84a25087ee5f720adc9321212f3c30a68284aee8b93ff853bffb",
+      "packagedModel": "roblox/triceratops.rbxmx"
+    },
+    {
+      "logicalId": "tyrannosaurus",
+      "source": "models/tyrannosaurus.obj",
+      "triangles": 712,
+      "bounds": [
+        [
+          -1.474998113193307,
+          0.04000000000000001,
+          -3.48625
+        ],
+        [
+          1.474998113193307,
+          4.45,
+          5.007905694150421
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import",
+      "sha256": "602ef7d3cf61334f06c7f97cef7885c8fe555f07d59022ce7dfaad5bb6245b28",
+      "packagedModel": "roblox/tyrannosaurus.rbxmx"
+    },
+    {
+      "logicalId": "tree",
+      "source": "models/tree.obj",
+      "triangles": 108,
+      "bounds": [
+        [
+          -4.384345884812358,
+          -0.06832091307714865,
+          -2.853169548885461
+        ],
+        [
+          4.8,
+          13.56,
+          2.9678525939969145
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import",
+      "sha256": "39ceff8658f98a2c5466f37b892224660e4a7e1df978bf4d4ab988e829f9abf8",
+      "packagedModel": "roblox/tree.rbxmx"
+    },
+    {
+      "logicalId": "rock",
+      "source": "models/rock.obj",
+      "triangles": 20,
+      "bounds": [
+        [
+          -2.265247584249853,
+          -0.20000000000000007,
+          -2.187429987478853
+        ],
+        [
+          2.8,
+          3.4000000000000004,
+          2.1874299874788528
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import",
+      "sha256": "7fcce5c6cea292e5698f90e1841ebc3775d880edd71d98ae9ccb8a3d556c9d74",
+      "packagedModel": "roblox/rock.rbxmx"
+    },
+    {
+      "logicalId": "fern",
+      "source": "models/fern.obj",
+      "triangles": 28,
+      "bounds": [
+        [
+          -1.8019377358048383,
+          0.15,
+          -1.9498558243636472
+        ],
+        [
+          2.0,
+          1.15,
+          1.9498558243636472
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import",
+      "sha256": "8d9dd7a3d6d35004e3f67b81434291e70c92881af6ac43f191df1d420eff66ed",
+      "packagedModel": "roblox/fern.rbxmx"
+    },
+    {
+      "logicalId": "egg",
+      "source": "models/egg.obj",
+      "triangles": 50,
+      "bounds": [
+        [
+          -0.7656230589874906,
+          0.0,
+          -0.8083980388508806
+        ],
+        [
+          0.85,
+          2.4,
+          0.8083980388508805
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import",
+      "sha256": "0808647edd7e2f39e9158b03c4b7e61fcdf092af87114267007ee174a7de87d4",
+      "packagedModel": "roblox/egg.rbxmx"
+    },
+    {
+      "logicalId": "berry",
+      "source": "models/berry.obj",
+      "triangles": 22,
+      "bounds": [
+        [
+          -0.19416407864998741,
+          0.0,
+          -0.22825356391083687
+        ],
+        [
+          0.24,
+          0.6173539185944884,
+          0.22825356391083684
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import",
+      "sha256": "5d7126aa25c2cbb3175c1bae46bff9622c51cf376ca23a8d6c5b203b22ccccb4",
+      "packagedModel": "roblox/berry.rbxmx"
+    },
+    {
+      "logicalId": "fruit",
+      "source": "models/fruit.obj",
+      "triangles": 20,
+      "bounds": [
+        [
+          -0.3559674775249769,
+          0.010000000000000009,
+          -0.4184648671698676
+        ],
+        [
+          0.44,
+          0.9600000000000001,
+          0.4184648671698676
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import",
+      "sha256": "791f8166907087441abfe29c3f6da25cab0191899a90e73652b9dae571a53c22",
+      "packagedModel": "roblox/fruit.rbxmx"
+    },
+    {
+      "logicalId": "amber",
+      "source": "models/amber.obj",
+      "triangles": 10,
+      "bounds": [
+        [
+          -0.4045084971874738,
+          0.0,
+          -0.4755282581475768
+        ],
+        [
+          0.5,
+          1.3,
+          0.47552825814757677
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import",
+      "sha256": "5849544c140729d7fa8785c89427144b05ff0139c5c99350ee70cae929427140",
+      "packagedModel": "roblox/amber.rbxmx"
     }
   ],
-  "runtimeIntegration": "Original mesh and icon data embedded; client-local Mesh/Image APIs with permission-aware fallback. Published Roblox upload IDs remain optional bindings."
+  "runtimeIntegration": "Native original triangle Models packaged; PNG icons compiled to native GUI tiles with optional uploaded image bindings. No runtime editable API dependency."
 }

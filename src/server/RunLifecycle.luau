@@ -9,6 +9,14 @@ local lastExitRequest: {[Player]: number} = {}
 local requestEndRun: RemoteEvent? = nil
 local settleRun = nil
 
+function RunLifecycle.prepareSanctuary(player: Player, character: Model)
+    character:SetAttribute("RunState", "Sanctuary")
+    character:SetAttribute("GrowthScore", 0)
+    character:SetAttribute("CatchScore", 0)
+    character:SetAttribute("ExitChannelEndsAt", 0)
+    player:SetAttribute("Location", "Sanctuary")
+end
+
 local function activeCharacter(player: Player): Model?
     local character = player.Character
     if not character or character:GetAttribute("RunState") ~= "Active" then return nil end
@@ -25,6 +33,7 @@ function RunLifecycle.begin(player: Player, character: Model)
     if player:GetAttribute("ProfileState") ~= "Loaded" then return end
     if character:GetAttribute("RunId") ~= nil then return end
     character:SetAttribute("RunId", HttpService:GenerateGUID(false))
+    player:SetAttribute("Location", "Island")
     character:SetAttribute("RunState", "Active")
     character:SetAttribute("GrowthScore", 0)
     character:SetAttribute("CatchScore", 0)
@@ -183,6 +192,21 @@ function RunLifecycle.start()
         folder.Name = "BeDinoRemotes"
         folder.Parent = ReplicatedStorage
     end
+
+    local startRemote = Instance.new("RemoteEvent")
+    startRemote.Name = "RequestStartRun"
+    startRemote.Parent = folder
+    startRemote.OnServerEvent:Connect(function(player: Player, ...)
+        if select("#", ...) ~= 0 or player:GetAttribute("ProfileState") ~= "Loaded" then return end
+        local character = player.Character
+        if not character or character:GetAttribute("RunState") ~= "Sanctuary" or not character:GetAttribute("DinoAttached") then return end
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid or humanoid.Health <= 0 then return end
+        local spawn = workspace.BeDinoArena:FindFirstChild("PrototypeSpawn")
+        if not spawn or not spawn:IsA("BasePart") then return end
+        character:PivotTo(spawn.CFrame + Vector3.new(0,5,0))
+        RunLifecycle.begin(player, character)
+    end)
 
     local existing = folder:FindFirstChild("RequestEndRun")
     if existing and existing:IsA("RemoteEvent") then

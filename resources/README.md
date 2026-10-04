@@ -1,3 +1,7 @@
+## Build 016 delivery
+
+Models are now packaged from `resources/roblox` into ReplicatedStorage.Resources. EditableMesh/Image APIs are no longer required to display the delivered models or local preview icons. OBJ/MTL sources remain available for optimized owned MeshPart imports. See [UI v2](ui/v2/README.md), [reference gallery](references/steal-an-egg/README.md), and [screen task list](../docs/28-ui-overhaul.md). Earlier editable-API instructions below describe the superseded Build 015 path.
+
 # Reusable Be Dino resources
 
 Start with the [2D asset gallery](ui/README.md). Build 015 embeds the real mesh sources and icon pixel data for automatic client-local creation when Roblox Mesh/Image APIs are available. Manual OBJ import below remains the permanent-asset fallback. Current implementation/checks: [Build 015](../docs/27-mountain-island.md).

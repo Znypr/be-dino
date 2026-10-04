@@ -73,8 +73,11 @@ local function setup(player: Player)
             character:Destroy()
             return
         end
-        RunLifecycle.begin(player, character)
-        task.spawn(Dinosaur.attach, character, Config.WalkSpeed, player)
+        RunLifecycle.prepareSanctuary(player, character)
+        task.spawn(function()
+            Dinosaur.attach(character, Config.WalkSpeed, player)
+            if player.Character == character then character:PivotTo(CFrame.new(0, 11, 365)) end
+        end)
     end)
     task.spawn(spawnLoadedPlayer, player)
 end

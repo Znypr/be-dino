@@ -40,6 +40,16 @@ def build(project_path=ROOT / "default.project.json"):
         for entry in sorted(path.iterdir()):
             if entry.is_dir():
                 name, kind = entry.name, "Folder"
+            elif entry.suffix == ".rbxmx":
+                imported = ET.parse(entry).getroot().findall("Item")
+                if len(imported) != 1 or imported[0].attrib["class"] != "Model":
+                    raise ValueError("Expected one native resource Model")
+                node = imported[0]
+                for nested in node.iter("Item"):
+                    counter_id = nested.attrib.get("referent", "")
+                    nested.attrib["referent"] = "RESOURCE_" + entry.stem + "_" + counter_id
+                parent.append(node)
+                continue
             elif entry.suffix == ".luau":
                 name, kind = entry.stem, "ModuleScript"
                 if name.endswith(".server"):

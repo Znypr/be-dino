@@ -41,7 +41,7 @@ def mesh_portrait(name):
  from mpl_toolkits.mplot3d.art3d import Poly3DCollection
  fig=plt.figure(figsize=(4,4));ax=fig.add_subplot(111,projection='3d');polys,colors=read_mesh(name)
  ax.add_collection3d(Poly3DCollection(polys,facecolors=colors,edgecolors='none'))
- ax.set(xlim=(-3.5,3.5),ylim=(-4,5.5),zlim=(0,6));ax.set_box_aspect((7,9.5,6));ax.view_init(15,-53);ax.set_axis_off();fig.subplots_adjust(0,0,1,1);fig.savefig(OUT/'previews'/(name+'.png'),dpi=160,transparent=True);plt.close(fig)
+ ax.set(xlim=(-3.5,3.5),ylim=(-4,5.5),zlim=(0,6));ax.set_box_aspect((7,9.5,6),zoom=1.75);ax.view_init(15,-53);ax.set_axis_off();fig.subplots_adjust(0,0,1,1);fig.savefig(OUT/'previews'/(name+'.png'),dpi=160,transparent=True);plt.close(fig)
 
 def build():
  icon_extra()

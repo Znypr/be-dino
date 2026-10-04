@@ -124,4 +124,4 @@ RunService.Heartbeat:Connect(function(dt)
         end
     end
 end)
-RuntimeMeshes.prepare()
+-- Native models are packaged. Optional API meshes are no longer needed.

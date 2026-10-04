@@ -1,81 +1,73 @@
 --!strict
 local TweenService = game:GetService("TweenService")
-local AssetService = game:GetService("AssetService")
-local IconRaster = require(script.Parent.IconRaster)
-local imageCache = {}
-local UITheme = {}
-UITheme.BackgroundImageId = "" -- optional permanent upload of resources/ui/backgrounds/prehistoric-island.png
-function UITheme.imageContent(id: string): Content?
-    if imageCache[id] == false then return nil end
-    if imageCache[id] then return Content.fromObject(imageCache[id]) end
-    local runs = IconRaster[id]
-    if not runs then return nil end
-    local ok, image = pcall(function()
-        local editable = AssetService:CreateEditableImage({Size = Vector2.new(64,64)})
-        if not editable then error("Image memory unavailable") end
-        local pixels = buffer.create(64*64*4)
-        local offset = 0
-        for i = 1, #runs, 2 do
-            for _ = 1, runs[i] do buffer.writeu32(pixels,offset,runs[i+1]) offset += 4 end
-        end
-        editable:WritePixelsBuffer(Vector2.zero, Vector2.new(64,64), pixels)
-        return editable
-    end)
-    if not ok then imageCache[id] = false return nil end
-    imageCache[id] = image
-    return Content.fromObject(image)
-end
-UITheme.Colors = {
-    panel = Color3.fromRGB(49, 94, 110),
-    card = Color3.fromRGB(55, 104, 122),
-    outline = Color3.fromRGB(16, 42, 56),
-    text = Color3.fromRGB(250, 248, 230),
-    accent = Color3.fromRGB(102, 203, 161),
-    gold = Color3.fromRGB(247, 196, 96),
-}
--- Upload resources/ui/icons/*.png, then set these logical icon IDs.
-UITheme.ImageIds = {home = "", dinos = "", egg = "", leaf = "", amber = "", close = "", settings = "", shop = "", play = "", lock = "", trophy = "", gift = "", bolt = "", snow = ""}
-function UITheme.decorate(object: GuiObject, radius: number)
+local Tiles = require(script.Parent.IconTiles)
+local Theme = {}
+Theme.BackgroundImageId = ""
+Theme.MotionEnabled = true
+Theme.Colors = {panel=Color3.fromRGB(42,40,53),card=Color3.fromRGB(61,58,73),outline=Color3.fromRGB(13,15,20),text=Color3.new(1,1,1),accent=Color3.fromRGB(93,237,31),gold=Color3.fromRGB(255,210,43),blue=Color3.fromRGB(46,206,255),purple=Color3.fromRGB(194,86,255),red=Color3.fromRGB(247,57,48)}
+Theme.ImageIds = {}
+function Theme.imageContent(_id: string): Content? return nil end
+function Theme.decorate(object: GuiObject, radius: number)
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, radius)
+    corner.CornerRadius = UDim.new(0,radius)
     corner.Parent = object
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = UITheme.Colors.outline
-    stroke.Thickness = 2
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    stroke.Parent = object
+    local border = Instance.new("UIStroke")
+    border.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    border.Color, border.Thickness, border.Parent = Theme.Colors.outline,3,object
     local gradient = Instance.new("UIGradient")
-    gradient.Rotation = 90
-    gradient.Color = ColorSequence.new(Color3.fromRGB(255,255,255), Color3.fromRGB(184,206,215))
-    gradient.Parent = object
+    gradient.Color = ColorSequence.new(Color3.new(1,1,1),Color3.fromRGB(157,168,185))
+    gradient.Rotation, gradient.Parent = 90,object
     if object:IsA("TextButton") then
+        object.Font, object.TextStrokeColor3, object.TextStrokeTransparency = Enum.Font.FredokaOne,Theme.Colors.outline,0
         local scale = Instance.new("UIScale")
         scale.Parent = object
-        object.MouseEnter:Connect(function()
-            TweenService:Create(scale, TweenInfo.new(.12), {Scale = 1.03}):Play()
-        end)
-        object.MouseLeave:Connect(function()
-            TweenService:Create(scale, TweenInfo.new(.12), {Scale = 1}):Play()
-        end)
-        object.MouseButton1Down:Connect(function()
-            TweenService:Create(scale, TweenInfo.new(.08), {Scale = .96}):Play()
-        end)
-        object.MouseButton1Up:Connect(function()
-            TweenService:Create(scale, TweenInfo.new(.12), {Scale = 1}):Play()
-        end)
+        local function animate(value: number)
+            TweenService:Create(scale,TweenInfo.new(if Theme.MotionEnabled then .12 else 0),{Scale=value*(object:GetAttribute("UIScaleBase") or 1)}):Play()
+        end
+        object.MouseEnter:Connect(function() animate(1.04) end)
+        object.MouseLeave:Connect(function() animate(1) end)
+        object.MouseButton1Down:Connect(function() animate(.94) end)
+        object.MouseButton1Up:Connect(function() animate(1.04) end)
     end
 end
-function UITheme.icon(parent: GuiObject, id: string): ImageLabel?
-    local imageId = UITheme.ImageIds[id]
-    local content = if not imageId or imageId == "" then UITheme.imageContent(id) else nil
-    if (not imageId or imageId == "") and not content then return nil end
-    local icon = Instance.new("ImageLabel")
-    icon.Size = UDim2.fromOffset(30,30)
-    icon.Position = UDim2.fromOffset(8,7)
-    icon.BackgroundTransparency = 1
-    if content then icon.ImageContent = content else icon.Image = imageId end
-    icon.ZIndex = parent.ZIndex + 1
-    icon.Parent = parent
-    return icon
+function Theme.texture(parent: GuiObject, width: number, height: number)
+    local pattern = Instance.new("Frame")
+    pattern.Name,pattern.Size,pattern.BackgroundTransparency,pattern.ClipsDescendants = "FossilTexture",UDim2.fromScale(1,1),1,true
+    pattern.ZIndex,pattern.Parent = parent.ZIndex,parent
+    for x=8,width,24 do for y=8,height,24 do
+        local stud = Instance.new("Frame")
+        stud.Position,stud.Size = UDim2.fromOffset(x,y),UDim2.fromOffset(7,7)
+        stud.BackgroundColor3,stud.BackgroundTransparency,stud.BorderSizePixel = Color3.new(1,1,1),.95,0
+        stud.ZIndex,stud.Parent = parent.ZIndex,pattern
+        local edge = Instance.new("UIStroke")
+        edge.Color,edge.Transparency,edge.Thickness,edge.Parent = Color3.new(0,0,0),.85,1,stud
+    end end
 end
-return UITheme
+-- Quantized exported PNG pixels rendered as merged native GUI tiles. No restricted image API.
+function Theme.icon(parent: GuiObject,id: string): Frame?
+    local uploaded = Theme.ImageIds[id]
+    if uploaded and uploaded ~= "" then
+        local root = Instance.new("Frame")
+        root.Name,root.BackgroundTransparency,root.Size = "Art_"..id,1,UDim2.fromOffset(42,42)
+        root.Position,root.ZIndex,root.Parent = UDim2.fromOffset(8,5),parent.ZIndex+1,parent
+        local image = Instance.new("ImageLabel")
+        image.Image,image.Size,image.BackgroundTransparency,image.ZIndex,image.Parent = uploaded,UDim2.fromScale(1,1),1,root.ZIndex,root
+        return root
+    end
+    local data = Tiles[id]
+    if not data then return nil end
+    local root = Instance.new("Frame")
+    root.Name,root.BackgroundTransparency,root.Size = "Art_"..id,1,UDim2.fromOffset(42,42)
+    root.Position,root.ZIndex,root.Parent = UDim2.fromOffset(8,5),parent.ZIndex+1,parent
+    for _, tile in data.tiles do
+        local pixel = Instance.new("Frame")
+        pixel.BorderSizePixel = 0
+        pixel.Position = UDim2.fromScale(tile[1]/data.size,tile[2]/data.size)
+        pixel.Size = UDim2.fromScale(tile[3]/data.size,tile[4]/data.size)
+        local c = data.colors[tile[5]]
+        pixel.BackgroundColor3 = Color3.fromRGB(c[1],c[2],c[3])
+        pixel.ZIndex,pixel.Parent = root.ZIndex,root
+    end
+    return root
+end
+return Theme

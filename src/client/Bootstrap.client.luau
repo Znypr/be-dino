@@ -2,924 +2,404 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
-local UserInputService = game:GetService("UserInputService")
-
-local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local TweenService = game:GetService("TweenService")
-local Theme = require(ReplicatedStorage.Shared.UITheme)
-local Preview = require(ReplicatedStorage.Shared.DinosaurPreview)
-local ModelPreview = require(ReplicatedStorage.Shared.ModelPreview)
+local Lighting = game:GetService("Lighting")
+local Input = game:GetService("UserInputService")
+local Http = game:GetService("HttpService")
 local player = Players.LocalPlayer
-player.CameraMode = Enum.CameraMode.Classic
-player.CameraMaxZoomDistance = Config.CameraMaxZoom
-
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Theme = require(Shared.UITheme)
+local Preview = require(Shared.DinosaurPreview)
+local ModelPreview = require(Shared.ModelPreview)
+local C = Theme.Colors
 local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
-local requestEndRun = remotes:WaitForChild("RequestEndRun") :: RemoteEvent
-local equipSpecies = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
-local claimChest = remotes:WaitForChild("ClaimChest") :: RemoteEvent
-local mutateSpecies = remotes:WaitForChild("MutateSpecies") :: RemoteEvent
-local testGrantSpecies = remotes:WaitForChild("TestGrantSpecies") :: RemoteEvent
-local testGrantChests = remotes:WaitForChild("TestGrantChests") :: RemoteEvent
-local testSetMutationCopies = remotes:WaitForChild("TestSetMutationCopies") :: RemoteEvent
-local previewDinosaurArt = if Config.ArtTestHarnessEnabled
-    then remotes:WaitForChild("PreviewDinosaurArt") :: RemoteEvent
-    else nil
-
+local startRun = remotes:WaitForChild("RequestStartRun") :: RemoteEvent
+local endRun = remotes:WaitForChild("RequestEndRun") :: RemoteEvent
+local equip = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
+local hatch = remotes:WaitForChild("ClaimChest") :: RemoteEvent
+local fuse = remotes:WaitForChild("MutateSpecies") :: RemoteEvent
 local gui = Instance.new("ScreenGui")
-gui.Name = "CoreUI"
-gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = false
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Name,gui.ResetOnSpawn,gui.ZIndexBehavior = "BeDinoUI",false,Enum.ZIndexBehavior.Sibling
 gui.Parent = player:WaitForChild("PlayerGui")
-
-local function rounded(instance: GuiObject, radius: number)
-    Theme.decorate(instance, radius)
+local blur = Instance.new("BlurEffect")
+blur.Name,blur.Size,blur.Parent = "BeDinoModalBlur",0,Lighting
+local motion = true
+local active = ""
+local selected = "compy"
+local seenTutorial = false
+local lastGrowth = 0
+local function num(id: string): number return player:GetAttribute(id) or 0 end
+local function str(id: string,fallback: string?): string return player:GetAttribute(id) or fallback or "" end
+local function copies(id: string): (number,number)
+    local prefix = ({compy="Compy",triceratops="Triceratops",tyrannosaurus="Tyrannosaurus"})[id]
+    return num(prefix.."Copies"),num(prefix.."Gold")
 end
-
-local function scaleForViewport(): number
-    local camera = workspace.CurrentCamera
-    local size = if camera then camera.ViewportSize else Vector2.new(1280, 720)
-    return math.clamp(math.min((size.X - 24) / 660, (size.Y - 80) / 500), 0.35, 1.08)
+local function label(parent: Instance,text: string,x: number,y: number,w: number,h: number,size: number,color: Color3?): TextLabel
+    local t = Instance.new("TextLabel")
+    t.BackgroundTransparency,t.Position,t.Size = 1,UDim2.fromOffset(x,y),UDim2.fromOffset(w,h)
+    t.Font,t.TextSize,t.Text,t.TextColor3 = Enum.Font.FredokaOne,size,text,color or C.text
+    t.TextStrokeTransparency,t.TextStrokeColor3 = 0,C.outline
+    t.TextWrapped,t.ZIndex,t.Parent = true,if parent:IsA("GuiObject") then parent.ZIndex+1 else 1,parent
+    local outline = Instance.new("UIStroke")
+    outline.ApplyStrokeMode,outline.Color,outline.Thickness,outline.Parent = Enum.ApplyStrokeMode.Contextual,C.outline,2,t
+    return t
 end
-
-local function addScale(instance: GuiObject): UIScale
-    local scale = Instance.new("UIScale")
-    scale.Scale = scaleForViewport()
-    scale.Parent = instance
-    return scale
-end
-
-local function makeButton(parent: Instance, textValue: string, width: number): TextButton
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.fromOffset(width, 44)
-    button.BackgroundColor3 = Theme.Colors.card
-    button.TextColor3 = Color3.fromRGB(250, 246, 224)
-    button.Font = Enum.Font.GothamBold
-    button.TextSize = 14
-    button.Text = textValue
-    button.AutoButtonColor = true
-    button.Parent = parent
-    rounded(button, 10)
-    return button
-end
-
-local hud = Instance.new("Frame")
-hud.AnchorPoint = Vector2.new(0.5, 0)
-hud.Position = UDim2.new(0.5, 0, 0, 12)
-hud.Size = UDim2.fromOffset(520, 72)
-hud.BackgroundColor3 = Theme.Colors.panel
-hud.BackgroundTransparency = 0
-hud.Parent = gui
-rounded(hud, 14)
-local hudScale = addScale(hud)
-
-local title = Instance.new("TextLabel")
-title.BackgroundTransparency = 1
-title.Position = UDim2.fromOffset(14, 8)
-title.Size = UDim2.fromOffset(120, 24)
-title.Text = "BE DINO!"
-title.TextColor3 = Color3.fromRGB(247, 236, 177)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 18
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.Parent = hud
-
-local hudStats = Instance.new("TextLabel")
-hudStats.BackgroundTransparency = 1
-hudStats.Position = UDim2.fromOffset(14, 34)
-hudStats.Size = UDim2.new(1, -28, 0, 28)
-hudStats.TextColor3 = Color3.fromRGB(238, 242, 232)
-hudStats.Font = Enum.Font.GothamMedium
-hudStats.TextSize = 14
-hudStats.TextXAlignment = Enum.TextXAlignment.Left
-hudStats.Parent = hud
-
-local nav = Instance.new("Frame")
-nav.AnchorPoint = Vector2.new(0.5, 1)
-nav.Position = UDim2.new(0.5, 0, 1, -16)
-nav.Size = UDim2.fromOffset(514, 54)
-nav.BackgroundColor3 = Theme.Colors.panel
-nav.BackgroundTransparency = 0
-nav.Parent = gui
-rounded(nav, 14)
-local navScale = addScale(nav)
-local navLayout = Instance.new("UIListLayout")
-navLayout.FillDirection = Enum.FillDirection.Horizontal
-navLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-navLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-navLayout.Padding = UDim.new(0, 8)
-navLayout.Parent = nav
-
-local homeButton = makeButton(nav, "HOME", 108)
-local collectionButton = makeButton(nav, "DINOS", 108)
-local chestButton = makeButton(nav, "EGGS", 108)
-local endButton = makeButton(nav, "END RUN", 150)
-endButton.BackgroundColor3 = Color3.fromRGB(133, 72, 57)
-Theme.icon(homeButton, "home")
-Theme.icon(collectionButton, "dinos")
-Theme.icon(chestButton, "egg")
-
-local previewNotice = Instance.new("TextLabel")
-previewNotice.AnchorPoint = Vector2.new(.5, 0)
-previewNotice.Position = UDim2.new(.5, 0, 0, 90)
-previewNotice.Size = UDim2.new(.8, 0, 0, 24)
-previewNotice.BackgroundTransparency = 1
-previewNotice.TextColor3 = Theme.Colors.gold
-previewNotice.TextSize = 13
-previewNotice.Font = Enum.Font.GothamBold
-previewNotice.Text = "STUDIO PREVIEW: PROGRESS IS NOT SAVED"
-previewNotice.Visible = false
-previewNotice.Parent = gui
-player:GetAttributeChangedSignal("ProfileMode"):Connect(function()
-    previewNotice.Visible = player:GetAttribute("ProfileMode") == "Studio preview (not saved)"
-end)
-previewNotice.Visible = player:GetAttribute("ProfileMode") == "Studio preview (not saved)"
-
-local modalShade = Instance.new("Frame")
-modalShade.Size = UDim2.fromScale(1, 1)
-modalShade.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-modalShade.BackgroundTransparency = 0.5
-modalShade.Visible = false
-modalShade.ZIndex = 10
-modalShade.Parent = gui
-
-local panel = Instance.new("Frame")
-panel.AnchorPoint = Vector2.new(0.5, 0.5)
-panel.Position = UDim2.fromScale(0.5, 0.5)
-panel.Size = UDim2.fromOffset(650, 440)
-panel.BackgroundColor3 = Theme.Colors.panel
-panel.ZIndex = 11
-panel.Parent = modalShade
-rounded(panel, 16)
-local panelScale = addScale(panel)
-local panelLip = Instance.new("Frame")
-panelLip.Name = "RaisedEdge"
-panelLip.Position = UDim2.fromOffset(8, 8)
-panelLip.Size = UDim2.new(1, -16, 1, -16)
-panelLip.BackgroundTransparency = 1
-panelLip.ZIndex = 11
-panelLip.Parent = panel
-local lipCorner = Instance.new("UICorner")
-lipCorner.CornerRadius = UDim.new(0, 12)
-lipCorner.Parent = panelLip
-local lipStroke = Instance.new("UIStroke")
-lipStroke.Color = Color3.fromRGB(121, 169, 178)
-lipStroke.Transparency = .6
-lipStroke.Thickness = 1
-lipStroke.Parent = panelLip
-
-
-local panelTitle = Instance.new("TextLabel")
-panelTitle.BackgroundTransparency = 1
-panelTitle.Position = UDim2.fromOffset(18, 12)
-panelTitle.Size = UDim2.new(1, -88, 0, 34)
-panelTitle.TextColor3 = Color3.fromRGB(247, 236, 177)
-panelTitle.Font = Enum.Font.GothamBold
-panelTitle.TextSize = 26
-panelTitle.TextXAlignment = Enum.TextXAlignment.Left
-panelTitle.ZIndex = 12
-panelTitle.Parent = panel
-
-local closeButton = Instance.new("TextButton")
-closeButton.AnchorPoint = Vector2.new(1, 0)
-closeButton.Position = UDim2.new(1, -12, 0, 12)
-closeButton.Size = UDim2.fromOffset(54, 36)
-closeButton.BackgroundColor3 = Color3.fromRGB(66, 78, 71)
-closeButton.TextColor3 = Color3.new(1, 1, 1)
-closeButton.Text = "X"
-closeButton.Font = Enum.Font.GothamBold
-closeButton.TextSize = 16
-closeButton.ZIndex = 12
-closeButton.Parent = panel
-rounded(closeButton, 9)
-
-local content = Instance.new("Frame")
-content.BackgroundTransparency = 1
-content.Position = UDim2.fromOffset(18, 58)
-content.Size = UDim2.new(1, -36, 1, -76)
-content.ZIndex = 12
-content.Parent = panel
-
-local activeView = ""
-local viewChildren: {Instance} = {}
-
-local function clearView()
-    for _, child in viewChildren do
-        child:Destroy()
-    end
-    table.clear(viewChildren)
-end
-
-local function track<T>(instance: T): T
-    table.insert(viewChildren, instance :: any)
-    return instance
-end
-
-local function numberAttr(name: string): number
-    local value = player:GetAttribute(name)
-    return if typeof(value) == "number" then value else 0
-end
-
-local function stringAttr(name: string, fallback: string): string
-    local value = player:GetAttribute(name)
-    return if typeof(value) == "string" and value ~= "" then value else fallback
-end
-
-local function counts(speciesId: string): (number, number)
-    if speciesId == "compy" then return numberAttr("CompyCopies"), numberAttr("CompyGold") end
-    if speciesId == "triceratops" then return numberAttr("TriceratopsCopies"), numberAttr("TriceratopsGold") end
-    if speciesId == "tyrannosaurus" then return numberAttr("TyrannosaurusCopies"), numberAttr("TyrannosaurusGold") end
-    return 0, 0
-end
-
-local function openModal(viewName: string)
-    activeView = viewName
-    modalShade.Visible = true
-    local target = scaleForViewport()
-    panelScale.Scale = target * .90
-    TweenService:Create(panelScale, TweenInfo.new(.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = target}):Play()
-end
-
-local function closeModal()
-    activeView = ""
-    modalShade.Visible = false
-    clearView()
-end
-closeButton.Activated:Connect(closeModal)
-
-local function textLine(parent: Instance, textValue: string, y: number, height: number, size: number, bold: boolean?): TextLabel
-    local label = Instance.new("TextLabel")
-    label.BackgroundTransparency = 1
-    label.Position = UDim2.fromOffset(0, y)
-    label.Size = UDim2.new(1, 0, 0, height)
-    label.Text = textValue
-    label.TextColor3 = Color3.fromRGB(236, 240, 230)
-    label.Font = if bold then Enum.Font.GothamBold else Enum.Font.GothamMedium
-    label.TextSize = size
-    label.TextWrapped = true
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.TextYAlignment = Enum.TextYAlignment.Top
-    label.ZIndex = 12
-    label.Parent = parent
-    return label
-end
-
-local function renderHome()
-    clearView()
-    panelTitle.Text = "EXPLORE THE ISLAND"
-    local equipped = stringAttr("EquippedSpeciesId", "compy")
-    local display = Config.SpeciesDisplayNames[equipped] or equipped
-    local hero = track(Instance.new("Frame"))
-    hero.Size = UDim2.fromOffset(220, 288)
-    hero.Position = UDim2.fromOffset(0, 0)
-    hero.BackgroundColor3 = Theme.Colors.card
-    hero.ZIndex = 12
-    hero.Parent = content
-    rounded(hero, 16)
-    local preview = Preview.add(hero, equipped, false)
-    preview.Size = UDim2.new(1, 0, 0, 195)
-    local name = textLine(hero, display, 204, 30, 22, true)
-    name.TextXAlignment = Enum.TextXAlignment.Center
-    local equippedLabel = textLine(hero, "YOUR EQUIPPED DINO", 247, 24, 11, true)
-    equippedLabel.TextXAlignment = Enum.TextXAlignment.Center
-    equippedLabel.TextColor3 = Theme.Colors.accent
-    local rules = track(textLine(content, "EAT. GROW. EXPLORE.", 6, 30, 20, true))
-    rules.Position = UDim2.fromOffset(242, 6)
-    rules.Size = UDim2.new(1, -242, 0, 30)
-    for index, rule in {
-        "Jump with Space or the mobile jump button.",
-        "Explore mountain paths for rare food. Avoid bigger dinos.",
-        "End a run to bank copies and reward eggs.",
-    } do
-        local line = track(textLine(content, rule, 44 + (index-1)*58, 52, 15, false))
-        line.Position = UDim2.fromOffset(242, 44+(index-1)*58)
-        line.Size = UDim2.new(1, -242, 0, 52)
-    end
-    local legend = track(textLine(content, "FOOD POINTS\nBerry +1    Fruit +4\nEgg +15    Crystal +50", 232, 68, 15, true))
-    legend.Position = UDim2.fromOffset(242, 232)
-    legend.Size = UDim2.new(1, -242, 0, 68)
-    legend.TextColor3 = Theme.Colors.gold
-    track(textLine(content, "Mesh art: " .. tostring(workspace:GetAttribute("LocalMeshStatus") or "Preparing...") , 324, 30, 12, false))
-end
-
-local function renderCollection()
-    clearView()
-    panelTitle.Text = "YOUR DINOSAURS"
-    local hint = track(textLine(content, "Choose a dino. Collect copies to unlock Gold.", 0, 26, 14, false))
-    local scroller = track(Instance.new("ScrollingFrame"))
-    scroller.BackgroundTransparency = 1
-    scroller.Position = UDim2.fromOffset(0, 32)
-    scroller.Size = UDim2.new(1, 0, 1, -70)
-    scroller.CanvasSize = UDim2.fromOffset(0, 292)
-    scroller.ScrollBarThickness = 4
-    scroller.ZIndex = 12
-    scroller.Parent = content
-    local equipped = stringAttr("EquippedSpeciesId", "compy")
-    local rarityColors = {Theme.Colors.accent, Color3.fromRGB(114, 186, 241), Theme.Colors.gold}
-    local rarities = {"COMMON", "RARE", "LEGENDARY"}
-    for index, speciesId in Config.SpeciesOrder do
-        local base, gold = counts(speciesId)
-        local owned = base + gold > 0
-        local card = Instance.new("Frame")
-        card.Position = UDim2.new((index - 1) / 3, 3, 0, 0)
-        card.Size = UDim2.new(1 / 3, -8, 0, 286)
-        card.BackgroundColor3 = Theme.Colors.card
-        card.ZIndex = 12
-        card.Parent = scroller
-        rounded(card, 12)
-        local preview = Preview.add(card, speciesId, base <= 0 and gold > 0)
-        preview.Position = UDim2.fromOffset(0, 10)
-        local rarity = textLine(card, rarities[index], 8, 18, 11, true)
-        rarity.TextColor3 = rarityColors[index]
-        rarity.TextXAlignment = Enum.TextXAlignment.Center
-        rarity.ZIndex = 14
-        local name = textLine(card, Config.SpeciesDisplayNames[speciesId], 148, 24, 17, true)
-        name.TextXAlignment = Enum.TextXAlignment.Center
-        local countLabel = textLine(card, string.format("%d base   /   %d Gold", base, gold), 177, 22, 12, false)
-        countLabel.TextXAlignment = Enum.TextXAlignment.Center
-        local equip = makeButton(card, if equipped == speciesId then "EQUIPPED" elseif owned then "EQUIP" else "LOCKED", 160)
-        equip.Size = UDim2.new(1, -20, 0, 36)
-        equip.Position = UDim2.fromOffset(10, 206)
-        equip.ZIndex = 14
-        equip.BackgroundColor3 = if owned then Theme.Colors.accent else Color3.fromRGB(83, 105, 115)
-        equip.TextColor3 = Theme.Colors.outline
-        equip.Active = owned and equipped ~= speciesId
-        equip.AutoButtonColor = equip.Active
-        equip.Activated:Connect(function()
-            if equip.Active then equipSpecies:FireServer(speciesId, HttpService:GenerateGUID(false)) end
-        end)
-        local mutate = makeButton(card, if base >= Config.GoldMutationCost then "MAKE GOLD" else string.format("GOLD  %d / %d", base, Config.GoldMutationCost), 160)
-        mutate.Size = UDim2.new(1, -20, 0, 30)
-        mutate.Position = UDim2.fromOffset(10, 248)
-        mutate.ZIndex = 14
-        mutate.TextSize = 12
-        mutate.BackgroundColor3 = Theme.Colors.gold
-        mutate.TextColor3 = Theme.Colors.outline
-        mutate.Active = base >= Config.GoldMutationCost
-        mutate.AutoButtonColor = mutate.Active
-        mutate.Activated:Connect(function()
-            if mutate.Active then mutateSpecies:FireServer(speciesId, "gold", HttpService:GenerateGUID(false)) end
-        end)
-    end
-    local status = track(textLine(content, stringAttr("LastEquipStatus", "") .. "  " .. stringAttr("LastMutationStatus", ""), 326, 26, 12, false))
-end
-
-local function parseChestQueue()
-    local raw = player:GetAttribute("ChestQueueJson")
-    if typeof(raw) ~= "string" or raw == "" then return {} end
-    local ok, result = pcall(function()
-        return HttpService:JSONDecode(raw)
-    end)
-    if not ok or typeof(result) ~= "table" then return {} end
-    return result
-end
-
-local function renderChests()
-    clearView()
-    panelTitle.Text = "YOUR EGG NEST"
-    local queue = parseChestQueue()
-    local now = workspace:GetServerTimeNow()
-    track(textLine(content, "Reward eggs hatch in order, including while you are offline.", 0, 30, 14, false))
-    for slot = 1, Config.ChestQueueCapacity do
-        local entry = queue[slot]
-        local card = track(Instance.new("Frame"))
-        card.Position = UDim2.new((slot-1)/Config.ChestQueueCapacity, 3, 0, 38)
-        card.Size = UDim2.new(1/Config.ChestQueueCapacity, -8, 0, 182)
-        card.BackgroundColor3 = Theme.Colors.card
-        card.ZIndex = 12
-        card.Parent = content
-        rounded(card, 12)
-        local preview = ModelPreview.add(card, "egg")
-        preview.Position = UDim2.fromOffset(0, 18)
-        preview.Size = UDim2.new(1, 0, 0, 126)
-        local title = textLine(card, "SLOT " .. tostring(slot), 8, 20, 11, true)
-        title.TextXAlignment = Enum.TextXAlignment.Center
-        local label = textLine(card, "EMPTY", 151, 23, 13, true)
-        label.TextXAlignment = Enum.TextXAlignment.Center
-        if typeof(entry) == "table" and typeof(entry.readyAt) == "number" then
-            local remaining = math.max(0, entry.readyAt - now)
-            label.Text = if remaining <= 0 then "READY!" else string.format("%.0fs", remaining)
-            label.TextColor3 = if remaining <= 0 then Theme.Colors.accent else Theme.Colors.gold
-        else preview.ImageTransparency = .72 end
-    end
-    local nextId = stringAttr("NextChestId", "")
-    local canClaim = nextId ~= "" and workspace:GetServerTimeNow() >= numberAttr("NextChestReadyAt")
-    local claim = track(makeButton(content, if canClaim then "HATCH NEXT EGG" elseif nextId == "" then "NO EGGS YET" else "HATCHING...", 220))
-    claim.Position = UDim2.fromOffset(0, 242)
-    claim.Size = UDim2.fromOffset(220, 52)
-    claim.BackgroundColor3 = Theme.Colors.gold
-    claim.TextColor3 = Theme.Colors.outline
-    claim.ZIndex = 13
-    claim.Active, claim.AutoButtonColor = canClaim, canClaim
-    claim.Activated:Connect(function()
-        if canClaim then claimChest:FireServer(nextId, HttpService:GenerateGUID(false)) end
-    end)
-    local pending = track(textLine(content, "Waiting for a slot: " .. tostring(numberAttr("PendingChestGrants")), 246, 42, 14, false))
-    pending.Position = UDim2.fromOffset(240, 246)
-    pending.Size = UDim2.new(1, -240, 0, 42)
-    track(textLine(content, "Last hatch: " .. stringAttr("LastChestRewardText", "none yet"), 318, 32, 13, false))
-end
-
-homeButton.Activated:Connect(function() openModal("home") renderHome() end)
-collectionButton.Activated:Connect(function() openModal("collection") renderCollection() end)
-chestButton.Activated:Connect(function() openModal("chests") renderChests() end)
-
-endButton.Activated:Connect(function()
-    requestEndRun:FireServer()
-end)
-
-local securityButton = Instance.new("TextButton")
-securityButton.Position = UDim2.fromOffset(12, 92)
-securityButton.Size = UDim2.fromOffset(124, 36)
-securityButton.BackgroundColor3 = Color3.fromRGB(91, 55, 55)
-securityButton.TextColor3 = Color3.new(1, 1, 1)
-securityButton.Font = Enum.Font.GothamBold
-securityButton.TextSize = 12
-securityButton.Text = "SECURITY TEST"
-securityButton.Visible = Config.SecurityTestHarnessEnabled
-securityButton.Parent = gui
-rounded(securityButton, 9)
-
-local securityPanel = Instance.new("Frame")
-securityPanel.Position = UDim2.fromOffset(12, 136)
-securityPanel.Size = UDim2.fromOffset(300, 168)
-securityPanel.BackgroundColor3 = Color3.fromRGB(42, 35, 35)
-securityPanel.Visible = false
-securityPanel.Parent = gui
-rounded(securityPanel, 12)
-
-local securityTitle = Instance.new("TextLabel")
-securityTitle.BackgroundTransparency = 1
-securityTitle.Position = UDim2.fromOffset(10, 8)
-securityTitle.Size = UDim2.new(1, -20, 0, 26)
-securityTitle.Text = "BUILD 012 SECURITY"
-securityTitle.TextColor3 = Color3.fromRGB(255, 220, 200)
-securityTitle.Font = Enum.Font.GothamBold
-securityTitle.TextSize = 14
-securityTitle.Parent = securityPanel
-
-local securityStatus = Instance.new("TextLabel")
-securityStatus.BackgroundTransparency = 1
-securityStatus.Position = UDim2.fromOffset(10, 38)
-securityStatus.Size = UDim2.new(1, -20, 0, 44)
-securityStatus.Text = "Remote: NOT RUN\nMovement: NOT RUN"
-securityStatus.TextColor3 = Color3.fromRGB(240, 235, 225)
-securityStatus.Font = Enum.Font.GothamMedium
-securityStatus.TextSize = 12
-securityStatus.TextWrapped = true
-securityStatus.Parent = securityPanel
-
-local remoteTest = makeButton(securityPanel, "RUN REMOTE ATTACKS", 132)
-remoteTest.Position = UDim2.fromOffset(10, 92)
-remoteTest.Size = UDim2.fromOffset(132, 42)
-
-local teleportTest = makeButton(securityPanel, "RUN TELEPORT CHECK", 138)
-teleportTest.Position = UDim2.fromOffset(152, 92)
-teleportTest.Size = UDim2.fromOffset(138, 42)
-
-local closeSecurity = Instance.new("TextButton")
-closeSecurity.AnchorPoint = Vector2.new(1, 1)
-closeSecurity.Position = UDim2.new(1, -10, 1, -8)
-closeSecurity.Size = UDim2.fromOffset(62, 22)
-closeSecurity.BackgroundTransparency = 1
-closeSecurity.Text = "CLOSE"
-closeSecurity.TextColor3 = Color3.fromRGB(205, 205, 195)
-closeSecurity.Font = Enum.Font.GothamBold
-closeSecurity.TextSize = 11
-closeSecurity.Parent = securityPanel
-
-local remoteResult = "NOT RUN"
-local movementResult = "NOT RUN"
-local function refreshSecurityStatus()
-    securityStatus.Text = "Remote: " .. remoteResult .. "\nMovement: " .. movementResult
-end
-
-securityButton.Activated:Connect(function()
-    securityPanel.Visible = not securityPanel.Visible
-end)
-closeSecurity.Activated:Connect(function() securityPanel.Visible = false end)
-
-local function securitySnapshot()
-    local character = player.Character
-    return {
-        compy = numberAttr("CompyCopies"),
-        compyGold = numberAttr("CompyGold"),
-        tri = numberAttr("TriceratopsCopies"),
-        triGold = numberAttr("TriceratopsGold"),
-        rex = numberAttr("TyrannosaurusCopies"),
-        rexGold = numberAttr("TyrannosaurusGold"),
-        equipped = stringAttr("EquippedSpeciesId", ""),
-        activeChests = numberAttr("ActiveChestCount"),
-        overflow = numberAttr("PendingChestGrants"),
-        revision = numberAttr("ProfileRevision"),
-        runState = if character then character:GetAttribute("RunState") else nil,
-    }
-end
-
-local function sameSnapshot(a, b): boolean
-    return a.compy == b.compy and a.compyGold == b.compyGold
-        and a.tri == b.tri and a.triGold == b.triGold
-        and a.rex == b.rex and a.rexGold == b.rexGold
-        and a.equipped == b.equipped
-        and a.activeChests == b.activeChests
-        and a.overflow == b.overflow
-        and a.revision == b.revision
-        and a.runState == b.runState
-end
-
-remoteTest.Activated:Connect(function()
-    if player:GetAttribute("ProfileState") ~= "Loaded" then
-        remoteResult = "FAIL: PROFILE"
-        refreshSecurityStatus()
-        return
-    end
-    remoteResult = "RUNNING"
-    refreshSecurityStatus()
-    local before = securitySnapshot()
-    local overlong = string.rep("x", 100)
-    local token = HttpService:GenerateGUID(false)
-
-    equipSpecies:FireServer(123, token)
-    equipSpecies:FireServer("unknown_species", token)
-    equipSpecies:FireServer(overlong, token)
-    equipSpecies:FireServer("compy", "", "extra")
-
-    claimChest:FireServer(123, token)
-    claimChest:FireServer("fake-chest-id", token)
-    claimChest:FireServer(overlong, token)
-    claimChest:FireServer("fake-chest-id", "", "extra")
-
-    mutateSpecies:FireServer(123, "gold", token)
-    mutateSpecies:FireServer("compy", "diamond", token)
-    mutateSpecies:FireServer("unknown_species", "gold", token)
-    mutateSpecies:FireServer("compy", "gold", "", "extra")
-
-    requestEndRun:FireServer("extra")
-    testGrantSpecies:FireServer()
-    testGrantChests:FireServer()
-    testSetMutationCopies:FireServer(50)
-
-    for _ = 1, 60 do
-        equipSpecies:FireServer("unknown_species", HttpService:GenerateGUID(false))
-    end
-
-    task.delay(1.25, function()
-        local after = securitySnapshot()
-        local character = player.Character
-        local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
-        local healthy = humanoid ~= nil and humanoid.Health > 0
-        remoteResult = if sameSnapshot(before, after) and healthy then "PASS" else "FAIL: STATE CHANGED"
-        refreshSecurityStatus()
-    end)
-end)
-
-teleportTest.Activated:Connect(function()
-    local character = player.Character
-    local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
-    if not root or not root:IsA("BasePart") or character:GetAttribute("RunState") ~= "Active" then
-        movementResult = "FAIL: NO ACTIVE RUN"
-        refreshSecurityStatus()
-        return
-    end
-
-    movementResult = "RUNNING"
-    refreshSecurityStatus()
-    local origin = root.Position
-    local beforeRejects = numberAttr("MovementRejectCount")
-
-    local foodFolder = workspace:FindFirstChild("Food")
-    local target = nil
-    if foodFolder then
-        for _, item in foodFolder:GetChildren() do
-            if item:IsA("BasePart") and (item.Position - origin).Magnitude > 25 then
-                target = item.Position + Vector3.new(0, 2.5, 0)
-                break
-            end
-        end
-    end
-    target = target or (origin + Vector3.new(45, 0, 0))
-    root.CFrame = CFrame.new(target)
-
-    task.delay(1, function()
-        local currentCharacter = player.Character
-        local currentRoot = if currentCharacter then currentCharacter:FindFirstChild("HumanoidRootPart") else nil
-        local rejects = numberAttr("MovementRejectCount")
-        local returned = currentRoot and currentRoot:IsA("BasePart")
-            and (currentRoot.Position - origin).Magnitude < 10
-        movementResult = if rejects > beforeRejects and returned then "PASS" else "FAIL"
-        refreshSecurityStatus()
-    end)
-end)
-
-local artButton = Instance.new("TextButton")
-artButton.Position = UDim2.fromOffset(12, 92)
-artButton.Size = UDim2.fromOffset(124, 36)
-artButton.BackgroundColor3 = Color3.fromRGB(65, 91, 70)
-artButton.TextColor3 = Color3.new(1, 1, 1)
-artButton.Font = Enum.Font.GothamBold
-artButton.TextSize = 12
-artButton.Text = "ART PREVIEW"
-artButton.Visible = Config.ArtTestHarnessEnabled
-artButton.Parent = gui
-rounded(artButton, 9)
-
-local artPanel = Instance.new("Frame")
-artPanel.Position = UDim2.fromOffset(12, 136)
-artPanel.Size = UDim2.fromOffset(310, 184)
-artPanel.BackgroundColor3 = Color3.fromRGB(34, 46, 39)
-artPanel.Visible = false
-artPanel.Parent = gui
-rounded(artPanel, 12)
-
-local artTitle = Instance.new("TextLabel")
-artTitle.BackgroundTransparency = 1
-artTitle.Position = UDim2.fromOffset(10, 8)
-artTitle.Size = UDim2.new(1, -20, 0, 26)
-artTitle.Text = "BUILD 013 ART PREVIEW"
-artTitle.TextColor3 = Color3.fromRGB(244, 232, 185)
-artTitle.Font = Enum.Font.GothamBold
-artTitle.TextSize = 14
-artTitle.Parent = artPanel
-
-local artStatus = Instance.new("TextLabel")
-artStatus.BackgroundTransparency = 1
-artStatus.Position = UDim2.fromOffset(10, 34)
-artStatus.Size = UDim2.new(1, -20, 0, 24)
-artStatus.Text = "Visual only, not saved"
-artStatus.TextColor3 = Color3.fromRGB(218, 226, 214)
-artStatus.Font = Enum.Font.GothamMedium
-artStatus.TextSize = 11
-artStatus.Parent = artPanel
-
-local function artPreviewButton(x: number, y: number, w: number, textValue: string): TextButton
-    local b = Instance.new("TextButton")
-    b.Position = UDim2.fromOffset(x, y)
-    b.Size = UDim2.fromOffset(w, 34)
-    b.BackgroundColor3 = Color3.fromRGB(67, 89, 73)
-    b.TextColor3 = Color3.new(1, 1, 1)
-    b.Font = Enum.Font.GothamBold
-    b.TextSize = 11
-    b.Text = textValue
-    b.Parent = artPanel
-    rounded(b, 8)
+local function box(parent: Instance,x: number,y: number,w: number,h: number,color: Color3,z: number): Frame
+    local b = Instance.new("Frame")
+    b.Position,b.Size,b.BackgroundColor3,b.ZIndex,b.Parent = UDim2.fromOffset(x,y),UDim2.fromOffset(w,h),color,z,parent
+    Theme.decorate(b,5)
     return b
 end
-
-local compyPreview = artPreviewButton(10, 66, 90, "COMPY")
-local triPreview = artPreviewButton(110, 66, 90, "TRICERATOPS")
-local rexPreview = artPreviewButton(210, 66, 90, "T-REX")
-local goldPreview = artPreviewButton(10, 108, 140, "GOLD CURRENT")
-local restorePreview = artPreviewButton(160, 108, 140, "RESTORE SAVED")
-local closeArt = artPreviewButton(210, 150, 90, "CLOSE")
-
-local previewSpecies = "compy"
-local function preview(speciesId: string, gold: boolean)
-    previewSpecies = speciesId
-    if previewDinosaurArt then previewDinosaurArt:FireServer(speciesId, gold, false) end
+local function button(parent: Instance,text: string,x: number,y: number,w: number,h: number,color: Color3,callback): TextButton
+    local b = Instance.new("TextButton")
+    b.Position,b.Size,b.BackgroundColor3 = UDim2.fromOffset(x,y),UDim2.fromOffset(w,h),color
+    b.Text,b.TextColor3,b.TextSize,b.ZIndex,b.Parent = text,C.text,23,if parent:IsA("GuiObject") then parent.ZIndex+2 else 2,parent
+    Theme.decorate(b,4)
+    b.Activated:Connect(callback)
+    return b
 end
-
-artButton.Activated:Connect(function() artPanel.Visible = not artPanel.Visible end)
-compyPreview.Activated:Connect(function() preview("compy", false) end)
-triPreview.Activated:Connect(function() preview("triceratops", false) end)
-rexPreview.Activated:Connect(function() preview("tyrannosaurus", false) end)
-goldPreview.Activated:Connect(function() preview(previewSpecies, true) end)
-restorePreview.Activated:Connect(function()
-    if previewDinosaurArt then previewDinosaurArt:FireServer("compy", false, true) end
-end)
-closeArt.Activated:Connect(function() artPanel.Visible = false end)
-
-local tutorialShade = Instance.new("Frame")
-tutorialShade.Size = UDim2.fromScale(1, 1)
-tutorialShade.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-tutorialShade.BackgroundTransparency = 0.42
-tutorialShade.Visible = false
-tutorialShade.ZIndex = 20
-tutorialShade.Parent = gui
-
-local tutorial = Instance.new("Frame")
-tutorial.AnchorPoint = Vector2.new(0.5, 0.5)
-tutorial.Position = UDim2.fromScale(0.5, 0.5)
-tutorial.Size = UDim2.fromOffset(500, 330)
-tutorial.BackgroundColor3 = Color3.fromRGB(34, 50, 42)
-tutorial.ZIndex = 21
-tutorial.Parent = tutorialShade
-rounded(tutorial, 16)
-local tutorialScale = addScale(tutorial)
-
-local tutorialTitle = Instance.new("TextLabel")
-tutorialTitle.BackgroundTransparency = 1
-tutorialTitle.Position = UDim2.fromOffset(22, 20)
-tutorialTitle.Size = UDim2.new(1, -44, 0, 34)
-tutorialTitle.Text = "HOW TO PLAY"
-tutorialTitle.TextColor3 = Color3.fromRGB(247, 236, 177)
-tutorialTitle.Font = Enum.Font.GothamBold
-tutorialTitle.TextSize = 24
-tutorialTitle.ZIndex = 22
-tutorialTitle.Parent = tutorial
-
-local tutorialText = Instance.new("TextLabel")
-tutorialText.BackgroundTransparency = 1
-tutorialText.Position = UDim2.fromOffset(28, 70)
-tutorialText.Size = UDim2.new(1, -56, 0, 180)
-tutorialText.Text = "1. Eat food to grow. Crystals give the most points.\n\n2. Jump with Space or the mobile jump button.\n\n3. Avoid bigger dinos. Explore mountains for rare food.\n\n4. End a run to collect dinos and reward eggs."
-tutorialText.TextColor3 = Color3.fromRGB(237, 242, 231)
-tutorialText.Font = Enum.Font.GothamMedium
-tutorialText.TextSize = 16
-tutorialText.TextWrapped = true
-tutorialText.TextXAlignment = Enum.TextXAlignment.Left
-tutorialText.TextYAlignment = Enum.TextYAlignment.Top
-tutorialText.ZIndex = 22
-tutorialText.Parent = tutorial
-
-local gotIt = Instance.new("TextButton")
-gotIt.AnchorPoint = Vector2.new(0.5, 1)
-gotIt.Position = UDim2.new(0.5, 0, 1, -18)
-gotIt.Size = UDim2.fromOffset(180, 48)
-gotIt.BackgroundColor3 = Color3.fromRGB(70, 113, 77)
-gotIt.TextColor3 = Color3.new(1, 1, 1)
-gotIt.Font = Enum.Font.GothamBold
-gotIt.TextSize = 15
-gotIt.Text = "GOT IT"
-gotIt.ZIndex = 22
-gotIt.Parent = tutorial
-rounded(gotIt, 10)
-
-local tutorialDismissed = false
-gotIt.Activated:Connect(function()
-    tutorialDismissed = true
-    tutorialShade.Visible = false
-end)
-
-local summaryShade = Instance.new("Frame")
-summaryShade.Size = UDim2.fromScale(1, 1)
-summaryShade.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-summaryShade.BackgroundTransparency = 0.48
-summaryShade.Visible = false
-summaryShade.ZIndex = 30
-summaryShade.Parent = gui
-
-local summary = Instance.new("Frame")
-summary.AnchorPoint = Vector2.new(0.5, 0.5)
-summary.Position = UDim2.fromScale(0.5, 0.5)
-summary.Size = UDim2.fromOffset(460, 250)
-summary.BackgroundColor3 = Theme.Colors.panel
-summary.ZIndex = 31
-summary.Parent = summaryShade
-rounded(summary, 16)
-local summaryScale = addScale(summary)
-
-local summaryText = Instance.new("TextLabel")
-summaryText.BackgroundTransparency = 1
-summaryText.Position = UDim2.fromOffset(24, 20)
-summaryText.Size = UDim2.new(1, -48, 1, -40)
-summaryText.TextColor3 = Color3.fromRGB(244, 241, 218)
-summaryText.Font = Enum.Font.GothamMedium
-summaryText.TextSize = 16
-summaryText.TextWrapped = true
-summaryText.ZIndex = 32
-summaryText.Parent = summary
-
-local lastSummaryAt = 0
-local function refreshSummaryText()
-    if lastSummaryAt <= 0 then return end
-    local reason = stringAttr("LastRunEndReason", "Run ended")
-    local catches = numberAttr("LastRunCatchScore")
-    local growth = numberAttr("LastRunGrowthScore")
-    local reward = stringAttr("LastRewardText", "saving reward...")
-    summaryText.Text = string.format(
-        "RUN COMPLETE\n\nReason: %s\nGrowth: %d   •   Catches: %d\n\nReward: %s\n\nA new run will start automatically.",
-        reason, growth, catches, reward
-    )
+local function art(parent: GuiObject,id: string,x: number,y: number,size: number)
+    local icon = Theme.icon(parent,id)
+    if icon then icon.Position,icon.Size = UDim2.fromOffset(x,y),UDim2.fromOffset(size,size) end
 end
-
-local function showSummary()
-    local endAt = numberAttr("LastRunEndAt")
-    if endAt <= 0 or endAt == lastSummaryAt then return end
-    lastSummaryAt = endAt
-    refreshSummaryText()
-    summaryShade.Visible = true
-    task.delay(3.5, function()
-        if lastSummaryAt == endAt then summaryShade.Visible = false end
-    end)
+local shade = Instance.new("TextButton")
+shade.Name,shade.Text,shade.Size = "ModalScrim","",UDim2.fromScale(1,1)
+shade.BackgroundColor3,shade.BackgroundTransparency,shade.Visible,shade.AutoButtonColor = Color3.new(0,0,0),.42,false,false
+shade.ZIndex,shade.Parent = 20,gui
+local panel = box(shade,0,0,860,520,C.panel,21)
+panel.AnchorPoint,panel.Position = Vector2.new(.5,.5),UDim2.fromScale(.5,.5)
+panel.Active=true
+Theme.texture(panel,860,520)
+local scale = Instance.new("UIScale")
+scale.Parent = panel
+local header = box(panel,4,4,852,78,C.blue,22)
+Theme.texture(header,852,78)
+local heading = label(header,"Dino Index",22,4,730,68,40)
+heading.TextXAlignment = Enum.TextXAlignment.Left
+local body = Instance.new("Frame")
+body.Position,body.Size,body.BackgroundTransparency,body.ZIndex,body.Parent = UDim2.fromOffset(18,98),UDim2.fromOffset(824,402),1,23,panel
+local modalVersion=0
+local function close()
+    modalVersion+=1
+    local version=modalVersion
+    active=""
+    TweenService:Create(scale,TweenInfo.new(if motion then .13 else 0),{Scale=scale.Scale*.92}):Play()
+    task.delay(if motion then .13 else 0,function() if modalVersion==version then shade.Visible=false end end)
+    TweenService:Create(blur,TweenInfo.new(if motion then .15 else 0),{Size=0}):Play()
 end
-
-local currentCharacter: Model? = nil
-local currentHumanoid: Humanoid? = nil
-local function onCharacter(character: Model)
-    currentCharacter = character
-    currentHumanoid = nil
-    local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
-    if not humanoid or player.Character ~= character then return end
-    currentHumanoid = humanoid
-    humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
-    local camera = workspace.CurrentCamera
-    if camera then
-        camera.CameraType = Enum.CameraType.Custom
-        camera.CameraSubject = humanoid
+button(header,"X",778,8,62,62,C.red,close)
+shade.Activated:Connect(close)
+local toast = box(gui,0,0,440,56,C.card,50)
+toast.AnchorPoint,toast.Position,toast.Visible = Vector2.new(.5,0),UDim2.new(.5,0,0,80),false
+local toastScale=Instance.new("UIScale") toastScale.Parent=toast
+local toastText = label(toast,"",10,5,420,46,22)
+local toastSerial = 0
+local function notify(text: string,color: Color3?)
+    toastSerial+=1
+    local serial=toastSerial
+    toast.BackgroundColor3,toastText.Text,toast.Visible = color or C.card,text,true
+    task.delay(3,function() if serial==toastSerial then toast.Visible=false end end)
+end
+local function viewportScale(): number
+    local camera=workspace.CurrentCamera
+    local size=if camera then camera.ViewportSize else Vector2.new(1280,720)
+    return math.max(.24,math.min(1,(size.X-28)/860,(size.Y-64)/520))
+end
+local function celebrate()
+    if not motion then return end
+    for i=1,24 do
+        local confetti=Instance.new("Frame")
+        confetti.Size,confetti.Position=UDim2.fromOffset(9,16),UDim2.fromScale(.5,.42)
+        confetti.BackgroundColor3,confetti.BorderSizePixel,confetti.Rotation,confetti.ZIndex,confetti.Parent=({C.gold,C.accent,C.blue,C.purple})[i%4+1],0,i*17,45,gui
+        TweenService:Create(confetti,TweenInfo.new(.9,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Position=UDim2.fromScale(.15+(i%8)*.1,.7+(i%3)*.06),Rotation=i*65,BackgroundTransparency=1}):Play()
+        task.delay(1,function() confetti:Destroy() end)
     end
 end
-player.CharacterAdded:Connect(onCharacter)
-if player.Character then task.spawn(onCharacter, player.Character) end
-
-local function refreshScales()
-    local value = scaleForViewport()
-    hudScale.Scale = value
-    navScale.Scale = value
-    panelScale.Scale = value
-    tutorialScale.Scale = value
-    summaryScale.Scale = value
+local render
+local function open(name: string)
+    modalVersion+=1
+    active=name
+    body:ClearAllChildren()
+    shade.Visible=true
+    scale.Scale=viewportScale()*(if motion then .86 else 1)
+    TweenService:Create(scale,TweenInfo.new(if motion then .24 else 0,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Scale=viewportScale()}):Play()
+    TweenService:Create(blur,TweenInfo.new(if motion then .18 else 0),{Size=12}):Play()
+    render(name)
 end
-
-local camera = workspace.CurrentCamera
-if camera then camera:GetPropertyChangedSignal("ViewportSize"):Connect(refreshScales) end
-refreshScales()
-
-local elapsed = 0
-local viewElapsed = 0
+local function hero(parent: GuiObject,id: string,x: number,y: number,w: number,h: number,gold: boolean?)
+    local view=Preview.add(parent,id,gold==true)
+    view.Position,view.Size = UDim2.fromOffset(x,y),UDim2.fromOffset(w,h)
+    return view
+end
+local rarityColors={C.accent,C.blue,C.gold}
+local rarityNames={"Common","Rare","Legendary"}
+local function speciesIndex(id: string): number return table.find(Config.SpeciesOrder,id) or 1 end
+local function meter(parent: GuiObject,x: number,y: number,w: number,value: number,maxValue: number,color: Color3,text: string)
+    local b=box(parent,x,y,w,34,C.outline,parent.ZIndex+1)
+    local fill=Instance.new("Frame")
+    fill.Size,fill.BorderSizePixel,fill.BackgroundColor3,fill.ZIndex,fill.Parent=UDim2.new(math.clamp(value/maxValue,0,1),0,1,0),0,color,b.ZIndex+1,b
+    label(b,text,0,0,w,34,20)
+end
+local function queue()
+    local ok,data=pcall(function() return Http:JSONDecode(str("ChestQueueJson","[]")) end)
+    return if ok and typeof(data)=="table" then data else {}
+end
+local refreshEggs
+render=function(name: string)
+    if name=="home" then
+        heading.Text,header.BackgroundColor3="Sanctuary",C.accent
+        local heroCard=box(body,0,0,290,330,C.card,24)
+        local id=str("EquippedSpeciesId","compy")
+        hero(heroCard,id,0,12,290,238)
+        label(heroCard,Config.SpeciesDisplayNames[id],0,250,290,42,30)
+        label(heroCard,"Equipped dinosaur",0,296,290,26,18,C.accent)
+        label(body,"Ready for an adventure?",320,0,495,58,32)
+        label(body,"Eat small food clusters, jump mountain paths and avoid bigger dinosaurs.",330,74,474,85,22)
+        label(body,"Bank catches and reward eggs by returning to your sanctuary.",330,170,474,75,22,C.gold)
+        button(body,"EXPLORE ISLAND",340,280,460,68,C.accent,function()
+            local character=player.Character
+            if character and character:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() close()
+            else close() notify("You are already exploring",C.blue) end
+        end)
+        art(body,"home",316,284,64)
+    elseif name=="collection" then
+        heading.Text,header.BackgroundColor3="Dino Index",C.blue
+        local unlocked=0
+        for i,id in Config.SpeciesOrder do
+            local base,gold=copies(id)
+            if base+gold>0 then unlocked+=1 end
+            local card=box(body,(i-1)*276,0,264,328,rarityColors[i],24)
+            Theme.texture(card,264,328)
+            label(card,Config.SpeciesDisplayNames[id],4,8,256,35,27)
+            label(card,rarityNames[i],4,44,256,25,18)
+            hero(card,id,0,72,264,174,gold>0 and base==0)
+            label(card,if base+gold>0 then string.format("%d copies  •  %d Gold",base,gold) else "Not discovered",5,246,254,25,18)
+            button(card,"VIEW DINO",12,281,240,38,C.card,function() selected=id open("detail") end)
+        end
+        meter(body,0,356,600,unlocked,3,C.accent,string.format("Discovered: %d / 3",unlocked))
+        button(body,"GOLD FUSION",624,350,200,44,C.gold,function() open("fusion") end)
+    elseif name=="detail" then
+        local index=speciesIndex(selected)
+        local base,gold=copies(selected)
+        heading.Text,header.BackgroundColor3=Config.SpeciesDisplayNames[selected],rarityColors[index]
+        local stage=box(body,0,0,380,360,rarityColors[index],24)
+        hero(stage,selected,0,20,380,280,gold>0 and base==0)
+        label(stage,rarityNames[index],0,302,380,42,30)
+        label(body,"YOUR COLLECTION",414,0,400,42,28)
+        label(body,string.format("Base copies: %d\nGold copies: %d",base,gold),414,62,400,92,25)
+        label(body,"Gold is cosmetic. Combine 50 base copies to unlock it.",414,173,400,76,22,C.gold)
+        local equipped=str("EquippedSpeciesId","compy")==selected
+        button(body,if equipped then "EQUIPPED" elseif base+gold==0 then "LOCKED" else "EQUIP",426,273,372,52,if base+gold>0 then C.accent else C.card,function()
+            if base+gold<=0 then notify("Hatch reward eggs to discover this dino") return end
+            if not equipped then equip:FireServer(selected,Http:GenerateGUID(false)) end
+        end)
+        button(body,"BACK TO INDEX",426,341,372,45,C.blue,function() open("collection") end)
+    elseif name=="fusion" then
+        heading.Text,header.BackgroundColor3="Gold Fusion",C.purple
+        local base=copies(selected)
+        hero(body,selected,14,0,360,300,true)
+        label(body,"MAKE IT GOLD",388,0,420,54,36,C.gold)
+        label(body,"Turn 50 base copies into one Gold dinosaur. This consumes the base copies.",392,76,420,106,24)
+        meter(body,400,214,400,base,Config.GoldMutationCost,C.gold,string.format("%d / %d copies",base,Config.GoldMutationCost))
+        button(body,"FUSE SELECTED DINO",400,277,400,56,if base>=Config.GoldMutationCost then C.accent else C.card,function()
+            if base<Config.GoldMutationCost then notify("You need 50 base copies",C.red) return end
+            open("fusionConfirm")
+        end)
+        button(body,"CHOOSE DINO",70,332,264,47,C.blue,function() open("collection") end)
+    elseif name=="fusionConfirm" then
+        heading.Text,header.BackgroundColor3="Confirm Gold Fusion",C.gold
+        art(body,"fusion",26,35,230)
+        label(body,"Use 50 copies?",280,12,510,64,36)
+        label(body,"You will receive 1 Gold "..Config.SpeciesDisplayNames[selected]..". Your other dinosaurs stay in your collection.",280,100,510,115,24)
+        button(body,"CONFIRM FUSION",280,264,510,64,C.accent,function() fuse:FireServer(selected,"gold",Http:GenerateGUID(false)) open("fusion") end)
+        button(body,"CANCEL",280,340,510,44,C.red,function() open("fusion") end)
+    elseif name=="eggs" then
+        heading.Text,header.BackgroundColor3="Growing Eggs",C.gold
+        local entries=queue()
+        local timers={}
+        for slot=1,Config.ChestQueueCapacity do
+            local entry=entries[slot]
+            local card=box(body,(slot-1)*166,0,156,280,if entry then C.card else C.outline,24)
+            label(card,"Slot "..slot,0,8,156,30,22)
+            if entry then
+                local view=ModelPreview.add(card,"egg")
+                view.Position,view.Size=UDim2.fromOffset(0,48),UDim2.fromOffset(156,160)
+            else art(card,"egg",26,74,104) end
+            timers[slot]=label(card,if entry then "Growing..." else "Empty",3,222,150,40,22,if entry then C.gold else Color3.fromRGB(156,156,174))
+        end
+        refreshEggs=function()
+            for i,timer in timers do
+                local entry=entries[i]
+                if entry and typeof(entry.readyAt)=="number" then
+                    local remaining=math.max(0,entry.readyAt-workspace:GetServerTimeNow())
+                    timer.Text=if remaining<=0 then "READY!" else string.format("%dm %02ds",remaining//60,remaining%60)
+                end
+            end
+        end
+        refreshEggs()
+        button(body,"HATCH NEXT EGG",0,310,400,64,C.accent,function()
+            local id=str("NextChestId")
+            if id=="" then notify("Return from a run to earn reward eggs") return end
+            if workspace:GetServerTimeNow()<num("NextChestReadyAt") then notify("This egg is still growing",C.gold) return end
+            hatch:FireServer(id,Http:GenerateGUID(false))
+        end)
+        label(body,"Eggs grow in order, even while offline.\nWaiting for a nest slot: "..num("PendingChestGrants"),420,302,400,88,21)
+    elseif name=="hatch" then
+        heading.Text,header.BackgroundColor3="You hatched a dinosaur!",C.gold
+        celebrate()
+        local reward=str("LastChestRewardText","New dinosaur")
+        local id=string.match(reward,"x (%w+)") or "compy"
+        if not Config.SpeciesDisplayNames[id] then id="compy" end
+        hero(body,id,160,-12,504,260)
+        label(body,reward,80,240,660,58,36,C.gold)
+        button(body,"VIEW COLLECTION",212,322,400,64,C.accent,function() open("collection") end)
+    elseif name=="exit" then
+        heading.Text,header.BackgroundColor3="Return to Sanctuary?",C.red
+        art(body,"home",36,28,214)
+        label(body,"Bank this run",300,12,500,54,36,C.gold)
+        label(body,"Stay still for "..Config.ExitChannelSeconds.." seconds to return safely. Moving cancels the return.",300,91,500,104,24)
+        button(body,"RETURN & BANK",300,242,500,68,C.accent,function() endRun:FireServer() close() notify("Returning... stay still",C.gold) end)
+        button(body,"KEEP EXPLORING",300,329,500,48,C.blue,close)
+    elseif name=="results" then
+        heading.Text,header.BackgroundColor3="Run Complete!",C.gold
+        art(body,"trophy",24,42,240)
+        label(body,"Growth  "..num("LastRunGrowthScore"),300,18,500,60,34,C.accent)
+        label(body,"Catches  "..num("LastRunCatchScore"),300,93,500,60,34,C.blue)
+        label(body,str("LastRewardText","Saving rewards..."),290,168,510,100,24,C.gold)
+        label(body,"Your next adventure starts from the sanctuary.",30,302,760,40,21)
+        button(body,"BACK TO SANCTUARY",212,348,400,48,C.accent,function() open("home") end)
+    elseif name=="settings" then
+        heading.Text,header.BackgroundColor3="Settings",C.purple
+        label(body,"Popup effects",24,24,410,56,30)
+        button(body,if motion then "ON" else "OFF",560,24,230,56,if motion then C.accent else C.card,function() motion=not motion Theme.MotionEnabled=motion open("settings") end)
+        label(body,"Camera distance",24,114,410,56,30)
+        button(body,"RESET CAMERA",470,114,320,56,C.blue,function() player.CameraMaxZoomDistance=Config.CameraMaxZoom notify("Camera reset",C.blue) end)
+        button(body,"HOW TO PLAY",24,238,370,64,C.gold,function() open("tutorial") end)
+        button(body,"FOOD GUIDE",424,238,366,64,C.accent,function() open("food") end)
+        label(body,"Settings apply on this device for this session.",24,342,766,40,18)
+    elseif name=="food" then
+        heading.Text,header.BackgroundColor3="Food & Growth",C.accent
+        local types={{"Berries","leaf",1,C.accent},{"Fruit","leaf",4,C.gold},{"Eggs","egg",15,C.blue},{"Crystals","amber",50,C.purple}}
+        for i,food in types do
+            local card=box(body,(i-1)*208,0,196,286,food[4],24)
+            art(card,food[2],28,30,140)
+            label(card,food[1],0,180,196,42,26)
+            label(card,"+"..food[3].." Growth",0,226,196,42,26)
+        end
+        label(body,"Look for small clusters across the island. Rare crystals are worth the most growth.",18,316,788,72,23)
+    elseif name=="tutorial" then
+        heading.Text,header.BackgroundColor3="Welcome to Be Dino!",C.blue
+        local steps={{"1","EAT & GROW","Find small food clusters across the island."},{"2","JUMP & EXPLORE","Space on desktop. Jump button on mobile."},{"3","BANK & HATCH","Return to sanctuary to bank catches and eggs."}}
+        for i,step in steps do
+            local card=box(body,(i-1)*276,0,264,278,C.card,24)
+            label(card,step[1],12,12,240,80,64,rarityColors[i])
+            label(card,step[2],10,110,244,46,25,rarityColors[i])
+            label(card,step[3],16,176,232,84,22)
+        end
+        button(body,"LET'S PLAY",212,324,400,62,C.accent,function() seenTutorial=true open("home") end)
+    end
+end
+local previewNotice=label(gui,"STUDIO PREVIEW • progress is not saved",0,0,390,25,14,C.gold)
+previewNotice.AnchorPoint,previewNotice.Position=Vector2.new(.5,0),UDim2.new(.5,0,0,8)
+previewNotice.Visible=player:GetAttribute("ProfileMode")=="Studio preview (not saved)"
+player:GetAttributeChangedSignal("ProfileMode"):Connect(function() previewNotice.Visible=player:GetAttribute("ProfileMode")=="Studio preview (not saved)" end)
+local rail=box(gui,14,0,148,320,C.panel,2)
+rail.AnchorPoint,rail.Position=Vector2.new(0,.5),UDim2.new(0,14,.5,0)
+local railScale=Instance.new("UIScale") railScale.Parent=rail
+for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"GOLD","fusion","fusion",C.purple},{"HOME","home","home",C.accent},{"SETTINGS","shield","settings",C.card}} do
+    local b=button(rail,entry[1],7,7+(i-1)*62,134,54,entry[4],function() open(entry[3]) end)
+    b.TextSize=20
+    art(b,entry[2],5,6,40)
+    b.TextXAlignment=Enum.TextXAlignment.Right
+end
+local hud=box(gui,0,0,390,94,C.panel,2)
+hud.AnchorPoint,hud.Position=Vector2.new(0,1),UDim2.new(0,18,1,-18)
+local hudScale=Instance.new("UIScale") hudScale.Parent=hud
+art(hud,"amber",8,12,64)
+local growthLabel=label(hud,"0 GROWTH",82,3,290,42,30,C.accent)
+local catchLabel=label(hud,"0 catches  •  Sanctuary",82,47,290,34,20)
+local action=button(gui,"EXPLORE",0,0,244,60,C.accent,function()
+    local character=player.Character
+    if character and character:GetAttribute("RunState")=="Active" then open("exit")
+    elseif character and character:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() close() end
+end)
+action.AnchorPoint,action.Position=Vector2.new(1,1),UDim2.new(1,-20,1,-22)
+local actionScale=action:FindFirstChildOfClass("UIScale") :: UIScale
+local function scales()
+    scale.Scale=viewportScale()
+    local camera=workspace.CurrentCamera
+    local size=if camera then camera.ViewportSize else Vector2.new(1280,720)
+    local small=math.clamp(math.min(size.X/1000,size.Y/700),.5,1)
+    railScale.Scale,hudScale.Scale,actionScale.Scale=small,small,small
+    action:SetAttribute("UIScaleBase",small)
+    toastScale.Scale=math.min(1,(size.X-20)/440)
+end
+local function characterAdded(character: Model)
+    local humanoid=character:WaitForChild("Humanoid",10) :: Humanoid?
+    if not humanoid or player.Character~=character then return end
+    local camera=workspace.CurrentCamera
+    if camera then camera.CameraType,camera.CameraSubject=Enum.CameraType.Custom,humanoid end
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping,true)
+    lastGrowth=0
+end
+player.CameraMaxZoomDistance=Config.CameraMaxZoom
+player.CharacterAdded:Connect(characterAdded)
+if player.Character then task.spawn(characterAdded,player.Character) end
+if workspace.CurrentCamera then workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(scales) end
+scales()
+local elapsed=0
+local exitPending=false
 RunService.Heartbeat:Connect(function(dt)
-    elapsed += dt
-    viewElapsed += dt
-    if elapsed < 0.12 then return end
-    elapsed = 0
-
-    local profile = stringAttr("ProfileState", "Loading")
-    if profile == "Loaded" and not tutorialDismissed and not tutorialShade.Visible then
-        tutorialShade.Visible = true
+    elapsed+=dt
+    if elapsed<.15 then return end elapsed=0
+    local character=player.Character
+    local state=if character then character:GetAttribute("RunState") else "Loading"
+    local growth=if character then character:GetAttribute("GrowthScore") or 0 else 0
+    local catches=if character then character:GetAttribute("CatchScore") or 0 else 0
+    growthLabel.Text=string.format("%d GROWTH",growth)
+    catchLabel.Text=string.format("%d catches  •  %s",catches,if state=="Sanctuary" then "Safe sanctuary" else "Island")
+    action.Text=if state=="Sanctuary" then "EXPLORE ISLAND" elseif state=="Active" then "RETURN HOME" else "SAVING..."
+    action.BackgroundColor3=if state=="Active" then C.red else C.accent
+    if character then
+        local visualScale=character:GetAttribute("VisualScale") or 1
+        player.CameraMinZoomDistance=Config.CameraMinZoom*visualScale
+        local humanoid=character:FindFirstChildOfClass("Humanoid")
+        if humanoid then humanoid.CameraOffset=Vector3.new(0,(visualScale-1)*2,0) end
+        local deadline=character:GetAttribute("ExitChannelEndsAt") or 0
+        local remaining=deadline-workspace:GetServerTimeNow()
+        if remaining>0 then action.Text=string.format("STAY STILL %.1fs",remaining) exitPending=true
+        elseif exitPending then exitPending=false if state=="Active" then notify("Return cancelled: you moved",C.red) end end
     end
-
-    local character = currentCharacter
-    local humanoid = currentHumanoid
-    if character and player.Character == character and humanoid then
-        local scaleValue = character:GetAttribute("VisualScale")
-        local visualScale = if typeof(scaleValue) == "number" then scaleValue else 1
-        player.CameraMinZoomDistance = Config.CameraMinZoom * visualScale
-        humanoid.CameraOffset = Vector3.new(0, (visualScale - 1) * 2, 0)
-
-        local growth = character:GetAttribute("GrowthScore")
-        local catches = character:GetAttribute("CatchScore")
-        local protection = character:GetAttribute("SpawnProtectionEndsAt")
-        local safeRemaining = math.max(0, (if typeof(protection) == "number" then protection else 0) - workspace:GetServerTimeNow())
-        local safety = if safeRemaining > 0 then string.format("SAFE %.0fs", safeRemaining) else "PVP"
-        hudStats.Text = string.format(
-            "Growth %d   •   Catches %d   •   %.2fx   •   %s",
-            if typeof(growth) == "number" then growth else 0,
-            if typeof(catches) == "number" then catches else 0,
-            visualScale,
-            safety
-        )
-
-        local state = character:GetAttribute("RunState")
-        local exitEnd = character:GetAttribute("ExitChannelEndsAt")
-        local exitRemaining = math.max(0, (if typeof(exitEnd) == "number" then exitEnd else 0) - workspace:GetServerTimeNow())
-        endButton.Active = state == "Active" and profile == "Loaded"
-        endButton.AutoButtonColor = endButton.Active
-        endButton.Text = if exitRemaining > 0 then string.format("STAY STILL %.1fs", exitRemaining) else "END RUN"
-    else
-        hudStats.Text = if profile == "Loaded" then "Preparing next run..." else "Profile: " .. profile
-        endButton.Active = false
-        endButton.AutoButtonColor = false
-        endButton.Text = "END RUN"
-    end
-
-    if activeView ~= "" and viewElapsed >= 1 then
-        viewElapsed = 0
-        if activeView == "home" then renderHome()
-        elseif activeView == "collection" then
-            -- Collection updates are driven by attributes, not a preview rebuild timer.
-        elseif activeView == "chests" then renderChests()
+    if growth>lastGrowth and state=="Active" then
+        notify("+"..(growth-lastGrowth).." Growth!",C.accent)
+        if motion then
+            hudScale.Scale*=1.06
+            TweenService:Create(hudScale,TweenInfo.new(.2,Enum.EasingStyle.Back),{Scale=railScale.Scale}):Play()
         end
     end
-
-    showSummary()
+    lastGrowth=growth
+    if active=="eggs" and refreshEggs then refreshEggs() end
+    if player:GetAttribute("ProfileState")=="Loaded" and state=="Sanctuary" and not seenTutorial then seenTutorial=true open("tutorial") end
 end)
-
-local collectionRefreshQueued = false
-for _, attribute in {"EquippedSpeciesId", "CompyCopies", "CompyGold", "TriceratopsCopies", "TriceratopsGold", "TyrannosaurusCopies", "TyrannosaurusGold", "LastEquipStatus", "LastMutationStatus"} do
+for _,attribute in {"EquippedSpeciesId","CompyCopies","CompyGold","TriceratopsCopies","TriceratopsGold","TyrannosaurusCopies","TyrannosaurusGold","ChestQueueJson"} do
     player:GetAttributeChangedSignal(attribute):Connect(function()
-        if activeView ~= "collection" or collectionRefreshQueued then return end
-        collectionRefreshQueued = true
-        task.defer(function()
-            collectionRefreshQueued = false
-            if activeView == "collection" then renderCollection() end
-        end)
+        if table.find({"collection","detail","fusion","eggs"},active) then body:ClearAllChildren() render(active) end
     end)
 end
-player:GetAttributeChangedSignal("LastRunEndAt"):Connect(showSummary)
-player:GetAttributeChangedSignal("LastRewardText"):Connect(function()
-    if summaryShade.Visible then refreshSummaryText() end
-end)
-
--- Keyboard convenience only; all core actions remain reachable by touch.
-UserInputService.InputBegan:Connect(function(input, processed)
+player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function() task.defer(function() open("hatch") end) end)
+player:GetAttributeChangedSignal("LastRunEndAt"):Connect(function() open("results") end)
+player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)
+for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus"} do
+    player:GetAttributeChangedSignal(attribute):Connect(function()
+        local status=str(attribute)
+        if status=="equipped" or status=="mutated" or status=="claimed" then notify("Success!",C.accent)
+        elseif status~="" and status~="duplicate" then notify(status:gsub("_"," "),C.red) end
+    end)
+end
+Input.InputBegan:Connect(function(input,processed)
     if processed then return end
-    if input.KeyCode == Enum.KeyCode.C then
-        openModal("collection")
-        renderCollection()
-    elseif input.KeyCode == Enum.KeyCode.B then
-        openModal("chests")
-        renderChests()
-    end
+    if input.KeyCode==Enum.KeyCode.Escape then close()
+    elseif input.KeyCode==Enum.KeyCode.C then open("collection")
+    elseif input.KeyCode==Enum.KeyCode.B then open("eggs") end
 end)
-
-print("[Be Dino] Core UI client ready")

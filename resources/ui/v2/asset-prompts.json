@@ -1,0 +1,42 @@
+{
+  "tool": "built-in image_gen",
+  "transparent_background": true,
+  "sharedStyle": "ONE individual reusable Be Dino game UI icon. Premium stylized 3D Roblox simulator item art, thick black contour, saturated colours, specular highlights and bevels. Centered on genuine transparent background. No text, panel, variants or watermark.",
+  "assets": [
+    {
+      "logicalId": "dinos",
+      "source": "icons/dinos.png",
+      "subject": "Polished friendly emerald-green dinosaur head with cream jaw, black eyes, golden dorsal spikes, three-quarter view"
+    },
+    {
+      "logicalId": "egg",
+      "source": "icons/egg.png",
+      "subject": "Upright cream prehistoric egg with emerald patches, a golden glint and tiny cracked shell marks"
+    },
+    {
+      "logicalId": "amber",
+      "source": "icons/amber.png",
+      "subject": "Cluster of three tall golden amber crystals with orange cores and sparkling yellow tips"
+    },
+    {
+      "logicalId": "home",
+      "source": "icons/home.png",
+      "subject": "Cozy prehistoric sanctuary hut with green leaf roof, wooden doorway and golden fossil stones"
+    },
+    {
+      "logicalId": "trophy",
+      "source": "icons/trophy.png",
+      "subject": "Golden dinosaur footprint trophy with emerald inset, laurel leaves and stone plinth"
+    },
+    {
+      "logicalId": "fusion",
+      "source": "icons/fusion.png",
+      "subject": "Two green dinosaur heads merging into a central golden dinosaur head with curved arrows and sparkles"
+    },
+    {
+      "logicalId": "shield",
+      "source": "icons/shield.png",
+      "subject": "Glossy emerald shield with golden rim and ivory dinosaur footprint emblem"
+    }
+  ]
+}

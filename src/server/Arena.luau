@@ -145,6 +145,28 @@ function Arena.build()
         local x,z = 30+i*10,-30
         part(world,"JumpStone",Vector3.new(6,1.2+i*.4,6),Vector3.new(x,Layout.height(x,z)+.6+i*.2,z),Color3.fromRGB(133,147,143),Enum.Material.Slate,true)
     end
+    -- Separate safe hub beyond the north boundary, with explicit server-owned entry.
+    local hub = Instance.new("Model")
+    hub.Name, hub.Parent = "Sanctuary", world
+    part(hub,"SanctuaryGround",Vector3.new(110,6,95),Vector3.new(0,3,365),Color3.fromRGB(111,178,91),Enum.Material.Grass,true)
+    part(hub,"NestPlaza",Vector3.new(34,.5,30),Vector3.new(0,6.25,365),Color3.fromRGB(223,205,154),Enum.Material.Sandstone,true)
+    for _, x in {-48,48} do
+        part(hub,"HubFence",Vector3.new(2,10,92),Vector3.new(x,11,365),Color3.fromRGB(83,131,73),Enum.Material.Wood,true)
+    end
+    for _, z in {322,408} do
+        part(hub,"HubFence",Vector3.new(96,10,2),Vector3.new(0,11,z),Color3.fromRGB(83,131,73),Enum.Material.Wood,true)
+    end
+    for _, x in {-32,32} do tree(hub,Vector3.new(x,6,380),1.2,x) end
+    for i = 1,5 do
+        local nest = part(hub,"EggNest",Vector3.new(5,1,5),Vector3.new(-18+i*6,6.6,385),Color3.fromRGB(174,129,70),Enum.Material.Wood,false)
+        nest.Shape = Enum.PartType.Cylinder
+    end
+    local sign = part(hub,"SanctuarySign",Vector3.new(30,7,1),Vector3.new(0,15,402),Color3.fromRGB(27,76,51),Enum.Material.Wood,false)
+    local surface = Instance.new("SurfaceGui")
+    surface.Face, surface.CanvasSize, surface.Parent = Enum.NormalId.Front, Vector2.new(600,140), sign
+    local label = Instance.new("TextLabel")
+    label.Size, label.BackgroundTransparency, label.Text = UDim2.fromScale(1,1),1,"SANCTUARY"
+    label.Font, label.TextScaled, label.TextColor3, label.Parent = Enum.Font.FredokaOne,true,Color3.new(1,1,1),surface
     workspace:SetAttribute("ArenaArtMode", if ReplicatedStorage.Resources:FindFirstChild("tree") then "Resource meshes" else "Import resources/models for mesh art")
 end
 return Arena

@@ -33,9 +33,23 @@ function Preview.add(parent: GuiObject, speciesId: string, gold: boolean): Viewp
     viewport.Destroying:Connect(function() if ready then ready:Disconnect() end end)
     local camera = Instance.new("Camera")
     camera.FieldOfView = 34
-    camera.CFrame = CFrame.lookAt(Vector3.new(10, 7, -13), Vector3.new(0, 2, .8))
+    camera.CFrame = CFrame.lookAt(Vector3.new(6, 5, -9), Vector3.new(0, 2, .8))
     camera.Parent = viewport
     viewport.CurrentCamera = camera
+    local elapsed = 0
+    local motion = game:GetService("RunService").RenderStepped:Connect(function(dt)
+        if not require(script.Parent.UITheme).MotionEnabled then return end
+        local ancestor: Instance? = viewport
+        while ancestor do
+            if ancestor:IsA("GuiObject") and not ancestor.Visible then return end
+            ancestor = ancestor.Parent
+        end
+        elapsed += dt
+        local base = camera.CFrame.Position
+        local target = Vector3.new(0,2,.8)
+        camera.CFrame = CFrame.lookAt(Vector3.new(6 + math.sin(elapsed*.6)*.8,5,-9),target)
+    end)
+    viewport.Destroying:Connect(function() motion:Disconnect() end)
     return viewport
 end
 return Preview

@@ -44,7 +44,11 @@ def update_manifest():
   source=file.relative_to(ROOT/'resources').as_posix()
   if source in known:continue
   manifest['assets'].append({'logicalId':source.replace('/','_').replace('.','_'),'source':source,'robloxAssetId':None,'status':'ready for GitHub review; local raster/source asset','sha256':hashlib.sha256(file.read_bytes()).hexdigest()})
- manifest['runtimeIntegration']='Original mesh and icon data embedded; client-local Mesh/Image APIs with permission-aware fallback. Published Roblox upload IDs remain optional bindings.'
+ for asset in manifest['assets']:
+  source=ROOT/'resources'/asset['source']
+  if source.is_file():asset['sha256']=hashlib.sha256(source.read_bytes()).hexdigest()
+  if 'triangles' in asset:asset['packagedModel']='roblox/'+asset['logicalId']+'.rbxmx'
+ manifest['runtimeIntegration']='Native original triangle Models packaged; PNG icons compiled to native GUI tiles with optional uploaded image bindings. No runtime editable API dependency.'
  p.write_text(json.dumps(manifest,indent=2)+'\n')
 if __name__=='__main__':
  geometry=compile_geometry();icons=compile_icons();update_manifest();print(f'Embedded {len(geometry)} model sources and {len(icons)} icons')

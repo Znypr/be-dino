@@ -52,6 +52,29 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
     local gold = isGold == true
     local palette = if gold then GOLD_PALETTE else PALETTES[speciesId]
 
+    local existing = character:FindFirstChild("DinoVisual")
+    if existing and existing:GetAttribute("ResourceSpecies") == speciesId and existing:GetAttribute("ResourceGold") == gold then
+        local previousScale = character:GetAttribute("VisualScale") or 1
+        local ratio = scale / previousScale
+        local floorOffset = root.Size.Y / 2 + humanoid.HipHeight
+        if humanoid.RigType == Enum.HumanoidRigType.R6 then
+            local leg = character:FindFirstChild("Left Leg") :: BasePart?
+            floorOffset += if leg then leg.Size.Y else 2
+        end
+        local ground = Vector3.new(0,floorOffset,0)
+        for _, item in existing:GetDescendants() do
+            if item:IsA("BasePart") then
+                item.Size *= ratio
+                local weld = item:FindFirstChild("ResourceWeld")
+                if weld and weld:IsA("Weld") then
+                    weld.C0 = CFrame.new((weld.C0.Position + ground) * ratio - ground) * weld.C0.Rotation
+                end
+            end
+        end
+        character:SetAttribute("VisualScale",scale)
+        return
+    end
+
     local old = character:FindFirstChild("DinoVisual")
     if old then old:Destroy() end
     local visual = Instance.new("Model")
@@ -68,6 +91,8 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
         visual:Destroy()
         visual = imported
         visual.Name = "DinoVisual"
+        visual:SetAttribute("ResourceSpecies",speciesId)
+        visual:SetAttribute("ResourceGold",gold)
         visual:ScaleTo(scale)
         visual:PivotTo(root.CFrame * CFrame.new(0, -groundHeight, 0))
         visual.Parent = character
@@ -75,7 +100,9 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
             if item:IsA("BasePart") then
                 item.Anchored = false
                 if gold then item.Color = GOLD_PALETTE.primary item.Material = Enum.Material.Metal end
-                local weld = Instance.new("WeldConstraint")
+                local weld = Instance.new("Weld")
+                weld.Name = "ResourceWeld"
+                weld.C0 = root.CFrame:ToObjectSpace(item.CFrame)
                 weld.Part0 = root
                 weld.Part1 = item
                 weld.Parent = item
@@ -84,7 +111,7 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
         character:SetAttribute("SpeciesId", speciesId)
         character:SetAttribute("GoldVisual", gold)
         character:SetAttribute("VisualScale", scale)
-        character:SetAttribute("VisualSource", "Imported mesh")
+        character:SetAttribute("VisualSource", "Packaged resource model")
         return
     end
     character:SetAttribute("VisualSource", "Procedural fallback: import resources/models")

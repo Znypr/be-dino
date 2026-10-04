@@ -20,6 +20,9 @@ function FoodService.start(dinosaur)
     local groundParams = RaycastParams.new()
     groundParams.FilterType = Enum.RaycastFilterType.Include
     groundParams.FilterDescendantsInstances = {workspace.BeDinoArena, workspace.Terrain}
+    local obstacleParams = RaycastParams.new()
+    obstacleParams.FilterType = Enum.RaycastFilterType.Include
+    obstacleParams.FilterDescendantsInstances = {workspace.BeDinoArena}
     local extent = Config.ArenaHalfWidth - 8
     local sectorWidth = 2 * extent / Config.FoodSectorCount
     local function groundAt(x: number, z: number): Vector3?
@@ -30,7 +33,7 @@ function FoodService.start(dinosaur)
             or hit.Material == Enum.Material.Water or hit.Normal.Y < 0.62 then return nil end
         -- A second horizontal check keeps pickups away from solid rock/trunk edges.
         for _, direction in {Vector3.xAxis, -Vector3.xAxis, Vector3.zAxis, -Vector3.zAxis} do
-            if workspace:Raycast(hit.Position + Vector3.new(0, 1, 0), direction * 1.25, groundParams) then
+            if workspace:Raycast(hit.Position + Vector3.new(0, 1, 0), direction * 1.25, obstacleParams) then
                 return nil
             end
         end
@@ -44,8 +47,8 @@ function FoodService.start(dinosaur)
             local z = math.clamp(food.center.Y + math.sin(angle) * radius, food.minZ + 1, food.maxZ - 1)
             local ground = groundAt(x, z)
             if ground then
-                food.part.Position = ground + Vector3.new(0, food.kind.size / 2 + 0.08, 0)
-                if food.visual then food.visual:PivotTo(CFrame.new(ground)) end
+                food.part.Position = ground + Vector3.new(0, food.kind.size / 2 + 0.35, 0)
+                if food.visual then food.visual:PivotTo(CFrame.new(ground + Vector3.new(0,.35,0))) end
                 return true
             end
         end
@@ -84,7 +87,8 @@ function FoodService.start(dinosaur)
                 pickup.CanQuery = false
                 pickup:SetAttribute("Points", kind.points)
                 pickup:SetAttribute("Sector", string.format("%d:%d", sx, sz))
-                local visual = Resources.clone(kind.id)
+                local visual = if kind.id == "egg" or kind.id == "amber" then Resources.clone(kind.id) else nil
+                if visual then visual:ScaleTo(kind.size / (if kind.id == "egg" then 2.4 else 1.3)) end
                 local food = {part = pickup, visual = visual, readyAt = 0, hidden = false, kind = kind,
                     center = center, minX = minX, maxX = minX + sectorWidth, minZ = minZ, maxZ = minZ + sectorWidth}
                 if relocate(food) then
@@ -105,6 +109,8 @@ function FoodService.start(dinosaur)
         end
     end
     workspace:SetAttribute("FoodCount", #foods)
+    workspace:SetAttribute("FoodSpawnStatus", if #foods > 0 then "Ready" else "No valid ground")
+    if #foods == 0 then warn("[Be Dino] Food placement failed: no valid terrain hits") end
     local previous = {}
     Players.PlayerRemoving:Connect(function(player) previous[player] = nil end)
     task.spawn(function()
