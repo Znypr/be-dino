@@ -9,6 +9,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 local TweenService = game:GetService("TweenService")
 local Theme = require(ReplicatedStorage.Shared.UITheme)
 local Preview = require(ReplicatedStorage.Shared.DinosaurPreview)
+local ModelPreview = require(ReplicatedStorage.Shared.ModelPreview)
 local player = Players.LocalPlayer
 player.CameraMode = Enum.CameraMode.Classic
 player.CameraMaxZoomDistance = Config.CameraMaxZoom
@@ -266,16 +267,40 @@ end
 
 local function renderHome()
     clearView()
-    panelTitle.Text = "HOME"
+    panelTitle.Text = "EXPLORE THE ISLAND"
     local equipped = stringAttr("EquippedSpeciesId", "compy")
     local display = Config.SpeciesDisplayNames[equipped] or equipped
-    track(textLine(content, "Equipped: " .. display, 4, 28, 18, true))
-    track(textLine(content, "Grow by collecting food. Bigger dinosaurs can eat smaller ones.", 42, 50, 15, false))
-    track(textLine(content, "End your run to bank dinosaur copies and any earned chests.", 100, 50, 15, false))
-    track(textLine(content, "Collect 50 base copies of a dinosaur to create one Gold copy.", 158, 50, 15, false))
-    local queue = numberAttr("ActiveChestCount")
-    local overflow = numberAttr("PendingChestGrants")
-    track(textLine(content, string.format("Chest queue: %d active, %d overflow", queue, overflow), 224, 30, 15, true))
+    local hero = track(Instance.new("Frame"))
+    hero.Size = UDim2.fromOffset(220, 288)
+    hero.Position = UDim2.fromOffset(0, 0)
+    hero.BackgroundColor3 = Theme.Colors.card
+    hero.ZIndex = 12
+    hero.Parent = content
+    rounded(hero, 16)
+    local preview = Preview.add(hero, equipped, false)
+    preview.Size = UDim2.new(1, 0, 0, 195)
+    local name = textLine(hero, display, 204, 30, 22, true)
+    name.TextXAlignment = Enum.TextXAlignment.Center
+    local equippedLabel = textLine(hero, "YOUR EQUIPPED DINO", 247, 24, 11, true)
+    equippedLabel.TextXAlignment = Enum.TextXAlignment.Center
+    equippedLabel.TextColor3 = Theme.Colors.accent
+    local rules = track(textLine(content, "EAT. GROW. EXPLORE.", 6, 30, 20, true))
+    rules.Position = UDim2.fromOffset(242, 6)
+    rules.Size = UDim2.new(1, -242, 0, 30)
+    for index, rule in {
+        "Jump with Space or the mobile jump button.",
+        "Explore mountain paths for rare food. Avoid bigger dinos.",
+        "End a run to bank copies and reward eggs.",
+    } do
+        local line = track(textLine(content, rule, 44 + (index-1)*58, 52, 15, false))
+        line.Position = UDim2.fromOffset(242, 44+(index-1)*58)
+        line.Size = UDim2.new(1, -242, 0, 52)
+    end
+    local legend = track(textLine(content, "FOOD POINTS\nBerry +1    Fruit +4\nEgg +15    Crystal +50", 232, 68, 15, true))
+    legend.Position = UDim2.fromOffset(242, 232)
+    legend.Size = UDim2.new(1, -242, 0, 68)
+    legend.TextColor3 = Theme.Colors.gold
+    track(textLine(content, "Mesh art: " .. tostring(workspace:GetAttribute("LocalMeshStatus") or "Preparing...") , 324, 30, 12, false))
 end
 
 local function renderCollection()
@@ -352,71 +377,48 @@ end
 
 local function renderChests()
     clearView()
-    panelTitle.Text = "EGG NEST"
+    panelTitle.Text = "YOUR EGG NEST"
     local queue = parseChestQueue()
     local now = workspace:GetServerTimeNow()
-    local y = 0
+    track(textLine(content, "Reward eggs hatch in order, including while you are offline.", 0, 30, 14, false))
     for slot = 1, Config.ChestQueueCapacity do
         local entry = queue[slot]
-        local row = track(Instance.new("Frame"))
-        row.Position = UDim2.fromOffset(0, y)
-        row.Size = UDim2.new(1, -132, 0, 48)
-        row.BackgroundColor3 = Color3.fromRGB(61, 52, 39)
-        row.ZIndex = 12
-        row.Parent = content
-        rounded(row, 8)
-
-        local label = Instance.new("TextLabel")
-        label.BackgroundTransparency = 1
-        label.Size = UDim2.new(1, -20, 1, 0)
-        label.Position = UDim2.fromOffset(10, 0)
-        label.TextColor3 = Color3.fromRGB(246, 232, 186)
-        label.Font = Enum.Font.GothamBold
-        label.TextSize = 14
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.ZIndex = 13
-        label.Parent = row
+        local card = track(Instance.new("Frame"))
+        card.Position = UDim2.new((slot-1)/Config.ChestQueueCapacity, 3, 0, 38)
+        card.Size = UDim2.new(1/Config.ChestQueueCapacity, -8, 0, 182)
+        card.BackgroundColor3 = Theme.Colors.card
+        card.ZIndex = 12
+        card.Parent = content
+        rounded(card, 12)
+        local preview = ModelPreview.add(card, "egg")
+        preview.Position = UDim2.fromOffset(0, 18)
+        preview.Size = UDim2.new(1, 0, 0, 126)
+        local title = textLine(card, "SLOT " .. tostring(slot), 8, 20, 11, true)
+        title.TextXAlignment = Enum.TextXAlignment.Center
+        local label = textLine(card, "EMPTY", 151, 23, 13, true)
+        label.TextXAlignment = Enum.TextXAlignment.Center
         if typeof(entry) == "table" and typeof(entry.readyAt) == "number" then
             local remaining = math.max(0, entry.readyAt - now)
-            label.Text = string.format("Slot %d   %s", slot, if remaining <= 0 then "READY" else string.format("%.0fs", remaining))
-        else
-            label.Text = string.format("Slot %d   EMPTY", slot)
-        end
-        y += 54
+            label.Text = if remaining <= 0 then "READY!" else string.format("%.0fs", remaining)
+            label.TextColor3 = if remaining <= 0 then Theme.Colors.accent else Theme.Colors.gold
+        else preview.ImageTransparency = .72 end
     end
-
-    local overflow = track(textLine(content, "Overflow: " .. tostring(numberAttr("PendingChestGrants")), 276, 24, 14, true))
-    overflow.Size = UDim2.new(1, -132, 0, 24)
-
-    local claim = track(Instance.new("TextButton"))
-    claim.AnchorPoint = Vector2.new(1, 0)
-    claim.Position = UDim2.new(1, 0, 0, 0)
-    claim.Size = UDim2.fromOffset(120, 50)
-    claim.BackgroundColor3 = Color3.fromRGB(142, 102, 42)
-    claim.TextColor3 = Color3.fromRGB(255, 247, 219)
-    claim.Font = Enum.Font.GothamBold
-    claim.TextSize = 13
-    claim.Text = "CLAIM NEXT"
-    claim.ZIndex = 13
-    claim.Parent = content
-    rounded(claim, 9)
-
     local nextId = stringAttr("NextChestId", "")
-    local nextReadyAt = numberAttr("NextChestReadyAt")
-    local canClaim = nextId ~= "" and workspace:GetServerTimeNow() >= nextReadyAt
-    claim.Active = canClaim
-    claim.AutoButtonColor = canClaim
-    if not canClaim then claim.Text = if nextId == "" then "NO CHEST" else "NOT READY" end
+    local canClaim = nextId ~= "" and workspace:GetServerTimeNow() >= numberAttr("NextChestReadyAt")
+    local claim = track(makeButton(content, if canClaim then "HATCH NEXT EGG" elseif nextId == "" then "NO EGGS YET" else "HATCHING...", 220))
+    claim.Position = UDim2.fromOffset(0, 242)
+    claim.Size = UDim2.fromOffset(220, 52)
+    claim.BackgroundColor3 = Theme.Colors.gold
+    claim.TextColor3 = Theme.Colors.outline
+    claim.ZIndex = 13
+    claim.Active, claim.AutoButtonColor = canClaim, canClaim
     claim.Activated:Connect(function()
-        if canClaim then
-            claimChest:FireServer(nextId, HttpService:GenerateGUID(false))
-        end
+        if canClaim then claimChest:FireServer(nextId, HttpService:GenerateGUID(false)) end
     end)
-
-    local reward = track(textLine(content, "Last reward: " .. stringAttr("LastChestRewardText", "none"), 64, 58, 13, false))
-    reward.Position = UDim2.new(1, -120, 0, 64)
-    reward.Size = UDim2.fromOffset(120, 58)
-    reward.TextXAlignment = Enum.TextXAlignment.Center
+    local pending = track(textLine(content, "Waiting for a slot: " .. tostring(numberAttr("PendingChestGrants")), 246, 42, 14, false))
+    pending.Position = UDim2.fromOffset(240, 246)
+    pending.Size = UDim2.new(1, -240, 0, 42)
+    track(textLine(content, "Last hatch: " .. stringAttr("LastChestRewardText", "none yet"), 318, 32, 13, false))
 end
 
 homeButton.Activated:Connect(function() openModal("home") renderHome() end)
@@ -720,7 +722,7 @@ local tutorialText = Instance.new("TextLabel")
 tutorialText.BackgroundTransparency = 1
 tutorialText.Position = UDim2.fromOffset(28, 70)
 tutorialText.Size = UDim2.new(1, -56, 0, 180)
-tutorialText.Text = "1. Eat food to grow bigger.\n\n2. Bigger dinos can eat smaller dinos.\n\n3. End your run to bank dinosaur copies and chests.\n\n4. Collect duplicates, equip new dinos, and make Gold copies."
+tutorialText.Text = "1. Eat food to grow. Crystals give the most points.\n\n2. Jump with Space or the mobile jump button.\n\n3. Avoid bigger dinos. Explore mountains for rare food.\n\n4. End a run to collect dinos and reward eggs."
 tutorialText.TextColor3 = Color3.fromRGB(237, 242, 231)
 tutorialText.Font = Enum.Font.GothamMedium
 tutorialText.TextSize = 16
@@ -810,7 +812,7 @@ local function onCharacter(character: Model)
     local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
     if not humanoid or player.Character ~= character then return end
     currentHumanoid = humanoid
-    humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
     local camera = workspace.CurrentCamera
     if camera then
         camera.CameraType = Enum.CameraType.Custom

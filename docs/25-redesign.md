@@ -22,3 +22,6 @@ Generate actual triangulated meshes and material sources. Import OBJ through Stu
 
 ## Verification
 Run packaging/economy regression, validate all generated mesh indices and bounds, verify sector distributions with deterministic seeds. Studio runtime checks: first start unpublished; API failure in published test; walk into tree/rock from multiple angles; collect food in all quadrants; resize to max growth; inspect preview/equip/mutate/chest menus on desktop and phone. Runtime acceptance remains pending until actually played.
+
+## Superseding Build 015
+Large mountainous island, jumping and crystal/egg food are now requested and implemented in source. Client-local mesh/icon generation embeds the original source assets for supported API sessions; permanent imports remain optional. See docs/27-mountain-island.md for current status and remaining Studio checks.

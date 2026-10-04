@@ -1,11 +1,13 @@
 --!strict
 -- Imported meshes are optional until Studio upload; no invented asset IDs.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local RuntimeMeshes = require(script.Parent.RuntimeMeshes)
 local ResourceModels = {}
 function ResourceModels.clone(id: string): Model?
     local folder = ReplicatedStorage:FindFirstChild("Resources")
     local template = if folder then folder:FindFirstChild(id) else nil
-    if not template then return nil end
+    if not template then return if RunService:IsClient() then RuntimeMeshes.clone(id) else nil end
     local copy: Model
     if template:IsA("Model") then
         copy = template:Clone()

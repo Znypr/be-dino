@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
 
 local MovementGuard = {}
 local states: {[Player]: {
@@ -57,7 +58,7 @@ function MovementGuard.start()
                 local allowed = Config.WalkSpeed * dt * Config.MovementGuardSpeedTolerance
                     + Config.MovementGuardBurstStuds
 
-                if distance > allowed then
+                if not MovementEnvelope.plausible(root.Position - state.position, dt, Config.MovementGuardSpeedTolerance, Config.MovementGuardBurstStuds, root.AssemblyLinearVelocity.Y) then
                     -- Server correction: never promote the impossible location to the trusted baseline.
                     root.CFrame = state.cframe
                     root.AssemblyLinearVelocity = Vector3.zero

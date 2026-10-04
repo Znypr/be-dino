@@ -2,6 +2,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
+local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
 
 local PredationService = {}
 
@@ -19,7 +20,7 @@ function PredationService.start(runLifecycle, dinosaur)
     local recentPairs: {[number]: {[number]: number}} = {}
     local arenaParams = RaycastParams.new()
     arenaParams.FilterType = Enum.RaycastFilterType.Include
-    arenaParams.FilterDescendantsInstances = {workspace.BeDinoArena}
+    arenaParams.FilterDescendantsInstances = {workspace.BeDinoArena, workspace.Terrain}
 
     Players.PlayerRemoving:Connect(function(player)
         previous[player] = nil
@@ -62,7 +63,7 @@ function PredationService.start(runLifecycle, dinosaur)
                     local last = previous[player]
                     local position = root.Position
                     local plausible = last and last.character == character
-                        and (position - last.position).Magnitude <= Config.WalkSpeed * (movementNow - last.time) * 2 + 2
+                        and MovementEnvelope.plausible(position - last.position, movementNow - last.time, 2, 2, root.AssemblyLinearVelocity.Y)
                     previous[player] = {character = character, position = position, time = movementNow}
                     if plausible then
                         table.insert(candidates, {

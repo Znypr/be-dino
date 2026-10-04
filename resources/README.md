@@ -1,5 +1,8 @@
 # Reusable Be Dino resources
 
+Start with the [2D asset gallery](ui/README.md). Build 015 embeds the real mesh sources and icon pixel data for automatic client-local creation when Roblox Mesh/Image APIs are available. Manual OBJ import below remains the permanent-asset fallback. Current implementation/checks: [Build 015](../docs/27-mountain-island.md).
+
+
 Original mesh and interface sources, versioned alongside the game. These are the new asset sources, not finished rigged characters or already uploaded Roblox content.
 
 - `models/`: 10 real triangulated OBJ meshes with MTL colors, facing -Z, Y up, in studs.

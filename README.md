@@ -1,14 +1,14 @@
 # Be Dino!
 An original Roblox dinosaur growth-and-collection arena inspired by Be Fish.
 
-**Stage:** Build 014 resource redesign and core fixes ready for Studio verification. **Updated:** 2026-10-04.
+**Stage:** Build 015 mountain island, jumping and reusable art ready for Studio verification. **Updated:** 2026-10-04.
 **Owner:** Znypr's Roblox account. **Studio:** installed. **Budget:** €0.
 **First milestone:** private community test with a small complete progression loop.
 
 ## Try the prototype
 Download [BeDino-Prototype.rbxlx](build/BeDino-Prototype.rbxlx), open it in Studio, and use the current private test experience. No plugin is required.
 
-For the current build, use [Build 014 checks](docs/26-redesign-test.md) and [mesh/icon import guide](resources/README.md). The general Studio workflow remains in [Studio quickstart](docs/10-studio-quickstart.md).
+For the current build, use [Build 015 checks](docs/27-mountain-island.md) and [mesh/icon import guide](resources/README.md). The general Studio workflow remains in [Studio quickstart](docs/10-studio-quickstart.md).
 
 ## Start here
 - [Project brief and roles](docs/01-project-brief.md)
@@ -48,7 +48,7 @@ Use original assets, free tools and server-owned gameplay state.
 Three species validate the first progression loop; a larger catalog follows after testing.
 
 ## Next action
-Open the new build, follow [Build 014 checks](docs/26-redesign-test.md), and import [mesh resources](resources/README.md).
+Open the new build, follow [Build 015 checks](docs/27-mountain-island.md), and import [mesh resources](resources/README.md).
 
 ## Build 014 redesign
 - Explicit growing torso collision; solid trees/rocks, non-solid foliage and pickups.
@@ -58,3 +58,6 @@ Open the new build, follow [Build 014 checks](docs/26-redesign-test.md), and imp
 - `resources/` contains 10 original OBJ/MTL meshes, six reusable SVG/PNG icons and a real mesh render.
 
 Mesh files must be imported through Studio; the base place uses fallback primitives until import. Studio physics, multiplayer, mobile and upload-permission verification remain pending. The screenshots show a newer local map/lobby build than the committed baseline; uncommitted local code is not included here.
+
+## Current Build 015
+[Inspect all 2D assets](resources/ui/README.md), [mountain-island direction](resources/concepts/mountain-island.png) and [verification details](docs/27-mountain-island.md). The large terrain, jump mechanic and crystal/egg food are implemented. Original mesh/icon data is embedded for client-local Mesh/Image API rendering with explicit permission-aware fallback. Runtime Studio playtesting remains required.

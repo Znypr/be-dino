@@ -80,9 +80,10 @@ function Dinosaur.attach(character: Model, walkSpeed: number, player: Player)
     humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
     humanoid.WalkSpeed = walkSpeed
     humanoid.UseJumpPower = true
-    humanoid.JumpPower = 0
+    humanoid.JumpPower = require(ReplicatedStorage.Shared.Config).JumpPower
+    humanoid.MaxSlopeAngle = require(ReplicatedStorage.Shared.Config).MaxSlopeAngle
     humanoid.AutoJumpEnabled = false
-    humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
 
     -- Explicit torso collider: decorative mesh triangles never control physics.
     for _, item in character:GetDescendants() do

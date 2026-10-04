@@ -160,3 +160,5 @@ Paid products/gems, trading, auto-farm, daily/group rewards, global leaderboards
 BD-023 (Review / test): startup/collision/food fixes and resource-based visual redesign. User feedback supersedes acceptance of the procedural fallback as finished art. Build 013 is the repository baseline; screenshot shows newer local work. See docs/25-redesign.md.
 
 - 2026-10-04: Build 014 source fixes, shared dimensional UI, mesh-aware rendering and resources prepared. Automated checks recorded in docs/26-redesign-test.md; Studio import/runtime remains pending. BD-023 moved to Review / test, not Done.
+
+- 2026-10-04: Build 015 incorporates the user-selected mountainous island direction, jumping, +50 crystal/+15 egg food, large terrain and complete inspectable 2D exports. Client-local mesh/icon generation added with explicit permission-aware fallback. Source/numeric checks pass; Studio verification pending. BD-023 remains Review / test. See docs/27-mountain-island.md.

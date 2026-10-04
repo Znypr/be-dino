@@ -1,0 +1,39 @@
+{
+  "palette": {
+    "outline": "#102a38",
+    "panel": "#214756",
+    "primary": "#78d8a7",
+    "gold": "#f6ca77",
+    "text": "#fff7db"
+  },
+  "nineSliceInset": 24,
+  "components": [
+    "popup-panel",
+    "collection-card",
+    "button-primary",
+    "button-gold",
+    "button-danger",
+    "button-secondary",
+    "rarity-common",
+    "rarity-rare",
+    "rarity-legendary"
+  ],
+  "icons": [
+    "amber",
+    "bolt",
+    "close",
+    "dinos",
+    "egg",
+    "gift",
+    "home",
+    "leaf",
+    "lock",
+    "play",
+    "settings",
+    "shop",
+    "snow",
+    "trophy"
+  ],
+  "loadingBackground": "backgrounds/prehistoric-island.png",
+  "referencePatterns": "Collection card hierarchy, dimensional popup shells, large primary actions. Original artwork; no extracted game assets."
+}

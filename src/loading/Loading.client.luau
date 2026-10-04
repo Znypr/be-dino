@@ -26,6 +26,27 @@ message.TextWrapped = true
 message.Text = "BE DINO!\n\nPreparing your island..."
 message.Parent = background
 ReplicatedFirst:RemoveDefaultLoadingScreen()
+task.spawn(function()
+    local shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared", 10)
+    local module = if shared then shared:FindFirstChild("UITheme") else nil
+    if not module then return end
+    local ok, theme = pcall(require, module)
+    if not ok or theme.BackgroundImageId == "" then return end
+    local image = Instance.new("ImageLabel")
+    image.Size = UDim2.fromScale(1,1)
+    image.ScaleType = Enum.ScaleType.Crop
+    image.Image = theme.BackgroundImageId
+    image.BackgroundTransparency = 1
+    image.ZIndex = 1
+    image.Parent = background
+    local shade = Instance.new("Frame")
+    shade.Size = UDim2.fromScale(1,1)
+    shade.BackgroundColor3 = Color3.fromRGB(10,26,36)
+    shade.BackgroundTransparency = .35
+    shade.ZIndex = 2
+    shade.Parent = background
+    message.ZIndex = 3
+end)
 local started = os.clock()
 local failures = {
     LoadFailed = "Your saved data could not load. Rejoin to retry. In a published Studio test, enable Studio API access under Game Settings > Security.",

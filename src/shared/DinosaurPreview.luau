@@ -1,5 +1,6 @@
 --!strict
 local Visual = require(script.Parent.DinosaurVisual)
+local RuntimeMeshes = require(script.Parent.RuntimeMeshes)
 local Preview = {}
 function Preview.add(parent: GuiObject, speciesId: string, gold: boolean): ViewportFrame
     local viewport = Instance.new("ViewportFrame")
@@ -25,6 +26,11 @@ function Preview.add(parent: GuiObject, speciesId: string, gold: boolean): Viewp
     root.Transparency = 1
     root.Parent = character
     Visual.render(character, 1, speciesId, gold)
+    local ready: RBXScriptConnection?
+    ready = RuntimeMeshes.Ready.Event:Connect(function(id)
+        if id == speciesId and viewport.Parent then Visual.render(character, 1, speciesId, gold) end
+    end)
+    viewport.Destroying:Connect(function() if ready then ready:Disconnect() end end)
     local camera = Instance.new("Camera")
     camera.FieldOfView = 34
     camera.CFrame = CFrame.lookAt(Vector3.new(10, 7, -13), Vector3.new(0, 2, .8))

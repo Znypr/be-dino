@@ -1,19 +1,23 @@
 --!strict
 -- Prototype tuning only. Persistent economy values remain private-test values.
 return table.freeze({
-    Build = "redesign-014",
-    WalkSpeed = 18,
-    ArenaHalfWidth = 90,
+    Build = "redesign-015",
+    WalkSpeed = 22,
+    JumpPower = 50,
+    MaxSlopeAngle = 46,
+    TerrainResolution = 4,
+    TerrainTop = 120,
+    ArenaHalfWidth = 260,
     CameraMinZoom = 12,
-    CameraMaxZoom = 80,
+    CameraMaxZoom = 110,
 
     FoodPoints = 1,
     FoodRespawnSeconds = 8,
     FoodPickupRadius = 2.25,
     FoodTickSeconds = 0.15,
-    FoodSectorCount = 8,
-    FoodClusterItems = 5,
-    FoodClusterRadius = 5,
+    FoodSectorCount = 16,
+    FoodClusterItems = 6,
+    FoodClusterRadius = 7,
     FoodSeed = 1404,
     StudioLocalProfilesEnabled = true, -- unpublished Studio only; never a live fallback
     ProfileLoadWarningSeconds = 20,

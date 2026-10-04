@@ -2,12 +2,14 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
+local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local FoodService = {}
 local TYPES = {
-    {id = "berry", weight = 82, points = 1, size = 0.5, color = Color3.fromRGB(224, 99, 118)},
+    {id = "berry", weight = 78, points = 1, size = 0.5, color = Color3.fromRGB(224, 99, 118)},
     {id = "fruit", weight = 15, points = 4, size = 0.85, color = Color3.fromRGB(244, 186, 83)},
-    {id = "amber", weight = 3, points = 12, size = 1.15, color = Color3.fromRGB(255, 219, 139)},
+    {id = "egg", weight = 5, points = 15, size = 0.95, color = Color3.fromRGB(245, 230, 187)},
+    {id = "amber", weight = 2, points = 50, size = 1.3, color = Color3.fromRGB(255, 219, 139)},
 }
 function FoodService.start(dinosaur)
     local folder = Instance.new("Folder")
@@ -17,14 +19,15 @@ function FoodService.start(dinosaur)
     local random = Random.new(Config.FoodSeed)
     local groundParams = RaycastParams.new()
     groundParams.FilterType = Enum.RaycastFilterType.Include
-    groundParams.FilterDescendantsInstances = {workspace.BeDinoArena}
+    groundParams.FilterDescendantsInstances = {workspace.BeDinoArena, workspace.Terrain}
     local extent = Config.ArenaHalfWidth - 8
     local sectorWidth = 2 * extent / Config.FoodSectorCount
     local function groundAt(x: number, z: number): Vector3?
         -- Safe spawn remains clear. Ground's top is y=0.
         if (Vector2.new(x, z) - Vector2.new(0, 30)).Magnitude < 11 then return nil end
-        local hit = workspace:Raycast(Vector3.new(x, 40, z), Vector3.new(0, -50, 0), groundParams)
-        if not hit or hit.Instance.Name ~= "Ground" then return nil end
+        local hit = workspace:Raycast(Vector3.new(x, Config.TerrainTop + 20, z), Vector3.new(0, -Config.TerrainTop - 60, 0), groundParams)
+        if not hit or (hit.Instance ~= workspace.Terrain and hit.Instance.Name ~= "Ground")
+            or hit.Material == Enum.Material.Water or hit.Normal.Y < 0.62 then return nil end
         -- A second horizontal check keeps pickups away from solid rock/trunk edges.
         for _, direction in {Vector3.xAxis, -Vector3.xAxis, Vector3.zAxis, -Vector3.zAxis} do
             if workspace:Raycast(hit.Position + Vector3.new(0, 1, 0), direction * 1.25, groundParams) then
@@ -68,7 +71,7 @@ function FoodService.start(dinosaur)
             end
             for _ = 1, Config.FoodClusterItems do
                 local roll, kind = random:NextInteger(1, 100), TYPES[1]
-                if roll > 97 then kind = TYPES[3] elseif roll > 82 then kind = TYPES[2] end
+                if roll > 98 then kind = TYPES[4] elseif roll > 93 then kind = TYPES[3] elseif roll > 78 then kind = TYPES[2] end
                 local pickup = Instance.new("Part")
                 pickup.Name = kind.id
                 pickup.Shape = Enum.PartType.Ball
@@ -117,7 +120,7 @@ function FoodService.start(dinosaur)
                     and character:GetAttribute("DinoAttached") and character:GetAttribute("RunState") == "Active" then
                     local last, position = previous[player], root.Position
                     local plausible = last and last.character == character
-                        and (position - last.position).Magnitude <= Config.WalkSpeed * (now - last.time) * 2 + 2
+                        and MovementEnvelope.plausible(position - last.position, now - last.time, 2, 2, root.AssemblyLinearVelocity.Y)
                     previous[player] = {character = character, position = position, time = now}
                     if plausible then table.insert(candidates, {player = player, character = character, root = root, gained = 0}) end
                 else previous[player] = nil end
