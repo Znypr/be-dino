@@ -7,6 +7,7 @@ Separate transparent PNG masters generated with the built-in image-generation to
 | fossil_centerpiece_v1 | fossil-centerpiece-v1.png | Shared neutral fossil footprint centerpiece |
 | aura_meadow_ring_v1 | aura-meadow-ring-v1.png | Full green leaf aura with transparent hole |
 | aura_tidal_ring_v1 | aura-tidal-ring-v1.png | Full cyan water aura with transparent hole |
+| aura_royal_ring_v1 | aura-royal-ring-v1.png | Full purple cosmic aura with gold stars and transparent hole |
 
 ## Composition
 Use rear ring -> centerpiece -> front ring. Reuse the same ring image twice; transparent clipping Frames select upper/lower regions. A square parent preserves the ring's perspective. Place the rear group at ZIndex 1, center at 2, front at 3 and configure consistent descendant ZIndex behavior. Use the full image at the same parent-relative position and scale in both groups; compensate for each clipping Frame's offset so the halves align.
@@ -19,6 +20,6 @@ No actual runtime UI has been changed. Upload under the experience owner, record
 The center is optional: replace it with a real dinosaur/model preview. Ring opacity and subtle scale pulses can animate independently. Do not rotate a flat perspective ellipse and call it real 3D orbiting VFX. Leaves/droplets/glints currently belong to each ring bitmap; independent animated sparkles can be an additional shared overlay later.
 
 ## Status
-All three assets: Generated draft. RGBA/transparent pixels checked; both ring center pixels are fully transparent. Roblox upload, image permissions, UI integration and device verification remain pending. Original combined drafts in ../items are preserved as reference only.
+All four assets: Generated draft. RGBA/transparent pixels checked; all three ring center pixels are fully transparent. Roblox upload, image permissions, UI integration and device verification remain pending. Original combined drafts in ../items are preserved as reference only.
 
 prompts.json records the exact prompts and sources. ../scalable remains the preferred source for simple functional icons.

@@ -23,6 +23,15 @@
       "prompt": "Edit this standalone Be Dino leaf aura ring into a matching Tidal Halo water aura ring. KEEP the complete ellipse shape, central transparent hole, canvas registration, scale, perspective, thickness, broad flowing arcs and lighting. Change green palette to luminous cyan #50D6FF with turquoise-blue shadows and cool white highlights. Replace the chunky leaf accents with glossy water-droplet accents in the same places, avoid adding other large accents. Clean stylized water energy, a few restrained glints. Entire center remains EMPTY and alpha transparent; no fossil, coin, footprint, dinosaur, pedestal, object or logo. Premium friendly dimensional Roblox item art, thick darker contour and glossy upper-left highlights. Genuine transparent background inside and outside the ring. No text, numbers, checkerboard, watermark, UI or variants. Output ONE isolated full continuous cyan water halo, suitable for layering around separately rendered objects.",
       "status": "Generated draft; not uploaded or integrated",
       "robloxAssetId": null
+    },
+    {
+      "logicalId": "aura_royal_ring_v1",
+      "source": "aura-royal-ring-v1.png",
+      "prompt": "Edit this standalone Be Dino green leaf aura ring into Royal Nova, a matching purple cosmic aura ring. Preserve the complete horizontal ellipse, central transparent hole, canvas placement, scale, perspective, broad flowing arcs, thickness and dimensional glossy upper-left lighting. Change green palette to saturated royal purple #B46AFF, deep violet shadows, lilac and cool white highlights. Replace the four chunky leaf accents with four small stylized five-point amber-gold stars in corresponding places. A restrained handful of tiny white star glints gives a cosmic feel; no dense particle cloud, galaxy backdrop or opaque haze. Friendly polished 3D Roblox collectible artwork with bold dark-purple contour, consistent with the reference. Entire central hole remains fully empty and genuinely alpha transparent. Transparent outside ring too. No fossil, footprint, coin, dinosaur, character, pedestal, text, letters, numbers, UI panel, checkerboard, watermark, variants or other objects. Output ONE individual Royal Nova empty purple aura ring PNG for reusable layering.",
+      "reference": "aura-meadow-ring-v1.png",
+      "created": "2026-10-08",
+      "status": "Generated draft; not uploaded or integrated",
+      "robloxAssetId": null
     }
   ]
 }

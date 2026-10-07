@@ -54,7 +54,7 @@ Distinct Index/inventory symbols are optional UX improvements, not prerequisites
 |---|---|---|---|
 | 1 | aura_meadow_v1 | Meadow Glow: leaf-green luminous ring with small leaves around a neutral fossil/footprint centerpiece. Common aura shop thumbnail; friendly and restrained. | Generated layer draft: resources/ui/v2/layers/aura-meadow-ring-v1.png + shared fossil |
 | 2 | aura_tidal_v1 | Tidal Halo: cyan flowing water-like ring, same center/composition and lighting as Meadow. Rare aura thumbnail. | Generated layer draft: resources/ui/v2/layers/aura-tidal-ring-v1.png + shared fossil |
-| 3 | aura_royal_v1 | Royal Nova: separate purple cosmic ring with a few gold accents and star glints; reuse shared fossil in UI. Legendary aura thumbnail, stronger but readable. | Todo |
+| 3 | aura_royal_v1 | Royal Nova: separate purple cosmic ring with a few gold accents and star glints; reuse shared fossil in UI. Legendary aura thumbnail, stronger but readable. | Generated layer draft: resources/ui/v2/layers/aura-royal-ring-v1.png |
 | 4 | potion_speed_v1 | Chunky stoppered bottle with cyan liquid and a bolt emblem. Shared master for Swift Sip/Raptor Rush/Meteor Sprint; tiers use controlled variants. | Todo |
 | 5 | potion_growth_v1 | Matching bottle with green liquid and leaf/food-growth emblem. Shared master for Growth Sip/Prime Feast/Titan Tonic. | Todo |
 | 6 | mutation_gold_v1 | Compact golden dinosaur-footprint badge with thick outline; collection, detail and hatch mutation labels. | Todo |
@@ -67,7 +67,7 @@ Deferred until actual products exist: luck boost art, Robux bundle contents and 
 Separate export task: render new dino/egg/model and mutation previews when their actual models are ready.
 
 ## Production, adjustment and tracking
-Generate one asset at a time. Meadow Glow v1 and Tidal Halo v1 are generated drafts; Royal Nova is next. The first draft establishes item-art style; reuse its proportions, camera, outline and lighting for subsequent assets.
+Generate one asset at a time. Meadow Glow, Tidal Halo and Royal Nova have separate generated ring drafts; Speed potion is next. The first draft establishes item-art style; reuse its proportions, camera, outline and lighting for subsequent assets.
 Save composed item art under resources/ui/v2/items/ and reusable layer masters under resources/ui/v2/layers/, with versioned names. Preserve existing art. Record each exact prompt in a sibling JSON manifest.
 Generated bitmap artwork can be revised through image editing; it is not a layered/vector source. Theme changes control UI frames/text separately and cannot recolor arbitrary bitmap details safely.
 Store sources in GitHub; upload accepted runtime PNGs under the Roblox experience owner and record real IDs in the shared asset/theme binding. Never fabricate IDs.
