@@ -1,0 +1,47 @@
+{
+  "created": "2026-10-08",
+  "tool": "built-in image_gen",
+  "transparent_background": true,
+  "assets": [
+    {
+      "logicalId": "potion_speed_base_v1",
+      "source": "potion-speed-base-v1.png",
+      "usage": "Overlay existing speed/bolt symbol; share base across speed rarity tiers.",
+      "prompt": "Use case stylized-concept. Create ONE reusable Be Dino speed potion BOTTLE BASE icon on genuine alpha transparency. Friendly premium stylized 3D Roblox prehistoric collectible item art: chunky rounded clear glass flask, squat bulbous body, short neck, large warm cork stopper, simple amber-gold neck collar, saturated cyan #50D6FF liquid filling about two thirds. Bold dark navy contour, beveled highlights, soft upper-left studio lighting, gentle three-quarter view slightly from above. The bottle front must remain clean and BLANK with no label, no emblem, no lightning bolt, no lettering, no carved footprint. We will overlay a separate speed symbol in UI. Simple glossy material, a few rounded bubbles INSIDE liquid, restrained specular highlights; no floating particles outside, no surrounding glow cloud. Centered square with at least 12% transparent margin around complete bottle, upright, unclipped. Works at 48-64px. This bottle shape will be reused for a matching green growth potion. No background, shadow floor, checkerboard, text, numbers, UI, watermark, extra objects or variants. Output the one cyan speed bottle base only.",
+      "status": "Generated draft; RGBA and square canvas checked; not uploaded/integrated/Studio verified",
+      "robloxAssetId": null
+    },
+    {
+      "logicalId": "potion_growth_base_v1",
+      "source": "potion-growth-base-v1.png",
+      "usage": "Overlay existing leaf/growth symbol; share base across growth rarity tiers.",
+      "prompt": "Edit this Be Dino potion bottle into its matching growth potion BASE. Change ONLY the cyan liquid and cyan glass reflections to saturated leaf-green #62EC70 liquid and green reflections. Preserve exact bottle silhouette, proportions, position, square canvas, cork stopper warm orange-brown, amber-gold collar, dark navy contour, upper-left lighting, glossy rounded glass, fill level and internal bubbles. Keep the bottle front completely BLANK: no emblem, leaf, label, footprint, text or numbers. A separate existing leaf icon will be overlaid in the UI. Genuine alpha transparency; preserve all transparent surrounding space. No external sparkles, glow cloud, new objects, floor shadow, background, checkerboard, UI, watermark or variants. Output ONE standalone matching green growth bottle base PNG.",
+      "status": "Generated draft; RGBA and square canvas checked; not uploaded/integrated/Studio verified",
+      "robloxAssetId": null
+    },
+    {
+      "logicalId": "mutation_gold_v1",
+      "source": "mutation-gold-v1.png",
+      "usage": "Compact shared Gold mutation badge, separate from rarity.",
+      "prompt": "Edit the Be Dino fossil centerpiece reference into ONE compact Gold mutation badge. Extract/reinterpret ONLY the golden three-toed dinosaur footprint shape, removing the entire ivory medallion, stone rim and all background. The resulting object is a standalone thick polished GOLD METAL dinosaur footprint emblem with three rounded tapering toes and broad rounded heel, gently raised beveled surface, warm amber shadows and golden upper-left specular highlights. Use a bold dark brown contour to remain readable at 32-64px. Friendly premium stylized dimensional Roblox item art matching the reference; retain footprint identity but simplify unnecessary surface noise. Face mostly towards camera with gentle depth, centered square canvas, 15% transparent margin. NO circular coin, rim, fossil stone, circle, shield, text, labels, rarity frame, particles, sparkles, pedestal or extra objects. Genuine alpha transparent background and complete unclipped footprint. Output one reusable Gold mutation footprint badge PNG, which will also serve as the silhouette reference for a Diamond badge.",
+      "status": "Generated draft; RGBA and square canvas checked; not uploaded/integrated/Studio verified",
+      "robloxAssetId": null
+    },
+    {
+      "logicalId": "mutation_diamond_v1",
+      "source": "mutation-diamond-v1.png",
+      "usage": "Shared Diamond mutation badge; artwork does not establish mechanic implementation.",
+      "prompt": "Edit this standalone GOLD Be Dino three-toed footprint badge into its matching DIAMOND mutation badge. Preserve the exact overall footprint silhouette, three toes, heel, scale, placement, orientation, square canvas and strong dark contour. Replace gold metal material with pale icy cyan/blue faceted DIAMOND CRYSTAL. Make the surface clearly geometric with broad triangular facets, icy white sharp highlights, cyan and deeper blue facets, a solid readable silhouette rather than barely visible transparent glass. Thick dark navy outline. Friendly premium polished dimensional Roblox item art, upper-left lighting. No remaining gold, stone, coin, background, added rim, text, numbers, particles, sparkle cloud, UI, watermark or extra objects. Genuine alpha transparent surroundings. Output ONE isolated Diamond footprint badge PNG. Material differences must distinguish it from the smooth gold badge even in grayscale.",
+      "status": "Generated draft; RGBA and square canvas checked; not uploaded/integrated/Studio verified",
+      "robloxAssetId": null
+    },
+    {
+      "logicalId": "catches_mark_v1",
+      "source": "catches-mark-v1.png",
+      "usage": "Neutral footprint; use once or repeat in UI to form catches group, with live Catches label.",
+      "prompt": "Edit this Be Dino gold footprint into a NEUTRAL reusable single footprint mark for a Catches counter. Preserve the three-toed dinosaur footprint silhouette, heel, square canvas, scale, orientation and bold contour. Replace all gold metal with matte warm IVORY CREAM carved fossil/bone material, soft rounded shallow bevels, subtle warm stone shading and upper-left lighting. Dark charcoal-brown outline. No metallic gold, diamond, crystal facets, shiny premium reward appearance, medallion, rim or coin. Friendly chunky dimensional Roblox UI icon, very clean readable 32-64px silhouette, minimal texture. Only ONE standalone footprint; UI will repeat the same mark as a group using separate ImageLabels. Genuine alpha transparent surroundings, no text, letters, numbers, frame, background, checkerboard, watermark, sparkles, extra footprints or other objects. Output ONE neutral ivory footprint source PNG.",
+      "status": "Generated draft; RGBA and square canvas checked; not uploaded/integrated/Studio verified",
+      "robloxAssetId": null
+    }
+  ]
+}

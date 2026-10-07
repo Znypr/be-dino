@@ -25,6 +25,10 @@ Znypr requests separate reusable effect rings and fossil centerpieces. Use one s
 For depth, display the same full ring in two clipped UI containers: upper half behind the center, lower half in front. Share ring position, scale and fade; configure clipping split and center size/offset independently. Do not spin a static perspective ellipse as if it were world-space 3D VFX. Glow/details within current ring PNGs are baked; optional future particle overlays should be separate.
 See resources/ui/v2/layers/README.md and layout.json. All assets are generated drafts, not yet uploaded/integrated/Studio verified. The standalone fossil was regenerated and differs in size from the initial composite; use configuration to align it, not a claim of exact pixel extraction.
 
+## Reusable potion and counter parts
+Potion bottle artwork is saved without baked emblems. Overlay existing speed/bolt or leaf/growth symbols in UI. Use the same bottle artwork across rarity tiers; frames, rarity labels, duration and quantity remain live UI. Do not regenerate six independent bottles for the six catalog products.
+Catches uses one neutral ivory footprint source, repeated through ImageLabels when a grouped mark is needed; do not use Gold/Diamond mutation badges for catch units. See layers/item-layouts.json for starting overlay settings.
+
 ## Consistency rules
 - One individual asset per file and per generation. Never deliver a sheet of multiple items as the runtime source.
 - Square transparent PNG master, ideally 1024x1024 or larger. Preserve genuine alpha; no baked checkerboard, solid background or opaque outer glow rectangle.
@@ -55,11 +59,11 @@ Distinct Index/inventory symbols are optional UX improvements, not prerequisites
 | 1 | aura_meadow_v1 | Meadow Glow: leaf-green luminous ring with small leaves around a neutral fossil/footprint centerpiece. Common aura shop thumbnail; friendly and restrained. | Generated layer draft: resources/ui/v2/layers/aura-meadow-ring-v1.png + shared fossil |
 | 2 | aura_tidal_v1 | Tidal Halo: cyan flowing water-like ring, same center/composition and lighting as Meadow. Rare aura thumbnail. | Generated layer draft: resources/ui/v2/layers/aura-tidal-ring-v1.png + shared fossil |
 | 3 | aura_royal_v1 | Royal Nova: separate purple cosmic ring with a few gold accents and star glints; reuse shared fossil in UI. Legendary aura thumbnail, stronger but readable. | Generated layer draft: resources/ui/v2/layers/aura-royal-ring-v1.png |
-| 4 | potion_speed_v1 | Chunky stoppered bottle with cyan liquid and a bolt emblem. Shared master for Swift Sip/Raptor Rush/Meteor Sprint; tiers use controlled variants. | Todo |
-| 5 | potion_growth_v1 | Matching bottle with green liquid and leaf/food-growth emblem. Shared master for Growth Sip/Prime Feast/Titan Tonic. | Todo |
-| 6 | mutation_gold_v1 | Compact golden dinosaur-footprint badge with thick outline; collection, detail and hatch mutation labels. | Todo |
-| 7 | mutation_diamond_v1 | Matching footprint made of pale cyan faceted diamond, crisp edges and restrained sparkles; future Diamond mutation. | Todo; requested feature, not verified implemented |
-| 8 | catches_v1 | Small group of dinosaur footprints indicating earned catch units. Pair with live Catches label; never use an egg to imply guaranteed egg drops. | Todo |
+| 4 | potion_speed_v1 | Cyan bottle base; existing speed/bolt emblem is a separate overlay. Shared master across speed tiers. | Generated draft: resources/ui/v2/layers/potion-speed-base-v1.png |
+| 5 | potion_growth_v1 | Matching green bottle base; existing leaf/growth emblem is a separate overlay. Shared master across growth tiers. | Generated draft: resources/ui/v2/layers/potion-growth-base-v1.png |
+| 6 | mutation_gold_v1 | Compact golden dinosaur-footprint badge with thick outline; collection, detail and hatch mutation labels. | Generated draft: resources/ui/v2/layers/mutation-gold-v1.png |
+| 7 | mutation_diamond_v1 | Matching footprint made of pale cyan faceted diamond, crisp edges and restrained sparkles; future Diamond mutation. | Generated draft: resources/ui/v2/layers/mutation-diamond-v1.png; mechanic not verified |
+| 8 | catches_v1 | Neutral ivory footprint source; repeat in UI for a grouped catches mark, with live Catches label. | Generated draft: resources/ui/v2/layers/catches-mark-v1.png |
 | 9 | inventory_v1 | Prehistoric leaf-and-leather satchel for owned consumables/items. | Optional after item art |
 | 10 | index_v1 | Fossil field guide/book with dinosaur emblem, distinct from Dino selection. | Optional if navigation separation is needed |
 
@@ -67,7 +71,7 @@ Deferred until actual products exist: luck boost art, Robux bundle contents and 
 Separate export task: render new dino/egg/model and mutation previews when their actual models are ready.
 
 ## Production, adjustment and tracking
-Generate one asset at a time. Meadow Glow, Tidal Halo and Royal Nova have separate generated ring drafts; Speed potion is next. The first draft establishes item-art style; reuse its proportions, camera, outline and lighting for subsequent assets.
+Generate one asset at a time. Core aura, potion, mutation and catches artwork drafts are generated. Next is owner upload/binding, component assembly and Studio visual verification. Inventory/Index remain optional; no speculative art generation is required. The first draft establishes item-art style; reuse its proportions, camera, outline and lighting for subsequent assets.
 Save composed item art under resources/ui/v2/items/ and reusable layer masters under resources/ui/v2/layers/, with versioned names. Preserve existing art. Record each exact prompt in a sibling JSON manifest.
 Generated bitmap artwork can be revised through image editing; it is not a layered/vector source. Theme changes control UI frames/text separately and cannot recolor arbitrary bitmap details safely.
 Store sources in GitHub; upload accepted runtime PNGs under the Roblox experience owner and record real IDs in the shared asset/theme binding. Never fabricate IDs.

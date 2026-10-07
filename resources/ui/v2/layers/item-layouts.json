@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "status": "Initial overlay suggestions; not Studio verified",
+  "potions": {
+    "base": {
+      "position": [
+        0.5,
+        0.5
+      ],
+      "anchor": [
+        0.5,
+        0.5
+      ],
+      "size": [
+        1,
+        1
+      ],
+      "zIndex": 1
+    },
+    "symbol": {
+      "position": [
+        0.5,
+        0.65
+      ],
+      "anchor": [
+        0.5,
+        0.5
+      ],
+      "size": [
+        0.3,
+        0.3
+      ],
+      "zIndex": 2
+    },
+    "speed": {
+      "source": "potion-speed-base-v1.png",
+      "overlayKey": "speed",
+      "alternativeOverlayKey": "bolt"
+    },
+    "growth": {
+      "source": "potion-growth-base-v1.png",
+      "overlayKey": "leaf",
+      "alternativeOverlayKey": "growth"
+    },
+    "rarity": "Use existing Common/Rare/Legendary frame, live label and product config; no new bottle per tier."
+  },
+  "catches": {
+    "source": "catches-mark-v1.png",
+    "singleMarkAtSmallSizes": true,
+    "groupedMarks": [
+      {
+        "position": [
+          0.28,
+          0.72
+        ],
+        "size": [
+          0.42,
+          0.42
+        ],
+        "rotation": -18
+      },
+      {
+        "position": [
+          0.5,
+          0.5
+        ],
+        "size": [
+          0.42,
+          0.42
+        ],
+        "rotation": 12
+      },
+      {
+        "position": [
+          0.72,
+          0.28
+        ],
+        "size": [
+          0.42,
+          0.42
+        ],
+        "rotation": -12
+      }
+    ],
+    "label": "Catches",
+    "note": "Decorative group, not exact count; numeric quantity is live text."
+  },
+  "mutation": {
+    "gold": "mutation-gold-v1.png",
+    "diamond": "mutation-diamond-v1.png",
+    "rarityIndependent": true
+  }
+}

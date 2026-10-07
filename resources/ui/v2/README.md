@@ -1,5 +1,7 @@
 # Be Dino UI v2 assets
 
+Current reusable additions: [aura layers](layers/README.md), [potion/mutation/catches layers](layers/ITEMS.md), and [current artwork guide and TODO](../../../docs/32-artwork-guide-and-todo.md). New artwork is a generated draft until uploaded, integrated and verified in Studio.
+
 Original reusable Be Dino artwork, informed by the [user-provided reference gallery](../../references/steal-an-egg/README.md). These are individual assets, not flattened screen replacements.
 
 ![Asset review sheet](previews/asset-sheet.png)
