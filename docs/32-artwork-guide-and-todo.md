@@ -47,7 +47,7 @@ Distinct Index/inventory symbols are optional UX improvements, not prerequisites
 ## Small prioritized artwork TODO
 | Order | Logical ID / asset | Description and use | Status |
 |---|---|---|---|
-| 1 | aura_meadow_v1 | Meadow Glow: leaf-green luminous ring with small leaves around a neutral fossil/footprint centerpiece. Common aura shop thumbnail; friendly and restrained. | Next: generate individual draft |
+| 1 | aura_meadow_v1 | Meadow Glow: leaf-green luminous ring with small leaves around a neutral fossil/footprint centerpiece. Common aura shop thumbnail; friendly and restrained. | Generated draft: resources/ui/v2/items/aura-meadow-v1.png |
 | 2 | aura_tidal_v1 | Tidal Halo: cyan flowing water-like ring, same center/composition and lighting as Meadow. Rare aura thumbnail. | Todo |
 | 3 | aura_royal_v1 | Royal Nova: purple cosmic ring with a few gold accents and star glints, same center/composition. Legendary aura thumbnail, stronger but readable. | Todo |
 | 4 | potion_speed_v1 | Chunky stoppered bottle with cyan liquid and a bolt emblem. Shared master for Swift Sip/Raptor Rush/Meteor Sprint; tiers use controlled variants. | Todo |
@@ -62,7 +62,7 @@ Deferred until actual products exist: luck boost art, Robux bundle contents and 
 Separate export task: render new dino/egg/model and mutation previews when their actual models are ready.
 
 ## Production, adjustment and tracking
-Generate one asset at a time. The first draft establishes item-art style; reuse its proportions, camera, outline and lighting for subsequent assets.
+Generate one asset at a time. Meadow Glow v1 is the first generated draft; Tidal Halo is next. The first draft establishes item-art style; reuse its proportions, camera, outline and lighting for subsequent assets.
 Save new PNG masters under resources/ui/v2/items/ with versioned names. Preserve existing art. Record each exact prompt in a sibling JSON manifest.
 Generated bitmap artwork can be revised through image editing; it is not a layered/vector source. Theme changes control UI frames/text separately and cannot recolor arbitrary bitmap details safely.
 Store sources in GitHub; upload accepted runtime PNGs under the Roblox experience owner and record real IDs in the shared asset/theme binding. Never fabricate IDs.

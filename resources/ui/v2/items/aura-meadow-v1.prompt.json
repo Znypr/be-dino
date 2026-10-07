@@ -1,0 +1,17 @@
+{
+  "logicalId": "aura_meadow_v1",
+  "name": "Meadow Glow",
+  "source": "resources/ui/v2/items/aura-meadow-v1.png",
+  "status": "Generated draft; not Roblox uploaded or integrated",
+  "tool": "built-in image_gen",
+  "transparent_background": true,
+  "reference": "resources/ui/v2/icons/dinos.png (inspected for style)",
+  "prompt": "Use case: stylized-concept. Asset type: ONE individual transparent Roblox Be Dino aura shop item thumbnail, Meadow Glow, square composition. Create a premium friendly stylized 3D game-item icon consistent with the Be Dino dinosaur icon: chunky rounded forms, saturated emerald green, thick near-black contour, cream ivory and small warm amber-gold accents, polished dimensional bevels and controlled glossy upper-left highlights. Subject: a single simple cream ivory fossil medallion bearing a raised three-toed dinosaur footprint, hovering slightly above the center of a luminous leaf-green elliptical aura ring. The medallion is a neutral symbol, not a character or collectible dinosaur. The ring is clearly an aura effect: two broad curved green energy arcs and only three small chunky leaves, a few restrained bright glints; no pedestal or landscape. Green primary color #62EC70. Gentle three-quarter view slightly from above. Strong clean silhouette, icon remains clear at 48-64px. Centered with 12 percent safe transparent margin, all effects and leaves inside the canvas. Attractive welcoming prehistoric fantasy for young Roblox players. Genuine alpha transparent background. No text, letters, numbers, price, UI frame, checkerboard, watermark, other icons, multiple variants, realistic gritty textures, excessive particles or giant bloom. Output ONLY the one isolated Meadow Glow aura item icon.",
+  "created": "2026-10-08",
+  "checks": {
+    "rgba": true,
+    "containsFullyTransparentPixels": true,
+    "visualReview": "Single fossil-footprint centerpiece with green leaf aura; no baked labels. Runtime thumbnail/device checks pending."
+  },
+  "robloxAssetId": null
+}
