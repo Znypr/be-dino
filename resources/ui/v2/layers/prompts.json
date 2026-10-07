@@ -1,0 +1,28 @@
+{
+  "created": "2026-10-08",
+  "tool": "built-in image_gen",
+  "transparent_background": true,
+  "assets": [
+    {
+      "logicalId": "fossil_centerpiece_v1",
+      "source": "fossil-centerpiece-v1.png",
+      "prompt": "Edit this Be Dino icon into ONE reusable isolated centerpiece asset. Keep ONLY the exact ivory fossil medallion with golden three-toed dinosaur footprint from the reference. Preserve its shape, chipped stone rim, golden inset, perspective, original scale and position on the square canvas, dark contour and upper-left lighting. Completely remove all green energy arcs, ring, leaves, sparkle stars, small particles and green cast/glow. The fossil medallion is centered horizontally, occupies the same region of the original canvas, and floats alone on genuine alpha transparency. Do not zoom or recenter vertically, retain original canvas registration so overlay rings can align to this asset. No new objects, shadow plane, text, background or checkerboard. Output only the standalone fossil centerpiece PNG.",
+      "status": "Generated draft; not uploaded or integrated",
+      "robloxAssetId": null
+    },
+    {
+      "logicalId": "aura_meadow_ring_v1",
+      "source": "aura-meadow-ring-v1.png",
+      "prompt": "Edit the provided Be Dino Meadow Glow composite into a reusable standalone aura ring. REMOVE the fossil medallion, footprint and all ivory/gold centerpiece material completely. Reconstruct the previously hidden BACK segment of the green elliptical ring so this is a complete uninterrupted 360-degree ellipse with a large clear TRANSPARENT center hole. The ring lies in a horizontal plane viewed slightly from above; preserve the reference's broad luminous green energy arcs, thick dark-green contour, glossy dimensional 3D render, leaf-green #62EC70 palette and upper-left highlights. Retain three chunky leaves around the ring, with only a few integrated glints. Ring must be an empty effect, no coin, fossil, logo, dinosaur, pedestal or object in the middle. Center the full ring on a square canvas with 12 percent clear margin all around. Equal left/right visual extent. Clean readable silhouette at small UI sizes. Genuine alpha transparency outside AND inside the ring. No text, watermark, background, checkerboard or variants. Output ONE individual empty Meadow Glow leaf aura ring PNG, suitable to overlay on separately rendered objects.",
+      "status": "Generated draft; not uploaded or integrated",
+      "robloxAssetId": null
+    },
+    {
+      "logicalId": "aura_tidal_ring_v1",
+      "source": "aura-tidal-ring-v1.png",
+      "prompt": "Edit this standalone Be Dino leaf aura ring into a matching Tidal Halo water aura ring. KEEP the complete ellipse shape, central transparent hole, canvas registration, scale, perspective, thickness, broad flowing arcs and lighting. Change green palette to luminous cyan #50D6FF with turquoise-blue shadows and cool white highlights. Replace the chunky leaf accents with glossy water-droplet accents in the same places, avoid adding other large accents. Clean stylized water energy, a few restrained glints. Entire center remains EMPTY and alpha transparent; no fossil, coin, footprint, dinosaur, pedestal, object or logo. Premium friendly dimensional Roblox item art, thick darker contour and glossy upper-left highlights. Genuine transparent background inside and outside the ring. No text, numbers, checkerboard, watermark, UI or variants. Output ONE isolated full continuous cyan water halo, suitable for layering around separately rendered objects.",
+      "status": "Generated draft; not uploaded or integrated",
+      "robloxAssetId": null
+    }
+  ]
+}

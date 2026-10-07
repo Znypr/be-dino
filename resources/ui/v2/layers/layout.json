@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "status": "Proposed adjustable layout; Studio verification pending",
+  "canvasAspect": 1,
+  "ring": {
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "position": [
+      0.5,
+      0.62
+    ],
+    "size": [
+      1,
+      1
+    ],
+    "splitY": 0.62
+  },
+  "centerpiece": {
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "position": [
+      0.5,
+      0.42
+    ],
+    "size": [
+      0.66,
+      0.66
+    ]
+  },
+  "zOrder": {
+    "ringRear": 1,
+    "centerpiece": 2,
+    "ringFront": 3
+  },
+  "notes": [
+    "Normalized dimensions relative to square thumbnail container; PNGs retain transparent padding.",
+    "Clip upper and lower regions of two identically transformed ring ImageLabels in separate transparent Frames.",
+    "Initial split/scale/position are tuning values, not engine-tested output.",
+    "Centerpiece may be omitted or replaced by actual dinosaur preview.",
+    "Store real owner-uploaded asset IDs separately; none fabricated."
+  ]
+}

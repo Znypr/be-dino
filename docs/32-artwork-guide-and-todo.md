@@ -20,6 +20,11 @@ Use owned/original assets and already available tools; do not introduce paid ass
 2. Functional symbols: reuse resources/ui/v2/scalable SVG/geometry assets for navigation, timers and status. Do not redraw these as expensive illustrated items.
 UI panels, labels, buttons, rarity frames and animations remain reusable Roblox components governed by UITheme; artwork does not flatten a menu into an image.
 
+## Layered artwork rule (supersedes flattened aura thumbnails)
+Znypr requests separate reusable effect rings and fossil centerpieces. Use one shared fossil PNG and independent transparent ring PNGs. Original combined Meadow/Tidal drafts remain historical references, not the preferred source format. Do not generate a new fossil for every aura.
+For depth, display the same full ring in two clipped UI containers: upper half behind the center, lower half in front. Share ring position, scale and fade; configure clipping split and center size/offset independently. Do not spin a static perspective ellipse as if it were world-space 3D VFX. Glow/details within current ring PNGs are baked; optional future particle overlays should be separate.
+See resources/ui/v2/layers/README.md and layout.json. All assets are generated drafts, not yet uploaded/integrated/Studio verified. The standalone fossil was regenerated and differs in size from the initial composite; use configuration to align it, not a claim of exact pixel extraction.
+
 ## Consistency rules
 - One individual asset per file and per generation. Never deliver a sheet of multiple items as the runtime source.
 - Square transparent PNG master, ideally 1024x1024 or larger. Preserve genuine alpha; no baked checkerboard, solid background or opaque outer glow rectangle.
@@ -47,9 +52,9 @@ Distinct Index/inventory symbols are optional UX improvements, not prerequisites
 ## Small prioritized artwork TODO
 | Order | Logical ID / asset | Description and use | Status |
 |---|---|---|---|
-| 1 | aura_meadow_v1 | Meadow Glow: leaf-green luminous ring with small leaves around a neutral fossil/footprint centerpiece. Common aura shop thumbnail; friendly and restrained. | Generated draft: resources/ui/v2/items/aura-meadow-v1.png |
-| 2 | aura_tidal_v1 | Tidal Halo: cyan flowing water-like ring, same center/composition and lighting as Meadow. Rare aura thumbnail. | Generated draft: resources/ui/v2/items/aura-tidal-v1.png |
-| 3 | aura_royal_v1 | Royal Nova: purple cosmic ring with a few gold accents and star glints, same center/composition. Legendary aura thumbnail, stronger but readable. | Todo |
+| 1 | aura_meadow_v1 | Meadow Glow: leaf-green luminous ring with small leaves around a neutral fossil/footprint centerpiece. Common aura shop thumbnail; friendly and restrained. | Generated layer draft: resources/ui/v2/layers/aura-meadow-ring-v1.png + shared fossil |
+| 2 | aura_tidal_v1 | Tidal Halo: cyan flowing water-like ring, same center/composition and lighting as Meadow. Rare aura thumbnail. | Generated layer draft: resources/ui/v2/layers/aura-tidal-ring-v1.png + shared fossil |
+| 3 | aura_royal_v1 | Royal Nova: separate purple cosmic ring with a few gold accents and star glints; reuse shared fossil in UI. Legendary aura thumbnail, stronger but readable. | Todo |
 | 4 | potion_speed_v1 | Chunky stoppered bottle with cyan liquid and a bolt emblem. Shared master for Swift Sip/Raptor Rush/Meteor Sprint; tiers use controlled variants. | Todo |
 | 5 | potion_growth_v1 | Matching bottle with green liquid and leaf/food-growth emblem. Shared master for Growth Sip/Prime Feast/Titan Tonic. | Todo |
 | 6 | mutation_gold_v1 | Compact golden dinosaur-footprint badge with thick outline; collection, detail and hatch mutation labels. | Todo |
@@ -63,7 +68,7 @@ Separate export task: render new dino/egg/model and mutation previews when their
 
 ## Production, adjustment and tracking
 Generate one asset at a time. Meadow Glow v1 and Tidal Halo v1 are generated drafts; Royal Nova is next. The first draft establishes item-art style; reuse its proportions, camera, outline and lighting for subsequent assets.
-Save new PNG masters under resources/ui/v2/items/ with versioned names. Preserve existing art. Record each exact prompt in a sibling JSON manifest.
+Save composed item art under resources/ui/v2/items/ and reusable layer masters under resources/ui/v2/layers/, with versioned names. Preserve existing art. Record each exact prompt in a sibling JSON manifest.
 Generated bitmap artwork can be revised through image editing; it is not a layered/vector source. Theme changes control UI frames/text separately and cannot recolor arbitrary bitmap details safely.
 Store sources in GitHub; upload accepted runtime PNGs under the Roblox experience owner and record real IDs in the shared asset/theme binding. Never fabricate IDs.
 Status sequence: Todo -> Generated draft -> Reviewed -> Uploaded -> Integrated -> Studio verified. Generated does not imply Uploaded or Integrated.
