@@ -1,0 +1,17 @@
+{
+  "logicalId": "aura_tidal_v1",
+  "name": "Tidal Halo",
+  "source": "resources/ui/v2/items/aura-tidal-v1.png",
+  "status": "Generated draft; not Roblox uploaded or integrated",
+  "tool": "built-in image_gen",
+  "transparent_background": true,
+  "reference": "resources/ui/v2/items/aura-meadow-v1.png",
+  "prompt": "Create Tidal Halo, the second Be Dino aura shop icon, by editing the provided Meadow Glow reference into a consistent sibling. Preserve the exact central cream ivory fossil medallion and golden three-toed footprint, medallion proportions, camera angle, placement, dark contour, glossy dimensional 3D game-item render and upper-left lighting. Change only the surrounding green leaf aura to a luminous CYAN WATER halo, primary #50D6FF, deeper turquoise-blue shadow edges and cool white highlights. Preserve the same elliptical ring silhouette and visual weight, but make the broad curved arcs look like clean stylized flowing water. Replace the three green leaves with three chunky cyan water droplets in corresponding positions; a few restrained water sparkles and tiny droplets, no busy spray. The center remains ivory/gold, not blue. Readable at 48-64px, friendly prehistoric Roblox collectible item illustration. Square composition, generous transparent margin with complete ring uncut. Genuine alpha transparent background, preserve transparency. No text, numbers, UI panels, background, checkerboard, watermark, extra icons or variants. Output ONE isolated individual Tidal Halo icon.",
+  "created": "2026-10-08",
+  "checks": {
+    "rgba": true,
+    "containsFullyTransparentPixels": true,
+    "visualReview": "Matching fossil-footprint center and camera; cyan flowing ring and water droplets. Studio readability checks pending."
+  },
+  "robloxAssetId": null
+}
