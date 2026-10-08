@@ -1,5 +1,7 @@
 # BD-005: persistence and remote contracts
 
+> **HISTORICAL initial contract.** The line that durable storage remains to be implemented describes BD-005, not the later implemented/tested BD-011 profile repository. Retain the contract invariants; current evidence and open acceptance: [Kanban](07-kanban.md) and [Build 020 integration](44-main-integration-checklist.md).
+
 > **HISTORICAL initial contract specification.** The line saying durable storage remains to be implemented describes the BD-005 design stage only: subsequent BD-011/storage and exactly-once reward features were implemented/tested in earlier builds. Use [Kanban](07-kanban.md) and [Build 020 integration](44-main-integration-checklist.md) for latest verification gates; retain this document for invariants/contracts, not live status.
 
 Status: specified for the private alpha. Implementation of durable storage remains BD-011.
