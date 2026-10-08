@@ -4,6 +4,16 @@ Updated 2026-10-08. This file is the canonical task tracker.
 Build 005 PvP/run-ending tests 1–9 passed. Build 006 persistence tests 1–10 passed. Build 007 lease/stale-writer verification and restart persistence passed in the new private test experience. BD-011 is Done. Build 008 collection/equip passed all 8 runtime tests. BD-012 is Done. Build 009 earned chest queue passed all 8 runtime tests. BD-013 is Done. Build 010 Gold mutation passed all 8 runtime tests. BD-014 is Done. Build 011 core UI passed all 8 desktop/phone-emulator tests. BD-015 is Done. Build 012 security/multiplayer regression passed all 8 runtime tests. BD-018 is Done. Build 013 original visual kit is ready for testing. Mobile remains untested.
 
 ## Board
+
+2026-10-08 multiplayer retry: disposable Build 019 Studio tests with 2 and 5
+clients passed profile/character loading, reward isolation, duplicate settlement,
+locked equip and memory reload. Znyprr joined and reconnected to published Build
+019; six collection previews were visible. Real multi-device play, earned-reward
+DataStore persistence, mobile/load and latest-asset release tests remain pending.
+Evidence and limits: [multiplayer results](42-live-multiplayer-test.md).
+Maximum player access/policy work remains in progress:
+[paid-random access plan](43-player-access-and-paid-random-policy.md).
+
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
 | BD-017; BD-019–022; BD-035 | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
