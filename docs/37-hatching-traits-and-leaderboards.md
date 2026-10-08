@@ -1,7 +1,9 @@
 # Hatching, traits and leaderboards
 
 2026-10-08. Branch redesign/resources-and-core-fixes, Build redesign-019.
-Baseline 3d8d1e4. Canonical acceptance remains docs/07-kanban.md, BD-035.
+Baseline 3d8d1e4. Canonical acceptance remains docs/07-kanban.md, BD-042.
+Concurrent planning commits through 26af626 were merged without removing their
+BD-035-041 scope. Those planned shops/genetics/art tasks are not completed here.
 
 ## Eggs and reveals
 

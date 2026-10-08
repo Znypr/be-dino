@@ -6,7 +6,7 @@ Build 005 PvP/run-ending tests 1–9 passed. Build 006 persistence tests 1–10 
 ## Board
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-017; BD-019–022 | BD-027 | None | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–035 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
+| BD-017; BD-019–022; BD-035–041 | BD-027 | None | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-042 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -55,7 +55,14 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 | BD-032 | Review / test | P1 | Crystal potion shop, timed buffs and inventory | BD-028, BD-031 |
 | BD-033 | Review / test | P1 | Matching aura, potion, leap, weather and currency icons | BD-026 |
 | BD-034 | Review / test | P1 | Event-mutated eggs, cosmetic trails and textured visual upgrade | BD-028, BD-031 |
-| BD-035 | Review / test | P1 | Five-second ordered hatches, Shiny/BIG and map leaderboards | BD-013, BD-034 |
+| BD-035 | Backlog | P1 | High-quality modular Blender egg/pattern/condition/mutation render passes | BD-024, BD-034 |
+| BD-036 | Backlog | P1 | Run-end crystal rewards, crystal unboxing and Robux crystal packs | BD-028, BD-011 |
+| BD-037 | Backlog | P1 | Crystal-priced random eggs feeding the existing hatching queue | BD-036, BD-013 |
+| BD-038 | Backlog | P1 | Persistent account levels and ten level-gated speed/VFX trails | BD-028, BD-029, BD-034 |
+| BD-039 | Backlog | P1 | Crystal-priced five-minute Speed Potion integration | BD-032, BD-036 |
+| BD-040 | Backlog | P1 | Escalating Condition Shop, weighted egg conditions and stat/hatch effects | BD-036, BD-037 |
+| BD-041 | Backlog | P1 | Two-colour egg genetics, Normal/Big eggs and independent shiny sparkle | BD-035, BD-037 |
+| BD-042 | Review / test | P1 | Five-second ordered hatches, Shiny/BIG and map leaderboards | BD-013, BD-034 |
 
 ### Hatching, traits and leaderboards, 2026-10-08
 
@@ -89,9 +96,22 @@ Only the verified unpublished Build 019 copy was modified/tested in Studio.
   rejoin, physical phones, multiplayer and maximum-growth BIG collision/performance.
   These release checks remain deferred; no published place/player data was touched.
 
-Mechanics: [current hatching notes](36-hatching-traits-and-leaderboards.md).
+Mechanics: [current hatching notes](37-hatching-traits-and-leaderboards.md).
 Evidence: [screenshots and fixture boundaries](evidence/2026-10-08-hatching-and-leaderboards/README.md).
-BD-035 remains Review / test.
+BD-042 remains Review / test. The concurrently added BD-035-041 planning tasks
+retain their IDs and scope; this local gameplay pass does not complete those plans.
+
+### New proposed shop/egg systems, 2026-10-08 (BD-035–041)
+
+- [ ] **BD-035:** Replace draft/Microsoft-Paint-quality egg art with a high-quality Blender master, fixed mesh and camera; export true transparent 512x512 RGBA base, patterns, conditions and separate mutation passes. Prove matching masks/preview alignment, then test in Studio. No finished art is claimed.
+- [ ] **BD-036:** Add crystals awarded/unboxed at run end alongside map pickups; design Robux crystal packs with server-authoritative idempotent receipt grants, persistence and purchase restrictions. Crystal award quantities remain configurable.
+- [ ] **BD-037:** Let players buy random eggs with crystals to join sequential hatching without losing purchases on full queues. Validate random-paid-item policy/disclosure before monetized release.
+- [ ] **BD-038:** Replace/extend three cosmetic trails with **ten** crystal-priced tiered coloured walking trails, from free normal white to highest **Astra glitter**. Prices, speed buffs and required **persistent account levels** increase by tier; cap aggregate speed and migrate existing ownership.
+- [ ] **BD-039:** Crystal-priced 5-minute Speed Potion, reusing the existing potion inventory/expiry and server multipliers; avoid duplicate shops.
+- [ ] **BD-040:** Condition Shop progressively reduces Cracked odds/increases Rainbow/Astra odds with escalating level and crystal gates. On hatch: Cracked low success and 80% base stats if successful; Dirty 80%; Normal 100%; Rainbow 120%; Astra 180%. Exact failure rate, affected stats and caps remain Todo.
+- [ ] **BD-041:** Two server-selected rarity-weighted egg colours (white ordinary, blue common, black exceptionally rare) and random 0–100% blend, inherited by dinosaur; independent Normal/Big eggs (Big visuals 1.2x, same stats), shiny sparkle on dinosaur/preview, immutable persistence. Black/black exceptionally rare.
+
+These are **planned**, not implemented or approved public balance. The earlier three-size proposal is superseded by **Normal and Big only**; shiny is not a stat condition. Existing BD-028/029/032/034 test evidence remains historical and does not certify these additions. [Detailed mechanics, proposed starting trail catalog, unresolved decisions and acceptance criteria](36-crystal-shops-egg-genetics-and-progression.md).
 
 ### Weather, trails and visual upgrade, 2026-10-08
 

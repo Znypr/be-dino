@@ -54,6 +54,12 @@ Catch score is distinct from growth score. Exact balancing remains proposed.
 - Build 013: original procedural dinosaur/map kit ready for visual runtime verification.
 - Mobile/touch remains pending.
 
+## Planned expansion: crystal shops and egg genetics
+
+[Crystal/egg design specification](docs/36-crystal-shops-egg-genetics-and-progression.md) · [BD-035–041 in canonical Kanban](docs/07-kanban.md).
+
+Future work includes end-of-run and map crystals plus Robux crystal packs, random crystal-purchased eggs, ten increasingly fast level-gated trails, a 5-minute Speed Potion, condition probability upgrades, rare two-colour eggs with inherited dinosaur colours, Normal/Big sizes, shiny sparkles and production-quality Blender-rendered modular egg artwork. All are **Todo**, not Build 019 acceptance claims. Numerical balancing and purchase/odds rules need review before release.
+
 ## Working agreement
 GitHub is the single source of truth for plans and code. `docs/07-kanban.md` is the live tracker.
 Use original assets, free tools and server-owned gameplay state.

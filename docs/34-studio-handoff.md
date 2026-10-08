@@ -27,9 +27,9 @@ are archived in `docs/evidence/2026-10-08-weather-and-leap/`. Native fallbacks r
 
 ## Completed before Studio
 
-Latest gameplay follow-up: [ordered hatching, Shiny/BIG and map leaderboards](36-hatching-traits-and-leaderboards.md).
+Latest gameplay follow-up: [ordered hatching, Shiny/BIG and map leaderboards](37-hatching-traits-and-leaderboards.md).
 New eggs no longer incubate offline: they reveal for five seconds each after the
-run. Legacy timestamps are retained. The canonical BD-035 checklist records
+run. Legacy timestamps are retained. The canonical BD-042 checklist records
 desktop/phone passes and the still-unverified paid/persistent/global cases.
 
 - Nine verified PNG masters stay separate and reusable. `Artwork.luau` composes the three aura rings with a shared fossil, clips each ring into rear/front layers, overlays native speed/leaf symbols on bottles, and repeats the single catches footprint. Shops, confirmations, fusion and the catches HUD use the shared assembler. Empty uploaded IDs use native icons.
