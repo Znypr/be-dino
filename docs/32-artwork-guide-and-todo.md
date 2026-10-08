@@ -1,6 +1,8 @@
 # Be Dino artwork guide and small production checklist
 Updated 2026-10-08. Current artwork planning for redesign/resources-and-core-fixes.
 
+For combined egg appearance, read the [shared egg vision](39-egg-appearance-shared-vision.md). The owner-selected matte shell, eight patterns, weighted color coverage, condition overlays and engulfing smoke/anime mutation auras supersede older conflicting egg-art instructions here. Rainbow/Astra condition artwork is explicitly deferred; latest mutation renders are review drafts. Existing shop-aura fossil/ring rules below still apply to those separate products.
+
 ## Authority and sources
 Znypr's latest explicit requests take precedence over historical prototype restrictions. This guide consolidates artwork decisions; it does not approve game balance, monetization, or new gameplay.
 Read docs/01-project-brief.md, docs/03-game-design.md, docs/05-asset-pipeline.md, docs/25-redesign.md, docs/28-ui-overhaul.md and docs/30-build017-and-progression-roadmap.md for context.
@@ -95,10 +97,12 @@ Separate export task: render new dino/egg/model and mutation previews when their
 Weather now includes seven events plus Clear. The prior four-state illustration
 pass remains valid but does not cover the new events. Continue the dimensional
 cloud/icon family and existing separate-layer AURAS/POTIONS compositions.
-Runtime auras use readable double orbit ribbons and restrained motes; trails
-use matching tapered color pairs. Mutated eggs use the actual egg model with
-event tint/name; hatched variants retain the species silhouette and show perks
-plus an event-colored glow. Avoid color-only identification: labels remain.
+Current runtime shop auras use readable double orbit ribbons and restrained motes; trails
+use matching tapered color pairs. Existing mutated-egg tints/names and event-colored
+glow are prototype implementation, not final egg art acceptance. The latest egg
+mutation target is engulfing elemental smoke with dimensional anime-like wisps,
+preserving separately chosen shell colors/patterns; see the shared egg vision.
+Hatched variants retain the species silhouette and show perks. Avoid color-only identification: labels remain.
 The shared trail preview is native assembled geometry, not illustrated art.
 New models/materials should remain soft, rounded and hand-painted, with broad
 readable details. Generated textured dinosaur models are reviewable drafts,

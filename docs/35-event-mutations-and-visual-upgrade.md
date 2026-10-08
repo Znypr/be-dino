@@ -1,5 +1,7 @@
 # Event mutations and visual upgrade
 
+**Egg-art follow-up:** [Shared egg appearance vision](39-egg-appearance-shared-vision.md) records the latest owner direction: preserve shell colors/patterns, use surrounding engulfing smoke and dimensional anime-like energy for event mutations, and keep condition effects separate. These Blender drafts supersede shell-painted mutation and flat-ring art proposals; they do not certify runtime integration or change the mechanics below.
+
 Follow-up: docs/37-hatching-traits-and-leaderboards.md adds independent Shiny/BIG,
 precommitted rarity-ordered reveals and map rankings. These supplement the event
 mutations below; newer hatch timing supersedes earlier incubation descriptions.

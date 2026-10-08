@@ -3,6 +3,8 @@
 **Requested:** 2026-10-08. **Status:** Design/Todo only; not implementation or public balance approval.
 **Canonical status:** [BD-035–041 in Kanban](07-kanban.md). **Existing systems:** [Build 018 progression](31-build018-progression-test.md), [Build 019 events and cosmetics](35-event-mutations-and-visual-upgrade.md).
 
+**Visual decision reference:** [Shared egg appearance vision](39-egg-appearance-shared-vision.md) consolidates the subsequent Blender review: eight patterns, two-color coverage and exceptional pure-color rarity, matte shell, reusable damage/condition overlays, and engulfing anime-like mutation smoke. Rainbow/Astra condition art is explicitly deferred. Exact authoring weights and latest aura renders remain provisional; this does not certify gameplay implementation.
+
 Concurrent gameplay baseline: [BD-042 hatching/traits/leaderboards](37-hatching-traits-and-leaderboards.md)
 now implements five-second run-ordered reveals, 5% event Shiny, 10% independent
 BIG, configurable 1.3x BIG scale and preview-only Shiny. The 1.2x scale/world
@@ -71,13 +73,13 @@ The **condition is assigned when an egg is earned or purchased**, not on opening
 - **Confirmed by the user on 2026-10-08:** Cracked hatch success is **20%**, and condition factors affect **both movement speed and growth intake**. Persist the success/failure outcome once on the server; retries and reconnects must not reroll it. Failed-hatch consolation is still unspecified and must not be described as an implemented reward.
 - The shop raises probability of Rainbow/Astra and lowers Cracked/Dirty odds as upgrade levels increase. Do not guarantee Astra at a finite tier unless separately approved. Each tier's full distribution must sum to 100% and be fixed/configurable, testable and disclosed when necessary.
 - Apply the **0.8/1.0/1.2/1.8 factors to movement speed and growth intake**, before the final shared speed/growth caps. Cracked and Dirty must genuinely permit 0.8x values; a minimum-1 multiplier clamp would incorrectly remove their penalty. Keep condition factors independent of size, shiny and cosmetic colour. The existing 2.2x speed and 8x growth caps remain the starting safety limits, pending interaction tests with trails, weather, mutations and potions.
-- **Condition `Cracked` is not the cosmetic `cracked` shell pattern**: keep independent IDs/fields to avoid collision.
+- **Condition `Cracked` is a separate condition field**, not one of the eight selected shell patterns. If legacy code has a cosmetic `cracked` pattern, reconcile its ID/migration deliberately; do not conflate it with condition damage.
 - Existing visual conditions such as Frosted, Mossy and Shiny are **not** part of these five stat-bearing condition tiers. Retain them as cosmetic modifiers or migrate deliberately, never silently give them implied 80–180% stats.
 
 ## Egg colours, sizes and shiny
 
 - **Two colour slots per egg:** `primaryColorId` and `secondaryColorId`, drawn independently from a configurable weighted rarity palette. Example anchors: **white = ordinary**, **blue = common**, **black = exceptionally rare**. Complete palette, actual relative weights and rarity names are Todo.
-- **Random blend proportion:** server chooses a blend in `[0,1]` and stores it. Examples: 80/20, 100/0, 50/50. The egg shell and dinosaur use the **same saved colours and blend**; do not independently recolour at hatch. Two independently rolled black colours make **black/black** exceptionally rare. Design deterministic blend/placement mapping for differently shaped dinosaur meshes.
+- **Random blend proportion:** server stores one saved color share; define explicitly whether the production field uses 0–1 or integer percentages. The newer art direction uses visible two-color coverage (for example 20% green/80% blue), not only an averaged uniform RGB tint. The authoring draft uses 1–99% for different colors and 100% for matching genes, preserving exceptional pure-black rarity and tonal pattern contrast. Exact production distribution/endpoints remain a reconciliation task; the earlier generic 0–100% proposal is not final. Egg and dinosaur use the **same saved colors and share**; do not reroll at hatch. See the shared vision for provisional weights and deterministic placement requirements.
 - **Two egg sizes only:** **Normal** and **Big**. A Big egg produces a dinosaur with **1.20x visual model scale**, but **no extra base gameplay stats or speed from size**. This supersedes the earlier small/medium/big idea. Validate collider/range fairness and keep the shared egg art aligned; size can be a UI scale property.
 - **Shiny** is an independent random property/flag, not a condition tier. It adds visible sparkling effects to the hatched **dinosaur** and its **collection/preview image** (and to the egg preview where practical). No stat bonus is specified. Odds remain Todo.
 - Persist all assigned traits and the resulting hatch exactly once. UI can preview an earned egg's stored attributes, but cannot draw or reroll them.
@@ -88,9 +90,9 @@ Source model is one locked `Egg_Master` mesh, fixed camera, floor tile and light
 
 - Render a background separately (opaque), floor tile (transparent outside), and one base egg (transparent outside).
 - Export pattern markings and condition surface passes **with the exact same egg silhouette mask**, no opaque duplicate eggs. Shiny sparkle belongs in its separate effect pass; size is applied as a shared scale.
-- Render mutation surface effects and external particles/rings in independently reusable transparent layers. A mutation's display on the unhatched egg can indicate event eligibility; it does not promise a mutated hatch unless already settled by server.
+- Render event mutations as surrounding, engulfing smoke/energy/particles in reusable transparent layers, not painted shell marks. Foreground wisps may overlap the lower shell; preserve the underlying color/pattern identity. A mutation's display on the unhatched egg can indicate event eligibility; it does not promise a mutated hatch unless already settled by server.
 - Export at 1024px or higher and downsample to **512 x 512 RGBA PNG**. Verify exact image dimensions, true alpha, mask identity, camera alignment, edge bleed and small mobile previews automatically.
-- Start with **Base + Spots + one condition + Magma**; inspect actual PNGs and a composited render before scaling to the full catalog. Keep source `.blend` and editable textures, plus an upload/Roblox asset-ID manifest. Validate performance and visible quality on target devices.
+- The Blender review now has eight authored patterns, color-mix examples, Cracked/Dirty overlays and seven smoke-aura drafts, inspected with the retained tile and grassy backdrop. Magma styling maps to existing Ember. These are authoring results, not uploaded/integrated runtime acceptance. Keep editable `.blend` sources and produce an upload/Roblox asset-ID manifest; validate combinations, performance and visible quality on target devices. Rainbow/Astra effects remain deferred for rework.
 
 ## Implementation / acceptance breakdown
 

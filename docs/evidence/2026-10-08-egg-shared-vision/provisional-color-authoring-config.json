@@ -1,0 +1,68 @@
+{
+  "status": "provisional art configuration, not integrated game drop odds",
+  "colors": {
+    "cream": [
+      0.93,
+      0.82,
+      0.55
+    ],
+    "green": [
+      0.012,
+      0.43,
+      0.07
+    ],
+    "teal": [
+      0.008,
+      0.4,
+      0.31
+    ],
+    "blue": [
+      0.018,
+      0.23,
+      0.65
+    ],
+    "purple": [
+      0.34,
+      0.08,
+      0.6
+    ],
+    "pink": [
+      0.68,
+      0.065,
+      0.29
+    ],
+    "amber": [
+      0.88,
+      0.35,
+      0.018
+    ],
+    "red": [
+      0.85,
+      0.025,
+      0.015
+    ],
+    "black": [
+      0.012,
+      0.016,
+      0.022
+    ]
+  },
+  "weights": {
+    "cream": 100,
+    "green": 100,
+    "blue": 100,
+    "teal": 40,
+    "pink": 40,
+    "purple": 15,
+    "amber": 15,
+    "red": 4,
+    "black": 1
+  },
+  "color_draws": "two independent weighted draws",
+  "different_color_share_percent": "uniform integer 1..99; endpoints excluded",
+  "same_color_share": "100 percent that color, pattern uses tonal contrast",
+  "full_black_probability": 5.806357961968356e-06,
+  "full_vivid_red_probability": 9.29017273914937e-05,
+  "pattern_weights": "uniform across the eight accepted patterns",
+  "blank_rule": "no spot or stripe motif; distinct colors may use broad unpatterned two-tone coverage"
+}

@@ -1,0 +1,122 @@
+{
+  "01_blank": {
+    "size": [
+      512,
+      512
+    ],
+    "mode": "RGBA",
+    "transparent_pixels": 216768,
+    "alpha_matches_blank_exactly": true,
+    "alpha_bounds": [
+      151,
+      107,
+      361,
+      383
+    ]
+  },
+  "02_emerald_islands": {
+    "size": [
+      512,
+      512
+    ],
+    "mode": "RGBA",
+    "transparent_pixels": 216768,
+    "alpha_matches_blank_exactly": true,
+    "alpha_bounds": [
+      151,
+      107,
+      361,
+      383
+    ]
+  },
+  "03_round_spots": {
+    "size": [
+      512,
+      512
+    ],
+    "mode": "RGBA",
+    "transparent_pixels": 216768,
+    "alpha_matches_blank_exactly": true,
+    "alpha_bounds": [
+      151,
+      107,
+      361,
+      383
+    ]
+  },
+  "04_bold_patches": {
+    "size": [
+      512,
+      512
+    ],
+    "mode": "RGBA",
+    "transparent_pixels": 216768,
+    "alpha_matches_blank_exactly": true,
+    "alpha_bounds": [
+      151,
+      107,
+      361,
+      383
+    ]
+  },
+  "05_horizontal_bands": {
+    "size": [
+      512,
+      512
+    ],
+    "mode": "RGBA",
+    "transparent_pixels": 216768,
+    "alpha_matches_blank_exactly": true,
+    "alpha_bounds": [
+      151,
+      107,
+      361,
+      383
+    ]
+  },
+  "06_wavy_stripes": {
+    "size": [
+      512,
+      512
+    ],
+    "mode": "RGBA",
+    "transparent_pixels": 216768,
+    "alpha_matches_blank_exactly": true,
+    "alpha_bounds": [
+      151,
+      107,
+      361,
+      383
+    ]
+  },
+  "07_diamond_scales": {
+    "size": [
+      512,
+      512
+    ],
+    "mode": "RGBA",
+    "transparent_pixels": 216768,
+    "alpha_matches_blank_exactly": true,
+    "alpha_bounds": [
+      151,
+      107,
+      361,
+      383
+    ]
+  },
+  "08_freckles": {
+    "size": [
+      512,
+      512
+    ],
+    "mode": "RGBA",
+    "transparent_pixels": 216768,
+    "alpha_matches_blank_exactly": true,
+    "alpha_bounds": [
+      151,
+      107,
+      361,
+      383
+    ]
+  }
+}
