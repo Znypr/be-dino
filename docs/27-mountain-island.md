@@ -1,5 +1,7 @@
 # Build 015: mountain island and completed resource exports
 
+> **HISTORICAL Build 015 terrain/food implementation record.** Mesh and environment integration evolved by Build 020. New world assets and sliding/climbing problems: [BD-049/050/053](45-owner-feedback-shop-hud-world-weather-tasks.md).
+
 ## User direction, 2026-10-04
 Use the selected prehistoric island image as the visual direction. Expand to a large map with mountains, paths, crystals as high-value food, eggs as lower-value food, and jumping. Finish the resource folder so assets can be inspected directly on GitHub. The original primitive kit is no longer accepted as final art.
 
