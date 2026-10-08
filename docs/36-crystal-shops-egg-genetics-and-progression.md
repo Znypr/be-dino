@@ -17,7 +17,7 @@ remain planned; no part is certified by the local hatch/leaderboard pass.
 3. Spend crystals on **random eggs**, **trail unlocks**, **temporary potions**, and **Condition Shop upgrades**.
 4. Earn persistent account levels through play. Account levels unlock progressively stronger trails and higher condition-upgrade tiers; purchasing crystals alone does not bypass those gates.
 5. New eggs receive immutable attributes (pattern, condition, two weighted colours and blend, size, shiny flag, and any event mutation eligibility). The egg preview is a composition of reusable layers. Eggs are hatched from the existing sequential queue, with the server committing the outcome once.
-6. Hatched dinosaurs inherit the egg's chosen blended colours, their allowed condition stat modifier, visual size, shiny status and any successfully rolled mutation. A failed hatch is possible only for the **Cracked condition**; exact chance and consolation outcome remain to be specified.
+6. Hatched dinosaurs inherit the egg's chosen blended colours, their allowed condition stat modifier, visual size, shiny status and any successfully rolled mutation. A failed hatch is possible only for the **Cracked condition**, with **20% hatch success** (80% failure). Failed-hatch consolation remains unspecified.
 
 **Separation of systems:** Pattern is cosmetic shell art; **condition** sets hatch risk/stat strength; **event mutation** is a separate chance/perk/VFX result; **shiny** is an independent sparkle trait; **size** is independent of stats; **colour genes** are cosmetic. Do not conflate event eligibility with guaranteed mutation.
 
@@ -62,15 +62,15 @@ The **condition is assigned when an egg is earned or purchased**, not on opening
 
 | Egg condition | Hatch result | Resulting dinosaur's base stats |
 |---|---|---:|
-| **Cracked** | Low chance to hatch a dinosaur; can fail | **80%** if it hatches |
+| **Cracked** | **20%** chance to hatch a dinosaur; **80%** failure | **80%** if it hatches |
 | **Dirty** | Dinosaur hatches | **80%** |
 | **Normal** | Dinosaur hatches | **100%** |
 | **Rainbow** | Dinosaur hatches | **120%** |
 | **Astra** | Dinosaur hatches | **180%** |
 
-- **Exact Cracked hatch chance is intentionally unspecified.** Define the server-side probability and what a failed hatch grants (if anything) before implementation.
+- **Confirmed by the user on 2026-10-08:** Cracked hatch success is **20%**, and condition factors affect **both movement speed and growth intake**. Persist the success/failure outcome once on the server; retries and reconnects must not reroll it. Failed-hatch consolation is still unspecified and must not be described as an implemented reward.
 - The shop raises probability of Rainbow/Astra and lowers Cracked/Dirty odds as upgrade levels increase. Do not guarantee Astra at a finite tier unless separately approved. Each tier's full distribution must sum to 100% and be fixed/configurable, testable and disclosed when necessary.
-- Specify exactly which **base stats** receive the 0.8/1.0/1.2/1.8 factors, especially whether movement speed, growth intake or other gameplay values are affected; apply caps to interactions with trails, weather and potions. The large 1.8x factor is a design request, not accepted balance.
+- Apply the **0.8/1.0/1.2/1.8 factors to movement speed and growth intake**, before the final shared speed/growth caps. Cracked and Dirty must genuinely permit 0.8x values; a minimum-1 multiplier clamp would incorrectly remove their penalty. Keep condition factors independent of size, shiny and cosmetic colour. The existing 2.2x speed and 8x growth caps remain the starting safety limits, pending interaction tests with trails, weather, mutations and potions.
 - **Condition `Cracked` is not the cosmetic `cracked` shell pattern**: keep independent IDs/fields to avoid collision.
 - Existing visual conditions such as Frosted, Mossy and Shiny are **not** part of these five stat-bearing condition tiers. Retain them as cosmetic modifiers or migrate deliberately, never silently give them implied 80–180% stats.
 
@@ -105,8 +105,8 @@ Source model is one locked `Egg_Master` mesh, fixed camera, floor tile and light
 ## Open decisions before implementation
 
 1. Run-end crystal formula, whether end-of-run crystals are direct, unboxed, or both; crystal box odds.
-2. Cracked hatch success % and failed-egg consolation.
-3. What counts as the condition-adjusted `base stats`; balance caps for 1.8x Astra.
+2. Failed-egg consolation; Cracked **20% success** is confirmed.
+3. Interaction balancing for 1.8x Astra; condition-adjusted stats are confirmed as **movement speed and growth intake**.
 4. Full level XP curve, ten trail prices/speed values (table above is a suggested starting point) and shop-upgrade gates.
 5. Palette weights, blend distribution, shiny rate, Normal/Big odds, whether colours are visible before hatch.
 6. Rules for random egg purchases using Robux-purchasable crystals: odds display, player eligibility and policy-safe alternatives.
