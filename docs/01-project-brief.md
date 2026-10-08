@@ -1,5 +1,7 @@
 # Project brief and responsibilities
 
+> **HISTORICAL project brief, 2026-09-17.** The original small private-alpha scope is superseded for product goals. Current vision: [README](../README.md), [reward economy](09-reward-economy.md), [new requests](45-owner-feedback-shop-hud-world-weather-tasks.md) and [Kanban](07-kanban.md).
+
 > **HISTORICAL project brief, 2026-09-17.** It describes the original small private-alpha scope. For current owner goals, use [project README](../README.md), [reward vision](09-reward-economy.md), [owner feedback](45-owner-feedback-shop-hud-world-weather-tasks.md) and [Kanban](07-kanban.md). Do not treat three species or absent shops as current requirements.
 Draft v0.2 • 2026-09-17
 
