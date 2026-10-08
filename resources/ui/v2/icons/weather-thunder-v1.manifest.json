@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "key": "thunder",
+  "runtimeState": "thunder",
+  "source": "weather-thunder-v1.png",
+  "createdAt": "2026-10-08",
+  "status": "Generated draft; Roblox upload, binding and Studio verification pending",
+  "generator": "Built-in image generation",
+  "styleReference": "resources/ui/v2/icons/weather-rain-v1.png",
+  "prompt": "Use case: stylized-concept. Asset type: ONE standalone Thunderstorm weather UI icon for Be Dino Roblox, square transparent PNG. Reference image is STYLE AND CLOUD FAMILY reference for established Rain icon: preserve broad puffy cloud proportions, dimensional finish, dark contour and soft upper-left highlights. Create a new thunderstorm composition. Subject: ONE chunky storm cloud with deeper slate-blue/indigo-gray shadows, and ONE large thick amber-gold lightning bolt dropping from its center toward lower-left, bolt bold, angular and readable. No raindrops, no sun, no snowflakes. Gentle three-quarter camera slightly above, rounded glossy 3D illustrated collectible-game art. Large simple forms readable at 48px, controlled highlights, no clutter or tiny sparkles. Fit entire icon inside middle 72 percent of square canvas with genuinely transparent 14 percent safe margin on every edge. Fully visible bolt, no cropped tips. No scenery, no floor shadow, no text, no letters, no frame, no face, no watermark, no opaque glow rectangle. Genuine transparent alpha.",
+  "sha256": "1969df8ea8d737f9316cc9c594c529fc5bf416d540d2a3a9bf921383b8e8c588",
+  "dimensions": [
+    1254,
+    1254
+  ],
+  "mode": "RGBA",
+  "review": {
+    "alpha": "Decoded RGBA, alpha range 0..255",
+    "visibleBBoxAlpha16": [
+      97,
+      148,
+      1175,
+      1135
+    ],
+    "composition": "Slate-blue storm cloud and one large amber-gold lightning bolt; no baked text",
+    "margin": "The requested 14% margin was not achieved. Visible alpha >16 bounds are recorded. Start with centered image scale 0.84 inside its icon container; review fit and edge fringe at 48/64px in Studio.",
+    "runtime": "No Roblox ID assigned; native symbol remains active"
+  }
+}

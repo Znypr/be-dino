@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "key": "weather",
+  "runtimeState": "clear",
+  "source": "weather-clear-v1.png",
+  "createdAt": "2026-10-08",
+  "status": "Generated draft; Roblox upload, binding and Studio verification pending",
+  "generator": "Built-in image generation",
+  "styleReference": "resources/ui/v2/icons/amber.png",
+  "prompt": "Use case: stylized-concept. Asset type: ONE standalone clear/default weather UI icon for Be Dino Roblox, square transparent PNG. Subject: a chunky golden sun with eight broad rounded triangular rays peeking above and behind one small ivory-white puffy cloud. Compact friendly silhouette, gentle three-quarter view slightly above. Dimensional glossy illustrated 3D collectible game artwork, rounded bevels, dark contour, controlled bright upper-left highlights, soft shadow within subject, amber/gold sun and cream cloud with subtle cool shadows. Reference image is STYLE ONLY for material richness, saturated palette, contour and polished game-art finish; do not include crystals. Keep simple bold forms readable at 48px. Center the complete composition within the middle 72 percent of the square canvas leaving generous 14 percent truly transparent margin on all four sides. No scenery, no horizon, no floor shadow, no text, no letters, no frame, no raindrops, no lightning, no faces, no watermark, no baked glow rectangle. Genuine alpha background.",
+  "sha256": "182f151e465615cddc86761014bc5523087e8affb1778aa46d2187bad1b1d73f",
+  "dimensions": [
+    1254,
+    1254
+  ],
+  "mode": "RGBA",
+  "review": {
+    "alpha": "Decoded RGBA, alpha range 0..255",
+    "visibleBBoxAlpha16": [
+      88,
+      73,
+      1169,
+      1180
+    ],
+    "composition": "Gold sun behind one cream cloud; no baked text",
+    "margin": "The requested 14% margin was not achieved. Visible alpha >16 bounds are recorded. Start with centered image scale 0.84 inside its icon container; review fit and edge fringe at 48/64px in Studio.",
+    "runtime": "No Roblox ID assigned; native weather remains active"
+  }
+}

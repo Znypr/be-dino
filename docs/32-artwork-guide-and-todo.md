@@ -76,10 +76,12 @@ Distinct Index/inventory symbols are optional UX improvements, not prerequisites
 | Logical ID / runtime state | Intended illustration | Status |
 |---|---|---|
 | leap_v1 / leap | Friendly dimensional dinosaur in a forward leap, readable motion silhouette; match existing dinosaur artwork, no text or baked E key. | Generated draft: `resources/ui/v2/icons/leap-v1.png`; prompt/integrity/review in sibling manifest. Tight outer margin requires centered UI inset around 0.80; upload, binding and 48/64px Studio review pending. Native leap remains the fallback |
-| weather_clear_v1 / clear (currently weather icon) | Dimensional sun/cloud composition for the implemented Clear/default countdown state. | Todo; native weather remains the fallback |
-| weather_rain_v1 / rain | Chunky rain cloud and readable drops in the same camera, contour and lighting style. | Todo; native rain remains the fallback |
-| weather_thunder_v1 / thunder | Thunderstorm cloud with a prominent lightning bolt, distinct from rain. | Todo; native thunder remains the fallback |
-| weather_blizzard_v1 / blizzard | Snow cloud and bold snowflake for the implemented Blizzard state. | Todo; native blizzard remains the fallback |
+| weather_clear_v1 / clear (currently weather icon) | Dimensional sun/cloud composition for the implemented Clear/default countdown state. | Generated draft: `resources/ui/v2/icons/weather-clear-v1.png`; separate prompt/integrity manifest. Upload, binding and Studio review pending; native fallback remains |
+| weather_rain_v1 / rain | Chunky rain cloud and readable drops in the same camera, contour and lighting style. | Generated draft: `resources/ui/v2/icons/weather-rain-v1.png`; separate prompt/integrity manifest. Upload, binding and Studio review pending; native fallback remains |
+| weather_thunder_v1 / thunder | Thunderstorm cloud with a prominent lightning bolt, distinct from rain. | Generated draft: `resources/ui/v2/icons/weather-thunder-v1.png`; separate prompt/integrity manifest. Upload, binding and Studio review pending; native fallback remains |
+| weather_blizzard_v1 / blizzard | Snow cloud and bold snowflake for the implemented Blizzard state. | Generated draft: `resources/ui/v2/icons/weather-blizzard-v1.png`; separate prompt/integrity manifest. Upload, binding and Studio review pending; native fallback remains |
+
+The four weather masters were generated one at a time on 2026-10-08. They share the cloud family, dark contour and upper-left lighting; Clear has a gold sun, Rain has three cyan drops, Thunderstorm has a gold bolt, and Blizzard has a six-arm ice snowflake. PNG decode/alpha and manifest SHA-256 checks pass. The requested safe margin was not achieved; use a centered UI inset starting at 0.84 for weather and around 0.80 for leap, then inspect at 48/64px. See `resources/ui/v2/icons/weather-and-leap-handoff.md`.
 
 These are the four implemented weather states in `ProgressionConfig` and the client default, not proposals for new mechanics. Each needs its own transparent PNG master, review, real owner upload/binding and desktop/phone verification before its illustrated status can advance. Reused navigation compositions require no new PNGs or asset IDs.
 

@@ -61,6 +61,10 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 
 ## Acceptance and current evidence
 
+### Weather artwork drafts, 2026-10-08
+
+All four separate weather PNG masters are generated: Clear/default, Rain, Thunderstorm and Blizzard. Each has a sibling prompt/integrity/review manifest in `resources/ui/v2/icons/`. Full RGBA decoding, transparent/opaque alpha checks and exact SHA-256 verification pass. Generation requested 14% margins but actual margins are tighter; start at centered UI scale 0.84 and inspect at 48/64px. These results supersede the weather Todo statement in the earlier leap entry below. Roblox uploads, expanded icon bindings, desktop/phone Studio screenshots and non-owner loading remain pending. No runtime sources or build changed. [Exact integration handoff](../resources/ui/v2/icons/weather-and-leap-handoff.md).
+
 ### Leap artwork draft, 2026-10-08
 
 `resources/ui/v2/icons/leap-v1.png` is generated as a separate reusable RGBA master, matching the existing illustrated dinosaur style. Full PNG decode and alpha checks pass; exact prompt, SHA-256 and margin limitation are recorded in `leap-v1.manifest.json`. Generated does not mean uploaded or integrated. Use a centered inset around 0.80 and verify small-size readability/edge fringe in Studio before acceptance. The native leap symbol remains active. Clear, Rain, Thunderstorm and Blizzard illustrations remain Todo. No runtime sources, build or persistent data changed.

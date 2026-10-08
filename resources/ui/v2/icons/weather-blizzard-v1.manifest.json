@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "key": "blizzard",
+  "runtimeState": "blizzard",
+  "source": "weather-blizzard-v1.png",
+  "createdAt": "2026-10-08",
+  "status": "Generated draft; Roblox upload, binding and Studio verification pending",
+  "generator": "Built-in image generation",
+  "styleReference": "resources/ui/v2/icons/weather-rain-v1.png",
+  "prompt": "Use case: stylized-concept. Asset type: ONE standalone Blizzard weather UI icon for Be Dino Roblox, square transparent PNG. Reference is the Rain icon: match this established cloud family, broad puffy silhouette, polished dimensional materials, dark contour, framing and soft upper-left highlights. Subject: ONE rounded icy ivory and pale-blue cloud with cool blue shadows, with ONE LARGE SIX-ARM cyan ice snowflake below and partly in front of the cloud. Snowflake has thick bold branches and minimal simple short side branches, dimensional beveled ice, readable at 48px. No raindrops, no sun, no lightning. A couple of broad subtle wind curves allowed only if they do not clutter the silhouette, prefer simplicity. Friendly bright winter weather, no face, no threatening realism. Glossy rounded 3D illustrated collectible-game style, gentle three-quarter camera slightly above, restrained bright highlights. Complete subject centered within middle 72 percent of square canvas, true transparent 14 percent margin each side; no cropped snowflake tips. No environment, no floor shadow, no text, no letters, no frame, no watermark, no baked background or opaque glow rectangle. Genuine transparent alpha.",
+  "sha256": "2410ac6ac7c107e291a635b5764407bec5e77126aeb6ec9a23348357db74fea5",
+  "dimensions": [
+    1254,
+    1254
+  ],
+  "mode": "RGBA",
+  "review": {
+    "alpha": "Decoded RGBA, alpha range 0..255",
+    "visibleBBoxAlpha16": [
+      90,
+      101,
+      1167,
+      1171
+    ],
+    "composition": "Icy cloud, bold six-arm cyan snowflake and two wind curves; no baked text",
+    "margin": "The requested 14% margin was not achieved. Visible alpha >16 bounds are recorded. Start with centered image scale 0.84 inside its icon container; review fit and edge fringe at 48/64px in Studio.",
+    "runtime": "No Roblox ID assigned; native symbol remains active"
+  }
+}

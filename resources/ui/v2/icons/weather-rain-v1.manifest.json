@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "key": "rain",
+  "runtimeState": "rain",
+  "source": "weather-rain-v1.png",
+  "createdAt": "2026-10-08",
+  "status": "Generated draft; Roblox upload, binding and Studio verification pending",
+  "generator": "Built-in image generation",
+  "styleReference": "resources/ui/v2/icons/weather-clear-v1.png",
+  "prompt": "Use case: stylized-concept. Asset type: ONE standalone Rain weather UI icon for Be Dino Roblox, square PNG with genuine transparent alpha. Reference is the established clear-weather icon, use it to MATCH cloud silhouette, dimensional rendering, outline thickness, lighting and framing across this weather set, not to keep the sun. Subject: ONE chunky puffy blue-gray rain cloud, friendly rounded form with darker cool gray base and silver blue highlights, and exactly THREE large separated glossy cyan teardrop raindrops beneath it. No sun, no lightning, no snow. Cloud fills upper half, drops form a readable row beneath, simple compact silhouette readable at 48 pixels. Gentle three-quarter camera slightly above, soft upper-left key lighting, glossy dimensional illustrated 3D collectible-game finish, thick dark contour. Center complete subject within middle 72 percent of canvas, large 14 percent truly transparent margin all four sides; all drops fully visible. Keep broad shapes and restrained reflections, no fine noise. No environment, no floor shadow, no frame, no text, no face, no watermark, no opaque glow rectangle.",
+  "sha256": "29fc03918ac2e14ea02d1d4327f391187a138ebfff6209163c9ce48cef4c8783",
+  "dimensions": [
+    1254,
+    1254
+  ],
+  "mode": "RGBA",
+  "review": {
+    "alpha": "Decoded RGBA, alpha range 0..255",
+    "visibleBBoxAlpha16": [
+      101,
+      191,
+      1156,
+      1147
+    ],
+    "composition": "Cool blue-gray cloud with three cyan drops; no baked text",
+    "margin": "The requested 14% margin was not achieved. Visible alpha >16 bounds are recorded. Start with centered image scale 0.84 inside its icon container; review fit and edge fringe at 48/64px in Studio.",
+    "runtime": "No Roblox ID assigned; native symbol remains active"
+  }
+}
