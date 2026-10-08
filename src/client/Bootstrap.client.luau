@@ -35,6 +35,7 @@ local active = ""
 local selected = "compy"
 local seenTutorial = false
 local lastGrowth = 0
+local lastEggCount = 0
 local function num(id: string): number return player:GetAttribute(id) or 0 end
 local function str(id: string,fallback: string?): string return player:GetAttribute(id) or fallback or "" end
 local function copies(id: string): (number,number,number)
@@ -45,6 +46,10 @@ end
 local function bestMutation(id: string): string
     local _,gold,diamond = copies(id)
     return if diamond>0 then "diamond" elseif gold>0 then "gold" else "base"
+end
+local function eventMutation(id: string)
+    local ok,data=pcall(function() return Http:JSONDecode(str("CollectionJson","{}")) end)
+    return if ok and typeof(data)=="table" then ProgressionRules.eventMutation(data[id]) else nil
 end
 local fusionTarget = "gold"
 local hatchPending = false
@@ -164,6 +169,7 @@ local function progression()
     return data
 end
 local chosenAura="meadow"
+local cosmeticTab="auras"
 local chosenPotion="speed_common"
 local pendingShop=nil
 local function transact(action,id,replace)
@@ -196,30 +202,44 @@ render=function(name: string)
         end)
         
     elseif name=="auras" then
-        heading.Text,header.BackgroundColor3="Aura Shop",C.purple
+        heading.Text,header.BackgroundColor3="Aura & Trail Shop",C.purple
         local p=progression()
-        label(body,"Crystals: "..num("Crystals").."  •  Equipped: "..(if p.equippedAura=="" then "None" else p.equippedAura),0,0,824,34,23,C.gold)
-        for i,item in ProgressionConfig.Auras do
+        p.trails=p.trails or {}
+        local isTrail=cosmeticTab=="trails"
+        local touch=Input.TouchEnabled
+        local targetHeight=if touch then math.max(45,45/viewportScale()) else 44
+        local tabsHeight=if touch then targetHeight else 40
+        local cardsY=tabsHeight+12
+        local cardsHeight=if touch then 402-cardsY else 302
+        local buyY=if touch then cardsHeight-targetHeight-10 else 247
+        for i,tab in {"auras","trails"} do
+            button(body,if tab=="auras" then "AURAS" else "TRAILS",(i-1)*170,0,160,tabsHeight,if cosmeticTab==tab then C.blue else C.card,function() cosmeticTab=tab open("auras") end)
+        end
+        label(body,"Crystals: "..num("Crystals"),355,0,460,40,23,C.gold)
+        local owned=if isTrail then p.trails else p.auras
+        local equippedId=if isTrail then p.equippedTrail or "" else p.equippedAura
+        for i,item in (if isTrail then ProgressionConfig.Trails else ProgressionConfig.Auras) do
             local color=Color3.fromRGB(item.color[1],item.color[2],item.color[3])
-            local card=box(body,(i-1)*276,44,264,288,color,24)
+            local card=box(body,(i-1)*276,cardsY,264,cardsHeight,color,24)
             label(card,item.name,6,5,252,34,25)
-            label(card,item.rarity.." • "..item.growth.."x Growth",4,42,256,30,19)
-            art(card,"aura_"..item.id,46,77,172)
-            label(card,if p.auras[item.id] then "Owned" else item.price.." Crystals",4,212,256,27,21,C.gold)
-            local equipped=p.equippedAura==item.id
-            button(card,if equipped then "UNEQUIP" elseif p.auras[item.id] then "EQUIP" else "BUY",12,247,240,34,C.card,function()
-                if p.auras[item.id] then transact("equipAura",if equipped then "" else item.id)
+            label(card,item.rarity.." • "..(if isTrail then "Cosmetic" else item.growth.."x Growth"),4,42,256,30,19)
+            art(card,(if isTrail then "trail_" else "aura_")..item.id,if touch then 92 else 46,if touch then 70 else 77,if touch then 80 else 172)
+            label(card,if owned[item.id] then "Owned" else item.price.." Crystals",4,if touch then buyY-33 else 212,256,27,21,C.gold)
+            local equipped=equippedId==item.id
+            button(card,if equipped then "UNEQUIP" elseif owned[item.id] then "EQUIP" else "BUY",12,buyY,240,targetHeight,C.card,function()
+                if owned[item.id] then transact(if isTrail then "equipTrail" else "equipAura",if equipped then "" else item.id)
                 else chosenAura=item.id open("auraConfirm") end
             end)
         end
-        label(body,"Auras boost growth when eating. One aura can be equipped at a time.",0,345,824,50,20)
+        if not touch then label(body,"Equipped: "..(if equippedId=="" then "None" else equippedId),0,363,824,35,20) end
     elseif name=="auraConfirm" then
-        local item=ProgressionRules.item(ProgressionConfig.Auras,chosenAura)
-        heading.Text,header.BackgroundColor3="Buy Aura?",C.purple
-        art(body,"aura_"..item.id,30,25,220)
-        label(body,item.name.." • "..item.growth.."x eating growth",290,24,510,70,29)
+        local isTrail=cosmeticTab=="trails"
+        local item=ProgressionRules.item(if isTrail then ProgressionConfig.Trails else ProgressionConfig.Auras,chosenAura)
+        heading.Text,header.BackgroundColor3=if isTrail then "Buy Trail?" else "Buy Aura?",C.purple
+        art(body,(if isTrail then "trail_" else "aura_")..item.id,30,25,220)
+        label(body,item.name.." • "..(if isTrail then "Cosmetic trail" else item.growth.."x eating growth"),290,24,510,70,29)
         label(body,item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,125,510,90,25,C.gold)
-        button(body,"BUY AURA",290,261,510,57,C.accent,function() transact("buyAura",item.id) open("auras") end)
+        button(body,if isTrail then "BUY TRAIL" else "BUY AURA",290,261,510,57,C.accent,function() transact(if isTrail then "buyTrail" else "buyAura",item.id) open("auras") end)
         button(body,"CANCEL",290,337,510,45,C.red,function() open("auras") end)
     elseif name=="potions" then
         heading.Text,header.BackgroundColor3="Potion Shop",C.accent
@@ -261,14 +281,15 @@ render=function(name: string)
         list.ZIndex,list.Parent=24,body
         for i,id in Config.SpeciesOrder do
             local base,gold,diamond=copies(id)
+            local event=eventMutation(id)
             local rarity=speciesIndex(id)
-            if base+gold+diamond>0 then unlocked+=1 end
+            if base+gold+diamond>0 or event then unlocked+=1 end
             local card=box(list,((i-1)%3)*276,math.floor((i-1)/3)*284,264,272,rarityColors[rarity],24)
             Theme.texture(card,264,272)
             label(card,Config.SpeciesDisplayNames[id],4,8,256,35,25)
             label(card,rarityNames[rarity],4,44,256,25,18)
             hero(card,id,7,70,250,128,bestMutation(id))
-            label(card,if base+gold+diamond>0 then string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond) else "Not discovered",5,201,254,25,15)
+            label(card,if event then event.name.." mutation" elseif base+gold+diamond>0 then string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond) else "Not discovered",5,201,254,25,15)
             button(card,"VIEW DINO",12,233,240,30,C.card,function() selected=id open("detail") end)
         end
         meter(body,0,356,600,unlocked,#Config.SpeciesOrder,C.accent,string.format("Discovered: %d / %d",unlocked,#Config.SpeciesOrder))
@@ -276,16 +297,18 @@ render=function(name: string)
     elseif name=="detail" then
         local index=speciesIndex(selected)
         local base,gold,diamond=copies(selected)
+        local event=eventMutation(selected)
+        local owned=base+gold+diamond>0 or event~=nil
         heading.Text,header.BackgroundColor3=Config.SpeciesDisplayNames[selected],rarityColors[index]
         local stage=box(body,0,0,380,360,rarityColors[index],24)
         hero(stage,selected,0,20,380,280,bestMutation(selected))
         label(stage,rarityNames[index],0,302,380,42,30)
         label(body,"YOUR COLLECTION",414,0,400,42,28)
         label(body,string.format("Base: %d • Gold: %d\nDiamond: %d",base,gold,diamond),414,62,400,92,25)
-        label(body,"Cosmetic fusion: 50 Base → Gold; 50 Gold → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
+        label(body,if event then event.name.." • "..event.growth.."x Growth • "..event.speed.."x Speed" else "Cosmetic fusion: 50 Base → Gold; 50 Gold → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
         local equipped=str("EquippedSpeciesId","compy")==selected
-        button(body,if equipped then "EQUIPPED" elseif base+gold+diamond==0 then "LOCKED" else "EQUIP",426,273,372,52,if base+gold+diamond>0 then C.accent else C.card,function()
-            if base+gold+diamond<=0 then notify("Hatch reward eggs to discover this dino") return end
+        button(body,if equipped then "EQUIPPED" elseif not owned then "LOCKED" else "EQUIP",426,273,372,52,if owned then C.accent else C.card,function()
+            if not owned then notify("Hatch reward eggs to discover this dino") return end
             if not equipped then equip:FireServer(selected,Http:GenerateGUID(false)) end
         end)
         button(body,"BACK TO INDEX",426,341,372,45,C.blue,function() open("collection") end)
@@ -330,6 +353,15 @@ render=function(name: string)
             label(card,"Slot "..slot,0,8,156,30,22)
             local view=ModelPreview.add(card,"egg",entry==nil)
             view.Position,view.Size=UDim2.fromOffset(18,58),UDim2.fromOffset(120,146)
+            local mutation=if entry then ProgressionRules.item(ProgressionConfig.EventMutations,entry.mutationId) else nil
+            if mutation then
+                local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
+                for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.6) end end
+                label(card,mutation.name,0,192,156,27,18,color)
+            elseif entry and entry.eventId and entry.eventId~="clear" then
+                local event=ProgressionRules.item(ProgressionConfig.Weather,entry.eventId)
+                label(card,if event then event.name else entry.eventId,0,192,156,27,15,C.gold)
+            end
             timers[slot]=label(card,if entry then "Growing..." else "Empty",3,222,150,40,22,if entry then C.gold else Color3.fromRGB(156,156,174))
         end
         refreshEggs=function()
@@ -358,8 +390,14 @@ render=function(name: string)
         local reward=str("LastChestRewardText","New dinosaur")
         local id=string.match(reward,"x (%w+)") or "compy"
         if not Config.SpeciesDisplayNames[id] then id="compy" end
-        hero(body,id,160,-12,504,260)
+        local view=hero(body,id,160,-12,504,260)
         label(body,reward,80,240,660,58,36,C.gold)
+        local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
+        if mutation then
+            local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
+            for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.55) end end
+            label(body,mutation.name.." • "..mutation.growth.."x Growth • "..mutation.speed.."x Speed",80,295,660,25,20,color)
+        end
         button(body,"NEXT EGG",80,322,320,64,C.accent,function()
             local id=str("NextChestId")
             if id=="" or workspace:GetServerTimeNow()<num("NextChestReadyAt") then open("eggs") return end
@@ -486,7 +524,8 @@ local function refreshProgressionHUD()
     if id~=lastWeather then
         lastWeather=id
         if weatherArt then weatherArt:Destroy() end
-        weatherArt=Theme.icon(weatherTile,if id=="clear" then "weather" else id)
+        local event=ProgressionRules.item(ProgressionConfig.Weather,id)
+        weatherArt=Theme.icon(weatherTile,if event then event.icon or id else "weather")
         if weatherArt then weatherArt.Position,weatherArt.Size=UDim2.fromOffset(4,7),UDim2.fromOffset(48,48) end
         if id~="clear" then notify((workspace:GetAttribute("WeatherName") or id).." started!",C.blue) end
     end
@@ -536,6 +575,8 @@ local function scales()
             end
         end
         hud.AnchorPoint,hud.Position=Vector2.new(0,0),UDim2.new(0,18,0,120)
+        previewNotice.Text="STUDIO PREVIEW: UNSAVED"
+        previewNotice.Size,previewNotice.AnchorPoint,previewNotice.Position=UDim2.fromOffset(240,25),Vector2.zero,UDim2.fromOffset(18,8)
         timerScale.Scale=math.max(small,44/60)
         timers.AnchorPoint=Vector2.new(1,0)
         timers.Position=UDim2.new(1,-20,0,120)
@@ -544,6 +585,8 @@ local function scales()
         action.AnchorPoint,action.Position=Vector2.new(.5,1),UDim2.new(.5,0,1,-18)
         action:SetAttribute("UIScaleBase",actionScale.Scale)
     else
+        previewNotice.Text="STUDIO PREVIEW • progress not saved • test currency"
+        previewNotice.Size,previewNotice.AnchorPoint,previewNotice.Position=UDim2.fromOffset(500,25),Vector2.new(.5,0),UDim2.new(.5,0,0,8)
         rail.AnchorPoint,rail.Position,rail.Size=Vector2.new(0,.5),UDim2.new(0,14,.5,0),UDim2.fromOffset(186,444)
         for i,b in navigationButtons do
             b.Position,b.Size=UDim2.fromOffset(7,7+(i-1)*62),UDim2.fromOffset(172,54)
@@ -569,6 +612,7 @@ local function characterAdded(character: Model)
     if camera then camera.CameraType,camera.CameraSubject=Enum.CameraType.Custom,humanoid end
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping,true)
     lastGrowth=0
+    lastEggCount=0
 end
 player.CameraMaxZoomDistance=Config.CameraMaxZoom
 player.CharacterAdded:Connect(characterAdded)
@@ -607,6 +651,15 @@ RunService.Heartbeat:Connect(function(dt)
         end
     end
     lastGrowth=growth
+    local ok,tags=pcall(function() return Http:JSONDecode(if character then character:GetAttribute("RunEggEvents") or "[]" else "[]") end)
+    if ok and typeof(tags)=="table" then
+        if #tags>lastEggCount and state=="Active" then
+            local newest=tags[#tags]
+            local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,newest.mutationId or "")
+            notify(if mutation then mutation.name.." egg caught!" else "Reward egg caught!",if mutation then C.gold else C.blue)
+        end
+        lastEggCount=#tags
+    end
     refreshProgressionHUD()
     if active=="eggs" and refreshEggs then refreshEggs() end
     if player:GetAttribute("ProfileState")=="Loaded" and state=="Sanctuary" and not seenTutorial then seenTutorial=true open("tutorial") end

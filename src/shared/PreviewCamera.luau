@@ -10,7 +10,7 @@ function PreviewCamera.bind(viewport: ViewportFrame, model: Model, geometryId: s
     viewport.CurrentCamera=camera
     local bounds,size=model:GetBoundingBox()
     local points={}
-    local data=if geometryId then Geometry[geometryId] else nil
+    local data=if geometryId and not model:GetAttribute("UploadedModelId") then Geometry[geometryId] else nil
     local origin=model:GetAttribute("GeometryOrigin") or Vector3.zero
     if data then
         for _,v in data.vertices do table.insert(points,model:GetPivot():PointToWorldSpace(Vector3.new(v[1],v[2],v[3])-origin)) end

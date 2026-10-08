@@ -14,6 +14,7 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         for _,item in model:GetDescendants() do
             if item:IsA("BasePart") then
                 item.Anchored=true
+                if gold==true or gold=="gold" or gold=="diamond" then Resources.clearTextures(item) end
                 if gold == "diamond" then item.Color=Color3.fromRGB(85,213,245) item.Material=Enum.Material.Glass item.Reflectance=.2
                 elseif gold == true or gold == "gold" then item.Color=Color3.fromRGB(242,199,63) item.Material=Enum.Material.Metal end
             end

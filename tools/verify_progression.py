@@ -41,6 +41,27 @@ assert(not Rules.apply(p,"grant","crystal",100,false,0/0))
 assert(not Rules.apply(p,"grant","crystal",100,false,1000))
 assert(not Rules.apply(p,"buyPotion","fake",100,false))
 print("Progression rules passed: prices, ownership, consumption, replacement, expiry, rarity bonuses and invalid data")
+local legacy={progression={crystals=700,auras={meadow=true},equippedAura="meadow",potions={},buffs={}}}
+assert(Rules.valid(legacy.progression))
+local migrated=Rules.upgrade(legacy)
+assert(migrated.crystals==700 and migrated.auras.meadow and migrated.equippedTrail=="")
+assert(not Rules.apply(legacy,"equipTrail","nova",0,false))
+assert(Rules.apply(legacy,"buyTrail","nova",0,false) and migrated.crystals==50)
+assert(not Rules.apply(legacy,"buyTrail","nova",0,false) and migrated.crystals==50)
+assert(Rules.apply(legacy,"equipTrail","nova",0,false))
+assert(Rules.apply(legacy,"equipTrail","",0,false))
+assert(not Rules.valid({crystals=0,auras={},equippedAura="",potions={},buffs={},trails={fake=true},equippedTrail=""}))
+for _,event in ProgressionConfig.Weather do
+ local tagged=Rules.eventEgg(event.id,0)
+ assert(tagged.mutationId==event.mutation and Rules.validEgg(tagged))
+ assert(Rules.eventEgg(event.id,1).mutationId=="")
+ assert(event.chance>0 and event.chance<.1 and event.weight>0)
+end
+assert(not Rules.validEgg({eventId="clear",mutationId="ember"}))
+assert(not Rules.validEgg({eventId="volcano",mutationId="frost"}))
+assert(Rules.validEvents({ember=2}) and not Rules.validEvents({ember=-1}) and not Rules.validEvents({fake=1}))
+assert(Rules.eventMutation({events={ember=1}}).id=="ember")
+print("Trail/event rules passed: additive migration, prices, ownership, equip/unequip, mutation chances and metadata validation")
 local function copy(t)
  if type(t)~="table" then return t end
  local result={} for k,v in t do result[k]=copy(v) end return result
@@ -68,9 +89,10 @@ local task={wait=function()end,spawn=function()end}
 local warn=function()end
 local script={Parent={RewardMath="Rewards"}}
 local require=function(id)
- if id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return {computeRunReward=function()return {stacks={},chestCount=2}end} end
+ if id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return {computeRunReward=function()return {stacks={},chestCount=2}end,computeChestReward=function()return {speciesId="raptor",count=2,mutationId="base"}end} end
  error("unexpected module "..tostring(id))
 end
+local Random={new=function()return {}end}
 local Repository=REPO_MODULE
 local player={Parent=true,UserId=123,Name="Test",attrs={}}
 function player:SetAttribute(k,v)self.attrs[k]=v end
@@ -126,6 +148,33 @@ assert(Repository.commitRunSettlement(player,"timer-live",10))
 assert(data['u:123'].eggs[2].readyAt-data['u:123'].eggs[1].readyAt==60)
 print("Migration/fusion passed: preserved v1 balances, six catalog entries, insufficient Gold, exact costs, duplicate/conflicting tokens, rejoin and 60s persistent eggs")
 local before=copy(data['u:123'])
+local eventUser={Parent=true,UserId=888,attrs={}}
+function eventUser:SetAttribute(k,v)self.attrs[k]=v end
+function eventUser:GetAttribute(k)return self.attrs[k]end
+assert(Repository.load(eventUser))
+Repository.release(eventUser)
+for i=1,4 do table.insert(data['u:888'].eggs,{eggId="fixture-"..i,kind="alpha_chest",readyAt=1}) end
+assert(Repository.load(eventUser))
+local tags={{eventId="volcano",mutationId="ember"},{eventId="aurora",mutationId="aurora"}}
+assert(Repository.commitRunSettlement(eventUser,"event-run",10,tags))
+assert(Repository.commitRunSettlement(eventUser,"event-run",10,tags))
+assert(#data['u:888'].eggs==5 and data['u:888'].pendingChestGrants==1)
+assert(data['u:888'].eggs[5].mutationId=="ember" and data['u:888'].pendingEggEvents[1].mutationId=="aurora")
+Repository.release(eventUser)
+data['u:888'].eggs[5].readyAt=1
+local emberId=data['u:888'].eggs[5].eggId
+assert(Repository.load(eventUser))
+local claimed,reward=Repository.claimChest(eventUser,emberId)
+assert(claimed and reward.eventMutationId=="ember")
+assert(Repository.claimChest(eventUser,emberId))
+assert(data['u:888'].collection.raptor.events.ember==2 and data['u:888'].collection.raptor.base==0)
+assert(data['u:888'].pendingChestGrants==0 and #data['u:888'].pendingEggEvents==0)
+assert(data['u:888'].eggs[5].mutationId=="aurora")
+assert(Repository.equipSpecies(eventUser,"raptor") and eventUser.attrs.EquippedEventMutation=="ember")
+assert(not Repository.commitRunSettlement(eventUser,"bad-event",10,{{eventId="volcano",mutationId="frost"}}))
+Repository.release(eventUser)
+assert(Repository.load(eventUser) and eventUser.attrs.EquippedEventMutation=="ember")
+print("Event transactions passed: repeated settlement transforms, overflow FIFO, mutated hatch, no Base duplication, duplicate claim, equip and rejoin")
 fail=true
 local failed,failedStatus=action("buyPotion","speed_common","outage",false)
 assert(not failed and failedStatus=="save_failed")

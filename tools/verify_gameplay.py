@@ -29,7 +29,7 @@ local UDim2={fromOffset=function(...)return {...}end,fromScale=function(...)retu
 local Enum={RaycastFilterType={Include="Include"},Material={Water="Water",Grass="Grass",SmoothPlastic="SmoothPlastic"},PartType={Ball="Ball"},Font={FredokaOne="FredokaOne"}}
 local RaycastParams={new=function()return {}end}
 local Random={new=function(seed)
- math.randomseed(seed)
+ math.randomseed(seed or 123)
  return {NextNumber=function(_,low,high)low=low or 0 high=high or 1 return low+math.random()*(high-low)end,NextInteger=function(_,low,high)return math.random(low,high)end}
 end}
 local noop={Connect=function(self,fn)self.callback=fn end}

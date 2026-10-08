@@ -1,0 +1,197 @@
+{
+  "date": "2026-10-08",
+  "studio": "BeDino-VisualUpgrade.rbxlx",
+  "placeId": 0,
+  "gameId": 0,
+  "screenshots": [
+    {
+      "file": "desktop-aura-shop.png",
+      "bytes": 312467,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "e269c94adf3e2f6a419e6ee5d48d4be42c5450517145d06444866e98414bec1a"
+    },
+    {
+      "file": "desktop-aurora-sky.png",
+      "bytes": 388458,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "652bd9434d5e1960f27b9bfc5c26a20c47b11f6c4c1460ba9399c5283e831210"
+    },
+    {
+      "file": "desktop-bloodmoon-sky.png",
+      "bytes": 361316,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "302252100e2a5e0948bf64118c7e2a231c63d6c6e1eba666bd6fb5d2b777ed9f"
+    },
+    {
+      "file": "desktop-event-hatch-1.png",
+      "bytes": 276883,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "2e31b90135596be72d98351bf0fbf00e4bea7fba7b55ec86c65b78877a38d2bc"
+    },
+    {
+      "file": "desktop-event-hatch-2.png",
+      "bytes": 272968,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "1fbb432148c4a0fefb645eec0206a4d21a7664e5ce5f50855bac3820b1b84ad3"
+    },
+    {
+      "file": "desktop-event-hatch-3.png",
+      "bytes": 272581,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "6b839bc09221b8299bfdf17ab4da69c63d162e277e5e87de2d8b7abfe04c5750"
+    },
+    {
+      "file": "desktop-model-index-bottom.png",
+      "bytes": 320800,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "070bcbdb9a2e0aaf6af9cf07274b47a35be3d662c69fbd49ef6a305d24edd8ff"
+    },
+    {
+      "file": "desktop-model-index-top.png",
+      "bytes": 333851,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "96912c0cbf66a47b429f99dcf4f2790de5329b84f8e7d000381b7fd53abb3041"
+    },
+    {
+      "file": "desktop-moving-trail-and-mutation.png",
+      "bytes": 493170,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "128ec7cd67e791f83496ec5b4497727526627bf50b0e29c3e00961daaf47531c"
+    },
+    {
+      "file": "desktop-mutated-eggs.png",
+      "bytes": 273114,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "30e8290c48d7ef16b5ad28f7699d61eabc42074382b0f341dd88cc371e331f42"
+    },
+    {
+      "file": "desktop-textured-diamond-fallback-treatment.png",
+      "bytes": 284754,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "1c40e82b03af6e161e1ff1c5d65cf118e20ef3ab23e9530b67fa8d3b5a94dce7"
+    },
+    {
+      "file": "desktop-textured-dino-and-aura.png",
+      "bytes": 482764,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "a20b1077a8226d2526c1f5166d9a2868acde1a00839e88c5f38dbdcf14ae03ba"
+    },
+    {
+      "file": "desktop-textured-gold-fallback-treatment.png",
+      "bytes": 281490,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "2c223cab8eefe19c865fb984542e6349041314e262843e16d1b713182b469f15"
+    },
+    {
+      "file": "desktop-trail-shop.png",
+      "bytes": 293363,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "dc41b448483d30f1d1f0ea0cce65d7c225e39cb4d941d153aa3bd4ab753c8b27"
+    },
+    {
+      "file": "desktop-weather-aurora.png",
+      "bytes": 309361,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "8904d7ba0f916e1cdcd823eb74fad39e56dc63870a6113eb91d0ebb22ea802c0"
+    },
+    {
+      "file": "desktop-weather-bloodmoon.png",
+      "bytes": 289522,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "94ac822fab9756d5ca3d7d0c343cf269a802864eb54f3fa1ae9d0b1cacbdc5f7"
+    },
+    {
+      "file": "desktop-weather-quake.png",
+      "bytes": 384087,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "8b7ac1858e63df3ff322e2191a419589e188f982171e1a67aba727c3315ced26"
+    },
+    {
+      "file": "desktop-weather-volcano.png",
+      "bytes": 358466,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "46cbfb2b32cf56df46c6219cdc058a439abb5ccd38bbe7fe3b6b192ab0671b27"
+    },
+    {
+      "file": "phone-aura-shop.png",
+      "bytes": 62802,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "31b04a15ee144dd306f4d606b7c61eb1c62e90c45ad5f58317861eb0bbf51813"
+    },
+    {
+      "file": "phone-event-hatch.png",
+      "bytes": 61025,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "34676e65bcca1aad8d990af18609e6e668ec94de4f42b51710453c4c4163f83a"
+    },
+    {
+      "file": "phone-model-index-bottom.png",
+      "bytes": 66304,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "ebe9eb32c0d5b9eef0a6518382cdbc2fdcfb3edf5dd9964d0a2d0d7c69c7e27c"
+    },
+    {
+      "file": "phone-mutated-eggs.png",
+      "bytes": 60227,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "91635332d43e7c29a97677094d0a727329a2a6baa014af70365b90973af7877f"
+    },
+    {
+      "file": "phone-trail-shop.png",
+      "bytes": 61464,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "a41bd443e09ce9a63398126ddbc03ca715e5dcc41b158ab62731b5bd1d18ff71"
+    },
+    {
+      "file": "phone-weather-aurora.png",
+      "bytes": 63488,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "3ab0a34f04c6e98c4c16bee34ef9db4125bbab2166e99b5b23e8248a21650dfd"
+    },
+    {
+      "file": "phone-weather-bloodmoon.png",
+      "bytes": 60453,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "76792b453ba7bacd3c857f5738a42dffc0624a9848704dd20439afb4903acfc1"
+    },
+    {
+      "file": "phone-weather-quake.png",
+      "bytes": 70539,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "8fecc366f1d9dbdd8575977e7cf903b9d335c3b8e3834b1b1df4e71ae1f68bae"
+    },
+    {
+      "file": "phone-weather-volcano.png",
+      "bytes": 67459,
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "76af3f64b0635d24175d33d423df3493dcda4f3779948436af640bd6b304d233"
+    }
+  ]
+}

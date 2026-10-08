@@ -7,15 +7,83 @@
       <string name="Name">Lighting</string>
     </Properties>
   </Item>
-  <Item class="ReplicatedFirst" referent="RBX2">
+  <Item class="MaterialService" referent="RBX3">
+    <Properties>
+      <string name="Name">MaterialService</string>
+      <string name="GrassName">BeDino_Meadow</string>
+      <string name="RockName">BeDino_Stone</string>
+      <string name="WoodName">BeDino_Bark</string>
+    </Properties>
+    <Item class="MaterialVariant" referent="RBX4">
+      <Properties>
+        <string name="Name">BeDino_Meadow</string>
+        <token name="BaseMaterial">1280</token>
+        <token name="MaterialPattern">1</token>
+        <float name="StudsPerTile">20</float>
+        <Content name="ColorMap">
+          <url>rbxassetid://94202355146046</url>
+        </Content>
+        <Content name="NormalMap">
+          <url>rbxassetid://102603392874381</url>
+        </Content>
+        <Content name="RoughnessMap">
+          <url>rbxassetid://82962110810713</url>
+        </Content>
+        <Content name="MetalnessMap">
+          <url>rbxassetid://94175885618888</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="MaterialVariant" referent="RBX5">
+      <Properties>
+        <string name="Name">BeDino_Stone</string>
+        <token name="BaseMaterial">896</token>
+        <token name="MaterialPattern">1</token>
+        <float name="StudsPerTile">12</float>
+        <Content name="ColorMap">
+          <url>rbxassetid://128007023677783</url>
+        </Content>
+        <Content name="NormalMap">
+          <url>rbxassetid://122774786381140</url>
+        </Content>
+        <Content name="RoughnessMap">
+          <url>rbxassetid://136846854290994</url>
+        </Content>
+        <Content name="MetalnessMap">
+          <url>rbxassetid://121086492719690</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="MaterialVariant" referent="RBX6">
+      <Properties>
+        <string name="Name">BeDino_Bark</string>
+        <token name="BaseMaterial">512</token>
+        <token name="MaterialPattern">1</token>
+        <float name="StudsPerTile">10</float>
+        <Content name="ColorMap">
+          <url>rbxassetid://81361214070715</url>
+        </Content>
+        <Content name="NormalMap">
+          <url>rbxassetid://133769849943046</url>
+        </Content>
+        <Content name="RoughnessMap">
+          <url>rbxassetid://113318935596754</url>
+        </Content>
+        <Content name="MetalnessMap">
+          <url>rbxassetid://116129277500945</url>
+        </Content>
+      </Properties>
+    </Item>
+  </Item>
+  <Item class="ReplicatedFirst" referent="RBX7">
     <Properties>
       <string name="Name">ReplicatedFirst</string>
     </Properties>
-    <Item class="Folder" referent="RBX3">
+    <Item class="Folder" referent="RBX8">
       <Properties>
         <string name="Name">Loading</string>
       </Properties>
-      <Item class="LocalScript" referent="RBX4">
+      <Item class="LocalScript" referent="RBX9">
         <Properties>
           <string name="Name">Loading</string>
           <ProtectedString name="Source">--!strict
@@ -101,11 +169,11 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="ReplicatedStorage" referent="RBX5">
+  <Item class="ReplicatedStorage" referent="RBX10">
     <Properties>
       <string name="Name">ReplicatedStorage</string>
     </Properties>
-    <Item class="Folder" referent="RBX6">
+    <Item class="Folder" referent="RBX11">
       <Properties>
         <string name="Name">Resources</string>
       </Properties>
@@ -364335,11 +364403,11 @@ end)
         </Item>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX7">
+    <Item class="Folder" referent="RBX12">
       <Properties>
         <string name="Name">Shared</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX8">
+      <Item class="ModuleScript" referent="RBX13">
         <Properties>
           <string name="Name">Artwork</string>
           <ProtectedString name="Source">--!strict
@@ -364406,7 +364474,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX9">
+      <Item class="ModuleScript" referent="RBX14">
         <Properties>
           <string name="Name">ArtworkAssets</string>
           <ProtectedString name="Source">--!strict
@@ -364425,7 +364493,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX10">
+      <Item class="ModuleScript" referent="RBX15">
         <Properties>
           <string name="Name">ArtworkLayout</string>
           <ProtectedString name="Source">--!strict
@@ -364447,7 +364515,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX11">
+      <Item class="ModuleScript" referent="RBX16">
         <Properties>
           <string name="Name">Config</string>
           <ProtectedString name="Source">--!strict
@@ -364565,7 +364633,103 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX12">
+      <Item class="ModuleScript" referent="RBX17">
+        <Properties>
+          <string name="Name">CosmeticEffects</string>
+          <ProtectedString name="Source">--!strict
+-- Cosmetic-only geometry. Server-published equipment selects bounded client-local effects.
+local Effects={}
+local function color(rgb) return Color3.fromRGB(rgb[1],rgb[2],rgb[3]) end
+function Effects.create(root: BasePart,aura,trail,mutation)
+    local state={objects={},orbits={},emitters={},beams={},trails={}}
+    local function make(class,name)
+        local object=Instance.new(class)
+        object.Name,object.Parent=name,root
+        table.insert(state.objects,object)
+        return object
+    end
+    if not aura and mutation then aura={id="event",color=mutation.color} end
+    if mutation then
+        local attachment=make("Attachment","LocalMutationGlow")
+        local light=Instance.new("PointLight")
+        light.Color,light.Brightness,light.Range,light.Shadows,light.Parent=color(mutation.color),.65,7,false,attachment
+        table.insert(state.emitters,light)
+    end
+    if aura then
+        local primary=color(aura.color)
+        local accent=if aura.id=="royal" then Color3.fromRGB(255,215,115) else primary:Lerp(Color3.new(1,1,1),.65)
+        for ring=1,2 do
+            local points={}
+            for i=1,4 do
+                local attachment=make("Attachment","LocalAuraOrbit")
+                table.insert(points,attachment)
+                table.insert(state.orbits,{attachment=attachment,angle=(i-1)*math.pi/2,ring=ring})
+            end
+            for i=1,4 do
+                local beam=make("Beam","LocalAuraRibbon")
+                beam.Attachment0,beam.Attachment1=points[i],points[i%4+1]
+                beam.Color=ColorSequence.new(primary,accent)
+                beam.Transparency=NumberSequence.new(if ring==1 then .22 else .65)
+                beam.LightEmission,beam.FaceCamera,beam.Segments=1,true,12
+                table.insert(state.beams,{beam=beam,ring=ring})
+            end
+        end
+        local center=make("Attachment","LocalAuraMotes")
+        local emitter=Instance.new("ParticleEmitter")
+        emitter.Name,emitter.Parent="LocalAuraParticles",center
+        emitter.Texture="rbxasset://textures/particles/sparkles_main.dds"
+        emitter.Color=ColorSequence.new(primary,accent)
+        emitter.LightEmission,emitter.Rate= .85,if aura.id=="royal" then 12 else 8
+        emitter.Lifetime,emitter.Speed=NumberRange.new(.8,1.3),NumberRange.new(.4,1.2)
+        emitter.SpreadAngle=Vector2.new(180,180)
+        emitter.Size=NumberSequence.new({NumberSequenceKeypoint.new(0,.08),NumberSequenceKeypoint.new(.4,.2),NumberSequenceKeypoint.new(1,0)})
+        emitter.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(.2,.2),NumberSequenceKeypoint.new(1,1)})
+        table.insert(state.emitters,emitter)
+    end
+    if trail then
+        local primary,accent=color(trail.color),color(trail.accent)
+        for side=-1,1,2 do
+            local a=make("Attachment","LocalTrailEdge")
+            local b=make("Attachment","LocalTrailEdge")
+            local ribbon=make("Trail","LocalCosmeticTrail")
+            ribbon.Attachment0,ribbon.Attachment1=a,b
+            ribbon.Color=ColorSequence.new(primary,accent)
+            ribbon.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,.12),NumberSequenceKeypoint.new(.7,.55),NumberSequenceKeypoint.new(1,1)})
+            ribbon.WidthScale=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(1,0)})
+            ribbon.Lifetime,ribbon.MinLength,ribbon.FaceCamera,ribbon.LightEmission=trail.lifetime,.12,true,.8
+            table.insert(state.trails,{ribbon=ribbon,a=a,b=b,side=side,width=trail.width})
+        end
+    end
+    function state:update(scale: number,time: number,enabled: boolean)
+        for _,orbit in self.orbits do
+            local angle=orbit.angle+time*(if orbit.ring==1 then .45 else -.3)
+            local radius=(if orbit.ring==1 then 2.1 else 1.6)*scale
+            local position=Vector3.new(math.cos(angle)*radius,(if orbit.ring==1 then -1.65 else -.7)*scale,math.sin(angle)*radius)
+            local tangent=Vector3.new(-math.sin(angle),0,math.cos(angle))
+            orbit.attachment.CFrame=CFrame.fromMatrix(position,tangent,Vector3.yAxis,tangent:Cross(Vector3.yAxis))
+        end
+        for _,entry in self.beams do
+            entry.beam.Enabled=enabled
+            local radius=(if entry.ring==1 then 2.1 else 1.6)*scale
+            entry.beam.CurveSize0,entry.beam.CurveSize1=.5523*radius,.5523*radius
+            entry.beam.Width0,entry.beam.Width1=.1*scale,.1*scale
+        end
+        for _,emitter in self.emitters do emitter.Enabled=enabled end
+        for _,entry in self.trails do
+            entry.a.Position=Vector3.new(entry.side*1.1,-.6,1.3)*scale
+            entry.b.Position=entry.a.Position+Vector3.new(0,-entry.width*scale,0)
+            if not enabled and entry.ribbon.Enabled then entry.ribbon:Clear() end
+            entry.ribbon.Enabled=enabled
+        end
+    end
+    function state:destroy() for _,object in self.objects do object:Destroy() end end
+    return state
+end
+return Effects
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX18">
         <Properties>
           <string name="Name">DinosaurPreview</string>
           <ProtectedString name="Source">--!strict
@@ -364584,6 +364748,7 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         for _,item in model:GetDescendants() do
             if item:IsA("BasePart") then
                 item.Anchored=true
+                if gold==true or gold=="gold" or gold=="diamond" then Resources.clearTextures(item) end
                 if gold == "diamond" then item.Color=Color3.fromRGB(85,213,245) item.Material=Enum.Material.Glass item.Reflectance=.2
                 elseif gold == true or gold == "gold" then item.Color=Color3.fromRGB(242,199,63) item.Material=Enum.Material.Metal end
             end
@@ -364598,7 +364763,7 @@ return Preview
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX13">
+      <Item class="ModuleScript" referent="RBX19">
         <Properties>
           <string name="Name">DinosaurVisual</string>
           <ProtectedString name="Source">--!strict
@@ -364708,7 +364873,7 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
         for _, item in visual:GetDescendants() do
             if item:IsA("BasePart") then
                 item.Anchored = false
-                if mutation ~= "base" then item.Color = palette.primary item.Material = if gold then Enum.Material.Metal else Enum.Material.Glass item.Reflectance = if gold then .08 else .2 end
+                if mutation ~= "base" then Resources.clearTextures(item) item.Color = palette.primary item.Material = if gold then Enum.Material.Metal else Enum.Material.Glass item.Reflectance = if gold then .08 else .2 end
                 local weld = Instance.new("Weld")
                 weld.Name = "ResourceWeld"
                 weld.C0 = root.CFrame:ToObjectSpace(item.CFrame)
@@ -364844,7 +365009,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX14">
+      <Item class="ModuleScript" referent="RBX20">
         <Properties>
           <string name="Name">EggPreview</string>
           <ProtectedString name="Source">--!strict
@@ -364877,7 +365042,22 @@ return Egg
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX15">
+      <Item class="ModuleScript" referent="RBX21">
+        <Properties>
+          <string name="Name">EventIconVectors</string>
+          <ProtectedString name="Source">--!strict
+-- Native placeholders; these are not completed illustrated PNG assets.
+local function shape(x,y,w,h,color,radius,rotation) return {x=x,y=y,w=w,h=h,color=color,radius=radius or 0,rotation=rotation or 0} end
+return {
+    volcano={shape(23,46,54,40,"#734F60",8),shape(33,31,34,30,"#FF8051",6),shape(42,8,16,26,"#FFD16B",8,-15),shape(63,17,12,17,"#FF8051",6,25)},
+    aurora={shape(12,30,75,12,"#65F5C6",6,-20),shape(15,48,68,12,"#BFA3FF",6,-20),shape(25,66,53,10,"#C9FFEF",5,-20)},
+    quake={shape(9,61,34,18,"#E4BF84",5,-14),shape(57,55,34,18,"#B49A7C",5,14),shape(43,20,10,24,"#FFF0CE",4,20),shape(48,41,10,22,"#FFF0CE",4,-25)},
+    bloodmoon={shape(14,14,72,72,"#481C41",36),shape(20,20,60,60,"#FF668F",30),shape(35,29,16,16,"#AD3D70",8),shape(53,50,18,18,"#C74473",9)},
+}
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX22">
         <Properties>
           <string name="Name">FoodCatchRules</string>
           <ProtectedString name="Source">--!strict
@@ -364893,7 +365073,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX16">
+      <Item class="ModuleScript" referent="RBX23">
         <Properties>
           <string name="Name">IconRaster</string>
           <ProtectedString name="Source">--!strict
@@ -364902,7 +365082,7 @@ return {["amber"]={341,0,1,16777216,1,33554432,20,55923968,1,16777216,40,0,1,167
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX17">
+      <Item class="ModuleScript" referent="RBX24">
         <Properties>
           <string name="Name">IconTiles</string>
           <ProtectedString name="Source">--!strict
@@ -364911,7 +365091,7 @@ return {["dinos"]={["size"]=32,["colors"]={{104,48,36},{110,114,78},{0,29,13},{1
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX18">
+      <Item class="ModuleScript" referent="RBX25">
         <Properties>
           <string name="Name">IconVectors</string>
           <ProtectedString name="Source">--!strict
@@ -364920,7 +365100,7 @@ return {["home"]={{["x"]=21,["y"]=41,["w"]=60,["h"]=47,["color"]="#142035",["rad
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX19">
+      <Item class="ModuleScript" referent="RBX26">
         <Properties>
           <string name="Name">IslandLayout</string>
           <ProtectedString name="Source">--!strict
@@ -364948,7 +365128,7 @@ return IslandLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX20">
+      <Item class="ModuleScript" referent="RBX27">
         <Properties>
           <string name="Name">ModelPreview</string>
           <ProtectedString name="Source">--!strict
@@ -364975,7 +365155,7 @@ return ModelPreview
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX21">
+      <Item class="ModuleScript" referent="RBX28">
         <Properties>
           <string name="Name">MovementEnvelope</string>
           <ProtectedString name="Source">--!strict
@@ -364991,7 +365171,7 @@ return MovementEnvelope
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX22">
+      <Item class="ModuleScript" referent="RBX29">
         <Properties>
           <string name="Name">NavigationArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -365008,7 +365188,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX23">
+      <Item class="ModuleScript" referent="RBX30">
         <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
@@ -365023,7 +365203,7 @@ function PreviewCamera.bind(viewport: ViewportFrame, model: Model, geometryId: s
     viewport.CurrentCamera=camera
     local bounds,size=model:GetBoundingBox()
     local points={}
-    local data=if geometryId then Geometry[geometryId] else nil
+    local data=if geometryId and not model:GetAttribute("UploadedModelId") then Geometry[geometryId] else nil
     local origin=model:GetAttribute("GeometryOrigin") or Vector3.zero
     if data then
         for _,v in data.vertices do table.insert(points,model:GetPivot():PointToWorldSpace(Vector3.new(v[1],v[2],v[3])-origin)) end
@@ -365069,7 +365249,7 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX24">
+      <Item class="ModuleScript" referent="RBX31">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -365086,6 +365266,11 @@ return table.freeze({
         {id="tidal",name="Tidal Halo",rarity="Rare",price=240,growth=1.35,color={80,214,255}},
         {id="royal",name="Royal Nova",rarity="Legendary",price=900,growth=1.7,color={180,106,255}},
     },
+    Trails={
+        {id="fern",name="Fern Drift",rarity="Common",price=45,color={98,236,112},accent={225,255,190},width=.45,lifetime=.7},
+        {id="tidal",name="Tidal Wake",rarity="Rare",price=180,color={80,214,255},accent={195,249,255},width=.65,lifetime=.95},
+        {id="nova",name="Nova Ribbon",rarity="Legendary",price=650,color={180,106,255},accent={255,215,115},width=.8,lifetime=1.2},
+    },
     Potions={
         {id="speed_common",name="Swift Sip",kind="speed",rarity="Common",duration=300,multiplier=1.2,price=20},
         {id="speed_rare",name="Raptor Rush",kind="speed",rarity="Rare",duration=600,multiplier=1.45,price=65},
@@ -365095,15 +365280,29 @@ return table.freeze({
         {id="growth_legendary",name="Titan Tonic",kind="growth",rarity="Legendary",duration=900,multiplier=2,price=220},
     },
     Weather={
-        {id="rain",name="Rain",weight=50,growth=1.25,speed=1,loot=1.1},
-        {id="thunder",name="Thunderstorm",weight=30,growth=1.1,speed=1.15,loot=1.4},
-        {id="blizzard",name="Blizzard",weight=20,growth=1.4,speed=1.05,loot=1.25},
+        {id="rain",name="Rain",rarity="Common",weight=50,growth=1.25,speed=1,loot=1.1,mutation="dewdrop",chance=.02,icon="rain"},
+        {id="thunder",name="Thunderstorm",rarity="Rare",weight=30,growth=1.1,speed=1.15,loot=1.4,mutation="charged",chance=.04,icon="thunder"},
+        {id="blizzard",name="Blizzard",rarity="Rare",weight=20,growth=1.4,speed=1.05,loot=1.25,mutation="frost",chance=.04,icon="blizzard"},
+        {id="volcano",name="Volcanic Bloom",rarity="Legendary",weight=6,growth=1.2,speed=1,loot=1.65,mutation="ember",chance=.07,icon="volcano"},
+        {id="aurora",name="Northern Lights",rarity="Legendary",weight=6,growth=1.3,speed=1.1,loot=1.5,mutation="aurora",chance=.07,icon="aurora"},
+        {id="quake",name="Earthquake",rarity="Rare",weight=12,growth=1.1,speed=1,loot=1.4,mutation="seismic",chance=.05,icon="quake"},
+        {id="bloodmoon",name="Blood Moon",rarity="Legendary",weight=4,growth=1.15,speed=1.15,loot=1.75,mutation="bloodmoon",chance=.08,icon="bloodmoon"},
+    },
+    -- Provisional event mutation perks; separate from cosmetic Gold/Diamond fusion.
+    EventMutations={
+        {id="dewdrop",name="Dewdrop",growth=1.08,speed=1,color={85,216,176}},
+        {id="charged",name="Charged",growth=1,speed=1.1,color={255,218,88}},
+        {id="frost",name="Frost",growth=1.12,speed=1,color={135,233,255}},
+        {id="seismic",name="Seismic",growth=1.15,speed=1,color={220,180,115}},
+        {id="ember",name="Ember",growth=1.18,speed=1.04,color={255,116,62}},
+        {id="aurora",name="Aurora",growth=1.12,speed=1.08,color={112,255,205}},
+        {id="bloodmoon",name="Blood Moon",growth=1.1,speed=1.12,color={255,85,128}},
     },
 })
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX25">
+      <Item class="ModuleScript" referent="RBX32">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -365113,12 +365312,42 @@ function Rules.item(catalog,id)
     for _,item in catalog do if item.id==id then return item end end
     return nil
 end
+function Rules.eventMutation(entry)
+    local selected=nil
+    for _,mutation in Config.EventMutations do
+        if entry and entry.events and (entry.events[mutation.id] or 0)&gt;0 then selected=mutation end
+    end
+    return selected
+end
+function Rules.validEvents(events): boolean
+    if events==nil then return true end
+    if typeof(events)~="table" then return false end
+    for id,count in events do
+        if not Rules.item(Config.EventMutations,id) or typeof(count)~="number" or count~=count or count&lt;0 or count%1~=0 or count&gt;2000000000 then return false end
+    end
+    return true
+end
+function Rules.knownEventMutation(id): boolean return Rules.item(Config.EventMutations,id)~=nil end
+function Rules.eventEgg(eventId,roll)
+    local event=Rules.item(Config.Weather,eventId)
+    return {eventId=if event then event.id else "clear",mutationId=if event and roll&lt;event.chance then event.mutation else ""}
+end
+function Rules.validEgg(metadata): boolean
+    if typeof(metadata)~="table" then return false end
+    local eventId=metadata.eventId or "clear"
+    local mutationId=metadata.mutationId or ""
+    local event=Rules.item(Config.Weather,eventId)
+    return (eventId=="clear" or event~=nil) and typeof(mutationId)=="string" and (mutationId=="" or (event~=nil and event.mutation==mutationId))
+end
 local function finite(n): boolean return typeof(n)=="number" and n==n and math.abs(n)&lt;math.huge end
 function Rules.upgrade(profile)
     -- Additive schema migration: never replace an existing wallet or inventory.
     if profile.progression==nil then
         profile.progression={crystals=0,auras={},equippedAura="",potions={},buffs={}}
     end
+    local p=profile.progression
+    if p.trails==nil then p.trails={} end
+    if p.equippedTrail==nil then p.equippedTrail="" end
     return profile.progression
 end
 function Rules.valid(p): boolean
@@ -365127,6 +365356,14 @@ function Rules.valid(p): boolean
     if typeof(p.auras)~="table" or typeof(p.potions)~="table" or typeof(p.buffs)~="table" or typeof(p.equippedAura)~="string" then return false end
     for id,value in p.auras do if not Rules.item(Config.Auras,id) or value~=true then return false end end
     if p.equippedAura~="" and not p.auras[p.equippedAura] then return false end
+    if p.trails~=nil then
+        if typeof(p.trails)~="table" then return false end
+        for id,value in p.trails do if not Rules.item(Config.Trails,id) or value~=true then return false end end
+    end
+    if p.equippedTrail~=nil then
+        if typeof(p.equippedTrail)~="string" then return false end
+        if p.equippedTrail~="" and (not p.trails or not p.trails[p.equippedTrail]) then return false end
+    end
     for id,count in p.potions do
         if not Rules.item(Config.Potions,id) or not finite(count) or count&lt;0 or count%1~=0 or count&gt;999 then return false end
     end
@@ -365152,6 +365389,17 @@ function Rules.apply(profile,action,id,now,replace,amount): (boolean,string)
     elseif action=="equipAura" then
         if id~="" and not p.auras[id] then return false,"not_owned" end
         p.equippedAura=id
+        return true,"equipped"
+    elseif action=="buyTrail" then
+        local item=Rules.item(Config.Trails,id)
+        if not item then return false,"unknown_item" end
+        if p.trails[id] then return false,"already_owned" end
+        if p.crystals&lt;item.price then return false,"insufficient_crystals" end
+        p.crystals-=item.price p.trails[id]=true
+        return true,"purchased"
+    elseif action=="equipTrail" then
+        if id~="" and not p.trails[id] then return false,"not_owned" end
+        p.equippedTrail=id
         return true,"equipped"
     elseif action=="buyPotion" then
         local item=Rules.item(Config.Potions,id)
@@ -365192,7 +365440,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX26">
+      <Item class="ModuleScript" referent="RBX33">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -365201,7 +365449,23 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX27">
+      <Item class="ModuleScript" referent="RBX34">
+        <Properties>
+          <string name="Name">ResourceMeshAssets</string>
+          <ProtectedString name="Source">--!strict
+-- Generated by tools/bind_visual_assets.py; empty IDs retain native geometry.
+return {
+    compy = "79351996702566",
+    triceratops = "90014068543889",
+    tyrannosaurus = "70736222541118",
+    raptor = "114284137928940",
+    stegosaurus = "92865644294705",
+    ankylosaurus = "74993073282146",
+}
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX35">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -365210,9 +365474,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local RuntimeMeshes = require(script.Parent.RuntimeMeshes)
 local ResourceModels = {}
+function ResourceModels.clearTextures(part: BasePart)
+    for _,child in part:GetChildren() do
+        if child:IsA("SurfaceAppearance") or child:IsA("Decal") or child:IsA("Texture") then child:Destroy() end
+    end
+    if part:IsA("MeshPart") then part.TextureID="" end
+end
 function ResourceModels.clone(id: string): Model?
     local folder = ReplicatedStorage:FindFirstChild("Resources")
     local template = if folder then folder:FindFirstChild(id) else nil
+    local overrides=ReplicatedStorage:FindFirstChild("ResourceOverrides")
+    template=(if overrides then overrides:FindFirstChild(id) else nil) or template
     if not template then return if RunService:IsClient() then RuntimeMeshes.clone(id) else nil end
     local copy: Model
     if template:IsA("Model") then
@@ -365248,7 +365520,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX28">
+      <Item class="ModuleScript" referent="RBX36">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -365339,7 +365611,39 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX29">
+      <Item class="ModuleScript" referent="RBX37">
+        <Properties>
+          <string name="Name">TrailArtwork</string>
+          <ProtectedString name="Source">--!strict
+-- Shared ribbon preview uses the catalog's real colors and taper, not a fabricated upload.
+local Config=require(script.Parent.ProgressionConfig)
+local Rules=require(script.Parent.ProgressionRules)
+local Art={}
+function Art.build(parent: GuiObject,id: string): Frame?
+    local item=Rules.item(Config.Trails,id)
+    if not item then return nil end
+    local root=Instance.new("Frame")
+    root.Name,root.BackgroundTransparency,root.Size,root.ZIndex,root.Parent="TrailArtwork_"..id,1,UDim2.fromScale(1,1),parent.ZIndex+1,parent
+    for lane=1,2 do for i=1,28 do
+        local t=(i-1)/27
+        local part=Instance.new("Frame")
+        local nextT=i/27
+        local x,y=.12+t*.76,.34+(lane-1)*.2+math.sin(t*math.pi*1.5)*.14
+        local dx,dy=(nextT-t)*.76,(math.sin(nextT*math.pi*1.5)-math.sin(t*math.pi*1.5))*.14
+        part.AnchorPoint,part.Position=Vector2.new(.5,.5),UDim2.fromScale(x,y)
+        part.Size=UDim2.fromScale(math.sqrt(dx*dx+dy*dy)*2.2,.045*(1-t*.75))
+        part.Rotation=math.deg(math.atan2(dy,dx))
+        part.BackgroundColor3=Color3.fromRGB(item.color[1],item.color[2],item.color[3]):Lerp(Color3.fromRGB(item.accent[1],item.accent[2],item.accent[3]),t)
+        part.BackgroundTransparency,part.BorderSizePixel,part.ZIndex,part.Parent=t*.7,0,root.ZIndex,root
+        local corner=Instance.new("UICorner") corner.CornerRadius,corner.Parent=UDim.new(1,0),part
+    end end
+    return root
+end
+return Art
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX38">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -365361,7 +365665,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX30">
+      <Item class="ModuleScript" referent="RBX39">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -365376,14 +365680,16 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX31">
+      <Item class="ModuleScript" referent="RBX40">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
 local TweenService = game:GetService("TweenService")
 local Vectors = require(script.Parent.IconVectors)
+local EventVectors = require(script.Parent.EventIconVectors)
 local Artwork = require(script.Parent.Artwork)
 local IconLayout = require(script.Parent.UIIconLayout)
+local TrailArtwork = require(script.Parent.TrailArtwork)
 local Theme = {}
 Theme.BackgroundImageId = ""
 Theme.MotionEnabled = true
@@ -365449,7 +365755,7 @@ local function nativeIcon(parent: GuiObject,id: string): Frame?
         preview.Size=UDim2.fromScale(1,1)
         return root
     end
-    local data = Vectors[id]
+    local data = EventVectors[id] or Vectors[id]
     if not data then return nil end
     local root = Instance.new("Frame")
     root.Name,root.BackgroundTransparency,root.Size = "Art_"..id,1,UDim2.fromOffset(42,42)
@@ -365476,13 +365782,15 @@ local function nativeIcon(parent: GuiObject,id: string): Frame?
     return root
 end
 function Theme.icon(parent: GuiObject,id: string): Frame?
+    local trail=string.match(id,"^trail_(%w+)$")
+    if trail then return TrailArtwork.build(parent,trail) end
     return Artwork.build(parent,id,nativeIcon) or nativeIcon(parent,id)
 end
 return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX32">
+      <Item class="ModuleScript" referent="RBX41">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -365507,15 +365815,15 @@ return Clock
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX33">
+  <Item class="ServerScriptService" referent="RBX42">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX34">
+    <Item class="Folder" referent="RBX43">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX35">
+      <Item class="ModuleScript" referent="RBX44">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -365693,7 +366001,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX36">
+      <Item class="Script" referent="RBX45">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -365717,11 +366025,12 @@ Players.CharacterAutoLoads = false
 Lighting.ClockTime = 14
 Lighting.Brightness = 2
 Lighting.Ambient = Color3.fromRGB(130, 143, 148)
+require(script.Parent.ImportedResources).load()
 Arena.build()
 
 ProfileRepository.start()
-RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string)
-    local ok = ProfileRepository.commitRunSettlement(player, runId, catchScore)
+RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string, eggEvents)
+    local ok = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents)
     if not ok then
         warn(string.format("[Be Dino] settlement failed for %s (%s)", player.Name, reason))
         return false
@@ -365811,7 +366120,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX37">
+      <Item class="ModuleScript" referent="RBX46">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -365892,7 +366201,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX38">
+      <Item class="ModuleScript" referent="RBX47">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -365980,7 +366289,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX39">
+      <Item class="ModuleScript" referent="RBX48">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -366091,7 +366400,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX40">
+      <Item class="ModuleScript" referent="RBX49">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -366102,6 +366411,10 @@ local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local FoodCatchRules = require(ReplicatedStorage.Shared.FoodCatchRules)
+local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
+local RewardMath = require(script.Parent.RewardMath)
+local Http = game:GetService("HttpService")
+local eventRandom = Random.new()
 local FoodService = {}
 local TYPES = {
     {id = "berry", weight = 78, points = 1, size = 0.7, color = Color3.fromRGB(224, 99, 118)},
@@ -366300,7 +366613,17 @@ function FoodService.start(dinosaur)
                     local c = candidate.character
                     local whole, carry = FoodCatchRules.award(candidate.gained, c:GetAttribute("FoodCatchCarry") or 0, c:GetAttribute("WeatherLootMultiplier") or 1)
                     c:SetAttribute("FoodCatchCarry", carry)
-                    c:SetAttribute("CatchScore", math.min(Config.MaxCatchScore, (c:GetAttribute("CatchScore") or 0) + whole))
+                    local before=c:GetAttribute("CatchScore") or 0
+                    local after=math.min(Config.MaxCatchScore,before+whole)
+                    c:SetAttribute("CatchScore",after)
+                    local ok,events=pcall(function() return Http:JSONDecode(c:GetAttribute("RunEggEvents") or "[]") end)
+                    if not ok or typeof(events)~="table" then events={} end
+                    for i=1,RewardMath.earnedChests(after) do
+                        if not events[i] then
+                            events[i]=ProgressionRules.eventEgg(if i&gt;RewardMath.earnedChests(before) then workspace:GetAttribute("WeatherId") or "clear" else "clear",eventRandom:NextNumber())
+                        end
+                    end
+                    c:SetAttribute("RunEggEvents",Http:JSONEncode(events))
                     dinosaur.addGrowth(c, candidate.gained)
                 end
             end
@@ -366311,7 +366634,57 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX41">
+      <Item class="ModuleScript" referent="RBX50">
+        <Properties>
+          <string name="Name">ImportedResources</string>
+          <ProtectedString name="Source">--!strict
+local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local InsertService=game:GetService("InsertService")
+local Bindings=require(ReplicatedStorage.Shared.ResourceMeshAssets)
+local Import={}
+function Import.load()
+    local folder=Instance.new("Folder") folder.Name="ResourceOverrides" folder.Parent=ReplicatedStorage
+    for id,assetId in Bindings do
+        if assetId=="" then continue end
+        local container=nil
+        local ok,result=pcall(function()
+            container=InsertService:LoadAsset(tonumber(assetId))
+            local model=Instance.new("Model") model.Name=id
+            -- Copy geometry/appearance only; never retain executable or physics objects.
+            for _,part in container:GetDescendants() do
+                if part:IsA("BasePart") then
+                    local copy=part:Clone()
+                    for _,child in copy:GetDescendants() do
+                        if not child:IsA("SurfaceAppearance") and not child:IsA("Decal") and not child:IsA("Texture") then child:Destroy() end
+                    end
+                    copy.Anchored,copy.CanCollide,copy.CanTouch,copy.CanQuery,copy.Massless=true,false,false,false,true
+                    copy.Parent=model
+                end
+            end
+            assert(#model:GetChildren()&gt;0,"Imported model has no geometry")
+            local box,size=model:GetBoundingBox()
+            local fallback=ReplicatedStorage.Resources:FindFirstChild(id)
+            local targetHeight=size.Y
+            if fallback and fallback:IsA("Model") then local _,bounds=fallback:GetBoundingBox() targetHeight=bounds.Y end
+            local scale=targetHeight/size.Y
+            local origin=box.Position-Vector3.new(0,size.Y/2,0)
+            for _,part in model:GetChildren() do
+                part.Size*=scale
+                part.CFrame=CFrame.new((part.Position-origin)*scale)*part.CFrame.Rotation
+            end
+            model.WorldPivot=CFrame.new()
+            model:SetAttribute("UploadedModelId",assetId)
+            return model
+        end)
+        if container then container:Destroy() end
+        if ok then result.Parent=folder else warn("[Be Dino] textured model "..id.." unavailable; keeping original: "..tostring(result)) end
+    end
+end
+return Import
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX51">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -366353,7 +366726,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX42">
+      <Item class="ModuleScript" referent="RBX52">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -366435,7 +366808,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX43">
+      <Item class="ModuleScript" referent="RBX53">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -366529,7 +366902,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX44">
+      <Item class="ModuleScript" referent="RBX54">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -366634,7 +367007,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX45">
+      <Item class="ModuleScript" referent="RBX55">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -366767,7 +367140,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX46">
+      <Item class="ModuleScript" referent="RBX56">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -366824,6 +367197,7 @@ local function upgradeCollection(profile: any)
             profile.collection[id] = entry
         end
         if typeof(entry) == "table" and entry.diamond == nil then entry.diamond = 0 end
+        if typeof(entry) == "table" and entry.events == nil then entry.events = {} end
     end
 end
 
@@ -366859,6 +367233,11 @@ local function isValidProfile(profile: any): boolean
         return false
     end
     if not knownSpecies(profile.equippedSpeciesId) then return false end
+    for _,egg in profile.eggs do if not ProgressionRules.validEgg(egg) then return false end end
+    if profile.pendingEggEvents~=nil then
+        if typeof(profile.pendingEggEvents)~="table" or #profile.pendingEggEvents~=profile.pendingChestGrants then return false end
+        for _,metadata in profile.pendingEggEvents do if not ProgressionRules.validEgg(metadata) then return false end end
+    end
     for _, speciesId in Config.SpeciesOrder do
         local entry = profile.collection[speciesId]
         if typeof(entry) ~= "table"
@@ -366868,6 +367247,7 @@ local function isValidProfile(profile: any): boolean
             or entry.base &gt; 2000000000 or entry.gold &gt; 2000000000 or entry.diamond &gt; 2000000000 then
             return false
         end
+        if not ProgressionRules.validEvents(entry.events) then return false end
     end
     return ProgressionRules.valid(profile.progression)
 end
@@ -366905,6 +367285,8 @@ local function syncAttributes(player: Player, profile: any)
     player:SetAttribute("PendingChestGrants", profile.pendingChestGrants or 0)
     player:SetAttribute("ProfileRevision", profile.revision or 0)
     player:SetAttribute("EquippedSpeciesId", profile.equippedSpeciesId)
+    local eventMutation=ProgressionRules.eventMutation(collection[profile.equippedSpeciesId])
+    player:SetAttribute("EquippedEventMutation",if eventMutation then eventMutation.id else "")
     player:SetAttribute("ActiveChestCount", #profile.eggs)
     local chestSummary = {}
     for index, chest in profile.eggs do
@@ -366912,6 +367294,8 @@ local function syncAttributes(player: Player, profile: any)
         table.insert(chestSummary, {
             id = chest.eggId,
             readyAt = chest.readyAt,
+            eventId=chest.eventId or "clear",
+            mutationId=chest.mutationId or "",
         })
     end
     player:SetAttribute("ChestQueueJson", HttpService:JSONEncode(chestSummary))
@@ -366960,18 +367344,27 @@ local function availableChestCapacity(profile: any): number
         + (Config.ChestOverflowCapacity - profile.pendingChestGrants)
 end
 
-local function enqueueChestIds(profile: any, chestIds: {string}, now: number)
+local function enqueueChestIds(profile: any, chestIds: {string}, now: number, events)
     local nextReadyAt = lastChestReadyAt(profile, now)
-    for _, chestId in chestIds do
+    if not profile.pendingEggEvents then
+        profile.pendingEggEvents={}
+        for _=1,profile.pendingChestGrants do table.insert(profile.pendingEggEvents,{eventId="clear",mutationId=""}) end
+    end
+    for i, chestId in chestIds do
+        local metadata=if events then events[i] else nil
+        metadata=metadata or {eventId="clear",mutationId=""}
         if #profile.eggs &lt; Config.ChestQueueCapacity then
             nextReadyAt += (if localPreview then Config.StudioChestTimerSeconds else Config.ChestTimerSeconds)
             table.insert(profile.eggs, {
                 eggId = chestId,
                 kind = "alpha_chest",
                 readyAt = nextReadyAt,
+                eventId=metadata.eventId,
+                mutationId=metadata.mutationId,
             })
         else
             profile.pendingChestGrants += 1
+            table.insert(profile.pendingEggEvents,metadata)
         end
     end
 end
@@ -367038,7 +367431,7 @@ function ProfileRepository.load(player: Player): boolean
     return true
 end
 
-function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number)
+function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number, eggEvents)
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
         return false, nil, "profile_not_loaded"
@@ -367048,6 +367441,10 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     end
 
     local outcome = RewardMath.computeRunReward(catchScore)
+    if eggEvents~=nil then
+        if typeof(eggEvents)~="table" or #eggEvents&gt;outcome.chestCount then return false,nil,"invalid_egg_events" end
+        for _,metadata in eggEvents do if not ProgressionRules.validEgg(metadata) then return false,nil,"invalid_egg_events" end end
+    end
     local operationId = "run:" .. runId
     local chestIds = {}
     for _ = 1, outcome.chestCount do
@@ -367086,7 +367483,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
                 species.base += stack.count
             end
 
-            enqueueChestIds(profileValue, chestIds, now)
+            enqueueChestIds(profileValue, chestIds, now, eggEvents)
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             profileValue.lastCheckpoint = {
@@ -367142,7 +367539,7 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string): (boo
     if not knownSpecies(speciesId) then return false, "unknown_species" end
 
     local cachedEntry = cached.collection[speciesId]
-    if typeof(cachedEntry) ~= "table" or cachedEntry.base + cachedEntry.gold + cachedEntry.diamond &lt;= 0 then
+    if typeof(cachedEntry) ~= "table" or (cachedEntry.base + cachedEntry.gold + cachedEntry.diamond &lt;= 0 and not ProgressionRules.eventMutation(cachedEntry)) then
         return false, "locked"
     end
     if cached.equippedSpeciesId == speciesId then
@@ -367161,7 +367558,7 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string): (boo
                 return nil
             end
             local entry = profileValue.collection[speciesId]
-            if typeof(entry) ~= "table" or entry.base + entry.gold + entry.diamond &lt;= 0 then
+            if typeof(entry) ~= "table" or (entry.base + entry.gold + entry.diamond &lt;= 0 and not ProgressionRules.eventMutation(entry)) then
                 locked = true
                 return nil
             end
@@ -367372,15 +367769,24 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
             table.remove(profileValue.eggs, index)
             local species = profileValue.collection[outcome.speciesId]
             if typeof(species) ~= "table" then return nil end
-            species.base += outcome.count
+            local mutationId=chest.mutationId or ""
+            if mutationId~="" then
+                if not ProgressionRules.knownEventMutation(mutationId) then return nil end
+                species.events[mutationId]=(species.events[mutationId] or 0)+outcome.count
+            else species.base += outcome.count end
+            outcome.eventMutationId=mutationId
+            outcome.eventId=chest.eventId or "clear"
 
             if profileValue.pendingChestGrants &gt; 0 then
                 profileValue.pendingChestGrants -= 1
                 local readyAt = lastChestReadyAt(profileValue, now) + (if localPreview then Config.StudioChestTimerSeconds else Config.ChestTimerSeconds)
+                local metadata=if profileValue.pendingEggEvents then table.remove(profileValue.pendingEggEvents,1) else nil
                 table.insert(profileValue.eggs, {
                     eggId = refillChestId,
                     kind = "alpha_chest",
                     readyAt = readyAt,
+                    eventId=if metadata then metadata.eventId else "clear",
+                    mutationId=if metadata then metadata.mutationId else "",
                 })
             end
 
@@ -367414,6 +367820,7 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
         "%dx %s", committedOutcome.count, committedOutcome.speciesId
     ))
     player:SetAttribute("LastClaimedChestId", chestId)
+    player:SetAttribute("LastChestEventMutation",committedOutcome.eventMutationId or "")
     return true, committedOutcome, if duplicateOutcome then "duplicate" else "claimed"
 end
 
@@ -367649,7 +368056,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX47">
+      <Item class="ModuleScript" referent="RBX57">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -367670,7 +368077,6 @@ local current=nil
 local weatherEnds=0
 local nextWeather=0
 local buckets={}
-local auraStates={}
 local function weatherPick()
     local total=0 for _,event in Config.Weather do total+=event.weight end
     local roll=random:NextNumber(0,total)
@@ -367683,44 +368089,6 @@ local function weatherAttributes()
     workspace:SetAttribute("WeatherEndsAt",weatherEnds)
     workspace:SetAttribute("NextWeatherAt",nextWeather)
 end
-local function aura(player,c,p)
-    local visual=c:FindFirstChild("DinoVisual")
-    local root=c:FindFirstChild("HumanoidRootPart")
-    local old=auraStates[player]
-    local item=Rules.item(Config.Auras,p.equippedAura)
-    if old and (old.character~=c or old.visual~=visual or old.id~=p.equippedAura) then
-        for _,attachment in old.attachments do attachment:Destroy() end
-        auraStates[player]=nil old=nil
-    end
-    if not item or not root or not visual then return end
-    if not old then
-        local attachments={}
-        local color=Color3.fromRGB(item.color[1],item.color[2],item.color[3])
-        for i=1,8 do
-            local attachment=Instance.new("Attachment") attachment.Name="EquippedAuraEffect" attachment.Parent=root
-            local emitter=Instance.new("ParticleEmitter")
-            emitter.Name="AuraParticles" emitter.Texture="rbxasset://textures/particles/sparkles_main.dds"
-            emitter.Color=ColorSequence.new(color)
-            emitter.LightEmission=.8 emitter.Rate=1.5 emitter.Lifetime=NumberRange.new(.7,1.1)
-            emitter.Speed=NumberRange.new(.3,.8) emitter.SpreadAngle=Vector2.new(30,30)
-            emitter.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,.15),NumberSequenceKeypoint.new(1,1)})
-            emitter.Parent=attachment
-            table.insert(attachments,attachment)
-        end
-        local light=Instance.new("PointLight") light.Color=color light.Brightness=.6 light.Parent=attachments[1]
-        old={id=p.equippedAura,character=c,visual=visual,attachments=attachments,light=light}
-        auraStates[player]=old
-    end
-    local size=c:GetAttribute("VisualScale") or 1
-    for i,attachment in old.attachments do
-        local angle=i*math.pi/4
-        attachment.Position=Vector3.new(math.cos(angle)*1.8*size,-1,math.sin(angle)*1.8*size)
-        local emitter=attachment:FindFirstChild("AuraParticles")
-        if emitter then emitter.Size=NumberSequence.new(.18*size) end
-    end
-    old.light.Range=5*size
-end
-
 local function crystalSpawns(repository)
     local folder=Instance.new("Folder") folder.Name="CrystalCurrency" folder.Parent=workspace
     local entries={}
@@ -367814,7 +368182,7 @@ function Service.start(repository)
     local remote=Instance.new("RemoteEvent") remote.Name="ProgressionAction" remote.Parent=ReplicatedStorage.BeDinoRemotes
     local response=Instance.new("RemoteEvent") response.Name="ProgressionResult" response.Parent=ReplicatedStorage.BeDinoRemotes
     remote.OnServerEvent:Connect(function(player,action,id,token,replace,...)
-        if select("#",...)~=0 or typeof(action)~="string" or not table.find({"buyAura","equipAura","buyPotion","usePotion"},action)
+        if select("#",...)~=0 or typeof(action)~="string" or not table.find({"buyAura","equipAura","buyTrail","equipTrail","buyPotion","usePotion"},action)
             or typeof(id)~="string" or #id&gt;40 or typeof(token)~="string" or #token&lt;1 or #token&gt;80
             or typeof(replace)~="boolean" then return end
         local now=os.clock() local bucket=buckets[player]
@@ -367832,8 +368200,9 @@ function Service.start(repository)
             local now=workspace:GetServerTimeNow()
             if WeatherClock.step(clock,now,weatherPick) then
                 current,weatherEnds,nextWeather=clock.current,clock.endsAt,clock.nextAt
-                Lighting.ClockTime=if current and current.id=="thunder" then 19 else 14
-                Lighting.Brightness=if current and current.id=="thunder" then .9 elseif current then 1.6 else 2
+                local night=current and table.find({"thunder","bloodmoon","aurora"},current.id)~=nil
+                Lighting.ClockTime=if night then 19 elseif current and current.id=="volcano" then 17 else 14
+                Lighting.Brightness=if night then .9 elseif current then 1.6 else 2
                 weatherAttributes()
             end
             for _,player in Players:GetPlayers() do
@@ -367841,22 +368210,26 @@ function Service.start(repository)
                 local c=player.Character
                 if p and c then
                     local growth,speed,loot=Rules.multipliers(p,player:GetAttribute("EquippedSpeciesId") or "compy",current,os.time())
+                    local mutation=Rules.item(Config.EventMutations,player:GetAttribute("EquippedEventMutation") or "")
+                    if mutation then growth=math.min(Config.GrowthCap,growth*mutation.growth) speed=math.min(Config.SpeedCap,speed*mutation.speed) end
+                    c:SetAttribute("EventMutationId",if mutation then mutation.id else "")
                     c:SetAttribute("GrowthMultiplier",growth) c:SetAttribute("WeatherLootMultiplier",loot)
                     player:SetAttribute("GrowthMultiplier",growth) player:SetAttribute("SpeedMultiplier",speed) player:SetAttribute("LootMultiplier",loot)
                     local h=c:FindFirstChildOfClass("Humanoid")
                     if h then h.WalkSpeed=GameConfig.WalkSpeed*(if c:GetAttribute("RunState")=="Active" then speed else 1) end
-                    aura(player,c,p)
+                    c:SetAttribute("EquippedAuraId",p.equippedAura)
+                    c:SetAttribute("EquippedTrailId",p.equippedTrail or "")
                 end
             end
         end
     end)
-    Players.PlayerRemoving:Connect(function(p) buckets[p]=nil auraStates[p]=nil end)
+    Players.PlayerRemoving:Connect(function(p) buckets[p]=nil end)
 end
 return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX48">
+      <Item class="ModuleScript" referent="RBX58">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -367972,7 +368345,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX49">
+      <Item class="ModuleScript" referent="RBX59">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -367992,6 +368365,7 @@ function RunLifecycle.prepareSanctuary(player: Player, character: Model)
     character:SetAttribute("CatchScore", 0)
     character:SetAttribute("FoodCatchCarry", 0)
     character:SetAttribute("WeatherLootCarry",0)
+    character:SetAttribute("RunEggEvents","[]")
     character:SetAttribute("ExitChannelEndsAt", 0)
     player:SetAttribute("Location", "Sanctuary")
 end
@@ -368018,6 +368392,7 @@ function RunLifecycle.begin(player: Player, character: Model)
     character:SetAttribute("CatchScore", 0)
     character:SetAttribute("FoodCatchCarry", 0)
     character:SetAttribute("WeatherLootCarry",0)
+    character:SetAttribute("RunEggEvents","[]")
     character:SetAttribute("SpawnProtectionEndsAt", workspace:GetServerTimeNow() + Config.SpawnProtectionSeconds)
     character:SetAttribute("ExitChannelEndsAt", 0)
 
@@ -368045,9 +368420,11 @@ local function settlementSnapshot(character: Model)
     local catchScore = character:GetAttribute("CatchScore")
     if typeof(runId) ~= "string" then return nil end
     if typeof(catchScore) ~= "number" or catchScore % 1 ~= 0 then return nil end
+    local ok,events=pcall(function() return HttpService:JSONDecode(character:GetAttribute("RunEggEvents") or "[]") end)
     return {
         runId = runId,
         catchScore = math.clamp(catchScore, 0, Config.MaxCatchScore),
+        eggEvents=if ok and typeof(events)=="table" then events else {},
     }
 end
 
@@ -368055,7 +368432,7 @@ local function respawnAfterSettlement(player: Player, character: Model, snapshot
     task.spawn(function()
         local ok = true
         if settleRun then
-            ok = settleRun(player, snapshot.runId, snapshot.catchScore, reason)
+            ok = settleRun(player, snapshot.runId, snapshot.catchScore, reason, snapshot.eggEvents)
         end
         if not ok then
             if player.Parent and player:GetAttribute("ProfileState") == "Loaded" then
@@ -368125,7 +368502,7 @@ function RunLifecycle.endForDisconnect(player: Player): string
     local growthScore = character:GetAttribute("GrowthScore")
     player:SetAttribute("LastRunGrowthScore", if typeof(growthScore) == "number" then growthScore else 0)
     if settleRun then
-        local ok = settleRun(player, snapshot.runId, snapshot.catchScore, "Disconnect")
+        local ok = settleRun(player, snapshot.runId, snapshot.catchScore, "Disconnect", snapshot.eggEvents)
         return if ok then "settled" else "failed"
     end
     return "settled"
@@ -368222,7 +368599,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX50">
+      <Item class="ModuleScript" referent="RBX60">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -368294,19 +368671,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX51">
+  <Item class="StarterPlayer" referent="RBX61">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX52">
+    <Item class="StarterPlayerScripts" referent="RBX62">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX53">
+      <Item class="Folder" referent="RBX63">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX54">
+        <Item class="LocalScript" referent="RBX64">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -368346,6 +368723,7 @@ local active = ""
 local selected = "compy"
 local seenTutorial = false
 local lastGrowth = 0
+local lastEggCount = 0
 local function num(id: string): number return player:GetAttribute(id) or 0 end
 local function str(id: string,fallback: string?): string return player:GetAttribute(id) or fallback or "" end
 local function copies(id: string): (number,number,number)
@@ -368356,6 +368734,10 @@ end
 local function bestMutation(id: string): string
     local _,gold,diamond = copies(id)
     return if diamond&gt;0 then "diamond" elseif gold&gt;0 then "gold" else "base"
+end
+local function eventMutation(id: string)
+    local ok,data=pcall(function() return Http:JSONDecode(str("CollectionJson","{}")) end)
+    return if ok and typeof(data)=="table" then ProgressionRules.eventMutation(data[id]) else nil
 end
 local fusionTarget = "gold"
 local hatchPending = false
@@ -368475,6 +368857,7 @@ local function progression()
     return data
 end
 local chosenAura="meadow"
+local cosmeticTab="auras"
 local chosenPotion="speed_common"
 local pendingShop=nil
 local function transact(action,id,replace)
@@ -368507,30 +368890,44 @@ render=function(name: string)
         end)
         
     elseif name=="auras" then
-        heading.Text,header.BackgroundColor3="Aura Shop",C.purple
+        heading.Text,header.BackgroundColor3="Aura &amp; Trail Shop",C.purple
         local p=progression()
-        label(body,"Crystals: "..num("Crystals").."  •  Equipped: "..(if p.equippedAura=="" then "None" else p.equippedAura),0,0,824,34,23,C.gold)
-        for i,item in ProgressionConfig.Auras do
+        p.trails=p.trails or {}
+        local isTrail=cosmeticTab=="trails"
+        local touch=Input.TouchEnabled
+        local targetHeight=if touch then math.max(45,45/viewportScale()) else 44
+        local tabsHeight=if touch then targetHeight else 40
+        local cardsY=tabsHeight+12
+        local cardsHeight=if touch then 402-cardsY else 302
+        local buyY=if touch then cardsHeight-targetHeight-10 else 247
+        for i,tab in {"auras","trails"} do
+            button(body,if tab=="auras" then "AURAS" else "TRAILS",(i-1)*170,0,160,tabsHeight,if cosmeticTab==tab then C.blue else C.card,function() cosmeticTab=tab open("auras") end)
+        end
+        label(body,"Crystals: "..num("Crystals"),355,0,460,40,23,C.gold)
+        local owned=if isTrail then p.trails else p.auras
+        local equippedId=if isTrail then p.equippedTrail or "" else p.equippedAura
+        for i,item in (if isTrail then ProgressionConfig.Trails else ProgressionConfig.Auras) do
             local color=Color3.fromRGB(item.color[1],item.color[2],item.color[3])
-            local card=box(body,(i-1)*276,44,264,288,color,24)
+            local card=box(body,(i-1)*276,cardsY,264,cardsHeight,color,24)
             label(card,item.name,6,5,252,34,25)
-            label(card,item.rarity.." • "..item.growth.."x Growth",4,42,256,30,19)
-            art(card,"aura_"..item.id,46,77,172)
-            label(card,if p.auras[item.id] then "Owned" else item.price.." Crystals",4,212,256,27,21,C.gold)
-            local equipped=p.equippedAura==item.id
-            button(card,if equipped then "UNEQUIP" elseif p.auras[item.id] then "EQUIP" else "BUY",12,247,240,34,C.card,function()
-                if p.auras[item.id] then transact("equipAura",if equipped then "" else item.id)
+            label(card,item.rarity.." • "..(if isTrail then "Cosmetic" else item.growth.."x Growth"),4,42,256,30,19)
+            art(card,(if isTrail then "trail_" else "aura_")..item.id,if touch then 92 else 46,if touch then 70 else 77,if touch then 80 else 172)
+            label(card,if owned[item.id] then "Owned" else item.price.." Crystals",4,if touch then buyY-33 else 212,256,27,21,C.gold)
+            local equipped=equippedId==item.id
+            button(card,if equipped then "UNEQUIP" elseif owned[item.id] then "EQUIP" else "BUY",12,buyY,240,targetHeight,C.card,function()
+                if owned[item.id] then transact(if isTrail then "equipTrail" else "equipAura",if equipped then "" else item.id)
                 else chosenAura=item.id open("auraConfirm") end
             end)
         end
-        label(body,"Auras boost growth when eating. One aura can be equipped at a time.",0,345,824,50,20)
+        if not touch then label(body,"Equipped: "..(if equippedId=="" then "None" else equippedId),0,363,824,35,20) end
     elseif name=="auraConfirm" then
-        local item=ProgressionRules.item(ProgressionConfig.Auras,chosenAura)
-        heading.Text,header.BackgroundColor3="Buy Aura?",C.purple
-        art(body,"aura_"..item.id,30,25,220)
-        label(body,item.name.." • "..item.growth.."x eating growth",290,24,510,70,29)
+        local isTrail=cosmeticTab=="trails"
+        local item=ProgressionRules.item(if isTrail then ProgressionConfig.Trails else ProgressionConfig.Auras,chosenAura)
+        heading.Text,header.BackgroundColor3=if isTrail then "Buy Trail?" else "Buy Aura?",C.purple
+        art(body,(if isTrail then "trail_" else "aura_")..item.id,30,25,220)
+        label(body,item.name.." • "..(if isTrail then "Cosmetic trail" else item.growth.."x eating growth"),290,24,510,70,29)
         label(body,item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,125,510,90,25,C.gold)
-        button(body,"BUY AURA",290,261,510,57,C.accent,function() transact("buyAura",item.id) open("auras") end)
+        button(body,if isTrail then "BUY TRAIL" else "BUY AURA",290,261,510,57,C.accent,function() transact(if isTrail then "buyTrail" else "buyAura",item.id) open("auras") end)
         button(body,"CANCEL",290,337,510,45,C.red,function() open("auras") end)
     elseif name=="potions" then
         heading.Text,header.BackgroundColor3="Potion Shop",C.accent
@@ -368572,14 +368969,15 @@ render=function(name: string)
         list.ZIndex,list.Parent=24,body
         for i,id in Config.SpeciesOrder do
             local base,gold,diamond=copies(id)
+            local event=eventMutation(id)
             local rarity=speciesIndex(id)
-            if base+gold+diamond&gt;0 then unlocked+=1 end
+            if base+gold+diamond&gt;0 or event then unlocked+=1 end
             local card=box(list,((i-1)%3)*276,math.floor((i-1)/3)*284,264,272,rarityColors[rarity],24)
             Theme.texture(card,264,272)
             label(card,Config.SpeciesDisplayNames[id],4,8,256,35,25)
             label(card,rarityNames[rarity],4,44,256,25,18)
             hero(card,id,7,70,250,128,bestMutation(id))
-            label(card,if base+gold+diamond&gt;0 then string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond) else "Not discovered",5,201,254,25,15)
+            label(card,if event then event.name.." mutation" elseif base+gold+diamond&gt;0 then string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond) else "Not discovered",5,201,254,25,15)
             button(card,"VIEW DINO",12,233,240,30,C.card,function() selected=id open("detail") end)
         end
         meter(body,0,356,600,unlocked,#Config.SpeciesOrder,C.accent,string.format("Discovered: %d / %d",unlocked,#Config.SpeciesOrder))
@@ -368587,16 +368985,18 @@ render=function(name: string)
     elseif name=="detail" then
         local index=speciesIndex(selected)
         local base,gold,diamond=copies(selected)
+        local event=eventMutation(selected)
+        local owned=base+gold+diamond&gt;0 or event~=nil
         heading.Text,header.BackgroundColor3=Config.SpeciesDisplayNames[selected],rarityColors[index]
         local stage=box(body,0,0,380,360,rarityColors[index],24)
         hero(stage,selected,0,20,380,280,bestMutation(selected))
         label(stage,rarityNames[index],0,302,380,42,30)
         label(body,"YOUR COLLECTION",414,0,400,42,28)
         label(body,string.format("Base: %d • Gold: %d\nDiamond: %d",base,gold,diamond),414,62,400,92,25)
-        label(body,"Cosmetic fusion: 50 Base → Gold; 50 Gold → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
+        label(body,if event then event.name.." • "..event.growth.."x Growth • "..event.speed.."x Speed" else "Cosmetic fusion: 50 Base → Gold; 50 Gold → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
         local equipped=str("EquippedSpeciesId","compy")==selected
-        button(body,if equipped then "EQUIPPED" elseif base+gold+diamond==0 then "LOCKED" else "EQUIP",426,273,372,52,if base+gold+diamond&gt;0 then C.accent else C.card,function()
-            if base+gold+diamond&lt;=0 then notify("Hatch reward eggs to discover this dino") return end
+        button(body,if equipped then "EQUIPPED" elseif not owned then "LOCKED" else "EQUIP",426,273,372,52,if owned then C.accent else C.card,function()
+            if not owned then notify("Hatch reward eggs to discover this dino") return end
             if not equipped then equip:FireServer(selected,Http:GenerateGUID(false)) end
         end)
         button(body,"BACK TO INDEX",426,341,372,45,C.blue,function() open("collection") end)
@@ -368641,6 +369041,15 @@ render=function(name: string)
             label(card,"Slot "..slot,0,8,156,30,22)
             local view=ModelPreview.add(card,"egg",entry==nil)
             view.Position,view.Size=UDim2.fromOffset(18,58),UDim2.fromOffset(120,146)
+            local mutation=if entry then ProgressionRules.item(ProgressionConfig.EventMutations,entry.mutationId) else nil
+            if mutation then
+                local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
+                for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.6) end end
+                label(card,mutation.name,0,192,156,27,18,color)
+            elseif entry and entry.eventId and entry.eventId~="clear" then
+                local event=ProgressionRules.item(ProgressionConfig.Weather,entry.eventId)
+                label(card,if event then event.name else entry.eventId,0,192,156,27,15,C.gold)
+            end
             timers[slot]=label(card,if entry then "Growing..." else "Empty",3,222,150,40,22,if entry then C.gold else Color3.fromRGB(156,156,174))
         end
         refreshEggs=function()
@@ -368669,8 +369078,14 @@ render=function(name: string)
         local reward=str("LastChestRewardText","New dinosaur")
         local id=string.match(reward,"x (%w+)") or "compy"
         if not Config.SpeciesDisplayNames[id] then id="compy" end
-        hero(body,id,160,-12,504,260)
+        local view=hero(body,id,160,-12,504,260)
         label(body,reward,80,240,660,58,36,C.gold)
+        local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
+        if mutation then
+            local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
+            for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.55) end end
+            label(body,mutation.name.." • "..mutation.growth.."x Growth • "..mutation.speed.."x Speed",80,295,660,25,20,color)
+        end
         button(body,"NEXT EGG",80,322,320,64,C.accent,function()
             local id=str("NextChestId")
             if id=="" or workspace:GetServerTimeNow()&lt;num("NextChestReadyAt") then open("eggs") return end
@@ -368797,7 +369212,8 @@ local function refreshProgressionHUD()
     if id~=lastWeather then
         lastWeather=id
         if weatherArt then weatherArt:Destroy() end
-        weatherArt=Theme.icon(weatherTile,if id=="clear" then "weather" else id)
+        local event=ProgressionRules.item(ProgressionConfig.Weather,id)
+        weatherArt=Theme.icon(weatherTile,if event then event.icon or id else "weather")
         if weatherArt then weatherArt.Position,weatherArt.Size=UDim2.fromOffset(4,7),UDim2.fromOffset(48,48) end
         if id~="clear" then notify((workspace:GetAttribute("WeatherName") or id).." started!",C.blue) end
     end
@@ -368847,6 +369263,8 @@ local function scales()
             end
         end
         hud.AnchorPoint,hud.Position=Vector2.new(0,0),UDim2.new(0,18,0,120)
+        previewNotice.Text="STUDIO PREVIEW: UNSAVED"
+        previewNotice.Size,previewNotice.AnchorPoint,previewNotice.Position=UDim2.fromOffset(240,25),Vector2.zero,UDim2.fromOffset(18,8)
         timerScale.Scale=math.max(small,44/60)
         timers.AnchorPoint=Vector2.new(1,0)
         timers.Position=UDim2.new(1,-20,0,120)
@@ -368855,6 +369273,8 @@ local function scales()
         action.AnchorPoint,action.Position=Vector2.new(.5,1),UDim2.new(.5,0,1,-18)
         action:SetAttribute("UIScaleBase",actionScale.Scale)
     else
+        previewNotice.Text="STUDIO PREVIEW • progress not saved • test currency"
+        previewNotice.Size,previewNotice.AnchorPoint,previewNotice.Position=UDim2.fromOffset(500,25),Vector2.new(.5,0),UDim2.new(.5,0,0,8)
         rail.AnchorPoint,rail.Position,rail.Size=Vector2.new(0,.5),UDim2.new(0,14,.5,0),UDim2.fromOffset(186,444)
         for i,b in navigationButtons do
             b.Position,b.Size=UDim2.fromOffset(7,7+(i-1)*62),UDim2.fromOffset(172,54)
@@ -368880,6 +369300,7 @@ local function characterAdded(character: Model)
     if camera then camera.CameraType,camera.CameraSubject=Enum.CameraType.Custom,humanoid end
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping,true)
     lastGrowth=0
+    lastEggCount=0
 end
 player.CameraMaxZoomDistance=Config.CameraMaxZoom
 player.CharacterAdded:Connect(characterAdded)
@@ -368918,6 +369339,15 @@ RunService.Heartbeat:Connect(function(dt)
         end
     end
     lastGrowth=growth
+    local ok,tags=pcall(function() return Http:JSONDecode(if character then character:GetAttribute("RunEggEvents") or "[]" else "[]") end)
+    if ok and typeof(tags)=="table" then
+        if #tags&gt;lastEggCount and state=="Active" then
+            local newest=tags[#tags]
+            local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,newest.mutationId or "")
+            notify(if mutation then mutation.name.." egg caught!" else "Reward egg caught!",if mutation then C.gold else C.blue)
+        end
+        lastEggCount=#tags
+    end
     refreshProgressionHUD()
     if active=="eggs" and refreshEggs then refreshEggs() end
     if player:GetAttribute("ProfileState")=="Loaded" and state=="Sanctuary" and not seenTutorial then seenTutorial=true open("tutorial") end
@@ -368949,7 +369379,52 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX55">
+        <Item class="LocalScript" referent="RBX65">
+          <Properties>
+            <string name="Name">CosmeticVisuals</string>
+            <ProtectedString name="Source">--!strict
+local Players=game:GetService("Players")
+local RunService=game:GetService("RunService")
+local Shared=game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Config=require(Shared.ProgressionConfig)
+local Rules=require(Shared.ProgressionRules)
+local Effects=require(Shared.CosmeticEffects)
+local Theme=require(Shared.UITheme)
+local states={}
+local elapsed=0
+RunService.Heartbeat:Connect(function(dt)
+    elapsed+=dt
+    if elapsed&lt;1/30 then return end
+    elapsed=0
+    local camera=workspace.CurrentCamera
+    local keep={}
+    local count=0
+    -- Own equipment wins the distance budget; never create unbounded particle pools.
+    local players=Players:GetPlayers()
+    table.sort(players,function(a,b) return a==Players.LocalPlayer and b~=Players.LocalPlayer end)
+    for _,player in players do
+        local character=player.Character
+        local root=if character then character:FindFirstChild("HumanoidRootPart") else nil
+        if root and root:IsA("BasePart") and camera and (camera.CFrame.Position-root.Position).Magnitude&lt;180 and count&lt;8 then
+            count+=1 keep[player]=true
+            local auraId=character:GetAttribute("EquippedAuraId") or ""
+            local trailId=character:GetAttribute("EquippedTrailId") or ""
+            local mutationId=character:GetAttribute("EventMutationId") or ""
+            local state=states[player]
+            if not state or state.root~=root or state.auraId~=auraId or state.trailId~=trailId or state.mutationId~=mutationId then
+                if state then state.effect:destroy() end
+                state={root=root,auraId=auraId,trailId=trailId,mutationId=mutationId,effect=Effects.create(root,Rules.item(Config.Auras,auraId),Rules.item(Config.Trails,trailId),Rules.item(Config.EventMutations,mutationId))}
+                states[player]=state
+            end
+            state.effect:update(character:GetAttribute("VisualScale") or 1,os.clock(),Theme.MotionEnabled)
+        end
+    end
+    for player,state in states do if not keep[player] then state.effect:destroy() states[player]=nil end end
+end)
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="LocalScript" referent="RBX66">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -368957,6 +369432,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local RuntimeMeshes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("RuntimeMeshes"))
+local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local watched = setmetatable({}, {__mode = "k"})
 local function characterVisual(character: Model)
     local root = character:FindFirstChild("HumanoidRootPart")
@@ -368968,7 +369444,8 @@ local function characterVisual(character: Model)
     local previous = character:FindFirstChild("LocalMeshVisual")
     if previous and previous:GetAttribute("SpeciesId") == id and previous:GetAttribute("Scale") == scale
         and previous:GetAttribute("Mutation") == mutation then return end
-    local model = RuntimeMeshes.clone(id)
+    local overrides=ReplicatedStorage:FindFirstChild("ResourceOverrides")
+    local model = if overrides and overrides:FindFirstChild(id) then Resources.clone(id) else RuntimeMeshes.clone(id)
     if not model then return end
     if previous then previous:Destroy() end
     local groundHeight = root.Size.Y / 2 + humanoid.HipHeight
@@ -368985,6 +369462,7 @@ local function characterVisual(character: Model)
     for _, item in model:GetDescendants() do
         if item:IsA("BasePart") then
             item.Anchored = false
+            if mutation=="gold" or mutation=="diamond" then Resources.clearTextures(item) end
             if mutation == "gold" then item.Color = Color3.fromRGB(242,199,63) item.Material = Enum.Material.Metal
             elseif mutation == "diamond" then item.Color = Color3.fromRGB(85,213,245) item.Material = Enum.Material.Glass item.Reflectance=.2 end
             local weld = Instance.new("WeldConstraint")
@@ -369083,7 +369561,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX56">
+        <Item class="LocalScript" referent="RBX67">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -369105,6 +369583,23 @@ for _=1,36 do
 end
 local flash=Instance.new("ColorCorrectionEffect") flash.Name="ThunderFlash" flash.Parent=Lighting
 local nextFlash=0 local flashUntil=0
+local moon=Instance.new("Part") moon.Name="EventMoon" moon.Shape=Enum.PartType.Ball
+moon.Anchored,moon.CanCollide,moon.CanTouch,moon.CanQuery,moon.CastShadow=true,false,false,false,false
+moon.Size,moon.Material,moon.Color,moon.Transparency,moon.Parent=Vector3.one*18,Enum.Material.Neon,Color3.fromRGB(255,95,125),1,folder
+local skyPoints={} local skyBeams={}
+for i=1,7 do
+    local point=Instance.new("Attachment") point.Parent=workspace.Terrain table.insert(skyPoints,point)
+    if i&gt;1 then
+        local beam=Instance.new("Beam") beam.Attachment0,beam.Attachment1=skyPoints[i-1],point
+        beam.FaceCamera,beam.Width0,beam.Width1,beam.LightEmission,beam.Segments=true,12,12,1,16
+        beam.Texture="rbxasset://textures/particles/smoke_main.dds"
+        beam.TextureMode,beam.TextureSpeed=Enum.TextureMode.Stretch,.05
+        beam.Color=ColorSequence.new(Color3.fromRGB(84,255,189),Color3.fromRGB(168,122,255))
+        beam.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,.85),NumberSequenceKeypoint.new(.5,.45),NumberSequenceKeypoint.new(1,.85)})
+        beam.Enabled,beam.Parent=false,folder table.insert(skyBeams,beam)
+    end
+end
+local atmosphere=Instance.new("ColorCorrectionEffect") atmosphere.Name="LocalEventColor" atmosphere.Parent=Lighting
 local elapsed=0
 RunService.Heartbeat:Connect(function(dt)
     elapsed+=dt
@@ -369113,21 +369608,30 @@ RunService.Heartbeat:Connect(function(dt)
     local id=workspace:GetAttribute("WeatherId") or "clear"
     local c=player.Character
     local root=if c then c:FindFirstChild("HumanoidRootPart") else nil
-    local on=id~="clear" and Theme.MotionEnabled and root~=nil
+    local on=table.find({"rain","thunder","blizzard","volcano","quake"},id)~=nil and Theme.MotionEnabled and root~=nil
     for _,drop in drops do
         local part=drop.part
         part.Transparency=if on then .35 else 1
         if on then
-            drop.y-=dt*(if id=="blizzard" then 6 else 48)
+            drop.y-=dt*(if id=="blizzard" then 6 elseif id=="volcano" then -7 elseif id=="quake" then 4 else 48)
             if drop.y&lt; -10 then drop.y=20 drop.x=random:NextNumber(-20,20) drop.z=random:NextNumber(-20,20) end
-            part.Size=if id=="blizzard" then Vector3.one*.15 else Vector3.new(.04,1.7,.04)
-            part.Color=if id=="blizzard" then Color3.new(1,1,1) else Color3.fromRGB(125,197,239)
+            if drop.y&gt;20 then drop.y=-10 end
+            part.Size=if id=="blizzard" or id=="volcano" then Vector3.one*.15 elseif id=="quake" then Vector3.one*.28 else Vector3.new(.04,1.7,.04)
+            part.Color=if id=="blizzard" then Color3.new(1,1,1) elseif id=="volcano" then Color3.fromRGB(255,140,67) elseif id=="quake" then Color3.fromRGB(202,182,142) else Color3.fromRGB(125,197,239)
             part.Position=root.Position+Vector3.new(drop.x,drop.y,drop.z)
         end
     end
     local now=os.clock()
     if id=="thunder" and on and now&gt;=nextFlash then nextFlash=now+random:NextNumber(12,25) flashUntil=now+.12 end
     flash.Brightness=if id=="thunder" and on and now&lt;flashUntil then .25 else 0
+    local skyOn=Theme.MotionEnabled and root~=nil
+    moon.Transparency=if skyOn and id=="bloodmoon" then .12 else 1
+    if skyOn then
+        moon.Position=root.Position+Vector3.new(-80,90,-130)
+        for i,point in skyPoints do point.Position=root.Position+Vector3.new((i-4)*24,65+math.sin(now*.25+i)*7,-75) end
+    end
+    for _,beam in skyBeams do beam.Enabled=skyOn and id=="aurora" beam.CurveSize0=math.sin(now*.3)*8 beam.CurveSize1=-beam.CurveSize0 end
+    atmosphere.TintColor=if skyOn and id=="bloodmoon" then Color3.fromRGB(255,200,215) elseif skyOn and id=="volcano" then Color3.fromRGB(255,226,194) elseif skyOn and id=="aurora" then Color3.fromRGB(215,243,255) else Color3.new(1,1,1)
     if c then
         local rootPart=c:FindFirstChild("HumanoidRootPart")
         if rootPart then for _,part in rootPart:GetDescendants() do if part:IsA("ParticleEmitter") and part.Name=="AuraParticles" then part.Enabled=Theme.MotionEnabled end end end
@@ -369139,7 +369643,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX57">
+  <Item class="Workspace" referent="RBX68">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

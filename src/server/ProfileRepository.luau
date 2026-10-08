@@ -52,6 +52,7 @@ local function upgradeCollection(profile: any)
             profile.collection[id] = entry
         end
         if typeof(entry) == "table" and entry.diamond == nil then entry.diamond = 0 end
+        if typeof(entry) == "table" and entry.events == nil then entry.events = {} end
     end
 end
 
@@ -87,6 +88,11 @@ local function isValidProfile(profile: any): boolean
         return false
     end
     if not knownSpecies(profile.equippedSpeciesId) then return false end
+    for _,egg in profile.eggs do if not ProgressionRules.validEgg(egg) then return false end end
+    if profile.pendingEggEvents~=nil then
+        if typeof(profile.pendingEggEvents)~="table" or #profile.pendingEggEvents~=profile.pendingChestGrants then return false end
+        for _,metadata in profile.pendingEggEvents do if not ProgressionRules.validEgg(metadata) then return false end end
+    end
     for _, speciesId in Config.SpeciesOrder do
         local entry = profile.collection[speciesId]
         if typeof(entry) ~= "table"
@@ -96,6 +102,7 @@ local function isValidProfile(profile: any): boolean
             or entry.base > 2000000000 or entry.gold > 2000000000 or entry.diamond > 2000000000 then
             return false
         end
+        if not ProgressionRules.validEvents(entry.events) then return false end
     end
     return ProgressionRules.valid(profile.progression)
 end
@@ -133,6 +140,8 @@ local function syncAttributes(player: Player, profile: any)
     player:SetAttribute("PendingChestGrants", profile.pendingChestGrants or 0)
     player:SetAttribute("ProfileRevision", profile.revision or 0)
     player:SetAttribute("EquippedSpeciesId", profile.equippedSpeciesId)
+    local eventMutation=ProgressionRules.eventMutation(collection[profile.equippedSpeciesId])
+    player:SetAttribute("EquippedEventMutation",if eventMutation then eventMutation.id else "")
     player:SetAttribute("ActiveChestCount", #profile.eggs)
     local chestSummary = {}
     for index, chest in profile.eggs do
@@ -140,6 +149,8 @@ local function syncAttributes(player: Player, profile: any)
         table.insert(chestSummary, {
             id = chest.eggId,
             readyAt = chest.readyAt,
+            eventId=chest.eventId or "clear",
+            mutationId=chest.mutationId or "",
         })
     end
     player:SetAttribute("ChestQueueJson", HttpService:JSONEncode(chestSummary))
@@ -188,18 +199,27 @@ local function availableChestCapacity(profile: any): number
         + (Config.ChestOverflowCapacity - profile.pendingChestGrants)
 end
 
-local function enqueueChestIds(profile: any, chestIds: {string}, now: number)
+local function enqueueChestIds(profile: any, chestIds: {string}, now: number, events)
     local nextReadyAt = lastChestReadyAt(profile, now)
-    for _, chestId in chestIds do
+    if not profile.pendingEggEvents then
+        profile.pendingEggEvents={}
+        for _=1,profile.pendingChestGrants do table.insert(profile.pendingEggEvents,{eventId="clear",mutationId=""}) end
+    end
+    for i, chestId in chestIds do
+        local metadata=if events then events[i] else nil
+        metadata=metadata or {eventId="clear",mutationId=""}
         if #profile.eggs < Config.ChestQueueCapacity then
             nextReadyAt += (if localPreview then Config.StudioChestTimerSeconds else Config.ChestTimerSeconds)
             table.insert(profile.eggs, {
                 eggId = chestId,
                 kind = "alpha_chest",
                 readyAt = nextReadyAt,
+                eventId=metadata.eventId,
+                mutationId=metadata.mutationId,
             })
         else
             profile.pendingChestGrants += 1
+            table.insert(profile.pendingEggEvents,metadata)
         end
     end
 end
@@ -266,7 +286,7 @@ function ProfileRepository.load(player: Player): boolean
     return true
 end
 
-function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number)
+function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number, eggEvents)
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
         return false, nil, "profile_not_loaded"
@@ -276,6 +296,10 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     end
 
     local outcome = RewardMath.computeRunReward(catchScore)
+    if eggEvents~=nil then
+        if typeof(eggEvents)~="table" or #eggEvents>outcome.chestCount then return false,nil,"invalid_egg_events" end
+        for _,metadata in eggEvents do if not ProgressionRules.validEgg(metadata) then return false,nil,"invalid_egg_events" end end
+    end
     local operationId = "run:" .. runId
     local chestIds = {}
     for _ = 1, outcome.chestCount do
@@ -314,7 +338,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
                 species.base += stack.count
             end
 
-            enqueueChestIds(profileValue, chestIds, now)
+            enqueueChestIds(profileValue, chestIds, now, eggEvents)
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             profileValue.lastCheckpoint = {
@@ -370,7 +394,7 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string): (boo
     if not knownSpecies(speciesId) then return false, "unknown_species" end
 
     local cachedEntry = cached.collection[speciesId]
-    if typeof(cachedEntry) ~= "table" or cachedEntry.base + cachedEntry.gold + cachedEntry.diamond <= 0 then
+    if typeof(cachedEntry) ~= "table" or (cachedEntry.base + cachedEntry.gold + cachedEntry.diamond <= 0 and not ProgressionRules.eventMutation(cachedEntry)) then
         return false, "locked"
     end
     if cached.equippedSpeciesId == speciesId then
@@ -389,7 +413,7 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string): (boo
                 return nil
             end
             local entry = profileValue.collection[speciesId]
-            if typeof(entry) ~= "table" or entry.base + entry.gold + entry.diamond <= 0 then
+            if typeof(entry) ~= "table" or (entry.base + entry.gold + entry.diamond <= 0 and not ProgressionRules.eventMutation(entry)) then
                 locked = true
                 return nil
             end
@@ -600,15 +624,24 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
             table.remove(profileValue.eggs, index)
             local species = profileValue.collection[outcome.speciesId]
             if typeof(species) ~= "table" then return nil end
-            species.base += outcome.count
+            local mutationId=chest.mutationId or ""
+            if mutationId~="" then
+                if not ProgressionRules.knownEventMutation(mutationId) then return nil end
+                species.events[mutationId]=(species.events[mutationId] or 0)+outcome.count
+            else species.base += outcome.count end
+            outcome.eventMutationId=mutationId
+            outcome.eventId=chest.eventId or "clear"
 
             if profileValue.pendingChestGrants > 0 then
                 profileValue.pendingChestGrants -= 1
                 local readyAt = lastChestReadyAt(profileValue, now) + (if localPreview then Config.StudioChestTimerSeconds else Config.ChestTimerSeconds)
+                local metadata=if profileValue.pendingEggEvents then table.remove(profileValue.pendingEggEvents,1) else nil
                 table.insert(profileValue.eggs, {
                     eggId = refillChestId,
                     kind = "alpha_chest",
                     readyAt = readyAt,
+                    eventId=if metadata then metadata.eventId else "clear",
+                    mutationId=if metadata then metadata.mutationId else "",
                 })
             end
 
@@ -642,6 +675,7 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
         "%dx %s", committedOutcome.count, committedOutcome.speciesId
     ))
     player:SetAttribute("LastClaimedChestId", chestId)
+    player:SetAttribute("LastChestEventMutation",committedOutcome.eventMutationId or "")
     return true, committedOutcome, if duplicateOutcome then "duplicate" else "claimed"
 end
 

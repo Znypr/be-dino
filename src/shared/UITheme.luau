@@ -1,8 +1,10 @@
 --!strict
 local TweenService = game:GetService("TweenService")
 local Vectors = require(script.Parent.IconVectors)
+local EventVectors = require(script.Parent.EventIconVectors)
 local Artwork = require(script.Parent.Artwork)
 local IconLayout = require(script.Parent.UIIconLayout)
+local TrailArtwork = require(script.Parent.TrailArtwork)
 local Theme = {}
 Theme.BackgroundImageId = ""
 Theme.MotionEnabled = true
@@ -68,7 +70,7 @@ local function nativeIcon(parent: GuiObject,id: string): Frame?
         preview.Size=UDim2.fromScale(1,1)
         return root
     end
-    local data = Vectors[id]
+    local data = EventVectors[id] or Vectors[id]
     if not data then return nil end
     local root = Instance.new("Frame")
     root.Name,root.BackgroundTransparency,root.Size = "Art_"..id,1,UDim2.fromOffset(42,42)
@@ -95,6 +97,8 @@ local function nativeIcon(parent: GuiObject,id: string): Frame?
     return root
 end
 function Theme.icon(parent: GuiObject,id: string): Frame?
+    local trail=string.match(id,"^trail_(%w+)$")
+    if trail then return TrailArtwork.build(parent,trail) end
     return Artwork.build(parent,id,nativeIcon) or nativeIcon(parent,id)
 end
 return Theme

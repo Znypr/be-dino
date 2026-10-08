@@ -89,6 +89,34 @@ Deferred until actual products exist: luck boost art, Robux bundle contents and 
 Separate export task: render new dino/egg/model and mutation previews when their actual models are ready.
 
 ## Production, adjustment and tracking
+
+### Event and cosmetic direction, 2026-10-08
+
+Weather now includes seven events plus Clear. The prior four-state illustration
+pass remains valid but does not cover the new events. Continue the dimensional
+cloud/icon family and existing separate-layer AURAS/POTIONS compositions.
+Runtime auras use readable double orbit ribbons and restrained motes; trails
+use matching tapered color pairs. Mutated eggs use the actual egg model with
+event tint/name; hatched variants retain the species silhouette and show perks
+plus an event-colored glow. Avoid color-only identification: labels remain.
+The shared trail preview is native assembled geometry, not illustrated art.
+New models/materials should remain soft, rounded and hand-painted, with broad
+readable details. Generated textured dinosaur models are reviewable drafts,
+not automatic final art approval. Preserve native fallbacks and controller
+collision independently of visual imports.
+
+#### New artwork needed separately
+| Asset | Intended direction | Status |
+|---|---|---|
+| weather_volcano_v1 | Rounded volcano with amber lava plume, same contour/lighting as weather family | TODO; native fallback implemented only |
+| weather_aurora_v1 | Layered emerald/cyan/violet light curtain with readable night silhouette | TODO; native fallback implemented only |
+| weather_quake_v1 | Chunky cracked prehistoric earth; readable separation, no text | TODO; native fallback implemented only |
+| weather_bloodmoon_v1 | Dimensional crimson/pink moon with restrained craters/glow | TODO; native fallback implemented only |
+| Event mutation marks | Dewdrop, Charged, Frost, Seismic, Ember, Aurora, Blood Moon; reusable egg/collection badges | TODO; labels/tints/glow implemented, no illustrated badge masters |
+| Trail texture/masters | Fern Drift, Tidal Wake, Nova Ribbon; separate tapered transparent ribbons | TODO; native shop previews and runtime trails implemented |
+| Event effect textures | Soft aurora curtain, detailed moon, volcanic embers/ash and grounded quake dust | TODO; first-pass native/built-in effects only |
+| Environment meshes | Rounded trees, mossy rocks, readable fern clusters matching the new dinos | TODO; generation publish/insertion failed, original props retained |
+
 Generate one asset at a time. Core aura, potion, mutation and catches artwork is generated, uploaded, integrated and owner-Studio verified. These latest results supersede the Generated draft labels in the planning table above. Build 019 implements reusable binding generation and component assembly for nine layers and twelve illustrated icons, including the five leap/weather masters. Next is non-owner published permission and real-device verification; see docs/34-studio-handoff.md. Inventory/Index remain optional; no speculative art generation is required. The first draft establishes item-art style; reuse its proportions, camera, outline and lighting for subsequent assets.
 Save composed item art under resources/ui/v2/items/ and reusable layer masters under resources/ui/v2/layers/, with versioned names. Preserve existing art. Record each exact prompt in a sibling JSON manifest.
 Generated bitmap artwork can be revised through image editing; it is not a layered/vector source. Theme changes control UI frames/text separately and cannot recolor arbitrary bitmap details safely.

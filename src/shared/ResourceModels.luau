@@ -4,9 +4,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local RuntimeMeshes = require(script.Parent.RuntimeMeshes)
 local ResourceModels = {}
+function ResourceModels.clearTextures(part: BasePart)
+    for _,child in part:GetChildren() do
+        if child:IsA("SurfaceAppearance") or child:IsA("Decal") or child:IsA("Texture") then child:Destroy() end
+    end
+    if part:IsA("MeshPart") then part.TextureID="" end
+end
 function ResourceModels.clone(id: string): Model?
     local folder = ReplicatedStorage:FindFirstChild("Resources")
     local template = if folder then folder:FindFirstChild(id) else nil
+    local overrides=ReplicatedStorage:FindFirstChild("ResourceOverrides")
+    template=(if overrides then overrides:FindFirstChild(id) else nil) or template
     if not template then return if RunService:IsClient() then RuntimeMeshes.clone(id) else nil end
     local copy: Model
     if template:IsA("Model") then

@@ -1,0 +1,70 @@
+<roblox version="4">
+  <Item class="MaterialService" referent="MATERIALS">
+    <Properties>
+      <string name="Name">MaterialService</string>
+      <string name="GrassName">BeDino_Meadow</string>
+      <string name="RockName">BeDino_Stone</string>
+      <string name="WoodName">BeDino_Bark</string>
+    </Properties>
+    <Item class="MaterialVariant" referent="BeDino_Meadow">
+      <Properties>
+        <string name="Name">BeDino_Meadow</string>
+        <token name="BaseMaterial">1280</token>
+        <token name="MaterialPattern">1</token>
+        <float name="StudsPerTile">20</float>
+        <Content name="ColorMap">
+          <url>rbxassetid://94202355146046</url>
+        </Content>
+        <Content name="NormalMap">
+          <url>rbxassetid://102603392874381</url>
+        </Content>
+        <Content name="RoughnessMap">
+          <url>rbxassetid://82962110810713</url>
+        </Content>
+        <Content name="MetalnessMap">
+          <url>rbxassetid://94175885618888</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="MaterialVariant" referent="BeDino_Stone">
+      <Properties>
+        <string name="Name">BeDino_Stone</string>
+        <token name="BaseMaterial">896</token>
+        <token name="MaterialPattern">1</token>
+        <float name="StudsPerTile">12</float>
+        <Content name="ColorMap">
+          <url>rbxassetid://128007023677783</url>
+        </Content>
+        <Content name="NormalMap">
+          <url>rbxassetid://122774786381140</url>
+        </Content>
+        <Content name="RoughnessMap">
+          <url>rbxassetid://136846854290994</url>
+        </Content>
+        <Content name="MetalnessMap">
+          <url>rbxassetid://121086492719690</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="MaterialVariant" referent="BeDino_Bark">
+      <Properties>
+        <string name="Name">BeDino_Bark</string>
+        <token name="BaseMaterial">512</token>
+        <token name="MaterialPattern">1</token>
+        <float name="StudsPerTile">10</float>
+        <Content name="ColorMap">
+          <url>rbxassetid://81361214070715</url>
+        </Content>
+        <Content name="NormalMap">
+          <url>rbxassetid://133769849943046</url>
+        </Content>
+        <Content name="RoughnessMap">
+          <url>rbxassetid://113318935596754</url>
+        </Content>
+        <Content name="MetalnessMap">
+          <url>rbxassetid://116129277500945</url>
+        </Content>
+      </Properties>
+    </Item>
+  </Item>
+</roblox>

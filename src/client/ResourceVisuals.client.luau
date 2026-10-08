@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local RuntimeMeshes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("RuntimeMeshes"))
+local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local watched = setmetatable({}, {__mode = "k"})
 local function characterVisual(character: Model)
     local root = character:FindFirstChild("HumanoidRootPart")
@@ -14,7 +15,8 @@ local function characterVisual(character: Model)
     local previous = character:FindFirstChild("LocalMeshVisual")
     if previous and previous:GetAttribute("SpeciesId") == id and previous:GetAttribute("Scale") == scale
         and previous:GetAttribute("Mutation") == mutation then return end
-    local model = RuntimeMeshes.clone(id)
+    local overrides=ReplicatedStorage:FindFirstChild("ResourceOverrides")
+    local model = if overrides and overrides:FindFirstChild(id) then Resources.clone(id) else RuntimeMeshes.clone(id)
     if not model then return end
     if previous then previous:Destroy() end
     local groundHeight = root.Size.Y / 2 + humanoid.HipHeight
@@ -31,6 +33,7 @@ local function characterVisual(character: Model)
     for _, item in model:GetDescendants() do
         if item:IsA("BasePart") then
             item.Anchored = false
+            if mutation=="gold" or mutation=="diamond" then Resources.clearTextures(item) end
             if mutation == "gold" then item.Color = Color3.fromRGB(242,199,63) item.Material = Enum.Material.Metal
             elseif mutation == "diamond" then item.Color = Color3.fromRGB(85,213,245) item.Material = Enum.Material.Glass item.Reflectance=.2 end
             local weld = Instance.new("WeldConstraint")

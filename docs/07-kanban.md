@@ -6,7 +6,7 @@ Build 005 PvP/run-ending tests 1–9 passed. Build 006 persistence tests 1–10 
 ## Board
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-017; BD-019–022 | BD-027 | None | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–033 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
+| BD-017; BD-019–022 | BD-027 | None | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -54,6 +54,46 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 | BD-031 | Review / test | P1 | Random weather, rarity bonuses and bottom-right timers | BD-027 |
 | BD-032 | Review / test | P1 | Crystal potion shop, timed buffs and inventory | BD-028, BD-031 |
 | BD-033 | Review / test | P1 | Matching aura, potion, leap, weather and currency icons | BD-026 |
+| BD-034 | Review / test | P1 | Event-mutated eggs, cosmetic trails and textured visual upgrade | BD-028, BD-031 |
+
+### Weather, trails and visual upgrade, 2026-10-08
+
+Current scope supersedes the earlier next-step list: the user deferred non-owner
+published assets, physical-phone and multiplayer/persistence release checks.
+They remain open, not passed. No published experience or persistent player
+profile was changed. Work used a separate unpublished Build 019 copy.
+
+- [x] Seven weighted weather events configured, including Volcanic Bloom,
+  Northern Lights, Earthquake and Blood Moon. Actual server event transitions,
+  lighting and loot multipliers tested through a disposable clock fixture.
+- [x] Real food pickup crossed 9 to 10 catches under volcanic weather and created
+  an Ember-tagged egg. The mutation roll was deterministic in the disposable
+  fixture; no claim of observed natural drop frequency.
+- [x] Additive trail/event migration, owned/equip validation, metadata integrity,
+  overflow FIFO, duplicate settlement/claim and rejoin pass offline transactions.
+- [x] Ember, Aurora and Blood Moon eggs hatch in order through actual UI, retain
+  their mutations, and show correct perks. Server applies Blood Moon speed 1.12x
+  and growth 1.87x with Royal Nova in clear weather.
+- [x] Aura/trail shop previews, permanent purchases/equip and moving tapered
+  trails engine checked. Reduced-effects fixture disables all cosmetic/weather
+  effects. Desktop and phone-emulator captures archived.
+- [x] Six actual owner-created textured models load and render in the index.
+  Imported camera clipping fixed and regression tested; native models retained.
+- [x] Twelve selected grass/rock/bark map creators match verified owner
+  7285577648. Authored MaterialService is packaged; protected runtime material
+  creation removed after detecting the startup failure.
+- [x] Reusable manifest and binding generator recorded. New native event symbols
+  and assembled trail previews are NOT completed illustrated PNGs.
+- [ ] Art approval, refined event VFX/custom textures, environment mesh upgrades
+  and measured performance. Three environment-generation jobs failed.
+- [ ] All phone modal targets/readability and physical-device performance.
+  Cosmetic shop targets were enlarged; this is not whole-app phone acceptance.
+- [ ] Non-owner published permissions, multiplayer load and persistent-data
+  migration/rejoin release tests: deferred by user.
+
+Design/configuration: [event and visual notes](35-event-mutations-and-visual-upgrade.md).
+Exact fixture boundaries and screenshots: [evidence](evidence/2026-10-08-events-and-cosmetics/README.md).
+BD-034 stays Review / test, not Done.
 
 ## Build 017 and next features
 

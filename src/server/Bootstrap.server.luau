@@ -19,11 +19,12 @@ Players.CharacterAutoLoads = false
 Lighting.ClockTime = 14
 Lighting.Brightness = 2
 Lighting.Ambient = Color3.fromRGB(130, 143, 148)
+require(script.Parent.ImportedResources).load()
 Arena.build()
 
 ProfileRepository.start()
-RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string)
-    local ok = ProfileRepository.commitRunSettlement(player, runId, catchScore)
+RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string, eggEvents)
+    local ok = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents)
     if not ok then
         warn(string.format("[Be Dino] settlement failed for %s (%s)", player.Name, reason))
         return false

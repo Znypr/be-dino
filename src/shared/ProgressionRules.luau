@@ -5,12 +5,42 @@ function Rules.item(catalog,id)
     for _,item in catalog do if item.id==id then return item end end
     return nil
 end
+function Rules.eventMutation(entry)
+    local selected=nil
+    for _,mutation in Config.EventMutations do
+        if entry and entry.events and (entry.events[mutation.id] or 0)>0 then selected=mutation end
+    end
+    return selected
+end
+function Rules.validEvents(events): boolean
+    if events==nil then return true end
+    if typeof(events)~="table" then return false end
+    for id,count in events do
+        if not Rules.item(Config.EventMutations,id) or typeof(count)~="number" or count~=count or count<0 or count%1~=0 or count>2000000000 then return false end
+    end
+    return true
+end
+function Rules.knownEventMutation(id): boolean return Rules.item(Config.EventMutations,id)~=nil end
+function Rules.eventEgg(eventId,roll)
+    local event=Rules.item(Config.Weather,eventId)
+    return {eventId=if event then event.id else "clear",mutationId=if event and roll<event.chance then event.mutation else ""}
+end
+function Rules.validEgg(metadata): boolean
+    if typeof(metadata)~="table" then return false end
+    local eventId=metadata.eventId or "clear"
+    local mutationId=metadata.mutationId or ""
+    local event=Rules.item(Config.Weather,eventId)
+    return (eventId=="clear" or event~=nil) and typeof(mutationId)=="string" and (mutationId=="" or (event~=nil and event.mutation==mutationId))
+end
 local function finite(n): boolean return typeof(n)=="number" and n==n and math.abs(n)<math.huge end
 function Rules.upgrade(profile)
     -- Additive schema migration: never replace an existing wallet or inventory.
     if profile.progression==nil then
         profile.progression={crystals=0,auras={},equippedAura="",potions={},buffs={}}
     end
+    local p=profile.progression
+    if p.trails==nil then p.trails={} end
+    if p.equippedTrail==nil then p.equippedTrail="" end
     return profile.progression
 end
 function Rules.valid(p): boolean
@@ -19,6 +49,14 @@ function Rules.valid(p): boolean
     if typeof(p.auras)~="table" or typeof(p.potions)~="table" or typeof(p.buffs)~="table" or typeof(p.equippedAura)~="string" then return false end
     for id,value in p.auras do if not Rules.item(Config.Auras,id) or value~=true then return false end end
     if p.equippedAura~="" and not p.auras[p.equippedAura] then return false end
+    if p.trails~=nil then
+        if typeof(p.trails)~="table" then return false end
+        for id,value in p.trails do if not Rules.item(Config.Trails,id) or value~=true then return false end end
+    end
+    if p.equippedTrail~=nil then
+        if typeof(p.equippedTrail)~="string" then return false end
+        if p.equippedTrail~="" and (not p.trails or not p.trails[p.equippedTrail]) then return false end
+    end
     for id,count in p.potions do
         if not Rules.item(Config.Potions,id) or not finite(count) or count<0 or count%1~=0 or count>999 then return false end
     end
@@ -44,6 +82,17 @@ function Rules.apply(profile,action,id,now,replace,amount): (boolean,string)
     elseif action=="equipAura" then
         if id~="" and not p.auras[id] then return false,"not_owned" end
         p.equippedAura=id
+        return true,"equipped"
+    elseif action=="buyTrail" then
+        local item=Rules.item(Config.Trails,id)
+        if not item then return false,"unknown_item" end
+        if p.trails[id] then return false,"already_owned" end
+        if p.crystals<item.price then return false,"insufficient_crystals" end
+        p.crystals-=item.price p.trails[id]=true
+        return true,"purchased"
+    elseif action=="equipTrail" then
+        if id~="" and not p.trails[id] then return false,"not_owned" end
+        p.equippedTrail=id
         return true,"equipped"
     elseif action=="buyPotion" then
         local item=Rules.item(Config.Potions,id)

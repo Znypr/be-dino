@@ -15,6 +15,7 @@ function RunLifecycle.prepareSanctuary(player: Player, character: Model)
     character:SetAttribute("CatchScore", 0)
     character:SetAttribute("FoodCatchCarry", 0)
     character:SetAttribute("WeatherLootCarry",0)
+    character:SetAttribute("RunEggEvents","[]")
     character:SetAttribute("ExitChannelEndsAt", 0)
     player:SetAttribute("Location", "Sanctuary")
 end
@@ -41,6 +42,7 @@ function RunLifecycle.begin(player: Player, character: Model)
     character:SetAttribute("CatchScore", 0)
     character:SetAttribute("FoodCatchCarry", 0)
     character:SetAttribute("WeatherLootCarry",0)
+    character:SetAttribute("RunEggEvents","[]")
     character:SetAttribute("SpawnProtectionEndsAt", workspace:GetServerTimeNow() + Config.SpawnProtectionSeconds)
     character:SetAttribute("ExitChannelEndsAt", 0)
 
@@ -68,9 +70,11 @@ local function settlementSnapshot(character: Model)
     local catchScore = character:GetAttribute("CatchScore")
     if typeof(runId) ~= "string" then return nil end
     if typeof(catchScore) ~= "number" or catchScore % 1 ~= 0 then return nil end
+    local ok,events=pcall(function() return HttpService:JSONDecode(character:GetAttribute("RunEggEvents") or "[]") end)
     return {
         runId = runId,
         catchScore = math.clamp(catchScore, 0, Config.MaxCatchScore),
+        eggEvents=if ok and typeof(events)=="table" then events else {},
     }
 end
 
@@ -78,7 +82,7 @@ local function respawnAfterSettlement(player: Player, character: Model, snapshot
     task.spawn(function()
         local ok = true
         if settleRun then
-            ok = settleRun(player, snapshot.runId, snapshot.catchScore, reason)
+            ok = settleRun(player, snapshot.runId, snapshot.catchScore, reason, snapshot.eggEvents)
         end
         if not ok then
             if player.Parent and player:GetAttribute("ProfileState") == "Loaded" then
@@ -148,7 +152,7 @@ function RunLifecycle.endForDisconnect(player: Player): string
     local growthScore = character:GetAttribute("GrowthScore")
     player:SetAttribute("LastRunGrowthScore", if typeof(growthScore) == "number" then growthScore else 0)
     if settleRun then
-        local ok = settleRun(player, snapshot.runId, snapshot.catchScore, "Disconnect")
+        local ok = settleRun(player, snapshot.runId, snapshot.catchScore, "Disconnect", snapshot.eggEvents)
         return if ok then "settled" else "failed"
     end
     return "settled"

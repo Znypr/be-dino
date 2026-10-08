@@ -1,0 +1,96 @@
+{
+  "owner": {
+    "type": "User",
+    "id": 7285577648,
+    "name": "znyprs"
+  },
+  "verified": "2026-10-08 owner Studio; cross-account permissions deferred",
+  "models": [
+    {
+      "id": "compy",
+      "assetId": "79351996702566",
+      "triangleBudget": 6000,
+      "prompt": "Friendly polished cartoon Compy dinosaur: emerald green, ivory belly, amber back spikes, big expressive eyes. Full grounded bipedal body, small arms, curved long tail. Glossy rounded shapes, subtle painted scale texture and thick readable silhouette matching illustrated Roblox collectible UI. No scenery, pedestal or text."
+    },
+    {
+      "id": "triceratops",
+      "assetId": "90014068543889",
+      "triangleBudget": 6000,
+      "prompt": "Friendly polished cartoon Triceratops, teal green body, ivory belly and horns, broad amber-edged frill. Full grounded quadruped, big expressive eyes, rounded glossy shapes and subtle painted scales. Readable Roblox collectible silhouette, consistent with emerald cartoon Compy. No scenery, pedestal or text."
+    },
+    {
+      "id": "tyrannosaurus",
+      "assetId": "70736222541118",
+      "triangleBudget": 6000,
+      "prompt": "Friendly polished cartoon T-Rex, coral red body, ivory belly, small amber back ridges, broad head and big expressive eyes. Full grounded biped, tiny arms and long curved tail. Rounded glossy shapes, subtle painted scales, matching Roblox collectible dinosaur UI. No scenery, pedestal or text."
+    },
+    {
+      "id": "raptor",
+      "assetId": "114284137928940",
+      "triangleBudget": 6000,
+      "prompt": "Friendly polished cartoon Raptor, cyan blue body, ivory belly, amber feather crest, clawed hind feet, small feathered arms and long tail. Full grounded biped with big expressive eyes. Rounded glossy shapes and subtle painted scales, consistent Roblox collectible dinosaur style. No scenery, pedestal or text."
+    },
+    {
+      "id": "stegosaurus",
+      "assetId": "92865644294705",
+      "triangleBudget": 6000,
+      "prompt": "Friendly polished cartoon Stegosaurus, leaf green quadruped, ivory belly, large rounded amber back plates and spiked tail. Complete grounded body, expressive eyes, glossy rounded forms and subtle painted scales. Consistent Roblox collectible dinosaur style. No scenery, pedestal or text."
+    },
+    {
+      "id": "ankylosaurus",
+      "assetId": "74993073282146",
+      "triangleBudget": 6000,
+      "prompt": "Friendly polished cartoon Ankylosaurus, golden ochre quadruped, ivory belly, rounded teal armor plates and broad club tail. Full grounded low body, expressive eyes, glossy rounded forms and subtle painted scales. Consistent Roblox collectible dinosaur style. No scenery, pedestal or text."
+    }
+  ],
+  "materials": [
+    {
+      "id": "BeDino_Meadow",
+      "prompt": "Stylized lush meadow turf for a friendly dinosaur collectible game. Broad soft grass tufts, emerald and fresh green with muted cool shadows, subtle hand-painted detail. Seamless top-down ground texture, no objects or flowers, no photoreal noise.",
+      "bindings": "resources/world-materials.rbxmx"
+    },
+    {
+      "id": "BeDino_Stone",
+      "prompt": "Stylized prehistoric stone for a friendly cartoon dinosaur game. Rounded cool gray slabs, restrained teal shadows and ivory edges, sparse tiny moss traces. Seamless organic texture, hand-painted polish, no photoreal cracks or text.",
+      "bindings": "resources/world-materials.rbxmx"
+    },
+    {
+      "id": "BeDino_Bark",
+      "prompt": "Stylized warm prehistoric tree bark, broad rounded flowing grooves, restrained golden highlights and dark neutral creases. Friendly cartoon collectible-game material, polished hand-painted finish. Seamless organic pattern, no leaves or text.",
+      "bindings": "resources/world-materials.rbxmx"
+    }
+  ],
+  "environmentModels": {
+    "status": "not integrated",
+    "reason": "Three generation jobs failed at publishing/insertion; original props retained."
+  },
+  "worldMaterials": [
+    {
+      "name": "BeDino_Meadow",
+      "base": "Grass",
+      "color": "94202355146046",
+      "normal": "102603392874381",
+      "roughness": "82962110810713",
+      "metal": "94175885618888",
+      "tile": 20
+    },
+    {
+      "name": "BeDino_Stone",
+      "base": "Rock",
+      "color": "128007023677783",
+      "normal": "122774786381140",
+      "roughness": "136846854290994",
+      "metal": "121086492719690",
+      "tile": 12
+    },
+    {
+      "name": "BeDino_Bark",
+      "base": "Wood",
+      "color": "81361214070715",
+      "normal": "133769849943046",
+      "roughness": "113318935596754",
+      "metal": "116129277500945",
+      "tile": 10
+    }
+  ]
+}

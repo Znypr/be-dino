@@ -33,6 +33,10 @@
     "Lighting": {
       "$className": "Lighting"
     },
+    "MaterialService": {
+      "$className": "MaterialService",
+      "$path": "resources/world-materials.rbxmx"
+    },
     "ReplicatedFirst": {
       "$className": "ReplicatedFirst",
       "Loading": {

@@ -45,6 +45,25 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(client.attrib["class"], "LocalScript")
         self.assertEqual(shared.attrib["class"], "ModuleScript")
 
+    def test_authored_world_materials_are_packaged(self):
+        root = ET.fromstring(packager.build()[0])
+        service = next(n for n in root.findall("Item") if n.attrib["class"] == "MaterialService")
+        variants = service.findall("Item")
+        self.assertEqual(len(variants), 3)
+        for variant in variants:
+            self.assertEqual(variant.attrib["class"], "MaterialVariant")
+            for key in ("ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap"):
+                self.assertRegex(variant.find(f"Properties/Content[@name='{key}']/url").text, r"^rbxassetid://[0-9]+$")
+        for base in ("Grass", "Rock", "Wood"):
+            self.assertEqual(service.find(f"Properties/string[@name='{base}Name']").text, "BeDino_" + {"Grass":"Meadow", "Rock":"Stone", "Wood":"Bark"}[base])
+
+    def test_visual_bindings_match_verified_manifest(self):
+        spec = importlib.util.spec_from_file_location("visual_bindings", ROOT / "tools/bind_visual_assets.py")
+        bindings = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(bindings)
+        for path, content in bindings.outputs().items():
+            self.assertEqual(path.read_text(encoding="utf-8"), content)
+
     def test_unsupported_property_fails(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "default.project.json"

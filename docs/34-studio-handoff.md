@@ -40,6 +40,17 @@ are archived in `docs/evidence/2026-10-08-weather-and-leap/`. Native fallbacks r
 
 ## Exactly what to do next
 
+**Latest scope update (2026-10-08):** Weather mutations, trails and textured
+visual overrides now exist. Read docs/35-event-mutations-and-visual-upgrade.md
+and the newest canonical checklist in docs/07-kanban.md before the historical
+steps below. The user deferred the three release gates for now. Do not retry
+them as routine scope, do not mark them passed, and do not touch saved profiles.
+resources/visual-upgrade-bindings.json is the configurable source for model and
+material IDs. Run tools/bind_visual_assets.py, then tools/build.py. Materials
+are authored place data, not server-created runtime variants; source-only sync
+must include resources/world-materials.rbxmx as MaterialService. New weather
+icons/trail previews remain native fallbacks pending illustrated artwork.
+
 1. Download this branch, extract it and open **`build/BeDino-Build019.rbxlx`** in Studio. Keep it unpublished for the first F5 session. Confirm the badge says **BUILD redesign-019** and the preview notice says progress is not saved. Test currency should show 1,000,000 crystals.
 2. Play the native-fallback build first. Explore, gather food, use E, buy/equip an aura, buy/use/replace a potion, return to bank rewards, and hatch eggs with NEXT EGG. Check the scrolling six-species index, phone emulator, reduced motion, terrain collisions and two-client PvP. Unknown/not-owned species should remain locked.
 3. Inspect Gold/Diamond previews in the Fusion page. To test actual fusion, earn fixture copies in the disposable local profile or use the existing offline transaction harness; do not enable persistent debug grants. The offline suite covers both fusion costs, migration, retries and rejoin; visual acceptance is still needed.

@@ -6,6 +6,10 @@ local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local FoodCatchRules = require(ReplicatedStorage.Shared.FoodCatchRules)
+local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
+local RewardMath = require(script.Parent.RewardMath)
+local Http = game:GetService("HttpService")
+local eventRandom = Random.new()
 local FoodService = {}
 local TYPES = {
     {id = "berry", weight = 78, points = 1, size = 0.7, color = Color3.fromRGB(224, 99, 118)},
@@ -204,7 +208,17 @@ function FoodService.start(dinosaur)
                     local c = candidate.character
                     local whole, carry = FoodCatchRules.award(candidate.gained, c:GetAttribute("FoodCatchCarry") or 0, c:GetAttribute("WeatherLootMultiplier") or 1)
                     c:SetAttribute("FoodCatchCarry", carry)
-                    c:SetAttribute("CatchScore", math.min(Config.MaxCatchScore, (c:GetAttribute("CatchScore") or 0) + whole))
+                    local before=c:GetAttribute("CatchScore") or 0
+                    local after=math.min(Config.MaxCatchScore,before+whole)
+                    c:SetAttribute("CatchScore",after)
+                    local ok,events=pcall(function() return Http:JSONDecode(c:GetAttribute("RunEggEvents") or "[]") end)
+                    if not ok or typeof(events)~="table" then events={} end
+                    for i=1,RewardMath.earnedChests(after) do
+                        if not events[i] then
+                            events[i]=ProgressionRules.eventEgg(if i>RewardMath.earnedChests(before) then workspace:GetAttribute("WeatherId") or "clear" else "clear",eventRandom:NextNumber())
+                        end
+                    end
+                    c:SetAttribute("RunEggEvents",Http:JSONEncode(events))
                     dinosaur.addGrowth(c, candidate.gained)
                 end
             end

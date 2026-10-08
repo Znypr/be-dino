@@ -105,7 +105,7 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
         for _, item in visual:GetDescendants() do
             if item:IsA("BasePart") then
                 item.Anchored = false
-                if mutation ~= "base" then item.Color = palette.primary item.Material = if gold then Enum.Material.Metal else Enum.Material.Glass item.Reflectance = if gold then .08 else .2 end
+                if mutation ~= "base" then Resources.clearTextures(item) item.Color = palette.primary item.Material = if gold then Enum.Material.Metal else Enum.Material.Glass item.Reflectance = if gold then .08 else .2 end
                 local weld = Instance.new("Weld")
                 weld.Name = "ResourceWeld"
                 weld.C0 = root.CFrame:ToObjectSpace(item.CFrame)

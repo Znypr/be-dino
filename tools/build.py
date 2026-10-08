@@ -70,6 +70,7 @@ def build(project_path=ROOT / "default.project.json"):
                 sources[entry.relative_to(project_path.parent).as_posix()] = hashlib.sha256(source.encode()).hexdigest()
 
     def descend(parent, name, spec):
+        nonlocal counter
         unknown = [k for k in spec if k.startswith("$") and k not in {"$className", "$path"}]
         if unknown:
             raise ValueError(f"Unsupported project properties: {unknown}")
@@ -80,7 +81,17 @@ def build(project_path=ROOT / "default.project.json"):
             path = (project_path.parent / spec["$path"]).resolve()
             if not path.is_relative_to(project_path.parent.resolve()):
                 raise ValueError("Source path escapes project")
-            directory(node, path)
+            if path.is_file() and path.suffix == ".rbxmx" and node.attrib["class"] == "MaterialService":
+                imported = ET.parse(path).getroot().findall("Item")
+                if len(imported) != 1 or imported[0].attrib["class"] != "MaterialService":
+                    raise ValueError("Expected one authored MaterialService")
+                for nested in imported[0].iter("Item"):
+                    counter += 1
+                    nested.attrib["referent"] = f"RBX{counter}"
+                parent.remove(node)
+                parent.append(imported[0])
+            else:
+                directory(node, path)
         for child_name, child_spec in sorted(spec.items()):
             if not child_name.startswith("$"):
                 descend(node, child_name, child_spec)
