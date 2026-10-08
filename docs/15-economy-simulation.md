@@ -2,6 +2,8 @@
 
 Status: specified and simulated for mechanics testing. These values are not public-launch balance.
 
+> **Historical private-alpha only (superseded as product vision on 2026-10-08).** Every `N(c)=c` direct dinosaur-copy result and separate 1/2/3 threshold chest model below remain correct descriptions of the **old simulation**, not approved future Be Dino rewards. In the target, 500 **food** points -> 15 catches = **15 earned run eggs** and 5,000 **food** points -> 150 run eggs, plus crystals and separately earned bonus nests. The old `c` is a **catch score**, not food/growth score. See [owner reward vision](09-reward-economy.md) and [implementation task BD-044](07-kanban.md). Do not use these tables to answer the user about intended end-of-run rewards.
+
 ## Test configuration
 
 Run rewards use `catchScore` only. Growth score remains temporary arena power.
