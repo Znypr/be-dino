@@ -1,5 +1,7 @@
 # Build 016: UI and model delivery rebuild
 
+> **HISTORICAL Build 016 screen/asset checklist.** Later Build 020 UI code and owner-requested Shop/Home/HUD/touch changes supersede old layouts. See [new UX tasks](45-owner-feedback-shop-hud-world-weather-tasks.md) and [Kanban](07-kanban.md).
+
 ## Why Build 015 did not meet the brief
 
 User screenshots show old procedural dinosaur and tree shells and a permission-error status. EditableMesh/Image data embedded in scripts is not equivalent to imported production art. Run end immediately restarted a run because no sanctuary state existed. The UI was text-heavy, low-contrast, and lacked item-art hierarchy. No claim of Studio verification was justified.
