@@ -1,0 +1,73 @@
+{
+  "date": "2026-10-08",
+  "scope": "Blender review evidence; not Roblox integration or final owner approval",
+  "local_source_root": "Premium_Egg",
+  "editable_sources": {
+    "patterns": "Pattern_Collection/BeDino_Eight_Patterns.blend",
+    "color_genetics": "Color_Genetics/BeDino_Color_Genetics.blend",
+    "basic_conditions": "Blank_Egg_Conditions/BeDino_Blank_Conditions.blend",
+    "latest_aura_draft": "Anime_Aura_Mutations/BeDino_Anime_Auras.blend"
+  },
+  "files": [
+    {
+      "path": "anime-aura-drafts.jpg",
+      "sha256": "4b0734a94c31eaef9ff364a60fa8d60b7c8a09fbdb97fc1827a9003d4a0c7e3e",
+      "bytes": 467327,
+      "dimensions": [
+        1536,
+        844
+      ],
+      "mode": "RGB"
+    },
+    {
+      "path": "aura-render-validation.json",
+      "sha256": "cd7edcaa6e359e689102ab8f73ebe8fdb49f7b16321e8c0d3ac52830d33813d7",
+      "bytes": 1474
+    },
+    {
+      "path": "basic-conditions.jpg",
+      "sha256": "d954dfc8d64a0884d431fef539a34ad2ebe5a4e41c423df32a53d5d40a6e545b",
+      "bytes": 159143,
+      "dimensions": [
+        1152,
+        422
+      ],
+      "mode": "RGB"
+    },
+    {
+      "path": "color-mixes-and-rare-examples.jpg",
+      "sha256": "6110c7eb75ae20dfed654ceb98ba328811509e3205080ddc2831248ddb32c89c",
+      "bytes": 443128,
+      "dimensions": [
+        1536,
+        836
+      ],
+      "mode": "RGB"
+    },
+    {
+      "path": "eight-patterns.jpg",
+      "sha256": "244f09298c3018b98c82de0da3274dc35dee16953d8cbb05cde9286b11290a92",
+      "bytes": 451755,
+      "dimensions": [
+        1536,
+        836
+      ],
+      "mode": "RGB"
+    },
+    {
+      "path": "pattern-validation.json",
+      "sha256": "90916936637caad52218d6f96f91d3d6d1e60deaca08e631768e90fe87126c97",
+      "bytes": 2008
+    },
+    {
+      "path": "provisional-color-authoring-config.json",
+      "sha256": "bc09484fb284f250896b8aa014399e2f21ed06a6c127385ac6aa5621179bf450",
+      "bytes": 1333
+    },
+    {
+      "path": "scene-integrity.json",
+      "sha256": "aa524eab663296f5d43b1ce2dfdbaab40b11696263bc957e6b91ed029f73ec00",
+      "bytes": 159
+    }
+  ]
+}

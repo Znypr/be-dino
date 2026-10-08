@@ -110,6 +110,28 @@ crystal shops/genetics; do not replace whole client files with older copies.
   imported bounding-box framing pass across four aspect ratios.
 - [x] UI-only code published in [draft PR #2](https://github.com/Znypr/be-dino/pull/2)
   on `codex/ui-motion-polish`; [implementation/acceptance notes](https://github.com/Znypr/be-dino/blob/codex/ui-motion-polish/docs/38-ui-motion-and-performance.md).
+- [x] Owner rejected primitive hatch/cracks; replaced with matched 512px premium blank-egg
+  and branching-fracture PNGs, attached shake/squash and 240ms shell split/fade.
+  Navigation now uses the same premium shell. Both uploads verified owner 7285577648.
+  [Crack screenshot](https://github.com/Znypr/be-dino/blob/codex/ui-motion-polish/docs/evidence/2026-10-08-ui-motion/premium-cracks.png)
+  and source/checksum bindings are included in PR #2. Actual UI buy/claim -> 2x Raptor;
+  queue empty, new navigation image IsLoaded=true, clean console. Owner art approval
+  and non-owner published image access remain pending.
+- [x] Hatch v3: three crack-growth stages and timed shakes, still beat before release,
+  seven jagged fragments with cap-first rotation/gravity/fade, rarity halo/rays and delayed confetti.
+  Five-second total unchanged. Separate hatch sound toggle; loaded free ProSoundEffects
+  crunch/chime assets recorded with provenance. Failed Cracked eggs suppress success effects.
+- [x] Native fragment coverage/budget harness passes (217 temporary crop strips); 61
+  current sources compile; framing checks pass. Reduced-motion and early-close helper probes pass.
+  [v3 observations](https://github.com/Znypr/be-dino/blob/codex/ui-motion-polish/docs/evidence/2026-10-08-ui-motion/hatch-v3-observations.json)
+  distinguish helper screenshots from real purchase/claim evidence.
+- [x] Mesh fetch failures reproduced in owner Studio; static actual-model thumbnail
+  fallback prevents blank discoveries. Compy fallback IsLoaded=true and renders after real claim.
+- [ ] Fix full 3D mesh asset access; static fallback does not reproduce genotype/fusion
+  colors or orbit. Owner visual/audio rating and physical-phone frame-time/memory remain open.
+  Integration note: shop/genetics commit `9354dc5` changes mesh preload to typed
+  MeshPart instances and proves colored imported hatch models in VisualUpgrade.
+  This is not non-owner published asset certification or a retest of Latest Studio.
 - [ ] Review/merge PR #2 alongside concurrent shop changes, resolve client overlap and rebuild.
 - [x] User selected **BeDino-Latest.rbxlx**, Studio `65d0a77a-6006-4d4c-80b3-4fa62fce67cc`.
   Verified GameId/PlaceId 0; backed up scripts and synced 57 current sources; left stopped in Edit.

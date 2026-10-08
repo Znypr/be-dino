@@ -1,0 +1,72 @@
+{
+  "dewdrop": {
+    "size": [
+      512,
+      512
+    ],
+    "mode": "RGBA",
+    "transparent_pixels": 194240,
+    "partial_alpha_pixels": 66462,
+    "shell_center_mean_alpha": 25.129614604462475
+  },
+  "charged": {
+    "size": [
+      512,
+      512
+    ],
+    "mode": "RGBA",
+    "transparent_pixels": 194944,
+    "partial_alpha_pixels": 66141,
+    "shell_center_mean_alpha": 24.879648411088574
+  },
+  "frost": {
+    "size": [
+      512,
+      512
+    ],
+    "mode": "RGBA",
+    "transparent_pixels": 194096,
+    "partial_alpha_pixels": 66586,
+    "shell_center_mean_alpha": 24.65652467883705
+  },
+  "seismic": {
+    "size": [
+      512,
+      512
+    ],
+    "mode": "RGBA",
+    "transparent_pixels": 191432,
+    "partial_alpha_pixels": 61260,
+    "shell_center_mean_alpha": 27.356862745098038
+  },
+  "ember": {
+    "size": [
+      512,
+      512
+    ],
+    "mode": "RGBA",
+    "transparent_pixels": 192883,
+    "partial_alpha_pixels": 61396,
+    "shell_center_mean_alpha": 22.68471940500338
+  },
+  "aurora": {
+    "size": [
+      512,
+      512
+    ],
+    "mode": "RGBA",
+    "transparent_pixels": 193102,
+    "partial_alpha_pixels": 67877,
+    "shell_center_mean_alpha": 24.00155510480054
+  },
+  "bloodmoon": {
+    "size": [
+      512,
+      512
+    ],
+    "mode": "RGBA",
+    "transparent_pixels": 191094,
+    "partial_alpha_pixels": 67412,
+    "shell_center_mean_alpha": 26.589655172413792
+  }
+}

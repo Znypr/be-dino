@@ -18,7 +18,7 @@ An original Roblox growth-and-collection game inspired by Be Fish. Start in a sa
 
 A bright dinosaur island where every run feeds a lasting collection. Growth creates the immediate challenge: find food, choose when to chase, survive larger dinosaurs and decide when to return. Eggs create the return journey: discover another species, reveal special traits, fuse duplicates and show off your dinosaur with auras and trails.
 
-The current art direction combines chunky dinosaur silhouettes, textured island surfaces, glossy illustrated icons, colourful navigation and layered 3D previews. Dinosaur and environment art are still drafts; the logo sets the branding direction.
+The current art direction combines chunky dinosaur silhouettes, textured island surfaces, colourful illustrated icons and layered 3D previews. Eggs use a matte illustrated shell, eight patterns, weighted color mixes, reusable condition overlays and surrounding smoky anime-style mutation effects. The [shared egg design vision](docs/39-egg-appearance-shared-vision.md) records accepted choices, provisional rarity settings and deferred work. Dinosaur, environment and latest mutation artwork remain drafts; the logo sets the branding direction.
 
 ## The player loop
 
@@ -106,6 +106,7 @@ These are **design/Todo items, BD-035–041**. Existing Shiny/BIG traits and thr
 | Rules and rewards | [Game design](docs/03-game-design.md) · [Reward economy](docs/09-reward-economy.md) |
 | Code and persistence | [Architecture](docs/04-architecture.md) · [Profile/remote contracts](docs/13-persistence-remote-contracts.md) |
 | Artwork and runtime assets | [Resources](resources/README.md) · [Artwork direction](docs/32-artwork-guide-and-todo.md) |
+| Combined egg appearance and trait decisions | [Shared egg vision: patterns, colors, rarity, conditions and mutations](docs/39-egg-appearance-shared-vision.md) |
 | Future progression | [Crystal shops and egg genetics](docs/36-crystal-shops-egg-genetics-and-progression.md) |
 | Release criteria | [Roadmap and testing](docs/06-roadmap-and-testing.md) |
 
