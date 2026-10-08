@@ -66,6 +66,8 @@ Level means a **persistent account progression level**, **not** temporary run gr
 - The server owns duration and buffs. Same-type replacement, expiry during offline time, duplicate purchase/use protection, buff caps and synchronization with weather/trails/conditions must be verified.
 - Prices, strengths, stack rules and rarity variants remain configurable; reuse the current potion infrastructure rather than creating a second purchase system.
 
+> **New owner target (2026-10-08, BD-045):** Starting condition distribution **50% Cracked, 30% Dirty, 15% Normal, 4.5% Rainbow, 0.5% Astra**. The unchanged prototype Cracked-success rule would imply **40% overall failed eggs** at this starting tier; verify this user experience during balancing. Six upgrade-tier probabilities need redesign, with live odds/disclosure kept aligned with server version. This does not assert the current Build 020 weights were changed; see [detailed task specification](45-owner-feedback-shop-hud-world-weather-tasks.md) and [current-vs-target contract](41-egg-outcomes-contract.md).
+
 ## Egg Condition Shop: permanent odds upgrades
 
 The **condition is assigned when an egg is earned or purchased**, not on opening the hatching UI. A Condition Shop permanently improves the player's odds of drawing good conditions for **future new eggs**. Each upgrade level costs more crystals and requires a higher persistent account level. Existing eggs do not reroll when the shop upgrades.
