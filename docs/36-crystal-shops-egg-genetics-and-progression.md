@@ -22,7 +22,7 @@ policy and receipt release checks pass. [Catalog and icons](../resources/monetiz
 
 ## Player loop
 
-> **Latest progression/Shop direction, 2026-10-08:** [Pattern-specific fusion, durable dino ownership and cosmetics](46-pattern-fusion-dino-identity-and-cosmetic-progression.md) supersedes the old global reusable aura/trail inventory proposal as **future game design**, not as Build 020 source. First Gold prototype: **10 same-species+pattern dinos → Gold hero**; tier order **Gold → Emerald → Diamond**, later stages only proposed. Bought auras/trails remain bound to their recipient dino, but this dino can buy and switch multiple choices; fusion grants the **main earned stats**. See [BD-057–062](07-kanban.md) for migration and disclosure. Neither code nor purchased legacy inventories have been changed.
+> **Latest progression/Shop direction, 2026-10-08:** [Advanced fusion and individual dino cosmetics](46-pattern-fusion-dino-identity-and-cosmetic-progression.md) supersedes the old globally shared look inventory as **future owner design**, not current Build 020 source. A living dino may **purchase multiple aura/trail appearances and switch between them**, but **on fusion all selected input dinosaurs and ALL their owned cosmetics are consumed; the NEW output inherits neither**. Gold requires ten same-species/same-pattern inputs; Emerald then Diamond follow. Guaranteed tier/stat progression is separate from **fresh ingredient-weighted output traits** and future wheel reveals. Fusion recipient selection, source lineage, paid purchase loss warnings/migration and conditional odds require [BD-057–065](07-kanban.md). Current code and legacy purchases remain untouched.
 
 
 
