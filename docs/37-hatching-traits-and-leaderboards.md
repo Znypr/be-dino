@@ -1,5 +1,7 @@
 # Hatching, traits and leaderboards
 
+> **HISTORICAL Build 019 hatching/leaderboard evidence.** References to six species, three egg thresholds and 1.3× BIG are bounded to earlier code. Build 020 has **22 species**, **1.2× size-only BIG** and nine-color/eight-pattern genes; see [creature integration](43-creature-runtime-integration.md). The owner-target one run egg per catch remains [BD-044](07-kanban.md), not shipped.
+
 2026-10-08. Branch redesign/resources-and-core-fixes, Build redesign-019.
 Baseline 3d8d1e4. Canonical acceptance remains docs/07-kanban.md, BD-042.
 Concurrent planning commits through 26af626 were merged without removing their
