@@ -79,7 +79,8 @@ return table.freeze({
     ShinyChance = 0.05,
     BigScaleMultiplier = 1.2,
     IrregularWeather = {volcano = true, aurora = true, quake = true, bloodmoon = true},
-    DeveloperProducts = {}, -- Verified product IDs -> crystal grants. Never invent IDs.
+    DeveloperProducts = { [3717200374] = 500, [3717200467] = 1500, [3717200523] = 4000, [3717200920] = 10000, [3717200940] = 25000, [3717200979] = 90000 },
+    CrystalPacksEnabled = false, -- Enable only after paid-random disclosure/release review.
     PaidRandomItemsEnabled = false, -- Release gate: complete combined-outcome disclosure/policy acceptance first.
     ChestQueueCapacity = 5,
     ChestOverflowCapacity = 10,

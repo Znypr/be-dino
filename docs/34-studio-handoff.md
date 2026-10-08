@@ -33,8 +33,10 @@ world Shiny are implemented and tested in unpublished VisualUpgrade. BIG is now
 1.2x, size-only. 38 owner-uploaded neutral maps use authored cloneable PBR templates;
 runtime scripts never write protected ColorMap. Gold/Diamond fusion preview retained.
 See [acceptance and limitations](39-crystal-shops-and-genetics-acceptance.md).
-Robux product IDs remain empty and paid-random release disabled. Do not enable
-these without actual receipt/disclosure/policy acceptance. Fixtures removed,
+Six real Robux product IDs are now bound from `resources/monetization/crystal-products.json`.
+Crystal-pack prompts and paid-random release remain disabled pending complete
+disclosure/policy acceptance. Actual two-client shop isolation and premium egg
+fallback passed; see `docs/evidence/2026-10-08-pending-gates/README.md`. Fixtures removed,
 Studio stopped/default viewport restored; published persistent profiles untouched.
 
 Latest gameplay follow-up: [ordered hatching, Shiny/BIG and map leaderboards](37-hatching-traits-and-leaderboards.md).

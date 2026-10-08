@@ -1,0 +1,19 @@
+{
+  "universeId": 10769812255,
+  "ownerType": "User",
+  "ownerId": 7285577648,
+  "verifiedAt": "2026-10-08",
+  "experienceNameAtCreation": "newbuild",
+  "managedPricing": true,
+  "releaseEnabled": false,
+  "productImageSource": "resources/ui/v2/icons/amber.png",
+  "productImageUploaded": false,
+  "products": [
+    {"productId": 3717200374, "name": "500 Crystals", "crystals": 500, "defaultRobux": 49},
+    {"productId": 3717200467, "name": "1500 Crystals", "crystals": 1500, "defaultRobux": 129},
+    {"productId": 3717200523, "name": "4000 Crystals", "crystals": 4000, "defaultRobux": 299},
+    {"productId": 3717200920, "name": "10000 Crystals", "crystals": 10000, "defaultRobux": 699},
+    {"productId": 3717200940, "name": "25000 Crystals", "crystals": 25000, "defaultRobux": 1499},
+    {"productId": 3717200979, "name": "90000 Crystals", "crystals": 90000, "defaultRobux": 4999}
+  ]
+}

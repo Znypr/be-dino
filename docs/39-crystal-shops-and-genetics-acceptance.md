@@ -110,16 +110,22 @@ source/build roundtrip. See the final test result in the evidence manifest.
 
 ## Remaining Gates
 
-- **Robux packs:** no real DeveloperProduct IDs configured. Shop correctly says
-  unavailable; actual payment, receipt delivery and spending leaderboard were
-  not tested. Do not invent IDs or imply purchase availability.
+- **Robux packs:** six real DeveloperProducts are configured, from 500 crystals /
+  49 Robux to 90000 / 4999; managed pricing enabled. Creator Hub and Studio lookup
+  verified. `CrystalPacksEnabled=false` prevents prompts until release review.
+  Product image uploads are blocked by browser file chooser tooling; in-game
+  crystal rows reuse the existing amber illustration. Actual payment, receipt
+  delivery and spending leaderboard are not tested.
 - **Paid randomness:** release flag defaults false. If product IDs are configured,
   random eggs and condition upgrades require the explicit flag plus server
   PolicyService eligibility; unknown/restricted policies deny. Factorized odds
   UI exists, but complete combined-outcome disclosure and policy review are not
   certified. Keep disabled until compliant. See [Roblox paid-random-item rules](https://create.roblox.com/docs/production/monetization/paid-random-items).
-- Saved-profile restart, two-client/multiplayer fairness, non-owner asset access,
+- Actual two-client shop isolation/locks/retry passed using disposable local
+  profiles. [Follow-up evidence](evidence/2026-10-08-pending-gates/README.md).
+- Saved-profile restart, broader multiplayer/load, non-owner asset access,
   real phone/load tests and release rollback need a controlled private experience.
   No published persistent data was accessed for this acceptance run.
 - Approve/tune provisional crystal/XP/price/condition/color curves. Full modular
-  condition/pattern/mutation artwork and premium art fallback remain separate work.
+  condition/pattern/mutation artwork remain separate work. Premium art fallback
+  now passes forced-missing-image/reveal-cleanup in the owner client.

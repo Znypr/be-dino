@@ -5,6 +5,8 @@ local geneticsModule=script.Parent:FindFirstChild("EggGenetics")
 local Genetics=if geneticsModule then require(geneticsModule) else nil
 local ContentProvider=game:GetService("ContentProvider")
 local RunService=game:GetService("RunService")
+local ModelPreview=require(script.Parent.ModelPreview)
+local Appearance=require(script.Parent.EggAppearance)
 local Hatch={}
 local shellImage="rbxassetid://95856282289615"
 local crackImage="rbxassetid://126956807167774"
@@ -13,7 +15,9 @@ local chimeId="rbxassetid://9116394545"
 local canvas=460
 local unit=canvas/512
 local trajectories={{12,-195,-28},{-175,-85,-105},{175,-100,110},{-135,-10,-150},{15,30,75},{145,-20,160},{-8,45,-40}}
-function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?)
+function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: string,cracks: string}?)
+    local shellAsset=if assets then assets.shell else Theme.ImageIds.egg or shellImage
+    local cracksAsset=if assets then assets.cracks else crackImage
     local color=rarityColor or Theme.Colors.gold
     local root=Instance.new("Frame")
     root.Name,root.BackgroundTransparency,root.Size,root.ZIndex,root.Parent="PremiumHatchEgg",1,UDim2.fromOffset(304,260),parent.ZIndex+1,parent
@@ -29,15 +33,22 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?)
         result.ZIndex,result.Parent=z,parentObject
         return result
     end
-    local shell=image(stage,shellImage,stage.ZIndex+2)
+    local fallback=ModelPreview.add(root,"egg")
+    fallback.Name="NativeHatchFallback"
+    fallback.ZIndex=root.ZIndex+2
+    Appearance.apply(fallback,genes)
+    root:SetAttribute("ArtworkFallback",true)
+    root:SetAttribute("ArtworkLoadState","Loading")
+    local shell=image(stage,shellAsset,stage.ZIndex+2)
     shell.Name,shell.ImageColor3="PorcelainShell",tint
+    shell.Visible=false
     local crackStages={}
     for i,region in {{210,107,95,128,.68},{151,224,210,83,1.48},{151,306,210,80,2.28}} do
         local mask=Instance.new("Frame")
         mask.Name,mask.BackgroundTransparency="CrackStage"..i,1
         mask.Position,mask.Size=UDim2.fromOffset(region[1]*unit,region[2]*unit),UDim2.fromOffset(region[3]*unit,0)
         mask.ZIndex,mask.Parent=stage.ZIndex+3,stage
-        local cracks=image(mask,crackImage,mask.ZIndex)
+        local cracks=image(mask,cracksAsset,mask.ZIndex)
         cracks.ImageRectOffset,cracks.ImageRectSize=Vector2.new(region[1],region[2]),Vector2.new(region[3],1)
         cracks.Visible=false
         table.insert(crackStages,{mask=mask,image=cracks,width=region[3],height=region[4],start=region[5]})
@@ -58,7 +69,21 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?)
     local tap=sound(crunchId,.16,1.5)
     local crunch=sound(crunchId,.38,1)
     local chime=sound(chimeId,.24,1)
-    task.spawn(function() pcall(function() ContentProvider:PreloadAsync({shellImage,crackImage,crunch,chime}) end) end)
+    task.spawn(function()
+        local failed=shellAsset=="" or cracksAsset==""
+        local images={shell}
+        for _,step in crackStages do table.insert(images,step.image) end
+        local ok=pcall(function() ContentProvider:PreloadAsync(images,function(_,status)
+            if status~=Enum.AssetFetchStatus.Success then failed=true end
+        end) end)
+        if not root.Parent or root:GetAttribute("Opening") then return end
+        local native=not ok or failed
+        root:SetAttribute("ArtworkFallback",native)
+        root:SetAttribute("ArtworkLoadState",if native then "Unavailable" else "Loaded")
+        fallback.Visible=native
+        shell.Visible=not native
+        task.spawn(function() pcall(function() ContentProvider:PreloadAsync({crunch,chime}) end) end)
+    end)
     local pieces={}
     -- Cropped strips approximate jagged alpha masks without editing the bitmap.
     for index,polygon in Fragments.Polygons do
@@ -74,7 +99,7 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?)
         for y=107,383,4 do
             for _,span in Fragments.spans(polygon,y+2) do
                 local left,right=span[1],span[2]
-                local strip=image(group,shellImage,group.ZIndex)
+                local strip=image(group,shellAsset,group.ZIndex)
                 strip.ImageColor3=tint
                 -- Guard overlap avoids one-pixel seams when the phone UI scales.
                 strip.ImageRectOffset,strip.ImageRectSize=Vector2.new(left,y),Vector2.new(right-left,6)
@@ -107,7 +132,7 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?)
             local height=math.floor(step.height*math.clamp((t-step.start)/.48,0,1))
             step.mask.Size=UDim2.fromOffset(step.width*unit,height*unit)
             step.image.ImageRectSize=Vector2.new(step.width,math.max(1,height))
-            step.image.Visible=height>0
+            step.image.Visible=height>0 and root:GetAttribute("ArtworkFallback")~=true
         end
         halo.BackgroundTransparency=if Theme.MotionEnabled then 1-math.clamp((t-2.3)/1.1,0,1)*.12 else 1
         haloScale.Scale=1+math.clamp(t-2.7,0,.7)*.15
@@ -115,14 +140,15 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?)
     local function split(success: boolean?)
         if opening or not root.Parent then return end
         opening=true
+        root:SetAttribute("Opening",true)
         if Theme.HatchSoundEnabled~=false then
             crunch.Parent=parent crunch:Play() game:GetService("Debris"):AddItem(crunch,2)
             if success~=false then chime.Parent=parent chime:Play() game:GetService("Debris"):AddItem(chime,3) end
         end
         if not Theme.MotionEnabled then root:Destroy() return end
-        stage.Rotation=0 scale.Scale=1 shell.Visible=false
+        stage.Rotation=0 scale.Scale=1 shell.Visible=false fallback.Visible=false
         for _,step in crackStages do step.mask.Visible=false end
-        for _,piece in pieces do piece.group.Visible=true end
+        for _,piece in pieces do piece.group.Visible=root:GetAttribute("ArtworkFallback")~=true end
         local ring=Instance.new("UIStroke") ring.Color,ring.Thickness,ring.Transparency,ring.Parent=color,2,.15,halo
         Theme.animate(halo,.48,{BackgroundTransparency=1})
         Theme.animate(haloScale,.48,{Scale=1.7})

@@ -304,6 +304,7 @@ render=function(name: string)
         elseif cosmeticTab=="crystals" then
             art(body,"amber",20,cardsY+12,220)
             label(body,num("Crystals").." Crystals",270,cardsY,535,50,30,C.gold)
+            if not Config.CrystalPacksEnabled then label(body,"COMING SOON",270,cardsY+38,535,20,16,C.gold) end
             local products={} for id,amount in Config.DeveloperProducts do table.insert(products,{id=id,amount=amount}) end
             table.sort(products,function(a,b) return a.amount<b.amount end)
             if #products==0 then label(body,"Robux packs unavailable",270,cardsY+70,535,80,27)
@@ -311,10 +312,19 @@ render=function(name: string)
                 local list=Instance.new("ScrollingFrame") list.BackgroundTransparency,list.BorderSizePixel,list.Size,list.Position,list.CanvasSize,list.ZIndex,list.Parent=1,0,UDim2.fromOffset(535,250),UDim2.fromOffset(270,cardsY+60),UDim2.fromOffset(0,#products*(targetHeight+12)),24,body
                 for i,product in products do
                     local saleReady=false
-                    local b=button(list,product.amount.." CRYSTALS",0,(i-1)*(targetHeight+12),520,targetHeight,C.gold,function() if saleReady then Marketplace:PromptProductPurchase(player,product.id) end end)
+                    local rowY=(i-1)*(targetHeight+12)
+                    art(list,"amber",4,rowY+6,targetHeight-12)
+                    local b=button(list,product.amount.." CRYSTALS",targetHeight+4,rowY,516-targetHeight,targetHeight,C.gold,function() if saleReady then Marketplace:PromptProductPurchase(player,product.id) end end)
                     task.spawn(function()
                         local ok,info=pcall(function() return Marketplace:GetProductInfo(product.id,Enum.InfoType.Product) end)
-                        if b.Parent then if ok and info.IsForSale~=false and typeof(info.PriceInRobux)=="number" then saleReady=true b.Text=product.amount.." CRYSTALS • R$ "..info.PriceInRobux else b.Text="UNAVAILABLE" b.Active=false end end
+                        if b.Parent then
+                            if ok and info.IsForSale~=false and typeof(info.PriceInRobux)=="number" then
+                                saleReady=Config.CrystalPacksEnabled==true
+                                b.Text=product.amount.." CRYSTALS • R$ "..info.PriceInRobux
+                                b.Active=saleReady
+                                if not saleReady then b.BackgroundColor3=C.card end
+                            else b.Text=product.amount.." CRYSTALS • UNAVAILABLE" b.Active=false end
+                        end
                     end)
                 end
             end

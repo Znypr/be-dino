@@ -85,9 +85,15 @@ Only unpublished Build 019 VisualUpgrade / GameId=PlaceId=0 was modified.
   templates, owner-client loading and native/original-texture fallbacks.
 - [x] Desktop/phone shop, queue and colored reveal captures; clean final gameplay console.
 - [x] Temporary acceptance fixture removed; Studio stopped/default viewport restored.
-- [ ] Real Robux IDs, successful paid receipts and Robux-spending leaderboard test.
+- [x] Six real crystal DeveloperProducts created under verified owner, 49-4999 Robux;
+  reusable manifest/bindings and Marketplace product lookup verified. No real charge.
+- [x] Actual two-client disposable-profile shop isolation, level locks, unauthorized
+  grant rejection and duplicate-request single debit; [evidence](evidence/2026-10-08-pending-gates/README.md).
+- [x] Premium hatch missing-image native fallback and reveal cleanup in owner client.
+- [ ] Creator Hub crystal product images: file chooser/upload tooling blocked.
+- [ ] Successful paid receipt delivery and Robux-spending leaderboard integration test.
 - [ ] Complete paid-random disclosure/policy review; release flag remains disabled.
-- [ ] Published private saved-profile restart, two-client fairness, non-owner assets,
+- [ ] Published private saved-profile restart, broader multiplayer/load, non-owner assets,
   physical phone/load verification, approved economy balance and modular egg art.
 
 ### UI motion and responsiveness, 2026-10-08 (BD-043)
