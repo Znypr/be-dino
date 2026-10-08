@@ -1,4 +1,6 @@
 # Asset, UI and audio production
+
+> **HISTORICAL asset-pipeline plan.** Procedural Build 013 methods and proposed future Blender work are early development history, not current production guidance. For current authoring standards and unfinished assets see [artwork guide](32-artwork-guide-and-todo.md), [egg appearance vision](39-egg-appearance-shared-vision.md), [Build 020 integration](43-creature-runtime-integration.md) and [BD-048–050](45-owner-feedback-shop-hud-world-weather-tasks.md).
 Goal: coherent original assets that are cheap to revise and work in Roblox. Build 013 now contains the first deliberate original procedural dinosaur/map kit; runtime art acceptance is BD-016.
 
 ## Production strategy
