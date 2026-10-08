@@ -1,5 +1,7 @@
 # Original asset kit manifest
 
+> **HISTORICAL Build 013 native-only asset manifest**, not a listing of the complete Build 020 resource catalog. Check [resources README](../resources/README.md), [artwork guide](32-artwork-guide-and-todo.md) and [creature integration](43-creature-runtime-integration.md) for newer assets. Do not delete these old source/rights records.
+
 Build 013 uses only native Roblox primitives and materials. No imported meshes, textures, decals, audio, Creator Store assets or third-party files are required.
 
 | Logical ID | Asset | Source | Rights | Roblox asset ID | Build |
