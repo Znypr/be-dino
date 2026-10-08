@@ -121,7 +121,7 @@ Use separate background, tile, shell/color/pattern, condition, mutation and Shin
 | Cracked and Dirty reusable overlays; clean Normal | Accepted visual direction |
 | Rainbow condition effects | Current prismatic/multicolored-star authoring direction; final combination/runtime review open |
 | Astra condition effects | Owner accepted brighter opal with five curved vertical streaks and three hero stars; runtime integration still open |
-| Smoky engulfing anime mutation auras | Latest requested direction; seven latest renders remain review drafts |
+| Smoky engulfing anime mutation auras | Owner prefers yellow/orange Magma with fine debris; six new elemental revisions await review |
 | Roblox upload, ID binding, layered runtime/phone testing | Not completed by the Blender review |
 
 The [evidence README and manifest](evidence/2026-10-08-egg-shared-vision/README.md) identify the preview files, local editable source lineage and render validation. Full `.blend` projects and complete individual export packs remain in the local `Premium_Egg` workspace; only compact review examples and validation records are archived here. Do not assume local-only sources are downloadable from this repository.
@@ -133,6 +133,8 @@ Subsequent [Magma and Cracked revisions](evidence/2026-10-08-magma-cracked-revis
 Next work: approve/refine mutation silhouettes; reconcile remaining visual palette/profile differences with private-test gameplay; produce missing granular runtime layers and upload manifests; then verify authored combinations, Shiny/Big and device performance in Studio. Keep accepted direction, authored draft, uploaded, integrated and runtime-verified states distinct.
 
 Latest Magma feedback: the owner prefers the volcanic revision and requests **yellow heat alongside orange** and **finer dark debris within the smoke**, retaining the larger rock chunks. [The color/debris render revision](evidence/2026-10-08-magma-color-debris/README.md) adds golden filament cores, golden smoke pockets, a hot yellow inner ring, pale sparks, and 74 smaller irregular charcoal chips. Its eleven aligned exports include a separate fine-debris layer. This revision is awaiting owner review; the previously preferred version is preserved as backup.
+
+The owner subsequently preferred that improved Magma direction and requested more mutations. [Six distinct elemental revisions](evidence/2026-10-08-six-elemental-mutations/README.md) now use low sandstone dust for Seismic, ice shards/snow for Frost, branching gold lightning for Charged, droplets/ripples for Dewdrop, flowing multicolor curtains for Aurora, and a separate red moon/crimson mist for Blood Moon. Each has a 512px scene preview and transparent aura from 1024px masters, with the same blank egg, grounded stage, and camera. These six are new authoring revisions of existing IDs and await owner review; granular component exports, animation, and Roblox integration remain open.
 
 Gameplay reconciliation follow-up: [the outcome contract](41-egg-outcomes-contract.md)
 selects provisional equal pattern weights and a nine-color next-build palette with

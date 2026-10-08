@@ -1,0 +1,44 @@
+{
+  "seismic": {
+    "transparent_pixels": 224286,
+    "opaque_shell_coverage_percent": 0.0,
+    "transparent_corners": true,
+    "no_opaque_replacement_egg": true
+  },
+  "frost": {
+    "transparent_pixels": 221076,
+    "opaque_shell_coverage_percent": 0.14,
+    "transparent_corners": true,
+    "no_opaque_replacement_egg": true
+  },
+  "charged": {
+    "transparent_pixels": 213490,
+    "opaque_shell_coverage_percent": 0.0,
+    "transparent_corners": true,
+    "no_opaque_replacement_egg": true
+  },
+  "dewdrop": {
+    "transparent_pixels": 214491,
+    "opaque_shell_coverage_percent": 0.15,
+    "transparent_corners": true,
+    "no_opaque_replacement_egg": true
+  },
+  "aurora": {
+    "transparent_pixels": 215478,
+    "opaque_shell_coverage_percent": 0.11,
+    "transparent_corners": true,
+    "no_opaque_replacement_egg": true
+  },
+  "bloodmoon": {
+    "transparent_pixels": 210543,
+    "opaque_shell_coverage_percent": 0.0,
+    "transparent_corners": true,
+    "no_opaque_replacement_egg": true
+  },
+  "integrity": {
+    "egg_vertices_preserved": true,
+    "camera_max_difference": 0,
+    "unaffected_layer_pixels_identical": true,
+    "outputs": "12 actual 512 x 512 RGBA exports from 12 actual 1024 x 1024 masters"
+  }
+}
