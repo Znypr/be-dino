@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "key": "leap",
+  "source": "leap-v1.png",
+  "createdAt": "2026-10-08",
+  "status": "Generated draft; Roblox upload, binding and Studio verification pending",
+  "generator": "Built-in image generation",
+  "styleReference": "resources/ui/v2/icons/dinos.png",
+  "prompt": "Use case: stylized-concept. Create ONE standalone transparent square PNG UI icon for Be Dino Roblox game, illustrated leap ability. Subject: friendly chunky emerald-green cartoon dinosaur with cream belly and small amber-gold back spikes, airborne in a clearly readable forward leap toward upper-right, short arms, powerful bent hind legs, tail extending left, cheerful focused expression. Full body visible. Three-quarter view slightly from above. Glossy dimensional 3D illustrated game collectible style, rounded bevels, saturated greens, controlled bright highlights, thick dark contour, soft upper-left key lighting, matching reference dinosaur portrait style. Simple compact silhouette readable at 48px, minimal large cyan/ivory motion swooshes behind the feet, no ground, no scenery, no badge frame, no text, no letters, no E key, no timer, no watermark. Center the entire subject in square canvas with 12% genuinely transparent margin on every edge, no cropped spikes or swoosh. Reference image is STYLE ONLY; create a new full-body leaping composition, do not repeat the portrait. Genuine alpha background.",
+  "sha256": "c8e00363194e592a922a944ccbe8e1f0982cef9e2434801ff2b41353ca04ca4e",
+  "dimensions": [
+    1254,
+    1254
+  ],
+  "mode": "RGBA",
+  "review": {
+    "alpha": "Decoded RGBA, alpha range 0..255",
+    "composition": "Friendly full-body green dinosaur in forward leap; cyan/ivory motion swooshes; no baked text",
+    "margin": "Requested 12% margin was not achieved; visible alpha >16 bbox [37,48,1231,1208]. Use centered UI inset around 0.80 and inspect edge fringe at 48/64px before acceptance.",
+    "runtime": "No fabricated Roblox ID; native leap remains until real upload and verification"
+  }
+}

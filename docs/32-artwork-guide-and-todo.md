@@ -75,7 +75,7 @@ Distinct Index/inventory symbols are optional UX improvements, not prerequisites
 ### New illustrated artwork needed (not completed by native symbols)
 | Logical ID / runtime state | Intended illustration | Status |
 |---|---|---|
-| leap_v1 / leap | Friendly dimensional dinosaur in a forward leap, readable motion silhouette; match existing dinosaur artwork, no text or baked E key. | Todo; native leap remains the fallback |
+| leap_v1 / leap | Friendly dimensional dinosaur in a forward leap, readable motion silhouette; match existing dinosaur artwork, no text or baked E key. | Generated draft: `resources/ui/v2/icons/leap-v1.png`; prompt/integrity/review in sibling manifest. Tight outer margin requires centered UI inset around 0.80; upload, binding and 48/64px Studio review pending. Native leap remains the fallback |
 | weather_clear_v1 / clear (currently weather icon) | Dimensional sun/cloud composition for the implemented Clear/default countdown state. | Todo; native weather remains the fallback |
 | weather_rain_v1 / rain | Chunky rain cloud and readable drops in the same camera, contour and lighting style. | Todo; native rain remains the fallback |
 | weather_thunder_v1 / thunder | Thunderstorm cloud with a prominent lightning bolt, distinct from rain. | Todo; native thunder remains the fallback |

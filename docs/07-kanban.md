@@ -61,6 +61,11 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 
 ## Acceptance and current evidence
 
+### Leap artwork draft, 2026-10-08
+
+`resources/ui/v2/icons/leap-v1.png` is generated as a separate reusable RGBA master, matching the existing illustrated dinosaur style. Full PNG decode and alpha checks pass; exact prompt, SHA-256 and margin limitation are recorded in `leap-v1.manifest.json`. Generated does not mean uploaded or integrated. Use a centered inset around 0.80 and verify small-size readability/edge fringe in Studio before acceptance. The native leap symbol remains active. Clear, Rain, Thunderstorm and Blizzard illustrations remain Todo. No runtime sources, build or persistent data changed.
+
+
 ### Build 019 shared navigation compositions, 2026-10-08
 
 Continued from `91aac96`. Shared configurable `NavigationArtwork` maps AURAS to
