@@ -22,7 +22,6 @@ return table.freeze({
     StudioLocalProfilesEnabled = true, -- unpublished Studio only; never a live fallback
     StudioTestWalletEnabled = true, -- only unpublished, nonpersistent local profiles
     StudioTestCrystals = 1000000,
-    StudioChestTimerSeconds = 10,
     FoodCatchRate = 15 / 500, -- raw food points; growth boosts do not multiply catches
     ProfileLoadWarningSeconds = 20,
 
@@ -72,7 +71,15 @@ return table.freeze({
     CollectionTestGrantSpeciesId = "triceratops",
     CollectionTestGrantVersion = 1,
 
-    ChestTimerSeconds = 60,
+    ChestTimerSeconds = 0, -- Reveals, rather than offline incubation, pace new eggs.
+    HatchRevealSeconds = 5,
+    EggRarityBoostPerExtraEgg = 0.25,
+    EggRarityBoostMaxEggs = 15,
+    BigChance = 0.1,
+    ShinyChance = 0.05,
+    BigScaleMultiplier = 1.3,
+    IrregularWeather = {volcano = true, aurora = true, quake = true, bloodmoon = true},
+    DeveloperProducts = {}, -- Verified product IDs -> crystal grants. Never invent IDs.
     ChestQueueCapacity = 5,
     ChestOverflowCapacity = 10,
     ChestClaimRequestCooldownSeconds = 0.35,

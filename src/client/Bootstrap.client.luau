@@ -15,6 +15,8 @@ local Preview = require(Shared.DinosaurPreview)
 local ModelPreview = require(Shared.ModelPreview)
 local ProgressionConfig=require(Shared.ProgressionConfig)
 local ProgressionRules=require(Shared.ProgressionRules)
+local EggTraits=require(Shared.EggTraits)
+local PreviewTraits=require(script.Parent.PreviewTraits)
 local C = Theme.Colors
 local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
 local startRun = remotes:WaitForChild("RequestStartRun") :: RemoteEvent
@@ -53,6 +55,12 @@ local function eventMutation(id: string)
 end
 local fusionTarget = "gold"
 local hatchPending = false
+local autoHatching = false
+local hatchCancelSerial = 0
+local function ownedTraits(id: string)
+    local ok,data=pcall(function() return Http:JSONDecode(str("CollectionJson","{}")) end)
+    return if ok and typeof(data)=="table" then EggTraits.selected(data[id]) else nil
+end
 local function label(parent: Instance,text: string,x: number,y: number,w: number,h: number,size: number,color: Color3?): TextLabel
     local t = Instance.new("TextLabel")
     t.BackgroundTransparency,t.Position,t.Size = 1,UDim2.fromOffset(x,y),UDim2.fromOffset(w,h)
@@ -99,6 +107,8 @@ local body = Instance.new("Frame")
 body.Position,body.Size,body.BackgroundTransparency,body.ZIndex,body.Parent = UDim2.fromOffset(18,98),UDim2.fromOffset(824,402),1,23,panel
 local modalVersion=0
 local function close()
+    autoHatching=false
+    hatchCancelSerial+=1
     modalVersion+=1
     local version=modalVersion
     active=""
@@ -106,7 +116,8 @@ local function close()
     task.delay(if motion then .13 else 0,function() if modalVersion==version then shade.Visible=false end end)
     TweenService:Create(blur,TweenInfo.new(if motion then .15 else 0),{Size=0}):Play()
 end
-button(header,"X",778,8,62,62,C.red,close)
+local closeButton=button(header,"X",770,1,80,76,C.red,close)
+closeButton.AnchorPoint,closeButton.Position=Vector2.new(1,0),UDim2.new(1,-2,0,1)
 shade.Activated:Connect(close)
 local toast = box(gui,0,0,440,56,C.card,50)
 toast.AnchorPoint,toast.Position,toast.Visible = Vector2.new(.5,0),UDim2.new(.5,0,0,80),false
@@ -148,6 +159,7 @@ end
 local function hero(parent: GuiObject,id: string,x: number,y: number,w: number,h: number,gold: (boolean | string)?)
     local view=Preview.add(parent,id,gold or "base")
     view.Position,view.Size = UDim2.fromOffset(x,y),UDim2.fromOffset(w,h)
+    PreviewTraits.add(view,ownedTraits(id))
     return view
 end
 local rarityColors={C.accent,C.blue,C.gold}
@@ -162,6 +174,20 @@ end
 local function queue()
     local ok,data=pcall(function() return Http:JSONDecode(str("ChestQueueJson","[]")) end)
     return if ok and typeof(data)=="table" then data else {}
+end
+local function hatchNext()
+    local id=str("NextChestId")
+    if id=="" or workspace:GetServerTimeNow()<num("NextChestReadyAt") then
+        autoHatching=false
+        open("eggs")
+        return
+    end
+    if hatchPending then return end
+    hatchPending=true
+    hatch:FireServer(id,Http:GenerateGUID(false))
+    task.delay(8,function()
+        if hatchPending then hatchPending=false autoHatching=false notify("Hatching did not finish. Please retry.",C.red) end
+    end)
 end
 local function progression()
     local ok,data=pcall(function() return Http:JSONDecode(str("ProgressionJson","{}")) end)
@@ -283,13 +309,13 @@ render=function(name: string)
             local base,gold,diamond=copies(id)
             local event=eventMutation(id)
             local rarity=speciesIndex(id)
-            if base+gold+diamond>0 or event then unlocked+=1 end
+            if base+gold+diamond>0 or event or ownedTraits(id) then unlocked+=1 end
             local card=box(list,((i-1)%3)*276,math.floor((i-1)/3)*284,264,272,rarityColors[rarity],24)
             Theme.texture(card,264,272)
             label(card,Config.SpeciesDisplayNames[id],4,8,256,35,25)
             label(card,rarityNames[rarity],4,44,256,25,18)
             hero(card,id,7,70,250,128,bestMutation(id))
-            label(card,if event then event.name.." mutation" elseif base+gold+diamond>0 then string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond) else "Not discovered",5,201,254,25,15)
+            label(card,if event then event.name.." mutation" elseif ownedTraits(id) then "Special variant" elseif base+gold+diamond>0 then string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond) else "Not discovered",5,201,254,25,15)
             button(card,"VIEW DINO",12,233,240,30,C.card,function() selected=id open("detail") end)
         end
         meter(body,0,356,600,unlocked,#Config.SpeciesOrder,C.accent,string.format("Discovered: %d / %d",unlocked,#Config.SpeciesOrder))
@@ -298,7 +324,7 @@ render=function(name: string)
         local index=speciesIndex(selected)
         local base,gold,diamond=copies(selected)
         local event=eventMutation(selected)
-        local owned=base+gold+diamond>0 or event~=nil
+        local owned=base+gold+diamond>0 or event~=nil or ownedTraits(selected)~=nil
         heading.Text,header.BackgroundColor3=Config.SpeciesDisplayNames[selected],rarityColors[index]
         local stage=box(body,0,0,380,360,rarityColors[index],24)
         hero(stage,selected,0,20,380,280,bestMutation(selected))
@@ -344,7 +370,7 @@ render=function(name: string)
         button(body,"CONFIRM FUSION",280,264,510,64,C.accent,function() fuse:FireServer(selected,fusionTarget,Http:GenerateGUID(false)) open("fusion") end)
         button(body,"CANCEL",280,340,510,44,C.red,function() open("fusion") end)
     elseif name=="eggs" then
-        heading.Text,header.BackgroundColor3="Growing Eggs",C.gold
+        heading.Text,header.BackgroundColor3="Caught Eggs",C.gold
         local entries=queue()
         local timers={}
         for slot=1,Config.ChestQueueCapacity do
@@ -352,7 +378,9 @@ render=function(name: string)
             local card=box(body,(slot-1)*166,0,156,280,if entry then C.card else C.outline,24)
             label(card,"Slot "..slot,0,8,156,30,22)
             local view=ModelPreview.add(card,"egg",entry==nil)
-            view.Position,view.Size=UDim2.fromOffset(18,58),UDim2.fromOffset(120,146)
+            view.Position,view.Size=UDim2.fromOffset(18,65),UDim2.fromOffset(120,120)
+            PreviewTraits.add(view,entry)
+            if entry then label(card,rarityNames[entry.rarity or 1],0,37,156,24,18,rarityColors[entry.rarity or 1]) end
             local mutation=if entry then ProgressionRules.item(ProgressionConfig.EventMutations,entry.mutationId) else nil
             if mutation then
                 local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
@@ -374,39 +402,66 @@ render=function(name: string)
             end
         end
         refreshEggs()
-        button(body,"HATCH NEXT EGG",0,310,400,64,C.accent,function()
+        button(body,"HATCH NEXT EGG",0,310,400,math.max(64,45/viewportScale()),C.accent,function()
             local id=str("NextChestId")
             if id=="" then notify("Return from a run to earn reward eggs") return end
             if workspace:GetServerTimeNow()<num("NextChestReadyAt") then notify("This egg is still growing",C.gold) return end
             if hatchPending then return end
-            hatchPending=true
-            hatch:FireServer(id,Http:GenerateGUID(false))
-            task.delay(5,function() hatchPending=false end)
+            autoHatching=true
+            hatchNext()
         end)
-        label(body,"Eggs grow in order, even while offline.\nWaiting for a nest slot: "..num("PendingChestGrants"),420,302,400,88,21)
+        label(body,"Waiting for a nest slot: "..num("PendingChestGrants"),420,302,400,88,21)
     elseif name=="hatch" then
-        heading.Text,header.BackgroundColor3="You hatched a dinosaur!",C.gold
-        celebrate()
+        heading.Text,header.BackgroundColor3="An egg is hatching...",C.gold
+        local version=modalVersion
         local reward=str("LastChestRewardText","New dinosaur")
         local id=string.match(reward,"x (%w+)") or "compy"
         if not Config.SpeciesDisplayNames[id] then id="compy" end
         local view=hero(body,id,160,-12,504,260)
-        label(body,reward,80,240,660,58,36,C.gold)
+        for _,child in view:GetChildren() do if child.Name=="TraitBadge" or child.Name=="ShinyPreviewGlint" then child:Destroy() end end
+        PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny")})
+        view.Visible=false
+        local eggView=ModelPreview.add(body,"egg")
+        eggView.Position,eggView.Size=UDim2.fromOffset(260,0),UDim2.fromOffset(304,260)
+        local rewardLabel=label(body,rarityNames[speciesIndex(id)].." egg",80,240,660,58,36,rarityColors[speciesIndex(id)])
+        local crack=Instance.new("Frame")
+        crack.BackgroundTransparency,crack.Position,crack.Size,crack.ZIndex,crack.Parent=1,UDim2.fromOffset(370,88),UDim2.fromOffset(84,120),eggView.ZIndex+1,body
+        local fractures={}
+        for i,line in {{34,0,22,44},{28,32,26,-35},{33,70,20,38}} do
+            local segment=Instance.new("Frame")
+            segment.BackgroundColor3,segment.BorderSizePixel=C.outline,0
+            segment.Position,segment.Size,segment.Rotation=UDim2.fromOffset(line[1],line[2]),UDim2.fromOffset(4,line[3]),line[4]
+            segment.Visible,segment.ZIndex,segment.Parent=false,crack.ZIndex,crack
+            fractures[i]=segment
+        end
         local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
         if mutation then
             local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
             for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.55) end end
-            label(body,mutation.name.." • "..mutation.growth.."x Growth • "..mutation.speed.."x Speed",80,295,660,25,20,color)
+            local perks=label(body,mutation.name.." • "..mutation.growth.."x Growth • "..mutation.speed.."x Speed",80,295,660,25,20,color)
+            perks.Visible=false
+            task.delay(3.4,function() if perks.Parent and modalVersion==version then perks.Visible=true end end)
         end
-        button(body,"NEXT EGG",80,322,320,64,C.accent,function()
-            local id=str("NextChestId")
-            if id=="" or workspace:GetServerTimeNow()<num("NextChestReadyAt") then open("eggs") return end
-            if hatchPending then return end
-            hatchPending=true
-            hatch:FireServer(id,Http:GenerateGUID(false))
-            task.delay(5,function() hatchPending=false end)
+        local nextButton=button(body,"NEXT EGG",80,322,320,math.max(64,45/viewportScale()),C.accent,function() autoHatching=true hatchNext() end)
+        local collectionButton=button(body,"COLLECTION",424,322,320,math.max(64,45/viewportScale()),C.blue,function() autoHatching=false open("collection") end)
+        nextButton.Visible,collectionButton.Visible=false,false
+        task.spawn(function()
+            local started=os.clock()
+            while os.clock()-started<3.4 and modalVersion==version and eggView.Parent do
+                local t=os.clock()-started
+                if motion then eggView.Rotation=math.sin(t*(8+t*5))*math.min(14,t*5) end
+                for i,segment in fractures do segment.Visible=t>1.8+i*.35 end
+                task.wait(.03)
+            end
+            if modalVersion~=version or not view.Parent then return end
+            eggView:Destroy() crack:Destroy()
+            view.Visible=true rewardLabel.Text=reward heading.Text="You hatched a dinosaur!"
+            celebrate()
+            task.wait(math.max(0,Config.HatchRevealSeconds-(os.clock()-started)))
+            if modalVersion~=version or not view.Parent then return end
+            if autoHatching and str("NextChestId")~="" then hatchNext()
+            else autoHatching=false nextButton.Visible=true collectionButton.Visible=true end
         end)
-        button(body,"COLLECTION",424,322,320,64,C.blue,function() open("collection") end)
     elseif name=="exit" then
         heading.Text,header.BackgroundColor3="Return to Sanctuary?",C.red
         art(body,"home",36,28,214)
@@ -552,6 +607,7 @@ action.AnchorPoint,action.Position=Vector2.new(1,1),UDim2.new(1,-20,1,-22)
 local actionScale=action:FindFirstChildOfClass("UIScale") :: UIScale
 local function scales()
     scale.Scale=viewportScale()
+    closeButton.Size=UDim2.fromOffset(math.max(80,46/viewportScale()),math.max(62,46/viewportScale()))
     local camera=workspace.CurrentCamera
     local size=if camera then camera.ViewportSize else Vector2.new(1280,720)
     local small=math.clamp(math.min(size.X/1000,size.Y/800),.3,1)
@@ -670,7 +726,16 @@ for _,attribute in {"EquippedSpeciesId","CollectionJson","ChestQueueJson","Progr
     end)
 end
 player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function() hatchPending=false task.defer(function() open("hatch") end) end)
-player:GetAttributeChangedSignal("LastRunEndAt"):Connect(function() open("results") end)
+player:GetAttributeChangedSignal("LastRunEndAt"):Connect(function() if not autoHatching then open("results") end end)
+player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
+    local serial=hatchCancelSerial
+    task.spawn(function()
+        local deadline=os.clock()+15
+        repeat task.wait(.1) until serial~=hatchCancelSerial or os.clock()>deadline
+            or (player.Character and player.Character:GetAttribute("RunState")=="Sanctuary")
+        if serial==hatchCancelSerial and str("NextChestId")~="" and player.Character and player.Character:GetAttribute("RunState")=="Sanctuary" then autoHatching=true hatchNext() end
+    end)
+end)
 player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)
 for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus"} do
     player:GetAttributeChangedSignal(attribute):Connect(function()

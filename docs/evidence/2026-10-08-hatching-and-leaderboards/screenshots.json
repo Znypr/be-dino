@@ -1,0 +1,135 @@
+[
+  {
+    "file": "desktop-caught-trait-eggs.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 276549,
+    "sha256": "2d2fa32a809d7499936593fa2af1ceb9ccfa9af176f229108f172ee9c4021b5d"
+  },
+  {
+    "file": "desktop-common-shiny-big-reveal.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 267164,
+    "sha256": "05d9956180ceb491e3824f934a35b37bb0293e091f3e28f3c181aae651c2c2ba"
+  },
+  {
+    "file": "desktop-egg-animation.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 253807,
+    "sha256": "bafa55b5793ce993cd4ea98f91c2ce56a9138f46169b987138b11508adbd8eaa"
+  },
+  {
+    "file": "desktop-final-three-leaderboards.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 361433,
+    "sha256": "8cb0d3f5ccd9e6a8483670a651482e0b3995ced9fac76e8cb167d523d094e2c6"
+  },
+  {
+    "file": "desktop-first-egg.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 310001,
+    "sha256": "1d608248a96766d949a1b8ca7035425947439570b8c7baba507cf3385969510c"
+  },
+  {
+    "file": "desktop-legendary-shiny-big-reveal.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 272615,
+    "sha256": "46cf00368d639062697cd146bf45308fbbbc747f80829a69698f659cdadd85b2"
+  },
+  {
+    "file": "desktop-map-three-leaderboards.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 356984,
+    "sha256": "7b74d1cda638e3f7e1ecf18361450aadb5d9926afee7668601cb79a74b732a46"
+  },
+  {
+    "file": "desktop-rare-shiny-big-reveal.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 270972,
+    "sha256": "4389e4476430f0adfcf002c09255b212db1163be98efbf7889f7b63295264939"
+  },
+  {
+    "file": "phone-auto-first-egg.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 57416,
+    "sha256": "a3dcd0f0882530630d4ba12a44fb595e54b80881cb6399134177c4313d3a679b"
+  },
+  {
+    "file": "phone-common-shiny-big-reveal.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 59818,
+    "sha256": "50a686c73779175b170b529f7ad285e969e4d430f7f91456d08f31eaa3a59e94"
+  },
+  {
+    "file": "phone-final-crack-stage.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 57408,
+    "sha256": "f7adb9d903b29c13b9797f7abaaf7d11502e2e73600b7cd7860356296c550ea6"
+  },
+  {
+    "file": "phone-final-legendary-and-controls.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 60598,
+    "sha256": "81c6e8857a14414384f32f8e9bf934bd215c103ff4cd1a0b09cc8b17fb3d4909"
+  },
+  {
+    "file": "phone-final-map-rarest-board.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 65724,
+    "sha256": "15482db814361f8366f4ef53c8957ddae40567614686bdf8ee9796dbecf4fdce"
+  },
+  {
+    "file": "phone-final-populated-rarest-board.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 65738,
+    "sha256": "78d696d08e0b4ddf54fde570ccf300687b5cef60f39c3db04b1fd12e3c4a9a1d"
+  },
+  {
+    "file": "phone-final-shiny-only-controls.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 58118,
+    "sha256": "2b07d6147aeee378fb5a1590d13fa2b73a0a34dd395a101a0c1b74730816c2be"
+  },
+  {
+    "file": "phone-legendary-shiny-big-reveal.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 60606,
+    "sha256": "4e4e403f76d1b98460c752d5025a4cdf249d97a12fad095236c9e4facc6529d3"
+  },
+  {
+    "file": "phone-map-rarest-board-close.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 62277,
+    "sha256": "ee906bf3536d368342c5f4249591f7fdf7555a7595f4d80f72659d1117d9877b"
+  },
+  {
+    "file": "phone-map-rarest-board.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 76230,
+    "sha256": "8b493457a5cef65916ac307dfc9b4906647ca0ade6f2b2c1c5e67c7bbfef719a"
+  },
+  {
+    "file": "phone-rare-shiny-big-reveal.png",
+    "width": 65536,
+    "height": 4292542531,
+    "bytes": 60907,
+    "sha256": "7a33193217229416e62ec42805844673660f49d933db96a469c928dd6691183c"
+  }
+]

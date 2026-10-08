@@ -364542,7 +364542,6 @@ return table.freeze({
     StudioLocalProfilesEnabled = true, -- unpublished Studio only; never a live fallback
     StudioTestWalletEnabled = true, -- only unpublished, nonpersistent local profiles
     StudioTestCrystals = 1000000,
-    StudioChestTimerSeconds = 10,
     FoodCatchRate = 15 / 500, -- raw food points; growth boosts do not multiply catches
     ProfileLoadWarningSeconds = 20,
 
@@ -364592,7 +364591,15 @@ return table.freeze({
     CollectionTestGrantSpeciesId = "triceratops",
     CollectionTestGrantVersion = 1,
 
-    ChestTimerSeconds = 60,
+    ChestTimerSeconds = 0, -- Reveals, rather than offline incubation, pace new eggs.
+    HatchRevealSeconds = 5,
+    EggRarityBoostPerExtraEgg = 0.25,
+    EggRarityBoostMaxEggs = 15,
+    BigChance = 0.1,
+    ShinyChance = 0.05,
+    BigScaleMultiplier = 1.3,
+    IrregularWeather = {volcano = true, aurora = true, quake = true, bloodmoon = true},
+    DeveloperProducts = {}, -- Verified product IDs -&gt; crystal grants. Never invent IDs.
     ChestQueueCapacity = 5,
     ChestOverflowCapacity = 10,
     ChestClaimRequestCooldownSeconds = 0.35,
@@ -365044,6 +365051,48 @@ return Egg
       </Item>
       <Item class="ModuleScript" referent="RBX21">
         <Properties>
+          <string name="Name">EggTraits</string>
+          <ProtectedString name="Source">--!strict
+local Config = require(script.Parent.Config)
+local Traits = {}
+function Traits.roll(eventId: string, shinyRoll: number, bigRoll: number)
+    return {
+        shiny = Config.IrregularWeather[eventId] == true and shinyRoll &lt; Config.ShinyChance,
+        big = bigRoll &lt; Config.BigChance,
+    }
+end
+function Traits.key(mutationId: string, shiny: boolean, big: boolean): string
+    return mutationId .. ":" .. (if shiny then "shiny" else "plain") .. ":" .. (if big then "big" else "normal")
+end
+function Traits.selected(entry)
+    local selected = nil
+    local best = -1
+    for key, variant in (if entry then entry.variants or {} else {}) do
+        local rank = (if variant.big then 2 else 0) + (if variant.shiny then 1 else 0)
+        if variant.count &gt; 0 and (rank &gt; best or (rank == best and selected and key &lt; selected.key)) then
+            best = rank
+            selected = {key = key, big = variant.big, shiny = variant.shiny, mutationId = variant.mutationId}
+        end
+    end
+    return selected
+end
+function Traits.valid(variants): boolean
+    if typeof(variants) ~= "table" then return false end
+    for key, variant in variants do
+        if typeof(variant) ~= "table" or typeof(variant.big) ~= "boolean" or typeof(variant.shiny) ~= "boolean"
+            or typeof(variant.mutationId) ~= "string" or typeof(variant.count) ~= "number"
+            or variant.count ~= variant.count or variant.count &lt; 0 or variant.count % 1 ~= 0 or variant.count &gt; 2000000000
+            or key ~= Traits.key(variant.mutationId, variant.shiny, variant.big)
+            or not (variant.shiny or variant.big) then return false end
+    end
+    return true
+end
+return Traits
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX22">
+        <Properties>
           <string name="Name">EventIconVectors</string>
           <ProtectedString name="Source">--!strict
 -- Native placeholders; these are not completed illustrated PNG assets.
@@ -365057,7 +365106,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX22">
+      <Item class="ModuleScript" referent="RBX23">
         <Properties>
           <string name="Name">FoodCatchRules</string>
           <ProtectedString name="Source">--!strict
@@ -365073,7 +365122,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX23">
+      <Item class="ModuleScript" referent="RBX24">
         <Properties>
           <string name="Name">IconRaster</string>
           <ProtectedString name="Source">--!strict
@@ -365082,7 +365131,7 @@ return {["amber"]={341,0,1,16777216,1,33554432,20,55923968,1,16777216,40,0,1,167
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX24">
+      <Item class="ModuleScript" referent="RBX25">
         <Properties>
           <string name="Name">IconTiles</string>
           <ProtectedString name="Source">--!strict
@@ -365091,7 +365140,7 @@ return {["dinos"]={["size"]=32,["colors"]={{104,48,36},{110,114,78},{0,29,13},{1
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX25">
+      <Item class="ModuleScript" referent="RBX26">
         <Properties>
           <string name="Name">IconVectors</string>
           <ProtectedString name="Source">--!strict
@@ -365100,7 +365149,7 @@ return {["home"]={{["x"]=21,["y"]=41,["w"]=60,["h"]=47,["color"]="#142035",["rad
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX26">
+      <Item class="ModuleScript" referent="RBX27">
         <Properties>
           <string name="Name">IslandLayout</string>
           <ProtectedString name="Source">--!strict
@@ -365128,7 +365177,7 @@ return IslandLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX27">
+      <Item class="ModuleScript" referent="RBX28">
         <Properties>
           <string name="Name">ModelPreview</string>
           <ProtectedString name="Source">--!strict
@@ -365155,7 +365204,7 @@ return ModelPreview
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX28">
+      <Item class="ModuleScript" referent="RBX29">
         <Properties>
           <string name="Name">MovementEnvelope</string>
           <ProtectedString name="Source">--!strict
@@ -365171,7 +365220,7 @@ return MovementEnvelope
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX29">
+      <Item class="ModuleScript" referent="RBX30">
         <Properties>
           <string name="Name">NavigationArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -365188,7 +365237,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX30">
+      <Item class="ModuleScript" referent="RBX31">
         <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
@@ -365249,7 +365298,7 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX31">
+      <Item class="ModuleScript" referent="RBX32">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -365302,7 +365351,7 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX32">
+      <Item class="ModuleScript" referent="RBX33">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -365316,6 +365365,9 @@ function Rules.eventMutation(entry)
     local selected=nil
     for _,mutation in Config.EventMutations do
         if entry and entry.events and (entry.events[mutation.id] or 0)&gt;0 then selected=mutation end
+        for _,variant in (if entry then entry.variants or {} else {}) do
+            if variant.count&gt;0 and variant.mutationId==mutation.id then selected=mutation end
+        end
     end
     return selected
 end
@@ -365440,7 +365492,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX33">
+      <Item class="ModuleScript" referent="RBX34">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -365449,7 +365501,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX34">
+      <Item class="ModuleScript" referent="RBX35">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -365465,7 +365517,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX35">
+      <Item class="ModuleScript" referent="RBX36">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -365520,7 +365572,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX36">
+      <Item class="ModuleScript" referent="RBX37">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -365611,7 +365663,7 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX37">
+      <Item class="ModuleScript" referent="RBX38">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -365643,7 +365695,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX38">
+      <Item class="ModuleScript" referent="RBX39">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -365665,7 +365717,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX39">
+      <Item class="ModuleScript" referent="RBX40">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -365680,7 +365732,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX40">
+      <Item class="ModuleScript" referent="RBX41">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -365790,7 +365842,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX41">
+      <Item class="ModuleScript" referent="RBX42">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -365815,15 +365867,15 @@ return Clock
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX42">
+  <Item class="ServerScriptService" referent="RBX43">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX43">
+    <Item class="Folder" referent="RBX44">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX44">
+      <Item class="ModuleScript" referent="RBX45">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -366001,7 +366053,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX45">
+      <Item class="Script" referent="RBX46">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -366019,6 +366071,7 @@ local MovementGuard = require(script.Parent.MovementGuard)
 local ProfileRepository = require(script.Parent.ProfileRepository)
 local RunLifecycle = require(script.Parent.RunLifecycle)
 local VisualTestService = require(script.Parent.VisualTestService)
+local Leaderboards = require(script.Parent.Leaderboards)
 
 Players.CharacterAutoLoads = false
 
@@ -366027,6 +366080,7 @@ Lighting.Brightness = 2
 Lighting.Ambient = Color3.fromRGB(130, 143, 148)
 require(script.Parent.ImportedResources).load()
 Arena.build()
+Leaderboards.start()
 
 ProfileRepository.start()
 RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string, eggEvents)
@@ -366046,7 +366100,10 @@ RunLifecycle.configureSettlement(function(player: Player, runId: string, catchSc
         player:SetAttribute("LastSettlementProbe", "duplicate-ok")
     end
 
-    if not player.Parent then ProfileRepository.release(player) end
+    if not player.Parent then
+        local metrics=ProfileRepository.release(player)
+        if metrics then Leaderboards.publish(player,metrics) end
+    end
     return true
 end)
 RunLifecycle.start()
@@ -366057,6 +366114,14 @@ MovementGuard.start()
 VisualTestService.start(Dinosaur)
 require(script.Parent.ProgressionService).start(ProfileRepository)
 require(script.Parent.LeapService).start()
+game:GetService("MarketplaceService").ProcessReceipt=function(receipt)
+    local player=Players:GetPlayerByUserId(receipt.PlayerId)
+    if player and ProfileRepository.purchase(player,receipt) then
+        task.spawn(Leaderboards.publish,player,nil)
+        return Enum.ProductPurchaseDecision.PurchaseGranted
+    end
+    return Enum.ProductPurchaseDecision.NotProcessedYet
+end
 
 local function spawnLoadedPlayer(player: Player)
     player.CanLoadCharacterAppearance = false
@@ -366077,6 +366142,10 @@ end
 
 local function setup(player: Player)
     player.CanLoadCharacterAppearance = false
+    player:GetAttributeChangedSignal("EquippedBig"):Connect(function()
+        local character=player.Character
+        if character and character:GetAttribute("DinoAttached") then Dinosaur.refreshForPlayer(character,player) end
+    end)
     player.CharacterAdded:Connect(function(character)
         if player:GetAttribute("ProfileState") ~= "Loaded" then
             character:Destroy()
@@ -366096,13 +366165,19 @@ for _, player in Players:GetPlayers() do setup(player) end
 
 Players.PlayerRemoving:Connect(function(player)
     local status = RunLifecycle.endForDisconnect(player)
-    if status ~= "busy" then ProfileRepository.release(player) end
+    if status ~= "busy" then
+        local metrics=ProfileRepository.release(player)
+        if metrics then Leaderboards.publish(player,metrics) end
+    end
 end)
 
 game:BindToClose(function()
     for _, player in Players:GetPlayers() do
         local status = RunLifecycle.endForDisconnect(player)
-        if status ~= "busy" then ProfileRepository.release(player) end
+        if status ~= "busy" then
+            local metrics=ProfileRepository.release(player)
+            if metrics then Leaderboards.publish(player,metrics) end
+        end
     end
 end)
 
@@ -366120,7 +366195,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX46">
+      <Item class="ModuleScript" referent="RBX47">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -366201,7 +366276,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX47">
+      <Item class="ModuleScript" referent="RBX48">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -366289,7 +366364,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX48">
+      <Item class="ModuleScript" referent="RBX49">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -366298,6 +366373,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PhysicsService = game:GetService("PhysicsService")
 local Dinosaur = {}
 local Visual = require(ReplicatedStorage.Shared.DinosaurVisual)
+local Config = require(ReplicatedStorage.Shared.Config)
 function Dinosaur.render(character: Model, scale: number, speciesId: string?, gold: (boolean | string)?)
     Visual.render(character, scale, speciesId, gold)
     local collider = character:FindFirstChild("DinoCollider")
@@ -366326,7 +366402,9 @@ function Dinosaur.refreshForPlayer(character: Model, player: Player)
     local ok, collection = pcall(function() return game:GetService("HttpService"):JSONDecode(player:GetAttribute("CollectionJson") or "{}") end)
     local entry = if ok then collection[speciesId] else nil
     local mutation = if entry and (entry.diamond or 0) &gt; 0 then "diamond" elseif entry and (entry.gold or 0) &gt; 0 then "gold" else "base"
-    Dinosaur.setSpecies(character, speciesId, mutation)
+    character:SetAttribute("BigDinosaur", player:GetAttribute("EquippedBig") == true)
+    local factor = if character:GetAttribute("BigDinosaur") then Config.BigScaleMultiplier else 1
+    Dinosaur.render(character, scaleForScore(character:GetAttribute("GrowthScore") or 0) * factor, speciesId, mutation)
 end
 
 function Dinosaur.addGrowth(character: Model, points: number)
@@ -366334,7 +366412,7 @@ function Dinosaur.addGrowth(character: Model, points: number)
     local current = character:GetAttribute("GrowthScore")
     local score = (if typeof(current) == "number" then current else 0) + points * math.clamp(character:GetAttribute("GrowthMultiplier") or 1,1,8)
     character:SetAttribute("GrowthScore", score)
-    local scale = scaleForScore(score)
+    local scale = scaleForScore(score) * (if character:GetAttribute("BigDinosaur") then Config.BigScaleMultiplier else 1)
     if character:GetAttribute("VisualScale") ~= scale then
         local gold = character:GetAttribute("MutationVisual") or "base"
         Dinosaur.render(character, scale, nil, gold)
@@ -366400,7 +366478,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX49">
+      <Item class="ModuleScript" referent="RBX50">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -366634,7 +366712,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX50">
+      <Item class="ModuleScript" referent="RBX51">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -366684,7 +366762,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX51">
+      <Item class="ModuleScript" referent="RBX52">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -366726,7 +366804,118 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX52">
+      <Item class="ModuleScript" referent="RBX53">
+        <Properties>
+          <string name="Name">Leaderboards</string>
+          <ProtectedString name="Source">--!strict
+local Players=game:GetService("Players")
+local DataStoreService=game:GetService("DataStoreService")
+local RunService=game:GetService("RunService")
+local Config=require(game:GetService("ReplicatedStorage").Shared.Config)
+local Theme=require(game:GetService("ReplicatedStorage").Shared.UITheme)
+local Leaderboards={}
+local preview=RunService:IsStudio() and game.GameId==0
+local rows={}
+local boards={}
+local names={}
+local definitions={
+    {id="rarest",attribute="RarestCaught",title="RAREST DINOS",color=Theme.Colors.gold},
+    {id="playSeconds",attribute="PlaySeconds",title="MOST PLAY TIME",color=Theme.Colors.accent},
+    {id="robux",attribute="RobuxSpent",title="ROBUX SPENT",color=Theme.Colors.blue},
+}
+local stores={}
+function Leaderboards.publish(player: Player, metrics)
+    if not metrics and player:GetAttribute("ProfileState")~="Loaded" then return end
+    names[player.UserId]=player.Name
+    for _,definition in definitions do
+        local value=if metrics then metrics[definition.id] else player:GetAttribute(definition.attribute) or 0
+        if preview then
+            rows[definition.id]=rows[definition.id] or {}
+            rows[definition.id][player.UserId]=value
+        else
+            local ok,err=pcall(function()
+                stores[definition.id]:UpdateAsync(tostring(player.UserId),function(old) return math.max(old or 0,value) end)
+            end)
+            if not ok then warn("[Be Dino] leaderboard publish failed: "..tostring(err)) end
+        end
+    end
+end
+local function displayValue(id: string,value: number): string
+    if id=="rarest" then return ({"Common","Rare","Legendary"})[value] or "Not ranked" end
+    if id=="playSeconds" then return string.format("%dh %02dm",value//3600,(value%3600)//60) end
+    return tostring(value).." R$"
+end
+local function refresh()
+    for _,definition in definitions do
+        local page={}
+        local ok=true
+        if preview then
+            for id,value in rows[definition.id] or {} do if value&gt;0 then table.insert(page,{key=tostring(id),value=value}) end end
+            table.sort(page,function(a,b) return if a.value==b.value then tonumber(a.key)&lt;tonumber(b.key) else a.value&gt;b.value end)
+        else
+            ok=pcall(function() page=stores[definition.id]:GetSortedAsync(false,8,1):GetCurrentPage() end)
+        end
+        local board=boards[definition.id]
+        board.Status.Text=if not ok then "Temporarily unavailable" elseif preview then "UNSAVED STUDIO PREVIEW" else "ALL-TIME"
+        for rank=1,8 do
+            local entry=page[rank]
+            local text=""
+            if entry then
+                local id=tonumber(entry.key)
+                if not names[id] then
+                    local found,name=pcall(function() return Players:GetNameFromUserIdAsync(id) end)
+                    names[id]=if found then name else "User "..entry.key
+                end
+                text=string.format("%d. %s  |  %s",rank,names[id],displayValue(definition.id,entry.value))
+            elseif rank==1 then text=if ok then "No ranked players yet" else "Please check again later" end
+            board.Rows[rank].Text=text
+        end
+    end
+end
+function Leaderboards.start()
+    workspace.BeDinoArena.Sanctuary.SanctuarySign.Position=Vector3.new(0,35,402)
+    local folder=Instance.new("Folder") folder.Name="Leaderboards" folder.Parent=workspace.BeDinoArena.Sanctuary
+    for i,definition in definitions do
+        if not preview then stores[definition.id]=DataStoreService:GetOrderedDataStore(Config.ProfileDataStoreName.."_"..definition.id.."_v1") end
+        local part=Instance.new("Part")
+        part.Name,part.Size,part.Position=definition.title,Vector3.new(27,23,1),Vector3.new((i-2)*30,19,399)
+        part.Anchored,part.CanCollide,part.Color,part.Material,part.Parent=true,false,Theme.Colors.panel,Enum.Material.SmoothPlastic,folder
+        local surface=Instance.new("SurfaceGui")
+        surface.Face,surface.CanvasSize,surface.Parent=Enum.NormalId.Front,Vector2.new(540,460),part
+        local function text(y,h,size,color)
+            local label=Instance.new("TextLabel")
+            label.Position,label.Size,label.BackgroundTransparency=UDim2.fromOffset(12,y),UDim2.fromOffset(516,h),1
+            label.Font,label.TextSize,label.TextColor3,label.TextWrapped,label.Parent=Enum.Font.FredokaOne,size,color,true,surface
+            return label
+        end
+        text(8,52,44,definition.color).Text=definition.title
+        local status=text(60,22,18,Theme.Colors.text)
+        local list={}
+        for rank=1,8 do
+            local row=text(86+(rank-1)*44,42,24,Theme.Colors.text)
+            row.TextScaled=true
+            local constraint=Instance.new("UITextSizeConstraint")
+            constraint.MinTextSize,constraint.MaxTextSize,constraint.Parent=16,24,row
+            list[rank]=row
+            local rule=Instance.new("Frame")
+            rule.Position,rule.Size=UDim2.fromOffset(12,128+(rank-1)*44),UDim2.fromOffset(516,1)
+            rule.BackgroundColor3,rule.BackgroundTransparency,rule.BorderSizePixel,rule.Parent=Theme.Colors.text,.9,0,surface
+        end
+        boards[definition.id]={Status=status,Rows=list}
+    end
+    task.spawn(function()
+        while folder.Parent do
+            for _,player in Players:GetPlayers() do Leaderboards.publish(player,nil) end
+            refresh()
+            task.wait(60)
+        end
+    end)
+end
+return Leaderboards
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX54">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -366808,7 +366997,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX53">
+      <Item class="ModuleScript" referent="RBX55">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -366902,7 +367091,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX54">
+      <Item class="ModuleScript" referent="RBX56">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -367007,7 +367196,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX55">
+      <Item class="ModuleScript" referent="RBX57">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -367140,7 +367329,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX56">
+      <Item class="ModuleScript" referent="RBX58">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -367151,6 +367340,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local RewardMath = require(script.Parent.RewardMath)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
+local EggTraits = require(ReplicatedStorage.Shared.EggTraits)
 
 local ProfileRepository = {}
 
@@ -367198,7 +367388,10 @@ local function upgradeCollection(profile: any)
         end
         if typeof(entry) == "table" and entry.diamond == nil then entry.diamond = 0 end
         if typeof(entry) == "table" and entry.events == nil then entry.events = {} end
+        if typeof(entry) == "table" and entry.variants == nil then entry.variants = {} end
     end
+    if profile.metrics == nil then profile.metrics = {playSeconds = 0, rarest = 0, robux = 0} end
+    if profile.purchaseReceipts == nil then profile.purchaseReceipts = {} end
 end
 
 local function defaultProfile()
@@ -367233,10 +367426,21 @@ local function isValidProfile(profile: any): boolean
         return false
     end
     if not knownSpecies(profile.equippedSpeciesId) then return false end
-    for _,egg in profile.eggs do if not ProgressionRules.validEgg(egg) then return false end end
+    local function validEgg(egg, active: boolean?)
+        if not ProgressionRules.validEgg(egg) then return false end
+        if active and (typeof(egg.eggId) ~= "string" or #egg.eggId &lt; 1 or #egg.eggId &gt; 80
+            or typeof(egg.readyAt) ~= "number" or egg.readyAt ~= egg.readyAt
+            or egg.readyAt &lt; 0 or egg.readyAt % 1 ~= 0 or egg.readyAt == math.huge) then return false end
+        if egg.big ~= nil and typeof(egg.big) ~= "boolean" then return false end
+        if egg.shiny ~= nil and typeof(egg.shiny) ~= "boolean" then return false end
+        local reward = egg.reward
+        return reward == nil or (typeof(reward) == "table" and knownSpecies(reward.speciesId)
+            and typeof(reward.count) == "number" and reward.count &gt;= 1 and reward.count &lt;= 3 and reward.count % 1 == 0)
+    end
+    for _,egg in profile.eggs do if not validEgg(egg,true) then return false end end
     if profile.pendingEggEvents~=nil then
         if typeof(profile.pendingEggEvents)~="table" or #profile.pendingEggEvents~=profile.pendingChestGrants then return false end
-        for _,metadata in profile.pendingEggEvents do if not ProgressionRules.validEgg(metadata) then return false end end
+        for _,metadata in profile.pendingEggEvents do if not validEgg(metadata) then return false end end
     end
     for _, speciesId in Config.SpeciesOrder do
         local entry = profile.collection[speciesId]
@@ -367248,7 +367452,24 @@ local function isValidProfile(profile: any): boolean
             return false
         end
         if not ProgressionRules.validEvents(entry.events) then return false end
+        if not EggTraits.valid(entry.variants) then return false end
+        for _,variant in entry.variants do
+            if variant.mutationId ~= "" and not ProgressionRules.knownEventMutation(variant.mutationId) then return false end
+        end
     end
+    if typeof(profile.metrics) ~= "table" or typeof(profile.purchaseReceipts) ~= "table" then return false end
+    for id,processed in profile.purchaseReceipts do
+        if typeof(id) ~= "string" or #id &lt; 1 or #id &gt; 120 or processed ~= true then return false end
+    end
+    if typeof(profile.session) == "table" and profile.session.metricsAt ~= nil then
+        local at=profile.session.metricsAt
+        if typeof(at) ~= "number" or at ~= at or at &lt; 0 or at % 1 ~= 0 or at == math.huge then return false end
+    end
+    for _,key in {"playSeconds", "rarest", "robux"} do
+        local n = profile.metrics[key]
+        if typeof(n) ~= "number" or n ~= n or n &lt; 0 or n % 1 ~= 0 or n &gt; 2000000000 then return false end
+    end
+    if profile.metrics.rarest &gt; 3 then return false end
     return ProgressionRules.valid(profile.progression)
 end
 
@@ -367285,6 +367506,12 @@ local function syncAttributes(player: Player, profile: any)
     player:SetAttribute("PendingChestGrants", profile.pendingChestGrants or 0)
     player:SetAttribute("ProfileRevision", profile.revision or 0)
     player:SetAttribute("EquippedSpeciesId", profile.equippedSpeciesId)
+    local traits = EggTraits.selected(collection[profile.equippedSpeciesId])
+    player:SetAttribute("EquippedBig", traits ~= nil and traits.big)
+    player:SetAttribute("EquippedShiny", traits ~= nil and traits.shiny)
+    player:SetAttribute("PlaySeconds", profile.metrics.playSeconds)
+    player:SetAttribute("RarestCaught", profile.metrics.rarest)
+    player:SetAttribute("RobuxSpent", profile.metrics.robux)
     local eventMutation=ProgressionRules.eventMutation(collection[profile.equippedSpeciesId])
     player:SetAttribute("EquippedEventMutation",if eventMutation then eventMutation.id else "")
     player:SetAttribute("ActiveChestCount", #profile.eggs)
@@ -367296,6 +367523,9 @@ local function syncAttributes(player: Player, profile: any)
             readyAt = chest.readyAt,
             eventId=chest.eventId or "clear",
             mutationId=chest.mutationId or "",
+            rarity=if chest.reward then Config.SpeciesRarities[chest.reward.speciesId] else 1,
+            shiny=chest.shiny or false,
+            big=chest.big or false,
         })
     end
     player:SetAttribute("ChestQueueJson", HttpService:JSONEncode(chestSummary))
@@ -367345,7 +367575,7 @@ local function availableChestCapacity(profile: any): number
 end
 
 local function enqueueChestIds(profile: any, chestIds: {string}, now: number, events)
-    local nextReadyAt = lastChestReadyAt(profile, now)
+    local nextReadyAt = if Config.ChestTimerSeconds == 0 then now else lastChestReadyAt(profile, now)
     if not profile.pendingEggEvents then
         profile.pendingEggEvents={}
         for _=1,profile.pendingChestGrants do table.insert(profile.pendingEggEvents,{eventId="clear",mutationId=""}) end
@@ -367354,13 +367584,16 @@ local function enqueueChestIds(profile: any, chestIds: {string}, now: number, ev
         local metadata=if events then events[i] else nil
         metadata=metadata or {eventId="clear",mutationId=""}
         if #profile.eggs &lt; Config.ChestQueueCapacity then
-            nextReadyAt += (if localPreview then Config.StudioChestTimerSeconds else Config.ChestTimerSeconds)
+            nextReadyAt += Config.ChestTimerSeconds
             table.insert(profile.eggs, {
                 eggId = chestId,
                 kind = "alpha_chest",
                 readyAt = nextReadyAt,
                 eventId=metadata.eventId,
                 mutationId=metadata.mutationId,
+                reward=metadata.reward,
+                shiny=metadata.shiny,
+                big=metadata.big,
             })
         else
             profile.pendingChestGrants += 1
@@ -367408,6 +367641,7 @@ function ProfileRepository.load(player: Player): boolean
                 leaseId = leaseId,
                 jobId = game.JobId,
                 expiresAt = now + Config.ProfileLeaseSeconds,
+                metricsAt = now,
             }
             profileValue.revision += 1
             return profileValue
@@ -367446,6 +367680,22 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         for _,metadata in eggEvents do if not ProgressionRules.validEgg(metadata) then return false,nil,"invalid_egg_events" end end
     end
     local operationId = "run:" .. runId
+    -- Commit all random draws before UpdateAsync. Catch-time event tags stay authoritative.
+    local prepared = {}
+    local rng = Random.new()
+    for i = 1, outcome.chestCount do
+        local tag = (eggEvents and eggEvents[i]) or {eventId = "clear", mutationId = ""}
+        local traits = EggTraits.roll(tag.eventId or "clear", rng:NextNumber(), rng:NextNumber())
+        table.insert(prepared, {
+            eventId = tag.eventId, mutationId = tag.mutationId,
+            reward = RewardMath.computeChestReward(rng, outcome.chestCount),
+            shiny = traits.shiny, big = traits.big, ordinal = i,
+        })
+    end
+    table.sort(prepared, function(a,b)
+        local ar, br = Config.SpeciesRarities[a.reward.speciesId], Config.SpeciesRarities[b.reward.speciesId]
+        return if ar == br then a.ordinal &lt; b.ordinal else ar &lt; br
+    end)
     local chestIds = {}
     for _ = 1, outcome.chestCount do
         table.insert(chestIds, HttpService:GenerateGUID(false))
@@ -367481,9 +367731,10 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
                     return nil
                 end
                 species.base += stack.count
+                profileValue.metrics.rarest = math.max(profileValue.metrics.rarest, Config.SpeciesRarities[stack.speciesId])
             end
 
-            enqueueChestIds(profileValue, chestIds, now, eggEvents)
+            enqueueChestIds(profileValue, chestIds, now, prepared)
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             profileValue.lastCheckpoint = {
@@ -367525,6 +367776,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         table.insert(summaryParts, string.format("%d chest(s)", committedOutcome.chestCount))
     end
     player:SetAttribute("LastRewardText", table.concat(summaryParts, " | "))
+    player:SetAttribute("LastSettledRunId", runId)
     return true, committedOutcome, if duplicateOutcome then "duplicate" else "committed"
 end
 
@@ -367539,7 +367791,7 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string): (boo
     if not knownSpecies(speciesId) then return false, "unknown_species" end
 
     local cachedEntry = cached.collection[speciesId]
-    if typeof(cachedEntry) ~= "table" or (cachedEntry.base + cachedEntry.gold + cachedEntry.diamond &lt;= 0 and not ProgressionRules.eventMutation(cachedEntry)) then
+    if typeof(cachedEntry) ~= "table" or (cachedEntry.base + cachedEntry.gold + cachedEntry.diamond &lt;= 0 and not ProgressionRules.eventMutation(cachedEntry) and not EggTraits.selected(cachedEntry)) then
         return false, "locked"
     end
     if cached.equippedSpeciesId == speciesId then
@@ -367558,7 +367810,7 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string): (boo
                 return nil
             end
             local entry = profileValue.collection[speciesId]
-            if typeof(entry) ~= "table" or (entry.base + entry.gold + entry.diamond &lt;= 0 and not ProgressionRules.eventMutation(entry)) then
+            if typeof(entry) ~= "table" or (entry.base + entry.gold + entry.diamond &lt;= 0 and not ProgressionRules.eventMutation(entry) and not EggTraits.selected(entry)) then
                 locked = true
                 return nil
             end
@@ -367727,7 +367979,7 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
     if now &lt; cachedChest.readyAt then return false, nil, "not_ready" end
 
     -- Generate once outside UpdateAsync so retries cannot reroll the reward.
-    local outcome = RewardMath.computeChestReward(Random.new())
+    local outcome = if cachedChest.reward then table.clone(cachedChest.reward) else RewardMath.computeChestReward(Random.new())
     local refillChestId = HttpService:GenerateGUID(false)
     local duplicateOutcome = nil
     local leaseLost = false
@@ -367765,21 +368017,30 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
                 notReady = true
                 return nil
             end
+            if chest.reward and index ~= 1 then missing = true return nil end
 
             table.remove(profileValue.eggs, index)
             local species = profileValue.collection[outcome.speciesId]
             if typeof(species) ~= "table" then return nil end
             local mutationId=chest.mutationId or ""
-            if mutationId~="" then
+            if chest.big or chest.shiny then
+                local key = EggTraits.key(mutationId, chest.shiny == true, chest.big == true)
+                local variant = species.variants[key] or {mutationId=mutationId, shiny=chest.shiny == true, big=chest.big == true, count=0}
+                variant.count += outcome.count
+                species.variants[key] = variant
+            elseif mutationId~="" then
                 if not ProgressionRules.knownEventMutation(mutationId) then return nil end
                 species.events[mutationId]=(species.events[mutationId] or 0)+outcome.count
             else species.base += outcome.count end
             outcome.eventMutationId=mutationId
             outcome.eventId=chest.eventId or "clear"
+            outcome.big=chest.big == true
+            outcome.shiny=chest.shiny == true
+            profileValue.metrics.rarest = math.max(profileValue.metrics.rarest, Config.SpeciesRarities[outcome.speciesId])
 
             if profileValue.pendingChestGrants &gt; 0 then
                 profileValue.pendingChestGrants -= 1
-                local readyAt = lastChestReadyAt(profileValue, now) + (if localPreview then Config.StudioChestTimerSeconds else Config.ChestTimerSeconds)
+                local readyAt = if Config.ChestTimerSeconds == 0 then now else lastChestReadyAt(profileValue, now) + Config.ChestTimerSeconds
                 local metadata=if profileValue.pendingEggEvents then table.remove(profileValue.pendingEggEvents,1) else nil
                 table.insert(profileValue.eggs, {
                     eggId = refillChestId,
@@ -367787,6 +368048,9 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
                     readyAt = readyAt,
                     eventId=if metadata then metadata.eventId else "clear",
                     mutationId=if metadata then metadata.mutationId else "",
+                    reward=if metadata then metadata.reward else nil,
+                    shiny=if metadata then metadata.shiny else nil,
+                    big=if metadata then metadata.big else nil,
                 })
             end
 
@@ -367819,8 +368083,10 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
     player:SetAttribute("LastChestRewardText", string.format(
         "%dx %s", committedOutcome.count, committedOutcome.speciesId
     ))
-    player:SetAttribute("LastClaimedChestId", chestId)
     player:SetAttribute("LastChestEventMutation",committedOutcome.eventMutationId or "")
+    player:SetAttribute("LastChestBig",committedOutcome.big == true)
+    player:SetAttribute("LastChestShiny",committedOutcome.shiny == true)
+    player:SetAttribute("LastClaimedChestId", chestId)
     return true, committedOutcome, if duplicateOutcome then "duplicate" else "claimed"
 end
 
@@ -368003,6 +368269,38 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
     return true,if duplicate then "duplicate" else outcome.status
 end
 
+-- Only called by the server's MarketplaceService callback. Receipts are never trimmed.
+function ProfileRepository.purchase(player: Player, receipt)
+    if not ProfileRepository.isLoaded(player) then return false end
+    local crystals = Config.DeveloperProducts[receipt.ProductId]
+    if typeof(crystals) ~= "number" or crystals &lt; 1 or crystals % 1 ~= 0 then return false end
+    if receipt.PlayerId ~= player.UserId or typeof(receipt.PurchaseId) ~= "string" or #receipt.PurchaseId &lt; 1 or #receipt.PurchaseId &gt; 120
+        or typeof(receipt.CurrencySpent) ~= "number" or receipt.CurrencySpent ~= receipt.CurrencySpent
+        or receipt.CurrencySpent &lt; 0 or receipt.CurrencySpent % 1 ~= 0 or receipt.CurrencySpent &gt; 2000000000 then return false end
+    local ok, updated = retry("purchase", function()
+        return store:UpdateAsync(keyFor(player),function(profile)
+            if not isValidProfile(profile) or not ownSession(profile) then return nil end
+            if profile.purchaseReceipts[receipt.PurchaseId] then return profile end
+            local count=0 for _ in profile.purchaseReceipts do count+=1 end
+            if count&gt;=10000 then return nil end -- Fail closed before the profile size limit.
+            local progress=ProgressionRules.upgrade(profile)
+            local maxCrystals=require(ReplicatedStorage.Shared.ProgressionConfig).MaxCrystals
+            if progress.crystals+crystals&gt;maxCrystals or profile.metrics.robux+receipt.CurrencySpent&gt;2000000000 then return nil end
+            progress.crystals+=crystals
+            profile.metrics.robux+=receipt.CurrencySpent
+            profile.purchaseReceipts[receipt.PurchaseId]=true
+            profile.revision+=1
+            profile.session.expiresAt=os.time()+Config.ProfileLeaseSeconds
+            return profile
+        end)
+    end)
+    if not ok or not updated then return false end
+    if not profiles[player] then return true end
+    if updated.revision&gt;=profiles[player].revision then profiles[player]=updated end
+    syncAttributes(player,profiles[player])
+    return true
+end
+
 function ProfileRepository.renew(player: Player): boolean
     if not profiles[player] or player:GetAttribute("ProfileState") ~= "Loaded" then return false end
     local leaseLost = false
@@ -368014,6 +368312,10 @@ function ProfileRepository.renew(player: Player): boolean
                 return nil
             end
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            local since = profileValue.session.metricsAt or now
+            profileValue.metrics.playSeconds = math.min(2000000000, profileValue.metrics.playSeconds + math.max(0, now - since))
+            profileValue.session.metricsAt = now
+            profileValue.revision += 1
             return profileValue
         end)
     end)
@@ -368022,6 +368324,7 @@ function ProfileRepository.renew(player: Player): boolean
         return false
     end
     if not profiles[player] or updated.revision &gt;= profiles[player].revision then profiles[player] = updated end
+    syncAttributes(player, profiles[player])
     return true
 end
 
@@ -368030,13 +368333,16 @@ function ProfileRepository.release(player: Player)
     profiles[player] = nil
     if not cached then return end
 
-    retry("lease release", function()
+    local ok, updated = retry("lease release", function()
         return store:UpdateAsync(keyFor(player), function(profileValue)
             if not isValidProfile(profileValue) or not ownSession(profileValue) then return nil end
+            profileValue.metrics.playSeconds = math.min(2000000000, profileValue.metrics.playSeconds + math.max(0, os.time() - (profileValue.session.metricsAt or os.time())))
             profileValue.session = nil
+            profileValue.revision += 1
             return profileValue
         end)
     end)
+    return if ok and updated then updated.metrics else nil
 end
 
 function ProfileRepository.start()
@@ -368056,7 +368362,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX57">
+      <Item class="ModuleScript" referent="RBX59">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -368229,7 +368535,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX58">
+      <Item class="ModuleScript" referent="RBX60">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -368329,9 +368635,14 @@ local function weightedChoice(rows, rng: Random)
     return rows[#rows]
 end
 
-function RewardMath.computeChestReward(rng: Random?)
+function RewardMath.computeChestReward(rng: Random?, eggCount: number?)
     local random = rng or Random.new()
-    local speciesRow = weightedChoice(Config.ChestSpeciesWeights, random)
+    local boost = 1 + (math.clamp(eggCount or 1, 1, Config.EggRarityBoostMaxEggs) - 1) * Config.EggRarityBoostPerExtraEgg
+    local rows = {}
+    for _, row in Config.ChestSpeciesWeights do
+        table.insert(rows, {speciesId = row.speciesId, weight = row.weight * boost ^ (Config.SpeciesRarities[row.speciesId] - 1)})
+    end
+    local speciesRow = weightedChoice(rows, random)
     local quantityRow = weightedChoice(Config.ChestQuantityWeights, random)
     return {
         rewardConfigVersion = 1,
@@ -368345,7 +368656,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX59">
+      <Item class="ModuleScript" referent="RBX61">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -368599,7 +368910,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX60">
+      <Item class="ModuleScript" referent="RBX62">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -368671,19 +368982,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX61">
+  <Item class="StarterPlayer" referent="RBX63">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX62">
+    <Item class="StarterPlayerScripts" referent="RBX64">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX63">
+      <Item class="Folder" referent="RBX65">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX64">
+        <Item class="LocalScript" referent="RBX66">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -368703,6 +369014,8 @@ local Preview = require(Shared.DinosaurPreview)
 local ModelPreview = require(Shared.ModelPreview)
 local ProgressionConfig=require(Shared.ProgressionConfig)
 local ProgressionRules=require(Shared.ProgressionRules)
+local EggTraits=require(Shared.EggTraits)
+local PreviewTraits=require(script.Parent.PreviewTraits)
 local C = Theme.Colors
 local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
 local startRun = remotes:WaitForChild("RequestStartRun") :: RemoteEvent
@@ -368741,6 +369054,12 @@ local function eventMutation(id: string)
 end
 local fusionTarget = "gold"
 local hatchPending = false
+local autoHatching = false
+local hatchCancelSerial = 0
+local function ownedTraits(id: string)
+    local ok,data=pcall(function() return Http:JSONDecode(str("CollectionJson","{}")) end)
+    return if ok and typeof(data)=="table" then EggTraits.selected(data[id]) else nil
+end
 local function label(parent: Instance,text: string,x: number,y: number,w: number,h: number,size: number,color: Color3?): TextLabel
     local t = Instance.new("TextLabel")
     t.BackgroundTransparency,t.Position,t.Size = 1,UDim2.fromOffset(x,y),UDim2.fromOffset(w,h)
@@ -368787,6 +369106,8 @@ local body = Instance.new("Frame")
 body.Position,body.Size,body.BackgroundTransparency,body.ZIndex,body.Parent = UDim2.fromOffset(18,98),UDim2.fromOffset(824,402),1,23,panel
 local modalVersion=0
 local function close()
+    autoHatching=false
+    hatchCancelSerial+=1
     modalVersion+=1
     local version=modalVersion
     active=""
@@ -368794,7 +369115,8 @@ local function close()
     task.delay(if motion then .13 else 0,function() if modalVersion==version then shade.Visible=false end end)
     TweenService:Create(blur,TweenInfo.new(if motion then .15 else 0),{Size=0}):Play()
 end
-button(header,"X",778,8,62,62,C.red,close)
+local closeButton=button(header,"X",770,1,80,76,C.red,close)
+closeButton.AnchorPoint,closeButton.Position=Vector2.new(1,0),UDim2.new(1,-2,0,1)
 shade.Activated:Connect(close)
 local toast = box(gui,0,0,440,56,C.card,50)
 toast.AnchorPoint,toast.Position,toast.Visible = Vector2.new(.5,0),UDim2.new(.5,0,0,80),false
@@ -368836,6 +369158,7 @@ end
 local function hero(parent: GuiObject,id: string,x: number,y: number,w: number,h: number,gold: (boolean | string)?)
     local view=Preview.add(parent,id,gold or "base")
     view.Position,view.Size = UDim2.fromOffset(x,y),UDim2.fromOffset(w,h)
+    PreviewTraits.add(view,ownedTraits(id))
     return view
 end
 local rarityColors={C.accent,C.blue,C.gold}
@@ -368850,6 +369173,20 @@ end
 local function queue()
     local ok,data=pcall(function() return Http:JSONDecode(str("ChestQueueJson","[]")) end)
     return if ok and typeof(data)=="table" then data else {}
+end
+local function hatchNext()
+    local id=str("NextChestId")
+    if id=="" or workspace:GetServerTimeNow()&lt;num("NextChestReadyAt") then
+        autoHatching=false
+        open("eggs")
+        return
+    end
+    if hatchPending then return end
+    hatchPending=true
+    hatch:FireServer(id,Http:GenerateGUID(false))
+    task.delay(8,function()
+        if hatchPending then hatchPending=false autoHatching=false notify("Hatching did not finish. Please retry.",C.red) end
+    end)
 end
 local function progression()
     local ok,data=pcall(function() return Http:JSONDecode(str("ProgressionJson","{}")) end)
@@ -368971,13 +369308,13 @@ render=function(name: string)
             local base,gold,diamond=copies(id)
             local event=eventMutation(id)
             local rarity=speciesIndex(id)
-            if base+gold+diamond&gt;0 or event then unlocked+=1 end
+            if base+gold+diamond&gt;0 or event or ownedTraits(id) then unlocked+=1 end
             local card=box(list,((i-1)%3)*276,math.floor((i-1)/3)*284,264,272,rarityColors[rarity],24)
             Theme.texture(card,264,272)
             label(card,Config.SpeciesDisplayNames[id],4,8,256,35,25)
             label(card,rarityNames[rarity],4,44,256,25,18)
             hero(card,id,7,70,250,128,bestMutation(id))
-            label(card,if event then event.name.." mutation" elseif base+gold+diamond&gt;0 then string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond) else "Not discovered",5,201,254,25,15)
+            label(card,if event then event.name.." mutation" elseif ownedTraits(id) then "Special variant" elseif base+gold+diamond&gt;0 then string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond) else "Not discovered",5,201,254,25,15)
             button(card,"VIEW DINO",12,233,240,30,C.card,function() selected=id open("detail") end)
         end
         meter(body,0,356,600,unlocked,#Config.SpeciesOrder,C.accent,string.format("Discovered: %d / %d",unlocked,#Config.SpeciesOrder))
@@ -368986,7 +369323,7 @@ render=function(name: string)
         local index=speciesIndex(selected)
         local base,gold,diamond=copies(selected)
         local event=eventMutation(selected)
-        local owned=base+gold+diamond&gt;0 or event~=nil
+        local owned=base+gold+diamond&gt;0 or event~=nil or ownedTraits(selected)~=nil
         heading.Text,header.BackgroundColor3=Config.SpeciesDisplayNames[selected],rarityColors[index]
         local stage=box(body,0,0,380,360,rarityColors[index],24)
         hero(stage,selected,0,20,380,280,bestMutation(selected))
@@ -369032,7 +369369,7 @@ render=function(name: string)
         button(body,"CONFIRM FUSION",280,264,510,64,C.accent,function() fuse:FireServer(selected,fusionTarget,Http:GenerateGUID(false)) open("fusion") end)
         button(body,"CANCEL",280,340,510,44,C.red,function() open("fusion") end)
     elseif name=="eggs" then
-        heading.Text,header.BackgroundColor3="Growing Eggs",C.gold
+        heading.Text,header.BackgroundColor3="Caught Eggs",C.gold
         local entries=queue()
         local timers={}
         for slot=1,Config.ChestQueueCapacity do
@@ -369040,7 +369377,9 @@ render=function(name: string)
             local card=box(body,(slot-1)*166,0,156,280,if entry then C.card else C.outline,24)
             label(card,"Slot "..slot,0,8,156,30,22)
             local view=ModelPreview.add(card,"egg",entry==nil)
-            view.Position,view.Size=UDim2.fromOffset(18,58),UDim2.fromOffset(120,146)
+            view.Position,view.Size=UDim2.fromOffset(18,65),UDim2.fromOffset(120,120)
+            PreviewTraits.add(view,entry)
+            if entry then label(card,rarityNames[entry.rarity or 1],0,37,156,24,18,rarityColors[entry.rarity or 1]) end
             local mutation=if entry then ProgressionRules.item(ProgressionConfig.EventMutations,entry.mutationId) else nil
             if mutation then
                 local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
@@ -369062,39 +369401,66 @@ render=function(name: string)
             end
         end
         refreshEggs()
-        button(body,"HATCH NEXT EGG",0,310,400,64,C.accent,function()
+        button(body,"HATCH NEXT EGG",0,310,400,math.max(64,45/viewportScale()),C.accent,function()
             local id=str("NextChestId")
             if id=="" then notify("Return from a run to earn reward eggs") return end
             if workspace:GetServerTimeNow()&lt;num("NextChestReadyAt") then notify("This egg is still growing",C.gold) return end
             if hatchPending then return end
-            hatchPending=true
-            hatch:FireServer(id,Http:GenerateGUID(false))
-            task.delay(5,function() hatchPending=false end)
+            autoHatching=true
+            hatchNext()
         end)
-        label(body,"Eggs grow in order, even while offline.\nWaiting for a nest slot: "..num("PendingChestGrants"),420,302,400,88,21)
+        label(body,"Waiting for a nest slot: "..num("PendingChestGrants"),420,302,400,88,21)
     elseif name=="hatch" then
-        heading.Text,header.BackgroundColor3="You hatched a dinosaur!",C.gold
-        celebrate()
+        heading.Text,header.BackgroundColor3="An egg is hatching...",C.gold
+        local version=modalVersion
         local reward=str("LastChestRewardText","New dinosaur")
         local id=string.match(reward,"x (%w+)") or "compy"
         if not Config.SpeciesDisplayNames[id] then id="compy" end
         local view=hero(body,id,160,-12,504,260)
-        label(body,reward,80,240,660,58,36,C.gold)
+        for _,child in view:GetChildren() do if child.Name=="TraitBadge" or child.Name=="ShinyPreviewGlint" then child:Destroy() end end
+        PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny")})
+        view.Visible=false
+        local eggView=ModelPreview.add(body,"egg")
+        eggView.Position,eggView.Size=UDim2.fromOffset(260,0),UDim2.fromOffset(304,260)
+        local rewardLabel=label(body,rarityNames[speciesIndex(id)].." egg",80,240,660,58,36,rarityColors[speciesIndex(id)])
+        local crack=Instance.new("Frame")
+        crack.BackgroundTransparency,crack.Position,crack.Size,crack.ZIndex,crack.Parent=1,UDim2.fromOffset(370,88),UDim2.fromOffset(84,120),eggView.ZIndex+1,body
+        local fractures={}
+        for i,line in {{34,0,22,44},{28,32,26,-35},{33,70,20,38}} do
+            local segment=Instance.new("Frame")
+            segment.BackgroundColor3,segment.BorderSizePixel=C.outline,0
+            segment.Position,segment.Size,segment.Rotation=UDim2.fromOffset(line[1],line[2]),UDim2.fromOffset(4,line[3]),line[4]
+            segment.Visible,segment.ZIndex,segment.Parent=false,crack.ZIndex,crack
+            fractures[i]=segment
+        end
         local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
         if mutation then
             local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
             for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.55) end end
-            label(body,mutation.name.." • "..mutation.growth.."x Growth • "..mutation.speed.."x Speed",80,295,660,25,20,color)
+            local perks=label(body,mutation.name.." • "..mutation.growth.."x Growth • "..mutation.speed.."x Speed",80,295,660,25,20,color)
+            perks.Visible=false
+            task.delay(3.4,function() if perks.Parent and modalVersion==version then perks.Visible=true end end)
         end
-        button(body,"NEXT EGG",80,322,320,64,C.accent,function()
-            local id=str("NextChestId")
-            if id=="" or workspace:GetServerTimeNow()&lt;num("NextChestReadyAt") then open("eggs") return end
-            if hatchPending then return end
-            hatchPending=true
-            hatch:FireServer(id,Http:GenerateGUID(false))
-            task.delay(5,function() hatchPending=false end)
+        local nextButton=button(body,"NEXT EGG",80,322,320,math.max(64,45/viewportScale()),C.accent,function() autoHatching=true hatchNext() end)
+        local collectionButton=button(body,"COLLECTION",424,322,320,math.max(64,45/viewportScale()),C.blue,function() autoHatching=false open("collection") end)
+        nextButton.Visible,collectionButton.Visible=false,false
+        task.spawn(function()
+            local started=os.clock()
+            while os.clock()-started&lt;3.4 and modalVersion==version and eggView.Parent do
+                local t=os.clock()-started
+                if motion then eggView.Rotation=math.sin(t*(8+t*5))*math.min(14,t*5) end
+                for i,segment in fractures do segment.Visible=t&gt;1.8+i*.35 end
+                task.wait(.03)
+            end
+            if modalVersion~=version or not view.Parent then return end
+            eggView:Destroy() crack:Destroy()
+            view.Visible=true rewardLabel.Text=reward heading.Text="You hatched a dinosaur!"
+            celebrate()
+            task.wait(math.max(0,Config.HatchRevealSeconds-(os.clock()-started)))
+            if modalVersion~=version or not view.Parent then return end
+            if autoHatching and str("NextChestId")~="" then hatchNext()
+            else autoHatching=false nextButton.Visible=true collectionButton.Visible=true end
         end)
-        button(body,"COLLECTION",424,322,320,64,C.blue,function() open("collection") end)
     elseif name=="exit" then
         heading.Text,header.BackgroundColor3="Return to Sanctuary?",C.red
         art(body,"home",36,28,214)
@@ -369240,6 +369606,7 @@ action.AnchorPoint,action.Position=Vector2.new(1,1),UDim2.new(1,-20,1,-22)
 local actionScale=action:FindFirstChildOfClass("UIScale") :: UIScale
 local function scales()
     scale.Scale=viewportScale()
+    closeButton.Size=UDim2.fromOffset(math.max(80,46/viewportScale()),math.max(62,46/viewportScale()))
     local camera=workspace.CurrentCamera
     local size=if camera then camera.ViewportSize else Vector2.new(1280,720)
     local small=math.clamp(math.min(size.X/1000,size.Y/800),.3,1)
@@ -369358,7 +369725,16 @@ for _,attribute in {"EquippedSpeciesId","CollectionJson","ChestQueueJson","Progr
     end)
 end
 player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function() hatchPending=false task.defer(function() open("hatch") end) end)
-player:GetAttributeChangedSignal("LastRunEndAt"):Connect(function() open("results") end)
+player:GetAttributeChangedSignal("LastRunEndAt"):Connect(function() if not autoHatching then open("results") end end)
+player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
+    local serial=hatchCancelSerial
+    task.spawn(function()
+        local deadline=os.clock()+15
+        repeat task.wait(.1) until serial~=hatchCancelSerial or os.clock()&gt;deadline
+            or (player.Character and player.Character:GetAttribute("RunState")=="Sanctuary")
+        if serial==hatchCancelSerial and str("NextChestId")~="" and player.Character and player.Character:GetAttribute("RunState")=="Sanctuary" then autoHatching=true hatchNext() end
+    end)
+end)
 player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)
 for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus"} do
     player:GetAttributeChangedSignal(attribute):Connect(function()
@@ -369379,7 +369755,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX65">
+        <Item class="LocalScript" referent="RBX67">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -369424,7 +369800,38 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX66">
+        <Item class="ModuleScript" referent="RBX68">
+          <Properties>
+            <string name="Name">PreviewTraits</string>
+            <ProtectedString name="Source">--!strict
+local TweenService = game:GetService("TweenService")
+local Theme = require(game:GetService("ReplicatedStorage").Shared.UITheme)
+local PreviewTraits = {}
+function PreviewTraits.add(view: ViewportFrame, traits)
+    if not traits or not (traits.shiny or traits.big) then return end
+    local badge = Instance.new("TextLabel")
+    badge.Name = "TraitBadge"
+    badge.BackgroundTransparency, badge.Size, badge.Position = 1, UDim2.new(1,0,0,26), UDim2.new(0,0,1,-26)
+    badge.Font, badge.TextSize, badge.TextColor3 = Enum.Font.FredokaOne, 18, Theme.Colors.gold
+    badge.TextScaled=true
+    badge.Text = (if traits.shiny then "SHINY" else "") .. (if traits.shiny and traits.big then " + " else "") .. (if traits.big then "BIG" else "")
+    badge.ZIndex, badge.Parent = view.ZIndex + 2, view
+    if not traits.shiny then return end
+    local shine = Instance.new("ImageLabel")
+    shine.Name, shine.Image = "ShinyPreviewGlint", "rbxasset://textures/particles/sparkles_main.dds"
+    shine.BackgroundTransparency, shine.ImageColor3 = 1, Color3.fromRGB(255,244,160)
+    shine.Size, shine.Position, shine.ZIndex, shine.Parent = UDim2.fromScale(.23,.3), UDim2.fromScale(.15,.14), view.ZIndex+1, view
+    if Theme.MotionEnabled then
+        TweenService:Create(shine,TweenInfo.new(1.6,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,-1,true),{
+            Position=UDim2.fromScale(.65,.5),Rotation=100,ImageTransparency=.65,
+        }):Play()
+    end
+end
+return PreviewTraits
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="LocalScript" referent="RBX69">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -369561,7 +369968,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX67">
+        <Item class="LocalScript" referent="RBX70">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -369643,7 +370050,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX68">
+  <Item class="Workspace" referent="RBX71">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

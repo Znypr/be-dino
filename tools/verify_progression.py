@@ -7,6 +7,7 @@ ROOT=Path(__file__).resolve().parents[1]
 def module(path):return '(function()\n'+(ROOT/path).read_text()+'\nend)()'
 def script():
  s='local ProgressionConfig='+module('src/shared/ProgressionConfig.luau')+'\nlocal GameConfig='+module('src/shared/Config.luau')+'\n'
+ s+='local script={Parent={Config="Config"}}\nlocal require=function(_)return GameConfig end\nlocal EggTraits='+module('src/shared/EggTraits.luau')+'\n'
  s+='local script={Parent={ProgressionConfig="ProgressionConfig"}}\nlocal require=function(_)return ProgressionConfig end\nlocal Rules='+module('src/shared/ProgressionRules.luau')+'\n'
  s+='''
 local p={}
@@ -81,18 +82,23 @@ local store={UpdateAsync=function(_,key,fn)
 end}
 local guid=0
 local http={GenerateGUID=function()guid+=1 return "test-"..guid end,JSONEncode=function(_,v)return copy(v) end,JSONDecode=function(_,v)return copy(v) end}
-local storage={Shared={Config="Config",ProgressionRules="Rules"}}
+local mutableConfig=table.clone(GameConfig)
+mutableConfig.DeveloperProducts={[456]=20} -- Mock product, never shipped in Config.
+GameConfig=mutableConfig
+local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",ProgressionConfig="ProgressionConfig"}}
 local datastores={GetDataStore=function()return store end}
 local services={DataStoreService=datastores,HttpService=http,ReplicatedStorage=storage,RunService={IsStudio=function()return false end}}
 local game={GameId=1,JobId="test",GetService=function(_,id)return services[id] end}
 local task={wait=function()end,spawn=function()end}
 local warn=function()end
 local script={Parent={RewardMath="Rewards"}}
+local rewardSpecies=nil
 local require=function(id)
- if id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return {computeRunReward=function()return {stacks={},chestCount=2}end,computeChestReward=function()return {speciesId="raptor",count=2,mutationId="base"}end} end
+ if id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return {computeRunReward=function()return {stacks={},chestCount=2}end,computeChestReward=function()return {speciesId=if rewardSpecies then table.remove(rewardSpecies,1) else "raptor",count=2,mutationId="base"}end} end
  error("unexpected module "..tostring(id))
 end
-local Random={new=function()return {}end}
+local traitRoll=1
+local Random={new=function()return {NextNumber=function()return traitRoll end}end}
 local Repository=REPO_MODULE
 local player={Parent=true,UserId=123,Name="Test",attrs={}}
 function player:SetAttribute(k,v)self.attrs[k]=v end
@@ -145,8 +151,8 @@ assert(Repository.load(player))
 assert(data['u:123'].collection.compy.diamond==1)
 assert(Repository.equipSpecies(player,"compy"))
 assert(Repository.commitRunSettlement(player,"timer-live",10))
-assert(data['u:123'].eggs[2].readyAt-data['u:123'].eggs[1].readyAt==60)
-print("Migration/fusion passed: preserved v1 balances, six catalog entries, insufficient Gold, exact costs, duplicate/conflicting tokens, rejoin and 60s persistent eggs")
+assert(data['u:123'].eggs[2].readyAt-data['u:123'].eggs[1].readyAt==0)
+print("Migration/fusion passed: preserved v1 balances, six catalog entries, exact costs, idempotency and immediately ready new eggs")
 local before=copy(data['u:123'])
 local eventUser={Parent=true,UserId=888,attrs={}}
 function eventUser:SetAttribute(k,v)self.attrs[k]=v end
@@ -164,17 +170,64 @@ Repository.release(eventUser)
 data['u:888'].eggs[5].readyAt=1
 local emberId=data['u:888'].eggs[5].eggId
 assert(Repository.load(eventUser))
+assert(not Repository.claimChest(eventUser,emberId))
+for i=1,4 do assert(Repository.claimChest(eventUser,"fixture-"..i)) end
 local claimed,reward=Repository.claimChest(eventUser,emberId)
 assert(claimed and reward.eventMutationId=="ember")
 assert(Repository.claimChest(eventUser,emberId))
-assert(data['u:888'].collection.raptor.events.ember==2 and data['u:888'].collection.raptor.base==0)
+assert(data['u:888'].collection.raptor.events.ember==2 and data['u:888'].collection.raptor.base==8)
 assert(data['u:888'].pendingChestGrants==0 and #data['u:888'].pendingEggEvents==0)
-assert(data['u:888'].eggs[5].mutationId=="aurora")
+assert(data['u:888'].eggs[1].mutationId=="aurora")
 assert(Repository.equipSpecies(eventUser,"raptor") and eventUser.attrs.EquippedEventMutation=="ember")
 assert(not Repository.commitRunSettlement(eventUser,"bad-event",10,{{eventId="volcano",mutationId="frost"}}))
 Repository.release(eventUser)
 assert(Repository.load(eventUser) and eventUser.attrs.EquippedEventMutation=="ember")
 print("Event transactions passed: repeated settlement transforms, overflow FIFO, mutated hatch, no Base duplication, duplicate claim, equip and rejoin")
+assert(Repository.claimChest(eventUser,data['u:888'].eggs[1].eggId))
+traitRoll=0
+assert(Repository.commitRunSettlement(eventUser,"stacked-traits",10,tags))
+local stackedId=data['u:888'].eggs[1].eggId
+local success,stacked=Repository.claimChest(eventUser,stackedId)
+assert(success and stacked.shiny and stacked.big)
+assert(Repository.claimChest(eventUser,stackedId))
+assert(data['u:888'].collection.raptor.variants['ember:shiny:big'].count==2)
+assert(data['u:888'].collection.raptor.events.ember==2 and data['u:888'].collection.raptor.base==8)
+Repository.release(eventUser)
+assert(Repository.load(eventUser) and eventUser.attrs.EquippedBig and eventUser.attrs.EquippedShiny)
+assert(eventUser.attrs.RarestCaught==1)
+local metricBefore=data['u:888'].metrics.playSeconds
+data['u:888'].session.metricsAt=os.time()-45
+assert(Repository.renew(eventUser))
+assert(data['u:888'].metrics.playSeconds>=metricBefore+45)
+assert(Repository.renew(eventUser) and data['u:888'].metrics.playSeconds<metricBefore+47)
+local receipt={ProductId=456,PlayerId=888,PurchaseId="real-callback-fixture",CurrencySpent=7}
+assert(Repository.purchase(eventUser,receipt))
+assert(Repository.purchase(eventUser,receipt))
+assert(data['u:888'].metrics.robux==7)
+assert(not Repository.purchase(eventUser,{ProductId=999,PlayerId=888,PurchaseId="unknown",CurrencySpent=50}))
+assert(not Repository.purchase(eventUser,{ProductId=456,PlayerId=123,PurchaseId="wrong-owner",CurrencySpent=50}))
+assert(data['u:888'].metrics.robux==7)
+traitRoll=1
+print("Traits/metrics passed: stacked variants, no fusion duplication, rejoin, playtime checkpoints and receipt retry deduplication")
+local sortedUser={Parent=true,UserId=880,attrs={}}
+function sortedUser:SetAttribute(k,v)self.attrs[k]=v end
+function sortedUser:GetAttribute(k)return self.attrs[k]end
+assert(Repository.load(sortedUser))
+rewardSpecies={"ankylosaurus","raptor"}
+assert(Repository.commitRunSettlement(sortedUser,"sorted-run",100,tags))
+rewardSpecies=nil
+local first,second=data['u:880'].eggs[1],data['u:880'].eggs[2]
+assert(first.reward.speciesId=="raptor" and first.mutationId=="aurora")
+assert(second.reward.speciesId=="ankylosaurus" and second.mutationId=="ember")
+assert(not Repository.claimChest(sortedUser,second.eggId))
+assert(Repository.claimChest(sortedUser,first.eggId))
+Repository.release(sortedUser)
+assert(Repository.load(sortedUser))
+local ok,legend=Repository.claimChest(sortedUser,second.eggId)
+assert(ok and legend.speciesId=="ankylosaurus" and sortedUser.attrs.RarestCaught==3)
+assert(Repository.claimChest(sortedUser,second.eggId))
+assert(data['u:880'].collection.ankylosaurus.events.ember==2)
+print("Ordering passed: low-to-high committed outcomes, matching event metadata, out-of-order rejection and no reroll across rejoin")
 fail=true
 local failed,failedStatus=action("buyPotion","speed_common","outage",false)
 assert(not failed and failedStatus=="save_failed")
@@ -198,7 +251,7 @@ assert(localUser.attrs.StudioTestWallet==true and LocalRepository.progression(lo
 assert(LocalRepository.progressionAction(localUser,"buyPotion","speed_legendary","test-purchase",false))
 assert(LocalRepository.progression(localUser).crystals==1000000)
 assert(LocalRepository.commitRunSettlement(localUser,"timer-local",10))
-assert(localUser.attrs.ChestQueueJson[2].readyAt-localUser.attrs.ChestQueueJson[1].readyAt==10)
+assert(localUser.attrs.ChestQueueJson[2].readyAt-localUser.attrs.ChestQueueJson[1].readyAt==0)
 assert(transforms==persistentCalls and data['u:999']==nil)
 LocalRepository.release(localUser)
 -- A published Studio place still uses persistent storage and ordinary currency/timers.
@@ -210,7 +263,7 @@ function published:GetAttribute(k)return self.attrs[k]end
 assert(PublishedRepository.load(published))
 assert(published.attrs.StudioTestWallet==false and PublishedRepository.progression(published).crystals==0)
 assert(data['u:777']~=nil)
-print("Studio isolation passed: local test wallet replenishes, local 10s eggs, zero persistent calls; published Studio retains normal wallet")
+print("Studio isolation passed: local test wallet replenishes, immediately ready eggs, zero persistent calls; published Studio retains normal wallet")
 print("Profile transactions passed: repeated transforms, duplicate grants/purchases/use, token conflicts, rejoin, outage rollback and lease loss")
 '''
  s+=r"""

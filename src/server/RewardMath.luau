@@ -95,9 +95,14 @@ local function weightedChoice(rows, rng: Random)
     return rows[#rows]
 end
 
-function RewardMath.computeChestReward(rng: Random?)
+function RewardMath.computeChestReward(rng: Random?, eggCount: number?)
     local random = rng or Random.new()
-    local speciesRow = weightedChoice(Config.ChestSpeciesWeights, random)
+    local boost = 1 + (math.clamp(eggCount or 1, 1, Config.EggRarityBoostMaxEggs) - 1) * Config.EggRarityBoostPerExtraEgg
+    local rows = {}
+    for _, row in Config.ChestSpeciesWeights do
+        table.insert(rows, {speciesId = row.speciesId, weight = row.weight * boost ^ (Config.SpeciesRarities[row.speciesId] - 1)})
+    end
+    local speciesRow = weightedChoice(rows, random)
     local quantityRow = weightedChoice(Config.ChestQuantityWeights, random)
     return {
         rewardConfigVersion = 1,

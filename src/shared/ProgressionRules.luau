@@ -9,6 +9,9 @@ function Rules.eventMutation(entry)
     local selected=nil
     for _,mutation in Config.EventMutations do
         if entry and entry.events and (entry.events[mutation.id] or 0)>0 then selected=mutation end
+        for _,variant in (if entry then entry.variants or {} else {}) do
+            if variant.count>0 and variant.mutationId==mutation.id then selected=mutation end
+        end
     end
     return selected
 end

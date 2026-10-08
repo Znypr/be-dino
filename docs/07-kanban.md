@@ -6,7 +6,7 @@ Build 005 PvP/run-ending tests 1–9 passed. Build 006 persistence tests 1–10 
 ## Board
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-017; BD-019–022 | BD-027 | None | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
+| BD-017; BD-019–022 | BD-027 | None | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–035 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -55,6 +55,43 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 | BD-032 | Review / test | P1 | Crystal potion shop, timed buffs and inventory | BD-028, BD-031 |
 | BD-033 | Review / test | P1 | Matching aura, potion, leap, weather and currency icons | BD-026 |
 | BD-034 | Review / test | P1 | Event-mutated eggs, cosmetic trails and textured visual upgrade | BD-028, BD-031 |
+| BD-035 | Review / test | P1 | Five-second ordered hatches, Shiny/BIG and map leaderboards | BD-013, BD-034 |
+
+### Hatching, traits and leaderboards, 2026-10-08
+
+Current mechanics supersede the old 60-second/10-second new-egg incubation.
+Existing saved eggs retain their readyAt; new eggs are ready immediately.
+Only the verified unpublished Build 019 copy was modified/tested in Studio.
+
+- [x] Per-run rewards committed before hatching, sorted Common -> Rare -> Legendary.
+  No client rolls. Metadata/outcomes survive overflow, repeated transforms and rejoin.
+- [x] Actual automatic post-run hatching waits for sanctuary respawn. Phone trace:
+  Raptor -> Stegosaurus -> Ankylosaurus, intervals 5.059 and 5.066 seconds.
+  Desktop also revealed Compy -> Triceratops -> T-Rex, completing all six species.
+- [x] Native 3D egg shake/fracture/reveal with existing textured dinosaur models.
+  Closing during the first reveal left two unclaimed eggs after six seconds.
+- [x] Exact independent 1/20 Shiny on four irregular events and 1/10 BIG in all
+  conditions, including clear. Offline exhaustive roll grid verifies 0.5% stacking.
+  Runtime fixtures are deterministic, not observed natural drop-frequency evidence.
+- [x] Shiny-only and stacked previews checked. BIG measured 1.0 -> 1.3 scale and
+  collider 3.38 x 2.4 x 4.16. Separate trait copies never become fusion fodder.
+- [x] Increasing rare/legendary odds for 1-15 eggs checked; current thresholds
+  still grant 1/2/3 eggs. No change to the existing food/catch conversion.
+- [x] Three sanctuary boards render on desktop and phone emulator. Real unsaved
+  session rarity/playtime populate; Robux board stays empty without verified purchases.
+- [x] Offline receipt retry deduplication, unknown-product/player rejection and
+  playtime checkpoints pass. No synthetic purchase reached Roblox/persistent data.
+- [x] Final phone hatch controls measured >=44 pixels; screenshots archived.
+  Final runtime console had no game script errors. Studio stopped/reset to default.
+- [ ] Verified paid product IDs/grants and real purchase receipt test. Catalog is
+  intentionally empty; passes/historical spend are not covered by developer receipts.
+- [ ] Published cross-server OrderedDataStore rankings and persistent migration/
+  rejoin, physical phones, multiplayer and maximum-growth BIG collision/performance.
+  These release checks remain deferred; no published place/player data was touched.
+
+Mechanics: [current hatching notes](36-hatching-traits-and-leaderboards.md).
+Evidence: [screenshots and fixture boundaries](evidence/2026-10-08-hatching-and-leaderboards/README.md).
+BD-035 remains Review / test.
 
 ### Weather, trails and visual upgrade, 2026-10-08
 
@@ -86,6 +123,10 @@ profile was changed. Work used a separate unpublished Build 019 copy.
   and assembled trail previews are NOT completed illustrated PNGs.
 - [ ] Art approval, refined event VFX/custom textures, environment mesh upgrades
   and measured performance. Three environment-generation jobs failed.
+- [ ] Rainbow and Astra egg condition overlays: owner explicitly deferred them
+  on 2026-10-08 for later rework. Existing shell-color and transparent-effect
+  drafts are preserved, not approved final art. Current egg art focus is the
+  seven event mutations on the blank normal egg.
 - [ ] All phone modal targets/readability and physical-device performance.
   Cosmetic shop targets were enlarged; this is not whole-app phone acceptance.
 - [ ] Non-owner published permissions, multiplayer load and persistent-data

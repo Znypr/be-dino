@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PhysicsService = game:GetService("PhysicsService")
 local Dinosaur = {}
 local Visual = require(ReplicatedStorage.Shared.DinosaurVisual)
+local Config = require(ReplicatedStorage.Shared.Config)
 function Dinosaur.render(character: Model, scale: number, speciesId: string?, gold: (boolean | string)?)
     Visual.render(character, scale, speciesId, gold)
     local collider = character:FindFirstChild("DinoCollider")
@@ -32,7 +33,9 @@ function Dinosaur.refreshForPlayer(character: Model, player: Player)
     local ok, collection = pcall(function() return game:GetService("HttpService"):JSONDecode(player:GetAttribute("CollectionJson") or "{}") end)
     local entry = if ok then collection[speciesId] else nil
     local mutation = if entry and (entry.diamond or 0) > 0 then "diamond" elseif entry and (entry.gold or 0) > 0 then "gold" else "base"
-    Dinosaur.setSpecies(character, speciesId, mutation)
+    character:SetAttribute("BigDinosaur", player:GetAttribute("EquippedBig") == true)
+    local factor = if character:GetAttribute("BigDinosaur") then Config.BigScaleMultiplier else 1
+    Dinosaur.render(character, scaleForScore(character:GetAttribute("GrowthScore") or 0) * factor, speciesId, mutation)
 end
 
 function Dinosaur.addGrowth(character: Model, points: number)
@@ -40,7 +43,7 @@ function Dinosaur.addGrowth(character: Model, points: number)
     local current = character:GetAttribute("GrowthScore")
     local score = (if typeof(current) == "number" then current else 0) + points * math.clamp(character:GetAttribute("GrowthMultiplier") or 1,1,8)
     character:SetAttribute("GrowthScore", score)
-    local scale = scaleForScore(score)
+    local scale = scaleForScore(score) * (if character:GetAttribute("BigDinosaur") then Config.BigScaleMultiplier else 1)
     if character:GetAttribute("VisualScale") ~= scale then
         local gold = character:GetAttribute("MutationVisual") or "base"
         Dinosaur.render(character, scale, nil, gold)

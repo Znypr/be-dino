@@ -13,6 +13,7 @@ local MovementGuard = require(script.Parent.MovementGuard)
 local ProfileRepository = require(script.Parent.ProfileRepository)
 local RunLifecycle = require(script.Parent.RunLifecycle)
 local VisualTestService = require(script.Parent.VisualTestService)
+local Leaderboards = require(script.Parent.Leaderboards)
 
 Players.CharacterAutoLoads = false
 
@@ -21,6 +22,7 @@ Lighting.Brightness = 2
 Lighting.Ambient = Color3.fromRGB(130, 143, 148)
 require(script.Parent.ImportedResources).load()
 Arena.build()
+Leaderboards.start()
 
 ProfileRepository.start()
 RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string, eggEvents)
@@ -40,7 +42,10 @@ RunLifecycle.configureSettlement(function(player: Player, runId: string, catchSc
         player:SetAttribute("LastSettlementProbe", "duplicate-ok")
     end
 
-    if not player.Parent then ProfileRepository.release(player) end
+    if not player.Parent then
+        local metrics=ProfileRepository.release(player)
+        if metrics then Leaderboards.publish(player,metrics) end
+    end
     return true
 end)
 RunLifecycle.start()
@@ -51,6 +56,14 @@ MovementGuard.start()
 VisualTestService.start(Dinosaur)
 require(script.Parent.ProgressionService).start(ProfileRepository)
 require(script.Parent.LeapService).start()
+game:GetService("MarketplaceService").ProcessReceipt=function(receipt)
+    local player=Players:GetPlayerByUserId(receipt.PlayerId)
+    if player and ProfileRepository.purchase(player,receipt) then
+        task.spawn(Leaderboards.publish,player,nil)
+        return Enum.ProductPurchaseDecision.PurchaseGranted
+    end
+    return Enum.ProductPurchaseDecision.NotProcessedYet
+end
 
 local function spawnLoadedPlayer(player: Player)
     player.CanLoadCharacterAppearance = false
@@ -71,6 +84,10 @@ end
 
 local function setup(player: Player)
     player.CanLoadCharacterAppearance = false
+    player:GetAttributeChangedSignal("EquippedBig"):Connect(function()
+        local character=player.Character
+        if character and character:GetAttribute("DinoAttached") then Dinosaur.refreshForPlayer(character,player) end
+    end)
     player.CharacterAdded:Connect(function(character)
         if player:GetAttribute("ProfileState") ~= "Loaded" then
             character:Destroy()
@@ -90,13 +107,19 @@ for _, player in Players:GetPlayers() do setup(player) end
 
 Players.PlayerRemoving:Connect(function(player)
     local status = RunLifecycle.endForDisconnect(player)
-    if status ~= "busy" then ProfileRepository.release(player) end
+    if status ~= "busy" then
+        local metrics=ProfileRepository.release(player)
+        if metrics then Leaderboards.publish(player,metrics) end
+    end
 end)
 
 game:BindToClose(function()
     for _, player in Players:GetPlayers() do
         local status = RunLifecycle.endForDisconnect(player)
-        if status ~= "busy" then ProfileRepository.release(player) end
+        if status ~= "busy" then
+            local metrics=ProfileRepository.release(player)
+            if metrics then Leaderboards.publish(player,metrics) end
+        end
     end
 end)
 

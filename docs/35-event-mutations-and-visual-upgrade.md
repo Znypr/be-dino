@@ -1,5 +1,9 @@
 # Event mutations and visual upgrade
 
+Follow-up: docs/36-hatching-traits-and-leaderboards.md adds independent Shiny/BIG,
+precommitted rarity-ordered reveals and map rankings. These supplement the event
+mutations below; newer hatch timing supersedes earlier incubation descriptions.
+
 2026-10-08, Build redesign-019, branch redesign/resources-and-core-fixes.
 User direction: focus on weather, auras, trails and 3D visuals. Published non-owner
 permissions, physical-phone checks and multiplayer/persistence release tests are

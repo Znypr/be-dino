@@ -1,0 +1,49 @@
+{
+  "runtime": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"profileMode\":\"Studio preview (not saved)\",\"robux\":0,\"big\":\"{\\\"before\\\":1,\\\"collider\\\":\\\"3.380000114440918, 2.4000000953674316, 4.159999847412109\\\",\\\"after\\\":1.3,\\\"noWorldShiny\\\":true}\",\"trace\":\"[{\\\"at\\\":1791434773.368953,\\\"reward\\\":\\\"1x raptor\\\"},{\\\"at\\\":1791434778.433486,\\\"reward\\\":\\\"1x stegosaurus\\\"},{\\\"at\\\":1791434783.49956,\\\"reward\\\":\\\"1x ankylosaurus\\\"}]\",\"playSeconds\":120,\"labels\":{\"1\":\"RAREST DINOS\",\"3\":\"1. znyprs\\nLegendary\",\"2\":\"UNSAVED STUDIO PREVIEW\",\"5\":\"UNSAVED STUDIO PREVIEW\",\"4\":\"MOST PLAY TIME\",\"7\":\"ROBUX SPENT\",\"6\":\"1. znyprs\\n0h 01m\",\"9\":\"No ranked players yet\",\"8\":\"UNSAVED STUDIO PREVIEW\"}}"
+      }
+    ],
+    "isError": false
+  },
+  "finalPhone": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"trace\":\"[{\\\"at\\\":1791435014.130908,\\\"reward\\\":\\\"1x raptor\\\"},{\\\"at\\\":1791435019.190099,\\\"reward\\\":\\\"1x stegosaurus\\\"},{\\\"at\\\":1791435024.25644,\\\"reward\\\":\\\"1x ankylosaurus\\\"}]\",\"buttons\":{\"1\":{\"size\":\"45.7153854, 45.7153854\",\"text\":\"X\"},\"3\":{\"size\":\"174.153839, 44.6269226\",\"text\":\"COLLECTION\"},\"2\":{\"size\":\"174.153839, 44.6269226\",\"text\":\"NEXT EGG\"}},\"next\":\"\"}"
+      }
+    ],
+    "isError": false
+  },
+  "interruption": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"trace\":\"[{\\\"at\\\":1791435014.130908,\\\"reward\\\":\\\"1x raptor\\\"},{\\\"at\\\":1791435019.190099,\\\"reward\\\":\\\"1x stegosaurus\\\"},{\\\"at\\\":1791435024.25644,\\\"reward\\\":\\\"1x ankylosaurus\\\"},{\\\"at\\\":1791435094.454201,\\\"reward\\\":\\\"1x raptor\\\"},{\\\"at\\\":1791435148.03564,\\\"reward\\\":\\\"1x raptor\\\"}]\",\"queue\":\"[{\\\"eventId\\\":\\\"bloodmoon\\\",\\\"readyAt\\\":1791435145,\\\"rarity\\\":2,\\\"id\\\":\\\"55c958fd-c82f-44e9-9ad0-295579aea2f9\\\",\\\"shiny\\\":true,\\\"mutationId\\\":\\\"bloodmoon\\\",\\\"big\\\":true},{\\\"eventId\\\":\\\"volcano\\\",\\\"readyAt\\\":1791435145,\\\"rarity\\\":3,\\\"id\\\":\\\"a6816d58-6c84-42cb-9256-18793399fa3e\\\",\\\"shiny\\\":true,\\\"mutationId\\\":\\\"ember\\\",\\\"big\\\":true}]\",\"active\":2}"
+      }
+    ],
+    "isError": false
+  },
+  "engineSeededSimulation": {
+    "samplePerBatch": 10000,
+    "batch1": {
+      "common": 6984,
+      "rare": 2484,
+      "legendary": 532
+    },
+    "batch3": {
+      "common": 5959,
+      "rare": 3062,
+      "legendary": 979
+    },
+    "volcanoTraits": {
+      "sample": 10000,
+      "shiny": 527,
+      "big": 1009,
+      "stacked": 54
+    },
+    "note": "Pure module simulation using actual Roblox Random; not natural gameplay drop-frequency evidence"
+  }
+}

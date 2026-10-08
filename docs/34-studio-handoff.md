@@ -27,15 +27,20 @@ are archived in `docs/evidence/2026-10-08-weather-and-leap/`. Native fallbacks r
 
 ## Completed before Studio
 
+Latest gameplay follow-up: [ordered hatching, Shiny/BIG and map leaderboards](36-hatching-traits-and-leaderboards.md).
+New eggs no longer incubate offline: they reveal for five seconds each after the
+run. Legacy timestamps are retained. The canonical BD-035 checklist records
+desktop/phone passes and the still-unverified paid/persistent/global cases.
+
 - Nine verified PNG masters stay separate and reusable. `Artwork.luau` composes the three aura rings with a shared fossil, clips each ring into rear/front layers, overlays native speed/leaf symbols on bottles, and repeats the single catches footprint. Shops, confirmations, fusion and the catches HUD use the shared assembler. Empty uploaded IDs use native icons.
 - `ArtworkAssets.luau` is generated from `resources/ui/v2/layers/upload-bindings.json`. All nine IDs now record actual MCP uploads, with verified owner metadata and owner-Studio loading evidence. GitHub PNGs are source files, not Roblox runtime image URLs.
 - `ArtworkLayout.luau` contains thumbnail position, scale, ring seam and repeated-mark layout. `UITheme.luau` remains the source of truth for panel colors, fonts, outlines and motion. `resources/ui/design-system.json` is marked historical. Illustration/vision rules remain in `docs/32-artwork-guide-and-todo.md`; the 8–13 audience is an assumption, not measured player research.
 - Desktop leap uses **E**, ordinary jump uses Space. Gamepad Y and the mobile leap button remain supported.
 - **500 raw food growth points = 15 catches** before weather bonuses. Fractional catches carry between pickups in the same run. Growth potions/auras do not multiply these raw points into catches. PvP remains a separate catch source. Catches are reward score units, not a count of eggs; existing thresholds decide egg grants. Carry resets on a new run.
 - Cosmetic fusion supports **50 Base → 1 Gold** and **50 Gold → 1 Diamond**. The Diamond price is provisional private-test tuning, editable in Config. Transactions persist, preserve balances during additive migration, reject insufficient copies, and protect against duplicate/conflicting tokens. Equipping a species shows its highest owned mutation; individual variant selection is not included in this build.
-- Six playable/discoverable species: Compy, Triceratops, T-Rex, Raptor, Stegosaurus and Ankylosaurus. New species have feather/claw, plate/spike and armored/club silhouettes. All have native packaged models and previews, catalog names, rarity factors and chest eligibility. Chest rarity totals remain 70% Common / 25% Rare / 5% Legendary; quantity odds remain unchanged. Direct run-reward tiers retain their original three species.
-- Unpublished Studio (`IsStudio` and `GameId == 0`) uses unsaved local profiles. With `StudioTestWalletEnabled`, its one-million-crystal test wallet replenishes on each progression transaction; eggs take 10 seconds each. Published Studio sessions and live servers use ordinary wallets, persistent storage and 60-second eggs. These test values can be disabled/adjusted in Config before opening Studio; there is no public grant remote.
-- Hatching reveals one committed egg reward at a time. NEXT EGG claims the next ready egg only after the current reveal; growing/empty queues return to the egg view. No reward is rolled on the client.
+- Six playable/discoverable species: Compy, Triceratops, T-Rex, Raptor, Stegosaurus and Ankylosaurus. All have native packaged models and previews, catalog names, rarity factors and chest eligibility. One-egg rarity totals are 70% Common / 25% Rare / 5% Legendary; larger run batches boost rare odds. Quantity odds are unchanged. Direct run-reward tiers retain their original three species.
+- Unpublished Studio (`IsStudio` and `GameId == 0`) uses unsaved local profiles. With `StudioTestWalletEnabled`, its one-million-crystal test wallet replenishes on each progression transaction. Published Studio/live use ordinary wallets and persistent storage. New eggs are immediately ready in both modes; legacy readyAt timestamps remain intact. There is no public grant remote.
+- Hatching automatically reveals one precommitted reward per five seconds, ascending rarity within each run batch. Closing stops the sequence without losing unclaimed eggs. No reward is rolled on the client.
 - CI covers main, the redesign branch, pull requests and manual runs. It installs Pillow/numpy and pinned Luau tools, checks bindings, compiles all sources, executes behavior/preview/artwork checks, rebuilds the current version, runs Python tests and uploads the correct place/manifest. CI no longer makes automated build commits.
 
 ## Exactly what to do next
