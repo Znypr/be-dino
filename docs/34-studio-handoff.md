@@ -21,8 +21,9 @@ Icon consistency follow-up: AURAS and POTIONS now select the shared Meadow aura
 and speed-potion compositions through `NavigationArtwork.luau`. Separate layers
 and native fallbacks are preserved. Desktop and phone-emulator captures are
 archived in `docs/evidence/2026-10-08-navigation-compositions/`. Illustrated leap
-and Clear/Rain/Thunderstorm/Blizzard remain Todo in the artwork guide; their native
-symbols are not completed illustrated assets.
+and Clear/Rain/Thunderstorm/Blizzard now have owner-verified uploads and configurable
+`UIIconLayout` insets. Desktop/phone states, leap ready/cooldown and 48/64px inspection
+are archived in `docs/evidence/2026-10-08-weather-and-leap/`. Native fallbacks remain.
 
 ## Completed before Studio
 
@@ -54,6 +55,7 @@ symbols are not completed illustrated assets.
 | Theme colors, outlines, font, motion | `src/shared/UITheme.luau` |
 | Artwork position, size, seam, symbol placement | `src/shared/ArtworkLayout.luau` |
 | Navigation artwork selection | `src/shared/NavigationArtwork.luau` |
+| Centered illustrated icon insets | `src/shared/UIIconLayout.luau` |
 | Uploaded image IDs | `resources/ui/v2/layers/upload-bindings.json`, then run `tools/bind_artwork.py` |
 | Food-catch rate, fusion prices, test wallet/timers, species and chest odds | `src/shared/Config.luau` |
 | Aura/potion prices and multipliers, weather/leap settings | `src/shared/ProgressionConfig.luau` |

@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "e0e25e4642eefbdd126b7354cfe546da07d241691b785cdbd10e7045563e09b1",
+  "place_sha256": "301c571d40866eb08e3ed58829c87c9ad330e7b0ef4c44611b8cb0ec57a3b19b",
   "sources": {
     "src/loading/Loading.client.luau": "80d7702a45826701816f333e5cfac5a035bd8bdcfeed8b3907f343e65271b104",
     "src/shared/Artwork.luau": "dbcef755028cbf3e737da0f96178db4e563f73843c0df00ad167ab134f1d066e",
@@ -24,8 +24,9 @@
     "src/shared/ResourceGeometry.luau": "07b7892ec2a5fae1ce15ecf5a5f5b2b571b8221f3aa123c608359c3d855333ae",
     "src/shared/ResourceModels.luau": "bc4cfdf3ee9285c084bff461023cf4075fd23d90e0fa276aefc1c5e93c959850",
     "src/shared/RuntimeMeshes.luau": "542db0c4f535afe0dbb1a591ef9567f26796f194ef38967373cf83fa8d710bda",
-    "src/shared/UIIconAssets.luau": "083ac24af573fff28a8806c89391791cf7bff093eb80010a4f323fe3cd2b9198",
-    "src/shared/UITheme.luau": "b1953fc6baf88ce917f04fb400c9f2dda7092cc390d249b83a5513d98c6dfa52",
+    "src/shared/UIIconAssets.luau": "e15be2fa7e70bb94eaa539f662a3cb75a943a489541636eb24708f5194eafd1c",
+    "src/shared/UIIconLayout.luau": "8f1f57adc9cb2c2638647f0dc9639f56efb561ce3d31c057752daf88553f9f73",
+    "src/shared/UITheme.luau": "c539301846674fb7b197481988a8305af27428bd1cf0f08f810969192570b2e8",
     "src/shared/WeatherClock.luau": "f9b4b6bb6c8107453e16401e1299260cb27de0c27bc2179242e20441d1f004e5",
     "src/server/Arena.luau": "531074c629aabab7fc2aa4bce35be1951e9d8ca6a81ba9cd576252981f6602a7",
     "src/server/Bootstrap.server.luau": "99d908b789d3ea3b1b8ed221bb37737e596a3bd17a849044b28948db01640477",

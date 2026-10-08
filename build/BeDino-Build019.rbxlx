@@ -365352,17 +365352,38 @@ return {
     fusion = "rbxassetid://122750027724491",
     shield = "rbxassetid://108184472237302",
     amber = "rbxassetid://113168177075625",
+    leap = "rbxassetid://137570028242707",
+    weather = "rbxassetid://115952370461269",
+    rain = "rbxassetid://72440937569305",
+    thunder = "rbxassetid://135005203451565",
+    blizzard = "rbxassetid://83461127038303",
 }
 </ProtectedString>
         </Properties>
       </Item>
       <Item class="ModuleScript" referent="RBX30">
         <Properties>
+          <string name="Name">UIIconLayout</string>
+          <ProtectedString name="Source">--!strict
+-- Centered image scale inside an unchanged logical icon slot; native geometry is unaffected.
+return {
+    leap = .80,
+    weather = .84,
+    rain = .84,
+    thunder = .84,
+    blizzard = .84,
+}
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX31">
+        <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
 local TweenService = game:GetService("TweenService")
 local Vectors = require(script.Parent.IconVectors)
 local Artwork = require(script.Parent.Artwork)
+local IconLayout = require(script.Parent.UIIconLayout)
 local Theme = {}
 Theme.BackgroundImageId = ""
 Theme.MotionEnabled = true
@@ -365414,7 +365435,9 @@ local function nativeIcon(parent: GuiObject,id: string): Frame?
         root.Position,root.ZIndex,root.Parent = UDim2.fromOffset(8,5),parent.ZIndex+1,parent
         local image = Instance.new("ImageLabel")
         image.Name,image.ScaleType = id,Enum.ScaleType.Fit
-        image.Image,image.Size,image.BackgroundTransparency,image.ZIndex,image.Parent = uploaded,UDim2.fromScale(1,1),1,root.ZIndex,root
+        local imageScale = IconLayout[id] or 1
+        image.AnchorPoint,image.Position = Vector2.new(.5,.5),UDim2.fromScale(.5,.5)
+        image.Image,image.Size,image.BackgroundTransparency,image.ZIndex,image.Parent = uploaded,UDim2.fromScale(imageScale,imageScale),1,root.ZIndex,root
         return root
     end
     if id=="amber" then
@@ -365459,7 +365482,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX31">
+      <Item class="ModuleScript" referent="RBX32">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -365484,15 +365507,15 @@ return Clock
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX32">
+  <Item class="ServerScriptService" referent="RBX33">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX33">
+    <Item class="Folder" referent="RBX34">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX34">
+      <Item class="ModuleScript" referent="RBX35">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -365670,7 +365693,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX35">
+      <Item class="Script" referent="RBX36">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -365788,7 +365811,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX36">
+      <Item class="ModuleScript" referent="RBX37">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -365869,7 +365892,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX37">
+      <Item class="ModuleScript" referent="RBX38">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -365957,7 +365980,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX38">
+      <Item class="ModuleScript" referent="RBX39">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -366068,7 +366091,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX39">
+      <Item class="ModuleScript" referent="RBX40">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -366288,7 +366311,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX40">
+      <Item class="ModuleScript" referent="RBX41">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -366330,7 +366353,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX41">
+      <Item class="ModuleScript" referent="RBX42">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -366412,7 +366435,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX42">
+      <Item class="ModuleScript" referent="RBX43">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -366506,7 +366529,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX43">
+      <Item class="ModuleScript" referent="RBX44">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -366611,7 +366634,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX44">
+      <Item class="ModuleScript" referent="RBX45">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -366744,7 +366767,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX45">
+      <Item class="ModuleScript" referent="RBX46">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -367626,7 +367649,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX46">
+      <Item class="ModuleScript" referent="RBX47">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -367833,7 +367856,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX47">
+      <Item class="ModuleScript" referent="RBX48">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -367949,7 +367972,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX48">
+      <Item class="ModuleScript" referent="RBX49">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -368199,7 +368222,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX49">
+      <Item class="ModuleScript" referent="RBX50">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -368271,19 +368294,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX50">
+  <Item class="StarterPlayer" referent="RBX51">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX51">
+    <Item class="StarterPlayerScripts" referent="RBX52">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX52">
+      <Item class="Folder" referent="RBX53">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX53">
+        <Item class="LocalScript" referent="RBX54">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -368926,7 +368949,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX54">
+        <Item class="LocalScript" referent="RBX55">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -369060,7 +369083,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX55">
+        <Item class="LocalScript" referent="RBX56">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -369116,7 +369139,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX56">
+  <Item class="Workspace" referent="RBX57">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

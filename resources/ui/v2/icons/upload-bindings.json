@@ -4,7 +4,7 @@
   "ownerType": "User",
   "experienceId": 10769812255,
   "uploadedAt": "2026-10-08",
-  "status": "All seven creators verified against owner 7285577648; all seven ImageLabels IsLoaded=true in unpublished Studio. Empty-binding native fallbacks verified. Non-owner published-client checks pending.",
+  "status": "Original seven uploads retained. Five leap/weather uploads verified via GetProductInfo against experience owner User znyprs / 7285577648 on 2026-10-08; all five IsLoaded=true in desktop and phone HUD states in unpublished Build 019. Native empty-binding fallbacks verified for all five. Archived evidence: docs/evidence/2026-10-08-weather-and-leap/. Non-owner published-client checks remain pending.",
   "assets": [
     {"key": "trophy", "source": "trophy.png", "robloxAssetId": "90878052837138"},
     {"key": "dinos", "source": "dinos.png", "robloxAssetId": "122025247365244"},
@@ -12,6 +12,11 @@
     {"key": "home", "source": "home.png", "robloxAssetId": "94252047806605"},
     {"key": "fusion", "source": "fusion.png", "robloxAssetId": "122750027724491"},
     {"key": "shield", "source": "shield.png", "robloxAssetId": "108184472237302"},
-    {"key": "amber", "source": "amber.png", "robloxAssetId": "113168177075625"}
+    {"key": "amber", "source": "amber.png", "robloxAssetId": "113168177075625"},
+    {"key": "leap", "source": "leap-v1.png", "robloxAssetId": "137570028242707"},
+    {"key": "weather", "source": "weather-clear-v1.png", "robloxAssetId": "115952370461269"},
+    {"key": "rain", "source": "weather-rain-v1.png", "robloxAssetId": "72440937569305"},
+    {"key": "thunder", "source": "weather-thunder-v1.png", "robloxAssetId": "135005203451565"},
+    {"key": "blizzard", "source": "weather-blizzard-v1.png", "robloxAssetId": "83461127038303"}
   ]
 }

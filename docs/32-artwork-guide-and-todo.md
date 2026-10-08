@@ -17,7 +17,7 @@ Use owned/original assets and already available tools; do not introduce paid ass
 
 ## Two compatible visual layers
 1. Illustrated item art: match resources/ui/v2/icons/dinos.png and its siblings. Stylized dimensional 3D render, saturated colors, dark contour, rounded bevels, controlled bright highlights, friendly proportions.
-2. Functional symbols: reuse resources/ui/v2/scalable SVG/geometry assets for small utility/status symbols and native fallbacks. Primary navigation and trophy use the existing illustrations. AURAS reuses the assembled Meadow aura; POTIONS reuses the assembled speed potion. Leap and weather illustrations are still needed; their native symbols are temporary fallbacks, not completed illustrated assets.
+2. Functional symbols: reuse resources/ui/v2/scalable SVG/geometry assets for small utility/status symbols and native fallbacks. Primary navigation and trophy use the existing illustrations. AURAS reuses the assembled Meadow aura; POTIONS reuses the assembled speed potion. Leap and all four weather states now use owner-uploaded illustrations with configurable centered insets; native symbols remain fallbacks, not substitute illustrated assets.
 UI panels, labels, buttons, rarity frames and animations remain reusable Roblox components governed by UITheme; artwork does not flatten a menu into an image.
 
 ## Layered artwork rule (supersedes flattened aura thumbnails)
@@ -72,24 +72,24 @@ Distinct Index/inventory symbols are optional UX improvements, not prerequisites
 | 9 | inventory_v1 | Prehistoric leaf-and-leather satchel for owned consumables/items. | Optional after item art |
 | 10 | index_v1 | Fossil field guide/book with dinosaur emblem, distinct from Dino selection. | Optional if navigation separation is needed |
 
-### New illustrated artwork needed (not completed by native symbols)
+### Leap and weather illustrated artwork (native symbols are separate fallbacks)
 | Logical ID / runtime state | Intended illustration | Status |
 |---|---|---|
-| leap_v1 / leap | Friendly dimensional dinosaur in a forward leap, readable motion silhouette; match existing dinosaur artwork, no text or baked E key. | Generated draft: `resources/ui/v2/icons/leap-v1.png`; prompt/integrity/review in sibling manifest. Tight outer margin requires centered UI inset around 0.80; upload, binding and 48/64px Studio review pending. Native leap remains the fallback |
-| weather_clear_v1 / clear (currently weather icon) | Dimensional sun/cloud composition for the implemented Clear/default countdown state. | Generated draft: `resources/ui/v2/icons/weather-clear-v1.png`; separate prompt/integrity manifest. Upload, binding and Studio review pending; native fallback remains |
-| weather_rain_v1 / rain | Chunky rain cloud and readable drops in the same camera, contour and lighting style. | Generated draft: `resources/ui/v2/icons/weather-rain-v1.png`; separate prompt/integrity manifest. Upload, binding and Studio review pending; native fallback remains |
-| weather_thunder_v1 / thunder | Thunderstorm cloud with a prominent lightning bolt, distinct from rain. | Generated draft: `resources/ui/v2/icons/weather-thunder-v1.png`; separate prompt/integrity manifest. Upload, binding and Studio review pending; native fallback remains |
-| weather_blizzard_v1 / blizzard | Snow cloud and bold snowflake for the implemented Blizzard state. | Generated draft: `resources/ui/v2/icons/weather-blizzard-v1.png`; separate prompt/integrity manifest. Upload, binding and Studio review pending; native fallback remains |
+| leap_v1 / leap | Friendly dimensional dinosaur in a forward leap, readable motion silhouette; no text or baked E key. | Owner uploaded, integrated and Studio verified ready/cooldown on desktop/phone; centered scale .80 |
+| weather_clear_v1 / clear (weather icon key) | Dimensional sun/cloud for Clear/default countdown. | Owner uploaded, integrated and Studio verified desktop/phone; centered scale .84 |
+| weather_rain_v1 / rain | Chunky rain cloud and readable drops. | Owner uploaded, integrated and Studio verified desktop/phone; centered scale .84 |
+| weather_thunder_v1 / thunder | Thunderstorm cloud and lightning bolt, distinct from rain. | Owner uploaded, integrated and Studio verified desktop/phone; centered scale .84 |
+| weather_blizzard_v1 / blizzard | Snow cloud and bold snowflake for Blizzard. | Owner uploaded, integrated and Studio verified desktop/phone; centered scale .84 |
 
 The four weather masters were generated one at a time on 2026-10-08. They share the cloud family, dark contour and upper-left lighting; Clear has a gold sun, Rain has three cyan drops, Thunderstorm has a gold bolt, and Blizzard has a six-arm ice snowflake. PNG decode/alpha and manifest SHA-256 checks pass. The requested safe margin was not achieved; use a centered UI inset starting at 0.84 for weather and around 0.80 for leap, then inspect at 48/64px. See `resources/ui/v2/icons/weather-and-leap-handoff.md`.
 
-These are the four implemented weather states in `ProgressionConfig` and the client default, not proposals for new mechanics. Each needs its own transparent PNG master, review, real owner upload/binding and desktop/phone verification before its illustrated status can advance. Reused navigation compositions require no new PNGs or asset IDs.
+These are the four implemented weather states in `ProgressionConfig` and the client default, not proposals for new mechanics. Masters/manifests remain unchanged; real owner IDs are in `icons/upload-bindings.json`, generated into `UIIconAssets`. `UIIconLayout.luau` controls centered image scale without changing native geometry or logical slot dimensions. Desktop/phone HUD and 48/64px inspection evidence is in `docs/evidence/2026-10-08-weather-and-leap/`. All five empty-binding native fallbacks were engine-verified separately. Non-owner published loading and physical-phone checks remain open. Reused navigation compositions require no duplicate PNGs or asset IDs.
 
 Deferred until actual products exist: luck boost art, Robux bundle contents and finisher thumbnails. Do not spend the first batch on speculative offers.
 Separate export task: render new dino/egg/model and mutation previews when their actual models are ready.
 
 ## Production, adjustment and tracking
-Generate one asset at a time. Core aura, potion, mutation and catches artwork is generated, uploaded, integrated and owner-Studio verified. These latest results supersede the Generated draft labels in the planning table above. Build 019 implements reusable binding generation and component assembly for the nine layers and seven illustrated icons. Next is non-owner published permission and real-device verification; see docs/34-studio-handoff.md. Inventory/Index remain optional; no speculative art generation is required. The first draft establishes item-art style; reuse its proportions, camera, outline and lighting for subsequent assets.
+Generate one asset at a time. Core aura, potion, mutation and catches artwork is generated, uploaded, integrated and owner-Studio verified. These latest results supersede the Generated draft labels in the planning table above. Build 019 implements reusable binding generation and component assembly for nine layers and twelve illustrated icons, including the five leap/weather masters. Next is non-owner published permission and real-device verification; see docs/34-studio-handoff.md. Inventory/Index remain optional; no speculative art generation is required. The first draft establishes item-art style; reuse its proportions, camera, outline and lighting for subsequent assets.
 Save composed item art under resources/ui/v2/items/ and reusable layer masters under resources/ui/v2/layers/, with versioned names. Preserve existing art. Record each exact prompt in a sibling JSON manifest.
 Generated bitmap artwork can be revised through image editing; it is not a layered/vector source. Theme changes control UI frames/text separately and cannot recolor arbitrary bitmap details safely.
 Store sources in GitHub; upload accepted runtime PNGs under the Roblox experience owner and record real IDs in the shared asset/theme binding. Never fabricate IDs.

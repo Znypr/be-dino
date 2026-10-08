@@ -1,7 +1,11 @@
 # Illustrated leap and weather integration
 
-Generated sources, 2026-10-08. All five are drafts; none has a Roblox upload ID yet.
-The existing runtime continues using native symbols. Canonical status is in
+Generated sources, 2026-10-08. Integration follow-up: all five now have verified
+owner uploads in `upload-bindings.json` and generated runtime bindings. Desktop,
+phone-emulator and 48/64px evidence is archived in
+`docs/evidence/2026-10-08-weather-and-leap/`. The original instructions below
+describe the completed integration path; manifest draft statuses record generation
+history. Empty bindings still use native symbols. Canonical status is in
 `docs/07-kanban.md`; style rules are in `docs/32-artwork-guide-and-todo.md`.
 
 | Master | Runtime icon key | Runtime state | Starting centered image scale |

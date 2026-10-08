@@ -2,6 +2,7 @@
 local TweenService = game:GetService("TweenService")
 local Vectors = require(script.Parent.IconVectors)
 local Artwork = require(script.Parent.Artwork)
+local IconLayout = require(script.Parent.UIIconLayout)
 local Theme = {}
 Theme.BackgroundImageId = ""
 Theme.MotionEnabled = true
@@ -53,7 +54,9 @@ local function nativeIcon(parent: GuiObject,id: string): Frame?
         root.Position,root.ZIndex,root.Parent = UDim2.fromOffset(8,5),parent.ZIndex+1,parent
         local image = Instance.new("ImageLabel")
         image.Name,image.ScaleType = id,Enum.ScaleType.Fit
-        image.Image,image.Size,image.BackgroundTransparency,image.ZIndex,image.Parent = uploaded,UDim2.fromScale(1,1),1,root.ZIndex,root
+        local imageScale = IconLayout[id] or 1
+        image.AnchorPoint,image.Position = Vector2.new(.5,.5),UDim2.fromScale(.5,.5)
+        image.Image,image.Size,image.BackgroundTransparency,image.ZIndex,image.Parent = uploaded,UDim2.fromScale(imageScale,imageScale),1,root.ZIndex,root
         return root
     end
     if id=="amber" then

@@ -61,6 +61,34 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 
 ## Acceptance and current evidence
 
+### Build 019 leap/weather illustration integration, 2026-10-08
+
+Pulled `6831ffd` and followed the five-master handoff. This supersedes the draft
+upload/integration/Studio-pending entries below, not the remaining release gates.
+
+- [x] Uploaded all five original masters via MCP; every GetProductInfo creator is
+  User `znyprs` / `7285577648`, matching the verified published place owner.
+  Actual IDs and metadata recorded in `icons/upload-bindings.json`; original seven
+  bindings preserved. Generator now strictly validates all twelve logical keys.
+- [x] `UIIconLayout` centers leap at .80 and weather keys at .84. Logical slots,
+  native geometry, live timers/labels and existing Clear-to-weather mapping remain.
+- [x] Synced the connected unpublished Build 019 copy (GameId=0 / PlaceId=0).
+  Desktop and iPhone 17 Pro landscape: Clear, Rain, Thunderstorm and Blizzard all
+  load and remain distinct; leap ready/cooldown loads in both layouts. Actual E
+  leap set a 60-second cooldown, and READY returned on natural expiry.
+- [x] All five native empty-binding fallbacks engine-verified independently;
+  48/64px visual inspection passed. [Eleven screenshots and runtime evidence](evidence/2026-10-08-weather-and-leap/README.md)
+  archived. Game console clean; play stopped, simulator reset, fixtures discarded.
+- [x] Build 019 regenerated, 45 Luau sources compile, artwork harness and binding
+  checks pass; 25 Python tests pass, including new binding validation and exact
+  five-master decoding/hash checks.
+
+Weather attributes were temporary server fixtures to exercise UI state transitions,
+not proof of random scheduling/bonuses. No persistent player data changed and no
+experience was published. The published Studio instance was not connected in this
+pass; only the connected local copy was synced. BD-033 remains Review / test for
+non-owner published permissions and physical-phone checks; BD-019 remains open.
+
 ### Weather artwork drafts, 2026-10-08
 
 All four separate weather PNG masters are generated: Clear/default, Rain, Thunderstorm and Blizzard. Each has a sibling prompt/integrity/review manifest in `resources/ui/v2/icons/`. Full RGBA decoding, transparent/opaque alpha checks and exact SHA-256 verification pass. Generation requested 14% margins but actual margins are tighter; start at centered UI scale 0.84 and inspect at 48/64px. These results supersede the weather Todo statement in the earlier leap entry below. Roblox uploads, expanded icon bindings, desktop/phone Studio screenshots and non-owner loading remain pending. No runtime sources or build changed. [Exact integration handoff](../resources/ui/v2/icons/weather-and-leap-handoff.md).

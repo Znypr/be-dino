@@ -1,0 +1,301 @@
+[
+  {
+    "capture": "desktop-clear",
+    "state": "clear",
+    "guiSize": "1263, 714",
+    "images": {
+      "1": {
+        "key": "leap",
+        "slot": "46.3199997, 46.3199997",
+        "loaded": true,
+        "position": "975.501953, 411.156982",
+        "id": "rbxassetid://137570028242707",
+        "size": "37.0559998, 37.0559998"
+      },
+      "2": {
+        "key": "weather",
+        "slot": "46.3199997, 46.3199997",
+        "loaded": true,
+        "position": "974.575562, 481.640564",
+        "id": "rbxassetid://115952370461269",
+        "size": "38.9087982, 38.9087982"
+      }
+    },
+    "viewport": "1263, 772",
+    "leapLeft": 0,
+    "labels": {
+      "1": "LEAP [E] • READY",
+      "2": "Weather in 9:57"
+    }
+  },
+  {
+    "capture": "desktop-rain",
+    "state": "rain",
+    "guiSize": "1263, 714",
+    "images": {
+      "1": {
+        "key": "leap",
+        "slot": "46.3199997, 46.3199997",
+        "loaded": true,
+        "position": "975.501953, 411.156982",
+        "id": "rbxassetid://137570028242707",
+        "size": "37.0559998, 37.0559998"
+      },
+      "2": {
+        "key": "rain",
+        "slot": "46.3199997, 46.3199997",
+        "loaded": true,
+        "position": "974.575562, 481.640564",
+        "id": "rbxassetid://72440937569305",
+        "size": "38.9087982, 38.9087982"
+      }
+    },
+    "viewport": "1263, 772",
+    "leapLeft": 0,
+    "labels": {
+      "1": "Rain started!",
+      "2": "LEAP [E] • READY",
+      "3": "Rain 2:57"
+    }
+  },
+  {
+    "capture": "desktop-thunder",
+    "state": "thunder",
+    "guiSize": "1263, 714",
+    "images": {
+      "1": {
+        "key": "leap",
+        "slot": "46.3199997, 46.3199997",
+        "loaded": true,
+        "position": "975.501953, 411.156982",
+        "id": "rbxassetid://137570028242707",
+        "size": "37.0559998, 37.0559998"
+      },
+      "2": {
+        "key": "thunder",
+        "slot": "46.3199997, 46.3199997",
+        "loaded": true,
+        "position": "974.575562, 481.640564",
+        "id": "rbxassetid://135005203451565",
+        "size": "38.9087982, 38.9087982"
+      }
+    },
+    "viewport": "1263, 772",
+    "leapLeft": 0,
+    "labels": {
+      "1": "Thunderstorm started!",
+      "2": "LEAP [E] • READY",
+      "3": "Thunderstorm 2:57"
+    }
+  },
+  {
+    "capture": "desktop-blizzard",
+    "state": "blizzard",
+    "guiSize": "1263, 714",
+    "images": {
+      "1": {
+        "key": "leap",
+        "slot": "46.3199997, 46.3199997",
+        "loaded": true,
+        "position": "975.501953, 411.156982",
+        "id": "rbxassetid://137570028242707",
+        "size": "37.0559998, 37.0559998"
+      },
+      "2": {
+        "key": "blizzard",
+        "slot": "46.3199997, 46.3199997",
+        "loaded": true,
+        "position": "974.575562, 481.640564",
+        "id": "rbxassetid://83461127038303",
+        "size": "38.9087982, 38.9087982"
+      }
+    },
+    "viewport": "1263, 772",
+    "leapLeft": 0,
+    "labels": {
+      "1": "Blizzard started!",
+      "2": "LEAP [E] • READY",
+      "3": "Blizzard 2:57"
+    }
+  },
+  {
+    "capture": "desktop-leap-cooldown",
+    "state": "blizzard",
+    "guiSize": "1263, 714",
+    "images": {
+      "1": {
+        "key": "leap",
+        "slot": "46.3199997, 46.3199997",
+        "loaded": true,
+        "position": "975.501953, 411.156982",
+        "id": "rbxassetid://137570028242707",
+        "size": "37.0559998, 37.0559998"
+      },
+      "2": {
+        "key": "blizzard",
+        "slot": "46.3199997, 46.3199997",
+        "loaded": true,
+        "position": "974.575562, 481.640564",
+        "id": "rbxassetid://83461127038303",
+        "size": "38.9087982, 38.9087982"
+      }
+    },
+    "viewport": "1263, 772",
+    "leapLeft": 59.098424196243286,
+    "labels": {
+      "1": "Blizzard started!",
+      "2": "LEAP 1:00",
+      "3": "Blizzard 2:40"
+    }
+  },
+  {
+    "capture": "phone-clear",
+    "state": "clear",
+    "guiSize": "750, 323",
+    "images": {
+      "1": {
+        "key": "leap",
+        "slot": "35.2000008, 35.2000008",
+        "loaded": true,
+        "position": "526.71991, 127.186691",
+        "id": "rbxassetid://137570028242707",
+        "size": "28.1600018, 28.1600018"
+      },
+      "2": {
+        "key": "weather",
+        "slot": "35.2000008, 35.2000008",
+        "loaded": true,
+        "position": "526.01593, 180.749359",
+        "id": "rbxassetid://115952370461269",
+        "size": "29.5680008, 29.5680008"
+      }
+    },
+    "viewport": "750, 381",
+    "leapLeft": 38.362011194229126,
+    "labels": {
+      "1": "Blizzard started!",
+      "2": "LEAP 0:39",
+      "3": "Weather in 9:57"
+    }
+  },
+  {
+    "capture": "phone-rain",
+    "state": "rain",
+    "guiSize": "750, 323",
+    "images": {
+      "1": {
+        "key": "leap",
+        "slot": "35.2000008, 35.2000008",
+        "loaded": true,
+        "position": "526.71991, 127.186691",
+        "id": "rbxassetid://137570028242707",
+        "size": "28.1600018, 28.1600018"
+      },
+      "2": {
+        "key": "rain",
+        "slot": "35.2000008, 35.2000008",
+        "loaded": true,
+        "position": "526.01593, 180.749359",
+        "id": "rbxassetid://72440937569305",
+        "size": "29.5680008, 29.5680008"
+      }
+    },
+    "viewport": "750, 381",
+    "leapLeft": 34.69929003715515,
+    "labels": {
+      "1": "Rain started!",
+      "2": "LEAP 0:35",
+      "3": "Rain 2:57"
+    }
+  },
+  {
+    "capture": "phone-thunder",
+    "state": "thunder",
+    "guiSize": "750, 323",
+    "images": {
+      "1": {
+        "key": "leap",
+        "slot": "35.2000008, 35.2000008",
+        "loaded": true,
+        "position": "526.71991, 127.186691",
+        "id": "rbxassetid://137570028242707",
+        "size": "28.1600018, 28.1600018"
+      },
+      "2": {
+        "key": "thunder",
+        "slot": "35.2000008, 35.2000008",
+        "loaded": true,
+        "position": "526.01593, 180.749359",
+        "id": "rbxassetid://135005203451565",
+        "size": "29.5680008, 29.5680008"
+      }
+    },
+    "viewport": "750, 381",
+    "leapLeft": 31.031414031982422,
+    "labels": {
+      "1": "Thunderstorm started!",
+      "2": "LEAP 0:32",
+      "3": "Thunderstorm 2:57"
+    }
+  },
+  {
+    "capture": "phone-blizzard",
+    "state": "blizzard",
+    "guiSize": "750, 323",
+    "images": {
+      "1": {
+        "key": "leap",
+        "slot": "35.2000008, 35.2000008",
+        "loaded": true,
+        "position": "526.71991, 127.186691",
+        "id": "rbxassetid://137570028242707",
+        "size": "28.1600018, 28.1600018"
+      },
+      "2": {
+        "key": "blizzard",
+        "slot": "35.2000008, 35.2000008",
+        "loaded": true,
+        "position": "526.01593, 180.749359",
+        "id": "rbxassetid://83461127038303",
+        "size": "29.5680008, 29.5680008"
+      }
+    },
+    "viewport": "750, 381",
+    "leapLeft": 27.365000009536743,
+    "labels": {
+      "1": "Blizzard started!",
+      "2": "LEAP 0:28",
+      "3": "Blizzard 2:57"
+    }
+  },
+  {
+    "capture": "phone-leap-ready",
+    "state": "blizzard",
+    "guiSize": "750, 323",
+    "images": {
+      "1": {
+        "key": "leap",
+        "slot": "35.2000008, 35.2000008",
+        "loaded": true,
+        "position": "526.71991, 127.186691",
+        "id": "rbxassetid://137570028242707",
+        "size": "28.1600018, 28.1600018"
+      },
+      "2": {
+        "key": "blizzard",
+        "slot": "35.2000008, 35.2000008",
+        "loaded": true,
+        "position": "526.01593, 180.749359",
+        "id": "rbxassetid://83461127038303",
+        "size": "29.5680008, 29.5680008"
+      }
+    },
+    "viewport": "750, 381",
+    "leapLeft": 0,
+    "labels": {
+      "1": "Blizzard started!",
+      "2": "LEAP [E] • READY",
+      "3": "Blizzard 2:11"
+    }
+  }
+]

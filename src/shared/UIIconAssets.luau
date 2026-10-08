@@ -8,4 +8,9 @@ return {
     fusion = "rbxassetid://122750027724491",
     shield = "rbxassetid://108184472237302",
     amber = "rbxassetid://113168177075625",
+    leap = "rbxassetid://137570028242707",
+    weather = "rbxassetid://115952370461269",
+    rain = "rbxassetid://72440937569305",
+    thunder = "rbxassetid://135005203451565",
+    blizzard = "rbxassetid://83461127038303",
 }
