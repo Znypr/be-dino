@@ -60,6 +60,8 @@ Legacy symbols include shop, settings, gift, play and close. Existing actual-mod
 An illustrated Gold fusion icon already exists; a separate compact Gold mutation badge serves a different purpose.
 Distinct Index/inventory symbols are optional UX improvements, not prerequisites to ship the core loop.
 
+> **2026-10-08 expanded art backlog:** [BD-047](07-kanban.md) needs **separate illustrated Crystal Shop category tiles** and leading icons for Auras/Trails/Eggs/Conditions/Crystals; specifically a **green-spotted egg** product icon/master and larger centered shared aura previews, while reusing the uploaded amber/crystals navigation asset. [BD-048](07-kanban.md) needs distinct icons/renders and optimized Blender walking effects for all **ten** trails, with a proposed **six-rarity presentation system** (not yet final taxonomy). [BD-049/050](07-kanban.md) need reusable trees/vegetation/rocks/landmarks and new Blender food meshes. Do not label these assets uploaded or verified before actual source, exports, owner-bound IDs and Studio/device evidence. Full requirements: [feedback specification](45-owner-feedback-shop-hud-world-weather-tasks.md).
+
 ## Small prioritized artwork TODO
 | Order | Logical ID / asset | Description and use | Status |
 |---|---|---|---|
