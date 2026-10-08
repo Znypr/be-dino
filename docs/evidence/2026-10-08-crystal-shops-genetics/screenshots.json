@@ -1,0 +1,230 @@
+[
+  {
+    "name": "desktop-astra-level60.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "e91671d9ea8edf116efd33ccf89120a9f40c33e4f915d303844984c5449a8c84"
+  },
+  {
+    "name": "desktop-astra-owned-real-wallet.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "96509015491218d509b0859fc28f823a50923e34482fca4ba4878780d86fd604"
+  },
+  {
+    "name": "desktop-astra-trail-moving.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "471af40c579c1ad7b0579d5798cb1ba1683c68242c0f9ecf79673bc5d98bbba8"
+  },
+  {
+    "name": "desktop-aura-shop.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "c862d9c174e2960920a2fcc0fd9c05e828ba758a550eb634ef963c7fb9cfe312"
+  },
+  {
+    "name": "desktop-black-astra-world.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "8a0253584f226db95624efb0f0ee0a74873ce3412ccea78326b5773cea6a1edd"
+  },
+  {
+    "name": "desktop-black-surface-tint-probe.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "87aa4ca212dd9e1a2f9892e1448217b7e4878f591c4f79a27cfe7cdb79aded67"
+  },
+  {
+    "name": "desktop-blue-ankylosaurus-final.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "72dcf1f2ba825919f40dff2767daa96513bbb85ea544c888b98a41dd7cb8d149"
+  },
+  {
+    "name": "desktop-blue-ankylosaurus-tint-probe.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "f3b3a00b4a66575441b00ed112d0d3e46851104c390f9af37df33efeb95f294b"
+  },
+  {
+    "name": "desktop-colored-condition-eggs-final.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "fe74a734a6d4007325bec0ff4ff688ffa598aa90b359568895eca0478b35a4c0"
+  },
+  {
+    "name": "desktop-colored-condition-eggs.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "467d933e3a6499ece24ad9d5e535a9e3781cde5b7de35166371f8870243d8af1"
+  },
+  {
+    "name": "desktop-condition-shop-final.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "9b41ba4190213f00527e54a5024f973476f28827488a47473a8578daead47c17"
+  },
+  {
+    "name": "desktop-condition-shop.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "424a92e9114e361d3da524f766a4d3c2315a7291554fd245a3bf2545775517ac"
+  },
+  {
+    "name": "desktop-condition-upgrade-max.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "dc671ecd0241635d097e601fb5bf73ab12ecc9bed4c5f2f32de30a27a69bb239"
+  },
+  {
+    "name": "desktop-cracked-failed-hatch.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "d644ba631a09fd6d168eb29a59fd0c31521e89d9ed4e5c4cbb52a688df16c840"
+  },
+  {
+    "name": "desktop-crystal-packs-unconfigured.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "e9757a077da3c3e84b52bd0a1d4002e232e40a17a30e9134e7b427dd2e5d2a52"
+  },
+  {
+    "name": "desktop-dirty-egg-animation.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "3ca1378cb3164863580cc2469872a0254c4377f31b4ed9e35a9ae69af1be6661"
+  },
+  {
+    "name": "desktop-egg-odds.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "f902eb5beae8ca4d070ceb1bea3be8e39033950dffcd93d58dcad5a902ed8802"
+  },
+  {
+    "name": "desktop-egg-shop-final.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "de59ec600269c9f82f53155d87a99003273d33be40db0858fcce795af00763dd"
+  },
+  {
+    "name": "desktop-purchased-egg-reveal.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "2c5d81514febf8db26171f842ca8ce34bc88ee3d26c05864174218829fb59bce"
+  },
+  {
+    "name": "desktop-random-egg-confirm.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "08cc6020fa46bfed41056bc241868e89b7bdb8500fbdb5b1def49af72a1bbe8e"
+  },
+  {
+    "name": "desktop-run-crystal-box.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "7e102f4f77895ae4313d55158c89c810c00961eaa8689d055e24fdfbd39f75b9"
+  },
+  {
+    "name": "desktop-trails-level-gates.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "ef22049b22b2145bd84c05c9158e14b3e7da6f61a1764e329d5540fbf06d0de0"
+  },
+  {
+    "name": "phone-astra-black-egg-animation.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "fa0fcf676b71a5557deaecb1fd038dd0863eaea8083594ff504ba7fdb1f6ea8c"
+  },
+  {
+    "name": "phone-astra-level60.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "d41a91d7dd2e6ddcae0f9484f3afe7af98c667fca504c4b1b641c945d1678e42"
+  },
+  {
+    "name": "phone-astra-trail-moving.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "bde1f6e969fc95517b7bdfc81818b772220f56a010473b81939d1af7869f853b"
+  },
+  {
+    "name": "phone-black-astra-world-trail.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "d731dc86e179d92c1fe6df7c49e10e221fb5ff674d275574dd0ad97712aeaca4"
+  },
+  {
+    "name": "phone-blue-ankylosaurus-final.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "3369f9783904c9432207ecb4ed5fce5f3be05aa2d9df6fca48681655dd59a4c2"
+  },
+  {
+    "name": "phone-colored-condition-eggs-final.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "a99b6f659a705812d5f95938d0214346b76c8212a8712c713c76d68c9067d675"
+  },
+  {
+    "name": "phone-colored-condition-eggs.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "f4d58ecefb647ecbde30c726d9b76a7a21a7087af4da0325fa8ab576749fe179"
+  },
+  {
+    "name": "phone-condition-shop.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "e387c646c73ebdf74dbf32d93b67708d14e167b0ed30b5616d688920ce44a6fb"
+  },
+  {
+    "name": "phone-cracked-failed-hatch-final.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "36453785a6fd7694fdce48ca2e214d5ed231e697ab2b096a6825b886f4fbc418"
+  },
+  {
+    "name": "phone-cracked-failed-hatch.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "f806b84ac9a385776fb85d524640b9a22512c00369aaf48611ae0c2e11e8691f"
+  },
+  {
+    "name": "phone-cracked-success-ankylosaurus.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "c3c8654a5f054d522016d3678b898321c93e844c76052339fbd9562f90e0b185"
+  },
+  {
+    "name": "phone-egg-odds.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "0ea9fac805fcde4c1f4eba15b5d2afaf0398f4c954375076e3b1d8ab8c71e8c4"
+  },
+  {
+    "name": "phone-genetic-dinosaur-reveal-final.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "ae4b285532d3d5271920054c2e4d83d95966ffe0e4a123311546d867f1bafdfc"
+  },
+  {
+    "name": "phone-rainbow-egg-animation.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "d63de924e2e808c744388e786b3f1887d924f004752920649492f6290da24726"
+  },
+  {
+    "name": "phone-random-egg-confirm.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "18e9e04c38fd9310e8098d9d0adb1d2e9f6849b9270f7e40b5a51d66467a2d8f"
+  },
+  {
+    "name": "phone-trail-shop-final.png",
+    "width": 65536,
+    "height": 4292542531,
+    "sha256": "1a74c670a23e79b0ad63a5ee2e13ec7dec28d01c3ca77ca11347b595b337d8c6"
+  }
+]

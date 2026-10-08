@@ -3,7 +3,7 @@
 return {
     trophy = "rbxassetid://90878052837138",
     dinos = "rbxassetid://122025247365244",
-    egg = "rbxassetid://103460376747474",
+    egg = "rbxassetid://95856282289615",
     home = "rbxassetid://94252047806605",
     fusion = "rbxassetid://122750027724491",
     shield = "rbxassetid://108184472237302",

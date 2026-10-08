@@ -13,10 +13,15 @@ local Theme = require(Shared.UITheme)
 local NavigationArtwork = require(Shared.NavigationArtwork)
 local Preview = require(Shared.DinosaurPreview)
 local ModelPreview = require(Shared.ModelPreview)
+local HatchPresentation = require(Shared.HatchPresentation)
 local ProgressionConfig=require(Shared.ProgressionConfig)
 local ProgressionRules=require(Shared.ProgressionRules)
 local EggTraits=require(Shared.EggTraits)
 local PreviewTraits=require(script.Parent.PreviewTraits)
+local EggGenetics=require(Shared.EggGenetics)
+local EggAppearance=require(Shared.EggAppearance)
+local ShopOdds=require(Shared.ShopOdds)
+local Marketplace=game:GetService("MarketplaceService")
 local C = Theme.Colors
 local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
 local startRun = remotes:WaitForChild("RequestStartRun") :: RemoteEvent
@@ -40,9 +45,18 @@ local lastGrowth = 0
 local lastEggCount = 0
 local function num(id: string): number return player:GetAttribute(id) or 0 end
 local function str(id: string,fallback: string?): string return player:GetAttribute(id) or fallback or "" end
+local jsonCache = {}
+local function decoded(attribute: string, fallback: string)
+    local raw=str(attribute,fallback)
+    local cached=jsonCache[attribute]
+    if cached and cached.raw==raw then return cached.data end
+    local ok,data=pcall(function() return Http:JSONDecode(raw) end)
+    local result=if ok and typeof(data)=="table" then data else {}
+    jsonCache[attribute]={raw=raw,data=result}
+    return result
+end
 local function copies(id: string): (number,number,number)
-    local ok, data = pcall(function() return Http:JSONDecode(str("CollectionJson","{}")) end)
-    local entry = if ok and typeof(data)=="table" then data[id] else nil
+    local entry = decoded("CollectionJson","{}")[id]
     return if entry then entry.base or 0 else 0, if entry then entry.gold or 0 else 0, if entry then entry.diamond or 0 else 0
 end
 local function bestMutation(id: string): string
@@ -50,16 +64,14 @@ local function bestMutation(id: string): string
     return if diamond>0 then "diamond" elseif gold>0 then "gold" else "base"
 end
 local function eventMutation(id: string)
-    local ok,data=pcall(function() return Http:JSONDecode(str("CollectionJson","{}")) end)
-    return if ok and typeof(data)=="table" then ProgressionRules.eventMutation(data[id]) else nil
+    return ProgressionRules.eventMutation(decoded("CollectionJson","{}")[id])
 end
 local fusionTarget = "gold"
 local hatchPending = false
 local autoHatching = false
 local hatchCancelSerial = 0
 local function ownedTraits(id: string)
-    local ok,data=pcall(function() return Http:JSONDecode(str("CollectionJson","{}")) end)
-    return if ok and typeof(data)=="table" then EggTraits.selected(data[id]) else nil
+    return EggTraits.selected(decoded("CollectionJson","{}")[id])
 end
 local function label(parent: Instance,text: string,x: number,y: number,w: number,h: number,size: number,color: Color3?): TextLabel
     local t = Instance.new("TextLabel")
@@ -106,15 +118,19 @@ heading.TextXAlignment = Enum.TextXAlignment.Left
 local body = Instance.new("Frame")
 body.Position,body.Size,body.BackgroundTransparency,body.ZIndex,body.Parent = UDim2.fromOffset(18,98),UDim2.fromOffset(824,402),1,23,panel
 local modalVersion=0
+local updateNavigation=function() end
 local function close()
     autoHatching=false
     hatchCancelSerial+=1
     modalVersion+=1
     local version=modalVersion
     active=""
-    TweenService:Create(scale,TweenInfo.new(if motion then .13 else 0),{Scale=scale.Scale*.92}):Play()
+    updateNavigation()
+    Theme.animate(scale,.12,{Scale=scale.Scale*.96})
+    Theme.animate(shade,.12,{BackgroundTransparency=1})
+    Theme.animate(panel,.12,{Position=UDim2.fromScale(.5,.52)})
     task.delay(if motion then .13 else 0,function() if modalVersion==version then shade.Visible=false end end)
-    TweenService:Create(blur,TweenInfo.new(if motion then .15 else 0),{Size=0}):Play()
+    Theme.animate(blur,.12,{Size=0})
 end
 local closeButton=button(header,"X",770,1,80,76,C.red,close)
 closeButton.AnchorPoint,closeButton.Position=Vector2.new(1,0),UDim2.new(1,-2,0,1)
@@ -128,7 +144,16 @@ local function notify(text: string,color: Color3?)
     toastSerial+=1
     local serial=toastSerial
     toast.BackgroundColor3,toastText.Text,toast.Visible = color or C.card,text,true
-    task.delay(3,function() if serial==toastSerial then toast.Visible=false end end)
+    if not toast:GetAttribute("Showing") then toast.Position=UDim2.new(.5,0,0,68) end
+    toast:SetAttribute("Showing",true)
+    Theme.animate(toast,.14,{Position=UDim2.new(.5,0,0,80)})
+    task.delay(3,function()
+        if serial~=toastSerial then return end
+        Theme.animate(toast,.12,{Position=UDim2.new(.5,0,0,68)})
+        task.delay(if motion then .12 else 0,function()
+            if serial==toastSerial then toast.Visible=false toast:SetAttribute("Showing",false) end
+        end)
+    end)
 end
 local function viewportScale(): number
     local camera=workspace.CurrentCamera
@@ -147,19 +172,31 @@ local function celebrate()
 end
 local render
 local function open(name: string)
+    local wasVisible=shade.Visible and active~=""
     modalVersion+=1
     active=name
+    updateNavigation()
     body:ClearAllChildren()
     shade.Visible=true
-    scale.Scale=viewportScale()*(if motion then .86 else 1)
-    TweenService:Create(scale,TweenInfo.new(if motion then .24 else 0,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Scale=viewportScale()}):Play()
-    TweenService:Create(blur,TweenInfo.new(if motion then .18 else 0),{Size=12}):Play()
+    if not wasVisible then
+        scale.Scale=viewportScale()*(if motion then .96 else 1)
+        shade.BackgroundTransparency=1
+        panel.Position=UDim2.fromScale(.5,.52)
+    end
+    Theme.animate(scale,.16,{Scale=viewportScale()})
+    Theme.animate(panel,.16,{Position=UDim2.fromScale(.5,.5)})
+    Theme.animate(shade,.14,{BackgroundTransparency=.42})
+    Theme.animate(blur,.16,{Size=if motion then 8 else 0})
     render(name)
+    -- Animate the content as one layer, keeping large collections inexpensive.
+    body.Position=UDim2.fromOffset(18,if motion then 106 else 98)
+    Theme.animate(body,.14,{Position=UDim2.fromOffset(18,98)})
 end
-local function hero(parent: GuiObject,id: string,x: number,y: number,w: number,h: number,gold: (boolean | string)?)
-    local view=Preview.add(parent,id,gold or "base")
+local function hero(parent: GuiObject,id: string,x: number,y: number,w: number,h: number,gold: (boolean | string)?,fusionPreview: boolean?)
+    local traits=if fusionPreview then nil else ownedTraits(id)
+    local view=Preview.add(parent,id,if traits and traits.genes then "base" else gold or "base")
     view.Position,view.Size = UDim2.fromOffset(x,y),UDim2.fromOffset(w,h)
-    PreviewTraits.add(view,ownedTraits(id))
+    PreviewTraits.add(view,traits)
     return view
 end
 local rarityColors={C.accent,C.blue,C.gold}
@@ -168,12 +205,13 @@ local function speciesIndex(id: string): number return Config.SpeciesRarities[id
 local function meter(parent: GuiObject,x: number,y: number,w: number,value: number,maxValue: number,color: Color3,text: string)
     local b=box(parent,x,y,w,34,C.outline,parent.ZIndex+1)
     local fill=Instance.new("Frame")
-    fill.Size,fill.BorderSizePixel,fill.BackgroundColor3,fill.ZIndex,fill.Parent=UDim2.new(math.clamp(value/maxValue,0,1),0,1,0),0,color,b.ZIndex+1,b
+    local fraction=if maxValue>0 then math.clamp(value/maxValue,0,1) else 0
+    fill.Size,fill.BorderSizePixel,fill.BackgroundColor3,fill.ZIndex,fill.Parent=UDim2.new(if motion then 0 else fraction,0,1,0),0,color,b.ZIndex+1,b
+    Theme.animate(fill,.22,{Size=UDim2.new(fraction,0,1,0)})
     label(b,text,0,0,w,34,20)
 end
 local function queue()
-    local ok,data=pcall(function() return Http:JSONDecode(str("ChestQueueJson","[]")) end)
-    return if ok and typeof(data)=="table" then data else {}
+    return decoded("ChestQueueJson","[]")
 end
 local function hatchNext()
     local id=str("NextChestId")
@@ -190,18 +228,20 @@ local function hatchNext()
     end)
 end
 local function progression()
-    local ok,data=pcall(function() return Http:JSONDecode(str("ProgressionJson","{}")) end)
-    if not ok or typeof(data)~="table" or typeof(data.auras)~="table" or typeof(data.potions)~="table" or typeof(data.buffs)~="table" then return {crystals=0,auras={},equippedAura="",potions={},buffs={}} end
+    local data=decoded("ProgressionJson","{}")
+    if typeof(data.auras)~="table" or typeof(data.potions)~="table" or typeof(data.buffs)~="table" then return {crystals=0,auras={},equippedAura="",potions={},buffs={}} end
     return data
 end
 local chosenAura="meadow"
 local cosmeticTab="auras"
+local trailPage=1
 local chosenPotion="speed_common"
 local pendingShop=nil
 local function transact(action,id,replace)
     if pendingShop then notify("Purchase is still processing",C.gold) return end
     local token=Http:GenerateGUID(false)
     pendingShop={token=token,action=action,id=id,replace=replace==true,started=os.clock()}
+    notify("Processing...",C.blue)
     shopAction:FireServer(action,id,token,replace==true)
 end
 shopResult.OnClientEvent:Connect(function(token,ok,status)
@@ -228,7 +268,7 @@ render=function(name: string)
         end)
         
     elseif name=="auras" then
-        heading.Text,header.BackgroundColor3="Aura & Trail Shop",C.purple
+        heading.Text,header.BackgroundColor3="Crystal Shops",C.purple
         local p=progression()
         p.trails=p.trails or {}
         local isTrail=cosmeticTab=="trails"
@@ -236,28 +276,99 @@ render=function(name: string)
         local targetHeight=if touch then math.max(45,45/viewportScale()) else 44
         local tabsHeight=if touch then targetHeight else 40
         local cardsY=tabsHeight+12
-        local cardsHeight=if touch then 402-cardsY else 302
-        local buyY=if touch then cardsHeight-targetHeight-10 else 247
-        for i,tab in {"auras","trails"} do
-            button(body,if tab=="auras" then "AURAS" else "TRAILS",(i-1)*170,0,160,tabsHeight,if cosmeticTab==tab then C.blue else C.card,function() cosmeticTab=tab open("auras") end)
+        local cardsHeight=if touch then 402-cardsY-targetHeight-12 else 270
+        local buyY=cardsHeight-targetHeight-10
+        for i,tab in {"auras","trails","eggs","conditions","crystals"} do
+            button(body,string.upper(tab),(i-1)*165,0,155,tabsHeight,if cosmeticTab==tab then C.blue else C.card,function() cosmeticTab=tab open("auras") end).TextSize=20
         end
-        label(body,"Crystals: "..num("Crystals"),355,0,460,40,23,C.gold)
+        if cosmeticTab=="eggs" then
+            art(body,"egg",20,cardsY+12,220)
+            label(body,"Random Egg",270,cardsY,535,40,30,C.gold)
+            label(body,ProgressionConfig.RandomEggPrice.." Crystals\nBalance: "..num("Crystals").."  •  Level "..num("AccountLevel"),270,cardsY+45,535,60,22)
+            button(body,"VIEW ODDS",270,cardsY+119,535,targetHeight,C.blue,function() open("eggOdds") end)
+            button(body,"BUY EGG",270,cardsY+targetHeight+130,535,targetHeight,C.accent,function() open("eggPurchase") end)
+            return
+        elseif cosmeticTab=="conditions" then
+            local weights=ProgressionConfig.ConditionWeights[(p.conditionLevel or 0)+1]
+            local upgrade=ProgressionConfig.ConditionUpgrades[(p.conditionLevel or 0)+1]
+            label(body,"Condition Level "..(p.conditionLevel or 0).."  •  Account "..num("AccountLevel"),0,cardsY,824,35,26,C.gold)
+            for i,row in ProgressionConfig.Conditions do
+                local x=(i-1)*165
+                label(body,row.name,x,cardsY+50,155,35,22)
+                label(body,weights[i].."%\n"..row.stats.."x stats",x,cardsY+87,155,60,21,C.blue)
+            end
+            button(body,"VIEW ODDS",0,cardsY+166,330,targetHeight,C.blue,function() open("eggOdds") end)
+            button(body,if upgrade then "UPGRADE: "..upgrade.price.." CRYSTALS" else "MAX LEVEL",348,cardsY+166,476,targetHeight,C.accent,function() if upgrade then open("conditionConfirm") end end).TextSize=20
+            label(body,if upgrade then "Next tier: account level "..upgrade.requiredLevel.."  •  Future eggs only" else "Maximum condition upgrade",0,360,824,35,19,C.gold)
+            return
+        elseif cosmeticTab=="crystals" then
+            art(body,"amber",20,cardsY+12,220)
+            label(body,num("Crystals").." Crystals",270,cardsY,535,50,30,C.gold)
+            local products={} for id,amount in Config.DeveloperProducts do table.insert(products,{id=id,amount=amount}) end
+            table.sort(products,function(a,b) return a.amount<b.amount end)
+            if #products==0 then label(body,"Robux packs unavailable",270,cardsY+70,535,80,27)
+            else
+                local list=Instance.new("ScrollingFrame") list.BackgroundTransparency,list.BorderSizePixel,list.Size,list.Position,list.CanvasSize,list.ZIndex,list.Parent=1,0,UDim2.fromOffset(535,250),UDim2.fromOffset(270,cardsY+60),UDim2.fromOffset(0,#products*(targetHeight+12)),24,body
+                for i,product in products do
+                    local saleReady=false
+                    local b=button(list,product.amount.." CRYSTALS",0,(i-1)*(targetHeight+12),520,targetHeight,C.gold,function() if saleReady then Marketplace:PromptProductPurchase(player,product.id) end end)
+                    task.spawn(function()
+                        local ok,info=pcall(function() return Marketplace:GetProductInfo(product.id,Enum.InfoType.Product) end)
+                        if b.Parent then if ok and info.IsForSale~=false and typeof(info.PriceInRobux)=="number" then saleReady=true b.Text=product.amount.." CRYSTALS • R$ "..info.PriceInRobux else b.Text="UNAVAILABLE" b.Active=false end end
+                    end)
+                end
+            end
+            return
+        end
         local owned=if isTrail then p.trails else p.auras
         local equippedId=if isTrail then p.equippedTrail or "" else p.equippedAura
         for i,item in (if isTrail then ProgressionConfig.Trails else ProgressionConfig.Auras) do
+            if isTrail and (i<(trailPage-1)*3+1 or i>trailPage*3) then continue end
+            local slot=if isTrail then (i-1)%3 else i-1
             local color=Color3.fromRGB(item.color[1],item.color[2],item.color[3])
-            local card=box(body,(i-1)*276,cardsY,264,cardsHeight,color,24)
+            local card=box(body,slot*276,cardsY,264,cardsHeight,color,24)
             label(card,item.name,6,5,252,34,25)
-            label(card,item.rarity.." • "..(if isTrail then "Cosmetic" else item.growth.."x Growth"),4,42,256,30,19)
-            art(card,(if isTrail then "trail_" else "aura_")..item.id,if touch then 92 else 46,if touch then 70 else 77,if touch then 80 else 172)
-            label(card,if owned[item.id] then "Owned" else item.price.." Crystals",4,if touch then buyY-33 else 212,256,27,21,C.gold)
+            label(card,if isTrail then "Level "..item.level.." • "..item.speed.."x Speed" else item.growth.."x Growth",4,42,256,30,19)
+            art(card,(if isTrail then "trail_" else "aura_")..item.id,102,76,60)
+            label(card,if owned[item.id] then "Owned" else item.price.." Crystals",4,buyY-30,256,27,21,C.gold)
             local equipped=equippedId==item.id
-            button(card,if equipped then "UNEQUIP" elseif owned[item.id] then "EQUIP" else "BUY",12,buyY,240,targetHeight,C.card,function()
+            local locked=isTrail and num("AccountLevel")<item.level and not owned[item.id]
+            button(card,if equipped then "UNEQUIP" elseif owned[item.id] then "EQUIP" elseif locked then "LEVEL "..item.level else "BUY",12,buyY,240,targetHeight,C.card,function()
+                if locked then notify("Requires account level "..item.level,C.gold) return end
                 if owned[item.id] then transact(if isTrail then "equipTrail" else "equipAura",if equipped then "" else item.id)
                 else chosenAura=item.id open("auraConfirm") end
             end)
         end
-        if not touch then label(body,"Equipped: "..(if equippedId=="" then "None" else equippedId),0,363,824,35,20) end
+        local footerY=402-targetHeight
+        if isTrail then
+            button(body,"<",0,footerY,110,targetHeight,C.blue,function() trailPage=math.max(1,trailPage-1) open("auras") end)
+            button(body,">",714,footerY,110,targetHeight,C.blue,function() trailPage=math.min(4,trailPage+1) open("auras") end)
+        end
+        label(body,"Level "..num("AccountLevel").." • "..num("Crystals").." Crystals"..(if isTrail then " • "..trailPage.." / 4" else ""),115,footerY,590,targetHeight,21,C.gold)
+    elseif name=="eggOdds" then
+        heading.Text,header.BackgroundColor3="Egg Odds",C.blue
+        local lines=ShopOdds.lines(progression().conditionLevel or 0)
+        local list=Instance.new("ScrollingFrame") list.Name,list.BackgroundTransparency,list.BorderSizePixel,list.Size,list.CanvasSize,list.ScrollBarThickness,list.ZIndex,list.Parent="EggOdds",1,0,UDim2.fromOffset(824,308),UDim2.fromOffset(0,#lines*46),8,24,body
+        for i,line in lines do label(list,line,10,(i-1)*46,790,44,21) end
+        button(body,"BACK TO SHOP",212,322,400,math.max(64,45/viewportScale()),C.blue,function() open("auras") end)
+    elseif name=="eggPurchase" or name=="conditionConfirm" then
+        local p=progression()
+        local upgrade=ProgressionConfig.ConditionUpgrades[(p.conditionLevel or 0)+1]
+        local isEgg=name=="eggPurchase"
+        heading.Text,header.BackgroundColor3=if isEgg then "Buy Random Egg?" else "Upgrade Conditions?",C.gold
+        local price=if isEgg then ProgressionConfig.RandomEggPrice elseif upgrade then upgrade.price else 0
+        art(body,"egg",20,15,200)
+        label(body,price.." Crystals\nBalance after: "..(num("Crystals")-price),260,10,550,80,27,C.gold)
+        label(body,if isEgg then "Cracked: 20% hatch success. A failed hatch gives no dinosaur or refund. Queue-full purchases are not charged." else "Account level "..(if upgrade then upgrade.requiredLevel else 60).." required. Existing eggs keep their conditions.",260,105,550,95,23)
+        if not isEgg and upgrade then
+            local parts={} for i,row in ProgressionConfig.Conditions do table.insert(parts,row.name.." "..ProgressionConfig.ConditionWeights[upgrade.level+1][i].."%") end
+            label(body,table.concat(parts," • "),0,213,824,60,21,C.blue)
+        end
+        button(body,"VIEW ODDS",0,300,250,math.max(64,45/viewportScale()),C.blue,function() open("eggOdds") end)
+        button(body,"CONFIRM",270,300,270,math.max(64,45/viewportScale()),C.accent,function()
+            transact(if isEgg then "buyEgg" else "upgradeCondition",if isEgg then "random" elseif upgrade then tostring(upgrade.level) else "") open("auras")
+        end)
+        button(body,"CANCEL",560,300,264,math.max(64,45/viewportScale()),C.red,function() open("auras") end)
     elseif name=="auraConfirm" then
         local isTrail=cosmeticTab=="trails"
         local item=ProgressionRules.item(if isTrail then ProgressionConfig.Trails else ProgressionConfig.Auras,chosenAura)
@@ -335,7 +446,7 @@ render=function(name: string)
         local equipped=str("EquippedSpeciesId","compy")==selected
         button(body,if equipped then "EQUIPPED" elseif not owned then "LOCKED" else "EQUIP",426,273,372,52,if owned then C.accent else C.card,function()
             if not owned then notify("Hatch reward eggs to discover this dino") return end
-            if not equipped then equip:FireServer(selected,Http:GenerateGUID(false)) end
+            if not equipped then notify("Equipping...",C.blue) equip:FireServer(selected,Http:GenerateGUID(false)) end
         end)
         button(body,"BACK TO INDEX",426,341,372,45,C.blue,function() open("collection") end)
     elseif name=="fusion" then
@@ -346,7 +457,7 @@ render=function(name: string)
         local owned=if diamond then gold else base
         local source=if diamond then "Gold" else "Base"
         local target=if diamond then "Diamond" else "Gold"
-        hero(body,selected,14,0,360,260,fusionTarget)
+        hero(body,selected,14,0,360,260,fusionTarget,true)
         art(body,"mutation_"..fusionTarget,142,242,84)
         button(body,"GOLD",388,0,200,42,C.gold,function() fusionTarget="gold" open("fusion") end)
         button(body,"DIAMOND",600,0,200,42,C.blue,function() fusionTarget="diamond" open("fusion") end)
@@ -376,7 +487,7 @@ render=function(name: string)
         for slot=1,Config.ChestQueueCapacity do
             local entry=entries[slot]
             local card=box(body,(slot-1)*166,0,156,280,if entry then C.card else C.outline,24)
-            label(card,"Slot "..slot,0,8,156,30,22)
+            label(card,if entry and entry.genes then EggGenetics.condition(entry.genes.conditionId).name else "Slot "..slot,0,8,156,30,22)
             local view=ModelPreview.add(card,"egg",entry==nil)
             view.Position,view.Size=UDim2.fromOffset(18,65),UDim2.fromOffset(120,120)
             PreviewTraits.add(view,entry)
@@ -384,11 +495,13 @@ render=function(name: string)
             local mutation=if entry then ProgressionRules.item(ProgressionConfig.EventMutations,entry.mutationId) else nil
             if mutation then
                 local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
-                for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.6) end end
+                if not entry.genes then for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.6) end end end
                 label(card,mutation.name,0,192,156,27,18,color)
             elseif entry and entry.eventId and entry.eventId~="clear" then
                 local event=ProgressionRules.item(ProgressionConfig.Weather,entry.eventId)
                 label(card,if event then event.name else entry.eventId,0,192,156,27,15,C.gold)
+            elseif entry and entry.genes then
+                label(card,EggGenetics.condition(entry.genes.conditionId).name,0,192,156,27,18,C.gold)
             end
             timers[slot]=label(card,if entry then "Growing..." else "Empty",3,222,150,40,22,if entry then C.gold else Color3.fromRGB(156,156,174))
         end
@@ -415,27 +528,24 @@ render=function(name: string)
         heading.Text,header.BackgroundColor3="An egg is hatching...",C.gold
         local version=modalVersion
         local reward=str("LastChestRewardText","New dinosaur")
+        local failed=player:GetAttribute("LastChestFailed")==true
+        local genesOk,genes=pcall(function() return Http:JSONDecode(str("LastChestGenesJson","null")) end)
+        if not genesOk or typeof(genes)~="table" then genes=nil end
         local id=string.match(reward,"x (%w+)") or "compy"
         if not Config.SpeciesDisplayNames[id] then id="compy" end
-        local view=hero(body,id,160,-12,504,260)
-        for _,child in view:GetChildren() do if child.Name=="TraitBadge" or child.Name=="ShinyPreviewGlint" then child:Destroy() end end
-        PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny")})
+        local view=Preview.add(body,id,"base")
+        view.Position,view.Size=UDim2.fromOffset(160,-12),UDim2.fromOffset(504,260)
+        PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),genes=genes})
         view.Visible=false
-        local eggView=ModelPreview.add(body,"egg")
+        task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync(view:GetDescendants()) end) end)
+        local eggView,animateEgg,splitEgg=HatchPresentation.add(body,genes,rarityColors[speciesIndex(id)])
         eggView.Position,eggView.Size=UDim2.fromOffset(260,0),UDim2.fromOffset(304,260)
         local rewardLabel=label(body,rarityNames[speciesIndex(id)].." egg",80,240,660,58,36,rarityColors[speciesIndex(id)])
-        local crack=Instance.new("Frame")
-        crack.BackgroundTransparency,crack.Position,crack.Size,crack.ZIndex,crack.Parent=1,UDim2.fromOffset(370,88),UDim2.fromOffset(84,120),eggView.ZIndex+1,body
-        local fractures={}
-        for i,line in {{34,0,22,44},{28,32,26,-35},{33,70,20,38}} do
-            local segment=Instance.new("Frame")
-            segment.BackgroundColor3,segment.BorderSizePixel=C.outline,0
-            segment.Position,segment.Size,segment.Rotation=UDim2.fromOffset(line[1],line[2]),UDim2.fromOffset(4,line[3]),line[4]
-            segment.Visible,segment.ZIndex,segment.Parent=false,crack.ZIndex,crack
-            fractures[i]=segment
-        end
         local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
-        if mutation then
+        if genes then
+            local condition=EggGenetics.condition(genes.conditionId)
+            label(body,if failed then "Cracked • 20% hatch success" else condition.name.." • "..condition.stats.."x speed & growth",80,295,660,25,20,C.gold)
+        elseif mutation then
             local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
             for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.55) end end
             local perks=label(body,mutation.name.." • "..mutation.growth.."x Growth • "..mutation.speed.."x Speed",80,295,660,25,20,color)
@@ -449,14 +559,24 @@ render=function(name: string)
             local started=os.clock()
             while os.clock()-started<3.4 and modalVersion==version and eggView.Parent do
                 local t=os.clock()-started
-                if motion then eggView.Rotation=math.sin(t*(8+t*5))*math.min(14,t*5) end
-                for i,segment in fractures do segment.Visible=t>1.8+i*.35 end
+                animateEgg(t)
                 task.wait(.03)
             end
             if modalVersion~=version or not view.Parent then return end
-            eggView:Destroy() crack:Destroy()
-            view.Visible=true rewardLabel.Text=reward heading.Text="You hatched a dinosaur!"
-            celebrate()
+            splitEgg(not failed)
+            view.Visible=not failed
+            rewardLabel.Text=if failed then "The cracked egg did not hatch" else reward
+            if failed then rewardLabel.TextColor3=C.red end
+            heading.Text=if failed then "Cracked egg" else "You hatched a dinosaur!"
+            if not failed then
+                local revealScale=Instance.new("UIScale")
+                revealScale.Scale,revealScale.Parent=if motion then .9 else 1,view
+                Theme.animate(revealScale,.24,{Scale=1},Enum.EasingStyle.Back)
+                local glow=Instance.new("UIStroke")
+                glow.Color,glow.Thickness,glow.Transparency,glow.Parent=rarityColors[speciesIndex(id)],3,if motion then .1 else 1,view
+                Theme.animate(glow,.65,{Transparency=1})
+                task.delay(.18,function() if modalVersion==version and view.Parent then celebrate() end end)
+            end
             task.wait(math.max(0,Config.HatchRevealSeconds-(os.clock()-started)))
             if modalVersion~=version or not view.Parent then return end
             if autoHatching and str("NextChestId")~="" then hatchNext()
@@ -469,13 +589,27 @@ render=function(name: string)
         label(body,"Stay still for "..Config.ExitChannelSeconds.." seconds to return safely. Moving cancels the return.",300,91,500,104,24)
         button(body,"RETURN & BANK",300,242,500,68,C.accent,function() endRun:FireServer() close() notify("Returning... stay still",C.gold) end)
         button(body,"KEEP EXPLORING",300,329,500,48,C.blue,close)
+    elseif name=="crystalReveal" then
+        heading.Text,header.BackgroundColor3="Run Crystal Box",C.gold
+        local version=modalVersion
+        art(body,"amber",262,8,300)
+        local amount=label(body,"Opening...",70,282,684,65,38,C.gold)
+        task.delay(1.2,function()
+            if modalVersion~=version or not amount.Parent then return end
+            amount.Text="+"..num("LastRunCrystalBox").." Crystals"
+            local rewardScale=Instance.new("UIScale")
+            rewardScale.Scale,rewardScale.Parent=if motion then .92 else 1,amount
+            Theme.animate(rewardScale,.22,{Scale=1},Enum.EasingStyle.Back)
+            celebrate()
+        end)
+        label(body,"Run total: +"..num("LastRunCrystals").." Crystals • already banked",70,353,684,40,22)
     elseif name=="results" then
         heading.Text,header.BackgroundColor3="Run Complete!",C.gold
         art(body,"trophy",24,42,240)
         label(body,"Growth  "..math.floor(num("LastRunGrowthScore")),300,18,500,60,34,C.accent)
         label(body,"Catches  "..num("LastRunCatchScore"),300,93,500,60,34,C.blue)
         label(body,str("LastRewardText","Saving rewards..."),290,168,510,100,24,C.gold)
-        label(body,"Your next adventure starts from the sanctuary.",30,302,760,40,21)
+        label(body,"+"..num("LastRunCrystals").." Crystals • Level "..num("AccountLevel"),30,302,760,40,21)
         button(body,"BACK TO SANCTUARY",212,348,400,48,C.accent,function() open("home") end)
     elseif name=="settings" then
         heading.Text,header.BackgroundColor3="Settings",C.purple
@@ -483,6 +617,8 @@ render=function(name: string)
         button(body,if motion then "ON" else "OFF",560,24,230,56,if motion then C.accent else C.card,function() motion=not motion Theme.MotionEnabled=motion open("settings") end)
         label(body,"Camera distance",24,114,410,56,30)
         button(body,"RESET CAMERA",470,114,320,56,C.blue,function() player.CameraMaxZoomDistance=Config.CameraMaxZoom notify("Camera reset",C.blue) end)
+        label(body,"Hatch sounds",24,182,410,44,26)
+        button(body,if Theme.HatchSoundEnabled~=false then "SOUND ON" else "SOUND OFF",560,182,230,44,C.blue,function() Theme.HatchSoundEnabled=Theme.HatchSoundEnabled==false open("settings") end).TextSize=20
         button(body,"HOW TO PLAY",24,238,370,64,C.gold,function() open("tutorial") end)
         button(body,"FOOD GUIDE",424,238,366,64,C.accent,function() open("food") end)
         label(body,"Settings apply on this device for this session.",24,342,766,40,18)
@@ -535,7 +671,19 @@ for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gol
     b.Text=""
     label(b,entry[1],52,0,114,54,19)
     table.insert(navigationButtons,b)
+    b:SetAttribute("Destination",entry[3])
+    local marker=Instance.new("Frame")
+    marker.Name,marker.Size,marker.Position="ActiveTab",UDim2.new(0,4,1,-12),UDim2.fromOffset(2,6)
+    marker.BackgroundColor3,marker.BorderSizePixel,marker.Visible,marker.ZIndex,marker.Parent=C.gold,0,false,b.ZIndex+3,b
 end
+updateNavigation=function()
+    local destination=if active=="detail" then "collection" elseif active=="hatch" then "eggs" else active
+    for _,b in navigationButtons do
+        local marker=b:FindFirstChild("ActiveTab") :: Frame
+        marker.Visible=b:GetAttribute("Destination")==destination
+    end
+end
+updateNavigation()
 local hud=box(gui,0,0,390,94,C.panel,2)
 hud.AnchorPoint,hud.Position=Vector2.new(0,1),UDim2.new(0,18,1,-18)
 local hudScale=Instance.new("UIScale") hudScale.Parent=hud
@@ -544,9 +692,27 @@ local growthLabel=label(hud,"0 GROWTH",82,3,290,42,30,C.accent)
 art(hud,"catches",40,48,32)
 local catchLabel=label(hud,"0 catches  •  Sanctuary",82,47,290,34,20)
 local crystalHUD=box(gui,0,0,260,48,C.panel,2)
+local crystalScale=Instance.new("UIScale") crystalScale.Parent=crystalHUD
 crystalHUD.AnchorPoint,crystalHUD.Position=Vector2.new(1,0),UDim2.new(1,-20,0,8)
 art(crystalHUD,"amber",6,4,40)
 local crystalText=label(crystalHUD,"0 Crystals",50,0,203,48,24,C.gold)
+local crystalValue=Instance.new("NumberValue")
+crystalValue.Value=num("Crystals")
+crystalText.Text=math.round(crystalValue.Value).." Crystals"
+crystalValue.Parent=crystalHUD
+local crystalInitialized=false
+local lastCrystalAmount=num("Crystals")
+crystalValue.Changed:Connect(function(value) crystalText.Text=math.round(value).." Crystals" end)
+local function refreshCrystals()
+    local amount=num("Crystals")
+    local delta=amount-lastCrystalAmount
+    lastCrystalAmount=amount
+    Theme.animate(crystalValue,.28,{Value=amount})
+    if crystalInitialized and delta>0 then notify("+"..math.round(delta).." Crystals",C.gold) end
+    crystalInitialized=true
+end
+player:GetAttributeChangedSignal("Crystals"):Connect(refreshCrystals)
+refreshCrystals()
 local timers=Instance.new("Frame")
 timers.BackgroundTransparency,timers.Size,timers.AnchorPoint,timers.Position,timers.Parent=1,UDim2.fromOffset(286,220),Vector2.new(1,1),UDim2.new(1,-20,1,-100),gui
 local timerScale=Instance.new("UIScale") timerScale.Parent=timers
@@ -569,7 +735,6 @@ end
 local lastWeather=""
 local function refreshProgressionHUD()
     local now=workspace:GetServerTimeNow()
-    crystalText.Text=num("Crystals").." Crystals"
     local left=num("LeapReadyAt")-now
     leapText.Text=if left>0 then "LEAP "..timerText(left) else "LEAP [E] • READY"
     leapButton.BackgroundColor3=if left>0 then C.card else C.blue
@@ -611,6 +776,7 @@ local function scales()
     local camera=workspace.CurrentCamera
     local size=if camera then camera.ViewportSize else Vector2.new(1280,720)
     local small=math.clamp(math.min(size.X/1000,size.Y/800),.3,1)
+    crystalScale.Scale=math.max(.65,small)
     railScale.Scale,hudScale.Scale,actionScale.Scale,timerScale.Scale=small,small,small,small
     hud:SetAttribute("UIScaleBase",small)
     timers.Position=UDim2.new(1,-20,1,if Input.TouchEnabled then -190 else -100)
@@ -625,7 +791,7 @@ local function scales()
             for _,child in b:GetChildren() do
                 if child:IsA("TextLabel") then
                     child.Position,child.Size,child.TextSize=UDim2.fromOffset(28,0),UDim2.fromOffset(52,44),11
-                elseif child:IsA("GuiObject") then
+                elseif child:IsA("GuiObject") and child.Name~="ActiveTab" then
                     child.Position,child.Size=UDim2.fromOffset(3,10),UDim2.fromOffset(24,24)
                 end
             end
@@ -649,7 +815,7 @@ local function scales()
             for _,child in b:GetChildren() do
                 if child:IsA("TextLabel") then
                     child.Position,child.Size,child.TextSize=UDim2.fromOffset(52,0),UDim2.fromOffset(114,54),19
-                elseif child:IsA("GuiObject") then
+                elseif child:IsA("GuiObject") and child.Name~="ActiveTab" then
                     child.Position,child.Size=UDim2.fromOffset(5,6),UDim2.fromOffset(40,40)
                 end
             end
@@ -676,6 +842,7 @@ if player.Character then task.spawn(characterAdded,player.Character) end
 if workspace.CurrentCamera then workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(scales) end
 gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(scales)
 scales()
+gui:SetAttribute("Ready",true)
 local elapsed=0
 local exitPending=false
 RunService.Heartbeat:Connect(function(dt)
@@ -702,8 +869,8 @@ RunService.Heartbeat:Connect(function(dt)
     if growth>lastGrowth and state=="Active" then
         notify(string.format("+%.1f Growth!",growth-lastGrowth),C.accent)
         if motion then
-            hudScale.Scale*=1.06
-            TweenService:Create(hudScale,TweenInfo.new(.2,Enum.EasingStyle.Back),{Scale=hud:GetAttribute("UIScaleBase") or 1}):Play()
+            hudScale.Scale=(hud:GetAttribute("UIScaleBase") or 1)*1.06
+            Theme.animate(hudScale,.2,{Scale=hud:GetAttribute("UIScaleBase") or 1},Enum.EasingStyle.Back)
         end
     end
     lastGrowth=growth
@@ -720,9 +887,21 @@ RunService.Heartbeat:Connect(function(dt)
     if active=="eggs" and refreshEggs then refreshEggs() end
     if player:GetAttribute("ProfileState")=="Loaded" and state=="Sanctuary" and not seenTutorial then seenTutorial=true open("tutorial") end
 end)
+local refreshQueued=false
+local function scheduleModalRefresh()
+    if refreshQueued then return end
+    refreshQueued=true
+    task.defer(function()
+        refreshQueued=false
+        if table.find({"collection","detail","fusion","eggs","auras","potions"},active) then
+            body:ClearAllChildren()
+            render(active)
+        end
+    end)
+end
 for _,attribute in {"EquippedSpeciesId","CollectionJson","ChestQueueJson","ProgressionJson"} do
     player:GetAttributeChangedSignal(attribute):Connect(function()
-        if table.find({"collection","detail","fusion","eggs","auras","potions"},active) then body:ClearAllChildren() render(active) end
+        scheduleModalRefresh()
     end)
 end
 player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function() hatchPending=false task.defer(function() open("hatch") end) end)
@@ -733,7 +912,15 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
         local deadline=os.clock()+15
         repeat task.wait(.1) until serial~=hatchCancelSerial or os.clock()>deadline
             or (player.Character and player.Character:GetAttribute("RunState")=="Sanctuary")
-        if serial==hatchCancelSerial and str("NextChestId")~="" and player.Character and player.Character:GetAttribute("RunState")=="Sanctuary" then autoHatching=true hatchNext() end
+        if serial==hatchCancelSerial and player.Character and player.Character:GetAttribute("RunState")=="Sanctuary" then
+            if num("LastRunCrystalBox")>0 then
+                open("crystalReveal")
+                local version=modalVersion
+                task.wait(3)
+                if modalVersion~=version or serial~=hatchCancelSerial then return end
+            end
+            if str("NextChestId")~="" then autoHatching=true hatchNext() else open("results") end
+        end
     end)
 end)
 player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)

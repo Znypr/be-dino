@@ -7,7 +7,7 @@ class DeliveryTests(unittest.TestCase):
  def test_catalog_native_models_packaged_with_colours_and_noncolliding_geometry(self):
   root=ET.parse(ROOT/('build/BeDino-Build'+__import__('re').search(r'Build = "redesign-(\d+)"',(ROOT/'src/shared/Config.luau').read_text()).group(1)+'.rbxlx')).getroot()
   resources=next(i for i in root.iter('Item') if i.find("Properties/string[@name='Name']") is not None and i.find("Properties/string[@name='Name']").text=='Resources')
-  models=resources.findall('Item');self.assertEqual(len(models),13)
+  models=[m for m in resources.findall('Item') if m.find("Properties/string[@name='Name']").text!='GeneSurfaces'];self.assertEqual(len(models),13)
   for model in models:
    self.assertEqual(model.attrib['class'],'Model')
    parts=model.findall('Item');self.assertGreater(len(parts),10)
@@ -18,7 +18,8 @@ class DeliveryTests(unittest.TestCase):
     size=part.find("Properties/Vector3[@name='size']")
     self.assertTrue(all(float(v.text)>0 for v in size))
  def test_individual_icons_have_real_alpha_and_references_are_not_game_assets(self):
-  icons=list((ROOT/'resources/ui/v2/icons').glob('*.png'));self.assertEqual(len(icons),12)
+  icons=list((ROOT/'resources/ui/v2/icons').glob('*.png'));self.assertEqual(len(icons),14)
+  self.assertTrue({'premium-egg-normal.png','premium-egg-cracks.png'} <= {p.name for p in icons})
   for icon in icons:
    im=Image.open(icon);self.assertEqual(im.mode,'RGBA')
    self.assertEqual(im.getchannel('A').getextrema(),(0,255))

@@ -1,0 +1,311 @@
+<roblox version="4">
+  <Item class="Model" referent="GENE_SURFACES">
+    <Properties>
+      <string name="Name">GeneSurfaces</string>
+    </Properties>
+    <Item class="SurfaceAppearance" referent="GENE_89306529393528">
+      <Properties>
+        <string name="Name">89306529393528</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://128964084135517</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_137466428907863">
+      <Properties>
+        <string name="Name">137466428907863</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://132626491725268</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_86214226605012">
+      <Properties>
+        <string name="Name">86214226605012</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://84311220009640</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_96313255897228">
+      <Properties>
+        <string name="Name">96313255897228</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://139134560479006</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_84027707250552">
+      <Properties>
+        <string name="Name">84027707250552</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://114114542672240</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_101761994616175">
+      <Properties>
+        <string name="Name">101761994616175</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://135757625669472</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_120976133173561">
+      <Properties>
+        <string name="Name">120976133173561</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://109977433923046</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_133097802660086">
+      <Properties>
+        <string name="Name">133097802660086</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://98739803615449</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_77871094851261">
+      <Properties>
+        <string name="Name">77871094851261</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://134353025553250</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_83489011768964">
+      <Properties>
+        <string name="Name">83489011768964</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://123089237687730</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_119955349969394">
+      <Properties>
+        <string name="Name">119955349969394</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://118585289366594</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_88173041360890">
+      <Properties>
+        <string name="Name">88173041360890</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://92850857118312</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_114272889076920">
+      <Properties>
+        <string name="Name">114272889076920</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://139191877103940</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_114442850182160">
+      <Properties>
+        <string name="Name">114442850182160</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://87464346491240</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_86717793285662">
+      <Properties>
+        <string name="Name">86717793285662</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://91376056200061</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_82287524918427">
+      <Properties>
+        <string name="Name">82287524918427</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://86442968164730</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_97962930815019">
+      <Properties>
+        <string name="Name">97962930815019</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://102005403648193</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_95961859135763">
+      <Properties>
+        <string name="Name">95961859135763</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://73702478471503</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_136509625246715">
+      <Properties>
+        <string name="Name">136509625246715</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://123027848166240</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_113268694982333">
+      <Properties>
+        <string name="Name">113268694982333</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://87969195799025</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_89101474677766">
+      <Properties>
+        <string name="Name">89101474677766</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://107375049421512</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_110478302976385">
+      <Properties>
+        <string name="Name">110478302976385</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://129646643038199</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_123604792589498">
+      <Properties>
+        <string name="Name">123604792589498</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://73869358749368</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_129544861339243">
+      <Properties>
+        <string name="Name">129544861339243</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://93387530203423</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_133135218919576">
+      <Properties>
+        <string name="Name">133135218919576</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://116903793956086</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_138023359262498">
+      <Properties>
+        <string name="Name">138023359262498</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://72737788443650</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_123358675122577">
+      <Properties>
+        <string name="Name">123358675122577</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://104678968426310</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_80991541624858">
+      <Properties>
+        <string name="Name">80991541624858</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://127760917531321</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_112337962938710">
+      <Properties>
+        <string name="Name">112337962938710</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://136703080875284</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_97304253135557">
+      <Properties>
+        <string name="Name">97304253135557</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://109724143546782</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_75837213574533">
+      <Properties>
+        <string name="Name">75837213574533</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://138170836922514</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_119704158216914">
+      <Properties>
+        <string name="Name">119704158216914</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://95524609309509</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_116689425933900">
+      <Properties>
+        <string name="Name">116689425933900</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://85242263798256</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_117213015114791">
+      <Properties>
+        <string name="Name">117213015114791</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://91933158775644</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_131479657892666">
+      <Properties>
+        <string name="Name">131479657892666</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://135424245768810</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_139037127337863">
+      <Properties>
+        <string name="Name">139037127337863</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://110169378547881</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_133059415654031">
+      <Properties>
+        <string name="Name">133059415654031</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://78172606671938</url>
+        </Content>
+      </Properties>
+    </Item>
+    <Item class="SurfaceAppearance" referent="GENE_137091811585694">
+      <Properties>
+        <string name="Name">137091811585694</string>
+        <Content name="ColorMap">
+          <url>rbxassetid://75413810422903</url>
+        </Content>
+      </Properties>
+    </Item>
+  </Item>
+</roblox>

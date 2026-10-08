@@ -46,9 +46,14 @@ function PreviewCamera.bind(viewport: ViewportFrame, model: Model, geometryId: s
         local ancestor: Instance?=viewport
         while ancestor do
             if ancestor:IsA("GuiObject") and not ancestor.Visible then return end
+            if ancestor:IsA("ScreenGui") and not ancestor.Enabled then return end
             ancestor=ancestor.Parent
         end
-        frame(dt)
+        -- Camera orbit does not need a full geometry fit on every rendered frame.
+        elapsed+=dt
+        if elapsed-(viewport:GetAttribute("LastOrbitUpdate") or 0)<1/30 then return end
+        viewport:SetAttribute("LastOrbitUpdate",elapsed)
+        frame(0)
     end)
     viewport.Destroying:Connect(function() resized:Disconnect() motion:Disconnect() end)
 end

@@ -2,14 +2,29 @@
 -- Cosmetic-only geometry. Server-published equipment selects bounded client-local effects.
 local Effects={}
 local function color(rgb) return Color3.fromRGB(rgb[1],rgb[2],rgb[3]) end
-function Effects.create(root: BasePart,aura,trail,mutation)
-    local state={objects={},orbits={},emitters={},beams={},trails={}}
+function Effects.create(root: BasePart,aura,trail,mutation,shiny: boolean?)
+    local state={objects={},orbits={},emitters={},beams={},trails={},walkingEmitters={}}
     local function make(class,name)
         local object=Instance.new(class)
         object.Name,object.Parent=name,root
         table.insert(state.objects,object)
         return object
     end
+    local function particles(name,primary,accent,rate,walking)
+        local attachment=make("Attachment",name.."Anchor")
+        attachment.Position=Vector3.new(0,-.8,1.3)
+        local emitter=Instance.new("ParticleEmitter")
+        emitter.Name,emitter.Parent=name,attachment
+        emitter.Texture="rbxasset://textures/particles/sparkles_main.dds"
+        emitter.Color=ColorSequence.new(primary,accent)
+        emitter.Rate,emitter.LightEmission=rate,1
+        emitter.Lifetime,emitter.Speed=NumberRange.new(.5,1),NumberRange.new(.2,.8)
+        emitter.SpreadAngle=Vector2.new(180,180)
+        emitter.Size=NumberSequence.new({NumberSequenceKeypoint.new(0,.15),NumberSequenceKeypoint.new(.3,.22),NumberSequenceKeypoint.new(1,0)})
+        emitter.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,.1),NumberSequenceKeypoint.new(1,1)})
+        table.insert(if walking then state.walkingEmitters else state.emitters,emitter)
+    end
+    if shiny then particles("LocalShinySparkles",Color3.fromRGB(255,239,142),Color3.new(1,1,1),8,false) end
     if not aura and mutation then aura={id="event",color=mutation.color} end
     if mutation then
         local attachment=make("Attachment","LocalMutationGlow")
@@ -50,6 +65,7 @@ function Effects.create(root: BasePart,aura,trail,mutation)
     end
     if trail then
         local primary,accent=color(trail.color),color(trail.accent)
+        if trail.particles then particles("LocalTrailGlitter",primary,accent,trail.particles,true) end
         for side=-1,1,2 do
             local a=make("Attachment","LocalTrailEdge")
             local b=make("Attachment","LocalTrailEdge")
@@ -77,11 +93,13 @@ function Effects.create(root: BasePart,aura,trail,mutation)
             entry.beam.Width0,entry.beam.Width1=.1*scale,.1*scale
         end
         for _,emitter in self.emitters do emitter.Enabled=enabled end
+        local walking=enabled and Vector3.new(root.AssemblyLinearVelocity.X,0,root.AssemblyLinearVelocity.Z).Magnitude>1
+        for _,emitter in self.walkingEmitters do emitter.Enabled=walking end
         for _,entry in self.trails do
             entry.a.Position=Vector3.new(entry.side*1.1,-.6,1.3)*scale
             entry.b.Position=entry.a.Position+Vector3.new(0,-entry.width*scale,0)
             if not enabled and entry.ribbon.Enabled then entry.ribbon:Clear() end
-            entry.ribbon.Enabled=enabled
+            entry.ribbon.Enabled=walking
         end
     end
     function state:destroy() for _,object in self.objects do object:Destroy() end end

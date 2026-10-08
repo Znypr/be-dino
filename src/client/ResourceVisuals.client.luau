@@ -4,6 +4,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local RuntimeMeshes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("RuntimeMeshes"))
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
+local Appearance = require(ReplicatedStorage.Shared.EggAppearance)
+local Http = game:GetService("HttpService")
 local watched = setmetatable({}, {__mode = "k"})
 local function characterVisual(character: Model)
     local root = character:FindFirstChild("HumanoidRootPart")
@@ -12,9 +14,10 @@ local function characterVisual(character: Model)
     local id = character:GetAttribute("SpeciesId") or "compy"
     local scale = character:GetAttribute("VisualScale") or 1
     local mutation = character:GetAttribute("MutationVisual") or (if character:GetAttribute("GoldVisual") == true then "gold" else "base")
+    local genesJson=character:GetAttribute("GenesJson") or "null"
     local previous = character:FindFirstChild("LocalMeshVisual")
     if previous and previous:GetAttribute("SpeciesId") == id and previous:GetAttribute("Scale") == scale
-        and previous:GetAttribute("Mutation") == mutation then return end
+        and previous:GetAttribute("Mutation") == mutation and previous:GetAttribute("GenesJson")==genesJson then return end
     local overrides=ReplicatedStorage:FindFirstChild("ResourceOverrides")
     local model = if overrides and overrides:FindFirstChild(id) then Resources.clone(id) else RuntimeMeshes.clone(id)
     if not model then return end
@@ -28,6 +31,7 @@ local function characterVisual(character: Model)
     model:SetAttribute("SpeciesId", id)
     model:SetAttribute("Scale", scale)
     model:SetAttribute("Mutation", mutation)
+    model:SetAttribute("GenesJson",genesJson)
     model:ScaleTo(scale)
     model:PivotTo(root.CFrame * CFrame.new(0, -groundHeight, 0))
     for _, item in model:GetDescendants() do
@@ -41,6 +45,8 @@ local function characterVisual(character: Model)
         end
     end
     model.Parent = character
+    local ok,genes=pcall(function() return Http:JSONDecode(genesJson) end)
+    if ok and typeof(genes)=="table" and mutation=="base" then Appearance.apply(model,genes) end
     local fallback = character:FindFirstChild("DinoVisual")
     if fallback then
         for _, item in fallback:GetDescendants() do
@@ -60,7 +66,7 @@ local function watchCharacter(character: Model)
             if character.Parent then characterVisual(character) end
         end)
     end
-    for _, attribute in {"SpeciesId", "VisualScale", "GoldVisual", "MutationVisual", "DinoAttached"} do
+    for _, attribute in {"SpeciesId", "VisualScale", "GoldVisual", "MutationVisual", "DinoAttached","GenesJson"} do
         character:GetAttributeChangedSignal(attribute):Connect(refresh)
     end
     character.DescendantAdded:Connect(function(item)

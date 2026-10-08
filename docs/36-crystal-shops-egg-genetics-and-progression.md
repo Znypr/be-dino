@@ -1,14 +1,13 @@
-# Crystal shops, egg genetics and progression (planned)
+# Crystal shops, egg genetics and progression
 
-**Requested:** 2026-10-08. **Status:** Design/Todo only; not implementation or public balance approval.
+**Requested:** 2026-10-08. **Status:** Implemented for isolated private testing; not public balance or monetization approval. See [implementation and actual acceptance](39-crystal-shops-and-genetics-acceptance.md). Sections below retain the original requested design; the implementation record supersedes their Todo/proposal status.
 **Canonical status:** [BD-035–041 in Kanban](07-kanban.md). **Existing systems:** [Build 018 progression](31-build018-progression-test.md), [Build 019 events and cosmetics](35-event-mutations-and-visual-upgrade.md).
 
 Concurrent gameplay baseline: [BD-042 hatching/traits/leaderboards](37-hatching-traits-and-leaderboards.md)
-now implements five-second run-ordered reveals, 5% event Shiny, 10% independent
-BIG, configurable 1.3x BIG scale and preview-only Shiny. The 1.2x scale/world
-sparkle suggestions below remain future proposals, not changes to that tested
-baseline. Genetics, conditions, ten trails, crystal packs and paid random eggs
-remain planned; no part is certified by the local hatch/leaderboard pass.
+implements five-second run-ordered reveals, 5% event Shiny and 10% independent
+BIG. The shop/genetics integration now uses **1.2x BIG**, world/preview sparkles,
+immutable conditions/colors, ten trails and earned-crystal random eggs. Robux
+packs remain unavailable until real product IDs are configured and verified.
 
 ## Player loop
 
@@ -102,7 +101,7 @@ Source model is one locked `Egg_Master` mesh, fixed camera, floor tile and light
 - **BD-040 | Condition Shop:** weighted assignment, 5 condition tiers, Cracked hatch failure, shop-level odds progression, persistence, caps and tests.
 - **BD-041 | Egg genetics:** weighted two-slot colour/blend, Normal/Big 1.2x visual size and independent shiny effect; persist/replicate through hatch and collection.
 
-## Open decisions before implementation
+## Remaining Release Decisions
 
 1. Run-end crystal formula, whether end-of-run crystals are direct, unboxed, or both; crystal box odds.
 2. Failed-egg consolation; Cracked **20% success** is confirmed.
@@ -111,4 +110,8 @@ Source model is one locked `Egg_Master` mesh, fixed camera, floor tile and light
 5. Palette weights, blend distribution, shiny rate, Normal/Big odds, whether colours are visible before hatch.
 6. Rules for random egg purchases using Robux-purchasable crystals: odds display, player eligibility and policy-safe alternatives.
 
-**Safety and scope:** existing Build 019 behaviour remains the implemented baseline until each task passes isolated server/gameplay, persistence, UI, and desktop/phone checks. No unpublished/saved profile changes, unapproved Robux products or grants are implied by this planning document.
+These choices now have configurable provisional values in ProgressionConfig;
+they still need balance approval. Failed Cracked eggs currently grant no dinosaur
+or crystal refund, as disclosed before purchase. No Robux products were invented.
+Published persistent profiles were not modified. See the newer acceptance record
+for the exact evidence and remaining device/persistence/compliance gates.

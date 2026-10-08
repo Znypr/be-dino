@@ -1,5 +1,6 @@
 --!strict
 local Config=require(script.Parent.ProgressionConfig)
+local Genetics=require(script.Parent.EggGenetics)
 local Rules={}
 function Rules.item(catalog,id)
     for _,item in catalog do if item.id==id then return item end end
@@ -30,6 +31,7 @@ function Rules.eventEgg(eventId,roll)
 end
 function Rules.validEgg(metadata): boolean
     if typeof(metadata)~="table" then return false end
+    if metadata.genes~=nil and not Genetics.valid(metadata.genes) then return false end
     local eventId=metadata.eventId or "clear"
     local mutationId=metadata.mutationId or ""
     local event=Rules.item(Config.Weather,eventId)
@@ -42,13 +44,18 @@ function Rules.upgrade(profile)
         profile.progression={crystals=0,auras={},equippedAura="",potions={},buffs={}}
     end
     local p=profile.progression
-    if p.trails==nil then p.trails={} end
-    if p.equippedTrail==nil then p.equippedTrail="" end
+    if p.trails==nil then p.trails={white=true} end
+    p.trails.white=true
+    if p.equippedTrail==nil then p.equippedTrail="white" end
+    if p.accountXP==nil then p.accountXP=0 end
+    if p.conditionLevel==nil then p.conditionLevel=0 end
     return profile.progression
 end
 function Rules.valid(p): boolean
     if p==nil then return true end -- historical profiles are migrated on load
     if typeof(p)~="table" or not finite(p.crystals) or p.crystals<0 or p.crystals>Config.MaxCrystals or p.crystals%1~=0 then return false end
+    if p.accountXP~=nil and (not finite(p.accountXP) or p.accountXP<0 or p.accountXP%1~=0 or p.accountXP>2000000000) then return false end
+    if p.conditionLevel~=nil and (not finite(p.conditionLevel) or p.conditionLevel<0 or p.conditionLevel%1~=0 or p.conditionLevel>#Config.ConditionUpgrades) then return false end
     if typeof(p.auras)~="table" or typeof(p.potions)~="table" or typeof(p.buffs)~="table" or typeof(p.equippedAura)~="string" then return false end
     for id,value in p.auras do if not Rules.item(Config.Auras,id) or value~=true then return false end end
     if p.equippedAura~="" and not p.auras[p.equippedAura] then return false end
@@ -90,6 +97,7 @@ function Rules.apply(profile,action,id,now,replace,amount): (boolean,string)
         local item=Rules.item(Config.Trails,id)
         if not item then return false,"unknown_item" end
         if p.trails[id] then return false,"already_owned" end
+        if Rules.level(p)<item.level then return false,"level_locked" end
         if p.crystals<item.price then return false,"insufficient_crystals" end
         p.crystals-=item.price p.trails[id]=true
         return true,"purchased"
@@ -97,6 +105,15 @@ function Rules.apply(profile,action,id,now,replace,amount): (boolean,string)
         if id~="" and not p.trails[id] then return false,"not_owned" end
         p.equippedTrail=id
         return true,"equipped"
+    elseif action=="upgradeCondition" then
+        local nextLevel=p.conditionLevel+1
+        local upgrade=Config.ConditionUpgrades[nextLevel]
+        if not upgrade then return false,"max_level" end
+        if id~=tostring(nextLevel) then return false,"upgrade_changed" end
+        if Rules.level(p)<upgrade.requiredLevel then return false,"level_locked" end
+        if p.crystals<upgrade.price then return false,"insufficient_crystals" end
+        p.crystals-=upgrade.price p.conditionLevel=nextLevel
+        return true,"upgraded"
     elseif action=="buyPotion" then
         local item=Rules.item(Config.Potions,id)
         if not item then return false,"unknown_item" end
@@ -115,7 +132,10 @@ function Rules.apply(profile,action,id,now,replace,amount): (boolean,string)
     end
     return false,"invalid_action"
 end
-function Rules.multipliers(p,species,weather,now)
+function Rules.level(p)
+    return math.min(Config.AccountMaxLevel,1+math.floor(math.sqrt((p.accountXP or 0)/Config.AccountXPPerLevel)))
+end
+function Rules.multipliers(p,species,weather,now,conditionId,mutation)
     local aura=Rules.item(Config.Auras,p.equippedAura)
     local factor=Config.RarityFactors[species] or 1
     local growth,speed,loot=1,1,1
@@ -130,6 +150,10 @@ function Rules.multipliers(p,species,weather,now)
             if item then if kind=="growth" then growth*=item.multiplier elseif kind=="speed" then speed*=item.multiplier end end
         end
     end
-    return math.min(Config.GrowthCap,growth*(if aura then aura.growth else 1)),math.min(Config.SpeedCap,speed),loot
+    local trail=Rules.item(Config.Trails,p.equippedTrail or "")
+    local condition=Genetics.condition(conditionId or "normal")
+    local stats=if condition then condition.stats else 1
+    return math.min(Config.GrowthCap,growth*stats*(if aura then aura.growth else 1)*(if mutation then mutation.growth else 1)),
+        math.min(Config.SpeedCap,speed*stats*(if trail then trail.speed else 1)*(if mutation then mutation.speed else 1)),loot
 end
 return Rules

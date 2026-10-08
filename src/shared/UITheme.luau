@@ -8,6 +8,22 @@ local TrailArtwork = require(script.Parent.TrailArtwork)
 local Theme = {}
 Theme.BackgroundImageId = ""
 Theme.MotionEnabled = true
+-- One tween per target prevents rapid input from stacking competing animations.
+local tweens: {[Instance]: Tween} = setmetatable({}, {__mode="k"}) :: any
+function Theme.animate(target: Instance, seconds: number, goals: any, style: Enum.EasingStyle?)
+    local previous = tweens[target]
+    if previous then previous:Cancel() tweens[target] = nil end
+    if not Theme.MotionEnabled then
+        for property, value in goals do (target :: any)[property] = value end
+        return
+    end
+    local tween = TweenService:Create(target,TweenInfo.new(seconds,style or Enum.EasingStyle.Quad,Enum.EasingDirection.Out),goals)
+    tweens[target] = tween
+    tween.Completed:Once(function()
+        if tweens[target] == tween then tweens[target] = nil end
+    end)
+    tween:Play()
+end
 Theme.Colors = {panel=Color3.fromRGB(42,40,53),card=Color3.fromRGB(61,58,73),outline=Color3.fromRGB(13,15,20),text=Color3.new(1,1,1),accent=Color3.fromRGB(93,237,31),gold=Color3.fromRGB(255,210,43),blue=Color3.fromRGB(46,206,255),purple=Color3.fromRGB(194,86,255),red=Color3.fromRGB(247,57,48)}
 Theme.ImageIds = require(script.Parent.UIIconAssets)
 function Theme.imageContent(_id: string): Content? return nil end
@@ -25,20 +41,40 @@ function Theme.decorate(object: GuiObject, radius: number)
         object.Font, object.TextStrokeColor3, object.TextStrokeTransparency = Enum.Font.FredokaOne,Theme.Colors.outline,0
         local scale = Instance.new("UIScale")
         scale.Parent = object
+        local hovered, pressed = false, false
         local function animate(value: number)
-            TweenService:Create(scale,TweenInfo.new(if Theme.MotionEnabled then .12 else 0),{Scale=value*(object:GetAttribute("UIScaleBase") or 1)}):Play()
+            Theme.animate(scale,.09,{Scale=value*(object:GetAttribute("UIScaleBase") or 1)})
+            Theme.animate(border,.09,{Color=if hovered or pressed then Theme.Colors.gold else Theme.Colors.outline})
         end
-        object.MouseEnter:Connect(function() animate(1.04) end)
-        object.MouseLeave:Connect(function() animate(1) end)
-        object.MouseButton1Down:Connect(function() animate(.94) end)
-        object.MouseButton1Up:Connect(function() animate(1.04) end)
+        object.MouseEnter:Connect(function() hovered=true animate(if pressed then .96 else 1.035) end)
+        object.MouseLeave:Connect(function() hovered=false pressed=false animate(1) end)
+        object.SelectionGained:Connect(function() hovered=true animate(1.035) end)
+        object.SelectionLost:Connect(function() hovered=false pressed=false animate(1) end)
+        object.InputBegan:Connect(function(input)
+            if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch or input.KeyCode==Enum.KeyCode.ButtonA then
+                pressed=true animate(.96)
+            end
+        end)
+        object.InputEnded:Connect(function(input)
+            if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch or input.KeyCode==Enum.KeyCode.ButtonA then
+                pressed=false animate(if hovered and input.UserInputType~=Enum.UserInputType.Touch then 1.035 else 1)
+            end
+        end)
+        object.Destroying:Connect(function()
+            local tween=tweens[scale]
+            if tween then tween:Cancel() tweens[scale]=nil end
+            local strokeTween=tweens[border]
+            if strokeTween then strokeTween:Cancel() tweens[border]=nil end
+        end)
     end
 end
 function Theme.texture(parent: GuiObject, width: number, height: number)
     local pattern = Instance.new("Frame")
     pattern.Name,pattern.Size,pattern.BackgroundTransparency,pattern.ClipsDescendants = "FossilTexture",UDim2.fromScale(1,1),1,true
     pattern.ZIndex,pattern.Parent = parent.ZIndex,parent
-    for x=8,width,24 do for y=8,height,24 do
+    -- Bound decoration cost on large panels instead of creating hundreds of studs.
+    local step=math.max(24,math.ceil(math.sqrt(width*height/100)))
+    for x=8,width,step do for y=8,height,step do
         local stud = Instance.new("Frame")
         stud.Position,stud.Size = UDim2.fromOffset(x,y),UDim2.fromOffset(7,7)
         stud.BackgroundColor3,stud.BackgroundTransparency,stud.BorderSizePixel = Color3.new(1,1,1),.95,0

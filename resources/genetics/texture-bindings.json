@@ -1,0 +1,278 @@
+{
+  "format": 1,
+  "owner": {
+    "type": "User",
+    "id": 7285577648,
+    "name": "znyprs"
+  },
+  "created": "2026-10-08",
+  "method": "Neutral luminance/value maps derived from owner meshes; max(R,G,B), original alpha, 512px nearest sampling; originals retained",
+  "textures": [
+    {
+      "id": "89306529393528",
+      "species": "tyrannosaurus",
+      "part": "body_geom",
+      "assetId": "128964084135517",
+      "path": "neutral-textures/89306529393528.png"
+    },
+    {
+      "id": "137466428907863",
+      "species": "tyrannosaurus",
+      "part": "head_geom",
+      "assetId": "132626491725268",
+      "path": "neutral-textures/137466428907863.png"
+    },
+    {
+      "id": "86214226605012",
+      "species": "tyrannosaurus",
+      "part": "left leg_geom",
+      "assetId": "84311220009640",
+      "path": "neutral-textures/86214226605012.png"
+    },
+    {
+      "id": "96313255897228",
+      "species": "tyrannosaurus",
+      "part": "right leg_geom",
+      "assetId": "139134560479006",
+      "path": "neutral-textures/96313255897228.png"
+    },
+    {
+      "id": "84027707250552",
+      "species": "tyrannosaurus",
+      "part": "left arm_geom",
+      "assetId": "114114542672240",
+      "path": "neutral-textures/84027707250552.png"
+    },
+    {
+      "id": "101761994616175",
+      "species": "tyrannosaurus",
+      "part": "right arm_geom",
+      "assetId": "135757625669472",
+      "path": "neutral-textures/101761994616175.png"
+    },
+    {
+      "id": "120976133173561",
+      "species": "tyrannosaurus",
+      "part": "tail_geom",
+      "assetId": "109977433923046",
+      "path": "neutral-textures/120976133173561.png"
+    },
+    {
+      "id": "133097802660086",
+      "species": "compy",
+      "part": "body_geom",
+      "assetId": "98739803615449",
+      "path": "neutral-textures/133097802660086.png"
+    },
+    {
+      "id": "77871094851261",
+      "species": "compy",
+      "part": "head_geom",
+      "assetId": "134353025553250",
+      "path": "neutral-textures/77871094851261.png"
+    },
+    {
+      "id": "83489011768964",
+      "species": "compy",
+      "part": "left leg_geom",
+      "assetId": "123089237687730",
+      "path": "neutral-textures/83489011768964.png"
+    },
+    {
+      "id": "119955349969394",
+      "species": "compy",
+      "part": "right leg_geom",
+      "assetId": "118585289366594",
+      "path": "neutral-textures/119955349969394.png"
+    },
+    {
+      "id": "88173041360890",
+      "species": "compy",
+      "part": "left arm_geom",
+      "assetId": "92850857118312",
+      "path": "neutral-textures/88173041360890.png"
+    },
+    {
+      "id": "114272889076920",
+      "species": "compy",
+      "part": "right arm_geom",
+      "assetId": "139191877103940",
+      "path": "neutral-textures/114272889076920.png"
+    },
+    {
+      "id": "114442850182160",
+      "species": "compy",
+      "part": "tail_geom",
+      "assetId": "87464346491240",
+      "path": "neutral-textures/114442850182160.png"
+    },
+    {
+      "id": "86717793285662",
+      "species": "ankylosaurus",
+      "part": "body_geom",
+      "assetId": "91376056200061",
+      "path": "neutral-textures/86717793285662.png"
+    },
+    {
+      "id": "82287524918427",
+      "species": "ankylosaurus",
+      "part": "head_geom",
+      "assetId": "86442968164730",
+      "path": "neutral-textures/82287524918427.png"
+    },
+    {
+      "id": "97962930815019",
+      "species": "ankylosaurus",
+      "part": "front left leg_geom",
+      "assetId": "102005403648193",
+      "path": "neutral-textures/97962930815019.png"
+    },
+    {
+      "id": "95961859135763",
+      "species": "ankylosaurus",
+      "part": "front right leg_geom",
+      "assetId": "73702478471503",
+      "path": "neutral-textures/95961859135763.png"
+    },
+    {
+      "id": "136509625246715",
+      "species": "ankylosaurus",
+      "part": "rear left leg_geom",
+      "assetId": "123027848166240",
+      "path": "neutral-textures/136509625246715.png"
+    },
+    {
+      "id": "113268694982333",
+      "species": "ankylosaurus",
+      "part": "rear right leg_geom",
+      "assetId": "87969195799025",
+      "path": "neutral-textures/113268694982333.png"
+    },
+    {
+      "id": "89101474677766",
+      "species": "ankylosaurus",
+      "part": "tail_geom",
+      "assetId": "107375049421512",
+      "path": "neutral-textures/89101474677766.png"
+    },
+    {
+      "id": "110478302976385",
+      "species": "raptor",
+      "part": "head_geom",
+      "assetId": "129646643038199",
+      "path": "neutral-textures/110478302976385.png"
+    },
+    {
+      "id": "123604792589498",
+      "species": "raptor",
+      "part": "body_geom",
+      "assetId": "73869358749368",
+      "path": "neutral-textures/123604792589498.png"
+    },
+    {
+      "id": "129544861339243",
+      "species": "raptor",
+      "part": "tail_geom",
+      "assetId": "93387530203423",
+      "path": "neutral-textures/129544861339243.png"
+    },
+    {
+      "id": "133135218919576",
+      "species": "triceratops",
+      "part": "body_geom",
+      "assetId": "116903793956086",
+      "path": "neutral-textures/133135218919576.png"
+    },
+    {
+      "id": "138023359262498",
+      "species": "triceratops",
+      "part": "head_geom",
+      "assetId": "72737788443650",
+      "path": "neutral-textures/138023359262498.png"
+    },
+    {
+      "id": "123358675122577",
+      "species": "triceratops",
+      "part": "front left leg_geom",
+      "assetId": "104678968426310",
+      "path": "neutral-textures/123358675122577.png"
+    },
+    {
+      "id": "80991541624858",
+      "species": "triceratops",
+      "part": "front right leg_geom",
+      "assetId": "127760917531321",
+      "path": "neutral-textures/80991541624858.png"
+    },
+    {
+      "id": "112337962938710",
+      "species": "triceratops",
+      "part": "rear left leg_geom",
+      "assetId": "136703080875284",
+      "path": "neutral-textures/112337962938710.png"
+    },
+    {
+      "id": "97304253135557",
+      "species": "triceratops",
+      "part": "rear right leg_geom",
+      "assetId": "109724143546782",
+      "path": "neutral-textures/97304253135557.png"
+    },
+    {
+      "id": "75837213574533",
+      "species": "triceratops",
+      "part": "tail_geom",
+      "assetId": "138170836922514",
+      "path": "neutral-textures/75837213574533.png"
+    },
+    {
+      "id": "119704158216914",
+      "species": "stegosaurus",
+      "part": "body_geom",
+      "assetId": "95524609309509",
+      "path": "neutral-textures/119704158216914.png"
+    },
+    {
+      "id": "116689425933900",
+      "species": "stegosaurus",
+      "part": "head_geom",
+      "assetId": "85242263798256",
+      "path": "neutral-textures/116689425933900.png"
+    },
+    {
+      "id": "117213015114791",
+      "species": "stegosaurus",
+      "part": "front left leg_geom",
+      "assetId": "91933158775644",
+      "path": "neutral-textures/117213015114791.png"
+    },
+    {
+      "id": "131479657892666",
+      "species": "stegosaurus",
+      "part": "front right leg_geom",
+      "assetId": "135424245768810",
+      "path": "neutral-textures/131479657892666.png"
+    },
+    {
+      "id": "139037127337863",
+      "species": "stegosaurus",
+      "part": "rear left leg_geom",
+      "assetId": "110169378547881",
+      "path": "neutral-textures/139037127337863.png"
+    },
+    {
+      "id": "133059415654031",
+      "species": "stegosaurus",
+      "part": "rear right leg_geom",
+      "assetId": "78172606671938",
+      "path": "neutral-textures/133059415654031.png"
+    },
+    {
+      "id": "137091811585694",
+      "species": "stegosaurus",
+      "part": "tail_geom",
+      "assetId": "75413810422903",
+      "path": "neutral-textures/137091811585694.png"
+    }
+  ]
+}

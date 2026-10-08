@@ -118,10 +118,17 @@ local function crystalSpawns(repository)
     end)
 end
 function Service.start(repository)
+    local function policy(player)
+        player:SetAttribute("PaidRandomEligible",false)
+        local ok,info=pcall(function() return game:GetService("PolicyService"):GetPolicyInfoForPlayerAsync(player) end)
+        if player.Parent then player:SetAttribute("PaidRandomEligible",ok and typeof(info)=="table" and info.ArePaidRandomItemsRestricted==false) end
+    end
+    Players.PlayerAdded:Connect(function(player) task.spawn(policy,player) end)
+    for _,player in Players:GetPlayers() do task.spawn(policy,player) end
     local remote=Instance.new("RemoteEvent") remote.Name="ProgressionAction" remote.Parent=ReplicatedStorage.BeDinoRemotes
     local response=Instance.new("RemoteEvent") response.Name="ProgressionResult" response.Parent=ReplicatedStorage.BeDinoRemotes
     remote.OnServerEvent:Connect(function(player,action,id,token,replace,...)
-        if select("#",...)~=0 or typeof(action)~="string" or not table.find({"buyAura","equipAura","buyTrail","equipTrail","buyPotion","usePotion"},action)
+        if select("#",...)~=0 or typeof(action)~="string" or not table.find({"buyAura","equipAura","buyTrail","equipTrail","buyPotion","usePotion","buyEgg","upgradeCondition"},action)
             or typeof(id)~="string" or #id>40 or typeof(token)~="string" or #token<1 or #token>80
             or typeof(replace)~="boolean" then return end
         local now=os.clock() local bucket=buckets[player]
@@ -148,9 +155,8 @@ function Service.start(repository)
                 local p=repository.progression(player)
                 local c=player.Character
                 if p and c then
-                    local growth,speed,loot=Rules.multipliers(p,player:GetAttribute("EquippedSpeciesId") or "compy",current,os.time())
                     local mutation=Rules.item(Config.EventMutations,player:GetAttribute("EquippedEventMutation") or "")
-                    if mutation then growth=math.min(Config.GrowthCap,growth*mutation.growth) speed=math.min(Config.SpeedCap,speed*mutation.speed) end
+                    local growth,speed,loot=Rules.multipliers(p,player:GetAttribute("EquippedSpeciesId") or "compy",current,os.time(),player:GetAttribute("EquippedCondition"),mutation)
                     c:SetAttribute("EventMutationId",if mutation then mutation.id else "")
                     c:SetAttribute("GrowthMultiplier",growth) c:SetAttribute("WeatherLootMultiplier",loot)
                     player:SetAttribute("GrowthMultiplier",growth) player:SetAttribute("SpeedMultiplier",speed) player:SetAttribute("LootMultiplier",loot)
@@ -158,6 +164,8 @@ function Service.start(repository)
                     if h then h.WalkSpeed=GameConfig.WalkSpeed*(if c:GetAttribute("RunState")=="Active" then speed else 1) end
                     c:SetAttribute("EquippedAuraId",p.equippedAura)
                     c:SetAttribute("EquippedTrailId",p.equippedTrail or "")
+                    c:SetAttribute("ShinyDinosaur",player:GetAttribute("EquippedShiny")==true)
+                    c:SetAttribute("GenesJson",player:GetAttribute("EquippedGenesJson") or "null")
                 end
             end
         end

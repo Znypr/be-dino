@@ -1,0 +1,83 @@
+{
+  "date": "2026-10-08",
+  "studio": "4aa9faee-9d45-4ff3-8780-e046093db182",
+  "build": "redesign-019",
+  "placeId": 0,
+  "gameId": 0,
+  "ownerUserId": 7285577648,
+  "persistentProfilesTouched": false,
+  "tests": {
+    "python": 29,
+    "compiledSources": 61,
+    "progression": "PASS",
+    "eggs": "PASS",
+    "gameplay": "PASS",
+    "luauGeometry": "PASS",
+    "previews": "PASS"
+  },
+  "cleanup": {
+    "stopped": true,
+    "fixtureRemoved": true,
+    "defaultViewport": true
+  },
+  "remaining": [
+    "Real DeveloperProduct IDs and paid receipts",
+    "Paid-random combined odds and policy release review",
+    "Physical phone, non-owner assets, multiplayer, saved-profile restart",
+    "Approved balance and full modular egg artwork"
+  ],
+  "shopAcceptanceSetupFinal": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"1\":{\"price\":100,\"trail\":\"fern\",\"after\":50695,\"before\":50795},\"15\":{\"before\":20545,\"price\":8500,\"after\":12045,\"upgrade\":6},\"3\":{\"price\":500,\"trail\":\"ember\",\"after\":49945,\"before\":50445},\"2\":{\"price\":250,\"trail\":\"tidal\",\"after\":50445,\"before\":50695},\"5\":{\"price\":1500,\"trail\":\"electric\",\"after\":47545,\"before\":49045},\"4\":{\"price\":900,\"trail\":\"violet\",\"after\":49045,\"before\":49945},\"7\":{\"price\":3600,\"trail\":\"solar\",\"after\":41545,\"before\":45145},\"6\":{\"price\":2400,\"trail\":\"frost\",\"after\":45145,\"before\":47545},\"9\":{\"price\":8500,\"trail\":\"astra\",\"after\":27545,\"before\":36045},\"8\":{\"price\":5500,\"trail\":\"nova\",\"after\":36045,\"before\":41545},\"16\":{\"potion\":\"speed_common\",\"level\":60,\"duration\":300,\"xp\":500000,\"wallet\":12025},\"14\":{\"before\":24545,\"price\":4000,\"after\":20545,\"upgrade\":5},\"13\":{\"before\":26345,\"price\":1800,\"after\":24545,\"upgrade\":4},\"12\":{\"before\":27145,\"price\":800,\"after\":26345,\"upgrade\":3},\"11\":{\"before\":27445,\"price\":300,\"after\":27145,\"upgrade\":2},\"10\":{\"before\":27545,\"price\":100,\"after\":27445,\"upgrade\":1}}"
+      }
+    ],
+    "isError": false
+  },
+  "shopPurchaseEvidence": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"queue\":\"[{\\\"eventId\\\":\\\"clear\\\",\\\"readyAt\\\":1791436897,\\\"rarity\\\":1,\\\"genes\\\":{\\\"hatchSuccess\\\":true,\\\"secondaryColorId\\\":\\\"white\\\",\\\"primaryColorId\\\":\\\"white\\\",\\\"conditionId\\\":\\\"rainbow\\\",\\\"blend\\\":78},\\\"id\\\":\\\"542e28c6-608d-46b2-83d5-3823b74e5d5a\\\",\\\"shiny\\\":false,\\\"mutationId\\\":\\\"\\\",\\\"big\\\":true}]\",\"collection\":\"{\\\"tyrannosaurus\\\":{\\\"diamond\\\":0,\\\"events\\\":[],\\\"gold\\\":0,\\\"base\\\":0,\\\"variants\\\":[]},\\\"compy\\\":{\\\"diamond\\\":0,\\\"events\\\":[],\\\"gold\\\":0,\\\"base\\\":1,\\\"variants\\\":[]},\\\"ankylosaurus\\\":{\\\"diamond\\\":0,\\\"events\\\":[],\\\"gold\\\":0,\\\"base\\\":0,\\\"variants\\\":[]},\\\"raptor\\\":{\\\"diamond\\\":0,\\\"events\\\":[],\\\"gold\\\":0,\\\"base\\\":0,\\\"variants\\\":[]},\\\"triceratops\\\":{\\\"diamond\\\":0,\\\"events\\\":[],\\\"gold\\\":0,\\\"base\\\":0,\\\"variants\\\":[]},\\\"stegosaurus\\\":{\\\"diamond\\\":0,\\\"events\\\":[],\\\"gold\\\":0,\\\"base\\\":0,\\\"variants\\\":[]}}\",\"level\":60,\"conditionLevel\":6,\"wallet\":12165}"
+      }
+    ],
+    "isError": false
+  },
+  "geneticsQueued": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"queue\":\"[{\\\"eventId\\\":\\\"clear\\\",\\\"readyAt\\\":1791436897,\\\"rarity\\\":1,\\\"genes\\\":{\\\"hatchSuccess\\\":true,\\\"secondaryColorId\\\":\\\"white\\\",\\\"primaryColorId\\\":\\\"white\\\",\\\"conditionId\\\":\\\"rainbow\\\",\\\"blend\\\":78},\\\"id\\\":\\\"542e28c6-608d-46b2-83d5-3823b74e5d5a\\\",\\\"shiny\\\":false,\\\"mutationId\\\":\\\"\\\",\\\"big\\\":true},{\\\"eventId\\\":\\\"volcano\\\",\\\"readyAt\\\":1791436907,\\\"rarity\\\":1,\\\"genes\\\":{\\\"hatchSuccess\\\":false,\\\"secondaryColorId\\\":\\\"white\\\",\\\"primaryColorId\\\":\\\"blue\\\",\\\"conditionId\\\":\\\"cracked\\\",\\\"blend\\\":80},\\\"id\\\":\\\"57298de7-0135-4a3c-8f0f-158a02d4fc7e\\\",\\\"shiny\\\":true,\\\"mutationId\\\":\\\"ember\\\",\\\"big\\\":true},{\\\"eventId\\\":\\\"volcano\\\",\\\"readyAt\\\":1791436907,\\\"rarity\\\":1,\\\"genes\\\":{\\\"hatchSuccess\\\":true,\\\"secondaryColorId\\\":\\\"white\\\",\\\"primaryColorId\\\":\\\"blue\\\",\\\"conditionId\\\":\\\"dirty\\\",\\\"blend\\\":80},\\\"id\\\":\\\"d12ffb62-7ab0-4cd6-be44-aeddbb40c10e\\\",\\\"shiny\\\":true,\\\"mutationId\\\":\\\"ember\\\",\\\"big\\\":true},{\\\"eventId\\\":\\\"volcano\\\",\\\"readyAt\\\":1791436907,\\\"rarity\\\":2,\\\"genes\\\":{\\\"hatchSuccess\\\":true,\\\"secondaryColorId\\\":\\\"white\\\",\\\"primaryColorId\\\":\\\"blue\\\",\\\"conditionId\\\":\\\"normal\\\",\\\"blend\\\":80},\\\"id\\\":\\\"6f000a5e-881e-4b02-b78f-a0f7c323a33e\\\",\\\"shiny\\\":true,\\\"mutationId\\\":\\\"ember\\\",\\\"big\\\":true},{\\\"eventId\\\":\\\"volcano\\\",\\\"readyAt\\\":1791436907,\\\"rarity\\\":2,\\\"genes\\\":{\\\"hatchSuccess\\\":true,\\\"secondaryColorId\\\":\\\"white\\\",\\\"primaryColorId\\\":\\\"blue\\\",\\\"conditionId\\\":\\\"rainbow\\\",\\\"blend\\\":80},\\\"id\\\":\\\"ddf56014-b176-4054-9f35-2f7b373b683b\\\",\\\"shiny\\\":true,\\\"mutationId\\\":\\\"ember\\\",\\\"big\\\":true}]\",\"overflow\":2}"
+      }
+    ],
+    "isError": false
+  },
+  "geneticsHatchTimes": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[{\"at\":5572.5871627999999,\"genes\":\"{\\\"hatchSuccess\\\":true,\\\"secondaryColorId\\\":\\\"white\\\",\\\"primaryColorId\\\":\\\"white\\\",\\\"conditionId\\\":\\\"rainbow\\\",\\\"blend\\\":78}\",\"id\":\"542e28c6-608d-46b2-83d5-3823b74e5d5a\",\"failed\":false,\"reward\":\"1x raptor\"},{\"at\":5577.6698753,\"genes\":\"{\\\"hatchSuccess\\\":false,\\\"secondaryColorId\\\":\\\"white\\\",\\\"primaryColorId\\\":\\\"blue\\\",\\\"conditionId\\\":\\\"cracked\\\",\\\"blend\\\":80}\",\"id\":\"57298de7-0135-4a3c-8f0f-158a02d4fc7e\",\"failed\":true,\"reward\":\"0x compy\"},{\"at\":5582.7365059,\"genes\":\"{\\\"hatchSuccess\\\":true,\\\"secondaryColorId\\\":\\\"white\\\",\\\"primaryColorId\\\":\\\"blue\\\",\\\"conditionId\\\":\\\"dirty\\\",\\\"blend\\\":80}\",\"id\":\"d12ffb62-7ab0-4cd6-be44-aeddbb40c10e\",\"failed\":false,\"reward\":\"1x raptor\"},{\"at\":5587.786728,\"genes\":\"{\\\"hatchSuccess\\\":true,\\\"secondaryColorId\\\":\\\"white\\\",\\\"primaryColorId\\\":\\\"blue\\\",\\\"conditionId\\\":\\\"normal\\\",\\\"blend\\\":80}\",\"id\":\"6f000a5e-881e-4b02-b78f-a0f7c323a33e\",\"failed\":false,\"reward\":\"1x triceratops\"},{\"at\":5593.2115224,\"genes\":\"{\\\"hatchSuccess\\\":true,\\\"secondaryColorId\\\":\\\"white\\\",\\\"primaryColorId\\\":\\\"blue\\\",\\\"conditionId\\\":\\\"rainbow\\\",\\\"blend\\\":80}\",\"id\":\"ddf56014-b176-4054-9f35-2f7b373b683b\",\"failed\":false,\"reward\":\"1x stegosaurus\"},{\"at\":5598.7224771,\"genes\":\"{\\\"hatchSuccess\\\":true,\\\"secondaryColorId\\\":\\\"black\\\",\\\"primaryColorId\\\":\\\"black\\\",\\\"conditionId\\\":\\\"astra\\\",\\\"blend\\\":100}\",\"id\":\"a8b35a94-f7ae-4fb5-afe0-7cb9bc557bd8\",\"failed\":false,\"reward\":\"1x tyrannosaurus\"},{\"at\":5603.7860546,\"genes\":\"{\\\"hatchSuccess\\\":true,\\\"secondaryColorId\\\":\\\"white\\\",\\\"primaryColorId\\\":\\\"blue\\\",\\\"conditionId\\\":\\\"cracked\\\",\\\"blend\\\":80}\",\"id\":\"87958ce8-2c6a-48b8-ab79-a8301631a233\",\"failed\":false,\"reward\":\"1x ankylosaurus\"}]"
+      }
+    ],
+    "isError": false
+  },
+  "shopWorldEvidence": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"trail\":\"astra\",\"speed\":2.2,\"growth\":2.124,\"scale\":1.2,\"shiny\":true,\"walkSpeed\":48.400001525878909,\"genes\":\"{\\\"hatchSuccess\\\":true,\\\"secondaryColorId\\\":\\\"black\\\",\\\"primaryColorId\\\":\\\"black\\\",\\\"conditionId\\\":\\\"astra\\\",\\\"blend\\\":100}\"}"
+      }
+    ],
+    "isError": false
+  },
+  "neutralTextureLoadEvidence": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"rbxassetid://87969195799025\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://72737788443650\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://98739803615449\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://128964084135517\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://91933158775644\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://129646643038199\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://136703080875284\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://85242263798256\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://93387530203423\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://132626491725268\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://135757625669472\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://87464346491240\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://135424245768810\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://134353025553250\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://110169378547881\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://95524609309509\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://139191877103940\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://107375049421512\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://91376056200061\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://104678968426310\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://86442968164730\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://75413810422903\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://123089237687730\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://127760917531321\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://102005403648193\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://118585289366594\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://109977433923046\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://92850857118312\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://138170836922514\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://109724143546782\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://84311220009640\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://139134560479006\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://73869358749368\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://78172606671938\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://116903793956086\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://123027848166240\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://73702478471503\":\"Enum.AssetFetchStatus.Success\",\"rbxassetid://114114542672240\":\"Enum.AssetFetchStatus.Success\"}"
+      }
+    ],
+    "isError": false
+  }
+}

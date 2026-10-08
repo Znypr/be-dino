@@ -84,10 +84,12 @@ end
 
 local function setup(player: Player)
     player.CanLoadCharacterAppearance = false
-    player:GetAttributeChangedSignal("EquippedBig"):Connect(function()
-        local character=player.Character
-        if character and character:GetAttribute("DinoAttached") then Dinosaur.refreshForPlayer(character,player) end
-    end)
+    for _,attribute in {"EquippedBig","EquippedGenesJson"} do
+        player:GetAttributeChangedSignal(attribute):Connect(function()
+            local character=player.Character
+            if character and character:GetAttribute("DinoAttached") then Dinosaur.refreshForPlayer(character,player) end
+        end)
+    end
     player.CharacterAdded:Connect(function(character)
         if player:GetAttribute("ProfileState") ~= "Loaded" then
             character:Destroy()
@@ -124,7 +126,7 @@ game:BindToClose(function()
 end)
 
 local FoodService = require(script.Parent.FoodService)
-local foodReady, foodError = xpcall(function() FoodService.start(Dinosaur) end, debug.traceback)
+local foodReady, foodError = xpcall(function() FoodService.start(Dinosaur,ProfileRepository) end, debug.traceback)
 if not foodReady then
     workspace:SetAttribute("FoodSpawnStatus", "Failed")
     workspace:SetAttribute("FoodStartupError", tostring(foodError))

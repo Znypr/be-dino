@@ -77,9 +77,10 @@ return table.freeze({
     EggRarityBoostMaxEggs = 15,
     BigChance = 0.1,
     ShinyChance = 0.05,
-    BigScaleMultiplier = 1.3,
+    BigScaleMultiplier = 1.2,
     IrregularWeather = {volcano = true, aurora = true, quake = true, bloodmoon = true},
     DeveloperProducts = {}, -- Verified product IDs -> crystal grants. Never invent IDs.
+    PaidRandomItemsEnabled = false, -- Release gate: complete combined-outcome disclosure/policy acceptance first.
     ChestQueueCapacity = 5,
     ChestOverflowCapacity = 10,
     ChestClaimRequestCooldownSeconds = 0.35,

@@ -27,6 +27,16 @@ are archived in `docs/evidence/2026-10-08-weather-and-leap/`. Native fallbacks r
 
 ## Completed before Studio
 
+Crystal shops/genetics follow-up (2026-10-08): run rewards/reveal, 150-crystal eggs,
+ten level-gated trails, six condition upgrades, immutable colors/conditions and
+world Shiny are implemented and tested in unpublished VisualUpgrade. BIG is now
+1.2x, size-only. 38 owner-uploaded neutral maps use authored cloneable PBR templates;
+runtime scripts never write protected ColorMap. Gold/Diamond fusion preview retained.
+See [acceptance and limitations](39-crystal-shops-and-genetics-acceptance.md).
+Robux product IDs remain empty and paid-random release disabled. Do not enable
+these without actual receipt/disclosure/policy acceptance. Fixtures removed,
+Studio stopped/default viewport restored; published persistent profiles untouched.
+
 Latest gameplay follow-up: [ordered hatching, Shiny/BIG and map leaderboards](37-hatching-traits-and-leaderboards.md).
 New eggs no longer incubate offline: they reveal for five seconds each after the
 run. Legacy timestamps are retained. The canonical BD-042 checklist records

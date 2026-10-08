@@ -17,7 +17,7 @@ local TYPES = {
     {id = "egg", weight = 5, points = 15, size = 1.3, color = Color3.fromRGB(245, 230, 187)},
     {id = "amber", weight = 2, points = 50, size = 1.5, color = Color3.fromRGB(255, 219, 139)},
 }
-function FoodService.start(dinosaur)
+function FoodService.start(dinosaur,repository)
     workspace:SetAttribute("FoodSpawnStatus", "Building")
     workspace:SetAttribute("FoodCount", 0)
     workspace:SetAttribute("FoodStartupError", "")
@@ -216,6 +216,7 @@ function FoodService.start(dinosaur)
                     for i=1,RewardMath.earnedChests(after) do
                         if not events[i] then
                             events[i]=ProgressionRules.eventEgg(if i>RewardMath.earnedChests(before) then workspace:GetAttribute("WeatherId") or "clear" else "clear",eventRandom:NextNumber())
+                            if repository then events[i]=repository.prepareEgg(candidate.player,events[i]) end
                         end
                     end
                     c:SetAttribute("RunEggEvents",Http:JSONEncode(events))

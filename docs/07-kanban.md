@@ -6,7 +6,7 @@ Build 005 PvP/run-ending tests 1–9 passed. Build 006 persistence tests 1–10 
 ## Board
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-017; BD-019–022; BD-035–041 | BD-027 | None | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-042 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
+| BD-017; BD-019–022; BD-035 | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -56,13 +56,84 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 | BD-033 | Review / test | P1 | Matching aura, potion, leap, weather and currency icons | BD-026 |
 | BD-034 | Review / test | P1 | Event-mutated eggs, cosmetic trails and textured visual upgrade | BD-028, BD-031 |
 | BD-035 | Backlog | P1 | High-quality modular Blender egg/pattern/condition/mutation render passes | BD-024, BD-034 |
-| BD-036 | Backlog | P1 | Run-end crystal rewards, crystal unboxing and Robux crystal packs | BD-028, BD-011 |
-| BD-037 | Backlog | P1 | Crystal-priced random eggs feeding the existing hatching queue | BD-036, BD-013 |
-| BD-038 | Backlog | P1 | Persistent account levels and ten level-gated speed/VFX trails | BD-028, BD-029, BD-034 |
-| BD-039 | Backlog | P1 | Crystal-priced five-minute Speed Potion integration | BD-032, BD-036 |
-| BD-040 | Backlog | P1 | Escalating Condition Shop, weighted egg conditions and stat/hatch effects | BD-036, BD-037 |
-| BD-041 | Backlog | P1 | Two-colour egg genetics, Normal/Big eggs and independent shiny sparkle | BD-035, BD-037 |
+| BD-036 | Review / test | P1 | Run-end crystal rewards, crystal unboxing and Robux crystal packs | BD-028, BD-011 |
+| BD-037 | Review / test | P1 | Crystal-priced random eggs feeding the existing hatching queue | BD-036, BD-013 |
+| BD-038 | Review / test | P1 | Persistent account levels and ten level-gated speed/VFX trails | BD-028, BD-029, BD-034 |
+| BD-039 | Review / test | P1 | Crystal-priced five-minute Speed Potion integration | BD-032, BD-036 |
+| BD-040 | Review / test | P1 | Escalating Condition Shop, weighted egg conditions and stat/hatch effects | BD-036, BD-037 |
+| BD-041 | Review / test | P1 | Two-colour egg genetics, Normal/Big eggs and independent shiny sparkle | BD-035, BD-037 |
 | BD-042 | Review / test | P1 | Five-second ordered hatches, Shiny/BIG and map leaderboards | BD-013, BD-034 |
+| BD-043 | In progress | P1 | UI animation, feedback, loading and preview performance | BD-015, BD-042 |
+
+### Crystal Shops and Genetics, 2026-10-08 (BD-036–041)
+
+Implemented/private-test acceptance; not release certification. Full record:
+[shop/genetics acceptance](39-crystal-shops-and-genetics-acceptance.md),
+[screenshots and observations](evidence/2026-10-08-crystal-shops-genetics/README.md).
+Only unpublished Build 019 VisualUpgrade / GameId=PlaceId=0 was modified.
+
+- [x] Run-end crystal credit and reveal, atomic settlement and no duplicate grant.
+- [x] Earned-crystal 150-price random egg UI, same ordered hatch queue, capacity rollback.
+- [x] Persistent catch XP/account levels; ten escalating trail gates, prices, speed and VFX.
+- [x] All nine paid trails/six condition tiers purchased with ordinary disposable wallet.
+- [x] 20-crystal Speed Common purchase/use, 300-second duration and server expiry rules.
+- [x] Five conditions, confirmed 20% Cracked success and .8/1/1.2/1.8 speed/growth.
+- [x] Failed/successful Cracked, future-only upgrades, immutable hatch retry/rejoin tests.
+- [x] Independent weighted colors/blend; egg-to-dino inheritance, size-only BIG 1.2x.
+- [x] Independent Shiny preview/world sparkles; walking Astra ribbons/glitter on phone.
+- [x] 38 neutral masters uploaded under verified owner; real reusable IDs, authored PBR
+  templates, owner-client loading and native/original-texture fallbacks.
+- [x] Desktop/phone shop, queue and colored reveal captures; clean final gameplay console.
+- [x] Temporary acceptance fixture removed; Studio stopped/default viewport restored.
+- [ ] Real Robux IDs, successful paid receipts and Robux-spending leaderboard test.
+- [ ] Complete paid-random disclosure/policy review; release flag remains disabled.
+- [ ] Published private saved-profile restart, two-client fairness, non-owner assets,
+  physical phone/load verification, approved economy balance and modular egg art.
+
+### UI motion and responsiveness, 2026-10-08 (BD-043)
+
+**In progress — source and phone-emulator acceptance published in PR #2; integration/device checks pending.**
+UI owner: this UI-motion chat. Other agents: preserve this work when integrating
+crystal shops/genetics; do not replace whole client files with older copies.
+
+- [x] Cancellable shared tween helper; 90ms mouse/touch/controller button feedback.
+- [x] Modal scrim/blur/slide transitions, content entry, toast slides, HUD pulses.
+- [x] Progress fills, rarity reveal outline/pop, existing egg wobble/fracture/confetti retained.
+- [x] Animated crystal counter and gain toast; active navigation indicators.
+- [x] Immediate processing/equip feedback; existing server success/error and retry tokens retained.
+- [x] Startup stage bar and fade only after character and main UI are ready.
+- [x] Cached collection/queue/progression JSON and coalesced panel refreshes.
+- [x] Preview camera orbit capped at 30Hz; shiny glints at 20Hz; hidden/disabled
+  screens pause visual updates and destruction disconnects callbacks.
+- [x] Responsive crystal HUD scaling; existing phone navigation/hatch target sizing retained.
+- [x] Local validation: 57 Luau sources compile; six-species preview geometry and
+  imported bounding-box framing pass across four aspect ratios.
+- [x] UI-only code published in [draft PR #2](https://github.com/Znypr/be-dino/pull/2)
+  on `codex/ui-motion-polish`; [implementation/acceptance notes](https://github.com/Znypr/be-dino/blob/codex/ui-motion-polish/docs/38-ui-motion-and-performance.md).
+- [ ] Review/merge PR #2 alongside concurrent shop changes, resolve client overlap and rebuild.
+- [x] User selected **BeDino-Latest.rbxlx**, Studio `65d0a77a-6006-4d4c-80b3-4fa62fce67cc`.
+  Verified GameId/PlaceId 0; backed up scripts and synced 57 current sources; left stopped in Edit.
+- [x] Phone-emulator startup/loading success, seven active navigation tabs, 8 reduced-effects
+  and 10 normal-effects close/reopen cycles, hidden-camera pause/resume and actual UI egg purchase/claim/reveal.
+- [x] Fixed initial wallet text at 0 and verified animated currency intermediate/final values.
+  Counter fixture was client-only and restored; not a server currency grant.
+- [x] Bounded panel texture density: collection descendants **3752 -> 1974** at the same
+  750x323 viewport. Final console only build-ready message. This is not an FPS result.
+- [x] [Runtime observations](https://github.com/Znypr/be-dino/blob/codex/ui-motion-polish/docs/evidence/2026-10-08-ui-motion/runtime-observations.json)
+  and [phone screenshot](https://github.com/Znypr/be-dino/blob/codex/ui-motion-polish/docs/evidence/2026-10-08-ui-motion/phone-final.png) archived in PR #2.
+- [ ] Physical mouse/touch/controller activation, early-close hatch regression,
+  loading-failure/slow-server transitions and delayed/error shop results.
+  Return selection drove tests; injected ButtonA did not activate.
+- [ ] Real phone safe-area/touch ergonomics, measured frame time/memory and
+  repeated panel open/close connection counts. Existing emulator evidence is historical.
+- [ ] Further preview pooling/reuse only after measurements justify it; runtime
+  mesh templates already cache geometry. No unbounded pool is added.
+
+This is UI presentation work, not proof of frame-rate improvement or completion of
+BD-019. Studio tests used an unpublished in-memory preview profile; no persistent profiles
+or published place were changed. The Studio snapshot includes other agents' local shop/genetics
+work excluded from this UI-only PR. A concurrent GeneTextures module appeared after the
+57-script sync and is not certified by these tests.
 
 ### Hatching, traits and leaderboards, 2026-10-08
 
@@ -103,13 +174,15 @@ retain their IDs and scope; this local gameplay pass does not complete those pla
 
 ### New proposed shop/egg systems, 2026-10-08 (BD-035–041)
 
+**Shared visual reference:** [Egg appearance vision](39-egg-appearance-shared-vision.md) consolidates the owner review and archives pattern/color/condition/aura previews. Matte shell, tile/grass grounding and reusable Cracked/Dirty overlays are accepted directions; exact color weights are provisional; latest seven engulfing smoke/anime auras are review drafts. Rainbow/Astra condition effects remain REWORK LATER. Local 1024-to-512 RGBA render/alpha and camera/mesh checks are evidence of authoring only. BD-035/040/041 remain open for missing runtime layers, ID/profile reconciliation, uploads and Studio/device acceptance.
+
 - [ ] **BD-035:** Replace draft/Microsoft-Paint-quality egg art with a high-quality Blender master, fixed mesh and camera; export true transparent 512x512 RGBA base, patterns, conditions and separate mutation passes. Prove matching masks/preview alignment, then test in Studio. No finished art is claimed.
 - [ ] **BD-036:** Add crystals awarded/unboxed at run end alongside map pickups; design Robux crystal packs with server-authoritative idempotent receipt grants, persistence and purchase restrictions. Crystal award quantities remain configurable.
 - [ ] **BD-037:** Let players buy random eggs with crystals to join sequential hatching without losing purchases on full queues. Validate random-paid-item policy/disclosure before monetized release.
 - [ ] **BD-038:** Replace/extend three cosmetic trails with **ten** crystal-priced tiered coloured walking trails, from free normal white to highest **Astra glitter**. Prices, speed buffs and required **persistent account levels** increase by tier; cap aggregate speed and migrate existing ownership.
 - [ ] **BD-039:** Crystal-priced 5-minute Speed Potion, reusing the existing potion inventory/expiry and server multipliers; avoid duplicate shops.
 - [ ] **BD-040:** Condition Shop progressively reduces Cracked odds/increases Rainbow/Astra odds with escalating level and crystal gates. User-confirmed 2026-10-08: Cracked **20% hatch success** and **80% speed/growth** if successful; Dirty 80%; Normal 100%; Rainbow 120%; Astra 180%. Factors affect **both movement speed and growth intake**, before final shared caps. Implementation, failed-hatch consolation and interaction tests remain Todo; this specification confirmation is not an acceptance pass.
-- [ ] **BD-041:** Two server-selected rarity-weighted egg colours (white ordinary, blue common, black exceptionally rare) and random 0–100% blend, inherited by dinosaur; independent Normal/Big eggs (Big visuals 1.2x, same stats), shiny sparkle on dinosaur/preview, immutable persistence. Black/black exceptionally rare.
+- [ ] **BD-041:** Two server-selected rarity-weighted egg colors and saved random visible coverage share, inherited by dinosaur; preserve tonal pattern contrast for matching genes. Vivid red is rare and pure black exceptionally rare. Reconcile percentage endpoints with that hierarchy; the shared art draft uses 1–99% for mixed genes and 100% for matching pairs, not approved public odds. Independent Normal/Big eggs (Big visuals 1.2x proposed, same stats), Shiny sparkle and immutable persistence remain in scope; see the existing tested BIG baseline before changing scale.
 
 These are **planned**, not implemented or approved public balance. The earlier three-size proposal is superseded by **Normal and Big only**; shiny is not a stat condition. Existing BD-028/029/032/034 test evidence remains historical and does not certify these additions. [Detailed mechanics, proposed starting trail catalog, unresolved decisions and acceptance criteria](36-crystal-shops-egg-genetics-and-progression.md).
 

@@ -7,6 +7,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local RewardMath = require(script.Parent.RewardMath)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local EggTraits = require(ReplicatedStorage.Shared.EggTraits)
+local EggGenetics = require(ReplicatedStorage.Shared.EggGenetics)
+local ProgressionConfig = require(ReplicatedStorage.Shared.ProgressionConfig)
 
 local ProfileRepository = {}
 
@@ -175,10 +177,13 @@ local function syncAttributes(player: Player, profile: any)
     local traits = EggTraits.selected(collection[profile.equippedSpeciesId])
     player:SetAttribute("EquippedBig", traits ~= nil and traits.big)
     player:SetAttribute("EquippedShiny", traits ~= nil and traits.shiny)
+    player:SetAttribute("EquippedGenesJson",HttpService:JSONEncode(if traits then traits.genes else nil))
+    player:SetAttribute("EquippedCondition",if traits and traits.genes then traits.genes.conditionId else "normal")
+    player:SetAttribute("AccountLevel",ProgressionRules.level(progress))
     player:SetAttribute("PlaySeconds", profile.metrics.playSeconds)
     player:SetAttribute("RarestCaught", profile.metrics.rarest)
     player:SetAttribute("RobuxSpent", profile.metrics.robux)
-    local eventMutation=ProgressionRules.eventMutation(collection[profile.equippedSpeciesId])
+    local eventMutation=if traits then ProgressionRules.item(ProgressionConfig.EventMutations,traits.mutationId) else ProgressionRules.eventMutation(collection[profile.equippedSpeciesId])
     player:SetAttribute("EquippedEventMutation",if eventMutation then eventMutation.id else "")
     player:SetAttribute("ActiveChestCount", #profile.eggs)
     local chestSummary = {}
@@ -192,6 +197,7 @@ local function syncAttributes(player: Player, profile: any)
             rarity=if chest.reward then Config.SpeciesRarities[chest.reward.speciesId] else 1,
             shiny=chest.shiny or false,
             big=chest.big or false,
+            genes=chest.genes,
         })
     end
     player:SetAttribute("ChestQueueJson", HttpService:JSONEncode(chestSummary))
@@ -260,6 +266,7 @@ local function enqueueChestIds(profile: any, chestIds: {string}, now: number, ev
                 reward=metadata.reward,
                 shiny=metadata.shiny,
                 big=metadata.big,
+                genes=metadata.genes,
             })
         else
             profile.pendingChestGrants += 1
@@ -270,6 +277,17 @@ end
 
 function ProfileRepository.isLoaded(player: Player): boolean
     return profiles[player] ~= nil and player:GetAttribute("ProfileState") == "Loaded"
+end
+
+-- Catch-time assignment is immutable; upgraded odds only affect future eggs.
+function ProfileRepository.prepareEgg(player: Player,tag)
+    local rng=Random.new()
+    local p=ProfileRepository.progression(player)
+    local result=table.clone(tag)
+    result.genes=EggGenetics.roll(if p then p.conditionLevel else 0,rng)
+    local traits=EggTraits.roll(tag.eventId or "clear",rng:NextNumber(),rng:NextNumber())
+    result.shiny,result.big=traits.shiny,traits.big
+    return result
 end
 
 function ProfileRepository.load(player: Player): boolean
@@ -341,6 +359,16 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     end
 
     local outcome = RewardMath.computeRunReward(catchScore)
+    local rng=Random.new()
+    local box=0
+    if catchScore>0 then
+        local total=0 for _,row in ProgressionConfig.CrystalBoxes do total+=row.weight end
+        local roll=rng:NextNumber()*total
+        for _,row in ProgressionConfig.CrystalBoxes do roll-=row.weight if roll<0 then box=row.amount break end end
+        if box==0 then box=ProgressionConfig.CrystalBoxes[#ProgressionConfig.CrystalBoxes].amount end
+    end
+    outcome.crystalBox=box
+    outcome.crystals=math.min(ProgressionConfig.RunCrystalCap,catchScore*ProgressionConfig.RunCrystalPerCatch)+box
     if eggEvents~=nil then
         if typeof(eggEvents)~="table" or #eggEvents>outcome.chestCount then return false,nil,"invalid_egg_events" end
         for _,metadata in eggEvents do if not ProgressionRules.validEgg(metadata) then return false,nil,"invalid_egg_events" end end
@@ -348,14 +376,14 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     local operationId = "run:" .. runId
     -- Commit all random draws before UpdateAsync. Catch-time event tags stay authoritative.
     local prepared = {}
-    local rng = Random.new()
     for i = 1, outcome.chestCount do
         local tag = (eggEvents and eggEvents[i]) or {eventId = "clear", mutationId = ""}
-        local traits = EggTraits.roll(tag.eventId or "clear", rng:NextNumber(), rng:NextNumber())
+        local traits = if tag.genes then tag else ProfileRepository.prepareEgg(player,tag)
         table.insert(prepared, {
             eventId = tag.eventId, mutationId = tag.mutationId,
             reward = RewardMath.computeChestReward(rng, outcome.chestCount),
             shiny = traits.shiny, big = traits.big, ordinal = i,
+            genes=traits.genes,
         })
     end
     table.sort(prepared, function(a,b)
@@ -401,6 +429,10 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
             end
 
             enqueueChestIds(profileValue, chestIds, now, prepared)
+            local progress=ProgressionRules.upgrade(profileValue)
+            if progress.crystals+outcome.crystals>ProgressionConfig.MaxCrystals then return nil end
+            progress.crystals+=outcome.crystals
+            progress.accountXP=math.min(2000000000,progress.accountXP+catchScore)
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             profileValue.lastCheckpoint = {
@@ -442,6 +474,8 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         table.insert(summaryParts, string.format("%d chest(s)", committedOutcome.chestCount))
     end
     player:SetAttribute("LastRewardText", table.concat(summaryParts, " | "))
+    player:SetAttribute("LastRunCrystals",committedOutcome.crystals or 0)
+    player:SetAttribute("LastRunCrystalBox",committedOutcome.crystalBox or 0)
     player:SetAttribute("LastSettledRunId", runId)
     return true, committedOutcome, if duplicateOutcome then "duplicate" else "committed"
 end
@@ -689,9 +723,13 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
             local species = profileValue.collection[outcome.speciesId]
             if typeof(species) ~= "table" then return nil end
             local mutationId=chest.mutationId or ""
-            if chest.big or chest.shiny then
-                local key = EggTraits.key(mutationId, chest.shiny == true, chest.big == true)
-                local variant = species.variants[key] or {mutationId=mutationId, shiny=chest.shiny == true, big=chest.big == true, count=0}
+            outcome.genes=chest.genes
+            outcome.failed=chest.genes~=nil and not chest.genes.hatchSuccess
+            if outcome.failed then
+                outcome.count=0
+            elseif chest.big or chest.shiny or chest.genes then
+                local key = EggTraits.key(mutationId, chest.shiny == true, chest.big == true,chest.genes)
+                local variant = species.variants[key] or {mutationId=mutationId, shiny=chest.shiny == true, big=chest.big == true, count=0,genes=chest.genes}
                 variant.count += outcome.count
                 species.variants[key] = variant
             elseif mutationId~="" then
@@ -702,7 +740,7 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
             outcome.eventId=chest.eventId or "clear"
             outcome.big=chest.big == true
             outcome.shiny=chest.shiny == true
-            profileValue.metrics.rarest = math.max(profileValue.metrics.rarest, Config.SpeciesRarities[outcome.speciesId])
+            if not outcome.failed then profileValue.metrics.rarest = math.max(profileValue.metrics.rarest, Config.SpeciesRarities[outcome.speciesId]) end
 
             if profileValue.pendingChestGrants > 0 then
                 profileValue.pendingChestGrants -= 1
@@ -717,6 +755,7 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
                     reward=if metadata then metadata.reward else nil,
                     shiny=if metadata then metadata.shiny else nil,
                     big=if metadata then metadata.big else nil,
+                    genes=if metadata then metadata.genes else nil,
                 })
             end
 
@@ -752,6 +791,8 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
     player:SetAttribute("LastChestEventMutation",committedOutcome.eventMutationId or "")
     player:SetAttribute("LastChestBig",committedOutcome.big == true)
     player:SetAttribute("LastChestShiny",committedOutcome.shiny == true)
+    player:SetAttribute("LastChestGenesJson",HttpService:JSONEncode(committedOutcome.genes))
+    player:SetAttribute("LastChestFailed",committedOutcome.failed==true)
     player:SetAttribute("LastClaimedChestId", chestId)
     return true, committedOutcome, if duplicateOutcome then "duplicate" else "claimed"
 end
@@ -898,6 +939,18 @@ function ProfileRepository.progression(player: Player)
 end
 function ProfileRepository.progressionAction(player: Player, action: string, id: string, token: string, replace: boolean?, amount: number?)
     if not ProfileRepository.isLoaded(player) then return false,"profile_not_loaded" end
+    if typeof(token)~="string" or #token<1 or #token>80 then return false,"invalid_token" end
+    if (action=="buyEgg" or action=="upgradeCondition") and next(Config.DeveloperProducts)~=nil
+        and (not Config.PaidRandomItemsEnabled or player:GetAttribute("PaidRandomEligible")~=true) then return false,"random_items_unavailable" end
+    local eggId=nil
+    local egg=nil
+    local purchaseConditionLevel=ProfileRepository.progression(player).conditionLevel
+    if action=="buyEgg" then
+        if id~="random" then return false,"unknown_item" end
+        eggId=HttpService:GenerateGUID(false)
+        egg=ProfileRepository.prepareEgg(player,{eventId="clear",mutationId=""})
+        egg.reward=RewardMath.computeChestReward(Random.new(),1)
+    end
     local operationId="progression:"..token
     local now=os.time()
     local denied="save_failed"
@@ -915,7 +968,16 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
             end
             local progress = ProgressionRules.upgrade(profile)
             if localPreview and Config.StudioTestWalletEnabled then progress.crystals = Config.StudioTestCrystals end
-            local applied,status=ProgressionRules.apply(profile,action,id,now,replace,amount)
+            local applied,status
+            if action=="buyEgg" then
+                if availableChestCapacity(profile)<1 then denied="queue_full" return nil end
+                if progress.crystals<ProgressionConfig.RandomEggPrice then denied="insufficient_crystals" return nil end
+                -- Do not buy against stale odds if a concurrent condition upgrade committed.
+                if progress.conditionLevel~=purchaseConditionLevel then denied="upgrade_changed" return nil end
+                progress.crystals-=ProgressionConfig.RandomEggPrice
+                enqueueChestIds(profile,{eggId},now,{egg})
+                applied,status=true,"egg_purchased"
+            else applied,status=ProgressionRules.apply(profile,action,id,now,replace,amount) end
             if localPreview and Config.StudioTestWalletEnabled then progress.crystals = Config.StudioTestCrystals end
             if not applied then denied=status return nil end
             outcome={action=action,item=id,status=status}

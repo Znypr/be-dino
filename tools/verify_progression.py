@@ -7,8 +7,9 @@ ROOT=Path(__file__).resolve().parents[1]
 def module(path):return '(function()\n'+(ROOT/path).read_text()+'\nend)()'
 def script():
  s='local ProgressionConfig='+module('src/shared/ProgressionConfig.luau')+'\nlocal GameConfig='+module('src/shared/Config.luau')+'\n'
- s+='local script={Parent={Config="Config"}}\nlocal require=function(_)return GameConfig end\nlocal EggTraits='+module('src/shared/EggTraits.luau')+'\n'
- s+='local script={Parent={ProgressionConfig="ProgressionConfig"}}\nlocal require=function(_)return ProgressionConfig end\nlocal Rules='+module('src/shared/ProgressionRules.luau')+'\n'
+ s+='local script={Parent={ProgressionConfig="ProgressionConfig"}}\nlocal require=function(_)return ProgressionConfig end\nlocal Genetics='+module('src/shared/EggGenetics.luau')+'\n'
+ s+='local script={Parent={Config="Config",EggGenetics="Genetics"}}\nlocal require=function(id)return if id=="Genetics" then Genetics else GameConfig end\nlocal EggTraits='+module('src/shared/EggTraits.luau')+'\n'
+ s+='local script={Parent={ProgressionConfig="ProgressionConfig",EggGenetics="Genetics"}}\nlocal require=function(id)return if id=="Genetics" then Genetics else ProgressionConfig end\nlocal Rules='+module('src/shared/ProgressionRules.luau')+'\n'
  s+='''
 local p={}
 local progress=Rules.upgrade(p)
@@ -45,10 +46,12 @@ print("Progression rules passed: prices, ownership, consumption, replacement, ex
 local legacy={progression={crystals=700,auras={meadow=true},equippedAura="meadow",potions={},buffs={}}}
 assert(Rules.valid(legacy.progression))
 local migrated=Rules.upgrade(legacy)
-assert(migrated.crystals==700 and migrated.auras.meadow and migrated.equippedTrail=="")
+assert(migrated.crystals==700 and migrated.auras.meadow and migrated.equippedTrail=="white")
 assert(not Rules.apply(legacy,"equipTrail","nova",0,false))
-assert(Rules.apply(legacy,"buyTrail","nova",0,false) and migrated.crystals==50)
-assert(not Rules.apply(legacy,"buyTrail","nova",0,false) and migrated.crystals==50)
+assert(not Rules.apply(legacy,"buyTrail","nova",0,false))
+migrated.accountXP=193600 migrated.crystals=5600
+assert(Rules.apply(legacy,"buyTrail","nova",0,false) and migrated.crystals==100)
+assert(not Rules.apply(legacy,"buyTrail","nova",0,false) and migrated.crystals==100)
 assert(Rules.apply(legacy,"equipTrail","nova",0,false))
 assert(Rules.apply(legacy,"equipTrail","",0,false))
 assert(not Rules.valid({crystals=0,auras={},equippedAura="",potions={},buffs={},trails={fake=true},equippedTrail=""}))
@@ -85,7 +88,7 @@ local http={GenerateGUID=function()guid+=1 return "test-"..guid end,JSONEncode=f
 local mutableConfig=table.clone(GameConfig)
 mutableConfig.DeveloperProducts={[456]=20} -- Mock product, never shipped in Config.
 GameConfig=mutableConfig
-local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",ProgressionConfig="ProgressionConfig"}}
+local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",EggGenetics="Genetics",ProgressionConfig="ProgressionConfig"}}
 local datastores={GetDataStore=function()return store end}
 local services={DataStoreService=datastores,HttpService=http,ReplicatedStorage=storage,RunService={IsStudio=function()return false end}}
 local game={GameId=1,JobId="test",GetService=function(_,id)return services[id] end}
@@ -94,7 +97,7 @@ local warn=function()end
 local script={Parent={RewardMath="Rewards"}}
 local rewardSpecies=nil
 local require=function(id)
- if id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return {computeRunReward=function()return {stacks={},chestCount=2}end,computeChestReward=function()return {speciesId=if rewardSpecies then table.remove(rewardSpecies,1) else "raptor",count=2,mutationId="base"}end} end
+ if id=="Genetics" then return Genetics elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return {computeRunReward=function()return {stacks={},chestCount=2}end,computeChestReward=function()return {speciesId=if rewardSpecies then table.remove(rewardSpecies,1) else "raptor",count=2,mutationId="base"}end} end
  error("unexpected module "..tostring(id))
 end
 local traitRoll=1
@@ -161,7 +164,9 @@ assert(Repository.load(eventUser))
 Repository.release(eventUser)
 for i=1,4 do table.insert(data['u:888'].eggs,{eggId="fixture-"..i,kind="alpha_chest",readyAt=1}) end
 assert(Repository.load(eventUser))
-local tags={{eventId="volcano",mutationId="ember"},{eventId="aurora",mutationId="aurora"}}
+local genes={conditionId="normal",hatchSuccess=true,primaryColorId="white",secondaryColorId="blue",blend=80}
+local tags={{eventId="volcano",mutationId="ember",genes=genes,shiny=false,big=false},{eventId="aurora",mutationId="aurora",genes=genes,shiny=false,big=false}}
+local emberKey=EggTraits.key("ember",false,false,genes)
 assert(Repository.commitRunSettlement(eventUser,"event-run",10,tags))
 assert(Repository.commitRunSettlement(eventUser,"event-run",10,tags))
 assert(#data['u:888'].eggs==5 and data['u:888'].pendingChestGrants==1)
@@ -175,7 +180,7 @@ for i=1,4 do assert(Repository.claimChest(eventUser,"fixture-"..i)) end
 local claimed,reward=Repository.claimChest(eventUser,emberId)
 assert(claimed and reward.eventMutationId=="ember")
 assert(Repository.claimChest(eventUser,emberId))
-assert(data['u:888'].collection.raptor.events.ember==2 and data['u:888'].collection.raptor.base==8)
+assert(data['u:888'].collection.raptor.variants[emberKey].count==2 and data['u:888'].collection.raptor.base==8)
 assert(data['u:888'].pendingChestGrants==0 and #data['u:888'].pendingEggEvents==0)
 assert(data['u:888'].eggs[1].mutationId=="aurora")
 assert(Repository.equipSpecies(eventUser,"raptor") and eventUser.attrs.EquippedEventMutation=="ember")
@@ -185,13 +190,14 @@ assert(Repository.load(eventUser) and eventUser.attrs.EquippedEventMutation=="em
 print("Event transactions passed: repeated settlement transforms, overflow FIFO, mutated hatch, no Base duplication, duplicate claim, equip and rejoin")
 assert(Repository.claimChest(eventUser,data['u:888'].eggs[1].eggId))
 traitRoll=0
-assert(Repository.commitRunSettlement(eventUser,"stacked-traits",10,tags))
+local stackedTags=copy(tags) for _,tag in stackedTags do tag.shiny=true tag.big=true end
+assert(Repository.commitRunSettlement(eventUser,"stacked-traits",10,stackedTags))
 local stackedId=data['u:888'].eggs[1].eggId
 local success,stacked=Repository.claimChest(eventUser,stackedId)
 assert(success and stacked.shiny and stacked.big)
 assert(Repository.claimChest(eventUser,stackedId))
-assert(data['u:888'].collection.raptor.variants['ember:shiny:big'].count==2)
-assert(data['u:888'].collection.raptor.events.ember==2 and data['u:888'].collection.raptor.base==8)
+assert(data['u:888'].collection.raptor.variants[EggTraits.key("ember",true,true,genes)].count==2)
+assert(data['u:888'].collection.raptor.variants[emberKey].count==2 and data['u:888'].collection.raptor.base==8)
 Repository.release(eventUser)
 assert(Repository.load(eventUser) and eventUser.attrs.EquippedBig and eventUser.attrs.EquippedShiny)
 assert(eventUser.attrs.RarestCaught==1)
@@ -226,8 +232,74 @@ assert(Repository.load(sortedUser))
 local ok,legend=Repository.claimChest(sortedUser,second.eggId)
 assert(ok and legend.speciesId=="ankylosaurus" and sortedUser.attrs.RarestCaught==3)
 assert(Repository.claimChest(sortedUser,second.eggId))
-assert(data['u:880'].collection.ankylosaurus.events.ember==2)
+assert(data['u:880'].collection.ankylosaurus.variants[emberKey].count==2)
 print("Ordering passed: low-to-high committed outcomes, matching event metadata, out-of-order rejection and no reroll across rejoin")
+-- New economy behavior uses real rules and repository transactions, including repeated transforms.
+local shopper={Parent=true,UserId=991,attrs={}}
+function shopper:SetAttribute(k,v)self.attrs[k]=v end
+function shopper:GetAttribute(k)return self.attrs[k]end
+assert(Repository.load(shopper))
+local wallet=Repository.progression(shopper)
+assert(wallet.trails.white and shopper.attrs.AccountLevel==1)
+assert(Repository.progressionAction(shopper,"grant","crystal","shop-fund",false,100))
+assert(not Repository.progressionAction(shopper,"buyTrail","fern","locked-trail",false))
+assert(wallet.accountXP==0)
+assert(Repository.commitRunSettlement(shopper,"xp-run",400))
+local balance=Repository.progression(shopper).crystals
+assert(balance==650 and shopper.attrs.AccountLevel==3) -- 100 + capped 500 + 50 box
+assert(Repository.commitRunSettlement(shopper,"xp-run",400))
+assert(Repository.progression(shopper).crystals==balance and Repository.progression(shopper).accountXP==400)
+assert(Repository.progressionAction(shopper,"buyTrail","fern","buy-fern",false))
+assert(Repository.progressionAction(shopper,"buyTrail","fern","buy-fern",false))
+assert(Repository.progression(shopper).crystals==550)
+assert(Repository.progressionAction(shopper,"equipTrail","fern","equip-fern",false))
+local growth,speed=Rules.multipliers(Repository.progression(shopper),"compy",nil,0,"dirty")
+assert(math.abs(growth-.8)<1e-8 and math.abs(speed-.816)<1e-8)
+assert(Repository.progressionAction(shopper,"upgradeCondition","1","policy-block",false)==false)
+mutableConfig.DeveloperProducts={} -- No Robux-buyable currency: earned-only path.
+assert(Repository.progressionAction(shopper,"upgradeCondition","1","condition-1",false))
+assert(Repository.progressionAction(shopper,"upgradeCondition","1","condition-1",false))
+assert(Repository.progression(shopper).conditionLevel==1 and Repository.progression(shopper).crystals==450)
+local oldGenes=copy(data['u:991'].eggs[1].genes)
+assert(oldGenes.conditionId==data['u:991'].eggs[1].genes.conditionId)
+assert(Repository.progressionAction(shopper,"buyEgg","random","egg-buy-1",false))
+local boughtId=data['u:991'].eggs[#data['u:991'].eggs].eggId
+local queueCount=#data['u:991'].eggs
+assert(Repository.progressionAction(shopper,"buyEgg","random","egg-buy-1",false))
+assert(#data['u:991'].eggs==queueCount and Repository.progression(shopper).crystals==300)
+assert(data['u:991'].eggs[1].genes.conditionId==oldGenes.conditionId)
+Repository.release(shopper)
+assert(Repository.load(shopper) and data['u:991'].eggs[#data['u:991'].eggs].eggId==boughtId)
+for _,egg in copy(data['u:991'].eggs) do assert(Repository.claimChest(shopper,egg.eggId)) end
+-- Force an already committed failed Cracked egg; replay/rejoin never creates a dinosaur.
+Repository.release(shopper)
+data['u:991'].eggs={{eggId="failed-cracked",readyAt=0,eventId="clear",mutationId="",reward={speciesId="ankylosaurus",count=3},genes={conditionId="cracked",hatchSuccess=false,primaryColorId="black",secondaryColorId="black",blend=100}}}
+assert(Repository.load(shopper))
+local beforeRarest=shopper.attrs.RarestCaught
+local ok,failedEgg=Repository.claimChest(shopper,"failed-cracked")
+assert(ok and failedEgg.failed and failedEgg.count==0 and shopper.attrs.LastChestFailed)
+assert(shopper.attrs.RarestCaught==beforeRarest and next(data['u:991'].collection.ankylosaurus.variants)==nil)
+assert(Repository.claimChest(shopper,"failed-cracked"))
+Repository.release(shopper)
+data['u:991'].eggs={}
+for i=1,GameConfig.ChestQueueCapacity do table.insert(data['u:991'].eggs,{eggId="full-"..i,readyAt=0}) end
+data['u:991'].pendingChestGrants=GameConfig.ChestOverflowCapacity
+data['u:991'].pendingEggEvents={}
+for i=1,GameConfig.ChestOverflowCapacity do table.insert(data['u:991'].pendingEggEvents,{eventId="clear",mutationId=""}) end
+assert(Repository.load(shopper))
+local beforeWallet=Repository.progression(shopper).crystals
+local ok,reason=Repository.progressionAction(shopper,"buyEgg","random","full-purchase",false)
+assert(not ok and reason=="queue_full" and Repository.progression(shopper).crystals==beforeWallet)
+mutableConfig.DeveloperProducts={[456]=20}
+shopper.attrs.PaidRandomEligible=true
+assert(not Repository.progressionAction(shopper,"buyEgg","random","release-disabled",false))
+mutableConfig.PaidRandomItemsEnabled=true
+shopper.attrs.PaidRandomEligible=false
+assert(not Repository.progressionAction(shopper,"upgradeCondition","2","restricted",false))
+shopper.attrs.PaidRandomEligible=nil
+assert(not Repository.progressionAction(shopper,"buyEgg","random","unknown-policy",false))
+mutableConfig.PaidRandomItemsEnabled=false
+print("Crystal shops passed: atomic run crystals/XP, duplicate settlement, level gates, ten-trail migration, condition debuffs, future-only odds, egg purchases/rejoin, failed hatches, queue-full rollback and fail-closed paid policy")
 fail=true
 local failed,failedStatus=action("buyPotion","speed_common","outage",false)
 assert(not failed and failedStatus=="save_failed")
@@ -239,7 +311,7 @@ assert(Repository.load(player))
 data['u:123'].session.leaseId="other"
 local lost,lostStatus=action("buyPotion","speed_common","lease",false)
 assert(not lost and lostStatus=="lease_lost")
-assert(data['u:123'].progression.crystals==120)
+assert(data['u:123'].progression.crystals==before.progression.crystals)
 game.GameId=0 services.RunService.IsStudio=function()return true end
 local LocalRepository=REPO_MODULE
 local localUser={Parent=true,UserId=999,attrs={}}

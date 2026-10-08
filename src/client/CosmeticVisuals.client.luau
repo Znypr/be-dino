@@ -26,10 +26,11 @@ RunService.Heartbeat:Connect(function(dt)
             local auraId=character:GetAttribute("EquippedAuraId") or ""
             local trailId=character:GetAttribute("EquippedTrailId") or ""
             local mutationId=character:GetAttribute("EventMutationId") or ""
+            local shiny=character:GetAttribute("ShinyDinosaur")==true
             local state=states[player]
-            if not state or state.root~=root or state.auraId~=auraId or state.trailId~=trailId or state.mutationId~=mutationId then
+            if not state or state.root~=root or state.auraId~=auraId or state.trailId~=trailId or state.mutationId~=mutationId or state.shiny~=shiny then
                 if state then state.effect:destroy() end
-                state={root=root,auraId=auraId,trailId=trailId,mutationId=mutationId,effect=Effects.create(root,Rules.item(Config.Auras,auraId),Rules.item(Config.Trails,trailId),Rules.item(Config.EventMutations,mutationId))}
+                state={root=root,auraId=auraId,trailId=trailId,mutationId=mutationId,shiny=shiny,effect=Effects.create(root,Rules.item(Config.Auras,auraId),Rules.item(Config.Trails,trailId),Rules.item(Config.EventMutations,mutationId),shiny)}
                 states[player]=state
             end
             state.effect:update(character:GetAttribute("VisualScale") or 1,os.clock(),Theme.MotionEnabled)

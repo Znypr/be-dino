@@ -3,6 +3,7 @@
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
 gui.Name = "StartupUI"
@@ -10,7 +11,7 @@ gui.IgnoreGuiInset = true
 gui.ResetOnSpawn = false
 gui.DisplayOrder = 100
 gui.Parent = player:WaitForChild("PlayerGui")
-local background = Instance.new("Frame")
+local background = Instance.new("CanvasGroup")
 background.Size = UDim2.fromScale(1, 1)
 background.BackgroundColor3 = Color3.fromRGB(18, 40, 49)
 background.Parent = gui
@@ -25,6 +26,13 @@ message.TextSize = 22
 message.TextWrapped = true
 message.Text = "BE DINO!\n\nPreparing your island..."
 message.Parent = background
+local track=Instance.new("Frame")
+track.AnchorPoint,track.Position,track.Size=Vector2.new(.5,0),UDim2.fromScale(.5,.76),UDim2.new(.6,0,0,8)
+track.BackgroundColor3,track.BorderSizePixel,track.ZIndex,track.Parent=Color3.fromRGB(36,68,77),0,4,background
+local fill=Instance.new("Frame")
+fill.Size,fill.BackgroundColor3,fill.BorderSizePixel,fill.ZIndex,fill.Parent=UDim2.fromScale(.15,1),Color3.fromRGB(93,237,31),0,5,track
+local progressTween: Tween?=nil
+local lastStage=0
 ReplicatedFirst:RemoveDefaultLoadingScreen()
 task.spawn(function()
     local shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared", 10)
@@ -59,9 +67,20 @@ local connection: RBXScriptConnection?
 connection = RunService.Heartbeat:Connect(function()
     local state = player:GetAttribute("ProfileState")
     local character = player.Character
-    if state == "Loaded" and character and character:GetAttribute("DinoAttached") then
+    local mainUI=player.PlayerGui:FindFirstChild("BeDinoUI")
+    local ready=state == "Loaded" and character and character:GetAttribute("DinoAttached") and mainUI and mainUI:GetAttribute("Ready")
+    local stage=if ready then 3 elseif state=="Loaded" then 2 else 1
+    if stage~=lastStage then
+        lastStage=stage
+        if progressTween then progressTween:Cancel() end
+        progressTween=TweenService:Create(fill,TweenInfo.new(.2),{Size=UDim2.fromScale(({.2,.65,1})[stage],1)})
+        progressTween:Play()
+    end
+    if ready then
         if connection then connection:Disconnect() end
-        gui:Destroy()
+        local fade=TweenService:Create(background,TweenInfo.new(.2),{GroupTransparency=1})
+        fade.Completed:Once(function() gui:Destroy() end)
+        fade:Play()
         return
     end
     local reason = failures[state :: any]

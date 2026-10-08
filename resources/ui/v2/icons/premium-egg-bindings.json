@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "normal": {
+    "file": "premium-egg-normal.png",
+    "assetId": "95856282289615",
+    "sha256": "2edc720527aafc3571e2bbe98b8c3431d41fee7ef2c5321aaad8665052a98546"
+  },
+  "cracks": {
+    "file": "premium-egg-cracks.png",
+    "assetId": "126956807167774",
+    "sha256": "8dfb5b9e476854252789d38d28a1be5ea1a3a371ac987f1dfa4a69cba7dedc98"
+  },
+  "dimensions": [
+    512,
+    512
+  ],
+  "alignment": "Shared full camera canvas; no independent trimming",
+  "source": "Premium_Egg/Blank_Egg_Conditions",
+  "previousHatch": "EggPreview sphere plus 3 unbound rectangle fractures",
+  "audio": [
+    {
+      "role": "shell taps/crunch",
+      "assetId": "9120490790",
+      "creator": "ProSoundEffects",
+      "creatorStoreUrl": "https://create.roblox.com/store/asset/9120490790",
+      "status": "Free Creator Store asset; owner Studio Sound.IsLoaded=true; non-owner access pending"
+    },
+    {
+      "role": "success reveal chime",
+      "assetId": "9116394545",
+      "creator": "ProSoundEffects",
+      "creatorStoreUrl": "https://create.roblox.com/store/asset/9116394545",
+      "status": "Free Creator Store asset; owner Studio Sound.IsLoaded=true; non-owner access pending"
+    }
+  ]
+}
