@@ -12,7 +12,7 @@ An original Roblox growth-and-collection game inspired by Be Fish. Start in a sa
 
 > The integrated Build 020 gameplay now lives on **[main](https://github.com/Znypr/be-dino/tree/main)**. See the [maintained integration checklist](docs/44-main-integration-checklist.md) for included updates and open acceptance gates. GitHub integration does not publish the Roblox experience. The owner-supplied logo above is the current main project image; the gallery below shows actual Studio gameplay.
 
-[Download Build 020](build/BeDino-Build020.rbxlx) · [Creature integration and limits](docs/43-creature-runtime-integration.md) · [Live task tracker](docs/07-kanban.md)
+[Download Build 020](build/BeDino-Build020.rbxlx) · [Current documentation guide](docs/00-documentation-guide.md) · [Creature integration and limits](docs/43-creature-runtime-integration.md) · [Live task tracker](docs/07-kanban.md)
 
 ## The vision
 
@@ -20,7 +20,7 @@ A bright dinosaur island where every run feeds a lasting collection. Growth crea
 
 ### Owner's intended reward experience (2026-10-08)
 
-**Catches mean individual run eggs.** If a five-minute run yields **500 raw food points**, the current example conversion gives **15 catches = 15 run eggs** to reveal one at a time, e.g. **11 Common + 4 Uncommon**, plus some crystals and **1 bonus egg nest**. A larger **5,000-food-point** run example yields **150 run eggs** (80 Common, 50 Uncommon, 17 Rare, 3 Epic), **220 example crystals** and **6 offered nests** (at most 5 claimable with 5 free nest spots). The rarity mixes and crystal amounts are examples, **not final drop tables**. Exact balance, large-batch UX and nest overflow policy remain open.
+**Catches mean individual run eggs.** If a five-minute run yields **500 raw food points**, the current example conversion gives **15 catches = 15 run eggs** to reveal one at a time, e.g. **11 Common + 4 Uncommon**, plus some crystals and **1 bonus egg nest**. A larger **5,000-food-point** run example yields **150 run eggs** (80 Common, 50 Uncommon, 17 Rare, 3 Epic), **220 example crystals** and **6 offered nests** (at most 5 claimable with 5 free nest spots). The rarity mixes and crystal amounts are examples, **not final drop tables**. **Uncommon and Epic species rarity categories are not present in Build 020's current Common/Rare/Legendary catalog**; updating rarity taxonomy is part of the future reward design. Exact balance, large-batch UX and nest overflow policy remain open.
 
 This is the **OWNER TARGET, NOT CURRENT BUILD BEHAVIOR**. Build 020 still grants legacy direct dinosaur-copy stacks and only 1/2/3 additional eggs through old catch thresholds. It is incorrect to describe that historical behavior as the target vision. See [reward target versus archived alpha](docs/09-reward-economy.md), [game design](docs/03-game-design.md), [AI/contributor rules](AGENTS.md), and [BD-044](docs/07-kanban.md). Do not change saves or reward code solely because the target has been documented.
 
@@ -104,7 +104,7 @@ The larger retention and release roadmap remains open; adding creature variety a
 
 ## Try the prototype
 
-1. Use the current redesign branch and download [BeDino-Build020.rbxlx](build/BeDino-Build020.rbxlx).
+1. Use the current **main** branch and download [BeDino-Build020.rbxlx](build/BeDino-Build020.rbxlx) (or the checked-in `build/BeDino-Latest.rbxlx`).
 2. Open it in Roblox Studio and keep the first test unpublished. No plugin is required.
 3. Press Play and confirm **BUILD redesign-020**. Unpublished preview sessions explicitly say progress is not saved and may use replenishing test currency. Read the [Build 020 API/device limits](docs/43-creature-runtime-integration.md) before publishing.
 4. Explore, gather food, leap, return, hatch and inspect the collection/shops. Read the [latest handoff](docs/34-studio-handoff.md) alongside the [tracker](docs/07-kanban.md); older build instructions may be superseded.
@@ -117,13 +117,14 @@ The larger retention and release roadmap remains open; adding creature variety a
 
 | Looking for… | Start here |
 |---|---|
+| Which document is authoritative? | [Current documentation and archive guide](docs/00-documentation-guide.md) |
 | Tasks and acceptance evidence | [Canonical Kanban](docs/07-kanban.md) |
-| Latest build setup and adjustments | [Build 019 handoff](docs/34-studio-handoff.md) |
+| Latest build setup and adjustments | [Build 020 handoff](docs/34-studio-handoff.md) |
 | Rules and rewards | [Game design](docs/03-game-design.md) · [Reward economy](docs/09-reward-economy.md) |
-| Code and persistence | [Architecture](docs/04-architecture.md) · [Profile/remote contracts](docs/13-persistence-remote-contracts.md) |
+| Code and persistence | [Build 020 integration](docs/44-main-integration-checklist.md) · [Historical architecture](docs/04-architecture.md) · [Persistence contract](docs/13-persistence-remote-contracts.md) |
 | Artwork and runtime assets | [Resources](resources/README.md) · [Artwork direction](docs/32-artwork-guide-and-todo.md) |
 | Combined egg appearance and trait decisions | [Shared egg vision: patterns, colors, rarity, conditions and mutations](docs/39-egg-appearance-shared-vision.md) |
-| Future progression | [Crystal shops and egg genetics](docs/36-crystal-shops-egg-genetics-and-progression.md) |
+| Future progression | [Crystal shops and egg genetics](docs/36-crystal-shops-egg-genetics-and-progression.md) · [New Shop/UI/World/Weather tasks](docs/45-owner-feedback-shop-hud-world-weather-tasks.md) |
 | Release criteria | [Roadmap and testing](docs/06-roadmap-and-testing.md) |
 
 GitHub is the source of truth for plans and code. Gameplay state belongs to the server. The prototype uses original assets and free tools with a **€0 production budget**.
