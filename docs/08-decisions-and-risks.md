@@ -45,6 +45,12 @@ A new feature must identify which launch task it replaces or why it does not ext
 Update this log when an owner answers; propagate to design and acceptance criteria.
 Keep proposed balancing reversible in config. Keep durable data contracts deliberate.
 
+## Future-scope user direction, 2026-10-08 (not released)
+
+Znypr requested crystal sales for Robux, run-end crystal rewards/unboxing, crystal-bought random eggs, ten increasingly fast level-gated trails (Normal White to glittering Astra), permanent condition odds upgrades, two-colour inherited egg/dinosaur palettes, Normal/Big (1.2x visual) sizes and independent Shiny. This **extends** historical D04 (small no-paid-shop private test), rather than retroactively reclassifying it as a completed paid experience. Existing event mutation and cosmetic trail implementation remains intact pending migration.
+
+Requested condition factors are Cracked 80% (and low hatch probability), Dirty 80%, Normal 100%, Rainbow 120%, Astra 180%. Specific hatch failure rate, affected stats, account XP/level progression, pricing, speed cap and paid-random-item compliance must be resolved before public implementation. Full plan: [docs/36](36-crystal-shops-egg-genetics-and-progression.md); canonical task status: [BD-035–041](07-kanban.md).
+
 ## Reversible working defaults to avoid blocking early development
 Use separate disposable test data, 60-second test chest timers, the existing proposed 10% eating margin and 3-second exit channel only as configurable prototypes. These are not owner-approved final rules. Preserve one usable equipped copy when proposing mutation behavior; resolve exact consume/equip semantics before BD-014 acceptance. Desktop plus touch remain targets; name and test a real phone before release.
 Do not assume a strict reward cap is compatible with 'higher catch always means more loot': define a supported catch-score range and a run-ending limit instead of silently flattening rewards.
