@@ -1,5 +1,7 @@
 # Build 013: original visual kit test
 
+> **HISTORICAL Build 013 test evidence.** Its passes concern older procedural fallbacks, not full Build 020 art, published runtime or mobile performance. Current acceptance: [Kanban](07-kanban.md) and [Build 020 integration](44-main-integration-checklist.md).
+
 Build 013 validates BD-007 and BD-016 using the all-procedural fallback kit.
 
 ## Test objectives
