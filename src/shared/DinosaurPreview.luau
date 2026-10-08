@@ -1,6 +1,7 @@
 --!strict
 local Resources=require(script.Parent.ResourceModels)
 local Camera=require(script.Parent.PreviewCamera)
+local ContentProvider=game:GetService("ContentProvider")
 local Preview={}
 function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string)): ViewportFrame
     local viewport=Instance.new("ViewportFrame")
@@ -22,6 +23,27 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         model:PivotTo(CFrame.new())
         model.Parent=world
         Camera.bind(viewport,model,speciesId)
+        task.spawn(function()
+            local assets={}
+            for _,part in model:GetDescendants() do
+                if part:IsA("MeshPart") and part.MeshId~="" then table.insert(assets,part) end
+            end
+            local uploadedId=model:GetAttribute("UploadedModelId")
+            if #assets==0 or not uploadedId then return end
+            local failed=false
+            local ok=pcall(function() ContentProvider:PreloadAsync(assets,function(_,status)
+                if status~=Enum.AssetFetchStatus.Success then failed=true end
+            end) end)
+            if not viewport.Parent or (ok and not failed) then return end
+            -- Keep the actual species visible when the uploaded mesh is unavailable.
+            local image=Instance.new("ImageLabel")
+            image.Name,image.BackgroundTransparency,image.BorderSizePixel="ModelThumbnailFallback",1,0
+            image.Size,image.ScaleType=UDim2.fromScale(1,1),Enum.ScaleType.Fit
+            image.Image="rbxthumb://type=Asset&id="..tostring(uploadedId).."&w=420&h=420"
+            image.ZIndex,image.Parent=viewport.ZIndex+1,viewport
+            pcall(function() ContentProvider:PreloadAsync({image}) end)
+            if image.Parent then viewport:SetAttribute("PreviewFallback","AssetThumbnail") end
+        end)
     end
     return viewport
 end

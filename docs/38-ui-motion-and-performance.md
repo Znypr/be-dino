@@ -85,3 +85,40 @@ published non-owner access or final owner art approval.
 Integration: keep the existing local genes variable and pass it into
 HatchPresentation.add when merging with shop/genetics changes. Do not restore
 the former rectangle fracture loop.
+
+## Hatch v3: stronger breaking/reveal
+
+Three crack regions grow from the impact point at 0.68/1.48/2.28 seconds,
+with escalating damped shakes. A 2.75-3.12s still beat precedes release at
+3.4s. Seven shared-edge jagged polygons crop the existing shell artwork; the
+top cap moves first, then pieces rotate/fall/fade over 0.72s. CanvasGroup
+flattening, zero image borders and source-pixel guard overlap remove phone
+crop seams. At most 217 temporary crops are used; grouped alpha updates run
+at 30Hz and cleanup disconnects flight. Reduced motion builds no fragments.
+
+A rarity-colored halo/ring and eight rays accompany successful reveal; confetti
+waits 180ms. Existing five-second total timing and server outcomes are unchanged.
+Cracked failure uses break but suppresses success chime/rays/confetti. When merging
+with local genetics code retain splitEgg(not failed), not baseline splitEgg(true).
+
+Loaded sound assets: ProSoundEffects shell crunch 9120490790 (taps pitched up,
+full crunch on release) and soft reveal chime 9116394545. Separate SOUND ON/OFF
+setting tested in actual UI. Asset provenance is in premium-egg-bindings.json.
+Auditory quality and published non-owner permission still need owner review.
+
+Studio trace shows progressive crack heights, seven visible fragments at
+3.56/3.86s and none by 4.31s; all sound instances loaded. Success and failed
+Cracked claims were exercised on disposable preview profiles. Early-close and
+reduced-motion helper probes pass. All 61 current sources compile; fragment
+coverage/budget harness and six-species framing harness pass.
+
+An imported mesh download failure left blank discoveries even after preloading.
+DinosaurPreview now uses the uploaded model's actual asset thumbnail when those
+mesh fetches fail. The Compy fallback IsLoaded=true and is visible in the real
+claim screenshot. It is a static base-model thumbnail; it does not reproduce
+genotype/fusion colors or orbit. Full 3D asset access remains an open issue.
+
+Evidence: hatch-v3-observations.json, hatch-v3-fragments.png (visual-only helper
+probe, no server claim) and hatch-v3-discovery.png (actual Compy purchase/claim).
+This is implementation evidence, not a subjective 8/10 rating, physical-phone
+FPS measurement, or blanket integration acceptance for concurrent work.

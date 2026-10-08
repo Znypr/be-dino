@@ -454,9 +454,10 @@ render=function(name: string)
         for _,child in view:GetChildren() do if child.Name=="TraitBadge" or child.Name=="ShinyPreviewGlint" then child:Destroy() end end
         PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny")})
         view.Visible=false
+        task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync(view:GetDescendants()) end) end)
         local genesOk,hatchGenes=pcall(function() return Http:JSONDecode(str("LastChestGenesJson","null")) end)
         if not genesOk or typeof(hatchGenes)~="table" then hatchGenes=nil end
-        local eggView,animateEgg,splitEgg=HatchPresentation.add(body,hatchGenes)
+        local eggView,animateEgg,splitEgg=HatchPresentation.add(body,hatchGenes,rarityColors[speciesIndex(id)])
         eggView.Position,eggView.Size=UDim2.fromOffset(260,0),UDim2.fromOffset(304,260)
         local rewardLabel=label(body,rarityNames[speciesIndex(id)].." egg",80,240,660,58,36,rarityColors[speciesIndex(id)])
         local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
@@ -478,7 +479,7 @@ render=function(name: string)
                 task.wait(.03)
             end
             if modalVersion~=version or not view.Parent then return end
-            splitEgg()
+            splitEgg(true)
             view.Visible=true
             rewardLabel.Text=reward
             heading.Text="You hatched a dinosaur!"
@@ -489,7 +490,7 @@ render=function(name: string)
                 local glow=Instance.new("UIStroke")
                 glow.Color,glow.Thickness,glow.Transparency,glow.Parent=rarityColors[speciesIndex(id)],3,if motion then .1 else 1,view
                 Theme.animate(glow,.65,{Transparency=1})
-                celebrate()
+                task.delay(.18,function() if modalVersion==version and view.Parent then celebrate() end end)
             end
             task.wait(math.max(0,Config.HatchRevealSeconds-(os.clock()-started)))
             if modalVersion~=version or not view.Parent then return end
@@ -517,6 +518,8 @@ render=function(name: string)
         button(body,if motion then "ON" else "OFF",560,24,230,56,if motion then C.accent else C.card,function() motion=not motion Theme.MotionEnabled=motion open("settings") end)
         label(body,"Camera distance",24,114,410,56,30)
         button(body,"RESET CAMERA",470,114,320,56,C.blue,function() player.CameraMaxZoomDistance=Config.CameraMaxZoom notify("Camera reset",C.blue) end)
+        label(body,"Hatch sounds",24,182,410,44,26)
+        button(body,if Theme.HatchSoundEnabled~=false then "SOUND ON" else "SOUND OFF",560,182,230,44,C.blue,function() Theme.HatchSoundEnabled=Theme.HatchSoundEnabled==false open("settings") end).TextSize=20
         button(body,"HOW TO PLAY",24,238,370,64,C.gold,function() open("tutorial") end)
         button(body,"FOOD GUIDE",424,238,366,64,C.accent,function() open("food") end)
         label(body,"Settings apply on this device for this session.",24,342,766,40,18)

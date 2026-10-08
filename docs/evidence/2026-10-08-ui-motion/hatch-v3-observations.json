@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-08",
+  "studio": "BeDino-Latest.rbxlx",
+  "placeId": 0,
+  "gameId": 0,
+  "trace": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"remainingFragments\":false,\"trace\":\"[{\\\"time\\\":0.8100396000008914,\\\"cracks\\\":[21,0,0],\\\"crops\\\":217,\\\"visibleFragments\\\":0,\\\"alive\\\":true,\\\"loadedSounds\\\":3},{\\\"time\\\":1.6106443999997283,\\\"cracks\\\":[115,14,0],\\\"crops\\\":217,\\\"visibleFragments\\\":0,\\\"alive\\\":true,\\\"loadedSounds\\\":3},{\\\"time\\\":2.611314699999639,\\\"cracks\\\":[115,74,43],\\\"crops\\\":217,\\\"visibleFragments\\\":0,\\\"alive\\\":true,\\\"loadedSounds\\\":3},{\\\"time\\\":3.5607600000003005,\\\"cracks\\\":[115,74,71],\\\"crops\\\":217,\\\"visibleFragments\\\":7,\\\"alive\\\":true,\\\"loadedSounds\\\":1},{\\\"time\\\":3.8607805999999984,\\\"cracks\\\":[115,74,71],\\\"crops\\\":217,\\\"visibleFragments\\\":7,\\\"alive\\\":true,\\\"loadedSounds\\\":1},{\\\"time\\\":4.311242499999935,\\\"cracks\\\":[],\\\"crops\\\":0,\\\"visibleFragments\\\":0,\\\"alive\\\":false,\\\"loadedSounds\\\":0}]\",\"queue\":\"[]\",\"reward\":\"2x tyrannosaurus\"}"
+      }
+    ],
+    "isError": false
+  },
+  "final": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"queue\":\"[]\",\"thumbnail\":{\"1\":{\"loaded\":true,\"image\":\"rbxthumb://type=Asset&id=79351996702566&w=420&h=420\"}},\"remainingEgg\":false,\"failed\":false,\"reward\":\"1x compy\"}"
+      }
+    ],
+    "isError": false
+  },
+  "fragmentCropCount": 217,
+  "notes": [
+    "Hatch remains five seconds; success and Cracked-failure flows exercised.",
+    "Sound assets 9120490790 and 9116394545 are free ProSoundEffects Creator Store assets; all three Sound instances IsLoaded=true.",
+    "UI Sound ON -> OFF -> ON updates correctly; reduced-motion helper creates zero fragment groups and resolves immediately.",
+    "Early-close helper removes root and flight callback without orphan probe.",
+    "First crop implementation showed horizontal seams on phone; fixed with CanvasGroup flattening, zero borders and two-source-pixel crop overlap.",
+    "Fragment screenshot is a visual-only helper probe over tutorial; it is not a server reward claim.",
+    "Final Compy screenshot is a real UI purchase/claim. Its model mesh failed fetch; real uploaded-model thumbnail fallback loaded successfully.",
+    "Native imported meshes still need asset-access verification; fallback thumbnail does not reproduce genotype/fusion colors or orbit.",
+    "No FPS or subjective 8/10 quality claim; owner review and physical-device profiling pending."
+  ]
+}

@@ -16,5 +16,21 @@
   ],
   "alignment": "Shared full camera canvas; no independent trimming",
   "source": "Premium_Egg/Blank_Egg_Conditions",
-  "previousHatch": "EggPreview sphere plus 3 unbound rectangle fractures"
+  "previousHatch": "EggPreview sphere plus 3 unbound rectangle fractures",
+  "audio": [
+    {
+      "role": "shell taps/crunch",
+      "assetId": "9120490790",
+      "creator": "ProSoundEffects",
+      "creatorStoreUrl": "https://create.roblox.com/store/asset/9120490790",
+      "status": "Free Creator Store asset; owner Studio Sound.IsLoaded=true; non-owner access pending"
+    },
+    {
+      "role": "success reveal chime",
+      "assetId": "9116394545",
+      "creator": "ProSoundEffects",
+      "creatorStoreUrl": "https://create.roblox.com/store/asset/9116394545",
+      "status": "Free Creator Store asset; owner Studio Sound.IsLoaded=true; non-owner access pending"
+    }
+  ]
 }
