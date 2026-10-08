@@ -1,4 +1,6 @@
-[Download the full Build 018](build/BeDino-Build018.rbxlx). The in-game badge must show `BUILD redesign-018`. [Build 017 Final](build/BeDino-Build017-Final.rbxlx) isolates the UI fixes and shows `BUILD redesign-017-final`.
+[Download Build 019](build/BeDino-Build019.rbxlx). The in-game badge must show `BUILD redesign-019`. [Exact Studio handoff and adjustment guide](docs/34-studio-handoff.md).
+
+Build 019 completes layered artwork wiring, E leap, food catches, Diamond fusion, a six-species collection, isolated Studio test currency/10-second eggs, sequential egg reveals and current build automation. Roblox uploads and Studio acceptance remain pending. Use the `redesign/resources-and-core-fixes` branch.
 
 ## Build 017: rebuilt UI and reliable resource delivery
 
@@ -11,14 +13,14 @@ Build 017 packages native triangle resource Models, replaces the UI, corrects te
 # Be Dino!
 An original Roblox dinosaur growth-and-collection arena inspired by Be Fish.
 
-**Stage:** Build 015 mountain island, jumping and reusable art ready for Studio verification. **Updated:** 2026-10-04.
+**Stage:** Build 019 repository work complete; Studio acceptance pending. **Updated:** 2026-10-08.
 **Owner:** Znypr's Roblox account. **Studio:** installed. **Budget:** €0.
 **First milestone:** private community test with a small complete progression loop.
 
 ## Try the prototype
-Download [BeDino-Build018.rbxlx](build/BeDino-Build018.rbxlx), open it in Studio, and use the current private test experience. No plugin is required.
+Download [BeDino-Build019.rbxlx](build/BeDino-Build019.rbxlx), open it in Studio, and use the current private test experience. No plugin is required.
 
-For the current build, use [Build 015 checks](docs/27-mountain-island.md) and [mesh/icon import guide](resources/README.md). The general Studio workflow remains in [Studio quickstart](docs/10-studio-quickstart.md).
+For the current build, use [Build 019 handoff](docs/34-studio-handoff.md) and [mesh/icon import guide](resources/README.md). The general Studio workflow remains in [Studio quickstart](docs/10-studio-quickstart.md).
 
 ## Start here
 - [Project brief and roles](docs/01-project-brief.md)

@@ -705,216 +705,6 @@
       "sha256": "bf94410e7723b6780e065e6333b39a08be2dfe4872cdedec2553472b7a32aeb7"
     },
     {
-      "logicalId": "compy",
-      "source": "models/compy.obj",
-      "triangles": 712,
-      "bounds": [
-        [
-          -1.474998113193307,
-          0.04000000000000001,
-          -3.48625
-        ],
-        [
-          1.474998113193307,
-          4.45,
-          5.007905694150421
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "native model packaged; OBJ available for optimized MeshPart import",
-      "sha256": "4810ffe1c0e05a0d07d46ff8b07aff8db103ef41e3ad6cef8725e5f88e4fa8a9",
-      "packagedModel": "roblox/compy.rbxmx"
-    },
-    {
-      "logicalId": "triceratops",
-      "source": "models/triceratops.obj",
-      "triangles": 988,
-      "bounds": [
-        [
-          -1.6405255888325765,
-          0.04000000000000001,
-          -3.5074740931868367
-        ],
-        [
-          1.6405255888325765,
-          5.390000000000001,
-          5.007905694150421
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "native model packaged; OBJ available for optimized MeshPart import",
-      "sha256": "8ef0ce7a3f7c84a25087ee5f720adc9321212f3c30a68284aee8b93ff853bffb",
-      "packagedModel": "roblox/triceratops.rbxmx"
-    },
-    {
-      "logicalId": "tyrannosaurus",
-      "source": "models/tyrannosaurus.obj",
-      "triangles": 712,
-      "bounds": [
-        [
-          -1.474998113193307,
-          0.04000000000000001,
-          -3.48625
-        ],
-        [
-          1.474998113193307,
-          4.45,
-          5.007905694150421
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "native model packaged; OBJ available for optimized MeshPart import",
-      "sha256": "602ef7d3cf61334f06c7f97cef7885c8fe555f07d59022ce7dfaad5bb6245b28",
-      "packagedModel": "roblox/tyrannosaurus.rbxmx"
-    },
-    {
-      "logicalId": "tree",
-      "source": "models/tree.obj",
-      "triangles": 108,
-      "bounds": [
-        [
-          -4.384345884812358,
-          -0.06832091307714865,
-          -2.853169548885461
-        ],
-        [
-          4.8,
-          13.56,
-          2.9678525939969145
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "native model packaged; OBJ available for optimized MeshPart import",
-      "sha256": "39ceff8658f98a2c5466f37b892224660e4a7e1df978bf4d4ab988e829f9abf8",
-      "packagedModel": "roblox/tree.rbxmx"
-    },
-    {
-      "logicalId": "rock",
-      "source": "models/rock.obj",
-      "triangles": 20,
-      "bounds": [
-        [
-          -2.265247584249853,
-          -0.20000000000000007,
-          -2.187429987478853
-        ],
-        [
-          2.8,
-          3.4000000000000004,
-          2.1874299874788528
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "native model packaged; OBJ available for optimized MeshPart import",
-      "sha256": "7fcce5c6cea292e5698f90e1841ebc3775d880edd71d98ae9ccb8a3d556c9d74",
-      "packagedModel": "roblox/rock.rbxmx"
-    },
-    {
-      "logicalId": "fern",
-      "source": "models/fern.obj",
-      "triangles": 28,
-      "bounds": [
-        [
-          -1.8019377358048383,
-          0.15,
-          -1.9498558243636472
-        ],
-        [
-          2,
-          1.15,
-          1.9498558243636472
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "native model packaged; OBJ available for optimized MeshPart import",
-      "sha256": "8d9dd7a3d6d35004e3f67b81434291e70c92881af6ac43f191df1d420eff66ed",
-      "packagedModel": "roblox/fern.rbxmx"
-    },
-    {
-      "logicalId": "egg",
-      "source": "models/egg.obj",
-      "triangles": 50,
-      "bounds": [
-        [
-          -0.7656230589874906,
-          0,
-          -0.8083980388508806
-        ],
-        [
-          0.85,
-          2.4,
-          0.8083980388508805
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "native model packaged; OBJ available for optimized MeshPart import",
-      "sha256": "0808647edd7e2f39e9158b03c4b7e61fcdf092af87114267007ee174a7de87d4",
-      "packagedModel": "roblox/egg.rbxmx"
-    },
-    {
-      "logicalId": "berry",
-      "source": "models/berry.obj",
-      "triangles": 22,
-      "bounds": [
-        [
-          -0.19416407864998741,
-          0,
-          -0.22825356391083687
-        ],
-        [
-          0.24,
-          0.6173539185944884,
-          0.22825356391083684
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "native model packaged; OBJ available for optimized MeshPart import",
-      "sha256": "5d7126aa25c2cbb3175c1bae46bff9622c51cf376ca23a8d6c5b203b22ccccb4",
-      "packagedModel": "roblox/berry.rbxmx"
-    },
-    {
-      "logicalId": "fruit",
-      "source": "models/fruit.obj",
-      "triangles": 20,
-      "bounds": [
-        [
-          -0.3559674775249769,
-          0.010000000000000009,
-          -0.4184648671698676
-        ],
-        [
-          0.44,
-          0.9600000000000001,
-          0.4184648671698676
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "native model packaged; OBJ available for optimized MeshPart import",
-      "sha256": "791f8166907087441abfe29c3f6da25cab0191899a90e73652b9dae571a53c22",
-      "packagedModel": "roblox/fruit.rbxmx"
-    },
-    {
-      "logicalId": "amber",
-      "source": "models/amber.obj",
-      "triangles": 10,
-      "bounds": [
-        [
-          -0.4045084971874738,
-          0,
-          -0.4755282581475768
-        ],
-        [
-          0.5,
-          1.3,
-          0.47552825814757677
-        ]
-      ],
-      "robloxAssetId": null,
-      "status": "native model packaged; OBJ available for optimized MeshPart import",
-      "sha256": "5849544c140729d7fa8785c89427144b05ff0139c5c99350ee70cae929427140",
-      "packagedModel": "roblox/amber.rbxmx"
-    },
-    {
       "logicalId": "fossil_centerpiece",
       "source": "ui/v2/layers/fossil-centerpiece-v1.png",
       "sha256": "a3c5fae249fd880b71bbb3e38d5ff50b576f0af839c2a6a7d27e62348876f3cd",
@@ -994,7 +784,254 @@
       "robloxAssetId": null,
       "status": "generated PNG draft; full decode/hash verified; Roblox upload and integration pending",
       "generationMethod": "built-in image_gen; exact prompts in layers/prompts.json or layers/item-prompts.json"
+    },
+    {
+      "logicalId": "compy",
+      "source": "models/compy.obj",
+      "triangles": 712,
+      "bounds": [
+        [
+          -1.474998113193307,
+          0.04000000000000001,
+          -3.48625
+        ],
+        [
+          1.474998113193307,
+          4.45,
+          5.007905694150421
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import"
+    },
+    {
+      "logicalId": "triceratops",
+      "source": "models/triceratops.obj",
+      "triangles": 988,
+      "bounds": [
+        [
+          -1.6405255888325765,
+          0.04000000000000001,
+          -3.5074740931868367
+        ],
+        [
+          1.6405255888325765,
+          5.390000000000001,
+          5.007905694150421
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import"
+    },
+    {
+      "logicalId": "tyrannosaurus",
+      "source": "models/tyrannosaurus.obj",
+      "triangles": 712,
+      "bounds": [
+        [
+          -1.474998113193307,
+          0.04000000000000001,
+          -3.48625
+        ],
+        [
+          1.474998113193307,
+          4.45,
+          5.007905694150421
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import"
+    },
+    {
+      "logicalId": "raptor",
+      "source": "models/raptor.obj",
+      "triangles": 824,
+      "bounds": [
+        [
+          -1.5984307351936249,
+          0.03600000000000001,
+          -3.76515
+        ],
+        [
+          1.5984307351936249,
+          4.005,
+          5.408538149682455
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import"
+    },
+    {
+      "logicalId": "stegosaurus",
+      "source": "models/stegosaurus.obj",
+      "triangles": 996,
+      "bounds": [
+        [
+          -1.385640646055102,
+          0.04000000000000001,
+          -3.48625
+        ],
+        [
+          1.385640646055102,
+          4.7007490642541585,
+          5.007905694150421
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import"
+    },
+    {
+      "logicalId": "ankylosaurus",
+      "source": "models/ankylosaurus.obj",
+      "triangles": 1200,
+      "bounds": [
+        [
+          -2.153713906763541,
+          0.04000000000000001,
+          -3.48625
+        ],
+        [
+          2.153713906763541,
+          4.45,
+          5.4125
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import"
+    },
+    {
+      "logicalId": "tree",
+      "source": "models/tree.obj",
+      "triangles": 108,
+      "bounds": [
+        [
+          -4.384345884812358,
+          -0.06832091307714865,
+          -2.853169548885461
+        ],
+        [
+          4.8,
+          13.56,
+          2.9678525939969145
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import"
+    },
+    {
+      "logicalId": "rock",
+      "source": "models/rock.obj",
+      "triangles": 20,
+      "bounds": [
+        [
+          -2.265247584249853,
+          -0.20000000000000007,
+          -2.187429987478853
+        ],
+        [
+          2.8,
+          3.4000000000000004,
+          2.1874299874788528
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import"
+    },
+    {
+      "logicalId": "fern",
+      "source": "models/fern.obj",
+      "triangles": 28,
+      "bounds": [
+        [
+          -1.8019377358048383,
+          0.15,
+          -1.9498558243636472
+        ],
+        [
+          2.0,
+          1.15,
+          1.9498558243636472
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import"
+    },
+    {
+      "logicalId": "egg",
+      "source": "models/egg.obj",
+      "triangles": 50,
+      "bounds": [
+        [
+          -0.7656230589874906,
+          0.0,
+          -0.8083980388508806
+        ],
+        [
+          0.85,
+          2.4,
+          0.8083980388508805
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import"
+    },
+    {
+      "logicalId": "berry",
+      "source": "models/berry.obj",
+      "triangles": 22,
+      "bounds": [
+        [
+          -0.19416407864998741,
+          0.0,
+          -0.22825356391083687
+        ],
+        [
+          0.24,
+          0.6173539185944884,
+          0.22825356391083684
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import"
+    },
+    {
+      "logicalId": "fruit",
+      "source": "models/fruit.obj",
+      "triangles": 20,
+      "bounds": [
+        [
+          -0.3559674775249769,
+          0.010000000000000009,
+          -0.4184648671698676
+        ],
+        [
+          0.44,
+          0.9600000000000001,
+          0.4184648671698676
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import"
+    },
+    {
+      "logicalId": "amber",
+      "source": "models/amber.obj",
+      "triangles": 10,
+      "bounds": [
+        [
+          -0.4045084971874738,
+          0.0,
+          -0.4755282581475768
+        ],
+        [
+          0.5,
+          1.3,
+          0.47552825814757677
+        ]
+      ],
+      "robloxAssetId": null,
+      "status": "native model packaged; OBJ available for optimized MeshPart import"
     }
   ],
-  "runtimeIntegration": "Native original triangle Models packaged; PNG icons compiled to native GUI tiles with optional uploaded image bindings. No runtime editable API dependency."
+  "runtimeIntegration": "Native triangle models packaged in ReplicatedStorage.Resources. No runtime Mesh/Image API required."
 }

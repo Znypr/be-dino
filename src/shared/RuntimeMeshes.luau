@@ -4,6 +4,9 @@ local AssetService = game:GetService("AssetService")
 local RunService = game:GetService("RunService")
 local Geometry = require(script.Parent.ResourceGeometry)
 local RuntimeMeshes = {}
+local resourceIds = {}
+for id in Geometry do table.insert(resourceIds,id) end
+table.sort(resourceIds)
 local templates: {[string]: Model} = {}
 local editableMeshes: {[string]: EditableMesh} = {}
 local started = false
@@ -17,7 +20,7 @@ function RuntimeMeshes.prepare()
     started = true
     task.spawn(function()
         local succeeded = 0
-        for _, id in {"compy", "triceratops", "tyrannosaurus", "tree", "rock", "fern", "egg", "berry", "fruit", "amber"} do
+        for _, id in resourceIds do
             local editable: EditableMesh? = nil
             local ok, result = pcall(function()
                 local data = Geometry[id]
@@ -70,13 +73,13 @@ function RuntimeMeshes.prepare()
             else
                 if editable then editable:Destroy() end
                 warn("[Be Dino] mesh " .. id .. " unavailable: " .. tostring(result))
-                -- A permission failure should not cause ten repeated heavyweight failures.
+                -- A permission failure should not cause repeated heavyweight failures.
                 if succeeded == 0 then break end
             end
             task.wait()
         end
         workspace:SetAttribute("LocalMeshCount", succeeded)
-        workspace:SetAttribute("LocalMeshStatus", if succeeded == 10 then "Ready" else "Enable Mesh / Image APIs or import OBJ assets")
+        workspace:SetAttribute("LocalMeshStatus", if succeeded == #resourceIds then "Ready" else "Enable Mesh / Image APIs or import OBJ assets")
     end)
 end
 return RuntimeMeshes

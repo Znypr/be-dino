@@ -1,7 +1,7 @@
 --!strict
 -- Prototype tuning only. Persistent economy values remain private-test values.
 return table.freeze({
-    Build = "redesign-018",
+    Build = "redesign-019",
     WalkSpeed = 22,
     JumpPower = 50,
     MaxSlopeAngle = 46,
@@ -20,6 +20,10 @@ return table.freeze({
     FoodClusterRadius = 7,
     FoodSeed = 1404,
     StudioLocalProfilesEnabled = true, -- unpublished Studio only; never a live fallback
+    StudioTestWalletEnabled = true, -- only unpublished, nonpersistent local profiles
+    StudioTestCrystals = 1000000,
+    StudioChestTimerSeconds = 10,
+    FoodCatchRate = 15 / 500, -- raw food points; growth boosts do not multiply catches
     ProfileLoadWarningSeconds = 20,
 
     SpawnProtectionSeconds = 5,
@@ -40,12 +44,16 @@ return table.freeze({
     RarityQ = 0.25,
     AlphaTierThresholds = {1, 25, 100},
     AlphaSpeciesByTier = {"compy", "triceratops", "tyrannosaurus"},
-    SpeciesOrder = {"compy", "triceratops", "tyrannosaurus"},
+    SpeciesOrder = {"compy", "triceratops", "tyrannosaurus", "raptor", "stegosaurus", "ankylosaurus"},
     SpeciesDisplayNames = {
         compy = "Compy",
         triceratops = "Triceratops",
         tyrannosaurus = "T-Rex",
+        raptor = "Raptor",
+        stegosaurus = "Stegosaurus",
+        ankylosaurus = "Ankylosaurus",
     },
+    SpeciesRarities = {compy = 1, raptor = 1, triceratops = 2, stegosaurus = 2, tyrannosaurus = 3, ankylosaurus = 3},
     ChestThresholds = {
         {score = 10, count = 1},
         {score = 100, count = 2},
@@ -72,9 +80,12 @@ return table.freeze({
     ChestTestGrantCount = 7,
     ChestTestGrantVersion = 1,
     ChestSpeciesWeights = {
-        {speciesId = "compy", weight = 70},
-        {speciesId = "triceratops", weight = 25},
-        {speciesId = "tyrannosaurus", weight = 5},
+        {speciesId = "compy", weight = 40},
+        {speciesId = "raptor", weight = 30},
+        {speciesId = "triceratops", weight = 15},
+        {speciesId = "stegosaurus", weight = 10},
+        {speciesId = "tyrannosaurus", weight = 3},
+        {speciesId = "ankylosaurus", weight = 2},
     },
     ChestQuantityWeights = {
         {count = 1, weight = 70},
@@ -83,6 +94,7 @@ return table.freeze({
     },
 
     GoldMutationCost = 50,
+    DiamondMutationCost = 50, -- provisional balance: 50 Gold -> 1 Diamond
     MutationRequestCooldownSeconds = 0.4,
     MutationTestSetupEnabled = false,
     MutationTestSpeciesId = "compy",

@@ -36,10 +36,17 @@ local seenTutorial = false
 local lastGrowth = 0
 local function num(id: string): number return player:GetAttribute(id) or 0 end
 local function str(id: string,fallback: string?): string return player:GetAttribute(id) or fallback or "" end
-local function copies(id: string): (number,number)
-    local prefix = ({compy="Compy",triceratops="Triceratops",tyrannosaurus="Tyrannosaurus"})[id]
-    return num(prefix.."Copies"),num(prefix.."Gold")
+local function copies(id: string): (number,number,number)
+    local ok, data = pcall(function() return Http:JSONDecode(str("CollectionJson","{}")) end)
+    local entry = if ok and typeof(data)=="table" then data[id] else nil
+    return if entry then entry.base or 0 else 0, if entry then entry.gold or 0 else 0, if entry then entry.diamond or 0 else 0
 end
+local function bestMutation(id: string): string
+    local _,gold,diamond = copies(id)
+    return if diamond>0 then "diamond" elseif gold>0 then "gold" else "base"
+end
+local fusionTarget = "gold"
+local hatchPending = false
 local function label(parent: Instance,text: string,x: number,y: number,w: number,h: number,size: number,color: Color3?): TextLabel
     local t = Instance.new("TextLabel")
     t.BackgroundTransparency,t.Position,t.Size = 1,UDim2.fromOffset(x,y),UDim2.fromOffset(w,h)
@@ -132,14 +139,14 @@ local function open(name: string)
     TweenService:Create(blur,TweenInfo.new(if motion then .18 else 0),{Size=12}):Play()
     render(name)
 end
-local function hero(parent: GuiObject,id: string,x: number,y: number,w: number,h: number,gold: boolean?)
-    local view=Preview.add(parent,id,gold==true)
+local function hero(parent: GuiObject,id: string,x: number,y: number,w: number,h: number,gold: (boolean | string)?)
+    local view=Preview.add(parent,id,gold or "base")
     view.Position,view.Size = UDim2.fromOffset(x,y),UDim2.fromOffset(w,h)
     return view
 end
 local rarityColors={C.accent,C.blue,C.gold}
 local rarityNames={"Common","Rare","Legendary"}
-local function speciesIndex(id: string): number return table.find(Config.SpeciesOrder,id) or 1 end
+local function speciesIndex(id: string): number return Config.SpeciesRarities[id] or 1 end
 local function meter(parent: GuiObject,x: number,y: number,w: number,value: number,maxValue: number,color: Color3,text: string)
     local b=box(parent,x,y,w,34,C.outline,parent.ZIndex+1)
     local fill=Instance.new("Frame")
@@ -175,7 +182,7 @@ render=function(name: string)
         heading.Text,header.BackgroundColor3="Sanctuary",C.accent
         local heroCard=box(body,0,0,290,330,C.card,24)
         local id=str("EquippedSpeciesId","compy")
-        hero(heroCard,id,8,8,274,230)
+        hero(heroCard,id,8,8,274,230,bestMutation(id))
         label(heroCard,Config.SpeciesDisplayNames[id],0,244,290,42,30)
         label(heroCard,"Equipped dinosaur",0,296,290,26,18,C.accent)
         label(body,"Ready for an adventure?",320,0,495,58,32)
@@ -196,8 +203,7 @@ render=function(name: string)
             local card=box(body,(i-1)*276,44,264,288,color,24)
             label(card,item.name,6,5,252,34,25)
             label(card,item.rarity.." • "..item.growth.."x Growth",4,42,256,30,19)
-            art(card,"aura",46,77,172)
-            hero(card,str("EquippedSpeciesId","compy"),12,78,240,135)
+            art(card,"aura_"..item.id,46,77,172)
             label(card,if p.auras[item.id] then "Owned" else item.price.." Crystals",4,212,256,27,21,C.gold)
             local equipped=p.equippedAura==item.id
             button(card,if equipped then "UNEQUIP" elseif p.auras[item.id] then "EQUIP" else "BUY",12,247,240,34,C.card,function()
@@ -209,7 +215,7 @@ render=function(name: string)
     elseif name=="auraConfirm" then
         local item=ProgressionRules.item(ProgressionConfig.Auras,chosenAura)
         heading.Text,header.BackgroundColor3="Buy Aura?",C.purple
-        art(body,"aura",30,25,220)
+        art(body,"aura_"..item.id,30,25,220)
         label(body,item.name.." • "..item.growth.."x eating growth",290,24,510,70,29)
         label(body,item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,125,510,90,25,C.gold)
         button(body,"BUY AURA",290,261,510,57,C.accent,function() transact("buyAura",item.id) open("auras") end)
@@ -222,7 +228,7 @@ render=function(name: string)
             local x=((i-1)%3)*276 local y=43+math.floor((i-1)/3)*176
             local color=if item.rarity=="Legendary" then C.gold elseif item.rarity=="Rare" then C.blue else C.accent
             local card=box(body,x,y,264,164,C.card,24)
-            art(card,item.kind,8,14,76)
+            art(card,"potion_"..item.kind,8,14,76)
             label(card,item.name,88,5,167,32,21,color)
             label(card,item.rarity.." • "..item.multiplier.."x\n"..(item.duration//60).." minutes",86,39,170,50,18)
             label(card,"Owned: "..(p.potions[item.id] or 0),86,88,170,24,17)
@@ -237,7 +243,7 @@ render=function(name: string)
         local item=ProgressionRules.item(ProgressionConfig.Potions,chosenPotion)
         local replacing=name=="potionReplace"
         heading.Text,header.BackgroundColor3=if replacing then "Replace Active Potion?" else "Buy Potion?",C.accent
-        art(body,item.kind,30,22,220)
+        art(body,"potion_"..item.kind,30,22,220)
         label(body,item.name.." • "..item.multiplier.."x "..item.kind,290,15,510,62,28)
         label(body,if replacing then "Your current "..item.kind.." potion ends immediately. Its remaining time is lost. Consume 1 potion for a fresh "..(item.duration//60).." minutes?" else (item.duration//60).." minutes • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
         button(body,if replacing then "REPLACE & USE" else "BUY POTION",290,263,510,58,C.accent,function()
@@ -247,53 +253,71 @@ render=function(name: string)
     elseif name=="collection" then
         heading.Text,header.BackgroundColor3="Dino Index",C.blue
         local unlocked=0
+        local list=Instance.new("ScrollingFrame")
+        list.Name,list.Size,list.Position="DinoCards",UDim2.fromOffset(824,326),UDim2.fromOffset(0,0)
+        list.BackgroundTransparency,list.BorderSizePixel,list.ScrollBarThickness=1,0,6
+        list.CanvasSize=UDim2.fromOffset(0,math.ceil(#Config.SpeciesOrder/3)*284)
+        list.ZIndex,list.Parent=24,body
         for i,id in Config.SpeciesOrder do
-            local base,gold=copies(id)
-            if base+gold>0 then unlocked+=1 end
-            local card=box(body,(i-1)*276,0,264,328,rarityColors[i],24)
-            Theme.texture(card,264,328)
-            label(card,Config.SpeciesDisplayNames[id],4,8,256,35,27)
-            label(card,rarityNames[i],4,44,256,25,18)
-            hero(card,id,7,74,250,172,gold>0 and base==0)
-            label(card,if base+gold>0 then string.format("%d %s  •  %d Gold",base,if base==1 then "copy" else "copies",gold) else "Not discovered",5,246,254,25,18)
-            button(card,"VIEW DINO",12,281,240,38,C.card,function() selected=id open("detail") end)
+            local base,gold,diamond=copies(id)
+            local rarity=speciesIndex(id)
+            if base+gold+diamond>0 then unlocked+=1 end
+            local card=box(list,((i-1)%3)*276,math.floor((i-1)/3)*284,264,272,rarityColors[rarity],24)
+            Theme.texture(card,264,272)
+            label(card,Config.SpeciesDisplayNames[id],4,8,256,35,25)
+            label(card,rarityNames[rarity],4,44,256,25,18)
+            hero(card,id,7,70,250,128,bestMutation(id))
+            label(card,if base+gold+diamond>0 then string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond) else "Not discovered",5,201,254,25,15)
+            button(card,"VIEW DINO",12,233,240,30,C.card,function() selected=id open("detail") end)
         end
-        meter(body,0,356,600,unlocked,3,C.accent,string.format("Discovered: %d / 3",unlocked))
-        button(body,"GOLD FUSION",624,350,200,44,C.gold,function() open("fusion") end)
+        meter(body,0,356,600,unlocked,#Config.SpeciesOrder,C.accent,string.format("Discovered: %d / %d",unlocked,#Config.SpeciesOrder))
+        button(body,"FUSION",624,350,200,44,C.gold,function() open("fusion") end)
     elseif name=="detail" then
         local index=speciesIndex(selected)
-        local base,gold=copies(selected)
+        local base,gold,diamond=copies(selected)
         heading.Text,header.BackgroundColor3=Config.SpeciesDisplayNames[selected],rarityColors[index]
         local stage=box(body,0,0,380,360,rarityColors[index],24)
-        hero(stage,selected,0,20,380,280,gold>0 and base==0)
+        hero(stage,selected,0,20,380,280,bestMutation(selected))
         label(stage,rarityNames[index],0,302,380,42,30)
         label(body,"YOUR COLLECTION",414,0,400,42,28)
-        label(body,string.format("Base copies: %d\nGold copies: %d",base,gold),414,62,400,92,25)
-        label(body,"Gold is cosmetic. Combine 50 base copies to unlock it.",414,173,400,76,22,C.gold)
+        label(body,string.format("Base: %d • Gold: %d\nDiamond: %d",base,gold,diamond),414,62,400,92,25)
+        label(body,"Cosmetic fusion: 50 Base → Gold; 50 Gold → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
         local equipped=str("EquippedSpeciesId","compy")==selected
-        button(body,if equipped then "EQUIPPED" elseif base+gold==0 then "LOCKED" else "EQUIP",426,273,372,52,if base+gold>0 then C.accent else C.card,function()
-            if base+gold<=0 then notify("Hatch reward eggs to discover this dino") return end
+        button(body,if equipped then "EQUIPPED" elseif base+gold+diamond==0 then "LOCKED" else "EQUIP",426,273,372,52,if base+gold+diamond>0 then C.accent else C.card,function()
+            if base+gold+diamond<=0 then notify("Hatch reward eggs to discover this dino") return end
             if not equipped then equip:FireServer(selected,Http:GenerateGUID(false)) end
         end)
         button(body,"BACK TO INDEX",426,341,372,45,C.blue,function() open("collection") end)
     elseif name=="fusion" then
-        heading.Text,header.BackgroundColor3="Gold Fusion",C.purple
-        local base=copies(selected)
-        hero(body,selected,14,0,360,300,true)
-        label(body,"MAKE IT GOLD",388,0,420,54,36,C.gold)
-        label(body,"Turn 50 base copies into one Gold dinosaur. This consumes the base copies.",392,76,420,106,24)
-        meter(body,400,214,400,base,Config.GoldMutationCost,C.gold,string.format("%d / %d copies",base,Config.GoldMutationCost))
-        button(body,"FUSE SELECTED DINO",400,277,400,56,if base>=Config.GoldMutationCost then C.accent else C.card,function()
-            if base<Config.GoldMutationCost then notify("You need 50 base copies",C.red) return end
+        heading.Text,header.BackgroundColor3="Dinosaur Fusion",C.purple
+        local base,gold=copies(selected)
+        local diamond=fusionTarget=="diamond"
+        local cost=if diamond then Config.DiamondMutationCost else Config.GoldMutationCost
+        local owned=if diamond then gold else base
+        local source=if diamond then "Gold" else "Base"
+        local target=if diamond then "Diamond" else "Gold"
+        hero(body,selected,14,0,360,260,fusionTarget)
+        art(body,"mutation_"..fusionTarget,142,242,84)
+        button(body,"GOLD",388,0,200,42,C.gold,function() fusionTarget="gold" open("fusion") end)
+        button(body,"DIAMOND",600,0,200,42,C.blue,function() fusionTarget="diamond" open("fusion") end)
+        label(body,"MAKE IT "..string.upper(target),388,56,420,54,30,if diamond then C.blue else C.gold)
+        label(body,"Consume "..cost.." "..source.." copies for 1 "..target.." "..Config.SpeciesDisplayNames[selected]..". Cosmetic only.",392,118,420,76,22)
+        meter(body,400,214,400,owned,cost,C.gold,string.format("%d / %d %s copies",owned,cost,source))
+        button(body,"FUSE SELECTED DINO",400,277,400,56,if owned>=cost then C.accent else C.card,function()
+            if owned<cost then notify("You need "..cost.." "..source.." copies",C.red) return end
             open("fusionConfirm")
         end)
-        button(body,"CHOOSE DINO",70,332,264,47,C.blue,function() open("collection") end)
+        button(body,"CHOOSE DINO",70,342,264,47,C.blue,function() open("collection") end)
     elseif name=="fusionConfirm" then
-        heading.Text,header.BackgroundColor3="Confirm Gold Fusion",C.gold
-        art(body,"fusion",26,35,230)
-        label(body,"Use 50 copies?",280,12,510,64,36)
-        label(body,"You will receive 1 Gold "..Config.SpeciesDisplayNames[selected]..". Your other dinosaurs stay in your collection.",280,100,510,115,24)
-        button(body,"CONFIRM FUSION",280,264,510,64,C.accent,function() fuse:FireServer(selected,"gold",Http:GenerateGUID(false)) open("fusion") end)
+        local diamond=fusionTarget=="diamond"
+        local cost=if diamond then Config.DiamondMutationCost else Config.GoldMutationCost
+        local source=if diamond then "Gold" else "Base"
+        local target=if diamond then "Diamond" else "Gold"
+        heading.Text,header.BackgroundColor3="Confirm "..target.." Fusion",if diamond then C.blue else C.gold
+        art(body,"mutation_"..fusionTarget,26,35,230)
+        label(body,"Use "..cost.." "..source.." copies?",280,12,510,64,30)
+        label(body,"Receive 1 "..target.." "..Config.SpeciesDisplayNames[selected]..". The consumed copies are removed after a successful save.",280,100,510,115,24)
+        button(body,"CONFIRM FUSION",280,264,510,64,C.accent,function() fuse:FireServer(selected,fusionTarget,Http:GenerateGUID(false)) open("fusion") end)
         button(body,"CANCEL",280,340,510,44,C.red,function() open("fusion") end)
     elseif name=="eggs" then
         heading.Text,header.BackgroundColor3="Growing Eggs",C.gold
@@ -321,7 +345,10 @@ render=function(name: string)
             local id=str("NextChestId")
             if id=="" then notify("Return from a run to earn reward eggs") return end
             if workspace:GetServerTimeNow()<num("NextChestReadyAt") then notify("This egg is still growing",C.gold) return end
+            if hatchPending then return end
+            hatchPending=true
             hatch:FireServer(id,Http:GenerateGUID(false))
+            task.delay(5,function() hatchPending=false end)
         end)
         label(body,"Eggs grow in order, even while offline.\nWaiting for a nest slot: "..num("PendingChestGrants"),420,302,400,88,21)
     elseif name=="hatch" then
@@ -332,7 +359,15 @@ render=function(name: string)
         if not Config.SpeciesDisplayNames[id] then id="compy" end
         hero(body,id,160,-12,504,260)
         label(body,reward,80,240,660,58,36,C.gold)
-        button(body,"VIEW COLLECTION",212,322,400,64,C.accent,function() open("collection") end)
+        button(body,"NEXT EGG",80,322,320,64,C.accent,function()
+            local id=str("NextChestId")
+            if id=="" or workspace:GetServerTimeNow()<num("NextChestReadyAt") then open("eggs") return end
+            if hatchPending then return end
+            hatchPending=true
+            hatch:FireServer(id,Http:GenerateGUID(false))
+            task.delay(5,function() hatchPending=false end)
+        end)
+        button(body,"COLLECTION",424,322,320,64,C.blue,function() open("collection") end)
     elseif name=="exit" then
         heading.Text,header.BackgroundColor3="Return to Sanctuary?",C.red
         art(body,"home",36,28,214)
@@ -366,10 +401,10 @@ render=function(name: string)
             label(card,food[1],0,180,196,42,26)
             label(card,"+"..food[3].." Growth",0,226,196,42,26)
         end
-        label(body,"Look for small clusters across the island. Rare crystals are worth the most growth.",18,316,788,72,23)
+        label(body,"500 raw food points earn 15 catches before weather bonuses. Growth boosts do not multiply catches.",18,316,788,72,23)
     elseif name=="tutorial" then
         heading.Text,header.BackgroundColor3="Welcome to Be Dino!",C.blue
-        local steps={{"1","EAT & GROW","Find small food clusters across the island."},{"2","JUMP & EXPLORE","Space on desktop. Jump button on mobile."},{"3","BANK & HATCH","Return to sanctuary to bank catches and eggs."}}
+        local steps={{"1","EAT & GROW","Find small food clusters across the island."},{"2","JUMP & EXPLORE","Space to jump, E to leap. Buttons on mobile."},{"3","BANK & HATCH","Return to sanctuary to bank catches and eggs."}}
         for i,step in steps do
             local card=box(body,(i-1)*276,0,264,278,C.card,24)
             label(card,step[1],12,12,240,80,64,rarityColors[i])
@@ -391,14 +426,14 @@ end
 workspace:GetAttributeChangedSignal("FoodSpawnStatus"):Connect(refreshFoodDiagnostic)
 workspace:GetAttributeChangedSignal("FoodCount"):Connect(refreshFoodDiagnostic)
 refreshFoodDiagnostic()
-local previewNotice=label(gui,"STUDIO PREVIEW • progress is not saved",0,0,390,25,14,C.gold)
+local previewNotice=label(gui,"STUDIO PREVIEW • progress not saved • test currency",0,0,500,25,14,C.gold)
 previewNotice.AnchorPoint,previewNotice.Position=Vector2.new(.5,0),UDim2.new(.5,0,0,8)
 previewNotice.Visible=player:GetAttribute("ProfileMode")=="Studio preview (not saved)"
 player:GetAttributeChangedSignal("ProfileMode"):Connect(function() previewNotice.Visible=player:GetAttribute("ProfileMode")=="Studio preview (not saved)" end)
 local rail=box(gui,14,0,186,444,C.panel,2)
 rail.AnchorPoint,rail.Position=Vector2.new(0,.5),UDim2.new(0,14,.5,0)
 local railScale=Instance.new("UIScale") railScale.Parent=rail
-for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"GOLD","fusion","fusion",C.purple},{"HOME","home","home",C.accent},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
+for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","mutation_gold","fusion",C.purple},{"HOME","home","home",C.accent},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
     local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() open(entry[3]) end)
     b.TextSize=20
     art(b,entry[2],5,6,40)
@@ -410,6 +445,7 @@ hud.AnchorPoint,hud.Position=Vector2.new(0,1),UDim2.new(0,18,1,-18)
 local hudScale=Instance.new("UIScale") hudScale.Parent=hud
 art(hud,"leaf",8,12,64)
 local growthLabel=label(hud,"0 GROWTH",82,3,290,42,30,C.accent)
+art(hud,"catches",40,48,32)
 local catchLabel=label(hud,"0 catches  •  Sanctuary",82,47,290,34,20)
 local crystalHUD=box(gui,0,0,260,48,C.panel,2)
 crystalHUD.AnchorPoint,crystalHUD.Position=Vector2.new(1,0),UDim2.new(1,-20,0,8)
@@ -418,13 +454,13 @@ local crystalText=label(crystalHUD,"0 Crystals",50,0,203,48,24,C.gold)
 local timers=Instance.new("Frame")
 timers.BackgroundTransparency,timers.Size,timers.AnchorPoint,timers.Position,timers.Parent=1,UDim2.fromOffset(286,220),Vector2.new(1,1),UDim2.new(1,-20,1,-100),gui
 local timerScale=Instance.new("UIScale") timerScale.Parent=timers
-local leapButton=button(timers,"LEAP [Q]",0,0,286,60,C.blue,function()
+local leapButton=button(timers,"LEAP [E]",0,0,286,60,C.blue,function()
     if shade.Visible then return end
     leapRemote:FireServer()
 end)
 leapButton.Text=""
 art(leapButton,"leap",4,5,48)
-local leapText=label(leapButton,"LEAP [Q]",56,0,225,60,22)
+local leapText=label(leapButton,"LEAP [E]",56,0,225,60,22)
 local weatherTile=box(timers,0,72,286,62,C.panel,2)
 local weatherArt=Theme.icon(weatherTile,"weather")
 if weatherArt then weatherArt.Position,weatherArt.Size=UDim2.fromOffset(4,7),UDim2.fromOffset(48,48) end
@@ -439,7 +475,7 @@ local function refreshProgressionHUD()
     local now=workspace:GetServerTimeNow()
     crystalText.Text=num("Crystals").." Crystals"
     local left=num("LeapReadyAt")-now
-    leapText.Text=if left>0 then "LEAP "..timerText(left) else "LEAP [Q] • READY"
+    leapText.Text=if left>0 then "LEAP "..timerText(left) else "LEAP [E] • READY"
     leapButton.BackgroundColor3=if left>0 then C.card else C.blue
     local c=player.Character
     leapButton.Active=left<=0 and c~=nil and c:GetAttribute("RunState")=="Active"
@@ -532,24 +568,25 @@ RunService.Heartbeat:Connect(function(dt)
     if active=="eggs" and refreshEggs then refreshEggs() end
     if player:GetAttribute("ProfileState")=="Loaded" and state=="Sanctuary" and not seenTutorial then seenTutorial=true open("tutorial") end
 end)
-for _,attribute in {"EquippedSpeciesId","CompyCopies","CompyGold","TriceratopsCopies","TriceratopsGold","TyrannosaurusCopies","TyrannosaurusGold","ChestQueueJson","ProgressionJson"} do
+for _,attribute in {"EquippedSpeciesId","CollectionJson","ChestQueueJson","ProgressionJson"} do
     player:GetAttributeChangedSignal(attribute):Connect(function()
         if table.find({"collection","detail","fusion","eggs","auras","potions"},active) then body:ClearAllChildren() render(active) end
     end)
 end
-player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function() task.defer(function() open("hatch") end) end)
+player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function() hatchPending=false task.defer(function() open("hatch") end) end)
 player:GetAttributeChangedSignal("LastRunEndAt"):Connect(function() open("results") end)
 player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)
 for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus"} do
     player:GetAttributeChangedSignal(attribute):Connect(function()
         local status=str(attribute)
+        if attribute=="LastChestClaimStatus" then hatchPending=false end
         if status=="equipped" or status=="mutated" or status=="claimed" then notify("Success!",C.accent)
         elseif status~="" and status~="duplicate" then notify(status:gsub("_"," "),C.red) end
     end)
 end
 Input.InputBegan:Connect(function(input,processed)
     if processed then return end
-    if (input.KeyCode==Enum.KeyCode.Q or input.KeyCode==Enum.KeyCode.ButtonY) and not shade.Visible then leapRemote:FireServer()
+    if (input.KeyCode==Enum.KeyCode.E or input.KeyCode==Enum.KeyCode.ButtonY) and not shade.Visible then leapRemote:FireServer()
     elseif input.KeyCode==Enum.KeyCode.Escape then close()
     elseif input.KeyCode==Enum.KeyCode.C then open("collection")
     elseif input.KeyCode==Enum.KeyCode.B then open("eggs") end

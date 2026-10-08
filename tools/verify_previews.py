@@ -32,7 +32,7 @@ local script={Parent={UITheme="Theme",ResourceGeometry="Geometry"}}
 local require=function(id)return if id=="Theme" then {MotionEnabled=true} else Geometry end
 local PreviewCamera=(function()
 '''+camera+'''\nend)()
-for _,id in {"compy","triceratops","tyrannosaurus"} do
+for _,id in {"compy","triceratops","tyrannosaurus","raptor","stegosaurus","ankylosaurus"} do
  for _,size in {{250,172},{274,230},{380,280},{120,146}} do
   local viewport={AbsoluteSize={X=size[1],Y=size[2]},Destroying=signal,GetPropertyChangedSignal=function()return signal end}
   local model={GetBoundingBox=function()return identity,v(100,100,100)end,GetAttribute=function()return Vector3.zero end,GetPivot=function()return identity end}
@@ -53,7 +53,7 @@ for _,id in {"compy","triceratops","tyrannosaurus"} do
   assert(math.max(maxX,maxY)>.85,"preview wastes card space")
  end
 end
-print("Preview camera passed: all vertices visible with tight framing for 3 dinos across 4 card aspect ratios")
+print("Preview camera passed: all vertices visible with tight framing for 6 dinos across 4 card aspect ratios")
 '''
 if __name__=='__main__':
  p=argparse.ArgumentParser();p.add_argument('--runner',required=True);args=p.parse_args()

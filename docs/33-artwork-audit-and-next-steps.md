@@ -1,4 +1,6 @@
 # Artwork audit and guided next steps
+> Historical pre-implementation audit. Build 019 resolves the source-side gaps below; see [current status and remaining Studio steps](34-studio-handoff.md). The image-upload and engine-verification boundaries still apply.
+
 Audit date: 2026-10-08. Branch: redesign/resources-and-core-fixes. Static source/files audit, not live Roblox verification.
 
 ## Findings and evidence

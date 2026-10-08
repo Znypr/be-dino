@@ -3,7 +3,7 @@
   "ownerId": null,
   "ownerType": null,
   "experienceId": null,
-  "status": "Sources recovered and decoded; upload/integration pending",
+  "status": "Runtime assembly implemented; nine sources verified. Roblox owner upload and Studio verification pending.",
   "assets": [
     {
       "key": "fossil_centerpiece",

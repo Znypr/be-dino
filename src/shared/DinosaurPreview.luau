@@ -2,7 +2,7 @@
 local Resources=require(script.Parent.ResourceModels)
 local Camera=require(script.Parent.PreviewCamera)
 local Preview={}
-function Preview.add(parent: GuiObject,speciesId: string,gold: boolean): ViewportFrame
+function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string)): ViewportFrame
     local viewport=Instance.new("ViewportFrame")
     viewport.Name,viewport.BackgroundTransparency="DinosaurPreview",1
     viewport.Size=UDim2.new(1,0,0,140)
@@ -14,7 +14,8 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: boolean): Viewpor
         for _,item in model:GetDescendants() do
             if item:IsA("BasePart") then
                 item.Anchored=true
-                if gold then item.Color=Color3.fromRGB(242,199,63) item.Material=Enum.Material.Metal end
+                if gold == "diamond" then item.Color=Color3.fromRGB(85,213,245) item.Material=Enum.Material.Glass item.Reflectance=.2
+                elseif gold == true or gold == "gold" then item.Color=Color3.fromRGB(242,199,63) item.Material=Enum.Material.Metal end
             end
         end
         model:PivotTo(CFrame.new())

@@ -10,10 +10,10 @@ local function characterVisual(character: Model)
     if not root or not root:IsA("BasePart") or not humanoid then return end
     local id = character:GetAttribute("SpeciesId") or "compy"
     local scale = character:GetAttribute("VisualScale") or 1
-    local gold = character:GetAttribute("GoldVisual") == true
+    local mutation = character:GetAttribute("MutationVisual") or (if character:GetAttribute("GoldVisual") == true then "gold" else "base")
     local previous = character:FindFirstChild("LocalMeshVisual")
     if previous and previous:GetAttribute("SpeciesId") == id and previous:GetAttribute("Scale") == scale
-        and previous:GetAttribute("Gold") == gold then return end
+        and previous:GetAttribute("Mutation") == mutation then return end
     local model = RuntimeMeshes.clone(id)
     if not model then return end
     if previous then previous:Destroy() end
@@ -25,13 +25,14 @@ local function characterVisual(character: Model)
     model.Name = "LocalMeshVisual"
     model:SetAttribute("SpeciesId", id)
     model:SetAttribute("Scale", scale)
-    model:SetAttribute("Gold", gold)
+    model:SetAttribute("Mutation", mutation)
     model:ScaleTo(scale)
     model:PivotTo(root.CFrame * CFrame.new(0, -groundHeight, 0))
     for _, item in model:GetDescendants() do
         if item:IsA("BasePart") then
             item.Anchored = false
-            if gold then item.Color = Color3.fromRGB(255, 207, 99) item.Material = Enum.Material.Metal end
+            if mutation == "gold" then item.Color = Color3.fromRGB(242,199,63) item.Material = Enum.Material.Metal
+            elseif mutation == "diamond" then item.Color = Color3.fromRGB(85,213,245) item.Material = Enum.Material.Glass item.Reflectance=.2 end
             local weld = Instance.new("WeldConstraint")
             weld.Part0, weld.Part1, weld.Parent = root, item, item
         end
@@ -56,7 +57,7 @@ local function watchCharacter(character: Model)
             if character.Parent then characterVisual(character) end
         end)
     end
-    for _, attribute in {"SpeciesId", "VisualScale", "GoldVisual", "DinoAttached"} do
+    for _, attribute in {"SpeciesId", "VisualScale", "GoldVisual", "MutationVisual", "DinoAttached"} do
         character:GetAttributeChangedSignal(attribute):Connect(refresh)
     end
     character.DescendantAdded:Connect(function(item)

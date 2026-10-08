@@ -1,5 +1,7 @@
 import importlib.util
 import json
+import hashlib
+import re
 from pathlib import Path
 import tempfile
 import unittest
@@ -22,6 +24,15 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(len(sources), len(expected))
         refs = [node.attrib["referent"] for node in root.iter("Item")]
         self.assertEqual(len(refs), len(set(refs)))
+
+    def test_current_delivery_matches_source_and_manifest(self):
+        version = re.search(r'Build = "redesign-(\d+)"', (ROOT / "src/shared/Config.luau").read_text()).group(1)
+        place = ROOT / f"build/BeDino-Build{version}.rbxlx"
+        manifest = json.loads(place.with_suffix(".manifest.json").read_text())
+        data, sources = packager.build()
+        self.assertEqual(place.read_bytes(), data, "Rebuild the current delivery after source changes")
+        self.assertEqual(manifest["place_sha256"], hashlib.sha256(data).hexdigest())
+        self.assertEqual(manifest["sources"], sources)
 
     def test_script_execution_locations(self):
         root = ET.fromstring(packager.build()[0])

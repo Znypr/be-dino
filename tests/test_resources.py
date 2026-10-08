@@ -42,7 +42,7 @@ class ResourceTests(unittest.TestCase):
         self.assertTrue(all(a['robloxAssetId'] is None for a in self.manifest['assets']))
     def test_generated_place_runs_loading_before_character(self):
         import xml.etree.ElementTree as ET
-        root=ET.parse(ROOT/'build/BeDino-Build018.rbxlx').getroot()
+        root=ET.parse(ROOT/('build/BeDino-Build'+__import__('re').search(r'Build = "redesign-(\d+)"',(ROOT/'src/shared/Config.luau').read_text()).group(1)+'.rbxlx')).getroot()
         first=next(i for i in root.findall('Item') if i.attrib['class']=='ReplicatedFirst')
         scripts=list(first.iter('Item'))
         self.assertTrue(any(i.attrib['class']=='LocalScript' for i in scripts))

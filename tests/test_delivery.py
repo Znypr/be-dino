@@ -4,10 +4,10 @@ import unittest,xml.etree.ElementTree as ET
 from PIL import Image
 ROOT=Path(__file__).resolve().parents[1]
 class DeliveryTests(unittest.TestCase):
- def test_ten_native_models_packaged_with_colours_and_noncolliding_geometry(self):
-  root=ET.parse(ROOT/'build/BeDino-Build018.rbxlx').getroot()
+ def test_catalog_native_models_packaged_with_colours_and_noncolliding_geometry(self):
+  root=ET.parse(ROOT/('build/BeDino-Build'+__import__('re').search(r'Build = "redesign-(\d+)"',(ROOT/'src/shared/Config.luau').read_text()).group(1)+'.rbxlx')).getroot()
   resources=next(i for i in root.iter('Item') if i.find("Properties/string[@name='Name']") is not None and i.find("Properties/string[@name='Name']").text=='Resources')
-  models=resources.findall('Item');self.assertEqual(len(models),10)
+  models=resources.findall('Item');self.assertEqual(len(models),13)
   for model in models:
    self.assertEqual(model.attrib['class'],'Model')
    parts=model.findall('Item');self.assertGreater(len(parts),10)

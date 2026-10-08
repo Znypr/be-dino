@@ -23,3 +23,6 @@ The center is optional: replace it with a real dinosaur/model preview. Ring opac
 All four assets: Generated draft. RGBA/transparent pixels checked; all three ring center pixels are fully transparent. Roblox upload, image permissions, UI integration and device verification remain pending. Original combined drafts in ../items are preserved as reference only.
 
 prompts.json records the exact prompts and sources. ../scalable remains the preferred source for simple functional icons.
+
+## Runtime integration (Build 019)
+Shared ArtworkAssets is generated from upload-bindings.json by `python tools/bind_artwork.py`. Shared ArtworkLayout controls normalized positions/sizes and rear/front clipping. Shared Artwork builds reusable aura, potion, mutation and catches graphics. Shop/confirm/fusion/HUD call through UITheme.icon. Empty cloud IDs use native graphics; actual owner upload and Studio visual acceptance are pending. See docs/34-studio-handoff.md.

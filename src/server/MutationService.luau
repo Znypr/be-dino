@@ -43,7 +43,7 @@ function MutationService.start(profileRepository, dinosaur)
             player:SetAttribute("LastMutationStatus", "invalid_species")
             return
         end
-        if targetMutation ~= "gold" then
+        if targetMutation ~= "gold" and targetMutation ~= "diamond" then
             player:SetAttribute("LastMutationStatus", "unknown_mutation")
             return
         end

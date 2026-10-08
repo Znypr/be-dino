@@ -47,7 +47,7 @@ for id,data in Geometry do
   assert(data.colors[face[4]],id.." missing material")
  end
 end
-assert(meshCount==10)
+assert(meshCount==13)
 local iconCount=0
 for name,runs in Icons do
  iconCount+=1
@@ -60,7 +60,7 @@ for name,runs in Icons do
  assert(total==64*64,name.." raster buffer length")
 end
 assert(iconCount==14)
-print("Luau execution passed: mountain bounds/routes, spawn, jump/fall rejection, 10 meshes, 14 icon rasters")
+print("Luau execution passed: mountain bounds/routes, spawn, jump/fall rejection, 13 meshes, 14 icon rasters")
 '''
 if __name__=='__main__':
  parser=argparse.ArgumentParser();parser.add_argument('--runner',required=True);args=parser.parse_args()

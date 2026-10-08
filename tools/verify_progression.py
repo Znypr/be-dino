@@ -58,7 +58,8 @@ local store={UpdateAsync=function(_,key,fn)
  data[key]=copy(updated)
  return copy(updated)
 end}
-local http={GenerateGUID=function()return "test-lease" end,JSONEncode=function(_,v)return "json" end}
+local guid=0
+local http={GenerateGUID=function()guid+=1 return "test-"..guid end,JSONEncode=function(_,v)return copy(v) end,JSONDecode=function(_,v)return copy(v) end}
 local storage={Shared={Config="Config",ProgressionRules="Rules"}}
 local datastores={GetDataStore=function()return store end}
 local services={DataStoreService=datastores,HttpService=http,ReplicatedStorage=storage,RunService={IsStudio=function()return false end}}
@@ -67,7 +68,7 @@ local task={wait=function()end,spawn=function()end}
 local warn=function()end
 local script={Parent={RewardMath="Rewards"}}
 local require=function(id)
- if id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return {} end
+ if id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return {computeRunReward=function()return {stacks={},chestCount=2}end} end
  error("unexpected module "..tostring(id))
 end
 local Repository=REPO_MODULE
@@ -97,6 +98,33 @@ Repository.release(player)
 assert(Repository.load(player))
 assert(Repository.progression(player).crystals==120 and Repository.progression(player).auras.meadow)
 assert(Repository.progression(player).buffs.speed.expiresAt==expiry)
+Repository.release(player)
+-- Historical v1 balances survive additive catalog and Diamond migration.
+for _,id in {"raptor","stegosaurus","ankylosaurus"} do data['u:123'].collection[id]=nil end
+for _,entry in data['u:123'].collection do entry.diamond=nil end
+data['u:123'].collection.compy.base=150
+data['u:123'].collection.compy.gold=49
+assert(Repository.load(player))
+assert(data['u:123'].collection.compy.base==150 and data['u:123'].collection.compy.gold==49)
+for _,id in GameConfig.SpeciesOrder do assert(data['u:123'].collection[id].diamond==0) end
+local insufficient,_,reason=Repository.mutateSpecies(player,"compy","diamond","too-soon")
+assert(not insufficient and reason=="insufficient_copies")
+assert(Repository.mutateSpecies(player,"compy","gold","gold1"))
+assert(data['u:123'].collection.compy.base==100 and data['u:123'].collection.compy.gold==50)
+assert(Repository.mutateSpecies(player,"compy","gold","gold1"))
+assert(data['u:123'].collection.compy.base==100 and data['u:123'].collection.compy.gold==50)
+local conflict,_,reason=Repository.mutateSpecies(player,"compy","diamond","gold1")
+assert(not conflict and reason=="token_conflict")
+assert(Repository.mutateSpecies(player,"compy","diamond","diamond1"))
+assert(Repository.mutateSpecies(player,"compy","diamond","diamond1"))
+assert(data['u:123'].collection.compy.gold==0 and data['u:123'].collection.compy.diamond==1)
+Repository.release(player)
+assert(Repository.load(player))
+assert(data['u:123'].collection.compy.diamond==1)
+assert(Repository.equipSpecies(player,"compy"))
+assert(Repository.commitRunSettlement(player,"timer-live",10))
+assert(data['u:123'].eggs[2].readyAt-data['u:123'].eggs[1].readyAt==60)
+print("Migration/fusion passed: preserved v1 balances, six catalog entries, insufficient Gold, exact costs, duplicate/conflicting tokens, rejoin and 60s persistent eggs")
 local before=copy(data['u:123'])
 fail=true
 local failed,failedStatus=action("buyPotion","speed_common","outage",false)
@@ -110,6 +138,30 @@ data['u:123'].session.leaseId="other"
 local lost,lostStatus=action("buyPotion","speed_common","lease",false)
 assert(not lost and lostStatus=="lease_lost")
 assert(data['u:123'].progression.crystals==120)
+game.GameId=0 services.RunService.IsStudio=function()return true end
+local LocalRepository=REPO_MODULE
+local localUser={Parent=true,UserId=999,attrs={}}
+function localUser:SetAttribute(k,v)self.attrs[k]=v end
+function localUser:GetAttribute(k)return self.attrs[k]end
+local persistentCalls=transforms
+assert(LocalRepository.load(localUser))
+assert(localUser.attrs.StudioTestWallet==true and LocalRepository.progression(localUser).crystals==1000000)
+assert(LocalRepository.progressionAction(localUser,"buyPotion","speed_legendary","test-purchase",false))
+assert(LocalRepository.progression(localUser).crystals==1000000)
+assert(LocalRepository.commitRunSettlement(localUser,"timer-local",10))
+assert(localUser.attrs.ChestQueueJson[2].readyAt-localUser.attrs.ChestQueueJson[1].readyAt==10)
+assert(transforms==persistentCalls and data['u:999']==nil)
+LocalRepository.release(localUser)
+-- A published Studio place still uses persistent storage and ordinary currency/timers.
+game.GameId=1
+local PublishedRepository=REPO_MODULE
+local published={Parent=true,UserId=777,attrs={}}
+function published:SetAttribute(k,v)self.attrs[k]=v end
+function published:GetAttribute(k)return self.attrs[k]end
+assert(PublishedRepository.load(published))
+assert(published.attrs.StudioTestWallet==false and PublishedRepository.progression(published).crystals==0)
+assert(data['u:777']~=nil)
+print("Studio isolation passed: local test wallet replenishes, local 10s eggs, zero persistent calls; published Studio retains normal wallet")
 print("Profile transactions passed: repeated transforms, duplicate grants/purchases/use, token conflicts, rejoin, outage rollback and lease loss")
 '''
  s+=r"""

@@ -4,7 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PhysicsService = game:GetService("PhysicsService")
 local Dinosaur = {}
 local Visual = require(ReplicatedStorage.Shared.DinosaurVisual)
-function Dinosaur.render(character: Model, scale: number, speciesId: string?, gold: boolean?)
+function Dinosaur.render(character: Model, scale: number, speciesId: string?, gold: (boolean | string)?)
     Visual.render(character, scale, speciesId, gold)
     local collider = character:FindFirstChild("DinoCollider")
     if collider and collider:IsA("BasePart") then
@@ -20,29 +20,19 @@ if not PhysicsService:IsCollisionGroupRegistered("DinoControllers") then
 end
 PhysicsService:CollisionGroupSetCollidable("DinoControllers", "DinoControllers", false)
 
-function Dinosaur.setSpecies(character: Model, speciesId: string, isGold: boolean?)
+function Dinosaur.setSpecies(character: Model, speciesId: string, isGold: (boolean | string)?)
     local scaleValue = character:GetAttribute("VisualScale")
     local scale = if typeof(scaleValue) == "number" then scaleValue else 1
     Dinosaur.render(character, scale, speciesId, isGold)
 end
 
-local function playerSpeciesCounts(player: Player, speciesId: string): (number, number)
-    if speciesId == "compy" then
-        return player:GetAttribute("CompyCopies") or 0, player:GetAttribute("CompyGold") or 0
-    elseif speciesId == "triceratops" then
-        return player:GetAttribute("TriceratopsCopies") or 0, player:GetAttribute("TriceratopsGold") or 0
-    elseif speciesId == "tyrannosaurus" then
-        return player:GetAttribute("TyrannosaurusCopies") or 0, player:GetAttribute("TyrannosaurusGold") or 0
-    end
-    return 0, 0
-end
-
 function Dinosaur.refreshForPlayer(character: Model, player: Player)
     local equipped = player:GetAttribute("EquippedSpeciesId")
     local speciesId = if typeof(equipped) == "string" then equipped else "compy"
-    local baseCount, goldCount = playerSpeciesCounts(player, speciesId)
-    local useGold = baseCount <= 0 and goldCount > 0
-    Dinosaur.setSpecies(character, speciesId, useGold)
+    local ok, collection = pcall(function() return game:GetService("HttpService"):JSONDecode(player:GetAttribute("CollectionJson") or "{}") end)
+    local entry = if ok then collection[speciesId] else nil
+    local mutation = if entry and (entry.diamond or 0) > 0 then "diamond" elseif entry and (entry.gold or 0) > 0 then "gold" else "base"
+    Dinosaur.setSpecies(character, speciesId, mutation)
 end
 
 function Dinosaur.addGrowth(character: Model, points: number)
@@ -52,7 +42,7 @@ function Dinosaur.addGrowth(character: Model, points: number)
     character:SetAttribute("GrowthScore", score)
     local scale = scaleForScore(score)
     if character:GetAttribute("VisualScale") ~= scale then
-        local gold = character:GetAttribute("GoldVisual") == true
+        local gold = character:GetAttribute("MutationVisual") or "base"
         Dinosaur.render(character, scale, nil, gold)
     end
 end

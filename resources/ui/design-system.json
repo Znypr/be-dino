@@ -35,5 +35,6 @@
     "trophy"
   ],
   "loadingBackground": "backgrounds/prehistoric-island.png",
-  "referencePatterns": "Collection card hierarchy, dimensional popup shells, large primary actions. Original artwork; no extracted game assets."
+  "referencePatterns": "Collection card hierarchy, dimensional popup shells, large primary actions. Original artwork; no extracted game assets.",
+  "status": "Historical v1 export reference. Current runtime palette and component styling: src/shared/UITheme.luau; illustration rules: docs/32-artwork-guide-and-todo.md. Do not use this legacy palette for new screens."
 }

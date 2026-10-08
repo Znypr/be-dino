@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "status": "Proposed adjustable layout; Studio verification pending",
+  "status": "Runtime source of truth: src/shared/ArtworkLayout.luau; Studio tuning pending",
   "canvasAspect": 1,
   "ring": {
     "anchor": [
@@ -12,8 +12,8 @@
       0.62
     ],
     "size": [
-      1,
-      1
+      0.7,
+      0.7
     ],
     "splitY": 0.62
   },
@@ -27,8 +27,8 @@
       0.42
     ],
     "size": [
-      0.66,
-      0.66
+      0.62,
+      0.62
     ]
   },
   "zOrder": {

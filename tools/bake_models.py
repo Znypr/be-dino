@@ -23,7 +23,7 @@ def environment(name):
   for tri in ((1,2,3),(1,4,2),(1,3,4),(2,4,3)):m.faces.append((mat,tuple(start+j for j in tri)))
  return m.save(name)
 Mesh.ellipsoid=lambda self,c,r,color,rings=3,sides=6:ellipsoid(self,c,r,color,min(rings,3),min(sides,6))
-assets=[dinosaur(x) for x in ('compy','triceratops','tyrannosaurus')]
+assets=[dinosaur(x) for x in ('compy','triceratops','tyrannosaurus','raptor','stegosaurus','ankylosaurus')]
 Mesh.ellipsoid=lambda self,c,r,color,rings=2,sides=5:ellipsoid(self,c,r,color,min(rings,2),min(sides,5))
 assets += [environment(x) for x in ('tree','rock','fern','egg','berry','fruit','amber')]
 import json

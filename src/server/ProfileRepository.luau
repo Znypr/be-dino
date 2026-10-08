@@ -41,17 +41,29 @@ local function knownSpecies(speciesId: any): boolean
     return false
 end
 
+local function upgradeCollection(profile: any)
+    if typeof(profile) ~= "table" or profile.schemaVersion ~= Config.ProfileSchemaVersion
+        or typeof(profile.collection) ~= "table" then return end
+    for _, id in Config.SpeciesOrder do
+        local entry = profile.collection[id]
+        -- Add only new catalog fields. Existing malformed balances remain invalid.
+        if entry == nil and table.find({"raptor", "stegosaurus", "ankylosaurus"}, id) then
+            entry = {base = 0, gold = 0, diamond = 0}
+            profile.collection[id] = entry
+        end
+        if typeof(entry) == "table" and entry.diamond == nil then entry.diamond = 0 end
+    end
+end
+
 local function defaultProfile()
+    local collection = {}
+    for _, id in Config.SpeciesOrder do collection[id] = {base = if id == "compy" then 1 else 0, gold = 0, diamond = 0} end
     return {
         schemaVersion = Config.ProfileSchemaVersion,
         revision = 0,
         session = nil,
         equippedSpeciesId = "compy",
-        collection = {
-            compy = {base = 1, gold = 0},
-            triceratops = {base = 0, gold = 0},
-            tyrannosaurus = {base = 0, gold = 0},
-        },
+        collection = collection,
         pendingChestGrants = 0,
         eggs = {},
         recentOperations = {},
@@ -63,6 +75,7 @@ local function defaultProfile()
 end
 
 local function isValidProfile(profile: any): boolean
+    upgradeCollection(profile)
     if typeof(profile) ~= "table" then return false end
     if profile.schemaVersion ~= Config.ProfileSchemaVersion then return false end
     if typeof(profile.revision) ~= "number" or profile.revision < 0 then return false end
@@ -78,7 +91,9 @@ local function isValidProfile(profile: any): boolean
         local entry = profile.collection[speciesId]
         if typeof(entry) ~= "table"
             or typeof(entry.base) ~= "number" or entry.base < 0 or entry.base % 1 ~= 0
-            or typeof(entry.gold) ~= "number" or entry.gold < 0 or entry.gold % 1 ~= 0 then
+            or typeof(entry.gold) ~= "number" or entry.gold < 0 or entry.gold % 1 ~= 0
+            or typeof(entry.diamond) ~= "number" or entry.diamond < 0 or entry.diamond % 1 ~= 0
+            or entry.base > 2000000000 or entry.gold > 2000000000 or entry.diamond > 2000000000 then
             return false
         end
     end
@@ -103,6 +118,8 @@ end
 
 local function syncAttributes(player: Player, profile: any)
     local progress=ProgressionRules.upgrade(profile)
+    player:SetAttribute("StudioTestWallet", localPreview and Config.StudioTestWalletEnabled)
+    player:SetAttribute("CollectionJson", HttpService:JSONEncode(profile.collection))
     player:SetAttribute("Crystals",progress.crystals)
     player:SetAttribute("ProgressionJson",HttpService:JSONEncode(progress))
     player:SetAttribute("EquippedAura",progress.equippedAura)
@@ -175,7 +192,7 @@ local function enqueueChestIds(profile: any, chestIds: {string}, now: number)
     local nextReadyAt = lastChestReadyAt(profile, now)
     for _, chestId in chestIds do
         if #profile.eggs < Config.ChestQueueCapacity then
-            nextReadyAt += Config.ChestTimerSeconds
+            nextReadyAt += (if localPreview then Config.StudioChestTimerSeconds else Config.ChestTimerSeconds)
             table.insert(profile.eggs, {
                 eggId = chestId,
                 kind = "alpha_chest",
@@ -211,7 +228,8 @@ function ProfileRepository.load(player: Player): boolean
                 return nil
             end
 
-            ProgressionRules.upgrade(profileValue)
+            local progress = ProgressionRules.upgrade(profileValue)
+            if localPreview and Config.StudioTestWalletEnabled then progress.crystals = Config.StudioTestCrystals end
             local session = profileValue.session
             if typeof(session) == "table"
                 and session.leaseId ~= leaseId
@@ -352,7 +370,7 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string): (boo
     if not knownSpecies(speciesId) then return false, "unknown_species" end
 
     local cachedEntry = cached.collection[speciesId]
-    if typeof(cachedEntry) ~= "table" or cachedEntry.base + cachedEntry.gold <= 0 then
+    if typeof(cachedEntry) ~= "table" or cachedEntry.base + cachedEntry.gold + cachedEntry.diamond <= 0 then
         return false, "locked"
     end
     if cached.equippedSpeciesId == speciesId then
@@ -371,7 +389,7 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string): (boo
                 return nil
             end
             local entry = profileValue.collection[speciesId]
-            if typeof(entry) ~= "table" or entry.base + entry.gold <= 0 then
+            if typeof(entry) ~= "table" or entry.base + entry.gold + entry.diamond <= 0 then
                 locked = true
                 return nil
             end
@@ -586,7 +604,7 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
 
             if profileValue.pendingChestGrants > 0 then
                 profileValue.pendingChestGrants -= 1
-                local readyAt = lastChestReadyAt(profileValue, now) + Config.ChestTimerSeconds
+                local readyAt = lastChestReadyAt(profileValue, now) + (if localPreview then Config.StudioChestTimerSeconds else Config.ChestTimerSeconds)
                 table.insert(profileValue.eggs, {
                     eggId = refillChestId,
                     kind = "alpha_chest",
@@ -620,10 +638,10 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
     if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
     syncAttributes(player, profiles[player])
     local committedOutcome = duplicateOutcome or outcome
-    player:SetAttribute("LastClaimedChestId", chestId)
     player:SetAttribute("LastChestRewardText", string.format(
         "%dx %s", committedOutcome.count, committedOutcome.speciesId
     ))
+    player:SetAttribute("LastClaimedChestId", chestId)
     return true, committedOutcome, if duplicateOutcome then "duplicate" else "claimed"
 end
 
@@ -633,7 +651,9 @@ function ProfileRepository.mutateSpecies(player: Player, speciesId: string, targ
         return false, nil, "profile_not_loaded"
     end
     if not knownSpecies(speciesId) then return false, nil, "unknown_species" end
-    if targetMutation ~= "gold" then return false, nil, "unknown_mutation" end
+    if targetMutation ~= "gold" and targetMutation ~= "diamond" then return false, nil, "unknown_mutation" end
+    local source = if targetMutation == "diamond" then "gold" else "base"
+    local cost = if targetMutation == "diamond" then Config.DiamondMutationCost else Config.GoldMutationCost
     if typeof(requestToken) ~= "string" or #requestToken < 1 or #requestToken > 80 then
         return false, nil, "invalid_token"
     end
@@ -641,26 +661,30 @@ function ProfileRepository.mutateSpecies(player: Player, speciesId: string, targ
     local operationId = "mutation:" .. requestToken
     local cachedOperation = findOperation(cached, operationId)
     if cachedOperation then
+        if cachedOperation.outcome.speciesId ~= speciesId or cachedOperation.outcome.mutationId ~= targetMutation then return false, nil, "token_conflict" end
         return true, cachedOperation.outcome, "duplicate"
     end
 
     local cachedEntry = cached.collection[speciesId]
-    if typeof(cachedEntry) ~= "table" or cachedEntry.base < Config.GoldMutationCost then
+    if typeof(cachedEntry) ~= "table" or cachedEntry[source] < cost then
         return false, nil, "insufficient_copies"
     end
 
     local outcome = {
         speciesId = speciesId,
-        mutationId = "gold",
-        spentBase = Config.GoldMutationCost,
-        gainedGold = 1,
+        mutationId = targetMutation,
+        spentBase = if source == "base" then cost else 0,
+        gainedGold = if targetMutation == "gold" then 1 else 0,
+        spentGold = if source == "gold" then cost else 0,
+        gainedDiamond = if targetMutation == "diamond" then 1 else 0,
     }
     local duplicateOutcome = nil
     local leaseLost = false
     local insufficient = false
+    local tokenConflict = false
     local now = os.time()
 
-    local ok, updated = retry("gold mutation", function()
+    local ok, updated = retry("mutation", function()
         return store:UpdateAsync(keyFor(player), function(profileValue)
             if not isValidProfile(profileValue) then return nil end
             if not ownSession(profileValue) then
@@ -670,18 +694,19 @@ function ProfileRepository.mutateSpecies(player: Player, speciesId: string, targ
 
             local existing = findOperation(profileValue, operationId)
             if existing then
+                if existing.outcome.speciesId ~= speciesId or existing.outcome.mutationId ~= targetMutation then tokenConflict = true return nil end
                 duplicateOutcome = existing.outcome
                 return profileValue
             end
 
             local entry = profileValue.collection[speciesId]
-            if typeof(entry) ~= "table" or entry.base < Config.GoldMutationCost then
+            if typeof(entry) ~= "table" or entry[source] < cost then
                 insufficient = true
                 return nil
             end
 
-            entry.base -= Config.GoldMutationCost
-            entry.gold += 1
+            entry[source] -= cost
+            entry[targetMutation] += 1
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             table.insert(profileValue.recentOperations, {
@@ -699,6 +724,7 @@ function ProfileRepository.mutateSpecies(player: Player, speciesId: string, targ
             player:SetAttribute("ProfileState", "LeaseLost")
             return false, nil, "lease_lost"
         end
+        if tokenConflict then return false, nil, "token_conflict" end
         if insufficient then return false, nil, "insufficient_copies" end
         player:SetAttribute("ProfileState", "SaveFailed")
         return false, nil, "save_failed"
@@ -776,7 +802,10 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
                 if existing.outcome.action~=action or existing.outcome.item~=id then denied="token_conflict" return nil end
                 outcome=existing.outcome duplicate=true return profile
             end
+            local progress = ProgressionRules.upgrade(profile)
+            if localPreview and Config.StudioTestWalletEnabled then progress.crystals = Config.StudioTestCrystals end
             local applied,status=ProgressionRules.apply(profile,action,id,now,replace,amount)
+            if localPreview and Config.StudioTestWalletEnabled then progress.crystals = Config.StudioTestCrystals end
             if not applied then denied=status return nil end
             outcome={action=action,item=id,status=status}
             profile.revision+=1

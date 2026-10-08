@@ -11,7 +11,11 @@ local GOLD_PALETTE = {
     accent = Color3.fromRGB(255, 244, 183),
 }
 
+local DIAMOND_PALETTE = {primary=Color3.fromRGB(85,213,245),light=Color3.fromRGB(211,249,255),dark=Color3.fromRGB(36,115,171),accent=Color3.fromRGB(242,255,255)}
 local PALETTES = {
+    raptor = {primary=Color3.fromRGB(186,104,153),light=Color3.fromRGB(239,192,212),dark=Color3.fromRGB(106,54,97),accent=Color3.fromRGB(247,210,137)},
+    stegosaurus = {primary=Color3.fromRGB(131,167,74),light=Color3.fromRGB(208,227,151),dark=Color3.fromRGB(72,107,56),accent=Color3.fromRGB(239,169,89)},
+    ankylosaurus = {primary=Color3.fromRGB(148,115,78),light=Color3.fromRGB(221,194,142),dark=Color3.fromRGB(88,69,56),accent=Color3.fromRGB(238,218,173)},
     compy = {
         primary = Color3.fromRGB(91, 174, 114),
         light = Color3.fromRGB(191, 225, 147),
@@ -43,17 +47,18 @@ local function normalizedSpecies(speciesId: any): string
     return "compy"
 end
 
-function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: string?, isGold: boolean?)
+function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: string?, isGold: (boolean | string)?)
     local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if not root or not humanoid then return end
 
     local speciesId = normalizedSpecies(requestedSpeciesId or character:GetAttribute("SpeciesId"))
-    local gold = isGold == true
-    local palette = if gold then GOLD_PALETTE else PALETTES[speciesId]
+    local mutation = if isGold == "diamond" then "diamond" elseif isGold == true or isGold == "gold" then "gold" else "base"
+    local gold = mutation == "gold"
+    local palette = if mutation == "diamond" then DIAMOND_PALETTE elseif gold then GOLD_PALETTE else PALETTES[speciesId]
 
     local existing = character:FindFirstChild("DinoVisual")
-    if existing and existing:GetAttribute("ResourceSpecies") == speciesId and existing:GetAttribute("ResourceGold") == gold then
+    if existing and existing:GetAttribute("ResourceSpecies") == speciesId and existing:GetAttribute("ResourceMutation") == mutation then
         local previousScale = character:GetAttribute("VisualScale") or 1
         local ratio = scale / previousScale
         local floorOffset = root.Size.Y / 2 + humanoid.HipHeight
@@ -93,13 +98,14 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
         visual.Name = "DinoVisual"
         visual:SetAttribute("ResourceSpecies",speciesId)
         visual:SetAttribute("ResourceGold",gold)
+        visual:SetAttribute("ResourceMutation",mutation)
         visual:ScaleTo(scale)
         visual:PivotTo(root.CFrame * CFrame.new(0, -groundHeight, 0))
         visual.Parent = character
         for _, item in visual:GetDescendants() do
             if item:IsA("BasePart") then
                 item.Anchored = false
-                if gold then item.Color = GOLD_PALETTE.primary item.Material = Enum.Material.Metal end
+                if mutation ~= "base" then item.Color = palette.primary item.Material = if gold then Enum.Material.Metal else Enum.Material.Glass item.Reflectance = if gold then .08 else .2 end
                 local weld = Instance.new("Weld")
                 weld.Name = "ResourceWeld"
                 weld.C0 = root.CFrame:ToObjectSpace(item.CFrame)
@@ -110,6 +116,7 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
         end
         character:SetAttribute("SpeciesId", speciesId)
         character:SetAttribute("GoldVisual", gold)
+        character:SetAttribute("MutationVisual", mutation)
         character:SetAttribute("VisualScale", scale)
         character:SetAttribute("VisualSource", "Packaged resource model")
         return
@@ -130,7 +137,7 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
         part.Shape = shape or Enum.PartType.Ball
         part.Size = size * scale
         part.Color = color
-        part.Material = if gold then Enum.Material.Metal else Enum.Material.SmoothPlastic
+        part.Material = if mutation == "diamond" then Enum.Material.Glass elseif gold then Enum.Material.Metal else Enum.Material.SmoothPlastic
         part.CanCollide = false
         part.CanTouch = false
         part.CanQuery = false
@@ -226,6 +233,7 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
 
     character:SetAttribute("SpeciesId", speciesId)
     character:SetAttribute("GoldVisual", gold)
+        character:SetAttribute("MutationVisual", mutation)
     character:SetAttribute("VisualScale", scale)
 end
 

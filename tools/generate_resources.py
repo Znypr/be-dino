@@ -60,8 +60,11 @@ class Mesh:
         return {'logicalId':name,'source':f'models/{name}.obj','triangles':len(self.faces),'bounds':[[min(v[i] for v in self.v) for i in range(3)],[max(v[i] for v in self.v) for i in range(3)]],'robloxAssetId':None,'status':'source-ready; Studio import required'}
 
 def dinosaur(species):
-    m=Mesh();quad=species=='triceratops';rex=species=='tyrannosaurus'
+    m=Mesh();quad=species in ('triceratops','stegosaurus','ankylosaurus');rex=species=='tyrannosaurus'
     main,light,dark=('#4EA68F','#B2DFC2','#286D69') if species=='compy' else (('#568FC0','#B3D5E5','#375E88') if quad else ('#D17C50','#F2C68D','#814B41'))
+    if species=='raptor':main,light,dark='#BA6899','#EFC0D4','#6A3661'
+    elif species=='stegosaurus':main,light,dark='#83A74A','#D0E397','#486B38'
+    elif species=='ankylosaurus':main,light,dark='#94734E','#DDC28E','#584538'
     m.ellipsoid((0,2.4,0.3),(1.6 if quad else 1.2,1.05,1.9 if quad else 1.5),main)
     m.ellipsoid((0,2.05,-.2),(.95,.65,1.25),light)
     m.tube([(0,2.5,-.9),(0,3.15,-1.5),(0,3.55,-1.9)],[.8,.72,.65],main)
@@ -81,14 +84,35 @@ def dinosaur(species):
         m.ellipsoid((s*.97,3.92,-2.62),(.06,.16,.14),'#142E35',4,8)
         m.ellipsoid((s*.98,3.99,-2.68),(.025,.05,.04),'#FFFFFF',3,6)
         m.ellipsoid((s*.39,3.63,-3.46),(.07,.065,.035),dark,3,6)
-        if quad:m.tube([(s*.55,4.1,-2.2),(s*.62,4.6,-3),(s*.6,4.75,-3.5)],[.22,.14,.015],'#F0E3BF')
-    if quad:
+        if species=='triceratops':m.tube([(s*.55,4.1,-2.2),(s*.62,4.6,-3),(s*.6,4.75,-3.5)],[.22,.14,.015],'#F0E3BF')
+    if species=='triceratops':
         m.ellipsoid((0,3.9,-1.25),(1.55,1.35,.28),dark)
         for i in range(7):
             a=math.pi*i/6;m.ellipsoid((1.45*math.cos(a),3.9+1.25*math.sin(a),-1.32),(.22,.24,.2),'#F0E3BF',4,8)
         m.tube([(0,3.6,-3.1),(0,4.05,-3.5)],[.18,.01],'#F0E3BF')
     else:
         for i in range(5):m.ellipsoid((0,3.34-i*.13,.3+i*.48),(.15,.25,.23),dark,4,8)
+    if species=='stegosaurus':
+        # Tall, alternating plates and four tail spikes.
+        for i in range(7):
+            z=-.7+i*.5
+            m.tube([((-.22 if i%2 else .22),3.1,z),((-.3 if i%2 else .3),4.7-abs(i-3)*.22,z)],[.48,.015],'#EFA959',4)
+        for side in (-1,1):
+            for z in (3.4,4.1):m.tube([(side*.18,2.6,z),(side*.85,3.2,z+.4)],[.16,.01],'#F0E3BF',4)
+    elif species=='ankylosaurus':
+        # Armored dome, side spikes and a club at the tail tip.
+        m.ellipsoid((0,3,.4),(1.75,.85,1.9),dark)
+        for x in (-.8,0,.8):
+            for z in (-.6,.3,1.2):m.ellipsoid((x,3.7,z),(.42,.3,.45),light,3,6)
+        for side in (-1,1):
+            for z in (-.5,.4,1.3):m.tube([(side*1.4,2.9,z),(side*2.15,3.2,z)],[.22,.01],light,4)
+        m.ellipsoid((0,3,4.85),(.85,.6,.75),dark)
+    elif species=='raptor':
+        # Narrow runner proportions, feathered arms and raised sickle claws.
+        for side in (-1,1):
+            for i in range(3):m.tube([(side*1.25,2.2,-1),(side*(1.75+i*.12),2.3,-.7+i*.35)],[.15,.01],dark,4)
+            m.tube([(side*.85,.4,-.4),(side*.85,.75,-.8),(side*.85,.65,-1.05)],[.15,.1,.01],'#F0E3BF',4)
+        m.v=[(x*.8,y*.9,z*1.08) for x,y,z in m.v]
     return m.save(species)
 
 def environment(name):
@@ -124,7 +148,7 @@ def environment(name):
 
 def generate():
     OUT.mkdir(exist_ok=True)
-    assets=[dinosaur(x) for x in ('compy','triceratops','tyrannosaurus')]+[environment(x) for x in ('tree','rock','fern','egg','berry','fruit','amber')]
+    assets=[dinosaur(x) for x in ('compy','triceratops','tyrannosaurus','raptor','stegosaurus','ankylosaurus')]+[environment(x) for x in ('tree','rock','fern','egg','berry','fruit','amber')]
     icons={
         'dinos':'<path d="M30 78V53Q30 36 49 36H66L72 22L83 28L79 50L95 58V76H74L66 66H55V94H39V78Z" fill="#77cba6"/><circle cx="74" cy="42" r="3" fill="#173c42"/>',
         'egg':'<path d="M64 18C43 18 26 56 26 78C26 107 102 107 102 78C102 56 85 18 64 18Z" fill="#ffe9b9"/><path d="M28 76L47 63L61 77L80 61L101 74" fill="none" stroke="#74bfa5" stroke-width="10"/>',
@@ -142,6 +166,9 @@ def generate():
             cairosvg.svg2png(bytestring=svg.encode(),write_to=str(iconfolder/(name+'.png')))
         except ImportError:pass
         assets.append({'logicalId':'icon_'+name,'source':'ui/icons/'+name+'.svg','robloxAssetId':None,'status':'original vector; image upload required'})
+    existing=json.loads((OUT/'manifest.json').read_text()) if (OUT/'manifest.json').exists() else {'assets':[]}
+    generated_ids={a['logicalId'] for a in assets}
+    assets += [a for a in existing['assets'] if a['logicalId'] not in generated_ids]
     manifest={'version':1,'creator':'Be Dino / Znypr','rights':'Original project-generated geometry and vector artwork; no third-party source assets.','generator':'tools/generate_resources.py','units':'Roblox studs; Y up; front -Z; origin on ground','assets':assets}
     (OUT/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     print(f'Generated {len(assets)} resource assets')

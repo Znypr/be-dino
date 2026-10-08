@@ -5,6 +5,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
+local FoodCatchRules = require(ReplicatedStorage.Shared.FoodCatchRules)
 local FoodService = {}
 local TYPES = {
     {id = "berry", weight = 78, points = 1, size = 0.7, color = Color3.fromRGB(224, 99, 118)},
@@ -199,7 +200,13 @@ function FoodService.start(dinosaur)
                 end
             end
             for _, candidate in candidates do
-                if candidate.gained > 0 then dinosaur.addGrowth(candidate.character, candidate.gained) end
+                if candidate.gained > 0 then
+                    local c = candidate.character
+                    local whole, carry = FoodCatchRules.award(candidate.gained, c:GetAttribute("FoodCatchCarry") or 0, c:GetAttribute("WeatherLootMultiplier") or 1)
+                    c:SetAttribute("FoodCatchCarry", carry)
+                    c:SetAttribute("CatchScore", math.min(Config.MaxCatchScore, (c:GetAttribute("CatchScore") or 0) + whole))
+                    dinosaur.addGrowth(c, candidate.gained)
+                end
             end
         end
     end)

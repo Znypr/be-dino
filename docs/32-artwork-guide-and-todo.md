@@ -62,7 +62,7 @@ Distinct Index/inventory symbols are optional UX improvements, not prerequisites
 | 4 | potion_speed_v1 | Cyan bottle base; existing speed/bolt emblem is a separate overlay. Shared master across speed tiers. | Generated draft: resources/ui/v2/layers/potion-speed-base-v1.png |
 | 5 | potion_growth_v1 | Matching green bottle base; existing leaf/growth emblem is a separate overlay. Shared master across growth tiers. | Generated draft: resources/ui/v2/layers/potion-growth-base-v1.png |
 | 6 | mutation_gold_v1 | Compact golden dinosaur-footprint badge with thick outline; collection, detail and hatch mutation labels. | Generated draft: resources/ui/v2/layers/mutation-gold-v1.png |
-| 7 | mutation_diamond_v1 | Matching footprint made of pale cyan faceted diamond, crisp edges and restrained sparkles; future Diamond mutation. | Generated draft: resources/ui/v2/layers/mutation-diamond-v1.png; mechanic not verified |
+| 7 | mutation_diamond_v1 | Matching footprint made of pale cyan faceted diamond, crisp edges and restrained sparkles; Diamond mutation. | Generated draft: resources/ui/v2/layers/mutation-diamond-v1.png; mechanic implemented/offline tested; Studio acceptance pending |
 | 8 | catches_v1 | Neutral ivory footprint source; repeat in UI for a grouped catches mark, with live Catches label. | Generated draft: resources/ui/v2/layers/catches-mark-v1.png |
 | 9 | inventory_v1 | Prehistoric leaf-and-leather satchel for owned consumables/items. | Optional after item art |
 | 10 | index_v1 | Fossil field guide/book with dinosaur emblem, distinct from Dino selection. | Optional if navigation separation is needed |
@@ -71,7 +71,7 @@ Deferred until actual products exist: luck boost art, Robux bundle contents and 
 Separate export task: render new dino/egg/model and mutation previews when their actual models are ready.
 
 ## Production, adjustment and tracking
-Generate one asset at a time. Core aura, potion, mutation and catches artwork drafts are generated. Next is owner upload/binding, component assembly and Studio visual verification. Inventory/Index remain optional; no speculative art generation is required. The first draft establishes item-art style; reuse its proportions, camera, outline and lighting for subsequent assets.
+Generate one asset at a time. Core aura, potion, mutation and catches artwork drafts are generated. Build 019 implements runtime binding generation and component assembly. Next is actual owner upload and Studio visual verification; see docs/34-studio-handoff.md. Inventory/Index remain optional; no speculative art generation is required. The first draft establishes item-art style; reuse its proportions, camera, outline and lighting for subsequent assets.
 Save composed item art under resources/ui/v2/items/ and reusable layer masters under resources/ui/v2/layers/, with versioned names. Preserve existing art. Record each exact prompt in a sibling JSON manifest.
 Generated bitmap artwork can be revised through image editing; it is not a layered/vector source. Theme changes control UI frames/text separately and cannot recolor arbitrary bitmap details safely.
 Store sources in GitHub; upload accepted runtime PNGs under the Roblox experience owner and record real IDs in the shared asset/theme binding. Never fabricate IDs.

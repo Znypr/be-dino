@@ -1,6 +1,7 @@
 --!strict
 local TweenService = game:GetService("TweenService")
 local Vectors = require(script.Parent.IconVectors)
+local Artwork = require(script.Parent.Artwork)
 local Theme = {}
 Theme.BackgroundImageId = ""
 Theme.MotionEnabled = true
@@ -44,7 +45,7 @@ function Theme.texture(parent: GuiObject, width: number, height: number)
     end end
 end
 -- Original scalable graphics render sharply at any card size; uploaded original PNGs override them.
-function Theme.icon(parent: GuiObject,id: string): Frame?
+local function nativeIcon(parent: GuiObject,id: string): Frame?
     local uploaded = Theme.ImageIds[id]
     if uploaded and uploaded ~= "" then
         local root = Instance.new("Frame")
@@ -88,5 +89,8 @@ function Theme.icon(parent: GuiObject,id: string): Frame?
         end
     end
     return root
+end
+function Theme.icon(parent: GuiObject,id: string): Frame?
+    return Artwork.build(parent,id,nativeIcon) or nativeIcon(parent,id)
 end
 return Theme
