@@ -138,6 +138,8 @@ crystal shops/genetics; do not replace whole client files with older copies.
   evidence is required: MCP screen_capture omitted ViewportFrame content.
   See [mesh verification](40-mesh-access-verification.md).
 - [ ] Published non-owner mesh permissions and physical-phone frame-time/memory remain open.
+  Real Znyprr join attempt: published place returns Content not accessible;
+  owner dashboard has no collaborators. Private Play access required before mesh testing.
   Owner accepts current hatching effects for now; no further hatch polish requested.
   Integration note: shop/genetics commit `2d3b637` changes mesh preload to typed
   MeshPart instances and proves colored imported hatch models in VisualUpgrade.

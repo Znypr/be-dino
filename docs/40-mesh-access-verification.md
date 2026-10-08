@@ -24,3 +24,17 @@ The temporary audit script and UI were removed after verification. Owner Studio
 access is verified; published non-owner asset permission remains a separate check
 in the actual experience. This pass does not certify the newer genetics texture
 bindings in the older Latest file or physical-phone performance.
+
+## Real alt-account join attempt
+
+Switched the existing saved Roblox browser session to Znyprr (user 5094736795)
+and opened published place 111259822927673. Roblox returned "Content not
+accessible" / "This experience is currently not available", with no Play
+control. Owner Creator Dashboard for experience 10769812255 shows no
+collaborators. Restored the browser to owner znyprs after the attempt.
+
+Result: alt join blocked at experience access, before client or mesh loading.
+Non-owner meshes are therefore still unverified. Grant Znyprr Play access to
+the private experience using Studio collaboration, then repeat the real join.
+No public-access change, collaborator grant, publishing or profile mutation
+was performed by this test.
