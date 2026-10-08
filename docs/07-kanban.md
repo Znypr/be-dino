@@ -77,14 +77,14 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 | BD-042 | Review / test | P1 | Five-second ordered hatches, Shiny/BIG and map leaderboards | BD-013, BD-034 |
 | BD-043 | In progress | P1 | UI animation, feedback, loading and preview performance | BD-015, BD-042 |
 | BD-044 | Backlog | P0 | Replace direct-copy rewards with caught-run-egg hatching, crystal payout and separate five-slot egg nests | BD-011, BD-013, BD-036, BD-042 |
-| BD-045 | Backlog | P0 | Rebalance condition odds to new owner starting distribution and update condition-upgrade/disclosure flow | BD-040, BD-044 |
+| BD-045 | Backlog | P0 | Rebalance condition odds to new owner starting distribution and update condition-upgrade/disclosure flow | BD-040 |
 | BD-046 | Backlog | P1 | Rename Auras nav entry to Shop with crystal icon; crystal HUD opens same Shop | BD-029, BD-036, BD-043 |
-| BD-047 | Backlog | P1 | Illustrated Crystal Shop category tiles, green-spotted egg icon, larger aura previews and leading tab icons | BD-046, BD-035 |
+| BD-047 | Backlog | P1 | Illustrated Crystal Shop category tiles, green-spotted egg icon, larger aura previews and leading tab icons | BD-046 |
 | BD-048 | Backlog | P1 | Trail icon art, Blender world VFX and six rarity categories across ten trails | BD-038, BD-034 |
-| BD-049 | Backlog | P1 | Blender trees, vegetation, rock variants, map landmarks and optimized biome placement | BD-016, BD-053 |
-| BD-050 | Backlog | P1 | Blender pickup/food model variants with intact food rewards and server validation | BD-008, BD-049 |
+| BD-049 | Backlog | P1 | Blender trees, vegetation, rock variants, map landmarks and optimized biome placement | BD-016 |
+| BD-050 | Backlog | P1 | Blender pickup/food model variants with intact food rewards and server validation | BD-008 |
 | BD-051 | Backlog | P1 | Rotating five-minute Potion Shop offers, rarity-weighted selection and 1–3 limited stock | BD-032, BD-039 |
-| BD-052 | Backlog | P1 | Single bottom-center Home with confirmation and no three-second exit channel | BD-009, BD-044 |
+| BD-052 | Backlog | P1 | Single bottom-center Home with confirmation and no three-second exit channel | BD-009 |
 | BD-053 | Backlog | P0 | Fix sliding and hill-climb movement on mountainous terrain | BD-006, BD-008 |
 | BD-054 | Backlog | P0 | Responsive phone/tablet touch-zone navigation/control placement and safe insets | BD-052, BD-046 |
 | BD-055 | Backlog | P1 | Complete sky, atmosphere, cloud, particle and audio effects for all weather events | BD-031, BD-034 |
@@ -100,7 +100,7 @@ The newer owner's reward intent supersedes the 2026-09-17 test economy's `N(c)=c
 - [ ] 500 **food** points -> example 15 catches -> **15 banked eggs** (NOT 15 guaranteed Compy copies + 1/2 threshold eggs). 5,000 **food** points -> example 150 catches -> **150 run eggs**; distinguish from historical 5,000 catch-score cap and test 0/negative/overflow values.
 - [ ] Run return/death/disconnect settle each egg exactly once, with immutable random species/rarity/condition/genetic/trait outcomes, saved batches, correct event provenance, Cracked failure and legacy data migration. No direct-copy double credit or preserved duplicate exploit.
 - [ ] Hatch every run egg individually in increasing species rarity, at ~5 seconds/egg in initial prototype. 15-egg and 150-egg cases: clear progress, close/skip/resume, mobile responsiveness, cancellation and performance. Define 150-egg pacing alternative with owner before launch.
-- [ ] 15-egg illustrative species rarity result can include 11 Common/4 Uncommon; 150-egg illustrative result can include 80 Common/50 Uncommon/17 Rare/3 Epic. These **are not mandatory quotas or fixed odds**; eligibility/distribution must be configurable and fair.
+- [ ] **Rarity taxonomy migration:** current species tiers are only Common/Rare/Legendary; owner examples need Uncommon/Epic as distinct species rarity categories. Design tier mapping, eligible catalog species, data/UI color names, saved rarity ordering, rewards, leaderboards and tests before promising the examples. The sample 15-egg result can be 11 Common/4 Uncommon; the 150-egg result can be 80 Common/50 Uncommon/17 Rare/3 Epic. These **are not mandatory quotas or fixed odds**; eligibility/distribution must be configurable and fair.
 - [ ] Grant crystals independently from catches and map pickups; prototype example **30** run crystals at 500 food is assistant illustrative ONLY, **220** at 5,000 food is the owner's illustrative example. Define/approve actual earning and crystal-box rules separately.
 - [ ] Model **bonus nests** as separate rewards from individual caught eggs, with **five nest inventory/claim spots**, not the existing ordinary egg queue capacity. Example: 1 nest from 500 food; 6 nests offered from 5,000 food, only 5 claimable if all five slots are free. Explicitly resolve where the sixth offered nest goes (pending/blocked/expiry) and prevent silent reward loss; define nest timing/content.
 - [ ] Retune and test quantity (currently 1/2/3 copies per egg), species odds, egg outcomes/disclosure, fusion pacing, 150+ egg batch payloads and reward caps. Old `tools/economy_sim.py`, `tests/test_economy.py`, Config thresholds and Studio fixtures remain **historical tests** until deliberately replaced.
