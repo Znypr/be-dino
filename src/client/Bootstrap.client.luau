@@ -40,9 +40,18 @@ local lastGrowth = 0
 local lastEggCount = 0
 local function num(id: string): number return player:GetAttribute(id) or 0 end
 local function str(id: string,fallback: string?): string return player:GetAttribute(id) or fallback or "" end
+local jsonCache = {}
+local function decoded(attribute: string, fallback: string)
+    local raw=str(attribute,fallback)
+    local cached=jsonCache[attribute]
+    if cached and cached.raw==raw then return cached.data end
+    local ok,data=pcall(function() return Http:JSONDecode(raw) end)
+    local result=if ok and typeof(data)=="table" then data else {}
+    jsonCache[attribute]={raw=raw,data=result}
+    return result
+end
 local function copies(id: string): (number,number,number)
-    local ok, data = pcall(function() return Http:JSONDecode(str("CollectionJson","{}")) end)
-    local entry = if ok and typeof(data)=="table" then data[id] else nil
+    local entry = decoded("CollectionJson","{}")[id]
     return if entry then entry.base or 0 else 0, if entry then entry.gold or 0 else 0, if entry then entry.diamond or 0 else 0
 end
 local function bestMutation(id: string): string
@@ -50,16 +59,14 @@ local function bestMutation(id: string): string
     return if diamond>0 then "diamond" elseif gold>0 then "gold" else "base"
 end
 local function eventMutation(id: string)
-    local ok,data=pcall(function() return Http:JSONDecode(str("CollectionJson","{}")) end)
-    return if ok and typeof(data)=="table" then ProgressionRules.eventMutation(data[id]) else nil
+    return ProgressionRules.eventMutation(decoded("CollectionJson","{}")[id])
 end
 local fusionTarget = "gold"
 local hatchPending = false
 local autoHatching = false
 local hatchCancelSerial = 0
 local function ownedTraits(id: string)
-    local ok,data=pcall(function() return Http:JSONDecode(str("CollectionJson","{}")) end)
-    return if ok and typeof(data)=="table" then EggTraits.selected(data[id]) else nil
+    return EggTraits.selected(decoded("CollectionJson","{}")[id])
 end
 local function label(parent: Instance,text: string,x: number,y: number,w: number,h: number,size: number,color: Color3?): TextLabel
     local t = Instance.new("TextLabel")
@@ -106,15 +113,19 @@ heading.TextXAlignment = Enum.TextXAlignment.Left
 local body = Instance.new("Frame")
 body.Position,body.Size,body.BackgroundTransparency,body.ZIndex,body.Parent = UDim2.fromOffset(18,98),UDim2.fromOffset(824,402),1,23,panel
 local modalVersion=0
+local updateNavigation=function() end
 local function close()
     autoHatching=false
     hatchCancelSerial+=1
     modalVersion+=1
     local version=modalVersion
     active=""
-    TweenService:Create(scale,TweenInfo.new(if motion then .13 else 0),{Scale=scale.Scale*.92}):Play()
+    updateNavigation()
+    Theme.animate(scale,.12,{Scale=scale.Scale*.96})
+    Theme.animate(shade,.12,{BackgroundTransparency=1})
+    Theme.animate(panel,.12,{Position=UDim2.fromScale(.5,.52)})
     task.delay(if motion then .13 else 0,function() if modalVersion==version then shade.Visible=false end end)
-    TweenService:Create(blur,TweenInfo.new(if motion then .15 else 0),{Size=0}):Play()
+    Theme.animate(blur,.12,{Size=0})
 end
 local closeButton=button(header,"X",770,1,80,76,C.red,close)
 closeButton.AnchorPoint,closeButton.Position=Vector2.new(1,0),UDim2.new(1,-2,0,1)
@@ -128,7 +139,16 @@ local function notify(text: string,color: Color3?)
     toastSerial+=1
     local serial=toastSerial
     toast.BackgroundColor3,toastText.Text,toast.Visible = color or C.card,text,true
-    task.delay(3,function() if serial==toastSerial then toast.Visible=false end end)
+    if not toast:GetAttribute("Showing") then toast.Position=UDim2.new(.5,0,0,68) end
+    toast:SetAttribute("Showing",true)
+    Theme.animate(toast,.14,{Position=UDim2.new(.5,0,0,80)})
+    task.delay(3,function()
+        if serial~=toastSerial then return end
+        Theme.animate(toast,.12,{Position=UDim2.new(.5,0,0,68)})
+        task.delay(if motion then .12 else 0,function()
+            if serial==toastSerial then toast.Visible=false toast:SetAttribute("Showing",false) end
+        end)
+    end)
 end
 local function viewportScale(): number
     local camera=workspace.CurrentCamera
@@ -147,14 +167,25 @@ local function celebrate()
 end
 local render
 local function open(name: string)
+    local wasVisible=shade.Visible and active~=""
     modalVersion+=1
     active=name
+    updateNavigation()
     body:ClearAllChildren()
     shade.Visible=true
-    scale.Scale=viewportScale()*(if motion then .86 else 1)
-    TweenService:Create(scale,TweenInfo.new(if motion then .24 else 0,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Scale=viewportScale()}):Play()
-    TweenService:Create(blur,TweenInfo.new(if motion then .18 else 0),{Size=12}):Play()
+    if not wasVisible then
+        scale.Scale=viewportScale()*(if motion then .96 else 1)
+        shade.BackgroundTransparency=1
+        panel.Position=UDim2.fromScale(.5,.52)
+    end
+    Theme.animate(scale,.16,{Scale=viewportScale()})
+    Theme.animate(panel,.16,{Position=UDim2.fromScale(.5,.5)})
+    Theme.animate(shade,.14,{BackgroundTransparency=.42})
+    Theme.animate(blur,.16,{Size=if motion then 8 else 0})
     render(name)
+    -- Animate the content as one layer, keeping large collections inexpensive.
+    body.Position=UDim2.fromOffset(18,if motion then 106 else 98)
+    Theme.animate(body,.14,{Position=UDim2.fromOffset(18,98)})
 end
 local function hero(parent: GuiObject,id: string,x: number,y: number,w: number,h: number,gold: (boolean | string)?)
     local view=Preview.add(parent,id,gold or "base")
@@ -168,12 +199,13 @@ local function speciesIndex(id: string): number return Config.SpeciesRarities[id
 local function meter(parent: GuiObject,x: number,y: number,w: number,value: number,maxValue: number,color: Color3,text: string)
     local b=box(parent,x,y,w,34,C.outline,parent.ZIndex+1)
     local fill=Instance.new("Frame")
-    fill.Size,fill.BorderSizePixel,fill.BackgroundColor3,fill.ZIndex,fill.Parent=UDim2.new(math.clamp(value/maxValue,0,1),0,1,0),0,color,b.ZIndex+1,b
+    local fraction=if maxValue>0 then math.clamp(value/maxValue,0,1) else 0
+    fill.Size,fill.BorderSizePixel,fill.BackgroundColor3,fill.ZIndex,fill.Parent=UDim2.new(if motion then 0 else fraction,0,1,0),0,color,b.ZIndex+1,b
+    Theme.animate(fill,.22,{Size=UDim2.new(fraction,0,1,0)})
     label(b,text,0,0,w,34,20)
 end
 local function queue()
-    local ok,data=pcall(function() return Http:JSONDecode(str("ChestQueueJson","[]")) end)
-    return if ok and typeof(data)=="table" then data else {}
+    return decoded("ChestQueueJson","[]")
 end
 local function hatchNext()
     local id=str("NextChestId")
@@ -190,8 +222,8 @@ local function hatchNext()
     end)
 end
 local function progression()
-    local ok,data=pcall(function() return Http:JSONDecode(str("ProgressionJson","{}")) end)
-    if not ok or typeof(data)~="table" or typeof(data.auras)~="table" or typeof(data.potions)~="table" or typeof(data.buffs)~="table" then return {crystals=0,auras={},equippedAura="",potions={},buffs={}} end
+    local data=decoded("ProgressionJson","{}")
+    if typeof(data.auras)~="table" or typeof(data.potions)~="table" or typeof(data.buffs)~="table" then return {crystals=0,auras={},equippedAura="",potions={},buffs={}} end
     return data
 end
 local chosenAura="meadow"
@@ -455,8 +487,18 @@ render=function(name: string)
             end
             if modalVersion~=version or not view.Parent then return end
             eggView:Destroy() crack:Destroy()
-            view.Visible=true rewardLabel.Text=reward heading.Text="You hatched a dinosaur!"
-            celebrate()
+            view.Visible=true
+            rewardLabel.Text=reward
+            heading.Text="You hatched a dinosaur!"
+            do
+                local revealScale=Instance.new("UIScale")
+                revealScale.Scale,revealScale.Parent=if motion then .9 else 1,view
+                Theme.animate(revealScale,.24,{Scale=1},Enum.EasingStyle.Back)
+                local glow=Instance.new("UIStroke")
+                glow.Color,glow.Thickness,glow.Transparency,glow.Parent=rarityColors[speciesIndex(id)],3,if motion then .1 else 1,view
+                Theme.animate(glow,.65,{Transparency=1})
+                celebrate()
+            end
             task.wait(math.max(0,Config.HatchRevealSeconds-(os.clock()-started)))
             if modalVersion~=version or not view.Parent then return end
             if autoHatching and str("NextChestId")~="" then hatchNext()
@@ -535,7 +577,19 @@ for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gol
     b.Text=""
     label(b,entry[1],52,0,114,54,19)
     table.insert(navigationButtons,b)
+    b:SetAttribute("Destination",entry[3])
+    local marker=Instance.new("Frame")
+    marker.Name,marker.Size,marker.Position="ActiveTab",UDim2.new(0,4,1,-12),UDim2.fromOffset(2,6)
+    marker.BackgroundColor3,marker.BorderSizePixel,marker.Visible,marker.ZIndex,marker.Parent=C.gold,0,false,b.ZIndex+3,b
 end
+updateNavigation=function()
+    local destination=if active=="detail" then "collection" elseif active=="hatch" then "eggs" else active
+    for _,b in navigationButtons do
+        local marker=b:FindFirstChild("ActiveTab") :: Frame
+        marker.Visible=b:GetAttribute("Destination")==destination
+    end
+end
+updateNavigation()
 local hud=box(gui,0,0,390,94,C.panel,2)
 hud.AnchorPoint,hud.Position=Vector2.new(0,1),UDim2.new(0,18,1,-18)
 local hudScale=Instance.new("UIScale") hudScale.Parent=hud
@@ -544,9 +598,26 @@ local growthLabel=label(hud,"0 GROWTH",82,3,290,42,30,C.accent)
 art(hud,"catches",40,48,32)
 local catchLabel=label(hud,"0 catches  •  Sanctuary",82,47,290,34,20)
 local crystalHUD=box(gui,0,0,260,48,C.panel,2)
+local crystalScale=Instance.new("UIScale") crystalScale.Parent=crystalHUD
 crystalHUD.AnchorPoint,crystalHUD.Position=Vector2.new(1,0),UDim2.new(1,-20,0,8)
 art(crystalHUD,"amber",6,4,40)
 local crystalText=label(crystalHUD,"0 Crystals",50,0,203,48,24,C.gold)
+local crystalValue=Instance.new("NumberValue")
+crystalValue.Value=num("Crystals")
+crystalValue.Parent=crystalHUD
+local crystalInitialized=false
+local lastCrystalAmount=num("Crystals")
+crystalValue.Changed:Connect(function(value) crystalText.Text=math.round(value).." Crystals" end)
+local function refreshCrystals()
+    local amount=num("Crystals")
+    local delta=amount-lastCrystalAmount
+    lastCrystalAmount=amount
+    Theme.animate(crystalValue,.28,{Value=amount})
+    if crystalInitialized and delta>0 then notify("+"..math.round(delta).." Crystals",C.gold) end
+    crystalInitialized=true
+end
+player:GetAttributeChangedSignal("Crystals"):Connect(refreshCrystals)
+refreshCrystals()
 local timers=Instance.new("Frame")
 timers.BackgroundTransparency,timers.Size,timers.AnchorPoint,timers.Position,timers.Parent=1,UDim2.fromOffset(286,220),Vector2.new(1,1),UDim2.new(1,-20,1,-100),gui
 local timerScale=Instance.new("UIScale") timerScale.Parent=timers
@@ -569,7 +640,6 @@ end
 local lastWeather=""
 local function refreshProgressionHUD()
     local now=workspace:GetServerTimeNow()
-    crystalText.Text=num("Crystals").." Crystals"
     local left=num("LeapReadyAt")-now
     leapText.Text=if left>0 then "LEAP "..timerText(left) else "LEAP [E] • READY"
     leapButton.BackgroundColor3=if left>0 then C.card else C.blue
@@ -611,6 +681,7 @@ local function scales()
     local camera=workspace.CurrentCamera
     local size=if camera then camera.ViewportSize else Vector2.new(1280,720)
     local small=math.clamp(math.min(size.X/1000,size.Y/800),.3,1)
+    crystalScale.Scale=math.max(.65,small)
     railScale.Scale,hudScale.Scale,actionScale.Scale,timerScale.Scale=small,small,small,small
     hud:SetAttribute("UIScaleBase",small)
     timers.Position=UDim2.new(1,-20,1,if Input.TouchEnabled then -190 else -100)
@@ -625,7 +696,7 @@ local function scales()
             for _,child in b:GetChildren() do
                 if child:IsA("TextLabel") then
                     child.Position,child.Size,child.TextSize=UDim2.fromOffset(28,0),UDim2.fromOffset(52,44),11
-                elseif child:IsA("GuiObject") then
+                elseif child:IsA("GuiObject") and child.Name~="ActiveTab" then
                     child.Position,child.Size=UDim2.fromOffset(3,10),UDim2.fromOffset(24,24)
                 end
             end
@@ -649,7 +720,7 @@ local function scales()
             for _,child in b:GetChildren() do
                 if child:IsA("TextLabel") then
                     child.Position,child.Size,child.TextSize=UDim2.fromOffset(52,0),UDim2.fromOffset(114,54),19
-                elseif child:IsA("GuiObject") then
+                elseif child:IsA("GuiObject") and child.Name~="ActiveTab" then
                     child.Position,child.Size=UDim2.fromOffset(5,6),UDim2.fromOffset(40,40)
                 end
             end
@@ -676,6 +747,7 @@ if player.Character then task.spawn(characterAdded,player.Character) end
 if workspace.CurrentCamera then workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(scales) end
 gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(scales)
 scales()
+gui:SetAttribute("Ready",true)
 local elapsed=0
 local exitPending=false
 RunService.Heartbeat:Connect(function(dt)
@@ -702,8 +774,8 @@ RunService.Heartbeat:Connect(function(dt)
     if growth>lastGrowth and state=="Active" then
         notify(string.format("+%.1f Growth!",growth-lastGrowth),C.accent)
         if motion then
-            hudScale.Scale*=1.06
-            TweenService:Create(hudScale,TweenInfo.new(.2,Enum.EasingStyle.Back),{Scale=hud:GetAttribute("UIScaleBase") or 1}):Play()
+            hudScale.Scale=(hud:GetAttribute("UIScaleBase") or 1)*1.06
+            Theme.animate(hudScale,.2,{Scale=hud:GetAttribute("UIScaleBase") or 1},Enum.EasingStyle.Back)
         end
     end
     lastGrowth=growth
@@ -720,9 +792,21 @@ RunService.Heartbeat:Connect(function(dt)
     if active=="eggs" and refreshEggs then refreshEggs() end
     if player:GetAttribute("ProfileState")=="Loaded" and state=="Sanctuary" and not seenTutorial then seenTutorial=true open("tutorial") end
 end)
+local refreshQueued=false
+local function scheduleModalRefresh()
+    if refreshQueued then return end
+    refreshQueued=true
+    task.defer(function()
+        refreshQueued=false
+        if table.find({"collection","detail","fusion","eggs","auras","potions"},active) then
+            body:ClearAllChildren()
+            render(active)
+        end
+    end)
+end
 for _,attribute in {"EquippedSpeciesId","CollectionJson","ChestQueueJson","ProgressionJson"} do
     player:GetAttributeChangedSignal(attribute):Connect(function()
-        if table.find({"collection","detail","fusion","eggs","auras","potions"},active) then body:ClearAllChildren() render(active) end
+        scheduleModalRefresh()
     end)
 end
 player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function() hatchPending=false task.defer(function() open("hatch") end) end)

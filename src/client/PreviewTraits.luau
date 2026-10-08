@@ -1,5 +1,5 @@
 --!strict
-local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local Theme = require(game:GetService("ReplicatedStorage").Shared.UITheme)
 local PreviewTraits = {}
 function PreviewTraits.add(view: ViewportFrame, traits)
@@ -16,10 +16,23 @@ function PreviewTraits.add(view: ViewportFrame, traits)
     shine.Name, shine.Image = "ShinyPreviewGlint", "rbxasset://textures/particles/sparkles_main.dds"
     shine.BackgroundTransparency, shine.ImageColor3 = 1, Color3.fromRGB(255,244,160)
     shine.Size, shine.Position, shine.ZIndex, shine.Parent = UDim2.fromScale(.23,.3), UDim2.fromScale(.15,.14), view.ZIndex+1, view
-    if Theme.MotionEnabled then
-        TweenService:Create(shine,TweenInfo.new(1.6,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,-1,true),{
-            Position=UDim2.fromScale(.65,.5),Rotation=100,ImageTransparency=.65,
-        }):Play()
-    end
+    local elapsed, accumulated=0,0
+    local connection=RunService.Heartbeat:Connect(function(dt)
+        if not Theme.MotionEnabled then shine.ImageTransparency=.3 return end
+        local ancestor: Instance?=view
+        while ancestor do
+            if ancestor:IsA("GuiObject") and not ancestor.Visible then return end
+            if ancestor:IsA("ScreenGui") and not ancestor.Enabled then return end
+            ancestor=ancestor.Parent
+        end
+        elapsed+=dt accumulated+=dt
+        if accumulated<1/20 then return end
+        accumulated=0
+        local phase=(1-math.cos(elapsed*math.pi/1.6))*.5
+        shine.Position=UDim2.fromScale(.15+.5*phase,.14+.36*phase)
+        shine.Rotation=100*phase
+        shine.ImageTransparency=.65*phase
+    end)
+    view.Destroying:Connect(function() connection:Disconnect() end)
 end
 return PreviewTraits
