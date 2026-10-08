@@ -38,3 +38,18 @@ Non-owner meshes are therefore still unverified. Grant Znyprr Play access to
 the private experience using Studio collaboration, then repeat the real join.
 No public-access change, collaborator grant, publishing or profile mutation
 was performed by this test.
+
+## Authorized Playtest grant and retry
+
+User explicitly authorized adding Znyprr. Opened the published newbuild Studio
+window (place 111259822927673, universe 10769812255), added @Znyprr through
+Manage Collaborators, selected Playtest / Can play this game, and saved.
+Reloaded Creator Dashboard confirms Znyprr with Playtest this experience checked.
+No Edit permission was granted and the experience remains private.
+
+Retried the published page while signed in as Znyprr (5094736795). The page
+now resolves to newbuild, but its disabled Unavailable button still says
+"This experience is currently not available". A real client join and non-owner
+mesh loading remain unverified. The reason for remaining unavailability has
+not been established; do not report this as a mesh permission failure.
+Restored the browser to owner znyprs. No game publishing or profile mutation.
