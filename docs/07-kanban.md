@@ -133,8 +133,12 @@ crystal shops/genetics; do not replace whole client files with older copies.
   distinguish helper screenshots from real purchase/claim evidence.
 - [x] Mesh fetch failures reproduced in owner Studio; static actual-model thumbnail
   fallback prevents blank discoveries. Compy fallback IsLoaded=true and renders after real claim.
-- [ ] Fix full 3D mesh asset access; static fallback does not reproduce genotype/fusion
-  colors or orbit. Owner visual/audio rating and physical-phone frame-time/memory remain open.
+- [x] Latest Studio owner mesh verification: typed MeshPart preload applied; all six
+  imported species render as 3D models with no thumbnail fallback. Native window
+  evidence is required: MCP screen_capture omitted ViewportFrame content.
+  See [mesh verification](40-mesh-access-verification.md).
+- [ ] Published non-owner mesh permissions and physical-phone frame-time/memory remain open.
+  Owner accepts current hatching effects for now; no further hatch polish requested.
   Integration note: shop/genetics commit `2d3b637` changes mesh preload to typed
   MeshPart instances and proves colored imported hatch models in VisualUpgrade.
   This is not non-owner published asset certification or a retest of Latest Studio.
