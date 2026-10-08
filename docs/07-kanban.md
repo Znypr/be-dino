@@ -85,6 +85,13 @@ crystal shops/genetics; do not replace whole client files with older copies.
   imported bounding-box framing pass across four aspect ratios.
 - [x] UI-only code published in [draft PR #2](https://github.com/Znypr/be-dino/pull/2)
   on `codex/ui-motion-polish`; [implementation/acceptance notes](https://github.com/Znypr/be-dino/blob/codex/ui-motion-polish/docs/38-ui-motion-and-performance.md).
+- [x] Owner rejected primitive hatch/cracks; replaced with matched 512px premium blank-egg
+  and branching-fracture PNGs, attached shake/squash and 240ms shell split/fade.
+  Navigation now uses the same premium shell. Both uploads verified owner 7285577648.
+  [Crack screenshot](https://github.com/Znypr/be-dino/blob/codex/ui-motion-polish/docs/evidence/2026-10-08-ui-motion/premium-cracks.png)
+  and source/checksum bindings are included in PR #2. Actual UI buy/claim -> 2x Raptor;
+  queue empty, new navigation image IsLoaded=true, clean console. Owner art approval
+  and non-owner published image access remain pending.
 - [ ] Review/merge PR #2 alongside concurrent shop changes, resolve client overlap and rebuild.
 - [x] User selected **BeDino-Latest.rbxlx**, Studio `65d0a77a-6006-4d4c-80b3-4fa62fce67cc`.
   Verified GameId/PlaceId 0; backed up scripts and synced 57 current sources; left stopped in Edit.
