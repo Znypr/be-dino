@@ -72,7 +72,9 @@ function Theme.texture(parent: GuiObject, width: number, height: number)
     local pattern = Instance.new("Frame")
     pattern.Name,pattern.Size,pattern.BackgroundTransparency,pattern.ClipsDescendants = "FossilTexture",UDim2.fromScale(1,1),1,true
     pattern.ZIndex,pattern.Parent = parent.ZIndex,parent
-    for x=8,width,24 do for y=8,height,24 do
+    -- Bound decoration cost on large panels instead of creating hundreds of studs.
+    local step=math.max(24,math.ceil(math.sqrt(width*height/100)))
+    for x=8,width,step do for y=8,height,step do
         local stud = Instance.new("Frame")
         stud.Position,stud.Size = UDim2.fromOffset(x,y),UDim2.fromOffset(7,7)
         stud.BackgroundColor3,stud.BackgroundTransparency,stud.BorderSizePixel = Color3.new(1,1,1),.95,0

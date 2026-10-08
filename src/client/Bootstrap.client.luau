@@ -604,6 +604,7 @@ art(crystalHUD,"amber",6,4,40)
 local crystalText=label(crystalHUD,"0 Crystals",50,0,203,48,24,C.gold)
 local crystalValue=Instance.new("NumberValue")
 crystalValue.Value=num("Crystals")
+crystalText.Text=math.round(crystalValue.Value).." Crystals"
 crystalValue.Parent=crystalHUD
 local crystalInitialized=false
 local lastCrystalAmount=num("Crystals")
