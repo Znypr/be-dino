@@ -132,6 +132,8 @@ Subsequent [Magma and Cracked revisions](evidence/2026-10-08-magma-cracked-revis
 
 Next work: approve/refine mutation silhouettes; reconcile remaining visual palette/profile differences with private-test gameplay; produce missing granular runtime layers and upload manifests; then verify authored combinations, Shiny/Big and device performance in Studio. Keep accepted direction, authored draft, uploaded, integrated and runtime-verified states distinct.
 
+Latest Magma feedback: the owner prefers the volcanic revision and requests **yellow heat alongside orange** and **finer dark debris within the smoke**, retaining the larger rock chunks. [The color/debris render revision](evidence/2026-10-08-magma-color-debris/README.md) adds golden filament cores, golden smoke pockets, a hot yellow inner ring, pale sparks, and 74 smaller irregular charcoal chips. Its eleven aligned exports include a separate fine-debris layer. This revision is awaiting owner review; the previously preferred version is preserved as backup.
+
 Gameplay reconciliation follow-up: [the outcome contract](41-egg-outcomes-contract.md)
 selects provisional equal pattern weights and a nine-color next-build palette with
 1-99 mixed shares / 100 matching shares. It preserves legacy genes and documents
