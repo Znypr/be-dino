@@ -8,6 +8,10 @@ These additions currently use the game's ground controller. Flight, diving, swim
 
 ## Appearance
 
+> **New visual expansion REQUESTED, not integrated in Build 020 (2026-10-08):** Gold, then **Emerald**, then Diamond should be progressively richer **masked mineral/gloss overlays** which preserve the dinosaur's original two gene colors, exact pattern, face and anatomy. Compare **subtle and medium** Blender materials against fully combined Shiny/BIG, weather mutation, equipped aura and trail. The existing Build 020 Gold/Diamond model treatment is only a test baseline; Emerald and complex additive fusion overlays need new sources/engine acceptance. See [BD-057/061](46-pattern-fusion-dino-identity-and-cosmetic-progression.md).
+
+
+
 - Eight patterns are baked from the accepted egg material graphs onto each new creature's UVs. The earlier six uploaded species use the shared egg masks on their existing UV layouts and retain their neutral texture shading.
 - Two genes remain distinct. Mixed coverage is uniformly rolled from 1–99%; matching genes use their single colour family with lighter/darker pattern regions. Coverage calibration measures usable UV pixels, not the percentage seen from every camera angle.
 - Eyes and mouths on the new creatures are fixed pixels. Dark facial pixels in older uploaded textures are retained. The canonical authored egg is packaged at 1,400 triangles and uses the same genes in nest/hatch previews.
