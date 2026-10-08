@@ -94,7 +94,10 @@ Only unpublished Build 019 VisualUpgrade / GameId=PlaceId=0 was modified.
 - [ ] Successful paid receipt delivery and Robux-spending leaderboard integration test.
 - [ ] Complete paid-random disclosure/policy review; release flag remains disabled.
   [Reconciled outcome contract](41-egg-outcomes-contract.md) fills provisional
-  pattern/palette/migration decisions; complete in-game outcome enumeration is still pending.
+  pattern/palette/migration decisions. Complete in-game outcome enumeration, filtering,
+  paging and next-tier links are implemented; [bounded evidence](evidence/2026-10-08-egg-outcome-details/README.md)
+  records offline passes and owner-widget captures. Final Studio interaction and
+  desktop/phone acceptance remain pending; this is not paid-release approval.
   Five reusable [amber pack PNGs](../resources/monetization/product-icons/README.md)
   are archived with prompts/hashes; Creator Hub upload/moderation remains open.
 - [ ] Published private saved-profile restart, broader multiplayer/load, non-owner assets,

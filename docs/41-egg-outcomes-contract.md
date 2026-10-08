@@ -170,7 +170,7 @@ do not change this species-rarity sorting rule for now. Closing/rejoining resume
 the unclaimed queue without rerolling or double granting; overflow preserves metadata.
 Cracked failure still receives its reveal interval and a clear no-dinosaur result.
 
-## Complete Outcome Disclosure: Still An Implementation Gate
+## Complete Outcome Disclosure: Implemented, Acceptance Still Open
 
 For purchased eggs today, a successful joint outcome's probability is:
 
@@ -193,8 +193,26 @@ The next palette/pattern version needs its own enumeration, including the 1 vers
 Use enough decimal precision for rare outcomes, a rounding notice and tests for
 normalization, every tier, lowest nonzero probabilities and conditional hatch risk.
 Display next-tier distributions before condition upgrades; reject stale confirmation
-if the player's tier/distribution changed. Current factorized ShopOdds is not this
-complete final-outcome view. A contract document is not an in-game disclosure.
+if the player's tier/distribution changed. `EggOutcomeOdds.luau` now lazily enumerates
+final outcomes and `EggOutcomeView.luau` exposes numeric per-outcome percentages,
+filters and page selection through FINAL OUTCOME DETAILS before purchases. The
+condition-upgrade confirmation links to the next tier, rather than current odds.
+Filters retain unconditional probabilities and hide the aggregate failure row;
+clearing filters restores it. Factorized ShopOdds remains supplementary.
+
+The enumerator supports committed legacy shares, the concurrent pattern generator's
+clamped endpoint distribution (1/99 endpoints each 2/101, interior each 1/101), and
+an explicit future `EggGenetics.BlendMode="uniform"` contract. It does not silently
+claim the proposed uniform distribution is already implemented. Current Config,
+condition, color, pattern and quantity tables drive enumeration; no hardcoded
+six-species list or generated multi-million-row asset is required.
+
+Offline execution validates complete normalization, actual blend-roll parity,
+every upgrade tier, filtering, page boundaries and nonzero rare precision. Owner
+Studio navigation and Black/Black rows were captured before the test instance
+closed. Final rounding-notice/row-height tweaks, next-tier navigation, desktop and
+phone emulator acceptance remain unverified in Studio. See the bounded
+[evidence record](evidence/2026-10-08-egg-outcome-details/README.md).
 
 Keep server PolicyService eligibility fail-closed, and keep `CrystalPacksEnabled`
 and `PaidRandomItemsEnabled` false until disclosure, restrictions and payment tests
@@ -206,7 +224,8 @@ trading feature is authorized here. See the current
 ## Next Acceptance Work
 
 - Integrate versioned palette/pattern/coverage without changing old saved outcomes.
-- Build and test complete current/next-tier final-outcome disclosures before release.
+- Complete Studio current/next-tier interaction and desktop/phone acceptance of the
+  implemented final-outcome disclosure, then obtain paid-policy acceptance.
 - Upload/bind granular shell/pattern/condition/mutation layers; verify combinations,
   Shiny/BIG and reduced effects on desktop, phone emulator and physical target phone.
 - Verify real receipt delivery, retries, restriction handling and spending leaderboard

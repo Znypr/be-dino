@@ -365461,6 +365461,233 @@ return Genetics
       </Item>
       <Item class="ModuleScript" referent="RBX22">
         <Properties>
+          <string name="Name">EggOutcomeOdds</string>
+          <ProtectedString name="Source">--!strict
+local Config=require(script.Parent.Config)
+local Progression=require(script.Parent.ProgressionConfig)
+local Genetics=require(script.Parent.EggGenetics)
+local Odds={}
+
+local function total(rows)
+    local n=0 for _,row in rows do n+=row.weight end return n
+end
+local function selectRows(rows,value,key)
+    local result={}
+    for _,row in rows do if value==nil or row[key]==value then table.insert(result,row) end end
+    return result
+end
+function Odds.percent(probability: number): string
+    if probability==0 then return "0%" end
+    local value=probability*100
+    local digits=math.max(4,4-math.floor(math.log10(math.abs(value))))
+    return string.format("%."..math.min(20,digits).."f%%",value)
+end
+function Odds.blendMode(): string
+    -- Legacy rolls have 101 shares. The current pattern integration clamps endpoints.
+    -- A future uniform 1-99 roll must explicitly declare Genetics.BlendMode="uniform".
+    return Genetics.BlendMode or (if Genetics.Patterns then "clamped" else "legacy")
+end
+function Odds.shareProbability(a: string,b: string,share: number): number
+    local mode=Odds.blendMode()
+    if mode=="legacy" then return if share&gt;=0 and share&lt;=100 then 1/101 else 0 end
+    if a==b then return if share==100 then 1 else 0 end
+    if share&lt;1 or share&gt;99 then return 0 end
+    return if mode=="uniform" then 1/99 elseif share==1 or share==99 then 2/101 else 1/101
+end
+function Odds.failure(level: number): number
+    local weights=Progression.ConditionWeights[math.clamp(level,0,#Progression.ConditionWeights-1)+1]
+    local sum=0 for _,weight in weights do sum+=weight end
+    local probability=0
+    for i,condition in Progression.Conditions do probability+=weights[i]/sum*(1-condition.hatchChance) end
+    return probability
+end
+function Odds.patterns()
+    return Genetics.Patterns or {"legacy"}
+end
+function Odds.catalog(level: number,filters)
+    filters=filters or {}
+    local tier=math.clamp(level,0,#Progression.ConditionWeights-1)
+    local weights=Progression.ConditionWeights[tier+1]
+    local weightTotal=0 for _,w in weights do weightTotal+=w end
+    local conditions={}
+    for i,c in Progression.Conditions do
+        if weights[i]&gt;0 and c.hatchChance&gt;0 and (not filters.condition or filters.condition==c.id) then
+            table.insert(conditions,{row=c,probability=weights[i]/weightTotal*c.hatchChance})
+        end
+    end
+    local species=selectRows(Config.ChestSpeciesWeights,filters.species,"speciesId")
+    local copies=selectRows(Config.ChestQuantityWeights,filters.copies,"count")
+    local patterns={}
+    for _,id in Odds.patterns() do if not filters.pattern or filters.pattern==id then table.insert(patterns,id) end end
+    local sizes={}
+    for _,big in {false,true} do if filters.big==nil or big==filters.big then table.insert(sizes,big) end end
+    local pairs={}
+    local shareCount=0
+    for _,a in Progression.EggColors do for _,b in Progression.EggColors do
+        if (not filters.primary or filters.primary==a.id) and (not filters.secondary or filters.secondary==b.id) then
+            local first,count=0,101
+            if Odds.blendMode()~="legacy" then
+                first,count=if a.id==b.id then 100 else 1,if a.id==b.id then 1 else 99
+            end
+            table.insert(pairs,{a=a,b=b,first=first,count=count,offset=shareCount})
+            shareCount+=count
+        end
+    end end
+    local includeFailure=next(filters)==nil
+    local combinations=#conditions*#species*#copies*#patterns*#sizes*shareCount
+    local catalog={count=combinations+(if includeFailure then 1 else 0),level=tier,
+        filtered=not includeFailure,failure=Odds.failure(tier)}
+    local speciesTotal,copiesTotal,colorTotal=total(Config.ChestSpeciesWeights),total(Config.ChestQuantityWeights),total(Progression.EggColors)
+    function catalog.at(index: number)
+        if index%1~=0 or index&lt;1 or index&gt;catalog.count then return nil end
+        if includeFailure and index==1 then return {failed=true,probability=catalog.failure} end
+        local n=index-1-(if includeFailure then 1 else 0)
+        local function take(length)
+            local i=n%length+1 n=math.floor(n/length) return i
+        end
+        local shareIndex=take(shareCount)-1
+        local pair
+        for _,p in pairs do if shareIndex&gt;=p.offset and shareIndex&lt;p.offset+p.count then pair=p break end end
+        local share=pair.first+shareIndex-pair.offset
+        local big=sizes[take(#sizes)]
+        local pattern=patterns[take(#patterns)]
+        local quantity=copies[take(#copies)]
+        local sp=species[take(#species)]
+        local condition=conditions[take(#conditions)]
+        local probability=condition.probability*sp.weight/speciesTotal*quantity.weight/copiesTotal
+            *pair.a.weight/colorTotal*pair.b.weight/colorTotal
+            *Odds.shareProbability(pair.a.id,pair.b.id,share)/#Odds.patterns()
+            *(if big then Config.BigChance else 1-Config.BigChance)
+        return {failed=false,probability=probability,speciesId=sp.speciesId,count=quantity.count,
+            conditionId=condition.row.id,conditionName=condition.row.name,stats=condition.row.stats,
+            primaryId=pair.a.id,primaryName=pair.a.name,secondaryId=pair.b.id,secondaryName=pair.b.name,
+            share=share,patternId=pattern,big=big}
+    end
+    return catalog
+end
+return Odds
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX23">
+        <Properties>
+          <string name="Name">EggOutcomeView</string>
+          <ProtectedString name="Source">--!strict
+local Theme=require(script.Parent.UITheme)
+local Config=require(script.Parent.Config)
+local Progression=require(script.Parent.ProgressionConfig)
+local Odds=require(script.Parent.EggOutcomeOdds)
+local C=Theme.Colors
+local View={}
+local patternNames={legacy="Legacy",["01_blank"]="Blank",["02_emerald_islands"]="Islands",
+    ["03_round_spots"]="Round spots",["04_bold_patches"]="Bold patches",["05_horizontal_bands"]="Bands",
+    ["06_wavy_stripes"]="Wavy stripes",["07_diamond_scales"]="Diamond scales",["08_freckles"]="Freckles"}
+local function text(parent,value,x,y,w,h,size,color)
+    local t=Instance.new("TextLabel")
+    t.BackgroundTransparency,t.Position,t.Size=1,UDim2.fromOffset(x,y),UDim2.fromOffset(w,h)
+    t.Text,t.TextColor3,t.TextSize,t.Font=value,color or C.text,size,Enum.Font.FredokaOne
+    t.TextWrapped,t.TextXAlignment,t.ZIndex,t.Parent=true,Enum.TextXAlignment.Left,parent.ZIndex+1,parent
+    return t
+end
+local function button(parent,value,x,y,w,h,callback)
+    local b=Instance.new("TextButton")
+    b.Position,b.Size,b.BackgroundColor3=UDim2.fromOffset(x,y),UDim2.fromOffset(w,h),C.card
+    b.Text,b.TextColor3,b.TextSize,b.ZIndex,b.Parent=value,C.text,17,parent.ZIndex+2,parent
+    Theme.decorate(b,4)
+    b.Activated:Connect(callback)
+    return b
+end
+function View.add(body,state,level,height,onChange,onBack)
+    local h=math.ceil(math.max(48,height))
+    local dropdown
+    local dropdownKey
+    local function menu(title,key,options,x,y,w)
+        local value=state.filters[key]
+        local selected="All"
+        for _,option in options do if option.id==value then selected=option.name end end
+        button(body,title..": "..selected.."  v",x,y,w,h,function()
+            if dropdown then
+                dropdown:Destroy() dropdown=nil
+                if dropdownKey==key then dropdownKey=nil return end
+            end
+            dropdownKey=key
+            dropdown=Instance.new("ScrollingFrame")
+            dropdown.Name,dropdown.BackgroundColor3,dropdown.BorderSizePixel="OutcomeFilterMenu",C.panel,0
+            dropdown.Position=UDim2.fromOffset(x,y+h)
+            dropdown.Size=UDim2.fromOffset(w,math.min(220,402-y-h))
+            dropdown.CanvasSize,dropdown.ScrollBarThickness=UDim2.fromOffset(0,(#options+1)*h),6
+            dropdown.ZIndex,dropdown.Parent=90,body
+            local choices={{name="All"}}
+            for _,option in options do table.insert(choices,option) end
+            for i,option in choices do
+                button(dropdown,option.name,0,(i-1)*h,w-8,h,function()
+                    state.filters[key]=option.id state.page=1 onChange()
+                end)
+            end
+        end)
+    end
+    local species={} for _,s in Config.ChestSpeciesWeights do table.insert(species,{id=s.speciesId,name=Config.SpeciesDisplayNames[s.speciesId]}) end
+    local conditions={} for _,c in Progression.Conditions do table.insert(conditions,{id=c.id,name=c.name}) end
+    local colors={} for _,c in Progression.EggColors do table.insert(colors,{id=c.id,name=c.name}) end
+    local patterns={} for _,p in Odds.patterns() do table.insert(patterns,{id=p,name=patternNames[p] or p}) end
+    menu("Species","species",species,0,0,200)
+    menu("Condition","condition",conditions,208,0,200)
+    menu("Primary","primary",colors,416,0,200)
+    menu("Secondary","secondary",colors,624,0,200)
+    menu("Pattern","pattern",patterns,0,h+6,260)
+    menu("Size","big",{{id=false,name="Normal"},{id=true,name="BIG"}},268,h+6,260)
+    menu("Copies","copies",{{id=1,name="1"},{id=2,name="2"},{id=3,name="3"}},536,h+6,280-h)
+    local reset=button(body,"X",824-h,h+6,h,h,function() state.filters={} state.page=1 onChange() end)
+    reset.Name="ClearOutcomeFilters"
+    local hint=text(body,"Clear filters",600,h*2+14,224,22,16,C.gold) hint.Visible=false
+    reset.MouseEnter:Connect(function() hint.Visible=true end)
+    reset.MouseLeave:Connect(function() hint.Visible=false end)
+    local catalog=Odds.catalog(level,state.filters)
+    local pages=math.max(1,math.ceil(catalog.count/2))
+    state.page=math.clamp(state.page,1,pages)
+    local y=2*h+14
+    text(body,"Tier "..catalog.level.." | "..catalog.count.." outcomes | Shiny 0% | Event: None",0,y,824,22,16,C.gold)
+    y+=28
+    local footer=402-h
+    local rowHeight=(footer-y-8)/2
+    for slot=1,2 do
+        local outcome=catalog.at((state.page-1)*2+slot)
+        if not outcome then continue end
+        local top=y+(slot-1)*rowHeight
+        local description
+        if outcome.failed then description="No dinosaur\nEgg consumed; no crystal refund"
+        else
+            description=Config.SpeciesDisplayNames[outcome.speciesId].." x"..outcome.count.." | "..outcome.conditionName.." | "..(if outcome.big then "BIG" else "Normal size")
+                .."\n"..outcome.primaryName.." "..outcome.share.."% / "..outcome.secondaryName.." "..(100-outcome.share).."%"
+                .." | "..(patternNames[outcome.patternId] or outcome.patternId)
+        end
+        text(body,description,4,top,560,rowHeight-4,18)
+        text(body,Odds.percent(outcome.probability),574,top,246,rowHeight-4,19,C.gold)
+    end
+    if catalog.count==0 then text(body,"No matching outcomes",0,y,824,80,22) end
+    local prev=button(body,"&lt;",0,footer,h,h,function() state.page=math.max(1,state.page-1) onChange() end)
+    prev.Name="PreviousOutcomePage"
+    local input=Instance.new("TextBox")
+    input.Name,input.Position,input.Size="OutcomePage",UDim2.fromOffset(h+10,footer),UDim2.fromOffset(170,h)
+    input.BackgroundColor3,input.TextColor3,input.TextSize,input.Font=C.card,C.text,18,Enum.Font.FredokaOne
+    input.Text,input.ClearTextOnFocus,input.ZIndex,input.Parent=tostring(state.page),false,body.ZIndex+2,body
+    Theme.decorate(input,4)
+    input.FocusLost:Connect(function()
+        local value=tonumber(input.Text)
+        if value and value==value and value%1==0 then state.page=math.clamp(value,1,pages) end
+        onChange()
+    end)
+    local nextButton=button(body,"&gt;",h+190,footer,h,h,function() state.page=math.min(pages,state.page+1) onChange() end)
+    nextButton.Name="NextOutcomePage"
+    text(body,"/ "..pages.." pages\nRounded; totals may differ from 100%",2*h+200,footer,400-2*h,h,15)
+    button(body,"BACK",610,footer,214,h,onBack)
+end
+return View
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX24">
+        <Properties>
           <string name="Name">EggPreview</string>
           <ProtectedString name="Source">--!strict
 -- Smooth built-in sphere geometry, no uploaded mesh or editable APIs required.
@@ -365492,7 +365719,7 @@ return Egg
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX23">
+      <Item class="ModuleScript" referent="RBX25">
         <Properties>
           <string name="Name">EggTraits</string>
           <ProtectedString name="Source">--!strict
@@ -365537,7 +365764,7 @@ return Traits
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX24">
+      <Item class="ModuleScript" referent="RBX26">
         <Properties>
           <string name="Name">EventIconVectors</string>
           <ProtectedString name="Source">--!strict
@@ -365552,7 +365779,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX25">
+      <Item class="ModuleScript" referent="RBX27">
         <Properties>
           <string name="Name">FoodCatchRules</string>
           <ProtectedString name="Source">--!strict
@@ -365568,7 +365795,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX26">
+      <Item class="ModuleScript" referent="RBX28">
         <Properties>
           <string name="Name">GeneTextureAssets</string>
           <ProtectedString name="Source">--!strict
@@ -365616,7 +365843,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX27">
+      <Item class="ModuleScript" referent="RBX29">
         <Properties>
           <string name="Name">GeneTextures</string>
           <ProtectedString name="Source">--!strict
@@ -365672,7 +365899,7 @@ return Textures
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX28">
+      <Item class="ModuleScript" referent="RBX30">
         <Properties>
           <string name="Name">HatchFragments</string>
           <ProtectedString name="Source">--!strict
@@ -365705,7 +365932,7 @@ return F
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX29">
+      <Item class="ModuleScript" referent="RBX31">
         <Properties>
           <string name="Name">HatchPresentation</string>
           <ProtectedString name="Source">--!strict
@@ -365898,7 +366125,7 @@ return Hatch
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX30">
+      <Item class="ModuleScript" referent="RBX32">
         <Properties>
           <string name="Name">IconRaster</string>
           <ProtectedString name="Source">--!strict
@@ -365907,7 +366134,7 @@ return {["amber"]={341,0,1,16777216,1,33554432,20,55923968,1,16777216,40,0,1,167
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX31">
+      <Item class="ModuleScript" referent="RBX33">
         <Properties>
           <string name="Name">IconTiles</string>
           <ProtectedString name="Source">--!strict
@@ -365916,7 +366143,7 @@ return {["dinos"]={["size"]=32,["colors"]={{104,48,36},{110,114,78},{0,29,13},{1
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX32">
+      <Item class="ModuleScript" referent="RBX34">
         <Properties>
           <string name="Name">IconVectors</string>
           <ProtectedString name="Source">--!strict
@@ -365925,7 +366152,7 @@ return {["home"]={{["x"]=21,["y"]=41,["w"]=60,["h"]=47,["color"]="#142035",["rad
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX33">
+      <Item class="ModuleScript" referent="RBX35">
         <Properties>
           <string name="Name">IslandLayout</string>
           <ProtectedString name="Source">--!strict
@@ -365953,7 +366180,7 @@ return IslandLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX34">
+      <Item class="ModuleScript" referent="RBX36">
         <Properties>
           <string name="Name">ModelPreview</string>
           <ProtectedString name="Source">--!strict
@@ -365980,7 +366207,7 @@ return ModelPreview
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX35">
+      <Item class="ModuleScript" referent="RBX37">
         <Properties>
           <string name="Name">MovementEnvelope</string>
           <ProtectedString name="Source">--!strict
@@ -365996,7 +366223,7 @@ return MovementEnvelope
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX36">
+      <Item class="ModuleScript" referent="RBX38">
         <Properties>
           <string name="Name">NavigationArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -366013,7 +366240,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX37">
+      <Item class="ModuleScript" referent="RBX39">
         <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
@@ -366079,7 +366306,7 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX38">
+      <Item class="ModuleScript" referent="RBX40">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -366168,7 +366395,7 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX39">
+      <Item class="ModuleScript" referent="RBX41">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -366333,7 +366560,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX40">
+      <Item class="ModuleScript" referent="RBX42">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -366342,7 +366569,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX41">
+      <Item class="ModuleScript" referent="RBX43">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -366358,7 +366585,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX42">
+      <Item class="ModuleScript" referent="RBX44">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -366413,7 +366640,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX43">
+      <Item class="ModuleScript" referent="RBX45">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -366504,12 +366731,13 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX44">
+      <Item class="ModuleScript" referent="RBX46">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
 local Config=require(script.Parent.Config)
 local Progression=require(script.Parent.ProgressionConfig)
+local Outcomes=require(script.Parent.EggOutcomeOdds)
 local Odds={}
 function Odds.lines(level)
     local lines={"RANDOM EGG ODDS", "Species (one purchased egg; no run-batch boost):"}
@@ -366525,19 +366753,25 @@ function Odds.lines(level)
     table.insert(lines,"Colors (each slot independently):")
     total=0 for _,row in Progression.EggColors do total+=row.weight end
     for _,row in Progression.EggColors do table.insert(lines,string.format("%s: %.4f%% per slot",row.name,100*row.weight/total)) end
-    table.insert(lines,"Black / Black: 0.000001% (1 in 100,000,000)")
-    table.insert(lines,"Primary blend 0 through 100%: 1/101 each; secondary is the remainder")
+    for _,row in Progression.EggColors do if row.id=="black" then table.insert(lines,"Black / Black genes: "..Outcomes.percent((row.weight/total)^2)) end end
+    local patterns=Outcomes.patterns()
+    table.insert(lines,"Patterns: "..#patterns.." equally likely; "..Outcomes.percent(1/#patterns).." each")
+    local mode=Outcomes.blendMode()
+    table.insert(lines,if mode=="legacy" then "Primary share 0-100%: "..Outcomes.percent(1/101).." each"
+        elseif mode=="uniform" then "Mixed share 1-99%: "..Outcomes.percent(1/99).." each; matching genes 100%"
+        else "Mixed shares 1% and 99%: "..Outcomes.percent(2/101).." each; shares 2-98%: "..Outcomes.percent(1/101).." each; matching genes 100%")
     table.insert(lines,"Normal size: 90%; BIG: 10% (size only, 1.2x)")
     table.insert(lines,"Purchased eggs: clear-weather, Shiny 0%; event mutation 0%")
     table.insert(lines,"Earned eggs: Shiny 5% during Volcano, Northern Lights, Earthquake or Blood Moon; otherwise 0%. BIG is independent.")
     table.insert(lines,"Each combined outcome multiplies its independent probabilities; only Cracked can fail.")
+    table.insert(lines,"Displayed percentages are rounded; their total may differ from 100%. Filters retain original odds, not renormalized subset odds.")
     return lines
 end
 return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX45">
+      <Item class="ModuleScript" referent="RBX47">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -366569,7 +366803,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX46">
+      <Item class="ModuleScript" referent="RBX48">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -366591,7 +366825,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX47">
+      <Item class="ModuleScript" referent="RBX49">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -366607,7 +366841,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX48">
+      <Item class="ModuleScript" referent="RBX50">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -366753,7 +366987,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX49">
+      <Item class="ModuleScript" referent="RBX51">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -366778,15 +367012,15 @@ return Clock
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX50">
+  <Item class="ServerScriptService" referent="RBX52">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX51">
+    <Item class="Folder" referent="RBX53">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX52">
+      <Item class="ModuleScript" referent="RBX54">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -366964,7 +367198,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX53">
+      <Item class="Script" referent="RBX55">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -367108,7 +367342,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX54">
+      <Item class="ModuleScript" referent="RBX56">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -367189,7 +367423,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX55">
+      <Item class="ModuleScript" referent="RBX57">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -367277,7 +367511,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX56">
+      <Item class="ModuleScript" referent="RBX58">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -367392,7 +367626,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX57">
+      <Item class="ModuleScript" referent="RBX59">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -367627,7 +367861,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX58">
+      <Item class="ModuleScript" referent="RBX60">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -367677,7 +367911,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX59">
+      <Item class="ModuleScript" referent="RBX61">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -367719,7 +367953,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX60">
+      <Item class="ModuleScript" referent="RBX62">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -367830,7 +368064,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX61">
+      <Item class="ModuleScript" referent="RBX63">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -367912,7 +368146,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX62">
+      <Item class="ModuleScript" referent="RBX64">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -368006,7 +368240,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX63">
+      <Item class="ModuleScript" referent="RBX65">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -368111,7 +368345,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX64">
+      <Item class="ModuleScript" referent="RBX66">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -368244,7 +368478,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX65">
+      <Item class="ModuleScript" referent="RBX67">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -369339,7 +369573,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX66">
+      <Item class="ModuleScript" referent="RBX68">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -369520,7 +369754,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX67">
+      <Item class="ModuleScript" referent="RBX69">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -369641,7 +369875,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX68">
+      <Item class="ModuleScript" referent="RBX70">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -369895,7 +370129,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX69">
+      <Item class="ModuleScript" referent="RBX71">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -369967,19 +370201,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX70">
+  <Item class="StarterPlayer" referent="RBX72">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX71">
+    <Item class="StarterPlayerScripts" referent="RBX73">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX72">
+      <Item class="Folder" referent="RBX74">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX73">
+        <Item class="LocalScript" referent="RBX75">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -370005,6 +370239,7 @@ local PreviewTraits=require(script.Parent.PreviewTraits)
 local EggGenetics=require(Shared.EggGenetics)
 local EggAppearance=require(Shared.EggAppearance)
 local ShopOdds=require(Shared.ShopOdds)
+local EggOutcomeView=require(Shared.EggOutcomeView)
 local Marketplace=game:GetService("MarketplaceService")
 local C = Theme.Colors
 local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
@@ -370219,6 +370454,8 @@ end
 local chosenAura="meadow"
 local cosmeticTab="auras"
 local trailPage=1
+local oddsLevelOverride=nil
+local outcomeState={page=1,filters={}}
 local chosenPotion="speed_common"
 local pendingShop=nil
 local function transact(action,id,replace)
@@ -370269,7 +370506,7 @@ render=function(name: string)
             art(body,"egg",20,cardsY+12,220)
             label(body,"Random Egg",270,cardsY,535,40,30,C.gold)
             label(body,ProgressionConfig.RandomEggPrice.." Crystals\nBalance: "..num("Crystals").."  •  Level "..num("AccountLevel"),270,cardsY+45,535,60,22)
-            button(body,"VIEW ODDS",270,cardsY+119,535,targetHeight,C.blue,function() open("eggOdds") end)
+            button(body,"VIEW ODDS",270,cardsY+119,535,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("eggOdds") end)
             button(body,"BUY EGG",270,cardsY+targetHeight+130,535,targetHeight,C.accent,function() open("eggPurchase") end)
             return
         elseif cosmeticTab=="conditions" then
@@ -370281,7 +370518,7 @@ render=function(name: string)
                 label(body,row.name,x,cardsY+50,155,35,22)
                 label(body,weights[i].."%\n"..row.stats.."x stats",x,cardsY+87,155,60,21,C.blue)
             end
-            button(body,"VIEW ODDS",0,cardsY+166,330,targetHeight,C.blue,function() open("eggOdds") end)
+            button(body,"VIEW ODDS",0,cardsY+166,330,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("eggOdds") end)
             button(body,if upgrade then "UPGRADE: "..upgrade.price.." CRYSTALS" else "MAX LEVEL",348,cardsY+166,476,targetHeight,C.accent,function() if upgrade then open("conditionConfirm") end end).TextSize=20
             label(body,if upgrade then "Next tier: account level "..upgrade.requiredLevel.."  •  Future eggs only" else "Maximum condition upgrade",0,360,824,35,19,C.gold)
             return
@@ -370341,10 +370578,22 @@ render=function(name: string)
         label(body,"Level "..num("AccountLevel").." • "..num("Crystals").." Crystals"..(if isTrail then " • "..trailPage.." / 4" else ""),115,footerY,590,targetHeight,21,C.gold)
     elseif name=="eggOdds" then
         heading.Text,header.BackgroundColor3="Egg Odds",C.blue
-        local lines=ShopOdds.lines(progression().conditionLevel or 0)
+        local level=oddsLevelOverride or progression().conditionLevel or 0
+        local lines=ShopOdds.lines(level)
         local list=Instance.new("ScrollingFrame") list.Name,list.BackgroundTransparency,list.BorderSizePixel,list.Size,list.CanvasSize,list.ScrollBarThickness,list.ZIndex,list.Parent="EggOdds",1,0,UDim2.fromOffset(824,308),UDim2.fromOffset(0,#lines*46),8,24,body
-        for i,line in lines do label(list,line,10,(i-1)*46,790,44,21) end
-        button(body,"BACK TO SHOP",212,322,400,math.max(64,45/viewportScale()),C.blue,function() open("auras") end)
+        local lineY=0
+        for _,line in lines do
+            local lineHeight=if #line&gt;95 then 88 elseif #line&gt;60 then 66 else 44
+            label(list,line,10,lineY,790,lineHeight,21)
+            lineY+=lineHeight+2
+        end
+        list.CanvasSize=UDim2.fromOffset(0,lineY)
+        button(body,"FINAL OUTCOME DETAILS",0,322,402,math.max(64,45/viewportScale()),C.blue,function() open("eggOutcomes") end).TextSize=20
+        button(body,"BACK TO SHOP",422,322,402,math.max(64,45/viewportScale()),C.blue,function() open("auras") end)
+    elseif name=="eggOutcomes" then
+        heading.Text,header.BackgroundColor3="Final Egg Outcomes",C.blue
+        EggOutcomeView.add(body,outcomeState,oddsLevelOverride or progression().conditionLevel or 0,
+            math.max(64,45/viewportScale()),function() open("eggOutcomes") end,function() open("eggOdds") end)
     elseif name=="eggPurchase" or name=="conditionConfirm" then
         local p=progression()
         local upgrade=ProgressionConfig.ConditionUpgrades[(p.conditionLevel or 0)+1]
@@ -370358,7 +370607,10 @@ render=function(name: string)
             local parts={} for i,row in ProgressionConfig.Conditions do table.insert(parts,row.name.." "..ProgressionConfig.ConditionWeights[upgrade.level+1][i].."%") end
             label(body,table.concat(parts," • "),0,213,824,60,21,C.blue)
         end
-        button(body,"VIEW ODDS",0,300,250,math.max(64,45/viewportScale()),C.blue,function() open("eggOdds") end)
+        button(body,"VIEW ODDS",0,300,250,math.max(64,45/viewportScale()),C.blue,function()
+            oddsLevelOverride=if not isEgg and upgrade then upgrade.level else nil
+            outcomeState={page=1,filters={}} open("eggOdds")
+        end)
         button(body,"CONFIRM",270,300,270,math.max(64,45/viewportScale()),C.accent,function()
             transact(if isEgg then "buyEgg" else "upgradeCondition",if isEgg then "random" elseif upgrade then tostring(upgrade.level) else "") open("auras")
         end)
@@ -370937,7 +371189,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX74">
+        <Item class="LocalScript" referent="RBX76">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -370983,7 +371235,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX75">
+        <Item class="ModuleScript" referent="RBX77">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -371029,7 +371281,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX76">
+        <Item class="LocalScript" referent="RBX78">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -371172,7 +371424,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX77">
+        <Item class="LocalScript" referent="RBX79">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -371254,7 +371506,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX78">
+  <Item class="Workspace" referent="RBX80">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

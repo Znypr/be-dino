@@ -21,6 +21,7 @@ local PreviewTraits=require(script.Parent.PreviewTraits)
 local EggGenetics=require(Shared.EggGenetics)
 local EggAppearance=require(Shared.EggAppearance)
 local ShopOdds=require(Shared.ShopOdds)
+local EggOutcomeView=require(Shared.EggOutcomeView)
 local Marketplace=game:GetService("MarketplaceService")
 local C = Theme.Colors
 local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
@@ -235,6 +236,8 @@ end
 local chosenAura="meadow"
 local cosmeticTab="auras"
 local trailPage=1
+local oddsLevelOverride=nil
+local outcomeState={page=1,filters={}}
 local chosenPotion="speed_common"
 local pendingShop=nil
 local function transact(action,id,replace)
@@ -285,7 +288,7 @@ render=function(name: string)
             art(body,"egg",20,cardsY+12,220)
             label(body,"Random Egg",270,cardsY,535,40,30,C.gold)
             label(body,ProgressionConfig.RandomEggPrice.." Crystals\nBalance: "..num("Crystals").."  •  Level "..num("AccountLevel"),270,cardsY+45,535,60,22)
-            button(body,"VIEW ODDS",270,cardsY+119,535,targetHeight,C.blue,function() open("eggOdds") end)
+            button(body,"VIEW ODDS",270,cardsY+119,535,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("eggOdds") end)
             button(body,"BUY EGG",270,cardsY+targetHeight+130,535,targetHeight,C.accent,function() open("eggPurchase") end)
             return
         elseif cosmeticTab=="conditions" then
@@ -297,7 +300,7 @@ render=function(name: string)
                 label(body,row.name,x,cardsY+50,155,35,22)
                 label(body,weights[i].."%\n"..row.stats.."x stats",x,cardsY+87,155,60,21,C.blue)
             end
-            button(body,"VIEW ODDS",0,cardsY+166,330,targetHeight,C.blue,function() open("eggOdds") end)
+            button(body,"VIEW ODDS",0,cardsY+166,330,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("eggOdds") end)
             button(body,if upgrade then "UPGRADE: "..upgrade.price.." CRYSTALS" else "MAX LEVEL",348,cardsY+166,476,targetHeight,C.accent,function() if upgrade then open("conditionConfirm") end end).TextSize=20
             label(body,if upgrade then "Next tier: account level "..upgrade.requiredLevel.."  •  Future eggs only" else "Maximum condition upgrade",0,360,824,35,19,C.gold)
             return
@@ -357,10 +360,22 @@ render=function(name: string)
         label(body,"Level "..num("AccountLevel").." • "..num("Crystals").." Crystals"..(if isTrail then " • "..trailPage.." / 4" else ""),115,footerY,590,targetHeight,21,C.gold)
     elseif name=="eggOdds" then
         heading.Text,header.BackgroundColor3="Egg Odds",C.blue
-        local lines=ShopOdds.lines(progression().conditionLevel or 0)
+        local level=oddsLevelOverride or progression().conditionLevel or 0
+        local lines=ShopOdds.lines(level)
         local list=Instance.new("ScrollingFrame") list.Name,list.BackgroundTransparency,list.BorderSizePixel,list.Size,list.CanvasSize,list.ScrollBarThickness,list.ZIndex,list.Parent="EggOdds",1,0,UDim2.fromOffset(824,308),UDim2.fromOffset(0,#lines*46),8,24,body
-        for i,line in lines do label(list,line,10,(i-1)*46,790,44,21) end
-        button(body,"BACK TO SHOP",212,322,400,math.max(64,45/viewportScale()),C.blue,function() open("auras") end)
+        local lineY=0
+        for _,line in lines do
+            local lineHeight=if #line>95 then 88 elseif #line>60 then 66 else 44
+            label(list,line,10,lineY,790,lineHeight,21)
+            lineY+=lineHeight+2
+        end
+        list.CanvasSize=UDim2.fromOffset(0,lineY)
+        button(body,"FINAL OUTCOME DETAILS",0,322,402,math.max(64,45/viewportScale()),C.blue,function() open("eggOutcomes") end).TextSize=20
+        button(body,"BACK TO SHOP",422,322,402,math.max(64,45/viewportScale()),C.blue,function() open("auras") end)
+    elseif name=="eggOutcomes" then
+        heading.Text,header.BackgroundColor3="Final Egg Outcomes",C.blue
+        EggOutcomeView.add(body,outcomeState,oddsLevelOverride or progression().conditionLevel or 0,
+            math.max(64,45/viewportScale()),function() open("eggOutcomes") end,function() open("eggOdds") end)
     elseif name=="eggPurchase" or name=="conditionConfirm" then
         local p=progression()
         local upgrade=ProgressionConfig.ConditionUpgrades[(p.conditionLevel or 0)+1]
@@ -374,7 +389,10 @@ render=function(name: string)
             local parts={} for i,row in ProgressionConfig.Conditions do table.insert(parts,row.name.." "..ProgressionConfig.ConditionWeights[upgrade.level+1][i].."%") end
             label(body,table.concat(parts," • "),0,213,824,60,21,C.blue)
         end
-        button(body,"VIEW ODDS",0,300,250,math.max(64,45/viewportScale()),C.blue,function() open("eggOdds") end)
+        button(body,"VIEW ODDS",0,300,250,math.max(64,45/viewportScale()),C.blue,function()
+            oddsLevelOverride=if not isEgg and upgrade then upgrade.level else nil
+            outcomeState={page=1,filters={}} open("eggOdds")
+        end)
         button(body,"CONFIRM",270,300,270,math.max(64,45/viewportScale()),C.accent,function()
             transact(if isEgg then "buyEgg" else "upgradeCondition",if isEgg then "random" elseif upgrade then tostring(upgrade.level) else "") open("auras")
         end)
