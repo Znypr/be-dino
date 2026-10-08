@@ -24,6 +24,7 @@ function CFrame.lookAt(position,target)
 end
 local identity={Position=v(0,0,0),PointToWorldSpace=function(_,p)return p end}
 local signal={Connect=function()return {Disconnect=function()end}end}
+signal.Once=signal.Connect
 local game={GetService=function()return {RenderStepped=signal}end}
 local Instance={new=function()return {}end}
 local Geometry=(function()
@@ -35,7 +36,7 @@ local PreviewCamera=(function()
 for _,id in {"compy","triceratops","tyrannosaurus","raptor","stegosaurus","ankylosaurus"} do
  for _,size in {{250,172},{274,230},{380,280},{120,146}} do
   local viewport={AbsoluteSize={X=size[1],Y=size[2]},Destroying=signal,GetPropertyChangedSignal=function()return signal end}
-  local model={GetBoundingBox=function()return identity,v(100,100,100)end,GetAttribute=function(_,key)return if key=="GeometryOrigin" then Vector3.zero else nil end,GetPivot=function()return identity end}
+  local model={Destroying=signal,GetBoundingBox=function()return identity,v(100,100,100)end,GetAttribute=function(_,key)return if key=="GeometryOrigin" then Vector3.zero else nil end,GetPivot=function()return identity end}
   PreviewCamera.bind(viewport,model,id)
   local cam=viewport.CurrentCamera
   local basis=cam.CFrame
@@ -56,7 +57,7 @@ end
 print("Preview camera passed: all vertices visible with tight framing for 6 dinos across 4 card aspect ratios")
 for _,size in {{504,260},{250,128},{120,146}} do
  local viewport={AbsoluteSize={X=size[1],Y=size[2]},Destroying=signal,GetPropertyChangedSignal=function()return signal end}
- local model={GetBoundingBox=function()return identity,v(4,6,7)end,GetAttribute=function(_,key)return if key=="UploadedModelId" then "verified-fixture" else nil end,GetPivot=function()return identity end}
+ local model={Destroying=signal,GetBoundingBox=function()return identity,v(4,6,7)end,GetAttribute=function(_,key)return if key=="UploadedModelId" then "verified-fixture" else nil end,GetPivot=function()return identity end}
  PreviewCamera.bind(viewport,model,"compy")
  local cam=viewport.CurrentCamera local basis=cam.CFrame local tan=math.tan(math.rad(cam.FieldOfView/2))
  for _,x in {-2,2} do for _,y in {-3,3} do for _,z in {-3.5,3.5} do

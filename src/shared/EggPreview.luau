@@ -1,7 +1,11 @@
 --!strict
--- Smooth built-in sphere geometry, no uploaded mesh or editable APIs required.
+-- Canonical authored egg; built-in geometry remains the API-unavailable fallback.
 local Egg={}
 function Egg.create(empty: boolean?): Model
+    if not empty then
+        local authored=require(script.Parent.AuthoredCreatures).clone("egg")
+        if authored then return authored end
+    end
     local model=Instance.new("Model")
     model.Name="SmoothEggPreview"
     local function sphere(name: string,position: Vector3,scale: Vector3,color: Color3)

@@ -37,6 +37,7 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
     fallback.Name="NativeHatchFallback"
     fallback.ZIndex=root.ZIndex+2
     Appearance.apply(fallback,genes)
+    local authored=fallback:FindFirstChild("AuthoredBody",true)~=nil
     root:SetAttribute("ArtworkFallback",true)
     root:SetAttribute("ArtworkLoadState","Loading")
     local shell=image(stage,shellAsset,stage.ZIndex+2)
@@ -77,7 +78,7 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
             if status~=Enum.AssetFetchStatus.Success then failed=true end
         end) end)
         if not root.Parent or root:GetAttribute("Opening") then return end
-        local native=not ok or failed
+        local native=authored or not ok or failed
         root:SetAttribute("ArtworkFallback",native)
         root:SetAttribute("ArtworkLoadState",if native then "Unavailable" else "Loaded")
         fallback.Visible=native

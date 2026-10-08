@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local RuntimeMeshes = require(script.Parent.RuntimeMeshes)
 local ResourceModels = {}
+local Authored = require(script.Parent.AuthoredCreatures)
 function ResourceModels.clearTextures(part: BasePart)
     for _,child in part:GetChildren() do
         if child:IsA("SurfaceAppearance") or child:IsA("Decal") or child:IsA("Texture") then child:Destroy() end
@@ -11,6 +12,10 @@ function ResourceModels.clearTextures(part: BasePart)
     if part:IsA("MeshPart") then part.TextureID="" end
 end
 function ResourceModels.clone(id: string): Model?
+    if RunService:IsClient() then
+        local authored=Authored.clone(id)
+        if authored then return authored end
+    end
     local folder = ReplicatedStorage:FindFirstChild("Resources")
     local template = if folder then folder:FindFirstChild(id) else nil
     local overrides=ReplicatedStorage:FindFirstChild("ResourceOverrides")

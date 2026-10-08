@@ -16,11 +16,37 @@ local function characterVisual(character: Model)
     local mutation = character:GetAttribute("MutationVisual") or (if character:GetAttribute("GoldVisual") == true then "gold" else "base")
     local genesJson=character:GetAttribute("GenesJson") or "null"
     local previous = character:FindFirstChild("LocalMeshVisual")
-    if previous and previous:GetAttribute("SpeciesId") == id and previous:GetAttribute("Scale") == scale
-        and previous:GetAttribute("Mutation") == mutation and previous:GetAttribute("GenesJson")==genesJson then return end
+    local function groundFrame()
+        local height=root.Size.Y/2+humanoid.HipHeight
+        if humanoid.RigType==Enum.HumanoidRigType.R6 then
+            local leg=character:FindFirstChild("Left Leg")
+            height+=if leg and leg:IsA("BasePart") then leg.Size.Y else 2
+        end
+        return root.CFrame*CFrame.new(0,-height,0)
+    end
+    if previous and previous:GetAttribute("SpeciesId") == id and previous:GetAttribute("Mutation") == mutation
+        and (genesJson~="null" or previous:GetAttribute("GenesJson")=="null") then
+        -- Growth reuses geometry, bones and editable images instead of allocating every pickup.
+        if previous:GetAttribute("Scale")~=scale then
+            local welds={}
+            for _,item in previous:GetDescendants() do
+                if item:IsA("WeldConstraint") then item.Enabled=false;table.insert(welds,item) end
+            end
+            previous.WorldPivot=groundFrame()
+            previous:ScaleTo(scale);previous:PivotTo(groundFrame());previous:SetAttribute("Scale",scale)
+            for _,weld in welds do weld.Enabled=true end
+        end
+        if previous:GetAttribute("GenesJson")~=genesJson then
+            local ok,genes=pcall(function() return Http:JSONDecode(genesJson) end)
+            if ok and typeof(genes)=="table" and mutation=="base" then Appearance.apply(previous,genes) end
+            previous:SetAttribute("GenesJson",genesJson)
+        end
+        return
+    end
     local overrides=ReplicatedStorage:FindFirstChild("ResourceOverrides")
-    local model = if overrides and overrides:FindFirstChild(id) then Resources.clone(id) else RuntimeMeshes.clone(id)
+    local model = Resources.clone(id)
     if not model then return end
+    if not character.Parent or not root.Parent then model:Destroy();return end
     if previous then previous:Destroy() end
     local groundHeight = root.Size.Y / 2 + humanoid.HipHeight
     if humanoid.RigType == Enum.HumanoidRigType.R6 then
@@ -58,12 +84,16 @@ local function watchCharacter(character: Model)
     if watched[character] then return end
     watched[character] = true
     local queued = false
+    local dirty = false
     local function refresh()
-        if queued then return end
+        if queued then dirty=true return end
         queued = true
         task.defer(function()
+            repeat
+                dirty=false
+                if character.Parent then characterVisual(character) end
+            until not dirty or not character.Parent
             queued = false
-            if character.Parent then characterVisual(character) end
         end)
     end
     for _, attribute in {"SpeciesId", "VisualScale", "GoldVisual", "MutationVisual", "DinoAttached","GenesJson"} do

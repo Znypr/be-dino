@@ -55,6 +55,8 @@ function PreviewCamera.bind(viewport: ViewportFrame, model: Model, geometryId: s
         viewport:SetAttribute("LastOrbitUpdate",elapsed)
         frame(0)
     end)
-    viewport.Destroying:Connect(function() resized:Disconnect() motion:Disconnect() end)
+    local function cleanup() resized:Disconnect();motion:Disconnect();camera:Destroy() end
+    viewport.Destroying:Once(cleanup)
+    model.Destroying:Once(cleanup)
 end
 return PreviewCamera

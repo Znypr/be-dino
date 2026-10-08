@@ -50,7 +50,7 @@ local function upgradeCollection(profile: any)
     for _, id in Config.SpeciesOrder do
         local entry = profile.collection[id]
         -- Add only new catalog fields. Existing malformed balances remain invalid.
-        if entry == nil and table.find({"raptor", "stegosaurus", "ankylosaurus"}, id) then
+        if entry == nil and table.find({"raptor", "stegosaurus", "ankylosaurus", "archaeopteryx", "baryonyx", "brachiosaurus", "dimorphodon", "elasmosaurus", "gallimimus", "ichthyosaurus", "microraptor", "mosasaurus", "pachycephalosaurus", "parasaurolophus", "plesiosaurus", "pteranodon", "quetzalcoatlus", "spinosaurus", "therizinosaurus"}, id) then
             entry = {base = 0, gold = 0, diamond = 0}
             profile.collection[id] = entry
         end

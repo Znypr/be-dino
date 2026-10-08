@@ -9,6 +9,7 @@ function ModelPreview.add(parent: GuiObject,id: string,empty: boolean?): Viewpor
     viewport.Ambient,viewport.LightColor,viewport.LightDirection=Color3.fromRGB(193,211,220),Color3.fromRGB(255,246,220),Vector3.new(-1,-1,-1)
     viewport.ZIndex,viewport.Parent=parent.ZIndex+1,parent
     local model=if id=="egg" then Egg.create(empty) else Resources.clone(id)
+    if model and not viewport.Parent then model:Destroy();return viewport end
     if model then
         for _,item in model:GetDescendants() do if item:IsA("BasePart") then item.Anchored=true end end
         model:PivotTo(CFrame.new())

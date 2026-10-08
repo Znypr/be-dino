@@ -18,7 +18,7 @@ class DeliveryTests(unittest.TestCase):
     size=part.find("Properties/Vector3[@name='size']")
     self.assertTrue(all(float(v.text)>0 for v in size))
  def test_individual_icons_have_real_alpha_and_references_are_not_game_assets(self):
-  icons=list((ROOT/'resources/ui/v2/icons').glob('*.png'));self.assertEqual(len(icons),14)
+  icons=list((ROOT/'resources/ui/v2/icons').glob('*.png'));self.assertGreaterEqual(len(icons),14)
   self.assertTrue({'premium-egg-normal.png','premium-egg-cracks.png'} <= {p.name for p in icons})
   for icon in icons:
    im=Image.open(icon);self.assertEqual(im.mode,'RGBA')

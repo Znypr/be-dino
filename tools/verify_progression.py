@@ -131,7 +131,7 @@ assert(Repository.progression(player).crystals==120 and Repository.progression(p
 assert(Repository.progression(player).buffs.speed.expiresAt==expiry)
 Repository.release(player)
 -- Historical v1 balances survive additive catalog and Diamond migration.
-for _,id in {"raptor","stegosaurus","ankylosaurus"} do data['u:123'].collection[id]=nil end
+for i,id in GameConfig.SpeciesOrder do if i>3 then data['u:123'].collection[id]=nil end end
 for _,entry in data['u:123'].collection do entry.diamond=nil end
 data['u:123'].collection.compy.base=150
 data['u:123'].collection.compy.gold=49
@@ -155,7 +155,7 @@ assert(data['u:123'].collection.compy.diamond==1)
 assert(Repository.equipSpecies(player,"compy"))
 assert(Repository.commitRunSettlement(player,"timer-live",10))
 assert(data['u:123'].eggs[2].readyAt-data['u:123'].eggs[1].readyAt==0)
-print("Migration/fusion passed: preserved v1 balances, six catalog entries, exact costs, idempotency and immediately ready new eggs")
+print("Migration/fusion passed: preserved v1 balances, 22 catalog entries, exact costs, idempotency and immediately ready new eggs")
 local before=copy(data['u:123'])
 local eventUser={Parent=true,UserId=888,attrs={}}
 function eventUser:SetAttribute(k,v)self.attrs[k]=v end

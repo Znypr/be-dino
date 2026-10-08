@@ -2,6 +2,7 @@
 -- Imported mesh first; original procedural shell remains an explicit fallback.
 local Dinosaur = {}
 local Resources = require(script.Parent.ResourceModels)
+local Config = require(script.Parent.Config)
 
 
 local GOLD_PALETTE = {
@@ -41,7 +42,7 @@ local function scaleForScore(score: number): number
 end
 
 local function normalizedSpecies(speciesId: any): string
-    if typeof(speciesId) == "string" and PALETTES[speciesId] then
+    if typeof(speciesId) == "string" and Config.SpeciesRarities[speciesId] then
         return speciesId
     end
     return "compy"
@@ -55,7 +56,7 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
     local speciesId = normalizedSpecies(requestedSpeciesId or character:GetAttribute("SpeciesId"))
     local mutation = if isGold == "diamond" then "diamond" elseif isGold == true or isGold == "gold" then "gold" else "base"
     local gold = mutation == "gold"
-    local palette = if mutation == "diamond" then DIAMOND_PALETTE elseif gold then GOLD_PALETTE else PALETTES[speciesId]
+    local palette = if mutation == "diamond" then DIAMOND_PALETTE elseif gold then GOLD_PALETTE else PALETTES[speciesId] or PALETTES.compy
 
     local existing = character:FindFirstChild("DinoVisual")
     if existing and existing:GetAttribute("ResourceSpecies") == speciesId and existing:GetAttribute("ResourceMutation") == mutation then

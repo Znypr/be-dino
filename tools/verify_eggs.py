@@ -96,7 +96,7 @@ for count=1,15 do
  assert(rare>previousRare and legend>previousLegend,"rarity boost not monotonic")
  previousRare,previousLegend=rare,legend
 end
-print("Egg rules passed: all six species, monotonic 1-15 egg rarity boost, exact independent 5% Shiny/10% BIG and 0.5% stacked outcomes")
+print("Egg rules passed: all 22 species, monotonic 1-15 egg rarity boost, exact independent 5% Shiny/10% BIG and 0.5% stacked outcomes")
 '''
 
 

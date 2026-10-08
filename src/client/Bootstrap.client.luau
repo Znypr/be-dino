@@ -442,20 +442,23 @@ render=function(name: string)
         local list=Instance.new("ScrollingFrame")
         list.Name,list.Size,list.Position="DinoCards",UDim2.fromOffset(824,326),UDim2.fromOffset(0,0)
         list.BackgroundTransparency,list.BorderSizePixel,list.ScrollBarThickness=1,0,6
-        list.CanvasSize=UDim2.fromOffset(0,math.ceil(#Config.SpeciesOrder/3)*284)
+        local cardButtonHeight=math.max(45,45/viewportScale())
+        local cardHeight=242+cardButtonHeight
+        local rowHeight=cardHeight+12
+        list.CanvasSize=UDim2.fromOffset(0,math.ceil(#Config.SpeciesOrder/3)*rowHeight)
         list.ZIndex,list.Parent=24,body
         for i,id in Config.SpeciesOrder do
             local base,gold,diamond=copies(id)
             local event=eventMutation(id)
             local rarity=speciesIndex(id)
             if base+gold+diamond>0 or event or ownedTraits(id) then unlocked+=1 end
-            local card=box(list,((i-1)%3)*276,math.floor((i-1)/3)*284,264,272,rarityColors[rarity],24)
-            Theme.texture(card,264,272)
+            local card=box(list,((i-1)%3)*276,math.floor((i-1)/3)*rowHeight,264,cardHeight,rarityColors[rarity],24)
+            Theme.texture(card,264,cardHeight)
             label(card,Config.SpeciesDisplayNames[id],4,8,256,35,25)
             label(card,rarityNames[rarity],4,44,256,25,18)
             hero(card,id,7,70,250,128,bestMutation(id))
             label(card,if event then event.name.." mutation" elseif ownedTraits(id) then "Special variant" elseif base+gold+diamond>0 then string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond) else "Not discovered",5,201,254,25,15)
-            button(card,"VIEW DINO",12,233,240,30,C.card,function() selected=id open("detail") end)
+            button(card,"VIEW DINO",12,233,240,cardButtonHeight,C.card,function() selected=id open("detail") end)
         end
         meter(body,0,356,600,unlocked,#Config.SpeciesOrder,C.accent,string.format("Discovered: %d / %d",unlocked,#Config.SpeciesOrder))
         button(body,"FUSION",624,350,200,44,C.gold,function() open("fusion") end)
