@@ -18,6 +18,8 @@ immutable conditions/colors, ten trails and earned-crystal random eggs. Robux
 packs have six verified real IDs; prompts remain unavailable until disclosure,
 policy and receipt release checks pass. [Catalog and icons](../resources/monetization/product-icons/README.md).
 
+> **Owner's clarified rewards direction, 2026-10-08:** The run's **catches become individual hatchable run eggs** (15 catches = 15 run eggs in the 500-food example), with crystals and separate bonus **egg nests**. Five nest spots are intended; six offered nests allow at most five claims into five empty slots. This supersedes the old direct-copy + one-to-three threshold-egg design as product intent, **not yet as runtime implementation**. See [reward economy](09-reward-economy.md), [AI instructions](../AGENTS.md) and [BD-044](07-kanban.md). Crystal amounts and nest grants remain unapproved formulas.
+
 ## Player loop
 
 1. Play a run, catch food, and earn eggs and **crystals** when the run settles. End-of-run rewards may also contain a crystal reward to **unbox/reveal**. Crystals are also scattered across the live map for players to pick up. Define earned crystal quantities, crystal containers and drop odds in configurable server tables.
