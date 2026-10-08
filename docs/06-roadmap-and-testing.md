@@ -1,5 +1,7 @@
 # Roadmap and release gates
 
+> **DOCUMENT STATUS:** The chronological phase estimates, statements that Studio testing has not started, Build 017/018 priority and original execution order below are **historical planning snapshots**. Use the still-applicable verification/release criteria as requirements, but consult [latest Build 020 acceptance](44-main-integration-checklist.md), [canonical task statuses](07-kanban.md) and [new owner request specification](45-owner-feedback-shop-hud-world-weather-tasks.md) for current progress. This file is not the live task board.
+
 > **2026-10-08 current-goal correction:** The original schedule and Phase 2's "stacked immediate rewards, separate chest loot/queue" record the **historical private-test plan**, not current reward vision or up-to-date Studio status. Before any economy/public release, complete [BD-044](07-kanban.md): catches become separately revealed run eggs (500 raw food -> 15 eggs; 5,000 raw food -> 150 eggs in owner's examples), with crystals and separate five-slot bonus nests. See [canonical owner-intent reward spec](09-reward-economy.md); the implemented Build 020 still follows the old payout.
 
 Estimates are effort ranges for planning, not a delivery promise. Studio is installed on Znypr's account; budget is €0. The source/build bootstrap and movement spike now exist; local Studio validation has not started. Estimates depend on integration and feedback availability.
