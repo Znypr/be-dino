@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "ownerId": null,
+  "ownerType": null,
+  "experienceId": null,
+  "status": "Sources recovered and decoded; upload/integration pending",
+  "assets": [
+    {
+      "key": "fossil_centerpiece",
+      "source": "fossil-centerpiece-v1.png",
+      "robloxAssetId": null,
+      "imageContentUri": null,
+      "status": "Not uploaded"
+    },
+    {
+      "key": "aura_meadow_ring",
+      "source": "aura-meadow-ring-v1.png",
+      "robloxAssetId": null,
+      "imageContentUri": null,
+      "status": "Not uploaded"
+    },
+    {
+      "key": "aura_tidal_ring",
+      "source": "aura-tidal-ring-v1.png",
+      "robloxAssetId": null,
+      "imageContentUri": null,
+      "status": "Not uploaded"
+    },
+    {
+      "key": "aura_royal_ring",
+      "source": "aura-royal-ring-v1.png",
+      "robloxAssetId": null,
+      "imageContentUri": null,
+      "status": "Not uploaded"
+    },
+    {
+      "key": "potion_speed_base",
+      "source": "potion-speed-base-v1.png",
+      "robloxAssetId": null,
+      "imageContentUri": null,
+      "status": "Not uploaded"
+    },
+    {
+      "key": "potion_growth_base",
+      "source": "potion-growth-base-v1.png",
+      "robloxAssetId": null,
+      "imageContentUri": null,
+      "status": "Not uploaded"
+    },
+    {
+      "key": "mutation_gold",
+      "source": "mutation-gold-v1.png",
+      "robloxAssetId": null,
+      "imageContentUri": null,
+      "status": "Not uploaded"
+    },
+    {
+      "key": "mutation_diamond",
+      "source": "mutation-diamond-v1.png",
+      "robloxAssetId": null,
+      "imageContentUri": null,
+      "status": "Not uploaded"
+    },
+    {
+      "key": "catches_mark",
+      "source": "catches-mark-v1.png",
+      "robloxAssetId": null,
+      "imageContentUri": null,
+      "status": "Not uploaded"
+    }
+  ]
+}

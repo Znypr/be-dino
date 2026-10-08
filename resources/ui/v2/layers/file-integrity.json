@@ -1,0 +1,159 @@
+{
+  "checked": "2026-10-08",
+  "files": [
+    {
+      "source": "resources/ui/v2/layers/aura-meadow-ring-v1.png",
+      "bytes": 953831,
+      "sha256": "888590943144364f87705b88c9d9090ce642ba7e80ff179d51b39b2df941038d",
+      "size": [
+        1254,
+        1254
+      ],
+      "alphaRange": [
+        0,
+        255
+      ],
+      "edgeMarginPx": 0
+    },
+    {
+      "source": "resources/ui/v2/layers/aura-tidal-ring-v1.png",
+      "bytes": 880205,
+      "sha256": "7664221e3d8c86832b7c6b92b12447db7658efc9b5e7e67f06dcd58e5a9358fc",
+      "size": [
+        1254,
+        1254
+      ],
+      "alphaRange": [
+        0,
+        255
+      ],
+      "edgeMarginPx": 19
+    },
+    {
+      "source": "resources/ui/v2/layers/aura-royal-ring-v1.png",
+      "bytes": 904315,
+      "sha256": "413032dabe983fdc3cd515b35245af319f7ad5feadb1fb09ef21986f0bf9ab91",
+      "size": [
+        1254,
+        1254
+      ],
+      "alphaRange": [
+        0,
+        255
+      ],
+      "edgeMarginPx": 0
+    },
+    {
+      "source": "resources/ui/v2/layers/fossil-centerpiece-v1.png",
+      "bytes": 847571,
+      "sha256": "a3c5fae249fd880b71bbb3e38d5ff50b576f0af839c2a6a7d27e62348876f3cd",
+      "size": [
+        1254,
+        1254
+      ],
+      "alphaRange": [
+        0,
+        255
+      ],
+      "edgeMarginPx": 20
+    },
+    {
+      "source": "resources/ui/v2/layers/potion-speed-base-v1.png",
+      "bytes": 1048068,
+      "sha256": "6c87eef36f4096ef23bd3c4e3ede8379f0e547ac13da982e7bb7eaae9be1b15e",
+      "size": [
+        1254,
+        1254
+      ],
+      "alphaRange": [
+        0,
+        255
+      ],
+      "edgeMarginPx": 25
+    },
+    {
+      "source": "resources/ui/v2/layers/potion-growth-base-v1.png",
+      "bytes": 1072762,
+      "sha256": "e3773bcf0c2a4c6ed311210aeedafd6034c2ef8acdd456154c03f2aa88338528",
+      "size": [
+        1254,
+        1254
+      ],
+      "alphaRange": [
+        0,
+        255
+      ],
+      "edgeMarginPx": 0
+    },
+    {
+      "source": "resources/ui/v2/layers/mutation-gold-v1.png",
+      "bytes": 849364,
+      "sha256": "74a350cb670d8e637b98073c68c2f878af847e39b125db0977e0b1c5e0f602e8",
+      "size": [
+        1254,
+        1254
+      ],
+      "alphaRange": [
+        0,
+        255
+      ],
+      "edgeMarginPx": 0
+    },
+    {
+      "source": "resources/ui/v2/layers/mutation-diamond-v1.png",
+      "bytes": 909944,
+      "sha256": "f0802103bbaab8df53b52dc9a68662b72c11584cff9bc12cbe7dc9fed67ae012",
+      "size": [
+        1254,
+        1254
+      ],
+      "alphaRange": [
+        0,
+        255
+      ],
+      "edgeMarginPx": 0
+    },
+    {
+      "source": "resources/ui/v2/layers/catches-mark-v1.png",
+      "bytes": 930263,
+      "sha256": "b114cee67fadbc9ed12d95430c1e76be6dd77e404b25a62d178e73e18d6641de",
+      "size": [
+        1254,
+        1254
+      ],
+      "alphaRange": [
+        0,
+        255
+      ],
+      "edgeMarginPx": 14
+    },
+    {
+      "source": "resources/ui/v2/items/aura-meadow-v1.png",
+      "bytes": 1227623,
+      "sha256": "d9d03bcae38206cea70653494eb4835288d4ab51351a4e9352bff048a63ef61f",
+      "size": [
+        1254,
+        1254
+      ],
+      "alphaRange": [
+        0,
+        255
+      ],
+      "edgeMarginPx": 0
+    },
+    {
+      "source": "resources/ui/v2/items/aura-tidal-v1.png",
+      "bytes": 1101335,
+      "sha256": "ea14625b4bfd9a380b9e7d34c8205cbd51234b60a47767327a1d0750567c9856",
+      "size": [
+        1254,
+        1254
+      ],
+      "alphaRange": [
+        0,
+        255
+      ],
+      "edgeMarginPx": 14
+    }
+  ]
+}

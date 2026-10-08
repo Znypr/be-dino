@@ -1,7 +1,7 @@
 {
   "version": 1,
   "creator": "Be Dino / Znypr",
-  "rights": "Original project-generated geometry and vector artwork; no third-party source assets.",
+  "rights": "Original project-created geometry/vector artwork and AI-generated PNG artwork; no extracted third-party game assets.",
   "generator": "tools/generate_resources.py",
   "units": "Roblox studs; Y up; front -Z; origin on ground",
   "assets": [
@@ -820,7 +820,7 @@
           -1.9498558243636472
         ],
         [
-          2.0,
+          2,
           1.15,
           1.9498558243636472
         ]
@@ -837,7 +837,7 @@
       "bounds": [
         [
           -0.7656230589874906,
-          0.0,
+          0,
           -0.8083980388508806
         ],
         [
@@ -858,7 +858,7 @@
       "bounds": [
         [
           -0.19416407864998741,
-          0.0,
+          0,
           -0.22825356391083687
         ],
         [
@@ -900,7 +900,7 @@
       "bounds": [
         [
           -0.4045084971874738,
-          0.0,
+          0,
           -0.4755282581475768
         ],
         [
@@ -913,6 +913,87 @@
       "status": "native model packaged; OBJ available for optimized MeshPart import",
       "sha256": "5849544c140729d7fa8785c89427144b05ff0139c5c99350ee70cae929427140",
       "packagedModel": "roblox/amber.rbxmx"
+    },
+    {
+      "logicalId": "fossil_centerpiece",
+      "source": "ui/v2/layers/fossil-centerpiece-v1.png",
+      "sha256": "a3c5fae249fd880b71bbb3e38d5ff50b576f0af839c2a6a7d27e62348876f3cd",
+      "bytes": 847571,
+      "robloxAssetId": null,
+      "status": "generated PNG draft; full decode/hash verified; Roblox upload and integration pending",
+      "generationMethod": "built-in image_gen; exact prompts in layers/prompts.json or layers/item-prompts.json"
+    },
+    {
+      "logicalId": "aura_meadow_ring",
+      "source": "ui/v2/layers/aura-meadow-ring-v1.png",
+      "sha256": "888590943144364f87705b88c9d9090ce642ba7e80ff179d51b39b2df941038d",
+      "bytes": 953831,
+      "robloxAssetId": null,
+      "status": "generated PNG draft; full decode/hash verified; Roblox upload and integration pending",
+      "generationMethod": "built-in image_gen; exact prompts in layers/prompts.json or layers/item-prompts.json"
+    },
+    {
+      "logicalId": "aura_tidal_ring",
+      "source": "ui/v2/layers/aura-tidal-ring-v1.png",
+      "sha256": "7664221e3d8c86832b7c6b92b12447db7658efc9b5e7e67f06dcd58e5a9358fc",
+      "bytes": 880205,
+      "robloxAssetId": null,
+      "status": "generated PNG draft; full decode/hash verified; Roblox upload and integration pending",
+      "generationMethod": "built-in image_gen; exact prompts in layers/prompts.json or layers/item-prompts.json"
+    },
+    {
+      "logicalId": "aura_royal_ring",
+      "source": "ui/v2/layers/aura-royal-ring-v1.png",
+      "sha256": "413032dabe983fdc3cd515b35245af319f7ad5feadb1fb09ef21986f0bf9ab91",
+      "bytes": 904315,
+      "robloxAssetId": null,
+      "status": "generated PNG draft; full decode/hash verified; Roblox upload and integration pending",
+      "generationMethod": "built-in image_gen; exact prompts in layers/prompts.json or layers/item-prompts.json"
+    },
+    {
+      "logicalId": "potion_speed_base",
+      "source": "ui/v2/layers/potion-speed-base-v1.png",
+      "sha256": "6c87eef36f4096ef23bd3c4e3ede8379f0e547ac13da982e7bb7eaae9be1b15e",
+      "bytes": 1048068,
+      "robloxAssetId": null,
+      "status": "generated PNG draft; full decode/hash verified; Roblox upload and integration pending",
+      "generationMethod": "built-in image_gen; exact prompts in layers/prompts.json or layers/item-prompts.json"
+    },
+    {
+      "logicalId": "potion_growth_base",
+      "source": "ui/v2/layers/potion-growth-base-v1.png",
+      "sha256": "e3773bcf0c2a4c6ed311210aeedafd6034c2ef8acdd456154c03f2aa88338528",
+      "bytes": 1072762,
+      "robloxAssetId": null,
+      "status": "generated PNG draft; full decode/hash verified; Roblox upload and integration pending",
+      "generationMethod": "built-in image_gen; exact prompts in layers/prompts.json or layers/item-prompts.json"
+    },
+    {
+      "logicalId": "mutation_gold",
+      "source": "ui/v2/layers/mutation-gold-v1.png",
+      "sha256": "74a350cb670d8e637b98073c68c2f878af847e39b125db0977e0b1c5e0f602e8",
+      "bytes": 849364,
+      "robloxAssetId": null,
+      "status": "generated PNG draft; full decode/hash verified; Roblox upload and integration pending",
+      "generationMethod": "built-in image_gen; exact prompts in layers/prompts.json or layers/item-prompts.json"
+    },
+    {
+      "logicalId": "mutation_diamond",
+      "source": "ui/v2/layers/mutation-diamond-v1.png",
+      "sha256": "f0802103bbaab8df53b52dc9a68662b72c11584cff9bc12cbe7dc9fed67ae012",
+      "bytes": 909944,
+      "robloxAssetId": null,
+      "status": "generated PNG draft; full decode/hash verified; Roblox upload and integration pending",
+      "generationMethod": "built-in image_gen; exact prompts in layers/prompts.json or layers/item-prompts.json"
+    },
+    {
+      "logicalId": "catches_mark",
+      "source": "ui/v2/layers/catches-mark-v1.png",
+      "sha256": "b114cee67fadbc9ed12d95430c1e76be6dd77e404b25a62d178e73e18d6641de",
+      "bytes": 930263,
+      "robloxAssetId": null,
+      "status": "generated PNG draft; full decode/hash verified; Roblox upload and integration pending",
+      "generationMethod": "built-in image_gen; exact prompts in layers/prompts.json or layers/item-prompts.json"
     }
   ],
   "runtimeIntegration": "Native original triangle Models packaged; PNG icons compiled to native GUI tiles with optional uploaded image bindings. No runtime editable API dependency."
