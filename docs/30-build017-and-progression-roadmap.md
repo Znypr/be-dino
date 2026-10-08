@@ -1,5 +1,7 @@
 # Build 017 completion and progression roadmap
 
+> **HISTORICAL Build 017/018 task plan.** Older unchecked boxes reflect then-pending Studio acceptance, not necessarily absent Build 020 code. Use [current integration](44-main-integration-checklist.md), [owner tasks](45-owner-feedback-shop-hud-world-weather-tasks.md) and [Kanban](07-kanban.md).
+
 Recorded 2026-10-04 from Znypr's playtest feedback and feature requests. Status is tracked only in [07-kanban.md](07-kanban.md). Implementation is now prepared in Build 017 Final and Build 018; [current implementation and local verification](31-build018-progression-test.md). Checkboxes below represent open Studio acceptance, not missing source code.
 
 ## First: finish Build 017
