@@ -13,6 +13,7 @@ local Theme = require(Shared.UITheme)
 local NavigationArtwork = require(Shared.NavigationArtwork)
 local Preview = require(Shared.DinosaurPreview)
 local ModelPreview = require(Shared.ModelPreview)
+local HatchPresentation = require(Shared.HatchPresentation)
 local ProgressionConfig=require(Shared.ProgressionConfig)
 local ProgressionRules=require(Shared.ProgressionRules)
 local EggTraits=require(Shared.EggTraits)
@@ -453,19 +454,11 @@ render=function(name: string)
         for _,child in view:GetChildren() do if child.Name=="TraitBadge" or child.Name=="ShinyPreviewGlint" then child:Destroy() end end
         PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny")})
         view.Visible=false
-        local eggView=ModelPreview.add(body,"egg")
+        local genesOk,hatchGenes=pcall(function() return Http:JSONDecode(str("LastChestGenesJson","null")) end)
+        if not genesOk or typeof(hatchGenes)~="table" then hatchGenes=nil end
+        local eggView,animateEgg,splitEgg=HatchPresentation.add(body,hatchGenes)
         eggView.Position,eggView.Size=UDim2.fromOffset(260,0),UDim2.fromOffset(304,260)
         local rewardLabel=label(body,rarityNames[speciesIndex(id)].." egg",80,240,660,58,36,rarityColors[speciesIndex(id)])
-        local crack=Instance.new("Frame")
-        crack.BackgroundTransparency,crack.Position,crack.Size,crack.ZIndex,crack.Parent=1,UDim2.fromOffset(370,88),UDim2.fromOffset(84,120),eggView.ZIndex+1,body
-        local fractures={}
-        for i,line in {{34,0,22,44},{28,32,26,-35},{33,70,20,38}} do
-            local segment=Instance.new("Frame")
-            segment.BackgroundColor3,segment.BorderSizePixel=C.outline,0
-            segment.Position,segment.Size,segment.Rotation=UDim2.fromOffset(line[1],line[2]),UDim2.fromOffset(4,line[3]),line[4]
-            segment.Visible,segment.ZIndex,segment.Parent=false,crack.ZIndex,crack
-            fractures[i]=segment
-        end
         local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
         if mutation then
             local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
@@ -481,12 +474,11 @@ render=function(name: string)
             local started=os.clock()
             while os.clock()-started<3.4 and modalVersion==version and eggView.Parent do
                 local t=os.clock()-started
-                if motion then eggView.Rotation=math.sin(t*(8+t*5))*math.min(14,t*5) end
-                for i,segment in fractures do segment.Visible=t>1.8+i*.35 end
+                animateEgg(t)
                 task.wait(.03)
             end
             if modalVersion~=version or not view.Parent then return end
-            eggView:Destroy() crack:Destroy()
+            splitEgg()
             view.Visible=true
             rewardLabel.Text=reward
             heading.Text="You hatched a dinosaur!"

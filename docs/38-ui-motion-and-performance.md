@@ -56,3 +56,32 @@ preview memory and vanished on restart. No published player data was accessed.
 Still open: physical touch/controller activation, device safe areas, FPS/memory
 and connection profiling, loading-failure/slow-server transitions, delayed/error
 shop results, early-close hatch regression and integration of all concurrent work.
+
+## Premium hatch correction after owner feedback
+
+The former hatch used EggPreview sphere/spot primitives and three 2D rectangle
+cracks. It did not use the premium Blender egg. The old navigation image was
+103460376747474, independently bound from the hatch.
+
+Now HatchPresentation uses matched 512px RGBA normal-shell and branching-crack
+exports from Premium_Egg/Blank_Egg_Conditions, preserving the shared full camera
+canvas. Uploaded shell 95856282289615 and cracks 126956807167774 both have verified
+Creator.Id 7285577648. The navigation binding also uses this shell, sized to
+compensate for its transparent margins. Source PNGs/checksums are retained in
+resources/ui/v2/icons/premium-egg-bindings.json.
+
+Cracks fade onto the shared egg layer, stay attached during shake/squash, and
+two cropped shell halves separate/rotate/fade over 240ms during reveal. With
+effects off, motion is removed and reveal resolves immediately. No reward
+outcomes or server claim timing are changed. Hatch genes tint the image when
+the concurrently developed genetics module is installed; baseline remains valid.
+
+Actual Studio UI buy/claim yielded 2x raptor, emptied the queue, and rendered
+the premium crack layers (premium-cracks.png). The new navigation ImageLabel
+IsLoaded=true; console only build-ready. All 60 current sources compile and
+generated icon bindings check passes. This is owner Studio evidence, not
+published non-owner access or final owner art approval.
+
+Integration: keep the existing local genes variable and pass it into
+HatchPresentation.add when merging with shop/genetics changes. Do not restore
+the former rectangle fracture loop.
