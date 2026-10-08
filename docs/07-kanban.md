@@ -110,38 +110,15 @@ The newer owner's reward intent supersedes the 2026-09-17 test economy's `N(c)=c
 - [ ] Retune and test quantity (currently 1/2/3 copies per egg), species odds, egg outcomes/disclosure, fusion pacing, 150+ egg batch payloads and reward caps. Old `tools/economy_sim.py`, `tests/test_economy.py`, Config thresholds and Studio fixtures remain **historical tests** until deliberately replaced.
 - [ ] End-to-end multiplayer/rejoin/persistence, queue limits, migration, real-device interaction, UI and no paid-random regression verified with evidence before marking done. Do not touch persistent profiles or enable paid random items without a separate release review.
 
-### BD-045–BD-056: Owner UI, economy, terrain, artwork and weather feedback (2026-10-08)
+### BD-045–BD-056: Owner feedback implementation (2026-10-08)
 
-**All tasks below are Backlog/TODO, not shipped or acceptance-tested.** Detailed research, source documents, implementation notes, individual subtasks, dependencies and measurable acceptance are in [the canonical feature specification](45-owner-feedback-shop-hud-world-weather-tasks.md). This task board remains the single source of task **status**. Existing BD-028–043 functionality is useful foundation, not evidence these refinements have shipped.
+**Status:** all Backlog/TODO. The **task index above is authoritative** for status, priority, dependencies and ownership. Rather than duplicate every subtask here, use the detailed [categorized owner feedback specification](45-owner-feedback-shop-hud-world-weather-tasks.md) for acceptance checklists, source references and design constraints.
 
-#### Economy and randomized shops
-
-- [ ] **BD-045 — condition odds (P0).** Starting odds **Cracked 50%, Dirty 30%, Normal 15%, Rainbow 4.5%, Astra 0.5%**, sum 100. Subtasks: config/integer weights; redo six upgrades with owner-reviewable current/next values; preserve 20% Cracked hatch success and saved egg results; update paid-odds disclosure/enumeration and 15/150-egg tests. At tier 0, **40% expected egg failure**, which needs explicit playtest review, not silent balance changes.
-- [ ] **BD-051 — rotating Potion Shop (P1).** Subtasks: every **300 seconds** server-set subset of available potions; rarity-weighted selection; each potion **1–3 purchasable units/player with 1 most likely** (numeric probability TBD); atomic purchases, stock/offer version and reconnect safety; **next-refresh countdown** and **“Potion Shop refreshed”** popup; preserve owned potion inventory, live buffs and paid-random restrictions.
-
-#### Shop navigation and presentation
-
-- [ ] **BD-046 — Shop entry (P1).** Subtasks: replace misleading **AURAS** navigation label with **SHOP**; replace nav image with **existing crystal icon**; keep AURAS internal category; make top-right wallet counter open same shop; test nav/history/modal, touch and controller.
-- [ ] **BD-047 — Shop artwork & layout (P1).** Subtasks: Crystal Shop **landing tiles with unique images**, not a horizontal category row; preserve in-shop Auras/Trails/Eggs/Conditions/Crystals tabs; put **small leading icons** on tabs and identify needed new icon masters; replace Egg Shop product icon with approved **green-spotted egg** art (verify new asset, upload, bind); enlarge/center aura card previews with the existing reusable layered ring/fossil assembler; QA prices and item states on phone/tablet/desktop.
-
-#### Trail, world and collectible assets
-
-- [ ] **BD-048 — trail rarity/render/art (P1).** Subtasks: audit existing TEN trails and THREE current rarity names; propose six rarity classes across ten products for approval; make original icons and consistent six-tier borders; Blender editable motion/ribbon/particle effect assets and per-trail previews; integrate optimized world trails, preserve level/speed and owned IDs; performance and reduced-effects QA.
-- [ ] **BD-049 — map variation (P1).** Subtasks: Blender multiple tree silhouettes/sizes, ground vegetation, ferns, bushes, boulders and rock forms; authored landmarks/statues/nests/arches; repeatable biome-aware seeds/placement and wide walkable corridors; colliders/LOD and owned mesh imports; actual Studio + device load.
-- [ ] **BD-050 — food props (P1).** Subtasks: Blender food berries, fruit, food egg, amber and variants; shared source meshes/materials and IDs; readable world-size scaling and placements; **preserve +1/+4/+15/+50 values and distinction between amber food vs wallet crystals**; server pickup/respawn/multiplayer and mobile tests.
-
-#### Traversal, home and HUD
-
-- [ ] **BD-053 — slope movement (P0).** Subtasks: reproduce slide/hill-climb failure with recorded coordinates; investigate controller/friction/slope (prototype **MaxSlopeAngle 46°**), root collider and animation pivot; repair traversable terrain/traction without PvP or movement exploit; test incline/decline, jump/leap, buffs, BIG, terrain types and server reconciliation.
-- [ ] **BD-052 — Home return (P1).** Subtasks: consolidate duplicated buttons to one **middle-bottom home icon**, keep it outside touch controls; clear **Return to Sanctuary / Cancel** confirmation; remove old **three-second** exit channel after confirmation; preserve server-authoritative death/exit ordering and exactly-once rewards; test in-run/sanctuary/phone/controller.
-- [ ] **BD-054 — phone/tablet (P0).** Subtasks: research thumb/reach zones and documented Roblox device safe insets; restructure controls away from inaccessible absolute bottom and joystick/jump areas; independent landscape phone/tablet layouts, 44–48px target, correct PreferredInput/gamepad transitions, screenshots with hitboxes and physical-touch tests. Refer to [Roblox UI guidance](https://create.roblox.com/docs/ui/position-and-size) and [mobile input](https://create.roblox.com/docs/input/mobile).
-- [ ] **BD-056 — live HUD (P1).** Subtasks: show **Growth/Size only at top center**; bottom left shows **egg icon + Eggs Caught N only**, outside thumbstick safe area; remove duplicated Growth readout; reconcile displayed eggs with BD-044 actual earned-egg count, preserve event bonuses and 0/15/150+ cases, test camera/modal overlap.
-
-#### Weather visuals and world ambience
-
-- [ ] **BD-055 — full weather environment (P1).** Subtasks: map all seven current events plus Clear to reusable **Lighting, Atmosphere, Terrain.Clouds, Sky/ColorCorrection** visual presets, tween/restore safely; camera-local bounded rain, storm lightning, snow, volcano ash/orange sky, aurora curtains, earthquake dust and blood-moon visuals with audio where appropriate; preserve server weather/RNG/mutation tags; join/exit/respawn/reduced-effects and 8–12-player/mobile QA. Icons/timers are already present and alone are insufficient.
-
-**Scope rule:** New tasks must not be marked Done from written specifications, AI renders, a working Build 020 feature with a similar name, or unverified Roblox model IDs. All status changes require evidence in this board.
+- **Economy/shops:** BD-045 conditions (new starting odds **50/30/15/4.5/0.5**), BD-046 Shop entry, BD-047 category cards/icons and aura previews, BD-051 five-minute randomized potion offers.
+- **Art/world:** BD-048 ten trail assets and six proposed rarity classes, BD-049 reusable world props and landmarks, BD-050 food models, BD-055 environment-wide weather.
+- **Movement/UX:** BD-052 return confirmation, BD-053 terrain/sliding defect, BD-054 mobile/tablet touch placement, BD-056 growth and caught-egg HUD.
+- **Critical interaction:** BD-044 egg-per-catch target is not shipped. Do not label old catches/threshold eggs as equivalent, or unlock paid random items. New **Cracked 50%** selection combined with existing **80% failure on cracked** implies **40% total failed eggs at tier 0**, a high-risk balancing review.
+- **Completion gate:** each task requires its own code/assets, Studio/device/runtime acceptance and evidence. Neither planning text nor a similarly named pre-existing Build 020 feature closes it.
 
 ### Crystal Shops and Genetics, 2026-10-08 (BD-036–041)
 
