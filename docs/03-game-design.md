@@ -50,6 +50,12 @@ At enqueue: readyAt = max(serverNow, previousReadyAt) + duration. Claim complete
 Do not silently discard rewards at capacity. Specify a bounded pending-batch or explicit overflow policy before implementation.
 No paid chests or paid timer skips for the first test.
 
+## Proposed expanded egg/shop progression (2026-10-08)
+
+The earlier three-species/no-paid-shop plan remains the **historical first private test scope**, not the desired long-term catalog. The new **Todo** direction includes crystals from the map and run-end rewards, optional Robux crystal packs, crystal-purchased random eggs in the existing hatch queue, level-gated priced speed trails, temporary potions and a progressively upgraded Condition Shop. Cracked/Dirty/Normal/Rainbow/Astra condition outcomes have requested base-stat factors 0.8/0.8/1.0/1.2/1.8, with Cracked additionally able to fail hatching. Exact probabilities and balancing remain open. Each egg has two rarity-weighted colour slots and a saved random blend, independent shiny status, and Normal/Big size; Big grows the dinosaur's appearance by 20% without intrinsic stat advantages.
+
+These are **future requirements only**. They do not silently replace working Build 019 runtime logic or earlier private-test economy assumptions. See [full expanded spec](36-crystal-shops-egg-genetics-and-progression.md) and [BD-035–041](07-kanban.md).
+
 ## UI
 Lobby: Play, Collection, Eggs, Settings.
 Run: score, reward progress, nearby relative-threat indicator, End Run, optional small session ranking.
