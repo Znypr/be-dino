@@ -1,0 +1,122 @@
+{
+  "date": "2026-10-08",
+  "studio": "BeDino-Latest.rbxlx",
+  "studioId": "65d0a77a-6006-4d4c-80b3-4fa62fce67cc",
+  "placeId": 0,
+  "gameId": 0,
+  "mode": "Studio preview (not saved)",
+  "viewport": {
+    "width": 750,
+    "height": 323,
+    "touchEmulator": true
+  },
+  "menus": [
+    {
+      "destination": "collection",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"visible\":true,\"blur\":8,\"position\":\"{0.5, 0}, {0.5, 0}\",\"scale\":0.5442307591438294,\"markers\":{\"1\":\"collection\"},\"instances\":3752}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "destination": "eggs",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"visible\":true,\"blur\":8,\"position\":\"{0.5, 0}, {0.5, 0}\",\"scale\":0.5442307591438294,\"markers\":{\"1\":\"eggs\"},\"instances\":2114}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "destination": "fusion",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"visible\":true,\"blur\":8,\"position\":\"{0.5, 0}, {0.5, 0}\",\"scale\":0.5442307591438294,\"markers\":{\"1\":\"fusion\"},\"instances\":2041}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "destination": "home",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"visible\":true,\"blur\":8,\"position\":\"{0.5, 0}, {0.5, 0}\",\"scale\":0.5442307591438294,\"markers\":{\"1\":\"home\"},\"instances\":2027}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "destination": "auras",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"visible\":true,\"blur\":8,\"position\":\"{0.5, 0}, {0.5, 0}\",\"scale\":0.5442307591438294,\"markers\":{\"1\":\"auras\"},\"instances\":2087}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "destination": "potions",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"visible\":true,\"blur\":8,\"position\":\"{0.5, 0}, {0.5, 0}\",\"scale\":0.5442307591438294,\"markers\":{\"1\":\"potions\"},\"instances\":2239}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "destination": "settings",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"visible\":true,\"blur\":8,\"position\":\"{0.5, 0}, {0.5, 0}\",\"scale\":0.5442307591438294,\"markers\":{\"1\":\"settings\"},\"instances\":2023}"
+          }
+        ],
+        "isError": false
+      }
+    }
+  ],
+  "counter": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"before\":1000000,\"animated\":true,\"fixture\":\"client-only currency attribute; not a server grant\",\"exact\":true,\"intermediate\":1000010.3173911572,\"settled\":1000025}"
+      }
+    ],
+    "isError": false
+  },
+  "notes": [
+    "Seven navigation destinations opened with one correct active marker, centered panel and settled blur 8.",
+    "Eight reduced-effects and ten normal-effects close/reopen cycles retained collection UI instance count 3752 and six previews.",
+    "Bounded texture reduced same collection layout from 3752 to 1974 descendants.",
+    "StartupUI cleared after main UI Ready and dinosaur attached.",
+    "Settings OFF had zero blur; ON restored blur 8.",
+    "Hidden preview camera paused for 0.2 seconds and resumed when shown.",
+    "Tween helper latest target wins; reduced effects writes final value immediately in an isolated NumberValue probe.",
+    "Real UI bought and claimed an egg on the unpublished in-memory profile: 154af0ba-523a-455b-ac3a-2b6ffa6c2d1d -> 1x raptor; queue empty.",
+    "Wallet initial zero display fixed and retested at 1000000 Crystals.",
+    "Return selected-object input works. Injected ButtonA did not activate; physical controller and touch remain unverified.",
+    "Final runtime console only build-ready message. Earlier AssistantCommand path lookup error was a tool diagnostic, not game runtime.",
+    "Snapshot synced 57 sources; concurrent GeneTextures file appeared later and was not part of this Studio snapshot."
+  ]
+}
