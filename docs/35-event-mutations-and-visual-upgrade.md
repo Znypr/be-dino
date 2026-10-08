@@ -1,5 +1,7 @@
 # Event mutations and visual upgrade
 
+> **HISTORICAL Build 019 event/cosmetic implementation snapshot.** It accurately records old three-trail cosmetics and 1/2/3 egg thresholds for that build but is **not** the current ten-trail Build 020 scope or the owner's egg-per-catch goal. Use [Build 020 integration](44-main-integration-checklist.md), [reward target](09-reward-economy.md), [full weather task BD-055](45-owner-feedback-shop-hud-world-weather-tasks.md) and [Kanban](07-kanban.md) for current direction.
+
 **Egg-art follow-up:** [Shared egg appearance vision](39-egg-appearance-shared-vision.md) records the latest owner direction: preserve shell colors/patterns, use surrounding engulfing smoke and dimensional anime-like energy for event mutations, and keep condition effects separate. These Blender drafts supersede shell-painted mutation and flat-ring art proposals; they do not certify runtime integration or change the mechanics below.
 
 Follow-up: docs/37-hatching-traits-and-leaderboards.md adds independent Shiny/BIG,
