@@ -50,6 +50,8 @@ The same batch boost applies to its eggs; hatching does not progressively reroll
 See `RewardMath.computeChestReward`. Direct run reward tiers are a separate legacy
 reward route and must not be advertised as this six-species egg distribution.
 
+> **Owner-directed future change (2026-10-08, BD-045; not yet implemented):** New **tier-0** condition odds must be **Cracked 50%, Dirty 30%, Normal 15%, Rainbow 4.5%, Astra 0.5%**. Total 100%. This supersedes the tier-0 odds below **as product intent**, not as implemented code. Existing six upgrade levels and tier-6 distribution below need an explicit monotonic retune/owner approval rather than pretending the old table is consistent with the new base. Keep Cracked's **20% hatch-success** rule separate from its **50% condition-selection probability**: unupgraded effective failure is **40% per egg** if the existing 80% Cracked failure stays. Existing eggs retain their committed immutable outcomes. Purchased random egg disclosure and exact server config must agree before a new version is live. [Implementation details](45-owner-feedback-shop-hud-world-weather-tasks.md#A-egg-conditions-and-game-economy--bd-045).
+
 ## Conditions And Upgrade Distributions
 
 Exactly one condition is assigned using the player's condition-upgrade level when
