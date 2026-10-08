@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "ownerId": 7285577648,
+  "ownerType": "User",
+  "experienceId": 10769812255,
+  "uploadedAt": "2026-10-08",
+  "status": "All seven creators verified against owner 7285577648; all seven ImageLabels IsLoaded=true in unpublished Studio. Empty-binding native fallbacks verified. Non-owner published-client checks pending.",
+  "assets": [
+    {"key": "trophy", "source": "trophy.png", "robloxAssetId": "90878052837138"},
+    {"key": "dinos", "source": "dinos.png", "robloxAssetId": "122025247365244"},
+    {"key": "egg", "source": "egg.png", "robloxAssetId": "103460376747474"},
+    {"key": "home", "source": "home.png", "robloxAssetId": "94252047806605"},
+    {"key": "fusion", "source": "fusion.png", "robloxAssetId": "122750027724491"},
+    {"key": "shield", "source": "shield.png", "robloxAssetId": "108184472237302"},
+    {"key": "amber", "source": "amber.png", "robloxAssetId": "113168177075625"}
+  ]
+}

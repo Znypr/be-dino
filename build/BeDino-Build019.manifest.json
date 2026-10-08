@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "40d2b957ec4c0f0fb8f1c8492e595f445d0b3bed6acad421535e3babc4d20ad6",
+  "place_sha256": "2704039582a79180abcb998d0d20be6c743d23f0dd964785f09377d86224d50d",
   "sources": {
     "src/loading/Loading.client.luau": "80d7702a45826701816f333e5cfac5a035bd8bdcfeed8b3907f343e65271b104",
     "src/shared/Artwork.luau": "dbcef755028cbf3e737da0f96178db4e563f73843c0df00ad167ab134f1d066e",
@@ -23,7 +23,8 @@
     "src/shared/ResourceGeometry.luau": "07b7892ec2a5fae1ce15ecf5a5f5b2b571b8221f3aa123c608359c3d855333ae",
     "src/shared/ResourceModels.luau": "bc4cfdf3ee9285c084bff461023cf4075fd23d90e0fa276aefc1c5e93c959850",
     "src/shared/RuntimeMeshes.luau": "542db0c4f535afe0dbb1a591ef9567f26796f194ef38967373cf83fa8d710bda",
-    "src/shared/UITheme.luau": "3b3ee8c1ed2e493eabbc674c1cefb47e9b7677f3fab8ec827ffa3a36e4567135",
+    "src/shared/UIIconAssets.luau": "083ac24af573fff28a8806c89391791cf7bff093eb80010a4f323fe3cd2b9198",
+    "src/shared/UITheme.luau": "b1953fc6baf88ce917f04fb400c9f2dda7092cc390d249b83a5513d98c6dfa52",
     "src/shared/WeatherClock.luau": "f9b4b6bb6c8107453e16401e1299260cb27de0c27bc2179242e20441d1f004e5",
     "src/server/Arena.luau": "531074c629aabab7fc2aa4bce35be1951e9d8ca6a81ba9cd576252981f6602a7",
     "src/server/Bootstrap.server.luau": "99d908b789d3ea3b1b8ed221bb37737e596a3bd17a849044b28948db01640477",
@@ -41,7 +42,7 @@
     "src/server/RewardMath.luau": "eeddcd6c722213f109a6e37a0d47e70c59f39138aca8c0ade24d1a23474708ef",
     "src/server/RunLifecycle.luau": "8e78f3a0ee79550430a36e6396926b5a62c8fc14ee4e893088bc404242b6c23c",
     "src/server/VisualTestService.luau": "ee48ddc907c11e5d1390483d570d9ab96fd01b3ee02493b5724a2ebcf1ef0773",
-    "src/client/Bootstrap.client.luau": "585bf13ea44ca1c4dae955d9c285b14aab2fa387cc1047005820db747ccc3453",
+    "src/client/Bootstrap.client.luau": "412f7d0ca971f893acb2b40cdbcfff4172d20b97583d8f0b4b54183de103a589",
     "src/client/ResourceVisuals.client.luau": "37efe6430b0a9e9723405facf7d9a0906d435d2416183367104c4d9a29d188c2",
     "src/client/WeatherVisuals.client.luau": "50f4adc5fbf2d71f8cc89139beb4cdbfa1ef83311a660ad52902f130da961a29"
   }

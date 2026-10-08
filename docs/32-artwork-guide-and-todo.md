@@ -17,13 +17,13 @@ Use owned/original assets and already available tools; do not introduce paid ass
 
 ## Two compatible visual layers
 1. Illustrated item art: match resources/ui/v2/icons/dinos.png and its siblings. Stylized dimensional 3D render, saturated colors, dark contour, rounded bevels, controlled bright highlights, friendly proportions.
-2. Functional symbols: reuse resources/ui/v2/scalable SVG/geometry assets for navigation, timers and status. Do not redraw these as expensive illustrated items.
+2. Functional symbols: reuse resources/ui/v2/scalable SVG/geometry assets for timers, small utility/status symbols and native fallbacks. The 2026-10-08 user request selects the existing illustrated trophy and available navigation originals for visible primary UI; this supersedes the earlier symbol-only navigation recommendation. No new artwork generation is needed.
 UI panels, labels, buttons, rarity frames and animations remain reusable Roblox components governed by UITheme; artwork does not flatten a menu into an image.
 
 ## Layered artwork rule (supersedes flattened aura thumbnails)
 Znypr requests separate reusable effect rings and fossil centerpieces. Use one shared fossil PNG and independent transparent ring PNGs. Original combined Meadow/Tidal drafts remain historical references, not the preferred source format. Do not generate a new fossil for every aura.
 For depth, display the same full ring in two clipped UI containers: upper half behind the center, lower half in front. Share ring position, scale and fade; configure clipping split and center size/offset independently. Do not spin a static perspective ellipse as if it were world-space 3D VFX. Glow/details within current ring PNGs are baked; optional future particle overlays should be separate.
-See resources/ui/v2/layers/README.md and layout.json. All assets are generated drafts, not yet uploaded/integrated/Studio verified. The standalone fossil was regenerated and differs in size from the initial composite; use configuration to align it, not a claim of exact pixel extraction.
+See resources/ui/v2/layers/README.md and layout.json. The nine preferred layers now have owner-verified uploads and loading/assembly evidence in Studio; non-owner published verification remains open. The standalone fossil was regenerated and differs in size from the initial composite; use configuration to align it, not a claim of exact pixel extraction.
 
 ## Reusable potion and counter parts
 Potion bottle artwork is saved without baked emblems. Overlay existing speed/bolt or leaf/growth symbols in UI. Use the same bottle artwork across rarity tiers; frames, rarity labels, duration and quantity remain live UI. Do not regenerate six independent bottles for the six catalog products.
@@ -48,6 +48,9 @@ Catches uses one neutral ivory footprint source, repeated through ImageLabels wh
 
 ## Existing assets to reuse
 Seven illustrated V2 originals: dinos, egg, amber/crystals, home, trophy, fusion, shield.
+All seven now have owner-verified Roblox uploads in `resources/ui/v2/icons/upload-bindings.json`,
+generated reusable bindings in `UIIconAssets.luau`, and archived desktop/phone Studio
+evidence in `docs/evidence/2026-10-08-icons-and-acceptance/`. Utility symbols remain native.
 Twenty scalable symbols: amber, aura, blizzard, check, clock, dinos, egg, fusion, growth, home, leaf, leap, lock, potion, rain, shield, speed, thunder, trophy, weather.
 Legacy symbols include shop, settings, gift, play and close. Existing actual-model dinosaur portraits and UI components are also available.
 An illustrated Gold fusion icon already exists; a separate compact Gold mutation badge serves a different purpose.
@@ -71,7 +74,7 @@ Deferred until actual products exist: luck boost art, Robux bundle contents and 
 Separate export task: render new dino/egg/model and mutation previews when their actual models are ready.
 
 ## Production, adjustment and tracking
-Generate one asset at a time. Core aura, potion, mutation and catches artwork drafts are generated. Build 019 implements runtime binding generation and component assembly. Next is actual owner upload and Studio visual verification; see docs/34-studio-handoff.md. Inventory/Index remain optional; no speculative art generation is required. The first draft establishes item-art style; reuse its proportions, camera, outline and lighting for subsequent assets.
+Generate one asset at a time. Core aura, potion, mutation and catches artwork is generated, uploaded, integrated and owner-Studio verified. These latest results supersede the Generated draft labels in the planning table above. Build 019 implements reusable binding generation and component assembly for the nine layers and seven illustrated icons. Next is non-owner published permission and real-device verification; see docs/34-studio-handoff.md. Inventory/Index remain optional; no speculative art generation is required. The first draft establishes item-art style; reuse its proportions, camera, outline and lighting for subsequent assets.
 Save composed item art under resources/ui/v2/items/ and reusable layer masters under resources/ui/v2/layers/, with versioned names. Preserve existing art. Record each exact prompt in a sibling JSON manifest.
 Generated bitmap artwork can be revised through image editing; it is not a layered/vector source. Theme changes control UI frames/text separately and cannot recolor arbitrary bitmap details safely.
 Store sources in GitHub; upload accepted runtime PNGs under the Roblox experience owner and record real IDs in the shared asset/theme binding. Never fabricate IDs.

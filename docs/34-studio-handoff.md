@@ -9,6 +9,14 @@ in source. See the canonical Build 019 evidence table in `docs/07-kanban.md` for
 passed, partial and pending cases. The connected place is published and uses persistent
 profiles, so it did not provide disposable wallets/copies/eggs for full acceptance.
 
+Follow-up: a separate GameId=0 / PlaceId=0 local copy has now passed successful
+purchases, aura equip, potion use/replacement, Gold/Diamond fusion, sequential
+three-egg hatching and six-species short movement runs with disposable fixtures.
+Seven illustrated trophy/navigation/currency originals are uploaded, bound and
+verified. Archived screenshots and the canonical checklist distinguish these passes
+from the remaining real-device, multiplayer, non-owner and persistent rejoin gates.
+The normal build does not contain acceptance copy/catch fixtures.
+
 ## Completed before Studio
 
 - Nine verified PNG masters stay separate and reusable. `Artwork.luau` composes the three aura rings with a shared fossil, clips each ring into rear/front layers, overlays native speed/leaf symbols on bottles, and repeats the single catches footprint. Shops, confirmations, fusion and the catches HUD use the shared assembler. Empty uploaded IDs use native icons.

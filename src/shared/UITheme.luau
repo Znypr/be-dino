@@ -6,7 +6,7 @@ local Theme = {}
 Theme.BackgroundImageId = ""
 Theme.MotionEnabled = true
 Theme.Colors = {panel=Color3.fromRGB(42,40,53),card=Color3.fromRGB(61,58,73),outline=Color3.fromRGB(13,15,20),text=Color3.new(1,1,1),accent=Color3.fromRGB(93,237,31),gold=Color3.fromRGB(255,210,43),blue=Color3.fromRGB(46,206,255),purple=Color3.fromRGB(194,86,255),red=Color3.fromRGB(247,57,48)}
-Theme.ImageIds = {}
+Theme.ImageIds = require(script.Parent.UIIconAssets)
 function Theme.imageContent(_id: string): Content? return nil end
 function Theme.decorate(object: GuiObject, radius: number)
     local corner = Instance.new("UICorner")
@@ -52,6 +52,7 @@ local function nativeIcon(parent: GuiObject,id: string): Frame?
         root.Name,root.BackgroundTransparency,root.Size = "Art_"..id,1,UDim2.fromOffset(42,42)
         root.Position,root.ZIndex,root.Parent = UDim2.fromOffset(8,5),parent.ZIndex+1,parent
         local image = Instance.new("ImageLabel")
+        image.Name,image.ScaleType = id,Enum.ScaleType.Fit
         image.Image,image.Size,image.BackgroundTransparency,image.ZIndex,image.Parent = uploaded,UDim2.fromScale(1,1),1,root.ZIndex,root
         return root
     end

@@ -1,0 +1,87 @@
+{
+  "species": [
+    {
+      "state": "Active",
+      "mutation": "diamond",
+      "walkSpeed": 26.399999618530273,
+      "distance": 30.49460792541504,
+      "visual": "Packaged resource model",
+      "species": "compy",
+      "attached": true,
+      "parts": 3139
+    },
+    {
+      "state": "Active",
+      "mutation": "base",
+      "walkSpeed": 26.399999618530273,
+      "distance": 29.34912872314453,
+      "visual": "Packaged resource model",
+      "species": "triceratops",
+      "attached": true,
+      "parts": 4243
+    },
+    {
+      "state": "Active",
+      "mutation": "base",
+      "walkSpeed": 26.399999618530273,
+      "distance": 28.766780853271484,
+      "visual": "Packaged resource model",
+      "species": "tyrannosaurus",
+      "attached": true,
+      "parts": 3139
+    },
+    {
+      "state": "Active",
+      "mutation": "base",
+      "walkSpeed": 26.399999618530273,
+      "distance": 28.985139846801758,
+      "visual": "Packaged resource model",
+      "species": "raptor",
+      "attached": true,
+      "parts": 3587
+    },
+    {
+      "state": "Active",
+      "mutation": "base",
+      "walkSpeed": 26.399999618530273,
+      "distance": 30.572111129760742,
+      "visual": "Packaged resource model",
+      "species": "stegosaurus",
+      "attached": true,
+      "parts": 4275
+    },
+    {
+      "state": "Active",
+      "mutation": "base",
+      "walkSpeed": 26.399999618530273,
+      "distance": 30.931711196899414,
+      "visual": "Packaged resource model",
+      "species": "ankylosaurus",
+      "attached": true,
+      "parts": 5091
+    }
+  ],
+  "hatching": [
+    {
+      "remaining": 2,
+      "collection": "{\"tyrannosaurus\":{\"diamond\":0,\"base\":24,\"gold\":0},\"compy\":{\"diamond\":1,\"base\":382,\"gold\":1},\"ankylosaurus\":{\"diamond\":0,\"base\":1,\"gold\":0},\"raptor\":{\"diamond\":0,\"base\":1,\"gold\":0},\"triceratops\":{\"diamond\":0,\"base\":98,\"gold\":0},\"stegosaurus\":{\"diamond\":0,\"base\":1,\"gold\":0}}",
+      "heading": "You hatched a dinosaur!",
+      "step": 1,
+      "lastClaim": "9b962009-bc14-4a99-8890-71e4966729d2"
+    },
+    {
+      "remaining": 1,
+      "collection": "{\"tyrannosaurus\":{\"diamond\":0,\"base\":24,\"gold\":0},\"compy\":{\"diamond\":1,\"base\":382,\"gold\":1},\"ankylosaurus\":{\"diamond\":0,\"base\":1,\"gold\":0},\"raptor\":{\"diamond\":0,\"base\":3,\"gold\":0},\"triceratops\":{\"diamond\":0,\"base\":98,\"gold\":0},\"stegosaurus\":{\"diamond\":0,\"base\":1,\"gold\":0}}",
+      "heading": "You hatched a dinosaur!",
+      "step": 2,
+      "lastClaim": "dd3cbc65-49a0-49d6-b618-dc17ec98d1f6"
+    },
+    {
+      "remaining": 0,
+      "collection": "{\"tyrannosaurus\":{\"diamond\":0,\"base\":24,\"gold\":0},\"compy\":{\"diamond\":1,\"base\":382,\"gold\":1},\"ankylosaurus\":{\"diamond\":0,\"base\":1,\"gold\":0},\"raptor\":{\"diamond\":0,\"base\":3,\"gold\":0},\"triceratops\":{\"diamond\":0,\"base\":98,\"gold\":0},\"stegosaurus\":{\"diamond\":0,\"base\":2,\"gold\":0}}",
+      "heading": "You hatched a dinosaur!",
+      "step": 3,
+      "lastClaim": "a68fd579-7460-4454-9447-beaafdbdf6d9"
+    }
+  ]
+}

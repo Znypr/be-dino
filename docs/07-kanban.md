@@ -63,6 +63,9 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 
 ### Build 019 MCP acceptance, 2026-10-08
 
+Initial pass at `7caf41a`; the separate unpublished follow-up below supersedes its
+pending single-client purchases, fusion, hatching and all-species cases.
+
 Connected instance: `newbuild`, Studio ID `c91d2e6f-2da9-4457-afa0-4fe028f1a83f`.
 Config and rendered badge both confirm `redesign-019`. Place `111259822927673`,
 experience `10769812255`, owner User `znyprs` / `7285577648`. This is a published
@@ -97,6 +100,60 @@ bindings check and deterministic Build 019 packaging pass. The artwork verifier 
 explicitly empties its test mapping to test fallback after real IDs are recorded.
 This does not certify engine physics, live saves/fusion/hatching or device performance.
 BD-023 through BD-033 retain their existing review/test status; BD-019 remains open.
+
+### Build 019 illustrated icons and disposable acceptance follow-up
+
+Continued from `7caf41a` on 2026-10-08. Seven existing illustrated originals
+(trophy, dinos, egg, home, fusion, shield and amber) were uploaded through MCP.
+Every GetProductInfo creator is User `znyprs` / `7285577648`, matching the experience
+owner. Real IDs live in `resources/ui/v2/icons/upload-bindings.json`; the generator
+`tools/bind_ui_icons.py` produces `UIIconAssets.luau`, consumed by UITheme.
+Navigation uses the illustrated fusion icon; mutation footprint badges retain their
+separate meaning. Leaf, speed, leap, weather, locks and other small utility graphics
+remain native. All seven ImageLabels reported IsLoaded=true. Empty-binding native
+fallbacks were exercised separately: all seven produced nonempty graphics and no
+ImageLabels (amber retains the actual crystal-model viewport).
+
+The original published `newbuild` instance was only edited/synced, never played in
+this follow-up. Persistent player data was not read, granted, reset or written.
+A rebuilt file was copied to `%TEMP%/BeDino-019-DisposableAcceptance.rbxlx` and opened
+as a separate Studio instance `83a530b4-df1c-44ca-b216-3367e97119c0`.
+Before fixtures, MCP confirmed GameId=0 and PlaceId=0. ProfileMode was
+`Studio preview (not saved)`, with the existing local 1,000,000-crystal wallet.
+Only that copy's default in-memory profile source was changed: Compy 50 Base / 50
+Gold and one Base of each other species. A synthetic 500-catch active run supplied
+three eggs through normal return/settlement. These fixtures are not in repository
+runtime source or the rebuilt deliverable, and must never be published.
+
+| Acceptance case | Runtime evidence | Result |
+|---|---|---|
+| Aura purchase/equip | Actual BUY -> BUY AURA -> EQUIP buttons; meadow owned/equipped; GrowthMultiplier=1.15 | Pass in disposable engine session |
+| Potion purchase/use/replace | Actual 20 Crystals -> BUY POTION -> USE; speed_common consumed to zero; SpeedMultiplier=1.2; another purchase/use prompted REPLACE & USE and advanced expiresAt | Pass in disposable engine session |
+| Gold fusion | Actual FUSE SELECTED DINO -> CONFIRM FUSION; Compy 50 Base / 50 Gold -> 0 Base / 51 Gold; status mutated; character gold | Pass |
+| Diamond fusion | Actual DIAMOND -> FUSE -> CONFIRM; Compy 0 Base / 51 Gold -> 0 Base / 1 Gold / 1 Diamond; status mutated; character diamond | Pass |
+| Sequential hatching | HATCH NEXT EGG then NEXT EGG; three distinct committed IDs; queue 3 -> 2 -> 1 -> 0; rewards 2 Triceratops, 2 Raptor, 1 Stegosaurus; final NEXT returned to Growing Eggs | Pass; server claims, not fabricated client reveals |
+| Six playable species | Each equip/start succeeded, DinoAttached=true, correct SpeciesId and packaged visual; W/Space moved each 28.77-30.93 studs; all six returned to Sanctuary | Pass for single-client short movement runs |
+| Disposable reset | Stop/start recreated Compy 50 Base / 50 Gold, empty egg queue and local wallet | Pass; no persistent lease/data path |
+| Desktop/phone icon audit | Archived screenshots show illustrated trophy, navigation and currency loading; iPhone 17 Pro landscape and desktop layouts inspected | Pass for tested layouts; small modal touch targets remain an ergonomics limitation |
+| UI regressions | Claimed-egg success toast covered the preview: suppressed redundant toast; growth pulse targeted navigation scale: now restores HUD's own responsive base; real phone-emulated food pickup yielded 5 growth with HUD scale 0.47625 / rail 1 | Fixed, synced and retested |
+
+Screenshot PNGs and structured runtime traces are archived in
+[`docs/evidence/2026-10-08-icons-and-acceptance/`](evidence/2026-10-08-icons-and-acceptance/README.md).
+Species screenshots show actual equipped models in Sanctuary after their movement
+runs; they use a temporary inspection camera. Initial hatch captures preserve the
+toast defect, and the final hatch capture verifies its correction. Keyboard selection
+activated UI buttons; Escape is blocked by Studio VirtualInput, so close buttons were
+used instead. This is not proof of real finger interaction.
+
+Validation: 43 Luau sources compile, all 21 Python tests pass, binding checks and
+artwork assembly pass, and the standard build/source round-trip succeeds. No gameplay
+script errors were observed; Assistant camera-reset messages are tool diagnostics.
+Still unverified: real target-phone performance/touch ergonomics, two-client interaction
+and races/load, published non-owner permissions, production persistence/rejoin of the
+new transactions and experience privacy/access settings. Historical Done entries are
+not extended to those cases; BD-019 and the larger device/multiplayer gates stay open.
+Both instances were left stopped; default viewport restored. The disposable source
+fixture was removed after testing. Fourteen archived PNGs passed image verification.
 
 ### BD-001 — research
 Done. Initial screenshot/source research and planning documents were completed on 2026-09-17.

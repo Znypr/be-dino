@@ -25,6 +25,7 @@ jobs:
           unzip /tmp/luau.zip -d /tmp/luau
       - name: Check Luau sources and behavior
         run: |
+          python tools/bind_ui_icons.py --check
           python tools/verify_sources.py --compiler /tmp/luau/luau-compile
           python tools/verify_luau.py --runner /tmp/luau/luau
           python tools/verify_gameplay.py --runner /tmp/luau/luau

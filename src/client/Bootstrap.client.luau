@@ -434,7 +434,7 @@ local rail=box(gui,14,0,186,444,C.panel,2)
 rail.AnchorPoint,rail.Position=Vector2.new(0,.5),UDim2.new(0,14,.5,0)
 local railScale=Instance.new("UIScale") railScale.Parent=rail
 local navigationButtons = {}
-for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","mutation_gold","fusion",C.purple},{"HOME","home","home",C.accent},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
+for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"HOME","home","home",C.accent},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
     local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() open(entry[3]) end)
     b.TextSize=20
     art(b,entry[2],5,6,40)
@@ -516,6 +516,7 @@ local function scales()
     local size=if camera then camera.ViewportSize else Vector2.new(1280,720)
     local small=math.clamp(math.min(size.X/1000,size.Y/800),.3,1)
     railScale.Scale,hudScale.Scale,actionScale.Scale,timerScale.Scale=small,small,small,small
+    hud:SetAttribute("UIScaleBase",small)
     timers.Position=UDim2.new(1,-20,1,if Input.TouchEnabled then -190 else -100)
     action.Position=UDim2.new(1,-20,1,if Input.TouchEnabled then -120 else -22)
     action:SetAttribute("UIScaleBase",small)
@@ -601,7 +602,7 @@ RunService.Heartbeat:Connect(function(dt)
         notify(string.format("+%.1f Growth!",growth-lastGrowth),C.accent)
         if motion then
             hudScale.Scale*=1.06
-            TweenService:Create(hudScale,TweenInfo.new(.2,Enum.EasingStyle.Back),{Scale=railScale.Scale}):Play()
+            TweenService:Create(hudScale,TweenInfo.new(.2,Enum.EasingStyle.Back),{Scale=hud:GetAttribute("UIScaleBase") or 1}):Play()
         end
     end
     lastGrowth=growth
@@ -621,7 +622,8 @@ for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus
     player:GetAttributeChangedSignal(attribute):Connect(function()
         local status=str(attribute)
         if attribute=="LastChestClaimStatus" then hatchPending=false end
-        if status=="equipped" or status=="mutated" or status=="claimed" then notify("Success!",C.accent)
+        if status=="claimed" then toast.Visible=false
+        elseif status=="equipped" or status=="mutated" then notify("Success!",C.accent)
         elseif status~="" and status~="duplicate" then notify(status:gsub("_"," "),C.red) end
     end)
 end
