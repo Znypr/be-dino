@@ -1,0 +1,33 @@
+{
+  "status": "Authored revisions awaiting owner review; not uploaded or verified in Roblox",
+  "files": {
+    "magma-before-after.jpg": {
+      "sha256": "3d66f62c7d2ad6d7658bc09e45d2c67753e6ab092b44dbb2398369ad910ebb12",
+      "source": "C:\\Users\\znypr\\Documents\\ChatGPT\\be dino roblox game\\Premium_Egg\\Magma_Refinement\\magma_before_after.jpg"
+    },
+    "magma-combinations.jpg": {
+      "sha256": "207e8bf0782cc2832a9819eff77074372ce1a8e7391029cc7370ec068bd3d35f",
+      "source": "C:\\Users\\znypr\\Documents\\ChatGPT\\be dino roblox game\\Premium_Egg\\Magma_Refinement\\magma_combination_review.jpg"
+    },
+    "magma-128.png": {
+      "sha256": "2b091e41fa9dc78f5a10c9db518cf53f45aabac6062a507b817efbab555407ec",
+      "source": "C:\\Users\\znypr\\Documents\\ChatGPT\\be dino roblox game\\Premium_Egg\\Magma_Refinement\\magma_at_128.png"
+    },
+    "magma-validation.json": {
+      "sha256": "32a99f0c4ec41793f553d4811986fb7b627c15af4a43d927029d660d5b01663d",
+      "source": "C:\\Users\\znypr\\Documents\\ChatGPT\\be dino roblox game\\Premium_Egg\\Magma_Refinement\\validation.json"
+    },
+    "cracked-before-after.jpg": {
+      "sha256": "2c5125a2cf3a981e1cb5cecfb40c5d4c5aa98a15d42bfe24026449c6a63eceb2",
+      "source": "C:\\Users\\znypr\\Documents\\ChatGPT\\be dino roblox game\\Premium_Egg\\Cracked_Readability\\before_after.jpg"
+    },
+    "cracked-128.png": {
+      "sha256": "6decacbf3f25e059a9a33897db127af8d4c31692adb25ce84e3d813bc4241122",
+      "source": "C:\\Users\\znypr\\Documents\\ChatGPT\\be dino roblox game\\Premium_Egg\\Cracked_Readability\\before_after_128.png"
+    },
+    "cracked-validation.json": {
+      "sha256": "f4be8835553bffd66aed7ea97b6ca946c4b53d9b627d3485fa170c3f4e7aec3e",
+      "source": "C:\\Users\\znypr\\Documents\\ChatGPT\\be dino roblox game\\Premium_Egg\\Cracked_Readability\\validation.json"
+    }
+  }
+}

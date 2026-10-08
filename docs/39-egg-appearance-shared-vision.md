@@ -128,6 +128,8 @@ The [evidence README and manifest](evidence/2026-10-08-egg-shared-vision/README.
 
 Latest authoring combination review: green/blue Islands with Normal, Dirty and Cracked + Magma; double-blue spots with Dirty, Cracked and Astra + Magma; double-black Islands with Rainbow/Astra + Magma. [Review images and layer validation](evidence/2026-10-08-egg-condition-combinations/README.md) cover this bounded sample, not every trait combination or a Studio acceptance pass.
 
+Subsequent [Magma and Cracked revisions](evidence/2026-10-08-magma-cracked-revision/README.md) are authored and rendered, **awaiting owner review**. Magma uses chunky matte charcoal rocks with narrower orange molten seams, heated side/floor smoke, fewer crossing wisps, tiny drifting embers, and a broken molten ring. Its combined transparent aura and separate smoke/wisp/rock/ember/ring/glow PNGs preserve the camera and egg. Cracked uses wider charcoal fractures with a pale chipped edge that remains visible on double black. The original aura and Cracked collections are retained as backups; these drafts do not supersede accepted direction or certify Roblox integration. The new 128px checks retain readable shell colors, Astra highlights, and Cracked lines through Magma.
+
 Next work: approve/refine mutation silhouettes; reconcile remaining visual palette/profile differences with private-test gameplay; produce missing granular runtime layers and upload manifests; then verify authored combinations, Shiny/Big and device performance in Studio. Keep accepted direction, authored draft, uploaded, integrated and runtime-verified states distinct.
 
 Gameplay reconciliation follow-up: [the outcome contract](41-egg-outcomes-contract.md)
