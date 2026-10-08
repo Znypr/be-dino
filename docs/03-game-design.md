@@ -31,10 +31,14 @@ Manual exit proposal: 3-second channel, canceled by movement; still vulnerable u
 Disconnect proposal: finalize last validated checkpoint rewards without a voluntary-exit bonus. Reconnection does not restore arena position/size. Crash recovery is limited to durable checkpoints.
 
 ## Collection and rarity
+
+> **Latest owner progression target (2026-10-08):** A durable dinosaur is a collectible individual with its **original egg history and exact natural traits**, not just one species counter. **Pattern-specific fusion** begins **Base → Gold → Emerald → Diamond**; first Gold recipe prototype is **10 same-species/same-pattern dinos**, preserving the selected hero's colors/condition/Shiny/BIG/mutation and bound cosmetics. Fusion provides the **main reliable stat boosts**; future Obsidian/Celestial are brainstormed, not approved. Auras/trails are **purchased for individual dinosaurs**, can be bought in multiple styles and switched freely within each dinosaur, but **not transferred**. The picker shows genetics, original egg, earned stage, cosmetics and rarity. Purchased cosmetics are excluded from overall rarity; earned fusion contributes **prestige** separately from real random egg odds. [Full source-of-truth specification](46-pattern-fusion-dino-identity-and-cosmetic-progression.md), [BD-057–062](07-kanban.md). **No runtime changes are claimed.**
+
+
 Proposed species: starter Compsognathus, Triceratops and Tyrannosaurus. All use the same movement controller and simple shared animation approach.
 Species identity is visual first. Trial growth multipliers 1.00 / 1.05 / 1.10; speed initially equal.
 Use three base tiers for three species initially; defer a full common-to-legendary catalog. More tiers with only three species would imply variety we do not have.
-One Gold mutation tier. Proposed conversion consumes 50 base copies and grants one Gold copy. Decide whether the last equipped base copy is protected before implementation.
+**Historical initial scope:** one Gold mutation tier, originally 50 base copies per Gold (Build 020 later supports Gold and Diamond at 50 each). **Superseded owner target:** 10 Base same-species/same-pattern copies (including protected target candidate), then Emerald before Diamond; deterministic fusion and safe donor selection are required. See BD-057–062.
 Keep species rarity and mutation separate data fields. Gold can add a small configured growth bonus with a total cap.
 
 ## Owner-confirmed reward vision (2026-10-08)
