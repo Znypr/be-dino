@@ -1,72 +1,72 @@
 {
   "version": 1,
-  "ownerId": null,
-  "ownerType": null,
-  "experienceId": null,
-  "status": "Runtime assembly implemented; nine sources verified. Roblox owner upload and Studio verification pending.",
+  "ownerId": 7285577648,
+  "ownerType": "User",
+  "experienceId": 10769812255,
+  "status": "Uploaded through Studio MCP on 2026-10-08; all nine image creators verified against the experience owner. Client PreloadAsync Success and IsLoaded true for all nine. Non-owner published-client verification pending.",
   "assets": [
     {
       "key": "fossil_centerpiece",
       "source": "fossil-centerpiece-v1.png",
-      "robloxAssetId": null,
+      "robloxAssetId": "86663955990810",
       "imageContentUri": null,
-      "status": "Not uploaded"
+      "status": "Uploaded; owner verified"
     },
     {
       "key": "aura_meadow_ring",
       "source": "aura-meadow-ring-v1.png",
-      "robloxAssetId": null,
+      "robloxAssetId": "80049958683098",
       "imageContentUri": null,
-      "status": "Not uploaded"
+      "status": "Uploaded; owner verified"
     },
     {
       "key": "aura_tidal_ring",
       "source": "aura-tidal-ring-v1.png",
-      "robloxAssetId": null,
+      "robloxAssetId": "80241308683604",
       "imageContentUri": null,
-      "status": "Not uploaded"
+      "status": "Uploaded; owner verified"
     },
     {
       "key": "aura_royal_ring",
       "source": "aura-royal-ring-v1.png",
-      "robloxAssetId": null,
+      "robloxAssetId": "118815481191196",
       "imageContentUri": null,
-      "status": "Not uploaded"
+      "status": "Uploaded; owner verified"
     },
     {
       "key": "potion_speed_base",
       "source": "potion-speed-base-v1.png",
-      "robloxAssetId": null,
+      "robloxAssetId": "87695825543059",
       "imageContentUri": null,
-      "status": "Not uploaded"
+      "status": "Uploaded; owner verified"
     },
     {
       "key": "potion_growth_base",
       "source": "potion-growth-base-v1.png",
-      "robloxAssetId": null,
+      "robloxAssetId": "88686902811976",
       "imageContentUri": null,
-      "status": "Not uploaded"
+      "status": "Uploaded; owner verified"
     },
     {
       "key": "mutation_gold",
       "source": "mutation-gold-v1.png",
-      "robloxAssetId": null,
+      "robloxAssetId": "100614707864137",
       "imageContentUri": null,
-      "status": "Not uploaded"
+      "status": "Uploaded; owner verified"
     },
     {
       "key": "mutation_diamond",
       "source": "mutation-diamond-v1.png",
-      "robloxAssetId": null,
+      "robloxAssetId": "71974162406565",
       "imageContentUri": null,
-      "status": "Not uploaded"
+      "status": "Uploaded; owner verified"
     },
     {
       "key": "catches_mark",
       "source": "catches-mark-v1.png",
-      "robloxAssetId": null,
+      "robloxAssetId": "111232893185225",
       "imageContentUri": null,
-      "status": "Not uploaded"
+      "status": "Uploaded; owner verified"
     }
   ]
 }

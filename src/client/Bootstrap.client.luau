@@ -433,12 +433,14 @@ player:GetAttributeChangedSignal("ProfileMode"):Connect(function() previewNotice
 local rail=box(gui,14,0,186,444,C.panel,2)
 rail.AnchorPoint,rail.Position=Vector2.new(0,.5),UDim2.new(0,14,.5,0)
 local railScale=Instance.new("UIScale") railScale.Parent=rail
+local navigationButtons = {}
 for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","mutation_gold","fusion",C.purple},{"HOME","home","home",C.accent},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
     local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() open(entry[3]) end)
     b.TextSize=20
     art(b,entry[2],5,6,40)
     b.Text=""
     label(b,entry[1],52,0,114,54,19)
+    table.insert(navigationButtons,b)
 end
 local hud=box(gui,0,0,390,94,C.panel,2)
 hud.AnchorPoint,hud.Position=Vector2.new(0,1),UDim2.new(0,18,1,-18)
@@ -517,6 +519,45 @@ local function scales()
     timers.Position=UDim2.new(1,-20,1,if Input.TouchEnabled then -190 else -100)
     action.Position=UDim2.new(1,-20,1,if Input.TouchEnabled then -120 else -22)
     action:SetAttribute("UIScaleBase",small)
+    if Input.TouchEnabled then
+        -- Keep navigation above the joystick and retain usable touch targets.
+        railScale.Scale=math.min(1,(size.X-28)/630)
+        rail.AnchorPoint,rail.Position,rail.Size=Vector2.new(.5,0),UDim2.new(.5,0,0,56),UDim2.fromOffset(630,58)
+        for i,b in navigationButtons do
+            b.Position,b.Size=UDim2.fromOffset(7+(i-1)*88,7),UDim2.fromOffset(82,44)
+            for _,child in b:GetChildren() do
+                if child:IsA("TextLabel") then
+                    child.Position,child.Size,child.TextSize=UDim2.fromOffset(28,0),UDim2.fromOffset(52,44),11
+                elseif child:IsA("GuiObject") then
+                    child.Position,child.Size=UDim2.fromOffset(3,10),UDim2.fromOffset(24,24)
+                end
+            end
+        end
+        hud.AnchorPoint,hud.Position=Vector2.new(0,0),UDim2.new(0,18,0,120)
+        timerScale.Scale=math.max(small,44/60)
+        timers.AnchorPoint=Vector2.new(1,0)
+        timers.Position=UDim2.new(1,-20,0,120)
+        foodDiagnostic.Visible=false
+        actionScale.Scale=math.max(small,44/60)
+        action.AnchorPoint,action.Position=Vector2.new(.5,1),UDim2.new(.5,0,1,-18)
+        action:SetAttribute("UIScaleBase",actionScale.Scale)
+    else
+        rail.AnchorPoint,rail.Position,rail.Size=Vector2.new(0,.5),UDim2.new(0,14,.5,0),UDim2.fromOffset(186,444)
+        for i,b in navigationButtons do
+            b.Position,b.Size=UDim2.fromOffset(7,7+(i-1)*62),UDim2.fromOffset(172,54)
+            for _,child in b:GetChildren() do
+                if child:IsA("TextLabel") then
+                    child.Position,child.Size,child.TextSize=UDim2.fromOffset(52,0),UDim2.fromOffset(114,54),19
+                elseif child:IsA("GuiObject") then
+                    child.Position,child.Size=UDim2.fromOffset(5,6),UDim2.fromOffset(40,40)
+                end
+            end
+        end
+        hud.AnchorPoint,hud.Position=Vector2.new(0,1),UDim2.new(0,18,1,-18)
+        timers.AnchorPoint=Vector2.new(1,1)
+        action.AnchorPoint=Vector2.new(1,1)
+        foodDiagnostic.Visible=RunService:IsStudio()
+    end
     toastScale.Scale=math.min(1,(size.X-20)/440)
 end
 local function characterAdded(character: Model)

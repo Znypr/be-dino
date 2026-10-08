@@ -16,6 +16,8 @@ local Artwork='''+module('src/shared/Artwork.luau')+'''
 local nativeCalls={}
 local function native(parent,id)table.insert(nativeCalls,id) return {Parent=parent} end
 local parent={ZIndex=20}
+-- Exercise fallback explicitly even after production bindings are populated.
+for key in Assets do Assets[key]="" end
 local root=Artwork.build(parent,"aura_meadow",native)
 assert(root.Parent==parent and #nativeCalls==2 and nativeCalls[1]=="aura" and nativeCalls[2]=="dinos")
 assert(Artwork.build(parent,"weather",native)==nil)

@@ -2,10 +2,17 @@
 
 Branch: `redesign/resources-and-core-fixes`. This is the current handoff; earlier build/audit documents are historical. Source and offline checks are complete. Studio physics, rendering, mobile performance, asset permissions and multiplayer acceptance are still pending.
 
+2026-10-08 update: connected Build 019 was verified through Studio MCP. All nine PNG
+masters were uploaded under the verified experience owner, bound, and successfully
+loaded in the owner Studio client. A phone navigation/joystick overlap was corrected
+in source. See the canonical Build 019 evidence table in `docs/07-kanban.md` for
+passed, partial and pending cases. The connected place is published and uses persistent
+profiles, so it did not provide disposable wallets/copies/eggs for full acceptance.
+
 ## Completed before Studio
 
 - Nine verified PNG masters stay separate and reusable. `Artwork.luau` composes the three aura rings with a shared fossil, clips each ring into rear/front layers, overlays native speed/leaf symbols on bottles, and repeats the single catches footprint. Shops, confirmations, fusion and the catches HUD use the shared assembler. Empty uploaded IDs use native icons.
-- `ArtworkAssets.luau` is generated from `resources/ui/v2/layers/upload-bindings.json`. All nine IDs are intentionally empty until an actual Roblox upload. GitHub PNGs are source files, not Roblox runtime image URLs.
+- `ArtworkAssets.luau` is generated from `resources/ui/v2/layers/upload-bindings.json`. All nine IDs now record actual MCP uploads, with verified owner metadata and owner-Studio loading evidence. GitHub PNGs are source files, not Roblox runtime image URLs.
 - `ArtworkLayout.luau` contains thumbnail position, scale, ring seam and repeated-mark layout. `UITheme.luau` remains the source of truth for panel colors, fonts, outlines and motion. `resources/ui/design-system.json` is marked historical. Illustration/vision rules remain in `docs/32-artwork-guide-and-todo.md`; the 8–13 audience is an assumption, not measured player research.
 - Desktop leap uses **E**, ordinary jump uses Space. Gamepad Y and the mobile leap button remain supported.
 - **500 raw food growth points = 15 catches** before weather bonuses. Fractional catches carry between pickups in the same run. Growth potions/auras do not multiply these raw points into catches. PvP remains a separate catch source. Catches are reward score units, not a count of eggs; existing thresholds decide egg grants. Carry resets on a new run.

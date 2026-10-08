@@ -1,5 +1,5 @@
 # Kanban and task specifications
-Updated 2026-10-04. This file is the canonical task tracker.
+Updated 2026-10-08. This file is the canonical task tracker.
 
 Build 005 PvP/run-ending tests 1–9 passed. Build 006 persistence tests 1–10 passed. Build 007 lease/stale-writer verification and restart persistence passed in the new private test experience. BD-011 is Done. Build 008 collection/equip passed all 8 runtime tests. BD-012 is Done. Build 009 earned chest queue passed all 8 runtime tests. BD-013 is Done. Build 010 Gold mutation passed all 8 runtime tests. BD-014 is Done. Build 011 core UI passed all 8 desktop/phone-emulator tests. BD-015 is Done. Build 012 security/multiplayer regression passed all 8 runtime tests. BD-018 is Done. Build 013 original visual kit is ready for testing. Mobile remains untested.
 
@@ -60,6 +60,43 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 [Detailed requirements, screen list, icon backlog and acceptance checks](30-build017-and-progression-roadmap.md). [Build 018 implementation and recorded local checks](31-build018-progression-test.md). Build 017 source/UI corrections and an isolated final export are prepared; progression systems are now integrated in Build 018. BD-027 and Studio acceptance remain open before release. Earlier Done records apply to their tested historical builds; they do not certify the redesigned Build 017.
 
 ## Acceptance and current evidence
+
+### Build 019 MCP acceptance, 2026-10-08
+
+Connected instance: `newbuild`, Studio ID `c91d2e6f-2da9-4457-afa0-4fe028f1a83f`.
+Config and rendered badge both confirm `redesign-019`. Place `111259822927673`,
+experience `10769812255`, owner User `znyprs` / `7285577648`. This is a published
+Studio session, not the disposable unpublished preview requested in the handoff.
+`ProfileMode=Persistent`, normal wallet (0 crystals), one Base Compy and no eggs
+were observed. Experience privacy/access settings are not verified by these tools.
+
+| Check | Actual evidence | Status |
+|---|---|---|
+| Startup / food | Profile loaded, packaged Compy attached, Food Ready / 1536, terrain ready, empty startup error | Pass for this single-client session |
+| Gameplay / catches | Normal start remote changed Sanctuary to Active; MCP navigation moved the character; fruit awarded 4 growth and 0.12 carry; live server FoodCatchRules returned 15 catches / zero carry for 500 raw points; zero-catch manual exit committed revision 4 and returned to Sanctuary at (0, 9.5, 365) | Partial: rewarded banking, long walking routes, terrain edges and two-client pickup races remain |
+| E leap | Keyboard E moved Z from 30 to about 10.82; LastLeapStatus=leaping, MovementSecurityStatus=OK, LeapReadyAt set 60 seconds ahead | Pass for desktop activation; touch and multiplayer physics remain |
+| Six dinosaurs | Collection JSON has all six; screenshots show both rows with distinct rendered previews; not-owned species display Not discovered; live Raptor equip returned locked and retained Compy | Preview / locked rejection pass; all six actual equip/run paths remain |
+| Aura / potion shops | Screenshots show three assembled aura rings and both bottle bases with native emblems; prices and counts visible | Visual pass; successful live purchases/equip/use/replacement remain (normal wallet is empty) |
+| Gold / Diamond | Screenshots show both colored dinosaur previews, uploaded badges and 50 Base / 50 Gold prices; live Diamond request returned insufficient_copies with unchanged inventory | Visual / rejection pass; live atomic conversion remains (insufficient copies) |
+| Sequential hatching | Persistent queue is empty | Pending live claim / reveal / NEXT EGG; offline harness is separate evidence |
+| Responsive UI | iPhone 17 Pro landscape screenshot confirmed ~26px navigation targets and joystick overlap; final phone HUD screenshots show horizontal 44px navigation, relocated HUD/action/timers and no overlap; desktop screenshot verifies restored layout | Pass for tested HUD layouts; real touch interaction, other phones and scaled modal target ergonomics remain |
+| Nine PNG uploads | MCP upload returned nine actual image IDs; GetProductInfo verified all image creators match the experience owner; client PreloadAsync returned Success and all nine rendered probe ImageLabels reported IsLoaded=true | Pass in owner Studio; non-owner published client remains |
+| Console | Initial gameplay and shop/collection/fusion passes showed only the build-ready message; rapid stop/start produced SessionBusy and blocked character spawn; after lease expiry restart loaded normally; final console contains only the build-ready message | Pass for tested sessions; rapid restart must allow lease expiry |
+
+Uploaded IDs and owner metadata are in `resources/ui/v2/layers/upload-bindings.json`.
+`ArtworkAssets` was regenerated and synced to Studio; revised client source was synced
+in Edit mode. Screenshots were inspected through MCP with capture IDs
+`019-baseline`, `019-collection-settled`, `019-lower-three-dinosaurs`,
+`019-aura-loaded`, `019-potions-loaded`, `019-gold-fusion`, `019-diamond-fusion`,
+`019-phone-fixed-tutorial`, `019-phone-retested`, `019-phone-active-retested`,
+and `019-desktop-restored`. These are conversation captures, not archived PNG files.
+
+Repository validation: 42 Luau sources compile with 0.741; gameplay, progression,
+layout/geometry, six-species camera and artwork harnesses pass; 21 Python tests pass;
+bindings check and deterministic Build 019 packaging pass. The artwork verifier now
+explicitly empties its test mapping to test fallback after real IDs are recorded.
+This does not certify engine physics, live saves/fusion/hatching or device performance.
+BD-023 through BD-033 retain their existing review/test status; BD-019 remains open.
 
 ### BD-001 — research
 Done. Initial screenshot/source research and planning documents were completed on 2026-09-17.

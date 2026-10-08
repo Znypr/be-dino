@@ -1,10 +1,10 @@
 {
   "format": 1,
-  "place_sha256": "60f067742b65f70abb812fe6b734d107b1d7b0200d037f5d9f47bd55c5077c11",
+  "place_sha256": "40d2b957ec4c0f0fb8f1c8492e595f445d0b3bed6acad421535e3babc4d20ad6",
   "sources": {
     "src/loading/Loading.client.luau": "80d7702a45826701816f333e5cfac5a035bd8bdcfeed8b3907f343e65271b104",
     "src/shared/Artwork.luau": "dbcef755028cbf3e737da0f96178db4e563f73843c0df00ad167ab134f1d066e",
-    "src/shared/ArtworkAssets.luau": "6897d480b363a3ea214d24046d683de55ff543a78169e0014afda32640f5ea51",
+    "src/shared/ArtworkAssets.luau": "0ff9492a91ef3538e0615ca20e5db96b0e3913e554675e3c21058b25bd58c00d",
     "src/shared/ArtworkLayout.luau": "50bafa21786bba19acbcb92b91ec813e5c7435d8f3665b8c6050dcf6e94beca3",
     "src/shared/Config.luau": "f0a33f23f1f5a83022e451ae101401e472b4bdd34dbca548ca1041385582826f",
     "src/shared/DinosaurPreview.luau": "3d361002ac96faeeef920c16548205b3ae8241b16a2cfe89e8cfbd7fd0868fa7",
@@ -41,7 +41,7 @@
     "src/server/RewardMath.luau": "eeddcd6c722213f109a6e37a0d47e70c59f39138aca8c0ade24d1a23474708ef",
     "src/server/RunLifecycle.luau": "8e78f3a0ee79550430a36e6396926b5a62c8fc14ee4e893088bc404242b6c23c",
     "src/server/VisualTestService.luau": "ee48ddc907c11e5d1390483d570d9ab96fd01b3ee02493b5724a2ebcf1ef0773",
-    "src/client/Bootstrap.client.luau": "8c5e637a1e9471c44f38e466fc91fb5024f4e9d4b5b072efdd51e7799a0512aa",
+    "src/client/Bootstrap.client.luau": "585bf13ea44ca1c4dae955d9c285b14aab2fa387cc1047005820db747ccc3453",
     "src/client/ResourceVisuals.client.luau": "37efe6430b0a9e9723405facf7d9a0906d435d2416183367104c4d9a29d188c2",
     "src/client/WeatherVisuals.client.luau": "50f4adc5fbf2d71f8cc89139beb4cdbfa1ef83311a660ad52902f130da961a29"
   }
