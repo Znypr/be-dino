@@ -9,6 +9,6 @@ for p in paths:
     folder={'shared':['ReplicatedStorage','Shared'],'server':['ServerScriptService','Server'],'client':['StarterPlayer','StarterPlayerScripts','Client'],'loading':['ReplicatedFirst','Loading']}[relative.parts[0]]
     folder+=list(relative.parts[1:-1])
     name=p.name.removesuffix('.client.luau').removesuffix('.server.luau').removesuffix('.luau')
-    rows.append({'folder':folder,'name':name,'class':'LocalScript' if '.client.' in p.name else 'Script' if '.server.' in p.name else 'ModuleScript','source':p.read_text()})
-(root.parent/'Dino_Models/studio-creature-sync.json').write_text(json.dumps(rows))
+    rows.append({'folder':folder,'name':name,'class':'LocalScript' if '.client.' in p.name else 'Script' if '.server.' in p.name else 'ModuleScript','source':p.read_text(encoding='utf-8')})
+(root.parent/'Dino_Models/studio-creature-sync.json').write_text(json.dumps(rows),encoding='utf-8')
 print('Prepared',len(rows),'scripts')

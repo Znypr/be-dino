@@ -10,7 +10,7 @@ An original Roblox growth-and-collection game inspired by Be Fish. Start in a sa
 
 **Current build:** `redesign-020` · **Updated:** 8 October 2026 · **Stage:** Studio-tested private prototype; published/mobile acceptance remains open.
 
-> The latest gameplay lives on **[redesign/resources-and-core-fixes](https://github.com/Znypr/be-dino/tree/redesign/resources-and-core-fixes)**. `main` currently has an older baseline. The owner-supplied logo above is the current main project image; the gallery below shows actual Studio gameplay.
+> The integrated Build 020 gameplay now lives on **[main](https://github.com/Znypr/be-dino/tree/main)**. See the [maintained integration checklist](docs/44-main-integration-checklist.md) for included updates and open acceptance gates. GitHub integration does not publish the Roblox experience. The owner-supplied logo above is the current main project image; the gallery below shows actual Studio gameplay.
 
 [Download Build 020](build/BeDino-Build020.rbxlx) · [Creature integration and limits](docs/43-creature-runtime-integration.md) · [Live task tracker](docs/07-kanban.md)
 

@@ -214,6 +214,12 @@ closed. Final rounding-notice/row-height tweaks, next-tier navigation, desktop a
 phone emulator acceptance remain unverified in Studio. See the bounded
 [evidence record](evidence/2026-10-08-egg-outcome-details/README.md).
 
+Latest integration acceptance: Build 020 now passes actual current/next-tier GUI
+navigation and visible widget text-fit checks, including the final rounding notice.
+The next-tier view shows 13.6% failure without upgrading the tier-0 profile. Page
+clamping passes a FocusLost helper, but real typed page interaction and desktop/
+phone acceptance remain open. See [main integration evidence](evidence/2026-10-08-main-integration/README.md).
+
 Keep server PolicyService eligibility fail-closed, and keep `CrystalPacksEnabled`
 and `PaidRandomItemsEnabled` false until disclosure, restrictions and payment tests
 are accepted. Earned free-run eggs remain the non-paid route; one fungible wallet

@@ -1,4 +1,11 @@
-# Build 019: ready for Studio acceptance
+# Build 020: Integrated Main Test Handoff
+
+2026-10-08: Build 020 and UI-motion history are integrated for GitHub main.
+Use [the maintained integration checklist](44-main-integration-checklist.md) and
+`build/BeDino-Latest.rbxlx` for the same-build acceptance pass. The unpublished
+BeDino-019-DisposableAcceptance copy has been synced to Build 020 despite its old
+filename. Current evidence is bounded; paid flags remain false and no experience
+was published. The Build 019 notes below are historical acceptance context.
 
 Branch: `redesign/resources-and-core-fixes`. This is the current handoff; earlier build/audit documents are historical. Source and offline checks are complete. Studio physics, rendering, mobile performance, asset permissions and multiplayer acceptance are still pending.
 

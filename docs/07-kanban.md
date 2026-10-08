@@ -1,6 +1,12 @@
 # Kanban and task specifications
 Updated 2026-10-08. This file is the canonical task tracker.
 
+Build 020 and UI-motion history are integrated for promotion to GitHub main.
+[Main integration checklist](44-main-integration-checklist.md) records what is new
+since main's Build 013, current bounded acceptance and open release gates. It is
+an integration snapshot, not a second task board. GitHub promotion does not publish
+Roblox or certify devices, persistent profiles or paid purchases.
+
 Build 005 PvP/run-ending tests 1–9 passed. Build 006 persistence tests 1–10 passed. Build 007 lease/stale-writer verification and restart persistence passed in the new private test experience. BD-011 is Done. Build 008 collection/equip passed all 8 runtime tests. BD-012 is Done. Build 009 earned chest queue passed all 8 runtime tests. BD-013 is Done. Build 010 Gold mutation passed all 8 runtime tests. BD-014 is Done. Build 011 core UI passed all 8 desktop/phone-emulator tests. BD-015 is Done. Build 012 security/multiplayer regression passed all 8 runtime tests. BD-018 is Done. Build 013 original visual kit is ready for testing. Mobile remains untested.
 
 ## Board
@@ -115,7 +121,10 @@ Only unpublished Build 019 VisualUpgrade / GameId=PlaceId=0 was modified.
 
 ### UI motion and responsiveness, 2026-10-08 (BD-043)
 
-**In progress — source and phone-emulator acceptance published in PR #2; integration/device checks pending.**
+**In progress — UI-motion history/evidence reconciled into Build 020; latest device checks pending.**
+Merge `1799536` preserves newer genes, failure handling, authored previews and four
+Shiny glints. The shared theme/loading/preview motion had already been incorporated.
+See [main integration evidence](evidence/2026-10-08-main-integration/README.md).
 UI owner: this UI-motion chat. Other agents: preserve this work when integrating
 crystal shops/genetics; do not replace whole client files with older copies.
 
