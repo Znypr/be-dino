@@ -22,6 +22,12 @@ The current test conversion `FoodCatchRate = 15/500` happens to fit both egg-cou
 - **Bonus egg nests are separate from ordinary run eggs.** Nests occupy **up to five nest slots**. The long-run example offers six nests, so at most five can be claimed when all slots are empty. Show the sixth as capacity-blocked/pending rather than silently losing or covertly granting it; the final excess/expiry/claim UX is an unresolved design decision. Do not confuse this five-slot nest capacity with the currently coded five-slot ordinary egg queue.
 - Score-to-egg conversion, crystal formula, exact rarity odds, per-egg 1-3 quantity, nest contents/timing, overflow, caps, and storage/UI performance for 150-egg batches all require balancing/implementation/verification. Do not report them as shipped.
 
+## Latest owner-requested work (2026-10-08)
+
+The [single canonical Kanban](docs/07-kanban.md) now includes **BD-045–056**, researched and categorized in [the detailed follow-up specification](docs/45-owner-feedback-shop-hud-world-weather-tasks.md). Future AI agents must read these before editing condition rates, Crystal Shop menus, rotating Potion Shop offers, Home exit flow, terrain movement, touch zones, HUD or weather.
+
+**New owner-target default condition weights**: Cracked 50%, Dirty 30%, Normal 15%, Rainbow 4.5%, Astra 0.5%. These **are not** the current Build 020 config. Preserve Cracked's separate 20% hatch success, note the implied 40% average failed eggs at tier 0, and rebuild upgrade curves/disclosure/versioning before implementation. Six trail **rarity categories** is a proposed interpretation; keep existing ten trail products until confirmed. All added visual art and Blender models remain TODO until actual owner uploads and runtime tests; do not invent asset IDs.
+
 ## How to answer and implement
 
 1. **For "what would a 5-minute / 500-food run reward?"** use the 15-egg example above. Mark any invented value as an illustrative assumption. Never answer "15 guaranteed Compies + 1 egg + 1 nest".
