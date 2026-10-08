@@ -1,0 +1,18 @@
+{
+  "name": "Egg Nest",
+  "file": "egg-nest-v1.png",
+  "date": "2026-10-08",
+  "generator": "built-in image_gen",
+  "status": "Generated draft; not uploaded or integrated.",
+  "designContext": "User clarification: run loot includes individual eggs hatched on screen after a run, crystals, and separate Egg Nests. Nests require time to open in the menu and reveal multiple eggs/dinosaurs, approximately 3–6. Collecting more nests provides more hatches and opportunities for rarer dinosaurs, without guaranteeing rare outcomes. This clarification supersedes ambiguous historical egg/chest terminology for this artwork; no gameplay implementation is claimed.",
+  "artDirection": "Amber twig nest, green prehistoric foliage and five varied intact patterned eggs, matching existing illustrated navigation assets. Five eggs communicate a bundle, not a fixed payout. Timer, quantity, rarity and readiness remain separate live UI elements.",
+  "sources": [
+    "../../../../docs/32-artwork-guide-and-todo.md",
+    "../../../../docs/39-egg-appearance-shared-vision.md",
+    "egg.png",
+    "home.png",
+    "dinos.png"
+  ],
+  "prompt": "Use case: stylized-concept. Asset type: one reusable transparent UI inventory/menu/reward icon for Be Dino, an original friendly Roblox dinosaur survival-and-collection game aimed at younger players. Primary request: EGG NEST, the timed reward bundle collected in runs and opened later in a menu to reveal multiple collectible eggs/dinosaurs. Distinguish strongly from the existing single-egg icon. Input reference images: existing egg, sanctuary home and dino navigation illustrations establish style. Match saturated dimensional illustrated 3D, thick near-black contour, soft rounded bevels, hand-painted broad shading, controlled highlights, cheerful chunky prehistoric fantasy. Subject: a compact substantial bowl-shaped woven twig nest in warm amber/honey-brown with broad interlocking twigs, plush straw lining and three chunky emerald fern leaves tucked around base. FIVE closed upright collectible dinosaur eggs visibly grouped inside one nest: central larger ivory egg with broad emerald green island patches; left blue egg with lighter-blue round spots; right ivory egg with amber spots; rear small teal egg with broad cream bands; rear small warm pink egg with deeper coral patches. Every egg has the SAME tall softly rounded egg silhouette, matte illustrated shell, subtle directional shading and restrained highlights. Make eggs easy to count and keep at least upper half of each rear egg visible. Generic bundle means random contents; do not depict Astra/Rainbow, rare black eggs, mutation effects, dinos emerging or cracked shells, which could imply guaranteed special rewards. Composition: single cohesive compact collectible object, three-quarter front view slightly from above, centered on square canvas, nest sturdy and rounded, eggs fill upper half, entire object visible, at least 12% clean transparent margin on all edges. Keep silhouette readable at 48/64/128 pixels, broad simple pattern marks and substantial nest rim, no hair-thin twig noise. Bright top-left lighting, gentle contact shadow only within nest/object. True transparent alpha background. No environment, grass ground plane, stone stage, sky, UI panel, logo, lettering, digits, labels, clocks, hourglass, padlock, arrows, ribbons, sparkle burst, currencies or watermark. The countdown/ready states will be separate live UI overlays; icon is reusable base art."
+}
+

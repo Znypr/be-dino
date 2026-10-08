@@ -1,0 +1,10 @@
+{
+  "name": "Green Egg",
+  "file": "egg-green-v1.png",
+  "date": "2026-10-08",
+  "generator": "built-in image_gen",
+  "status": "Generated reusable asset; Roblox upload and integration pending.",
+  "reference": "egg-nest-v1.png",
+  "purpose": "Single intact collectible egg matching the central green egg in the timed Egg Nest bundle.",
+  "prompt": "Create one reusable Be Dino UI icon on a square transparent canvas: the central front green-and-ivory dinosaur egg from the reference egg-nest icon, isolated by itself. Reference is identity and style source. Preserve the SAME tall rounded silhouette, ivory matte illustrated shell, broad organic emerald green Islands patches, chunky friendly dimensional illustrated 3D treatment, broad hand-painted directional shading, near-black clean contour and controlled soft warm upper-left highlights. Show one intact upright egg, three-quarter front view, no cracks, hatch fragments, dirt, condition sparkles, aura, nest, straw, leaves, shadow plane, scenery, labels, text or watermark. Match the reference central egg closely; keep its broad green patch layout and cream contrast rather than inventing spots or stripes. Entire egg centered with 12% transparent safe margins, clear silhouette readable at 48/64/128 px. True transparent alpha background. This is a separate generic single collectible egg, not the timed multi-egg Nest bundle."
+}
