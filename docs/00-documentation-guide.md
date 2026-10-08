@@ -21,7 +21,7 @@
 
 ## What is implemented, what is only planned?
 
-> **New owner progression authority:** [Pattern-specific fusion and per-dino cosmetics](46-pattern-fusion-dino-identity-and-cosmetic-progression.md) specifies BD-057–062. It supersedes initial 50-copy Gold/Diamond recipes and proposed global aura/trail unlocks as **owner goal only**. It does **not** modify Build 020 code; consult [Kanban](07-kanban.md) for status.
+> **New owner progression authority:** [Advanced fusion, individual dino identity and Fusion Menu](46-pattern-fusion-dino-identity-and-cosmetic-progression.md), **BD-057–065**. Ten matching inputs produce a **NEW guaranteed Gold** with **fresh donor-weighted traits**; Emerald and Diamond follow. Auras/trails bought on any consumed donor are lost, never transferred. Dedicated filtered Fusion Menu and staged reveal wheels are planned. Build 020 remains unchanged until safe code/data migration.
 
 
 
@@ -42,7 +42,7 @@ Do **not** delete build snapshots or test evidence just to make them look curren
 
 ## Duplication policy
 
-- **One advanced fusion/individual-dino specification**: [`46-pattern-fusion-dino-identity-and-cosmetic-progression.md`](46-pattern-fusion-dino-identity-and-cosmetic-progression.md), BD-057–063, including the optional deterministic pattern-research system. Keep the older 50/50 Build 020 recipe as a historical/current implementation description, not the approved new goal.
+- **One advanced fusion/individual-dino specification**: [`46-pattern-fusion-dino-identity-and-cosmetic-progression.md`](46-pattern-fusion-dino-identity-and-cosmetic-progression.md), BD-057–065, including pattern research, ingredient-weighted trait RNG and wheel presentation. Keep the older 50/50 Build 020 recipe as a historical/current implementation description, not the approved new goal.
 
 
 - **One status board**: `07-kanban.md`. Keep detailed checklists in their specialized spec and link them; do not duplicate 12-item acceptance lists in the board.
