@@ -147,7 +147,7 @@ Server already chooses events and computes perks/mutation eligibility. **Do not 
 | BD-051 rotating potion stock | P1 | BD-032, BD-039 | Client-side timer or rerollable inventory |
 | BD-052 Home return | P1 | BD-009, BD-044 | Instant client teleport or unprotected duplicate rewards |
 | BD-053 terrain movement | **P0** | BD-006, BD-008 | Arbitrarily raising max slope angle without validation |
-| BD-054 touch layout | **P0** | BD-052, BD-046, BD-056 | Desktop screenshots only |
+| BD-054 touch layout | **P0** | BD-052, BD-046 | Desktop screenshots only |
 | BD-055 atmospheric weather | P1 | BD-031, BD-034 | Weather HUD icon/timer only |
 | BD-056 HUD labels | P1 | BD-044, BD-054 | Calling legacy catches `eggs` before counting is true |
 
