@@ -1,5 +1,7 @@
 # AI / contributor instructions: Be Dino!
 
+**Start with the [current documentation guide](docs/00-documentation-guide.md)** to identify current owner goals, source implementation, test evidence and historical documents. This file covers contributor behavior, not a separate duplicate game spec.
+
 Read this file before interpreting reward requests, editing game-design documents, or changing game economy code. Source of truth for **owner's intended target**: [docs/09-reward-economy.md](docs/09-reward-economy.md), **2026-10-08 Owner-approved target**, and [docs/03-game-design.md](docs/03-game-design.md). [docs/07-kanban.md](docs/07-kanban.md) is the sole task/acceptance tracker.
 
 ## Game vision
