@@ -1,0 +1,64 @@
+{
+  "magma_aura_effect_only": {
+    "transparent_pixels": 206066,
+    "opaque_shell_coverage_percent": 2.15,
+    "nonzero_pixels": 56078,
+    "transparent_corners": true,
+    "no_opaque_second_egg": true
+  },
+  "magma_smoke": {
+    "transparent_pixels": 216376,
+    "opaque_shell_coverage_percent": 0.0,
+    "nonzero_pixels": 45768,
+    "transparent_corners": true,
+    "no_opaque_second_egg": true
+  },
+  "magma_flame_wisps": {
+    "transparent_pixels": 242736,
+    "opaque_shell_coverage_percent": 1.86,
+    "nonzero_pixels": 19408,
+    "transparent_corners": true,
+    "no_opaque_second_egg": true
+  },
+  "magma_rocks": {
+    "transparent_pixels": 247940,
+    "opaque_shell_coverage_percent": 0.35,
+    "nonzero_pixels": 14204,
+    "transparent_corners": true,
+    "no_opaque_second_egg": true
+  },
+  "magma_embers": {
+    "transparent_pixels": 261284,
+    "opaque_shell_coverage_percent": 0.0,
+    "nonzero_pixels": 860,
+    "transparent_corners": true,
+    "no_opaque_second_egg": true
+  },
+  "magma_ground_ring": {
+    "transparent_pixels": 260444,
+    "opaque_shell_coverage_percent": 0.0,
+    "nonzero_pixels": 1700,
+    "transparent_corners": true,
+    "no_opaque_second_egg": true
+  },
+  "magma_fine_debris": {
+    "transparent_pixels": 259411,
+    "opaque_shell_coverage_percent": 0.02,
+    "nonzero_pixels": 2733,
+    "transparent_corners": true,
+    "no_opaque_second_egg": true
+  },
+  "magma_glow": {
+    "transparent_pixels": 256967,
+    "opaque_shell_coverage_percent": 0.0,
+    "nonzero_pixels": 5177,
+    "transparent_corners": true,
+    "no_opaque_second_egg": true
+  },
+  "integrity": {
+    "egg_vertices_preserved": true,
+    "camera_max_difference": 0,
+    "unchanged_pixels_outside_effect": true,
+    "exports": "11 actual 512 x 512 RGBA PNGs and 11 actual 1024 x 1024 masters"
+  }
+}
