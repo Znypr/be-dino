@@ -18,6 +18,12 @@ An original Roblox growth-and-collection game inspired by Be Fish. Start in a sa
 
 A bright dinosaur island where every run feeds a lasting collection. Growth creates the immediate challenge: find food, choose when to chase, survive larger dinosaurs and decide when to return. Eggs create the return journey: discover another species, reveal special traits, fuse duplicates and show off your dinosaur with auras and trails.
 
+### Owner's intended reward experience (2026-10-08)
+
+**Catches mean individual run eggs.** If a five-minute run yields **500 raw food points**, the current example conversion gives **15 catches = 15 run eggs** to reveal one at a time, e.g. **11 Common + 4 Uncommon**, plus some crystals and **1 bonus egg nest**. A larger **5,000-food-point** run example yields **150 run eggs** (80 Common, 50 Uncommon, 17 Rare, 3 Epic), **220 example crystals** and **6 offered nests** (at most 5 claimable with 5 free nest spots). The rarity mixes and crystal amounts are examples, **not final drop tables**. Exact balance, large-batch UX and nest overflow policy remain open.
+
+This is the **OWNER TARGET, NOT CURRENT BUILD BEHAVIOR**. Build 020 still grants legacy direct dinosaur-copy stacks and only 1/2/3 additional eggs through old catch thresholds. It is incorrect to describe that historical behavior as the target vision. See [reward target versus archived alpha](docs/09-reward-economy.md), [game design](docs/03-game-design.md), [AI/contributor rules](AGENTS.md), and [BD-044](docs/07-kanban.md). Do not change saves or reward code solely because the target has been documented.
+
 The current art direction combines chunky creature silhouettes, textured island surfaces, colourful illustrated icons and layered 3D previews. Build 020 connects the authored creature models and egg to eight patterns, nine colour families and visible inherited two-tone genes. Broad mutation wisps and stronger white Shiny glints remain separate layers over the body. The [shared egg design vision](docs/39-egg-appearance-shared-vision.md) records the design; the [integration report](docs/43-creature-runtime-integration.md) distinguishes working Studio features from release checks.
 
 ## The player loop
@@ -25,8 +31,8 @@ The current art direction combines chunky creature silhouettes, textured island 
 1. Choose an owned dinosaur in the sanctuary and select **Explore Island**.
 2. Gather food, grow, jump and use the special leap to explore.
 3. Hunt smaller dinosaurs while avoiding larger ones. Spawn protection and sanctuary safety support the return loop.
-4. Return or get eaten to settle eligible collection rewards and eggs. **Catches are reward-score units**, separate from growth and egg count.
-5. Watch new eggs reveal automatically after the run, approximately **five seconds per egg**, ascending in rarity within each run batch.
+4. **Target:** return or get eaten to bank your catches as **individual run eggs**, plus crystals and separate bonus nests. **Current Build 020:** catches are a reward score; direct copies and additional threshold eggs are still separate.
+5. Watch earned eggs reveal individually after the run, approximately **five seconds per egg** in the current prototype, ascending in rarity within each batch. The target is to hatch **each caught egg**, not merely 1–3 threshold eggs.
 6. Equip discoveries, fuse duplicate copies and use crystals in the current aura, trail and potion shops.
 
 ## What Build 020 can do
@@ -88,6 +94,7 @@ The next milestone is a **small, complete private community test**, supported by
 
 The [progression design](docs/36-crystal-shops-egg-genetics-and-progression.md) now has implementations for account levels, ten trails, conditions and colour inheritance. The remaining work includes:
 
+- **BD-044:** Replace legacy direct-copy plus 1/2/3 threshold egg payouts with **one run egg per catch**, separate bonus nests and crystal payouts. Add 5-slot nest claiming, 150-egg reveal/performance acceptance and safe data migration; details in the [target economy](docs/09-reward-economy.md).
 - Production balance and paid-random disclosure/receipt verification before enabling egg purchases or Robux packs.
 - Published migration/rejoin, real phones, non-owner assets and multiplayer load acceptance.
 - Species abilities and habitats that make flying/marine discoveries change how the game plays.
