@@ -22,7 +22,7 @@ Maximum player access/policy work remains in progress:
 
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-017; BD-019–022; BD-035 | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
+| BD-017; BD-019–022; BD-035; **BD-044** | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -80,6 +80,23 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 | BD-041 | Review / test | P1 | Two-colour egg genetics, Normal/Big eggs and independent shiny sparkle | BD-035, BD-037 |
 | BD-042 | Review / test | P1 | Five-second ordered hatches, Shiny/BIG and map leaderboards | BD-013, BD-034 |
 | BD-043 | In progress | P1 | UI animation, feedback, loading and preview performance | BD-015, BD-042 |
+| BD-044 | Backlog | P0 | Replace direct-copy rewards with caught-run-egg hatching, crystal payout and separate five-slot egg nests | BD-011, BD-013, BD-036, BD-042 |
+
+### BD-044: Owner-approved reward-loop correction (2026-10-08)
+
+**Status: Backlog; design confirmed, runtime NOT changed. P0 before economy/public release.**
+The newer owner's reward intent supersedes the 2026-09-17 test economy's `N(c)=c` immediate dinosaur copies and the 10/100/500 catches -> 1/2/3 extra-egg thresholds. [Canonical target and illustrated distributions](09-reward-economy.md) and [AI/contributor instructions](../AGENTS.md) define the intended behavior; [actual Build 020](44-main-integration-checklist.md) is the separate implementation record.
+
+**Acceptance checklist (do not check off from documentation alone):**
+
+- [ ] 500 **food** points -> example 15 catches -> **15 banked eggs** (NOT 15 guaranteed Compy copies + 1/2 threshold eggs). 5,000 **food** points -> example 150 catches -> **150 run eggs**; distinguish from historical 5,000 catch-score cap and test 0/negative/overflow values.
+- [ ] Run return/death/disconnect settle each egg exactly once, with immutable random species/rarity/condition/genetic/trait outcomes, saved batches, correct event provenance, Cracked failure and legacy data migration. No direct-copy double credit or preserved duplicate exploit.
+- [ ] Hatch every run egg individually in increasing species rarity, at ~5 seconds/egg in initial prototype. 15-egg and 150-egg cases: clear progress, close/skip/resume, mobile responsiveness, cancellation and performance. Define 150-egg pacing alternative with owner before launch.
+- [ ] 15-egg illustrative species rarity result can include 11 Common/4 Uncommon; 150-egg illustrative result can include 80 Common/50 Uncommon/17 Rare/3 Epic. These **are not mandatory quotas or fixed odds**; eligibility/distribution must be configurable and fair.
+- [ ] Grant crystals independently from catches and map pickups; prototype example **30** run crystals at 500 food is assistant illustrative ONLY, **220** at 5,000 food is the owner's illustrative example. Define/approve actual earning and crystal-box rules separately.
+- [ ] Model **bonus nests** as separate rewards from individual caught eggs, with **five nest inventory/claim spots**, not the existing ordinary egg queue capacity. Example: 1 nest from 500 food; 6 nests offered from 5,000 food, only 5 claimable if all five slots are free. Explicitly resolve where the sixth offered nest goes (pending/blocked/expiry) and prevent silent reward loss; define nest timing/content.
+- [ ] Retune and test quantity (currently 1/2/3 copies per egg), species odds, egg outcomes/disclosure, fusion pacing, 150+ egg batch payloads and reward caps. Old `tools/economy_sim.py`, `tests/test_economy.py`, Config thresholds and Studio fixtures remain **historical tests** until deliberately replaced.
+- [ ] End-to-end multiplayer/rejoin/persistence, queue limits, migration, real-device interaction, UI and no paid-random regression verified with evidence before marking done. Do not touch persistent profiles or enable paid random items without a separate release review.
 
 ### Crystal Shops and Genetics, 2026-10-08 (BD-036–041)
 
