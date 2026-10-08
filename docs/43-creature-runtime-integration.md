@@ -8,7 +8,7 @@ These additions currently use the game's ground controller. Flight, diving, swim
 
 ## Appearance
 
-> **New visual expansion REQUESTED, not integrated in Build 020 (2026-10-08):** Gold, then **Emerald**, then Diamond should be progressively richer **masked mineral/gloss overlays** which preserve the dinosaur's original two gene colors, exact pattern, face and anatomy. Compare **subtle and medium** Blender materials against fully combined Shiny/BIG, weather mutation, equipped aura and trail. The existing Build 020 Gold/Diamond model treatment is only a test baseline; Emerald and complex additive fusion overlays need new sources/engine acceptance. See [BD-057/061](46-pattern-fusion-dino-identity-and-cosmetic-progression.md).
+> **New visual expansion REQUESTED, not implemented in Build 020 (2026-10-08):** Gold → **Emerald** → Diamond should use **Blender-authored selective gloss/mineral overlays over the NEW fusion output's freshly rolled color/pattern identity**. The same-species/same-pattern recipe guarantees the pattern, but colors, condition, BIG/Shiny and mutation are **rolled from ingredient-influenced probabilities**, not copied from a lead donor. Compare **subtle and medium** with all newly rolled effects. Auras/trails **do not transfer from fused ingredients**; a new output may purchase fresh cosmetic styles. Existing Gold/Diamond is a Build 020 baseline only. [BD-057/061/064/065](46-pattern-fusion-dino-identity-and-cosmetic-progression.md).
 
 
 
