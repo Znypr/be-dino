@@ -26,6 +26,7 @@ Chests remain independent from immediate run dinosaur rewards.
 - Catch 100–499: 2 chests.
 - Catch 500+: 3 chests, capped at 3 per run.
 - Private-test timer: 60 seconds per chest, sequential.
+- **Build 009 historical exception:** its timer was temporarily accelerated to **10 seconds** only to validate offline/queue mechanics. Neither 60 nor 10 seconds is an approved future bonus-nest timer; see [target rewards](09-reward-economy.md).
 - Chest content is one species stack using an independent chest table. Test quantity distribution: 1 copy 70%, 2 copies 25%, 3 copies 5%.
 - Active queue capacity: 5. Additional earned chests go to a bounded pending list. If both active and pending capacity are full, block starting another reward-bearing run rather than discard an earned chest.
 - Chest randomness is generated server-side once and persisted by operation ID. Retrying a claim never rerolls.
