@@ -21,6 +21,10 @@
 
 ## What is implemented, what is only planned?
 
+> **New owner progression authority:** [Pattern-specific fusion and per-dino cosmetics](46-pattern-fusion-dino-identity-and-cosmetic-progression.md) specifies BD-057–062. It supersedes initial 50-copy Gold/Diamond recipes and proposed global aura/trail unlocks as **owner goal only**. It does **not** modify Build 020 code; consult [Kanban](07-kanban.md) for status.
+
+
+
 - **Build 020 committed**: 22 prehistoric playable/collectible models, 8 egg patterns, 9 color families, uniform mixed-color 1–99% shares, 5 conditions, ten level-gated trails, six potions, event/weather systems, server-committed run rewards, 5-second ordered hatches and current three species rarity categories **Common/Rare/Legendary**. Current tier-0 condition odds are **20/25/45/9/1**, not the new owner request.
 - **Owner targets NOT yet in Build 020**: one caught egg per catch (15 eggs for a 500-food example; 150 for 5,000 food), separate five-slot bonus egg nests, six-species-rarity-style examples with **Uncommon/Epic** (tier taxonomy not implemented), new tier-0 conditions **50/30/15/4.5/0.5**, five-minute rotating limited-stock potion offers, unified Shop/category tiles/art, six-category trail presentation/art, richer environment/food, hill traction, streamlined Home, touch/HUD repositioning and richer atmospheric weather. Track via BD-044–056.
 - **Verified vs unverified**: earlier disposable Studio sessions and offline tests do **not** establish newest real paid receipts, published non-owner asset access, physical phone FPS/touch, full latest multiplayer/load or persistent profile migration. Refer to the integration checklist for precise bounds.
