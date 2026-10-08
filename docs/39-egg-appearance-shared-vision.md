@@ -1,5 +1,7 @@
 # Egg appearance: shared design vision
 
+> **Art authority, not live probability table.** Since this Blender review, **Build 020 has integrated the eight pattern IDs, nine palette families and uniform 1–99% mixed-gene coverage** (see [actual creature integration](43-creature-runtime-integration.md) and [`EggGenetics.luau`](../src/shared/EggGenetics.luau)). The **415-total color weight authoring example** below is still a **non-shipped design draft**, not the current `ProgressionConfig.EggColors` weights (10,000 total). Source-owned weights/traits and final-outcome disclosure are documented in [the egg contract](41-egg-outcomes-contract.md). Remaining matte shell, separate conditions, mutation smoke and Blender exports require their own art/Studio approvals.
+
 **Updated:** 2026-10-08. Owner decisions from the Blender egg design review.
 **Scope:** the combined visual contract for eggs, genetics, conditions and event mutations.
 This supplements [artwork production](32-artwork-guide-and-todo.md), [event mechanics](35-event-mutations-and-visual-upgrade.md) and [progression/genetics](36-crystal-shops-egg-genetics-and-progression.md). It supersedes their older conflicting egg-art instructions. It does not change gameplay code, approve public drop odds or certify runtime integration. Track delivery under BD-035, BD-040 and BD-041 in [Kanban](07-kanban.md).
