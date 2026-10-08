@@ -19,6 +19,8 @@ A run accumulates **raw food/growth points**, producing a **catch count**, repre
 | **5-minute run** | **500** | **15** | **11 Common + 4 Uncommon** | **30 illustrative ONLY** | **1** |
 | **Longer/higher-scoring run** | **5,000** | **150** | **80 Common + 50 Uncommon + 17 Rare + 3 Epic** | **220 in owner's example; final formula TBD** | **6 offered, at most 5 claimed if all 5 spots free** |
 
+**Rarity implementation gap:** Current Build 020 has only **Common, Rare, Legendary** species tiers. The owner's examples require additional **Uncommon and Epic** tiers, including catalog classification, unlock thresholds, saved metadata, UI rarity ordering and weighted random rewards. This is a specific [BD-044](07-kanban.md) implementation subtask, not an assertion these tiers already exist.
+
 The rarity counts describe **15/150 individual eggs revealed**, not extra guaranteed immediate dinosaur copies. Egg hatch success and resulting copies remain separate outcome questions; the current per-egg 1/2/3-copy probability and 20% Cracked hatch success are **existing provisional mechanics**. Do not present every run egg as guaranteed to hatch successfully, and do not compound its results with `N(c)=c` automatic copies. The examples do **not** approve specific species odds, number of crystals, or nests-per-point thresholds. A five-minute run need not attain 500 points, and a 5,000-**food**-point run is not the historical 5,000-**catch**-score case.
 
 ### Design/implementation decisions still open
