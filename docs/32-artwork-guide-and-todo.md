@@ -19,6 +19,8 @@ Friendly prehistoric fantasy, clear silhouettes, cheerful chunky forms. No gore,
 Design for desktop and phone. Artwork must work without reading tiny detail or relying only on color.
 Use owned/original assets and already available tools; do not introduce paid asset dependencies.
 
+> **New multi-stage dino fusion art task (2026-10-08; BD-061):** Blender-authored **Gold → Emerald → Diamond** overlay materials must build on the **existing original two-gene color coverage + saved pattern** rather than replacing them with a flat metal/gem recolor. Render/test both **subtle** and **medium** masks, with BIG/Shiny, event mutation, dino-owned aura and trail together. Source templates must be modular for all 22 species with in-game/performance evidence, not one uneditable baked screenshot per combination. Optional Obsidian/Celestial are exploration only. [Complete fusion stack and acceptance](46-pattern-fusion-dino-identity-and-cosmetic-progression.md).
+
 ## Two compatible visual layers
 1. Illustrated item art: match resources/ui/v2/icons/dinos.png and its siblings. Stylized dimensional 3D render, saturated colors, dark contour, rounded bevels, controlled bright highlights, friendly proportions.
 2. Functional symbols: reuse resources/ui/v2/scalable SVG/geometry assets for small utility/status symbols and native fallbacks. Primary navigation and trophy use the existing illustrations. AURAS reuses the assembled Meadow aura; POTIONS reuses the assembled speed potion. Leap and all four weather states now use owner-uploaded illustrations with configurable centered insets; native symbols remain fallbacks, not substitute illustrated assets.
