@@ -88,6 +88,12 @@ New creature rigs use 916–2,010 triangles. Growth reuses the rig, genes repain
 
 Full evidence: [events/cosmetics](docs/evidence/2026-10-08-events-and-cosmetics/README.md) · [hatching/boards](docs/evidence/2026-10-08-hatching-and-leaderboards/README.md) · [weather/leap](docs/evidence/2026-10-08-weather-and-leap/README.md) · [icons/acceptance](docs/evidence/2026-10-08-icons-and-acceptance/README.md).
 
+### New long-term progression target: individual dinosaurs and pattern fusion (planned)
+
+The owner now wants **species-and-pattern-specific fusion** rather than a flat `50 Base → Gold; 50 Gold → Diamond` grind. Prototype: **ten Compies with the same saved stripe pattern → one Gold Striped Compy**, preserving a selected hero instance's colors/condition/Shiny/BIG/egg origin; **Emerald follows Gold and precedes Diamond**, with additional premium materials under review. This is **owner intent, not Build 020 behavior**. Gold/Emerald/Diamond need Blender-authored **subtle and medium gloss/crystal overlays** that preserve the underlying genetics while stacking Shiny, event mutation, aura and trail. Fusion should be the **main deterministic stat booster**, not a new random-drop roll.
+
+Auras/trails will be **purchased for individual dinosaur instances** and freely switched among already purchased styles on that dino, without transferring cosmetics to other dinos. The picker needs stable instance IDs, original egg previews, DNA, traits, fusion stage, per-dino aura/trail loadouts and truthfully distinguished **natural hatch odds versus crafted earned prestige**. Purchased cosmetics are not part of the combined rarity. Pattern research/duplicate conversion is proposed as a deterministic parallel route to reduce bad luck in exact-pattern fusion. See [full specification](docs/46-pattern-fusion-dino-identity-and-cosmetic-progression.md) and [BD-057–063](docs/07-kanban.md).
+
 ## Where the project goes next
 
 The next milestone is a **small, complete private community test**, supported by the remaining device, multiplayer, asset and persistence checks.
