@@ -1,5 +1,7 @@
 # Be Dino redesign, 2026-10-04
 
+> **HISTORICAL 2026-10-04 redesign request.** The phrase below saying main was Build 013 was true at the time, **not today**. Mountain-island art direction remains relevant. Current build: [README](../README.md); current map tasks: [BD-049–050/053](45-owner-feedback-shop-hud-world-weather-tasks.md).
+
 > **HISTORICAL 2026-10-04 redesign request.** The assertion below that GitHub main "is still Build 013" was true **at this document's creation**, not after Build 020 was merged to main. The mountain-island direction remains relevant; for current status, see [README](../README.md), [Build 020 integration](44-main-integration-checklist.md) and [new map-art task BD-049](45-owner-feedback-shop-hud-world-weather-tasks.md).
 
 ## Direction
