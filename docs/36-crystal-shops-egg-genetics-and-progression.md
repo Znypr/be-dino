@@ -3,13 +3,20 @@
 **Requested:** 2026-10-08. **Status:** Implemented for isolated private testing; not public balance or monetization approval. See [implementation and actual acceptance](39-crystal-shops-and-genetics-acceptance.md). Sections below retain the original requested design; the implementation record supersedes their Todo/proposal status.
 **Canonical status:** [BD-035–041 in Kanban](07-kanban.md). **Existing systems:** [Build 018 progression](31-build018-progression-test.md), [Build 019 events and cosmetics](35-event-mutations-and-visual-upgrade.md).
 
+**Reconciled outcome decisions:** [Egg outcome contract](41-egg-outcomes-contract.md)
+now fills the missing provisional pattern distribution, next palette/blend rules,
+failure/copy semantics, migration requirements and full-disclosure acceptance.
+Its current-versus-next-build distinctions supersede older Todo/unspecified wording
+below. The proposed palette/pattern version is not implemented or public balance approval.
+
 **Visual decision reference:** [Shared egg appearance vision](39-egg-appearance-shared-vision.md) consolidates the subsequent Blender review: eight patterns, two-color coverage and exceptional pure-color rarity, matte shell, reusable damage/condition overlays, and engulfing anime-like mutation smoke. Rainbow/Astra rework resumed; the owner accepted bright Astra opal highlights as curved vertical streaks, while Rainbow keeps multicolored unoutlined stars. Their authored-layer integration remains open. Exact authoring weights and latest aura renders remain provisional; this does not certify gameplay implementation.
 
 Concurrent gameplay baseline: [BD-042 hatching/traits/leaderboards](37-hatching-traits-and-leaderboards.md)
 implements five-second run-ordered reveals, 5% event Shiny and 10% independent
 BIG. The shop/genetics integration now uses **1.2x BIG**, world/preview sparkles,
 immutable conditions/colors, ten trails and earned-crystal random eggs. Robux
-packs remain unavailable until real product IDs are configured and verified.
+packs have six verified real IDs; prompts remain unavailable until disclosure,
+policy and receipt release checks pass. [Catalog and icons](../resources/monetization/product-icons/README.md).
 
 ## Player loop
 
@@ -112,8 +119,11 @@ Source model is one locked `Egg_Master` mesh, fixed camera, floor tile and light
 5. Palette weights, blend distribution, shiny rate, Normal/Big odds, whether colours are visible before hatch.
 6. Rules for random egg purchases using Robux-purchasable crystals: odds display, player eligibility and policy-safe alternatives.
 
-These choices now have configurable provisional values in ProgressionConfig;
+Most original choices now have configurable provisional values in ProgressionConfig;
 they still need balance approval. Failed Cracked eggs currently grant no dinosaur
 or crystal refund, as disclosed before purchase. No Robux products were invented.
 Published persistent profiles were not modified. See the newer acceptance record
 for the exact evidence and remaining device/persistence/compliance gates.
+New visual palette/pattern/coverage decisions are documented separately in the
+outcome contract and still require versioned implementation; they are not implied
+by the older seven-color uniform-tint runtime.

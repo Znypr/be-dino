@@ -1,0 +1,53 @@
+{
+  "createdAt": "2026-10-08",
+  "generator": "Built-in image_gen",
+  "reference": "resources/ui/v2/icons/amber.png",
+  "uploadedToRoblox": false,
+  "dimensions": [
+    1254,
+    1254
+  ],
+  "format": "RGBA PNG",
+  "assets": [
+    {
+      "crystals": 500,
+      "file": "amber-500.png",
+      "sha256": "36f24b8900bbb9740920a1722f12442587b5539b27f0bd392acdc9a7c6f65292",
+      "composition": "Two shards; starter cluster",
+      "prompt": "Use case: stylized-concept. Create a square Roblox Be Dino developer-product icon on a genuinely transparent background. Reference image is the existing amber currency artwork: preserve its luminous honey-gold and orange faceted crystals, crisp dark outline, painterly premium game-icon finish, front three-quarter view and bright ivory facet highlights. No text, numbers, currency symbols, containers, other objects, background, floor, cast-shadow plane or watermark. Center the silhouette with generous 10% transparent edge clearance. Change only the quantity/composition of amber crystals. Smallest pack (500 crystals): just TWO distinct amber crystals, one tall upright shard and one shorter leaning shard, with at most two tiny chips at their feet. Sparse, simple and unmistakably the smallest amount. Keep full silhouette visible."
+    },
+    {
+      "crystals": 1500,
+      "file": "amber-1500.png",
+      "sha256": "f1f56369657ce842935bb57bf98c43a8a99b08787c2c6aa15417851e601f52a0",
+      "composition": "Three-shard fan",
+      "prompt": "Use case: stylized-concept. Create a square Roblox Be Dino developer-product icon on a genuinely transparent background. Reference image is the existing amber currency artwork: preserve its luminous honey-gold and orange faceted crystals, crisp dark outline, painterly premium game-icon finish, front three-quarter view and bright ivory facet highlights. No text, numbers, currency symbols, containers, other objects, background, floor, cast-shadow plane or watermark. Center the silhouette with generous 10% transparent edge clearance. Change only the quantity/composition of amber crystals. Second pack (1500 crystals): THREE clearly separated upright amber crystals in a compact fan, medium central shard and two shorter side shards, and just three small chips. More abundant than the two-shard starter but still a modest cluster. Same crystal material and visual identity as reference."
+    },
+    {
+      "crystals": 4000,
+      "file": "amber-4000.png",
+      "sha256": "4448f7c3b6529f0f041dbd78f7fa1bef47f335c31e0e894f58601cf74d99ab8d",
+      "composition": "Five-shard fan with loose gems",
+      "prompt": "Use case: stylized-concept. Create a square Roblox Be Dino developer-product icon on a genuinely transparent background. Reference image is the existing amber currency artwork: preserve its luminous honey-gold and orange faceted crystals, crisp dark outline, painterly premium game-icon finish, front three-quarter view and bright ivory facet highlights. No text, numbers, currency symbols, containers, other objects, background, floor, cast-shadow plane or watermark. Center the silhouette with generous 10% transparent edge clearance. Change only the quantity/composition of amber crystals. Third pack (4000 crystals): FIVE main amber shards arranged as a wider, fuller fan with staggered heights and a small bed of six chunky crystals at the base. Clear individual shard silhouettes, no container. Visibly more plentiful than a three-shard cluster but not yet a huge mound."
+    },
+    {
+      "crystals": 10000,
+      "file": "amber-10000.png",
+      "sha256": "6a103663b032a09cf6208f614f5cd63b435696e557dd02d6bddeb6c111372e8a",
+      "composition": "Broad layered heap",
+      "prompt": "Use case: stylized-concept. Create a square Roblox Be Dino developer-product icon on a genuinely transparent background. Reference image is the existing amber currency artwork: preserve its luminous honey-gold and orange faceted crystals, crisp dark outline, painterly premium game-icon finish, front three-quarter view and bright ivory facet highlights. No text, numbers, currency symbols, containers, other objects, background, floor, cast-shadow plane or watermark. Center the silhouette with generous 10% transparent edge clearance. Change only the quantity/composition of amber crystals. Fourth pack (10000 crystals): a broad rounded heap of NINE main amber shards in two staggered rows, upright shards at back and chunky loose gems at front. Shift away from a single towering central crystal to a visibly substantial medium pile with varied crystal angles. Compact readable silhouette, edge clearance 10%, all gems fully inside frame. No text or containers."
+    },
+    {
+      "crystals": 25000,
+      "file": "amber-25000.png",
+      "sha256": "0bf837204a08881a0defd3d046216b1501d2bac2e5df8fb70dcde3d7d7a3e2a8",
+      "composition": "Large treasure mound",
+      "prompt": "Use case: stylized-concept. Create a square Roblox Be Dino developer-product icon on a genuinely transparent background. Reference image is the existing amber currency artwork: preserve its luminous honey-gold and orange faceted crystals, crisp dark outline, painterly premium game-icon finish, front three-quarter view and bright ivory facet highlights. No text, numbers, currency symbols, containers, other objects, background, floor, cast-shadow plane or watermark. Center the silhouette with generous 10% transparent edge clearance. Change only the quantity/composition of amber crystals. Fifth pack (25000 crystals): a large treasure mound with FIFTEEN distinct prominent amber crystals layered in three staggered rows, many chunky gems spilling forward, broad triangular silhouette. Individual gems somewhat smaller relative to whole pile than reference, communicating abundant quantity rather than only larger crystals. Rich but clean readable illustration. Keep 10% empty transparent padding on ALL edges. No chest, container, labels or other materials."
+    }
+  ],
+  "largestPackFallback": {
+    "crystals": 90000,
+    "file": "amber-25000.png",
+    "reason": "Owner stopped generation after five completed variants; reuse for now."
+  }
+}

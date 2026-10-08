@@ -93,6 +93,10 @@ Only unpublished Build 019 VisualUpgrade / GameId=PlaceId=0 was modified.
 - [ ] Creator Hub crystal product images: file chooser/upload tooling blocked.
 - [ ] Successful paid receipt delivery and Robux-spending leaderboard integration test.
 - [ ] Complete paid-random disclosure/policy review; release flag remains disabled.
+  [Reconciled outcome contract](41-egg-outcomes-contract.md) fills provisional
+  pattern/palette/migration decisions; complete in-game outcome enumeration is still pending.
+  Five reusable [amber pack PNGs](../resources/monetization/product-icons/README.md)
+  are archived with prompts/hashes; Creator Hub upload/moderation remains open.
 - [ ] Published private saved-profile restart, broader multiplayer/load, non-owner assets,
   physical phone/load verification, approved economy balance and modular egg art.
 
