@@ -1,5 +1,7 @@
 # BD-043 UI motion and responsiveness
 
+> **HISTORICAL branch-specific BD-043 test snapshot.** This document's `Status: Review / test` below records its original branch review and may disagree with the **current canonical Kanban** (BD-043: In progress). Build 020 merged UI-motion work into main; consult [main integration](44-main-integration-checklist.md) and [Kanban](07-kanban.md) for active status. The tests below retain their original bounded evidence.
+
 Status: Review / test. The canonical tracker is docs/07-kanban.md.
 
 This branch isolates presentation changes from concurrent shop/genetics changes.
