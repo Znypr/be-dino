@@ -32,6 +32,14 @@ The [single canonical Kanban](docs/07-kanban.md) now includes **BD-045–056**, 
 
 **New owner-target default condition weights**: Cracked 50%, Dirty 30%, Normal 15%, Rainbow 4.5%, Astra 0.5%. These **are not** the current Build 020 config. Preserve Cracked's separate 20% hatch success, note the implied 40% average failed eggs at tier 0, and rebuild upgrade curves/disclosure/versioning before implementation. Six trail **rarity categories** is a proposed interpretation; keep existing ten trail products until confirmed. All added visual art and Blender models remain TODO until actual owner uploads and runtime tests; do not invent asset IDs.
 
+## Current long-term progression decisions (2026-10-08)
+
+**READ [pattern fusion / dino identity / cosmetics](docs/46-pattern-fusion-dino-identity-and-cosmetic-progression.md) before touching fusion, persistent collections, auras, trails, dinosaur picker or rarity.** The owner wants Base → **Gold → Emerald → Diamond** (optional higher stages merely proposed); first Gold recipe prototype costs **10 same-species and same-egg-pattern dinosaurs** rather than the Build 020 50-base conversion. The hero keeps original two color genes and percentage, pattern, condition, origin egg, BIG/Shiny and event mutation. Fusion is the main **earned reliable stat booster**. Blender layers need **subtle and medium** appearance comparisons with all effects stacked, preserving source genetics and readable faces/patterns.
+
+Purchases are **bound to a stable dinosaur instance**, not globally reusable among species or copies. That instance can buy **several auras/trails** and freely equip or downgrade among its **own** purchases. Never claim free cross-dino transfers, never auto-consume protected donor dinosaurs or silently lose purchased items. Old global unlocks, old merged copy stacks and existing Gold/Diamond must receive a safe migration before enabling new code. **Original egg provenance** must survive hatch, fusion and cosmetic changes; older copies may have unknown legacy provenance.
+
+Natural hatch % comes from the correct versioned conditional RNG, **excluding purchased cosmetics**. Earned Gold/Emerald/Diamond **contributes to prestige/rarity**, but has **no independently rolled Gold probability**: do not fake a decimal combined chance by multiplying a craft stage into hatch probabilities. BD-057–063 are Backlog and source gameplay remains Build 020. Pattern research/duplicate credits and higher material tiers are suggested paths, **not approved recipes**.
+
 ## How to answer and implement
 
 1. **For "what would a 5-minute / 500-food run reward?"** use the 15-egg example above. Mark any invented value as an illustrative assumption. Never answer "15 guaranteed Compies + 1 egg + 1 nest".
