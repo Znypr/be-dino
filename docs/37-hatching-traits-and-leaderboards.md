@@ -5,6 +5,8 @@ Baseline 3d8d1e4. Canonical acceptance remains docs/07-kanban.md, BD-042.
 Concurrent planning commits through 26af626 were merged without removing their
 BD-035-041 scope. Those planned shops/genetics/art tasks are not completed here.
 
+> **Design correction (2026-10-08):** The 10/100/500 catches -> 1/2/3 eggs and unchanged direct run-copy stacks described in this Build 019 test report are **current/historical prototype behavior, not the intended player reward vision**. The owner wants **one separately revealed run egg per catch** (e.g. 500 food points -> 15 catches -> 15 eggs; 5,000 food points -> 150 eggs), plus crystals and **separate** bonus egg nests with five claim spots. Implementation remains pending as [BD-044](07-kanban.md). This report remains evidence of already-tested behavior; do not update its acceptance claims without new runs. See [target economy](09-reward-economy.md).
+
 ## Eggs and reveals
 
 Server settlement precommits species, quantity, Shiny/BIG and catch-time event
