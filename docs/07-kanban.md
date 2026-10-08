@@ -67,7 +67,7 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 
 ### UI motion and responsiveness, 2026-10-08 (BD-043)
 
-**In progress — source implemented; GitHub review and Studio acceptance pending.**
+**In progress — source published in draft PR #2; integration and Studio acceptance pending.**
 UI owner: this UI-motion chat. Other agents: preserve this work when integrating
 crystal shops/genetics; do not replace whole client files with older copies.
 
@@ -83,7 +83,9 @@ crystal shops/genetics; do not replace whole client files with older copies.
 - [x] Responsive crystal HUD scaling; existing phone navigation/hatch target sizing retained.
 - [x] Local validation: 57 Luau sources compile; six-species preview geometry and
   imported bounding-box framing pass across four aspect ratios.
-- [ ] Publish isolated UI code for review and integrate alongside concurrent shop changes.
+- [x] UI-only code published in [draft PR #2](https://github.com/Znypr/be-dino/pull/2)
+  on `codex/ui-motion-polish`; [implementation/acceptance notes](https://github.com/Znypr/be-dino/blob/codex/ui-motion-polish/docs/38-ui-motion-and-performance.md).
+- [ ] Review/merge PR #2 alongside concurrent shop changes, resolve client overlap and rebuild.
 - [ ] Choose connected Studio target: newbuild (111259822927673) or BeDino-VisualUpgrade.rbxlx.
 - [ ] Studio rapid open/close/reopen, mouse/touch/controller, hatch closure and
   reduced-effects regression, loading failure/success and shop retry/error checks.
