@@ -114,6 +114,10 @@ The **415-total palette** (100/100/100/40/40/15/15/4/1) and associated **1 in 17
 
 ## Persistence And Reveal Contract
 
+> **Downstream collector requirement (2026-10-08; BD-060/062):** once a successful egg grants one or more dinosaur copies, each customized/fused dinosaur must be persistently identifiable (stable instance ID or safe lazy stack-split) and traceable to the **immutable source egg** (pattern, colors/coverage, condition, Shiny/BIG and event info). Do **not** destroy or reroll this history when fusing Gold → Emerald → Diamond or purchasing aura/trail loadouts. True natural hatch probability is separate from deterministic earned fusion-stage prestige; **purchased cosmetics never factor into total rarity**. The current grouped-copy storage is not certified for this yet. [Full new system and migration](46-pattern-fusion-dino-identity-and-cosmetic-progression.md).
+
+
+
 New-version target: save an explicit genetics/distribution version with condition,
 hatch success, pattern ID, two color IDs and integer share. Save species, quantity,
 event/mutation, Shiny, BIG, batch identifier and stable order in the same immutable
