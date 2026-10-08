@@ -1,5 +1,7 @@
 # Build 018: integrated progression and Build 017 fixes
 
+> **HISTORICAL Build 018 handoff.** Its phrase "This is the current full build" applied only to this milestone. **Build 020 is now on GitHub main**. For current instructions use [Build 020 handoff](34-studio-handoff.md) and [integration checklist](44-main-integration-checklist.md).
+
 ## Downloads and scope
 
 - `build/BeDino-Build017-Final.rbxlx`, badge `BUILD redesign-017-final`: isolated menu/icon/egg/dinosaur-preview fixes. Historical Build017 is retained unchanged.
