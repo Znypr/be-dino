@@ -129,7 +129,7 @@ crystal shops/genetics; do not replace whole client files with older copies.
   fallback prevents blank discoveries. Compy fallback IsLoaded=true and renders after real claim.
 - [ ] Fix full 3D mesh asset access; static fallback does not reproduce genotype/fusion
   colors or orbit. Owner visual/audio rating and physical-phone frame-time/memory remain open.
-  Integration note: shop/genetics commit `9354dc5` changes mesh preload to typed
+  Integration note: shop/genetics commit `2d3b637` changes mesh preload to typed
   MeshPart instances and proves colored imported hatch models in VisualUpgrade.
   This is not non-owner published asset certification or a retest of Latest Studio.
 - [ ] Review/merge PR #2 alongside concurrent shop changes, resolve client overlap and rebuild.

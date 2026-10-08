@@ -98,7 +98,8 @@ Screenshots and machine-readable observations: [evidence archive](evidence/2026-
 
 ## Automated Verification
 
-61 Luau sources compile. Real Luau execution checks progression/profile atomicity,
+**Feature commit: `2d3b637`. All 29 Python tests pass; 61 Luau sources compile.**
+Real Luau execution checks progression/profile atomicity,
 duplicate/conflicting tokens, queue capacity, failed-hatch retry/rejoin, future-only
 upgrades, receipt retry deduplication, published/local isolation, migration,
 policy fail-closed behavior, cap/debuff composition, all seven distributions,
