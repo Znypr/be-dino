@@ -18,7 +18,7 @@ Maximum player access/policy work remains in progress:
 
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-017; BD-019–022; BD-035; **BD-044–056** | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
+| BD-017; BD-019–022; BD-035; **BD-044–062** | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -89,6 +89,12 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 | BD-054 | Backlog | P0 | Responsive phone/tablet touch-zone navigation/control placement and safe insets | BD-052, BD-046 |
 | BD-055 | Backlog | P1 | Complete sky, atmosphere, cloud, particle and audio effects for all weather events | BD-031, BD-034 |
 | BD-056 | Backlog | P1 | Top-center growth metric and bottom-left egg-icon catches-only HUD | BD-044, BD-054 |
+| BD-057 | Backlog | P0 | Replace 50-copy fusion with 10-copy same-species/same-pattern Gold recipes; add Emerald before Diamond and optional advanced stages | BD-012, BD-060 |
+| BD-058 | Backlog | P0 | Earned fusion stages as main permanent stat progression, fair caps, weekly grind and recipe pacing simulation | BD-057 |
+| BD-059 | Backlog | P1 | Per-dinosaur aura/trail purchase ownership; buy multiple options, switch freely within same dinosaur, never transfer | BD-060, BD-029, BD-038 |
+| BD-060 | Backlog | P0 | Persistent individual dinosaur IDs, immutable source-egg snapshot and safe legacy stack migration | BD-011, BD-012, BD-041 |
+| BD-061 | Backlog | P1 | Blender Gold/Emerald/Diamond additive surfaces, subtle/medium overlay A/B, stack every trait/effect | BD-057, BD-035 |
+| BD-062 | Backlog | P1 | Dino picker/details origin egg, full trait/cosmetic badges, honest natural rarity and earned fusion prestige | BD-059, BD-060, BD-057 |
 
 ### BD-044: Owner-approved reward-loop correction (2026-10-08)
 
@@ -115,6 +121,14 @@ The newer owner's reward intent supersedes the 2026-09-17 test economy's `N(c)=c
 - **Movement/UX:** BD-052 return confirmation, BD-053 terrain/sliding defect, BD-054 mobile/tablet touch placement, BD-056 growth and caught-egg HUD.
 - **Critical interaction:** BD-044 egg-per-catch target is not shipped. Do not label old catches/threshold eggs as equivalent, or unlock paid random items. New **Cracked 50%** selection combined with existing **80% failure on cracked** implies **40% total failed eggs at tier 0**, a high-risk balancing review.
 - **Completion gate:** each task requires its own code/assets, Studio/device/runtime acceptance and evidence. Neither planning text nor a similarly named pre-existing Build 020 feature closes it.
+
+### BD-057–BD-062: Pattern fusion, permanent dinosaur identity and earned prestige (2026-10-08)
+
+**OWNER TARGET, unimplemented; task index above controls status.** New definitive direction: Gold uses a **10-copy same-species + same-egg-pattern recipe** (example ten Wavy-Stripes Compies) while keeping the selected target dinosaur's unique traits; **Emerald comes after Gold and before Diamond**. Further proposed tiers Obsidian and Celestial are **not approved**. Fusion should be the **main deterministic upgrade path** for stats and long-term progress; higher-stage copy costs are open to tuning and must be simulated, not blindly compounded 10-per-step.
+
+Each dinosaur should have **persistent per-instance identity and original egg history**, its **own purchased aura/trail inventory**, free selection among previously purchased styles **on that dinosaur only**, and a details UI showing genetics, condition, pattern, BIG/Shiny, mutation, origin, fusion, equipped/owned cosmetics and rarity. **Natural hatch odds** must be computed from true versioned conditional probabilities; **crafted fusion** contributes an **earned prestige/tier**, never a fake random-chance percentage. Exclude **bought cosmetics** from rarity. **Subtle and medium** Blender surface overlays must be compared for Gold/Emerald/Diamond with every effect stacked, preserving saved color coverage and pattern.
+
+Complete ownership, recipes, protection rules for expensive/rare donors, legacy migration, per-stage safety/bonuses, Blender deliverables, multi-week balancing, click/phone acceptance and test cases are specified **only** in [docs/46-pattern-fusion-dino-identity-and-cosmetic-progression.md](46-pattern-fusion-dino-identity-and-cosmetic-progression.md). Do not create a duplicate task board or treat source `GoldMutationCost=50`, `DiamondMutationCost=50` as newly approved.
 
 ### Crystal Shops and Genetics, 2026-10-08 (BD-036–041)
 
