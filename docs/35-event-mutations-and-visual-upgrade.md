@@ -63,6 +63,12 @@ Imported preview cameras fit actual bounds rather than the old native vertices.
 Gold/Diamond clones drop painted texture layers and use metal/glass treatment
 on the new geometry, so source textures cannot hide their mutation colors.
 
+## New requested expansion (Todo, not implemented)
+
+On 2026-10-08 Znypr requested a broader crystal/egg economy and ten tiered trails. The three **implemented cosmetic** trails listed above remain the current Build 019 baseline; the proposed replacement/extension is tracked under **BD-035–041**. New trails grant increasing speed as well as coloured walking effects, require escalating **persistent account levels** and crystal prices, and end at **Astra** with glitter particles. Existing owned trails require migration, and speed balance/multiplayer safety require fresh tests.
+
+Further planned work: run-end crystals and crystal reveals, Robux-purchasable crystals, crystal-priced random eggs, a five-minute Speed Potion, progressively improved condition odds with Cracked/Dirty/Normal/Rainbow/Astra stat tiers, weighted two-colour eggs, Normal/Big visual sizes, and independent shiny sparkles. **None of these newer mechanics is claimed as implemented** by the event/VFX acceptance evidence above. See [full design and open decisions](36-crystal-shops-egg-genetics-and-progression.md) and [canonical Kanban](07-kanban.md).
+
 ## Evidence and remaining work
 
 See evidence/2026-10-08-events-and-cosmetics/README.md. Verification uses a
