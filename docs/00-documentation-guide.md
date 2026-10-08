@@ -42,6 +42,9 @@ Do **not** delete build snapshots or test evidence just to make them look curren
 
 ## Duplication policy
 
+- **One advanced fusion/individual-dino specification**: [`46-pattern-fusion-dino-identity-and-cosmetic-progression.md`](46-pattern-fusion-dino-identity-and-cosmetic-progression.md), BD-057–063, including the optional deterministic pattern-research system. Keep the older 50/50 Build 020 recipe as a historical/current implementation description, not the approved new goal.
+
+
 - **One status board**: `07-kanban.md`. Keep detailed checklists in their specialized spec and link them; do not duplicate 12-item acceptance lists in the board.
 - **One owner-target reward document**: `09-reward-economy.md`. Historical direct-copy `N(c)=c` arithmetic lives in `15-economy-simulation.md`; it must never be silently reinstated.
 - **One consolidated egg appearance guide**: `39-egg-appearance-shared-vision.md`; the general artwork production guide `32` covers export/asset workflow. `41` covers **mechanical** probabilities, saved outcomes and paid-random disclosure, not art taste.
