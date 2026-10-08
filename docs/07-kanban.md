@@ -202,7 +202,7 @@ retain their IDs and scope; this local gameplay pass does not complete those pla
 
 ### New proposed shop/egg systems, 2026-10-08 (BD-035–041)
 
-**Shared visual reference:** [Egg appearance vision](39-egg-appearance-shared-vision.md) consolidates the owner review and archives pattern/color/condition/aura previews. Matte shell, tile/grass grounding and reusable Cracked/Dirty overlays are accepted directions; exact color weights are provisional; latest seven engulfing smoke/anime auras are review drafts. Rainbow/Astra condition effects remain REWORK LATER. Local 1024-to-512 RGBA render/alpha and camera/mesh checks are evidence of authoring only. BD-035/040/041 remain open for missing runtime layers, ID/profile reconciliation, uploads and Studio/device acceptance.
+**Shared visual reference:** [Egg appearance vision](39-egg-appearance-shared-vision.md) consolidates the owner review and archives pattern/color/condition/aura previews. Matte shell, tile/grass grounding and reusable Cracked/Dirty overlays are accepted directions; exact art-authoring weights are provisional; latest seven engulfing smoke/anime auras are review drafts. Rainbow/Astra rework resumed and the owner accepted Astra's brighter curved-vertical opal direction. [Combined-condition review evidence](evidence/2026-10-08-egg-condition-combinations/README.md) tests selected patterned/color/condition/Magma stacks. Local 1024-to-512 RGBA/alpha and camera/mesh checks are authoring evidence only; they do not close missing authored-runtime layers, uploads or Studio/device acceptance. Existing gameplay acceptance is recorded separately above.
 
 - [ ] **BD-035:** Replace draft/Microsoft-Paint-quality egg art with a high-quality Blender master, fixed mesh and camera; export true transparent 512x512 RGBA base, patterns, conditions and separate mutation passes. Prove matching masks/preview alignment, then test in Studio. No finished art is claimed.
 - [ ] **BD-036:** Add crystals awarded/unboxed at run end alongside map pickups; design Robux crystal packs with server-authoritative idempotent receipt grants, persistence and purchase restrictions. Crystal award quantities remain configurable.
@@ -244,10 +244,11 @@ profile was changed. Work used a separate unpublished Build 019 copy.
   and assembled trail previews are NOT completed illustrated PNGs.
 - [ ] Art approval, refined event VFX/custom textures, environment mesh upgrades
   and measured performance. Three environment-generation jobs failed.
-- [ ] Rainbow and Astra egg condition overlays: owner explicitly deferred them
-  on 2026-10-08 for later rework. Existing shell-color and transparent-effect
-  drafts are preserved, not approved final art. Current egg art focus is the
-  seven event mutations on the blank normal egg.
+- [ ] Authored Rainbow/Astra layer integration: rework resumed; owner accepted
+  Astra's bright five curved vertical opal streaks and three hero stars. Rainbow
+  retains multicolored stars without black outlines. Earlier recolors, bold-star
+  and crossing-streak variants remain backups. Combination renders are authoring
+  evidence; Roblox upload/runtime/phone checks remain open.
 - [ ] All phone modal targets/readability and physical-device performance.
   Cosmetic shop targets were enlarged; this is not whole-app phone acceptance.
 - [ ] Non-owner published permissions, multiplayer load and persistent-data

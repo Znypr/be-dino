@@ -65,7 +65,14 @@ Persist the server-selected pair and percentage once. Egg and dinosaur use the s
 
 The accepted basic visual progression is **Cracked → Dirty → Normal**. Cracked uses dark, non-glowing fractures/chipped detail; Dirty uses matte earthy smudges; Normal is clean and intact. Cracks and dirt are separate transparent effect pixels that can be layered over any color/pattern. They must not supply an opaque replacement egg or erase its genetics.
 
-**Rainbow and Astra condition artwork is REWORK LATER**, explicitly deferred by the owner. The initial rainbow-gradient and indigo celestial shell recolors were rejected because they covered underlying colors. Later shimmer/constellation drafts are also preserved for rework, not approved finals. Future versions must be transparent special effects that preserve the chosen shell colors and motif. Deferral of their art does not remove their planned gameplay tiers.
+**Rainbow/Astra rework resumed and Astra's latest visual direction was accepted by the owner.** Initial rainbow-gradient and indigo celestial shell recolors were rejected because they covered underlying colors. These remain historical backups. Current effects are transparent highlights/sparkles over the independently chosen shell.
+
+- **Rainbow:** stronger prismatic flank and center highlights with multicolored stars, without black outlines. Keep this identity distinct from Astra; the current authored Rainbow remains subject to final combination/runtime review.
+- **Astra:** owner accepted **five bright, curved vertical opal streaks**, shifting icy white/cyan/violet/soft pink, with three hero stars, medium black outlines, restrained violet halos and sparse smaller glints. One hero is an eight-point north star. Crossing/diagonal condition streaks were rejected. Earlier dense bold-star, first opal and crossing-streak versions are preserved as backups. Current local source: `Premium_Egg/Astra_Curved_Vertical/BeDino_Astra_Vertical.blend`, collection 86.
+- Opaque black star-outline pixels are allowed; an opaque replacement egg is not. Most shell pixels remain untouched, and selected colors/patterns must stay readable. Orange diagonal wisps in Magma comparisons belong to the mutation, not Astra.
+- Assign one condition per egg. Dirty/Cracked/Rainbow/Astra are alternatives; each may coexist with its pattern, saved color genes and event mutation. Do not interpret composition tests as stacking two stat-bearing conditions.
+
+![Accepted curved-vertical Astra, shown with and without Magma](evidence/2026-10-08-egg-condition-combinations/accepted-astra.jpg)
 
 The already-confirmed mechanics remain in [the condition design](36-crystal-shops-egg-genetics-and-progression.md#egg-condition-shop-permanent-odds-upgrades): Cracked has 20% hatch success and 0.8x movement speed/growth intake on success; Dirty 0.8x, Normal 1.0x, Rainbow 1.2x and Astra 1.8x, subject to shared caps. This art review neither rebalances those factors nor proves implementation. Condition-shop odds and failed-hatch consolation remain separate gameplay work. A Normal condition can still coexist with any pattern, color or mutation.
 
@@ -102,7 +109,7 @@ Use separate background, tile, shell/color/pattern, condition, mutation and Shin
 - Surface overlays contain only effect pixels, not an opaque second egg. Authored full-egg pattern/color previews are valid review sources but do not, by themselves, complete a dynamic pattern-only runtime pass.
 - Smoke/ring/rock/ember/glow parts remain separately editable. The current anime batch exports one combined transparent aura per event; finer pass splits and live animation remain integration work. Use Blender 5.1-compatible nodes and compositor bloom.
 - Actually render, visually inspect, refine and check resolution, alpha, edge clipping and alignment. Verify every shell mask against the canonical silhouette. Test overlays over patterned eggs, double blue and double black, plus Shiny/size combinations. Do not declare completion from node edits alone.
-- Shared scaling must keep all layers registered. Existing Normal/Big and Shiny gameplay specifications remain in [hatching/traits](37-hatching-traits-and-leaderboards.md); this review does not resolve the documented 1.2x proposal versus 1.3x tested BIG baseline.
+- Shared scaling must keep all layers registered. Current private-test genetics integration uses 1.2x BIG and independent Shiny per [shop/genetics acceptance](39-crystal-shops-and-genetics-acceptance.md); the earlier 1.3x hatch baseline is historical. These Blender renders do not certify authored-layer size/Shiny integration in Studio.
 
 ## Current decision and delivery status
 
@@ -112,10 +119,13 @@ Use separate background, tile, shell/color/pattern, condition, mutation and Shin
 | Eight patterns including blank | Requested set authored/rendered; not a runtime migration acceptance |
 | Two colors, random shares, rare vivid red / exceptional pure black, same-color pattern contrast | Confirmed direction; exact balance/production distribution provisional |
 | Cracked and Dirty reusable overlays; clean Normal | Accepted visual direction |
-| Rainbow/Astra condition effects | Explicitly deferred, REWORK LATER |
+| Rainbow condition effects | Current prismatic/multicolored-star authoring direction; final combination/runtime review open |
+| Astra condition effects | Owner accepted brighter opal with five curved vertical streaks and three hero stars; runtime integration still open |
 | Smoky engulfing anime mutation auras | Latest requested direction; seven latest renders remain review drafts |
 | Roblox upload, ID binding, layered runtime/phone testing | Not completed by the Blender review |
 
 The [evidence README and manifest](evidence/2026-10-08-egg-shared-vision/README.md) identify the preview files, local editable source lineage and render validation. Full `.blend` projects and complete individual export packs remain in the local `Premium_Egg` workspace; only compact review examples and validation records are archived here. Do not assume local-only sources are downloadable from this repository.
 
-Next work: approve/refine mutation silhouettes; rework deferred condition effects when requested; reconcile palette/percentage/profile IDs with gameplay; produce missing granular runtime layers and upload manifests; then verify combinations and device performance in Studio. Keep accepted direction, authored draft, uploaded, integrated and runtime-verified states distinct.
+Latest authoring combination review: green/blue Islands with Normal, Dirty and Cracked + Magma; double-blue spots with Dirty, Cracked and Astra + Magma; double-black Islands with Rainbow/Astra + Magma. [Review images and layer validation](evidence/2026-10-08-egg-condition-combinations/README.md) cover this bounded sample, not every trait combination or a Studio acceptance pass.
+
+Next work: approve/refine mutation silhouettes; reconcile remaining visual palette/profile differences with private-test gameplay; produce missing granular runtime layers and upload manifests; then verify authored combinations, Shiny/Big and device performance in Studio. Keep accepted direction, authored draft, uploaded, integrated and runtime-verified states distinct.

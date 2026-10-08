@@ -1,0 +1,26 @@
+{
+  "dirty": {
+    "effect_shell_coverage_percent": 38.45,
+    "transparent_pixels": 244802,
+    "opaque_effect_pixels": 7576,
+    "no_opaque_second_shell": true
+  },
+  "cracked": {
+    "effect_shell_coverage_percent": 9.31,
+    "transparent_pixels": 258016,
+    "opaque_effect_pixels": 838,
+    "no_opaque_second_shell": true
+  },
+  "rainbow": {
+    "effect_shell_coverage_percent": 21.9,
+    "transparent_pixels": 251691,
+    "opaque_effect_pixels": 0,
+    "no_opaque_second_shell": true
+  },
+  "astra": {
+    "effect_shell_coverage_percent": 29.06,
+    "transparent_pixels": 245400,
+    "opaque_effect_pixels": 472,
+    "no_opaque_second_shell": true
+  }
+}

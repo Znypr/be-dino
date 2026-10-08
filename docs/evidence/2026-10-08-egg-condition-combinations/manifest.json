@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-08",
+  "scope": "Accepted Astra direction and bounded Blender combination review; not runtime integration",
+  "local_sources": {
+    "accepted_astra": "Premium_Egg/Astra_Curved_Vertical/BeDino_Astra_Vertical.blend",
+    "combination_review": "Premium_Egg/Full_Combination_Review/BeDino_Full_Combination_Review.blend"
+  },
+  "files": [
+    {
+      "path": "accepted-astra.jpg",
+      "sha256": "52444b6cb85ab9e65e3936ee35c7359fcc441f3e725f483f10083dc5c954ce3c",
+      "bytes": 394722,
+      "dimensions": [
+        1152,
+        844
+      ]
+    },
+    {
+      "path": "combination-overview.jpg",
+      "sha256": "4c0160f9f65c2939ccaab1138421d94a622a42a422a25a730930dcc8a5170e2f",
+      "bytes": 563283,
+      "dimensions": [
+        1536,
+        844
+      ]
+    },
+    {
+      "path": "combination-128.png",
+      "sha256": "eaff4fcc880dedddc6cc0fef853662a66421e07283915471793e2b56ecddba97",
+      "bytes": 149066,
+      "dimensions": [
+        512,
+        306
+      ]
+    },
+    {
+      "path": "layer-validation.json",
+      "sha256": "38d6f518ecbec7705d8ca965e7da9ed083bb95dad2095ac99d1844dd244cf5e8",
+      "bytes": 686
+    },
+    {
+      "path": "scene-integrity.json",
+      "sha256": "f2832c07473d65a655c1528e5ffbc9f2d4b67253343405554e058243ba6d441a",
+      "bytes": 58
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 # Be Dino artwork guide and small production checklist
 Updated 2026-10-08. Current artwork planning for redesign/resources-and-core-fixes.
 
-For combined egg appearance, read the [shared egg vision](39-egg-appearance-shared-vision.md). The owner-selected matte shell, eight patterns, weighted color coverage, condition overlays and engulfing smoke/anime mutation auras supersede older conflicting egg-art instructions here. Rainbow/Astra condition artwork is explicitly deferred; latest mutation renders are review drafts. Existing shop-aura fossil/ring rules below still apply to those separate products.
+For combined egg appearance, read the [shared egg vision](39-egg-appearance-shared-vision.md). The owner-selected matte shell, eight patterns, weighted color coverage, condition overlays and engulfing smoke/anime mutation auras supersede older conflicting egg-art instructions here. Rainbow/Astra rework resumed: Astra's bright curved-vertical opal direction is owner accepted, Rainbow retains unoutlined multicolored stars, and combination/runtime review remains open. Latest mutation renders are review drafts. Existing shop-aura fossil/ring rules below still apply to those separate products.
 
 ## Authority and sources
 Znypr's latest explicit requests take precedence over historical prototype restrictions. This guide consolidates artwork decisions; it does not approve game balance, monetization, or new gameplay.
