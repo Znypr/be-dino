@@ -1,5 +1,7 @@
 # Build 014 verification
 
+> **HISTORICAL Build 014 test evidence**, not current source counts or Studio acceptance. See [Build 020 integration](44-main-integration-checklist.md).
+
 ## Completed automated checks
 - Packaging/economy/resource regression: 16 tests passed.
 - Official Luau parser: all 20 source scripts parsed without syntax errors.
