@@ -1,13 +1,19 @@
 # Build 020: Integrated Main Test Handoff
 
-2026-10-08: Build 020 and UI-motion history are integrated for GitHub main.
-Use [the maintained integration checklist](44-main-integration-checklist.md) and
-`build/BeDino-Latest.rbxlx` for the same-build acceptance pass. The unpublished
-BeDino-019-DisposableAcceptance copy has been synced to Build 020 despite its old
-filename. Current evidence is bounded; paid flags remain false and no experience
-was published. The Build 019 notes below are historical acceptance context.
+**Active handoff for GitHub `main`, Build `redesign-020` (2026-10-08).** Use [current integration/remaining gates](44-main-integration-checklist.md), [canonical tasks](07-kanban.md) and `build/BeDino-Latest.rbxlx`. GitHub integration is not a Roblox published release. The similarly named `BeDino-019-DisposableAcceptance` Studio copy was later synced to Build 020; place filenames are not build verification.
 
-Branch: `redesign/resources-and-core-fixes`. This is the current handoff; earlier build/audit documents are historical. Source and offline checks are complete. Studio physics, rendering, mobile performance, asset permissions and multiplayer acceptance are still pending.
+The legacy notes below came from `redesign/resources-and-core-fixes` **before the Build 020 main merge**. They are historical handoff evidence, not executable latest setup instructions. Core owner targets, including one caught egg per catch, the new condition odds, redesigned shop/HUD/touch and world visuals, are **planned but not shipped** ([BD-044–056](45-owner-feedback-shop-hud-world-weather-tasks.md)).
+
+## Current Build 020 acceptance workflow
+
+1. Start from current **GitHub main**, using `build/BeDino-Latest.rbxlx` or `build/BeDino-Build020.rbxlx`; do not follow the archived Build 019 branch/download instructions below. Confirm the running version label **BUILD redesign-020**.
+2. Prefer an **unpublished disposable Studio copy** (GameId/PlaceId 0) to exercise rewards, eggs, shops and purchase restrictions without touching persistent players. Unpublished profiles are nonpersistent; test wallet behavior may be enabled. **Keep both paid release flags false.** No purchase/economy result from disposable fixtures establishes production drop rates.
+3. Check actual **22-creature** catalog, patterns/colors/genes, five-second sequential hatching, rarity/detail disclosure, level-gated ten trails, condition shop, weather/event state and visual fallbacks. Use [Build 020 evidence and current open gates](44-main-integration-checklist.md); do not misread older six-creature checks as today's full acceptance.
+4. Exercise sanctuary -> run -> return/death -> rewards -> hatch -> collection, including closing/reopening the queue, with **no persistent debug grants**. Note that the current payout still uses **direct copies + 1/2/3 threshold eggs**. The desired 15 catches = 15 run eggs is **BD-044, not verified gameplay**.
+5. Inspect actual UI/visual layouts on desktop, landscape phone emulator and tablets; separately validate physical phone, non-owner published asset permissions, max-size/BIG slope collisions, multiplayer/load and newest save migration before any release decision. Distinguish source compile, emulator success and published game evidence.
+6. Record each acceptance result under [Kanban](07-kanban.md), including commit/build, target place/profile mode, viewport/device, screenshots and limitations. Respect the published-player/release gates and don't mark a whole feature complete from isolated test fixtures.
+
+## Archived Build 019 follow-up and evidence (not current procedure)
 
 2026-10-08 update: connected Build 019 was verified through Studio MCP. All nine PNG
 masters were uploaded under the verified experience owner, bound, and successfully
@@ -32,7 +38,7 @@ and Clear/Rain/Thunderstorm/Blizzard now have owner-verified uploads and configu
 `UIIconLayout` insets. Desktop/phone states, leap ready/cooldown and 48/64px inspection
 are archived in `docs/evidence/2026-10-08-weather-and-leap/`. Native fallbacks remain.
 
-## Completed before Studio
+## Historical Build 019 code, artwork and gameplay notes
 
 Crystal shops/genetics follow-up (2026-10-08): run rewards/reveal, 150-crystal eggs,
 ten level-gated trails, six condition upgrades, immutable colors/conditions and
@@ -62,9 +68,9 @@ desktop/phone passes and the still-unverified paid/persistent/global cases.
 - Hatching automatically reveals one precommitted reward per five seconds, ascending rarity within each run batch. Closing stops the sequence without losing unclaimed eggs. No reward is rolled on the client.
 - CI covers main, the redesign branch, pull requests and manual runs. It installs Pillow/numpy and pinned Luau tools, checks bindings, compiles all sources, executes behavior/preview/artwork checks, rebuilds the current version, runs Python tests and uploads the correct place/manifest. CI no longer makes automated build commits.
 
-## Exactly what to do next
+## Archived Build 019 walkthrough: do not use for current Build 020
 
-**Latest scope update (2026-10-08):** Weather mutations, trails and textured
+**Build 019 period scope update:** Weather mutations, trails and textured
 visual overrides now exist. Read docs/35-event-mutations-and-visual-upgrade.md
 and the newest canonical checklist in docs/07-kanban.md before the historical
 steps below. The user deferred the three release gates for now. Do not retry
@@ -75,15 +81,15 @@ are authored place data, not server-created runtime variants; source-only sync
 must include resources/world-materials.rbxmx as MaterialService. New weather
 icons/trail previews remain native fallbacks pending illustrated artwork.
 
-1. Download this branch, extract it and open **`build/BeDino-Build019.rbxlx`** in Studio. Keep it unpublished for the first F5 session. Confirm the badge says **BUILD redesign-019** and the preview notice says progress is not saved. Test currency should show 1,000,000 crystals.
+1. **HISTORICAL ONLY:** Download that branch, extract it and open **`build/BeDino-Build019.rbxlx`** in Studio. Keep it unpublished for the first F5 session. Confirm the badge says **BUILD redesign-019** and the preview notice says progress is not saved. Test currency should show 1,000,000 crystals.
 2. Play the native-fallback build first. Explore, gather food, use E, buy/equip an aura, buy/use/replace a potion, return to bank rewards, and hatch eggs with NEXT EGG. Check the scrolling six-species index, phone emulator, reduced motion, terrain collisions and two-client PvP. Unknown/not-owned species should remain locked.
 3. Inspect Gold/Diamond previews in the Fusion page. To test actual fusion, earn fixture copies in the disposable local profile or use the existing offline transaction harness; do not enable persistent debug grants. The offline suite covers both fusion costs, migration, retries and rejoin; visual acceptance is still needed.
 4. Import the nine PNGs from `resources/ui/v2/layers/` through Studio File → Import / Asset Manager, under the experience owner. Start with fossil, Meadow ring and speed bottle. Confirm transparency, moderation and actual loading in the private experience. Upload all remaining preferred masters; keep historical combined thumbnails as references.
 5. Record each copied asset ID and, if needed, its actual image content URI in `upload-bindings.json`; record owner/experience metadata too. Run `python tools/bind_artwork.py`, then `python tools/build.py`. Or sync those changed Luau files with Rojo. Do not expect editing JSON alone to change an already-open place.
 6. Check all three aura seams/front occlusion, both bottle emblems, Gold/Diamond badges and catches mark at 32/48/64 px. Tune **ArtworkLayout**, not the PNG master, for positional changes. The initial ring size is .70 to leave room for glow/fringe. If an image fails permissions/moderation, clear its binding until corrected.
-7. Publish to the private test experience only after the local pass. Verify real asset permissions, normal currency/60-second egg timing, save/rejoin, existing-profile migration, both fusion stages and two-client interaction there. Record results before merging into main or treating this as release ready.
+7. **HISTORICAL ONLY:** The earlier publication checklist referenced a 60-second egg timer; **Build 020 new eggs are immediately ready and reveal for five seconds each**. For the older private-place checklist, verify real asset permissions, normal currency/old egg timing, save/rejoin, existing-profile migration, both fusion stages and two-client interaction there. Record results before merging into main or treating this as release ready.
 
-## Quick adjustment map
+## Reference source adjustment map (some models/assets evolved since Build 019)
 
 | Change | Source |
 |---|---|
@@ -99,7 +105,7 @@ icons/trail previews remain native fallbacks pending illustrated artwork.
 
 The native wedge models avoid import permissions but are heavier than optimized MeshParts. Validate phone performance in Studio; production mesh optimization remains a measured follow-up, not an offline performance claim.
 
-## Local verification
+## Historical local verification commands (check current CI/scripts before use)
 
 Use Python 3.12 with Pillow/numpy, and Luau 0.741 tools:
 
