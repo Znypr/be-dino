@@ -1,4 +1,6 @@
 # Technical architecture
+
+> **HISTORICAL architecture target.** Statements below that persistence, multiplayer integration or asset systems are "not implemented" reflect the early September design, **not Build 020**. Consult [Build 020 integration](44-main-integration-checklist.md), [persistence contracts](13-persistence-remote-contracts.md), current source and [Kanban](07-kanban.md) for actual status. The server-authoritative design principles remain relevant.
 Architecture target; first movement spike implemented, persistence not implemented. Goal: small modules with explicit authority and durable progression.
 
 ## Toolchain
