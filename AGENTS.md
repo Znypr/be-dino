@@ -16,6 +16,8 @@ The player-facing count of **catches** in the target reward loop means **the num
 | Five-minute example | 500 | **15** | 11 Common, 4 Uncommon | **30 (illustrative; amount NOT owner-approved)** | **1** |
 | Longer, more successful run | 5,000 | **150** | 80 Common, 50 Uncommon, 17 Rare, 3 Epic | **220 (owner's example, NOT a final formula)** | **6 earned/offered; max 5 claimable into five free nest spots** |
 
+**Current species-rarity taxonomy mismatch:** Build 020 only implements **Common / Rare / Legendary**. The owner's sample outcomes with **Uncommon / Epic** require explicit species-rarity tiers, data/UI ordering and eligibility migration under BD-044. Do not fabricate existing Uncommon/Epic drops when describing *current runtime*.
+
 The current test conversion `FoodCatchRate = 15/500` happens to fit both egg-count examples. Do **not** confuse `5,000 food points` with the old `MaxCatchScore = 5000`: they are distinct quantities. Five minutes does not automatically imply 500 food points. Neither rarity distribution is a committed probability table; drops should generally be common-heavy, with longer/better runs exposing more rare tiers.
 
 - **Every earned run catch corresponds to one run egg**, stored/settled server-side. Reveal the **15 or 150 eggs sequentially**, one at a time, approximately five seconds each at the current prototype speed, preferably in increasing species rarity within a batch. Do not invent additional separate immediate eggs from the old 10/100/500 catch thresholds.
