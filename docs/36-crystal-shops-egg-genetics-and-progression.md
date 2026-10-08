@@ -1,0 +1,107 @@
+# Crystal shops, egg genetics and progression (planned)
+
+**Requested:** 2026-10-08. **Status:** Design/Todo only; not implementation or public balance approval.
+**Canonical status:** [BD-035–041 in Kanban](07-kanban.md). **Existing systems:** [Build 018 progression](31-build018-progression-test.md), [Build 019 events and cosmetics](35-event-mutations-and-visual-upgrade.md).
+
+## Player loop
+
+1. Play a run, catch food, and earn eggs and **crystals** when the run settles. End-of-run rewards may also contain a crystal reward to **unbox/reveal**. Crystals are also scattered across the live map for players to pick up. Define earned crystal quantities, crystal containers and drop odds in configurable server tables.
+2. Optionally purchase crystal packs with **Robux** in the Crystal Shop. Receipts grant the currency exactly once through a server-owned purchase pipeline.
+3. Spend crystals on **random eggs**, **trail unlocks**, **temporary potions**, and **Condition Shop upgrades**.
+4. Earn persistent account levels through play. Account levels unlock progressively stronger trails and higher condition-upgrade tiers; purchasing crystals alone does not bypass those gates.
+5. New eggs receive immutable attributes (pattern, condition, two weighted colours and blend, size, shiny flag, and any event mutation eligibility). The egg preview is a composition of reusable layers. Eggs are hatched from the existing sequential queue, with the server committing the outcome once.
+6. Hatched dinosaurs inherit the egg's chosen blended colours, their allowed condition stat modifier, visual size, shiny status and any successfully rolled mutation. A failed hatch is possible only for the **Cracked condition**; exact chance and consolation outcome remain to be specified.
+
+**Separation of systems:** Pattern is cosmetic shell art; **condition** sets hatch risk/stat strength; **event mutation** is a separate chance/perk/VFX result; **shiny** is an independent sparkle trait; **size** is independent of stats; **colour genes** are cosmetic. Do not conflate event eligibility with guaranteed mutation.
+
+## Crystals: earning, purchase and spending
+
+- **Earned:** random validated map pickups (already exists), run-end rewards, and possibly a separate crystal reveal/unbox reward. Do not let one food pickup grant unintended duplicate currency; the exact run formula and reward packaging are Todo.
+- **Purchased:** Robux crystal packs, with storefront confirmation and idempotent receipt processing. No client-authoritative balance, and no paid-only gameplay resource.
+- **Spent:** random egg rolls that join the existing pending hatch queue; permanent trail products; consumable speed/growth potions; repeatable escalating Condition Shop levels.
+- **Persistence:** single wallet ledger, atomic server-side debit/credit with unique transaction IDs, replay/receipt protection, profile migration, and failure-safe settlement. Audit currency earning rate versus catalog prices.
+- **Fairness/compliance:** because Robux buys crystals which can buy **random-result eggs**, review Roblox's current paid-random-item rules, odds disclosure and relevant regional/age restrictions before shipping. If needed, separate bought-currency eligibility from paid-random purchases or provide a compliant alternative. Do not launch or advertise an unverified policy flow.
+
+## Trail Shop: ten account-level-gated tiers
+
+Replace/extend the existing **three cosmetic trails** (Fern Drift, Tidal Wake, Nova Ribbon) with a **ten-tier catalog**; migrate owned/equipped items without deleting or silently downgrading them. All trails have coloured walking/running VFX behind the dinosaur. **Normal White** is the free default. **Astra** is the highest tier, with multicolour glow and glitter particles. Each tier increases both crystal price, required persistent account level, and movement speed.
+
+**Provisional illustrative balance, not approved:**
+
+| Tier | Trail | Colour/effect when walking | Account level | Crystals | Speed |
+|---:|---|---|---:|---:|---:|
+| 1 | Normal White | Simple white trail | 1 | 0 | 1.00x |
+| 2 | Fern Drift | Green leaf motes | 3 | 100 | 1.02x |
+| 3 | Tidal Wake | Blue water ribbon | 6 | 250 | 1.04x |
+| 4 | Ember Trail | Orange sparks | 10 | 500 | 1.06x |
+| 5 | Violet Pulse | Purple glowing wake | 15 | 900 | 1.08x |
+| 6 | Electric Arc | Cyan electric sparks | 21 | 1,500 | 1.10x |
+| 7 | Frost Comet | Pale-blue crystal mist | 28 | 2,400 | 1.12x |
+| 8 | Solar Flare | Golden star streak | 36 | 3,600 | 1.14x |
+| 9 | Cosmic Prism | Prismatic star dust | 45 | 5,500 | 1.16x |
+| 10 | **Astra** | Iridescent trail and glitter particles | 60 | 8,500 | 1.18x |
+
+Level means a **persistent account progression level**, **not** temporary run growth/catches. How account XP is earned, actual price curve, final speed curve and total speed cap require balancing before release. Server verifies level and ownership, applies a bounded speed multiplier and validates movement. Test interactions with speed potions, weather and condition bonuses; high tiers must not create unavoidable chases or immediate pay-to-win purchases. Reduced-effects mode suppresses VFX, not authorized stats.
+
+## Potions
+
+- Crystals purchase consumable potion inventory through the existing Potion Shop. Include a **5-minute Speed Potion**, with displayed speed multiplier and expiration. Growth Potion variants may remain from the current shop.
+- The server owns duration and buffs. Same-type replacement, expiry during offline time, duplicate purchase/use protection, buff caps and synchronization with weather/trails/conditions must be verified.
+- Prices, strengths, stack rules and rarity variants remain configurable; reuse the current potion infrastructure rather than creating a second purchase system.
+
+## Egg Condition Shop: permanent odds upgrades
+
+The **condition is assigned when an egg is earned or purchased**, not on opening the hatching UI. A Condition Shop permanently improves the player's odds of drawing good conditions for **future new eggs**. Each upgrade level costs more crystals and requires a higher persistent account level. Existing eggs do not reroll when the shop upgrades.
+
+| Egg condition | Hatch result | Resulting dinosaur's base stats |
+|---|---|---:|
+| **Cracked** | Low chance to hatch a dinosaur; can fail | **80%** if it hatches |
+| **Dirty** | Dinosaur hatches | **80%** |
+| **Normal** | Dinosaur hatches | **100%** |
+| **Rainbow** | Dinosaur hatches | **120%** |
+| **Astra** | Dinosaur hatches | **180%** |
+
+- **Exact Cracked hatch chance is intentionally unspecified.** Define the server-side probability and what a failed hatch grants (if anything) before implementation.
+- The shop raises probability of Rainbow/Astra and lowers Cracked/Dirty odds as upgrade levels increase. Do not guarantee Astra at a finite tier unless separately approved. Each tier's full distribution must sum to 100% and be fixed/configurable, testable and disclosed when necessary.
+- Specify exactly which **base stats** receive the 0.8/1.0/1.2/1.8 factors, especially whether movement speed, growth intake or other gameplay values are affected; apply caps to interactions with trails, weather and potions. The large 1.8x factor is a design request, not accepted balance.
+- **Condition `Cracked` is not the cosmetic `cracked` shell pattern**: keep independent IDs/fields to avoid collision.
+- Existing visual conditions such as Frosted, Mossy and Shiny are **not** part of these five stat-bearing condition tiers. Retain them as cosmetic modifiers or migrate deliberately, never silently give them implied 80–180% stats.
+
+## Egg colours, sizes and shiny
+
+- **Two colour slots per egg:** `primaryColorId` and `secondaryColorId`, drawn independently from a configurable weighted rarity palette. Example anchors: **white = ordinary**, **blue = common**, **black = exceptionally rare**. Complete palette, actual relative weights and rarity names are Todo.
+- **Random blend proportion:** server chooses a blend in `[0,1]` and stores it. Examples: 80/20, 100/0, 50/50. The egg shell and dinosaur use the **same saved colours and blend**; do not independently recolour at hatch. Two independently rolled black colours make **black/black** exceptionally rare. Design deterministic blend/placement mapping for differently shaped dinosaur meshes.
+- **Two egg sizes only:** **Normal** and **Big**. A Big egg produces a dinosaur with **1.20x visual model scale**, but **no extra base gameplay stats or speed from size**. This supersedes the earlier small/medium/big idea. Validate collider/range fairness and keep the shared egg art aligned; size can be a UI scale property.
+- **Shiny** is an independent random property/flag, not a condition tier. It adds visible sparkling effects to the hatched **dinosaur** and its **collection/preview image** (and to the egg preview where practical). No stat bonus is specified. Odds remain Todo.
+- Persist all assigned traits and the resulting hatch exactly once. UI can preview an earned egg's stored attributes, but cannot draw or reroll them.
+
+## Modular egg artwork and Blender pipeline
+
+Source model is one locked `Egg_Master` mesh, fixed camera, floor tile and lighting. Prepare high-quality source materials and VFX via Blender MCP; **do not** treat a generated contact sheet as a shippable sprite pack.
+
+- Render a background separately (opaque), floor tile (transparent outside), and one base egg (transparent outside).
+- Export pattern markings and condition surface passes **with the exact same egg silhouette mask**, no opaque duplicate eggs. Shiny sparkle belongs in its separate effect pass; size is applied as a shared scale.
+- Render mutation surface effects and external particles/rings in independently reusable transparent layers. A mutation's display on the unhatched egg can indicate event eligibility; it does not promise a mutated hatch unless already settled by server.
+- Export at 1024px or higher and downsample to **512 x 512 RGBA PNG**. Verify exact image dimensions, true alpha, mask identity, camera alignment, edge bleed and small mobile previews automatically.
+- Start with **Base + Spots + one condition + Magma**; inspect actual PNGs and a composited render before scaling to the full catalog. Keep source `.blend` and editable textures, plus an upload/Roblox asset-ID manifest. Validate performance and visible quality on target devices.
+
+## Implementation / acceptance breakdown
+
+- **BD-035 | Egg render pipeline:** lock mesh/camera/mask; produce truly aligned, high-quality 512px RGBA assets and verify layered stacking in Studio.
+- **BD-036 | Crystal economy:** award on completed runs and crystal reveals in addition to map pickups, implement/verify Robux pack receipts and wallet accounting, clarify compliance restrictions.
+- **BD-037 | Crystal random eggs:** crystal purchase, weighted species/egg outcome, queued hatching, disclosure and idempotency; queue-full behavior must not destroy purchases.
+- **BD-038 | Ten trails / account levels:** account XP/level progression, gated escalating crystal prices, 10 VFX + speed tiers, migration from 3 trails and speed-cap/multiplayer checks.
+- **BD-039 | Potion integration:** crystal-priced five-minute Speed Potion; preserve existing variants and expiry logic.
+- **BD-040 | Condition Shop:** weighted assignment, 5 condition tiers, Cracked hatch failure, shop-level odds progression, persistence, caps and tests.
+- **BD-041 | Egg genetics:** weighted two-slot colour/blend, Normal/Big 1.2x visual size and independent shiny effect; persist/replicate through hatch and collection.
+
+## Open decisions before implementation
+
+1. Run-end crystal formula, whether end-of-run crystals are direct, unboxed, or both; crystal box odds.
+2. Cracked hatch success % and failed-egg consolation.
+3. What counts as the condition-adjusted `base stats`; balance caps for 1.8x Astra.
+4. Full level XP curve, ten trail prices/speed values (table above is a suggested starting point) and shop-upgrade gates.
+5. Palette weights, blend distribution, shiny rate, Normal/Big odds, whether colours are visible before hatch.
+6. Rules for random egg purchases using Robux-purchasable crystals: odds display, player eligibility and policy-safe alternatives.
+
+**Safety and scope:** existing Build 019 behaviour remains the implemented baseline until each task passes isolated server/gameplay, persistence, UI, and desktop/phone checks. No unpublished/saved profile changes, unapproved Robux products or grants are implied by this planning document.
