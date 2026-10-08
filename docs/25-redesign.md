@@ -1,5 +1,7 @@
 # Be Dino redesign, 2026-10-04
 
+> **HISTORICAL 2026-10-04 redesign request.** The assertion below that GitHub main "is still Build 013" was true **at this document's creation**, not after Build 020 was merged to main. The mountain-island direction remains relevant; for current status, see [README](../README.md), [Build 020 integration](44-main-integration-checklist.md) and [new map-art task BD-049](45-owner-feedback-shop-hud-world-weather-tasks.md).
+
 ## Direction
 Znypr rejects the primitive blockout. The new target is a coherent stylized prehistoric island with proper reusable mesh assets, intentional landmarks and spacious, dimensional menus. The supplied screenshot shows a newer layout than GitHub main (main is still Build 013). This change is based on the actual repository; uncommitted local work is not assumed to exist here.
 
