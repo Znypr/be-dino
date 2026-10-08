@@ -1,17 +1,8 @@
 # Egg Outcomes: Reconciled Contract
 
-Updated 2026-10-08 after checking GitHub through `14afd6e`, including the accepted
-Astra/combination review in `224f0d7`. This fills missing design decisions using
-provisional defaults authorized by the owner. It does not change gameplay code,
-approve public balance, certify paid-random compliance or complete Studio artwork.
-The [shared appearance vision](39-egg-appearance-shared-vision.md) governs visuals;
-the [acceptance record](39-crystal-shops-and-genetics-acceptance.md) governs actual passes.
-Keep current implementation and next-build targets distinct.
+**Reconciled 2026-10-08 against GitHub main Build 020.** This contract separates **implemented source behavior**, **owner-directed target changes** and **archived earlier proposals**. [Main integration checklist](44-main-integration-checklist.md) and [22-creature integration](43-creature-runtime-integration.md) supersede the initial six-species / seven-color snapshot; [art vision](39-egg-appearance-shared-vision.md) governs unapproved artistic choices, and [Kanban](07-kanban.md) governs current task status. No paid-random launch or physical-device certification is implied.
 
-Runtime numbers below describe committed gameplay baseline `3793653`, not an
-assertion about concurrent uncommitted creature/genetics edits. During this review,
-new local work adds patterns/coverage and expands the species catalog; it is left
-untouched and needs its own migration, odds and Studio acceptance evidence.
+**Build 020 implemented:** 22 species, nine palette colors, eight patterns, uniform mixed 1–99% gene coverage, matching-color 100% primary, and configurable current condition distributions. The owner-target 50/30/15/4.5/0.5 starting condition distribution and one egg per catch are **NOT implemented**. Historic earlier `3793653` / `14afd6e` review numbers remain in version-control history and in the earlier [acceptance record](39-crystal-shops-and-genetics-acceptance.md), not today's runtime authority.
 
 ## Owner target versus Build 020 runtime (2026-10-08)
 
@@ -28,14 +19,7 @@ egg awards zero copies, consumes that egg and grants no crystal refund or
 consolation. This is the provisional default already implemented, not an open rule.
 Never subtract existing owned dinosaurs when an egg fails.
 
-| Species | Purchased / one-egg base odds | Species rarity |
-| --- | ---: | --- |
-| Compy | 40% | Common |
-| Raptor | 30% | Common |
-| Triceratops | 15% | Rare |
-| Stegosaurus | 10% | Rare |
-| T-Rex (`tyrannosaurus`) | 3% | Legendary |
-| Ankylosaurus | 2% | Legendary |
+**Species catalog note:** the six-row Compy/Raptor/Triceratops/Stegosaurus/T-Rex/Ankylosaurus weighting table from the older Build 019 snapshot is **no longer a complete current odds table**. Build 020 uses the 22-species weights in [`src/shared/Config.luau`](../src/shared/Config.luau), enumerated dynamically by `EggOutcomeOdds`, and three implemented species tiers: **Common / Rare / Legendary**. The owner's reward examples additionally name **Uncommon / Epic**, which are **future progression requirements**, not current tier IDs. Reconcile taxonomy as part of [BD-044](07-kanban.md) before advertising those outcomes.
 
 Purchased eggs cost 150 crystals, use the same ordered queue and have no run-batch
 boost, event mutation or Shiny roll. They still roll condition, colors/blend,
@@ -47,8 +31,7 @@ in that run batch, `B = 1 + (clamp(N,1,15)-1)*0.25`; multiply Common species wei
 by 1, Rare weights by B and Legendary weights by B squared, then normalize. N is
 the granted batch size, not lifetime eggs, wallet balance or eggs left after a claim.
 The same batch boost applies to its eggs; hatching does not progressively reroll odds.
-See `RewardMath.computeChestReward`. Direct run reward tiers are a separate legacy
-reward route and must not be advertised as this six-species egg distribution.
+See `RewardMath.computeChestReward`. Direct run copies are a separate **legacy** reward route, not the intended egg-per-catch target. The 22-species distribution and three-tier rarity mapping are current Build 020 behavior, not the original six-species table.
 
 > **Owner-directed future change (2026-10-08, BD-045; not yet implemented):** New **tier-0** condition odds must be **Cracked 50%, Dirty 30%, Normal 15%, Rainbow 4.5%, Astra 0.5%**. Total 100%. This supersedes the tier-0 odds below **as product intent**, not as implemented code. Existing six upgrade levels and tier-6 distribution below need an explicit monotonic retune/owner approval rather than pretending the old table is consistent with the new base. Keep Cracked's **20% hatch-success** rule separate from its **50% condition-selection probability**: unupgraded effective failure is **40% per egg** if the existing 80% Cracked failure stays. Existing eggs retain their committed immutable outcomes. Purchased random egg disclosure and exact server config must agree before a new version is live. [Implementation details](45-owner-feedback-shop-hud-world-weather-tasks.md#A-egg-conditions-and-game-economy--bd-045).
 
@@ -108,56 +91,26 @@ Event perk/roll values remain provisional balance. Do not add Cosmic/Eclipse IDs
 merely because they appeared in visual references. Gold/Diamond fusion materials,
 purchased auras and the Astra trail are separate systems.
 
-## Current Colors Versus The Next Build
+## Build 020 genes, patterns and historical authoring weights
 
-Current `EggGenetics` independently draws White/Blue/Green/Pink/Gold/Violet/Black
-with weights 5000/3000/1200/500/250/49/1 out of 10000 per slot. It saves a primary
-share from 0 through 100 uniformly (101 outcomes), including matching pairs.
-The current renderer averages the colors into one tint. Two visibly separate color
-regions and the eight independently rolled patterns are NOT integrated yet.
+**Verified against `ProgressionConfig.luau`, `EggGenetics.luau` and [Build 020 creature integration](43-creature-runtime-integration.md):** the current palette includes **nine** colors; weighted selection is per gene slot. Mixed pairs roll a **uniform integer 1–99%** primary share; matching pairs retain 100% of that family. All **eight** authored pattern IDs are implemented (Blank, Islands, Round Spots, Bold Patches, Horizontal Bands, Wavy Stripes, Diamond Scales, Freckles). The earlier seven-color / uniform 0–100% blend and clamped endpoints are **legacy schemas**, not the current default.
 
-Current Black/Black genes have probability 0.000001% (1 in 100 million). This is
-not the current probability of a visually pure-black egg: mixed-pair 0/100 endpoints
-can also look pure black. Do not advertise those two different events as equivalent.
-The newer vision intentionally excludes mixed endpoints to prevent that shortcut.
-
-### Provisional Next-Build Defaults
-
-Use these explicit defaults until owner tuning, preserving the newer hierarchy:
-
-| Stored color ID | Display family | Weight per slot |
+| Stored ID | Current display | Current weight per slot |
 | --- | --- | ---: |
-| `white` | Cream / ivory | 100 |
-| `green` | Green | 100 |
-| `blue` | Blue | 100 |
-| `teal` | Teal | 40 |
-| `pink` | Pink | 40 |
-| `violet` | Purple | 15 |
-| `gold` | Amber | 15 |
-| `red` | Vivid red | 4 |
-| `black` | Black / charcoal | 1 |
+| `white` | Cream | 5000 |
+| `blue` | Blue | 2600 |
+| `green` | Green | 1200 |
+| `pink` | Pink | 500 |
+| `teal` | Teal | 400 |
+| `gold` | Amber | 250 |
+| `violet` | Purple | 45 |
+| `red` | Red | 4 |
+| `black` | Black | 1 |
+| **Total** | | **10000** |
 
-Total weight 415. Existing IDs white/violet/gold are retained; display names do
-not introduce competing neutral IDs or change Gold fusion. New teal/red IDs need
-palette, validation, renderer and migration support before any production roll.
-Matching genes use 100% primary; differing genes uniformly use integer 1-99%.
-Generate mixed shares directly from 99 equally likely values (for example
-`1 + floor(U*99)` with U in [0,1)); do not clamp a 0-100 roll to 1-99, which doubles
-the endpoint probabilities. A clamped distribution must never be disclosed as uniform.
-Pure Black/Black is 1 in 172225; pure Red/Red is 16/172225, about 1 in 10764.
-This is a deliberate provisional rebalance, not today's live/private-test odds.
+For a matching Black/Black pair the current weight is `(1/10000)^2 = 1 in 100 million` and it is a genuinely black-family pair without mixed-endpoint shortcuts. That is a **per-egg pair probability given the current private-test weights**, not a public odds promise. Display coverage uses saved distinct color regions and pattern-dependent UV maps in Build 020, rather than one average tint. Verify rendered source vs fallback path on each target device.
 
-Roll each of the eight canonical patterns with equal 1/8 weight (12.5%) for now:
-Blank, Islands, Round Spots, Bold Patches, Horizontal Bands, Wavy Stripes,
-Diamond Scales and Freckles. Pattern does not affect species, condition or stats.
-Store its ID once. Use the authoring IDs in the shared vision as the mapping contract.
-This closes the missing pattern probability decision without claiming implementation.
-
-Render saved shares as visible color coverage, not uniform tint. Matching pairs
-retain tonal contrast, especially double black, without becoming a second color
-gene. Use deterministic masks/seeds for stable egg-to-dinosaur inheritance.
-The eight-pattern design, accepted Astra streaks and mutation smoke retain separate
-layers; Rainbow runtime review and mutation draft approval remain open.
+The **415-total palette** (100/100/100/40/40/15/15/4/1) and associated **1 in 172,225** pure-black example in [the shared egg art vision](39-egg-appearance-shared-vision.md) were an **earlier authoring draft**, not current implementation. Preserve as a visual/balance proposal; do not substitute it for `ProgressionConfig.EggColors` or reuse its odds in paid-item disclosure. Future tuning must version outcomes, retain earlier saved genes and update the exact final-outcome enumerator.
 
 ## Persistence And Reveal Contract
 
@@ -180,23 +133,19 @@ Cracked failure still receives its reveal interval and a clear no-dinosaur resul
 
 ## Complete Outcome Disclosure: Implemented, Acceptance Still Open
 
-For purchased eggs today, a successful joint outcome's probability is:
+For purchased Build 020 eggs, an individual **successful** outcome has probability:
 
 `P(species) * P(copy count) * P(condition) * P(hatch success | condition)`
-`* P(primary color) * P(secondary color) * (1/101) * P(size)`
+`* P(primary color) * P(secondary color) * P(saved share | gene pair)`
+`* P(pattern) * P(size)`
 
-Shiny/event mutation are guaranteed absent and must be stated. Failure can be
-one aggregate final outcome with probability `P(Cracked)*0.8`, since no dinosaur
-is awarded regardless of its other rolled metadata. Sum all successful outcomes
-and this aggregate failure to exactly 100% before rounding. The current v1 variant
-key space has 890820 successful combinations plus that failure outcome.
+The saved-share factor is **1/99 for each mixed-gene share 1–99**, or 1 for 100%-matching gene pairs; pattern weight is 1/8 in current code. These replace the obsolete seven-color `1/101` / no-pattern formula. Shiny/event mutation are absent for purchased eggs in the current policy-gated flow. Aggregate hatch failure is `P(Cracked)*0.8`. Sum all successful outcomes plus failure to exactly 100% before rounding. Build 020's implemented disclosure page reported **37,683,361 enumerated final entries** in its bounded Studio test ([integration evidence](44-main-integration-checklist.md)); the earlier 890,820-entry v1 figure is historical.
 
 Provide a searchable/paginated pre-purchase Details view with itemized final
 outcomes and numeric percentages, not only factor tables or a multiplication
 instruction. Identical-probability items can be grouped only with their per-item
 odds and an explicit item list; do not confuse group odds with per-item odds.
-The next palette/pattern version needs its own enumeration, including the 1 versus
-99 share outcomes for matching versus differing genes. Never reuse v1 disclosure.
+The **implemented** nine-color/eight-pattern version must be enumerated according to its actual 1-versus-99 gene-pair share possibilities. Any future change to color weights, conditions, patterns or trait odds requires fresh disclosure, no stale cached legacy odds.
 
 Use enough decimal precision for rare outcomes, a rounding notice and tests for
 normalization, every tier, lowest nonzero probabilities and conditional hatch risk.
@@ -208,12 +157,7 @@ condition-upgrade confirmation links to the next tier, rather than current odds.
 Filters retain unconditional probabilities and hide the aggregate failure row;
 clearing filters restores it. Factorized ShopOdds remains supplementary.
 
-The enumerator supports committed legacy shares, the concurrent pattern generator's
-clamped endpoint distribution (1/99 endpoints each 2/101, interior each 1/101), and
-an explicit future `EggGenetics.BlendMode="uniform"` contract. It does not silently
-claim the proposed uniform distribution is already implemented. Current Config,
-condition, color, pattern and quantity tables drive enumeration; no hardcoded
-six-species list or generated multi-million-row asset is required.
+The enumerator supports historical **legacy** 0–100 and **clamped** 1–99 gene modes for backward compatibility. Current `EggGenetics.BlendMode="uniform"` is **already set in Build 020**. Current Config, condition, color, pattern and quantity tables drive enumeration; no hardcoded six-species list or generated multi-million-row asset is required.
 
 Offline execution validates complete normalization, actual blend-roll parity,
 every upgrade tier, filtering, page boundaries and nonzero rare precision. Owner
@@ -237,7 +181,7 @@ trading feature is authorized here. See the current
 
 ## Next Acceptance Work
 
-- Integrate versioned palette/pattern/coverage without changing old saved outcomes.
+- Validate current 22-species / nine-color / eight-pattern migration and deterministic saved outcomes, including any explicit next schema version, without changing old saved awards.
 - Complete Studio current/next-tier interaction and desktop/phone acceptance of the
   implemented final-outcome disclosure, then obtain paid-policy acceptance.
 - Upload/bind granular shell/pattern/condition/mutation layers; verify combinations,
