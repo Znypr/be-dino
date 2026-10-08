@@ -22,6 +22,10 @@ policy and receipt release checks pass. [Catalog and icons](../resources/monetiz
 
 ## Player loop
 
+> **Latest progression/Shop direction, 2026-10-08:** [Pattern-specific fusion, durable dino ownership and cosmetics](46-pattern-fusion-dino-identity-and-cosmetic-progression.md) supersedes the old global reusable aura/trail inventory proposal as **future game design**, not as Build 020 source. First Gold prototype: **10 same-species+pattern dinos → Gold hero**; tier order **Gold → Emerald → Diamond**, later stages only proposed. Bought auras/trails remain bound to their recipient dino, but this dino can buy and switch multiple choices; fusion grants the **main earned stats**. See [BD-057–062](07-kanban.md) for migration and disclosure. Neither code nor purchased legacy inventories have been changed.
+
+
+
 1. Play a run, catch food, and earn eggs and **crystals** when the run settles. End-of-run rewards may also contain a crystal reward to **unbox/reveal**. Crystals are also scattered across the live map for players to pick up. Define earned crystal quantities, crystal containers and drop odds in configurable server tables.
 2. Optionally purchase crystal packs with **Robux** in the Crystal Shop. Receipts grant the currency exactly once through a server-owned purchase pipeline.
 3. Spend crystals on **random eggs**, **trail unlocks**, **temporary potions**, and **Condition Shop upgrades**.
@@ -41,7 +45,7 @@ policy and receipt release checks pass. [Catalog and icons](../resources/monetiz
 
 ## Trail Shop: ten account-level-gated tiers
 
-Replace/extend the existing **three cosmetic trails** (Fern Drift, Tidal Wake, Nova Ribbon) with a **ten-tier catalog**; migrate owned/equipped items without deleting or silently downgrading them. All trails have coloured walking/running VFX behind the dinosaur. **Normal White** is the free default. **Astra** is the highest tier, with multicolour glow and glitter particles. Each tier increases both crystal price, required persistent account level, and movement speed.
+Replace/extend the existing **three cosmetic trails** (Fern Drift, Tidal Wake, Nova Ribbon) with a **ten-tier catalog**; migrate owned/equipped items without deleting or silently downgrading them. All trails have coloured walking/running VFX behind the dinosaur. **Normal White** is the free default. **Astra** is the highest tier, with multicolour glow and glitter particles. The **current Build 020 test catalog** increases crystal price, required level and movement speed by trail tier. The owner now wants fusion to be the **main stat booster**, and trail/aura purchases **per dinosaur with freely interchangeable owned styles**. How legacy paid trail stats are preserved or decoupled from appearance requires a separate migration decision under BD-058/059; do not silently change existing player benefits.
 
 **Provisional illustrative balance, not approved:**
 
