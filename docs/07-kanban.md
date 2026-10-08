@@ -22,7 +22,7 @@ Maximum player access/policy work remains in progress:
 
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-017; BD-019–022; BD-035; **BD-044** | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
+| BD-017; BD-019–022; BD-035; **BD-044–056** | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -81,6 +81,18 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 | BD-042 | Review / test | P1 | Five-second ordered hatches, Shiny/BIG and map leaderboards | BD-013, BD-034 |
 | BD-043 | In progress | P1 | UI animation, feedback, loading and preview performance | BD-015, BD-042 |
 | BD-044 | Backlog | P0 | Replace direct-copy rewards with caught-run-egg hatching, crystal payout and separate five-slot egg nests | BD-011, BD-013, BD-036, BD-042 |
+| BD-045 | Backlog | P0 | Rebalance condition odds to new owner starting distribution and update condition-upgrade/disclosure flow | BD-040, BD-044 |
+| BD-046 | Backlog | P1 | Rename Auras nav entry to Shop with crystal icon; crystal HUD opens same Shop | BD-029, BD-036, BD-043 |
+| BD-047 | Backlog | P1 | Illustrated Crystal Shop category tiles, green-spotted egg icon, larger aura previews and leading tab icons | BD-046, BD-035 |
+| BD-048 | Backlog | P1 | Trail icon art, Blender world VFX and six rarity categories across ten trails | BD-038, BD-034 |
+| BD-049 | Backlog | P1 | Blender trees, vegetation, rock variants, map landmarks and optimized biome placement | BD-016, BD-053 |
+| BD-050 | Backlog | P1 | Blender pickup/food model variants with intact food rewards and server validation | BD-008, BD-049 |
+| BD-051 | Backlog | P1 | Rotating five-minute Potion Shop offers, rarity-weighted selection and 1–3 limited stock | BD-032, BD-039 |
+| BD-052 | Backlog | P1 | Single bottom-center Home with confirmation and no three-second exit channel | BD-009, BD-044 |
+| BD-053 | Backlog | P0 | Fix sliding and hill-climb movement on mountainous terrain | BD-006, BD-008 |
+| BD-054 | Backlog | P0 | Responsive phone/tablet touch-zone navigation/control placement and safe insets | BD-052, BD-046, BD-056 |
+| BD-055 | Backlog | P1 | Complete sky, atmosphere, cloud, particle and audio effects for all weather events | BD-031, BD-034 |
+| BD-056 | Backlog | P1 | Top-center growth metric and bottom-left egg-icon catches-only HUD | BD-044, BD-054 |
 
 ### BD-044: Owner-approved reward-loop correction (2026-10-08)
 
@@ -97,6 +109,39 @@ The newer owner's reward intent supersedes the 2026-09-17 test economy's `N(c)=c
 - [ ] Model **bonus nests** as separate rewards from individual caught eggs, with **five nest inventory/claim spots**, not the existing ordinary egg queue capacity. Example: 1 nest from 500 food; 6 nests offered from 5,000 food, only 5 claimable if all five slots are free. Explicitly resolve where the sixth offered nest goes (pending/blocked/expiry) and prevent silent reward loss; define nest timing/content.
 - [ ] Retune and test quantity (currently 1/2/3 copies per egg), species odds, egg outcomes/disclosure, fusion pacing, 150+ egg batch payloads and reward caps. Old `tools/economy_sim.py`, `tests/test_economy.py`, Config thresholds and Studio fixtures remain **historical tests** until deliberately replaced.
 - [ ] End-to-end multiplayer/rejoin/persistence, queue limits, migration, real-device interaction, UI and no paid-random regression verified with evidence before marking done. Do not touch persistent profiles or enable paid random items without a separate release review.
+
+### BD-045–BD-056: Owner UI, economy, terrain, artwork and weather feedback (2026-10-08)
+
+**All tasks below are Backlog/TODO, not shipped or acceptance-tested.** Detailed research, source documents, implementation notes, individual subtasks, dependencies and measurable acceptance are in [the canonical feature specification](45-owner-feedback-shop-hud-world-weather-tasks.md). This task board remains the single source of task **status**. Existing BD-028–043 functionality is useful foundation, not evidence these refinements have shipped.
+
+#### Economy and randomized shops
+
+- [ ] **BD-045 — condition odds (P0).** Starting odds **Cracked 50%, Dirty 30%, Normal 15%, Rainbow 4.5%, Astra 0.5%**, sum 100. Subtasks: config/integer weights; redo six upgrades with owner-reviewable current/next values; preserve 20% Cracked hatch success and saved egg results; update paid-odds disclosure/enumeration and 15/150-egg tests. At tier 0, **40% expected egg failure**, which needs explicit playtest review, not silent balance changes.
+- [ ] **BD-051 — rotating Potion Shop (P1).** Subtasks: every **300 seconds** server-set subset of available potions; rarity-weighted selection; each potion **1–3 purchasable units/player with 1 most likely** (numeric probability TBD); atomic purchases, stock/offer version and reconnect safety; **next-refresh countdown** and **“Potion Shop refreshed”** popup; preserve owned potion inventory, live buffs and paid-random restrictions.
+
+#### Shop navigation and presentation
+
+- [ ] **BD-046 — Shop entry (P1).** Subtasks: replace misleading **AURAS** navigation label with **SHOP**; replace nav image with **existing crystal icon**; keep AURAS internal category; make top-right wallet counter open same shop; test nav/history/modal, touch and controller.
+- [ ] **BD-047 — Shop artwork & layout (P1).** Subtasks: Crystal Shop **landing tiles with unique images**, not a horizontal category row; preserve in-shop Auras/Trails/Eggs/Conditions/Crystals tabs; put **small leading icons** on tabs and identify needed new icon masters; replace Egg Shop product icon with approved **green-spotted egg** art (verify new asset, upload, bind); enlarge/center aura card previews with the existing reusable layered ring/fossil assembler; QA prices and item states on phone/tablet/desktop.
+
+#### Trail, world and collectible assets
+
+- [ ] **BD-048 — trail rarity/render/art (P1).** Subtasks: audit existing TEN trails and THREE current rarity names; propose six rarity classes across ten products for approval; make original icons and consistent six-tier borders; Blender editable motion/ribbon/particle effect assets and per-trail previews; integrate optimized world trails, preserve level/speed and owned IDs; performance and reduced-effects QA.
+- [ ] **BD-049 — map variation (P1).** Subtasks: Blender multiple tree silhouettes/sizes, ground vegetation, ferns, bushes, boulders and rock forms; authored landmarks/statues/nests/arches; repeatable biome-aware seeds/placement and wide walkable corridors; colliders/LOD and owned mesh imports; actual Studio + device load.
+- [ ] **BD-050 — food props (P1).** Subtasks: Blender food berries, fruit, food egg, amber and variants; shared source meshes/materials and IDs; readable world-size scaling and placements; **preserve +1/+4/+15/+50 values and distinction between amber food vs wallet crystals**; server pickup/respawn/multiplayer and mobile tests.
+
+#### Traversal, home and HUD
+
+- [ ] **BD-053 — slope movement (P0).** Subtasks: reproduce slide/hill-climb failure with recorded coordinates; investigate controller/friction/slope (prototype **MaxSlopeAngle 46°**), root collider and animation pivot; repair traversable terrain/traction without PvP or movement exploit; test incline/decline, jump/leap, buffs, BIG, terrain types and server reconciliation.
+- [ ] **BD-052 — Home return (P1).** Subtasks: consolidate duplicated buttons to one **middle-bottom home icon**, keep it outside touch controls; clear **Return to Sanctuary / Cancel** confirmation; remove old **three-second** exit channel after confirmation; preserve server-authoritative death/exit ordering and exactly-once rewards; test in-run/sanctuary/phone/controller.
+- [ ] **BD-054 — phone/tablet (P0).** Subtasks: research thumb/reach zones and documented Roblox device safe insets; restructure controls away from inaccessible absolute bottom and joystick/jump areas; independent landscape phone/tablet layouts, 44–48px target, correct PreferredInput/gamepad transitions, screenshots with hitboxes and physical-touch tests. Refer to [Roblox UI guidance](https://create.roblox.com/docs/ui/position-and-size) and [mobile input](https://create.roblox.com/docs/input/mobile).
+- [ ] **BD-056 — live HUD (P1).** Subtasks: show **Growth/Size only at top center**; bottom left shows **egg icon + Eggs Caught N only**, outside thumbstick safe area; remove duplicated Growth readout; reconcile displayed eggs with BD-044 actual earned-egg count, preserve event bonuses and 0/15/150+ cases, test camera/modal overlap.
+
+#### Weather visuals and world ambience
+
+- [ ] **BD-055 — full weather environment (P1).** Subtasks: map all seven current events plus Clear to reusable **Lighting, Atmosphere, Terrain.Clouds, Sky/ColorCorrection** visual presets, tween/restore safely; camera-local bounded rain, storm lightning, snow, volcano ash/orange sky, aurora curtains, earthquake dust and blood-moon visuals with audio where appropriate; preserve server weather/RNG/mutation tags; join/exit/respawn/reduced-effects and 8–12-player/mobile QA. Icons/timers are already present and alone are insufficient.
+
+**Scope rule:** New tasks must not be marked Done from written specifications, AI renders, a working Build 020 feature with a similar name, or unverified Roblox model IDs. All status changes require evidence in this board.
 
 ### Crystal Shops and Genetics, 2026-10-08 (BD-036–041)
 
