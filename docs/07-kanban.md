@@ -67,7 +67,7 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 
 ### UI motion and responsiveness, 2026-10-08 (BD-043)
 
-**In progress — source published in draft PR #2; integration and Studio acceptance pending.**
+**In progress — source and phone-emulator acceptance published in PR #2; integration/device checks pending.**
 UI owner: this UI-motion chat. Other agents: preserve this work when integrating
 crystal shops/genetics; do not replace whole client files with older copies.
 
@@ -86,17 +86,29 @@ crystal shops/genetics; do not replace whole client files with older copies.
 - [x] UI-only code published in [draft PR #2](https://github.com/Znypr/be-dino/pull/2)
   on `codex/ui-motion-polish`; [implementation/acceptance notes](https://github.com/Znypr/be-dino/blob/codex/ui-motion-polish/docs/38-ui-motion-and-performance.md).
 - [ ] Review/merge PR #2 alongside concurrent shop changes, resolve client overlap and rebuild.
-- [ ] Choose connected Studio target: newbuild (111259822927673) or BeDino-VisualUpgrade.rbxlx.
-- [ ] Studio rapid open/close/reopen, mouse/touch/controller, hatch closure and
-  reduced-effects regression, loading failure/success and shop retry/error checks.
+- [x] User selected **BeDino-Latest.rbxlx**, Studio `65d0a77a-6006-4d4c-80b3-4fa62fce67cc`.
+  Verified GameId/PlaceId 0; backed up scripts and synced 57 current sources; left stopped in Edit.
+- [x] Phone-emulator startup/loading success, seven active navigation tabs, 8 reduced-effects
+  and 10 normal-effects close/reopen cycles, hidden-camera pause/resume and actual UI egg purchase/claim/reveal.
+- [x] Fixed initial wallet text at 0 and verified animated currency intermediate/final values.
+  Counter fixture was client-only and restored; not a server currency grant.
+- [x] Bounded panel texture density: collection descendants **3752 -> 1974** at the same
+  750x323 viewport. Final console only build-ready message. This is not an FPS result.
+- [x] [Runtime observations](https://github.com/Znypr/be-dino/blob/codex/ui-motion-polish/docs/evidence/2026-10-08-ui-motion/runtime-observations.json)
+  and [phone screenshot](https://github.com/Znypr/be-dino/blob/codex/ui-motion-polish/docs/evidence/2026-10-08-ui-motion/phone-final.png) archived in PR #2.
+- [ ] Physical mouse/touch/controller activation, early-close hatch regression,
+  loading-failure/slow-server transitions and delayed/error shop results.
+  Return selection drove tests; injected ButtonA did not activate.
 - [ ] Real phone safe-area/touch ergonomics, measured frame time/memory and
   repeated panel open/close connection counts. Existing emulator evidence is historical.
 - [ ] Further preview pooling/reuse only after measurements justify it; runtime
   mesh templates already cache geometry. No unbounded pool is added.
 
 This is UI presentation work, not proof of frame-rate improvement or completion of
-BD-019. No Studio was modified/played during this UI pass; target selection is pending.
-No gameplay odds, grants, balances or persistent profiles were changed by this pass.
+BD-019. Studio tests used an unpublished in-memory preview profile; no persistent profiles
+or published place were changed. The Studio snapshot includes other agents' local shop/genetics
+work excluded from this UI-only PR. A concurrent GeneTextures module appeared after the
+57-script sync and is not certified by these tests.
 
 ### Hatching, traits and leaderboards, 2026-10-08
 
