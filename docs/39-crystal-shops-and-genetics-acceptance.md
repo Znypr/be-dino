@@ -1,5 +1,7 @@
 # Crystal Shops and Egg Genetics Acceptance
 
+> **HISTORICAL Build 019 private-test acceptance snapshot.** Original seven-color palette, six-creature weights and other configurations below describe the tested earlier build, not the expanded 22-creature/nine-color/eight-pattern Build 020 on main. Read [Build 020 integration](44-main-integration-checklist.md), [current egg outcome contract](41-egg-outcomes-contract.md) and [owner condition changes BD-045](45-owner-feedback-shop-hud-world-weather-tasks.md). Preserve these test observations; do not treat them as current paid-random disclosure.
+
 2026-10-08; branch `redesign/resources-and-core-fixes`, Build redesign-019.
 Canonical task status remains [Kanban](07-kanban.md). This is private-test
 implementation evidence, not release certification or approved economy balance.
