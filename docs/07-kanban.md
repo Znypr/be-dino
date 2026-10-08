@@ -6,7 +6,7 @@ Build 005 PvP/run-ending tests 1–9 passed. Build 006 persistence tests 1–10 
 ## Board
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-017; BD-019–022; BD-035–041 | BD-027 | None | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-042 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
+| BD-017; BD-019–022; BD-035–041 | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-042 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -63,6 +63,38 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 | BD-040 | Backlog | P1 | Escalating Condition Shop, weighted egg conditions and stat/hatch effects | BD-036, BD-037 |
 | BD-041 | Backlog | P1 | Two-colour egg genetics, Normal/Big eggs and independent shiny sparkle | BD-035, BD-037 |
 | BD-042 | Review / test | P1 | Five-second ordered hatches, Shiny/BIG and map leaderboards | BD-013, BD-034 |
+| BD-043 | In progress | P1 | UI animation, feedback, loading and preview performance | BD-015, BD-042 |
+
+### UI motion and responsiveness, 2026-10-08 (BD-043)
+
+**In progress — source implemented; GitHub review and Studio acceptance pending.**
+UI owner: this UI-motion chat. Other agents: preserve this work when integrating
+crystal shops/genetics; do not replace whole client files with older copies.
+
+- [x] Cancellable shared tween helper; 90ms mouse/touch/controller button feedback.
+- [x] Modal scrim/blur/slide transitions, content entry, toast slides, HUD pulses.
+- [x] Progress fills, rarity reveal outline/pop, existing egg wobble/fracture/confetti retained.
+- [x] Animated crystal counter and gain toast; active navigation indicators.
+- [x] Immediate processing/equip feedback; existing server success/error and retry tokens retained.
+- [x] Startup stage bar and fade only after character and main UI are ready.
+- [x] Cached collection/queue/progression JSON and coalesced panel refreshes.
+- [x] Preview camera orbit capped at 30Hz; shiny glints at 20Hz; hidden/disabled
+  screens pause visual updates and destruction disconnects callbacks.
+- [x] Responsive crystal HUD scaling; existing phone navigation/hatch target sizing retained.
+- [x] Local validation: 57 Luau sources compile; six-species preview geometry and
+  imported bounding-box framing pass across four aspect ratios.
+- [ ] Publish isolated UI code for review and integrate alongside concurrent shop changes.
+- [ ] Choose connected Studio target: newbuild (111259822927673) or BeDino-VisualUpgrade.rbxlx.
+- [ ] Studio rapid open/close/reopen, mouse/touch/controller, hatch closure and
+  reduced-effects regression, loading failure/success and shop retry/error checks.
+- [ ] Real phone safe-area/touch ergonomics, measured frame time/memory and
+  repeated panel open/close connection counts. Existing emulator evidence is historical.
+- [ ] Further preview pooling/reuse only after measurements justify it; runtime
+  mesh templates already cache geometry. No unbounded pool is added.
+
+This is UI presentation work, not proof of frame-rate improvement or completion of
+BD-019. No Studio was modified/played during this UI pass; target selection is pending.
+No gameplay odds, grants, balances or persistent profiles were changed by this pass.
 
 ### Hatching, traits and leaderboards, 2026-10-08
 
