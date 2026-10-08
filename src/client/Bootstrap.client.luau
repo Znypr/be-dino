@@ -258,7 +258,7 @@ render=function(name: string)
             if character and character:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() close()
             else close() notify("You are already exploring",C.blue) end
         end)
-        
+
     elseif name=="auras" then
         heading.Text,header.BackgroundColor3="Aura & Trail Shop",C.purple
         local p=progression()
