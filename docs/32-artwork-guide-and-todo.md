@@ -17,7 +17,7 @@ Use owned/original assets and already available tools; do not introduce paid ass
 
 ## Two compatible visual layers
 1. Illustrated item art: match resources/ui/v2/icons/dinos.png and its siblings. Stylized dimensional 3D render, saturated colors, dark contour, rounded bevels, controlled bright highlights, friendly proportions.
-2. Functional symbols: reuse resources/ui/v2/scalable SVG/geometry assets for timers, small utility/status symbols and native fallbacks. The 2026-10-08 user request selects the existing illustrated trophy and available navigation originals for visible primary UI; this supersedes the earlier symbol-only navigation recommendation. No new artwork generation is needed.
+2. Functional symbols: reuse resources/ui/v2/scalable SVG/geometry assets for small utility/status symbols and native fallbacks. Primary navigation and trophy use the existing illustrations. AURAS reuses the assembled Meadow aura; POTIONS reuses the assembled speed potion. Leap and weather illustrations are still needed; their native symbols are temporary fallbacks, not completed illustrated assets.
 UI panels, labels, buttons, rarity frames and animations remain reusable Roblox components governed by UITheme; artwork does not flatten a menu into an image.
 
 ## Layered artwork rule (supersedes flattened aura thumbnails)
@@ -30,6 +30,8 @@ Potion bottle artwork is saved without baked emblems. Overlay existing speed/bol
 Catches uses one neutral ivory footprint source, repeated through ImageLabels when a grouped mark is needed; do not use Gold/Diamond mutation badges for catch units. See layers/item-layouts.json for starting overlay settings.
 
 ## Consistency rules
+`src/shared/NavigationArtwork.luau` maps logical page IDs to existing artwork IDs. AURAS selects `aura_meadow`; POTIONS selects `potion_speed`. Navigation and shop thumbnails share `Artwork.build`, `ArtworkLayout`, uploaded bindings and native fallbacks. Preserve separate rear/front ring clips, shared fossil, bottle and speed emblem; do not flatten or upload duplicate navigation PNGs. Small speed/leaf overlays intentionally remain native utility symbols. Changing the mapping does not change the product catalog or its benefits.
+
 - One individual asset per file and per generation. Never deliver a sheet of multiple items as the runtime source.
 - Square transparent PNG master, ideally 1024x1024 or larger. Preserve genuine alpha; no baked checkerboard, solid background or opaque outer glow rectangle.
 - Center subject with about 10-15% safe margin. Keep all spikes, bottle tops, rings and sparkles inside the canvas.
@@ -69,6 +71,17 @@ Distinct Index/inventory symbols are optional UX improvements, not prerequisites
 | 8 | catches_v1 | Neutral ivory footprint source; repeat in UI for a grouped catches mark, with live Catches label. | Generated draft: resources/ui/v2/layers/catches-mark-v1.png |
 | 9 | inventory_v1 | Prehistoric leaf-and-leather satchel for owned consumables/items. | Optional after item art |
 | 10 | index_v1 | Fossil field guide/book with dinosaur emblem, distinct from Dino selection. | Optional if navigation separation is needed |
+
+### New illustrated artwork needed (not completed by native symbols)
+| Logical ID / runtime state | Intended illustration | Status |
+|---|---|---|
+| leap_v1 / leap | Friendly dimensional dinosaur in a forward leap, readable motion silhouette; match existing dinosaur artwork, no text or baked E key. | Todo; native leap remains the fallback |
+| weather_clear_v1 / clear (currently weather icon) | Dimensional sun/cloud composition for the implemented Clear/default countdown state. | Todo; native weather remains the fallback |
+| weather_rain_v1 / rain | Chunky rain cloud and readable drops in the same camera, contour and lighting style. | Todo; native rain remains the fallback |
+| weather_thunder_v1 / thunder | Thunderstorm cloud with a prominent lightning bolt, distinct from rain. | Todo; native thunder remains the fallback |
+| weather_blizzard_v1 / blizzard | Snow cloud and bold snowflake for the implemented Blizzard state. | Todo; native blizzard remains the fallback |
+
+These are the four implemented weather states in `ProgressionConfig` and the client default, not proposals for new mechanics. Each needs its own transparent PNG master, review, real owner upload/binding and desktop/phone verification before its illustrated status can advance. Reused navigation compositions require no new PNGs or asset IDs.
 
 Deferred until actual products exist: luck boost art, Robux bundle contents and finisher thumbnails. Do not spend the first batch on speculative offers.
 Separate export task: render new dino/egg/model and mutation previews when their actual models are ready.

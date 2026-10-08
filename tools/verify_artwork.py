@@ -18,8 +18,13 @@ local function native(parent,id)table.insert(nativeCalls,id) return {Parent=pare
 local parent={ZIndex=20}
 -- Exercise fallback explicitly even after production bindings are populated.
 for key in Assets do Assets[key]="" end
-local root=Artwork.build(parent,"aura_meadow",native)
+local Navigation='''+module('src/shared/NavigationArtwork.luau')+'''
+assert(Navigation.auras=="aura_meadow" and Navigation.potions=="potion_speed")
+local root=Artwork.build(parent,Navigation.auras,native)
 assert(root.Parent==parent and #nativeCalls==2 and nativeCalls[1]=="aura" and nativeCalls[2]=="dinos")
+nativeCalls={}
+Artwork.build(parent,Navigation.potions,native)
+assert(#nativeCalls==1 and nativeCalls[1]=="speed")
 assert(Artwork.build(parent,"weather",native)==nil)
 -- Stub IDs are fixtures only, never written to the upload mapping.
 for key in Assets do Assets[key]="fixture://"..key end
@@ -41,7 +46,7 @@ nativeCalls={}
 Artwork.build(parent,"potion_growth",native)
 assert(#nativeCalls==1 and nativeCalls[1]=="leaf")
 nativeCalls={}
-Artwork.build(parent,"potion_speed",native)
+Artwork.build(parent,Navigation.potions,native)
 assert(#nativeCalls==1 and nativeCalls[1]=="speed")
 created={}
 Artwork.build(parent,"catches",native)

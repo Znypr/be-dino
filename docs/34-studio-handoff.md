@@ -17,6 +17,13 @@ verified. Archived screenshots and the canonical checklist distinguish these pas
 from the remaining real-device, multiplayer, non-owner and persistent rejoin gates.
 The normal build does not contain acceptance copy/catch fixtures.
 
+Icon consistency follow-up: AURAS and POTIONS now select the shared Meadow aura
+and speed-potion compositions through `NavigationArtwork.luau`. Separate layers
+and native fallbacks are preserved. Desktop and phone-emulator captures are
+archived in `docs/evidence/2026-10-08-navigation-compositions/`. Illustrated leap
+and Clear/Rain/Thunderstorm/Blizzard remain Todo in the artwork guide; their native
+symbols are not completed illustrated assets.
+
 ## Completed before Studio
 
 - Nine verified PNG masters stay separate and reusable. `Artwork.luau` composes the three aura rings with a shared fossil, clips each ring into rear/front layers, overlays native speed/leaf symbols on bottles, and repeats the single catches footprint. Shops, confirmations, fusion and the catches HUD use the shared assembler. Empty uploaded IDs use native icons.
@@ -46,6 +53,7 @@ The normal build does not contain acceptance copy/catch fixtures.
 |---|---|
 | Theme colors, outlines, font, motion | `src/shared/UITheme.luau` |
 | Artwork position, size, seam, symbol placement | `src/shared/ArtworkLayout.luau` |
+| Navigation artwork selection | `src/shared/NavigationArtwork.luau` |
 | Uploaded image IDs | `resources/ui/v2/layers/upload-bindings.json`, then run `tools/bind_artwork.py` |
 | Food-catch rate, fusion prices, test wallet/timers, species and chest odds | `src/shared/Config.luau` |
 | Aura/potion prices and multipliers, weather/leap settings | `src/shared/ProgressionConfig.luau` |

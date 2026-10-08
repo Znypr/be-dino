@@ -61,6 +61,29 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 
 ## Acceptance and current evidence
 
+### Build 019 shared navigation compositions, 2026-10-08
+
+Continued from `91aac96`. Shared configurable `NavigationArtwork` maps AURAS to
+`aura_meadow` and POTIONS to `potion_speed`, using the existing shop assembler,
+layer bindings/layout and native fallbacks. No new uploads or flattened PNGs.
+
+- [x] Synced repository changes in Edit to both verified Build 019 instances.
+- [x] Desktop and iPhone 17 Pro landscape emulator: reused compositions visible,
+  all PNG layers loaded, separate ring clips/fossil and bottle/native speed emblem
+  preserved. Navigation label/icon bounds remain clean; phone buttons are 82x44.
+- [x] Archived and inspected [desktop/phone screenshots and exact evidence](evidence/2026-10-08-navigation-compositions/README.md).
+- [x] Unpublished GameId=0 / PlaceId=0 copy only for play; persistent data untouched.
+  Clean game console, play stopped and simulator reset to default.
+- [x] 44 sources compile; shared mapping/assembly/fallback harness, binding checks
+  and 21 Python tests pass. Build 019 regenerated.
+- [ ] Illustrated leap and all implemented weather states: Clear/default, Rain,
+  Thunderstorm and Blizzard. Native symbols do not complete these assets; see
+  the separate new-artwork table in `docs/32-artwork-guide-and-todo.md`.
+
+BD-033 remains Review / test for those illustrations and unverified release gates.
+This emulator pass does not close real-phone touch/performance or non-owner
+published permissions. Earlier gameplay evidence below remains unchanged.
+
 ### Build 019 MCP acceptance, 2026-10-08
 
 Initial pass at `7caf41a`; the separate unpublished follow-up below supersedes its

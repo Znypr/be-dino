@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "2704039582a79180abcb998d0d20be6c743d23f0dd964785f09377d86224d50d",
+  "place_sha256": "e0e25e4642eefbdd126b7354cfe546da07d241691b785cdbd10e7045563e09b1",
   "sources": {
     "src/loading/Loading.client.luau": "80d7702a45826701816f333e5cfac5a035bd8bdcfeed8b3907f343e65271b104",
     "src/shared/Artwork.luau": "dbcef755028cbf3e737da0f96178db4e563f73843c0df00ad167ab134f1d066e",
@@ -17,6 +17,7 @@
     "src/shared/IslandLayout.luau": "cfab2cd0c0814c03f15c870053407adfd0c29e2844166e83b4161aad55f32968",
     "src/shared/ModelPreview.luau": "a3806513bd249a50a8d62c091c93bd7317abd079a80debae29fd5d9c552923b1",
     "src/shared/MovementEnvelope.luau": "3ab7796a2f06f52ee4b334233f003d8ea9e038692fed50fa6fa51df40e37f432",
+    "src/shared/NavigationArtwork.luau": "8f217518bf3afa393f3f72243541656824f70efad4f5596e37273b431fae1b6a",
     "src/shared/PreviewCamera.luau": "c8cfe2f01f0e0c150012f21b8a878bdea4e3d7dd9ebd17f070ee3ae4f51d2a3e",
     "src/shared/ProgressionConfig.luau": "9e290eeb562a1a4d48a22e3b36c76d01b5525c49e3c7d6f0d44ee229ee7671b0",
     "src/shared/ProgressionRules.luau": "315fe99ac03c3dd66edb4eaec5161b2989e6896a52fd4d3cb8ffc87464a58b1d",
@@ -42,7 +43,7 @@
     "src/server/RewardMath.luau": "eeddcd6c722213f109a6e37a0d47e70c59f39138aca8c0ade24d1a23474708ef",
     "src/server/RunLifecycle.luau": "8e78f3a0ee79550430a36e6396926b5a62c8fc14ee4e893088bc404242b6c23c",
     "src/server/VisualTestService.luau": "ee48ddc907c11e5d1390483d570d9ab96fd01b3ee02493b5724a2ebcf1ef0773",
-    "src/client/Bootstrap.client.luau": "412f7d0ca971f893acb2b40cdbcfff4172d20b97583d8f0b4b54183de103a589",
+    "src/client/Bootstrap.client.luau": "3d70c340aca14b4ed3796a1cdf75f22bd50e9e266399ae38d5888e55b95d2323",
     "src/client/ResourceVisuals.client.luau": "37efe6430b0a9e9723405facf7d9a0906d435d2416183367104c4d9a29d188c2",
     "src/client/WeatherVisuals.client.luau": "50f4adc5fbf2d71f8cc89139beb4cdbfa1ef83311a660ad52902f130da961a29"
   }
