@@ -13,6 +13,12 @@ assertion about concurrent uncommitted creature/genetics edits. During this revi
 new local work adds patterns/coverage and expands the species catalog; it is left
 untouched and needs its own migration, odds and Studio acceptance evidence.
 
+## Owner target versus Build 020 runtime (2026-10-08)
+
+**The owner now wants each catch earned during the run to produce one individual run egg to hatch.** Examples: 500 **food** points -> 15 catches -> 15 run eggs (e.g. 11 Common, 4 Uncommon), plus crystals and 1 separate bonus egg nest; 5,000 **food** points -> 150 run eggs (e.g. 80 Common, 50 Uncommon, 17 Rare, 3 Epic), 220 illustrative crystals and 6 offered nests, at most 5 claimable with five free nest slots. See [target reward economy](09-reward-economy.md) and [BD-044](07-kanban.md). This count mapping is **not implemented**; never answer future reward examples by adding 15 guaranteed direct Compys to 1-3 threshold eggs. Ordinary run eggs and separate bonus nests are distinct systems.
+
+The outcome tables and mechanics **below** document current/legacy **per-egg** behavior, including 1/2/3 copy awards, Cracked failures, batch rarity boosts and purchase odds. The owner has **not** approved changing those independently from the catch->egg migration. Keep immutable saved outcomes and exact-current paid-random disclosure consistent with actual runtime until a versioned change is tested and approved.
+
 ## Committed Runtime Outcomes
 
 One egg is one immutable award, not one dinosaur copy. A successful egg awards
