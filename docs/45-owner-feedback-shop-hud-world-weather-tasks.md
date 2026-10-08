@@ -37,6 +37,10 @@ Subtasks:
 
 ## B. Unified Crystal Shop and navigation — BD-046, BD-047
 
+> **New owner rule (BD-059, 2026-10-08):** aura/trail cards must target a **specific owned dinosaur instance**, not a globally owned cosmetic unlock. The same dino can purchase and change between several styles; other dinos must purchase their own. Preserve recipient purchase confirmation, safe old-save migration, and shop preview on the exact selected dino. Details and the cosmetic ownership data model live in [pattern fusion/dino identity spec](46-pattern-fusion-dino-identity-and-cosmetic-progression.md).
+
+
+
 **BD-046 navigation:**
 - Change the **navigation entry** currently labeled **AURAS** to **SHOP** and use the **already owned/uploaded crystal/amber icon** instead of the aura composition. Preserve **AURAS** as an internal shop tab, with TRAILS, EGGS, CONDITIONS and CRYSTALS. Do not rename the aura product category.
 - Tapping/clicking the top-right crystal **balance counter**, including its image where suitable, opens the same Crystal Shop landing page. Avoid two independently implemented shop surfaces. Insufficient-currency calls may deep-link into the shop while honoring paid-item restrictions.
