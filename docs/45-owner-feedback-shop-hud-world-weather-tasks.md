@@ -138,17 +138,17 @@ Server already chooses events and computes perks/mutation eligibility. **Do not 
 
 | Task | Priority | Dependencies | Completion is NOT |
 | --- | --- | --- | --- |
-| BD-045 condition odds | P0 | BD-040, BD-044 | Editing weights without shop disclosure/testing |
+| BD-045 condition odds | P0 | BD-040 | Editing weights without shop disclosure/testing |
 | BD-046 shop entry/wallet | P1 | BD-029, BD-036, BD-043 | Renaming one string without route parity |
-| BD-047 shop UI/art | P1 | BD-046, BD-035 | Mockup without new egg icon/upload/real component test |
+| BD-047 shop UI/art | P1 | BD-046 | Mockup without new egg icon/upload/real component test |
 | BD-048 trail rarities/art/VFX | P1 | BD-038, BD-034 | Recoloring current two native ribbons |
-| BD-049 world props | P1 | BD-016, BD-053 | One repeated generic tree everywhere |
-| BD-050 food assets | P1 | BD-008, BD-049 | New render with changed server pickup values |
+| BD-049 world props | P1 | BD-016 | One repeated generic tree everywhere |
+| BD-050 food assets | P1 | BD-008 | New render with changed server pickup values |
 | BD-051 rotating potion stock | P1 | BD-032, BD-039 | Client-side timer or rerollable inventory |
-| BD-052 Home return | P1 | BD-009, BD-044 | Instant client teleport or unprotected duplicate rewards |
+| BD-052 Home return | P1 | BD-009 | Instant client teleport or unprotected duplicate rewards |
 | BD-053 terrain movement | **P0** | BD-006, BD-008 | Arbitrarily raising max slope angle without validation |
 | BD-054 touch layout | **P0** | BD-052, BD-046 | Desktop screenshots only |
 | BD-055 atmospheric weather | P1 | BD-031, BD-034 | Weather HUD icon/timer only |
 | BD-056 HUD labels | P1 | BD-044, BD-054 | Calling legacy catches `eggs` before counting is true |
 
-**Suggested work order:** fix slipping/climbing and reward correctness; then layout/navigation/HUD, rotating shop and condition disclosure; parallelize original Blender prop/food/trail artwork and environment-preset authoring. Keep only one implementation task in-progress per the canonical board; unrelated asset production may prepare drafts concurrently. Mark as Done only with commit/build + physical/mobile and Studio evidence per existing gates.
+**Dependencies are hard blockers only.** BD-045 odds/config can be implemented on the current egg pipeline and later tested alongside BD-044's new run rewards; BD-052 can use the current settlement idempotency without waiting for BD-044; BD-047 UI mockups can begin before BD-035's final Blender layers. BD-049/050 Blender asset creation can progress independently of the terrain bug, but final placement/navigation acceptance must retest BD-053. **Suggested work order:** fix slipping/climbing and reward correctness; then layout/navigation/HUD, rotating shop and condition disclosure; parallelize original Blender prop/food/trail artwork and environment-preset authoring. Keep only one implementation task in-progress per the canonical board; unrelated asset production may prepare drafts concurrently. Mark as Done only with commit/build + physical/mobile and Studio evidence per existing gates.
