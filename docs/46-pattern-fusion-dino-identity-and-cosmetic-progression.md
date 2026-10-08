@@ -1,6 +1,6 @@
 # Pattern-specific fusion, durable dinosaur identity and per-dino cosmetics
 
-**Owner decisions: 2026-10-08. Status: TARGET / PLANNED, NOT IN BUILD 020.** This specification covers **BD-057–BD-062**. [Task status](07-kanban.md) is canonical; current implementation is [Build 020](44-main-integration-checklist.md). Read [egg provenance and outcome contract](41-egg-outcomes-contract.md), [22-creature appearance](43-creature-runtime-integration.md), [shop/genetics spec](36-crystal-shops-egg-genetics-and-progression.md), [original layered egg art direction](39-egg-appearance-shared-vision.md) and [BD-044 egg-per-catch migration](09-reward-economy.md).
+**Owner decisions: 2026-10-08. Status: TARGET / PLANNED, NOT IN BUILD 020.** This specification covers **BD-057–BD-063**. [Task status](07-kanban.md) is canonical; current implementation is [Build 020](44-main-integration-checklist.md). Read [egg provenance and outcome contract](41-egg-outcomes-contract.md), [22-creature appearance](43-creature-runtime-integration.md), [shop/genetics spec](36-crystal-shops-egg-genetics-and-progression.md), [original layered egg art direction](39-egg-appearance-shared-vision.md) and [BD-044 egg-per-catch migration](09-reward-economy.md).
 
 ## Vision and settled owner rules
 
@@ -40,7 +40,24 @@ Owner decisions:
 5. Subsequent stages, any “prestige reset,” duplicate refunds, higher-stage stat modifiers and material/shard requirements require separate owner approval and economy simulation. **No random chance of fusion failure**. Late-game rewards should require time/mastery, never delete fully earned trophies due to an unadvertised gamble.
 6. Each stage upgrades **the SAME hero instance**. UI shows previous and next material preview, pattern-specific name, gained stats, costs/missing donors, protection warnings and exact remaining balances. Receipts are not Roblox currency purchases; all server inventory mutations stay atomic/idempotent and persisted.
 
+### Quantitative feasibility checkpoint (base odds only)
+
+Source-verified Build 020 **purchased/one-egg base species weights** allocate **Compy 25 out of 100** and the current eight pattern IDs are selected uniformly. Under the new **50% Cracked** condition selection and preserved **20% cracked hatch success**, average hatch success at tier 0 is **60%**. The current per-egg 1/2/3 copy mean is **1.35 copies** (70/25/5 distribution). These independent prototype baselines imply `0.25 * (1/8) * 0.60 * 1.35 = 0.0253125` eligible striped Compy copies per egg, or **~2.53 copies per 100 eggs**, **~395 eggs expected for 10**, approximately **26.3 runs if and only if each run earns 15 eggs**. This is **NOT current-run measured odds**: 15-egg batch rare-species boosts lower Compy's share, upgrade tiers/weather change condition/rarity, protection/fodder choices change eligible consumption, and the BD-044 15-egg run system is not implemented. The expected count is *not* a guarantee or a pacing promise. Record an actual simulation across event mixes and account profiles before locking recipes.
+
 **Weeks-long retention without punishing grind:** Combine deterministic recipes, visible donor progress 0/10, repeatable species/pattern mastery, earned seasonal/event objectives and eventual endgame optional cosmetics. Not every rare gene/condition should be mandatory fusion fodder. Use measured **successful eggs/hour, target species+pattern/hour, acquisition after Cracked failures, runs/day, weeks to each stage, PvP fairness and speed cap** to tune costs. Provide goals at short session, few-day and multi-week horizons. No daily login mandate or speculative odds/power promises. Demonstrate casual and heavy play paths using 15-/150-egg sample runs (not guaranteed per five minutes). Keep playability without Robux and high-priced crystals.
+
+## Targeted pattern research / duplicate sink — BD-063 (proposal, not approved mechanic)
+
+**Problem:** even though fusion itself is deterministic, a ten-*exact-pattern* recipe remains primarily RNG-gated. Earning hundreds of eggs for a single common patterned target can feel unrewarding, especially with the new condition-failure rate. Provide a **nonrandom, finite, earned-only alternative** after measuring how many correct-pattern eggs players actually receive.
+
+**Candidate options to prototype and compare** (select one with owner before implementation):
+- **Same-species Pattern Research:** each hatched duplicate of the *same species* but an unwanted pattern contributes a fixed progress credit toward **that species + the player's chosen target pattern**. At a published fixed requirement, generate a **pattern-specific fusion donor voucher** (not an extra dinosaur and not an egg rarity reroll). The real hero must still have naturally hatched with the target pattern. No Robux instant skip.
+- **Fixed-rate duplicate salvage:** deliberately trade a known fixed number of same-species nonmatching ordinary spare copies for **one pattern-bound donor credit**; show exact before/after quantities and never auto-burn protected/rare/paid-cosmetic dinos.
+- **Species/pattern mastery objectives:** deterministic objectives unlocked by playing with that species, completing food/PvP milestones or seeing a particular pattern during hatching. Rewards offer pattern-specific crafting progress, rather than additional random gambling.
+
+**Fusion eligibility stays honest:** the 10-copy prototype means **10 eligible matching units**. If vouchers become allowed, the UI states **X genuine donors + Y earned bound donor credits**, never pretends credits are actual matching-pattern dino individuals. Owner may keep Gold as 10 literal matching Compies and use the research system only for later Emerald/Diamond, depending on playtest.
+
+**Required abuse protections:** species/pattern-bound currency; server-only atomic granting/consumption; account XP/level integration without pay shortcuts; rate caps on PvP/repeat-victim farming; safe migration, expiry rules if any, no value inflation from 1/2/3 copies or a single egg; UI progress always visible and testable after reconnect. Separate earned material credits from random egg payout/disclosure. Measure casual and regular players' time to desired variants, not just fastest farm route.
 
 ## 2. Stats and meaningful deterministic progress — BD-058
 
@@ -125,6 +142,7 @@ Art sources/assets required: versioned .blend masters (not only PNG screenshots)
 | **BD-060** Unique identity, storage and egg origin | **P0** | BD-011, BD-012, BD-041 | safe migration; preserved egg/genetic identity; variant counts; 2–3 copy and 150-egg scalability |
 | **BD-061** Blender fusion surfaces and stacks | P1 | BD-057, BD-035 | subtle/medium comparisons for Gold/Emerald/Diamond; unaltered patterns, all layers coexist; FPS/device |
 | **BD-062** Dino detail UI and rarity math | P1 | BD-059, BD-060, BD-057 | clear compact card/detail, origin display, earned-vs-natural breakdown, nonfabricated odds |
+| **BD-063** Targeted pattern research, deterministic duplicate sink | P1 | BD-057 | Transparent earned-only recipe progress using nonmatching duplicates, no gene rerolls/paid skip |
 
 **Cross-cutting dependencies:** BD-044 new run eggs feeds individualized hatch origins; BD-045 condition rebalance affects true natural-odds calculation and fusion resource pacing. BD-048 ten-trail assets and BD-047 Shop art integrate with per-dino recipient and picker previews. Cosmetics must never be treated as independent RNG or counted in natural rarity. **No Build 020 scripts, profile data or existing purchases have been migrated as a result of this planning spec.**
 
