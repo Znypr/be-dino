@@ -29,6 +29,12 @@
 - **Owner targets NOT yet in Build 020**: one caught egg per catch (15 eggs for a 500-food example; 150 for 5,000 food), separate five-slot bonus egg nests, six-species-rarity-style examples with **Uncommon/Epic** (tier taxonomy not implemented), new tier-0 conditions **50/30/15/4.5/0.5**, five-minute rotating limited-stock potion offers, unified Shop/category tiles/art, six-category trail presentation/art, richer environment/food, hill traction, streamlined Home, touch/HUD repositioning and richer atmospheric weather. Track via BD-044–056.
 - **Verified vs unverified**: earlier disposable Studio sessions and offline tests do **not** establish newest real paid receipts, published non-owner asset access, physical phone FPS/touch, full latest multiplayer/load or persistent profile migration. Refer to the integration checklist for precise bounds.
 
+## BD-060 foundation work
+
+[Identity implementation and verification](47-dinosaur-identity-foundation.md)
+describes the additive source foundation and unpublished memory-only integration.
+This is not persistent migration or new fusion-gameplay acceptance; use Kanban for status.
+
 ## Historical documents: keep for traceability, not as active instructions
 
 Do **not** delete build snapshots or test evidence just to make them look current. Retain their specific facts and outputs, with clear historical notices. Older strings like "this is the current build", "persistence is not implemented", "GitHub main is Build 013", "three-species only" and "60-second newly earned egg timing" are scoped to their original dates/builds.

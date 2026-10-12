@@ -31,6 +31,7 @@ jobs:
           python tools/verify_sources.py --compiler /tmp/luau/luau-compile
           python tools/verify_luau.py --runner /tmp/luau/luau
           python tools/verify_gameplay.py --runner /tmp/luau/luau
+          python tools/verify_identity.py --runner /tmp/luau/luau
           python tools/verify_progression.py --runner /tmp/luau/luau
           python tools/verify_eggs.py --runner /tmp/luau/luau
           python tools/verify_creature_genes.py --runner /tmp/luau/luau

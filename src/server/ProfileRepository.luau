@@ -11,6 +11,7 @@ local EggGenetics = require(ReplicatedStorage.Shared.EggGenetics)
 local ProgressionConfig = require(ReplicatedStorage.Shared.ProgressionConfig)
 
 local ProfileRepository = {}
+local DinosaurIdentity = require(script.Parent.DinosaurIdentity)
 
 local RunService = game:GetService("RunService")
 local localPreview = RunService:IsStudio() and game.GameId == 0 and Config.StudioLocalProfilesEnabled
@@ -27,6 +28,21 @@ if localPreview then
     end}
 else
     store = DataStoreService:GetDataStore(Config.ProfileDataStoreName)
+end
+-- Development integration is strictly limited to unpublished memory-only profiles.
+-- Persistent migration is intentionally not enabled by this foundation PR.
+if localPreview then
+    local backingStore = store
+    store = {UpdateAsync = function(_, key, transform)
+        return backingStore:UpdateAsync(key, function(current)
+            local updated = transform(current)
+            if updated == nil then return nil end
+            local identity, reason = DinosaurIdentity.reconcile(updated.collection, updated.dinosaurIdentity, key)
+            if not identity then error(reason) end
+            updated.dinosaurIdentity = identity
+            return updated
+        end)
+    end}
 end
 local leaseId = HttpService:GenerateGUID(false)
 local profiles: {[Player]: any} = {}
@@ -254,7 +270,11 @@ local function enqueueChestIds(profile: any, chestIds: {string}, now: number, ev
     end
     for i, chestId in chestIds do
         local metadata=if events then events[i] else nil
-        metadata=metadata or {eventId="clear",mutationId=""}
+        metadata=table.clone(metadata or {eventId="clear",mutationId=""})
+        if metadata.source then
+            metadata.source = table.clone(metadata.source)
+            metadata.source.originalEggId = chestId
+        end
         if #profile.eggs < Config.ChestQueueCapacity then
             nextReadyAt += Config.ChestTimerSeconds
             table.insert(profile.eggs, {
@@ -267,12 +287,25 @@ local function enqueueChestIds(profile: any, chestIds: {string}, now: number, ev
                 shiny=metadata.shiny,
                 big=metadata.big,
                 genes=metadata.genes,
+                source=metadata.source,
+                traitRollVersion=metadata.traitRollVersion,
             })
         else
             profile.pendingChestGrants += 1
             table.insert(profile.pendingEggEvents,metadata)
         end
     end
+end
+
+-- Server-only read interface for future selection/details; no new network surface.
+function ProfileRepository.dinosaurDetails(player: Player, instanceId: string)
+    local profile = profiles[player]
+    local state = profile and profile.dinosaurIdentity
+    local instance = state and state.instances[instanceId]
+    if not instance then return nil end
+    local result = DinosaurIdentity.copy(instance)
+    if result.origin.kind == "hatch" then result.originalEgg = DinosaurIdentity.copy(state.eggs[result.origin.eggId]) end
+    return result
 end
 
 function ProfileRepository.isLoaded(player: Player): boolean
@@ -284,6 +317,7 @@ function ProfileRepository.prepareEgg(player: Player,tag)
     local rng=Random.new()
     local p=ProfileRepository.progression(player)
     local result=table.clone(tag)
+    result.traitRollVersion="build020-genes-v1"
     result.genes=EggGenetics.roll(if p then p.conditionLevel else 0,rng)
     local traits=EggTraits.roll(tag.eventId or "clear",rng:NextNumber(),rng:NextNumber())
     result.shiny,result.big=traits.shiny,traits.big
@@ -384,6 +418,8 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
             reward = RewardMath.computeChestReward(rng, outcome.chestCount),
             shiny = traits.shiny, big = traits.big, ordinal = i,
             genes=traits.genes,
+            traitRollVersion=traits.traitRollVersion,
+            source={kind="run", runId=runId, ordinal=i},
         })
     end
     table.sort(prepared, function(a,b)
@@ -736,6 +772,14 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
                 if not ProgressionRules.knownEventMutation(mutationId) then return nil end
                 species.events[mutationId]=(species.events[mutationId] or 0)+outcome.count
             else species.base += outcome.count end
+            if localPreview and profileValue.dinosaurIdentity and not outcome.failed then
+                local bucketKey = outcome.speciesId .. "/base"
+                if chest.big or chest.shiny or chest.genes then
+                    bucketKey = outcome.speciesId .. "/variant/" .. EggTraits.key(mutationId, chest.shiny == true, chest.big == true, chest.genes)
+                elseif mutationId ~= "" then bucketKey = outcome.speciesId .. "/event/" .. mutationId end
+                outcome.instanceIds = DinosaurIdentity.hatch(profileValue.dinosaurIdentity, chest,
+                    outcome.speciesId, outcome.count, bucketKey)
+            end
             outcome.eventMutationId=mutationId
             outcome.eventId=chest.eventId or "clear"
             outcome.big=chest.big == true
@@ -756,6 +800,8 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
                     shiny=if metadata then metadata.shiny else nil,
                     big=if metadata then metadata.big else nil,
                     genes=if metadata then metadata.genes else nil,
+                    source=if metadata then metadata.source else nil,
+                    traitRollVersion=if metadata then metadata.traitRollVersion else nil,
                 })
             end
 
@@ -949,6 +995,7 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
         if id~="random" then return false,"unknown_item" end
         eggId=HttpService:GenerateGUID(false)
         egg=ProfileRepository.prepareEgg(player,{eventId="clear",mutationId=""})
+        egg.source={kind="crystal_shop", currency="crystals", funding="unknown", conditionLevel=purchaseConditionLevel}
         egg.reward=RewardMath.computeChestReward(Random.new(),1)
     end
     local operationId="progression:"..token

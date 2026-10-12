@@ -1,5 +1,5 @@
 # Kanban and task specifications
-Updated 2026-10-08. This file is the canonical task tracker.
+Updated 2026-10-12. This file is the canonical task tracker.
 
 **Current scope: GitHub main Build 020.** Use [the documentation authority guide](00-documentation-guide.md) to distinguish owner targets, committed source, historical build evidence and Studio/release acceptance. [Build 020 integration checklist](44-main-integration-checklist.md) records bounded passes and remaining gates, but **this file alone owns task statuses**. GitHub integration does not publish Roblox or certify paid items, physical-device performance or newest persistent migration.
 
@@ -21,6 +21,17 @@ Maximum player access/policy work remains in progress:
 | BD-017; BD-019–022; BD-035; **BD-044–065** | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
+
+### BD-060 foundation � 2026-10-12
+
+Implemented on `codex/bd-060-dinosaur-identity` from latest main `ad5245c`;
+**Review / test, not Done**. [Implementation and verification](47-dinosaur-identity-foundation.md).
+Offline identity/transaction tests cover migration, 1/2/3-copy hatches, identical
+instances, duplicate claims, reconnects, original eggs, cosmetic isolation and a
+150-egg batch. Persistent identity rollout is deliberately disabled; no real player
+profiles were accessed or migrated. Engine acceptance, isolated durable-store restart,
+large-inventory serialization sizing and rollout approval remain open. Actual fusion
+consumption/RNG and per-instance shop/selector integration remain their own tasks.
 
 ## Operating rules
 - Preserve task IDs and record the commit/build or actual test evidence used for completion.
@@ -92,7 +103,7 @@ Backlog means dependencies are not yet satisfied. `Review / test` means code exi
 | BD-057 | Backlog | P0 | Consume 10 same-species/same-pattern Base dinos to create ONE NEW Gold, then Emerald before Diamond; guaranteed stage, freshly rolled traits | BD-012, BD-060 |
 | BD-058 | Backlog | P0 | Earned fusion stages as main permanent stat progression, fair caps, weekly grind and recipe pacing simulation | BD-057 |
 | BD-059 | Backlog | P1 | Buy and switch multiple aura/trail styles per individual dino; ALL purchased ingredient cosmetics are lost at fusion, never transfer to result | BD-060, BD-029, BD-038 |
-| BD-060 | Backlog | P0 | Unique dinosaur identity, hatched egg records, fused NEW instance lineage/parent egg history, safe profile migration | BD-011, BD-012, BD-041 |
+| BD-060 | Review / test | P0 | Unique dinosaur identity, hatched egg records, fused NEW instance lineage/parent egg history, safe profile migration | BD-011, BD-012, BD-041 |
 | BD-061 | Backlog | P1 | Blender Gold/Emerald/Diamond additive surfaces, subtle/medium overlay A/B, stack every trait/effect | BD-057, BD-035 |
 | BD-062 | Backlog | P1 | Dino picker/details hatch egg or fused parent lineage, trait/cosmetic badges, hatch rarity vs conditional fusion odds/prestige | BD-059, BD-060, BD-057 |
 | BD-063 | Backlog | P1 | Pattern research/duplicate sink: deterministic earned-only progress toward species-pattern fusion donors | BD-057 |
