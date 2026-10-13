@@ -10,6 +10,11 @@ fusion, not a Fusion Menu, not trait odds and not a production migration. It pas
 one unpublished Studio memory-profile check (below) and has never run against a
 persistent profile or DataStore.
 
+> **Update 2026-10-13 (BD-064):** this document describes the Phase 1 state. Since then a
+> provisional odds roller, persistent-identity flag and the `FusionAction` remote were added;
+> see [53](53-bd064-fusion-server.md) and [52](52-fusion-remote-contract.md). Statements below
+> about "no remote", "no odds" and "not persisted" are historical to Phase 1.
+
 ## What it does
 
 Ten distinct dinosaur identities of the same species, Base stage and saved egg
