@@ -154,7 +154,10 @@ class LoadHarnessTests(unittest.TestCase):
     def test_projection_matches_budget_formula(self):
         result = verify_load.projection(8, 150)
         self.assertEqual(result["budget"], 140)
-        self.assertGreater(result["ratio"], 1.0)
+        # BD-044: one write per egg at 1 s reveals busts the budget; 10-egg hatch pages fit.
+        self.assertGreater(verify_load.projection(8, 150, page_size=1)["ratio"], 1.0)
+        self.assertLess(result["ratio"], 1.0)
+        self.assertLess(verify_load.projection(12, 150)["ratio"], 1.0)
         self.assertEqual(verify_load.projection(12, 15)["budget"], 180)
 
     def test_gate_flags_problems(self):

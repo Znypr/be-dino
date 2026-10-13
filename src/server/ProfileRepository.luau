@@ -95,7 +95,7 @@ local leaseId = HttpService:GenerateGUID(false)
 local profiles: {[Player]: any} = {}
 -- BD-044 hatch pages: one claim transaction commits up to Config.HatchPageSize queued run
 -- eggs; committed (already credited) results wait here so the client still reveals them
--- one at a time (~5 s each) without a DataStore request per egg. Memory only: a rejoin
+-- one at a time (~1 s each) without a DataStore request per egg. Memory only: a rejoin
 -- mid-page loses just the animation, never a credit (see docs/50).
 local revealBuffer: {[Player]: {any}} = {}
 local renewing = false
@@ -200,6 +200,10 @@ local function isValidProfile(profile: any): boolean
     if profile.pendingNests ~= nil then
         if typeof(profile.pendingNests) ~= "table" or #profile.pendingNests > 1000 then return false end
         for _, nest in profile.pendingNests do if not validNest(nest, false) then return false end end
+    end
+    if profile.revealSkip ~= nil then
+        if typeof(profile.revealSkip) ~= "table" or #profile.revealSkip > 3 then return false end
+        for _, rarity in profile.revealSkip do if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity < 1 or rarity > 3 then return false end end
     end
     if profile.settledRuns ~= nil then
         if typeof(profile.settledRuns) ~= "table" then return false end
@@ -307,6 +311,7 @@ local function syncAttributes(player: Player, profile: any)
     end
     player:SetAttribute("NestsJson", HttpService:JSONEncode(nestSummary))
     player:SetAttribute("PendingNestCount", pendingNests)
+    player:SetAttribute("RevealSkipJson", HttpService:JSONEncode(profile.revealSkip or {}))
     player:SetAttribute("RunStartBlocked", ProfileRepository.runStartBlockReason(profile))
     local nextChest = profile.eggs[1]
     local buffered = revealBuffer[player]
@@ -884,6 +889,42 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     end
     player:SetAttribute("LastSettledRunId", runId)
     return true, committedOutcome, if duplicate then "duplicate" else "committed"
+end
+
+-- UI preference only (which species rarities the client auto-skips while revealing). Rewards
+-- never depend on it; skipped eggs are still hatched and credited. Additive profile field.
+function ProfileRepository.setRevealSkip(player: Player, selection: any): (boolean, string)
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then return false, "profile_not_loaded" end
+    if typeof(selection) ~= "table" or #selection > 3 then return false, "invalid_selection" end
+    local seen, clean = {}, {}
+    for _, rarity in selection do
+        if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity < 1 or rarity > 3 or seen[rarity] then return false, "invalid_selection" end
+        seen[rarity] = true
+        table.insert(clean, rarity)
+    end
+    table.sort(clean)
+    local leaseLost = false
+    local now = os.time()
+    local ok, updated = retry("reveal skip", function()
+        return store:UpdateAsync(keyFor(player), function(profileValue)
+            leaseLost = false
+            if not isValidProfile(profileValue) then return nil end
+            if not ownSession(profileValue) then leaseLost = true return nil end
+            profileValue.revealSkip = table.clone(clean)
+            profileValue.revision += 1
+            profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            return profileValue
+        end)
+    end)
+    if not ok or updated == nil then
+        if leaseLost then player:SetAttribute("ProfileState", "LeaseLost") return false, "lease_lost" end
+        player:SetAttribute("ProfileState", "SaveFailed")
+        return false, "save_failed"
+    end
+    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
+    syncAttributes(player, profiles[player])
+    return true, "saved"
 end
 
 -- Opens a ready bonus nest: its precommitted eggs join the reveal line next (ahead of

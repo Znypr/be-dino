@@ -593,11 +593,12 @@ def harness(root: Path = ROOT) -> str:
     return "local SCENARIO_FAIL_RATE = 0\n" + text
 
 
-def projection(players: int, eggs_per_run: int, reveal_seconds: float = 5.0, renew_seconds: float = 30.0,
-               pickups_per_minute: float = 64 * 60 / 90) -> dict:
-    """Requests/minute if every player reveals eggs at once with one UpdateAsync per egg."""
+def projection(players: int, eggs_per_run: int, reveal_seconds: float = 1.0, renew_seconds: float = 30.0,
+               pickups_per_minute: float = 64 * 60 / 90, page_size: int = 10) -> dict:
+    """Requests/minute if every player reveals eggs at once; one UpdateAsync per hatch page of
+    Config.HatchPageSize eggs (BD-044 paged claims), eggs revealed Config.HatchRevealSeconds apart."""
     budget = 60 + 10 * players
-    claims = players * min(60 / reveal_seconds, eggs_per_run)
+    claims = players * min(60 / reveal_seconds, eggs_per_run) / page_size
     renew = players * 60 / renew_seconds
     total = claims + renew + pickups_per_minute
     return {"players": players, "eggsPerRun": eggs_per_run, "budget": budget, "requestsPerMinute": round(total, 1),
@@ -658,7 +659,7 @@ def main(argv=None) -> int:
         for problem in problems:
             print(f"       - {problem}")
     projections = [projection(n, e) for n in (8, 12) for e in (15, 150)]
-    print("BD-044 projection (all players revealing simultaneously, one UpdateAsync per egg at 5 s):")
+    print("BD-044 projection (all players revealing simultaneously, one UpdateAsync per 10-egg hatch page, 1 s reveals):")
     for p in projections:
         print(f"       {p['players']} players x {p['eggsPerRun']} eggs: {p['requestsPerMinute']}/min vs budget "
               f"{p['budget']}/min ({p['ratio']:.0%}) for {p['revealMinutes']} min")

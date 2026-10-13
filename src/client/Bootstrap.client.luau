@@ -21,6 +21,7 @@ local PreviewTraits=require(script.Parent.PreviewTraits)
 local EggGenetics=require(Shared.EggGenetics)
 local EggAppearance=require(Shared.EggAppearance)
 local ShopOdds=require(Shared.ShopOdds)
+local RevealSkip=require(Shared.RevealSkip)
 local EggOutcomeView=require(Shared.EggOutcomeView)
 local TouchLayout=require(Shared.TouchLayout)
 local Marketplace=game:GetService("MarketplaceService")
@@ -30,6 +31,7 @@ local startRun = remotes:WaitForChild("RequestStartRun") :: RemoteEvent
 local endRun = remotes:WaitForChild("RequestEndRun") :: RemoteEvent
 local equip = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
 local hatch = remotes:WaitForChild("ClaimChest") :: RemoteEvent
+local setSkipRemote = remotes:WaitForChild("SetRevealSkip") :: RemoteEvent
 local claimNestRemote = remotes:WaitForChild("ClaimNest") :: RemoteEvent -- BD-044 bonus nests
 local fuse = remotes:WaitForChild("MutateSpecies") :: RemoteEvent
 local shopAction=remotes:WaitForChild("ProgressionAction") :: RemoteEvent
@@ -224,11 +226,15 @@ end
 local function queue()
     return decoded("ChestQueueJson","[]")
 end
+local skippedEntries={} -- BD-044: eggs hatched and credited but not animated this batch
+local function finishBatch()
+    autoHatching=false
+    if #skippedEntries>0 then open("batchSummary") else open("eggs") end
+end
 local function hatchNext()
     local id=str("NextChestId")
     if id=="" or workspace:GetServerTimeNow()<num("NextChestReadyAt") then
-        autoHatching=false
-        open("eggs")
+        finishBatch()
         return
     end
     if hatchPending then return end
@@ -602,15 +608,16 @@ render=function(name: string)
             for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.55) end end
             local perks=label(body,mutation.name.." • "..mutation.growth.."x Growth • "..mutation.speed.."x Speed",80,295,660,25,20,color)
             perks.Visible=false
-            task.delay(3.4,function() if perks.Parent and modalVersion==version then perks.Visible=true end end)
+            task.delay(math.min(3.4,Config.HatchRevealSeconds*.68),function() if perks.Parent and modalVersion==version then perks.Visible=true end end)
         end
         local nextButton=button(body,"NEXT EGG",80,322,320,math.max(64,45/viewportScale()),C.accent,function() autoHatching=true hatchNext() end)
         local collectionButton=button(body,"COLLECTION",424,322,320,math.max(64,45/viewportScale()),C.blue,function() autoHatching=false open("collection") end)
         nextButton.Visible,collectionButton.Visible=false,false
         task.spawn(function()
             local started=os.clock()
-            while os.clock()-started<3.4 and modalVersion==version and eggView.Parent do
-                local t=os.clock()-started
+            local crackSeconds=math.min(3.4,Config.HatchRevealSeconds*.68) -- crack animation scales with the 1 s reveal pace
+            while os.clock()-started<crackSeconds and modalVersion==version and eggView.Parent do
+                local t=(os.clock()-started)*3.4/crackSeconds
                 animateEgg(t)
                 task.wait(.03)
             end
@@ -632,6 +639,7 @@ render=function(name: string)
             task.wait(math.max(0,Config.HatchRevealSeconds-(os.clock()-started)))
             if modalVersion~=version or not view.Parent then return end
             if autoHatching and str("NextChestId")~="" then hatchNext()
+            elseif #skippedEntries>0 then finishBatch()
             else autoHatching=false nextButton.Visible=true collectionButton.Visible=true end
         end)
     elseif name=="exit" then
@@ -672,6 +680,16 @@ render=function(name: string)
         label(body,str("LastRewardText","Saving rewards..."),290,168,510,100,24,C.gold)
         label(body,"+"..num("LastRunCrystals").." Crystals • Level "..num("AccountLevel"),30,302,760,40,21)
         button(body,"BACK TO SANCTUARY",212,348,400,48,C.accent,function() open("home") end)
+    elseif name=="batchSummary" then
+        heading.Text,header.BackgroundColor3="Skipped eggs",C.gold
+        local summary=RevealSkip.summarize(skippedEntries)
+        local lines=RevealSkip.lines(summary)
+        label(body,table.concat(lines,"\n"),24,16,760,90,24)
+        local notes={}
+        for _,entry in summary.notable do table.insert(notes,Config.SpeciesDisplayNames[entry.speciesId] or entry.speciesId) end
+        label(body,if #notes>0 then "Notable finds: "..table.concat(notes,", ") else "Every skipped egg is already in your collection.",24,120,760,120,22,C.gold)
+        button(body,"COLLECTION",24,300,370,64,C.blue,function() skippedEntries={} open("collection") end)
+        button(body,"DONE",424,300,370,64,C.accent,function() skippedEntries={} open("eggs") end)
     elseif name=="settings" then
         heading.Text,header.BackgroundColor3="Settings",C.purple
         label(body,"Visual effects",24,24,410,56,30)
@@ -681,6 +699,13 @@ render=function(name: string)
         label(body,"Hatch sounds",24,182,410,44,26)
         button(body,if Theme.HatchSoundEnabled~=false then "SOUND ON" else "SOUND OFF",560,182,230,44,C.blue,function() Theme.HatchSoundEnabled=Theme.HatchSoundEnabled==false open("settings") end).TextSize=20
         button(body,"HOW TO PLAY",24,238,370,64,C.gold,function() open("tutorial") end)
+        label(body,"Skip reveals:",24,318,250,44,24)
+        local chosen=RevealSkip.set(decoded("RevealSkipJson","[]"))
+        for i,rarityName in RevealSkip.Names do
+            button(body,(if chosen[i] then "SKIP " else "SHOW ")..rarityName,270+(i-1)*172,318,164,44,if chosen[i] then C.accent else C.card,function()
+                setSkipRemote:FireServer(RevealSkip.toggle(decoded("RevealSkipJson","[]"),i))
+            end).TextSize=17
+        end
         button(body,"FOOD GUIDE",424,238,366,64,C.accent,function() open("food") end)
         label(body,"Settings apply on this device for this session.",24,342,766,40,18)
     elseif name=="food" then
@@ -975,18 +1000,32 @@ local function scheduleModalRefresh()
     refreshQueued=true
     task.defer(function()
         refreshQueued=false
-        if table.find({"collection","detail","fusion","eggs","auras","potions"},active) then
+        if table.find({"collection","detail","fusion","eggs","auras","potions","settings"},active) then
             body:ClearAllChildren()
             render(active)
         end
     end)
 end
-for _,attribute in {"EquippedSpeciesId","CollectionJson","ChestQueueJson","ProgressionJson","NestsJson","QueuedEggsWaiting"} do
+for _,attribute in {"EquippedSpeciesId","CollectionJson","ChestQueueJson","ProgressionJson","NestsJson","QueuedEggsWaiting","RevealSkipJson"} do
     player:GetAttributeChangedSignal(attribute):Connect(function()
         scheduleModalRefresh()
     end)
 end
-player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function() hatchPending=false task.defer(function() open("hatch") end) end)
+player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function()
+    hatchPending=false
+    -- Skippable eggs (selected rarities, nothing notable) are already credited: no animation.
+    local species=string.match(str("LastChestRewardText"),"x (%w+)") or "compy"
+    local okGenes,genes=pcall(function() return Http:JSONDecode(str("LastChestGenesJson","null")) end)
+    local outcome={big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),eventMutationId=str("LastChestEventMutation"),
+        genes=if okGenes and typeof(genes)=="table" then genes else nil,failed=player:GetAttribute("LastChestFailed")==true}
+    local rarity=speciesIndex(species)
+    if autoHatching and RevealSkip.shouldSkip(decoded("RevealSkipJson","[]"),rarity,outcome) then
+        table.insert(skippedEntries,{rarity=rarity,speciesId=species,outcome=outcome})
+        task.defer(hatchNext)
+        return
+    end
+    task.defer(function() open("hatch") end)
+end)
 player:GetAttributeChangedSignal("LastRunEndAt"):Connect(function() if not autoHatching then open("results") end end)
 player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
     local serial=hatchCancelSerial
