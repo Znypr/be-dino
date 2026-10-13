@@ -1,5 +1,44 @@
 # BD-061 Gold, Emerald and Diamond fusion visual test
 
+## Revision 2 — owner-directed glossy fusion finish
+
+The current review candidate is `BD061_FusionFinish_Daylight_v2.blend` and its
+appendable `BD061_FusionFinish_Library_v2.blend`. Working name: **Fusion finish**.
+The owner's review supersedes the ornament/mineral-lattice direction below:
+the finish is a continuous glossy coating, like a glazed toy, with a restrained
+gold/emerald/cool-clear tint over the existing colors and markings. Subtle and
+Medium change coat strength, roughness and tint; neither adds stones, crystals,
+accessory meshes, facet bump, aura ornaments or particles.
+
+![Compy daylight finish](evidence/2026-10-12-bd061-fusion-visuals/bd061-compy-daylight-finish.png)
+
+![Triceratops daylight finish](evidence/2026-10-12-bd061-fusion-visuals/bd061-triceratops-daylight-finish.png)
+
+Each tile uses exactly the same pose, camera, sunlight, sky, grass clearing and
+background forest. The Base reference is repeated in the eighth tile. Individual
+640-pixel panels are also included for closer inspection. These are Blender
+Cycles renders of a game-style test clearing, not screenshots of the Roblox map.
+The original low-poly silhouettes are retained; smooth shading lets the coating
+catch continuous highlights. Both versions add **zero triangles, zero meshes,
+and zero fusion particles**. The lower section records the rejected first study
+and its historical stack fixtures; those do not establish v2 stack acceptance.
+
+Rebuild with `tools/blender/build_fusion_finish.py`. The v2 material library
+contains only the reusable shader group and materials. The daylight scene keeps
+the fourteen species/treatment objects individually selectable in Blender.
+Underlying stripe/spot patterns are procedural review fixtures, not calibrated
+copies of the runtime UV masks; the old 20/80 and 55/45 fixture labels were not
+measured color coverage and should not be used as verification of game genetics.
+
+Roblox integration still needs the UV-bearing owner-uploaded models and actual
+runtime gene ColorMap. Apply the finish through the existing mesh's material
+roughness/metalness response, keep the generated genetic color map intact, and
+resolve `PatternGenes` surface deletion before integrating. No new geometric
+overlay or accessory attachment is required. BIG/Shiny/event/aura/trail remain
+independent runtime systems; v2 Studio, phone and full stack tests are pending.
+
+## Historical revision 1 — rejected visual study
+
 **Date:** 2026-10-13
 
 **Branch:** `codex/bd-061-fusion-visuals`

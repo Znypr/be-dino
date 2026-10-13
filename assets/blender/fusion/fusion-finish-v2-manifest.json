@@ -1,0 +1,10 @@
+{
+  "revision": 2,
+  "working_name": "Fusion finish",
+  "additional_triangles": 0,
+  "additional_meshes": 0,
+  "fusion_particles": 0,
+  "node_group": "BD061_FusionFinish_v2",
+  "comparison": "fixed camera, pose, environment and genetics; daylight grass clearing",
+  "genetics_note": "Procedural review patterns; stored color shares are fixture labels, not calibrated UV coverage."
+}
