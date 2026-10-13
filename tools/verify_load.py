@@ -150,7 +150,7 @@ local function newMetrics()
 end
 
 local LATENCY_RNG = minstd(77)
-local function newServer(name, jobId)
+local function newServer(name, jobId, overrides)
     local server = {name = name, players = {}, cache = {}, bucket = nil, last = 0, waiting = 0}
     function server.rate() return 60 + 10 * #server.players end
     local function refill()
@@ -229,6 +229,12 @@ local function newServer(name, jobId)
         local result = chunk()
         server.cache[path] = result
         return result
+    end
+    if overrides then
+        -- Release-profile values (the playtest's persistent identities + fusion).
+        local config = table.clone(load(node("src/shared/Config")))
+        for k, v in overrides do config[k] = v end
+        server.cache["src/shared/Config"] = table.freeze(config)
     end
     server.Repository = load(node("src/server/ProfileRepository"))
     server.Config = load(node("src/shared/Config"))
@@ -463,7 +469,7 @@ for _, sc in SCENARIOS do
     for i = 1, 64 do CRYSTALS[i] = 0 end
     SCENARIO_FAIL_RATE = sc.failRate
     M = newMetrics()
-    local servers = {newServer("A", "job-A"), newServer("B", "job-B")}
+    local servers = {newServer("A", "job-A", sc.configOverrides), newServer("B", "job-B", sc.configOverrides)}
     local players = {}
     for i = 1, sc.players do players[i] = newPlayer(1000 + i) end
     local spamUser = if sc.spammer then newPlayer(999) else nil
@@ -549,9 +555,12 @@ end
 
 BASE = {"duration": 900, "joinStagger": 2, "runMin": 90, "runMax": 240, "pickupMin": 8, "pickupMax": 20,
         "revealSeconds": 5, "failRate": 0.01, "hop": 2, "catchesPerMinute": 3, "revealCap": 300, "spammer": False, "spamSeconds": 0}
+# Values the playtest release profile writes (tools/release_profiles.py).
+PLAYTEST_OVERRIDES = {"IdentityPersistentEnabled": True, "IdentityFusionPreviewEnabled": True}
 SCENARIOS = [
     dict(BASE, name="build020-8-players", players=8, seed=8, gated=True),
     dict(BASE, name="build020-12-players", players=12, seed=12, gated=True),
+    dict(BASE, name="playtest-flags-12-players", players=12, seed=1212, configOverrides=PLAYTEST_OVERRIDES, gated=False, playtestGate=True),
     dict(BASE, name="egg-burst-15-x12", players=12, seed=15, duration=420, gated=False),
     dict(BASE, name="egg-burst-150-x12", players=12, seed=150, catchesPerMinute=30, duration=1200, gated=False),
     dict(BASE, name="equip-spam-8+1", players=8, seed=81, spammer=True, spamSeconds=360, duration=480, gated=False),
@@ -565,6 +574,8 @@ def lua_value(value):
         return "true" if value else "false"
     if isinstance(value, (int, float)):
         return repr(value)
+    if isinstance(value, dict):
+        return "{" + ",".join(f"{k}={lua_value(v)}" for k, v in value.items()) + "}"
     if isinstance(value, str):
         return json.dumps(value)
     raise TypeError(value)
@@ -588,7 +599,7 @@ def harness(root: Path = ROOT) -> str:
             entries.append(f"[{json.dumps(key)}] = {long_string(path.read_text(encoding='utf-8'))}")
     sources = "{\n" + ",\n".join(entries) + "\n}"
     scenarios = "{" + ",".join(
-        "{" + ",".join(f"{k}={lua_value(v)}" for k, v in sc.items() if k != "gated") + "}" for sc in SCENARIOS) + "}"
+        "{" + ",".join(f"{k}={lua_value(v)}" for k, v in sc.items() if k not in ("gated", "playtestGate")) + "}" for sc in SCENARIOS) + "}"
     text = HARNESS.replace("__SCENARIOS__", scenarios).replace("__SOURCES__", sources)
     return "local SCENARIO_FAIL_RATE = 0\n" + text
 
@@ -617,6 +628,10 @@ def gate(result: dict) -> list[str]:
         problems.append(f"{result['undrainedEggs']} settled eggs neither claimed nor queued/banked")
     if result["leasedAtEnd"]:
         problems.append(f"{result['leasedAtEnd']} profiles still leased after leaving")
+    if result["maxKeyBytesPerMinute"] > 4 * 1024 * 1024:
+        problems.append(f"one profile key wrote {result['maxKeyBytesPerMinute']} bytes in a minute (> 4 MB/min per-key limit)")
+    if result["maxProfileBytes"] > 3_400_000:
+        problems.append(f"profile reached {result['maxProfileBytes']} bytes (> 3.4 MB fusion budget)")
     for side in ("A", "B"):
         if result[f"ratio{side}"] > 1.0:
             problems.append(f"server {side} peak window {result[f'peakWindow{side}']} > budget {result[f'budget{side}']}")
@@ -626,6 +641,8 @@ def gate(result: dict) -> list[str]:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--runner", required=True, help="path to the pinned luau executable")
+    parser.add_argument("--gate-playtest", action="store_true",
+                        help="also fail on the playtest-flags scenario (release gate; run by the CI playtest step)")
     parser.add_argument("--json", type=Path, help="write all results to this file")
     args = parser.parse_args(argv)
     with tempfile.TemporaryDirectory() as folder:
@@ -644,8 +661,9 @@ def main(argv=None) -> int:
     failed = False
     for sc, result in zip(SCENARIOS, results):
         problems = gate(result)
-        tag = "PASS" if not problems else ("FAIL" if sc["gated"] else "WARN")
-        failed |= bool(problems) and sc["gated"]
+        gated = sc["gated"] or (args.gate_playtest and sc.get("playtestGate", False))
+        tag = "PASS" if not problems else ("FAIL" if gated else "WARN")
+        failed |= bool(problems) and gated
         print(f"[{tag}] {result['name']}: {result['players']} players, {result['duration']}s; "
               f"requests A/B {result['requestsA']}/{result['requestsB']}, peak 60s window "
               f"{result['peakWindowA']}/{result['budgetA']} ({result['ratioA']:.0%}) on A, "
@@ -665,7 +683,7 @@ def main(argv=None) -> int:
               f"{p['budget']}/min ({p['ratio']:.0%}) for {p['revealMinutes']} min")
     if args.json:
         args.json.write_text(json.dumps({"scenarios": results, "projection": projections}, indent=2) + "\n", encoding="utf-8")
-    print("Load harness " + ("FAILED" if failed else "passed") + " (gated: Build 020 8 and 12 player scenarios).")
+    print("Load harness " + ("FAILED" if failed else "passed") + " (gated: 8/12-player" + (" + playtest-flag" if args.gate_playtest else "") + " scenarios).")
     return 1 if failed else 0
 
 

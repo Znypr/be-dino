@@ -36,11 +36,10 @@ All rules live in **one place**, [`tools/release_profiles.py`](../tools/release_
 | `PaidRandomItemsEnabled`, `CrystalPacksEnabled` | must be `false` | must be `false` | No Robux and no paid-random items ([43](43-player-access-and-paid-random-policy.md)) |
 | `CollectionTestGrantEnabled`, `ChestTestGrantEnabled`, `MutationTestSetupEnabled` | must be `false` | must be `false` | No debug grants in any build that could be published |
 | `SecurityTestHarnessEnabled`, `ArtTestHarnessEnabled`, `DuplicateSettlementProbe` | must be `false` | must be `false` | Test harnesses and probes |
-| `IdentityFusionPreviewEnabled` | must be `false` | must be `false` | BD-057 Studio memory-only preview |
 | `ReleaseProfile` | must be `"development"` | **set** `"playtest"` | Marks the generated place |
 | `ProfileDataStoreName` | ≤50 chars | **set** from `PlaytestProfileDataStoreName`, must match `BeDino_Playtest_<Tag>_v<N>` | Isolated playtest store |
 | `PlaytestUniverseId`, `PlaytestPlaceId` | 0 or an ID | **must be positive** | BD-004 record (see §2) |
-| `IdentityPersistentEnabled` | — | **set** `true`; *warn* while missing | BD-064 is not on main yet. Switch the rule to `missing="error"` when it merges |
+| `IdentityPersistentEnabled`, `IdentityFusionPreviewEnabled` | must be `false` | **set** `true` | BD-064 persistent identities + fusion ([53](53-bd064-fusion-server.md)); on only in the generated playtest place |
 | any key defined twice | error | error | A later duplicate key in a Luau table literal would silently win |
 
 - **Safety flags are required, never patched.** If a test grant is left on in source,
@@ -94,8 +93,8 @@ store name is. The playtest store name (`BeDino_Playtest_M1_v1`) gives a reset l
   `measure_identity_storage --check`, `build.py`, `verify_release --profile default`, all
   unit tests and the playtest build/verify step.
 - [ ] `python tools/verify_release.py --profile playtest --place build/BeDino-BuildNNN-playtest.rbxlx`
-  passes on a clean checkout of the tag. No `IdentityPersistentEnabled` warning remains
-  once BD-064 has merged.
+  passes on a clean checkout of the tag, and so does
+  `python tools/verify_load.py --runner <luau> --gate-playtest` (persistent identities + fusion on).
 - [ ] The known-issues list (§7) is written, and no open P0 issue remains (data loss,
   duplication, security, cannot play).
 
@@ -188,6 +187,7 @@ Results on main Build 020 + this branch (2026-10-13):
 | Scenario | Requests (A/B) | Peak 60 s window / accrued budget | Throttled | Failed ops | Notes |
 |---|---:|---:|---:|---:|---|
 | **8 players, 15 min** (gated) | 720 / 101 | 80 / 140 (57%) | 0 | 0 | 884 transforms for 808 writes, 13 transient errors retried, 2 server hops, all eggs drained, all leases released |
+| **12 players, 15 min, playtest flags** (persistent identities + fusion; BD-044 payout; `--gate-playtest`) | 996 / 87 | 90 / 180 (50%) | 0 | 0 | profile 64 KB after 15 min, key writes <=10/min and <=475 KB/min (the pre-BD-044 payout reached 528 KB and 4.7 MB/min) |
 | **12 players, 15 min** (gated) | 1064 / 116 | 99 / 180 (55%) | 0 | 0 | max profile 14.9 KB; per-key ≤12 writes and ≤160 KB per minute |
 | 12 players each revealing a 15-egg batch | 627 / 42 | 167 / 180 (93%) | 0 | 0 | absorbed by the bucket; little headroom |
 | 12 players each revealing a 150-egg batch | 2634 / 33 | 181 / 180 (101%) | 0 | 0 | sustained at the budget for about 13 min; any extra writes would queue |
