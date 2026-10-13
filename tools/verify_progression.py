@@ -193,13 +193,13 @@ assert(claimed and reward.eventMutationId=="ember")
 assert(Repository.claimChest(eventUser,emberId))
 assert(data['u:888'].collection.raptor.variants[emberKey].count==1 and data['u:888'].collection.raptor.base==4)
 assert(data['u:888'].pendingChestGrants==0 and #data['u:888'].runEggBank==0)
-assert(data['u:888'].eggs[1].mutationId=="aurora")
-assert(Repository.equipSpecies(eventUser,"raptor") and eventUser.attrs.EquippedEventMutation=="ember")
+-- BD-044 hatch page: the next queued run egg (aurora) committed in the same transaction and waits to be revealed.
+assert(#data['u:888'].eggs==0 and eventUser.attrs.NextChestId==data['u:888'].recentOperations[#data['u:888'].recentOperations].outcome.eggId)
+assert(Repository.equipSpecies(eventUser,"raptor") and eventUser.attrs.EquippedEventMutation=="aurora")
 assert(not Repository.commitRunSettlement(eventUser,"bad-event",10,{{eventId="volcano",mutationId="frost"}}))
 Repository.release(eventUser)
-assert(Repository.load(eventUser) and eventUser.attrs.EquippedEventMutation=="ember")
+assert(Repository.load(eventUser) and eventUser.attrs.EquippedEventMutation=="aurora")
 print("Event transactions passed: repeated settlement transforms, overflow FIFO, mutated hatch, no Base duplication, duplicate claim, equip and rejoin")
-assert(Repository.claimChest(eventUser,data['u:888'].eggs[1].eggId))
 traitRoll=0
 local stackedTags=copy(tags) for _,tag in stackedTags do tag.shiny=true tag.big=true end
 assert(Repository.commitRunSettlement(eventUser,"stacked-traits",2,stackedTags))
@@ -494,6 +494,11 @@ local function newUser(id)
  return u
 end
 local KEY="u:4242"
+-- BD-044 hatch pages: reveal any committed page entries (no write), then claim the real queue head (one transaction).
+local function claimHead(u)
+ while u.attrs.NextChestId~="" and u.attrs.NextChestId~=u.attrs.ChestQueueJson[1].id do assert(PersistentRepository.claimChest(u,u.attrs.NextChestId)) end
+ return PersistentRepository.claimChest(u,u.attrs.ChestQueueJson[1].id)
+end
 local pu=newUser(4242)
 local callsBefore=transforms
 -- Fresh profile: sidecar created in the same load transform.
@@ -575,12 +580,12 @@ assert(select(2,PersistentRepository.quoteFusion(pu,"gold",donors2))=="identity_
 assert(select(3,PersistentRepository.fuseDinosaurs(pu,{token="suspended",targetStage="gold",donorIds=donors2,quoteDigest="x"}))=="identity_unavailable")
 -- A hatch while suspended still credits the grouped collection and skips identities.
 assert(PersistentRepository.commitRunSettlement(pu,"persist-suspended",10))
-local okS,hs=PersistentRepository.claimChest(pu,pu.attrs.ChestQueueJson[1].id)
+local okS,hs=claimHead(pu)
 assert(okS and hs.instanceIds==nil and data[KEY].dinosaurIdentity.suspendedReason=="identity_capacity")
 data[KEY].collection.compy.base=compyBase
 assert(PersistentRepository.renew(pu))
 assert(data[KEY].dinosaurIdentity.suspendedReason==nil and data[KEY].dinosaurIdentity.instances[committed.resultId])
-assert(PersistentRepository.claimChest(pu,pu.attrs.ChestQueueJson[1].id))
+assert(claimHead(pu))
 assert(PersistentRepository.fusionStatus(pu))
 -- Hard byte ceiling: identity growth is dropped (suspended) before the profile write is,
 -- and a write that is still too large aborts with the stored profile unchanged.
@@ -589,7 +594,7 @@ assert(PersistentRepository.commitRunSettlement(pu,"persist-hard",10))
 local sizeBefore=IdentityFusion.encodedSize(data[KEY])
 mutableConfig.IdentityProfileHardLimitBytes=sizeBefore+200
 local hatchesBefore=data[KEY].dinosaurIdentity.nextId
-local okH,hh=PersistentRepository.claimChest(pu,pu.attrs.ChestQueueJson[1].id)
+local okH,hh=claimHead(pu)
 assert(okH and data[KEY].dinosaurIdentity.suspendedReason=="storage_limit" and data[KEY].dinosaurIdentity.nextId==hatchesBefore)
 assert(IdentityFusion.encodedSize(data[KEY])<=sizeBefore+200)
 mutableConfig.IdentityProfileHardLimitBytes=1000

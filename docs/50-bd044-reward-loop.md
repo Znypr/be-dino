@@ -78,6 +78,28 @@ continuously; closing or rejoining resumes at the exact next egg with no reroll.
 One identity (`DinosaurIdentity.hatch`, count 1) is created per hatched dinosaur; failed
 Cracked eggs create none. Legacy eggs with a committed count of 2 or 3 still create 2-3.
 
+## Hatch pages: request budget (integration fix, 2026-10-13)
+
+One `UpdateAsync` per revealed egg at 5 s is 12 requests/min per player, which projected to
+154.7/min for 8 players (budget 140) and 210.7/min for 12 (budget 180) in `tools/verify_load.py`.
+Claims are now **paged**: claiming a run/nest egg at the queue head commits up to
+`HatchPageSize = 5` (PROVISIONAL) consecutive ready run/nest eggs in the **same** transaction
+(each credited, identity-hatched and recorded as its own `chest:<eggId>` operation; legacy and
+purchased eggs still claim singly). The first result is returned; the other committed results
+wait in a per-player in-memory reveal buffer and `NextChestId` points at them, so the existing
+client keeps revealing one egg per ~5 s with **no** DataStore request for buffered entries.
+Claiming a buffered egg only pops the buffer; a claim for a still-queued egg while a page is
+waiting reveals the page head ("reveal next"); already-credited IDs return `duplicate`.
+Cost drops to 2.4 claim requests/min/player (about 78/min for 8 players = 56% of budget,
+95/min for 12 = 53%, with renews and pickups).
+
+Consequences: credit happens at page commit, so a rejoin mid-page loses only the reveal
+animation of up to 4 already-credited eggs (they are in the collection; verified in
+`verify_rewards.py`). Exactly-once, one dinosaur/egg, deterministic order and the 5-slot queue are
+unchanged; a page never crosses a legacy/purchased egg. Studio check pending: reveal UX when the
+buffer is reconnected-lost, and `verify_load.py`'s hard-coded projection formula should be updated
+to the paged model by its owner.
+
 ## Bonus nests (PROVISIONAL rule and contents)
 
 - Earning: first nest at 15 run eggs, then one per 27 further eggs, max 11 per run

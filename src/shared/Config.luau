@@ -122,6 +122,7 @@ return table.freeze({
     -- exactly ONE run egg; no direct N(c)=c copies and no 10/100/500 threshold eggs.
     -- Run eggs beyond the five-slot reveal queue wait in a server-side ordered bank.
     RunRewardConfigVersion = 2,
+    HatchPageSize = 5, -- PROVISIONAL: queued run eggs committed per claim transaction (reveal stays 5 s/egg client-side)
     RunEggMaxPerRun = 300, -- PROVISIONAL: catches stop counting at 300 eggs per run (storage bound)
     RunEggBankCapacity = 600, -- PROVISIONAL: banked run eggs behind the queue; runs start only with room for a full run
     SettledRunLedgerSize = 200, -- PROVISIONAL: settled run IDs kept for exactly-once settlement beyond recentOperations

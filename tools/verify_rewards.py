@@ -191,10 +191,15 @@ local line=revealLine(b)
 assert(#line==150)
 local committedIds={} for i,egg in line do committedIds[i]=egg.eggId end
 local committedGenes={} for i,egg in line do committedGenes[i]=copy(egg.genes) end
-local successes,failures,claimed=0,0,0
-local function claimNext(u)
- local egg=data[key(u)].eggs[1]
- local claimOk,result,claimStatus=Repository.claimChest(u,egg.eggId)
+local byId={} for _,egg in line do byId[egg.eggId]=egg end
+local expectedSuccess=0 for _,g in committedGenes do if g.hatchSuccess then expectedSuccess+=1 end end
+local successes,failures,revealed=0,0,0
+local claimTransforms=transforms
+-- Client behaviour: reveal whatever NextChestId names, one egg per call (~5 s apart in game).
+local function revealNext(u)
+ local id=u.attrs.NextChestId
+ local egg=byId[id]
+ local claimOk,result,claimStatus=Repository.claimChest(u,id)
  assert(claimOk and claimStatus=="claimed",tostring(claimStatus))
  if result.failed then
   assert(result.count==0 and egg.genes.conditionId=="cracked","only Cracked eggs fail and they give 0 dinosaurs")
@@ -202,46 +207,46 @@ local function claimNext(u)
  else
   assert(result.count==1,"exactly one dinosaur per successful egg") successes+=1
  end
- claimed+=1
+ revealed+=1
  return egg
 end
 lastRarity=0
-for i=1,40 do
- local egg=claimNext(b)
+for i=1,42 do
+ local egg=revealNext(b)
  assert(egg.eggId==committedIds[i] and same(egg.genes,committedGenes[i]),"reveal order or genes changed")
  local rarity=GameConfig.SpeciesRarities[egg.reward.speciesId]
  assert(rarity>=lastRarity) lastRarity=rarity
 end
-assert(#data[key(b)].eggs==5 and bankCount(b)==105,"queue refills from the bank after each claim")
--- Duplicate claim of an already hatched egg never double-credits.
+-- 9 pages of 5 are committed (45 eggs credited); the 3 unrevealed page eggs are already credited.
+assert(#data[key(b)].eggs==5 and bankCount(b)==100 and transforms-claimTransforms<=2*9,"one claim transaction per page of 5")
 local copiesMid=totalCopies(data[key(b)])
-local again,_,againStatus=Repository.claimChest(b,committedIds[40])
+local again,_,againStatus=Repository.claimChest(b,committedIds[42])
 assert(again and againStatus=="duplicate" and totalCopies(data[key(b)])==copiesMid)
--- Reconnect mid-batch: the remaining 110 eggs return identically, no reroll, no loss.
+-- Reconnect mid-page: nothing is re-hatched or lost; only the 3 pending animations are skipped.
 Repository.release(b)
 assert(Repository.load(b))
+assert(b.attrs.NextChestId==committedIds[46] and totalCopies(data[key(b)])==copiesMid)
 line=revealLine(b)
-assert(#line==110)
-for i,egg in line do assert(egg.eggId==committedIds[40+i] and same(egg.genes,committedGenes[40+i])) end
--- Out-of-order claim is refused.
-local skip,_,skipStatus=Repository.claimChest(b,data[key(b)].eggs[2].eggId)
-assert(not skip and skipStatus=="missing")
-for i=41,150 do
- local egg=claimNext(b)
+assert(#line==105)
+for i,egg in line do assert(egg.eggId==committedIds[45+i] and same(egg.genes,committedGenes[45+i])) end
+for i=46,150 do
+ local egg=revealNext(b)
  assert(egg.eggId==committedIds[i])
  local rarity=GameConfig.SpeciesRarities[egg.reward.speciesId]
  assert(rarity>=lastRarity) lastRarity=rarity
 end
-assert(claimed==150 and successes+failures==150 and #data[key(b)].eggs==0 and bankCount(b)==0)
-assert(totalCopies(data[key(b)])==copiesBefore+successes,"one dinosaur per successful egg, none for failures")
+assert(revealed==147 and #data[key(b)].eggs==0 and bankCount(b)==0)
+assert(totalCopies(data[key(b)])==copiesBefore+expectedSuccess,"one dinosaur per successful egg, none for failures, none lost by the reconnect")
 assert(failures>0,"expected some failed Cracked eggs at BD-045 tier 0")
+local claimRequests=transforms-claimTransforms
+assert(claimRequests<=2*30+2,"150 eggs must need ~30 claim transactions, got "..claimRequests)
 -- Replaying settlement after 150 claims trimmed it out of recentOperations is still a no-op.
 local found=false for _,entry in data[key(b)].recentOperations do if entry.id=="run:run-150" then found=true end end
 assert(not found,"fixture expects the run operation to be trimmed")
 snapshot=copy(data[key(b)])
 dupOk,_,dupStatus=Repository.commitRunSettlement(b,"run-150",150)
 assert(dupOk and dupStatus=="duplicate" and same(snapshot,data[key(b)]),"settledRuns ledger must block re-settlement")
-print(string.format("150-egg run passed: 150 eggs revealed in committed ascending order across reconnect; %d hatched, %d Cracked failures; trimmed-ledger replay blocked", successes, failures))
+print(string.format("150-egg run passed: 150 eggs credited in 30 hatch-page transactions (%d transforms incl. probes), revealed in committed ascending order, reconnect mid-page loses no credit; %d hatched total, trimmed-ledger replay blocked", claimRequests, expectedSuccess))
 
 ------------------------------------------------------------------ Outage, transient failure, lease loss
 local c=user(103)
@@ -402,7 +407,7 @@ assert(LocalRepository.load(i))
 assert(LocalRepository.commitRunSettlement(i,"identity-run",15))
 local identities,hatched,failedHatches=0,0,0
 for _=1,15 do
- local head=i.attrs.ChestQueueJson[1]
+ local head={id=i.attrs.NextChestId}
  local claimOk,h=LocalRepository.claimChest(i,head.id)
  assert(claimOk)
  if h.failed then
@@ -414,7 +419,7 @@ for _=1,15 do
   identities+=1
  end
 end
-assert(hatched+failedHatches==15 and identities==hatched and #i.attrs.ChestQueueJson==0)
+assert(hatched+failedHatches==15 and identities==hatched and #i.attrs.ChestQueueJson==0 and i.attrs.NextChestId=="")
 print(string.format("Identity passed: 15-egg run -> %d identities for %d hatched eggs, %d failed Cracked eggs create none", identities, hatched, failedHatches))
 
 ------------------------------------------------------------------ Seeded condition draws (BD-045)

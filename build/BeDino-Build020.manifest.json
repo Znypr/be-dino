@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "a1be509f2a01d942d40df3f1d84b1925f7f39955c05b3d6ac6c7774e56748b74",
+  "place_sha256": "ed0a25125c83c187a33cce4b1e499dce3d241282e4adce825581556bbf146e4c",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/Artwork.luau": "dbcef755028cbf3e737da0f96178db4e563f73843c0df00ad167ab134f1d066e",
@@ -8,7 +8,7 @@
     "src/shared/ArtworkLayout.luau": "50bafa21786bba19acbcb92b91ec813e5c7435d8f3665b8c6050dcf6e94beca3",
     "src/shared/AuthoredCreatures.luau": "78b0e6f5c7f534ec8b5c42ccdabf4d7a5e4eddd097c8c37c17ca7ec9514f741b",
     "src/shared/BiomePlacement.luau": "fb7231d8b6b67d3c5ed4a7dac63fcb01ad81d8ca45117f74630b1a79f5c7d21d",
-    "src/shared/Config.luau": "7be2817656094f475e3864d60188949b03a8b65eacce832c0fc9a4971393d390",
+    "src/shared/Config.luau": "8835794d0ace31fdd329ae637a9b801b014c62a7892e80436dbd7a129999f5e7",
     "src/shared/CosmeticEffects.luau": "b4d1123d8f1d5801b738483ae52c8fb97d49f953d2185e48e7fbb014b6e28c28",
     "src/shared/CreatureData/archaeopteryx.luau": "77b3395fd98c04ba78e305d35a9320c83e529bacc42a84baee6b12d061b225c4",
     "src/shared/CreatureData/baryonyx.luau": "8ec5bdfdd445ebb014be6089f2a09fabd909826d348782501306515dae85ee1c",
@@ -226,7 +226,7 @@
     "src/server/MovementGuard.luau": "68f1eb76c26659521002602e2e537b3b7706fd87a748bbfc90eb10a103d9b321",
     "src/server/MutationService.luau": "1be0b164544336ab2e5440fb42e0927020ad6b85e8ff9cfe1c75a337be5bf20a",
     "src/server/PredationService.luau": "122b7c44ed0f01f636c256b9546925ac06140aa32ab8d54650274625d5d67395",
-    "src/server/ProfileRepository.luau": "9da7b3f4f684f0c5288cb3a34c886a433460f8156a327a1c36625decf8cb0d6f",
+    "src/server/ProfileRepository.luau": "835dcac8c6d4c98883102adc89303d72d28d94a5eab6a4c885728b35f1d99d8d",
     "src/server/ProgressionService.luau": "69dc1aa8df12cba5b30ad209887d2fff631fd25ffa16b9bcf074ad35015746fd",
     "src/server/RewardMath.luau": "50f8aa8477996f3a039f5ab40debe9bd52da022338b459eb1c3aa09a831c5f2f",
     "src/server/RunLifecycle.luau": "c0c2d0a10ab2446edfc09478df1320fd12416e5dce73132879fcc397904f0079",
