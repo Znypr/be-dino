@@ -18,7 +18,7 @@ Maximum player access/policy work remains in progress:
 
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-017; BD-019–022; BD-035; **BD-044–056, BD-058–059, BD-061–065** | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042; **BD-057 Phase 1; BD-060** | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
+| BD-017; BD-019–022; BD-035; **BD-044–056, BD-058–059, BD-061–063, BD-065** | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042; **BD-057 Phase 1; BD-060; BD-064 server** | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -57,6 +57,11 @@ competing-session verification remain open. `fusionRecord()` is explicitly rejec
 by reconciliation until BD-057 adds the atomic identity-aware inventory transaction.
 Persistent rollout remains disabled; no real profiles were accessed or migrated.
 Actual fusion RNG and per-instance shop/selector integration remain separate tasks.
+**2026-10-13 (BD-064 branch):** a default-off `IdentityPersistentEnabled` flag now runs
+the sidecar, hatch credit and reconcile inside the same persistent `UpdateAsync`
+transform for the Milestone 1 private playtest (fresh DataStore), with a whole-profile
+byte preflight and fail-closed suspension for legacy/over-capacity profiles
+([53](53-bd064-fusion-server.md)). Offline-tested only; Studio/DataStore pending.
 
 ### BD-057 Phase 1 — updated 2026-10-13
 
@@ -70,6 +75,25 @@ memory-profile check passed 20/20 with Roblox `JSONEncode` matching the byte est
 **No published-place, DataStore or production verification was performed.** Trait odds (BD-064), Emerald/Diamond costs,
 UI/remote (BD-065) and persistent rollout remain open. Consent for Shiny/BIG/mutation
 donors and the hard lock/favorite block are working defaults awaiting owner approval.
+**2026-10-13:** BD-064 adds the PROVISIONAL production roller, the `FusionAction`
+remote and a persistent-playtest flag on top of this transaction (below).
+
+### BD-064 server — updated 2026-10-13
+
+Implemented on `claude/bd-064-fusion-server` from main `18856b4`; **Review / test, not Done**.
+[Implementation and evidence](53-bd064-fusion-server.md); [remote contract](52-fusion-remote-contract.md)
+for the BD-065 UI. `FusionOdds` `fusion-odds-provisional-v1` (PROVISIONAL: Shiny/BIG
+`0.5 × donors/10`, mutation `0.5 × mutated/10` split by donor counts, condition and
+colors proportional to donors, blend uniform 1–99 or 100, pattern locked) exposes the
+exact quote distribution and a consistent roll; `FusionAction` RemoteFunction
+(`list/details/quote/fuse`) validates every argument, rate-limits per player and never
+accepts client traits; `IdentityPersistentEnabled` enables identities + fusion on
+persistent profiles for the Milestone 1 private playtest (fresh DataStore, Robux off).
+Offline evidence: normalization, 200,000-sample parity, determinism, persistent
+fresh/hatch/fuse/reload/outage/lease loss/byte preflight/legacy login, remote fuzzing
+and rate limit. Both flags are false in committed source. **Pending:** Studio and
+private-place DataStore acceptance, owner sign-off on PROVISIONAL coefficients/budgets,
+ledger compaction before public release.
 
 ## Operating rules
 - Preserve task IDs and record the commit/build or actual test evidence used for completion.
@@ -138,14 +162,14 @@ donors and the hard lock/favorite block are working defaults awaiting owner appr
 | BD-054 | Backlog | P0 | Responsive phone/tablet touch-zone navigation/control placement and safe insets | BD-052, BD-046 |
 | BD-055 | Backlog | P1 | Complete sky, atmosphere, cloud, particle and audio effects for all weather events | BD-031, BD-034 |
 | BD-056 | Backlog | P1 | Top-center growth metric and bottom-left egg-icon catches-only HUD | BD-044, BD-054 |
-| BD-057 | Review / test | P0 | Consume 10 same-species/same-pattern Base dinos to create ONE NEW Gold, then Emerald before Diamond; guaranteed stage, freshly rolled traits | BD-012, BD-060 |
+| BD-057 | Review / test | P0 | Consume 10 same-species/same-pattern Base dinos to create ONE NEW Gold, then Emerald before Diamond; guaranteed stage, freshly rolled traits (Gold transaction; provisional odds/remote via BD-064; Emerald/Diamond unapproved) | BD-012, BD-060 |
 | BD-058 | Backlog | P0 | Earned fusion stages as main permanent stat progression, fair caps, weekly grind and recipe pacing simulation | BD-057 |
 | BD-059 | Backlog | P1 | Buy and switch multiple aura/trail styles per individual dino; ALL purchased ingredient cosmetics are lost at fusion, never transfer to result | BD-060, BD-029, BD-038 |
-| BD-060 | Review / test | P0 | Unique dinosaur identity, hatched egg records, fused NEW instance lineage/parent egg history, safe profile migration | BD-011, BD-012, BD-041 |
+| BD-060 | Review / test | P0 | Unique dinosaur identity, hatched egg records, fused NEW instance lineage/parent egg history, safe profile migration (persistent playtest flag, default off: [53](53-bd064-fusion-server.md)) | BD-011, BD-012, BD-041 |
 | BD-061 | Backlog | P1 | Blender Gold/Emerald/Diamond additive surfaces, subtle/medium overlay A/B, stack every trait/effect | BD-057, BD-035 |
 | BD-062 | Backlog | P1 | Dino picker/details hatch egg or fused parent lineage, trait/cosmetic badges, hatch rarity vs conditional fusion odds/prestige | BD-059, BD-060, BD-057 |
 | BD-063 | Backlog | P1 | Pattern research/duplicate sink: deterministic earned-only progress toward species-pattern fusion donors | BD-057 |
-| BD-064 | Backlog | P0 | Ingredient-influenced fusion trait RNG (2/10 Shiny → proposed 10%), versioned true odds, paid-random gate and atomic NEW result | BD-057, BD-060 |
+| BD-064 | Review / test | P0 | Ingredient-influenced fusion trait RNG (2/10 Shiny → proposed 10%), versioned true odds, paid-random gate and atomic NEW result — PROVISIONAL `fusion-odds-provisional-v1` + `FusionAction` remote ([53](53-bd064-fusion-server.md)) | BD-057, BD-060 |
 | BD-065 | Backlog | P1 | Dedicated Fusion Menu: species/trait filters, manual ten-donor selection, odds preview, loss warnings and staged wheel reveals | BD-057, BD-060, BD-064 |
 
 ### BD-044: Owner-approved reward-loop correction (2026-10-08)
