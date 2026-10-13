@@ -1,0 +1,76 @@
+{
+  "task": "BD-061",
+  "status": "Blender prototype; Roblox Studio and physical-device verification pending",
+  "source_models": {
+    "Compy": {
+      "source": "resources/models/compy.obj",
+      "triangles": 712,
+      "vertices": 424,
+      "material_slots": 7,
+      "genetics": {
+        "primary": [
+          0.025,
+          0.42,
+          0.13,
+          1
+        ],
+        "secondary": [
+          0.02,
+          0.22,
+          0.82,
+          1
+        ],
+        "pattern": 0.0,
+        "pattern_name": "Wavy stripes",
+        "blend": "20/80 green/blue"
+      }
+    },
+    "Triceratops": {
+      "source": "resources/models/triceratops.obj",
+      "triangles": 988,
+      "vertices": 594,
+      "material_slots": 7,
+      "genetics": {
+        "primary": [
+          0.82,
+          0.035,
+          0.025,
+          1
+        ],
+        "secondary": [
+          0.91,
+          0.68,
+          0.28,
+          1
+        ],
+        "pattern": 1.0,
+        "pattern_name": "Spots",
+        "blend": "55/45 red/amber"
+      }
+    }
+  },
+  "treatments": [
+    "Gold_Subtle",
+    "Gold_Medium",
+    "Emerald_Subtle",
+    "Emerald_Medium",
+    "Diamond_Subtle",
+    "Diamond_Medium"
+  ],
+  "shared_node_group": "BD061_FusionOverlay_v1",
+  "medium_accessories": {
+    "detail_count": 3,
+    "mesh_objects_per_model": 1,
+    "triangles_total": 60,
+    "source": "three joined icospheres, subdivision 1"
+  },
+  "render_layers": [
+    "fusion surface",
+    "BIG scale",
+    "Shiny",
+    "event mutation",
+    "aura",
+    "trail"
+  ],
+  "roblox_note": "Bake stage masks to Color/Metalness/Roughness/Normal maps or use authored SurfaceAppearance templates; preserve runtime gene ColorMap and keep cosmetic particles separate."
+}
