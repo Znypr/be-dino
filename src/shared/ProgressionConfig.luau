@@ -7,8 +7,11 @@ return table.freeze({
     WeatherInterval=600, WeatherDuration=180,
     GrowthCap=8, SpeedCap=2.2,
     AccountXPPerLevel=100, AccountMaxLevel=60,
-    RunCrystalPerCatch=2, RunCrystalCap=500,
-    CrystalBoxes={{amount=5,weight=70},{amount=15,weight=25},{amount=50,weight=5}},
+    -- BD-044 PROVISIONAL run crystals (deterministic; the random 5/15/50 crystal box is retired):
+    -- crystals = min(RunCrystalCap, RunCrystalPerEgg*min(eggs,RunCrystalTierEggs)
+    --            + floor(RunCrystalPerExtraEggTenths*max(0,eggs-RunCrystalTierEggs)/10)).
+    -- 15 eggs -> 30, 150 eggs -> 219 (owner's illustrative 30/220 examples, not approved balance).
+    RunCrystalPerEgg=2, RunCrystalTierEggs=15, RunCrystalPerExtraEggTenths=14, RunCrystalCap=500,
     RandomEggPrice=150,
     ConditionUpgrades={
         {level=1,price=100,requiredLevel=3},{level=2,price=300,requiredLevel=8},
@@ -22,9 +25,22 @@ return table.freeze({
         {id="rainbow",name="Rainbow",stats=1.2,hatchChance=1},
         {id="astra",name="Astra",stats=1.8,hatchChance=1},
     },
+    -- BD-045 condition odds, integer weights out of ConditionWeightScale (10,000 = 100%).
+    -- Tier 0 is the owner target 50/30/15/4.5/0.5. Tiers 1-6 are a PROVISIONAL monotonic
+    -- curve (Cracked/Dirty fall, Normal/Rainbow/Astra rise every tier); not approved balance.
+    -- Historical Build 020 (build020-conditions, percent): {20,25,45,9,1},{17,23,47,11,2},
+    -- {14,21,48,14,3},{11,19,49,17,4},{8,17,50,20,5},{5,15,51,22,7},{2,12,51,25,10}.
+    -- Eggs keep the odds they were rolled with; traitRollVersion records the version.
+    ConditionOddsVersion="bd045-conditions-v1",
+    ConditionWeightScale=10000,
     ConditionWeights={
-        {20,25,45,9,1},{17,23,47,11,2},{14,21,48,14,3},
-        {11,19,49,17,4},{8,17,50,20,5},{5,15,51,22,7},{2,12,51,25,10},
+        {5000,3000,1500,450,50},
+        {4200,2900,2200,600,100},
+        {3400,2700,2900,800,200},
+        {2600,2400,3600,1050,350},
+        {1800,2100,4300,1300,500},
+        {1000,1800,4900,1600,700},
+        {400,1500,5200,1900,1000},
     },
     EggColors={
         {id="white",name="Cream",weight=5000,rgb={247,234,196}},

@@ -18,7 +18,7 @@ Maximum player access/policy work remains in progress:
 
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-017; BD-019–022; BD-035; **BD-044–056, BD-058–059, BD-061–063, BD-065** | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042; **BD-057 Phase 1; BD-060; BD-064 server** | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
+| BD-017; BD-019–022; BD-035; **BD-046–056, BD-058–059, BD-061–063, BD-065** | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042; **BD-044; BD-045; BD-057 Phase 1; BD-060; BD-064 server** | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -149,8 +149,8 @@ ledger compaction before public release.
 | BD-041 | Review / test | P1 | Two-colour egg genetics, Normal/Big eggs and independent shiny sparkle | BD-035, BD-037 |
 | BD-042 | Review / test | P1 | Five-second ordered hatches, Shiny/BIG and map leaderboards | BD-013, BD-034 |
 | BD-043 | In progress | P1 | UI animation, feedback, loading and preview performance | BD-015, BD-042 |
-| BD-044 | Backlog | P0 | Replace direct-copy rewards with caught-run-egg hatching, crystal payout and separate five-slot egg nests | BD-011, BD-013, BD-036, BD-042 |
-| BD-045 | Backlog | P0 | Rebalance condition odds to new owner starting distribution and update condition-upgrade/disclosure flow | BD-040 |
+| BD-044 | Review / test | P0 | Replace direct-copy rewards with caught-run-egg hatching, crystal payout and separate five-slot egg nests ([evidence](50-bd044-reward-loop.md); Studio pending) | BD-011, BD-013, BD-036, BD-042 |
+| BD-045 | Review / test | P0 | Rebalance condition odds to new owner starting distribution and update condition-upgrade/disclosure flow ([evidence](50-bd044-reward-loop.md#bd-045-condition-odds-bd045-conditions-v1); Studio pending) | BD-040 |
 | BD-046 | Backlog | P1 | Rename Auras nav entry to Shop with crystal icon; crystal HUD opens same Shop | BD-029, BD-036, BD-043 |
 | BD-047 | Backlog | P1 | Illustrated Crystal Shop category tiles, green-spotted egg icon, larger aura previews and leading tab icons | BD-046 |
 | BD-048 | Backlog | P1 | Trail icon art, Blender world VFX and six rarity categories across ten trails | BD-038, BD-034 |
@@ -175,7 +175,9 @@ ledger compaction before public release.
 
 ### BD-044: Owner-approved reward-loop correction (2026-10-08)
 
-**Status: Backlog; design confirmed, runtime NOT changed. P0 before economy/public release.**
+**Status: Review / test (2026-10-13). Implemented on `claude/bd-044-reward-loop`; offline Luau evidence only, Studio verification pending. P0 before economy/public release.**
+
+**Implementation 2026-10-13** ([details and evidence](50-bd044-reward-loop.md)): owner decisions of 2026-10-13 applied: one banked run egg per catch (15/150 at 500/5,000 food), exactly one dinosaur per successful egg, no `N(c)=c` copies or threshold eggs; server-side ordered run-egg bank behind the five-slot queue with exactly-once settlement (`settledRuns` + operation log, deterministic egg IDs, precommitted outcomes); PROVISIONAL deterministic run crystals (30/219); separate five bonus-nest slots with visible pending nests and a run-start gate instead of loss; additive schema, old queued eggs still claimable. New `tools/verify_rewards.py` in CI. Still open: Studio/device/multiplayer acceptance, 150-egg pacing UX, Uncommon/Epic taxonomy, balance sign-off. Checklist items below stay unchecked until Studio evidence exists.
 The newer owner's reward intent supersedes the 2026-09-17 test economy's `N(c)=c` immediate dinosaur copies and the 10/100/500 catches -> 1/2/3 extra-egg thresholds. [Canonical target and illustrated distributions](09-reward-economy.md) and [AI/contributor instructions](../AGENTS.md) define the intended behavior; [actual Build 020](44-main-integration-checklist.md) is the separate implementation record.
 
 **Acceptance checklist (do not check off from documentation alone):**
@@ -193,6 +195,7 @@ The newer owner's reward intent supersedes the 2026-09-17 test economy's `N(c)=c
 
 **Status:** all Backlog/TODO. The **task index above is authoritative** for status, priority, dependencies and ownership. Rather than duplicate every subtask here, use the detailed [categorized owner feedback specification](45-owner-feedback-shop-hud-world-weather-tasks.md) for acceptance checklists, source references and design constraints.
 
+- **BD-045 status (2026-10-13): Review / test.** Tier 0 = 50/30/15/4.5/0.5 as integer weights /10,000 (`bd045-conditions-v1`), PROVISIONAL monotonic tiers 1-6, Cracked 20% hatch success kept, new eggs versioned `bd045-genes-v2`, disclosure (`EggOutcomeOdds`/`ShopOdds`, Condition Shop) normalized and tested offline. Studio verification pending. [Evidence](50-bd044-reward-loop.md#bd-045-condition-odds-bd045-conditions-v1).
 - **Economy/shops:** BD-045 conditions (new starting odds **50/30/15/4.5/0.5**), BD-046 Shop entry, BD-047 category cards/icons and aura previews, BD-051 five-minute randomized potion offers.
 - **Art/world:** BD-048 ten trail assets and six proposed rarity classes, BD-049 reusable world props and landmarks, BD-050 food models, BD-055 environment-wide weather.
 - **Movement/UX:** BD-052 return confirmation, BD-053 terrain/sliding defect, BD-054 mobile/tablet touch placement, BD-056 growth and caught-egg HUD.

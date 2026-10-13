@@ -3,17 +3,26 @@ local Config=require(script.Parent.Config)
 local Progression=require(script.Parent.ProgressionConfig)
 local Outcomes=require(script.Parent.EggOutcomeOdds)
 local Odds={}
+-- Normalized condition percentages for an upgrade tier (weights are integers out of
+-- ConditionWeightScale, so 0.5% stays exact). Shared by disclosure text and shop UI.
+function Odds.conditionPercents(level)
+    local weights=Progression.ConditionWeights[math.clamp(level or 0,0,#Progression.ConditionWeights-1)+1]
+    local sum=0 for _,weight in weights do sum+=weight end
+    local result={}
+    for i,weight in weights do result[i]=100*weight/sum end
+    return result
+end
 function Odds.lines(level)
     local lines={"RANDOM EGG ODDS", "Species (one purchased egg; no run-batch boost):"}
     local total=0 for _,row in Config.ChestSpeciesWeights do total+=row.weight end
     for _,row in Config.ChestSpeciesWeights do table.insert(lines,string.format("%s: %.4f%%",Config.SpeciesDisplayNames[row.speciesId],100*row.weight/total)) end
     total=0 for _,row in Config.ChestQuantityWeights do total+=row.weight end
-    table.insert(lines,"Copies from a successful egg:")
-    for _,row in Config.ChestQuantityWeights do table.insert(lines,string.format("%d copies: %.4f%%",row.count,100*row.weight/total)) end
-    table.insert(lines,"Condition upgrade "..level..":")
-    local weights=Progression.ConditionWeights[level+1]
-    for i,row in Progression.Conditions do table.insert(lines,string.format("%s: %g%%; hatch %g%%; speed/growth %gx",row.name,weights[i],row.hatchChance*100,row.stats)) end
-    table.insert(lines,string.format("Failed egg: %.4f%% overall; no dinosaur or crystal refund",weights[1]*(1-Progression.Conditions[1].hatchChance)))
+    table.insert(lines,"Dinosaurs from a successful egg:")
+    for _,row in Config.ChestQuantityWeights do table.insert(lines,string.format("%d %s: %.4f%%",row.count,if row.count==1 then "dinosaur" else "dinosaurs",100*row.weight/total)) end
+    table.insert(lines,"Condition upgrade "..level.." ("..Progression.ConditionOddsVersion.."):")
+    local percents=Odds.conditionPercents(level)
+    for i,row in Progression.Conditions do table.insert(lines,string.format("%s: %g%%; hatch %g%%; speed/growth %gx",row.name,percents[i],row.hatchChance*100,row.stats)) end
+    table.insert(lines,"Failed egg: "..Outcomes.percent(Outcomes.failure(level)).." overall; no dinosaur or crystal refund")
     table.insert(lines,"Colors (each slot independently):")
     total=0 for _,row in Progression.EggColors do total+=row.weight end
     for _,row in Progression.EggColors do table.insert(lines,string.format("%s: %.4f%% per slot",row.name,100*row.weight/total)) end

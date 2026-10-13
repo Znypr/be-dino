@@ -101,13 +101,17 @@ local IdentityFusion=IDENTITY_FUSION_MODULE
 local FusionOdds=FUSION_ODDS_MODULE
 local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds"}}
 local rewardSpecies=nil
+local Rewards=nil
 local require=function(id)
  if id=="FusionOdds" then return FusionOdds end
- if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return {computeRunReward=function()return {stacks={},chestCount=2}end,computeChestReward=function()return {speciesId=if rewardSpecies then table.remove(rewardSpecies,1) else "raptor",count=2,mutationId="base"}end} end
+ if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return Rewards end
  error("unexpected module "..tostring(id))
 end
 local traitRoll=1
 local Random={new=function()return {NextNumber=function()return traitRoll end}end}
+-- Real BD-044 RewardMath (egg count, crystals, nests, IDs); species rolls are fixture-controlled.
+local RealRewards=REWARDS_MODULE
+Rewards=setmetatable({computeChestReward=function()return {speciesId=if rewardSpecies then table.remove(rewardSpecies,1) else "raptor",count=1,mutationId="base"}end},{__index=RealRewards})
 local Repository=REPO_MODULE
 local player={Parent=true,UserId=123,Name="Test",attrs={}}
 function player:SetAttribute(k,v)self.attrs[k]=v end
@@ -173,10 +177,11 @@ assert(Repository.load(eventUser))
 local genes={conditionId="normal",hatchSuccess=true,primaryColorId="white",secondaryColorId="blue",blend=80}
 local tags={{eventId="volcano",mutationId="ember",genes=genes,shiny=false,big=false},{eventId="aurora",mutationId="aurora",genes=genes,shiny=false,big=false}}
 local emberKey=EggTraits.key("ember",false,false,genes)
-assert(Repository.commitRunSettlement(eventUser,"event-run",10,tags))
-assert(Repository.commitRunSettlement(eventUser,"event-run",10,tags))
-assert(#data['u:888'].eggs==5 and data['u:888'].pendingChestGrants==1)
-assert(data['u:888'].eggs[5].mutationId=="ember" and data['u:888'].pendingEggEvents[1].mutationId=="aurora")
+assert(Repository.commitRunSettlement(eventUser,"event-run",2,tags))
+assert(Repository.commitRunSettlement(eventUser,"event-run",2,tags))
+-- BD-044: the 2 catches bank exactly 2 run eggs; the one beyond the 5-slot queue waits in the bank.
+assert(#data['u:888'].eggs==5 and data['u:888'].pendingChestGrants==0 and #data['u:888'].runEggBank==1)
+assert(data['u:888'].eggs[5].mutationId=="ember" and data['u:888'].runEggBank[1].mutationId=="aurora")
 Repository.release(eventUser)
 data['u:888'].eggs[5].readyAt=1
 local emberId=data['u:888'].eggs[5].eggId
@@ -186,8 +191,8 @@ for i=1,4 do assert(Repository.claimChest(eventUser,"fixture-"..i)) end
 local claimed,reward=Repository.claimChest(eventUser,emberId)
 assert(claimed and reward.eventMutationId=="ember")
 assert(Repository.claimChest(eventUser,emberId))
-assert(data['u:888'].collection.raptor.variants[emberKey].count==2 and data['u:888'].collection.raptor.base==8)
-assert(data['u:888'].pendingChestGrants==0 and #data['u:888'].pendingEggEvents==0)
+assert(data['u:888'].collection.raptor.variants[emberKey].count==1 and data['u:888'].collection.raptor.base==4)
+assert(data['u:888'].pendingChestGrants==0 and #data['u:888'].runEggBank==0)
 assert(data['u:888'].eggs[1].mutationId=="aurora")
 assert(Repository.equipSpecies(eventUser,"raptor") and eventUser.attrs.EquippedEventMutation=="ember")
 assert(not Repository.commitRunSettlement(eventUser,"bad-event",10,{{eventId="volcano",mutationId="frost"}}))
@@ -197,13 +202,13 @@ print("Event transactions passed: repeated settlement transforms, overflow FIFO,
 assert(Repository.claimChest(eventUser,data['u:888'].eggs[1].eggId))
 traitRoll=0
 local stackedTags=copy(tags) for _,tag in stackedTags do tag.shiny=true tag.big=true end
-assert(Repository.commitRunSettlement(eventUser,"stacked-traits",10,stackedTags))
+assert(Repository.commitRunSettlement(eventUser,"stacked-traits",2,stackedTags))
 local stackedId=data['u:888'].eggs[1].eggId
 local success,stacked=Repository.claimChest(eventUser,stackedId)
 assert(success and stacked.shiny and stacked.big)
 assert(Repository.claimChest(eventUser,stackedId))
-assert(data['u:888'].collection.raptor.variants[EggTraits.key("ember",true,true,genes)].count==2)
-assert(data['u:888'].collection.raptor.variants[emberKey].count==2 and data['u:888'].collection.raptor.base==8)
+assert(data['u:888'].collection.raptor.variants[EggTraits.key("ember",true,true,genes)].count==1)
+assert(data['u:888'].collection.raptor.variants[emberKey].count==1 and data['u:888'].collection.raptor.base==4)
 Repository.release(eventUser)
 assert(Repository.load(eventUser) and eventUser.attrs.EquippedBig and eventUser.attrs.EquippedShiny)
 assert(eventUser.attrs.RarestCaught==1)
@@ -226,7 +231,7 @@ function sortedUser:SetAttribute(k,v)self.attrs[k]=v end
 function sortedUser:GetAttribute(k)return self.attrs[k]end
 assert(Repository.load(sortedUser))
 rewardSpecies={"ankylosaurus","raptor"}
-assert(Repository.commitRunSettlement(sortedUser,"sorted-run",100,tags))
+assert(Repository.commitRunSettlement(sortedUser,"sorted-run",2,tags))
 rewardSpecies=nil
 local first,second=data['u:880'].eggs[1],data['u:880'].eggs[2]
 assert(first.reward.speciesId=="raptor" and first.mutationId=="aurora")
@@ -238,7 +243,7 @@ assert(Repository.load(sortedUser))
 local ok,legend=Repository.claimChest(sortedUser,second.eggId)
 assert(ok and legend.speciesId=="ankylosaurus" and sortedUser.attrs.RarestCaught==3)
 assert(Repository.claimChest(sortedUser,second.eggId))
-assert(data['u:880'].collection.ankylosaurus.variants[emberKey].count==2)
+assert(data['u:880'].collection.ankylosaurus.variants[emberKey].count==1)
 print("Ordering passed: low-to-high committed outcomes, matching event metadata, out-of-order rejection and no reroll across rejoin")
 -- New economy behavior uses real rules and repository transactions, including repeated transforms.
 local shopper={Parent=true,UserId=991,attrs={}}
@@ -250,14 +255,25 @@ assert(wallet.trails.white and shopper.attrs.AccountLevel==1)
 assert(Repository.progressionAction(shopper,"grant","crystal","shop-fund",false,100))
 assert(not Repository.progressionAction(shopper,"buyTrail","fern","locked-trail",false))
 assert(wallet.accountXP==0)
+-- BD-044: 400 catches clamp to the 300-egg run cap; XP = run eggs; deterministic PROVISIONAL crystals.
 assert(Repository.commitRunSettlement(shopper,"xp-run",400))
+assert(Repository.progression(shopper).crystals==529 and shopper.attrs.AccountLevel==2) -- 100 + 429
+assert(Repository.commitRunSettlement(shopper,"xp-run-2",100))
 local balance=Repository.progression(shopper).crystals
-assert(balance==650 and shopper.attrs.AccountLevel==3) -- 100 + capped 500 + 50 box
+assert(balance==678 and shopper.attrs.AccountLevel==3) -- + 149
 assert(Repository.commitRunSettlement(shopper,"xp-run",400))
 assert(Repository.progression(shopper).crystals==balance and Repository.progression(shopper).accountXP==400)
+assert(#data['u:991'].eggs==5 and #data['u:991'].runEggBank==395 and #data['u:991'].nests==5 and #data['u:991'].pendingNests==10)
+assert(shopper.attrs.RunStartBlocked=="egg_bank_full" and shopper.attrs.BankedRunEggCount==395)
+-- Fixture reset so the purchase checks below start from an empty queue.
+Repository.release(shopper)
+data['u:991'].eggs={} data['u:991'].runEggBank={} data['u:991'].nests={} data['u:991'].pendingNests={}
+assert(Repository.load(shopper) and shopper.attrs.RunStartBlocked=="")
+assert(Repository.commitRunSettlement(shopper,"genes-run",1)) -- one queued egg (+2 crystals)
+assert(#data['u:991'].eggs==1 and data['u:991'].eggs[1].traitRollVersion=="bd045-genes-v2")
 assert(Repository.progressionAction(shopper,"buyTrail","fern","buy-fern",false))
 assert(Repository.progressionAction(shopper,"buyTrail","fern","buy-fern",false))
-assert(Repository.progression(shopper).crystals==550)
+assert(Repository.progression(shopper).crystals==580)
 assert(Repository.progressionAction(shopper,"equipTrail","fern","equip-fern",false))
 local growth,speed=Rules.multipliers(Repository.progression(shopper),"compy",nil,0,"dirty")
 assert(math.abs(growth-.8)<1e-8 and math.abs(speed-.816)<1e-8)
@@ -265,14 +281,14 @@ assert(Repository.progressionAction(shopper,"upgradeCondition","1","policy-block
 mutableConfig.DeveloperProducts={} -- No Robux-buyable currency: earned-only path.
 assert(Repository.progressionAction(shopper,"upgradeCondition","1","condition-1",false))
 assert(Repository.progressionAction(shopper,"upgradeCondition","1","condition-1",false))
-assert(Repository.progression(shopper).conditionLevel==1 and Repository.progression(shopper).crystals==450)
+assert(Repository.progression(shopper).conditionLevel==1 and Repository.progression(shopper).crystals==480)
 local oldGenes=copy(data['u:991'].eggs[1].genes)
 assert(oldGenes.conditionId==data['u:991'].eggs[1].genes.conditionId)
 assert(Repository.progressionAction(shopper,"buyEgg","random","egg-buy-1",false))
 local boughtId=data['u:991'].eggs[#data['u:991'].eggs].eggId
 local queueCount=#data['u:991'].eggs
 assert(Repository.progressionAction(shopper,"buyEgg","random","egg-buy-1",false))
-assert(#data['u:991'].eggs==queueCount and Repository.progression(shopper).crystals==300)
+assert(#data['u:991'].eggs==queueCount and Repository.progression(shopper).crystals==330)
 assert(data['u:991'].eggs[1].genes.conditionId==oldGenes.conditionId)
 Repository.release(shopper)
 assert(Repository.load(shopper) and data['u:991'].eggs[#data['u:991'].eggs].eggId==boughtId)
@@ -333,7 +349,7 @@ assert(localUser.attrs.ChestQueueJson[2].readyAt-localUser.attrs.ChestQueueJson[
 assert(transforms==persistentCalls and data['u:999']==nil)
 local chestId = localUser.attrs.ChestQueueJson[1].id
 local claimed, hatch = LocalRepository.claimChest(localUser, chestId)
-assert(claimed and #hatch.instanceIds == 2 and hatch.instanceIds[1] ~= hatch.instanceIds[2])
+assert(claimed and #hatch.instanceIds == 1) -- BD-044: exactly one dinosaur identity per hatched egg
 local first = LocalRepository.dinosaurDetails(localUser, hatch.instanceIds[1])
 assert(first.origin.kind == "hatch" and first.originalEgg.eggId == chestId)
 assert(first.originalEgg.source.kind == "run" and first.originalEgg.source.originalEggId == chestId)
@@ -343,7 +359,7 @@ local replayed, replay = LocalRepository.claimChest(localUser, chestId)
 assert(replayed and replay.instanceIds[1] == hatch.instanceIds[1])
 LocalRepository.release(localUser)
 assert(LocalRepository.load(localUser))
-assert(LocalRepository.dinosaurDetails(localUser, hatch.instanceIds[2]).originalEgg.eggId == chestId)
+assert(LocalRepository.dinosaurDetails(localUser, hatch.instanceIds[1]).originalEgg.eggId == chestId)
 assert(LocalRepository.dinosaurDetails(localUser, "u:999/d:1").origin.kind == "legacy_unknown")
 assert(transforms==persistentCalls and data['u:999']==nil)
 -- BD-057 Phase 1: fusion through the real repository, memory profiles only.
@@ -494,11 +510,11 @@ for round=1,6 do
  assert(PersistentRepository.commitRunSettlement(pu,"persist-run-"..round,10))
  for _,chest in pu.attrs.ChestQueueJson do
   local ok,h=PersistentRepository.claimChest(pu,chest.id)
-  assert(ok and #h.instanceIds==2,"hatch credited identities")
+  assert(ok and #h.instanceIds==1,"hatch credited one identity (BD-044)")
   for _,id in h.instanceIds do table.insert(hatched,id) end
  end
 end
-assert(#hatched==24)
+assert(#hatched==30) -- BD-044: 5 queued eggs claimed per 10-egg run, one identity each
 for _,id in hatched do
  local stored=data[KEY].dinosaurIdentity.instances[id]
  assert(stored and stored.origin.kind=="hatch" and data[KEY].dinosaurIdentity.eggs[stored.origin.eggId])
@@ -787,7 +803,7 @@ leapNow=62 h.FloorMaterial="grass" ownerFailure=true activate(user) assert(user.
 leapNow=63 ownerFailure=false activate(user) assert(ownerChanges==2 and user.attrs.LeapReadyAt==123)
 print("Leap handler passed: malformed requests, exact 60s cooldown, wall/air rejection, failed ownership and cleanup")
 """
- return s.replace('FUSION_ODDS_MODULE',module('src/server/FusionOdds.luau')).replace('FUSION_SERVICE_MODULE',module('src/server/FusionService.luau')).replace('IDENTITY_FUSION_MODULE',module('src/server/IdentityFusion.luau')).replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))
+ return s.replace('FUSION_ODDS_MODULE',module('src/server/FusionOdds.luau')).replace('FUSION_SERVICE_MODULE',module('src/server/FusionService.luau')).replace('IDENTITY_FUSION_MODULE',module('src/server/IdentityFusion.luau')).replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('REWARDS_MODULE',module('src/server/RewardMath.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))
 if __name__=='__main__':
  parser=argparse.ArgumentParser();parser.add_argument('--runner',required=True);args=parser.parse_args()
  with tempfile.TemporaryDirectory() as d:

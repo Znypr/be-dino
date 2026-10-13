@@ -34,6 +34,13 @@ end
 
 function RunLifecycle.begin(player: Player, character: Model)
     if player:GetAttribute("ProfileState") ~= "Loaded" then return end
+    -- BD-044: a run starts only when the egg bank and pending-nest list have room for a
+    -- maximum run, so settlement never has to drop or refuse earned eggs/nests.
+    local blocked = player:GetAttribute("RunStartBlocked")
+    if typeof(blocked) == "string" and blocked ~= "" then
+        player:SetAttribute("LastRunStartStatus", blocked)
+        return
+    end
     if character:GetAttribute("RunId") ~= nil then return end
     character:SetAttribute("RunId", HttpService:GenerateGUID(false))
     player:SetAttribute("Location", "Island")
@@ -73,7 +80,7 @@ local function settlementSnapshot(character: Model)
     local ok,events=pcall(function() return HttpService:JSONDecode(character:GetAttribute("RunEggEvents") or "[]") end)
     return {
         runId = runId,
-        catchScore = math.clamp(catchScore, 0, Config.MaxCatchScore),
+        catchScore = math.clamp(catchScore, 0, Config.RunEggMaxPerRun), -- one run egg per catch
         eggEvents=if ok and typeof(events)=="table" then events else {},
     }
 end

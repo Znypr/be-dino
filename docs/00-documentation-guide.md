@@ -10,7 +10,7 @@
 | AI/contributor behavior | [AGENTS.md](../AGENTS.md) | Read before planning or editing |
 | Tasks, priorities, dependencies and **status** | **[07-kanban.md](07-kanban.md)** | The **single live task board**; never maintain a competing board |
 | Detailed owner feedback: UI, shops, 3D assets, movement, weather | [45-owner-feedback-shop-hud-world-weather-tasks.md](45-owner-feedback-shop-hud-world-weather-tasks.md) | Acceptance details for **BD-045–056**; do not mirror status here |
-| Food/catch -> egg rewards | [09-reward-economy.md](09-reward-economy.md) and **BD-044** in Kanban | **Intended** egg-per-catch model, not yet coded |
+| Food/catch -> egg rewards | [09-reward-economy.md](09-reward-economy.md), **BD-044** in Kanban, [50-bd044-reward-loop.md](50-bd044-reward-loop.md) | Egg-per-catch + BD-045 odds implemented on the BD-044 branch (Review / test, Studio pending); not in Build 020 main |
 | Implementation and release verification | [44-main-integration-checklist.md](44-main-integration-checklist.md) | **Build 020** bounded test evidence and remaining gates; does not supersede Kanban statuses |
 | Current Studio instructions | [34-studio-handoff.md](34-studio-handoff.md) | Begin with its **Build 020 workflow**, not archived Build 019 steps |
 | Game balance/tunables and current data IDs | [`src/shared/Config.luau`](../src/shared/Config.luau), [`ProgressionConfig.luau`](../src/shared/ProgressionConfig.luau), current Luau source | Actual committed implementation. Confirm runtime and migration separately |

@@ -31,6 +31,7 @@ local startRun = remotes:WaitForChild("RequestStartRun") :: RemoteEvent
 local endRun = remotes:WaitForChild("RequestEndRun") :: RemoteEvent
 local equip = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
 local hatch = remotes:WaitForChild("ClaimChest") :: RemoteEvent
+local claimNestRemote = remotes:WaitForChild("ClaimNest") :: RemoteEvent -- BD-044 bonus nests
 local fuse = remotes:WaitForChild("MutateSpecies") :: RemoteEvent
 local shopAction=remotes:WaitForChild("ProgressionAction") :: RemoteEvent
 local shopResult=remotes:WaitForChild("ProgressionResult") :: RemoteEvent
@@ -294,7 +295,7 @@ render=function(name: string)
             button(body,"BUY EGG",270,cardsY+targetHeight+130,535,targetHeight,C.accent,function() open("eggPurchase") end)
             return
         elseif cosmeticTab=="conditions" then
-            local weights=ProgressionConfig.ConditionWeights[(p.conditionLevel or 0)+1]
+            local weights=ShopOdds.conditionPercents(p.conditionLevel or 0) -- BD-045: normalized percents
             local upgrade=ProgressionConfig.ConditionUpgrades[(p.conditionLevel or 0)+1]
             label(body,"Condition Level "..(p.conditionLevel or 0).."  •  Account "..num("AccountLevel"),0,cardsY,824,35,26,C.gold)
             for i,row in ProgressionConfig.Conditions do
@@ -388,7 +389,7 @@ render=function(name: string)
         label(body,price.." Crystals\nBalance after: "..(num("Crystals")-price),260,10,550,80,27,C.gold)
         label(body,if isEgg then "Cracked: 20% hatch success. A failed hatch gives no dinosaur or refund. Queue-full purchases are not charged." else "Account level "..(if upgrade then upgrade.requiredLevel else 60).." required. Existing eggs keep their conditions.",260,105,550,95,23)
         if not isEgg and upgrade then
-            local parts={} for i,row in ProgressionConfig.Conditions do table.insert(parts,row.name.." "..ProgressionConfig.ConditionWeights[upgrade.level+1][i].."%") end
+            local parts={} for i,row in ProgressionConfig.Conditions do table.insert(parts,row.name.." "..ShopOdds.conditionPercents(upgrade.level)[i].."%") end
             label(body,table.concat(parts," • "),0,213,824,60,21,C.blue)
         end
         button(body,"VIEW ODDS",0,300,250,math.max(64,45/viewportScale()),C.blue,function()
@@ -558,7 +559,16 @@ render=function(name: string)
             autoHatching=true
             hatchNext()
         end)
-        label(body,"Waiting for a nest slot: "..num("PendingChestGrants"),420,302,400,88,21)
+        -- BD-044 (minimal, isolated hook): banked run eggs and separate bonus nests.
+        local nestsOk,nests=pcall(function() return Http:JSONDecode(str("NestsJson","[]")) end)
+        if not nestsOk or typeof(nests)~="table" then nests={} end
+        local readyNest=nil
+        for _,nest in nests do if typeof(nest.readyAt)=="number" and nest.readyAt<=workspace:GetServerTimeNow() then readyNest=nest break end end
+        label(body,"Eggs waiting: "..num("QueuedEggsWaiting").."\nBonus nests: "..#nests.."/"..Config.NestSlotCapacity.."  •  Pending: "..num("PendingNestCount"),420,296,400,56,19)
+        button(body,if readyNest then "OPEN BONUS NEST" else "NEST INCUBATING",420,354,400,40,if readyNest then C.gold else C.card,function()
+            if not readyNest then notify(if #nests==0 then "No bonus nests yet" else "Bonus nest still incubating",C.gold) return end
+            claimNestRemote:FireServer(readyNest.id)
+        end)
     elseif name=="hatch" then
         heading.Text,header.BackgroundColor3="An egg is hatching...",C.gold
         local version=modalVersion
@@ -934,7 +944,7 @@ local function scheduleModalRefresh()
         end
     end)
 end
-for _,attribute in {"EquippedSpeciesId","CollectionJson","ChestQueueJson","ProgressionJson"} do
+for _,attribute in {"EquippedSpeciesId","CollectionJson","ChestQueueJson","ProgressionJson","NestsJson","QueuedEggsWaiting"} do
     player:GetAttributeChangedSignal(attribute):Connect(function()
         scheduleModalRefresh()
     end)
@@ -959,12 +969,12 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
     end)
 end)
 player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)
-for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus"} do
+for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus","LastNestClaimStatus","LastRunStartStatus"} do
     player:GetAttributeChangedSignal(attribute):Connect(function()
         local status=str(attribute)
         if attribute=="LastChestClaimStatus" then hatchPending=false end
         if status=="claimed" then toast.Visible=false
-        elseif status=="equipped" or status=="mutated" then notify("Success!",C.accent)
+        elseif status=="equipped" or status=="mutated" or status=="opened" then notify("Success!",C.accent)
         elseif status~="" and status~="duplicate" then notify(status:gsub("_"," "),C.red) end
     end)
 end
