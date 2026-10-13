@@ -22,6 +22,17 @@ Maximum player access/policy work remains in progress:
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
+### Studio check of merged main — 2026-10-13
+
+Unpublished copy of `main` (`9a9b1ee`, GameId/PlaceId 0), Studio Play, one player. Floor food built
+(1,536 pickups, status Ready); a run started; 3 of 3 pickups eaten with growth 0 → 7; an eaten pickup
+respawned after the 8 s configured delay; the Home request returned the dino to the Sanctuary.
+BD-027 stays Review / test pending phone and multi-client evidence. With the fusion flag on in that
+copy only, the real `FusionAction` remote answered over a real client connection: list, details,
+`wrong_donor_count`, `bad_request` for unknown actions and extra fields, and Emerald refusal.
+Not yet checked: Fusion Menu on screen, 1 s reveal and rarity-skip UI, Android layout, hill traction,
+world-art mode, a real 10-donor fusion through the game's own repository instance.
+
 ### Milestone 1 owner decisions — 2026-10-13
 
 Znypr set the first milestone and handed project lead to Claude:
@@ -132,7 +143,7 @@ ledger compaction before public release.
 | BD-024 | Review / test | P1 | Restore visible egg previews | Build 017 |
 | BD-025 | Review / test | P1 | Enlarge centered dinosaur previews | Build 017 |
 | BD-026 | Review / test | P1 | Replace pixelated UI icon rendering everywhere | Build 017 |
-| BD-027 | Ready | P0 | Verify visible floor food and close Build 017 regressions | BD-023–026 |
+| BD-027 | Review / test | P0 | Verify visible floor food and close Build 017 regressions | BD-023–026 |
 | BD-028 | Review / test | P1 | Persistent crystal currency and random map pickups | BD-027, BD-011 |
 | BD-029 | Review / test | P1 | Aura shop, ownership/equip and eating-growth effects | BD-028 |
 | BD-030 | Review / test | P1 | Forward leap with 60-second cooldown and HUD | BD-027, BD-006 |
