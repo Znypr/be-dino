@@ -16,7 +16,6 @@ function RunLifecycle.prepareSanctuary(player: Player, character: Model)
     character:SetAttribute("FoodCatchCarry", 0)
     character:SetAttribute("WeatherLootCarry",0)
     character:SetAttribute("RunEggEvents","[]")
-    character:SetAttribute("ExitChannelEndsAt", 0)
     player:SetAttribute("Location", "Sanctuary")
 end
 
@@ -44,7 +43,6 @@ function RunLifecycle.begin(player: Player, character: Model)
     character:SetAttribute("WeatherLootCarry",0)
     character:SetAttribute("RunEggEvents","[]")
     character:SetAttribute("SpawnProtectionEndsAt", workspace:GetServerTimeNow() + Config.SpawnProtectionSeconds)
-    character:SetAttribute("ExitChannelEndsAt", 0)
 
     task.spawn(function()
         local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
@@ -115,7 +113,6 @@ function RunLifecycle.tryEnd(player: Player, character: Model, reason: string, s
     end
 
     character:SetAttribute("RunState", "Ending")
-    character:SetAttribute("ExitChannelEndsAt", 0)
     player:SetAttribute("LastRunEndReason", reason)
     player:SetAttribute("LastRunCatchScore", snapshot.catchScore)
     local growthScore = character:GetAttribute("GrowthScore")
@@ -146,7 +143,6 @@ function RunLifecycle.endForDisconnect(player: Player): string
     if not snapshot then return "none" end
 
     character:SetAttribute("RunState", "Ending")
-    character:SetAttribute("ExitChannelEndsAt", 0)
     player:SetAttribute("LastRunEndReason", "Disconnect")
     player:SetAttribute("LastRunCatchScore", snapshot.catchScore)
     local growthScore = character:GetAttribute("GrowthScore")
@@ -158,39 +154,28 @@ function RunLifecycle.endForDisconnect(player: Player): string
     return "settled"
 end
 
-local function cancelExit(character: Model)
-    if character:GetAttribute("RunState") == "Active" then
-        character:SetAttribute("ExitChannelEndsAt", 0)
-    end
-end
-
-local function startExitChannel(player: Player, character: Model)
+-- BD-052: without the old stay-still channel, Home must not be an instant escape from a
+-- predator that is already closing in. Mirrors PredationService's size rule.
+local function predatorNearby(player: Player, character: Model): boolean
     local root = character:FindFirstChild("HumanoidRootPart")
-    if not root or not root:IsA("BasePart") then return end
-    local currentEnd = character:GetAttribute("ExitChannelEndsAt")
-    if typeof(currentEnd) == "number" and currentEnd > workspace:GetServerTimeNow() then return end
-
-    local origin = root.Position
-    character:SetAttribute("ExitChannelEndsAt", workspace:GetServerTimeNow() + Config.ExitChannelSeconds)
-    task.spawn(function()
-        local deadline = os.clock() + Config.ExitChannelSeconds
-        while os.clock() < deadline do
-            task.wait(0.1)
-            if player.Character ~= character or character:GetAttribute("RunState") ~= "Active" then
-                return
-            end
-            local currentRoot = character:FindFirstChild("HumanoidRootPart")
-            if not currentRoot or not currentRoot:IsA("BasePart") then
-                cancelExit(character)
-                return
-            end
-            if (currentRoot.Position - origin).Magnitude > Config.ExitMoveCancelDistance then
-                cancelExit(character)
-                return
+    if not root or not root:IsA("BasePart") then return false end
+    local rawScore = character:GetAttribute("GrowthScore")
+    local score = if typeof(rawScore) == "number" then rawScore else 0
+    local now = workspace:GetServerTimeNow()
+    if RunLifecycle.isProtected(character, now) then return false end
+    for _, other in Players:GetPlayers() do
+        local otherCharacter = if other ~= player then activeCharacter(other) else nil
+        local otherRoot = if otherCharacter then otherCharacter:FindFirstChild("HumanoidRootPart") else nil
+        if otherCharacter and otherRoot and otherRoot:IsA("BasePart") and not RunLifecycle.isProtected(otherCharacter, now) then
+            local rawOther = otherCharacter:GetAttribute("GrowthScore")
+            local otherScore = if typeof(rawOther) == "number" then rawOther else 0
+            if otherScore > score and otherScore >= score * Config.PredationScoreMultiplier
+                and (otherRoot.Position - root.Position).Magnitude <= Config.HomeThreatRadius then
+                return true
             end
         end
-        RunLifecycle.tryEnd(player, character, "ManualExit")
-    end)
+    end
+    return false
 end
 
 function RunLifecycle.start()
@@ -237,7 +222,17 @@ function RunLifecycle.start()
         lastExitRequest[player] = now
         local character = activeCharacter(player)
         if not character then return end
-        startExitChannel(player, character)
+        if predatorNearby(player, character) then
+            player:SetAttribute("LastExitStatus", "predator_nearby")
+            player:SetAttribute("LastExitStatusAt", workspace:GetServerTimeNow())
+            return
+        end
+        player:SetAttribute("LastExitStatus", "returning")
+        player:SetAttribute("LastExitStatusAt", workspace:GetServerTimeNow())
+        -- BD-052: the client already showed a Return/Cancel confirmation, so Home ends the
+        -- run immediately (no stay-still channel). tryEnd is the same idempotent path as
+        -- death and predation: the first caller flips Active -> Ending and settles once.
+        RunLifecycle.tryEnd(player, character, "ManualExit")
     end)
 
     Players.PlayerRemoving:Connect(function(player)

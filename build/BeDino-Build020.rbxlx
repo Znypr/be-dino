@@ -364948,11 +364948,24 @@ return table.freeze({
     WalkSpeed = 22,
     JumpPower = 50,
     MaxSlopeAngle = 46,
+    -- BD-053 torso collider. Footprint grows with the dinosaur, but its underside is lifted so
+    -- it clears any ground slope up to MaxSlopeAngle under every footprint corner. PROVISIONAL.
+    DinoColliderWidth = 2.6,
+    DinoColliderLength = 3.2,
+    DinoColliderTopPerScale = 2.6, -- PROVISIONAL: collider top above floor per unit visual scale
+    DinoColliderMinHeight = 1.2, -- PROVISIONAL
+    DinoColliderMinClearance = 0.2,
+    DinoColliderSlopeMargin = 0.35, -- PROVISIONAL: studs on top of the planar slope clearance
+    MovementGuardMaxVerticalSpeed = 120,
     TerrainResolution = 4,
     TerrainTop = 120,
     ArenaHalfWidth = 260,
     CameraMinZoom = 12,
     CameraMaxZoom = 110,
+    -- BD-054 touch HUD layout (shared/TouchLayout). PROVISIONAL until physical Android review.
+    TouchMinTargetPx = 44, -- PROVISIONAL minimum touch target edge in canvas px
+    TouchSafeMargin = 8, -- PROVISIONAL gap to safe-area edges, Roblox touch controls and each other
+    TouchMinHudScale = 0.62, -- PROVISIONAL keeps HUD text &gt;= ~12 px on 360 px tall phones
 
     FoodPoints = 1,
     FoodRespawnSeconds = 8,
@@ -364977,9 +364990,9 @@ return table.freeze({
     PredationGrowthPoints = 25,
     RepeatVictimCatchCooldownSeconds = 60,
 
-    ExitChannelSeconds = 3,
-    ExitMoveCancelDistance = 2,
+    -- BD-052: Home is a confirmed, immediate return; the 3-second stay-still channel is removed.
     ExitRequestCooldownSeconds = 0.75,
+    HomeThreatRadius = 30, -- PROVISIONAL: Home is refused while a dinosaur that can eat you is this close
     RespawnDelaySeconds = 2,
 
     MaxCatchScore = 5000,
@@ -367596,14 +367609,51 @@ return ModelPreview
         <Properties>
           <string name="Name">MovementEnvelope</string>
           <ProtectedString name="Source">--!strict
+-- Shared movement envelope. The same numbers drive the Humanoid setup (Dinosaur.luau),
+-- the torso collider and every server plausibility check, so allowed traversal and
+-- anti-cheat tolerance cannot drift apart (BD-053).
 local Config = require(script.Parent.Config)
 local MovementEnvelope = {}
+
+local function slopeTangent(): number
+    return math.tan(math.rad(Config.MaxSlopeAngle))
+end
+
+-- Fastest legitimate vertical climb while walking up the steepest allowed slope.
+function MovementEnvelope.maxClimbRate(speed: number): number
+    return math.max(0, speed) * slopeTangent()
+end
+
 function MovementEnvelope.plausible(delta: Vector3, dt: number, tolerance: number, burst: number, verticalVelocity: number, speed: number?): boolean
+    local walk = speed or Config.WalkSpeed
     local horizontal = Vector2.new(delta.X, delta.Z).Magnitude
-    local verticalSpeed = math.max(Config.JumpPower, math.min(120, math.abs(verticalVelocity)))
-    return horizontal &lt;= (speed or Config.WalkSpeed) * dt * tolerance + burst
+    local verticalSpeed = math.max(
+        Config.JumpPower,
+        MovementEnvelope.maxClimbRate(walk),
+        math.min(Config.MovementGuardMaxVerticalSpeed, math.abs(verticalVelocity))
+    )
+    return horizontal &lt;= walk * dt * tolerance + burst
         and math.abs(delta.Y) &lt;= verticalSpeed * dt + workspace.Gravity * dt * dt / 2 + burst
 end
+
+-- Torso collider box for a dinosaur at `scale`, welded to the HumanoidRootPart whose
+-- floor sits `groundHeight` studs below its centre. Returns width, height, length and
+-- the collider centre's Y offset from the root. The footprint grows with the visual,
+-- but the underside clears a plane tilted to MaxSlopeAngle in any direction (the worst
+-- case is the half-diagonal), so the box never wedges into a walkable hill.
+function MovementEnvelope.collider(scale: number, groundHeight: number): (number, number, number, number)
+    local width = Config.DinoColliderWidth * scale
+    local length = Config.DinoColliderLength * scale
+    local halfDiagonal = math.sqrt(width * width + length * length) / 2
+    local bottom = math.max(
+        Config.DinoColliderMinClearance,
+        halfDiagonal * slopeTangent() + Config.DinoColliderSlopeMargin
+    )
+    local top = math.max(bottom + Config.DinoColliderMinHeight, Config.DinoColliderTopPerScale * scale)
+    local height = top - bottom
+    return width, height, length, -groundHeight + bottom + height / 2
+end
+
 return MovementEnvelope
 </ProtectedString>
         </Properties>
@@ -368369,6 +368419,206 @@ return Odds
       </Item>
       <Item class="ModuleScript" referent="RBX214">
         <Properties>
+          <string name="Name">TouchLayout</string>
+          <ProtectedString name="Source">--!strict
+-- BD-054: pure gameplay-HUD layout math for touch phones/tablets and desktop.
+-- No Roblox services are used: every number is a pixel inside the BeDinoUI ScreenGui
+-- canvas, which uses ScreenInsets = CoreUISafeInsets (device notch/gesture bar and the
+-- Roblox top bar are already excluded). Bootstrap.client.luau applies the result;
+-- tools/verify_movement_mobile.py checks it for several viewports offline.
+--
+-- Each placed element is {x, y, scale, w, h}: (x, y) is the top-left corner with
+-- AnchorPoint (0, 0), (w, h) is the design size before UIScale, so the rendered
+-- rectangle is (x, y, w * scale, h * scale).
+local Config = require(script.Parent.Config)
+local TouchLayout = {}
+
+export type Rect = {x: number, y: number, w: number, h: number}
+
+TouchLayout.HUD = {w = 390, h = 94}
+TouchLayout.CRYSTAL = {w = 260, h = 48}
+TouchLayout.TIMERS_W = 286
+TouchLayout.LEAP_H, TouchLayout.WEATHER_H, TouchLayout.BUFFS_H = 60, 62, 68
+TouchLayout.ACTION = {w = 244, h = 60}
+
+local function clamp(value: number, low: number, high: number): number
+    return math.max(low, math.min(high, value))
+end
+
+function TouchLayout.rendered(element): Rect
+    return {x = element.x, y = element.y, w = element.w * element.scale, h = element.h * element.scale}
+end
+
+function TouchLayout.overlaps(a: Rect, b: Rect): boolean
+    return a.x &lt; b.x + b.w and b.x &lt; a.x + a.w and a.y &lt; b.y + b.h and b.y &lt; a.y + a.h
+end
+
+local function union(a: Rect, b: Rect?): Rect
+    if not b or b.w &lt;= 0 or b.h &lt;= 0 then return a end
+    local x, y = math.min(a.x, b.x), math.min(a.y, b.y)
+    return {x = x, y = y, w = math.max(a.x + a.w, b.x + b.w) - x, h = math.max(a.y + a.h, b.y + b.h) - y}
+end
+
+-- Mirrors the Roblox PlayerModule defaults: DynamicThumbstickFrame covers the left 40%
+-- of the lower two thirds; TouchJump is a 70 px button on small screens (shorter side
+-- &lt;= 500) or 120 px otherwise. Measured rects from the live TouchGui are unioned in.
+function TouchLayout.reservedZones(width: number, height: number, measuredThumb: Rect?, measuredJump: Rect?): (Rect, Rect)
+    local thumb = union({x = 0, y = height / 3, w = width * 0.4, h = height * 2 / 3}, measuredThumb)
+    local small = math.min(width, height) &lt;= 500
+    local jump: Rect = if small then {x = width - 95, y = height - 90, w = 70, h = 70}
+        else {x = width - 170, y = height - 210, w = 120, h = 120}
+    jump = union(jump, measuredJump)
+    -- Reserve the whole thumb-resting corner from the jump button to the screen edges.
+    local m = Config.TouchSafeMargin
+    local corner = {x = jump.x - m, y = jump.y - m, w = width - jump.x + m, h = height - jump.y + m}
+    local thumbZone = {x = thumb.x, y = thumb.y - m, w = thumb.w + m, h = height - thumb.y + m}
+    return thumbZone, corner
+end
+
+local function railButtons(count: number, columns: number, bw: number, bh: number, gap: number)
+    local positions = {}
+    for i = 1, count do
+        local column = (i - 1) % columns
+        local row = (i - 1) // columns
+        positions[i] = {x = gap + column * (bw + gap), y = gap + row * (bh + gap)}
+    end
+    return positions
+end
+
+local function buttonContent(bw: number, bh: number)
+    if bw &gt;= 120 then
+        -- Wide tablets: icon left, label right (desktop style).
+        local icon = math.min(bh - 12, 40)
+        return {iconX = 4, iconY = (bh - icon) / 2, icon = icon, labelX = icon + 8, labelY = 0,
+            labelW = bw - icon - 10, labelH = bh, textSize = clamp(math.floor((bw - icon - 10) / 4.8), 12, 17)}
+    end
+    -- Phones: icon above a short label.
+    local icon = math.min(math.floor(bh * 0.5), bw - 12)
+    return {iconX = (bw - icon) / 2, iconY = 3, icon = icon, labelX = 0, labelY = icon + 3,
+        labelW = bw, labelH = bh - icon - 5, textSize = clamp(math.floor((bw - 4) / 4.7), 10, 14)}
+end
+
+local function desktop(width: number, height: number, count: number)
+    local small = clamp(math.min(width / 1000, height / 800), 0.3, 1)
+    local crystalScale = math.max(0.65, small)
+    local hud = {x = 18, y = height - 18 - TouchLayout.HUD.h * small, scale = small, w = TouchLayout.HUD.w, h = TouchLayout.HUD.h}
+    local railH = count * 62 + 10
+    local action = {x = 0, y = height - 22 - TouchLayout.ACTION.h * small, scale = small, w = TouchLayout.ACTION.w, h = TouchLayout.ACTION.h}
+    action.x = math.max(width / 2 - action.w * small / 2, hud.x + hud.w * small + 12)
+    local crystalX = width - 20 - TouchLayout.CRYSTAL.w * crystalScale
+    local noticeW = math.min(500, 2 * (crystalX - 8 - width / 2))
+    return {
+        touch = false,
+        reserved = {},
+        crystal = {x = crystalX, y = 8, scale = crystalScale, w = TouchLayout.CRYSTAL.w, h = TouchLayout.CRYSTAL.h},
+        hud = hud,
+        rail = {x = 14, y = height / 2 - railH * small / 2, scale = small, w = 186, h = railH,
+            button = {w = 172, h = 54, iconX = 5, iconY = 6, icon = 40, labelX = 52, labelY = 0, labelW = 114, labelH = 54, textSize = 19},
+            positions = railButtons(count, 1, 172, 54, 7) :: any},
+        timers = {x = width - 20 - TouchLayout.TIMERS_W * small, y = height - 22 - 220 * small, scale = small, w = TouchLayout.TIMERS_W, h = 220,
+            leapY = 0, weatherY = 72, weatherVisible = true, buffsY = 145, buffsH = 68, buffsVisible = true},
+        action = action,
+        badge = {x = width / 2 - 125, y = 36, scale = 1, w = 250, h = 24, textSize = 15},
+        notice = {x = width / 2 - noticeW / 2, y = 8, scale = 1, w = noticeW, h = 25, textSize = 14},
+        toastScale = math.min(1, (width - 20) / 440),
+    }
+end
+
+function TouchLayout.compute(params: {width: number, height: number, touch: boolean, navCount: number, thumb: Rect?, jump: Rect?})
+    local width, height, count = params.width, params.height, params.navCount
+    if not params.touch then return desktop(width, height, count) end
+    local target, m = Config.TouchMinTargetPx, Config.TouchSafeMargin
+    local s = clamp(math.min(width / 1000, height / 560), 0.55, 1)
+    local thumb, corner = TouchLayout.reservedZones(width, height, params.thumb, params.jump)
+
+    -- Top-left status HUD: stays above the thumbstick zone.
+    local hudScale = math.min(1, math.max(s, Config.TouchMinHudScale), (thumb.y - 2 * m) / TouchLayout.HUD.h)
+    local crystalScale = math.max(0.65, s)
+    local hud, crystal, rail
+    for attempt = 1, 2 do
+        if attempt == 2 then
+            -- Narrow phones: compact status widgets to their floor before shrinking buttons.
+            hudScale = math.min(hudScale, 0.55)
+            crystalScale = 0.55
+        end
+        hud = {x = m, y = m, scale = hudScale, w = TouchLayout.HUD.w, h = TouchLayout.HUD.h}
+        crystal = {x = width - m - TouchLayout.CRYSTAL.w * crystalScale, y = m, scale = crystalScale, w = TouchLayout.CRYSTAL.w, h = TouchLayout.CRYSTAL.h}
+        local left = hud.x + hud.w * hudScale + m
+        local available = crystal.x - m - left
+        local gap = 4
+        -- One row of navigation buttons between HUD and wallet, else a 2-row grid.
+        for _, rows in {1, 2} do
+            local columns = math.ceil(count / rows)
+            local bh = if rows == 1 then math.max(target + 8, math.round(56 * s)) else target
+            local bw = math.min(132, math.floor((available - (columns + 1) * gap) / columns))
+            local railW = columns * bw + (columns + 1) * gap
+            local railH = rows * bh + (rows + 1) * gap
+            if bw &gt;= target and m + railH &lt;= thumb.y then
+                rail = {x = left + (available - railW) / 2, y = m, scale = 1, w = railW, h = railH,
+                    button = buttonContent(bw, bh), positions = railButtons(count, columns, bw, bh, gap), rows = rows}
+                rail.button.w, rail.button.h = bw, bh
+                break
+            end
+        end
+        if rail then break end
+    end
+    if not rail then
+        -- Last resort (very narrow canvas): minimum-size grid, verified by tests not to be hit.
+        local columns = math.ceil(count / 2)
+        local railW = columns * target + (columns + 1) * 4
+        rail = {x = (width - railW) / 2, y = m, scale = 1, w = railW, h = 2 * target + 12,
+            button = buttonContent(target, target), positions = railButtons(count, columns, target, target, 4), rows = 2}
+        rail.button.w, rail.button.h = target, target
+    end
+
+    -- Right column above the jump corner: weather on top, LEAP nearest the right thumb.
+    local timersScale = math.max(target / TouchLayout.LEAP_H, s)
+    local columnX = width - m - TouchLayout.TIMERS_W * timersScale
+    local top = crystal.y + crystal.h * crystal.scale + m
+    if rail.x + rail.w &gt; columnX then top = math.max(top, rail.y + rail.h + m) end
+    local bottom = corner.y - 1 -- 1 px guard against float rounding at the shared edge
+    local designH = math.min(220, (bottom - top) / timersScale)
+    local leapY = designH - TouchLayout.LEAP_H
+    local weatherVisible = leapY &gt;= TouchLayout.WEATHER_H + 6
+    local buffsY = TouchLayout.WEATHER_H + 6
+    local buffsH = math.min(TouchLayout.BUFFS_H, leapY - 6 - buffsY)
+    local timers = {x = columnX, y = bottom - designH * timersScale, scale = timersScale, w = TouchLayout.TIMERS_W, h = designH,
+        leapY = leapY, weatherY = 0, weatherVisible = weatherVisible, buffsY = leapY - 6 - math.max(buffsH, 0),
+        buffsH = math.max(buffsH, 0), buffsVisible = weatherVisible and buffsH &gt;= 30}
+
+    -- Bottom-centre Home/Explore between the thumbstick zone and the jump corner.
+    local actionScale = math.max(target / TouchLayout.ACTION.h, s)
+    local halfSpace = math.min(width / 2 - (thumb.x + thumb.w) - m, corner.x - m - width / 2)
+    local actionW = math.min(TouchLayout.ACTION.w, 2 * halfSpace / actionScale)
+    local action = {x = width / 2 - actionW * actionScale / 2, y = height - m - TouchLayout.ACTION.h * actionScale,
+        scale = actionScale, w = actionW, h = TouchLayout.ACTION.h}
+
+    local badgeY = hud.y + hud.h * hud.scale + 2
+    -- Studio-only preview notice: beside the build badge, or below it when the rail is in the way.
+    local notice = {x = m + 154, y = badgeY, scale = 1, w = 230, h = 16, textSize = 12}
+    if TouchLayout.overlaps(TouchLayout.rendered(notice), {x = rail.x, y = rail.y, w = rail.w, h = rail.h}) then
+        notice.x, notice.y = m, badgeY + 18
+    end
+    return {
+        touch = true,
+        reserved = {thumb = thumb, jump = corner},
+        crystal = crystal,
+        hud = hud,
+        rail = rail,
+        timers = timers,
+        action = action,
+        badge = {x = m, y = badgeY, scale = 1, w = 150, h = 16, textSize = 12},
+        notice = notice,
+        toastScale = math.min(1, (width - 20) / 440),
+    }
+end
+
+return TouchLayout
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX215">
+        <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
 -- Shared ribbon preview uses the catalog's real colors and taper, not a fabricated upload.
@@ -368399,7 +368649,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX215">
+      <Item class="ModuleScript" referent="RBX216">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -368421,7 +368671,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX216">
+      <Item class="ModuleScript" referent="RBX217">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -368437,7 +368687,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX217">
+      <Item class="ModuleScript" referent="RBX218">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -368583,7 +368833,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX218">
+      <Item class="ModuleScript" referent="RBX219">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -368608,15 +368858,15 @@ return Clock
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX219">
+  <Item class="ServerScriptService" referent="RBX220">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX220">
+    <Item class="Folder" referent="RBX221">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX221">
+      <Item class="ModuleScript" referent="RBX222">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -368794,7 +369044,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX222">
+      <Item class="Script" referent="RBX223">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -368938,7 +369188,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX223">
+      <Item class="ModuleScript" referent="RBX224">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -369019,7 +369269,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX224">
+      <Item class="ModuleScript" referent="RBX225">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -369107,7 +369357,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX225">
+      <Item class="ModuleScript" referent="RBX226">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -369117,13 +369367,33 @@ local PhysicsService = game:GetService("PhysicsService")
 local Dinosaur = {}
 local Visual = require(ReplicatedStorage.Shared.DinosaurVisual)
 local Config = require(ReplicatedStorage.Shared.Config)
+local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
+local function groundHeight(character: Model, root: BasePart, humanoid: Humanoid): number
+    local height = root.Size.Y / 2 + humanoid.HipHeight
+    if humanoid.RigType == Enum.HumanoidRigType.R6 then
+        local leg = character:FindFirstChild("Left Leg")
+        height += if leg and leg:IsA("BasePart") then leg.Size.Y else 2
+    end
+    return height
+end
+
+-- BD-053: the footprint follows the growing torso, but the box is lifted by the slope
+-- clearance from MovementEnvelope so it never wedges into walkable hills (the previous
+-- fixed 0.2-stud clearance snagged on any slope above ~5 degrees and slid dinosaurs back).
+local function placeCollider(character: Model, scale: number)
+    local collider = character:FindFirstChild("DinoCollider")
+    local root = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not collider or not collider:IsA("BasePart") or not root or not root:IsA("BasePart") or not humanoid then return end
+    local width, height, length, offsetY = MovementEnvelope.collider(scale, groundHeight(character, root, humanoid))
+    collider.Size = Vector3.new(width, height, length)
+    local weld = collider:FindFirstChild("ColliderWeld")
+    if weld and weld:IsA("Weld") then weld.C0 = CFrame.new(0, offsetY, 0) end
+end
+
 function Dinosaur.render(character: Model, scale: number, speciesId: string?, gold: (boolean | string)?)
     Visual.render(character, scale, speciesId, gold)
-    local collider = character:FindFirstChild("DinoCollider")
-    if collider and collider:IsA("BasePart") then
-        -- Match the growing torso footprint; keep floor clearance and the tail visual-only.
-        collider.Size = Vector3.new(2.6 * scale, 2.4, 3.2 * scale)
-    end
+    placeCollider(character, scale)
 end
 local function scaleForScore(score: number): number
     return math.min(4, math.sqrt(1 + math.max(0, score) / 50))
@@ -369186,8 +369456,8 @@ function Dinosaur.attach(character: Model, walkSpeed: number, player: Player)
     humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
     humanoid.WalkSpeed = walkSpeed
     humanoid.UseJumpPower = true
-    humanoid.JumpPower = require(ReplicatedStorage.Shared.Config).JumpPower
-    humanoid.MaxSlopeAngle = require(ReplicatedStorage.Shared.Config).MaxSlopeAngle
+    humanoid.JumpPower = Config.JumpPower
+    humanoid.MaxSlopeAngle = Config.MaxSlopeAngle
     humanoid.AutoJumpEnabled = false
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
 
@@ -369197,22 +369467,21 @@ function Dinosaur.attach(character: Model, walkSpeed: number, player: Player)
     end
     local collider = Instance.new("Part")
     collider.Name = "DinoCollider"
-    collider.Size = Vector3.new(2.6, 2.4, 3.2)
     collider.Transparency = 1
     collider.Massless = true
     collider.CanCollide = true
     collider.CanTouch = false
     collider.CollisionGroup = "DinoControllers"
-    local groundHeight = root.Size.Y / 2 + humanoid.HipHeight
-    if humanoid.RigType == Enum.HumanoidRigType.R6 then
-        local leg = character:FindFirstChild("Left Leg")
-        groundHeight += if leg and leg:IsA("BasePart") then leg.Size.Y else 2
-    end
-    collider.CFrame = root.CFrame * CFrame.new(0, -groundHeight + 1.4, 0)
+    local width, height, length, offsetY = MovementEnvelope.collider(1, groundHeight(character, root, humanoid))
+    collider.Size = Vector3.new(width, height, length)
+    collider.CFrame = root.CFrame * CFrame.new(0, offsetY, 0)
     collider.Parent = character
-    local weld = Instance.new("WeldConstraint")
+    -- A rigid Weld (not WeldConstraint) so growth can move the box by editing C0.
+    local weld = Instance.new("Weld")
+    weld.Name = "ColliderWeld"
     weld.Part0 = root
     weld.Part1 = collider
+    weld.C0 = CFrame.new(0, offsetY, 0)
     weld.Parent = collider
     Dinosaur.refreshForPlayer(character, player)
     character:SetAttribute("DinoAttached", true)
@@ -369222,7 +369491,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX226">
+      <Item class="ModuleScript" referent="RBX227">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -369425,7 +369694,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX227">
+      <Item class="ModuleScript" referent="RBX228">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -369660,7 +369929,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX228">
+      <Item class="ModuleScript" referent="RBX229">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -370036,7 +370305,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX229">
+      <Item class="ModuleScript" referent="RBX230">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -370086,7 +370355,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX230">
+      <Item class="ModuleScript" referent="RBX231">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -370128,7 +370397,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX231">
+      <Item class="ModuleScript" referent="RBX232">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -370239,7 +370508,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX232">
+      <Item class="ModuleScript" referent="RBX233">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -370321,7 +370590,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX233">
+      <Item class="ModuleScript" referent="RBX234">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -370380,10 +370649,8 @@ function MovementGuard.start()
                 end
 
                 local dt = math.max(now - state.sampleAt, Config.MovementGuardTickSeconds * 0.5)
-                local distance = (root.Position - state.position).Magnitude
-                local allowed = Config.WalkSpeed * dt * Config.MovementGuardSpeedTolerance
-                    + Config.MovementGuardBurstStuds
-
+                -- Same envelope as the Humanoid: walk speed (incl. potions/trails/leap limit),
+                -- slope climb rate up to MaxSlopeAngle, jumps and falls (BD-053).
                 if not MovementEnvelope.plausible(root.Position - state.position, dt, Config.MovementGuardSpeedTolerance, Config.MovementGuardBurstStuds, root.AssemblyLinearVelocity.Y, character:GetAttribute("MovementSpeedLimit") or humanoid.WalkSpeed) then
                     -- Server correction: never promote the impossible location to the trusted baseline.
                     root.CFrame = state.cframe
@@ -370415,7 +370682,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX234">
+      <Item class="ModuleScript" referent="RBX235">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -370520,7 +370787,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX235">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -370653,7 +370920,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -371879,7 +372146,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX238">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -372060,7 +372327,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -372181,7 +372448,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -372202,7 +372469,6 @@ function RunLifecycle.prepareSanctuary(player: Player, character: Model)
     character:SetAttribute("FoodCatchCarry", 0)
     character:SetAttribute("WeatherLootCarry",0)
     character:SetAttribute("RunEggEvents","[]")
-    character:SetAttribute("ExitChannelEndsAt", 0)
     player:SetAttribute("Location", "Sanctuary")
 end
 
@@ -372230,7 +372496,6 @@ function RunLifecycle.begin(player: Player, character: Model)
     character:SetAttribute("WeatherLootCarry",0)
     character:SetAttribute("RunEggEvents","[]")
     character:SetAttribute("SpawnProtectionEndsAt", workspace:GetServerTimeNow() + Config.SpawnProtectionSeconds)
-    character:SetAttribute("ExitChannelEndsAt", 0)
 
     task.spawn(function()
         local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
@@ -372301,7 +372566,6 @@ function RunLifecycle.tryEnd(player: Player, character: Model, reason: string, s
     end
 
     character:SetAttribute("RunState", "Ending")
-    character:SetAttribute("ExitChannelEndsAt", 0)
     player:SetAttribute("LastRunEndReason", reason)
     player:SetAttribute("LastRunCatchScore", snapshot.catchScore)
     local growthScore = character:GetAttribute("GrowthScore")
@@ -372332,7 +372596,6 @@ function RunLifecycle.endForDisconnect(player: Player): string
     if not snapshot then return "none" end
 
     character:SetAttribute("RunState", "Ending")
-    character:SetAttribute("ExitChannelEndsAt", 0)
     player:SetAttribute("LastRunEndReason", "Disconnect")
     player:SetAttribute("LastRunCatchScore", snapshot.catchScore)
     local growthScore = character:GetAttribute("GrowthScore")
@@ -372344,39 +372607,28 @@ function RunLifecycle.endForDisconnect(player: Player): string
     return "settled"
 end
 
-local function cancelExit(character: Model)
-    if character:GetAttribute("RunState") == "Active" then
-        character:SetAttribute("ExitChannelEndsAt", 0)
-    end
-end
-
-local function startExitChannel(player: Player, character: Model)
+-- BD-052: without the old stay-still channel, Home must not be an instant escape from a
+-- predator that is already closing in. Mirrors PredationService's size rule.
+local function predatorNearby(player: Player, character: Model): boolean
     local root = character:FindFirstChild("HumanoidRootPart")
-    if not root or not root:IsA("BasePart") then return end
-    local currentEnd = character:GetAttribute("ExitChannelEndsAt")
-    if typeof(currentEnd) == "number" and currentEnd &gt; workspace:GetServerTimeNow() then return end
-
-    local origin = root.Position
-    character:SetAttribute("ExitChannelEndsAt", workspace:GetServerTimeNow() + Config.ExitChannelSeconds)
-    task.spawn(function()
-        local deadline = os.clock() + Config.ExitChannelSeconds
-        while os.clock() &lt; deadline do
-            task.wait(0.1)
-            if player.Character ~= character or character:GetAttribute("RunState") ~= "Active" then
-                return
-            end
-            local currentRoot = character:FindFirstChild("HumanoidRootPart")
-            if not currentRoot or not currentRoot:IsA("BasePart") then
-                cancelExit(character)
-                return
-            end
-            if (currentRoot.Position - origin).Magnitude &gt; Config.ExitMoveCancelDistance then
-                cancelExit(character)
-                return
+    if not root or not root:IsA("BasePart") then return false end
+    local rawScore = character:GetAttribute("GrowthScore")
+    local score = if typeof(rawScore) == "number" then rawScore else 0
+    local now = workspace:GetServerTimeNow()
+    if RunLifecycle.isProtected(character, now) then return false end
+    for _, other in Players:GetPlayers() do
+        local otherCharacter = if other ~= player then activeCharacter(other) else nil
+        local otherRoot = if otherCharacter then otherCharacter:FindFirstChild("HumanoidRootPart") else nil
+        if otherCharacter and otherRoot and otherRoot:IsA("BasePart") and not RunLifecycle.isProtected(otherCharacter, now) then
+            local rawOther = otherCharacter:GetAttribute("GrowthScore")
+            local otherScore = if typeof(rawOther) == "number" then rawOther else 0
+            if otherScore &gt; score and otherScore &gt;= score * Config.PredationScoreMultiplier
+                and (otherRoot.Position - root.Position).Magnitude &lt;= Config.HomeThreatRadius then
+                return true
             end
         end
-        RunLifecycle.tryEnd(player, character, "ManualExit")
-    end)
+    end
+    return false
 end
 
 function RunLifecycle.start()
@@ -372423,7 +372675,17 @@ function RunLifecycle.start()
         lastExitRequest[player] = now
         local character = activeCharacter(player)
         if not character then return end
-        startExitChannel(player, character)
+        if predatorNearby(player, character) then
+            player:SetAttribute("LastExitStatus", "predator_nearby")
+            player:SetAttribute("LastExitStatusAt", workspace:GetServerTimeNow())
+            return
+        end
+        player:SetAttribute("LastExitStatus", "returning")
+        player:SetAttribute("LastExitStatusAt", workspace:GetServerTimeNow())
+        -- BD-052: the client already showed a Return/Cancel confirmation, so Home ends the
+        -- run immediately (no stay-still channel). tryEnd is the same idempotent path as
+        -- death and predation: the first caller flips Active -&gt; Ending and settles once.
+        RunLifecycle.tryEnd(player, character, "ManualExit")
     end)
 
     Players.PlayerRemoving:Connect(function(player)
@@ -372435,7 +372697,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -372507,19 +372769,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX241">
+  <Item class="StarterPlayer" referent="RBX242">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX242">
+    <Item class="StarterPlayerScripts" referent="RBX243">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX243">
+      <Item class="Folder" referent="RBX244">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX244">
+        <Item class="LocalScript" referent="RBX245">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -372546,6 +372808,7 @@ local EggGenetics=require(Shared.EggGenetics)
 local EggAppearance=require(Shared.EggAppearance)
 local ShopOdds=require(Shared.ShopOdds)
 local EggOutcomeView=require(Shared.EggOutcomeView)
+local TouchLayout=require(Shared.TouchLayout)
 local Marketplace=game:GetService("MarketplaceService")
 local C = Theme.Colors
 local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
@@ -372559,6 +372822,8 @@ local shopResult=remotes:WaitForChild("ProgressionResult") :: RemoteEvent
 local leapRemote=remotes:WaitForChild("RequestLeap") :: RemoteEvent
 local gui = Instance.new("ScreenGui")
 gui.Name,gui.ResetOnSpawn,gui.ZIndexBehavior = "BeDinoUI",false,Enum.ZIndexBehavior.Sibling
+-- BD-054: lay out inside the device safe area and below/around Roblox core UI.
+gui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
 gui.Parent = player:WaitForChild("PlayerGui")
 local blur = Instance.new("BlurEffect")
 blur.Name,blur.Size,blur.Parent = "BeDinoModalBlur",0,Lighting
@@ -372684,6 +372949,12 @@ local function viewportScale(): number
     local camera=workspace.CurrentCamera
     local size=gui.AbsoluteSize
     return math.max(.05,math.min(1,(size.X-40)/860,(size.Y-40)/520))
+end
+-- BD-054: prefer the active input style; fall back to TouchEnabled on older clients.
+local function touchMode(): boolean
+    local ok,touch=pcall(function() return (Input :: any).PreferredInput==(Enum :: any).PreferredInput.Touch end)
+    if ok and typeof(touch)=="boolean" then return touch end
+    return Input.TouchEnabled
 end
 local function celebrate()
     if not motion then return end
@@ -373138,12 +373409,21 @@ render=function(name: string)
             else autoHatching=false nextButton.Visible=true collectionButton.Visible=true end
         end)
     elseif name=="exit" then
+        -- BD-052: one confirmation, no stay-still channel; the server settles through tryEnd.
         heading.Text,header.BackgroundColor3="Return to Sanctuary?",C.red
         art(body,"home",36,28,214)
-        label(body,"Bank this run",300,12,500,54,36,C.gold)
-        label(body,"Stay still for "..Config.ExitChannelSeconds.." seconds to return safely. Moving cancels the return.",300,91,500,104,24)
-        button(body,"RETURN &amp; BANK",300,242,500,68,C.accent,function() endRun:FireServer() close() notify("Returning... stay still",C.gold) end)
-        button(body,"KEEP EXPLORING",300,329,500,48,C.blue,close)
+        label(body,"Your current run will end and rewards will be banked.",300,8,500,100,28,C.gold)
+        local character=player.Character
+        local catches=if character then character:GetAttribute("CatchScore") or 0 else 0
+        local growth=if character then character:GetAttribute("GrowthScore") or 0 else 0
+        label(body,string.format("Banking %d catches  •  %d growth",catches,math.floor(growth)),300,116,500,60,22)
+        local buttonHeight=if touchMode() then math.max(68,46/viewportScale()) else 68
+        button(body,"RETURN",300,396-buttonHeight,244,buttonHeight,C.accent,function()
+            local current=player.Character
+            close()
+            if current and current:GetAttribute("RunState")=="Active" then endRun:FireServer() notify("Returning to Sanctuary...",C.gold) end
+        end)
+        button(body,"CANCEL",556,396-buttonHeight,244,buttonHeight,C.blue,close)
     elseif name=="crystalReveal" then
         heading.Text,header.BackgroundColor3="Run Crystal Box",C.gold
         local version=modalVersion
@@ -373219,7 +373499,7 @@ local rail=box(gui,14,0,186,444,C.panel,2)
 rail.AnchorPoint,rail.Position=Vector2.new(0,.5),UDim2.new(0,14,.5,0)
 local railScale=Instance.new("UIScale") railScale.Parent=rail
 local navigationButtons = {}
-for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"HOME","home","home",C.accent},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
+for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
     local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() open(entry[3]) end)
     b.TextSize=20
     art(b,NavigationArtwork[entry[3]] or entry[2],5,6,40)
@@ -373318,69 +373598,75 @@ local function refreshProgressionHUD()
         shopAction:FireServer(pendingShop.action,pendingShop.id,pendingShop.token,pendingShop.replace)
     end
 end
+-- BD-052: the single Home control (bottom-centre). In Sanctuary it starts a run instead.
 local action=button(gui,"EXPLORE",0,0,244,60,C.accent,function()
     local character=player.Character
     if character and character:GetAttribute("RunState")=="Active" then open("exit")
     elseif character and character:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() close() end
 end)
-action.AnchorPoint,action.Position=Vector2.new(1,1),UDim2.new(1,-20,1,-22)
+action.Name="HomeButton"
+action.TextScaled=true
+local actionTextLimit=Instance.new("UITextSizeConstraint") actionTextLimit.MaxTextSize=23 actionTextLimit.Parent=action
+local actionPadding=Instance.new("UIPadding") actionPadding.Parent=action
+local actionIcon=Theme.icon(action,"home")
+-- UIPadding (52 px while the icon shows) also shifts children, so -44 lands the icon at x=8.
+if actionIcon then actionIcon.Position,actionIcon.Size,actionIcon.Visible=UDim2.fromOffset(-44,8),UDim2.fromOffset(44,44),false end
 local actionScale=action:FindFirstChildOfClass("UIScale") :: UIScale
+-- BD-054: measured Roblox touch controls, in this ScreenGui's pixel space.
+local function coreTouchRect(name: string)
+    local playerGui=player:FindFirstChildOfClass("PlayerGui")
+    local touchGui=if playerGui then playerGui:FindFirstChild("TouchGui") else nil
+    local object=if touchGui then touchGui:FindFirstChild(name,true) else nil
+    if not object or not object:IsA("GuiObject") or object.AbsoluteSize.X&lt;=0 or object.AbsoluteSize.Y&lt;=0 then return nil end
+    local origin=gui.AbsolutePosition
+    return {x=object.AbsolutePosition.X-origin.X,y=object.AbsolutePosition.Y-origin.Y,w=object.AbsoluteSize.X,h=object.AbsoluteSize.Y}
+end
 local function scales()
     scale.Scale=viewportScale()
     closeButton.Size=UDim2.fromOffset(math.max(80,46/viewportScale()),math.max(62,46/viewportScale()))
-    local camera=workspace.CurrentCamera
-    local size=if camera then camera.ViewportSize else Vector2.new(1280,720)
-    local small=math.clamp(math.min(size.X/1000,size.Y/800),.3,1)
-    crystalScale.Scale=math.max(.65,small)
-    railScale.Scale,hudScale.Scale,actionScale.Scale,timerScale.Scale=small,small,small,small
-    hud:SetAttribute("UIScaleBase",small)
-    timers.Position=UDim2.new(1,-20,1,if Input.TouchEnabled then -190 else -100)
-    action.Position=UDim2.new(1,-20,1,if Input.TouchEnabled then -120 else -22)
-    action:SetAttribute("UIScaleBase",small)
-    if Input.TouchEnabled then
-        -- Keep navigation above the joystick and retain usable touch targets.
-        railScale.Scale=math.min(1,(size.X-28)/630)
-        rail.AnchorPoint,rail.Position,rail.Size=Vector2.new(.5,0),UDim2.new(.5,0,0,56),UDim2.fromOffset(630,58)
-        for i,b in navigationButtons do
-            b.Position,b.Size=UDim2.fromOffset(7+(i-1)*88,7),UDim2.fromOffset(82,44)
-            for _,child in b:GetChildren() do
-                if child:IsA("TextLabel") then
-                    child.Position,child.Size,child.TextSize=UDim2.fromOffset(28,0),UDim2.fromOffset(52,44),11
-                elseif child:IsA("GuiObject") and child.Name~="ActiveTab" then
-                    child.Position,child.Size=UDim2.fromOffset(3,10),UDim2.fromOffset(24,24)
-                end
-            end
-        end
-        hud.AnchorPoint,hud.Position=Vector2.new(0,0),UDim2.new(0,18,0,120)
-        previewNotice.Text="STUDIO PREVIEW: UNSAVED"
-        previewNotice.Size,previewNotice.AnchorPoint,previewNotice.Position=UDim2.fromOffset(240,25),Vector2.zero,UDim2.fromOffset(18,8)
-        timerScale.Scale=math.max(small,44/60)
-        timers.AnchorPoint=Vector2.new(1,0)
-        timers.Position=UDim2.new(1,-20,0,120)
-        foodDiagnostic.Visible=false
-        actionScale.Scale=math.max(small,44/60)
-        action.AnchorPoint,action.Position=Vector2.new(.5,1),UDim2.new(.5,0,1,-18)
-        action:SetAttribute("UIScaleBase",actionScale.Scale)
-    else
-        previewNotice.Text="STUDIO PREVIEW • progress not saved • test currency"
-        previewNotice.Size,previewNotice.AnchorPoint,previewNotice.Position=UDim2.fromOffset(500,25),Vector2.new(.5,0),UDim2.new(.5,0,0,8)
-        rail.AnchorPoint,rail.Position,rail.Size=Vector2.new(0,.5),UDim2.new(0,14,.5,0),UDim2.fromOffset(186,444)
-        for i,b in navigationButtons do
-            b.Position,b.Size=UDim2.fromOffset(7,7+(i-1)*62),UDim2.fromOffset(172,54)
-            for _,child in b:GetChildren() do
-                if child:IsA("TextLabel") then
-                    child.Position,child.Size,child.TextSize=UDim2.fromOffset(52,0),UDim2.fromOffset(114,54),19
-                elseif child:IsA("GuiObject") and child.Name~="ActiveTab" then
-                    child.Position,child.Size=UDim2.fromOffset(5,6),UDim2.fromOffset(40,40)
-                end
-            end
-        end
-        hud.AnchorPoint,hud.Position=Vector2.new(0,1),UDim2.new(0,18,1,-18)
-        timers.AnchorPoint=Vector2.new(1,1)
-        action.AnchorPoint=Vector2.new(1,1)
-        foodDiagnostic.Visible=RunService:IsStudio()
+    local size=gui.AbsoluteSize
+    if size.X&lt;=0 or size.Y&lt;=0 then return end
+    local touch=touchMode()
+    local layout=TouchLayout.compute({width=size.X,height=size.Y,touch=touch,navCount=#navigationButtons,
+        thumb=if touch then coreTouchRect("DynamicThumbstickFrame") or coreTouchRect("ThumbstickFrame") else nil,
+        jump=if touch then coreTouchRect("JumpButton") else nil})
+    local function place(object: GuiObject,uiScale: UIScale,entry)
+        object.AnchorPoint,object.Position,object.Size=Vector2.zero,UDim2.fromOffset(entry.x,entry.y),UDim2.fromOffset(entry.w,entry.h)
+        uiScale.Scale=entry.scale
+        object:SetAttribute("UIScaleBase",entry.scale)
     end
-    toastScale.Scale=math.min(1,(size.X-20)/440)
+    place(crystalHUD,crystalScale,layout.crystal)
+    place(hud,hudScale,layout.hud)
+    place(rail,railScale,layout.rail)
+    place(timers,timerScale,layout.timers)
+    place(action,actionScale,layout.action)
+    local cell=layout.rail.button
+    for i,b in navigationButtons do
+        local cellPosition=layout.rail.positions[i]
+        b.Position,b.Size=UDim2.fromOffset(cellPosition.x,cellPosition.y),UDim2.fromOffset(cell.w,cell.h)
+        for _,child in b:GetChildren() do
+            if child:IsA("TextLabel") then
+                child.Position,child.Size,child.TextSize=UDim2.fromOffset(cell.labelX,cell.labelY),UDim2.fromOffset(cell.labelW,cell.labelH),cell.textSize
+                child.TextScaled=true
+                local limit=child:FindFirstChildOfClass("UITextSizeConstraint") or Instance.new("UITextSizeConstraint")
+                limit.MaxTextSize,limit.Parent=cell.textSize,child
+            elseif child:IsA("GuiObject") and child.Name~="ActiveTab" then
+                child.Position,child.Size=UDim2.fromOffset(cell.iconX,cell.iconY),UDim2.fromOffset(cell.icon,cell.icon)
+            end
+        end
+    end
+    local t=layout.timers
+    leapButton.Position=UDim2.fromOffset(0,t.leapY)
+    weatherTile.Position,weatherTile.Visible=UDim2.fromOffset(0,t.weatherY),t.weatherVisible
+    buffsText.Position,buffsText.Size,buffsText.Visible=UDim2.fromOffset(0,t.buffsY),UDim2.fromOffset(286,t.buffsH),t.buffsVisible
+    for _,item in {{buildBadge,layout.badge},{previewNotice,layout.notice}} do
+        local labelObject,entry=item[1],item[2]
+        labelObject.AnchorPoint,labelObject.Position,labelObject.Size=Vector2.zero,UDim2.fromOffset(entry.x,entry.y),UDim2.fromOffset(entry.w,entry.h)
+        labelObject.TextSize,labelObject.TextXAlignment=entry.textSize,if touch then Enum.TextXAlignment.Left else Enum.TextXAlignment.Center
+    end
+    previewNotice.Text=if touch then "STUDIO PREVIEW: UNSAVED" else "STUDIO PREVIEW • progress not saved • test currency"
+    foodDiagnostic.Visible=not touch and RunService:IsStudio()
+    toastScale.Scale=layout.toastScale
 end
 local function characterAdded(character: Model)
     local humanoid=character:WaitForChild("Humanoid",10) :: Humanoid?
@@ -373396,10 +373682,25 @@ player.CharacterAdded:Connect(characterAdded)
 if player.Character then task.spawn(characterAdded,player.Character) end
 if workspace.CurrentCamera then workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(scales) end
 gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(scales)
+-- Re-layout when Roblox creates/moves its touch controls or the preferred input changes.
+local layoutQueued=false
+local function queueLayout()
+    if layoutQueued then return end
+    layoutQueued=true
+    task.defer(function() layoutQueued=false scales() end)
+end
+local touchControlNames={JumpButton=true,DynamicThumbstickFrame=true,ThumbstickFrame=true}
+player:WaitForChild("PlayerGui").DescendantAdded:Connect(function(descendant)
+    if touchControlNames[descendant.Name] and descendant:IsA("GuiObject") and descendant:FindFirstAncestor("TouchGui") then
+        descendant:GetPropertyChangedSignal("AbsolutePosition"):Connect(queueLayout)
+        descendant:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueLayout)
+        queueLayout()
+    end
+end)
+pcall(function() Input:GetPropertyChangedSignal("PreferredInput"):Connect(queueLayout) end)
 scales()
 gui:SetAttribute("Ready",true)
 local elapsed=0
-local exitPending=false
 RunService.Heartbeat:Connect(function(dt)
     elapsed+=dt
     if elapsed&lt;.15 then return end elapsed=0
@@ -373409,17 +373710,17 @@ RunService.Heartbeat:Connect(function(dt)
     local catches=if character then character:GetAttribute("CatchScore") or 0 else 0
     growthLabel.Text=string.format("%d GROWTH",growth)
     catchLabel.Text=string.format("%d catches  •  %s",catches,if state=="Sanctuary" then "Safe sanctuary" else "Island")
-    action.Text=if state=="Sanctuary" then "EXPLORE ISLAND" elseif state=="Active" then "RETURN HOME" else "SAVING..."
+    action.Text=if state=="Sanctuary" then "EXPLORE ISLAND" elseif state=="Active" then "HOME" else "SAVING..."
     action.BackgroundColor3=if state=="Active" then C.red else C.accent
+    if actionIcon then actionIcon.Visible=state=="Active" end
+    actionPadding.PaddingLeft=UDim.new(0,if actionIcon and state=="Active" then 52 else 6)
+    actionPadding.PaddingRight=UDim.new(0,6)
+    if active=="exit" and state~="Active" then close() end
     if character then
         local visualScale=character:GetAttribute("VisualScale") or 1
         player.CameraMinZoomDistance=Config.CameraMinZoom*visualScale
         local humanoid=character:FindFirstChildOfClass("Humanoid")
         if humanoid then humanoid.CameraOffset=Vector3.new(0,(visualScale-1)*2,0) end
-        local deadline=character:GetAttribute("ExitChannelEndsAt") or 0
-        local remaining=deadline-workspace:GetServerTimeNow()
-        if remaining&gt;0 then action.Text=string.format("STAY STILL %.1fs",remaining) exitPending=true
-        elseif exitPending then exitPending=false if state=="Active" then notify("Return cancelled: you moved",C.red) end end
     end
     if growth&gt;lastGrowth and state=="Active" then
         notify(string.format("+%.1f Growth!",growth-lastGrowth),C.accent)
@@ -373478,6 +373779,9 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
         end
     end)
 end)
+player:GetAttributeChangedSignal("LastExitStatusAt"):Connect(function()
+    if str("LastExitStatus")=="predator_nearby" then notify("A bigger dino is too close to go home!",C.red) end
+end)
 player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)
 for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus"} do
     player:GetAttributeChangedSignal(attribute):Connect(function()
@@ -373498,7 +373802,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX245">
+        <Item class="LocalScript" referent="RBX246">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -373561,7 +373865,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX246">
+        <Item class="ModuleScript" referent="RBX247">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -373621,7 +373925,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX247">
+        <Item class="LocalScript" referent="RBX248">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -373794,7 +374098,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX248">
+        <Item class="LocalScript" referent="RBX249">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -373876,7 +374180,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX249">
+  <Item class="Workspace" referent="RBX250">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

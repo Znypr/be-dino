@@ -54,10 +54,8 @@ function MovementGuard.start()
                 end
 
                 local dt = math.max(now - state.sampleAt, Config.MovementGuardTickSeconds * 0.5)
-                local distance = (root.Position - state.position).Magnitude
-                local allowed = Config.WalkSpeed * dt * Config.MovementGuardSpeedTolerance
-                    + Config.MovementGuardBurstStuds
-
+                -- Same envelope as the Humanoid: walk speed (incl. potions/trails/leap limit),
+                -- slope climb rate up to MaxSlopeAngle, jumps and falls (BD-053).
                 if not MovementEnvelope.plausible(root.Position - state.position, dt, Config.MovementGuardSpeedTolerance, Config.MovementGuardBurstStuds, root.AssemblyLinearVelocity.Y, character:GetAttribute("MovementSpeedLimit") or humanoid.WalkSpeed) then
                     -- Server correction: never promote the impossible location to the trusted baseline.
                     root.CFrame = state.cframe
