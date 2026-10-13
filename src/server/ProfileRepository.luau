@@ -12,6 +12,7 @@ local ProgressionConfig = require(ReplicatedStorage.Shared.ProgressionConfig)
 
 local ProfileRepository = {}
 local DinosaurIdentity = require(script.Parent.DinosaurIdentity)
+local IdentityFusion = require(script.Parent.IdentityFusion)
 
 local RunService = game:GetService("RunService")
 local localPreview = RunService:IsStudio() and game.GameId == 0 and Config.StudioLocalProfilesEnabled
@@ -305,7 +306,90 @@ function ProfileRepository.dinosaurDetails(player: Player, instanceId: string)
     if not instance then return nil end
     local result = DinosaurIdentity.copy(instance)
     if result.origin.kind == "hatch" then result.originalEgg = DinosaurIdentity.copy(state.eggs[result.origin.eggId]) end
+    if result.origin.kind == "fusion" then result.lineage = IdentityFusion.lineage(state, result.origin.operationId) end
     return result
+end
+
+-- BD-057 Phase 1 fusion. Development-only: unpublished memory profiles, a default-off
+-- config flag and an explicitly injected test roller (no approved odds exist yet).
+-- There is intentionally no remote; BD-065 owns the client flow.
+local fusionTestRoller: any = nil
+local function fusionEnabled(): boolean
+    return localPreview and Config.IdentityFusionPreviewEnabled == true
+end
+
+function ProfileRepository.setFusionTestRoller(roller: any): boolean
+    if not fusionEnabled() then return false end
+    fusionTestRoller = roller
+    return true
+end
+
+-- Returns a frozen quote (donor validation, ingredient summary, itemized loss
+-- manifest and digests) without consuming anything.
+function ProfileRepository.quoteFusion(player: Player, targetStage: any, donorIds: any)
+    if not fusionEnabled() then return nil, "fusion_disabled" end
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then return nil, "profile_not_loaded" end
+    local quote, reason = IdentityFusion.quote(cached.dinosaurIdentity, keyFor(player), targetStage, donorIds)
+    if not quote then return nil, reason end
+    return DinosaurIdentity.copy(quote)
+end
+
+-- request = {token, targetStage, donorIds, quoteDigest, consentDigest?}
+function ProfileRepository.fuseDinosaurs(player: Player, request: any)
+    if not fusionEnabled() then return false, nil, "fusion_disabled" end
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then return false, nil, "profile_not_loaded" end
+    if typeof(request) ~= "table" or typeof(request.token) ~= "string" or #request.token < 1
+        or #request.token > IdentityFusion.MaxTokenLength then return false, nil, "invalid_token" end
+    local ownerKey = keyFor(player)
+    local operationId = "fusion:" .. request.token
+    local cachedLedger = cached.dinosaurIdentity and cached.dinosaurIdentity.fusions
+    if cachedLedger and cachedLedger[operationId] then
+        -- Replays never need odds; validate the token still matches the same request.
+        local _, status, replay = IdentityFusion.apply(cached, ownerKey, request, nil)
+        if status == "duplicate" then return true, replay, "duplicate" end
+        return false, nil, "token_conflict"
+    end
+    local quote, quoteReason = IdentityFusion.quote(cached.dinosaurIdentity, ownerKey, request.targetStage, request.donorIds)
+    if not quote then return false, nil, quoteReason end
+    if request.quoteDigest ~= quote.quoteDigest then return false, nil, "stale_quote" end
+    if quote.consentRequired and request.consentDigest ~= quote.consentDigest then return false, nil, "consent_required" end
+    -- Precommit traits ONCE outside UpdateAsync: retries cannot reroll.
+    local outcome, outcomeReason = IdentityFusion.prepareOutcome(quote, fusionTestRoller, EggGenetics.valid)
+    if not outcome then return false, nil, outcomeReason end
+
+    local now = os.time()
+    local committed, failure, duplicate, leaseLost = nil, nil, false, false
+    local ok, updated = retry("identity fusion", function()
+        return store:UpdateAsync(ownerKey, function(profileValue)
+            committed, failure, duplicate, leaseLost = nil, nil, false, false
+            if not isValidProfile(profileValue) then failure = "invalid_profile" return nil end
+            if not ownSession(profileValue) then leaseLost = true return nil end
+            local nextProfile, status, result = IdentityFusion.apply(profileValue, ownerKey, request, outcome, now)
+            if not nextProfile then failure = status return nil end
+            committed = result
+            if status == "duplicate" then duplicate = true return profileValue end
+            nextProfile.revision += 1
+            nextProfile.session.expiresAt = now + Config.ProfileLeaseSeconds
+            table.insert(nextProfile.recentOperations, {id = operationId, kind = "identity_fusion",
+                outcome = {resultId = result.resultId, targetStage = result.targetStage, speciesId = result.speciesId}})
+            trimOperations(nextProfile)
+            return nextProfile
+        end)
+    end)
+    if not ok or updated == nil then
+        if leaseLost then
+            player:SetAttribute("ProfileState", "LeaseLost")
+            return false, nil, "lease_lost"
+        end
+        if failure then return false, nil, failure end
+        player:SetAttribute("ProfileState", "SaveFailed")
+        return false, nil, "save_failed"
+    end
+    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
+    syncAttributes(player, profiles[player])
+    return true, committed, if duplicate then "duplicate" else "fused"
 end
 
 function ProfileRepository.isLoaded(player: Player): boolean

@@ -95,10 +95,13 @@ local game={GameId=1,JobId="test",GetService=function(_,id)return services[id] e
 local task={wait=function()end,spawn=function()end}
 local warn=function()end
 local Identity=IDENTITY_MODULE
-local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity"}}
+local script={Parent={DinosaurIdentity="Identity"}}
+local require=function(id) assert(id=="Identity") return Identity end
+local IdentityFusion=IDENTITY_FUSION_MODULE
+local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion"}}
 local rewardSpecies=nil
 local require=function(id)
- if id=="Identity" then return Identity elseif id=="Genetics" then return Genetics elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return {computeRunReward=function()return {stacks={},chestCount=2}end,computeChestReward=function()return {speciesId=if rewardSpecies then table.remove(rewardSpecies,1) else "raptor",count=2,mutationId="base"}end} end
+ if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return {computeRunReward=function()return {stacks={},chestCount=2}end,computeChestReward=function()return {speciesId=if rewardSpecies then table.remove(rewardSpecies,1) else "raptor",count=2,mutationId="base"}end} end
  error("unexpected module "..tostring(id))
 end
 local traitRoll=1
@@ -419,7 +422,7 @@ leapNow=62 h.FloorMaterial="grass" ownerFailure=true activate(user) assert(user.
 leapNow=63 ownerFailure=false activate(user) assert(ownerChanges==2 and user.attrs.LeapReadyAt==123)
 print("Leap handler passed: malformed requests, exact 60s cooldown, wall/air rejection, failed ownership and cleanup")
 """
- return s.replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))
+ return s.replace('IDENTITY_FUSION_MODULE',module('src/server/IdentityFusion.luau')).replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))
 if __name__=='__main__':
  parser=argparse.ArgumentParser();parser.add_argument('--runner',required=True);args=parser.parse_args()
  with tempfile.TemporaryDirectory() as d:
