@@ -291,25 +291,46 @@ local function loadWithRetry(server, p)
     return false
 end
 
+-- Egg conservation per UserId: settled run eggs + opened nest eggs == claimed + still queued/banked.
+-- (BD-044 banks eggs; a player may legitimately leave with eggs still banked.)
+local EGGS = {}
+local function eggBook(p)
+    EGGS[p.UserId] = EGGS[p.UserId] or {settled = 0, claimed = 0}
+    return EGGS[p.UserId]
+end
+
 local function revealAll(server, p, rng, sc)
-    local claimed = 0
-    for _ = 1, 400 do
+    local book, started = eggBook(p), now
+    for _ = 1, 1000 do
+        if now - started >= sc.revealCap then break end
+        -- Track queue ids in order: paged claims commit up to 5 eggs at once and reveal
+        -- them from a server buffer, so committed eggs leave the stored queue early.
+        book.pending = book.pending or {}
         local profile = DATA[keyOf(p)]
-        local egg = profile and profile.eggs[1]
-        if not egg then break end
-        -- BD-044-style batches beyond the 5 + 10 queue: top up the overflow counter so
-        -- the real claim path refills the queue and every egg costs one UpdateAsync.
-        if sc.seedEggs and (p.injected or 0) < sc.seedEggs - 15 and profile.pendingChestGrants < 10 then
-            profile.pendingChestGrants += 1
-            p.injected = (p.injected or 0) + 1
+        for _, queued in (profile and profile.eggs or {}) do
+            if not table.find(book.pending, queued.eggId) then table.insert(book.pending, queued.eggId) end
         end
-        if egg.readyAt > now then sleep(egg.readyAt - now + 0.1) end
-        local ok, _, status = op("claim", server.Repository.claimChest, p, egg.eggId)
+        local eggId = book.pending[1]
+        if not eggId then break end
+        local ok, _, status = op("claim", server.Repository.claimChest, p, eggId)
         if not judge("claim", ok, status) then break end
-        claimed += 1
+        table.remove(book.pending, 1)
+        if status ~= "duplicate" then book.claimed += 1 end
         sleep(sc.revealSeconds)
     end
-    return claimed
+end
+
+local function openNests(server, p)
+    if not server.Repository.claimNest then return end
+    local book = eggBook(p)
+    for _ = 1, 20 do
+        local profile = DATA[keyOf(p)]
+        local nest = profile and profile.nests and profile.nests[1]
+        if not nest or nest.readyAt > now then break end
+        local ok, outcome, status = op("nest", server.Repository.claimNest, p, nest.nestId)
+        if not judge("nest", ok, status) then break end
+        if status ~= "duplicate" and type(outcome) == "table" then book.settled += outcome.eggCount or 0 end
+    end
 end
 
 local ACTIVE = 0
@@ -340,9 +361,17 @@ local function playerLoop(sc, servers, p, index, rng)
             judge("potion", ok, status)
         end
     end
-    if sc.seedEggs then revealAll(server, p, rng, sc) sanctuary() end
     while now < sc.duration - 60 do
+        local blocked = server.Repository.runStartBlockReason and server.Repository.runStartBlockReason(DATA[keyOf(p)]) or ""
+        if blocked ~= "" then
+            M.denials["run:" .. blocked] = (M.denials["run:" .. blocked] or 0) + 1
+            openNests(server, p)
+            revealAll(server, p, rng, sc)
+            sanctuary()
+            continue
+        end
         runs += 1
+        local runStart = now
         local runEnd = math.min(sc.duration - 30, now + sc.runMin + rng() * (sc.runMax - sc.runMin))
         while now < runEnd do
             sleep(sc.pickupMin + rng() * (sc.pickupMax - sc.pickupMin))
@@ -353,21 +382,29 @@ local function playerLoop(sc, servers, p, index, rng)
             end
         end
         local runId = p.Name .. "-run-" .. runs
-        local ok, _, status = op("settle", server.Repository.commitRunSettlement, p, runId, math.floor(20 + rng() * 580))
-        judge("settle", ok, status)
+        -- One run egg per catch (BD-044); owner example 15 catches per 5 minutes.
+        local catches = math.floor((now - runStart) / 60 * sc.catchesPerMinute * (0.3 + rng() * 1.7))
+        catches = math.min(catches, server.Config.RunEggMaxPerRun or catches)
+        local ok, outcome, status = op("settle", server.Repository.commitRunSettlement, p, runId, catches)
+        if judge("settle", ok, status) and status ~= "duplicate" and type(outcome) == "table" then
+            eggBook(p).settled += outcome.eggCount or outcome.chestCount or 0
+        end
         if ok and rng() < 0.15 then -- duplicate end-run request must be idempotent
-            local again, _, againStatus = op("settle", server.Repository.commitRunSettlement, p, runId, 10)
+            local again, _, againStatus = op("settle", server.Repository.commitRunSettlement, p, runId, catches)
             judge("settle", again, againStatus)
         end
+        openNests(server, p)
         revealAll(server, p, rng, sc)
         sanctuary()
         if sc.hop and not hopped and index <= sc.hop and now > sc.duration / 3 then
             hopped = true
-            local from = server
-            p.Parent = nil
-            leave(from, p)
-            task.spawn(function() op("release", from.Repository.release, p) end)
+            local from, old = server, p
+            old.Parent = nil
+            leave(from, old)
+            task.spawn(function() op("release", from.Repository.release, old) end)
             sleep(3)
+            -- A real hop gives the new server its own Player object for the same UserId.
+            p = newPlayer(old.UserId)
             server = servers[2]
             join(server, p)
             if not loadWithRetry(server, p) then leave(server, p) ACTIVE -= 1 return end
@@ -397,14 +434,7 @@ local function seedProfile(server, p, sc)
     assert(server.Repository.load(p))
     server.Repository.release(p)
     leave(server, p)
-    local profile = DATA[keyOf(p)]
-    if sc.seedEggs then
-        for i = 1, server.Config.ChestQueueCapacity do
-            table.insert(profile.eggs, {eggId = p.Name .. "-seed-" .. i, kind = "alpha_chest", readyAt = 0})
-        end
-        profile.pendingChestGrants = math.min(10, sc.seedEggs - server.Config.ChestQueueCapacity)
-    end
-    if sc.spammer then profile.collection.raptor.base = 1 end
+    DATA[keyOf(p)].collection.raptor.base = 1
 end
 
 local function windowPeak(requests, serverName)
@@ -428,6 +458,7 @@ for _, sc in SCENARIOS do
     now = 0
     queue = {}
     DATA = {}
+    EGGS = {}
     CRYSTALS = {}
     for i = 1, 64 do CRYSTALS[i] = 0 end
     SCENARIO_FAIL_RATE = sc.failRate
@@ -438,7 +469,6 @@ for _, sc in SCENARIOS do
     local spamUser = if sc.spammer then newPlayer(999) else nil
     -- Setup (seeding fixtures) runs outside the measured window.
     local setup = coroutine.create(function()
-        for _, p in players do seedProfile(servers[1], p, sc) end
         if spamUser then seedProfile(servers[1], spamUser, sc) end
     end)
     schedule(0, setup)
@@ -473,11 +503,12 @@ for _, sc in SCENARIOS do
     local endTime = now
     queue = {} -- stop background renew loops of this scenario
     -- Integrity: eggs drained, leases released.
-    local undrained, leased = 0, 0
+    local undrained, leased = 0, 0 -- undrained = eggs not conserved
     for _, p in players do
         local profile = DATA[keyOf(p)]
         if profile then
-            undrained += #profile.eggs + profile.pendingChestGrants
+            local book = eggBook(p)
+            undrained += math.abs(book.settled - book.claimed - (#profile.eggs + profile.pendingChestGrants + #(profile.runEggBank or {})))
             if profile.session ~= nil then leased += 1 end
         end
     end
@@ -517,12 +548,12 @@ end
 '''
 
 BASE = {"duration": 900, "joinStagger": 2, "runMin": 90, "runMax": 240, "pickupMin": 8, "pickupMax": 20,
-        "revealSeconds": 5, "failRate": 0.01, "hop": 2, "seedEggs": None, "spammer": False, "spamSeconds": 0}
+        "revealSeconds": 5, "failRate": 0.01, "hop": 2, "catchesPerMinute": 3, "revealCap": 300, "spammer": False, "spamSeconds": 0}
 SCENARIOS = [
     dict(BASE, name="build020-8-players", players=8, seed=8, gated=True),
     dict(BASE, name="build020-12-players", players=12, seed=12, gated=True),
-    dict(BASE, name="egg-burst-15-x12", players=12, seed=15, seedEggs=15, duration=420, gated=False),
-    dict(BASE, name="egg-burst-150-x12", players=12, seed=150, seedEggs=150, duration=1200, gated=False),
+    dict(BASE, name="egg-burst-15-x12", players=12, seed=15, duration=420, gated=False),
+    dict(BASE, name="egg-burst-150-x12", players=12, seed=150, catchesPerMinute=30, duration=1200, gated=False),
     dict(BASE, name="equip-spam-8+1", players=8, seed=81, spammer=True, spamSeconds=360, duration=480, gated=False),
 ]
 
@@ -582,7 +613,7 @@ def gate(result: dict) -> list[str]:
     if result["queueDrops"]:
         problems.append(f"{result['queueDrops']} throttle-queue drops")
     if result["undrainedEggs"]:
-        problems.append(f"{result['undrainedEggs']} eggs left unclaimed")
+        problems.append(f"{result['undrainedEggs']} settled eggs neither claimed nor queued/banked")
     if result["leasedAtEnd"]:
         problems.append(f"{result['leasedAtEnd']} profiles still leased after leaving")
     for side in ("A", "B"):
