@@ -61,40 +61,59 @@ function Identity.reconcile(collection, existing, ownerKey)
         or type(existing.instances) ~= "table" or type(existing.nextId) ~= "number"
         or existing.nextId < 1 or existing.nextId % 1 ~= 0) then return nil, "invalid_identity" end
     if existing and type(existing.eggs) ~= "table" then return nil, "invalid_eggs" end
+    if existing and existing.fusions ~= nil and type(existing.fusions) ~= "table" then return nil, "invalid_fusion_ledger" end
     local state = copy(existing or {version = Identity.Version, ownerKey = ownerKey, nextId = 1, instances = {}, eggs = {}})
     if state.ownerKey ~= ownerKey then return nil, "wrong_owner" end
+    local fusions = state.fusions or {}
     local ids = {}
+    local fused = {}
     for id, instance in state.instances do
-        if type(instance) == "table" and type(instance.origin) == "table"
-            and instance.origin.kind == "fusion" then return nil, "fusion_not_integrated" end
-        if type(instance) ~= "table" or instance.instanceId ~= id or not desired[instance.bucketKey]
+        if type(instance) == "table" and type(instance.origin) == "table" and instance.origin.kind == "fusion" then
+            -- BD-057: fused outputs are identity-authoritative. Their grouped projection is the
+            -- plain stage count; genes/traits are freshly rolled and need not match a bucket.
+            local entry = fusions[instance.origin.operationId]
+            if type(entry) ~= "table" or entry.resultId ~= id then return nil, "missing_fusion_ledger" end
+            if instance.instanceId ~= id or instance.bucketKey ~= tostring(instance.speciesId) .. "/" .. tostring(instance.stage)
+                or not desired[instance.bucketKey] or type(instance.genes) ~= "table"
+                or type(instance.cosmetics) ~= "table" or type(instance.cosmetics.ownedAuraIds) ~= "table"
+                or type(instance.cosmetics.ownedTrailIds) ~= "table" then return nil, "invalid_instance" end
+            fused[id] = true
+        elseif type(instance) ~= "table" or instance.instanceId ~= id or not desired[instance.bucketKey]
             or type(instance.cosmetics) ~= "table" or type(instance.cosmetics.ownedAuraIds) ~= "table"
             or type(instance.cosmetics.ownedTrailIds) ~= "table" or type(instance.origin) ~= "table" then return nil, "invalid_instance" end
         local sequence = tonumber(string.match(id, "/d:(%d+)$"))
         if not sequence or id ~= state.ownerKey .. "/d:" .. tostring(sequence) or sequence >= state.nextId then return nil, "invalid_sequence" end
         local bucket = desired[instance.bucketKey]
-        if instance.speciesId ~= bucket.speciesId or instance.stage ~= bucket.stage
+        if fused[id] then
+            -- Validated above; skip grouped trait comparison.
+        elseif instance.speciesId ~= bucket.speciesId or instance.stage ~= bucket.stage
             or instance.big ~= (bucket.big or false) or instance.shiny ~= (bucket.shiny or false)
             or instance.mutationId ~= (bucket.mutationId or "") then return nil, "trait_mismatch" end
-        if (instance.genes == nil) ~= (bucket.genes == nil) then return nil, "gene_mismatch" end
-        if instance.genes then
+        if not fused[id] and (instance.genes == nil) ~= (bucket.genes == nil) then return nil, "gene_mismatch" end
+        if instance.genes and not fused[id] then
             for key, value in bucket.genes do if instance.genes[key] ~= value then return nil, "gene_mismatch" end end
             for key, value in instance.genes do if bucket.genes[key] ~= value then return nil, "gene_mismatch" end end
         end
         if instance.origin.kind == "hatch" then
             if not state.eggs[instance.origin.eggId] then return nil, "missing_origin" end
-        elseif instance.origin.kind ~= "legacy_unknown" then return nil, "unsupported_origin" end
+        elseif instance.origin.kind ~= "legacy_unknown" and not fused[id] then return nil, "unsupported_origin" end
         table.insert(ids, id)
     end
-    table.sort(ids)
+    -- Fused outputs are kept first so a grouped decrement (e.g. legacy Gold->Diamond)
+    -- spends legacy copies; non-fused order is unchanged from the BD-060 contract.
+    table.sort(ids, function(a, b)
+        if (fused[a] == true) ~= (fused[b] == true) then return fused[a] == true end
+        return a < b
+    end)
     local counts = {}
     for _, id in ids do
         local instance = state.instances[id]
         local key = instance.bucketKey
         counts[key] = (counts[key] or 0) + 1
-        -- Existing Build 020 conversion spends only plain buckets. Never erase cosmetics.
+        -- Existing Build 020 conversion spends only plain buckets. Never erase cosmetics
+        -- or a crafted fusion result; fail closed instead.
         if counts[key] > desired[key].count then
-            if next(instance.cosmetics.ownedAuraIds) or next(instance.cosmetics.ownedTrailIds) then
+            if fused[id] or next(instance.cosmetics.ownedAuraIds) or next(instance.cosmetics.ownedTrailIds) then
                 return nil, "protected_identity"
             end
             state.instances[id] = nil
@@ -116,6 +135,12 @@ function Identity.reconcile(collection, existing, ownerKey)
     local referenced = {}
     for _, instance in state.instances do
         if instance.origin.kind == "hatch" then referenced[instance.origin.eggId] = true end
+    end
+    -- The fusion ledger archives consumed parents' original eggs (BD-057 lineage).
+    for _, entry in fusions do
+        if type(entry) == "table" and type(entry.parentEggIds) == "table" then
+            for _, eggId in entry.parentEggIds do referenced[eggId] = true end
+        end
     end
     for eggId in state.eggs do if not referenced[eggId] then state.eggs[eggId] = nil end end
     return state
@@ -163,7 +188,8 @@ function Identity.fusionRecord(id, output, parents, operationId, recipeVersion, 
             stage = parent.stage, genes = copy(parent.genes), big = parent.big, shiny = parent.shiny,
             mutationId = parent.mutationId, origin = {kind = parent.origin.kind, eggId = parent.origin.eggId, operationId = parent.origin.operationId}})
     end
-    local result = record(id, "fusion/" .. id, output, {kind = "fusion", operationId = operationId,
+    -- Grouped compatibility projection: the plain stage bucket (BD-057).
+    local result = record(id, output.speciesId .. "/" .. output.stage, output, {kind = "fusion", operationId = operationId,
         recipeVersion = recipeVersion, oddsVersion = oddsVersion, parents = snapshots})
     -- No parent cosmetic fields are copied into either output or lineage.
     return result

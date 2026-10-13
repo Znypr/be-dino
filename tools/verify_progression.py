@@ -95,10 +95,13 @@ local game={GameId=1,JobId="test",GetService=function(_,id)return services[id] e
 local task={wait=function()end,spawn=function()end}
 local warn=function()end
 local Identity=IDENTITY_MODULE
-local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity"}}
+local script={Parent={DinosaurIdentity="Identity"}}
+local require=function(id) assert(id=="Identity") return Identity end
+local IdentityFusion=IDENTITY_FUSION_MODULE
+local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion"}}
 local rewardSpecies=nil
 local require=function(id)
- if id=="Identity" then return Identity elseif id=="Genetics" then return Genetics elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return {computeRunReward=function()return {stacks={},chestCount=2}end,computeChestReward=function()return {speciesId=if rewardSpecies then table.remove(rewardSpecies,1) else "raptor",count=2,mutationId="base"}end} end
+ if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return {computeRunReward=function()return {stacks={},chestCount=2}end,computeChestReward=function()return {speciesId=if rewardSpecies then table.remove(rewardSpecies,1) else "raptor",count=2,mutationId="base"}end} end
  error("unexpected module "..tostring(id))
 end
 local traitRoll=1
@@ -341,6 +344,104 @@ assert(LocalRepository.load(localUser))
 assert(LocalRepository.dinosaurDetails(localUser, hatch.instanceIds[2]).originalEgg.eggId == chestId)
 assert(LocalRepository.dinosaurDetails(localUser, "u:999/d:1").origin.kind == "legacy_unknown")
 assert(transforms==persistentCalls and data['u:999']==nil)
+-- BD-057 Phase 1: fusion through the real repository, memory profiles only.
+local function claimAll(user, repo)
+ local ids={}
+ for _,chest in user.attrs.ChestQueueJson or {} do
+  local ok,h=repo.claimChest(user,chest.id)
+  if ok and h.instanceIds then for _,id in h.instanceIds do table.insert(ids,id) end end
+ end
+ return ids
+end
+local byBucket={}
+for round=1,12 do
+ assert(LocalRepository.commitRunSettlement(localUser,"fusion-run-"..round,10))
+ for _,id in claimAll(localUser,LocalRepository) do
+  local d=LocalRepository.dinosaurDetails(localUser,id)
+  byBucket[d.bucketKey]=byBucket[d.bucketKey] or {}
+  table.insert(byBucket[d.bucketKey],id)
+ end
+end
+local donors=nil
+for key,list in byBucket do if #list>=10 and string.find(key,"/variant/") then donors={table.unpack(list,1,10)} end end
+assert(donors,"expected 10 same-bucket hatched donors")
+local donorDetails=LocalRepository.dinosaurDetails(localUser,donors[1])
+assert(donorDetails.traitsKnown and donorDetails.genes.patternId~=nil)
+local fusionSpecies=donorDetails.speciesId
+local function goldCount() return localUser.attrs.CollectionJson[fusionSpecies].gold end -- mock JSONEncode returns a table copy
+-- Default-off flag: no quote, no fusion.
+assert(GameConfig.IdentityFusionPreviewEnabled==false)
+assert(select(2,LocalRepository.quoteFusion(localUser,"gold",donors))=="fusion_disabled")
+assert(select(3,LocalRepository.fuseDinosaurs(localUser,{token="off"}))=="fusion_disabled")
+assert(LocalRepository.setFusionTestRoller({})==false)
+mutableConfig.IdentityFusionPreviewEnabled=true
+local quote=assert(LocalRepository.quoteFusion(localUser,"gold",donors))
+assert(quote.consentRequired==(donorDetails.shiny or donorDetails.big or donorDetails.mutationId~=""))
+local request={token="repo-fuse-1",targetStage="gold",donorIds=donors,quoteDigest=quote.quoteDigest,consentDigest=quote.consentDigest}
+-- No approved odds: rejected before any write.
+local okNoOdds,_,noOdds=LocalRepository.fuseDinosaurs(localUser,request)
+assert(not okNoOdds and noOdds=="odds_not_approved" and LocalRepository.dinosaurDetails(localUser,donors[1]))
+local rolls=0
+assert(LocalRepository.setFusionTestRoller({version="repo-test-v1",roll=function(_,patternId)
+ rolls+=1
+ -- Controlled test outcome: schema-valid genes with a distinguishable blend, no odds.
+ local g=table.clone(donorDetails.genes) g.patternId=patternId g.blend=(g.blend+37)%100
+ return {big=false,shiny=false,mutationId="",genes=g}
+end}))
+-- Client-supplied stale digest and wrong-owner IDs are refused.
+local staleRequest=table.clone(request) staleRequest.quoteDigest="stale"
+assert(select(3,LocalRepository.fuseDinosaurs(localUser,staleRequest))=="stale_quote")
+local foreign=table.clone(donors) foreign[10]="u:123/d:1"
+assert(select(2,LocalRepository.quoteFusion(localUser,"gold",foreign))=="wrong_owner")
+assert(select(3,LocalRepository.fuseDinosaurs(localUser,{token=string.rep("x",81)}))=="invalid_token")
+-- Write outage: every attempt fails at the memory write; nothing is consumed.
+local realEncode=http.JSONEncode
+local encodes=0
+http.JSONEncode=function(self,v) encodes+=1 if encodes%2==0 then error("injected write failure") end return realEncode(self,v) end
+local okOutage,_,outage=LocalRepository.fuseDinosaurs(localUser,request)
+http.JSONEncode=realEncode
+assert(not okOutage and outage=="save_failed" and localUser.attrs.ProfileState=="SaveFailed")
+LocalRepository.release(localUser)
+assert(LocalRepository.load(localUser))
+for _,id in donors do assert(LocalRepository.dinosaurDetails(localUser,id)) end
+-- Lease lost mid-transaction: rejected, nothing consumed.
+local realDecode=http.JSONDecode
+http.JSONDecode=function(self,v) local r=realDecode(self,v) if type(r)=="table" and r.session then r.session.leaseId="other-server" end return r end
+local okLease,_,lease=LocalRepository.fuseDinosaurs(localUser,request)
+http.JSONDecode=realDecode
+assert(not okLease and lease=="lease_lost" and localUser.attrs.ProfileState=="LeaseLost")
+LocalRepository.release(localUser)
+assert(LocalRepository.load(localUser))
+for _,id in donors do assert(LocalRepository.dinosaurDetails(localUser,id)) end
+-- Success: one new Gold, donors consumed, grouped projection synced.
+local goldBefore=goldCount()
+rolls=0
+local fusedOk,committed,fusedStatus=LocalRepository.fuseDinosaurs(localUser,request)
+assert(fusedOk and fusedStatus=="fused" and rolls==1,tostring(fusedStatus))
+assert(goldCount()==goldBefore+1)
+for _,id in donors do assert(LocalRepository.dinosaurDetails(localUser,id)==nil) end
+local gold=assert(LocalRepository.dinosaurDetails(localUser,committed.resultId))
+assert(gold.stage=="gold" and gold.origin.kind=="fusion" and gold.genes.blend==(donorDetails.genes.blend+37)%100)
+assert(gold.genes.patternId==donorDetails.genes.patternId and next(gold.cosmetics.ownedAuraIds)==nil)
+assert(#gold.lineage.parentIds==10 and next(gold.lineage.parentEggs)~=nil)
+for _,egg in gold.lineage.parentEggs do assert(egg.genes.patternId==donorDetails.genes.patternId) end
+-- Duplicate confirm: same result, no reroll, no second consumption.
+local dupOk,dupResult,dupStatus=LocalRepository.fuseDinosaurs(localUser,request)
+assert(dupOk and dupStatus=="duplicate" and dupResult.resultId==committed.resultId and rolls==1 and goldCount()==goldBefore+1)
+local conflictRequest=table.clone(request) conflictRequest.donorIds=table.clone(donors) conflictRequest.donorIds[1]=gold.instanceId
+assert(select(3,LocalRepository.fuseDinosaurs(localUser,conflictRequest))=="token_conflict")
+-- A second fusion reusing consumed donors fails cleanly.
+local reuse=table.clone(request) reuse.token="repo-fuse-2"
+assert(select(3,LocalRepository.fuseDinosaurs(localUser,reuse))=="donor_missing")
+-- Reload keeps the result, lineage and replay.
+LocalRepository.release(localUser)
+assert(LocalRepository.load(localUser))
+local reloaded=assert(LocalRepository.dinosaurDetails(localUser,committed.resultId))
+assert(reloaded.origin.operationId=="fusion:repo-fuse-1" and #reloaded.lineage.parentIds==10)
+local replayOk,replayResult,replayStatus=LocalRepository.fuseDinosaurs(localUser,request)
+assert(replayOk and replayStatus=="duplicate" and replayResult.resultId==committed.resultId and rolls==1)
+assert(transforms==persistentCalls and data['u:999']==nil)
+print("Repository fusion passed: default-off flag, no-odds refusal, stale/foreign/invalid requests, write outage and lease loss rollback, one new Gold with lineage, duplicate confirm, token conflict, reload and zero persistent calls")
 LocalRepository.release(localUser)
 -- A published Studio place still uses persistent storage and ordinary currency/timers.
 game.GameId=1
@@ -351,6 +452,10 @@ function published:GetAttribute(k)return self.attrs[k]end
 assert(PublishedRepository.load(published))
 assert(published.attrs.StudioTestWallet==false and PublishedRepository.progression(published).crystals==0)
 assert(data['u:777']~=nil and data['u:777'].dinosaurIdentity==nil)
+assert(PublishedRepository.setFusionTestRoller({version="x",roll=function()end})==false)
+assert(select(2,PublishedRepository.quoteFusion(published,"gold",{}))=="fusion_disabled")
+assert(select(3,PublishedRepository.fuseDinosaurs(published,{token="published"}))=="fusion_disabled")
+mutableConfig.IdentityFusionPreviewEnabled=false
 print("Studio isolation passed: local test wallet replenishes, immediately ready eggs, zero persistent calls; published Studio retains normal wallet")
 print("Profile transactions passed: repeated transforms, duplicate grants/purchases/use, token conflicts, rejoin, outage rollback and lease loss")
 '''
@@ -419,7 +524,7 @@ leapNow=62 h.FloorMaterial="grass" ownerFailure=true activate(user) assert(user.
 leapNow=63 ownerFailure=false activate(user) assert(ownerChanges==2 and user.attrs.LeapReadyAt==123)
 print("Leap handler passed: malformed requests, exact 60s cooldown, wall/air rejection, failed ownership and cleanup")
 """
- return s.replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))
+ return s.replace('IDENTITY_FUSION_MODULE',module('src/server/IdentityFusion.luau')).replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))
 if __name__=='__main__':
  parser=argparse.ArgumentParser();parser.add_argument('--runner',required=True);args=parser.parse_args()
  with tempfile.TemporaryDirectory() as d:

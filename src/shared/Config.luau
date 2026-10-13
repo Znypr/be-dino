@@ -138,6 +138,10 @@ return table.freeze({
     DiamondMutationCost = 50, -- provisional balance: 50 Gold -> 1 Diamond
     MutationRequestCooldownSeconds = 0.4,
     MutationTestSetupEnabled = false,
+    -- BD-057 Phase 1: identity fusion runs ONLY in unpublished, memory-only Studio
+    -- profiles, and additionally needs a controlled test roller until BD-064 approves
+    -- odds. No remote/UI exists. Keep false in committed builds.
+    IdentityFusionPreviewEnabled = false,
     MutationTestSpeciesId = "compy",
 
     MovementGuardTickSeconds = 0.1,

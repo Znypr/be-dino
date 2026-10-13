@@ -74,7 +74,8 @@ assert(result.origin.parents[1].cosmetics==nil)
 local pending=I.copy(state)
 pending.instances[result.instanceId]=I.copy(result)
 local unsupported, fusionReason=I.reconcile(collection,pending,"u:123")
-assert(unsupported==nil and fusionReason=="fusion_not_integrated")
+-- BD-057: a fusion record is only accepted when backed by a durable ledger entry.
+assert(unsupported==nil and fusionReason=="missing_fusion_ledger")
 assert(state.instances[result.instanceId]==nil)
 assert(not pcall(I.fusionRecord,'new',fresh,{parents[1],parents[1]},'op','r','v'))
 -- Nested ancestry is referenced, never copied recursively.

@@ -1,6 +1,6 @@
 # Pattern-specific fusion, durable dinosaur identity and per-dino cosmetics
 
-**Owner decisions: 2026-10-08. Status: TARGET / PLANNED, NOT IN BUILD 020.** This specification covers **BD-057–BD-065**. [Task status](07-kanban.md) is canonical; current implementation is [Build 020](44-main-integration-checklist.md). Read [egg provenance and outcome contract](41-egg-outcomes-contract.md), [22-creature appearance](43-creature-runtime-integration.md), [shop/genetics spec](36-crystal-shops-egg-genetics-and-progression.md), [original layered egg art direction](39-egg-appearance-shared-vision.md) and [BD-044 egg-per-catch migration](09-reward-economy.md).
+**Owner decisions: 2026-10-08. Status: TARGET / PLANNED, NOT IN BUILD 020.** A disabled BD-057 Phase 1 transaction foundation exists since 2026-10-13: [49-identity-fusion-phase1](49-identity-fusion-phase1.md). This specification covers **BD-057–BD-065**. [Task status](07-kanban.md) is canonical; current implementation is [Build 020](44-main-integration-checklist.md). Read [egg provenance and outcome contract](41-egg-outcomes-contract.md), [22-creature appearance](43-creature-runtime-integration.md), [shop/genetics spec](36-crystal-shops-egg-genetics-and-progression.md), [original layered egg art direction](39-egg-appearance-shared-vision.md) and [BD-044 egg-per-catch migration](09-reward-economy.md).
 
 ## Vision and settled owner rules
 
