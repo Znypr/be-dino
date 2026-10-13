@@ -19,6 +19,10 @@ return table.freeze({
     FoodClusterItems = 6,
     FoodClusterRadius = 7,
     FoodSeed = 1404,
+    FoodArtMode = "Legacy", -- "Kit": BD-050 Blender food variants (visual only; points unchanged) PROVISIONAL
+    WorldArtMode = "Legacy", -- "BiomeKit": BD-049 Blender props + placement grammar PROVISIONAL
+    WorldArtSeed = 1404,
+    WorldArtDensity = 1,
     StudioLocalProfilesEnabled = true, -- unpublished Studio only; never a live fallback
     StudioTestWalletEnabled = true, -- only unpublished, nonpersistent local profiles
     StudioTestCrystals = 1000000,

@@ -41,6 +41,8 @@ jobs:
           python tools/verify_outcomes.py --runner /tmp/luau/luau
           python tools/verify_previews.py --runner /tmp/luau/luau
           python tools/verify_artwork.py --runner /tmp/luau/luau
+          python tools/bake_world_kit.py --check
+          python tools/verify_world_art.py --runner /tmp/luau/luau
       - name: Build place
         run: |
           python tools/build.py

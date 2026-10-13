@@ -112,8 +112,8 @@ donors and the hard lock/favorite block are working defaults awaiting owner appr
 | BD-046 | Backlog | P1 | Rename Auras nav entry to Shop with crystal icon; crystal HUD opens same Shop | BD-029, BD-036, BD-043 |
 | BD-047 | Backlog | P1 | Illustrated Crystal Shop category tiles, green-spotted egg icon, larger aura previews and leading tab icons | BD-046 |
 | BD-048 | Backlog | P1 | Trail icon art, Blender world VFX and six rarity categories across ten trails | BD-038, BD-034 |
-| BD-049 | Backlog | P1 | Blender trees, vegetation, rock variants, map landmarks and optimized biome placement | BD-016 |
-| BD-050 | Backlog | P1 | Blender pickup/food model variants with intact food rewards and server validation | BD-008 |
+| BD-049 | Review / test | P1 | Blender trees, vegetation, rock variants, map landmarks and optimized biome placement; kit + flagged grammar in [56](56-bd049-050-world-art.md), Studio/Android pending | BD-016 |
+| BD-050 | Review / test | P1 | Blender pickup/food model variants with intact food rewards and server validation; kit in [56](56-bd049-050-world-art.md), berry/fruit need MeshPart upload | BD-008 |
 | BD-051 | Backlog | P1 | Rotating five-minute Potion Shop offers, rarity-weighted selection and 1–3 limited stock | BD-032, BD-039 |
 | BD-052 | Backlog | P1 | Single bottom-center Home with confirmation and no three-second exit channel | BD-009 |
 | BD-053 | Backlog | P0 | Fix sliding and hill-climb movement on mountainous terrain | BD-006, BD-008 |
