@@ -4,6 +4,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Terrain = require(script.Parent.IslandTerrain)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
+local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
+local KitData = require(ReplicatedStorage.Shared.WorldKitData)
 local Arena = {}
 local function part(parent: Instance, name: string, size: Vector3, position: Vector3, color: Color3, material: Enum.Material, solid: boolean): Part
     local p = Instance.new("Part")
@@ -74,6 +76,35 @@ local function fern(parent: Instance, position: Vector3, scale: number, yaw: num
         leaf.CFrame = CFrame.new(leaf.Position) * CFrame.Angles(-0.28, angle, 0)
     end
 end
+-- BD-049 BiomeKit dressing: noncolliding kit visuals plus simplified invisible box colliders.
+local function biomeKit(parent: Instance)
+    local folder = Instance.new("Folder")
+    folder.Name, folder.Parent = "WorldKit", parent
+    local placed = Biome.generate({seed = Config.WorldArtSeed, density = Config.WorldArtDensity,
+        extent = Config.ArenaHalfWidth, height = Layout.height, kit = KitData})
+    local missing = 0
+    for i, p in placed do
+        local pivot = CFrame.new(p.x, p.y, p.z) * CFrame.Angles(0, p.yaw, 0)
+        local model = Resources.clone(p.id)
+        if model then
+            model:ScaleTo(p.scale)
+            model:PivotTo(pivot)
+            model.Parent = folder
+        else
+            missing += 1
+        end
+        for _, c in KitData[p.id].colliders do
+            local collider = part(folder, p.id .. "Collider", Vector3.new(c[4], c[5], c[6]) * p.scale, Vector3.zero,
+                Color3.fromRGB(113, 133, 139), Enum.Material.Slate, true)
+            collider.CFrame = pivot * CFrame.new(Vector3.new(c[1], c[2], c[3]) * p.scale) * CFrame.Angles(0, c[7], 0)
+            collider.Transparency = 1
+        end
+        if i % 25 == 0 then task.wait() end
+    end
+    workspace:SetAttribute("WorldKitPlacements", #placed)
+    workspace:SetAttribute("WorldKitTriangles", Biome.triangles(placed, KitData))
+    workspace:SetAttribute("WorldKitMissing", missing)
+end
 function Arena.build()
     local old = workspace:FindFirstChild("BeDinoArena")
     if old then old:Destroy() end
@@ -109,6 +140,7 @@ function Arena.build()
     spawn.CanCollide, spawn.CanQuery = false, false
     spawn.Parent = world
     -- Authored landmark centers; within each, offset props avoid a uniform grid.
+    if Config.WorldArtMode == "BiomeKit" then biomeKit(world) else
     for _, center in {Vector3.new(-105,0,80), Vector3.new(105,0,-80), Vector3.new(-125,0,-100), Vector3.new(128,0,102), Vector3.new(-190,0,15), Vector3.new(182,0,20), Vector3.new(0,0,-180), Vector3.new(15,0,190)} do
         for i = 1, 4 do
             local angle = i * 1.65 + random:NextNumber(-.4, .4)
@@ -129,6 +161,7 @@ function Arena.build()
         position = Vector3.new(position.X,Layout.height(position.X,position.Z),position.Z)
         if (position - Vector3.new(0,0,30)).Magnitude > 14 then fern(world, position, 1.2, angle) end
     end
+    end -- Legacy dressing
     -- Stone arch landmark with an open passage.
     for _, x in {-96,-64} do
         local y = Layout.height(x,-15)

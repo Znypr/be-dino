@@ -113,10 +113,14 @@ function FoodService.start(dinosaur,repository)
                 pickup:SetAttribute("StarterFood", starter)
                 pickup:SetAttribute("Sector", string.format("%d:%d", sx, sz))
                 local visual = nil
+                -- BD-050 Kit mode is visual only: same TYPES points, pickup part and server validation.
+                -- Berry/fruit kit meshes wait for MeshPart uploads (1,300+ native wedge copies is too heavy).
+                local artId = if Config.FoodArtMode == "Kit" then string.format("food_%s_%s", kind.id, if (sx + sz + itemIndex) % 2 == 0 then "a" else "b") else kind.id
+                pickup:SetAttribute("ArtId", artId)
                 if kind.id == "egg" or kind.id == "amber" then
                     local ok, result = pcall(function()
-                        local model = Resources.clone(kind.id)
-                        if model then model:ScaleTo(kind.size / (if kind.id == "egg" then 2.4 else 1.3)) end
+                        local model = Resources.clone(artId)
+                        if model and artId == kind.id then model:ScaleTo(kind.size / (if kind.id == "egg" then 2.4 else 1.3)) end
                         return model
                     end)
                     if ok then visual = result end -- visible native pickup survives any art failure
