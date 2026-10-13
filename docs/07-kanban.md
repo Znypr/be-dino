@@ -167,8 +167,9 @@ ledger compaction before public release.
 | BD-059 | Backlog | P1 | Buy and switch multiple aura/trail styles per individual dino; ALL purchased ingredient cosmetics are lost at fusion, never transfer to result | BD-060, BD-029, BD-038 |
 | BD-060 | Review / test | P0 | Unique dinosaur identity, hatched egg records, fused NEW instance lineage/parent egg history, safe profile migration (persistent playtest flag, default off: [53](53-bd064-fusion-server.md)) | BD-011, BD-012, BD-041 |
 | BD-061 | Backlog | P1 | Blender Gold/Emerald/Diamond additive surfaces, subtle/medium overlay A/B, stack every trait/effect | BD-057, BD-035 |
-| BD-062 | Backlog | P1 | Dino picker/details hatch egg or fused parent lineage, trait/cosmetic badges, hatch rarity vs conditional fusion odds/prestige | BD-059, BD-060, BD-057 |
+| BD-062 | Review / test | P1 | Dino picker/details hatch egg or fused parent lineage, trait/cosmetic badges, hatch rarity vs conditional fusion odds/prestige. Client Dino Details built ([54](54-bd065-fusion-menu.md)); natural hatch odds math, Studio/Android verification pending | BD-059, BD-060, BD-057 |
 | BD-063 | Backlog | P1 | Pattern research/duplicate sink: deterministic earned-only progress toward species-pattern fusion donors | BD-057 |
+| BD-065 | Review / test | P1 | Dedicated Fusion Menu: species/trait filters, manual ten-donor selection, odds preview, loss warnings and staged wheel reveals. Client built against the `FusionAction` contract ([54](54-bd065-fusion-menu.md)); offline logic + mock UI smoke pass, Studio/Android verification pending | BD-057, BD-060, BD-064 |
 | BD-064 | Review / test | P0 | Ingredient-influenced fusion trait RNG (2/10 Shiny → proposed 10%), versioned true odds, paid-random gate and atomic NEW result — PROVISIONAL `fusion-odds-provisional-v1` + `FusionAction` remote ([53](53-bd064-fusion-server.md)) | BD-057, BD-060 |
 | BD-065 | Backlog | P1 | Dedicated Fusion Menu: species/trait filters, manual ten-donor selection, odds preview, loss warnings and staged wheel reveals | BD-057, BD-060, BD-064 |
 
