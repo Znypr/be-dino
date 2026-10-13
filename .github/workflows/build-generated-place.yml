@@ -41,9 +41,11 @@ jobs:
           python tools/verify_outcomes.py --runner /tmp/luau/luau
           python tools/verify_previews.py --runner /tmp/luau/luau
           python tools/verify_artwork.py --runner /tmp/luau/luau
+          python tools/verify_load.py --runner /tmp/luau/luau
       - name: Build place
         run: |
           python tools/build.py
+          python tools/verify_release.py --profile default
           python -c 'import os,re,pathlib; v=re.search(r"Build = \"redesign-(\d+)\"",pathlib.Path("src/shared/Config.luau").read_text()).group(1); open(os.environ["GITHUB_ENV"],"a").write("BE_DINO_BUILD=BeDino-Build"+v+"\n")'
       - name: Run packaging and artwork tests
         run: python -m unittest discover -s tests -v
@@ -55,3 +57,19 @@ jobs:
             build/${{ env.BE_DINO_BUILD }}.rbxlx
             build/${{ env.BE_DINO_BUILD }}.manifest.json
           if-no-files-found: error
+      - name: Build playtest place (once BD-004 IDs are recorded)
+        run: |
+          if grep -Eq '^    PlaytestPlaceId = [1-9][0-9]*,' src/shared/Config.luau; then
+            python tools/build.py --profile playtest
+            python tools/verify_release.py --profile playtest --place "build/${BE_DINO_BUILD}-playtest.rbxlx"
+          else
+            echo "PlaytestPlaceId not recorded yet (BD-004); playtest place not built."
+          fi
+      - name: Upload playtest build
+        uses: actions/upload-artifact@v4
+        with:
+          name: BeDino-playtest-build
+          path: |
+            build/${{ env.BE_DINO_BUILD }}-playtest.rbxlx
+            build/${{ env.BE_DINO_BUILD }}-playtest.manifest.json
+          if-no-files-found: ignore

@@ -76,6 +76,13 @@ return table.freeze({
     },
 
     ProfileDataStoreName = "BeDino_PrivateTest_v1",
+    -- Release keys (BD-004/BD-020). `python tools/build.py --profile playtest` rewrites
+    -- ReleaseProfile and ProfileDataStoreName in the generated place only; rules live in
+    -- tools/release_profiles.py and are enforced by tools/verify_release.py.
+    ReleaseProfile = "development",
+    PlaytestUniverseId = 0, -- TODO(BD-004): owner records the private playtest experience (universe) ID
+    PlaytestPlaceId = 0, -- TODO(BD-004): owner records the private playtest start place ID
+    PlaytestProfileDataStoreName = "BeDino_Playtest_M1_v1", -- rotate _vN to isolate a corrupted test store
     ProfileSchemaVersion = 1,
     ProfileLeaseSeconds = 90,
     ProfileRenewSeconds = 30,
