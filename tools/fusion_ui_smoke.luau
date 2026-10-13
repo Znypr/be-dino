@@ -216,17 +216,22 @@ for i = 1, 12 do table.insert(owned, dino(i)) end
 table.insert(owned, dino(13, {shiny = true}))
 table.insert(owned, dino(14, {auraCount = 1, equippedAuraId = "meadow"}))
 table.insert(owned, dino(15, {speciesId = "raptor"}))
+local legacy = dino(16, {originKind = "legacy_unknown"}) legacy.genes = nil -- legacy copy: DNA never saved
+table.insert(owned, legacy)
 local function find(id) for _, d in owned do if d.instanceId == id then return d end end return nil end
 local function handle(payload)
     if payload.action == "list" then
-        if payload.cursor == nil then
-            local page = {}
-            for i = 1, 8 do page[i] = owned[i] end
-            return {ok = true, dinosaurs = page, nextCursor = "p2"}
+        -- Real contract: cursor = last instance sequence received (exclusive, number), limit <= 200.
+        assert(payload.cursor == nil or type(payload.cursor) == "number", "numeric cursor")
+        assert(payload.limit == nil or (payload.limit >= 1 and payload.limit <= 200))
+        local page, last = {}, nil
+        for _, d in owned do
+            local n = tonumber(string.match(d.instanceId, "/d:(%d+)$"))
+            if n > (payload.cursor or 0) and #page < 8 then table.insert(page, d) last = n end
         end
-        local page = {}
-        for i = 9, #owned do table.insert(page, owned[i]) end
-        return {ok = true, dinosaurs = page}
+        local more = false
+        for _, d in owned do if tonumber(string.match(d.instanceId, "/d:(%d+)$")) > (last or 0) then more = true end end
+        return {ok = true, dinosaurs = page, nextCursor = if more then last else nil}
     elseif payload.action == "details" then
         if payload.instanceId == "u:1/d:99" then
             return {ok = true, dinosaur = {instanceId = "u:1/d:99", speciesId = "compy", stage = "gold", genes = committed.traits.genes,
@@ -320,7 +325,8 @@ assert(not screen.Enabled)
 fusionRemote.Parent = Remotes
 assert(Menu.available())
 Menu.open() runFor(2)
-assert(#cards(screen) == 15, "paged list: " .. #cards(screen))
+assert(#cards(screen) == 16, "paged list: " .. #cards(screen))
+assert(has(screen, "Egg pattern unknown"), "legacy copy with nil genes explained")
 -- Locked stages: visible, explained, never quoted.
 press(byName(screen, "Stage_emerald")) runFor(1)
 assert(has(screen, "EMERALD LOCKED") and has(screen, "Recipe not approved yet"), "emerald locked")
@@ -369,7 +375,7 @@ assert(preview:GetAttribute("Stage") == "gold" and preview:GetAttribute("Shiny")
 press(byName(screen, "ResultDetails")) runFor(1)
 assert(has(screen, "Gold Wavy Stripes Compy") and has(screen, "PRESTIGE: Crafted Gold (earned)") and has(screen, "Fused from 1 dinos"), "fused details")
 press(byText(screen, "BACK")) runFor(2)
-assert(#cards(screen) == 5, "donors consumed and list refreshed: " .. #cards(screen))
+assert(#cards(screen) == 6, "donors consumed and list refreshed: " .. #cards(screen))
 -- Hatched dino details from a card info button.
 press(byName(cards(screen)[1], "Details")) runFor(1)
 assert(has(screen, "ORIGINAL EGG") and has(screen, "Event: Rain") and has(screen, "Run reward egg"), "hatched details")

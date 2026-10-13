@@ -163,7 +163,7 @@ local function loadList(after: (() -> ())?)
             if type(response) ~= "table" or response.ok ~= true or type(response.dinosaurs) ~= "table" then
                 state.loading = false
                 state.listError = if type(response) == "table" then tostring(response.reason or "unknown") else "request_failed"
-                if state.listError == "fusion_disabled" or state.listError == "unavailable" then state.mode = "unavailable" end
+                if state.listError == "fusion_disabled" or state.listError == "unavailable" or state.listError == "identity_unavailable" or state.listError == "random_items_unavailable" then state.mode = "unavailable" end
                 if state.open then render() end
                 return
             end

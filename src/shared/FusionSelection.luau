@@ -518,11 +518,22 @@ Sel.FailureText = {
     profile_not_loaded = "Your profile is still loading. Try again in a moment.",
     request_failed = "Connection problem. Retrying with the same request.",
     unavailable = "Fusion unavailable.",
+    identity_unavailable = "Fusion is unavailable for this save right now.",
+    random_items_unavailable = "Fusion is not available for this account.",
+    bad_request = "Request was rejected. Please reopen Fusion.",
+    invalid_token = "Request token invalid. Please confirm again.",
+    invalid_instance = "A selected dino is invalid. Selection refreshed.",
+    wrong_owner = "A selected dino is not yours. Selection refreshed.",
+    unknown_stage = "Unknown fusion stage.",
+    projection_unsupported = "This stage is not fusable yet.",
+    identity_capacity = "Your collection is at its identity limit. Nothing was consumed.",
 }
-local RetrySame = {rate_limited = true, save_failed = true, request_failed = true, lease_lost = true}
+-- profile_not_loaded: after save_failed/lease_lost the server refuses until reload; the same token stays safe.
+local RetrySame = {rate_limited = true, save_failed = true, request_failed = true, lease_lost = true, profile_not_loaded = true}
 local Requote = {stale_quote = true, consent_required = true, donor_missing = true, donor_locked = true,
     wrong_donor_count = true, species_mismatch = true, pattern_mismatch = true, token_conflict = true,
-    duplicate_donor = true, wrong_stage = true, missing_pattern = true, invalid_donor_id = true}
+    duplicate_donor = true, wrong_stage = true, missing_pattern = true, invalid_donor_id = true,
+    invalid_instance = true, wrong_owner = true, invalid_token = true}
 
 function Sel.failureMessage(reason: any): string
     return Sel.FailureText[reason] or ("Fusion failed: " .. string.gsub(tostring(reason), "_", " "))

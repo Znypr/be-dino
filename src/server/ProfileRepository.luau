@@ -13,6 +13,7 @@ local ProgressionConfig = require(ReplicatedStorage.Shared.ProgressionConfig)
 local ProfileRepository = {}
 local DinosaurIdentity = require(script.Parent.DinosaurIdentity)
 local IdentityFusion = require(script.Parent.IdentityFusion)
+local FusionOdds = require(script.Parent.FusionOdds)
 
 local RunService = game:GetService("RunService")
 local localPreview = RunService:IsStudio() and game.GameId == 0 and Config.StudioLocalProfilesEnabled
@@ -30,8 +31,44 @@ if localPreview then
 else
     store = DataStoreService:GetDataStore(Config.ProfileDataStoreName)
 end
--- Development integration is strictly limited to unpublished memory-only profiles.
--- Persistent migration is intentionally not enabled by this foundation PR.
+-- Identity gating helpers. Unpublished memory-only Studio keeps the BD-060 behavior.
+-- Persistent profiles get the sidecar only when Config.IdentityPersistentEnabled is
+-- true (Milestone 1 private playtest with a fresh DataStore; default false).
+local function identityPersistent(): boolean
+    return not localPreview and Config.IdentityPersistentEnabled == true
+end
+-- True when the sidecar exists, is enabled for this server and is not suspended.
+local function identityAvailable(state: any): boolean
+    return (localPreview or identityPersistent()) and type(state) == "table" and state.suspendedReason == nil
+end
+-- Fail closed for identity features only: keep the last good sidecar untouched (never
+-- delete identities, cosmetics or fused results) and mark it suspended. A later write
+-- whose grouped collection reconciles again clears the mark automatically.
+local function suspendIdentity(before: any, reason: string)
+    if type(before) == "table" then before.suspendedReason = reason end
+    return before
+end
+local function persistentIdentityTransform(key: string, current: any, transform)
+    local before = if type(current) == "table" then DinosaurIdentity.copy(current.dinosaurIdentity) else nil
+    local updated = transform(current)
+    if updated == nil then return nil end
+    local identity, reason = DinosaurIdentity.reconcile(updated.collection, updated.dinosaurIdentity, key)
+    if identity then
+        identity.suspendedReason = nil
+        updated.dinosaurIdentity = identity
+    else
+        -- Legacy/over-capacity/protected profiles keep loading and playing.
+        updated.dinosaurIdentity = suspendIdentity(before, reason :: string)
+    end
+    -- Whole-profile byte preflight (estimate matched Roblox JSONEncode in Studio).
+    local limit = Config.IdentityProfileHardLimitBytes
+    if IdentityFusion.encodedSize(updated) > limit then
+        if identity then updated.dinosaurIdentity = suspendIdentity(DinosaurIdentity.copy(before), "storage_limit") end
+        if IdentityFusion.encodedSize(updated) > limit then return nil end
+    end
+    return updated
+end
+-- Development integration (unpublished memory-only profiles): unchanged BD-060 path.
 if localPreview then
     local backingStore = store
     store = {UpdateAsync = function(_, key, transform)
@@ -42,6 +79,15 @@ if localPreview then
             if not identity then error(reason) end
             updated.dinosaurIdentity = identity
             return updated
+        end)
+    end}
+elseif identityPersistent() then
+    -- Persistent identity (Milestone 1 playtest): reconcile in the SAME UpdateAsync
+    -- transform as every grouped change, so sidecar and collection commit together.
+    local backingStore = store
+    store = {UpdateAsync = function(_, key, transform)
+        return backingStore:UpdateAsync(key, function(current)
+            return persistentIdentityTransform(key, current, transform)
         end)
     end}
 end
@@ -310,36 +356,114 @@ function ProfileRepository.dinosaurDetails(player: Player, instanceId: string)
     return result
 end
 
--- BD-057 Phase 1 fusion. Development-only: unpublished memory profiles, a default-off
--- config flag and an explicitly injected test roller (no approved odds exist yet).
--- There is intentionally no remote; BD-065 owns the client flow.
+-- BD-057/BD-064 fusion. Enabled by Config.IdentityFusionPreviewEnabled on unpublished
+-- memory profiles, or on persistent profiles when Config.IdentityPersistentEnabled is
+-- also true. Trait odds come from the versioned PROVISIONAL FusionOdds roller; tests may
+-- inject a controlled roller. FusionService exposes this over the FusionAction remote.
 local fusionTestRoller: any = nil
+local productionRoller = FusionOdds.roller(function() return Random.new() end)
 local function fusionEnabled(): boolean
-    return localPreview and Config.IdentityFusionPreviewEnabled == true
+    return Config.IdentityFusionPreviewEnabled == true and (localPreview or identityPersistent())
+end
+local function activeRoller(): any
+    return if fusionTestRoller ~= nil then fusionTestRoller else productionRoller
 end
 
+-- Test hook: inject a controlled roller (nil restores the production roller).
 function ProfileRepository.setFusionTestRoller(roller: any): boolean
     if not fusionEnabled() then return false end
     fusionTestRoller = roller
     return true
 end
 
--- Returns a frozen quote (donor validation, ingredient summary, itemized loss
--- manifest and digests) without consuming anything.
-function ProfileRepository.quoteFusion(player: Player, targetStage: any, donorIds: any)
+-- Randomized synthesis is a paid random item when donors are Robux-linked. Milestone 1
+-- runs with all Robux features off; any profile that ever spent Robux, or a build with
+-- crystal packs on, needs the paid-random release gate and a passed PolicyService check.
+local function paidRandomBlocked(player: Player, profile: any): boolean
+    local robuxLinked = Config.CrystalPacksEnabled == true
+        or (type(profile.metrics) == "table" and type(profile.metrics.robux) == "number" and profile.metrics.robux > 0)
+    return robuxLinked and (not Config.PaidRandomItemsEnabled or player:GetAttribute("PaidRandomEligible") ~= true)
+end
+
+-- Shared precondition for every fusion read/write. Returns cached profile or nil, reason.
+local function fusionProfile(player: Player)
     if not fusionEnabled() then return nil, "fusion_disabled" end
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then return nil, "profile_not_loaded" end
+    if not identityAvailable(cached.dinosaurIdentity) then return nil, "identity_unavailable" end
+    if paidRandomBlocked(player, cached) then return nil, "random_items_unavailable" end
+    return cached, nil
+end
+
+function ProfileRepository.fusionStatus(player: Player): (boolean, string?)
+    local cached, reason = fusionProfile(player)
+    return cached ~= nil, reason
+end
+
+local function instanceSequence(id: string): number
+    return tonumber(string.match(id, "/d:(%d+)$")) or 0
+end
+
+-- Paged individual-dinosaur list for the Fusion Menu, sorted by instanceId sequence.
+-- cursor = last sequence already seen (exclusive); limit 1..200.
+function ProfileRepository.listDinosaurs(player: Player, cursor: number?, limit: number?)
+    local cached, reason = fusionProfile(player)
+    if not cached then return nil, reason end
+    local after = cursor or 0
+    local size = math.clamp(limit or 100, 1, 200)
+    local entries = {}
+    for id, instance in cached.dinosaurIdentity.instances do
+        local sequence = instanceSequence(id)
+        if sequence > after then table.insert(entries, {sequence = sequence, instance = instance}) end
+    end
+    table.sort(entries, function(a, b) return a.sequence < b.sequence end)
+    local page = {}
+    for i = 1, math.min(size, #entries) do
+        local d = entries[i].instance
+        local c = if type(d.cosmetics) == "table" then d.cosmetics else {}
+        local auras, trails = 0, 0
+        for _, owned in c.ownedAuraIds or {} do if owned then auras += 1 end end
+        for _, owned in c.ownedTrailIds or {} do if owned then trails += 1 end end
+        table.insert(page, {instanceId = d.instanceId, speciesId = d.speciesId, stage = d.stage,
+            genes = DinosaurIdentity.copy(d.genes), big = d.big == true, shiny = d.shiny == true,
+            mutationId = d.mutationId or "", originKind = if type(d.origin) == "table" then d.origin.kind else "legacy_unknown",
+            locked = d.locked == true, favorited = d.favorited == true, auraCount = auras, trailCount = trails,
+            equippedAuraId = c.equippedAuraId or "", equippedTrailId = c.equippedTrailId or ""})
+    end
+    local nextCursor = if #entries > size then entries[size].sequence else nil
+    return {dinosaurs = page, nextCursor = nextCursor}
+end
+
+-- Gated Dino Details copy (original egg or fusion lineage) for the remote.
+function ProfileRepository.fusionDetails(player: Player, instanceId: string)
+    local cached, reason = fusionProfile(player)
+    if not cached then return nil, reason end
+    local details = ProfileRepository.dinosaurDetails(player, instanceId)
+    if not details then return nil, "donor_missing" end
+    return details
+end
+
+-- Returns a frozen quote (donor validation, ingredient summary, itemized loss
+-- manifest, digests) plus the EXACT active odds, without consuming anything.
+function ProfileRepository.quoteFusion(player: Player, targetStage: any, donorIds: any)
+    local cached, gate = fusionProfile(player)
+    if not cached then return nil, gate end
     local quote, reason = IdentityFusion.quote(cached.dinosaurIdentity, keyFor(player), targetStage, donorIds)
     if not quote then return nil, reason end
-    return DinosaurIdentity.copy(quote)
+    local result = DinosaurIdentity.copy(quote)
+    local roller = activeRoller()
+    if type(roller) == "table" and type(roller.distribution) == "function" then
+        local ok, odds = pcall(roller.distribution, DinosaurIdentity.copy(quote.summary))
+        result.oddsVersion = roller.version
+        result.odds = if ok then odds else nil
+    end
+    return result
 end
 
 -- request = {token, targetStage, donorIds, quoteDigest, consentDigest?}
 function ProfileRepository.fuseDinosaurs(player: Player, request: any)
-    if not fusionEnabled() then return false, nil, "fusion_disabled" end
-    local cached = profiles[player]
-    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then return false, nil, "profile_not_loaded" end
+    local cached, gate = fusionProfile(player)
+    if not cached then return false, nil, gate end
     if typeof(request) ~= "table" or typeof(request.token) ~= "string" or #request.token < 1
         or #request.token > IdentityFusion.MaxTokenLength then return false, nil, "invalid_token" end
     local ownerKey = keyFor(player)
@@ -356,7 +480,7 @@ function ProfileRepository.fuseDinosaurs(player: Player, request: any)
     if request.quoteDigest ~= quote.quoteDigest then return false, nil, "stale_quote" end
     if quote.consentRequired and request.consentDigest ~= quote.consentDigest then return false, nil, "consent_required" end
     -- Precommit traits ONCE outside UpdateAsync: retries cannot reroll.
-    local outcome, outcomeReason = IdentityFusion.prepareOutcome(quote, fusionTestRoller, EggGenetics.valid)
+    local outcome, outcomeReason = IdentityFusion.prepareOutcome(quote, activeRoller(), EggGenetics.valid)
     if not outcome then return false, nil, outcomeReason end
 
     local now = os.time()
@@ -366,6 +490,9 @@ function ProfileRepository.fuseDinosaurs(player: Player, request: any)
             committed, failure, duplicate, leaseLost = nil, nil, false, false
             if not isValidProfile(profileValue) then failure = "invalid_profile" return nil end
             if not ownSession(profileValue) then leaseLost = true return nil end
+            local state = profileValue.dinosaurIdentity
+            local replay = type(state) == "table" and type(state.fusions) == "table" and state.fusions[operationId] ~= nil
+            if not replay and not identityAvailable(state) then failure = "identity_unavailable" return nil end
             local nextProfile, status, result = IdentityFusion.apply(profileValue, ownerKey, request, outcome, now)
             if not nextProfile then failure = status return nil end
             committed = result
@@ -375,6 +502,11 @@ function ProfileRepository.fuseDinosaurs(player: Player, request: any)
             table.insert(nextProfile.recentOperations, {id = operationId, kind = "identity_fusion",
                 outcome = {resultId = result.resultId, targetStage = result.targetStage, speciesId = result.speciesId}})
             trimOperations(nextProfile)
+            -- Whole-profile byte preflight before the write (4 MiB DataStore limit).
+            if IdentityFusion.encodedSize(nextProfile) > Config.IdentityFusionProfileBudgetBytes then
+                failure = "storage_limit"
+                return nil
+            end
             return nextProfile
         end)
     end)
@@ -856,7 +988,7 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
                 if not ProgressionRules.knownEventMutation(mutationId) then return nil end
                 species.events[mutationId]=(species.events[mutationId] or 0)+outcome.count
             else species.base += outcome.count end
-            if localPreview and profileValue.dinosaurIdentity and not outcome.failed then
+            if identityAvailable(profileValue.dinosaurIdentity) and not outcome.failed then
                 local bucketKey = outcome.speciesId .. "/base"
                 if chest.big or chest.shiny or chest.genes then
                     bucketKey = outcome.speciesId .. "/variant/" .. EggTraits.key(mutationId, chest.shiny == true, chest.big == true, chest.genes)
