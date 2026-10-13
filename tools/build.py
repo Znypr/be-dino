@@ -13,7 +13,9 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def build(project_path=ROOT / "default.project.json"):
+def build(project_path=ROOT / "default.project.json", transform=None):
+    """Package the project. `transform(relative_path, source) -> source` lets a
+    release profile rewrite generated sources; `src/` itself is never modified."""
     project_path = Path(project_path)
     project = json.loads(project_path.read_text(encoding="utf-8"))
     if set(project) != {"name", "tree"}:
@@ -63,6 +65,8 @@ def build(project_path=ROOT / "default.project.json"):
                 raise ValueError(f"Duplicate instance name: {name}")
             names.add(name)
             source = None if entry.is_dir() else entry.read_text(encoding="utf-8")
+            if source is not None and transform is not None:
+                source = transform(entry.relative_to(project_path.parent).as_posix(), source)
             child = item(parent, name, kind, source)
             if entry.is_dir():
                 directory(child, entry)
@@ -106,13 +110,72 @@ def build(project_path=ROOT / "default.project.json"):
     return ET.tostring(root, encoding="utf-8", xml_declaration=True), sources
 
 
+CONFIG_PATH = "src/shared/Config.luau"
+
+
+def build_version(root=ROOT):
+    return re.search(r'Build = "redesign-(\d+)"', (Path(root) / CONFIG_PATH).read_text(encoding="utf-8")).group(1)
+
+
+def git_state(root=ROOT):
+    """(commit, dirty) for the build manifest; (None, None) outside a git checkout."""
+    import subprocess
+    try:
+        commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True, check=True).stdout.strip()
+        status = subprocess.run(["git", "status", "--porcelain", "--", "src", "default.project.json", "resources", "tools"],
+                                cwd=root, capture_output=True, text=True, check=True).stdout.strip()
+        return commit, bool(status)
+    except (OSError, subprocess.CalledProcessError):
+        return None, None
+
+
+def build_profile(profile, project_path=ROOT / "default.project.json"):
+    """Build with a release profile applied to Config. Returns (data, sources, report)."""
+    import sys
+    tools = str(Path(__file__).resolve().parent)
+    if tools not in sys.path:
+        sys.path.insert(0, tools)
+    import release_profiles
+    reports = []
+
+    def transform(relative, source):
+        if relative != CONFIG_PATH:
+            return source
+        rewritten, report = release_profiles.apply_profile(source, profile)
+        reports.append(report)
+        return rewritten
+
+    data, sources = build(project_path, transform)
+    if len(reports) != 1:
+        raise ValueError(f"Release profile {profile!r}: expected exactly one {CONFIG_PATH}, found {len(reports)}")
+    return data, sources, reports[0]
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", type=Path, default=ROOT / ("build/BeDino-Build" + re.search(r'Build = "redesign-(\d+)"', (ROOT / "src/shared/Config.luau").read_text()).group(1) + ".rbxlx"))
+    parser.add_argument("--output", type=Path, default=None)
+    parser.add_argument("--profile", default=None,
+                        help="release profile from tools/release_profiles.py (e.g. playtest); default build is unchanged")
     args = parser.parse_args()
-    data, sources = build()
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_bytes(data)
+    suffix = "" if args.profile in (None, "default") else "-" + args.profile
+    output = args.output or ROOT / ("build/BeDino-Build" + build_version() + suffix + ".rbxlx")
+    if suffix:
+        data, sources, report = build_profile(args.profile)
+        for warning in report.warnings:
+            print(f"WARNING: {warning}")
+        if not report.ok:
+            for error in report.errors:
+                print(f"ERROR: {error}")
+            raise SystemExit(f"Release profile {args.profile!r} failed; no place was written.")
+    else:
+        data, sources = build()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_bytes(data)
     manifest = {"format": 1, "place_sha256": hashlib.sha256(data).hexdigest(), "sources": sources}
-    args.output.with_suffix(".manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    print(f"Built {args.output.name}: {len(sources)} scripts, {len(data)} bytes")
+    if suffix:
+        commit, dirty = git_state()
+        manifest.update({"profile": args.profile, "build": "redesign-" + build_version(),
+                         "git_commit": commit, "git_dirty": dirty, "config_overrides": report.applied,
+                         "warnings": report.warnings})
+    output.with_suffix(".manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    print(f"Built {output.name}: {len(sources)} scripts, {len(data)} bytes")

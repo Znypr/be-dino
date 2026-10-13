@@ -18,7 +18,7 @@ Maximum player access/policy work remains in progress:
 
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-017; BD-019–022; BD-035; **BD-044–056, BD-058–059, BD-061–063, BD-065** | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042; **BD-057 Phase 1; BD-060; BD-064 server** | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
+| BD-017; BD-021–022; BD-035; **BD-044–056, BD-058–059, BD-061–063, BD-065** | BD-027 | BD-043; BD-019 device/load (owner publish pending) | BD-006 mobile; BD-016 visual kit; BD-020 release/rollback (owner publish pending); BD-023–026; BD-028–034; BD-036–042; **BD-057 Phase 1; BD-060; BD-064 server** | BD-004 private-place record (IDs pending) | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -108,7 +108,7 @@ ledger compaction before public release.
 | BD-001 | Done | P0 | Research and initial project documents | None |
 | BD-002 | Done | P0 | Choose first-test direction | BD-001 |
 | BD-003 | Done | P0 | Resolve setup and design blockers | BD-002 |
-| BD-004 | Blocked | P0 | Bootstrap reproducible project and private test place | BD-003 |
+| BD-004 | Blocked | P0 | Bootstrap reproducible project and private test place (Milestone 1 playtest IDs pending from owner) | BD-003 |
 | BD-005 | Done | P0 | Specify persistence and remote contracts | BD-003 |
 | BD-006 | Review / test | P0 | Prototype one dinosaur controller and camera | BD-004 |
 | BD-007 | Done | P1 | Specify original asset kit and visual sample | BD-002 |
@@ -123,8 +123,8 @@ ledger compaction before public release.
 | BD-016 | Review / test | P1 | Produce and integrate dinosaur/map kit | BD-006, BD-007 |
 | BD-017 | Backlog | P1 | Integrate minimal sound feedback | BD-004, BD-008, BD-013 |
 | BD-018 | Done | P0 | Run multiplayer, security and persistence suite | BD-011–015 |
-| BD-019 | Backlog | P0 | Run device/load and published-asset checks | BD-015–017 |
-| BD-020 | Backlog | P0 | Prepare private test release and rollback | BD-018, BD-019 |
+| BD-019 | In progress | P0 | Run device/load and published-asset checks (offline load harness done; owner publish pending) | BD-015–017 |
+| BD-020 | Review / test | P0 | Prepare private test release and rollback (tooling + runbook ready; owner publish pending) | BD-018, BD-019 |
 | BD-021 | Backlog | P0 | Observe community test and triage | BD-020 |
 | BD-022 | Backlog | P1 | Decide public alpha scope after test | BD-021 |
 
@@ -591,6 +591,8 @@ Done. Personal account, Studio installed, €0 target budget, immediate run dino
 
 Source mapping, dependency-free Python packager and generated `.rbxlx` are working. A separate private test experience is now being used for DataStore testing, but the repository still does not record its experience/place IDs. That remains the blocker for closing BD-004.
 
+2026-10-13 (Milestone 1): the playtest uses a **new** private experience with a fresh DataStore; IDs are pending from Znypr. Record them in `PlaytestUniverseId` / `PlaytestPlaceId` in `src/shared/Config.luau` (placeholders marked `TODO(BD-004)`, right after `ProfileDataStoreName`) and in the release record of the [playtest runbook](55-playtest-release-runbook.md) §2/§6. `tools/verify_release.py --profile playtest` and `tools/build.py --profile playtest` fail until both are positive. Move to Done when that commit lands.
+
 ### BD-005 — persistence and remote contracts
 Done as a specification. `docs/13-persistence-remote-contracts.md` chooses a project-owned `DataStoreService`/`UpdateAsync` repository with leases, revisions, immutable operation outcomes and explicit remote validation. Durable implementation remains BD-011.
 
@@ -658,8 +660,12 @@ Build 012 passed all eight runtime checks. Malformed/flooded remotes, impossible
 ### BD-019 — device/load/published assets
 Requires a real target phone plus the agreed multiplayer/pickup load test and non-owner asset checks.
 
+2026-10-13 — **In progress, owner publish pending.** `tools/verify_load.py` (in CI) runs the real ProfileRepository with a mocked, latency/throttle-modelled DataStore: 8 and 12 simulated players over 15 min pass with zero failed operations, no throttling and peak 56–57% of the 60 + 10×players/min budget. **Release blocker:** with the playtest flags (persistent identities + fusion) on today's direct-copy payout, profiles reach 528 KB in 15 min and exceed the 4 MB/min per-key write throughput; the playtest must wait for BD-044 (`--gate-playtest` gate, runbook §5). Report-only: a 150-egg simultaneous reveal sits at ~100% of budget and one equip-spamming client uses ~60% of an 8-player server's budget; batching egg claims and a per-player write budget are recommended. The Studio 2/4/8-client, desktop + Android and non-owner rows of the [runbook matrix](55-playtest-release-runbook.md) §5 remain to be executed after publish. Offline results are not device or live-DataStore evidence.
+
 ### BD-020 — private release/rollback
 Requires a known-good commit/build, private access settings, no public debug grants, known issues and a tested rollback.
+
+2026-10-13 — **Review / test, owner publish pending.** `python tools/build.py --profile playtest` produces a reproducible playtest place (playtest store name, `ReleaseProfile = "playtest"`, manifest with commit/dirty flag) and `tools/verify_release.py` enforces paid/test/debug flags off (default profile in CI). [Playtest runbook](55-playtest-release-runbook.md) holds gates, owner Studio publish steps, tagging (`playtest-m1-bNNN-rK`), release record, known-issues template, rollback/store-rotation and data-reset policy. Done requires the actual private publish, the recorded release row and a performed rollback drill.
 
 ### BD-021 — observed community test
 Run the small invited session only after BD-020. Capture friction, repeat-run behavior and defects separately from suggestions.
