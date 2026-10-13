@@ -1,86 +1,55 @@
 --!strict
+-- BD-044 reward math. Pure functions: no DataStore access, no wall clock.
+-- Every earned run catch is exactly one run egg; crystals and bonus nests are separate.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
+local ProgressionConfig = require(ReplicatedStorage.Shared.ProgressionConfig)
 
 local RewardMath = {}
 
-local function validateScore(catchScore: number)
-    if catchScore ~= catchScore or catchScore == math.huge or catchScore == -math.huge then
-        error("catchScore must be finite")
-    end
-    if catchScore % 1 ~= 0 or catchScore < 0 or catchScore > Config.MaxCatchScore then
-        error("catchScore outside supported integer range")
-    end
+-- Sanitizes an untrusted catch count: NaN/non-number/negative -> 0, fractions floor,
+-- anything above the per-run cap (including +inf) clamps to RunEggMaxPerRun.
+function RewardMath.runEggCount(catchScore: any): number
+    if typeof(catchScore) ~= "number" or catchScore ~= catchScore or catchScore <= 0 then return 0 end
+    if catchScore >= Config.RunEggMaxPerRun then return Config.RunEggMaxPerRun end
+    return math.floor(catchScore)
 end
 
-local function eligibleTierCount(catchScore: number): number
-    local count = 0
-    for _, threshold in Config.AlphaTierThresholds do
-        if catchScore >= threshold then
-            count += 1
-        end
-    end
-    return count
+-- PROVISIONAL deterministic run crystals (see ProgressionConfig.RunCrystal*).
+function RewardMath.runCrystals(eggCount: number): number
+    local n = RewardMath.runEggCount(eggCount)
+    local tier = ProgressionConfig.RunCrystalTierEggs
+    local crystals = ProgressionConfig.RunCrystalPerEgg * math.min(n, tier)
+        + (ProgressionConfig.RunCrystalPerExtraEggTenths * math.max(0, n - tier)) // 10
+    return math.min(ProgressionConfig.RunCrystalCap, crystals)
 end
 
-function RewardMath.allocateTiers(catchScore: number): {number}
-    validateScore(catchScore)
-    local tierCount = eligibleTierCount(catchScore)
-    if catchScore == 0 or tierCount == 0 then
-        return {}
-    end
-
-    local allocated = table.create(tierCount, 0)
-    local weights = table.create(tierCount, 0)
-    for tier = 1, tierCount do
-        weights[tier] = Config.RarityQ ^ (tier - 1)
-    end
-
-    for _ = 1, catchScore do
-        local bestTier = 1
-        local bestValue = -math.huge
-        for tier = 1, tierCount do
-            local value = weights[tier] / (allocated[tier] + 1)
-            if value > bestValue then
-                bestValue = value
-                bestTier = tier
-            end
-        end
-        allocated[bestTier] += 1
-    end
-
-    return allocated
+-- PROVISIONAL nest earning rule: first nest at NestFirstAtEggs, then one per
+-- NestEggsPerExtraNest further eggs (15 -> 1, 150 -> 6), capped per run.
+function RewardMath.nestCount(eggCount: number): number
+    local n = RewardMath.runEggCount(eggCount)
+    if n < Config.NestFirstAtEggs then return 0 end
+    return math.min(Config.NestMaxPerRun, 1 + (n - Config.NestFirstAtEggs) // Config.NestEggsPerExtraNest)
 end
 
-function RewardMath.earnedChests(catchScore: number): number
-    validateScore(catchScore)
-    local result = 0
-    for _, row in Config.ChestThresholds do
-        if catchScore >= row.score then
-            result = row.count
-        end
-    end
-    return result
-end
-
-function RewardMath.computeRunReward(catchScore: number)
-    local tierCounts = RewardMath.allocateTiers(catchScore)
-    local stacks = {}
-    for tier, count in tierCounts do
-        if count > 0 then
-            table.insert(stacks, {
-                speciesId = Config.AlphaSpeciesByTier[tier],
-                mutationId = "base",
-                count = count,
-            })
-        end
-    end
+function RewardMath.computeRunReward(catchScore: any)
+    local eggCount = RewardMath.runEggCount(catchScore)
     return {
-        rewardConfigVersion = 1,
-        catchScore = catchScore,
-        stacks = stacks,
-        chestCount = RewardMath.earnedChests(catchScore),
+        rewardConfigVersion = Config.RunRewardConfigVersion,
+        catchScore = eggCount,
+        eggCount = eggCount,
+        crystals = RewardMath.runCrystals(eggCount),
+        nestCount = RewardMath.nestCount(eggCount),
+        accountXP = eggCount, -- unchanged rate: 1 account XP per catch (= per run egg)
     }
+end
+
+-- Deterministic, bounded egg identifiers: retries and reconnects cannot mint new IDs.
+function RewardMath.runEggId(runId: string, ordinal: number): string
+    return "run:" .. runId .. ":" .. tostring(ordinal)
+end
+function RewardMath.nestId(runId: string, ordinal: number): string
+    return "nest:" .. runId .. ":" .. tostring(ordinal)
 end
 
 local function weightedChoice(rows, rng: Random)
@@ -95,6 +64,8 @@ local function weightedChoice(rows, rng: Random)
     return rows[#rows]
 end
 
+-- Species roll for one egg. Run batches boost Rare/Legendary weights by
+-- B = 1 + (clamp(N,1,15)-1)*0.25. Quantity is now always one dinosaur.
 function RewardMath.computeChestReward(rng: Random?, eggCount: number?)
     local random = rng or Random.new()
     local boost = 1 + (math.clamp(eggCount or 1, 1, Config.EggRarityBoostMaxEggs) - 1) * Config.EggRarityBoostPerExtraEgg
@@ -105,7 +76,7 @@ function RewardMath.computeChestReward(rng: Random?, eggCount: number?)
     local speciesRow = weightedChoice(rows, random)
     local quantityRow = weightedChoice(Config.ChestQuantityWeights, random)
     return {
-        rewardConfigVersion = 1,
+        rewardConfigVersion = Config.RunRewardConfigVersion,
         speciesId = speciesRow.speciesId,
         mutationId = "base",
         count = quantityRow.count,

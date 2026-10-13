@@ -37,6 +37,11 @@ See `RewardMath.computeChestReward`. Direct run copies are a separate **legacy**
 
 ## Conditions And Upgrade Distributions
 
+> **BD-044/BD-045 update (2026-10-13, Review / test, Studio pending):** new eggs use
+> `bd045-conditions-v1` (tier 0 50/30/15/4.5/0.5, PROVISIONAL tiers 1-6) and hatch
+> exactly one dinosaur; the table below is the **historical Build 020** distribution that
+> already-saved eggs were rolled with. Current tiers: [50-bd044-reward-loop.md](50-bd044-reward-loop.md#bd-045-condition-odds-bd045-conditions-v1).
+
 Exactly one condition is assigned using the player's condition-upgrade level when
 the new egg is prepared. Upgrades never alter existing queued/overflow eggs.
 Cracked succeeds 20%; every other condition succeeds 100%. Successful Cracked

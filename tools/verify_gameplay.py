@@ -135,7 +135,15 @@ assert(not Lifecycle.tryEnd(player,first,"ManualExit"))
 assert(settlements==1,"duplicate settlement")
 start(player)
 assert(player.Character:GetAttribute("RunState")=="Active")
-print("Lifecycle passed: sanctuary -> active -> one settlement -> sanctuary; malformed/duplicate requests rejected")
+local blocked={Parent=true,attrs={ProfileState="Loaded",RunStartBlocked="egg_bank_full"}}
+setmetatable(blocked,{__index=player})
+blocked:LoadCharacterAsync()
+start(blocked)
+assert(blocked.Character:GetAttribute("RunState")=="Sanctuary" and blocked.attrs.LastRunStartStatus=="egg_bank_full","full egg bank must block a new run")
+blocked.attrs.RunStartBlocked=""
+start(blocked)
+assert(blocked.Character:GetAttribute("RunState")=="Active","run starts once the bank has room")
+print("Lifecycle passed: sanctuary -> active -> one settlement -> sanctuary; malformed/duplicate requests rejected; BD-044 egg-bank gate")
 '''
 if __name__=='__main__':
  p=argparse.ArgumentParser();p.add_argument('--runner',required=True);args=p.parse_args()

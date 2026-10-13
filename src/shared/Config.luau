@@ -40,9 +40,6 @@ return table.freeze({
     RespawnDelaySeconds = 2,
 
     MaxCatchScore = 5000,
-    RarityQ = 0.25,
-    AlphaTierThresholds = {1, 25, 100},
-    AlphaSpeciesByTier = {"compy", "triceratops", "tyrannosaurus"},
     SpeciesOrder = {"compy", "triceratops", "tyrannosaurus", "raptor", "stegosaurus", "ankylosaurus", "archaeopteryx", "baryonyx", "brachiosaurus", "dimorphodon", "elasmosaurus", "gallimimus", "ichthyosaurus", "microraptor", "mosasaurus", "pachycephalosaurus", "parasaurolophus", "plesiosaurus", "pteranodon", "quetzalcoatlus", "spinosaurus", "therizinosaurus"},
     SpeciesDisplayNames = {
         compy = "Compy",
@@ -69,11 +66,8 @@ return table.freeze({
         therizinosaurus = "Therizinosaurus",
     },
     SpeciesRarities = {compy = 1, raptor = 1, triceratops = 2, stegosaurus = 2, tyrannosaurus = 3, ankylosaurus = 3, archaeopteryx = 1, baryonyx = 2, brachiosaurus = 2, dimorphodon = 1, elasmosaurus = 3, gallimimus = 1, ichthyosaurus = 2, microraptor = 1, mosasaurus = 3, pachycephalosaurus = 2, parasaurolophus = 2, plesiosaurus = 2, pteranodon = 2, quetzalcoatlus = 3, spinosaurus = 3, therizinosaurus = 3},
-    ChestThresholds = {
-        {score = 10, count = 1},
-        {score = 100, count = 2},
-        {score = 500, count = 3},
-    },
+    -- HISTORICAL (removed by BD-044): ChestThresholds 10/100/500 catches -> 1/2/3 eggs and
+    -- AlphaTierThresholds direct N(c)=c copies. See docs/15-economy-simulation.md.
 
     ProfileDataStoreName = "BeDino_PrivateTest_v1",
     ProfileSchemaVersion = 1,
@@ -100,6 +94,24 @@ return table.freeze({
     PaidRandomItemsEnabled = false, -- Release gate: complete combined-outcome disclosure/policy acceptance first.
     ChestQueueCapacity = 5,
     ChestOverflowCapacity = 10,
+    -- BD-044 reward loop (owner decision 2026-10-13): every earned run catch banks
+    -- exactly ONE run egg; no direct N(c)=c copies and no 10/100/500 threshold eggs.
+    -- Run eggs beyond the five-slot reveal queue wait in a server-side ordered bank.
+    RunRewardConfigVersion = 2,
+    RunEggMaxPerRun = 300, -- PROVISIONAL: catches stop counting at 300 eggs per run (storage bound)
+    RunEggBankCapacity = 600, -- PROVISIONAL: banked run eggs behind the queue; runs start only with room for a full run
+    SettledRunLedgerSize = 200, -- PROVISIONAL: settled run IDs kept for exactly-once settlement beyond recentOperations
+    -- Separate bonus egg nests (never the ordinary egg queue). Excess nests wait as
+    -- pending/capacity-blocked and are never silently granted or discarded.
+    NestSlotCapacity = 5,
+    NestPendingCapacity = 30, -- PROVISIONAL
+    NestFirstAtEggs = 15, -- PROVISIONAL: 15 run eggs (500 food) earn the first nest
+    NestEggsPerExtraNest = 27, -- PROVISIONAL: +1 nest per 27 further eggs (150 eggs -> 6 nests)
+    NestMaxPerRun = 11, -- PROVISIONAL: equals the nest count at RunEggMaxPerRun
+    NestEggCount = 3, -- PROVISIONAL: each nest contains three precommitted bonus eggs
+    NestIncubationSeconds = 300, -- PROVISIONAL: a slotted nest opens five minutes after it takes a slot
+    NestRarityBoostEggs = 15, -- PROVISIONAL: nest eggs use the maximum run-batch species boost
+    NestClaimRequestCooldownSeconds = 0.5,
     ChestClaimRequestCooldownSeconds = 0.35,
     ChestTestGrantEnabled = false,
     ChestTestGrantCount = 7,
@@ -128,10 +140,11 @@ return table.freeze({
         {speciesId = "mosasaurus", weight = 0.75},
         {speciesId = "elasmosaurus", weight = 0.75},
     },
+    -- Owner decision 2026-10-13: exactly one dinosaur per successfully hatched egg.
+    -- Historical Build 020 split was 1/2/3 copies at 70/25/5; already-saved eggs keep
+    -- their committed count when claimed.
     ChestQuantityWeights = {
-        {count = 1, weight = 70},
-        {count = 2, weight = 25},
-        {count = 3, weight = 5},
+        {count = 1, weight = 1},
     },
 
     GoldMutationCost = 50,

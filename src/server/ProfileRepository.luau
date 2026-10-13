@@ -127,6 +127,33 @@ local function isValidProfile(profile: any): boolean
         if typeof(profile.pendingEggEvents)~="table" or #profile.pendingEggEvents~=profile.pendingChestGrants then return false end
         for _,metadata in profile.pendingEggEvents do if not validEgg(metadata) then return false end end
     end
+    -- BD-044 additive fields. Absent on older saves; capacities gate run starts, not loads,
+    -- so only a generous structural ceiling is enforced here (never strand a save).
+    local function validId(id) return typeof(id) == "string" and #id >= 1 and #id <= 80 end
+    local function validBankedEgg(egg) return validEgg(egg) and validId(egg.eggId) end
+    local function validNest(nest, slotted: boolean)
+        if typeof(nest) ~= "table" or not validId(nest.nestId) or typeof(nest.eggs) ~= "table" or #nest.eggs > 20 then return false end
+        if slotted and (typeof(nest.readyAt) ~= "number" or nest.readyAt ~= nest.readyAt or nest.readyAt < 0
+            or nest.readyAt % 1 ~= 0 or nest.readyAt == math.huge) then return false end
+        for _, egg in nest.eggs do if not validBankedEgg(egg) then return false end end
+        return true
+    end
+    if profile.runEggBank ~= nil then
+        if typeof(profile.runEggBank) ~= "table" or #profile.runEggBank > 5000 then return false end
+        for _, egg in profile.runEggBank do if not validBankedEgg(egg) then return false end end
+    end
+    if profile.nests ~= nil then
+        if typeof(profile.nests) ~= "table" or #profile.nests > 50 then return false end -- structural ceiling only
+        for _, nest in profile.nests do if not validNest(nest, true) then return false end end
+    end
+    if profile.pendingNests ~= nil then
+        if typeof(profile.pendingNests) ~= "table" or #profile.pendingNests > 1000 then return false end
+        for _, nest in profile.pendingNests do if not validNest(nest, false) then return false end end
+    end
+    if profile.settledRuns ~= nil then
+        if typeof(profile.settledRuns) ~= "table" then return false end
+        for _, id in profile.settledRuns do if not validId(id) then return false end end
+    end
     for _, speciesId in Config.SpeciesOrder do
         local entry = profile.collection[speciesId]
         if typeof(entry) ~= "table"
@@ -218,6 +245,18 @@ local function syncAttributes(player: Player, profile: any)
         })
     end
     player:SetAttribute("ChestQueueJson", HttpService:JSONEncode(chestSummary))
+    -- BD-044: banked run eggs and separate bonus nests (counts and slot summaries only).
+    local banked = if typeof(profile.runEggBank) == "table" then #profile.runEggBank else 0
+    local pendingNests = if typeof(profile.pendingNests) == "table" then #profile.pendingNests else 0
+    player:SetAttribute("BankedRunEggCount", banked)
+    player:SetAttribute("QueuedEggsWaiting", banked + (profile.pendingChestGrants or 0))
+    local nestSummary = {}
+    for _, nest in profile.nests or {} do
+        table.insert(nestSummary, {id = nest.nestId, readyAt = nest.readyAt, eggCount = #nest.eggs})
+    end
+    player:SetAttribute("NestsJson", HttpService:JSONEncode(nestSummary))
+    player:SetAttribute("PendingNestCount", pendingNests)
+    player:SetAttribute("RunStartBlocked", ProfileRepository.runStartBlockReason(profile))
     local nextChest = profile.eggs[1]
     if typeof(nextChest) == "table" then
         player:SetAttribute("NextChestId", nextChest.eggId)
@@ -296,6 +335,65 @@ local function enqueueChestIds(profile: any, chestIds: {string}, now: number, ev
             table.insert(profile.pendingEggEvents,metadata)
         end
     end
+end
+
+-- BD-044 egg bank. The five-slot queue stays the reveal window; banked run eggs wait
+-- behind it (and behind any legacy pending grants) in committed reveal order.
+function ProfileRepository.runStartBlockReason(profile: any): string
+    local banked = if typeof(profile.runEggBank) == "table" then #profile.runEggBank else 0
+    if banked > Config.RunEggBankCapacity - Config.RunEggMaxPerRun then return "egg_bank_full" end
+    local pending = if typeof(profile.pendingNests) == "table" then #profile.pendingNests else 0
+    if pending > Config.NestPendingCapacity - Config.NestMaxPerRun then return "nests_pending_full" end
+    return ""
+end
+
+local function queueEntry(egg: any, readyAt: number)
+    local entry = table.clone(egg)
+    entry.readyAt = readyAt
+    return entry
+end
+
+-- Moves banked eggs into free queue slots, preserving FIFO behind legacy overflow.
+local function refillFromBank(profile: any, now: number)
+    local bank = profile.runEggBank
+    if typeof(bank) ~= "table" then return end
+    while #profile.eggs < Config.ChestQueueCapacity and profile.pendingChestGrants == 0 and #bank > 0 do
+        local readyAt = if Config.ChestTimerSeconds == 0 then now else lastChestReadyAt(profile, now) + Config.ChestTimerSeconds
+        table.insert(profile.eggs, queueEntry(table.remove(bank, 1), readyAt))
+    end
+end
+
+local function bankEggs(profile: any, eggs: {any}, now: number, atFront: boolean?)
+    profile.runEggBank = profile.runEggBank or {}
+    local bank = profile.runEggBank
+    if atFront then
+        for i = #eggs, 1, -1 do table.insert(bank, 1, eggs[i]) end
+    else
+        for _, egg in eggs do table.insert(bank, egg) end
+    end
+    refillFromBank(profile, now)
+end
+
+-- Bonus nests fill free nest slots (incubation starts on slotting); the rest wait as
+-- pending. Capacities gate run starts, so a settlement never drops or covertly grants a nest.
+local function promoteNests(profile: any, now: number)
+    profile.nests = profile.nests or {}
+    profile.pendingNests = profile.pendingNests or {}
+    while #profile.nests < Config.NestSlotCapacity and #profile.pendingNests > 0 do
+        local nest = table.remove(profile.pendingNests, 1)
+        nest.readyAt = now + Config.NestIncubationSeconds
+        table.insert(profile.nests, nest)
+    end
+end
+
+local function hasSettledRun(profile: any, runId: string): boolean
+    return typeof(profile.settledRuns) == "table" and table.find(profile.settledRuns, runId) ~= nil
+end
+
+local function recordSettledRun(profile: any, runId: string)
+    profile.settledRuns = profile.settledRuns or {}
+    table.insert(profile.settledRuns, runId)
+    while #profile.settledRuns > Config.SettledRunLedgerSize do table.remove(profile.settledRuns, 1) end
 end
 
 -- Server-only read interface for future selection/details; no new network surface.
@@ -401,7 +499,9 @@ function ProfileRepository.prepareEgg(player: Player,tag)
     local rng=Random.new()
     local p=ProfileRepository.progression(player)
     local result=table.clone(tag)
-    result.traitRollVersion="build020-genes-v1"
+    -- bd045-genes-v2 = Build 020 genes with ProgressionConfig.ConditionOddsVersion
+    -- (bd045-conditions-v1). Older eggs keep "build020-genes-v1" and their saved genes.
+    result.traitRollVersion="bd045-genes-v2"
     result.genes=EggGenetics.roll(if p then p.conditionLevel else 0,rng)
     local traits=EggTraits.roll(tag.eventId or "clear",rng:NextNumber(),rng:NextNumber())
     result.shiny,result.big=traits.shiny,traits.big
@@ -467,98 +567,150 @@ function ProfileRepository.load(player: Player): boolean
     return true
 end
 
+-- Places weather/mutation tags (catch-time metadata) onto egg ordinals. A tag may name
+-- its catch ordinal as n; otherwise it takes the next free ordinal.
+local function placeEggTags(eggEvents, eggCount: number)
+    local placed = table.create(eggCount, false)
+    local leftovers = {}
+    for _, tag in eggEvents or {} do
+        local n = tag.n
+        if typeof(n) == "number" and n % 1 == 0 and n >= 1 and n <= eggCount and not placed[n] then
+            placed[n] = tag
+        else
+            table.insert(leftovers, tag)
+        end
+    end
+    local cursor = 1
+    for _, tag in leftovers do
+        while cursor <= eggCount and placed[cursor] do cursor += 1 end
+        if cursor > eggCount then break end
+        placed[cursor] = tag
+    end
+    return placed
+end
+
+local function sortByRarity(eggs)
+    table.sort(eggs, function(a, b)
+        local ar, br = Config.SpeciesRarities[a.reward.speciesId], Config.SpeciesRarities[b.reward.speciesId]
+        return if ar == br then a.source.ordinal < b.source.ordinal else ar < br
+    end)
+end
+
+local function runRewardText(outcome): string
+    local eggs = outcome.eggCount or outcome.chestCount or 0
+    local parts = {}
+    for _, stack in outcome.stacks or {} do -- legacy Build 020 operation replay only
+        table.insert(parts, string.format("%dx %s", stack.count, stack.speciesId))
+    end
+    table.insert(parts, if eggs == 1 then "1 run egg" elseif eggs > 0 then string.format("%d run eggs", eggs) else "no run eggs")
+    local nests = outcome.nestCount or 0
+    if nests > 0 then table.insert(parts, if nests == 1 then "1 bonus nest" else string.format("%d bonus nests", nests)) end
+    return table.concat(parts, " | ")
+end
+
+-- BD-044 settlement: catches -> exactly that many run eggs (capped per run), plus
+-- deterministic crystals and separate bonus nests. Every random draw is committed
+-- before UpdateAsync; settledRuns + recentOperations make the run exactly-once.
 function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number, eggEvents)
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
         return false, nil, "profile_not_loaded"
     end
-    if typeof(runId) ~= "string" or #runId < 1 or #runId > 80 then
+    if typeof(runId) ~= "string" or #runId < 1 or #runId > 64 then
         return false, nil, "invalid_run_id"
     end
 
     local outcome = RewardMath.computeRunReward(catchScore)
-    local rng=Random.new()
-    local box=0
-    if catchScore>0 then
-        local total=0 for _,row in ProgressionConfig.CrystalBoxes do total+=row.weight end
-        local roll=rng:NextNumber()*total
-        for _,row in ProgressionConfig.CrystalBoxes do roll-=row.weight if roll<0 then box=row.amount break end end
-        if box==0 then box=ProgressionConfig.CrystalBoxes[#ProgressionConfig.CrystalBoxes].amount end
-    end
-    outcome.crystalBox=box
-    outcome.crystals=math.min(ProgressionConfig.RunCrystalCap,catchScore*ProgressionConfig.RunCrystalPerCatch)+box
-    if eggEvents~=nil then
-        if typeof(eggEvents)~="table" or #eggEvents>outcome.chestCount then return false,nil,"invalid_egg_events" end
-        for _,metadata in eggEvents do if not ProgressionRules.validEgg(metadata) then return false,nil,"invalid_egg_events" end end
+    outcome.crystalBox = 0 -- retired random crystal box; kept for client/operation compatibility
+    local eggCount = outcome.eggCount
+    if eggEvents ~= nil then
+        if typeof(eggEvents) ~= "table" or #eggEvents > eggCount then return false, nil, "invalid_egg_events" end
+        for _, metadata in eggEvents do if not ProgressionRules.validEgg(metadata) then return false, nil, "invalid_egg_events" end end
     end
     local operationId = "run:" .. runId
-    -- Commit all random draws before UpdateAsync. Catch-time event tags stay authoritative.
-    local prepared = {}
-    for i = 1, outcome.chestCount do
-        local tag = (eggEvents and eggEvents[i]) or {eventId = "clear", mutationId = ""}
-        local traits = if tag.genes then tag else ProfileRepository.prepareEgg(player,tag)
-        table.insert(prepared, {
-            eventId = tag.eventId, mutationId = tag.mutationId,
-            reward = RewardMath.computeChestReward(rng, outcome.chestCount),
-            shiny = traits.shiny, big = traits.big, ordinal = i,
-            genes=traits.genes,
-            traitRollVersion=traits.traitRollVersion,
-            source={kind="run", runId=runId, ordinal=i},
+    local cachedOperation = findOperation(cached, operationId)
+    if cachedOperation or hasSettledRun(cached, runId) then
+        -- Cheap replay: skip preparing up to 300 eggs for a run that already committed.
+        player:SetAttribute("LastSettledRunId", runId)
+        return true, if cachedOperation then cachedOperation.outcome else nil, "duplicate"
+    end
+
+    local rng = Random.new()
+    local tags = placeEggTags(eggEvents, eggCount)
+    local runEggs = table.create(eggCount)
+    for i = 1, eggCount do
+        local tag = tags[i] or {eventId = "clear", mutationId = ""}
+        local traits = if tag.genes then tag else ProfileRepository.prepareEgg(player, tag)
+        local eggId = RewardMath.runEggId(runId, i)
+        table.insert(runEggs, {
+            eggId = eggId, kind = "run_egg",
+            eventId = tag.eventId or "clear", mutationId = tag.mutationId or "",
+            reward = RewardMath.computeChestReward(rng, eggCount),
+            shiny = traits.shiny, big = traits.big,
+            genes = traits.genes, traitRollVersion = traits.traitRollVersion,
+            source = {kind = "run", runId = runId, ordinal = i, originalEggId = eggId},
         })
     end
-    table.sort(prepared, function(a,b)
-        local ar, br = Config.SpeciesRarities[a.reward.speciesId], Config.SpeciesRarities[b.reward.speciesId]
-        return if ar == br then a.ordinal < b.ordinal else ar < br
-    end)
-    local chestIds = {}
-    for _ = 1, outcome.chestCount do
-        table.insert(chestIds, HttpService:GenerateGUID(false))
+    sortByRarity(runEggs)
+    local nests = table.create(outcome.nestCount)
+    for j = 1, outcome.nestCount do
+        local nestId = RewardMath.nestId(runId, j)
+        local nestEggs = {}
+        for k = 1, Config.NestEggCount do
+            local traits = ProfileRepository.prepareEgg(player, {eventId = "clear", mutationId = ""})
+            local eggId = nestId .. ":" .. tostring(k)
+            table.insert(nestEggs, {
+                eggId = eggId, kind = "nest_egg", eventId = "clear", mutationId = "",
+                reward = RewardMath.computeChestReward(rng, Config.NestRarityBoostEggs),
+                shiny = traits.shiny, big = traits.big,
+                genes = traits.genes, traitRollVersion = traits.traitRollVersion,
+                source = {kind = "nest", runId = runId, nestId = nestId, ordinal = k, originalEggId = eggId},
+            })
+        end
+        sortByRarity(nestEggs)
+        table.insert(nests, {nestId = nestId, eggs = nestEggs, source = {kind = "run_nest", runId = runId, ordinal = j}})
     end
-    outcome.chestIds = chestIds
+
     local leaseLost = false
-    local queueFull = false
+    local invalid = false
+    local duplicate = false
     local duplicateOutcome = nil
     local now = os.time()
 
     local ok, updated = retry("run settlement", function()
         return store:UpdateAsync(keyFor(player), function(profileValue)
-            if not isValidProfile(profileValue) then return nil end
+            leaseLost, invalid, duplicate, duplicateOutcome = false, false, false, nil
+            if not isValidProfile(profileValue) then invalid = true return nil end
             if not ownSession(profileValue) then
                 leaseLost = true
                 return nil
             end
 
             local existing = findOperation(profileValue, operationId)
-            if existing then
-                duplicateOutcome = existing.outcome
+            if existing or hasSettledRun(profileValue, runId) then
+                duplicate = true
+                duplicateOutcome = if existing then existing.outcome else nil
                 return profileValue
             end
 
-            if outcome.chestCount > availableChestCapacity(profileValue) then
-                queueFull = true
-                return nil
-            end
+            -- Copies keep the prepared batch immutable across repeated transforms.
+            local batch = table.create(#runEggs)
+            for _, egg in runEggs do table.insert(batch, DinosaurIdentity.copy(egg)) end
+            bankEggs(profileValue, batch, now)
+            promoteNests(profileValue, now)
+            for _, nest in nests do table.insert(profileValue.pendingNests, DinosaurIdentity.copy(nest)) end
+            promoteNests(profileValue, now)
 
-            for _, stack in outcome.stacks do
-                local species = profileValue.collection[stack.speciesId]
-                if typeof(species) ~= "table" or typeof(species.base) ~= "number" then
-                    return nil
-                end
-                species.base += stack.count
-                profileValue.metrics.rarest = math.max(profileValue.metrics.rarest, Config.SpeciesRarities[stack.speciesId])
-            end
-
-            enqueueChestIds(profileValue, chestIds, now, prepared)
-            local progress=ProgressionRules.upgrade(profileValue)
-            if progress.crystals+outcome.crystals>ProgressionConfig.MaxCrystals then return nil end
-            progress.crystals+=outcome.crystals
-            progress.accountXP=math.min(2000000000,progress.accountXP+catchScore)
+            local progress = ProgressionRules.upgrade(profileValue)
+            progress.crystals = math.min(ProgressionConfig.MaxCrystals, progress.crystals + outcome.crystals)
+            progress.accountXP = math.min(2000000000, progress.accountXP + (outcome.accountXP or eggCount))
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             profileValue.lastCheckpoint = {
                 committedAt = now,
                 lastSettledRunId = runId,
             }
+            recordSettledRun(profileValue, runId)
             table.insert(profileValue.recentOperations, {
                 id = operationId,
                 kind = "run",
@@ -574,31 +726,92 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
             player:SetAttribute("ProfileState", "LeaseLost")
             return false, nil, "lease_lost"
         end
-        if queueFull then
-            player:SetAttribute("LastChestClaimStatus", "queue_full")
-            return false, nil, "queue_full"
-        end
+        if invalid then return false, nil, "invalid_profile" end
         player:SetAttribute("ProfileState", "SaveFailed")
         return false, nil, "save_failed"
     end
 
     if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
     syncAttributes(player, profiles[player])
-    local committedOutcome = duplicateOutcome or outcome
-    local summaryParts = {}
-    for _, stack in committedOutcome.stacks do
-        table.insert(summaryParts, string.format("%dx %s", stack.count, stack.speciesId))
+    local committedOutcome = if duplicate then duplicateOutcome else outcome
+    if committedOutcome then
+        player:SetAttribute("LastRewardText", runRewardText(committedOutcome))
+        player:SetAttribute("LastRunCrystals", committedOutcome.crystals or 0)
+        player:SetAttribute("LastRunCrystalBox", committedOutcome.crystalBox or 0)
+        player:SetAttribute("LastRunEggCount", committedOutcome.eggCount or committedOutcome.chestCount or 0)
+        player:SetAttribute("LastRunNestCount", committedOutcome.nestCount or 0)
     end
-    if #summaryParts == 0 then table.insert(summaryParts, "no dinosaur copies") end
-    if committedOutcome.chestCount > 0 then
-        table.insert(summaryParts, string.format("%d chest(s)", committedOutcome.chestCount))
-    end
-    player:SetAttribute("LastRewardText", table.concat(summaryParts, " | "))
-    player:SetAttribute("LastRunCrystals",committedOutcome.crystals or 0)
-    player:SetAttribute("LastRunCrystalBox",committedOutcome.crystalBox or 0)
     player:SetAttribute("LastSettledRunId", runId)
-    return true, committedOutcome, if duplicateOutcome then "duplicate" else "committed"
+    return true, committedOutcome, if duplicate then "duplicate" else "committed"
 end
+
+-- Opens a ready bonus nest: its precommitted eggs join the reveal line next (ahead of
+-- the remaining banked run eggs) and the oldest pending nest takes the freed slot.
+function ProfileRepository.claimNest(player: Player, nestId: string)
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
+        return false, nil, "profile_not_loaded"
+    end
+    if typeof(nestId) ~= "string" or #nestId < 1 or #nestId > 80 then
+        return false, nil, "invalid_nest_id"
+    end
+    local operationId = "nestclaim:" .. nestId
+    local cachedOperation = findOperation(cached, operationId)
+    if cachedOperation then return true, cachedOperation.outcome, "duplicate" end
+
+    local status = nil
+    local duplicateOutcome = nil
+    local leaseLost = false
+    local outcome = nil
+    local now = os.time()
+    local ok, updated = retry("nest claim", function()
+        return store:UpdateAsync(keyFor(player), function(profileValue)
+            status, duplicateOutcome, leaseLost, outcome = nil, nil, false, nil
+            if not isValidProfile(profileValue) then status = "invalid_profile" return nil end
+            if not ownSession(profileValue) then leaseLost = true return nil end
+            local existing = findOperation(profileValue, operationId)
+            if existing then duplicateOutcome = existing.outcome return profileValue end
+            local index = nil
+            for i, nest in profileValue.nests or {} do
+                if nest.nestId == nestId then index = i break end
+            end
+            if not index then
+                for _, nest in profileValue.pendingNests or {} do
+                    if nest.nestId == nestId then status = "nest_pending" return nil end
+                end
+                status = "missing"
+                return nil
+            end
+            local nest = profileValue.nests[index]
+            if now < nest.readyAt then status = "not_ready" return nil end
+            local banked = if profileValue.runEggBank then #profileValue.runEggBank else 0
+            if banked + #nest.eggs > Config.RunEggBankCapacity then status = "bank_full" return nil end
+            table.remove(profileValue.nests, index)
+            bankEggs(profileValue, nest.eggs, now, true)
+            promoteNests(profileValue, now)
+            outcome = {nestId = nestId, eggCount = #nest.eggs}
+            profileValue.revision += 1
+            profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            table.insert(profileValue.recentOperations, {id = operationId, kind = "nest_claim", outcome = outcome})
+            trimOperations(profileValue)
+            return profileValue
+        end)
+    end)
+    if not ok or updated == nil then
+        if leaseLost then
+            player:SetAttribute("ProfileState", "LeaseLost")
+            return false, nil, "lease_lost"
+        end
+        if status then return false, nil, status end
+        player:SetAttribute("ProfileState", "SaveFailed")
+        return false, nil, "save_failed"
+    end
+    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
+    syncAttributes(player, profiles[player])
+    if duplicateOutcome then return true, duplicateOutcome, "duplicate" end
+    return true, outcome, "opened"
+end
+
 
 function ProfileRepository.equipSpecies(player: Player, speciesId: string): (boolean, string)
     local cached = profiles[player]
@@ -888,6 +1101,8 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
                     traitRollVersion=if metadata then metadata.traitRollVersion else nil,
                 })
             end
+            -- BD-044: banked run/nest eggs advance once legacy overflow is drained.
+            refillFromBank(profileValue, now)
 
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
