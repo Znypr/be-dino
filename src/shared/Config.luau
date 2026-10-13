@@ -5,11 +5,24 @@ return table.freeze({
     WalkSpeed = 22,
     JumpPower = 50,
     MaxSlopeAngle = 46,
+    -- BD-053 torso collider. Footprint grows with the dinosaur, but its underside is lifted so
+    -- it clears any ground slope up to MaxSlopeAngle under every footprint corner. PROVISIONAL.
+    DinoColliderWidth = 2.6,
+    DinoColliderLength = 3.2,
+    DinoColliderTopPerScale = 2.6, -- PROVISIONAL: collider top above floor per unit visual scale
+    DinoColliderMinHeight = 1.2, -- PROVISIONAL
+    DinoColliderMinClearance = 0.2,
+    DinoColliderSlopeMargin = 0.35, -- PROVISIONAL: studs on top of the planar slope clearance
+    MovementGuardMaxVerticalSpeed = 120,
     TerrainResolution = 4,
     TerrainTop = 120,
     ArenaHalfWidth = 260,
     CameraMinZoom = 12,
     CameraMaxZoom = 110,
+    -- BD-054 touch HUD layout (shared/TouchLayout). PROVISIONAL until physical Android review.
+    TouchMinTargetPx = 44, -- PROVISIONAL minimum touch target edge in canvas px
+    TouchSafeMargin = 8, -- PROVISIONAL gap to safe-area edges, Roblox touch controls and each other
+    TouchMinHudScale = 0.62, -- PROVISIONAL keeps HUD text >= ~12 px on 360 px tall phones
 
     FoodPoints = 1,
     FoodRespawnSeconds = 8,
@@ -19,6 +32,10 @@ return table.freeze({
     FoodClusterItems = 6,
     FoodClusterRadius = 7,
     FoodSeed = 1404,
+    FoodArtMode = "Legacy", -- "Kit": BD-050 Blender food variants (visual only; points unchanged) PROVISIONAL
+    WorldArtMode = "Legacy", -- "BiomeKit": BD-049 Blender props + placement grammar PROVISIONAL
+    WorldArtSeed = 1404,
+    WorldArtDensity = 1,
     StudioLocalProfilesEnabled = true, -- unpublished Studio only; never a live fallback
     StudioTestWalletEnabled = true, -- only unpublished, nonpersistent local profiles
     StudioTestCrystals = 1000000,
@@ -34,15 +51,12 @@ return table.freeze({
     PredationGrowthPoints = 25,
     RepeatVictimCatchCooldownSeconds = 60,
 
-    ExitChannelSeconds = 3,
-    ExitMoveCancelDistance = 2,
+    -- BD-052: Home is a confirmed, immediate return; the 3-second stay-still channel is removed.
     ExitRequestCooldownSeconds = 0.75,
+    HomeThreatRadius = 30, -- PROVISIONAL: Home is refused while a dinosaur that can eat you is this close
     RespawnDelaySeconds = 2,
 
     MaxCatchScore = 5000,
-    RarityQ = 0.25,
-    AlphaTierThresholds = {1, 25, 100},
-    AlphaSpeciesByTier = {"compy", "triceratops", "tyrannosaurus"},
     SpeciesOrder = {"compy", "triceratops", "tyrannosaurus", "raptor", "stegosaurus", "ankylosaurus", "archaeopteryx", "baryonyx", "brachiosaurus", "dimorphodon", "elasmosaurus", "gallimimus", "ichthyosaurus", "microraptor", "mosasaurus", "pachycephalosaurus", "parasaurolophus", "plesiosaurus", "pteranodon", "quetzalcoatlus", "spinosaurus", "therizinosaurus"},
     SpeciesDisplayNames = {
         compy = "Compy",
@@ -69,13 +83,17 @@ return table.freeze({
         therizinosaurus = "Therizinosaurus",
     },
     SpeciesRarities = {compy = 1, raptor = 1, triceratops = 2, stegosaurus = 2, tyrannosaurus = 3, ankylosaurus = 3, archaeopteryx = 1, baryonyx = 2, brachiosaurus = 2, dimorphodon = 1, elasmosaurus = 3, gallimimus = 1, ichthyosaurus = 2, microraptor = 1, mosasaurus = 3, pachycephalosaurus = 2, parasaurolophus = 2, plesiosaurus = 2, pteranodon = 2, quetzalcoatlus = 3, spinosaurus = 3, therizinosaurus = 3},
-    ChestThresholds = {
-        {score = 10, count = 1},
-        {score = 100, count = 2},
-        {score = 500, count = 3},
-    },
+    -- HISTORICAL (removed by BD-044): ChestThresholds 10/100/500 catches -> 1/2/3 eggs and
+    -- AlphaTierThresholds direct N(c)=c copies. See docs/15-economy-simulation.md.
 
     ProfileDataStoreName = "BeDino_PrivateTest_v1",
+    -- Release keys (BD-004/BD-020). `python tools/build.py --profile playtest` rewrites
+    -- ReleaseProfile and ProfileDataStoreName in the generated place only; rules live in
+    -- tools/release_profiles.py and are enforced by tools/verify_release.py.
+    ReleaseProfile = "development",
+    PlaytestUniverseId = 0, -- TODO(BD-004): owner records the private playtest experience (universe) ID
+    PlaytestPlaceId = 0, -- TODO(BD-004): owner records the private playtest start place ID
+    PlaytestProfileDataStoreName = "BeDino_Playtest_M1_v1", -- rotate _vN to isolate a corrupted test store
     ProfileSchemaVersion = 1,
     ProfileLeaseSeconds = 90,
     ProfileRenewSeconds = 30,
@@ -100,6 +118,24 @@ return table.freeze({
     PaidRandomItemsEnabled = false, -- Release gate: complete combined-outcome disclosure/policy acceptance first.
     ChestQueueCapacity = 5,
     ChestOverflowCapacity = 10,
+    -- BD-044 reward loop (owner decision 2026-10-13): every earned run catch banks
+    -- exactly ONE run egg; no direct N(c)=c copies and no 10/100/500 threshold eggs.
+    -- Run eggs beyond the five-slot reveal queue wait in a server-side ordered bank.
+    RunRewardConfigVersion = 2,
+    RunEggMaxPerRun = 300, -- PROVISIONAL: catches stop counting at 300 eggs per run (storage bound)
+    RunEggBankCapacity = 600, -- PROVISIONAL: banked run eggs behind the queue; runs start only with room for a full run
+    SettledRunLedgerSize = 200, -- PROVISIONAL: settled run IDs kept for exactly-once settlement beyond recentOperations
+    -- Separate bonus egg nests (never the ordinary egg queue). Excess nests wait as
+    -- pending/capacity-blocked and are never silently granted or discarded.
+    NestSlotCapacity = 5,
+    NestPendingCapacity = 30, -- PROVISIONAL
+    NestFirstAtEggs = 15, -- PROVISIONAL: 15 run eggs (500 food) earn the first nest
+    NestEggsPerExtraNest = 27, -- PROVISIONAL: +1 nest per 27 further eggs (150 eggs -> 6 nests)
+    NestMaxPerRun = 11, -- PROVISIONAL: equals the nest count at RunEggMaxPerRun
+    NestEggCount = 3, -- PROVISIONAL: each nest contains three precommitted bonus eggs
+    NestIncubationSeconds = 300, -- PROVISIONAL: a slotted nest opens five minutes after it takes a slot
+    NestRarityBoostEggs = 15, -- PROVISIONAL: nest eggs use the maximum run-batch species boost
+    NestClaimRequestCooldownSeconds = 0.5,
     ChestClaimRequestCooldownSeconds = 0.35,
     ChestTestGrantEnabled = false,
     ChestTestGrantCount = 7,
@@ -128,10 +164,11 @@ return table.freeze({
         {speciesId = "mosasaurus", weight = 0.75},
         {speciesId = "elasmosaurus", weight = 0.75},
     },
+    -- Owner decision 2026-10-13: exactly one dinosaur per successfully hatched egg.
+    -- Historical Build 020 split was 1/2/3 copies at 70/25/5; already-saved eggs keep
+    -- their committed count when claimed.
     ChestQuantityWeights = {
-        {count = 1, weight = 70},
-        {count = 2, weight = 25},
-        {count = 3, weight = 5},
+        {count = 1, weight = 1},
     },
 
     GoldMutationCost = 50,

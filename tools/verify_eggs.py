@@ -44,25 +44,37 @@ assert(Traits.valid({[':shiny:big']={mutationId="",shiny=true,big=true,count=1}}
 assert(not Traits.valid({['bad']={mutationId="",shiny=true,big=true,count=1}}))
 assert(Config.BigScaleMultiplier==1.2)
 assert(#Progression.Trails==10 and Progression.Trails[1].id=="white" and Progression.Trails[10].id=="astra")
-local previousCracked,previousAstra=100,0
+-- BD-045: integer weights out of ConditionWeightScale; tier 0 = owner target 50/30/15/4.5/0.5.
+assert(Progression.ConditionWeightScale==10000 and Progression.ConditionOddsVersion=="bd045-conditions-v1")
+local tier0=Progression.ConditionWeights[1]
+assert(tier0[1]==5000 and tier0[2]==3000 and tier0[3]==1500 and tier0[4]==450 and tier0[5]==50)
+assert(Progression.Conditions[1].id=="cracked" and Progression.Conditions[1].hatchChance==.2)
+local previous=nil
 for level,weights in Progression.ConditionWeights do
- local total=0 for _,weight in weights do total+=weight end
- assert(total==100 and weights[1]<previousCracked and weights[5]>previousAstra)
- previousCracked,previousAstra=weights[1],weights[5]
+ local total=0 for _,weight in weights do assert(weight>0 and weight%1==0) total+=weight end
+ assert(total==Progression.ConditionWeightScale,"condition tier does not total 100%")
+ if previous then
+  -- Upgrades improve odds monotonically: Cracked/Dirty fall, Normal/Rainbow/Astra rise.
+  assert(weights[1]<previous[1] and weights[2]<previous[2],"bad eggs must decrease every tier")
+  assert(weights[3]>previous[3] and weights[4]>previous[4] and weights[5]>previous[5],"good eggs must increase every tier")
+ end
+ previous=weights
  local seen={} local failed=0
- for i=0,99 do
-  for j=0,99 do
+ for i=0,9999 do
+  for j=0,4 do
    local n=0
-   local rng={NextNumber=function()n+=1 return if n==1 then (i+.5)/100 elseif n==2 then (j+.5)/100 else .5 end}
+   local rng={NextNumber=function()n+=1 return if n==1 then (i+.5)/10000 elseif n==2 then (j+.5)/5 else .5 end}
    local genes=Genetics.roll(level-1,rng)
    assert(Genetics.valid(genes))
    seen[genes.conditionId]=(seen[genes.conditionId] or 0)+1
    if not genes.hatchSuccess then failed+=1 assert(genes.conditionId=="cracked") end
   end
  end
- for k,condition in Progression.Conditions do assert(seen[condition.id]==weights[k]*100) end
- assert(failed==weights[1]*80)
+ for k,condition in Progression.Conditions do assert(seen[condition.id]==weights[k]*5) end
+ assert(failed==weights[1]*4,"Cracked must keep exactly 20% hatch success")
 end
+-- Tier 0 failure: 50% Cracked x 80% failure = 40% of eggs.
+assert(tier0[1]*4==20000)
 local palette={}
 for i=0,9999 do
  local n=0 local rng={NextNumber=function()n+=1 return if n==3 then (i+.5)/10000 else .5 end}
@@ -75,7 +87,7 @@ assert(not Genetics.valid({conditionId="astra",hatchSuccess=false,primaryColorId
 for i,trail in Progression.Trails do
  if i>1 then local prior=Progression.Trails[i-1] assert(trail.level>prior.level and trail.price>prior.price and trail.speed>prior.speed) end
 end
-print("Genetics passed: seven exact condition distributions, 20% Cracked hatch success, weighted color slots, 1-in-10000 Black, size-only BIG 1.2x and ten increasing trail tiers")
+print("Genetics passed: seven exact BD-045 condition distributions (tier 0 50/30/15/4.5/0.5, monotonic upgrades), 20% Cracked hatch success, weighted color slots, 1-in-10000 Black, size-only BIG 1.2x and ten increasing trail tiers")
 local previousRare,previousLegend=0,0
 for count=1,15 do
  local seen={}

@@ -1,6 +1,23 @@
 # Reward economy: owner-approved target and historical prototype
 
-**Owner clarification: 2026-10-08.** This target supersedes the older 2026-09-17 private-alpha reward *design*, but **is not yet implemented in the Build 020 source**, which continues to use the historical direct-copy and 1/2/3-egg thresholds. Historical simulation tables are retained below to explain those tests, not to drive future product decisions. See [AI instructions](../AGENTS.md), [game design](03-game-design.md), and [canonical task BD-044](07-kanban.md).
+**Owner clarification: 2026-10-08; owner decisions 2026-10-13.** This target supersedes the older 2026-09-17 private-alpha reward *design*. Build 020 on main still uses the historical direct-copy and 1/2/3-egg thresholds; the BD-044/BD-045 branch below replaces them and is in **Review / test** (offline evidence only, **Studio verification pending**). Historical simulation tables are retained below to explain those tests, not to drive future product decisions. See [AI instructions](../AGENTS.md), [game design](03-game-design.md), and [canonical task BD-044](07-kanban.md).
+
+## Implementation status (2026-10-13, BD-044 + BD-045, Review / test)
+
+Implemented on `claude/bd-044-reward-loop` (details, data shape and evidence: [50-bd044-reward-loop.md](50-bd044-reward-loop.md)). **Implemented in code, offline-tested, NOT Studio-verified, NOT released.**
+
+| Topic | Implemented behavior | Status |
+| --- | --- | --- |
+| Catches -> eggs | Every earned catch = one banked run egg (`FoodCatchRate 15/500`: 500 food -> 15, 5,000 -> 150); per-run cap 300 (PROVISIONAL) | Implemented, offline-tested |
+| Direct copies / thresholds | `N(c)=c` settlement copies and 10/100/500 threshold eggs removed | Implemented |
+| Dinosaurs per egg | Owner decision 2026-10-13: exactly 1 per successful hatch; failed Cracked = 0; old saved 2-3-copy eggs keep their committed count | Implemented |
+| Reveal | Existing ordered ~5 s reveal; 5-slot queue refilled from a server-side ordered run-egg bank (600, PROVISIONAL); exactly-once via `settledRuns` + operation log | Implemented; 150-egg pacing UX still an owner decision |
+| Run crystals | PROVISIONAL deterministic `min(500, 2*min(n,15) + floor(1.4*max(0,n-15)))`: 15 -> 30, 150 -> 219; random crystal box retired | Implemented, needs balance sign-off |
+| Bonus nests | Separate 5 nest slots + visible pending list; PROVISIONAL 15 eggs -> 1 nest, +1 per 27 eggs (150 -> 6: 5 slotted, 1 pending); 3 bonus eggs per nest, 300 s incubation; new runs blocked rather than losing eggs/nests when storage is near capacity | Implemented, needs balance/UX sign-off |
+| Condition odds (BD-045) | Tier 0 = 50/30/15/4.5/0.5 (`bd045-conditions-v1`, integer weights /10,000), PROVISIONAL monotonic tiers 1-6, Cracked 20% hatch success, versioned disclosure | Implemented; 40% tier-0 failure is a playtest risk |
+| Uncommon/Epic species tiers | Not implemented (still Common/Rare/Legendary) | Open |
+
+Milestone 1 is a private playtest in a new private place with fresh saves; all Robux/paid flags stay off.
 
 ## Owner-approved target reward loop
 
@@ -26,7 +43,7 @@ The rarity counts describe **15/150 individual eggs revealed**, not extra guaran
 ### Design/implementation decisions still open
 - Rarity probabilities and eligibility/gating across 15-egg and 150-egg batches; species catalog and trait odds remain data-driven. These two distributions are sample outcomes, not fixed tier weights.
 - Exact conversion from food/PvP to earned eggs (current `15/500` is an example-compatible starting point), crystal rewards, and nest milestone formula.
-- Whether successful individual eggs continue to grant 1/2/3 copies or one dinosaur, and how failed Cracked reveals/consolation are handled. Keep the existing immutable outcome rules until deliberately migrated.
+- ~~Whether successful individual eggs continue to grant 1/2/3 copies or one dinosaur~~ **Decided 2026-10-13: exactly one dinosaur per successful egg** (failed Cracked = 0, no consolation yet). Existing saved eggs keep their committed outcomes.
 - Five separate **nest slots** versus current five ordinary-egg queue slots. In the six-nest example, only five can be claimed with five empty nest spots; sixth must be shown as unavailable or pending under an explicit policy, never silently discarded.
 - Batch UI for 150 eggs; user-controlled fast reveal/skip or summary options need owner design while retaining individually inspectable results and atomic persistence.
 - Migration of existing earned direct dinosaur copies, saved eggs, rewards and legacy `ChestThresholds` without duplication, regressions, or paid-egg bypasses.

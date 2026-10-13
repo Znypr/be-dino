@@ -18,7 +18,7 @@ Maximum player access/policy work remains in progress:
 
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-017; BD-019–022; BD-035; **BD-044–056, BD-058–059, BD-061–063, BD-065** | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042; **BD-057 Phase 1; BD-060; BD-064 server** | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
+| BD-017; BD-021–022; BD-035; **BD-044–056, BD-058–059, BD-061–065** | BD-027 | BD-043; BD-019 device/load (owner publish pending) | BD-006 mobile; BD-016 visual kit; BD-020 release/rollback (owner publish pending); BD-023–026; BD-028–034; BD-036–042; **BD-057 Phase 1; BD-060** | BD-004 private-place record (IDs pending) | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -108,7 +108,7 @@ ledger compaction before public release.
 | BD-001 | Done | P0 | Research and initial project documents | None |
 | BD-002 | Done | P0 | Choose first-test direction | BD-001 |
 | BD-003 | Done | P0 | Resolve setup and design blockers | BD-002 |
-| BD-004 | Blocked | P0 | Bootstrap reproducible project and private test place | BD-003 |
+| BD-004 | Blocked | P0 | Bootstrap reproducible project and private test place (Milestone 1 playtest IDs pending from owner) | BD-003 |
 | BD-005 | Done | P0 | Specify persistence and remote contracts | BD-003 |
 | BD-006 | Review / test | P0 | Prototype one dinosaur controller and camera | BD-004 |
 | BD-007 | Done | P1 | Specify original asset kit and visual sample | BD-002 |
@@ -123,8 +123,8 @@ ledger compaction before public release.
 | BD-016 | Review / test | P1 | Produce and integrate dinosaur/map kit | BD-006, BD-007 |
 | BD-017 | Backlog | P1 | Integrate minimal sound feedback | BD-004, BD-008, BD-013 |
 | BD-018 | Done | P0 | Run multiplayer, security and persistence suite | BD-011–015 |
-| BD-019 | Backlog | P0 | Run device/load and published-asset checks | BD-015–017 |
-| BD-020 | Backlog | P0 | Prepare private test release and rollback | BD-018, BD-019 |
+| BD-019 | In progress | P0 | Run device/load and published-asset checks (offline load harness done; owner publish pending) | BD-015–017 |
+| BD-020 | Review / test | P0 | Prepare private test release and rollback (tooling + runbook ready; owner publish pending) | BD-018, BD-019 |
 | BD-021 | Backlog | P0 | Observe community test and triage | BD-020 |
 | BD-022 | Backlog | P1 | Decide public alpha scope after test | BD-021 |
 
@@ -149,17 +149,17 @@ ledger compaction before public release.
 | BD-041 | Review / test | P1 | Two-colour egg genetics, Normal/Big eggs and independent shiny sparkle | BD-035, BD-037 |
 | BD-042 | Review / test | P1 | Five-second ordered hatches, Shiny/BIG and map leaderboards | BD-013, BD-034 |
 | BD-043 | In progress | P1 | UI animation, feedback, loading and preview performance | BD-015, BD-042 |
-| BD-044 | Backlog | P0 | Replace direct-copy rewards with caught-run-egg hatching, crystal payout and separate five-slot egg nests | BD-011, BD-013, BD-036, BD-042 |
-| BD-045 | Backlog | P0 | Rebalance condition odds to new owner starting distribution and update condition-upgrade/disclosure flow | BD-040 |
+| BD-044 | Review / test | P0 | Replace direct-copy rewards with caught-run-egg hatching, crystal payout and separate five-slot egg nests ([evidence](50-bd044-reward-loop.md); Studio pending) | BD-011, BD-013, BD-036, BD-042 |
+| BD-045 | Review / test | P0 | Rebalance condition odds to new owner starting distribution and update condition-upgrade/disclosure flow ([evidence](50-bd044-reward-loop.md#bd-045-condition-odds-bd045-conditions-v1); Studio pending) | BD-040 |
 | BD-046 | Backlog | P1 | Rename Auras nav entry to Shop with crystal icon; crystal HUD opens same Shop | BD-029, BD-036, BD-043 |
 | BD-047 | Backlog | P1 | Illustrated Crystal Shop category tiles, green-spotted egg icon, larger aura previews and leading tab icons | BD-046 |
 | BD-048 | Backlog | P1 | Trail icon art, Blender world VFX and six rarity categories across ten trails | BD-038, BD-034 |
-| BD-049 | Backlog | P1 | Blender trees, vegetation, rock variants, map landmarks and optimized biome placement | BD-016 |
-| BD-050 | Backlog | P1 | Blender pickup/food model variants with intact food rewards and server validation | BD-008 |
+| BD-049 | Review / test | P1 | Blender trees, vegetation, rock variants, map landmarks and optimized biome placement; kit + flagged grammar in [56](56-bd049-050-world-art.md), Studio/Android pending | BD-016 |
+| BD-050 | Review / test | P1 | Blender pickup/food model variants with intact food rewards and server validation; kit in [56](56-bd049-050-world-art.md), berry/fruit need MeshPart upload | BD-008 |
 | BD-051 | Backlog | P1 | Rotating five-minute Potion Shop offers, rarity-weighted selection and 1–3 limited stock | BD-032, BD-039 |
-| BD-052 | Backlog | P1 | Single bottom-center Home with confirmation and no three-second exit channel | BD-009 |
-| BD-053 | Backlog | P0 | Fix sliding and hill-climb movement on mountainous terrain | BD-006, BD-008 |
-| BD-054 | Backlog | P0 | Responsive phone/tablet touch-zone navigation/control placement and safe insets | BD-052, BD-046 |
+| BD-052 | Review / test | P1 | Single bottom-center Home with confirmation and no three-second exit channel ([51](51-bd053-054-movement-mobile.md)) | BD-009 |
+| BD-053 | Review / test | P0 | Fix sliding and hill-climb movement on mountainous terrain ([51](51-bd053-054-movement-mobile.md)) | BD-006, BD-008 |
+| BD-054 | Review / test | P0 | Responsive phone/tablet touch-zone navigation/control placement and safe insets ([51](51-bd053-054-movement-mobile.md)) | BD-052, BD-046 |
 | BD-055 | Backlog | P1 | Complete sky, atmosphere, cloud, particle and audio effects for all weather events | BD-031, BD-034 |
 | BD-056 | Backlog | P1 | Top-center growth metric and bottom-left egg-icon catches-only HUD | BD-044, BD-054 |
 | BD-057 | Review / test | P0 | Consume 10 same-species/same-pattern Base dinos to create ONE NEW Gold, then Emerald before Diamond; guaranteed stage, freshly rolled traits (Gold transaction; provisional odds/remote via BD-064; Emerald/Diamond unapproved) | BD-012, BD-060 |
@@ -175,7 +175,9 @@ ledger compaction before public release.
 
 ### BD-044: Owner-approved reward-loop correction (2026-10-08)
 
-**Status: Backlog; design confirmed, runtime NOT changed. P0 before economy/public release.**
+**Status: Review / test (2026-10-13). Implemented on `claude/bd-044-reward-loop`; offline Luau evidence only, Studio verification pending. P0 before economy/public release.**
+
+**Implementation 2026-10-13** ([details and evidence](50-bd044-reward-loop.md)): owner decisions of 2026-10-13 applied: one banked run egg per catch (15/150 at 500/5,000 food), exactly one dinosaur per successful egg, no `N(c)=c` copies or threshold eggs; server-side ordered run-egg bank behind the five-slot queue with exactly-once settlement (`settledRuns` + operation log, deterministic egg IDs, precommitted outcomes); PROVISIONAL deterministic run crystals (30/219); separate five bonus-nest slots with visible pending nests and a run-start gate instead of loss; additive schema, old queued eggs still claimable. New `tools/verify_rewards.py` in CI. Still open: Studio/device/multiplayer acceptance, 150-egg pacing UX, Uncommon/Epic taxonomy, balance sign-off. Checklist items below stay unchecked until Studio evidence exists.
 The newer owner's reward intent supersedes the 2026-09-17 test economy's `N(c)=c` immediate dinosaur copies and the 10/100/500 catches -> 1/2/3 extra-egg thresholds. [Canonical target and illustrated distributions](09-reward-economy.md) and [AI/contributor instructions](../AGENTS.md) define the intended behavior; [actual Build 020](44-main-integration-checklist.md) is the separate implementation record.
 
 **Acceptance checklist (do not check off from documentation alone):**
@@ -193,9 +195,11 @@ The newer owner's reward intent supersedes the 2026-09-17 test economy's `N(c)=c
 
 **Status:** all Backlog/TODO. The **task index above is authoritative** for status, priority, dependencies and ownership. Rather than duplicate every subtask here, use the detailed [categorized owner feedback specification](45-owner-feedback-shop-hud-world-weather-tasks.md) for acceptance checklists, source references and design constraints.
 
+- **BD-045 status (2026-10-13): Review / test.** Tier 0 = 50/30/15/4.5/0.5 as integer weights /10,000 (`bd045-conditions-v1`), PROVISIONAL monotonic tiers 1-6, Cracked 20% hatch success kept, new eggs versioned `bd045-genes-v2`, disclosure (`EggOutcomeOdds`/`ShopOdds`, Condition Shop) normalized and tested offline. Studio verification pending. [Evidence](50-bd044-reward-loop.md#bd-045-condition-odds-bd045-conditions-v1).
 - **Economy/shops:** BD-045 conditions (new starting odds **50/30/15/4.5/0.5**), BD-046 Shop entry, BD-047 category cards/icons and aura previews, BD-051 five-minute randomized potion offers.
 - **Art/world:** BD-048 ten trail assets and six proposed rarity classes, BD-049 reusable world props and landmarks, BD-050 food models, BD-055 environment-wide weather.
 - **Movement/UX:** BD-052 return confirmation, BD-053 terrain/sliding defect, BD-054 mobile/tablet touch placement, BD-056 growth and caught-egg HUD.
+- **Update 2026-10-13 — BD-052/053/054 are `Review / test`** ([implementation and evidence](51-bd053-054-movement-mobile.md)): root cause of sliding was the low torso collider wedging into slopes (now slope-clearance lifted, guard envelope shares `MaxSlopeAngle`); touch layout moved to `shared/TouchLayout` with safe insets and Roblox thumbstick/jump reserved zones; one bottom-center Home with Return/Cancel settles immediately through idempotent `tryEnd` (provisional predator-nearby refusal). Offline tests only; Studio checks and the owner Android checklist in doc 51 are the remaining gates. BD-054 dependency BD-046 (Shop entry) is not required for this layout pass.
 - **Critical interaction:** BD-044 egg-per-catch target is not shipped. Do not label old catches/threshold eggs as equivalent, or unlock paid random items. New **Cracked 50%** selection combined with existing **80% failure on cracked** implies **40% total failed eggs at tier 0**, a high-risk balancing review.
 - **Completion gate:** each task requires its own code/assets, Studio/device/runtime acceptance and evidence. Neither planning text nor a similarly named pre-existing Build 020 feature closes it.
 
@@ -591,6 +595,8 @@ Done. Personal account, Studio installed, €0 target budget, immediate run dino
 
 Source mapping, dependency-free Python packager and generated `.rbxlx` are working. A separate private test experience is now being used for DataStore testing, but the repository still does not record its experience/place IDs. That remains the blocker for closing BD-004.
 
+2026-10-13 (Milestone 1): the playtest uses a **new** private experience with a fresh DataStore; IDs are pending from Znypr. Record them in `PlaytestUniverseId` / `PlaytestPlaceId` in `src/shared/Config.luau` (placeholders marked `TODO(BD-004)`, right after `ProfileDataStoreName`) and in the release record of the [playtest runbook](55-playtest-release-runbook.md) §2/§6. `tools/verify_release.py --profile playtest` and `tools/build.py --profile playtest` fail until both are positive. Move to Done when that commit lands.
+
 ### BD-005 — persistence and remote contracts
 Done as a specification. `docs/13-persistence-remote-contracts.md` chooses a project-owned `DataStoreService`/`UpdateAsync` repository with leases, revisions, immutable operation outcomes and explicit remote validation. Durable implementation remains BD-011.
 
@@ -598,6 +604,8 @@ Done as a specification. `docs/13-persistence-remote-contracts.md` chooses a pro
 **Done when:** desktop and touch movement work, min/max visual-size behavior is usable and two clients replicate correctly.
 
 Desktop evidence passed: movement, camera, dinosaur visibility, size behavior, reset isolation and two-client replication. Mobile/touch is still untested, so the task remains `Review / test`.
+
+2026-10-13 note: the touch HUD/control layout (BD-054), hill traction (BD-053) and Home (BD-052) changes in [51](51-bd053-054-movement-mobile.md) include the owner Android checklist that can also supply BD-006 mobile evidence.
 
 ### BD-007 — asset kit
 **Done when:** one original dinosaur silhouette/palette, manifest template and procedural fallback are reviewable.
@@ -658,8 +666,12 @@ Build 012 passed all eight runtime checks. Malformed/flooded remotes, impossible
 ### BD-019 — device/load/published assets
 Requires a real target phone plus the agreed multiplayer/pickup load test and non-owner asset checks.
 
+2026-10-13 — **In progress, owner publish pending.** `tools/verify_load.py` (in CI) runs the real ProfileRepository with a mocked, latency/throttle-modelled DataStore: 8 and 12 simulated players over 15 min pass with zero failed operations, no throttling and peak 55–57% of the 60 + 10×players/min budget. Report-only: a BD-044 150-egg simultaneous reveal sits at ~100% of budget and one equip-spamming client uses ~60% of an 8-player server's budget; batching egg claims and a per-player write budget are recommended. The Studio 2/4/8-client, desktop + Android and non-owner rows of the [runbook matrix](55-playtest-release-runbook.md) §5 remain to be executed after publish. Offline results are not device or live-DataStore evidence.
+
 ### BD-020 — private release/rollback
 Requires a known-good commit/build, private access settings, no public debug grants, known issues and a tested rollback.
+
+2026-10-13 — **Review / test, owner publish pending.** `python tools/build.py --profile playtest` produces a reproducible playtest place (playtest store name, `ReleaseProfile = "playtest"`, manifest with commit/dirty flag) and `tools/verify_release.py` enforces paid/test/debug flags off (default profile in CI). [Playtest runbook](55-playtest-release-runbook.md) holds gates, owner Studio publish steps, tagging (`playtest-m1-bNNN-rK`), release record, known-issues template, rollback/store-rotation and data-reset policy. Done requires the actual private publish, the recorded release row and a performed rollback drill.
 
 ### BD-021 — observed community test
 Run the small invited session only after BD-020. Capture friction, repeat-run behavior and defects separately from suggestions.

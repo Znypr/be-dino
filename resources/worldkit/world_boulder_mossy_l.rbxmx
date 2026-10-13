@@ -1,0 +1,3848 @@
+<?xml version='1.0' encoding='utf-8'?>
+<roblox version="4">
+  <Item class="Model" referent="model">
+    <Properties>
+      <string name="Name">world_boulder_mossy_l</string>
+    </Properties>
+    <Item class="WedgePart" referent="w1">
+      <Properties>
+        <string name="Name">Surface1</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.14994</Y>
+          <Z>2.29224</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-0.07417</X>
+          <Y>3.89087</Y>
+          <Z>4.18378</Z>
+          <R00>0.072607</R00>
+          <R01>0.573754</R01>
+          <R02>0.815803</R02>
+          <R10>0.818482</R10>
+          <R11>-0.501689</R11>
+          <R12>0.279992</R12>
+          <R20>0.569925</R20>
+          <R21>0.647391</R21>
+          <R22>-0.506034</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w2">
+      <Properties>
+        <string name="Name">Surface2</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.14994</Y>
+          <Z>1.74099</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>1.57099</X>
+          <Y>4.45550</Y>
+          <Z>3.16330</Z>
+          <R00>-0.072607</R00>
+          <R01>0.573754</R01>
+          <R02>-0.815803</R02>
+          <R10>-0.818482</R10>
+          <R11>-0.501689</R11>
+          <R12>-0.279992</R12>
+          <R20>-0.569925</R20>
+          <R21>0.647391</R21>
+          <R22>0.506034</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w3">
+      <Properties>
+        <string name="Name">Surface3</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.51746</Y>
+          <Z>2.30692</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-0.47989</X>
+          <Y>5.69414</Y>
+          <Z>0.73787</Z>
+          <R00>0.089292</R00>
+          <R01>0.991057</R01>
+          <R02>0.099158</R02>
+          <R10>-0.925480</R10>
+          <R11>0.119353</R11>
+          <R12>-0.359501</R12>
+          <R20>-0.368121</R20>
+          <R21>-0.059668</R21>
+          <R22>0.927861</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w4">
+      <Properties>
+        <string name="Name">Surface4</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.51746</Y>
+          <Z>1.97343</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-0.26767</X>
+          <Y>4.92474</Y>
+          <Z>2.72365</Z>
+          <R00>-0.089292</R00>
+          <R01>0.991057</R01>
+          <R02>-0.099158</R02>
+          <R10>0.925480</R10>
+          <R11>0.119353</R11>
+          <R12>0.359501</R12>
+          <R20>0.368121</R20>
+          <R21>-0.059668</R21>
+          <R22>-0.927861</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w5">
+      <Properties>
+        <string name="Name">Surface5</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.69098</Y>
+          <Z>2.39903</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-0.59615</X>
+          <Y>5.29508</Y>
+          <Z>-1.43102</Z>
+          <R00>0.203489</R00>
+          <R01>-0.977661</R01>
+          <R02>0.052648</R02>
+          <R10>0.960915</R10>
+          <R11>0.209734</R11>
+          <R12>0.180704</R12>
+          <R20>-0.187710</R20>
+          <R21>0.013819</R21>
+          <R22>0.982127</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w6">
+      <Properties>
+        <string name="Name">Surface6</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.69098</Y>
+          <Z>2.01769</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-0.47989</X>
+          <Y>5.69414</Y>
+          <Z>0.73787</Z>
+          <R00>-0.203489</R00>
+          <R01>-0.977661</R01>
+          <R02>-0.052648</R02>
+          <R10>-0.960915</R10>
+          <R11>0.209734</R11>
+          <R12>-0.180704</R12>
+          <R20>0.187710</R20>
+          <R21>0.013819</R21>
+          <R22>-0.982127</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w7">
+      <Properties>
+        <string name="Name">Surface7</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.88562</Y>
+          <Z>1.14978</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.50738</X>
+          <Y>4.49972</Y>
+          <Z>1.30805</Z>
+          <R00>-0.613511</R00>
+          <R01>-0.562117</R01>
+          <R02>-0.554644</R02>
+          <R10>-0.770145</R10>
+          <R11>0.581186</R11>
+          <R12>0.262868</R12>
+          <R20>0.174589</R20>
+          <R21>0.588428</R21>
+          <R22>-0.789475</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w8">
+      <Properties>
+        <string name="Name">Surface8</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.88562</Y>
+          <Z>3.34374</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>1.26123</X>
+          <Y>5.09032</Y>
+          <Z>-0.46571</Z>
+          <R00>0.613511</R00>
+          <R01>-0.562117</R01>
+          <R02>0.554644</R02>
+          <R10>0.770145</R10>
+          <R11>0.581186</R11>
+          <R12>-0.262868</R12>
+          <R20>-0.174589</R20>
+          <R21>0.588428</R21>
+          <R22>0.789475</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w9">
+      <Properties>
+        <string name="Name">Surface9</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.61195</Y>
+          <Z>2.47606</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>1.57099</X>
+          <Y>4.45550</Y>
+          <Z>3.16330</Z>
+          <R00>-0.682791</R00>
+          <R01>-0.575206</R01>
+          <R02>0.450483</R02>
+          <R10>-0.635892</R10>
+          <R11>0.771485</R11>
+          <R12>0.021271</R12>
+          <R20>-0.359776</R20>
+          <R21>-0.271934</R21>
+          <R22>-0.892532</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w10">
+      <Properties>
+        <string name="Name">Surface10</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.61195</Y>
+          <Z>1.68122</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.50738</X>
+          <Y>4.49972</Y>
+          <Z>1.30805</Z>
+          <R00>0.682791</R00>
+          <R01>-0.575206</R01>
+          <R02>-0.450483</R02>
+          <R10>0.635892</R10>
+          <R11>0.771485</R11>
+          <R12>-0.021271</R12>
+          <R20>0.359776</R20>
+          <R21>-0.271934</R21>
+          <R22>0.892532</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w11">
+      <Properties>
+        <string name="Name">Surface11</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.43726</Y>
+          <Z>1.87435</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.61492</X>
+          <Y>4.55419</Y>
+          <Z>0.39813</Z>
+          <R00>-0.595129</R00>
+          <R01>-0.797489</R01>
+          <R02>0.099158</R02>
+          <R10>0.725882</R10>
+          <R11>-0.586391</R11>
+          <R12>-0.359501</R12>
+          <R20>0.344843</R20>
+          <R21>-0.141973</R21>
+          <R22>0.927861</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w12">
+      <Properties>
+        <string name="Name">Surface12</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.43726</Y>
+          <Z>2.40600</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.40271</X>
+          <Y>3.78480</Y>
+          <Z>2.38392</Z>
+          <R00>0.595129</R00>
+          <R01>-0.797489</R01>
+          <R02>-0.099158</R02>
+          <R10>-0.725882</R10>
+          <R11>-0.586391</R11>
+          <R12>0.359501</R12>
+          <R20>-0.344843</R20>
+          <R21>-0.141973</R21>
+          <R22>-0.927861</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w13">
+      <Properties>
+        <string name="Name">Surface13</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.45645</Y>
+          <Z>1.80612</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-2.74165</X>
+          <Y>4.58901</Y>
+          <Z>-1.61414</Z>
+          <R00>-0.188755</R00>
+          <R01>-0.260732</R01>
+          <R02>0.946779</R02>
+          <R10>0.740773</R10>
+          <R11>0.595126</R11>
+          <R12>0.311576</R12>
+          <R20>-0.644691</R20>
+          <R21>0.760160</R21>
+          <R22>0.080810</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w14">
+      <Properties>
+        <string name="Name">Surface14</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.45645</Y>
+          <Z>2.72610</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-0.59615</X>
+          <Y>5.29508</Y>
+          <Z>-1.43102</Z>
+          <R00>0.188755</R00>
+          <R01>-0.260732</R01>
+          <R02>-0.946779</R02>
+          <R10>-0.740773</R10>
+          <R11>0.595126</R11>
+          <R12>-0.311576</R12>
+          <R20>0.644691</R20>
+          <R21>0.760160</R21>
+          <R22>-0.080810</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w15">
+      <Properties>
+        <string name="Name">Surface15</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.23347</Y>
+          <Z>2.20741</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.61492</X>
+          <Y>4.55419</Y>
+          <Z>0.39813</Z>
+          <R00>-0.756755</R00>
+          <R01>0.518535</R01>
+          <R02>0.398048</R02>
+          <R10>0.570841</R10>
+          <R11>0.820907</R11>
+          <R12>0.015872</R12>
+          <R20>-0.318531</R20>
+          <R21>0.239233</R21>
+          <R22>-0.917227</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w16">
+      <Properties>
+        <string name="Name">Surface16</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.23347</Y>
+          <Z>2.18033</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-2.74165</X>
+          <Y>4.58901</Y>
+          <Z>-1.61414</Z>
+          <R00>0.756755</R00>
+          <R01>0.518535</R01>
+          <R02>-0.398048</R02>
+          <R10>-0.570841</R10>
+          <R11>0.820907</R11>
+          <R12>-0.015872</R12>
+          <R20>0.318531</R20>
+          <R21>0.239233</R21>
+          <R22>0.917227</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w17">
+      <Properties>
+        <string name="Name">Surface17</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.42214</Y>
+          <Z>1.78973</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>0.59660</X>
+          <Y>2.88368</Y>
+          <Z>-2.13359</Z>
+          <R00>-0.785621</R00>
+          <R01>-0.522481</R01>
+          <R02>0.331381</R02>
+          <R10>0.611594</R10>
+          <R11>-0.736794</R11>
+          <R12>0.288249</R12>
+          <R20>0.093555</R20>
+          <R21>0.429125</R21>
+          <R22>0.898387</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w18">
+      <Properties>
+        <string name="Name">Surface18</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.42214</Y>
+          <Z>1.39519</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>1.12431</X>
+          <Y>3.34271</Y>
+          <Z>-0.70294</Z>
+          <R00>0.785621</R00>
+          <R01>-0.522481</R01>
+          <R02>-0.331381</R02>
+          <R10>-0.611594</R10>
+          <R11>-0.736794</R11>
+          <R12>-0.288249</R12>
+          <R20>-0.093555</R20>
+          <R21>0.429125</R21>
+          <R22>-0.898387</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w19">
+      <Properties>
+        <string name="Name">Surface19</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.35035</Y>
+          <Z>1.10835</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.87262</X>
+          <Y>4.46236</Y>
+          <Z>-1.54743</Z>
+          <R00>-0.253459</R00>
+          <R01>0.908815</R01>
+          <R02>-0.331381</R02>
+          <R10>0.944384</R10>
+          <R11>0.158275</R11>
+          <R12>-0.288249</R12>
+          <R20>-0.209516</R20>
+          <R21>-0.386010</R21>
+          <R22>-0.898387</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w20">
+      <Properties>
+        <string name="Name">Surface20</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.35035</Y>
+          <Z>2.07657</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.34490</X>
+          <Y>4.00333</Y>
+          <Z>-2.97807</Z>
+          <R00>0.253459</R00>
+          <R01>0.908815</R01>
+          <R02>0.331381</R02>
+          <R10>-0.944384</R10>
+          <R11>0.158275</R11>
+          <R12>0.288249</R12>
+          <R20>0.209516</R20>
+          <R21>-0.386010</R21>
+          <R22>0.898387</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w21">
+      <Properties>
+        <string name="Name">Surface21</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.34866</Y>
+          <Z>2.11220</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>4.35155</X>
+          <Y>3.97680</Y>
+          <Z>-1.12817</Z>
+          <R00>0.238230</R00>
+          <R01>0.318752</R01>
+          <R02>-0.917411</R02>
+          <R10>0.939184</R10>
+          <R11>0.164961</R11>
+          <R12>0.301199</R12>
+          <R20>0.247345</R20>
+          <R21>-0.933373</R21>
+          <R22>-0.260069</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w22">
+      <Properties>
+        <string name="Name">Surface22</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.34866</Y>
+          <Z>1.11194</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.87262</X>
+          <Y>4.46236</Y>
+          <Z>-1.54743</Z>
+          <R00>-0.238230</R00>
+          <R01>0.318752</R01>
+          <R02>0.917411</R02>
+          <R10>-0.939184</R10>
+          <R11>0.164961</R11>
+          <R12>-0.301199</R12>
+          <R20>-0.247345</R20>
+          <R21>-0.933373</R21>
+          <R22>0.260069</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w23">
+      <Properties>
+        <string name="Name">Surface23</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.37011</Y>
+          <Z>1.81942</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.35550</X>
+          <Y>3.45061</Y>
+          <Z>0.46514</Z>
+          <R00>0.053412</R00>
+          <R01>-0.394340</R01>
+          <R02>0.917411</R02>
+          <R10>0.740825</R10>
+          <R11>-0.600382</R11>
+          <R12>-0.301199</R12>
+          <R20>0.669571</R20>
+          <R21>0.695729</R21>
+          <R22>0.260069</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w24">
+      <Properties>
+        <string name="Name">Surface24</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.37011</Y>
+          <Z>1.40473</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>3.83444</X>
+          <Y>2.96505</Y>
+          <Z>0.88438</Z>
+          <R00>-0.053412</R00>
+          <R01>-0.394340</R01>
+          <R02>-0.917411</R02>
+          <R10>-0.740825</R10>
+          <R11>-0.600382</R11>
+          <R12>0.301199</R12>
+          <R20>-0.669571</R20>
+          <R21>0.695729</R21>
+          <R22>-0.260069</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w25">
+      <Properties>
+        <string name="Name">Surface25</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.64501</Y>
+          <Z>1.62873</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.14834</X>
+          <Y>2.74688</Y>
+          <Z>-4.04032</Z>
+          <R00>0.039489</R00>
+          <R01>-0.992154</R01>
+          <R02>0.118623</R02>
+          <R10>0.641508</R10>
+          <R11>0.116192</R11>
+          <R12>0.758265</R12>
+          <R20>-0.766099</R20>
+          <R21>0.046155</R21>
+          <R22>0.641063</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w26">
+      <Properties>
+        <string name="Name">Surface26</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.64501</Y>
+          <Z>1.68529</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.34490</X>
+          <Y>4.00333</Y>
+          <Z>-2.97807</Z>
+          <R00>-0.039489</R00>
+          <R01>-0.992154</R01>
+          <R02>-0.118623</R02>
+          <R10>-0.641508</R10>
+          <R11>0.116192</R11>
+          <R12>-0.758265</R12>
+          <R20>0.766099</R20>
+          <R21>0.046155</R21>
+          <R22>-0.641063</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w27">
+      <Properties>
+        <string name="Name">Surface27</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.68905</Y>
+          <Z>1.72409</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>4.87175</X>
+          <Y>3.35025</Y>
+          <Z>-2.60982</Z>
+          <R00>0.711417</R00>
+          <R01>-0.631837</R01>
+          <R02>-0.307682</R02>
+          <R10>0.701213</R10>
+          <R11>0.609066</R11>
+          <R12>0.370591</R12>
+          <R20>-0.046754</R20>
+          <R21>-0.479396</R21>
+          <R22>0.876353</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w28">
+      <Properties>
+        <string name="Name">Surface28</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.68905</Y>
+          <Z>1.65729</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>4.35155</X>
+          <Y>3.97680</Y>
+          <Z>-1.12817</Z>
+          <R00>-0.711417</R00>
+          <R01>-0.631837</R01>
+          <R02>0.307682</R02>
+          <R10>-0.701213</R10>
+          <R11>0.609066</R11>
+          <R12>-0.370591</R12>
+          <R20>0.046754</R20>
+          <R21>-0.479396</R21>
+          <R22>-0.876353</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w29">
+      <Properties>
+        <string name="Name">Surface29</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.76231</Y>
+          <Z>1.60408</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>4.87175</X>
+          <Y>3.35025</Y>
+          <Z>-2.60982</Z>
+          <R00>0.467492</R00>
+          <R01>0.876002</R01>
+          <R02>-0.118623</R02>
+          <R10>0.526938</R10>
+          <R11>-0.383888</R11>
+          <R12>-0.758265</R12>
+          <R20>-0.709780</R20>
+          <R21>0.291976</R21>
+          <R22>-0.641063</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w30">
+      <Properties>
+        <string name="Name">Surface30</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.76231</Y>
+          <Z>1.70994</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>4.67518</X>
+          <Y>2.09380</Y>
+          <Z>-3.67206</Z>
+          <R00>-0.467492</R00>
+          <R01>0.876002</R01>
+          <R02>0.118623</R02>
+          <R10>-0.526938</R10>
+          <R11>-0.383888</R11>
+          <R12>0.758265</R12>
+          <R20>0.709780</R20>
+          <R21>0.291976</R21>
+          <R22>0.641063</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w31">
+      <Properties>
+        <string name="Name">Surface31</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.81522</Y>
+          <Z>2.12269</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-5.82671</X>
+          <Y>2.52484</Y>
+          <Z>-1.78772</Z>
+          <R00>-0.632962</R00>
+          <R01>-0.507552</R01>
+          <R02>0.584594</R02>
+          <R10>0.721684</R10>
+          <R11>-0.660160</R11>
+          <R12>0.208234</R12>
+          <R20>0.280236</R20>
+          <R21>0.553696</R21>
+          <R22>0.784148</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w32">
+      <Properties>
+        <string name="Name">Surface32</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.81522</Y>
+          <Z>0.67575</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-5.00873</X>
+          <Y>2.81621</Y>
+          <Z>-0.69052</Z>
+          <R00>0.632962</R00>
+          <R01>-0.507552</R01>
+          <R02>-0.584594</R02>
+          <R10>-0.721684</R10>
+          <R11>-0.660160</R11>
+          <R12>-0.208234</R12>
+          <R20>-0.280236</R20>
+          <R21>0.553696</R21>
+          <R22>-0.784148</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w33">
+      <Properties>
+        <string name="Name">Surface33</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.22870</Y>
+          <Z>1.48784</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.95743</X>
+          <Y>3.61017</Y>
+          <Z>-2.20294</Z>
+          <R00>-0.325789</R00>
+          <R01>0.743042</R01>
+          <R02>-0.584594</R02>
+          <R10>0.945407</R10>
+          <R11>0.250687</R11>
+          <R12>-0.208234</R12>
+          <R20>-0.008176</R20>
+          <R21>-0.620520</R21>
+          <R22>-0.784148</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w34">
+      <Properties>
+        <string name="Name">Surface34</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.22870</Y>
+          <Z>1.31060</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-4.77541</X>
+          <Y>3.31881</Y>
+          <Z>-3.30014</Z>
+          <R00>0.325789</R00>
+          <R01>0.743042</R01>
+          <R02>0.584594</R02>
+          <R10>-0.945407</R10>
+          <R11>0.250687</R11>
+          <R12>0.208234</R12>
+          <R20>0.008176</R20>
+          <R21>-0.620520</R21>
+          <R22>0.784148</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w35">
+      <Properties>
+        <string name="Name">Surface35</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.22213</Y>
+          <Z>1.32105</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-2.61926</X>
+          <Y>3.49356</Y>
+          <Z>-2.62951</Z>
+          <R00>0.128840</R00>
+          <R01>-0.286107</R01>
+          <R02>-0.949496</R02>
+          <R10>0.982347</R10>
+          <R11>0.167772</R11>
+          <R12>0.082744</R12>
+          <R20>0.135625</R20>
+          <R21>-0.943396</R21>
+          <R22>0.302672</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w36">
+      <Properties>
+        <string name="Name">Surface36</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.22213</Y>
+          <Z>1.49764</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.95743</X>
+          <Y>3.61017</Y>
+          <Z>-2.20294</Z>
+          <R00>-0.128840</R00>
+          <R01>-0.286107</R01>
+          <R02>0.949496</R02>
+          <R10>-0.982347</R10>
+          <R11>0.167772</R11>
+          <R12>-0.082744</R12>
+          <R20>-0.135625</R20>
+          <R21>-0.943396</R21>
+          <R22>-0.302672</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w37">
+      <Properties>
+        <string name="Name">Surface37</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.92815</Y>
+          <Z>0.95028</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.86341</X>
+          <Y>2.80994</Y>
+          <Z>-0.24900</Z>
+          <R00>-0.253573</R00>
+          <R01>-0.784322</R01>
+          <R02>0.566162</R02>
+          <R10>-0.770501</R10>
+          <R11>0.517633</R11>
+          <R12>0.372001</R12>
+          <R20>-0.584832</R20>
+          <R21>-0.341899</R21>
+          <R22>-0.735579</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w38">
+      <Properties>
+        <string name="Name">Surface38</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.92815</Y>
+          <Z>2.05603</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.01238</X>
+          <Y>3.36911</Y>
+          <Z>-1.35469</Z>
+          <R00>0.253573</R00>
+          <R01>-0.784322</R01>
+          <R02>-0.566162</R02>
+          <R10>0.770501</R10>
+          <R11>0.517633</R11>
+          <R12>-0.372001</R12>
+          <R20>0.584832</R20>
+          <R21>-0.341899</R21>
+          <R22>0.735579</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w39">
+      <Properties>
+        <string name="Name">Surface39</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.62732</Y>
+          <Z>1.05048</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-5.00873</X>
+          <Y>2.81621</Y>
+          <Z>-0.69052</Z>
+          <R00>0.294488</R00>
+          <R01>0.206601</R01>
+          <R02>0.933055</R02>
+          <R10>-0.563424</R10>
+          <R11>0.826152</R11>
+          <R12>-0.005104</R12>
+          <R20>-0.771901</R20>
+          <R21>-0.524202</R21>
+          <R22>0.359696</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w40">
+      <Properties>
+        <string name="Name">Surface40</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.62732</Y>
+          <Z>1.40451</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.86341</X>
+          <Y>2.80994</Y>
+          <Z>-0.24900</Z>
+          <R00>-0.294488</R00>
+          <R01>0.206601</R01>
+          <R02>-0.933055</R02>
+          <R10>0.563424</R10>
+          <R11>0.826152</R11>
+          <R12>0.005104</R12>
+          <R20>0.771901</R20>
+          <R21>-0.524202</R21>
+          <R22>-0.359696</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w41">
+      <Properties>
+        <string name="Name">Surface41</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.88103</Y>
+          <Z>1.05351</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.90934</X>
+          <Y>2.86982</Y>
+          <Z>-4.02100</Z>
+          <R00>-0.312123</R00>
+          <R01>0.157847</R01>
+          <R02>-0.936837</R02>
+          <R10>0.591517</R10>
+          <R11>-0.739358</R11>
+          <R12>-0.321648</R12>
+          <R20>-0.743429</R20>
+          <R21>-0.654549</R21>
+          <R22>0.137401</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w42">
+      <Properties>
+        <string name="Name">Surface42</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.88103</Y>
+          <Z>1.53199</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-5.12043</X>
+          <Y>2.45400</Y>
+          <Z>-3.84337</Z>
+          <R00>0.312123</R00>
+          <R01>0.157847</R01>
+          <R02>0.936837</R02>
+          <R10>-0.591517</R10>
+          <R11>-0.739358</R11>
+          <R12>0.321648</R12>
+          <R20>0.743429</R20>
+          <R21>-0.654549</R21>
+          <R22>-0.137401</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w43">
+      <Properties>
+        <string name="Name">Surface43</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.93649</Y>
+          <Z>1.46777</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-1.84313</X>
+          <Y>2.72329</Y>
+          <Z>-2.86177</Z>
+          <R00>0.566800</R00>
+          <R01>0.379708</R01>
+          <R02>-0.731136</R02>
+          <R10>0.701416</R10>
+          <R11>-0.687921</R11>
+          <R12>0.186496</R12>
+          <R20>-0.432150</R20>
+          <R21>-0.618536</R21>
+          <R22>-0.656247</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w44">
+      <Properties>
+        <string name="Name">Surface44</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.93649</Y>
+          <Z>1.11738</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-2.78818</X>
+          <Y>2.96435</Y>
+          <Z>-3.71002</Z>
+          <R00>-0.566800</R00>
+          <R01>0.379708</R01>
+          <R02>0.731136</R02>
+          <R10>-0.701416</R10>
+          <R11>-0.687921</R11>
+          <R12>-0.186496</R12>
+          <R20>0.432150</R20>
+          <R21>-0.618536</R21>
+          <R22>0.656247</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4285504069</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w45">
+      <Properties>
+        <string name="Name">Surface45</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.50007</Y>
+          <Z>1.98490</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-2.23177</X>
+          <Y>2.80302</Y>
+          <Z>3.59816</Z>
+          <R00>0.242302</R00>
+          <R01>-0.433831</R01>
+          <R02>0.867802</R02>
+          <R10>0.041241</R10>
+          <R11>0.898253</R11>
+          <R12>0.437539</R12>
+          <R20>-0.969324</R20>
+          <R21>-0.070228</R21>
+          <R22>0.235541</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w46">
+      <Properties>
+        <string name="Name">Surface46</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.50007</Y>
+          <Z>2.98766</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-0.07417</X>
+          <Y>3.89087</Y>
+          <Z>4.18378</Z>
+          <R00>-0.242302</R00>
+          <R01>-0.433831</R01>
+          <R02>-0.867802</R02>
+          <R10>-0.041241</R10>
+          <R11>0.898253</R11>
+          <R12>-0.437539</R12>
+          <R20>0.969324</R20>
+          <R21>-0.070228</R21>
+          <R22>-0.235541</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w47">
+      <Properties>
+        <string name="Name">Surface47</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.41688</Y>
+          <Z>1.90762</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.43921</X>
+          <Y>1.99733</Y>
+          <Z>1.23669</Z>
+          <R00>0.764479</R00>
+          <R01>0.632923</R01>
+          <R02>0.122393</R02>
+          <R10>-0.525546</R10>
+          <R11>0.501950</R11>
+          <R12>0.686911</R12>
+          <R20>0.373326</R20>
+          <R21>-0.589453</R21>
+          <R22>0.716361</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w48">
+      <Properties>
+        <string name="Name">Surface48</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.41688</Y>
+          <Z>2.36810</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.70087</X>
+          <Y>3.46584</Y>
+          <Z>2.76817</Z>
+          <R00>-0.764479</R00>
+          <R01>0.632923</R01>
+          <R02>-0.122393</R02>
+          <R10>0.525546</R10>
+          <R11>0.501950</R11>
+          <R12>-0.686911</R12>
+          <R20>-0.373326</R20>
+          <R21>-0.589453</R21>
+          <R22>-0.716361</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w49">
+      <Properties>
+        <string name="Name">Surface49</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.90616</Y>
+          <Z>1.29281</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>0.97513</X>
+          <Y>3.11824</Y>
+          <Z>-2.47316</Z>
+          <R00>0.785818</R00>
+          <R01>-0.150031</R01>
+          <R02>0.599984</R02>
+          <R10>-0.146504</R10>
+          <R11>0.897359</R11>
+          <R12>0.416274</R12>
+          <R20>-0.600855</R20>
+          <R21>-0.415016</R21>
+          <R22>0.683180</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w50">
+      <Properties>
+        <string name="Name">Surface50</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.90616</Y>
+          <Z>3.42723</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.39111</X>
+          <Y>4.10066</Y>
+          <Z>-0.86084</Z>
+          <R00>-0.785818</R00>
+          <R01>-0.150031</R01>
+          <R02>-0.599984</R02>
+          <R10>0.146504</R10>
+          <R11>0.897359</R11>
+          <R12>-0.416274</R12>
+          <R20>0.600855</R20>
+          <R21>-0.415016</R21>
+          <R22>-0.683180</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w51">
+      <Properties>
+        <string name="Name">Surface51</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.18727</Y>
+          <Z>1.99973</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-2.44239</X>
+          <Y>0.62297</Y>
+          <Z>1.68029</Z>
+          <R00>-0.736483</R00>
+          <R01>0.309433</R01>
+          <R02>-0.601535</R02>
+          <R10>-0.650993</R10>
+          <R11>-0.082524</R11>
+          <R12>0.754585</R12>
+          <R20>0.183853</R20>
+          <R21>0.947333</R21>
+          <R22>0.262216</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w52">
+      <Properties>
+        <string name="Name">Surface52</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.18727</Y>
+          <Z>2.25359</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.72165</X>
+          <Y>2.22771</Y>
+          <Z>2.23794</Z>
+          <R00>0.736483</R00>
+          <R01>0.309433</R01>
+          <R02>0.601535</R02>
+          <R10>0.650993</R10>
+          <R11>-0.082524</R11>
+          <R12>-0.754585</R12>
+          <R20>-0.183853</R20>
+          <R21>0.947333</R21>
+          <R22>-0.262216</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w53">
+      <Properties>
+        <string name="Name">Surface53</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.20683</Y>
+          <Z>2.33721</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-0.54645</X>
+          <Y>0.24230</Y>
+          <Z>0.73443</Z>
+          <R00>0.024704</R00>
+          <R01>-0.472987</R01>
+          <R02>-0.880723</R02>
+          <R10>0.943575</R10>
+          <R11>-0.279993</R11>
+          <R12>0.176835</R12>
+          <R20>-0.330237</R20>
+          <R21>-0.835396</R21>
+          <R22>0.439381</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w54">
+      <Properties>
+        <string name="Name">Surface54</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.20683</Y>
+          <Z>1.96821</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-2.44239</X>
+          <Y>0.62297</Y>
+          <Z>1.68029</Z>
+          <R00>-0.024704</R00>
+          <R01>-0.472987</R01>
+          <R02>0.880723</R02>
+          <R10>-0.943575</R10>
+          <R11>-0.279993</R11>
+          <R12>-0.176835</R12>
+          <R20>0.330237</R20>
+          <R21>-0.835396</R21>
+          <R22>-0.439381</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w55">
+      <Properties>
+        <string name="Name">Surface55</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.42488</Y>
+          <Z>2.13984</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>1.02324</X>
+          <Y>1.01491</Y>
+          <Z>-0.37563</Z>
+          <R00>0.255673</R00>
+          <R01>0.600588</R01>
+          <R02>-0.757578</R02>
+          <R10>-0.924700</R10>
+          <R11>-0.076710</R11>
+          <R12>-0.372888</R12>
+          <R20>-0.282066</R20>
+          <R21>0.795870</R21>
+          <R22>0.535752</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w56">
+      <Properties>
+        <string name="Name">Surface56</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.42488</Y>
+          <Z>2.00412</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-0.54645</X>
+          <Y>0.24230</Y>
+          <Z>0.73443</Z>
+          <R00>-0.255673</R00>
+          <R01>0.600588</R01>
+          <R02>0.757578</R02>
+          <R10>0.924700</R10>
+          <R11>-0.076710</R11>
+          <R12>0.372888</R12>
+          <R20>0.282066</R20>
+          <R21>0.795870</R21>
+          <R22>-0.535752</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w57">
+      <Properties>
+        <string name="Name">Surface57</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.62188</Y>
+          <Z>2.44469</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-1.17037</X>
+          <Y>2.41218</Y>
+          <Z>-2.65629</Z>
+          <R00>-0.172452</R00>
+          <R01>0.968033</R01>
+          <R02>0.182133</R02>
+          <R10>-0.677268</R10>
+          <R11>0.017733</R11>
+          <R12>-0.735523</R12>
+          <R20>-0.715240</R20>
+          <R21>-0.250195</R21>
+          <R22>0.652559</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w58">
+      <Properties>
+        <string name="Name">Surface58</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.62188</Y>
+          <Z>2.01354</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-0.76438</X>
+          <Y>0.77262</Y>
+          <Z>-1.20166</Z>
+          <R00>0.172452</R00>
+          <R01>0.968033</R01>
+          <R02>-0.182133</R02>
+          <R10>0.677268</R10>
+          <R11>0.017733</R11>
+          <R12>0.735523</R12>
+          <R20>0.715240</R20>
+          <R21>-0.250195</R21>
+          <R22>-0.652559</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w59">
+      <Properties>
+        <string name="Name">Surface59</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.69940</Y>
+          <Z>2.09885</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.61332</X>
+          <Y>1.60475</Y>
+          <Z>0.46605</Z>
+          <R00>-0.787886</R00>
+          <R01>-0.588271</R01>
+          <R02>-0.182133</R02>
+          <R10>-0.506222</R10>
+          <R11>0.450273</R11>
+          <R12>0.735523</R12>
+          <R20>-0.350678</R20>
+          <R21>0.671708</R21>
+          <R22>-0.652559</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w60">
+      <Properties>
+        <string name="Name">Surface60</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.69940</Y>
+          <Z>2.35938</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-4.01931</X>
+          <Y>3.24431</Y>
+          <Z>-0.98857</Z>
+          <R00>0.787886</R00>
+          <R01>-0.588271</R01>
+          <R02>0.182133</R02>
+          <R10>0.506222</R10>
+          <R11>0.450273</R11>
+          <R12>-0.735523</R12>
+          <R20>0.350678</R20>
+          <R21>0.671708</R21>
+          <R22>0.652559</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w61">
+      <Properties>
+        <string name="Name">Surface61</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.81977</Y>
+          <Z>1.49636</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-2.23177</X>
+          <Y>2.80302</Y>
+          <Z>3.59816</Z>
+          <R00>0.687693</R00>
+          <R01>0.150658</R01>
+          <R02>-0.710198</R02>
+          <R10>-0.073148</R10>
+          <R11>-0.958875</R11>
+          <R12>-0.274240</R12>
+          <R20>-0.722308</R20>
+          <R21>0.240543</R21>
+          <R22>-0.648391</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w62">
+      <Properties>
+        <string name="Name">Surface62</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.81977</Y>
+          <Z>2.69930</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.72165</X>
+          <Y>2.22771</Y>
+          <Z>2.23794</Z>
+          <R00>-0.687693</R00>
+          <R01>0.150658</R01>
+          <R02>0.710198</R02>
+          <R10>0.073148</R10>
+          <R11>-0.958875</R11>
+          <R12>0.274240</R12>
+          <R20>0.722308</R20>
+          <R21>0.240543</R21>
+          <R22>0.648391</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w63">
+      <Properties>
+        <string name="Name">Surface63</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.49671</Y>
+          <Z>2.46066</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>1.50282</X>
+          <Y>1.95311</Y>
+          <Z>3.09194</Z>
+          <R00>-0.185424</R00>
+          <R01>0.461018</R01>
+          <R02>-0.867802</R02>
+          <R10>0.724905</R10>
+          <R11>-0.532045</R11>
+          <R12>-0.437539</R12>
+          <R20>-0.663423</R20>
+          <R21>-0.710204</R21>
+          <R22>-0.235541</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w64">
+      <Properties>
+        <string name="Name">Surface64</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.49671</Y>
+          <Z>2.51190</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-0.65478</X>
+          <Y>0.86527</Y>
+          <Z>2.50632</Z>
+          <R00>0.185424</R00>
+          <R01>0.461018</R01>
+          <R02>0.867802</R02>
+          <R10>-0.724905</R10>
+          <R11>-0.532045</R11>
+          <R12>0.437539</R12>
+          <R20>0.663423</R20>
+          <R21>-0.710204</R21>
+          <R22>0.235541</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w65">
+      <Properties>
+        <string name="Name">Surface65</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.19853</Y>
+          <Z>2.25466</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.43921</X>
+          <Y>1.99733</Y>
+          <Z>1.23669</Z>
+          <R00>0.730491</R00>
+          <R01>-0.326194</R01>
+          <R02>-0.599984</R02>
+          <R10>-0.633254</R10>
+          <R11>-0.652461</R11>
+          <R12>-0.416274</R12>
+          <R20>-0.255680</R20>
+          <R21>0.684027</R21>
+          <R22>-0.683180</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w66">
+      <Properties>
+        <string name="Name">Surface66</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>3.19853</Y>
+          <Z>2.46538</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>1.02324</X>
+          <Y>1.01491</Y>
+          <Z>-0.37563</Z>
+          <R00>-0.730491</R00>
+          <R01>-0.326194</R01>
+          <R02>0.599984</R02>
+          <R10>0.633254</R10>
+          <R11>-0.652461</R11>
+          <R12>0.416274</R12>
+          <R20>0.255680</R20>
+          <R21>0.684027</R21>
+          <R22>0.683180</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w67">
+      <Properties>
+        <string name="Name">Surface67</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.91371</Y>
+          <Z>1.27571</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>0.97513</X>
+          <Y>3.11824</Y>
+          <Z>-2.47316</Z>
+          <R00>0.121781</R00>
+          <R01>0.297958</R01>
+          <R02>-0.946779</R02>
+          <R10>-0.114337</R10>
+          <R11>-0.943317</R11>
+          <R12>-0.311576</R12>
+          <R20>-0.985950</R20>
+          <R21>0.146195</R21>
+          <R22>-0.080810</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w68">
+      <Properties>
+        <string name="Name">Surface68</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.91371</Y>
+          <Z>3.25651</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-1.17037</X>
+          <Y>2.41218</Y>
+          <Z>-2.65629</Z>
+          <R00>-0.121781</R00>
+          <R01>0.297958</R01>
+          <R02>0.946779</R02>
+          <R10>0.114337</R10>
+          <R11>-0.943317</R11>
+          <R12>0.311576</R12>
+          <R20>0.985950</R20>
+          <R21>0.146195</R21>
+          <R22>0.080810</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w69">
+      <Properties>
+        <string name="Name">Surface69</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.33491</Y>
+          <Z>1.53672</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>1.12431</X>
+          <Y>3.34271</Y>
+          <Z>-0.70294</Z>
+          <R00>0.637487</R00>
+          <R01>0.263513</R01>
+          <R02>0.723997</R02>
+          <R10>-0.441937</R10>
+          <R11>0.894800</R11>
+          <R12>0.063450</R12>
+          <R20>-0.631112</R20>
+          <R21>-0.360409</R21>
+          <R22>0.686879</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w70">
+      <Properties>
+        <string name="Name">Surface70</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.33491</Y>
+          <Z>1.86439</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.35550</X>
+          <Y>3.45061</Y>
+          <Z>0.46514</Z>
+          <R00>-0.637487</R00>
+          <R01>0.263513</R01>
+          <R02>-0.723997</R02>
+          <R10>0.441937</R10>
+          <R11>0.894800</R11>
+          <R12>-0.063450</R12>
+          <R20>0.631112</R20>
+          <R21>-0.360409</R21>
+          <R22>-0.686879</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w71">
+      <Properties>
+        <string name="Name">Surface71</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.13691</Y>
+          <Z>1.30930</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>1.08180</X>
+          <Y>2.28903</Y>
+          <Z>-3.26364</Z>
+          <R00>-0.934792</R00>
+          <R01>0.276241</R01>
+          <R02>-0.223281</R02>
+          <R10>-0.163018</R10>
+          <R11>-0.892161</R11>
+          <R12>-0.421277</R12>
+          <R20>-0.315577</R20>
+          <R21>-0.357408</R21>
+          <R22>0.879017</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w72">
+      <Properties>
+        <string name="Name">Surface72</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.13691</Y>
+          <Z>1.70232</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>0.74558</X>
+          <Y>1.65466</Y>
+          <Z>-1.94001</Z>
+          <R00>0.934792</R00>
+          <R01>0.276241</R01>
+          <R02>0.223281</R02>
+          <R10>0.163018</R10>
+          <R11>-0.892161</R11>
+          <R12>0.421277</R12>
+          <R20>0.315577</R20>
+          <R21>-0.357408</R21>
+          <R22>-0.879017</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w73">
+      <Properties>
+        <string name="Name">Surface73</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.19146</Y>
+          <Z>1.03779</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>0.97210</X>
+          <Y>1.27249</Y>
+          <Z>-0.71446</Z>
+          <R00>-0.617876</R00>
+          <R01>0.306689</R01>
+          <R02>0.723997</R02>
+          <R10>-0.383067</R10>
+          <R11>-0.921539</R11>
+          <R12>0.063450</R12>
+          <R20>0.686650</R20>
+          <R21>-0.238135</R21>
+          <R22>0.686879</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w74">
+      <Properties>
+        <string name="Name">Surface74</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.19146</Y>
+          <Z>2.36332</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.20330</X>
+          <Y>1.38039</Y>
+          <Z>0.45361</Z>
+          <R00>0.617876</R00>
+          <R01>0.306689</R01>
+          <R02>-0.723997</R02>
+          <R10>0.383067</R10>
+          <R11>-0.921539</R11>
+          <R12>-0.063450</R12>
+          <R20>-0.686650</R20>
+          <R21>-0.238135</R21>
+          <R22>-0.686879</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w75">
+      <Properties>
+        <string name="Name">Surface75</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.27184</Y>
+          <Z>1.53480</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>4.92122</X>
+          <Y>2.09474</Y>
+          <Z>0.21071</Z>
+          <R00>0.509615</R00>
+          <R01>0.496592</R01>
+          <R02>-0.702630</R02>
+          <R10>-0.029251</R10>
+          <R11>0.826157</R11>
+          <R12>0.562680</R12>
+          <R20>0.859905</R20>
+          <R21>-0.266198</R21>
+          <R22>0.435548</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w76">
+      <Properties>
+        <string name="Name">Surface76</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.27184</Y>
+          <Z>1.55866</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>3.83444</X>
+          <Y>2.96505</Y>
+          <Z>0.88438</Z>
+          <R00>-0.509615</R00>
+          <R01>0.496592</R01>
+          <R02>0.702630</R02>
+          <R10>0.029251</R10>
+          <R11>0.826157</R11>
+          <R12>-0.562680</R12>
+          <R20>-0.859905</R20>
+          <R21>-0.266198</R21>
+          <R22>-0.435548</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w77">
+      <Properties>
+        <string name="Name">Surface77</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.19309</Y>
+          <Z>1.72970</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.29732</X>
+          <Y>1.51785</Y>
+          <Z>-3.84675</Z>
+          <R00>-0.074536</R00>
+          <R01>0.202522</R01>
+          <R02>0.976437</R02>
+          <R10>-0.810917</R10>
+          <R11>0.557576</R11>
+          <R12>-0.177547</R12>
+          <R20>-0.580395</R20>
+          <R21>-0.805043</R21>
+          <R22>0.122669</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w78">
+      <Properties>
+        <string name="Name">Surface78</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.19309</Y>
+          <Z>1.14340</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>3.70003</X>
+          <Y>1.26280</Y>
+          <Z>-3.67053</Z>
+          <R00>0.074536</R00>
+          <R01>0.202522</R01>
+          <R02>-0.976437</R02>
+          <R10>0.810917</R10>
+          <R11>0.557576</R11>
+          <R12>0.177547</R12>
+          <R20>0.580395</R20>
+          <R21>-0.805043</R21>
+          <R22>-0.122669</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w79">
+      <Properties>
+        <string name="Name">Surface79</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.22986</Y>
+          <Z>1.35094</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>1.45730</X>
+          <Y>0.67783</Y>
+          <Z>-1.84452</Z>
+          <R00>-0.139094</R00>
+          <R01>-0.653787</R01>
+          <R02>0.743785</R02>
+          <R10>-0.952395</R10>
+          <R11>0.294077</R11>
+          <R12>0.080388</R12>
+          <R20>-0.271286</R20>
+          <R21>-0.697196</R21>
+          <R22>-0.663568</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w80">
+      <Properties>
+        <string name="Name">Surface80</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.22986</Y>
+          <Z>1.81174</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.63348</X>
+          <Y>0.80495</Y>
+          <Z>-2.89385</Z>
+          <R00>0.139094</R00>
+          <R01>-0.653787</R01>
+          <R02>-0.743785</R02>
+          <R10>0.952395</R10>
+          <R11>0.294077</R11>
+          <R12>-0.080388</R12>
+          <R20>0.271286</R20>
+          <R21>-0.697196</R21>
+          <R22>0.663568</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w81">
+      <Properties>
+        <string name="Name">Surface81</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.60387</Y>
+          <Z>1.54266</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>4.46626</X>
+          <Y>0.63719</Y>
+          <Z>-1.26939</Z>
+          <R00>-0.126892</R00>
+          <R01>0.239880</R01>
+          <R02>-0.962474</R02>
+          <R10>0.991670</R10>
+          <R11>0.009065</R11>
+          <R12>-0.128482</R12>
+          <R20>-0.022096</R20>
+          <R21>-0.970760</R21>
+          <R22>-0.239032</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w82">
+      <Properties>
+        <string name="Name">Surface82</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.60387</Y>
+          <Z>1.79510</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.86001</X>
+          <Y>0.42277</Y>
+          <Z>-1.66831</Z>
+          <R00>0.126892</R00>
+          <R01>0.239880</R01>
+          <R02>0.962474</R02>
+          <R10>-0.991670</R10>
+          <R11>0.009065</R11>
+          <R12>0.128482</R12>
+          <R20>0.022096</R20>
+          <R21>-0.970760</R21>
+          <R22>0.239032</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w83">
+      <Properties>
+        <string name="Name">Surface83</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.18367</Y>
+          <Z>1.34072</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>5.01134</X>
+          <Y>1.38088</Y>
+          <Z>-2.71917</Z>
+          <R00>-0.641604</R00>
+          <R01>-0.698353</R01>
+          <R02>-0.317250</R02>
+          <R10>0.753181</R10>
+          <R11>-0.495342</R11>
+          <R12>-0.432845</R12>
+          <R20>0.145131</R20>
+          <R21>-0.516661</R21>
+          <R22>0.843800</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w84">
+      <Properties>
+        <string name="Name">Surface84</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.18367</Y>
+          <Z>2.09559</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>4.46626</X>
+          <Y>0.63719</Y>
+          <Z>-1.26939</Z>
+          <R00>0.641604</R00>
+          <R01>-0.698353</R01>
+          <R02>0.317250</R02>
+          <R10>-0.753181</R10>
+          <R11>-0.495342</R11>
+          <R12>0.432845</R12>
+          <R20>-0.145131</R20>
+          <R21>-0.516661</R21>
+          <R22>-0.843800</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w85">
+      <Properties>
+        <string name="Name">Surface85</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.92306</Y>
+          <Z>1.55527</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>3.70003</X>
+          <Y>1.26280</Y>
+          <Z>-3.67053</Z>
+          <R00>-0.506285</R00>
+          <R01>-0.303279</R01>
+          <R02>0.807278</R02>
+          <R10>0.595274</R10>
+          <R11>-0.800228</R11>
+          <R12>0.072696</R12>
+          <R20>0.623959</R20>
+          <R21>0.517356</R21>
+          <R22>0.585677</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w86">
+      <Properties>
+        <string name="Name">Surface86</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.92306</Y>
+          <Z>1.69347</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>5.01134</X>
+          <Y>1.38088</Y>
+          <Z>-2.71917</Z>
+          <R00>0.506285</R00>
+          <R01>-0.303279</R01>
+          <R02>-0.807278</R02>
+          <R10>-0.595274</R10>
+          <R11>-0.800228</R11>
+          <R12>-0.072696</R12>
+          <R20>-0.623959</R20>
+          <R21>0.517356</R21>
+          <R22>-0.585677</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w87">
+      <Properties>
+        <string name="Name">Surface87</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.13751</Y>
+          <Z>1.30833</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>1.08180</X>
+          <Y>2.28903</Y>
+          <Z>-3.26364</Z>
+          <R00>0.521668</R00>
+          <R01>-0.339637</R01>
+          <R02>0.782630</R02>
+          <R10>0.194086</R10>
+          <R11>-0.846045</R11>
+          <R12>-0.496527</R12>
+          <R20>0.830779</R20>
+          <R21>0.410919</R21>
+          <R22>-0.375436</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w88">
+      <Properties>
+        <string name="Name">Surface88</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.13751</Y>
+          <Z>1.79793</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.29732</X>
+          <Y>1.51785</Y>
+          <Z>-3.84675</Z>
+          <R00>-0.521668</R00>
+          <R01>-0.339637</R01>
+          <R02>-0.782630</R02>
+          <R10>-0.194086</R10>
+          <R11>-0.846045</R11>
+          <R12>0.496527</R12>
+          <R20>-0.830779</R20>
+          <R21>0.410919</R21>
+          <R22>0.375436</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w89">
+      <Properties>
+        <string name="Name">Surface89</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.10811</Y>
+          <Z>1.19807</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>0.97210</X>
+          <Y>1.27249</Y>
+          <Z>-0.71446</Z>
+          <R00>0.806081</R00>
+          <R01>0.473368</R01>
+          <R02>0.355186</R02>
+          <R10>0.590756</R10>
+          <R11>-0.679343</R11>
+          <R12>-0.435316</R12>
+          <R20>0.035229</R20>
+          <R21>0.560728</R21>
+          <R22>-0.827250</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w90">
+      <Properties>
+        <string name="Name">Surface90</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.10811</Y>
+          <Z>1.53401</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>1.45730</X>
+          <Y>0.67783</Y>
+          <Z>-1.84452</Z>
+          <R00>-0.806081</R00>
+          <R01>0.473368</R01>
+          <R02>-0.355186</R02>
+          <R10>-0.590756</R10>
+          <R11>-0.679343</R11>
+          <R12>0.435316</R12>
+          <R20>-0.035229</R20>
+          <R21>0.560728</R21>
+          <R22>0.827250</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w91">
+      <Properties>
+        <string name="Name">Surface91</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.67927</Y>
+          <Z>1.54630</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>3.80955</X>
+          <Y>1.59481</Y>
+          <Z>0.85252</Z>
+          <R00>-0.090680</R00>
+          <R01>-0.255775</R01>
+          <R02>-0.962474</R02>
+          <R10>-0.677924</R10>
+          <R11>0.723817</R11>
+          <R12>-0.128482</R12>
+          <R20>0.729518</R20>
+          <R21>0.640833</R21>
+          <R22>-0.239032</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w92">
+      <Properties>
+        <string name="Name">Surface92</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.67927</Y>
+          <Z>1.79146</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2.20330</X>
+          <Y>1.38039</Y>
+          <Z>0.45361</Z>
+          <R00>0.090680</R00>
+          <R01>-0.255775</R01>
+          <R02>0.962474</R02>
+          <R10>0.677924</R10>
+          <R11>0.723817</R11>
+          <R12>0.128482</R12>
+          <R20>-0.729518</R20>
+          <R21>0.640833</R21>
+          <R22>0.239032</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w93">
+      <Properties>
+        <string name="Name">Surface93</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.48966</Y>
+          <Z>2.28808</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>5.46631</X>
+          <Y>2.83843</Y>
+          <Z>-1.23907</Z>
+          <R00>0.939891</R00>
+          <R01>-0.126321</R01>
+          <R02>-0.317250</R02>
+          <R10>-0.024991</R10>
+          <R11>0.901122</R11>
+          <R12>-0.432845</R12>
+          <R20>0.340558</R20>
+          <R21>0.414755</R21>
+          <R22>0.843800</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w94">
+      <Properties>
+        <string name="Name">Surface94</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.48966</Y>
+          <Z>1.14824</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>4.92122</X>
+          <Y>2.09474</Y>
+          <Z>0.21071</Z>
+          <R00>-0.939891</R00>
+          <R01>-0.126321</R01>
+          <R02>0.317250</R02>
+          <R10>0.024991</R10>
+          <R11>0.901122</R11>
+          <R12>0.432845</R12>
+          <R20>-0.340558</R20>
+          <R21>0.414755</R21>
+          <R22>-0.843800</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w95">
+      <Properties>
+        <string name="Name">Surface95</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.88100</Y>
+          <Z>0.73259</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-5.90166</X>
+          <Y>1.90088</Y>
+          <Z>-3.03718</Z>
+          <R00>0.992365</R00>
+          <R01>-0.111080</R01>
+          <R02>0.053593</R02>
+          <R10>0.075725</R10>
+          <R11>0.891760</R11>
+          <R12>0.446128</R12>
+          <R20>-0.097348</R20>
+          <R21>-0.438663</R21>
+          <R22>0.893363</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w96">
+      <Properties>
+        <string name="Name">Surface96</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.88100</Y>
+          <Z>2.06462</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-5.82671</X>
+          <Y>2.52484</Y>
+          <Z>-1.78772</Z>
+          <R00>-0.992365</R00>
+          <R01>-0.111080</R01>
+          <R02>-0.053593</R02>
+          <R10>-0.075725</R10>
+          <R11>0.891760</R11>
+          <R12>-0.446128</R12>
+          <R20>0.097348</R20>
+          <R21>-0.438663</R21>
+          <R22>-0.893363</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w97">
+      <Properties>
+        <string name="Name">Surface97</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.86274</Y>
+          <Z>0.95658</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-5.08334</X>
+          <Y>1.29980</Y>
+          <Z>-0.64902</Z>
+          <R00>-0.328142</R00>
+          <R01>0.147413</R01>
+          <R02>0.933055</R02>
+          <R10>-0.421819</R10>
+          <R11>-0.906665</R11>
+          <R12>-0.005104</R12>
+          <R20>0.845217</R20>
+          <R21>-0.395256</R21>
+          <R22>0.359696</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w98">
+      <Properties>
+        <string name="Name">Surface98</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.86274</Y>
+          <Z>1.49841</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.93803</X>
+          <Y>1.29353</Y>
+          <Z>-0.20750</Z>
+          <R00>0.328142</R00>
+          <R01>0.147413</R01>
+          <R02>-0.933055</R02>
+          <R10>0.421819</R10>
+          <R11>-0.906665</R11>
+          <R12>0.005104</R12>
+          <R20>-0.845217</R20>
+          <R21>-0.395256</R21>
+          <R22>-0.359696</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w99">
+      <Properties>
+        <string name="Name">Surface99</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.93059</Y>
+          <Z>1.87955</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-2.70955</X>
+          <Y>1.59302</Y>
+          <Z>-0.60797</Z>
+          <R00>0.812405</R00>
+          <R01>0.139497</R01>
+          <R02>0.566162</R02>
+          <R10>-0.100803</R10>
+          <R11>-0.922743</R11>
+          <R12>0.372001</R12>
+          <R20>0.574315</R20>
+          <R21>-0.359286</R21>
+          <R22>-0.735579</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w100">
+      <Properties>
+        <string name="Name">Surface100</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.93059</Y>
+          <Z>1.12677</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-1.85852</X>
+          <Y>2.15220</Y>
+          <Z>-1.71366</Z>
+          <R00>-0.812405</R00>
+          <R01>0.139497</R01>
+          <R02>-0.566162</R02>
+          <R10>0.100803</R10>
+          <R11>-0.922743</R11>
+          <R12>-0.372001</R12>
+          <R20>-0.574315</R20>
+          <R21>-0.359286</R21>
+          <R22>0.735579</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w101">
+      <Properties>
+        <string name="Name">Surface101</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.98734</Y>
+          <Z>1.26884</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-4.69545</X>
+          <Y>0.55933</Y>
+          <Z>-3.08292</Z>
+          <R00>0.278355</R00>
+          <R01>0.729957</R01>
+          <R02>0.624244</R02>
+          <R10>0.644634</R10>
+          <R11>-0.623784</R11>
+          <R12>0.441972</R12>
+          <R20>0.712015</R20>
+          <R21>0.279384</R21>
+          <R22>-0.644189</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w102">
+      <Properties>
+        <string name="Name">Surface102</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.98734</Y>
+          <Z>1.23412</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.91422</X>
+          <Y>1.11245</Y>
+          <Z>-3.88911</Z>
+          <R00>-0.278355</R00>
+          <R01>0.729957</R01>
+          <R02>-0.624244</R02>
+          <R10>-0.644634</R10>
+          <R11>-0.623784</R11>
+          <R12>-0.441972</R12>
+          <R20>-0.712015</R20>
+          <R21>0.279384</R21>
+          <R22>0.644189</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w103">
+      <Properties>
+        <string name="Name">Surface103</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.07596</Y>
+          <Z>1.43601</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-5.15830</X>
+          <Y>0.67585</Y>
+          <Z>-1.89848</Z>
+          <R00>-0.291797</R00>
+          <R01>-0.885145</R01>
+          <R02>0.362454</R02>
+          <R10>-0.956272</R10>
+          <R11>0.277883</R11>
+          <R12>-0.091242</R12>
+          <R20>-0.019957</R20>
+          <R21>-0.373229</R21>
+          <R22>-0.927525</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w104">
+      <Properties>
+        <string name="Name">Surface104</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.07596</Y>
+          <Z>1.11797</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-4.69545</X>
+          <Y>0.55933</Y>
+          <Z>-3.08292</Z>
+          <R00>0.291797</R00>
+          <R01>-0.885145</R01>
+          <R02>-0.362454</R02>
+          <R10>0.956272</R10>
+          <R11>0.277883</R11>
+          <R12>0.091242</R12>
+          <R20>0.019957</R20>
+          <R21>-0.373229</R21>
+          <R22>0.927525</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w105">
+      <Properties>
+        <string name="Name">Surface105</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.05240</Y>
+          <Z>1.13269</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-2.80845</X>
+          <Y>0.63589</Y>
+          <Z>-2.43003</Z>
+          <R00>-0.294899</R00>
+          <R01>-0.234919</R01>
+          <R02>-0.926201</R02>
+          <R10>0.932837</R10>
+          <R11>-0.280769</R11>
+          <R12>-0.225799</R12>
+          <R20>-0.207004</R20>
+          <R21>-0.930582</R21>
+          <R22>0.301939</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w106">
+      <Properties>
+        <string name="Name">Surface106</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.05240</Y>
+          <Z>1.52002</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-4.03693</X>
+          <Y>0.33641</Y>
+          <Z>-2.02955</Z>
+          <R00>0.294899</R00>
+          <R01>-0.234919</R01>
+          <R02>0.926201</R02>
+          <R10>-0.932837</R10>
+          <R11>-0.280769</R11>
+          <R12>0.225799</R12>
+          <R20>0.207004</R20>
+          <R21>-0.930582</R21>
+          <R22>-0.301939</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w107">
+      <Properties>
+        <string name="Name">Surface107</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.06811</Y>
+          <Z>1.51689</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-2.02744</X>
+          <Y>1.62299</Y>
+          <Z>-2.79417</Z>
+          <R00>0.682926</R00>
+          <R01>0.422300</R01>
+          <R02>-0.596049</R02>
+          <R10>-0.657650</R10>
+          <R11>0.000258</R11>
+          <R12>-0.753324</R12>
+          <R20>-0.317975</R20>
+          <R21>0.906456</R21>
+          <R22>0.277902</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w108">
+      <Properties>
+        <string name="Name">Surface108</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.06811</Y>
+          <Z>1.10375</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-2.80845</X>
+          <Y>0.63589</Y>
+          <Z>-2.43003</Z>
+          <R00>-0.682926</R00>
+          <R01>0.422300</R01>
+          <R02>0.596049</R02>
+          <R10>0.657650</R10>
+          <R11>0.000258</R11>
+          <R12>0.753324</R12>
+          <R20>0.317975</R20>
+          <R21>0.906456</R21>
+          <R22>-0.277902</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w109">
+      <Properties>
+        <string name="Name">Surface109</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.93510</Y>
+          <Z>1.31453</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.91422</X>
+          <Y>1.11245</Y>
+          <Z>-3.88911</Z>
+          <R00>0.269278</R00>
+          <R01>-0.756449</R01>
+          <R02>0.596049</R02>
+          <R10>-0.513597</R10>
+          <R11>0.410758</R11>
+          <R12>0.753324</R12>
+          <R20>-0.814682</R20>
+          <R21>-0.508983</R21>
+          <R22>-0.277902</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w110">
+      <Properties>
+        <string name="Name">Surface110</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.93510</Y>
+          <Z>1.30611</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.13321</X>
+          <Y>2.09954</Y>
+          <Z>-4.25325</Z>
+          <R00>-0.269278</R00>
+          <R01>-0.756449</R01>
+          <R02>-0.596049</R02>
+          <R10>0.513597</R10>
+          <R11>0.410758</R11>
+          <R12>-0.753324</R12>
+          <R20>0.814682</R20>
+          <R21>-0.508983</R21>
+          <R22>0.277902</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w111">
+      <Properties>
+        <string name="Name">Surface111</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.81192</Y>
+          <Z>0.88983</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-5.90166</X>
+          <Y>1.90088</Y>
+          <Z>-3.03718</Z>
+          <R00>-0.670932</R00>
+          <R01>-0.400211</R01>
+          <R02>0.624244</R02>
+          <R10>-0.119122</R10>
+          <R11>0.889084</R11>
+          <R12>0.441972</R12>
+          <R20>-0.731888</R20>
+          <R21>0.222172</R21>
+          <R22>-0.644189</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w112">
+      <Properties>
+        <string name="Name">Surface112</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.81192</Y>
+          <Z>1.61313</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-5.12043</X>
+          <Y>2.45400</Y>
+          <Z>-3.84337</Z>
+          <R00>0.670932</R00>
+          <R01>-0.400211</R01>
+          <R02>-0.624244</R02>
+          <R10>0.119122</R10>
+          <R11>0.889084</R11>
+          <R12>-0.441972</R12>
+          <R20>0.731888</R20>
+          <R21>0.222172</R21>
+          <R22>0.644189</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w113">
+      <Properties>
+        <string name="Name">Surface113</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.81550</Y>
+          <Z>1.04344</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-5.08334</X>
+          <Y>1.29980</Y>
+          <Z>-0.64902</Z>
+          <R00>0.737086</R00>
+          <R01>0.673671</R01>
+          <R02>-0.053593</R02>
+          <R10>0.585893</R10>
+          <R11>-0.676535</R11>
+          <R12>-0.446128</R12>
+          <R20>-0.336801</R20>
+          <R21>0.297435</R21>
+          <R22>-0.893363</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w114">
+      <Properties>
+        <string name="Name">Surface114</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.81550</Y>
+          <Z>1.75376</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-5.15830</X>
+          <Y>0.67585</Y>
+          <Z>-1.89848</Z>
+          <R00>-0.737086</R00>
+          <R01>0.673671</R01>
+          <R02>0.053593</R02>
+          <R10>-0.585893</R10>
+          <R11>-0.676535</R11>
+          <R12>0.446128</R12>
+          <R20>0.336801</R20>
+          <R21>0.297435</R21>
+          <R22>0.893363</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w115">
+      <Properties>
+        <string name="Name">Surface115</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.12151</Y>
+          <Z>1.10191</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.93803</X>
+          <Y>1.29353</Y>
+          <Z>-0.20750</Z>
+          <R00>0.369199</R00>
+          <R01>-0.786623</R01>
+          <R02>0.494890</R02>
+          <R10>-0.705544</R10>
+          <R11>-0.583844</R11>
+          <R12>-0.401664</R12>
+          <R20>0.604896</R20>
+          <R21>-0.200872</R21>
+          <R22>-0.770552</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w116">
+      <Properties>
+        <string name="Name">Surface116</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>2.12151</Y>
+          <Z>1.59251</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.27130</X>
+          <Y>0.75241</Y>
+          <Z>-1.24559</Z>
+          <R00>-0.369199</R00>
+          <R01>-0.786623</R01>
+          <R02>-0.494890</R02>
+          <R10>0.705544</R10>
+          <R11>-0.583844</R11>
+          <R12>0.401664</R12>
+          <R20>-0.604896</R20>
+          <R21>-0.200872</R21>
+          <R22>0.770552</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w117">
+      <Properties>
+        <string name="Name">Surface117</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.94287</Y>
+          <Z>1.45931</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-1.84313</X>
+          <Y>2.72329</Y>
+          <Z>-2.86177</Z>
+          <R00>0.983058</R00>
+          <R01>0.182901</R01>
+          <R02>-0.012001</R02>
+          <R10>-0.169027</R10>
+          <R11>0.879265</R11>
+          <R12>-0.445334</R12>
+          <R20>-0.070900</R20>
+          <R21>0.439818</R21>
+          <R22>0.895284</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w118">
+      <Properties>
+        <string name="Name">Surface118</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.94287</Y>
+          <Z>1.10546</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-1.85852</X>
+          <Y>2.15220</Y>
+          <Z>-1.71366</Z>
+          <R00>-0.983058</R00>
+          <R01>0.182901</R01>
+          <R02>0.012001</R02>
+          <R10>0.169027</R10>
+          <R11>0.879265</R11>
+          <R12>0.445334</R12>
+          <R20>0.070900</R20>
+          <R21>0.439818</R21>
+          <R22>-0.895284</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w119">
+      <Properties>
+        <string name="Name">Surface119</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.85878</Y>
+          <Z>1.09227</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-3.90934</X>
+          <Y>2.86982</Y>
+          <Z>-4.02100</Z>
+          <R00>0.200556</R00>
+          <R01>-0.193152</R01>
+          <R02>0.960453</R02>
+          <R10>0.462491</R10>
+          <R11>0.882918</R11>
+          <R12>0.080985</R12>
+          <R20>-0.863643</R20>
+          <R21>0.427959</R21>
+          <R22>0.266405</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+    <Item class="WedgePart" referent="w120">
+      <Properties>
+        <string name="Name">Surface120</string>
+        <Vector3 name="size">
+          <X>0.01000</X>
+          <Y>1.85878</Y>
+          <Z>1.24236</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>-2.78818</X>
+          <Y>2.96435</Y>
+          <Z>-3.71002</Z>
+          <R00>-0.200556</R00>
+          <R01>-0.193152</R01>
+          <R02>-0.960453</R02>
+          <R10>-0.462491</R10>
+          <R11>0.882918</R11>
+          <R12>-0.080985</R12>
+          <R20>0.863643</R20>
+          <R21>0.427959</R21>
+          <R22>-0.266405</R22>
+        </CoordinateFrame>
+        <Color3uint8 name="Color3uint8">4286548877</Color3uint8>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanTouch">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="Massless">true</bool>
+        <bool name="CastShadow">true</bool>
+        <token name="Material">272</token>
+      </Properties>
+    </Item>
+  </Item>
+</roblox>

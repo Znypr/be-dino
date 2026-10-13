@@ -1,0 +1,1927 @@
+{
+  "version": 1,
+  "generator": "tools/blender/build_world_kit.py",
+  "seed": 4950,
+  "units": "1 Blender unit = 1 Roblox stud; OBJ exported Y-up",
+  "pivot": "bounding-box bottom centre",
+  "front": "Roblox -Z (Blender +Y)",
+  "rights": "Original Be Dino! geometry generated from primitives; no third-party models or textures.",
+  "palette": {
+    "bark_dark": "5A3E2E",
+    "bark": "7A563C",
+    "bark_light": "9B7650",
+    "deadwood": "A89A86",
+    "leaf_deep": "2F6B4A",
+    "leaf": "3F8A57",
+    "leaf_light": "66A85E",
+    "conifer": "2E5E48",
+    "conifer_light": "417A55",
+    "frond": "5E9E4A",
+    "frond_light": "86B85A",
+    "moss": "6F9A45",
+    "grass": "7DAF52",
+    "grass_dry": "B5B060",
+    "flower_yellow": "F2C94C",
+    "flower_white": "F1EDE0",
+    "flower_violet": "9C7BD0",
+    "mushroom_cap": "C8553D",
+    "mushroom_stem": "E9DCC0",
+    "rock": "7F8B8D",
+    "rock_dark": "5E686B",
+    "rock_light": "A3AAA6",
+    "rock_warm": "9C8B76",
+    "statue_stone": "B9B19A",
+    "statue_dark": "8E8670",
+    "bone": "E8DDC2",
+    "bone_dark": "C2B597",
+    "berry_red": "D6334A",
+    "berry_purple": "6E3A8E",
+    "leaf_food": "4FA04A",
+    "fruit_orange": "F09A2E",
+    "fruit_yellow": "F4CF4A",
+    "egg_cream": "F2E6C4",
+    "egg_spot": "8C6A4A",
+    "egg_teal": "8FC9C4",
+    "nest_straw": "C9A15A",
+    "amber": "F2A33A",
+    "amber_deep": "C8661B"
+  },
+  "budgets": {
+    "tree_s": 80,
+    "tree_m": 120,
+    "tree_l": 160,
+    "shrub": 60,
+    "groundcover": 40,
+    "prehistoric": 60,
+    "rock_s": 24,
+    "rock_m": 48,
+    "rock_l": 72,
+    "formation": 120,
+    "landmark": 300,
+    "food_berry": 32,
+    "food_fruit": 40,
+    "food_egg": 60,
+    "food_amber": 64
+  },
+  "assets": [
+    {
+      "id": "world_tree_conifer_s",
+      "kit": "world",
+      "kind": "tree",
+      "family": "conifer",
+      "sizeClass": "s",
+      "triangles": 52,
+      "budget": 80,
+      "bounds": [
+        [
+          -2.95378,
+          0.0,
+          -3.01677
+        ],
+        [
+          2.95378,
+          10.16098,
+          3.01677
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            0.16004,
+            2.61406,
+            -0.23368
+          ],
+          "size": [
+            0.765,
+            5.0,
+            0.765
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "bark",
+        "conifer",
+        "conifer_light"
+      ],
+      "obj": "resources/models/world/world_tree_conifer_s.obj",
+      "fbx": "assets/blender/world/fbx/world_tree_conifer_s.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_tree_conifer_m",
+      "kit": "world",
+      "kind": "tree",
+      "family": "conifer",
+      "sizeClass": "m",
+      "triangles": 58,
+      "budget": 120,
+      "bounds": [
+        [
+          -5.63427,
+          0.0,
+          -5.04372
+        ],
+        [
+          5.63427,
+          16.93959,
+          5.04372
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            -0.10677,
+            4.53378,
+            -0.32321
+          ],
+          "size": [
+            1.3005,
+            8.5,
+            1.3005
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "bark",
+        "conifer",
+        "conifer_light"
+      ],
+      "obj": "resources/models/world/world_tree_conifer_m.obj",
+      "fbx": "assets/blender/world/fbx/world_tree_conifer_m.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_tree_conifer_l",
+      "kit": "world",
+      "kind": "tree",
+      "family": "conifer",
+      "sizeClass": "l",
+      "triangles": 76,
+      "budget": 160,
+      "bounds": [
+        [
+          -7.89072,
+          0.0,
+          -7.88474
+        ],
+        [
+          7.89072,
+          26.22248,
+          7.88474
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            -0.13219,
+            6.19083,
+            0.4755
+          ],
+          "size": [
+            1.989,
+            12,
+            1.989
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "bark",
+        "conifer",
+        "conifer_light"
+      ],
+      "obj": "resources/models/world/world_tree_conifer_l.obj",
+      "fbx": "assets/blender/world/fbx/world_tree_conifer_l.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_tree_canopy_s",
+      "kit": "world",
+      "kind": "tree",
+      "family": "canopy",
+      "sizeClass": "s",
+      "triangles": 66,
+      "budget": 80,
+      "bounds": [
+        [
+          -3.20834,
+          0.0,
+          -2.68478
+        ],
+        [
+          3.20834,
+          8.2445,
+          2.68478
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            -0.39103,
+            2.26319,
+            0.00197
+          ],
+          "size": [
+            0.891,
+            4.5,
+            0.891
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "bark",
+        "bark_light",
+        "leaf_deep",
+        "leaf"
+      ],
+      "obj": "resources/models/world/world_tree_canopy_s.obj",
+      "fbx": "assets/blender/world/fbx/world_tree_canopy_s.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_tree_canopy_m",
+      "kit": "world",
+      "kind": "tree",
+      "family": "canopy",
+      "sizeClass": "m",
+      "triangles": 92,
+      "budget": 120,
+      "bounds": [
+        [
+          -6.57896,
+          0.0,
+          -4.2696
+        ],
+        [
+          6.57896,
+          13.09817,
+          4.2696
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            0.2188,
+            3.65806,
+            0.01475
+          ],
+          "size": [
+            1.386,
+            7.0,
+            1.386
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "bark",
+        "bark_light",
+        "leaf_deep",
+        "leaf",
+        "leaf_light"
+      ],
+      "obj": "resources/models/world/world_tree_canopy_m.obj",
+      "fbx": "assets/blender/world/fbx/world_tree_canopy_m.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_tree_canopy_l",
+      "kit": "world",
+      "kind": "tree",
+      "family": "canopy",
+      "sizeClass": "l",
+      "triangles": 112,
+      "budget": 160,
+      "bounds": [
+        [
+          -8.9631,
+          0.0,
+          -8.32791
+        ],
+        [
+          8.9631,
+          19.42987,
+          8.32791
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            -0.69729,
+            5.46716,
+            0.31437
+          ],
+          "size": [
+            2.079,
+            10.5,
+            2.079
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "bark",
+        "bark_light",
+        "leaf_deep",
+        "leaf",
+        "leaf_light"
+      ],
+      "obj": "resources/models/world/world_tree_canopy_l.obj",
+      "fbx": "assets/blender/world/fbx/world_tree_canopy_l.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_tree_cycad_s",
+      "kit": "world",
+      "kind": "tree",
+      "family": "cycad",
+      "sizeClass": "s",
+      "triangles": 72,
+      "budget": 80,
+      "bounds": [
+        [
+          -2.8582,
+          0.0,
+          -2.42885
+        ],
+        [
+          2.8582,
+          5.23524,
+          2.42885
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            0.02285,
+            1.8454,
+            0.06508
+          ],
+          "size": [
+            0.9,
+            3.6,
+            0.9
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "bark",
+        "frond",
+        "frond_light"
+      ],
+      "obj": "resources/models/world/world_tree_cycad_s.obj",
+      "fbx": "assets/blender/world/fbx/world_tree_cycad_s.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_tree_cycad_m",
+      "kit": "world",
+      "kind": "tree",
+      "family": "cycad",
+      "sizeClass": "m",
+      "triangles": 112,
+      "budget": 120,
+      "bounds": [
+        [
+          -4.60278,
+          0.0,
+          -4.61869
+        ],
+        [
+          4.60278,
+          8.84943,
+          4.61869
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            0.0712,
+            3.09429,
+            0.42156
+          ],
+          "size": [
+            1.5,
+            6.0,
+            1.5
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "bark",
+        "bark_light",
+        "frond",
+        "frond_light"
+      ],
+      "obj": "resources/models/world/world_tree_cycad_m.obj",
+      "fbx": "assets/blender/world/fbx/world_tree_cycad_m.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_tree_cycad_l",
+      "kit": "world",
+      "kind": "tree",
+      "family": "cycad",
+      "sizeClass": "l",
+      "triangles": 136,
+      "budget": 160,
+      "bounds": [
+        [
+          -7.07177,
+          0.0,
+          -7.16123
+        ],
+        [
+          7.07177,
+          12.67285,
+          7.16123
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            0.56753,
+            4.64948,
+            -0.76904
+          ],
+          "size": [
+            2.25,
+            9.0,
+            2.25
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "bark",
+        "bark_light",
+        "frond",
+        "frond_light"
+      ],
+      "obj": "resources/models/world/world_tree_cycad_l.obj",
+      "fbx": "assets/blender/world/fbx/world_tree_cycad_l.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_tree_dead_s",
+      "kit": "world",
+      "kind": "tree",
+      "family": "dead",
+      "sizeClass": "s",
+      "triangles": 44,
+      "budget": 80,
+      "bounds": [
+        [
+          -0.78082,
+          0.0,
+          -1.27138
+        ],
+        [
+          0.78082,
+          7.99748,
+          1.27138
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            0.04538,
+            2.50071,
+            -0.19426
+          ],
+          "size": [
+            0.912,
+            4.8,
+            0.912
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "bark_dark",
+        "bark_light",
+        "deadwood"
+      ],
+      "obj": "resources/models/world/world_tree_dead_s.obj",
+      "fbx": "assets/blender/world/fbx/world_tree_dead_s.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_tree_dead_m",
+      "kit": "world",
+      "kind": "tree",
+      "family": "dead",
+      "sizeClass": "m",
+      "triangles": 50,
+      "budget": 120,
+      "bounds": [
+        [
+          -2.62497,
+          0.0,
+          -2.0189
+        ],
+        [
+          2.62497,
+          12.33902,
+          2.0189
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            0.27283,
+            4.07601,
+            0.01258
+          ],
+          "size": [
+            1.482,
+            7.8,
+            1.482
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "bark_dark",
+        "bark_light",
+        "deadwood"
+      ],
+      "obj": "resources/models/world/world_tree_dead_m.obj",
+      "fbx": "assets/blender/world/fbx/world_tree_dead_m.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_tree_dead_l",
+      "kit": "world",
+      "kind": "tree",
+      "family": "dead",
+      "sizeClass": "l",
+      "triangles": 68,
+      "budget": 160,
+      "bounds": [
+        [
+          -3.5209,
+          0.0,
+          -3.11245
+        ],
+        [
+          3.5209,
+          17.48014,
+          3.11245
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            0.51075,
+            5.83393,
+            -0.56913
+          ],
+          "size": [
+            2.166,
+            11.4,
+            2.166
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "bark_dark",
+        "bark_light",
+        "deadwood"
+      ],
+      "obj": "resources/models/world/world_tree_dead_l.obj",
+      "fbx": "assets/blender/world/fbx/world_tree_dead_l.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_bush_a",
+      "kit": "world",
+      "kind": "shrub",
+      "family": "bush",
+      "sizeClass": "m",
+      "triangles": 60,
+      "budget": 60,
+      "bounds": [
+        [
+          -1.85115,
+          0.0,
+          -1.23839
+        ],
+        [
+          1.85115,
+          1.89874,
+          1.23839
+        ]
+      ],
+      "colliders": [],
+      "materials": [
+        "leaf_deep",
+        "leaf",
+        "leaf_light"
+      ],
+      "obj": "resources/models/world/world_bush_a.obj",
+      "fbx": "assets/blender/world/fbx/world_bush_a.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_fern_a",
+      "kit": "world",
+      "kind": "shrub",
+      "family": "fern",
+      "sizeClass": "s",
+      "triangles": 48,
+      "budget": 60,
+      "bounds": [
+        [
+          -1.62782,
+          0.0,
+          -1.46809
+        ],
+        [
+          1.62782,
+          1.20059,
+          1.46809
+        ]
+      ],
+      "colliders": [],
+      "materials": [
+        "frond",
+        "frond_light"
+      ],
+      "obj": "resources/models/world/world_fern_a.obj",
+      "fbx": "assets/blender/world/fbx/world_fern_a.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_grass_a",
+      "kit": "world",
+      "kind": "groundcover",
+      "family": "grass",
+      "sizeClass": "s",
+      "triangles": 20,
+      "budget": 40,
+      "bounds": [
+        [
+          -0.33414,
+          0.0,
+          -0.33896
+        ],
+        [
+          0.33414,
+          1.43339,
+          0.33896
+        ]
+      ],
+      "colliders": [],
+      "materials": [
+        "grass"
+      ],
+      "obj": "resources/models/world/world_grass_a.obj",
+      "fbx": "assets/blender/world/fbx/world_grass_a.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_bush_b",
+      "kit": "world",
+      "kind": "shrub",
+      "family": "bush",
+      "sizeClass": "m",
+      "triangles": 56,
+      "budget": 60,
+      "bounds": [
+        [
+          -1.56857,
+          0.0,
+          -1.23173
+        ],
+        [
+          1.56857,
+          2.03717,
+          1.23173
+        ]
+      ],
+      "colliders": [],
+      "materials": [
+        "leaf_deep",
+        "leaf",
+        "flower_white"
+      ],
+      "obj": "resources/models/world/world_bush_b.obj",
+      "fbx": "assets/blender/world/fbx/world_bush_b.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_fern_b",
+      "kit": "world",
+      "kind": "shrub",
+      "family": "fern",
+      "sizeClass": "s",
+      "triangles": 52,
+      "budget": 60,
+      "bounds": [
+        [
+          -1.74431,
+          0.0,
+          -1.76323
+        ],
+        [
+          1.74431,
+          1.52603,
+          1.76323
+        ]
+      ],
+      "colliders": [],
+      "materials": [
+        "bark_dark",
+        "frond",
+        "frond_light"
+      ],
+      "obj": "resources/models/world/world_fern_b.obj",
+      "fbx": "assets/blender/world/fbx/world_fern_b.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_grass_b",
+      "kit": "world",
+      "kind": "groundcover",
+      "family": "grass",
+      "sizeClass": "s",
+      "triangles": 16,
+      "budget": 40,
+      "bounds": [
+        [
+          -0.32584,
+          0.0,
+          -0.3448
+        ],
+        [
+          0.32584,
+          1.61275,
+          0.3448
+        ]
+      ],
+      "colliders": [],
+      "materials": [
+        "grass_dry"
+      ],
+      "obj": "resources/models/world/world_grass_b.obj",
+      "fbx": "assets/blender/world/fbx/world_grass_b.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_flowers_a",
+      "kit": "world",
+      "kind": "groundcover",
+      "family": "flowers",
+      "sizeClass": "s",
+      "triangles": 36,
+      "budget": 40,
+      "bounds": [
+        [
+          -0.29993,
+          0.0,
+          -0.30671
+        ],
+        [
+          0.29993,
+          1.18422,
+          0.30671
+        ]
+      ],
+      "colliders": [],
+      "materials": [
+        "grass",
+        "flower_yellow",
+        "flower_white",
+        "flower_violet"
+      ],
+      "obj": "resources/models/world/world_flowers_a.obj",
+      "fbx": "assets/blender/world/fbx/world_flowers_a.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_horsetail_a",
+      "kit": "world",
+      "kind": "shrub",
+      "family": "horsetail",
+      "sizeClass": "m",
+      "triangles": 56,
+      "budget": 60,
+      "bounds": [
+        [
+          -0.6524,
+          0.0,
+          -0.78215
+        ],
+        [
+          0.6524,
+          4.44351,
+          0.78215
+        ]
+      ],
+      "colliders": [],
+      "materials": [
+        "frond",
+        "frond_light"
+      ],
+      "obj": "resources/models/world/world_horsetail_a.obj",
+      "fbx": "assets/blender/world/fbx/world_horsetail_a.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_mushrooms_a",
+      "kit": "world",
+      "kind": "shrub",
+      "family": "mushrooms",
+      "sizeClass": "s",
+      "triangles": 60,
+      "budget": 60,
+      "bounds": [
+        [
+          -1.17204,
+          0.0,
+          -0.88605
+        ],
+        [
+          1.17204,
+          2.01674,
+          0.88605
+        ]
+      ],
+      "colliders": [],
+      "materials": [
+        "mushroom_cap",
+        "mushroom_stem"
+      ],
+      "obj": "resources/models/world/world_mushrooms_a.obj",
+      "fbx": "assets/blender/world/fbx/world_mushrooms_a.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_boulder_mossy_s",
+      "kit": "world",
+      "kind": "rock",
+      "family": "boulder_mossy",
+      "sizeClass": "s",
+      "triangles": 20,
+      "budget": 24,
+      "bounds": [
+        [
+          -1.14325,
+          0.0,
+          -1.33391
+        ],
+        [
+          1.14325,
+          2.06545,
+          1.33391
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            0.0485,
+            0.83075,
+            -0.05816
+          ],
+          "size": [
+            2.232,
+            1.872,
+            2.0832
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "moss",
+        "rock"
+      ],
+      "obj": "resources/models/world/world_boulder_mossy_s.obj",
+      "fbx": "assets/blender/world/fbx/world_boulder_mossy_s.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_boulder_mossy_m",
+      "kit": "world",
+      "kind": "rock",
+      "family": "boulder_mossy",
+      "sizeClass": "m",
+      "triangles": 40,
+      "budget": 48,
+      "bounds": [
+        [
+          -3.1167,
+          0.0,
+          -2.71577
+        ],
+        [
+          3.1167,
+          3.49312,
+          2.71577
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            -0.58889,
+            1.6858,
+            0.47839
+          ],
+          "size": [
+            3.72,
+            3.12,
+            3.472
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            1.61111,
+            1.2298,
+            -0.92161
+          ],
+          "size": [
+            2.604,
+            2.184,
+            2.4304
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "moss",
+        "rock"
+      ],
+      "obj": "resources/models/world/world_boulder_mossy_m.obj",
+      "fbx": "assets/blender/world/fbx/world_boulder_mossy_m.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_boulder_mossy_l",
+      "kit": "world",
+      "kind": "rock",
+      "family": "boulder_mossy",
+      "sizeClass": "l",
+      "triangles": 60,
+      "budget": 72,
+      "bounds": [
+        [
+          -5.9865,
+          0.0,
+          -4.62342
+        ],
+        [
+          5.9865,
+          5.8989,
+          4.62342
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            -0.59858,
+            2.79639,
+            0.69776
+          ],
+          "size": [
+            6.045,
+            5.07,
+            5.642
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            2.97642,
+            2.05539,
+            -1.57724
+          ],
+          "size": [
+            4.2315,
+            3.549,
+            3.9494
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            -3.84858,
+            1.80839,
+            -2.22724
+          ],
+          "size": [
+            3.627,
+            3.042,
+            3.3852
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "moss",
+        "rock"
+      ],
+      "obj": "resources/models/world/world_boulder_mossy_l.obj",
+      "fbx": "assets/blender/world/fbx/world_boulder_mossy_l.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_boulder_bare_s",
+      "kit": "world",
+      "kind": "rock",
+      "family": "boulder_bare",
+      "sizeClass": "s",
+      "triangles": 20,
+      "budget": 24,
+      "bounds": [
+        [
+          -1.43456,
+          0.0,
+          -1.43273
+        ],
+        [
+          1.43456,
+          1.9831,
+          1.43273
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            -0.03363,
+            0.84618,
+            -0.0085
+          ],
+          "size": [
+            2.232,
+            1.872,
+            2.0832
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "rock",
+        "rock_dark",
+        "rock_light"
+      ],
+      "obj": "resources/models/world/world_boulder_bare_s.obj",
+      "fbx": "assets/blender/world/fbx/world_boulder_bare_s.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_boulder_bare_m",
+      "kit": "world",
+      "kind": "rock",
+      "family": "boulder_bare",
+      "sizeClass": "m",
+      "triangles": 40,
+      "budget": 48,
+      "bounds": [
+        [
+          -3.2072,
+          0.0,
+          -2.73449
+        ],
+        [
+          3.2072,
+          3.71064,
+          2.73449
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            -0.62163,
+            1.78082,
+            0.30994
+          ],
+          "size": [
+            3.72,
+            3.12,
+            3.472
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            1.57837,
+            1.32482,
+            -1.09006
+          ],
+          "size": [
+            2.604,
+            2.184,
+            2.4304
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "rock",
+        "rock_dark",
+        "rock_light"
+      ],
+      "obj": "resources/models/world/world_boulder_bare_m.obj",
+      "fbx": "assets/blender/world/fbx/world_boulder_bare_m.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_boulder_bare_l",
+      "kit": "world",
+      "kind": "rock",
+      "family": "boulder_bare",
+      "sizeClass": "l",
+      "triangles": 60,
+      "budget": 72,
+      "bounds": [
+        [
+          -5.75289,
+          0.0,
+          -4.58452
+        ],
+        [
+          5.75289,
+          5.68871,
+          4.58452
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            -0.28848,
+            2.72816,
+            0.63621
+          ],
+          "size": [
+            6.045,
+            5.07,
+            5.642
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            3.28652,
+            1.98716,
+            -1.63879
+          ],
+          "size": [
+            4.2315,
+            3.549,
+            3.9494
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            -3.53848,
+            1.74016,
+            -2.28879
+          ],
+          "size": [
+            3.627,
+            3.042,
+            3.3852
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "rock",
+        "rock_dark",
+        "rock_light"
+      ],
+      "obj": "resources/models/world/world_boulder_bare_l.obj",
+      "fbx": "assets/blender/world/fbx/world_boulder_bare_l.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_rocks_spires",
+      "kit": "world",
+      "kind": "rock",
+      "family": "formation",
+      "sizeClass": "l",
+      "triangles": 104,
+      "budget": 120,
+      "bounds": [
+        [
+          -4.32932,
+          0.0,
+          -3.55078
+        ],
+        [
+          4.32932,
+          14.22821,
+          3.55078
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            -0.19646,
+            6.44218,
+            -0.49975
+          ],
+          "size": [
+            2.912,
+            12.6,
+            2.912
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            3.00354,
+            4.64218,
+            -2.09975
+          ],
+          "size": [
+            2.08,
+            9.0,
+            2.08
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            -2.99646,
+            3.96718,
+            -2.39975
+          ],
+          "size": [
+            1.768,
+            7.65,
+            1.768
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            0.40354,
+            3.06718,
+            2.50025
+          ],
+          "size": [
+            1.352,
+            5.85,
+            1.352
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "moss",
+        "rock",
+        "rock_dark",
+        "rock_warm"
+      ],
+      "obj": "resources/models/world/world_rocks_spires.obj",
+      "fbx": "assets/blender/world/fbx/world_rocks_spires.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_rocks_ledge",
+      "kit": "world",
+      "kind": "rock",
+      "family": "formation",
+      "sizeClass": "l",
+      "triangles": 68,
+      "budget": 120,
+      "bounds": [
+        [
+          -5.29314,
+          0.0,
+          -3.41464
+        ],
+        [
+          5.29314,
+          7.90028,
+          3.41464
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            -0.74298,
+            1.4936,
+            -0.22239
+          ],
+          "size": [
+            8.55,
+            2.4,
+            5.7
+          ],
+          "yaw": -0.0485
+        },
+        {
+          "centre": [
+            -0.34298,
+            3.5936,
+            -0.52239
+          ],
+          "size": [
+            7.03,
+            2.2,
+            4.75
+          ],
+          "yaw": 0.01433
+        },
+        {
+          "centre": [
+            -1.04298,
+            5.4936,
+            -0.82239
+          ],
+          "size": [
+            5.32,
+            2.0,
+            3.61
+          ],
+          "yaw": -0.07881
+        },
+        {
+          "centre": [
+            -0.24298,
+            7.0936,
+            -0.42239
+          ],
+          "size": [
+            3.42,
+            1.6,
+            2.47
+          ],
+          "yaw": 0.03956
+        }
+      ],
+      "materials": [
+        "moss",
+        "rock",
+        "rock_dark",
+        "rock_warm"
+      ],
+      "obj": "resources/models/world/world_rocks_ledge.obj",
+      "fbx": "assets/blender/world/fbx/world_rocks_ledge.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_landmark_dino_statue",
+      "kit": "world",
+      "kind": "landmark",
+      "family": "landmark",
+      "sizeClass": "l",
+      "triangles": 124,
+      "budget": 300,
+      "bounds": [
+        [
+          -4.52022,
+          0.0,
+          -9.04537
+        ],
+        [
+          4.52022,
+          14.17883,
+          9.04537
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            -0.01282,
+            0.82056,
+            -0.98669
+          ],
+          "size": [
+            9.0,
+            1.6,
+            14.0
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            -0.01282,
+            2.22056,
+            -0.98669
+          ],
+          "size": [
+            6.5,
+            1.2,
+            11.0
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            -0.01282,
+            5.82056,
+            -0.38669
+          ],
+          "size": [
+            4.2,
+            4.4,
+            7.4
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "moss",
+        "statue_stone",
+        "statue_dark"
+      ],
+      "obj": "resources/models/world/world_landmark_dino_statue.obj",
+      "fbx": "assets/blender/world/fbx/world_landmark_dino_statue.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_landmark_fossil_display",
+      "kit": "world",
+      "kind": "landmark",
+      "family": "landmark",
+      "sizeClass": "l",
+      "triangles": 152,
+      "budget": 300,
+      "bounds": [
+        [
+          -3.5235,
+          0.0,
+          -8.66415
+        ],
+        [
+          3.5235,
+          6.73135,
+          8.66415
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            0.01161,
+            0.51613,
+            1.13585
+          ],
+          "size": [
+            7.0,
+            1.0,
+            15.0
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            0.01161,
+            3.31613,
+            0.63585
+          ],
+          "size": [
+            3.6,
+            4.6,
+            14.0
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "statue_dark",
+        "bone",
+        "bone_dark"
+      ],
+      "obj": "resources/models/world/world_landmark_fossil_display.obj",
+      "fbx": "assets/blender/world/fbx/world_landmark_fossil_display.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_landmark_stone_arch",
+      "kit": "world",
+      "kind": "landmark",
+      "family": "landmark",
+      "sizeClass": "l",
+      "triangles": 100,
+      "budget": 300,
+      "bounds": [
+        [
+          -12.33423,
+          0.0,
+          -3.8378
+        ],
+        [
+          12.33423,
+          18.463,
+          3.8378
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            8.09863,
+            7.61123,
+            -0.04869
+          ],
+          "size": [
+            3.4,
+            15.0,
+            4.0
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            -8.50137,
+            7.61123,
+            -0.04869
+          ],
+          "size": [
+            3.4,
+            15.0,
+            4.0
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            -0.20137,
+            16.71123,
+            -0.04869
+          ],
+          "size": [
+            21.4,
+            3.2,
+            4.4
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "moss",
+        "rock",
+        "rock_dark",
+        "rock_warm"
+      ],
+      "obj": "resources/models/world/world_landmark_stone_arch.obj",
+      "fbx": "assets/blender/world/fbx/world_landmark_stone_arch.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "world_landmark_ruins_altar",
+      "kit": "world",
+      "kind": "landmark",
+      "family": "landmark",
+      "sizeClass": "l",
+      "triangles": 152,
+      "budget": 300,
+      "bounds": [
+        [
+          -7.51815,
+          0.0,
+          -7.53156
+        ],
+        [
+          7.51815,
+          8.97798,
+          7.53156
+        ]
+      ],
+      "colliders": [
+        {
+          "centre": [
+            0.00321,
+            0.73999,
+            0.00139
+          ],
+          "size": [
+            15.0,
+            1.4,
+            15.0
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            0.00321,
+            1.93999,
+            0.00139
+          ],
+          "size": [
+            10.0,
+            1.0,
+            10.0
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            0.00321,
+            3.63999,
+            0.00139
+          ],
+          "size": [
+            3.6,
+            2.4,
+            2.4
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            5.60321,
+            5.18999,
+            -5.59861
+          ],
+          "size": [
+            1.6,
+            7.5,
+            1.6
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            -5.59679,
+            3.93999,
+            -5.59861
+          ],
+          "size": [
+            1.6,
+            5.0,
+            1.6
+          ],
+          "yaw": 0.0
+        },
+        {
+          "centre": [
+            5.60321,
+            3.03999,
+            5.60139
+          ],
+          "size": [
+            1.6,
+            3.2,
+            1.6
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "materials": [
+        "moss",
+        "statue_stone",
+        "statue_dark"
+      ],
+      "obj": "resources/models/world/world_landmark_ruins_altar.obj",
+      "fbx": "assets/blender/world/fbx/world_landmark_ruins_altar.fbx",
+      "blend": "assets/blender/world/BD049_WorldKit.blend"
+    },
+    {
+      "id": "food_berry_a",
+      "kit": "food",
+      "kind": "food",
+      "family": "berry",
+      "sizeClass": "s",
+      "triangles": 32,
+      "budget": 32,
+      "bounds": [
+        [
+          -0.36084,
+          0.0,
+          -0.43546
+        ],
+        [
+          0.36084,
+          0.95384,
+          0.43546
+        ]
+      ],
+      "colliders": [],
+      "materials": [
+        "berry_red",
+        "leaf_food"
+      ],
+      "obj": "resources/models/world/food_berry_a.obj",
+      "fbx": "assets/blender/world/fbx/food_berry_a.fbx",
+      "blend": "assets/blender/world/BD050_FoodKit.blend",
+      "points": 1
+    },
+    {
+      "id": "food_berry_b",
+      "kit": "food",
+      "kind": "food",
+      "family": "berry",
+      "sizeClass": "s",
+      "triangles": 28,
+      "budget": 32,
+      "bounds": [
+        [
+          -0.36222,
+          0.0,
+          -0.30894
+        ],
+        [
+          0.36222,
+          0.80264,
+          0.30894
+        ]
+      ],
+      "colliders": [],
+      "materials": [
+        "berry_purple",
+        "leaf_food"
+      ],
+      "obj": "resources/models/world/food_berry_b.obj",
+      "fbx": "assets/blender/world/fbx/food_berry_b.fbx",
+      "blend": "assets/blender/world/BD050_FoodKit.blend",
+      "points": 1
+    },
+    {
+      "id": "food_fruit_a",
+      "kit": "food",
+      "kind": "food",
+      "family": "fruit",
+      "sizeClass": "s",
+      "triangles": 32,
+      "budget": 40,
+      "bounds": [
+        [
+          -0.37916,
+          0.0,
+          -0.38162
+        ],
+        [
+          0.37916,
+          1.16406,
+          0.38162
+        ]
+      ],
+      "colliders": [],
+      "materials": [
+        "bark",
+        "leaf_food",
+        "fruit_orange"
+      ],
+      "obj": "resources/models/world/food_fruit_a.obj",
+      "fbx": "assets/blender/world/fbx/food_fruit_a.fbx",
+      "blend": "assets/blender/world/BD050_FoodKit.blend",
+      "points": 4
+    },
+    {
+      "id": "food_fruit_b",
+      "kit": "food",
+      "kind": "food",
+      "family": "fruit",
+      "sizeClass": "s",
+      "triangles": 40,
+      "budget": 40,
+      "bounds": [
+        [
+          -0.52,
+          0.0,
+          -0.45033
+        ],
+        [
+          0.52,
+          1.24,
+          0.45033
+        ]
+      ],
+      "colliders": [],
+      "materials": [
+        "bark",
+        "fruit_orange",
+        "fruit_yellow"
+      ],
+      "obj": "resources/models/world/food_fruit_b.obj",
+      "fbx": "assets/blender/world/fbx/food_fruit_b.fbx",
+      "blend": "assets/blender/world/BD050_FoodKit.blend",
+      "points": 4
+    },
+    {
+      "id": "food_egg_a",
+      "kit": "food",
+      "kind": "food",
+      "family": "egg",
+      "sizeClass": "s",
+      "triangles": 56,
+      "budget": 60,
+      "bounds": [
+        [
+          -0.93218,
+          0.0,
+          -1.00982
+        ],
+        [
+          0.93218,
+          1.56106,
+          1.00982
+        ]
+      ],
+      "colliders": [],
+      "materials": [
+        "egg_cream",
+        "egg_spot",
+        "nest_straw"
+      ],
+      "obj": "resources/models/world/food_egg_a.obj",
+      "fbx": "assets/blender/world/fbx/food_egg_a.fbx",
+      "blend": "assets/blender/world/BD050_FoodKit.blend",
+      "points": 15
+    },
+    {
+      "id": "food_egg_b",
+      "kit": "food",
+      "kind": "food",
+      "family": "egg",
+      "sizeClass": "s",
+      "triangles": 60,
+      "budget": 60,
+      "bounds": [
+        [
+          -0.72766,
+          0.0,
+          -0.67537
+        ],
+        [
+          0.72766,
+          1.48,
+          0.67537
+        ]
+      ],
+      "colliders": [],
+      "materials": [
+        "leaf_food",
+        "egg_cream",
+        "egg_teal"
+      ],
+      "obj": "resources/models/world/food_egg_b.obj",
+      "fbx": "assets/blender/world/fbx/food_egg_b.fbx",
+      "blend": "assets/blender/world/BD050_FoodKit.blend",
+      "points": 15
+    },
+    {
+      "id": "food_amber_a",
+      "kit": "food",
+      "kind": "food",
+      "family": "amber",
+      "sizeClass": "s",
+      "triangles": 56,
+      "budget": 64,
+      "bounds": [
+        [
+          -0.53418,
+          0.0,
+          -0.47629
+        ],
+        [
+          0.53418,
+          1.99752,
+          0.47629
+        ]
+      ],
+      "colliders": [],
+      "materials": [
+        "rock_dark",
+        "amber",
+        "amber_deep"
+      ],
+      "obj": "resources/models/world/food_amber_a.obj",
+      "fbx": "assets/blender/world/fbx/food_amber_a.fbx",
+      "blend": "assets/blender/world/BD050_FoodKit.blend",
+      "points": 50
+    },
+    {
+      "id": "food_amber_b",
+      "kit": "food",
+      "kind": "food",
+      "family": "amber",
+      "sizeClass": "s",
+      "triangles": 60,
+      "budget": 64,
+      "bounds": [
+        [
+          -0.56683,
+          0.0,
+          -0.46995
+        ],
+        [
+          0.56683,
+          1.4441,
+          0.46995
+        ]
+      ],
+      "colliders": [],
+      "materials": [
+        "rock_dark",
+        "amber",
+        "amber_deep"
+      ],
+      "obj": "resources/models/world/food_amber_b.obj",
+      "fbx": "assets/blender/world/fbx/food_amber_b.fbx",
+      "blend": "assets/blender/world/BD050_FoodKit.blend",
+      "points": 50
+    }
+  ]
+}

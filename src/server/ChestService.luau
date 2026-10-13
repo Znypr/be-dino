@@ -7,6 +7,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local ChestService = {}
 local lastClaim: {[Player]: number} = {}
 local lastGrant: {[Player]: number} = {}
+local lastNest: {[Player]: number} = {}
 
 local function getRemote(folder: Folder, name: string): RemoteEvent
     local existing = folder:FindFirstChild(name)
@@ -18,10 +19,10 @@ local function getRemote(folder: Folder, name: string): RemoteEvent
     return remote
 end
 
-local function allowed(bucket: {[Player]: number}, player: Player): boolean
+local function allowed(bucket: {[Player]: number}, player: Player, cooldown: number?): boolean
     local now = os.clock()
     local last = bucket[player] or -math.huge
-    if now - last < Config.ChestClaimRequestCooldownSeconds then return false end
+    if now - last < (cooldown or Config.ChestClaimRequestCooldownSeconds) then return false end
     bucket[player] = now
     return true
 end
@@ -55,6 +56,22 @@ function ChestService.start(profileRepository)
         player:SetAttribute("LastChestClaimStatus", status)
     end)
 
+    -- BD-044 bonus nests: open one ready nest slot; its eggs join the reveal line next.
+    local claimNest = getRemote(folder, "ClaimNest")
+    claimNest.OnServerEvent:Connect(function(player: Player, nestId, ...)
+        if select("#", ...) ~= 0 then return end
+        if typeof(nestId) ~= "string" or #nestId < 1 or #nestId > 80 then
+            player:SetAttribute("LastNestClaimStatus", "invalid_nest_id")
+            return
+        end
+        if not allowed(lastNest, player, Config.NestClaimRequestCooldownSeconds) then
+            player:SetAttribute("LastNestClaimStatus", "rate_limited")
+            return
+        end
+        local _, _, status = profileRepository.claimNest(player, nestId)
+        player:SetAttribute("LastNestClaimStatus", status)
+    end)
+
     testGrant.OnServerEvent:Connect(function(player: Player, ...)
         if select("#", ...) ~= 0 then return end
         if not Config.ChestTestGrantEnabled then return end
@@ -69,6 +86,7 @@ function ChestService.start(profileRepository)
     Players.PlayerRemoving:Connect(function(player)
         lastClaim[player] = nil
         lastGrant[player] = nil
+        lastNest[player] = nil
     end)
 end
 

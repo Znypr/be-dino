@@ -20,6 +20,10 @@ function ResourceModels.clone(id: string): Model?
     local template = if folder then folder:FindFirstChild(id) else nil
     local overrides=ReplicatedStorage:FindFirstChild("ResourceOverrides")
     template=(if overrides then overrides:FindFirstChild(id) else nil) or template
+    if not template then -- BD-049/050 Blender kit (native fallback until owner MeshPart uploads)
+        local kit = ReplicatedStorage:FindFirstChild("WorldKit")
+        template = if kit then kit:FindFirstChild(id) else nil
+    end
     if not template then return if RunService:IsClient() then RuntimeMeshes.clone(id) else nil end
     local copy: Model
     if template:IsA("Model") then

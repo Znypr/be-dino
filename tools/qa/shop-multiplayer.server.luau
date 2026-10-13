@@ -35,7 +35,7 @@ local ok,result=xpcall(function()
     assert(statusA=="level_locked" and statusB=="level_locked","level lock response: "..tostring(statusA).." / "..tostring(statusB))
     local Rewards=require(game.ServerScriptService.Server.RewardMath)
     local compute=Rewards.computeRunReward
-    Rewards.computeRunReward=function()return {stacks={},chestCount=0}end
+    Rewards.computeRunReward=function()return {rewardConfigVersion=2,catchScore=0,eggCount=0,crystals=0,nestCount=0,accountXP=5000}end -- XP-only fixture, no eggs
     for i=1,100 do assert(Repo.commitRunSettlement(a,"qa-level-"..i,5000)) end
     Rewards.computeRunReward=compute
     local beforePurchases=Repo.progression(a).crystals

@@ -42,11 +42,12 @@ function PredationService.start(runLifecycle, dinosaur)
         end
         victims[victimUserId] = now
         local catches = numberAttribute(attacker.character, "CatchScore", 0)
-        if catches < Config.MaxCatchScore then
+        local cap = math.min(Config.MaxCatchScore, Config.RunEggMaxPerRun) -- BD-044: one run egg per catch
+        if catches < cap then
             local bonus=(attacker.character:GetAttribute("WeatherLootCarry") or 0)+(attacker.character:GetAttribute("WeatherLootMultiplier") or 1)
             local whole=math.floor(bonus)
             attacker.character:SetAttribute("WeatherLootCarry",bonus-whole)
-            attacker.character:SetAttribute("CatchScore", math.min(Config.MaxCatchScore,catches+whole))
+            attacker.character:SetAttribute("CatchScore", math.min(cap,catches+whole))
         end
     end
 

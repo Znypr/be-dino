@@ -7,7 +7,6 @@ local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local FoodCatchRules = require(ReplicatedStorage.Shared.FoodCatchRules)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
-local RewardMath = require(script.Parent.RewardMath)
 local Http = game:GetService("HttpService")
 local eventRandom = Random.new()
 local FoodService = {}
@@ -114,10 +113,14 @@ function FoodService.start(dinosaur,repository)
                 pickup:SetAttribute("StarterFood", starter)
                 pickup:SetAttribute("Sector", string.format("%d:%d", sx, sz))
                 local visual = nil
+                -- BD-050 Kit mode is visual only: same TYPES points, pickup part and server validation.
+                -- Berry/fruit kit meshes wait for MeshPart uploads (1,300+ native wedge copies is too heavy).
+                local artId = if Config.FoodArtMode == "Kit" then string.format("food_%s_%s", kind.id, if (sx + sz + itemIndex) % 2 == 0 then "a" else "b") else kind.id
+                pickup:SetAttribute("ArtId", artId)
                 if kind.id == "egg" or kind.id == "amber" then
                     local ok, result = pcall(function()
-                        local model = Resources.clone(kind.id)
-                        if model then model:ScaleTo(kind.size / (if kind.id == "egg" then 2.4 else 1.3)) end
+                        local model = Resources.clone(artId)
+                        if model and artId == kind.id then model:ScaleTo(kind.size / (if kind.id == "egg" then 2.4 else 1.3)) end
                         return model
                     end)
                     if ok then visual = result end -- visible native pickup survives any art failure
@@ -209,17 +212,21 @@ function FoodService.start(dinosaur,repository)
                     local whole, carry = FoodCatchRules.award(candidate.gained, c:GetAttribute("FoodCatchCarry") or 0, c:GetAttribute("WeatherLootMultiplier") or 1)
                     c:SetAttribute("FoodCatchCarry", carry)
                     local before=c:GetAttribute("CatchScore") or 0
-                    local after=math.min(Config.MaxCatchScore,before+whole)
+                    local after=math.min(Config.MaxCatchScore,Config.RunEggMaxPerRun,before+whole)
                     c:SetAttribute("CatchScore",after)
-                    local ok,events=pcall(function() return Http:JSONDecode(c:GetAttribute("RunEggEvents") or "[]") end)
-                    if not ok or typeof(events)~="table" then events={} end
-                    for i=1,RewardMath.earnedChests(after) do
-                        if not events[i] then
-                            events[i]=ProgressionRules.eventEgg(if i>RewardMath.earnedChests(before) then workspace:GetAttribute("WeatherId") or "clear" else "clear",eventRandom:NextNumber())
-                            if repository then events[i]=repository.prepareEgg(candidate.player,events[i]) end
+                    -- BD-044: every catch is one run egg. Only eggs caught during weather carry a
+                    -- compact catch-time tag {eventId, mutationId, n=catch ordinal}; clear-weather
+                    -- eggs need none. Genes/traits are committed once at settlement.
+                    local weatherId=workspace:GetAttribute("WeatherId") or "clear"
+                    if after>before and weatherId~="clear" then
+                        local ok,events=pcall(function() return Http:JSONDecode(c:GetAttribute("RunEggEvents") or "[]") end)
+                        if not ok or typeof(events)~="table" then events={} end
+                        for n=before+1,after do
+                            local tag=ProgressionRules.eventEgg(weatherId,eventRandom:NextNumber())
+                            if tag.eventId~="clear" then tag.n=n table.insert(events,tag) end
                         end
+                        c:SetAttribute("RunEggEvents",Http:JSONEncode(events))
                     end
-                    c:SetAttribute("RunEggEvents",Http:JSONEncode(events))
                     dinosaur.addGrowth(c, candidate.gained)
                 end
             end

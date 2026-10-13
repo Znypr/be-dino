@@ -5,13 +5,33 @@ local PhysicsService = game:GetService("PhysicsService")
 local Dinosaur = {}
 local Visual = require(ReplicatedStorage.Shared.DinosaurVisual)
 local Config = require(ReplicatedStorage.Shared.Config)
+local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
+local function groundHeight(character: Model, root: BasePart, humanoid: Humanoid): number
+    local height = root.Size.Y / 2 + humanoid.HipHeight
+    if humanoid.RigType == Enum.HumanoidRigType.R6 then
+        local leg = character:FindFirstChild("Left Leg")
+        height += if leg and leg:IsA("BasePart") then leg.Size.Y else 2
+    end
+    return height
+end
+
+-- BD-053: the footprint follows the growing torso, but the box is lifted by the slope
+-- clearance from MovementEnvelope so it never wedges into walkable hills (the previous
+-- fixed 0.2-stud clearance snagged on any slope above ~5 degrees and slid dinosaurs back).
+local function placeCollider(character: Model, scale: number)
+    local collider = character:FindFirstChild("DinoCollider")
+    local root = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not collider or not collider:IsA("BasePart") or not root or not root:IsA("BasePart") or not humanoid then return end
+    local width, height, length, offsetY = MovementEnvelope.collider(scale, groundHeight(character, root, humanoid))
+    collider.Size = Vector3.new(width, height, length)
+    local weld = collider:FindFirstChild("ColliderWeld")
+    if weld and weld:IsA("Weld") then weld.C0 = CFrame.new(0, offsetY, 0) end
+end
+
 function Dinosaur.render(character: Model, scale: number, speciesId: string?, gold: (boolean | string)?)
     Visual.render(character, scale, speciesId, gold)
-    local collider = character:FindFirstChild("DinoCollider")
-    if collider and collider:IsA("BasePart") then
-        -- Match the growing torso footprint; keep floor clearance and the tail visual-only.
-        collider.Size = Vector3.new(2.6 * scale, 2.4, 3.2 * scale)
-    end
+    placeCollider(character, scale)
 end
 local function scaleForScore(score: number): number
     return math.min(4, math.sqrt(1 + math.max(0, score) / 50))
@@ -74,8 +94,8 @@ function Dinosaur.attach(character: Model, walkSpeed: number, player: Player)
     humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
     humanoid.WalkSpeed = walkSpeed
     humanoid.UseJumpPower = true
-    humanoid.JumpPower = require(ReplicatedStorage.Shared.Config).JumpPower
-    humanoid.MaxSlopeAngle = require(ReplicatedStorage.Shared.Config).MaxSlopeAngle
+    humanoid.JumpPower = Config.JumpPower
+    humanoid.MaxSlopeAngle = Config.MaxSlopeAngle
     humanoid.AutoJumpEnabled = false
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
 
@@ -85,22 +105,21 @@ function Dinosaur.attach(character: Model, walkSpeed: number, player: Player)
     end
     local collider = Instance.new("Part")
     collider.Name = "DinoCollider"
-    collider.Size = Vector3.new(2.6, 2.4, 3.2)
     collider.Transparency = 1
     collider.Massless = true
     collider.CanCollide = true
     collider.CanTouch = false
     collider.CollisionGroup = "DinoControllers"
-    local groundHeight = root.Size.Y / 2 + humanoid.HipHeight
-    if humanoid.RigType == Enum.HumanoidRigType.R6 then
-        local leg = character:FindFirstChild("Left Leg")
-        groundHeight += if leg and leg:IsA("BasePart") then leg.Size.Y else 2
-    end
-    collider.CFrame = root.CFrame * CFrame.new(0, -groundHeight + 1.4, 0)
+    local width, height, length, offsetY = MovementEnvelope.collider(1, groundHeight(character, root, humanoid))
+    collider.Size = Vector3.new(width, height, length)
+    collider.CFrame = root.CFrame * CFrame.new(0, offsetY, 0)
     collider.Parent = character
-    local weld = Instance.new("WeldConstraint")
+    -- A rigid Weld (not WeldConstraint) so growth can move the box by editing C0.
+    local weld = Instance.new("Weld")
+    weld.Name = "ColliderWeld"
     weld.Part0 = root
     weld.Part1 = collider
+    weld.C0 = CFrame.new(0, offsetY, 0)
     weld.Parent = collider
     Dinosaur.refreshForPlayer(character, player)
     character:SetAttribute("DinoAttached", true)

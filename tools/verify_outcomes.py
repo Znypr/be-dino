@@ -56,11 +56,11 @@ for tier=0,#Progression.ConditionWeights-1 do
  end
  close(probability,(1-Odds.failure(tier))*(Progression.EggColors[1].weight/sum(Progression.EggColors))^2)
 end
-local filters={species="compy",condition="astra",primary="black",secondary="black",copies=3,big=true,pattern=Odds.patterns()[1]}
+local filters={species="compy",condition="astra",primary="black",secondary="black",copies=1,big=true,pattern=Odds.patterns()[1]}
 local rare=Odds.catalog(0,filters)
 assert(rare.count==(if mode=="legacy" then 101 else 1))
 local r=rare.at(1)
-assert(r.speciesId=="compy" and r.conditionId=="astra" and r.big and r.count==3)
+assert(r.speciesId=="compy" and r.conditionId=="astra" and r.big and r.count==1)
 local formatted=Odds.percent(r.probability)
 assert(string.find(formatted,"%%") and tonumber(string.sub(formatted,1,-2))>0,"rare odds rounded to zero")
 close(tonumber(string.sub(formatted,1,-2))/100,r.probability)
@@ -74,6 +74,40 @@ close(Odds.shareProbability("white","blue",1),1/99)
 close(Odds.shareProbability("white","blue",99),1/99)
 close(Odds.shareProbability("black","black",100),1)
 Genetics.Patterns=patterns Genetics.BlendMode=originalMode
+-- BD-045 disclosure: versioned odds, exact half-percent tiers and aggregated failure.
+close(Odds.failure(0),.4)
+for tier=0,#Progression.ConditionWeights-1 do
+ local weights=Progression.ConditionWeights[tier+1]
+ close(Odds.failure(tier),weights[1]/Progression.ConditionWeightScale*.8)
+ -- Successful outcomes per condition sum to weight*hatchChance; together with failure = 100%.
+ local total=Odds.failure(tier)
+ for i,condition in Progression.Conditions do
+  local rows=Odds.catalog(tier,{condition=condition.id,species="compy",primary="white",secondary="white",big=false,pattern=Odds.patterns()[1]})
+  assert(rows.count==1)
+  local speciesP=Config.ChestSpeciesWeights[1].weight/sum(Config.ChestSpeciesWeights)
+  local colorP=(Progression.EggColors[1].weight/sum(Progression.EggColors))^2
+  close(rows.at(1).probability,weights[i]/Progression.ConditionWeightScale*condition.hatchChance*speciesP*colorP/patternCount*(1-Config.BigChance))
+  total+=weights[i]/Progression.ConditionWeightScale*condition.hatchChance
+ end
+ close(total,1)
+end
+assert(#Config.ChestQuantityWeights==1 and Config.ChestQuantityWeights[1].count==1,"exactly one dinosaur per successful egg")
+local script={Parent={Config="Config",ProgressionConfig="Progression",EggOutcomeOdds="Odds"}}
+local require=function(id)return if id=="Config" then Config elseif id=="Odds" then Odds else Progression end
+local ShopOdds=''' + module('src/shared/ShopOdds.luau') + '''
+local text=table.concat(ShopOdds.lines(0)," | ")
+assert(string.find(text,"Cracked: 50%%; hatch 20%%",1,false),text)
+assert(string.find(text,"Rainbow: 4.5%%",1,false) and string.find(text,"Astra: 0.5%%",1,false),text)
+assert(string.find(text,"Failed egg: 40.0000%%",1,false),text)
+assert(string.find(text,"bd045%-conditions%-v1",1,false) and string.find(text,"1 dinosaur: 100.0000%%",1,false),text)
+for tier=0,#Progression.ConditionWeights-1 do
+ local percents=ShopOdds.conditionPercents(tier) local n=0
+ for _,value in percents do n+=value end
+ close(n,100)
+end
+local top=table.concat(ShopOdds.lines(6)," | ")
+assert(string.find(top,"Failed egg: 3.2000%%",1,false),top)
+print("BD-045 disclosure passed: versioned 50/30/15/4.5/0.5 tier 0, monotonic tiers normalize to 100%, 40% tier-0 failure, one dinosaur per egg")
 print("Outcome odds passed: full normalization, actual blend roll parity, every tier, lazy enumeration, filters, rare precision, legacy and uniform modes")
 '''
 
