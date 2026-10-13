@@ -315,7 +315,9 @@ function Fusion.apply(profile, ownerKey: string, request, outcome, now: number?)
         if type(current) ~= "number" or current < 1 then return nil, "grouped_mismatch" end
         set(current - 1)
         table.insert(parents, donor)
-        if donor.origin and donor.origin.kind == "hatch" then table.insert(parentEggIds, donor.origin.eggId) end
+        if donor.origin and donor.origin.kind == "hatch" and not table.find(parentEggIds, donor.origin.eggId) then
+            table.insert(parentEggIds, donor.origin.eggId) -- one entry per shared egg
+        end
         if donor.origin and donor.origin.kind == "fusion" then table.insert(parentOperationIds, donor.origin.operationId) end
     end
     entry[quote.targetStage] = (entry[quote.targetStage] or 0) + 1

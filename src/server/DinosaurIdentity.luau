@@ -89,7 +89,7 @@ function Identity.reconcile(collection, existing, ownerKey)
         elseif instance.speciesId ~= bucket.speciesId or instance.stage ~= bucket.stage
             or instance.big ~= (bucket.big or false) or instance.shiny ~= (bucket.shiny or false)
             or instance.mutationId ~= (bucket.mutationId or "") then return nil, "trait_mismatch" end
-        if (instance.genes == nil) ~= (bucket.genes == nil) then return nil, "gene_mismatch" end
+        if not fused[id] and (instance.genes == nil) ~= (bucket.genes == nil) then return nil, "gene_mismatch" end
         if instance.genes and not fused[id] then
             for key, value in bucket.genes do if instance.genes[key] ~= value then return nil, "gene_mismatch" end end
             for key, value in instance.genes do if bucket.genes[key] ~= value then return nil, "gene_mismatch" end end

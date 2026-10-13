@@ -35,6 +35,12 @@
 describes the additive source foundation and unpublished memory-only integration.
 This is not persistent migration or new fusion-gameplay acceptance; use Kanban for status.
 
+## BD-057 Phase 1 fusion transaction
+
+[Identity fusion Phase 1](48-identity-fusion-phase1.md) adds a disabled,
+unpublished-memory-only 10 → 1 Gold transaction over the BD-060 sidecar, with
+offline tests only. No trait odds, UI, Studio acceptance or persistent rollout.
+
 ## Historical documents: keep for traceability, not as active instructions
 
 Do **not** delete build snapshots or test evidence just to make them look current. Retain their specific facts and outputs, with clear historical notices. Older strings like "this is the current build", "persistence is not implemented", "GitHub main is Build 013", "three-species only" and "60-second newly earned egg timing" are scoped to their original dates/builds.

@@ -1,5 +1,5 @@
 # Kanban and task specifications
-Updated 2026-10-12. This file is the canonical task tracker.
+Updated 2026-10-13. This file is the canonical task tracker.
 
 **Current scope: GitHub main Build 020.** Use [the documentation authority guide](00-documentation-guide.md) to distinguish owner targets, committed source, historical build evidence and Studio/release acceptance. [Build 020 integration checklist](44-main-integration-checklist.md) records bounded passes and remaining gates, but **this file alone owns task statuses**. GitHub integration does not publish Roblox or certify paid items, physical-device performance or newest persistent migration.
 
@@ -18,7 +18,7 @@ Maximum player access/policy work remains in progress:
 
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-017; BD-019–022; BD-035; **BD-044–065** | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042 | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
+| BD-017; BD-019–022; BD-035; **BD-044–056, BD-058–059, BD-061–065** | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042; **BD-057 Phase 1; BD-060** | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -39,6 +39,18 @@ competing-session verification remain open. `fusionRecord()` is explicitly rejec
 by reconciliation until BD-057 adds the atomic identity-aware inventory transaction.
 Persistent rollout remains disabled; no real profiles were accessed or migrated.
 Actual fusion RNG and per-instance shop/selector integration remain separate tasks.
+
+### BD-057 Phase 1 — updated 2026-10-13
+
+Implemented on `claude/be-dino-development` from `50116b8`; **Review / test, not Done**.
+[Implementation and verification](48-identity-fusion-phase1.md). A disabled,
+memory-only transaction fuses 10 same-species/same-pattern Base identities into one
+NEW Gold with a server ID, consent-gated loss manifest, durable ledger, parent egg
+lineage, idempotent replay and full rollback. Offline harnesses (`verify_fusion.py`,
+repository section of `verify_progression.py`) pass; **no Studio, DataStore or
+production verification was performed.** Trait odds (BD-064), Emerald/Diamond costs,
+UI/remote (BD-065) and persistent rollout remain open. Consent for Shiny/BIG/mutation
+donors and the hard lock/favorite block are working defaults awaiting owner approval.
 
 ## Operating rules
 - Preserve task IDs and record the commit/build or actual test evidence used for completion.
@@ -107,7 +119,7 @@ Actual fusion RNG and per-instance shop/selector integration remain separate tas
 | BD-054 | Backlog | P0 | Responsive phone/tablet touch-zone navigation/control placement and safe insets | BD-052, BD-046 |
 | BD-055 | Backlog | P1 | Complete sky, atmosphere, cloud, particle and audio effects for all weather events | BD-031, BD-034 |
 | BD-056 | Backlog | P1 | Top-center growth metric and bottom-left egg-icon catches-only HUD | BD-044, BD-054 |
-| BD-057 | Backlog | P0 | Consume 10 same-species/same-pattern Base dinos to create ONE NEW Gold, then Emerald before Diamond; guaranteed stage, freshly rolled traits | BD-012, BD-060 |
+| BD-057 | Review / test | P0 | Consume 10 same-species/same-pattern Base dinos to create ONE NEW Gold, then Emerald before Diamond; guaranteed stage, freshly rolled traits | BD-012, BD-060 |
 | BD-058 | Backlog | P0 | Earned fusion stages as main permanent stat progression, fair caps, weekly grind and recipe pacing simulation | BD-057 |
 | BD-059 | Backlog | P1 | Buy and switch multiple aura/trail styles per individual dino; ALL purchased ingredient cosmetics are lost at fusion, never transfer to result | BD-060, BD-029, BD-038 |
 | BD-060 | Review / test | P0 | Unique dinosaur identity, hatched egg records, fused NEW instance lineage/parent egg history, safe profile migration | BD-011, BD-012, BD-041 |
@@ -145,7 +157,7 @@ The newer owner's reward intent supersedes the 2026-09-17 test economy's `N(c)=c
 
 ### BD-057–BD-065: Pattern fusion, permanent dinosaur identity and earned prestige (2026-10-08)
 
-**OWNER TARGET, unimplemented; task index above controls status.** Gold consumes **10 same-species + same-egg-pattern dinosaur instances** (example ten Wavy-Stripes Compies) and guarantees **ONE NEW Gold Wavy-Stripes Compy**; it **does NOT preserve the traits of a selected hero**. The new result's colors, condition, Shiny, event mutation and BIG are **rolled from versioned ingredient-dependent probabilities**. Pattern remains fixed by the same-pattern recipe. **Emerald comes after Gold and before Diamond**; higher-stage costs, additional materials and Obsidian/Celestial are proposals. Fusion always grants the guaranteed higher stage/stat improvement, never a random chance to lose all ingredients with nothing.
+**OWNER TARGET; only the disabled BD-057 Phase 1 transaction foundation exists ([48](48-identity-fusion-phase1.md)); task index above controls status.** Gold consumes **10 same-species + same-egg-pattern dinosaur instances** (example ten Wavy-Stripes Compies) and guarantees **ONE NEW Gold Wavy-Stripes Compy**; it **does NOT preserve the traits of a selected hero**. The new result's colors, condition, Shiny, event mutation and BIG are **rolled from versioned ingredient-dependent probabilities**. Pattern remains fixed by the same-pattern recipe. **Emerald comes after Gold and before Diamond**; higher-stage costs, additional materials and Obsidian/Celestial are proposals. Fusion always grants the guaranteed higher stage/stat improvement, never a random chance to lose all ingredients with nothing.
 
 Each hatched dinosaur keeps **its immutable originating egg record**, but the **NEW fusion output** instead stores **a parent-dino/source-egg lineage** and freshly rolled traits. A living dino can purchase many aura/trail options and switch between them; on fusion **all input dinos and their aura/trail purchases are consumed, with explicit loss confirmation**, and no bought cosmetics transfer to the new result. A dedicated **Fusion Menu** must sort/filter by species, Shiny, mutation, colors, pattern, condition and other traits, display selected ingredients, exact chances and input loss, then reveal each **server-committed trait** via entertaining, skippable wheel animations. **2/10 Shiny ingredients → 10% Shiny on result** is a **proposed formula**, not approved balance. Show true **hatch odds only for hatched dinos** versus **conditional fusion-outcome odds for fused ones**; earned tier is not a random drop %. Bought cosmetics are excluded. Blender Gold/Emerald/Diamond subtle/medium surfaces must preserve **the newly rolled output** DNA and support stacked new effects.
 

@@ -156,6 +156,13 @@ blocker rather than silently truncated accounts.
 
 ## Required BD-057 fusion integration
 
+> **Update 2026-10-13:** BD-057 Phase 1 ([48](48-identity-fusion-phase1.md))
+> implements items 2, 3, 5, 6 and 7 for Gold, plus the Gold/Diamond part of item 1
+> (fused records project onto the plain stage bucket) and item 4 for ledger-backed
+> fusion origins. `reconcile()` now returns `missing_fusion_ledger` instead of
+> `fusion_not_integrated`. Emerald projection, odds (BD-064) and persistent rollout
+> remain open. The list below is the original BD-060 requirement, kept for traceability.
+
 `fusionRecord()` is a bounded data-contract builder. Its result deliberately does
 not pass `reconcile()`: reconciliation now returns `fusion_not_integrated` explicitly.
 BD-057 must change all of the following together before inserting such a record:
