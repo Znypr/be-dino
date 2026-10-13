@@ -98,10 +98,12 @@ local Identity=IDENTITY_MODULE
 local script={Parent={DinosaurIdentity="Identity"}}
 local require=function(id) assert(id=="Identity") return Identity end
 local IdentityFusion=IDENTITY_FUSION_MODULE
-local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion"}}
+local FusionOdds=FUSION_ODDS_MODULE
+local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds"}}
 local rewardSpecies=nil
 local Rewards=nil
 local require=function(id)
+ if id=="FusionOdds" then return FusionOdds end
  if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return Rewards end
  error("unexpected module "..tostring(id))
 end
@@ -394,7 +396,10 @@ mutableConfig.IdentityFusionPreviewEnabled=true
 local quote=assert(LocalRepository.quoteFusion(localUser,"gold",donors))
 assert(quote.consentRequired==(donorDetails.shiny or donorDetails.big or donorDetails.mutationId~=""))
 local request={token="repo-fuse-1",targetStage="gold",donorIds=donors,quoteDigest=quote.quoteDigest,consentDigest=quote.consentDigest}
--- No approved odds: rejected before any write.
+-- The production PROVISIONAL roller quotes exact odds; an invalid injected roller is
+-- refused before any write.
+assert(quote.oddsVersion=="fusion-odds-provisional-v1" and quote.odds.shiny==(if donorDetails.shiny then 0.5 else 0))
+assert(LocalRepository.setFusionTestRoller({}))
 local okNoOdds,_,noOdds=LocalRepository.fuseDinosaurs(localUser,request)
 assert(not okNoOdds and noOdds=="odds_not_approved" and LocalRepository.dinosaurDetails(localUser,donors[1]))
 local rolls=0
@@ -473,6 +478,264 @@ assert(select(2,PublishedRepository.quoteFusion(published,"gold",{}))=="fusion_d
 assert(select(3,PublishedRepository.fuseDinosaurs(published,{token="published"}))=="fusion_disabled")
 mutableConfig.IdentityFusionPreviewEnabled=false
 print("Studio isolation passed: local test wallet replenishes, immediately ready eggs, zero persistent calls; published Studio retains normal wallet")
+-- ===== BD-064: persistent identity mode (Milestone 1 playtest flag) =====
+-- Own function scope: the main chunk is close to the 200-local register limit.
+;(function()
+assert(GameConfig.IdentityPersistentEnabled==false,"committed default must stay off")
+assert(GameConfig.IdentityFusionPreviewEnabled==false)
+mutableConfig.IdentityPersistentEnabled=true
+mutableConfig.IdentityFusionPreviewEnabled=true
+game.GameId=1 services.RunService.IsStudio=function()return false end
+local PersistentRepository=REPO_MODULE
+local function newUser(id)
+ local u={Parent=true,UserId=id,Name="P"..id,attrs={}}
+ function u:SetAttribute(k,v)self.attrs[k]=v end
+ function u:GetAttribute(k)return self.attrs[k]end
+ return u
+end
+local KEY="u:4242"
+local pu=newUser(4242)
+local callsBefore=transforms
+-- Fresh profile: sidecar created in the same load transform.
+assert(PersistentRepository.load(pu) and pu.attrs.ProfileMode=="Persistent")
+assert(transforms>callsBefore,"persistent store used")
+local sidecar=data[KEY].dinosaurIdentity
+assert(sidecar and sidecar.ownerKey==KEY and sidecar.suspendedReason==nil and sidecar.nextId==2)
+assert(sidecar.instances[KEY.."/d:1"].origin.kind=="legacy_unknown")
+assert(PersistentRepository.fusionStatus(pu))
+-- Hatches credit identities in the persisted sidecar (same UpdateAsync transform).
+traitRoll=0.5
+local hatched={}
+for round=1,6 do
+ assert(PersistentRepository.commitRunSettlement(pu,"persist-run-"..round,10))
+ for _,chest in pu.attrs.ChestQueueJson do
+  local ok,h=PersistentRepository.claimChest(pu,chest.id)
+  assert(ok and #h.instanceIds==1,"hatch credited one identity (BD-044)")
+  for _,id in h.instanceIds do table.insert(hatched,id) end
+ end
+end
+assert(#hatched==30) -- BD-044: 5 queued eggs claimed per 10-egg run, one identity each
+for _,id in hatched do
+ local stored=data[KEY].dinosaurIdentity.instances[id]
+ assert(stored and stored.origin.kind=="hatch" and data[KEY].dinosaurIdentity.eggs[stored.origin.eggId])
+end
+local donors={table.unpack(hatched,1,10)}
+local donors2={table.unpack(hatched,11,20)}
+local quote=assert(PersistentRepository.quoteFusion(pu,"gold",donors))
+assert(quote.oddsVersion=="fusion-odds-provisional-v1" and quote.odds.primaryColor[quote.summary.colors[1].primaryColorId]==1)
+local request={token="persist-1",targetStage="gold",donorIds=donors,quoteDigest=quote.quoteDigest,consentDigest=quote.consentDigest}
+local function donorsIntact(list) for _,id in list do if not data[KEY].dinosaurIdentity.instances[id] then return false end end return true end
+-- Outage: nothing consumed, ProfileState SaveFailed; recover by reload.
+fail=true
+local okO,_,outage=PersistentRepository.fuseDinosaurs(pu,request)
+fail=false
+assert(not okO and outage=="save_failed" and pu.attrs.ProfileState=="SaveFailed" and donorsIntact(donors))
+PersistentRepository.release(pu) assert(PersistentRepository.load(pu))
+-- Lease loss: another server owns the session; nothing consumed.
+local lease=data[KEY].session.leaseId
+data[KEY].session.leaseId="other-server"
+local okL,_,lost=PersistentRepository.fuseDinosaurs(pu,request)
+assert(not okL and lost=="lease_lost" and pu.attrs.ProfileState=="LeaseLost" and donorsIntact(donors))
+data[KEY].session.leaseId=lease
+PersistentRepository.release(pu) assert(PersistentRepository.load(pu))
+-- Whole-profile byte preflight: a fusion that would exceed the budget is rejected.
+local budget=mutableConfig.IdentityFusionProfileBudgetBytes
+mutableConfig.IdentityFusionProfileBudgetBytes=IdentityFusion.encodedSize(data[KEY])-1000 -- below the post-fusion size
+local okB,_,bytes=PersistentRepository.fuseDinosaurs(pu,request)
+mutableConfig.IdentityFusionProfileBudgetBytes=budget
+assert(not okB and bytes=="storage_limit" and donorsIntact(donors) and pu.attrs.ProfileState=="Loaded")
+assert(data[KEY].dinosaurIdentity.fusions==nil)
+-- Success with the production PROVISIONAL roller (mocked Random): deterministic traits.
+local goldBefore=data[KEY].collection.raptor.gold
+local okF,committed,status=PersistentRepository.fuseDinosaurs(pu,request)
+assert(okF and status=="fused" and committed.oddsVersion=="fusion-odds-provisional-v1",tostring(status))
+assert(data[KEY].collection.raptor.gold==goldBefore+1)
+for _,id in donors do assert(data[KEY].dinosaurIdentity.instances[id]==nil) end
+local stored=data[KEY].dinosaurIdentity.instances[committed.resultId]
+assert(stored and stored.stage=="gold" and stored.origin.oddsVersion=="fusion-odds-provisional-v1")
+assert(stored.genes.hatchSuccess==true and stored.genes.patternId==quote.patternId and stored.shiny==false)
+assert(data[KEY].dinosaurIdentity.fusions["fusion:persist-1"].outcome.resultId==committed.resultId)
+local dupOk,dup,dupStatus=PersistentRepository.fuseDinosaurs(pu,request)
+assert(dupOk and dupStatus=="duplicate" and dup.resultId==committed.resultId and data[KEY].collection.raptor.gold==goldBefore+1)
+-- Reload: result, lineage and replay survive in the persistent store.
+PersistentRepository.release(pu)
+assert(PersistentRepository.load(pu))
+local reloaded=assert(PersistentRepository.dinosaurDetails(pu,committed.resultId))
+assert(reloaded.lineage and #reloaded.lineage.parentIds==10 and next(reloaded.lineage.parentEggs)~=nil)
+assert(select(3,PersistentRepository.fuseDinosaurs(pu,request))=="duplicate")
+-- Reconcile failure (over the 3,000-identity guard) suspends identity, never deletes it,
+-- and keeps the profile writable; recovering the grouped counts resumes identity.
+local compyBase=data[KEY].collection.compy.base
+data[KEY].collection.compy.base=3500
+assert(PersistentRepository.renew(pu) and pu.attrs.ProfileState=="Loaded")
+assert(data[KEY].dinosaurIdentity.suspendedReason=="identity_capacity")
+assert(data[KEY].dinosaurIdentity.instances[committed.resultId],"fused result kept while suspended")
+assert(select(2,PersistentRepository.fusionStatus(pu))=="identity_unavailable")
+assert(select(2,PersistentRepository.quoteFusion(pu,"gold",donors2))=="identity_unavailable")
+assert(select(3,PersistentRepository.fuseDinosaurs(pu,{token="suspended",targetStage="gold",donorIds=donors2,quoteDigest="x"}))=="identity_unavailable")
+-- A hatch while suspended still credits the grouped collection and skips identities.
+assert(PersistentRepository.commitRunSettlement(pu,"persist-suspended",10))
+local okS,hs=PersistentRepository.claimChest(pu,pu.attrs.ChestQueueJson[1].id)
+assert(okS and hs.instanceIds==nil and data[KEY].dinosaurIdentity.suspendedReason=="identity_capacity")
+data[KEY].collection.compy.base=compyBase
+assert(PersistentRepository.renew(pu))
+assert(data[KEY].dinosaurIdentity.suspendedReason==nil and data[KEY].dinosaurIdentity.instances[committed.resultId])
+assert(PersistentRepository.claimChest(pu,pu.attrs.ChestQueueJson[1].id))
+assert(PersistentRepository.fusionStatus(pu))
+-- Hard byte ceiling: identity growth is dropped (suspended) before the profile write is,
+-- and a write that is still too large aborts with the stored profile unchanged.
+local hard=mutableConfig.IdentityProfileHardLimitBytes
+assert(PersistentRepository.commitRunSettlement(pu,"persist-hard",10))
+local sizeBefore=IdentityFusion.encodedSize(data[KEY])
+mutableConfig.IdentityProfileHardLimitBytes=sizeBefore+200
+local hatchesBefore=data[KEY].dinosaurIdentity.nextId
+local okH,hh=PersistentRepository.claimChest(pu,pu.attrs.ChestQueueJson[1].id)
+assert(okH and data[KEY].dinosaurIdentity.suspendedReason=="storage_limit" and data[KEY].dinosaurIdentity.nextId==hatchesBefore)
+assert(IdentityFusion.encodedSize(data[KEY])<=sizeBefore+200)
+mutableConfig.IdentityProfileHardLimitBytes=1000
+local frozen=IdentityFusion.encodedSize(data[KEY])
+assert(not PersistentRepository.renew(pu) and IdentityFusion.encodedSize(data[KEY])==frozen)
+mutableConfig.IdentityProfileHardLimitBytes=hard
+PersistentRepository.release(pu) assert(PersistentRepository.load(pu))
+assert(data[KEY].dinosaurIdentity.suspendedReason==nil,"identity resumes under the ceiling")
+-- Legacy profiles keep loading: over capacity -> no sidecar, identity features closed.
+local legacy=newUser(5151)
+data['u:5151']=copy(data[KEY]) data['u:5151'].session=nil data['u:5151'].dinosaurIdentity=nil
+data['u:5151'].collection.compy.base=5000
+assert(PersistentRepository.load(legacy) and legacy.attrs.ProfileState=="Loaded")
+assert(data['u:5151'].dinosaurIdentity==nil and data['u:5151'].collection.compy.base==5000)
+assert(select(2,PersistentRepository.fusionStatus(legacy))=="identity_unavailable")
+assert(PersistentRepository.commitRunSettlement(legacy,"legacy-run",10),"legacy profile still writable")
+PersistentRepository.release(legacy)
+-- Legacy profile under capacity migrates on first load (fresh playtest stores have none).
+local small=newUser(5252)
+data['u:5252']=copy(data['u:5151']) data['u:5252'].collection.compy.base=3 data['u:5252'].eggs={} data['u:5252'].pendingChestGrants=0 data['u:5252'].pendingEggEvents=nil
+assert(PersistentRepository.load(small) and data['u:5252'].dinosaurIdentity.ownerKey=="u:5252")
+-- Paid-random gate: a profile that spent Robux needs the release gate + policy check.
+data['u:5252'].metrics.robux=100
+PersistentRepository.release(small) assert(PersistentRepository.load(small))
+assert(select(2,PersistentRepository.fusionStatus(small))=="random_items_unavailable")
+PersistentRepository.release(small)
+print("Persistent identity passed: fresh sidecar, hatch credit, outage/lease-loss/byte-preflight rollback, provisional-odds fusion, duplicate, reload with lineage, capacity suspension without deletion, hard byte ceiling, legacy over-capacity login, paid-random gate")
+
+-- ===== FusionService (FusionAction RemoteFunction) with mocked remotes =====
+local folderChildren={}
+local remoteFolder={}
+function remoteFolder:FindFirstChild(n) return folderChildren[n] end
+local fusionStorage={Shared={Config="Config"},BeDinoRemotes=remoteFolder}
+function fusionStorage:FindFirstChild(n) return if n=="BeDinoRemotes" then remoteFolder else nil end
+local removing=nil
+local fusionPlayers={PlayerRemoving={Connect=function(_,fn) removing=fn end}}
+local game={GetService=function(_,id) return ({Players=fusionPlayers,ReplicatedStorage=fusionStorage})[id] end}
+local Instance={new=function(kind)
+ local o={ClassName=kind}
+ function o:IsA(k) return k==kind end
+ return setmetatable(o,{__newindex=function(t,k,v) rawset(t,k,v) if k=="Parent" and v==remoteFolder then folderChildren[t.Name]=t end end})
+end}
+local require=function(id) assert(id=="Config") return GameConfig end
+local FusionService=FUSION_SERVICE_MODULE
+assert(FusionService.handle(pu,{action="list"}).reason=="fusion_disabled","not started")
+local remote=FusionService.start(PersistentRepository)
+assert(folderChildren.FusionAction==remote and remote.ClassName=="RemoteFunction" and type(remote.OnServerInvoke)=="function")
+local now=0
+FusionService.setClock(function() return now end)
+local function invoke(...) now+=1000 return remote.OnServerInvoke(pu,...) end -- fresh window per call
+assert(PersistentRepository.load(pu))
+-- Contract keys.
+local function keys(t) local r={} for k in t do table.insert(r,k) end table.sort(r) return table.concat(r,",") end
+local list=invoke({action="list"})
+assert(list.ok and #list.dinosaurs>=10 and list.nextCursor==nil)
+local prev=0
+for _,d in list.dinosaurs do
+ local seq=tonumber(string.match(d.instanceId,"/d:(%d+)$")) assert(seq>prev) prev=seq
+ -- genes is nil only for legacy copies whose DNA was never saved (plain buckets).
+ assert(d.genes~=nil or d.originKind=="legacy_unknown")
+ local withGenes=table.clone(d) withGenes.genes=withGenes.genes or {}
+ assert(keys(withGenes)=="auraCount,big,equippedAuraId,equippedTrailId,favorited,genes,instanceId,locked,mutationId,originKind,shiny,speciesId,stage,trailCount")
+end
+local page1=invoke({action="list",limit=3})
+assert(#page1.dinosaurs==3 and page1.nextCursor)
+local page2=invoke({action="list",limit=3,cursor=page1.nextCursor})
+assert(page2.dinosaurs[1].instanceId==list.dinosaurs[4].instanceId)
+local details=invoke({action="details",instanceId=donors2[1]})
+assert(details.ok and details.dinosaur.instanceId==donors2[1] and details.dinosaur.originalEgg)
+local fusedDetails=invoke({action="details",instanceId=committed.resultId})
+assert(fusedDetails.ok and fusedDetails.dinosaur.lineage)
+assert(invoke({action="details",instanceId="u:1/d:1"}).reason=="donor_missing")
+local q=invoke({action="quote",targetStage="gold",donorIds=donors2})
+assert(q.ok and keys(q)=="ok,quote")
+assert(keys(q.quote)=="consentDigest,consentRequired,donorIds,lossManifest,odds,oddsVersion,patternId,quoteDigest,recipeVersion,speciesId,targetStage")
+assert(keys(q.quote.odds)=="big,condition,mutation,noMutation,primaryColor,secondaryColor,shiny")
+assert(q.quote.oddsVersion=="fusion-odds-provisional-v1" and q.quote.odds.noMutation==1)
+local foreignIds=table.clone(donors2) foreignIds[1]="u:1/d:1"
+assert(invoke({action="quote",targetStage="gold",donorIds=foreignIds}).reason=="wrong_owner")
+assert(invoke({action="quote",targetStage="emerald",donorIds=donors2}).reason=="recipe_not_approved")
+local fuseReq={action="fuse",token="remote-1",targetStage="gold",donorIds=donors2,quoteDigest=q.quote.quoteDigest,consentDigest=q.quote.consentDigest}
+assert(invoke({action="fuse",token="remote-0",targetStage="gold",donorIds=donors2,quoteDigest="stale"}).reason=="stale_quote")
+local fused=invoke(fuseReq)
+assert(fused.ok and fused.status=="fused" and keys(fused)=="ok,result,status")
+assert(keys(fused.result)=="oddsVersion,patternId,resultId,speciesId,targetStage,traits")
+assert(keys(fused.result.traits)=="big,genes,mutationId,shiny" and fused.result.oddsVersion=="fusion-odds-provisional-v1")
+local again=invoke(fuseReq)
+assert(again.ok and again.status=="duplicate" and again.result.resultId==fused.result.resultId)
+local reuse=table.clone(fuseReq) reuse.token="remote-2"
+assert(invoke(reuse).reason=="donor_missing")
+-- Client-supplied traits/odds/result IDs are not part of the contract.
+local forged=table.clone(fuseReq) forged.token="remote-3" forged.traits={shiny=true}
+assert(invoke(forged).reason=="bad_request")
+local forgedId=table.clone(fuseReq) forgedId.resultId="u:4242/d:1"
+assert(invoke(forgedId).reason=="bad_request")
+-- Argument fuzzing: every malformed shape is bad_request and never throws.
+local badRequests={1,"list",true,{},{action=5},{action="nope"},{action="list",cursor=-1},{action="list",cursor=1.5},
+ {action="list",cursor=0/0},{action="list",limit=0},{action="list",limit=201},{action="list",limit="5"},{action="list",extra=1},
+ {action="details"},{action="details",instanceId=""},{action="details",instanceId=string.rep("x",121)},{action="details",instanceId=7},
+ {action="quote",targetStage="gold"},{action="quote",targetStage="gold",donorIds={}},{action="quote",targetStage=1,donorIds=donors2},
+ {action="quote",targetStage="gold",donorIds={a="u:4242/d:2"}},{action="quote",targetStage="gold",donorIds={1,2}},
+ {action="quote",targetStage="gold",donorIds={[1]="u:4242/d:2",[3]="u:4242/d:3"}},
+ {action="quote",targetStage=string.rep("g",17),donorIds=donors2},
+ {action="fuse",targetStage="gold",donorIds=donors2,quoteDigest="d"},{action="fuse",token="",targetStage="gold",donorIds=donors2,quoteDigest="d"},
+ {action="fuse",token=string.rep("t",81),targetStage="gold",donorIds=donors2,quoteDigest="d"},
+ {action="fuse",token="t",targetStage="gold",donorIds=donors2},{action="fuse",token="t",targetStage="gold",donorIds=donors2,quoteDigest="d",consentDigest=5},
+ {[1]="list"},{action="list",[2]=true}}
+local seventeen={} for i=1,17 do seventeen[i]="u:4242/d:"..i end
+table.insert(badRequests,{action="quote",targetStage="gold",donorIds=seventeen})
+assert(invoke(nil).reason=="bad_request" and invoke().reason=="bad_request")
+for i=1,#badRequests do
+ local response=invoke(badRequests[i])
+ assert(type(response)=="table" and response.ok==false and response.reason=="bad_request","bad request "..i)
+end
+assert(invoke({action="list"},"extra").reason=="bad_request","extra remote arguments")
+math.randomseed(64)
+local pool={true,false,0,-1,1.5,2^60,0/0,"","gold","list","details","quote","fuse",string.rep("z",300),{}, {1,2,3},{a=1},donors2}
+local fields={"action","cursor","limit","instanceId","targetStage","donorIds","token","quoteDigest","consentDigest","traits"}
+for _=1,2000 do
+ local request={}
+ for _,field in fields do if math.random()<0.5 then request[field]=pool[math.random(1,#pool)] end end
+ local ok,response=pcall(invoke,request)
+ assert(ok and type(response)=="table" and type(response.ok)=="boolean")
+ assert(response.ok==false or request.action=="list" or request.action=="details" or request.action=="quote","fuzzed fuse must not succeed")
+end
+-- Per-player rate limit (PROVISIONAL Config: requests per window).
+FusionService.setClock(function() return now end)
+now=0
+local limit=mutableConfig.FusionRequestsPerWindow
+for i=1,limit do assert(remote.OnServerInvoke(pu,{action="list",limit=1}).ok,"within limit "..i) end
+assert(remote.OnServerInvoke(pu,{action="list",limit=1}).reason=="rate_limited")
+assert(remote.OnServerInvoke(pu,"garbage").reason=="rate_limited","malformed requests also count")
+local other=newUser(6161)
+assert(remote.OnServerInvoke(other,{action="list"}).reason~="rate_limited","limit is per player")
+now=mutableConfig.FusionRateWindowSeconds
+assert(remote.OnServerInvoke(pu,{action="list",limit=1}).ok,"window resets")
+removing(pu)
+-- Disabled flag: every action answers fusion_disabled.
+mutableConfig.IdentityFusionPreviewEnabled=false
+now+=1000
+assert(remote.OnServerInvoke(pu,{action="list"}).reason=="fusion_disabled")
+assert(remote.OnServerInvoke(pu,{action="quote",targetStage="gold",donorIds=donors2}).reason=="fusion_disabled")
+PersistentRepository.release(pu)
+mutableConfig.IdentityPersistentEnabled=false
+print("FusionService passed: FusionAction RemoteFunction contract keys, sorted paging, details/lineage, quote odds, fuse/duplicate/reuse, forged traits/IDs refused, 2,000 fuzzed requests, per-player rate limit and disabled flag")
+end)()
 print("Profile transactions passed: repeated transforms, duplicate grants/purchases/use, token conflicts, rejoin, outage rollback and lease loss")
 '''
  s+=r"""
@@ -540,7 +803,7 @@ leapNow=62 h.FloorMaterial="grass" ownerFailure=true activate(user) assert(user.
 leapNow=63 ownerFailure=false activate(user) assert(ownerChanges==2 and user.attrs.LeapReadyAt==123)
 print("Leap handler passed: malformed requests, exact 60s cooldown, wall/air rejection, failed ownership and cleanup")
 """
- return s.replace('IDENTITY_FUSION_MODULE',module('src/server/IdentityFusion.luau')).replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('REWARDS_MODULE',module('src/server/RewardMath.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))
+ return s.replace('FUSION_ODDS_MODULE',module('src/server/FusionOdds.luau')).replace('FUSION_SERVICE_MODULE',module('src/server/FusionService.luau')).replace('IDENTITY_FUSION_MODULE',module('src/server/IdentityFusion.luau')).replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('REWARDS_MODULE',module('src/server/RewardMath.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))
 if __name__=='__main__':
  parser=argparse.ArgumentParser();parser.add_argument('--runner',required=True);args=parser.parse_args()
  with tempfile.TemporaryDirectory() as d:

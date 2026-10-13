@@ -87,8 +87,12 @@ local Identity=@@IDENTITY_MODULE@@
 local script={Parent={DinosaurIdentity="Identity"}}
 local require=function(id) assert(id=="Identity") return Identity end
 local IdentityFusion=@@IDENTITY_FUSION_MODULE@@
-local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion"}}
+local script={Parent={Config="Config"}}
+local require=function(id) if id=="Identity" then return Identity end return GameConfig end
+local FusionOdds=@@FUSION_ODDS@@
+local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds"}}
 local require=function(id)
+ if id=="FusionOdds" then return FusionOdds end
  if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics
  elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig
  elseif id=="Rules" then return Rules elseif id=="Rewards" then return Rewards end
@@ -444,6 +448,7 @@ def script():
         ('@@GENETICS@@', 'src/shared/EggGenetics.luau'),
         ('@@EGG_TRAITS@@', 'src/shared/EggTraits.luau'),
         ('@@RULES@@', 'src/shared/ProgressionRules.luau'),
+        ('@@FUSION_ODDS@@', 'src/server/FusionOdds.luau'),
         ('@@REWARD_MATH@@', 'src/server/RewardMath.luau'),
         ('@@IDENTITY_FUSION_MODULE@@', 'src/server/IdentityFusion.luau'),
         ('@@IDENTITY_MODULE@@', 'src/server/DinosaurIdentity.luau'),
