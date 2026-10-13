@@ -43,7 +43,7 @@ Actual fusion RNG and per-instance shop/selector integration remain separate tas
 ### BD-057 Phase 1 — updated 2026-10-13
 
 Implemented on `claude/be-dino-development` from `50116b8`; **Review / test, not Done**.
-[Implementation and verification](48-identity-fusion-phase1.md). A disabled,
+[Implementation and verification](49-identity-fusion-phase1.md). A disabled,
 memory-only transaction fuses 10 same-species/same-pattern Base identities into one
 NEW Gold with a server ID, consent-gated loss manifest, durable ledger, parent egg
 lineage, idempotent replay and full rollback. Offline harnesses (`verify_fusion.py`,
@@ -158,7 +158,7 @@ The newer owner's reward intent supersedes the 2026-09-17 test economy's `N(c)=c
 
 ### BD-057–BD-065: Pattern fusion, permanent dinosaur identity and earned prestige (2026-10-08)
 
-**OWNER TARGET; only the disabled BD-057 Phase 1 transaction foundation exists ([48](48-identity-fusion-phase1.md)); task index above controls status.** Gold consumes **10 same-species + same-egg-pattern dinosaur instances** (example ten Wavy-Stripes Compies) and guarantees **ONE NEW Gold Wavy-Stripes Compy**; it **does NOT preserve the traits of a selected hero**. The new result's colors, condition, Shiny, event mutation and BIG are **rolled from versioned ingredient-dependent probabilities**. Pattern remains fixed by the same-pattern recipe. **Emerald comes after Gold and before Diamond**; higher-stage costs, additional materials and Obsidian/Celestial are proposals. Fusion always grants the guaranteed higher stage/stat improvement, never a random chance to lose all ingredients with nothing.
+**OWNER TARGET; only the disabled BD-057 Phase 1 transaction foundation exists ([49](49-identity-fusion-phase1.md)); task index above controls status.** Gold consumes **10 same-species + same-egg-pattern dinosaur instances** (example ten Wavy-Stripes Compies) and guarantees **ONE NEW Gold Wavy-Stripes Compy**; it **does NOT preserve the traits of a selected hero**. The new result's colors, condition, Shiny, event mutation and BIG are **rolled from versioned ingredient-dependent probabilities**. Pattern remains fixed by the same-pattern recipe. **Emerald comes after Gold and before Diamond**; higher-stage costs, additional materials and Obsidian/Celestial are proposals. Fusion always grants the guaranteed higher stage/stat improvement, never a random chance to lose all ingredients with nothing.
 
 Each hatched dinosaur keeps **its immutable originating egg record**, but the **NEW fusion output** instead stores **a parent-dino/source-egg lineage** and freshly rolled traits. A living dino can purchase many aura/trail options and switch between them; on fusion **all input dinos and their aura/trail purchases are consumed, with explicit loss confirmation**, and no bought cosmetics transfer to the new result. A dedicated **Fusion Menu** must sort/filter by species, Shiny, mutation, colors, pattern, condition and other traits, display selected ingredients, exact chances and input loss, then reveal each **server-committed trait** via entertaining, skippable wheel animations. **2/10 Shiny ingredients → 10% Shiny on result** is a **proposed formula**, not approved balance. Show true **hatch odds only for hatched dinos** versus **conditional fusion-outcome odds for fused ones**; earned tier is not a random drop %. Bought cosmetics are excluded. Blender Gold/Emerald/Diamond subtle/medium surfaces must preserve **the newly rolled output** DNA and support stacked new effects.
 

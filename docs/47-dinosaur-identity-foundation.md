@@ -156,7 +156,7 @@ blocker rather than silently truncated accounts.
 
 ## Required BD-057 fusion integration
 
-> **Update 2026-10-13:** BD-057 Phase 1 ([48](48-identity-fusion-phase1.md))
+> **Update 2026-10-13:** BD-057 Phase 1 ([49](49-identity-fusion-phase1.md))
 > implements items 2, 3, 5, 6 and 7 for Gold, plus the Gold/Diamond part of item 1
 > (fused records project onto the plain stage bucket) and item 4 for ledger-backed
 > fusion origins. `reconcile()` now returns `missing_fusion_ledger` instead of

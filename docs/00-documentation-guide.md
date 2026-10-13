@@ -37,7 +37,7 @@ This is not persistent migration or new fusion-gameplay acceptance; use Kanban f
 
 ## BD-057 Phase 1 fusion transaction
 
-[Identity fusion Phase 1](48-identity-fusion-phase1.md) adds a disabled,
+[Identity fusion Phase 1](49-identity-fusion-phase1.md) adds a disabled,
 unpublished-memory-only 10 → 1 Gold transaction over the BD-060 sidecar, with
 offline tests only. No trait odds, UI, Studio acceptance or persistent rollout.
 
