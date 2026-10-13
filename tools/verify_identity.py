@@ -23,14 +23,22 @@ assert(I.reconcile(collection,legacy,"u:456")==nil)
 local corrupt=I.copy(legacy)
 corrupt.instances['u:123/d:1'].speciesId="trex"
 assert(I.reconcile(collection,corrupt,"u:123")==nil)
-assert(I.reconcile({compy={base=2000000000,gold=0,diamond=0}},nil)==nil)
+local maxed=assert(I.reconcile({compy={base=I.MaxInstances,gold=0,diamond=0}},nil,"u:max"))
+assert(count(maxed.instances)==I.MaxInstances)
+local tooMany={compy={base=I.MaxInstances+1,gold=0,diamond=0}}
+local rejected, capacityReason=I.reconcile(tooMany,nil,"u:max")
+assert(rejected==nil and capacityReason=="identity_capacity" and tooMany.compy.base==I.MaxInstances+1)
 assert(I.reconcile({compy={base=0/0,gold=0,diamond=0}},nil)==nil)
 local plain={compy={base=2,gold=0,diamond=0}}
 local protected=assert(I.reconcile(plain,nil,"u:123"))
 protected.instances['u:123/d:2'].cosmetics.ownedAuraIds.meadow=true
 protected.instances['u:123/d:2'].cosmetics.ownedAuraIds.tidal=true
 plain.compy.base=1
-assert(I.reconcile(plain,protected,"u:123")==nil)
+local protectedNext=protected.nextId
+local protectedCount=count(protected.instances)
+local protectedResult, protectedReason=I.reconcile(plain,protected,"u:123")
+assert(protectedResult==nil and protectedReason=="protected_identity")
+assert(protected.nextId==protectedNext and count(protected.instances)==protectedCount)
 assert(protected.instances['u:123/d:2'].cosmetics.ownedAuraIds.tidal)
 local originalNext=legacy.nextId
 local started=os.clock()
@@ -63,13 +71,18 @@ assert(result.origin.kind=='fusion' and #result.origin.parents==2)
 assert(result.origin.parents[1].origin.eggId=='egg-1')
 assert(next(result.cosmetics.ownedAuraIds)==nil and next(result.cosmetics.ownedTrailIds)==nil)
 assert(result.origin.parents[1].cosmetics==nil)
+local pending=I.copy(state)
+pending.instances[result.instanceId]=I.copy(result)
+local unsupported, fusionReason=I.reconcile(collection,pending,"u:123")
+assert(unsupported==nil and fusionReason=="fusion_not_integrated")
+assert(state.instances[result.instanceId]==nil)
 assert(not pcall(I.fusionRecord,'new',fresh,{parents[1],parents[1]},'op','r','v'))
 -- Nested ancestry is referenced, never copied recursively.
 local higher=I.fusionRecord('higher',fresh,{result,parents[2]},'op2','r','v')
 assert(higher.origin.parents[1].origin.operationId=='fusion-op')
 assert(higher.origin.parents[1].origin.parents==nil)
 print('150-egg reconciliation seconds:', os.clock()-started)
-print('Identity passed: migration, owner isolation, immutable shared egg snapshots, 150 eggs/300 copies, reconnect, failures, bounded lineage and no cosmetic transfer')
+print('Identity passed: migration/rollback, 3,000-copy ceiling, owner isolation, immutable shared egg snapshots, 150 eggs/300 copies, reconnect, failures, explicit fusion boundary, bounded lineage and no cosmetic transfer')
 '''
 if __name__ == '__main__':
     parser=argparse.ArgumentParser(); parser.add_argument('--runner',required=True); args=parser.parse_args()

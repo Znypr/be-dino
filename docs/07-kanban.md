@@ -22,16 +22,23 @@ Maximum player access/policy work remains in progress:
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
-### BD-060 foundation — 2026-10-12
+### BD-060 foundation â€” updated 2026-10-13
 
 Implemented on `codex/bd-060-dinosaur-identity` from latest main `ad5245c`;
 **Review / test, not Done**. [Implementation and verification](47-dinosaur-identity-foundation.md).
 Offline identity/transaction tests cover migration, 1/2/3-copy hatches, identical
 instances, duplicate claims, reconnects, original eggs, cosmetic isolation and a
-150-egg batch. Persistent identity rollout is deliberately disabled; no real player
-profiles were accessed or migrated. Engine acceptance, isolated durable-store restart,
-large-inventory serialization sizing and rollout approval remain open. Actual fusion
-consumption/RNG and per-instance shop/selector integration remain their own tasks.
+150-egg batch. Unpublished Studio acceptance passed 17 created identities, duplicate
+claims, multi-copy hatches, failed hatches and memory reconnect. A separate private
+test experience passed isolated DataStore write/full-Play-restart/read for 53 migrated
+copies plus a three-copy egg; no configured profile store or player key was used.
+Roblox JSON sizing measured 468,320 / 938,806 / 4,722,389 / 9,472,285 bytes at
+500 / 1,000 / 5,000 / 10,000 identities. The fail-closed ceiling is now 3,000;
+large-profile compaction/sharding, final migration rollout/rollback approval and
+competing-session verification remain open. `fusionRecord()` is explicitly rejected
+by reconciliation until BD-057 adds the atomic identity-aware inventory transaction.
+Persistent rollout remains disabled; no real profiles were accessed or migrated.
+Actual fusion RNG and per-instance shop/selector integration remain separate tasks.
 
 ## Operating rules
 - Preserve task IDs and record the commit/build or actual test evidence used for completion.

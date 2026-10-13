@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "bb8e1ce6f0b80f3a85bd7ecebfe46f1f9a7af22969abc49aa454a5223c06f2b9",
+  "place_sha256": "b4e52ab7d29e3a0f047f52730e5bf3817c0e642571a4e3ac369e8689795aaaf4",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/Artwork.luau": "dbcef755028cbf3e737da0f96178db4e563f73843c0df00ad167ab134f1d066e",
@@ -210,6 +210,7 @@
     "src/server/ChestService.luau": "741b4801c30a3e23088ab005d2685d6011e0d130a6aba8b00d81ad5ddd31bde1",
     "src/server/CollectionService.luau": "05ae04a12e90d6c181e3d140ac35c8347bcd15b775bdb1f2d1878bf43bf3c8ee",
     "src/server/Dinosaur.luau": "ac2556a2bbef0e5cd1ac40654853c424ff23e69a60d4f789cadb7fb9c5a13a19",
+    "src/server/DinosaurIdentity.luau": "f908528340857d8489b66cfc675ecea4e586501655d2de4aad8ef4ed74733992",
     "src/server/FoodService.luau": "2ea682ab8452ed4e9e9841b24e53f18a81bdf357b1ff08f1bfbd3bff27a50816",
     "src/server/ImportedResources.luau": "811ba6e249b54f1d414185ed3f7f1a40998857e54d7faabb526a01806b79fb4c",
     "src/server/IslandTerrain.luau": "869a4fe90c81e5d2e28d5bf207a1aeb3b2c027706e9c2d0e4d32ff1d986b1dd8",
@@ -218,7 +219,7 @@
     "src/server/MovementGuard.luau": "31ff0f51793321b5e581491d2dd8906ec36b8492e9708b1b13d8d59e18dcabb2",
     "src/server/MutationService.luau": "1be0b164544336ab2e5440fb42e0927020ad6b85e8ff9cfe1c75a337be5bf20a",
     "src/server/PredationService.luau": "c208c5d1dbada725d21e31f4d882adb122d0c21d8cf2383e28f8df66df5775f3",
-    "src/server/ProfileRepository.luau": "06ef16a8fca28466ac93ff82dfd3bfb534193722c3bef3c19e1717a4e4d382b8",
+    "src/server/ProfileRepository.luau": "d286b9c09e723bd69713dabf5657496e9c676521b85f422b700dafe4549af36c",
     "src/server/ProgressionService.luau": "69dc1aa8df12cba5b30ad209887d2fff631fd25ffa16b9bcf074ad35015746fd",
     "src/server/RewardMath.luau": "826e73c5f77611a10f0eff5f99ee374482c27ce0ca61ed8b8fb8fda4ed675aae",
     "src/server/RunLifecycle.luau": "78ffae8efdaa58f3d22525a1f796b020da1ae5bc4581071160d09c662e22de7c",

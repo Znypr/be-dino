@@ -2,7 +2,10 @@
 -- Additive identity sidecar. No DataStore access, RNG, economy or cosmetic grants.
 local Identity = {}
 Identity.Version = 1
-Identity.MaxInstances = 10000 -- fail closed; never truncate a legacy collection
+-- Worst-case Studio serialization measured ~938 KB/1,000 identities. Keep enough
+-- room for the rest of the profile and fail closed until BD-057 adds compaction or
+-- sharding. This guard never truncates the grouped legacy collection.
+Identity.MaxInstances = 3000
 
 local function copy(value)
     if type(value) ~= "table" then return value end
@@ -62,6 +65,8 @@ function Identity.reconcile(collection, existing, ownerKey)
     if state.ownerKey ~= ownerKey then return nil, "wrong_owner" end
     local ids = {}
     for id, instance in state.instances do
+        if type(instance) == "table" and type(instance.origin) == "table"
+            and instance.origin.kind == "fusion" then return nil, "fusion_not_integrated" end
         if type(instance) ~= "table" or instance.instanceId ~= id or not desired[instance.bucketKey]
             or type(instance.cosmetics) ~= "table" or type(instance.cosmetics.ownedAuraIds) ~= "table"
             or type(instance.cosmetics.ownedTrailIds) ~= "table" or type(instance.origin) ~= "table" then return nil, "invalid_instance" end
