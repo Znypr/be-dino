@@ -365094,10 +365094,22 @@ return table.freeze({
     DiamondMutationCost = 50, -- provisional balance: 50 Gold -&gt; 1 Diamond
     MutationRequestCooldownSeconds = 0.4,
     MutationTestSetupEnabled = false,
-    -- BD-057 Phase 1: identity fusion runs ONLY in unpublished, memory-only Studio
-    -- profiles, and additionally needs a controlled test roller until BD-064 approves
-    -- odds. No remote/UI exists. Keep false in committed builds.
+    -- BD-057/BD-064 fusion flag. Fusion runs in unpublished memory-only Studio profiles,
+    -- or in persistent profiles when IdentityPersistentEnabled is also true, using the
+    -- PROVISIONAL FusionOdds roller. Keep false in committed builds.
     IdentityFusionPreviewEnabled = false,
+    -- Milestone 1 private playtest (fresh, empty DataStore): identity sidecar, hatch
+    -- credit and reconciliation for persistent profiles. Keep false in committed builds.
+    IdentityPersistentEnabled = false,
+    -- PROVISIONAL byte budgets (IdentityFusion.encodedSize of the WHOLE profile) under
+    -- the 4 MiB (4,194,304 B) DataStore value limit. A fusion that would exceed the
+    -- fusion budget is rejected; any persistent write above the hard limit first drops
+    -- identity growth (identity suspended) and otherwise aborts.
+    IdentityFusionProfileBudgetBytes = 3400000,
+    IdentityProfileHardLimitBytes = 3800000,
+    -- PROVISIONAL FusionAction remote rate limit: requests per player per window.
+    FusionRequestsPerWindow = 20,
+    FusionRateWindowSeconds = 10,
     MutationTestSpeciesId = "compy",
 
     MovementGuardTickSeconds = 0.1,
@@ -369104,6 +369116,7 @@ MutationService.start(ProfileRepository, Dinosaur)
 MovementGuard.start()
 VisualTestService.start(Dinosaur)
 require(script.Parent.ProgressionService).start(ProfileRepository)
+require(script.Parent.FusionService).start(ProfileRepository)
 require(script.Parent.LeapService).start()
 game:GetService("MarketplaceService").ProcessReceipt=function(receipt)
     local player=Players:GetPlayerByUserId(receipt.PlayerId)
@@ -369931,6 +369944,371 @@ return FoodService
       </Item>
       <Item class="ModuleScript" referent="RBX229">
         <Properties>
+          <string name="Name">FusionOdds</string>
+          <ProtectedString name="Source">--!strict
+-- BD-064 PROVISIONAL fusion trait odds. Pure module: no DataStore, remotes or UI.
+--
+-- PROVISIONAL (owner decision 2026-10-13: provisional numbers are allowed for the
+-- private Milestone 1 playtest; NOT final balance). Every coefficient lives below and
+-- the formula is versioned, so a change must bump `Version`; committed outcomes keep
+-- the version they were rolled with.
+--
+-- Formula, for N donors from IdentityFusion's neutral ingredient summary:
+--   P(Shiny)              = ShinyCoefficient    * shinyDonors / N     (2/10 -&gt; 10%)
+--   P(BIG)                = BigCoefficient      * bigDonors / N
+--   P(any event mutation) = MutationCoefficient * mutatedDonors / N
+--     P(mutation m)       = MutationCoefficient * donorsWith(m) / N  (proportional pick)
+--     P(no mutation)      = 1 - sum(P(m))
+--   P(condition c)        = donorsWith(c) / N
+--   P(primary color k)    = donorsWithPrimary(k) / N
+--   P(secondary color k)  = donorsWithSecondary(k) / N
+--   blend                 = uniform integer 1..99, or 100 when both colors are equal
+--   pattern               = locked by the recipe (never rolled)
+--   hatchSuccess          = true (a fusion result never fails or cracks open)
+--
+-- `distribution` is the EXACT distribution `roll` samples from: `roll` draws one
+-- uniform per wheel in a fixed order and inverts the same tables with sorted keys, so
+-- a quote shown to the player is the distribution the server commits against.
+local FusionOdds = {}
+
+FusionOdds.Version = "fusion-odds-provisional-v1"
+FusionOdds.ShinyCoefficient = 0.5 -- PROVISIONAL
+FusionOdds.BigCoefficient = 0.5 -- PROVISIONAL
+FusionOdds.MutationCoefficient = 0.5 -- PROVISIONAL
+FusionOdds.BlendMin = 1 -- PROVISIONAL (matches Build 020 egg genes)
+FusionOdds.BlendMax = 99
+FusionOdds.EqualColorBlend = 100
+-- Fixed draw order; one uniform per wheel, always consumed (even when blend is fixed).
+FusionOdds.DrawOrder = {"shiny", "big", "mutation", "condition", "primaryColor", "secondaryColor", "blend"}
+
+local function sortedKeys(map): {string}
+    local keys = {}
+    for key in map do table.insert(keys, key) end
+    table.sort(keys)
+    return keys
+end
+
+local function proportional(counts: {[string]: number}, total: number): {[string]: number}
+    local result = {}
+    for key, n in counts do
+        if n &gt; 0 then result[key] = n / total end
+    end
+    return result
+end
+
+-- Returns the exact outcome distribution for a quote summary, or nil, reason.
+function FusionOdds.distribution(summary)
+    if type(summary) ~= "table" then return nil, "invalid_summary" end
+    local n = summary.donorCount
+    if type(n) ~= "number" or n &lt; 1 or n % 1 ~= 0 or type(summary.colors) ~= "table" or #summary.colors ~= n
+        or type(summary.conditionCounts) ~= "table" or type(summary.mutationCounts) ~= "table"
+        or type(summary.shinyCount) ~= "number" or type(summary.bigCount) ~= "number"
+        or summary.shinyCount &lt; 0 or summary.shinyCount &gt; n or summary.bigCount &lt; 0 or summary.bigCount &gt; n then
+        return nil, "invalid_summary"
+    end
+    local mutated = 0
+    for id, count in summary.mutationCounts do
+        if type(id) ~= "string" or id == "" or type(count) ~= "number" or count &lt; 0 then return nil, "invalid_summary" end
+        mutated += count
+    end
+    local conditions = 0
+    for id, count in summary.conditionCounts do
+        if type(id) ~= "string" or type(count) ~= "number" or count &lt; 0 then return nil, "invalid_summary" end
+        conditions += count
+    end
+    if mutated &gt; n or conditions ~= n then return nil, "invalid_summary" end
+
+    local mutation = {}
+    local mutationTotal = 0
+    for id, count in summary.mutationCounts do
+        if count &gt; 0 then
+            mutation[id] = FusionOdds.MutationCoefficient * count / n
+            mutationTotal += mutation[id]
+        end
+    end
+    local primary, secondary = {}, {}
+    for _, colors in summary.colors do
+        if type(colors) ~= "table" or type(colors.primaryColorId) ~= "string" or type(colors.secondaryColorId) ~= "string" then
+            return nil, "invalid_summary"
+        end
+        primary[colors.primaryColorId] = (primary[colors.primaryColorId] or 0) + 1
+        secondary[colors.secondaryColorId] = (secondary[colors.secondaryColorId] or 0) + 1
+    end
+    return {
+        version = FusionOdds.Version,
+        shiny = FusionOdds.ShinyCoefficient * summary.shinyCount / n,
+        big = FusionOdds.BigCoefficient * summary.bigCount / n,
+        mutation = mutation,
+        noMutation = math.max(0, 1 - mutationTotal),
+        condition = proportional(summary.conditionCounts, n),
+        primaryColor = proportional(primary, n),
+        secondaryColor = proportional(secondary, n),
+        blend = {min = FusionOdds.BlendMin, max = FusionOdds.BlendMax, equalColors = FusionOdds.EqualColorBlend},
+    }
+end
+
+-- Inverse-CDF pick over sorted keys; `u` in [0, 1). Falls back to the last key with
+-- positive probability so floating-point sums slightly below 1 never return nil.
+local function pick(dist: {[string]: number}, u: number): string?
+    local keys = sortedKeys(dist)
+    local acc, last = 0, nil
+    for _, key in keys do
+        local p = dist[key]
+        if p &gt; 0 then
+            acc += p
+            last = key
+            if u &lt; acc then return key end
+        end
+    end
+    return last
+end
+FusionOdds.pick = pick
+
+-- Mutation wheel including the "" (no mutation) outcome; "" sorts first.
+local function mutationWheel(dist)
+    local wheel = {[""] = dist.noMutation}
+    for id, p in dist.mutation do wheel[id] = p end
+    return wheel
+end
+FusionOdds.mutationWheel = mutationWheel
+
+-- Deterministic for a given sequence of uniforms. Returns traits in the shape
+-- IdentityFusion.prepareOutcome validates (pattern overwritten by the recipe there).
+function FusionOdds.rollWith(summary, patternId: string, nextNumber: () -&gt; number)
+    local dist, reason = FusionOdds.distribution(summary)
+    if not dist then error(reason) end
+    local u = {}
+    for i = 1, #FusionOdds.DrawOrder do
+        local value = nextNumber()
+        assert(type(value) == "number" and value == value, "invalid uniform")
+        -- Clamp into [0, 1): Random:NextNumber() edge values must not escape a wheel.
+        u[i] = math.clamp(value, 0, 1 - 2 ^ -53)
+    end
+    local primary = pick(dist.primaryColor, u[5])
+    local secondary = pick(dist.secondaryColor, u[6])
+    local blend = FusionOdds.BlendMin + math.min(FusionOdds.BlendMax - FusionOdds.BlendMin,
+        math.floor(u[7] * (FusionOdds.BlendMax - FusionOdds.BlendMin + 1)))
+    if primary == secondary then blend = FusionOdds.EqualColorBlend end
+    return {
+        shiny = u[1] &lt; dist.shiny,
+        big = u[2] &lt; dist.big,
+        mutationId = pick(mutationWheel(dist), u[3]) or "",
+        genes = {
+            patternId = patternId,
+            conditionId = pick(dist.condition, u[4]),
+            primaryColorId = primary,
+            secondaryColorId = secondary,
+            blend = blend,
+            hatchSuccess = true,
+        },
+    }
+end
+
+-- Roller in the IdentityFusion contract: {version, roll(summary, patternId)}, plus
+-- `distribution` for quotes. `newRng` returns an object with NextNumber() in [0, 1).
+function FusionOdds.roller(newRng: () -&gt; any)
+    return {
+        version = FusionOdds.Version,
+        distribution = FusionOdds.distribution,
+        roll = function(summary, patternId)
+            local rng = newRng()
+            return FusionOdds.rollWith(summary, patternId, function() return rng:NextNumber() end)
+        end,
+    }
+end
+
+return FusionOdds
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX230">
+        <Properties>
+          <string name="Name">FusionService</string>
+          <ProtectedString name="Source">--!strict
+-- BD-064/BD-065 server surface: the FusionAction RemoteFunction in
+-- ReplicatedStorage.BeDinoRemotes. Contract: docs/52-fusion-remote-contract.md.
+-- Every argument is validated here; ownership, recipes, odds and commits stay in
+-- ProfileRepository/IdentityFusion. Clients never supply traits, odds or result IDs.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+
+local FusionService = {}
+FusionService.MaxListLimit = 200
+FusionService.DefaultListLimit = 100
+FusionService.MaxDonorIds = 16 -- IdentityFusion enforces the exact recipe count
+FusionService.MaxIdLength = 120
+FusionService.MaxDigestLength = 64
+FusionService.MaxTokenLength = 80
+FusionService.MaxStageLength = 16
+
+local repository: any = nil
+local windows: {[any]: {startedAt: number, count: number}} = {}
+local clock = os.clock
+
+-- Allowed keys per action; anything else is a bad request.
+local Shapes = {
+    list = {action = true, cursor = true, limit = true},
+    details = {action = true, instanceId = true},
+    quote = {action = true, targetStage = true, donorIds = true},
+    fuse = {action = true, token = true, targetStage = true, donorIds = true, quoteDigest = true, consentDigest = true},
+}
+
+local function fail(reason: string)
+    return {ok = false, reason = reason}
+end
+
+local function boundedString(value: any, maxLength: number): boolean
+    return type(value) == "string" and #value &gt;= 1 and #value &lt;= maxLength
+end
+
+local function integer(value: any, min: number, max: number): boolean
+    return type(value) == "number" and value == value and value % 1 == 0 and value &gt;= min and value &lt;= max
+end
+
+local function donorList(value: any): boolean
+    if type(value) ~= "table" then return false end
+    local n = #value
+    if n &lt; 1 or n &gt; FusionService.MaxDonorIds then return false end
+    local count = 0
+    for key, id in value do
+        count += 1
+        if type(key) ~= "number" or not boundedString(id, FusionService.MaxIdLength) then return false end
+    end
+    return count == n
+end
+
+-- Fixed-window per-player limiter (PROVISIONAL Config values).
+local function allowed(player: any): boolean
+    local now = clock()
+    local window = windows[player]
+    if not window or now - window.startedAt &gt;= Config.FusionRateWindowSeconds then
+        window = {startedAt = now, count = 0}
+        windows[player] = window
+    end
+    window.count += 1
+    return window.count &lt;= Config.FusionRequestsPerWindow
+end
+
+local function validate(request: any): string?
+    if type(request) ~= "table" then return "bad_request" end
+    local shape = Shapes[request.action]
+    if type(request.action) ~= "string" or not shape then return "bad_request" end
+    for key in request do
+        if type(key) ~= "string" or not shape[key] then return "bad_request" end
+    end
+    local action = request.action
+    if action == "list" then
+        if request.cursor ~= nil and not integer(request.cursor, 0, 2 ^ 53) then return "bad_request" end
+        if request.limit ~= nil and not integer(request.limit, 1, FusionService.MaxListLimit) then return "bad_request" end
+    elseif action == "details" then
+        if not boundedString(request.instanceId, FusionService.MaxIdLength) then return "bad_request" end
+    else
+        if not boundedString(request.targetStage, FusionService.MaxStageLength) or not donorList(request.donorIds) then
+            return "bad_request"
+        end
+        if action == "fuse" then
+            if not boundedString(request.token, FusionService.MaxTokenLength)
+                or not boundedString(request.quoteDigest, FusionService.MaxDigestLength)
+                or (request.consentDigest ~= nil and not boundedString(request.consentDigest, FusionService.MaxDigestLength)) then
+                return "bad_request"
+            end
+        end
+    end
+    return nil
+end
+
+local function copyList(list: {string}): {string}
+    local result = {}
+    for i, id in list do result[i] = id end
+    return result
+end
+
+local function exactOdds(odds: any)
+    return {shiny = odds.shiny, big = odds.big, mutation = table.clone(odds.mutation), noMutation = odds.noMutation,
+        condition = table.clone(odds.condition), primaryColor = table.clone(odds.primaryColor),
+        secondaryColor = table.clone(odds.secondaryColor)}
+end
+
+local function handleAction(player: any, request: any)
+    local action = request.action
+    if action == "list" then
+        local page, reason = repository.listDinosaurs(player, request.cursor, request.limit or FusionService.DefaultListLimit)
+        if not page then return fail(reason or "fusion_disabled") end
+        return {ok = true, dinosaurs = page.dinosaurs, nextCursor = page.nextCursor}
+    elseif action == "details" then
+        local details, reason = repository.fusionDetails(player, request.instanceId)
+        if not details then return fail(reason or "donor_missing") end
+        return {ok = true, dinosaur = details}
+    elseif action == "quote" then
+        local quote, reason = repository.quoteFusion(player, request.targetStage, copyList(request.donorIds))
+        if not quote then return fail(reason or "bad_request") end
+        if type(quote.odds) ~= "table" or type(quote.oddsVersion) ~= "string" then return fail("odds_not_approved") end
+        return {ok = true, quote = {speciesId = quote.speciesId, patternId = quote.patternId, targetStage = quote.targetStage,
+            donorIds = quote.donorIds, lossManifest = quote.lossManifest, consentRequired = quote.consentRequired,
+            consentDigest = quote.consentDigest, quoteDigest = quote.quoteDigest, recipeVersion = quote.recipeVersion,
+            oddsVersion = quote.oddsVersion, odds = exactOdds(quote.odds)}}
+    end
+    -- fuse: only whitelisted fields reach the repository.
+    local ok, result, status = repository.fuseDinosaurs(player, {token = request.token, targetStage = request.targetStage,
+        donorIds = copyList(request.donorIds), quoteDigest = request.quoteDigest, consentDigest = request.consentDigest})
+    if not ok or type(result) ~= "table" then return fail(status or "save_failed") end
+    return {ok = true, status = status, result = {resultId = result.resultId, targetStage = result.targetStage,
+        speciesId = result.speciesId, patternId = result.patternId,
+        traits = {genes = table.clone(result.traits.genes), big = result.traits.big, shiny = result.traits.shiny,
+            mutationId = result.traits.mutationId}, oddsVersion = result.oddsVersion}}
+end
+
+-- Entry point for OnServerInvoke (and offline tests). Never throws to the client.
+function FusionService.handle(player: any, request: any, ...)
+    if not repository then return fail("fusion_disabled") end
+    if select("#", ...) ~= 0 then return fail("bad_request") end
+    if not allowed(player) then return fail("rate_limited") end
+    local invalid = validate(request)
+    if invalid then return fail(invalid) end
+    local ok, response = pcall(handleAction, player, request)
+    if not ok then
+        warn("[Be Dino] FusionAction failed: " .. tostring(response))
+        return fail("save_failed")
+    end
+    return response
+end
+
+-- Test hook: deterministic clock for the rate limiter.
+function FusionService.setClock(fn: () -&gt; number)
+    clock = fn
+    windows = {}
+end
+
+function FusionService.start(profileRepository)
+    repository = profileRepository
+    local folder = ReplicatedStorage:FindFirstChild("BeDinoRemotes")
+    if not folder then
+        folder = Instance.new("Folder")
+        folder.Name = "BeDinoRemotes"
+        folder.Parent = ReplicatedStorage
+    end
+    local existing = folder:FindFirstChild("FusionAction")
+    if existing and not existing:IsA("RemoteFunction") then existing:Destroy() existing = nil end
+    local remote = existing or Instance.new("RemoteFunction")
+    remote.Name = "FusionAction"
+    remote.Parent = folder
+    remote.OnServerInvoke = function(player, ...)
+        return FusionService.handle(player, ...)
+    end
+    Players.PlayerRemoving:Connect(function(player)
+        windows[player] = nil
+    end)
+    return remote
+end
+
+return FusionService
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX231">
+        <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
 -- BD-057 Phase 1: server-authoritative pattern fusion over the BD-060 identity sidecar.
@@ -370305,7 +370683,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX230">
+      <Item class="ModuleScript" referent="RBX232">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -370355,7 +370733,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX231">
+      <Item class="ModuleScript" referent="RBX233">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -370397,7 +370775,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX232">
+      <Item class="ModuleScript" referent="RBX234">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -370508,7 +370886,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX233">
+      <Item class="ModuleScript" referent="RBX235">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -370590,7 +370968,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX234">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -370682,7 +371060,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX235">
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -370787,7 +371165,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX238">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -370920,7 +371298,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -370938,6 +371316,7 @@ local ProgressionConfig = require(ReplicatedStorage.Shared.ProgressionConfig)
 local ProfileRepository = {}
 local DinosaurIdentity = require(script.Parent.DinosaurIdentity)
 local IdentityFusion = require(script.Parent.IdentityFusion)
+local FusionOdds = require(script.Parent.FusionOdds)
 
 local RunService = game:GetService("RunService")
 local localPreview = RunService:IsStudio() and game.GameId == 0 and Config.StudioLocalProfilesEnabled
@@ -370955,8 +371334,44 @@ if localPreview then
 else
     store = DataStoreService:GetDataStore(Config.ProfileDataStoreName)
 end
--- Development integration is strictly limited to unpublished memory-only profiles.
--- Persistent migration is intentionally not enabled by this foundation PR.
+-- Identity gating helpers. Unpublished memory-only Studio keeps the BD-060 behavior.
+-- Persistent profiles get the sidecar only when Config.IdentityPersistentEnabled is
+-- true (Milestone 1 private playtest with a fresh DataStore; default false).
+local function identityPersistent(): boolean
+    return not localPreview and Config.IdentityPersistentEnabled == true
+end
+-- True when the sidecar exists, is enabled for this server and is not suspended.
+local function identityAvailable(state: any): boolean
+    return (localPreview or identityPersistent()) and type(state) == "table" and state.suspendedReason == nil
+end
+-- Fail closed for identity features only: keep the last good sidecar untouched (never
+-- delete identities, cosmetics or fused results) and mark it suspended. A later write
+-- whose grouped collection reconciles again clears the mark automatically.
+local function suspendIdentity(before: any, reason: string)
+    if type(before) == "table" then before.suspendedReason = reason end
+    return before
+end
+local function persistentIdentityTransform(key: string, current: any, transform)
+    local before = if type(current) == "table" then DinosaurIdentity.copy(current.dinosaurIdentity) else nil
+    local updated = transform(current)
+    if updated == nil then return nil end
+    local identity, reason = DinosaurIdentity.reconcile(updated.collection, updated.dinosaurIdentity, key)
+    if identity then
+        identity.suspendedReason = nil
+        updated.dinosaurIdentity = identity
+    else
+        -- Legacy/over-capacity/protected profiles keep loading and playing.
+        updated.dinosaurIdentity = suspendIdentity(before, reason :: string)
+    end
+    -- Whole-profile byte preflight (estimate matched Roblox JSONEncode in Studio).
+    local limit = Config.IdentityProfileHardLimitBytes
+    if IdentityFusion.encodedSize(updated) &gt; limit then
+        if identity then updated.dinosaurIdentity = suspendIdentity(DinosaurIdentity.copy(before), "storage_limit") end
+        if IdentityFusion.encodedSize(updated) &gt; limit then return nil end
+    end
+    return updated
+end
+-- Development integration (unpublished memory-only profiles): unchanged BD-060 path.
 if localPreview then
     local backingStore = store
     store = {UpdateAsync = function(_, key, transform)
@@ -370967,6 +371382,15 @@ if localPreview then
             if not identity then error(reason) end
             updated.dinosaurIdentity = identity
             return updated
+        end)
+    end}
+elseif identityPersistent() then
+    -- Persistent identity (Milestone 1 playtest): reconcile in the SAME UpdateAsync
+    -- transform as every grouped change, so sidecar and collection commit together.
+    local backingStore = store
+    store = {UpdateAsync = function(_, key, transform)
+        return backingStore:UpdateAsync(key, function(current)
+            return persistentIdentityTransform(key, current, transform)
         end)
     end}
 end
@@ -371235,36 +371659,114 @@ function ProfileRepository.dinosaurDetails(player: Player, instanceId: string)
     return result
 end
 
--- BD-057 Phase 1 fusion. Development-only: unpublished memory profiles, a default-off
--- config flag and an explicitly injected test roller (no approved odds exist yet).
--- There is intentionally no remote; BD-065 owns the client flow.
+-- BD-057/BD-064 fusion. Enabled by Config.IdentityFusionPreviewEnabled on unpublished
+-- memory profiles, or on persistent profiles when Config.IdentityPersistentEnabled is
+-- also true. Trait odds come from the versioned PROVISIONAL FusionOdds roller; tests may
+-- inject a controlled roller. FusionService exposes this over the FusionAction remote.
 local fusionTestRoller: any = nil
+local productionRoller = FusionOdds.roller(function() return Random.new() end)
 local function fusionEnabled(): boolean
-    return localPreview and Config.IdentityFusionPreviewEnabled == true
+    return Config.IdentityFusionPreviewEnabled == true and (localPreview or identityPersistent())
+end
+local function activeRoller(): any
+    return if fusionTestRoller ~= nil then fusionTestRoller else productionRoller
 end
 
+-- Test hook: inject a controlled roller (nil restores the production roller).
 function ProfileRepository.setFusionTestRoller(roller: any): boolean
     if not fusionEnabled() then return false end
     fusionTestRoller = roller
     return true
 end
 
--- Returns a frozen quote (donor validation, ingredient summary, itemized loss
--- manifest and digests) without consuming anything.
-function ProfileRepository.quoteFusion(player: Player, targetStage: any, donorIds: any)
+-- Randomized synthesis is a paid random item when donors are Robux-linked. Milestone 1
+-- runs with all Robux features off; any profile that ever spent Robux, or a build with
+-- crystal packs on, needs the paid-random release gate and a passed PolicyService check.
+local function paidRandomBlocked(player: Player, profile: any): boolean
+    local robuxLinked = Config.CrystalPacksEnabled == true
+        or (type(profile.metrics) == "table" and type(profile.metrics.robux) == "number" and profile.metrics.robux &gt; 0)
+    return robuxLinked and (not Config.PaidRandomItemsEnabled or player:GetAttribute("PaidRandomEligible") ~= true)
+end
+
+-- Shared precondition for every fusion read/write. Returns cached profile or nil, reason.
+local function fusionProfile(player: Player)
     if not fusionEnabled() then return nil, "fusion_disabled" end
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then return nil, "profile_not_loaded" end
+    if not identityAvailable(cached.dinosaurIdentity) then return nil, "identity_unavailable" end
+    if paidRandomBlocked(player, cached) then return nil, "random_items_unavailable" end
+    return cached, nil
+end
+
+function ProfileRepository.fusionStatus(player: Player): (boolean, string?)
+    local cached, reason = fusionProfile(player)
+    return cached ~= nil, reason
+end
+
+local function instanceSequence(id: string): number
+    return tonumber(string.match(id, "/d:(%d+)$")) or 0
+end
+
+-- Paged individual-dinosaur list for the Fusion Menu, sorted by instanceId sequence.
+-- cursor = last sequence already seen (exclusive); limit 1..200.
+function ProfileRepository.listDinosaurs(player: Player, cursor: number?, limit: number?)
+    local cached, reason = fusionProfile(player)
+    if not cached then return nil, reason end
+    local after = cursor or 0
+    local size = math.clamp(limit or 100, 1, 200)
+    local entries = {}
+    for id, instance in cached.dinosaurIdentity.instances do
+        local sequence = instanceSequence(id)
+        if sequence &gt; after then table.insert(entries, {sequence = sequence, instance = instance}) end
+    end
+    table.sort(entries, function(a, b) return a.sequence &lt; b.sequence end)
+    local page = {}
+    for i = 1, math.min(size, #entries) do
+        local d = entries[i].instance
+        local c = if type(d.cosmetics) == "table" then d.cosmetics else {}
+        local auras, trails = 0, 0
+        for _, owned in c.ownedAuraIds or {} do if owned then auras += 1 end end
+        for _, owned in c.ownedTrailIds or {} do if owned then trails += 1 end end
+        table.insert(page, {instanceId = d.instanceId, speciesId = d.speciesId, stage = d.stage,
+            genes = DinosaurIdentity.copy(d.genes), big = d.big == true, shiny = d.shiny == true,
+            mutationId = d.mutationId or "", originKind = if type(d.origin) == "table" then d.origin.kind else "legacy_unknown",
+            locked = d.locked == true, favorited = d.favorited == true, auraCount = auras, trailCount = trails,
+            equippedAuraId = c.equippedAuraId or "", equippedTrailId = c.equippedTrailId or ""})
+    end
+    local nextCursor = if #entries &gt; size then entries[size].sequence else nil
+    return {dinosaurs = page, nextCursor = nextCursor}
+end
+
+-- Gated Dino Details copy (original egg or fusion lineage) for the remote.
+function ProfileRepository.fusionDetails(player: Player, instanceId: string)
+    local cached, reason = fusionProfile(player)
+    if not cached then return nil, reason end
+    local details = ProfileRepository.dinosaurDetails(player, instanceId)
+    if not details then return nil, "donor_missing" end
+    return details
+end
+
+-- Returns a frozen quote (donor validation, ingredient summary, itemized loss
+-- manifest, digests) plus the EXACT active odds, without consuming anything.
+function ProfileRepository.quoteFusion(player: Player, targetStage: any, donorIds: any)
+    local cached, gate = fusionProfile(player)
+    if not cached then return nil, gate end
     local quote, reason = IdentityFusion.quote(cached.dinosaurIdentity, keyFor(player), targetStage, donorIds)
     if not quote then return nil, reason end
-    return DinosaurIdentity.copy(quote)
+    local result = DinosaurIdentity.copy(quote)
+    local roller = activeRoller()
+    if type(roller) == "table" and type(roller.distribution) == "function" then
+        local ok, odds = pcall(roller.distribution, DinosaurIdentity.copy(quote.summary))
+        result.oddsVersion = roller.version
+        result.odds = if ok then odds else nil
+    end
+    return result
 end
 
 -- request = {token, targetStage, donorIds, quoteDigest, consentDigest?}
 function ProfileRepository.fuseDinosaurs(player: Player, request: any)
-    if not fusionEnabled() then return false, nil, "fusion_disabled" end
-    local cached = profiles[player]
-    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then return false, nil, "profile_not_loaded" end
+    local cached, gate = fusionProfile(player)
+    if not cached then return false, nil, gate end
     if typeof(request) ~= "table" or typeof(request.token) ~= "string" or #request.token &lt; 1
         or #request.token &gt; IdentityFusion.MaxTokenLength then return false, nil, "invalid_token" end
     local ownerKey = keyFor(player)
@@ -371281,7 +371783,7 @@ function ProfileRepository.fuseDinosaurs(player: Player, request: any)
     if request.quoteDigest ~= quote.quoteDigest then return false, nil, "stale_quote" end
     if quote.consentRequired and request.consentDigest ~= quote.consentDigest then return false, nil, "consent_required" end
     -- Precommit traits ONCE outside UpdateAsync: retries cannot reroll.
-    local outcome, outcomeReason = IdentityFusion.prepareOutcome(quote, fusionTestRoller, EggGenetics.valid)
+    local outcome, outcomeReason = IdentityFusion.prepareOutcome(quote, activeRoller(), EggGenetics.valid)
     if not outcome then return false, nil, outcomeReason end
 
     local now = os.time()
@@ -371291,6 +371793,9 @@ function ProfileRepository.fuseDinosaurs(player: Player, request: any)
             committed, failure, duplicate, leaseLost = nil, nil, false, false
             if not isValidProfile(profileValue) then failure = "invalid_profile" return nil end
             if not ownSession(profileValue) then leaseLost = true return nil end
+            local state = profileValue.dinosaurIdentity
+            local replay = type(state) == "table" and type(state.fusions) == "table" and state.fusions[operationId] ~= nil
+            if not replay and not identityAvailable(state) then failure = "identity_unavailable" return nil end
             local nextProfile, status, result = IdentityFusion.apply(profileValue, ownerKey, request, outcome, now)
             if not nextProfile then failure = status return nil end
             committed = result
@@ -371300,6 +371805,11 @@ function ProfileRepository.fuseDinosaurs(player: Player, request: any)
             table.insert(nextProfile.recentOperations, {id = operationId, kind = "identity_fusion",
                 outcome = {resultId = result.resultId, targetStage = result.targetStage, speciesId = result.speciesId}})
             trimOperations(nextProfile)
+            -- Whole-profile byte preflight before the write (4 MiB DataStore limit).
+            if IdentityFusion.encodedSize(nextProfile) &gt; Config.IdentityFusionProfileBudgetBytes then
+                failure = "storage_limit"
+                return nil
+            end
             return nextProfile
         end)
     end)
@@ -371781,7 +372291,7 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
                 if not ProgressionRules.knownEventMutation(mutationId) then return nil end
                 species.events[mutationId]=(species.events[mutationId] or 0)+outcome.count
             else species.base += outcome.count end
-            if localPreview and profileValue.dinosaurIdentity and not outcome.failed then
+            if identityAvailable(profileValue.dinosaurIdentity) and not outcome.failed then
                 local bucketKey = outcome.speciesId .. "/base"
                 if chest.big or chest.shiny or chest.genes then
                     bucketKey = outcome.speciesId .. "/variant/" .. EggTraits.key(mutationId, chest.shiny == true, chest.big == true, chest.genes)
@@ -372146,7 +372656,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -372327,7 +372837,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -372448,7 +372958,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -372697,7 +373207,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -372769,19 +373279,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX242">
+  <Item class="StarterPlayer" referent="RBX244">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX243">
+    <Item class="StarterPlayerScripts" referent="RBX245">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX244">
+      <Item class="Folder" referent="RBX246">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX245">
+        <Item class="LocalScript" referent="RBX247">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -373802,7 +374312,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX246">
+        <Item class="LocalScript" referent="RBX248">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -373865,7 +374375,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX247">
+        <Item class="ModuleScript" referent="RBX249">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -373925,7 +374435,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX248">
+        <Item class="LocalScript" referent="RBX250">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -374098,7 +374608,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX249">
+        <Item class="LocalScript" referent="RBX251">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -374180,7 +374690,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX250">
+  <Item class="Workspace" referent="RBX252">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>
