@@ -121,7 +121,7 @@ Use separate background, tile, shell/color/pattern, condition, mutation and Shin
 | Cracked and Dirty reusable overlays; clean Normal | Accepted visual direction |
 | Rainbow condition effects | Current prismatic/multicolored-star authoring direction; final combination/runtime review open |
 | Astra condition effects | Owner accepted brighter opal with five curved vertical streaks and three hero stars; runtime integration still open |
-| Smoky engulfing anime mutation auras | Owner prefers yellow/orange Magma with fine debris; six new elemental revisions await review |
+| Smoky engulfing anime mutation auras | Yellow/orange Magma is the preferred reference; owner visually approved all six elemental revisions on 2026-10-13; packaging/runtime integration pending |
 | Roblox upload, ID binding, layered runtime/phone testing | Not completed by the Blender review |
 
 The [evidence README and manifest](evidence/2026-10-08-egg-shared-vision/README.md) identify the preview files, local editable source lineage and render validation. Full `.blend` projects and complete individual export packs remain in the local `Premium_Egg` workspace; only compact review examples and validation records are archived here. Do not assume local-only sources are downloadable from this repository.

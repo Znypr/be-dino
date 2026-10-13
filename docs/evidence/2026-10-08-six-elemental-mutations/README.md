@@ -1,5 +1,7 @@
 # Six elemental auras following the preferred Magma direction
 
+**Owner approval, 2026-10-13:** all six displayed designs are visually approved. Preserve Seismic, Frost, Charged, Dewdrop, Aurora, and Blood Moon as shown. The earlier awaiting-review language below describes the original render batch; approval supersedes it. This approval covers appearance, not granular export completion, runtime animation, or Studio/device acceptance. Next work is packaging and combination testing, rather than unsolicited art redesign.
+
 The owner preferred the refined Magma with yellow heat, orange smoke, and finer dark debris, then requested more mutations. These six new visual revisions follow the existing Seismic, Frost, Charged, Dewdrop, Aurora, and Blood Moon entries. They are **awaiting owner review**; no new catalog IDs, eligibility rules, probabilities, or gameplay perks are introduced.
 
 ![Six new aura revisions on blank Normal eggs](six_mutations_overview.jpg)
