@@ -97,11 +97,12 @@ local warn=function()end
 local script={Parent={RewardMath="Rewards"}}
 local rewardSpecies=nil
 local require=function(id)
- if id=="Genetics" then return Genetics elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return {computeRunReward=function()return {stacks={},chestCount=2}end,computeChestReward=function()return {speciesId=if rewardSpecies then table.remove(rewardSpecies,1) else "raptor",count=2,mutationId="base"}end} end
+ if id=="Genetics" then return Genetics elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return {computeRunReward=function()return {stacks={},chestCount=2}end,computeChestReward=function()return {speciesId=if rewardSpecies and #rewardSpecies>0 then table.remove(rewardSpecies,1) else "raptor",count=2,mutationId="base"}end} end
  error("unexpected module "..tostring(id))
 end
 local traitRoll=1
-local Random={new=function()return {NextNumber=function()return traitRoll end}end}
+local nestSizeRoll=3
+local Random={new=function()return {NextNumber=function()return traitRoll end,NextInteger=function(_,low,high)return math.clamp(nestSizeRoll,low,high) end}end}
 local Repository=REPO_MODULE
 local player={Parent=true,UserId=123,Name="Test",attrs={}}
 function player:SetAttribute(k,v)self.attrs[k]=v end

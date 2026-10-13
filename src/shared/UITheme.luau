@@ -106,7 +106,7 @@ local function nativeIcon(parent: GuiObject,id: string): Frame?
         preview.Size=UDim2.fromScale(1,1)
         return root
     end
-    local data = EventVectors[id] or Vectors[id]
+    local data = EventVectors[id] or Vectors[if id=="egg_nest" or id=="egg_caught" then "egg" else id]
     if not data then return nil end
     local root = Instance.new("Frame")
     root.Name,root.BackgroundTransparency,root.Size = "Art_"..id,1,UDim2.fromOffset(42,42)

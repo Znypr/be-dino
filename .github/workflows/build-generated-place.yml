@@ -32,6 +32,7 @@ jobs:
           python tools/verify_luau.py --runner /tmp/luau/luau
           python tools/verify_gameplay.py --runner /tmp/luau/luau
           python tools/verify_progression.py --runner /tmp/luau/luau
+          python tools/verify_egg_nests.py --runner /tmp/luau/luau
           python tools/verify_eggs.py --runner /tmp/luau/luau
           python tools/verify_creature_genes.py --runner /tmp/luau/luau
           python tools/verify_visual_growth.py --runner /tmp/luau/luau

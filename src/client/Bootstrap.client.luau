@@ -29,6 +29,8 @@ local startRun = remotes:WaitForChild("RequestStartRun") :: RemoteEvent
 local endRun = remotes:WaitForChild("RequestEndRun") :: RemoteEvent
 local equip = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
 local hatch = remotes:WaitForChild("ClaimChest") :: RemoteEvent
+local openEggNest = remotes:WaitForChild("OpenEggNest") :: RemoteEvent
+local nestPending = false
 local fuse = remotes:WaitForChild("MutateSpecies") :: RemoteEvent
 local shopAction=remotes:WaitForChild("ProgressionAction") :: RemoteEvent
 local shopResult=remotes:WaitForChild("ProgressionResult") :: RemoteEvent
@@ -512,29 +514,17 @@ render=function(name: string)
         button(body,"CONFIRM FUSION",280,264,510,64,C.accent,function() fuse:FireServer(selected,fusionTarget,Http:GenerateGUID(false)) open("fusion") end)
         button(body,"CANCEL",280,340,510,44,C.red,function() open("fusion") end)
     elseif name=="eggs" then
-        heading.Text,header.BackgroundColor3="Caught Eggs",C.gold
-        local entries=queue()
+        heading.Text,header.BackgroundColor3="Egg Nests",C.gold
+        local entries=decoded("EggNestQueueJson","[]")
         local timers={}
         for slot=1,Config.ChestQueueCapacity do
             local entry=entries[slot]
             local card=box(body,(slot-1)*166,0,156,280,if entry then C.card else C.outline,24)
-            label(card,if entry and entry.genes then EggGenetics.condition(entry.genes.conditionId).name else "Slot "..slot,0,8,156,30,22)
-            local view=ModelPreview.add(card,"egg",entry==nil)
-            view.Position,view.Size=UDim2.fromOffset(18,65),UDim2.fromOffset(120,120)
-            PreviewTraits.add(view,entry)
-            if entry then label(card,rarityNames[entry.rarity or 1],0,37,156,24,18,rarityColors[entry.rarity or 1]) end
-            local mutation=if entry then ProgressionRules.item(ProgressionConfig.EventMutations,entry.mutationId) else nil
-            if mutation then
-                local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
-                if not entry.genes then for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.6) end end end
-                label(card,mutation.name,0,192,156,27,18,color)
-            elseif entry and entry.eventId and entry.eventId~="clear" then
-                local event=ProgressionRules.item(ProgressionConfig.Weather,entry.eventId)
-                label(card,if event then event.name else entry.eventId,0,192,156,27,15,C.gold)
-            elseif entry and entry.genes then
-                label(card,EggGenetics.condition(entry.genes.conditionId).name,0,192,156,27,18,C.gold)
-            end
-            timers[slot]=label(card,if entry then "Growing..." else "Empty",3,222,150,40,22,if entry then C.gold else Color3.fromRGB(156,156,174))
+            label(card,if entry then "Egg Nest" else "Slot "..slot,0,8,156,30,22)
+            art(card,"egg_nest",12,65,132)
+            if entry then label(card,entry.eggCount.." eggs",0,37,156,24,18,C.gold) end
+            if entry then label(card,"Timed reward",0,192,156,27,18,C.gold) end
+            timers[slot]=label(card,if entry then "Opening in..." else "Empty",3,222,150,40,22,if entry then C.gold else Color3.fromRGB(156,156,174))
         end
         refreshEggs=function()
             for i,timer in timers do
@@ -546,15 +536,18 @@ render=function(name: string)
             end
         end
         refreshEggs()
-        button(body,"HATCH NEXT EGG",0,310,400,math.max(64,45/viewportScale()),C.accent,function()
-            local id=str("NextChestId")
-            if id=="" then notify("Return from a run to earn reward eggs") return end
-            if workspace:GetServerTimeNow()<num("NextChestReadyAt") then notify("This egg is still growing",C.gold) return end
-            if hatchPending then return end
-            autoHatching=true
-            hatchNext()
+        button(body,"OPEN NEXT NEST",0,310,400,math.max(64,45/viewportScale()),C.accent,function()
+            local id=str("NextEggNestId")
+            if id=="" then notify("Complete runs to earn Egg Nests") return end
+            if workspace:GetServerTimeNow()<num("NextEggNestReadyAt") then notify("This nest is still waiting",C.gold) return end
+            if nestPending then return end
+            nestPending=true
+            openEggNest:FireServer(id,Http:GenerateGUID(false))
+            task.delay(8,function() if nestPending then nestPending=false notify("Nest opening did not finish. Retry.",C.red) end end)
         end)
-        label(body,"Waiting for a nest slot: "..num("PendingChestGrants"),420,302,400,88,21)
+        local waiting=math.max(0,#entries-Config.ChestQueueCapacity)
+        label(body,waiting.." more nests • "..num("ActiveChestCount").." eggs ready to reveal",420,300,400,48,19)
+        button(body,"REVEAL READY EGGS",420,354,400,48,C.blue,function() autoHatching=true hatchNext() end).TextSize=20
     elseif name=="hatch" then
         heading.Text,header.BackgroundColor3="An egg is hatching...",C.gold
         local version=modalVersion
@@ -638,9 +631,11 @@ render=function(name: string)
         heading.Text,header.BackgroundColor3="Run Complete!",C.gold
         art(body,"trophy",24,42,240)
         label(body,"Growth  "..math.floor(num("LastRunGrowthScore")),300,18,500,60,34,C.accent)
-        label(body,"Catches  "..num("LastRunCatchScore"),300,93,500,60,34,C.blue)
+        art(body,"egg_caught",300,98,45)
+        label(body,num("LastRunEggs").." eggs caught",350,93,440,60,28,C.blue)
         label(body,str("LastRewardText","Saving rewards..."),290,168,510,100,24,C.gold)
-        label(body,"+"..num("LastRunCrystals").." Crystals • Level "..num("AccountLevel"),30,302,760,40,21)
+        art(body,"egg_nest",28,282,64)
+        label(body,"+"..num("LastRunEggNests").." Egg Nests • +"..num("LastRunCrystals").." Crystals",100,294,690,40,22,C.gold)
         button(body,"BACK TO SANCTUARY",212,348,400,48,C.accent,function() open("home") end)
     elseif name=="settings" then
         heading.Text,header.BackgroundColor3="Settings",C.purple
@@ -695,7 +690,7 @@ local rail=box(gui,14,0,186,444,C.panel,2)
 rail.AnchorPoint,rail.Position=Vector2.new(0,.5),UDim2.new(0,14,.5,0)
 local railScale=Instance.new("UIScale") railScale.Parent=rail
 local navigationButtons = {}
-for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"HOME","home","home",C.accent},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
+for i,entry in {{"DINOS","dinos","collection",C.blue},{"NESTS","egg_nest","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"HOME","home","home",C.accent},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
     local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() open(entry[3]) end)
     b.TextSize=20
     art(b,NavigationArtwork[entry[3]] or entry[2],5,6,40)
@@ -720,8 +715,8 @@ hud.AnchorPoint,hud.Position=Vector2.new(0,1),UDim2.new(0,18,1,-18)
 local hudScale=Instance.new("UIScale") hudScale.Parent=hud
 art(hud,"leaf",8,12,64)
 local growthLabel=label(hud,"0 GROWTH",82,3,290,42,30,C.accent)
-art(hud,"catches",40,48,32)
-local catchLabel=label(hud,"0 catches  •  Sanctuary",82,47,290,34,20)
+art(hud,"egg_caught",40,48,32)
+local catchLabel=label(hud,"0 eggs caught  •  Sanctuary",82,47,290,34,20)
 local crystalHUD=box(gui,0,0,260,48,C.panel,2)
 local crystalScale=Instance.new("UIScale") crystalScale.Parent=crystalHUD
 crystalHUD.AnchorPoint,crystalHUD.Position=Vector2.new(1,0),UDim2.new(1,-20,0,8)
@@ -884,7 +879,8 @@ RunService.Heartbeat:Connect(function(dt)
     local growth=if character then character:GetAttribute("GrowthScore") or 0 else 0
     local catches=if character then character:GetAttribute("CatchScore") or 0 else 0
     growthLabel.Text=string.format("%d GROWTH",growth)
-    catchLabel.Text=string.format("%d catches  •  %s",catches,if state=="Sanctuary" then "Safe sanctuary" else "Island")
+    local caughtEggs=0 for _,threshold in Config.ChestThresholds do if catches>=threshold.score then caughtEggs=threshold.count end end
+    catchLabel.Text=string.format("%d eggs caught  •  %s",caughtEggs,if state=="Sanctuary" then "Safe sanctuary" else "Island")
     action.Text=if state=="Sanctuary" then "EXPLORE ISLAND" elseif state=="Active" then "RETURN HOME" else "SAVING..."
     action.BackgroundColor3=if state=="Active" then C.red else C.accent
     if character then
@@ -930,11 +926,22 @@ local function scheduleModalRefresh()
         end
     end)
 end
-for _,attribute in {"EquippedSpeciesId","CollectionJson","ChestQueueJson","ProgressionJson"} do
+for _,attribute in {"EquippedSpeciesId","CollectionJson","ChestQueueJson","EggNestQueueJson","ProgressionJson"} do
     player:GetAttributeChangedSignal(attribute):Connect(function()
         scheduleModalRefresh()
     end)
 end
+player:GetAttributeChangedSignal("LastOpenedEggNestId"):Connect(function()
+    nestPending=false
+    task.defer(function() autoHatching=true hatchNext() end)
+end)
+player:GetAttributeChangedSignal("LastEggNestStatus"):Connect(function()
+    nestPending=false
+    local status=str("LastEggNestStatus")
+    if status=="queue_full" then notify("Reveal your ready eggs first; your nest is kept.",C.gold)
+    elseif status=="nest_queue_full" then notify("Open some Egg Nests before another run.",C.gold)
+    elseif status~="opened" and status~="duplicate" then notify("Nest: "..status,C.gold) end
+end)
 player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function() hatchPending=false task.defer(function() open("hatch") end) end)
 player:GetAttributeChangedSignal("LastRunEndAt"):Connect(function() if not autoHatching then open("results") end end)
 player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()

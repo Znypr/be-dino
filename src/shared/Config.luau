@@ -1,7 +1,7 @@
 --!strict
 -- Prototype tuning only. Persistent economy values remain private-test values.
 return table.freeze({
-    Build = "redesign-020",
+    Build = "redesign-021",
     WalkSpeed = 22,
     JumpPower = 50,
     MaxSlopeAngle = 46,
@@ -87,6 +87,10 @@ return table.freeze({
     CollectionTestGrantSpeciesId = "triceratops",
     CollectionTestGrantVersion = 1,
 
+    EggNestTimerSeconds = 60, -- Private-test tuning; offline time counts.
+    EggNestCapacity = 30,
+    EggNestMinEggs = 3,
+    EggNestMaxEggs = 6,
     ChestTimerSeconds = 0, -- Reveals, rather than offline incubation, pace new eggs.
     HatchRevealSeconds = 5,
     EggRarityBoostPerExtraEgg = 0.25,

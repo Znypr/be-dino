@@ -21,11 +21,11 @@ class UIIconBindingTests(unittest.TestCase):
             return BINDER.compile_bindings()
 
     def test_all_twelve_keys_and_empty_binding_fallback(self):
-        self.assertEqual(len(self.data["assets"]), 12)
+        self.assertEqual(len(self.data["assets"]), 14)
         self.assertEqual(BINDER.compile_bindings(), BINDER.OUTPUT.read_text())
         for entry in self.data["assets"]:
             entry["robloxAssetId"] = None
-        self.assertEqual(self.compile(self.data).count('= ""'), 12)
+        self.assertEqual(self.compile(self.data).count('= ""'), 14)
 
     def test_rejects_invalid_duplicate_and_missing_keys(self):
         for key in ("clear", "not-valid", "leap"):

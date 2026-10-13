@@ -58,6 +58,7 @@ local function upgradeCollection(profile: any)
         if typeof(entry) == "table" and entry.events == nil then entry.events = {} end
         if typeof(entry) == "table" and entry.variants == nil then entry.variants = {} end
     end
+    if profile.nests == nil then profile.nests = {} end -- additive; existing eggs remain intact
     if profile.metrics == nil then profile.metrics = {playSeconds = 0, rarest = 0, robux = 0} end
     if profile.purchaseReceipts == nil then profile.purchaseReceipts = {} end
 end
@@ -106,6 +107,19 @@ local function isValidProfile(profile: any): boolean
             and typeof(reward.count) == "number" and reward.count >= 1 and reward.count <= 3 and reward.count % 1 == 0)
     end
     for _,egg in profile.eggs do if not validEgg(egg,true) then return false end end
+    if typeof(profile.nests) ~= "table" or #profile.nests > Config.EggNestCapacity then return false end
+    local seenNests = {}
+    for _,nest in profile.nests do
+        if typeof(nest) ~= "table" or typeof(nest.id) ~= "string" or #nest.id < 1 or #nest.id > 80
+            or seenNests[nest.id] or typeof(nest.readyAt) ~= "number" or nest.readyAt ~= nest.readyAt
+            or nest.readyAt < 0 or nest.readyAt % 1 ~= 0 or nest.readyAt == math.huge
+            or typeof(nest.contents) ~= "table" or #nest.contents < Config.EggNestMinEggs
+            or #nest.contents > Config.EggNestMaxEggs then return false end
+        seenNests[nest.id] = true
+        for _,egg in nest.contents do
+            if not validEgg(egg,true) or egg.reward == nil or egg.reward.count ~= 1 then return false end
+        end
+    end
     if profile.pendingEggEvents~=nil then
         if typeof(profile.pendingEggEvents)~="table" or #profile.pendingEggEvents~=profile.pendingChestGrants then return false end
         for _,metadata in profile.pendingEggEvents do if not validEgg(metadata) then return false end end
@@ -185,6 +199,12 @@ local function syncAttributes(player: Player, profile: any)
     player:SetAttribute("RobuxSpent", profile.metrics.robux)
     local eventMutation=if traits then ProgressionRules.item(ProgressionConfig.EventMutations,traits.mutationId) else ProgressionRules.eventMutation(collection[profile.equippedSpeciesId])
     player:SetAttribute("EquippedEventMutation",if eventMutation then eventMutation.id else "")
+    local nests = {}
+    for _,nest in profile.nests do table.insert(nests,{id=nest.id,readyAt=nest.readyAt,eggCount=#nest.contents}) end
+    player:SetAttribute("EggNestQueueJson",HttpService:JSONEncode(nests))
+    player:SetAttribute("EggNestCount",#nests)
+    player:SetAttribute("NextEggNestId",if nests[1] then nests[1].id else "")
+    player:SetAttribute("NextEggNestReadyAt",if nests[1] then nests[1].readyAt else 0)
     player:SetAttribute("ActiveChestCount", #profile.eggs)
     local chestSummary = {}
     for index, chest in profile.eggs do
@@ -255,7 +275,7 @@ local function enqueueChestIds(profile: any, chestIds: {string}, now: number, ev
     for i, chestId in chestIds do
         local metadata=if events then events[i] else nil
         metadata=metadata or {eventId="clear",mutationId=""}
-        if #profile.eggs < Config.ChestQueueCapacity then
+        if #profile.eggs < Config.ChestQueueCapacity and profile.pendingChestGrants == 0 then
             nextReadyAt += Config.ChestTimerSeconds
             table.insert(profile.eggs, {
                 eggId = chestId,
@@ -395,6 +415,20 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         table.insert(chestIds, HttpService:GenerateGUID(false))
     end
     outcome.chestIds = chestIds
+    local preparedNests = {}
+    for _ = 1, outcome.chestCount do
+        local contents = {}
+        for _ = 1, rng:NextInteger(Config.EggNestMinEggs,Config.EggNestMaxEggs) do
+            local egg = ProfileRepository.prepareEgg(player,{eventId="clear",mutationId=""})
+            egg.eggId,egg.readyAt = HttpService:GenerateGUID(false),0
+            egg.reward = RewardMath.computeChestReward(rng,1)
+            egg.reward.count = 1 -- each shell reveals one dinosaur, subject to its condition
+            table.insert(contents,egg)
+        end
+        table.sort(contents,function(a,b) return Config.SpeciesRarities[a.reward.speciesId]<Config.SpeciesRarities[b.reward.speciesId] end)
+        table.insert(preparedNests,{id=HttpService:GenerateGUID(false),contents=contents})
+    end
+    outcome.nestCount = #preparedNests
     local leaseLost = false
     local queueFull = false
     local duplicateOutcome = nil
@@ -414,7 +448,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
                 return profileValue
             end
 
-            if outcome.chestCount > availableChestCapacity(profileValue) then
+            if outcome.chestCount > availableChestCapacity(profileValue) or #profileValue.nests + #preparedNests > Config.EggNestCapacity then
                 queueFull = true
                 return nil
             end
@@ -429,6 +463,13 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
             end
 
             enqueueChestIds(profileValue, chestIds, now, prepared)
+            local nestReadyAt = now
+            for _,nest in profileValue.nests do nestReadyAt=math.max(nestReadyAt,nest.readyAt) end
+            for _,nest in preparedNests do
+                nestReadyAt += Config.EggNestTimerSeconds
+                nest.readyAt = nestReadyAt
+                table.insert(profileValue.nests,nest)
+            end
             local progress=ProgressionRules.upgrade(profileValue)
             if progress.crystals+outcome.crystals>ProgressionConfig.MaxCrystals then return nil end
             progress.crystals+=outcome.crystals
@@ -471,9 +512,11 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     end
     if #summaryParts == 0 then table.insert(summaryParts, "no dinosaur copies") end
     if committedOutcome.chestCount > 0 then
-        table.insert(summaryParts, string.format("%d chest(s)", committedOutcome.chestCount))
+        table.insert(summaryParts, string.format("%d egg(s) + %d Egg Nest(s)", committedOutcome.chestCount,committedOutcome.nestCount or 0))
     end
     player:SetAttribute("LastRewardText", table.concat(summaryParts, " | "))
+    player:SetAttribute("LastRunEggNests",committedOutcome.nestCount or 0)
+    player:SetAttribute("LastRunEggs",committedOutcome.chestCount or 0)
     player:SetAttribute("LastRunCrystals",committedOutcome.crystals or 0)
     player:SetAttribute("LastRunCrystalBox",committedOutcome.crystalBox or 0)
     player:SetAttribute("LastSettledRunId", runId)
@@ -649,6 +692,48 @@ function ProfileRepository.grantChestTest(player: Player): (boolean, string)
     if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
     syncAttributes(player, profiles[player])
     return true, if duplicate then "duplicate" else "granted"
+end
+
+-- One transaction removes a ready nest and enqueues its precommitted eggs.
+-- Repeated requests, server retries and rejoins never reroll or duplicate its contents.
+function ProfileRepository.openEggNest(player: Player, nestId: string)
+    local cached=profiles[player]
+    if not cached or player:GetAttribute("ProfileState")~="Loaded" then return false,"profile_not_loaded" end
+    if player.Character and player.Character:GetAttribute("RunState")~="Sanctuary" then return false,"run_active" end
+    if typeof(nestId)~="string" or #nestId<1 or #nestId>80 then return false,"invalid_nest_id" end
+    local operationId="nest:"..nestId
+    if findOperation(cached,operationId) then return true,"duplicate" end
+    local now=os.time()
+    local status="missing"
+    local ok,updated=retry("egg nest opening",function()
+        return store:UpdateAsync(keyFor(player),function(profile)
+            if not isValidProfile(profile) then return nil end
+            if not ownSession(profile) then status="lease_lost" return nil end
+            if findOperation(profile,operationId) then status="duplicate" return profile end
+            local nest=profile.nests[1]
+            if not nest or nest.id~=nestId then status="missing" return nil end
+            if now<nest.readyAt then status="not_ready" return nil end
+            if #nest.contents>availableChestCapacity(profile) then status="queue_full" return nil end
+            local ids={} for _,egg in nest.contents do table.insert(ids,egg.eggId) end
+            enqueueChestIds(profile,ids,now,nest.contents)
+            table.remove(profile.nests,1)
+            profile.revision+=1
+            profile.session.expiresAt=now+Config.ProfileLeaseSeconds
+            table.insert(profile.recentOperations,{id=operationId,kind="nest_open",outcome={eggCount=#ids}})
+            trimOperations(profile)
+            status="opened"
+            return profile
+        end)
+    end)
+    if not ok then player:SetAttribute("ProfileState","SaveFailed") return false,"save_failed" end
+    if not updated then
+        if status=="lease_lost" then player:SetAttribute("ProfileState","LeaseLost") end
+        return false,status
+    end
+    if not profiles[player] or updated.revision>=profiles[player].revision then profiles[player]=updated end
+    syncAttributes(player,profiles[player])
+    player:SetAttribute("LastOpenedEggNestId",nestId)
+    return true,status
 end
 
 function ProfileRepository.claimChest(player: Player, chestId: string)
@@ -970,7 +1055,8 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
             if localPreview and Config.StudioTestWalletEnabled then progress.crystals = Config.StudioTestCrystals end
             local applied,status
             if action=="buyEgg" then
-                if availableChestCapacity(profile)<1 then denied="queue_full" return nil end
+                local reserve=if player.Character and player.Character:GetAttribute("RunState")~="Sanctuary" then 3 else 0
+                if availableChestCapacity(profile)<1+reserve then denied="queue_full" return nil end
                 if progress.crystals<ProgressionConfig.RandomEggPrice then denied="insufficient_crystals" return nil end
                 -- Do not buy against stale odds if a concurrent condition upgrade committed.
                 if progress.conditionLevel~=purchaseConditionLevel then denied="upgrade_changed" return nil end

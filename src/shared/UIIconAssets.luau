@@ -13,4 +13,6 @@ return {
     rain = "rbxassetid://72440937569305",
     thunder = "rbxassetid://135005203451565",
     blizzard = "rbxassetid://83461127038303",
+    egg_caught = "rbxassetid://104481541835155",
+    egg_nest = "rbxassetid://127462994652706",
 }

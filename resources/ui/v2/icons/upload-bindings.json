@@ -4,7 +4,7 @@
   "ownerType": "User",
   "experienceId": 10769812255,
   "uploadedAt": "2026-10-08",
-  "status": "Original seven uploads retained. Five leap/weather uploads verified via GetProductInfo against experience owner User znyprs / 7285577648 on 2026-10-08; all five IsLoaded=true in desktop and phone HUD states in unpublished Build 019. Native empty-binding fallbacks verified for all five. Archived evidence: docs/evidence/2026-10-08-weather-and-leap/. Non-owner published-client checks remain pending. Premium blank egg replaces earlier egg.png navigation image; hatch shell and cracks uploaded 2026-10-08. Published non-owner access pending.",
+  "status": "Original seven uploads retained. Five leap/weather uploads verified via GetProductInfo against experience owner User znyprs / 7285577648 on 2026-10-08; all five IsLoaded=true in desktop and phone HUD states in unpublished Build 019. Native empty-binding fallbacks verified for all five. Archived evidence: docs/evidence/2026-10-08-weather-and-leap/. Non-owner published-client checks remain pending. Premium blank egg replaces earlier egg.png navigation image; hatch shell and cracks uploaded 2026-10-08. Published non-owner access pending. Caught green egg and Egg Nest uploaded 2026-10-08; bindings added. Published rendering verification pending.",
   "assets": [
     {
       "key": "trophy",
@@ -66,6 +66,16 @@
       "key": "blizzard",
       "source": "weather-blizzard-v1.png",
       "robloxAssetId": "83461127038303"
+    },
+    {
+      "key": "egg_caught",
+      "source": "egg-green-v1.png",
+      "robloxAssetId": "104481541835155"
+    },
+    {
+      "key": "egg_nest",
+      "source": "egg-nest-v1.png",
+      "robloxAssetId": "127462994652706"
     }
   ]
 }

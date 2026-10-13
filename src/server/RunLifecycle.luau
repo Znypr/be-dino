@@ -35,6 +35,12 @@ end
 function RunLifecycle.begin(player: Player, character: Model)
     if player:GetAttribute("ProfileState") ~= "Loaded" then return end
     if character:GetAttribute("RunId") ~= nil then return end
+    if (player:GetAttribute("EggNestCount") or 0)>Config.EggNestCapacity-3 then
+        player:SetAttribute("LastEggNestStatus","nest_queue_full") return
+    end
+    if (player:GetAttribute("ActiveChestCount") or 0)+(player:GetAttribute("PendingChestGrants") or 0)>Config.ChestQueueCapacity+Config.ChestOverflowCapacity-3 then
+        player:SetAttribute("LastChestClaimStatus","queue_full") return
+    end
     character:SetAttribute("RunId", HttpService:GenerateGUID(false))
     player:SetAttribute("Location", "Island")
     character:SetAttribute("RunState", "Active")
@@ -212,8 +218,8 @@ function RunLifecycle.start()
         if not humanoid or humanoid.Health <= 0 then return end
         local spawn = workspace.BeDinoArena:FindFirstChild("PrototypeSpawn")
         if not spawn or not spawn:IsA("BasePart") then return end
-        character:PivotTo(spawn.CFrame + Vector3.new(0,5,0))
         RunLifecycle.begin(player, character)
+        if character:GetAttribute("RunState")=="Active" then character:PivotTo(spawn.CFrame + Vector3.new(0,5,0)) end
     end)
 
     local existing = folder:FindFirstChild("RequestEndRun")

@@ -36,6 +36,16 @@ function ChestService.start(profileRepository)
 
     local claimChest = getRemote(folder, "ClaimChest")
     local testGrant = getRemote(folder, "TestGrantChests")
+    local openNest = getRemote(folder,"OpenEggNest")
+    openNest.OnServerEvent:Connect(function(player: Player,nestId,token,...)
+        if select("#",...)~=0 then return end
+        if typeof(nestId)~="string" or #nestId<1 or #nestId>80 or typeof(token)~="string" or #token<1 or #token>80 then
+            player:SetAttribute("LastEggNestStatus","invalid_request") return
+        end
+        if not allowed(lastClaim,player) then player:SetAttribute("LastEggNestStatus","rate_limited") return end
+        local _,status=profileRepository.openEggNest(player,nestId)
+        player:SetAttribute("LastEggNestStatus",status)
+    end)
 
     claimChest.OnServerEvent:Connect(function(player: Player, chestId, requestToken, ...)
         if select("#", ...) ~= 0 then return end
