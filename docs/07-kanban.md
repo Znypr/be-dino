@@ -18,7 +18,7 @@ Maximum player access/policy work remains in progress:
 
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-017; BD-019–022; BD-035; **BD-046–056, BD-058–059, BD-061–063, BD-065** | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042; **BD-044; BD-045; BD-057 Phase 1; BD-060; BD-064 server** | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
+| BD-017; BD-019–022; BD-035; **BD-044–051, BD-055–056, BD-058–059, BD-061–063, BD-065** | BD-027 | BD-043 | BD-006 mobile; BD-016 visual kit; BD-023–026; BD-028–034; BD-036–042; **BD-052–054 (code; Android/Studio pending)**; **BD-057 Phase 1; BD-060; BD-064 server** | BD-004 private-place record | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
@@ -157,9 +157,9 @@ ledger compaction before public release.
 | BD-049 | Backlog | P1 | Blender trees, vegetation, rock variants, map landmarks and optimized biome placement | BD-016 |
 | BD-050 | Backlog | P1 | Blender pickup/food model variants with intact food rewards and server validation | BD-008 |
 | BD-051 | Backlog | P1 | Rotating five-minute Potion Shop offers, rarity-weighted selection and 1–3 limited stock | BD-032, BD-039 |
-| BD-052 | Backlog | P1 | Single bottom-center Home with confirmation and no three-second exit channel | BD-009 |
-| BD-053 | Backlog | P0 | Fix sliding and hill-climb movement on mountainous terrain | BD-006, BD-008 |
-| BD-054 | Backlog | P0 | Responsive phone/tablet touch-zone navigation/control placement and safe insets | BD-052, BD-046 |
+| BD-052 | Review / test | P1 | Single bottom-center Home with confirmation and no three-second exit channel ([51](51-bd053-054-movement-mobile.md)) | BD-009 |
+| BD-053 | Review / test | P0 | Fix sliding and hill-climb movement on mountainous terrain ([51](51-bd053-054-movement-mobile.md)) | BD-006, BD-008 |
+| BD-054 | Review / test | P0 | Responsive phone/tablet touch-zone navigation/control placement and safe insets ([51](51-bd053-054-movement-mobile.md)) | BD-052, BD-046 |
 | BD-055 | Backlog | P1 | Complete sky, atmosphere, cloud, particle and audio effects for all weather events | BD-031, BD-034 |
 | BD-056 | Backlog | P1 | Top-center growth metric and bottom-left egg-icon catches-only HUD | BD-044, BD-054 |
 | BD-057 | Review / test | P0 | Consume 10 same-species/same-pattern Base dinos to create ONE NEW Gold, then Emerald before Diamond; guaranteed stage, freshly rolled traits (Gold transaction; provisional odds/remote via BD-064; Emerald/Diamond unapproved) | BD-012, BD-060 |
@@ -199,6 +199,7 @@ The newer owner's reward intent supersedes the 2026-09-17 test economy's `N(c)=c
 - **Economy/shops:** BD-045 conditions (new starting odds **50/30/15/4.5/0.5**), BD-046 Shop entry, BD-047 category cards/icons and aura previews, BD-051 five-minute randomized potion offers.
 - **Art/world:** BD-048 ten trail assets and six proposed rarity classes, BD-049 reusable world props and landmarks, BD-050 food models, BD-055 environment-wide weather.
 - **Movement/UX:** BD-052 return confirmation, BD-053 terrain/sliding defect, BD-054 mobile/tablet touch placement, BD-056 growth and caught-egg HUD.
+- **Update 2026-10-13 — BD-052/053/054 are `Review / test`** ([implementation and evidence](51-bd053-054-movement-mobile.md)): root cause of sliding was the low torso collider wedging into slopes (now slope-clearance lifted, guard envelope shares `MaxSlopeAngle`); touch layout moved to `shared/TouchLayout` with safe insets and Roblox thumbstick/jump reserved zones; one bottom-center Home with Return/Cancel settles immediately through idempotent `tryEnd` (provisional predator-nearby refusal). Offline tests only; Studio checks and the owner Android checklist in doc 51 are the remaining gates. BD-054 dependency BD-046 (Shop entry) is not required for this layout pass.
 - **Critical interaction:** BD-044 egg-per-catch target is not shipped. Do not label old catches/threshold eggs as equivalent, or unlock paid random items. New **Cracked 50%** selection combined with existing **80% failure on cracked** implies **40% total failed eggs at tier 0**, a high-risk balancing review.
 - **Completion gate:** each task requires its own code/assets, Studio/device/runtime acceptance and evidence. Neither planning text nor a similarly named pre-existing Build 020 feature closes it.
 
@@ -601,6 +602,8 @@ Done as a specification. `docs/13-persistence-remote-contracts.md` chooses a pro
 **Done when:** desktop and touch movement work, min/max visual-size behavior is usable and two clients replicate correctly.
 
 Desktop evidence passed: movement, camera, dinosaur visibility, size behavior, reset isolation and two-client replication. Mobile/touch is still untested, so the task remains `Review / test`.
+
+2026-10-13 note: the touch HUD/control layout (BD-054), hill traction (BD-053) and Home (BD-052) changes in [51](51-bd053-054-movement-mobile.md) include the owner Android checklist that can also supply BD-006 mobile evidence.
 
 ### BD-007 — asset kit
 **Done when:** one original dinosaur silhouette/palette, manifest template and procedural fallback are reviewable.

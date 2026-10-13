@@ -22,8 +22,7 @@ local EggGenetics=require(Shared.EggGenetics)
 local EggAppearance=require(Shared.EggAppearance)
 local ShopOdds=require(Shared.ShopOdds)
 local EggOutcomeView=require(Shared.EggOutcomeView)
--- BD-065 pattern fusion menu: own ScreenGui; pcall keeps Bootstrap safe if it fails to load.
-local fusionMenuOk,FusionMenu=pcall(require,script.Parent.FusionMenu)
+local TouchLayout=require(Shared.TouchLayout)
 local Marketplace=game:GetService("MarketplaceService")
 local C = Theme.Colors
 local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
@@ -38,6 +37,8 @@ local shopResult=remotes:WaitForChild("ProgressionResult") :: RemoteEvent
 local leapRemote=remotes:WaitForChild("RequestLeap") :: RemoteEvent
 local gui = Instance.new("ScreenGui")
 gui.Name,gui.ResetOnSpawn,gui.ZIndexBehavior = "BeDinoUI",false,Enum.ZIndexBehavior.Sibling
+-- BD-054: lay out inside the device safe area and below/around Roblox core UI.
+gui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
 gui.Parent = player:WaitForChild("PlayerGui")
 local blur = Instance.new("BlurEffect")
 blur.Name,blur.Size,blur.Parent = "BeDinoModalBlur",0,Lighting
@@ -163,6 +164,12 @@ local function viewportScale(): number
     local camera=workspace.CurrentCamera
     local size=gui.AbsoluteSize
     return math.max(.05,math.min(1,(size.X-40)/860,(size.Y-40)/520))
+end
+-- BD-054: prefer the active input style; fall back to TouchEnabled on older clients.
+local function touchMode(): boolean
+    local ok,touch=pcall(function() return (Input :: any).PreferredInput==(Enum :: any).PreferredInput.Touch end)
+    if ok and typeof(touch)=="boolean" then return touch end
+    return Input.TouchEnabled
 end
 local function celebrate()
     if not motion then return end
@@ -628,12 +635,21 @@ render=function(name: string)
             else autoHatching=false nextButton.Visible=true collectionButton.Visible=true end
         end)
     elseif name=="exit" then
+        -- BD-052: one confirmation, no stay-still channel; the server settles through tryEnd.
         heading.Text,header.BackgroundColor3="Return to Sanctuary?",C.red
         art(body,"home",36,28,214)
-        label(body,"Bank this run",300,12,500,54,36,C.gold)
-        label(body,"Stay still for "..Config.ExitChannelSeconds.." seconds to return safely. Moving cancels the return.",300,91,500,104,24)
-        button(body,"RETURN & BANK",300,242,500,68,C.accent,function() endRun:FireServer() close() notify("Returning... stay still",C.gold) end)
-        button(body,"KEEP EXPLORING",300,329,500,48,C.blue,close)
+        label(body,"Your current run will end and rewards will be banked.",300,8,500,100,28,C.gold)
+        local character=player.Character
+        local catches=if character then character:GetAttribute("CatchScore") or 0 else 0
+        local growth=if character then character:GetAttribute("GrowthScore") or 0 else 0
+        label(body,string.format("Banking %d catches  •  %d growth",catches,math.floor(growth)),300,116,500,60,22)
+        local buttonHeight=if touchMode() then math.max(68,46/viewportScale()) else 68
+        button(body,"RETURN",300,396-buttonHeight,244,buttonHeight,C.accent,function()
+            local current=player.Character
+            close()
+            if current and current:GetAttribute("RunState")=="Active" then endRun:FireServer() notify("Returning to Sanctuary...",C.gold) end
+        end)
+        button(body,"CANCEL",556,396-buttonHeight,244,buttonHeight,C.blue,close)
     elseif name=="crystalReveal" then
         heading.Text,header.BackgroundColor3="Run Crystal Box",C.gold
         local version=modalVersion
@@ -709,7 +725,7 @@ local rail=box(gui,14,0,186,444,C.panel,2)
 rail.AnchorPoint,rail.Position=Vector2.new(0,.5),UDim2.new(0,14,.5,0)
 local railScale=Instance.new("UIScale") railScale.Parent=rail
 local navigationButtons = {}
-for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"HOME","home","home",C.accent},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
+for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
     local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() open(entry[3]) end)
     b.TextSize=20
     art(b,NavigationArtwork[entry[3]] or entry[2],5,6,40)
@@ -808,69 +824,75 @@ local function refreshProgressionHUD()
         shopAction:FireServer(pendingShop.action,pendingShop.id,pendingShop.token,pendingShop.replace)
     end
 end
+-- BD-052: the single Home control (bottom-centre). In Sanctuary it starts a run instead.
 local action=button(gui,"EXPLORE",0,0,244,60,C.accent,function()
     local character=player.Character
     if character and character:GetAttribute("RunState")=="Active" then open("exit")
     elseif character and character:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() close() end
 end)
-action.AnchorPoint,action.Position=Vector2.new(1,1),UDim2.new(1,-20,1,-22)
+action.Name="HomeButton"
+action.TextScaled=true
+local actionTextLimit=Instance.new("UITextSizeConstraint") actionTextLimit.MaxTextSize=23 actionTextLimit.Parent=action
+local actionPadding=Instance.new("UIPadding") actionPadding.Parent=action
+local actionIcon=Theme.icon(action,"home")
+-- UIPadding (52 px while the icon shows) also shifts children, so -44 lands the icon at x=8.
+if actionIcon then actionIcon.Position,actionIcon.Size,actionIcon.Visible=UDim2.fromOffset(-44,8),UDim2.fromOffset(44,44),false end
 local actionScale=action:FindFirstChildOfClass("UIScale") :: UIScale
+-- BD-054: measured Roblox touch controls, in this ScreenGui's pixel space.
+local function coreTouchRect(name: string)
+    local playerGui=player:FindFirstChildOfClass("PlayerGui")
+    local touchGui=if playerGui then playerGui:FindFirstChild("TouchGui") else nil
+    local object=if touchGui then touchGui:FindFirstChild(name,true) else nil
+    if not object or not object:IsA("GuiObject") or object.AbsoluteSize.X<=0 or object.AbsoluteSize.Y<=0 then return nil end
+    local origin=gui.AbsolutePosition
+    return {x=object.AbsolutePosition.X-origin.X,y=object.AbsolutePosition.Y-origin.Y,w=object.AbsoluteSize.X,h=object.AbsoluteSize.Y}
+end
 local function scales()
     scale.Scale=viewportScale()
     closeButton.Size=UDim2.fromOffset(math.max(80,46/viewportScale()),math.max(62,46/viewportScale()))
-    local camera=workspace.CurrentCamera
-    local size=if camera then camera.ViewportSize else Vector2.new(1280,720)
-    local small=math.clamp(math.min(size.X/1000,size.Y/800),.3,1)
-    crystalScale.Scale=math.max(.65,small)
-    railScale.Scale,hudScale.Scale,actionScale.Scale,timerScale.Scale=small,small,small,small
-    hud:SetAttribute("UIScaleBase",small)
-    timers.Position=UDim2.new(1,-20,1,if Input.TouchEnabled then -190 else -100)
-    action.Position=UDim2.new(1,-20,1,if Input.TouchEnabled then -120 else -22)
-    action:SetAttribute("UIScaleBase",small)
-    if Input.TouchEnabled then
-        -- Keep navigation above the joystick and retain usable touch targets.
-        railScale.Scale=math.min(1,(size.X-28)/630)
-        rail.AnchorPoint,rail.Position,rail.Size=Vector2.new(.5,0),UDim2.new(.5,0,0,56),UDim2.fromOffset(630,58)
-        for i,b in navigationButtons do
-            b.Position,b.Size=UDim2.fromOffset(7+(i-1)*88,7),UDim2.fromOffset(82,44)
-            for _,child in b:GetChildren() do
-                if child:IsA("TextLabel") then
-                    child.Position,child.Size,child.TextSize=UDim2.fromOffset(28,0),UDim2.fromOffset(52,44),11
-                elseif child:IsA("GuiObject") and child.Name~="ActiveTab" then
-                    child.Position,child.Size=UDim2.fromOffset(3,10),UDim2.fromOffset(24,24)
-                end
-            end
-        end
-        hud.AnchorPoint,hud.Position=Vector2.new(0,0),UDim2.new(0,18,0,120)
-        previewNotice.Text="STUDIO PREVIEW: UNSAVED"
-        previewNotice.Size,previewNotice.AnchorPoint,previewNotice.Position=UDim2.fromOffset(240,25),Vector2.zero,UDim2.fromOffset(18,8)
-        timerScale.Scale=math.max(small,44/60)
-        timers.AnchorPoint=Vector2.new(1,0)
-        timers.Position=UDim2.new(1,-20,0,120)
-        foodDiagnostic.Visible=false
-        actionScale.Scale=math.max(small,44/60)
-        action.AnchorPoint,action.Position=Vector2.new(.5,1),UDim2.new(.5,0,1,-18)
-        action:SetAttribute("UIScaleBase",actionScale.Scale)
-    else
-        previewNotice.Text="STUDIO PREVIEW • progress not saved • test currency"
-        previewNotice.Size,previewNotice.AnchorPoint,previewNotice.Position=UDim2.fromOffset(500,25),Vector2.new(.5,0),UDim2.new(.5,0,0,8)
-        rail.AnchorPoint,rail.Position,rail.Size=Vector2.new(0,.5),UDim2.new(0,14,.5,0),UDim2.fromOffset(186,444)
-        for i,b in navigationButtons do
-            b.Position,b.Size=UDim2.fromOffset(7,7+(i-1)*62),UDim2.fromOffset(172,54)
-            for _,child in b:GetChildren() do
-                if child:IsA("TextLabel") then
-                    child.Position,child.Size,child.TextSize=UDim2.fromOffset(52,0),UDim2.fromOffset(114,54),19
-                elseif child:IsA("GuiObject") and child.Name~="ActiveTab" then
-                    child.Position,child.Size=UDim2.fromOffset(5,6),UDim2.fromOffset(40,40)
-                end
-            end
-        end
-        hud.AnchorPoint,hud.Position=Vector2.new(0,1),UDim2.new(0,18,1,-18)
-        timers.AnchorPoint=Vector2.new(1,1)
-        action.AnchorPoint=Vector2.new(1,1)
-        foodDiagnostic.Visible=RunService:IsStudio()
+    local size=gui.AbsoluteSize
+    if size.X<=0 or size.Y<=0 then return end
+    local touch=touchMode()
+    local layout=TouchLayout.compute({width=size.X,height=size.Y,touch=touch,navCount=#navigationButtons,
+        thumb=if touch then coreTouchRect("DynamicThumbstickFrame") or coreTouchRect("ThumbstickFrame") else nil,
+        jump=if touch then coreTouchRect("JumpButton") else nil})
+    local function place(object: GuiObject,uiScale: UIScale,entry)
+        object.AnchorPoint,object.Position,object.Size=Vector2.zero,UDim2.fromOffset(entry.x,entry.y),UDim2.fromOffset(entry.w,entry.h)
+        uiScale.Scale=entry.scale
+        object:SetAttribute("UIScaleBase",entry.scale)
     end
-    toastScale.Scale=math.min(1,(size.X-20)/440)
+    place(crystalHUD,crystalScale,layout.crystal)
+    place(hud,hudScale,layout.hud)
+    place(rail,railScale,layout.rail)
+    place(timers,timerScale,layout.timers)
+    place(action,actionScale,layout.action)
+    local cell=layout.rail.button
+    for i,b in navigationButtons do
+        local cellPosition=layout.rail.positions[i]
+        b.Position,b.Size=UDim2.fromOffset(cellPosition.x,cellPosition.y),UDim2.fromOffset(cell.w,cell.h)
+        for _,child in b:GetChildren() do
+            if child:IsA("TextLabel") then
+                child.Position,child.Size,child.TextSize=UDim2.fromOffset(cell.labelX,cell.labelY),UDim2.fromOffset(cell.labelW,cell.labelH),cell.textSize
+                child.TextScaled=true
+                local limit=child:FindFirstChildOfClass("UITextSizeConstraint") or Instance.new("UITextSizeConstraint")
+                limit.MaxTextSize,limit.Parent=cell.textSize,child
+            elseif child:IsA("GuiObject") and child.Name~="ActiveTab" then
+                child.Position,child.Size=UDim2.fromOffset(cell.iconX,cell.iconY),UDim2.fromOffset(cell.icon,cell.icon)
+            end
+        end
+    end
+    local t=layout.timers
+    leapButton.Position=UDim2.fromOffset(0,t.leapY)
+    weatherTile.Position,weatherTile.Visible=UDim2.fromOffset(0,t.weatherY),t.weatherVisible
+    buffsText.Position,buffsText.Size,buffsText.Visible=UDim2.fromOffset(0,t.buffsY),UDim2.fromOffset(286,t.buffsH),t.buffsVisible
+    for _,item in {{buildBadge,layout.badge},{previewNotice,layout.notice}} do
+        local labelObject,entry=item[1],item[2]
+        labelObject.AnchorPoint,labelObject.Position,labelObject.Size=Vector2.zero,UDim2.fromOffset(entry.x,entry.y),UDim2.fromOffset(entry.w,entry.h)
+        labelObject.TextSize,labelObject.TextXAlignment=entry.textSize,if touch then Enum.TextXAlignment.Left else Enum.TextXAlignment.Center
+    end
+    previewNotice.Text=if touch then "STUDIO PREVIEW: UNSAVED" else "STUDIO PREVIEW • progress not saved • test currency"
+    foodDiagnostic.Visible=not touch and RunService:IsStudio()
+    toastScale.Scale=layout.toastScale
 end
 local function characterAdded(character: Model)
     local humanoid=character:WaitForChild("Humanoid",10) :: Humanoid?
@@ -886,10 +908,25 @@ player.CharacterAdded:Connect(characterAdded)
 if player.Character then task.spawn(characterAdded,player.Character) end
 if workspace.CurrentCamera then workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(scales) end
 gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(scales)
+-- Re-layout when Roblox creates/moves its touch controls or the preferred input changes.
+local layoutQueued=false
+local function queueLayout()
+    if layoutQueued then return end
+    layoutQueued=true
+    task.defer(function() layoutQueued=false scales() end)
+end
+local touchControlNames={JumpButton=true,DynamicThumbstickFrame=true,ThumbstickFrame=true}
+player:WaitForChild("PlayerGui").DescendantAdded:Connect(function(descendant)
+    if touchControlNames[descendant.Name] and descendant:IsA("GuiObject") and descendant:FindFirstAncestor("TouchGui") then
+        descendant:GetPropertyChangedSignal("AbsolutePosition"):Connect(queueLayout)
+        descendant:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueLayout)
+        queueLayout()
+    end
+end)
+pcall(function() Input:GetPropertyChangedSignal("PreferredInput"):Connect(queueLayout) end)
 scales()
 gui:SetAttribute("Ready",true)
 local elapsed=0
-local exitPending=false
 RunService.Heartbeat:Connect(function(dt)
     elapsed+=dt
     if elapsed<.15 then return end elapsed=0
@@ -899,17 +936,17 @@ RunService.Heartbeat:Connect(function(dt)
     local catches=if character then character:GetAttribute("CatchScore") or 0 else 0
     growthLabel.Text=string.format("%d GROWTH",growth)
     catchLabel.Text=string.format("%d catches  •  %s",catches,if state=="Sanctuary" then "Safe sanctuary" else "Island")
-    action.Text=if state=="Sanctuary" then "EXPLORE ISLAND" elseif state=="Active" then "RETURN HOME" else "SAVING..."
+    action.Text=if state=="Sanctuary" then "EXPLORE ISLAND" elseif state=="Active" then "HOME" else "SAVING..."
     action.BackgroundColor3=if state=="Active" then C.red else C.accent
+    if actionIcon then actionIcon.Visible=state=="Active" end
+    actionPadding.PaddingLeft=UDim.new(0,if actionIcon and state=="Active" then 52 else 6)
+    actionPadding.PaddingRight=UDim.new(0,6)
+    if active=="exit" and state~="Active" then close() end
     if character then
         local visualScale=character:GetAttribute("VisualScale") or 1
         player.CameraMinZoomDistance=Config.CameraMinZoom*visualScale
         local humanoid=character:FindFirstChildOfClass("Humanoid")
         if humanoid then humanoid.CameraOffset=Vector3.new(0,(visualScale-1)*2,0) end
-        local deadline=character:GetAttribute("ExitChannelEndsAt") or 0
-        local remaining=deadline-workspace:GetServerTimeNow()
-        if remaining>0 then action.Text=string.format("STAY STILL %.1fs",remaining) exitPending=true
-        elseif exitPending then exitPending=false if state=="Active" then notify("Return cancelled: you moved",C.red) end end
     end
     if growth>lastGrowth and state=="Active" then
         notify(string.format("+%.1f Growth!",growth-lastGrowth),C.accent)
@@ -967,6 +1004,9 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
             if str("NextChestId")~="" then autoHatching=true hatchNext() else open("results") end
         end
     end)
+end)
+player:GetAttributeChangedSignal("LastExitStatusAt"):Connect(function()
+    if str("LastExitStatus")=="predator_nearby" then notify("A bigger dino is too close to go home!",C.red) end
 end)
 player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)
 for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus","LastNestClaimStatus","LastRunStartStatus"} do

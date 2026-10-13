@@ -5,11 +5,24 @@ return table.freeze({
     WalkSpeed = 22,
     JumpPower = 50,
     MaxSlopeAngle = 46,
+    -- BD-053 torso collider. Footprint grows with the dinosaur, but its underside is lifted so
+    -- it clears any ground slope up to MaxSlopeAngle under every footprint corner. PROVISIONAL.
+    DinoColliderWidth = 2.6,
+    DinoColliderLength = 3.2,
+    DinoColliderTopPerScale = 2.6, -- PROVISIONAL: collider top above floor per unit visual scale
+    DinoColliderMinHeight = 1.2, -- PROVISIONAL
+    DinoColliderMinClearance = 0.2,
+    DinoColliderSlopeMargin = 0.35, -- PROVISIONAL: studs on top of the planar slope clearance
+    MovementGuardMaxVerticalSpeed = 120,
     TerrainResolution = 4,
     TerrainTop = 120,
     ArenaHalfWidth = 260,
     CameraMinZoom = 12,
     CameraMaxZoom = 110,
+    -- BD-054 touch HUD layout (shared/TouchLayout). PROVISIONAL until physical Android review.
+    TouchMinTargetPx = 44, -- PROVISIONAL minimum touch target edge in canvas px
+    TouchSafeMargin = 8, -- PROVISIONAL gap to safe-area edges, Roblox touch controls and each other
+    TouchMinHudScale = 0.62, -- PROVISIONAL keeps HUD text >= ~12 px on 360 px tall phones
 
     FoodPoints = 1,
     FoodRespawnSeconds = 8,
@@ -34,9 +47,9 @@ return table.freeze({
     PredationGrowthPoints = 25,
     RepeatVictimCatchCooldownSeconds = 60,
 
-    ExitChannelSeconds = 3,
-    ExitMoveCancelDistance = 2,
+    -- BD-052: Home is a confirmed, immediate return; the 3-second stay-still channel is removed.
     ExitRequestCooldownSeconds = 0.75,
+    HomeThreatRadius = 30, -- PROVISIONAL: Home is refused while a dinosaur that can eat you is this close
     RespawnDelaySeconds = 2,
 
     MaxCatchScore = 5000,

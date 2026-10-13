@@ -135,15 +135,39 @@ assert(not Lifecycle.tryEnd(player,first,"ManualExit"))
 assert(settlements==1,"duplicate settlement")
 start(player)
 assert(player.Character:GetAttribute("RunState")=="Active")
-local blocked={Parent=true,attrs={ProfileState="Loaded",RunStartBlocked="egg_bank_full"}}
-setmetatable(blocked,{__index=player})
-blocked:LoadCharacterAsync()
-start(blocked)
-assert(blocked.Character:GetAttribute("RunState")=="Sanctuary" and blocked.attrs.LastRunStartStatus=="egg_bank_full","full egg bank must block a new run")
-blocked.attrs.RunStartBlocked=""
-start(blocked)
-assert(blocked.Character:GetAttribute("RunState")=="Active","run starts once the bank has room")
-print("Lifecycle passed: sanctuary -> active -> one settlement -> sanctuary; malformed/duplicate requests rejected; BD-044 egg-bank gate")
+print("Lifecycle passed: sanctuary -> active -> one settlement -> sanctuary; malformed/duplicate requests rejected")
+-- BD-052 Home: one confirmed request ends the run at once through the idempotent tryEnd path.
+local home=Remotes.children.RequestEndRun.OnServerEvent.callback
+local running=player.Character
+home(player,"extra")
+assert(running:GetAttribute("RunState")=="Active" and settlements==1,"malformed Home accepted")
+home(player)
+assert(settlements==2 and running:GetAttribute("RunState")=="Settled","Home must settle immediately (no stay-still channel)")
+assert(player:GetAttribute("LastRunEndReason")=="ManualExit" and player:GetAttribute("LastExitStatus")=="returning")
+assert(player.Character~=running and player.Character:GetAttribute("RunState")=="Sanctuary")
+home(player)
+assert(settlements==2,"Home in sanctuary must not settle")
+assert(not Lifecycle.tryEnd(player,running,"Death") and settlements==2,"death after Home settled twice")
+local function newPlayer()
+ local p={Parent=true,attrs={ProfileState="Loaded"}}
+ p.GetAttribute,p.SetAttribute,p.LoadCharacterAsync=player.GetAttribute,player.SetAttribute,player.LoadCharacterAsync
+ p:LoadCharacterAsync() start(p)
+ p.Character:SetAttribute("SpawnProtectionEndsAt",0)
+ return p
+end
+local prey,hunter,small=newPlayer(),newPlayer(),newPlayer()
+prey.Character:SetAttribute("GrowthScore",10) hunter.Character:SetAttribute("GrowthScore",100) small.Character:SetAttribute("GrowthScore",10.5)
+prey.Character.root.Position=vector(0,5,0) hunter.Character.root.Position=vector(0,5,Config.HomeThreatRadius-1) small.Character.root.Position=vector(1,5,0)
+Players.GetPlayers=function()return {prey,hunter,small}end
+local before=settlements
+home(prey)
+assert(prey.Character:GetAttribute("RunState")=="Active" and settlements==before and prey:GetAttribute("LastExitStatus")=="predator_nearby","Home escaped a nearby predator")
+hunter.Character.root.Position=vector(0,5,Config.HomeThreatRadius+5)
+local waitUntil=os.clock()+Config.ExitRequestCooldownSeconds+0.05 repeat until os.clock()>waitUntil
+home(prey)
+assert(settlements==before+1 and prey:GetAttribute("LastRunEndReason")=="ManualExit","Home blocked by a distant or same-size dinosaur")
+Players.GetPlayers=function()return {}end
+print("Home passed: immediate single settlement, sanctuary/duplicate/death no-ops, refused only while a bigger dinosaur is within HomeThreatRadius")
 '''
 if __name__=='__main__':
  p=argparse.ArgumentParser();p.add_argument('--runner',required=True);args=p.parse_args()
