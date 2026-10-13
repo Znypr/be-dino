@@ -22,6 +22,8 @@ local EggGenetics=require(Shared.EggGenetics)
 local EggAppearance=require(Shared.EggAppearance)
 local ShopOdds=require(Shared.ShopOdds)
 local EggOutcomeView=require(Shared.EggOutcomeView)
+-- BD-065 pattern fusion menu: own ScreenGui; pcall keeps Bootstrap safe if it fails to load.
+local fusionMenuOk,FusionMenu=pcall(require,script.Parent.FusionMenu)
 local Marketplace=game:GetService("MarketplaceService")
 local C = Theme.Colors
 local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
@@ -500,6 +502,8 @@ render=function(name: string)
             open("fusionConfirm")
         end)
         button(body,"CHOOSE DINO",70,342,264,47,C.blue,function() open("collection") end)
+        local patternHeight=math.min(60,math.max(47,45/viewportScale()))
+        if fusionMenuOk then button(body,"PATTERN FUSION: 10 -> NEW GOLD",400,402-patternHeight,400,patternHeight,C.purple,function() close() FusionMenu.open() end).TextSize=20 end
     elseif name=="fusionConfirm" then
         local diamond=fusionTarget=="diamond"
         local cost=if diamond then Config.DiamondMutationCost else Config.GoldMutationCost
