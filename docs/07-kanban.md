@@ -47,8 +47,9 @@ Implemented on `claude/be-dino-development` from `50116b8`; **Review / test, not
 memory-only transaction fuses 10 same-species/same-pattern Base identities into one
 NEW Gold with a server ID, consent-gated loss manifest, durable ledger, parent egg
 lineage, idempotent replay and full rollback. Offline harnesses (`verify_fusion.py`,
-repository section of `verify_progression.py`) pass; **no Studio, DataStore or
-production verification was performed.** Trait odds (BD-064), Emerald/Diamond costs,
+repository section of `verify_progression.py`) pass, and an unpublished Studio
+memory-profile check passed 20/20 with Roblox `JSONEncode` matching the byte estimate.
+**No published-place, DataStore or production verification was performed.** Trait odds (BD-064), Emerald/Diamond costs,
 UI/remote (BD-065) and persistent rollout remain open. Consent for Shiny/BIG/mutation
 donors and the hard lock/favorite block are working defaults awaiting owner approval.
 

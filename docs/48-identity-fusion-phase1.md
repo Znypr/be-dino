@@ -6,8 +6,9 @@ Implemented 2026-10-13 on `claude/be-dino-development`, based on `50116b8`
 the identity sidecar this builds on is [BD-060](47-dinosaur-identity-foundation.md).
 
 **Scope: a disabled, development-only transaction foundation.** It is not playable
-fusion, not a Fusion Menu, not trait odds and not a production migration. It is
-**not Studio-verified** and has never run against a persistent profile.
+fusion, not a Fusion Menu, not trait odds and not a production migration. It passed
+one unpublished Studio memory-profile check (below) and has never run against a
+persistent profile or DataStore.
 
 ## What it does
 
@@ -98,11 +99,41 @@ Writing these tests found and fixed one defect in the earlier WIP: `reconcile` s
 applied the grouped genes-presence check to fused records, so every fusion was
 rejected with `gene_mismatch`. Parent egg IDs in the ledger are now distinct.
 
+## Unpublished Studio check (2026-10-13)
+
+A local copy of the PR build (`BeDino-Build020.rbxlx`, commit `1a33656`) was opened
+in Roblox Studio and confirmed unpublished (`GameId = 0`, `PlaceId = 0`). In that
+unsaved copy only, `IdentityFusionPreviewEnabled` was set to `true` in Config's
+source for one Play session, then reverted; the file was not saved or published.
+The checks ran through the Studio MCP server's server-side Luau. That context loads
+its own `ProfileRepository` instance, so they used a stand-in test player
+(`UserId -57`) on that instance's memory store, separate from the joined player's
+profile. Real Roblox `HttpService` JSON round-trips, `Random` and the
+unpublished-only gate were exercised.
+
+- Ten Wavy-Stripes Compies were hatched through the real `commitRunSettlement` /
+  `claimChest` path (24 one-egg runs with fixed, schema-valid egg genes; species stayed
+  the real random draw).
+- 20 of 20 checks passed: quote; `odds_not_approved` without a roller and nothing
+  consumed; roller accepted; stale digest, foreign donor ID and Emerald refused; fusion
+  committed with grouped Gold +1, all ten donors consumed, a new Gold record with the
+  recipe-locked pattern, traits from the controlled outcome, empty cosmetics, lineage
+  with 10 parents and 9 distinct original eggs; duplicate confirm returned the same
+  result without a reroll; token conflict; consumed-donor reuse → `donor_missing`;
+  release/reload kept result and lineage; replay after reload returned the same result.
+- Roblox `HttpService:JSONEncode` matched `IdentityFusion.encodedSize` exactly for
+  synthetic sidecars: 290,317 bytes (300 hatched + 10 fusions) and 964,904 bytes
+  (1,000 hatched + 10 fusions). The estimate is exact for this data, not proven for
+  every possible string.
+- Observation: a fresh unpublished Studio profile starts with a seeded collection of
+  2,522 copies, so a 500-catch run (500 direct copies) exceeded the 3,000-identity
+  guard (`identity_capacity`, rolled back). That is existing BD-060 behaviour, not a
+  fusion defect, but it limits Studio testing headroom.
+
 ## Not performed / not verified
 
-- **No Studio session** (unpublished or published) ran this code, and no Roblox
-  `HttpService:JSONEncode` byte measurement was taken. `MaxSidecarBytes` uses an
-  offline JSON-like estimate, not Roblox encoding.
+- No published-place or multi-client Studio run, and no fusion inside the game's
+  own `Bootstrap`-loaded repository instance (no remote exists to reach it).
 - No DataStore, private test experience, real profile or production save was touched.
 - No competing-server test: lease loss and outages are mocked.
 - No client remote, UI, reveal wheel or mobile test exists.
