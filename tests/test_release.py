@@ -15,6 +15,10 @@ import verify_release  # noqa: E402
 CONFIG = (ROOT / "src/shared/Config.luau").read_text(encoding="utf-8")
 
 
+# Config may already define the future key; these tests need it absent to exercise "missing".
+ABSENT = chr(10).join(l for l in CONFIG.splitlines() if not l.startswith("    IdentityPersistentEnabled =")) + chr(10)
+
+
 def with_value(source, key, literal):
     pattern = re.compile(rf"^(    {key} = )[^,\n]*(,.*)$", re.M)
     assert pattern.search(source), key
@@ -64,22 +68,28 @@ class ReleaseProfileTests(unittest.TestCase):
         self.assertTrue(any(e.startswith("PlaytestPlaceId") for e in report.errors))
 
     def test_playtest_rewrites_release_values_only(self):
-        rewritten, report = profiles.apply_profile(with_ids(CONFIG), "playtest")
+        rewritten, report = profiles.apply_profile(with_ids(ABSENT), "playtest")
         self.assertEqual(report.errors, [])
         values = {k: v[-1][1] for k, v in profiles.config_entries(rewritten).items()}
         self.assertEqual(values["ProfileDataStoreName"], values["PlaytestProfileDataStoreName"])
         self.assertNotEqual(values["ProfileDataStoreName"], profiles.DEVELOPMENT_STORE_NAME)
         self.assertEqual(values["ReleaseProfile"], "playtest")
-        changed = [a for a, b in zip(with_ids(CONFIG).splitlines(), rewritten.splitlines()) if a != b]
+        changed = [a for a, b in zip(with_ids(ABSENT).splitlines(), rewritten.splitlines()) if a != b]
         self.assertEqual(len(changed), 2)
         self.assertTrue(any("missing from src/shared/Config.luau" in w and "IdentityPersistentEnabled" in w
                             for w in report.warnings))
 
     def test_future_key_is_set_once_present(self):
-        source = with_ids(CONFIG).replace("    ReleaseProfile =", "    IdentityPersistentEnabled = false,\n    ReleaseProfile =", 1)
+        source = with_ids(ABSENT).replace("    ReleaseProfile =", "    IdentityPersistentEnabled = false,\n    ReleaseProfile =", 1)
         rewritten, report = profiles.apply_profile(source, "playtest")
         self.assertEqual(report.errors, [])
         self.assertIs(profiles.config_entries(rewritten)["IdentityPersistentEnabled"][-1][1], True)
+
+    def test_existing_future_key_is_rewritten_in_place(self):
+        rewritten, report = profiles.apply_profile(with_ids(CONFIG), "playtest")
+        self.assertEqual(report.errors, [])
+        entries = profiles.config_entries(rewritten)["IdentityPersistentEnabled"]
+        self.assertEqual(len(entries), 1)
 
     def test_safety_flags_are_not_silently_patched(self):
         source = with_value(with_ids(CONFIG), "ChestTestGrantEnabled", "true")
