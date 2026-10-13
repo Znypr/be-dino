@@ -125,10 +125,11 @@ unpublished-only gate were exercised.
   synthetic sidecars: 290,317 bytes (300 hatched + 10 fusions) and 964,904 bytes
   (1,000 hatched + 10 fusions). The estimate is exact for this data, not proven for
   every possible string.
-- Observation: a fresh unpublished Studio profile starts with a seeded collection of
-  2,522 copies, so a 500-catch run (500 direct copies) exceeded the 3,000-identity
-  guard (`identity_capacity`, rolled back). That is existing BD-060 behaviour, not a
-  fusion defect, but it limits Studio testing headroom.
+- Observation: an earlier attempt used 500-catch runs, and each credits 500 direct
+  copies under the Build 020 run reward. After about five such runs the test profile
+  held 2,522 copies, and the next run exceeded the 3,000-identity guard
+  (`identity_capacity`, rolled back as designed). The donors were then collected with
+  one-egg, 10-catch runs. A new Studio profile starts with one Compy.
 
 ## Not performed / not verified
 
