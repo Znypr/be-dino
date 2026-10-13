@@ -249,6 +249,49 @@ dupOk,_,dupStatus=Repository.commitRunSettlement(b,"run-150",150)
 assert(dupOk and dupStatus=="duplicate" and same(snapshot,data[key(b)]),"settledRuns ledger must block re-settlement")
 print(string.format("150-egg run passed: 150 eggs credited in 15 hatch-page transactions (%d transforms incl. probes), revealed in committed ascending order, reconnect mid-page loses no credit; %d hatched total, trimmed-ledger replay blocked", claimRequests, expectedSuccess))
 
+------------------------------------------------------------------ Conservation across hatch pages, leave and rejoin
+-- settled == credited + queued + banked, where "credited" is judged from collection growth and
+-- committed egg outcomes (not from reveal counts), at every step including a leave mid-page.
+do
+ local u=user(110)
+ assert(Repository.load(u))
+ local before=totalCopies(data[key(u)])
+ assert(Repository.commitRunSettlement(u,"conserve",150))
+ local all={} for _,egg in revealLine(u) do all[egg.eggId]=egg end
+ assert(#revealLine(u)==150)
+ local function check(label)
+  local live={}
+  for _,egg in revealLine(u) do assert(not live[egg.eggId],"duplicate live egg "..label) live[egg.eggId]=true end
+  local credited,successes=0,0
+  for id,egg in all do
+   if not live[id] then credited+=1 if egg.genes.hatchSuccess then successes+=1 end end
+  end
+  assert(credited+#revealLine(u)==150,"conservation "..label)
+  assert(totalCopies(data[key(u)])==before+successes,"collection growth != credited successes "..label)
+  return credited
+ end
+ check("settled")
+ for i=1,37 do assert(Repository.claimChest(u,u.attrs.NextChestId)) end
+ local creditedMid=check("mid-page")
+ assert(creditedMid==40 and Repository.pendingReveals(u)==3,"37 revealed, page of 40 credited, 3 buffered: "..creditedMid)
+ Repository.release(u) -- leave with 3 credited-but-unrevealed eggs
+ assert(Repository.pendingReveals(u)==0)
+ assert(Repository.load(u))
+ assert(check("after rejoin")==40,"rejoin must neither re-credit nor drop the buffered eggs")
+ -- A stale client id for an already-credited egg is a harmless duplicate or unknown, never a second credit.
+ local copies=totalCopies(data[key(u)])
+ for id,egg in all do
+  if not string.find(id,"nope") and #revealLine(u)>0 then
+   local okStale,_,stale=Repository.claimChest(u,id)
+   assert(totalCopies(data[key(u)])==copies,"stale id must not credit "..tostring(stale))
+   break
+  end
+ end
+ while u.attrs.NextChestId~="" do assert(Repository.claimChest(u,u.attrs.NextChestId)) end
+ assert(check("drained")==150 and #revealLine(u)==0)
+end
+print("Conservation passed: settled == credited + queued + banked at settlement, mid-page, after leave/rejoin with 3 buffered eggs, and fully drained; stale ids never double-credit")
+
 ------------------------------------------------------------------ Outage, transient failure, lease loss
 local c=user(103)
 assert(Repository.load(c))

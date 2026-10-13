@@ -542944,6 +542944,12 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     return true, committedOutcome, if duplicate then "duplicate" else "committed"
 end
 
+-- Number of already-credited eggs whose reveal animation is still buffered in memory.
+function ProfileRepository.pendingReveals(player: Player): number
+    local buffered = revealBuffer[player]
+    return if buffered then #buffered else 0
+end
+
 -- UI preference only (which species rarities the client auto-skips while revealing). Rewards
 -- never depend on it; skipped eggs are still hatched and credited. Additive profile field.
 function ProfileRepository.setRevealSkip(player: Player, selection: any): (boolean, string)

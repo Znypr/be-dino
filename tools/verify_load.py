@@ -309,20 +309,23 @@ local function revealAll(server, p, rng, sc)
     local book, started = eggBook(p), now
     for _ = 1, 1000 do
         if now - started >= sc.revealCap then break end
-        -- Track queue ids in order: paged claims commit up to 5 eggs at once and reveal
-        -- them from a server buffer, so committed eggs leave the stored queue early.
-        book.pending = book.pending or {}
-        local profile = DATA[keyOf(p)]
-        for _, queued in (profile and profile.eggs or {}) do
-            if not table.find(book.pending, queued.eggId) then table.insert(book.pending, queued.eggId) end
-        end
-        local eggId = book.pending[1]
-        if not eggId then break end
+        -- Like the real client: reveal whatever NextChestId names (paged claims credit up to
+        -- Config.HatchPageSize eggs per transaction and serve the rest from a server buffer).
+        local eggId = p.attrs.NextChestId
+        if eggId == nil or eggId == "" then break end
         local ok, _, status = op("claim", server.Repository.claimChest, p, eggId)
         if not judge("claim", ok, status) then break end
-        table.remove(book.pending, 1)
         if status ~= "duplicate" then book.claimed += 1 end
         sleep(sc.revealSeconds)
+    end
+end
+
+-- Leaving drops the in-memory reveal buffer: those eggs are already credited, only their
+-- animation is lost, so they count as claimed for conservation.
+local function releaseTracked(repository)
+    return function(p)
+        if repository.pendingReveals then eggBook(p).claimed += repository.pendingReveals(p) end
+        return repository.release(p)
     end
 end
 
@@ -407,7 +410,7 @@ local function playerLoop(sc, servers, p, index, rng)
             local from, old = server, p
             old.Parent = nil
             leave(from, old)
-            task.spawn(function() op("release", from.Repository.release, old) end)
+            task.spawn(function() op("release", releaseTracked(from.Repository), old) end)
             sleep(3)
             -- A real hop gives the new server its own Player object for the same UserId.
             p = newPlayer(old.UserId)
@@ -418,7 +421,7 @@ local function playerLoop(sc, servers, p, index, rng)
     end
     p.Parent = nil
     leave(server, p)
-    op("release", server.Repository.release, p)
+    op("release", releaseTracked(server.Repository), p)
     ACTIVE -= 1
 end
 
@@ -438,7 +441,7 @@ end
 local function seedProfile(server, p, sc)
     join(server, p)
     assert(server.Repository.load(p))
-    server.Repository.release(p)
+    releaseTracked(server.Repository)(p)
     leave(server, p)
     DATA[keyOf(p)].collection.raptor.base = 1
 end
