@@ -93,6 +93,11 @@ elseif identityPersistent() then
 end
 local leaseId = HttpService:GenerateGUID(false)
 local profiles: {[Player]: any} = {}
+-- BD-044 hatch pages: one claim transaction commits up to Config.HatchPageSize queued run
+-- eggs; committed (already credited) results wait here so the client still reveals them
+-- one at a time (~1 s each) without a DataStore request per egg. Memory only: a rejoin
+-- mid-page loses just the animation, never a credit (see docs/50).
+local revealBuffer: {[Player]: {any}} = {}
 local renewing = false
 
 local function keyFor(player: Player): string
@@ -195,6 +200,10 @@ local function isValidProfile(profile: any): boolean
     if profile.pendingNests ~= nil then
         if typeof(profile.pendingNests) ~= "table" or #profile.pendingNests > 1000 then return false end
         for _, nest in profile.pendingNests do if not validNest(nest, false) then return false end end
+    end
+    if profile.revealSkip ~= nil then
+        if typeof(profile.revealSkip) ~= "table" or #profile.revealSkip > 3 then return false end
+        for _, rarity in profile.revealSkip do if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity < 1 or rarity > 3 then return false end end
     end
     if profile.settledRuns ~= nil then
         if typeof(profile.settledRuns) ~= "table" then return false end
@@ -302,9 +311,14 @@ local function syncAttributes(player: Player, profile: any)
     end
     player:SetAttribute("NestsJson", HttpService:JSONEncode(nestSummary))
     player:SetAttribute("PendingNestCount", pendingNests)
+    player:SetAttribute("RevealSkipJson", HttpService:JSONEncode(profile.revealSkip or {}))
     player:SetAttribute("RunStartBlocked", ProfileRepository.runStartBlockReason(profile))
     local nextChest = profile.eggs[1]
-    if typeof(nextChest) == "table" then
+    local buffered = revealBuffer[player]
+    if buffered and #buffered > 0 then
+        player:SetAttribute("NextChestId", buffered[1].eggId)
+        player:SetAttribute("NextChestReadyAt", 0)
+    elseif typeof(nextChest) == "table" then
         player:SetAttribute("NextChestId", nextChest.eggId)
         player:SetAttribute("NextChestReadyAt", nextChest.readyAt)
     else
@@ -877,6 +891,48 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     return true, committedOutcome, if duplicate then "duplicate" else "committed"
 end
 
+-- Number of already-credited eggs whose reveal animation is still buffered in memory.
+function ProfileRepository.pendingReveals(player: Player): number
+    local buffered = revealBuffer[player]
+    return if buffered then #buffered else 0
+end
+
+-- UI preference only (which species rarities the client auto-skips while revealing). Rewards
+-- never depend on it; skipped eggs are still hatched and credited. Additive profile field.
+function ProfileRepository.setRevealSkip(player: Player, selection: any): (boolean, string)
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then return false, "profile_not_loaded" end
+    if typeof(selection) ~= "table" or #selection > 3 then return false, "invalid_selection" end
+    local seen, clean = {}, {}
+    for _, rarity in selection do
+        if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity < 1 or rarity > 3 or seen[rarity] then return false, "invalid_selection" end
+        seen[rarity] = true
+        table.insert(clean, rarity)
+    end
+    table.sort(clean)
+    local leaseLost = false
+    local now = os.time()
+    local ok, updated = retry("reveal skip", function()
+        return store:UpdateAsync(keyFor(player), function(profileValue)
+            leaseLost = false
+            if not isValidProfile(profileValue) then return nil end
+            if not ownSession(profileValue) then leaseLost = true return nil end
+            profileValue.revealSkip = table.clone(clean)
+            profileValue.revision += 1
+            profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            return profileValue
+        end)
+    end)
+    if not ok or updated == nil then
+        if leaseLost then player:SetAttribute("ProfileState", "LeaseLost") return false, "lease_lost" end
+        player:SetAttribute("ProfileState", "SaveFailed")
+        return false, "save_failed"
+    end
+    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
+    syncAttributes(player, profiles[player])
+    return true, "saved"
+end
+
 -- Opens a ready bonus nest: its precommitted eggs join the reveal line next (ahead of
 -- the remaining banked run eggs) and the oldest pending nest takes the freed slot.
 function ProfileRepository.claimNest(player: Player, nestId: string)
@@ -1116,6 +1172,75 @@ function ProfileRepository.grantChestTest(player: Player): (boolean, string)
     return true, if duplicate then "duplicate" else "granted"
 end
 
+-- Credits one queue egg (collection, identity, metrics), refills the queue and records
+-- its operation. Returns the committed outcome or nil. Runs inside an UpdateAsync transform.
+local function applyHatch(profileValue: any, chest: any, index: number, outcome: any, now: number)
+    table.remove(profileValue.eggs, index)
+    local species = profileValue.collection[outcome.speciesId]
+    if typeof(species) ~= "table" then return nil end
+    local mutationId=chest.mutationId or ""
+    outcome.genes=chest.genes
+    outcome.failed=chest.genes~=nil and not chest.genes.hatchSuccess
+    if outcome.failed then
+        outcome.count=0
+    elseif chest.big or chest.shiny or chest.genes then
+        local key = EggTraits.key(mutationId, chest.shiny == true, chest.big == true,chest.genes)
+        local variant = species.variants[key] or {mutationId=mutationId, shiny=chest.shiny == true, big=chest.big == true, count=0,genes=chest.genes}
+        variant.count += outcome.count
+        species.variants[key] = variant
+    elseif mutationId~="" then
+        if not ProgressionRules.knownEventMutation(mutationId) then return nil end
+        species.events[mutationId]=(species.events[mutationId] or 0)+outcome.count
+    else species.base += outcome.count end
+    if identityAvailable(profileValue.dinosaurIdentity) and not outcome.failed then
+        local bucketKey = outcome.speciesId .. "/base"
+        if chest.big or chest.shiny or chest.genes then
+            bucketKey = outcome.speciesId .. "/variant/" .. EggTraits.key(mutationId, chest.shiny == true, chest.big == true, chest.genes)
+        elseif mutationId ~= "" then bucketKey = outcome.speciesId .. "/event/" .. mutationId end
+        outcome.instanceIds = DinosaurIdentity.hatch(profileValue.dinosaurIdentity, chest,
+            outcome.speciesId, outcome.count, bucketKey)
+    end
+    outcome.eventMutationId=mutationId
+    outcome.eventId=chest.eventId or "clear"
+    outcome.big=chest.big == true
+    outcome.shiny=chest.shiny == true
+    outcome.eggId=chest.eggId
+    if not outcome.failed then profileValue.metrics.rarest = math.max(profileValue.metrics.rarest, Config.SpeciesRarities[outcome.speciesId]) end
+
+    if profileValue.pendingChestGrants > 0 then
+        profileValue.pendingChestGrants -= 1
+        local readyAt = if Config.ChestTimerSeconds == 0 then now else lastChestReadyAt(profileValue, now) + Config.ChestTimerSeconds
+        local metadata=if profileValue.pendingEggEvents then table.remove(profileValue.pendingEggEvents,1) else nil
+        table.insert(profileValue.eggs, {
+            eggId = HttpService:GenerateGUID(false),
+            kind = "alpha_chest",
+            readyAt = readyAt,
+            eventId=if metadata then metadata.eventId else "clear",
+            mutationId=if metadata then metadata.mutationId else "",
+            reward=if metadata then metadata.reward else nil,
+            shiny=if metadata then metadata.shiny else nil,
+            big=if metadata then metadata.big else nil,
+            genes=if metadata then metadata.genes else nil,
+            source=if metadata then metadata.source else nil,
+            traitRollVersion=if metadata then metadata.traitRollVersion else nil,
+        })
+    end
+    -- BD-044: banked run/nest eggs advance once legacy overflow is drained.
+    refillFromBank(profileValue, now)
+    table.insert(profileValue.recentOperations, {id = "chest:" .. chest.eggId, kind = "chest_claim", outcome = outcome})
+    return outcome
+end
+
+local function publishHatch(player: Player, chestId: string, committedOutcome: any)
+    player:SetAttribute("LastChestRewardText", string.format("%dx %s", committedOutcome.count, committedOutcome.speciesId))
+    player:SetAttribute("LastChestEventMutation",committedOutcome.eventMutationId or "")
+    player:SetAttribute("LastChestBig",committedOutcome.big == true)
+    player:SetAttribute("LastChestShiny",committedOutcome.shiny == true)
+    player:SetAttribute("LastChestGenesJson",HttpService:JSONEncode(committedOutcome.genes))
+    player:SetAttribute("LastChestFailed",committedOutcome.failed==true)
+    player:SetAttribute("LastClaimedChestId", chestId)
+end
+
 function ProfileRepository.claimChest(player: Player, chestId: string)
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
@@ -1126,6 +1251,24 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
     end
 
     local operationId = "chest:" .. chestId
+    -- Reveal an already-committed page entry: no DataStore request.
+    local buffered = revealBuffer[player]
+    if buffered and #buffered > 0 then
+        if buffered[1].eggId ~= chestId then
+            local done = findOperation(cached, operationId)
+            if done then return true, done.outcome, "duplicate" end
+            -- "Reveal next": a claim for a still-queued egg while a page is waiting reveals the
+            -- page head (pages precede later queue eggs); anything else is unknown.
+            local queued = false
+            for _, queuedEgg in cached.eggs do if queuedEgg.eggId == chestId then queued = true break end end
+            if not queued then return false, nil, "missing" end
+            chestId = buffered[1].eggId
+        end
+        local entry = table.remove(buffered, 1)
+        syncAttributes(player, cached)
+        publishHatch(player, chestId, entry.outcome)
+        return true, entry.outcome, "claimed"
+    end
     local cachedOperation = findOperation(cached, operationId)
     if cachedOperation then
         return true, cachedOperation.outcome, "duplicate"
@@ -1145,7 +1288,7 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
 
     -- Generate once outside UpdateAsync so retries cannot reroll the reward.
     local outcome = if cachedChest.reward then table.clone(cachedChest.reward) else RewardMath.computeChestReward(Random.new())
-    local refillChestId = HttpService:GenerateGUID(false)
+    local pageOutcomes = {}
     local duplicateOutcome = nil
     local leaseLost = false
     local notReady = false
@@ -1184,65 +1327,22 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
             end
             if chest.reward and index ~= 1 then missing = true return nil end
 
-            table.remove(profileValue.eggs, index)
-            local species = profileValue.collection[outcome.speciesId]
-            if typeof(species) ~= "table" then return nil end
-            local mutationId=chest.mutationId or ""
-            outcome.genes=chest.genes
-            outcome.failed=chest.genes~=nil and not chest.genes.hatchSuccess
-            if outcome.failed then
-                outcome.count=0
-            elseif chest.big or chest.shiny or chest.genes then
-                local key = EggTraits.key(mutationId, chest.shiny == true, chest.big == true,chest.genes)
-                local variant = species.variants[key] or {mutationId=mutationId, shiny=chest.shiny == true, big=chest.big == true, count=0,genes=chest.genes}
-                variant.count += outcome.count
-                species.variants[key] = variant
-            elseif mutationId~="" then
-                if not ProgressionRules.knownEventMutation(mutationId) then return nil end
-                species.events[mutationId]=(species.events[mutationId] or 0)+outcome.count
-            else species.base += outcome.count end
-            if identityAvailable(profileValue.dinosaurIdentity) and not outcome.failed then
-                local bucketKey = outcome.speciesId .. "/base"
-                if chest.big or chest.shiny or chest.genes then
-                    bucketKey = outcome.speciesId .. "/variant/" .. EggTraits.key(mutationId, chest.shiny == true, chest.big == true, chest.genes)
-                elseif mutationId ~= "" then bucketKey = outcome.speciesId .. "/event/" .. mutationId end
-                outcome.instanceIds = DinosaurIdentity.hatch(profileValue.dinosaurIdentity, chest,
-                    outcome.speciesId, outcome.count, bucketKey)
+            pageOutcomes = {}
+            if not applyHatch(profileValue, chest, index, outcome, now) then return nil end
+            -- Hatch page: following ready run/nest eggs at the queue head commit in the same
+            -- transaction (their rewards are precommitted, so nothing is rerolled).
+            while #pageOutcomes < Config.HatchPageSize - 1 and chest.reward and chest.genes
+                and (chest.kind == "run_egg" or chest.kind == "nest_egg") do
+                local nextEgg = profileValue.eggs[1]
+                if not nextEgg or not nextEgg.reward or not nextEgg.genes or now < nextEgg.readyAt
+                    or (nextEgg.kind ~= "run_egg" and nextEgg.kind ~= "nest_egg") then break end
+                local nextOutcome = applyHatch(profileValue, nextEgg, 1, table.clone(nextEgg.reward), now)
+                if not nextOutcome then return nil end
+                table.insert(pageOutcomes, nextOutcome)
             end
-            outcome.eventMutationId=mutationId
-            outcome.eventId=chest.eventId or "clear"
-            outcome.big=chest.big == true
-            outcome.shiny=chest.shiny == true
-            if not outcome.failed then profileValue.metrics.rarest = math.max(profileValue.metrics.rarest, Config.SpeciesRarities[outcome.speciesId]) end
-
-            if profileValue.pendingChestGrants > 0 then
-                profileValue.pendingChestGrants -= 1
-                local readyAt = if Config.ChestTimerSeconds == 0 then now else lastChestReadyAt(profileValue, now) + Config.ChestTimerSeconds
-                local metadata=if profileValue.pendingEggEvents then table.remove(profileValue.pendingEggEvents,1) else nil
-                table.insert(profileValue.eggs, {
-                    eggId = refillChestId,
-                    kind = "alpha_chest",
-                    readyAt = readyAt,
-                    eventId=if metadata then metadata.eventId else "clear",
-                    mutationId=if metadata then metadata.mutationId else "",
-                    reward=if metadata then metadata.reward else nil,
-                    shiny=if metadata then metadata.shiny else nil,
-                    big=if metadata then metadata.big else nil,
-                    genes=if metadata then metadata.genes else nil,
-                    source=if metadata then metadata.source else nil,
-                    traitRollVersion=if metadata then metadata.traitRollVersion else nil,
-                })
-            end
-            -- BD-044: banked run/nest eggs advance once legacy overflow is drained.
-            refillFromBank(profileValue, now)
 
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
-            table.insert(profileValue.recentOperations, {
-                id = operationId,
-                kind = "chest_claim",
-                outcome = outcome,
-            })
             trimOperations(profileValue)
             return profileValue
         end)
@@ -1262,15 +1362,13 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
     if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
     syncAttributes(player, profiles[player])
     local committedOutcome = duplicateOutcome or outcome
-    player:SetAttribute("LastChestRewardText", string.format(
-        "%dx %s", committedOutcome.count, committedOutcome.speciesId
-    ))
-    player:SetAttribute("LastChestEventMutation",committedOutcome.eventMutationId or "")
-    player:SetAttribute("LastChestBig",committedOutcome.big == true)
-    player:SetAttribute("LastChestShiny",committedOutcome.shiny == true)
-    player:SetAttribute("LastChestGenesJson",HttpService:JSONEncode(committedOutcome.genes))
-    player:SetAttribute("LastChestFailed",committedOutcome.failed==true)
-    player:SetAttribute("LastClaimedChestId", chestId)
+    if not duplicateOutcome and #pageOutcomes > 0 then
+        local pageBuffer = {}
+        for _, pageOutcome in pageOutcomes do table.insert(pageBuffer, {eggId = pageOutcome.eggId, outcome = pageOutcome}) end
+        revealBuffer[player] = pageBuffer
+        syncAttributes(player, profiles[player])
+    end
+    publishHatch(player, chestId, committedOutcome)
     return true, committedOutcome, if duplicateOutcome then "duplicate" else "claimed"
 end
 
@@ -1535,6 +1633,7 @@ function ProfileRepository.renew(player: Player): boolean
 end
 
 function ProfileRepository.release(player: Player)
+    revealBuffer[player] = nil
     local cached = profiles[player]
     profiles[player] = nil
     if not cached then return end

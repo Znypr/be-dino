@@ -65,6 +65,7 @@ jobs:
           if grep -Eq '^    PlaytestPlaceId = [1-9][0-9]*,' src/shared/Config.luau; then
             python tools/build.py --profile playtest
             python tools/verify_release.py --profile playtest --place "build/${BE_DINO_BUILD}-playtest.rbxlx"
+            python tools/verify_load.py --runner /tmp/luau/luau --gate-playtest
           else
             echo "PlaytestPlaceId not recorded yet (BD-004); playtest place not built."
           fi

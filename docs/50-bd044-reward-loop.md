@@ -47,7 +47,7 @@ Old saves have none of the new fields and load unchanged; old queued eggs (inclu
    returns `duplicate` without preparing anything.
 3. All randomness is committed **before** `UpdateAsync`: per-egg species (batch boost
    `B = 1 + (clamp(N,1,15)-1)*0.25`), genes/traits, nest contents. Eggs are sorted by
-   ascending species rarity (stable by catch ordinal), matching the ordered ~5 s reveal.
+   ascending species rarity (stable by catch ordinal), matching the ordered reveal (`HatchRevealSeconds`, **1 s per egg**, PROVISIONAL owner decision 2026-10-13).
 4. The transform re-checks the lease and the ledger (a lost acknowledgement or a retry by
    the same session finds its own write and reports `duplicate`), then appends deep copies
    of the batch to the bank, refills the queue, places nests, credits deterministic crystals
@@ -71,12 +71,50 @@ that does start always fits; settlement itself never refuses or truncates.
 
 ## Reveal and claims
 
-`claimChest` is unchanged for the player: claim the queue head, ~5 s ordered reveal, then
+`claimChest` is unchanged for the player: claim the queue head, 1 s ordered reveal, then
 the client auto-advances (`NextChestId`). After each claim the queue refills from legacy
 overflow first, then from the bank. A 150-egg batch is 5 queued + 145 banked and reveals
 continuously; closing or rejoining resumes at the exact next egg with no reroll.
 One identity (`DinosaurIdentity.hatch`, count 1) is created per hatched dinosaur; failed
 Cracked eggs create none. Legacy eggs with a committed count of 2 or 3 still create 2-3.
+
+## Hatch pages: request budget (integration fix, 2026-10-13)
+
+One `UpdateAsync` per revealed egg at the original 5 s was 12 requests/min per player, which projected to
+154.7/min for 8 players (budget 140) and 210.7/min for 12 (budget 180) in `tools/verify_load.py`.
+Claims are now **paged**: claiming a run/nest egg at the queue head commits up to
+`HatchPageSize = 10` (PROVISIONAL; was 5 at the 5 s reveal) consecutive ready run/nest eggs in the **same** transaction
+(each credited, identity-hatched and recorded as its own `chest:<eggId>` operation; legacy and
+purchased eggs still claim singly). The first result is returned; the other committed results
+wait in a per-player in-memory reveal buffer and `NextChestId` points at them, so the existing
+client keeps revealing one egg per 1 s with **no** DataStore request for buffered entries.
+Claiming a buffered egg only pops the buffer; a claim for a still-queued egg while a page is
+waiting reveals the page head ("reveal next"); already-credited IDs return `duplicate`.
+Reveal pacing is now 1 s/egg, i.e. 60 eggs/min per player; with pages of 10 that is 6 claim requests/min/player
+(page size 5 would be 12/min and exceed the budgets again). Projection incl. renews and pickups: 8 players about 107/min vs 140 (76%), 12 players about 139/min vs 180 (77%); `verify_load.py` prints the same formula.
+
+Consequences: credit happens at page commit, so a rejoin mid-page loses only the reveal
+animation of up to 9 already-credited eggs (they are in the collection; verified in
+`verify_rewards.py`). Exactly-once, one dinosaur/egg, deterministic order and the 5-slot queue are
+unchanged; a page never crosses a legacy/purchased egg. Studio check pending: reveal UX when the
+buffer is reconnected-lost, and `verify_load.py`'s hard-coded projection formula should be updated
+to the paged model by its owner.
+
+## Skipping selected rarities (PROVISIONAL, owner request 2026-10-13)
+
+Instead of one skip button the player chooses which **species rarities** to skip
+(Common / Rare / Legendary; default none, so Legendary is always shown unless chosen) in
+Settings -> "Skip reveals". Logic lives in the pure `src/shared/RevealSkip.luau`
+(normalize/toggle/shouldSkip/summarize/lines). A skipped egg is **still hatched and credited
+by the server** exactly like any other; only the animation is dropped. **Notable finds are never
+skipped:** Shiny, BIG, event mutation, Rainbow or Astra condition, and any outcome the client
+cannot classify. Skipped eggs are collected in a compact end-of-batch "Skipped eggs" summary
+(counts per rarity, hatched vs cracked, notable names). The selection is a UI preference stored in the
+additive profile field `revealSkip` (array of 1-3 rarity numbers, validated by
+`ProfileRepository.setRevealSkip` behind the rate-limited `SetRevealSkip` remote, mirrored in the
+`RevealSkipJson` attribute); the server never reads it when granting anything. Tested in
+`verify_rewards.py` (selection logic, validation, persistence, claims unaffected). Studio check
+of the Settings row layout and the summary modal is pending.
 
 ## Bonus nests (PROVISIONAL rule and contents)
 
@@ -165,7 +203,7 @@ contract: one copy per egg, one identity per hatch, bank FIFO, crystals 429/149)
 ## Open risks / not done
 
 - **Studio verification pending:** run end/death/disconnect settlement, 150-egg reveal
-  pacing (~12.5 min at 5 s/egg), nest button, run-start gate message, multiplayer/rejoin.
+  pacing (~2.5 min at 1 s/egg; was ~12.5 min at 5 s), nest button, run-start gate message, multiplayer/rejoin.
 - 150-egg pacing/skip UX and the Uncommon/Epic rarity taxonomy are still open owner
   decisions (current tiers remain Common/Rare/Legendary).
 - Purchased eggs still enter the legacy overflow, so they can be revealed before the rest

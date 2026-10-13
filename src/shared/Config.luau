@@ -106,7 +106,7 @@ return table.freeze({
     CollectionTestGrantVersion = 1,
 
     ChestTimerSeconds = 0, -- Reveals, rather than offline incubation, pace new eggs.
-    HatchRevealSeconds = 5,
+    HatchRevealSeconds = 1, -- PROVISIONAL owner decision 2026-10-13: 1 s per egg reveal (was 5 s)
     EggRarityBoostPerExtraEgg = 0.25,
     EggRarityBoostMaxEggs = 15,
     BigChance = 0.1,
@@ -122,6 +122,7 @@ return table.freeze({
     -- exactly ONE run egg; no direct N(c)=c copies and no 10/100/500 threshold eggs.
     -- Run eggs beyond the five-slot reveal queue wait in a server-side ordered bank.
     RunRewardConfigVersion = 2,
+    HatchPageSize = 10, -- PROVISIONAL: queued run eggs committed per claim transaction; at 1 s/egg = 6 claims/min/player (size 5 would be 12/min and bust the 8/12-player budgets)
     RunEggMaxPerRun = 300, -- PROVISIONAL: catches stop counting at 300 eggs per run (storage bound)
     RunEggBankCapacity = 600, -- PROVISIONAL: banked run eggs behind the queue; runs start only with room for a full run
     SettledRunLedgerSize = 200, -- PROVISIONAL: settled run IDs kept for exactly-once settlement beyond recentOperations

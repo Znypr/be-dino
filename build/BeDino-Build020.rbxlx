@@ -365268,7 +365268,7 @@ return table.freeze({
     CollectionTestGrantVersion = 1,
 
     ChestTimerSeconds = 0, -- Reveals, rather than offline incubation, pace new eggs.
-    HatchRevealSeconds = 5,
+    HatchRevealSeconds = 1, -- PROVISIONAL owner decision 2026-10-13: 1 s per egg reveal (was 5 s)
     EggRarityBoostPerExtraEgg = 0.25,
     EggRarityBoostMaxEggs = 15,
     BigChance = 0.1,
@@ -365284,6 +365284,7 @@ return table.freeze({
     -- exactly ONE run egg; no direct N(c)=c copies and no 10/100/500 threshold eggs.
     -- Run eggs beyond the five-slot reveal queue wait in a server-side ordered bank.
     RunRewardConfigVersion = 2,
+    HatchPageSize = 10, -- PROVISIONAL: queued run eggs committed per claim transaction; at 1 s/egg = 6 claims/min/player (size 5 would be 12/min and bust the 8/12-player budgets)
     RunEggMaxPerRun = 300, -- PROVISIONAL: catches stop counting at 300 eggs per run (storage bound)
     RunEggBankCapacity = 600, -- PROVISIONAL: banked run eggs behind the queue; runs start only with room for a full run
     SettledRunLedgerSize = 200, -- PROVISIONAL: settled run IDs kept for exactly-once settlement beyond recentOperations
@@ -369236,6 +369237,88 @@ return ResourceModels
       </Item>
       <Item class="ModuleScript" referent="RBX213">
         <Properties>
+          <string name="Name">RevealSkip</string>
+          <ProtectedString name="Source">--!strict
+-- BD-044 reveal skipping (PROVISIONAL). Pure client/server-neutral selection logic.
+-- A skipped egg is still hatched and credited by the server; skipping only drops the
+-- animation. Notable finds (Shiny, BIG, event mutation, Rainbow/Astra) are never skipped.
+-- The stored selection is a UI preference: the server never uses it for rewards.
+local Skip = {}
+Skip.Rarities = {1, 2, 3} -- Config.SpeciesRarities values: Common / Rare / Legendary
+Skip.Names = {"Common", "Rare", "Legendary"}
+
+-- Accepts any list of rarity numbers; returns a sorted, de-duplicated, valid list.
+function Skip.normalize(list: any): {number}
+    local seen, result = {}, {}
+    if typeof(list) ~= "table" then return result end
+    for _, value in list do
+        if typeof(value) == "number" and value % 1 == 0 and value &gt;= 1 and value &lt;= #Skip.Names and not seen[value] then
+            seen[value] = true
+            table.insert(result, value)
+        end
+    end
+    table.sort(result)
+    return result
+end
+
+function Skip.set(list: any): {[number]: boolean}
+    local set = {}
+    for _, rarity in Skip.normalize(list) do set[rarity] = true end
+    return set
+end
+
+function Skip.toggle(list: any, rarity: number): {number}
+    local set = Skip.set(list)
+    if rarity &gt;= 1 and rarity &lt;= #Skip.Names and rarity % 1 == 0 then set[rarity] = if set[rarity] then nil else true end
+    local result = {}
+    for value in set do table.insert(result, value) end
+    table.sort(result)
+    return result
+end
+
+-- outcome: {big, shiny, eventMutationId, genes={conditionId}, failed}
+function Skip.isNotable(outcome: any): boolean
+    if typeof(outcome) ~= "table" then return true end -- unknown data is never hidden
+    if outcome.shiny == true or outcome.big == true then return true end
+    if typeof(outcome.eventMutationId) == "string" and outcome.eventMutationId ~= "" then return true end
+    local genes = outcome.genes
+    if typeof(genes) == "table" and (genes.conditionId == "rainbow" or genes.conditionId == "astra") then return true end
+    return false
+end
+
+function Skip.shouldSkip(selection: any, rarity: number, outcome: any): boolean
+    if not Skip.set(selection)[rarity] then return false end
+    return not Skip.isNotable(outcome)
+end
+
+-- entries: {{rarity=number, outcome=table, speciesId=string?}}
+function Skip.summarize(entries: {any})
+    local summary = {total = #entries, byRarity = {0, 0, 0}, failed = 0, hatched = 0, notable = {}}
+    for _, entry in entries do
+        local rarity = math.clamp(entry.rarity or 1, 1, #Skip.Names)
+        summary.byRarity[rarity] += 1
+        if entry.outcome and entry.outcome.failed == true then summary.failed += 1 else summary.hatched += 1 end
+        if Skip.isNotable(entry.outcome) then table.insert(summary.notable, entry) end
+    end
+    return summary
+end
+
+function Skip.lines(summary: any): {string}
+    local lines = {string.format("%d eggs skipped (%d hatched, %d cracked)", summary.total, summary.hatched, summary.failed)}
+    local parts = {}
+    for rarity, count in summary.byRarity do
+        if count &gt; 0 then table.insert(parts, string.format("%d %s", count, Skip.Names[rarity])) end
+    end
+    if #parts &gt; 0 then table.insert(lines, table.concat(parts, "  |  ")) end
+    return lines
+end
+
+return Skip
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX214">
+        <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
 -- Build local visual MeshParts from embedded original geometry. Server collision stays separate.
@@ -369325,7 +369408,7 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX214">
+      <Item class="ModuleScript" referent="RBX215">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -369373,7 +369456,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX215">
+      <Item class="ModuleScript" referent="RBX216">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -369422,7 +369505,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX216">
+      <Item class="ModuleScript" referent="RBX217">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -369622,7 +369705,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX217">
+      <Item class="ModuleScript" referent="RBX218">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -369654,7 +369737,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX218">
+      <Item class="ModuleScript" referent="RBX219">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -369676,7 +369759,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX219">
+      <Item class="ModuleScript" referent="RBX220">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -369692,7 +369775,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX220">
+      <Item class="ModuleScript" referent="RBX221">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -369838,7 +369921,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX221">
+      <Item class="ModuleScript" referent="RBX222">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -369861,7 +369944,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX222">
+      <Item class="ModuleScript" referent="RBX223">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -369913,7 +369996,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX223">
+    <Item class="Folder" referent="RBX224">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -539468,15 +539551,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX224">
+  <Item class="ServerScriptService" referent="RBX225">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX225">
+    <Item class="Folder" referent="RBX226">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX226">
+      <Item class="ModuleScript" referent="RBX227">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -539687,7 +539770,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX227">
+      <Item class="Script" referent="RBX228">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -539832,7 +539915,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX228">
+      <Item class="ModuleScript" referent="RBX229">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -539845,6 +539928,7 @@ local ChestService = {}
 local lastClaim: {[Player]: number} = {}
 local lastGrant: {[Player]: number} = {}
 local lastNest: {[Player]: number} = {}
+local lastSkip: {[Player]: number} = {}
 
 local function getRemote(folder: Folder, name: string): RemoteEvent
     local existing = folder:FindFirstChild(name)
@@ -539909,6 +539993,14 @@ function ChestService.start(profileRepository)
         player:SetAttribute("LastNestClaimStatus", status)
     end)
 
+    -- BD-044 reveal-skip preference (UI only; never affects rewards).
+    local setSkip = getRemote(folder, "SetRevealSkip")
+    setSkip.OnServerEvent:Connect(function(player: Player, selection, ...)
+        if select("#", ...) ~= 0 then return end
+        if not allowed(lastSkip, player, 1) then return end
+        profileRepository.setRevealSkip(player, selection)
+    end)
+
     testGrant.OnServerEvent:Connect(function(player: Player, ...)
         if select("#", ...) ~= 0 then return end
         if not Config.ChestTestGrantEnabled then return end
@@ -539924,6 +540016,7 @@ function ChestService.start(profileRepository)
         lastClaim[player] = nil
         lastGrant[player] = nil
         lastNest[player] = nil
+        lastSkip[player] = nil
     end)
 end
 
@@ -539931,7 +540024,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX229">
+      <Item class="ModuleScript" referent="RBX230">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -540019,7 +540112,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX230">
+      <Item class="ModuleScript" referent="RBX231">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -540153,7 +540246,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX231">
+      <Item class="ModuleScript" referent="RBX232">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -540356,7 +540449,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX232">
+      <Item class="ModuleScript" referent="RBX233">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -540598,7 +540691,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX233">
+      <Item class="ModuleScript" referent="RBX234">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -540777,7 +540870,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX234">
+      <Item class="ModuleScript" referent="RBX235">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -540963,7 +541056,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX235">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -541339,7 +541432,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -541389,7 +541482,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX238">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -541431,7 +541524,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -541542,7 +541635,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -541624,7 +541717,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -541716,7 +541809,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -541821,7 +541914,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -541955,7 +542048,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -542053,6 +542146,11 @@ elseif identityPersistent() then
 end
 local leaseId = HttpService:GenerateGUID(false)
 local profiles: {[Player]: any} = {}
+-- BD-044 hatch pages: one claim transaction commits up to Config.HatchPageSize queued run
+-- eggs; committed (already credited) results wait here so the client still reveals them
+-- one at a time (~1 s each) without a DataStore request per egg. Memory only: a rejoin
+-- mid-page loses just the animation, never a credit (see docs/50).
+local revealBuffer: {[Player]: {any}} = {}
 local renewing = false
 
 local function keyFor(player: Player): string
@@ -542155,6 +542253,10 @@ local function isValidProfile(profile: any): boolean
     if profile.pendingNests ~= nil then
         if typeof(profile.pendingNests) ~= "table" or #profile.pendingNests &gt; 1000 then return false end
         for _, nest in profile.pendingNests do if not validNest(nest, false) then return false end end
+    end
+    if profile.revealSkip ~= nil then
+        if typeof(profile.revealSkip) ~= "table" or #profile.revealSkip &gt; 3 then return false end
+        for _, rarity in profile.revealSkip do if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity &lt; 1 or rarity &gt; 3 then return false end end
     end
     if profile.settledRuns ~= nil then
         if typeof(profile.settledRuns) ~= "table" then return false end
@@ -542262,9 +542364,14 @@ local function syncAttributes(player: Player, profile: any)
     end
     player:SetAttribute("NestsJson", HttpService:JSONEncode(nestSummary))
     player:SetAttribute("PendingNestCount", pendingNests)
+    player:SetAttribute("RevealSkipJson", HttpService:JSONEncode(profile.revealSkip or {}))
     player:SetAttribute("RunStartBlocked", ProfileRepository.runStartBlockReason(profile))
     local nextChest = profile.eggs[1]
-    if typeof(nextChest) == "table" then
+    local buffered = revealBuffer[player]
+    if buffered and #buffered &gt; 0 then
+        player:SetAttribute("NextChestId", buffered[1].eggId)
+        player:SetAttribute("NextChestReadyAt", 0)
+    elseif typeof(nextChest) == "table" then
         player:SetAttribute("NextChestId", nextChest.eggId)
         player:SetAttribute("NextChestReadyAt", nextChest.readyAt)
     else
@@ -542837,6 +542944,48 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     return true, committedOutcome, if duplicate then "duplicate" else "committed"
 end
 
+-- Number of already-credited eggs whose reveal animation is still buffered in memory.
+function ProfileRepository.pendingReveals(player: Player): number
+    local buffered = revealBuffer[player]
+    return if buffered then #buffered else 0
+end
+
+-- UI preference only (which species rarities the client auto-skips while revealing). Rewards
+-- never depend on it; skipped eggs are still hatched and credited. Additive profile field.
+function ProfileRepository.setRevealSkip(player: Player, selection: any): (boolean, string)
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then return false, "profile_not_loaded" end
+    if typeof(selection) ~= "table" or #selection &gt; 3 then return false, "invalid_selection" end
+    local seen, clean = {}, {}
+    for _, rarity in selection do
+        if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity &lt; 1 or rarity &gt; 3 or seen[rarity] then return false, "invalid_selection" end
+        seen[rarity] = true
+        table.insert(clean, rarity)
+    end
+    table.sort(clean)
+    local leaseLost = false
+    local now = os.time()
+    local ok, updated = retry("reveal skip", function()
+        return store:UpdateAsync(keyFor(player), function(profileValue)
+            leaseLost = false
+            if not isValidProfile(profileValue) then return nil end
+            if not ownSession(profileValue) then leaseLost = true return nil end
+            profileValue.revealSkip = table.clone(clean)
+            profileValue.revision += 1
+            profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            return profileValue
+        end)
+    end)
+    if not ok or updated == nil then
+        if leaseLost then player:SetAttribute("ProfileState", "LeaseLost") return false, "lease_lost" end
+        player:SetAttribute("ProfileState", "SaveFailed")
+        return false, "save_failed"
+    end
+    if not profiles[player] or updated.revision &gt;= profiles[player].revision then profiles[player] = updated end
+    syncAttributes(player, profiles[player])
+    return true, "saved"
+end
+
 -- Opens a ready bonus nest: its precommitted eggs join the reveal line next (ahead of
 -- the remaining banked run eggs) and the oldest pending nest takes the freed slot.
 function ProfileRepository.claimNest(player: Player, nestId: string)
@@ -543076,6 +543225,75 @@ function ProfileRepository.grantChestTest(player: Player): (boolean, string)
     return true, if duplicate then "duplicate" else "granted"
 end
 
+-- Credits one queue egg (collection, identity, metrics), refills the queue and records
+-- its operation. Returns the committed outcome or nil. Runs inside an UpdateAsync transform.
+local function applyHatch(profileValue: any, chest: any, index: number, outcome: any, now: number)
+    table.remove(profileValue.eggs, index)
+    local species = profileValue.collection[outcome.speciesId]
+    if typeof(species) ~= "table" then return nil end
+    local mutationId=chest.mutationId or ""
+    outcome.genes=chest.genes
+    outcome.failed=chest.genes~=nil and not chest.genes.hatchSuccess
+    if outcome.failed then
+        outcome.count=0
+    elseif chest.big or chest.shiny or chest.genes then
+        local key = EggTraits.key(mutationId, chest.shiny == true, chest.big == true,chest.genes)
+        local variant = species.variants[key] or {mutationId=mutationId, shiny=chest.shiny == true, big=chest.big == true, count=0,genes=chest.genes}
+        variant.count += outcome.count
+        species.variants[key] = variant
+    elseif mutationId~="" then
+        if not ProgressionRules.knownEventMutation(mutationId) then return nil end
+        species.events[mutationId]=(species.events[mutationId] or 0)+outcome.count
+    else species.base += outcome.count end
+    if identityAvailable(profileValue.dinosaurIdentity) and not outcome.failed then
+        local bucketKey = outcome.speciesId .. "/base"
+        if chest.big or chest.shiny or chest.genes then
+            bucketKey = outcome.speciesId .. "/variant/" .. EggTraits.key(mutationId, chest.shiny == true, chest.big == true, chest.genes)
+        elseif mutationId ~= "" then bucketKey = outcome.speciesId .. "/event/" .. mutationId end
+        outcome.instanceIds = DinosaurIdentity.hatch(profileValue.dinosaurIdentity, chest,
+            outcome.speciesId, outcome.count, bucketKey)
+    end
+    outcome.eventMutationId=mutationId
+    outcome.eventId=chest.eventId or "clear"
+    outcome.big=chest.big == true
+    outcome.shiny=chest.shiny == true
+    outcome.eggId=chest.eggId
+    if not outcome.failed then profileValue.metrics.rarest = math.max(profileValue.metrics.rarest, Config.SpeciesRarities[outcome.speciesId]) end
+
+    if profileValue.pendingChestGrants &gt; 0 then
+        profileValue.pendingChestGrants -= 1
+        local readyAt = if Config.ChestTimerSeconds == 0 then now else lastChestReadyAt(profileValue, now) + Config.ChestTimerSeconds
+        local metadata=if profileValue.pendingEggEvents then table.remove(profileValue.pendingEggEvents,1) else nil
+        table.insert(profileValue.eggs, {
+            eggId = HttpService:GenerateGUID(false),
+            kind = "alpha_chest",
+            readyAt = readyAt,
+            eventId=if metadata then metadata.eventId else "clear",
+            mutationId=if metadata then metadata.mutationId else "",
+            reward=if metadata then metadata.reward else nil,
+            shiny=if metadata then metadata.shiny else nil,
+            big=if metadata then metadata.big else nil,
+            genes=if metadata then metadata.genes else nil,
+            source=if metadata then metadata.source else nil,
+            traitRollVersion=if metadata then metadata.traitRollVersion else nil,
+        })
+    end
+    -- BD-044: banked run/nest eggs advance once legacy overflow is drained.
+    refillFromBank(profileValue, now)
+    table.insert(profileValue.recentOperations, {id = "chest:" .. chest.eggId, kind = "chest_claim", outcome = outcome})
+    return outcome
+end
+
+local function publishHatch(player: Player, chestId: string, committedOutcome: any)
+    player:SetAttribute("LastChestRewardText", string.format("%dx %s", committedOutcome.count, committedOutcome.speciesId))
+    player:SetAttribute("LastChestEventMutation",committedOutcome.eventMutationId or "")
+    player:SetAttribute("LastChestBig",committedOutcome.big == true)
+    player:SetAttribute("LastChestShiny",committedOutcome.shiny == true)
+    player:SetAttribute("LastChestGenesJson",HttpService:JSONEncode(committedOutcome.genes))
+    player:SetAttribute("LastChestFailed",committedOutcome.failed==true)
+    player:SetAttribute("LastClaimedChestId", chestId)
+end
+
 function ProfileRepository.claimChest(player: Player, chestId: string)
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
@@ -543086,6 +543304,24 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
     end
 
     local operationId = "chest:" .. chestId
+    -- Reveal an already-committed page entry: no DataStore request.
+    local buffered = revealBuffer[player]
+    if buffered and #buffered &gt; 0 then
+        if buffered[1].eggId ~= chestId then
+            local done = findOperation(cached, operationId)
+            if done then return true, done.outcome, "duplicate" end
+            -- "Reveal next": a claim for a still-queued egg while a page is waiting reveals the
+            -- page head (pages precede later queue eggs); anything else is unknown.
+            local queued = false
+            for _, queuedEgg in cached.eggs do if queuedEgg.eggId == chestId then queued = true break end end
+            if not queued then return false, nil, "missing" end
+            chestId = buffered[1].eggId
+        end
+        local entry = table.remove(buffered, 1)
+        syncAttributes(player, cached)
+        publishHatch(player, chestId, entry.outcome)
+        return true, entry.outcome, "claimed"
+    end
     local cachedOperation = findOperation(cached, operationId)
     if cachedOperation then
         return true, cachedOperation.outcome, "duplicate"
@@ -543105,7 +543341,7 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
 
     -- Generate once outside UpdateAsync so retries cannot reroll the reward.
     local outcome = if cachedChest.reward then table.clone(cachedChest.reward) else RewardMath.computeChestReward(Random.new())
-    local refillChestId = HttpService:GenerateGUID(false)
+    local pageOutcomes = {}
     local duplicateOutcome = nil
     local leaseLost = false
     local notReady = false
@@ -543144,65 +543380,22 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
             end
             if chest.reward and index ~= 1 then missing = true return nil end
 
-            table.remove(profileValue.eggs, index)
-            local species = profileValue.collection[outcome.speciesId]
-            if typeof(species) ~= "table" then return nil end
-            local mutationId=chest.mutationId or ""
-            outcome.genes=chest.genes
-            outcome.failed=chest.genes~=nil and not chest.genes.hatchSuccess
-            if outcome.failed then
-                outcome.count=0
-            elseif chest.big or chest.shiny or chest.genes then
-                local key = EggTraits.key(mutationId, chest.shiny == true, chest.big == true,chest.genes)
-                local variant = species.variants[key] or {mutationId=mutationId, shiny=chest.shiny == true, big=chest.big == true, count=0,genes=chest.genes}
-                variant.count += outcome.count
-                species.variants[key] = variant
-            elseif mutationId~="" then
-                if not ProgressionRules.knownEventMutation(mutationId) then return nil end
-                species.events[mutationId]=(species.events[mutationId] or 0)+outcome.count
-            else species.base += outcome.count end
-            if identityAvailable(profileValue.dinosaurIdentity) and not outcome.failed then
-                local bucketKey = outcome.speciesId .. "/base"
-                if chest.big or chest.shiny or chest.genes then
-                    bucketKey = outcome.speciesId .. "/variant/" .. EggTraits.key(mutationId, chest.shiny == true, chest.big == true, chest.genes)
-                elseif mutationId ~= "" then bucketKey = outcome.speciesId .. "/event/" .. mutationId end
-                outcome.instanceIds = DinosaurIdentity.hatch(profileValue.dinosaurIdentity, chest,
-                    outcome.speciesId, outcome.count, bucketKey)
+            pageOutcomes = {}
+            if not applyHatch(profileValue, chest, index, outcome, now) then return nil end
+            -- Hatch page: following ready run/nest eggs at the queue head commit in the same
+            -- transaction (their rewards are precommitted, so nothing is rerolled).
+            while #pageOutcomes &lt; Config.HatchPageSize - 1 and chest.reward and chest.genes
+                and (chest.kind == "run_egg" or chest.kind == "nest_egg") do
+                local nextEgg = profileValue.eggs[1]
+                if not nextEgg or not nextEgg.reward or not nextEgg.genes or now &lt; nextEgg.readyAt
+                    or (nextEgg.kind ~= "run_egg" and nextEgg.kind ~= "nest_egg") then break end
+                local nextOutcome = applyHatch(profileValue, nextEgg, 1, table.clone(nextEgg.reward), now)
+                if not nextOutcome then return nil end
+                table.insert(pageOutcomes, nextOutcome)
             end
-            outcome.eventMutationId=mutationId
-            outcome.eventId=chest.eventId or "clear"
-            outcome.big=chest.big == true
-            outcome.shiny=chest.shiny == true
-            if not outcome.failed then profileValue.metrics.rarest = math.max(profileValue.metrics.rarest, Config.SpeciesRarities[outcome.speciesId]) end
-
-            if profileValue.pendingChestGrants &gt; 0 then
-                profileValue.pendingChestGrants -= 1
-                local readyAt = if Config.ChestTimerSeconds == 0 then now else lastChestReadyAt(profileValue, now) + Config.ChestTimerSeconds
-                local metadata=if profileValue.pendingEggEvents then table.remove(profileValue.pendingEggEvents,1) else nil
-                table.insert(profileValue.eggs, {
-                    eggId = refillChestId,
-                    kind = "alpha_chest",
-                    readyAt = readyAt,
-                    eventId=if metadata then metadata.eventId else "clear",
-                    mutationId=if metadata then metadata.mutationId else "",
-                    reward=if metadata then metadata.reward else nil,
-                    shiny=if metadata then metadata.shiny else nil,
-                    big=if metadata then metadata.big else nil,
-                    genes=if metadata then metadata.genes else nil,
-                    source=if metadata then metadata.source else nil,
-                    traitRollVersion=if metadata then metadata.traitRollVersion else nil,
-                })
-            end
-            -- BD-044: banked run/nest eggs advance once legacy overflow is drained.
-            refillFromBank(profileValue, now)
 
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
-            table.insert(profileValue.recentOperations, {
-                id = operationId,
-                kind = "chest_claim",
-                outcome = outcome,
-            })
             trimOperations(profileValue)
             return profileValue
         end)
@@ -543222,15 +543415,13 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
     if not profiles[player] or updated.revision &gt;= profiles[player].revision then profiles[player] = updated end
     syncAttributes(player, profiles[player])
     local committedOutcome = duplicateOutcome or outcome
-    player:SetAttribute("LastChestRewardText", string.format(
-        "%dx %s", committedOutcome.count, committedOutcome.speciesId
-    ))
-    player:SetAttribute("LastChestEventMutation",committedOutcome.eventMutationId or "")
-    player:SetAttribute("LastChestBig",committedOutcome.big == true)
-    player:SetAttribute("LastChestShiny",committedOutcome.shiny == true)
-    player:SetAttribute("LastChestGenesJson",HttpService:JSONEncode(committedOutcome.genes))
-    player:SetAttribute("LastChestFailed",committedOutcome.failed==true)
-    player:SetAttribute("LastClaimedChestId", chestId)
+    if not duplicateOutcome and #pageOutcomes &gt; 0 then
+        local pageBuffer = {}
+        for _, pageOutcome in pageOutcomes do table.insert(pageBuffer, {eggId = pageOutcome.eggId, outcome = pageOutcome}) end
+        revealBuffer[player] = pageBuffer
+        syncAttributes(player, profiles[player])
+    end
+    publishHatch(player, chestId, committedOutcome)
     return true, committedOutcome, if duplicateOutcome then "duplicate" else "claimed"
 end
 
@@ -543495,6 +543686,7 @@ function ProfileRepository.renew(player: Player): boolean
 end
 
 function ProfileRepository.release(player: Player)
+    revealBuffer[player] = nil
     local cached = profiles[player]
     profiles[player] = nil
     if not cached then return end
@@ -543528,7 +543720,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -543709,7 +543901,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -543801,7 +543993,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -544057,7 +544249,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -544129,19 +544321,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX248">
+  <Item class="StarterPlayer" referent="RBX249">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX249">
+    <Item class="StarterPlayerScripts" referent="RBX250">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX250">
+      <Item class="Folder" referent="RBX251">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX251">
+        <Item class="LocalScript" referent="RBX252">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -544167,6 +544359,7 @@ local PreviewTraits=require(script.Parent.PreviewTraits)
 local EggGenetics=require(Shared.EggGenetics)
 local EggAppearance=require(Shared.EggAppearance)
 local ShopOdds=require(Shared.ShopOdds)
+local RevealSkip=require(Shared.RevealSkip)
 local EggOutcomeView=require(Shared.EggOutcomeView)
 local TouchLayout=require(Shared.TouchLayout)
 local Marketplace=game:GetService("MarketplaceService")
@@ -544176,6 +544369,7 @@ local startRun = remotes:WaitForChild("RequestStartRun") :: RemoteEvent
 local endRun = remotes:WaitForChild("RequestEndRun") :: RemoteEvent
 local equip = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
 local hatch = remotes:WaitForChild("ClaimChest") :: RemoteEvent
+local setSkipRemote = remotes:WaitForChild("SetRevealSkip") :: RemoteEvent
 local claimNestRemote = remotes:WaitForChild("ClaimNest") :: RemoteEvent -- BD-044 bonus nests
 local fuse = remotes:WaitForChild("MutateSpecies") :: RemoteEvent
 local shopAction=remotes:WaitForChild("ProgressionAction") :: RemoteEvent
@@ -544370,11 +544564,15 @@ end
 local function queue()
     return decoded("ChestQueueJson","[]")
 end
+local skippedEntries={} -- BD-044: eggs hatched and credited but not animated this batch
+local function finishBatch()
+    autoHatching=false
+    if #skippedEntries&gt;0 then open("batchSummary") else open("eggs") end
+end
 local function hatchNext()
     local id=str("NextChestId")
     if id=="" or workspace:GetServerTimeNow()&lt;num("NextChestReadyAt") then
-        autoHatching=false
-        open("eggs")
+        finishBatch()
         return
     end
     if hatchPending then return end
@@ -544748,15 +544946,16 @@ render=function(name: string)
             for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.55) end end
             local perks=label(body,mutation.name.." • "..mutation.growth.."x Growth • "..mutation.speed.."x Speed",80,295,660,25,20,color)
             perks.Visible=false
-            task.delay(3.4,function() if perks.Parent and modalVersion==version then perks.Visible=true end end)
+            task.delay(math.min(3.4,Config.HatchRevealSeconds*.68),function() if perks.Parent and modalVersion==version then perks.Visible=true end end)
         end
         local nextButton=button(body,"NEXT EGG",80,322,320,math.max(64,45/viewportScale()),C.accent,function() autoHatching=true hatchNext() end)
         local collectionButton=button(body,"COLLECTION",424,322,320,math.max(64,45/viewportScale()),C.blue,function() autoHatching=false open("collection") end)
         nextButton.Visible,collectionButton.Visible=false,false
         task.spawn(function()
             local started=os.clock()
-            while os.clock()-started&lt;3.4 and modalVersion==version and eggView.Parent do
-                local t=os.clock()-started
+            local crackSeconds=math.min(3.4,Config.HatchRevealSeconds*.68) -- crack animation scales with the 1 s reveal pace
+            while os.clock()-started&lt;crackSeconds and modalVersion==version and eggView.Parent do
+                local t=(os.clock()-started)*3.4/crackSeconds
                 animateEgg(t)
                 task.wait(.03)
             end
@@ -544778,6 +544977,7 @@ render=function(name: string)
             task.wait(math.max(0,Config.HatchRevealSeconds-(os.clock()-started)))
             if modalVersion~=version or not view.Parent then return end
             if autoHatching and str("NextChestId")~="" then hatchNext()
+            elseif #skippedEntries&gt;0 then finishBatch()
             else autoHatching=false nextButton.Visible=true collectionButton.Visible=true end
         end)
     elseif name=="exit" then
@@ -544818,6 +545018,16 @@ render=function(name: string)
         label(body,str("LastRewardText","Saving rewards..."),290,168,510,100,24,C.gold)
         label(body,"+"..num("LastRunCrystals").." Crystals • Level "..num("AccountLevel"),30,302,760,40,21)
         button(body,"BACK TO SANCTUARY",212,348,400,48,C.accent,function() open("home") end)
+    elseif name=="batchSummary" then
+        heading.Text,header.BackgroundColor3="Skipped eggs",C.gold
+        local summary=RevealSkip.summarize(skippedEntries)
+        local lines=RevealSkip.lines(summary)
+        label(body,table.concat(lines,"\n"),24,16,760,90,24)
+        local notes={}
+        for _,entry in summary.notable do table.insert(notes,Config.SpeciesDisplayNames[entry.speciesId] or entry.speciesId) end
+        label(body,if #notes&gt;0 then "Notable finds: "..table.concat(notes,", ") else "Every skipped egg is already in your collection.",24,120,760,120,22,C.gold)
+        button(body,"COLLECTION",24,300,370,64,C.blue,function() skippedEntries={} open("collection") end)
+        button(body,"DONE",424,300,370,64,C.accent,function() skippedEntries={} open("eggs") end)
     elseif name=="settings" then
         heading.Text,header.BackgroundColor3="Settings",C.purple
         label(body,"Visual effects",24,24,410,56,30)
@@ -544827,6 +545037,13 @@ render=function(name: string)
         label(body,"Hatch sounds",24,182,410,44,26)
         button(body,if Theme.HatchSoundEnabled~=false then "SOUND ON" else "SOUND OFF",560,182,230,44,C.blue,function() Theme.HatchSoundEnabled=Theme.HatchSoundEnabled==false open("settings") end).TextSize=20
         button(body,"HOW TO PLAY",24,238,370,64,C.gold,function() open("tutorial") end)
+        label(body,"Skip reveals:",24,318,250,44,24)
+        local chosen=RevealSkip.set(decoded("RevealSkipJson","[]"))
+        for i,rarityName in RevealSkip.Names do
+            button(body,(if chosen[i] then "SKIP " else "SHOW ")..rarityName,270+(i-1)*172,318,164,44,if chosen[i] then C.accent else C.card,function()
+                setSkipRemote:FireServer(RevealSkip.toggle(decoded("RevealSkipJson","[]"),i))
+            end).TextSize=17
+        end
         button(body,"FOOD GUIDE",424,238,366,64,C.accent,function() open("food") end)
         label(body,"Settings apply on this device for this session.",24,342,766,40,18)
     elseif name=="food" then
@@ -545121,18 +545338,32 @@ local function scheduleModalRefresh()
     refreshQueued=true
     task.defer(function()
         refreshQueued=false
-        if table.find({"collection","detail","fusion","eggs","auras","potions"},active) then
+        if table.find({"collection","detail","fusion","eggs","auras","potions","settings"},active) then
             body:ClearAllChildren()
             render(active)
         end
     end)
 end
-for _,attribute in {"EquippedSpeciesId","CollectionJson","ChestQueueJson","ProgressionJson","NestsJson","QueuedEggsWaiting"} do
+for _,attribute in {"EquippedSpeciesId","CollectionJson","ChestQueueJson","ProgressionJson","NestsJson","QueuedEggsWaiting","RevealSkipJson"} do
     player:GetAttributeChangedSignal(attribute):Connect(function()
         scheduleModalRefresh()
     end)
 end
-player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function() hatchPending=false task.defer(function() open("hatch") end) end)
+player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function()
+    hatchPending=false
+    -- Skippable eggs (selected rarities, nothing notable) are already credited: no animation.
+    local species=string.match(str("LastChestRewardText"),"x (%w+)") or "compy"
+    local okGenes,genes=pcall(function() return Http:JSONDecode(str("LastChestGenesJson","null")) end)
+    local outcome={big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),eventMutationId=str("LastChestEventMutation"),
+        genes=if okGenes and typeof(genes)=="table" then genes else nil,failed=player:GetAttribute("LastChestFailed")==true}
+    local rarity=speciesIndex(species)
+    if autoHatching and RevealSkip.shouldSkip(decoded("RevealSkipJson","[]"),rarity,outcome) then
+        table.insert(skippedEntries,{rarity=rarity,speciesId=species,outcome=outcome})
+        task.defer(hatchNext)
+        return
+    end
+    task.defer(function() open("hatch") end)
+end)
 player:GetAttributeChangedSignal("LastRunEndAt"):Connect(function() if not autoHatching then open("results") end end)
 player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
     local serial=hatchCancelSerial
@@ -545174,7 +545405,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX252">
+        <Item class="LocalScript" referent="RBX253">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -545237,7 +545468,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX253">
+        <Item class="ModuleScript" referent="RBX254">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -545316,7 +545547,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX254">
+        <Item class="ModuleScript" referent="RBX255">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -546136,7 +546367,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX255">
+        <Item class="ModuleScript" referent="RBX256">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -546238,7 +546469,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX256">
+        <Item class="ModuleScript" referent="RBX257">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -546298,7 +546529,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX257">
+        <Item class="LocalScript" referent="RBX258">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -546471,7 +546702,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX258">
+        <Item class="LocalScript" referent="RBX259">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -546553,7 +546784,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX259">
+  <Item class="Workspace" referent="RBX260">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

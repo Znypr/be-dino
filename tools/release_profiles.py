@@ -85,7 +85,6 @@ COMMON_RULES = [
     _flag_off("SecurityTestHarnessEnabled", "security test harness"),
     _flag_off("ArtTestHarnessEnabled", "art preview harness"),
     _flag_off("DuplicateSettlementProbe", "historical settlement probe"),
-    _flag_off("IdentityFusionPreviewEnabled", "BD-057 Studio memory-only preview; keep false in committed builds"),
     Rule("ProfileDataStoreName", "check", predicate=_store_name, reason="DataStore name limits"),
     Rule("PlaytestUniverseId", "check", predicate=_id_or_zero, reason="BD-004 record"),
     Rule("PlaytestPlaceId", "check", predicate=_id_or_zero, reason="BD-004 record"),
@@ -100,6 +99,8 @@ STUDIO_LOCAL_FLAGS = ["StudioLocalProfilesEnabled", "StudioTestWalletEnabled"]
 PROFILES: dict[str, list[Rule]] = {
     "default": COMMON_RULES + [
         Rule("ReleaseProfile", "require", "development", reason="default build is a development build"),
+        _flag_off("IdentityPersistentEnabled", "BD-064 persistent identities; only the playtest profile enables it"),
+        _flag_off("IdentityFusionPreviewEnabled", "BD-057/BD-064 fusion; only the playtest profile enables it"),
     ],
     "playtest": COMMON_RULES + [
         Rule("ReleaseProfile", "set", "playtest", reason="marks the generated place"),
@@ -110,8 +111,8 @@ PROFILES: dict[str, list[Rule]] = {
         Rule("PlaytestPlaceId", "check", predicate=_positive_id, reason="BD-004: private start place ID"),
         # Milestone 1 includes fusion with persistent identities (BD-064). The key
         # is not on main yet: warn until it lands, then set missing="error".
-        Rule("IdentityPersistentEnabled", "set", True, missing="warn",
-             reason="BD-064 persistent identities (Milestone 1 includes fusion)"),
+        Rule("IdentityPersistentEnabled", "set", True, reason="BD-064 persistent identities (Milestone 1)"),
+        Rule("IdentityFusionPreviewEnabled", "set", True, reason="BD-064 fusion on persistent profiles (Milestone 1)"),
         # Future fusion/menu release keys (BD-064/BD-065) go here, e.g.
         # Rule("<FusionFlagName>", "set", True, missing="warn", reason="BD-064 fusion server"),
     ],

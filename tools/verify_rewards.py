@@ -191,10 +191,15 @@ local line=revealLine(b)
 assert(#line==150)
 local committedIds={} for i,egg in line do committedIds[i]=egg.eggId end
 local committedGenes={} for i,egg in line do committedGenes[i]=copy(egg.genes) end
-local successes,failures,claimed=0,0,0
-local function claimNext(u)
- local egg=data[key(u)].eggs[1]
- local claimOk,result,claimStatus=Repository.claimChest(u,egg.eggId)
+local byId={} for _,egg in line do byId[egg.eggId]=egg end
+local expectedSuccess=0 for _,g in committedGenes do if g.hatchSuccess then expectedSuccess+=1 end end
+local successes,failures,revealed=0,0,0
+local claimTransforms=transforms
+-- Client behaviour: reveal whatever NextChestId names, one egg per call (~1 s apart in game).
+local function revealNext(u)
+ local id=u.attrs.NextChestId
+ local egg=byId[id]
+ local claimOk,result,claimStatus=Repository.claimChest(u,id)
  assert(claimOk and claimStatus=="claimed",tostring(claimStatus))
  if result.failed then
   assert(result.count==0 and egg.genes.conditionId=="cracked","only Cracked eggs fail and they give 0 dinosaurs")
@@ -202,46 +207,90 @@ local function claimNext(u)
  else
   assert(result.count==1,"exactly one dinosaur per successful egg") successes+=1
  end
- claimed+=1
+ revealed+=1
  return egg
 end
 lastRarity=0
-for i=1,40 do
- local egg=claimNext(b)
+for i=1,42 do
+ local egg=revealNext(b)
  assert(egg.eggId==committedIds[i] and same(egg.genes,committedGenes[i]),"reveal order or genes changed")
  local rarity=GameConfig.SpeciesRarities[egg.reward.speciesId]
  assert(rarity>=lastRarity) lastRarity=rarity
 end
-assert(#data[key(b)].eggs==5 and bankCount(b)==105,"queue refills from the bank after each claim")
--- Duplicate claim of an already hatched egg never double-credits.
+-- 5 pages of 10 are committed (50 eggs credited); the 8 unrevealed page eggs are already credited.
+local pageSize=GameConfig.HatchPageSize assert(pageSize==10)
+assert(#data[key(b)].eggs==5 and bankCount(b)==95 and transforms-claimTransforms<=2*5,"one claim transaction per hatch page")
 local copiesMid=totalCopies(data[key(b)])
-local again,_,againStatus=Repository.claimChest(b,committedIds[40])
+local again,_,againStatus=Repository.claimChest(b,committedIds[42])
 assert(again and againStatus=="duplicate" and totalCopies(data[key(b)])==copiesMid)
--- Reconnect mid-batch: the remaining 110 eggs return identically, no reroll, no loss.
+-- Reconnect mid-page: nothing is re-hatched or lost; only the 8 pending animations are skipped.
 Repository.release(b)
 assert(Repository.load(b))
+assert(b.attrs.NextChestId==committedIds[51] and totalCopies(data[key(b)])==copiesMid)
 line=revealLine(b)
-assert(#line==110)
-for i,egg in line do assert(egg.eggId==committedIds[40+i] and same(egg.genes,committedGenes[40+i])) end
--- Out-of-order claim is refused.
-local skip,_,skipStatus=Repository.claimChest(b,data[key(b)].eggs[2].eggId)
-assert(not skip and skipStatus=="missing")
-for i=41,150 do
- local egg=claimNext(b)
+assert(#line==100)
+for i,egg in line do assert(egg.eggId==committedIds[50+i] and same(egg.genes,committedGenes[50+i])) end
+for i=51,150 do
+ local egg=revealNext(b)
  assert(egg.eggId==committedIds[i])
  local rarity=GameConfig.SpeciesRarities[egg.reward.speciesId]
  assert(rarity>=lastRarity) lastRarity=rarity
 end
-assert(claimed==150 and successes+failures==150 and #data[key(b)].eggs==0 and bankCount(b)==0)
-assert(totalCopies(data[key(b)])==copiesBefore+successes,"one dinosaur per successful egg, none for failures")
+assert(revealed==142 and #data[key(b)].eggs==0 and bankCount(b)==0)
+assert(totalCopies(data[key(b)])==copiesBefore+expectedSuccess,"one dinosaur per successful egg, none for failures, none lost by the reconnect")
 assert(failures>0,"expected some failed Cracked eggs at BD-045 tier 0")
+local claimRequests=transforms-claimTransforms
+assert(claimRequests<=2*15+2,"150 eggs must need ~15 claim transactions, got "..claimRequests)
 -- Replaying settlement after 150 claims trimmed it out of recentOperations is still a no-op.
 local found=false for _,entry in data[key(b)].recentOperations do if entry.id=="run:run-150" then found=true end end
 assert(not found,"fixture expects the run operation to be trimmed")
 snapshot=copy(data[key(b)])
 dupOk,_,dupStatus=Repository.commitRunSettlement(b,"run-150",150)
 assert(dupOk and dupStatus=="duplicate" and same(snapshot,data[key(b)]),"settledRuns ledger must block re-settlement")
-print(string.format("150-egg run passed: 150 eggs revealed in committed ascending order across reconnect; %d hatched, %d Cracked failures; trimmed-ledger replay blocked", successes, failures))
+print(string.format("150-egg run passed: 150 eggs credited in 15 hatch-page transactions (%d transforms incl. probes), revealed in committed ascending order, reconnect mid-page loses no credit; %d hatched total, trimmed-ledger replay blocked", claimRequests, expectedSuccess))
+
+------------------------------------------------------------------ Conservation across hatch pages, leave and rejoin
+-- settled == credited + queued + banked, where "credited" is judged from collection growth and
+-- committed egg outcomes (not from reveal counts), at every step including a leave mid-page.
+do
+ local u=user(110)
+ assert(Repository.load(u))
+ local before=totalCopies(data[key(u)])
+ assert(Repository.commitRunSettlement(u,"conserve",150))
+ local all={} for _,egg in revealLine(u) do all[egg.eggId]=egg end
+ assert(#revealLine(u)==150)
+ local function check(label)
+  local live={}
+  for _,egg in revealLine(u) do assert(not live[egg.eggId],"duplicate live egg "..label) live[egg.eggId]=true end
+  local credited,successes=0,0
+  for id,egg in all do
+   if not live[id] then credited+=1 if egg.genes.hatchSuccess then successes+=1 end end
+  end
+  assert(credited+#revealLine(u)==150,"conservation "..label)
+  assert(totalCopies(data[key(u)])==before+successes,"collection growth != credited successes "..label)
+  return credited
+ end
+ check("settled")
+ for i=1,37 do assert(Repository.claimChest(u,u.attrs.NextChestId)) end
+ local creditedMid=check("mid-page")
+ assert(creditedMid==40 and Repository.pendingReveals(u)==3,"37 revealed, page of 40 credited, 3 buffered: "..creditedMid)
+ Repository.release(u) -- leave with 3 credited-but-unrevealed eggs
+ assert(Repository.pendingReveals(u)==0)
+ assert(Repository.load(u))
+ assert(check("after rejoin")==40,"rejoin must neither re-credit nor drop the buffered eggs")
+ -- A stale client id for an already-credited egg is a harmless duplicate or unknown, never a second credit.
+ local copies=totalCopies(data[key(u)])
+ for id,egg in all do
+  if not string.find(id,"nope") and #revealLine(u)>0 then
+   local okStale,_,stale=Repository.claimChest(u,id)
+   assert(totalCopies(data[key(u)])==copies,"stale id must not credit "..tostring(stale))
+   break
+  end
+ end
+ while u.attrs.NextChestId~="" do assert(Repository.claimChest(u,u.attrs.NextChestId)) end
+ assert(check("drained")==150 and #revealLine(u)==0)
+end
+print("Conservation passed: settled == credited + queued + banked at settlement, mid-page, after leave/rejoin with 3 buffered eggs, and fully drained; stale ids never double-credit")
 
 ------------------------------------------------------------------ Outage, transient failure, lease loss
 local c=user(103)
@@ -402,7 +451,7 @@ assert(LocalRepository.load(i))
 assert(LocalRepository.commitRunSettlement(i,"identity-run",15))
 local identities,hatched,failedHatches=0,0,0
 for _=1,15 do
- local head=i.attrs.ChestQueueJson[1]
+ local head={id=i.attrs.NextChestId}
  local claimOk,h=LocalRepository.claimChest(i,head.id)
  assert(claimOk)
  if h.failed then
@@ -414,8 +463,50 @@ for _=1,15 do
   identities+=1
  end
 end
-assert(hatched+failedHatches==15 and identities==hatched and #i.attrs.ChestQueueJson==0)
+assert(hatched+failedHatches==15 and identities==hatched and #i.attrs.ChestQueueJson==0 and i.attrs.NextChestId=="")
 print(string.format("Identity passed: 15-egg run -> %d identities for %d hatched eggs, %d failed Cracked eggs create none", identities, hatched, failedHatches))
+
+------------------------------------------------------------------ Reveal skipping (pure module + preference field)
+local RevealSkip=@@REVEAL_SKIP@@
+local plain={big=false,shiny=false,eventMutationId="",genes={conditionId="normal"},failed=false}
+assert(#RevealSkip.normalize({3,1,1,2,0,4,-1,1.5,"x"})==3 and RevealSkip.normalize({3,1,1})[1]==1 and #RevealSkip.normalize(nil)==0 and #RevealSkip.normalize("1")==0)
+assert(not RevealSkip.shouldSkip({},1,plain) and not RevealSkip.shouldSkip(nil,1,plain),"default skips nothing")
+assert(RevealSkip.shouldSkip({1,2},1,plain) and RevealSkip.shouldSkip({1,2},2,plain) and not RevealSkip.shouldSkip({1,2},3,plain),"Legendary is never skipped unless chosen")
+local cracked=table.clone(plain) cracked.failed=true cracked.genes={conditionId="cracked"}
+assert(RevealSkip.shouldSkip({1},1,cracked),"cracked failures may be skipped (counted in the summary)")
+for _,notable in {{shiny=true},{big=true},{eventMutationId="ember"},{genes={conditionId="rainbow"}},{genes={conditionId="astra"}}} do
+ local o=table.clone(plain) for k,v in notable do o[k]=v end
+ assert(RevealSkip.isNotable(o) and not RevealSkip.shouldSkip({1,2,3},1,o),"notable finds are never skipped")
+end
+assert(RevealSkip.isNotable(nil) and not RevealSkip.shouldSkip({1,2,3},1,nil),"unknown data is never hidden")
+local toggled=RevealSkip.toggle({1},2) assert(#toggled==2 and toggled[1]==1 and toggled[2]==2)
+toggled=RevealSkip.toggle(toggled,1) assert(#toggled==1 and toggled[1]==2)
+assert(#RevealSkip.toggle({},9)==0 and #RevealSkip.toggle({},0)==0)
+local summary=RevealSkip.summarize({{rarity=1,outcome=plain},{rarity=1,outcome=cracked},{rarity=2,outcome=plain},{rarity=3,outcome={shiny=true}}})
+assert(summary.total==4 and summary.byRarity[1]==2 and summary.byRarity[2]==1 and summary.byRarity[3]==1 and summary.failed==1 and summary.hatched==3 and #summary.notable==1)
+local lines=RevealSkip.lines(summary)
+assert(lines[1]=="4 eggs skipped (3 hatched, 1 cracked)" and lines[2]=="2 Common  |  1 Rare  |  1 Legendary")
+-- Preference field: validated, additive, persisted, never touches rewards.
+local sk=user(109)
+assert(Repository.load(sk) and sk.attrs.RevealSkipJson[1]==nil)
+assert(Repository.commitRunSettlement(sk,"skip-run",15))
+local before=totalCopies(data[key(sk)])
+local queueBefore=copy(data[key(sk)].eggs)
+assert(Repository.setRevealSkip(sk,{2,1}) and same(data[key(sk)].revealSkip,{1,2}) and sk.attrs.RevealSkipJson[2]==2)
+assert(totalCopies(data[key(sk)])==before and same(data[key(sk)].eggs,queueBefore),"preference never changes eggs or collection")
+for _,bad in {{4},{0},{1,1},{1.5},{1,2,3,3},"x",{{}},{"1"}} do
+ local okBad,reasonBad=Repository.setRevealSkip(sk,bad)
+ assert(not okBad and reasonBad=="invalid_selection" and same(data[key(sk)].revealSkip,{1,2}))
+end
+Repository.release(sk) assert(Repository.load(sk) and sk.attrs.RevealSkipJson[1]==1)
+assert(Repository.setRevealSkip(sk,{}) and #data[key(sk)].revealSkip==0)
+-- Skipped eggs are still credited exactly once: claim the whole run without any animation.
+local hatchedSkipped=0
+while sk.attrs.NextChestId~="" do
+ local claimOk,res=Repository.claimChest(sk,sk.attrs.NextChestId) assert(claimOk) hatchedSkipped+=1
+end
+assert(hatchedSkipped==15 and #data[key(sk)].eggs==0 and bankCount(sk)==0)
+print("Reveal skip passed: rarity selection, notable finds never skipped, Legendary default shown, toggle/normalize/summary lines, validated additive preference that cannot affect rewards, all 15 eggs still credited")
 
 ------------------------------------------------------------------ Seeded condition draws (BD-045)
 local counts={} local failedDraws=0
@@ -449,6 +540,7 @@ def script():
         ('@@EGG_TRAITS@@', 'src/shared/EggTraits.luau'),
         ('@@RULES@@', 'src/shared/ProgressionRules.luau'),
         ('@@FUSION_ODDS@@', 'src/server/FusionOdds.luau'),
+        ('@@REVEAL_SKIP@@', 'src/shared/RevealSkip.luau'),
         ('@@REWARD_MATH@@', 'src/server/RewardMath.luau'),
         ('@@IDENTITY_FUSION_MODULE@@', 'src/server/IdentityFusion.luau'),
         ('@@IDENTITY_MODULE@@', 'src/server/DinosaurIdentity.luau'),

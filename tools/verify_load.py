@@ -150,7 +150,7 @@ local function newMetrics()
 end
 
 local LATENCY_RNG = minstd(77)
-local function newServer(name, jobId)
+local function newServer(name, jobId, overrides)
     local server = {name = name, players = {}, cache = {}, bucket = nil, last = 0, waiting = 0}
     function server.rate() return 60 + 10 * #server.players end
     local function refill()
@@ -230,6 +230,12 @@ local function newServer(name, jobId)
         server.cache[path] = result
         return result
     end
+    if overrides then
+        -- Release-profile values (the playtest's persistent identities + fusion).
+        local config = table.clone(load(node("src/shared/Config")))
+        for k, v in overrides do config[k] = v end
+        server.cache["src/shared/Config"] = table.freeze(config)
+    end
     server.Repository = load(node("src/server/ProfileRepository"))
     server.Config = load(node("src/shared/Config"))
     return server
@@ -291,25 +297,49 @@ local function loadWithRetry(server, p)
     return false
 end
 
+-- Egg conservation per UserId: settled run eggs + opened nest eggs == claimed + still queued/banked.
+-- (BD-044 banks eggs; a player may legitimately leave with eggs still banked.)
+local EGGS = {}
+local function eggBook(p)
+    EGGS[p.UserId] = EGGS[p.UserId] or {settled = 0, claimed = 0}
+    return EGGS[p.UserId]
+end
+
 local function revealAll(server, p, rng, sc)
-    local claimed = 0
-    for _ = 1, 400 do
-        local profile = DATA[keyOf(p)]
-        local egg = profile and profile.eggs[1]
-        if not egg then break end
-        -- BD-044-style batches beyond the 5 + 10 queue: top up the overflow counter so
-        -- the real claim path refills the queue and every egg costs one UpdateAsync.
-        if sc.seedEggs and (p.injected or 0) < sc.seedEggs - 15 and profile.pendingChestGrants < 10 then
-            profile.pendingChestGrants += 1
-            p.injected = (p.injected or 0) + 1
-        end
-        if egg.readyAt > now then sleep(egg.readyAt - now + 0.1) end
-        local ok, _, status = op("claim", server.Repository.claimChest, p, egg.eggId)
+    local book, started = eggBook(p), now
+    for _ = 1, 1000 do
+        if now - started >= sc.revealCap then break end
+        -- Like the real client: reveal whatever NextChestId names (paged claims credit up to
+        -- Config.HatchPageSize eggs per transaction and serve the rest from a server buffer).
+        local eggId = p.attrs.NextChestId
+        if eggId == nil or eggId == "" then break end
+        local ok, _, status = op("claim", server.Repository.claimChest, p, eggId)
         if not judge("claim", ok, status) then break end
-        claimed += 1
+        if status ~= "duplicate" then book.claimed += 1 end
         sleep(sc.revealSeconds)
     end
-    return claimed
+end
+
+-- Leaving drops the in-memory reveal buffer: those eggs are already credited, only their
+-- animation is lost, so they count as claimed for conservation.
+local function releaseTracked(repository)
+    return function(p)
+        if repository.pendingReveals then eggBook(p).claimed += repository.pendingReveals(p) end
+        return repository.release(p)
+    end
+end
+
+local function openNests(server, p)
+    if not server.Repository.claimNest then return end
+    local book = eggBook(p)
+    for _ = 1, 20 do
+        local profile = DATA[keyOf(p)]
+        local nest = profile and profile.nests and profile.nests[1]
+        if not nest or nest.readyAt > now then break end
+        local ok, outcome, status = op("nest", server.Repository.claimNest, p, nest.nestId)
+        if not judge("nest", ok, status) then break end
+        if status ~= "duplicate" and type(outcome) == "table" then book.settled += outcome.eggCount or 0 end
+    end
 end
 
 local ACTIVE = 0
@@ -340,9 +370,17 @@ local function playerLoop(sc, servers, p, index, rng)
             judge("potion", ok, status)
         end
     end
-    if sc.seedEggs then revealAll(server, p, rng, sc) sanctuary() end
     while now < sc.duration - 60 do
+        local blocked = server.Repository.runStartBlockReason and server.Repository.runStartBlockReason(DATA[keyOf(p)]) or ""
+        if blocked ~= "" then
+            M.denials["run:" .. blocked] = (M.denials["run:" .. blocked] or 0) + 1
+            openNests(server, p)
+            revealAll(server, p, rng, sc)
+            sanctuary()
+            continue
+        end
         runs += 1
+        local runStart = now
         local runEnd = math.min(sc.duration - 30, now + sc.runMin + rng() * (sc.runMax - sc.runMin))
         while now < runEnd do
             sleep(sc.pickupMin + rng() * (sc.pickupMax - sc.pickupMin))
@@ -353,21 +391,29 @@ local function playerLoop(sc, servers, p, index, rng)
             end
         end
         local runId = p.Name .. "-run-" .. runs
-        local ok, _, status = op("settle", server.Repository.commitRunSettlement, p, runId, math.floor(20 + rng() * 580))
-        judge("settle", ok, status)
+        -- One run egg per catch (BD-044); owner example 15 catches per 5 minutes.
+        local catches = math.floor((now - runStart) / 60 * sc.catchesPerMinute * (0.3 + rng() * 1.7))
+        catches = math.min(catches, server.Config.RunEggMaxPerRun or catches)
+        local ok, outcome, status = op("settle", server.Repository.commitRunSettlement, p, runId, catches)
+        if judge("settle", ok, status) and status ~= "duplicate" and type(outcome) == "table" then
+            eggBook(p).settled += outcome.eggCount or outcome.chestCount or 0
+        end
         if ok and rng() < 0.15 then -- duplicate end-run request must be idempotent
-            local again, _, againStatus = op("settle", server.Repository.commitRunSettlement, p, runId, 10)
+            local again, _, againStatus = op("settle", server.Repository.commitRunSettlement, p, runId, catches)
             judge("settle", again, againStatus)
         end
+        openNests(server, p)
         revealAll(server, p, rng, sc)
         sanctuary()
         if sc.hop and not hopped and index <= sc.hop and now > sc.duration / 3 then
             hopped = true
-            local from = server
-            p.Parent = nil
-            leave(from, p)
-            task.spawn(function() op("release", from.Repository.release, p) end)
+            local from, old = server, p
+            old.Parent = nil
+            leave(from, old)
+            task.spawn(function() op("release", releaseTracked(from.Repository), old) end)
             sleep(3)
+            -- A real hop gives the new server its own Player object for the same UserId.
+            p = newPlayer(old.UserId)
             server = servers[2]
             join(server, p)
             if not loadWithRetry(server, p) then leave(server, p) ACTIVE -= 1 return end
@@ -375,7 +421,7 @@ local function playerLoop(sc, servers, p, index, rng)
     end
     p.Parent = nil
     leave(server, p)
-    op("release", server.Repository.release, p)
+    op("release", releaseTracked(server.Repository), p)
     ACTIVE -= 1
 end
 
@@ -395,16 +441,9 @@ end
 local function seedProfile(server, p, sc)
     join(server, p)
     assert(server.Repository.load(p))
-    server.Repository.release(p)
+    releaseTracked(server.Repository)(p)
     leave(server, p)
-    local profile = DATA[keyOf(p)]
-    if sc.seedEggs then
-        for i = 1, server.Config.ChestQueueCapacity do
-            table.insert(profile.eggs, {eggId = p.Name .. "-seed-" .. i, kind = "alpha_chest", readyAt = 0})
-        end
-        profile.pendingChestGrants = math.min(10, sc.seedEggs - server.Config.ChestQueueCapacity)
-    end
-    if sc.spammer then profile.collection.raptor.base = 1 end
+    DATA[keyOf(p)].collection.raptor.base = 1
 end
 
 local function windowPeak(requests, serverName)
@@ -428,17 +467,17 @@ for _, sc in SCENARIOS do
     now = 0
     queue = {}
     DATA = {}
+    EGGS = {}
     CRYSTALS = {}
     for i = 1, 64 do CRYSTALS[i] = 0 end
     SCENARIO_FAIL_RATE = sc.failRate
     M = newMetrics()
-    local servers = {newServer("A", "job-A"), newServer("B", "job-B")}
+    local servers = {newServer("A", "job-A", sc.configOverrides), newServer("B", "job-B", sc.configOverrides)}
     local players = {}
     for i = 1, sc.players do players[i] = newPlayer(1000 + i) end
     local spamUser = if sc.spammer then newPlayer(999) else nil
     -- Setup (seeding fixtures) runs outside the measured window.
     local setup = coroutine.create(function()
-        for _, p in players do seedProfile(servers[1], p, sc) end
         if spamUser then seedProfile(servers[1], spamUser, sc) end
     end)
     schedule(0, setup)
@@ -473,11 +512,12 @@ for _, sc in SCENARIOS do
     local endTime = now
     queue = {} -- stop background renew loops of this scenario
     -- Integrity: eggs drained, leases released.
-    local undrained, leased = 0, 0
+    local undrained, leased = 0, 0 -- undrained = eggs not conserved
     for _, p in players do
         local profile = DATA[keyOf(p)]
         if profile then
-            undrained += #profile.eggs + profile.pendingChestGrants
+            local book = eggBook(p)
+            undrained += math.abs(book.settled - book.claimed - (#profile.eggs + profile.pendingChestGrants + #(profile.runEggBank or {})))
             if profile.session ~= nil then leased += 1 end
         end
     end
@@ -517,12 +557,15 @@ end
 '''
 
 BASE = {"duration": 900, "joinStagger": 2, "runMin": 90, "runMax": 240, "pickupMin": 8, "pickupMax": 20,
-        "revealSeconds": 5, "failRate": 0.01, "hop": 2, "seedEggs": None, "spammer": False, "spamSeconds": 0}
+        "revealSeconds": 5, "failRate": 0.01, "hop": 2, "catchesPerMinute": 3, "revealCap": 300, "spammer": False, "spamSeconds": 0}
+# Values the playtest release profile writes (tools/release_profiles.py).
+PLAYTEST_OVERRIDES = {"IdentityPersistentEnabled": True, "IdentityFusionPreviewEnabled": True}
 SCENARIOS = [
     dict(BASE, name="build020-8-players", players=8, seed=8, gated=True),
     dict(BASE, name="build020-12-players", players=12, seed=12, gated=True),
-    dict(BASE, name="egg-burst-15-x12", players=12, seed=15, seedEggs=15, duration=420, gated=False),
-    dict(BASE, name="egg-burst-150-x12", players=12, seed=150, seedEggs=150, duration=1200, gated=False),
+    dict(BASE, name="playtest-flags-12-players", players=12, seed=1212, configOverrides=PLAYTEST_OVERRIDES, gated=False, playtestGate=True),
+    dict(BASE, name="egg-burst-15-x12", players=12, seed=15, duration=420, gated=False),
+    dict(BASE, name="egg-burst-150-x12", players=12, seed=150, catchesPerMinute=30, duration=1200, gated=False),
     dict(BASE, name="equip-spam-8+1", players=8, seed=81, spammer=True, spamSeconds=360, duration=480, gated=False),
 ]
 
@@ -534,6 +577,8 @@ def lua_value(value):
         return "true" if value else "false"
     if isinstance(value, (int, float)):
         return repr(value)
+    if isinstance(value, dict):
+        return "{" + ",".join(f"{k}={lua_value(v)}" for k, v in value.items()) + "}"
     if isinstance(value, str):
         return json.dumps(value)
     raise TypeError(value)
@@ -557,16 +602,17 @@ def harness(root: Path = ROOT) -> str:
             entries.append(f"[{json.dumps(key)}] = {long_string(path.read_text(encoding='utf-8'))}")
     sources = "{\n" + ",\n".join(entries) + "\n}"
     scenarios = "{" + ",".join(
-        "{" + ",".join(f"{k}={lua_value(v)}" for k, v in sc.items() if k != "gated") + "}" for sc in SCENARIOS) + "}"
+        "{" + ",".join(f"{k}={lua_value(v)}" for k, v in sc.items() if k not in ("gated", "playtestGate")) + "}" for sc in SCENARIOS) + "}"
     text = HARNESS.replace("__SCENARIOS__", scenarios).replace("__SOURCES__", sources)
     return "local SCENARIO_FAIL_RATE = 0\n" + text
 
 
-def projection(players: int, eggs_per_run: int, reveal_seconds: float = 5.0, renew_seconds: float = 30.0,
-               pickups_per_minute: float = 64 * 60 / 90) -> dict:
-    """Requests/minute if every player reveals eggs at once with one UpdateAsync per egg."""
+def projection(players: int, eggs_per_run: int, reveal_seconds: float = 1.0, renew_seconds: float = 30.0,
+               pickups_per_minute: float = 64 * 60 / 90, page_size: int = 10) -> dict:
+    """Requests/minute if every player reveals eggs at once; one UpdateAsync per hatch page of
+    Config.HatchPageSize eggs (BD-044 paged claims), eggs revealed Config.HatchRevealSeconds apart."""
     budget = 60 + 10 * players
-    claims = players * min(60 / reveal_seconds, eggs_per_run)
+    claims = players * min(60 / reveal_seconds, eggs_per_run) / page_size
     renew = players * 60 / renew_seconds
     total = claims + renew + pickups_per_minute
     return {"players": players, "eggsPerRun": eggs_per_run, "budget": budget, "requestsPerMinute": round(total, 1),
@@ -582,9 +628,13 @@ def gate(result: dict) -> list[str]:
     if result["queueDrops"]:
         problems.append(f"{result['queueDrops']} throttle-queue drops")
     if result["undrainedEggs"]:
-        problems.append(f"{result['undrainedEggs']} eggs left unclaimed")
+        problems.append(f"{result['undrainedEggs']} settled eggs neither claimed nor queued/banked")
     if result["leasedAtEnd"]:
         problems.append(f"{result['leasedAtEnd']} profiles still leased after leaving")
+    if result["maxKeyBytesPerMinute"] > 4 * 1024 * 1024:
+        problems.append(f"one profile key wrote {result['maxKeyBytesPerMinute']} bytes in a minute (> 4 MB/min per-key limit)")
+    if result["maxProfileBytes"] > 3_400_000:
+        problems.append(f"profile reached {result['maxProfileBytes']} bytes (> 3.4 MB fusion budget)")
     for side in ("A", "B"):
         if result[f"ratio{side}"] > 1.0:
             problems.append(f"server {side} peak window {result[f'peakWindow{side}']} > budget {result[f'budget{side}']}")
@@ -594,6 +644,8 @@ def gate(result: dict) -> list[str]:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--runner", required=True, help="path to the pinned luau executable")
+    parser.add_argument("--gate-playtest", action="store_true",
+                        help="also fail on the playtest-flags scenario (release gate; run by the CI playtest step)")
     parser.add_argument("--json", type=Path, help="write all results to this file")
     args = parser.parse_args(argv)
     with tempfile.TemporaryDirectory() as folder:
@@ -612,8 +664,9 @@ def main(argv=None) -> int:
     failed = False
     for sc, result in zip(SCENARIOS, results):
         problems = gate(result)
-        tag = "PASS" if not problems else ("FAIL" if sc["gated"] else "WARN")
-        failed |= bool(problems) and sc["gated"]
+        gated = sc["gated"] or (args.gate_playtest and sc.get("playtestGate", False))
+        tag = "PASS" if not problems else ("FAIL" if gated else "WARN")
+        failed |= bool(problems) and gated
         print(f"[{tag}] {result['name']}: {result['players']} players, {result['duration']}s; "
               f"requests A/B {result['requestsA']}/{result['requestsB']}, peak 60s window "
               f"{result['peakWindowA']}/{result['budgetA']} ({result['ratioA']:.0%}) on A, "
@@ -627,13 +680,13 @@ def main(argv=None) -> int:
         for problem in problems:
             print(f"       - {problem}")
     projections = [projection(n, e) for n in (8, 12) for e in (15, 150)]
-    print("BD-044 projection (all players revealing simultaneously, one UpdateAsync per egg at 5 s):")
+    print("BD-044 projection (all players revealing simultaneously, one UpdateAsync per 10-egg hatch page, 1 s reveals):")
     for p in projections:
         print(f"       {p['players']} players x {p['eggsPerRun']} eggs: {p['requestsPerMinute']}/min vs budget "
               f"{p['budget']}/min ({p['ratio']:.0%}) for {p['revealMinutes']} min")
     if args.json:
         args.json.write_text(json.dumps({"scenarios": results, "projection": projections}, indent=2) + "\n", encoding="utf-8")
-    print("Load harness " + ("FAILED" if failed else "passed") + " (gated: Build 020 8 and 12 player scenarios).")
+    print("Load harness " + ("FAILED" if failed else "passed") + " (gated: 8/12-player" + (" + playtest-flag" if args.gate_playtest else "") + " scenarios).")
     return 1 if failed else 0
 
 

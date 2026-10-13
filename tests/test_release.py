@@ -50,7 +50,7 @@ class ReleaseProfileTests(unittest.TestCase):
 
     def test_forbidden_flags_fail(self):
         for key in ("PaidRandomItemsEnabled", "CrystalPacksEnabled", "ChestTestGrantEnabled",
-                    "CollectionTestGrantEnabled", "MutationTestSetupEnabled", "IdentityFusionPreviewEnabled",
+                    "CollectionTestGrantEnabled", "MutationTestSetupEnabled",
                     "DuplicateSettlementProbe", "SecurityTestHarnessEnabled", "ArtTestHarnessEnabled"):
             for profile in ("default", "playtest"):
                 report = profiles.verify_source(with_value(with_ids(CONFIG), key, "true"), profile)
@@ -68,28 +68,35 @@ class ReleaseProfileTests(unittest.TestCase):
         self.assertTrue(any(e.startswith("PlaytestPlaceId") for e in report.errors))
 
     def test_playtest_rewrites_release_values_only(self):
-        rewritten, report = profiles.apply_profile(with_ids(ABSENT), "playtest")
+        rewritten, report = profiles.apply_profile(with_ids(CONFIG), "playtest")
         self.assertEqual(report.errors, [])
         values = {k: v[-1][1] for k, v in profiles.config_entries(rewritten).items()}
         self.assertEqual(values["ProfileDataStoreName"], values["PlaytestProfileDataStoreName"])
         self.assertNotEqual(values["ProfileDataStoreName"], profiles.DEVELOPMENT_STORE_NAME)
         self.assertEqual(values["ReleaseProfile"], "playtest")
-        changed = [a for a, b in zip(with_ids(ABSENT).splitlines(), rewritten.splitlines()) if a != b]
-        self.assertEqual(len(changed), 2)
-        self.assertTrue(any("missing from src/shared/Config.luau" in w and "IdentityPersistentEnabled" in w
-                            for w in report.warnings))
+        self.assertIs(values["IdentityPersistentEnabled"], True)
+        self.assertIs(values["IdentityFusionPreviewEnabled"], True)
+        changed = [a for a, b in zip(with_ids(CONFIG).splitlines(), rewritten.splitlines()) if a != b]
+        self.assertEqual(len(changed), 4)
 
-    def test_future_key_is_set_once_present(self):
-        source = with_ids(ABSENT).replace("    ReleaseProfile =", "    IdentityPersistentEnabled = false,\n    ReleaseProfile =", 1)
-        rewritten, report = profiles.apply_profile(source, "playtest")
-        self.assertEqual(report.errors, [])
-        self.assertIs(profiles.config_entries(rewritten)["IdentityPersistentEnabled"][-1][1], True)
+    def test_fusion_flags_stay_off_in_committed_builds(self):
+        for key in ("IdentityPersistentEnabled", "IdentityFusionPreviewEnabled"):
+            report = profiles.verify_source(with_value(CONFIG, key, "true"), "default")
+            self.assertTrue(any(e.startswith(key) for e in report.errors), key)
 
-    def test_existing_future_key_is_rewritten_in_place(self):
-        rewritten, report = profiles.apply_profile(with_ids(CONFIG), "playtest")
-        self.assertEqual(report.errors, [])
-        entries = profiles.config_entries(rewritten)["IdentityPersistentEnabled"]
-        self.assertEqual(len(entries), 1)
+    def test_missing_identity_key_fails_playtest(self):
+        _, report = profiles.apply_profile(with_ids(ABSENT), "playtest")
+        self.assertTrue(any(e.startswith("IdentityPersistentEnabled: missing") for e in report.errors))
+
+    def test_missing_warn_key_does_not_block(self):
+        original = profiles.PROFILES["playtest"]
+        try:
+            profiles.PROFILES["playtest"] = original + [profiles.Rule("FutureFlag", "set", True, missing="warn", reason="t")]
+            _, report = profiles.apply_profile(with_ids(CONFIG), "playtest")
+            self.assertEqual(report.errors, [])
+            self.assertTrue(any(w.startswith("FutureFlag: missing") for w in report.warnings))
+        finally:
+            profiles.PROFILES["playtest"] = original
 
     def test_safety_flags_are_not_silently_patched(self):
         source = with_value(with_ids(CONFIG), "ChestTestGrantEnabled", "true")
@@ -154,12 +161,16 @@ class LoadHarnessTests(unittest.TestCase):
     def test_projection_matches_budget_formula(self):
         result = verify_load.projection(8, 150)
         self.assertEqual(result["budget"], 140)
-        self.assertGreater(result["ratio"], 1.0)
+        # BD-044: one write per egg at 1 s reveals busts the budget; 10-egg hatch pages fit.
+        self.assertGreater(verify_load.projection(8, 150, page_size=1)["ratio"], 1.0)
+        self.assertLess(result["ratio"], 1.0)
+        self.assertLess(verify_load.projection(12, 150)["ratio"], 1.0)
         self.assertEqual(verify_load.projection(12, 15)["budget"], 180)
 
     def test_gate_flags_problems(self):
         clean = {"crashes": 0, "failures": {}, "queueDrops": 0, "undrainedEggs": 0, "leasedAtEnd": 0,
-                 "ratioA": 0.5, "ratioB": 0.2, "peakWindowA": 70, "budgetA": 140, "peakWindowB": 10, "budgetB": 80}
+                 "ratioA": 0.5, "ratioB": 0.2, "peakWindowA": 70, "budgetA": 140, "peakWindowB": 10, "budgetB": 80,
+                 "maxKeyBytesPerMinute": 200000, "maxProfileBytes": 15000}
         self.assertEqual(verify_load.gate(clean), [])
         self.assertEqual(len(verify_load.gate(dict(clean, failures={"claim:save_failed": 1}, ratioA=1.2))), 2)
 

@@ -8,6 +8,7 @@ local ChestService = {}
 local lastClaim: {[Player]: number} = {}
 local lastGrant: {[Player]: number} = {}
 local lastNest: {[Player]: number} = {}
+local lastSkip: {[Player]: number} = {}
 
 local function getRemote(folder: Folder, name: string): RemoteEvent
     local existing = folder:FindFirstChild(name)
@@ -72,6 +73,14 @@ function ChestService.start(profileRepository)
         player:SetAttribute("LastNestClaimStatus", status)
     end)
 
+    -- BD-044 reveal-skip preference (UI only; never affects rewards).
+    local setSkip = getRemote(folder, "SetRevealSkip")
+    setSkip.OnServerEvent:Connect(function(player: Player, selection, ...)
+        if select("#", ...) ~= 0 then return end
+        if not allowed(lastSkip, player, 1) then return end
+        profileRepository.setRevealSkip(player, selection)
+    end)
+
     testGrant.OnServerEvent:Connect(function(player: Player, ...)
         if select("#", ...) ~= 0 then return end
         if not Config.ChestTestGrantEnabled then return end
@@ -87,6 +96,7 @@ function ChestService.start(profileRepository)
         lastClaim[player] = nil
         lastGrant[player] = nil
         lastNest[player] = nil
+        lastSkip[player] = nil
     end)
 end
 
