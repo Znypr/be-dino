@@ -22,6 +22,24 @@ Maximum player access/policy work remains in progress:
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
+### Milestone 1 owner decisions — 2026-10-13
+
+Znypr set the first milestone and handed project lead to Claude:
+- **Milestone 1 = private playtest including fusion** (10 → Gold with odds, Fusion Menu,
+  persistent identities). Public launch is a later, evidence-based decision (BD-022).
+- **BD-044: exactly one dinosaur per successfully hatched egg**; the 1–3 copy split is retired
+  for new eggs. Failed Cracked eggs still yield nothing.
+- **Unapproved numbers** (run crystals, bonus nests, fusion trait odds, caps) may use
+  provisional defaults, kept in config and labelled `PROVISIONAL` for later tuning.
+- **Playtest place:** a new private experience with a fresh, empty DataStore (IDs pending
+  from Znypr; closes BD-004 when recorded). No legacy save migration is needed there.
+- **All Robux / paid-random features stay off** for the playtest.
+- **Devices:** desktop plus one Android phone; iOS and tablet are untested.
+
+Parallel workstreams (one branch and PR each): BD-044/045 reward loop; BD-052/053/054
+movement and mobile; BD-064 fusion server, odds and persistence; BD-062/065 Fusion Menu
+and Dino Details. Studio/Blender verification is run centrally.
+
 ### BD-060 foundation — updated 2026-10-13
 
 Implemented on `codex/bd-060-dinosaur-identity` from latest main `ad5245c`;
