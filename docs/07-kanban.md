@@ -162,8 +162,8 @@ ledger compaction before public release.
 | BD-054 | Review / test | P0 | Responsive phone/tablet touch-zone navigation/control placement and safe insets ([51](51-bd053-054-movement-mobile.md)) | BD-052, BD-046 |
 | BD-055 | Backlog | P1 | Complete sky, atmosphere, cloud, particle and audio effects for all weather events | BD-031, BD-034 |
 | BD-056 | Backlog | P1 | Top-center growth metric and bottom-left egg-icon catches-only HUD | BD-044, BD-054 |
-| BD-057 | Review / test | P0 | Consume 10 same-species/same-pattern Base dinos to create ONE NEW Gold, then Emerald before Diamond; guaranteed stage, freshly rolled traits (Gold transaction; provisional odds/remote via BD-064; Emerald/Diamond unapproved) | BD-012, BD-060 |
-| BD-058 | Backlog | P0 | Earned fusion stages as main permanent stat progression, fair caps, weekly grind and recipe pacing simulation | BD-057 |
+| BD-057 | Review / test | P0 | [Emerald/Diamond cost options: 57](57-fusion-ladder-options.md). Consume 10 same-species/same-pattern Base dinos to create ONE NEW Gold, then Emerald before Diamond; guaranteed stage, freshly rolled traits (Gold transaction; provisional odds/remote via BD-064; Emerald/Diamond unapproved) | BD-012, BD-060 |
+| BD-058 | Backlog | P0 | [Recipe pacing options sim: 57](57-fusion-ladder-options.md). Earned fusion stages as main permanent stat progression, fair caps, weekly grind and recipe pacing simulation | BD-057 |
 | BD-059 | Backlog | P1 | Buy and switch multiple aura/trail styles per individual dino; ALL purchased ingredient cosmetics are lost at fusion, never transfer to result | BD-060, BD-029, BD-038 |
 | BD-060 | Review / test | P0 | Unique dinosaur identity, hatched egg records, fused NEW instance lineage/parent egg history, safe profile migration (persistent playtest flag, default off: [53](53-bd064-fusion-server.md)) | BD-011, BD-012, BD-041 |
 | BD-061 | Backlog | P1 | Blender Gold/Emerald/Diamond additive surfaces, subtle/medium overlay A/B, stack every trait/effect | BD-057, BD-035 |
