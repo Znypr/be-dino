@@ -138,10 +138,22 @@ return table.freeze({
     DiamondMutationCost = 50, -- provisional balance: 50 Gold -> 1 Diamond
     MutationRequestCooldownSeconds = 0.4,
     MutationTestSetupEnabled = false,
-    -- BD-057 Phase 1: identity fusion runs ONLY in unpublished, memory-only Studio
-    -- profiles, and additionally needs a controlled test roller until BD-064 approves
-    -- odds. No remote/UI exists. Keep false in committed builds.
+    -- BD-057/BD-064 fusion flag. Fusion runs in unpublished memory-only Studio profiles,
+    -- or in persistent profiles when IdentityPersistentEnabled is also true, using the
+    -- PROVISIONAL FusionOdds roller. Keep false in committed builds.
     IdentityFusionPreviewEnabled = false,
+    -- Milestone 1 private playtest (fresh, empty DataStore): identity sidecar, hatch
+    -- credit and reconciliation for persistent profiles. Keep false in committed builds.
+    IdentityPersistentEnabled = false,
+    -- PROVISIONAL byte budgets (IdentityFusion.encodedSize of the WHOLE profile) under
+    -- the 4 MiB (4,194,304 B) DataStore value limit. A fusion that would exceed the
+    -- fusion budget is rejected; any persistent write above the hard limit first drops
+    -- identity growth (identity suspended) and otherwise aborts.
+    IdentityFusionProfileBudgetBytes = 3400000,
+    IdentityProfileHardLimitBytes = 3800000,
+    -- PROVISIONAL FusionAction remote rate limit: requests per player per window.
+    FusionRequestsPerWindow = 20,
+    FusionRateWindowSeconds = 10,
     MutationTestSpeciesId = "compy",
 
     MovementGuardTickSeconds = 0.1,
