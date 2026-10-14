@@ -70,7 +70,7 @@ function FoodService.start(dinosaur,repository)
             local z = math.clamp(food.center.Y + math.sin(angle) * radius, food.minZ + 1, food.maxZ - 1)
             local ground = groundAt(x, z)
             if ground then
-                food.part.Position = ground + Vector3.new(0, food.kind.size / 2 + 0.35, 0)
+                food.part.Position = ground + Vector3.new(0, food.part.Size.Y / 2 + 0.35, 0)
                 if food.visual then food.visual:PivotTo(CFrame.new(ground + Vector3.new(0,.35,0))) end
                 return true
             end
@@ -103,12 +103,35 @@ function FoodService.start(dinosaur,repository)
                 local roll, kind = random:NextInteger(1, 100), TYPES[1]
                 if roll > 98 then kind = TYPES[4] elseif roll > 93 then kind = TYPES[3] elseif roll > 78 then kind = TYPES[2] end
                 if starter then kind = if itemIndex % 3 == 0 then TYPES[2] else TYPES[1] end
-                local pickup = Instance.new("Part")
-                pickup.Name = kind.id
-                pickup.Shape = Enum.PartType.Ball
-                pickup.Size = Vector3.one * kind.size
-                pickup.Color = kind.color
-                pickup.Material = Enum.Material.SmoothPlastic
+                local kitMode = Config.FoodArtMode == "Kit"
+                local artId = if kitMode then string.format("food_%s_%s", kind.id, if (sx + sz + itemIndex) % 2 == 0 then "a" else "b") else kind.id
+                -- Kit mode: the uploaded food MeshPart IS the pickup part (one part, replaces the ball), scaled so its
+                -- largest side equals the old ball diameter (same readability, points, attributes and validation).
+                local pickup: BasePart
+                local meshPickup = false
+                if kitMode then
+                    local ok, model = pcall(Resources.clone, artId)
+                    local mesh = if ok and model then model:FindFirstChildWhichIsA("MeshPart") else nil
+                    if mesh then
+                        mesh.Parent = nil
+                        mesh.Size *= kind.size / math.max(mesh.Size.X, mesh.Size.Y, mesh.Size.Z)
+                        mesh.CFrame = CFrame.Angles(0, random:NextNumber(0, math.pi * 2), 0)
+                        mesh.Name = kind.id
+                        mesh.Color = Color3.new(1, 1, 1)
+                        mesh.Material = Enum.Material.SmoothPlastic
+                        pickup, meshPickup = mesh, true
+                    end
+                    if model then model:Destroy() end
+                end
+                if not meshPickup then
+                    local ball = Instance.new("Part")
+                    ball.Name = kind.id
+                    ball.Shape = Enum.PartType.Ball
+                    ball.Size = Vector3.one * kind.size
+                    ball.Color = kind.color
+                    ball.Material = Enum.Material.SmoothPlastic
+                    pickup = ball
+                end
                 pickup.Anchored = true
                 pickup.CanCollide = false
                 pickup.CanTouch = false
@@ -118,13 +141,12 @@ function FoodService.start(dinosaur,repository)
                 pickup:SetAttribute("Sector", string.format("%d:%d", sx, sz))
                 local visual = nil
                 -- BD-050 Kit mode is visual only: same TYPES points, pickup part and server validation.
-                -- Berry/fruit keep the visible ball pickup (1,300+ native kit copies is too heavy; the ArtId variant is
-                -- recorded for the MeshPart upload). Kit egg/amber models replace the ball only on a deterministic stride
-                -- (amber 1/4, egg 1/20) up to Config.FoodKitVisualCap, so the part budget in docs/68 holds.
-                local kitMode = Config.FoodArtMode == "Kit"
-                local artId = if kitMode then string.format("food_%s_%s", kind.id, if (sx + sz + itemIndex) % 2 == 0 then "a" else "b") else kind.id
+                -- With the uploaded MeshParts every pickup (berry, fruit, egg, amber) is its own kit mesh. Only when a kit
+                -- mesh is missing does it fall back: berry/fruit keep the ball and native egg/amber models replace the
+                -- ball on a deterministic stride (amber 1/4, egg 1/20) up to Config.FoodKitVisualCap (part budget, docs/68).
                 pickup:SetAttribute("ArtId", artId)
-                local useModel = kind.id == "egg" or kind.id == "amber"
+                pickup:SetAttribute("KitMesh", meshPickup)
+                local useModel = (kind.id == "egg" or kind.id == "amber") and not meshPickup
                 if kitMode and useModel then
                     local stride = if kind.id == "amber" then 4 else 20
                     useModel = kitVisuals < Config.FoodKitVisualCap and (sx * 16 + sz + itemIndex * 7) % stride == 0

@@ -365090,13 +365090,18 @@ BiomePlacement.Landmarks = {
     {id = "world_landmark_ruins_altar", x = -40, z = -120},
 }
 -- Layers: grid cell size, acceptance chance, slope limit (degrees), count cap, blocking.
+-- MeshPart era (docs/68): a prop is ONE part, so the layers are far denser than the native-fallback grammar
+-- (which had to stay near 190 props at density 1). Lush groves (groveBoost) carry most trees, shrubs and cover.
 BiomePlacement.Layers = {
-    {name = "tree", cell = 15, chance = .2, groveBoost = .75, maxSlope = 32, cap = 40, blocking = true},
-    {name = "rock", cell = 20, chance = .2, groveBoost = 0, maxSlope = 46, cap = 34, blocking = true},
-    {name = "shrub", cell = 13, chance = .14, groveBoost = .45, maxSlope = 34, cap = 50, blocking = false},
-    {name = "groundcover", cell = 11, chance = .1, groveBoost = .1, maxSlope = 30, cap = 70, blocking = false},
+    {name = "tree", cell = 11, chance = .2, groveBoost = .85, maxSlope = 32, cap = 130, blocking = true},
+    {name = "rock", cell = 15, chance = .2, groveBoost = .1, maxSlope = 46, cap = 80, blocking = true},
+    {name = "shrub", cell = 8, chance = .12, groveBoost = .6, maxSlope = 34, cap = 380, blocking = false},
+    {name = "groundcover", cell = 6, chance = .08, groveBoost = .4, maxSlope = 30, cap = 620, blocking = false},
 }
-BiomePlacement.TriangleBudget = 9000 -- total placed triangles at density 1 (native fallback = 2 parts each)
+-- Placed-part budget at density 1: MeshPart props cost 1 part (+ their invisible collider boxes); a prop whose
+-- mesh is not available costs the native fallback (2 wedge parts per triangle + colliders), so a failed upload
+-- thins the world instead of blowing the phone budget. The 8,000-part phone ceiling is documented in docs/68.
+BiomePlacement.PartBudget = 3200
 
 local function mul32(a: number, b: number): number
     local lo, hi = a % 65536, math.floor(a / 65536)
@@ -365176,12 +365181,13 @@ end
 
 export type Placement = {id: string, x: number, y: number, z: number, yaw: number, scale: number, radius: number, layer: string}
 
--- options: {seed, density, extent, height=(x,z)-&gt;y, kit=WorldKitData}
+-- options: {seed, density, extent, height=(x,z)-&gt;y, kit=WorldKitData, meshes=WorldKitMeshAssets (ids that are real MeshParts)}
 function BiomePlacement.generate(options): {Placement}
     local seed, density, extent, height, kit = options.seed, math.clamp(options.density or 1, .25, 2), options.extent - 12, options.height, options.kit
     local placed: {Placement} = {}
-    local triangles = 0
-    local budget = BiomePlacement.TriangleBudget * density
+    local meshes = options.meshes or {}
+    local parts = 0
+    local budget = BiomePlacement.PartBudget * density
     local grid: {[number]: {Placement}} = {}
     local function key(x: number, z: number): number return math.floor(x / 24) * 4096 + math.floor(z / 24) end
     local function clear(x: number, z: number, r: number, blocking: boolean): boolean
@@ -365202,7 +365208,7 @@ function BiomePlacement.generate(options): {Placement}
         local lo = footprintRange(height, x, z, r * .5)
         local p = {id = id, x = x, y = lo - sink * data.extent[2] * scale, z = z, yaw = yaw, scale = scale, radius = r, layer = layer}
         table.insert(placed, p)
-        triangles += data.triangles
+        parts += BiomePlacement.partCost(id, kit, meshes)
         local k = key(x, z)
         grid[k] = grid[k] or {}
         table.insert(grid[k], p)
@@ -365246,8 +365252,9 @@ function BiomePlacement.generate(options): {Placement}
                 local id = if layer.name == "tree" then chooseTree(h, wet, n, roll + (if grove &lt; 15 then .2 else 0))
                     elseif layer.name == "rock" then chooseRock(h, s, wet, n, roll)
                     elseif layer.name == "shrub" then chooseShrub(wet, n, grove &lt; 25) else chooseCover(n)
+                id = BiomePlacement.substitute(id, kit, meshes)
                 local data = kit[id]
-                if not data or triangles + data.triangles &gt; budget then continue end
+                if not data or parts + BiomePlacement.partCost(id, kit, meshes) &gt; budget then continue end
                 local scale = .88 + .24 * BiomePlacement.hash(seed, li, ix, iz, 6)
                 local r = math.max(data.extent[1], data.extent[3]) * .5 * scale
                 local needed = if layer.blocking then r * .7 else 1
@@ -365263,6 +365270,29 @@ function BiomePlacement.generate(options): {Placement}
     return placed
 end
 
+-- An id with no uploaded mesh swaps to another size of the same family that has one (a missing upload must not
+-- bring back ~100-part native models); with no mesh info at all (offline native budget) nothing changes.
+function BiomePlacement.substitute(id: string, kit, meshes): string
+    if meshes[id] or next(meshes) == nil then return id end
+    local base = string.match(id, "^(.*)_[sml]$")
+    if base then
+        for _, size in {"m", "s", "l"} do
+            local alt = base .. "_" .. size
+            if meshes[alt] and kit[alt] then return alt end
+        end
+    end
+    return id
+end
+-- Parts one placement adds to the world: 1 MeshPart (or 2 wedges per triangle of the native fallback) + collider boxes.
+function BiomePlacement.partCost(id: string, kit, meshes): number
+    local data = kit[id]
+    return (if meshes[id] then 1 else 2 * data.triangles) + #data.colliders
+end
+function BiomePlacement.parts(placed: {Placement}, kit, meshes): number
+    local total = 0
+    for _, p in placed do total += BiomePlacement.partCost(p.id, kit, meshes or {}) end
+    return total
+end
 function BiomePlacement.triangles(placed: {Placement}, kit): number
     local total = 0
     for _, p in placed do total += kit[p.id].triangles end
@@ -371423,8 +371453,60 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
+      <Item class="ModuleScript" referent="RBX235">
+        <Properties>
+          <string name="Name">WorldKitMeshAssets</string>
+          <ProtectedString name="Source">--!strict
+-- Generated by tools/bind_worldkit_meshes.py from resources/worldkit-meshes/mesh-bindings.json.
+-- size is in studs; ids missing here keep the native fallback model.
+return {
+    world_tree_conifer_s = {meshId = "rbxassetid://104425755184706", size = {5.9076, 10.162, 6.0336}},
+    world_tree_conifer_m = {meshId = "rbxassetid://91506608798417", size = {11.268, 16.939, 10.087}},
+    world_tree_conifer_l = {meshId = "rbxassetid://94476421551155", size = {15.7809, 26.2213, 15.7694}},
+    world_tree_canopy_s = {meshId = "rbxassetid://80178436874450", size = {6.417, 8.244, 5.37}},
+    world_tree_canopy_m = {meshId = "rbxassetid://98978128229639", size = {13.158, 13.098, 8.539}},
+    world_tree_canopy_l = {meshId = "rbxassetid://122558382330439", size = {17.926, 19.43, 16.656}},
+    world_tree_cycad_s = {meshId = "rbxassetid://110652847848305", size = {5.7166, 5.2355, 4.8575}},
+    world_tree_cycad_m = {meshId = "rbxassetid://102479671711761", size = {9.2059, 8.8499, 9.2379}},
+    world_tree_cycad_l = {meshId = "rbxassetid://121463204666848", size = {14.143, 12.673, 14.322}},
+    world_tree_dead_s = {meshId = "rbxassetid://128424086478561", size = {1.5618, 7.9962, 2.5427}},
+    world_tree_dead_m = {meshId = "rbxassetid://126421013408998", size = {5.2499, 12.339, 4.0378}},
+    world_tree_dead_l = {meshId = "rbxassetid://126942564214652", size = {7.042, 17.48, 6.225}},
+    world_bush_a = {meshId = "rbxassetid://78099483652653", size = {3.702, 1.899, 2.477}},
+    world_fern_a = {meshId = "rbxassetid://107977080086482", size = {3.255, 1.201, 2.936}},
+    world_grass_a = {meshId = "rbxassetid://124539051999563", size = {0.6681, 1.4333, 0.6781}},
+    world_bush_b = {meshId = "rbxassetid://94508842728897", size = {3.1373, 2.0372, 2.4632}},
+    world_fern_b = {meshId = "rbxassetid://106175807503473", size = {3.489, 1.526, 3.526}},
+    world_grass_b = {meshId = "rbxassetid://78917402156100", size = {0.6517, 1.6124, 0.6897}},
+    world_flowers_a = {meshId = "rbxassetid://131727133316043", size = {0.6001, 1.1842, 0.6131}},
+    world_horsetail_a = {meshId = "rbxassetid://88682217520174", size = {1.305, 4.444, 1.564}},
+    world_mushrooms_a = {meshId = "rbxassetid://124085042950860", size = {2.344, 2.017, 1.772}},
+    world_boulder_mossy_s = {meshId = "rbxassetid://73460768281844", size = {2.287, 2.065, 2.668}},
+    world_boulder_mossy_m = {meshId = "rbxassetid://71559086769664", size = {6.233, 3.493, 5.432}},
+    world_boulder_mossy_l = {meshId = "rbxassetid://74337027284321", size = {11.973, 5.899, 9.247}},
+    world_boulder_bare_s = {meshId = "rbxassetid://124164861917596", size = {2.8693, 1.9832, 2.8653}},
+    world_boulder_bare_m = {meshId = "rbxassetid://122759214184314", size = {6.414, 3.711, 5.469}},
+    world_boulder_bare_l = {meshId = "rbxassetid://77475611908984", size = {11.506, 5.689, 9.169}},
+    world_rocks_spires = {meshId = "rbxassetid://74975865747855", size = {8.659, 14.228, 7.102}},
+    world_rocks_ledge = {meshId = "rbxassetid://71352685037118", size = {10.586, 7.9, 6.829}},
+    world_landmark_dino_statue = {meshId = "rbxassetid://126891918289401", size = {9.04, 14.179, 18.091}},
+    world_landmark_fossil_display = {meshId = "rbxassetid://107866531107524", size = {7.0467, 6.7317, 17.3297}},
+    world_landmark_stone_arch = {meshId = "rbxassetid://132612538772119", size = {24.6682, 18.4626, 7.6751}},
+    world_landmark_ruins_altar = {meshId = "rbxassetid://119988150698376", size = {15.036, 8.978, 15.063}},
+    food_berry_a = {meshId = "rbxassetid://117697980183495", size = {0.7219, 0.9538, 0.8708}},
+    food_berry_b = {meshId = "rbxassetid://93708588973222", size = {0.724, 0.803, 0.618}},
+    food_fruit_a = {meshId = "rbxassetid://82455228296419", size = {0.7582, 1.1643, 0.7632}},
+    food_fruit_b = {meshId = "rbxassetid://105088766237379", size = {1.0399, 1.2399, 0.9009}},
+    food_egg_a = {meshId = "rbxassetid://134933556720755", size = {1.864, 1.561, 2.02}},
+    food_egg_b = {meshId = "rbxassetid://109029062368148", size = {1.455, 1.48, 1.351}},
+    food_amber_a = {meshId = "rbxassetid://81927471048892", size = {1.0679, 1.9978, 0.9529}},
+    food_amber_b = {meshId = "rbxassetid://78459467425351", size = {1.1339, 1.4439, 0.9399}},
+}
+</ProtectedString>
+        </Properties>
+      </Item>
     </Item>
-    <Item class="Folder" referent="RBX235">
+    <Item class="Folder" referent="RBX236">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -540979,15 +541061,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX236">
+  <Item class="ServerScriptService" referent="RBX237">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX237">
+    <Item class="Folder" referent="RBX238">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">AdminService</string>
           <ProtectedString name="Source">--!strict
@@ -541093,7 +541175,7 @@ return AdminService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -541104,6 +541186,7 @@ local Terrain = require(script.Parent.IslandTerrain)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
+local KitMeshes = require(ReplicatedStorage.Shared.WorldKitMeshAssets)
 local Arena = {}
 local function part(parent: Instance, name: string, size: Vector3, position: Vector3, color: Color3, material: Enum.Material, solid: boolean): Part
     local p = Instance.new("Part")
@@ -541178,8 +541261,15 @@ end
 local function biomeKit(parent: Instance)
     local folder = Instance.new("Folder")
     folder.Name, folder.Parent = "WorldKit", parent
+    -- Only ids whose uploaded MeshPart really loaded count as one part; the rest cost their native fallback.
+    local meshes: {[string]: boolean} = {}
+    local overrides = ReplicatedStorage:FindFirstChild("ResourceOverrides")
+    for id in KitMeshes do
+        local template = if overrides then overrides:FindFirstChild(id) else nil
+        if template and template:IsA("MeshPart") then meshes[id] = true end
+    end
     local placed = Biome.generate({seed = Config.WorldArtSeed, density = Config.WorldArtDensity,
-        extent = Config.ArenaHalfWidth, height = Layout.height, kit = KitData})
+        extent = Config.ArenaHalfWidth, height = Layout.height, kit = KitData, meshes = meshes})
     local missing = 0
     for i, p in placed do
         local pivot = CFrame.new(p.x, p.y, p.z) * CFrame.Angles(0, p.yaw, 0)
@@ -541201,6 +541291,7 @@ local function biomeKit(parent: Instance)
     end
     workspace:SetAttribute("WorldKitPlacements", #placed)
     workspace:SetAttribute("WorldKitTriangles", Biome.triangles(placed, KitData))
+    workspace:SetAttribute("WorldKitParts", Biome.parts(placed, KitData, meshes))
     workspace:SetAttribute("WorldKitMissing", missing)
 end
 function Arena.build()
@@ -541305,7 +541396,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX240">
+      <Item class="Script" referent="RBX241">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -541331,6 +541422,7 @@ Lighting.ClockTime = 14
 Lighting.Brightness = 2
 Lighting.Ambient = Color3.fromRGB(130, 143, 148)
 require(script.Parent.ImportedResources).load()
+if Config.WorldArtMode=="BiomeKit" or Config.FoodArtMode=="Kit" then require(script.Parent.ImportedResources).loadWorldKit() end
 Arena.build()
 Leaderboards.start()
 
@@ -541451,7 +541543,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -541561,7 +541653,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -541649,7 +541741,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -541785,7 +541877,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -541997,7 +542089,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -542072,7 +542164,7 @@ function FoodService.start(dinosaur,repository)
             local z = math.clamp(food.center.Y + math.sin(angle) * radius, food.minZ + 1, food.maxZ - 1)
             local ground = groundAt(x, z)
             if ground then
-                food.part.Position = ground + Vector3.new(0, food.kind.size / 2 + 0.35, 0)
+                food.part.Position = ground + Vector3.new(0, food.part.Size.Y / 2 + 0.35, 0)
                 if food.visual then food.visual:PivotTo(CFrame.new(ground + Vector3.new(0,.35,0))) end
                 return true
             end
@@ -542105,12 +542197,35 @@ function FoodService.start(dinosaur,repository)
                 local roll, kind = random:NextInteger(1, 100), TYPES[1]
                 if roll &gt; 98 then kind = TYPES[4] elseif roll &gt; 93 then kind = TYPES[3] elseif roll &gt; 78 then kind = TYPES[2] end
                 if starter then kind = if itemIndex % 3 == 0 then TYPES[2] else TYPES[1] end
-                local pickup = Instance.new("Part")
-                pickup.Name = kind.id
-                pickup.Shape = Enum.PartType.Ball
-                pickup.Size = Vector3.one * kind.size
-                pickup.Color = kind.color
-                pickup.Material = Enum.Material.SmoothPlastic
+                local kitMode = Config.FoodArtMode == "Kit"
+                local artId = if kitMode then string.format("food_%s_%s", kind.id, if (sx + sz + itemIndex) % 2 == 0 then "a" else "b") else kind.id
+                -- Kit mode: the uploaded food MeshPart IS the pickup part (one part, replaces the ball), scaled so its
+                -- largest side equals the old ball diameter (same readability, points, attributes and validation).
+                local pickup: BasePart
+                local meshPickup = false
+                if kitMode then
+                    local ok, model = pcall(Resources.clone, artId)
+                    local mesh = if ok and model then model:FindFirstChildWhichIsA("MeshPart") else nil
+                    if mesh then
+                        mesh.Parent = nil
+                        mesh.Size *= kind.size / math.max(mesh.Size.X, mesh.Size.Y, mesh.Size.Z)
+                        mesh.CFrame = CFrame.Angles(0, random:NextNumber(0, math.pi * 2), 0)
+                        mesh.Name = kind.id
+                        mesh.Color = Color3.new(1, 1, 1)
+                        mesh.Material = Enum.Material.SmoothPlastic
+                        pickup, meshPickup = mesh, true
+                    end
+                    if model then model:Destroy() end
+                end
+                if not meshPickup then
+                    local ball = Instance.new("Part")
+                    ball.Name = kind.id
+                    ball.Shape = Enum.PartType.Ball
+                    ball.Size = Vector3.one * kind.size
+                    ball.Color = kind.color
+                    ball.Material = Enum.Material.SmoothPlastic
+                    pickup = ball
+                end
                 pickup.Anchored = true
                 pickup.CanCollide = false
                 pickup.CanTouch = false
@@ -542120,13 +542235,12 @@ function FoodService.start(dinosaur,repository)
                 pickup:SetAttribute("Sector", string.format("%d:%d", sx, sz))
                 local visual = nil
                 -- BD-050 Kit mode is visual only: same TYPES points, pickup part and server validation.
-                -- Berry/fruit keep the visible ball pickup (1,300+ native kit copies is too heavy; the ArtId variant is
-                -- recorded for the MeshPart upload). Kit egg/amber models replace the ball only on a deterministic stride
-                -- (amber 1/4, egg 1/20) up to Config.FoodKitVisualCap, so the part budget in docs/68 holds.
-                local kitMode = Config.FoodArtMode == "Kit"
-                local artId = if kitMode then string.format("food_%s_%s", kind.id, if (sx + sz + itemIndex) % 2 == 0 then "a" else "b") else kind.id
+                -- With the uploaded MeshParts every pickup (berry, fruit, egg, amber) is its own kit mesh. Only when a kit
+                -- mesh is missing does it fall back: berry/fruit keep the ball and native egg/amber models replace the
+                -- ball on a deterministic stride (amber 1/4, egg 1/20) up to Config.FoodKitVisualCap (part budget, docs/68).
                 pickup:SetAttribute("ArtId", artId)
-                local useModel = kind.id == "egg" or kind.id == "amber"
+                pickup:SetAttribute("KitMesh", meshPickup)
+                local useModel = (kind.id == "egg" or kind.id == "amber") and not meshPickup
                 if kitMode and useModel then
                     local stride = if kind.id == "amber" then 4 else 20
                     useModel = kitVisuals &lt; Config.FoodKitVisualCap and (sx * 16 + sz + itemIndex * 7) % stride == 0
@@ -542252,7 +542366,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -542431,7 +542545,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -542617,7 +542731,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -543005,16 +543119,53 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local InsertService=game:GetService("InsertService")
+local AssetService=game:GetService("AssetService")
 local Bindings=require(ReplicatedStorage.Shared.ResourceMeshAssets)
+local KitMeshes=require(ReplicatedStorage.Shared.WorldKitMeshAssets)
 local Import={}
-function Import.load()
+local function overrides(): Folder
+    local existing=ReplicatedStorage:FindFirstChild("ResourceOverrides")
+    if existing and existing:IsA("Folder") then return existing end
     local folder=Instance.new("Folder") folder.Name="ResourceOverrides" folder.Parent=ReplicatedStorage
+    return folder
+end
+-- BD-049/050 kit: one real MeshPart per uploaded kit mesh (vertex colours carry the palette; no textures).
+-- Sized in studs from the generated bindings, pivot = bounding-box bottom centre (ResourceModels.clone normalises it).
+-- An id whose mesh fails to load keeps its native fallback model; the world is never left empty.
+function Import.loadWorldKit(): (number, number)
+    local folder=overrides()
+    local loaded,failed,pending=0,0,0
+    for id,binding in KitMeshes do
+        pending+=1
+        task.spawn(function()
+            local ok,result=pcall(function()
+                local mesh=AssetService:CreateMeshPartAsync(Content.fromUri(binding.meshId),{CollisionFidelity=Enum.CollisionFidelity.Box,RenderFidelity=Enum.RenderFidelity.Automatic})
+                mesh.Name=id
+                mesh.Size=Vector3.new(binding.size[1],binding.size[2],binding.size[3])
+                mesh.Color=Color3.new(1,1,1) -- white tint: the kit palette comes from the mesh vertex colours
+                mesh.Material=Enum.Material.SmoothPlastic
+                mesh.Anchored,mesh.CanCollide,mesh.CanTouch,mesh.CanQuery,mesh.Massless=true,false,false,false,true
+                mesh:SetAttribute("KitMeshId",binding.meshId)
+                return mesh
+            end)
+            if ok then result.Parent=folder loaded+=1 else failed+=1 warn("[Be Dino] kit mesh "..id.." unavailable; keeping native fallback: "..tostring(result)) end
+            pending-=1
+        end)
+    end
+    local deadline=os.clock()+30
+    while pending&gt;0 and os.clock()&lt;deadline do task.wait() end
+    workspace:SetAttribute("WorldKitMeshParts",loaded)
+    workspace:SetAttribute("WorldKitMeshFailed",failed+pending)
+    return loaded,failed+pending
+end
+function Import.load()
+    local folder=overrides()
     for id,assetId in Bindings do
         if assetId=="" then continue end
         local container=nil
@@ -543055,7 +543206,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -543097,7 +543248,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX251">
+      <Item class="ModuleScript" referent="RBX252">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -543209,7 +543360,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX252">
+      <Item class="ModuleScript" referent="RBX253">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -543291,7 +543442,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX253">
+      <Item class="ModuleScript" referent="RBX254">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -543383,7 +543534,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX254">
+      <Item class="ModuleScript" referent="RBX255">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -543488,7 +543639,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX255">
+      <Item class="ModuleScript" referent="RBX256">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -543623,7 +543774,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX256">
+      <Item class="ModuleScript" referent="RBX257">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -545386,7 +545537,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX257">
+      <Item class="ModuleScript" referent="RBX258">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -545585,7 +545736,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX258">
+      <Item class="ModuleScript" referent="RBX259">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -545699,7 +545850,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX259">
+      <Item class="ModuleScript" referent="RBX260">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -545962,7 +546113,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX260">
+      <Item class="ModuleScript" referent="RBX261">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -546034,19 +546185,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX261">
+  <Item class="StarterPlayer" referent="RBX262">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX262">
+    <Item class="StarterPlayerScripts" referent="RBX263">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX263">
+      <Item class="Folder" referent="RBX264">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX264">
+        <Item class="LocalScript" referent="RBX265">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -546247,7 +546398,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX265">
+        <Item class="LocalScript" referent="RBX266">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -547677,7 +547828,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX266">
+        <Item class="LocalScript" referent="RBX267">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -547740,7 +547891,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX267">
+        <Item class="ModuleScript" referent="RBX268">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -547819,7 +547970,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX268">
+        <Item class="LocalScript" referent="RBX269">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -548100,7 +548251,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX269">
+        <Item class="ModuleScript" referent="RBX270">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -548965,7 +549116,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX270">
+        <Item class="ModuleScript" referent="RBX271">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -549067,7 +549218,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX271">
+        <Item class="ModuleScript" referent="RBX272">
           <Properties>
             <string name="Name">HatchSequence</string>
             <ProtectedString name="Source">--!strict
@@ -549882,7 +550033,7 @@ return Seq
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX272">
+        <Item class="ModuleScript" referent="RBX273">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -549942,7 +550093,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX273">
+        <Item class="LocalScript" referent="RBX274">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -550107,7 +550258,7 @@ RunService.Heartbeat:Connect(function(dt)
     local folder = workspace:FindFirstChild("Food")
     if not folder then return end
     for _, item in folder:GetChildren() do
-        if not item:IsA("BasePart") or not item:GetAttribute("Points") then continue end
+        if not item:IsA("BasePart") or not item:GetAttribute("Points") or item:GetAttribute("KitMesh") then continue end
         local model = foods[item]
         if not model then
             model = RuntimeMeshes.clone(item.Name)
@@ -550129,7 +550280,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX274">
+        <Item class="LocalScript" referent="RBX275">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -550211,7 +550362,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX275">
+  <Item class="Workspace" referent="RBX276">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

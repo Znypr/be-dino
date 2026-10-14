@@ -21,6 +21,7 @@ Lighting.ClockTime = 14
 Lighting.Brightness = 2
 Lighting.Ambient = Color3.fromRGB(130, 143, 148)
 require(script.Parent.ImportedResources).load()
+if Config.WorldArtMode=="BiomeKit" or Config.FoodArtMode=="Kit" then require(script.Parent.ImportedResources).loadWorldKit() end
 Arena.build()
 Leaderboards.start()
 
