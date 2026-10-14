@@ -740,3 +740,16 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-076 | Backlog | P3 | NextGoal shows top objective | BD-075 |
 | BD-077 | Backlog | P3 | Objective icons (4 new) | none |
 | BD-078 | Backlog | P2 | Objectives Studio/Android acceptance | BD-072-077 |
+| BD-086 | Backlog | P1 | Pick aura/trail style, freeze spec (doc 70) | none |
+| BD-087 | Backlog | P1 | Aura/trail sprite sheets and textures | BD-086 |
+| BD-088 | Backlog | P2 | Ribbon textures and ground-disc decals | BD-086 |
+| BD-089 | Backlog | P1 | Studio spike: trail + aura per tier, ground sigil | BD-086 |
+| BD-090 | Backlog | P1 | CosmeticEffects v2 auras (tiers, orbit beams) | BD-087, BD-089 |
+| BD-091 | Backlog | P1 | Trail v2 textured, six-class complexity | BD-087, BD-088, BD-089 |
+| BD-092 | Backlog | P2 | Config: trail class, aura tier, 3 new auras | BD-086 |
+| BD-093 | Backlog | P2 | Shop icons (16) and rarity badges (6) | BD-092 |
+| BD-094 | Backlog | P2 | Shop previews use real effect sprites | BD-091, BD-093 |
+| BD-095 | Backlog | P1 | Effects Full/Lite/Off setting and distance LOD | BD-090 |
+| BD-096 | Backlog | P3 | Equip shimmer audio | none |
+| BD-097 | Backlog | P2 | 12-player phone perf + Studio/Android acceptance | BD-090-095 |
+| BD-098 | Backlog | P3 | Prices and gates for 3 new auras | BD-092 |
