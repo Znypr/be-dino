@@ -160,7 +160,7 @@ RunService.Heartbeat:Connect(function(dt)
     local folder = workspace:FindFirstChild("Food")
     if not folder then return end
     for _, item in folder:GetChildren() do
-        if not item:IsA("BasePart") or not item:GetAttribute("Points") then continue end
+        if not item:IsA("BasePart") or not item:GetAttribute("Points") or item:GetAttribute("KitMesh") then continue end
         local model = foods[item]
         if not model then
             model = RuntimeMeshes.clone(item.Name)

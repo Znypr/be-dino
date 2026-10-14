@@ -1,0 +1,624 @@
+{
+ "version": 1,
+ "uploadedAt": "2026-10-15",
+ "owner": "znyprs (7285577648)",
+ "status": "uploaded via Studio Bulk Import; MeshPart sizes are centimetre-scale, multiply by scale to get studs; all 41 uploaded",
+ "missing": [],
+ "meshes": {
+  "world_boulder_mossy_l": {
+   "meshId": "rbxassetid://74337027284321",
+   "importedSize": [
+    1197.3,
+    589.9,
+    924.7
+   ],
+   "targetSize": [
+    11.973,
+    5.8989,
+    9.2468
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_boulder_bare_s": {
+   "meshId": "rbxassetid://124164861917596",
+   "importedSize": [
+    286.9,
+    198.3,
+    286.5
+   ],
+   "targetSize": [
+    2.8691,
+    1.9831,
+    2.8655
+   ],
+   "scale": 0.010001,
+   "ratioSpread": 1.0
+  },
+  "world_tree_cycad_s": {
+   "meshId": "rbxassetid://110652847848305",
+   "importedSize": [
+    571.6,
+    523.5,
+    485.7
+   ],
+   "targetSize": [
+    5.7164,
+    5.2352,
+    4.8577
+   ],
+   "scale": 0.010001,
+   "ratioSpread": 1.0
+  },
+  "food_fruit_b": {
+   "meshId": "rbxassetid://105088766237379",
+   "importedSize": [
+    104.0,
+    124.0,
+    90.1
+   ],
+   "targetSize": [
+    1.04,
+    1.24,
+    0.9007
+   ],
+   "scale": 0.009999,
+   "ratioSpread": 1.0
+  },
+  "food_egg_b": {
+   "meshId": "rbxassetid://109029062368148",
+   "importedSize": [
+    145.5,
+    148.0,
+    135.1
+   ],
+   "targetSize": [
+    1.4553,
+    1.48,
+    1.3507
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_bush_b": {
+   "meshId": "rbxassetid://94508842728897",
+   "importedSize": [
+    313.7,
+    203.7,
+    246.3
+   ],
+   "targetSize": [
+    3.1371,
+    2.0372,
+    2.4635
+   ],
+   "scale": 0.010001,
+   "ratioSpread": 1.0
+  },
+  "world_tree_conifer_l": {
+   "meshId": "rbxassetid://94476421551155",
+   "importedSize": [
+    1232.5,
+    2047.9,
+    1231.6
+   ],
+   "targetSize": [
+    15.7814,
+    26.2225,
+    15.7695
+   ],
+   "scale": 0.012804,
+   "ratioSpread": 1.0
+  },
+  "food_berry_a": {
+   "meshId": "rbxassetid://117697980183495",
+   "importedSize": [
+    72.2,
+    95.4,
+    87.1
+   ],
+   "targetSize": [
+    0.7217,
+    0.9538,
+    0.8709
+   ],
+   "scale": 0.009998,
+   "ratioSpread": 1.0
+  },
+  "world_fern_b": {
+   "meshId": "rbxassetid://106175807503473",
+   "importedSize": [
+    348.9,
+    152.6,
+    352.6
+   ],
+   "targetSize": [
+    3.4886,
+    1.526,
+    3.5265
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_horsetail_a": {
+   "meshId": "rbxassetid://88682217520174",
+   "importedSize": [
+    130.5,
+    444.4,
+    156.4
+   ],
+   "targetSize": [
+    1.3048,
+    4.4435,
+    1.5643
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_tree_cycad_l": {
+   "meshId": "rbxassetid://121463204666848",
+   "importedSize": [
+    1414.3,
+    1267.3,
+    1432.2
+   ],
+   "targetSize": [
+    14.1435,
+    12.6729,
+    14.3225
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "food_fruit_a": {
+   "meshId": "rbxassetid://82455228296419",
+   "importedSize": [
+    75.8,
+    116.4,
+    76.3
+   ],
+   "targetSize": [
+    0.7583,
+    1.1641,
+    0.7632
+   ],
+   "scale": 0.010003,
+   "ratioSpread": 1.0
+  },
+  "world_landmark_fossil_display": {
+   "meshId": "rbxassetid://107866531107524",
+   "importedSize": [
+    704.6,
+    673.1,
+    1732.8
+   ],
+   "targetSize": [
+    7.047,
+    6.7313,
+    17.3283
+   ],
+   "scale": 0.010001,
+   "ratioSpread": 1.0
+  },
+  "world_rocks_spires": {
+   "meshId": "rbxassetid://74975865747855",
+   "importedSize": [
+    865.9,
+    1422.8,
+    710.2
+   ],
+   "targetSize": [
+    8.6586,
+    14.2282,
+    7.1016
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_fern_a": {
+   "meshId": "rbxassetid://107977080086482",
+   "importedSize": [
+    325.5,
+    120.1,
+    293.6
+   ],
+   "targetSize": [
+    3.2556,
+    1.2006,
+    2.9362
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.001
+  },
+  "world_tree_dead_s": {
+   "meshId": "rbxassetid://128424086478561",
+   "importedSize": [
+    156.2,
+    799.7,
+    254.3
+   ],
+   "targetSize": [
+    1.5616,
+    7.9975,
+    2.5428
+   ],
+   "scale": 0.009999,
+   "ratioSpread": 1.0
+  },
+  "food_amber_a": {
+   "meshId": "rbxassetid://81927471048892",
+   "importedSize": [
+    106.8,
+    199.8,
+    95.3
+   ],
+   "targetSize": [
+    1.0684,
+    1.9975,
+    0.9526
+   ],
+   "scale": 0.009999,
+   "ratioSpread": 1.001
+  },
+  "world_tree_cycad_m": {
+   "meshId": "rbxassetid://102479671711761",
+   "importedSize": [
+    920.5,
+    884.9,
+    923.7
+   ],
+   "targetSize": [
+    9.2056,
+    8.8494,
+    9.2374
+   ],
+   "scale": 0.010001,
+   "ratioSpread": 1.0
+  },
+  "world_tree_conifer_s": {
+   "meshId": "rbxassetid://104425755184706",
+   "importedSize": [
+    590.7,
+    1016.1,
+    603.3
+   ],
+   "targetSize": [
+    5.9076,
+    10.161,
+    6.0335
+   ],
+   "scale": 0.010001,
+   "ratioSpread": 1.0
+  },
+  "food_berry_b": {
+   "meshId": "rbxassetid://93708588973222",
+   "importedSize": [
+    72.4,
+    80.3,
+    61.8
+   ],
+   "targetSize": [
+    0.7244,
+    0.8026,
+    0.6179
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.001
+  },
+  "world_tree_canopy_m": {
+   "meshId": "rbxassetid://98978128229639",
+   "importedSize": [
+    1315.8,
+    1309.8,
+    853.9
+   ],
+   "targetSize": [
+    13.1579,
+    13.0982,
+    8.5392
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_tree_dead_l": {
+   "meshId": "rbxassetid://126942564214652",
+   "importedSize": [
+    704.2,
+    1748.0,
+    622.5
+   ],
+   "targetSize": [
+    7.0418,
+    17.4801,
+    6.2249
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_mushrooms_a": {
+   "meshId": "rbxassetid://124085042950860",
+   "importedSize": [
+    234.4,
+    201.7,
+    177.2
+   ],
+   "targetSize": [
+    2.3441,
+    2.0167,
+    1.7721
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_boulder_mossy_m": {
+   "meshId": "rbxassetid://71559086769664",
+   "importedSize": [
+    623.3,
+    349.3,
+    543.2
+   ],
+   "targetSize": [
+    6.2334,
+    3.4931,
+    5.4315
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_landmark_ruins_altar": {
+   "meshId": "rbxassetid://119988150698376",
+   "importedSize": [
+    1503.6,
+    897.8,
+    1506.3
+   ],
+   "targetSize": [
+    15.0363,
+    8.978,
+    15.0631
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_boulder_bare_l": {
+   "meshId": "rbxassetid://77475611908984",
+   "importedSize": [
+    1150.6,
+    568.9,
+    916.9
+   ],
+   "targetSize": [
+    11.5058,
+    5.6887,
+    9.169
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_rocks_ledge": {
+   "meshId": "rbxassetid://71352685037118",
+   "importedSize": [
+    1058.6,
+    790.0,
+    682.9
+   ],
+   "targetSize": [
+    10.5863,
+    7.9003,
+    6.8293
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_tree_canopy_s": {
+   "meshId": "rbxassetid://80178436874450",
+   "importedSize": [
+    641.7,
+    824.4,
+    537.0
+   ],
+   "targetSize": [
+    6.4167,
+    8.2445,
+    5.3696
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_tree_conifer_m": {
+   "meshId": "rbxassetid://91506608798417",
+   "importedSize": [
+    1126.8,
+    1693.9,
+    1008.7
+   ],
+   "targetSize": [
+    11.2685,
+    16.9396,
+    10.0874
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_boulder_bare_m": {
+   "meshId": "rbxassetid://122759214184314",
+   "importedSize": [
+    641.4,
+    371.1,
+    546.9
+   ],
+   "targetSize": [
+    6.4144,
+    3.7106,
+    5.469
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_boulder_mossy_s": {
+   "meshId": "rbxassetid://73460768281844",
+   "importedSize": [
+    228.7,
+    206.5,
+    266.8
+   ],
+   "targetSize": [
+    2.2865,
+    2.0654,
+    2.6678
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_landmark_dino_statue": {
+   "meshId": "rbxassetid://126891918289401",
+   "importedSize": [
+    904.0,
+    1417.9,
+    1809.1
+   ],
+   "targetSize": [
+    9.0404,
+    14.1788,
+    18.0907
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "food_egg_a": {
+   "meshId": "rbxassetid://134933556720755",
+   "importedSize": [
+    186.4,
+    156.1,
+    202.0
+   ],
+   "targetSize": [
+    1.8644,
+    1.5611,
+    2.0196
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_landmark_stone_arch": {
+   "meshId": "rbxassetid://132612538772119",
+   "importedSize": [
+    2048.0,
+    1532.8,
+    637.2
+   ],
+   "targetSize": [
+    24.6685,
+    18.463,
+    7.6756
+   ],
+   "scale": 0.012045,
+   "ratioSpread": 1.0
+  },
+  "world_bush_a": {
+   "meshId": "rbxassetid://78099483652653",
+   "importedSize": [
+    370.2,
+    189.9,
+    247.7
+   ],
+   "targetSize": [
+    3.7023,
+    1.8987,
+    2.4768
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_grass_b": {
+   "meshId": "rbxassetid://78917402156100",
+   "importedSize": [
+    65.2,
+    161.3,
+    69.0
+   ],
+   "targetSize": [
+    0.6517,
+    1.6127,
+    0.6896
+   ],
+   "scale": 0.009996,
+   "ratioSpread": 1.0
+  },
+  "world_flowers_a": {
+   "meshId": "rbxassetid://131727133316043",
+   "importedSize": [
+    60.0,
+    118.4,
+    61.3
+   ],
+   "targetSize": [
+    0.5999,
+    1.1842,
+    0.6134
+   ],
+   "scale": 0.010002,
+   "ratioSpread": 1.001
+  },
+  "world_grass_a": {
+   "meshId": "rbxassetid://124539051999563",
+   "importedSize": [
+    66.8,
+    143.3,
+    67.8
+   ],
+   "targetSize": [
+    0.6683,
+    1.4334,
+    0.6779
+   ],
+   "scale": 0.010002,
+   "ratioSpread": 1.001
+  },
+  "food_amber_b": {
+   "meshId": "rbxassetid://78459467425351",
+   "importedSize": [
+    113.4,
+    144.4,
+    94.0
+   ],
+   "targetSize": [
+    1.1337,
+    1.4441,
+    0.9399
+   ],
+   "scale": 0.009999,
+   "ratioSpread": 1.0
+  },
+  "world_tree_canopy_l": {
+   "meshId": "rbxassetid://122558382330439",
+   "importedSize": [
+    1792.6,
+    1943.0,
+    1665.6
+   ],
+   "targetSize": [
+    17.9262,
+    19.4299,
+    16.6558
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_tree_dead_m": {
+   "meshId": "rbxassetid://126421013408998",
+   "importedSize": [
+    524.9936,
+    1233.9022,
+    403.7802
+   ],
+   "targetSize": [
+    5.2499,
+    12.339,
+    4.0378
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  }
+ }
+}
