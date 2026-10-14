@@ -1128,6 +1128,20 @@ local timerScale=Instance.new("UIScale") timerScale.Parent=timers
 -- (same numbers as LeapService) so there is no round-trip wait; the server still validates,
 -- owns the cooldown and re-applies the impulse. PROVISIONAL.
 local predictedLeap:{ready:number,at:number,character:Model}?=nil
+-- Humanoid air control would damp the launch speed within ~0.4 s (measured 18 of ~50 intended studs), so the client holds the
+-- launch heading until the leap ends. Dropped if the server does not confirm the leap ("leaping") within half a second.
+local leapHold:{forward:Vector3,at:number,untilAt:number,character:Model,root:BasePart}?=nil
+game:GetService("RunService").Heartbeat:Connect(function()
+    local hold=leapHold
+    if not hold then return end
+    local now=os.clock()
+    if now>=hold.untilAt or player.Character~=hold.character or not hold.root.Parent
+        or (now-hold.at>.5 and player:GetAttribute("LastLeapStatus")~="leaping") then
+        leapHold=nil return
+    end
+    local velocity=hold.root.AssemblyLinearVelocity
+    hold.root.AssemblyLinearVelocity=Vector3.new(hold.forward.X*ProgressionConfig.LeapHorizontalSpeed,velocity.Y,hold.forward.Z*ProgressionConfig.LeapHorizontalSpeed)
+end)
 local function requestLeap()
     leapRemote:FireServer()
     local c=player.Character
@@ -1138,7 +1152,10 @@ local function requestLeap()
     local look=root.CFrame.LookVector
     local forward=Vector3.new(look.X,0,look.Z)
     if forward.Magnitude<.01 then return end
+    -- The leap is client-owned: this client launches and simulates the dino itself; the server only validates (LeapService).
+    h:ChangeState(Enum.HumanoidStateType.Jumping)
     root.AssemblyLinearVelocity=forward.Unit*ProgressionConfig.LeapHorizontalSpeed+Vector3.new(0,ProgressionConfig.LeapVerticalSpeed,0)
+    leapHold={forward=forward.Unit,at=os.clock(),untilAt=os.clock()+ProgressionConfig.LeapDuration,character=c,root=root}
     -- Client-local attribute: DinoMotion starts wind-up + leap pose now instead of on the replicated cooldown.
     c:SetAttribute("LeapPredictAt",os.clock())
     predictedLeap={ready=num("LeapReadyAt"),at=os.clock(),character=c}
