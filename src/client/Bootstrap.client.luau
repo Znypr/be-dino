@@ -12,6 +12,8 @@ local Config = require(Shared.Config)
 local Theme = require(Shared.UITheme)
 local NavigationArtwork = require(Shared.NavigationArtwork)
 local NestQueue = require(Shared.NestQueue)
+local EggsLogic = require(Shared.EggsLogic)
+local EggsScreen = require(script.Parent.EggsScreen)
 local Preview = require(Shared.DinosaurPreview)
 local ModelPreview = require(Shared.ModelPreview)
 local HatchPresentation = require(Shared.HatchPresentation)
@@ -358,6 +360,16 @@ local function meter(parent: GuiObject,x: number,y: number,w: number,value: numb
     fill.Size,fill.BorderSizePixel,fill.BackgroundColor3,fill.ZIndex,fill.Parent=UDim2.new(if motion then 0 else fraction,0,1,0),0,color,b.ZIndex+1,b
     Theme.animate(fill,.22,{Size=UDim2.new(fraction,0,1,0)})
     label(b,text,0,0,w,34,20)
+end
+local function ownsAutoOpen(): boolean return player:GetAttribute("OwnsAutoOpen")==true end
+local function autoOpenSelection()
+    return EggsLogic.effective(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen())
+end
+local function autoOpenText(): string
+    if EggsLogic.locked(Config.AutoOpenRequiresPass,ownsAutoOpen()) then return "Auto-open is locked" end
+    local names={}
+    for _,rarity in autoOpenSelection() do table.insert(names,Config.SpeciesRarityNames[rarity]) end
+    return if #names==0 then "Auto-open: off" else "Auto-open: "..table.concat(names,", ")
 end
 local function queue()
     return decoded("ChestQueueJson","[]")
@@ -763,122 +775,27 @@ render=function(name: string)
         button(body,"CONFIRM FUSION",280,264,510,64,C.accent,function() fuse:FireServer(selected,fusionTarget,Http:GenerateGUID(false)) open("fusion") end)
         button(body,"CANCEL",280,340,510,44,C.red,function() open("fusion") end)
     elseif name=="eggs" then
-        heading.Text,header.BackgroundColor3="Caught Eggs",C.gold
-        local entries=queue()
-        local timers={}
-        for slot=1,Config.ChestQueueCapacity do
-            local entry=entries[slot]
-            local card=box(body,(slot-1)*166,0,156,280,if entry then C.card else C.outline,24)
-            label(card,if entry and entry.genes then EggGenetics.condition(entry.genes.conditionId).name else "Slot "..slot,0,8,156,30,22)
-            -- Real egg look from the committed genes; empty slots stay a neutral gray placeholder.
-            local look=FusionSelection.eggSlotLook(entry,entry~=nil and EggGenetics.valid(entry.genes))
-            local view=ModelPreview.add(card,"egg",look=="empty")
-            view.Position,view.Size=UDim2.fromOffset(18,65),UDim2.fromOffset(120,120)
-            if entry then PreviewTraits.add(view,if look=="genes" then entry else {shiny=entry.shiny,big=entry.big}) end
-            if entry then label(card,rarityNames[entry.rarity or 1],0,37,156,24,18,rarityColors[entry.rarity or 1]) end
-            local mutation=if entry then ProgressionRules.item(ProgressionConfig.EventMutations,entry.mutationId) else nil
-            if mutation then
-                local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
-                if not entry.genes then for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.6) end end end
-                label(card,mutation.name,0,192,156,27,18,color)
-            elseif entry and entry.eventId and entry.eventId~="clear" then
-                local event=ProgressionRules.item(ProgressionConfig.Weather,entry.eventId)
-                label(card,if event then event.name else entry.eventId,0,192,156,27,15,C.gold)
-            elseif entry and entry.genes then
-                label(card,EggGenetics.condition(entry.genes.conditionId).name,0,192,156,27,18,C.gold)
-            end
-            timers[slot]=label(card,if entry then "Growing..." else "Empty",3,222,150,40,22,if entry then C.gold else Color3.fromRGB(156,156,174))
-        end
-        refreshEggs=function()
-            for i,timer in timers do
-                local entry=entries[i]
-                if entry and typeof(entry.readyAt)=="number" then
-                    local remaining=math.max(0,entry.readyAt-workspace:GetServerTimeNow())
-                    timer.Text=if remaining<=0 then "READY!" else UIFormat.duration(remaining)
-                end
-            end
-        end
-        refreshEggs()
-        button(body,"HATCH NEXT EGG",0,310,400,math.max(64,45/viewportScale()),C.accent,function()
-            local id=str("NextChestId")
-            if id=="" then notify("Return from a run to earn reward eggs") return end
-            if workspace:GetServerTimeNow()<num("NextChestReadyAt") then notify("This egg is still growing",C.gold) return end
-            if hatchPending then return end
-            autoHatching=true
-            hatchNext()
-        end)
-        label(body,"Eggs waiting: "..num("QueuedEggsWaiting"),420,310,400,44,22)
-    elseif name=="nests" then
-        -- BD-090: separate Egg Nests menu (never mixed with the run eggs in Caught Eggs).
-        heading.Text,header.BackgroundColor3="Egg Nests",C.gold
+        -- Owner 2026-10-15: ONE Eggs screen = five nest slots + a single Next egg card (src/client/EggsScreen.luau).
+        heading.Text,header.BackgroundColor3="Eggs",C.gold
         local nestOk,nestList=pcall(function() return Http:JSONDecode(str("NestsJson","[]")) end)
         if not nestOk or typeof(nestList)~="table" then nestList={} end
-        local duration=Config.NestIncubationSeconds
-        local formatWait=UIFormat.duration
-        local storage=label(body,"Nests "..#nestList.."/"..Config.NestStorageCapacity,0,0,300,30,24,C.gold)
-        storage.TextXAlignment=Enum.TextXAlignment.Left
-        local luckLine=label(body,"Nest eggs are lucky: better rarity, condition, Shiny and BIG odds.",300,2,524,28,16)
-        luckLine.TextXAlignment=Enum.TextXAlignment.Right
-        local list=Instance.new("ScrollingFrame")
-        list.Name,list.BackgroundTransparency,list.BorderSizePixel,list.ZIndex,list.Parent="NestList",1,0,24,body
-        list.Position,list.Size=UDim2.fromOffset(0,36),UDim2.fromOffset(824,296)
-        list.CanvasSize,list.ScrollBarThickness=UDim2.fromOffset(0,math.max(296,#nestList*60)),6
-        local rows={}
-        for index,nest in nestList do
-            local card=box(list,0,(index-1)*60,812,56,C.card,25)
-            art(card,"egg_nest",8,5,46)
-            local title=label(card,"Nest: "..tostring(nest.size).." eggs",64,2,230,28,22)
-            title.TextXAlignment=Enum.TextXAlignment.Left
-            local chip=box(card,300,5,120,26,C.card,26)
-            local chipText=label(chip,"",0,0,120,26,17)
-            local timeText=label(card,"",430,2,190,28,19)
-            timeText.TextXAlignment=Enum.TextXAlignment.Left
-            local track=box(card,64,38,556,12,C.outline,26)
-            local fill=box(track,0,0,556,12,C.accent,27)
-            local openButton=button(card,"OPEN",632,5,170,46,C.accent,function()
-                Sfx.play("shop_buy")
-                claimNestRemote:FireServer(nest.id)
-            end)
-            rows[index]={chip=chip,chipText=chipText,timeText=timeText,fill=fill,openButton=openButton}
-        end
-        local footer=label(body,"",0,336,824,62,17,C.text)
-        local function refreshNests()
-            local now=math.floor(workspace:GetServerTimeNow())
-            local projected=NestQueue.project(nestList,now,duration)
-            local waitingCount,incubatingCount=0,0
-            for index,nest in projected do
-                local row=rows[index]
-                if row then
-                    local remaining=if nest.readyAt then nest.readyAt-now else duration
-                    if nest.state=="ready" then
-                        row.chipText.Text,row.chip.BackgroundColor3="Ready",C.accent
-                        row.timeText.Text="Ready to open"
-                        row.fill.Size=UDim2.fromOffset(556,12)
-                    elseif nest.state=="incubating" then
-                        incubatingCount+=1
-                        row.chipText.Text,row.chip.BackgroundColor3="Incubating",C.gold
-                        row.timeText.Text="Ready in "..formatWait(remaining)
-                        row.fill.Size=UDim2.fromOffset(math.floor(556*math.clamp(1-remaining/duration,0,1)),12)
-                    else
-                        waitingCount+=1
-                        row.chipText.Text,row.chip.BackgroundColor3="Waiting",C.blue
-                        row.timeText.Text="Starts after the one before"
-                        row.fill.Size=UDim2.fromOffset(0,12)
-                    end
-                    row.openButton.Visible=nest.state=="ready"
-                end
-            end
-            if #nestList==0 then
-                footer.Text="No egg nests yet. Look for one at the end of a run."
-            else
-                footer.Text="One nest hatches at a time, "..math.floor(duration/3600).." h each. The next starts when this one is ready, even while you are away."
-            end
-        end
-        refreshNests()
-        task.spawn(function() -- live countdown: cheap text/size updates once a second, stops when the list is gone
-            while list.Parent and active=="nests" do
+        local version=modalVersion
+        refreshEggs=EggsScreen.render({
+            body=body,C=C,label=label,box=box,button=button,art=art,queue=queue,str=str,num=num,nestList=nestList,
+            rarityNames=rarityNames,rarityColors=rarityColors,scale=viewportScale,notify=notify,
+            openNest=function(id) Sfx.play("shop_buy") claimNestRemote:FireServer(id) end,
+            openEgg=function()
+                if hatchPending then return end
+                autoHatching=true
+                hatchNext()
+            end,
+            openSettings=function() open("settings") end,
+            autoOpenText=autoOpenText,
+        })
+        task.spawn(function() -- live countdowns; stops when the screen is left
+            while modalVersion==version and active=="eggs" do
                 task.wait(1)
-                if list.Parent and active=="nests" then refreshNests() end
+                if modalVersion==version and active=="eggs" and refreshEggs then refreshEggs() end
             end
         end)
     elseif name=="hatch" then
@@ -936,7 +853,7 @@ render=function(name: string)
             onReveal=function() if modalVersion==version then heading.Text=if failed then "Oops! Splat!" else "You hatched a dinosaur!" end end,
             onNext=function()
                 heading.Text="An egg is hatching..."
-                if remaining>0 then autoHatching=true hatchNext() else finishBatch() end
+                if EggsLogic.afterReveal(skipAllReveals,remaining)=="continue" then autoHatching=true hatchNext() else finishBatch() end
             end,
         })
     elseif name=="exit" then
@@ -976,15 +893,17 @@ render=function(name: string)
         label(body,"Catches  "..num("LastRunCatchScore"),300,93,500,60,34,C.blue)
         label(body,str("LastRewardText","Saving rewards..."),290,168,510,100,24,C.gold)
         label(body,"+"..num("LastRunCrystals").." Crystals • Level "..num("AccountLevel"),30,302,760,40,21)
-        button(body,"BACK TO SANCTUARY",212,348,400,48,C.accent,function() open("home") end)
+        local hasEggs=str("NextChestId")~="" or num("QueuedEggsWaiting")>0 or #decoded("NestsJson","[]")>0
+        button(body,"BACK TO SANCTUARY",if hasEggs then 30 else 212,348,if hasEggs then 370 else 400,48,C.accent,function() open("home") end)
+        if hasEggs then button(body,"OPEN EGGS",424,348,370,48,C.gold,function() open("eggs") end) end
     elseif name=="batchSummary" then
-        heading.Text,header.BackgroundColor3="Skipped eggs",C.gold
+        heading.Text,header.BackgroundColor3="Auto-opened eggs",C.gold
         local summary=RevealSkip.summarize(skippedEntries)
-        local lines=RevealSkip.lines(summary)
+        local lines=EggsLogic.summaryLines(summary)
         label(body,table.concat(lines,"\n"),24,16,760,90,24)
         local notes={}
         for _,entry in summary.notable do table.insert(notes,Config.SpeciesDisplayNames[entry.speciesId] or entry.speciesId) end
-        label(body,if #notes>0 then "Notable finds: "..table.concat(notes,", ") else "Every skipped egg is already in your collection.",24,120,760,120,22,C.gold)
+        label(body,if #notes>0 then "Notable finds: "..table.concat(notes,", ") else "All saved in your collection!",24,120,760,120,22,C.gold)
         button(body,"COLLECTION",24,300,370,64,C.blue,function() skippedEntries={} open("collection") end)
         button(body,"DONE",424,300,370,64,C.accent,function() skippedEntries={} open("eggs") end)
     elseif name=="settings" then
@@ -996,16 +915,18 @@ render=function(name: string)
         label(body,"Hatch sounds",24,182,410,44,26)
         button(body,if Theme.HatchSoundEnabled~=false then "SOUND ON" else "SOUND OFF",560,182,230,44,C.blue,function() Theme.HatchSoundEnabled=Theme.HatchSoundEnabled==false open("settings") end).TextSize=20
         button(body,"HOW TO PLAY",24,238,370,64,C.gold,function() open("tutorial") end)
-        label(body,"Skip reveals:",24,312,160,52,24)
-        local chosen=RevealSkip.set(decoded("RevealSkipJson","[]"))
+        label(body,"Auto-open:",24,312,160,52,24)
+        local locked=EggsLogic.locked(Config.AutoOpenRequiresPass,ownsAutoOpen())
+        local chosen=RevealSkip.set(autoOpenSelection())
         for i,rarityName in RevealSkip.Names do
             -- Five rarities: name on top, state below; rarity colour while shown, dark while skipped.
-            button(body,rarityName.."\n"..(if chosen[i] then "SKIP" else "SHOW"),190+(i-1)*126,312,120,52,if chosen[i] then C.card else rarityColors[i],function()
+            button(body,rarityName.."\n"..(if locked then "LOCKED" elseif chosen[i] then "AUTO" else "SHOW"),190+(i-1)*126,312,120,52,if chosen[i] then C.card else rarityColors[i],function()
+                if locked then notify("Auto-open needs a pass",C.gold) return end
                 setSkipRemote:FireServer(RevealSkip.toggle(decoded("RevealSkipJson","[]"),i))
             end).TextSize=16
         end
         button(body,"FOOD GUIDE",424,238,366,64,C.accent,function() open("food") end)
-        label(body,"Settings apply on this device for this session.",24,370,766,30,18)
+        label(body,"Shiny, BIG and special eggs always show. Auto-opened eggs are still saved!",24,370,766,30,18)
     elseif name=="food" then
         heading.Text,header.BackgroundColor3="Food & Growth",C.accent
         local types={{"Berries","leaf",1,C.accent},{"Fruit","leaf",4,C.gold},{"Eggs","egg",15,C.blue},{"Crystals","amber",50,C.purple}}
@@ -1045,11 +966,11 @@ local previewNotice=label(gui,"STUDIO PREVIEW • progress not saved • test cu
 previewNotice.AnchorPoint,previewNotice.Position=Vector2.new(.5,0),UDim2.new(.5,0,0,8)
 previewNotice.Visible=player:GetAttribute("ProfileMode")=="Studio preview (not saved)"
 player:GetAttributeChangedSignal("ProfileMode"):Connect(function() previewNotice.Visible=player:GetAttribute("ProfileMode")=="Studio preview (not saved)" end)
-rail=box(gui,14,0,186,444,C.panel,2)
+rail=box(gui,14,0,186,382,C.panel,2)
 rail.AnchorPoint,rail.Position=Vector2.new(0,.5),UDim2.new(0,14,.5,0)
 local railScale=Instance.new("UIScale") railScale.Parent=rail
 local navigationButtons = {}
-for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"NESTS","egg_nest","nests",C.gold},{"FUSION","fusion","fusion",C.purple},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
+for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
     local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() if entry[3]=="fusion" then openFusion() else open(entry[3]) end end)
     b.TextSize=20
     art(b,NavigationArtwork[entry[3]] or entry[2],5,6,40)
@@ -1368,7 +1289,7 @@ local function scheduleModalRefresh()
     refreshQueued=true
     task.defer(function()
         refreshQueued=false
-        if table.find({"collection","detail","fusion","eggs","nests","auras","potions","settings"},active) then
+        if table.find({"collection","detail","fusion","eggs","auras","potions","settings"},active) then
             body:ClearAllChildren()
             render(active)
         end
@@ -1388,9 +1309,9 @@ player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function()
         genes=if okGenes and typeof(genes)=="table" then genes else nil,failed=player:GetAttribute("LastChestFailed")==true}
     local rarity=speciesIndex(species)
     table.insert(batchEntries,{rarity=rarity,name=Config.SpeciesDisplayNames[species] or species,failed=outcome.failed,shiny=outcome.shiny==true,big=outcome.big==true})
-    if autoHatching and HatchTimeline.shouldSkip(decoded("RevealSkipJson","[]"),rarity,outcome,skipAllReveals) then
+    if autoHatching and EggsLogic.shouldAutoOpen(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen(),rarity,outcome,skipAllReveals) then
         table.insert(skippedEntries,{rarity=rarity,speciesId=species,outcome=outcome})
-        task.defer(hatchNext)
+        task.delay(Config.ChestClaimRequestCooldownSeconds+.15,hatchNext) -- stay under the server claim cooldown
         return
     end
     task.defer(function() open("hatch") end)
@@ -1418,7 +1339,7 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
                 task.wait(3)
                 if modalVersion~=version or serial~=hatchCancelSerial then return end
             end
-            if str("NextChestId")~="" then autoHatching=true hatchNext() else open("results") end
+            open("results") -- never forced into hatching: the summary offers "Open eggs"
         end
     end)
 end)
@@ -1428,8 +1349,7 @@ end)
 player:GetAttributeChangedSignal("LastNestClaimAt"):Connect(function()
     if str("LastNestClaimStatus")~="opened" then return end
     Sfx.play("level_up")
-    notify("Nest opened!",C.accent,{icon="egg_nest",body="Eggs are hatching"})
-    if str("NextChestId")~="" then autoHatching=true hatchNext() end
+    notify("Nest opened!",C.accent,{icon="egg_nest",body="Open your eggs when ready"})
 end)
 player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)
 for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus","LastNestClaimStatus","LastRunStartStatus"} do

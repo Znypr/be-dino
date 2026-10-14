@@ -146,6 +146,9 @@ return table.freeze({
     -- BD-090 Egg Nests v2 (owner 2026-10-14). ALL PROVISIONAL. A nest is a separate loot item
     -- dropped at the end of a qualified run; it incubates on SERVER time (os.time), ONE nest at a
     -- time (queue), and opens into NestMinSize..NestMaxSize eggs rolled with luck. See docs/71.
+    -- Auto-open by rarity (owner 2026-10-15). UI preference only; the server still credits every egg.
+    -- When true, a player without the pass sees locked rows and the setting is ignored (no Robux code here).
+    AutoOpenRequiresPass = false,
     NestStorageCapacity = 5, -- owned nests (waiting + incubating + ready); when full a new nest is not granted
     NestIncubationSeconds = 10800, -- 3 h each; the next waiting nest starts the moment the previous becomes ready
     NestMinSize = 10, -- eggs per nest, rolled deterministically from the run id at drop
