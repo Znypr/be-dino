@@ -21,8 +21,7 @@ assert(progress.crystals==2940)
 assert(not Rules.apply(p,"buyAura","meadow",100,false))
 assert(Rules.apply(p,"equipAura","meadow",100,false))
 assert(not Rules.apply(p,"equipAura","royal",100,false))
-assert(Rules.apply(p,"buyPotion","growth_common",100,false))
-assert(Rules.apply(p,"buyPotion","growth_common",100,false))
+progress.potions.growth_common=2 -- purchases are covered by tools/verify_potion_shop.py
 assert(Rules.apply(p,"usePotion","growth_common",100,false))
 assert(progress.buffs.growth.expiresAt==400 and progress.potions.growth_common==1)
 local ok,status=Rules.apply(p,"usePotion","growth_common",110,false)
@@ -128,17 +127,49 @@ assert(action("buyAura","meadow","buy1",false))
 assert(Repository.progression(player).crystals==140)
 assert(action("buyAura","meadow","buy1",false))
 assert(Repository.progression(player).crystals==140)
-local conflict,conflictStatus=action("buyPotion","speed_common","buy1",false)
+local conflict,conflictStatus=action("buyPotion","speed_common@0","buy1",false)
 assert(not conflict and conflictStatus=="token_conflict")
-assert(action("buyPotion","speed_common","potion1",false))
-assert(action("usePotion","speed_common","use1",false))
-assert(action("usePotion","speed_common","use1",false))
-assert(Repository.progression(player).potions.speed_common==0)
-local expiry=Repository.progression(player).buffs.speed.expiresAt
+for g=1,3 do assert(action("grant","crystal","shop-grant"..g,false,100)) end
+local shopWindow=Rules.shopWindow(os.time())
+local shopOffer=Rules.shopOffers(shopWindow)[1]
+local shopItem=Rules.item(ProgressionConfig.Potions,shopOffer.id)
+local shopId=shopOffer.id.."@"..shopWindow
+assert(action("buyPotion",shopId,"potion1",false))
+assert(action("usePotion",shopOffer.id,"use1",false))
+assert(action("usePotion",shopOffer.id,"use1",false))
+assert(Repository.progression(player).potions[shopOffer.id]==0)
+local expiry=Repository.progression(player).buffs[shopItem.kind].expiresAt
 Repository.release(player)
 assert(Repository.load(player))
-assert(Repository.progression(player).crystals==120 and Repository.progression(player).auras.meadow)
-assert(Repository.progression(player).buffs.speed.expiresAt==expiry)
+assert(Repository.progression(player).crystals==440-shopItem.price and Repository.progression(player).auras.meadow)
+assert(Repository.progression(player).buffs[shopItem.kind].expiresAt==expiry)
+-- BD-051: stock is per player per window, survives reconnect, and every purchase is idempotent by token.
+do
+ local shopState=Repository.progression(player).shop
+ assert(shopState.window==shopWindow and shopState.bought[shopOffer.id]==1)
+ local crystalsBefore=Repository.progression(player).crystals
+ local dupOk,dupStatus=action("buyPotion",shopId,"potion1",false)
+ assert(dupOk and dupStatus=="duplicate" and Repository.progression(player).crystals==crystalsBefore)
+ assert(Repository.progression(player).shop.bought[shopOffer.id]==1)
+ local stale,staleStatus=action("buyPotion",shopOffer.id.."@"..(shopWindow-1),"stale1",false)
+ assert(not stale and staleStatus=="stale_window")
+ local bare,bareStatus=action("buyPotion",shopOffer.id,"bare1",false)
+ assert(not bare and bareStatus=="window_required")
+ local extra=0
+ for i=1,shopOffer.stock+1 do
+  local bought,why=action("buyPotion",shopId,"stock"..i,false)
+  if bought then extra+=1 else assert(why=="sold_out") end
+ end
+ assert(extra==shopOffer.stock-1 and Repository.progression(player).shop.bought[shopOffer.id]==shopOffer.stock)
+ local out,outStatus=action("buyPotion",shopId,"stock-final",false)
+ assert(not out and outStatus=="sold_out")
+ Repository.release(player)
+ assert(Repository.load(player))
+ local soldAfterRejoin,soldStatus=action("buyPotion",shopId,"stock-rejoin",false)
+ assert(not soldAfterRejoin and soldStatus=="sold_out")
+ assert(Repository.progression(player).shop.bought[shopOffer.id]==shopOffer.stock)
+ print("Potion shop transactions passed: idempotent token, stale window, bare id, sold out, reconnect keeps stock")
+end
 Repository.release(player)
 -- Historical v1 balances survive additive catalog and Diamond migration.
 for i,id in GameConfig.SpeciesOrder do if i>3 then data['u:123'].collection[id]=nil end end
@@ -323,7 +354,7 @@ assert(not Repository.progressionAction(shopper,"buyEgg","random","unknown-polic
 mutableConfig.PaidRandomItemsEnabled=false
 print("Crystal shops passed: atomic run crystals/XP, duplicate settlement, level gates, ten-trail migration, condition debuffs, future-only odds, egg purchases/rejoin, failed hatches, queue-full rollback and fail-closed paid policy")
 fail=true
-local failed,failedStatus=action("buyPotion","speed_common","outage",false)
+local failed,failedStatus=action("buyPotion",shopId,"outage",false)
 assert(not failed and failedStatus=="save_failed")
 assert(data['u:123'].progression.crystals==before.progression.crystals)
 assert(player:GetAttribute("ProfileState")=="SaveFailed")
@@ -331,7 +362,7 @@ fail=false
 Repository.release(player)
 assert(Repository.load(player))
 data['u:123'].session.leaseId="other"
-local lost,lostStatus=action("buyPotion","speed_common","lease",false)
+local lost,lostStatus=action("buyPotion",shopId,"lease",false)
 assert(not lost and lostStatus=="lease_lost")
 assert(data['u:123'].progression.crystals==before.progression.crystals)
 game.GameId=0 services.RunService.IsStudio=function()return true end
@@ -342,7 +373,7 @@ function localUser:GetAttribute(k)return self.attrs[k]end
 local persistentCalls=transforms
 assert(LocalRepository.load(localUser))
 assert(localUser.attrs.StudioTestWallet==true and LocalRepository.progression(localUser).crystals==1000000)
-assert(LocalRepository.progressionAction(localUser,"buyPotion","speed_legendary","test-purchase",false))
+assert(LocalRepository.progressionAction(localUser,"buyPotion",shopId,"test-purchase",false))
 assert(LocalRepository.progression(localUser).crystals==1000000)
 assert(LocalRepository.commitRunSettlement(localUser,"timer-local",10))
 assert(localUser.attrs.ChestQueueJson[2].readyAt-localUser.attrs.ChestQueueJson[1].readyAt==0)

@@ -41,7 +41,7 @@ local ok,result=xpcall(function()
     local beforePurchases=Repo.progression(a).crystals
     assert(Repo.progressionAction(a,"buyTrail","astra","fixture-astra"))
     assert(Repo.progressionAction(a,"equipTrail","astra","fixture-equip"))
-    assert(Repo.progressionAction(a,"buyPotion","speed_common","fixture-potion"))
+    assert(Repo.progressionAction(a,"buyPotion",(function() local R=require(game.ReplicatedStorage.Shared.ProgressionRules) local w=R.shopWindow(os.time()) return R.shopOffers(w)[1].id.."@"..w end)(),"fixture-potion"))
     local finished=0
     local outcomes={}
     for i=1,2 do task.spawn(function()

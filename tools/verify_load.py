@@ -238,6 +238,7 @@ local function newServer(name, jobId, overrides)
     end
     server.Repository = load(node("src/server/ProfileRepository"))
     server.Config = load(node("src/shared/Config"))
+    server.Rules = load(node("src/shared/ProgressionRules"))
     return server
 end
 
@@ -366,7 +367,9 @@ local function playerLoop(sc, servers, p, index, rng)
         end
         if rng() < 0.2 then
             token += 1
-            local ok, status = op("potion", server.Repository.progressionAction, p, "buyPotion", "speed_common", p.Name .. "-potion-" .. token, false)
+            local window = server.Rules.shopWindow(vos.time())
+            local offers = server.Rules.shopOffers(window)
+            local ok, status = op("potion", server.Repository.progressionAction, p, "buyPotion", offers[1 + token % #offers].id .. "@" .. window, p.Name .. "-potion-" .. token, false)
             judge("potion", ok, status)
         end
     end

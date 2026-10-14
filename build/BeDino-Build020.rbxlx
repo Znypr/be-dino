@@ -368972,6 +368972,10 @@ return table.freeze({
         {id="nova",name="Nova Ribbon",rarity="Legendary",price=5500,level=45,speed=1.16,color={180,106,255},accent={255,215,115},width=.8,lifetime=1.2,particles=10},
         {id="astra",name="Astra",rarity="Legendary",price=8500,level=60,speed=1.18,color={112,255,205},accent={255,130,232},width=.85,lifetime=1.3,particles=14},
     },
+    -- BD-051 PROVISIONAL rotating Potion Shop (owner-approved 2026-10-14: restock every 2 minutes).
+    -- Offers derive from the window number (floor(unixSeconds/PeriodSeconds)), so every server agrees and rejoining never rerolls.
+    -- Weights are relative; rarity picks distinct potions without replacement, stock is rolled 1..3 per offer. Crystals only.
+    PotionShop={PeriodSeconds=120, OfferCount=3, RarityWeights={Common=60,Rare=30,Legendary=10}, StockWeights={60,30,10}},
     Potions={
         {id="speed_common",name="Swift Sip",kind="speed",rarity="Common",duration=300,multiplier=1.2,price=20},
         {id="speed_rare",name="Raptor Rush",kind="speed",rarity="Rare",duration=600,multiplier=1.45,price=65},
@@ -369045,6 +369049,48 @@ function Rules.validEgg(metadata): boolean
     local event=Rules.item(Config.Weather,eventId)
     return (eventId=="clear" or event~=nil) and typeof(mutationId)=="string" and (mutationId=="" or (event~=nil and event.mutation==mutationId))
 end
+-- BD-051 rotating Potion Shop. Pure and deterministic: offers depend only on the window number.
+function Rules.shopWindow(now: number): number
+    return math.floor(now/Config.PotionShop.PeriodSeconds)
+end
+function Rules.shopEndsAt(window: number): number
+    return (window+1)*Config.PotionShop.PeriodSeconds
+end
+function Rules.shopOffers(window: number)
+    local shop=Config.PotionShop
+    -- Park-Miller generator; products stay below 2^53 so results are identical on every platform.
+    local state=(window*16807+1013904223)%2147483646+1
+    local function nextUnit(): number
+        state=(state*48271)%2147483647
+        return state/2147483647
+    end
+    for _=1,6 do nextUnit() end
+    local pool={}
+    for _,item in Config.Potions do table.insert(pool,{item=item,weight=shop.RarityWeights[item.rarity] or 0}) end
+    local offers={}
+    for _=1,math.min(shop.OfferCount,#pool) do
+        local total=0 for _,entry in pool do total+=entry.weight end
+        local roll=nextUnit()*total
+        local pick=#pool
+        for i,entry in pool do roll-=entry.weight if roll&lt;0 then pick=i break end end
+        local item=table.remove(pool,pick).item
+        local stockTotal=0 for _,w in shop.StockWeights do stockTotal+=w end
+        local stockRoll=nextUnit()*stockTotal
+        local stock=#shop.StockWeights
+        for i,w in shop.StockWeights do stockRoll-=w if stockRoll&lt;0 then stock=i break end end
+        table.insert(offers,{id=item.id,stock=stock})
+    end
+    return offers
+end
+function Rules.shopRemaining(p,window: number,id: string): number
+    for _,offer in Rules.shopOffers(window) do
+        if offer.id==id then
+            local bought=if p.shop and p.shop.window==window then (p.shop.bought[id] or 0) else 0
+            return math.max(0,offer.stock-bought)
+        end
+    end
+    return 0
+end
 local function finite(n): boolean return typeof(n)=="number" and n==n and math.abs(n)&lt;math.huge end
 function Rules.upgrade(profile)
     -- Additive schema migration: never replace an existing wallet or inventory.
@@ -369074,6 +369120,13 @@ function Rules.valid(p): boolean
     if p.equippedTrail~=nil then
         if typeof(p.equippedTrail)~="string" then return false end
         if p.equippedTrail~="" and (not p.trails or not p.trails[p.equippedTrail]) then return false end
+    end
+    if p.shop~=nil then
+        local shop=p.shop
+        if typeof(shop)~="table" or not finite(shop.window) or shop.window&lt;0 or shop.window%1~=0 or typeof(shop.bought)~="table" then return false end
+        for id,count in shop.bought do
+            if typeof(id)~="string" or not Rules.item(Config.Potions,id) or not finite(count) or count&lt;0 or count%1~=0 or count&gt;#Config.PotionShop.StockWeights then return false end
+        end
     end
     for id,count in p.potions do
         if not Rules.item(Config.Potions,id) or not finite(count) or count&lt;0 or count%1~=0 or count&gt;999 then return false end
@@ -369123,11 +369176,22 @@ function Rules.apply(profile,action,id,now,replace,amount): (boolean,string)
         p.crystals-=upgrade.price p.conditionLevel=nextLevel
         return true,"upgraded"
     elseif action=="buyPotion" then
-        local item=Rules.item(Config.Potions,id)
+        -- id is "&lt;potionId&gt;@&lt;window&gt;": only the current window's disclosed offers can be bought, within stock.
+        local potionId,windowText=string.match(id,"^([%w_]+)@(%d+)$")
+        if not potionId then return false,"window_required" end
+        local item=Rules.item(Config.Potions,potionId)
         if not item then return false,"unknown_item" end
-        if (p.potions[id] or 0)&gt;=999 then return false,"inventory_full" end
+        local window=tonumber(windowText) :: number
+        if window~=Rules.shopWindow(now) then return false,"stale_window" end
+        local offered=false
+        for _,offer in Rules.shopOffers(window) do if offer.id==potionId then offered=true end end
+        if not offered then return false,"not_offered" end
+        if Rules.shopRemaining(p,window,potionId)&lt;1 then return false,"sold_out" end
+        if (p.potions[potionId] or 0)&gt;=999 then return false,"inventory_full" end
         if p.crystals&lt;item.price then return false,"insufficient_crystals" end
-        p.crystals-=item.price p.potions[id]=(p.potions[id] or 0)+1
+        if not p.shop or p.shop.window~=window then p.shop={window=window,bought={}} end
+        p.shop.bought[potionId]=(p.shop.bought[potionId] or 0)+1
+        p.crystals-=item.price p.potions[potionId]=(p.potions[potionId] or 0)+1
         return true,"purchased"
     elseif action=="usePotion" then
         local item=Rules.item(Config.Potions,id)
@@ -544809,22 +544873,56 @@ render=function(name: string)
     elseif name=="potions" then
         heading.Text,header.BackgroundColor3="Potion Shop",C.accent
         local p=progression()
-        label(body,"Crystals: "..num("Crystals").."  •  Select a potion to buy or use",0,0,824,32,21,C.gold)
-        for i,item in ProgressionConfig.Potions do
-            local x=((i-1)%3)*276 local y=43+math.floor((i-1)/3)*176
+        -- BD-051: server-clock rotation. Offers/stock come from the shared deterministic rules; the server re-checks every purchase.
+        local window=ProgressionRules.shopWindow(workspace:GetServerTimeNow())
+        chosenPotionWindow=window
+        local restock=label(body,"",0,0,824,32,21,C.gold)
+        local function header_text()
+            local left=math.max(0,math.ceil(ProgressionRules.shopEndsAt(window)-workspace:GetServerTimeNow()))
+            restock.Text=string.format("Crystals: %s  •  Restock in %d:%02d",num("Crystals"),left//60,left%60)
+        end
+        header_text()
+        task.spawn(function()
+            while restock.Parent and active=="potions" do
+                task.wait(1)
+                if not restock.Parent or active~="potions" then return end
+                if ProgressionRules.shopWindow(workspace:GetServerTimeNow())~=window then
+                    notify("Potion Shop refreshed",C.accent)
+                    body:ClearAllChildren() render("potions") return
+                end
+                header_text()
+            end
+        end)
+        for i,offer in ProgressionRules.shopOffers(window) do
+            local item=ProgressionRules.item(ProgressionConfig.Potions,offer.id)
+            local left=ProgressionRules.shopRemaining(p,window,offer.id)
+            local x=(i-1)*276 local y=40
             local color=if item.rarity=="Legendary" then C.gold elseif item.rarity=="Rare" then C.blue else C.accent
             local card=box(body,x,y,264,164,C.card,24)
             art(card,"potion_"..item.kind,8,14,76)
             label(card,item.name,88,5,167,32,21,color)
             label(card,item.rarity.." • "..item.multiplier.."x\n"..(item.duration//60).." minutes",86,39,170,50,18)
-            label(card,"Owned: "..(p.potions[item.id] or 0),86,88,170,24,17)
-            button(card,item.price.." Crystals",8,120,144,34,color,function() chosenPotion=item.id open("potionConfirm") end).TextSize=17
-            button(card,"USE",162,120,94,34,C.purple,function()
-                chosenPotion=item.id
-                local buff=p.buffs[item.kind]
-                if buff and buff.expiresAt&gt;workspace:GetServerTimeNow() then open("potionReplace") else transact("usePotion",item.id,false) end
-            end).TextSize=18
+            label(card,if left&gt;0 then left.." left" else "Sold Out",86,88,170,24,17,if left&gt;0 then C.gold else C.red)
+            local buy=button(card,if left&gt;0 then item.price.." Crystals" else "SOLD OUT",8,120,248,34,if left&gt;0 then color else C.card,function()
+                if left&gt;0 then chosenPotion=item.id open("potionConfirm") end
+            end)
+            buy.TextSize=17
         end
+        label(body,"Your potions (tap to use)",0,212,824,26,18,C.gold)
+        local slot=0
+        for _,item in ProgressionConfig.Potions do
+            local owned=p.potions[item.id] or 0
+            if owned&gt;0 then
+                local x=(slot%3)*276 local y=240+math.floor(slot/3)*46
+                slot+=1
+                button(body,item.name.." x"..owned.."  USE",x,y,264,40,C.purple,function()
+                    chosenPotion=item.id
+                    local buff=p.buffs[item.kind]
+                    if buff and buff.expiresAt&gt;workspace:GetServerTimeNow() then open("potionReplace") else transact("usePotion",item.id,false) end
+                end).TextSize=17
+            end
+        end
+        if slot==0 then label(body,"No potions yet. Buy from today's offers above.",0,244,824,32,18) end
     elseif name=="potionConfirm" or name=="potionReplace" then
         local item=ProgressionRules.item(ProgressionConfig.Potions,chosenPotion)
         local replacing=name=="potionReplace"
@@ -544833,7 +544931,8 @@ render=function(name: string)
         label(body,item.name.." • "..item.multiplier.."x "..item.kind,290,15,510,62,28)
         label(body,if replacing then "Your current "..item.kind.." potion ends immediately. Its remaining time is lost. Consume 1 potion for a fresh "..(item.duration//60).." minutes?" else (item.duration//60).." minutes • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
         button(body,if replacing then "REPLACE &amp; USE" else "BUY POTION",290,263,510,58,C.accent,function()
-            transact(if replacing then "usePotion" else "buyPotion",item.id,replacing) open("potions")
+            if replacing then transact("usePotion",item.id,true) else transact("buyPotion",item.id.."@"..chosenPotionWindow,false) end
+            open("potions")
         end)
         button(body,"CANCEL",290,339,510,44,C.red,function() open("potions") end)
     elseif name=="collection" then
