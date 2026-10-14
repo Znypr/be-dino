@@ -366664,6 +366664,138 @@ return require(script.Parent.Chunks.therizinosaurus_1)..require(script.Parent.Ch
       </Item>
       <Item class="ModuleScript" referent="RBX182">
         <Properties>
+          <string name="Name">DinoMotion</string>
+          <ProtectedString name="Source">--!strict
+-- BD-079 pure procedural action curves for the visual dino model. No Roblox APIs here, so the
+-- bounds / determinism / return-to-rest rules are unit tested (tools/verify_dino_motion.py).
+-- All offsets are dimensionless fractions of the model's own bounding box, so BIG/large scales
+-- need no special casing. Pose axes are root-relative: -Z is forward, +pitch = nose up.
+local DinoMotion = {}
+
+DinoMotion.MinScale = 0.6
+DinoMotion.MaxScale = 1.4
+DinoMotion.MaxOffset = 0.35
+DinoMotion.MaxAngle = 1.6
+DinoMotion.MaxLean = 0.25
+DinoMotion.Duration = {eat = 0.18, takeoff = 0.22, land = 0.28, leap = 0.5, bite = 0.22, death = 0.4}
+local SLOTS = {"eat", "takeoff", "land", "leap", "bite", "death"}
+DinoMotion.Kinds = SLOTS
+
+export type Pose = {sx: number, sy: number, sz: number, pitch: number, roll: number, fx: number, dy: number, fade: number}
+export type State = {start: {[string]: number}, power: {[string]: number}, lean: number, dead: boolean}
+
+function DinoMotion.newPose(): Pose
+    return {sx = 1, sy = 1, sz = 1, pitch = 0, roll = 0, fx = 0, dy = 0, fade = 0}
+end
+
+function DinoMotion.new(): State
+    return {start = {}, power = {}, lean = 0, dead = false}
+end
+
+local function clamp(v: number, lo: number, hi: number): number
+    if v ~= v then return (lo + hi) / 2 end -- NaN guard
+    return if v &lt; lo then lo elseif v &gt; hi then hi else v
+end
+
+-- Restarting the same kind replaces it (no stacking), so spam can never grow the state.
+function DinoMotion.trigger(state: State, kind: string, now: number, power: number?)
+    if state.dead or DinoMotion.Duration[kind] == nil then return end
+    state.start[kind] = now
+    state.power[kind] = clamp(power or 1, 0, 1)
+    if kind == "death" then state.dead = true end
+end
+
+function DinoMotion.clear(state: State)
+    for _, kind in SLOTS do state.start[kind] = nil end
+    state.lean = 0
+    state.dead = false
+end
+
+-- Smoothed bank angle from yaw rate (rad/s) and horizontal speed (studs/s).
+function DinoMotion.lean(previous: number, yawRate: number, speed: number, dt: number): number
+    if yawRate ~= yawRate or speed ~= speed or dt ~= dt then return 0 end
+    local moving = clamp(speed / 8, 0, 1)
+    local target = clamp(-yawRate * 0.08, -DinoMotion.MaxLean, DinoMotion.MaxLean) * moving
+    local blend = 1 - math.exp(-clamp(dt, 0, 0.25) * 10)
+    local nextLean = previous + (target - previous) * blend
+    if math.abs(nextLean) &lt; 1e-3 and math.abs(target) &lt; 1e-3 then return 0 end
+    return clamp(nextLean, -DinoMotion.MaxLean, DinoMotion.MaxLean)
+end
+
+local function ease(u: number): number return u * u * (3 - 2 * u) end
+
+-- Writes the combined pose into `out`. Returns true while any action/lean is non-rest; when false
+-- `out` is EXACTLY the rest pose (1,1,1,0,0,0,0,0).
+function DinoMotion.sample(state: State, now: number, out: Pose): boolean
+    local sx, sy, sz, pitch, roll, fx, dy, fade = 1, 1, 1, 0, 0, 0, 0, 0
+    local active = false
+    for _, kind in SLOTS do
+        local start = state.start[kind]
+        if start then
+            local duration = DinoMotion.Duration[kind]
+            local u = (now - start) / duration
+            local p = state.power[kind] or 1
+            if u &lt; 0 then u = 0 end
+            if kind == "death" then
+                active = true
+                local e = ease(math.min(u, 1))
+                roll += 1.35 * e * p
+                local s = 1 - 0.4 * e
+                sx *= s sy *= s sz *= s
+                dy -= 0.15 * e
+                fade = math.max(fade, e)
+            elseif u &gt;= 1 then
+                state.start[kind] = nil
+            else
+                active = true
+                if kind == "eat" then
+                    local v = math.sin(2 * math.pi * u) * (1 - u) * p
+                    sy *= 1 + 0.12 * v sx *= 1 - 0.06 * v sz *= 1 - 0.06 * v
+                elseif kind == "takeoff" then
+                    local v = math.sin(math.pi * u) * (1 - 0.3 * u) * p
+                    sy *= 1 + 0.16 * v sx *= 1 - 0.07 * v sz *= 1 - 0.07 * v
+                elseif kind == "land" then
+                    local v = math.sin(math.pi * u) * (1 - u) * p
+                    sy *= 1 - 0.18 * v sx *= 1 + 0.09 * v sz *= 1 + 0.09 * v
+                    dy -= 0.02 * v
+                elseif kind == "leap" then
+                    local v = math.sin(math.pi * u) * p
+                    sz *= 1 + 0.3 * v sy *= 1 - 0.1 * v sx *= 1 - 0.08 * v
+                    pitch += 0.15 * v
+                elseif kind == "bite" then
+                    local v = math.sin(math.pi * u) * p
+                    fx += 0.2 * v
+                    pitch -= 0.12 * v
+                    sz *= 1 + 0.08 * v
+                end
+            end
+        end
+    end
+    if state.lean ~= 0 then
+        active = true
+        roll += state.lean
+    end
+    if not active then
+        out.sx, out.sy, out.sz, out.pitch, out.roll, out.fx, out.dy, out.fade = 1, 1, 1, 0, 0, 0, 0, 0
+        return false
+    end
+    out.sx = clamp(sx, DinoMotion.MinScale, DinoMotion.MaxScale)
+    out.sy = clamp(sy, DinoMotion.MinScale, DinoMotion.MaxScale)
+    out.sz = clamp(sz, DinoMotion.MinScale, DinoMotion.MaxScale)
+    out.pitch = clamp(pitch, -DinoMotion.MaxAngle, DinoMotion.MaxAngle)
+    out.roll = clamp(roll, -DinoMotion.MaxAngle, DinoMotion.MaxAngle)
+    out.fx = clamp(fx, -DinoMotion.MaxOffset, DinoMotion.MaxOffset)
+    out.dy = clamp(dy, -DinoMotion.MaxOffset, DinoMotion.MaxOffset)
+    out.fade = clamp(fade, 0, 1)
+    return true
+end
+
+return DinoMotion
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX183">
+        <Properties>
           <string name="Name">DinosaurPreview</string>
           <ProtectedString name="Source">--!strict
 local Resources=require(script.Parent.ResourceModels)
@@ -366762,7 +366894,7 @@ return Preview
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX183">
+      <Item class="ModuleScript" referent="RBX184">
         <Properties>
           <string name="Name">DinosaurVisual</string>
           <ProtectedString name="Source">--!strict
@@ -367009,7 +367141,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX184">
+      <Item class="ModuleScript" referent="RBX185">
         <Properties>
           <string name="Name">EggAppearance</string>
           <ProtectedString name="Source">--!strict
@@ -367039,7 +367171,7 @@ return Appearance
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX185">
+      <Item class="ModuleScript" referent="RBX186">
         <Properties>
           <string name="Name">EggGenetics</string>
           <ProtectedString name="Source">--!strict
@@ -367093,7 +367225,7 @@ return Genetics
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX186">
+      <Item class="ModuleScript" referent="RBX187">
         <Properties>
           <string name="Name">EggOutcomeOdds</string>
           <ProtectedString name="Source">--!strict
@@ -367203,7 +367335,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX187">
+      <Item class="ModuleScript" referent="RBX188">
         <Properties>
           <string name="Name">EggOutcomeView</string>
           <ProtectedString name="Source">--!strict
@@ -367320,7 +367452,7 @@ return View
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX188">
+      <Item class="ModuleScript" referent="RBX189">
         <Properties>
           <string name="Name">EggPreview</string>
           <ProtectedString name="Source">--!strict
@@ -367353,7 +367485,7 @@ return Egg
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX189">
+      <Item class="ModuleScript" referent="RBX190">
         <Properties>
           <string name="Name">EggTraits</string>
           <ProtectedString name="Source">--!strict
@@ -367398,7 +367530,7 @@ return Traits
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX190">
+      <Item class="ModuleScript" referent="RBX191">
         <Properties>
           <string name="Name">EventIconVectors</string>
           <ProtectedString name="Source">--!strict
@@ -367413,7 +367545,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX191">
+      <Item class="ModuleScript" referent="RBX192">
         <Properties>
           <string name="Name">FoodCatchRules</string>
           <ProtectedString name="Source">--!strict
@@ -367429,7 +367561,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX192">
+      <Item class="ModuleScript" referent="RBX193">
         <Properties>
           <string name="Name">FusionSelection</string>
           <ProtectedString name="Source">--!strict
@@ -368195,7 +368327,7 @@ return Sel
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX193">
+      <Item class="ModuleScript" referent="RBX194">
         <Properties>
           <string name="Name">GeneTextureAssets</string>
           <ProtectedString name="Source">--!strict
@@ -368243,7 +368375,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX194">
+      <Item class="ModuleScript" referent="RBX195">
         <Properties>
           <string name="Name">GeneTextures</string>
           <ProtectedString name="Source">--!strict
@@ -368299,7 +368431,7 @@ return Textures
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX195">
+      <Item class="ModuleScript" referent="RBX196">
         <Properties>
           <string name="Name">HatchFragments</string>
           <ProtectedString name="Source">--!strict
@@ -368332,7 +368464,7 @@ return F
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX196">
+      <Item class="ModuleScript" referent="RBX197">
         <Properties>
           <string name="Name">HatchPresentation</string>
           <ProtectedString name="Source">--!strict
@@ -368526,7 +368658,7 @@ return Hatch
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX197">
+      <Item class="ModuleScript" referent="RBX198">
         <Properties>
           <string name="Name">IconRaster</string>
           <ProtectedString name="Source">--!strict
@@ -368535,7 +368667,7 @@ return {["amber"]={341,0,1,16777216,1,33554432,20,55923968,1,16777216,40,0,1,167
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX198">
+      <Item class="ModuleScript" referent="RBX199">
         <Properties>
           <string name="Name">IconTiles</string>
           <ProtectedString name="Source">--!strict
@@ -368544,7 +368676,7 @@ return {["dinos"]={["size"]=32,["colors"]={{104,48,36},{110,114,78},{0,29,13},{1
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX199">
+      <Item class="ModuleScript" referent="RBX200">
         <Properties>
           <string name="Name">IconVectors</string>
           <ProtectedString name="Source">--!strict
@@ -368553,7 +368685,7 @@ return {["home"]={{["x"]=21,["y"]=41,["w"]=60,["h"]=47,["color"]="#142035",["rad
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX200">
+      <Item class="ModuleScript" referent="RBX201">
         <Properties>
           <string name="Name">IslandLayout</string>
           <ProtectedString name="Source">--!strict
@@ -368581,7 +368713,7 @@ return IslandLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX201">
+      <Item class="ModuleScript" referent="RBX202">
         <Properties>
           <string name="Name">LegacyGenePatterns</string>
           <ProtectedString name="Source">--!strict
@@ -368625,7 +368757,7 @@ return Legacy
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX202">
+      <Item class="ModuleScript" referent="RBX203">
         <Properties>
           <string name="Name">ModelPreview</string>
           <ProtectedString name="Source">--!strict
@@ -368653,7 +368785,7 @@ return ModelPreview
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX203">
+      <Item class="ModuleScript" referent="RBX204">
         <Properties>
           <string name="Name">MovementEnvelope</string>
           <ProtectedString name="Source">--!strict
@@ -368706,7 +368838,7 @@ return MovementEnvelope
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX204">
+      <Item class="ModuleScript" referent="RBX205">
         <Properties>
           <string name="Name">MutationEffects</string>
           <ProtectedString name="Source">-- Standalone client adapter. Upload BeDino_Soft_Smoke_256.png first.
@@ -368795,7 +368927,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX205">
+      <Item class="ModuleScript" referent="RBX206">
         <Properties>
           <string name="Name">NavigationArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -368813,7 +368945,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX206">
+      <Item class="ModuleScript" referent="RBX207">
         <Properties>
           <string name="Name">NestQueue</string>
           <ProtectedString name="Source">--!strict
@@ -368874,7 +369006,7 @@ return NestQueue
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX207">
+      <Item class="ModuleScript" referent="RBX208">
         <Properties>
           <string name="Name">NextGoal</string>
           <ProtectedString name="Source">--!strict
@@ -368951,7 +369083,7 @@ return NextGoal
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX208">
+      <Item class="ModuleScript" referent="RBX209">
         <Properties>
           <string name="Name">PatternGenes</string>
           <ProtectedString name="Source">--!strict
@@ -369016,7 +369148,7 @@ return Pattern
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX209">
+      <Item class="ModuleScript" referent="RBX210">
         <Properties>
           <string name="Name">PotionArt</string>
           <ProtectedString name="Source">--!strict
@@ -369080,7 +369212,7 @@ return PotionArt
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX210">
+      <Item class="ModuleScript" referent="RBX211">
         <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
@@ -369148,7 +369280,7 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX211">
+      <Item class="ModuleScript" referent="RBX212">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -369274,7 +369406,7 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX212">
+      <Item class="ModuleScript" referent="RBX213">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -369512,7 +369644,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX213">
+      <Item class="ModuleScript" referent="RBX214">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -369521,7 +369653,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX214">
+      <Item class="ModuleScript" referent="RBX215">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -369537,7 +369669,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX215">
+      <Item class="ModuleScript" referent="RBX216">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -369601,7 +369733,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX216">
+      <Item class="ModuleScript" referent="RBX217">
         <Properties>
           <string name="Name">RevealSkip</string>
           <ProtectedString name="Source">--!strict
@@ -369683,7 +369815,7 @@ return Skip
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX217">
+      <Item class="ModuleScript" referent="RBX218">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -369774,7 +369906,7 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX218">
+      <Item class="ModuleScript" referent="RBX219">
         <Properties>
           <string name="Name">Sfx</string>
           <ProtectedString name="Source">--!strict
@@ -369874,7 +370006,7 @@ return Sfx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX219">
+      <Item class="ModuleScript" referent="RBX220">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -369922,7 +370054,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX220">
+      <Item class="ModuleScript" referent="RBX221">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -369971,7 +370103,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX221">
+      <Item class="ModuleScript" referent="RBX222">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -370173,7 +370305,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX222">
+      <Item class="ModuleScript" referent="RBX223">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -370205,7 +370337,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX223">
+      <Item class="ModuleScript" referent="RBX224">
         <Properties>
           <string name="Name">UIFormat</string>
           <ProtectedString name="Source">--!strict
@@ -370249,7 +370381,7 @@ return UIFormat
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX224">
+      <Item class="ModuleScript" referent="RBX225">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -370271,7 +370403,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX225">
+      <Item class="ModuleScript" referent="RBX226">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -370287,7 +370419,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX226">
+      <Item class="ModuleScript" referent="RBX227">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -370448,7 +370580,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX227">
+      <Item class="ModuleScript" referent="RBX228">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -370471,7 +370603,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX228">
+      <Item class="ModuleScript" referent="RBX229">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -370523,7 +370655,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX229">
+    <Item class="Folder" referent="RBX230">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -540078,15 +540210,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX230">
+  <Item class="ServerScriptService" referent="RBX231">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX231">
+    <Item class="Folder" referent="RBX232">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX232">
+      <Item class="ModuleScript" referent="RBX233">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -540298,7 +540430,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX233">
+      <Item class="Script" referent="RBX234">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -540443,7 +540575,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX234">
+      <Item class="ModuleScript" referent="RBX235">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -540553,7 +540685,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX235">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -540641,7 +540773,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -540775,7 +540907,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX238">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -540987,7 +541119,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -541239,7 +541371,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -541418,7 +541550,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -541604,7 +541736,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -541992,7 +542124,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -542042,7 +542174,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -542084,7 +542216,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -542195,7 +542327,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -542277,7 +542409,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -542369,7 +542501,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -542474,7 +542606,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -542596,6 +542728,7 @@ function PredationService.start(runLifecycle, dinosaur)
                 end
 
                 if winner and runLifecycle.tryEnd(victim.player, victim.character, "Eaten", winner.player.UserId) then
+                    winner.character:SetAttribute("BiteSeq", numberAttribute(winner.character, "BiteSeq", 0) + 1) -- BD-079 replicated cue for the client bite lunge
                     awardCatch(winner, victim.player.UserId, serverNow)
                     dinosaur.addGrowth(winner.character, Config.PredationGrowthPoints)
                 end
@@ -542608,7 +542741,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -544327,7 +544460,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -544508,7 +544641,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX251">
+      <Item class="ModuleScript" referent="RBX252">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -544614,7 +544747,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX252">
+      <Item class="ModuleScript" referent="RBX253">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -544877,7 +545010,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX253">
+      <Item class="ModuleScript" referent="RBX254">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -544949,19 +545082,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX254">
+  <Item class="StarterPlayer" referent="RBX255">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX255">
+    <Item class="StarterPlayerScripts" referent="RBX256">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX256">
+      <Item class="Folder" referent="RBX257">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX257">
+        <Item class="LocalScript" referent="RBX258">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -546346,7 +546479,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX258">
+        <Item class="LocalScript" referent="RBX259">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -546409,7 +546542,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX259">
+        <Item class="ModuleScript" referent="RBX260">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -546488,7 +546621,288 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX260">
+        <Item class="LocalScript" referent="RBX261">
+          <Properties>
+            <string name="Name">DinoMotion</string>
+            <ProtectedString name="Source">--!strict
+-- BD-079: client-only procedural action motion for the visible dino model (eat, jump, leap, turn,
+-- bite, death). Visual only: the physics root and server authority are never touched. One shared
+-- Heartbeat; zero work for characters at rest; pooled particles. Curves: src/shared/DinoMotion.luau.
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Motion = require(Shared.DinoMotion)
+local Theme = require(Shared.UITheme)
+local Sfx = require(Shared.Sfx)
+
+local OTHER_RANGE = 120
+local OTHER_STEP = 1 / 20
+local EAT_DELAY = 0.1 -- lets growth rescale the model first (ResourceVisuals refreshes deferred)
+
+local rigs: {[Model]: any} = {}
+
+-- Pooled particle puffs: 3 dust + 3 munch emitters, created lazily, never more.
+local pool: {ParticleEmitter} = {}
+local poolAttachments: {Attachment} = {}
+local nextDust, nextMunch = 0, 0
+local function ensurePool()
+    if #pool &gt; 0 then return end
+    for i = 1, 6 do
+        local attachment = Instance.new("Attachment")
+        attachment.Name = "DinoMotionFx"
+        attachment.Parent = workspace.Terrain
+        local emitter = Instance.new("ParticleEmitter")
+        emitter.Enabled = false
+        emitter.Rate = 0
+        emitter.Lifetime = NumberRange.new(0.25, 0.45)
+        emitter.Speed = NumberRange.new(3, 6)
+        emitter.SpreadAngle = Vector2.new(180, 180)
+        emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0)})
+        emitter.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1)})
+        emitter.Color = ColorSequence.new(if i &lt;= 3 then Color3.fromRGB(190, 170, 130) else Color3.fromRGB(150, 220, 110))
+        emitter.Parent = attachment
+        table.insert(pool, emitter)
+        table.insert(poolAttachments, attachment)
+    end
+end
+local function puff(kind: string, position: Vector3, count: number)
+    ensurePool()
+    local index
+    if kind == "dust" then
+        nextDust = nextDust % 3 + 1
+        index = nextDust
+    else
+        nextMunch = nextMunch % 3 + 1
+        index = 3 + nextMunch
+    end
+    poolAttachments[index].WorldPosition = position
+    pool[index]:Emit(count)
+end
+
+local function number(instance: Instance, name: string): number
+    local value = instance:GetAttribute(name)
+    return if typeof(value) == "number" then value else 0
+end
+
+local function writePose(rig: any, pose: any)
+    local rootCF = rig.root.CFrame
+    local pivot = rig.pivot
+    local rotation = CFrame.Angles(pose.pitch, 0, pose.roll)
+    local offset = Vector3.new(0, pose.dy * rig.height, -pose.fx * rig.length)
+    local sx, sy, sz = pose.sx, pose.sy, pose.sz
+    local sx2, sy2, sz2 = sx * sx, sy * sy, sz * sz
+    for i = 1, rig.count do
+        local item = rig.parts[i]
+        local part = item.part
+        local relPos = item.rel.Position - pivot
+        local position = pivot + offset + rotation:VectorToWorldSpace(Vector3.new(relPos.X * sx, relPos.Y * sy, relPos.Z * sz))
+        local newRel = CFrame.new(position) * (rotation.Rotation * item.rel.Rotation)
+        if item.weld then item.weld.C0 = newRel else part.CFrame = rootCF * newRel end
+        part.Size = Vector3.new(
+            item.size.X * math.sqrt(item.a11 * sx2 + item.a12 * sy2 + item.a13 * sz2),
+            item.size.Y * math.sqrt(item.a21 * sx2 + item.a22 * sy2 + item.a23 * sz2),
+            item.size.Z * math.sqrt(item.a31 * sx2 + item.a32 * sy2 + item.a33 * sz2))
+        part.Transparency = item.transparency + (1 - item.transparency) * pose.fade
+    end
+end
+
+-- Exact rest write: captured CFrames/sizes/transparency go back verbatim.
+local function restore(rig: any)
+    if not rig.applied then return end
+    rig.applied = false
+    if rig.visual and rig.visual.Parent then
+        for i = 1, rig.count do
+            local item = rig.parts[i]
+            if item.part.Parent then
+                if item.weld then item.weld.C0 = item.rel else item.part.CFrame = rig.root.CFrame * item.rel end
+                item.part.Size = item.size
+                item.part.Transparency = item.transparency
+            end
+        end
+    end
+    rig.count = 0
+end
+
+local function capture(rig: any): boolean
+    local visual = rig.character:FindFirstChild("LocalMeshVisual") or rig.character:FindFirstChild("DinoVisual")
+    if not visual or not visual:IsA("Model") then return false end
+    rig.visual = visual
+    local count = 0
+    local inverse = rig.root.CFrame:Inverse()
+    for _, item in visual:GetDescendants() do
+        if item:IsA("BasePart") and not item.Anchored then
+            count += 1
+            local found = item:FindFirstChild("ResourceWeld")
+            local weld = if found and found:IsA("Weld") and found.Part0 == rig.root then found else nil
+            local rel = if weld then weld.C0 else inverse * item.CFrame
+            local r = rel.Rotation
+            local x, y, z = r.RightVector, r.UpVector, r.LookVector
+            rig.parts[count] = {part = item, weld = weld, rel = rel, size = item.Size, transparency = item.Transparency,
+                a11 = x.X * x.X, a12 = x.Y * x.Y, a13 = x.Z * x.Z,
+                a21 = y.X * y.X, a22 = y.Y * y.Y, a23 = y.Z * y.Z,
+                a31 = z.X * z.X, a32 = z.Y * z.Y, a33 = z.Z * z.Z}
+        end
+    end
+    if count == 0 then return false end
+    rig.count = count
+    local cf, size = visual:GetBoundingBox()
+    local center = inverse * cf
+    rig.pivot = Vector3.new(center.X, center.Y - size.Y / 2, center.Z)
+    rig.length, rig.height = math.max(size.Z, 1), math.max(size.Y, 1)
+    return true
+end
+
+local function trigger(rig: any, kind: string, power: number?)
+    if not Theme.MotionEnabled then return end
+    Motion.trigger(rig.motion, kind, os.clock(), power)
+end
+
+local function untrack(character: Model)
+    local rig = rigs[character]
+    if not rig then return end
+    for _, connection in rig.connections do connection:Disconnect() end
+    rig.connections = {}
+    restore(rig)
+    rigs[character] = nil
+end
+
+local function track(player: Player, character: Model)
+    untrack(character)
+    local root = character:WaitForChild("HumanoidRootPart", 10)
+    if not root or not root:IsA("BasePart") or not character.Parent then return end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local rig: any = {character = character, root = root, isLocal = player == Players.LocalPlayer,
+        motion = Motion.new(), pose = Motion.newPose(), parts = {}, count = 0, visual = nil, pivot = Vector3.zero,
+        length = 1, height = 1, applied = false, accumulator = 0, lastYaw = nil, eatAt = nil,
+        lastGrowth = number(character, "GrowthScore"), lastCatch = number(character, "CatchScore"),
+        lastBite = number(character, "BiteSeq"), lastLeap = number(player, "LeapReadyAt"), connections = {}}
+    rigs[character] = rig
+    local function connect(signal: RBXScriptSignal, callback: (...any) -&gt; ())
+        table.insert(rig.connections, signal:Connect(callback))
+    end
+    local function watchScore(name: string, field: string)
+        connect(character:GetAttributeChangedSignal(name), function()
+            local value = number(character, name)
+            if value &gt; rig[field] and Theme.MotionEnabled and not rig.eatAt then rig.eatAt = os.clock() + EAT_DELAY end
+            rig[field] = value
+        end)
+    end
+    watchScore("GrowthScore", "lastGrowth")
+    watchScore("CatchScore", "lastCatch")
+    -- Any visual rebuild/rescale: put the model back BEFORE ResourceVisuals resizes it.
+    for _, name in {"VisualScale", "SpeciesId", "MutationVisual", "GoldVisual", "GenesJson", "DinoAttached"} do
+        connect(character:GetAttributeChangedSignal(name), function() restore(rig) end)
+    end
+    connect(character:GetAttributeChangedSignal("BiteSeq"), function()
+        local value = number(character, "BiteSeq")
+        if value ~= rig.lastBite then
+            rig.lastBite = value
+            trigger(rig, "bite")
+        end
+    end)
+    connect(character:GetAttributeChangedSignal("RunState"), function()
+        if character:GetAttribute("RunState") == "Ending" and Theme.MotionEnabled then
+            restore(rig)
+            trigger(rig, "death")
+        end
+    end)
+    connect(player:GetAttributeChangedSignal("LeapReadyAt"), function()
+        local value = number(player, "LeapReadyAt")
+        if value &gt; rig.lastLeap then
+            rig.lastLeap = value
+            trigger(rig, "leap")
+        end
+    end)
+    if humanoid then
+        connect(humanoid.StateChanged, function(old, new)
+            if new == Enum.HumanoidStateType.Jumping then
+                local leapStart = rig.motion.start.leap
+                if not leapStart or os.clock() - leapStart &gt; 0.35 then trigger(rig, "takeoff") end
+            elseif old == Enum.HumanoidStateType.Freefall
+                and (new == Enum.HumanoidStateType.Landed or new == Enum.HumanoidStateType.Running) then
+                trigger(rig, "land")
+                local camera = workspace.CurrentCamera
+                if Theme.MotionEnabled and (rig.isLocal or (camera and (camera.CFrame.Position - root.Position).Magnitude &lt; OTHER_RANGE / 2)) then
+                    puff("dust", root.Position - Vector3.new(0, humanoid.HipHeight + root.Size.Y / 2, 0), 5)
+                end
+            end
+        end)
+    end
+    connect(character.Destroying, function() untrack(character) end)
+end
+
+local function step(rig: any, now: number, dt: number)
+    local character = rig.character
+    local root = rig.root
+    if not character.Parent or not root.Parent then
+        untrack(character)
+        return
+    end
+    local look = root.CFrame.LookVector
+    local yaw = math.atan2(-look.X, -look.Z)
+    local rate = 0
+    if rig.lastYaw and dt &gt; 0 then
+        rate = ((yaw - rig.lastYaw + math.pi) % (2 * math.pi) - math.pi) / dt
+    end
+    rig.lastYaw = yaw
+    local velocity = root.AssemblyLinearVelocity
+    rig.motion.lean = Motion.lean(rig.motion.lean, rate, math.sqrt(velocity.X * velocity.X + velocity.Z * velocity.Z), dt)
+    if rig.eatAt and now &gt;= rig.eatAt then
+        rig.eatAt = nil
+        Motion.trigger(rig.motion, "eat", now)
+        puff("munch", root.Position + look * (rig.length * 0.5), 3)
+        if rig.isLocal then Sfx.play("pickup") end
+    end
+    if Motion.sample(rig.motion, now, rig.pose) then
+        if not rig.applied then
+            if not capture(rig) then return end
+            rig.applied = true
+        end
+        writePose(rig, rig.pose)
+    elseif rig.applied then
+        restore(rig)
+    end
+end
+
+RunService.Heartbeat:Connect(function(dt)
+    if next(rigs) == nil then return end
+    local enabled = Theme.MotionEnabled
+    local camera = workspace.CurrentCamera
+    local now = os.clock()
+    for _, rig in rigs do
+        if not enabled then
+            if rig.applied then restore(rig) end
+            Motion.clear(rig.motion)
+            rig.eatAt = nil
+        elseif rig.isLocal then
+            step(rig, now, dt)
+        elseif camera and (camera.CFrame.Position - rig.root.Position).Magnitude &lt;= OTHER_RANGE then
+            rig.accumulator += dt
+            if rig.accumulator &gt;= OTHER_STEP then
+                local elapsed = rig.accumulator
+                rig.accumulator = 0
+                step(rig, now, elapsed)
+            end
+        elseif rig.applied then
+            restore(rig)
+            Motion.clear(rig.motion)
+        end
+    end
+end)
+
+local function watch(player: Player)
+    player.CharacterAdded:Connect(function(character) track(player, character) end)
+    if player.Character then task.spawn(track, player, player.Character) end
+end
+Players.PlayerAdded:Connect(watch)
+for _, player in Players:GetPlayers() do watch(player) end
+Players.PlayerRemoving:Connect(function(player)
+    if player.Character then untrack(player.Character) end
+end)
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="RBX262">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -547353,7 +547767,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX261">
+        <Item class="ModuleScript" referent="RBX263">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -547455,7 +547869,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX262">
+        <Item class="ModuleScript" referent="RBX264">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -547515,7 +547929,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX263">
+        <Item class="LocalScript" referent="RBX265">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -547688,7 +548102,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX264">
+        <Item class="LocalScript" referent="RBX266">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -547770,7 +548184,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX265">
+  <Item class="Workspace" referent="RBX267">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>
