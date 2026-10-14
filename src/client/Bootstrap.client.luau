@@ -535,14 +535,14 @@ render=function(name: string)
         scroller.BorderSizePixel,scroller.ScrollBarThickness,scroller.ZIndex,scroller.Parent=0,8,body.ZIndex+1,body
         scroller.ScrollingDirection=Enum.ScrollingDirection.Y
         local rarityColor={Common=Color3.fromRGB(176,188,200),Uncommon=C.accent,Rare=C.blue,Epic=C.purple,Legendary=C.gold}
-        local function bottle(kind) return "potion_"..(if kind=="loot" then "growth" else kind) end -- loot reuses the growth bottle until its art exists
+        local function bottle(item) return "potion_"..item.kind.."_"..item.rarity end -- native vector bottle (PotionArt): shape = effect, trim/glow/pips = rarity
         for i,offer in ProgressionRules.shopOffers(window) do
             local item=ProgressionRules.item(ProgressionConfig.Potions,offer.id)
             local left=ProgressionRules.shopRemaining(p,window,offer.id)
             local x=((i-1)%3)*276 local y=math.floor((i-1)/3)*140
             local color=rarityColor[item.rarity] or C.accent
             local card=box(scroller,x,y,264,132,C.card:Lerp(color,if left>0 then .28 else .08),24)
-            art(card,bottle(item.kind),6,8,64)
+            art(card,bottle(item),6,8,64)
             label(card,item.name,74,3,186,26,19,color)
             label(card,item.rarity.." "..item.kind.." - "..item.multiplier.."x\n"..(item.duration//60).."m "..(item.duration%60).."s",74,28,186,44,15)
             label(card,if left>0 then left.." left" else "Sold Out - back later",74,74,186,20,15,if left>0 then C.gold else C.red)
@@ -572,7 +572,7 @@ render=function(name: string)
         local item=ProgressionRules.item(ProgressionConfig.Potions,chosenPotion)
         local replacing=name=="potionReplace"
         heading.Text,header.BackgroundColor3=if replacing then "Replace Active Potion?" else "Buy Potion?",C.accent
-        art(body,"potion_"..(if item.kind=="loot" then "growth" else item.kind),30,22,220)
+        art(body,"potion_"..item.kind.."_"..item.rarity,30,22,220)
         label(body,item.name.." • "..item.multiplier.."x "..item.kind,290,15,510,62,28)
         label(body,if replacing then "Your current "..item.kind.." potion ends immediately. Its remaining time is lost. Consume 1 potion for a fresh "..(item.duration//60).." minutes?" else (item.duration//60).." minutes • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
         button(body,if replacing then "REPLACE & USE" else "BUY POTION",290,263,510,58,C.accent,function()

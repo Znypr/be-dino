@@ -1,9 +1,9 @@
 {
   "format": 1,
-  "place_sha256": "8b455572e183ac749141b56bd96486c43fbe1d6db345cf997696fbfbf0cccfbe",
+  "place_sha256": "46df1002b401f5529e8c8012a48d1ba26592004eb30ff451b70a091bead40528",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
-    "src/shared/Artwork.luau": "dbcef755028cbf3e737da0f96178db4e563f73843c0df00ad167ab134f1d066e",
+    "src/shared/Artwork.luau": "77bef322245582ebe9cf225c27f3281616a436dd7b1680347bb5cb853f8d2dfe",
     "src/shared/ArtworkAssets.luau": "0ff9492a91ef3538e0615ca20e5db96b0e3913e554675e3c21058b25bd58c00d",
     "src/shared/ArtworkLayout.luau": "50bafa21786bba19acbcb92b91ec813e5c7435d8f3665b8c6050dcf6e94beca3",
     "src/shared/AuthoredCreatures.luau": "78b0e6f5c7f534ec8b5c42ccdabf4d7a5e4eddd097c8c37c17ca7ec9514f741b",
@@ -194,6 +194,7 @@
     "src/shared/NavigationArtwork.luau": "8f217518bf3afa393f3f72243541656824f70efad4f5596e37273b431fae1b6a",
     "src/shared/NextGoal.luau": "7113840ee9e062b04ec31adc94b2f5dd559f19171ee3bef47925e51c24901ac4",
     "src/shared/PatternGenes.luau": "48bb508cf68c350ce5b1856654f1387194370fc9a8958f2585c9925e531d8f10",
+    "src/shared/PotionArt.luau": "a5d29fd4b89650cdc5d1d1ec7a06206016fbab436500e8f87f8595bc296c9bc1",
     "src/shared/PreviewCamera.luau": "4fb0416b3f45f4722d740cf895b436c71d8ec0dd5072174a514894fb05f97ba3",
     "src/shared/ProgressionConfig.luau": "dc6af27128d8af76d080547d1470765a8940fcf55e88100f3983f79bd2806074",
     "src/shared/ProgressionRules.luau": "9976dbca3b17e22a3ed47a5a18c36b515cb2e247af9868463f7e2dafa4e5fc22",
@@ -234,7 +235,7 @@
     "src/server/RewardMath.luau": "cc7dad58b2678f8846955287ce8f42d7ef0c55c643da7c193a710b280011eec4",
     "src/server/RunLifecycle.luau": "c0c2d0a10ab2446edfc09478df1320fd12416e5dce73132879fcc397904f0079",
     "src/server/VisualTestService.luau": "ee48ddc907c11e5d1390483d570d9ab96fd01b3ee02493b5724a2ebcf1ef0773",
-    "src/client/Bootstrap.client.luau": "f8484b8e744a9da841c1c41bdca14844bddf9576d26e40a982a42111538b0d67",
+    "src/client/Bootstrap.client.luau": "674d0b2e75a967eba46dddc5d4fcbc74b3068c41fa8c92f2e181eebfbcaf468c",
     "src/client/CosmeticVisuals.client.luau": "85d567cf577cf91bbc9402ee7a26f11bd705cf4ef8b328ecf350ae569bd82c06",
     "src/client/DinoDetails.luau": "2997fa1005dd0d38bcc1cca686c7d40301f1a6c10b6922e80943b0d911a7795a",
     "src/client/FusionMenu.luau": "2bd0602d062df0d9c22a7a6d64f73c0879f59c2ecce542365860812df701e5df",
