@@ -768,10 +768,4 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-100 | Review / test | P1 | UI copy pass (docs/72): one shared time/percent formatter, remove '5m 0s' and 'x' multipliers everywhere (shops, potions, buffs, nests, weather, HUD), short child-friendly lines. Roles: UI writer, gameplay eng | BD-043 |
 | BD-101 | Backlog | P1 | Potion icons as real art (replace code-drawn bottles, PLACEHOLDER): 12 potions, 5 rarity frames; brief, 2D drafts, pick, final export, owner upload. Roles: UI artist, art director | BD-082 |
 | BD-102 | Backlog | P1 | UI asset production pipeline: brief template, draft/review/final/upload checklist, naming, QA at 64 px and phone size; audit existing code-drawn icons (growth tile, nest sprite, hud icons) and list which are PLACEHOLDER. Roles: art director, tech artist | BD-047 |
-| BD-104 | Backlog | P1 | Condition egg art decision: owner picks style A or B from docs/75 boards (and gloss vs matte). Roles: art director, owner | BD-103 |
-| BD-105 | Backlog | P1 | Condition egg textures final: 4 overlays 512 px + 2 star layers 256 px + Astra shell 512 px, plus chipped Cracked mesh variant (Blender). Roles: UI/3D artist, owner upload | BD-104 |
-| BD-106 | Backlog | P1 | Condition layer in EggAppearance/EggPreview: read conditionId, stack above pattern, shop card + world + nest parity. Roles: gameplay eng | BD-105 |
-| BD-107 | Backlog | P2 | Astra/Rainbow sparkle ParticleEmitter + glow with distance budget and reduced-effects fallback. Roles: tech artist | BD-106 |
-| BD-108 | Backlog | P2 | Hatch reveal per condition (crumble, mud flake, prism, star burst) reusing sfx pack. Roles: tech artist, audio | BD-106 |
-| BD-109 | Backlog | P1 | Condition Shop cards show the condition egg with short copy (docs/72/73); Studio screenshot check at phone size. Roles: UI designer, QA | BD-106 |
 | BD-103 | Backlog | P1 | Condition egg art: Cracked, Dirty, Normal, Rainbow, Astra eggs render identically in the Condition Shop (renderer ignores condition); make real distinct art/looks per docs/72 flow and docs/73. Roles: UI artist, tech artist | BD-100 |
