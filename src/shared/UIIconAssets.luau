@@ -18,4 +18,6 @@ return {
     aurora = "rbxassetid://119932884142526",
     quake = "rbxassetid://121965025477639",
     bloodmoon = "rbxassetid://123248871135913",
+    egg_splat = "rbxassetid://90653261302119",
+    egg_shell = "rbxassetid://81264206118496",
 }

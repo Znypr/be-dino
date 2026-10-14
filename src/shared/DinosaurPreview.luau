@@ -29,8 +29,16 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
     viewport.Ambient,viewport.LightColor,viewport.LightDirection=Color3.fromRGB(190,210,218),Color3.fromRGB(255,246,226),Vector3.new(-1,-1,-1)
     viewport.ZIndex,viewport.Parent=parent.ZIndex+1,parent
     local function load()
-    local model=Resources.clone(speciesId)
+    local encoded=viewport:GetAttribute("TraitsJson")
+    local traits=nil
+    if encoded and gold~="silhouette" and gold~=true and gold~="gold" and gold~="diamond" then
+        local ok,decoded=pcall(function() return Http:JSONDecode(encoded) end)
+        if ok and typeof(decoded)=="table" then traits=decoded end
+    end
+    local model=Resources.clone(speciesId,if traits then traits.genes else nil,true)
     if model and not viewport.Parent then model:Destroy();return end
+    -- Species with authored data must show the authored mesh, never any other (box) model.
+    if model and require(script.Parent.AuthoredCreatures).has(speciesId) and not model:GetAttribute("AuthoredCreature") then model:Destroy() model=nil end
     if model then
         local world=Instance.new("WorldModel") world.Parent=viewport
         for _,item in model:GetDescendants() do
@@ -49,10 +57,9 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         end
         model:PivotTo(CFrame.new())
         model.Parent=world
-        local encoded=viewport:GetAttribute("TraitsJson")
         if gold=="silhouette" then
             viewport.Ambient,viewport.LightColor=Color3.new(0,0,0),Color3.new(0,0,0)
-        elseif encoded then local ok,traits=pcall(function() return Http:JSONDecode(encoded) end);if ok and traits.genes then Appearance.apply(model,traits.genes) end end
+        elseif traits and traits.genes then Appearance.apply(model,traits.genes) end
         Camera.bind(viewport,model,speciesId)
         task.spawn(function()
             local assets={}
@@ -79,13 +86,13 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
     end
     local data=script.Parent:FindFirstChild("CreatureData")
     if data and data:FindFirstChild(speciesId) then
-        local elapsed=0;local loading=false
+        local elapsed=0;local loading=false;local attempts=0
         local connection=RunService.Heartbeat:Connect(function(dt)
             elapsed+=dt;if elapsed<.25 or loading then return end;elapsed=0
             local world=viewport:FindFirstChildOfClass("WorldModel")
             if visible(viewport) then
-                if not world then loading=true;task.spawn(function() if viewport.Parent then load() end;loading=false end) end
-            elseif world then world:Destroy() end
+                if not world and attempts<8 then attempts+=1;loading=true;task.spawn(function() if viewport.Parent then load() end;loading=false end) end
+            elseif world then world:Destroy();attempts=0 end
         end)
         viewport.Destroying:Once(function() connection:Disconnect() end)
     else load() end

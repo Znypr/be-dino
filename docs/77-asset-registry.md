@@ -22,6 +22,8 @@ Every art asset the game uses at runtime. Add a line here when an asset is added
 | bloodmoon | UI icon | resources/ui/v2/icons/weather-bloodmoon-v1.png | 123248871135913 | src/shared/UITheme.luau via UIIconAssets.luau | uploaded, bound (Studio check pending) |
 | egg_nest | UI icon | resources/ui/v2/icons/egg-nest-v1.png | 127462994652706 | src/shared/UITheme.luau via UIIconAssets.luau | in game |
 | egg-green-v1 | UI icon | resources/ui/v2/icons/egg-green-v1.png | - | (none yet) | planned |
+| egg_splat | UI icon | resources/ui/v2/icons/egg-splat-v1.png | 90653261302119 | src/client/HatchSequence.luau via UIIconAssets.luau (failed Cracked egg; native shapes until bound) | uploaded, bound (Studio check pending) |
+| egg_shell | UI icon | resources/ui/v2/icons/egg-shell-v1.png | 81264206118496 | src/client/HatchSequence.luau via UIIconAssets.luau (two shell halves; native shapes until bound) | uploaded, bound (Studio check pending) |
 | fossil_centerpiece | UI icon (layer) | resources/ui/v2/layers/fossil-centerpiece-v1.png | 86663955990810 | src/shared/Artwork.luau via ArtworkAssets.luau | in game |
 | aura_meadow_ring | UI icon (layer) | resources/ui/v2/layers/aura-meadow-ring-v1.png | 80049958683098 | src/shared/Artwork.luau via ArtworkAssets.luau | in game |
 | aura_tidal_ring | UI icon (layer) | resources/ui/v2/layers/aura-tidal-ring-v1.png | 80241308683604 | src/shared/Artwork.luau via ArtworkAssets.luau | in game |
@@ -43,7 +45,7 @@ Every art asset the game uses at runtime. Add a line here when an asset is added
 | Dino mesh stegosaurus | mesh | resources/models/stegosaurus.obj (original geometry; uploaded mesh is the runtime asset) | 92865644294705 | src/server/ImportedResources.luau via ResourceMeshAssets.luau | in game |
 | Dino mesh ankylosaurus | mesh | resources/models/ankylosaurus.obj (original geometry; uploaded mesh is the runtime asset) | 74993073282146 | src/server/ImportedResources.luau via ResourceMeshAssets.luau | in game |
 | Gene textures (38 neutral maps, 6 species x body parts) | texture | resources/genetics/neutral-textures/*.png (map: resources/genetics/texture-bindings.json) | 38 IDs, see src/shared/GeneTextureAssets.luau | src/shared/GeneTextures.luau, LegacyGenePatterns.luau | in game |
-| World kit (41 meshes: trees, rocks, bushes, landmarks, food) | mesh | resources/worldkit/*.rbxmx; sources assets/blender/world/BD049_WorldKit.blend, BD050_FoodKit.blend, fbx/ | - | built into place by tools/build.py | in game (no uploaded IDs) |
+| World kit (41 meshes: trees, rocks, bushes, landmarks, food) | mesh | resources/worldkit/*.rbxmx; sources assets/blender/world/BD049_WorldKit.blend, BD050_FoodKit.blend, fbx/ | 40 uploaded mesh IDs (world_tree_dead_m missing) | resources/worldkit-meshes/mesh-bindings.json -> src/shared/WorldKitMeshAssets.luau (tools/bind_worldkit_meshes.py), loaded by ImportedResources.loadWorldKit | in game (MeshParts; native fallback for dead_m) |
 | Meadow/world materials | texture | resources/world-materials.rbxmx (prompts: resources/visual-upgrade-bindings.json) | - | built into place by tools/build.py | in game |
 | Egg/food/nature OBJ models (amber, berry, egg, fern, fruit, rock, tree) | mesh | resources/models/*.obj | - | src/server/ImportedResources.luau (native geometry fallback) | in game (fallback) |
 | Fusion finish v2 (Blender study) | mesh | assets/blender/fusion/*.blend | - | none (no runtime asset yet) | planned |
@@ -78,3 +80,27 @@ Notes
 All older revisions and Blender sources live OUTSIDE git in Google Drive: `My Drive/Be Dino/Art Archive/2026-10-08_Premium_Egg_all_revisions.zip` (full Premium_Egg folder as of 2026-10-13).
 
 Rule: every new asset adds a registry line when it is added.
+
+## Sound effects (uploaded 2026-10-15)
+
+The 17-sound pack from `assets/audio/sfx/` (synthesized placeholders by `tools/generate_sfx.py`; a proper sound pass is BD-081). `hatch_rattle` and `hatch_burst` have no sound yet and stay silent.
+
+| Name | Type | Source | ID | Used by | Status |
+|---|---|---|---|---|---|
+| sfx_big_thud | sound | assets/audio/sfx/big_thud.wav | 88666885925372 | src/shared/Sfx.luau | in game |
+| sfx_fusion_reveal | sound | assets/audio/sfx/fusion_reveal.wav | 90816090310479 | src/shared/Sfx.luau | in game |
+| sfx_hatch_common | sound | assets/audio/sfx/hatch_common.wav | 123602379376075 | src/shared/Sfx.luau | in game |
+| sfx_hatch_crack | sound | assets/audio/sfx/hatch_crack.wav | 135613869332284 | src/shared/Sfx.luau | in game |
+| sfx_hatch_legendary | sound | assets/audio/sfx/hatch_legendary.wav | 109331854464968 | src/shared/Sfx.luau | in game |
+| sfx_hatch_rare | sound | assets/audio/sfx/hatch_rare.wav | 100769608611671 | src/shared/Sfx.luau | in game |
+| sfx_level_up | sound | assets/audio/sfx/level_up.wav | 135894580270926 | src/shared/Sfx.luau | in game |
+| sfx_pickup | sound | assets/audio/sfx/pickup.wav | 97315544055472 | src/shared/Sfx.luau | in game |
+| sfx_pickup_hi | sound | assets/audio/sfx/pickup_hi.wav | 86225160041514 | src/shared/Sfx.luau | in game |
+| sfx_pickup_lo | sound | assets/audio/sfx/pickup_lo.wav | 80767583749596 | src/shared/Sfx.luau | in game |
+| sfx_run_end | sound | assets/audio/sfx/run_end.wav | 127962506254484 | src/shared/Sfx.luau | in game |
+| sfx_run_start | sound | assets/audio/sfx/run_start.wav | 87202810278231 | src/shared/Sfx.luau | in game |
+| sfx_shiny_bang | sound | assets/audio/sfx/shiny_bang.wav | 124365194004947 | src/shared/Sfx.luau | in game |
+| sfx_shop_buy | sound | assets/audio/sfx/shop_buy.wav | 102585210519734 | src/shared/Sfx.luau | in game |
+| sfx_shop_refresh | sound | assets/audio/sfx/shop_refresh.wav | 91960074825710 | src/shared/Sfx.luau | in game |
+| sfx_ui_click | sound | assets/audio/sfx/ui_click.wav | 77237659470894 | src/shared/Sfx.luau | in game |
+| sfx_weather_start | sound | assets/audio/sfx/weather_start.wav | 120619985059497 | src/shared/Sfx.luau | in game |

@@ -7,6 +7,15 @@ local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Appearance = require(ReplicatedStorage.Shared.EggAppearance)
 local Http = game:GetService("HttpService")
 local watched = setmetatable({}, {__mode = "k"})
+-- The server shell (DinoVisual) shares geometry with the local mesh; keep it invisible on this client or its
+-- original texture z-fights through the genes-painted pattern. Client-local Transparency survives the camera script.
+local function hideShell(character: Model)
+    local shell = character:FindFirstChild("DinoVisual")
+    if not shell or not character:FindFirstChild("LocalMeshVisual") then return end
+    for _, item in shell:GetDescendants() do
+        if item:IsA("BasePart") and item.Transparency ~= 1 then item.LocalTransparencyModifier = 1 item.Transparency = 1 end
+    end
+end
 local function characterVisual(character: Model)
     local root = character:FindFirstChild("HumanoidRootPart")
     local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -36,6 +45,7 @@ local function characterVisual(character: Model)
             previous:ScaleTo(scale);previous:PivotTo(groundFrame());previous:SetAttribute("Scale",scale)
             for _,weld in welds do weld.Enabled=true end
         end
+        hideShell(character)
         if previous:GetAttribute("GenesJson")~=genesJson then
             local ok,genes=pcall(function() return Http:JSONDecode(genesJson) end)
             if ok and typeof(genes)=="table" and mutation=="base" then Appearance.apply(previous,genes) end
@@ -44,7 +54,9 @@ local function characterVisual(character: Model)
         return
     end
     local overrides=ReplicatedStorage:FindFirstChild("ResourceOverrides")
-    local model = Resources.clone(id)
+    local okGenes,genes=pcall(function() return Http:JSONDecode(genesJson) end)
+    local realGenes=if okGenes and typeof(genes)=="table" and mutation=="base" then genes else nil
+    local model = Resources.clone(id,realGenes)
     if not model then return end
     if not character.Parent or not root.Parent then model:Destroy();return end
     if previous then previous:Destroy() end
@@ -71,12 +83,11 @@ local function characterVisual(character: Model)
         end
     end
     model.Parent = character
-    local ok,genes=pcall(function() return Http:JSONDecode(genesJson) end)
-    if ok and typeof(genes)=="table" and mutation=="base" then Appearance.apply(model,genes) end
+    if realGenes then Appearance.apply(model,realGenes) end
     local fallback = character:FindFirstChild("DinoVisual")
     if fallback then
         for _, item in fallback:GetDescendants() do
-            if item:IsA("BasePart") then item.LocalTransparencyModifier = 1 end
+            if item:IsA("BasePart") then item.LocalTransparencyModifier = 1 item.Transparency = 1 end
         end
     end
 end
@@ -99,9 +110,12 @@ local function watchCharacter(character: Model)
     for _, attribute in {"SpeciesId", "VisualScale", "GoldVisual", "MutationVisual", "DinoAttached","GenesJson"} do
         character:GetAttributeChangedSignal(attribute):Connect(refresh)
     end
+    character.ChildAdded:Connect(function(child)
+        if child.Name == "DinoVisual" then task.delay(.5, function() hideShell(character) end) end
+    end)
     character.DescendantAdded:Connect(function(item)
         if item:IsA("BasePart") and item:FindFirstAncestor("DinoVisual") and character:FindFirstChild("LocalMeshVisual") then
-            item.LocalTransparencyModifier = 1
+            item.LocalTransparencyModifier = 1 item.Transparency = 1
         end
     end)
     refresh()
@@ -146,7 +160,7 @@ RunService.Heartbeat:Connect(function(dt)
     local folder = workspace:FindFirstChild("Food")
     if not folder then return end
     for _, item in folder:GetChildren() do
-        if not item:IsA("BasePart") or not item:GetAttribute("Points") then continue end
+        if not item:IsA("BasePart") or not item:GetAttribute("Points") or item:GetAttribute("KitMesh") then continue end
         local model = foods[item]
         if not model then
             model = RuntimeMeshes.clone(item.Name)

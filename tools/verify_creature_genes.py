@@ -44,14 +44,37 @@ for name,mask in data.patterns do
  local n=0 for _ in tones do n+=1 end
  assert(n==2,name.." lost same-family tonal contrast")
 end
+-- Genes X must paint pattern X and colors X, never the old hard-coded green/white round spots.
+local function snapshot(genes) assert(Pattern.apply(part,genes));return buffer.tostring(current) end
+local defaultLook=snapshot({conditionId="normal",hatchSuccess=true,primaryColorId="green",secondaryColorId="white",blend=70,patternId="03_round_spots"})
+local seen={}
+for name in data.patterns do
+ local look=snapshot({conditionId="normal",hatchSuccess=true,primaryColorId="red",secondaryColorId="blue",blend=50,patternId=name})
+ assert(look~=defaultLook,name.." rendered like the default pattern")
+ assert(not seen[look],name.." rendered identically to another pattern")
+ seen[look]=true
+end
+local redLook=snapshot({conditionId="normal",hatchSuccess=true,primaryColorId="red",secondaryColorId="blue",blend=50,patternId="03_round_spots"})
+local blueLook=snapshot({conditionId="normal",hatchSuccess=true,primaryColorId="blue",secondaryColorId="teal",blend=50,patternId="03_round_spots"})
+assert(redLook~=blueLook and redLook~=defaultLook,"colors X must differ from other colors")
 local legacy={conditionId="normal",hatchSuccess=true,primaryColorId="white",secondaryColorId="black",blend=80}
 assert(Genetics.key(legacy)=="normal:white:black:80")
 local invalid=table.clone(legacy);invalid.patternId="unknown";assert(not Genetics.valid(invalid))
 print("Authored genes passed: 8 masks × 4 exact UV coverage ratios, fixed facial pixels, same-family contrast and legacy saved keys")
 '''
     return s
+def check_wiring():
+    """Static proof that real genes (not the default) reach every renderer."""
+    def src(path): return (ROOT/path).read_text(encoding='utf8')
+    a=src('src/shared/AuthoredCreatures.luau')
+    assert a.count('patternId="03_round_spots"')==1 and 'if genes then genes else Creatures.DefaultGenes' in a,'authored clone must paint passed genes'
+    assert 'Resources.clone(id,realGenes)' in src('src/client/ResourceVisuals.client.luau'),'character visual must pass genes'
+    assert 'Resources.clone(speciesId,if traits then traits.genes else nil' in src('src/shared/DinosaurPreview.luau'),'previews must pass genes'  # extra trailing args (patient load) are allowed
+    assert 'TextureContent=Content.none' in src('src/shared/ResourceModels.luau'),'Gold/Diamond must drop painted pattern'
+    assert 'character:SetAttribute("GenesJson"' in src('src/server/Dinosaur.luau'),'equip must publish genes on the character'
+    assert 'item.Transparency = 1' in src('src/client/ResourceVisuals.client.luau'),'server shell must stay hidden'
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--runner',required=True);args=p.parse_args()
     with tempfile.TemporaryDirectory() as folder:
         path=Path(folder)/'genes.luau';path.write_text(script());result=subprocess.run([args.runner,str(path)])
-        raise SystemExit(result.returncode)
+        check_wiring();raise SystemExit(result.returncode)

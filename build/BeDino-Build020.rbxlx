@@ -364940,21 +364940,40 @@ return {
 local Assets=game:GetService("AssetService")
 local RunService=game:GetService("RunService")
 local Http=game:GetService("HttpService")
+local Gate=require(script.Parent.LoadGate)
 local Creatures={}
-local active=0
+local Sanity=require(script.Parent.MeshSanity)
+-- At most a few concurrent EditableMesh builds. Extra patient requests wait for a slot instead of failing.
+local gate=Gate.new(4)
+Creatures.Gate=gate
 local function frame(v) return CFrame.new(table.unpack(v)) end
-function Creatures.clone(id: string): Model?
+-- Used only when the caller has no genes (e.g. index entry never hatched); real genes are painted in place.
+Creatures.DefaultGenes={conditionId="normal",hatchSuccess=true,primaryColorId="green",secondaryColorId="white",blend=70,patternId="03_round_spots"}
+function Creatures.has(id: string): boolean
+    local source=script.Parent:FindFirstChild("CreatureData")
+    return source~=nil and source:FindFirstChild(id)~=nil and RunService:IsClient()
+end
+local function build(id: string,genes: any?,patient: boolean): Model?
     local source=script.Parent:FindFirstChild("CreatureData")
     local module=if source then source:FindFirstChild(id) else nil
-    if not module or not RunService:IsClient() or active&gt;=12 then return nil end
-    active+=1
+    if not module or not RunService:IsClient() then return nil end
+    if patient then
+        if not Gate.acquire(gate,6,os.clock,task.wait) then return nil end
+    elseif not Gate.tryAcquire(gate) then return nil end
     local mesh
+    local released=false
+    local function release() if not released then released=true Gate.release(gate) end end
     local ok,result=pcall(function()
         local data=Http:JSONDecode(require(module))
         mesh=Assets:CreateEditableMesh()
         assert(mesh,"EditableMesh memory budget exhausted")
         local vertices,bones,uvs,normals={},{},{},{}
-        for _,p in data.vertices do table.insert(vertices,mesh:AddVertex(Vector3.new(table.unpack(p)))) end
+        local low,high=Vector3.new(math.huge,math.huge,math.huge),Vector3.new(-math.huge,-math.huge,-math.huge)
+        for _,p in data.vertices do
+            local v=Vector3.new(table.unpack(p))
+            low,high=low:Min(v),high:Max(v)
+            table.insert(vertices,mesh:AddVertex(v))
+        end
         for _,b in data.bones do
             local params={Name=b.name,CFrame=frame(b.bind),Virtual=false}
             if b.parent&gt;0 then params.ParentId=bones[b.parent] end
@@ -364974,6 +364993,13 @@ function Creatures.clone(id: string): Model?
             mesh:SetFaceNormals(f,{normals[n],normals[n+1],normals[n+2]})
         end
         local part=Assets:CreateMeshPartAsync(Content.fromObject(mesh),{CollisionFidelity=Enum.CollisionFidelity.Box})
+        -- The MeshPart owns a copy: free the EditableMesh budget now, not when the model dies. Holding it made menus and
+        -- previews exhaust the budget so the real character fell back to the primitive blob.
+        mesh:Destroy() mesh=nil
+        release()
+        -- A MeshPart whose mesh did not really load renders as a plain cube/box: treat it as a failed load (retried by clone).
+        local ok2,why=Sanity.check(high-low,part.Size,data.triangles)
+        if not ok2 then part:Destroy() error("mesh sanity failed: "..tostring(why)) end
         local model=Instance.new("Model")
         model.Name=id
         part.Name="AuthoredBody";part.Anchored=true;part.CanCollide=false;part.CanTouch=false;part.CanQuery=false;part.Massless=true
@@ -365013,15 +365039,27 @@ function Creatures.clone(id: string): Model?
                 node.Transform=pose.Rotation+pose.Position*scale
             end
         end)
-        require(script.Parent.PatternGenes).apply(part,{conditionId="normal",hatchSuccess=true,primaryColorId="green",secondaryColorId="white",blend=70,patternId="03_round_spots"})
-        model.Destroying:Once(function() connection:Disconnect();mesh:Destroy();active-=1 end)
+        require(script.Parent.PatternGenes).apply(part,if genes then genes else Creatures.DefaultGenes)
+        model.Destroying:Once(function() connection:Disconnect() end)
         return model
     end)
     if ok then return result end
     if mesh then mesh:Destroy() end
-    active-=1
+    release()
     warn("Be Dino creature unavailable: "..id.." ("..tostring(result)..")")
     return nil
+end
+-- patient=true (previews): waits for a load slot and retries once; callers must be able to yield.
+function Creatures.clone(id: string,genes: any?,patient: boolean?): Model?
+    local model=build(id,genes,patient==true)
+    if not model and patient==true and Creatures.has(id) then
+        for _,delay in {.4,1.2} do
+            task.wait(delay)
+            model=build(id,genes,true)
+            if model then break end
+        end
+    end
+    return model
 end
 return Creatures
 </ProtectedString>
@@ -365064,13 +365102,18 @@ BiomePlacement.Landmarks = {
     {id = "world_landmark_ruins_altar", x = -40, z = -120},
 }
 -- Layers: grid cell size, acceptance chance, slope limit (degrees), count cap, blocking.
+-- MeshPart era (docs/68): a prop is ONE part, so the layers are far denser than the native-fallback grammar
+-- (which had to stay near 190 props at density 1). Lush groves (groveBoost) carry most trees, shrubs and cover.
 BiomePlacement.Layers = {
-    {name = "tree", cell = 15, chance = .2, groveBoost = .75, maxSlope = 32, cap = 40, blocking = true},
-    {name = "rock", cell = 20, chance = .2, groveBoost = 0, maxSlope = 46, cap = 34, blocking = true},
-    {name = "shrub", cell = 13, chance = .14, groveBoost = .45, maxSlope = 34, cap = 50, blocking = false},
-    {name = "groundcover", cell = 11, chance = .1, groveBoost = .1, maxSlope = 30, cap = 70, blocking = false},
+    {name = "tree", cell = 11, chance = .2, groveBoost = .85, maxSlope = 32, cap = 130, blocking = true},
+    {name = "rock", cell = 15, chance = .2, groveBoost = .1, maxSlope = 46, cap = 80, blocking = true},
+    {name = "shrub", cell = 8, chance = .12, groveBoost = .6, maxSlope = 34, cap = 380, blocking = false},
+    {name = "groundcover", cell = 6, chance = .08, groveBoost = .4, maxSlope = 30, cap = 620, blocking = false},
 }
-BiomePlacement.TriangleBudget = 9000 -- total placed triangles at density 1 (native fallback = 2 parts each)
+-- Placed-part budget at density 1: MeshPart props cost 1 part (+ their invisible collider boxes); a prop whose
+-- mesh is not available costs the native fallback (2 wedge parts per triangle + colliders), so a failed upload
+-- thins the world instead of blowing the phone budget. The 8,000-part phone ceiling is documented in docs/68.
+BiomePlacement.PartBudget = 3200
 
 local function mul32(a: number, b: number): number
     local lo, hi = a % 65536, math.floor(a / 65536)
@@ -365150,12 +365193,13 @@ end
 
 export type Placement = {id: string, x: number, y: number, z: number, yaw: number, scale: number, radius: number, layer: string}
 
--- options: {seed, density, extent, height=(x,z)-&gt;y, kit=WorldKitData}
+-- options: {seed, density, extent, height=(x,z)-&gt;y, kit=WorldKitData, meshes=WorldKitMeshAssets (ids that are real MeshParts)}
 function BiomePlacement.generate(options): {Placement}
     local seed, density, extent, height, kit = options.seed, math.clamp(options.density or 1, .25, 2), options.extent - 12, options.height, options.kit
     local placed: {Placement} = {}
-    local triangles = 0
-    local budget = BiomePlacement.TriangleBudget * density
+    local meshes = options.meshes or {}
+    local parts = 0
+    local budget = BiomePlacement.PartBudget * density
     local grid: {[number]: {Placement}} = {}
     local function key(x: number, z: number): number return math.floor(x / 24) * 4096 + math.floor(z / 24) end
     local function clear(x: number, z: number, r: number, blocking: boolean): boolean
@@ -365176,7 +365220,7 @@ function BiomePlacement.generate(options): {Placement}
         local lo = footprintRange(height, x, z, r * .5)
         local p = {id = id, x = x, y = lo - sink * data.extent[2] * scale, z = z, yaw = yaw, scale = scale, radius = r, layer = layer}
         table.insert(placed, p)
-        triangles += data.triangles
+        parts += BiomePlacement.partCost(id, kit, meshes)
         local k = key(x, z)
         grid[k] = grid[k] or {}
         table.insert(grid[k], p)
@@ -365220,8 +365264,9 @@ function BiomePlacement.generate(options): {Placement}
                 local id = if layer.name == "tree" then chooseTree(h, wet, n, roll + (if grove &lt; 15 then .2 else 0))
                     elseif layer.name == "rock" then chooseRock(h, s, wet, n, roll)
                     elseif layer.name == "shrub" then chooseShrub(wet, n, grove &lt; 25) else chooseCover(n)
+                id = BiomePlacement.substitute(id, kit, meshes)
                 local data = kit[id]
-                if not data or triangles + data.triangles &gt; budget then continue end
+                if not data or parts + BiomePlacement.partCost(id, kit, meshes) &gt; budget then continue end
                 local scale = .88 + .24 * BiomePlacement.hash(seed, li, ix, iz, 6)
                 local r = math.max(data.extent[1], data.extent[3]) * .5 * scale
                 local needed = if layer.blocking then r * .7 else 1
@@ -365237,6 +365282,29 @@ function BiomePlacement.generate(options): {Placement}
     return placed
 end
 
+-- An id with no uploaded mesh swaps to another size of the same family that has one (a missing upload must not
+-- bring back ~100-part native models); with no mesh info at all (offline native budget) nothing changes.
+function BiomePlacement.substitute(id: string, kit, meshes): string
+    if meshes[id] or next(meshes) == nil then return id end
+    local base = string.match(id, "^(.*)_[sml]$")
+    if base then
+        for _, size in {"m", "s", "l"} do
+            local alt = base .. "_" .. size
+            if meshes[alt] and kit[alt] then return alt end
+        end
+    end
+    return id
+end
+-- Parts one placement adds to the world: 1 MeshPart (or 2 wedges per triangle of the native fallback) + collider boxes.
+function BiomePlacement.partCost(id: string, kit, meshes): number
+    local data = kit[id]
+    return (if meshes[id] then 1 else 2 * data.triangles) + #data.colliders
+end
+function BiomePlacement.parts(placed: {Placement}, kit, meshes): number
+    local total = 0
+    for _, p in placed do total += BiomePlacement.partCost(p.id, kit, meshes or {}) end
+    return total
+end
 function BiomePlacement.triangles(placed: {Placement}, kit): number
     local total = 0
     for _, p in placed do total += kit[p.id].triangles end
@@ -365437,6 +365505,9 @@ return table.freeze({
     -- BD-090 Egg Nests v2 (owner 2026-10-14). ALL PROVISIONAL. A nest is a separate loot item
     -- dropped at the end of a qualified run; it incubates on SERVER time (os.time), ONE nest at a
     -- time (queue), and opens into NestMinSize..NestMaxSize eggs rolled with luck. See docs/71.
+    -- Auto-open by rarity (owner 2026-10-15). UI preference only; the server still credits every egg.
+    -- When true, a player without the pass sees locked rows and the setting is ignored (no Robux code here).
+    AutoOpenRequiresPass = false,
     NestStorageCapacity = 5, -- owned nests (waiting + incubating + ready); when full a new nest is not granted
     NestIncubationSeconds = 10800, -- 3 h each; the next waiting nest starts the moment the previous becomes ready
     NestMinSize = 10, -- eggs per nest, rolled deterministically from the run id at drop
@@ -366971,8 +367042,16 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
     viewport.Ambient,viewport.LightColor,viewport.LightDirection=Color3.fromRGB(190,210,218),Color3.fromRGB(255,246,226),Vector3.new(-1,-1,-1)
     viewport.ZIndex,viewport.Parent=parent.ZIndex+1,parent
     local function load()
-    local model=Resources.clone(speciesId)
+    local encoded=viewport:GetAttribute("TraitsJson")
+    local traits=nil
+    if encoded and gold~="silhouette" and gold~=true and gold~="gold" and gold~="diamond" then
+        local ok,decoded=pcall(function() return Http:JSONDecode(encoded) end)
+        if ok and typeof(decoded)=="table" then traits=decoded end
+    end
+    local model=Resources.clone(speciesId,if traits then traits.genes else nil,true)
     if model and not viewport.Parent then model:Destroy();return end
+    -- Species with authored data must show the authored mesh, never any other (box) model.
+    if model and require(script.Parent.AuthoredCreatures).has(speciesId) and not model:GetAttribute("AuthoredCreature") then model:Destroy() model=nil end
     if model then
         local world=Instance.new("WorldModel") world.Parent=viewport
         for _,item in model:GetDescendants() do
@@ -366991,10 +367070,9 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         end
         model:PivotTo(CFrame.new())
         model.Parent=world
-        local encoded=viewport:GetAttribute("TraitsJson")
         if gold=="silhouette" then
             viewport.Ambient,viewport.LightColor=Color3.new(0,0,0),Color3.new(0,0,0)
-        elseif encoded then local ok,traits=pcall(function() return Http:JSONDecode(encoded) end);if ok and traits.genes then Appearance.apply(model,traits.genes) end end
+        elseif traits and traits.genes then Appearance.apply(model,traits.genes) end
         Camera.bind(viewport,model,speciesId)
         task.spawn(function()
             local assets={}
@@ -367021,13 +367099,13 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
     end
     local data=script.Parent:FindFirstChild("CreatureData")
     if data and data:FindFirstChild(speciesId) then
-        local elapsed=0;local loading=false
+        local elapsed=0;local loading=false;local attempts=0
         local connection=RunService.Heartbeat:Connect(function(dt)
             elapsed+=dt;if elapsed&lt;.25 or loading then return end;elapsed=0
             local world=viewport:FindFirstChildOfClass("WorldModel")
             if visible(viewport) then
-                if not world then loading=true;task.spawn(function() if viewport.Parent then load() end;loading=false end) end
-            elseif world then world:Destroy() end
+                if not world and attempts&lt;8 then attempts+=1;loading=true;task.spawn(function() if viewport.Parent then load() end;loading=false end) end
+            elseif world then world:Destroy();attempts=0 end
         end)
         viewport.Destroying:Once(function() connection:Disconnect() end)
     else load() end
@@ -367608,7 +367686,7 @@ return View
 local Egg={}
 function Egg.create(empty: boolean?): Model
     if not empty then
-        local authored=require(script.Parent.AuthoredCreatures).clone("egg")
+        local authored=require(script.Parent.AuthoredCreatures).clone("egg",nil,true)
         if authored then return authored end
     end
     local model=Instance.new("Model")
@@ -367620,8 +367698,8 @@ function Egg.create(empty: boolean?): Model
         part.Color,part.Material= color,Enum.Material.SmoothPlastic
         part.Transparency=0
         part.Parent=model
-        local mesh=Instance.new("SpecialMesh")
-        mesh.MeshType,mesh.Scale,mesh.Parent=Enum.MeshType.Sphere,Vector3.one,part
+        -- A real Ball part (a SpecialMesh sphere can render as a plain cube in a ViewportFrame).
+        part.Shape=Enum.PartType.Ball
         return part
     end
     -- Neutral shell only: genes (EggAppearance) supply pattern/colors; empty slots are a flat gray placeholder.
@@ -367634,6 +367712,101 @@ return Egg
         </Properties>
       </Item>
       <Item class="ModuleScript" referent="RBX192">
+        <Properties>
+          <string name="Name">EggsLogic</string>
+          <ProtectedString name="Source">--!strict
+-- Combined Eggs screen logic (owner 2026-10-15): pure state machines, no Instances, no time source.
+-- Nest slots row, the single "Next egg" card and the auto-open (per rarity) rules.
+-- The auto-open choice is a UI preference: the server never trusts it and still credits every egg
+-- through the normal claim path. src/client/EggsScreen.luau only draws; tools/verify_eggs_screen.py tests this.
+local RevealSkip = require(script.Parent.RevealSkip)
+local L = {}
+
+-- Five nest slots (capacity), index = queue order. nests are NestQueue.project() results.
+-- state: "ready" | "opening" (the incubating one, shows the timer) | "queued" | "empty".
+function L.nestSlots(nests: {any}, capacity: number, now: number)
+    local slots = {}
+    for i = 1, capacity do
+        local nest = nests[i]
+        if not nest then
+            slots[i] = {state = "empty", text = "Empty"}
+        elseif nest.state == "ready" then
+            slots[i] = {state = "ready", text = "READY", id = nest.id}
+        elseif nest.state == "incubating" then
+            slots[i] = {state = "opening", remaining = math.max(0, (nest.readyAt or now) - now), id = nest.id}
+        else
+            slots[i] = {state = "queued", text = "Queued", id = nest.id}
+        end
+    end
+    return slots
+end
+
+function L.nestHeader(nests: {any}, capacity: number): string
+    return string.format("Nests %d/%d", math.min(#nests, capacity), capacity)
+end
+
+-- Single next-egg card. entry = ChestQueueJson entry or nil; waiting = QueuedEggsWaiting.
+-- kind: "empty" (nothing waiting), "banked" (eggs not yet in the line), "growing", "ready".
+function L.card(entry: any, nextId: string?, readyAt: number, now: number, waiting: number)
+    if nextId == nil or nextId == "" then
+        return {kind = if waiting &gt; 0 then "banked" else "empty", canOpen = false, waiting = waiting}
+    end
+    local at = if entry and typeof(entry.readyAt) == "number" then entry.readyAt else readyAt
+    local remaining = math.max(0, at - now)
+    return {kind = if remaining &lt;= 0 then "ready" else "growing", canOpen = remaining &lt;= 0, remaining = remaining, waiting = waiting}
+end
+
+function L.cardCopy(card: any): (string, string)
+    if card.kind == "ready" then return "READY!", "OPEN" end
+    if card.kind == "growing" then return "Growing...", "GROWING" end
+    if card.kind == "banked" then return "Eggs are on the way", "WAIT" end
+    return "No eggs yet. Finish a run to catch some!", "NO EGGS"
+end
+
+-- Auto-open per rarity. selection = the stored rarity list (RevealSkip format).
+-- When requiresPass and the player lacks the pass: rows are locked and the setting is ignored.
+function L.locked(requiresPass: boolean, ownsPass: boolean): boolean
+    return requiresPass == true and ownsPass ~= true
+end
+function L.effective(selection: any, requiresPass: boolean, ownsPass: boolean): {number}
+    if L.locked(requiresPass, ownsPass) then return {} end
+    return RevealSkip.normalize(selection)
+end
+-- Never auto-opens Shiny, BIG, event mutations, Rainbow/Astra (RevealSkip.isNotable). openAll = the optional
+-- "Open all" convenience (every rarity, same never-skip rules).
+function L.shouldAutoOpen(selection: any, requiresPass: boolean, ownsPass: boolean, rarity: number, outcome: any, openAll: boolean): boolean
+    local list = if openAll and not L.locked(requiresPass, ownsPass) then RevealSkip.Rarities else L.effective(selection, requiresPass, ownsPass)
+    return RevealSkip.shouldSkip(list, rarity, outcome)
+end
+
+-- "Auto-opened" summary lines: a header, then counts per rarity with the best find first.
+function L.summaryLines(summary: any): {string}
+    local lines = {string.format("Auto-opened: %d", summary.total)}
+    local parts = {}
+    for rarity = #RevealSkip.Names, 1, -1 do
+        local count = summary.byRarity[rarity] or 0
+        if count &gt; 0 then table.insert(parts, string.format("%d %s", count, RevealSkip.Names[rarity])) end
+    end
+    if summary.failed &gt; 0 then table.insert(parts, string.format("%d cracked", summary.failed)) end
+    if #parts &gt; 0 then table.insert(lines, table.concat(parts, "  |  ")) end
+    return lines
+end
+
+-- Run end: the player is never forced into hatching; the run summary may offer "Open eggs".
+function L.afterRun(): string
+    return "results"
+end
+-- After one reveal: back to the Eggs screen unless the player chose "Skip all".
+function L.afterReveal(skipAll: boolean, remaining: number): string
+    if skipAll and remaining &gt; 0 then return "continue" end
+    return "eggs"
+end
+
+return L
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX193">
         <Properties>
           <string name="Name">EggTraits</string>
           <ProtectedString name="Source">--!strict
@@ -367678,7 +367851,7 @@ return Traits
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX193">
+      <Item class="ModuleScript" referent="RBX194">
         <Properties>
           <string name="Name">EventIconVectors</string>
           <ProtectedString name="Source">--!strict
@@ -367693,7 +367866,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX194">
+      <Item class="ModuleScript" referent="RBX195">
         <Properties>
           <string name="Name">FoodCatchRules</string>
           <ProtectedString name="Source">--!strict
@@ -367709,7 +367882,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX195">
+      <Item class="ModuleScript" referent="RBX196">
         <Properties>
           <string name="Name">FusionSelection</string>
           <ProtectedString name="Source">--!strict
@@ -367761,10 +367934,30 @@ function Sel.patternName(id: string?): string
 end
 
 -- Builds name lookups from the shared config tables (passed in to stay pure).
+-- Player-facing drop chance text: 26 -&gt; "26%", 12.5 -&gt; "12.5%", 0.04 -&gt; "0.04%" (docs/85). Percent in, string out.
+function Sel.pct(p: number): string
+    local s = string.format("%.2f", p)
+    if string.find(s, ".", 1, true) then s = string.gsub(s, "0+$", "") s = string.gsub(s, "%.$", "") end
+    return s .. "%"
+end
+
 function Sel.buildCatalog(config, progression, patterns)
     local catalog = {species = {}, speciesOrder = {}, patterns = {}, patternOrder = {}, colors = {},
         colorOrder = {}, conditions = {}, mutations = {}, mutationOrder = {}, auras = {}, trails = {}}
     for id, name in (config and config.SpeciesDisplayNames) or {} do catalog.species[id] = name end
+    -- Base odds of ONE purchased egg (no run boost): species by weight, patterns equally likely, colors per slot by weight.
+    catalog.speciesPct, catalog.speciesRarity, catalog.patternPct, catalog.colorPct = {}, {}, {}, {}
+    local speciesTotal = 0
+    for _, row in (config and config.ChestSpeciesWeights) or {} do speciesTotal += row.weight end
+    for _, row in (config and config.ChestSpeciesWeights) or {} do
+        catalog.speciesPct[row.speciesId] = if speciesTotal &gt; 0 then 100 * row.weight / speciesTotal else 0
+        local tier = config.SpeciesRarities and config.SpeciesRarities[row.speciesId]
+        catalog.speciesRarity[row.speciesId] = tier and config.SpeciesRarityNames and config.SpeciesRarityNames[tier] or nil
+    end
+    for _, id in patterns or {} do catalog.patternPct[id] = 100 / math.max(1, #(patterns :: any)) end
+    local colorTotal = 0
+    for _, row in (progression and progression.EggColors) or {} do colorTotal += row.weight end
+    for _, row in (progression and progression.EggColors) or {} do catalog.colorPct[row.id] = if colorTotal &gt; 0 then 100 * row.weight / colorTotal else 0 end
     for i, id in (config and config.SpeciesOrder) or {} do catalog.speciesOrder[id] = i end
     for i, id in patterns or {} do catalog.patterns[id] = Sel.patternName(id) catalog.patternOrder[id] = i end
     for i, row in (progression and progression.EggColors) or {} do catalog.colors[row.id] = row.name catalog.colorOrder[row.id] = i end
@@ -368371,6 +368564,21 @@ local function eggLine(egg, catalog): string
 end
 Sel.eggLine = eggLine
 
+-- " • Common • 26% of eggs" (rarity optional); empty when the percent is unknown.
+local function oddsText(rarity: string?, p: number?): string
+    if p == nil then return "" end
+    return " • " .. (if rarity then rarity .. " • " else "") .. Sel.pct(p) .. " of eggs"
+end
+local function colorOdds(g, catalog): string
+    if type(g) ~= "table" or not g.primaryColorId then return "Unknown" end
+    local function one(id)
+        local p = catalog.colorPct and catalog.colorPct[id]
+        return lookup(catalog, "colors", id) .. (if p then " " .. Sel.pct(p) else "")
+    end
+    if g.secondaryColorId == g.primaryColorId then return one(g.primaryColorId) .. " (per egg slot)" end
+    return one(g.primaryColorId) .. " • " .. one(g.secondaryColorId) .. " (per egg slot)"
+end
+
 function Sel.details(d, catalog)
     local g = genes(d)
     local stage = d.stage or "base"
@@ -368380,8 +368588,10 @@ function Sel.details(d, catalog)
             .. lookup(catalog, "species", d.speciesId, "Dino"),
         traits = {
             {label = "Stage", value = stageName},
-            {label = "Pattern", value = lookup(catalog, "patterns", g.patternId, "Unknown")},
+            {label = "Species", value = lookup(catalog, "species", d.speciesId, "Dino") .. oddsText(catalog.speciesRarity and catalog.speciesRarity[d.speciesId], catalog.speciesPct and catalog.speciesPct[d.speciesId])},
+            {label = "Pattern", value = lookup(catalog, "patterns", g.patternId, "Unknown") .. oddsText(nil, catalog.patternPct and catalog.patternPct[g.patternId])},
             {label = "Colors", value = geneLine(g, catalog)},
+            {label = "Color odds", value = colorOdds(g, catalog)},
             {label = "Condition", value = lookup(catalog, "conditions", g.conditionId, "Unknown")},
             {label = "Shiny", value = if d.shiny then "Yes" else "No"},
             {label = "BIG", value = if d.big then "Yes" else "No"},
@@ -368475,7 +368685,7 @@ return Sel
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX196">
+      <Item class="ModuleScript" referent="RBX197">
         <Properties>
           <string name="Name">GeneTextureAssets</string>
           <ProtectedString name="Source">--!strict
@@ -368523,7 +368733,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX197">
+      <Item class="ModuleScript" referent="RBX198">
         <Properties>
           <string name="Name">GeneTextures</string>
           <ProtectedString name="Source">--!strict
@@ -368579,7 +368789,7 @@ return Textures
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX198">
+      <Item class="ModuleScript" referent="RBX199">
         <Properties>
           <string name="Name">HatchFragments</string>
           <ProtectedString name="Source">--!strict
@@ -368612,7 +368822,7 @@ return F
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX199">
+      <Item class="ModuleScript" referent="RBX200">
         <Properties>
           <string name="Name">HatchPresentation</string>
           <ProtectedString name="Source">--!strict
@@ -368806,7 +369016,275 @@ return Hatch
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX200">
+      <Item class="ModuleScript" referent="RBX201">
+        <Properties>
+          <string name="Name">HatchTimeline</string>
+          <ProtectedString name="Source">--!strict
+-- Hatch sequence logic: pure timing, curves, tap gating and skip rules (no Instances, no time source).
+-- The client module HatchSequence.luau only draws; everything testable lives here
+-- (tools/verify_hatch_sequence.py). Presentation only: the server-committed outcome is never read or changed.
+local RevealSkip = require(script.Parent.RevealSkip)
+local T = {}
+
+-- Seconds. Full motion: ~3 s rattle/crack build-up, burst, dino reveal, then wait for a tap.
+T.Motion = {build = 3.0, burst = .6, settle = .8, tapGate = .5}
+-- Reduced Motion (Theme.MotionEnabled false): no shake/zoom/particles, a short fade, same tap flow.
+T.Reduced = {build = 0, burst = 0, settle = .45, tapGate = .15}
+-- A failed (Cracked) egg: same ~3 s build-up, then a SPLAT instead of a dinosaur (shell halves bounce, yolk plops into a puddle).
+T.Splat = {build = 3.0, burst = .7, settle = 1.0, tapGate = .5}
+T.CrumbMax = 10 -- tiny shell crumbs of the splat (pooled; they reuse the sparkle pool)
+T.MaxParticles = 28
+T.OrbitMax = 12 -- twinkling sparkles orbiting the dinosaur after the reveal
+T.FireworkMax = 24 -- Legendary gold fireworks: 3 bursts of 8
+T.RainMax = 14 -- Shiny gold sparkle rain
+T.CrackBeats = {.21, .46, .71} -- fractions of the build-up where the three crack stages start (HatchPresentation)
+T.EggClock = 3.2 -- HatchPresentation.update() time at the end of the build-up
+
+-- Legendary holds the reveal longer (+.5 s settle) before the tap prompt; the build-up stays about 3 s.
+function T.durations(motion: boolean, rarity: number?, failed: boolean?)
+    local d = if not motion then T.Reduced elseif failed then T.Splat else T.Motion
+    local settle = d.settle + (if motion and not failed and (rarity or 1) &gt;= 5 then .5 else 0)
+    return {build = d.build, burst = d.burst, settle = settle, revealAt = d.build, readyAt = d.build + d.burst + settle,
+        tapGate = d.tapGate}
+end
+
+function T.phase(durs, t: number): string
+    if t &lt; durs.build then return "build" end
+    if t &lt; durs.build + durs.burst then return "burst" end
+    if t &lt; durs.readyAt then return "settle" end
+    return "ready"
+end
+
+-- State machine: {t, fastForwarded, done}. All transitions are pure.
+function T.new(motion: boolean, rarity: number?, failed: boolean?)
+    return {t = 0, durs = T.durations(motion, rarity, failed), fastForwarded = false, done = false, motion = motion}
+end
+function T.step(state, dt: number)
+    if state.done then return state end
+    state.t += math.max(0, dt)
+    return state
+end
+-- "advance" (next egg / done), "fastforward" (jump the build-up to the burst) or "ignore".
+function T.tapAction(state): string
+    if state.done then return "ignore" end
+    local phase = T.phase(state.durs, state.t)
+    if phase == "ready" then return "advance" end
+    if phase == "build" and not state.fastForwarded and state.t &gt;= state.durs.tapGate then return "fastforward" end
+    return "ignore"
+end
+function T.tap(state): string
+    local action = T.tapAction(state)
+    if action == "fastforward" then
+        state.t, state.fastForwarded = state.durs.build, true
+    elseif action == "advance" then
+        state.done = true
+    end
+    return action
+end
+-- Skip all: fast-forward a running build-up; an already revealed egg moves on at once.
+function T.skipAll(state): string
+    if state.done then return "ignore" end
+    local phase = T.phase(state.durs, state.t)
+    if phase == "build" then
+        state.t, state.fastForwarded = state.durs.build, true
+        return "fastforward"
+    elseif phase == "ready" then
+        state.done = true
+        return "advance"
+    end
+    return "ignore"
+end
+
+-- Reveal skipping: the player's chosen rarities, or every rarity after "Skip all". Shiny, BIG, event
+-- mutations and Rainbow/Astra are never skipped (RevealSkip.isNotable).
+function T.shouldSkip(selection: any, rarity: number, outcome: any, skipAll: boolean): boolean
+    return RevealSkip.shouldSkip(if skipAll then RevealSkip.Rarities else selection, rarity, outcome)
+end
+
+-- Tap hint copy. remaining = eggs still to open after this one.
+function T.hint(remaining: number): string
+    if remaining &gt; 0 then return "Tap for next egg (" .. tostring(remaining) .. " left)" end
+    return "Done"
+end
+-- Remaining eggs after this one; `more` is whether another egg can be claimed right now.
+function T.remaining(more: boolean, active: number, waiting: number): number
+    if not more then return 0 end
+    return math.max(1, math.floor(active + waiting))
+end
+
+-- Curves (p = 0..1 progress of the build-up).
+local function clamp01(x: number): number return math.clamp(x, 0, 1) end
+function T.intensity(p: number): number return clamp01(p) ^ 2.2 end -- rattle gets stronger, eased in
+function T.zoom(p: number): number return 1 + .24 * clamp01(p) ^ 1.7 end -- egg push-in
+function T.cameraZoom(p: number): number return 1 + .045 * clamp01(p) ^ 1.7 end -- whole panel, slight
+function T.glow(p: number): number return clamp01((p - .12) / .88) ^ 1.4 end -- light leaking from the cracks
+-- Rattle offsets: rotation (degrees), position (virtual px). Bounded by 12 deg / 8 px at intensity 1.
+function T.rattle(t: number, intensity: number): (number, number, number)
+    local rot = (math.sin(t * 38) * 5.2 + math.sin(t * 61 + 1.3) * 2.6) * intensity
+    local dx = math.sin(t * 47 + .7) * 5 * intensity
+    local dy = math.cos(t * 53) * 3 * intensity
+    return rot, dx, dy
+end
+-- Camera/UI shake: smaller than the egg's, +-3 px at full intensity.
+function T.shakeOffset(t: number, intensity: number): (number, number)
+    return math.sin(t * 71 + .4) * 2.4 * intensity, math.cos(t * 83) * 1.8 * intensity
+end
+-- Ease-out with overshoot for the dinosaur: from .25 to 1 with ~7% overshoot, settles at exactly 1.
+function T.revealScale(p: number): number
+    local x = clamp01(p)
+    if x &gt;= 1 then return 1 end
+    local c1 = 1.4
+    local c3 = c1 + 1
+    local back = 1 + c3 * (x - 1) ^ 3 + c1 * (x - 1) ^ 2
+    return .25 + .75 * back
+end
+function T.easeOut(p: number): number
+    local x = 1 - clamp01(p)
+    return 1 - x * x * x
+end
+
+-- Particles scale with rarity (1..5); Shiny and BIG add more; none when motion is off or the egg failed.
+function T.particleCount(rarity: number, shiny: boolean, big: boolean, motion: boolean, failed: boolean): number
+    if not motion or failed then return 0 end
+    local n = 8 + 4 * math.clamp(rarity, 1, 5) + (if shiny then 6 else 0) + (if big then 4 else 0)
+    return math.min(T.MaxParticles, n)
+end
+function T.orbitCount(rarity: number, motion: boolean, failed: boolean): number
+    if not motion or failed then return 0 end
+    return math.min(T.OrbitMax, 4 + 2 * math.clamp(rarity, 1, 5))
+end
+-- Rarity escalation flags (all false without motion): shockwave Rare+, energy arcs and stronger shake Epic+, fireworks Legendary.
+function T.escalation(rarity: number, motion: boolean)
+    local r = math.clamp(rarity, 1, 5)
+    return {shock = motion and r &gt;= 3, arcs = motion and r &gt;= 4, fireworks = motion and r &gt;= 5,
+        shakeScale = if motion and r &gt;= 4 then 1 + .35 * (r - 3) else 1, punch = if r &gt;= 5 then .09 elseif r &gt;= 3 then .06 else .045}
+end
+-- BIG "stamp": starts 35% oversize and slams to 1 in .25 s.
+function T.stamp(s: number): number
+    if s &lt; 0 or s &gt;= .25 then return 1 end
+    return 1 + .35 * (1 - s / .25) ^ 2
+end
+function T.burstStrength(rarity: number): number return .18 + .08 * math.clamp(rarity, 1, 5) end -- screen flash alpha
+
+-- Failed-egg splat curves. s = seconds since the burst. Pure and bounded (tools/verify_hatch_sequence.py).
+T.SplatDrop = .22 -- the yolk reaches the puddle this long after the burst
+-- Vertical offset of a bouncing body: launched with v0 (negative = up), gravity g, resting `floor` px below the start.
+function T.bounceY(s: number, v0: number, g: number, floor: number, e: number): number
+    if s &lt;= 0 then return 0 end
+    local pos, vel = 0, v0
+    for _ = 1, 4 do
+        local fall = (-vel + math.sqrt(vel * vel + 2 * g * (floor - pos))) / g
+        if s &lt; fall then return pos + vel * s + .5 * g * s * s end
+        s -= fall
+        vel = -(vel + g * fall) * e
+        pos = floor
+        if vel &gt; -8 then return floor end
+        local up = -2 * vel / g
+        if s &lt; up then return floor + vel * s + .5 * g * s * s end
+        s -= up
+    end
+    return floor
+end
+-- One shell half (side -1 left, +1 right): dx, dy (px from the egg centre), rotation (deg). Pops up, tumbles, falls, bounces.
+function T.shell(s: number, side: number, fall: number): (number, number, number)
+    local dx = side * (22 + 128 * T.easeOut(s / .8))
+    return dx, T.bounceY(s, -170, 900, fall, .38), side * 400 * T.easeOut(s / .85)
+end
+-- Yolk: dy above its resting place, squash and stretch scales. Falls stretched, lands squashed, then wobbles to rest.
+function T.yolk(s: number): (number, number, number)
+    local d = T.SplatDrop
+    if s &lt; d then
+        local k = math.max(0, s / d)
+        return -70 * (1 - k * k), .86, 1.2
+    end
+    local u = s - d
+    local amp = math.exp(-5 * u)
+    local osc = math.cos(16 * u)
+    local hop = if u &lt; .28 then -20 * math.sin(math.pi * u / .28) else 0
+    return hop, 1 + .55 * amp * osc, 1 - .42 * amp * osc
+end
+local function backOut(x: number): number
+    x = clamp01(x)
+    return math.max(0, 1 + 2.2 * (x - 1) ^ 3 + 1.2 * (x - 1) ^ 2)
+end
+-- Egg-white puddle spreading from the landing: width and height scale (0 before the landing, wobbles at the end).
+function T.puddle(s: number): (number, number)
+    local k = (s - T.SplatDrop) / .5
+    if k &lt;= 0 then return 0, 0 end
+    local wob = 1 + .025 * math.sin((s - T.SplatDrop) * 11) * math.exp(-(s - T.SplatDrop) * 1.6)
+    return backOut(k) * wob, backOut(k - .1) * (2 - wob)
+end
+-- Drip i (1..2): nil while inactive, else dy (px) and alpha. Starts after the puddle has spread.
+function T.drip(s: number, i: number): (number?, number?)
+    local k = (s - T.SplatDrop - .5 - (i - 1) * .3) / .6
+    if k &lt; 0 or k &gt;= 1 then return nil, nil end
+    return 44 * k * k, 1 - k ^ 1.5
+end
+-- Camera bump: panel scale and a small downward nudge (px), both decaying to 0.
+function T.bump(s: number): (number, number)
+    if s &lt; 0 then return 1, 0 end
+    local d = math.exp(-9 * s)
+    return 1 + .032 * d, 5 * math.exp(-8 * s) * math.cos(22 * s) * -1
+end
+-- Cartoon splat pulse: expanding soft ring. Returns scale and ring transparency (1 = invisible).
+function T.splatPulse(s: number): (number, number)
+    local k = clamp01((s - T.SplatDrop) / .45)
+    return .3 + 2.2 * T.easeOut(k), if s &lt; T.SplatDrop then 1 else k
+end
+function T.crumbCount(motion: boolean): number return if motion then T.CrumbMax else 0 end
+
+-- Failed-egg copy (docs/72: short and friendly). The chance line is built from the real config value (Cracked hatchChance).
+T.FailTitle = "Oops! Splat!"
+T.FailSub = "This cracked egg did not hatch"
+function T.failChance(hatchChance: number?): string
+    if hatchChance == nil or hatchChance &lt;= 0 or hatchChance &gt;= 1 then return "" end
+    local n = 1 / hatchChance
+    local r = math.floor(n + .5)
+    if r &gt;= 2 and math.abs(n - r) &lt; .02 then return "Cracked eggs hatch 1 time in " .. r end
+    return "Cracked eggs hatch " .. T.pct(100 * hatchChance) .. " of the time"
+end
+
+-- Odds line: base chance of one purchased egg (docs/85); FusionSelection.pct formatting.
+function T.pct(p: number): string
+    local s = string.format("%.2f", p)
+    if string.find(s, ".", 1, true) then s = string.gsub(s, "0+$", "") s = string.gsub(s, "%.$", "") end
+    return s .. "%"
+end
+function T.speciesPct(weights: any, speciesId: string): number?
+    if typeof(weights) ~= "table" then return nil end
+    local total, mine = 0, 0
+    for _, row in weights do
+        total += row.weight
+        if row.speciesId == speciesId then mine = row.weight end
+    end
+    if total &lt;= 0 or mine &lt;= 0 then return nil end
+    return 100 * mine / total
+end
+function T.oddsLine(rarityName: string, p: number?, pctFormat: ((number) -&gt; string)?): string
+    if p == nil then return rarityName end
+    return rarityName .. " \u{2022} " .. (pctFormat or T.pct)(p) .. " of eggs"
+end
+
+-- Sound cues in time order: {t = seconds, name = Sfx name}. The "reveal" cue name depends on rarity.
+T.RattleBeats = {.1, .8, 1.4, 1.9, 2.35, 2.7, 2.9}
+function T.cues(durs, rarity: number, failed: boolean, revealName: string)
+    local cues = {}
+    local build = durs.build
+    if build &gt; 0 then
+        for _, b in T.RattleBeats do table.insert(cues, {t = build * b / 3, name = "hatch_rattle"}) end
+        for _, f in T.CrackBeats do table.insert(cues, {t = build * f, name = "hatch_crack_stage"}) end
+    end
+    table.insert(cues, {t = build, name = "hatch_burst"})
+    if not failed then table.insert(cues, {t = build + .12, name = revealName}) end
+    table.sort(cues, function(a, b) return a.t &lt; b.t end)
+    return cues
+end
+
+return T
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX202">
         <Properties>
           <string name="Name">IconRaster</string>
           <ProtectedString name="Source">--!strict
@@ -368815,7 +369293,7 @@ return {["amber"]={341,0,1,16777216,1,33554432,20,55923968,1,16777216,40,0,1,167
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX201">
+      <Item class="ModuleScript" referent="RBX203">
         <Properties>
           <string name="Name">IconTiles</string>
           <ProtectedString name="Source">--!strict
@@ -368824,7 +369302,7 @@ return {["dinos"]={["size"]=32,["colors"]={{104,48,36},{110,114,78},{0,29,13},{1
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX202">
+      <Item class="ModuleScript" referent="RBX204">
         <Properties>
           <string name="Name">IconVectors</string>
           <ProtectedString name="Source">--!strict
@@ -368833,7 +369311,7 @@ return {["home"]={{["x"]=21,["y"]=41,["w"]=60,["h"]=47,["color"]="#142035",["rad
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX203">
+      <Item class="ModuleScript" referent="RBX205">
         <Properties>
           <string name="Name">IslandLayout</string>
           <ProtectedString name="Source">--!strict
@@ -368861,7 +369339,7 @@ return IslandLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX204">
+      <Item class="ModuleScript" referent="RBX206">
         <Properties>
           <string name="Name">LegacyGenePatterns</string>
           <ProtectedString name="Source">--!strict
@@ -368905,7 +369383,73 @@ return Legacy
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX205">
+      <Item class="ModuleScript" referent="RBX207">
+        <Properties>
+          <string name="Name">LoadGate</string>
+          <ProtectedString name="Source">--!strict
+-- Concurrency gate for EditableMesh-backed model loads (AuthoredCreatures). Pure: the clock and the sleep
+-- function are injected so tools/verify_load_gate.py can run it offline. Requests above the cap WAIT for a slot
+-- (bounded) instead of failing, so a preview never degrades to the box fallback just because many were requested.
+local Gate = {}
+function Gate.new(cap: number)
+    return {cap = cap, active = 0, peak = 0, waited = 0, timedOut = 0, granted = 0}
+end
+function Gate.tryAcquire(gate): boolean
+    if gate.active &gt;= gate.cap then return false end
+    gate.active += 1
+    gate.granted += 1
+    if gate.active &gt; gate.peak then gate.peak = gate.active end
+    return true
+end
+function Gate.release(gate)
+    if gate.active &gt; 0 then gate.active -= 1 end
+end
+-- Waits (sleep(seconds) yields) until a slot frees or `timeout` seconds pass. Returns true when acquired.
+function Gate.acquire(gate, timeout: number, now: () -&gt; number, sleep: (number) -&gt; ()): boolean
+    local started = now()
+    local waited = false
+    while not Gate.tryAcquire(gate) do
+        if now() - started &gt;= timeout then gate.timedOut += 1 return false end
+        waited = true
+        sleep(.05)
+    end
+    if waited then gate.waited += 1 end
+    return true
+end
+return Gate
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX208">
+        <Properties>
+          <string name="Name">MeshSanity</string>
+          <ProtectedString name="Source">--!strict
+-- Pure sanity check for a freshly built authored MeshPart. A mesh that did not really load renders as a plain
+-- cube/box (or has zero size); the built part's size must match the extents of the source vertices.
+local Sanity = {}
+-- expected / actual: Vector3-like with X, Y, Z. Returns ok, reason.
+function Sanity.check(expected: any, actual: any, triangles: number?): (boolean, string?)
+    for _, axis in {"X", "Y", "Z"} do
+        local e, a = expected[axis], actual[axis]
+        if a ~= a or e ~= e then return false, "nan" end
+        if e &lt;= 0 and a &lt;= 0 then continue end
+        if a &lt;= 0.01 then return false, "empty" end
+        if math.abs(a - e) &gt; math.max(.15, .35 * e) then return false, "size mismatch" end
+    end
+    if triangles ~= nil and triangles &lt; 4 then return false, "too few triangles" end
+    -- A cube has three (almost) equal sides; authored creatures never do.
+    local x, y, z = actual.X, actual.Y, actual.Z
+    local lo, hi = math.min(x, y, z), math.max(x, y, z)
+    if hi &gt; 0 and lo / hi &gt; .92 and not (expected.X &gt; 0 and math.abs(expected.X / expected.Y - 1) &lt; .08 and math.abs(expected.Z / expected.Y - 1) &lt; .08) then
+        return false, "cube"
+    end
+    return true, nil
+end
+return Sanity
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX209">
         <Properties>
           <string name="Name">ModelPreview</string>
           <ProtectedString name="Source">--!strict
@@ -368918,7 +369462,7 @@ function ModelPreview.add(parent: GuiObject,id: string,empty: boolean?): Viewpor
     viewport.BackgroundTransparency,viewport.Size=1,UDim2.fromScale(1,1)
     viewport.Ambient,viewport.LightColor,viewport.LightDirection=Color3.fromRGB(193,211,220),Color3.fromRGB(255,246,220),Vector3.new(-1,-1,-1)
     viewport.ZIndex,viewport.Parent=parent.ZIndex+1,parent
-    local model=if id=="egg" then Egg.create(empty) else Resources.clone(id)
+    local model=if id=="egg" then Egg.create(empty) else Resources.clone(id,nil,true)
     if model and not viewport.Parent then model:Destroy();return viewport end
     if model then
         for _,item in model:GetDescendants() do if item:IsA("BasePart") then item.Anchored=true end end
@@ -368933,7 +369477,7 @@ return ModelPreview
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX206">
+      <Item class="ModuleScript" referent="RBX210">
         <Properties>
           <string name="Name">MovementEnvelope</string>
           <ProtectedString name="Source">--!strict
@@ -368986,7 +369530,7 @@ return MovementEnvelope
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX207">
+      <Item class="ModuleScript" referent="RBX211">
         <Properties>
           <string name="Name">MutationEffects</string>
           <ProtectedString name="Source">-- Standalone client adapter. Upload BeDino_Soft_Smoke_256.png first.
@@ -369075,7 +369619,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX208">
+      <Item class="ModuleScript" referent="RBX212">
         <Properties>
           <string name="Name">NavigationArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -369093,7 +369637,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX209">
+      <Item class="ModuleScript" referent="RBX213">
         <Properties>
           <string name="Name">NestQueue</string>
           <ProtectedString name="Source">--!strict
@@ -369154,7 +369698,7 @@ return NestQueue
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX210">
+      <Item class="ModuleScript" referent="RBX214">
         <Properties>
           <string name="Name">NextGoal</string>
           <ProtectedString name="Source">--!strict
@@ -369231,7 +369775,7 @@ return NextGoal
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX211">
+      <Item class="ModuleScript" referent="RBX215">
         <Properties>
           <string name="Name">NotifyQueue</string>
           <ProtectedString name="Source">--!strict
@@ -369431,7 +369975,7 @@ return Q
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX212">
+      <Item class="ModuleScript" referent="RBX216">
         <Properties>
           <string name="Name">PatternGenes</string>
           <ProtectedString name="Source">--!strict
@@ -369496,7 +370040,7 @@ return Pattern
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX213">
+      <Item class="ModuleScript" referent="RBX217">
         <Properties>
           <string name="Name">PotionArt</string>
           <ProtectedString name="Source">--!strict
@@ -369560,7 +370104,7 @@ return PotionArt
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX214">
+      <Item class="ModuleScript" referent="RBX218">
         <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
@@ -369628,7 +370172,7 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX215">
+      <Item class="ModuleScript" referent="RBX219">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -369754,7 +370298,7 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX216">
+      <Item class="ModuleScript" referent="RBX220">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -369992,7 +370536,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX217">
+      <Item class="ModuleScript" referent="RBX221">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -370001,7 +370545,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX218">
+      <Item class="ModuleScript" referent="RBX222">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -370017,7 +370561,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX219">
+      <Item class="ModuleScript" referent="RBX223">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -370031,12 +370575,16 @@ function ResourceModels.clearTextures(part: BasePart)
     for _,child in part:GetChildren() do
         if child:IsA("SurfaceAppearance") or child:IsA("Decal") or child:IsA("Texture") then child:Destroy() end
     end
-    if part:IsA("MeshPart") then part.TextureID="" end
+    -- Authored creatures paint an EditableImage into TextureContent; Gold/Diamond/silhouette must drop it too.
+    if part:IsA("MeshPart") then part.TextureID="";part.TextureContent=Content.none end
 end
-function ResourceModels.clone(id: string): Model?
+-- patient=true (previews, may yield): wait for a load slot, retry once, and NEVER fall back to a placeholder
+-- box for an authored creature: return nil so the caller shows nothing until a retry succeeds.
+function ResourceModels.clone(id: string,genes: any?,patient: boolean?): Model?
     if RunService:IsClient() then
-        local authored=Authored.clone(id)
+        local authored=Authored.clone(id,genes,patient)
         if authored then return authored end
+        if patient==true and Authored.has(id) then return nil end
     end
     local folder = ReplicatedStorage:FindFirstChild("Resources")
     local template = if folder then folder:FindFirstChild(id) else nil
@@ -370081,7 +370629,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX220">
+      <Item class="ModuleScript" referent="RBX224">
         <Properties>
           <string name="Name">RevealSkip</string>
           <ProtectedString name="Source">--!strict
@@ -370165,7 +370713,7 @@ return Skip
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX221">
+      <Item class="ModuleScript" referent="RBX225">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -370256,32 +370804,43 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX222">
+      <Item class="ModuleScript" referent="RBX226">
         <Properties>
           <string name="Name">Sfx</string>
           <ProtectedString name="Source">--!strict
--- Polish pass: one table of named UI/gameplay sounds. Every id is an EMPTY PROVISIONAL placeholder
--- until the owner uploads the audio pack (docs/62). Empty or malformed ids are a silent no-op, so the
--- game stays silent (never errors) until ids are filled. Honors the SOUND ON/OFF setting
+-- Polish pass: one table of named UI/gameplay sounds. The 17-sound pack was uploaded by the owner on 2026-10-15
+-- (docs/77); hatch_rattle and hatch_burst still have no sound and stay empty (silent). Empty or malformed ids are a
+-- silent no-op, so a missing sound never errors. Honors the SOUND ON/OFF setting
 -- (Theme.HatchSoundEnabled). Sound instances are pooled per name; repeats are throttled.
 local Sfx = {}
 -- id = "" PROVISIONAL (do not invent ids). gap = minimum seconds between plays of the same name.
 Sfx.Sounds = {
-    hatch_crack = {id = "", volume = .6, rate = 1, gap = .12},
-    hatch_common = {id = "", volume = .6, rate = 1, gap = .2},
-    hatch_rare = {id = "", volume = .7, rate = 1, gap = .2},
-    hatch_legendary = {id = "", volume = .85, rate = 1, gap = .2},
-    shiny_bang = {id = "", volume = .8, rate = 1, gap = .3},
-    big_thud = {id = "", volume = .8, rate = 1, gap = .3},
-    pickup = {id = "", volume = .35, rate = 1, gap = .06},
-    run_start = {id = "", volume = .6, rate = 1, gap = .5},
-    run_end = {id = "", volume = .6, rate = 1, gap = .5},
-    shop_buy = {id = "", volume = .6, rate = 1, gap = .15},
-    shop_refresh = {id = "", volume = .45, rate = 1, gap = .5},
-    weather_start = {id = "", volume = .6, rate = 1, gap = 1},
-    level_up = {id = "", volume = .7, rate = 1, gap = .5},
-    fusion_reveal = {id = "", volume = .75, rate = 1, gap = .3},
-    ui_click = {id = "", volume = .4, rate = 1, gap = .04},
+    hatch_crack = {id = "rbxassetid://135613869332284", volume = .6, rate = 1, gap = .12},
+    hatch_common = {id = "rbxassetid://123602379376075", volume = .6, rate = 1, gap = .2},
+    hatch_rare = {id = "rbxassetid://100769608611671", volume = .7, rate = 1, gap = .2},
+    hatch_legendary = {id = "rbxassetid://109331854464968", volume = .85, rate = 1, gap = .2},
+    -- Hatch sequence hooks (HatchTimeline cues): silent until ids are bound.
+    hatch_rattle = {id = "", volume = .5, rate = 1, gap = .12},
+    hatch_crack_stage = {id = "rbxassetid://135613869332284", volume = .6, rate = 1, gap = .2},
+    hatch_burst = {id = "", volume = .8, rate = 1, gap = .3},
+    hatch_reveal_common = {id = "rbxassetid://123602379376075", volume = .6, rate = 1, gap = .2},
+    hatch_reveal_uncommon = {id = "rbxassetid://123602379376075", volume = .65, rate = 1, gap = .2},
+    hatch_reveal_rare = {id = "rbxassetid://100769608611671", volume = .75, rate = 1, gap = .2},
+    hatch_reveal_epic = {id = "rbxassetid://109331854464968", volume = .85, rate = 1, gap = .2},
+    hatch_reveal_legendary = {id = "rbxassetid://109331854464968", volume = .95, rate = 1, gap = .2},
+    shiny_bang = {id = "rbxassetid://124365194004947", volume = .8, rate = 1, gap = .3},
+    big_thud = {id = "rbxassetid://88666885925372", volume = .8, rate = 1, gap = .3},
+    pickup = {id = "rbxassetid://97315544055472", volume = .35, rate = 1, gap = .06},
+    pickup_hi = {id = "rbxassetid://86225160041514", volume = .35, rate = 1, gap = .06},
+    pickup_lo = {id = "rbxassetid://80767583749596", volume = .35, rate = 1, gap = .06},
+    run_start = {id = "rbxassetid://87202810278231", volume = .6, rate = 1, gap = .5},
+    run_end = {id = "rbxassetid://127962506254484", volume = .6, rate = 1, gap = .5},
+    shop_buy = {id = "rbxassetid://102585210519734", volume = .6, rate = 1, gap = .15},
+    shop_refresh = {id = "rbxassetid://91960074825710", volume = .45, rate = 1, gap = .5},
+    weather_start = {id = "rbxassetid://120619985059497", volume = .6, rate = 1, gap = 1},
+    level_up = {id = "rbxassetid://135894580270926", volume = .7, rate = 1, gap = .5},
+    fusion_reveal = {id = "rbxassetid://90816090310479", volume = .75, rate = 1, gap = .3},
+    ui_click = {id = "rbxassetid://77237659470894", volume = .4, rate = 1, gap = .04},
 }
 Sfx.PoolSize = 3
 Sfx.Group = "BeDinoSfx"
@@ -370308,6 +370867,12 @@ end
 function Sfx.hatchName(rarity: number?): string
     local r = rarity or 1
     return if r &gt;= 4 then "hatch_legendary" elseif r == 3 then "hatch_rare" else "hatch_common"
+end
+
+-- Pure: reveal sting for a hatched dinosaur, one hook per rarity 1..5.
+Sfx.RevealNames = {"hatch_reveal_common", "hatch_reveal_uncommon", "hatch_reveal_rare", "hatch_reveal_epic", "hatch_reveal_legendary"}
+function Sfx.revealName(rarity: number?): string
+    return Sfx.RevealNames[math.clamp(math.floor(rarity or 1), 1, #Sfx.RevealNames)]
 end
 
 local pools: {[string]: {sounds: {Sound}, slot: number}} = {}
@@ -370358,7 +370923,7 @@ return Sfx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX223">
+      <Item class="ModuleScript" referent="RBX227">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -370406,7 +370971,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX224">
+      <Item class="ModuleScript" referent="RBX228">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -370455,7 +371020,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX225">
+      <Item class="ModuleScript" referent="RBX229">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -370657,7 +371222,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX226">
+      <Item class="ModuleScript" referent="RBX230">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -370689,7 +371254,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX227">
+      <Item class="ModuleScript" referent="RBX231">
         <Properties>
           <string name="Name">UIFormat</string>
           <ProtectedString name="Source">--!strict
@@ -370733,7 +371298,7 @@ return UIFormat
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX228">
+      <Item class="ModuleScript" referent="RBX232">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -370756,11 +371321,13 @@ return {
     aurora = "rbxassetid://119932884142526",
     quake = "rbxassetid://121965025477639",
     bloodmoon = "rbxassetid://123248871135913",
+    egg_splat = "rbxassetid://90653261302119",
+    egg_shell = "rbxassetid://81264206118496",
 }
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX229">
+      <Item class="ModuleScript" referent="RBX233">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -370776,11 +371343,13 @@ return {
     aurora = .93,
     quake = .93,
     bloodmoon = .93,
+    egg_splat = 1,
+    egg_shell = 1,
 }
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX230">
+      <Item class="ModuleScript" referent="RBX234">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -370945,7 +371514,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX231">
+      <Item class="ModuleScript" referent="RBX235">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -370976,7 +371545,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX232">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -371027,8 +371596,60 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
+      <Item class="ModuleScript" referent="RBX237">
+        <Properties>
+          <string name="Name">WorldKitMeshAssets</string>
+          <ProtectedString name="Source">--!strict
+-- Generated by tools/bind_worldkit_meshes.py from resources/worldkit-meshes/mesh-bindings.json.
+-- size is in studs; ids missing here keep the native fallback model.
+return {
+    world_tree_conifer_s = {meshId = "rbxassetid://104425755184706", size = {5.9076, 10.162, 6.0336}},
+    world_tree_conifer_m = {meshId = "rbxassetid://91506608798417", size = {11.268, 16.939, 10.087}},
+    world_tree_conifer_l = {meshId = "rbxassetid://94476421551155", size = {15.7809, 26.2213, 15.7694}},
+    world_tree_canopy_s = {meshId = "rbxassetid://80178436874450", size = {6.417, 8.244, 5.37}},
+    world_tree_canopy_m = {meshId = "rbxassetid://98978128229639", size = {13.158, 13.098, 8.539}},
+    world_tree_canopy_l = {meshId = "rbxassetid://122558382330439", size = {17.926, 19.43, 16.656}},
+    world_tree_cycad_s = {meshId = "rbxassetid://110652847848305", size = {5.7166, 5.2355, 4.8575}},
+    world_tree_cycad_m = {meshId = "rbxassetid://102479671711761", size = {9.2059, 8.8499, 9.2379}},
+    world_tree_cycad_l = {meshId = "rbxassetid://121463204666848", size = {14.143, 12.673, 14.322}},
+    world_tree_dead_s = {meshId = "rbxassetid://128424086478561", size = {1.5618, 7.9962, 2.5427}},
+    world_tree_dead_m = {meshId = "rbxassetid://126421013408998", size = {5.2499, 12.339, 4.0378}},
+    world_tree_dead_l = {meshId = "rbxassetid://126942564214652", size = {7.042, 17.48, 6.225}},
+    world_bush_a = {meshId = "rbxassetid://78099483652653", size = {3.702, 1.899, 2.477}},
+    world_fern_a = {meshId = "rbxassetid://107977080086482", size = {3.255, 1.201, 2.936}},
+    world_grass_a = {meshId = "rbxassetid://124539051999563", size = {0.6681, 1.4333, 0.6781}},
+    world_bush_b = {meshId = "rbxassetid://94508842728897", size = {3.1373, 2.0372, 2.4632}},
+    world_fern_b = {meshId = "rbxassetid://106175807503473", size = {3.489, 1.526, 3.526}},
+    world_grass_b = {meshId = "rbxassetid://78917402156100", size = {0.6517, 1.6124, 0.6897}},
+    world_flowers_a = {meshId = "rbxassetid://131727133316043", size = {0.6001, 1.1842, 0.6131}},
+    world_horsetail_a = {meshId = "rbxassetid://88682217520174", size = {1.305, 4.444, 1.564}},
+    world_mushrooms_a = {meshId = "rbxassetid://124085042950860", size = {2.344, 2.017, 1.772}},
+    world_boulder_mossy_s = {meshId = "rbxassetid://73460768281844", size = {2.287, 2.065, 2.668}},
+    world_boulder_mossy_m = {meshId = "rbxassetid://71559086769664", size = {6.233, 3.493, 5.432}},
+    world_boulder_mossy_l = {meshId = "rbxassetid://74337027284321", size = {11.973, 5.899, 9.247}},
+    world_boulder_bare_s = {meshId = "rbxassetid://124164861917596", size = {2.8693, 1.9832, 2.8653}},
+    world_boulder_bare_m = {meshId = "rbxassetid://122759214184314", size = {6.414, 3.711, 5.469}},
+    world_boulder_bare_l = {meshId = "rbxassetid://77475611908984", size = {11.506, 5.689, 9.169}},
+    world_rocks_spires = {meshId = "rbxassetid://74975865747855", size = {8.659, 14.228, 7.102}},
+    world_rocks_ledge = {meshId = "rbxassetid://71352685037118", size = {10.586, 7.9, 6.829}},
+    world_landmark_dino_statue = {meshId = "rbxassetid://126891918289401", size = {9.04, 14.179, 18.091}},
+    world_landmark_fossil_display = {meshId = "rbxassetid://107866531107524", size = {7.0467, 6.7317, 17.3297}},
+    world_landmark_stone_arch = {meshId = "rbxassetid://132612538772119", size = {24.6682, 18.4626, 7.6751}},
+    world_landmark_ruins_altar = {meshId = "rbxassetid://119988150698376", size = {15.036, 8.978, 15.063}},
+    food_berry_a = {meshId = "rbxassetid://117697980183495", size = {0.7219, 0.9538, 0.8708}},
+    food_berry_b = {meshId = "rbxassetid://93708588973222", size = {0.724, 0.803, 0.618}},
+    food_fruit_a = {meshId = "rbxassetid://82455228296419", size = {0.7582, 1.1643, 0.7632}},
+    food_fruit_b = {meshId = "rbxassetid://105088766237379", size = {1.0399, 1.2399, 0.9009}},
+    food_egg_a = {meshId = "rbxassetid://134933556720755", size = {1.864, 1.561, 2.02}},
+    food_egg_b = {meshId = "rbxassetid://109029062368148", size = {1.455, 1.48, 1.351}},
+    food_amber_a = {meshId = "rbxassetid://81927471048892", size = {1.0679, 1.9978, 0.9529}},
+    food_amber_b = {meshId = "rbxassetid://78459467425351", size = {1.1339, 1.4439, 0.9399}},
+}
+</ProtectedString>
+        </Properties>
+      </Item>
     </Item>
-    <Item class="Folder" referent="RBX233">
+    <Item class="Folder" referent="RBX238">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -540583,15 +541204,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX234">
+  <Item class="ServerScriptService" referent="RBX239">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX235">
+    <Item class="Folder" referent="RBX240">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">AdminService</string>
           <ProtectedString name="Source">--!strict
@@ -540697,7 +541318,7 @@ return AdminService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -540708,6 +541329,7 @@ local Terrain = require(script.Parent.IslandTerrain)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
+local KitMeshes = require(ReplicatedStorage.Shared.WorldKitMeshAssets)
 local Arena = {}
 local function part(parent: Instance, name: string, size: Vector3, position: Vector3, color: Color3, material: Enum.Material, solid: boolean): Part
     local p = Instance.new("Part")
@@ -540782,8 +541404,15 @@ end
 local function biomeKit(parent: Instance)
     local folder = Instance.new("Folder")
     folder.Name, folder.Parent = "WorldKit", parent
+    -- Only ids whose uploaded MeshPart really loaded count as one part; the rest cost their native fallback.
+    local meshes: {[string]: boolean} = {}
+    local overrides = ReplicatedStorage:FindFirstChild("ResourceOverrides")
+    for id in KitMeshes do
+        local template = if overrides then overrides:FindFirstChild(id) else nil
+        if template and template:IsA("MeshPart") then meshes[id] = true end
+    end
     local placed = Biome.generate({seed = Config.WorldArtSeed, density = Config.WorldArtDensity,
-        extent = Config.ArenaHalfWidth, height = Layout.height, kit = KitData})
+        extent = Config.ArenaHalfWidth, height = Layout.height, kit = KitData, meshes = meshes})
     local missing = 0
     for i, p in placed do
         local pivot = CFrame.new(p.x, p.y, p.z) * CFrame.Angles(0, p.yaw, 0)
@@ -540805,6 +541434,7 @@ local function biomeKit(parent: Instance)
     end
     workspace:SetAttribute("WorldKitPlacements", #placed)
     workspace:SetAttribute("WorldKitTriangles", Biome.triangles(placed, KitData))
+    workspace:SetAttribute("WorldKitParts", Biome.parts(placed, KitData, meshes))
     workspace:SetAttribute("WorldKitMissing", missing)
 end
 function Arena.build()
@@ -540909,7 +541539,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX238">
+      <Item class="Script" referent="RBX243">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -540935,6 +541565,7 @@ Lighting.ClockTime = 14
 Lighting.Brightness = 2
 Lighting.Ambient = Color3.fromRGB(130, 143, 148)
 require(script.Parent.ImportedResources).load()
+if Config.WorldArtMode=="BiomeKit" or Config.FoodArtMode=="Kit" then require(script.Parent.ImportedResources).loadWorldKit() end
 Arena.build()
 Leaderboards.start()
 
@@ -541055,7 +541686,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -541165,7 +541796,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -541253,7 +541884,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -541312,6 +541943,8 @@ function Dinosaur.refreshForPlayer(character: Model, player: Player)
     local entry = if ok then collection[speciesId] else nil
     local mutation = if entry and (entry.diamond or 0) &gt; 0 then "diamond" elseif entry and (entry.gold or 0) &gt; 0 then "gold" else "base"
     if player:GetAttribute("EquippedGenesJson") and player:GetAttribute("EquippedGenesJson")~="null" then mutation="base" end
+    -- Genes first so the client repaint triggered by SpeciesId/MutationVisual already sees the new equip.
+    character:SetAttribute("GenesJson", player:GetAttribute("EquippedGenesJson") or "null")
     character:SetAttribute("BigDinosaur", player:GetAttribute("EquippedBig") == true)
     local factor = if character:GetAttribute("BigDinosaur") then Config.BigScaleMultiplier else 1
     Dinosaur.render(character, scaleForScore(character:GetAttribute("GrowthScore") or 0) * factor, speciesId, mutation)
@@ -541387,7 +542020,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -541599,7 +542232,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -541674,7 +542307,7 @@ function FoodService.start(dinosaur,repository)
             local z = math.clamp(food.center.Y + math.sin(angle) * radius, food.minZ + 1, food.maxZ - 1)
             local ground = groundAt(x, z)
             if ground then
-                food.part.Position = ground + Vector3.new(0, food.kind.size / 2 + 0.35, 0)
+                food.part.Position = ground + Vector3.new(0, food.part.Size.Y / 2 + 0.35, 0)
                 if food.visual then food.visual:PivotTo(CFrame.new(ground + Vector3.new(0,.35,0))) end
                 return true
             end
@@ -541707,12 +542340,35 @@ function FoodService.start(dinosaur,repository)
                 local roll, kind = random:NextInteger(1, 100), TYPES[1]
                 if roll &gt; 98 then kind = TYPES[4] elseif roll &gt; 93 then kind = TYPES[3] elseif roll &gt; 78 then kind = TYPES[2] end
                 if starter then kind = if itemIndex % 3 == 0 then TYPES[2] else TYPES[1] end
-                local pickup = Instance.new("Part")
-                pickup.Name = kind.id
-                pickup.Shape = Enum.PartType.Ball
-                pickup.Size = Vector3.one * kind.size
-                pickup.Color = kind.color
-                pickup.Material = Enum.Material.SmoothPlastic
+                local kitMode = Config.FoodArtMode == "Kit"
+                local artId = if kitMode then string.format("food_%s_%s", kind.id, if (sx + sz + itemIndex) % 2 == 0 then "a" else "b") else kind.id
+                -- Kit mode: the uploaded food MeshPart IS the pickup part (one part, replaces the ball), scaled so its
+                -- largest side equals the old ball diameter (same readability, points, attributes and validation).
+                local pickup: BasePart
+                local meshPickup = false
+                if kitMode then
+                    local ok, model = pcall(Resources.clone, artId)
+                    local mesh = if ok and model then model:FindFirstChildWhichIsA("MeshPart") else nil
+                    if mesh then
+                        mesh.Parent = nil
+                        mesh.Size *= kind.size / math.max(mesh.Size.X, mesh.Size.Y, mesh.Size.Z)
+                        mesh.CFrame = CFrame.Angles(0, random:NextNumber(0, math.pi * 2), 0)
+                        mesh.Name = kind.id
+                        mesh.Color = Color3.new(1, 1, 1)
+                        mesh.Material = Enum.Material.SmoothPlastic
+                        pickup, meshPickup = mesh, true
+                    end
+                    if model then model:Destroy() end
+                end
+                if not meshPickup then
+                    local ball = Instance.new("Part")
+                    ball.Name = kind.id
+                    ball.Shape = Enum.PartType.Ball
+                    ball.Size = Vector3.one * kind.size
+                    ball.Color = kind.color
+                    ball.Material = Enum.Material.SmoothPlastic
+                    pickup = ball
+                end
                 pickup.Anchored = true
                 pickup.CanCollide = false
                 pickup.CanTouch = false
@@ -541722,13 +542378,12 @@ function FoodService.start(dinosaur,repository)
                 pickup:SetAttribute("Sector", string.format("%d:%d", sx, sz))
                 local visual = nil
                 -- BD-050 Kit mode is visual only: same TYPES points, pickup part and server validation.
-                -- Berry/fruit keep the visible ball pickup (1,300+ native kit copies is too heavy; the ArtId variant is
-                -- recorded for the MeshPart upload). Kit egg/amber models replace the ball only on a deterministic stride
-                -- (amber 1/4, egg 1/20) up to Config.FoodKitVisualCap, so the part budget in docs/68 holds.
-                local kitMode = Config.FoodArtMode == "Kit"
-                local artId = if kitMode then string.format("food_%s_%s", kind.id, if (sx + sz + itemIndex) % 2 == 0 then "a" else "b") else kind.id
+                -- With the uploaded MeshParts every pickup (berry, fruit, egg, amber) is its own kit mesh. Only when a kit
+                -- mesh is missing does it fall back: berry/fruit keep the ball and native egg/amber models replace the
+                -- ball on a deterministic stride (amber 1/4, egg 1/20) up to Config.FoodKitVisualCap (part budget, docs/68).
                 pickup:SetAttribute("ArtId", artId)
-                local useModel = kind.id == "egg" or kind.id == "amber"
+                pickup:SetAttribute("KitMesh", meshPickup)
+                local useModel = (kind.id == "egg" or kind.id == "amber") and not meshPickup
                 if kitMode and useModel then
                     local stride = if kind.id == "amber" then 4 else 20
                     useModel = kitVisuals &lt; Config.FoodKitVisualCap and (sx * 16 + sz + itemIndex * 7) % stride == 0
@@ -541854,7 +542509,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -542033,7 +542688,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -542219,7 +542874,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -542607,16 +543262,53 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX252">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local InsertService=game:GetService("InsertService")
+local AssetService=game:GetService("AssetService")
 local Bindings=require(ReplicatedStorage.Shared.ResourceMeshAssets)
+local KitMeshes=require(ReplicatedStorage.Shared.WorldKitMeshAssets)
 local Import={}
-function Import.load()
+local function overrides(): Folder
+    local existing=ReplicatedStorage:FindFirstChild("ResourceOverrides")
+    if existing and existing:IsA("Folder") then return existing end
     local folder=Instance.new("Folder") folder.Name="ResourceOverrides" folder.Parent=ReplicatedStorage
+    return folder
+end
+-- BD-049/050 kit: one real MeshPart per uploaded kit mesh (vertex colours carry the palette; no textures).
+-- Sized in studs from the generated bindings, pivot = bounding-box bottom centre (ResourceModels.clone normalises it).
+-- An id whose mesh fails to load keeps its native fallback model; the world is never left empty.
+function Import.loadWorldKit(): (number, number)
+    local folder=overrides()
+    local loaded,failed,pending=0,0,0
+    for id,binding in KitMeshes do
+        pending+=1
+        task.spawn(function()
+            local ok,result=pcall(function()
+                local mesh=AssetService:CreateMeshPartAsync(Content.fromUri(binding.meshId),{CollisionFidelity=Enum.CollisionFidelity.Box,RenderFidelity=Enum.RenderFidelity.Automatic})
+                mesh.Name=id
+                mesh.Size=Vector3.new(binding.size[1],binding.size[2],binding.size[3])
+                mesh.Color=Color3.new(1,1,1) -- white tint: the kit palette comes from the mesh vertex colours
+                mesh.Material=Enum.Material.SmoothPlastic
+                mesh.Anchored,mesh.CanCollide,mesh.CanTouch,mesh.CanQuery,mesh.Massless=true,false,false,false,true
+                mesh:SetAttribute("KitMeshId",binding.meshId)
+                return mesh
+            end)
+            if ok then result.Parent=folder loaded+=1 else failed+=1 warn("[Be Dino] kit mesh "..id.." unavailable; keeping native fallback: "..tostring(result)) end
+            pending-=1
+        end)
+    end
+    local deadline=os.clock()+30
+    while pending&gt;0 and os.clock()&lt;deadline do task.wait() end
+    workspace:SetAttribute("WorldKitMeshParts",loaded)
+    workspace:SetAttribute("WorldKitMeshFailed",failed+pending)
+    return loaded,failed+pending
+end
+function Import.load()
+    local folder=overrides()
     for id,assetId in Bindings do
         if assetId=="" then continue end
         local container=nil
@@ -542657,7 +543349,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX253">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -542699,7 +543391,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX254">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -542811,7 +543503,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX255">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -542893,7 +543585,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX251">
+      <Item class="ModuleScript" referent="RBX256">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -542985,7 +543677,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX252">
+      <Item class="ModuleScript" referent="RBX257">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -543090,7 +543782,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX253">
+      <Item class="ModuleScript" referent="RBX258">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -543225,7 +543917,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX254">
+      <Item class="ModuleScript" referent="RBX259">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -544988,7 +545680,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX255">
+      <Item class="ModuleScript" referent="RBX260">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -545187,7 +545879,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX256">
+      <Item class="ModuleScript" referent="RBX261">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -545301,7 +545993,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX257">
+      <Item class="ModuleScript" referent="RBX262">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -545564,7 +546256,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX258">
+      <Item class="ModuleScript" referent="RBX263">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -545636,19 +546328,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX259">
+  <Item class="StarterPlayer" referent="RBX264">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX260">
+    <Item class="StarterPlayerScripts" referent="RBX265">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX261">
+      <Item class="Folder" referent="RBX266">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX262">
+        <Item class="LocalScript" referent="RBX267">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -545849,7 +546541,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX263">
+        <Item class="LocalScript" referent="RBX268">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -545866,9 +546558,13 @@ local Config = require(Shared.Config)
 local Theme = require(Shared.UITheme)
 local NavigationArtwork = require(Shared.NavigationArtwork)
 local NestQueue = require(Shared.NestQueue)
+local EggsLogic = require(Shared.EggsLogic)
+local EggsScreen = require(script.Parent.EggsScreen)
 local Preview = require(Shared.DinosaurPreview)
 local ModelPreview = require(Shared.ModelPreview)
 local HatchPresentation = require(Shared.HatchPresentation)
+local HatchTimeline = require(Shared.HatchTimeline)
+local HatchSequence = require(script.Parent.HatchSequence)
 local ProgressionConfig=require(Shared.ProgressionConfig)
 local ProgressionRules=require(Shared.ProgressionRules)
 local EggTraits=require(Shared.EggTraits)
@@ -546200,6 +546896,8 @@ end
 local rarityColors=Theme.RarityColors
 local rarityNames=Config.SpeciesRarityNames
 local function speciesIndex(id: string): number return Config.SpeciesRarities[id] or 1 end
+local oddsWeight,oddsTotal={},0 -- base chance of one purchased egg, shown on Dino Index cards (docs/85)
+for _,row in Config.ChestSpeciesWeights do oddsWeight[row.speciesId]=row.weight oddsTotal+=row.weight end
 local function meter(parent: GuiObject,x: number,y: number,w: number,value: number,maxValue: number,color: Color3,text: string)
     local b=box(parent,x,y,w,34,C.outline,parent.ZIndex+1)
     local fill=Instance.new("Frame")
@@ -546208,9 +546906,20 @@ local function meter(parent: GuiObject,x: number,y: number,w: number,value: numb
     Theme.animate(fill,.22,{Size=UDim2.new(fraction,0,1,0)})
     label(b,text,0,0,w,34,20)
 end
+local function ownsAutoOpen(): boolean return player:GetAttribute("OwnsAutoOpen")==true end
+local function autoOpenSelection()
+    return EggsLogic.effective(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen())
+end
+local function autoOpenText(): string
+    if EggsLogic.locked(Config.AutoOpenRequiresPass,ownsAutoOpen()) then return "Auto-open is locked" end
+    local names={}
+    for _,rarity in autoOpenSelection() do table.insert(names,Config.SpeciesRarityNames[rarity]) end
+    return if #names==0 then "Auto-open: off" else "Auto-open: "..table.concat(names,", ")
+end
 local function queue()
     return decoded("ChestQueueJson","[]")
 end
+local skipAllReveals=false -- "Skip all" during a hatch batch: every non-notable egg takes the quick path
 local skippedEntries={} -- BD-044: eggs hatched and credited but not animated this batch
 local batchEntries={} -- BD-069: every egg claimed this batch, for the one summary toast
 local function emitHatchSummary()
@@ -546220,6 +546929,7 @@ local function emitHatchSummary()
 end
 local function finishBatch()
     autoHatching=false
+    skipAllReveals=false
     emitHatchSummary()
     if #skippedEntries&gt;0 then open("batchSummary") else open("eggs") end
 end
@@ -546233,7 +546943,7 @@ local function hatchNext()
     hatchPending=true
     hatch:FireServer(id,Http:GenerateGUID(false))
     task.delay(8,function()
-        if hatchPending then hatchPending=false autoHatching=false notify("Hatching stopped",C.red,{key="hatch_error",icon="egg",body="Tap an egg to try again"}) end
+        if hatchPending then hatchPending=false autoHatching=false skipAllReveals=false notify("Hatching stopped",C.red,{key="hatch_error",icon="egg",body="Tap an egg to try again"}) end
     end)
 end
 local function progression()
@@ -546515,7 +547225,7 @@ render=function(name: string)
             local card=box(list,((i-1)%3)*276,math.floor((i-1)/3)*rowHeight,264,cardHeight,if found then rarityColors[rarity] else Color3.fromRGB(62,64,74),24)
             Theme.texture(card,264,cardHeight)
             label(card,look.nameText or Config.SpeciesDisplayNames[id],4,8,256,35,25)
-            label(card,look.rarityText or rarityNames[rarity],4,44,256,25,18)
+            label(card,look.rarityText or (rarityNames[rarity].." • "..FusionSelection.pct(100*(oddsWeight[id] or 0)/oddsTotal).." of eggs"),4,44,256,25,18)
             if found then
                 hero(card,id,7,70,250,128,bestMutation(id))
                 label(card,if event then event.name.." mutation" elseif ownedTraits(id) then "Special variant" else string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond),5,201,254,25,15)
@@ -546544,7 +547254,7 @@ render=function(name: string)
         heading.Text,header.BackgroundColor3=Config.SpeciesDisplayNames[selected],rarityColors[index]
         local stage=box(body,0,0,380,360,rarityColors[index],24)
         hero(stage,selected,0,20,380,280,bestMutation(selected))
-        label(stage,rarityNames[index],0,302,380,42,30)
+        label(stage,rarityNames[index].." • "..FusionSelection.pct(100*(oddsWeight[selected] or 0)/oddsTotal).." of eggs",0,302,380,42,28)
         label(body,"YOUR COLLECTION",414,0,400,42,28)
         label(body,string.format("Base: %d • Gold: %d\nDiamond: %d",base,gold,diamond),414,62,400,92,25)
         label(body,if event then event.name.." • "..table.concat(UIFormat.boostLines(event.growth,event.speed,1)," • ") else "Cosmetic fusion: 15 Base → Gold; 4 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
@@ -546588,122 +547298,27 @@ render=function(name: string)
         button(body,"CONFIRM FUSION",280,264,510,64,C.accent,function() fuse:FireServer(selected,fusionTarget,Http:GenerateGUID(false)) open("fusion") end)
         button(body,"CANCEL",280,340,510,44,C.red,function() open("fusion") end)
     elseif name=="eggs" then
-        heading.Text,header.BackgroundColor3="Caught Eggs",C.gold
-        local entries=queue()
-        local timers={}
-        for slot=1,Config.ChestQueueCapacity do
-            local entry=entries[slot]
-            local card=box(body,(slot-1)*166,0,156,280,if entry then C.card else C.outline,24)
-            label(card,if entry and entry.genes then EggGenetics.condition(entry.genes.conditionId).name else "Slot "..slot,0,8,156,30,22)
-            -- Real egg look from the committed genes; empty slots stay a neutral gray placeholder.
-            local look=FusionSelection.eggSlotLook(entry,entry~=nil and EggGenetics.valid(entry.genes))
-            local view=ModelPreview.add(card,"egg",look=="empty")
-            view.Position,view.Size=UDim2.fromOffset(18,65),UDim2.fromOffset(120,120)
-            if entry then PreviewTraits.add(view,if look=="genes" then entry else {shiny=entry.shiny,big=entry.big}) end
-            if entry then label(card,rarityNames[entry.rarity or 1],0,37,156,24,18,rarityColors[entry.rarity or 1]) end
-            local mutation=if entry then ProgressionRules.item(ProgressionConfig.EventMutations,entry.mutationId) else nil
-            if mutation then
-                local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
-                if not entry.genes then for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.6) end end end
-                label(card,mutation.name,0,192,156,27,18,color)
-            elseif entry and entry.eventId and entry.eventId~="clear" then
-                local event=ProgressionRules.item(ProgressionConfig.Weather,entry.eventId)
-                label(card,if event then event.name else entry.eventId,0,192,156,27,15,C.gold)
-            elseif entry and entry.genes then
-                label(card,EggGenetics.condition(entry.genes.conditionId).name,0,192,156,27,18,C.gold)
-            end
-            timers[slot]=label(card,if entry then "Growing..." else "Empty",3,222,150,40,22,if entry then C.gold else Color3.fromRGB(156,156,174))
-        end
-        refreshEggs=function()
-            for i,timer in timers do
-                local entry=entries[i]
-                if entry and typeof(entry.readyAt)=="number" then
-                    local remaining=math.max(0,entry.readyAt-workspace:GetServerTimeNow())
-                    timer.Text=if remaining&lt;=0 then "READY!" else UIFormat.duration(remaining)
-                end
-            end
-        end
-        refreshEggs()
-        button(body,"HATCH NEXT EGG",0,310,400,math.max(64,45/viewportScale()),C.accent,function()
-            local id=str("NextChestId")
-            if id=="" then notify("Return from a run to earn reward eggs") return end
-            if workspace:GetServerTimeNow()&lt;num("NextChestReadyAt") then notify("This egg is still growing",C.gold) return end
-            if hatchPending then return end
-            autoHatching=true
-            hatchNext()
-        end)
-        label(body,"Eggs waiting: "..num("QueuedEggsWaiting"),420,310,400,44,22)
-    elseif name=="nests" then
-        -- BD-090: separate Egg Nests menu (never mixed with the run eggs in Caught Eggs).
-        heading.Text,header.BackgroundColor3="Egg Nests",C.gold
+        -- Owner 2026-10-15: ONE Eggs screen = five nest slots + a single Next egg card (src/client/EggsScreen.luau).
+        heading.Text,header.BackgroundColor3="Eggs",C.gold
         local nestOk,nestList=pcall(function() return Http:JSONDecode(str("NestsJson","[]")) end)
         if not nestOk or typeof(nestList)~="table" then nestList={} end
-        local duration=Config.NestIncubationSeconds
-        local formatWait=UIFormat.duration
-        local storage=label(body,"Nests "..#nestList.."/"..Config.NestStorageCapacity,0,0,300,30,24,C.gold)
-        storage.TextXAlignment=Enum.TextXAlignment.Left
-        local luckLine=label(body,"Nest eggs are lucky: better rarity, condition, Shiny and BIG odds.",300,2,524,28,16)
-        luckLine.TextXAlignment=Enum.TextXAlignment.Right
-        local list=Instance.new("ScrollingFrame")
-        list.Name,list.BackgroundTransparency,list.BorderSizePixel,list.ZIndex,list.Parent="NestList",1,0,24,body
-        list.Position,list.Size=UDim2.fromOffset(0,36),UDim2.fromOffset(824,296)
-        list.CanvasSize,list.ScrollBarThickness=UDim2.fromOffset(0,math.max(296,#nestList*60)),6
-        local rows={}
-        for index,nest in nestList do
-            local card=box(list,0,(index-1)*60,812,56,C.card,25)
-            art(card,"egg_nest",8,5,46)
-            local title=label(card,"Nest: "..tostring(nest.size).." eggs",64,2,230,28,22)
-            title.TextXAlignment=Enum.TextXAlignment.Left
-            local chip=box(card,300,5,120,26,C.card,26)
-            local chipText=label(chip,"",0,0,120,26,17)
-            local timeText=label(card,"",430,2,190,28,19)
-            timeText.TextXAlignment=Enum.TextXAlignment.Left
-            local track=box(card,64,38,556,12,C.outline,26)
-            local fill=box(track,0,0,556,12,C.accent,27)
-            local openButton=button(card,"OPEN",632,5,170,46,C.accent,function()
-                Sfx.play("shop_buy")
-                claimNestRemote:FireServer(nest.id)
-            end)
-            rows[index]={chip=chip,chipText=chipText,timeText=timeText,fill=fill,openButton=openButton}
-        end
-        local footer=label(body,"",0,336,824,62,17,C.text)
-        local function refreshNests()
-            local now=math.floor(workspace:GetServerTimeNow())
-            local projected=NestQueue.project(nestList,now,duration)
-            local waitingCount,incubatingCount=0,0
-            for index,nest in projected do
-                local row=rows[index]
-                if row then
-                    local remaining=if nest.readyAt then nest.readyAt-now else duration
-                    if nest.state=="ready" then
-                        row.chipText.Text,row.chip.BackgroundColor3="Ready",C.accent
-                        row.timeText.Text="Ready to open"
-                        row.fill.Size=UDim2.fromOffset(556,12)
-                    elseif nest.state=="incubating" then
-                        incubatingCount+=1
-                        row.chipText.Text,row.chip.BackgroundColor3="Incubating",C.gold
-                        row.timeText.Text="Ready in "..formatWait(remaining)
-                        row.fill.Size=UDim2.fromOffset(math.floor(556*math.clamp(1-remaining/duration,0,1)),12)
-                    else
-                        waitingCount+=1
-                        row.chipText.Text,row.chip.BackgroundColor3="Waiting",C.blue
-                        row.timeText.Text="Starts after the one before"
-                        row.fill.Size=UDim2.fromOffset(0,12)
-                    end
-                    row.openButton.Visible=nest.state=="ready"
-                end
-            end
-            if #nestList==0 then
-                footer.Text="No egg nests yet. Look for one at the end of a run."
-            else
-                footer.Text="One nest hatches at a time, "..math.floor(duration/3600).." h each. The next starts when this one is ready, even while you are away."
-            end
-        end
-        refreshNests()
-        task.spawn(function() -- live countdown: cheap text/size updates once a second, stops when the list is gone
-            while list.Parent and active=="nests" do
+        local version=modalVersion
+        refreshEggs=EggsScreen.render({
+            body=body,C=C,label=label,box=box,button=button,art=art,queue=queue,str=str,num=num,nestList=nestList,
+            rarityNames=rarityNames,rarityColors=rarityColors,scale=viewportScale,notify=notify,
+            openNest=function(id) Sfx.play("shop_buy") claimNestRemote:FireServer(id) end,
+            openEgg=function()
+                if hatchPending then return end
+                autoHatching=true
+                hatchNext()
+            end,
+            openSettings=function() open("settings") end,
+            autoOpenText=autoOpenText,
+        })
+        task.spawn(function() -- live countdowns; stops when the screen is left
+            while modalVersion==version and active=="eggs" do
                 task.wait(1)
-                if list.Parent and active=="nests" then refreshNests() end
+                if modalVersion==version and active=="eggs" and refreshEggs then refreshEggs() end
             end
         end)
     elseif name=="hatch" then
@@ -546721,64 +547336,49 @@ render=function(name: string)
         view.Visible=false
         task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync(view:GetDescendants()) end) end)
         local eggView,animateEgg,splitEgg=HatchPresentation.add(body,genes,rarityColors[speciesIndex(id)])
-        eggView.Position,eggView.Size=UDim2.fromOffset(260,0),UDim2.fromOffset(304,260)
-        local rewardLabel=label(body,rarityNames[speciesIndex(id)].." egg",80,240,660,58,36,rarityColors[speciesIndex(id)])
+        eggView.Size=UDim2.fromOffset(304,260) -- HatchSequence centres and animates it
+        local rarity=speciesIndex(id)
+        local count=tonumber(string.match(reward,"^(%d+)x")) or 1
+        local displayName=Config.SpeciesDisplayNames[id] or id
+        local rewardLabel=label(body,if failed then HatchTimeline.FailTitle elseif count&gt;1 then count.."x "..displayName else displayName,80,236,660,54,38,if failed then C.gold else rarityColors[rarity])
+        local oddsLabel=label(body,if failed then HatchTimeline.FailSub else HatchTimeline.oddsLine(rarityNames[rarity],HatchTimeline.speciesPct(Config.ChestSpeciesWeights,id),(FusionSelection :: any).pct or HatchTimeline.pct),80,288,660,28,22,C.text)
         local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
+        local detailText,detailColor="",C.gold
+        local mutationColor=if mutation then Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3]) else nil
         if genes then
             local condition=EggGenetics.condition(genes.conditionId)
-            label(body,if failed then "Cracked • 20% hatch" else condition.name,80,295,660,25,20,C.gold)
+            detailText=if failed then HatchTimeline.failChance(condition.hatchChance) else condition.name
+            -- Mutation audit: genes eggs (all new eggs) used to hide the mutation name/perk and tint.
+            if mutation and not failed then
+                local tint=mutationColor :: Color3
+                for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(tint,.35) end end
+                detailText=condition.name.." • "..mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
+            end
         elseif mutation then
-            local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
-            for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.55) end end
-            local perks=label(body,mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • "),80,295,660,25,20,color)
-            perks.Visible=false
-            task.delay(math.min(3.4,Config.HatchRevealSeconds*.68),function() if perks.Parent and modalVersion==version then perks.Visible=true end end)
+            local tint=mutationColor :: Color3
+            for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(tint,.55) end end
+            detailText=mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
+            detailColor=tint
         end
-        local nextButton=button(body,"NEXT EGG",80,322,320,math.max(64,45/viewportScale()),C.accent,function() autoHatching=true hatchNext() end)
-        local collectionButton=button(body,"COLLECTION",424,322,320,math.max(64,45/viewportScale()),C.blue,function() autoHatching=false open("collection") end)
-        nextButton.Visible,collectionButton.Visible=false,false
-        task.spawn(function()
-            local started=os.clock()
-            Sfx.play("hatch_crack")
-            local crackSeconds=math.min(3.4,Config.HatchRevealSeconds*.68) -- crack animation scales with the 1 s reveal pace
-            while os.clock()-started&lt;crackSeconds and modalVersion==version and eggView.Parent do
-                local t=(os.clock()-started)*3.4/crackSeconds
-                animateEgg(t)
-                task.wait(.03)
-            end
-            if modalVersion~=version or not view.Parent then return end
-            splitEgg(not failed)
-            if not failed then
-                local rarity=speciesIndex(id)
-                local isShiny,isBig=player:GetAttribute("LastChestShiny")==true,player:GetAttribute("LastChestBig")==true
-                Sfx.play(Sfx.hatchName(rarity))
-                flash(rarityColors[rarity],.12+rarity*.06)
-                if isShiny then Sfx.play("shiny_bang") end
-                if isBig then Sfx.play("big_thud") end
-                if isShiny or isBig then
-                    banner(body,if isShiny and isBig then "SHINY + BIG!" elseif isShiny then "SHINY!" else "BIG!",if isShiny then C.gold else C.purple)
-                end
-                if rarity&gt;=3 or isShiny or isBig then shake(.08+.02*rarity) end
-            end
-            view.Visible=not failed
-            rewardLabel.Text=if failed then "The cracked egg did not hatch" else reward
-            if failed then rewardLabel.TextColor3=C.red end
-            heading.Text=if failed then "Cracked egg" else "You hatched a dinosaur!"
-            if not failed then
-                local revealScale=Instance.new("UIScale")
-                revealScale.Scale,revealScale.Parent=if motion then .9 else 1,view
-                Theme.animate(revealScale,.24,{Scale=1},Enum.EasingStyle.Back)
-                local glow=Instance.new("UIStroke")
-                glow.Color,glow.Thickness,glow.Transparency,glow.Parent=rarityColors[speciesIndex(id)],3,if motion then .1 else 1,view
-                Theme.animate(glow,.65,{Transparency=1})
-                task.delay(.18,function() if modalVersion==version and view.Parent then celebrate() end end)
-            end
-            task.wait(math.max(0,Config.HatchRevealSeconds-(os.clock()-started)))
-            if modalVersion~=version or not view.Parent then return end
-            if autoHatching and str("NextChestId")~="" then hatchNext()
-            elseif #skippedEntries&gt;0 then finishBatch()
-            else autoHatching=false emitHatchSummary() nextButton.Visible=true collectionButton.Visible=true end
-        end)
+        if failed and detailText=="" then detailText=HatchTimeline.failChance((EggGenetics.condition("cracked") :: any).hatchChance) end
+        local detailLabel=label(body,detailText,80,316,660,28,20,detailColor)
+        local remaining=HatchTimeline.remaining(str("NextChestId")~="" and workspace:GetServerTimeNow()&gt;=num("NextChestReadyAt"),num("ActiveChestCount"),num("QueuedEggsWaiting"))
+        Sfx.play("hatch_crack")
+        HatchSequence.play({
+            gui=gui,panel=panel,body=body,eggView=eggView,animateEgg=animateEgg,splitEgg=splitEgg,dino=view,
+            rarity=rarity,color=rarityColors[rarity],failed=failed,
+            shiny=not failed and player:GetAttribute("LastChestShiny")==true,big=not failed and player:GetAttribute("LastChestBig")==true,
+            mutationName=if mutation and not failed then mutation.name else nil,mutationColor=mutationColor,
+            nameLabel=rewardLabel,oddsLabel=oddsLabel,detailLabel=detailLabel,remaining=remaining,motion=motion,
+            alive=function() return modalVersion==version and active=="hatch" end,
+            flash=flash,
+            onSkipAll=function() autoHatching=true skipAllReveals=true end,
+            onReveal=function() if modalVersion==version then heading.Text=if failed then "Oops! Splat!" else "You hatched a dinosaur!" end end,
+            onNext=function()
+                heading.Text="An egg is hatching..."
+                if EggsLogic.afterReveal(skipAllReveals,remaining)=="continue" then autoHatching=true hatchNext() else finishBatch() end
+            end,
+        })
     elseif name=="exit" then
         -- BD-052: one confirmation, no stay-still channel; the server settles through tryEnd.
         heading.Text,header.BackgroundColor3="Return to Sanctuary?",C.red
@@ -546816,15 +547416,17 @@ render=function(name: string)
         label(body,"Catches  "..num("LastRunCatchScore"),300,93,500,60,34,C.blue)
         label(body,str("LastRewardText","Saving rewards..."),290,168,510,100,24,C.gold)
         label(body,"+"..num("LastRunCrystals").." Crystals • Level "..num("AccountLevel"),30,302,760,40,21)
-        button(body,"BACK TO SANCTUARY",212,348,400,48,C.accent,function() open("home") end)
+        local hasEggs=str("NextChestId")~="" or num("QueuedEggsWaiting")&gt;0 or #decoded("NestsJson","[]")&gt;0
+        button(body,"BACK TO SANCTUARY",if hasEggs then 30 else 212,348,if hasEggs then 370 else 400,48,C.accent,function() open("home") end)
+        if hasEggs then button(body,"OPEN EGGS",424,348,370,48,C.gold,function() open("eggs") end) end
     elseif name=="batchSummary" then
-        heading.Text,header.BackgroundColor3="Skipped eggs",C.gold
+        heading.Text,header.BackgroundColor3="Auto-opened eggs",C.gold
         local summary=RevealSkip.summarize(skippedEntries)
-        local lines=RevealSkip.lines(summary)
+        local lines=EggsLogic.summaryLines(summary)
         label(body,table.concat(lines,"\n"),24,16,760,90,24)
         local notes={}
         for _,entry in summary.notable do table.insert(notes,Config.SpeciesDisplayNames[entry.speciesId] or entry.speciesId) end
-        label(body,if #notes&gt;0 then "Notable finds: "..table.concat(notes,", ") else "Every skipped egg is already in your collection.",24,120,760,120,22,C.gold)
+        label(body,if #notes&gt;0 then "Notable finds: "..table.concat(notes,", ") else "All saved in your collection!",24,120,760,120,22,C.gold)
         button(body,"COLLECTION",24,300,370,64,C.blue,function() skippedEntries={} open("collection") end)
         button(body,"DONE",424,300,370,64,C.accent,function() skippedEntries={} open("eggs") end)
     elseif name=="settings" then
@@ -546836,16 +547438,18 @@ render=function(name: string)
         label(body,"Hatch sounds",24,182,410,44,26)
         button(body,if Theme.HatchSoundEnabled~=false then "SOUND ON" else "SOUND OFF",560,182,230,44,C.blue,function() Theme.HatchSoundEnabled=Theme.HatchSoundEnabled==false open("settings") end).TextSize=20
         button(body,"HOW TO PLAY",24,238,370,64,C.gold,function() open("tutorial") end)
-        label(body,"Skip reveals:",24,312,160,52,24)
-        local chosen=RevealSkip.set(decoded("RevealSkipJson","[]"))
+        label(body,"Auto-open:",24,312,160,52,24)
+        local locked=EggsLogic.locked(Config.AutoOpenRequiresPass,ownsAutoOpen())
+        local chosen=RevealSkip.set(autoOpenSelection())
         for i,rarityName in RevealSkip.Names do
             -- Five rarities: name on top, state below; rarity colour while shown, dark while skipped.
-            button(body,rarityName.."\n"..(if chosen[i] then "SKIP" else "SHOW"),190+(i-1)*126,312,120,52,if chosen[i] then C.card else rarityColors[i],function()
+            button(body,rarityName.."\n"..(if locked then "LOCKED" elseif chosen[i] then "AUTO" else "SHOW"),190+(i-1)*126,312,120,52,if chosen[i] then C.card else rarityColors[i],function()
+                if locked then notify("Auto-open needs a pass",C.gold) return end
                 setSkipRemote:FireServer(RevealSkip.toggle(decoded("RevealSkipJson","[]"),i))
             end).TextSize=16
         end
         button(body,"FOOD GUIDE",424,238,366,64,C.accent,function() open("food") end)
-        label(body,"Settings apply on this device for this session.",24,370,766,30,18)
+        label(body,"Shiny, BIG and special eggs always show. Auto-opened eggs are still saved!",24,370,766,30,18)
     elseif name=="food" then
         heading.Text,header.BackgroundColor3="Food &amp; Growth",C.accent
         local types={{"Berries","leaf",1,C.accent},{"Fruit","leaf",4,C.gold},{"Eggs","egg",15,C.blue},{"Crystals","amber",50,C.purple}}
@@ -546885,11 +547489,11 @@ local previewNotice=label(gui,"STUDIO PREVIEW • progress not saved • test cu
 previewNotice.AnchorPoint,previewNotice.Position=Vector2.new(.5,0),UDim2.new(.5,0,0,8)
 previewNotice.Visible=player:GetAttribute("ProfileMode")=="Studio preview (not saved)"
 player:GetAttributeChangedSignal("ProfileMode"):Connect(function() previewNotice.Visible=player:GetAttribute("ProfileMode")=="Studio preview (not saved)" end)
-rail=box(gui,14,0,186,444,C.panel,2)
+rail=box(gui,14,0,186,382,C.panel,2)
 rail.AnchorPoint,rail.Position=Vector2.new(0,.5),UDim2.new(0,14,.5,0)
 local railScale=Instance.new("UIScale") railScale.Parent=rail
 local navigationButtons = {}
-for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"NESTS","egg_nest","nests",C.gold},{"FUSION","fusion","fusion",C.purple},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
+for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
     local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() if entry[3]=="fusion" then openFusion() else open(entry[3]) end end)
     b.TextSize=20
     art(b,NavigationArtwork[entry[3]] or entry[2],5,6,40)
@@ -547208,7 +547812,7 @@ local function scheduleModalRefresh()
     refreshQueued=true
     task.defer(function()
         refreshQueued=false
-        if table.find({"collection","detail","fusion","eggs","nests","auras","potions","settings"},active) then
+        if table.find({"collection","detail","fusion","eggs","auras","potions","settings"},active) then
             body:ClearAllChildren()
             render(active)
         end
@@ -547228,9 +547832,9 @@ player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function()
         genes=if okGenes and typeof(genes)=="table" then genes else nil,failed=player:GetAttribute("LastChestFailed")==true}
     local rarity=speciesIndex(species)
     table.insert(batchEntries,{rarity=rarity,name=Config.SpeciesDisplayNames[species] or species,failed=outcome.failed,shiny=outcome.shiny==true,big=outcome.big==true})
-    if autoHatching and RevealSkip.shouldSkip(decoded("RevealSkipJson","[]"),rarity,outcome) then
+    if autoHatching and EggsLogic.shouldAutoOpen(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen(),rarity,outcome,skipAllReveals) then
         table.insert(skippedEntries,{rarity=rarity,speciesId=species,outcome=outcome})
-        task.defer(hatchNext)
+        task.delay(Config.ChestClaimRequestCooldownSeconds+.15,hatchNext) -- stay under the server claim cooldown
         return
     end
     task.defer(function() open("hatch") end)
@@ -547258,7 +547862,7 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
                 task.wait(3)
                 if modalVersion~=version or serial~=hatchCancelSerial then return end
             end
-            if str("NextChestId")~="" then autoHatching=true hatchNext() else open("results") end
+            open("results") -- never forced into hatching: the summary offers "Open eggs"
         end
     end)
 end)
@@ -547268,8 +547872,7 @@ end)
 player:GetAttributeChangedSignal("LastNestClaimAt"):Connect(function()
     if str("LastNestClaimStatus")~="opened" then return end
     Sfx.play("level_up")
-    notify("Nest opened!",C.accent,{icon="egg_nest",body="Eggs are hatching"})
-    if str("NextChestId")~="" then autoHatching=true hatchNext() end
+    notify("Nest opened!",C.accent,{icon="egg_nest",body="Open your eggs when ready"})
 end)
 player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)
 for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus","LastNestClaimStatus","LastRunStartStatus"} do
@@ -547294,7 +547897,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX264">
+        <Item class="LocalScript" referent="RBX269">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -547357,7 +547960,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX265">
+        <Item class="ModuleScript" referent="RBX270">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -547436,7 +548039,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX266">
+        <Item class="LocalScript" referent="RBX271">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -547717,7 +548320,217 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX267">
+        <Item class="ModuleScript" referent="RBX272">
+          <Properties>
+            <string name="Name">EggsScreen</string>
+            <ProtectedString name="Source">--!strict
+-- Combined Eggs screen (owner 2026-10-15): five nest slots on top, ONE large "Next egg" card below.
+-- Drawing only; state rules live in Shared/EggsLogic (tools/verify_eggs_screen.py). Bootstrap passes a
+-- context table of its UI helpers so this module stays focused and Bootstrap edits stay small.
+-- Art: reuses the uploaded egg_nest icon and the real egg preview. No new art, no PLACEHOLDER needed.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local NestQueue = require(Shared.NestQueue)
+local EggsLogic = require(Shared.EggsLogic)
+local EggGenetics = require(Shared.EggGenetics)
+local FusionSelection = require(Shared.FusionSelection)
+local ProgressionConfig = require(Shared.ProgressionConfig)
+local ProgressionRules = require(Shared.ProgressionRules)
+local ModelPreview = require(Shared.ModelPreview)
+local UIFormat = require(Shared.UIFormat)
+local PreviewTraits = require(script.Parent.PreviewTraits)
+local PreviewCamera = require(Shared.PreviewCamera)
+local ContentProvider = game:GetService("ContentProvider")
+
+local EggsScreen = {}
+
+local SHELL = Color3.fromRGB(255, 244, 214)
+-- Never show a box: an authored egg whose mesh is unbound (empty MeshId) or still loading renders as a cube.
+-- Show a soft shell-colored ellipse, wait for the mesh (PreloadAsync, 3 tries), else swap to a smooth ball egg.
+local function meshParts(view: ViewportFrame): {MeshPart}
+    local list = {}
+    for _, item in view:GetDescendants() do if item:IsA("MeshPart") then table.insert(list, item) end end
+    return list
+end
+local function ballEgg(view: ViewportFrame)
+    local world = view:FindFirstChildOfClass("WorldModel")
+    if world then world:ClearAllChildren() else world = Instance.new("WorldModel") world.Parent = view end
+    local model = Instance.new("Model")
+    local part = Instance.new("Part")
+    part.Name, part.Shape, part.Size, part.Anchored, part.CanCollide = "Shell", Enum.PartType.Ball, Vector3.new(1.55, 2.3, 1.55), true, false
+    part.Color, part.Material, part.CFrame, part.Parent = SHELL, Enum.Material.SmoothPlastic, CFrame.new(0, 1.2, 0), model
+    model.PrimaryPart = part
+    model.Parent = world
+    PreviewCamera.bind(view, model, nil)
+end
+function EggsScreen.safeEggView(card: GuiObject, empty: boolean, size: number, x: number, y: number, traits: any): ViewportFrame
+    local view = ModelPreview.add(card, "egg", empty)
+    view.Position, view.Size = UDim2.fromOffset(x, y), UDim2.fromOffset(size, size)
+    local function finish() if traits then PreviewTraits.add(view, traits) end end
+    local parts = meshParts(view)
+    if #parts == 0 then finish() return view end
+    local blank = false
+    for _, part in parts do if part.MeshId == "" then blank = true end end
+    if blank then ballEgg(view) finish() return view end
+    -- Mesh set but maybe not loaded yet: ellipse placeholder until it is.
+    view.Visible = false
+    local holder = Instance.new("Frame")
+    holder.Name, holder.BackgroundColor3, holder.Position, holder.Size, holder.ZIndex, holder.Parent = "EggPlaceholder", SHELL, UDim2.fromOffset(x + size * .2, y + size * .06), UDim2.fromOffset(size * .6, size * .88), view.ZIndex, card
+    local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(.5, 0) corner.Parent = holder
+    task.spawn(function()
+        local ready = false
+        for _ = 1, 3 do
+            local ok = pcall(function() ContentProvider:PreloadAsync(parts) end)
+            ready = ok and #parts &gt; 0
+            for _, part in parts do if part.MeshId == "" or part.Parent == nil then ready = false end end
+            if ready then break end
+            task.wait(1)
+        end
+        if not view.Parent then return end
+        if not ready then ballEgg(view) end
+        finish()
+        view.Visible = true
+        holder:Destroy()
+    end)
+    return view
+end
+
+local function dim(root: Instance, transparency: number)
+    for _, item in root:GetDescendants() do
+        if item:IsA("ImageLabel") then item.ImageTransparency = transparency
+        elseif item:IsA("Frame") and item.BackgroundTransparency &lt; 1 then item.BackgroundTransparency = math.max(item.BackgroundTransparency, transparency) end
+    end
+end
+
+-- ctx: body, C, label, box, button, art, queue, str, num, nestList, rarityNames, rarityColors, scale (viewportScale),
+-- isActive(), openEgg(), openNest(id), openSettings(), autoOpenText(), notify(text, color?)
+-- Returns refresh(): cheap once-a-second text updates (timers).
+function EggsScreen.render(ctx: any)
+    local body, C, label, box, button, art = ctx.body, ctx.C, ctx.label, ctx.box, ctx.button, ctx.art
+    local capacity = Config.NestStorageCapacity
+    local duration = Config.NestIncubationSeconds
+    local touchH = math.clamp(45 / ctx.scale(), 64, 120)
+    local nestH = math.clamp(touchH, 96, 124)
+
+    local nestList = ctx.nestList
+    local function projected() return NestQueue.project(nestList, math.floor(workspace:GetServerTimeNow()), duration) end
+    local header = label(body, EggsLogic.nestHeader(nestList, capacity), 0, 0, 220, 28, 24, C.gold)
+    header.TextXAlignment = Enum.TextXAlignment.Left
+    local luck = label(body, "Nest eggs are lucky!", 224, 2, 600, 26, 18)
+    luck.TextXAlignment = Enum.TextXAlignment.Right
+
+    -- Five nest slots: egg-nest icon, status text, tap READY to open. Empty slots are dimmed.
+    local slotW, gap = 156, 11
+    local slotViews = {}
+    for i = 1, capacity do
+        local x = (i - 1) * (slotW + gap)
+        local slot = button(body, "", x, 32, slotW, nestH, C.card, function()
+            local info = slotViews[i].info
+            if info and info.state == "ready" then ctx.openNest(info.id)
+            elseif info and info.state == "empty" then ctx.notify("Finish a run to earn a nest!", C.gold)
+            elseif info then ctx.notify("This nest is growing. Hang tight!", C.gold) end
+        end)
+        slot.Name = "NestSlot" .. i
+        local icon = box(slot, (slotW - 52) // 2, 6, 52, 52, C.card, slot.ZIndex + 1)
+        icon.BackgroundTransparency = 1
+        art(icon, "egg_nest", 0, 0, 52)
+        local text = label(slot, "", 0, 62, slotW, nestH - 64, 19)
+        slotViews[i] = {slot = slot, icon = icon, text = text}
+    end
+
+    -- ONE large "Next egg" card.
+    local cardY = 32 + nestH + 8
+    local cardH = 402 - cardY
+    local card = box(body, 0, cardY, 824, cardH, C.card, 24)
+    local queue = ctx.queue()
+    local nextId = ctx.str("NextChestId")
+    local entry = nil
+    for _, item in queue do if item.id == nextId then entry = item break end end
+    entry = entry or queue[1]
+    local waiting = ctx.num("QueuedEggsWaiting")
+    local state = EggsLogic.card(entry, nextId, ctx.num("NextChestReadyAt"), workspace:GetServerTimeNow(), waiting)
+    local statusText, buttonText = EggsLogic.cardCopy(state)
+
+    label(card, "Next egg", 14, 6, 200, 28, 22, C.gold).TextXAlignment = Enum.TextXAlignment.Left
+    local look = FusionSelection.eggSlotLook(entry, entry ~= nil and EggGenetics.valid(entry.genes))
+    local viewSize = math.clamp(cardH - 50, 96, 170)
+    EggsScreen.safeEggView(card, look == "empty", viewSize, 16, 38, if entry then (if look == "genes" then entry else {shiny = entry.shiny, big = entry.big}) else nil)
+
+    local infoX = 16 + viewSize + 14
+    local infoW = 824 - infoX - 14
+    local rarity = if entry then entry.rarity or 1 else nil
+    if entry and rarity then
+        label(card, ctx.rarityNames[rarity], infoX, 40, 230, 30, 24, ctx.rarityColors[rarity]).TextXAlignment = Enum.TextXAlignment.Left
+        local conditionName = if entry.genes then EggGenetics.condition(entry.genes.conditionId).name else nil
+        local mutation = ProgressionRules.item(ProgressionConfig.EventMutations, entry.mutationId)
+        local badge = conditionName
+        local badgeColor = C.gold
+        if mutation then
+            badge = mutation.name
+            badgeColor = Color3.fromRGB(mutation.color[1], mutation.color[2], mutation.color[3])
+        elseif entry.eventId and entry.eventId ~= "clear" then
+            local weather = ProgressionRules.item(ProgressionConfig.Weather, entry.eventId)
+            badge = if weather then weather.name else entry.eventId
+        end
+        if badge then label(card, badge, infoX, 72, 230, 28, 20, badgeColor).TextXAlignment = Enum.TextXAlignment.Left end
+    else
+        local empty = label(card, statusText, infoX, 46, 250, 90, 22, C.text)
+        empty.TextXAlignment = Enum.TextXAlignment.Left
+    end
+    local timer = label(card, if entry then statusText else "", infoX, 104, 230, 40, 26, C.gold)
+    timer.TextXAlignment = Enum.TextXAlignment.Left
+    label(card, "Eggs waiting: " .. waiting, infoX, 150, 230, 28, 20).TextXAlignment = Enum.TextXAlignment.Left
+
+    -- OPEN (one clear action) + gear to the auto-open settings.
+    local openW = math.min(300, infoW - 240)
+    local openX = 824 - 14 - openW
+    local gearH = math.max(touchH * .6, 52)
+    local openButton = button(card, buttonText, openX, 40, openW, math.min(touchH + 16, cardH - 62 - gearH), if state.canOpen then C.accent else C.outline, function()
+        state = EggsLogic.card(entry, nextId, ctx.num("NextChestReadyAt"), workspace:GetServerTimeNow(), waiting)
+        if state.canOpen then ctx.openEgg()
+        elseif state.kind == "growing" then ctx.notify("This egg is still growing", C.gold)
+        else ctx.notify("Finish a run to catch eggs!", C.gold) end
+    end)
+    openButton.Name = "OpenEggButton"
+    openButton.TextSize = 30
+    local gear = button(card, "AUTO", openX, cardH - 14 - gearH, openW, gearH, C.blue, function() ctx.openSettings() end)
+    gear.Name = "AutoOpenSettingsButton"
+    gear.TextSize = 20
+    local autoLine = label(card, ctx.autoOpenText(), infoX, cardH - 62, openX - infoX - 10, 48, 17, C.text)
+    autoLine.TextXAlignment = Enum.TextXAlignment.Left
+
+    local function refresh()
+        if not card.Parent then return end
+        local now = math.floor(workspace:GetServerTimeNow())
+        local slots = EggsLogic.nestSlots(projected(), capacity, now)
+        for i, info in slots do
+            local v = slotViews[i]
+            v.info = info
+            local opening, ready, empty = info.state == "opening", info.state == "ready", info.state == "empty"
+            v.slot.BackgroundColor3 = if ready then C.accent elseif opening then C.gold elseif empty then C.outline else C.card
+            v.text.Text = if opening then "Ready in " .. UIFormat.duration(info.remaining) else info.text
+            v.text.TextTransparency = if empty then .45 else 0
+            dim(v.icon, if empty then .8 else 0)
+        end
+        state = EggsLogic.card(entry, nextId, ctx.num("NextChestReadyAt"), workspace:GetServerTimeNow(), waiting)
+        statusText, buttonText = EggsLogic.cardCopy(state)
+        openButton.Text = buttonText
+        openButton.BackgroundColor3 = if state.canOpen then C.accent else C.outline
+        if entry then
+            local remaining = math.max(0, (if typeof(entry.readyAt) == "number" then entry.readyAt else ctx.num("NextChestReadyAt")) - workspace:GetServerTimeNow())
+            timer.Text = if remaining &lt;= 0 then "READY!" else "Growing " .. UIFormat.duration(remaining)
+        end
+    end
+    refresh()
+    return refresh
+end
+
+return EggsScreen
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="RBX273">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -548582,7 +549395,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX268">
+        <Item class="ModuleScript" referent="RBX274">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -548684,7 +549497,823 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX269">
+        <Item class="ModuleScript" referent="RBX275">
+          <Properties>
+            <string name="Name">HatchSequence</string>
+            <ProtectedString name="Source">--!strict
+-- Hatch sequence (client). Draws the ~3 s egg opening + dinosaur reveal + tap-to-continue for ONE already
+-- committed egg. Presentation only: it never reads or changes genes, species, odds or saved data.
+-- Timing, curves, tap gating, rarity escalation and skip rules are pure and live in Shared.HatchTimeline
+-- (verify_hatch_sequence.py). Performance: one Heartbeat connection per egg and persistent, reused pools
+-- (rings, rays, motes, sparkles, fireworks, rain, arcs, shock rings); no Instances are created per frame.
+-- Reduced Motion: no shake, zoom, particles or rotation, only a soft static glow and fades.
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Input = game:GetService("UserInputService")
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Theme = require(Shared.UITheme)
+local Sfx = require(Shared.Sfx)
+local Timeline = require(Shared.HatchTimeline)
+
+local Seq = {}
+local CENTER_EGG = Vector2.new(412, 130) -- body coordinates (824 x 402 virtual px)
+local CENTER_DINO = Vector2.new(412, 118)
+local BODY_HOME = Vector2.new(18, 98)
+local BODY_CENTER = Vector2.new(430, 299)
+local RING_N, RAY_N, MOTE_N, ARC_N = 8, 6, 12, 6
+local GRAVITY = 260
+local WHITE = Color3.new(1, 1, 1)
+local TAU = math.pi * 2
+local FIREWORKS = {{.35, 250, 120}, {.75, 580, 92}, {1.15, 412, 58}}
+
+-- Failed-egg splat kit (built once, reused): native rounded shapes until the egg_splat / egg_shell icons are bound.
+type Splat = {group: CanvasGroup, puddle: Frame, lobes: {Frame}, yolk: Frame, drips: {Frame}, shells: {Frame}, domes: {Frame},
+    shellImages: {ImageLabel}, image: ImageLabel}
+local PUDDLE = Vector2.new(412, 200) -- body coordinates
+local YOLK_REST = 190
+local SHELL_START_Y, SHELL_FALL = 112, 70
+local CREAM = Color3.fromRGB(255, 244, 214)
+local YOLK_GOLD = Color3.fromRGB(255, 196, 38)
+
+type Layers = {splat: Splat, back: Frame, front: Frame, backdrop: Frame, rings: {Frame}, ringScales: {UIScale}, rays: {Frame}, motes: {Frame},
+    podium: {Frame}, particles: {Frame}, fw: {Frame}, rain: {Frame}, shocks: {Frame}, shockStrokes: {UIStroke}, shockScales: {UIScale},
+    arcs: {Frame}, shimmer: Frame, shimmerGradient: UIGradient}
+local layers: Layers? = nil
+
+local function corner(parent: Instance, radius: UDim?)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = radius or UDim.new(1, 0)
+    c.Parent = parent
+end
+local function dot(parent: Instance, name: string, z: number, w: number, h: number, round: boolean): Frame
+    local f = Instance.new("Frame")
+    f.Name, f.BorderSizePixel, f.BackgroundTransparency, f.Visible, f.AnchorPoint = name, 0, 1, false, Vector2.new(.5, .5)
+    f.Size, f.ZIndex, f.Parent = UDim2.fromOffset(w, h), z, parent
+    if round then corner(f) end
+    return f
+end
+
+local function buildSplat(front: Frame): Splat
+    -- PLACEHOLDER (docs/72): the egg-white puddle, yolk and shell cups below are native shape stacks. They are replaced by the
+    -- ChatGPT icons egg_splat / egg_shell (docs/83 items 29 and 30) as soon as their asset IDs are bound in UIIconAssets; they never count as final art.
+    local group = Instance.new("CanvasGroup")
+    group.Name, group.BackgroundTransparency, group.Active, group.ZIndex = "EggSplat", 1, false, 24
+    group.Size, group.Parent = UDim2.fromOffset(824, 402), front
+    local function blob(name: string, z: number, w: number, h: number, color: Color3, transparency: number): Frame
+        local f = dot(group, name, z, w, h, true)
+        f.BackgroundColor3, f.BackgroundTransparency = color, transparency
+        return f
+    end
+    local puddle = blob("EggWhitePuddle", 24, 250, 66, Color3.fromRGB(255, 252, 240), .12)
+    local rim = Instance.new("UIStroke") rim.Color, rim.Thickness, rim.Transparency, rim.Parent = Color3.fromRGB(255, 255, 255), 3, .45, puddle
+    local lobes = {blob("PuddleLobeL", 24, 80, 30, Color3.fromRGB(255, 252, 240), .25), blob("PuddleLobeR", 24, 64, 26, Color3.fromRGB(255, 252, 240), .25)}
+    local drips = {blob("Drip1", 25, 12, 18, Color3.fromRGB(255, 252, 240), .2), blob("Drip2", 25, 10, 16, Color3.fromRGB(255, 252, 240), .2)}
+    local yolk = blob("Yolk", 26, 74, 62, YOLK_GOLD, 0)
+    local yolkStroke = Instance.new("UIStroke") yolkStroke.Color, yolkStroke.Thickness, yolkStroke.Parent = Color3.fromRGB(190, 120, 10), 3, yolk
+    local shine = Instance.new("Frame")
+    shine.BackgroundColor3, shine.BorderSizePixel, shine.AnchorPoint, shine.BackgroundTransparency = WHITE, 0, Vector2.new(.5, .5), .1
+    shine.Position, shine.Size, shine.ZIndex, shine.Parent = UDim2.fromScale(.32, .3), UDim2.fromOffset(22, 13), 27, yolk
+    corner(shine)
+    local shells, domes, shellImages = {}, {}, {}
+    for i = 1, 2 do
+        -- A shell half is a cream cup: outer ellipse plus a darker hollow inside (no clipping: clips break on rotation).
+        local shell = dot(group, "ShellHalf" .. i, 28, 104, 62, false)
+        local dome = Instance.new("Frame")
+        dome.Name, dome.BackgroundColor3, dome.BorderSizePixel, dome.Size, dome.ZIndex, dome.Parent = "NativeShell", CREAM, 0, UDim2.fromScale(1, 1), 28, shell
+        corner(dome)
+        local ds = Instance.new("UIStroke") ds.Color, ds.Thickness, ds.Parent = Color3.fromRGB(160, 118, 62), 4, dome
+        local hollow = Instance.new("Frame")
+        hollow.BackgroundColor3, hollow.BorderSizePixel, hollow.AnchorPoint, hollow.Position, hollow.Size, hollow.ZIndex, hollow.Parent = Color3.fromRGB(246, 214, 150), 0, Vector2.new(.5, .5), UDim2.fromScale(.5, .6), UDim2.fromScale(.74, .48), 29, dome
+        corner(hollow)
+        local gloss = Instance.new("Frame")
+        gloss.BackgroundColor3, gloss.BackgroundTransparency, gloss.BorderSizePixel, gloss.Position, gloss.Size, gloss.ZIndex, gloss.Parent = WHITE, .2, 0, UDim2.fromOffset(14, 5), UDim2.fromOffset(26, 8), 30, dome
+        corner(gloss)
+        local img = Instance.new("ImageLabel")
+        img.Name, img.BackgroundTransparency, img.AnchorPoint, img.Position, img.Size, img.ZIndex, img.Visible = "ShellImage", 1, Vector2.new(.5, .5), UDim2.fromScale(.5, .5), UDim2.fromOffset(110, 110), 28, false
+        img.Parent = shell
+        shells[i], domes[i], shellImages[i] = shell, dome, img
+    end
+    local image = Instance.new("ImageLabel")
+    image.Name, image.BackgroundTransparency, image.AnchorPoint, image.Visible, image.ZIndex = "SplatImage", 1, Vector2.new(.5, .5), false, 25
+    image.Size, image.Parent = UDim2.fromOffset(260, 260), group
+    return {group = group, puddle = puddle, lobes = lobes, yolk = yolk, drips = drips, shells = shells, domes = domes, shellImages = shellImages, image = image}
+end
+
+local function ensureLayers(panel: GuiObject): Layers
+    local existing = layers
+    if existing and existing.back.Parent == panel and existing.front.Parent == panel then return existing end
+    if existing then existing.back:Destroy() existing.front:Destroy() end
+    local function layer(name: string, z: number): Frame
+        local f = Instance.new("Frame")
+        f.Name, f.BackgroundTransparency, f.ClipsDescendants, f.Active = name, 1, true, false
+        f.Position, f.Size, f.ZIndex, f.Parent = UDim2.fromOffset(BODY_HOME.X, BODY_HOME.Y), UDim2.fromOffset(824, 402), z, panel
+        return f
+    end
+    local back, front = layer("HatchFxBack", 22), layer("HatchFxFront", 24)
+    local backdrop = Instance.new("Frame")
+    backdrop.Name, backdrop.BorderSizePixel, backdrop.BackgroundTransparency, backdrop.Size, backdrop.ZIndex, backdrop.Parent = "Backdrop", 0, 1, UDim2.fromScale(1, 1), 22, back
+    local rings, ringScales, rays, motes, podium, particles, fw, rain, arcs = {}, {}, {}, {}, {}, {}, {}, {}, {}
+    -- Radial gradient: stacked translucent circles, bright centre fading to the dark backdrop vignette.
+    for i = 1, RING_N do
+        local size = 120 + (i - 1) * 92
+        local ring = dot(back, "GlowRing" .. i, 22, size, size, true)
+        ring.Visible, ring.Position = true, UDim2.fromOffset(CENTER_DINO.X, CENTER_DINO.Y)
+        local s = Instance.new("UIScale") s.Parent = ring
+        rings[i], ringScales[i] = ring, s
+    end
+    for i = 1, RAY_N do
+        local ray = dot(back, "LightRay" .. i, 22, 78, 760, false)
+        ray.Visible, ray.BackgroundTransparency, ray.Position = true, 1, UDim2.fromOffset(CENTER_DINO.X, CENTER_DINO.Y)
+        local g = Instance.new("UIGradient")
+        g.Rotation = 90
+        g.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(.5, .1), NumberSequenceKeypoint.new(1, 1)})
+        g.Parent = ray
+        rays[i] = ray
+    end
+    for i = 1, MOTE_N do motes[i] = dot(back, "Mote" .. i, 22, 6 + (i % 4) * 2, 6 + (i % 4) * 2, true) end
+    for i, size in {{330, 46}, {220, 28}} do
+        local p = dot(back, "Podium" .. i, 22, size[1], size[2], true)
+        p.Visible, p.Position = true, UDim2.fromOffset(CENTER_DINO.X, 236)
+        podium[i] = p
+    end
+    local total = Timeline.MaxParticles + Timeline.OrbitMax
+    for i = 1, total do particles[i] = dot(front, "Sparkle" .. i, 24, 10, 10, i % 2 == 0) if i % 2 == 1 then particles[i].Rotation = 45 end end
+    for i = 1, Timeline.FireworkMax do fw[i] = dot(front, "Firework" .. i, 24, 9, 9, true) end
+    for i = 1, Timeline.RainMax do rain[i] = dot(front, "Rain" .. i, 24, 8, 8, false) rain[i].Rotation = 45 end
+    local shocks, shockStrokes, shockScales = {}, {}, {}
+    for i = 1, 2 do
+        local s = dot(front, "Shockwave" .. i, 24, 300, 300, true)
+        local stroke = Instance.new("UIStroke") stroke.Thickness, stroke.Transparency, stroke.Parent = 8, 1, s
+        local scale = Instance.new("UIScale") scale.Parent = s
+        shocks[i], shockStrokes[i], shockScales[i] = s, stroke, scale
+    end
+    for i = 1, ARC_N do arcs[i] = dot(front, "EnergyArc" .. i, 24, 76, 5, true) end
+    local shimmer = dot(front, "ShinyShimmer", 25, 440, 300, false)
+    shimmer.Position, shimmer.BackgroundColor3 = UDim2.fromOffset(CENTER_DINO.X, CENTER_DINO.Y), WHITE
+    local sg = Instance.new("UIGradient")
+    sg.Rotation = 25
+    sg.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 120)), ColorSequenceKeypoint.new(.25, Color3.fromRGB(255, 220, 80)),
+        ColorSequenceKeypoint.new(.5, Color3.fromRGB(80, 255, 160)), ColorSequenceKeypoint.new(.75, Color3.fromRGB(80, 170, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 100, 255))})
+    sg.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(.38, 1), NumberSequenceKeypoint.new(.5, .35),
+        NumberSequenceKeypoint.new(.62, 1), NumberSequenceKeypoint.new(1, 1)})
+    sg.Parent = shimmer
+    local created: Layers = {splat = buildSplat(front), back = back, front = front, backdrop = backdrop, rings = rings, ringScales = ringScales, rays = rays, motes = motes, podium = podium,
+        particles = particles, fw = fw, rain = rain, shocks = shocks, shockStrokes = shockStrokes, shockScales = shockScales, arcs = arcs,
+        shimmer = shimmer, shimmerGradient = sg}
+    layers = created
+    return created
+end
+
+local function fadeLabel(label: GuiObject, delay: number, seconds: number, rise: number)
+    local stroke = label:FindFirstChildOfClass("UIStroke")
+    local base = label.Position
+    label.Visible = true
+    task.delay(delay, function()
+        if not label.Parent then return end
+        local info = TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local goals: {[string]: any} = {TextTransparency = 0, TextStrokeTransparency = 0}
+        if rise ~= 0 then label.Position = base + UDim2.fromOffset(0, rise) goals.Position = base end
+        TweenService:Create(label, info, goals):Play()
+        if stroke then TweenService:Create(stroke, info, {Transparency = 0}):Play() end
+    end)
+end
+local function hideLabel(label: TextLabel)
+    label.TextTransparency, label.TextStrokeTransparency = 1, 1
+    local stroke = label:FindFirstChildOfClass("UIStroke")
+    if stroke then stroke.Transparency = 1 end
+end
+
+-- Tilted ribbon tag with a diamond icon and a glowing outline (not a button).
+local function ribbon(parent: GuiObject, text: string, color: Color3, cx: number, cy: number, w: number, tilt: number): (Frame, UIScale, UIStroke)
+    local f = Instance.new("Frame")
+    f.Name, f.BackgroundColor3, f.AnchorPoint, f.Visible, f.Rotation = "Ribbon", WHITE, Vector2.new(.5, .5), false, tilt
+    f.Position, f.Size, f.ZIndex, f.Parent = UDim2.fromOffset(cx, cy), UDim2.fromOffset(w, 44), parent.ZIndex + 6, parent
+    corner(f, UDim.new(0, 8))
+    local g = Instance.new("UIGradient")
+    g.Rotation = 90
+    g.Color = ColorSequence.new(color:Lerp(WHITE, .35), color:Lerp(Color3.new(0, 0, 0), .3))
+    g.Parent = f
+    local stroke = Instance.new("UIStroke") stroke.Color, stroke.Thickness, stroke.Parent = color:Lerp(WHITE, .6), 4, f
+    local icon = Instance.new("Frame")
+    icon.BackgroundColor3, icon.BorderSizePixel, icon.AnchorPoint, icon.Rotation = WHITE, 0, Vector2.new(.5, .5), 45
+    icon.Position, icon.Size, icon.ZIndex, icon.Parent = UDim2.fromOffset(24, 22), UDim2.fromOffset(16, 16), f.ZIndex + 1, f
+    local label = Instance.new("TextLabel")
+    label.BackgroundTransparency, label.Position, label.Size, label.Font, label.Text = 1, UDim2.fromOffset(42, 2), UDim2.new(1, -50, 1, -4), Enum.Font.FredokaOne, text
+    label.TextColor3, label.TextScaled, label.ZIndex, label.TextStrokeTransparency, label.TextStrokeColor3 = WHITE, true, f.ZIndex + 1, 0, Color3.new(0, 0, 0)
+    label.Parent = f
+    local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 26, 10, label
+    local scale = Instance.new("UIScale") scale.Scale, scale.Parent = 0, f
+    return f, scale, stroke
+end
+
+export type Args = {
+    gui: ScreenGui, panel: GuiObject, body: GuiObject,
+    eggView: GuiObject, animateEgg: (number) -&gt; (), splitEgg: (boolean?) -&gt; (),
+    dino: GuiObject, rarity: number, color: Color3, failed: boolean, shiny: boolean, big: boolean,
+    mutationName: string?, mutationColor: Color3?,
+    nameLabel: TextLabel, oddsLabel: TextLabel, detailLabel: TextLabel,
+    remaining: number, motion: boolean,
+    alive: () -&gt; boolean, flash: (Color3, number) -&gt; (),
+    onNext: () -&gt; (), onSkipAll: () -&gt; (), onReveal: () -&gt; (),
+}
+
+-- Returns {cancel}. onNext runs once after the player taps on the revealed egg.
+function Seq.play(a: Args)
+    local motion = a.motion
+    local rarity = math.clamp(a.rarity, 1, 5)
+    local state = Timeline.new(motion, rarity, a.failed)
+    local durs = state.durs
+    local esc = Timeline.escalation(rarity, motion)
+    local fx = ensureLayers(a.panel)
+    local failed = a.failed
+    -- Rarity palette: Common is lively teal, then the rarity colour up to gold for Legendary.
+    local glow = if a.failed then Color3.fromRGB(255, 205, 90) elseif rarity &lt;= 1 then Color3.fromRGB(70, 205, 170) else a.color
+    local bodyHomePos, bodyHomeAnchor = a.body.Position, a.body.AnchorPoint
+    local connections: {RBXScriptConnection} = {}
+    local finished = false
+
+    a.eggView.AnchorPoint = Vector2.new(.5, .5)
+    a.eggView.Position = UDim2.fromOffset(CENTER_EGG.X, CENTER_EGG.Y)
+    a.dino.AnchorPoint = Vector2.new(.5, .5)
+    a.dino.Position = UDim2.fromOffset(CENTER_DINO.X, CENTER_DINO.Y)
+    local eggZoom = Instance.new("UIScale") eggZoom.Parent = a.eggView
+    local dinoScale = Instance.new("UIScale") dinoScale.Scale, dinoScale.Parent = if motion then .25 else 1, a.dino
+    local bodyScale = Instance.new("UIScale") bodyScale.Parent = a.body
+    if motion then
+        a.body.AnchorPoint, a.body.Position = Vector2.new(.5, .5), UDim2.fromOffset(BODY_CENTER.X, BODY_CENTER.Y)
+    end
+    -- Keep the viewport visible but transparent so DinosaurPreview loads the model during the build-up.
+    a.dino.Visible = not failed
+    local dinoView = a.dino :: any
+    dinoView.ImageTransparency = 1
+
+    -- Name: big white fill with a thick rarity-coloured stroke. Rarity line sits on a coloured pill.
+    local nameStroke = a.nameLabel:FindFirstChildOfClass("UIStroke")
+    if not failed then
+        a.nameLabel.TextColor3, a.nameLabel.TextSize = WHITE, 48
+        a.nameLabel.TextStrokeColor3 = glow:Lerp(Color3.new(0, 0, 0), .45)
+        if nameStroke then nameStroke.Color, nameStroke.Thickness = glow:Lerp(Color3.new(0, 0, 0), .35), 5 end
+        a.oddsLabel.TextColor3 = WHITE
+    end
+    if failed then
+        -- Funny, not sad: warm cream title with a brown outline, soft cream lines under it (no red).
+        a.nameLabel.TextColor3, a.nameLabel.TextStrokeColor3 = Color3.fromRGB(255, 236, 150), Color3.fromRGB(110, 70, 15)
+        if nameStroke then nameStroke.Color, nameStroke.Thickness = Color3.fromRGB(110, 70, 15), 5 end
+        a.oddsLabel.TextColor3, a.detailLabel.TextColor3 = WHITE, Color3.fromRGB(255, 226, 140)
+    end
+    for _, l in {a.nameLabel, a.oddsLabel, a.detailLabel} do hideLabel(l) end
+    local pill = Instance.new("Frame")
+    pill.Name, pill.BackgroundColor3, pill.AnchorPoint, pill.Visible = "RarityPill", glow:Lerp(Color3.new(0, 0, 0), .4), Vector2.new(.5, .5), false
+    pill.Position, pill.Size, pill.ZIndex, pill.Parent = UDim2.fromOffset(412, 302), UDim2.fromOffset(380, 32), a.oddsLabel.ZIndex - 1, a.body
+    corner(pill)
+    local pillStroke = Instance.new("UIStroke") pillStroke.Color, pillStroke.Thickness, pillStroke.Parent = glow:Lerp(WHITE, .25), 2.5, pill
+    local pillScale = Instance.new("UIScale") pillScale.Scale, pillScale.Parent = 0, pill
+    -- Shine sweep across the name (clipped strip, one tween per egg).
+    local sweepClip = Instance.new("Frame")
+    sweepClip.Name, sweepClip.BackgroundTransparency, sweepClip.ClipsDescendants, sweepClip.AnchorPoint = "NameShine", 1, true, Vector2.new(.5, 0)
+    sweepClip.Position, sweepClip.Size, sweepClip.ZIndex, sweepClip.Parent = UDim2.fromOffset(412, 236), UDim2.fromOffset(360, 54), a.nameLabel.ZIndex + 2, a.body
+    local sweep = Instance.new("Frame")
+    sweep.BackgroundColor3, sweep.BorderSizePixel, sweep.Rotation, sweep.Visible = WHITE, 0, 18, false
+    sweep.Position, sweep.Size, sweep.ZIndex, sweep.Parent = UDim2.fromOffset(-90, -10), UDim2.fromOffset(50, 90), sweepClip.ZIndex, sweepClip
+    local sg = Instance.new("UIGradient")
+    sg.Rotation = 0
+    sg.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(.5, .35), NumberSequenceKeypoint.new(1, 1)})
+    sg.Parent = sweep
+
+    -- Ribbons (Shiny / BIG / mutation) and the tap hint.
+    local badges: {{any}} = {}
+    local pulseStrokes: {UIStroke} = {}
+    local function addRibbon(text: string, color: Color3, cx: number, cy: number, w: number, tilt: number)
+        local f, s, st = ribbon(a.body, text, color, cx, cy, w, tilt)
+        table.insert(badges, {f, s}) table.insert(pulseStrokes, st)
+    end
+    if a.shiny then addRibbon("SHINY", Theme.Colors.gold, 100, 52, 170, -7) end
+    if a.big then addRibbon("BIG", Theme.Colors.purple, 724, 52, 150, 7) end
+    if a.mutationName then addRibbon(string.upper(a.mutationName), a.mutationColor or Theme.Colors.gold, 116, if a.shiny then 108 else 52, 210, -4) end
+    local hint = Instance.new("TextLabel")
+    hint.Name, hint.BackgroundTransparency, hint.Position, hint.Size = "TapHint", 1, UDim2.fromOffset(152, 350), UDim2.fromOffset(520, 46)
+    hint.Font, hint.TextColor3, hint.TextScaled, hint.Text = Enum.Font.FredokaOne, WHITE, true, Timeline.hint(a.remaining)
+    hint.TextStrokeTransparency, hint.TextStrokeColor3, hint.ZIndex, hint.Visible = 0, Theme.Colors.outline, a.body.ZIndex + 6, false
+    hint.Parent = a.body
+    local hintLimit = Instance.new("UITextSizeConstraint") hintLimit.MaxTextSize, hintLimit.MinTextSize, hintLimit.Parent = 34, 12, hint
+
+    -- Full-screen tap target (&gt;= 44 px everywhere) plus a small "Skip all" while more eggs wait.
+    local overlay = Instance.new("TextButton")
+    overlay.Name, overlay.Text, overlay.BackgroundTransparency, overlay.AutoButtonColor = "HatchTapCatcher", "", 1, false
+    overlay.Size, overlay.ZIndex, overlay.Parent = UDim2.fromScale(1, 1), 46, a.gui
+    local skipButton: TextButton? = nil
+    if a.remaining &gt; 0 then
+        local b = Instance.new("TextButton")
+        b.Name, b.Text, b.AnchorPoint, b.AutoButtonColor = "SkipAll", "Skip all", Vector2.new(1, 1), true
+        b.Position, b.Size, b.BackgroundColor3 = UDim2.new(1, -12, 1, -12), UDim2.fromOffset(132, 46), Theme.Colors.card
+        b.Font, b.TextSize, b.TextColor3, b.ZIndex, b.Parent = Enum.Font.FredokaOne, 22, Theme.Colors.text, 47, overlay
+        local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 12) c.Parent = b
+        local s = Instance.new("UIStroke") s.Color, s.Thickness, s.Parent = Theme.Colors.outline, 2, b
+        skipButton = b
+    end
+
+    -- Reset the pooled effects and tint them for this egg.
+    local strength = .75 + .06 * rarity
+    fx.backdrop.BackgroundColor3, fx.backdrop.BackgroundTransparency = glow:Lerp(Color3.new(0, 0, 0), .78), 1
+    for i, ring in fx.rings do
+        ring.BackgroundColor3 = glow:Lerp(WHITE, (1 - (i - 1) / (RING_N - 1)) * .5)
+        ring.BackgroundTransparency = 1
+        fx.ringScales[i].Scale = .6
+    end
+    for i, ray in fx.rays do
+        ray.BackgroundColor3, ray.BackgroundTransparency = glow:Lerp(WHITE, .4), 1
+        ray.Size = UDim2.fromOffset(if i &lt;= 3 then 90 else 56, 760)
+    end
+    local mx, my, ms, mp = table.create(MOTE_N, 0), table.create(MOTE_N, 0), table.create(MOTE_N, 0), table.create(MOTE_N, 0)
+    for i, m in fx.motes do
+        mx[i], my[i], ms[i], mp[i] = 40 + (i * 67) % 744, (i * 131) % 402, 14 + (i * 7) % 22, i * 1.7
+        m.BackgroundColor3, m.BackgroundTransparency, m.Visible = glow:Lerp(WHITE, .5), 1, motion
+    end
+    for i, p in fx.podium do p.BackgroundColor3, p.BackgroundTransparency = glow:Lerp(WHITE, if i == 1 then .1 else .4), 1 end
+    for _, f in fx.particles do f.Visible = false end
+    for _, f in fx.fw do f.Visible = false end
+    for _, f in fx.rain do f.Visible = false end
+    for _, f in fx.arcs do f.Visible = false end
+    fx.shimmer.Visible = false
+    local splat = fx.splat
+    local useSplatImage, useShellImage = Theme.ImageIds.egg_splat ~= "", Theme.ImageIds.egg_shell ~= ""
+    splat.group.GroupTransparency, splat.image.Image = 0, Theme.ImageIds.egg_splat
+    for _, f in {splat.puddle, splat.yolk, splat.image} do f.Visible = false end
+    for _, f in splat.lobes do f.Visible = false end
+    for _, f in splat.drips do f.Visible = false end
+    for i, f in splat.shells do
+        f.Visible, f.Rotation = false, 0
+        splat.domes[i].Visible, splat.shellImages[i].Visible, splat.shellImages[i].Image = not useShellImage, useShellImage, Theme.ImageIds.egg_shell
+        splat.shellImages[i].Rotation = if i == 2 then 14 else 0
+    end
+    for i, s in fx.shocks do s.Visible, fx.shockStrokes[i].Color, fx.shockStrokes[i].Transparency = false, glow:Lerp(WHITE, .3), 1 end
+
+    local count = if failed then Timeline.crumbCount(motion) else Timeline.particleCount(rarity, a.shiny, a.big, motion, failed)
+    local orbit = Timeline.orbitCount(rarity, motion, failed)
+    local px, py, vx, vy, life = table.create(count, 0), table.create(count, 0), table.create(count, 0), table.create(count, 0), table.create(count, 0)
+    local palette = if failed then {CREAM, WHITE, YOLK_GOLD, Color3.fromRGB(225, 190, 130)} else {glow, WHITE, Theme.Colors.gold, glow:Lerp(WHITE, .5), Theme.RarityColors[math.min(5, rarity + 1)]}
+    local cues = Timeline.cues(durs, rarity, failed, Sfx.revealName(rarity))
+    local cueIndex = 1
+    local burstDone, revealStarted, readyShown, bodyRestored = false, false, false, false
+    local burstAt = durs.build
+    local tweenHint: Tween? = nil
+    local punchStart = 1 + esc.punch
+    local impactAt = .95
+    local level = 0 -- overall glow level 0..1
+    local revealT = 0 -- seconds after the burst when the dinosaur actually appeared
+
+    local function restoreBody()
+        a.body.AnchorPoint, a.body.Position = bodyHomeAnchor, bodyHomePos
+        bodyScale.Scale = 1
+    end
+    local function finish()
+        if finished then return end
+        finished = true
+        for _, c in connections do c:Disconnect() end
+        table.clear(connections)
+        if tweenHint then tweenHint:Cancel() tweenHint = nil end
+        restoreBody()
+        if overlay.Parent then overlay:Destroy() end
+        if fx.back.Parent then
+            fx.backdrop.BackgroundTransparency = 1
+            for _, f in fx.rings do f.BackgroundTransparency = 1 end
+            for _, f in fx.rays do f.BackgroundTransparency = 1 end
+            for _, f in fx.motes do f.Visible = false end
+            for _, f in fx.podium do f.BackgroundTransparency = 1 end
+            for _, f in fx.particles do f.Visible = false end
+            for _, f in fx.fw do f.Visible = false end
+            for _, f in fx.rain do f.Visible = false end
+            for _, f in fx.arcs do f.Visible = false end
+            for _, f in fx.shocks do f.Visible = false end
+            fx.shimmer.Visible = false
+            for _, f in {fx.splat.puddle, fx.splat.yolk, fx.splat.image} do f.Visible = false end
+            for _, f in fx.splat.lobes do f.Visible = false end
+            for _, f in fx.splat.drips do f.Visible = false end
+            for _, f in fx.splat.shells do f.Visible = false end
+        end
+    end
+
+    local function setGlow(l: number)
+        level = l
+        local t = 1 - .16 * l * strength
+        for _, ring in fx.rings do ring.BackgroundTransparency = t end
+        fx.backdrop.BackgroundTransparency = 1 - .55 * l
+    end
+
+    -- Poses the pooled splat kit for `since` seconds after the burst (pure curves from HatchTimeline; no Instances created).
+    local function applySplat(since: number)
+        for i, shell in splat.shells do
+            local dx, dy, rot = Timeline.shell(since, if i == 1 then -1 else 1, SHELL_FALL)
+            shell.Position, shell.Rotation, shell.Visible = UDim2.fromOffset(CENTER_EGG.X + dx, SHELL_START_Y + dy), rot, true
+        end
+        local lift, ysx, ysy = Timeline.yolk(since)
+        local pw, ph = Timeline.puddle(since)
+        local landed = since &gt;= Timeline.SplatDrop
+        if useSplatImage then
+            splat.image.Visible = landed
+            -- Square canvas (art is ~76% of 1024 px and centred): never stretched at rest; squash only while wobbling.
+            splat.image.Position = UDim2.fromOffset(PUDDLE.X, PUDDLE.Y - 42)
+            splat.image.Size = UDim2.fromOffset(260 * pw * (1 + (ysx - 1) * .2), 260 * ph * (1 + (ysy - 1) * .2))
+        else
+            local puddle = splat.puddle
+            puddle.Visible = pw &gt; 0
+            puddle.Position, puddle.Size = UDim2.fromOffset(PUDDLE.X, PUDDLE.Y), UDim2.fromOffset(250 * pw, 66 * ph)
+            local l1, l2 = splat.lobes[1], splat.lobes[2]
+            l1.Visible, l2.Visible = pw &gt; 0, pw &gt; 0
+            l1.Position, l1.Size = UDim2.fromOffset(PUDDLE.X - 112 * pw, PUDDLE.Y + 6), UDim2.fromOffset(80 * pw, 30 * ph)
+            l2.Position, l2.Size = UDim2.fromOffset(PUDDLE.X + 120 * pw, PUDDLE.Y + 4), UDim2.fromOffset(64 * pw, 26 * ph)
+        end
+        local yolk = splat.yolk
+        yolk.Visible = not (useSplatImage and landed)
+        yolk.Position, yolk.Size = UDim2.fromOffset(PUDDLE.X, YOLK_REST + lift), UDim2.fromOffset(74 * ysx, 62 * ysy)
+        for i, drip in splat.drips do
+            local dy, alpha = Timeline.drip(since, i)
+            drip.Visible = dy ~= nil and not useSplatImage
+            if dy and alpha then
+                drip.Position, drip.BackgroundTransparency = UDim2.fromOffset(PUDDLE.X + (if i == 1 then -70 else 84), PUDDLE.Y + 14 + dy * .45), .15 + .85 * (1 - alpha)
+            end
+        end
+    end
+
+    local function burst()
+        burstDone = true
+        a.eggView.Rotation = 0
+        eggZoom.Scale = 1
+        if motion then a.body.Position = UDim2.fromOffset(BODY_CENTER.X, BODY_CENTER.Y) end
+        if motion then a.animateEgg(Timeline.EggClock) end
+        a.splitEgg(not failed)
+        for _, f in fx.arcs do f.Visible = false end
+        if failed then
+            -- SPLAT: our own shell halves replace the generic flying fragments.
+            a.eggView.Visible = false
+            if motion then
+                a.flash(CREAM, .14)
+                splat.group.GroupTransparency = 0
+                for _, f in splat.shells do f.Visible = true end
+                splat.yolk.Visible = not useSplatImage
+                splat.puddle.Visible = false
+                fx.shocks[1].Visible = true
+                fx.shockStrokes[1].Color = Color3.fromRGB(255, 252, 240)
+                for i = 1, count do
+                    local angle = -math.pi / 2 + ((i / count) - .5) * 2.6
+                    local speed = 90 + (i * 37) % 130
+                    px[i], py[i] = CENTER_EGG.X, CENTER_EGG.Y
+                    vx[i], vy[i] = math.cos(angle) * speed, math.sin(angle) * speed - 40
+                    life[i] = .6 + (i * 13 % 7) * .08
+                    local size = 5 + (i * 3) % 5
+                    local p = fx.particles[i]
+                    p.Size, p.BackgroundColor3, p.BackgroundTransparency, p.Visible = UDim2.fromOffset(size, size), palette[i % #palette + 1], 0, true
+                end
+            end
+            return
+        end
+        a.flash(glow, Timeline.burstStrength(rarity))
+        if esc.fireworks then task.delay(.12, function() if not finished then a.flash(Theme.Colors.gold, .3) end end) end
+        for i = 1, count do
+            local angle = (i / count) * TAU + (i % 3) * .21
+            local speed = (170 + (i * 37) % 210) * (1 + .07 * rarity)
+            px[i], py[i] = CENTER_EGG.X, CENTER_EGG.Y
+            vx[i], vy[i] = math.cos(angle) * speed, math.sin(angle) * speed - 140
+            life[i] = .8 + (i * 13 % 7) * .09
+            local p = fx.particles[i]
+            local size = 6 + (i * 5) % 9 + (if rarity &gt;= 4 then 3 else 0)
+            p.Size, p.BackgroundColor3, p.BackgroundTransparency, p.Visible = UDim2.fromOffset(size, if i % 5 == 0 then size * 2 else size), palette[i % #palette + 1], 0, true
+        end
+        for i = 1, 2 do
+            if (i == 1 and esc.shock) or (i == 2 and esc.arcs) then fx.shocks[i].Visible = true end
+        end
+    end
+
+    local function startReveal()
+        revealStarted = true
+        a.onReveal()
+        if failed then
+            local rise = if motion then 10 else 0
+            fadeLabel(a.nameLabel, if motion then .25 else 0, .3, rise)
+            fadeLabel(a.oddsLabel, if motion then .4 else .1, .3, rise)
+            fadeLabel(a.detailLabel, if motion then .55 else .2, .3, rise)
+            if not motion then
+                -- Reduced Motion: a static splat that simply fades in (no shake, tumble, wobble or particles).
+                splat.group.GroupTransparency = 1
+                applySplat(10)
+                TweenService:Create(splat.group, TweenInfo.new(.35), {GroupTransparency = 0}):Play()
+            end
+            return
+        end
+        a.dino.Visible = true
+        local view = a.dino :: any
+        view.ImageTransparency = 0
+        if not motion then
+            view.ImageTransparency = 1
+            TweenService:Create(view, TweenInfo.new(.3), {ImageTransparency = 0}):Play()
+            setGlow(.6)
+            for _, sc in fx.ringScales do sc.Scale = 1 end
+            for _, p in fx.podium do p.BackgroundTransparency = .6 end
+        end
+        local rise = if motion then 14 else 0
+        fadeLabel(a.nameLabel, if motion then .25 else 0, .3, rise)
+        fadeLabel(a.oddsLabel, if motion then .4 else .1, .3, rise)
+        fadeLabel(a.detailLabel, if motion then .55 else .2, .3, rise)
+        task.delay(if motion then .35 else .1, function()
+            if finished or not pill.Parent then return end
+            pill.Visible = true
+            if motion then TweenService:Create(pillScale, TweenInfo.new(.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play() else pillScale.Scale = 1 end
+        end)
+        if motion then
+            task.delay(.55, function()
+                if finished or not sweep.Parent then return end
+                sweep.Visible = true
+                sweep.Position = UDim2.fromOffset(-90, -10)
+                local t = TweenService:Create(sweep, TweenInfo.new(.7, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {Position = UDim2.fromOffset(400, -10)})
+                t.Completed:Once(function() sweep.Visible = false end)
+                t:Play()
+            end)
+        end
+        for i, entry in badges do
+            local frame, scale = entry[1], entry[2]
+            task.delay(if motion then .45 + i * .12 else .1, function()
+                if finished or not frame.Parent then return end
+                frame.Visible = true
+                if motion then TweenService:Create(scale, TweenInfo.new(.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play() else scale.Scale = 1 end
+            end)
+        end
+    end
+
+    local function showHint()
+        readyShown = true
+        hint.Visible = true
+        if motion then
+            hint.TextTransparency = 1
+            TweenService:Create(hint, TweenInfo.new(.25), {TextTransparency = 0}):Play()
+            task.delay(.3, function()
+                if finished or not hint.Parent then return end
+                local t = TweenService:Create(hint, TweenInfo.new(.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {TextTransparency = .4})
+                tweenHint = t
+                t:Play()
+            end)
+        end
+    end
+
+    local function advance()
+        if finished then return end
+        finish()
+        a.onNext()
+    end
+    local function onTap()
+        if finished then return end
+        if not failed and not revealStarted then return end -- never advance past an egg whose dinosaur is not shown yet
+        if Timeline.tap(state) == "advance" then advance() end
+    end
+    overlay.Activated:Connect(onTap)
+    if skipButton then
+        skipButton.Activated:Connect(function()
+            if finished then return end
+            a.onSkipAll()
+            if Timeline.skipAll(state) == "advance" then advance() end
+        end)
+    end
+    table.insert(connections, Input.InputBegan:Connect(function(input, processed)
+        if processed then return end
+        local k = input.KeyCode
+        if k == Enum.KeyCode.Space or k == Enum.KeyCode.Return or k == Enum.KeyCode.KeypadEnter or k == Enum.KeyCode.ButtonA then onTap() end
+    end))
+
+    local function place(f: Frame, x: number, y: number) f.Position = UDim2.fromOffset(x, y) end
+
+    table.insert(connections, RunService.Heartbeat:Connect(function(dt)
+        if finished then return end
+        if not a.alive() or not a.dino.Parent then finish() return end
+        local frameDt = math.min(dt, 1 / 20) -- a hitch must not skip the whole build-up
+        Timeline.step(state, frameDt)
+        local t = state.t
+
+        while cueIndex &lt;= #cues and cues[cueIndex].t &lt;= t do
+            Sfx.play(cues[cueIndex].name)
+            cueIndex += 1
+        end
+
+        if t &lt; burstAt then
+            if motion then
+                local p = t / durs.build
+                local i = Timeline.intensity(p)
+                local rot, dx, dy = Timeline.rattle(t, i)
+                local sx, sy = Timeline.shakeOffset(t, i * esc.shakeScale)
+                a.eggView.Rotation = rot * esc.shakeScale
+                a.eggView.Position = UDim2.fromOffset(CENTER_EGG.X + dx * esc.shakeScale, CENTER_EGG.Y + dy * esc.shakeScale)
+                eggZoom.Scale = Timeline.zoom(p)
+                bodyScale.Scale = Timeline.cameraZoom(p)
+                a.body.Position = UDim2.fromOffset(BODY_CENTER.X + sx, BODY_CENTER.Y + sy)
+                a.animateEgg(p * Timeline.EggClock)
+                local g = Timeline.glow(p)
+                for n, ring in fx.rings do
+                    ring.BackgroundTransparency = 1 - .16 * g * strength * (1 - (n - 1) / (RING_N + 2))
+                    fx.ringScales[n].Scale = (.35 + .5 * g) * (1 + .05 * math.sin(t * 9))
+                    ring.Position = UDim2.fromOffset(CENTER_EGG.X, CENTER_EGG.Y)
+                end
+                fx.backdrop.BackgroundTransparency = 1 - .35 * g
+                if esc.arcs then
+                    for n, arc in fx.arcs do
+                        local ang = n / ARC_N * TAU + t * 3
+                        local rad = 110 + 18 * math.sin(t * 17 + n)
+                        place(arc, CENTER_EGG.X + math.cos(ang) * rad, CENTER_EGG.Y + math.sin(ang) * rad * .85)
+                        arc.Rotation = math.deg(ang) + 90
+                        arc.BackgroundColor3 = Theme.Colors.purple:Lerp(WHITE, .35 + .3 * math.sin(t * 23 + n))
+                        arc.BackgroundTransparency = 1 - .9 * g
+                        arc.Visible = math.sin(t * 26 + n * 2.3) &gt; -.3
+                    end
+                end
+                for n, m in fx.motes do
+                    my[n] -= ms[n] * frameDt
+                    if my[n] &lt; -10 then my[n] = 410 end
+                    place(m, mx[n] + math.sin(t * 1.3 + mp[n]) * 14, my[n])
+                    m.BackgroundTransparency = 1 - .6 * g
+                end
+            end
+        else
+            if not burstDone then burst() end
+            local since = t - burstAt
+            -- Wait (up to 2.5 s) for the real model instead of revealing an empty viewport.
+            local modelReady = failed or a.dino:FindFirstChildOfClass("WorldModel") ~= nil or since &gt; 2.5
+            if not revealStarted and modelReady and t &gt;= burstAt + (if motion then .1 else 0) then revealT = since startReveal() end
+            if motion then
+                -- camera push-in releases with a short ease (stronger punch for rarer eggs)
+                if since &lt; .45 then
+                    if failed then
+                        local bumpScale, bumpDy = Timeline.bump(since)
+                        bodyScale.Scale = bumpScale
+                        a.body.Position = UDim2.fromOffset(BODY_CENTER.X, BODY_CENTER.Y + bumpDy)
+                    else
+                        bodyScale.Scale = 1 + (punchStart - 1) * (1 - Timeline.easeOut(since / .45))
+                    end
+                elseif not bodyRestored then
+                    bodyRestored = true
+                    restoreBody()
+                end
+                if not failed then
+                    if revealStarted then dinoScale.Scale = Timeline.revealScale((since - revealT) / .8) * (if a.big then Timeline.stamp(since - impactAt - revealT) else 1) end
+                    if a.big and since &gt;= impactAt + revealT and since &lt; impactAt + revealT + .25 then
+                        local k = 1 - (since - impactAt - revealT) / .25
+                        a.body.AnchorPoint = Vector2.new(.5, .5)
+                        a.body.Position = UDim2.fromOffset(BODY_CENTER.X + math.sin(since * 120) * 4 * k, BODY_CENTER.Y + math.cos(since * 100) * 3 * k)
+                    elseif a.big and since &gt;= impactAt + .25 and bodyRestored then
+                        a.body.AnchorPoint, a.body.Position = bodyHomeAnchor, bodyHomePos
+                    end
+                    -- radial glow: burst, settle to a pulsing halo
+                    local expand = Timeline.easeOut(since / .5)
+                    local settle = Timeline.easeOut(since / (durs.burst + durs.settle))
+                    local pulse = 1 + .045 * math.sin(since * 3.4)
+                    setGlow(1 - .3 * settle + .08 * math.sin(since * 3.4))
+                    for n, ring in fx.rings do
+                        fx.ringScales[n].Scale = (.85 + .4 * expand) * pulse
+                        ring.Position = UDim2.fromOffset(CENTER_DINO.X, CENTER_DINO.Y)
+                    end
+                    local rayT = 1 - (.55 + .1 * math.sin(since * 2.2)) * Timeline.easeOut(since / .4)
+                    for n, ray in fx.rays do
+                        ray.BackgroundTransparency = rayT
+                        ray.Rotation = if n &lt;= 3 then (n - 1) * 60 + since * 14 else (n - 4) * 60 + 30 - since * 10
+                    end
+                    for n, pd in fx.podium do pd.BackgroundTransparency = 1 - (if n == 1 then .45 else .6) * Timeline.easeOut(since / .5) end
+                    for n, m in fx.motes do
+                        my[n] -= ms[n] * frameDt
+                        if my[n] &lt; -10 then my[n] = 410 end
+                        place(m, mx[n] + math.sin(t * 1.3 + mp[n]) * 14, my[n])
+                        m.BackgroundTransparency = .3 + .3 * math.abs(math.sin(t * 2 + mp[n]))
+                    end
+                    -- confetti / sparkle burst
+                    for i = 1, count do
+                        local p = fx.particles[i]
+                        local l = life[i]
+                        if since &gt;= l then
+                            if p.Visible then p.Visible = false end
+                        else
+                            vy[i] += GRAVITY * frameDt
+                            px[i] += vx[i] * frameDt
+                            py[i] += vy[i] * frameDt
+                            place(p, px[i], py[i])
+                            p.BackgroundTransparency = math.clamp((since / l - .45) / .55, 0, 1)
+                            p.Rotation += 240 * frameDt
+                        end
+                    end
+                    -- twinkling sparkles orbiting the dinosaur
+                    if since &gt; .6 then
+                        for n = 1, orbit do
+                            local p = fx.particles[Timeline.MaxParticles + n]
+                            local ang = since * 1.1 + n / orbit * TAU
+                            p.Visible = true
+                            place(p, CENTER_DINO.X + math.cos(ang) * 210, CENTER_DINO.Y + 10 + math.sin(ang) * 95)
+                            local sz = 7 + (n % 3) * 3
+                            p.Size = UDim2.fromOffset(sz, sz)
+                            p.BackgroundColor3 = palette[n % #palette + 1]
+                            p.BackgroundTransparency = .1 + .7 * (1 - math.abs(math.sin(since * 4 + n * 1.9)))
+                            p.Rotation += 120 * frameDt
+                        end
+                    end
+                    -- shockwave rings (Rare+; Epic+ gets a second one)
+                    for n, s in fx.shocks do
+                        if s.Visible then
+                            local age = since - (n - 1) * .14
+                            if age &gt;= 0 and age &lt; .65 then
+                                local k = age / .65
+                                place(s, CENTER_EGG.X, CENTER_EGG.Y)
+                                fx.shockScales[n].Scale = .3 + 3.2 * Timeline.easeOut(k)
+                                fx.shockStrokes[n].Transparency = k
+                                fx.shockStrokes[n].Thickness = 2 + 8 * (1 - k)
+                            elseif age &gt;= .65 then
+                                s.Visible = false
+                            end
+                        end
+                    end
+                    -- Legendary gold fireworks
+                    if esc.fireworks then
+                        for b, spec in FIREWORKS do
+                            local age = since - spec[1]
+                            for j = 1, 8 do
+                                local f = fx.fw[(b - 1) * 8 + j]
+                                if age &gt;= 0 and age &lt; .9 then
+                                    local ang = j / 8 * TAU + b
+                                    local r = 190 * Timeline.easeOut(age / .9)
+                                    f.Visible = true
+                                    place(f, spec[2] + math.cos(ang) * r, spec[3] + math.sin(ang) * r + age * age * 90)
+                                    f.BackgroundColor3 = if j % 2 == 0 then Theme.Colors.gold else WHITE
+                                    f.BackgroundTransparency = (age / .9) ^ 1.6
+                                elseif f.Visible then
+                                    f.Visible = false
+                                end
+                            end
+                        end
+                    end
+                    -- Shiny: rainbow shimmer pass and gold sparkle rain
+                    if a.shiny then
+                        local sp = (since - .9) / 1.1
+                        if sp &gt;= 0 and sp &lt;= 1 then
+                            fx.shimmer.Visible = true
+                            fx.shimmerGradient.Offset = Vector2.new(-1 + 2 * sp, 0)
+                        elseif fx.shimmer.Visible then
+                            fx.shimmer.Visible = false
+                        end
+                        for n, r in fx.rain do
+                            if since &gt; .2 and since &lt; 3.4 then
+                                local y = ((since - .2) * (150 + n * 9) + n * 61) % 440 - 20
+                                r.Visible = true
+                                place(r, 190 + (n * 47) % 450, y)
+                                r.BackgroundColor3 = if n % 2 == 0 then Theme.Colors.gold else Color3.fromRGB(255, 240, 160)
+                                r.BackgroundTransparency = .1 + .5 * math.abs(math.sin(since * 6 + n))
+                            elseif r.Visible then
+                                r.Visible = false
+                            end
+                        end
+                    end
+                    -- ribbon glow pulse
+                    for n, st in pulseStrokes do st.Thickness = 4 + 1.6 * math.sin(since * 5 + n) end
+                else
+                    -- SPLAT: the build-up glow fades while shells bounce, the yolk plops and the puddle spreads.
+                    local fade = Timeline.easeOut(since / .35)
+                    for n, ring in fx.rings do ring.BackgroundTransparency = 1 - .16 * strength * (1 - fade) * (1 - (n - 1) / (RING_N + 2)) end
+                    fx.backdrop.BackgroundTransparency = 1 - .35 * (1 - fade)
+                    applySplat(since)
+                    local pulseShock = fx.shocks[1]
+                    if pulseShock.Visible then
+                        local pulseScale, pulseAlpha = Timeline.splatPulse(since)
+                        if pulseAlpha &gt;= 1 and since &gt; Timeline.SplatDrop then
+                            pulseShock.Visible = false
+                        else
+                            place(pulseShock, PUDDLE.X, PUDDLE.Y)
+                            fx.shockScales[1].Scale = pulseScale
+                            fx.shockStrokes[1].Transparency = pulseAlpha
+                            fx.shockStrokes[1].Thickness = 2 + 8 * (1 - pulseAlpha)
+                        end
+                    end
+                    for i = 1, count do
+                        local p = fx.particles[i]
+                        local l = life[i]
+                        if since &gt;= l then
+                            if p.Visible then p.Visible = false end
+                        else
+                            vy[i] += GRAVITY * frameDt
+                            px[i] += vx[i] * frameDt
+                            py[i] += vy[i] * frameDt
+                            place(p, px[i], py[i])
+                            p.BackgroundTransparency = math.clamp((since / l - .45) / .55, 0, 1)
+                            p.Rotation += 240 * frameDt
+                        end
+                    end
+                end
+            end
+        end
+        if not motion and not bodyRestored then bodyRestored = true restoreBody() end
+        if not readyShown and (revealStarted or failed) and t &gt;= durs.readyAt + revealT then showHint() end
+    end))
+
+    return {
+        cancel = function() finish() end,
+    }
+end
+
+return Seq
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="RBX276">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -548744,7 +550373,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX270">
+        <Item class="LocalScript" referent="RBX277">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -548756,6 +550385,15 @@ local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Appearance = require(ReplicatedStorage.Shared.EggAppearance)
 local Http = game:GetService("HttpService")
 local watched = setmetatable({}, {__mode = "k"})
+-- The server shell (DinoVisual) shares geometry with the local mesh; keep it invisible on this client or its
+-- original texture z-fights through the genes-painted pattern. Client-local Transparency survives the camera script.
+local function hideShell(character: Model)
+    local shell = character:FindFirstChild("DinoVisual")
+    if not shell or not character:FindFirstChild("LocalMeshVisual") then return end
+    for _, item in shell:GetDescendants() do
+        if item:IsA("BasePart") and item.Transparency ~= 1 then item.LocalTransparencyModifier = 1 item.Transparency = 1 end
+    end
+end
 local function characterVisual(character: Model)
     local root = character:FindFirstChild("HumanoidRootPart")
     local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -548785,6 +550423,7 @@ local function characterVisual(character: Model)
             previous:ScaleTo(scale);previous:PivotTo(groundFrame());previous:SetAttribute("Scale",scale)
             for _,weld in welds do weld.Enabled=true end
         end
+        hideShell(character)
         if previous:GetAttribute("GenesJson")~=genesJson then
             local ok,genes=pcall(function() return Http:JSONDecode(genesJson) end)
             if ok and typeof(genes)=="table" and mutation=="base" then Appearance.apply(previous,genes) end
@@ -548793,7 +550432,9 @@ local function characterVisual(character: Model)
         return
     end
     local overrides=ReplicatedStorage:FindFirstChild("ResourceOverrides")
-    local model = Resources.clone(id)
+    local okGenes,genes=pcall(function() return Http:JSONDecode(genesJson) end)
+    local realGenes=if okGenes and typeof(genes)=="table" and mutation=="base" then genes else nil
+    local model = Resources.clone(id,realGenes)
     if not model then return end
     if not character.Parent or not root.Parent then model:Destroy();return end
     if previous then previous:Destroy() end
@@ -548820,12 +550461,11 @@ local function characterVisual(character: Model)
         end
     end
     model.Parent = character
-    local ok,genes=pcall(function() return Http:JSONDecode(genesJson) end)
-    if ok and typeof(genes)=="table" and mutation=="base" then Appearance.apply(model,genes) end
+    if realGenes then Appearance.apply(model,realGenes) end
     local fallback = character:FindFirstChild("DinoVisual")
     if fallback then
         for _, item in fallback:GetDescendants() do
-            if item:IsA("BasePart") then item.LocalTransparencyModifier = 1 end
+            if item:IsA("BasePart") then item.LocalTransparencyModifier = 1 item.Transparency = 1 end
         end
     end
 end
@@ -548848,9 +550488,12 @@ local function watchCharacter(character: Model)
     for _, attribute in {"SpeciesId", "VisualScale", "GoldVisual", "MutationVisual", "DinoAttached","GenesJson"} do
         character:GetAttributeChangedSignal(attribute):Connect(refresh)
     end
+    character.ChildAdded:Connect(function(child)
+        if child.Name == "DinoVisual" then task.delay(.5, function() hideShell(character) end) end
+    end)
     character.DescendantAdded:Connect(function(item)
         if item:IsA("BasePart") and item:FindFirstAncestor("DinoVisual") and character:FindFirstChild("LocalMeshVisual") then
-            item.LocalTransparencyModifier = 1
+            item.LocalTransparencyModifier = 1 item.Transparency = 1
         end
     end)
     refresh()
@@ -548895,7 +550538,7 @@ RunService.Heartbeat:Connect(function(dt)
     local folder = workspace:FindFirstChild("Food")
     if not folder then return end
     for _, item in folder:GetChildren() do
-        if not item:IsA("BasePart") or not item:GetAttribute("Points") then continue end
+        if not item:IsA("BasePart") or not item:GetAttribute("Points") or item:GetAttribute("KitMesh") then continue end
         local model = foods[item]
         if not model then
             model = RuntimeMeshes.clone(item.Name)
@@ -548917,7 +550560,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX271">
+        <Item class="LocalScript" referent="RBX278">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -549425,7 +551068,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX272">
+  <Item class="Workspace" referent="RBX279">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

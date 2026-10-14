@@ -61,6 +61,8 @@ logos, ground plane or sparkle bursts**. Save the prompt as a `.json` next to th
 | 22 | potion rarity frames (5) | P2 | Card frames for Common grey, Uncommon green, Rare blue, Epic purple, Legendary gold, 512x512, 9-slice, empty centre. |
 | 23 | shop trail icons (10) and aura icons (3) | P2 | One per trail and aura in `ProgressionConfig.luau`, showing the effect as a short glowing swoosh or ring in its colour. Better made **after** item 1, using the Blender renders as reference, so shop and in-game look the same. |
 | 24 | rarity badges (6) | P2 | Small gem badges for the six trail classes (Common to Mythic). |
+| 29 | egg-splat-v1.png (`egg_splat`) | P1 | Subject line: a funny cracked-egg splat seen from slightly above: a glossy golden yolk sitting in a flat spreading puddle of translucent egg white with two small drips and a few tiny shell crumbs. Square canvas. Replaces the native yolk and puddle shapes in the failed-egg hatch (`HatchSequence.luau`). |
+| 30 | egg-shell-v1.png (`egg_shell`) | P1 | Subject line: one cream eggshell half with a jagged cracked rim, dome up, a little yolk gloss inside. The game uses it twice, rotated and mirrored, as the two halves that tumble and bounce in the failed-egg hatch. |
 
 ChatGPT prompt template (fill in the subject line; copy the rest as is):
 
