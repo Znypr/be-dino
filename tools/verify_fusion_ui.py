@@ -59,9 +59,9 @@ assert(S.eggSlotLook({genes={}},true)=="genes")
 assert(S.eggSlotLook({genes={}},false)=="plain")
 assert(S.eggSlotLook({rarity=1},false)=="plain")
 local hidden=S.indexCard(false)
-assert(hidden.silhouette and hidden.locked and hidden.nameText=="???" and hidden.rarityText=="???" and hidden.status=="Not discovered")
+assert(hidden.silhouette and hidden.locked and hidden.nameText=="???" and hidden.rarityText=="???" and hidden.status=="Not discovered" and hidden.showButton==false)
 local shown=S.indexCard(true)
-assert(not shown.silhouette and not shown.locked and shown.nameText==nil and shown.rarityText==nil)
+assert(not shown.silhouette and not shown.locked and shown.nameText==nil and shown.rarityText==nil and shown.showButton==true)
 
 -- ===== Eligibility reasons =====
 local ctx={targetStage="gold",speciesId="compy",patternId="06_wavy_stripes"}
