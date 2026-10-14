@@ -176,6 +176,7 @@ end
 function Theme.animate(target, _, goals) for k, v in goals do target[k] = v end end
 local stubs = {
     UITheme = Theme,
+    Sfx = {play = function() return false end},
     DinosaurPreview = {add = function(parent, species, stage)
         local v = Instance.new("ViewportFrame")
         v.Name = "DinosaurPreview"
@@ -192,7 +193,7 @@ local function requireModule(inst)
     if loaded[name] == nil then loaded[name] = sources[name](inst, requireModule) end
     return loaded[name]
 end
-for _, name in {"Config", "ProgressionConfig", "EggGenetics", "FusionSelection", "UITheme", "DinosaurPreview"} do
+for _, name in {"Config", "ProgressionConfig", "EggGenetics", "FusionSelection", "UITheme", "DinosaurPreview", "Sfx"} do
     local m = Instance.new("ModuleScript") m.Name = name m.Parent = SharedFolder
 end
 for _, name in {"FusionWidgets", "DinoDetails", "PreviewTraits", "FusionMenu"} do
