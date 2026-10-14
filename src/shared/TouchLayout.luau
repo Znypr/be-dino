@@ -176,6 +176,8 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
     local notice = {x = m + 154, y = badgeY, scale = 1, w = 230, h = 16, textSize = 12}
     if TouchLayout.overlaps(TouchLayout.rendered(notice), {x = rail.x, y = rail.y, w = rail.w, h = rail.h}) then
         notice.x, notice.y = m, badgeY + 18
+        -- Seven nav buttons give a wider rail: keep the (short, touch) notice left of it.
+        notice.w = math.max(150, math.min(notice.w, rail.x - m - notice.x - 1))
     end
     return {
         touch = true,

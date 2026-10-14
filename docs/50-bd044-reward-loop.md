@@ -2,6 +2,8 @@
 
 > **Superseded in part 2026-10-13 (owner):** the egg rate is now 40 per 500 food (5,000 -> 400); every 15 / 150 / 300 / 600 / 219 figure below is the earlier prototype. Current values: [59-egg-rate-40.md](59-egg-rate-40.md).
 
+> **Nests superseded 2026-10-14:** the 3-egg / 5-minute / 5-slot bonus nests below are replaced by Egg Nests v2, see [71-egg-nests-v2](71-egg-nests-v2.md). Old saves migrate without loss.
+
 Implemented 2026-10-13 on `claude/bd-044-reward-loop`, based on GitHub main `18856b4`.
 Task status lives only in [Kanban](07-kanban.md) (**Review / test**). Owner intent:
 [reward target](09-reward-economy.md), [AGENTS.md](../AGENTS.md) and

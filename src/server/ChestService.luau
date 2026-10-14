@@ -57,7 +57,7 @@ function ChestService.start(profileRepository)
         player:SetAttribute("LastChestClaimStatus", status)
     end)
 
-    -- BD-044 bonus nests: open one ready nest slot; its eggs join the reveal line next.
+    -- BD-090 egg nests: open one READY nest; its rolled eggs join the reveal line next.
     local claimNest = getRemote(folder, "ClaimNest")
     claimNest.OnServerEvent:Connect(function(player: Player, nestId, ...)
         if select("#", ...) ~= 0 then return end
@@ -71,6 +71,7 @@ function ChestService.start(profileRepository)
         end
         local _, _, status = profileRepository.claimNest(player, nestId)
         player:SetAttribute("LastNestClaimStatus", status)
+        player:SetAttribute("LastNestClaimAt", os.clock()) -- changes every request so the client always sees a repeat
     end)
 
     -- BD-044 reveal-skip preference (UI only; never affects rewards).

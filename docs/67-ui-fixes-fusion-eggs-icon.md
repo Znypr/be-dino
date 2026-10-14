@@ -11,3 +11,7 @@ Check in Studio
 2. Caught Eggs: gene-colored eggs per slot, gray empty slots, nest sprites; hatch reveal unchanged.
 3. GROWTH tile icon looks clean.
 4. Undiscovered Index cards are black silhouettes with `???`; discovered cards unchanged.
+
+Follow-up: undiscovered Index cards
+- No VIEW DINO button at all; the silhouette and "Not discovered" are re-centered so card height stays stable.
+- Soft edge: a second silhouette viewport (82% transparent, ~7% larger) sits under the solid one. Two viewports per undiscovered card, no per-frame work; the underlay is skipped when motion/effects are reduced.

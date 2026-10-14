@@ -32,6 +32,9 @@ class WorldKitTests(unittest.TestCase):
         self.assertEqual({a['family']: a['points'] for a in self.manifest['assets'] if a['kind'] == 'food'}, {'berry': 1, 'fruit': 4, 'egg': 15, 'amber': 50})
         config = (ROOT / 'src/shared/Config.luau').read_text()
         self.assertIn('FoodArtMode = "Legacy"', config); self.assertIn('WorldArtMode = "Legacy"', config)
+        import sys; sys.path.insert(0, str(ROOT / 'tools')); import release_profiles as rp
+        out, report = rp.apply_profile(config, 'playtest')
+        self.assertIn('WorldArtMode = "BiomeKit"', out); self.assertIn('FoodArtMode = "Kit"', out); self.assertIn('WorldArtDensity = 0.35', out)
     def test_no_roblox_ids_invented(self):
         self.assertNotIn('rbxassetid', json.dumps(self.manifest))
 if __name__ == '__main__': unittest.main()

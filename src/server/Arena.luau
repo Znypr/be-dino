@@ -125,7 +125,8 @@ function Arena.build()
     end
     local random = Random.new(1404)
     for side = 1, 4 do
-        for i = 0, 11 do
+        -- BiomeKit keeps every third legacy ring rock (part budget, docs/68); Legacy keeps all twelve per side.
+        for i = 0, 11, (if Config.WorldArtMode == "BiomeKit" then 3 else 1) do
             local t = -extent + i * extent * 2 / 11
             local position = if side == 1 then Vector3.new(t, 0, -extent - 5)
                 elseif side == 2 then Vector3.new(t, 0, extent + 5)

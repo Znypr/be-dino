@@ -753,3 +753,18 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-096 | Backlog | P3 | Equip shimmer audio | none |
 | BD-097 | Backlog | P2 | 12-player phone perf + Studio/Android acceptance | BD-090-095 |
 | BD-098 | Backlog | P3 | Prices and gates for 3 new auras | BD-092 |
+| BD-079 | Backlog | P1 | Dino action animations (procedural, all species): eat, leap/jump stretch+land, death/eaten, bite lunge, turn lean; dust/munch effects reuse SFX; real Blender clips later. Roles: gameplay eng (hooks), tech artist (motion), audio (reuse pack) | BD-043 |
+| BD-080 | Backlog | P1 | Growth/Eggs HUD rework (BD-056 spec): bottom-left egg icon + EGGS N with pop, top-center slim SIZE bar; remove Island/Sanctuary text; replace three-bar icon with growth/dino icon. Roles: UI designer, gameplay eng | BD-044 |
+| BD-081 | Backlog | P1 | Sound style guide + Sound lab page: listen to the 17 sounds, 2-3 variants for hatch/Shiny/fusion/shop/level-up, owner picks by ear; owner uploads, IDs filled in Sfx.luau. Roles: audio, UI (lab page) | BD-063 sfx pack |
+| BD-082 | Review / test | P1 | Potion catalog 12 potions / 5 rarities, 6 offers per 2-minute window, not all available | BD-051 |
+| BD-083 | Backlog | P2 | Fusion Menu density: larger text, clearer ingredient grid, readable at 1080x720 and phone landscape. Roles: UI designer | BD-065 |
+| BD-084 | Backlog | P2 | Aura/trail shop: distinct aura icons and in-world previews; equipped-state feedback. Roles: UI designer, 3D artist | BD-029 |
+| BD-085 | Backlog | P0 | Phone measurement pass (frame time, part counts, world art kit on) before the friends playtest. Roles: QA, tech artist; needs owner Android device | BD-019 |
+| BD-090 | Review / test | P0 | Egg Nests v2 server: separate nest loot, 3 h one-at-a-time queue on server time, storage 5, luck on open, Build 020 migration (docs/71) | BD-044 |
+| BD-091 | Review / test | P0 | Hidden nest drop gate: server-measured run length >= 120 s and >= 8 catches, never shown in UI (docs/71) | BD-090 |
+| BD-092 | Review / test | P0 | Nests menu (7th nav button), cards with state/countdown/progress, OPEN, drop toast, run-end line; nest UI removed from Caught Eggs | BD-090 |
+| BD-093 | Review / test | P1 | tools/verify_nests.py in CI: gate, exactly-once, 15 h queue, offline, cap, luck bounds, migration, budget | BD-090 |
+| BD-094 | Backlog | P1 | Egg-nest icon as real art: bind resources/ui/v2/icons/egg-nest-v1.png after owner upload (replaces PLACEHOLDER code-drawn nest). Roles: UI artist, owner upload | BD-092 |
+| BD-100 | Backlog | P1 | UI copy pass (docs/72): one shared time/percent formatter, remove '5m 0s' and 'x' multipliers everywhere (shops, potions, buffs, nests, weather, HUD), short child-friendly lines. Roles: UI writer, gameplay eng | BD-043 |
+| BD-101 | Backlog | P1 | Potion icons as real art (replace code-drawn bottles, PLACEHOLDER): 12 potions, 5 rarity frames; brief, 2D drafts, pick, final export, owner upload. Roles: UI artist, art director | BD-082 |
+| BD-102 | Backlog | P1 | UI asset production pipeline: brief template, draft/review/final/upload checklist, naming, QA at 64 px and phone size; audit existing code-drawn icons (growth tile, nest sprite, hud icons) and list which are PLACEHOLDER. Roles: art director, tech artist | BD-047 |

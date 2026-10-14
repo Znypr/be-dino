@@ -53,19 +53,32 @@ function Rules.shopOffers(window: number)
         return state/2147483647
     end
     for _=1,6 do nextUnit() end
-    local pool={}
-    for _,item in Config.Potions do table.insert(pool,{item=item,weight=shop.RarityWeights[item.rarity] or 0}) end
+    -- Pools per rarity; each slot picks a rarity (weighted, among rarities with potions left), then a distinct potion.
+    local pools={}
+    for _,item in Config.Potions do
+        pools[item.rarity]=pools[item.rarity] or {}
+        table.insert(pools[item.rarity],item)
+    end
     local offers={}
-    for _=1,math.min(shop.OfferCount,#pool) do
-        local total=0 for _,entry in pool do total+=entry.weight end
+    for _=1,math.min(shop.OfferCount,#Config.Potions) do
+        local total=0
+        for _,rarity in shop.Rarities do if pools[rarity] and #pools[rarity]>0 then total+=shop.RarityWeights[rarity] or 0 end end
         local roll=nextUnit()*total
-        local pick=#pool
-        for i,entry in pool do roll-=entry.weight if roll<0 then pick=i break end end
-        local item=table.remove(pool,pick).item
-        local stockTotal=0 for _,w in shop.StockWeights do stockTotal+=w end
+        local chosen=nil
+        for _,rarity in shop.Rarities do
+            if pools[rarity] and #pools[rarity]>0 then
+                chosen=rarity
+                roll-=shop.RarityWeights[rarity] or 0
+                if roll<0 then break end
+            end
+        end
+        local pool=pools[chosen :: string]
+        local item=table.remove(pool,math.min(#pool,1+math.floor(nextUnit()*#pool)))
+        local weights=shop.StockWeights[item.rarity]
+        local stockTotal=0 for _,w in weights do stockTotal+=w end
         local stockRoll=nextUnit()*stockTotal
-        local stock=#shop.StockWeights
-        for i,w in shop.StockWeights do stockRoll-=w if stockRoll<0 then stock=i break end end
+        local stock=#weights
+        for i,w in weights do stockRoll-=w if stockRoll<0 then stock=i break end end
         table.insert(offers,{id=item.id,stock=stock})
     end
     return offers
@@ -113,7 +126,7 @@ function Rules.valid(p): boolean
         local shop=p.shop
         if typeof(shop)~="table" or not finite(shop.window) or shop.window<0 or shop.window%1~=0 or typeof(shop.bought)~="table" then return false end
         for id,count in shop.bought do
-            if typeof(id)~="string" or not Rules.item(Config.Potions,id) or not finite(count) or count<0 or count%1~=0 or count>#Config.PotionShop.StockWeights then return false end
+            if typeof(id)~="string" or not Rules.item(Config.Potions,id) or not finite(count) or count<0 or count%1~=0 or count>Config.PotionShop.MaxStock then return false end
         end
     end
     for id,count in p.potions do
@@ -207,7 +220,7 @@ function Rules.multipliers(p,species,weather,now,conditionId,mutation)
     for kind,buff in p.buffs do
         if buff.expiresAt>now then
             local item=Rules.item(Config.Potions,buff.id)
-            if item then if kind=="growth" then growth*=item.multiplier elseif kind=="speed" then speed*=item.multiplier end end
+            if item then if kind=="growth" then growth*=item.multiplier elseif kind=="speed" then speed*=item.multiplier elseif kind=="loot" then loot*=item.multiplier end end
         end
     end
     local trail=Rules.item(Config.Trails,p.equippedTrail or "")

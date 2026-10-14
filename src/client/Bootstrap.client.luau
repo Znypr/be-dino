@@ -11,6 +11,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Theme = require(Shared.UITheme)
 local NavigationArtwork = require(Shared.NavigationArtwork)
+local NestQueue = require(Shared.NestQueue)
 local Preview = require(Shared.DinosaurPreview)
 local ModelPreview = require(Shared.ModelPreview)
 local HatchPresentation = require(Shared.HatchPresentation)
@@ -36,7 +37,7 @@ local endRun = remotes:WaitForChild("RequestEndRun") :: RemoteEvent
 local equip = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
 local hatch = remotes:WaitForChild("ClaimChest") :: RemoteEvent
 local setSkipRemote = remotes:WaitForChild("SetRevealSkip") :: RemoteEvent
-local claimNestRemote = remotes:WaitForChild("ClaimNest") :: RemoteEvent -- BD-044 bonus nests
+local claimNestRemote = remotes:WaitForChild("ClaimNest") :: RemoteEvent -- BD-090 egg nests menu
 local fuse = remotes:WaitForChild("MutateSpecies") :: RemoteEvent
 local shopAction=remotes:WaitForChild("ProgressionAction") :: RemoteEvent
 local shopResult=remotes:WaitForChild("ProgressionResult") :: RemoteEvent
@@ -528,41 +529,51 @@ render=function(name: string)
                 header_text()
             end
         end)
+        -- docs/68: 6 offers in a 3x2 grid plus the owned list scroll together, so the panel fits a phone landscape (UIScale) and desktop.
+        local scroller=Instance.new("ScrollingFrame")
+        scroller.Name="PotionScroll"
+        scroller.Position,scroller.Size,scroller.BackgroundTransparency=UDim2.fromOffset(0,34),UDim2.fromOffset(824,368),1
+        scroller.BorderSizePixel,scroller.ScrollBarThickness,scroller.ZIndex,scroller.Parent=0,8,body.ZIndex+1,body
+        scroller.ScrollingDirection=Enum.ScrollingDirection.Y
+        local rarityColor={Common=Color3.fromRGB(176,188,200),Uncommon=C.accent,Rare=C.blue,Epic=C.purple,Legendary=C.gold}
+        local function bottle(item) return "potion_"..item.kind.."_"..item.rarity end -- native vector bottle (PotionArt): shape = effect, trim/glow/pips = rarity
         for i,offer in ProgressionRules.shopOffers(window) do
             local item=ProgressionRules.item(ProgressionConfig.Potions,offer.id)
             local left=ProgressionRules.shopRemaining(p,window,offer.id)
-            local x=(i-1)*276 local y=40
-            local color=if item.rarity=="Legendary" then C.gold elseif item.rarity=="Rare" then C.blue else C.accent
-            local card=box(body,x,y,264,164,C.card,24)
-            art(card,"potion_"..item.kind,8,14,76)
-            label(card,item.name,88,5,167,32,21,color)
-            label(card,item.rarity.." • "..item.multiplier.."x\n"..(item.duration//60).." minutes",86,39,170,50,18)
-            label(card,if left>0 then left.." left" else "Sold Out",86,88,170,24,17,if left>0 then C.gold else C.red)
-            local buy=button(card,if left>0 then item.price.." Crystals" else "SOLD OUT",8,120,248,34,if left>0 then color else C.card,function()
+            local x=((i-1)%3)*276 local y=math.floor((i-1)/3)*140
+            local color=rarityColor[item.rarity] or C.accent
+            local card=box(scroller,x,y,264,132,C.card:Lerp(color,if left>0 then .28 else .08),24)
+            art(card,bottle(item),6,8,64)
+            label(card,item.name,74,3,186,26,19,color)
+            label(card,item.rarity.." "..item.kind.." - "..item.multiplier.."x\n"..(item.duration//60).."m "..(item.duration%60).."s",74,28,186,44,15)
+            label(card,if left>0 then left.." left" else "Sold Out - back later",74,74,186,20,15,if left>0 then C.gold else C.red)
+            local buy=button(card,if left>0 then item.price.." Crystals" else "SOLD OUT",8,96,248,30,if left>0 then color:Lerp(C.panel,.45) else C.card,function()
                 if left>0 then chosenPotion=item.id open("potionConfirm") end
             end)
-            buy.TextSize=17
+            buy.TextSize=16
         end
-        label(body,"Your potions (tap to use)",0,212,824,26,18,C.gold)
+        label(scroller,"Rarer potions appear less often. Six of twelve are offered each restock.",0,284,824,22,15,C.gold)
+        label(scroller,"Your potions (tap to use)",0,310,824,24,18,C.gold)
         local slot=0
         for _,item in ProgressionConfig.Potions do
             local owned=p.potions[item.id] or 0
             if owned>0 then
-                local x=(slot%3)*276 local y=240+math.floor(slot/3)*46
+                local x=(slot%3)*276 local y=338+math.floor(slot/3)*46
                 slot+=1
-                button(body,item.name.." x"..owned.."  USE",x,y,264,40,C.purple,function()
+                button(scroller,item.name.." x"..owned.."  USE",x,y,264,40,C.purple,function()
                     chosenPotion=item.id
                     local buff=p.buffs[item.kind]
                     if buff and buff.expiresAt>workspace:GetServerTimeNow() then open("potionReplace") else transact("usePotion",item.id,false) end
-                end).TextSize=17
+                end).TextSize=16
             end
         end
-        if slot==0 then label(body,"No potions yet. Buy from today's offers above.",0,244,824,32,18) end
+        if slot==0 then label(scroller,"No potions yet. Buy from this restock's offers above.",0,338,824,32,18) end
+        scroller.CanvasSize=UDim2.fromOffset(0,338+math.max(1,math.ceil(slot/3))*46+8)
     elseif name=="potionConfirm" or name=="potionReplace" then
         local item=ProgressionRules.item(ProgressionConfig.Potions,chosenPotion)
         local replacing=name=="potionReplace"
         heading.Text,header.BackgroundColor3=if replacing then "Replace Active Potion?" else "Buy Potion?",C.accent
-        art(body,"potion_"..item.kind,30,22,220)
+        art(body,"potion_"..item.kind.."_"..item.rarity,30,22,220)
         label(body,item.name.." • "..item.multiplier.."x "..item.kind,290,15,510,62,28)
         label(body,if replacing then "Your current "..item.kind.." potion ends immediately. Its remaining time is lost. Consume 1 potion for a fresh "..(item.duration//60).." minutes?" else (item.duration//60).." minutes • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
         button(body,if replacing then "REPLACE & USE" else "BUY POTION",290,263,510,58,C.accent,function()
@@ -592,14 +603,23 @@ render=function(name: string)
             Theme.texture(card,264,cardHeight)
             label(card,look.nameText or Config.SpeciesDisplayNames[id],4,8,256,35,25)
             label(card,look.rarityText or rarityNames[rarity],4,44,256,25,18)
-            if found then hero(card,id,7,70,250,128,bestMutation(id))
+            if found then
+                hero(card,id,7,70,250,128,bestMutation(id))
+                label(card,if event then event.name.." mutation" elseif ownedTraits(id) then "Special variant" else string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond),5,201,254,25,15)
+                button(card,"VIEW DINO",12,233,240,cardButtonHeight,C.card,function() selected=id open("detail") end)
             else
+                -- No button: silhouette block re-centered in the freed space. Soft edge = a faint, slightly larger
+                -- copy underneath (2 viewports max, no per-frame work); skipped when motion/effects are reduced.
+                local blockY=70+math.floor((cardButtonHeight+12)/2)
+                if motion then
+                    local halo=Preview.add(card,id,"silhouette")
+                    halo.Name,halo.ImageTransparency=("SilhouetteSoftEdge"),.82
+                    halo.Position,halo.Size=UDim2.fromOffset(-2,blockY-9),UDim2.fromOffset(268,146)
+                end
                 local view=Preview.add(card,id,"silhouette")
-                view.Position,view.Size=UDim2.fromOffset(7,70),UDim2.fromOffset(250,128)
+                view.Position,view.Size=UDim2.fromOffset(7,blockY),UDim2.fromOffset(250,128)
+                label(card,look.status,5,blockY+134,254,25,15)
             end
-            label(card,if not found then look.status elseif event then event.name.." mutation" elseif ownedTraits(id) then "Special variant" else string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond),5,201,254,25,15)
-            local view=button(card,"VIEW DINO",12,233,240,cardButtonHeight,if found then C.card else C.outline,function() if found then selected=id open("detail") end end)
-            if not found then view.Active,view.AutoButtonColor,view.TextTransparency,view.BackgroundTransparency=false,false,.55,.4 end
         end
         meter(body,0,356,600,unlocked,#Config.SpeciesOrder,C.accent,string.format("Discovered: %d / %d",unlocked,#Config.SpeciesOrder))
         button(body,"FUSION",624,350,200,44,C.gold,function() openFusion() end)
@@ -699,33 +719,88 @@ render=function(name: string)
             autoHatching=true
             hatchNext()
         end)
-        -- BD-044 (minimal, isolated hook): banked run eggs and separate bonus nests.
-        local nestsOk,nests=pcall(function() return Http:JSONDecode(str("NestsJson","[]")) end)
-        if not nestsOk or typeof(nests)~="table" then nests={} end
-        local readyNest=nil
-        for _,nest in nests do if typeof(nest.readyAt)=="number" and nest.readyAt<=workspace:GetServerTimeNow() then readyNest=nest break end end
-        for n=1,Config.NestSlotCapacity do -- nest sprites: twig ring + egg, gold egg when ready
-            local ready=nests[n]~=nil and typeof(nests[n].readyAt)=="number" and nests[n].readyAt<=workspace:GetServerTimeNow()
-            local slotBox=Instance.new("Frame")
-            slotBox.Name,slotBox.BackgroundTransparency,slotBox.Size,slotBox.Position,slotBox.ZIndex,slotBox.Parent="Nest"..n,1,UDim2.fromOffset(40,26),UDim2.fromOffset(420+(n-1)*46,278),24,body
-            local function blob(color: Color3,w: number,h: number,x: number,y: number,z: number)
-                local f=Instance.new("Frame")
-                f.BorderSizePixel,f.BackgroundColor3,f.Size,f.Position,f.ZIndex=0,color,UDim2.fromOffset(w,h),UDim2.fromOffset(x,y),z
-                local c=Instance.new("UICorner") c.CornerRadius=UDim.new(.5,0) c.Parent=f
-                f.Parent=slotBox
+        label(body,"Eggs waiting: "..num("QueuedEggsWaiting"),420,310,400,44,22)
+    elseif name=="nests" then
+        -- BD-090: separate Egg Nests menu (never mixed with the run eggs in Caught Eggs).
+        heading.Text,header.BackgroundColor3="Egg Nests",C.gold
+        local nestOk,nestList=pcall(function() return Http:JSONDecode(str("NestsJson","[]")) end)
+        if not nestOk or typeof(nestList)~="table" then nestList={} end
+        local duration=Config.NestIncubationSeconds
+        local function formatWait(seconds: number): string -- docs/72: round, drop zeros ("2 h", "40 min", "30 s")
+            seconds=math.max(0,math.ceil(seconds))
+            if seconds>=3600 then
+                local hours,minutes=seconds//3600,math.floor((seconds%3600)/60+.5)
+                if minutes>=60 then hours+=1 minutes=0 end
+                return if minutes==0 then hours.." h" else hours.." h "..minutes.." min"
             end
-            if nests[n] then
-                blob(Color3.fromRGB(126,88,52),40,14,0,12,24)
-                blob(if ready then C.gold else Color3.fromRGB(240,228,196),16,20,12,0,25)
-                blob(Color3.fromRGB(96,64,36),40,7,0,18,26)
+            if seconds>=60 then return math.ceil(seconds/60).." min" end
+            return seconds.." s"
+        end
+        local storage=label(body,"Nests "..#nestList.."/"..Config.NestStorageCapacity,0,0,300,30,24,C.gold)
+        storage.TextXAlignment=Enum.TextXAlignment.Left
+        local luckLine=label(body,"Nest eggs are lucky: better rarity, condition, Shiny and BIG odds.",300,2,524,28,16)
+        luckLine.TextXAlignment=Enum.TextXAlignment.Right
+        local list=Instance.new("ScrollingFrame")
+        list.Name,list.BackgroundTransparency,list.BorderSizePixel,list.ZIndex,list.Parent="NestList",1,0,24,body
+        list.Position,list.Size=UDim2.fromOffset(0,36),UDim2.fromOffset(824,296)
+        list.CanvasSize,list.ScrollBarThickness=UDim2.fromOffset(0,math.max(296,#nestList*60)),6
+        local rows={}
+        for index,nest in nestList do
+            local card=box(list,0,(index-1)*60,812,56,C.card,25)
+            art(card,"egg_nest",8,5,46)
+            local title=label(card,"Nest: "..tostring(nest.size).." eggs",64,2,230,28,22)
+            title.TextXAlignment=Enum.TextXAlignment.Left
+            local chip=box(card,300,5,120,26,C.card,26)
+            local chipText=label(chip,"",0,0,120,26,17)
+            local timeText=label(card,"",430,2,190,28,19)
+            timeText.TextXAlignment=Enum.TextXAlignment.Left
+            local track=box(card,64,38,556,12,C.outline,26)
+            local fill=box(track,0,0,556,12,C.accent,27)
+            local openButton=button(card,"OPEN",632,5,170,46,C.accent,function()
+                Sfx.play("shop_buy")
+                claimNestRemote:FireServer(nest.id)
+            end)
+            rows[index]={chip=chip,chipText=chipText,timeText=timeText,fill=fill,openButton=openButton}
+        end
+        local footer=label(body,"",0,336,824,62,17,C.text)
+        local function refreshNests()
+            local now=math.floor(workspace:GetServerTimeNow())
+            local projected=NestQueue.project(nestList,now,duration)
+            local waitingCount,incubatingCount=0,0
+            for index,nest in projected do
+                local row=rows[index]
+                if row then
+                    local remaining=if nest.readyAt then nest.readyAt-now else duration
+                    if nest.state=="ready" then
+                        row.chipText.Text,row.chip.BackgroundColor3="Ready",C.accent
+                        row.timeText.Text="Ready to open"
+                        row.fill.Size=UDim2.fromOffset(556,12)
+                    elseif nest.state=="incubating" then
+                        incubatingCount+=1
+                        row.chipText.Text,row.chip.BackgroundColor3="Incubating",C.gold
+                        row.timeText.Text="Ready in "..formatWait(remaining)
+                        row.fill.Size=UDim2.fromOffset(math.floor(556*math.clamp(1-remaining/duration,0,1)),12)
+                    else
+                        waitingCount+=1
+                        row.chipText.Text,row.chip.BackgroundColor3="Waiting",C.blue
+                        row.timeText.Text="Starts after the one before"
+                        row.fill.Size=UDim2.fromOffset(0,12)
+                    end
+                    row.openButton.Visible=nest.state=="ready"
+                end
+            end
+            if #nestList==0 then
+                footer.Text="No egg nests yet. Look for one at the end of a run."
             else
-                blob(Color3.fromRGB(64,66,78),40,14,0,12,24)
+                footer.Text="One nest hatches at a time, "..math.floor(duration/3600).." h each. The next starts when this one is ready, even while you are away."
             end
         end
-        label(body,"Eggs waiting: "..num("QueuedEggsWaiting").."\nBonus nests: "..#nests.."/"..Config.NestSlotCapacity.."  •  Pending: "..num("PendingNestCount"),420,308,400,44,17)
-        button(body,if readyNest then "OPEN BONUS NEST" else "NEST INCUBATING",420,354,400,40,if readyNest then C.gold else C.card,function()
-            if not readyNest then notify(if #nests==0 then "No bonus nests yet" else "Bonus nest still incubating",C.gold) return end
-            claimNestRemote:FireServer(readyNest.id)
+        refreshNests()
+        task.spawn(function() -- live countdown: cheap text/size updates once a second, stops when the list is gone
+            while list.Parent and active=="nests" do
+                task.wait(1)
+                if list.Parent and active=="nests" then refreshNests() end
+            end
         end)
     elseif name=="hatch" then
         heading.Text,header.BackgroundColor3="An egg is hatching...",C.gold
@@ -908,7 +983,7 @@ rail=box(gui,14,0,186,444,C.panel,2)
 rail.AnchorPoint,rail.Position=Vector2.new(0,.5),UDim2.new(0,14,.5,0)
 local railScale=Instance.new("UIScale") railScale.Parent=rail
 local navigationButtons = {}
-for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
+for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"NESTS","egg_nest","nests",C.gold},{"FUSION","fusion","fusion",C.purple},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
     local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() if entry[3]=="fusion" then openFusion() else open(entry[3]) end end)
     b.TextSize=20
     art(b,NavigationArtwork[entry[3]] or entry[2],5,6,40)
@@ -1224,7 +1299,7 @@ local function scheduleModalRefresh()
     refreshQueued=true
     task.defer(function()
         refreshQueued=false
-        if table.find({"collection","detail","fusion","eggs","auras","potions","settings"},active) then
+        if table.find({"collection","detail","fusion","eggs","nests","auras","potions","settings"},active) then
             body:ClearAllChildren()
             render(active)
         end
@@ -1258,6 +1333,15 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
         repeat task.wait(.1) until serial~=hatchCancelSerial or os.clock()>deadline
             or (player.Character and player.Character:GetAttribute("RunState")=="Sanctuary")
         if serial==hatchCancelSerial and player.Character and player.Character:GetAttribute("RunState")=="Sanctuary" then
+            if num("LastRunNestCount")>0 then
+                local nestOk,nestList=pcall(function() return Http:JSONDecode(str("NestsJson","[]")) end)
+                local waitSeconds=Config.NestIncubationSeconds
+                if nestOk and typeof(nestList)=="table" then
+                    waitSeconds=NestQueue.secondsUntilAllReady(nestList,math.floor(workspace:GetServerTimeNow()),Config.NestIncubationSeconds)
+                end
+                notify("New Egg Nest! Hatches in "..math.max(1,math.ceil(waitSeconds/3600)).." h",C.gold)
+                Sfx.play("shop_buy")
+            end
             if num("LastRunCrystalBox")>0 then
                 open("crystalReveal")
                 local version=modalVersion
@@ -1271,12 +1355,22 @@ end)
 player:GetAttributeChangedSignal("LastExitStatusAt"):Connect(function()
     if str("LastExitStatus")=="predator_nearby" then notify("A bigger dino is too close to go home!",C.red) end
 end)
+player:GetAttributeChangedSignal("LastNestClaimAt"):Connect(function()
+    if str("LastNestClaimStatus")~="opened" then return end
+    Sfx.play("level_up")
+    notify("Nest opened! Eggs are hatching",C.accent)
+    if str("NextChestId")~="" then autoHatching=true hatchNext() end
+end)
 player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)
 for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus","LastNestClaimStatus","LastRunStartStatus"} do
     player:GetAttributeChangedSignal(attribute):Connect(function()
         local status=str(attribute)
         if attribute=="LastChestClaimStatus" then hatchPending=false end
         if status=="claimed" then toast.Visible=false
+        elseif attribute=="LastNestClaimStatus" then
+            if status=="not_ready" or status=="nest_pending" then notify("That nest is still incubating",C.gold)
+            elseif status=="bank_full" then notify("Hatch some eggs first, then open this nest",C.gold)
+            elseif status~="opened" and status~="duplicate" and status~="" then notify(status:gsub("_"," "),C.red) end
         elseif status=="equipped" or status=="mutated" or status=="opened" then notify("Success!",C.accent)
         elseif status~="" and status~="duplicate" then notify(status:gsub("_"," "),C.red) end
     end)
