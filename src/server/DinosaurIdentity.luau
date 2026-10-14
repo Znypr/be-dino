@@ -26,7 +26,7 @@ local function buckets(collection)
         for _, stage in {"base", "gold", "diamond"} do
             result[speciesId .. "/" .. stage] = {speciesId = speciesId, stage = stage, count = entry[stage]}
         end
-        -- Additive optional Emerald counter (BD-057 ladder 50/10/3): nil means 0.
+        -- Additive optional Emerald counter (BD-057 ladder 15/4/2): nil means 0.
         result[speciesId .. "/emerald"] = {speciesId = speciesId, stage = "emerald", count = if entry.emerald == nil then 0 else entry.emerald}
         for mutationId, count in entry.events or {} do
             result[speciesId .. "/event/" .. mutationId] = {speciesId = speciesId, stage = "base", count = count, mutationId = mutationId}
@@ -173,10 +173,10 @@ end
 
 -- Data contract only: caller supplies already rolled output. Does not consume or roll.
 -- Immediate parent snapshots retain traits and origins without recursively copying trees.
--- Compact (ladder 50/10/3): speciesId, stage and genes.patternId are identical for every
+-- Compact (ladder 15/4/2): speciesId, stage and genes.patternId are identical for every
 -- parent (recipe-locked), so they are stored once on the record (origin.parentStage)
--- instead of 50 times. Readers fall back to the result's speciesId/pattern.
-Identity.MaxFusionParents = 50
+-- instead of 15 times. Readers fall back to the result's speciesId/pattern.
+Identity.MaxFusionParents = 15
 function Identity.fusionRecord(id, output, parents, operationId, recipeVersion, oddsVersion)
     assert(type(id) == "string" and #id > 0 and #id <= 120, "invalid result ID")
     assert(type(operationId) == "string" and #operationId > 0 and #operationId <= 120, "invalid operation ID")

@@ -193,7 +193,7 @@ scheduleQuote = function()
     if not recipe or not recipe.approved then
         state.quoteStatus, state.quoteMessage = "locked", Sel.LockedStageText
     elseif #state.selection ~= recipe.donorCount then
-        -- Quotes are requested at EXACTLY the recipe count (50 / 10 / 3).
+        -- Quotes are requested at EXACTLY the recipe count (15 / 4 / 2).
         state.quoteStatus = "need"
         state.quoteMessage = if #state.selection < recipe.donorCount
             then "Select " .. (recipe.donorCount - #state.selection) .. " more matching dinos to see exact odds."
@@ -335,7 +335,7 @@ updateColumn = function()
             else UDim2.new(1 / perRow, -4, 0, math.max(18, math.floor(height / rows) - 6))
     end
     if counterMode then
-        -- 50-donor Gold: a compact n/N progress counter (Android landscape safe); the
+        -- 15-donor Gold: a compact n/N progress counter (Android landscape safe); the
         -- selected dinos stay highlighted in the grid and a tap there removes them.
         local bar = W.box(col.slots, UDim2.new(), UDim2.new(), C.outline, 4)
         bar.Name = "Counter"

@@ -576,7 +576,7 @@ render=function(name: string)
         label(stage,rarityNames[index],0,302,380,42,30)
         label(body,"YOUR COLLECTION",414,0,400,42,28)
         label(body,string.format("Base: %d • Gold: %d\nDiamond: %d",base,gold,diamond),414,62,400,92,25)
-        label(body,if event then event.name.." • "..event.growth.."x Growth • "..event.speed.."x Speed" else "Cosmetic fusion: 50 Base → Gold; 50 Gold → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
+        label(body,if event then event.name.." • "..event.growth.."x Growth • "..event.speed.."x Speed" else "Cosmetic fusion: 15 Base → Gold; 4 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
         local equipped=str("EquippedSpeciesId","compy")==selected
         button(body,if equipped then "EQUIPPED" elseif not owned then "LOCKED" else "EQUIP",426,273,372,52,if owned then C.accent else C.card,function()
             if not owned then notify("Hatch reward eggs to discover this dino") return end
@@ -604,7 +604,7 @@ render=function(name: string)
         end)
         button(body,"CHOOSE DINO",70,342,264,47,C.blue,function() open("collection") end)
         local patternHeight=math.min(60,math.max(47,45/viewportScale()))
-        if fusionMenuOk then button(body,"PATTERN FUSION: 10 -> NEW GOLD",400,402-patternHeight,400,patternHeight,C.purple,function() close() FusionMenu.open() end).TextSize=20 end
+        if fusionMenuOk then button(body,"PATTERN FUSION: 15 -> NEW GOLD",400,402-patternHeight,400,patternHeight,C.purple,function() close() FusionMenu.open() end).TextSize=20 end
     elseif name=="fusionConfirm" then
         local diamond=fusionTarget=="diamond"
         local cost=if diamond then Config.DiamondMutationCost else Config.GoldMutationCost

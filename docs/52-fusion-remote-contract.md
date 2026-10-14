@@ -25,8 +25,8 @@ The client (BD-065 Fusion Menu) is built by a separate agent against this docume
   **the client never supplies traits, odds, result IDs or stages beyond `targetStage`.**
 - Strings: 1..120 chars for IDs, 1..80 for `token`, 1..64 for digests, 1..16 for
   `targetStage`. Numbers must be finite integers in range.
-- `donorIds`: a proper array (keys `1..n`, no holes) of 1..50 strings. The exact recipe
-  count (50 for Gold, 10 for Emerald, 3 for Diamond; backward compatible: only the accepted maximum grew) and ownership are enforced afterwards (`wrong_donor_count`,
+- `donorIds`: a proper array (keys `1..n`, no holes) of 1..15 strings. The exact recipe
+  count (15 for Gold, 4 for Emerald, 2 for Diamond; was 50/10/3 until 2026-10-14, so the accepted maximum shrank from 50 to 15) and ownership are enforced afterwards (`wrong_donor_count`,
   `wrong_owner`, ...). IDs are only ever looked up inside the caller's own profile.
 - **Rate limit (PROVISIONAL):** `Config.FusionRequestsPerWindow = 20` requests per player
   per `Config.FusionRateWindowSeconds = 10` s fixed window, counted before validation
@@ -90,7 +90,7 @@ Response:
     consentRequired,   -- true when lossManifest is non-empty
     consentDigest,     -- echo in `fuse` when consentRequired
     quoteDigest,       -- echo in `fuse`; any donor change makes it stale
-    recipeVersion,     -- "gold-same-species-pattern-10-v1"
+    recipeVersion,     -- "gold-same-species-pattern-15-v1"
     oddsVersion,       -- "fusion-odds-provisional-v1"
     odds = {
         shiny = p, big = p,

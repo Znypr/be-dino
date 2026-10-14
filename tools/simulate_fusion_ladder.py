@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Monte Carlo model of the Base -> Gold -> Emerald -> Diamond fusion ladder (BD-057/BD-058).
 
-MODEL, NOT MEASURED GAMEPLAY. DEFAULT scenario = the owner-chosen ladder (2026-10-13):
-Gold = 50 Base, Emerald = 10 Gold, Diamond = 3 Emerald, at 40 eggs per 500 food. The old
-10-Base-Gold candidates remain as a comparison: pass `--gold-donors 10 --emerald-donors 2 3 4 5
---diamond-donors 2 3 4 --eggs-small 15 --eggs-big 150`. See docs/57-fusion-ladder-options.md.
+MODEL, NOT MEASURED GAMEPLAY. DEFAULT scenario = the owner-approved ladder (2026-10-14):
+Gold = 15 Base, Emerald = 4 Gold, Diamond = 2 Emerald, at 40 eggs per 500 food (supersedes
+50/10/3 of 2026-10-13). The old candidates remain as a comparison: pass `--gold-donors 50
+--emerald-donors 10 --diamond-donors 3` (previous ladder) or `--gold-donors 10 --emerald-donors
+2 3 4 5 --diamond-donors 2 3 4 --eggs-small 15 --eggs-big 150`. See docs/57-fusion-ladder-options.md.
+`--hours` prints median hours of heavy play to the FIRST Gold / Emerald / Diamond of any one
+species+pattern at an assumed 180 hatched dinos per hour (1 h = 180 dinos).
 
 Model (numbers read from the repo):
   * One egg -> hatch success ps = 1 - P(cracked) * (1 - 0.2) at the chosen condition-upgrade
@@ -13,7 +16,7 @@ Model (numbers read from the repo):
   * Species by Config.ChestSpeciesWeights (22 species, sum 100); pattern uniform over 8.
   * Every fusion needs same species AND same pattern, and the output keeps that cell, so a
     recipe with d Gold donors (Emerald) and e Emerald donors (Diamond) costs exactly
-    G*d*e Base dinos of ONE species+pattern (G = Gold donors, 50 by default) "cell" (176 cells).
+    G*d*e Base dinos of ONE species+pattern (G = Gold donors, 15 by default) "cell" (176 cells).
   * No pattern research, no Robux, no trading, no donors lost to protection rules.
 Pure standard library, deterministic seeds.
 """
@@ -31,7 +34,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PATTERNS = 8
-GOLD_DONORS = 50  # owner decision 2026-10-13 (the old candidates used 10)
+GOLD_DONORS = 15  # owner decision 2026-10-14 (50 on 2026-10-13; the oldest candidates used 10)
+DINOS_PER_HOUR = 180  # planning assumption: 1 h of heavy play = 180 hatched dinos
 
 
 def load_species_weights(path=None):
@@ -156,6 +160,12 @@ def run(a):
     return res
 
 
+def hours_to_cells(res, dinos_per_hour=DINOS_PER_HOUR):
+    """Median hours (p50 of the any-cell race) per Base-count, from eggs via hatch success."""
+    ps = hatch_success(0)
+    return {b: s["p50"] * ps / dinos_per_hour for b, s in res.items()}
+
+
 def fmt_days(eggs, per_day):
     d = eggs / per_day
     return f"{d:.1f}" if d < 10 else f"{d:.0f}"
@@ -202,10 +212,17 @@ def check():
     for b in bs:
         assert an[b]["mean"] <= tg[b]["mean"], "any-cell must not be slower than a fixed cell"
     assert abs(tg[10]["mean"] / (10 / q) - 1) < 0.06, "targeted MC mean off analytic B/q"
-    own = [50, 500, 1500]
+    own = [15, 60, 120]  # Gold = 15 Base, Emerald = 15*4, Diamond = 15*4*2
     og = targeted(own, q, 300, 5)
-    assert og[50]["p50"] < og[500]["p50"] < og[1500]["p50"], "owner ladder must be monotone"
-    assert abs(og[50]["mean"] / (50 / q) - 1) < 0.15, "owner Gold targeted mean off analytic B/q"
+    assert og[15]["p50"] < og[60]["p50"] < og[120]["p50"], "owner ladder must be monotone"
+    assert abs(og[15]["mean"] / (15 / q) - 1) < 0.15, "owner Gold targeted mean off analytic B/q"
+    fusion = (ROOT / "src/server/IdentityFusion.luau").read_text(encoding="utf-8")
+    counts = [int(x) for x in re.findall(r"donorCount = (\d+), version", fusion)]
+    assert counts == [15, 4, 2], f"IdentityFusion recipes must be 15/4/2, got {counts}"
+    assert (GOLD_DONORS, GOLD_DONORS * 4, GOLD_DONORS * 4 * 2) == tuple(own), "default scenario must be 15/4/2"
+    hrs = hours_to_cells(any_cell(own, cell_probs(species), ps0, 150, 9))
+    for b, lo, hi in ((15, 1.3, 2.2), (60, 7.0, 10.5), (120, 15.0, 22.0)):
+        assert lo <= hrs[b] <= hi, f"any-cell median hours for {b} Base = {hrs[b]:.1f}, outside [{lo}, {hi}] (owner targets 1.7 / 8.8 / 18.7 h)"
     cfg = (ROOT / "src/shared/Config.luau").read_text(encoding="utf-8")
     assert re.search(r"FoodCatchRate = 40 / 500", cfg), "owner decision 2026-10-13: 40 catches per 500 food"
     assert targeted([10], q, 200, 3) == targeted([10], q, 200, 3), "not deterministic"
@@ -223,18 +240,26 @@ def main(argv=None):
     ap.add_argument("--any-trials", type=int, default=300, help="any-cell Monte Carlo trials (slower)")
     ap.add_argument("--tier", type=int, default=0, help="condition upgrade tier 0-6")
     ap.add_argument("--targets", nargs="*", default=["compy", "triceratops", "tyrannosaurus"])
-    ap.add_argument("--emerald-donors", type=int, nargs="*", default=[10])
-    ap.add_argument("--diamond-donors", type=int, nargs="*", default=[3])
+    ap.add_argument("--emerald-donors", type=int, nargs="*", default=[4])
+    ap.add_argument("--diamond-donors", type=int, nargs="*", default=[2])
     ap.add_argument("--gold-donors", type=int, default=GOLD_DONORS)
     ap.add_argument("--eggs-small", type=int, default=40)
     ap.add_argument("--eggs-big", type=int, default=400)
     ap.add_argument("--casual-runs", type=int, default=3, help="runs/day, all small")
     ap.add_argument("--heavy-runs", type=int, default=10, help="runs/day")
     ap.add_argument("--heavy-big-runs", type=int, default=3, help="of the heavy runs, how many are big (5,000-food, 400-egg) runs")
+    ap.add_argument("--hours", action="store_true", help="print median hours to first Gold/Emerald/Diamond (any one species+pattern) at 180 dinos/h")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
     if a.check:
         check()
+        return 0
+    if a.hours:
+        species = load_species_weights()
+        bs = sorted({b for _, b in recipes(a)})
+        hrs = hours_to_cells(any_cell(bs, cell_probs(species), hatch_success(a.tier), max(a.any_trials, 1000), a.seed + 1))
+        for label, b in recipes(a):
+            print(f"{label}: {b} Base, median {hrs[b]:.1f} h at {DINOS_PER_HOUR} dinos/h")
         return 0
     r = run(a)
     print(json.dumps(r, indent=1) if a.json else render(r))

@@ -1,0 +1,160 @@
+{
+  "sampleRate": 44100,
+  "bitDepth": 16,
+  "channels": 1,
+  "sounds": [
+    {
+      "name": "hatch_crack",
+      "file": "hatch_crack.wav",
+      "durationSeconds": 0.45,
+      "peakDbfs": -3.0,
+      "suggestedVolume": 0.6,
+      "suggestedRateJitter": 0.08,
+      "trigger": "Egg starts cracking open (hatch sequence beat 1)."
+    },
+    {
+      "name": "hatch_common",
+      "file": "hatch_common.wav",
+      "durationSeconds": 0.75,
+      "peakDbfs": -3.0,
+      "suggestedVolume": 0.6,
+      "suggestedRateJitter": 0.05,
+      "trigger": "Common dino revealed; soft two-note chirp, safe to repeat every second."
+    },
+    {
+      "name": "hatch_rare",
+      "file": "hatch_rare.wav",
+      "durationSeconds": 1.45,
+      "peakDbfs": -3.0,
+      "suggestedVolume": 0.7,
+      "suggestedRateJitter": 0.04,
+      "trigger": "Rare dino revealed; brighter bell arpeggio."
+    },
+    {
+      "name": "hatch_legendary",
+      "file": "hatch_legendary.wav",
+      "durationSeconds": 2.45,
+      "peakDbfs": -3.0,
+      "suggestedVolume": 0.8,
+      "suggestedRateJitter": 0.0,
+      "trigger": "Legendary reveal; rising stinger with sparkle payoff. Use sparingly."
+    },
+    {
+      "name": "shiny_bang",
+      "file": "shiny_bang.wav",
+      "durationSeconds": 1.7,
+      "peakDbfs": -3.0,
+      "suggestedVolume": 0.65,
+      "suggestedRateJitter": 0.05,
+      "trigger": "Shiny / gold variant reveal; high sparkly shimmer layered on the hatch sound."
+    },
+    {
+      "name": "big_thud",
+      "file": "big_thud.wav",
+      "durationSeconds": 0.6,
+      "peakDbfs": -3.0,
+      "suggestedVolume": 0.7,
+      "suggestedRateJitter": 0.06,
+      "trigger": "Heavy landing, big dino stomp or boss egg drop; low punch."
+    },
+    {
+      "name": "pickup",
+      "file": "pickup.wav",
+      "durationSeconds": 0.14,
+      "peakDbfs": -3.0,
+      "suggestedVolume": 0.35,
+      "suggestedRateJitter": 0.12,
+      "trigger": "Food or item collected; very short, use rate jitter on every play."
+    },
+    {
+      "name": "pickup_hi",
+      "file": "pickup_hi.wav",
+      "durationSeconds": 0.14,
+      "peakDbfs": -3.0,
+      "suggestedVolume": 0.35,
+      "suggestedRateJitter": 0.1,
+      "trigger": "Pickup pitch variant (chain/combo, higher)."
+    },
+    {
+      "name": "pickup_lo",
+      "file": "pickup_lo.wav",
+      "durationSeconds": 0.14,
+      "peakDbfs": -3.0,
+      "suggestedVolume": 0.35,
+      "suggestedRateJitter": 0.1,
+      "trigger": "Pickup pitch variant (lower, alternate)."
+    },
+    {
+      "name": "run_start",
+      "file": "run_start.wav",
+      "durationSeconds": 0.5,
+      "peakDbfs": -3.0,
+      "suggestedVolume": 0.5,
+      "suggestedRateJitter": 0.04,
+      "trigger": "PvP/run round begins; rising whoosh and ping."
+    },
+    {
+      "name": "run_end",
+      "file": "run_end.wav",
+      "durationSeconds": 1.1,
+      "peakDbfs": -3.0,
+      "suggestedVolume": 0.5,
+      "suggestedRateJitter": 0.03,
+      "trigger": "Run ends; gentle descending three notes."
+    },
+    {
+      "name": "shop_buy",
+      "file": "shop_buy.wav",
+      "durationSeconds": 0.8,
+      "peakDbfs": -3.0,
+      "suggestedVolume": 0.55,
+      "suggestedRateJitter": 0.06,
+      "trigger": "Purchase confirmed; coin-like clink."
+    },
+    {
+      "name": "shop_refresh",
+      "file": "shop_refresh.wav",
+      "durationSeconds": 1.4,
+      "peakDbfs": -3.0,
+      "suggestedVolume": 0.45,
+      "suggestedRateJitter": 0.03,
+      "trigger": "Potion shop stock refreshed; soft chime."
+    },
+    {
+      "name": "weather_start",
+      "file": "weather_start.wav",
+      "durationSeconds": 1.8,
+      "peakDbfs": -3.0,
+      "suggestedVolume": 0.4,
+      "suggestedRateJitter": 0.03,
+      "trigger": "Weather event begins; soft wind swell."
+    },
+    {
+      "name": "level_up",
+      "file": "level_up.wav",
+      "durationSeconds": 1.4,
+      "peakDbfs": -3.0,
+      "suggestedVolume": 0.6,
+      "suggestedRateJitter": 0.02,
+      "trigger": "Player level up; short rising arpeggio."
+    },
+    {
+      "name": "fusion_reveal",
+      "file": "fusion_reveal.wav",
+      "durationSeconds": 2.4,
+      "peakDbfs": -3.0,
+      "suggestedVolume": 0.8,
+      "suggestedRateJitter": 0.0,
+      "trigger": "Fusion result reveal; ~2 s build-up then payoff hit."
+    },
+    {
+      "name": "ui_click",
+      "file": "ui_click.wav",
+      "durationSeconds": 0.05,
+      "peakDbfs": -3.0,
+      "suggestedVolume": 0.35,
+      "suggestedRateJitter": 0.08,
+      "trigger": "Any button press; tiny tick."
+    }
+  ]
+}
