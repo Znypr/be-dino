@@ -370808,37 +370808,39 @@ return RuntimeMeshes
         <Properties>
           <string name="Name">Sfx</string>
           <ProtectedString name="Source">--!strict
--- Polish pass: one table of named UI/gameplay sounds. Every id is an EMPTY PROVISIONAL placeholder
--- until the owner uploads the audio pack (docs/62). Empty or malformed ids are a silent no-op, so the
--- game stays silent (never errors) until ids are filled. Honors the SOUND ON/OFF setting
+-- Polish pass: one table of named UI/gameplay sounds. The 17-sound pack was uploaded by the owner on 2026-10-15
+-- (docs/77); hatch_rattle and hatch_burst still have no sound and stay empty (silent). Empty or malformed ids are a
+-- silent no-op, so a missing sound never errors. Honors the SOUND ON/OFF setting
 -- (Theme.HatchSoundEnabled). Sound instances are pooled per name; repeats are throttled.
 local Sfx = {}
 -- id = "" PROVISIONAL (do not invent ids). gap = minimum seconds between plays of the same name.
 Sfx.Sounds = {
-    hatch_crack = {id = "", volume = .6, rate = 1, gap = .12},
-    hatch_common = {id = "", volume = .6, rate = 1, gap = .2},
-    hatch_rare = {id = "", volume = .7, rate = 1, gap = .2},
-    hatch_legendary = {id = "", volume = .85, rate = 1, gap = .2},
+    hatch_crack = {id = "rbxassetid://135613869332284", volume = .6, rate = 1, gap = .12},
+    hatch_common = {id = "rbxassetid://123602379376075", volume = .6, rate = 1, gap = .2},
+    hatch_rare = {id = "rbxassetid://100769608611671", volume = .7, rate = 1, gap = .2},
+    hatch_legendary = {id = "rbxassetid://109331854464968", volume = .85, rate = 1, gap = .2},
     -- Hatch sequence hooks (HatchTimeline cues): silent until ids are bound.
     hatch_rattle = {id = "", volume = .5, rate = 1, gap = .12},
-    hatch_crack_stage = {id = "", volume = .6, rate = 1, gap = .2},
+    hatch_crack_stage = {id = "rbxassetid://135613869332284", volume = .6, rate = 1, gap = .2},
     hatch_burst = {id = "", volume = .8, rate = 1, gap = .3},
-    hatch_reveal_common = {id = "", volume = .6, rate = 1, gap = .2},
-    hatch_reveal_uncommon = {id = "", volume = .65, rate = 1, gap = .2},
-    hatch_reveal_rare = {id = "", volume = .75, rate = 1, gap = .2},
-    hatch_reveal_epic = {id = "", volume = .85, rate = 1, gap = .2},
-    hatch_reveal_legendary = {id = "", volume = .95, rate = 1, gap = .2},
-    shiny_bang = {id = "", volume = .8, rate = 1, gap = .3},
-    big_thud = {id = "", volume = .8, rate = 1, gap = .3},
-    pickup = {id = "", volume = .35, rate = 1, gap = .06},
-    run_start = {id = "", volume = .6, rate = 1, gap = .5},
-    run_end = {id = "", volume = .6, rate = 1, gap = .5},
-    shop_buy = {id = "", volume = .6, rate = 1, gap = .15},
-    shop_refresh = {id = "", volume = .45, rate = 1, gap = .5},
-    weather_start = {id = "", volume = .6, rate = 1, gap = 1},
-    level_up = {id = "", volume = .7, rate = 1, gap = .5},
-    fusion_reveal = {id = "", volume = .75, rate = 1, gap = .3},
-    ui_click = {id = "", volume = .4, rate = 1, gap = .04},
+    hatch_reveal_common = {id = "rbxassetid://123602379376075", volume = .6, rate = 1, gap = .2},
+    hatch_reveal_uncommon = {id = "rbxassetid://123602379376075", volume = .65, rate = 1, gap = .2},
+    hatch_reveal_rare = {id = "rbxassetid://100769608611671", volume = .75, rate = 1, gap = .2},
+    hatch_reveal_epic = {id = "rbxassetid://109331854464968", volume = .85, rate = 1, gap = .2},
+    hatch_reveal_legendary = {id = "rbxassetid://109331854464968", volume = .95, rate = 1, gap = .2},
+    shiny_bang = {id = "rbxassetid://124365194004947", volume = .8, rate = 1, gap = .3},
+    big_thud = {id = "rbxassetid://88666885925372", volume = .8, rate = 1, gap = .3},
+    pickup = {id = "rbxassetid://97315544055472", volume = .35, rate = 1, gap = .06},
+    pickup_hi = {id = "rbxassetid://86225160041514", volume = .35, rate = 1, gap = .06},
+    pickup_lo = {id = "rbxassetid://80767583749596", volume = .35, rate = 1, gap = .06},
+    run_start = {id = "rbxassetid://87202810278231", volume = .6, rate = 1, gap = .5},
+    run_end = {id = "rbxassetid://127962506254484", volume = .6, rate = 1, gap = .5},
+    shop_buy = {id = "rbxassetid://102585210519734", volume = .6, rate = 1, gap = .15},
+    shop_refresh = {id = "rbxassetid://91960074825710", volume = .45, rate = 1, gap = .5},
+    weather_start = {id = "rbxassetid://120619985059497", volume = .6, rate = 1, gap = 1},
+    level_up = {id = "rbxassetid://135894580270926", volume = .7, rate = 1, gap = .5},
+    fusion_reveal = {id = "rbxassetid://90816090310479", volume = .75, rate = 1, gap = .3},
+    ui_click = {id = "rbxassetid://77237659470894", volume = .4, rate = 1, gap = .04},
 }
 Sfx.PoolSize = 3
 Sfx.Group = "BeDinoSfx"
