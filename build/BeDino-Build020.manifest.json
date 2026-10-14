@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "de16b3b28c0852a85ac5ac6445c92a904bea09b25d76db61db72dbb87f91949a",
+  "place_sha256": "a362615adf885a9fb74e42248aa6555fc4a411f8bf813540380ca8f4e99ae65a",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "33f6491c3921573cdf897028008998b4097b134df9aefad7dee98030a3e62262",
@@ -258,6 +258,6 @@
     "src/client/HatchSequence.luau": "7173fffbb364c8f123afeb91ed622bfab788aa64bf170b38c8d83611fec42cca",
     "src/client/PreviewTraits.luau": "9ab27bd37071412536083ac3a0993fb6344cf1de4ce79f5cc92abbfd55329958",
     "src/client/ResourceVisuals.client.luau": "734cbac841db6a6c88ccda176dabb6c3a9a626c158a10b7da3b1d1723335701d",
-    "src/client/WeatherVisuals.client.luau": "db44662db26a03530ed337c86a89af90e6c39c4ad0500f28fcfd0825593a1c80"
+    "src/client/WeatherVisuals.client.luau": "1c768813fdb5a2623a93bddf6170f9564412dcdd5cae345df93a21e4fd834ef2"
   }
 }

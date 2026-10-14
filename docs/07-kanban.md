@@ -768,6 +768,9 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-142 | Backlog | P1 | Aura shop: cards are boring and the icon is too small. Rework with a large live preview (dino on the rotating sigil, halo and pillar per tier), tier badge (T1/T2/T3), growth bonus as "Growth +35%", and owned or equipped state; should sell the "mythic" fantasy at first glance | BD-110, BD-087 |
 | BD-141 | Backlog | P1 | Condition shop displays are bugged: the five condition tiles show plain cream boxes instead of eggs with the accepted condition looks (Cracked, Dirty, Normal, Rainbow, Astra overlays, docs/39 and docs/77 IDs). Render the real egg with its overlay per tile, keep the percent line, check phone size | BD-039 |
 | BD-140 | Backlog | P2 | Crystal shop: one card per crystal pack (art that grows with pack size, crystal amount, price, bonus tag) instead of the plain row list. Robux packs are off for the playtest, so keep the tab clearly "Coming soon" or hide it there | BD-004 |
+| BD-130 | In progress | P0 | Weather v2: per-event lighting grade, haze, bloom, particle rigs, bolts, lava bombs, quake shake, aurora curtains, blood moon, title card ([84](84-weather-events-v2.md)); owner feedback "weak, boring" | BD-120 |
+| BD-131 | Backlog | P1 | Weather particle textures from Blender (smoke, bolt, rain, snow, ember, dust, ring, curtain flipbooks) | BD-130 |
+| BD-132 | Backlog | P1 | Weather sounds: thunder, rumble, wind, lava impact | BD-130, sfx upload |
 | BD-095 | Backlog | P1 | Effects Full/Lite/Off setting and distance LOD | BD-090 |
 | BD-096 | Backlog | P3 | Equip shimmer audio | none |
 | BD-097 | Backlog | P2 | 12-player phone perf + Studio/Android acceptance | BD-090-095 |
