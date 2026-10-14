@@ -3,15 +3,28 @@
 local Assets=game:GetService("AssetService")
 local RunService=game:GetService("RunService")
 local Http=game:GetService("HttpService")
+local Gate=require(script.Parent.LoadGate)
 local Creatures={}
-local active=0
+-- At most a few concurrent EditableMesh builds. Extra patient requests wait for a slot instead of failing.
+local gate=Gate.new(4)
+Creatures.Gate=gate
 local function frame(v) return CFrame.new(table.unpack(v)) end
-function Creatures.clone(id: string): Model?
+-- Used only when the caller has no genes (e.g. index entry never hatched); real genes are painted in place.
+Creatures.DefaultGenes={conditionId="normal",hatchSuccess=true,primaryColorId="green",secondaryColorId="white",blend=70,patternId="03_round_spots"}
+function Creatures.has(id: string): boolean
+    local source=script.Parent:FindFirstChild("CreatureData")
+    return source~=nil and source:FindFirstChild(id)~=nil and RunService:IsClient()
+end
+local function build(id: string,genes: any?,patient: boolean): Model?
     local source=script.Parent:FindFirstChild("CreatureData")
     local module=if source then source:FindFirstChild(id) else nil
-    if not module or not RunService:IsClient() or active>=12 then return nil end
-    active+=1
+    if not module or not RunService:IsClient() then return nil end
+    if patient then
+        if not Gate.acquire(gate,6,os.clock,task.wait) then return nil end
+    elseif not Gate.tryAcquire(gate) then return nil end
     local mesh
+    local released=false
+    local function release() if not released then released=true Gate.release(gate) end end
     local ok,result=pcall(function()
         local data=Http:JSONDecode(require(module))
         mesh=Assets:CreateEditableMesh()
@@ -37,6 +50,10 @@ function Creatures.clone(id: string): Model?
             mesh:SetFaceNormals(f,{normals[n],normals[n+1],normals[n+2]})
         end
         local part=Assets:CreateMeshPartAsync(Content.fromObject(mesh),{CollisionFidelity=Enum.CollisionFidelity.Box})
+        -- The MeshPart owns a copy: free the EditableMesh budget now, not when the model dies. Holding it made menus and
+        -- previews exhaust the budget so the real character fell back to the primitive blob.
+        mesh:Destroy() mesh=nil
+        release()
         local model=Instance.new("Model")
         model.Name=id
         part.Name="AuthoredBody";part.Anchored=true;part.CanCollide=false;part.CanTouch=false;part.CanQuery=false;part.Massless=true
@@ -76,14 +93,23 @@ function Creatures.clone(id: string): Model?
                 node.Transform=pose.Rotation+pose.Position*scale
             end
         end)
-        require(script.Parent.PatternGenes).apply(part,{conditionId="normal",hatchSuccess=true,primaryColorId="green",secondaryColorId="white",blend=70,patternId="03_round_spots"})
-        model.Destroying:Once(function() connection:Disconnect();mesh:Destroy();active-=1 end)
+        require(script.Parent.PatternGenes).apply(part,if genes then genes else Creatures.DefaultGenes)
+        model.Destroying:Once(function() connection:Disconnect() end)
         return model
     end)
     if ok then return result end
     if mesh then mesh:Destroy() end
-    active-=1
+    release()
     warn("Be Dino creature unavailable: "..id.." ("..tostring(result)..")")
     return nil
+end
+-- patient=true (previews): waits for a load slot and retries once; callers must be able to yield.
+function Creatures.clone(id: string,genes: any?,patient: boolean?): Model?
+    local model=build(id,genes,patient==true)
+    if not model and patient==true and Creatures.has(id) then
+        task.wait(.4)
+        model=build(id,genes,true)
+    end
+    return model
 end
 return Creatures
