@@ -740,7 +740,7 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-076 | Backlog | P3 | NextGoal shows top objective | BD-075 |
 | BD-077 | Backlog | P3 | Objective icons (4 new) | none |
 | BD-078 | Backlog | P2 | Objectives Studio/Android acceptance | BD-072-077 |
-| BD-079 | Backlog | P1 | Dino action animations (procedural, all species): eat, leap/jump stretch+land, death/eaten, bite lunge, turn lean; dust/munch effects reuse SFX; real Blender clips later. Roles: gameplay eng (hooks), tech artist (motion), audio (reuse pack) | BD-043 |
+| BD-079 | Review / test | P1 | Dino action animations (procedural, all species): eat, leap/jump stretch+land, death/eaten, bite lunge, turn lean; dust/munch effects reuse SFX; real Blender clips later. Roles: gameplay eng (hooks), tech artist (motion), audio (reuse pack) | BD-043 |
 | BD-080 | Backlog | P1 | Growth/Eggs HUD rework (BD-056 spec): bottom-left egg icon + EGGS N with pop, top-center slim SIZE bar; remove Island/Sanctuary text; replace three-bar icon with growth/dino icon. Roles: UI designer, gameplay eng | BD-044 |
 | BD-081 | Backlog | P1 | Sound style guide + Sound lab page: listen to the 17 sounds, 2-3 variants for hatch/Shiny/fusion/shop/level-up, owner picks by ear; owner uploads, IDs filled in Sfx.luau. Roles: audio, UI (lab page) | BD-063 sfx pack |
 | BD-082 | Review / test | P1 | Potion catalog 12 potions / 5 rarities, 6 offers per 2-minute window, not all available | BD-051 |

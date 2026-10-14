@@ -117,6 +117,7 @@ function PredationService.start(runLifecycle, dinosaur)
                 end
 
                 if winner and runLifecycle.tryEnd(victim.player, victim.character, "Eaten", winner.player.UserId) then
+                    winner.character:SetAttribute("BiteSeq", numberAttribute(winner.character, "BiteSeq", 0) + 1) -- BD-079 replicated cue for the client bite lunge
                     awardCatch(winner, victim.player.UserId, serverNow)
                     dinosaur.addGrowth(winner.character, Config.PredationGrowthPoints)
                 end

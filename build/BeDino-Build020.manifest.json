@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "7030ae9191c56799dbc938d82f83cc7742d803d1716d03e252de4772b4e2a198",
+  "place_sha256": "12aaf1ff5bac8902598ec22089d4c571a98dc1e8c82c14d1fc1667fa93739c26",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/Artwork.luau": "77bef322245582ebe9cf225c27f3281616a436dd7b1680347bb5cb853f8d2dfe",
@@ -168,6 +168,7 @@
     "src/shared/CreatureGenes/quetzalcoatlus.luau": "b50aadae4c3bc0986c207e07b383a6a31dddcd62e60f6000231f3cc6e3ec640b",
     "src/shared/CreatureGenes/spinosaurus.luau": "b437212b70896505d05d9bf91d0db6498062df5119db74c4c4d8ea4439b680ef",
     "src/shared/CreatureGenes/therizinosaurus.luau": "c324a92a633151b66c6c9e9a57c8a8b711cf69e86b05c7f374722d24fc3e048a",
+    "src/shared/DinoMotion.luau": "c71dd1c2aa6eb100c368052df77f6c4b456df7df04ff7c6369359b9d6705161f",
     "src/shared/DinosaurPreview.luau": "55072c355dc4ac50bf64ed584f366c6c5bd9832302905fa67a19b92f2607cd92",
     "src/shared/DinosaurVisual.luau": "d4ba9376a4f4e6eef95f349fec0fb248bd5ecc8afb90577c7e2bf682539a28aa",
     "src/shared/EggAppearance.luau": "a2b827b7bcd2b5e16239549b9f9c7cf60a7f3592a65e978ce6089fd08ebe2868",
@@ -230,7 +231,7 @@
     "src/server/LeapService.luau": "efa630263f9979e404662bf377414d3349e9f79a312e7f91809b832b45c03d3c",
     "src/server/MovementGuard.luau": "68f1eb76c26659521002602e2e537b3b7706fd87a748bbfc90eb10a103d9b321",
     "src/server/MutationService.luau": "1be0b164544336ab2e5440fb42e0927020ad6b85e8ff9cfe1c75a337be5bf20a",
-    "src/server/PredationService.luau": "122b7c44ed0f01f636c256b9546925ac06140aa32ab8d54650274625d5d67395",
+    "src/server/PredationService.luau": "82ed006d8ef8dbf3ff73f52e6110605e9565ad6c1f00a0fa5389791d0f256a22",
     "src/server/ProfileRepository.luau": "e53deb5cdb5ebad9803a884a45fd2c811937b8d1387a02387c172d4daf266a20",
     "src/server/ProgressionService.luau": "69dc1aa8df12cba5b30ad209887d2fff631fd25ffa16b9bcf074ad35015746fd",
     "src/server/RewardMath.luau": "f52b612c920853b4e0f68c72061e04db5d54865b4da225229db39859e5f7fa23",
@@ -239,6 +240,7 @@
     "src/client/Bootstrap.client.luau": "a11a8cfb0e6d30d5d0959e718227d9e7477b5fa1bb50427ea5cc19907c7e62e2",
     "src/client/CosmeticVisuals.client.luau": "85d567cf577cf91bbc9402ee7a26f11bd705cf4ef8b328ecf350ae569bd82c06",
     "src/client/DinoDetails.luau": "2997fa1005dd0d38bcc1cca686c7d40301f1a6c10b6922e80943b0d911a7795a",
+    "src/client/DinoMotion.client.luau": "16e5de5e4539285d4433cbc62a846ff48baf37d6b5eb3b5fe9dc0707f63e53c8",
     "src/client/FusionMenu.luau": "2bd0602d062df0d9c22a7a6d64f73c0879f59c2ecce542365860812df701e5df",
     "src/client/FusionWidgets.luau": "f0428582feecd3f1601972a48973cccc879db1b97aa2b7171f0a286a7ce9ecc5",
     "src/client/PreviewTraits.luau": "9ab27bd37071412536083ac3a0993fb6344cf1de4ce79f5cc92abbfd55329958",
