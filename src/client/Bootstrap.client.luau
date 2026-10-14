@@ -592,14 +592,23 @@ render=function(name: string)
             Theme.texture(card,264,cardHeight)
             label(card,look.nameText or Config.SpeciesDisplayNames[id],4,8,256,35,25)
             label(card,look.rarityText or rarityNames[rarity],4,44,256,25,18)
-            if found then hero(card,id,7,70,250,128,bestMutation(id))
+            if found then
+                hero(card,id,7,70,250,128,bestMutation(id))
+                label(card,if event then event.name.." mutation" elseif ownedTraits(id) then "Special variant" else string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond),5,201,254,25,15)
+                button(card,"VIEW DINO",12,233,240,cardButtonHeight,C.card,function() selected=id open("detail") end)
             else
+                -- No button: silhouette block re-centered in the freed space. Soft edge = a faint, slightly larger
+                -- copy underneath (2 viewports max, no per-frame work); skipped when motion/effects are reduced.
+                local blockY=70+math.floor((cardButtonHeight+12)/2)
+                if motion then
+                    local halo=Preview.add(card,id,"silhouette")
+                    halo.Name,halo.ImageTransparency=("SilhouetteSoftEdge"),.82
+                    halo.Position,halo.Size=UDim2.fromOffset(-2,blockY-9),UDim2.fromOffset(268,146)
+                end
                 local view=Preview.add(card,id,"silhouette")
-                view.Position,view.Size=UDim2.fromOffset(7,70),UDim2.fromOffset(250,128)
+                view.Position,view.Size=UDim2.fromOffset(7,blockY),UDim2.fromOffset(250,128)
+                label(card,look.status,5,blockY+134,254,25,15)
             end
-            label(card,if not found then look.status elseif event then event.name.." mutation" elseif ownedTraits(id) then "Special variant" else string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond),5,201,254,25,15)
-            local view=button(card,"VIEW DINO",12,233,240,cardButtonHeight,if found then C.card else C.outline,function() if found then selected=id open("detail") end end)
-            if not found then view.Active,view.AutoButtonColor,view.TextTransparency,view.BackgroundTransparency=false,false,.55,.4 end
         end
         meter(body,0,356,600,unlocked,#Config.SpeciesOrder,C.accent,string.format("Discovered: %d / %d",unlocked,#Config.SpeciesOrder))
         button(body,"FUSION",624,350,200,44,C.gold,function() openFusion() end)

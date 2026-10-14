@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "820b1e18ca5ac2890f6b28e99072b6314ec9d6f62ed062596ddec0b776ca1714",
+  "place_sha256": "d82bb03f74d039c5b71eecff417ff8769b8616f0ba450527f1aa6b68c1d97833",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/Artwork.luau": "dbcef755028cbf3e737da0f96178db4e563f73843c0df00ad167ab134f1d066e",
@@ -178,7 +178,7 @@
     "src/shared/EggTraits.luau": "2fa1258002441ecbb7bebc0186257ddb7a05d99006a1453f54c297acfc0f1162",
     "src/shared/EventIconVectors.luau": "4a5bf43178f8adfaedcc64300ba7991b3a61f025cd741bf60c539415a15609b0",
     "src/shared/FoodCatchRules.luau": "c2c6cfa816271218494ca4116f70a1fc0b4b1e82ca2b6592d2d3280b43c4ecd4",
-    "src/shared/FusionSelection.luau": "bde5b8247e8ebbf1e9426f92377339721f6f71902e69232f8fee9053e7cd7e93",
+    "src/shared/FusionSelection.luau": "a3d29dce92f6982c65213836bccea8047058adc3c9e566065fd4ddb6e9f506fb",
     "src/shared/GeneTextureAssets.luau": "79f6f9c881ee1dd53339d188b8656339421489c0117ad6e04fceffd240972c26",
     "src/shared/GeneTextures.luau": "efceb4ab08639f0fce0fb212f4401bb43867c8d11d66f8245241ed639ff35787",
     "src/shared/HatchFragments.luau": "4fb383a9b89c2ff58ffc8b973ed8419d70cb34b840cc3d0662233bbf0c2931ee",
@@ -234,7 +234,7 @@
     "src/server/RewardMath.luau": "cc7dad58b2678f8846955287ce8f42d7ef0c55c643da7c193a710b280011eec4",
     "src/server/RunLifecycle.luau": "c0c2d0a10ab2446edfc09478df1320fd12416e5dce73132879fcc397904f0079",
     "src/server/VisualTestService.luau": "ee48ddc907c11e5d1390483d570d9ab96fd01b3ee02493b5724a2ebcf1ef0773",
-    "src/client/Bootstrap.client.luau": "84bcda4d3ae402ce9bc554890de9441503afac4ede5965eca1b7ed9ed7f1d94d",
+    "src/client/Bootstrap.client.luau": "693b209b100adc154cb9f848890e01f4f036371728ff289117dfe788556d2401",
     "src/client/CosmeticVisuals.client.luau": "85d567cf577cf91bbc9402ee7a26f11bd705cf4ef8b328ecf350ae569bd82c06",
     "src/client/DinoDetails.luau": "2997fa1005dd0d38bcc1cca686c7d40301f1a6c10b6922e80943b0d911a7795a",
     "src/client/FusionMenu.luau": "2bd0602d062df0d9c22a7a6d64f73c0879f59c2ecce542365860812df701e5df",
