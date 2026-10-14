@@ -28,6 +28,10 @@ function Genetics.roll(level,rng)
     genes.blend=if genes.primaryColorId==genes.secondaryColorId then 100 else genes.blend
     return genes
 end
+-- docs/73: plain egg (cream, no pattern) in one condition, for shop swatches. Always valid, never rolls.
+function Genetics.neutral(conditionId)
+    return {conditionId=conditionId,hatchSuccess=true,primaryColorId="white",secondaryColorId="white",blend=100,patternId="01_blank"}
+end
 function Genetics.valid(g)
     if typeof(g)~="table" or not Genetics.condition(g.conditionId) or not Genetics.color(g.primaryColorId)
         or not Genetics.color(g.secondaryColorId) or typeof(g.hatchSuccess)~="boolean"

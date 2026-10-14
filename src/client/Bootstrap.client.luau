@@ -22,6 +22,7 @@ local PreviewTraits=require(script.Parent.PreviewTraits)
 local EggGenetics=require(Shared.EggGenetics)
 local EggAppearance=require(Shared.EggAppearance)
 local ShopOdds=require(Shared.ShopOdds)
+local UIFormat=require(Shared.UIFormat)
 local RevealSkip=require(Shared.RevealSkip)
 local EggOutcomeView=require(Shared.EggOutcomeView)
 local TouchLayout=require(Shared.TouchLayout)
@@ -394,15 +395,18 @@ render=function(name: string)
         elseif cosmeticTab=="conditions" then
             local weights=ShopOdds.conditionPercents(p.conditionLevel or 0) -- BD-045: normalized percents
             local upgrade=ProgressionConfig.ConditionUpgrades[(p.conditionLevel or 0)+1]
-            label(body,"Condition Level "..(p.conditionLevel or 0).."  •  Account "..num("AccountLevel"),0,cardsY,824,35,26,C.gold)
+            -- docs/73: plain egg per condition on a floor swatch; chance only (no stats text, no odds screen).
+            label(body,"Condition level "..(p.conditionLevel or 0),0,cardsY,824,30,24,C.gold)
             for i,row in ProgressionConfig.Conditions do
                 local x=(i-1)*165
-                label(body,row.name,x,cardsY+50,155,35,22)
-                label(body,weights[i].."%\n"..row.stats.."x stats",x,cardsY+87,155,60,21,C.blue)
+                label(body,row.name,x,cardsY+32,155,28,22)
+                local tile=box(body,x,cardsY+62,155,110,Color3.fromRGB(122,148,112):Lerp(C.panel,.25),24)
+                local view=ModelPreview.add(tile,"egg")
+                EggAppearance.apply(view,EggGenetics.neutral(row.id))
+                label(body,string.format("%g%%",weights[i]),x,cardsY+176,155,34,24,C.blue)
             end
-            button(body,"VIEW ODDS",0,cardsY+166,330,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("eggOdds") end)
-            button(body,if upgrade then "UPGRADE: "..upgrade.price.." CRYSTALS" else "MAX LEVEL",348,cardsY+166,476,targetHeight,C.accent,function() if upgrade then open("conditionConfirm") end end).TextSize=20
-            label(body,if upgrade then "Next tier: account level "..upgrade.requiredLevel.."  •  Future eggs only" else "Maximum condition upgrade",0,360,824,35,19,C.gold)
+            button(body,if upgrade then "UPGRADE: "..upgrade.price.." CRYSTALS" else "MAX LEVEL",142,cardsY+220,540,targetHeight,C.accent,function() if upgrade then open("conditionConfirm") end end).TextSize=20
+            label(body,if upgrade then "Unlocks at level "..upgrade.requiredLevel else "Top level reached",0,cardsY+220+targetHeight+6,824,30,19,C.gold)
             return
         elseif cosmeticTab=="crystals" then
             art(body,"amber",20,cardsY+12,220)
@@ -441,7 +445,7 @@ render=function(name: string)
             local color=Color3.fromRGB(item.color[1],item.color[2],item.color[3])
             local card=box(body,slot*276,cardsY,264,cardsHeight,color,24)
             label(card,item.name,6,5,252,34,25)
-            label(card,if isTrail then "Level "..item.level.." • "..item.speed.."x Speed" else item.growth.."x Growth",4,42,256,30,19)
+            label(card,if isTrail then "Level "..item.level.." • "..(UIFormat.boost("Speed",item.speed) or "Speed") else (UIFormat.boost("Growth",item.growth) or "Growth"),4,42,256,30,19)
             art(card,(if isTrail then "trail_" else "aura_")..item.id,102,76,60)
             label(card,if owned[item.id] then "Owned" else item.price.." Crystals",4,buyY-30,256,27,21,C.gold)
             local equipped=equippedId==item.id
@@ -484,15 +488,17 @@ render=function(name: string)
         local price=if isEgg then ProgressionConfig.RandomEggPrice elseif upgrade then upgrade.price else 0
         art(body,"egg",20,15,200)
         label(body,price.." Crystals\nBalance after: "..(num("Crystals")-price),260,10,550,80,27,C.gold)
-        label(body,if isEgg then "Cracked: 20% hatch success. A failed hatch gives no dinosaur or refund. Queue-full purchases are not charged." else "Account level "..(if upgrade then upgrade.requiredLevel else 60).." required. Existing eggs keep their conditions.",260,105,550,95,23)
+        label(body,if isEgg then "Cracked: 20% hatch success. A failed hatch gives no dinosaur or refund. Queue-full purchases are not charged." else "Unlocks at level "..(if upgrade then upgrade.requiredLevel else 60)..". New eggs only.",260,105,550,95,23)
         if not isEgg and upgrade then
             local parts={} for i,row in ProgressionConfig.Conditions do table.insert(parts,row.name.." "..ShopOdds.conditionPercents(upgrade.level)[i].."%") end
             label(body,table.concat(parts," • "),0,213,824,60,21,C.blue)
         end
-        button(body,"VIEW ODDS",0,300,250,math.max(64,45/viewportScale()),C.blue,function()
-            oddsLevelOverride=if not isEgg and upgrade then upgrade.level else nil
-            outcomeState={page=1,filters={}} open("eggOdds")
-        end)
+        if isEgg then -- docs/73: condition odds screen stays out of the UI (egg odds remain)
+            button(body,"VIEW ODDS",0,300,250,math.max(64,45/viewportScale()),C.blue,function()
+                oddsLevelOverride=nil
+                outcomeState={page=1,filters={}} open("eggOdds")
+            end)
+        end
         button(body,"CONFIRM",270,300,270,math.max(64,45/viewportScale()),C.accent,function()
             transact(if isEgg then "buyEgg" else "upgradeCondition",if isEgg then "random" elseif upgrade then tostring(upgrade.level) else "") open("auras")
         end)
@@ -502,7 +508,7 @@ render=function(name: string)
         local item=ProgressionRules.item(if isTrail then ProgressionConfig.Trails else ProgressionConfig.Auras,chosenAura)
         heading.Text,header.BackgroundColor3=if isTrail then "Buy Trail?" else "Buy Aura?",C.purple
         art(body,(if isTrail then "trail_" else "aura_")..item.id,30,25,220)
-        label(body,item.name.." • "..(if isTrail then "Cosmetic trail" else item.growth.."x eating growth"),290,24,510,70,29)
+        label(body,item.name.." • "..(if isTrail then "Cosmetic trail" else (UIFormat.boost("Growth",item.growth) or "Growth")),290,24,510,70,29)
         label(body,item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,125,510,90,25,C.gold)
         button(body,if isTrail then "BUY TRAIL" else "BUY AURA",290,261,510,57,C.accent,function() transact(if isTrail then "buyTrail" else "buyAura",item.id) open("auras") end)
         button(body,"CANCEL",290,337,510,45,C.red,function() open("auras") end)
@@ -515,7 +521,7 @@ render=function(name: string)
         local restock=label(body,"",0,0,824,32,21,C.gold)
         local function header_text()
             local left=math.max(0,math.ceil(ProgressionRules.shopEndsAt(window)-workspace:GetServerTimeNow()))
-            restock.Text=string.format("Crystals: %s  •  Restock in %d:%02d",num("Crystals"),left//60,left%60)
+            restock.Text=string.format("Crystals: %s  •  New offers in %s",num("Crystals"),UIFormat.duration(left))
         end
         header_text()
         task.spawn(function()
@@ -545,7 +551,7 @@ render=function(name: string)
             local card=box(scroller,x,y,264,132,C.card:Lerp(color,if left>0 then .28 else .08),24)
             art(card,bottle(item),6,8,64)
             label(card,item.name,74,3,186,26,19,color)
-            label(card,item.rarity.." "..item.kind.." - "..item.multiplier.."x\n"..(item.duration//60).."m "..(item.duration%60).."s",74,28,186,44,15)
+            label(card,UIFormat.potion(item.kind,item.multiplier,item.duration),74,28,186,44,15)
             label(card,if left>0 then left.." left" else "Sold Out - back later",74,74,186,20,15,if left>0 then C.gold else C.red)
             local buy=button(card,if left>0 then item.price.." Crystals" else "SOLD OUT",8,96,248,30,if left>0 then color:Lerp(C.panel,.45) else C.card,function()
                 if left>0 then chosenPotion=item.id open("potionConfirm") end
@@ -574,8 +580,8 @@ render=function(name: string)
         local replacing=name=="potionReplace"
         heading.Text,header.BackgroundColor3=if replacing then "Replace Active Potion?" else "Buy Potion?",C.accent
         art(body,"potion_"..item.kind.."_"..item.rarity,30,22,220)
-        label(body,item.name.." • "..item.multiplier.."x "..item.kind,290,15,510,62,28)
-        label(body,if replacing then "Your current "..item.kind.." potion ends immediately. Its remaining time is lost. Consume 1 potion for a fresh "..(item.duration//60).." minutes?" else (item.duration//60).." minutes • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
+        label(body,item.name.." • "..UIFormat.potion(item.kind,item.multiplier,item.duration),290,15,510,62,28)
+        label(body,if replacing then "Your current "..item.kind.." potion ends immediately. Its remaining time is lost. Consume 1 potion for a fresh "..UIFormat.duration(item.duration).."?" else UIFormat.duration(item.duration).." • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
         button(body,if replacing then "REPLACE & USE" else "BUY POTION",290,263,510,58,C.accent,function()
             if replacing then transact("usePotion",item.id,true) else transact("buyPotion",item.id.."@"..chosenPotionWindow,false) end
             open("potions")
@@ -634,7 +640,7 @@ render=function(name: string)
         label(stage,rarityNames[index],0,302,380,42,30)
         label(body,"YOUR COLLECTION",414,0,400,42,28)
         label(body,string.format("Base: %d • Gold: %d\nDiamond: %d",base,gold,diamond),414,62,400,92,25)
-        label(body,if event then event.name.." • "..event.growth.."x Growth • "..event.speed.."x Speed" else "Cosmetic fusion: 15 Base → Gold; 4 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
+        label(body,if event then event.name.." • "..table.concat(UIFormat.boostLines(event.growth,event.speed,1)," • ") else "Cosmetic fusion: 15 Base → Gold; 4 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
         local equipped=str("EquippedSpeciesId","compy")==selected
         button(body,if equipped then "EQUIPPED" elseif not owned then "LOCKED" else "EQUIP",426,273,372,52,if owned then C.accent else C.card,function()
             if not owned then notify("Hatch reward eggs to discover this dino") return end
@@ -706,7 +712,7 @@ render=function(name: string)
                 local entry=entries[i]
                 if entry and typeof(entry.readyAt)=="number" then
                     local remaining=math.max(0,entry.readyAt-workspace:GetServerTimeNow())
-                    timer.Text=if remaining<=0 then "READY!" else string.format("%dm %02ds",remaining//60,remaining%60)
+                    timer.Text=if remaining<=0 then "READY!" else UIFormat.duration(remaining)
                 end
             end
         end
@@ -726,16 +732,7 @@ render=function(name: string)
         local nestOk,nestList=pcall(function() return Http:JSONDecode(str("NestsJson","[]")) end)
         if not nestOk or typeof(nestList)~="table" then nestList={} end
         local duration=Config.NestIncubationSeconds
-        local function formatWait(seconds: number): string -- docs/72: round, drop zeros ("2 h", "40 min", "30 s")
-            seconds=math.max(0,math.ceil(seconds))
-            if seconds>=3600 then
-                local hours,minutes=seconds//3600,math.floor((seconds%3600)/60+.5)
-                if minutes>=60 then hours+=1 minutes=0 end
-                return if minutes==0 then hours.." h" else hours.." h "..minutes.." min"
-            end
-            if seconds>=60 then return math.ceil(seconds/60).." min" end
-            return seconds.." s"
-        end
+        local formatWait=UIFormat.duration
         local storage=label(body,"Nests "..#nestList.."/"..Config.NestStorageCapacity,0,0,300,30,24,C.gold)
         storage.TextXAlignment=Enum.TextXAlignment.Left
         local luckLine=label(body,"Nest eggs are lucky: better rarity, condition, Shiny and BIG odds.",300,2,524,28,16)
@@ -822,11 +819,11 @@ render=function(name: string)
         local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
         if genes then
             local condition=EggGenetics.condition(genes.conditionId)
-            label(body,if failed then "Cracked • 20% hatch success" else condition.name.." • "..condition.stats.."x speed & growth",80,295,660,25,20,C.gold)
+            label(body,if failed then "Cracked • 20% hatch" else condition.name,80,295,660,25,20,C.gold)
         elseif mutation then
             local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
             for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.55) end end
-            local perks=label(body,mutation.name.." • "..mutation.growth.."x Growth • "..mutation.speed.."x Speed",80,295,660,25,20,color)
+            local perks=label(body,mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • "),80,295,660,25,20,color)
             perks.Visible=false
             task.delay(math.min(3.4,Config.HatchRevealSeconds*.68),function() if perks.Parent and modalVersion==version then perks.Visible=true end end)
         end
@@ -1097,10 +1094,7 @@ local weatherArt=Theme.icon(weatherTile,"weather")
 if weatherArt then weatherArt.Position,weatherArt.Size=UDim2.fromOffset(4,7),UDim2.fromOffset(48,48) end
 local weatherText=label(weatherTile,"Weather in 10:00",56,0,226,62,20)
 local buffsText=label(timers,"",0,145,286,68,16,C.gold)
-local function timerText(seconds)
-    local value=math.max(0,math.ceil(seconds))
-    return string.format("%d:%02d",value//60,value%60)
-end
+local function timerText(seconds) return UIFormat.duration(seconds) end
 local lastWeather=""
 local function refreshProgressionHUD()
     local now=workspace:GetServerTimeNow()
@@ -1121,10 +1115,11 @@ local function refreshProgressionHUD()
     weatherText.Text=if id=="clear" then "Weather in "..timerText((workspace:GetAttribute("NextWeatherAt") or now)-now) else (workspace:GetAttribute("WeatherName") or id).." "..timerText((workspace:GetAttribute("WeatherEndsAt") or now)-now)
     local p=progression() local lines={}
     for kind,buff in p.buffs do
-        if buff.expiresAt>now then table.insert(lines,kind.." potion "..timerText(buff.expiresAt-now)) end
+        if buff.expiresAt>now then table.insert(lines,string.upper(string.sub(kind,1,1))..string.sub(kind,2).." potion "..timerText(buff.expiresAt-now)) end
     end
     table.sort(lines)
-    table.insert(lines,string.format("Growth %.2fx • Speed %.2fx • Loot %.2fx",num("GrowthMultiplier"),num("SpeedMultiplier"),num("LootMultiplier")))
+    local boosts=UIFormat.boostLines(num("GrowthMultiplier"),num("SpeedMultiplier"),num("LootMultiplier"))
+    if #boosts>0 then table.insert(lines,table.concat(boosts," • ")) end
     buffsText.Text=table.concat(lines,"\n")
     if pendingShop and os.clock()-pendingShop.started>8 then
         -- Retry the same operation token so a delayed result cannot charge twice.
@@ -1339,7 +1334,7 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
                 if nestOk and typeof(nestList)=="table" then
                     waitSeconds=NestQueue.secondsUntilAllReady(nestList,math.floor(workspace:GetServerTimeNow()),Config.NestIncubationSeconds)
                 end
-                notify("New Egg Nest! Hatches in "..math.max(1,math.ceil(waitSeconds/3600)).." h",C.gold)
+                notify("New Egg Nest! Ready in "..UIFormat.duration(math.max(3600,waitSeconds)),C.gold)
                 Sfx.play("shop_buy")
             end
             if num("LastRunCrystalBox")>0 then
