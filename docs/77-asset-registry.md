@@ -62,6 +62,16 @@ Every art asset the game uses at runtime. Add a line here when an asset is added
 | sfx shop_refresh | sound | assets/audio/sfx/shop_refresh.wav | - | src/shared/Sfx.luau | planned |
 | sfx ui_click | sound | assets/audio/sfx/ui_click.wav | - | src/shared/Sfx.luau | planned |
 | sfx weather_start | sound | assets/audio/sfx/weather_start.wav | - | src/shared/Sfx.luau | planned |
+| mythic glow sigil-outer | effect texture (DRAFT) | resources/effects/mythic-glow/sigil-outer.png | - (upload pending) | src/shared/EffectAssets.luau via CosmeticEffects v2: aura ground sigil, outer | planned |
+| mythic glow sigil-inner | effect texture (DRAFT) | resources/effects/mythic-glow/sigil-inner.png | - (upload pending) | src/shared/EffectAssets.luau via CosmeticEffects v2: aura ground sigil, inner (tier 2+) | planned |
+| mythic glow runes | effect texture (DRAFT) | resources/effects/mythic-glow/runes.png | - (upload pending) | src/shared/EffectAssets.luau via CosmeticEffects v2: rune motes (flipbook 4x4) | planned |
+| mythic glow glow-dot | effect texture (DRAFT) | resources/effects/mythic-glow/glow-dot.png | - (upload pending) | src/shared/EffectAssets.luau via CosmeticEffects v2: motes and sigil under-glow | planned |
+| mythic glow ribbon-plain | effect texture (DRAFT) | resources/effects/mythic-glow/ribbon-plain.png | - (upload pending) | src/shared/EffectAssets.luau via CosmeticEffects v2: trail main + navy under-layer | planned |
+| mythic glow ribbon-plasma | effect texture (DRAFT) | resources/effects/mythic-glow/ribbon-plasma.png | - (upload pending) | src/shared/EffectAssets.luau via CosmeticEffects v2: trail strand/braid, aura comets | planned |
+| mythic glow ribbon-lightning | effect texture (DRAFT) | resources/effects/mythic-glow/ribbon-lightning.png | - (upload pending) | src/shared/EffectAssets.luau via CosmeticEffects v2: Electric Arc strand | planned |
+| mythic glow light-pillar | effect texture (DRAFT) | resources/effects/mythic-glow/light-pillar.png | - (upload pending) | src/shared/EffectAssets.luau via CosmeticEffects v2: aura pillar (tier 2+) | planned |
+| mythic glow halo-ring | effect texture (DRAFT) | resources/effects/mythic-glow/halo-ring.png | - (upload pending) | src/shared/EffectAssets.luau via CosmeticEffects v2: head halo (tier 3) | planned |
+| mythic glow twinkle | effect texture (DRAFT) | resources/effects/mythic-glow/twinkle.png | - (upload pending) | src/shared/EffectAssets.luau via CosmeticEffects v2: sparkle pops (flipbook 4x4) | planned |
 
 Notes
 

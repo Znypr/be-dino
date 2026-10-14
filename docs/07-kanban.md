@@ -741,17 +741,17 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-077 | Backlog | P3 | Objective icons (4 new) | none |
 | BD-078 | Backlog | P2 | Objectives Studio/Android acceptance | BD-072-077 |
 | BD-079 | Review / test | P1 | Dino action animations (procedural, all species): eat, leap/jump stretch+land, death/eaten, bite lunge, turn lean; dust/munch effects reuse SFX; real Blender clips later. Roles: gameplay eng (hooks), tech artist (motion), audio (reuse pack) | BD-043 |
-| BD-086 | Backlog | P1 | Pick aura/trail style, freeze spec (doc 70) | none |
-| BD-087 | Backlog | P1 | Aura/trail sprite sheets and textures | BD-086 |
-| BD-088 | Backlog | P2 | Ribbon textures and ground-disc decals | BD-086 |
+| BD-086 | Done | P1 | Pick aura/trail style, freeze spec (doc 70). **Owner picked Mythic Glow 2026-10-14**; frozen spec in [81](81-mythic-glow-v2.md) | none |
+| BD-087 | Review / test | P1 | Aura/trail sprite sheets and textures: 10 Mythic Glow DRAFTS + review sheet ([81](81-mythic-glow-v2.md)); owner review + upload pending | BD-086 |
+| BD-088 | Review / test | P2 | Ribbon textures and ground-disc decals (in the BD-087 set, [81](81-mythic-glow-v2.md)) | BD-086 |
 | BD-089 | Backlog | P1 | Studio spike: trail + aura per tier, ground sigil | BD-086 |
-| BD-110 | Backlog | P1 | CosmeticEffects v2 auras (tiers, orbit beams) | BD-087, BD-089 |
-| BD-111 | Backlog | P1 | Trail v2 textured, six-class complexity | BD-087, BD-088, BD-089 |
-| BD-112 | Backlog | P2 | Config: trail class, aura tier, 3 new auras | BD-086 |
+| BD-110 | Review / test | P1 | CosmeticEffects v2 auras (tiers, orbit beams): built behind the asset gate ([81](81-mythic-glow-v2.md)); Studio spike BD-089 pending | BD-087, BD-089 |
+| BD-111 | Review / test | P1 | Trail v2 textured, six-class complexity: built behind the asset gate ([81](81-mythic-glow-v2.md)); Studio pending | BD-087, BD-088, BD-089 |
+| BD-112 | Review / test | P2 | Config: trail class + aura tier done in `AuraTrailStyle` ([81](81-mythic-glow-v2.md)); 3 new auras not added (prices need BD-098) | BD-086 |
 | BD-113 | Backlog | P2 | Shop icons (16) and rarity badges (6) | BD-112 |
 | BD-114 | Backlog | P2 | Shop previews use real effect sprites | BD-111, BD-113 |
 | BD-120 | Review / test | P1 | Owner-only admin panel for private playtests: food worth / growth / run speed sliders, start or stop any weather, runtime-only, server-authorized ([79](79-admin-panel.md); offline checks pass, Studio pending) | BD-031 |
-| BD-095 | Backlog | P1 | Effects Full/Lite/Off setting and distance LOD | BD-090 |
+| BD-095 | In progress | P1 | Effects Full/Lite/Off setting and distance LOD: distance LOD + motion-off cap done ([81](81-mythic-glow-v2.md)); the settings toggle is not built | BD-090 |
 | BD-096 | Backlog | P3 | Equip shimmer audio | none |
 | BD-097 | Backlog | P2 | 12-player phone perf + Studio/Android acceptance | BD-090-095 |
 | BD-098 | Backlog | P3 | Prices and gates for 3 new auras | BD-092 |
