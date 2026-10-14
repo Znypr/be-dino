@@ -549359,13 +549359,13 @@ local function buildSplat(front: Frame): Splat
         gloss.BackgroundColor3, gloss.BackgroundTransparency, gloss.BorderSizePixel, gloss.Position, gloss.Size, gloss.ZIndex, gloss.Parent = WHITE, .2, 0, UDim2.fromOffset(14, 5), UDim2.fromOffset(26, 8), 30, dome
         corner(gloss)
         local img = Instance.new("ImageLabel")
-        img.Name, img.BackgroundTransparency, img.AnchorPoint, img.Position, img.Size, img.ZIndex, img.Visible = "ShellImage", 1, Vector2.new(.5, .5), UDim2.fromScale(.5, .5), UDim2.fromOffset(96, 96), 28, false
+        img.Name, img.BackgroundTransparency, img.AnchorPoint, img.Position, img.Size, img.ZIndex, img.Visible = "ShellImage", 1, Vector2.new(.5, .5), UDim2.fromScale(.5, .5), UDim2.fromOffset(110, 110), 28, false
         img.Parent = shell
         shells[i], domes[i], shellImages[i] = shell, dome, img
     end
     local image = Instance.new("ImageLabel")
     image.Name, image.BackgroundTransparency, image.AnchorPoint, image.Visible, image.ZIndex = "SplatImage", 1, Vector2.new(.5, .5), false, 25
-    image.Size, image.Parent = UDim2.fromOffset(300, 200), group
+    image.Size, image.Parent = UDim2.fromOffset(260, 260), group
     return {group = group, puddle = puddle, lobes = lobes, yolk = yolk, drips = drips, shells = shells, domes = domes, shellImages = shellImages, image = image}
 end
 
@@ -549681,8 +549681,9 @@ function Seq.play(a: Args)
         local landed = since &gt;= Timeline.SplatDrop
         if useSplatImage then
             splat.image.Visible = landed
-            splat.image.Position = UDim2.fromOffset(PUDDLE.X, PUDDLE.Y - 10)
-            splat.image.Size = UDim2.fromOffset(300 * pw * (1 + (ysx - 1) * .25), 200 * ph * (1 + (ysy - 1) * .25))
+            -- Square canvas (art is ~76% of 1024 px and centred): never stretched at rest; squash only while wobbling.
+            splat.image.Position = UDim2.fromOffset(PUDDLE.X, PUDDLE.Y - 42)
+            splat.image.Size = UDim2.fromOffset(260 * pw * (1 + (ysx - 1) * .2), 260 * ph * (1 + (ysy - 1) * .2))
         else
             local puddle = splat.puddle
             puddle.Visible = pw &gt; 0
