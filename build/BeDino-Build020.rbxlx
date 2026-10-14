@@ -365253,8 +365253,8 @@ return table.freeze({
     -- ReleaseProfile and ProfileDataStoreName in the generated place only; rules live in
     -- tools/release_profiles.py and are enforced by tools/verify_release.py.
     ReleaseProfile = "development",
-    PlaytestUniverseId = 0, -- TODO(BD-004): owner records the private playtest experience (universe) ID
-    PlaytestPlaceId = 0, -- TODO(BD-004): owner records the private playtest start place ID
+    PlaytestUniverseId = 10769812255, -- BD-004: private experience "newbuild" (universe), recorded 2026-10-14
+    PlaytestPlaceId = 111259822927673, -- BD-004: private experience "newbuild" (start place), recorded 2026-10-14
     PlaytestProfileDataStoreName = "BeDino_Playtest_M1_v1", -- rotate _vN to isolate a corrupted test store
     ProfileSchemaVersion = 1,
     ProfileLeaseSeconds = 90,
