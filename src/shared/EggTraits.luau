@@ -11,9 +11,15 @@ end
 function Traits.key(mutationId: string, shiny: boolean, big: boolean,genes): string
     return mutationId .. ":" .. (if shiny then "shiny" else "plain") .. ":" .. (if big then "big" else "normal") .. (if genes then ":"..Genetics.key(genes) else "")
 end
-function Traits.selected(entry)
+-- preferredKey (BD-150): the exact owned copy the player chose to equip; used only while that variant is still
+-- owned (count > 0), otherwise the best copy below is selected as before.
+function Traits.selected(entry, preferredKey: string?)
     local selected = nil
     local best = -1
+    local chosen = if preferredKey and entry and entry.variants then entry.variants[preferredKey] else nil
+    if chosen and chosen.count > 0 then
+        return {key = preferredKey, big = chosen.big, shiny = chosen.shiny, mutationId = chosen.mutationId, genes = chosen.genes}
+    end
     for key, variant in (if entry then entry.variants or {} else {}) do
         local rank = (if variant.big then 2 else 0) + (if variant.shiny then 1 else 0)
         if variant.genes then rank+=Genetics.condition(variant.genes.conditionId).stats*10 end

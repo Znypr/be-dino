@@ -3,7 +3,7 @@
 return table.freeze({
     MaxCrystals=2000000000,
     CrystalCount=100, CrystalRespawnSeconds=90, CrystalValue=3,
-    LeapCooldown=60, LeapHorizontalSpeed=72, LeapVerticalSpeed=62, LeapDuration=.7,
+    LeapCooldown=60, LeapHorizontalSpeed=72, LeapVerticalSpeed=72, LeapDuration=.7,
     WeatherInterval=600, WeatherDuration=180,
     GrowthCap=8, SpeedCap=2.2,
     AccountXPPerLevel=100, AccountMaxLevel=60,

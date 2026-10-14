@@ -823,37 +823,65 @@ local Instance={new=function(kind)
 end}
 local leapNow=0
 local blocked=false
-local workspace={Terrain={},BeDinoArena={},GetServerTimeNow=function()return leapNow end,Blockcast=function()return if blocked then {} else nil end}
+local warnings=0
+local warn=function() warnings+=1 end
+local workspace={Terrain={},BeDinoArena={},Gravity=250,GetAttribute=function()return nil end,GetServerTimeNow=function()return leapNow end,Blockcast=function()return if blocked then {} else nil end}
 local storage={Shared={ProgressionConfig=true},BeDinoRemotes={}}
 local game={GetService=function(_,id)return ({Players={PlayerRemoving=removal},ReplicatedStorage=storage,RunService={Heartbeat=heartbeat}})[id]end}
 local require=function()return ProgressionConfig end
+CFrame.new=function(p)return {Position=p}end
 local Leap=LEAP_MODULE
 local h={Health=100,FloorMaterial="grass",WalkSpeed=22,ChangeState=function()end}
-local root={Parent=true,Position=vec(0,5,0),Size=vec(2,2,1),CFrame={LookVector=vec(0,0,-1)},AssemblyLinearVelocity=vec(0,0,0)}
-local ownerChanges=0 local ownerFailure=false
+local home=vec(0,5,0)
+local function cf(pos)return {LookVector=vec(0,0,-1),Position=pos}end
+local root={Parent=true,Position=home,Size=vec(2,2,1),CFrame=cf(home),AssemblyLinearVelocity=vec(0,0,0)}
+local ownerChanges=0
 function root:IsA(id)return id=="BasePart"end
-function root:SetNetworkOwner(_)if ownerFailure then error("cannot own")end ownerChanges+=1 end
-function root:SetNetworkOwnershipAuto()self.restored=true end
+function root:SetNetworkOwner(_)ownerChanges+=1 end
+function root:SetNetworkOwnershipAuto()ownerChanges+=1 end
 local c={attrs={RunState="Active"}}
 function c:GetAttribute(k)return self.attrs[k]end
 function c:SetAttribute(k,v)self.attrs[k]=v end
 function c:FindFirstChild(k)return if k=="HumanoidRootPart" then root else nil end
 function c:FindFirstChildOfClass(k)return if k=="Humanoid" then h else nil end
-local user={Character=c,attrs={ProfileState="Loaded",MovementSecurityStatus="OK"}}
+local user={Name="Tester",Character=c,attrs={ProfileState="Loaded",MovementSecurityStatus="OK"}}
 function user:GetAttribute(k)return self.attrs[k]end
 function user:SetAttribute(k,v)self.attrs[k]=v end
+-- Pure envelope: a leap that follows the launch numbers is valid; every kind of cheat is named.
+local cfg=ProgressionConfig
+local start=vec(0,5,0)
+assert(Leap.violation(cfg,250,start,vec(0,9,-40),vec(0,10,-70),.6)==nil,"honest leap")
+assert(Leap.violation(cfg,250,start,vec(0,9,-400),vec(0,10,-70),.6)=="distance","too far")
+assert(Leap.violation(cfg,250,start,vec(0,200,-20),vec(0,10,-70),.6)=="height","too high")
+assert(Leap.violation(cfg,250,start,vec(0,9,-40),vec(0,10,-400),.6)=="speed","too fast")
+assert(Leap.violation(cfg,250,start,vec(0,9,-40),vec(0,500,-70),.6)=="lift","too much lift")
+assert(Leap.violation(cfg,250,start,vec(0,5,-50),vec(0,0,-70),0)=="distance","teleport at takeoff")
 Leap.start()
 local activate=remotes.RequestLeap.OnServerEvent.fn
-activate(user,"bad") assert(ownerChanges==0)
-activate(user) assert(ownerChanges==1 and user.attrs.LeapReadyAt==60 and root.AssemblyLinearVelocity.Y==62)
-leapNow=.4 activate(user) assert(ownerChanges==1 and user.attrs.LeapReadyAt==60)
-leapNow=.8 heartbeat.fn() assert(root.restored and c.attrs.LeapUntil==0 and c.attrs.MovementSpeedLimit==nil)
-assert(root.AssemblyLinearVelocity.Magnitude<70)
-leapNow=60 blocked=true activate(user) assert(ownerChanges==1 and user.attrs.LeapReadyAt==60)
-leapNow=61 blocked=false h.FloorMaterial="air" activate(user) assert(ownerChanges==1)
-leapNow=62 h.FloorMaterial="grass" ownerFailure=true activate(user) assert(user.attrs.LeapReadyAt==60)
-leapNow=63 ownerFailure=false activate(user) assert(ownerChanges==2 and user.attrs.LeapReadyAt==123)
-print("Leap handler passed: malformed requests, exact 60s cooldown, wall/air rejection, failed ownership and cleanup")
+activate(user,"bad") assert(user.attrs.LeapReadyAt==nil)
+activate(user) assert(user.attrs.LeapReadyAt==60 and user.attrs.LastLeapStatus=="leaping" and ownerChanges==0 and c.attrs.MovementSpeedLimit==cfg.LeapHorizontalSpeed)
+assert(root.AssemblyLinearVelocity.Y==0,"server must not set velocity: the client owns the leap")
+leapNow=.4 activate(user) assert(user.attrs.LeapReadyAt==60)
+-- an honest client path inside the envelope keeps the leap alive and updates the last valid position
+leapNow=.2 root.Position=vec(0,9,-14) root.CFrame=cf(vec(0,9,-14)) root.AssemblyLinearVelocity=vec(0,10,-70) heartbeat.fn()
+assert(user.attrs.LeapRejectCount==nil and user.attrs.LastLeapStatus=="leaping")
+leapNow=.8 heartbeat.fn() assert(c.attrs.LeapUntil==0 and c.attrs.MovementSpeedLimit==nil and ownerChanges==0)
+-- cheat: a client that teleports far away mid-leap is rolled back with a 30 s penalty and a warning
+root.Position=home root.CFrame=cf(home) root.AssemblyLinearVelocity=vec(0,0,0)
+leapNow=60 activate(user) assert(user.attrs.LeapReadyAt==120)
+leapNow=60.2 root.Position=vec(0,9,-500) root.CFrame=cf(vec(0,9,-500)) root.AssemblyLinearVelocity=vec(0,10,-70) heartbeat.fn()
+assert(user.attrs.LeapRejectCount==1 and user.attrs.LastLeapStatus=="rejected" and warnings==1 and user.attrs.LeapReadyAt==150)
+assert(root.CFrame.Position.Z==0 and root.CFrame.Position.Y==5,"rolled back to the last valid position (the takeoff spot)")
+assert(root.AssemblyLinearVelocity.Magnitude==0 and c.attrs.LeapUntil==0)
+-- cheat: leaping through a wall is rolled back too
+root.Position=vec(0,5,0) root.CFrame=cf(vec(0,5,0))
+leapNow=150 activate(user) assert(user.attrs.LeapReadyAt==210)
+blocked=true leapNow=150.2 root.Position=vec(0,9,-14) root.CFrame=cf(vec(0,9,-14)) heartbeat.fn() blocked=false
+assert(user.attrs.LeapRejectCount==2 and user.attrs.LastLeapStatus=="rejected")
+leapNow=240 blocked=true activate(user) assert(user.attrs.LastLeapStatus=="blocked" and user.attrs.LeapReadyAt==240,"a wall right ahead refuses the leap and costs no extra cooldown (240 = 210 + the 30 s penalty already served)")
+blocked=false
+leapNow=300 h.FloorMaterial="air" local before=user.attrs.LeapReadyAt activate(user) assert(user.attrs.LeapReadyAt==before,"no leap from the air")
+print("Leap handler passed: client-owned leap (no ownership change, no server velocity), envelope distance/height/speed/lift, wall rollback, 30s penalty, cooldown and air rejection")
 """
  return s.replace('FUSION_ODDS_MODULE',module('src/server/FusionOdds.luau')).replace('FUSION_SERVICE_MODULE',module('src/server/FusionService.luau')).replace('IDENTITY_FUSION_MODULE',module('src/server/IdentityFusion.luau')).replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('NEST_QUEUE_MODULE',module('src/shared/NestQueue.luau')).replace('REWARDS_MODULE',module('src/server/RewardMath.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))
 if __name__=='__main__':
