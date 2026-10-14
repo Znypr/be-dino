@@ -14,6 +14,8 @@ function Creatures.clone(id: string,genes: any?): Model?
     if not module or not RunService:IsClient() or active>=12 then return nil end
     active+=1
     local mesh
+    local released=false
+    local function release() if not released then released=true active-=1 end end
     local ok,result=pcall(function()
         local data=Http:JSONDecode(require(module))
         mesh=Assets:CreateEditableMesh()
@@ -39,6 +41,10 @@ function Creatures.clone(id: string,genes: any?): Model?
             mesh:SetFaceNormals(f,{normals[n],normals[n+1],normals[n+2]})
         end
         local part=Assets:CreateMeshPartAsync(Content.fromObject(mesh),{CollisionFidelity=Enum.CollisionFidelity.Box})
+        -- The MeshPart owns a copy: free the EditableMesh budget now, not when the model dies. Holding it made menus and
+        -- previews exhaust the budget so the real character fell back to the primitive blob.
+        mesh:Destroy() mesh=nil
+        release()
         local model=Instance.new("Model")
         model.Name=id
         part.Name="AuthoredBody";part.Anchored=true;part.CanCollide=false;part.CanTouch=false;part.CanQuery=false;part.Massless=true
@@ -79,12 +85,12 @@ function Creatures.clone(id: string,genes: any?): Model?
             end
         end)
         require(script.Parent.PatternGenes).apply(part,if genes then genes else Creatures.DefaultGenes)
-        model.Destroying:Once(function() connection:Disconnect();mesh:Destroy();active-=1 end)
+        model.Destroying:Once(function() connection:Disconnect() end)
         return model
     end)
     if ok then return result end
     if mesh then mesh:Destroy() end
-    active-=1
+    release()
     warn("Be Dino creature unavailable: "..id.." ("..tostring(result)..")")
     return nil
 end
