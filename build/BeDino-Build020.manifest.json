@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "e5c1f1ef97ca6744d327f3fdc1f60ec975a9de84c08c24937e970245dcd3da00",
+  "place_sha256": "2eb369f933416a67b858a87e6e96a6a1867052ad4070e5ca1780c1f99e777489",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/Artwork.luau": "dbcef755028cbf3e737da0f96178db4e563f73843c0df00ad167ab134f1d066e",
@@ -194,8 +194,8 @@
     "src/shared/NavigationArtwork.luau": "8f217518bf3afa393f3f72243541656824f70efad4f5596e37273b431fae1b6a",
     "src/shared/PatternGenes.luau": "48bb508cf68c350ce5b1856654f1387194370fc9a8958f2585c9925e531d8f10",
     "src/shared/PreviewCamera.luau": "4fb0416b3f45f4722d740cf895b436c71d8ec0dd5072174a514894fb05f97ba3",
-    "src/shared/ProgressionConfig.luau": "563b32c2048e13186e6743d10cab5ffedf85312d5493cdc068a4eeaf8879eced",
-    "src/shared/ProgressionRules.luau": "f41165feae25d8dfb9123a2f6db3b9af6522618915cdb3b991b6fd2e97c55821",
+    "src/shared/ProgressionConfig.luau": "d5c2f9ee7c3471429ca6350626beb4c706c01b9a1ede797c51ff18fbcf92d55d",
+    "src/shared/ProgressionRules.luau": "7b8a744e1ec5b46d5b9f3f0908a236801e3871c8be3ab0db461167232d75a0cd",
     "src/shared/ResourceGeometry.luau": "07b7892ec2a5fae1ce15ecf5a5f5b2b571b8221f3aa123c608359c3d855333ae",
     "src/shared/ResourceMeshAssets.luau": "51cd1706c5c832fd6f2b66671555beb3b66904eac6fd9e26d8c511628cc3a70e",
     "src/shared/ResourceModels.luau": "81ab813b3666c618a19a55303e73433af8a979cffe529f48df995abaa1119b21",
@@ -232,7 +232,7 @@
     "src/server/RewardMath.luau": "cc7dad58b2678f8846955287ce8f42d7ef0c55c643da7c193a710b280011eec4",
     "src/server/RunLifecycle.luau": "c0c2d0a10ab2446edfc09478df1320fd12416e5dce73132879fcc397904f0079",
     "src/server/VisualTestService.luau": "ee48ddc907c11e5d1390483d570d9ab96fd01b3ee02493b5724a2ebcf1ef0773",
-    "src/client/Bootstrap.client.luau": "1c23203fe0f95b4a00d4dd54aca461c10e0fb044a3f5555aed68ad2fb2312db1",
+    "src/client/Bootstrap.client.luau": "e5a03fafc62e41816cdebaeaeccd6f7ac2d17e86c280d38c6102e9e2c8360a2b",
     "src/client/CosmeticVisuals.client.luau": "85d567cf577cf91bbc9402ee7a26f11bd705cf4ef8b328ecf350ae569bd82c06",
     "src/client/DinoDetails.luau": "2997fa1005dd0d38bcc1cca686c7d40301f1a6c10b6922e80943b0d911a7795a",
     "src/client/FusionMenu.luau": "b857af380df2de35b82b790f09bf9bf629a65bf8cbb32e244b2170d588cc74fc",

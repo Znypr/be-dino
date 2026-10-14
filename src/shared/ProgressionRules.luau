@@ -37,6 +37,48 @@ function Rules.validEgg(metadata): boolean
     local event=Rules.item(Config.Weather,eventId)
     return (eventId=="clear" or event~=nil) and typeof(mutationId)=="string" and (mutationId=="" or (event~=nil and event.mutation==mutationId))
 end
+-- BD-051 rotating Potion Shop. Pure and deterministic: offers depend only on the window number.
+function Rules.shopWindow(now: number): number
+    return math.floor(now/Config.PotionShop.PeriodSeconds)
+end
+function Rules.shopEndsAt(window: number): number
+    return (window+1)*Config.PotionShop.PeriodSeconds
+end
+function Rules.shopOffers(window: number)
+    local shop=Config.PotionShop
+    -- Park-Miller generator; products stay below 2^53 so results are identical on every platform.
+    local state=(window*16807+1013904223)%2147483646+1
+    local function nextUnit(): number
+        state=(state*48271)%2147483647
+        return state/2147483647
+    end
+    for _=1,6 do nextUnit() end
+    local pool={}
+    for _,item in Config.Potions do table.insert(pool,{item=item,weight=shop.RarityWeights[item.rarity] or 0}) end
+    local offers={}
+    for _=1,math.min(shop.OfferCount,#pool) do
+        local total=0 for _,entry in pool do total+=entry.weight end
+        local roll=nextUnit()*total
+        local pick=#pool
+        for i,entry in pool do roll-=entry.weight if roll<0 then pick=i break end end
+        local item=table.remove(pool,pick).item
+        local stockTotal=0 for _,w in shop.StockWeights do stockTotal+=w end
+        local stockRoll=nextUnit()*stockTotal
+        local stock=#shop.StockWeights
+        for i,w in shop.StockWeights do stockRoll-=w if stockRoll<0 then stock=i break end end
+        table.insert(offers,{id=item.id,stock=stock})
+    end
+    return offers
+end
+function Rules.shopRemaining(p,window: number,id: string): number
+    for _,offer in Rules.shopOffers(window) do
+        if offer.id==id then
+            local bought=if p.shop and p.shop.window==window then (p.shop.bought[id] or 0) else 0
+            return math.max(0,offer.stock-bought)
+        end
+    end
+    return 0
+end
 local function finite(n): boolean return typeof(n)=="number" and n==n and math.abs(n)<math.huge end
 function Rules.upgrade(profile)
     -- Additive schema migration: never replace an existing wallet or inventory.
@@ -66,6 +108,13 @@ function Rules.valid(p): boolean
     if p.equippedTrail~=nil then
         if typeof(p.equippedTrail)~="string" then return false end
         if p.equippedTrail~="" and (not p.trails or not p.trails[p.equippedTrail]) then return false end
+    end
+    if p.shop~=nil then
+        local shop=p.shop
+        if typeof(shop)~="table" or not finite(shop.window) or shop.window<0 or shop.window%1~=0 or typeof(shop.bought)~="table" then return false end
+        for id,count in shop.bought do
+            if typeof(id)~="string" or not Rules.item(Config.Potions,id) or not finite(count) or count<0 or count%1~=0 or count>#Config.PotionShop.StockWeights then return false end
+        end
     end
     for id,count in p.potions do
         if not Rules.item(Config.Potions,id) or not finite(count) or count<0 or count%1~=0 or count>999 then return false end
@@ -115,11 +164,22 @@ function Rules.apply(profile,action,id,now,replace,amount): (boolean,string)
         p.crystals-=upgrade.price p.conditionLevel=nextLevel
         return true,"upgraded"
     elseif action=="buyPotion" then
-        local item=Rules.item(Config.Potions,id)
+        -- id is "<potionId>@<window>": only the current window's disclosed offers can be bought, within stock.
+        local potionId,windowText=string.match(id,"^([%w_]+)@(%d+)$")
+        if not potionId then return false,"window_required" end
+        local item=Rules.item(Config.Potions,potionId)
         if not item then return false,"unknown_item" end
-        if (p.potions[id] or 0)>=999 then return false,"inventory_full" end
+        local window=tonumber(windowText) :: number
+        if window~=Rules.shopWindow(now) then return false,"stale_window" end
+        local offered=false
+        for _,offer in Rules.shopOffers(window) do if offer.id==potionId then offered=true end end
+        if not offered then return false,"not_offered" end
+        if Rules.shopRemaining(p,window,potionId)<1 then return false,"sold_out" end
+        if (p.potions[potionId] or 0)>=999 then return false,"inventory_full" end
         if p.crystals<item.price then return false,"insufficient_crystals" end
-        p.crystals-=item.price p.potions[id]=(p.potions[id] or 0)+1
+        if not p.shop or p.shop.window~=window then p.shop={window=window,bought={}} end
+        p.shop.bought[potionId]=(p.shop.bought[potionId] or 0)+1
+        p.crystals-=item.price p.potions[potionId]=(p.potions[potionId] or 0)+1
         return true,"purchased"
     elseif action=="usePotion" then
         local item=Rules.item(Config.Potions,id)
