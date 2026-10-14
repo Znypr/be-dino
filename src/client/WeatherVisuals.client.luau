@@ -414,7 +414,7 @@ RunService.Heartbeat:Connect(function(dt)
     grade.Brightness=lerpNum(0,target.bright,t)+flash*.5+pulse*.12
     bloom.Intensity=lerpNum(0,target.bloom,t)+flash*1.5
     bloom.Threshold=lerpNum(.95,.72,t) bloom.Size=lerpNum(24,40,t)
-    rays.Intensity=lerpNum(0,target.rays,t) rays.Spread=.7 rays.Color=Color3.new(1,1,1):Lerp(target.rayTint,t)
+    rays.Intensity=lerpNum(0,target.rays,t) rays.Spread=.7
     atmosphere.Density=lerpNum(baseAtmo.density,math.max(baseAtmo.density,target.density),t)
     atmosphere.Haze=lerpNum(baseAtmo.haze,math.max(baseAtmo.haze,target.haze),t)
     atmosphere.Glare=lerpNum(baseAtmo.glare,math.max(baseAtmo.glare,target.glare),t)
