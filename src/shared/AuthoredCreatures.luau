@@ -6,12 +6,16 @@ local Http=game:GetService("HttpService")
 local Creatures={}
 local active=0
 local function frame(v) return CFrame.new(table.unpack(v)) end
-function Creatures.clone(id: string): Model?
+-- Used only when the caller has no genes (e.g. index entry never hatched); real genes are painted in place.
+Creatures.DefaultGenes={conditionId="normal",hatchSuccess=true,primaryColorId="green",secondaryColorId="white",blend=70,patternId="03_round_spots"}
+function Creatures.clone(id: string,genes: any?): Model?
     local source=script.Parent:FindFirstChild("CreatureData")
     local module=if source then source:FindFirstChild(id) else nil
     if not module or not RunService:IsClient() or active>=12 then return nil end
     active+=1
     local mesh
+    local released=false
+    local function release() if not released then released=true active-=1 end end
     local ok,result=pcall(function()
         local data=Http:JSONDecode(require(module))
         mesh=Assets:CreateEditableMesh()
@@ -37,6 +41,10 @@ function Creatures.clone(id: string): Model?
             mesh:SetFaceNormals(f,{normals[n],normals[n+1],normals[n+2]})
         end
         local part=Assets:CreateMeshPartAsync(Content.fromObject(mesh),{CollisionFidelity=Enum.CollisionFidelity.Box})
+        -- The MeshPart owns a copy: free the EditableMesh budget now, not when the model dies. Holding it made menus and
+        -- previews exhaust the budget so the real character fell back to the primitive blob.
+        mesh:Destroy() mesh=nil
+        release()
         local model=Instance.new("Model")
         model.Name=id
         part.Name="AuthoredBody";part.Anchored=true;part.CanCollide=false;part.CanTouch=false;part.CanQuery=false;part.Massless=true
@@ -76,13 +84,13 @@ function Creatures.clone(id: string): Model?
                 node.Transform=pose.Rotation+pose.Position*scale
             end
         end)
-        require(script.Parent.PatternGenes).apply(part,{conditionId="normal",hatchSuccess=true,primaryColorId="green",secondaryColorId="white",blend=70,patternId="03_round_spots"})
-        model.Destroying:Once(function() connection:Disconnect();mesh:Destroy();active-=1 end)
+        require(script.Parent.PatternGenes).apply(part,if genes then genes else Creatures.DefaultGenes)
+        model.Destroying:Once(function() connection:Disconnect() end)
         return model
     end)
     if ok then return result end
     if mesh then mesh:Destroy() end
-    active-=1
+    release()
     warn("Be Dino creature unavailable: "..id.." ("..tostring(result)..")")
     return nil
 end

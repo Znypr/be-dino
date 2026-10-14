@@ -54,6 +54,8 @@ function Dinosaur.refreshForPlayer(character: Model, player: Player)
     local entry = if ok then collection[speciesId] else nil
     local mutation = if entry and (entry.diamond or 0) > 0 then "diamond" elseif entry and (entry.gold or 0) > 0 then "gold" else "base"
     if player:GetAttribute("EquippedGenesJson") and player:GetAttribute("EquippedGenesJson")~="null" then mutation="base" end
+    -- Genes first so the client repaint triggered by SpeciesId/MutationVisual already sees the new equip.
+    character:SetAttribute("GenesJson", player:GetAttribute("EquippedGenesJson") or "null")
     character:SetAttribute("BigDinosaur", player:GetAttribute("EquippedBig") == true)
     local factor = if character:GetAttribute("BigDinosaur") then Config.BigScaleMultiplier else 1
     Dinosaur.render(character, scaleForScore(character:GetAttribute("GrowthScore") or 0) * factor, speciesId, mutation)
