@@ -41,7 +41,7 @@ function Leap.start()
         local trail=Instance.new("Trail") trail.Attachment0,trail.Attachment1=a,b
         trail.Color=ColorSequence.new(Color3.fromRGB(80,214,255),Color3.new(1,1,1))
         trail.Lifetime,trail.FaceCamera,trail.Parent=.25,true,root
-        active[player]={character=c,root=root,position=root.Position,endsAt=now+Config.LeapDuration,trail=trail,a=a,b=b}
+        active[player]={forward=forward,character=c,root=root,position=root.Position,endsAt=now+Config.LeapDuration,trail=trail,a=a,b=b}
     end)
     RunService.Heartbeat:Connect(function()
         local now=workspace:GetServerTimeNow()
@@ -68,6 +68,11 @@ function Leap.start()
                     if hit then root.Position=state.position root.AssemblyLinearVelocity=Vector3.zero state.endsAt=now end
                 end
                 state.position=root.Position
+                -- Movement feel: the Humanoid's air control damps the launch speed to zero within ~0.4s
+                -- (measured 18 of ~50 intended studs). Hold the launch heading until the leap ends.
+                if state.endsAt>now then
+                local velocity=root.AssemblyLinearVelocity
+                root.AssemblyLinearVelocity=Vector3.new(state.forward.X*Config.LeapHorizontalSpeed,velocity.Y,state.forward.Z*Config.LeapHorizontalSpeed) end
             end
         end
     end)

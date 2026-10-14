@@ -1123,9 +1123,28 @@ loadGoalDinos()
 local timers=Instance.new("Frame")
 timers.BackgroundTransparency,timers.Size,timers.AnchorPoint,timers.Position,timers.Parent=1,UDim2.fromOffset(286,220),Vector2.new(1,1),UDim2.new(1,-20,1,-100),gui
 local timerScale=Instance.new("UIScale") timerScale.Parent=timers
+-- Movement feel: the leap impulse is applied locally the instant the key/button is pressed
+-- (same numbers as LeapService) so there is no round-trip wait; the server still validates,
+-- owns the cooldown and re-applies the impulse. PROVISIONAL.
+local predictedLeap:{ready:number,at:number,character:Model}?=nil
+local function requestLeap()
+    leapRemote:FireServer()
+    local c=player.Character
+    local h=if c then c:FindFirstChildOfClass("Humanoid") else nil
+    local root=if c then c:FindFirstChild("HumanoidRootPart") else nil
+    if not (c and h and root and root:IsA("BasePart")) or h.Health<=0 or h.FloorMaterial==Enum.Material.Air
+        or c:GetAttribute("RunState")~="Active" or workspace:GetServerTimeNow()<num("LeapReadyAt") then return end
+    local look=root.CFrame.LookVector
+    local forward=Vector3.new(look.X,0,look.Z)
+    if forward.Magnitude<.01 then return end
+    root.AssemblyLinearVelocity=forward.Unit*ProgressionConfig.LeapHorizontalSpeed+Vector3.new(0,ProgressionConfig.LeapVerticalSpeed,0)
+    -- Client-local attribute: DinoMotion starts wind-up + leap pose now instead of on the replicated cooldown.
+    c:SetAttribute("LeapPredictAt",os.clock())
+    predictedLeap={ready=num("LeapReadyAt"),at=os.clock(),character=c}
+end
 local leapButton=button(timers,"LEAP [E]",0,0,286,60,C.blue,function()
     if shade.Visible then return end
-    leapRemote:FireServer()
+    requestLeap()
 end)
 leapButton.Text=""
 art(leapButton,"leap",4,5,48)
@@ -1284,6 +1303,45 @@ player:GetAttributeChangedSignal("AccountLevel"):Connect(function()
     if lastLevel>0 and level>lastLevel then Sfx.play("level_up") notify("Level "..level.."!",C.gold,{kind="major",icon="trophy",key="level"}) end
     lastLevel=level
 end)
+-- Movement feel: camera height follows growth every frame (not the 0.15 s HUD tick), and the
+-- pickup pop/sfx fire the frame GrowthScore replicates instead of waiting for the next tick.
+local cameraLift=0
+RunService.RenderStepped:Connect(function(dt)
+    local character=player.Character
+    local humanoid=if character then character:FindFirstChildOfClass("Humanoid") else nil
+    local growth=if character then character:GetAttribute("GrowthScore") or 0 else 0
+    if character and growth>lastGrowth and character:GetAttribute("RunState")=="Active" then
+        Sfx.play("pickup")
+        pickupPop(string.format("+%.1f",growth-lastGrowth))
+        if motion then
+            hudScale.Scale=(hud:GetAttribute("UIScaleBase") or 1)*1.06
+            Theme.animate(hudScale,.2,{Scale=hud:GetAttribute("UIScaleBase") or 1},Enum.EasingStyle.Back)
+        end
+    end
+    lastGrowth=growth
+    if not humanoid then return end
+    local target=((character :: Model):GetAttribute("VisualScale") or 1)-1
+    cameraLift+=(target-cameraLift)*(1-math.exp(-dt*Config.CameraLiftSharpness))
+    humanoid.CameraOffset=Vector3.new(0,cameraLift*2,0)
+end)
+-- Reconcile a predicted leap: the server raising LeapReadyAt confirms it; if it has not within 0.6 s
+-- (cooldown/blocked/guard) cancel the pose and drop the extra horizontal speed.
+RunService.Heartbeat:Connect(function()
+    local p=predictedLeap
+    if not p then return end
+    if num("LeapReadyAt")>p.ready then predictedLeap=nil return end
+    if os.clock()-p.at>.6 then
+        predictedLeap=nil
+        if p.character.Parent then
+            p.character:SetAttribute("LeapRejectAt",os.clock())
+            local root=p.character:FindFirstChild("HumanoidRootPart")
+            if root and root:IsA("BasePart") then
+                local v=root.AssemblyLinearVelocity
+                root.AssemblyLinearVelocity=Vector3.new(v.X*.3,v.Y,v.Z*.3)
+            end
+        end
+    end
+end)
 RunService.Heartbeat:Connect(function(dt)
     elapsed+=dt
     if elapsed<.15 then return end elapsed=0
@@ -1300,20 +1358,8 @@ RunService.Heartbeat:Connect(function(dt)
     actionPadding.PaddingRight=UDim.new(0,6)
     if active=="exit" and state~="Active" then close() end
     if character then
-        local visualScale=character:GetAttribute("VisualScale") or 1
-        player.CameraMinZoomDistance=Config.CameraMinZoom*visualScale
-        local humanoid=character:FindFirstChildOfClass("Humanoid")
-        if humanoid then humanoid.CameraOffset=Vector3.new(0,(visualScale-1)*2,0) end
+        player.CameraMinZoomDistance=Config.CameraMinZoom*(character:GetAttribute("VisualScale") or 1)
     end
-    if growth>lastGrowth and state=="Active" then
-        Sfx.play("pickup")
-        pickupPop(string.format("+%.1f",growth-lastGrowth))
-        if motion then
-            hudScale.Scale=(hud:GetAttribute("UIScaleBase") or 1)*1.06
-            Theme.animate(hudScale,.2,{Scale=hud:GetAttribute("UIScaleBase") or 1},Enum.EasingStyle.Back)
-        end
-    end
-    lastGrowth=growth
     if state~=lastRunState then
         if lastRunState=="Sanctuary" and state=="Active" then Sfx.play("run_start") elseif lastRunState=="Active" and state=="Sanctuary" then Sfx.play("run_end") end
         lastRunState=state
@@ -1416,7 +1462,7 @@ for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus
 end
 Input.InputBegan:Connect(function(input,processed)
     if processed then return end
-    if (input.KeyCode==Enum.KeyCode.E or input.KeyCode==Enum.KeyCode.ButtonY) and not shade.Visible then leapRemote:FireServer()
+    if (input.KeyCode==Enum.KeyCode.E or input.KeyCode==Enum.KeyCode.ButtonY) and not shade.Visible then requestLeap()
     elseif input.KeyCode==Enum.KeyCode.Escape then close()
     elseif input.KeyCode==Enum.KeyCode.C then open("collection")
     elseif input.KeyCode==Enum.KeyCode.B then open("eggs") end

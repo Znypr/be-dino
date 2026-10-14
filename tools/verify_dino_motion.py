@@ -71,6 +71,16 @@ assert(M.lean(0.1, 0 / 0, 5, 0.016) == 0 and M.lean(0.1, 1, 0 / 0, 0.016) == 0)
 assert(M.lean(0, 50, 0, 0.1) == 0, "no lean while standing still")
 local ls = M.new() ls.lean = 0.2 assert(M.sample(ls, 0, out) == true and out.roll == 0.2)
 ls.lean = 0 assert(M.sample(ls, 0, out) == false and rest(out))
+-- Growth tween: starts at old/new, eases out monotonically to exactly 1, and a mid-tween retrigger continues without a step.
+local g = M.new()
+M.trigger(g, "grow", 0, 0.2)
+M.sample(g, 0, out) assert(math.abs(out.sx - 0.8) < 1e-9, "grow must start at old/new")
+local last = out.sx
+for i = 1, 35 do M.sample(g, i * 0.01, out) assert(out.sx >= last - 1e-12 and out.sx <= 1, "grow must ease monotonically") last = out.sx end
+M.sample(g, 0.2, out) local mid = M.growFactor(g, 0.2) assert(math.abs(mid - out.sx) < 1e-9)
+M.trigger(g, "grow", 0.2, 1 - mid * 0.98) M.sample(g, 0.2, out) assert(math.abs(out.sx - mid * 0.98) < 1e-9, "retrigger must not step")
+M.sample(g, 0.6, out) assert(rest(out) and M.growFactor(g, 0.6) == 1, "grow must end at exactly rest")
+local w = M.new() M.trigger(w, "windup", 0) M.sample(w, 0.04, out) assert(out.sy < 1) M.cancel(w, "windup") assert(M.sample(w, 0.05, out) == false)
 -- Power scales amplitude; bad inputs are clamped; BIG (dimensionless offsets) identical for any scale.
 local weak, strong = M.new(), M.new()
 M.trigger(weak, "bite", 0, 0.25) M.trigger(strong, "bite", 0, 5)
