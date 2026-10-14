@@ -5,6 +5,7 @@ local RunService=game:GetService("RunService")
 local Http=game:GetService("HttpService")
 local Gate=require(script.Parent.LoadGate)
 local Creatures={}
+local Sanity=require(script.Parent.MeshSanity)
 -- At most a few concurrent EditableMesh builds. Extra patient requests wait for a slot instead of failing.
 local gate=Gate.new(4)
 Creatures.Gate=gate
@@ -30,7 +31,12 @@ local function build(id: string,genes: any?,patient: boolean): Model?
         mesh=Assets:CreateEditableMesh()
         assert(mesh,"EditableMesh memory budget exhausted")
         local vertices,bones,uvs,normals={},{},{},{}
-        for _,p in data.vertices do table.insert(vertices,mesh:AddVertex(Vector3.new(table.unpack(p)))) end
+        local low,high=Vector3.new(math.huge,math.huge,math.huge),Vector3.new(-math.huge,-math.huge,-math.huge)
+        for _,p in data.vertices do
+            local v=Vector3.new(table.unpack(p))
+            low,high=low:Min(v),high:Max(v)
+            table.insert(vertices,mesh:AddVertex(v))
+        end
         for _,b in data.bones do
             local params={Name=b.name,CFrame=frame(b.bind),Virtual=false}
             if b.parent>0 then params.ParentId=bones[b.parent] end
@@ -54,6 +60,9 @@ local function build(id: string,genes: any?,patient: boolean): Model?
         -- previews exhaust the budget so the real character fell back to the primitive blob.
         mesh:Destroy() mesh=nil
         release()
+        -- A MeshPart whose mesh did not really load renders as a plain cube/box: treat it as a failed load (retried by clone).
+        local ok2,why=Sanity.check(high-low,part.Size,data.triangles)
+        if not ok2 then part:Destroy() error("mesh sanity failed: "..tostring(why)) end
         local model=Instance.new("Model")
         model.Name=id
         part.Name="AuthoredBody";part.Anchored=true;part.CanCollide=false;part.CanTouch=false;part.CanQuery=false;part.Massless=true
@@ -107,8 +116,11 @@ end
 function Creatures.clone(id: string,genes: any?,patient: boolean?): Model?
     local model=build(id,genes,patient==true)
     if not model and patient==true and Creatures.has(id) then
-        task.wait(.4)
-        model=build(id,genes,true)
+        for _,delay in {.4,1.2} do
+            task.wait(delay)
+            model=build(id,genes,true)
+            if model then break end
+        end
     end
     return model
 end

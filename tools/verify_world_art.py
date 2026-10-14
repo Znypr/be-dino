@@ -10,8 +10,9 @@ ROOT = Path(__file__).resolve().parents[1]
 def wrapped(path): return '(function()\n' + (ROOT / path).read_text() + '\nend)()'
 def script(dump, config=None, playtest=False):
     return ('local Config=' + ('(function()\n' + config + '\nend)()' if config else wrapped('src/shared/Config.luau')) + '\nlocal Layout=' + wrapped('src/shared/IslandLayout.luau')
-            + '\nlocal Kit=' + wrapped('src/shared/WorldKitData.luau') + '\nlocal Biome=' + wrapped('src/shared/BiomePlacement.luau') + '\n' + '''
+            + '\nlocal Kit=' + wrapped('src/shared/WorldKitData.luau') + '\nlocal Meshes=' + wrapped('src/shared/WorldKitMeshAssets.luau') + '\nlocal Biome=' + wrapped('src/shared/BiomePlacement.luau') + '\n' + '''
 local PLAYTEST=@PLAYTEST@
+local TREE_LO,ROCK_LO,SHRUB_LO,COVER_LO,PROPS_LO,WORLD_MAX=60,30,150,250,400,4500
 if PLAYTEST then
  assert(Config.WorldArtMode=="BiomeKit" and Config.FoodArtMode=="Kit","playtest profile must enable the kit")
 else
@@ -19,7 +20,7 @@ else
  assert(Config.FoodArtMode=="Legacy","default must keep the current food look")
 end
 local DENSITY=if PLAYTEST then Config.WorldArtDensity else 1
-local function gen(seed,density) return Biome.generate({seed=seed,density=density,extent=Config.ArenaHalfWidth,height=Layout.height,kit=Kit}) end
+local function gen(seed,density) return Biome.generate({seed=seed,density=density,extent=Config.ArenaHalfWidth,height=Layout.height,kit=Kit,meshes=Meshes}) end
 local t0=os.clock()
 local a=gen(Config.WorldArtSeed,DENSITY)
 local elapsed=os.clock()-t0
@@ -53,25 +54,31 @@ for _,p in a do
 end
 assert(counts.landmark==4,"four landmarks")
 if not PLAYTEST then
-assert(counts.tree>=25 and counts.tree<=40,"tree density "..counts.tree)
-assert(counts.rock>=15 and counts.rock<=34,"rock density "..counts.rock)
-assert(counts.shrub>=20 and counts.shrub<=50,"shrub density "..counts.shrub)
-assert(counts.groundcover>=20 and counts.groundcover<=70,"groundcover density "..counts.groundcover)
+assert(counts.tree>=TREE_LO and counts.tree<=130,"tree density "..counts.tree)
+assert(counts.rock>=ROCK_LO and counts.rock<=80,"rock density "..counts.rock)
+assert(counts.shrub>=SHRUB_LO and counts.shrub<=380,"shrub density "..counts.shrub)
+assert(counts.groundcover>=COVER_LO and counts.groundcover<=620,"groundcover density "..counts.groundcover)
 end
 local tris=Biome.triangles(a,Kit)
-assert(tris<=Biome.TriangleBudget,"triangle budget "..tris)
-local parts,colliders=0,0
-for _,p in a do parts+=2*Kit[p.id].triangles colliders+=#Kit[p.id].colliders end
-local worldParts=parts+colliders -- native fallback: two wedges per triangle plus invisible colliders
-local foodParts=0
-for _,id in {"food_egg_a","food_egg_b","food_amber_a","food_amber_b"} do foodParts=math.max(foodParts,2*Kit[id].triangles) end
-foodParts*=Config.FoodKitVisualCap
+local worldParts=Biome.parts(a,Kit,Meshes) -- MeshPart props = 1 part + invisible colliders; unbound ids cost the native fallback
+assert(worldParts<=Biome.PartBudget*DENSITY,"part budget "..worldParts)
+local meshProps,nativeProps=0,0
+for _,p in a do if Meshes[p.id] then meshProps+=1 else nativeProps+=1 end end
+-- every food pickup is one MeshPart replacing the ball (no growth); legacy dressing kept in kit mode (docs/68)
+local foodParts=Config.FoodSectorCount*Config.FoodSectorCount*Config.FoodClusterItems
+local residualParts=1100
+-- Whole-kit failure drill: with no MeshPart loaded the budget falls back to native costs instead of exploding.
+local nativeOnly=Biome.generate({seed=Config.WorldArtSeed,density=DENSITY,extent=Config.ArenaHalfWidth,height=Layout.height,kit=Kit,meshes={}})
+assert(Biome.parts(nativeOnly,Kit,{})<=Biome.PartBudget*DENSITY,"native fallback blows the part budget")
+assert(#nativeOnly<#a,"native fallback must thin the world")
 if PLAYTEST then
- assert(Config.WorldArtDensity>=.25 and Config.WorldArtDensity<1,"playtest density is a reduced phone budget")
- assert(counts.tree>=12 and counts.rock>=8 and counts.shrub>=12 and counts.groundcover>=4,"kit must clearly dress the map")
- assert(worldParts<=6500,"world kit parts "..worldParts)
- assert(foodParts<=1500,"food kit parts "..foodParts)
- assert(worldParts+foodParts<=8000,"total kit parts "..(worldParts+foodParts))
+ assert(Config.WorldArtDensity>=.5 and Config.WorldArtDensity<=2 and Config.WorldArtDensity>1,"playtest density")
+ assert(#a>=PROPS_LO,"the kit must dress the map richly: "..#a.." props (owner: lush; was ~45 as native models)")
+ assert(counts.tree>=TREE_LO and counts.rock>=ROCK_LO and counts.shrub>=SHRUB_LO and counts.groundcover>=COVER_LO,"kit must clearly dress the map")
+ assert(nativeProps==0,"every kit prop must be a MeshPart now (all 41 uploaded): "..nativeProps)
+ assert(worldParts<=WORLD_MAX,"world kit parts "..worldParts)
+ assert(foodParts<=1600,"food pickup parts "..foodParts)
+ assert(worldParts+foodParts+residualParts<=8000,"total world parts "..(worldParts+foodParts+residualParts))
  for _,family in {"berry","fruit","egg","amber"} do
   for _,v in {"a","b"} do assert(Kit["food_"..family.."_"..v],"missing food variant "..family..v) end
  end
@@ -82,7 +89,13 @@ for id,data in Kit do
  if data.kind=="tree" or data.kind=="landmark" or (data.kind=="rock") then assert(#data.colliders>0,"missing collider proxy "..id) end
  if data.kind=="shrub" or data.kind=="groundcover" or data.kind=="food" then assert(#data.colliders==0,"foliage/food must not collide "..id) end
 end
-print(string.format("%s world art: %d kit parts + %d food-model parts; %d placements (%d trees, %d rocks, %d shrubs, %d cover, 4 landmarks), %d triangles, %.3fs",if PLAYTEST then "Playtest" else "Default",worldParts,foodParts,#a,counts.tree,counts.rock,counts.shrub,counts.groundcover,tris,elapsed))
+local byId,ids,list={},{},{}
+for _,p in a do byId[p.id]=(byId[p.id] or 0)+1 end
+for id in byId do table.insert(ids,id) end
+table.sort(ids)
+for _,id in ids do table.insert(list,id.."="..byId[id]) end
+print(string.format("%s world art: %d kit parts + %d food pickup parts + ~%d legacy dressing = %d; %d placements (%d trees, %d rocks, %d shrubs, %d cover, 4 landmarks; %d MeshPart props), %d triangles, %.3fs",if PLAYTEST then "Playtest" else "Default",worldParts,foodParts,residualParts,worldParts+foodParts+residualParts,#a,counts.tree,counts.rock,counts.shrub,counts.groundcover,meshProps,tris,elapsed))
+print("by id: "..table.concat(list," "))
 '''.replace('@PLAYTEST@','true' if playtest else 'false') + ('for _,p in a do print(string.format("P %s %s %.2f %.2f %.3f",p.layer,p.id,p.x,p.z,p.radius)) end\n' if dump else ''))
 
 def draw(lines, path):
@@ -111,7 +124,8 @@ def legacy_parts():
 
 def static_checks():
     food = (ROOT / 'src/server/FoodService.luau').read_text()
-    assert 'kitVisuals < Config.FoodKitVisualCap' in food and 'useModel = kind.id == "egg" or kind.id == "amber"' in food, 'kit models only for egg/amber, capped'
+    assert 'kitVisuals < Config.FoodKitVisualCap' in food and 'useModel = (kind.id == "egg" or kind.id == "amber") and not meshPickup' in food, 'native fallback models only for egg/amber, capped'
+    assert 'pickup, meshPickup = mesh, true' in food and '"KitMesh"' in food, 'kit mesh is the pickup part (no extra part)'
     assert re.findall(r'id = "(\w+)", weight = \d+, points = (\d+)', food) == [('berry', '1'), ('fruit', '4'), ('egg', '15'), ('amber', '50')], 'food values changed'
     cfg = (ROOT / 'src/shared/Config.luau').read_text()
     assert 'FoodArtMode = "Legacy"' in cfg and 'WorldArtMode = "Legacy"' in cfg, 'source default must stay Legacy'

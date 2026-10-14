@@ -37,6 +37,8 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
     end
     local model=Resources.clone(speciesId,if traits then traits.genes else nil,true)
     if model and not viewport.Parent then model:Destroy();return end
+    -- Species with authored data must show the authored mesh, never any other (box) model.
+    if model and require(script.Parent.AuthoredCreatures).has(speciesId) and not model:GetAttribute("AuthoredCreature") then model:Destroy() model=nil end
     if model then
         local world=Instance.new("WorldModel") world.Parent=viewport
         for _,item in model:GetDescendants() do
