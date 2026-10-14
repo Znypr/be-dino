@@ -747,3 +747,6 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-083 | Backlog | P2 | Fusion Menu density: larger text, clearer ingredient grid, readable at 1080x720 and phone landscape. Roles: UI designer | BD-065 |
 | BD-084 | Backlog | P2 | Aura/trail shop: distinct aura icons and in-world previews; equipped-state feedback. Roles: UI designer, 3D artist | BD-029 |
 | BD-085 | Backlog | P0 | Phone measurement pass (frame time, part counts, world art kit on) before the friends playtest. Roles: QA, tech artist; needs owner Android device | BD-019 |
+| BD-100 | Backlog | P1 | UI copy pass (docs/72): one shared time/percent formatter, remove '5m 0s' and 'x' multipliers everywhere (shops, potions, buffs, nests, weather, HUD), short child-friendly lines. Roles: UI writer, gameplay eng | BD-043 |
+| BD-101 | Backlog | P1 | Potion icons as real art (replace code-drawn bottles, PLACEHOLDER): 12 potions, 5 rarity frames; brief, 2D drafts, pick, final export, owner upload. Roles: UI artist, art director | BD-082 |
+| BD-102 | Backlog | P1 | UI asset production pipeline: brief template, draft/review/final/upload checklist, naming, QA at 64 px and phone size; audit existing code-drawn icons (growth tile, nest sprite, hud icons) and list which are PLACEHOLDER. Roles: art director, tech artist | BD-047 |
