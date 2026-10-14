@@ -191,11 +191,14 @@ scheduleQuote = function()
     local recipe = Sel.stage(state.targetStage)
     if not recipe or not recipe.approved then
         state.quoteStatus, state.quoteMessage = "locked", Sel.LockedStageText
-    elseif #state.selection < (recipe.donorCount or Sel.DonorCount) then
+    elseif #state.selection ~= recipe.donorCount then
+        -- Quotes are requested at EXACTLY the recipe count (50 / 10 / 3).
         state.quoteStatus = "need"
-        state.quoteMessage = "Select " .. ((recipe.donorCount or Sel.DonorCount) - #state.selection) .. " more matching dinos to see exact odds."
+        state.quoteMessage = if #state.selection < recipe.donorCount
+            then "Select " .. (recipe.donorCount - #state.selection) .. " more matching dinos to see exact odds."
+            else "Too many dinos selected: remove " .. (#state.selection - recipe.donorCount) .. "."
     else
-        state.quoteStatus, state.quoteMessage = "loading", "Calculating exact odds for these 10 dinos..."
+        state.quoteStatus, state.quoteMessage = "loading", "Calculating exact odds for these " .. recipe.donorCount .. " dinos..."
         local key, donors, stage = currentKey(), table.clone(state.selection), state.targetStage
         task.delay(FusionMenu.QuoteDebounce, function()
             if serial ~= state.quoteSerial then return end
@@ -318,8 +321,31 @@ updateColumn = function()
     if not col.slots then return end
     for _, child in col.slots:GetChildren() do if not child:IsA("UIGridLayout") then child:Destroy() end end
     local recipe = Sel.stage(state.targetStage)
-    local need = (recipe and recipe.donorCount) or Sel.DonorCount
-    for i = 1, need do
+    local need = (recipe and recipe.donorCount) or 0
+    local stageName = if recipe then recipe.name else "?"
+    local counterMode = need > Sel.CompactSlotThreshold
+    local slotLayout = col.slots:FindFirstChildOfClass("UIGridLayout")
+    if slotLayout then
+        -- One row of up to 10 slots (compact strip) or two rows of 5; 3 slots use thirds.
+        local perRow = if counterMode then 1 elseif col.compact then math.max(need, 1) else math.max(math.min(need, 5), 1)
+        local rows = if counterMode or col.compact then 1 else math.ceil(need / perRow)
+        local height = col.slotsHeight or 40
+        slotLayout.CellSize = if counterMode then UDim2.fromScale(1, 1)
+            else UDim2.new(1 / perRow, -4, 0, math.max(18, math.floor(height / rows) - 6))
+    end
+    if counterMode then
+        -- 50-donor Gold: a compact n/N progress counter (Android landscape safe); the
+        -- selected dinos stay highlighted in the grid and a tap there removes them.
+        local bar = W.box(col.slots, UDim2.new(), UDim2.new(), C.outline, 4)
+        bar.Name = "Counter"
+        local fill = W.box(bar, UDim2.fromScale(math.clamp(#state.selection / need, 0, 1), 1), UDim2.new(),
+            if #state.selection == need then C.accent else C.gold, 4)
+        fill.Name = "Fill"
+        local counter = W.label(bar, string.format("%d/%d selected • tap a dino card to remove", #state.selection, need),
+            UDim2.fromScale(1, 1), UDim2.new(), 16, C.text, true)
+        counter.Name = "CounterText"
+    end
+    for i = 1, if counterMode then 0 else need do
         local id = state.selection[i]
         local d = id and state.byId[id]
         if d and col.compact then
@@ -351,11 +377,11 @@ updateColumn = function()
         local l = W.label(odds, text, UDim2.new(1, -12, 0, height or 24), UDim2.new(), 18, color, true)
         l.LayoutOrder = order
     end
-    if state.targetStage ~= "gold" then
+    if not (recipe and recipe.approved) then
         line(string.upper(state.targetStage) .. " LOCKED", C.gold, 30)
-        line(Sel.LockedStageText .. ". Gold is the only approved recipe.", nil, 44)
+        line(Sel.LockedStageText .. ".", nil, 44)
     else
-        line("UPGRADED (guaranteed): 1 NEW Gold, stage + stats", C.accent, 40)
+        line("UPGRADED (guaranteed): 1 NEW " .. stageName .. " from " .. need .. " " .. Sel.stageTitle(recipe.source) .. ", stage + stats", C.accent, 40)
         if state.selection[1] and state.byId[state.selection[1]] then
             local g = state.byId[state.selection[1]].genes or {}
             line("PATTERN LOCKED: " .. Sel.name(catalog, "patterns", g.patternId), C.gold)
@@ -380,14 +406,19 @@ updateColumn = function()
 end
 
 local function renderBrowse()
-    setTitle("Pattern Fusion: 10 Base -> 1 NEW Gold", C.purple)
+    local active = Sel.stage(state.targetStage)
+    setTitle(if active then string.format("Pattern Fusion: %d %s -> 1 NEW %s", active.donorCount, Sel.stageTitle(active.source), active.name)
+        else "Pattern Fusion", C.purple)
     local root = body :: Frame
     local left = Instance.new("Frame")
     left.Name, left.BackgroundTransparency, left.Size, left.Parent = "Browse", 1, UDim2.new(.6, -6, 1, 0), root
     local right = W.box(root, UDim2.new(.4, -6, 1, 0), UDim2.new(.6, 6, 0, 0), C.card, 6)
     right.Name = "Ingredients"
     -- Row 1: target stage tabs + sort + auto-fill.
-    local tabs = {{"gold", "GOLD"}, {"emerald", "EMERALD (LOCKED)"}, {"diamond", "DIAMOND (LOCKED)"}}
+    local tabs = {}
+    for _, s in Sel.Stages do
+        table.insert(tabs, {s.id, string.upper(s.name) .. (if s.approved then " (" .. s.donorCount .. ")" else " (LOCKED)")})
+    end
     for i, tab in tabs do
         local stage = Sel.stage(tab[1])
         local b = W.button(left, tab[2], UDim2.new(.17, -4, 0, T), UDim2.new((i - 1) * .17, 0, 0, 0),
@@ -457,6 +488,7 @@ local function renderBrowse()
     local compact = gui ~= nil and (gui :: ScreenGui).AbsoluteSize.Y < 450
     column.compact = compact
     local slotsHeight = if compact then 26 else T * 2 + 6
+    column.slotsHeight = slotsHeight
     local slotsBottom = T + 6 + slotsHeight
     column.count = W.label(right, "", UDim2.new(1, -100, 0, T), UDim2.fromOffset(6, 2), 24, C.gold, true)
     W.button(right, "CLEAR", UDim2.fromOffset(84, T), UDim2.new(1, -88, 0, 2), C.red, function()
@@ -504,7 +536,10 @@ end
 local function renderConfirm()
     local quote = state.quote
     if not quote or state.quoteKey ~= currentKey() then state.mode = "browse" render() return end
-    setTitle("Confirm Gold Fusion (no undo)", C.gold)
+    local recipe = Sel.stage(quote.targetStage or state.targetStage)
+    local stageName = if recipe then recipe.name else "?"
+    local donorTotal = #(quote.donorIds or state.selection)
+    setTitle("Confirm " .. stageName .. " Fusion (no undo)", C.gold)
     local root = body :: Frame
     local loss = Sel.lossSummary(quote, catalog)
     local list = W.scroll(root, UDim2.new(1, 0, 1, -(T + 14)), UDim2.new())
@@ -515,10 +550,10 @@ local function renderConfirm()
         local l = W.label(list, text, UDim2.new(1, -14, 0, height or (if #text > 80 then 48 else 26)), UDim2.new(), 20, color, true)
         l.LayoutOrder = order
     end
-    line("GUARANTEED: 1 NEW Gold " .. Sel.name(catalog, "patterns", quote.patternId) .. " " .. Sel.name(catalog, "species", quote.speciesId)
-        .. " with the Gold stage upgrade. Its colors, condition, Shiny, BIG and mutation are freshly rolled.", C.accent, 48)
+    line("GUARANTEED: 1 NEW " .. stageName .. " " .. Sel.name(catalog, "patterns", quote.patternId) .. " " .. Sel.name(catalog, "species", quote.speciesId)
+        .. " with the " .. stageName .. " stage upgrade. Its colors, condition, Shiny, BIG and mutation are freshly rolled.", C.accent, 48)
     line("PATTERN LOCKED: " .. Sel.name(catalog, "patterns", quote.patternId), C.gold)
-    line("ALL 10 DINOS BELOW ARE CONSUMED:", C.red)
+    line("ALL " .. donorTotal .. " DINOS BELOW ARE CONSUMED:", C.red)
     for i, id in quote.donorIds or state.selection do
         local d = state.byId[id]
         line(i .. ". " .. (if d then donorLine(d) else id), if d and #Sel.valuableReasons(d) > 0 then C.purple else nil)
@@ -548,7 +583,7 @@ local function renderConfirm()
             render()
         end).Name = "Acknowledge"
     else
-        W.button(root, "FUSE NOW (CONSUMES 10)", UDim2.new(.7, 0, 0, T + 4), UDim2.new(.3, 0, 1, -(T + 6)), C.accent, function()
+        W.button(root, "FUSE NOW (CONSUMES " .. donorTotal .. ")", UDim2.new(.7, 0, 0, T + 4), UDim2.new(.3, 0, 1, -(T + 6)), C.accent, function()
             if state.quoteKey ~= currentKey() then state.mode = "browse" render() return end
             local attempt = Sel.attempt(pendingAttempt, state.targetStage, quote.donorIds or state.selection, quote.quoteDigest, function()
                 return Http:GenerateGUID(false)
@@ -578,7 +613,7 @@ runFuse = function(attempt)
     fuseInFlight = true
     state.mode = "fusing"
     setTitle("Fusing...", C.gold)
-    renderStatus("Fusing your 10 dinos...\nThis request is saved: retries reuse the same token, so it can never fuse twice.", C.gold)
+    renderStatus("Fusing your " .. #attempt.donorIds .. " dinos...\nThis request is saved: retries reuse the same token, so it can never fuse twice.", C.gold)
     task.spawn(function()
         local tries = 0
         while true do
@@ -672,7 +707,7 @@ local function finalCard(root: Frame, result, stage)
         W.label(info, text, UDim2.new(1, -12, 0, if #text > 44 then 46 else 28), UDim2.new(), 22, color, true).LayoutOrder = order
     end
     line(stage.title, C.gold)
-    line("Crafted Gold (earned) • guaranteed stage", C.accent)
+    line("Crafted " .. Sel.stageTitle(result.targetStage or "gold") .. " (earned) • guaranteed stage", C.accent)
     line("Pattern (locked): " .. Sel.name(catalog, "patterns", result.patternId or g.patternId))
     line("Colors: " .. Sel.geneLine(g, catalog))
     line("Condition: " .. Sel.name(catalog, "conditions", g.conditionId, "?"))
@@ -750,7 +785,7 @@ end
 
 local function renderUnavailable()
     setTitle("Fusion unavailable", C.card)
-    renderStatus("Fusion unavailable\nThe 10-dino Gold fusion is not enabled on this server yet. Nothing was changed.", C.gold,
+    renderStatus("Fusion unavailable\nPattern fusion is not enabled on this server yet. Nothing was changed.", C.gold,
         {{"CLOSE", C.red, function() FusionMenu.close() end, "Close"}})
 end
 

@@ -26,6 +26,8 @@ local function buckets(collection)
         for _, stage in {"base", "gold", "diamond"} do
             result[speciesId .. "/" .. stage] = {speciesId = speciesId, stage = stage, count = entry[stage]}
         end
+        -- Additive optional Emerald counter (BD-057 ladder 50/10/3): nil means 0.
+        result[speciesId .. "/emerald"] = {speciesId = speciesId, stage = "emerald", count = if entry.emerald == nil then 0 else entry.emerald}
         for mutationId, count in entry.events or {} do
             result[speciesId .. "/event/" .. mutationId] = {speciesId = speciesId, stage = "base", count = count, mutationId = mutationId}
         end
@@ -171,26 +173,33 @@ end
 
 -- Data contract only: caller supplies already rolled output. Does not consume or roll.
 -- Immediate parent snapshots retain traits and origins without recursively copying trees.
+-- Compact (ladder 50/10/3): speciesId, stage and genes.patternId are identical for every
+-- parent (recipe-locked), so they are stored once on the record (origin.parentStage)
+-- instead of 50 times. Readers fall back to the result's speciesId/pattern.
+Identity.MaxFusionParents = 50
 function Identity.fusionRecord(id, output, parents, operationId, recipeVersion, oddsVersion)
     assert(type(id) == "string" and #id > 0 and #id <= 120, "invalid result ID")
     assert(type(operationId) == "string" and #operationId > 0 and #operationId <= 120, "invalid operation ID")
     assert(type(recipeVersion) == "string" and #recipeVersion > 0 and type(oddsVersion) == "string" and #oddsVersion > 0, "versioned recipe and odds required")
     assert(type(output.genes) == "table" and output.genes.patternId ~= nil, "fresh output genes required")
     assert(output.stage == "gold" or output.stage == "emerald" or output.stage == "diamond", "invalid result stage")
-    assert(#parents >= 2 and #parents <= 10, "bounded immediate parents required")
+    assert(#parents >= 2 and #parents <= Identity.MaxFusionParents, "bounded immediate parents required")
     local snapshots, seen = {}, {}
+    local parentStage = parents[1] and parents[1].stage
     for _, parent in parents do
         assert(not seen[parent.instanceId] and parent.instanceId ~= id, "duplicate/cyclic parent")
         assert(parent.speciesId == output.speciesId and parent.genes
             and parent.genes.patternId == output.genes.patternId, "matching species/pattern required")
+        assert(parent.stage == parentStage, "single parent stage required")
         seen[parent.instanceId] = true
-        table.insert(snapshots, {instanceId = parent.instanceId, speciesId = parent.speciesId,
-            stage = parent.stage, genes = copy(parent.genes), big = parent.big, shiny = parent.shiny,
+        local genes = copy(parent.genes)
+        genes.patternId = nil
+        table.insert(snapshots, {instanceId = parent.instanceId, genes = genes, big = parent.big, shiny = parent.shiny,
             mutationId = parent.mutationId, origin = {kind = parent.origin.kind, eggId = parent.origin.eggId, operationId = parent.origin.operationId}})
     end
     -- Grouped compatibility projection: the plain stage bucket (BD-057).
     local result = record(id, output.speciesId .. "/" .. output.stage, output, {kind = "fusion", operationId = operationId,
-        recipeVersion = recipeVersion, oddsVersion = oddsVersion, parents = snapshots})
+        recipeVersion = recipeVersion, oddsVersion = oddsVersion, parentStage = parentStage, parents = snapshots})
     -- No parent cosmetic fields are copied into either output or lineage.
     return result
 end

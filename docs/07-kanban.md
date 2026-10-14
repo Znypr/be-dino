@@ -76,6 +76,8 @@ byte preflight and fail-closed suspension for legacy/over-capacity profiles
 
 ### BD-057 Phase 1 — updated 2026-10-13
 
+**2026-10-13 ladder:** recipes are now Gold = 50 Base, Emerald = 10 Gold, Diamond = 3 Emerald ([58](58-fusion-ladder-50-10-3.md)); Studio verification pending.
+
 Implemented on `claude/be-dino-development` from `50116b8`; **Review / test, not Done**.
 [Implementation and verification](49-identity-fusion-phase1.md). A disabled,
 memory-only transaction fuses 10 same-species/same-pattern Base identities into one
@@ -90,6 +92,8 @@ donors and the hard lock/favorite block are working defaults awaiting owner appr
 remote and a persistent-playtest flag on top of this transaction (below).
 
 ### BD-064 server — updated 2026-10-13
+
+**2026-10-13 ladder:** odds normalize by actual donor count N; remote accepts up to 50 donors ([58](58-fusion-ladder-50-10-3.md)).
 
 Implemented on `claude/bd-064-fusion-server` from main `18856b4`; **Review / test, not Done**.
 [Implementation and evidence](53-bd064-fusion-server.md); [remote contract](52-fusion-remote-contract.md)
@@ -180,9 +184,9 @@ ledger compaction before public release.
 | BD-061 | Backlog | P1 | Blender Gold/Emerald/Diamond additive surfaces, subtle/medium overlay A/B, stack every trait/effect | BD-057, BD-035 |
 | BD-062 | Review / test | P1 | Dino picker/details hatch egg or fused parent lineage, trait/cosmetic badges, hatch rarity vs conditional fusion odds/prestige. Client Dino Details built ([54](54-bd065-fusion-menu.md)); natural hatch odds math, Studio/Android verification pending | BD-059, BD-060, BD-057 |
 | BD-063 | Backlog | P1 | Pattern research/duplicate sink: deterministic earned-only progress toward species-pattern fusion donors | BD-057 |
-| BD-065 | Review / test | P1 | Dedicated Fusion Menu: species/trait filters, manual ten-donor selection, odds preview, loss warnings and staged wheel reveals. Client built against the `FusionAction` contract ([54](54-bd065-fusion-menu.md)); offline logic + mock UI smoke pass, Studio/Android verification pending | BD-057, BD-060, BD-064 |
-| BD-064 | Review / test | P0 | Ingredient-influenced fusion trait RNG (2/10 Shiny → proposed 10%), versioned true odds, paid-random gate and atomic NEW result — PROVISIONAL `fusion-odds-provisional-v1` + `FusionAction` remote ([53](53-bd064-fusion-server.md)) | BD-057, BD-060 |
-| BD-065 | Backlog | P1 | Dedicated Fusion Menu: species/trait filters, manual ten-donor selection, odds preview, loss warnings and staged wheel reveals | BD-057, BD-060, BD-064 |
+| BD-065 | Review / test | P1 | Dedicated Fusion Menu: species/trait filters, manual 50/10/3-donor selection, odds preview, loss warnings and staged wheel reveals. Client built against the `FusionAction` contract ([54](54-bd065-fusion-menu.md)); offline logic + mock UI smoke pass, Studio/Android verification pending | BD-057, BD-060, BD-064 **2026-10-13 owner ladder: 50/10/3, see [58](58-fusion-ladder-50-10-3.md); Studio pending.** |
+| BD-064 | Review / test | P0 | Ingredient-influenced fusion trait RNG (2/10 Shiny → proposed 10%), versioned true odds, paid-random gate and atomic NEW result — PROVISIONAL `fusion-odds-provisional-v1` + `FusionAction` remote ([53](53-bd064-fusion-server.md)) | BD-057, BD-060 **2026-10-13 owner ladder: 50/10/3, see [58](58-fusion-ladder-50-10-3.md); Studio pending.** |
+| BD-065 | Backlog | P1 | Dedicated Fusion Menu: species/trait filters, manual 50/10/3-donor selection, odds preview, loss warnings and staged wheel reveals | BD-057, BD-060, BD-064 **2026-10-13 owner ladder: 50/10/3, see [58](58-fusion-ladder-50-10-3.md); Studio pending.** |
 
 ### BD-044: Owner-approved reward-loop correction (2026-10-08)
 

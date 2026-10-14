@@ -176,3 +176,5 @@ DataStore with repeated transforms):
   underestimated (the 3.8 MB ceiling leaves ~390 KB headroom).
 - Locked/favorited fields have no setter yet; consent for Shiny/BIG/mutation donors
   remains a working default (BD-057).
+
+> **2026-10-13 update:** donor counts are per recipe (50/10/3), odds normalize by the actual donor count N, `FusionService.MaxDonorIds` is 50: see [58](58-fusion-ladder-50-10-3.md).
