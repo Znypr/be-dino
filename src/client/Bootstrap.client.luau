@@ -877,20 +877,21 @@ render=function(name: string)
         local rarity=speciesIndex(id)
         local count=tonumber(string.match(reward,"^(%d+)x")) or 1
         local displayName=Config.SpeciesDisplayNames[id] or id
-        local rewardLabel=label(body,if failed then "The cracked egg did not hatch" elseif count>1 then count.."x "..displayName else displayName,80,236,660,54,38,if failed then C.red else rarityColors[rarity])
-        local oddsLabel=label(body,if failed then "" else HatchTimeline.oddsLine(rarityNames[rarity],HatchTimeline.speciesPct(Config.ChestSpeciesWeights,id),(FusionSelection :: any).pct or HatchTimeline.pct),80,288,660,28,22,C.text)
+        local rewardLabel=label(body,if failed then HatchTimeline.FailTitle elseif count>1 then count.."x "..displayName else displayName,80,236,660,54,38,if failed then C.gold else rarityColors[rarity])
+        local oddsLabel=label(body,if failed then HatchTimeline.FailSub else HatchTimeline.oddsLine(rarityNames[rarity],HatchTimeline.speciesPct(Config.ChestSpeciesWeights,id),(FusionSelection :: any).pct or HatchTimeline.pct),80,288,660,28,22,C.text)
         local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
         local detailText,detailColor="",C.gold
         local mutationColor=if mutation then Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3]) else nil
         if genes then
             local condition=EggGenetics.condition(genes.conditionId)
-            detailText=if failed then "Cracked • 20% hatch" else condition.name
+            detailText=if failed then HatchTimeline.failChance(condition.hatchChance) else condition.name
         elseif mutation then
             local tint=mutationColor :: Color3
             for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(tint,.55) end end
             detailText=mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
             detailColor=tint
         end
+        if failed and detailText=="" then detailText=HatchTimeline.failChance((EggGenetics.condition("cracked") :: any).hatchChance) end
         local detailLabel=label(body,detailText,80,316,660,28,20,detailColor)
         local remaining=HatchTimeline.remaining(str("NextChestId")~="" and workspace:GetServerTimeNow()>=num("NextChestReadyAt"),num("ActiveChestCount"),num("QueuedEggsWaiting"))
         Sfx.play("hatch_crack")
@@ -903,7 +904,7 @@ render=function(name: string)
             alive=function() return modalVersion==version and active=="hatch" end,
             flash=flash,
             onSkipAll=function() autoHatching=true skipAllReveals=true end,
-            onReveal=function() if modalVersion==version then heading.Text=if failed then "Cracked egg" else "You hatched a dinosaur!" end end,
+            onReveal=function() if modalVersion==version then heading.Text=if failed then "Oops! Splat!" else "You hatched a dinosaur!" end end,
             onNext=function()
                 heading.Text="An egg is hatching..."
                 if remaining>0 then autoHatching=true hatchNext() else finishBatch() end
