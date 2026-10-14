@@ -36,6 +36,7 @@ jobs:
           python tools/verify_fusion.py --runner /tmp/luau/luau
           python tools/simulate_fusion_ladder.py --check
           python tools/verify_fusion_ui.py --runner /tmp/luau/luau
+          python tools/verify_next_goal.py --runner /tmp/luau/luau
           python tools/measure_identity_storage.py --check
           python tools/verify_progression.py --runner /tmp/luau/luau
           python tools/verify_potion_shop.py --runner /tmp/luau/luau

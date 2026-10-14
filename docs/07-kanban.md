@@ -163,7 +163,7 @@ ledger compaction before public release.
 | BD-040 | Review / test | P1 | Escalating Condition Shop, weighted egg conditions and stat/hatch effects | BD-036, BD-037 |
 | BD-041 | Review / test | P1 | Two-colour egg genetics, Normal/Big eggs and independent shiny sparkle | BD-035, BD-037 |
 | BD-042 | Review / test | P1 | Five-second ordered hatches, Shiny/BIG and map leaderboards | BD-013, BD-034 |
-| BD-043 | In progress | P1 | UI animation, feedback, loading and preview performance | BD-015, BD-042 |
+| BD-043 | In progress | P1 | UI animation, feedback, loading and preview performance | BD-015, BD-042 | Polish pass (SFX hooks, goal line, reveal juice): [62](62-polish-sfx-goal-juice.md).
 | BD-044 | Review / test | P0 | Replace direct-copy rewards with caught-run-egg hatching, crystal payout and separate five-slot egg nests ([evidence](50-bd044-reward-loop.md); Studio pending). **Owner 2026-10-13: 40 eggs per 500 food (was 15); values/evidence: [59](59-egg-rate-40.md)** | BD-011, BD-013, BD-036, BD-042 |
 | BD-045 | Review / test | P0 | Rebalance condition odds to new owner starting distribution and update condition-upgrade/disclosure flow ([evidence](50-bd044-reward-loop.md#bd-045-condition-odds-bd045-conditions-v1); Studio pending) | BD-040 |
 | BD-046 | Backlog | P1 | Rename Auras nav entry to Shop with crystal icon; crystal HUD opens same Shop | BD-029, BD-036, BD-043 |

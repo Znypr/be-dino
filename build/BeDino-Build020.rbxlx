@@ -368764,6 +368764,83 @@ return {
       </Item>
       <Item class="ModuleScript" referent="RBX206">
         <Properties>
+          <string name="Name">NextGoal</string>
+          <ProtectedString name="Source">--!strict
+-- Polish pass: pure "next goal" HUD line. No Instances, services or remotes.
+-- Best fusion progress across species + pattern (from the FusionAction list data) wins; when that data
+-- is unavailable or nothing is in progress the line falls back to account-level XP progress.
+-- Exercised by tools/verify_next_goal.py.
+local NextGoal = {}
+-- Mirrors FusionSelection.Stages (docs/58). Callers may pass opts.stages to stay in sync.
+NextGoal.Stages = {
+    {id = "gold", name = "Gold", source = "base", donorCount = 50},
+    {id = "emerald", name = "Emerald", source = "gold", donorCount = 10},
+    {id = "diamond", name = "Diamond", source = "emerald", donorCount = 3},
+}
+
+-- Returns the best in-progress (or ready) fusion goal, or nil.
+function NextGoal.fusion(dinos: any, opts: any)
+    if type(dinos) ~= "table" then return nil end
+    local stages = opts.stages or NextGoal.Stages
+    local counts: {[string]: number} = {}
+    for _, d in dinos do
+        if type(d) == "table" and not d.locked then
+            local pattern = if type(d.genes) == "table" then d.genes.patternId else nil
+            if type(d.speciesId) == "string" and type(pattern) == "string" and type(d.stage) == "string" then
+                local key = d.stage .. "|" .. d.speciesId .. "|" .. pattern
+                counts[key] = (counts[key] or 0) + 1
+            end
+        end
+    end
+    local best = nil
+    for key, count in counts do
+        local stageId, species, pattern = string.match(key, "^([^|]*)|([^|]*)|(.*)$")
+        for _, stage in stages do
+            if stage.source == stageId then
+                local have = math.min(count, stage.donorCount)
+                local fraction = have / stage.donorCount
+                local ready = count &gt;= stage.donorCount
+                -- Prefer ready, then fraction, then smaller recipe, then name (deterministic).
+                local score = (if ready then 2 else 0) + fraction
+                local tier = stage.donorCount
+                local name = stage.name .. "|" .. species .. "|" .. pattern
+                if not best or score &gt; best.score or (score == best.score and (tier &lt; best.tier or (tier == best.tier and name &lt; best.name))) then
+                    best = {score = score, tier = tier, name = name, stage = stage, species = species, pattern = pattern, have = have, fraction = fraction, ready = ready}
+                end
+            end
+        end
+    end
+    if not best then return nil end
+    local label = if opts.speciesName then opts.speciesName(best.species) else best.species
+    local patternLabel = if opts.patternName then opts.patternName(best.pattern) else best.pattern
+    local text = if best.ready then string.format("%s ready: fuse %s %s", best.stage.name, label, patternLabel)
+        else string.format("%s: %d/%d %s %s", best.stage.name, best.have, best.stage.donorCount, label, patternLabel)
+    return {kind = "fusion", text = text, fraction = best.fraction, ready = best.ready}
+end
+
+-- Level XP progress. Level L starts at (L-1)^2 * perLevel xp (ProgressionRules.level).
+function NextGoal.level(opts: any)
+    local perLevel, maxLevel = opts.perLevel or 100, opts.maxLevel or 60
+    local xp = math.max(0, tonumber(opts.xp) or 0)
+    local level = tonumber(opts.level)
+    if not level then level = math.min(maxLevel, 1 + math.floor(math.sqrt(xp / perLevel))) end
+    level = math.clamp(level, 1, maxLevel)
+    if level &gt;= maxLevel then return {kind = "level", text = "Level " .. level .. " (max)", fraction = 1} end
+    local floorXp, nextXp = (level - 1) ^ 2 * perLevel, level ^ 2 * perLevel
+    local into = math.clamp(xp - floorXp, 0, nextXp - floorXp)
+    return {kind = "level", text = string.format("Level %d: %d/%d XP", level, into, nextXp - floorXp), fraction = into / (nextXp - floorXp)}
+end
+
+-- opts: dinos (list or nil), level, xp, perLevel, maxLevel, stages, speciesName(id), patternName(id)
+function NextGoal.pick(opts: any)
+    return NextGoal.fusion(opts.dinos, opts) or NextGoal.level(opts)
+end
+return NextGoal
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX207">
+        <Properties>
           <string name="Name">PatternGenes</string>
           <ProtectedString name="Source">--!strict
 -- Authored egg masks on creature UVs; eyes/mouth are fixed pixels, never tinted.
@@ -368827,7 +368904,7 @@ return Pattern
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX207">
+      <Item class="ModuleScript" referent="RBX208">
         <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
@@ -368895,7 +368972,7 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX208">
+      <Item class="ModuleScript" referent="RBX209">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -369007,7 +369084,7 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX209">
+      <Item class="ModuleScript" referent="RBX210">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -369232,7 +369309,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX210">
+      <Item class="ModuleScript" referent="RBX211">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -369241,7 +369318,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX211">
+      <Item class="ModuleScript" referent="RBX212">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -369257,7 +369334,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX212">
+      <Item class="ModuleScript" referent="RBX213">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -369321,7 +369398,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX213">
+      <Item class="ModuleScript" referent="RBX214">
         <Properties>
           <string name="Name">RevealSkip</string>
           <ProtectedString name="Source">--!strict
@@ -369403,7 +369480,7 @@ return Skip
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX214">
+      <Item class="ModuleScript" referent="RBX215">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -369494,7 +369571,107 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX215">
+      <Item class="ModuleScript" referent="RBX216">
+        <Properties>
+          <string name="Name">Sfx</string>
+          <ProtectedString name="Source">--!strict
+-- Polish pass: one table of named UI/gameplay sounds. Every id is an EMPTY PROVISIONAL placeholder
+-- until the owner uploads the audio pack (docs/62). Empty or malformed ids are a silent no-op, so the
+-- game stays silent (never errors) until ids are filled. Honors the SOUND ON/OFF setting
+-- (Theme.HatchSoundEnabled). Sound instances are pooled per name; repeats are throttled.
+local Sfx = {}
+-- id = "" PROVISIONAL (do not invent ids). gap = minimum seconds between plays of the same name.
+Sfx.Sounds = {
+    hatch_crack = {id = "", volume = .6, rate = 1, gap = .12},
+    hatch_common = {id = "", volume = .6, rate = 1, gap = .2},
+    hatch_rare = {id = "", volume = .7, rate = 1, gap = .2},
+    hatch_legendary = {id = "", volume = .85, rate = 1, gap = .2},
+    shiny_bang = {id = "", volume = .8, rate = 1, gap = .3},
+    big_thud = {id = "", volume = .8, rate = 1, gap = .3},
+    pickup = {id = "", volume = .35, rate = 1, gap = .06},
+    run_start = {id = "", volume = .6, rate = 1, gap = .5},
+    run_end = {id = "", volume = .6, rate = 1, gap = .5},
+    shop_buy = {id = "", volume = .6, rate = 1, gap = .15},
+    shop_refresh = {id = "", volume = .45, rate = 1, gap = .5},
+    weather_start = {id = "", volume = .6, rate = 1, gap = 1},
+    level_up = {id = "", volume = .7, rate = 1, gap = .5},
+    fusion_reveal = {id = "", volume = .75, rate = 1, gap = .3},
+    ui_click = {id = "", volume = .4, rate = 1, gap = .04},
+}
+Sfx.PoolSize = 3
+Sfx.Group = "BeDinoSfx"
+
+-- Pure: returns a "rbxassetid://N" string, or nil for empty/invalid ids.
+function Sfx.normalizeId(id: any): string?
+    if type(id) == "number" and id &gt; 0 and id % 1 == 0 then return "rbxassetid://" .. string.format("%d", id) end
+    if type(id) ~= "string" then return nil end
+    local digits = string.match(id, "^rbxassetid://(%d+)$") or string.match(id, "^(%d+)$")
+    if not digits or tonumber(digits) == 0 then return nil end
+    return "rbxassetid://" .. digits
+end
+-- Pure: should a play at `now` be allowed given the previous accepted play time (nil = never)?
+function Sfx.throttled(entry: any, last: number?, now: number): boolean
+    if type(entry) ~= "table" then return true end
+    return last ~= nil and now - last &lt; (entry.gap or 0)
+end
+-- Pure: next round-robin slot (1..size).
+function Sfx.nextSlot(current: number, size: number): number
+    return current % size + 1
+end
+-- Pure: sound name for a hatched egg. rarity 1..3 (Common/Rare/Legendary).
+function Sfx.hatchName(rarity: number?): string
+    return if rarity == 3 then "hatch_legendary" elseif rarity == 2 then "hatch_rare" else "hatch_common"
+end
+
+local pools: {[string]: {sounds: {Sound}, slot: number}} = {}
+local lastPlayed: {[string]: number} = {}
+local folder: Instance? = nil
+
+local function enabled(): boolean
+    local ok, value = pcall(function()
+        return (require((script :: any).Parent.UITheme) :: any).HatchSoundEnabled ~= false
+    end)
+    return not ok or value
+end
+
+-- Returns true when a sound was actually started. Never throws.
+function Sfx.play(name: string): boolean
+    local entry = Sfx.Sounds[name]
+    if not entry then return false end
+    local assetId = Sfx.normalizeId(entry.id)
+    if not assetId or not enabled() then return false end
+    local now = os.clock()
+    if Sfx.throttled(entry, lastPlayed[name], now) then return false end
+    local ok = pcall(function()
+        if not folder or not folder.Parent then
+            local created = Instance.new("Folder")
+            created.Name = Sfx.Group
+            created.Parent = game:GetService("SoundService")
+            folder = created
+            pools = {}
+        end
+        local pool = pools[name]
+        if not pool then pool = {sounds = {}, slot = 0} pools[name] = pool end
+        pool.slot = Sfx.nextSlot(pool.slot, Sfx.PoolSize)
+        local sound = pool.sounds[pool.slot]
+        if not sound or not sound.Parent then
+            sound = Instance.new("Sound")
+            sound.Name = name
+            sound.Parent = folder
+            pool.sounds[pool.slot] = sound
+        end
+        sound.SoundId, sound.Volume, sound.PlaybackSpeed = assetId, entry.volume, entry.rate
+        sound.TimePosition = 0
+        sound:Play()
+    end)
+    if ok then lastPlayed[name] = now end
+    return ok
+end
+return Sfx
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX217">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -369542,7 +369719,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX216">
+      <Item class="ModuleScript" referent="RBX218">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -369591,7 +369768,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX217">
+      <Item class="ModuleScript" referent="RBX219">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -369791,7 +369968,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX218">
+      <Item class="ModuleScript" referent="RBX220">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -369823,7 +370000,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX219">
+      <Item class="ModuleScript" referent="RBX221">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -369845,7 +370022,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX220">
+      <Item class="ModuleScript" referent="RBX222">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -369861,7 +370038,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX221">
+      <Item class="ModuleScript" referent="RBX223">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -369909,7 +370086,7 @@ function Theme.decorate(object: GuiObject, radius: number)
         scale.Parent = object
         local hovered, pressed = false, false
         local function animate(value: number)
-            Theme.animate(scale,.09,{Scale=value*(object:GetAttribute("UIScaleBase") or 1)})
+            Theme.animate(scale,.09,{Scale=(if Theme.MotionEnabled then value else 1)*(object:GetAttribute("UIScaleBase") or 1)})
             Theme.animate(border,.09,{Color=if hovered or pressed then Theme.Colors.gold else Theme.Colors.outline})
         end
         object.MouseEnter:Connect(function() hovered=true animate(if pressed then .96 else 1.035) end)
@@ -370007,7 +370184,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX222">
+      <Item class="ModuleScript" referent="RBX224">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -370030,7 +370207,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX223">
+      <Item class="ModuleScript" referent="RBX225">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -370082,7 +370259,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX224">
+    <Item class="Folder" referent="RBX226">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -539637,15 +539814,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX225">
+  <Item class="ServerScriptService" referent="RBX227">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX226">
+    <Item class="Folder" referent="RBX228">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX227">
+      <Item class="ModuleScript" referent="RBX229">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -539856,7 +540033,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX228">
+      <Item class="Script" referent="RBX230">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -540001,7 +540178,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX229">
+      <Item class="ModuleScript" referent="RBX231">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -540110,7 +540287,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX230">
+      <Item class="ModuleScript" referent="RBX232">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -540198,7 +540375,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX231">
+      <Item class="ModuleScript" referent="RBX233">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -540332,7 +540509,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX232">
+      <Item class="ModuleScript" referent="RBX234">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -540544,7 +540721,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX233">
+      <Item class="ModuleScript" referent="RBX235">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -540786,7 +540963,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX234">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -540965,7 +541142,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX235">
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -541151,7 +541328,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX238">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -541539,7 +541716,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -541589,7 +541766,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -541631,7 +541808,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -541742,7 +541919,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -541824,7 +542001,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -541916,7 +542093,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -542021,7 +542198,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -542155,7 +542332,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -542442,6 +542619,7 @@ local function syncAttributes(player: Player, profile: any)
     player:SetAttribute("EquippedGenesJson",HttpService:JSONEncode(if traits then traits.genes else nil))
     player:SetAttribute("EquippedCondition",if traits and traits.genes then traits.genes.conditionId else "normal")
     player:SetAttribute("AccountLevel",ProgressionRules.level(progress))
+    player:SetAttribute("AccountXP",progress.accountXP or 0)
     player:SetAttribute("PlaySeconds", profile.metrics.playSeconds)
     player:SetAttribute("RarestCaught", profile.metrics.rarest)
     player:SetAttribute("RobuxSpent", profile.metrics.robux)
@@ -543830,7 +544008,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -544011,7 +544189,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -544103,7 +544281,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -544359,7 +544537,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -544431,19 +544609,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX249">
+  <Item class="StarterPlayer" referent="RBX251">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX250">
+    <Item class="StarterPlayerScripts" referent="RBX252">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX251">
+      <Item class="Folder" referent="RBX253">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX252">
+        <Item class="LocalScript" referent="RBX254">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -544472,6 +544650,9 @@ local ShopOdds=require(Shared.ShopOdds)
 local RevealSkip=require(Shared.RevealSkip)
 local EggOutcomeView=require(Shared.EggOutcomeView)
 local TouchLayout=require(Shared.TouchLayout)
+local Sfx=require(Shared.Sfx)
+local NextGoal=require(Shared.NextGoal)
+local FusionSelection=require(Shared.FusionSelection)
 local Marketplace=game:GetService("MarketplaceService")
 local C = Theme.Colors
 local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
@@ -544549,7 +544730,7 @@ local function button(parent: Instance,text: string,x: number,y: number,w: numbe
     b.Position,b.Size,b.BackgroundColor3 = UDim2.fromOffset(x,y),UDim2.fromOffset(w,h),color
     b.Text,b.TextColor3,b.TextSize,b.ZIndex,b.Parent = text,C.text,23,if parent:IsA("GuiObject") then parent.ZIndex+2 else 2,parent
     Theme.decorate(b,4)
-    b.Activated:Connect(callback)
+    b.Activated:Connect(function() Sfx.play("ui_click") callback() end)
     return b
 end
 local function art(parent: GuiObject,id: string,x: number,y: number,size: number)
@@ -544630,6 +544811,54 @@ local function celebrate()
         TweenService:Create(confetti,TweenInfo.new(.9,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Position=UDim2.fromScale(.15+(i%8)*.1,.7+(i%3)*.06),Rotation=i*65,BackgroundTransparency=1}):Play()
         task.delay(1,function() confetti:Destroy() end)
     end
+end
+-- Polish: pooled reveal juice. At most one flash and one banner exist at a time; nothing runs per frame
+-- except the capped &lt;=0.22 s camera shake, and every effect is skipped when motion is off.
+local flashFrame=Instance.new("Frame")
+flashFrame.Name,flashFrame.BorderSizePixel,flashFrame.BackgroundTransparency,flashFrame.Visible="RevealFlash",0,1,false
+flashFrame.Size,flashFrame.ZIndex,flashFrame.Active=UDim2.fromScale(1,1),44,false
+flashFrame.Parent=gui
+local function flash(color: Color3,strength: number)
+    if not motion then return end
+    flashFrame.BackgroundColor3,flashFrame.BackgroundTransparency,flashFrame.Visible=color,1-math.clamp(strength,0,.5),true
+    Theme.animate(flashFrame,.35,{BackgroundTransparency=1})
+    task.delay(.4,function() if flashFrame.BackgroundTransparency&gt;=.99 then flashFrame.Visible=false end end)
+end
+local shaking=false
+local function shake(amplitude: number)
+    local camera=workspace.CurrentCamera
+    if not motion or shaking or not camera then return end
+    shaking=true
+    local amp=math.min(amplitude,.15)
+    local started=os.clock()
+    RunService:BindToRenderStep("BeDinoRevealShake",Enum.RenderPriority.Camera.Value+1,function()
+        local t=os.clock()-started
+        if t&gt;=.22 or not camera.Parent then RunService:UnbindFromRenderStep("BeDinoRevealShake") shaking=false return end
+        local fade=1-t/.22
+        camera.CFrame=camera.CFrame*CFrame.new(math.sin(t*90)*amp*fade,math.cos(t*70)*amp*fade,0)
+    end)
+end
+local function banner(parent: GuiObject,text: string,color: Color3)
+    local b=label(parent,text,80,2,660,52,40,color)
+    b.TextXAlignment=Enum.TextXAlignment.Center
+    if motion then
+        local s=Instance.new("UIScale") s.Scale,s.Parent=.7,b
+        Theme.animate(s,.25,{Scale=1},Enum.EasingStyle.Back)
+    end
+    task.delay(1.4,function() if b.Parent then b:Destroy() end end)
+end
+local popLabel=label(gui,"",0,0,160,40,28,C.accent)
+popLabel.AnchorPoint,popLabel.Position,popLabel.Visible,popLabel.ZIndex=Vector2.new(.5,.5),UDim2.fromScale(.5,.4),false,43
+local popSerial=0
+local function pickupPop(text: string)
+    popSerial+=1
+    local serial=popSerial
+    popLabel.Text=text
+    popLabel.Visible=true
+    popLabel.TextTransparency,popLabel.TextStrokeTransparency=0,0
+    popLabel.Position=UDim2.fromScale(.5,.4)
+    Theme.animate(popLabel,.5,{Position=UDim2.fromScale(.5,if motion then .33 else .4),TextTransparency=1,TextStrokeTransparency=1})
+    task.delay(.55,function() if serial==popSerial then popLabel.Visible=false end end)
 end
 local render
 local function open(name: string)
@@ -544713,6 +544942,7 @@ local function transact(action,id,replace)
 end
 shopResult.OnClientEvent:Connect(function(token,ok,status)
     if pendingShop and pendingShop.token==token then pendingShop=nil end
+    if ok then Sfx.play("shop_buy") end
     notify(if ok then "Success!" else tostring(status):gsub("_"," "),if ok then C.accent else C.red)
     if active=="auras" or active=="potions" then body:ClearAllChildren() render(active) end
 end)
@@ -544887,7 +545117,7 @@ render=function(name: string)
                 task.wait(1)
                 if not restock.Parent or active~="potions" then return end
                 if ProgressionRules.shopWindow(workspace:GetServerTimeNow())~=window then
-                    notify("Potion Shop refreshed",C.accent)
+                    notify("Potion Shop refreshed",C.accent) Sfx.play("shop_refresh")
                     body:ClearAllChildren() render("potions") return
                 end
                 header_text()
@@ -545098,6 +545328,7 @@ render=function(name: string)
         nextButton.Visible,collectionButton.Visible=false,false
         task.spawn(function()
             local started=os.clock()
+            Sfx.play("hatch_crack")
             local crackSeconds=math.min(3.4,Config.HatchRevealSeconds*.68) -- crack animation scales with the 1 s reveal pace
             while os.clock()-started&lt;crackSeconds and modalVersion==version and eggView.Parent do
                 local t=(os.clock()-started)*3.4/crackSeconds
@@ -545106,6 +545337,18 @@ render=function(name: string)
             end
             if modalVersion~=version or not view.Parent then return end
             splitEgg(not failed)
+            if not failed then
+                local rarity=speciesIndex(id)
+                local isShiny,isBig=player:GetAttribute("LastChestShiny")==true,player:GetAttribute("LastChestBig")==true
+                Sfx.play(Sfx.hatchName(rarity))
+                flash(rarityColors[rarity],.12+rarity*.06)
+                if isShiny then Sfx.play("shiny_bang") end
+                if isBig then Sfx.play("big_thud") end
+                if isShiny or isBig then
+                    banner(body,if isShiny and isBig then "SHINY + BIG!" elseif isShiny then "SHINY!" else "BIG!",if isShiny then C.gold else C.purple)
+                end
+                if rarity&gt;=3 or isShiny or isBig then shake(.08+.02*rarity) end
+            end
             view.Visible=not failed
             rewardLabel.Text=if failed then "The cracked egg did not hatch" else reward
             if failed then rewardLabel.TextColor3=C.red end
@@ -545282,6 +545525,46 @@ local function refreshCrystals()
 end
 player:GetAttributeChangedSignal("Crystals"):Connect(refreshCrystals)
 refreshCrystals()
+-- Polish: persistent "next goal" line under the crystal HUD (top-right, clear of the thumbstick/jump area).
+local goalHUD=box(gui,0,0,260,30,C.panel,2)
+local goalScale=Instance.new("UIScale") goalScale.Parent=goalHUD
+goalHUD.Name,goalHUD.BackgroundTransparency="NextGoal",.15
+local goalText=label(goalHUD,"",8,0,244,30,17,C.gold)
+goalText.TextScaled=true
+local goalLimit=Instance.new("UITextSizeConstraint") goalLimit.MaxTextSize=17 goalLimit.Parent=goalText
+local goalDinos=nil -- latest FusionAction list; nil = unavailable (falls back to level XP)
+local function refreshGoal()
+    local goal=NextGoal.pick({dinos=goalDinos,level=num("AccountLevel"),xp=num("AccountXP"),perLevel=ProgressionConfig.AccountXPPerLevel,
+        maxLevel=ProgressionConfig.AccountMaxLevel,stages=FusionSelection.Stages,
+        speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName})
+    goalText.Text,goalText.TextColor3="Goal  "..goal.text,if goal.ready then C.accent else C.gold
+end
+local goalQueued=false
+local function loadGoalDinos()
+    if goalQueued then return end
+    goalQueued=true
+    task.delay(2,function() -- debounce bursts of hatches; one request, up to 5 pages, never blocks the UI
+        goalQueued=false
+        local folder=ReplicatedStorage:FindFirstChild("BeDinoRemotes")
+        local fn=folder and folder:FindFirstChild("FusionAction")
+        if not fn or not fn:IsA("RemoteFunction") then goalDinos=nil refreshGoal() return end
+        local all,cursor,pages={},nil,0
+        repeat
+            local ok,response=pcall(function() return (fn :: RemoteFunction):InvokeServer({action="list",cursor=cursor,limit=200}) end)
+            if not ok or typeof(response)~="table" or response.ok~=true or typeof(response.dinosaurs)~="table" then goalDinos=nil refreshGoal() return end
+            for _,d in response.dinosaurs do table.insert(all,d) end
+            cursor=response.nextCursor
+            pages+=1
+        until cursor==nil or pages&gt;=5
+        goalDinos=all
+        refreshGoal()
+    end)
+end
+for _,attribute in {"CollectionJson","AccountLevel","AccountXP"} do
+    player:GetAttributeChangedSignal(attribute):Connect(function() refreshGoal() if attribute=="CollectionJson" then loadGoalDinos() end end)
+end
+refreshGoal()
+loadGoalDinos()
 local timers=Instance.new("Frame")
 timers.BackgroundTransparency,timers.Size,timers.AnchorPoint,timers.Position,timers.Parent=1,UDim2.fromOffset(286,220),Vector2.new(1,1),UDim2.new(1,-20,1,-100),gui
 local timerScale=Instance.new("UIScale") timerScale.Parent=timers
@@ -545316,7 +545599,7 @@ local function refreshProgressionHUD()
         local event=ProgressionRules.item(ProgressionConfig.Weather,id)
         weatherArt=Theme.icon(weatherTile,if event then event.icon or id else "weather")
         if weatherArt then weatherArt.Position,weatherArt.Size=UDim2.fromOffset(4,7),UDim2.fromOffset(48,48) end
-        if id~="clear" then notify((workspace:GetAttribute("WeatherName") or id).." started!",C.blue) end
+        if id~="clear" then notify((workspace:GetAttribute("WeatherName") or id).." started!",C.blue) Sfx.play("weather_start") end
     end
     weatherText.Text=if id=="clear" then "Weather in "..timerText((workspace:GetAttribute("NextWeatherAt") or now)-now) else (workspace:GetAttribute("WeatherName") or id).." "..timerText((workspace:GetAttribute("WeatherEndsAt") or now)-now)
     local p=progression() local lines={}
@@ -545370,6 +545653,9 @@ local function scales()
         object:SetAttribute("UIScaleBase",entry.scale)
     end
     place(crystalHUD,crystalScale,layout.crystal)
+    goalHUD.AnchorPoint,goalHUD.Size=Vector2.zero,UDim2.fromOffset(layout.crystal.w,30)
+    goalHUD.Position=UDim2.fromOffset(layout.crystal.x,layout.crystal.y+layout.crystal.h*layout.crystal.scale+4)
+    goalScale.Scale=layout.crystal.scale
     place(hud,hudScale,layout.hud)
     place(rail,railScale,layout.rail)
     place(timers,timerScale,layout.timers)
@@ -545435,6 +545721,13 @@ pcall(function() Input:GetPropertyChangedSignal("PreferredInput"):Connect(queueL
 scales()
 gui:SetAttribute("Ready",true)
 local elapsed=0
+local lastRunState=""
+local lastLevel=num("AccountLevel")
+player:GetAttributeChangedSignal("AccountLevel"):Connect(function()
+    local level=num("AccountLevel")
+    if lastLevel&gt;0 and level&gt;lastLevel then Sfx.play("level_up") notify("Level "..level.."!",C.gold) end
+    lastLevel=level
+end)
 RunService.Heartbeat:Connect(function(dt)
     elapsed+=dt
     if elapsed&lt;.15 then return end elapsed=0
@@ -545458,12 +545751,18 @@ RunService.Heartbeat:Connect(function(dt)
     end
     if growth&gt;lastGrowth and state=="Active" then
         notify(string.format("+%.1f Growth!",growth-lastGrowth),C.accent)
+        Sfx.play("pickup")
+        pickupPop(string.format("+%.1f",growth-lastGrowth))
         if motion then
             hudScale.Scale=(hud:GetAttribute("UIScaleBase") or 1)*1.06
             Theme.animate(hudScale,.2,{Scale=hud:GetAttribute("UIScaleBase") or 1},Enum.EasingStyle.Back)
         end
     end
     lastGrowth=growth
+    if state~=lastRunState then
+        if lastRunState=="Sanctuary" and state=="Active" then Sfx.play("run_start") elseif lastRunState=="Active" and state=="Sanctuary" then Sfx.play("run_end") end
+        lastRunState=state
+    end
     local ok,tags=pcall(function() return Http:JSONDecode(if character then character:GetAttribute("RunEggEvents") or "[]" else "[]") end)
     if ok and typeof(tags)=="table" then
         if #tags&gt;lastEggCount and state=="Active" then
@@ -545550,7 +545849,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX253">
+        <Item class="LocalScript" referent="RBX255">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -545613,7 +545912,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX254">
+        <Item class="ModuleScript" referent="RBX256">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -545692,7 +545991,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX255">
+        <Item class="ModuleScript" referent="RBX257">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -545714,6 +546013,7 @@ local EggGenetics = require(Shared.EggGenetics)
 local Theme = require(Shared.UITheme)
 local Preview = require(Shared.DinosaurPreview)
 local Sel = require(Shared.FusionSelection)
+local Sfx = require(Shared.Sfx)
 local PreviewTraits = require(script.Parent.PreviewTraits)
 local W = require(script.Parent.FusionWidgets)
 local DinoDetails = require(script.Parent.DinoDetails)
@@ -546417,6 +546717,7 @@ end
 
 startReveal = function(quote, result, status)
     state.mode = "reveal"
+    Sfx.play("fusion_reveal")
     clearBody()
     local serial = state.viewSerial
     local root = body :: Frame
@@ -546547,7 +546848,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX256">
+        <Item class="ModuleScript" referent="RBX258">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -546649,7 +546950,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX257">
+        <Item class="ModuleScript" referent="RBX259">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -546709,7 +547010,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX258">
+        <Item class="LocalScript" referent="RBX260">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -546882,7 +547183,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX259">
+        <Item class="LocalScript" referent="RBX261">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -546964,7 +547265,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX260">
+  <Item class="Workspace" referent="RBX262">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

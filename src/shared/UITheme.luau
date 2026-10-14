@@ -43,7 +43,7 @@ function Theme.decorate(object: GuiObject, radius: number)
         scale.Parent = object
         local hovered, pressed = false, false
         local function animate(value: number)
-            Theme.animate(scale,.09,{Scale=value*(object:GetAttribute("UIScaleBase") or 1)})
+            Theme.animate(scale,.09,{Scale=(if Theme.MotionEnabled then value else 1)*(object:GetAttribute("UIScaleBase") or 1)})
             Theme.animate(border,.09,{Color=if hovered or pressed then Theme.Colors.gold else Theme.Colors.outline})
         end
         object.MouseEnter:Connect(function() hovered=true animate(if pressed then .96 else 1.035) end)

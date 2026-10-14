@@ -24,6 +24,9 @@ local ShopOdds=require(Shared.ShopOdds)
 local RevealSkip=require(Shared.RevealSkip)
 local EggOutcomeView=require(Shared.EggOutcomeView)
 local TouchLayout=require(Shared.TouchLayout)
+local Sfx=require(Shared.Sfx)
+local NextGoal=require(Shared.NextGoal)
+local FusionSelection=require(Shared.FusionSelection)
 local Marketplace=game:GetService("MarketplaceService")
 local C = Theme.Colors
 local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
@@ -101,7 +104,7 @@ local function button(parent: Instance,text: string,x: number,y: number,w: numbe
     b.Position,b.Size,b.BackgroundColor3 = UDim2.fromOffset(x,y),UDim2.fromOffset(w,h),color
     b.Text,b.TextColor3,b.TextSize,b.ZIndex,b.Parent = text,C.text,23,if parent:IsA("GuiObject") then parent.ZIndex+2 else 2,parent
     Theme.decorate(b,4)
-    b.Activated:Connect(callback)
+    b.Activated:Connect(function() Sfx.play("ui_click") callback() end)
     return b
 end
 local function art(parent: GuiObject,id: string,x: number,y: number,size: number)
@@ -182,6 +185,54 @@ local function celebrate()
         TweenService:Create(confetti,TweenInfo.new(.9,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Position=UDim2.fromScale(.15+(i%8)*.1,.7+(i%3)*.06),Rotation=i*65,BackgroundTransparency=1}):Play()
         task.delay(1,function() confetti:Destroy() end)
     end
+end
+-- Polish: pooled reveal juice. At most one flash and one banner exist at a time; nothing runs per frame
+-- except the capped <=0.22 s camera shake, and every effect is skipped when motion is off.
+local flashFrame=Instance.new("Frame")
+flashFrame.Name,flashFrame.BorderSizePixel,flashFrame.BackgroundTransparency,flashFrame.Visible="RevealFlash",0,1,false
+flashFrame.Size,flashFrame.ZIndex,flashFrame.Active=UDim2.fromScale(1,1),44,false
+flashFrame.Parent=gui
+local function flash(color: Color3,strength: number)
+    if not motion then return end
+    flashFrame.BackgroundColor3,flashFrame.BackgroundTransparency,flashFrame.Visible=color,1-math.clamp(strength,0,.5),true
+    Theme.animate(flashFrame,.35,{BackgroundTransparency=1})
+    task.delay(.4,function() if flashFrame.BackgroundTransparency>=.99 then flashFrame.Visible=false end end)
+end
+local shaking=false
+local function shake(amplitude: number)
+    local camera=workspace.CurrentCamera
+    if not motion or shaking or not camera then return end
+    shaking=true
+    local amp=math.min(amplitude,.15)
+    local started=os.clock()
+    RunService:BindToRenderStep("BeDinoRevealShake",Enum.RenderPriority.Camera.Value+1,function()
+        local t=os.clock()-started
+        if t>=.22 or not camera.Parent then RunService:UnbindFromRenderStep("BeDinoRevealShake") shaking=false return end
+        local fade=1-t/.22
+        camera.CFrame=camera.CFrame*CFrame.new(math.sin(t*90)*amp*fade,math.cos(t*70)*amp*fade,0)
+    end)
+end
+local function banner(parent: GuiObject,text: string,color: Color3)
+    local b=label(parent,text,80,2,660,52,40,color)
+    b.TextXAlignment=Enum.TextXAlignment.Center
+    if motion then
+        local s=Instance.new("UIScale") s.Scale,s.Parent=.7,b
+        Theme.animate(s,.25,{Scale=1},Enum.EasingStyle.Back)
+    end
+    task.delay(1.4,function() if b.Parent then b:Destroy() end end)
+end
+local popLabel=label(gui,"",0,0,160,40,28,C.accent)
+popLabel.AnchorPoint,popLabel.Position,popLabel.Visible,popLabel.ZIndex=Vector2.new(.5,.5),UDim2.fromScale(.5,.4),false,43
+local popSerial=0
+local function pickupPop(text: string)
+    popSerial+=1
+    local serial=popSerial
+    popLabel.Text=text
+    popLabel.Visible=true
+    popLabel.TextTransparency,popLabel.TextStrokeTransparency=0,0
+    popLabel.Position=UDim2.fromScale(.5,.4)
+    Theme.animate(popLabel,.5,{Position=UDim2.fromScale(.5,if motion then .33 else .4),TextTransparency=1,TextStrokeTransparency=1})
+    task.delay(.55,function() if serial==popSerial then popLabel.Visible=false end end)
 end
 local render
 local function open(name: string)
@@ -265,6 +316,7 @@ local function transact(action,id,replace)
 end
 shopResult.OnClientEvent:Connect(function(token,ok,status)
     if pendingShop and pendingShop.token==token then pendingShop=nil end
+    if ok then Sfx.play("shop_buy") end
     notify(if ok then "Success!" else tostring(status):gsub("_"," "),if ok then C.accent else C.red)
     if active=="auras" or active=="potions" then body:ClearAllChildren() render(active) end
 end)
@@ -439,7 +491,7 @@ render=function(name: string)
                 task.wait(1)
                 if not restock.Parent or active~="potions" then return end
                 if ProgressionRules.shopWindow(workspace:GetServerTimeNow())~=window then
-                    notify("Potion Shop refreshed",C.accent)
+                    notify("Potion Shop refreshed",C.accent) Sfx.play("shop_refresh")
                     body:ClearAllChildren() render("potions") return
                 end
                 header_text()
@@ -650,6 +702,7 @@ render=function(name: string)
         nextButton.Visible,collectionButton.Visible=false,false
         task.spawn(function()
             local started=os.clock()
+            Sfx.play("hatch_crack")
             local crackSeconds=math.min(3.4,Config.HatchRevealSeconds*.68) -- crack animation scales with the 1 s reveal pace
             while os.clock()-started<crackSeconds and modalVersion==version and eggView.Parent do
                 local t=(os.clock()-started)*3.4/crackSeconds
@@ -658,6 +711,18 @@ render=function(name: string)
             end
             if modalVersion~=version or not view.Parent then return end
             splitEgg(not failed)
+            if not failed then
+                local rarity=speciesIndex(id)
+                local isShiny,isBig=player:GetAttribute("LastChestShiny")==true,player:GetAttribute("LastChestBig")==true
+                Sfx.play(Sfx.hatchName(rarity))
+                flash(rarityColors[rarity],.12+rarity*.06)
+                if isShiny then Sfx.play("shiny_bang") end
+                if isBig then Sfx.play("big_thud") end
+                if isShiny or isBig then
+                    banner(body,if isShiny and isBig then "SHINY + BIG!" elseif isShiny then "SHINY!" else "BIG!",if isShiny then C.gold else C.purple)
+                end
+                if rarity>=3 or isShiny or isBig then shake(.08+.02*rarity) end
+            end
             view.Visible=not failed
             rewardLabel.Text=if failed then "The cracked egg did not hatch" else reward
             if failed then rewardLabel.TextColor3=C.red end
@@ -834,6 +899,46 @@ local function refreshCrystals()
 end
 player:GetAttributeChangedSignal("Crystals"):Connect(refreshCrystals)
 refreshCrystals()
+-- Polish: persistent "next goal" line under the crystal HUD (top-right, clear of the thumbstick/jump area).
+local goalHUD=box(gui,0,0,260,30,C.panel,2)
+local goalScale=Instance.new("UIScale") goalScale.Parent=goalHUD
+goalHUD.Name,goalHUD.BackgroundTransparency="NextGoal",.15
+local goalText=label(goalHUD,"",8,0,244,30,17,C.gold)
+goalText.TextScaled=true
+local goalLimit=Instance.new("UITextSizeConstraint") goalLimit.MaxTextSize=17 goalLimit.Parent=goalText
+local goalDinos=nil -- latest FusionAction list; nil = unavailable (falls back to level XP)
+local function refreshGoal()
+    local goal=NextGoal.pick({dinos=goalDinos,level=num("AccountLevel"),xp=num("AccountXP"),perLevel=ProgressionConfig.AccountXPPerLevel,
+        maxLevel=ProgressionConfig.AccountMaxLevel,stages=FusionSelection.Stages,
+        speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName})
+    goalText.Text,goalText.TextColor3="Goal  "..goal.text,if goal.ready then C.accent else C.gold
+end
+local goalQueued=false
+local function loadGoalDinos()
+    if goalQueued then return end
+    goalQueued=true
+    task.delay(2,function() -- debounce bursts of hatches; one request, up to 5 pages, never blocks the UI
+        goalQueued=false
+        local folder=ReplicatedStorage:FindFirstChild("BeDinoRemotes")
+        local fn=folder and folder:FindFirstChild("FusionAction")
+        if not fn or not fn:IsA("RemoteFunction") then goalDinos=nil refreshGoal() return end
+        local all,cursor,pages={},nil,0
+        repeat
+            local ok,response=pcall(function() return (fn :: RemoteFunction):InvokeServer({action="list",cursor=cursor,limit=200}) end)
+            if not ok or typeof(response)~="table" or response.ok~=true or typeof(response.dinosaurs)~="table" then goalDinos=nil refreshGoal() return end
+            for _,d in response.dinosaurs do table.insert(all,d) end
+            cursor=response.nextCursor
+            pages+=1
+        until cursor==nil or pages>=5
+        goalDinos=all
+        refreshGoal()
+    end)
+end
+for _,attribute in {"CollectionJson","AccountLevel","AccountXP"} do
+    player:GetAttributeChangedSignal(attribute):Connect(function() refreshGoal() if attribute=="CollectionJson" then loadGoalDinos() end end)
+end
+refreshGoal()
+loadGoalDinos()
 local timers=Instance.new("Frame")
 timers.BackgroundTransparency,timers.Size,timers.AnchorPoint,timers.Position,timers.Parent=1,UDim2.fromOffset(286,220),Vector2.new(1,1),UDim2.new(1,-20,1,-100),gui
 local timerScale=Instance.new("UIScale") timerScale.Parent=timers
@@ -868,7 +973,7 @@ local function refreshProgressionHUD()
         local event=ProgressionRules.item(ProgressionConfig.Weather,id)
         weatherArt=Theme.icon(weatherTile,if event then event.icon or id else "weather")
         if weatherArt then weatherArt.Position,weatherArt.Size=UDim2.fromOffset(4,7),UDim2.fromOffset(48,48) end
-        if id~="clear" then notify((workspace:GetAttribute("WeatherName") or id).." started!",C.blue) end
+        if id~="clear" then notify((workspace:GetAttribute("WeatherName") or id).." started!",C.blue) Sfx.play("weather_start") end
     end
     weatherText.Text=if id=="clear" then "Weather in "..timerText((workspace:GetAttribute("NextWeatherAt") or now)-now) else (workspace:GetAttribute("WeatherName") or id).." "..timerText((workspace:GetAttribute("WeatherEndsAt") or now)-now)
     local p=progression() local lines={}
@@ -922,6 +1027,9 @@ local function scales()
         object:SetAttribute("UIScaleBase",entry.scale)
     end
     place(crystalHUD,crystalScale,layout.crystal)
+    goalHUD.AnchorPoint,goalHUD.Size=Vector2.zero,UDim2.fromOffset(layout.crystal.w,30)
+    goalHUD.Position=UDim2.fromOffset(layout.crystal.x,layout.crystal.y+layout.crystal.h*layout.crystal.scale+4)
+    goalScale.Scale=layout.crystal.scale
     place(hud,hudScale,layout.hud)
     place(rail,railScale,layout.rail)
     place(timers,timerScale,layout.timers)
@@ -987,6 +1095,13 @@ pcall(function() Input:GetPropertyChangedSignal("PreferredInput"):Connect(queueL
 scales()
 gui:SetAttribute("Ready",true)
 local elapsed=0
+local lastRunState=""
+local lastLevel=num("AccountLevel")
+player:GetAttributeChangedSignal("AccountLevel"):Connect(function()
+    local level=num("AccountLevel")
+    if lastLevel>0 and level>lastLevel then Sfx.play("level_up") notify("Level "..level.."!",C.gold) end
+    lastLevel=level
+end)
 RunService.Heartbeat:Connect(function(dt)
     elapsed+=dt
     if elapsed<.15 then return end elapsed=0
@@ -1010,12 +1125,18 @@ RunService.Heartbeat:Connect(function(dt)
     end
     if growth>lastGrowth and state=="Active" then
         notify(string.format("+%.1f Growth!",growth-lastGrowth),C.accent)
+        Sfx.play("pickup")
+        pickupPop(string.format("+%.1f",growth-lastGrowth))
         if motion then
             hudScale.Scale=(hud:GetAttribute("UIScaleBase") or 1)*1.06
             Theme.animate(hudScale,.2,{Scale=hud:GetAttribute("UIScaleBase") or 1},Enum.EasingStyle.Back)
         end
     end
     lastGrowth=growth
+    if state~=lastRunState then
+        if lastRunState=="Sanctuary" and state=="Active" then Sfx.play("run_start") elseif lastRunState=="Active" and state=="Sanctuary" then Sfx.play("run_end") end
+        lastRunState=state
+    end
     local ok,tags=pcall(function() return Http:JSONDecode(if character then character:GetAttribute("RunEggEvents") or "[]" else "[]") end)
     if ok and typeof(tags)=="table" then
         if #tags>lastEggCount and state=="Active" then

@@ -17,6 +17,7 @@ local EggGenetics = require(Shared.EggGenetics)
 local Theme = require(Shared.UITheme)
 local Preview = require(Shared.DinosaurPreview)
 local Sel = require(Shared.FusionSelection)
+local Sfx = require(Shared.Sfx)
 local PreviewTraits = require(script.Parent.PreviewTraits)
 local W = require(script.Parent.FusionWidgets)
 local DinoDetails = require(script.Parent.DinoDetails)
@@ -720,6 +721,7 @@ end
 
 startReveal = function(quote, result, status)
     state.mode = "reveal"
+    Sfx.play("fusion_reveal")
     clearBody()
     local serial = state.viewSerial
     local root = body :: Frame
