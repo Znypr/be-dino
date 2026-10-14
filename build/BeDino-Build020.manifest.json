@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "b2c58408d2c2dd117b966526bd48b50c3c72d78baead3737bf4b85f628228001",
+  "place_sha256": "cded347201c776068d0c69b92c48521d3f718c86d395ec72dfb7f323abeb388b",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "33f6491c3921573cdf897028008998b4097b134df9aefad7dee98030a3e62262",
@@ -216,7 +216,7 @@
     "src/shared/ResourceModels.luau": "b021243e12db7f5705f8f54e810da482568c5097a1c307ffa5d8b3a81d1ddb4d",
     "src/shared/RevealSkip.luau": "3d35f316aa74ef7a143582e0f0dd48c640347918074a3f3edbf9e1c1aee6baf0",
     "src/shared/RuntimeMeshes.luau": "542db0c4f535afe0dbb1a591ef9567f26796f194ef38967373cf83fa8d710bda",
-    "src/shared/Sfx.luau": "2560797591b03aa4794858629ef10946e1750397bbd191246628af82fa537fa3",
+    "src/shared/Sfx.luau": "a196e166d3ea8bbbbc2a1943d6de8acbc8d19abe0e9d6d938cac2a346ece3a17",
     "src/shared/ShinyEffects.luau": "f5059433f066966709b9cc9e0a7aea6ac80e7f03a51ebd4edc134ab04da1d127",
     "src/shared/ShopOdds.luau": "c38149e210da89368bc3e0dc6a1e2463b7d04fe9a876e7f72a56a38d7d5d3017",
     "src/shared/TouchLayout.luau": "a1acd43184f9ee8c229ea99013a1e576c6473060a50b2fd4aadee4d912f50f88",
