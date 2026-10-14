@@ -92,11 +92,11 @@ The ten trails keep ids, levels, prices and speed multipliers (`ProgressionConfi
 | BD-087 | art | L | Sprite sheets and textures for the chosen style (list in section c) |
 | BD-088 | art | M | Ribbon textures for the ten colors and ground-disc decals |
 | BD-089 | tech art | M | Studio spike: one trail + one aura per tier, ground-sigil technique, additive vs opaque on grass |
-| BD-090 | client | L | `CosmeticEffects` v2: aura tiers, textured ribbons, orbit beams, pooled emitters |
-| BD-091 | client | L | Trail v2: textured trails, motif emitters, six-class complexity |
-| BD-092 | design/shared | M | Config: class per trail, aura tier from growth, three new auras (ids, prices TBD) |
-| BD-093 | UI art | M | 16 shop icons + 6 rarity badges |
-| BD-094 | UI | M | Shop previews use real sprites/loops instead of `TrailArtwork` flat lines |
+| BD-110 | client | L | `CosmeticEffects` v2: aura tiers, textured ribbons, orbit beams, pooled emitters |
+| BD-111 | client | L | Trail v2: textured trails, motif emitters, six-class complexity |
+| BD-112 | design/shared | M | Config: class per trail, aura tier from growth, three new auras (ids, prices TBD) |
+| BD-113 | UI art | M | 16 shop icons + 6 rarity badges |
+| BD-114 | UI | M | Shop previews use real sprites/loops instead of `TrailArtwork` flat lines |
 | BD-095 | client | M | Effects Full/Lite/Off setting, distance LOD, motion-off behavior |
 | BD-096 | audio | S | Equip shimmer wiring from the existing pack |
 | BD-097 | QA | M | 12-player phone performance and Studio/Android acceptance |
