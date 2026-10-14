@@ -66,6 +66,11 @@
       "key": "blizzard",
       "source": "weather-blizzard-v1.png",
       "robloxAssetId": "83461127038303"
+    },
+    {
+      "key": "egg_nest",
+      "source": "egg-nest-v1.png",
+      "robloxAssetId": "127462994652706"
     }
   ]
 }

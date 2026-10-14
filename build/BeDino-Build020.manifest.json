@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "1792949ab628bd2cf663a9e7369e9456b056e43d9779ee187541d22516e059c8",
+  "place_sha256": "7c17192c57d228fbadfbcd0f2d6b96f7f5b939f07241435f9eb44b77f8430971",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/Artwork.luau": "77bef322245582ebe9cf225c27f3281616a436dd7b1680347bb5cb853f8d2dfe",
@@ -212,9 +212,9 @@
     "src/shared/TouchLayout.luau": "a1acd43184f9ee8c229ea99013a1e576c6473060a50b2fd4aadee4d912f50f88",
     "src/shared/TrailArtwork.luau": "1b8485d058494bd2c8567c256e00ea107ee88f3631cd8433ebff3bbf7de3ca34",
     "src/shared/UIFormat.luau": "c3315076131baec70e40c5a6ecad4ac557b4d55bb502c7c5a74e2d7766e6c51d",
-    "src/shared/UIIconAssets.luau": "971db9bbdea3d750775275d4cd4903797105e2862525f51d58c41c663e130feb",
+    "src/shared/UIIconAssets.luau": "843cc1e4580606d948157cfb8e313c52e0efaf7a7be9f9759fa62173b1342a20",
     "src/shared/UIIconLayout.luau": "846e61f3c74cf8fe48d8de8a70dab1333ad4fad17bcfd42b225a7aaba00218d1",
-    "src/shared/UITheme.luau": "fcd32f3269479dff34ecb567842571bc23da542c614cd246989c0196d49cc13a",
+    "src/shared/UITheme.luau": "f3fc85462374cfb81a67696a4ca3bd20b12b91e933fa07dda63397a08ce536f3",
     "src/shared/WeatherClock.luau": "f9b4b6bb6c8107453e16401e1299260cb27de0c27bc2179242e20441d1f004e5",
     "src/shared/WorldKitData.luau": "860dd88ae449c3daa82d1372148e02d50d0ccaa08c8fa5a21a003a75bb4abde2",
     "src/server/Arena.luau": "263dad8590f35fbb981198d7ab0ffe7316982800c02ddf889b1f100bca2afcc9",

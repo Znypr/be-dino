@@ -50,3 +50,4 @@ A living dinosaur may **buy several auras/trails and switch between styles it ow
 
 ## UI rules (2026-10-14)
 Follow [UI copy and UI asset standards](docs/72-ui-copy-and-asset-standards.md): children as audience (short, obvious text, no "5m 0s" or "1.25x"), and no code-generated UI art as final: it needs a drafted, reviewed asset task.
+Every new art asset gets a line in [docs/77-asset-registry.md](docs/77-asset-registry.md) when it is added.

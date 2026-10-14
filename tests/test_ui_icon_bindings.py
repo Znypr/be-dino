@@ -20,12 +20,12 @@ class UIIconBindingTests(unittest.TestCase):
         with patch.object(BINDER.Path, "read_text", return_value=json.dumps(data)):
             return BINDER.compile_bindings()
 
-    def test_all_twelve_keys_and_empty_binding_fallback(self):
-        self.assertEqual(len(self.data["assets"]), 12)
+    def test_all_thirteen_keys_and_empty_binding_fallback(self):
+        self.assertEqual(len(self.data["assets"]), 13)
         self.assertEqual(BINDER.compile_bindings(), BINDER.OUTPUT.read_text())
         for entry in self.data["assets"]:
             entry["robloxAssetId"] = None
-        self.assertEqual(self.compile(self.data).count('= ""'), 12)
+        self.assertEqual(self.compile(self.data).count('= ""'), 13)
 
     def test_rejects_invalid_duplicate_and_missing_keys(self):
         for key in ("clear", "not-valid", "leap"):
