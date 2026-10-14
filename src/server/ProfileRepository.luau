@@ -336,7 +336,7 @@ local function syncAttributes(player: Player, profile: any)
     player:SetAttribute("PendingChestGrants", profile.pendingChestGrants or 0)
     player:SetAttribute("ProfileRevision", profile.revision or 0)
     player:SetAttribute("EquippedSpeciesId", profile.equippedSpeciesId)
-    local traits = EggTraits.selected(collection[profile.equippedSpeciesId])
+    local traits = EggTraits.selected(collection[profile.equippedSpeciesId], profile.equippedVariantKey)
     player:SetAttribute("EquippedBig", traits ~= nil and traits.big)
     player:SetAttribute("EquippedShiny", traits ~= nil and traits.shiny)
     player:SetAttribute("EquippedGenesJson",HttpService:JSONEncode(if traits then traits.genes else nil))
@@ -1092,7 +1092,9 @@ function ProfileRepository.claimNest(player: Player, nestId: string)
 end
 
 
-function ProfileRepository.equipSpecies(player: Player, speciesId: string): (boolean, string)
+-- variantKey (optional, BD-150): equip one exact owned copy of the species. It must be a variant key of the player's
+-- own collection entry with count > 0, so a client can never equip a copy it does not own.
+function ProfileRepository.equipSpecies(player: Player, speciesId: string, variantKey: string?): (boolean, string)
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
         return false, "profile_not_loaded"
@@ -1106,7 +1108,14 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string): (boo
     if typeof(cachedEntry) ~= "table" or (cachedEntry.base + cachedEntry.gold + (cachedEntry.emerald or 0) + cachedEntry.diamond <= 0 and not ProgressionRules.eventMutation(cachedEntry) and not EggTraits.selected(cachedEntry)) then
         return false, "locked"
     end
-    if cached.equippedSpeciesId == speciesId then
+    if variantKey ~= nil then
+        local variants = cachedEntry.variants
+        local variant = if typeof(variants) == "table" then variants[variantKey] else nil
+        if typeof(variantKey) ~= "string" or #variantKey > 160 or typeof(variant) ~= "table" or typeof(variant.count) ~= "number" or variant.count <= 0 then
+            return false, "not_owned"
+        end
+    end
+    if cached.equippedSpeciesId == speciesId and cached.equippedVariantKey == variantKey then
         syncAttributes(player, cached)
         return true, "already_equipped"
     end
@@ -1126,7 +1135,15 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string): (boo
                 locked = true
                 return nil
             end
+            if variantKey ~= nil then
+                local owned = if typeof(entry.variants) == "table" then entry.variants[variantKey] else nil
+                if typeof(owned) ~= "table" or typeof(owned.count) ~= "number" or owned.count <= 0 then
+                    locked = true
+                    return nil
+                end
+            end
             profileValue.equippedSpeciesId = speciesId
+            profileValue.equippedVariantKey = variantKey
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             return profileValue

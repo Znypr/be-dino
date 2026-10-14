@@ -35,7 +35,7 @@ local PreviewCamera=(function()
 '''+camera+'''\nend)()
 for _,id in {"compy","triceratops","tyrannosaurus","raptor","stegosaurus","ankylosaurus"} do
  for _,size in {{250,172},{274,230},{380,280},{120,146}} do
-  local viewport={AbsoluteSize={X=size[1],Y=size[2]},Destroying=signal,GetPropertyChangedSignal=function()return signal end}
+  local viewport={AbsoluteSize={X=size[1],Y=size[2]},Destroying=signal,GetPropertyChangedSignal=function()return signal end,GetAttributeChangedSignal=function()return signal end,GetAttribute=function()return nil end}
   local model={Destroying=signal,GetBoundingBox=function()return identity,v(100,100,100)end,GetAttribute=function(_,key)return if key=="GeometryOrigin" then Vector3.zero else nil end,GetPivot=function()return identity end}
   PreviewCamera.bind(viewport,model,id)
   local cam=viewport.CurrentCamera
@@ -56,7 +56,7 @@ for _,id in {"compy","triceratops","tyrannosaurus","raptor","stegosaurus","ankyl
 end
 print("Preview camera passed: all vertices visible with tight framing for 6 dinos across 4 card aspect ratios")
 for _,size in {{504,260},{250,128},{120,146}} do
- local viewport={AbsoluteSize={X=size[1],Y=size[2]},Destroying=signal,GetPropertyChangedSignal=function()return signal end}
+ local viewport={AbsoluteSize={X=size[1],Y=size[2]},Destroying=signal,GetPropertyChangedSignal=function()return signal end,GetAttributeChangedSignal=function()return signal end,GetAttribute=function()return nil end}
  local model={Destroying=signal,GetBoundingBox=function()return identity,v(4,6,7)end,GetAttribute=function(_,key)return if key=="UploadedModelId" then "verified-fixture" else nil end,GetPivot=function()return identity end}
  PreviewCamera.bind(viewport,model,"compy")
  local cam=viewport.CurrentCamera local basis=cam.CFrame local tan=math.tan(math.rad(cam.FieldOfView/2))
