@@ -103,6 +103,7 @@ local services={DataStoreService=datastores,HttpService=http,ReplicatedStorage=s
 local game={GameId=1,JobId="test",GetService=function(_,id)return services[id] end}
 local task={wait=function()end,spawn=function()end}
 local warn=function()end
+local os={time=function()return 1700000030 end,clock=os.clock,date=os.date} -- fixed injected clock: shop window never rolls mid-test
 local Identity=IDENTITY_MODULE
 local script={Parent={DinosaurIdentity="Identity"}}
 local require=function(id) assert(id=="Identity") return Identity end
