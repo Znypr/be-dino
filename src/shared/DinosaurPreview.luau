@@ -29,7 +29,13 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
     viewport.Ambient,viewport.LightColor,viewport.LightDirection=Color3.fromRGB(190,210,218),Color3.fromRGB(255,246,226),Vector3.new(-1,-1,-1)
     viewport.ZIndex,viewport.Parent=parent.ZIndex+1,parent
     local function load()
-    local model=Resources.clone(speciesId)
+    local encoded=viewport:GetAttribute("TraitsJson")
+    local traits=nil
+    if encoded and gold~="silhouette" and gold~=true and gold~="gold" and gold~="diamond" then
+        local ok,decoded=pcall(function() return Http:JSONDecode(encoded) end)
+        if ok and typeof(decoded)=="table" then traits=decoded end
+    end
+    local model=Resources.clone(speciesId,if traits then traits.genes else nil)
     if model and not viewport.Parent then model:Destroy();return end
     if model then
         local world=Instance.new("WorldModel") world.Parent=viewport
@@ -49,10 +55,9 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         end
         model:PivotTo(CFrame.new())
         model.Parent=world
-        local encoded=viewport:GetAttribute("TraitsJson")
         if gold=="silhouette" then
             viewport.Ambient,viewport.LightColor=Color3.new(0,0,0),Color3.new(0,0,0)
-        elseif encoded then local ok,traits=pcall(function() return Http:JSONDecode(encoded) end);if ok and traits.genes then Appearance.apply(model,traits.genes) end end
+        elseif traits and traits.genes then Appearance.apply(model,traits.genes) end
         Camera.bind(viewport,model,speciesId)
         task.spawn(function()
             local assets={}

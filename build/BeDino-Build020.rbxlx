@@ -364943,14 +364943,14 @@ local Http=game:GetService("HttpService")
 local Creatures={}
 local active=0
 local function frame(v) return CFrame.new(table.unpack(v)) end
-function Creatures.clone(id: string): Model?
+-- Used only when the caller has no genes (e.g. index entry never hatched); real genes are painted in place.
+Creatures.DefaultGenes={conditionId="normal",hatchSuccess=true,primaryColorId="green",secondaryColorId="white",blend=70,patternId="03_round_spots"}
+function Creatures.clone(id: string,genes: any?): Model?
     local source=script.Parent:FindFirstChild("CreatureData")
     local module=if source then source:FindFirstChild(id) else nil
     if not module or not RunService:IsClient() or active&gt;=12 then return nil end
     active+=1
     local mesh
-    local released=false
-    local function release() if not released then released=true active-=1 end end
     local ok,result=pcall(function()
         local data=Http:JSONDecode(require(module))
         mesh=Assets:CreateEditableMesh()
@@ -364976,10 +364976,6 @@ function Creatures.clone(id: string): Model?
             mesh:SetFaceNormals(f,{normals[n],normals[n+1],normals[n+2]})
         end
         local part=Assets:CreateMeshPartAsync(Content.fromObject(mesh),{CollisionFidelity=Enum.CollisionFidelity.Box})
-        -- The MeshPart owns a copy: free the EditableMesh budget now, not when the model dies. Holding it made menus and
-        -- previews exhaust the budget so the real character fell back to the primitive blob.
-        mesh:Destroy() mesh=nil
-        release()
         local model=Instance.new("Model")
         model.Name=id
         part.Name="AuthoredBody";part.Anchored=true;part.CanCollide=false;part.CanTouch=false;part.CanQuery=false;part.Massless=true
@@ -365019,13 +365015,13 @@ function Creatures.clone(id: string): Model?
                 node.Transform=pose.Rotation+pose.Position*scale
             end
         end)
-        require(script.Parent.PatternGenes).apply(part,{conditionId="normal",hatchSuccess=true,primaryColorId="green",secondaryColorId="white",blend=70,patternId="03_round_spots"})
-        model.Destroying:Once(function() connection:Disconnect() end)
+        require(script.Parent.PatternGenes).apply(part,if genes then genes else Creatures.DefaultGenes)
+        model.Destroying:Once(function() connection:Disconnect();mesh:Destroy();active-=1 end)
         return model
     end)
     if ok then return result end
     if mesh then mesh:Destroy() end
-    release()
+    active-=1
     warn("Be Dino creature unavailable: "..id.." ("..tostring(result)..")")
     return nil
 end
@@ -366977,7 +366973,13 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
     viewport.Ambient,viewport.LightColor,viewport.LightDirection=Color3.fromRGB(190,210,218),Color3.fromRGB(255,246,226),Vector3.new(-1,-1,-1)
     viewport.ZIndex,viewport.Parent=parent.ZIndex+1,parent
     local function load()
-    local model=Resources.clone(speciesId)
+    local encoded=viewport:GetAttribute("TraitsJson")
+    local traits=nil
+    if encoded and gold~="silhouette" and gold~=true and gold~="gold" and gold~="diamond" then
+        local ok,decoded=pcall(function() return Http:JSONDecode(encoded) end)
+        if ok and typeof(decoded)=="table" then traits=decoded end
+    end
+    local model=Resources.clone(speciesId,if traits then traits.genes else nil)
     if model and not viewport.Parent then model:Destroy();return end
     if model then
         local world=Instance.new("WorldModel") world.Parent=viewport
@@ -366997,10 +366999,9 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         end
         model:PivotTo(CFrame.new())
         model.Parent=world
-        local encoded=viewport:GetAttribute("TraitsJson")
         if gold=="silhouette" then
             viewport.Ambient,viewport.LightColor=Color3.new(0,0,0),Color3.new(0,0,0)
-        elseif encoded then local ok,traits=pcall(function() return Http:JSONDecode(encoded) end);if ok and traits.genes then Appearance.apply(model,traits.genes) end end
+        elseif traits and traits.genes then Appearance.apply(model,traits.genes) end
         Camera.bind(viewport,model,speciesId)
         task.spawn(function()
             local assets={}
@@ -367767,30 +367768,10 @@ function Sel.patternName(id: string?): string
 end
 
 -- Builds name lookups from the shared config tables (passed in to stay pure).
--- Player-facing drop chance text: 26 -&gt; "26%", 12.5 -&gt; "12.5%", 0.04 -&gt; "0.04%" (docs/85). Percent in, string out.
-function Sel.pct(p: number): string
-    local s = string.format("%.2f", p)
-    if string.find(s, ".", 1, true) then s = string.gsub(s, "0+$", "") s = string.gsub(s, "%.$", "") end
-    return s .. "%"
-end
-
 function Sel.buildCatalog(config, progression, patterns)
     local catalog = {species = {}, speciesOrder = {}, patterns = {}, patternOrder = {}, colors = {},
         colorOrder = {}, conditions = {}, mutations = {}, mutationOrder = {}, auras = {}, trails = {}}
     for id, name in (config and config.SpeciesDisplayNames) or {} do catalog.species[id] = name end
-    -- Base odds of ONE purchased egg (no run boost): species by weight, patterns equally likely, colors per slot by weight.
-    catalog.speciesPct, catalog.speciesRarity, catalog.patternPct, catalog.colorPct = {}, {}, {}, {}
-    local speciesTotal = 0
-    for _, row in (config and config.ChestSpeciesWeights) or {} do speciesTotal += row.weight end
-    for _, row in (config and config.ChestSpeciesWeights) or {} do
-        catalog.speciesPct[row.speciesId] = if speciesTotal &gt; 0 then 100 * row.weight / speciesTotal else 0
-        local tier = config.SpeciesRarities and config.SpeciesRarities[row.speciesId]
-        catalog.speciesRarity[row.speciesId] = tier and config.SpeciesRarityNames and config.SpeciesRarityNames[tier] or nil
-    end
-    for _, id in patterns or {} do catalog.patternPct[id] = 100 / math.max(1, #(patterns :: any)) end
-    local colorTotal = 0
-    for _, row in (progression and progression.EggColors) or {} do colorTotal += row.weight end
-    for _, row in (progression and progression.EggColors) or {} do catalog.colorPct[row.id] = if colorTotal &gt; 0 then 100 * row.weight / colorTotal else 0 end
     for i, id in (config and config.SpeciesOrder) or {} do catalog.speciesOrder[id] = i end
     for i, id in patterns or {} do catalog.patterns[id] = Sel.patternName(id) catalog.patternOrder[id] = i end
     for i, row in (progression and progression.EggColors) or {} do catalog.colors[row.id] = row.name catalog.colorOrder[row.id] = i end
@@ -368397,21 +368378,6 @@ local function eggLine(egg, catalog): string
 end
 Sel.eggLine = eggLine
 
--- " • Common • 26% of eggs" (rarity optional); empty when the percent is unknown.
-local function oddsText(rarity: string?, p: number?): string
-    if p == nil then return "" end
-    return " • " .. (if rarity then rarity .. " • " else "") .. Sel.pct(p) .. " of eggs"
-end
-local function colorOdds(g, catalog): string
-    if type(g) ~= "table" or not g.primaryColorId then return "Unknown" end
-    local function one(id)
-        local p = catalog.colorPct and catalog.colorPct[id]
-        return lookup(catalog, "colors", id) .. (if p then " " .. Sel.pct(p) else "")
-    end
-    if g.secondaryColorId == g.primaryColorId then return one(g.primaryColorId) .. " (per egg slot)" end
-    return one(g.primaryColorId) .. " • " .. one(g.secondaryColorId) .. " (per egg slot)"
-end
-
 function Sel.details(d, catalog)
     local g = genes(d)
     local stage = d.stage or "base"
@@ -368421,10 +368387,8 @@ function Sel.details(d, catalog)
             .. lookup(catalog, "species", d.speciesId, "Dino"),
         traits = {
             {label = "Stage", value = stageName},
-            {label = "Species", value = lookup(catalog, "species", d.speciesId, "Dino") .. oddsText(catalog.speciesRarity and catalog.speciesRarity[d.speciesId], catalog.speciesPct and catalog.speciesPct[d.speciesId])},
-            {label = "Pattern", value = lookup(catalog, "patterns", g.patternId, "Unknown") .. oddsText(nil, catalog.patternPct and catalog.patternPct[g.patternId])},
+            {label = "Pattern", value = lookup(catalog, "patterns", g.patternId, "Unknown")},
             {label = "Colors", value = geneLine(g, catalog)},
-            {label = "Color odds", value = colorOdds(g, catalog)},
             {label = "Condition", value = lookup(catalog, "conditions", g.conditionId, "Unknown")},
             {label = "Shiny", value = if d.shiny then "Yes" else "No"},
             {label = "BIG", value = if d.big then "Yes" else "No"},
@@ -370074,11 +370038,12 @@ function ResourceModels.clearTextures(part: BasePart)
     for _,child in part:GetChildren() do
         if child:IsA("SurfaceAppearance") or child:IsA("Decal") or child:IsA("Texture") then child:Destroy() end
     end
-    if part:IsA("MeshPart") then part.TextureID="" end
+    -- Authored creatures paint an EditableImage into TextureContent; Gold/Diamond/silhouette must drop it too.
+    if part:IsA("MeshPart") then part.TextureID="";part.TextureContent=Content.none end
 end
-function ResourceModels.clone(id: string): Model?
+function ResourceModels.clone(id: string,genes: any?): Model?
     if RunService:IsClient() then
-        local authored=Authored.clone(id)
+        local authored=Authored.clone(id,genes)
         if authored then return authored end
     end
     local folder = ReplicatedStorage:FindFirstChild("Resources")
@@ -541355,6 +541320,8 @@ function Dinosaur.refreshForPlayer(character: Model, player: Player)
     local entry = if ok then collection[speciesId] else nil
     local mutation = if entry and (entry.diamond or 0) &gt; 0 then "diamond" elseif entry and (entry.gold or 0) &gt; 0 then "gold" else "base"
     if player:GetAttribute("EquippedGenesJson") and player:GetAttribute("EquippedGenesJson")~="null" then mutation="base" end
+    -- Genes first so the client repaint triggered by SpeciesId/MutationVisual already sees the new equip.
+    character:SetAttribute("GenesJson", player:GetAttribute("EquippedGenesJson") or "null")
     character:SetAttribute("BigDinosaur", player:GetAttribute("EquippedBig") == true)
     local factor = if character:GetAttribute("BigDinosaur") then Config.BigScaleMultiplier else 1
     Dinosaur.render(character, scaleForScore(character:GetAttribute("GrowthScore") or 0) * factor, speciesId, mutation)
@@ -546243,8 +546210,6 @@ end
 local rarityColors=Theme.RarityColors
 local rarityNames=Config.SpeciesRarityNames
 local function speciesIndex(id: string): number return Config.SpeciesRarities[id] or 1 end
-local oddsWeight,oddsTotal={},0 -- base chance of one purchased egg, shown on Dino Index cards (docs/85)
-for _,row in Config.ChestSpeciesWeights do oddsWeight[row.speciesId]=row.weight oddsTotal+=row.weight end
 local function meter(parent: GuiObject,x: number,y: number,w: number,value: number,maxValue: number,color: Color3,text: string)
     local b=box(parent,x,y,w,34,C.outline,parent.ZIndex+1)
     local fill=Instance.new("Frame")
@@ -546560,7 +546525,7 @@ render=function(name: string)
             local card=box(list,((i-1)%3)*276,math.floor((i-1)/3)*rowHeight,264,cardHeight,if found then rarityColors[rarity] else Color3.fromRGB(62,64,74),24)
             Theme.texture(card,264,cardHeight)
             label(card,look.nameText or Config.SpeciesDisplayNames[id],4,8,256,35,25)
-            label(card,look.rarityText or (rarityNames[rarity].." • "..FusionSelection.pct(100*(oddsWeight[id] or 0)/oddsTotal).." of eggs"),4,44,256,25,18)
+            label(card,look.rarityText or rarityNames[rarity],4,44,256,25,18)
             if found then
                 hero(card,id,7,70,250,128,bestMutation(id))
                 label(card,if event then event.name.." mutation" elseif ownedTraits(id) then "Special variant" else string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond),5,201,254,25,15)
@@ -546589,7 +546554,7 @@ render=function(name: string)
         heading.Text,header.BackgroundColor3=Config.SpeciesDisplayNames[selected],rarityColors[index]
         local stage=box(body,0,0,380,360,rarityColors[index],24)
         hero(stage,selected,0,20,380,280,bestMutation(selected))
-        label(stage,rarityNames[index].." • "..FusionSelection.pct(100*(oddsWeight[selected] or 0)/oddsTotal).." of eggs",0,302,380,42,28)
+        label(stage,rarityNames[index],0,302,380,42,30)
         label(body,"YOUR COLLECTION",414,0,400,42,28)
         label(body,string.format("Base: %d • Gold: %d\nDiamond: %d",base,gold,diamond),414,62,400,92,25)
         label(body,if event then event.name.." • "..table.concat(UIFormat.boostLines(event.growth,event.speed,1)," • ") else "Cosmetic fusion: 15 Base → Gold; 4 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
@@ -548801,6 +548766,15 @@ local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Appearance = require(ReplicatedStorage.Shared.EggAppearance)
 local Http = game:GetService("HttpService")
 local watched = setmetatable({}, {__mode = "k"})
+-- The server shell (DinoVisual) shares geometry with the local mesh; keep it invisible on this client or its
+-- original texture z-fights through the genes-painted pattern. Client-local Transparency survives the camera script.
+local function hideShell(character: Model)
+    local shell = character:FindFirstChild("DinoVisual")
+    if not shell or not character:FindFirstChild("LocalMeshVisual") then return end
+    for _, item in shell:GetDescendants() do
+        if item:IsA("BasePart") and item.Transparency ~= 1 then item.LocalTransparencyModifier = 1 item.Transparency = 1 end
+    end
+end
 local function characterVisual(character: Model)
     local root = character:FindFirstChild("HumanoidRootPart")
     local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -548830,6 +548804,7 @@ local function characterVisual(character: Model)
             previous:ScaleTo(scale);previous:PivotTo(groundFrame());previous:SetAttribute("Scale",scale)
             for _,weld in welds do weld.Enabled=true end
         end
+        hideShell(character)
         if previous:GetAttribute("GenesJson")~=genesJson then
             local ok,genes=pcall(function() return Http:JSONDecode(genesJson) end)
             if ok and typeof(genes)=="table" and mutation=="base" then Appearance.apply(previous,genes) end
@@ -548838,7 +548813,9 @@ local function characterVisual(character: Model)
         return
     end
     local overrides=ReplicatedStorage:FindFirstChild("ResourceOverrides")
-    local model = Resources.clone(id)
+    local okGenes,genes=pcall(function() return Http:JSONDecode(genesJson) end)
+    local realGenes=if okGenes and typeof(genes)=="table" and mutation=="base" then genes else nil
+    local model = Resources.clone(id,realGenes)
     if not model then return end
     if not character.Parent or not root.Parent then model:Destroy();return end
     if previous then previous:Destroy() end
@@ -548865,12 +548842,11 @@ local function characterVisual(character: Model)
         end
     end
     model.Parent = character
-    local ok,genes=pcall(function() return Http:JSONDecode(genesJson) end)
-    if ok and typeof(genes)=="table" and mutation=="base" then Appearance.apply(model,genes) end
+    if realGenes then Appearance.apply(model,realGenes) end
     local fallback = character:FindFirstChild("DinoVisual")
     if fallback then
         for _, item in fallback:GetDescendants() do
-            if item:IsA("BasePart") then item.LocalTransparencyModifier = 1 end
+            if item:IsA("BasePart") then item.LocalTransparencyModifier = 1 item.Transparency = 1 end
         end
     end
 end
@@ -548893,9 +548869,12 @@ local function watchCharacter(character: Model)
     for _, attribute in {"SpeciesId", "VisualScale", "GoldVisual", "MutationVisual", "DinoAttached","GenesJson"} do
         character:GetAttributeChangedSignal(attribute):Connect(refresh)
     end
+    character.ChildAdded:Connect(function(child)
+        if child.Name == "DinoVisual" then task.delay(.5, function() hideShell(character) end) end
+    end)
     character.DescendantAdded:Connect(function(item)
         if item:IsA("BasePart") and item:FindFirstAncestor("DinoVisual") and character:FindFirstChild("LocalMeshVisual") then
-            item.LocalTransparencyModifier = 1
+            item.LocalTransparencyModifier = 1 item.Transparency = 1
         end
     end)
     refresh()
