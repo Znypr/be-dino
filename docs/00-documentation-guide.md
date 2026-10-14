@@ -70,3 +70,4 @@ Do **not** delete build snapshots or test evidence just to make them look curren
 3. If a newer build replaces Build 020, refresh README + this guide + current handoff + integration checklist together.
 4. Update the task status **only** in Kanban, including evidence link; older milestones keep historical snapshots.
 5. For shop art and Blender assets, source/render, approved preview, uploaded owner-bound IDs, integration and device verification are different stages.
+- [61 Release-readiness audit](61-release-readiness-audit.md): R/Y/G verdicts, ranked polish tasks, audio plan and live Studio checklist for the private playtest.
