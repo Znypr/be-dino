@@ -547783,7 +547783,7 @@ player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function()
     table.insert(batchEntries,{rarity=rarity,name=Config.SpeciesDisplayNames[species] or species,failed=outcome.failed,shiny=outcome.shiny==true,big=outcome.big==true})
     if autoHatching and EggsLogic.shouldAutoOpen(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen(),rarity,outcome,skipAllReveals) then
         table.insert(skippedEntries,{rarity=rarity,speciesId=species,outcome=outcome})
-        task.defer(hatchNext)
+        task.delay(Config.ChestClaimRequestCooldownSeconds+.15,hatchNext) -- stay under the server claim cooldown
         return
     end
     task.defer(function() open("hatch") end)
@@ -548289,8 +548289,61 @@ local ProgressionRules = require(Shared.ProgressionRules)
 local ModelPreview = require(Shared.ModelPreview)
 local UIFormat = require(Shared.UIFormat)
 local PreviewTraits = require(script.Parent.PreviewTraits)
+local PreviewCamera = require(Shared.PreviewCamera)
+local ContentProvider = game:GetService("ContentProvider")
 
 local EggsScreen = {}
+
+local SHELL = Color3.fromRGB(255, 244, 214)
+-- Never show a box: an authored egg whose mesh is unbound (empty MeshId) or still loading renders as a cube.
+-- Show a soft shell-colored ellipse, wait for the mesh (PreloadAsync, 3 tries), else swap to a smooth ball egg.
+local function meshParts(view: ViewportFrame): {MeshPart}
+    local list = {}
+    for _, item in view:GetDescendants() do if item:IsA("MeshPart") then table.insert(list, item) end end
+    return list
+end
+local function ballEgg(view: ViewportFrame)
+    local world = view:FindFirstChildOfClass("WorldModel")
+    if world then world:ClearAllChildren() else world = Instance.new("WorldModel") world.Parent = view end
+    local model = Instance.new("Model")
+    local part = Instance.new("Part")
+    part.Name, part.Shape, part.Size, part.Anchored, part.CanCollide = "Shell", Enum.PartType.Ball, Vector3.new(1.55, 2.3, 1.55), true, false
+    part.Color, part.Material, part.CFrame, part.Parent = SHELL, Enum.Material.SmoothPlastic, CFrame.new(0, 1.2, 0), model
+    model.PrimaryPart = part
+    model.Parent = world
+    PreviewCamera.bind(view, model, nil)
+end
+function EggsScreen.safeEggView(card: GuiObject, empty: boolean, size: number, x: number, y: number, traits: any): ViewportFrame
+    local view = ModelPreview.add(card, "egg", empty)
+    view.Position, view.Size = UDim2.fromOffset(x, y), UDim2.fromOffset(size, size)
+    local function finish() if traits then PreviewTraits.add(view, traits) end end
+    local parts = meshParts(view)
+    if #parts == 0 then finish() return view end
+    local blank = false
+    for _, part in parts do if part.MeshId == "" then blank = true end end
+    if blank then ballEgg(view) finish() return view end
+    -- Mesh set but maybe not loaded yet: ellipse placeholder until it is.
+    view.Visible = false
+    local holder = Instance.new("Frame")
+    holder.Name, holder.BackgroundColor3, holder.Position, holder.Size, holder.ZIndex, holder.Parent = "EggPlaceholder", SHELL, UDim2.fromOffset(x + size * .2, y + size * .06), UDim2.fromOffset(size * .6, size * .88), view.ZIndex, card
+    local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(.5, 0) corner.Parent = holder
+    task.spawn(function()
+        local ready = false
+        for _ = 1, 3 do
+            local ok = pcall(function() ContentProvider:PreloadAsync(parts) end)
+            ready = ok and #parts &gt; 0
+            for _, part in parts do if part.MeshId == "" or part.Parent == nil then ready = false end end
+            if ready then break end
+            task.wait(1)
+        end
+        if not view.Parent then return end
+        if not ready then ballEgg(view) end
+        finish()
+        view.Visible = true
+        holder:Destroy()
+    end)
+    return view
+end
 
 local function dim(root: Instance, transparency: number)
     for _, item in root:GetDescendants() do
@@ -548351,9 +548404,7 @@ function EggsScreen.render(ctx: any)
     label(card, "Next egg", 14, 6, 200, 28, 22, C.gold).TextXAlignment = Enum.TextXAlignment.Left
     local look = FusionSelection.eggSlotLook(entry, entry ~= nil and EggGenetics.valid(entry.genes))
     local viewSize = math.clamp(cardH - 50, 96, 170)
-    local view = ModelPreview.add(card, "egg", look == "empty")
-    view.Position, view.Size = UDim2.fromOffset(16, 38), UDim2.fromOffset(viewSize, viewSize)
-    if entry then PreviewTraits.add(view, if look == "genes" then entry else {shiny = entry.shiny, big = entry.big}) end
+    EggsScreen.safeEggView(card, look == "empty", viewSize, 16, 38, if entry then (if look == "genes" then entry else {shiny = entry.shiny, big = entry.big}) else nil)
 
     local infoX = 16 + viewSize + 14
     local infoW = 824 - infoX - 14
@@ -548383,7 +548434,8 @@ function EggsScreen.render(ctx: any)
     -- OPEN (one clear action) + gear to the auto-open settings.
     local openW = math.min(300, infoW - 240)
     local openX = 824 - 14 - openW
-    local openButton = button(card, buttonText, openX, 40, openW, math.min(touchH + 16, cardH - 100), if state.canOpen then C.accent else C.outline, function()
+    local gearH = math.max(touchH * .6, 52)
+    local openButton = button(card, buttonText, openX, 40, openW, math.min(touchH + 16, cardH - 62 - gearH), if state.canOpen then C.accent else C.outline, function()
         state = EggsLogic.card(entry, nextId, ctx.num("NextChestReadyAt"), workspace:GetServerTimeNow(), waiting)
         if state.canOpen then ctx.openEgg()
         elseif state.kind == "growing" then ctx.notify("This egg is still growing", C.gold)
@@ -548391,7 +548443,7 @@ function EggsScreen.render(ctx: any)
     end)
     openButton.Name = "OpenEggButton"
     openButton.TextSize = 30
-    local gear = button(card, "AUTO", openX, cardH - 14 - math.max(touchH * .6, 52), openW, math.max(touchH * .6, 52), C.blue, function() ctx.openSettings() end)
+    local gear = button(card, "AUTO", openX, cardH - 14 - gearH, openW, gearH, C.blue, function() ctx.openSettings() end)
     gear.Name = "AutoOpenSettingsButton"
     gear.TextSize = 20
     local autoLine = label(card, ctx.autoOpenText(), infoX, cardH - 62, openX - infoX - 10, 48, 17, C.text)

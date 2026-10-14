@@ -1282,7 +1282,7 @@ player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function()
     table.insert(batchEntries,{rarity=rarity,name=Config.SpeciesDisplayNames[species] or species,failed=outcome.failed,shiny=outcome.shiny==true,big=outcome.big==true})
     if autoHatching and EggsLogic.shouldAutoOpen(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen(),rarity,outcome,skipAllReveals) then
         table.insert(skippedEntries,{rarity=rarity,speciesId=species,outcome=outcome})
-        task.defer(hatchNext)
+        task.delay(Config.ChestClaimRequestCooldownSeconds+.15,hatchNext) -- stay under the server claim cooldown
         return
     end
     task.defer(function() open("hatch") end)

@@ -160,7 +160,8 @@ function EggsScreen.render(ctx: any)
     -- OPEN (one clear action) + gear to the auto-open settings.
     local openW = math.min(300, infoW - 240)
     local openX = 824 - 14 - openW
-    local openButton = button(card, buttonText, openX, 40, openW, math.min(touchH + 16, cardH - 100), if state.canOpen then C.accent else C.outline, function()
+    local gearH = math.max(touchH * .6, 52)
+    local openButton = button(card, buttonText, openX, 40, openW, math.min(touchH + 16, cardH - 62 - gearH), if state.canOpen then C.accent else C.outline, function()
         state = EggsLogic.card(entry, nextId, ctx.num("NextChestReadyAt"), workspace:GetServerTimeNow(), waiting)
         if state.canOpen then ctx.openEgg()
         elseif state.kind == "growing" then ctx.notify("This egg is still growing", C.gold)
@@ -168,7 +169,7 @@ function EggsScreen.render(ctx: any)
     end)
     openButton.Name = "OpenEggButton"
     openButton.TextSize = 30
-    local gear = button(card, "AUTO", openX, cardH - 14 - math.max(touchH * .6, 52), openW, math.max(touchH * .6, 52), C.blue, function() ctx.openSettings() end)
+    local gear = button(card, "AUTO", openX, cardH - 14 - gearH, openW, gearH, C.blue, function() ctx.openSettings() end)
     gear.Name = "AutoOpenSettingsButton"
     gear.TextSize = 20
     local autoLine = label(card, ctx.autoOpenText(), infoX, cardH - 62, openX - infoX - 10, 48, 17, C.text)
