@@ -9,20 +9,20 @@
 local Identity = require(script.Parent.DinosaurIdentity)
 
 local Fusion = {}
-Fusion.Version = "bd057-ladder-50-10-3"
+Fusion.Version = "bd057-ladder-15-4-2"
 
--- OWNER DECISION 2026-10-13 (supersedes the 10-donor Gold rule; docs/58):
+-- OWNER DECISION 2026-10-14 (supersedes 50/10/3 of 2026-10-13 and the 10-donor Gold rule; docs/57, docs/58):
 -- same species + same pattern at every tier, guaranteed, consumes ALL donors and
--- creates ONE new individual. Gold = 50 Base, Emerald = 10 Gold, Diamond = 3 Emerald.
+-- creates ONE new individual. Gold = 15 Base, Emerald = 4 Gold, Diamond = 2 Emerald.
 -- The donor count is per recipe; nothing else may hard-code it.
 Fusion.Ladder = {"base", "gold", "emerald", "diamond"}
 Fusion.Recipes = {
-    gold = {targetStage = "gold", sourceStage = "base", donorCount = 50, version = "gold-same-species-pattern-50-v1"},
-    emerald = {targetStage = "emerald", sourceStage = "gold", donorCount = 10, version = "emerald-same-species-pattern-10-v1"},
-    diamond = {targetStage = "diamond", sourceStage = "emerald", donorCount = 3, version = "diamond-same-species-pattern-3-v1"},
+    gold = {targetStage = "gold", sourceStage = "base", donorCount = 15, version = "gold-same-species-pattern-15-v1"},
+    emerald = {targetStage = "emerald", sourceStage = "gold", donorCount = 4, version = "emerald-same-species-pattern-4-v1"},
+    diamond = {targetStage = "diamond", sourceStage = "emerald", donorCount = 2, version = "diamond-same-species-pattern-2-v1"},
 }
 -- Largest approved donor count (remote/list bounds derive from this).
-Fusion.MaxDonorCount = 50
+Fusion.MaxDonorCount = 15
 -- Stages the grouped collection can represent. Emerald uses the additive optional
 -- collection[species].emerald counter (nil == 0).
 Fusion.GroupedProjection = {gold = true, emerald = true, diamond = true}
@@ -111,7 +111,7 @@ local function sequence(id: string, ownerKey: string): number?
     return n
 end
 
--- A fused donor's origin embeds up to 50 immutable parent snapshots; the quote digest
+-- A fused donor's origin embeds up to 15 immutable parent snapshots; the quote digest
 -- needs only the origin identity (kind/operation/versions), keeping quotes O(donors).
 local function compactOrigin(origin)
     if type(origin) ~= "table" then return origin end

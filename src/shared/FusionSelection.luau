@@ -6,16 +6,16 @@
 -- this module only explains and previews. Exercised by tools/verify_fusion_ui.py.
 local Sel = {}
 
--- OWNER DECISION 2026-10-13 (docs/58): Gold = 50 Base, Emerald = 10 Gold,
--- Diamond = 3 Emerald; same species + same pattern; all three tiers active. Mirrors
+-- OWNER DECISION 2026-10-14 (docs/57): Gold = 15 Base, Emerald = 4 Gold,
+-- Diamond = 2 Emerald; same species + same pattern; all three tiers active. Mirrors
 -- IdentityFusion.Recipes (verify_fusion_ui.py asserts they match).
 Sel.Stages = {
-    {id = "gold", name = "Gold", source = "base", donorCount = 50, approved = true},
-    {id = "emerald", name = "Emerald", source = "gold", donorCount = 10, approved = true},
-    {id = "diamond", name = "Diamond", source = "emerald", donorCount = 3, approved = true},
+    {id = "gold", name = "Gold", source = "base", donorCount = 15, approved = true},
+    {id = "emerald", name = "Emerald", source = "gold", donorCount = 4, approved = true},
+    {id = "diamond", name = "Diamond", source = "emerald", donorCount = 2, approved = true},
 }
 -- Largest recipe; kept for older callers. Use Sel.donorCount(stage) instead.
-Sel.DonorCount = 50
+Sel.DonorCount = 15
 function Sel.donorCount(stageId: string?): number?
     for _, s in Sel.Stages do if s.id == stageId and s.approved then return s.donorCount end end
     return nil
@@ -319,7 +319,7 @@ function Sel.autoFill(dinos, selection, targetStage: string, filters, catalog)
     return result, added, need - added
 end
 
--- Selected-donor histogram: "2 Shiny / 50" etc. Cosmetics are listed but not rarity.
+-- Selected-donor histogram: "2 Shiny / 15" etc. Cosmetics are listed but not rarity.
 function Sel.histogram(selection, byId)
     local h = {count = 0, shiny = 0, big = 0, mutations = {}, cosmetics = 0, valuable = 0}
     for _, id in selection do
@@ -516,7 +516,7 @@ Sel.FailureText = {
     consent_required = "Please review the itemized loss list and confirm again.",
     donor_missing = "A selected dino is no longer in your collection. Selection refreshed.",
     donor_locked = "A selected dino is locked or favorited. Selection refreshed.",
-    wrong_donor_count = "Exactly the recipe count of matching dinos is required (50 Base, 10 Gold or 3 Emerald).",
+    wrong_donor_count = "Exactly the recipe count of matching dinos is required (15 Base, 4 Gold or 2 Emerald).",
     species_mismatch = "All dinos must be the same species.",
     pattern_mismatch = "All dinos must share the same egg pattern.",
     recipe_not_approved = "This recipe is not approved yet.",
@@ -692,7 +692,7 @@ function Sel.details(d, catalog)
         for _, snap in snapshots do byParent[snap.instanceId] = snap end
         local ids = if #parentIds > 0 then parentIds else (function()
             local list = {} for _, snap in snapshots do table.insert(list, snap.instanceId) end return list end)()
-        -- Bounded view: a Gold has 50 parents; list the first DetailsParentLimit.
+        -- Bounded view: a Gold has 15 parents; list the first DetailsParentLimit.
         local shown = math.min(#ids, Sel.DetailsParentLimit)
         if #ids > shown then
             table.insert(view.origin.lines, "Showing " .. shown .. " of " .. #ids .. " parents")

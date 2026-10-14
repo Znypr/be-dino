@@ -177,4 +177,4 @@ DataStore with repeated transforms):
 - Locked/favorited fields have no setter yet; consent for Shiny/BIG/mutation donors
   remains a working default (BD-057).
 
-> **2026-10-13 update:** donor counts are per recipe (50/10/3), odds normalize by the actual donor count N, `FusionService.MaxDonorIds` is 50: see [58](58-fusion-ladder-50-10-3.md).
+> **2026-10-14 update:** donor counts are per recipe (15/4/2; 50/10/3 on 2026-10-13), odds normalize by the actual donor count N, `FusionService.MaxDonorIds` is 15: see [58](58-fusion-ladder-50-10-3.md).

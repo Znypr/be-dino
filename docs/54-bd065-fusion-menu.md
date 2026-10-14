@@ -11,9 +11,11 @@ by a parallel task and **is not part of this change**.
 DataStore, odds or price changes. Nothing here has been run in Roblox Studio or on a
 phone yet (see [Verification pending](#verification-pending)).
 
+> **2026-10-14 update:** the recipe counts below are now 15 / 4 / 2 (Gold = 15 Base, Emerald = 4 Gold, Diamond = 2 Emerald; see [58](58-fusion-ladder-50-10-3.md)). The 10-Base text is the original BD-065 prototype; the menu reads counts from `FusionSelection.Stages`.
+
 ## Owner rules this UI follows (2026-10-13)
 
-- 10 same-species + same-pattern **Base** dinos → **one NEW Gold**. All 10 are consumed.
+- 15 same-species + same-pattern **Base** dinos → **one NEW Gold**. All 15 are consumed (10 in the original prototype).
 - The pattern is locked. Colors, condition, Shiny, BIG and mutation are rolled fresh,
   and the UI shows the numerical odds before you confirm.
 - Every aura and trail on every donor is lost. The confirmation lists each one by
@@ -58,11 +60,11 @@ module error can't break the main UI.
 | `src/client/FusionMenu.luau` | The menu's own `ScreenGui` (`BeDinoFusionUI`, DisplayOrder 20, `DeviceSafeInsets`). Screens: browse, confirm, fusing/retry, reveal, resume, unavailable. Remote calls are wrapped in `pcall` with a 12 s timeout. |
 | `src/client/DinoDetails.luau` | BD-062 details panel for one individual dino. |
 | `src/client/FusionWidgets.luau` | Relative-layout helpers in the existing style (FredokaOne, outlined text, `Theme.decorate`). Text scales with size constraints, and buttons are at least 44 px. |
-| `src/client/Bootstrap.client.luau` | **4-line hook:** a `pcall` require, plus a **PATTERN FUSION: 10 -> NEW GOLD** button on the existing FUSION page. That page is still the legacy 50→Gold screen and is otherwise unchanged. |
+| `src/client/Bootstrap.client.luau` | **4-line hook:** a `pcall` require, plus a **PATTERN FUSION: 15 -> NEW GOLD** button on the existing FUSION page. That page is still the legacy 50→Gold screen and is otherwise unchanged. |
 
 ## Screens and flows
 
-1. **Entry.** Nav **FUSION** → existing page → **PATTERN FUSION: 10 -> NEW GOLD**. This
+1. **Entry.** Nav **FUSION** → existing page → **PATTERN FUSION: 15 -> NEW GOLD**. This
    closes the main modal and opens the Fusion Menu.
 2. **Browse.**
    - **Target stage tabs:** GOLD (active), EMERALD (LOCKED), DIAMOND (LOCKED). Picking a
@@ -82,23 +84,23 @@ module error can't break the main UI.
    - The **i** button (44 px) opens Dino Details.
    - Cards are drawn 120 at a time, with SHOW MORE for the rest.
 3. **Ingredients column.**
-   - `INGREDIENTS n/10`, CLEAR, and ten slots. Tapping a slot removes that dino.
-   - A histogram, e.g. `2 Shiny / 10 • 1 BIG • Ember x1 • 1 with bought FX (lost)`.
+   - `INGREDIENTS n/15`, CLEAR, and a compact n/N counter (slot cards only up to 10). Tapping a slot removes that dino.
+   - A histogram, e.g. `2 Shiny / 15 • 1 BIG • Ember x1 • 1 with bought FX (lost)`.
    - "UPGRADED (guaranteed): 1 NEW Gold, stage + stats" is kept separate from
      "ROLLED (exact odds from the server)".
    - Any change to the selection asks for a fresh quote after a 0.35 s debounce. Quotes
-     are only requested once 10 dinos are selected. With fewer, the column says
-     "Select N more…", because the server rejects anything other than 10.
+     are only requested once 15 dinos are selected. With fewer, the column says
+     "Select N more…", because the server rejects anything other than 15.
    - A quote that comes back late or for a different selection is thrown away.
    - Odds that are malformed or don't add up to 100% disable fusing.
 4. **Confirm.**
    - States the guaranteed Gold result and "PATTERN LOCKED".
-   - Lists all 10 consumed donors with traits; valuable ones are highlighted.
+   - Lists all 15 consumed donors with traits; valuable ones are highlighted.
    - Shows the itemized loss line, e.g. "2 auras and 1 trail will be lost: Meadow Glow,
      Tidal Halo, Fern Drift", then the Shiny/BIG/mutation donors.
    - Shows the full exact odds and the odds/recipe versions.
    - If anything will be lost (or `consentRequired`), you must first tap **I UNDERSTAND
-     …**. Only then does **FUSE NOW (CONSUMES 10)** appear.
+     …**. Only then does **FUSE NOW (CONSUMES 15)** appear.
    - The client sends `consentDigest` only when the quote requires it. Cancel consumes
      nothing.
 5. **Fuse.**

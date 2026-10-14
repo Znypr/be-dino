@@ -2,6 +2,7 @@
 
 **STATUS: simulation for an OWNER DECISION (owner request 2026-10-13: "Simulate options and show me").
 No Emerald/Diamond cost is chosen or approved.** `Fusion.Recipes.emerald/diamond.donorCount` stay `nil` until the owner picks.
+**UPDATE 2026-10-14: the owner approved Gold 15 Base / Emerald 4 Gold / Diamond 2 Emerald; see section 12 (sections 1-11 are the history of the options and the superseded 50/10/3).**
 **This is a model, not measured gameplay.** Tool: `python tools/simulate_fusion_ladder.py` (deterministic; `--check` is a CI guard).
 Source rules: [46](46-pattern-fusion-dino-identity-and-cosmetic-progression.md) section 1, [49](49-identity-fusion-phase1.md), [53](53-bd064-fusion-server.md).
 
@@ -166,7 +167,7 @@ python tools/simulate_fusion_ladder.py --casual-runs 2 --heavy-big-runs 5
 python tools/simulate_fusion_ladder.py --check             # CI: 2k trials, monotonicity, ~1 s
 ```
 
-## 11. Owner-chosen ladder 50/10/3 at 40 eggs per 500 food (2026-10-13)
+## 11. Previous ladder 50/10/3 at 40 eggs per 500 food (2026-10-13; SUPERSEDED by section 12)
 
 **Owner decisions 2026-10-13 (authoritative):** Gold = **50 Base**, Emerald = **10 Gold**, Diamond = **3 Emerald**, always the same species + pattern; and **40 eggs per 500 food** (5,000 food = 400 eggs, see [59](59-egg-rate-40.md)). Sections 1-10 above are the earlier candidate comparison (15/150 eggs, Gold = 10 Base) and are kept as history; they are reproducible with `--gold-donors 10 --emerald-donors 2 3 4 5 --diamond-donors 2 3 4 --eggs-small 15 --eggs-big 150`. `python tools/simulate_fusion_ladder.py` now defaults to the owner ladder. **Model, not measured gameplay**; assumptions A1-A4 and A7-A10 unchanged (tier-0 hatch success 60%, one dino per hatched egg).
 
@@ -213,3 +214,24 @@ Tier 3 (79.2% hatch success): Gold 17, Emerald 169, Diamond 505. Tier 6 (96.8%):
 * Storage implication: Diamond needs 1,500 same-cell Base dinos, but a player also holds every other hatched dino. `DinosaurIdentity.MaxInstances = 3000` is reached after about 5,000 eggs (60% hatch success): about 42 casual days or 3.4 heavy days. See [59](59-egg-rate-40.md) risks.
 
 Reproduce: `python tools/simulate_fusion_ladder.py --any-trials 150 --trials 3000` (6 s); `--tier 3|6`; `--check` (CI, about 1 s, also asserts the 40/500 conversion and owner-ladder monotonicity).
+
+## 12. Owner-approved ladder 15/4/2 (2026-10-14)
+
+**Owner decision 2026-10-14 (current, authoritative):** Gold = **15 Base**, Emerald = **4 Gold**, Diamond = **2 Emerald**, same species + pattern at every tier. This replaces the 50/10/3 of section 11; code and tests now use 15/4/2 ([58](58-fusion-ladder-50-10-3.md)).
+
+Cost in Base dinos of ONE species+pattern cell: Gold 15, Emerald 4 x 15 = **60**, Diamond 2 x 60 = **120**.
+
+**Assumption: 1 hour of heavy play = 180 hatched dinos** (at 60% tier-0 hatch success that is 300 eggs per hour). Model, not measured gameplay.
+
+Median (p50) hours until the FIRST Gold / Emerald / Diamond of any one species+pattern (best case: first of 176 cells to reach the count; 3,000-trial seeded `any_cell` run):
+
+| Stage | Base dinos of one cell | Dinos hatched (p50) | Median hours at 180 dinos/h |
+|---|---:|---:|---:|
+| Gold (15 Base) | 15 | about 310 | **1.7 h** |
+| Emerald (4 Gold) | 60 | about 1,590 | **8.8 h** |
+| Diamond (2 Emerald) | 120 | about 3,360 | **18.7 h** |
+
+Reproduce: `python tools/simulate_fusion_ladder.py --hours` (about 1 s). `--check` (CI) asserts the recipes in `IdentityFusion.luau` are 15/4/2 and that the three medians stay inside 1.3-2.2 h, 7.0-10.5 h and 15.0-22.0 h. A specific target (a chosen species and pattern) is much slower, as in section 11: rare species stay out of reach without pattern research (BD-063) or trading.
+
+Storage: a complete Diamond is 8 Gold + 2 Emerald + 1 Diamond ledgers and 120 archived parent eggs, about 40 KB in the sidecar versus the 3.2 MB ceiling ([58](58-fusion-ladder-50-10-3.md)).
+
