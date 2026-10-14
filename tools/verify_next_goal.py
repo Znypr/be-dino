@@ -67,7 +67,7 @@ local e = {gap = .1}
 assert(not Sfx.throttled(e, nil, 0) and Sfx.throttled(e, 0, .05) and not Sfx.throttled(e, 0, .1) and Sfx.throttled(nil, 0, 5))
 local slot = 0 local seen = {} for _ = 1, 7 do slot = Sfx.nextSlot(slot, 3) seen[slot] = true end
 assert(seen[1] and seen[2] and seen[3] and not seen[4] and slot == 1)
-assert(Sfx.hatchName(1) == "hatch_common" and Sfx.hatchName(2) == "hatch_rare" and Sfx.hatchName(3) == "hatch_legendary" and Sfx.hatchName(nil) == "hatch_common")
+assert(Sfx.hatchName(1) == "hatch_common" and Sfx.hatchName(2) == "hatch_common" and Sfx.hatchName(3) == "hatch_rare" and Sfx.hatchName(4) == "hatch_legendary" and Sfx.hatchName(5) == "hatch_legendary" and Sfx.hatchName(nil) == "hatch_common")
 print("Next goal and Sfx helper checks passed")
 '''
 

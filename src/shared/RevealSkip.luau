@@ -4,8 +4,10 @@
 -- animation. Notable finds (Shiny, BIG, event mutation, Rainbow/Astra) are never skipped.
 -- The stored selection is a UI preference: the server never uses it for rewards.
 local Skip = {}
-Skip.Rarities = {1, 2, 3} -- Config.SpeciesRarities values: Common / Rare / Legendary
-Skip.Names = {"Common", "Rare", "Legendary"}
+-- Must match Config.SpeciesRarityNames (checked by tools/verify_rewards.py); kept literal so this
+-- module stays dependency-free.
+Skip.Rarities = {1, 2, 3, 4, 5}
+Skip.Names = {"Common", "Uncommon", "Rare", "Epic", "Legendary"}
 
 -- Accepts any list of rarity numbers; returns a sorted, de-duplicated, valid list.
 function Skip.normalize(list: any): {number}
@@ -53,7 +55,7 @@ end
 
 -- entries: {{rarity=number, outcome=table, speciesId=string?}}
 function Skip.summarize(entries: {any})
-    local summary = {total = #entries, byRarity = {0, 0, 0}, failed = 0, hatched = 0, notable = {}}
+    local summary = {total = #entries, byRarity = table.create(#Skip.Names, 0), failed = 0, hatched = 0, notable = {}}
     for _, entry in entries do
         local rarity = math.clamp(entry.rarity or 1, 1, #Skip.Names)
         summary.byRarity[rarity] += 1

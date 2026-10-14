@@ -78,15 +78,23 @@ local function weightedChoice(rows, rng: Random)
     return rows[#rows]
 end
 
--- Species roll for one egg. Run batches boost Rare/Legendary weights by
--- B = 1 + (clamp(N,1,15)-1)*0.25. Quantity is now always one dinosaur.
-function RewardMath.computeChestReward(rng: Random?, eggCount: number?)
-    local random = rng or Random.new()
-    local boost = 1 + (math.clamp(eggCount or 1, 1, Config.EggRarityBoostMaxEggs) - 1) * Config.EggRarityBoostPerExtraEgg
+-- Run-size species boost per rarity tier (BD-044): a batch of N eggs scales tier t by
+-- 1 + s * (SpeciesRunBoost[t] - 1), s = (clamp(N, 1, max) - 1) / (max - 1). One egg = base odds.
+function RewardMath.speciesWeights(eggCount: number?)
+    local maxEggs = Config.EggRarityBoostMaxEggs
+    local s = (math.clamp(eggCount or 1, 1, maxEggs) - 1) / math.max(1, maxEggs - 1)
     local rows = {}
     for _, row in Config.ChestSpeciesWeights do
-        table.insert(rows, {speciesId = row.speciesId, weight = row.weight * boost ^ (Config.SpeciesRarities[row.speciesId] - 1)})
+        local gain = Config.SpeciesRunBoost[Config.SpeciesRarities[row.speciesId]] or 1
+        table.insert(rows, {speciesId = row.speciesId, weight = row.weight * (1 + s * (gain - 1))})
     end
+    return rows
+end
+
+-- Species roll for one egg. Quantity is now always one dinosaur.
+function RewardMath.computeChestReward(rng: Random?, eggCount: number?)
+    local random = rng or Random.new()
+    local rows = RewardMath.speciesWeights(eggCount)
     local speciesRow = weightedChoice(rows, random)
     local quantityRow = weightedChoice(Config.ChestQuantityWeights, random)
     return {

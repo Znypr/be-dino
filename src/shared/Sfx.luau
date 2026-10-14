@@ -42,9 +42,11 @@ end
 function Sfx.nextSlot(current: number, size: number): number
     return current % size + 1
 end
--- Pure: sound name for a hatched egg. rarity 1..3 (Common/Rare/Legendary).
+-- Pure: sound name for a hatched egg. rarity 1..5 (Config.SpeciesRarityNames): Common/Uncommon share
+-- the common sting, Rare has its own, Epic/Legendary share the big one.
 function Sfx.hatchName(rarity: number?): string
-    return if rarity == 3 then "hatch_legendary" elseif rarity == 2 then "hatch_rare" else "hatch_common"
+    local r = rarity or 1
+    return if r >= 4 then "hatch_legendary" elseif r == 3 then "hatch_rare" else "hatch_common"
 end
 
 local pools: {[string]: {sounds: {Sound}, slot: number}} = {}

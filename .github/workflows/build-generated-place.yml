@@ -38,6 +38,7 @@ jobs:
           python tools/verify_fusion_ui.py --runner /tmp/luau/luau
           python tools/verify_next_goal.py --runner /tmp/luau/luau
           python tools/verify_admin.py --runner /tmp/luau/luau
+          python tools/verify_notify.py --runner /tmp/luau/luau
           python tools/verify_dino_motion.py --runner /tmp/luau/luau
           python tools/verify_aura_trail.py --runner /tmp/luau/luau
           python tools/design/mythic_glow_textures.py --check

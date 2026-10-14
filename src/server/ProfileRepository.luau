@@ -113,6 +113,48 @@ local function knownSpecies(speciesId: any): boolean
     return false
 end
 
+-- BD-044: metrics.rarest and revealSkip were saved on the old three-tier species scale
+-- (1 Common, 2 Rare, 3 Legendary) until profile.rarityScale exists. Migrate once, additively, and
+-- never overclaim: old Rare covered today's Uncommon/Rare, old Legendary today's Epic/Legendary, so
+-- rarest takes the lowest new tier of its old band, raised to the best owned species inside that band.
+local LEGACY_RAREST_BAND = {[0] = {0, 0}, [1] = {1, 2}, [2] = {2, 3}, [3] = {4, 5}}
+local LEGACY_SKIP_TIERS = {{1}, {2, 3}, {4, 5}}
+local function ownsAny(entry: any): boolean
+    if typeof(entry) ~= "table" then return false end
+    for _, key in {"base", "gold", "diamond"} do
+        if typeof(entry[key]) == "number" and entry[key] > 0 then return true end
+    end
+    return (typeof(entry.variants) == "table" and next(entry.variants) ~= nil)
+        or (typeof(entry.events) == "table" and next(entry.events) ~= nil)
+end
+local function upgradeRarityScale(profile: any)
+    if profile.rarityScale ~= nil then return end
+    local band = LEGACY_RAREST_BAND[profile.metrics.rarest]
+    if band == nil then return end -- malformed legacy value: validation rejects it unchanged
+    local skip = nil
+    if profile.revealSkip ~= nil then
+        if typeof(profile.revealSkip) ~= "table" then return end
+        local set = {}
+        for _, legacy in profile.revealSkip do
+            local tiers = LEGACY_SKIP_TIERS[legacy]
+            if tiers == nil then return end
+            for _, tier in tiers do set[tier] = true end
+        end
+        skip = {}
+        for tier = 1, Config.SpeciesRarityScale do if set[tier] then table.insert(skip, tier) end end
+    end
+    local rarest = band[1]
+    if rarest > 0 then
+        for id, entry in profile.collection do
+            local tier = Config.SpeciesRarities[id]
+            if tier and tier <= band[2] and ownsAny(entry) then rarest = math.max(rarest, tier) end
+        end
+    end
+    profile.metrics.rarest = rarest
+    profile.revealSkip = skip
+    profile.rarityScale = Config.SpeciesRarityScale
+end
+
 local function upgradeCollection(profile: any)
     if typeof(profile) ~= "table" or profile.schemaVersion ~= Config.ProfileSchemaVersion
         or typeof(profile.collection) ~= "table" then return end
@@ -129,6 +171,7 @@ local function upgradeCollection(profile: any)
     end
     if profile.metrics == nil then profile.metrics = {playSeconds = 0, rarest = 0, robux = 0} end
     if profile.purchaseReceipts == nil then profile.purchaseReceipts = {} end
+    if typeof(profile.metrics) == "table" then upgradeRarityScale(profile) end
 end
 
 local function defaultProfile()
@@ -136,6 +179,7 @@ local function defaultProfile()
     for _, id in Config.SpeciesOrder do collection[id] = {base = if id == "compy" then 1 else 0, gold = 0, diamond = 0} end
     return {
         schemaVersion = Config.ProfileSchemaVersion,
+        rarityScale = Config.SpeciesRarityScale,
         revision = 0,
         session = nil,
         equippedSpeciesId = "compy",
@@ -218,8 +262,8 @@ local function isValidProfile(profile: any): boolean
         end
     end
     if profile.revealSkip ~= nil then
-        if typeof(profile.revealSkip) ~= "table" or #profile.revealSkip > 3 then return false end
-        for _, rarity in profile.revealSkip do if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity < 1 or rarity > 3 then return false end end
+        if typeof(profile.revealSkip) ~= "table" or #profile.revealSkip > Config.SpeciesRarityScale then return false end
+        for _, rarity in profile.revealSkip do if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity < 1 or rarity > Config.SpeciesRarityScale then return false end end
     end
     if profile.settledRuns ~= nil then
         if typeof(profile.settledRuns) ~= "table" then return false end
@@ -255,7 +299,7 @@ local function isValidProfile(profile: any): boolean
         local n = profile.metrics[key]
         if typeof(n) ~= "number" or n ~= n or n < 0 or n % 1 ~= 0 or n > 2000000000 then return false end
     end
-    if profile.metrics.rarest > 3 then return false end
+    if profile.rarityScale ~= Config.SpeciesRarityScale or profile.metrics.rarest > Config.SpeciesRarityScale then return false end
     return ProgressionRules.valid(profile.progression)
 end
 
@@ -931,10 +975,10 @@ end
 function ProfileRepository.setRevealSkip(player: Player, selection: any): (boolean, string)
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then return false, "profile_not_loaded" end
-    if typeof(selection) ~= "table" or #selection > 3 then return false, "invalid_selection" end
+    if typeof(selection) ~= "table" or #selection > Config.SpeciesRarityScale then return false, "invalid_selection" end
     local seen, clean = {}, {}
     for _, rarity in selection do
-        if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity < 1 or rarity > 3 or seen[rarity] then return false, "invalid_selection" end
+        if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity < 1 or rarity > Config.SpeciesRarityScale or seen[rarity] then return false, "invalid_selection" end
         seen[rarity] = true
         table.insert(clean, rarity)
     end
