@@ -13,9 +13,13 @@ Every art asset the game uses at runtime. Add a line here when an asset is added
 | amber | UI icon | resources/ui/v2/icons/amber.png | 113168177075625 | UIIconAssets.luau (UI shows 3D amber model preview instead) | uploaded not bound |
 | leap | UI icon | resources/ui/v2/icons/leap-v1.png | 137570028242707 | src/shared/UITheme.luau via UIIconAssets.luau | in game |
 | weather (clear) | UI icon | resources/ui/v2/icons/weather-clear-v1.png | 115952370461269 | src/shared/UITheme.luau via UIIconAssets.luau | in game |
-| rain | UI icon | resources/ui/v2/icons/weather-rain-v1.png | 72440937569305 | src/shared/UITheme.luau via UIIconAssets.luau | in game |
+| rain | UI icon | resources/ui/v2/icons/weather-rain-v2.png | 99264077757256 | src/shared/UITheme.luau via UIIconAssets.luau | in game |
 | thunder | UI icon | resources/ui/v2/icons/weather-thunder-v1.png | 135005203451565 | src/shared/UITheme.luau via UIIconAssets.luau | in game |
-| blizzard | UI icon | resources/ui/v2/icons/weather-blizzard-v1.png | 83461127038303 | src/shared/UITheme.luau via UIIconAssets.luau | in game |
+| blizzard | UI icon | resources/ui/v2/icons/weather-blizzard-v2.png | 139930692113070 | src/shared/UITheme.luau via UIIconAssets.luau | in game |
+| volcano | UI icon | resources/ui/v2/icons/weather-volcano-v1.png | 78071231084873 | src/shared/UITheme.luau via UIIconAssets.luau | uploaded, bound (Studio check pending) |
+| aurora | UI icon | resources/ui/v2/icons/weather-aurora-v1.png | 119932884142526 | src/shared/UITheme.luau via UIIconAssets.luau | uploaded, bound (Studio check pending) |
+| quake | UI icon | resources/ui/v2/icons/weather-quake-v1.png | 121965025477639 | src/shared/UITheme.luau via UIIconAssets.luau | uploaded, bound (Studio check pending) |
+| bloodmoon | UI icon | resources/ui/v2/icons/weather-bloodmoon-v1.png | 123248871135913 | src/shared/UITheme.luau via UIIconAssets.luau | uploaded, bound (Studio check pending) |
 | egg_nest | UI icon | resources/ui/v2/icons/egg-nest-v1.png | 127462994652706 | src/shared/UITheme.luau via UIIconAssets.luau | in game |
 | egg-green-v1 | UI icon | resources/ui/v2/icons/egg-green-v1.png | - | (none yet) | planned |
 | fossil_centerpiece | UI icon (layer) | resources/ui/v2/layers/fossil-centerpiece-v1.png | 86663955990810 | src/shared/Artwork.luau via ArtworkAssets.luau | in game |

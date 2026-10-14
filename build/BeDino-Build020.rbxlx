@@ -371060,10 +371060,14 @@ return {
     amber = "rbxassetid://113168177075625",
     leap = "rbxassetid://137570028242707",
     weather = "rbxassetid://115952370461269",
-    rain = "rbxassetid://72440937569305",
+    rain = "rbxassetid://99264077757256",
     thunder = "rbxassetid://135005203451565",
-    blizzard = "rbxassetid://83461127038303",
+    blizzard = "rbxassetid://139930692113070",
     egg_nest = "rbxassetid://127462994652706",
+    volcano = "rbxassetid://78071231084873",
+    aurora = "rbxassetid://119932884142526",
+    quake = "rbxassetid://121965025477639",
+    bloodmoon = "rbxassetid://123248871135913",
 }
 </ProtectedString>
         </Properties>
@@ -371077,9 +371081,13 @@ return {
     egg = 1.75,
     leap = .80,
     weather = .84,
-    rain = .84,
+    rain = .93,
     thunder = .84,
-    blizzard = .84,
+    blizzard = .93,
+    volcano = .93,
+    aurora = .93,
+    quake = .93,
+    bloodmoon = .93,
 }
 </ProtectedString>
         </Properties>

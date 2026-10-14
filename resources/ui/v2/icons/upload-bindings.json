@@ -54,8 +54,8 @@
     },
     {
       "key": "rain",
-      "source": "weather-rain-v1.png",
-      "robloxAssetId": "72440937569305"
+      "source": "weather-rain-v2.png",
+      "robloxAssetId": "99264077757256"
     },
     {
       "key": "thunder",
@@ -64,13 +64,33 @@
     },
     {
       "key": "blizzard",
-      "source": "weather-blizzard-v1.png",
-      "robloxAssetId": "83461127038303"
+      "source": "weather-blizzard-v2.png",
+      "robloxAssetId": "139930692113070"
     },
     {
       "key": "egg_nest",
       "source": "egg-nest-v1.png",
       "robloxAssetId": "127462994652706"
+    },
+    {
+      "key": "volcano",
+      "source": "weather-volcano-v1.png",
+      "robloxAssetId": "78071231084873"
+    },
+    {
+      "key": "aurora",
+      "source": "weather-aurora-v1.png",
+      "robloxAssetId": "119932884142526"
+    },
+    {
+      "key": "quake",
+      "source": "weather-quake-v1.png",
+      "robloxAssetId": "121965025477639"
+    },
+    {
+      "key": "bloodmoon",
+      "source": "weather-bloodmoon-v1.png",
+      "robloxAssetId": "123248871135913"
     }
   ]
 }
