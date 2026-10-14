@@ -213,4 +213,9 @@ return table.freeze({
 
     -- Build 006/007 probes passed and are disabled again.
     DuplicateSettlementProbe = false,
+
+    -- BD-120 owner admin panel (docs/79). Runtime-only overrides, never saved to profiles.
+    -- Admins: the experience's user creator, rank 255 of its group creator, unpublished Studio, or AdminUserIds.
+    AdminPanelEnabled = true,
+    AdminUserIds = {}, -- extra Roblox UserIds (numbers); empty by default
 })
