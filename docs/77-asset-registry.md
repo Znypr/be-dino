@@ -22,8 +22,8 @@ Every art asset the game uses at runtime. Add a line here when an asset is added
 | bloodmoon | UI icon | resources/ui/v2/icons/weather-bloodmoon-v1.png | 123248871135913 | src/shared/UITheme.luau via UIIconAssets.luau | uploaded, bound (Studio check pending) |
 | egg_nest | UI icon | resources/ui/v2/icons/egg-nest-v1.png | 127462994652706 | src/shared/UITheme.luau via UIIconAssets.luau | in game |
 | egg-green-v1 | UI icon | resources/ui/v2/icons/egg-green-v1.png | - | (none yet) | planned |
-| egg_splat | UI icon | resources/ui/v2/icons/egg-splat-v1.png | - | src/client/HatchSequence.luau via UIIconAssets.luau (failed Cracked egg; native shapes until bound) | planned |
-| egg_shell | UI icon | resources/ui/v2/icons/egg-shell-v1.png | - | src/client/HatchSequence.luau via UIIconAssets.luau (two shell halves; native shapes until bound) | planned |
+| egg_splat | UI icon | resources/ui/v2/icons/egg-splat-v1.png | 90653261302119 | src/client/HatchSequence.luau via UIIconAssets.luau (failed Cracked egg; native shapes until bound) | uploaded, bound (Studio check pending) |
+| egg_shell | UI icon | resources/ui/v2/icons/egg-shell-v1.png | 81264206118496 | src/client/HatchSequence.luau via UIIconAssets.luau (two shell halves; native shapes until bound) | uploaded, bound (Studio check pending) |
 | fossil_centerpiece | UI icon (layer) | resources/ui/v2/layers/fossil-centerpiece-v1.png | 86663955990810 | src/shared/Artwork.luau via ArtworkAssets.luau | in game |
 | aura_meadow_ring | UI icon (layer) | resources/ui/v2/layers/aura-meadow-ring-v1.png | 80049958683098 | src/shared/Artwork.luau via ArtworkAssets.luau | in game |
 | aura_tidal_ring | UI icon (layer) | resources/ui/v2/layers/aura-tidal-ring-v1.png | 80241308683604 | src/shared/Artwork.luau via ArtworkAssets.luau | in game |
