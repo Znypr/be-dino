@@ -34,7 +34,7 @@ class WorldKitTests(unittest.TestCase):
         self.assertIn('FoodArtMode = "Legacy"', config); self.assertIn('WorldArtMode = "Legacy"', config)
         import sys; sys.path.insert(0, str(ROOT / 'tools')); import release_profiles as rp
         out, report = rp.apply_profile(config, 'playtest')
-        self.assertIn('WorldArtMode = "BiomeKit"', out); self.assertIn('FoodArtMode = "Kit"', out); self.assertIn('WorldArtDensity = 0.35', out)
+        self.assertIn('WorldArtMode = "BiomeKit"', out); self.assertIn('FoodArtMode = "Kit"', out); self.assertIn('WorldArtDensity = 1.25', out)
     def test_no_roblox_ids_invented(self):
         self.assertNotIn('rbxassetid', json.dumps(self.manifest))
 if __name__ == '__main__': unittest.main()
