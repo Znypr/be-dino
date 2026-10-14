@@ -80,10 +80,15 @@ end
 
 -- Sliders: the label updates while dragging; the value is sent once on release.
 local dragging: {key: string, apply: (number) -> (), send: () -> ()}? = nil
+local feelHeaderShown = false
 for _, key in Rules.SettingOrder do
     local spec = Rules.Settings[key]
+    if spec.group == "feel" and not feelHeaderShown then
+        feelHeaderShown = true
+        place(text(scroll, "Feel (live, not saved)", 18, 24))
+    end
     local holder = place(Instance.new("Frame"))
-    holder.BackgroundTransparency, holder.Size, holder.Parent = 1, UDim2.new(1, 0, 0, 52), scroll
+    holder.BackgroundTransparency, holder.Size, holder.Parent = 1, UDim2.new(1, 0, 0, 62), scroll
     local label = text(holder, "", 16, 22)
     local track = Instance.new("Frame")
     track.BackgroundColor3, track.Position, track.Size = C.card, UDim2.fromOffset(8, 30), UDim2.new(1, -16, 0, 12)
@@ -98,7 +103,7 @@ for _, key in Rules.SettingOrder do
     Theme.decorate(knob, 12)
     local function show(value: number)
         local fraction = Rules.toFraction(key, value)
-        label.Text = spec.label .. ": " .. Rules.format(value)
+        label.Text = spec.label .. ": " .. Rules.format(value, key)
         fill.Size = UDim2.fromScale(fraction, 1)
         knob.Position = UDim2.fromScale(fraction, .5)
     end
@@ -112,10 +117,13 @@ for _, key in Rules.SettingOrder do
         current = Rules.fromFraction(key, (x - track.AbsolutePosition.X) / math.max(1, track.AbsoluteSize.X))
         show(current)
     end
-    track.InputBegan:Connect(function(input)
+    -- 44 px touch target around the thin track (phones): a transparent hit area, same drag behaviour.
+    local hit = Instance.new("Frame")
+    hit.BackgroundTransparency, hit.Size, hit.Position, hit.Active, hit.Parent = 1, UDim2.new(1, 0, 0, 44), UDim2.fromOffset(0, -16), true, track
+    hit.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = {key = key, apply = apply, send = function()
-                call("set", key, current, spec.label .. " " .. Rules.format(current))
+                call("set", key, current, spec.label .. " " .. Rules.format(current, key))
             end}
             apply(input.Position.X)
         end

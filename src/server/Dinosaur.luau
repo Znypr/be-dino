@@ -96,7 +96,7 @@ function Dinosaur.attach(character: Model, walkSpeed: number, player: Player)
     humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
     humanoid.WalkSpeed = walkSpeed
     humanoid.UseJumpPower = true
-    humanoid.JumpPower = Config.JumpPower
+    humanoid.JumpPower = (workspace:GetAttribute("Admin_jumpPower") :: number?) or Config.JumpPower
     humanoid.MaxSlopeAngle = Config.MaxSlopeAngle
     humanoid.AutoJumpEnabled = false
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
