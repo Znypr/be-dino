@@ -37,7 +37,7 @@ local LOOKS:{[string]:Look}={
     volcano=look({tint=Color3.fromRGB(255,184,128),sat=.4,contrast=.18,bright=-.06,fog=Color3.fromRGB(255,110,50),density=.4,haze=2.6,glare=.6,bloom=.85,rays=.22,rayTint=Color3.fromRGB(255,150,70)}),
     aurora=look({tint=Color3.fromRGB(176,255,230),sat=.3,contrast=.1,bright=-.06,fog=Color3.fromRGB(60,170,160),density=.24,haze=.8,bloom=.9}),
     quake=look({tint=Color3.fromRGB(232,200,156),sat=-.12,contrast=.14,bright=-.06,fog=Color3.fromRGB(190,160,120),density=.34,haze=2,bloom=.1}),
-    bloodmoon=look({tint=Color3.fromRGB(255,112,128),sat=.45,contrast=.2,bright=-.08,fog=Color3.fromRGB(200,28,52),density=.34,haze=2.4,glare=.3,bloom=1,rays=.1,rayTint=Color3.fromRGB(255,60,80)}),
+    bloodmoon=look({tint=Color3.fromRGB(255,150,160),sat=.4,contrast=.16,bright=.02,fog=Color3.fromRGB(215,40,64),density=.16,haze=1.5,glare=.3,bloom=.9,rays=.1,rayTint=Color3.fromRGB(255,60,80)}),
 }
 local TITLE_COLOR:{[string]:Color3}={
     rain=Color3.fromRGB(110,200,255),thunder=Color3.fromRGB(190,170,255),blizzard=Color3.fromRGB(190,235,255),
