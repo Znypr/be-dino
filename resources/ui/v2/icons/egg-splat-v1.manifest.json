@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "key": "egg_splat",
+  "source": "egg-splat-v1.png",
+  "createdAt": "2026-10-15",
+  "status": "Uploaded and bound 2026-10-15; owner ChatGPT art padded to a 12% margin; Studio check pending",
+  "generator": "ChatGPT image generation (owner), padded to 1024x1024",
+  "sha256": "b30e602125441f267ee94ec5b316524a2bcc1429911b5866c8cedfce94ca526d",
+  "dimensions": [
+    1024,
+    1024
+  ],
+  "mode": "RGBA"
+}

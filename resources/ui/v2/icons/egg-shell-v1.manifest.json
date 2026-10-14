@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "key": "egg_shell",
+  "source": "egg-shell-v1.png",
+  "createdAt": "2026-10-15",
+  "status": "Uploaded and bound 2026-10-15; owner ChatGPT art padded to a 12% margin; Studio check pending",
+  "generator": "ChatGPT image generation (owner), padded to 1024x1024",
+  "sha256": "62551cc30a945437143cea02b8869e8921a061b3c6669517d12158c40fac20bd",
+  "dimensions": [
+    1024,
+    1024
+  ],
+  "mode": "RGBA"
+}
