@@ -741,6 +741,20 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-077 | Backlog | P3 | Objective icons (4 new) | none |
 | BD-078 | Backlog | P2 | Objectives Studio/Android acceptance | BD-072-077 |
 | BD-079 | Review / test | P1 | Dino action animations (procedural, all species): eat, leap/jump stretch+land, death/eaten, bite lunge, turn lean; dust/munch effects reuse SFX; real Blender clips later. Roles: gameplay eng (hooks), tech artist (motion), audio (reuse pack) | BD-043 |
+| BD-086 | Backlog | P1 | Pick aura/trail style, freeze spec (doc 70) | none |
+| BD-087 | Backlog | P1 | Aura/trail sprite sheets and textures | BD-086 |
+| BD-088 | Backlog | P2 | Ribbon textures and ground-disc decals | BD-086 |
+| BD-089 | Backlog | P1 | Studio spike: trail + aura per tier, ground sigil | BD-086 |
+| BD-110 | Backlog | P1 | CosmeticEffects v2 auras (tiers, orbit beams) | BD-087, BD-089 |
+| BD-111 | Backlog | P1 | Trail v2 textured, six-class complexity | BD-087, BD-088, BD-089 |
+| BD-112 | Backlog | P2 | Config: trail class, aura tier, 3 new auras | BD-086 |
+| BD-113 | Backlog | P2 | Shop icons (16) and rarity badges (6) | BD-112 |
+| BD-114 | Backlog | P2 | Shop previews use real effect sprites | BD-111, BD-113 |
+| BD-095 | Backlog | P1 | Effects Full/Lite/Off setting and distance LOD | BD-090 |
+| BD-096 | Backlog | P3 | Equip shimmer audio | none |
+| BD-097 | Backlog | P2 | 12-player phone perf + Studio/Android acceptance | BD-090-095 |
+| BD-098 | Backlog | P3 | Prices and gates for 3 new auras | BD-092 |
+| BD-079 | Backlog | P1 | Dino action animations (procedural, all species): eat, leap/jump stretch+land, death/eaten, bite lunge, turn lean; dust/munch effects reuse SFX; real Blender clips later. Roles: gameplay eng (hooks), tech artist (motion), audio (reuse pack) | BD-043 |
 | BD-080 | Backlog | P1 | Growth/Eggs HUD rework (BD-056 spec): bottom-left egg icon + EGGS N with pop, top-center slim SIZE bar; remove Island/Sanctuary text; replace three-bar icon with growth/dino icon. Roles: UI designer, gameplay eng | BD-044 |
 | BD-081 | Backlog | P1 | Sound style guide + Sound lab page: listen to the 17 sounds, 2-3 variants for hatch/Shiny/fusion/shop/level-up, owner picks by ear; owner uploads, IDs filled in Sfx.luau. Roles: audio, UI (lab page) | BD-063 sfx pack |
 | BD-082 | Review / test | P1 | Potion catalog 12 potions / 5 rarities, 6 offers per 2-minute window, not all available | BD-051 |
