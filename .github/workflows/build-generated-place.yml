@@ -52,6 +52,7 @@ jobs:
           python tools/verify_eggs.py --runner /tmp/luau/luau
           python tools/verify_rewards.py --runner /tmp/luau/luau
           python tools/verify_nests.py --runner /tmp/luau/luau
+          python tools/verify_mutations.py --runner /tmp/luau/luau
           python tools/verify_creature_genes.py --runner /tmp/luau/luau
           python tools/verify_visual_growth.py --runner /tmp/luau/luau
           python tools/verify_outcomes.py --runner /tmp/luau/luau
