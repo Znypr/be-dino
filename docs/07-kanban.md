@@ -721,3 +721,22 @@ BD-023 (Review / test): startup/collision/food fixes and resource-based visual r
 - 2026-10-04: Build 014 source fixes, shared dimensional UI, mesh-aware rendering and resources prepared. Automated checks recorded in docs/26-redesign-test.md; Studio import/runtime remains pending. BD-023 moved to Review / test, not Done.
 
 - 2026-10-04: Build 015 incorporates the user-selected mountainous island direction, jumping, +50 crystal/+15 egg food, large terrain and complete inspectable 2D exports. Client-local mesh/icon generation added with explicit permission-aware fallback. Source/numeric checks pass; Studio verification pending. BD-023 remains Review / test. See docs/27-mountain-island.md.
+
+### Proposed: notification system and mini objectives (2026-10-14, Backlog)
+Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md) and [66](66-intake-mini-objectives.md).
+
+| ID | Status | Pri | Task | Depends on |
+| --- | --- | --- | --- | --- |
+| BD-066 | Backlog | P2 | NotifyQueue pure module: priority, dedupe, throttle, cap ([65](65-intake-notifications.md)) | none |
+| BD-067 | Backlog | P2 | Toast v2 renderer, 3 pooled cards, rarity tints, motion-off | BD-066 |
+| BD-068 | Backlog | P2 | Notification icons (5) + toast plate, owner upload | none |
+| BD-069 | Backlog | P2 | Wire popup events and hatch-batch summary | BD-067 |
+| BD-070 | Backlog | P3 | Notification Sfx mapping | BD-069 |
+| BD-071 | Backlog | P2 | Notification Studio/Android acceptance | BD-066-070 |
+| BD-072 | Backlog | P2 | ObjectiveConfig catalogue and rewards ([66](66-intake-mini-objectives.md)) | none |
+| BD-073 | Backlog | P2 | ObjectiveService, additive profile field, server-clock windows, claim | BD-072 |
+| BD-074 | Backlog | P2 | Objective event hooks | BD-073 |
+| BD-075 | Backlog | P2 | Collapsible objectives panel, phone-safe | BD-073 |
+| BD-076 | Backlog | P3 | NextGoal shows top objective | BD-075 |
+| BD-077 | Backlog | P3 | Objective icons (4 new) | none |
+| BD-078 | Backlog | P2 | Objectives Studio/Android acceptance | BD-072-077 |

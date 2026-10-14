@@ -71,3 +71,4 @@ Do **not** delete build snapshots or test evidence just to make them look curren
 4. Update the task status **only** in Kanban, including evidence link; older milestones keep historical snapshots.
 5. For shop art and Blender assets, source/render, approved preview, uploaded owner-bound IDs, integration and device verification are different stages.
 - [61 Release-readiness audit](61-release-readiness-audit.md): R/Y/G verdicts, ranked polish tasks, audio plan and live Studio checklist for the private playtest.
+- [64 Feature intake template](64-feature-intake-template.md), [65 notifications](65-intake-notifications.md), [66 mini objectives](66-intake-mini-objectives.md): pre-build checklist and two applied proposals (BD-066 to BD-078, Backlog).
