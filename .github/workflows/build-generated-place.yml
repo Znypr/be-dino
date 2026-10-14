@@ -40,6 +40,7 @@ jobs:
           python tools/measure_identity_storage.py --check
           python tools/verify_progression.py --runner /tmp/luau/luau
           python tools/verify_potion_shop.py --runner /tmp/luau/luau
+          python tools/verify_ui_format.py --runner /tmp/luau/luau
           python tools/verify_eggs.py --runner /tmp/luau/luau
           python tools/verify_rewards.py --runner /tmp/luau/luau
           python tools/verify_nests.py --runner /tmp/luau/luau
