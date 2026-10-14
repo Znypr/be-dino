@@ -51,7 +51,7 @@ assert(n == 1, "spam grew state")
 -- All kinds at once (worst-case stacking) still respects the 0.6..1.4 envelope.
 local all = M.new()
 for _, kind in M.Kinds do M.trigger(all, kind, 3, 1) end
-all.lean = 0.25
+all.lean = M.MaxLean all.bob = M.MaxBob
 for i = 0, 300 do M.sample(all, 3 + i * 0.002, out) bounded(out) end
 -- Death: tips over, shrinks to exactly 0.6 and fades fully; terminal (cannot be restarted or overridden).
 local d = M.new()
@@ -60,10 +60,13 @@ M.sample(d, 0.2, out) bounded(out) assert(out.roll > 0 and out.fade > 0 and out.
 M.sample(d, 5, out) bounded(out)
 assert(math.abs(out.sx - 0.6) < 1e-9 and out.fade == 1 and out.roll > 1)
 M.trigger(d, "eat", 5) M.sample(d, 5.05, out) assert(out.fade == 1 and d.start.eat == nil)
+-- Footfall bob: bounded, lifts the model only, exact rest at zero.
+local bobState = M.new() bobState.bob = 5 assert(M.sample(bobState, 0, out) == true and out.dy == M.MaxBob)
+bobState.bob = 0 assert(M.sample(bobState, 0, out) == false and rest(out))
 -- Lean: clamped, smoothed, zero at rest, NaN safe.
 local lean = 0
 for i = 1, 600 do lean = M.lean(lean, 50, 20, 1 / 60) assert(math.abs(lean) <= M.MaxLean + 1e-12) end
-assert(lean < -0.2, "lean should approach the clamp opposite the yaw rate")
+assert(lean < -0.9 * M.MaxLean and M.MaxLean <= 0.07, "lean (max ~4 degrees) should approach the clamp opposite the yaw rate")
 local first = M.lean(0, 50, 20, 1 / 60) assert(math.abs(first) < math.abs(lean), "lean must ease in")
 for i = 1, 600 do lean = M.lean(lean, 0, 20, 1 / 60) end
 assert(lean == 0, "lean must return exactly to 0")

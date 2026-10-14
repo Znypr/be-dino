@@ -1057,6 +1057,10 @@ local timerScale=Instance.new("UIScale") timerScale.Parent=timers
 local predictedLeap:{ready:number,at:number,character:Model}?=nil
 -- Humanoid air control would damp the launch speed within ~0.4 s (measured 18 of ~50 intended studs), so the client holds the
 -- launch heading until the leap ends. Dropped if the server does not confirm the leap ("leaping") within half a second.
+local function leapSpeed():number -- owner "Feel" tuning multiplier (runtime only), mirrored from the server
+    local scale=workspace:GetAttribute("Admin_leapSpeed")
+    return ProgressionConfig.LeapHorizontalSpeed*(if typeof(scale)=="number" then math.clamp(scale,.5,1.5) else 1)
+end
 local leapHold:{forward:Vector3,at:number,untilAt:number,character:Model,root:BasePart}?=nil
 game:GetService("RunService").Heartbeat:Connect(function()
     local hold=leapHold
@@ -1067,7 +1071,7 @@ game:GetService("RunService").Heartbeat:Connect(function()
         leapHold=nil return
     end
     local velocity=hold.root.AssemblyLinearVelocity
-    hold.root.AssemblyLinearVelocity=Vector3.new(hold.forward.X*ProgressionConfig.LeapHorizontalSpeed,velocity.Y,hold.forward.Z*ProgressionConfig.LeapHorizontalSpeed)
+    hold.root.AssemblyLinearVelocity=Vector3.new(hold.forward.X*leapSpeed(),velocity.Y,hold.forward.Z*leapSpeed())
 end)
 local function requestLeap()
     leapRemote:FireServer()
@@ -1081,7 +1085,7 @@ local function requestLeap()
     if forward.Magnitude<.01 then return end
     -- The leap is client-owned: this client launches and simulates the dino itself; the server only validates (LeapService).
     h:ChangeState(Enum.HumanoidStateType.Jumping)
-    root.AssemblyLinearVelocity=forward.Unit*ProgressionConfig.LeapHorizontalSpeed+Vector3.new(0,ProgressionConfig.LeapVerticalSpeed,0)
+    root.AssemblyLinearVelocity=forward.Unit*leapSpeed()+Vector3.new(0,ProgressionConfig.LeapVerticalSpeed,0)
     leapHold={forward=forward.Unit,at=os.clock(),untilAt=os.clock()+ProgressionConfig.LeapDuration,character=c,root=root}
     -- Client-local attribute: DinoMotion starts wind-up + leap pose now instead of on the replicated cooldown.
     c:SetAttribute("LeapPredictAt",os.clock())
@@ -1265,6 +1269,21 @@ RunService.RenderStepped:Connect(function(dt)
     end
     lastGrowth=growth
     if not humanoid then return end
+    -- Movement feel: the Humanoid turns at ~8 rad/s (180 degrees in ~0.38 s measured), which reads as heavy.
+    -- Steer the facing toward the move direction at Config.TurnRate (x owner "Feel" responsiveness) instead.
+    local rootPart=(character :: Model):FindFirstChild("HumanoidRootPart")
+    local moveDirection=humanoid.MoveDirection
+    if rootPart and rootPart:IsA("BasePart") and humanoid.Health>0 and moveDirection.Magnitude>.1 and not leapHold then
+        local scale=workspace:GetAttribute("Admin_moveResponsiveness")
+        local rate=Config.TurnRate*(if typeof(scale)=="number" then math.clamp(scale,.5,2) else 1)
+        local look=rootPart.CFrame.LookVector
+        local current=math.atan2(-look.X,-look.Z)
+        local diff=(math.atan2(-moveDirection.X,-moveDirection.Z)-current+math.pi)%(2*math.pi)-math.pi
+        humanoid.AutoRotate=false
+        rootPart.CFrame=CFrame.new(rootPart.Position)*CFrame.Angles(0,current+math.clamp(diff,-rate*dt,rate*dt),0)
+    else
+        humanoid.AutoRotate=true
+    end
     local target=((character :: Model):GetAttribute("VisualScale") or 1)-1
     cameraLift+=(target-cameraLift)*(1-math.exp(-dt*Config.CameraLiftSharpness))
     humanoid.CameraOffset=Vector3.new(0,cameraLift*2,0)

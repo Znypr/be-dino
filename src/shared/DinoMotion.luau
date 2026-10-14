@@ -9,21 +9,22 @@ DinoMotion.MinScale = 0.6
 DinoMotion.MaxScale = 1.4
 DinoMotion.MaxOffset = 0.35
 DinoMotion.MaxAngle = 1.6
-DinoMotion.MaxLean = 0.25
-DinoMotion.Duration = {eat = 0.18, takeoff = 0.22, land = 0.28, leap = 0.5, bite = 0.22, death = 0.4,
+DinoMotion.MaxLean = 0.07 -- PROVISIONAL: ~4 degrees; was 0.25 (14 degrees) and read as a top-heavy motorbike bank
+DinoMotion.MaxBob = 0.02 -- PROVISIONAL: footfall bob, fraction of model height
+DinoMotion.Duration = {eat = 0.18, takeoff = 0.22, land = 0.22, leap = 0.5, bite = 0.22, death = 0.4,
     grow = 0.35, windup = 0.08} -- grow/windup: movement-feel additions (PROVISIONAL)
 local SLOTS = {"eat", "takeoff", "land", "leap", "bite", "death", "grow", "windup"}
 DinoMotion.Kinds = SLOTS
 
 export type Pose = {sx: number, sy: number, sz: number, pitch: number, roll: number, fx: number, dy: number, fade: number}
-export type State = {start: {[string]: number}, power: {[string]: number}, lean: number, dead: boolean}
+export type State = {start: {[string]: number}, power: {[string]: number}, lean: number, bob: number, dead: boolean}
 
 function DinoMotion.newPose(): Pose
     return {sx = 1, sy = 1, sz = 1, pitch = 0, roll = 0, fx = 0, dy = 0, fade = 0}
 end
 
 function DinoMotion.new(): State
-    return {start = {}, power = {}, lean = 0, dead = false}
+    return {start = {}, power = {}, lean = 0, bob = 0, dead = false}
 end
 
 local function clamp(v: number, lo: number, hi: number): number
@@ -57,6 +58,7 @@ end
 function DinoMotion.clear(state: State)
     for _, kind in SLOTS do state.start[kind] = nil end
     state.lean = 0
+    state.bob = 0
     state.dead = false
 end
 
@@ -64,8 +66,8 @@ end
 function DinoMotion.lean(previous: number, yawRate: number, speed: number, dt: number): number
     if yawRate ~= yawRate or speed ~= speed or dt ~= dt then return 0 end
     local moving = clamp(speed / 8, 0, 1)
-    local target = clamp(-yawRate * 0.08, -DinoMotion.MaxLean, DinoMotion.MaxLean) * moving
-    local blend = 1 - math.exp(-clamp(dt, 0, 0.25) * 10)
+    local target = clamp(-yawRate * 0.02, -DinoMotion.MaxLean, DinoMotion.MaxLean) * moving
+    local blend = 1 - math.exp(-clamp(dt, 0, 0.25) * 16)
     local nextLean = previous + (target - previous) * blend
     if math.abs(nextLean) < 1e-3 and math.abs(target) < 1e-3 then return 0 end
     return clamp(nextLean, -DinoMotion.MaxLean, DinoMotion.MaxLean)
@@ -105,7 +107,7 @@ function DinoMotion.sample(state: State, now: number, out: Pose): boolean
                     sy *= 1 + 0.16 * v sx *= 1 - 0.07 * v sz *= 1 - 0.07 * v
                 elseif kind == "land" then
                     local v = math.sin(math.pi * u) * (1 - u) * p
-                    sy *= 1 - 0.18 * v sx *= 1 + 0.09 * v sz *= 1 + 0.09 * v
+                    sy *= 1 - 0.22 * v sx *= 1 + 0.1 * v sz *= 1 + 0.1 * v
                     dy -= 0.02 * v
                 elseif kind == "leap" then
                     local v = math.sin(math.pi * u) * p
@@ -131,6 +133,10 @@ function DinoMotion.sample(state: State, now: number, out: Pose): boolean
     if state.lean ~= 0 then
         active = true
         roll += state.lean
+    end
+    if state.bob ~= 0 then
+        active = true
+        dy += clamp(state.bob, 0, DinoMotion.MaxBob)
     end
     if not active then
         out.sx, out.sy, out.sz, out.pitch, out.roll, out.fx, out.dy, out.fade = 1, 1, 1, 0, 0, 0, 0, 0

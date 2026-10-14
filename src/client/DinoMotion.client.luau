@@ -244,7 +244,19 @@ local function step(rig: any, now: number, dt: number)
     end
     rig.lastYaw = yaw
     local velocity = root.AssemblyLinearVelocity
-    rig.motion.lean = Motion.lean(rig.motion.lean, rate, math.sqrt(velocity.X * velocity.X + velocity.Z * velocity.Z), dt)
+    local speed = math.sqrt(velocity.X * velocity.X + velocity.Z * velocity.Z)
+    -- Lean keeps its raw smoothed value; the owner "Feel" slider (Admin_turnLean, runtime only) scales what is shown.
+    local leanScale = workspace:GetAttribute("Admin_turnLean")
+    rig.leanRaw = Motion.lean(rig.leanRaw or 0, rate, speed, dt)
+    rig.motion.lean = rig.leanRaw * (if typeof(leanScale) == "number" then math.clamp(leanScale, 0, 3) else 1)
+    -- Footfall bob: stride phase advances with distance, so the bob frequency follows speed. Grounded only.
+    local humanoid = rig.character:FindFirstChildOfClass("Humanoid")
+    if rig.isLocal and humanoid and speed > 3 and humanoid.FloorMaterial ~= Enum.Material.Air then
+        rig.stride = (rig.stride or 0) + speed * dt * 1.6
+        rig.motion.bob = Motion.MaxBob * math.abs(math.sin(rig.stride)) * math.clamp(speed / 16, 0, 1)
+    else
+        rig.motion.bob = 0
+    end
     if rig.growFrom and Theme.MotionEnabled then
         local target = Motion.growFactor(rig.motion, now) * rig.growFrom / rig.growTo
         rig.growFrom = nil

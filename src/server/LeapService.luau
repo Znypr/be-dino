@@ -36,6 +36,13 @@ function Leap.violation(config,gravity: number,start,position,velocity,elapsed: 
     return nil
 end
 
+-- Owner-only runtime tuning (AdminService "leapSpeed" multiplier, never persisted). Client and server read the same attribute.
+function Leap.effective()
+    local scale=workspace:GetAttribute("Admin_leapSpeed")
+    if typeof(scale)~="number" or scale~=scale then scale=1 end
+    return {LeapHorizontalSpeed=Config.LeapHorizontalSpeed*math.clamp(scale,.5,1.5),LeapVerticalSpeed=Config.LeapVerticalSpeed}
+end
+
 function Leap.start()
     local remote=Instance.new("RemoteEvent") remote.Name="RequestLeap" remote.Parent=ReplicatedStorage.BeDinoRemotes
     local params=RaycastParams.new()
@@ -85,7 +92,7 @@ function Leap.start()
         player:SetAttribute("LeapReadyAt",now+Config.LeapCooldown)
         player:SetAttribute("LastLeapStatus","leaping")
         c:SetAttribute("LeapUntil",now+Config.LeapDuration)
-        c:SetAttribute("MovementSpeedLimit",Config.LeapHorizontalSpeed)
+        c:SetAttribute("MovementSpeedLimit",Leap.effective().LeapHorizontalSpeed)
         local a=Instance.new("Attachment") a.Position=Vector3.new(-.8,0,0) a.Parent=root
         local b=Instance.new("Attachment") b.Position=Vector3.new(.8,0,0) b.Parent=root
         local trail=Instance.new("Trail") trail.Attachment0,trail.Attachment1=a,b
@@ -110,7 +117,7 @@ function Leap.start()
                 if blockedPath then
                     reject(player,state,"wall",now)
                 else
-                    local reason=Leap.violation(Config,workspace.Gravity,state.start,root.Position,root.AssemblyLinearVelocity,now-state.startedAt)
+                    local reason=Leap.violation(Leap.effective(),workspace.Gravity,state.start,root.Position,root.AssemblyLinearVelocity,now-state.startedAt)
                     if reason then
                         reject(player,state,reason,now)
                     else

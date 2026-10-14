@@ -825,7 +825,7 @@ local leapNow=0
 local blocked=false
 local warnings=0
 local warn=function() warnings+=1 end
-local workspace={Terrain={},BeDinoArena={},Gravity=250,GetServerTimeNow=function()return leapNow end,Blockcast=function()return if blocked then {} else nil end}
+local workspace={Terrain={},BeDinoArena={},Gravity=250,GetAttribute=function()return nil end,GetServerTimeNow=function()return leapNow end,Blockcast=function()return if blocked then {} else nil end}
 local storage={Shared={ProgressionConfig=true},BeDinoRemotes={}}
 local game={GetService=function(_,id)return ({Players={PlayerRemoving=removal},ReplicatedStorage=storage,RunService={Heartbeat=heartbeat}})[id]end}
 local require=function()return ProgressionConfig end

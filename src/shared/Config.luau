@@ -7,6 +7,7 @@ return table.freeze({
     -- ~6.3 stud jump but cuts air time ~0.51s -> ~0.45s; leap vertical speed is retuned in ProgressionConfig.
     Gravity = 250,
     JumpPower = 56,
+    TurnRate = 16, -- PROVISIONAL rad/s facing steer (Humanoid default ~8 gave a 0.38 s 180 turn)
     CameraLiftSharpness = 7, -- PROVISIONAL: per-second exponential follow of growth camera lift
     MaxSlopeAngle = 46,
     -- BD-053 torso collider. Footprint grows with the dinosaur, but its underside is lifted so
