@@ -25,8 +25,8 @@ Arena.build()
 Leaderboards.start()
 
 ProfileRepository.start()
-RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string, eggEvents)
-    local ok = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents)
+RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string, eggEvents, runSeconds)
+    local ok = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents, runSeconds)
     if not ok then
         warn(string.format("[Be Dino] settlement failed for %s (%s)", player.Name, reason))
         return false

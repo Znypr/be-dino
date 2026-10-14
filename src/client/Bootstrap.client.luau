@@ -11,6 +11,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Theme = require(Shared.UITheme)
 local NavigationArtwork = require(Shared.NavigationArtwork)
+local NestQueue = require(Shared.NestQueue)
 local Preview = require(Shared.DinosaurPreview)
 local ModelPreview = require(Shared.ModelPreview)
 local HatchPresentation = require(Shared.HatchPresentation)
@@ -36,7 +37,7 @@ local endRun = remotes:WaitForChild("RequestEndRun") :: RemoteEvent
 local equip = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
 local hatch = remotes:WaitForChild("ClaimChest") :: RemoteEvent
 local setSkipRemote = remotes:WaitForChild("SetRevealSkip") :: RemoteEvent
-local claimNestRemote = remotes:WaitForChild("ClaimNest") :: RemoteEvent -- BD-044 bonus nests
+local claimNestRemote = remotes:WaitForChild("ClaimNest") :: RemoteEvent -- BD-090 egg nests menu
 local fuse = remotes:WaitForChild("MutateSpecies") :: RemoteEvent
 local shopAction=remotes:WaitForChild("ProgressionAction") :: RemoteEvent
 local shopResult=remotes:WaitForChild("ProgressionResult") :: RemoteEvent
@@ -718,33 +719,88 @@ render=function(name: string)
             autoHatching=true
             hatchNext()
         end)
-        -- BD-044 (minimal, isolated hook): banked run eggs and separate bonus nests.
-        local nestsOk,nests=pcall(function() return Http:JSONDecode(str("NestsJson","[]")) end)
-        if not nestsOk or typeof(nests)~="table" then nests={} end
-        local readyNest=nil
-        for _,nest in nests do if typeof(nest.readyAt)=="number" and nest.readyAt<=workspace:GetServerTimeNow() then readyNest=nest break end end
-        for n=1,Config.NestSlotCapacity do -- nest sprites: twig ring + egg, gold egg when ready
-            local ready=nests[n]~=nil and typeof(nests[n].readyAt)=="number" and nests[n].readyAt<=workspace:GetServerTimeNow()
-            local slotBox=Instance.new("Frame")
-            slotBox.Name,slotBox.BackgroundTransparency,slotBox.Size,slotBox.Position,slotBox.ZIndex,slotBox.Parent="Nest"..n,1,UDim2.fromOffset(40,26),UDim2.fromOffset(420+(n-1)*46,278),24,body
-            local function blob(color: Color3,w: number,h: number,x: number,y: number,z: number)
-                local f=Instance.new("Frame")
-                f.BorderSizePixel,f.BackgroundColor3,f.Size,f.Position,f.ZIndex=0,color,UDim2.fromOffset(w,h),UDim2.fromOffset(x,y),z
-                local c=Instance.new("UICorner") c.CornerRadius=UDim.new(.5,0) c.Parent=f
-                f.Parent=slotBox
+        label(body,"Eggs waiting: "..num("QueuedEggsWaiting"),420,310,400,44,22)
+    elseif name=="nests" then
+        -- BD-090: separate Egg Nests menu (never mixed with the run eggs in Caught Eggs).
+        heading.Text,header.BackgroundColor3="Egg Nests",C.gold
+        local nestOk,nestList=pcall(function() return Http:JSONDecode(str("NestsJson","[]")) end)
+        if not nestOk or typeof(nestList)~="table" then nestList={} end
+        local duration=Config.NestIncubationSeconds
+        local function formatWait(seconds: number): string -- docs/72: round, drop zeros ("2 h", "40 min", "30 s")
+            seconds=math.max(0,math.ceil(seconds))
+            if seconds>=3600 then
+                local hours,minutes=seconds//3600,math.floor((seconds%3600)/60+.5)
+                if minutes>=60 then hours+=1 minutes=0 end
+                return if minutes==0 then hours.." h" else hours.." h "..minutes.." min"
             end
-            if nests[n] then
-                blob(Color3.fromRGB(126,88,52),40,14,0,12,24)
-                blob(if ready then C.gold else Color3.fromRGB(240,228,196),16,20,12,0,25)
-                blob(Color3.fromRGB(96,64,36),40,7,0,18,26)
+            if seconds>=60 then return math.ceil(seconds/60).." min" end
+            return seconds.." s"
+        end
+        local storage=label(body,"Nests "..#nestList.."/"..Config.NestStorageCapacity,0,0,300,30,24,C.gold)
+        storage.TextXAlignment=Enum.TextXAlignment.Left
+        local luckLine=label(body,"Nest eggs are lucky: better rarity, condition, Shiny and BIG odds.",300,2,524,28,16)
+        luckLine.TextXAlignment=Enum.TextXAlignment.Right
+        local list=Instance.new("ScrollingFrame")
+        list.Name,list.BackgroundTransparency,list.BorderSizePixel,list.ZIndex,list.Parent="NestList",1,0,24,body
+        list.Position,list.Size=UDim2.fromOffset(0,36),UDim2.fromOffset(824,296)
+        list.CanvasSize,list.ScrollBarThickness=UDim2.fromOffset(0,math.max(296,#nestList*60)),6
+        local rows={}
+        for index,nest in nestList do
+            local card=box(list,0,(index-1)*60,812,56,C.card,25)
+            art(card,"egg_nest",8,5,46)
+            local title=label(card,"Nest: "..tostring(nest.size).." eggs",64,2,230,28,22)
+            title.TextXAlignment=Enum.TextXAlignment.Left
+            local chip=box(card,300,5,120,26,C.card,26)
+            local chipText=label(chip,"",0,0,120,26,17)
+            local timeText=label(card,"",430,2,190,28,19)
+            timeText.TextXAlignment=Enum.TextXAlignment.Left
+            local track=box(card,64,38,556,12,C.outline,26)
+            local fill=box(track,0,0,556,12,C.accent,27)
+            local openButton=button(card,"OPEN",632,5,170,46,C.accent,function()
+                Sfx.play("shop_buy")
+                claimNestRemote:FireServer(nest.id)
+            end)
+            rows[index]={chip=chip,chipText=chipText,timeText=timeText,fill=fill,openButton=openButton}
+        end
+        local footer=label(body,"",0,336,824,62,17,C.text)
+        local function refreshNests()
+            local now=math.floor(workspace:GetServerTimeNow())
+            local projected=NestQueue.project(nestList,now,duration)
+            local waitingCount,incubatingCount=0,0
+            for index,nest in projected do
+                local row=rows[index]
+                if row then
+                    local remaining=if nest.readyAt then nest.readyAt-now else duration
+                    if nest.state=="ready" then
+                        row.chipText.Text,row.chip.BackgroundColor3="Ready",C.accent
+                        row.timeText.Text="Ready to open"
+                        row.fill.Size=UDim2.fromOffset(556,12)
+                    elseif nest.state=="incubating" then
+                        incubatingCount+=1
+                        row.chipText.Text,row.chip.BackgroundColor3="Incubating",C.gold
+                        row.timeText.Text="Ready in "..formatWait(remaining)
+                        row.fill.Size=UDim2.fromOffset(math.floor(556*math.clamp(1-remaining/duration,0,1)),12)
+                    else
+                        waitingCount+=1
+                        row.chipText.Text,row.chip.BackgroundColor3="Waiting",C.blue
+                        row.timeText.Text="Starts after the one before"
+                        row.fill.Size=UDim2.fromOffset(0,12)
+                    end
+                    row.openButton.Visible=nest.state=="ready"
+                end
+            end
+            if #nestList==0 then
+                footer.Text="No egg nests yet. Look for one at the end of a run."
             else
-                blob(Color3.fromRGB(64,66,78),40,14,0,12,24)
+                footer.Text="One nest hatches at a time, "..math.floor(duration/3600).." h each. The next starts when this one is ready, even while you are away."
             end
         end
-        label(body,"Eggs waiting: "..num("QueuedEggsWaiting").."\nBonus nests: "..#nests.."/"..Config.NestSlotCapacity.."  •  Pending: "..num("PendingNestCount"),420,308,400,44,17)
-        button(body,if readyNest then "OPEN BONUS NEST" else "NEST INCUBATING",420,354,400,40,if readyNest then C.gold else C.card,function()
-            if not readyNest then notify(if #nests==0 then "No bonus nests yet" else "Bonus nest still incubating",C.gold) return end
-            claimNestRemote:FireServer(readyNest.id)
+        refreshNests()
+        task.spawn(function() -- live countdown: cheap text/size updates once a second, stops when the list is gone
+            while list.Parent and active=="nests" do
+                task.wait(1)
+                if list.Parent and active=="nests" then refreshNests() end
+            end
         end)
     elseif name=="hatch" then
         heading.Text,header.BackgroundColor3="An egg is hatching...",C.gold
@@ -927,7 +983,7 @@ rail=box(gui,14,0,186,444,C.panel,2)
 rail.AnchorPoint,rail.Position=Vector2.new(0,.5),UDim2.new(0,14,.5,0)
 local railScale=Instance.new("UIScale") railScale.Parent=rail
 local navigationButtons = {}
-for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
+for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"NESTS","egg_nest","nests",C.gold},{"FUSION","fusion","fusion",C.purple},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
     local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() if entry[3]=="fusion" then openFusion() else open(entry[3]) end end)
     b.TextSize=20
     art(b,NavigationArtwork[entry[3]] or entry[2],5,6,40)
@@ -1243,7 +1299,7 @@ local function scheduleModalRefresh()
     refreshQueued=true
     task.defer(function()
         refreshQueued=false
-        if table.find({"collection","detail","fusion","eggs","auras","potions","settings"},active) then
+        if table.find({"collection","detail","fusion","eggs","nests","auras","potions","settings"},active) then
             body:ClearAllChildren()
             render(active)
         end
@@ -1277,6 +1333,15 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
         repeat task.wait(.1) until serial~=hatchCancelSerial or os.clock()>deadline
             or (player.Character and player.Character:GetAttribute("RunState")=="Sanctuary")
         if serial==hatchCancelSerial and player.Character and player.Character:GetAttribute("RunState")=="Sanctuary" then
+            if num("LastRunNestCount")>0 then
+                local nestOk,nestList=pcall(function() return Http:JSONDecode(str("NestsJson","[]")) end)
+                local waitSeconds=Config.NestIncubationSeconds
+                if nestOk and typeof(nestList)=="table" then
+                    waitSeconds=NestQueue.secondsUntilAllReady(nestList,math.floor(workspace:GetServerTimeNow()),Config.NestIncubationSeconds)
+                end
+                notify("New Egg Nest! Hatches in "..math.max(1,math.ceil(waitSeconds/3600)).." h",C.gold)
+                Sfx.play("shop_buy")
+            end
             if num("LastRunCrystalBox")>0 then
                 open("crystalReveal")
                 local version=modalVersion
@@ -1290,12 +1355,22 @@ end)
 player:GetAttributeChangedSignal("LastExitStatusAt"):Connect(function()
     if str("LastExitStatus")=="predator_nearby" then notify("A bigger dino is too close to go home!",C.red) end
 end)
+player:GetAttributeChangedSignal("LastNestClaimAt"):Connect(function()
+    if str("LastNestClaimStatus")~="opened" then return end
+    Sfx.play("level_up")
+    notify("Nest opened! Eggs are hatching",C.accent)
+    if str("NextChestId")~="" then autoHatching=true hatchNext() end
+end)
 player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)
 for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus","LastNestClaimStatus","LastRunStartStatus"} do
     player:GetAttributeChangedSignal(attribute):Connect(function()
         local status=str(attribute)
         if attribute=="LastChestClaimStatus" then hatchPending=false end
         if status=="claimed" then toast.Visible=false
+        elseif attribute=="LastNestClaimStatus" then
+            if status=="not_ready" or status=="nest_pending" then notify("That nest is still incubating",C.gold)
+            elseif status=="bank_full" then notify("Hatch some eggs first, then open this nest",C.gold)
+            elseif status~="opened" and status~="duplicate" and status~="" then notify(status:gsub("_"," "),C.red) end
         elseif status=="equipped" or status=="mutated" or status=="opened" then notify("Success!",C.accent)
         elseif status~="" and status~="duplicate" then notify(status:gsub("_"," "),C.red) end
     end)

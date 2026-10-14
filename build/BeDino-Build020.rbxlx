@@ -365298,16 +365298,24 @@ return table.freeze({
     RunEggMaxPerRun = 500, -- PROVISIONAL: catches stop counting at 500 eggs per run (6,250 food); a 5,000-food run (400 eggs) is not truncated
     RunEggBankCapacity = 1000, -- PROVISIONAL: banked run eggs behind the queue (~540 B each, ~0.54 MB); a run starts only while banked &lt;= capacity - RunEggMaxPerRun (500)
     SettledRunLedgerSize = 200, -- PROVISIONAL: settled run IDs kept for exactly-once settlement beyond recentOperations
-    -- Separate bonus egg nests (never the ordinary egg queue). Excess nests wait as
-    -- pending/capacity-blocked and are never silently granted or discarded.
-    NestSlotCapacity = 5,
-    NestPendingCapacity = 30, -- PROVISIONAL: a run starts only while pending &lt;= capacity - NestMaxPerRun (22)
-    NestFirstAtEggs = 40, -- PROVISIONAL: 40 run eggs (500 food) earn the first nest (rescaled x40/15)
-    NestEggsPerExtraNest = 72, -- PROVISIONAL: +1 nest per 72 further eggs (400 eggs -&gt; 6 nests, same as the old 150)
-    NestMaxPerRun = 8, -- PROVISIONAL: &gt;= the nest count at RunEggMaxPerRun (500 eggs -&gt; 7)
-    NestEggCount = 3, -- PROVISIONAL: each nest contains three precommitted bonus eggs
-    NestIncubationSeconds = 300, -- PROVISIONAL: a slotted nest opens five minutes after it takes a slot
-    NestRarityBoostEggs = 15, -- PROVISIONAL: nest eggs use the maximum run-batch species boost
+    -- BD-090 Egg Nests v2 (owner 2026-10-14). ALL PROVISIONAL. A nest is a separate loot item
+    -- dropped at the end of a qualified run; it incubates on SERVER time (os.time), ONE nest at a
+    -- time (queue), and opens into NestMinSize..NestMaxSize eggs rolled with luck. See docs/71.
+    NestStorageCapacity = 5, -- owned nests (waiting + incubating + ready); when full a new nest is not granted
+    NestIncubationSeconds = 10800, -- 3 h each; the next waiting nest starts the moment the previous becomes ready
+    NestMinSize = 10, -- eggs per nest, rolled deterministically from the run id at drop
+    NestMaxSize = 15,
+    -- Hidden drop gate (never shown in the UI; measured on the server, never client-reported).
+    NestMinRunSeconds = 120, -- PROVISIONAL: server clock from RunLifecycle.begin to settlement
+    NestMinCatches = 8, -- PROVISIONAL: validated server CatchScore (run eggs) needed for a nest
+    NestEggsPerExtraNest = 100, -- PROVISIONAL: +1 nest per 100 further catches on top of a qualified run
+    NestMaxPerRun = 3, -- PROVISIONAL cap per run
+    -- Luck tiers (index = nest.luck). PROVISIONAL, disclosed in the Nests menu. rarityBoostEggs feeds
+    -- the run-batch species boost (15 = maximum), conditionLevels adds to the condition-upgrade level
+    -- (clamped to the top tier), shinyChance applies even without irregular weather, bigChance replaces BigChance.
+    NestLuckTiers = {
+        {rarityBoostEggs = 15, conditionLevels = 2, shinyChance = 0.03, bigChance = 0.2},
+    },
     NestClaimRequestCooldownSeconds = 0.5,
     ChestClaimRequestCooldownSeconds = 0.35,
     ChestTestGrantEnabled = false,
@@ -368791,6 +368799,7 @@ return Effects
 return {
     collection = "dinos",
     eggs = "egg",
+    nests = "egg_nest",
     fusion = "fusion",
     home = "home",
     auras = "aura_meadow",
@@ -368801,6 +368810,67 @@ return {
         </Properties>
       </Item>
       <Item class="ModuleScript" referent="RBX206">
+        <Properties>
+          <string name="Name">NestQueue</string>
+          <ProtectedString name="Source">--!strict
+-- BD-090 Egg Nests v2: pure one-at-a-time incubation queue, shared by the server (authoritative,
+-- os.time) and the client (display projection with the server clock). No services, no randomness.
+-- A nest is {nestId, state = "waiting" | "incubating" | "ready", readyAt?}. List order is queue order.
+-- The next waiting nest starts the moment the previous one becomes READY (not when it is opened),
+-- so offline time counts and N nests take N * duration in total.
+local NestQueue = {}
+
+-- Mutates `list` so it reflects time `now`. Returns true when anything changed.
+function NestQueue.advance(list: {any}, now: number, duration: number): boolean
+    local changed = false
+    local chain: number? = nil
+    while true do
+        local incubating = nil
+        for _, nest in list do
+            if nest.state == "incubating" then incubating = nest break end
+        end
+        if incubating then
+            if incubating.readyAt &gt; now then return changed end
+            incubating.state = "ready"
+            chain = incubating.readyAt
+            changed = true
+        end
+        local nextNest = nil
+        for _, nest in list do
+            if nest.state == "waiting" then nextNest = nest break end
+        end
+        if not nextNest then return changed end
+        nextNest.state = "incubating"
+        nextNest.readyAt = (chain or now) + duration
+        chain = nil
+        changed = true
+    end
+end
+
+-- Display copy at time `now` (never mutates the input).
+function NestQueue.project(list: {any}, now: number, duration: number): {any}
+    local copy = {}
+    for i, nest in list do copy[i] = table.clone(nest) end
+    NestQueue.advance(copy, now, duration)
+    return copy
+end
+
+-- Seconds until the whole queue has finished (0 when nothing is incubating or waiting).
+function NestQueue.secondsUntilAllReady(list: {any}, now: number, duration: number): number
+    local last, waiting = now, 0
+    for _, nest in NestQueue.project(list, now, duration) do
+        if nest.state == "incubating" and nest.readyAt &gt; last then last = nest.readyAt end
+        if nest.state == "waiting" then waiting += 1 end
+    end
+    last += waiting * duration
+    return last - now
+end
+
+return NestQueue
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX207">
         <Properties>
           <string name="Name">NextGoal</string>
           <ProtectedString name="Source">--!strict
@@ -368877,7 +368947,7 @@ return NextGoal
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX207">
+      <Item class="ModuleScript" referent="RBX208">
         <Properties>
           <string name="Name">PatternGenes</string>
           <ProtectedString name="Source">--!strict
@@ -368942,7 +369012,7 @@ return Pattern
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX208">
+      <Item class="ModuleScript" referent="RBX209">
         <Properties>
           <string name="Name">PotionArt</string>
           <ProtectedString name="Source">--!strict
@@ -369006,7 +369076,7 @@ return PotionArt
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX209">
+      <Item class="ModuleScript" referent="RBX210">
         <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
@@ -369074,7 +369144,7 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX210">
+      <Item class="ModuleScript" referent="RBX211">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -369200,7 +369270,7 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX211">
+      <Item class="ModuleScript" referent="RBX212">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -369438,7 +369508,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX212">
+      <Item class="ModuleScript" referent="RBX213">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -369447,7 +369517,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX213">
+      <Item class="ModuleScript" referent="RBX214">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -369463,7 +369533,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX214">
+      <Item class="ModuleScript" referent="RBX215">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -369527,7 +369597,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX215">
+      <Item class="ModuleScript" referent="RBX216">
         <Properties>
           <string name="Name">RevealSkip</string>
           <ProtectedString name="Source">--!strict
@@ -369609,7 +369679,7 @@ return Skip
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX216">
+      <Item class="ModuleScript" referent="RBX217">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -369700,7 +369770,7 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX217">
+      <Item class="ModuleScript" referent="RBX218">
         <Properties>
           <string name="Name">Sfx</string>
           <ProtectedString name="Source">--!strict
@@ -369800,7 +369870,7 @@ return Sfx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX218">
+      <Item class="ModuleScript" referent="RBX219">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -369848,7 +369918,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX219">
+      <Item class="ModuleScript" referent="RBX220">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -369897,7 +369967,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX220">
+      <Item class="ModuleScript" referent="RBX221">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -370078,6 +370148,8 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
     local notice = {x = m + 154, y = badgeY, scale = 1, w = 230, h = 16, textSize = 12}
     if TouchLayout.overlaps(TouchLayout.rendered(notice), {x = rail.x, y = rail.y, w = rail.w, h = rail.h}) then
         notice.x, notice.y = m, badgeY + 18
+        -- Seven nav buttons give a wider rail: keep the (short, touch) notice left of it.
+        notice.w = math.max(150, math.min(notice.w, rail.x - m - notice.x - 1))
     end
     return {
         touch = true,
@@ -370097,7 +370169,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX221">
+      <Item class="ModuleScript" referent="RBX222">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -370129,7 +370201,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX222">
+      <Item class="ModuleScript" referent="RBX223">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -370151,7 +370223,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX223">
+      <Item class="ModuleScript" referent="RBX224">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -370167,7 +370239,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX224">
+      <Item class="ModuleScript" referent="RBX225">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -370278,6 +370350,21 @@ local function nativeIcon(parent: GuiObject,id: string): Frame?
         preview.Size=UDim2.fromScale(1,1)
         return root
     end
+    if id=="egg_nest" then -- PLACEHOLDER (docs/72): code-drawn nest until the owner uploads resources/ui/v2/icons/egg-nest-v1.png and its id is bound as "egg_nest"
+        local root=Instance.new("Frame")
+        root.Name,root.BackgroundTransparency,root.Size="Art_egg_nest",1,UDim2.fromOffset(42,42)
+        root.Position,root.ZIndex,root.Parent=UDim2.fromOffset(8,5),parent.ZIndex+1,parent
+        local function blob(color: Color3,x: number,y: number,w: number,h: number)
+            local f=Instance.new("Frame")
+            f.BorderSizePixel,f.BackgroundColor3=0,color
+            f.Position,f.Size,f.ZIndex,f.Parent=UDim2.fromScale(x,y),UDim2.fromScale(w,h),root.ZIndex,root
+            local c=Instance.new("UICorner") c.CornerRadius=UDim.new(.5,0) c.Parent=f
+        end
+        blob(Color3.fromRGB(126,88,52),0,.5,1,.42)
+        blob(Color3.fromRGB(240,228,196),.3,0,.4,.66)
+        blob(Color3.fromRGB(96,64,36),0,.66,1,.2)
+        return root
+    end
     local data = EventVectors[id] or Vectors[id]
     if not data then return nil end
     local root = Instance.new("Frame")
@@ -370313,7 +370400,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX225">
+      <Item class="ModuleScript" referent="RBX226">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -370336,7 +370423,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX226">
+      <Item class="ModuleScript" referent="RBX227">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -370388,7 +370475,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX227">
+    <Item class="Folder" referent="RBX228">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -539943,15 +540030,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX228">
+  <Item class="ServerScriptService" referent="RBX229">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX229">
+    <Item class="Folder" referent="RBX230">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX230">
+      <Item class="ModuleScript" referent="RBX231">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -540163,7 +540250,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX231">
+      <Item class="Script" referent="RBX232">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -540193,8 +540280,8 @@ Arena.build()
 Leaderboards.start()
 
 ProfileRepository.start()
-RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string, eggEvents)
-    local ok = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents)
+RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string, eggEvents, runSeconds)
+    local ok = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents, runSeconds)
     if not ok then
         warn(string.format("[Be Dino] settlement failed for %s (%s)", player.Name, reason))
         return false
@@ -540308,7 +540395,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX232">
+      <Item class="ModuleScript" referent="RBX233">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -540370,7 +540457,7 @@ function ChestService.start(profileRepository)
         player:SetAttribute("LastChestClaimStatus", status)
     end)
 
-    -- BD-044 bonus nests: open one ready nest slot; its eggs join the reveal line next.
+    -- BD-090 egg nests: open one READY nest; its rolled eggs join the reveal line next.
     local claimNest = getRemote(folder, "ClaimNest")
     claimNest.OnServerEvent:Connect(function(player: Player, nestId, ...)
         if select("#", ...) ~= 0 then return end
@@ -540384,6 +540471,7 @@ function ChestService.start(profileRepository)
         end
         local _, _, status = profileRepository.claimNest(player, nestId)
         player:SetAttribute("LastNestClaimStatus", status)
+        player:SetAttribute("LastNestClaimAt", os.clock()) -- changes every request so the client always sees a repeat
     end)
 
     -- BD-044 reveal-skip preference (UI only; never affects rewards).
@@ -540417,7 +540505,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX233">
+      <Item class="ModuleScript" referent="RBX234">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -540505,7 +540593,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX234">
+      <Item class="ModuleScript" referent="RBX235">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -540639,7 +540727,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX235">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -540851,7 +540939,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -541103,7 +541191,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX238">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -541282,7 +541370,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -541468,7 +541556,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -541856,7 +541944,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -541906,7 +541994,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -541948,7 +542036,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -542059,7 +542147,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -542141,7 +542229,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -542233,7 +542321,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -542338,7 +542426,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -542472,7 +542560,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -542485,6 +542573,7 @@ local RewardMath = require(script.Parent.RewardMath)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local EggTraits = require(ReplicatedStorage.Shared.EggTraits)
 local EggGenetics = require(ReplicatedStorage.Shared.EggGenetics)
+local NestQueue = require(ReplicatedStorage.Shared.NestQueue)
 local ProgressionConfig = require(ReplicatedStorage.Shared.ProgressionConfig)
 
 local ProfileRepository = {}
@@ -542678,6 +542767,21 @@ local function isValidProfile(profile: any): boolean
         if typeof(profile.pendingNests) ~= "table" or #profile.pendingNests &gt; 1000 then return false end
         for _, nest in profile.pendingNests do if not validNest(nest, false) then return false end end
     end
+    if profile.eggNests ~= nil then -- BD-090 nests v2
+        if typeof(profile.eggNests) ~= "table" or #profile.eggNests &gt; 50 then return false end -- structural ceiling only
+        for _, nest in profile.eggNests do
+            if typeof(nest) ~= "table" or not validId(nest.nestId) or not validId(nest.droppedFromRun)
+                or typeof(nest.size) ~= "number" or nest.size % 1 ~= 0 or nest.size &lt; 1 or nest.size &gt; 50
+                or typeof(nest.luck) ~= "number" or nest.luck % 1 ~= 0 or nest.luck &lt; 1 or nest.luck &gt; #Config.NestLuckTiers
+                or (nest.state ~= "waiting" and nest.state ~= "incubating" and nest.state ~= "ready") then return false end
+            if nest.state ~= "waiting" and (typeof(nest.readyAt) ~= "number" or nest.readyAt ~= nest.readyAt
+                or nest.readyAt &lt; 0 or nest.readyAt % 1 ~= 0 or nest.readyAt == math.huge) then return false end
+            if nest.eggs ~= nil then -- legacy precommitted eggs (migrated Build 020 nests)
+                if typeof(nest.eggs) ~= "table" or #nest.eggs &gt; 20 or #nest.eggs ~= nest.size then return false end
+                for _, egg in nest.eggs do if not validBankedEgg(egg) then return false end end
+            end
+        end
+    end
     if profile.revealSkip ~= nil then
         if typeof(profile.revealSkip) ~= "table" or #profile.revealSkip &gt; 3 then return false end
         for _, rarity in profile.revealSkip do if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity &lt; 1 or rarity &gt; 3 then return false end end
@@ -542783,15 +542887,13 @@ local function syncAttributes(player: Player, profile: any)
     player:SetAttribute("ChestQueueJson", HttpService:JSONEncode(chestSummary))
     -- BD-044: banked run eggs and separate bonus nests (counts and slot summaries only).
     local banked = if typeof(profile.runEggBank) == "table" then #profile.runEggBank else 0
-    local pendingNests = if typeof(profile.pendingNests) == "table" then #profile.pendingNests else 0
     player:SetAttribute("BankedRunEggCount", banked)
     player:SetAttribute("QueuedEggsWaiting", banked + (profile.pendingChestGrants or 0))
     local nestSummary = {}
-    for _, nest in profile.nests or {} do
-        table.insert(nestSummary, {id = nest.nestId, readyAt = nest.readyAt, eggCount = #nest.eggs})
+    for _, nest in profile.eggNests or {} do
+        table.insert(nestSummary, {id = nest.nestId, size = nest.size, luck = nest.luck, state = nest.state, readyAt = nest.readyAt})
     end
     player:SetAttribute("NestsJson", HttpService:JSONEncode(nestSummary))
-    player:SetAttribute("PendingNestCount", pendingNests)
     player:SetAttribute("RevealSkipJson", HttpService:JSONEncode(profile.revealSkip or {}))
     player:SetAttribute("RunStartBlocked", ProfileRepository.runStartBlockReason(profile))
     local nextChest = profile.eggs[1]
@@ -542883,8 +542985,6 @@ end
 function ProfileRepository.runStartBlockReason(profile: any): string
     local banked = if typeof(profile.runEggBank) == "table" then #profile.runEggBank else 0
     if banked &gt; Config.RunEggBankCapacity - Config.RunEggMaxPerRun then return "egg_bank_full" end
-    local pending = if typeof(profile.pendingNests) == "table" then #profile.pendingNests else 0
-    if pending &gt; Config.NestPendingCapacity - Config.NestMaxPerRun then return "nests_pending_full" end
     return ""
 end
 
@@ -542915,16 +543015,34 @@ local function bankEggs(profile: any, eggs: {any}, now: number, atFront: boolean
     refillFromBank(profile, now)
 end
 
--- Bonus nests fill free nest slots (incubation starts on slotting); the rest wait as
--- pending. Capacities gate run starts, so a settlement never drops or covertly grants a nest.
-local function promoteNests(profile: any, now: number)
-    profile.nests = profile.nests or {}
-    profile.pendingNests = profile.pendingNests or {}
-    while #profile.nests &lt; Config.NestSlotCapacity and #profile.pendingNests &gt; 0 do
-        local nest = table.remove(profile.pendingNests, 1)
-        nest.readyAt = now + Config.NestIncubationSeconds
-        table.insert(profile.nests, nest)
+-- BD-090: advance the one-at-a-time incubation queue on server time.
+local function advanceNests(profile: any, now: number)
+    if typeof(profile.eggNests) == "table" then NestQueue.advance(profile.eggNests, now, Config.NestIncubationSeconds) end
+end
+
+-- Old (Build 020) nests/pendingNests become v2 records that keep their precommitted eggs, so
+-- nothing is lost: ready ones are ready, the first unready slotted one keeps its readyAt and
+-- incubates, everything else waits in the one-at-a-time queue. Idempotent (fields are cleared).
+local function migrateLegacyNests(profile: any, now: number)
+    if profile.nests == nil and profile.pendingNests == nil then return end
+    local list = if typeof(profile.eggNests) == "table" then profile.eggNests else {}
+    local incubating = false
+    for _, nest in list do if nest.state == "incubating" then incubating = true end end
+    local function convert(old: any, state: string, readyAt: number?)
+        local record: any = {nestId = old.nestId, droppedFromRun = (old.source and old.source.runId) or "legacy",
+            size = #old.eggs, luck = 1, state = state, eggs = old.eggs}
+        if state ~= "waiting" then record.readyAt = readyAt end
+        table.insert(list, record)
     end
+    for _, old in profile.nests or {} do
+        if old.readyAt &lt;= now then convert(old, "ready", old.readyAt)
+        elseif not incubating then incubating = true convert(old, "incubating", old.readyAt)
+        else convert(old, "waiting") end
+    end
+    for _, old in profile.pendingNests or {} do convert(old, "waiting") end
+    profile.eggNests = list
+    profile.nests, profile.pendingNests = nil, nil
+    advanceNests(profile, now)
 end
 
 local function hasSettledRun(profile: any, runId: string): boolean
@@ -543154,6 +543272,8 @@ function ProfileRepository.load(player: Player): boolean
                 invalidSchema = true
                 return nil
             end
+            migrateLegacyNests(profileValue, now)
+            advanceNests(profileValue, now)
 
             local progress = ProgressionRules.upgrade(profileValue)
             if localPreview and Config.StudioTestWalletEnabled then progress.crystals = Config.StudioTestCrystals end
@@ -543231,14 +543351,15 @@ local function runRewardText(outcome): string
     end
     table.insert(parts, if eggs == 1 then "1 run egg" elseif eggs &gt; 0 then string.format("%d run eggs", eggs) else "no run eggs")
     local nests = outcome.nestCount or 0
-    if nests &gt; 0 then table.insert(parts, if nests == 1 then "1 bonus nest" else string.format("%d bonus nests", nests)) end
+    if nests &gt; 0 then table.insert(parts, if nests == 1 then "1 egg nest" else string.format("%d egg nests", nests)) end
+    if outcome.nestFull then table.insert(parts, "nest storage full") end
     return table.concat(parts, " | ")
 end
 
 -- BD-044 settlement: catches -&gt; exactly that many run eggs (capped per run), plus
 -- deterministic crystals and separate bonus nests. Every random draw is committed
 -- before UpdateAsync; settledRuns + recentOperations make the run exactly-once.
-function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number, eggEvents)
+function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number, eggEvents, runSeconds: number?)
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
         return false, nil, "profile_not_loaded"
@@ -543247,7 +543368,8 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         return false, nil, "invalid_run_id"
     end
 
-    local outcome = RewardMath.computeRunReward(catchScore)
+    local outcome = RewardMath.computeRunReward(catchScore, runSeconds)
+    local nestsEarned = outcome.nestCount -- hidden qualification (server run time + server catches), committed below
     outcome.crystalBox = 0 -- retired random crystal box; kept for client/operation compatibility
     local eggCount = outcome.eggCount
     if eggEvents ~= nil then
@@ -543279,25 +543401,6 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         })
     end
     sortByRarity(runEggs)
-    local nests = table.create(outcome.nestCount)
-    for j = 1, outcome.nestCount do
-        local nestId = RewardMath.nestId(runId, j)
-        local nestEggs = {}
-        for k = 1, Config.NestEggCount do
-            local traits = ProfileRepository.prepareEgg(player, {eventId = "clear", mutationId = ""})
-            local eggId = nestId .. ":" .. tostring(k)
-            table.insert(nestEggs, {
-                eggId = eggId, kind = "nest_egg", eventId = "clear", mutationId = "",
-                reward = RewardMath.computeChestReward(rng, Config.NestRarityBoostEggs),
-                shiny = traits.shiny, big = traits.big,
-                genes = traits.genes, traitRollVersion = traits.traitRollVersion,
-                source = {kind = "nest", runId = runId, nestId = nestId, ordinal = k, originalEggId = eggId},
-            })
-        end
-        sortByRarity(nestEggs)
-        table.insert(nests, {nestId = nestId, eggs = nestEggs, source = {kind = "run_nest", runId = runId, ordinal = j}})
-    end
-
     local leaseLost = false
     local invalid = false
     local duplicate = false
@@ -543324,9 +543427,18 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
             local batch = table.create(#runEggs)
             for _, egg in runEggs do table.insert(batch, DinosaurIdentity.copy(egg)) end
             bankEggs(profileValue, batch, now)
-            promoteNests(profileValue, now)
-            for _, nest in nests do table.insert(profileValue.pendingNests, DinosaurIdentity.copy(nest)) end
-            promoteNests(profileValue, now)
+            -- BD-090: nest drop for qualified runs only; storage cap never blocks the settlement.
+            profileValue.eggNests = profileValue.eggNests or {}
+            advanceNests(profileValue, now)
+            local granted = math.min(nestsEarned, math.max(0, Config.NestStorageCapacity - #profileValue.eggNests))
+            for j = 1, granted do
+                local nestId = RewardMath.nestId(runId, j)
+                table.insert(profileValue.eggNests, {nestId = nestId, droppedFromRun = runId,
+                    size = RewardMath.nestSize(nestId), luck = 1, state = "waiting"})
+            end
+            advanceNests(profileValue, now)
+            outcome.nestCount = granted
+            outcome.nestFull = granted &lt; nestsEarned
 
             local progress = ProgressionRules.upgrade(profileValue)
             progress.crystals = math.min(ProgressionConfig.MaxCrystals, progress.crystals + outcome.crystals)
@@ -543367,6 +543479,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         player:SetAttribute("LastRunCrystalBox", committedOutcome.crystalBox or 0)
         player:SetAttribute("LastRunEggCount", committedOutcome.eggCount or committedOutcome.chestCount or 0)
         player:SetAttribute("LastRunNestCount", committedOutcome.nestCount or 0)
+        player:SetAttribute("LastRunNestFull", committedOutcome.nestFull == true)
     end
     player:SetAttribute("LastSettledRunId", runId)
     return true, committedOutcome, if duplicate then "duplicate" else "committed"
@@ -543414,8 +543527,30 @@ function ProfileRepository.setRevealSkip(player: Player, selection: any): (boole
     return true, "saved"
 end
 
--- Opens a ready bonus nest: its precommitted eggs join the reveal line next (ahead of
--- the remaining banked run eggs) and the oldest pending nest takes the freed slot.
+-- Opens a READY nest (server time): credits its eggs to the front of the banked-egg pipeline,
+-- rolled with the nest's luck tier (config), atomically with removing the nest. Idempotent via
+-- the "nestclaim:&lt;nestId&gt;" operation record.
+local function rollNestEggs(profileValue: any, nest: any): {any}
+    if nest.eggs then return nest.eggs end -- migrated legacy nest: precommitted eggs
+    local tier = Config.NestLuckTiers[nest.luck]
+    local level = ProgressionRules.upgrade(profileValue).conditionLevel + tier.conditionLevels
+    local rng = Random.new()
+    local eggs = table.create(nest.size)
+    for k = 1, nest.size do
+        local eggId = nest.nestId .. ":" .. tostring(k)
+        local shinyRoll, bigRoll = rng:NextNumber(), rng:NextNumber()
+        table.insert(eggs, {
+            eggId = eggId, kind = "nest_egg", eventId = "clear", mutationId = "",
+            reward = RewardMath.computeChestReward(rng, tier.rarityBoostEggs),
+            shiny = shinyRoll &lt; tier.shinyChance, big = bigRoll &lt; tier.bigChance,
+            genes = EggGenetics.roll(level, rng), traitRollVersion = "bd045-genes-v2",
+            source = {kind = "nest", runId = nest.droppedFromRun, nestId = nest.nestId, ordinal = k, originalEggId = eggId, luck = nest.luck},
+        })
+    end
+    sortByRarity(eggs)
+    return eggs
+end
+
 function ProfileRepository.claimNest(player: Player, nestId: string)
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
@@ -543440,25 +543575,21 @@ function ProfileRepository.claimNest(player: Player, nestId: string)
             if not ownSession(profileValue) then leaseLost = true return nil end
             local existing = findOperation(profileValue, operationId)
             if existing then duplicateOutcome = existing.outcome return profileValue end
+            migrateLegacyNests(profileValue, now)
+            advanceNests(profileValue, now)
             local index = nil
-            for i, nest in profileValue.nests or {} do
+            for i, nest in profileValue.eggNests or {} do
                 if nest.nestId == nestId then index = i break end
             end
-            if not index then
-                for _, nest in profileValue.pendingNests or {} do
-                    if nest.nestId == nestId then status = "nest_pending" return nil end
-                end
-                status = "missing"
-                return nil
-            end
-            local nest = profileValue.nests[index]
-            if now &lt; nest.readyAt then status = "not_ready" return nil end
+            if not index then status = "missing" return nil end
+            local nest = profileValue.eggNests[index]
+            if nest.state ~= "ready" then status = if nest.state == "waiting" then "nest_pending" else "not_ready" return nil end
             local banked = if profileValue.runEggBank then #profileValue.runEggBank else 0
-            if banked + #nest.eggs &gt; Config.RunEggBankCapacity then status = "bank_full" return nil end
-            table.remove(profileValue.nests, index)
-            bankEggs(profileValue, nest.eggs, now, true)
-            promoteNests(profileValue, now)
-            outcome = {nestId = nestId, eggCount = #nest.eggs}
+            if banked + nest.size &gt; Config.RunEggBankCapacity then status = "bank_full" return nil end
+            table.remove(profileValue.eggNests, index)
+            bankEggs(profileValue, rollNestEggs(profileValue, nest), now, true)
+            advanceNests(profileValue, now)
+            outcome = {nestId = nestId, eggCount = nest.size, luck = nest.luck}
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             table.insert(profileValue.recentOperations, {id = operationId, kind = "nest_claim", outcome = outcome})
@@ -544148,7 +544279,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -544329,7 +544460,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -544358,22 +544489,36 @@ function RewardMath.runCrystals(eggCount: number): number
     return math.min(ProgressionConfig.RunCrystalCap, crystals)
 end
 
--- PROVISIONAL nest earning rule: first nest at NestFirstAtEggs, then one per
--- NestEggsPerExtraNest further eggs (40 -&gt; 1, 400 -&gt; 6), capped per run.
-function RewardMath.nestCount(eggCount: number): number
+-- PROVISIONAL nest count for a QUALIFIED run (see RewardMath.nestQualifies): one nest, plus one
+-- per NestEggsPerExtraNest catches beyond NestMinCatches, capped per run. 0 when not qualified.
+function RewardMath.nestCount(eggCount: number, runSeconds: any?): number
     local n = RewardMath.runEggCount(eggCount)
-    if n &lt; Config.NestFirstAtEggs then return 0 end
-    return math.min(Config.NestMaxPerRun, 1 + (n - Config.NestFirstAtEggs) // Config.NestEggsPerExtraNest)
+    if not RewardMath.nestQualifies(n, runSeconds) then return 0 end
+    return math.min(Config.NestMaxPerRun, 1 + (n - Config.NestMinCatches) // Config.NestEggsPerExtraNest)
 end
 
-function RewardMath.computeRunReward(catchScore: any)
+-- Hidden gate: server-measured run length AND validated server catch score.
+function RewardMath.nestQualifies(eggCount: number, runSeconds: any?): boolean
+    if typeof(runSeconds) ~= "number" or runSeconds ~= runSeconds then return false end
+    return runSeconds &gt;= Config.NestMinRunSeconds and RewardMath.runEggCount(eggCount) &gt;= Config.NestMinCatches
+end
+
+-- Deterministic nest size NestMinSize..NestMaxSize from the nest id (committed at drop).
+function RewardMath.nestSize(nestId: string): number
+    local h = 5381
+    for i = 1, #nestId do h = (h * 33 + string.byte(nestId, i)) % 2147483629 end
+    h = bit32.bxor(h, bit32.rshift(h, 7), bit32.rshift(h, 15)) -- spread low bits (djb2 alone is skewed mod small n)
+    return Config.NestMinSize + h % (Config.NestMaxSize - Config.NestMinSize + 1)
+end
+
+function RewardMath.computeRunReward(catchScore: any, runSeconds: any?)
     local eggCount = RewardMath.runEggCount(catchScore)
     return {
         rewardConfigVersion = Config.RunRewardConfigVersion,
         catchScore = eggCount,
         eggCount = eggCount,
         crystals = RewardMath.runCrystals(eggCount),
-        nestCount = RewardMath.nestCount(eggCount),
+        nestCount = RewardMath.nestCount(eggCount, runSeconds),
         accountXP = eggCount, -- unchanged rate: 1 account XP per catch (= per run egg)
     }
 end
@@ -544421,7 +544566,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -544434,6 +544579,8 @@ local RunLifecycle = {}
 local lastExitRequest: {[Player]: number} = {}
 local requestEndRun: RemoteEvent? = nil
 local settleRun = nil
+-- BD-090: server-side run start times (server clock); never replicated, never client-reported.
+local runStartedAt: {[string]: number} = {}
 
 function RunLifecycle.prepareSanctuary(player: Player, character: Model)
     character:SetAttribute("RunState", "Sanctuary")
@@ -544467,7 +544614,9 @@ function RunLifecycle.begin(player: Player, character: Model)
         return
     end
     if character:GetAttribute("RunId") ~= nil then return end
-    character:SetAttribute("RunId", HttpService:GenerateGUID(false))
+    local newRunId = HttpService:GenerateGUID(false)
+    character:SetAttribute("RunId", newRunId)
+    runStartedAt[newRunId] = workspace:GetServerTimeNow()
     player:SetAttribute("Location", "Island")
     character:SetAttribute("RunState", "Active")
     character:SetAttribute("GrowthScore", 0)
@@ -544502,8 +544651,11 @@ local function settlementSnapshot(character: Model)
     if typeof(runId) ~= "string" then return nil end
     if typeof(catchScore) ~= "number" or catchScore % 1 ~= 0 then return nil end
     local ok,events=pcall(function() return HttpService:JSONDecode(character:GetAttribute("RunEggEvents") or "[]") end)
+    local startedAt = runStartedAt[runId]
+    runStartedAt[runId] = nil
     return {
         runId = runId,
+        runSeconds = if startedAt then math.max(0, workspace:GetServerTimeNow() - startedAt) else 0, -- unknown start = 0 s = no nest
         catchScore = math.clamp(catchScore, 0, Config.RunEggMaxPerRun), -- one run egg per catch
         eggEvents=if ok and typeof(events)=="table" then events else {},
     }
@@ -544513,7 +544665,7 @@ local function respawnAfterSettlement(player: Player, character: Model, snapshot
     task.spawn(function()
         local ok = true
         if settleRun then
-            ok = settleRun(player, snapshot.runId, snapshot.catchScore, reason, snapshot.eggEvents)
+            ok = settleRun(player, snapshot.runId, snapshot.catchScore, reason, snapshot.eggEvents, snapshot.runSeconds)
         end
         if not ok then
             if player.Parent and player:GetAttribute("ProfileState") == "Loaded" then
@@ -544581,7 +544733,7 @@ function RunLifecycle.endForDisconnect(player: Player): string
     local growthScore = character:GetAttribute("GrowthScore")
     player:SetAttribute("LastRunGrowthScore", if typeof(growthScore) == "number" then growthScore else 0)
     if settleRun then
-        local ok = settleRun(player, snapshot.runId, snapshot.catchScore, "Disconnect", snapshot.eggEvents)
+        local ok = settleRun(player, snapshot.runId, snapshot.catchScore, "Disconnect", snapshot.eggEvents, snapshot.runSeconds)
         return if ok then "settled" else "failed"
     end
     return "settled"
@@ -544677,7 +544829,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX251">
+      <Item class="ModuleScript" referent="RBX252">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -544749,19 +544901,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX252">
+  <Item class="StarterPlayer" referent="RBX253">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX253">
+    <Item class="StarterPlayerScripts" referent="RBX254">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX254">
+      <Item class="Folder" referent="RBX255">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX255">
+        <Item class="LocalScript" referent="RBX256">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -544777,6 +544929,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Theme = require(Shared.UITheme)
 local NavigationArtwork = require(Shared.NavigationArtwork)
+local NestQueue = require(Shared.NestQueue)
 local Preview = require(Shared.DinosaurPreview)
 local ModelPreview = require(Shared.ModelPreview)
 local HatchPresentation = require(Shared.HatchPresentation)
@@ -544802,7 +544955,7 @@ local endRun = remotes:WaitForChild("RequestEndRun") :: RemoteEvent
 local equip = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
 local hatch = remotes:WaitForChild("ClaimChest") :: RemoteEvent
 local setSkipRemote = remotes:WaitForChild("SetRevealSkip") :: RemoteEvent
-local claimNestRemote = remotes:WaitForChild("ClaimNest") :: RemoteEvent -- BD-044 bonus nests
+local claimNestRemote = remotes:WaitForChild("ClaimNest") :: RemoteEvent -- BD-090 egg nests menu
 local fuse = remotes:WaitForChild("MutateSpecies") :: RemoteEvent
 local shopAction=remotes:WaitForChild("ProgressionAction") :: RemoteEvent
 local shopResult=remotes:WaitForChild("ProgressionResult") :: RemoteEvent
@@ -545484,33 +545637,88 @@ render=function(name: string)
             autoHatching=true
             hatchNext()
         end)
-        -- BD-044 (minimal, isolated hook): banked run eggs and separate bonus nests.
-        local nestsOk,nests=pcall(function() return Http:JSONDecode(str("NestsJson","[]")) end)
-        if not nestsOk or typeof(nests)~="table" then nests={} end
-        local readyNest=nil
-        for _,nest in nests do if typeof(nest.readyAt)=="number" and nest.readyAt&lt;=workspace:GetServerTimeNow() then readyNest=nest break end end
-        for n=1,Config.NestSlotCapacity do -- nest sprites: twig ring + egg, gold egg when ready
-            local ready=nests[n]~=nil and typeof(nests[n].readyAt)=="number" and nests[n].readyAt&lt;=workspace:GetServerTimeNow()
-            local slotBox=Instance.new("Frame")
-            slotBox.Name,slotBox.BackgroundTransparency,slotBox.Size,slotBox.Position,slotBox.ZIndex,slotBox.Parent="Nest"..n,1,UDim2.fromOffset(40,26),UDim2.fromOffset(420+(n-1)*46,278),24,body
-            local function blob(color: Color3,w: number,h: number,x: number,y: number,z: number)
-                local f=Instance.new("Frame")
-                f.BorderSizePixel,f.BackgroundColor3,f.Size,f.Position,f.ZIndex=0,color,UDim2.fromOffset(w,h),UDim2.fromOffset(x,y),z
-                local c=Instance.new("UICorner") c.CornerRadius=UDim.new(.5,0) c.Parent=f
-                f.Parent=slotBox
+        label(body,"Eggs waiting: "..num("QueuedEggsWaiting"),420,310,400,44,22)
+    elseif name=="nests" then
+        -- BD-090: separate Egg Nests menu (never mixed with the run eggs in Caught Eggs).
+        heading.Text,header.BackgroundColor3="Egg Nests",C.gold
+        local nestOk,nestList=pcall(function() return Http:JSONDecode(str("NestsJson","[]")) end)
+        if not nestOk or typeof(nestList)~="table" then nestList={} end
+        local duration=Config.NestIncubationSeconds
+        local function formatWait(seconds: number): string -- docs/72: round, drop zeros ("2 h", "40 min", "30 s")
+            seconds=math.max(0,math.ceil(seconds))
+            if seconds&gt;=3600 then
+                local hours,minutes=seconds//3600,math.floor((seconds%3600)/60+.5)
+                if minutes&gt;=60 then hours+=1 minutes=0 end
+                return if minutes==0 then hours.." h" else hours.." h "..minutes.." min"
             end
-            if nests[n] then
-                blob(Color3.fromRGB(126,88,52),40,14,0,12,24)
-                blob(if ready then C.gold else Color3.fromRGB(240,228,196),16,20,12,0,25)
-                blob(Color3.fromRGB(96,64,36),40,7,0,18,26)
+            if seconds&gt;=60 then return math.ceil(seconds/60).." min" end
+            return seconds.." s"
+        end
+        local storage=label(body,"Nests "..#nestList.."/"..Config.NestStorageCapacity,0,0,300,30,24,C.gold)
+        storage.TextXAlignment=Enum.TextXAlignment.Left
+        local luckLine=label(body,"Nest eggs are lucky: better rarity, condition, Shiny and BIG odds.",300,2,524,28,16)
+        luckLine.TextXAlignment=Enum.TextXAlignment.Right
+        local list=Instance.new("ScrollingFrame")
+        list.Name,list.BackgroundTransparency,list.BorderSizePixel,list.ZIndex,list.Parent="NestList",1,0,24,body
+        list.Position,list.Size=UDim2.fromOffset(0,36),UDim2.fromOffset(824,296)
+        list.CanvasSize,list.ScrollBarThickness=UDim2.fromOffset(0,math.max(296,#nestList*60)),6
+        local rows={}
+        for index,nest in nestList do
+            local card=box(list,0,(index-1)*60,812,56,C.card,25)
+            art(card,"egg_nest",8,5,46)
+            local title=label(card,"Nest: "..tostring(nest.size).." eggs",64,2,230,28,22)
+            title.TextXAlignment=Enum.TextXAlignment.Left
+            local chip=box(card,300,5,120,26,C.card,26)
+            local chipText=label(chip,"",0,0,120,26,17)
+            local timeText=label(card,"",430,2,190,28,19)
+            timeText.TextXAlignment=Enum.TextXAlignment.Left
+            local track=box(card,64,38,556,12,C.outline,26)
+            local fill=box(track,0,0,556,12,C.accent,27)
+            local openButton=button(card,"OPEN",632,5,170,46,C.accent,function()
+                Sfx.play("shop_buy")
+                claimNestRemote:FireServer(nest.id)
+            end)
+            rows[index]={chip=chip,chipText=chipText,timeText=timeText,fill=fill,openButton=openButton}
+        end
+        local footer=label(body,"",0,336,824,62,17,C.text)
+        local function refreshNests()
+            local now=math.floor(workspace:GetServerTimeNow())
+            local projected=NestQueue.project(nestList,now,duration)
+            local waitingCount,incubatingCount=0,0
+            for index,nest in projected do
+                local row=rows[index]
+                if row then
+                    local remaining=if nest.readyAt then nest.readyAt-now else duration
+                    if nest.state=="ready" then
+                        row.chipText.Text,row.chip.BackgroundColor3="Ready",C.accent
+                        row.timeText.Text="Ready to open"
+                        row.fill.Size=UDim2.fromOffset(556,12)
+                    elseif nest.state=="incubating" then
+                        incubatingCount+=1
+                        row.chipText.Text,row.chip.BackgroundColor3="Incubating",C.gold
+                        row.timeText.Text="Ready in "..formatWait(remaining)
+                        row.fill.Size=UDim2.fromOffset(math.floor(556*math.clamp(1-remaining/duration,0,1)),12)
+                    else
+                        waitingCount+=1
+                        row.chipText.Text,row.chip.BackgroundColor3="Waiting",C.blue
+                        row.timeText.Text="Starts after the one before"
+                        row.fill.Size=UDim2.fromOffset(0,12)
+                    end
+                    row.openButton.Visible=nest.state=="ready"
+                end
+            end
+            if #nestList==0 then
+                footer.Text="No egg nests yet. Look for one at the end of a run."
             else
-                blob(Color3.fromRGB(64,66,78),40,14,0,12,24)
+                footer.Text="One nest hatches at a time, "..math.floor(duration/3600).." h each. The next starts when this one is ready, even while you are away."
             end
         end
-        label(body,"Eggs waiting: "..num("QueuedEggsWaiting").."\nBonus nests: "..#nests.."/"..Config.NestSlotCapacity.."  •  Pending: "..num("PendingNestCount"),420,308,400,44,17)
-        button(body,if readyNest then "OPEN BONUS NEST" else "NEST INCUBATING",420,354,400,40,if readyNest then C.gold else C.card,function()
-            if not readyNest then notify(if #nests==0 then "No bonus nests yet" else "Bonus nest still incubating",C.gold) return end
-            claimNestRemote:FireServer(readyNest.id)
+        refreshNests()
+        task.spawn(function() -- live countdown: cheap text/size updates once a second, stops when the list is gone
+            while list.Parent and active=="nests" do
+                task.wait(1)
+                if list.Parent and active=="nests" then refreshNests() end
+            end
         end)
     elseif name=="hatch" then
         heading.Text,header.BackgroundColor3="An egg is hatching...",C.gold
@@ -545693,7 +545901,7 @@ rail=box(gui,14,0,186,444,C.panel,2)
 rail.AnchorPoint,rail.Position=Vector2.new(0,.5),UDim2.new(0,14,.5,0)
 local railScale=Instance.new("UIScale") railScale.Parent=rail
 local navigationButtons = {}
-for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
+for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"NESTS","egg_nest","nests",C.gold},{"FUSION","fusion","fusion",C.purple},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
     local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() if entry[3]=="fusion" then openFusion() else open(entry[3]) end end)
     b.TextSize=20
     art(b,NavigationArtwork[entry[3]] or entry[2],5,6,40)
@@ -546009,7 +546217,7 @@ local function scheduleModalRefresh()
     refreshQueued=true
     task.defer(function()
         refreshQueued=false
-        if table.find({"collection","detail","fusion","eggs","auras","potions","settings"},active) then
+        if table.find({"collection","detail","fusion","eggs","nests","auras","potions","settings"},active) then
             body:ClearAllChildren()
             render(active)
         end
@@ -546043,6 +546251,15 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
         repeat task.wait(.1) until serial~=hatchCancelSerial or os.clock()&gt;deadline
             or (player.Character and player.Character:GetAttribute("RunState")=="Sanctuary")
         if serial==hatchCancelSerial and player.Character and player.Character:GetAttribute("RunState")=="Sanctuary" then
+            if num("LastRunNestCount")&gt;0 then
+                local nestOk,nestList=pcall(function() return Http:JSONDecode(str("NestsJson","[]")) end)
+                local waitSeconds=Config.NestIncubationSeconds
+                if nestOk and typeof(nestList)=="table" then
+                    waitSeconds=NestQueue.secondsUntilAllReady(nestList,math.floor(workspace:GetServerTimeNow()),Config.NestIncubationSeconds)
+                end
+                notify("New Egg Nest! Hatches in "..math.max(1,math.ceil(waitSeconds/3600)).." h",C.gold)
+                Sfx.play("shop_buy")
+            end
             if num("LastRunCrystalBox")&gt;0 then
                 open("crystalReveal")
                 local version=modalVersion
@@ -546056,12 +546273,22 @@ end)
 player:GetAttributeChangedSignal("LastExitStatusAt"):Connect(function()
     if str("LastExitStatus")=="predator_nearby" then notify("A bigger dino is too close to go home!",C.red) end
 end)
+player:GetAttributeChangedSignal("LastNestClaimAt"):Connect(function()
+    if str("LastNestClaimStatus")~="opened" then return end
+    Sfx.play("level_up")
+    notify("Nest opened! Eggs are hatching",C.accent)
+    if str("NextChestId")~="" then autoHatching=true hatchNext() end
+end)
 player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)
 for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus","LastNestClaimStatus","LastRunStartStatus"} do
     player:GetAttributeChangedSignal(attribute):Connect(function()
         local status=str(attribute)
         if attribute=="LastChestClaimStatus" then hatchPending=false end
         if status=="claimed" then toast.Visible=false
+        elseif attribute=="LastNestClaimStatus" then
+            if status=="not_ready" or status=="nest_pending" then notify("That nest is still incubating",C.gold)
+            elseif status=="bank_full" then notify("Hatch some eggs first, then open this nest",C.gold)
+            elseif status~="opened" and status~="duplicate" and status~="" then notify(status:gsub("_"," "),C.red) end
         elseif status=="equipped" or status=="mutated" or status=="opened" then notify("Success!",C.accent)
         elseif status~="" and status~="duplicate" then notify(status:gsub("_"," "),C.red) end
     end)
@@ -546076,7 +546303,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX256">
+        <Item class="LocalScript" referent="RBX257">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -546139,7 +546366,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX257">
+        <Item class="ModuleScript" referent="RBX258">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -546218,7 +546445,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX258">
+        <Item class="ModuleScript" referent="RBX259">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -547083,7 +547310,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX259">
+        <Item class="ModuleScript" referent="RBX260">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -547185,7 +547412,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX260">
+        <Item class="ModuleScript" referent="RBX261">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -547245,7 +547472,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX261">
+        <Item class="LocalScript" referent="RBX262">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -547418,7 +547645,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX262">
+        <Item class="LocalScript" referent="RBX263">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -547500,7 +547727,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX263">
+  <Item class="Workspace" referent="RBX264">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

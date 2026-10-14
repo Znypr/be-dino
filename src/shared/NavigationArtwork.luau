@@ -3,6 +3,7 @@
 return {
     collection = "dinos",
     eggs = "egg",
+    nests = "egg_nest",
     fusion = "fusion",
     home = "home",
     auras = "aura_meadow",

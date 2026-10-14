@@ -8,6 +8,7 @@ local RewardMath = require(script.Parent.RewardMath)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local EggTraits = require(ReplicatedStorage.Shared.EggTraits)
 local EggGenetics = require(ReplicatedStorage.Shared.EggGenetics)
+local NestQueue = require(ReplicatedStorage.Shared.NestQueue)
 local ProgressionConfig = require(ReplicatedStorage.Shared.ProgressionConfig)
 
 local ProfileRepository = {}
@@ -201,6 +202,21 @@ local function isValidProfile(profile: any): boolean
         if typeof(profile.pendingNests) ~= "table" or #profile.pendingNests > 1000 then return false end
         for _, nest in profile.pendingNests do if not validNest(nest, false) then return false end end
     end
+    if profile.eggNests ~= nil then -- BD-090 nests v2
+        if typeof(profile.eggNests) ~= "table" or #profile.eggNests > 50 then return false end -- structural ceiling only
+        for _, nest in profile.eggNests do
+            if typeof(nest) ~= "table" or not validId(nest.nestId) or not validId(nest.droppedFromRun)
+                or typeof(nest.size) ~= "number" or nest.size % 1 ~= 0 or nest.size < 1 or nest.size > 50
+                or typeof(nest.luck) ~= "number" or nest.luck % 1 ~= 0 or nest.luck < 1 or nest.luck > #Config.NestLuckTiers
+                or (nest.state ~= "waiting" and nest.state ~= "incubating" and nest.state ~= "ready") then return false end
+            if nest.state ~= "waiting" and (typeof(nest.readyAt) ~= "number" or nest.readyAt ~= nest.readyAt
+                or nest.readyAt < 0 or nest.readyAt % 1 ~= 0 or nest.readyAt == math.huge) then return false end
+            if nest.eggs ~= nil then -- legacy precommitted eggs (migrated Build 020 nests)
+                if typeof(nest.eggs) ~= "table" or #nest.eggs > 20 or #nest.eggs ~= nest.size then return false end
+                for _, egg in nest.eggs do if not validBankedEgg(egg) then return false end end
+            end
+        end
+    end
     if profile.revealSkip ~= nil then
         if typeof(profile.revealSkip) ~= "table" or #profile.revealSkip > 3 then return false end
         for _, rarity in profile.revealSkip do if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity < 1 or rarity > 3 then return false end end
@@ -306,15 +322,13 @@ local function syncAttributes(player: Player, profile: any)
     player:SetAttribute("ChestQueueJson", HttpService:JSONEncode(chestSummary))
     -- BD-044: banked run eggs and separate bonus nests (counts and slot summaries only).
     local banked = if typeof(profile.runEggBank) == "table" then #profile.runEggBank else 0
-    local pendingNests = if typeof(profile.pendingNests) == "table" then #profile.pendingNests else 0
     player:SetAttribute("BankedRunEggCount", banked)
     player:SetAttribute("QueuedEggsWaiting", banked + (profile.pendingChestGrants or 0))
     local nestSummary = {}
-    for _, nest in profile.nests or {} do
-        table.insert(nestSummary, {id = nest.nestId, readyAt = nest.readyAt, eggCount = #nest.eggs})
+    for _, nest in profile.eggNests or {} do
+        table.insert(nestSummary, {id = nest.nestId, size = nest.size, luck = nest.luck, state = nest.state, readyAt = nest.readyAt})
     end
     player:SetAttribute("NestsJson", HttpService:JSONEncode(nestSummary))
-    player:SetAttribute("PendingNestCount", pendingNests)
     player:SetAttribute("RevealSkipJson", HttpService:JSONEncode(profile.revealSkip or {}))
     player:SetAttribute("RunStartBlocked", ProfileRepository.runStartBlockReason(profile))
     local nextChest = profile.eggs[1]
@@ -406,8 +420,6 @@ end
 function ProfileRepository.runStartBlockReason(profile: any): string
     local banked = if typeof(profile.runEggBank) == "table" then #profile.runEggBank else 0
     if banked > Config.RunEggBankCapacity - Config.RunEggMaxPerRun then return "egg_bank_full" end
-    local pending = if typeof(profile.pendingNests) == "table" then #profile.pendingNests else 0
-    if pending > Config.NestPendingCapacity - Config.NestMaxPerRun then return "nests_pending_full" end
     return ""
 end
 
@@ -438,16 +450,34 @@ local function bankEggs(profile: any, eggs: {any}, now: number, atFront: boolean
     refillFromBank(profile, now)
 end
 
--- Bonus nests fill free nest slots (incubation starts on slotting); the rest wait as
--- pending. Capacities gate run starts, so a settlement never drops or covertly grants a nest.
-local function promoteNests(profile: any, now: number)
-    profile.nests = profile.nests or {}
-    profile.pendingNests = profile.pendingNests or {}
-    while #profile.nests < Config.NestSlotCapacity and #profile.pendingNests > 0 do
-        local nest = table.remove(profile.pendingNests, 1)
-        nest.readyAt = now + Config.NestIncubationSeconds
-        table.insert(profile.nests, nest)
+-- BD-090: advance the one-at-a-time incubation queue on server time.
+local function advanceNests(profile: any, now: number)
+    if typeof(profile.eggNests) == "table" then NestQueue.advance(profile.eggNests, now, Config.NestIncubationSeconds) end
+end
+
+-- Old (Build 020) nests/pendingNests become v2 records that keep their precommitted eggs, so
+-- nothing is lost: ready ones are ready, the first unready slotted one keeps its readyAt and
+-- incubates, everything else waits in the one-at-a-time queue. Idempotent (fields are cleared).
+local function migrateLegacyNests(profile: any, now: number)
+    if profile.nests == nil and profile.pendingNests == nil then return end
+    local list = if typeof(profile.eggNests) == "table" then profile.eggNests else {}
+    local incubating = false
+    for _, nest in list do if nest.state == "incubating" then incubating = true end end
+    local function convert(old: any, state: string, readyAt: number?)
+        local record: any = {nestId = old.nestId, droppedFromRun = (old.source and old.source.runId) or "legacy",
+            size = #old.eggs, luck = 1, state = state, eggs = old.eggs}
+        if state ~= "waiting" then record.readyAt = readyAt end
+        table.insert(list, record)
     end
+    for _, old in profile.nests or {} do
+        if old.readyAt <= now then convert(old, "ready", old.readyAt)
+        elseif not incubating then incubating = true convert(old, "incubating", old.readyAt)
+        else convert(old, "waiting") end
+    end
+    for _, old in profile.pendingNests or {} do convert(old, "waiting") end
+    profile.eggNests = list
+    profile.nests, profile.pendingNests = nil, nil
+    advanceNests(profile, now)
 end
 
 local function hasSettledRun(profile: any, runId: string): boolean
@@ -677,6 +707,8 @@ function ProfileRepository.load(player: Player): boolean
                 invalidSchema = true
                 return nil
             end
+            migrateLegacyNests(profileValue, now)
+            advanceNests(profileValue, now)
 
             local progress = ProgressionRules.upgrade(profileValue)
             if localPreview and Config.StudioTestWalletEnabled then progress.crystals = Config.StudioTestCrystals end
@@ -754,14 +786,15 @@ local function runRewardText(outcome): string
     end
     table.insert(parts, if eggs == 1 then "1 run egg" elseif eggs > 0 then string.format("%d run eggs", eggs) else "no run eggs")
     local nests = outcome.nestCount or 0
-    if nests > 0 then table.insert(parts, if nests == 1 then "1 bonus nest" else string.format("%d bonus nests", nests)) end
+    if nests > 0 then table.insert(parts, if nests == 1 then "1 egg nest" else string.format("%d egg nests", nests)) end
+    if outcome.nestFull then table.insert(parts, "nest storage full") end
     return table.concat(parts, " | ")
 end
 
 -- BD-044 settlement: catches -> exactly that many run eggs (capped per run), plus
 -- deterministic crystals and separate bonus nests. Every random draw is committed
 -- before UpdateAsync; settledRuns + recentOperations make the run exactly-once.
-function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number, eggEvents)
+function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number, eggEvents, runSeconds: number?)
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
         return false, nil, "profile_not_loaded"
@@ -770,7 +803,8 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         return false, nil, "invalid_run_id"
     end
 
-    local outcome = RewardMath.computeRunReward(catchScore)
+    local outcome = RewardMath.computeRunReward(catchScore, runSeconds)
+    local nestsEarned = outcome.nestCount -- hidden qualification (server run time + server catches), committed below
     outcome.crystalBox = 0 -- retired random crystal box; kept for client/operation compatibility
     local eggCount = outcome.eggCount
     if eggEvents ~= nil then
@@ -802,25 +836,6 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         })
     end
     sortByRarity(runEggs)
-    local nests = table.create(outcome.nestCount)
-    for j = 1, outcome.nestCount do
-        local nestId = RewardMath.nestId(runId, j)
-        local nestEggs = {}
-        for k = 1, Config.NestEggCount do
-            local traits = ProfileRepository.prepareEgg(player, {eventId = "clear", mutationId = ""})
-            local eggId = nestId .. ":" .. tostring(k)
-            table.insert(nestEggs, {
-                eggId = eggId, kind = "nest_egg", eventId = "clear", mutationId = "",
-                reward = RewardMath.computeChestReward(rng, Config.NestRarityBoostEggs),
-                shiny = traits.shiny, big = traits.big,
-                genes = traits.genes, traitRollVersion = traits.traitRollVersion,
-                source = {kind = "nest", runId = runId, nestId = nestId, ordinal = k, originalEggId = eggId},
-            })
-        end
-        sortByRarity(nestEggs)
-        table.insert(nests, {nestId = nestId, eggs = nestEggs, source = {kind = "run_nest", runId = runId, ordinal = j}})
-    end
-
     local leaseLost = false
     local invalid = false
     local duplicate = false
@@ -847,9 +862,18 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
             local batch = table.create(#runEggs)
             for _, egg in runEggs do table.insert(batch, DinosaurIdentity.copy(egg)) end
             bankEggs(profileValue, batch, now)
-            promoteNests(profileValue, now)
-            for _, nest in nests do table.insert(profileValue.pendingNests, DinosaurIdentity.copy(nest)) end
-            promoteNests(profileValue, now)
+            -- BD-090: nest drop for qualified runs only; storage cap never blocks the settlement.
+            profileValue.eggNests = profileValue.eggNests or {}
+            advanceNests(profileValue, now)
+            local granted = math.min(nestsEarned, math.max(0, Config.NestStorageCapacity - #profileValue.eggNests))
+            for j = 1, granted do
+                local nestId = RewardMath.nestId(runId, j)
+                table.insert(profileValue.eggNests, {nestId = nestId, droppedFromRun = runId,
+                    size = RewardMath.nestSize(nestId), luck = 1, state = "waiting"})
+            end
+            advanceNests(profileValue, now)
+            outcome.nestCount = granted
+            outcome.nestFull = granted < nestsEarned
 
             local progress = ProgressionRules.upgrade(profileValue)
             progress.crystals = math.min(ProgressionConfig.MaxCrystals, progress.crystals + outcome.crystals)
@@ -890,6 +914,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         player:SetAttribute("LastRunCrystalBox", committedOutcome.crystalBox or 0)
         player:SetAttribute("LastRunEggCount", committedOutcome.eggCount or committedOutcome.chestCount or 0)
         player:SetAttribute("LastRunNestCount", committedOutcome.nestCount or 0)
+        player:SetAttribute("LastRunNestFull", committedOutcome.nestFull == true)
     end
     player:SetAttribute("LastSettledRunId", runId)
     return true, committedOutcome, if duplicate then "duplicate" else "committed"
@@ -937,8 +962,30 @@ function ProfileRepository.setRevealSkip(player: Player, selection: any): (boole
     return true, "saved"
 end
 
--- Opens a ready bonus nest: its precommitted eggs join the reveal line next (ahead of
--- the remaining banked run eggs) and the oldest pending nest takes the freed slot.
+-- Opens a READY nest (server time): credits its eggs to the front of the banked-egg pipeline,
+-- rolled with the nest's luck tier (config), atomically with removing the nest. Idempotent via
+-- the "nestclaim:<nestId>" operation record.
+local function rollNestEggs(profileValue: any, nest: any): {any}
+    if nest.eggs then return nest.eggs end -- migrated legacy nest: precommitted eggs
+    local tier = Config.NestLuckTiers[nest.luck]
+    local level = ProgressionRules.upgrade(profileValue).conditionLevel + tier.conditionLevels
+    local rng = Random.new()
+    local eggs = table.create(nest.size)
+    for k = 1, nest.size do
+        local eggId = nest.nestId .. ":" .. tostring(k)
+        local shinyRoll, bigRoll = rng:NextNumber(), rng:NextNumber()
+        table.insert(eggs, {
+            eggId = eggId, kind = "nest_egg", eventId = "clear", mutationId = "",
+            reward = RewardMath.computeChestReward(rng, tier.rarityBoostEggs),
+            shiny = shinyRoll < tier.shinyChance, big = bigRoll < tier.bigChance,
+            genes = EggGenetics.roll(level, rng), traitRollVersion = "bd045-genes-v2",
+            source = {kind = "nest", runId = nest.droppedFromRun, nestId = nest.nestId, ordinal = k, originalEggId = eggId, luck = nest.luck},
+        })
+    end
+    sortByRarity(eggs)
+    return eggs
+end
+
 function ProfileRepository.claimNest(player: Player, nestId: string)
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
@@ -963,25 +1010,21 @@ function ProfileRepository.claimNest(player: Player, nestId: string)
             if not ownSession(profileValue) then leaseLost = true return nil end
             local existing = findOperation(profileValue, operationId)
             if existing then duplicateOutcome = existing.outcome return profileValue end
+            migrateLegacyNests(profileValue, now)
+            advanceNests(profileValue, now)
             local index = nil
-            for i, nest in profileValue.nests or {} do
+            for i, nest in profileValue.eggNests or {} do
                 if nest.nestId == nestId then index = i break end
             end
-            if not index then
-                for _, nest in profileValue.pendingNests or {} do
-                    if nest.nestId == nestId then status = "nest_pending" return nil end
-                end
-                status = "missing"
-                return nil
-            end
-            local nest = profileValue.nests[index]
-            if now < nest.readyAt then status = "not_ready" return nil end
+            if not index then status = "missing" return nil end
+            local nest = profileValue.eggNests[index]
+            if nest.state ~= "ready" then status = if nest.state == "waiting" then "nest_pending" else "not_ready" return nil end
             local banked = if profileValue.runEggBank then #profileValue.runEggBank else 0
-            if banked + #nest.eggs > Config.RunEggBankCapacity then status = "bank_full" return nil end
-            table.remove(profileValue.nests, index)
-            bankEggs(profileValue, nest.eggs, now, true)
-            promoteNests(profileValue, now)
-            outcome = {nestId = nestId, eggCount = #nest.eggs}
+            if banked + nest.size > Config.RunEggBankCapacity then status = "bank_full" return nil end
+            table.remove(profileValue.eggNests, index)
+            bankEggs(profileValue, rollNestEggs(profileValue, nest), now, true)
+            advanceNests(profileValue, now)
+            outcome = {nestId = nestId, eggCount = nest.size, luck = nest.luck}
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             table.insert(profileValue.recentOperations, {id = operationId, kind = "nest_claim", outcome = outcome})

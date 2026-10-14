@@ -97,7 +97,7 @@ local http={GenerateGUID=function()guid+=1 return "test-"..guid end,JSONEncode=f
 local mutableConfig=table.clone(GameConfig)
 mutableConfig.DeveloperProducts={[456]=20} -- Mock product, never shipped in Config.
 GameConfig=mutableConfig
-local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",EggGenetics="Genetics",ProgressionConfig="ProgressionConfig"}}
+local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",EggGenetics="Genetics",NestQueue="NestQueue",ProgressionConfig="ProgressionConfig"}}
 local datastores={GetDataStore=function()return store end}
 local services={DataStoreService=datastores,HttpService=http,ReplicatedStorage=storage,RunService={IsStudio=function()return false end}}
 local game={GameId=1,JobId="test",GetService=function(_,id)return services[id] end}
@@ -110,10 +110,11 @@ local IdentityFusion=IDENTITY_FUSION_MODULE
 local FusionOdds=FUSION_ODDS_MODULE
 local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds"}}
 local rewardSpecies=nil
+local NestQueue=NEST_QUEUE_MODULE
 local Rewards=nil
 local require=function(id)
  if id=="FusionOdds" then return FusionOdds end
- if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return Rewards end
+ if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return Rewards elseif id=="NestQueue" then return NestQueue end
  error("unexpected module "..tostring(id))
 end
 local traitRoll=1
@@ -304,11 +305,11 @@ local balance=Repository.progression(shopper).crystals
 assert(balance==434 and shopper.attrs.AccountLevel>=3) -- + 61
 assert(Repository.commitRunSettlement(shopper,"xp-run",600))
 assert(Repository.progression(shopper).crystals==balance and Repository.progression(shopper).accountXP==600)
-assert(#data['u:991'].eggs==5 and #data['u:991'].runEggBank==595 and #data['u:991'].nests==5 and #data['u:991'].pendingNests==3)
+assert(#data['u:991'].eggs==5 and #data['u:991'].runEggBank==595 and #(data['u:991'].eggNests or {})==0,"no run time given -> no nest")
 assert(shopper.attrs.RunStartBlocked=="egg_bank_full" and shopper.attrs.BankedRunEggCount==595)
 -- Fixture reset so the purchase checks below start from an empty queue.
 Repository.release(shopper)
-data['u:991'].eggs={} data['u:991'].runEggBank={} data['u:991'].nests={} data['u:991'].pendingNests={}
+data['u:991'].eggs={} data['u:991'].runEggBank={} data['u:991'].eggNests={}
 assert(Repository.load(shopper) and shopper.attrs.RunStartBlocked=="")
 assert(Repository.commitRunSettlement(shopper,"genes-run",1)) -- one queued egg (0 crystals at 0.75/egg)
 assert(#data['u:991'].eggs==1 and data['u:991'].eggs[1].traitRollVersion=="bd045-genes-v2")
@@ -853,7 +854,7 @@ leapNow=62 h.FloorMaterial="grass" ownerFailure=true activate(user) assert(user.
 leapNow=63 ownerFailure=false activate(user) assert(ownerChanges==2 and user.attrs.LeapReadyAt==123)
 print("Leap handler passed: malformed requests, exact 60s cooldown, wall/air rejection, failed ownership and cleanup")
 """
- return s.replace('FUSION_ODDS_MODULE',module('src/server/FusionOdds.luau')).replace('FUSION_SERVICE_MODULE',module('src/server/FusionService.luau')).replace('IDENTITY_FUSION_MODULE',module('src/server/IdentityFusion.luau')).replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('REWARDS_MODULE',module('src/server/RewardMath.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))
+ return s.replace('FUSION_ODDS_MODULE',module('src/server/FusionOdds.luau')).replace('FUSION_SERVICE_MODULE',module('src/server/FusionService.luau')).replace('IDENTITY_FUSION_MODULE',module('src/server/IdentityFusion.luau')).replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('NEST_QUEUE_MODULE',module('src/shared/NestQueue.luau')).replace('REWARDS_MODULE',module('src/server/RewardMath.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))
 if __name__=='__main__':
  parser=argparse.ArgumentParser();parser.add_argument('--runner',required=True);args=parser.parse_args()
  with tempfile.TemporaryDirectory() as d:
