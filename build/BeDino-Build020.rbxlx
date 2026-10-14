@@ -366664,6 +366664,138 @@ return require(script.Parent.Chunks.therizinosaurus_1)..require(script.Parent.Ch
       </Item>
       <Item class="ModuleScript" referent="RBX182">
         <Properties>
+          <string name="Name">DinoMotion</string>
+          <ProtectedString name="Source">--!strict
+-- BD-079 pure procedural action curves for the visual dino model. No Roblox APIs here, so the
+-- bounds / determinism / return-to-rest rules are unit tested (tools/verify_dino_motion.py).
+-- All offsets are dimensionless fractions of the model's own bounding box, so BIG/large scales
+-- need no special casing. Pose axes are root-relative: -Z is forward, +pitch = nose up.
+local DinoMotion = {}
+
+DinoMotion.MinScale = 0.6
+DinoMotion.MaxScale = 1.4
+DinoMotion.MaxOffset = 0.35
+DinoMotion.MaxAngle = 1.6
+DinoMotion.MaxLean = 0.25
+DinoMotion.Duration = {eat = 0.18, takeoff = 0.22, land = 0.28, leap = 0.5, bite = 0.22, death = 0.4}
+local SLOTS = {"eat", "takeoff", "land", "leap", "bite", "death"}
+DinoMotion.Kinds = SLOTS
+
+export type Pose = {sx: number, sy: number, sz: number, pitch: number, roll: number, fx: number, dy: number, fade: number}
+export type State = {start: {[string]: number}, power: {[string]: number}, lean: number, dead: boolean}
+
+function DinoMotion.newPose(): Pose
+    return {sx = 1, sy = 1, sz = 1, pitch = 0, roll = 0, fx = 0, dy = 0, fade = 0}
+end
+
+function DinoMotion.new(): State
+    return {start = {}, power = {}, lean = 0, dead = false}
+end
+
+local function clamp(v: number, lo: number, hi: number): number
+    if v ~= v then return (lo + hi) / 2 end -- NaN guard
+    return if v &lt; lo then lo elseif v &gt; hi then hi else v
+end
+
+-- Restarting the same kind replaces it (no stacking), so spam can never grow the state.
+function DinoMotion.trigger(state: State, kind: string, now: number, power: number?)
+    if state.dead or DinoMotion.Duration[kind] == nil then return end
+    state.start[kind] = now
+    state.power[kind] = clamp(power or 1, 0, 1)
+    if kind == "death" then state.dead = true end
+end
+
+function DinoMotion.clear(state: State)
+    for _, kind in SLOTS do state.start[kind] = nil end
+    state.lean = 0
+    state.dead = false
+end
+
+-- Smoothed bank angle from yaw rate (rad/s) and horizontal speed (studs/s).
+function DinoMotion.lean(previous: number, yawRate: number, speed: number, dt: number): number
+    if yawRate ~= yawRate or speed ~= speed or dt ~= dt then return 0 end
+    local moving = clamp(speed / 8, 0, 1)
+    local target = clamp(-yawRate * 0.08, -DinoMotion.MaxLean, DinoMotion.MaxLean) * moving
+    local blend = 1 - math.exp(-clamp(dt, 0, 0.25) * 10)
+    local nextLean = previous + (target - previous) * blend
+    if math.abs(nextLean) &lt; 1e-3 and math.abs(target) &lt; 1e-3 then return 0 end
+    return clamp(nextLean, -DinoMotion.MaxLean, DinoMotion.MaxLean)
+end
+
+local function ease(u: number): number return u * u * (3 - 2 * u) end
+
+-- Writes the combined pose into `out`. Returns true while any action/lean is non-rest; when false
+-- `out` is EXACTLY the rest pose (1,1,1,0,0,0,0,0).
+function DinoMotion.sample(state: State, now: number, out: Pose): boolean
+    local sx, sy, sz, pitch, roll, fx, dy, fade = 1, 1, 1, 0, 0, 0, 0, 0
+    local active = false
+    for _, kind in SLOTS do
+        local start = state.start[kind]
+        if start then
+            local duration = DinoMotion.Duration[kind]
+            local u = (now - start) / duration
+            local p = state.power[kind] or 1
+            if u &lt; 0 then u = 0 end
+            if kind == "death" then
+                active = true
+                local e = ease(math.min(u, 1))
+                roll += 1.35 * e * p
+                local s = 1 - 0.4 * e
+                sx *= s sy *= s sz *= s
+                dy -= 0.15 * e
+                fade = math.max(fade, e)
+            elseif u &gt;= 1 then
+                state.start[kind] = nil
+            else
+                active = true
+                if kind == "eat" then
+                    local v = math.sin(2 * math.pi * u) * (1 - u) * p
+                    sy *= 1 + 0.12 * v sx *= 1 - 0.06 * v sz *= 1 - 0.06 * v
+                elseif kind == "takeoff" then
+                    local v = math.sin(math.pi * u) * (1 - 0.3 * u) * p
+                    sy *= 1 + 0.16 * v sx *= 1 - 0.07 * v sz *= 1 - 0.07 * v
+                elseif kind == "land" then
+                    local v = math.sin(math.pi * u) * (1 - u) * p
+                    sy *= 1 - 0.18 * v sx *= 1 + 0.09 * v sz *= 1 + 0.09 * v
+                    dy -= 0.02 * v
+                elseif kind == "leap" then
+                    local v = math.sin(math.pi * u) * p
+                    sz *= 1 + 0.3 * v sy *= 1 - 0.1 * v sx *= 1 - 0.08 * v
+                    pitch += 0.15 * v
+                elseif kind == "bite" then
+                    local v = math.sin(math.pi * u) * p
+                    fx += 0.2 * v
+                    pitch -= 0.12 * v
+                    sz *= 1 + 0.08 * v
+                end
+            end
+        end
+    end
+    if state.lean ~= 0 then
+        active = true
+        roll += state.lean
+    end
+    if not active then
+        out.sx, out.sy, out.sz, out.pitch, out.roll, out.fx, out.dy, out.fade = 1, 1, 1, 0, 0, 0, 0, 0
+        return false
+    end
+    out.sx = clamp(sx, DinoMotion.MinScale, DinoMotion.MaxScale)
+    out.sy = clamp(sy, DinoMotion.MinScale, DinoMotion.MaxScale)
+    out.sz = clamp(sz, DinoMotion.MinScale, DinoMotion.MaxScale)
+    out.pitch = clamp(pitch, -DinoMotion.MaxAngle, DinoMotion.MaxAngle)
+    out.roll = clamp(roll, -DinoMotion.MaxAngle, DinoMotion.MaxAngle)
+    out.fx = clamp(fx, -DinoMotion.MaxOffset, DinoMotion.MaxOffset)
+    out.dy = clamp(dy, -DinoMotion.MaxOffset, DinoMotion.MaxOffset)
+    out.fade = clamp(fade, 0, 1)
+    return true
+end
+
+return DinoMotion
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX183">
+        <Properties>
           <string name="Name">DinosaurPreview</string>
           <ProtectedString name="Source">--!strict
 local Resources=require(script.Parent.ResourceModels)
@@ -366762,7 +366894,7 @@ return Preview
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX183">
+      <Item class="ModuleScript" referent="RBX184">
         <Properties>
           <string name="Name">DinosaurVisual</string>
           <ProtectedString name="Source">--!strict
@@ -367009,7 +367141,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX184">
+      <Item class="ModuleScript" referent="RBX185">
         <Properties>
           <string name="Name">EggAppearance</string>
           <ProtectedString name="Source">--!strict
@@ -367039,7 +367171,7 @@ return Appearance
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX185">
+      <Item class="ModuleScript" referent="RBX186">
         <Properties>
           <string name="Name">EggGenetics</string>
           <ProtectedString name="Source">--!strict
@@ -367072,6 +367204,10 @@ function Genetics.roll(level,rng)
     genes.blend=if genes.primaryColorId==genes.secondaryColorId then 100 else genes.blend
     return genes
 end
+-- docs/73: plain egg (cream, no pattern) in one condition, for shop swatches. Always valid, never rolls.
+function Genetics.neutral(conditionId)
+    return {conditionId=conditionId,hatchSuccess=true,primaryColorId="white",secondaryColorId="white",blend=100,patternId="01_blank"}
+end
 function Genetics.valid(g)
     if typeof(g)~="table" or not Genetics.condition(g.conditionId) or not Genetics.color(g.primaryColorId)
         or not Genetics.color(g.secondaryColorId) or typeof(g.hatchSuccess)~="boolean"
@@ -367089,7 +367225,7 @@ return Genetics
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX186">
+      <Item class="ModuleScript" referent="RBX187">
         <Properties>
           <string name="Name">EggOutcomeOdds</string>
           <ProtectedString name="Source">--!strict
@@ -367199,7 +367335,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX187">
+      <Item class="ModuleScript" referent="RBX188">
         <Properties>
           <string name="Name">EggOutcomeView</string>
           <ProtectedString name="Source">--!strict
@@ -367316,7 +367452,7 @@ return View
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX188">
+      <Item class="ModuleScript" referent="RBX189">
         <Properties>
           <string name="Name">EggPreview</string>
           <ProtectedString name="Source">--!strict
@@ -367349,7 +367485,7 @@ return Egg
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX189">
+      <Item class="ModuleScript" referent="RBX190">
         <Properties>
           <string name="Name">EggTraits</string>
           <ProtectedString name="Source">--!strict
@@ -367394,7 +367530,7 @@ return Traits
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX190">
+      <Item class="ModuleScript" referent="RBX191">
         <Properties>
           <string name="Name">EventIconVectors</string>
           <ProtectedString name="Source">--!strict
@@ -367409,7 +367545,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX191">
+      <Item class="ModuleScript" referent="RBX192">
         <Properties>
           <string name="Name">FoodCatchRules</string>
           <ProtectedString name="Source">--!strict
@@ -367425,7 +367561,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX192">
+      <Item class="ModuleScript" referent="RBX193">
         <Properties>
           <string name="Name">FusionSelection</string>
           <ProtectedString name="Source">--!strict
@@ -368191,7 +368327,7 @@ return Sel
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX193">
+      <Item class="ModuleScript" referent="RBX194">
         <Properties>
           <string name="Name">GeneTextureAssets</string>
           <ProtectedString name="Source">--!strict
@@ -368239,7 +368375,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX194">
+      <Item class="ModuleScript" referent="RBX195">
         <Properties>
           <string name="Name">GeneTextures</string>
           <ProtectedString name="Source">--!strict
@@ -368295,7 +368431,7 @@ return Textures
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX195">
+      <Item class="ModuleScript" referent="RBX196">
         <Properties>
           <string name="Name">HatchFragments</string>
           <ProtectedString name="Source">--!strict
@@ -368328,7 +368464,7 @@ return F
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX196">
+      <Item class="ModuleScript" referent="RBX197">
         <Properties>
           <string name="Name">HatchPresentation</string>
           <ProtectedString name="Source">--!strict
@@ -368522,7 +368658,7 @@ return Hatch
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX197">
+      <Item class="ModuleScript" referent="RBX198">
         <Properties>
           <string name="Name">IconRaster</string>
           <ProtectedString name="Source">--!strict
@@ -368531,7 +368667,7 @@ return {["amber"]={341,0,1,16777216,1,33554432,20,55923968,1,16777216,40,0,1,167
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX198">
+      <Item class="ModuleScript" referent="RBX199">
         <Properties>
           <string name="Name">IconTiles</string>
           <ProtectedString name="Source">--!strict
@@ -368540,7 +368676,7 @@ return {["dinos"]={["size"]=32,["colors"]={{104,48,36},{110,114,78},{0,29,13},{1
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX199">
+      <Item class="ModuleScript" referent="RBX200">
         <Properties>
           <string name="Name">IconVectors</string>
           <ProtectedString name="Source">--!strict
@@ -368549,7 +368685,7 @@ return {["home"]={{["x"]=21,["y"]=41,["w"]=60,["h"]=47,["color"]="#142035",["rad
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX200">
+      <Item class="ModuleScript" referent="RBX201">
         <Properties>
           <string name="Name">IslandLayout</string>
           <ProtectedString name="Source">--!strict
@@ -368577,7 +368713,7 @@ return IslandLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX201">
+      <Item class="ModuleScript" referent="RBX202">
         <Properties>
           <string name="Name">LegacyGenePatterns</string>
           <ProtectedString name="Source">--!strict
@@ -368621,7 +368757,7 @@ return Legacy
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX202">
+      <Item class="ModuleScript" referent="RBX203">
         <Properties>
           <string name="Name">ModelPreview</string>
           <ProtectedString name="Source">--!strict
@@ -368649,7 +368785,7 @@ return ModelPreview
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX203">
+      <Item class="ModuleScript" referent="RBX204">
         <Properties>
           <string name="Name">MovementEnvelope</string>
           <ProtectedString name="Source">--!strict
@@ -368702,7 +368838,7 @@ return MovementEnvelope
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX204">
+      <Item class="ModuleScript" referent="RBX205">
         <Properties>
           <string name="Name">MutationEffects</string>
           <ProtectedString name="Source">-- Standalone client adapter. Upload BeDino_Soft_Smoke_256.png first.
@@ -368791,7 +368927,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX205">
+      <Item class="ModuleScript" referent="RBX206">
         <Properties>
           <string name="Name">NavigationArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -368809,7 +368945,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX206">
+      <Item class="ModuleScript" referent="RBX207">
         <Properties>
           <string name="Name">NestQueue</string>
           <ProtectedString name="Source">--!strict
@@ -368870,7 +369006,7 @@ return NestQueue
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX207">
+      <Item class="ModuleScript" referent="RBX208">
         <Properties>
           <string name="Name">NextGoal</string>
           <ProtectedString name="Source">--!strict
@@ -368947,7 +369083,7 @@ return NextGoal
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX208">
+      <Item class="ModuleScript" referent="RBX209">
         <Properties>
           <string name="Name">PatternGenes</string>
           <ProtectedString name="Source">--!strict
@@ -369012,7 +369148,7 @@ return Pattern
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX209">
+      <Item class="ModuleScript" referent="RBX210">
         <Properties>
           <string name="Name">PotionArt</string>
           <ProtectedString name="Source">--!strict
@@ -369076,7 +369212,7 @@ return PotionArt
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX210">
+      <Item class="ModuleScript" referent="RBX211">
         <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
@@ -369144,7 +369280,7 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX211">
+      <Item class="ModuleScript" referent="RBX212">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -369270,7 +369406,7 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX212">
+      <Item class="ModuleScript" referent="RBX213">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -369508,7 +369644,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX213">
+      <Item class="ModuleScript" referent="RBX214">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -369517,7 +369653,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX214">
+      <Item class="ModuleScript" referent="RBX215">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -369533,7 +369669,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX215">
+      <Item class="ModuleScript" referent="RBX216">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -369597,7 +369733,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX216">
+      <Item class="ModuleScript" referent="RBX217">
         <Properties>
           <string name="Name">RevealSkip</string>
           <ProtectedString name="Source">--!strict
@@ -369679,7 +369815,7 @@ return Skip
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX217">
+      <Item class="ModuleScript" referent="RBX218">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -369770,7 +369906,7 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX218">
+      <Item class="ModuleScript" referent="RBX219">
         <Properties>
           <string name="Name">Sfx</string>
           <ProtectedString name="Source">--!strict
@@ -369870,7 +370006,7 @@ return Sfx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX219">
+      <Item class="ModuleScript" referent="RBX220">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -369918,7 +370054,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX220">
+      <Item class="ModuleScript" referent="RBX221">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -369967,7 +370103,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX221">
+      <Item class="ModuleScript" referent="RBX222">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -370169,7 +370305,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX222">
+      <Item class="ModuleScript" referent="RBX223">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -370201,7 +370337,51 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX223">
+      <Item class="ModuleScript" referent="RBX224">
+        <Properties>
+          <string name="Name">UIFormat</string>
+          <ProtectedString name="Source">--!strict
+-- BD-100 (docs/72, docs/73): the one place that turns seconds and multipliers into child-friendly text.
+local UIFormat={}
+-- 40 s, 5 min, 2 h, 2 h 10 min. Whole seconds are rounded up; minutes and hours drop zero parts.
+function UIFormat.duration(seconds: number): string
+    local total=math.max(0,math.ceil(seconds))
+    if total&lt;60 then return total.." s" end
+    if total&lt;3600 then return (total//60).." min" end
+    local hours,minutes=total//3600,(total%3600)//60
+    return if minutes==0 then hours.." h" else hours.." h "..minutes.." min"
+end
+function UIFormat.readyIn(seconds: number): string return "Ready in "..UIFormat.duration(seconds) end
+-- 1.2 -&gt; "+20%", 0.8 -&gt; "-20%", 1 -&gt; "" (neutral).
+function UIFormat.percent(multiplier: number): string
+    local value=math.floor((multiplier-1)*100+.5)
+    if value==0 then return "" end
+    return (if value&gt;0 then "+" else "-")..math.abs(value).."%"
+end
+function UIFormat.boost(name: string,multiplier: number): string?
+    local text=UIFormat.percent(multiplier)
+    if text=="" then return nil end
+    return name.." "..text
+end
+-- Only active boosts, in a fixed order; empty table when nothing is active.
+function UIFormat.boostLines(growth: number,speed: number,loot: number): {string}
+    local lines={}
+    for _,pair in {{"Speed",speed},{"Growth",growth},{"Loot",loot}} do
+        local line=UIFormat.boost(pair[1] :: string,pair[2] :: number)
+        if line then table.insert(lines,line) end
+    end
+    return lines
+end
+-- "Speed +20% - 5 min"
+function UIFormat.potion(kind: string,multiplier: number,seconds: number): string
+    local name=string.upper(string.sub(kind,1,1))..string.sub(kind,2)
+    return (UIFormat.boost(name,multiplier) or name).." - "..UIFormat.duration(seconds)
+end
+return UIFormat
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX225">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -370223,7 +370403,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX224">
+      <Item class="ModuleScript" referent="RBX226">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -370239,7 +370419,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX225">
+      <Item class="ModuleScript" referent="RBX227">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -370400,7 +370580,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX226">
+      <Item class="ModuleScript" referent="RBX228">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -370423,7 +370603,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX227">
+      <Item class="ModuleScript" referent="RBX229">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -370475,7 +370655,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX228">
+    <Item class="Folder" referent="RBX230">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -540030,15 +540210,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX229">
+  <Item class="ServerScriptService" referent="RBX231">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX230">
+    <Item class="Folder" referent="RBX232">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX231">
+      <Item class="ModuleScript" referent="RBX233">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -540250,7 +540430,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX232">
+      <Item class="Script" referent="RBX234">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -540395,7 +540575,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX233">
+      <Item class="ModuleScript" referent="RBX235">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -540505,7 +540685,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX234">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -540593,7 +540773,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX235">
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -540727,7 +540907,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX238">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -540939,7 +541119,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -541191,7 +541371,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -541370,7 +541550,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -541556,7 +541736,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -541944,7 +542124,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -541994,7 +542174,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -542036,7 +542216,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -542147,7 +542327,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -542229,7 +542409,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -542321,7 +542501,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -542426,7 +542606,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -542548,6 +542728,7 @@ function PredationService.start(runLifecycle, dinosaur)
                 end
 
                 if winner and runLifecycle.tryEnd(victim.player, victim.character, "Eaten", winner.player.UserId) then
+                    winner.character:SetAttribute("BiteSeq", numberAttribute(winner.character, "BiteSeq", 0) + 1) -- BD-079 replicated cue for the client bite lunge
                     awardCatch(winner, victim.player.UserId, serverNow)
                     dinosaur.addGrowth(winner.character, Config.PredationGrowthPoints)
                 end
@@ -542560,7 +542741,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -544279,7 +544460,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -544460,7 +544641,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX252">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -544566,7 +544747,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX251">
+      <Item class="ModuleScript" referent="RBX253">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -544829,7 +545010,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX252">
+      <Item class="ModuleScript" referent="RBX254">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -544901,19 +545082,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX253">
+  <Item class="StarterPlayer" referent="RBX255">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX254">
+    <Item class="StarterPlayerScripts" referent="RBX256">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX255">
+      <Item class="Folder" referent="RBX257">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX256">
+        <Item class="LocalScript" referent="RBX258">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -544940,6 +545121,7 @@ local PreviewTraits=require(script.Parent.PreviewTraits)
 local EggGenetics=require(Shared.EggGenetics)
 local EggAppearance=require(Shared.EggAppearance)
 local ShopOdds=require(Shared.ShopOdds)
+local UIFormat=require(Shared.UIFormat)
 local RevealSkip=require(Shared.RevealSkip)
 local EggOutcomeView=require(Shared.EggOutcomeView)
 local TouchLayout=require(Shared.TouchLayout)
@@ -545312,15 +545494,18 @@ render=function(name: string)
         elseif cosmeticTab=="conditions" then
             local weights=ShopOdds.conditionPercents(p.conditionLevel or 0) -- BD-045: normalized percents
             local upgrade=ProgressionConfig.ConditionUpgrades[(p.conditionLevel or 0)+1]
-            label(body,"Condition Level "..(p.conditionLevel or 0).."  •  Account "..num("AccountLevel"),0,cardsY,824,35,26,C.gold)
+            -- docs/73: plain egg per condition on a floor swatch; chance only (no stats text, no odds screen).
+            label(body,"Condition level "..(p.conditionLevel or 0),0,cardsY,824,30,24,C.gold)
             for i,row in ProgressionConfig.Conditions do
                 local x=(i-1)*165
-                label(body,row.name,x,cardsY+50,155,35,22)
-                label(body,weights[i].."%\n"..row.stats.."x stats",x,cardsY+87,155,60,21,C.blue)
+                label(body,row.name,x,cardsY+32,155,28,22)
+                local tile=box(body,x,cardsY+62,155,110,Color3.fromRGB(122,148,112):Lerp(C.panel,.25),24)
+                local view=ModelPreview.add(tile,"egg")
+                EggAppearance.apply(view,EggGenetics.neutral(row.id))
+                label(body,string.format("%g%%",weights[i]),x,cardsY+176,155,34,24,C.blue)
             end
-            button(body,"VIEW ODDS",0,cardsY+166,330,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("eggOdds") end)
-            button(body,if upgrade then "UPGRADE: "..upgrade.price.." CRYSTALS" else "MAX LEVEL",348,cardsY+166,476,targetHeight,C.accent,function() if upgrade then open("conditionConfirm") end end).TextSize=20
-            label(body,if upgrade then "Next tier: account level "..upgrade.requiredLevel.."  •  Future eggs only" else "Maximum condition upgrade",0,360,824,35,19,C.gold)
+            button(body,if upgrade then "UPGRADE: "..upgrade.price.." CRYSTALS" else "MAX LEVEL",142,cardsY+220,540,targetHeight,C.accent,function() if upgrade then open("conditionConfirm") end end).TextSize=20
+            label(body,if upgrade then "Unlocks at level "..upgrade.requiredLevel else "Top level reached",0,cardsY+220+targetHeight+6,824,30,19,C.gold)
             return
         elseif cosmeticTab=="crystals" then
             art(body,"amber",20,cardsY+12,220)
@@ -545359,7 +545544,7 @@ render=function(name: string)
             local color=Color3.fromRGB(item.color[1],item.color[2],item.color[3])
             local card=box(body,slot*276,cardsY,264,cardsHeight,color,24)
             label(card,item.name,6,5,252,34,25)
-            label(card,if isTrail then "Level "..item.level.." • "..item.speed.."x Speed" else item.growth.."x Growth",4,42,256,30,19)
+            label(card,if isTrail then "Level "..item.level.." • "..(UIFormat.boost("Speed",item.speed) or "Speed") else (UIFormat.boost("Growth",item.growth) or "Growth"),4,42,256,30,19)
             art(card,(if isTrail then "trail_" else "aura_")..item.id,102,76,60)
             label(card,if owned[item.id] then "Owned" else item.price.." Crystals",4,buyY-30,256,27,21,C.gold)
             local equipped=equippedId==item.id
@@ -545402,15 +545587,17 @@ render=function(name: string)
         local price=if isEgg then ProgressionConfig.RandomEggPrice elseif upgrade then upgrade.price else 0
         art(body,"egg",20,15,200)
         label(body,price.." Crystals\nBalance after: "..(num("Crystals")-price),260,10,550,80,27,C.gold)
-        label(body,if isEgg then "Cracked: 20% hatch success. A failed hatch gives no dinosaur or refund. Queue-full purchases are not charged." else "Account level "..(if upgrade then upgrade.requiredLevel else 60).." required. Existing eggs keep their conditions.",260,105,550,95,23)
+        label(body,if isEgg then "Cracked: 20% hatch success. A failed hatch gives no dinosaur or refund. Queue-full purchases are not charged." else "Unlocks at level "..(if upgrade then upgrade.requiredLevel else 60)..". New eggs only.",260,105,550,95,23)
         if not isEgg and upgrade then
             local parts={} for i,row in ProgressionConfig.Conditions do table.insert(parts,row.name.." "..ShopOdds.conditionPercents(upgrade.level)[i].."%") end
             label(body,table.concat(parts," • "),0,213,824,60,21,C.blue)
         end
-        button(body,"VIEW ODDS",0,300,250,math.max(64,45/viewportScale()),C.blue,function()
-            oddsLevelOverride=if not isEgg and upgrade then upgrade.level else nil
-            outcomeState={page=1,filters={}} open("eggOdds")
-        end)
+        if isEgg then -- docs/73: condition odds screen stays out of the UI (egg odds remain)
+            button(body,"VIEW ODDS",0,300,250,math.max(64,45/viewportScale()),C.blue,function()
+                oddsLevelOverride=nil
+                outcomeState={page=1,filters={}} open("eggOdds")
+            end)
+        end
         button(body,"CONFIRM",270,300,270,math.max(64,45/viewportScale()),C.accent,function()
             transact(if isEgg then "buyEgg" else "upgradeCondition",if isEgg then "random" elseif upgrade then tostring(upgrade.level) else "") open("auras")
         end)
@@ -545420,7 +545607,7 @@ render=function(name: string)
         local item=ProgressionRules.item(if isTrail then ProgressionConfig.Trails else ProgressionConfig.Auras,chosenAura)
         heading.Text,header.BackgroundColor3=if isTrail then "Buy Trail?" else "Buy Aura?",C.purple
         art(body,(if isTrail then "trail_" else "aura_")..item.id,30,25,220)
-        label(body,item.name.." • "..(if isTrail then "Cosmetic trail" else item.growth.."x eating growth"),290,24,510,70,29)
+        label(body,item.name.." • "..(if isTrail then "Cosmetic trail" else (UIFormat.boost("Growth",item.growth) or "Growth")),290,24,510,70,29)
         label(body,item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,125,510,90,25,C.gold)
         button(body,if isTrail then "BUY TRAIL" else "BUY AURA",290,261,510,57,C.accent,function() transact(if isTrail then "buyTrail" else "buyAura",item.id) open("auras") end)
         button(body,"CANCEL",290,337,510,45,C.red,function() open("auras") end)
@@ -545433,7 +545620,7 @@ render=function(name: string)
         local restock=label(body,"",0,0,824,32,21,C.gold)
         local function header_text()
             local left=math.max(0,math.ceil(ProgressionRules.shopEndsAt(window)-workspace:GetServerTimeNow()))
-            restock.Text=string.format("Crystals: %s  •  Restock in %d:%02d",num("Crystals"),left//60,left%60)
+            restock.Text=string.format("Crystals: %s  •  New offers in %s",num("Crystals"),UIFormat.duration(left))
         end
         header_text()
         task.spawn(function()
@@ -545463,7 +545650,7 @@ render=function(name: string)
             local card=box(scroller,x,y,264,132,C.card:Lerp(color,if left&gt;0 then .28 else .08),24)
             art(card,bottle(item),6,8,64)
             label(card,item.name,74,3,186,26,19,color)
-            label(card,item.rarity.." "..item.kind.." - "..item.multiplier.."x\n"..(item.duration//60).."m "..(item.duration%60).."s",74,28,186,44,15)
+            label(card,UIFormat.potion(item.kind,item.multiplier,item.duration),74,28,186,44,15)
             label(card,if left&gt;0 then left.." left" else "Sold Out - back later",74,74,186,20,15,if left&gt;0 then C.gold else C.red)
             local buy=button(card,if left&gt;0 then item.price.." Crystals" else "SOLD OUT",8,96,248,30,if left&gt;0 then color:Lerp(C.panel,.45) else C.card,function()
                 if left&gt;0 then chosenPotion=item.id open("potionConfirm") end
@@ -545492,8 +545679,8 @@ render=function(name: string)
         local replacing=name=="potionReplace"
         heading.Text,header.BackgroundColor3=if replacing then "Replace Active Potion?" else "Buy Potion?",C.accent
         art(body,"potion_"..item.kind.."_"..item.rarity,30,22,220)
-        label(body,item.name.." • "..item.multiplier.."x "..item.kind,290,15,510,62,28)
-        label(body,if replacing then "Your current "..item.kind.." potion ends immediately. Its remaining time is lost. Consume 1 potion for a fresh "..(item.duration//60).." minutes?" else (item.duration//60).." minutes • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
+        label(body,item.name.." • "..UIFormat.potion(item.kind,item.multiplier,item.duration),290,15,510,62,28)
+        label(body,if replacing then "Your current "..item.kind.." potion ends immediately. Its remaining time is lost. Consume 1 potion for a fresh "..UIFormat.duration(item.duration).."?" else UIFormat.duration(item.duration).." • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
         button(body,if replacing then "REPLACE &amp; USE" else "BUY POTION",290,263,510,58,C.accent,function()
             if replacing then transact("usePotion",item.id,true) else transact("buyPotion",item.id.."@"..chosenPotionWindow,false) end
             open("potions")
@@ -545552,7 +545739,7 @@ render=function(name: string)
         label(stage,rarityNames[index],0,302,380,42,30)
         label(body,"YOUR COLLECTION",414,0,400,42,28)
         label(body,string.format("Base: %d • Gold: %d\nDiamond: %d",base,gold,diamond),414,62,400,92,25)
-        label(body,if event then event.name.." • "..event.growth.."x Growth • "..event.speed.."x Speed" else "Cosmetic fusion: 15 Base → Gold; 4 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
+        label(body,if event then event.name.." • "..table.concat(UIFormat.boostLines(event.growth,event.speed,1)," • ") else "Cosmetic fusion: 15 Base → Gold; 4 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
         local equipped=str("EquippedSpeciesId","compy")==selected
         button(body,if equipped then "EQUIPPED" elseif not owned then "LOCKED" else "EQUIP",426,273,372,52,if owned then C.accent else C.card,function()
             if not owned then notify("Hatch reward eggs to discover this dino") return end
@@ -545624,7 +545811,7 @@ render=function(name: string)
                 local entry=entries[i]
                 if entry and typeof(entry.readyAt)=="number" then
                     local remaining=math.max(0,entry.readyAt-workspace:GetServerTimeNow())
-                    timer.Text=if remaining&lt;=0 then "READY!" else string.format("%dm %02ds",remaining//60,remaining%60)
+                    timer.Text=if remaining&lt;=0 then "READY!" else UIFormat.duration(remaining)
                 end
             end
         end
@@ -545644,16 +545831,7 @@ render=function(name: string)
         local nestOk,nestList=pcall(function() return Http:JSONDecode(str("NestsJson","[]")) end)
         if not nestOk or typeof(nestList)~="table" then nestList={} end
         local duration=Config.NestIncubationSeconds
-        local function formatWait(seconds: number): string -- docs/72: round, drop zeros ("2 h", "40 min", "30 s")
-            seconds=math.max(0,math.ceil(seconds))
-            if seconds&gt;=3600 then
-                local hours,minutes=seconds//3600,math.floor((seconds%3600)/60+.5)
-                if minutes&gt;=60 then hours+=1 minutes=0 end
-                return if minutes==0 then hours.." h" else hours.." h "..minutes.." min"
-            end
-            if seconds&gt;=60 then return math.ceil(seconds/60).." min" end
-            return seconds.." s"
-        end
+        local formatWait=UIFormat.duration
         local storage=label(body,"Nests "..#nestList.."/"..Config.NestStorageCapacity,0,0,300,30,24,C.gold)
         storage.TextXAlignment=Enum.TextXAlignment.Left
         local luckLine=label(body,"Nest eggs are lucky: better rarity, condition, Shiny and BIG odds.",300,2,524,28,16)
@@ -545740,11 +545918,11 @@ render=function(name: string)
         local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
         if genes then
             local condition=EggGenetics.condition(genes.conditionId)
-            label(body,if failed then "Cracked • 20% hatch success" else condition.name.." • "..condition.stats.."x speed &amp; growth",80,295,660,25,20,C.gold)
+            label(body,if failed then "Cracked • 20% hatch" else condition.name,80,295,660,25,20,C.gold)
         elseif mutation then
             local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
             for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.55) end end
-            local perks=label(body,mutation.name.." • "..mutation.growth.."x Growth • "..mutation.speed.."x Speed",80,295,660,25,20,color)
+            local perks=label(body,mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • "),80,295,660,25,20,color)
             perks.Visible=false
             task.delay(math.min(3.4,Config.HatchRevealSeconds*.68),function() if perks.Parent and modalVersion==version then perks.Visible=true end end)
         end
@@ -546015,10 +546193,7 @@ local weatherArt=Theme.icon(weatherTile,"weather")
 if weatherArt then weatherArt.Position,weatherArt.Size=UDim2.fromOffset(4,7),UDim2.fromOffset(48,48) end
 local weatherText=label(weatherTile,"Weather in 10:00",56,0,226,62,20)
 local buffsText=label(timers,"",0,145,286,68,16,C.gold)
-local function timerText(seconds)
-    local value=math.max(0,math.ceil(seconds))
-    return string.format("%d:%02d",value//60,value%60)
-end
+local function timerText(seconds) return UIFormat.duration(seconds) end
 local lastWeather=""
 local function refreshProgressionHUD()
     local now=workspace:GetServerTimeNow()
@@ -546039,10 +546214,11 @@ local function refreshProgressionHUD()
     weatherText.Text=if id=="clear" then "Weather in "..timerText((workspace:GetAttribute("NextWeatherAt") or now)-now) else (workspace:GetAttribute("WeatherName") or id).." "..timerText((workspace:GetAttribute("WeatherEndsAt") or now)-now)
     local p=progression() local lines={}
     for kind,buff in p.buffs do
-        if buff.expiresAt&gt;now then table.insert(lines,kind.." potion "..timerText(buff.expiresAt-now)) end
+        if buff.expiresAt&gt;now then table.insert(lines,string.upper(string.sub(kind,1,1))..string.sub(kind,2).." potion "..timerText(buff.expiresAt-now)) end
     end
     table.sort(lines)
-    table.insert(lines,string.format("Growth %.2fx • Speed %.2fx • Loot %.2fx",num("GrowthMultiplier"),num("SpeedMultiplier"),num("LootMultiplier")))
+    local boosts=UIFormat.boostLines(num("GrowthMultiplier"),num("SpeedMultiplier"),num("LootMultiplier"))
+    if #boosts&gt;0 then table.insert(lines,table.concat(boosts," • ")) end
     buffsText.Text=table.concat(lines,"\n")
     if pendingShop and os.clock()-pendingShop.started&gt;8 then
         -- Retry the same operation token so a delayed result cannot charge twice.
@@ -546257,7 +546433,7 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
                 if nestOk and typeof(nestList)=="table" then
                     waitSeconds=NestQueue.secondsUntilAllReady(nestList,math.floor(workspace:GetServerTimeNow()),Config.NestIncubationSeconds)
                 end
-                notify("New Egg Nest! Hatches in "..math.max(1,math.ceil(waitSeconds/3600)).." h",C.gold)
+                notify("New Egg Nest! Ready in "..UIFormat.duration(math.max(3600,waitSeconds)),C.gold)
                 Sfx.play("shop_buy")
             end
             if num("LastRunCrystalBox")&gt;0 then
@@ -546303,7 +546479,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX257">
+        <Item class="LocalScript" referent="RBX259">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -546366,7 +546542,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX258">
+        <Item class="ModuleScript" referent="RBX260">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -546445,7 +546621,288 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX259">
+        <Item class="LocalScript" referent="RBX261">
+          <Properties>
+            <string name="Name">DinoMotion</string>
+            <ProtectedString name="Source">--!strict
+-- BD-079: client-only procedural action motion for the visible dino model (eat, jump, leap, turn,
+-- bite, death). Visual only: the physics root and server authority are never touched. One shared
+-- Heartbeat; zero work for characters at rest; pooled particles. Curves: src/shared/DinoMotion.luau.
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Motion = require(Shared.DinoMotion)
+local Theme = require(Shared.UITheme)
+local Sfx = require(Shared.Sfx)
+
+local OTHER_RANGE = 120
+local OTHER_STEP = 1 / 20
+local EAT_DELAY = 0.1 -- lets growth rescale the model first (ResourceVisuals refreshes deferred)
+
+local rigs: {[Model]: any} = {}
+
+-- Pooled particle puffs: 3 dust + 3 munch emitters, created lazily, never more.
+local pool: {ParticleEmitter} = {}
+local poolAttachments: {Attachment} = {}
+local nextDust, nextMunch = 0, 0
+local function ensurePool()
+    if #pool &gt; 0 then return end
+    for i = 1, 6 do
+        local attachment = Instance.new("Attachment")
+        attachment.Name = "DinoMotionFx"
+        attachment.Parent = workspace.Terrain
+        local emitter = Instance.new("ParticleEmitter")
+        emitter.Enabled = false
+        emitter.Rate = 0
+        emitter.Lifetime = NumberRange.new(0.25, 0.45)
+        emitter.Speed = NumberRange.new(3, 6)
+        emitter.SpreadAngle = Vector2.new(180, 180)
+        emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0)})
+        emitter.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1)})
+        emitter.Color = ColorSequence.new(if i &lt;= 3 then Color3.fromRGB(190, 170, 130) else Color3.fromRGB(150, 220, 110))
+        emitter.Parent = attachment
+        table.insert(pool, emitter)
+        table.insert(poolAttachments, attachment)
+    end
+end
+local function puff(kind: string, position: Vector3, count: number)
+    ensurePool()
+    local index
+    if kind == "dust" then
+        nextDust = nextDust % 3 + 1
+        index = nextDust
+    else
+        nextMunch = nextMunch % 3 + 1
+        index = 3 + nextMunch
+    end
+    poolAttachments[index].WorldPosition = position
+    pool[index]:Emit(count)
+end
+
+local function number(instance: Instance, name: string): number
+    local value = instance:GetAttribute(name)
+    return if typeof(value) == "number" then value else 0
+end
+
+local function writePose(rig: any, pose: any)
+    local rootCF = rig.root.CFrame
+    local pivot = rig.pivot
+    local rotation = CFrame.Angles(pose.pitch, 0, pose.roll)
+    local offset = Vector3.new(0, pose.dy * rig.height, -pose.fx * rig.length)
+    local sx, sy, sz = pose.sx, pose.sy, pose.sz
+    local sx2, sy2, sz2 = sx * sx, sy * sy, sz * sz
+    for i = 1, rig.count do
+        local item = rig.parts[i]
+        local part = item.part
+        local relPos = item.rel.Position - pivot
+        local position = pivot + offset + rotation:VectorToWorldSpace(Vector3.new(relPos.X * sx, relPos.Y * sy, relPos.Z * sz))
+        local newRel = CFrame.new(position) * (rotation.Rotation * item.rel.Rotation)
+        if item.weld then item.weld.C0 = newRel else part.CFrame = rootCF * newRel end
+        part.Size = Vector3.new(
+            item.size.X * math.sqrt(item.a11 * sx2 + item.a12 * sy2 + item.a13 * sz2),
+            item.size.Y * math.sqrt(item.a21 * sx2 + item.a22 * sy2 + item.a23 * sz2),
+            item.size.Z * math.sqrt(item.a31 * sx2 + item.a32 * sy2 + item.a33 * sz2))
+        part.Transparency = item.transparency + (1 - item.transparency) * pose.fade
+    end
+end
+
+-- Exact rest write: captured CFrames/sizes/transparency go back verbatim.
+local function restore(rig: any)
+    if not rig.applied then return end
+    rig.applied = false
+    if rig.visual and rig.visual.Parent then
+        for i = 1, rig.count do
+            local item = rig.parts[i]
+            if item.part.Parent then
+                if item.weld then item.weld.C0 = item.rel else item.part.CFrame = rig.root.CFrame * item.rel end
+                item.part.Size = item.size
+                item.part.Transparency = item.transparency
+            end
+        end
+    end
+    rig.count = 0
+end
+
+local function capture(rig: any): boolean
+    local visual = rig.character:FindFirstChild("LocalMeshVisual") or rig.character:FindFirstChild("DinoVisual")
+    if not visual or not visual:IsA("Model") then return false end
+    rig.visual = visual
+    local count = 0
+    local inverse = rig.root.CFrame:Inverse()
+    for _, item in visual:GetDescendants() do
+        if item:IsA("BasePart") and not item.Anchored then
+            count += 1
+            local found = item:FindFirstChild("ResourceWeld")
+            local weld = if found and found:IsA("Weld") and found.Part0 == rig.root then found else nil
+            local rel = if weld then weld.C0 else inverse * item.CFrame
+            local r = rel.Rotation
+            local x, y, z = r.RightVector, r.UpVector, r.LookVector
+            rig.parts[count] = {part = item, weld = weld, rel = rel, size = item.Size, transparency = item.Transparency,
+                a11 = x.X * x.X, a12 = x.Y * x.Y, a13 = x.Z * x.Z,
+                a21 = y.X * y.X, a22 = y.Y * y.Y, a23 = y.Z * y.Z,
+                a31 = z.X * z.X, a32 = z.Y * z.Y, a33 = z.Z * z.Z}
+        end
+    end
+    if count == 0 then return false end
+    rig.count = count
+    local cf, size = visual:GetBoundingBox()
+    local center = inverse * cf
+    rig.pivot = Vector3.new(center.X, center.Y - size.Y / 2, center.Z)
+    rig.length, rig.height = math.max(size.Z, 1), math.max(size.Y, 1)
+    return true
+end
+
+local function trigger(rig: any, kind: string, power: number?)
+    if not Theme.MotionEnabled then return end
+    Motion.trigger(rig.motion, kind, os.clock(), power)
+end
+
+local function untrack(character: Model)
+    local rig = rigs[character]
+    if not rig then return end
+    for _, connection in rig.connections do connection:Disconnect() end
+    rig.connections = {}
+    restore(rig)
+    rigs[character] = nil
+end
+
+local function track(player: Player, character: Model)
+    untrack(character)
+    local root = character:WaitForChild("HumanoidRootPart", 10)
+    if not root or not root:IsA("BasePart") or not character.Parent then return end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local rig: any = {character = character, root = root, isLocal = player == Players.LocalPlayer,
+        motion = Motion.new(), pose = Motion.newPose(), parts = {}, count = 0, visual = nil, pivot = Vector3.zero,
+        length = 1, height = 1, applied = false, accumulator = 0, lastYaw = nil, eatAt = nil,
+        lastGrowth = number(character, "GrowthScore"), lastCatch = number(character, "CatchScore"),
+        lastBite = number(character, "BiteSeq"), lastLeap = number(player, "LeapReadyAt"), connections = {}}
+    rigs[character] = rig
+    local function connect(signal: RBXScriptSignal, callback: (...any) -&gt; ())
+        table.insert(rig.connections, signal:Connect(callback))
+    end
+    local function watchScore(name: string, field: string)
+        connect(character:GetAttributeChangedSignal(name), function()
+            local value = number(character, name)
+            if value &gt; rig[field] and Theme.MotionEnabled and not rig.eatAt then rig.eatAt = os.clock() + EAT_DELAY end
+            rig[field] = value
+        end)
+    end
+    watchScore("GrowthScore", "lastGrowth")
+    watchScore("CatchScore", "lastCatch")
+    -- Any visual rebuild/rescale: put the model back BEFORE ResourceVisuals resizes it.
+    for _, name in {"VisualScale", "SpeciesId", "MutationVisual", "GoldVisual", "GenesJson", "DinoAttached"} do
+        connect(character:GetAttributeChangedSignal(name), function() restore(rig) end)
+    end
+    connect(character:GetAttributeChangedSignal("BiteSeq"), function()
+        local value = number(character, "BiteSeq")
+        if value ~= rig.lastBite then
+            rig.lastBite = value
+            trigger(rig, "bite")
+        end
+    end)
+    connect(character:GetAttributeChangedSignal("RunState"), function()
+        if character:GetAttribute("RunState") == "Ending" and Theme.MotionEnabled then
+            restore(rig)
+            trigger(rig, "death")
+        end
+    end)
+    connect(player:GetAttributeChangedSignal("LeapReadyAt"), function()
+        local value = number(player, "LeapReadyAt")
+        if value &gt; rig.lastLeap then
+            rig.lastLeap = value
+            trigger(rig, "leap")
+        end
+    end)
+    if humanoid then
+        connect(humanoid.StateChanged, function(old, new)
+            if new == Enum.HumanoidStateType.Jumping then
+                local leapStart = rig.motion.start.leap
+                if not leapStart or os.clock() - leapStart &gt; 0.35 then trigger(rig, "takeoff") end
+            elseif old == Enum.HumanoidStateType.Freefall
+                and (new == Enum.HumanoidStateType.Landed or new == Enum.HumanoidStateType.Running) then
+                trigger(rig, "land")
+                local camera = workspace.CurrentCamera
+                if Theme.MotionEnabled and (rig.isLocal or (camera and (camera.CFrame.Position - root.Position).Magnitude &lt; OTHER_RANGE / 2)) then
+                    puff("dust", root.Position - Vector3.new(0, humanoid.HipHeight + root.Size.Y / 2, 0), 5)
+                end
+            end
+        end)
+    end
+    connect(character.Destroying, function() untrack(character) end)
+end
+
+local function step(rig: any, now: number, dt: number)
+    local character = rig.character
+    local root = rig.root
+    if not character.Parent or not root.Parent then
+        untrack(character)
+        return
+    end
+    local look = root.CFrame.LookVector
+    local yaw = math.atan2(-look.X, -look.Z)
+    local rate = 0
+    if rig.lastYaw and dt &gt; 0 then
+        rate = ((yaw - rig.lastYaw + math.pi) % (2 * math.pi) - math.pi) / dt
+    end
+    rig.lastYaw = yaw
+    local velocity = root.AssemblyLinearVelocity
+    rig.motion.lean = Motion.lean(rig.motion.lean, rate, math.sqrt(velocity.X * velocity.X + velocity.Z * velocity.Z), dt)
+    if rig.eatAt and now &gt;= rig.eatAt then
+        rig.eatAt = nil
+        Motion.trigger(rig.motion, "eat", now)
+        puff("munch", root.Position + look * (rig.length * 0.5), 3)
+        if rig.isLocal then Sfx.play("pickup") end
+    end
+    if Motion.sample(rig.motion, now, rig.pose) then
+        if not rig.applied then
+            if not capture(rig) then return end
+            rig.applied = true
+        end
+        writePose(rig, rig.pose)
+    elseif rig.applied then
+        restore(rig)
+    end
+end
+
+RunService.Heartbeat:Connect(function(dt)
+    if next(rigs) == nil then return end
+    local enabled = Theme.MotionEnabled
+    local camera = workspace.CurrentCamera
+    local now = os.clock()
+    for _, rig in rigs do
+        if not enabled then
+            if rig.applied then restore(rig) end
+            Motion.clear(rig.motion)
+            rig.eatAt = nil
+        elseif rig.isLocal then
+            step(rig, now, dt)
+        elseif camera and (camera.CFrame.Position - rig.root.Position).Magnitude &lt;= OTHER_RANGE then
+            rig.accumulator += dt
+            if rig.accumulator &gt;= OTHER_STEP then
+                local elapsed = rig.accumulator
+                rig.accumulator = 0
+                step(rig, now, elapsed)
+            end
+        elseif rig.applied then
+            restore(rig)
+            Motion.clear(rig.motion)
+        end
+    end
+end)
+
+local function watch(player: Player)
+    player.CharacterAdded:Connect(function(character) track(player, character) end)
+    if player.Character then task.spawn(track, player, player.Character) end
+end
+Players.PlayerAdded:Connect(watch)
+for _, player in Players:GetPlayers() do watch(player) end
+Players.PlayerRemoving:Connect(function(player)
+    if player.Character then untrack(player.Character) end
+end)
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="RBX262">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -547310,7 +547767,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX260">
+        <Item class="ModuleScript" referent="RBX263">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -547412,7 +547869,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX261">
+        <Item class="ModuleScript" referent="RBX264">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -547472,7 +547929,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX262">
+        <Item class="LocalScript" referent="RBX265">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -547645,7 +548102,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX263">
+        <Item class="LocalScript" referent="RBX266">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -547727,7 +548184,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX264">
+  <Item class="Workspace" referent="RBX267">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

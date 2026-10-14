@@ -740,6 +740,7 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-076 | Backlog | P3 | NextGoal shows top objective | BD-075 |
 | BD-077 | Backlog | P3 | Objective icons (4 new) | none |
 | BD-078 | Backlog | P2 | Objectives Studio/Android acceptance | BD-072-077 |
+| BD-079 | Review / test | P1 | Dino action animations (procedural, all species): eat, leap/jump stretch+land, death/eaten, bite lunge, turn lean; dust/munch effects reuse SFX; real Blender clips later. Roles: gameplay eng (hooks), tech artist (motion), audio (reuse pack) | BD-043 |
 | BD-086 | Backlog | P1 | Pick aura/trail style, freeze spec (doc 70) | none |
 | BD-087 | Backlog | P1 | Aura/trail sprite sheets and textures | BD-086 |
 | BD-088 | Backlog | P2 | Ribbon textures and ground-disc decals | BD-086 |
@@ -753,7 +754,6 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-096 | Backlog | P3 | Equip shimmer audio | none |
 | BD-097 | Backlog | P2 | 12-player phone perf + Studio/Android acceptance | BD-090-095 |
 | BD-098 | Backlog | P3 | Prices and gates for 3 new auras | BD-092 |
-| BD-079 | Backlog | P1 | Dino action animations (procedural, all species): eat, leap/jump stretch+land, death/eaten, bite lunge, turn lean; dust/munch effects reuse SFX; real Blender clips later. Roles: gameplay eng (hooks), tech artist (motion), audio (reuse pack) | BD-043 |
 | BD-080 | Backlog | P1 | Growth/Eggs HUD rework (BD-056 spec): bottom-left egg icon + EGGS N with pop, top-center slim SIZE bar; remove Island/Sanctuary text; replace three-bar icon with growth/dino icon. Roles: UI designer, gameplay eng | BD-044 |
 | BD-081 | Backlog | P1 | Sound style guide + Sound lab page: listen to the 17 sounds, 2-3 variants for hatch/Shiny/fusion/shop/level-up, owner picks by ear; owner uploads, IDs filled in Sfx.luau. Roles: audio, UI (lab page) | BD-063 sfx pack |
 | BD-082 | Review / test | P1 | Potion catalog 12 potions / 5 rarities, 6 offers per 2-minute window, not all available | BD-051 |
@@ -765,7 +765,7 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-092 | Review / test | P0 | Nests menu (7th nav button), cards with state/countdown/progress, OPEN, drop toast, run-end line; nest UI removed from Caught Eggs | BD-090 |
 | BD-093 | Review / test | P1 | tools/verify_nests.py in CI: gate, exactly-once, 15 h queue, offline, cap, luck bounds, migration, budget | BD-090 |
 | BD-094 | Backlog | P1 | Egg-nest icon as real art: bind resources/ui/v2/icons/egg-nest-v1.png after owner upload (replaces PLACEHOLDER code-drawn nest). Roles: UI artist, owner upload | BD-092 |
-| BD-100 | Backlog | P1 | UI copy pass (docs/72): one shared time/percent formatter, remove '5m 0s' and 'x' multipliers everywhere (shops, potions, buffs, nests, weather, HUD), short child-friendly lines. Roles: UI writer, gameplay eng | BD-043 |
+| BD-100 | Review / test | P1 | UI copy pass (docs/72): one shared time/percent formatter, remove '5m 0s' and 'x' multipliers everywhere (shops, potions, buffs, nests, weather, HUD), short child-friendly lines. Roles: UI writer, gameplay eng | BD-043 |
 | BD-101 | Backlog | P1 | Potion icons as real art (replace code-drawn bottles, PLACEHOLDER): 12 potions, 5 rarity frames; brief, 2D drafts, pick, final export, owner upload. Roles: UI artist, art director | BD-082 |
 | BD-102 | Backlog | P1 | UI asset production pipeline: brief template, draft/review/final/upload checklist, naming, QA at 64 px and phone size; audit existing code-drawn icons (growth tile, nest sprite, hud icons) and list which are PLACEHOLDER. Roles: art director, tech artist | BD-047 |
 | BD-104 | Backlog | P1 | Condition egg art decision: owner picks style A or B from docs/75 boards (and gloss vs matte). Roles: art director, owner | BD-103 |
@@ -774,3 +774,4 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-107 | Backlog | P2 | Astra/Rainbow sparkle ParticleEmitter + glow with distance budget and reduced-effects fallback. Roles: tech artist | BD-106 |
 | BD-108 | Backlog | P2 | Hatch reveal per condition (crumble, mud flake, prism, star burst) reusing sfx pack. Roles: tech artist, audio | BD-106 |
 | BD-109 | Backlog | P1 | Condition Shop cards show the condition egg with short copy (docs/72/73); Studio screenshot check at phone size. Roles: UI designer, QA | BD-106 |
+| BD-103 | Backlog | P1 | Condition egg art: Cracked, Dirty, Normal, Rainbow, Astra eggs render identically in the Condition Shop (renderer ignores condition); make real distinct art/looks per docs/72 flow and docs/73. Roles: UI artist, tech artist | BD-100 |
