@@ -35,7 +35,7 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         local ok,decoded=pcall(function() return Http:JSONDecode(encoded) end)
         if ok and typeof(decoded)=="table" then traits=decoded end
     end
-    local model=Resources.clone(speciesId,if traits then traits.genes else nil)
+    local model=Resources.clone(speciesId,if traits then traits.genes else nil,true)
     if model and not viewport.Parent then model:Destroy();return end
     if model then
         local world=Instance.new("WorldModel") world.Parent=viewport
@@ -84,13 +84,13 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
     end
     local data=script.Parent:FindFirstChild("CreatureData")
     if data and data:FindFirstChild(speciesId) then
-        local elapsed=0;local loading=false
+        local elapsed=0;local loading=false;local attempts=0
         local connection=RunService.Heartbeat:Connect(function(dt)
             elapsed+=dt;if elapsed<.25 or loading then return end;elapsed=0
             local world=viewport:FindFirstChildOfClass("WorldModel")
             if visible(viewport) then
-                if not world then loading=true;task.spawn(function() if viewport.Parent then load() end;loading=false end) end
-            elseif world then world:Destroy() end
+                if not world and attempts<8 then attempts+=1;loading=true;task.spawn(function() if viewport.Parent then load() end;loading=false end) end
+            elseif world then world:Destroy();attempts=0 end
         end)
         viewport.Destroying:Once(function() connection:Disconnect() end)
     else load() end
