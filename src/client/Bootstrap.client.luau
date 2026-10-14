@@ -908,6 +908,12 @@ render=function(name: string)
         if genes then
             local condition=EggGenetics.condition(genes.conditionId)
             detailText=if failed then HatchTimeline.failChance(condition.hatchChance) else condition.name
+            -- Mutation audit: genes eggs (all new eggs) used to hide the mutation name/perk and tint.
+            if mutation and not failed then
+                local tint=mutationColor :: Color3
+                for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(tint,.35) end end
+                detailText=condition.name.." • "..mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
+            end
         elseif mutation then
             local tint=mutationColor :: Color3
             for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(tint,.55) end end
