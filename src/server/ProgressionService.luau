@@ -28,6 +28,28 @@ local function weatherAttributes()
     workspace:SetAttribute("WeatherEndsAt",weatherEnds)
     workspace:SetAttribute("NextWeatherAt",nextWeather)
 end
+local function applyWeather()
+    current,weatherEnds,nextWeather=clock.current,clock.endsAt,clock.nextAt
+    local night=current and table.find({"thunder","bloodmoon","aurora"},current.id)~=nil
+    Lighting.ClockTime=if night then 19 elseif current and current.id=="volcano" then 17 else 14
+    Lighting.Brightness=if night then .9 elseif current then 1.6 else 2
+    weatherAttributes()
+end
+-- BD-120 owner admin panel (AdminService validates the caller and arguments).
+function Service.adminStartWeather(id: string,seconds: number): boolean
+    for _,event in Config.Weather do
+        if event.id==id then
+            WeatherClock.force(clock,workspace:GetServerTimeNow(),event,seconds) applyWeather()
+            return true
+        end
+    end
+    return false
+end
+function Service.adminStopWeather()
+    WeatherClock.clear(clock,workspace:GetServerTimeNow()) applyWeather()
+end
+local adminMultipliers=function() return 1,1 end
+function Service.setAdminMultipliers(source: () -> (number,number)) adminMultipliers=source end
 local function crystalSpawns(repository)
     local folder=Instance.new("Folder") folder.Name="CrystalCurrency" folder.Parent=workspace
     local entries={}
@@ -144,19 +166,15 @@ function Service.start(repository)
         while true do
             task.wait(1)
             local now=workspace:GetServerTimeNow()
-            if WeatherClock.step(clock,now,weatherPick) then
-                current,weatherEnds,nextWeather=clock.current,clock.endsAt,clock.nextAt
-                local night=current and table.find({"thunder","bloodmoon","aurora"},current.id)~=nil
-                Lighting.ClockTime=if night then 19 elseif current and current.id=="volcano" then 17 else 14
-                Lighting.Brightness=if night then .9 elseif current then 1.6 else 2
-                weatherAttributes()
-            end
+            if WeatherClock.step(clock,now,weatherPick) then applyWeather() end
             for _,player in Players:GetPlayers() do
                 local p=repository.progression(player)
                 local c=player.Character
                 if p and c then
                     local mutation=Rules.item(Config.EventMutations,player:GetAttribute("EquippedEventMutation") or "")
                     local growth,speed,loot=Rules.multipliers(p,player:GetAttribute("EquippedSpeciesId") or "compy",current,os.time(),player:GetAttribute("EquippedCondition"),mutation)
+                    local adminGrowth,adminSpeed=adminMultipliers()
+                    growth*=adminGrowth speed*=adminSpeed
                     c:SetAttribute("EventMutationId",if mutation then mutation.id else "")
                     c:SetAttribute("GrowthMultiplier",growth) c:SetAttribute("WeatherLootMultiplier",loot)
                     player:SetAttribute("GrowthMultiplier",growth) player:SetAttribute("SpeedMultiplier",speed) player:SetAttribute("LootMultiplier",loot)

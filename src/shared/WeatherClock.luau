@@ -14,4 +14,12 @@ function Clock.step(state,now: number,choose): boolean
     end
     return false
 end
+-- BD-120 admin: start an event now for `seconds`; the normal cycle resumes after it ends.
+function Clock.force(state,now: number,event,seconds: number)
+    state.current=event state.endsAt=now+seconds
+end
+-- BD-120 admin: end the current event now; the next random event is a full interval away.
+function Clock.clear(state,now: number)
+    state.current=nil state.endsAt=0 state.nextAt=now+Config.WeatherInterval
+end
 return Clock

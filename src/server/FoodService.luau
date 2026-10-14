@@ -10,6 +10,9 @@ local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local Http = game:GetService("HttpService")
 local eventRandom = Random.new()
 local FoodService = {}
+-- BD-120 owner admin panel: runtime-only food worth multiplier (AdminService validates and clamps it).
+local adminFoodMultiplier = 1
+function FoodService.setAdminFoodMultiplier(value: number) adminFoodMultiplier = value end
 local TYPES = {
     {id = "berry", weight = 78, points = 1, size = 0.7, color = Color3.fromRGB(224, 99, 118)},
     {id = "fruit", weight = 15, points = 4, size = 1.0, color = Color3.fromRGB(244, 186, 83)},
@@ -213,7 +216,7 @@ function FoodService.start(dinosaur,repository)
                     food.readyAt = now + Config.FoodRespawnSeconds
                     food.hidden = true
                     show(food, false)
-                    winner.gained += food.kind.points
+                    winner.gained += food.kind.points * adminFoodMultiplier
                 end
             end
             for _, candidate in candidates do

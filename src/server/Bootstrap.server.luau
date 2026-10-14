@@ -135,5 +135,6 @@ if not foodReady then
 end
 local PredationService = require(script.Parent.PredationService)
 PredationService.start(RunLifecycle, Dinosaur)
+require(script.Parent.AdminService).start() -- BD-120 owner-only admin panel (docs/79)
 
 print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
