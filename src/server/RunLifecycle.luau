@@ -8,6 +8,8 @@ local RunLifecycle = {}
 local lastExitRequest: {[Player]: number} = {}
 local requestEndRun: RemoteEvent? = nil
 local settleRun = nil
+-- BD-090: server-side run start times (server clock); never replicated, never client-reported.
+local runStartedAt: {[string]: number} = {}
 
 function RunLifecycle.prepareSanctuary(player: Player, character: Model)
     character:SetAttribute("RunState", "Sanctuary")
@@ -41,7 +43,9 @@ function RunLifecycle.begin(player: Player, character: Model)
         return
     end
     if character:GetAttribute("RunId") ~= nil then return end
-    character:SetAttribute("RunId", HttpService:GenerateGUID(false))
+    local newRunId = HttpService:GenerateGUID(false)
+    character:SetAttribute("RunId", newRunId)
+    runStartedAt[newRunId] = workspace:GetServerTimeNow()
     player:SetAttribute("Location", "Island")
     character:SetAttribute("RunState", "Active")
     character:SetAttribute("GrowthScore", 0)
@@ -76,8 +80,11 @@ local function settlementSnapshot(character: Model)
     if typeof(runId) ~= "string" then return nil end
     if typeof(catchScore) ~= "number" or catchScore % 1 ~= 0 then return nil end
     local ok,events=pcall(function() return HttpService:JSONDecode(character:GetAttribute("RunEggEvents") or "[]") end)
+    local startedAt = runStartedAt[runId]
+    runStartedAt[runId] = nil
     return {
         runId = runId,
+        runSeconds = if startedAt then math.max(0, workspace:GetServerTimeNow() - startedAt) else 0, -- unknown start = 0 s = no nest
         catchScore = math.clamp(catchScore, 0, Config.RunEggMaxPerRun), -- one run egg per catch
         eggEvents=if ok and typeof(events)=="table" then events else {},
     }
@@ -87,7 +94,7 @@ local function respawnAfterSettlement(player: Player, character: Model, snapshot
     task.spawn(function()
         local ok = true
         if settleRun then
-            ok = settleRun(player, snapshot.runId, snapshot.catchScore, reason, snapshot.eggEvents)
+            ok = settleRun(player, snapshot.runId, snapshot.catchScore, reason, snapshot.eggEvents, snapshot.runSeconds)
         end
         if not ok then
             if player.Parent and player:GetAttribute("ProfileState") == "Loaded" then
@@ -155,7 +162,7 @@ function RunLifecycle.endForDisconnect(player: Player): string
     local growthScore = character:GetAttribute("GrowthScore")
     player:SetAttribute("LastRunGrowthScore", if typeof(growthScore) == "number" then growthScore else 0)
     if settleRun then
-        local ok = settleRun(player, snapshot.runId, snapshot.catchScore, "Disconnect", snapshot.eggEvents)
+        local ok = settleRun(player, snapshot.runId, snapshot.catchScore, "Disconnect", snapshot.eggEvents, snapshot.runSeconds)
         return if ok then "settled" else "failed"
     end
     return "settled"

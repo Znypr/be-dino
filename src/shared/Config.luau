@@ -126,16 +126,24 @@ return table.freeze({
     RunEggMaxPerRun = 500, -- PROVISIONAL: catches stop counting at 500 eggs per run (6,250 food); a 5,000-food run (400 eggs) is not truncated
     RunEggBankCapacity = 1000, -- PROVISIONAL: banked run eggs behind the queue (~540 B each, ~0.54 MB); a run starts only while banked <= capacity - RunEggMaxPerRun (500)
     SettledRunLedgerSize = 200, -- PROVISIONAL: settled run IDs kept for exactly-once settlement beyond recentOperations
-    -- Separate bonus egg nests (never the ordinary egg queue). Excess nests wait as
-    -- pending/capacity-blocked and are never silently granted or discarded.
-    NestSlotCapacity = 5,
-    NestPendingCapacity = 30, -- PROVISIONAL: a run starts only while pending <= capacity - NestMaxPerRun (22)
-    NestFirstAtEggs = 40, -- PROVISIONAL: 40 run eggs (500 food) earn the first nest (rescaled x40/15)
-    NestEggsPerExtraNest = 72, -- PROVISIONAL: +1 nest per 72 further eggs (400 eggs -> 6 nests, same as the old 150)
-    NestMaxPerRun = 8, -- PROVISIONAL: >= the nest count at RunEggMaxPerRun (500 eggs -> 7)
-    NestEggCount = 3, -- PROVISIONAL: each nest contains three precommitted bonus eggs
-    NestIncubationSeconds = 300, -- PROVISIONAL: a slotted nest opens five minutes after it takes a slot
-    NestRarityBoostEggs = 15, -- PROVISIONAL: nest eggs use the maximum run-batch species boost
+    -- BD-090 Egg Nests v2 (owner 2026-10-14). ALL PROVISIONAL. A nest is a separate loot item
+    -- dropped at the end of a qualified run; it incubates on SERVER time (os.time), ONE nest at a
+    -- time (queue), and opens into NestMinSize..NestMaxSize eggs rolled with luck. See docs/71.
+    NestStorageCapacity = 5, -- owned nests (waiting + incubating + ready); when full a new nest is not granted
+    NestIncubationSeconds = 10800, -- 3 h each; the next waiting nest starts the moment the previous becomes ready
+    NestMinSize = 10, -- eggs per nest, rolled deterministically from the run id at drop
+    NestMaxSize = 15,
+    -- Hidden drop gate (never shown in the UI; measured on the server, never client-reported).
+    NestMinRunSeconds = 120, -- PROVISIONAL: server clock from RunLifecycle.begin to settlement
+    NestMinCatches = 8, -- PROVISIONAL: validated server CatchScore (run eggs) needed for a nest
+    NestEggsPerExtraNest = 100, -- PROVISIONAL: +1 nest per 100 further catches on top of a qualified run
+    NestMaxPerRun = 3, -- PROVISIONAL cap per run
+    -- Luck tiers (index = nest.luck). PROVISIONAL, disclosed in the Nests menu. rarityBoostEggs feeds
+    -- the run-batch species boost (15 = maximum), conditionLevels adds to the condition-upgrade level
+    -- (clamped to the top tier), shinyChance applies even without irregular weather, bigChance replaces BigChance.
+    NestLuckTiers = {
+        {rarityBoostEggs = 15, conditionLevels = 2, shinyChance = 0.03, bigChance = 0.2},
+    },
     NestClaimRequestCooldownSeconds = 0.5,
     ChestClaimRequestCooldownSeconds = 0.35,
     ChestTestGrantEnabled = false,

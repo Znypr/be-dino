@@ -24,22 +24,35 @@ function RewardMath.runCrystals(eggCount: number): number
     return math.min(ProgressionConfig.RunCrystalCap, crystals)
 end
 
--- PROVISIONAL nest earning rule: first nest at NestFirstAtEggs, then one per
--- NestEggsPerExtraNest further eggs (40 -> 1, 400 -> 6), capped per run.
-function RewardMath.nestCount(eggCount: number): number
+-- PROVISIONAL nest count for a QUALIFIED run (see RewardMath.nestQualifies): one nest, plus one
+-- per NestEggsPerExtraNest catches beyond NestMinCatches, capped per run. 0 when not qualified.
+function RewardMath.nestCount(eggCount: number, runSeconds: any?): number
     local n = RewardMath.runEggCount(eggCount)
-    if n < Config.NestFirstAtEggs then return 0 end
-    return math.min(Config.NestMaxPerRun, 1 + (n - Config.NestFirstAtEggs) // Config.NestEggsPerExtraNest)
+    if not RewardMath.nestQualifies(n, runSeconds) then return 0 end
+    return math.min(Config.NestMaxPerRun, 1 + (n - Config.NestMinCatches) // Config.NestEggsPerExtraNest)
 end
 
-function RewardMath.computeRunReward(catchScore: any)
+-- Hidden gate: server-measured run length AND validated server catch score.
+function RewardMath.nestQualifies(eggCount: number, runSeconds: any?): boolean
+    if typeof(runSeconds) ~= "number" or runSeconds ~= runSeconds then return false end
+    return runSeconds >= Config.NestMinRunSeconds and RewardMath.runEggCount(eggCount) >= Config.NestMinCatches
+end
+
+-- Deterministic nest size NestMinSize..NestMaxSize from the nest id (committed at drop).
+function RewardMath.nestSize(nestId: string): number
+    local h = 5381
+    for i = 1, #nestId do h = (h * 33 + string.byte(nestId, i)) % 2147483629 end
+    return Config.NestMinSize + h % (Config.NestMaxSize - Config.NestMinSize + 1)
+end
+
+function RewardMath.computeRunReward(catchScore: any, runSeconds: any?)
     local eggCount = RewardMath.runEggCount(catchScore)
     return {
         rewardConfigVersion = Config.RunRewardConfigVersion,
         catchScore = eggCount,
         eggCount = eggCount,
         crystals = RewardMath.runCrystals(eggCount),
-        nestCount = RewardMath.nestCount(eggCount),
+        nestCount = RewardMath.nestCount(eggCount, runSeconds),
         accountXP = eggCount, -- unchanged rate: 1 account XP per catch (= per run egg)
     }
 end

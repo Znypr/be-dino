@@ -72,7 +72,7 @@ end}
 local http={GenerateGUID=function() return "guid-"..tostring(math.random(1,1e9)) end,JSONEncode=function(_,v) return copy(v) end,JSONDecode=function(_,v) return copy(v) end}
 local mutableConfig=table.clone(GameConfig)
 GameConfig=mutableConfig
-local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",EggGenetics="Genetics",ProgressionConfig="ProgressionConfig"}}
+local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",EggGenetics="Genetics",NestQueue="NestQueue",ProgressionConfig="ProgressionConfig"}}
 local services={DataStoreService={GetDataStore=function() return store end},HttpService=http,ReplicatedStorage=storage,RunService={IsStudio=function() return false end}}
 local game={GameId=1,JobId="test",GetService=function(_,id) return services[id] end}
 local task={wait=function() end,spawn=function() end}
@@ -82,6 +82,7 @@ local require=function(id)
  if id=="Config" then return GameConfig elseif id=="ProgressionConfig" then return ProgressionConfig end
  error("unexpected module "..tostring(id))
 end
+local NestQueue=@@NEST_QUEUE@@
 local Rewards=@@REWARD_MATH@@
 local Identity=@@IDENTITY_MODULE@@
 local script={Parent={DinosaurIdentity="Identity"}}
@@ -95,7 +96,7 @@ local require=function(id)
  if id=="FusionOdds" then return FusionOdds end
  if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics
  elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig
- elseif id=="Rules" then return Rules elseif id=="Rewards" then return Rewards end
+ elseif id=="Rules" then return Rules elseif id=="Rewards" then return Rewards elseif id=="NestQueue" then return NestQueue end
  error("unexpected module "..tostring(id))
 end
 local Repository=@@REPO_MODULE@@
@@ -137,27 +138,31 @@ catches=FoodCatchRules.award(5000,0,1)
 assert(catches==400 and Rewards.runEggCount(catches)==400,"5,000 food -> 400 run eggs")
 assert(Rewards.runCrystals(0)==0 and Rewards.runCrystals(40)==30 and Rewards.runCrystals(400)==220 and Rewards.runCrystals(500)==273)
 assert(Rewards.runCrystals(0/0)==0 and Rewards.runCrystals(-1)==0 and Rewards.runCrystals(math.huge)==273)
-assert(Rewards.nestCount(39)==0 and Rewards.nestCount(40)==1 and Rewards.nestCount(400)==6)
-assert(Rewards.nestCount(500)==7 and Rewards.nestCount(math.huge)==7 and Rewards.nestCount(500)<=GameConfig.NestMaxPerRun)
+assert(Rewards.nestCount(40)==0 and Rewards.nestCount(400)==0,"no run time -> never a nest")
+assert(Rewards.nestCount(7,600)==0 and Rewards.nestCount(8,119)==0 and Rewards.nestCount(8,120)==1 and Rewards.nestCount(0,600)==0)
+assert(Rewards.nestCount(40,200)==1 and Rewards.nestCount(108,200)==2 and Rewards.nestCount(400,200)==GameConfig.NestMaxPerRun)
+assert(Rewards.nestCount(500,200)==GameConfig.NestMaxPerRun and Rewards.nestCount(math.huge,math.huge)==GameConfig.NestMaxPerRun)
+assert(Rewards.nestCount(40,0/0)==0 and Rewards.nestCount(40,"200")==0 and Rewards.nestCount(40,-5)==0)
 local zero=Rewards.computeRunReward(0/0)
 assert(zero.eggCount==0 and zero.crystals==0 and zero.nestCount==0 and zero.accountXP==0)
 local previous=-1
 for n=0,500 do local c=Rewards.runCrystals(n) assert(c>=previous) previous=c end
 assert(#Rewards.runEggId(string.rep("x",64),500)<=80 and #(Rewards.nestId(string.rep("x",64),11)..":3")<=80)
-print("Reward math passed: 0/negative/NaN/inf/huge/non-number scores, 500->40 and 5,000->400 eggs, 30/220 crystals, 1/6 nests, bounded IDs")
+print("Reward math passed: 0/negative/NaN/inf/huge/non-number scores, 500->40 and 5,000->400 eggs, 30/220 crystals, hidden nest gate (run time + catches) with capped extras, bounded IDs")
 
 ------------------------------------------------------------------ 15-egg run
 local now=os.time()
 local a=user(101)
 assert(Repository.load(a))
 local beforeCopies=totalCopies(data[key(a)])
-local ok,outcome,status=Repository.commitRunSettlement(a,"run-40",40)
+local ok,outcome,status=Repository.commitRunSettlement(a,"run-40",40,nil,200)
 assert(ok and status=="committed" and outcome.eggCount==40 and outcome.crystals==30 and outcome.nestCount==1)
 assert(totalCopies(data[key(a)])==beforeCopies,"settlement must not grant direct dinosaur copies")
 assert(#data[key(a)].eggs==5 and bankCount(a)==35 and data[key(a)].pendingChestGrants==0)
 assert(data[key(a)].progression.crystals==30 and data[key(a)].progression.accountXP==40)
-assert(#data[key(a)].nests==1 and #data[key(a)].pendingNests==0 and data[key(a)].nests[1].readyAt>=now+GameConfig.NestIncubationSeconds)
-assert(#data[key(a)].nests[1].eggs==GameConfig.NestEggCount)
+local aNest=data[key(a)].eggNests[1]
+assert(#data[key(a)].eggNests==1 and aNest.state=="incubating" and aNest.readyAt>=now+GameConfig.NestIncubationSeconds and aNest.eggs==nil)
+assert(aNest.size>=GameConfig.NestMinSize and aNest.size<=GameConfig.NestMaxSize and aNest.luck==1 and aNest.droppedFromRun=="run-40")
 local ids={}
 local lastRarity=0
 for _,egg in revealLine(a) do
@@ -167,7 +172,7 @@ for _,egg in revealLine(a) do
  local rarity=GameConfig.SpeciesRarities[egg.reward.speciesId]
  assert(rarity>=lastRarity,"run batch must reveal in increasing rarity") lastRarity=rarity
 end
-assert(a.attrs.LastRewardText=="40 run eggs | 1 bonus nest" and a.attrs.LastRunCrystals==30 and a.attrs.LastRunCrystalBox==0)
+assert(a.attrs.LastRewardText=="40 run eggs | 1 egg nest" and a.attrs.LastRunCrystals==30 and a.attrs.LastRunCrystalBox==0)
 assert(a.attrs.BankedRunEggCount==35 and a.attrs.QueuedEggsWaiting==35 and a.attrs.RunStartBlocked=="")
 -- Exactly once: replays (cached and uncached) change nothing.
 local snapshot=copy(data[key(a)])
@@ -177,16 +182,16 @@ Repository.release(a) assert(Repository.load(a))
 snapshot=copy(data[key(a)])
 dupOk,_,dupStatus=Repository.commitRunSettlement(a,"run-40",400)
 assert(dupOk and dupStatus=="duplicate" and same(snapshot,data[key(a)]),"replay with a different score must not re-settle")
-print("40-egg run passed: 40 banked eggs (5 queue + 35 bank), no direct copies, 30 crystals, 1 slotted nest, ascending rarity, exactly-once replays")
+print("40-egg run passed: 40 banked eggs (5 queue + 35 bank), no direct copies, 30 crystals, 1 incubating nest, ascending rarity, exactly-once replays")
 
 ------------------------------------------------------------------ 150-egg run, reveal, reconnect
 local b=user(102)
 assert(Repository.load(b))
 local copiesBefore=totalCopies(data[key(b)])
-assert(Repository.commitRunSettlement(b,"run-400",400))
+assert(Repository.commitRunSettlement(b,"run-400",400,nil,600))
 assert(#data[key(b)].eggs==5 and bankCount(b)==395)
-assert(#data[key(b)].nests==5 and #data[key(b)].pendingNests==1,"6 nests: 5 slotted, 1 capacity-blocked pending")
-assert(b.attrs.PendingNestCount==1 and #b.attrs.NestsJson==5 and data[key(b)].progression.crystals==220)
+assert(#data[key(b)].eggNests==GameConfig.NestMaxPerRun and #b.attrs.NestsJson==GameConfig.NestMaxPerRun and data[key(b)].progression.crystals==220)
+assert(data[key(b)].eggNests[1].state=="incubating" and data[key(b)].eggNests[2].state=="waiting")
 local line=revealLine(b)
 assert(#line==400)
 local committedIds={} for i,egg in line do committedIds[i]=egg.eggId end
@@ -325,61 +330,7 @@ assert(Repository.commitRunSettlement(c,"lease-run",40) and #revealLine(c)==120)
 assert(select(3,Repository.commitRunSettlement(c,"lease-run",40))=="duplicate" and #revealLine(c)==120)
 print("Failure handling passed: full outage writes nothing, transient outage commits once, lost acknowledgement retried as duplicate, lease loss blocks settlement/claims, retry after recovery is exactly-once")
 
------------------------------------------------------------------- Nests: capacity, pending, opening
-local n=user(104)
-assert(Repository.load(n))
-assert(Repository.commitRunSettlement(n,"nest-a",400)) -- 6 nests
-assert(#data[key(n)].nests==5 and #data[key(n)].pendingNests==1)
-local pendingId=data[key(n)].pendingNests[1].nestId
-local slotId=data[key(n)].nests[1].nestId
-assert(select(3,Repository.claimNest(n,slotId))=="not_ready")
-assert(select(3,Repository.claimNest(n,pendingId))=="nest_pending")
-assert(select(3,Repository.claimNest(n,"nest:missing:1"))=="missing")
-assert(select(3,Repository.claimNest(n,string.rep("x",81)))=="invalid_nest_id")
--- Fast-forward incubation through a reload fixture.
-Repository.release(n)
-for _,nest in data[key(n)].nests do nest.readyAt=0 end
-assert(Repository.load(n))
-local queueHead=data[key(n)].eggs[1].eggId
-local bankBefore=bankCount(n)
-local nestEggs=copy(data[key(n)].nests[1].eggs)
-local opened,nestOutcome,openStatus=Repository.claimNest(n,slotId)
-assert(opened and openStatus=="opened" and nestOutcome.eggCount==GameConfig.NestEggCount)
-assert(bankCount(n)==bankBefore+GameConfig.NestEggCount and data[key(n)].eggs[1].eggId==queueHead)
-for i,egg in nestEggs do
- assert(data[key(n)].runEggBank[i].eggId==egg.eggId and same(data[key(n)].runEggBank[i].genes,egg.genes),"nest eggs are next in line, unchanged")
- assert(egg.source.kind=="nest" and egg.reward.count==1 and egg.kind=="nest_egg")
-end
-assert(#data[key(n)].nests==5 and #data[key(n)].pendingNests==0,"pending nest promoted into the freed slot")
-local promoted=data[key(n)].nests[5]
-assert(promoted.nestId==pendingId and promoted.readyAt>=now+GameConfig.NestIncubationSeconds)
-assert(select(3,Repository.claimNest(n,slotId))=="duplicate" and bankCount(n)==bankBefore+GameConfig.NestEggCount)
--- Pending nests are never dropped; once pending exceeds headroom for a max run, runs are blocked.
-local totalNests=#data[key(n)].nests+#data[key(n)].pendingNests
--- Isolate the nest gate from the egg-bank gate (fixture: empty queue/bank).
-Repository.release(n) data[key(n)].runEggBank={} data[key(n)].eggs={} assert(Repository.load(n))
-local runs=0
-while n.attrs.RunStartBlocked~="nests_pending_full" do
- runs+=1
- assert(Repository.commitRunSettlement(n,"nest-fill-"..runs,40))
- totalNests+=1
- assert(#data[key(n)].nests+#data[key(n)].pendingNests==totalNests,"a nest was lost")
- assert(runs<100)
- -- Keep the egg-bank gate out of the way: 40-egg runs would otherwise fill the bank first.
- Repository.release(n) data[key(n)].runEggBank={} data[key(n)].eggs={} assert(Repository.load(n))
-end
-assert(#data[key(n)].pendingNests==GameConfig.NestPendingCapacity-GameConfig.NestMaxPerRun+1)
--- Even a settlement while blocked (run started before the block) keeps every nest.
-assert(Repository.commitRunSettlement(n,"nest-overflow",500))
-assert(#data[key(n)].nests+#data[key(n)].pendingNests==totalNests+Rewards.nestCount(500))
--- Bank-full refusal keeps the nest intact.
-Repository.release(n)
-data[key(n)].nests[1].readyAt=0
-while #data[key(n)].runEggBank<GameConfig.RunEggBankCapacity-1 do table.insert(data[key(n)].runEggBank,copy(data[key(n)].runEggBank[1])) end
-assert(Repository.load(n) and n.attrs.RunStartBlocked=="egg_bank_full")
-local fullId=data[key(n)].nests[1].nestId
-assert(select(3,Repository.claimNest(n,fullId))=="bank_full" and data[key(n)].nests[1].nestId==fullId)
-print(string.format("Nests passed: 5 slots + pending, incubation, pending/missing/invalid refusals, opening puts 3 eggs next in line, promotion, duplicate, %d runs to nests_pending_full gate, no nest ever lost, bank_full refusal", runs))
+-- Nest queue, storage, drop gate, luck and migration: tools/verify_nests.py (same harness).
 
 ------------------------------------------------------------------ Legacy save compatibility
 local l=user(105)
@@ -443,7 +394,7 @@ while bankCount(s)+#data[key(s)].eggs<GameConfig.RunEggBankCapacity do
 end
 local bytes=jsonSize(data[key(s)])
 assert(bytes<900000,"profile with a full egg bank must stay well under the 4 MB DataStore limit: "..bytes)
-print(string.format("Storage passed: %d banked eggs + %d nests/pending ~ %d bytes (%.1f%% of 4 MiB)", bankCount(s)+#data[key(s)].eggs, #data[key(s)].nests+#data[key(s)].pendingNests, bytes, bytes/4194304*100))
+print(string.format("Storage passed: %d banked eggs + %d nests ~ %d bytes (%.1f%% of 4 MiB)", bankCount(s)+#data[key(s)].eggs, #(data[key(s)].eggNests or {}), bytes, bytes/4194304*100))
 
 ------------------------------------------------------------------ Identity crediting (memory-only Studio profiles)
 game.GameId=0 services.RunService.IsStudio=function() return true end
@@ -543,6 +494,7 @@ def script():
         ('@@RULES@@', 'src/shared/ProgressionRules.luau'),
         ('@@FUSION_ODDS@@', 'src/server/FusionOdds.luau'),
         ('@@REVEAL_SKIP@@', 'src/shared/RevealSkip.luau'),
+        ('@@NEST_QUEUE@@', 'src/shared/NestQueue.luau'),
         ('@@REWARD_MATH@@', 'src/server/RewardMath.luau'),
         ('@@IDENTITY_FUSION_MODULE@@', 'src/server/IdentityFusion.luau'),
         ('@@IDENTITY_MODULE@@', 'src/server/DinosaurIdentity.luau'),

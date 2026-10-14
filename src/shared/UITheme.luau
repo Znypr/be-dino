@@ -106,6 +106,21 @@ local function nativeIcon(parent: GuiObject,id: string): Frame?
         preview.Size=UDim2.fromScale(1,1)
         return root
     end
+    if id=="egg_nest" then -- BD-090 native nest sprite (twig ring + egg); an uploaded "egg_nest" image overrides it
+        local root=Instance.new("Frame")
+        root.Name,root.BackgroundTransparency,root.Size="Art_egg_nest",1,UDim2.fromOffset(42,42)
+        root.Position,root.ZIndex,root.Parent=UDim2.fromOffset(8,5),parent.ZIndex+1,parent
+        local function blob(color: Color3,x: number,y: number,w: number,h: number)
+            local f=Instance.new("Frame")
+            f.BorderSizePixel,f.BackgroundColor3=0,color
+            f.Position,f.Size,f.ZIndex,f.Parent=UDim2.fromScale(x,y),UDim2.fromScale(w,h),root.ZIndex,root
+            local c=Instance.new("UICorner") c.CornerRadius=UDim.new(.5,0) c.Parent=f
+        end
+        blob(Color3.fromRGB(126,88,52),0,.5,1,.42)
+        blob(Color3.fromRGB(240,228,196),.3,0,.4,.66)
+        blob(Color3.fromRGB(96,64,36),0,.66,1,.2)
+        return root
+    end
     local data = EventVectors[id] or Vectors[id]
     if not data then return nil end
     local root = Instance.new("Frame")

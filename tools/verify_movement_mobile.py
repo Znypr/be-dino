@@ -150,7 +150,7 @@ local function elements(layout)
  end
  return list
 end
-local NAV = 6
+local NAV = 7
 local function check(width, height, touch, measured)
  local layout = TouchLayout.compute({width = width, height = height, touch = touch, navCount = NAV,
   thumb = measured and measured.thumb, jump = measured and measured.jump})
