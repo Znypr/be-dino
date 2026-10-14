@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "654277c3e73c0deecc4e5a640c8ce539143cecf44dac5c1c2854ac23c1891d3a",
+  "place_sha256": "94279b4220253727a12044cc2ff5e891860854734efc6ccc8c41cc0c571ec04f",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "33f6491c3921573cdf897028008998b4097b134df9aefad7dee98030a3e62262",
@@ -224,6 +224,7 @@
     "src/shared/UIIconLayout.luau": "8987e0064bdeb10556c6dec7d84d41243b72b6682c74a2300dff5a1e46c3cd69",
     "src/shared/UITheme.luau": "ebe8f366e81e3f0a34bd14f4a3560cdfffa50651a89f1e73df2a1a976d043ceb",
     "src/shared/WeatherClock.luau": "ae9d42007a3bb54610b478c906d9042859b735467af69ad9d1e8782ee6b33730",
+    "src/shared/WeatherLooks.luau": "03f982a9d4b3e64ea6677900b083c91bec0bf4e1528659ebcb6c7b360e0ec776",
     "src/shared/WorldKitData.luau": "860dd88ae449c3daa82d1372148e02d50d0ccaa08c8fa5a21a003a75bb4abde2",
     "src/shared/WorldKitMeshAssets.luau": "7110648be06c6e602728e21ad96a833e4ad87d65c64fced492ef5bfcd9ce503f",
     "src/server/AdminService.luau": "b017aed5b20be0c7a2226618d128acf8e1415bf18ce260afcae3b9d45ff26ee9",
@@ -262,6 +263,6 @@
     "src/client/InspectView.luau": "af6e2c8413bdb4cf5a0e43aa48765bf02016ea77475e90761747b1cad4da0e0b",
     "src/client/PreviewTraits.luau": "9ab27bd37071412536083ac3a0993fb6344cf1de4ce79f5cc92abbfd55329958",
     "src/client/ResourceVisuals.client.luau": "734cbac841db6a6c88ccda176dabb6c3a9a626c158a10b7da3b1d1723335701d",
-    "src/client/WeatherVisuals.client.luau": "1c768813fdb5a2623a93bddf6170f9564412dcdd5cae345df93a21e4fd834ef2"
+    "src/client/WeatherVisuals.client.luau": "4055e97da0a56d8214f01e149df3e6dcaa9f157cdf697bf7dde4120a4a8ebc23"
   }
 }

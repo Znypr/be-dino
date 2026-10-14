@@ -43,7 +43,7 @@ Weather.Looks={
         glow=rgb(60,255,170),glowBright=1.3,glowRange=60,fogStart=140,vis=520,stars=5000}),
     quake=look({tint=rgb(232,200,156),sat=-.14,contrast=.16,bright=-.06,fog=rgb(190,160,118),decay=rgb(130,100,70),density=.6,offset=0,haze=3,bloom=.15,
         amb=rgb(150,126,96),shiftTop=rgb(120,88,48),dof=.35,dofFocus=70,lamp=.6,fogStart=25,vis=110}),
-    bloodmoon=look({tint=rgb(255,140,150),sat=.45,contrast=.18,bright=0,fog=rgb(210,34,56),decay=rgb(120,10,30),density=.6,offset=0,haze=2.8,glare=.5,bloom=.8,rays=.12,
+    bloodmoon=look({tint=rgb(255,140,150),sat=.45,contrast=.18,bright=0,fog=rgb(210,34,56),decay=rgb(120,10,30),density=.45,offset=0,haze=2.8,glare=.5,bloom=.8,rays=.12,
         rayTint=rgb(255,60,80),amb=rgb(165,38,56),shiftTop=rgb(120,10,30),dof=.3,dofFocus=80,exposure=-.15,lamp=1.2,glow=rgb(255,40,70),glowBright=.5,glowRange=60,fogStart=100,vis=300}),
 }
 Weather.Ids=table.freeze({"rain","thunder","blizzard","volcano","aurora","quake","bloodmoon"})
