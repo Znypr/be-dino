@@ -11,4 +11,6 @@ return {
     aurora = .93,
     quake = .93,
     bloodmoon = .93,
+    egg_splat = 1,
+    egg_shell = 1,
 }
