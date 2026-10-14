@@ -549124,6 +549124,8 @@ local function dot(parent: Instance, name: string, z: number, w: number, h: numb
 end
 
 local function buildSplat(front: Frame): Splat
+    -- PLACEHOLDER (docs/72): the egg-white puddle, yolk and shell cups below are native shape stacks. They are replaced by the
+    -- ChatGPT icons egg_splat / egg_shell (docs/83 items 29 and 30) as soon as their asset IDs are bound in UIIconAssets; they never count as final art.
     local group = Instance.new("CanvasGroup")
     group.Name, group.BackgroundTransparency, group.Active, group.ZIndex = "EggSplat", 1, false, 24
     group.Size, group.Parent = UDim2.fromOffset(824, 402), front
