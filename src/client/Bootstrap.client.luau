@@ -15,6 +15,8 @@ local NestQueue = require(Shared.NestQueue)
 local Preview = require(Shared.DinosaurPreview)
 local ModelPreview = require(Shared.ModelPreview)
 local HatchPresentation = require(Shared.HatchPresentation)
+local HatchTimeline = require(Shared.HatchTimeline)
+local HatchSequence = require(script.Parent.HatchSequence)
 local ProgressionConfig=require(Shared.ProgressionConfig)
 local ProgressionRules=require(Shared.ProgressionRules)
 local EggTraits=require(Shared.EggTraits)
@@ -359,6 +361,7 @@ end
 local function queue()
     return decoded("ChestQueueJson","[]")
 end
+local skipAllReveals=false -- "Skip all" during a hatch batch: every non-notable egg takes the quick path
 local skippedEntries={} -- BD-044: eggs hatched and credited but not animated this batch
 local batchEntries={} -- BD-069: every egg claimed this batch, for the one summary toast
 local function emitHatchSummary()
@@ -368,6 +371,7 @@ local function emitHatchSummary()
 end
 local function finishBatch()
     autoHatching=false
+    skipAllReveals=false
     emitHatchSummary()
     if #skippedEntries>0 then open("batchSummary") else open("eggs") end
 end
@@ -381,7 +385,7 @@ local function hatchNext()
     hatchPending=true
     hatch:FireServer(id,Http:GenerateGUID(false))
     task.delay(8,function()
-        if hatchPending then hatchPending=false autoHatching=false notify("Hatching stopped",C.red,{key="hatch_error",icon="egg",body="Tap an egg to try again"}) end
+        if hatchPending then hatchPending=false autoHatching=false skipAllReveals=false notify("Hatching stopped",C.red,{key="hatch_error",icon="egg",body="Tap an egg to try again"}) end
     end)
 end
 local function progression()
@@ -869,64 +873,42 @@ render=function(name: string)
         view.Visible=false
         task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync(view:GetDescendants()) end) end)
         local eggView,animateEgg,splitEgg=HatchPresentation.add(body,genes,rarityColors[speciesIndex(id)])
-        eggView.Position,eggView.Size=UDim2.fromOffset(260,0),UDim2.fromOffset(304,260)
-        local rewardLabel=label(body,rarityNames[speciesIndex(id)].." egg",80,240,660,58,36,rarityColors[speciesIndex(id)])
+        eggView.Size=UDim2.fromOffset(304,260) -- HatchSequence centres and animates it
+        local rarity=speciesIndex(id)
+        local count=tonumber(string.match(reward,"^(%d+)x")) or 1
+        local displayName=Config.SpeciesDisplayNames[id] or id
+        local rewardLabel=label(body,if failed then "The cracked egg did not hatch" elseif count>1 then count.."x "..displayName else displayName,80,236,660,54,38,if failed then C.red else rarityColors[rarity])
+        local oddsLabel=label(body,if failed then "" else HatchTimeline.oddsLine(rarityNames[rarity],HatchTimeline.speciesPct(Config.ChestSpeciesWeights,id),(FusionSelection :: any).pct or HatchTimeline.pct),80,288,660,28,22,C.text)
         local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
+        local detailText,detailColor="",C.gold
+        local mutationColor=if mutation then Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3]) else nil
         if genes then
             local condition=EggGenetics.condition(genes.conditionId)
-            label(body,if failed then "Cracked • 20% hatch" else condition.name,80,295,660,25,20,C.gold)
+            detailText=if failed then "Cracked • 20% hatch" else condition.name
         elseif mutation then
-            local color=Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3])
-            for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(color,.55) end end
-            local perks=label(body,mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • "),80,295,660,25,20,color)
-            perks.Visible=false
-            task.delay(math.min(3.4,Config.HatchRevealSeconds*.68),function() if perks.Parent and modalVersion==version then perks.Visible=true end end)
+            local tint=mutationColor :: Color3
+            for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(tint,.55) end end
+            detailText=mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
+            detailColor=tint
         end
-        local nextButton=button(body,"NEXT EGG",80,322,320,math.max(64,45/viewportScale()),C.accent,function() autoHatching=true hatchNext() end)
-        local collectionButton=button(body,"COLLECTION",424,322,320,math.max(64,45/viewportScale()),C.blue,function() autoHatching=false open("collection") end)
-        nextButton.Visible,collectionButton.Visible=false,false
-        task.spawn(function()
-            local started=os.clock()
-            Sfx.play("hatch_crack")
-            local crackSeconds=math.min(3.4,Config.HatchRevealSeconds*.68) -- crack animation scales with the 1 s reveal pace
-            while os.clock()-started<crackSeconds and modalVersion==version and eggView.Parent do
-                local t=(os.clock()-started)*3.4/crackSeconds
-                animateEgg(t)
-                task.wait(.03)
-            end
-            if modalVersion~=version or not view.Parent then return end
-            splitEgg(not failed)
-            if not failed then
-                local rarity=speciesIndex(id)
-                local isShiny,isBig=player:GetAttribute("LastChestShiny")==true,player:GetAttribute("LastChestBig")==true
-                Sfx.play(Sfx.hatchName(rarity))
-                flash(rarityColors[rarity],.12+rarity*.06)
-                if isShiny then Sfx.play("shiny_bang") end
-                if isBig then Sfx.play("big_thud") end
-                if isShiny or isBig then
-                    banner(body,if isShiny and isBig then "SHINY + BIG!" elseif isShiny then "SHINY!" else "BIG!",if isShiny then C.gold else C.purple)
-                end
-                if rarity>=3 or isShiny or isBig then shake(.08+.02*rarity) end
-            end
-            view.Visible=not failed
-            rewardLabel.Text=if failed then "The cracked egg did not hatch" else reward
-            if failed then rewardLabel.TextColor3=C.red end
-            heading.Text=if failed then "Cracked egg" else "You hatched a dinosaur!"
-            if not failed then
-                local revealScale=Instance.new("UIScale")
-                revealScale.Scale,revealScale.Parent=if motion then .9 else 1,view
-                Theme.animate(revealScale,.24,{Scale=1},Enum.EasingStyle.Back)
-                local glow=Instance.new("UIStroke")
-                glow.Color,glow.Thickness,glow.Transparency,glow.Parent=rarityColors[speciesIndex(id)],3,if motion then .1 else 1,view
-                Theme.animate(glow,.65,{Transparency=1})
-                task.delay(.18,function() if modalVersion==version and view.Parent then celebrate() end end)
-            end
-            task.wait(math.max(0,Config.HatchRevealSeconds-(os.clock()-started)))
-            if modalVersion~=version or not view.Parent then return end
-            if autoHatching and str("NextChestId")~="" then hatchNext()
-            elseif #skippedEntries>0 then finishBatch()
-            else autoHatching=false emitHatchSummary() nextButton.Visible=true collectionButton.Visible=true end
-        end)
+        local detailLabel=label(body,detailText,80,316,660,28,20,detailColor)
+        local remaining=HatchTimeline.remaining(str("NextChestId")~="" and workspace:GetServerTimeNow()>=num("NextChestReadyAt"),num("ActiveChestCount"),num("QueuedEggsWaiting"))
+        Sfx.play("hatch_crack")
+        HatchSequence.play({
+            gui=gui,panel=panel,body=body,eggView=eggView,animateEgg=animateEgg,splitEgg=splitEgg,dino=view,
+            rarity=rarity,color=rarityColors[rarity],failed=failed,
+            shiny=not failed and player:GetAttribute("LastChestShiny")==true,big=not failed and player:GetAttribute("LastChestBig")==true,
+            mutationName=if mutation and not failed then mutation.name else nil,mutationColor=mutationColor,
+            nameLabel=rewardLabel,oddsLabel=oddsLabel,detailLabel=detailLabel,remaining=remaining,motion=motion,
+            alive=function() return modalVersion==version and active=="hatch" end,
+            flash=flash,
+            onSkipAll=function() autoHatching=true skipAllReveals=true end,
+            onReveal=function() if modalVersion==version then heading.Text=if failed then "Cracked egg" else "You hatched a dinosaur!" end end,
+            onNext=function()
+                heading.Text="An egg is hatching..."
+                if remaining>0 then autoHatching=true hatchNext() else finishBatch() end
+            end,
+        })
     elseif name=="exit" then
         -- BD-052: one confirmation, no stay-still channel; the server settles through tryEnd.
         heading.Text,header.BackgroundColor3="Return to Sanctuary?",C.red
@@ -1376,7 +1358,7 @@ player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function()
         genes=if okGenes and typeof(genes)=="table" then genes else nil,failed=player:GetAttribute("LastChestFailed")==true}
     local rarity=speciesIndex(species)
     table.insert(batchEntries,{rarity=rarity,name=Config.SpeciesDisplayNames[species] or species,failed=outcome.failed,shiny=outcome.shiny==true,big=outcome.big==true})
-    if autoHatching and RevealSkip.shouldSkip(decoded("RevealSkipJson","[]"),rarity,outcome) then
+    if autoHatching and HatchTimeline.shouldSkip(decoded("RevealSkipJson","[]"),rarity,outcome,skipAllReveals) then
         table.insert(skippedEntries,{rarity=rarity,speciesId=species,outcome=outcome})
         task.defer(hatchNext)
         return
