@@ -15,7 +15,7 @@ Implemented on `claude/bd-044-reward-loop` (details, data shape and evidence: [5
 | Run crystals | PROVISIONAL deterministic `min(300, floor((75*min(n,40) + 53*max(0,n-40))/100))`: 40 -> 30, 400 -> 220 (old 15 -> 30, 150 -> 219 superseded 2026-10-13); random crystal box retired | Implemented, needs balance sign-off |
 | Bonus nests | Separate 5 nest slots + visible pending list; PROVISIONAL 40 eggs -> 1 nest, +1 per 72 eggs (400 -> 6: 5 slotted, 1 pending; was 15 / 27 / 150); 3 bonus eggs per nest, 300 s incubation; new runs blocked rather than losing eggs/nests when storage is near capacity | Implemented, needs balance/UX sign-off |
 | Condition odds (BD-045) | Tier 0 = 50/30/15/4.5/0.5 (`bd045-conditions-v1`, integer weights /10,000), PROVISIONAL monotonic tiers 1-6, Cracked 20% hatch success, versioned disclosure | Implemented; 40% tier-0 failure is a playtest risk |
-| Uncommon/Epic species tiers | Not implemented (still Common/Rare/Legendary) | Open |
+| Five species tiers | Common/Uncommon/Rare/Epic/Legendary, PROVISIONAL weights and run-size boost (40 eggs ~ 28/10/2; 400 eggs ~ 211/134/44/9/1), saved-value migration ([82](82-species-rarity-tiers.md)) | Implemented; Studio pending |
 
 Milestone 1 is a private playtest in a new private place with fresh saves; all Robux/paid flags stay off.
 
@@ -36,7 +36,7 @@ A run accumulates **raw food/growth points**, producing a **catch count**, repre
 | **5-minute run** | **500** | **40** (superseded 2026-10-13: was 15) | **29 Common + 11 Uncommon (illustrative; old 15-egg split was 11 + 4)** | **30 illustrative ONLY** | **1** |
 | **Longer/higher-scoring run** | **5,000** | **400** (superseded 2026-10-13: was 150) | **213 Common + 133 Uncommon + 45 Rare + 9 Epic (illustrative scaling of the old 150-egg split 80/50/17/3)** | **220 in owner's example; final formula TBD** | **6 offered, at most 5 claimed if all 5 spots free** |
 
-**Rarity implementation gap:** Current Build 020 has only **Common, Rare, Legendary** species tiers. The owner's examples require additional **Uncommon and Epic** tiers, including catalog classification, unlock thresholds, saved metadata, UI rarity ordering and weighted random rewards. This is a specific [BD-044](07-kanban.md) implementation subtask, not an assertion these tiers already exist.
+**Rarity implementation gap (closed in code 2026-10-14, see [82](82-species-rarity-tiers.md)):** Build 020 had only **Common, Rare, Legendary** species tiers. The owner's examples require additional **Uncommon and Epic** tiers, including catalog classification, unlock thresholds, saved metadata, UI rarity ordering and weighted random rewards. This is a specific [BD-044](07-kanban.md) implementation subtask, not an assertion these tiers already exist.
 
 The rarity counts describe **15/150 individual eggs revealed**, not extra guaranteed immediate dinosaur copies. Egg hatch success and resulting copies remain separate outcome questions; the current per-egg 1/2/3-copy probability and 20% Cracked hatch success are **existing provisional mechanics**. Do not present every run egg as guaranteed to hatch successfully, and do not compound its results with `N(c)=c` automatic copies. The examples do **not** approve specific species odds, number of crystals, or nests-per-point thresholds. A five-minute run need not attain 500 points, and a 5,000-**food**-point run is not the historical 5,000-**catch**-score case.
 

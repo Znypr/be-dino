@@ -296,8 +296,8 @@ local function hero(parent: GuiObject,id: string,x: number,y: number,w: number,h
     PreviewTraits.add(view,traits)
     return view
 end
-local rarityColors={C.accent,C.blue,C.gold}
-local rarityNames={"Common","Rare","Legendary"}
+local rarityColors=Theme.RarityColors
+local rarityNames=Config.SpeciesRarityNames
 local function speciesIndex(id: string): number return Config.SpeciesRarities[id] or 1 end
 local function meter(parent: GuiObject,x: number,y: number,w: number,value: number,maxValue: number,color: Color3,text: string)
     local b=box(parent,x,y,w,34,C.outline,parent.ZIndex+1)
@@ -541,7 +541,7 @@ render=function(name: string)
         scroller.Position,scroller.Size,scroller.BackgroundTransparency=UDim2.fromOffset(0,34),UDim2.fromOffset(824,368),1
         scroller.BorderSizePixel,scroller.ScrollBarThickness,scroller.ZIndex,scroller.Parent=0,8,body.ZIndex+1,body
         scroller.ScrollingDirection=Enum.ScrollingDirection.Y
-        local rarityColor={Common=Color3.fromRGB(176,188,200),Uncommon=C.accent,Rare=C.blue,Epic=C.purple,Legendary=C.gold}
+        local rarityColor=Theme.RarityColors
         local function bottle(item) return "potion_"..item.kind.."_"..item.rarity end -- native vector bottle (PotionArt): shape = effect, trim/glow/pips = rarity
         for i,offer in ProgressionRules.shopOffers(window) do
             local item=ProgressionRules.item(ProgressionConfig.Potions,offer.id)
@@ -929,15 +929,16 @@ render=function(name: string)
         label(body,"Hatch sounds",24,182,410,44,26)
         button(body,if Theme.HatchSoundEnabled~=false then "SOUND ON" else "SOUND OFF",560,182,230,44,C.blue,function() Theme.HatchSoundEnabled=Theme.HatchSoundEnabled==false open("settings") end).TextSize=20
         button(body,"HOW TO PLAY",24,238,370,64,C.gold,function() open("tutorial") end)
-        label(body,"Skip reveals:",24,318,250,44,24)
+        label(body,"Skip reveals:",24,312,160,52,24)
         local chosen=RevealSkip.set(decoded("RevealSkipJson","[]"))
         for i,rarityName in RevealSkip.Names do
-            button(body,(if chosen[i] then "SKIP " else "SHOW ")..rarityName,270+(i-1)*172,318,164,44,if chosen[i] then C.accent else C.card,function()
+            -- Five rarities: name on top, state below; rarity colour while shown, dark while skipped.
+            button(body,rarityName.."\n"..(if chosen[i] then "SKIP" else "SHOW"),190+(i-1)*126,312,120,52,if chosen[i] then C.card else rarityColors[i],function()
                 setSkipRemote:FireServer(RevealSkip.toggle(decoded("RevealSkipJson","[]"),i))
-            end).TextSize=17
+            end).TextSize=16
         end
         button(body,"FOOD GUIDE",424,238,366,64,C.accent,function() open("food") end)
-        label(body,"Settings apply on this device for this session.",24,342,766,40,18)
+        label(body,"Settings apply on this device for this session.",24,370,766,30,18)
     elseif name=="food" then
         heading.Text,header.BackgroundColor3="Food & Growth",C.accent
         local types={{"Berries","leaf",1,C.accent},{"Fruit","leaf",4,C.gold},{"Eggs","egg",15,C.blue},{"Crystals","amber",50,C.purple}}
@@ -947,14 +948,15 @@ render=function(name: string)
             label(card,food[1],0,180,196,42,26)
             label(card,"+"..food[3].." Growth",0,226,196,42,26)
         end
-        label(body,"500 raw food points earn 15 catches before weather bonuses. Growth boosts do not multiply catches.",18,316,788,72,23)
+        label(body,string.format("Eat 500 food to earn %d eggs. Some weather gives more!",math.floor(500*Config.FoodCatchRate+.5)),18,316,788,72,23)
     elseif name=="tutorial" then
         heading.Text,header.BackgroundColor3="Welcome to Be Dino!",C.blue
         local steps={{"1","EAT & GROW","Find small food clusters across the island."},{"2","JUMP & EXPLORE","Space to jump, E to leap. Buttons on mobile."},{"3","BANK & HATCH","Return to sanctuary to bank catches and eggs."}}
         for i,step in steps do
             local card=box(body,(i-1)*276,0,264,278,C.card,24)
-            label(card,step[1],12,12,240,80,64,rarityColors[i])
-            label(card,step[2],10,110,244,46,25,rarityColors[i])
+            local stepColor=({C.accent,C.blue,C.gold})[i]
+            label(card,step[1],12,12,240,80,64,stepColor)
+            label(card,step[2],10,110,244,46,25,stepColor)
             label(card,step[3],16,176,232,84,22)
         end
         button(body,"LET'S PLAY",212,324,400,62,C.accent,function() seenTutorial=true open("home") end)
