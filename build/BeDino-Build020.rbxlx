@@ -365176,10 +365176,10 @@ return BiomePlacement
 local Overlays={}
 Overlays.Layers={
     normal={layer="clean",assetId="",material=Enum.Material.SmoothPlastic,reflectance=0},
-    cracked={layer="cracked_fractures",assetId="",material=Enum.Material.Plastic,reflectance=0},
-    dirty={layer="dirty_smudges",assetId="",material=Enum.Material.Plastic,reflectance=0},
-    rainbow={layer="rainbow_flank_stars",assetId="",material=Enum.Material.SmoothPlastic,reflectance=0.08},
-    astra={layer="astra_opal_streaks",assetId="",material=Enum.Material.SmoothPlastic,reflectance=0.15},
+    cracked={layer="cracked_fractures",assetId="126956807167774",material=Enum.Material.Plastic,reflectance=0},
+    dirty={layer="dirty_smudges",assetId="105931497056313",material=Enum.Material.Plastic,reflectance=0},
+    rainbow={layer="rainbow_flank_stars",assetId="117352915695915",material=Enum.Material.SmoothPlastic,reflectance=0.08},
+    astra={layer="astra_opal_streaks",assetId="102255733208943",material=Enum.Material.SmoothPlastic,reflectance=0.15},
 }
 function Overlays.describe(conditionId: string?)
     local layer=Overlays.Layers[conditionId or "normal"] or Overlays.Layers.normal
