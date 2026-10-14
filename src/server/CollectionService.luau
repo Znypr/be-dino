@@ -37,8 +37,13 @@ function CollectionService.start(profileRepository, dinosaur)
     local equipSpecies = getRemote(folder :: Folder, "EquipSpecies")
     local testGrant = getRemote(folder :: Folder, "TestGrantSpecies")
 
-    equipSpecies.OnServerEvent:Connect(function(player: Player, speciesId, requestToken, ...)
+    equipSpecies.OnServerEvent:Connect(function(player: Player, speciesId, requestToken, variantKey, ...)
         if select("#", ...) ~= 0 then return end
+        -- BD-150: optional exact copy (EggTraits variant key); the repository checks the player owns it.
+        if variantKey ~= nil and (typeof(variantKey) ~= "string" or #variantKey < 1 or #variantKey > 160) then
+            player:SetAttribute("LastEquipStatus", "invalid_variant")
+            return
+        end
         if typeof(speciesId) ~= "string" or #speciesId < 1 or #speciesId > 32 then
             player:SetAttribute("LastEquipStatus", "invalid_species")
             return
@@ -52,7 +57,7 @@ function CollectionService.start(profileRepository, dinosaur)
             return
         end
 
-        local ok, status = profileRepository.equipSpecies(player, speciesId)
+        local ok, status = profileRepository.equipSpecies(player, speciesId, variantKey)
         player:SetAttribute("LastEquipStatus", status)
         if not ok then return end
 

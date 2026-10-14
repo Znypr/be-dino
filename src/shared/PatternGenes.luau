@@ -6,11 +6,40 @@ local Genetics=require(script.Parent.EggGenetics)
 local Pattern={}
 local images=setmetatable({},{__mode="k"})
 local activeImages=0
+-- BD-150: authored creatures share ONE EditableImage per species + gene combination (all parts of a model use the
+-- same UV atlas), reference counted per part. Roblox allows ~32 live EditableImages; per-part images capped the
+-- screen at about four patterned dinos, shared images allow about 30 different patterned dinos at once.
+local sharedImages={}
+local partEntry=setmetatable({},{__mode="k"})
+local function release(part)
+    local entry=partEntry[part]
+    if not entry then return end
+    partEntry[part]=nil
+    entry.refs-=1
+    if entry.refs<=0 then
+        if sharedImages[entry.key]==entry then sharedImages[entry.key]=nil end
+        entry.image:Destroy();activeImages-=1
+    end
+end
 function Pattern.apply(part: MeshPart,genes): boolean
     local folder=script.Parent:FindFirstChild("CreatureGenes")
     local source=if folder then folder:FindFirstChild(part:GetAttribute("GeneSpecies") or "") else nil
     local data=if source then Http:JSONDecode(require(source)) else require(script.Parent.LegacyGenePatterns).data(part)
     if not data then return false end
+    local sharedKey=if source then (part:GetAttribute("GeneSpecies") or "").."|"..Genetics.key(genes) else nil
+    if sharedKey then
+        local current=partEntry[part]
+        if current and current.key==sharedKey then return true end
+        release(part)
+        local entry=sharedImages[sharedKey]
+        if entry then
+            entry.refs+=1;partEntry[part]=entry
+            part.Destroying:Once(function() release(part) end)
+            for _,child in part:GetChildren() do if child:IsA("SurfaceAppearance") then child:Destroy() end end
+            part.Color=Color3.new(1,1,1);part.TextureContent=Content.fromObject(entry.image)
+            return true
+        end
+    end
     local mask=data.patterns[genes.patternId or "01_blank"] or data.patterns["01_blank"]
     local size=data.size
     local histogram=table.create(254,0);local count=0
@@ -42,6 +71,19 @@ function Pattern.apply(part: MeshPart,genes): boolean
             buffer.writeu8(pixels,p*4+channel-1,math.floor(value+.5))
         end
         buffer.writeu8(pixels,p*4+3,255)
+    end
+    if sharedKey then
+        if activeImages>=32 or not part.Parent then return false end
+        local ok,result=pcall(function() return Assets:CreateEditableImage({Size=Vector2.new(size,size)}) end)
+        if not ok or not result then return false end
+        activeImages+=1
+        local entry={key=sharedKey,image=result,refs=1}
+        sharedImages[sharedKey]=entry;partEntry[part]=entry
+        part.Destroying:Once(function() release(part) end)
+        result:WritePixelsBuffer(Vector2.zero,Vector2.new(size,size),pixels)
+        for _,child in part:GetChildren() do if child:IsA("SurfaceAppearance") then child:Destroy() end end
+        part.Color=Color3.new(1,1,1);part.TextureContent=Content.fromObject(result)
+        return true
     end
     local image=images[part]
     if not image then

@@ -12,6 +12,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Theme = require(Shared.UITheme)
 local Sfx = require(Shared.Sfx)
 local Timeline = require(Shared.HatchTimeline)
+local InspectView = require(script.Parent.InspectView)
 
 local Seq = {}
 local CENTER_EGG = Vector2.new(412, 130) -- body coordinates (824 x 402 virtual px)
@@ -229,6 +230,7 @@ function Seq.play(a: Args)
     local bodyHomePos, bodyHomeAnchor = a.body.Position, a.body.AnchorPoint
     local connections: {RBXScriptConnection} = {}
     local finished = false
+    local inspect: InspectView.Handle? = nil -- BD-149: drag to turn the revealed dino (never eats the continue tap)
 
     a.eggView.AnchorPoint = Vector2.new(.5, .5)
     a.eggView.Position = UDim2.fromOffset(CENTER_EGG.X, CENTER_EGG.Y)
@@ -370,6 +372,7 @@ function Seq.play(a: Args)
         for _, c in connections do c:Disconnect() end
         table.clear(connections)
         if tweenHint then tweenHint:Cancel() tweenHint = nil end
+        if inspect then inspect.destroy() inspect = nil end
         restoreBody()
         if overlay.Parent then overlay:Destroy() end
         if fx.back.Parent then
@@ -500,6 +503,11 @@ function Seq.play(a: Args)
         a.dino.Visible = true
         local view = a.dino :: any
         view.ImageTransparency = 0
+        if a.dino:IsA("ViewportFrame") and overlay.Parent then
+            -- Drags on the full-screen catcher turn the dino; a press that moves under 12 px is still a tap.
+            inspect = InspectView.attach(a.dino :: ViewportFrame, {surface = overlay, uiParent = overlay,
+                hintPosition = UDim2.new(.5, 0, 1, -76), resetPosition = UDim2.new(0, 84, 1, -60)})
+        end
         if not motion then
             view.ImageTransparency = 1
             TweenService:Create(view, TweenInfo.new(.3), {ImageTransparency = 0}):Play()
@@ -558,6 +566,7 @@ function Seq.play(a: Args)
     end
     local function onTap()
         if finished then return end
+        if inspect and (inspect :: InspectView.Handle).wasDrag() then return end -- a drag turns the dino, it never advances
         if not failed and not revealStarted then return end -- never advance past an egg whose dinosaur is not shown yet
         if Timeline.tap(state) == "advance" then advance() end
     end

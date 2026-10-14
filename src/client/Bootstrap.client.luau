@@ -17,6 +17,7 @@ local ModelPreview = require(Shared.ModelPreview)
 local HatchPresentation = require(Shared.HatchPresentation)
 local HatchTimeline = require(Shared.HatchTimeline)
 local HatchSequence = require(script.Parent.HatchSequence)
+local DinoIndexPanels = require(script.Parent.DinoIndexPanels)
 local ProgressionConfig=require(Shared.ProgressionConfig)
 local ProgressionRules=require(Shared.ProgressionRules)
 local EggTraits=require(Shared.EggTraits)
@@ -688,6 +689,28 @@ render=function(name: string)
         end
         meter(body,0,356,600,unlocked,#Config.SpeciesOrder,C.accent,string.format("Discovered: %d / %d",unlocked,#Config.SpeciesOrder))
         button(body,"FUSION",624,350,200,44,C.gold,function() openFusion() end)
+    elseif name=="detail" and DinoIndexPanels.supported() then
+        -- BD-149/150/151: drag-to-turn hero, My dinos grid, per-copy EQUIP, Sort and filter (src/client/DinoIndexPanels).
+        local index=speciesIndex(selected)
+        local base,gold,diamond=copies(selected)
+        local event=eventMutation(selected)
+        heading.Text,header.BackgroundColor3=Config.SpeciesDisplayNames[selected],rarityColors[index]
+        DinoIndexPanels.species({
+            body=body,speciesId=selected,color=rarityColors[index],
+            owned=base+gold+diamond>0 or event~=nil or ownedTraits(selected)~=nil,
+            fallbackStage=bestMutation(selected),
+            fallbackLine=string.format("Base: %d • Gold: %d • Diamond: %d",base,gold,diamond),
+            scale=viewportScale,
+            revision=function() return num("ProfileRevision") end,
+            equipped=function()
+                local ok,genes=pcall(function() return Http:JSONDecode(str("EquippedGenesJson","null")) end)
+                return {speciesId=str("EquippedSpeciesId","compy"),genes=if ok and typeof(genes)=="table" then genes else nil,
+                    shiny=player:GetAttribute("EquippedShiny")==true,big=player:GetAttribute("EquippedBig")==true,mutationId=str("EquippedEventMutation")}
+            end,
+            equip=function(speciesId,variantKey) notify("Equipping...",C.blue) equip:FireServer(speciesId,Http:GenerateGUID(false),variantKey) end,
+            notify=notify,
+            onBack=function() open("collection") end,
+        })
     elseif name=="detail" then
         local index=speciesIndex(selected)
         local base,gold,diamond=copies(selected)

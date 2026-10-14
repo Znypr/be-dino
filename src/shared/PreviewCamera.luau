@@ -26,6 +26,15 @@ function PreviewCamera.bind(viewport: ViewportFrame, model: Model, geometryId: s
     local function frame(dt: number)
         if Theme.MotionEnabled then elapsed+=dt end
         local direction=Vector3.new(1+math.sin(elapsed*.5)*.035,.2,-.65).Unit
+        -- BD-149 inspect: InspectView turns the dino by orbiting the camera around the vertical axis (and keeps the
+        -- light with the camera); InspectZoom pulls it closer. Previews without the attributes are unchanged.
+        local yaw=viewport:GetAttribute("InspectYaw")
+        if typeof(yaw)=="number" then
+            local turn=CFrame.Angles(0,-yaw,0)
+            direction=turn:VectorToWorldSpace(direction)
+            viewport.LightDirection=turn:VectorToWorldSpace(Vector3.new(-1,-1,-1))
+        end
+        local zoom=viewport:GetAttribute("InspectZoom")
         local basis=CFrame.lookAt(target+direction,target)
         local pixels=viewport.AbsoluteSize
         local aspect=if pixels.Y>0 then pixels.X/pixels.Y else 1.4
@@ -37,10 +46,12 @@ function PreviewCamera.bind(viewport: ViewportFrame, model: Model, geometryId: s
             local depth=corner:Dot(basis.ZVector)
             distance=math.max(distance,depth+math.abs(corner:Dot(basis.XVector))/horizontal,depth+math.abs(corner:Dot(basis.YVector))/vertical)
         end
-        camera.CFrame=CFrame.lookAt(target+direction*math.max(1,distance*1.045),target)
+        camera.CFrame=CFrame.lookAt(target+direction*math.max(1,distance*1.045/(if typeof(zoom)=="number" and zoom>0 then zoom else 1)),target)
     end
     frame(0)
     local resized=viewport:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() frame(0) end)
+    local inspectYaw=viewport:GetAttributeChangedSignal("InspectYaw"):Connect(function() frame(0) end)
+    local inspectZoom=viewport:GetAttributeChangedSignal("InspectZoom"):Connect(function() frame(0) end)
     local motion=RunService.RenderStepped:Connect(function(dt)
         if not Theme.MotionEnabled then return end
         local ancestor: Instance?=viewport
@@ -55,7 +66,7 @@ function PreviewCamera.bind(viewport: ViewportFrame, model: Model, geometryId: s
         viewport:SetAttribute("LastOrbitUpdate",elapsed)
         frame(0)
     end)
-    local function cleanup() resized:Disconnect();motion:Disconnect();camera:Destroy() end
+    local function cleanup() resized:Disconnect();inspectYaw:Disconnect();inspectZoom:Disconnect();motion:Disconnect();camera:Destroy() end
     viewport.Destroying:Once(cleanup)
     model.Destroying:Once(cleanup)
 end
