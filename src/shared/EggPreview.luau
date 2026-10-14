@@ -3,7 +3,7 @@
 local Egg={}
 function Egg.create(empty: boolean?): Model
     if not empty then
-        local authored=require(script.Parent.AuthoredCreatures).clone("egg")
+        local authored=require(script.Parent.AuthoredCreatures).clone("egg",nil,true)
         if authored then return authored end
     end
     local model=Instance.new("Model")
@@ -15,8 +15,8 @@ function Egg.create(empty: boolean?): Model
         part.Color,part.Material= color,Enum.Material.SmoothPlastic
         part.Transparency=0
         part.Parent=model
-        local mesh=Instance.new("SpecialMesh")
-        mesh.MeshType,mesh.Scale,mesh.Parent=Enum.MeshType.Sphere,Vector3.one,part
+        -- A real Ball part (a SpecialMesh sphere can render as a plain cube in a ViewportFrame).
+        part.Shape=Enum.PartType.Ball
         return part
     end
     -- Neutral shell only: genes (EggAppearance) supply pattern/colors; empty slots are a flat gray placeholder.

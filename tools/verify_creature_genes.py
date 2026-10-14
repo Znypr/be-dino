@@ -69,7 +69,7 @@ def check_wiring():
     a=src('src/shared/AuthoredCreatures.luau')
     assert a.count('patternId="03_round_spots"')==1 and 'if genes then genes else Creatures.DefaultGenes' in a,'authored clone must paint passed genes'
     assert 'Resources.clone(id,realGenes)' in src('src/client/ResourceVisuals.client.luau'),'character visual must pass genes'
-    assert 'Resources.clone(speciesId,if traits then traits.genes else nil)' in src('src/shared/DinosaurPreview.luau'),'previews must pass genes'
+    assert 'Resources.clone(speciesId,if traits then traits.genes else nil' in src('src/shared/DinosaurPreview.luau'),'previews must pass genes'  # extra trailing args (patient load) are allowed
     assert 'TextureContent=Content.none' in src('src/shared/ResourceModels.luau'),'Gold/Diamond must drop painted pattern'
     assert 'character:SetAttribute("GenesJson"' in src('src/server/Dinosaur.luau'),'equip must publish genes on the character'
     assert 'item.Transparency = 1' in src('src/client/ResourceVisuals.client.luau'),'server shell must stay hidden'
