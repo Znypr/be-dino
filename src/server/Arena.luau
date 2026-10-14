@@ -6,6 +6,7 @@ local Terrain = require(script.Parent.IslandTerrain)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
+local KitMeshes = require(ReplicatedStorage.Shared.WorldKitMeshAssets)
 local Arena = {}
 local function part(parent: Instance, name: string, size: Vector3, position: Vector3, color: Color3, material: Enum.Material, solid: boolean): Part
     local p = Instance.new("Part")
@@ -80,8 +81,15 @@ end
 local function biomeKit(parent: Instance)
     local folder = Instance.new("Folder")
     folder.Name, folder.Parent = "WorldKit", parent
+    -- Only ids whose uploaded MeshPart really loaded count as one part; the rest cost their native fallback.
+    local meshes: {[string]: boolean} = {}
+    local overrides = ReplicatedStorage:FindFirstChild("ResourceOverrides")
+    for id in KitMeshes do
+        local template = if overrides then overrides:FindFirstChild(id) else nil
+        if template and template:IsA("MeshPart") then meshes[id] = true end
+    end
     local placed = Biome.generate({seed = Config.WorldArtSeed, density = Config.WorldArtDensity,
-        extent = Config.ArenaHalfWidth, height = Layout.height, kit = KitData})
+        extent = Config.ArenaHalfWidth, height = Layout.height, kit = KitData, meshes = meshes})
     local missing = 0
     for i, p in placed do
         local pivot = CFrame.new(p.x, p.y, p.z) * CFrame.Angles(0, p.yaw, 0)
@@ -103,6 +111,7 @@ local function biomeKit(parent: Instance)
     end
     workspace:SetAttribute("WorldKitPlacements", #placed)
     workspace:SetAttribute("WorldKitTriangles", Biome.triangles(placed, KitData))
+    workspace:SetAttribute("WorldKitParts", Biome.parts(placed, KitData, meshes))
     workspace:SetAttribute("WorldKitMissing", missing)
 end
 function Arena.build()

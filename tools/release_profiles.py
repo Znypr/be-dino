@@ -115,11 +115,11 @@ PROFILES: dict[str, list[Rule]] = {
         # is not on main yet: warn until it lands, then set missing="error".
         Rule("IdentityPersistentEnabled", "set", True, reason="BD-064 persistent identities (Milestone 1)"),
         Rule("IdentityFusionPreviewEnabled", "set", True, reason="BD-064 fusion on persistent profiles (Milestone 1)"),
-        # docs/68: owner wants the new world kit and food art in the playtest. Density is a PROVISIONAL phone
-        # budget: at 0.35 the kit world is ~6.3k native parts (tools/verify_world_art.py enforces <= 8,000 with food).
+        # docs/68: owner wants the new world kit and food art in the playtest. With uploaded MeshParts one prop is
+        # one part, so density 1.25 (~1,250 props) is ~4.3k parts incl. food (tools/verify_world_art.py enforces <= 8,000).
         Rule("WorldArtMode", "set", "BiomeKit", reason="BD-049 new trees/rocks/landmarks (docs/68)"),
         Rule("FoodArtMode", "set", "Kit", reason="BD-050 food variants (docs/68)"),
-        Rule("WorldArtDensity", "set", 0.35, reason="PROVISIONAL phone part budget (docs/68)"),
+        Rule("WorldArtDensity", "set", 1.25, reason="PROVISIONAL: MeshPart props are 1 part each, phone budget (docs/68)"),
         # Future fusion/menu release keys (BD-064/BD-065) go here, e.g.
         # Rule("<FusionFlagName>", "set", True, missing="warn", reason="BD-064 fusion server"),
     ],
