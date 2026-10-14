@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "846bacdafe7cd65dacb357c0c42e35fd935953f28448d96820a1e75e1b7521d6",
+  "place_sha256": "735137b7ea476a456847d2de8254d10777cbfe21e56777dc4fc11eac2e5306e8",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "bf8cb9707c8ac3b1ab6e0d49813e5132568a6f72d20564a2316e82e9be48519e",
@@ -197,6 +197,7 @@
     "src/shared/NavigationArtwork.luau": "d473bbe5cb7fd8bd59796d2b7077b9432efc0651016ceaef2bf6716e3e188e9e",
     "src/shared/NestQueue.luau": "2fd6d7297c1ad48f0e4921de3a8fdfc771117f3a62614f3eeeeb229ce78a2fa7",
     "src/shared/NextGoal.luau": "7113840ee9e062b04ec31adc94b2f5dd559f19171ee3bef47925e51c24901ac4",
+    "src/shared/NotifyQueue.luau": "4447f90eecfa0a42020167b09cf103bd92cb24af021c772e434237b7cbd5929d",
     "src/shared/PatternGenes.luau": "48bb508cf68c350ce5b1856654f1387194370fc9a8958f2585c9925e531d8f10",
     "src/shared/PotionArt.luau": "a5d29fd4b89650cdc5d1d1ec7a06206016fbab436500e8f87f8595bc296c9bc1",
     "src/shared/PreviewCamera.luau": "4fb0416b3f45f4722d740cf895b436c71d8ec0dd5072174a514894fb05f97ba3",
@@ -242,7 +243,7 @@
     "src/server/RunLifecycle.luau": "4e9db52291f52a89fa15df2154b51a286c046122d7661130bf04045c704ef50e",
     "src/server/VisualTestService.luau": "ee48ddc907c11e5d1390483d570d9ab96fd01b3ee02493b5724a2ebcf1ef0773",
     "src/client/AdminPanel.client.luau": "65d7434c5325fa5edc44d30323a70a92bd645ce96c937337008999a25aa5f65f",
-    "src/client/Bootstrap.client.luau": "8636825a1cf4d931fa4fdabe217ecc2ab7598fc6f82d688b2ba50cad3d190b8e",
+    "src/client/Bootstrap.client.luau": "8910b4b13b1b9049037cec8d269b0bfdfd4ffebca7e86e27bdaff54ff55401c6",
     "src/client/CosmeticVisuals.client.luau": "85d567cf577cf91bbc9402ee7a26f11bd705cf4ef8b328ecf350ae569bd82c06",
     "src/client/DinoDetails.luau": "2997fa1005dd0d38bcc1cca686c7d40301f1a6c10b6922e80943b0d911a7795a",
     "src/client/DinoMotion.client.luau": "16e5de5e4539285d4433cbc62a846ff48baf37d6b5eb3b5fe9dc0707f63e53c8",

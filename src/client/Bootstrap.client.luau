@@ -24,6 +24,7 @@ local EggAppearance=require(Shared.EggAppearance)
 local ShopOdds=require(Shared.ShopOdds)
 local UIFormat=require(Shared.UIFormat)
 local RevealSkip=require(Shared.RevealSkip)
+local NotifyQueue=require(Shared.NotifyQueue)
 local EggOutcomeView=require(Shared.EggOutcomeView)
 local TouchLayout=require(Shared.TouchLayout)
 local Sfx=require(Shared.Sfx)
@@ -148,26 +149,72 @@ end
 local closeButton=button(header,"X",770,1,80,76,C.red,close)
 closeButton.AnchorPoint,closeButton.Position=Vector2.new(1,0),UDim2.new(1,-2,0,1)
 shade.Activated:Connect(close)
-local toast = box(gui,0,0,440,56,C.card,50)
-toast.AnchorPoint,toast.Position,toast.Visible = Vector2.new(.5,0),UDim2.new(.5,0,0,80),false
-local toastScale=Instance.new("UIScale") toastScale.Parent=toast
-local toastText = label(toast,"",10,5,420,46,22)
-local toastSerial = 0
-local function notify(text: string,color: Color3?)
-    toastSerial+=1
-    local serial=toastSerial
-    toast.BackgroundColor3,toastText.Text,toast.Visible = color or C.card,text,true
-    if not toast:GetAttribute("Showing") then toast.Position=UDim2.new(.5,0,0,68) end
-    toast:SetAttribute("Showing",true)
-    Theme.animate(toast,.14,{Position=UDim2.new(.5,0,0,80)})
-    task.delay(3,function()
-        if serial~=toastSerial then return end
-        Theme.animate(toast,.12,{Position=UDim2.new(.5,0,0,68)})
-        task.delay(if motion then .12 else 0,function()
-            if serial==toastSerial then toast.Visible=false toast:SetAttribute("Showing",false) end
-        end)
-    end)
+-- BD-067 toasts: up to 3 pooled cards stacked from the old toast slot (y=80). NotifyQueue decides
+-- what shows (priority, merge, throttle); this only draws. Tap a card to dismiss the newest one.
+local drawToasts
+local toastLayer=Instance.new("Frame")
+toastLayer.Name,toastLayer.AnchorPoint,toastLayer.Position=  "Toasts",Vector2.new(.5,0),UDim2.new(.5,0,0,80)
+toastLayer.Size,toastLayer.BackgroundTransparency,toastLayer.ZIndex,toastLayer.Parent=UDim2.fromOffset(440,186),1,50,gui
+local toastScale=Instance.new("UIScale") toastScale.Parent=toastLayer
+local notifyQueue=NotifyQueue.new()
+local toastKindColor={info=C.blue,good=C.accent,warning=C.red,major=C.gold}
+local toastCards={}
+for i=1,NotifyQueue.MaxVisible do
+    local card=box(toastLayer,0,(i-1)*62,440,56,C.card,50)
+    card.Visible=false
+    local bar=box(card,0,0,10,56,C.blue,51)
+    local plate=box(card,16,6,44,44,C.panel,51)
+    Theme.decorate(plate,22)
+    local title=label(card,"",68,3,330,30,21)
+    local detail=label(card,"",68,30,330,22,15,Color3.fromRGB(220,224,235))
+    local count=label(card,"",392,6,44,44,20,C.gold)
+    for _,t in {title,detail} do t.TextXAlignment=Enum.TextXAlignment.Left t.TextTruncate=Enum.TextTruncate.AtEnd end
+    local tap=Instance.new("TextButton")
+    tap.Text,tap.BackgroundTransparency,tap.Size,tap.ZIndex,tap.Parent="",1,UDim2.fromScale(1,1),55,card
+    tap.Activated:Connect(function() if NotifyQueue.dismissTop(notifyQueue) then drawToasts() end end)
+    toastCards[i]={frame=card,bar=bar,plate=plate,title=title,detail=detail,count=count,seq=0}
 end
+drawToasts=function()
+    for i,slot in toastCards do
+        local entry=notifyQueue.visible[i]
+        slot.frame.Visible=entry~=nil
+        if entry then
+            local color=(entry.tint and Theme.RarityColors[entry.tint]) or toastKindColor[entry.kind] or C.blue
+            slot.bar.BackgroundColor3,slot.plate.BackgroundColor3=color,C.panel:Lerp(color,.35)
+            slot.title.Text,slot.detail.Text=entry.text,entry.body or ""
+            slot.title.Size=UDim2.fromOffset(330,if entry.body then 30 else 50)
+            slot.count.Text=if entry.count>1 and not entry.amount then "x"..entry.count else ""
+            local target=UDim2.fromOffset(0,(i-1)*62)
+            if slot.seq~=entry.seq then
+                slot.seq=entry.seq
+                for _,child in slot.plate:GetChildren() do if child:IsA("GuiObject") then child:Destroy() end end
+                if entry.icon then art(slot.plate,entry.icon,2,2,40) end
+                slot.frame.Position=if motion then target-UDim2.fromOffset(0,12) else target
+                if motion and entry.kind=="major" then
+                    local pop=slot.plate:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+                    pop.Scale,pop.Parent=1.15,slot.plate
+                    Theme.animate(pop,.4,{Scale=1},Enum.EasingStyle.Back)
+                end
+            end
+            Theme.animate(slot.frame,if motion then .14 else 0,{Position=target})
+        else
+            slot.seq=0
+        end
+    end
+end
+local function pumpToasts()
+    if NotifyQueue.update(notifyQueue,os.clock(),shade.Visible) then drawToasts() end
+end
+-- Existing call sites keep notify(text,color); opts adds {kind,key,icon,body,tint,amount,format}.
+local function notify(text: string,color: Color3?,opts: any?)
+    local o=opts or {}
+    local kind=o.kind or (if color==C.red then "warning" elseif color==C.gold or color==C.accent then "good" else "info")
+    NotifyQueue.push(notifyQueue,os.clock(),{text=text,body=o.body,kind=kind,key=o.key,icon=o.icon,tint=o.tint,amount=o.amount,format=o.format})
+    pumpToasts()
+end
+task.spawn(function()
+    while gui.Parent do pumpToasts() task.wait(.1) end
+end)
 local function viewportScale(): number
     local camera=workspace.CurrentCamera
     local size=gui.AbsoluteSize
@@ -311,8 +358,15 @@ local function queue()
     return decoded("ChestQueueJson","[]")
 end
 local skippedEntries={} -- BD-044: eggs hatched and credited but not animated this batch
+local batchEntries={} -- BD-069: every egg claimed this batch, for the one summary toast
+local function emitHatchSummary()
+    local summary=NotifyQueue.hatchSummary(batchEntries,rarityNames)
+    batchEntries={}
+    if summary then notify(summary.text,nil,summary) end
+end
 local function finishBatch()
     autoHatching=false
+    emitHatchSummary()
     if #skippedEntries>0 then open("batchSummary") else open("eggs") end
 end
 local function hatchNext()
@@ -325,7 +379,7 @@ local function hatchNext()
     hatchPending=true
     hatch:FireServer(id,Http:GenerateGUID(false))
     task.delay(8,function()
-        if hatchPending then hatchPending=false autoHatching=false notify("Hatching did not finish. Please retry.",C.red) end
+        if hatchPending then hatchPending=false autoHatching=false notify("Hatching stopped",C.red,{key="hatch_error",icon="egg",body="Tap an egg to try again"}) end
     end)
 end
 local function progression()
@@ -344,13 +398,12 @@ local function transact(action,id,replace)
     if pendingShop then notify("Purchase is still processing",C.gold) return end
     local token=Http:GenerateGUID(false)
     pendingShop={token=token,action=action,id=id,replace=replace==true,started=os.clock()}
-    notify("Processing...",C.blue)
     shopAction:FireServer(action,id,token,replace==true)
 end
 shopResult.OnClientEvent:Connect(function(token,ok,status)
     if pendingShop and pendingShop.token==token then pendingShop=nil end
     if ok then Sfx.play("shop_buy") end
-    notify(if ok then "Success!" else tostring(status):gsub("_"," "),if ok then C.accent else C.red)
+    notify(if ok then "Done!" else NotifyQueue.statusText(status),if ok then C.accent else C.red,{key=if ok then "ok" else "error"})
     if active=="auras" or active=="potions" then body:ClearAllChildren() render(active) end
 end)
 local refreshEggs
@@ -529,7 +582,7 @@ render=function(name: string)
                 task.wait(1)
                 if not restock.Parent or active~="potions" then return end
                 if ProgressionRules.shopWindow(workspace:GetServerTimeNow())~=window then
-                    notify("Potion Shop refreshed",C.accent) Sfx.play("shop_refresh")
+                    notify("Potion shop restocked",C.blue,{key="potion_restock",icon="potion_speed_Common"}) Sfx.play("shop_refresh")
                     body:ClearAllChildren() render("potions") return
                 end
                 header_text()
@@ -870,7 +923,7 @@ render=function(name: string)
             if modalVersion~=version or not view.Parent then return end
             if autoHatching and str("NextChestId")~="" then hatchNext()
             elseif #skippedEntries>0 then finishBatch()
-            else autoHatching=false nextButton.Visible=true collectionButton.Visible=true end
+            else autoHatching=false emitHatchSummary() nextButton.Visible=true collectionButton.Visible=true end
         end)
     elseif name=="exit" then
         -- BD-052: one confirmation, no stay-still channel; the server settles through tryEnd.
@@ -1036,7 +1089,9 @@ local function refreshCrystals()
     local delta=amount-lastCrystalAmount
     lastCrystalAmount=amount
     Theme.animate(crystalValue,.28,{Value=amount})
-    if crystalInitialized and delta>0 then notify("+"..math.round(delta).." Crystals",C.gold) end
+    if crystalInitialized and delta>0 then
+        notify("+"..math.round(delta).." Crystals",C.gold,{key="crystals",icon="amber",amount=math.round(delta),format="+%d Crystals"})
+    end
     crystalInitialized=true
 end
 player:GetAttributeChangedSignal("Crystals"):Connect(refreshCrystals)
@@ -1112,7 +1167,10 @@ local function refreshProgressionHUD()
         local event=ProgressionRules.item(ProgressionConfig.Weather,id)
         weatherArt=Theme.icon(weatherTile,if event then event.icon or id else "weather")
         if weatherArt then weatherArt.Position,weatherArt.Size=UDim2.fromOffset(4,7),UDim2.fromOffset(48,48) end
-        if id~="clear" then notify((workspace:GetAttribute("WeatherName") or id).." started!",C.blue) Sfx.play("weather_start") end
+        if id~="clear" then
+            notify((workspace:GetAttribute("WeatherName") or id).." started!",C.blue,{key="weather",icon=if event then event.icon or id else "weather",body="Special eggs can drop!"})
+            Sfx.play("weather_start")
+        end
     end
     weatherText.Text=if id=="clear" then "Weather in "..timerText((workspace:GetAttribute("NextWeatherAt") or now)-now) else (workspace:GetAttribute("WeatherName") or id).." "..timerText((workspace:GetAttribute("WeatherEndsAt") or now)-now)
     local p=progression() local lines={}
@@ -1239,7 +1297,7 @@ local lastRunState=""
 local lastLevel=num("AccountLevel")
 player:GetAttributeChangedSignal("AccountLevel"):Connect(function()
     local level=num("AccountLevel")
-    if lastLevel>0 and level>lastLevel then Sfx.play("level_up") notify("Level "..level.."!",C.gold) end
+    if lastLevel>0 and level>lastLevel then Sfx.play("level_up") notify("Level "..level.."!",C.gold,{kind="major",icon="trophy",key="level"}) end
     lastLevel=level
 end)
 RunService.Heartbeat:Connect(function(dt)
@@ -1264,7 +1322,6 @@ RunService.Heartbeat:Connect(function(dt)
         if humanoid then humanoid.CameraOffset=Vector3.new(0,(visualScale-1)*2,0) end
     end
     if growth>lastGrowth and state=="Active" then
-        notify(string.format("+%.1f Growth!",growth-lastGrowth),C.accent)
         Sfx.play("pickup")
         pickupPop(string.format("+%.1f",growth-lastGrowth))
         if motion then
@@ -1282,7 +1339,8 @@ RunService.Heartbeat:Connect(function(dt)
         if #tags>lastEggCount and state=="Active" then
             local newest=tags[#tags]
             local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,newest.mutationId or "")
-            notify(if mutation then mutation.name.." egg caught!" else "Reward egg caught!",if mutation then C.gold else C.blue)
+            -- Plain eggs show on the HUD counter; only special eggs get a card (docs/65).
+            if mutation then notify(mutation.name.." egg caught!",C.gold,{kind="major",icon="egg",body="Hatch it at Home"}) end
         end
         lastEggCount=#tags
     end
@@ -1315,6 +1373,7 @@ player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function()
     local outcome={big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),eventMutationId=str("LastChestEventMutation"),
         genes=if okGenes and typeof(genes)=="table" then genes else nil,failed=player:GetAttribute("LastChestFailed")==true}
     local rarity=speciesIndex(species)
+    table.insert(batchEntries,{rarity=rarity,name=Config.SpeciesDisplayNames[species] or species,failed=outcome.failed,shiny=outcome.shiny==true,big=outcome.big==true})
     if autoHatching and RevealSkip.shouldSkip(decoded("RevealSkipJson","[]"),rarity,outcome) then
         table.insert(skippedEntries,{rarity=rarity,speciesId=species,outcome=outcome})
         task.defer(hatchNext)
@@ -1336,7 +1395,7 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
                 if nestOk and typeof(nestList)=="table" then
                     waitSeconds=NestQueue.secondsUntilAllReady(nestList,math.floor(workspace:GetServerTimeNow()),Config.NestIncubationSeconds)
                 end
-                notify("New Egg Nest! Ready in "..UIFormat.duration(math.max(3600,waitSeconds)),C.gold)
+                notify("New Egg Nest!",C.gold,{icon="egg_nest",key="nest",body="Ready in "..UIFormat.duration(math.max(3600,waitSeconds))})
                 Sfx.play("shop_buy")
             end
             if num("LastRunCrystalBox")>0 then
@@ -1350,12 +1409,12 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
     end)
 end)
 player:GetAttributeChangedSignal("LastExitStatusAt"):Connect(function()
-    if str("LastExitStatus")=="predator_nearby" then notify("A bigger dino is too close to go home!",C.red) end
+    if str("LastExitStatus")=="predator_nearby" then notify("Too dangerous to go home!",C.red,{icon="shield",key="predator",body="A bigger dino is close"}) end
 end)
 player:GetAttributeChangedSignal("LastNestClaimAt"):Connect(function()
     if str("LastNestClaimStatus")~="opened" then return end
     Sfx.play("level_up")
-    notify("Nest opened! Eggs are hatching",C.accent)
+    notify("Nest opened!",C.accent,{icon="egg_nest",body="Eggs are hatching"})
     if str("NextChestId")~="" then autoHatching=true hatchNext() end
 end)
 player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)
@@ -1363,13 +1422,12 @@ for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus
     player:GetAttributeChangedSignal(attribute):Connect(function()
         local status=str(attribute)
         if attribute=="LastChestClaimStatus" then hatchPending=false end
-        if status=="claimed" then toast.Visible=false
+        if status=="claimed" then return
         elseif attribute=="LastNestClaimStatus" then
-            if status=="not_ready" or status=="nest_pending" then notify("That nest is still incubating",C.gold)
-            elseif status=="bank_full" then notify("Hatch some eggs first, then open this nest",C.gold)
-            elseif status~="opened" and status~="duplicate" and status~="" then notify(status:gsub("_"," "),C.red) end
-        elseif status=="equipped" or status=="mutated" or status=="opened" then notify("Success!",C.accent)
-        elseif status~="" and status~="duplicate" then notify(status:gsub("_"," "),C.red) end
+            if status=="not_ready" or status=="nest_pending" or status=="bank_full" then notify(NotifyQueue.statusText(status),C.gold,{icon="egg_nest",key="nest_status"})
+            elseif status~="opened" and status~="duplicate" and status~="" then notify(NotifyQueue.statusText(status),C.red,{key="error"}) end
+        elseif status=="equipped" or status=="mutated" or status=="opened" then notify("Done!",C.accent,{key="ok"})
+        elseif status~="" and status~="duplicate" then notify(NotifyQueue.statusText(status),C.red,{key="error"}) end
     end)
 end
 Input.InputBegan:Connect(function(input,processed)

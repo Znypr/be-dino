@@ -369233,6 +369233,206 @@ return NextGoal
       </Item>
       <Item class="ModuleScript" referent="RBX211">
         <Properties>
+          <string name="Name">NotifyQueue</string>
+          <ProtectedString name="Source">--!strict
+-- BD-066 notification queue (docs/65). Pure and dependency-free: the caller passes the clock, so
+-- tests drive it with fake time. Decides WHICH cards are visible; the client only draws them.
+-- Rules: at most 3 visible; major 3 &gt; warning 2 &gt; good/info 1; same `key` merges into one card
+-- with a counter; info cards at most one per 1.5 s; a repeat of an expired key within 5 s is
+-- dropped for info; at most 8 waiting (lowest priority, oldest dropped); major cards wait while the
+-- hatch reveal or a menu is open (`blocked`) and may bump the oldest visible info/good card.
+local Q = {}
+
+Q.MaxVisible = 3
+Q.MaxWaiting = 8
+Q.InfoGap = 1.5
+Q.KeyGap = 5
+Q.Priority = {info = 1, good = 1, warning = 2, major = 3} :: {[string]: number}
+Q.Duration = {info = 2.5, good = 3, warning = 4, major = 4.5} :: {[string]: number}
+
+export type Card = {text: string, body: string?, kind: string, key: string?, icon: string?, tint: string?,
+    amount: number?, format: string?, count: number, seq: number, shownAt: number?, expiresAt: number?}
+
+-- Merging into an existing card: counters (`amount` + `format`, e.g. "+%d Crystals") add up,
+-- anything else shows the newest text with an x2, x3 badge.
+local function merge(card: Card, input: any)
+    card.count += 1
+    local amount = card.amount
+    if amount ~= nil and typeof(input.amount) == "number" then
+        amount += input.amount :: number
+        card.amount = amount
+        card.text = string.format(card.format or "%d", amount)
+    else
+        card.text = input.text
+    end
+    card.body = input.body
+end
+
+export type State = {visible: {Card}, waiting: {Card}, keyShownAt: {[string]: number}, lastInfoAt: number,
+    seq: number, stats: {shown: number, merged: number, dropped: number}}
+
+function Q.new(): State
+    return {visible = {} :: {Card}, waiting = {} :: {Card}, keyShownAt = {} :: {[string]: number},
+        lastInfoAt = -math.huge, seq = 0, stats = {shown = 0, merged = 0, dropped = 0}} :: State
+end
+
+local function kindOf(kind: any): string
+    return if typeof(kind) == "string" and Q.Priority[kind] then kind else "info"
+end
+
+local function findKey(list: {Card}, key: string?): Card?
+    if key == nil then return nil end
+    for _, card in list do if card.key == key then return card end end
+    return nil
+end
+
+-- Returns "queued" | "merged" | "dropped".
+function Q.push(q: State, now: number, input: any): string
+    if typeof(input) ~= "table" or typeof(input.text) ~= "string" or input.text == "" then return "dropped" end
+    local kind = kindOf(input.kind)
+    local key = if typeof(input.key) == "string" then input.key else nil
+    local live = findKey(q.visible, key)
+    if live then
+        merge(live, input)
+        live.expiresAt = now + Q.Duration[live.kind]
+        q.stats.merged += 1
+        return "merged"
+    end
+    local waiting = findKey(q.waiting, key)
+    if waiting then
+        merge(waiting, input)
+        q.stats.merged += 1
+        return "merged"
+    end
+    if key and Q.Priority[kind] == 1 and q.keyShownAt[key] and now - q.keyShownAt[key] &lt; Q.KeyGap then
+        q.stats.dropped += 1
+        return "dropped"
+    end
+    q.seq += 1
+    table.insert(q.waiting, {text = input.text, body = input.body, kind = kind, key = key, icon = input.icon,
+        tint = input.tint, amount = if typeof(input.amount) == "number" then input.amount else nil,
+        format = if typeof(input.format) == "string" then input.format else nil, count = 1, seq = q.seq})
+    if #q.waiting &gt; Q.MaxWaiting then
+        local worst = 1
+        for i, card in q.waiting do
+            local w = q.waiting[worst]
+            if Q.Priority[card.kind] &lt; Q.Priority[w.kind] then worst = i end
+        end
+        local removed = table.remove(q.waiting, worst)
+        q.stats.dropped += 1
+        if removed and removed.seq == q.seq then return "dropped" end
+    end
+    return "queued"
+end
+
+local function nextWaiting(q: State, blocked: boolean): number?
+    local best = nil
+    for i, card in q.waiting do
+        if not (blocked and card.kind == "major") then
+            local b = if best then q.waiting[best] else nil
+            if b == nil or Q.Priority[card.kind] &gt; Q.Priority[b.kind] then best = i end
+        end
+    end
+    return best
+end
+
+-- Expires and promotes cards. Returns true when the visible list changed.
+function Q.update(q: State, now: number, blocked: boolean?): boolean
+    local changed = false
+    for i = #q.visible, 1, -1 do
+        if (q.visible[i].expiresAt or 0) &lt;= now then table.remove(q.visible, i) changed = true end
+    end
+    while true do
+        local index = nextWaiting(q, blocked == true)
+        if index == nil then break end
+        local card = q.waiting[index]
+        local priority = Q.Priority[card.kind]
+        if priority == 1 and now - q.lastInfoAt &lt; Q.InfoGap then break end
+        if #q.visible &gt;= Q.MaxVisible then
+            if card.kind ~= "major" then break end
+            local bump = nil
+            for i, shown in q.visible do if Q.Priority[shown.kind] == 1 then bump = i break end end
+            if bump == nil then break end
+            table.remove(q.visible, bump)
+        end
+        table.remove(q.waiting, index)
+        card.shownAt, card.expiresAt = now, now + Q.Duration[card.kind]
+        if priority == 1 then q.lastInfoAt = now end
+        if card.key then q.keyShownAt[card.key] = now end
+        table.insert(q.visible, card)
+        q.stats.shown += 1
+        changed = true
+    end
+    return changed
+end
+
+-- Tap: dismiss the newest visible card.
+function Q.dismissTop(q: State): boolean
+    if #q.visible == 0 then return false end
+    table.remove(q.visible, #q.visible)
+    return true
+end
+
+-- Hatch batches: per-egg reveals are the feedback, so one summary card at the end.
+-- entries: {{rarity=number, name=string, failed=boolean?, shiny=boolean?, big=boolean?}}
+function Q.hatchSummary(entries: {any}, rarityNames: {string}): any
+    local hatched, failed, best = 0, 0, nil :: any
+    for _, entry in entries do
+        if entry.failed then failed += 1 else
+            hatched += 1
+            local score = (entry.rarity or 1) * 4 + (if entry.shiny then 2 else 0) + (if entry.big then 1 else 0)
+            if best == nil or score &gt; best.score then best = {score = score, entry = entry} end
+        end
+    end
+    if #entries &lt; 2 then return nil end
+    local text = if hatched == 1 then "1 dino hatched" else string.format("%d dinos hatched", hatched)
+    local body = nil
+    if best then
+        local e = best.entry
+        local tags = (if e.shiny then "Shiny " else "") .. (if e.big then "BIG " else "")
+        body = "Best: " .. tags .. (rarityNames[e.rarity or 1] or "") .. " " .. tostring(e.name)
+    elseif failed &gt; 0 then
+        body = "The cracked eggs crumbled"
+    end
+    local rarity = if best then best.entry.rarity or 1 else 1
+    return {text = text, body = body, kind = if rarity &gt;= 4 or (best and best.entry.shiny) then "major" else "good",
+        key = "hatch_summary", icon = "egg", tint = rarityNames[rarity]}
+end
+
+-- Server status codes -&gt; short child-friendly copy (docs/72). Unknown codes never show raw text.
+Q.StatusText = {
+    insufficient_crystals = "Not enough Crystals",
+    not_owned = "You don't own that yet",
+    already_owned = "You already have that",
+    locked = "Locked for now",
+    level_locked = "Reach a higher level first",
+    sold_out = "Sold out! Check back soon",
+    not_offered = "Not in the shop right now",
+    stale_window = "The shop just changed. Try again",
+    window_required = "The shop just changed. Try again",
+    inventory_full = "Your bag is full",
+    queue_full = "Hatch some eggs first",
+    max_level = "Already at the top level",
+    replace_confirmation_required = "Tap again to replace it",
+    disabled = "Not available yet",
+    random_items_unavailable = "Not available yet",
+    profile_not_loaded = "Still loading. Try again",
+    save_failed = "Could not save. Try again",
+    lease_lost = "Please rejoin the game",
+    bank_full = "Hatch some eggs first, then open this nest",
+    not_ready = "That nest is still incubating",
+    nest_pending = "That nest is still incubating",
+}
+function Q.statusText(status: any): string
+    return if typeof(status) == "string" and Q.StatusText[status] then Q.StatusText[status] else "Something went wrong. Try again"
+end
+
+return Q
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX212">
+        <Properties>
           <string name="Name">PatternGenes</string>
           <ProtectedString name="Source">--!strict
 -- Authored egg masks on creature UVs; eyes/mouth are fixed pixels, never tinted.
@@ -369296,7 +369496,7 @@ return Pattern
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX212">
+      <Item class="ModuleScript" referent="RBX213">
         <Properties>
           <string name="Name">PotionArt</string>
           <ProtectedString name="Source">--!strict
@@ -369360,7 +369560,7 @@ return PotionArt
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX213">
+      <Item class="ModuleScript" referent="RBX214">
         <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
@@ -369428,7 +369628,7 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX214">
+      <Item class="ModuleScript" referent="RBX215">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -369554,7 +369754,7 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX215">
+      <Item class="ModuleScript" referent="RBX216">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -369792,7 +369992,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX216">
+      <Item class="ModuleScript" referent="RBX217">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -369801,7 +370001,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX217">
+      <Item class="ModuleScript" referent="RBX218">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -369817,7 +370017,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX218">
+      <Item class="ModuleScript" referent="RBX219">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -369881,7 +370081,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX219">
+      <Item class="ModuleScript" referent="RBX220">
         <Properties>
           <string name="Name">RevealSkip</string>
           <ProtectedString name="Source">--!strict
@@ -369965,7 +370165,7 @@ return Skip
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX220">
+      <Item class="ModuleScript" referent="RBX221">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -370056,7 +370256,7 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX221">
+      <Item class="ModuleScript" referent="RBX222">
         <Properties>
           <string name="Name">Sfx</string>
           <ProtectedString name="Source">--!strict
@@ -370158,7 +370358,7 @@ return Sfx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX222">
+      <Item class="ModuleScript" referent="RBX223">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -370206,7 +370406,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX223">
+      <Item class="ModuleScript" referent="RBX224">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -370255,7 +370455,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX224">
+      <Item class="ModuleScript" referent="RBX225">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -370457,7 +370657,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX225">
+      <Item class="ModuleScript" referent="RBX226">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -370489,7 +370689,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX226">
+      <Item class="ModuleScript" referent="RBX227">
         <Properties>
           <string name="Name">UIFormat</string>
           <ProtectedString name="Source">--!strict
@@ -370533,7 +370733,7 @@ return UIFormat
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX227">
+      <Item class="ModuleScript" referent="RBX228">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -370556,7 +370756,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX228">
+      <Item class="ModuleScript" referent="RBX229">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -370572,7 +370772,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX229">
+      <Item class="ModuleScript" referent="RBX230">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -370737,7 +370937,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX230">
+      <Item class="ModuleScript" referent="RBX231">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -370768,7 +370968,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX231">
+      <Item class="ModuleScript" referent="RBX232">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -370820,7 +371020,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX232">
+    <Item class="Folder" referent="RBX233">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -540375,15 +540575,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX233">
+  <Item class="ServerScriptService" referent="RBX234">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX234">
+    <Item class="Folder" referent="RBX235">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX235">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">AdminService</string>
           <ProtectedString name="Source">--!strict
@@ -540489,7 +540689,7 @@ return AdminService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -540701,7 +540901,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX237">
+      <Item class="Script" referent="RBX238">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -540847,7 +541047,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -540957,7 +541157,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -541045,7 +541245,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -541179,7 +541379,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -541391,7 +541591,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -541646,7 +541846,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -541825,7 +542025,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -542011,7 +542211,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -542399,7 +542599,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -542449,7 +542649,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -542491,7 +542691,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -542603,7 +542803,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -542685,7 +542885,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -542777,7 +542977,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX251">
+      <Item class="ModuleScript" referent="RBX252">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -542882,7 +543082,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX252">
+      <Item class="ModuleScript" referent="RBX253">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -543017,7 +543217,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX253">
+      <Item class="ModuleScript" referent="RBX254">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -544780,7 +544980,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX254">
+      <Item class="ModuleScript" referent="RBX255">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -544979,7 +545179,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX255">
+      <Item class="ModuleScript" referent="RBX256">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -545093,7 +545293,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX256">
+      <Item class="ModuleScript" referent="RBX257">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -545356,7 +545556,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX257">
+      <Item class="ModuleScript" referent="RBX258">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -545428,19 +545628,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX258">
+  <Item class="StarterPlayer" referent="RBX259">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX259">
+    <Item class="StarterPlayerScripts" referent="RBX260">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX260">
+      <Item class="Folder" referent="RBX261">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX261">
+        <Item class="LocalScript" referent="RBX262">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -545641,7 +545841,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX262">
+        <Item class="LocalScript" referent="RBX263">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -545670,6 +545870,7 @@ local EggAppearance=require(Shared.EggAppearance)
 local ShopOdds=require(Shared.ShopOdds)
 local UIFormat=require(Shared.UIFormat)
 local RevealSkip=require(Shared.RevealSkip)
+local NotifyQueue=require(Shared.NotifyQueue)
 local EggOutcomeView=require(Shared.EggOutcomeView)
 local TouchLayout=require(Shared.TouchLayout)
 local Sfx=require(Shared.Sfx)
@@ -545794,26 +545995,72 @@ end
 local closeButton=button(header,"X",770,1,80,76,C.red,close)
 closeButton.AnchorPoint,closeButton.Position=Vector2.new(1,0),UDim2.new(1,-2,0,1)
 shade.Activated:Connect(close)
-local toast = box(gui,0,0,440,56,C.card,50)
-toast.AnchorPoint,toast.Position,toast.Visible = Vector2.new(.5,0),UDim2.new(.5,0,0,80),false
-local toastScale=Instance.new("UIScale") toastScale.Parent=toast
-local toastText = label(toast,"",10,5,420,46,22)
-local toastSerial = 0
-local function notify(text: string,color: Color3?)
-    toastSerial+=1
-    local serial=toastSerial
-    toast.BackgroundColor3,toastText.Text,toast.Visible = color or C.card,text,true
-    if not toast:GetAttribute("Showing") then toast.Position=UDim2.new(.5,0,0,68) end
-    toast:SetAttribute("Showing",true)
-    Theme.animate(toast,.14,{Position=UDim2.new(.5,0,0,80)})
-    task.delay(3,function()
-        if serial~=toastSerial then return end
-        Theme.animate(toast,.12,{Position=UDim2.new(.5,0,0,68)})
-        task.delay(if motion then .12 else 0,function()
-            if serial==toastSerial then toast.Visible=false toast:SetAttribute("Showing",false) end
-        end)
-    end)
+-- BD-067 toasts: up to 3 pooled cards stacked from the old toast slot (y=80). NotifyQueue decides
+-- what shows (priority, merge, throttle); this only draws. Tap a card to dismiss the newest one.
+local drawToasts
+local toastLayer=Instance.new("Frame")
+toastLayer.Name,toastLayer.AnchorPoint,toastLayer.Position=  "Toasts",Vector2.new(.5,0),UDim2.new(.5,0,0,80)
+toastLayer.Size,toastLayer.BackgroundTransparency,toastLayer.ZIndex,toastLayer.Parent=UDim2.fromOffset(440,186),1,50,gui
+local toastScale=Instance.new("UIScale") toastScale.Parent=toastLayer
+local notifyQueue=NotifyQueue.new()
+local toastKindColor={info=C.blue,good=C.accent,warning=C.red,major=C.gold}
+local toastCards={}
+for i=1,NotifyQueue.MaxVisible do
+    local card=box(toastLayer,0,(i-1)*62,440,56,C.card,50)
+    card.Visible=false
+    local bar=box(card,0,0,10,56,C.blue,51)
+    local plate=box(card,16,6,44,44,C.panel,51)
+    Theme.decorate(plate,22)
+    local title=label(card,"",68,3,330,30,21)
+    local detail=label(card,"",68,30,330,22,15,Color3.fromRGB(220,224,235))
+    local count=label(card,"",392,6,44,44,20,C.gold)
+    for _,t in {title,detail} do t.TextXAlignment=Enum.TextXAlignment.Left t.TextTruncate=Enum.TextTruncate.AtEnd end
+    local tap=Instance.new("TextButton")
+    tap.Text,tap.BackgroundTransparency,tap.Size,tap.ZIndex,tap.Parent="",1,UDim2.fromScale(1,1),55,card
+    tap.Activated:Connect(function() if NotifyQueue.dismissTop(notifyQueue) then drawToasts() end end)
+    toastCards[i]={frame=card,bar=bar,plate=plate,title=title,detail=detail,count=count,seq=0}
 end
+drawToasts=function()
+    for i,slot in toastCards do
+        local entry=notifyQueue.visible[i]
+        slot.frame.Visible=entry~=nil
+        if entry then
+            local color=(entry.tint and Theme.RarityColors[entry.tint]) or toastKindColor[entry.kind] or C.blue
+            slot.bar.BackgroundColor3,slot.plate.BackgroundColor3=color,C.panel:Lerp(color,.35)
+            slot.title.Text,slot.detail.Text=entry.text,entry.body or ""
+            slot.title.Size=UDim2.fromOffset(330,if entry.body then 30 else 50)
+            slot.count.Text=if entry.count&gt;1 and not entry.amount then "x"..entry.count else ""
+            local target=UDim2.fromOffset(0,(i-1)*62)
+            if slot.seq~=entry.seq then
+                slot.seq=entry.seq
+                for _,child in slot.plate:GetChildren() do if child:IsA("GuiObject") then child:Destroy() end end
+                if entry.icon then art(slot.plate,entry.icon,2,2,40) end
+                slot.frame.Position=if motion then target-UDim2.fromOffset(0,12) else target
+                if motion and entry.kind=="major" then
+                    local pop=slot.plate:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+                    pop.Scale,pop.Parent=1.15,slot.plate
+                    Theme.animate(pop,.4,{Scale=1},Enum.EasingStyle.Back)
+                end
+            end
+            Theme.animate(slot.frame,if motion then .14 else 0,{Position=target})
+        else
+            slot.seq=0
+        end
+    end
+end
+local function pumpToasts()
+    if NotifyQueue.update(notifyQueue,os.clock(),shade.Visible) then drawToasts() end
+end
+-- Existing call sites keep notify(text,color); opts adds {kind,key,icon,body,tint,amount,format}.
+local function notify(text: string,color: Color3?,opts: any?)
+    local o=opts or {}
+    local kind=o.kind or (if color==C.red then "warning" elseif color==C.gold or color==C.accent then "good" else "info")
+    NotifyQueue.push(notifyQueue,os.clock(),{text=text,body=o.body,kind=kind,key=o.key,icon=o.icon,tint=o.tint,amount=o.amount,format=o.format})
+    pumpToasts()
+end
+task.spawn(function()
+    while gui.Parent do pumpToasts() task.wait(.1) end
+end)
 local function viewportScale(): number
     local camera=workspace.CurrentCamera
     local size=gui.AbsoluteSize
@@ -545957,8 +546204,15 @@ local function queue()
     return decoded("ChestQueueJson","[]")
 end
 local skippedEntries={} -- BD-044: eggs hatched and credited but not animated this batch
+local batchEntries={} -- BD-069: every egg claimed this batch, for the one summary toast
+local function emitHatchSummary()
+    local summary=NotifyQueue.hatchSummary(batchEntries,rarityNames)
+    batchEntries={}
+    if summary then notify(summary.text,nil,summary) end
+end
 local function finishBatch()
     autoHatching=false
+    emitHatchSummary()
     if #skippedEntries&gt;0 then open("batchSummary") else open("eggs") end
 end
 local function hatchNext()
@@ -545971,7 +546225,7 @@ local function hatchNext()
     hatchPending=true
     hatch:FireServer(id,Http:GenerateGUID(false))
     task.delay(8,function()
-        if hatchPending then hatchPending=false autoHatching=false notify("Hatching did not finish. Please retry.",C.red) end
+        if hatchPending then hatchPending=false autoHatching=false notify("Hatching stopped",C.red,{key="hatch_error",icon="egg",body="Tap an egg to try again"}) end
     end)
 end
 local function progression()
@@ -545990,13 +546244,12 @@ local function transact(action,id,replace)
     if pendingShop then notify("Purchase is still processing",C.gold) return end
     local token=Http:GenerateGUID(false)
     pendingShop={token=token,action=action,id=id,replace=replace==true,started=os.clock()}
-    notify("Processing...",C.blue)
     shopAction:FireServer(action,id,token,replace==true)
 end
 shopResult.OnClientEvent:Connect(function(token,ok,status)
     if pendingShop and pendingShop.token==token then pendingShop=nil end
     if ok then Sfx.play("shop_buy") end
-    notify(if ok then "Success!" else tostring(status):gsub("_"," "),if ok then C.accent else C.red)
+    notify(if ok then "Done!" else NotifyQueue.statusText(status),if ok then C.accent else C.red,{key=if ok then "ok" else "error"})
     if active=="auras" or active=="potions" then body:ClearAllChildren() render(active) end
 end)
 local refreshEggs
@@ -546175,7 +546428,7 @@ render=function(name: string)
                 task.wait(1)
                 if not restock.Parent or active~="potions" then return end
                 if ProgressionRules.shopWindow(workspace:GetServerTimeNow())~=window then
-                    notify("Potion Shop refreshed",C.accent) Sfx.play("shop_refresh")
+                    notify("Potion shop restocked",C.blue,{key="potion_restock",icon="potion_speed_Common"}) Sfx.play("shop_refresh")
                     body:ClearAllChildren() render("potions") return
                 end
                 header_text()
@@ -546516,7 +546769,7 @@ render=function(name: string)
             if modalVersion~=version or not view.Parent then return end
             if autoHatching and str("NextChestId")~="" then hatchNext()
             elseif #skippedEntries&gt;0 then finishBatch()
-            else autoHatching=false nextButton.Visible=true collectionButton.Visible=true end
+            else autoHatching=false emitHatchSummary() nextButton.Visible=true collectionButton.Visible=true end
         end)
     elseif name=="exit" then
         -- BD-052: one confirmation, no stay-still channel; the server settles through tryEnd.
@@ -546682,7 +546935,9 @@ local function refreshCrystals()
     local delta=amount-lastCrystalAmount
     lastCrystalAmount=amount
     Theme.animate(crystalValue,.28,{Value=amount})
-    if crystalInitialized and delta&gt;0 then notify("+"..math.round(delta).." Crystals",C.gold) end
+    if crystalInitialized and delta&gt;0 then
+        notify("+"..math.round(delta).." Crystals",C.gold,{key="crystals",icon="amber",amount=math.round(delta),format="+%d Crystals"})
+    end
     crystalInitialized=true
 end
 player:GetAttributeChangedSignal("Crystals"):Connect(refreshCrystals)
@@ -546758,7 +547013,10 @@ local function refreshProgressionHUD()
         local event=ProgressionRules.item(ProgressionConfig.Weather,id)
         weatherArt=Theme.icon(weatherTile,if event then event.icon or id else "weather")
         if weatherArt then weatherArt.Position,weatherArt.Size=UDim2.fromOffset(4,7),UDim2.fromOffset(48,48) end
-        if id~="clear" then notify((workspace:GetAttribute("WeatherName") or id).." started!",C.blue) Sfx.play("weather_start") end
+        if id~="clear" then
+            notify((workspace:GetAttribute("WeatherName") or id).." started!",C.blue,{key="weather",icon=if event then event.icon or id else "weather",body="Special eggs can drop!"})
+            Sfx.play("weather_start")
+        end
     end
     weatherText.Text=if id=="clear" then "Weather in "..timerText((workspace:GetAttribute("NextWeatherAt") or now)-now) else (workspace:GetAttribute("WeatherName") or id).." "..timerText((workspace:GetAttribute("WeatherEndsAt") or now)-now)
     local p=progression() local lines={}
@@ -546885,7 +547143,7 @@ local lastRunState=""
 local lastLevel=num("AccountLevel")
 player:GetAttributeChangedSignal("AccountLevel"):Connect(function()
     local level=num("AccountLevel")
-    if lastLevel&gt;0 and level&gt;lastLevel then Sfx.play("level_up") notify("Level "..level.."!",C.gold) end
+    if lastLevel&gt;0 and level&gt;lastLevel then Sfx.play("level_up") notify("Level "..level.."!",C.gold,{kind="major",icon="trophy",key="level"}) end
     lastLevel=level
 end)
 RunService.Heartbeat:Connect(function(dt)
@@ -546910,7 +547168,6 @@ RunService.Heartbeat:Connect(function(dt)
         if humanoid then humanoid.CameraOffset=Vector3.new(0,(visualScale-1)*2,0) end
     end
     if growth&gt;lastGrowth and state=="Active" then
-        notify(string.format("+%.1f Growth!",growth-lastGrowth),C.accent)
         Sfx.play("pickup")
         pickupPop(string.format("+%.1f",growth-lastGrowth))
         if motion then
@@ -546928,7 +547185,8 @@ RunService.Heartbeat:Connect(function(dt)
         if #tags&gt;lastEggCount and state=="Active" then
             local newest=tags[#tags]
             local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,newest.mutationId or "")
-            notify(if mutation then mutation.name.." egg caught!" else "Reward egg caught!",if mutation then C.gold else C.blue)
+            -- Plain eggs show on the HUD counter; only special eggs get a card (docs/65).
+            if mutation then notify(mutation.name.." egg caught!",C.gold,{kind="major",icon="egg",body="Hatch it at Home"}) end
         end
         lastEggCount=#tags
     end
@@ -546961,6 +547219,7 @@ player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function()
     local outcome={big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),eventMutationId=str("LastChestEventMutation"),
         genes=if okGenes and typeof(genes)=="table" then genes else nil,failed=player:GetAttribute("LastChestFailed")==true}
     local rarity=speciesIndex(species)
+    table.insert(batchEntries,{rarity=rarity,name=Config.SpeciesDisplayNames[species] or species,failed=outcome.failed,shiny=outcome.shiny==true,big=outcome.big==true})
     if autoHatching and RevealSkip.shouldSkip(decoded("RevealSkipJson","[]"),rarity,outcome) then
         table.insert(skippedEntries,{rarity=rarity,speciesId=species,outcome=outcome})
         task.defer(hatchNext)
@@ -546982,7 +547241,7 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
                 if nestOk and typeof(nestList)=="table" then
                     waitSeconds=NestQueue.secondsUntilAllReady(nestList,math.floor(workspace:GetServerTimeNow()),Config.NestIncubationSeconds)
                 end
-                notify("New Egg Nest! Ready in "..UIFormat.duration(math.max(3600,waitSeconds)),C.gold)
+                notify("New Egg Nest!",C.gold,{icon="egg_nest",key="nest",body="Ready in "..UIFormat.duration(math.max(3600,waitSeconds))})
                 Sfx.play("shop_buy")
             end
             if num("LastRunCrystalBox")&gt;0 then
@@ -546996,12 +547255,12 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
     end)
 end)
 player:GetAttributeChangedSignal("LastExitStatusAt"):Connect(function()
-    if str("LastExitStatus")=="predator_nearby" then notify("A bigger dino is too close to go home!",C.red) end
+    if str("LastExitStatus")=="predator_nearby" then notify("Too dangerous to go home!",C.red,{icon="shield",key="predator",body="A bigger dino is close"}) end
 end)
 player:GetAttributeChangedSignal("LastNestClaimAt"):Connect(function()
     if str("LastNestClaimStatus")~="opened" then return end
     Sfx.play("level_up")
-    notify("Nest opened! Eggs are hatching",C.accent)
+    notify("Nest opened!",C.accent,{icon="egg_nest",body="Eggs are hatching"})
     if str("NextChestId")~="" then autoHatching=true hatchNext() end
 end)
 player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)
@@ -547009,13 +547268,12 @@ for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus
     player:GetAttributeChangedSignal(attribute):Connect(function()
         local status=str(attribute)
         if attribute=="LastChestClaimStatus" then hatchPending=false end
-        if status=="claimed" then toast.Visible=false
+        if status=="claimed" then return
         elseif attribute=="LastNestClaimStatus" then
-            if status=="not_ready" or status=="nest_pending" then notify("That nest is still incubating",C.gold)
-            elseif status=="bank_full" then notify("Hatch some eggs first, then open this nest",C.gold)
-            elseif status~="opened" and status~="duplicate" and status~="" then notify(status:gsub("_"," "),C.red) end
-        elseif status=="equipped" or status=="mutated" or status=="opened" then notify("Success!",C.accent)
-        elseif status~="" and status~="duplicate" then notify(status:gsub("_"," "),C.red) end
+            if status=="not_ready" or status=="nest_pending" or status=="bank_full" then notify(NotifyQueue.statusText(status),C.gold,{icon="egg_nest",key="nest_status"})
+            elseif status~="opened" and status~="duplicate" and status~="" then notify(NotifyQueue.statusText(status),C.red,{key="error"}) end
+        elseif status=="equipped" or status=="mutated" or status=="opened" then notify("Done!",C.accent,{key="ok"})
+        elseif status~="" and status~="duplicate" then notify(NotifyQueue.statusText(status),C.red,{key="error"}) end
     end)
 end
 Input.InputBegan:Connect(function(input,processed)
@@ -547028,7 +547286,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX263">
+        <Item class="LocalScript" referent="RBX264">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -547091,7 +547349,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX264">
+        <Item class="ModuleScript" referent="RBX265">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -547170,7 +547428,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX265">
+        <Item class="LocalScript" referent="RBX266">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -547451,7 +547709,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX266">
+        <Item class="ModuleScript" referent="RBX267">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -548316,7 +548574,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX267">
+        <Item class="ModuleScript" referent="RBX268">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -548418,7 +548676,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX268">
+        <Item class="ModuleScript" referent="RBX269">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -548478,7 +548736,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX269">
+        <Item class="LocalScript" referent="RBX270">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -548651,7 +548909,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX270">
+        <Item class="LocalScript" referent="RBX271">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -548733,7 +548991,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX271">
+  <Item class="Workspace" referent="RBX272">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>
