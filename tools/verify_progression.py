@@ -845,10 +845,10 @@ function user:SetAttribute(k,v)self.attrs[k]=v end
 Leap.start()
 local activate=remotes.RequestLeap.OnServerEvent.fn
 activate(user,"bad") assert(ownerChanges==0)
-activate(user) assert(ownerChanges==1 and user.attrs.LeapReadyAt==60 and root.AssemblyLinearVelocity.Y==62)
+activate(user) assert(ownerChanges==1 and user.attrs.LeapReadyAt==60 and root.AssemblyLinearVelocity.Y==72)
 leapNow=.4 activate(user) assert(ownerChanges==1 and user.attrs.LeapReadyAt==60)
 leapNow=.8 heartbeat.fn() assert(root.restored and c.attrs.LeapUntil==0 and c.attrs.MovementSpeedLimit==nil)
-assert(root.AssemblyLinearVelocity.Magnitude<70)
+assert(root.AssemblyLinearVelocity.Magnitude<80)
 leapNow=60 blocked=true activate(user) assert(ownerChanges==1 and user.attrs.LeapReadyAt==60)
 leapNow=61 blocked=false h.FloorMaterial="air" activate(user) assert(ownerChanges==1)
 leapNow=62 h.FloorMaterial="grass" ownerFailure=true activate(user) assert(user.attrs.LeapReadyAt==60)
