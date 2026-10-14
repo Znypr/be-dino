@@ -16,7 +16,8 @@ return table.freeze({
     MovementGuardMaxVerticalSpeed = 120,
     TerrainResolution = 4,
     TerrainTop = 120,
-    ArenaHalfWidth = 260,
+    ArenaHalfWidth = 416, -- world v2: 1.6x the 260 of the 520 map (IslandLayout.Scale)
+    SanctuaryCenterZ = 521, -- hub centre: ArenaHalfWidth + 105 (it sits past the north boundary)
     CameraMinZoom = 12,
     CameraMaxZoom = 110,
     -- BD-054 touch HUD layout (shared/TouchLayout). PROVISIONAL until physical Android review.
@@ -28,7 +29,7 @@ return table.freeze({
     FoodRespawnSeconds = 8,
     FoodPickupRadius = 2.25,
     FoodTickSeconds = 0.15,
-    FoodSectorCount = 16,
+    FoodSectorCount = 20, -- world v2: 400 clusters of 6 over a 2.56x larger island (was 256)
     FoodClusterItems = 6,
     FoodClusterRadius = 7,
     FoodSeed = 1404,

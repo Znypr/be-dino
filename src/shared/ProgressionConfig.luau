@@ -2,7 +2,7 @@
 -- Private-test balance. Prices scale with permanent growth bonuses and potion duration/power.
 return table.freeze({
     MaxCrystals=2000000000,
-    CrystalCount=64, CrystalRespawnSeconds=90, CrystalValue=3,
+    CrystalCount=100, CrystalRespawnSeconds=90, CrystalValue=3,
     LeapCooldown=60, LeapHorizontalSpeed=72, LeapVerticalSpeed=62, LeapDuration=.7,
     WeatherInterval=600, WeatherDuration=180,
     GrowthCap=8, SpeedCap=2.2,
