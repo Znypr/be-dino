@@ -51,7 +51,7 @@ assert(n == 1, "spam grew state")
 -- All kinds at once (worst-case stacking) still respects the 0.6..1.4 envelope.
 local all = M.new()
 for _, kind in M.Kinds do M.trigger(all, kind, 3, 1) end
-all.lean = 0.25
+all.lean = M.MaxLean all.bob = M.MaxBob
 for i = 0, 300 do M.sample(all, 3 + i * 0.002, out) bounded(out) end
 -- Death: tips over, shrinks to exactly 0.6 and fades fully; terminal (cannot be restarted or overridden).
 local d = M.new()
@@ -60,10 +60,13 @@ M.sample(d, 0.2, out) bounded(out) assert(out.roll > 0 and out.fade > 0 and out.
 M.sample(d, 5, out) bounded(out)
 assert(math.abs(out.sx - 0.6) < 1e-9 and out.fade == 1 and out.roll > 1)
 M.trigger(d, "eat", 5) M.sample(d, 5.05, out) assert(out.fade == 1 and d.start.eat == nil)
+-- Footfall bob: bounded, lifts the model only, exact rest at zero.
+local bobState = M.new() bobState.bob = 5 assert(M.sample(bobState, 0, out) == true and out.dy == M.MaxBob)
+bobState.bob = 0 assert(M.sample(bobState, 0, out) == false and rest(out))
 -- Lean: clamped, smoothed, zero at rest, NaN safe.
 local lean = 0
 for i = 1, 600 do lean = M.lean(lean, 50, 20, 1 / 60) assert(math.abs(lean) <= M.MaxLean + 1e-12) end
-assert(lean < -0.2, "lean should approach the clamp opposite the yaw rate")
+assert(lean < -0.9 * M.MaxLean and M.MaxLean <= 0.07, "lean (max ~4 degrees) should approach the clamp opposite the yaw rate")
 local first = M.lean(0, 50, 20, 1 / 60) assert(math.abs(first) < math.abs(lean), "lean must ease in")
 for i = 1, 600 do lean = M.lean(lean, 0, 20, 1 / 60) end
 assert(lean == 0, "lean must return exactly to 0")
@@ -71,6 +74,16 @@ assert(M.lean(0.1, 0 / 0, 5, 0.016) == 0 and M.lean(0.1, 1, 0 / 0, 0.016) == 0)
 assert(M.lean(0, 50, 0, 0.1) == 0, "no lean while standing still")
 local ls = M.new() ls.lean = 0.2 assert(M.sample(ls, 0, out) == true and out.roll == 0.2)
 ls.lean = 0 assert(M.sample(ls, 0, out) == false and rest(out))
+-- Growth tween: starts at old/new, eases out monotonically to exactly 1, and a mid-tween retrigger continues without a step.
+local g = M.new()
+M.trigger(g, "grow", 0, 0.2)
+M.sample(g, 0, out) assert(math.abs(out.sx - 0.8) < 1e-9, "grow must start at old/new")
+local last = out.sx
+for i = 1, 35 do M.sample(g, i * 0.01, out) assert(out.sx >= last - 1e-12 and out.sx <= 1, "grow must ease monotonically") last = out.sx end
+M.sample(g, 0.2, out) local mid = M.growFactor(g, 0.2) assert(math.abs(mid - out.sx) < 1e-9)
+M.trigger(g, "grow", 0.2, 1 - mid * 0.98) M.sample(g, 0.2, out) assert(math.abs(out.sx - mid * 0.98) < 1e-9, "retrigger must not step")
+M.sample(g, 0.6, out) assert(rest(out) and M.growFactor(g, 0.6) == 1, "grow must end at exactly rest")
+local w = M.new() M.trigger(w, "windup", 0) M.sample(w, 0.04, out) assert(out.sy < 1) M.cancel(w, "windup") assert(M.sample(w, 0.05, out) == false)
 -- Power scales amplitude; bad inputs are clamped; BIG (dimensionless offsets) identical for any scale.
 local weak, strong = M.new(), M.new()
 M.trigger(weak, "bite", 0, 0.25) M.trigger(strong, "bite", 0, 5)

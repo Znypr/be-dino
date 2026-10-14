@@ -20,6 +20,14 @@ local function publish(key: string, value: number)
     values[key] = value
     workspace:SetAttribute("Admin_" .. key, value)
     if key == "foodMultiplier" then FoodService.setAdminFoodMultiplier(value) end
+    if key == "gravity" then workspace.Gravity = value end
+    if key == "jumpPower" then
+        -- Server-validated range (Rules.sanitize); applies to live characters, Dinosaur.attach reads the attribute for new ones.
+        for _, player in Players:GetPlayers() do
+            local humanoid = if player.Character then player.Character:FindFirstChildOfClass("Humanoid") else nil
+            if humanoid then humanoid.JumpPower = value end
+        end
+    end
 end
 
 local function authorize(player: Player)
@@ -53,7 +61,7 @@ local function handle(player: Player, action: any, a: any, b: any): (boolean, st
         if value == nil then return false, "bad_value" end
         publish(a, value)
         print(string.format("[Be Dino admin] %s set %s = %s", player.Name, a, tostring(value)))
-        return true, Rules.format(value)
+        return true, Rules.format(value, a)
     elseif action == "startWeather" then
         if typeof(a) ~= "string" or #a > 24 then return false, "bad_weather" end
         local seconds = Rules.weatherSeconds(b, ProgressionConfig.WeatherDuration)

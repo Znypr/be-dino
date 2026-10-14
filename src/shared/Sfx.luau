@@ -24,7 +24,7 @@ Sfx.Sounds = {
     pickup = {id = "rbxassetid://97315544055472", volume = .35, rate = 1, gap = .06},
     pickup_hi = {id = "rbxassetid://86225160041514", volume = .35, rate = 1, gap = .06},
     pickup_lo = {id = "rbxassetid://80767583749596", volume = .35, rate = 1, gap = .06},
-    run_start = {id = "rbxassetid://87202810278231", volume = .6, rate = 1, gap = .5},
+    run_start = {id = "rbxassetid://87202810278231", volume = .25, rate = 1, gap = .5},
     run_end = {id = "rbxassetid://127962506254484", volume = .6, rate = 1, gap = .5},
     shop_buy = {id = "rbxassetid://102585210519734", volume = .6, rate = 1, gap = .15},
     shop_refresh = {id = "rbxassetid://91960074825710", volume = .45, rate = 1, gap = .5},
@@ -33,6 +33,7 @@ Sfx.Sounds = {
     fusion_reveal = {id = "rbxassetid://90816090310479", volume = .75, rate = 1, gap = .3},
     ui_click = {id = "rbxassetid://77237659470894", volume = .4, rate = 1, gap = .04},
 }
+Sfx.Master = .5 -- global gain; synthesized placeholder sounds were far too loud (owner, 2026-10-15)
 Sfx.PoolSize = 3
 Sfx.Group = "BeDinoSfx"
 
@@ -103,7 +104,7 @@ function Sfx.play(name: string): boolean
             sound.Parent = folder
             pool.sounds[pool.slot] = sound
         end
-        sound.SoundId, sound.Volume, sound.PlaybackSpeed = assetId, entry.volume, entry.rate
+        sound.SoundId, sound.Volume, sound.PlaybackSpeed = assetId, entry.volume * Sfx.Master, entry.rate
         sound.TimePosition = 0
         sound:Play()
     end)

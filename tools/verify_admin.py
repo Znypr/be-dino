@@ -59,6 +59,14 @@ for _, key in Admin.SettingOrder do
  assert(Admin.toFraction(key, spec.min) == 0 and Admin.toFraction(key, spec.max) == 1)
  assert(Admin.fromFraction(key, Admin.toFraction(key, spec.default)) == spec.default)
 end
+-- Feel sliders: server-side clamps keep gravity/jump/leap in sane ranges (runtime only, never persisted).
+assert(Admin.sanitize("gravity", 1e6) == 400 and Admin.sanitize("gravity", 0) == 150 and Admin.sanitize("gravity", 255) == 260)
+assert(Admin.sanitize("jumpPower", 1e6) == 90 and Admin.sanitize("jumpPower", -1) == 40)
+assert(Admin.sanitize("leapSpeed", 9) == 1.5 and Admin.sanitize("leapSpeed", 0) == 0.5)
+assert(Admin.sanitize("turnLean", 99) == 3 and Admin.sanitize("moveResponsiveness", 99) == 2 and Admin.sanitize("moveResponsiveness", 0) == 0.5)
+assert(Admin.sanitize("gravity", "250") == nil and Admin.sanitize("jumpPower", 0/0) == nil)
+for _, key in {"gravity", "jumpPower", "moveResponsiveness", "turnLean", "leapSpeed"} do assert(Admin.Settings[key].group == "feel", key) end
+assert(Admin.format(250, "gravity") == "250" and Admin.format(1.5, "leapSpeed") == "x1.5")
 assert(Admin.format(2) == "x2" and Admin.format(0.5) == "x0.5" and Admin.format(1.25) == "x1.25")
 
 -- Weather length.

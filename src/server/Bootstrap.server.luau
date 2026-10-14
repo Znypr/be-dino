@@ -57,6 +57,7 @@ MovementGuard.start()
 VisualTestService.start(Dinosaur)
 require(script.Parent.ProgressionService).start(ProfileRepository)
 require(script.Parent.FusionService).start(ProfileRepository)
+workspace.Gravity=require(game:GetService("ReplicatedStorage").Shared.Config).Gravity
 require(script.Parent.LeapService).start()
 game:GetService("MarketplaceService").ProcessReceipt=function(receipt)
     local player=Players:GetPlayerByUserId(receipt.PlayerId)
