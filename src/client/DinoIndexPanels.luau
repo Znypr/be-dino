@@ -92,7 +92,7 @@ local function chipButton(parent: GuiObject, text: string, height: number, on: b
     local b = Instance.new("TextButton")
     b.AutomaticSize, b.Size = Enum.AutomaticSize.X, UDim2.fromOffset(0, height)
     b.BackgroundColor3 = if on then C.gold:Lerp(C.panel, .35) else C.card
-    b.Font, b.Text, b.TextSize, b.TextColor3 = Enum.Font.FredokaOne, text, 18, C.text
+    b.Font, b.Text, b.TextSize, b.TextColor3 = Enum.Font.FredokaOne, text, 18, if on then C.outline else C.text
     b.AutoButtonColor = true
     local pad = Instance.new("UIPadding")
     pad.PaddingLeft, pad.PaddingRight = UDim.new(0, if swatch then 36 else 14), UDim.new(0, 14)
@@ -471,8 +471,9 @@ function Panels.species(ctx)
         for _, d in st.list do st.byId[d.instanceId] = d end
         st.loaded = true
         st.selected = MyDinos.defaultSelection(st.list, catalog)
-        buildRight()
+        -- Hero first: it takes the scarce EditableImages (pattern textures) before the card previews do.
         if st.selected then buildLeft() end
+        buildRight()
         refreshEquipped()
     end)
     if not answered then

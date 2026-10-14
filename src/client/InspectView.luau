@@ -59,7 +59,7 @@ function InspectView.attach(viewport: ViewportFrame, options: Options?): Handle
     local function apply()
         viewport:SetAttribute("InspectYaw", s.yaw)
         viewport:SetAttribute("InspectZoom", s.zoom)
-        if resetButton then resetButton.Visible = enabled and Math.changed(s) end
+        if resetButton then resetButton.Visible = enabled and s.touched and Math.changed(s) end
     end
 
     if o.hint ~= false then

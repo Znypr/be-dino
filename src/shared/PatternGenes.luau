@@ -6,9 +6,9 @@ local Genetics=require(script.Parent.EggGenetics)
 local Pattern={}
 local images=setmetatable({},{__mode="k"})
 local activeImages=0
--- BD-150: authored creatures share ONE EditableImage per species + gene combination (all parts of a model use the
--- same UV atlas), reference counted per part. Roblox allows ~32 live EditableImages; per-part images capped the
--- screen at about four patterned dinos, shared images allow about 30 different patterned dinos at once.
+-- BD-150: copies with identical genes share ONE EditableImage per texture (authored: species atlas, legacy: the
+-- part's own texture), reference counted per part. Roblox allows ~32 live EditableImages and a legacy dino has 7
+-- parts, so about four DIFFERENT patterned dinos fit on screen; identical copies are free. Others keep their gene tint.
 local sharedImages={}
 local partEntry=setmetatable({},{__mode="k"})
 local function release(part)
@@ -26,7 +26,8 @@ function Pattern.apply(part: MeshPart,genes): boolean
     local source=if folder then folder:FindFirstChild(part:GetAttribute("GeneSpecies") or "") else nil
     local data=if source then Http:JSONDecode(require(source)) else require(script.Parent.LegacyGenePatterns).data(part)
     if not data then return false end
-    local sharedKey=if source then (part:GetAttribute("GeneSpecies") or "").."|"..Genetics.key(genes) else nil
+    local owner=if source then part:GetAttribute("GeneSpecies") else part:GetAttribute("GeneOriginalTexture") -- legacy: one texture per part
+    local sharedKey=if owner then tostring(owner).."|"..tostring(genes.patternId).."|"..tostring(genes.primaryColorId).."|"..tostring(genes.secondaryColorId).."|"..tostring(genes.blend) else nil
     if sharedKey then
         local current=partEntry[part]
         if current and current.key==sharedKey then return true end
