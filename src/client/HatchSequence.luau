@@ -185,7 +185,10 @@ function Seq.play(a: Args)
     if motion then
         a.body.AnchorPoint, a.body.Position = Vector2.new(.5, .5), UDim2.fromOffset(BODY_CENTER.X, BODY_CENTER.Y)
     end
-    a.dino.Visible = false
+    -- Keep the viewport visible but transparent so DinosaurPreview loads the model during the build-up.
+    a.dino.Visible = not failed
+    local dinoView = a.dino :: any
+    dinoView.ImageTransparency = 1
 
     -- Name: big white fill with a thick rarity-coloured stroke. Rarity line sits on a coloured pill.
     local nameStroke = a.nameLabel:FindFirstChildOfClass("UIStroke")
@@ -283,6 +286,7 @@ function Seq.play(a: Args)
     local punchStart = 1 + esc.punch
     local impactAt = .95
     local level = 0 -- overall glow level 0..1
+    local revealT = 0 -- seconds after the burst when the dinosaur actually appeared
 
     local function restoreBody()
         a.body.AnchorPoint, a.body.Position = bodyHomeAnchor, bodyHomePos
@@ -353,8 +357,9 @@ function Seq.play(a: Args)
             return
         end
         a.dino.Visible = true
+        local view = a.dino :: any
+        view.ImageTransparency = 0
         if not motion then
-            local view = a.dino :: any
             view.ImageTransparency = 1
             TweenService:Create(view, TweenInfo.new(.3), {ImageTransparency = 0}):Play()
             setGlow(.6)
@@ -412,6 +417,7 @@ function Seq.play(a: Args)
     end
     local function onTap()
         if finished then return end
+        if not failed and not revealStarted then return end -- never advance past an egg whose dinosaur is not shown yet
         if Timeline.tap(state) == "advance" then advance() end
     end
     overlay.Activated:Connect(onTap)
@@ -481,8 +487,10 @@ function Seq.play(a: Args)
             end
         else
             if not burstDone then burst() end
-            if not revealStarted and t >= burstAt + (if motion then .1 else 0) then startReveal() end
             local since = t - burstAt
+            -- Wait (up to 2.5 s) for the real model instead of revealing an empty viewport.
+            local modelReady = failed or a.dino:FindFirstChildOfClass("WorldModel") ~= nil or since > 2.5
+            if not revealStarted and modelReady and t >= burstAt + (if motion then .1 else 0) then revealT = since startReveal() end
             if motion then
                 -- camera push-in releases with a short ease (stronger punch for rarer eggs)
                 if since < .45 then
@@ -492,9 +500,9 @@ function Seq.play(a: Args)
                     restoreBody()
                 end
                 if not failed then
-                    if revealStarted then dinoScale.Scale = Timeline.revealScale((since - .1) / .8) * (if a.big then Timeline.stamp(since - impactAt) else 1) end
-                    if a.big and since >= impactAt and since < impactAt + .25 then
-                        local k = 1 - (since - impactAt) / .25
+                    if revealStarted then dinoScale.Scale = Timeline.revealScale((since - revealT) / .8) * (if a.big then Timeline.stamp(since - impactAt - revealT) else 1) end
+                    if a.big and since >= impactAt + revealT and since < impactAt + revealT + .25 then
+                        local k = 1 - (since - impactAt - revealT) / .25
                         a.body.AnchorPoint = Vector2.new(.5, .5)
                         a.body.Position = UDim2.fromOffset(BODY_CENTER.X + math.sin(since * 120) * 4 * k, BODY_CENTER.Y + math.cos(since * 100) * 3 * k)
                     elseif a.big and since >= impactAt + .25 and bodyRestored then
@@ -614,7 +622,7 @@ function Seq.play(a: Args)
             end
         end
         if not motion and not bodyRestored then bodyRestored = true restoreBody() end
-        if not readyShown and t >= durs.readyAt then showHint() end
+        if not readyShown and (revealStarted or failed) and t >= durs.readyAt + revealT then showHint() end
     end))
 
     return {
