@@ -24,7 +24,16 @@ local WHITE = Color3.new(1, 1, 1)
 local TAU = math.pi * 2
 local FIREWORKS = {{.35, 250, 120}, {.75, 580, 92}, {1.15, 412, 58}}
 
-type Layers = {back: Frame, front: Frame, backdrop: Frame, rings: {Frame}, ringScales: {UIScale}, rays: {Frame}, motes: {Frame},
+-- Failed-egg splat kit (built once, reused): native rounded shapes until the egg_splat / egg_shell icons are bound.
+type Splat = {group: CanvasGroup, puddle: Frame, lobes: {Frame}, yolk: Frame, drips: {Frame}, shells: {Frame}, domes: {Frame},
+    shellImages: {ImageLabel}, image: ImageLabel}
+local PUDDLE = Vector2.new(412, 200) -- body coordinates
+local YOLK_REST = 190
+local SHELL_START_Y, SHELL_FALL = 112, 70
+local CREAM = Color3.fromRGB(255, 244, 214)
+local YOLK_GOLD = Color3.fromRGB(255, 196, 38)
+
+type Layers = {splat: Splat, back: Frame, front: Frame, backdrop: Frame, rings: {Frame}, ringScales: {UIScale}, rays: {Frame}, motes: {Frame},
     podium: {Frame}, particles: {Frame}, fw: {Frame}, rain: {Frame}, shocks: {Frame}, shockStrokes: {UIStroke}, shockScales: {UIScale},
     arcs: {Frame}, shimmer: Frame, shimmerGradient: UIGradient}
 local layers: Layers? = nil
@@ -40,6 +49,52 @@ local function dot(parent: Instance, name: string, z: number, w: number, h: numb
     f.Size, f.ZIndex, f.Parent = UDim2.fromOffset(w, h), z, parent
     if round then corner(f) end
     return f
+end
+
+local function buildSplat(front: Frame): Splat
+    -- PLACEHOLDER (docs/72): the egg-white puddle, yolk and shell cups below are native shape stacks. They are replaced by the
+    -- ChatGPT icons egg_splat / egg_shell (docs/83 items 29 and 30) as soon as their asset IDs are bound in UIIconAssets; they never count as final art.
+    local group = Instance.new("CanvasGroup")
+    group.Name, group.BackgroundTransparency, group.Active, group.ZIndex = "EggSplat", 1, false, 24
+    group.Size, group.Parent = UDim2.fromOffset(824, 402), front
+    local function blob(name: string, z: number, w: number, h: number, color: Color3, transparency: number): Frame
+        local f = dot(group, name, z, w, h, true)
+        f.BackgroundColor3, f.BackgroundTransparency = color, transparency
+        return f
+    end
+    local puddle = blob("EggWhitePuddle", 24, 250, 66, Color3.fromRGB(255, 252, 240), .12)
+    local rim = Instance.new("UIStroke") rim.Color, rim.Thickness, rim.Transparency, rim.Parent = Color3.fromRGB(255, 255, 255), 3, .45, puddle
+    local lobes = {blob("PuddleLobeL", 24, 80, 30, Color3.fromRGB(255, 252, 240), .25), blob("PuddleLobeR", 24, 64, 26, Color3.fromRGB(255, 252, 240), .25)}
+    local drips = {blob("Drip1", 25, 12, 18, Color3.fromRGB(255, 252, 240), .2), blob("Drip2", 25, 10, 16, Color3.fromRGB(255, 252, 240), .2)}
+    local yolk = blob("Yolk", 26, 74, 62, YOLK_GOLD, 0)
+    local yolkStroke = Instance.new("UIStroke") yolkStroke.Color, yolkStroke.Thickness, yolkStroke.Parent = Color3.fromRGB(190, 120, 10), 3, yolk
+    local shine = Instance.new("Frame")
+    shine.BackgroundColor3, shine.BorderSizePixel, shine.AnchorPoint, shine.BackgroundTransparency = WHITE, 0, Vector2.new(.5, .5), .1
+    shine.Position, shine.Size, shine.ZIndex, shine.Parent = UDim2.fromScale(.32, .3), UDim2.fromOffset(22, 13), 27, yolk
+    corner(shine)
+    local shells, domes, shellImages = {}, {}, {}
+    for i = 1, 2 do
+        -- A shell half is a cream cup: outer ellipse plus a darker hollow inside (no clipping: clips break on rotation).
+        local shell = dot(group, "ShellHalf" .. i, 28, 104, 62, false)
+        local dome = Instance.new("Frame")
+        dome.Name, dome.BackgroundColor3, dome.BorderSizePixel, dome.Size, dome.ZIndex, dome.Parent = "NativeShell", CREAM, 0, UDim2.fromScale(1, 1), 28, shell
+        corner(dome)
+        local ds = Instance.new("UIStroke") ds.Color, ds.Thickness, ds.Parent = Color3.fromRGB(160, 118, 62), 4, dome
+        local hollow = Instance.new("Frame")
+        hollow.BackgroundColor3, hollow.BorderSizePixel, hollow.AnchorPoint, hollow.Position, hollow.Size, hollow.ZIndex, hollow.Parent = Color3.fromRGB(246, 214, 150), 0, Vector2.new(.5, .5), UDim2.fromScale(.5, .6), UDim2.fromScale(.74, .48), 29, dome
+        corner(hollow)
+        local gloss = Instance.new("Frame")
+        gloss.BackgroundColor3, gloss.BackgroundTransparency, gloss.BorderSizePixel, gloss.Position, gloss.Size, gloss.ZIndex, gloss.Parent = WHITE, .2, 0, UDim2.fromOffset(14, 5), UDim2.fromOffset(26, 8), 30, dome
+        corner(gloss)
+        local img = Instance.new("ImageLabel")
+        img.Name, img.BackgroundTransparency, img.AnchorPoint, img.Position, img.Size, img.ZIndex, img.Visible = "ShellImage", 1, Vector2.new(.5, .5), UDim2.fromScale(.5, .5), UDim2.fromOffset(96, 96), 28, false
+        img.Parent = shell
+        shells[i], domes[i], shellImages[i] = shell, dome, img
+    end
+    local image = Instance.new("ImageLabel")
+    image.Name, image.BackgroundTransparency, image.AnchorPoint, image.Visible, image.ZIndex = "SplatImage", 1, Vector2.new(.5, .5), false, 25
+    image.Size, image.Parent = UDim2.fromOffset(300, 200), group
+    return {group = group, puddle = puddle, lobes = lobes, yolk = yolk, drips = drips, shells = shells, domes = domes, shellImages = shellImages, image = image}
 end
 
 local function ensureLayers(panel: GuiObject): Layers
@@ -100,7 +155,7 @@ local function ensureLayers(panel: GuiObject): Layers
     sg.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(.38, 1), NumberSequenceKeypoint.new(.5, .35),
         NumberSequenceKeypoint.new(.62, 1), NumberSequenceKeypoint.new(1, 1)})
     sg.Parent = shimmer
-    local created: Layers = {back = back, front = front, backdrop = backdrop, rings = rings, ringScales = ringScales, rays = rays, motes = motes, podium = podium,
+    local created: Layers = {splat = buildSplat(front), back = back, front = front, backdrop = backdrop, rings = rings, ringScales = ringScales, rays = rays, motes = motes, podium = podium,
         particles = particles, fw = fw, rain = rain, shocks = shocks, shockStrokes = shockStrokes, shockScales = shockScales, arcs = arcs,
         shimmer = shimmer, shimmerGradient = sg}
     layers = created
@@ -164,13 +219,13 @@ export type Args = {
 function Seq.play(a: Args)
     local motion = a.motion
     local rarity = math.clamp(a.rarity, 1, 5)
-    local state = Timeline.new(motion, rarity)
+    local state = Timeline.new(motion, rarity, a.failed)
     local durs = state.durs
     local esc = Timeline.escalation(rarity, motion)
     local fx = ensureLayers(a.panel)
     local failed = a.failed
     -- Rarity palette: Common is lively teal, then the rarity colour up to gold for Legendary.
-    local glow = if rarity <= 1 then Color3.fromRGB(70, 205, 170) else a.color
+    local glow = if a.failed then Color3.fromRGB(255, 205, 90) elseif rarity <= 1 then Color3.fromRGB(70, 205, 170) else a.color
     local bodyHomePos, bodyHomeAnchor = a.body.Position, a.body.AnchorPoint
     local connections: {RBXScriptConnection} = {}
     local finished = false
@@ -197,6 +252,12 @@ function Seq.play(a: Args)
         a.nameLabel.TextStrokeColor3 = glow:Lerp(Color3.new(0, 0, 0), .45)
         if nameStroke then nameStroke.Color, nameStroke.Thickness = glow:Lerp(Color3.new(0, 0, 0), .35), 5 end
         a.oddsLabel.TextColor3 = WHITE
+    end
+    if failed then
+        -- Funny, not sad: warm cream title with a brown outline, soft cream lines under it (no red).
+        a.nameLabel.TextColor3, a.nameLabel.TextStrokeColor3 = Color3.fromRGB(255, 236, 150), Color3.fromRGB(110, 70, 15)
+        if nameStroke then nameStroke.Color, nameStroke.Thickness = Color3.fromRGB(110, 70, 15), 5 end
+        a.oddsLabel.TextColor3, a.detailLabel.TextColor3 = WHITE, Color3.fromRGB(255, 226, 140)
     end
     for _, l in {a.nameLabel, a.oddsLabel, a.detailLabel} do hideLabel(l) end
     local pill = Instance.new("Frame")
@@ -272,12 +333,23 @@ function Seq.play(a: Args)
     for _, f in fx.rain do f.Visible = false end
     for _, f in fx.arcs do f.Visible = false end
     fx.shimmer.Visible = false
+    local splat = fx.splat
+    local useSplatImage, useShellImage = Theme.ImageIds.egg_splat ~= "", Theme.ImageIds.egg_shell ~= ""
+    splat.group.GroupTransparency, splat.image.Image = 0, Theme.ImageIds.egg_splat
+    for _, f in {splat.puddle, splat.yolk, splat.image} do f.Visible = false end
+    for _, f in splat.lobes do f.Visible = false end
+    for _, f in splat.drips do f.Visible = false end
+    for i, f in splat.shells do
+        f.Visible, f.Rotation = false, 0
+        splat.domes[i].Visible, splat.shellImages[i].Visible, splat.shellImages[i].Image = not useShellImage, useShellImage, Theme.ImageIds.egg_shell
+        splat.shellImages[i].Rotation = if i == 2 then 14 else 0
+    end
     for i, s in fx.shocks do s.Visible, fx.shockStrokes[i].Color, fx.shockStrokes[i].Transparency = false, glow:Lerp(WHITE, .3), 1 end
 
-    local count = Timeline.particleCount(rarity, a.shiny, a.big, motion, failed)
+    local count = if failed then Timeline.crumbCount(motion) else Timeline.particleCount(rarity, a.shiny, a.big, motion, failed)
     local orbit = Timeline.orbitCount(rarity, motion, failed)
     local px, py, vx, vy, life = table.create(count, 0), table.create(count, 0), table.create(count, 0), table.create(count, 0), table.create(count, 0)
-    local palette = {glow, WHITE, Theme.Colors.gold, glow:Lerp(WHITE, .5), Theme.RarityColors[math.min(5, rarity + 1)]}
+    local palette = if failed then {CREAM, WHITE, YOLK_GOLD, Color3.fromRGB(225, 190, 130)} else {glow, WHITE, Theme.Colors.gold, glow:Lerp(WHITE, .5), Theme.RarityColors[math.min(5, rarity + 1)]}
     local cues = Timeline.cues(durs, rarity, failed, Sfx.revealName(rarity))
     local cueIndex = 1
     local burstDone, revealStarted, readyShown, bodyRestored = false, false, false, false
@@ -312,6 +384,10 @@ function Seq.play(a: Args)
             for _, f in fx.arcs do f.Visible = false end
             for _, f in fx.shocks do f.Visible = false end
             fx.shimmer.Visible = false
+            for _, f in {fx.splat.puddle, fx.splat.yolk, fx.splat.image} do f.Visible = false end
+            for _, f in fx.splat.lobes do f.Visible = false end
+            for _, f in fx.splat.drips do f.Visible = false end
+            for _, f in fx.splat.shells do f.Visible = false end
         end
     end
 
@@ -322,6 +398,40 @@ function Seq.play(a: Args)
         fx.backdrop.BackgroundTransparency = 1 - .55 * l
     end
 
+    -- Poses the pooled splat kit for `since` seconds after the burst (pure curves from HatchTimeline; no Instances created).
+    local function applySplat(since: number)
+        for i, shell in splat.shells do
+            local dx, dy, rot = Timeline.shell(since, if i == 1 then -1 else 1, SHELL_FALL)
+            shell.Position, shell.Rotation, shell.Visible = UDim2.fromOffset(CENTER_EGG.X + dx, SHELL_START_Y + dy), rot, true
+        end
+        local lift, ysx, ysy = Timeline.yolk(since)
+        local pw, ph = Timeline.puddle(since)
+        local landed = since >= Timeline.SplatDrop
+        if useSplatImage then
+            splat.image.Visible = landed
+            splat.image.Position = UDim2.fromOffset(PUDDLE.X, PUDDLE.Y - 10)
+            splat.image.Size = UDim2.fromOffset(300 * pw * (1 + (ysx - 1) * .25), 200 * ph * (1 + (ysy - 1) * .25))
+        else
+            local puddle = splat.puddle
+            puddle.Visible = pw > 0
+            puddle.Position, puddle.Size = UDim2.fromOffset(PUDDLE.X, PUDDLE.Y), UDim2.fromOffset(250 * pw, 66 * ph)
+            local l1, l2 = splat.lobes[1], splat.lobes[2]
+            l1.Visible, l2.Visible = pw > 0, pw > 0
+            l1.Position, l1.Size = UDim2.fromOffset(PUDDLE.X - 112 * pw, PUDDLE.Y + 6), UDim2.fromOffset(80 * pw, 30 * ph)
+            l2.Position, l2.Size = UDim2.fromOffset(PUDDLE.X + 120 * pw, PUDDLE.Y + 4), UDim2.fromOffset(64 * pw, 26 * ph)
+        end
+        local yolk = splat.yolk
+        yolk.Visible = not (useSplatImage and landed)
+        yolk.Position, yolk.Size = UDim2.fromOffset(PUDDLE.X, YOLK_REST + lift), UDim2.fromOffset(74 * ysx, 62 * ysy)
+        for i, drip in splat.drips do
+            local dy, alpha = Timeline.drip(since, i)
+            drip.Visible = dy ~= nil and not useSplatImage
+            if dy and alpha then
+                drip.Position, drip.BackgroundTransparency = UDim2.fromOffset(PUDDLE.X + (if i == 1 then -70 else 84), PUDDLE.Y + 14 + dy * .45), .15 + .85 * (1 - alpha)
+            end
+        end
+    end
+
     local function burst()
         burstDone = true
         a.eggView.Rotation = 0
@@ -330,7 +440,30 @@ function Seq.play(a: Args)
         if motion then a.animateEgg(Timeline.EggClock) end
         a.splitEgg(not failed)
         for _, f in fx.arcs do f.Visible = false end
-        if failed then return end
+        if failed then
+            -- SPLAT: our own shell halves replace the generic flying fragments.
+            a.eggView.Visible = false
+            if motion then
+                a.flash(CREAM, .14)
+                splat.group.GroupTransparency = 0
+                for _, f in splat.shells do f.Visible = true end
+                splat.yolk.Visible = not useSplatImage
+                splat.puddle.Visible = false
+                fx.shocks[1].Visible = true
+                fx.shockStrokes[1].Color = Color3.fromRGB(255, 252, 240)
+                for i = 1, count do
+                    local angle = -math.pi / 2 + ((i / count) - .5) * 2.6
+                    local speed = 90 + (i * 37) % 130
+                    px[i], py[i] = CENTER_EGG.X, CENTER_EGG.Y
+                    vx[i], vy[i] = math.cos(angle) * speed, math.sin(angle) * speed - 40
+                    life[i] = .6 + (i * 13 % 7) * .08
+                    local size = 5 + (i * 3) % 5
+                    local p = fx.particles[i]
+                    p.Size, p.BackgroundColor3, p.BackgroundTransparency, p.Visible = UDim2.fromOffset(size, size), palette[i % #palette + 1], 0, true
+                end
+            end
+            return
+        end
         a.flash(glow, Timeline.burstStrength(rarity))
         if esc.fireworks then task.delay(.12, function() if not finished then a.flash(Theme.Colors.gold, .3) end end) end
         for i = 1, count do
@@ -352,8 +485,16 @@ function Seq.play(a: Args)
         revealStarted = true
         a.onReveal()
         if failed then
-            fadeLabel(a.nameLabel, .15, .35, 0)
-            fadeLabel(a.detailLabel, .3, .35, 0)
+            local rise = if motion then 10 else 0
+            fadeLabel(a.nameLabel, if motion then .25 else 0, .3, rise)
+            fadeLabel(a.oddsLabel, if motion then .4 else .1, .3, rise)
+            fadeLabel(a.detailLabel, if motion then .55 else .2, .3, rise)
+            if not motion then
+                -- Reduced Motion: a static splat that simply fades in (no shake, tumble, wobble or particles).
+                splat.group.GroupTransparency = 1
+                applySplat(10)
+                TweenService:Create(splat.group, TweenInfo.new(.35), {GroupTransparency = 0}):Play()
+            end
             return
         end
         a.dino.Visible = true
@@ -494,7 +635,13 @@ function Seq.play(a: Args)
             if motion then
                 -- camera push-in releases with a short ease (stronger punch for rarer eggs)
                 if since < .45 then
-                    bodyScale.Scale = 1 + (punchStart - 1) * (1 - Timeline.easeOut(since / .45))
+                    if failed then
+                        local bumpScale, bumpDy = Timeline.bump(since)
+                        bodyScale.Scale = bumpScale
+                        a.body.Position = UDim2.fromOffset(BODY_CENTER.X, BODY_CENTER.Y + bumpDy)
+                    else
+                        bodyScale.Scale = 1 + (punchStart - 1) * (1 - Timeline.easeOut(since / .45))
+                    end
                 elseif not bodyRestored then
                     bodyRestored = true
                     restoreBody()
@@ -616,8 +763,37 @@ function Seq.play(a: Args)
                     -- ribbon glow pulse
                     for n, st in pulseStrokes do st.Thickness = 4 + 1.6 * math.sin(since * 5 + n) end
                 else
-                    for _, ring in fx.rings do ring.BackgroundTransparency = 1 end
-                    fx.backdrop.BackgroundTransparency = 1
+                    -- SPLAT: the build-up glow fades while shells bounce, the yolk plops and the puddle spreads.
+                    local fade = Timeline.easeOut(since / .35)
+                    for n, ring in fx.rings do ring.BackgroundTransparency = 1 - .16 * strength * (1 - fade) * (1 - (n - 1) / (RING_N + 2)) end
+                    fx.backdrop.BackgroundTransparency = 1 - .35 * (1 - fade)
+                    applySplat(since)
+                    local pulseShock = fx.shocks[1]
+                    if pulseShock.Visible then
+                        local pulseScale, pulseAlpha = Timeline.splatPulse(since)
+                        if pulseAlpha >= 1 and since > Timeline.SplatDrop then
+                            pulseShock.Visible = false
+                        else
+                            place(pulseShock, PUDDLE.X, PUDDLE.Y)
+                            fx.shockScales[1].Scale = pulseScale
+                            fx.shockStrokes[1].Transparency = pulseAlpha
+                            fx.shockStrokes[1].Thickness = 2 + 8 * (1 - pulseAlpha)
+                        end
+                    end
+                    for i = 1, count do
+                        local p = fx.particles[i]
+                        local l = life[i]
+                        if since >= l then
+                            if p.Visible then p.Visible = false end
+                        else
+                            vy[i] += GRAVITY * frameDt
+                            px[i] += vx[i] * frameDt
+                            py[i] += vy[i] * frameDt
+                            place(p, px[i], py[i])
+                            p.BackgroundTransparency = math.clamp((since / l - .45) / .55, 0, 1)
+                            p.Rotation += 240 * frameDt
+                        end
+                    end
                 end
             end
         end

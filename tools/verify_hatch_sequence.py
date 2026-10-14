@@ -57,6 +57,69 @@ for rarity = 1, 5 do
     assert(not T.shouldSkip({}, rarity, {eventMutationId = "x"}, true) and not T.shouldSkip({}, rarity, {genes = {conditionId = "rainbow"}}, true))
 end
 
+-- Failed (Cracked) egg: same ~3 s build-up, then a splat; same tap flow and skip rules as any egg.
+local f, fr = T.durations(true, 1, true), T.durations(false, 1, true)
+assert(f.build == m.build and f.build >= 2.8 and f.build <= 3.2, "failed egg has the same ~3 s build-up")
+assert(f.burst > 0 and f.settle >= .8 and f.readyAt > f.build + f.burst and f.readyAt <= 5.5, "splat burst and settle, then ready")
+assert(T.durations(true, 5, true).readyAt == f.readyAt, "no Legendary hold for a failed egg")
+assert(fr.build == 0 and fr.readyAt == r.readyAt, "reduced motion failed egg is the short fade")
+assert(T.durations(true, 5).readyAt == T.durations(true, 5, nil).readyAt, "normal eggs unchanged")
+s = T.new(true, 1, true)
+assert(T.tap(s) == "ignore", "the opening tap cannot skip a failed egg")
+T.step(s, .6) assert(T.tap(s) == "fastforward" and near(s.t, f.build))
+T.step(s, f.burst + f.settle - .05) assert(T.tap(s) == "ignore", "taps ignored during the splat")
+T.step(s, .1) assert(T.phase(s.durs, s.t) == "ready" and T.tap(s) == "advance" and s.done, "failed egg counts in the tap flow")
+s = T.new(true, 1, true) T.step(s, 1) assert(T.skipAll(s) == "fastforward")
+s = T.new(true, 1, true) T.step(s, f.readyAt + .1) assert(T.skipAll(s) == "advance")
+s = T.new(false, 1, true) T.step(s, fr.readyAt + .01) assert(T.tap(s) == "advance")
+-- Skip rules do not look at hatch success: a failed egg of a skipped rarity keeps its quick path, notable ones are never skipped.
+assert(T.shouldSkip({1}, 1, {genes = {conditionId = "cracked", hatchSuccess = false}}, false))
+assert(not T.shouldSkip({1}, 3, {genes = {conditionId = "cracked", hatchSuccess = false}}, false))
+assert(T.shouldSkip({}, 2, {genes = {conditionId = "cracked", hatchSuccess = false}}, true))
+-- Splat curves are bounded: shells bounce but never sink below the floor, yolk squashes then rests, puddle spreads to 1.
+for _, side in {-1, 1} do
+    local lastX = -1
+    for i = 0, 300 do
+        local dx, dy, rot = T.shell(i / 100, side, 84)
+        assert(dy <= 84.001 and dy >= -170 and math.abs(dx) <= 150 and math.abs(rot) <= 400.001)
+        assert(side * dx >= lastX - 1e-6, "shell drifts outward") lastX = side * dx
+    end
+    local _, endY = T.shell(3, side, 84) assert(near(endY, 84, .01), "shell comes to rest on the floor")
+end
+local sawUp, sawBounce, prevY = false, false, 0
+for i = 0, 200 do
+    local y = T.bounceY(i / 100, -170, 900, 84, .38)
+    if y < -10 then sawUp = true end
+    if i > 30 and y < prevY - .001 and prevY > 70 then sawBounce = true end
+    prevY = y
+end
+assert(sawUp and sawBounce, "shells pop up and bounce at least once")
+local y0, sx0, sy0 = T.yolk(0) assert(y0 == -70 and sy0 > 1 and sx0 < 1, "yolk falls stretched")
+local _, sxL, syL = T.yolk(T.SplatDrop) assert(sxL > 1.4 and syL < .65, "yolk squashes on landing")
+local ysxEnd, ysyEnd
+do local _, a1, b1 = T.yolk(4) ysxEnd, ysyEnd = a1, b1 end
+assert(near(ysxEnd, 1, .01) and near(ysyEnd, 1, .01), "yolk settles")
+local pw0, ph0 = T.puddle(T.SplatDrop - .01) assert(pw0 == 0 and ph0 == 0, "no puddle before the landing")
+local pwMax = 0 for i = 0, 300 do local pw, ph = T.puddle(i / 100) pwMax = math.max(pwMax, pw) assert(pw >= 0 and pw < 1.3 and ph >= 0 and ph < 1.3) end
+local pwEnd = T.puddle(4) assert(near(pwEnd, 1, .02) and pwMax > 1, "puddle spreads with a little overshoot, then rests")
+for i = 1, 2 do
+    local dy, alpha = T.drip(T.SplatDrop + .5 + (i - 1) * .3 + .3, i) assert(dy and alpha and dy > 0 and alpha > 0 and alpha < 1)
+    assert(T.drip(0, i) == nil and T.drip(5, i) == nil, "drips only show for a moment")
+end
+local b1, b1y = T.bump(0) assert(b1 > 1.02 and b1 < 1.06 and math.abs(b1y) < 6)
+local b2 = T.bump(1) assert(near(b2, 1, .001), "camera bump decays")
+local sc0, tr0 = T.splatPulse(T.SplatDrop + .45) assert(sc0 > 2 and tr0 == 1)
+assert(T.crumbCount(true) == T.CrumbMax and T.CrumbMax <= 12 and T.crumbCount(false) == 0 and T.MaxParticles >= T.CrumbMax)
+-- Cues: build-up like any egg, burst cue, no reveal sting.
+local fc = T.cues(f, 1, true, "hatch_reveal_common")
+local nb = 0 for _, c in fc do if c.name == "hatch_rattle" then nb += 1 end assert(c.t <= f.readyAt) end
+assert(nb >= 4, "failed egg rattles like a normal egg")
+-- Copy is built from config, never hardcoded: Cracked hatchChance .2 reads "1 time in 5".
+assert(T.FailTitle == "Oops! Splat!" and T.FailSub == "This cracked egg did not hatch")
+assert(T.failChance(.2) == "Cracked eggs hatch 1 time in 5" and T.failChance(.25) == "Cracked eggs hatch 1 time in 4")
+assert(T.failChance(.4) == "Cracked eggs hatch 40% of the time" and T.failChance(1) == "" and T.failChance(nil) == "" and T.failChance(0) == "")
+for _, text in {T.FailTitle, T.FailSub, T.failChance(.2)} do assert(not string.find(string.lower(text), "fail") and #text <= 40, "short and friendly: " .. text) end
+
 -- Curves.
 local prev = -1
 for i = 0, 20 do
@@ -122,7 +185,7 @@ for rarity = 1, 5 do
 end
 assert(Sfx.revealName(nil) == "hatch_reveal_common" and Sfx.revealName(9) == "hatch_reveal_legendary")
 for _, name in {"hatch_rattle", "hatch_crack_stage", "hatch_burst"} do assert(Sfx.Sounds[name].id == "") end
-print("Hatch sequence checks passed: ~3 s build-up, tap gating, skip rules, curves, particle caps, copy, Sfx cues")
+print("Hatch sequence checks passed: ~3 s build-up, tap gating, skip rules, failed-egg splat, curves, particle caps, copy, Sfx cues")
 '''
 
 
