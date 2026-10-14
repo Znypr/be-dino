@@ -4,7 +4,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 def script():
     source=(ROOT/'src/client/ResourceVisuals.client.luau').read_text()
-    refresh=source[source.index('local function characterVisual('):source.index('local function watchCharacter(')]
+    refresh=source[source.index('local function hideShell('):source.index('local function watchCharacter(')]
     return '''
 local clones,paints=0,0
 local frame=setmetatable({},{__mul=function()return frame end})
