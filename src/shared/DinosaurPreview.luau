@@ -31,7 +31,7 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
     local function load()
     local encoded=viewport:GetAttribute("TraitsJson")
     local traits=nil
-    if encoded and gold~="silhouette" and gold~=true and gold~="gold" and gold~="diamond" then
+    if encoded and gold~="silhouette" and gold~=true and gold~="gold" and gold~="diamond" and gold~="emerald" then
         local ok,decoded=pcall(function() return Http:JSONDecode(encoded) end)
         if ok and typeof(decoded)=="table" then traits=decoded end
     end
@@ -50,8 +50,9 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
                     for _,child in item:GetChildren() do
                         if child:IsA("ParticleEmitter") or child:IsA("Highlight") or child:IsA("Light") or child:IsA("Trail") or child:IsA("Beam") then child:Destroy() end
                     end
-                elseif gold==true or gold=="gold" or gold=="diamond" then Resources.clearTextures(item) end
+                elseif gold==true or gold=="gold" or gold=="diamond" or gold=="emerald" then Resources.clearTextures(item) end
                 if gold == "diamond" then item.Color=Color3.fromRGB(85,213,245) item.Material=Enum.Material.Glass item.Reflectance=.2
+                elseif gold == "emerald" then item.Color=Color3.fromRGB(46,196,120) item.Material=Enum.Material.Metal item.Reflectance=.1
                 elseif gold == true or gold == "gold" then item.Color=Color3.fromRGB(242,199,63) item.Material=Enum.Material.Metal end
             end
         end
