@@ -753,8 +753,8 @@ end
 
 -- Dino Index card display for a species. discovered = any copy, event mutation or traits.
 function Sel.indexCard(discovered: boolean)
-    if discovered then return {silhouette = false, locked = false, nameText = nil, rarityText = nil} end
-    return {silhouette = true, locked = true, nameText = "???", rarityText = "???", status = "Not discovered"}
+    if discovered then return {silhouette = false, locked = false, nameText = nil, rarityText = nil, showButton = true} end
+    return {silhouette = true, locked = true, nameText = "???", rarityText = "???", status = "Not discovered", showButton = false}
 end
 
 return Sel
