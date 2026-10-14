@@ -1,8 +1,10 @@
 # 81 Mythic Glow aura and trail v2 (BD-086 to 088, 110 to 112, 095), 2026-10-14
 
 **Owner pick (2026-10-14): Mythic Glow** (docs/70, board `docs/evidence/2026-10-14-aura-trail-concepts/board-mythic.png`).
-Status: textures are **drafts for owner review**; the effect code is built and **inactive until the
-textures are uploaded** (no asset IDs exist yet). Studio spike (BD-089) and phone check (BD-097) are pending.
+Status: the effect code is built and **inactive until the textures are uploaded**. The 10 textures in this PR are
+**Python-drawn PLACEHOLDERS and not acceptable as final art** (owner, 2026-10-14). They only fix the file names, sizes
+and layout. Final textures are Blender renders: spec and session plan in [docs/83](83-playtest-asset-list.md).
+Studio spike (BD-089) and phone check (BD-097) are pending.
 
 ## Frozen spec
 Light ribbons, runes and glow, tinted per aura/trail colour. Each layer is white light tinted at
@@ -48,7 +50,7 @@ twinkle (512, 16-frame flipbook). They are generated deterministically by
   catalog combination). Worst case with 12 players is 3 full + 9 lite, which is about 12 emitters and 15 beams.
 
 ## To make it live (playtest steps)
-1. **Owner reviews** the texture sheet. Redraws are cheap because the generator is parameterised.
+1. Render the 10 textures in Blender (docs/83 section 5) over the placeholder files, same names and sizes.
 2. Upload the 10 PNGs (owner account, or the lead through Studio), then put the IDs into `EffectAssets.luau`
    and docs/77. v2 switches on automatically when all 10 are bound.
 3. BD-089 Studio spike: one trail and one aura per class/tier on grass. Check additive brightness, sigil

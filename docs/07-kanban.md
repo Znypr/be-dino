@@ -742,8 +742,8 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-078 | Backlog | P2 | Objectives Studio/Android acceptance | BD-072-077 |
 | BD-079 | Review / test | P1 | Dino action animations (procedural, all species): eat, leap/jump stretch+land, death/eaten, bite lunge, turn lean; dust/munch effects reuse SFX; real Blender clips later. Roles: gameplay eng (hooks), tech artist (motion), audio (reuse pack) | BD-043 |
 | BD-086 | Done | P1 | Pick aura/trail style, freeze spec (doc 70). **Owner picked Mythic Glow 2026-10-14**; frozen spec in [81](81-mythic-glow-v2.md) | none |
-| BD-087 | Review / test | P1 | Aura/trail sprite sheets and textures: 10 Mythic Glow DRAFTS + review sheet ([81](81-mythic-glow-v2.md)); owner review + upload pending | BD-086 |
-| BD-088 | Review / test | P2 | Ribbon textures and ground-disc decals (in the BD-087 set, [81](81-mythic-glow-v2.md)) | BD-086 |
+| BD-087 | In progress | P1 | Aura/trail textures: 10 Mythic Glow textures as **Blender renders** ([83](83-playtest-asset-list.md)); current files are Python PLACEHOLDERS, not final ([81](81-mythic-glow-v2.md)) | BD-086 |
+| BD-088 | In progress | P2 | Ribbon textures and ground-disc decals (in the BD-087 Blender set, [83](83-playtest-asset-list.md)) | BD-086 |
 | BD-089 | Backlog | P1 | Studio spike: trail + aura per tier, ground sigil | BD-086 |
 | BD-110 | Review / test | P1 | CosmeticEffects v2 auras (tiers, orbit beams): built behind the asset gate ([81](81-mythic-glow-v2.md)); Studio spike BD-089 pending | BD-087, BD-089 |
 | BD-111 | Review / test | P1 | Trail v2 textured, six-class complexity: built behind the asset gate ([81](81-mythic-glow-v2.md)); Studio pending | BD-087, BD-088, BD-089 |
