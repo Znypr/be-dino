@@ -27,6 +27,7 @@ local TouchLayout=require(Shared.TouchLayout)
 local Sfx=require(Shared.Sfx)
 local NextGoal=require(Shared.NextGoal)
 local FusionSelection=require(Shared.FusionSelection)
+local fusionMenuOk,FusionMenu=pcall(require,script.Parent.FusionMenu)
 local Marketplace=game:GetService("MarketplaceService")
 local C = Theme.Colors
 local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
@@ -235,6 +236,8 @@ local function pickupPop(text: string)
     task.delay(.55,function() if serial==popSerial then popLabel.Visible=false end end)
 end
 local render
+local openFusion
+local rail
 local function open(name: string)
     local wasVisible=shade.Visible and active~=""
     modalVersion+=1
@@ -255,6 +258,34 @@ local function open(name: string)
     -- Animate the content as one layer, keeping large collections inexpensive.
     body.Position=UDim2.fromOffset(18,if motion then 106 else 98)
     Theme.animate(body,.14,{Position=UDim2.fromOffset(18,98)})
+end
+local fusionProbe: string?=nil -- nil unknown, "ok", "disabled"
+local function fusionRemote(): RemoteFunction?
+    local folder=ReplicatedStorage:FindFirstChild("BeDinoRemotes")
+    local found=folder and folder:FindFirstChild("FusionAction")
+    return if found and found:IsA("RemoteFunction") then found else nil
+end
+local function showFusionMenu()
+    close()
+    if rail then FusionMenu.setLeftInset(rail.AbsolutePosition.X+rail.AbsoluteSize.X+10-gui.AbsolutePosition.X) end
+    FusionMenu.open()
+end
+-- Nav FUSION + Dino Index footer: the new Pattern Fusion Menu when FusionAction answers.
+openFusion=function()
+    local fn=fusionRemote()
+    local function decide()
+        local target=FusionSelection.navTarget({menuLoaded=fusionMenuOk,remote=fn~=nil,probe=fusionProbe,profile=Config.ReleaseProfile})
+        if target=="menu" then showFusionMenu()
+        elseif target=="legacy" then open("fusion")
+        else notify("Fusion is not available on this server yet",C.gold) end
+    end
+    if fn and fusionMenuOk and fusionProbe==nil then
+        task.spawn(function()
+            local ok,response=pcall(function() return (fn :: RemoteFunction):InvokeServer({action="list",limit=1}) end)
+            fusionProbe=if ok and typeof(response)=="table" and response.reason=="fusion_disabled" then "disabled" else "ok"
+            decide()
+        end)
+    else decide() end
 end
 local function hero(parent: GuiObject,id: string,x: number,y: number,w: number,h: number,gold: (boolean | string)?,fusionPreview: boolean?)
     local traits=if fusionPreview then nil else ownedTraits(id)
@@ -554,17 +585,24 @@ render=function(name: string)
             local base,gold,diamond=copies(id)
             local event=eventMutation(id)
             local rarity=speciesIndex(id)
-            if base+gold+diamond>0 or event or ownedTraits(id) then unlocked+=1 end
-            local card=box(list,((i-1)%3)*276,math.floor((i-1)/3)*rowHeight,264,cardHeight,rarityColors[rarity],24)
+            local found=base+gold+diamond>0 or event~=nil or ownedTraits(id)~=nil
+            if found then unlocked+=1 end
+            local look=FusionSelection.indexCard(found)
+            local card=box(list,((i-1)%3)*276,math.floor((i-1)/3)*rowHeight,264,cardHeight,if found then rarityColors[rarity] else Color3.fromRGB(62,64,74),24)
             Theme.texture(card,264,cardHeight)
-            label(card,Config.SpeciesDisplayNames[id],4,8,256,35,25)
-            label(card,rarityNames[rarity],4,44,256,25,18)
-            hero(card,id,7,70,250,128,bestMutation(id))
-            label(card,if event then event.name.." mutation" elseif ownedTraits(id) then "Special variant" elseif base+gold+diamond>0 then string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond) else "Not discovered",5,201,254,25,15)
-            button(card,"VIEW DINO",12,233,240,cardButtonHeight,C.card,function() selected=id open("detail") end)
+            label(card,look.nameText or Config.SpeciesDisplayNames[id],4,8,256,35,25)
+            label(card,look.rarityText or rarityNames[rarity],4,44,256,25,18)
+            if found then hero(card,id,7,70,250,128,bestMutation(id))
+            else
+                local view=Preview.add(card,id,"silhouette")
+                view.Position,view.Size=UDim2.fromOffset(7,70),UDim2.fromOffset(250,128)
+            end
+            label(card,if not found then look.status elseif event then event.name.." mutation" elseif ownedTraits(id) then "Special variant" else string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond),5,201,254,25,15)
+            local view=button(card,"VIEW DINO",12,233,240,cardButtonHeight,if found then C.card else C.outline,function() if found then selected=id open("detail") end end)
+            if not found then view.Active,view.AutoButtonColor,view.TextTransparency,view.BackgroundTransparency=false,false,.55,.4 end
         end
         meter(body,0,356,600,unlocked,#Config.SpeciesOrder,C.accent,string.format("Discovered: %d / %d",unlocked,#Config.SpeciesOrder))
-        button(body,"FUSION",624,350,200,44,C.gold,function() open("fusion") end)
+        button(body,"FUSION",624,350,200,44,C.gold,function() openFusion() end)
     elseif name=="detail" then
         local index=speciesIndex(selected)
         local base,gold,diamond=copies(selected)
@@ -624,9 +662,11 @@ render=function(name: string)
             local entry=entries[slot]
             local card=box(body,(slot-1)*166,0,156,280,if entry then C.card else C.outline,24)
             label(card,if entry and entry.genes then EggGenetics.condition(entry.genes.conditionId).name else "Slot "..slot,0,8,156,30,22)
-            local view=ModelPreview.add(card,"egg",entry==nil)
+            -- Real egg look from the committed genes; empty slots stay a neutral gray placeholder.
+            local look=FusionSelection.eggSlotLook(entry,entry~=nil and EggGenetics.valid(entry.genes))
+            local view=ModelPreview.add(card,"egg",look=="empty")
             view.Position,view.Size=UDim2.fromOffset(18,65),UDim2.fromOffset(120,120)
-            PreviewTraits.add(view,entry)
+            if entry then PreviewTraits.add(view,if look=="genes" then entry else {shiny=entry.shiny,big=entry.big}) end
             if entry then label(card,rarityNames[entry.rarity or 1],0,37,156,24,18,rarityColors[entry.rarity or 1]) end
             local mutation=if entry then ProgressionRules.item(ProgressionConfig.EventMutations,entry.mutationId) else nil
             if mutation then
@@ -664,7 +704,25 @@ render=function(name: string)
         if not nestsOk or typeof(nests)~="table" then nests={} end
         local readyNest=nil
         for _,nest in nests do if typeof(nest.readyAt)=="number" and nest.readyAt<=workspace:GetServerTimeNow() then readyNest=nest break end end
-        label(body,"Eggs waiting: "..num("QueuedEggsWaiting").."\nBonus nests: "..#nests.."/"..Config.NestSlotCapacity.."  •  Pending: "..num("PendingNestCount"),420,296,400,56,19)
+        for n=1,Config.NestSlotCapacity do -- nest sprites: twig ring + egg, gold egg when ready
+            local ready=nests[n]~=nil and typeof(nests[n].readyAt)=="number" and nests[n].readyAt<=workspace:GetServerTimeNow()
+            local slotBox=Instance.new("Frame")
+            slotBox.Name,slotBox.BackgroundTransparency,slotBox.Size,slotBox.Position,slotBox.ZIndex,slotBox.Parent="Nest"..n,1,UDim2.fromOffset(40,26),UDim2.fromOffset(420+(n-1)*46,278),24,body
+            local function blob(color: Color3,w: number,h: number,x: number,y: number,z: number)
+                local f=Instance.new("Frame")
+                f.BorderSizePixel,f.BackgroundColor3,f.Size,f.Position,f.ZIndex=0,color,UDim2.fromOffset(w,h),UDim2.fromOffset(x,y),z
+                local c=Instance.new("UICorner") c.CornerRadius=UDim.new(.5,0) c.Parent=f
+                f.Parent=slotBox
+            end
+            if nests[n] then
+                blob(Color3.fromRGB(126,88,52),40,14,0,12,24)
+                blob(if ready then C.gold else Color3.fromRGB(240,228,196),16,20,12,0,25)
+                blob(Color3.fromRGB(96,64,36),40,7,0,18,26)
+            else
+                blob(Color3.fromRGB(64,66,78),40,14,0,12,24)
+            end
+        end
+        label(body,"Eggs waiting: "..num("QueuedEggsWaiting").."\nBonus nests: "..#nests.."/"..Config.NestSlotCapacity.."  •  Pending: "..num("PendingNestCount"),420,308,400,44,17)
         button(body,if readyNest then "OPEN BONUS NEST" else "NEST INCUBATING",420,354,400,40,if readyNest then C.gold else C.card,function()
             if not readyNest then notify(if #nests==0 then "No bonus nests yet" else "Bonus nest still incubating",C.gold) return end
             claimNestRemote:FireServer(readyNest.id)
@@ -846,12 +904,12 @@ local previewNotice=label(gui,"STUDIO PREVIEW • progress not saved • test cu
 previewNotice.AnchorPoint,previewNotice.Position=Vector2.new(.5,0),UDim2.new(.5,0,0,8)
 previewNotice.Visible=player:GetAttribute("ProfileMode")=="Studio preview (not saved)"
 player:GetAttributeChangedSignal("ProfileMode"):Connect(function() previewNotice.Visible=player:GetAttribute("ProfileMode")=="Studio preview (not saved)" end)
-local rail=box(gui,14,0,186,444,C.panel,2)
+rail=box(gui,14,0,186,444,C.panel,2)
 rail.AnchorPoint,rail.Position=Vector2.new(0,.5),UDim2.new(0,14,.5,0)
 local railScale=Instance.new("UIScale") railScale.Parent=rail
 local navigationButtons = {}
 for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
-    local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() open(entry[3]) end)
+    local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() if entry[3]=="fusion" then openFusion() else open(entry[3]) end end)
     b.TextSize=20
     art(b,NavigationArtwork[entry[3]] or entry[2],5,6,40)
     b.Text=""
@@ -873,7 +931,17 @@ updateNavigation()
 local hud=box(gui,0,0,390,94,C.panel,2)
 hud.AnchorPoint,hud.Position=Vector2.new(0,1),UDim2.new(0,18,1,-18)
 local hudScale=Instance.new("UIScale") hudScale.Parent=hud
-art(hud,"leaf",8,12,64)
+do -- clean "growth" icon: three rising bars on a green tile (native vector, no asset ids)
+    local tile=box(hud,8,12,64,64,C.accent,hud.ZIndex+1)
+    tile.Name="GrowthIcon"
+    for i=1,3 do
+        local bar=Instance.new("Frame")
+        bar.Name,bar.BorderSizePixel,bar.BackgroundColor3,bar.ZIndex="GrowthBar"..i,0,Color3.fromRGB(255,255,255),tile.ZIndex+1
+        bar.AnchorPoint,bar.Position,bar.Size=Vector2.new(0,1),UDim2.fromOffset(10+(i-1)*17,54),UDim2.fromOffset(12,10+i*11)
+        local corner=Instance.new("UICorner") corner.CornerRadius=UDim.new(0,3) corner.Parent=bar
+        bar.Parent=tile
+    end
+end
 local growthLabel=label(hud,"0 GROWTH",82,3,290,42,30,C.accent)
 art(hud,"catches",40,48,32)
 local catchLabel=label(hud,"0 catches  •  Sanctuary",82,47,290,34,20)
