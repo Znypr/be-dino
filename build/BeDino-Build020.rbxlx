@@ -548943,10 +548943,10 @@ local TEX_FIRE="rbxasset://textures/particles/fire_main.dds"
 local folder=Instance.new("Folder") folder.Name="LocalWeatherFX" folder.Parent=workspace
 
 -- ---------------------------------------------------------------- look (grade + haze + bloom per weather)
-type Look={tint:Color3,sat:number,contrast:number,bright:number,fog:Color3,density:number,haze:number,glare:number,bloom:number,rays:number,rayTint:Color3}
+type Look={amb:Color3?,tint:Color3,sat:number,contrast:number,bright:number,fog:Color3,density:number,haze:number,glare:number,bloom:number,rays:number,rayTint:Color3}
 local function look(t:{[string]:any}):Look
     return {
-        tint=t.tint or Color3.new(1,1,1),sat=t.sat or 0,contrast=t.contrast or 0,bright=t.bright or 0,
+        amb=t.amb,tint=t.tint or Color3.new(1,1,1),sat=t.sat or 0,contrast=t.contrast or 0,bright=t.bright or 0,
         fog=t.fog or Color3.fromRGB(199,214,230),density=t.density or 0,haze=t.haze or 0,glare=t.glare or 0,
         bloom=t.bloom or 0,rays=t.rays or 0,rayTint=t.rayTint or Color3.new(1,1,1),
     }
@@ -548961,6 +548961,9 @@ local LOOKS:{[string]:Look}={
     quake=look({tint=Color3.fromRGB(232,200,156),sat=-.12,contrast=.14,bright=-.06,fog=Color3.fromRGB(190,160,120),density=.34,haze=2,bloom=.1}),
     bloodmoon=look({tint=Color3.fromRGB(255,150,160),sat=.4,contrast=.16,bright=.02,fog=Color3.fromRGB(215,40,64),density=.16,haze=1.5,glare=.3,bloom=.9,rays=.1,rayTint=Color3.fromRGB(255,60,80)}),
 }
+LOOKS.rain.amb=Color3.fromRGB(105,118,140) LOOKS.thunder.amb=Color3.fromRGB(88,98,132) LOOKS.blizzard.amb=Color3.fromRGB(172,184,206)
+LOOKS.volcano.amb=Color3.fromRGB(165,84,44) LOOKS.aurora.amb=Color3.fromRGB(70,130,120) LOOKS.quake.amb=Color3.fromRGB(150,126,96)
+LOOKS.bloodmoon.amb=Color3.fromRGB(165,38,56)
 local TITLE_COLOR:{[string]:Color3}={
     rain=Color3.fromRGB(110,200,255),thunder=Color3.fromRGB(190,170,255),blizzard=Color3.fromRGB(190,235,255),
     volcano=Color3.fromRGB(255,150,60),aurora=Color3.fromRGB(110,255,200),quake=Color3.fromRGB(235,190,120),bloodmoon=Color3.fromRGB(255,70,100),
@@ -548975,6 +548978,7 @@ if not atmosphere then
     atmosphere=Instance.new("Atmosphere") atmosphere.Density,atmosphere.Offset,atmosphere.Glare,atmosphere.Haze=0,0,0,0
     atmosphere.Name="WeatherAtmosphere" atmosphere.Parent=Lighting ownAtmosphere=true
 end
+local baseAmbient,baseOutdoor=Lighting.Ambient,Lighting.OutdoorAmbient
 local baseAtmo={density=atmosphere.Density,haze=atmosphere.Haze,glare=atmosphere.Glare,color=atmosphere.Color}
 
 -- ---------------------------------------------------------------- particle helpers
@@ -548997,11 +549001,11 @@ local function emitter(parent:Instance,rate:number,props:{[string]:any}):Emitter
     return {e=e,rate=rate}
 end
 local rig:{[string]:{Emitter}}={}
-local rigParts:{[string]:{part:Part,offset:Vector3,world:boolean?}}={}
+local rigParts:{[string]:{{part:Part,offset:Vector3,base:Vector3}}}={}
 local function addRig(id:string,part:Part,offset:Vector3,list:{Emitter})
     rig[id]=rig[id] or {} rigParts[id]=rigParts[id] or {}
     for _,item in list do table.insert(rig[id],item) end
-    table.insert(rigParts[id],{part=part,offset=offset})
+    table.insert(rigParts[id],{part=part,offset=offset,base=part.Size})
 end
 local WIDE=Vector3.new(90,1,90)
 local FEET=Vector3.new(0,-2.8,0)
@@ -549341,16 +549345,22 @@ RunService.Heartbeat:Connect(function(dt)
     atmosphere.Haze=lerpNum(baseAtmo.haze,math.max(baseAtmo.haze,target.haze),t)
     atmosphere.Glare=lerpNum(baseAtmo.glare,math.max(baseAtmo.glare,target.glare),t)
     atmosphere.Color=baseAtmo.color:Lerp(target.fog,t)
+    -- world-wide light tint, so the whole scene (not just near the player) takes on the event mood
+    local amb=target.amb or baseAmbient
+    Lighting.Ambient=baseAmbient:Lerp(amb,t*.8) Lighting.OutdoorAmbient=baseOutdoor:Lerp(amb,t)
+    -- zoomed-out cameras see further: grow the particle volumes and keep their density
+    local cam=workspace.CurrentCamera
+    local zoom=if cam and root then math.clamp((cam.CFrame.Position-root).Magnitude/16,1,6) else 1
 
     -- particle rigs follow the player; only the active weather emits
     for weatherId,list in rig do
         local on=motion and weatherId==activeId and k&gt;0
         for _,item in list do
-            item.e.Enabled=on item.e.Rate=item.rate*k
+            item.e.Enabled=on item.e.Rate=item.rate*k*math.min(zoom*zoom,5)
         end
         if on and root then
             local parts=rigParts[weatherId]
-            if parts then for _,p in parts do p.part.Position=root+p.offset end end
+            if parts then for _,p in parts do p.part.Size=Vector3.new(p.base.X*zoom,p.base.Y,p.base.Z*zoom) p.part.Position=root+p.offset end end
         end
     end
     local sky=motion and root~=nil
