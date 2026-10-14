@@ -4,14 +4,20 @@
 local Rules = {}
 
 -- Runtime-only sliders. Values are never written to player profiles and reset when the server restarts.
-export type Setting = {label: string, min: number, max: number, step: number, default: number}
+export type Setting = {label: string, min: number, max: number, step: number, default: number, group: string?, unit: string?}
 local settings: {[string]: Setting} = {
     foodMultiplier = {label = "Food worth", min = 0.5, max = 10, step = 0.5, default = 1},
     growthMultiplier = {label = "Growth speed", min = 0.5, max = 5, step = 0.5, default = 1},
     speedMultiplier = {label = "Run speed", min = 0.5, max = 3, step = 0.25, default = 1},
+    -- "Feel" tuning (runtime only). Defaults mirror Config so Reset restores the shipped feel.
+    gravity = {label = "Gravity", min = 150, max = 400, step = 10, default = 250, group = "feel", unit = ""},
+    jumpPower = {label = "Jump power", min = 40, max = 90, step = 2, default = 56, group = "feel", unit = ""},
+    moveResponsiveness = {label = "Turn/stop responsiveness", min = 0.5, max = 2, step = 0.25, default = 1, group = "feel"},
+    turnLean = {label = "Turn lean", min = 0, max = 3, step = 0.25, default = 1, group = "feel"},
+    leapSpeed = {label = "Leap speed", min = 0.5, max = 1.5, step = 0.1, default = 1, group = "feel"},
 }
 Rules.Settings = table.freeze(settings)
-Rules.SettingOrder = table.freeze({"foodMultiplier", "growthMultiplier", "speedMultiplier"})
+Rules.SettingOrder = table.freeze({"foodMultiplier", "growthMultiplier", "speedMultiplier", "gravity", "jumpPower", "moveResponsiveness", "turnLean", "leapSpeed"})
 Rules.WeatherMinSeconds = 15
 Rules.WeatherMaxSeconds = 1800
 Rules.Actions = table.freeze({"set", "startWeather", "stopWeather", "reset"})
@@ -45,7 +51,9 @@ function Rules.weatherSeconds(value: any, fallback: number): number?
     return math.clamp(math.floor(value), Rules.WeatherMinSeconds, Rules.WeatherMaxSeconds)
 end
 
-function Rules.format(value: number): string
+function Rules.format(value: number, key: string?): string
+    local spec = if key then Rules.Settings[key] else nil
+    if spec and spec.unit then return string.format("%g", value) end
     return if value == math.floor(value) then string.format("x%d", value) else string.format("x%g", value)
 end
 
