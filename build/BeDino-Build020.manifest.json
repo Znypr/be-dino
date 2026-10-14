@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "b2970b6664edc88f5cd95f6e765746b19059caed5ded8ea824caf21e6c770d33",
+  "place_sha256": "7b830b08cf9883be5b4fcd1e09405d1f86f9ab9f19d6aeca27f16a0ad8873de0",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/Artwork.luau": "77bef322245582ebe9cf225c27f3281616a436dd7b1680347bb5cb853f8d2dfe",
@@ -8,6 +8,7 @@
     "src/shared/ArtworkLayout.luau": "50bafa21786bba19acbcb92b91ec813e5c7435d8f3665b8c6050dcf6e94beca3",
     "src/shared/AuthoredCreatures.luau": "78b0e6f5c7f534ec8b5c42ccdabf4d7a5e4eddd097c8c37c17ca7ec9514f741b",
     "src/shared/BiomePlacement.luau": "fb7231d8b6b67d3c5ed4a7dac63fcb01ad81d8ca45117f74630b1a79f5c7d21d",
+    "src/shared/ConditionOverlays.luau": "090a679b1adac51749bb0dd3d2030809b0a6d2b9f5d20bb784ca2c94fdaa5338",
     "src/shared/Config.luau": "61412914522d09c7f0de348796ffeb1f126ee240a0f7c8a964030b40135664b1",
     "src/shared/CosmeticEffects.luau": "b4d1123d8f1d5801b738483ae52c8fb97d49f953d2185e48e7fbb014b6e28c28",
     "src/shared/CreatureData/archaeopteryx.luau": "77b3395fd98c04ba78e305d35a9320c83e529bacc42a84baee6b12d061b225c4",
@@ -171,7 +172,7 @@
     "src/shared/DinoMotion.luau": "c71dd1c2aa6eb100c368052df77f6c4b456df7df04ff7c6369359b9d6705161f",
     "src/shared/DinosaurPreview.luau": "55072c355dc4ac50bf64ed584f366c6c5bd9832302905fa67a19b92f2607cd92",
     "src/shared/DinosaurVisual.luau": "d4ba9376a4f4e6eef95f349fec0fb248bd5ecc8afb90577c7e2bf682539a28aa",
-    "src/shared/EggAppearance.luau": "a2b827b7bcd2b5e16239549b9f9c7cf60a7f3592a65e978ce6089fd08ebe2868",
+    "src/shared/EggAppearance.luau": "70160dfddb6d72b657b1b3e8ce0d1b7ab1aad00cf413786cd3ab38fad55419b2",
     "src/shared/EggGenetics.luau": "d031793daac2db1eebf7f2ad0d9ce523ccc8a1fb2722f3b7497e7e37ac81d2bc",
     "src/shared/EggOutcomeOdds.luau": "e7371b4ca49cec1fc19eebdb9e9707aacb9513636614bee1822a56b97f60a477",
     "src/shared/EggOutcomeView.luau": "ed76b725847b0b69531dffc7d67ab8188b02b025baf88e780a4245cfe3c3b774",

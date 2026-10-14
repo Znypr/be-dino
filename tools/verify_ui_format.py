@@ -21,7 +21,7 @@ for _,c in ProgressionConfig.Conditions do
  local g=Genetics.neutral(c.id) assert(Genetics.valid(g) and g.patternId=="01_blank" and g.conditionId==c.id)
  seen[#seen+1]=Genetics.tint(g)
 end
-for i=2,#seen do assert(seen[i][1]==seen[1][1] and seen[i][2]==seen[1][2],"renderer cannot tell conditions apart (docs/73)") end
+local sigs={} for _,c in ProgressionConfig.Conditions do local sg=Overlays.signature(c.id) assert(not sigs[sg],"condition renders like another: "..c.id) sigs[sg]=true end
 assert(#ProgressionConfig.Conditions==5)
 -- Detailed odds logic stays callable even though no screen opens it.
 local pct=ShopOdds.conditionPercents(0) local sum=0 for _,v in pct do sum+=v end assert(math.abs(sum-100)<1e-6)
@@ -32,6 +32,7 @@ def script():
  s='local UIFormat='+module('src/shared/UIFormat.luau')+'\nlocal ProgressionConfig='+module('src/shared/ProgressionConfig.luau')+'\n'
  s+='local Color3={fromRGB=function(r,g,b)return {r,g,b,Lerp=function(self,o,a)return {self[1]+(o[1]-self[1])*a,self[2]+(o[2]-self[2])*a,self[3]+(o[3]-self[3])*a} end} end}\n'
  s+='local script={Parent={}}\nlocal require=function(_)return ProgressionConfig end\nlocal Genetics='+module('src/shared/EggGenetics.luau')+'\n'
+ s+='local Enum={Material={SmoothPlastic="SmoothPlastic",Plastic="Plastic"}}\nlocal Overlays='+module('src/shared/ConditionOverlays.luau')+'\n'
  s+='local ShopOdds={conditionPercents=function(level)local w=ProgressionConfig.ConditionWeights[level+1] local t=0 for _,x in w do t+=x end local r={} for i,x in w do r[i]=100*x/t end return r end}\n'
  return s+BODY
 def scan():
