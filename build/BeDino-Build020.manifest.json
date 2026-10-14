@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "2eb369f933416a67b858a87e6e96a6a1867052ad4070e5ca1780c1f99e777489",
+  "place_sha256": "7f639d28047bee235d279fbcdbba80e1728535a24c85b8eff5ce876d75fa1387",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/Artwork.luau": "dbcef755028cbf3e737da0f96178db4e563f73843c0df00ad167ab134f1d066e",
@@ -8,7 +8,7 @@
     "src/shared/ArtworkLayout.luau": "50bafa21786bba19acbcb92b91ec813e5c7435d8f3665b8c6050dcf6e94beca3",
     "src/shared/AuthoredCreatures.luau": "78b0e6f5c7f534ec8b5c42ccdabf4d7a5e4eddd097c8c37c17ca7ec9514f741b",
     "src/shared/BiomePlacement.luau": "fb7231d8b6b67d3c5ed4a7dac63fcb01ad81d8ca45117f74630b1a79f5c7d21d",
-    "src/shared/Config.luau": "16df83748a7c74c4d3766337f2fcb0a7756a89ceba00df98c67bca80c7c1e99e",
+    "src/shared/Config.luau": "901aeb6b1d9795201a3092dd51873f1891cf2ba0da129c79c24d8764268baf13",
     "src/shared/CosmeticEffects.luau": "b4d1123d8f1d5801b738483ae52c8fb97d49f953d2185e48e7fbb014b6e28c28",
     "src/shared/CreatureData/archaeopteryx.luau": "77b3395fd98c04ba78e305d35a9320c83e529bacc42a84baee6b12d061b225c4",
     "src/shared/CreatureData/baryonyx.luau": "8ec5bdfdd445ebb014be6089f2a09fabd909826d348782501306515dae85ee1c",

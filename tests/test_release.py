@@ -62,7 +62,9 @@ class ReleaseProfileTests(unittest.TestCase):
         self.assertTrue(any("defined 2 times" in e for e in report.errors))
 
     def test_playtest_requires_recorded_ids(self):
-        _, report = profiles.apply_profile(CONFIG, "playtest")
+        # The committed Config now records the real IDs (BD-004); zero them to exercise the gate.
+        zeroed = with_value(with_value(CONFIG, "PlaytestUniverseId", "0"), "PlaytestPlaceId", "0")
+        _, report = profiles.apply_profile(zeroed, "playtest")
         self.assertFalse(report.ok)
         self.assertTrue(any(e.startswith("PlaytestUniverseId") and "BD-004" in e for e in report.errors))
         self.assertTrue(any(e.startswith("PlaytestPlaceId") for e in report.errors))
