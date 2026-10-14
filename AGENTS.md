@@ -18,6 +18,8 @@ The player-facing count of **catches** in the target reward loop means **the num
 
 **Species rarity tiers (2026-10-14):** main now has five tiers **Common / Uncommon / Rare / Epic / Legendary** with PROVISIONAL weights and a run-size boost tuned to the examples below ([docs/82](docs/82-species-rarity-tiers.md)). Build 020 as published had only Common / Rare / Legendary.
 
+**Art rule (owner, 2026-10-14):** no Python- or code-drawn textures as final art. Effect textures are **Blender renders** (Claude via Blender MCP on the owner's PC); icons are made in Blender or by the owner with ChatGPT. The playtest asset list and Blender session plan are in [docs/83](docs/83-playtest-asset-list.md).
+
 **Owner decision 2026-10-13:** the conversion is now `FoodCatchRate = 40/500` (PROVISIONAL): 500 food -> 40 eggs, 5,000 food -> 400 eggs, still exactly one egg per catch and one dinosaur per hatched egg. The earlier 15 / 150 figures are historical. See [docs/59](docs/59-egg-rate-40.md). Do **not** confuse `5,000 food points` with the old `MaxCatchScore = 5000`: they are distinct quantities. Five minutes does not automatically imply 500 food points. Neither rarity distribution is a committed probability table; drops should generally be common-heavy, with longer/better runs exposing more rare tiers.
 
 - **Every earned run catch corresponds to one run egg**, stored/settled server-side. Reveal the **40 or 400 eggs sequentially (earlier 15 / 150 superseded 2026-10-13)**, one at a time, approximately five seconds each at the current prototype speed, preferably in increasing species rarity within a batch. Do not invent additional separate immediate eggs from the old 10/100/500 catch thresholds.
