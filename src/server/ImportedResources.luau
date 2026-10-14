@@ -1,10 +1,47 @@
 --!strict
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local InsertService=game:GetService("InsertService")
+local AssetService=game:GetService("AssetService")
 local Bindings=require(ReplicatedStorage.Shared.ResourceMeshAssets)
+local KitMeshes=require(ReplicatedStorage.Shared.WorldKitMeshAssets)
 local Import={}
-function Import.load()
+local function overrides(): Folder
+    local existing=ReplicatedStorage:FindFirstChild("ResourceOverrides")
+    if existing and existing:IsA("Folder") then return existing end
     local folder=Instance.new("Folder") folder.Name="ResourceOverrides" folder.Parent=ReplicatedStorage
+    return folder
+end
+-- BD-049/050 kit: one real MeshPart per uploaded kit mesh (vertex colours carry the palette; no textures).
+-- Sized in studs from the generated bindings, pivot = bounding-box bottom centre (ResourceModels.clone normalises it).
+-- An id whose mesh fails to load keeps its native fallback model; the world is never left empty.
+function Import.loadWorldKit(): (number, number)
+    local folder=overrides()
+    local loaded,failed,pending=0,0,0
+    for id,binding in KitMeshes do
+        pending+=1
+        task.spawn(function()
+            local ok,result=pcall(function()
+                local mesh=AssetService:CreateMeshPartAsync(Content.fromUri(binding.meshId),{CollisionFidelity=Enum.CollisionFidelity.Box,RenderFidelity=Enum.RenderFidelity.Automatic})
+                mesh.Name=id
+                mesh.Size=Vector3.new(binding.size[1],binding.size[2],binding.size[3])
+                mesh.Color=Color3.new(1,1,1) -- white tint: the kit palette comes from the mesh vertex colours
+                mesh.Material=Enum.Material.SmoothPlastic
+                mesh.Anchored,mesh.CanCollide,mesh.CanTouch,mesh.CanQuery,mesh.Massless=true,false,false,false,true
+                mesh:SetAttribute("KitMeshId",binding.meshId)
+                return mesh
+            end)
+            if ok then result.Parent=folder loaded+=1 else failed+=1 warn("[Be Dino] kit mesh "..id.." unavailable; keeping native fallback: "..tostring(result)) end
+            pending-=1
+        end)
+    end
+    local deadline=os.clock()+30
+    while pending>0 and os.clock()<deadline do task.wait() end
+    workspace:SetAttribute("WorldKitMeshParts",loaded)
+    workspace:SetAttribute("WorldKitMeshFailed",failed+pending)
+    return loaded,failed+pending
+end
+function Import.load()
+    local folder=overrides()
     for id,assetId in Bindings do
         if assetId=="" then continue end
         local container=nil

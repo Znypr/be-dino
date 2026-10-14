@@ -5,24 +5,20 @@ Date: 2026-10-14. All numbers PROVISIONAL. Studio and phone evidence pending (th
 ## 1. World and food art on in the playtest
 The BD-049/050 kit (docs/56) was off by default, so the map still showed the old trees, ferns, rocks and food. `tools/release_profiles.py` now makes the **playtest** profile set `WorldArtMode="BiomeKit"`, `FoodArtMode="Kit"`, `WorldArtDensity=0.35`. The **default** profile now *requires* `Legacy`/`Legacy` (so a committed dev build cannot ship the kit by accident); `tools/verify_release.py`, `tests/test_release.py` and `tests/test_world_kit.py` check both.
 
-### Part budget (native fallback = 2 wedge parts per triangle, plus invisible collider boxes)
-| Scene | Parts |
-| --- | --- |
-| Legacy world props (34 trees x217, 72 rocks x41, 97 ferns x56) | ~15,800 |
-| Legacy egg/amber food models (~77 eggs x100, ~31 amber x20) | ~8,300 |
-| Kit at density 1 (188 placements, 8,990 tris) | 18,093 (the audit's ~18k phone risk) |
-| **Kit at playtest density 0.35** (53 placements: 14 trees, 11 rocks, 17 shrubs, 7 cover, 4 landmarks; 3,144 tris) | **6,337** |
-| Kit food models (cap 12 x <=120 parts) | <= 1,440 |
-| **Kit total** | **7,777 (<= 8,000)** |
-| Residual legacy dressing kept in kit mode: 16 boundary rocks (every third), 2 hub trees | ~1,100 |
+### Part budget, MeshPart era (2026-10-15, supersedes the native-fallback numbers)
+The 40 uploaded kit meshes (`resources/worldkit-meshes/mesh-bindings.json` -> `src/shared/WorldKitMeshAssets.luau` via `tools/bind_worldkit_meshes.py`) load at server start as real MeshParts (`AssetService:CreateMeshPartAsync`, size = imported size x scale, white colour so the mesh vertex colours show the kit palette, anchored, no collision). One prop = 1 part (+ its invisible collider boxes). `world_tree_dead_m` is not uploaded: it is swapped for another dead-tree size, and an id without a mesh would cost the native fallback (2 wedges per triangle) in the budget. Food pickups in Kit mode are the berry/fruit/egg/amber MeshParts themselves (replace the ball, no extra part).
 
-Justification: the budget is about 1/3 of the old world+food parts, comfortably under the ~8,000 phone target, while the four landmarks and every tree/rock/shrub/cover family are still placed, so the old look is clearly replaced. Density only thins counts (grammar, clearances and seeds unchanged); MeshPart uploads remain the real fix.
+| Scene (playtest, density 1.25) | Parts |
+| --- | --- |
+| Kit props: 1,257 placements (162 trees, 100 rocks, 475 shrubs, 516 cover, 4 landmarks) + colliders | 1,608 |
+| Food pickups (16 x 16 sectors x 6, one MeshPart each) | 1,536 |
+| Legacy dressing kept in kit mode (boundary rocks, hub trees) | ~1,100 |
+| **Total (phone ceiling 8,000 kept)** | **~4,244** (Studio play measured 5,632 BaseParts incl. hub, terrain props and weather) |
+
+`BiomePlacement.PartBudget = 3200` at density 1 replaces `TriangleBudget` (it scales with density; layer caps are 130 trees, 80 rocks, 380 shrubs, 620 cover at density 1). Before this change the playtest placed ~45 props at density 0.35. `tools/verify_world_art.py` (now in CI) enforces prop minimums, world parts <= 4,500, total <= 8,000, and that with no meshes loaded the budget thins the world instead of exploding.
 
 ### Food
-Kit variants `food_{berry,fruit,egg,amber}_{a,b}` all exist and set the pickup `ArtId`. Berry/fruit keep their visible ball pickup (kit meshes need uploads); egg/amber get a kit model only on a deterministic stride (amber 1/4, egg 1/20) up to `Config.FoodKitVisualCap=12`, so no pickup is ever hidden without a visible replacement. +1/+4/+15/+50 and all server validation are unchanged (tests assert them).
-
-### Tests
-`tools/verify_world_art.py` now also runs the grammar against the playtest-rewritten Config: modes, density < 1, tree/rock/shrub/cover minimums, world parts <= 6,500, food parts <= 1,500, total <= 8,000, all 8 food variants present, plus static checks (egg/amber only, capped; food values; source default Legacy). It prints the legacy vs kit part counts.
+All eight `food_{berry,fruit,egg,amber}_{a,b}` variants are used. Each pickup is the MeshPart scaled so its longest side equals the old ball diameter; +1/+4/+15/+50, server validation and hidden/respawn mirroring are unchanged. If a mesh is missing the old ball (and capped native egg/amber model) is used.
 
 ## 2. Potion catalog: 12 potions, 5 rarities, 6 of 12 per restock
 One config block: `ProgressionConfig.PotionShop` + `Potions`.

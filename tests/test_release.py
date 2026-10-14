@@ -80,7 +80,7 @@ class ReleaseProfileTests(unittest.TestCase):
         self.assertIs(values["IdentityFusionPreviewEnabled"], True)
         changed = [a for a, b in zip(with_ids(CONFIG).splitlines(), rewritten.splitlines()) if a != b]
         self.assertEqual(len(changed), 7)
-        self.assertEqual((values["WorldArtMode"], values["FoodArtMode"], values["WorldArtDensity"]), ("BiomeKit", "Kit", 0.35))
+        self.assertEqual((values["WorldArtMode"], values["FoodArtMode"], values["WorldArtDensity"]), ("BiomeKit", "Kit", 1.25))
         self.assertEqual(profiles.verify_source(CONFIG, "default").errors, [])
 
     def test_fusion_flags_stay_off_in_committed_builds(self):

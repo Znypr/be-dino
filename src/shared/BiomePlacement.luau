@@ -32,13 +32,18 @@ BiomePlacement.Landmarks = {
     {id = "world_landmark_ruins_altar", x = -40, z = -120},
 }
 -- Layers: grid cell size, acceptance chance, slope limit (degrees), count cap, blocking.
+-- MeshPart era (docs/68): a prop is ONE part, so the layers are far denser than the native-fallback grammar
+-- (which had to stay near 190 props at density 1). Lush groves (groveBoost) carry most trees, shrubs and cover.
 BiomePlacement.Layers = {
-    {name = "tree", cell = 15, chance = .2, groveBoost = .75, maxSlope = 32, cap = 40, blocking = true},
-    {name = "rock", cell = 20, chance = .2, groveBoost = 0, maxSlope = 46, cap = 34, blocking = true},
-    {name = "shrub", cell = 13, chance = .14, groveBoost = .45, maxSlope = 34, cap = 50, blocking = false},
-    {name = "groundcover", cell = 11, chance = .1, groveBoost = .1, maxSlope = 30, cap = 70, blocking = false},
+    {name = "tree", cell = 11, chance = .2, groveBoost = .85, maxSlope = 32, cap = 130, blocking = true},
+    {name = "rock", cell = 15, chance = .2, groveBoost = .1, maxSlope = 46, cap = 80, blocking = true},
+    {name = "shrub", cell = 8, chance = .12, groveBoost = .6, maxSlope = 34, cap = 380, blocking = false},
+    {name = "groundcover", cell = 6, chance = .08, groveBoost = .4, maxSlope = 30, cap = 620, blocking = false},
 }
-BiomePlacement.TriangleBudget = 9000 -- total placed triangles at density 1 (native fallback = 2 parts each)
+-- Placed-part budget at density 1: MeshPart props cost 1 part (+ their invisible collider boxes); a prop whose
+-- mesh is not available costs the native fallback (2 wedge parts per triangle + colliders), so a failed upload
+-- thins the world instead of blowing the phone budget. The 8,000-part phone ceiling is documented in docs/68.
+BiomePlacement.PartBudget = 3200
 
 local function mul32(a: number, b: number): number
     local lo, hi = a % 65536, math.floor(a / 65536)
@@ -118,12 +123,13 @@ end
 
 export type Placement = {id: string, x: number, y: number, z: number, yaw: number, scale: number, radius: number, layer: string}
 
--- options: {seed, density, extent, height=(x,z)->y, kit=WorldKitData}
+-- options: {seed, density, extent, height=(x,z)->y, kit=WorldKitData, meshes=WorldKitMeshAssets (ids that are real MeshParts)}
 function BiomePlacement.generate(options): {Placement}
     local seed, density, extent, height, kit = options.seed, math.clamp(options.density or 1, .25, 2), options.extent - 12, options.height, options.kit
     local placed: {Placement} = {}
-    local triangles = 0
-    local budget = BiomePlacement.TriangleBudget * density
+    local meshes = options.meshes or {}
+    local parts = 0
+    local budget = BiomePlacement.PartBudget * density
     local grid: {[number]: {Placement}} = {}
     local function key(x: number, z: number): number return math.floor(x / 24) * 4096 + math.floor(z / 24) end
     local function clear(x: number, z: number, r: number, blocking: boolean): boolean
@@ -144,7 +150,7 @@ function BiomePlacement.generate(options): {Placement}
         local lo = footprintRange(height, x, z, r * .5)
         local p = {id = id, x = x, y = lo - sink * data.extent[2] * scale, z = z, yaw = yaw, scale = scale, radius = r, layer = layer}
         table.insert(placed, p)
-        triangles += data.triangles
+        parts += BiomePlacement.partCost(id, kit, meshes)
         local k = key(x, z)
         grid[k] = grid[k] or {}
         table.insert(grid[k], p)
@@ -188,8 +194,9 @@ function BiomePlacement.generate(options): {Placement}
                 local id = if layer.name == "tree" then chooseTree(h, wet, n, roll + (if grove < 15 then .2 else 0))
                     elseif layer.name == "rock" then chooseRock(h, s, wet, n, roll)
                     elseif layer.name == "shrub" then chooseShrub(wet, n, grove < 25) else chooseCover(n)
+                id = BiomePlacement.substitute(id, kit, meshes)
                 local data = kit[id]
-                if not data or triangles + data.triangles > budget then continue end
+                if not data or parts + BiomePlacement.partCost(id, kit, meshes) > budget then continue end
                 local scale = .88 + .24 * BiomePlacement.hash(seed, li, ix, iz, 6)
                 local r = math.max(data.extent[1], data.extent[3]) * .5 * scale
                 local needed = if layer.blocking then r * .7 else 1
@@ -205,6 +212,29 @@ function BiomePlacement.generate(options): {Placement}
     return placed
 end
 
+-- An id with no uploaded mesh swaps to another size of the same family that has one (a missing upload must not
+-- bring back ~100-part native models); with no mesh info at all (offline native budget) nothing changes.
+function BiomePlacement.substitute(id: string, kit, meshes): string
+    if meshes[id] or next(meshes) == nil then return id end
+    local base = string.match(id, "^(.*)_[sml]$")
+    if base then
+        for _, size in {"m", "s", "l"} do
+            local alt = base .. "_" .. size
+            if meshes[alt] and kit[alt] then return alt end
+        end
+    end
+    return id
+end
+-- Parts one placement adds to the world: 1 MeshPart (or 2 wedges per triangle of the native fallback) + collider boxes.
+function BiomePlacement.partCost(id: string, kit, meshes): number
+    local data = kit[id]
+    return (if meshes[id] then 1 else 2 * data.triangles) + #data.colliders
+end
+function BiomePlacement.parts(placed: {Placement}, kit, meshes): number
+    local total = 0
+    for _, p in placed do total += BiomePlacement.partCost(p.id, kit, meshes or {}) end
+    return total
+end
 function BiomePlacement.triangles(placed: {Placement}, kit): number
     local total = 0
     for _, p in placed do total += kit[p.id].triangles end
