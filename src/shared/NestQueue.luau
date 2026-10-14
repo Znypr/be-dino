@@ -43,10 +43,12 @@ end
 
 -- Seconds until the whole queue has finished (0 when nothing is incubating or waiting).
 function NestQueue.secondsUntilAllReady(list: {any}, now: number, duration: number): number
-    local last = now
+    local last, waiting = now, 0
     for _, nest in NestQueue.project(list, now, duration) do
         if nest.state == "incubating" and nest.readyAt > last then last = nest.readyAt end
+        if nest.state == "waiting" then waiting += 1 end
     end
+    last += waiting * duration
     return last - now
 end
 

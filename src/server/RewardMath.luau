@@ -42,6 +42,7 @@ end
 function RewardMath.nestSize(nestId: string): number
     local h = 5381
     for i = 1, #nestId do h = (h * 33 + string.byte(nestId, i)) % 2147483629 end
+    h = bit32.bxor(h, bit32.rshift(h, 7), bit32.rshift(h, 15)) -- spread low bits (djb2 alone is skewed mod small n)
     return Config.NestMinSize + h % (Config.NestMaxSize - Config.NestMinSize + 1)
 end
 

@@ -726,14 +726,19 @@ render=function(name: string)
         local nestOk,nestList=pcall(function() return Http:JSONDecode(str("NestsJson","[]")) end)
         if not nestOk or typeof(nestList)~="table" then nestList={} end
         local duration=Config.NestIncubationSeconds
-        local function formatWait(seconds: number): string
+        local function formatWait(seconds: number): string -- docs/72: round, drop zeros ("2 h", "40 min", "30 s")
             seconds=math.max(0,math.ceil(seconds))
-            if seconds>=3600 then return string.format("%dh %02dm",seconds//3600,(seconds%3600)//60) end
-            return string.format("%dm %02ds",seconds//60,seconds%60)
+            if seconds>=3600 then
+                local hours,minutes=seconds//3600,math.floor((seconds%3600)/60+.5)
+                if minutes>=60 then hours+=1 minutes=0 end
+                return if minutes==0 then hours.." h" else hours.." h "..minutes.." min"
+            end
+            if seconds>=60 then return math.ceil(seconds/60).." min" end
+            return seconds.." s"
         end
         local storage=label(body,"Nests "..#nestList.."/"..Config.NestStorageCapacity,0,0,300,30,24,C.gold)
         storage.TextXAlignment=Enum.TextXAlignment.Left
-        local luckLine=label(body,"Nest eggs are lucky: better rarity, condition and Shiny/BIG odds.",300,2,524,28,16)
+        local luckLine=label(body,"Nest eggs are lucky: better rarity, condition, Shiny and BIG odds.",300,2,524,28,16)
         luckLine.TextXAlignment=Enum.TextXAlignment.Right
         local list=Instance.new("ScrollingFrame")
         list.Name,list.BackgroundTransparency,list.BorderSizePixel,list.ZIndex,list.Parent="NestList",1,0,24,body
@@ -787,7 +792,7 @@ render=function(name: string)
             if #nestList==0 then
                 footer.Text="No egg nests yet. Look for one at the end of a run."
             else
-                footer.Text="Nests hatch one at a time, "..math.floor(duration/3600).." h each. The next one starts as soon as the current one is ready, even while you are away."
+                footer.Text="One nest hatches at a time, "..math.floor(duration/3600).." h each. The next starts when this one is ready, even while you are away."
             end
         end
         refreshNests()
@@ -1334,7 +1339,7 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
                 if nestOk and typeof(nestList)=="table" then
                     waitSeconds=NestQueue.secondsUntilAllReady(nestList,math.floor(workspace:GetServerTimeNow()),Config.NestIncubationSeconds)
                 end
-                notify("New Egg Nest! Hatches in "..math.max(1,math.ceil(waitSeconds/3600)).."h",C.gold)
+                notify("New Egg Nest! Hatches in "..math.max(1,math.ceil(waitSeconds/3600)).." h",C.gold)
                 Sfx.play("shop_buy")
             end
             if num("LastRunCrystalBox")>0 then

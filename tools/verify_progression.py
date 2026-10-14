@@ -305,11 +305,11 @@ local balance=Repository.progression(shopper).crystals
 assert(balance==434 and shopper.attrs.AccountLevel>=3) -- + 61
 assert(Repository.commitRunSettlement(shopper,"xp-run",600))
 assert(Repository.progression(shopper).crystals==balance and Repository.progression(shopper).accountXP==600)
-assert(#data['u:991'].eggs==5 and #data['u:991'].runEggBank==595 and #data['u:991'].nests==5 and #data['u:991'].pendingNests==3)
+assert(#data['u:991'].eggs==5 and #data['u:991'].runEggBank==595 and #(data['u:991'].eggNests or {})==0,"no run time given -> no nest")
 assert(shopper.attrs.RunStartBlocked=="egg_bank_full" and shopper.attrs.BankedRunEggCount==595)
 -- Fixture reset so the purchase checks below start from an empty queue.
 Repository.release(shopper)
-data['u:991'].eggs={} data['u:991'].runEggBank={} data['u:991'].nests={} data['u:991'].pendingNests={}
+data['u:991'].eggs={} data['u:991'].runEggBank={} data['u:991'].eggNests={}
 assert(Repository.load(shopper) and shopper.attrs.RunStartBlocked=="")
 assert(Repository.commitRunSettlement(shopper,"genes-run",1)) -- one queued egg (0 crystals at 0.75/egg)
 assert(#data['u:991'].eggs==1 and data['u:991'].eggs[1].traitRollVersion=="bd045-genes-v2")

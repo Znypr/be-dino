@@ -106,7 +106,7 @@ local function nativeIcon(parent: GuiObject,id: string): Frame?
         preview.Size=UDim2.fromScale(1,1)
         return root
     end
-    if id=="egg_nest" then -- BD-090 native nest sprite (twig ring + egg); an uploaded "egg_nest" image overrides it
+    if id=="egg_nest" then -- PLACEHOLDER (docs/72): code-drawn nest until the owner uploads resources/ui/v2/icons/egg-nest-v1.png and its id is bound as "egg_nest"
         local root=Instance.new("Frame")
         root.Name,root.BackgroundTransparency,root.Size="Art_egg_nest",1,UDim2.fromOffset(42,42)
         root.Position,root.ZIndex,root.Parent=UDim2.fromOffset(8,5),parent.ZIndex+1,parent
