@@ -75,7 +75,7 @@ if PLAYTEST then
  assert(Config.WorldArtDensity>=.5 and Config.WorldArtDensity<=2 and Config.WorldArtDensity>1,"playtest density")
  assert(#a>=PROPS_LO,"the kit must dress the map richly: "..#a.." props (owner: lush; was ~45 as native models)")
  assert(counts.tree>=TREE_LO and counts.rock>=ROCK_LO and counts.shrub>=SHRUB_LO and counts.groundcover>=COVER_LO,"kit must clearly dress the map")
- assert(nativeProps<=1,"only the unuploaded dead_m may be native: "..nativeProps)
+ assert(nativeProps==0,"every kit prop must be a MeshPart now (all 41 uploaded): "..nativeProps)
  assert(worldParts<=WORLD_MAX,"world kit parts "..worldParts)
  assert(foodParts<=1600,"food pickup parts "..foodParts)
  assert(worldParts+foodParts+residualParts<=8000,"total world parts "..(worldParts+foodParts+residualParts))

@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "bfea14328d62514ae6aff0f61b1bddb75342212e72ae1a8e51aea935b7aa71fa",
+  "place_sha256": "216eed8ff08521b4bb596028d5c9da3a62905d57cd461496176507dae87786a8",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "bf8cb9707c8ac3b1ab6e0d49813e5132568a6f72d20564a2316e82e9be48519e",
@@ -221,7 +221,7 @@
     "src/shared/UITheme.luau": "ebe8f366e81e3f0a34bd14f4a3560cdfffa50651a89f1e73df2a1a976d043ceb",
     "src/shared/WeatherClock.luau": "ae9d42007a3bb54610b478c906d9042859b735467af69ad9d1e8782ee6b33730",
     "src/shared/WorldKitData.luau": "860dd88ae449c3daa82d1372148e02d50d0ccaa08c8fa5a21a003a75bb4abde2",
-    "src/shared/WorldKitMeshAssets.luau": "9eb71311ec6cc8a857b07ad11ef7942ef363f28016b50602d36991913763439b",
+    "src/shared/WorldKitMeshAssets.luau": "7110648be06c6e602728e21ad96a833e4ad87d65c64fced492ef5bfcd9ce503f",
     "src/server/AdminService.luau": "976ad80456b7adabfbb9092fe9e6986a565957ec47a2e7e5046f61406d9c12af",
     "src/server/Arena.luau": "c33fc4beee43e9332d75e8ee2f5afda9641cdac446eeeeacb33f6226ab752787",
     "src/server/Bootstrap.server.luau": "29a136bc39e0c4a4c38cd507d4da309f64b2df530c5be4876725d4fda422025c",

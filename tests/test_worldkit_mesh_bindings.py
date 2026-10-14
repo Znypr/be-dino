@@ -19,9 +19,9 @@ class WorldKitMeshBindingTests(unittest.TestCase):
     def test_generated_file_is_current_and_covers_the_kit(self):
         self.assertEqual(BINDER.compile_bindings(), BINDER.OUTPUT.read_text())
         text = BINDER.OUTPUT.read_text()
-        self.assertEqual(text.count("meshId ="), 40)
-        self.assertNotIn("world_tree_dead_m", text)  # not uploaded: native fallback
-        self.assertEqual(self.data["missing"], ["world_tree_dead_m"])
+        self.assertEqual(text.count("meshId ="), 41)
+        self.assertIn("world_tree_dead_m", text)
+        self.assertEqual(self.data["missing"], [])
 
     def test_every_id_is_bound_or_missing(self):
         data = copy.deepcopy(self.data)

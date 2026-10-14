@@ -2,10 +2,8 @@
  "version": 1,
  "uploadedAt": "2026-10-15",
  "owner": "znyprs (7285577648)",
- "status": "uploaded via Studio Bulk Import; MeshPart sizes are centimetre-scale, multiply by scale to get studs; missing ids = null",
- "missing": [
-  "world_tree_dead_m"
- ],
+ "status": "uploaded via Studio Bulk Import; MeshPart sizes are centimetre-scale, multiply by scale to get studs; all 41 uploaded",
+ "missing": [],
  "meshes": {
   "world_boulder_mossy_l": {
    "meshId": "rbxassetid://74337027284321",
@@ -603,6 +601,21 @@
     17.9262,
     19.4299,
     16.6558
+   ],
+   "scale": 0.01,
+   "ratioSpread": 1.0
+  },
+  "world_tree_dead_m": {
+   "meshId": "rbxassetid://126421013408998",
+   "importedSize": [
+    524.9936,
+    1233.9022,
+    403.7802
+   ],
+   "targetSize": [
+    5.2499,
+    12.339,
+    4.0378
    ],
    "scale": 0.01,
    "ratioSpread": 1.0

@@ -371470,6 +371470,7 @@ return {
     world_tree_cycad_m = {meshId = "rbxassetid://102479671711761", size = {9.2059, 8.8499, 9.2379}},
     world_tree_cycad_l = {meshId = "rbxassetid://121463204666848", size = {14.143, 12.673, 14.322}},
     world_tree_dead_s = {meshId = "rbxassetid://128424086478561", size = {1.5618, 7.9962, 2.5427}},
+    world_tree_dead_m = {meshId = "rbxassetid://126421013408998", size = {5.2499, 12.339, 4.0378}},
     world_tree_dead_l = {meshId = "rbxassetid://126942564214652", size = {7.042, 17.48, 6.225}},
     world_bush_a = {meshId = "rbxassetid://78099483652653", size = {3.702, 1.899, 2.477}},
     world_fern_a = {meshId = "rbxassetid://107977080086482", size = {3.255, 1.201, 2.936}},
