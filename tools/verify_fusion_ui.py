@@ -46,6 +46,23 @@ local rainbow=dino({genes={conditionId="rainbow",primaryColorId="red"}})
 for _,d in {shiny,big,ember,aura,trail,locked,fav,spots,raptor,gold,legacy,rainbow} do table.insert(all,d) end
 local byId=S.index(all)
 
+-- ===== Nav gating, egg slot look, Dino Index silhouette =====
+assert(S.navTarget({menuLoaded=true,remote=true,probe="ok",profile="playtest"})=="menu")
+assert(S.navTarget({menuLoaded=true,remote=true,probe=nil,profile="release"})=="menu")
+assert(S.navTarget({menuLoaded=true,remote=true,probe="disabled",profile="development"})=="legacy")
+assert(S.navTarget({menuLoaded=true,remote=false,profile="development"})=="legacy")
+assert(S.navTarget({menuLoaded=false,remote=true,profile="development"})=="legacy")
+assert(S.navTarget({menuLoaded=true,remote=true,probe="disabled",profile="playtest"})=="unavailable")
+assert(S.navTarget({menuLoaded=true,remote=false,profile="release"})=="unavailable")
+assert(S.eggSlotLook(nil,false)=="empty")
+assert(S.eggSlotLook({genes={}},true)=="genes")
+assert(S.eggSlotLook({genes={}},false)=="plain")
+assert(S.eggSlotLook({rarity=1},false)=="plain")
+local hidden=S.indexCard(false)
+assert(hidden.silhouette and hidden.locked and hidden.nameText=="???" and hidden.rarityText=="???" and hidden.status=="Not discovered")
+local shown=S.indexCard(true)
+assert(not shown.silhouette and not shown.locked and shown.nameText==nil and shown.rarityText==nil)
+
 -- ===== Eligibility reasons =====
 local ctx={targetStage="gold",speciesId="compy",patternId="06_wavy_stripes"}
 assert(S.ineligibility(all[1],ctx)==nil)

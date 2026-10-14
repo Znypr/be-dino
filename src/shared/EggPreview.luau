@@ -19,12 +19,8 @@ function Egg.create(empty: boolean?): Model
         mesh.MeshType,mesh.Scale,mesh.Parent=Enum.MeshType.Sphere,Vector3.one,part
         return part
     end
-    sphere("Shell",Vector3.new(0,1.2,0),Vector3.new(1.55,2.3,1.55),Color3.fromRGB(255,237,182))
-    do
-        for i,p in {Vector3.new(.49,1.58,-.59),Vector3.new(-.32,.94,-.66),Vector3.new(.17,2.01,-.43),Vector3.new(-.68,1.48,-.21)} do
-            sphere("JadePatch"..i,p,Vector3.new(.32,.36,.12),Color3.fromRGB(58,172,117))
-        end
-    end
+    -- Neutral shell only: genes (EggAppearance) supply pattern/colors; empty slots are a flat gray placeholder.
+    sphere("Shell",Vector3.new(0,1.2,0),Vector3.new(1.55,2.3,1.55),if empty then Color3.fromRGB(96,100,116) else Color3.fromRGB(255,244,214))
     model.WorldPivot=CFrame.new()
     return model
 end

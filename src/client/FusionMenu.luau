@@ -25,6 +25,7 @@ local C = W.Colors
 local T = W.Touch
 
 local FusionMenu = {}
+local leftInset = 0 -- px kept clear for the left nav rail
 -- Client display constants (module-local by design; no Config edits).
 FusionMenu.QuoteDebounce = .35
 FusionMenu.RequestTimeout = 12
@@ -76,6 +77,13 @@ local gui: ScreenGui? = nil
 local panel: Frame? = nil
 local body: Frame? = nil
 local titleLabel: TextLabel? = nil
+function FusionMenu.setLeftInset(px: number)
+    leftInset = math.clamp(math.floor(px), 0, 320)
+    if panel then
+        (panel :: Frame).Size = UDim2.new(.97, -leftInset, .95, 0)
+        ;(panel :: Frame).Position = UDim2.new(0, leftInset + 6, .5, 0)
+    end
+end
 local cards = {}
 local column = {}
 
@@ -103,8 +111,8 @@ local function ensureGui()
     scrim.Name, scrim.Text, scrim.AutoButtonColor, scrim.Size = "FusionScrim", "", false, UDim2.fromScale(1, 1)
     scrim.BackgroundColor3, scrim.BackgroundTransparency = Color3.new(0, 0, 0), .42
     scrim.Parent = screen
-    local frame = W.box(scrim, UDim2.fromScale(.97, .95), UDim2.fromScale(.5, .5), C.panel, 8)
-    frame.Name, frame.AnchorPoint, frame.Active = "FusionPanel", Vector2.new(.5, .5), true
+    local frame = W.box(scrim, UDim2.new(.97, -leftInset, .95, 0), UDim2.new(0, leftInset + 6, .5, 0), C.panel, 8)
+    frame.Name, frame.AnchorPoint, frame.Active = "FusionPanel", Vector2.new(0, .5), true
     local limit = Instance.new("UISizeConstraint")
     limit.MaxSize, limit.Parent = Vector2.new(1180, 680), frame
     local header = W.box(frame, UDim2.new(1, -8, 0, T + 8), UDim2.fromOffset(4, 4), C.purple)
@@ -817,8 +825,8 @@ function FusionMenu.open()
     screen.Enabled = true
     if panel and motion() then
         local frame = panel :: Frame
-        frame.Position = UDim2.fromScale(.5, .53)
-        Theme.animate(frame, .16, {Position = UDim2.fromScale(.5, .5)})
+        frame.Position = UDim2.new(0, leftInset + 6, .53, 0)
+        Theme.animate(frame, .16, {Position = UDim2.new(0, leftInset + 6, .5, 0)})
     end
     if not FusionMenu.available() then state.mode = "unavailable" render() return end
     if fuseInFlight then
