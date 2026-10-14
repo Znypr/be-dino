@@ -528,41 +528,51 @@ render=function(name: string)
                 header_text()
             end
         end)
+        -- docs/68: 6 offers in a 3x2 grid plus the owned list scroll together, so the panel fits a phone landscape (UIScale) and desktop.
+        local scroller=Instance.new("ScrollingFrame")
+        scroller.Name="PotionScroll"
+        scroller.Position,scroller.Size,scroller.BackgroundTransparency=UDim2.fromOffset(0,34),UDim2.fromOffset(824,368),1
+        scroller.BorderSizePixel,scroller.ScrollBarThickness,scroller.ZIndex,scroller.Parent=0,8,body.ZIndex+1,body
+        scroller.ScrollingDirection=Enum.ScrollingDirection.Y
+        local rarityColor={Common=Color3.fromRGB(176,188,200),Uncommon=C.accent,Rare=C.blue,Epic=C.purple,Legendary=C.gold}
+        local function bottle(item) return "potion_"..item.kind.."_"..item.rarity end -- native vector bottle (PotionArt): shape = effect, trim/glow/pips = rarity
         for i,offer in ProgressionRules.shopOffers(window) do
             local item=ProgressionRules.item(ProgressionConfig.Potions,offer.id)
             local left=ProgressionRules.shopRemaining(p,window,offer.id)
-            local x=(i-1)*276 local y=40
-            local color=if item.rarity=="Legendary" then C.gold elseif item.rarity=="Rare" then C.blue else C.accent
-            local card=box(body,x,y,264,164,C.card,24)
-            art(card,"potion_"..item.kind,8,14,76)
-            label(card,item.name,88,5,167,32,21,color)
-            label(card,item.rarity.." • "..item.multiplier.."x\n"..(item.duration//60).." minutes",86,39,170,50,18)
-            label(card,if left>0 then left.." left" else "Sold Out",86,88,170,24,17,if left>0 then C.gold else C.red)
-            local buy=button(card,if left>0 then item.price.." Crystals" else "SOLD OUT",8,120,248,34,if left>0 then color else C.card,function()
+            local x=((i-1)%3)*276 local y=math.floor((i-1)/3)*140
+            local color=rarityColor[item.rarity] or C.accent
+            local card=box(scroller,x,y,264,132,C.card:Lerp(color,if left>0 then .28 else .08),24)
+            art(card,bottle(item),6,8,64)
+            label(card,item.name,74,3,186,26,19,color)
+            label(card,item.rarity.." "..item.kind.." - "..item.multiplier.."x\n"..(item.duration//60).."m "..(item.duration%60).."s",74,28,186,44,15)
+            label(card,if left>0 then left.." left" else "Sold Out - back later",74,74,186,20,15,if left>0 then C.gold else C.red)
+            local buy=button(card,if left>0 then item.price.." Crystals" else "SOLD OUT",8,96,248,30,if left>0 then color:Lerp(C.panel,.45) else C.card,function()
                 if left>0 then chosenPotion=item.id open("potionConfirm") end
             end)
-            buy.TextSize=17
+            buy.TextSize=16
         end
-        label(body,"Your potions (tap to use)",0,212,824,26,18,C.gold)
+        label(scroller,"Rarer potions appear less often. Six of twelve are offered each restock.",0,284,824,22,15,C.gold)
+        label(scroller,"Your potions (tap to use)",0,310,824,24,18,C.gold)
         local slot=0
         for _,item in ProgressionConfig.Potions do
             local owned=p.potions[item.id] or 0
             if owned>0 then
-                local x=(slot%3)*276 local y=240+math.floor(slot/3)*46
+                local x=(slot%3)*276 local y=338+math.floor(slot/3)*46
                 slot+=1
-                button(body,item.name.." x"..owned.."  USE",x,y,264,40,C.purple,function()
+                button(scroller,item.name.." x"..owned.."  USE",x,y,264,40,C.purple,function()
                     chosenPotion=item.id
                     local buff=p.buffs[item.kind]
                     if buff and buff.expiresAt>workspace:GetServerTimeNow() then open("potionReplace") else transact("usePotion",item.id,false) end
-                end).TextSize=17
+                end).TextSize=16
             end
         end
-        if slot==0 then label(body,"No potions yet. Buy from today's offers above.",0,244,824,32,18) end
+        if slot==0 then label(scroller,"No potions yet. Buy from this restock's offers above.",0,338,824,32,18) end
+        scroller.CanvasSize=UDim2.fromOffset(0,338+math.max(1,math.ceil(slot/3))*46+8)
     elseif name=="potionConfirm" or name=="potionReplace" then
         local item=ProgressionRules.item(ProgressionConfig.Potions,chosenPotion)
         local replacing=name=="potionReplace"
         heading.Text,header.BackgroundColor3=if replacing then "Replace Active Potion?" else "Buy Potion?",C.accent
-        art(body,"potion_"..item.kind,30,22,220)
+        art(body,"potion_"..item.kind.."_"..item.rarity,30,22,220)
         label(body,item.name.." • "..item.multiplier.."x "..item.kind,290,15,510,62,28)
         label(body,if replacing then "Your current "..item.kind.." potion ends immediately. Its remaining time is lost. Consume 1 potion for a fresh "..(item.duration//60).." minutes?" else (item.duration//60).." minutes • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
         button(body,if replacing then "REPLACE & USE" else "BUY POTION",290,263,510,58,C.accent,function()

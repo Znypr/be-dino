@@ -1,6 +1,7 @@
 --!strict
 local Assets = require(script.Parent.ArtworkAssets)
 local Layout = require(script.Parent.ArtworkLayout)
+local PotionArt = require(script.Parent.PotionArt)
 local Art = {}
 local function layer(parent: GuiObject, key: string, position: Vector2, size: number, z: number): ImageLabel?
     local uri = Assets[key]
@@ -15,6 +16,14 @@ end
 function Art.build(parent: GuiObject, id: string, native): Frame?
     local aura = string.match(id, "^aura_(%w+)$")
     local potion = string.match(id, "^potion_(%w+)$")
+    local vialKind, vialRarity = string.match(id, "^potion_(%a+)_(%a+)$")
+    if vialKind and PotionArt.Shapes[vialKind] then -- docs/68 native vector bottle: no symbol overlay
+        local vial = Instance.new("Frame")
+        vial.Name,vial.BackgroundTransparency,vial.Size = "Artwork_"..id,1,UDim2.fromOffset(42,42)
+        vial.ZIndex,vial.Parent = parent.ZIndex+1,parent
+        PotionArt.build(vial,vialKind,vialRarity :: string)
+        return vial
+    end
     if not aura and not potion and id ~= "catches" and id ~= "mutation_gold" and id ~= "mutation_diamond" then return nil end
     local root = Instance.new("Frame")
     root.Name,root.BackgroundTransparency,root.Size = "Artwork_"..id,1,UDim2.fromOffset(42,42)

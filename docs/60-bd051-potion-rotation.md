@@ -26,3 +26,6 @@ Status: Review / test. Studio and phone evidence pending. **Owner-approved 2026-
 - The server uses `os.time()` and the client `GetServerTimeNow()`; a tiny skew near a boundary can show a just-expired offer (rejected as `stale_window`, shop re-renders).
 - A purchase at the exact boundary in the load/progression tests uses real time; a two-minute rollover mid-test could in theory flake.
 - Weights, offer count and stock are placeholders pending balance review. Phone layout of the offers row plus owned-potion buttons needs Studio/device evidence.
+
+## 2026-10-14 update: 12-potion catalog, 6 offers (docs/68)
+`PotionShop` now has `OfferCount=6`, `MaxStock=3`, five rarities with `RarityWeights` Common 50 / Uncommon 28 / Rare 14 / Epic 6 / Legendary 2, and per-rarity `StockWeights` (Epic/Legendary stock is always 1). `Potions` grew from 6 to 12 (a new loot family); old ids and data are unchanged. Each slot rolls a rarity then a distinct potion; unrolled potions are `not_offered` that window. Window ids, `stale_window`/`not_offered`/`sold_out` and exactly-once purchase logic are unchanged. The rows above that list 3 offers, weights 60/30/10 and stock weights 60/30/10 are superseded by docs/68.

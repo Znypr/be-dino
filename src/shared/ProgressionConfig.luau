@@ -72,16 +72,30 @@ return table.freeze({
         {id="nova",name="Nova Ribbon",rarity="Legendary",price=5500,level=45,speed=1.16,color={180,106,255},accent={255,215,115},width=.8,lifetime=1.2,particles=10},
         {id="astra",name="Astra",rarity="Legendary",price=8500,level=60,speed=1.18,color={112,255,205},accent={255,130,232},width=.85,lifetime=1.3,particles=14},
     },
-    -- BD-051 PROVISIONAL rotating Potion Shop (owner-approved 2026-10-14: restock every 2 minutes).
+    -- BD-051 + docs/68 PROVISIONAL rotating Potion Shop (one block; owner-approved 2026-10-14: restock every 2 minutes).
     -- Offers derive from the window number (floor(unixSeconds/PeriodSeconds)), so every server agrees and rejoining never rerolls.
-    -- Weights are relative; rarity picks distinct potions without replacement, stock is rolled 1..3 per offer. Crystals only.
-    PotionShop={PeriodSeconds=120, OfferCount=3, RarityWeights={Common=60,Rare=30,Legendary=10}, StockWeights={60,30,10}},
+    -- Each of the OfferCount slots rolls a rarity from RarityWeights (only rarities that still have unoffered potions), then a
+    -- distinct potion of that rarity; the other potions are simply not offered this window (not_offered). Stock is rolled per
+    -- offer from StockWeights[rarity] (index = stock, so Epic/Legendary always stock 1). Crystals only.
+    PotionShop={
+        PeriodSeconds=120, OfferCount=6, MaxStock=3,
+        Rarities={"Common","Uncommon","Rare","Epic","Legendary"},
+        RarityWeights={Common=50,Uncommon=28,Rare=14,Epic=6,Legendary=2},
+        StockWeights={Common={60,30,10},Uncommon={60,30,10},Rare={60,30,10},Epic={1},Legendary={1}},
+    },
+    -- Prices rise with rarity, power and duration (docs/68). The six pre-catalog ids keep their data and values.
     Potions={
         {id="speed_common",name="Swift Sip",kind="speed",rarity="Common",duration=300,multiplier=1.2,price=20},
-        {id="speed_rare",name="Raptor Rush",kind="speed",rarity="Rare",duration=600,multiplier=1.45,price=65},
-        {id="speed_legendary",name="Meteor Sprint",kind="speed",rarity="Legendary",duration=900,multiplier=1.75,price=180},
         {id="growth_common",name="Growth Sip",kind="growth",rarity="Common",duration=300,multiplier=1.25,price=25},
+        {id="loot_common",name="Lucky Sip",kind="loot",rarity="Common",duration=300,multiplier=1.1,price=30},
+        {id="speed_uncommon",name="Trail Blazer",kind="speed",rarity="Uncommon",duration=450,multiplier=1.3,price=38},
+        {id="growth_uncommon",name="Hearty Brew",kind="growth",rarity="Uncommon",duration=450,multiplier=1.4,price=48},
+        {id="speed_rare",name="Raptor Rush",kind="speed",rarity="Rare",duration=600,multiplier=1.45,price=65},
         {id="growth_rare",name="Prime Feast",kind="growth",rarity="Rare",duration=600,multiplier=1.6,price=80},
+        {id="loot_rare",name="Treasure Draught",kind="loot",rarity="Rare",duration=600,multiplier=1.25,price=95},
+        {id="growth_epic",name="Behemoth Brew",kind="growth",rarity="Epic",duration=750,multiplier=1.8,price=135},
+        {id="loot_epic",name="Jackpot Elixir",kind="loot",rarity="Epic",duration=750,multiplier=1.4,price=170},
+        {id="speed_legendary",name="Meteor Sprint",kind="speed",rarity="Legendary",duration=900,multiplier=1.75,price=180},
         {id="growth_legendary",name="Titan Tonic",kind="growth",rarity="Legendary",duration=900,multiplier=2,price=220},
     },
     Weather={

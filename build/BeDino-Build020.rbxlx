@@ -364741,6 +364741,7 @@ end)
           <ProtectedString name="Source">--!strict
 local Assets = require(script.Parent.ArtworkAssets)
 local Layout = require(script.Parent.ArtworkLayout)
+local PotionArt = require(script.Parent.PotionArt)
 local Art = {}
 local function layer(parent: GuiObject, key: string, position: Vector2, size: number, z: number): ImageLabel?
     local uri = Assets[key]
@@ -364755,6 +364756,14 @@ end
 function Art.build(parent: GuiObject, id: string, native): Frame?
     local aura = string.match(id, "^aura_(%w+)$")
     local potion = string.match(id, "^potion_(%w+)$")
+    local vialKind, vialRarity = string.match(id, "^potion_(%a+)_(%a+)$")
+    if vialKind and PotionArt.Shapes[vialKind] then -- docs/68 native vector bottle: no symbol overlay
+        local vial = Instance.new("Frame")
+        vial.Name,vial.BackgroundTransparency,vial.Size = "Artwork_"..id,1,UDim2.fromOffset(42,42)
+        vial.ZIndex,vial.Parent = parent.ZIndex+1,parent
+        PotionArt.build(vial,vialKind,vialRarity :: string)
+        return vial
+    end
     if not aura and not potion and id ~= "catches" and id ~= "mutation_gold" and id ~= "mutation_diamond" then return nil end
     local root = Instance.new("Frame")
     root.Name,root.BackgroundTransparency,root.Size = "Artwork_"..id,1,UDim2.fromOffset(42,42)
@@ -365197,7 +365206,8 @@ return table.freeze({
     FoodArtMode = "Legacy", -- "Kit": BD-050 Blender food variants (visual only; points unchanged) PROVISIONAL
     WorldArtMode = "Legacy", -- "BiomeKit": BD-049 Blender props + placement grammar PROVISIONAL
     WorldArtSeed = 1404,
-    WorldArtDensity = 1,
+    WorldArtDensity = 1, -- the playtest profile sets 0.35 (docs/68 part budget); 1 is ~18k native parts
+    FoodKitVisualCap = 12, -- PROVISIONAL max native egg/amber kit models (about 115 parts each); other pickups keep the light ball
     StudioLocalProfilesEnabled = true, -- unpublished Studio only; never a live fallback
     StudioTestWalletEnabled = true, -- only unpublished, nonpersistent local profiles
     StudioTestCrystals = 1000000,
@@ -368934,6 +368944,70 @@ return Pattern
       </Item>
       <Item class="ModuleScript" referent="RBX208">
         <Properties>
+          <string name="Name">PotionArt</string>
+          <ProtectedString name="Source">--!strict
+-- Native vector potion icons (docs/68). No image assets and no symbol on the glass:
+-- the effect family sets the bottle SHAPE and liquid colour, the rarity sets cork, trim, glow and pip count.
+local PotionArt = {}
+PotionArt.Rarities = {"Common","Uncommon","Rare","Epic","Legendary"}
+PotionArt.RarityColor = {
+    Common=Color3.fromRGB(176,188,200), Uncommon=Color3.fromRGB(93,237,31), Rare=Color3.fromRGB(46,206,255),
+    Epic=Color3.fromRGB(194,86,255), Legendary=Color3.fromRGB(255,210,43),
+}
+-- body = {x,y,w,h}, neck = {x,w,top,height}, corner = body corner radius (scale), all fractions of the 42x42 root.
+PotionArt.Shapes = {
+    speed={body={.30,.34,.40,.52}, neck={.40,.20,.14,.22}, corner=.5, liquid=Color3.fromRGB(64,214,255)}, -- tall slim flask, cyan
+    growth={body={.18,.42,.64,.46}, neck={.38,.24,.20,.24}, corner=1, liquid=Color3.fromRGB(98,236,112)}, -- round flask, green
+    loot={body={.16,.48,.68,.38}, neck={.30,.40,.30,.20}, corner=.3, liquid=Color3.fromRGB(255,170,48)}, -- wide squat jar, amber
+}
+local function frame(parent: GuiObject, name: string, x: number, y: number, w: number, h: number, color: Color3, z: number, corner: number?, transparency: number?)
+    local f = Instance.new("Frame")
+    f.Name, f.BackgroundColor3, f.BorderSizePixel, f.ZIndex = name, color, 0, z
+    f.BackgroundTransparency = transparency or 0
+    f.Position, f.Size = UDim2.fromScale(x,y), UDim2.fromScale(w,h)
+    if corner then
+        local c = Instance.new("UICorner")
+        c.CornerRadius, c.Parent = UDim.new(corner,0), f
+    end
+    f.Parent = parent
+    return f
+end
+local function stroke(parent: GuiObject, color: Color3, thickness: number)
+    local s = Instance.new("UIStroke")
+    s.Color, s.Thickness, s.Parent = color, thickness, parent
+    return s
+end
+function PotionArt.rarityIndex(rarity: string): number
+    return table.find(PotionArt.Rarities, rarity) or 1
+end
+function PotionArt.build(root: GuiObject, kind: string, rarity: string)
+    local shape = PotionArt.Shapes[kind] or PotionArt.Shapes.speed
+    local tier = PotionArt.rarityIndex(rarity)
+    local trim = PotionArt.RarityColor[rarity] or PotionArt.RarityColor.Common
+    local z = root.ZIndex + 1
+    -- Glow plate: invisible for Common, strengthening each tier; Epic/Legendary get a bright rim.
+    local glow = frame(root, "RarityGlow", .02, .02, .96, .96, trim, z, .3, if tier == 1 then 1 else 0.9 - tier * .1)
+    if tier &gt;= 4 then stroke(glow, trim, tier - 2) end
+    local b, n = shape.body, shape.neck
+    local neck = frame(root, "Neck", n[1], n[3], n[2], n[4] + .06, Color3.fromRGB(214,238,246), z + 1, .2, .25)
+    local body = frame(root, "Glass", b[1], b[2], b[3], b[4], Color3.fromRGB(214,238,246), z + 1, shape.corner, .25)
+    stroke(body, trim, if tier &gt;= 3 then 2 else 1)
+    -- Liquid fills the lower 65% of the body, clipped by matching corners.
+    frame(body, "Liquid", .06, .35, .88, .59, shape.liquid, z + 2, shape.corner, .05)
+    frame(body, "Shine", .14, .14, .12, .3, Color3.new(1,1,1), z + 3, 1, .45)
+    frame(root, "Cork", n[1] - .02, n[3] - .06, n[2] + .04, .1, trim, z + 3, .35)
+    -- Pips (1 per tier) make rarity readable without colour.
+    for i = 1, tier do
+        frame(root, "Pip", .5 + (i - (tier + 1) / 2) * .11 - .03, .92, .06, .06, trim, z + 3, 1)
+    end
+    return neck
+end
+return PotionArt
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX209">
+        <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
 -- Fit actual geometry, excluding controller roots and invisible humanoid parts.
@@ -369000,7 +369074,7 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX209">
+      <Item class="ModuleScript" referent="RBX210">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -369077,16 +369151,30 @@ return table.freeze({
         {id="nova",name="Nova Ribbon",rarity="Legendary",price=5500,level=45,speed=1.16,color={180,106,255},accent={255,215,115},width=.8,lifetime=1.2,particles=10},
         {id="astra",name="Astra",rarity="Legendary",price=8500,level=60,speed=1.18,color={112,255,205},accent={255,130,232},width=.85,lifetime=1.3,particles=14},
     },
-    -- BD-051 PROVISIONAL rotating Potion Shop (owner-approved 2026-10-14: restock every 2 minutes).
+    -- BD-051 + docs/68 PROVISIONAL rotating Potion Shop (one block; owner-approved 2026-10-14: restock every 2 minutes).
     -- Offers derive from the window number (floor(unixSeconds/PeriodSeconds)), so every server agrees and rejoining never rerolls.
-    -- Weights are relative; rarity picks distinct potions without replacement, stock is rolled 1..3 per offer. Crystals only.
-    PotionShop={PeriodSeconds=120, OfferCount=3, RarityWeights={Common=60,Rare=30,Legendary=10}, StockWeights={60,30,10}},
+    -- Each of the OfferCount slots rolls a rarity from RarityWeights (only rarities that still have unoffered potions), then a
+    -- distinct potion of that rarity; the other potions are simply not offered this window (not_offered). Stock is rolled per
+    -- offer from StockWeights[rarity] (index = stock, so Epic/Legendary always stock 1). Crystals only.
+    PotionShop={
+        PeriodSeconds=120, OfferCount=6, MaxStock=3,
+        Rarities={"Common","Uncommon","Rare","Epic","Legendary"},
+        RarityWeights={Common=50,Uncommon=28,Rare=14,Epic=6,Legendary=2},
+        StockWeights={Common={60,30,10},Uncommon={60,30,10},Rare={60,30,10},Epic={1},Legendary={1}},
+    },
+    -- Prices rise with rarity, power and duration (docs/68). The six pre-catalog ids keep their data and values.
     Potions={
         {id="speed_common",name="Swift Sip",kind="speed",rarity="Common",duration=300,multiplier=1.2,price=20},
-        {id="speed_rare",name="Raptor Rush",kind="speed",rarity="Rare",duration=600,multiplier=1.45,price=65},
-        {id="speed_legendary",name="Meteor Sprint",kind="speed",rarity="Legendary",duration=900,multiplier=1.75,price=180},
         {id="growth_common",name="Growth Sip",kind="growth",rarity="Common",duration=300,multiplier=1.25,price=25},
+        {id="loot_common",name="Lucky Sip",kind="loot",rarity="Common",duration=300,multiplier=1.1,price=30},
+        {id="speed_uncommon",name="Trail Blazer",kind="speed",rarity="Uncommon",duration=450,multiplier=1.3,price=38},
+        {id="growth_uncommon",name="Hearty Brew",kind="growth",rarity="Uncommon",duration=450,multiplier=1.4,price=48},
+        {id="speed_rare",name="Raptor Rush",kind="speed",rarity="Rare",duration=600,multiplier=1.45,price=65},
         {id="growth_rare",name="Prime Feast",kind="growth",rarity="Rare",duration=600,multiplier=1.6,price=80},
+        {id="loot_rare",name="Treasure Draught",kind="loot",rarity="Rare",duration=600,multiplier=1.25,price=95},
+        {id="growth_epic",name="Behemoth Brew",kind="growth",rarity="Epic",duration=750,multiplier=1.8,price=135},
+        {id="loot_epic",name="Jackpot Elixir",kind="loot",rarity="Epic",duration=750,multiplier=1.4,price=170},
+        {id="speed_legendary",name="Meteor Sprint",kind="speed",rarity="Legendary",duration=900,multiplier=1.75,price=180},
         {id="growth_legendary",name="Titan Tonic",kind="growth",rarity="Legendary",duration=900,multiplier=2,price=220},
     },
     Weather={
@@ -369112,7 +369200,7 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX210">
+      <Item class="ModuleScript" referent="RBX211">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -369170,19 +369258,32 @@ function Rules.shopOffers(window: number)
         return state/2147483647
     end
     for _=1,6 do nextUnit() end
-    local pool={}
-    for _,item in Config.Potions do table.insert(pool,{item=item,weight=shop.RarityWeights[item.rarity] or 0}) end
+    -- Pools per rarity; each slot picks a rarity (weighted, among rarities with potions left), then a distinct potion.
+    local pools={}
+    for _,item in Config.Potions do
+        pools[item.rarity]=pools[item.rarity] or {}
+        table.insert(pools[item.rarity],item)
+    end
     local offers={}
-    for _=1,math.min(shop.OfferCount,#pool) do
-        local total=0 for _,entry in pool do total+=entry.weight end
+    for _=1,math.min(shop.OfferCount,#Config.Potions) do
+        local total=0
+        for _,rarity in shop.Rarities do if pools[rarity] and #pools[rarity]&gt;0 then total+=shop.RarityWeights[rarity] or 0 end end
         local roll=nextUnit()*total
-        local pick=#pool
-        for i,entry in pool do roll-=entry.weight if roll&lt;0 then pick=i break end end
-        local item=table.remove(pool,pick).item
-        local stockTotal=0 for _,w in shop.StockWeights do stockTotal+=w end
+        local chosen=nil
+        for _,rarity in shop.Rarities do
+            if pools[rarity] and #pools[rarity]&gt;0 then
+                chosen=rarity
+                roll-=shop.RarityWeights[rarity] or 0
+                if roll&lt;0 then break end
+            end
+        end
+        local pool=pools[chosen :: string]
+        local item=table.remove(pool,math.min(#pool,1+math.floor(nextUnit()*#pool)))
+        local weights=shop.StockWeights[item.rarity]
+        local stockTotal=0 for _,w in weights do stockTotal+=w end
         local stockRoll=nextUnit()*stockTotal
-        local stock=#shop.StockWeights
-        for i,w in shop.StockWeights do stockRoll-=w if stockRoll&lt;0 then stock=i break end end
+        local stock=#weights
+        for i,w in weights do stockRoll-=w if stockRoll&lt;0 then stock=i break end end
         table.insert(offers,{id=item.id,stock=stock})
     end
     return offers
@@ -369230,7 +369331,7 @@ function Rules.valid(p): boolean
         local shop=p.shop
         if typeof(shop)~="table" or not finite(shop.window) or shop.window&lt;0 or shop.window%1~=0 or typeof(shop.bought)~="table" then return false end
         for id,count in shop.bought do
-            if typeof(id)~="string" or not Rules.item(Config.Potions,id) or not finite(count) or count&lt;0 or count%1~=0 or count&gt;#Config.PotionShop.StockWeights then return false end
+            if typeof(id)~="string" or not Rules.item(Config.Potions,id) or not finite(count) or count&lt;0 or count%1~=0 or count&gt;Config.PotionShop.MaxStock then return false end
         end
     end
     for id,count in p.potions do
@@ -369324,7 +369425,7 @@ function Rules.multipliers(p,species,weather,now,conditionId,mutation)
     for kind,buff in p.buffs do
         if buff.expiresAt&gt;now then
             local item=Rules.item(Config.Potions,buff.id)
-            if item then if kind=="growth" then growth*=item.multiplier elseif kind=="speed" then speed*=item.multiplier end end
+            if item then if kind=="growth" then growth*=item.multiplier elseif kind=="speed" then speed*=item.multiplier elseif kind=="loot" then loot*=item.multiplier end end
         end
     end
     local trail=Rules.item(Config.Trails,p.equippedTrail or "")
@@ -369337,7 +369438,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX211">
+      <Item class="ModuleScript" referent="RBX212">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -369346,7 +369447,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX212">
+      <Item class="ModuleScript" referent="RBX213">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -369362,7 +369463,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX213">
+      <Item class="ModuleScript" referent="RBX214">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -369426,7 +369527,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX214">
+      <Item class="ModuleScript" referent="RBX215">
         <Properties>
           <string name="Name">RevealSkip</string>
           <ProtectedString name="Source">--!strict
@@ -369508,7 +369609,7 @@ return Skip
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX215">
+      <Item class="ModuleScript" referent="RBX216">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -369599,7 +369700,7 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX216">
+      <Item class="ModuleScript" referent="RBX217">
         <Properties>
           <string name="Name">Sfx</string>
           <ProtectedString name="Source">--!strict
@@ -369699,7 +369800,7 @@ return Sfx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX217">
+      <Item class="ModuleScript" referent="RBX218">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -369747,7 +369848,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX218">
+      <Item class="ModuleScript" referent="RBX219">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -369796,7 +369897,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX219">
+      <Item class="ModuleScript" referent="RBX220">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -369996,7 +370097,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX220">
+      <Item class="ModuleScript" referent="RBX221">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -370028,7 +370129,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX221">
+      <Item class="ModuleScript" referent="RBX222">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -370050,7 +370151,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX222">
+      <Item class="ModuleScript" referent="RBX223">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -370066,7 +370167,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX223">
+      <Item class="ModuleScript" referent="RBX224">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -370212,7 +370313,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX224">
+      <Item class="ModuleScript" referent="RBX225">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -370235,7 +370336,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX225">
+      <Item class="ModuleScript" referent="RBX226">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -370287,7 +370388,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX226">
+    <Item class="Folder" referent="RBX227">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -539842,15 +539943,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX227">
+  <Item class="ServerScriptService" referent="RBX228">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX228">
+    <Item class="Folder" referent="RBX229">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX229">
+      <Item class="ModuleScript" referent="RBX230">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -539980,7 +540081,8 @@ function Arena.build()
     end
     local random = Random.new(1404)
     for side = 1, 4 do
-        for i = 0, 11 do
+        -- BiomeKit keeps every third legacy ring rock (part budget, docs/68); Legacy keeps all twelve per side.
+        for i = 0, 11, (if Config.WorldArtMode == "BiomeKit" then 3 else 1) do
             local t = -extent + i * extent * 2 / 11
             local position = if side == 1 then Vector3.new(t, 0, -extent - 5)
                 elseif side == 2 then Vector3.new(t, 0, extent + 5)
@@ -540061,7 +540163,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX230">
+      <Item class="Script" referent="RBX231">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -540206,7 +540308,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX231">
+      <Item class="ModuleScript" referent="RBX232">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -540315,7 +540417,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX232">
+      <Item class="ModuleScript" referent="RBX233">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -540403,7 +540505,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX233">
+      <Item class="ModuleScript" referent="RBX234">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -540537,7 +540639,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX234">
+      <Item class="ModuleScript" referent="RBX235">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -540749,7 +540851,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX235">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -540786,6 +540888,7 @@ function FoodService.start(dinosaur,repository)
     pickupParams.FilterType = Enum.RaycastFilterType.Include
     pickupParams.FilterDescendantsInstances = {workspace.BeDinoArena, workspace.Terrain}
     local fallbackCount = 0
+    local kitVisuals = 0
     local obstacleParams = RaycastParams.new()
     obstacleParams.FilterType = Enum.RaycastFilterType.Include
     obstacleParams.FilterDescendantsInstances = {workspace.BeDinoArena}
@@ -540868,15 +540971,24 @@ function FoodService.start(dinosaur,repository)
                 pickup:SetAttribute("Sector", string.format("%d:%d", sx, sz))
                 local visual = nil
                 -- BD-050 Kit mode is visual only: same TYPES points, pickup part and server validation.
-                -- Berry/fruit kit meshes wait for MeshPart uploads (1,300+ native wedge copies is too heavy).
-                local artId = if Config.FoodArtMode == "Kit" then string.format("food_%s_%s", kind.id, if (sx + sz + itemIndex) % 2 == 0 then "a" else "b") else kind.id
+                -- Berry/fruit keep the visible ball pickup (1,300+ native kit copies is too heavy; the ArtId variant is
+                -- recorded for the MeshPart upload). Kit egg/amber models replace the ball only on a deterministic stride
+                -- (amber 1/4, egg 1/20) up to Config.FoodKitVisualCap, so the part budget in docs/68 holds.
+                local kitMode = Config.FoodArtMode == "Kit"
+                local artId = if kitMode then string.format("food_%s_%s", kind.id, if (sx + sz + itemIndex) % 2 == 0 then "a" else "b") else kind.id
                 pickup:SetAttribute("ArtId", artId)
-                if kind.id == "egg" or kind.id == "amber" then
+                local useModel = kind.id == "egg" or kind.id == "amber"
+                if kitMode and useModel then
+                    local stride = if kind.id == "amber" then 4 else 20
+                    useModel = kitVisuals &lt; Config.FoodKitVisualCap and (sx * 16 + sz + itemIndex * 7) % stride == 0
+                end
+                if useModel then
                     local ok, result = pcall(function()
                         local model = Resources.clone(artId)
                         if model and artId == kind.id then model:ScaleTo(kind.size / (if kind.id == "egg" then 2.4 else 1.3)) end
                         return model
                     end)
+                    if ok and result and kitMode then kitVisuals += 1 end
                     if ok then visual = result end -- visible native pickup survives any art failure
                 end
                 local food = {part = pickup, visual = visual, readyAt = 0, hidden = false, kind = kind,
@@ -540884,7 +540996,7 @@ function FoodService.start(dinosaur,repository)
                 if relocate(food) then
                     pickup.Parent = folder
                     if visual then
-                        pickup.Transparency = 1
+                        pickup.Transparency = 1 -- only while the kit model is the visible pickup; show() mirrors it
                         for _, item in visual:GetDescendants() do
                             if item:IsA("BasePart") then item.Anchored = true end
                         end
@@ -540991,7 +541103,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -541170,7 +541282,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX238">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -541356,7 +541468,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -541744,7 +541856,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -541794,7 +541906,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -541836,7 +541948,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -541947,7 +542059,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -542029,7 +542141,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -542121,7 +542233,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -542226,7 +542338,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -542360,7 +542472,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -544036,7 +544148,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -544217,7 +544329,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -544309,7 +544421,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -544565,7 +544677,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -544637,19 +544749,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX251">
+  <Item class="StarterPlayer" referent="RBX252">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX252">
+    <Item class="StarterPlayerScripts" referent="RBX253">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX253">
+      <Item class="Folder" referent="RBX254">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX254">
+        <Item class="LocalScript" referent="RBX255">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -545182,41 +545294,51 @@ render=function(name: string)
                 header_text()
             end
         end)
+        -- docs/68: 6 offers in a 3x2 grid plus the owned list scroll together, so the panel fits a phone landscape (UIScale) and desktop.
+        local scroller=Instance.new("ScrollingFrame")
+        scroller.Name="PotionScroll"
+        scroller.Position,scroller.Size,scroller.BackgroundTransparency=UDim2.fromOffset(0,34),UDim2.fromOffset(824,368),1
+        scroller.BorderSizePixel,scroller.ScrollBarThickness,scroller.ZIndex,scroller.Parent=0,8,body.ZIndex+1,body
+        scroller.ScrollingDirection=Enum.ScrollingDirection.Y
+        local rarityColor={Common=Color3.fromRGB(176,188,200),Uncommon=C.accent,Rare=C.blue,Epic=C.purple,Legendary=C.gold}
+        local function bottle(item) return "potion_"..item.kind.."_"..item.rarity end -- native vector bottle (PotionArt): shape = effect, trim/glow/pips = rarity
         for i,offer in ProgressionRules.shopOffers(window) do
             local item=ProgressionRules.item(ProgressionConfig.Potions,offer.id)
             local left=ProgressionRules.shopRemaining(p,window,offer.id)
-            local x=(i-1)*276 local y=40
-            local color=if item.rarity=="Legendary" then C.gold elseif item.rarity=="Rare" then C.blue else C.accent
-            local card=box(body,x,y,264,164,C.card,24)
-            art(card,"potion_"..item.kind,8,14,76)
-            label(card,item.name,88,5,167,32,21,color)
-            label(card,item.rarity.." • "..item.multiplier.."x\n"..(item.duration//60).." minutes",86,39,170,50,18)
-            label(card,if left&gt;0 then left.." left" else "Sold Out",86,88,170,24,17,if left&gt;0 then C.gold else C.red)
-            local buy=button(card,if left&gt;0 then item.price.." Crystals" else "SOLD OUT",8,120,248,34,if left&gt;0 then color else C.card,function()
+            local x=((i-1)%3)*276 local y=math.floor((i-1)/3)*140
+            local color=rarityColor[item.rarity] or C.accent
+            local card=box(scroller,x,y,264,132,C.card:Lerp(color,if left&gt;0 then .28 else .08),24)
+            art(card,bottle(item),6,8,64)
+            label(card,item.name,74,3,186,26,19,color)
+            label(card,item.rarity.." "..item.kind.." - "..item.multiplier.."x\n"..(item.duration//60).."m "..(item.duration%60).."s",74,28,186,44,15)
+            label(card,if left&gt;0 then left.." left" else "Sold Out - back later",74,74,186,20,15,if left&gt;0 then C.gold else C.red)
+            local buy=button(card,if left&gt;0 then item.price.." Crystals" else "SOLD OUT",8,96,248,30,if left&gt;0 then color:Lerp(C.panel,.45) else C.card,function()
                 if left&gt;0 then chosenPotion=item.id open("potionConfirm") end
             end)
-            buy.TextSize=17
+            buy.TextSize=16
         end
-        label(body,"Your potions (tap to use)",0,212,824,26,18,C.gold)
+        label(scroller,"Rarer potions appear less often. Six of twelve are offered each restock.",0,284,824,22,15,C.gold)
+        label(scroller,"Your potions (tap to use)",0,310,824,24,18,C.gold)
         local slot=0
         for _,item in ProgressionConfig.Potions do
             local owned=p.potions[item.id] or 0
             if owned&gt;0 then
-                local x=(slot%3)*276 local y=240+math.floor(slot/3)*46
+                local x=(slot%3)*276 local y=338+math.floor(slot/3)*46
                 slot+=1
-                button(body,item.name.." x"..owned.."  USE",x,y,264,40,C.purple,function()
+                button(scroller,item.name.." x"..owned.."  USE",x,y,264,40,C.purple,function()
                     chosenPotion=item.id
                     local buff=p.buffs[item.kind]
                     if buff and buff.expiresAt&gt;workspace:GetServerTimeNow() then open("potionReplace") else transact("usePotion",item.id,false) end
-                end).TextSize=17
+                end).TextSize=16
             end
         end
-        if slot==0 then label(body,"No potions yet. Buy from today's offers above.",0,244,824,32,18) end
+        if slot==0 then label(scroller,"No potions yet. Buy from this restock's offers above.",0,338,824,32,18) end
+        scroller.CanvasSize=UDim2.fromOffset(0,338+math.max(1,math.ceil(slot/3))*46+8)
     elseif name=="potionConfirm" or name=="potionReplace" then
         local item=ProgressionRules.item(ProgressionConfig.Potions,chosenPotion)
         local replacing=name=="potionReplace"
         heading.Text,header.BackgroundColor3=if replacing then "Replace Active Potion?" else "Buy Potion?",C.accent
-        art(body,"potion_"..item.kind,30,22,220)
+        art(body,"potion_"..item.kind.."_"..item.rarity,30,22,220)
         label(body,item.name.." • "..item.multiplier.."x "..item.kind,290,15,510,62,28)
         label(body,if replacing then "Your current "..item.kind.." potion ends immediately. Its remaining time is lost. Consume 1 potion for a fresh "..(item.duration//60).." minutes?" else (item.duration//60).." minutes • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
         button(body,if replacing then "REPLACE &amp; USE" else "BUY POTION",290,263,510,58,C.accent,function()
@@ -545954,7 +546076,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX255">
+        <Item class="LocalScript" referent="RBX256">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -546017,7 +546139,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX256">
+        <Item class="ModuleScript" referent="RBX257">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -546096,7 +546218,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX257">
+        <Item class="ModuleScript" referent="RBX258">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -546961,7 +547083,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX258">
+        <Item class="ModuleScript" referent="RBX259">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -547063,7 +547185,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX259">
+        <Item class="ModuleScript" referent="RBX260">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -547123,7 +547245,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX260">
+        <Item class="LocalScript" referent="RBX261">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -547296,7 +547418,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX261">
+        <Item class="LocalScript" referent="RBX262">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -547378,7 +547500,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX262">
+  <Item class="Workspace" referent="RBX263">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>
