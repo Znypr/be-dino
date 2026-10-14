@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "4672cbef405cda9e891de144fc3a1c8f0b0d2ab9cbbf0a7ed0145f1781f9d13f",
+  "place_sha256": "734a960d07b66f52fe97c07f38eb8c07e12eebc4f38d363fe4143b814a215554",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "bf8cb9707c8ac3b1ab6e0d49813e5132568a6f72d20564a2316e82e9be48519e",
@@ -231,7 +231,7 @@
     "src/server/CollectionService.luau": "05ae04a12e90d6c181e3d140ac35c8347bcd15b775bdb1f2d1878bf43bf3c8ee",
     "src/server/Dinosaur.luau": "dd3c6bb212462c1cc1b5ce6da01ef3d1646d618423c8a7cad4fca9df1f8639e4",
     "src/server/DinosaurIdentity.luau": "fa29deab51cf21413e671a56153d27e22f22a6571582ff323fe1d156bd2c9d84",
-    "src/server/FoodService.luau": "8eec7ef65da33a632e364588841cb8927a6827b95a128ecf73a06630eee092d7",
+    "src/server/FoodService.luau": "bd5b602f98906191749da4829b6a4a681db504f8d7f0141b322d99fac988970e",
     "src/server/FusionOdds.luau": "7b3d9b93a8d9f5a0499ed840749f15acc5da8ebc725730a64768bcaaaab827a0",
     "src/server/FusionService.luau": "d54efbba49fb86eeeddb0883268c588a061de23aab7354f0342ea6b131b9b4f9",
     "src/server/IdentityFusion.luau": "bb7219d5d824c92ff2caff0e82d553c73bcaaaaf6d152edbd5424755add49256",
