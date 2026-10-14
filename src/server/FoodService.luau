@@ -32,6 +32,7 @@ function FoodService.start(dinosaur,repository)
     pickupParams.FilterType = Enum.RaycastFilterType.Include
     pickupParams.FilterDescendantsInstances = {workspace.BeDinoArena, workspace.Terrain}
     local fallbackCount = 0
+    local kitVisuals = 0
     local obstacleParams = RaycastParams.new()
     obstacleParams.FilterType = Enum.RaycastFilterType.Include
     obstacleParams.FilterDescendantsInstances = {workspace.BeDinoArena}
@@ -114,15 +115,24 @@ function FoodService.start(dinosaur,repository)
                 pickup:SetAttribute("Sector", string.format("%d:%d", sx, sz))
                 local visual = nil
                 -- BD-050 Kit mode is visual only: same TYPES points, pickup part and server validation.
-                -- Berry/fruit kit meshes wait for MeshPart uploads (1,300+ native wedge copies is too heavy).
-                local artId = if Config.FoodArtMode == "Kit" then string.format("food_%s_%s", kind.id, if (sx + sz + itemIndex) % 2 == 0 then "a" else "b") else kind.id
+                -- Berry/fruit keep the visible ball pickup (1,300+ native kit copies is too heavy; the ArtId variant is
+                -- recorded for the MeshPart upload). Kit egg/amber models replace the ball only on a deterministic stride
+                -- (amber 1/4, egg 1/20) up to Config.FoodKitVisualCap, so the part budget in docs/68 holds.
+                local kitMode = Config.FoodArtMode == "Kit"
+                local artId = if kitMode then string.format("food_%s_%s", kind.id, if (sx + sz + itemIndex) % 2 == 0 then "a" else "b") else kind.id
                 pickup:SetAttribute("ArtId", artId)
-                if kind.id == "egg" or kind.id == "amber" then
+                local useModel = kind.id == "egg" or kind.id == "amber"
+                if kitMode and useModel then
+                    local stride = if kind.id == "amber" then 4 else 20
+                    useModel = kitVisuals < Config.FoodKitVisualCap and (sx * 16 + sz + itemIndex * 7) % stride == 0
+                end
+                if useModel then
                     local ok, result = pcall(function()
                         local model = Resources.clone(artId)
                         if model and artId == kind.id then model:ScaleTo(kind.size / (if kind.id == "egg" then 2.4 else 1.3)) end
                         return model
                     end)
+                    if ok and result and kitMode then kitVisuals += 1 end
                     if ok then visual = result end -- visible native pickup survives any art failure
                 end
                 local food = {part = pickup, visual = visual, readyAt = 0, hidden = false, kind = kind,
@@ -130,7 +140,7 @@ function FoodService.start(dinosaur,repository)
                 if relocate(food) then
                     pickup.Parent = folder
                     if visual then
-                        pickup.Transparency = 1
+                        pickup.Transparency = 1 -- only while the kit model is the visible pickup; show() mirrors it
                         for _, item in visual:GetDescendants() do
                             if item:IsA("BasePart") then item.Anchored = true end
                         end

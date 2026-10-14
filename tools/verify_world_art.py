@@ -3,22 +3,30 @@ Checks determinism, path/sanctuary/keep-out clearance, density bounds, ground co
 triangle budget. Optional --map writes a top-down placement plan PNG. Not Studio evidence.
 """
 from pathlib import Path
-import argparse, json, subprocess, tempfile
+import argparse, json, re, subprocess, sys, tempfile
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import release_profiles
 ROOT = Path(__file__).resolve().parents[1]
 def wrapped(path): return '(function()\n' + (ROOT / path).read_text() + '\nend)()'
-def script(dump):
-    return ('local Config=' + wrapped('src/shared/Config.luau') + '\nlocal Layout=' + wrapped('src/shared/IslandLayout.luau')
+def script(dump, config=None, playtest=False):
+    return ('local Config=' + ('(function()\n' + config + '\nend)()' if config else wrapped('src/shared/Config.luau')) + '\nlocal Layout=' + wrapped('src/shared/IslandLayout.luau')
             + '\nlocal Kit=' + wrapped('src/shared/WorldKitData.luau') + '\nlocal Biome=' + wrapped('src/shared/BiomePlacement.luau') + '\n' + '''
-assert(Config.WorldArtMode=="Legacy","default must keep the current look")
-assert(Config.FoodArtMode=="Legacy","default must keep the current food look")
+local PLAYTEST=@PLAYTEST@
+if PLAYTEST then
+ assert(Config.WorldArtMode=="BiomeKit" and Config.FoodArtMode=="Kit","playtest profile must enable the kit")
+else
+ assert(Config.WorldArtMode=="Legacy","default must keep the current look")
+ assert(Config.FoodArtMode=="Legacy","default must keep the current food look")
+end
+local DENSITY=if PLAYTEST then Config.WorldArtDensity else 1
 local function gen(seed,density) return Biome.generate({seed=seed,density=density,extent=Config.ArenaHalfWidth,height=Layout.height,kit=Kit}) end
 local t0=os.clock()
-local a=gen(Config.WorldArtSeed,1)
+local a=gen(Config.WorldArtSeed,DENSITY)
 local elapsed=os.clock()-t0
-local b=gen(Config.WorldArtSeed,1)
+local b=gen(Config.WorldArtSeed,DENSITY)
 assert(#a==#b,"nondeterministic count")
 for i,p in a do local q=b[i] assert(p.id==q.id and p.x==q.x and p.z==q.z and p.yaw==q.yaw and p.scale==q.scale,"nondeterministic placement") end
-local c=gen(Config.WorldArtSeed+1,1)
+local c=gen(Config.WorldArtSeed+1,DENSITY)
 local differs=#c~=#a
 for i=1,math.min(#a,#c) do if a[i].id~=c[i].id or a[i].x~=c[i].x then differs=true end end
 assert(differs,"seed has no effect")
@@ -44,20 +52,38 @@ for _,p in a do
  assert(ground-p.y<=math.max(2.5,data.extent[2]*p.scale*.3),"buried too deep "..p.id)
 end
 assert(counts.landmark==4,"four landmarks")
+if not PLAYTEST then
 assert(counts.tree>=25 and counts.tree<=40,"tree density "..counts.tree)
 assert(counts.rock>=15 and counts.rock<=34,"rock density "..counts.rock)
 assert(counts.shrub>=20 and counts.shrub<=50,"shrub density "..counts.shrub)
 assert(counts.groundcover>=20 and counts.groundcover<=70,"groundcover density "..counts.groundcover)
+end
 local tris=Biome.triangles(a,Kit)
 assert(tris<=Biome.TriangleBudget,"triangle budget "..tris)
-local low=gen(Config.WorldArtSeed,.5)
+local parts,colliders=0,0
+for _,p in a do parts+=2*Kit[p.id].triangles colliders+=#Kit[p.id].colliders end
+local worldParts=parts+colliders -- native fallback: two wedges per triangle plus invisible colliders
+local foodParts=0
+for _,id in {"food_egg_a","food_egg_b","food_amber_a","food_amber_b"} do foodParts=math.max(foodParts,2*Kit[id].triangles) end
+foodParts*=Config.FoodKitVisualCap
+if PLAYTEST then
+ assert(Config.WorldArtDensity>=.25 and Config.WorldArtDensity<1,"playtest density is a reduced phone budget")
+ assert(counts.tree>=12 and counts.rock>=8 and counts.shrub>=12 and counts.groundcover>=4,"kit must clearly dress the map")
+ assert(worldParts<=6500,"world kit parts "..worldParts)
+ assert(foodParts<=1500,"food kit parts "..foodParts)
+ assert(worldParts+foodParts<=8000,"total kit parts "..(worldParts+foodParts))
+ for _,family in {"berry","fruit","egg","amber"} do
+  for _,v in {"a","b"} do assert(Kit["food_"..family.."_"..v],"missing food variant "..family..v) end
+ end
+end
+local low=gen(Config.WorldArtSeed,DENSITY*.5)
 assert(#low<#a,"density does not scale")
 for id,data in Kit do
  if data.kind=="tree" or data.kind=="landmark" or (data.kind=="rock") then assert(#data.colliders>0,"missing collider proxy "..id) end
  if data.kind=="shrub" or data.kind=="groundcover" or data.kind=="food" then assert(#data.colliders==0,"foliage/food must not collide "..id) end
 end
-print(string.format("World art passed: %d placements (%d trees, %d rocks, %d shrubs, %d cover, 4 landmarks), %d triangles, %.3fs",#a,counts.tree,counts.rock,counts.shrub,counts.groundcover,tris,elapsed))
-''' + ('for _,p in a do print(string.format("P %s %s %.2f %.2f %.3f",p.layer,p.id,p.x,p.z,p.radius)) end\n' if dump else ''))
+print(string.format("%s world art: %d kit parts + %d food-model parts; %d placements (%d trees, %d rocks, %d shrubs, %d cover, 4 landmarks), %d triangles, %.3fs",if PLAYTEST then "Playtest" else "Default",worldParts,foodParts,#a,counts.tree,counts.rock,counts.shrub,counts.groundcover,tris,elapsed))
+'''.replace('@PLAYTEST@','true' if playtest else 'false') + ('for _,p in a do print(string.format("P %s %s %.2f %.2f %.3f",p.layer,p.id,p.x,p.z,p.radius)) end\n' if dump else ''))
 
 def draw(lines, path):
     from PIL import Image, ImageDraw
@@ -75,12 +101,35 @@ def draw(lines, path):
     d.text((10, 10), 'BD-049 BiomeKit placement plan (seed 1404, density 1) - paths beige, landmarks red', fill=(0, 0, 0))
     im.save(path)
 
+def legacy_parts():
+    """Part count of the legacy world props (baked models in resources/roblox) at the Arena.luau placement counts."""
+    def count(name): return len(re.findall(r'<Item class="(?:Wedge|Mesh)?Part"', (ROOT / 'resources/roblox' / (name + '.rbxmx')).read_text(errors='ignore')))
+    tree, rock, fern = count('tree') + 1, count('rock') + 1, count('fern')  # tree/rock add one invisible collider
+    world = (8 * 4 + 2) * tree + (8 * 3 + 48) * rock + (8 * 4 + 65) * fern
+    food = 77 * count('egg') + 31 * count('amber')  # ~5% eggs, ~2% amber of 1,536 pickups (legacy clones the models)
+    return world, food, dict(tree=tree, rock=rock, fern=fern)
+
+def static_checks():
+    food = (ROOT / 'src/server/FoodService.luau').read_text()
+    assert 'kitVisuals < Config.FoodKitVisualCap' in food and 'useModel = kind.id == "egg" or kind.id == "amber"' in food, 'kit models only for egg/amber, capped'
+    assert re.findall(r'id = "(\w+)", weight = \d+, points = (\d+)', food) == [('berry', '1'), ('fruit', '4'), ('egg', '15'), ('amber', '50')], 'food values changed'
+    cfg = (ROOT / 'src/shared/Config.luau').read_text()
+    assert 'FoodArtMode = "Legacy"' in cfg and 'WorldArtMode = "Legacy"' in cfg, 'source default must stay Legacy'
+
+def run(runner, source, dump=False, playtest=False):
+    with tempfile.TemporaryDirectory() as temp:
+        path = Path(temp) / 'verify.luau'; path.write_text(script(dump, source, playtest))
+        out = subprocess.run([runner, str(path)], capture_output=True, text=True)
+        if out.returncode: raise SystemExit(out.stdout[-2000:] + out.stderr)
+        return out.stdout
+
 if __name__ == '__main__':
     p = argparse.ArgumentParser(); p.add_argument('--runner', required=True); p.add_argument('--map'); args = p.parse_args()
-    with tempfile.TemporaryDirectory() as temp:
-        path = Path(temp) / 'verify.luau'; path.write_text(script(bool(args.map)))
-        out = subprocess.run([args.runner, str(path)], capture_output=True, text=True)
-        if out.returncode: raise SystemExit(out.stdout[-2000:] + out.stderr)
-        out = out.stdout
-    print('\n'.join(l for l in out.splitlines() if not l.startswith('P ')))
+    static_checks()
+    out = run(args.runner, None, bool(args.map))
+    print(chr(10).join(l for l in out.splitlines() if not l.startswith('P ')))
+    rewritten, _ = release_profiles.apply_profile((ROOT / 'src/shared/Config.luau').read_text(), 'playtest')
+    print(chr(10).join(l for l in run(args.runner, rewritten, False, True).splitlines() if not l.startswith('P ')))
+    world, food, per = legacy_parts()
+    print(f"Legacy world props ~{world:,} parts (+~{food:,} legacy egg/amber food models), per prop {per}")
     if args.map: draw([l for l in out.splitlines() if l.startswith('P ')], args.map)

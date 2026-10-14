@@ -37,6 +37,16 @@ assert(math.abs(expired-1.15)<.000001)
 for _,item in ProgressionConfig.Potions do
  assert(item.duration>=300 and item.price>0 and item.multiplier>1)
 end
+-- docs/68: 12-potion catalog; every potion is usable once owned, applies its buff kind, and buff kinds are validated.
+assert(#ProgressionConfig.Potions==12)
+for _,item in ProgressionConfig.Potions do
+ local fresh={} local freshProgress=Rules.upgrade(fresh)
+ freshProgress.potions[item.id]=1
+ assert(Rules.valid(freshProgress) and Rules.apply(fresh,"usePotion",item.id,100,false) and freshProgress.buffs[item.kind].id==item.id and Rules.valid(freshProgress))
+ local g,s,l=Rules.multipliers(freshProgress,"compy",nil,101)
+ assert((if item.kind=="growth" then g elseif item.kind=="speed" then s else l)==item.multiplier,"buff applies "..item.id)
+end
+assert(not Rules.valid({crystals=0,auras={},potions={},equippedAura="",buffs={loot={id="speed_common",expiresAt=5}}}),"buff kind must match potion")
 assert(not Rules.valid({crystals=0/0,auras={},potions={},buffs={},equippedAura=""}))
 assert(not Rules.apply(p,"grant","crystal",100,false,0/0))
 assert(not Rules.apply(p,"grant","crystal",100,false,1000))

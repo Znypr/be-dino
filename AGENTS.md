@@ -47,3 +47,6 @@ A living dinosaur may **buy several auras/trails and switch between styles it ow
 3. Prioritize the newer owner's explicit direction over older alpha docs, test fixtures, generated summaries, or implementation defaults. Do not rewrite history: preserve legacy specs as historical, update conflicting high-visibility references, and keep one canonical task board.
 4. If asked to implement, plan a safe, server-authoritative migration: egg ownership/settlement exactly once, immutable outcome RNG, existing saves/queues, Cracked failure, five-second reveals, trait versioning, duplicate species stacks, UI scalability and reconnect/overflow behavior. Validate with tests and Studio evidence. **Never rewrite persistent profiles, enable Robux packs, or claim Studio/phone acceptance without evidence.**
 5. If asked for concrete examples, show actual counts whose rarity totals sum to the egg count and identify any open economic assumptions. Ask for specific unresolved balancing decisions only if necessary for implementation; examples do not require clarification.
+
+## UI rules (2026-10-14)
+Follow [UI copy and UI asset standards](docs/72-ui-copy-and-asset-standards.md): children as audience (short, obvious text, no "5m 0s" or "1.25x"), and no code-generated UI art as final: it needs a drafted, reviewed asset task.
