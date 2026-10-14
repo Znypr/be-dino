@@ -10,8 +10,9 @@ DinoMotion.MaxScale = 1.4
 DinoMotion.MaxOffset = 0.35
 DinoMotion.MaxAngle = 1.6
 DinoMotion.MaxLean = 0.25
-DinoMotion.Duration = {eat = 0.18, takeoff = 0.22, land = 0.28, leap = 0.5, bite = 0.22, death = 0.4}
-local SLOTS = {"eat", "takeoff", "land", "leap", "bite", "death"}
+DinoMotion.Duration = {eat = 0.18, takeoff = 0.22, land = 0.28, leap = 0.5, bite = 0.22, death = 0.4,
+    grow = 0.35, windup = 0.08} -- grow/windup: movement-feel additions (PROVISIONAL)
+local SLOTS = {"eat", "takeoff", "land", "leap", "bite", "death", "grow", "windup"}
 DinoMotion.Kinds = SLOTS
 
 export type Pose = {sx: number, sy: number, sz: number, pitch: number, roll: number, fx: number, dy: number, fade: number}
@@ -36,6 +37,21 @@ function DinoMotion.trigger(state: State, kind: string, now: number, power: numb
     state.start[kind] = now
     state.power[kind] = clamp(power or 1, 0, 1)
     if kind == "death" then state.dead = true end
+end
+
+function DinoMotion.cancel(state: State, kind: string)
+    state.start[kind] = nil
+end
+
+-- Client-side growth tween: the replicated model is already at its new size, so the displayed
+-- factor starts at (old/new) and eases out (cubic) back to 1 over Duration.grow. Returns the
+-- factor currently displayed, so a new pickup mid-tween continues from it without a step.
+function DinoMotion.growFactor(state: State, now: number): number
+    local start = state.start.grow
+    if not start then return 1 end
+    local u = clamp((now - start) / DinoMotion.Duration.grow, 0, 1)
+    local v = (1 - u) * (1 - u) * (1 - u)
+    return 1 - (state.power.grow or 0) * v
 end
 
 function DinoMotion.clear(state: State)
@@ -95,6 +111,14 @@ function DinoMotion.sample(state: State, now: number, out: Pose): boolean
                     local v = math.sin(math.pi * u) * p
                     sz *= 1 + 0.3 * v sy *= 1 - 0.1 * v sx *= 1 - 0.08 * v
                     pitch += 0.15 * v
+                elseif kind == "grow" then
+                    local v = (1 - u) * (1 - u) * (1 - u)
+                    local s = 1 - p * v
+                    sx *= s sy *= s sz *= s
+                elseif kind == "windup" then
+                    local v = math.sin(math.pi * u) * p
+                    sy *= 1 - 0.18 * v sx *= 1 + 0.08 * v sz *= 1 + 0.08 * v
+                    dy -= 0.02 * v
                 elseif kind == "bite" then
                     local v = math.sin(math.pi * u) * p
                     fx += 0.2 * v

@@ -365298,7 +365298,7 @@ return table.freeze({
     -- ~6.3 stud jump but cuts air time ~0.51s -&gt; ~0.45s; leap vertical speed is retuned in ProgressionConfig.
     Gravity = 250,
     JumpPower = 56,
-    CameraLiftSharpness = 12, -- PROVISIONAL: per-second exponential follow of growth camera lift
+    CameraLiftSharpness = 7, -- PROVISIONAL: per-second exponential follow of growth camera lift
     MaxSlopeAngle = 46,
     -- BD-053 torso collider. Footprint grows with the dinosaur, but its underside is lifted so
     -- it clears any ground slope up to MaxSlopeAngle under every footprint corner. PROVISIONAL.
@@ -366824,8 +366824,9 @@ DinoMotion.MaxScale = 1.4
 DinoMotion.MaxOffset = 0.35
 DinoMotion.MaxAngle = 1.6
 DinoMotion.MaxLean = 0.25
-DinoMotion.Duration = {eat = 0.18, takeoff = 0.22, land = 0.28, leap = 0.5, bite = 0.22, death = 0.4}
-local SLOTS = {"eat", "takeoff", "land", "leap", "bite", "death"}
+DinoMotion.Duration = {eat = 0.18, takeoff = 0.22, land = 0.28, leap = 0.5, bite = 0.22, death = 0.4,
+    grow = 0.35, windup = 0.08} -- grow/windup: movement-feel additions (PROVISIONAL)
+local SLOTS = {"eat", "takeoff", "land", "leap", "bite", "death", "grow", "windup"}
 DinoMotion.Kinds = SLOTS
 
 export type Pose = {sx: number, sy: number, sz: number, pitch: number, roll: number, fx: number, dy: number, fade: number}
@@ -366850,6 +366851,21 @@ function DinoMotion.trigger(state: State, kind: string, now: number, power: numb
     state.start[kind] = now
     state.power[kind] = clamp(power or 1, 0, 1)
     if kind == "death" then state.dead = true end
+end
+
+function DinoMotion.cancel(state: State, kind: string)
+    state.start[kind] = nil
+end
+
+-- Client-side growth tween: the replicated model is already at its new size, so the displayed
+-- factor starts at (old/new) and eases out (cubic) back to 1 over Duration.grow. Returns the
+-- factor currently displayed, so a new pickup mid-tween continues from it without a step.
+function DinoMotion.growFactor(state: State, now: number): number
+    local start = state.start.grow
+    if not start then return 1 end
+    local u = clamp((now - start) / DinoMotion.Duration.grow, 0, 1)
+    local v = (1 - u) * (1 - u) * (1 - u)
+    return 1 - (state.power.grow or 0) * v
 end
 
 function DinoMotion.clear(state: State)
@@ -366909,6 +366925,14 @@ function DinoMotion.sample(state: State, now: number, out: Pose): boolean
                     local v = math.sin(math.pi * u) * p
                     sz *= 1 + 0.3 * v sy *= 1 - 0.1 * v sx *= 1 - 0.08 * v
                     pitch += 0.15 * v
+                elseif kind == "grow" then
+                    local v = (1 - u) * (1 - u) * (1 - u)
+                    local s = 1 - p * v
+                    sx *= s sy *= s sz *= s
+                elseif kind == "windup" then
+                    local v = math.sin(math.pi * u) * p
+                    sy *= 1 - 0.18 * v sx *= 1 + 0.08 * v sz *= 1 + 0.08 * v
+                    dy -= 0.02 * v
                 elseif kind == "bite" then
                     local v = math.sin(math.pi * u) * p
                     fx += 0.2 * v
@@ -542862,7 +542886,7 @@ function Leap.start()
         local trail=Instance.new("Trail") trail.Attachment0,trail.Attachment1=a,b
         trail.Color=ColorSequence.new(Color3.fromRGB(80,214,255),Color3.new(1,1,1))
         trail.Lifetime,trail.FaceCamera,trail.Parent=.25,true,root
-        active[player]={character=c,root=root,position=root.Position,endsAt=now+Config.LeapDuration,trail=trail,a=a,b=b}
+        active[player]={forward=forward,character=c,root=root,position=root.Position,endsAt=now+Config.LeapDuration,trail=trail,a=a,b=b}
     end)
     RunService.Heartbeat:Connect(function()
         local now=workspace:GetServerTimeNow()
@@ -542889,6 +542913,11 @@ function Leap.start()
                     if hit then root.Position=state.position root.AssemblyLinearVelocity=Vector3.zero state.endsAt=now end
                 end
                 state.position=root.Position
+                -- Movement feel: the Humanoid's air control damps the launch speed to zero within ~0.4s
+                -- (measured 18 of ~50 intended studs). Hold the launch heading until the leap ends.
+                if state.endsAt&gt;now then
+                local velocity=root.AssemblyLinearVelocity
+                root.AssemblyLinearVelocity=Vector3.new(state.forward.X*Config.LeapHorizontalSpeed,velocity.Y,state.forward.Z*Config.LeapHorizontalSpeed) end
             end
         end
     end)
@@ -547001,6 +547030,7 @@ local timerScale=Instance.new("UIScale") timerScale.Parent=timers
 -- Movement feel: the leap impulse is applied locally the instant the key/button is pressed
 -- (same numbers as LeapService) so there is no round-trip wait; the server still validates,
 -- owns the cooldown and re-applies the impulse. PROVISIONAL.
+local predictedLeap:{ready:number,at:number,character:Model}?=nil
 local function requestLeap()
     leapRemote:FireServer()
     local c=player.Character
@@ -547012,6 +547042,9 @@ local function requestLeap()
     local forward=Vector3.new(look.X,0,look.Z)
     if forward.Magnitude&lt;.01 then return end
     root.AssemblyLinearVelocity=forward.Unit*ProgressionConfig.LeapHorizontalSpeed+Vector3.new(0,ProgressionConfig.LeapVerticalSpeed,0)
+    -- Client-local attribute: DinoMotion starts wind-up + leap pose now instead of on the replicated cooldown.
+    c:SetAttribute("LeapPredictAt",os.clock())
+    predictedLeap={ready=num("LeapReadyAt"),at=os.clock(),character=c}
 end
 local leapButton=button(timers,"LEAP [E]",0,0,286,60,C.blue,function()
     if shade.Visible then return end
@@ -547194,6 +547227,24 @@ RunService.RenderStepped:Connect(function(dt)
     local target=((character :: Model):GetAttribute("VisualScale") or 1)-1
     cameraLift+=(target-cameraLift)*(1-math.exp(-dt*Config.CameraLiftSharpness))
     humanoid.CameraOffset=Vector3.new(0,cameraLift*2,0)
+end)
+-- Reconcile a predicted leap: the server raising LeapReadyAt confirms it; if it has not within 0.6 s
+-- (cooldown/blocked/guard) cancel the pose and drop the extra horizontal speed.
+RunService.Heartbeat:Connect(function()
+    local p=predictedLeap
+    if not p then return end
+    if num("LeapReadyAt")&gt;p.ready then predictedLeap=nil return end
+    if os.clock()-p.at&gt;.6 then
+        predictedLeap=nil
+        if p.character.Parent then
+            p.character:SetAttribute("LeapRejectAt",os.clock())
+            local root=p.character:FindFirstChild("HumanoidRootPart")
+            if root and root:IsA("BasePart") then
+                local v=root.AssemblyLinearVelocity
+                root.AssemblyLinearVelocity=Vector3.new(v.X*.3,v.Y,v.Z*.3)
+            end
+        end
+    end
 end)
 RunService.Heartbeat:Connect(function(dt)
     elapsed+=dt
@@ -547619,7 +547670,8 @@ local function track(player: Player, character: Model)
         motion = Motion.new(), pose = Motion.newPose(), parts = {}, count = 0, visual = nil, pivot = Vector3.zero,
         length = 1, height = 1, applied = false, accumulator = 0, lastYaw = nil, eatAt = nil,
         lastGrowth = number(character, "GrowthScore"), lastCatch = number(character, "CatchScore"),
-        lastBite = number(character, "BiteSeq"), lastLeap = number(player, "LeapReadyAt"), connections = {}}
+        lastBite = number(character, "BiteSeq"), lastLeap = number(player, "LeapReadyAt"), lastScale = number(character, "VisualScale"),
+        growFrom = nil, predictedAt = -10, connections = {}}
     rigs[character] = rig
     local function connect(signal: RBXScriptSignal, callback: (...any) -&gt; ())
         table.insert(rig.connections, signal:Connect(callback))
@@ -547637,6 +547689,29 @@ local function track(player: Player, character: Model)
     for _, name in {"VisualScale", "SpeciesId", "MutationVisual", "GoldVisual", "GenesJson", "DinoAttached"} do
         connect(character:GetAttributeChangedSignal(name), function() restore(rig) end)
     end
+    -- Growth tween: the replicated mesh snaps to the new size, so ease the DISPLAYED size from
+    -- old/new back to 1 (single mesh, no rebuild). Started from step() after the rescale landed.
+    connect(character:GetAttributeChangedSignal("VisualScale"), function()
+        local value = number(character, "VisualScale")
+        if value &gt; rig.lastScale and rig.lastScale &gt; 0 and value / rig.lastScale &lt; 1.6 then
+            rig.growFrom = rig.lastScale
+            rig.growTo = value
+        end
+        rig.lastScale = value
+    end)
+    -- Leap prediction from Bootstrap (client-local attributes): start the pose on press, not on the
+    -- replicated cooldown; cancel cleanly if the server rejects the leap.
+    connect(character:GetAttributeChangedSignal("LeapPredictAt"), function()
+        rig.predictedAt = os.clock()
+        trigger(rig, "windup")
+        trigger(rig, "leap")
+        if rig.motion.start.leap then rig.motion.start.leap = os.clock() + Motion.Duration.windup end
+    end)
+    connect(character:GetAttributeChangedSignal("LeapRejectAt"), function()
+        rig.predictedAt = -10
+        Motion.cancel(rig.motion, "windup")
+        Motion.cancel(rig.motion, "leap")
+    end)
     connect(character:GetAttributeChangedSignal("BiteSeq"), function()
         local value = number(character, "BiteSeq")
         if value ~= rig.lastBite then
@@ -547654,7 +547729,7 @@ local function track(player: Player, character: Model)
         local value = number(player, "LeapReadyAt")
         if value &gt; rig.lastLeap then
             rig.lastLeap = value
-            trigger(rig, "leap")
+            if os.clock() - rig.predictedAt &gt; 1.5 then trigger(rig, "leap") end -- already played if predicted
         end
     end)
     if humanoid then
@@ -547691,6 +547766,12 @@ local function step(rig: any, now: number, dt: number)
     rig.lastYaw = yaw
     local velocity = root.AssemblyLinearVelocity
     rig.motion.lean = Motion.lean(rig.motion.lean, rate, math.sqrt(velocity.X * velocity.X + velocity.Z * velocity.Z), dt)
+    if rig.growFrom and Theme.MotionEnabled then
+        local target = Motion.growFactor(rig.motion, now) * rig.growFrom / rig.growTo
+        rig.growFrom = nil
+        Motion.trigger(rig.motion, "grow", now, math.min(0.4, 1 - target))
+    end
+    rig.growFrom = nil
     if rig.eatAt and now &gt;= rig.eatAt then
         rig.eatAt = nil
         Motion.trigger(rig.motion, "eat", now)

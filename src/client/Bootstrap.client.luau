@@ -1142,6 +1142,7 @@ local timerScale=Instance.new("UIScale") timerScale.Parent=timers
 -- Movement feel: the leap impulse is applied locally the instant the key/button is pressed
 -- (same numbers as LeapService) so there is no round-trip wait; the server still validates,
 -- owns the cooldown and re-applies the impulse. PROVISIONAL.
+local predictedLeap:{ready:number,at:number,character:Model}?=nil
 local function requestLeap()
     leapRemote:FireServer()
     local c=player.Character
@@ -1153,6 +1154,9 @@ local function requestLeap()
     local forward=Vector3.new(look.X,0,look.Z)
     if forward.Magnitude<.01 then return end
     root.AssemblyLinearVelocity=forward.Unit*ProgressionConfig.LeapHorizontalSpeed+Vector3.new(0,ProgressionConfig.LeapVerticalSpeed,0)
+    -- Client-local attribute: DinoMotion starts wind-up + leap pose now instead of on the replicated cooldown.
+    c:SetAttribute("LeapPredictAt",os.clock())
+    predictedLeap={ready=num("LeapReadyAt"),at=os.clock(),character=c}
 end
 local leapButton=button(timers,"LEAP [E]",0,0,286,60,C.blue,function()
     if shade.Visible then return end
@@ -1335,6 +1339,24 @@ RunService.RenderStepped:Connect(function(dt)
     local target=((character :: Model):GetAttribute("VisualScale") or 1)-1
     cameraLift+=(target-cameraLift)*(1-math.exp(-dt*Config.CameraLiftSharpness))
     humanoid.CameraOffset=Vector3.new(0,cameraLift*2,0)
+end)
+-- Reconcile a predicted leap: the server raising LeapReadyAt confirms it; if it has not within 0.6 s
+-- (cooldown/blocked/guard) cancel the pose and drop the extra horizontal speed.
+RunService.Heartbeat:Connect(function()
+    local p=predictedLeap
+    if not p then return end
+    if num("LeapReadyAt")>p.ready then predictedLeap=nil return end
+    if os.clock()-p.at>.6 then
+        predictedLeap=nil
+        if p.character.Parent then
+            p.character:SetAttribute("LeapRejectAt",os.clock())
+            local root=p.character:FindFirstChild("HumanoidRootPart")
+            if root and root:IsA("BasePart") then
+                local v=root.AssemblyLinearVelocity
+                root.AssemblyLinearVelocity=Vector3.new(v.X*.3,v.Y,v.Z*.3)
+            end
+        end
+    end
 end)
 RunService.Heartbeat:Connect(function(dt)
     elapsed+=dt

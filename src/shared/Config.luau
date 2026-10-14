@@ -7,7 +7,7 @@ return table.freeze({
     -- ~6.3 stud jump but cuts air time ~0.51s -> ~0.45s; leap vertical speed is retuned in ProgressionConfig.
     Gravity = 250,
     JumpPower = 56,
-    CameraLiftSharpness = 12, -- PROVISIONAL: per-second exponential follow of growth camera lift
+    CameraLiftSharpness = 7, -- PROVISIONAL: per-second exponential follow of growth camera lift
     MaxSlopeAngle = 46,
     -- BD-053 torso collider. Footprint grows with the dinosaur, but its underside is lifted so
     -- it clears any ground slope up to MaxSlopeAngle under every footprint corner. PROVISIONAL.
