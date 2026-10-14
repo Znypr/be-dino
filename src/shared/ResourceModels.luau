@@ -9,11 +9,12 @@ function ResourceModels.clearTextures(part: BasePart)
     for _,child in part:GetChildren() do
         if child:IsA("SurfaceAppearance") or child:IsA("Decal") or child:IsA("Texture") then child:Destroy() end
     end
-    if part:IsA("MeshPart") then part.TextureID="" end
+    -- Authored creatures paint an EditableImage into TextureContent; Gold/Diamond/silhouette must drop it too.
+    if part:IsA("MeshPart") then part.TextureID="";part.TextureContent=Content.none end
 end
-function ResourceModels.clone(id: string): Model?
+function ResourceModels.clone(id: string,genes: any?): Model?
     if RunService:IsClient() then
-        local authored=Authored.clone(id)
+        local authored=Authored.clone(id,genes)
         if authored then return authored end
     end
     local folder = ReplicatedStorage:FindFirstChild("Resources")

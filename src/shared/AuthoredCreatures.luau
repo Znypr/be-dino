@@ -6,7 +6,9 @@ local Http=game:GetService("HttpService")
 local Creatures={}
 local active=0
 local function frame(v) return CFrame.new(table.unpack(v)) end
-function Creatures.clone(id: string): Model?
+-- Used only when the caller has no genes (e.g. index entry never hatched); real genes are painted in place.
+Creatures.DefaultGenes={conditionId="normal",hatchSuccess=true,primaryColorId="green",secondaryColorId="white",blend=70,patternId="03_round_spots"}
+function Creatures.clone(id: string,genes: any?): Model?
     local source=script.Parent:FindFirstChild("CreatureData")
     local module=if source then source:FindFirstChild(id) else nil
     if not module or not RunService:IsClient() or active>=12 then return nil end
@@ -76,7 +78,7 @@ function Creatures.clone(id: string): Model?
                 node.Transform=pose.Rotation+pose.Position*scale
             end
         end)
-        require(script.Parent.PatternGenes).apply(part,{conditionId="normal",hatchSuccess=true,primaryColorId="green",secondaryColorId="white",blend=70,patternId="03_round_spots"})
+        require(script.Parent.PatternGenes).apply(part,if genes then genes else Creatures.DefaultGenes)
         model.Destroying:Once(function() connection:Disconnect();mesh:Destroy();active-=1 end)
         return model
     end)
