@@ -101,6 +101,8 @@ PROFILES: dict[str, list[Rule]] = {
         Rule("ReleaseProfile", "require", "development", reason="default build is a development build"),
         _flag_off("IdentityPersistentEnabled", "BD-064 persistent identities; only the playtest profile enables it"),
         _flag_off("IdentityFusionPreviewEnabled", "BD-057/BD-064 fusion; only the playtest profile enables it"),
+        Rule("WorldArtMode", "require", "Legacy", reason="BD-049 world kit; only the playtest profile enables it"),
+        Rule("FoodArtMode", "require", "Legacy", reason="BD-050 food kit; only the playtest profile enables it"),
     ],
     "playtest": COMMON_RULES + [
         Rule("ReleaseProfile", "set", "playtest", reason="marks the generated place"),
@@ -113,6 +115,11 @@ PROFILES: dict[str, list[Rule]] = {
         # is not on main yet: warn until it lands, then set missing="error".
         Rule("IdentityPersistentEnabled", "set", True, reason="BD-064 persistent identities (Milestone 1)"),
         Rule("IdentityFusionPreviewEnabled", "set", True, reason="BD-064 fusion on persistent profiles (Milestone 1)"),
+        # docs/68: owner wants the new world kit and food art in the playtest. Density is a PROVISIONAL phone
+        # budget: at 0.35 the kit world is ~6.3k native parts (tools/verify_world_art.py enforces <= 8,000 with food).
+        Rule("WorldArtMode", "set", "BiomeKit", reason="BD-049 new trees/rocks/landmarks (docs/68)"),
+        Rule("FoodArtMode", "set", "Kit", reason="BD-050 food variants (docs/68)"),
+        Rule("WorldArtDensity", "set", 0.35, reason="PROVISIONAL phone part budget (docs/68)"),
         # Future fusion/menu release keys (BD-064/BD-065) go here, e.g.
         # Rule("<FusionFlagName>", "set", True, missing="warn", reason="BD-064 fusion server"),
     ],
@@ -167,6 +174,8 @@ def format_literal(value: Any) -> str:
         return "true" if value else "false"
     if isinstance(value, int):
         return str(value)
+    if isinstance(value, float):
+        return repr(value)
     if isinstance(value, str):
         if '"' in value or "\\" in value or "\n" in value:
             raise ValueError(f"Unsupported string literal: {value!r}")
