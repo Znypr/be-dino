@@ -542462,15 +542462,7 @@ function FoodService.start(dinosaur,repository)
                     end
                     table.insert(foods, food)
                     workspace:SetAttribute("FoodCount", #foods)
-                    if starter then
-                        local hint = Instance.new("BillboardGui")
-                        hint.Name, hint.Size, hint.StudsOffset = "FoodHint", UDim2.fromOffset(74,24), Vector3.new(0,1.2,0)
-                        hint.MaxDistance, hint.AlwaysOnTop, hint.Parent = 45,false,pickup
-                        local label = Instance.new("TextLabel")
-                        label.Size,label.BackgroundTransparency,label.Text = UDim2.fromScale(1,1),1,"+"..kind.points
-                        label.Font,label.TextSize,label.TextColor3 = Enum.Font.FredokaOne,16,kind.color
-                        label.TextStrokeTransparency,label.TextStrokeColor3,label.Parent = 0,Color3.new(0,0,0),hint
-                    end
+                    -- Owner 2026-10-15: no floating point numbers over food (they cluttered the world).
                 else
                     pickup:Destroy()
                     if visual then visual:Destroy() end
