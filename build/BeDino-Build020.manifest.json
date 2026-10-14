@@ -1,13 +1,13 @@
 {
   "format": 1,
-  "place_sha256": "b9daba33872ff0c353e8752aeb63fb524a0efe2cc82bb4ae082d5bb277783787",
+  "place_sha256": "8ac4bca4caf78e3ffbb992e69d7dfcaaa4bda0fa6d4224334015e85291dd26fc",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "bf8cb9707c8ac3b1ab6e0d49813e5132568a6f72d20564a2316e82e9be48519e",
     "src/shared/Artwork.luau": "77bef322245582ebe9cf225c27f3281616a436dd7b1680347bb5cb853f8d2dfe",
     "src/shared/ArtworkAssets.luau": "0ff9492a91ef3538e0615ca20e5db96b0e3913e554675e3c21058b25bd58c00d",
     "src/shared/ArtworkLayout.luau": "50bafa21786bba19acbcb92b91ec813e5c7435d8f3665b8c6050dcf6e94beca3",
-    "src/shared/AuthoredCreatures.luau": "78b0e6f5c7f534ec8b5c42ccdabf4d7a5e4eddd097c8c37c17ca7ec9514f741b",
+    "src/shared/AuthoredCreatures.luau": "f8cfdec2eadddf61df397f90a3a3f19b209542e81a277c4c69f5d5299c4558a2",
     "src/shared/BiomePlacement.luau": "fb7231d8b6b67d3c5ed4a7dac63fcb01ad81d8ca45117f74630b1a79f5c7d21d",
     "src/shared/ConditionOverlays.luau": "69b1725f10e0d8281514a237ba3f2ca0778a411c9f83af329725aba5c1f8c73d",
     "src/shared/Config.luau": "7dab96a723944b4aeb67f3b37618ac1c957769bcea7344909114edca7fc7d03c",
