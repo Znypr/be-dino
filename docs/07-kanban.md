@@ -751,6 +751,9 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-113 | Backlog | P2 | Shop icons (16) and rarity badges (6) | BD-112 |
 | BD-114 | Backlog | P2 | Shop previews use real effect sprites | BD-111, BD-113 |
 | BD-120 | Review / test | P1 | Owner-only admin panel for private playtests: food worth / growth / run speed sliders, start or stop any weather, runtime-only, server-authorized ([79](79-admin-panel.md); offline checks pass, Studio pending) | BD-031 |
+| BD-130 | In progress | P0 | Weather v2: per-event lighting grade, haze, bloom, particle rigs, bolts, lava bombs, quake shake, aurora curtains, blood moon, title card ([84](84-weather-events-v2.md)); owner feedback "weak, boring" | BD-120 |
+| BD-131 | Backlog | P1 | Weather particle textures from Blender (smoke, bolt, rain, snow, ember, dust, ring, curtain flipbooks) | BD-130 |
+| BD-132 | Backlog | P1 | Weather sounds: thunder, rumble, wind, lava impact | BD-130, sfx upload |
 | BD-095 | Backlog | P1 | Effects Full/Lite/Off setting and distance LOD | BD-090 |
 | BD-096 | Backlog | P3 | Equip shimmer audio | none |
 | BD-097 | Backlog | P2 | 12-player phone perf + Studio/Android acceptance | BD-090-095 |
