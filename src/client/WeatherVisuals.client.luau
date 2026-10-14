@@ -31,13 +31,13 @@ local function look(t:{[string]:any}):Look
 end
 local LOOKS:{[string]:Look}={
     clear=look({}),
-    rain=look({tint=Color3.fromRGB(176,196,226),sat=-.18,contrast=.1,bright=-.1,fog=Color3.fromRGB(120,135,155),density=.4,haze=2.2,bloom=.15}),
-    thunder=look({tint=Color3.fromRGB(150,166,205),sat=-.25,contrast=.16,bright=-.22,fog=Color3.fromRGB(80,92,120),density=.5,haze=2.8,bloom=.4}),
+    rain=look({tint=Color3.fromRGB(176,196,226),sat=-.18,contrast=.1,bright=-.04,fog=Color3.fromRGB(140,155,178),density=.28,haze=1.8,bloom=.15}),
+    thunder=look({tint=Color3.fromRGB(170,182,222),sat=-.18,contrast=.14,bright=-.07,fog=Color3.fromRGB(112,122,156),density=.3,haze=2.2,bloom=.45}),
     blizzard=look({tint=Color3.fromRGB(214,232,255),sat=-.35,contrast=-.08,bright=.06,fog=Color3.fromRGB(232,240,250),density=.68,haze=3.2,bloom=.35,rays=.08,rayTint=Color3.fromRGB(220,235,255)}),
     volcano=look({tint=Color3.fromRGB(255,184,128),sat=.4,contrast=.18,bright=-.06,fog=Color3.fromRGB(255,110,50),density=.4,haze=2.6,glare=.6,bloom=.85,rays=.22,rayTint=Color3.fromRGB(255,150,70)}),
     aurora=look({tint=Color3.fromRGB(176,255,230),sat=.3,contrast=.1,bright=-.06,fog=Color3.fromRGB(60,170,160),density=.24,haze=.8,bloom=.9}),
     quake=look({tint=Color3.fromRGB(232,200,156),sat=-.12,contrast=.14,bright=-.06,fog=Color3.fromRGB(190,160,120),density=.34,haze=2,bloom=.1}),
-    bloodmoon=look({tint=Color3.fromRGB(255,112,128),sat=.45,contrast=.2,bright=-.2,fog=Color3.fromRGB(190,20,44),density=.5,haze=2.8,glare=.3,bloom=1,rays=.1,rayTint=Color3.fromRGB(255,60,80)}),
+    bloodmoon=look({tint=Color3.fromRGB(255,112,128),sat=.45,contrast=.2,bright=-.08,fog=Color3.fromRGB(200,28,52),density=.34,haze=2.4,glare=.3,bloom=1,rays=.1,rayTint=Color3.fromRGB(255,60,80)}),
 }
 local TITLE_COLOR:{[string]:Color3}={
     rain=Color3.fromRGB(110,200,255),thunder=Color3.fromRGB(190,170,255),blizzard=Color3.fromRGB(190,235,255),
@@ -91,7 +91,7 @@ for _,id in {"rain","thunder"} do
     local streaks=emitter(sky,(if heavy then 1500 else 950)*DENSITY,{
         Texture=TEX_SMOKE,Lifetime=NumberRange.new(.55,.7),Speed=NumberRange.new(95,115),EmissionDirection=Enum.NormalId.Bottom,
         Acceleration=Vector3.new(if heavy then 30 else 10,-70,0),Orientation=Enum.ParticleOrientation.VelocityParallel,
-        Size=seq(if heavy then .3 else .22,.22),Squash=seq(-14,-14),Transparency=seq(.55,.35),LightEmission=.25,
+        Size=seq(if heavy then .5 else .38,.38),Squash=seq(-14,-14),Transparency=seq(.35,.15),LightEmission=.6,
         Color=ColorSequence.new(Color3.fromRGB(190,220,255),Color3.fromRGB(140,185,240)),SpreadAngle=Vector2.new(4,4),
     })
     local ground=volume(Vector3.new(60,.2,60))
