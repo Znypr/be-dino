@@ -727,10 +727,10 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 
 | ID | Status | Pri | Task | Depends on |
 | --- | --- | --- | --- | --- |
-| BD-066 | Backlog | P2 | NotifyQueue pure module: priority, dedupe, throttle, cap ([65](65-intake-notifications.md)) | none |
-| BD-067 | Backlog | P2 | Toast v2 renderer, 3 pooled cards, rarity tints, motion-off | BD-066 |
+| BD-066 | Review / test | P1 | NotifyQueue pure module: priority, dedupe, throttle, cap ([65](65-intake-notifications.md)); built + `tools/verify_notify.py` ([80](80-notifications.md)) | none |
+| BD-067 | Review / test | P1 | Toast v2 renderer, 3 pooled cards, rarity tints, motion-off ([80](80-notifications.md); Studio pending) | BD-066 |
 | BD-068 | Backlog | P2 | Notification icons (5) + toast plate, owner upload | none |
-| BD-069 | Backlog | P2 | Wire popup events and hatch-batch summary | BD-067 |
+| BD-069 | Review / test | P1 | Wire popup events and hatch-batch summary ([80](80-notifications.md); new-species and fusion cards not yet) | BD-067 |
 | BD-070 | Backlog | P3 | Notification Sfx mapping | BD-069 |
 | BD-071 | Backlog | P2 | Notification Studio/Android acceptance | BD-066-070 |
 | BD-072 | Backlog | P2 | ObjectiveConfig catalogue and rewards ([66](66-intake-mini-objectives.md)) | none |
