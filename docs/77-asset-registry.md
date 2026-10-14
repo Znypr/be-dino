@@ -90,3 +90,27 @@ Notes
 All older revisions and Blender sources live OUTSIDE git in Google Drive: `My Drive/Be Dino/Art Archive/2026-10-08_Premium_Egg_all_revisions.zip` (full Premium_Egg folder as of 2026-10-13).
 
 Rule: every new asset adds a registry line when it is added.
+
+## Sound effects (uploaded 2026-10-15)
+
+The 17-sound pack from `assets/audio/sfx/` (synthesized placeholders by `tools/generate_sfx.py`; a proper sound pass is BD-081). `hatch_rattle` and `hatch_burst` have no sound yet and stay silent.
+
+| Name | Type | Source | ID | Used by | Status |
+|---|---|---|---|---|---|
+| sfx_big_thud | sound | assets/audio/sfx/big_thud.wav | 88666885925372 | src/shared/Sfx.luau | in game |
+| sfx_fusion_reveal | sound | assets/audio/sfx/fusion_reveal.wav | 90816090310479 | src/shared/Sfx.luau | in game |
+| sfx_hatch_common | sound | assets/audio/sfx/hatch_common.wav | 123602379376075 | src/shared/Sfx.luau | in game |
+| sfx_hatch_crack | sound | assets/audio/sfx/hatch_crack.wav | 135613869332284 | src/shared/Sfx.luau | in game |
+| sfx_hatch_legendary | sound | assets/audio/sfx/hatch_legendary.wav | 109331854464968 | src/shared/Sfx.luau | in game |
+| sfx_hatch_rare | sound | assets/audio/sfx/hatch_rare.wav | 100769608611671 | src/shared/Sfx.luau | in game |
+| sfx_level_up | sound | assets/audio/sfx/level_up.wav | 135894580270926 | src/shared/Sfx.luau | in game |
+| sfx_pickup | sound | assets/audio/sfx/pickup.wav | 97315544055472 | src/shared/Sfx.luau | in game |
+| sfx_pickup_hi | sound | assets/audio/sfx/pickup_hi.wav | 86225160041514 | src/shared/Sfx.luau | in game |
+| sfx_pickup_lo | sound | assets/audio/sfx/pickup_lo.wav | 80767583749596 | src/shared/Sfx.luau | in game |
+| sfx_run_end | sound | assets/audio/sfx/run_end.wav | 127962506254484 | src/shared/Sfx.luau | in game |
+| sfx_run_start | sound | assets/audio/sfx/run_start.wav | 87202810278231 | src/shared/Sfx.luau | in game |
+| sfx_shiny_bang | sound | assets/audio/sfx/shiny_bang.wav | 124365194004947 | src/shared/Sfx.luau | in game |
+| sfx_shop_buy | sound | assets/audio/sfx/shop_buy.wav | 102585210519734 | src/shared/Sfx.luau | in game |
+| sfx_shop_refresh | sound | assets/audio/sfx/shop_refresh.wav | 91960074825710 | src/shared/Sfx.luau | in game |
+| sfx_ui_click | sound | assets/audio/sfx/ui_click.wav | 77237659470894 | src/shared/Sfx.luau | in game |
+| sfx_weather_start | sound | assets/audio/sfx/weather_start.wav | 120619985059497 | src/shared/Sfx.luau | in game |
