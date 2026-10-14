@@ -22,6 +22,17 @@ Maximum player access/policy work remains in progress:
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
+### Studio check of merged main — 2026-10-13
+
+Unpublished copy of `main` (`9a9b1ee`, GameId/PlaceId 0), Studio Play, one player. Floor food built
+(1,536 pickups, status Ready); a run started; 3 of 3 pickups eaten with growth 0 → 7; an eaten pickup
+respawned after the 8 s configured delay; the Home request returned the dino to the Sanctuary.
+BD-027 stays Review / test pending phone and multi-client evidence. With the fusion flag on in that
+copy only, the real `FusionAction` remote answered over a real client connection: list, details,
+`wrong_donor_count`, `bad_request` for unknown actions and extra fields, and Emerald refusal.
+Not yet checked: Fusion Menu on screen, 1 s reveal and rarity-skip UI, Android layout, hill traction,
+world-art mode, a real 10-donor fusion through the game's own repository instance.
+
 ### Milestone 1 owner decisions — 2026-10-13
 
 Znypr set the first milestone and handed project lead to Claude:
@@ -136,7 +147,7 @@ ledger compaction before public release.
 | BD-024 | Review / test | P1 | Restore visible egg previews | Build 017 |
 | BD-025 | Review / test | P1 | Enlarge centered dinosaur previews | Build 017 |
 | BD-026 | Review / test | P1 | Replace pixelated UI icon rendering everywhere | Build 017 |
-| BD-027 | Ready | P0 | Verify visible floor food and close Build 017 regressions | BD-023–026 |
+| BD-027 | Review / test | P0 | Verify visible floor food and close Build 017 regressions | BD-023–026 |
 | BD-028 | Review / test | P1 | Persistent crystal currency and random map pickups | BD-027, BD-011 |
 | BD-029 | Review / test | P1 | Aura shop, ownership/equip and eating-growth effects | BD-028 |
 | BD-030 | Review / test | P1 | Forward leap with 60-second cooldown and HUD | BD-027, BD-006 |
@@ -153,7 +164,7 @@ ledger compaction before public release.
 | BD-041 | Review / test | P1 | Two-colour egg genetics, Normal/Big eggs and independent shiny sparkle | BD-035, BD-037 |
 | BD-042 | Review / test | P1 | Five-second ordered hatches, Shiny/BIG and map leaderboards | BD-013, BD-034 |
 | BD-043 | In progress | P1 | UI animation, feedback, loading and preview performance | BD-015, BD-042 |
-| BD-044 | Review / test | P0 | Replace direct-copy rewards with caught-run-egg hatching, crystal payout and separate five-slot egg nests ([evidence](50-bd044-reward-loop.md); Studio pending) | BD-011, BD-013, BD-036, BD-042 |
+| BD-044 | Review / test | P0 | Replace direct-copy rewards with caught-run-egg hatching, crystal payout and separate five-slot egg nests ([evidence](50-bd044-reward-loop.md); Studio pending). **Owner 2026-10-13: 40 eggs per 500 food (was 15); values/evidence: [59](59-egg-rate-40.md)** | BD-011, BD-013, BD-036, BD-042 |
 | BD-045 | Review / test | P0 | Rebalance condition odds to new owner starting distribution and update condition-upgrade/disclosure flow ([evidence](50-bd044-reward-loop.md#bd-045-condition-odds-bd045-conditions-v1); Studio pending) | BD-040 |
 | BD-046 | Backlog | P1 | Rename Auras nav entry to Shop with crystal icon; crystal HUD opens same Shop | BD-029, BD-036, BD-043 |
 | BD-047 | Backlog | P1 | Illustrated Crystal Shop category tiles, green-spotted egg icon, larger aura previews and leading tab icons | BD-046 |
@@ -166,8 +177,8 @@ ledger compaction before public release.
 | BD-054 | Review / test | P0 | Responsive phone/tablet touch-zone navigation/control placement and safe insets ([51](51-bd053-054-movement-mobile.md)) | BD-052, BD-046 |
 | BD-055 | Backlog | P1 | Complete sky, atmosphere, cloud, particle and audio effects for all weather events | BD-031, BD-034 |
 | BD-056 | Backlog | P1 | Top-center growth metric and bottom-left egg-icon catches-only HUD | BD-044, BD-054 |
-| BD-057 | Review / test | P0 | [Emerald/Diamond cost options: 57](57-fusion-ladder-options.md). Consume 10 same-species/same-pattern Base dinos to create ONE NEW Gold, then Emerald before Diamond; guaranteed stage, freshly rolled traits (Gold transaction; provisional odds/remote via BD-064; Emerald/Diamond unapproved) | BD-012, BD-060 **2026-10-13 owner ladder: 50/10/3, see [58](58-fusion-ladder-50-10-3.md); Studio pending.** |
-| BD-058 | Backlog | P0 | [Recipe pacing options sim: 57](57-fusion-ladder-options.md). Earned fusion stages as main permanent stat progression, fair caps, weekly grind and recipe pacing simulation | BD-057 |
+| BD-057 | Review / test | P0 | [Emerald/Diamond cost options: 57](57-fusion-ladder-options.md). Consume 10 same-species/same-pattern Base dinos to create ONE NEW Gold, then Emerald before Diamond; guaranteed stage, freshly rolled traits (Gold transaction; provisional odds/remote via BD-064; Emerald/Diamond unapproved) **Owner 2026-10-13: ladder fixed at Gold 50 Base / Emerald 10 Gold / Diamond 3 Emerald; pacing at 40 eggs per 500 food: [57 section 11](57-fusion-ladder-options.md), [59](59-egg-rate-40.md).** | BD-012, BD-060  |
+| BD-058 | Backlog | P0 | [Recipe pacing options sim: 57](57-fusion-ladder-options.md). Earned fusion stages as main permanent stat progression, fair caps, weekly grind and recipe pacing simulation **Owner 2026-10-13: ladder fixed at Gold 50 Base / Emerald 10 Gold / Diamond 3 Emerald; pacing at 40 eggs per 500 food: [57 section 11](57-fusion-ladder-options.md), [59](59-egg-rate-40.md).** | BD-057  |
 | BD-059 | Backlog | P1 | Buy and switch multiple aura/trail styles per individual dino; ALL purchased ingredient cosmetics are lost at fusion, never transfer to result | BD-060, BD-029, BD-038 |
 | BD-060 | Review / test | P0 | Unique dinosaur identity, hatched egg records, fused NEW instance lineage/parent egg history, safe profile migration (persistent playtest flag, default off: [53](53-bd064-fusion-server.md)) | BD-011, BD-012, BD-041 |
 | BD-061 | Backlog | P1 | Blender Gold/Emerald/Diamond additive surfaces, subtle/medium overlay A/B, stack every trait/effect | BD-057, BD-035 |

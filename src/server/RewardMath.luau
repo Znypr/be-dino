@@ -19,13 +19,13 @@ end
 function RewardMath.runCrystals(eggCount: number): number
     local n = RewardMath.runEggCount(eggCount)
     local tier = ProgressionConfig.RunCrystalTierEggs
-    local crystals = ProgressionConfig.RunCrystalPerEgg * math.min(n, tier)
-        + (ProgressionConfig.RunCrystalPerExtraEggTenths * math.max(0, n - tier)) // 10
+    local crystals = (ProgressionConfig.RunCrystalPerEggHundredths * math.min(n, tier)
+        + ProgressionConfig.RunCrystalPerExtraEggHundredths * math.max(0, n - tier)) // 100
     return math.min(ProgressionConfig.RunCrystalCap, crystals)
 end
 
 -- PROVISIONAL nest earning rule: first nest at NestFirstAtEggs, then one per
--- NestEggsPerExtraNest further eggs (15 -> 1, 150 -> 6), capped per run.
+-- NestEggsPerExtraNest further eggs (40 -> 1, 400 -> 6), capped per run.
 function RewardMath.nestCount(eggCount: number): number
     local n = RewardMath.runEggCount(eggCount)
     if n < Config.NestFirstAtEggs then return 0 end

@@ -13,8 +13,8 @@ hop servers and leave.
 Gated scenarios (exit 1 on failure): 8 and 12 players playing Build 020 as
 shipped -- zero failed operations, no throttle-queue drops, all eggs drained,
 all leases released, peak 60 s request window within the budget.
-Report-only scenarios: a BD-044-style 15-egg reveal burst and a client that
-spams a cheap write remote, plus an analytic 150-egg projection.
+Report-only scenarios: a BD-044-style 40-egg reveal burst and a client that
+spams a cheap write remote, plus an analytic 400-egg projection.
 
 Limits: Luau mocks prove transaction/budget behaviour of the repository, not
 Roblox networking, physics, rendering, frame time or real DataStore latency.
@@ -391,7 +391,7 @@ local function playerLoop(sc, servers, p, index, rng)
             end
         end
         local runId = p.Name .. "-run-" .. runs
-        -- One run egg per catch (BD-044); owner example 15 catches per 5 minutes.
+        -- One run egg per catch (BD-044); owner 2026-10-13: 40 catches per 500 food (~5 minutes).
         local catches = math.floor((now - runStart) / 60 * sc.catchesPerMinute * (0.3 + rng() * 1.7))
         catches = math.min(catches, server.Config.RunEggMaxPerRun or catches)
         local ok, outcome, status = op("settle", server.Repository.commitRunSettlement, p, runId, catches)
@@ -557,15 +557,15 @@ end
 '''
 
 BASE = {"duration": 900, "joinStagger": 2, "runMin": 90, "runMax": 240, "pickupMin": 8, "pickupMax": 20,
-        "revealSeconds": 5, "failRate": 0.01, "hop": 2, "catchesPerMinute": 3, "revealCap": 300, "spammer": False, "spamSeconds": 0}
+        "revealSeconds": 5, "failRate": 0.01, "hop": 2, "catchesPerMinute": 8, "revealCap": 500, "spammer": False, "spamSeconds": 0}
 # Values the playtest release profile writes (tools/release_profiles.py).
 PLAYTEST_OVERRIDES = {"IdentityPersistentEnabled": True, "IdentityFusionPreviewEnabled": True}
 SCENARIOS = [
     dict(BASE, name="build020-8-players", players=8, seed=8, gated=True),
     dict(BASE, name="build020-12-players", players=12, seed=12, gated=True),
     dict(BASE, name="playtest-flags-12-players", players=12, seed=1212, configOverrides=PLAYTEST_OVERRIDES, gated=False, playtestGate=True),
-    dict(BASE, name="egg-burst-15-x12", players=12, seed=15, duration=420, gated=False),
-    dict(BASE, name="egg-burst-150-x12", players=12, seed=150, catchesPerMinute=30, duration=1200, gated=False),
+    dict(BASE, name="egg-burst-40-x12", players=12, seed=40, duration=420, gated=False),
+    dict(BASE, name="egg-burst-400-x12", players=12, seed=400, catchesPerMinute=100, duration=1200, gated=False),
     dict(BASE, name="equip-spam-8+1", players=8, seed=81, spammer=True, spamSeconds=360, duration=480, gated=False),
 ]
 
@@ -679,7 +679,7 @@ def main(argv=None) -> int:
         print(f"       ops {result['ops']} requests-by-op {result['byLabel']} denials {result['denials']}")
         for problem in problems:
             print(f"       - {problem}")
-    projections = [projection(n, e) for n in (8, 12) for e in (15, 150)]
+    projections = [projection(n, e) for n in (8, 12) for e in (40, 400)]
     print("BD-044 projection (all players revealing simultaneously, one UpdateAsync per 10-egg hatch page, 1 s reveals):")
     for p in projections:
         print(f"       {p['players']} players x {p['eggsPerRun']} eggs: {p['requestsPerMinute']}/min vs budget "

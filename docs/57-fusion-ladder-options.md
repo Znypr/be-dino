@@ -165,3 +165,51 @@ python tools/simulate_fusion_ladder.py --tier 3 --targets compy
 python tools/simulate_fusion_ladder.py --casual-runs 2 --heavy-big-runs 5
 python tools/simulate_fusion_ladder.py --check             # CI: 2k trials, monotonicity, ~1 s
 ```
+
+## 11. Owner-chosen ladder 50/10/3 at 40 eggs per 500 food (2026-10-13)
+
+**Owner decisions 2026-10-13 (authoritative):** Gold = **50 Base**, Emerald = **10 Gold**, Diamond = **3 Emerald**, always the same species + pattern; and **40 eggs per 500 food** (5,000 food = 400 eggs, see [59](59-egg-rate-40.md)). Sections 1-10 above are the earlier candidate comparison (15/150 eggs, Gold = 10 Base) and are kept as history; they are reproducible with `--gold-donors 10 --emerald-donors 2 3 4 5 --diamond-donors 2 3 4 --eggs-small 15 --eggs-big 150`. `python tools/simulate_fusion_ladder.py` now defaults to the owner ladder. **Model, not measured gameplay**; assumptions A1-A4 and A7-A10 unchanged (tier-0 hatch success 60%, one dino per hatched egg).
+
+Cost in Base dinos of ONE species+pattern cell: Gold 50, Emerald 10 x 50 = **500**, Diamond 3 x 500 = **1,500**.
+
+Egg supply (ASSUMPTIONS, CLI flags): **casual** = 3 runs x 40 eggs = **120 eggs/day**; **heavy** = 10 runs/day, 3 of them 400-egg (5,000-food) runs and 7 x 40 = **1,480 eggs/day**.
+
+### Any one species+pattern (best case, first of 176 cells to reach the count)
+
+| Tier | Base | eggs p10 | eggs p50 | eggs p90 | days casual p10 / p50 / p90 | days heavy p50 |
+|---|---:|---:|---:|---:|---|---:|
+| Gold | 50 | 1,902 | 2,141 | 2,386 | 16 / 18 / 20 | 1.4 |
+| Emerald (from scratch) | 500 | 24,203 | 25,050 | 25,801 | 202 / 209 / 215 | 17 |
+| Diamond (from scratch) | 1,500 | 76,012 | 77,271 | 78,706 | 633 / 644 / 656 | 52 |
+
+### Targeted Compy (25% of species; one pattern = 3.1% of hatches)
+
+| Tier | Base | eggs p10 | eggs p50 | eggs p90 | days casual p10 / p50 / p90 | days heavy p50 |
+|---|---:|---:|---:|---:|---|---:|
+| Gold | 50 | 2,207 | 2,644 | 3,158 | 18 / 22 / 26 | 1.8 |
+| Emerald | 500 | 25,095 | 26,683 | 28,160 | 209 / 222 / 235 | 18 |
+| Diamond | 1,500 | 77,352 | 79,957 | 82,694 | 645 / 666 / 689 | 54 |
+
+### Targeted rare species (weight 10 Triceratops; weight 1 Tyrannosaurus), p50
+
+| Tier | Triceratops eggs | casual days | heavy days | Tyrannosaurus eggs | casual days | heavy days |
+|---|---:|---:|---:|---:|---:|---:|
+| Gold | 6,612 | 55 | 4.5 | 66,096 | 551 | 45 |
+| Emerald | 66,710 | 556 | 45 | 667,118 | 5,559 | 451 |
+| Diamond | 199,899 | 1,666 | 135 | 1,999,003 | 16,658 | 1,351 |
+
+(p10-p90 for Triceratops Gold: casual 46-66 days; Tyrannosaurus Gold: 459-659 days.)
+
+### Sensitivity: condition upgrades (targeted Compy p50 casual days)
+
+Tier 3 (79.2% hatch success): Gold 17, Emerald 169, Diamond 505. Tier 6 (96.8%): Gold 14, Emerald 138, Diamond 413. Upgrades shorten the ladder by at most about 35-40%.
+
+### Plain-language summary
+
+* **Is Gold quick?** For a casual player (one short session, 120 eggs/day), no: about **18 days** for the first Gold of any species+pattern (16-20), about 22 days if they insist on one Compy pattern. A heavy player (1,480 eggs/day) gets it in **about 1.5 days**. 50 Base is 5x the old 10-Base Gold; the egg-rate rise (2.7x) only partly offsets it.
+* **Emerald?** Casual about **7 months (209 days)** any-one, 222 days for a Compy pattern; heavy about **17 days**. Emerald needs 500 Base of one cell.
+* **Diamond?** Casual about **21 months (644 days)**; heavy about **52 days** (about 7.5 weeks). Diamond needs 1,500 Base of one cell.
+* Casual vs heavy is about 12x apart. A rare-species Diamond (Triceratops about 135 heavy days, Tyrannosaurus years) is effectively out of reach without pattern research (BD-063), trading or non-egg materials. These are **owner-set costs**; this section reports pacing and does not change them. The levers are the egg rate or the 50 / 10 / 3 counts.
+* Storage implication: Diamond needs 1,500 same-cell Base dinos, but a player also holds every other hatched dino. `DinosaurIdentity.MaxInstances = 3000` is reached after about 5,000 eggs (60% hatch success): about 42 casual days or 3.4 heavy days. See [59](59-egg-rate-40.md) risks.
+
+Reproduce: `python tools/simulate_fusion_ladder.py --any-trials 150 --trials 3000` (6 s); `--tier 3|6`; `--check` (CI, about 1 s, also asserts the 40/500 conversion and owner-ladder monotonicity).

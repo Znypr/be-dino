@@ -365201,7 +365201,7 @@ return table.freeze({
     StudioLocalProfilesEnabled = true, -- unpublished Studio only; never a live fallback
     StudioTestWalletEnabled = true, -- only unpublished, nonpersistent local profiles
     StudioTestCrystals = 1000000,
-    FoodCatchRate = 15 / 500, -- raw food points; growth boosts do not multiply catches
+    FoodCatchRate = 40 / 500, -- PROVISIONAL (owner 2026-10-13: 40 catches = 40 run eggs per 500 food; 5,000 food -&gt; 400; was 15/500); raw food points, growth boosts do not multiply catches
     ProfileLoadWarningSeconds = 20,
 
     SpawnProtectionSeconds = 5,
@@ -365285,16 +365285,16 @@ return table.freeze({
     -- Run eggs beyond the five-slot reveal queue wait in a server-side ordered bank.
     RunRewardConfigVersion = 2,
     HatchPageSize = 10, -- PROVISIONAL: queued run eggs committed per claim transaction; at 1 s/egg = 6 claims/min/player (size 5 would be 12/min and bust the 8/12-player budgets)
-    RunEggMaxPerRun = 300, -- PROVISIONAL: catches stop counting at 300 eggs per run (storage bound)
-    RunEggBankCapacity = 600, -- PROVISIONAL: banked run eggs behind the queue; runs start only with room for a full run
+    RunEggMaxPerRun = 500, -- PROVISIONAL: catches stop counting at 500 eggs per run (6,250 food); a 5,000-food run (400 eggs) is not truncated
+    RunEggBankCapacity = 1000, -- PROVISIONAL: banked run eggs behind the queue (~540 B each, ~0.54 MB); a run starts only while banked &lt;= capacity - RunEggMaxPerRun (500)
     SettledRunLedgerSize = 200, -- PROVISIONAL: settled run IDs kept for exactly-once settlement beyond recentOperations
     -- Separate bonus egg nests (never the ordinary egg queue). Excess nests wait as
     -- pending/capacity-blocked and are never silently granted or discarded.
     NestSlotCapacity = 5,
-    NestPendingCapacity = 30, -- PROVISIONAL
-    NestFirstAtEggs = 15, -- PROVISIONAL: 15 run eggs (500 food) earn the first nest
-    NestEggsPerExtraNest = 27, -- PROVISIONAL: +1 nest per 27 further eggs (150 eggs -&gt; 6 nests)
-    NestMaxPerRun = 11, -- PROVISIONAL: equals the nest count at RunEggMaxPerRun
+    NestPendingCapacity = 30, -- PROVISIONAL: a run starts only while pending &lt;= capacity - NestMaxPerRun (22)
+    NestFirstAtEggs = 40, -- PROVISIONAL: 40 run eggs (500 food) earn the first nest (rescaled x40/15)
+    NestEggsPerExtraNest = 72, -- PROVISIONAL: +1 nest per 72 further eggs (400 eggs -&gt; 6 nests, same as the old 150)
+    NestMaxPerRun = 8, -- PROVISIONAL: &gt;= the nest count at RunEggMaxPerRun (500 eggs -&gt; 7)
     NestEggCount = 3, -- PROVISIONAL: each nest contains three precommitted bonus eggs
     NestIncubationSeconds = 300, -- PROVISIONAL: a slotted nest opens five minutes after it takes a slot
     NestRarityBoostEggs = 15, -- PROVISIONAL: nest eggs use the maximum run-batch species boost
@@ -368907,11 +368907,12 @@ return table.freeze({
     WeatherInterval=600, WeatherDuration=180,
     GrowthCap=8, SpeedCap=2.2,
     AccountXPPerLevel=100, AccountMaxLevel=60,
-    -- BD-044 PROVISIONAL run crystals (deterministic; the random 5/15/50 crystal box is retired):
-    -- crystals = min(RunCrystalCap, RunCrystalPerEgg*min(eggs,RunCrystalTierEggs)
-    --            + floor(RunCrystalPerExtraEggTenths*max(0,eggs-RunCrystalTierEggs)/10)).
-    -- 15 eggs -&gt; 30, 150 eggs -&gt; 219 (owner's illustrative 30/220 examples, not approved balance).
-    RunCrystalPerEgg=2, RunCrystalTierEggs=15, RunCrystalPerExtraEggTenths=14, RunCrystalCap=500,
+    -- BD-044 PROVISIONAL run crystals (deterministic; the random 5/15/50 crystal box is retired).
+    -- Re-tuned 2026-10-13 for 40 eggs per 500 food:
+    -- crystals = min(RunCrystalCap, (RunCrystalPerEggHundredths*min(eggs,RunCrystalTierEggs)
+    --            + RunCrystalPerExtraEggHundredths*max(0,eggs-RunCrystalTierEggs)) // 100).
+    -- 40 eggs (500 food) -&gt; 30, 400 eggs (5,000 food) -&gt; 220 (owner's illustrative 30/220), 500 eggs -&gt; 273; cap 300 bounds it.
+    RunCrystalPerEggHundredths=75, RunCrystalTierEggs=40, RunCrystalPerExtraEggHundredths=53, RunCrystalCap=300,
     RandomEggPrice=150,
     ConditionUpgrades={
         {level=1,price=100,requiredLevel=3},{level=2,price=300,requiredLevel=8},
@@ -543970,13 +543971,13 @@ end
 function RewardMath.runCrystals(eggCount: number): number
     local n = RewardMath.runEggCount(eggCount)
     local tier = ProgressionConfig.RunCrystalTierEggs
-    local crystals = ProgressionConfig.RunCrystalPerEgg * math.min(n, tier)
-        + (ProgressionConfig.RunCrystalPerExtraEggTenths * math.max(0, n - tier)) // 10
+    local crystals = (ProgressionConfig.RunCrystalPerEggHundredths * math.min(n, tier)
+        + ProgressionConfig.RunCrystalPerExtraEggHundredths * math.max(0, n - tier)) // 100
     return math.min(ProgressionConfig.RunCrystalCap, crystals)
 end
 
 -- PROVISIONAL nest earning rule: first nest at NestFirstAtEggs, then one per
--- NestEggsPerExtraNest further eggs (15 -&gt; 1, 150 -&gt; 6), capped per run.
+-- NestEggsPerExtraNest further eggs (40 -&gt; 1, 400 -&gt; 6), capped per run.
 function RewardMath.nestCount(eggCount: number): number
     local n = RewardMath.runEggCount(eggCount)
     if n &lt; Config.NestFirstAtEggs then return 0 end

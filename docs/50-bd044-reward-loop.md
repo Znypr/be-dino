@@ -1,5 +1,7 @@
 # BD-044 + BD-045: one run egg per catch, banked reveals, bonus nests and new condition odds
 
+> **Superseded in part 2026-10-13 (owner):** the egg rate is now 40 per 500 food (5,000 -> 400); every 15 / 150 / 300 / 600 / 219 figure below is the earlier prototype. Current values: [59-egg-rate-40.md](59-egg-rate-40.md).
+
 Implemented 2026-10-13 on `claude/bd-044-reward-loop`, based on GitHub main `18856b4`.
 Task status lives only in [Kanban](07-kanban.md) (**Review / test**). Owner intent:
 [reward target](09-reward-economy.md), [AGENTS.md](../AGENTS.md) and
