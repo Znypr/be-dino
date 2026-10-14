@@ -10,6 +10,15 @@ Sfx.Sounds = {
     hatch_common = {id = "", volume = .6, rate = 1, gap = .2},
     hatch_rare = {id = "", volume = .7, rate = 1, gap = .2},
     hatch_legendary = {id = "", volume = .85, rate = 1, gap = .2},
+    -- Hatch sequence hooks (HatchTimeline cues): silent until ids are bound.
+    hatch_rattle = {id = "", volume = .5, rate = 1, gap = .12},
+    hatch_crack_stage = {id = "", volume = .6, rate = 1, gap = .2},
+    hatch_burst = {id = "", volume = .8, rate = 1, gap = .3},
+    hatch_reveal_common = {id = "", volume = .6, rate = 1, gap = .2},
+    hatch_reveal_uncommon = {id = "", volume = .65, rate = 1, gap = .2},
+    hatch_reveal_rare = {id = "", volume = .75, rate = 1, gap = .2},
+    hatch_reveal_epic = {id = "", volume = .85, rate = 1, gap = .2},
+    hatch_reveal_legendary = {id = "", volume = .95, rate = 1, gap = .2},
     shiny_bang = {id = "", volume = .8, rate = 1, gap = .3},
     big_thud = {id = "", volume = .8, rate = 1, gap = .3},
     pickup = {id = "", volume = .35, rate = 1, gap = .06},
@@ -47,6 +56,12 @@ end
 function Sfx.hatchName(rarity: number?): string
     local r = rarity or 1
     return if r >= 4 then "hatch_legendary" elseif r == 3 then "hatch_rare" else "hatch_common"
+end
+
+-- Pure: reveal sting for a hatched dinosaur, one hook per rarity 1..5.
+Sfx.RevealNames = {"hatch_reveal_common", "hatch_reveal_uncommon", "hatch_reveal_rare", "hatch_reveal_epic", "hatch_reveal_legendary"}
+function Sfx.revealName(rarity: number?): string
+    return Sfx.RevealNames[math.clamp(math.floor(rarity or 1), 1, #Sfx.RevealNames)]
 end
 
 local pools: {[string]: {sounds: {Sound}, slot: number}} = {}
