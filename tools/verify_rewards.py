@@ -128,67 +128,67 @@ end
 ------------------------------------------------------------------ RewardMath
 assert(Rewards.runEggCount(0)==0 and Rewards.runEggCount(-5)==0 and Rewards.runEggCount(0/0)==0)
 assert(Rewards.runEggCount(-math.huge)==0 and Rewards.runEggCount(math.huge)==GameConfig.RunEggMaxPerRun)
-assert(Rewards.runEggCount(1e308)==300 and Rewards.runEggCount(301)==300 and Rewards.runEggCount(300)==300)
+assert(Rewards.runEggCount(1e308)==500 and Rewards.runEggCount(501)==500 and Rewards.runEggCount(500)==500)
 assert(Rewards.runEggCount("15")==0 and Rewards.runEggCount(nil)==0 and Rewards.runEggCount(14.7)==14)
-assert(Rewards.runEggCount(15)==15 and Rewards.runEggCount(150)==150)
+assert(Rewards.runEggCount(40)==40 and Rewards.runEggCount(400)==400)
 local catches,carry=FoodCatchRules.award(500,0,1)
-assert(catches==15 and Rewards.runEggCount(catches)==15,"500 food -> 15 run eggs")
+assert(catches==40 and Rewards.runEggCount(catches)==40,"500 food -> 40 run eggs")
 catches=FoodCatchRules.award(5000,0,1)
-assert(catches==150 and Rewards.runEggCount(catches)==150,"5,000 food -> 150 run eggs")
-assert(Rewards.runCrystals(0)==0 and Rewards.runCrystals(15)==30 and Rewards.runCrystals(150)==219 and Rewards.runCrystals(300)==429)
-assert(Rewards.runCrystals(0/0)==0 and Rewards.runCrystals(-1)==0 and Rewards.runCrystals(math.huge)==429)
-assert(Rewards.nestCount(14)==0 and Rewards.nestCount(15)==1 and Rewards.nestCount(150)==6)
-assert(Rewards.nestCount(300)==GameConfig.NestMaxPerRun and Rewards.nestCount(math.huge)==GameConfig.NestMaxPerRun)
+assert(catches==400 and Rewards.runEggCount(catches)==400,"5,000 food -> 400 run eggs")
+assert(Rewards.runCrystals(0)==0 and Rewards.runCrystals(40)==30 and Rewards.runCrystals(400)==220 and Rewards.runCrystals(500)==273)
+assert(Rewards.runCrystals(0/0)==0 and Rewards.runCrystals(-1)==0 and Rewards.runCrystals(math.huge)==273)
+assert(Rewards.nestCount(39)==0 and Rewards.nestCount(40)==1 and Rewards.nestCount(400)==6)
+assert(Rewards.nestCount(500)==7 and Rewards.nestCount(math.huge)==7 and Rewards.nestCount(500)<=GameConfig.NestMaxPerRun)
 local zero=Rewards.computeRunReward(0/0)
 assert(zero.eggCount==0 and zero.crystals==0 and zero.nestCount==0 and zero.accountXP==0)
 local previous=-1
-for n=0,300 do local c=Rewards.runCrystals(n) assert(c>=previous) previous=c end
-assert(#Rewards.runEggId(string.rep("x",64),300)<=80 and #(Rewards.nestId(string.rep("x",64),11)..":3")<=80)
-print("Reward math passed: 0/negative/NaN/inf/huge/non-number scores, 500->15 and 5,000->150 eggs, 30/219 crystals, 1/6 nests, bounded IDs")
+for n=0,500 do local c=Rewards.runCrystals(n) assert(c>=previous) previous=c end
+assert(#Rewards.runEggId(string.rep("x",64),500)<=80 and #(Rewards.nestId(string.rep("x",64),11)..":3")<=80)
+print("Reward math passed: 0/negative/NaN/inf/huge/non-number scores, 500->40 and 5,000->400 eggs, 30/220 crystals, 1/6 nests, bounded IDs")
 
 ------------------------------------------------------------------ 15-egg run
 local now=os.time()
 local a=user(101)
 assert(Repository.load(a))
 local beforeCopies=totalCopies(data[key(a)])
-local ok,outcome,status=Repository.commitRunSettlement(a,"run-15",15)
-assert(ok and status=="committed" and outcome.eggCount==15 and outcome.crystals==30 and outcome.nestCount==1)
+local ok,outcome,status=Repository.commitRunSettlement(a,"run-40",40)
+assert(ok and status=="committed" and outcome.eggCount==40 and outcome.crystals==30 and outcome.nestCount==1)
 assert(totalCopies(data[key(a)])==beforeCopies,"settlement must not grant direct dinosaur copies")
-assert(#data[key(a)].eggs==5 and bankCount(a)==10 and data[key(a)].pendingChestGrants==0)
-assert(data[key(a)].progression.crystals==30 and data[key(a)].progression.accountXP==15)
+assert(#data[key(a)].eggs==5 and bankCount(a)==35 and data[key(a)].pendingChestGrants==0)
+assert(data[key(a)].progression.crystals==30 and data[key(a)].progression.accountXP==40)
 assert(#data[key(a)].nests==1 and #data[key(a)].pendingNests==0 and data[key(a)].nests[1].readyAt>=now+GameConfig.NestIncubationSeconds)
 assert(#data[key(a)].nests[1].eggs==GameConfig.NestEggCount)
 local ids={}
 local lastRarity=0
 for _,egg in revealLine(a) do
  assert(not ids[egg.eggId]) ids[egg.eggId]=true
- assert(string.match(egg.eggId,"^run:run%-15:%d+$") and egg.reward.count==1 and egg.kind=="run_egg")
+ assert(string.match(egg.eggId,"^run:run%-40:%d+$") and egg.reward.count==1 and egg.kind=="run_egg")
  assert(Genetics.valid(egg.genes) and egg.traitRollVersion=="bd045-genes-v2" and egg.source.kind=="run")
  local rarity=GameConfig.SpeciesRarities[egg.reward.speciesId]
  assert(rarity>=lastRarity,"run batch must reveal in increasing rarity") lastRarity=rarity
 end
-assert(a.attrs.LastRewardText=="15 run eggs | 1 bonus nest" and a.attrs.LastRunCrystals==30 and a.attrs.LastRunCrystalBox==0)
-assert(a.attrs.BankedRunEggCount==10 and a.attrs.QueuedEggsWaiting==10 and a.attrs.RunStartBlocked=="")
+assert(a.attrs.LastRewardText=="40 run eggs | 1 bonus nest" and a.attrs.LastRunCrystals==30 and a.attrs.LastRunCrystalBox==0)
+assert(a.attrs.BankedRunEggCount==35 and a.attrs.QueuedEggsWaiting==35 and a.attrs.RunStartBlocked=="")
 -- Exactly once: replays (cached and uncached) change nothing.
 local snapshot=copy(data[key(a)])
-local dupOk,_,dupStatus=Repository.commitRunSettlement(a,"run-15",15)
+local dupOk,_,dupStatus=Repository.commitRunSettlement(a,"run-40",40)
 assert(dupOk and dupStatus=="duplicate" and same(snapshot,data[key(a)]))
 Repository.release(a) assert(Repository.load(a))
 snapshot=copy(data[key(a)])
-dupOk,_,dupStatus=Repository.commitRunSettlement(a,"run-15",150)
+dupOk,_,dupStatus=Repository.commitRunSettlement(a,"run-40",400)
 assert(dupOk and dupStatus=="duplicate" and same(snapshot,data[key(a)]),"replay with a different score must not re-settle")
-print("15-egg run passed: 15 banked eggs (5 queue + 10 bank), no direct copies, 30 crystals, 1 slotted nest, ascending rarity, exactly-once replays")
+print("40-egg run passed: 40 banked eggs (5 queue + 35 bank), no direct copies, 30 crystals, 1 slotted nest, ascending rarity, exactly-once replays")
 
 ------------------------------------------------------------------ 150-egg run, reveal, reconnect
 local b=user(102)
 assert(Repository.load(b))
 local copiesBefore=totalCopies(data[key(b)])
-assert(Repository.commitRunSettlement(b,"run-150",150))
-assert(#data[key(b)].eggs==5 and bankCount(b)==145)
+assert(Repository.commitRunSettlement(b,"run-400",400))
+assert(#data[key(b)].eggs==5 and bankCount(b)==395)
 assert(#data[key(b)].nests==5 and #data[key(b)].pendingNests==1,"6 nests: 5 slotted, 1 capacity-blocked pending")
-assert(b.attrs.PendingNestCount==1 and #b.attrs.NestsJson==5 and data[key(b)].progression.crystals==219)
+assert(b.attrs.PendingNestCount==1 and #b.attrs.NestsJson==5 and data[key(b)].progression.crystals==220)
 local line=revealLine(b)
-assert(#line==150)
+assert(#line==400)
 local committedIds={} for i,egg in line do committedIds[i]=egg.eggId end
 local committedGenes={} for i,egg in line do committedGenes[i]=copy(egg.genes) end
 local byId={} for _,egg in line do byId[egg.eggId]=egg end
@@ -219,7 +219,7 @@ for i=1,42 do
 end
 -- 5 pages of 10 are committed (50 eggs credited); the 8 unrevealed page eggs are already credited.
 local pageSize=GameConfig.HatchPageSize assert(pageSize==10)
-assert(#data[key(b)].eggs==5 and bankCount(b)==95 and transforms-claimTransforms<=2*5,"one claim transaction per hatch page")
+assert(#data[key(b)].eggs==5 and bankCount(b)==345 and transforms-claimTransforms<=2*5,"one claim transaction per hatch page")
 local copiesMid=totalCopies(data[key(b)])
 local again,_,againStatus=Repository.claimChest(b,committedIds[42])
 assert(again and againStatus=="duplicate" and totalCopies(data[key(b)])==copiesMid)
@@ -228,26 +228,26 @@ Repository.release(b)
 assert(Repository.load(b))
 assert(b.attrs.NextChestId==committedIds[51] and totalCopies(data[key(b)])==copiesMid)
 line=revealLine(b)
-assert(#line==100)
+assert(#line==350)
 for i,egg in line do assert(egg.eggId==committedIds[50+i] and same(egg.genes,committedGenes[50+i])) end
-for i=51,150 do
+for i=51,400 do
  local egg=revealNext(b)
  assert(egg.eggId==committedIds[i])
  local rarity=GameConfig.SpeciesRarities[egg.reward.speciesId]
  assert(rarity>=lastRarity) lastRarity=rarity
 end
-assert(revealed==142 and #data[key(b)].eggs==0 and bankCount(b)==0)
+assert(revealed==392 and #data[key(b)].eggs==0 and bankCount(b)==0)
 assert(totalCopies(data[key(b)])==copiesBefore+expectedSuccess,"one dinosaur per successful egg, none for failures, none lost by the reconnect")
 assert(failures>0,"expected some failed Cracked eggs at BD-045 tier 0")
 local claimRequests=transforms-claimTransforms
-assert(claimRequests<=2*15+2,"150 eggs must need ~15 claim transactions, got "..claimRequests)
+assert(claimRequests<=2*40+2,"400 eggs must need ~40 claim transactions, got "..claimRequests)
 -- Replaying settlement after 150 claims trimmed it out of recentOperations is still a no-op.
 local found=false for _,entry in data[key(b)].recentOperations do if entry.id=="run:run-150" then found=true end end
 assert(not found,"fixture expects the run operation to be trimmed")
 snapshot=copy(data[key(b)])
-dupOk,_,dupStatus=Repository.commitRunSettlement(b,"run-150",150)
+dupOk,_,dupStatus=Repository.commitRunSettlement(b,"run-400",400)
 assert(dupOk and dupStatus=="duplicate" and same(snapshot,data[key(b)]),"settledRuns ledger must block re-settlement")
-print(string.format("150-egg run passed: 150 eggs credited in 15 hatch-page transactions (%d transforms incl. probes), revealed in committed ascending order, reconnect mid-page loses no credit; %d hatched total, trimmed-ledger replay blocked", claimRequests, expectedSuccess))
+print(string.format("400-egg run passed: 400 eggs credited in 40 hatch-page transactions (%d transforms incl. probes), revealed in committed ascending order, reconnect mid-page loses no credit; %d hatched total, trimmed-ledger replay blocked", claimRequests, expectedSuccess))
 
 ------------------------------------------------------------------ Conservation across hatch pages, leave and rejoin
 -- settled == credited + queued + banked, where "credited" is judged from collection growth and
@@ -297,23 +297,23 @@ local c=user(103)
 assert(Repository.load(c))
 snapshot=copy(data[key(c)])
 failMode="all"
-local failed,_,failedStatus=Repository.commitRunSettlement(c,"outage-run",15)
+local failed,_,failedStatus=Repository.commitRunSettlement(c,"outage-run",40)
 failMode=nil
 assert(not failed and failedStatus=="save_failed" and same(snapshot,data[key(c)]),"outage must not partially write")
 -- Recovery = rejoin after the outage; the same run then settles.
 Repository.release(c) assert(Repository.load(c))
 failMode="once"
-local retried,_,retriedStatus=Repository.commitRunSettlement(c,"outage-run",15)
-assert(retried and retriedStatus=="committed" and #revealLine(c)==15,"transient outage retried inside the repository")
+local retried,_,retriedStatus=Repository.commitRunSettlement(c,"outage-run",40)
+assert(retried and retriedStatus=="committed" and #revealLine(c)==40,"transient outage retried inside the repository")
 assert(data[key(c)].progression.crystals==30)
-assert(select(3,Repository.commitRunSettlement(c,"outage-run",15))=="duplicate" and #revealLine(c)==15)
+assert(select(3,Repository.commitRunSettlement(c,"outage-run",40))=="duplicate" and #revealLine(c)==40)
 -- Lost acknowledgement: the first write commits, the retry finds it and reports duplicate.
 failMode="ack_lost"
-local acked,_,ackStatus=Repository.commitRunSettlement(c,"ack-run",15)
-assert(acked and ackStatus=="duplicate" and #revealLine(c)==30 and data[key(c)].progression.crystals==60,"lost ack must not double-settle")
+local acked,_,ackStatus=Repository.commitRunSettlement(c,"ack-run",40)
+assert(acked and ackStatus=="duplicate" and #revealLine(c)==80 and data[key(c)].progression.crystals==60,"lost ack must not double-settle")
 data[key(c)].session.leaseId="other-server"
 snapshot=copy(data[key(c)])
-local lost,_,lostStatus=Repository.commitRunSettlement(c,"lease-run",15)
+local lost,_,lostStatus=Repository.commitRunSettlement(c,"lease-run",40)
 assert(not lost and lostStatus=="lease_lost" and same(snapshot,data[key(c)]) and c.attrs.ProfileState=="LeaseLost")
 local lostClaim,_,lostClaimStatus=Repository.claimChest(c,data[key(c)].eggs[1].eggId)
 assert(not lostClaim and lostClaimStatus=="profile_not_loaded" and same(snapshot,data[key(c)]))
@@ -321,14 +321,14 @@ assert(not lostClaim and lostClaimStatus=="profile_not_loaded" and same(snapshot
 data[key(c)].session=nil
 Repository.release(c)
 assert(Repository.load(c))
-assert(Repository.commitRunSettlement(c,"lease-run",15) and #revealLine(c)==45)
-assert(select(3,Repository.commitRunSettlement(c,"lease-run",15))=="duplicate" and #revealLine(c)==45)
+assert(Repository.commitRunSettlement(c,"lease-run",40) and #revealLine(c)==120)
+assert(select(3,Repository.commitRunSettlement(c,"lease-run",40))=="duplicate" and #revealLine(c)==120)
 print("Failure handling passed: full outage writes nothing, transient outage commits once, lost acknowledgement retried as duplicate, lease loss blocks settlement/claims, retry after recovery is exactly-once")
 
 ------------------------------------------------------------------ Nests: capacity, pending, opening
 local n=user(104)
 assert(Repository.load(n))
-assert(Repository.commitRunSettlement(n,"nest-a",150)) -- 6 nests
+assert(Repository.commitRunSettlement(n,"nest-a",400)) -- 6 nests
 assert(#data[key(n)].nests==5 and #data[key(n)].pendingNests==1)
 local pendingId=data[key(n)].pendingNests[1].nestId
 local slotId=data[key(n)].nests[1].nestId
@@ -361,15 +361,17 @@ Repository.release(n) data[key(n)].runEggBank={} data[key(n)].eggs={} assert(Rep
 local runs=0
 while n.attrs.RunStartBlocked~="nests_pending_full" do
  runs+=1
- assert(Repository.commitRunSettlement(n,"nest-fill-"..runs,15))
+ assert(Repository.commitRunSettlement(n,"nest-fill-"..runs,40))
  totalNests+=1
  assert(#data[key(n)].nests+#data[key(n)].pendingNests==totalNests,"a nest was lost")
  assert(runs<100)
+ -- Keep the egg-bank gate out of the way: 40-egg runs would otherwise fill the bank first.
+ Repository.release(n) data[key(n)].runEggBank={} data[key(n)].eggs={} assert(Repository.load(n))
 end
 assert(#data[key(n)].pendingNests==GameConfig.NestPendingCapacity-GameConfig.NestMaxPerRun+1)
 -- Even a settlement while blocked (run started before the block) keeps every nest.
-assert(Repository.commitRunSettlement(n,"nest-overflow",300))
-assert(#data[key(n)].nests+#data[key(n)].pendingNests==totalNests+GameConfig.NestMaxPerRun)
+assert(Repository.commitRunSettlement(n,"nest-overflow",500))
+assert(#data[key(n)].nests+#data[key(n)].pendingNests==totalNests+Rewards.nestCount(500))
 -- Bank-full refusal keeps the nest intact.
 Repository.release(n)
 data[key(n)].nests[1].readyAt=0
@@ -437,10 +439,10 @@ local s=user(107)
 assert(Repository.load(s))
 local r=0
 while bankCount(s)+#data[key(s)].eggs<GameConfig.RunEggBankCapacity do
- r+=1 assert(Repository.commitRunSettlement(s,"storage-"..r,300))
+ r+=1 assert(Repository.commitRunSettlement(s,"storage-"..r,500))
 end
 local bytes=jsonSize(data[key(s)])
-assert(bytes<1500000,"profile with a full egg bank must stay well under the 4 MB DataStore limit: "..bytes)
+assert(bytes<900000,"profile with a full egg bank must stay well under the 4 MB DataStore limit: "..bytes)
 print(string.format("Storage passed: %d banked eggs + %d nests/pending ~ %d bytes (%.1f%% of 4 MiB)", bankCount(s)+#data[key(s)].eggs, #data[key(s)].nests+#data[key(s)].pendingNests, bytes, bytes/4194304*100))
 
 ------------------------------------------------------------------ Identity crediting (memory-only Studio profiles)

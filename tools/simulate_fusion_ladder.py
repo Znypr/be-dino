@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Monte Carlo model of the Base -> Gold -> Emerald -> Diamond fusion ladder (BD-057/BD-058).
 
-MODEL, NOT MEASURED GAMEPLAY. Every recipe cost simulated here is a CANDIDATE for the
-owner to choose from; none is approved. See docs/57-fusion-ladder-options.md.
+MODEL, NOT MEASURED GAMEPLAY. DEFAULT scenario = the owner-chosen ladder (2026-10-13):
+Gold = 50 Base, Emerald = 10 Gold, Diamond = 3 Emerald, at 40 eggs per 500 food. The old
+10-Base-Gold candidates remain as a comparison: pass `--gold-donors 10 --emerald-donors 2 3 4 5
+--diamond-donors 2 3 4 --eggs-small 15 --eggs-big 150`. See docs/57-fusion-ladder-options.md.
 
 Model (numbers read from the repo):
   * One egg -> hatch success ps = 1 - P(cracked) * (1 - 0.2) at the chosen condition-upgrade
@@ -11,7 +13,7 @@ Model (numbers read from the repo):
   * Species by Config.ChestSpeciesWeights (22 species, sum 100); pattern uniform over 8.
   * Every fusion needs same species AND same pattern, and the output keeps that cell, so a
     recipe with d Gold donors (Emerald) and e Emerald donors (Diamond) costs exactly
-    10*d*e Base dinos of ONE species+pattern "cell" (176 cells).
+    G*d*e Base dinos of ONE species+pattern (G = Gold donors, 50 by default) "cell" (176 cells).
   * No pattern research, no Robux, no trading, no donors lost to protection rules.
 Pure standard library, deterministic seeds.
 """
@@ -29,7 +31,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PATTERNS = 8
-GOLD_DONORS = 10
+GOLD_DONORS = 50  # owner decision 2026-10-13 (the old candidates used 10)
 
 
 def load_species_weights(path=None):
@@ -129,12 +131,13 @@ def player_profiles(a):
 
 
 def recipes(a):
-    rows = [("Gold = 10 Base", GOLD_DONORS)]
+    g = a.gold_donors
+    rows = [(f"Gold = {g} Base", g)]
     for d in a.emerald_donors:
-        rows.append((f"Emerald = {d} Gold", GOLD_DONORS * d))
+        rows.append((f"Emerald = {d} Gold", g * d))
     for d in a.emerald_donors:
         for e in a.diamond_donors:
-            rows.append((f"Diamond = {e} Emerald (Emerald = {d} Gold)", GOLD_DONORS * d * e))
+            rows.append((f"Diamond = {e} Emerald (Emerald = {d} Gold)", g * d * e))
     return rows
 
 
@@ -199,6 +202,12 @@ def check():
     for b in bs:
         assert an[b]["mean"] <= tg[b]["mean"], "any-cell must not be slower than a fixed cell"
     assert abs(tg[10]["mean"] / (10 / q) - 1) < 0.06, "targeted MC mean off analytic B/q"
+    own = [50, 500, 1500]
+    og = targeted(own, q, 300, 5)
+    assert og[50]["p50"] < og[500]["p50"] < og[1500]["p50"], "owner ladder must be monotone"
+    assert abs(og[50]["mean"] / (50 / q) - 1) < 0.15, "owner Gold targeted mean off analytic B/q"
+    cfg = (ROOT / "src/shared/Config.luau").read_text(encoding="utf-8")
+    assert re.search(r"FoodCatchRate = 40 / 500", cfg), "owner decision 2026-10-13: 40 catches per 500 food"
     assert targeted([10], q, 200, 3) == targeted([10], q, 200, 3), "not deterministic"
     dt = time.time() - t0
     assert dt < 10, f"check too slow: {dt:.1f}s"
@@ -211,16 +220,17 @@ def main(argv=None):
     ap.add_argument("--check", action="store_true", help="fast CI-safe monotonicity/sanity check")
     ap.add_argument("--seed", type=int, default=57)
     ap.add_argument("--trials", type=int, default=5000, help="targeted Monte Carlo trials")
-    ap.add_argument("--any-trials", type=int, default=1000, help="any-cell Monte Carlo trials (slower)")
+    ap.add_argument("--any-trials", type=int, default=300, help="any-cell Monte Carlo trials (slower)")
     ap.add_argument("--tier", type=int, default=0, help="condition upgrade tier 0-6")
     ap.add_argument("--targets", nargs="*", default=["compy", "triceratops", "tyrannosaurus"])
-    ap.add_argument("--emerald-donors", type=int, nargs="*", default=[2, 3, 4, 5])
-    ap.add_argument("--diamond-donors", type=int, nargs="*", default=[2, 3, 4])
-    ap.add_argument("--eggs-small", type=int, default=15)
-    ap.add_argument("--eggs-big", type=int, default=150)
+    ap.add_argument("--emerald-donors", type=int, nargs="*", default=[10])
+    ap.add_argument("--diamond-donors", type=int, nargs="*", default=[3])
+    ap.add_argument("--gold-donors", type=int, default=GOLD_DONORS)
+    ap.add_argument("--eggs-small", type=int, default=40)
+    ap.add_argument("--eggs-big", type=int, default=400)
     ap.add_argument("--casual-runs", type=int, default=3, help="runs/day, all small")
     ap.add_argument("--heavy-runs", type=int, default=10, help="runs/day")
-    ap.add_argument("--heavy-big-runs", type=int, default=3, help="of the heavy runs, how many are 150-egg runs")
+    ap.add_argument("--heavy-big-runs", type=int, default=3, help="of the heavy runs, how many are big (5,000-food, 400-egg) runs")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
     if a.check:

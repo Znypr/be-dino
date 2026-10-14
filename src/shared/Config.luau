@@ -39,7 +39,7 @@ return table.freeze({
     StudioLocalProfilesEnabled = true, -- unpublished Studio only; never a live fallback
     StudioTestWalletEnabled = true, -- only unpublished, nonpersistent local profiles
     StudioTestCrystals = 1000000,
-    FoodCatchRate = 15 / 500, -- raw food points; growth boosts do not multiply catches
+    FoodCatchRate = 40 / 500, -- PROVISIONAL (owner 2026-10-13: 40 catches = 40 run eggs per 500 food; 5,000 food -> 400; was 15/500); raw food points, growth boosts do not multiply catches
     ProfileLoadWarningSeconds = 20,
 
     SpawnProtectionSeconds = 5,
@@ -123,16 +123,16 @@ return table.freeze({
     -- Run eggs beyond the five-slot reveal queue wait in a server-side ordered bank.
     RunRewardConfigVersion = 2,
     HatchPageSize = 10, -- PROVISIONAL: queued run eggs committed per claim transaction; at 1 s/egg = 6 claims/min/player (size 5 would be 12/min and bust the 8/12-player budgets)
-    RunEggMaxPerRun = 300, -- PROVISIONAL: catches stop counting at 300 eggs per run (storage bound)
-    RunEggBankCapacity = 600, -- PROVISIONAL: banked run eggs behind the queue; runs start only with room for a full run
+    RunEggMaxPerRun = 500, -- PROVISIONAL: catches stop counting at 500 eggs per run (6,250 food); a 5,000-food run (400 eggs) is not truncated
+    RunEggBankCapacity = 1000, -- PROVISIONAL: banked run eggs behind the queue (~540 B each, ~0.54 MB); a run starts only while banked <= capacity - RunEggMaxPerRun (500)
     SettledRunLedgerSize = 200, -- PROVISIONAL: settled run IDs kept for exactly-once settlement beyond recentOperations
     -- Separate bonus egg nests (never the ordinary egg queue). Excess nests wait as
     -- pending/capacity-blocked and are never silently granted or discarded.
     NestSlotCapacity = 5,
-    NestPendingCapacity = 30, -- PROVISIONAL
-    NestFirstAtEggs = 15, -- PROVISIONAL: 15 run eggs (500 food) earn the first nest
-    NestEggsPerExtraNest = 27, -- PROVISIONAL: +1 nest per 27 further eggs (150 eggs -> 6 nests)
-    NestMaxPerRun = 11, -- PROVISIONAL: equals the nest count at RunEggMaxPerRun
+    NestPendingCapacity = 30, -- PROVISIONAL: a run starts only while pending <= capacity - NestMaxPerRun (22)
+    NestFirstAtEggs = 40, -- PROVISIONAL: 40 run eggs (500 food) earn the first nest (rescaled x40/15)
+    NestEggsPerExtraNest = 72, -- PROVISIONAL: +1 nest per 72 further eggs (400 eggs -> 6 nests, same as the old 150)
+    NestMaxPerRun = 8, -- PROVISIONAL: >= the nest count at RunEggMaxPerRun (500 eggs -> 7)
     NestEggCount = 3, -- PROVISIONAL: each nest contains three precommitted bonus eggs
     NestIncubationSeconds = 300, -- PROVISIONAL: a slotted nest opens five minutes after it takes a slot
     NestRarityBoostEggs = 15, -- PROVISIONAL: nest eggs use the maximum run-batch species boost
