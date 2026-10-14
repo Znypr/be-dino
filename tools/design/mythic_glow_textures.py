@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Mythic Glow aura/trail textures (BD-087/BD-088 DRAFTS, owner-picked style 2026-10-14).
 
+REFERENCE ONLY (docs/83): final textures are Blender renders that replace these files one by one. This
+script is no longer a CI check; it documents sizes and layout and writes the placeholder set.
+
 Deterministic (fixed seeds, no clock, no network). Every texture is WHITE light on a transparent
 background: the game tints it per aura/trail with Color3/ColorSequence, so one sheet serves every
 colour. Alpha carries the shape; RGB stays white except where a texture needs a hot core.

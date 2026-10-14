@@ -41,7 +41,6 @@ jobs:
           python tools/verify_notify.py --runner /tmp/luau/luau
           python tools/verify_dino_motion.py --runner /tmp/luau/luau
           python tools/verify_aura_trail.py --runner /tmp/luau/luau
-          python tools/design/mythic_glow_textures.py --check
           python tools/measure_identity_storage.py --check
           python tools/verify_progression.py --runner /tmp/luau/luau
           python tools/verify_potion_shop.py --runner /tmp/luau/luau
