@@ -72,6 +72,10 @@ return table.freeze({
         {id="nova",name="Nova Ribbon",rarity="Legendary",price=5500,level=45,speed=1.16,color={180,106,255},accent={255,215,115},width=.8,lifetime=1.2,particles=10},
         {id="astra",name="Astra",rarity="Legendary",price=8500,level=60,speed=1.18,color={112,255,205},accent={255,130,232},width=.85,lifetime=1.3,particles=14},
     },
+    -- BD-051 PROVISIONAL rotating Potion Shop (owner-approved 2026-10-14: restock every 2 minutes).
+    -- Offers derive from the window number (floor(unixSeconds/PeriodSeconds)), so every server agrees and rejoining never rerolls.
+    -- Weights are relative; rarity picks distinct potions without replacement, stock is rolled 1..3 per offer. Crystals only.
+    PotionShop={PeriodSeconds=120, OfferCount=3, RarityWeights={Common=60,Rare=30,Legendary=10}, StockWeights={60,30,10}},
     Potions={
         {id="speed_common",name="Swift Sip",kind="speed",rarity="Common",duration=300,multiplier=1.2,price=20},
         {id="speed_rare",name="Raptor Rush",kind="speed",rarity="Rare",duration=600,multiplier=1.45,price=65},

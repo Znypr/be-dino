@@ -171,7 +171,7 @@ ledger compaction before public release.
 | BD-048 | Backlog | P1 | Trail icon art, Blender world VFX and six rarity categories across ten trails | BD-038, BD-034 |
 | BD-049 | Review / test | P1 | Blender trees, vegetation, rock variants, map landmarks and optimized biome placement; kit + flagged grammar in [56](56-bd049-050-world-art.md), Studio/Android pending | BD-016 |
 | BD-050 | Review / test | P1 | Blender pickup/food model variants with intact food rewards and server validation; kit in [56](56-bd049-050-world-art.md), berry/fruit need MeshPart upload | BD-008 |
-| BD-051 | Backlog | P1 | Rotating five-minute Potion Shop offers, rarity-weighted selection and 1–3 limited stock | BD-032, BD-039 |
+| BD-051 | Review / test | P1 | Rotating Potion Shop offers every **2 minutes** (owner 2026-10-14; was five), rarity-weighted selection and 1–3 limited per-player stock ([60](60-bd051-potion-rotation.md); Studio/phone pending) | BD-032, BD-039 |
 | BD-052 | Review / test | P1 | Single bottom-center Home with confirmation and no three-second exit channel ([51](51-bd053-054-movement-mobile.md)) | BD-009 |
 | BD-053 | Review / test | P0 | Fix sliding and hill-climb movement on mountainous terrain ([51](51-bd053-054-movement-mobile.md)) | BD-006, BD-008 |
 | BD-054 | Review / test | P0 | Responsive phone/tablet touch-zone navigation/control placement and safe insets ([51](51-bd053-054-movement-mobile.md)) | BD-052, BD-046 |
