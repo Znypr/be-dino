@@ -34,11 +34,11 @@ Percentages are the **base odds of one purchased egg**; they are shown on dinos 
 
 | Rarity | Species | % total |
 |---|---:|---:|
-| Common | 5 | 72% | 72% |
-| Uncommon | 5 | 24% | 24% |
-| Rare | 5 | 3.2% | 3.2% |
-| Epic | 4 | 0.7% | 0.7% |
-| Legendary | 3 | 0.1% | 0.1% |
+| Common | 5 | 72% |
+| Uncommon | 5 | 24% |
+| Rare | 5 | 3.2% |
+| Epic | 4 | 0.7% |
+| Legendary | 3 | 0.1% |
 
 ## Patterns (8, eggs and the dinosaurs hatched from them)
 
@@ -60,15 +60,15 @@ Every egg rolls one pattern; the hatched dinosaur keeps it. All 8 are equally li
 Each egg has **two** color slots (primary and secondary), rolled independently with these odds. Matching slots make a solid color; otherwise a blend share is rolled.
 
 | # | Color | Rarity | % per slot | Both slots this color |
-|---:|---|---|---:|
-| 1 | Cream | Common | 50% |
-| 2 | Blue | Common | 26% |
-| 3 | Green | Uncommon | 12% |
-| 4 | Pink | Uncommon | 5% |
-| 5 | Teal | Uncommon | 4% |
-| 6 | Amber | Rare | 2.5% |
-| 7 | Purple | Epic | 0.45% |
-| 8 | Red | Legendary | 0.04% |
-| 9 | Black | Legendary | 0.01% |
+|---:|---|---|---:|---:|
+| 1 | Cream | Common | 50% | 25% |
+| 2 | Blue | Common | 26% | 6.76% |
+| 3 | Green | Uncommon | 12% | 1.44% |
+| 4 | Pink | Uncommon | 5% | 0.25% |
+| 5 | Teal | Uncommon | 4% | 0.16% |
+| 6 | Amber | Rare | 2.5% | 0.0625% |
+| 7 | Purple | Epic | 0.45% | 1 in 49,383 |
+| 8 | Red | Legendary | 0.04% | 1 in 6,250,000 |
+| 9 | Black | Legendary | 0.01% | 1 in 100,000,000 |
 
 Rarity for colors is a label from the percentage: Common 25%+, Uncommon 4%+, Rare 1%+, Epic 0.1%+, Legendary below that.
