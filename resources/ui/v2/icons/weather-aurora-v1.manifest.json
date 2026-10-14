@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "key": "aurora",
+  "runtimeState": "aurora",
+  "source": "weather-aurora-v1.png",
+  "createdAt": "2026-10-14",
+  "status": "Uploaded and bound 2026-10-14; Studio and phone verification pending",
+  "generator": "ChatGPT image generation (owner), cropped and padded to 1024x1024 with 12% margin",
+  "sha256": "6e440c181f3f250e6b66921e25e2b39b91a51eb0d51d2d117084338814eb58c4",
+  "dimensions": [
+    1024,
+    1024
+  ],
+  "mode": "RGBA"
+}

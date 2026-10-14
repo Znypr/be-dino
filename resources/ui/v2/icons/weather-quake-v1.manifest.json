@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "key": "quake",
+  "runtimeState": "quake",
+  "source": "weather-quake-v1.png",
+  "createdAt": "2026-10-14",
+  "status": "Uploaded and bound 2026-10-14; Studio and phone verification pending",
+  "generator": "ChatGPT image generation (owner), cropped and padded to 1024x1024 with 12% margin",
+  "sha256": "b784fd9f6560279a40f90806471a449519e9396cb6cea8d782199ba3c56e8238",
+  "dimensions": [
+    1024,
+    1024
+  ],
+  "mode": "RGBA"
+}

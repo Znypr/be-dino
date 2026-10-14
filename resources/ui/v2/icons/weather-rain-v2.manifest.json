@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "key": "rain",
+  "runtimeState": "rain",
+  "source": "weather-rain-v2.png",
+  "createdAt": "2026-10-14",
+  "status": "Uploaded and bound 2026-10-14; Studio and phone verification pending",
+  "generator": "ChatGPT image generation (owner), cropped and padded to 1024x1024 with 12% margin",
+  "sha256": "eba2683d597ea934d2da8236897f6a744208ac9badf805f995e2f57a17ae9603",
+  "dimensions": [
+    1024,
+    1024
+  ],
+  "mode": "RGBA"
+}
