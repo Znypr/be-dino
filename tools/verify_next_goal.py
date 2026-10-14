@@ -54,10 +54,14 @@ assert(Goal.pick(opts(mixed)).text == Goal.pick(opts(reversed)).text)
 local required = {"hatch_crack","hatch_common","hatch_rare","hatch_legendary","shiny_bang","big_thud","pickup","run_start","run_end","shop_buy","shop_refresh","weather_start","level_up","fusion_reveal","ui_click"}
 for _, name in required do assert(Sfx.Sounds[name], name) end
 for name, entry in Sfx.Sounds do
- assert(entry.id == "", name .. " must stay an empty PROVISIONAL id until the owner uploads audio")
+ assert(entry.id == "" or Sfx.normalizeId(entry.id) ~= nil, name .. " must be empty or a valid rbxassetid (never invented: only uploaded ids)")
  assert(entry.volume > 0 and entry.volume <= 1 and entry.rate > 0 and entry.gap >= 0, name)
- assert(Sfx.play(name) == false, "empty id must be a no-op")
+ if entry.id == "" then assert(Sfx.play(name) == false, "empty id must be a no-op") end
 end
+for _, name in {"hatch_crack","hatch_common","hatch_rare","hatch_legendary","shiny_bang","big_thud","pickup","pickup_hi","pickup_lo","run_start","run_end","shop_buy","shop_refresh","weather_start","level_up","fusion_reveal","ui_click"} do
+ assert(Sfx.normalizeId(Sfx.Sounds[name].id) ~= nil, name .. ": the uploaded sound pack must be bound (2026-10-15)")
+end
+assert(Sfx.Sounds.hatch_rattle.id == "" and Sfx.Sounds.hatch_burst.id == "", "no sound exists yet for the rattle and burst cues")
 assert(Sfx.play("not_a_sound") == false)
 assert(Sfx.normalizeId("") == nil and Sfx.normalizeId("rbxassetid://") == nil and Sfx.normalizeId("abc") == nil)
 assert(Sfx.normalizeId(0) == nil and Sfx.normalizeId(1.5) == nil and Sfx.normalizeId(nil) == nil and Sfx.normalizeId({}) == nil)

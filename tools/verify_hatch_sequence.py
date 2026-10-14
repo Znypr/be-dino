@@ -181,10 +181,11 @@ end
 for _, c in T.cues(m, 1, true, "hatch_reveal_common") do assert(c.name ~= "hatch_reveal_common", "no reveal sting for a cracked egg") end
 for _, c in T.cues(r, 3, false, Sfx.revealName(3)) do assert(c.name ~= "hatch_rattle" and c.name ~= "hatch_crack_stage", "no rattle or crack cues in Reduced Motion") end
 for rarity = 1, 5 do
-    local name = Sfx.revealName(rarity) assert(Sfx.Sounds[name] and Sfx.Sounds[name].id == "", "reveal hooks stay silent until ids are bound")
+    local name = Sfx.revealName(rarity) assert(Sfx.Sounds[name] and Sfx.normalizeId(Sfx.Sounds[name].id) ~= nil, "every reveal hook maps to a bound uploaded sound (2026-10-15 pack)")
 end
 assert(Sfx.revealName(nil) == "hatch_reveal_common" and Sfx.revealName(9) == "hatch_reveal_legendary")
-for _, name in {"hatch_rattle", "hatch_crack_stage", "hatch_burst"} do assert(Sfx.Sounds[name].id == "") end
+for _, name in {"hatch_rattle", "hatch_burst"} do assert(Sfx.Sounds[name].id == "", "no sound exists yet for " .. name) end
+assert(Sfx.normalizeId(Sfx.Sounds.hatch_crack_stage.id) ~= nil, "crack stage reuses the uploaded crack sound")
 print("Hatch sequence checks passed: ~3 s build-up, tap gating, skip rules, failed-egg splat, curves, particle caps, copy, Sfx cues")
 '''
 
