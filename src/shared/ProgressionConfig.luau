@@ -7,11 +7,12 @@ return table.freeze({
     WeatherInterval=600, WeatherDuration=180,
     GrowthCap=8, SpeedCap=2.2,
     AccountXPPerLevel=100, AccountMaxLevel=60,
-    -- BD-044 PROVISIONAL run crystals (deterministic; the random 5/15/50 crystal box is retired):
-    -- crystals = min(RunCrystalCap, RunCrystalPerEgg*min(eggs,RunCrystalTierEggs)
-    --            + floor(RunCrystalPerExtraEggTenths*max(0,eggs-RunCrystalTierEggs)/10)).
-    -- 15 eggs -> 30, 150 eggs -> 219 (owner's illustrative 30/220 examples, not approved balance).
-    RunCrystalPerEgg=2, RunCrystalTierEggs=15, RunCrystalPerExtraEggTenths=14, RunCrystalCap=500,
+    -- BD-044 PROVISIONAL run crystals (deterministic; the random 5/15/50 crystal box is retired).
+    -- Re-tuned 2026-10-13 for 40 eggs per 500 food:
+    -- crystals = min(RunCrystalCap, (RunCrystalPerEggHundredths*min(eggs,RunCrystalTierEggs)
+    --            + RunCrystalPerExtraEggHundredths*max(0,eggs-RunCrystalTierEggs)) // 100).
+    -- 40 eggs (500 food) -> 30, 400 eggs (5,000 food) -> 220 (owner's illustrative 30/220), 500 eggs -> 273; cap 300 bounds it.
+    RunCrystalPerEggHundredths=75, RunCrystalTierEggs=40, RunCrystalPerExtraEggHundredths=53, RunCrystalCap=300,
     RandomEggPrice=150,
     ConditionUpgrades={
         {level=1,price=100,requiredLevel=3},{level=2,price=300,requiredLevel=8},

@@ -8,12 +8,12 @@ Implemented on `claude/bd-044-reward-loop` (details, data shape and evidence: [5
 
 | Topic | Implemented behavior | Status |
 | --- | --- | --- |
-| Catches -> eggs | Every earned catch = one banked run egg (`FoodCatchRate 15/500`: 500 food -> 15, 5,000 -> 150); per-run cap 300 (PROVISIONAL) | Implemented, offline-tested |
+| Catches -> eggs | Every earned catch = one banked run egg (`FoodCatchRate 40/500` since owner decision 2026-10-13: 500 food -> 40, 5,000 -> 400; was 15/150); per-run cap 500 (PROVISIONAL) | Implemented, offline-tested |
 | Direct copies / thresholds | `N(c)=c` settlement copies and 10/100/500 threshold eggs removed | Implemented |
 | Dinosaurs per egg | Owner decision 2026-10-13: exactly 1 per successful hatch; failed Cracked = 0; old saved 2-3-copy eggs keep their committed count | Implemented |
-| Reveal | Ordered reveal now 1 s/egg (owner 2026-10-13, PROVISIONAL `HatchRevealSeconds`); 5-slot queue refilled from a server-side ordered run-egg bank (600, PROVISIONAL); exactly-once via `settledRuns` + operation log | Implemented; 150-egg pacing UX still an owner decision |
-| Run crystals | PROVISIONAL deterministic `min(500, 2*min(n,15) + floor(1.4*max(0,n-15)))`: 15 -> 30, 150 -> 219; random crystal box retired | Implemented, needs balance sign-off |
-| Bonus nests | Separate 5 nest slots + visible pending list; PROVISIONAL 15 eggs -> 1 nest, +1 per 27 eggs (150 -> 6: 5 slotted, 1 pending); 3 bonus eggs per nest, 300 s incubation; new runs blocked rather than losing eggs/nests when storage is near capacity | Implemented, needs balance/UX sign-off |
+| Reveal | Ordered reveal now 1 s/egg (owner 2026-10-13, PROVISIONAL `HatchRevealSeconds`); 5-slot queue refilled from a server-side ordered run-egg bank (1,000, PROVISIONAL; was 600); exactly-once via `settledRuns` + operation log | Implemented; 150-egg pacing UX still an owner decision |
+| Run crystals | PROVISIONAL deterministic `min(300, floor((75*min(n,40) + 53*max(0,n-40))/100))`: 40 -> 30, 400 -> 220 (old 15 -> 30, 150 -> 219 superseded 2026-10-13); random crystal box retired | Implemented, needs balance sign-off |
+| Bonus nests | Separate 5 nest slots + visible pending list; PROVISIONAL 40 eggs -> 1 nest, +1 per 72 eggs (400 -> 6: 5 slotted, 1 pending; was 15 / 27 / 150); 3 bonus eggs per nest, 300 s incubation; new runs blocked rather than losing eggs/nests when storage is near capacity | Implemented, needs balance/UX sign-off |
 | Condition odds (BD-045) | Tier 0 = 50/30/15/4.5/0.5 (`bd045-conditions-v1`, integer weights /10,000), PROVISIONAL monotonic tiers 1-6, Cracked 20% hatch success, versioned disclosure | Implemented; 40% tier-0 failure is a playtest risk |
 | Uncommon/Epic species tiers | Not implemented (still Common/Rare/Legendary) | Open |
 
@@ -23,7 +23,7 @@ Milestone 1 is a private playtest in a new private place with fresh saves; all R
 
 A run accumulates **raw food/growth points**, producing a **catch count**, representing the number of **run eggs** collected. Each catch is **one egg to reveal after the run**, sequentially and separately. Those eggs are the central collection payout, not merely thresholds into an additional one-to-three egg reward. The player also gets **crystals** and potentially **bonus egg nests**, each a distinct reward. Gameplay time alone does not determine rewards.
 
-1. **Collect food / hunt in the run** -> gain growth/food points and catches. Prototype conversion `500 raw food points = 15 catches` is an existing test rate; it is **not** a final economy curve.
+1. **Collect food / hunt in the run** -> gain growth/food points and catches. Prototype conversion `500 raw food points = 40 catches` (owner 2026-10-13; superseded 15) is a provisional rate; it is **not** a final economy curve.
 2. **Settle the run** -> a 15-catch run produces **15 run eggs**, not 15 automatic Base Compys plus an extra single egg. Server snapshots each egg's persistent identity, species/rarity, condition, colors, traits and event eligibility/outcome (as supported by a versioned implementation), preventing rerolls or double grants.
 3. **Reveal run eggs one at a time** to see the discoveries. The reveal pace is now 1 second/egg (owner decision 2026-10-13; earlier prototype 5 s) and ascending rarity ordering are useful prototype behaviors. For 15 eggs this is ~15 seconds; for 150 it is ~2.5 minutes at that speed, **a pacing/UX issue to solve**, not a claim that current UI supports it. Closing should preserve unclaimed eggs, with bounded storage.
 4. **Crystals** are earned from the run separately, possibly through a crystal reveal, and can also be found on the map. The precise run payout rule is **unapproved**.
@@ -33,8 +33,8 @@ A run accumulates **raw food/growth points**, producing a **catch count**, repre
 
 | Scenario | Food score | Catches = run eggs | Example egg rarity composition | Run crystals | Bonus nests |
 | --- | ---: | ---: | --- | ---: | --- |
-| **5-minute run** | **500** | **15** | **11 Common + 4 Uncommon** | **30 illustrative ONLY** | **1** |
-| **Longer/higher-scoring run** | **5,000** | **150** | **80 Common + 50 Uncommon + 17 Rare + 3 Epic** | **220 in owner's example; final formula TBD** | **6 offered, at most 5 claimed if all 5 spots free** |
+| **5-minute run** | **500** | **40** (superseded 2026-10-13: was 15) | **29 Common + 11 Uncommon (illustrative; old 15-egg split was 11 + 4)** | **30 illustrative ONLY** | **1** |
+| **Longer/higher-scoring run** | **5,000** | **400** (superseded 2026-10-13: was 150) | **213 Common + 133 Uncommon + 45 Rare + 9 Epic (illustrative scaling of the old 150-egg split 80/50/17/3)** | **220 in owner's example; final formula TBD** | **6 offered, at most 5 claimed if all 5 spots free** |
 
 **Rarity implementation gap:** Current Build 020 has only **Common, Rare, Legendary** species tiers. The owner's examples require additional **Uncommon and Epic** tiers, including catalog classification, unlock thresholds, saved metadata, UI rarity ordering and weighted random rewards. This is a specific [BD-044](07-kanban.md) implementation subtask, not an assertion these tiers already exist.
 
@@ -56,3 +56,8 @@ The September 17 private-alpha specified **immediate dinosaur copies `N(c) = c`*
 
 The **complete legacy test parameters, 25–5000 score simulation table, chest rules, anti-farming safeguards, Gold pacing and verification evidence** remain in [BD-010 historical economy simulation](15-economy-simulation.md). Its old `c` is catch score, **not** raw food points. The current runtime and migration requirements are separately documented in [Build 020 integration](44-main-integration-checklist.md), [egg outcomes contract](41-egg-outcomes-contract.md) and [BD-044](07-kanban.md).
 
+
+
+## Update 2026-10-13: owner raised eggs per run
+
+Owner decision: catches (= run eggs) per 500 food rise from 15 to **40** so hatching many eggs is normal. All 15/150 numbers above in this document are the earlier example, kept as history; the 40/400 figures and all re-tuned dependants (run cap 500, bank 1,000, crystals 30/220, nests 1/6, run-start gates) are in [59-egg-rate-40.md](59-egg-rate-40.md).
