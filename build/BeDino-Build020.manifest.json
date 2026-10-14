@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "041c2c103ea31f2f2a5ab767575922650cb1f3b95e3b75814418e1c12292f8f4",
+  "place_sha256": "7a80e3284d1ea5becfa91a3fbe2370b4af75bf85b1ff19cfbe684860866daa61",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/Artwork.luau": "dbcef755028cbf3e737da0f96178db4e563f73843c0df00ad167ab134f1d066e",
