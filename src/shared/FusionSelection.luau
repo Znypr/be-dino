@@ -733,4 +733,28 @@ function Sel.details(d, catalog)
     return view
 end
 
+
+-- Nav FUSION target. "menu" = new Pattern Fusion Menu; "legacy" = old Build 020 page
+-- (development profile only); "unavailable" = notify, open nothing.
+-- ctx: {menuLoaded, remote (FusionAction exists), probe ("ok"|"disabled"|nil), profile}
+function Sel.navTarget(ctx): string
+    if ctx.menuLoaded and ctx.remote and ctx.probe ~= "disabled" then return "menu" end
+    if ctx.profile == nil or ctx.profile == "development" then return "legacy" end
+    return "unavailable"
+end
+
+-- Caught Eggs slot look: empty -> neutral placeholder; valid genes -> real gene look;
+-- otherwise a plain (untinted) egg. genesValid comes from EggGenetics.valid.
+function Sel.eggSlotLook(entry, genesValid: boolean): string
+    if not entry then return "empty" end
+    if entry.genes and genesValid then return "genes" end
+    return "plain"
+end
+
+-- Dino Index card display for a species. discovered = any copy, event mutation or traits.
+function Sel.indexCard(discovered: boolean)
+    if discovered then return {silhouette = false, locked = false, nameText = nil, rarityText = nil} end
+    return {silhouette = true, locked = true, nameText = "???", rarityText = "???", status = "Not discovered"}
+end
+
 return Sel

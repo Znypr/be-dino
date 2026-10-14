@@ -36,7 +36,13 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         for _,item in model:GetDescendants() do
             if item:IsA("BasePart") then
                 item.Anchored=true
-                if gold==true or gold=="gold" or gold=="diamond" then Resources.clearTextures(item) end
+                if gold=="silhouette" then
+                    Resources.clearTextures(item)
+                    item.Color,item.Material,item.Reflectance=Color3.new(0,0,0),Enum.Material.SmoothPlastic,0
+                    for _,child in item:GetChildren() do
+                        if child:IsA("ParticleEmitter") or child:IsA("Highlight") or child:IsA("Light") or child:IsA("Trail") or child:IsA("Beam") then child:Destroy() end
+                    end
+                elseif gold==true or gold=="gold" or gold=="diamond" then Resources.clearTextures(item) end
                 if gold == "diamond" then item.Color=Color3.fromRGB(85,213,245) item.Material=Enum.Material.Glass item.Reflectance=.2
                 elseif gold == true or gold == "gold" then item.Color=Color3.fromRGB(242,199,63) item.Material=Enum.Material.Metal end
             end
@@ -44,7 +50,9 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         model:PivotTo(CFrame.new())
         model.Parent=world
         local encoded=viewport:GetAttribute("TraitsJson")
-        if encoded then local ok,traits=pcall(function() return Http:JSONDecode(encoded) end);if ok and traits.genes then Appearance.apply(model,traits.genes) end end
+        if gold=="silhouette" then
+            viewport.Ambient,viewport.LightColor=Color3.new(0,0,0),Color3.new(0,0,0)
+        elseif encoded then local ok,traits=pcall(function() return Http:JSONDecode(encoded) end);if ok and traits.genes then Appearance.apply(model,traits.genes) end end
         Camera.bind(viewport,model,speciesId)
         task.spawn(function()
             local assets={}
