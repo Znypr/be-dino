@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "fa70f1fa11f1b25535c8d79c49fe739a2c46fd964ccc14c72ad1f21aca33b569",
+  "place_sha256": "b9daba33872ff0c353e8752aeb63fb524a0efe2cc82bb4ae082d5bb277783787",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "bf8cb9707c8ac3b1ab6e0d49813e5132568a6f72d20564a2316e82e9be48519e",
@@ -181,7 +181,7 @@
     "src/shared/EggTraits.luau": "2fa1258002441ecbb7bebc0186257ddb7a05d99006a1453f54c297acfc0f1162",
     "src/shared/EventIconVectors.luau": "4a5bf43178f8adfaedcc64300ba7991b3a61f025cd741bf60c539415a15609b0",
     "src/shared/FoodCatchRules.luau": "c2c6cfa816271218494ca4116f70a1fc0b4b1e82ca2b6592d2d3280b43c4ecd4",
-    "src/shared/FusionSelection.luau": "a3d29dce92f6982c65213836bccea8047058adc3c9e566065fd4ddb6e9f506fb",
+    "src/shared/FusionSelection.luau": "5df717cddd76e442d7ae35f50390724e8508d56d2b5d3aa839f27c9d574042db",
     "src/shared/GeneTextureAssets.luau": "79f6f9c881ee1dd53339d188b8656339421489c0117ad6e04fceffd240972c26",
     "src/shared/GeneTextures.luau": "efceb4ab08639f0fce0fb212f4401bb43867c8d11d66f8245241ed639ff35787",
     "src/shared/HatchFragments.luau": "4fb383a9b89c2ff58ffc8b973ed8419d70cb34b840cc3d0662233bbf0c2931ee",
@@ -243,7 +243,7 @@
     "src/server/RunLifecycle.luau": "4e9db52291f52a89fa15df2154b51a286c046122d7661130bf04045c704ef50e",
     "src/server/VisualTestService.luau": "ee48ddc907c11e5d1390483d570d9ab96fd01b3ee02493b5724a2ebcf1ef0773",
     "src/client/AdminPanel.client.luau": "65d7434c5325fa5edc44d30323a70a92bd645ce96c937337008999a25aa5f65f",
-    "src/client/Bootstrap.client.luau": "8910b4b13b1b9049037cec8d269b0bfdfd4ffebca7e86e27bdaff54ff55401c6",
+    "src/client/Bootstrap.client.luau": "02afaf107b218d79d8319de60ca11c7e6ecabf7b70d6098f89ed326a09e1228a",
     "src/client/CosmeticVisuals.client.luau": "85d567cf577cf91bbc9402ee7a26f11bd705cf4ef8b328ecf350ae569bd82c06",
     "src/client/DinoDetails.luau": "2997fa1005dd0d38bcc1cca686c7d40301f1a6c10b6922e80943b0d911a7795a",
     "src/client/DinoMotion.client.luau": "16e5de5e4539285d4433cbc62a846ff48baf37d6b5eb3b5fe9dc0707f63e53c8",

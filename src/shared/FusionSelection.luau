@@ -47,10 +47,30 @@ function Sel.patternName(id: string?): string
 end
 
 -- Builds name lookups from the shared config tables (passed in to stay pure).
+-- Player-facing drop chance text: 26 -> "26%", 12.5 -> "12.5%", 0.04 -> "0.04%" (docs/85). Percent in, string out.
+function Sel.pct(p: number): string
+    local s = string.format("%.2f", p)
+    if string.find(s, ".", 1, true) then s = string.gsub(s, "0+$", "") s = string.gsub(s, "%.$", "") end
+    return s .. "%"
+end
+
 function Sel.buildCatalog(config, progression, patterns)
     local catalog = {species = {}, speciesOrder = {}, patterns = {}, patternOrder = {}, colors = {},
         colorOrder = {}, conditions = {}, mutations = {}, mutationOrder = {}, auras = {}, trails = {}}
     for id, name in (config and config.SpeciesDisplayNames) or {} do catalog.species[id] = name end
+    -- Base odds of ONE purchased egg (no run boost): species by weight, patterns equally likely, colors per slot by weight.
+    catalog.speciesPct, catalog.speciesRarity, catalog.patternPct, catalog.colorPct = {}, {}, {}, {}
+    local speciesTotal = 0
+    for _, row in (config and config.ChestSpeciesWeights) or {} do speciesTotal += row.weight end
+    for _, row in (config and config.ChestSpeciesWeights) or {} do
+        catalog.speciesPct[row.speciesId] = if speciesTotal > 0 then 100 * row.weight / speciesTotal else 0
+        local tier = config.SpeciesRarities and config.SpeciesRarities[row.speciesId]
+        catalog.speciesRarity[row.speciesId] = tier and config.SpeciesRarityNames and config.SpeciesRarityNames[tier] or nil
+    end
+    for _, id in patterns or {} do catalog.patternPct[id] = 100 / math.max(1, #(patterns :: any)) end
+    local colorTotal = 0
+    for _, row in (progression and progression.EggColors) or {} do colorTotal += row.weight end
+    for _, row in (progression and progression.EggColors) or {} do catalog.colorPct[row.id] = if colorTotal > 0 then 100 * row.weight / colorTotal else 0 end
     for i, id in (config and config.SpeciesOrder) or {} do catalog.speciesOrder[id] = i end
     for i, id in patterns or {} do catalog.patterns[id] = Sel.patternName(id) catalog.patternOrder[id] = i end
     for i, row in (progression and progression.EggColors) or {} do catalog.colors[row.id] = row.name catalog.colorOrder[row.id] = i end
@@ -657,6 +677,21 @@ local function eggLine(egg, catalog): string
 end
 Sel.eggLine = eggLine
 
+-- " • Common • 26% of eggs" (rarity optional); empty when the percent is unknown.
+local function oddsText(rarity: string?, p: number?): string
+    if p == nil then return "" end
+    return " • " .. (if rarity then rarity .. " • " else "") .. Sel.pct(p) .. " of eggs"
+end
+local function colorOdds(g, catalog): string
+    if type(g) ~= "table" or not g.primaryColorId then return "Unknown" end
+    local function one(id)
+        local p = catalog.colorPct and catalog.colorPct[id]
+        return lookup(catalog, "colors", id) .. (if p then " " .. Sel.pct(p) else "")
+    end
+    if g.secondaryColorId == g.primaryColorId then return one(g.primaryColorId) .. " (per egg slot)" end
+    return one(g.primaryColorId) .. " • " .. one(g.secondaryColorId) .. " (per egg slot)"
+end
+
 function Sel.details(d, catalog)
     local g = genes(d)
     local stage = d.stage or "base"
@@ -666,8 +701,10 @@ function Sel.details(d, catalog)
             .. lookup(catalog, "species", d.speciesId, "Dino"),
         traits = {
             {label = "Stage", value = stageName},
-            {label = "Pattern", value = lookup(catalog, "patterns", g.patternId, "Unknown")},
+            {label = "Species", value = lookup(catalog, "species", d.speciesId, "Dino") .. oddsText(catalog.speciesRarity and catalog.speciesRarity[d.speciesId], catalog.speciesPct and catalog.speciesPct[d.speciesId])},
+            {label = "Pattern", value = lookup(catalog, "patterns", g.patternId, "Unknown") .. oddsText(nil, catalog.patternPct and catalog.patternPct[g.patternId])},
             {label = "Colors", value = geneLine(g, catalog)},
+            {label = "Color odds", value = colorOdds(g, catalog)},
             {label = "Condition", value = lookup(catalog, "conditions", g.conditionId, "Unknown")},
             {label = "Shiny", value = if d.shiny then "Yes" else "No"},
             {label = "BIG", value = if d.big then "Yes" else "No"},
