@@ -18,7 +18,7 @@ Milestone 1 = private playtest incl. fusion in experience newbuild (universe 107
 - On main: playtest build, fusion (menu, server, odds), nests, potions, 12-potion shop, copy pass, condition shop (eggs on tiles), dino motion (procedural), Sfx helper (silent until IDs), goal line, world art kit (on in playtest profile), release profile + load tests, asset registry.
 - Uploaded to owner's Roblox account and bound/being bound: condition overlays (Cracked 126956807167774, Dirty 105931497056313, Rainbow 117352915695915, Astra 102255733208943) and nest icon 127462994652706 (PR for binding may still be open).
 - TO CHECK IN STUDIO: condition overlay decal orientation on the egg, Nests menu with a real nest (needs a qualifying run), Eggs|Nests tab idea, reveal skip UI, Condition Shop on phone size.
-- Not built yet: aura/trail effects (docs/70; owner to pick a style, Candy Pop recommended; Kanban BD-110..114), growth/eggs HUD rework (BD-080), sound lab (BD-081), popups (BD-066..), mini-objectives, aura shop icons, Fusion Menu density, phone measurement (BD-085, needs owner phone), species tiers Uncommon/Epic (owner said now), 17 creature data files vs 22 listed species (verify).
+- Not built yet: aura/trail effects (docs/70; owner to pick a style, Candy Pop recommended; Kanban BD-110..114), growth/eggs HUD rework (BD-080), sound lab (BD-081), popups (BD-066..), mini-objectives, aura shop icons, Fusion Menu density, phone measurement (BD-085, needs owner phone), 17 creature data files vs 22 listed species (verify).
 - Paused/unmerged: none intentionally.
 
 ## Owner open decisions (dashboard)

@@ -422,9 +422,10 @@ print(string.format("Identity passed: 15-egg run -> %d identities for %d hatched
 ------------------------------------------------------------------ Reveal skipping (pure module + preference field)
 local RevealSkip=@@REVEAL_SKIP@@
 local plain={big=false,shiny=false,eventMutationId="",genes={conditionId="normal"},failed=false}
-assert(#RevealSkip.normalize({3,1,1,2,0,4,-1,1.5,"x"})==3 and RevealSkip.normalize({3,1,1})[1]==1 and #RevealSkip.normalize(nil)==0 and #RevealSkip.normalize("1")==0)
+assert(#RevealSkip.normalize({3,1,1,2,0,6,-1,1.5,"x",5})==4 and RevealSkip.normalize({3,1,1})[1]==1 and #RevealSkip.normalize(nil)==0 and #RevealSkip.normalize("1")==0)
 assert(not RevealSkip.shouldSkip({},1,plain) and not RevealSkip.shouldSkip(nil,1,plain),"default skips nothing")
-assert(RevealSkip.shouldSkip({1,2},1,plain) and RevealSkip.shouldSkip({1,2},2,plain) and not RevealSkip.shouldSkip({1,2},3,plain),"Legendary is never skipped unless chosen")
+assert(RevealSkip.shouldSkip({1,2},1,plain) and RevealSkip.shouldSkip({1,2},2,plain) and not RevealSkip.shouldSkip({1,2},3,plain) and not RevealSkip.shouldSkip({1,2,3,4},5,plain),"Legendary is never skipped unless chosen")
+assert(same(RevealSkip.Names,GameConfig.SpeciesRarityNames) and #RevealSkip.Rarities==GameConfig.SpeciesRarityScale,"skip names follow Config")
 local cracked=table.clone(plain) cracked.failed=true cracked.genes={conditionId="cracked"}
 assert(RevealSkip.shouldSkip({1},1,cracked),"cracked failures may be skipped (counted in the summary)")
 for _,notable in {{shiny=true},{big=true},{eventMutationId="ember"},{genes={conditionId="rainbow"}},{genes={conditionId="astra"}}} do
@@ -435,10 +436,10 @@ assert(RevealSkip.isNotable(nil) and not RevealSkip.shouldSkip({1,2,3},1,nil),"u
 local toggled=RevealSkip.toggle({1},2) assert(#toggled==2 and toggled[1]==1 and toggled[2]==2)
 toggled=RevealSkip.toggle(toggled,1) assert(#toggled==1 and toggled[1]==2)
 assert(#RevealSkip.toggle({},9)==0 and #RevealSkip.toggle({},0)==0)
-local summary=RevealSkip.summarize({{rarity=1,outcome=plain},{rarity=1,outcome=cracked},{rarity=2,outcome=plain},{rarity=3,outcome={shiny=true}}})
-assert(summary.total==4 and summary.byRarity[1]==2 and summary.byRarity[2]==1 and summary.byRarity[3]==1 and summary.failed==1 and summary.hatched==3 and #summary.notable==1)
+local summary=RevealSkip.summarize({{rarity=1,outcome=plain},{rarity=1,outcome=cracked},{rarity=2,outcome=plain},{rarity=3,outcome=plain},{rarity=5,outcome={shiny=true}}})
+assert(summary.total==5 and summary.byRarity[1]==2 and summary.byRarity[2]==1 and summary.byRarity[3]==1 and summary.byRarity[4]==0 and summary.byRarity[5]==1 and summary.failed==1 and summary.hatched==4 and #summary.notable==1)
 local lines=RevealSkip.lines(summary)
-assert(lines[1]=="4 eggs skipped (3 hatched, 1 cracked)" and lines[2]=="2 Common  |  1 Rare  |  1 Legendary")
+assert(lines[1]=="5 eggs skipped (4 hatched, 1 cracked)" and lines[2]=="2 Common  |  1 Uncommon  |  1 Rare  |  1 Legendary")
 -- Preference field: validated, additive, persisted, never touches rewards.
 local sk=user(109)
 assert(Repository.load(sk) and sk.attrs.RevealSkipJson[1]==nil)
@@ -447,7 +448,9 @@ local before=totalCopies(data[key(sk)])
 local queueBefore=copy(data[key(sk)].eggs)
 assert(Repository.setRevealSkip(sk,{2,1}) and same(data[key(sk)].revealSkip,{1,2}) and sk.attrs.RevealSkipJson[2]==2)
 assert(totalCopies(data[key(sk)])==before and same(data[key(sk)].eggs,queueBefore),"preference never changes eggs or collection")
-for _,bad in {{4},{0},{1,1},{1.5},{1,2,3,3},"x",{{}},{"1"}} do
+assert(Repository.setRevealSkip(sk,{4,5}) and same(data[key(sk)].revealSkip,{4,5}))
+assert(Repository.setRevealSkip(sk,{2,1}))
+for _,bad in {{6},{0},{1,1},{1.5},{1,2,3,4,5,5},"x",{{}},{"1"}} do
  local okBad,reasonBad=Repository.setRevealSkip(sk,bad)
  assert(not okBad and reasonBad=="invalid_selection" and same(data[key(sk)].revealSkip,{1,2}))
 end
@@ -460,6 +463,79 @@ while sk.attrs.NextChestId~="" do
 end
 assert(hatchedSkipped==15 and #data[key(sk)].eggs==0 and bankCount(sk)==0)
 print("Reveal skip passed: rarity selection, notable finds never skipped, Legendary default shown, toggle/normalize/summary lines, validated additive preference that cannot affect rewards, all 15 eggs still credited")
+
+------------------------------------------------------------------ Five species rarity tiers (BD-044)
+local tierCount={0,0,0,0,0}
+local weighted={}
+local weightSum=0
+for _,row in GameConfig.ChestSpeciesWeights do weighted[row.speciesId]=true weightSum+=row.weight end
+assert(math.abs(weightSum-100)<1e-9,"base species weights sum to 100")
+assert(#GameConfig.SpeciesRarityNames==5 and GameConfig.SpeciesRarityScale==5 and #GameConfig.SpeciesRunBoost==5)
+for _,id in GameConfig.SpeciesOrder do
+ local tier=GameConfig.SpeciesRarities[id]
+ assert(tier and tier>=1 and tier<=5 and tier%1==0 and weighted[id],"every species has a tier and a weight: "..id)
+ tierCount[tier]+=1
+ assert(GameConfig.LegacySpeciesRarities[id],"legacy tier known for migration: "..id)
+end
+for tier=1,5 do assert(tierCount[tier]>=3,"every tier has species") end
+local function tierShares(eggs)
+ local w={0,0,0,0,0} local total=0
+ for _,row in Rewards.speciesWeights(eggs) do local t=GameConfig.SpeciesRarities[row.speciesId] w[t]+=row.weight total+=row.weight end
+ for t=1,5 do w[t]/=total end
+ return w
+end
+local base=tierShares(1)
+assert(math.abs(base[1]-.72)<1e-9 and math.abs(base[5]-.001)<1e-9,"one egg = base odds (shop eggs disclose these)")
+local previous=nil
+for _,n in {1,15,40,100,200,400,1000} do
+ local sh=tierShares(n)
+ for t=1,4 do assert(sh[t]>sh[t+1],"rarer tiers are always less likely") end
+ if previous then assert(sh[1]<=previous[1]+1e-12 and sh[3]>=previous[3]-1e-12 and sh[5]>=previous[5]-1e-12,"bigger runs expose rarer tiers") end
+ previous=sh
+end
+assert(same(tierShares(400),tierShares(1000)),"boost capped at EggRarityBoostMaxEggs")
+-- Owner examples (docs/09): 40 eggs ~ 29 Common + 11 Uncommon; 400 eggs ~ 213 / 133 / 45 / 9 (+ rare Legendary).
+local s40,s400=tierShares(40),tierShares(400)
+assert(math.abs(40*s40[1]-29)<=2 and math.abs(40*s40[2]-11)<=2 and 40*(s40[3]+s40[4]+s40[5])<=3,"40-egg mix near the owner example")
+local want={213,133,45,9}
+for t=1,4 do assert(math.abs(400*s400[t]-want[t])<=want[t]*.1+1,"400-egg mix near the owner example, tier "..t) end
+assert(400*s400[5]>=.5 and 400*s400[5]<=2,"about one Legendary per 400-egg run")
+-- Seeded rolls through the real computeChestReward agree with the analytic shares.
+local drawsT=40000 local seen={0,0,0,0,0}
+local tierRng=Random.new()
+for _=1,drawsT do local r=Rewards.computeChestReward(tierRng,400) seen[GameConfig.SpeciesRarities[r.speciesId]]+=1 end
+for t=1,5 do assert(math.abs(seen[t]/drawsT-s400[t])<=4*math.sqrt(s400[t]*(1-s400[t])/drawsT)+1e-4,"seeded tier "..t) end
+-- Saved values from the three-tier scale migrate once, additively, never overclaiming.
+local function legacyProfile(id,rarest,skip,owned)
+ local u=user(id) assert(Repository.load(u)) Repository.release(u)
+ local p=data[key(u)]
+ p.rarityScale=nil p.metrics.rarest=rarest p.revealSkip=skip
+ for species,count in owned do p.collection[species].base=count end
+ return u
+end
+local cases={
+ {0,nil,{},0,nil},
+ {1,{1},{},1,{1}},
+ {1,nil,{archaeopteryx=2},2,nil}, -- old Common archaeopteryx is Uncommon now
+ {2,{1,2},{},2,{1,2,3}}, -- old Rare without an owned Rare-now species stays at Uncommon
+ {2,nil,{triceratops=1,tyrannosaurus=1},3,nil}, -- owned T. rex is outside the old Rare band: no overclaim
+ {3,{3},{},4,{4,5}},
+ {3,{1,2,3},{spinosaurus=1},5,{1,2,3,4,5}},
+}
+for i,case in cases do
+ local u=legacyProfile(2000+i,case[1],case[2],case[3])
+ assert(Repository.load(u),"legacy rarity profile loads "..i)
+ local p=data[key(u)]
+ assert(p.rarityScale==5 and p.metrics.rarest==case[4] and u.attrs.RarestCaught==case[4],"migrated rarest "..i)
+ assert(same(p.revealSkip,case[5]),"migrated reveal skip "..i)
+ Repository.release(u) assert(Repository.load(u) and data[key(u)].metrics.rarest==case[4] and same(data[key(u)].revealSkip,case[5]),"migration is idempotent "..i)
+end
+local broken=legacyProfile(2100,4,nil,{}) -- 4 was never valid on the old scale
+assert(not Repository.load(broken) and data[key(broken)].rarityScale==nil,"malformed legacy rarest is rejected, not rewritten")
+local fresh=user(2101) assert(Repository.load(fresh) and data[key(fresh)].rarityScale==5)
+print(string.format("Species tiers passed: 22 species in 5 tiers (%d/%d/%d/%d/%d); 40 eggs -> %.1f C / %.1f U / %.1f R+; 400 eggs -> %.0f / %.0f / %.0f / %.1f / %.1f; %d seeded rolls; legacy rarest/skip migration (%d cases) idempotent, malformed rejected",
+ tierCount[1],tierCount[2],tierCount[3],tierCount[4],tierCount[5],40*s40[1],40*s40[2],40*(s40[3]+s40[4]+s40[5]),
+ 400*s400[1],400*s400[2],400*s400[3],400*s400[4],400*s400[5],drawsT,#cases))
 
 ------------------------------------------------------------------ Seeded condition draws (BD-045)
 local counts={} local failedDraws=0

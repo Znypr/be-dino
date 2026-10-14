@@ -10,7 +10,8 @@ local rows={}
 local boards={}
 local names={}
 local definitions={
-    {id="rarest",attribute="RarestCaught",title="RAREST DINOS",color=Theme.Colors.gold},
+    -- rarest "_v2": BD-044 five-tier scale; "_v1" holds old three-tier values and is no longer read.
+    {id="rarest",attribute="RarestCaught",title="RAREST DINOS",color=Theme.Colors.gold,store="_v2"},
     {id="playSeconds",attribute="PlaySeconds",title="MOST PLAY TIME",color=Theme.Colors.accent},
     {id="robux",attribute="RobuxSpent",title="ROBUX SPENT",color=Theme.Colors.blue},
 }
@@ -32,7 +33,7 @@ function Leaderboards.publish(player: Player, metrics)
     end
 end
 local function displayValue(id: string,value: number): string
-    if id=="rarest" then return ({"Common","Rare","Legendary"})[value] or "Not ranked" end
+    if id=="rarest" then return Config.SpeciesRarityNames[value] or "Not ranked" end
     if id=="playSeconds" then return string.format("%dh %02dm",value//3600,(value%3600)//60) end
     return tostring(value).." R$"
 end
@@ -67,7 +68,7 @@ function Leaderboards.start()
     workspace.BeDinoArena.Sanctuary.SanctuarySign.Position=Vector3.new(0,35,402)
     local folder=Instance.new("Folder") folder.Name="Leaderboards" folder.Parent=workspace.BeDinoArena.Sanctuary
     for i,definition in definitions do
-        if not preview then stores[definition.id]=DataStoreService:GetOrderedDataStore(Config.ProfileDataStoreName.."_"..definition.id.."_v1") end
+        if not preview then stores[definition.id]=DataStoreService:GetOrderedDataStore(Config.ProfileDataStoreName.."_"..definition.id..(definition.store or "_v1")) end
         local part=Instance.new("Part")
         part.Name,part.Size,part.Position=definition.title,Vector3.new(27,23,1),Vector3.new((i-2)*30,19,399)
         part.Anchored,part.CanCollide,part.Color,part.Material,part.Parent=true,false,Theme.Colors.panel,Enum.Material.SmoothPlastic,folder

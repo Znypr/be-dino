@@ -365374,7 +365374,20 @@ return table.freeze({
         spinosaurus = "Spinosaurus",
         therizinosaurus = "Therizinosaurus",
     },
-    SpeciesRarities = {compy = 1, raptor = 1, triceratops = 2, stegosaurus = 2, tyrannosaurus = 3, ankylosaurus = 3, archaeopteryx = 1, baryonyx = 2, brachiosaurus = 2, dimorphodon = 1, elasmosaurus = 3, gallimimus = 1, ichthyosaurus = 2, microraptor = 1, mosasaurus = 3, pachycephalosaurus = 2, parasaurolophus = 2, plesiosaurus = 2, pteranodon = 2, quetzalcoatlus = 3, spinosaurus = 3, therizinosaurus = 3},
+    -- BD-044 five species rarity tiers (index = rank, higher is rarer). PROVISIONAL tier mapping by the
+    -- lead (2026-10-14); see docs/82. Saved values written before this scale are migrated on load
+    -- (ProfileRepository, profile.rarityScale) and the rarest leaderboard moved to a new "_v2" store.
+    SpeciesRarityNames = {"Common", "Uncommon", "Rare", "Epic", "Legendary"},
+    SpeciesRarityScale = 5,
+    SpeciesRarities = {
+        compy = 1, raptor = 1, gallimimus = 1, microraptor = 1, dimorphodon = 1,
+        archaeopteryx = 2, stegosaurus = 2, parasaurolophus = 2, pachycephalosaurus = 2, pteranodon = 2,
+        triceratops = 3, brachiosaurus = 3, baryonyx = 3, ichthyosaurus = 3, plesiosaurus = 3,
+        ankylosaurus = 4, elasmosaurus = 4, therizinosaurus = 4, quetzalcoatlus = 4,
+        tyrannosaurus = 5, spinosaurus = 5, mosasaurus = 5,
+    },
+    -- Pre-BD-044 three-tier scale (1 Common, 2 Rare, 3 Legendary), used only to migrate saved values.
+    LegacySpeciesRarities = {compy = 1, raptor = 1, triceratops = 2, stegosaurus = 2, tyrannosaurus = 3, ankylosaurus = 3, archaeopteryx = 1, baryonyx = 2, brachiosaurus = 2, dimorphodon = 1, elasmosaurus = 3, gallimimus = 1, ichthyosaurus = 2, microraptor = 1, mosasaurus = 3, pachycephalosaurus = 2, parasaurolophus = 2, plesiosaurus = 2, pteranodon = 2, quetzalcoatlus = 3, spinosaurus = 3, therizinosaurus = 3},
     -- HISTORICAL (removed by BD-044): ChestThresholds 10/100/500 catches -&gt; 1/2/3 eggs and
     -- AlphaTierThresholds direct N(c)=c copies. See docs/15-economy-simulation.md.
 
@@ -365399,8 +365412,11 @@ return table.freeze({
 
     ChestTimerSeconds = 0, -- Reveals, rather than offline incubation, pace new eggs.
     HatchRevealSeconds = 1, -- PROVISIONAL owner decision 2026-10-13: 1 s per egg reveal (was 5 s)
-    EggRarityBoostPerExtraEgg = 0.25,
-    EggRarityBoostMaxEggs = 15,
+    -- PROVISIONAL run-size species boost (BD-044 five tiers). A batch of N run eggs multiplies each tier's
+    -- weight by 1 + s * (SpeciesRunBoost[tier] - 1), s = (clamp(N, 1, EggRarityBoostMaxEggs) - 1) / (max - 1).
+    -- Tuned to the owner's examples: 40 eggs ~ 28 Common / 10 Uncommon / 2 Rare; 400 eggs ~ 211 / 134 / 44 / 9 / 1.
+    SpeciesRunBoost = {1, 1.9, 4.7, 4.5, 4},
+    EggRarityBoostMaxEggs = 400,
     BigChance = 0.1,
     ShinyChance = 0.05,
     BigScaleMultiplier = 1.2,
@@ -365413,7 +365429,7 @@ return table.freeze({
     -- BD-044 reward loop (owner decision 2026-10-13): every earned run catch banks
     -- exactly ONE run egg; no direct N(c)=c copies and no 10/100/500 threshold eggs.
     -- Run eggs beyond the five-slot reveal queue wait in a server-side ordered bank.
-    RunRewardConfigVersion = 2,
+    RunRewardConfigVersion = 3, -- 3: five species rarity tiers + run-size boost (BD-044)
     HatchPageSize = 10, -- PROVISIONAL: queued run eggs committed per claim transaction; at 1 s/egg = 6 claims/min/player (size 5 would be 12/min and bust the 8/12-player budgets)
     RunEggMaxPerRun = 500, -- PROVISIONAL: catches stop counting at 500 eggs per run (6,250 food); a 5,000-food run (400 eggs) is not truncated
     RunEggBankCapacity = 1000, -- PROVISIONAL: banked run eggs behind the queue (~540 B each, ~0.54 MB); a run starts only while banked &lt;= capacity - RunEggMaxPerRun (500)
@@ -365431,39 +365447,41 @@ return table.freeze({
     NestEggsPerExtraNest = 100, -- PROVISIONAL: +1 nest per 100 further catches on top of a qualified run
     NestMaxPerRun = 3, -- PROVISIONAL cap per run
     -- Luck tiers (index = nest.luck). PROVISIONAL, disclosed in the Nests menu. rarityBoostEggs feeds
-    -- the run-batch species boost (15 = maximum), conditionLevels adds to the condition-upgrade level
+    -- the run-batch species boost (EggRarityBoostMaxEggs = maximum), conditionLevels adds to the condition-upgrade level
     -- (clamped to the top tier), shinyChance applies even without irregular weather, bigChance replaces BigChance.
     NestLuckTiers = {
-        {rarityBoostEggs = 15, conditionLevels = 2, shinyChance = 0.03, bigChance = 0.2},
+        {rarityBoostEggs = 200, conditionLevels = 2, shinyChance = 0.03, bigChance = 0.2},
     },
     NestClaimRequestCooldownSeconds = 0.5,
     ChestClaimRequestCooldownSeconds = 0.35,
     ChestTestGrantEnabled = false,
     ChestTestGrantCount = 7,
     ChestTestGrantVersion = 1,
+    -- PROVISIONAL base species weights (sum 100): Common 72, Uncommon 24, Rare 3.2, Epic 0.7, Legendary 0.1.
+    -- Single shop eggs use these directly; run and nest batches add SpeciesRunBoost.
     ChestSpeciesWeights = {
-        {speciesId = "compy", weight = 25},
-        {speciesId = "raptor", weight = 20},
-        {speciesId = "gallimimus", weight = 8},
-        {speciesId = "microraptor", weight = 7},
-        {speciesId = "archaeopteryx", weight = 5},
-        {speciesId = "dimorphodon", weight = 5},
-        {speciesId = "triceratops", weight = 10},
-        {speciesId = "stegosaurus", weight = 5},
-        {speciesId = "brachiosaurus", weight = 3},
-        {speciesId = "parasaurolophus", weight = 2},
-        {speciesId = "pachycephalosaurus", weight = 1},
-        {speciesId = "baryonyx", weight = 1},
-        {speciesId = "pteranodon", weight = 1},
-        {speciesId = "ichthyosaurus", weight = 1},
-        {speciesId = "plesiosaurus", weight = 1},
-        {speciesId = "tyrannosaurus", weight = 1},
-        {speciesId = "ankylosaurus", weight = 1},
-        {speciesId = "therizinosaurus", weight = 0.5},
-        {speciesId = "spinosaurus", weight = 0.5},
-        {speciesId = "quetzalcoatlus", weight = 0.5},
-        {speciesId = "mosasaurus", weight = 0.75},
-        {speciesId = "elasmosaurus", weight = 0.75},
+        {speciesId = "compy", weight = 26},
+        {speciesId = "raptor", weight = 22},
+        {speciesId = "gallimimus", weight = 9},
+        {speciesId = "microraptor", weight = 8},
+        {speciesId = "dimorphodon", weight = 7},
+        {speciesId = "archaeopteryx", weight = 6},
+        {speciesId = "stegosaurus", weight = 6},
+        {speciesId = "parasaurolophus", weight = 5},
+        {speciesId = "pachycephalosaurus", weight = 4},
+        {speciesId = "pteranodon", weight = 3},
+        {speciesId = "triceratops", weight = 1},
+        {speciesId = "brachiosaurus", weight = 0.7},
+        {speciesId = "baryonyx", weight = 0.5},
+        {speciesId = "ichthyosaurus", weight = 0.5},
+        {speciesId = "plesiosaurus", weight = 0.5},
+        {speciesId = "ankylosaurus", weight = 0.2},
+        {speciesId = "elasmosaurus", weight = 0.2},
+        {speciesId = "therizinosaurus", weight = 0.15},
+        {speciesId = "quetzalcoatlus", weight = 0.15},
+        {speciesId = "tyrannosaurus", weight = 0.04},
+        {speciesId = "spinosaurus", weight = 0.03},
+        {speciesId = "mosasaurus", weight = 0.03},
     },
     -- Owner decision 2026-10-13: exactly one dinosaur per successfully hatched egg.
     -- Historical Build 020 split was 1/2/3 copies at 70/25/5; already-saved eggs keep
@@ -369872,8 +369890,10 @@ return ResourceModels
 -- animation. Notable finds (Shiny, BIG, event mutation, Rainbow/Astra) are never skipped.
 -- The stored selection is a UI preference: the server never uses it for rewards.
 local Skip = {}
-Skip.Rarities = {1, 2, 3} -- Config.SpeciesRarities values: Common / Rare / Legendary
-Skip.Names = {"Common", "Rare", "Legendary"}
+-- Must match Config.SpeciesRarityNames (checked by tools/verify_rewards.py); kept literal so this
+-- module stays dependency-free.
+Skip.Rarities = {1, 2, 3, 4, 5}
+Skip.Names = {"Common", "Uncommon", "Rare", "Epic", "Legendary"}
 
 -- Accepts any list of rarity numbers; returns a sorted, de-duplicated, valid list.
 function Skip.normalize(list: any): {number}
@@ -369921,7 +369941,7 @@ end
 
 -- entries: {{rarity=number, outcome=table, speciesId=string?}}
 function Skip.summarize(entries: {any})
-    local summary = {total = #entries, byRarity = {0, 0, 0}, failed = 0, hatched = 0, notable = {}}
+    local summary = {total = #entries, byRarity = table.create(#Skip.Names, 0), failed = 0, hatched = 0, notable = {}}
     for _, entry in entries do
         local rarity = math.clamp(entry.rarity or 1, 1, #Skip.Names)
         summary.byRarity[rarity] += 1
@@ -370083,9 +370103,11 @@ end
 function Sfx.nextSlot(current: number, size: number): number
     return current % size + 1
 end
--- Pure: sound name for a hatched egg. rarity 1..3 (Common/Rare/Legendary).
+-- Pure: sound name for a hatched egg. rarity 1..5 (Config.SpeciesRarityNames): Common/Uncommon share
+-- the common sting, Rare has its own, Epic/Legendary share the big one.
 function Sfx.hatchName(rarity: number?): string
-    return if rarity == 3 then "hatch_legendary" elseif rarity == 2 then "hatch_rare" else "hatch_common"
+    local r = rarity or 1
+    return if r &gt;= 4 then "hatch_legendary" elseif r == 3 then "hatch_rare" else "hatch_common"
 end
 
 local pools: {[string]: {sounds: {Sound}, slot: number}} = {}
@@ -370580,6 +370602,10 @@ function Theme.animate(target: Instance, seconds: number, goals: any, style: Enu
     tween:Play()
 end
 Theme.Colors = {panel=Color3.fromRGB(42,40,53),card=Color3.fromRGB(61,58,73),outline=Color3.fromRGB(13,15,20),text=Color3.new(1,1,1),accent=Color3.fromRGB(93,237,31),gold=Color3.fromRGB(255,210,43),blue=Color3.fromRGB(46,206,255),purple=Color3.fromRGB(194,86,255),red=Color3.fromRGB(247,57,48)}
+-- One colour per rarity everywhere (species, potions): grey, green, blue, purple, gold. Index = rarity
+-- rank 1..5 (Config.SpeciesRarityNames); keyed by name too for potion rarity strings.
+Theme.RarityColors = {Color3.fromRGB(128,142,158),Theme.Colors.accent,Theme.Colors.blue,Theme.Colors.purple,Theme.Colors.gold}
+for index, name in {"Common","Uncommon","Rare","Epic","Legendary"} do Theme.RarityColors[name] = Theme.RarityColors[index] end
 Theme.ImageIds = require(script.Parent.UIIconAssets)
 function Theme.imageContent(_id: string): Content? return nil end
 function Theme.decorate(object: GuiObject, radius: number)
@@ -542480,7 +542506,8 @@ local rows={}
 local boards={}
 local names={}
 local definitions={
-    {id="rarest",attribute="RarestCaught",title="RAREST DINOS",color=Theme.Colors.gold},
+    -- rarest "_v2": BD-044 five-tier scale; "_v1" holds old three-tier values and is no longer read.
+    {id="rarest",attribute="RarestCaught",title="RAREST DINOS",color=Theme.Colors.gold,store="_v2"},
     {id="playSeconds",attribute="PlaySeconds",title="MOST PLAY TIME",color=Theme.Colors.accent},
     {id="robux",attribute="RobuxSpent",title="ROBUX SPENT",color=Theme.Colors.blue},
 }
@@ -542502,7 +542529,7 @@ function Leaderboards.publish(player: Player, metrics)
     end
 end
 local function displayValue(id: string,value: number): string
-    if id=="rarest" then return ({"Common","Rare","Legendary"})[value] or "Not ranked" end
+    if id=="rarest" then return Config.SpeciesRarityNames[value] or "Not ranked" end
     if id=="playSeconds" then return string.format("%dh %02dm",value//3600,(value%3600)//60) end
     return tostring(value).." R$"
 end
@@ -542537,7 +542564,7 @@ function Leaderboards.start()
     workspace.BeDinoArena.Sanctuary.SanctuarySign.Position=Vector3.new(0,35,402)
     local folder=Instance.new("Folder") folder.Name="Leaderboards" folder.Parent=workspace.BeDinoArena.Sanctuary
     for i,definition in definitions do
-        if not preview then stores[definition.id]=DataStoreService:GetOrderedDataStore(Config.ProfileDataStoreName.."_"..definition.id.."_v1") end
+        if not preview then stores[definition.id]=DataStoreService:GetOrderedDataStore(Config.ProfileDataStoreName.."_"..definition.id..(definition.store or "_v1")) end
         local part=Instance.new("Part")
         part.Name,part.Size,part.Position=definition.title,Vector3.new(27,23,1),Vector3.new((i-2)*30,19,399)
         part.Anchored,part.CanCollide,part.Color,part.Material,part.Parent=true,false,Theme.Colors.panel,Enum.Material.SmoothPlastic,folder
@@ -543108,6 +543135,48 @@ local function knownSpecies(speciesId: any): boolean
     return false
 end
 
+-- BD-044: metrics.rarest and revealSkip were saved on the old three-tier species scale
+-- (1 Common, 2 Rare, 3 Legendary) until profile.rarityScale exists. Migrate once, additively, and
+-- never overclaim: old Rare covered today's Uncommon/Rare, old Legendary today's Epic/Legendary, so
+-- rarest takes the lowest new tier of its old band, raised to the best owned species inside that band.
+local LEGACY_RAREST_BAND = {[0] = {0, 0}, [1] = {1, 2}, [2] = {2, 3}, [3] = {4, 5}}
+local LEGACY_SKIP_TIERS = {{1}, {2, 3}, {4, 5}}
+local function ownsAny(entry: any): boolean
+    if typeof(entry) ~= "table" then return false end
+    for _, key in {"base", "gold", "diamond"} do
+        if typeof(entry[key]) == "number" and entry[key] &gt; 0 then return true end
+    end
+    return (typeof(entry.variants) == "table" and next(entry.variants) ~= nil)
+        or (typeof(entry.events) == "table" and next(entry.events) ~= nil)
+end
+local function upgradeRarityScale(profile: any)
+    if profile.rarityScale ~= nil then return end
+    local band = LEGACY_RAREST_BAND[profile.metrics.rarest]
+    if band == nil then return end -- malformed legacy value: validation rejects it unchanged
+    local skip = nil
+    if profile.revealSkip ~= nil then
+        if typeof(profile.revealSkip) ~= "table" then return end
+        local set = {}
+        for _, legacy in profile.revealSkip do
+            local tiers = LEGACY_SKIP_TIERS[legacy]
+            if tiers == nil then return end
+            for _, tier in tiers do set[tier] = true end
+        end
+        skip = {}
+        for tier = 1, Config.SpeciesRarityScale do if set[tier] then table.insert(skip, tier) end end
+    end
+    local rarest = band[1]
+    if rarest &gt; 0 then
+        for id, entry in profile.collection do
+            local tier = Config.SpeciesRarities[id]
+            if tier and tier &lt;= band[2] and ownsAny(entry) then rarest = math.max(rarest, tier) end
+        end
+    end
+    profile.metrics.rarest = rarest
+    profile.revealSkip = skip
+    profile.rarityScale = Config.SpeciesRarityScale
+end
+
 local function upgradeCollection(profile: any)
     if typeof(profile) ~= "table" or profile.schemaVersion ~= Config.ProfileSchemaVersion
         or typeof(profile.collection) ~= "table" then return end
@@ -543124,6 +543193,7 @@ local function upgradeCollection(profile: any)
     end
     if profile.metrics == nil then profile.metrics = {playSeconds = 0, rarest = 0, robux = 0} end
     if profile.purchaseReceipts == nil then profile.purchaseReceipts = {} end
+    if typeof(profile.metrics) == "table" then upgradeRarityScale(profile) end
 end
 
 local function defaultProfile()
@@ -543131,6 +543201,7 @@ local function defaultProfile()
     for _, id in Config.SpeciesOrder do collection[id] = {base = if id == "compy" then 1 else 0, gold = 0, diamond = 0} end
     return {
         schemaVersion = Config.ProfileSchemaVersion,
+        rarityScale = Config.SpeciesRarityScale,
         revision = 0,
         session = nil,
         equippedSpeciesId = "compy",
@@ -543213,8 +543284,8 @@ local function isValidProfile(profile: any): boolean
         end
     end
     if profile.revealSkip ~= nil then
-        if typeof(profile.revealSkip) ~= "table" or #profile.revealSkip &gt; 3 then return false end
-        for _, rarity in profile.revealSkip do if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity &lt; 1 or rarity &gt; 3 then return false end end
+        if typeof(profile.revealSkip) ~= "table" or #profile.revealSkip &gt; Config.SpeciesRarityScale then return false end
+        for _, rarity in profile.revealSkip do if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity &lt; 1 or rarity &gt; Config.SpeciesRarityScale then return false end end
     end
     if profile.settledRuns ~= nil then
         if typeof(profile.settledRuns) ~= "table" then return false end
@@ -543250,7 +543321,7 @@ local function isValidProfile(profile: any): boolean
         local n = profile.metrics[key]
         if typeof(n) ~= "number" or n ~= n or n &lt; 0 or n % 1 ~= 0 or n &gt; 2000000000 then return false end
     end
-    if profile.metrics.rarest &gt; 3 then return false end
+    if profile.rarityScale ~= Config.SpeciesRarityScale or profile.metrics.rarest &gt; Config.SpeciesRarityScale then return false end
     return ProgressionRules.valid(profile.progression)
 end
 
@@ -543926,10 +543997,10 @@ end
 function ProfileRepository.setRevealSkip(player: Player, selection: any): (boolean, string)
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then return false, "profile_not_loaded" end
-    if typeof(selection) ~= "table" or #selection &gt; 3 then return false, "invalid_selection" end
+    if typeof(selection) ~= "table" or #selection &gt; Config.SpeciesRarityScale then return false, "invalid_selection" end
     local seen, clean = {}, {}
     for _, rarity in selection do
-        if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity &lt; 1 or rarity &gt; 3 or seen[rarity] then return false, "invalid_selection" end
+        if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity &lt; 1 or rarity &gt; Config.SpeciesRarityScale or seen[rarity] then return false, "invalid_selection" end
         seen[rarity] = true
         table.insert(clean, rarity)
     end
@@ -544991,15 +545062,23 @@ local function weightedChoice(rows, rng: Random)
     return rows[#rows]
 end
 
--- Species roll for one egg. Run batches boost Rare/Legendary weights by
--- B = 1 + (clamp(N,1,15)-1)*0.25. Quantity is now always one dinosaur.
-function RewardMath.computeChestReward(rng: Random?, eggCount: number?)
-    local random = rng or Random.new()
-    local boost = 1 + (math.clamp(eggCount or 1, 1, Config.EggRarityBoostMaxEggs) - 1) * Config.EggRarityBoostPerExtraEgg
+-- Run-size species boost per rarity tier (BD-044): a batch of N eggs scales tier t by
+-- 1 + s * (SpeciesRunBoost[t] - 1), s = (clamp(N, 1, max) - 1) / (max - 1). One egg = base odds.
+function RewardMath.speciesWeights(eggCount: number?)
+    local maxEggs = Config.EggRarityBoostMaxEggs
+    local s = (math.clamp(eggCount or 1, 1, maxEggs) - 1) / math.max(1, maxEggs - 1)
     local rows = {}
     for _, row in Config.ChestSpeciesWeights do
-        table.insert(rows, {speciesId = row.speciesId, weight = row.weight * boost ^ (Config.SpeciesRarities[row.speciesId] - 1)})
+        local gain = Config.SpeciesRunBoost[Config.SpeciesRarities[row.speciesId]] or 1
+        table.insert(rows, {speciesId = row.speciesId, weight = row.weight * (1 + s * (gain - 1))})
     end
+    return rows
+end
+
+-- Species roll for one egg. Quantity is now always one dinosaur.
+function RewardMath.computeChestReward(rng: Random?, eggCount: number?)
+    local random = rng or Random.new()
+    local rows = RewardMath.speciesWeights(eggCount)
     local speciesRow = weightedChoice(rows, random)
     local quantityRow = weightedChoice(Config.ChestQuantityWeights, random)
     return {
@@ -545863,8 +545942,8 @@ local function hero(parent: GuiObject,id: string,x: number,y: number,w: number,h
     PreviewTraits.add(view,traits)
     return view
 end
-local rarityColors={C.accent,C.blue,C.gold}
-local rarityNames={"Common","Rare","Legendary"}
+local rarityColors=Theme.RarityColors
+local rarityNames=Config.SpeciesRarityNames
 local function speciesIndex(id: string): number return Config.SpeciesRarities[id] or 1 end
 local function meter(parent: GuiObject,x: number,y: number,w: number,value: number,maxValue: number,color: Color3,text: string)
     local b=box(parent,x,y,w,34,C.outline,parent.ZIndex+1)
@@ -546108,7 +546187,7 @@ render=function(name: string)
         scroller.Position,scroller.Size,scroller.BackgroundTransparency=UDim2.fromOffset(0,34),UDim2.fromOffset(824,368),1
         scroller.BorderSizePixel,scroller.ScrollBarThickness,scroller.ZIndex,scroller.Parent=0,8,body.ZIndex+1,body
         scroller.ScrollingDirection=Enum.ScrollingDirection.Y
-        local rarityColor={Common=Color3.fromRGB(176,188,200),Uncommon=C.accent,Rare=C.blue,Epic=C.purple,Legendary=C.gold}
+        local rarityColor=Theme.RarityColors
         local function bottle(item) return "potion_"..item.kind.."_"..item.rarity end -- native vector bottle (PotionArt): shape = effect, trim/glow/pips = rarity
         for i,offer in ProgressionRules.shopOffers(window) do
             local item=ProgressionRules.item(ProgressionConfig.Potions,offer.id)
@@ -546496,15 +546575,16 @@ render=function(name: string)
         label(body,"Hatch sounds",24,182,410,44,26)
         button(body,if Theme.HatchSoundEnabled~=false then "SOUND ON" else "SOUND OFF",560,182,230,44,C.blue,function() Theme.HatchSoundEnabled=Theme.HatchSoundEnabled==false open("settings") end).TextSize=20
         button(body,"HOW TO PLAY",24,238,370,64,C.gold,function() open("tutorial") end)
-        label(body,"Skip reveals:",24,318,250,44,24)
+        label(body,"Skip reveals:",24,312,160,52,24)
         local chosen=RevealSkip.set(decoded("RevealSkipJson","[]"))
         for i,rarityName in RevealSkip.Names do
-            button(body,(if chosen[i] then "SKIP " else "SHOW ")..rarityName,270+(i-1)*172,318,164,44,if chosen[i] then C.accent else C.card,function()
+            -- Five rarities: name on top, state below; rarity colour while shown, dark while skipped.
+            button(body,rarityName.."\n"..(if chosen[i] then "SKIP" else "SHOW"),190+(i-1)*126,312,120,52,if chosen[i] then C.card else rarityColors[i],function()
                 setSkipRemote:FireServer(RevealSkip.toggle(decoded("RevealSkipJson","[]"),i))
-            end).TextSize=17
+            end).TextSize=16
         end
         button(body,"FOOD GUIDE",424,238,366,64,C.accent,function() open("food") end)
-        label(body,"Settings apply on this device for this session.",24,342,766,40,18)
+        label(body,"Settings apply on this device for this session.",24,370,766,30,18)
     elseif name=="food" then
         heading.Text,header.BackgroundColor3="Food &amp; Growth",C.accent
         local types={{"Berries","leaf",1,C.accent},{"Fruit","leaf",4,C.gold},{"Eggs","egg",15,C.blue},{"Crystals","amber",50,C.purple}}
@@ -546514,14 +546594,15 @@ render=function(name: string)
             label(card,food[1],0,180,196,42,26)
             label(card,"+"..food[3].." Growth",0,226,196,42,26)
         end
-        label(body,"500 raw food points earn 15 catches before weather bonuses. Growth boosts do not multiply catches.",18,316,788,72,23)
+        label(body,string.format("Eat 500 food to earn %d eggs. Some weather gives more!",math.floor(500*Config.FoodCatchRate+.5)),18,316,788,72,23)
     elseif name=="tutorial" then
         heading.Text,header.BackgroundColor3="Welcome to Be Dino!",C.blue
         local steps={{"1","EAT &amp; GROW","Find small food clusters across the island."},{"2","JUMP &amp; EXPLORE","Space to jump, E to leap. Buttons on mobile."},{"3","BANK &amp; HATCH","Return to sanctuary to bank catches and eggs."}}
         for i,step in steps do
             local card=box(body,(i-1)*276,0,264,278,C.card,24)
-            label(card,step[1],12,12,240,80,64,rarityColors[i])
-            label(card,step[2],10,110,244,46,25,rarityColors[i])
+            local stepColor=({C.accent,C.blue,C.gold})[i]
+            label(card,step[1],12,12,240,80,64,stepColor)
+            label(card,step[2],10,110,244,46,25,stepColor)
             label(card,step[3],16,176,232,84,22)
         end
         button(body,"LET'S PLAY",212,324,400,62,C.accent,function() seenTutorial=true open("home") end)

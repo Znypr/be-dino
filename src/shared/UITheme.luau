@@ -25,6 +25,10 @@ function Theme.animate(target: Instance, seconds: number, goals: any, style: Enu
     tween:Play()
 end
 Theme.Colors = {panel=Color3.fromRGB(42,40,53),card=Color3.fromRGB(61,58,73),outline=Color3.fromRGB(13,15,20),text=Color3.new(1,1,1),accent=Color3.fromRGB(93,237,31),gold=Color3.fromRGB(255,210,43),blue=Color3.fromRGB(46,206,255),purple=Color3.fromRGB(194,86,255),red=Color3.fromRGB(247,57,48)}
+-- One colour per rarity everywhere (species, potions): grey, green, blue, purple, gold. Index = rarity
+-- rank 1..5 (Config.SpeciesRarityNames); keyed by name too for potion rarity strings.
+Theme.RarityColors = {Color3.fromRGB(128,142,158),Theme.Colors.accent,Theme.Colors.blue,Theme.Colors.purple,Theme.Colors.gold}
+for index, name in {"Common","Uncommon","Rare","Epic","Legendary"} do Theme.RarityColors[name] = Theme.RarityColors[index] end
 Theme.ImageIds = require(script.Parent.UIIconAssets)
 function Theme.imageContent(_id: string): Content? return nil end
 function Theme.decorate(object: GuiObject, radius: number)
