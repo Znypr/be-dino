@@ -44,7 +44,7 @@ local function fixture()
   I.hatch(profile.dinosaurIdentity,egg,species,qty,species.."/variant/"..key)
   profile.dinosaurIdentity=assert(I.reconcile(profile.collection,profile.dinosaurIdentity,OWNER))
  end
- for _,qty in {3,3,3,1} do hatch("compy","wavyA",genes("06_wavy_stripes"),qty) end -- egg-1..4: 10 plain
+ for _=1,50 do hatch("compy","wavyA",genes("06_wavy_stripes"),1) end -- egg-1..50: 50 plain (1 dino per egg)
  hatch("compy","wavyB",genes("06_wavy_stripes","red"),2,{shiny=true})             -- egg-5: 2 Shiny
  hatch("compy","wavyC",genes("06_wavy_stripes","teal"),1,{big=true,mutationId="ember"}) -- egg-6
  hatch("compy","spots",genes("02_spots"),1)                                       -- egg-7
@@ -62,7 +62,7 @@ local function take(t,n) local r={} for i=1,n do r[i]=t[i] end return r end
 local rolls=0
 local roller={version="test-fixed-v1",roll=function(summary,patternId)
  rolls+=1
- assert(summary.donorCount==10 and summary.speciesId=="compy")
+ assert(summary.donorCount==F.Recipes[summary.targetStage or "gold"].donorCount and type(summary.speciesId)=="string")
  for k,v in summary do assert(type(k)=="string" and not string.find(k,"prob") and not string.find(k,"odds")) end
  return {big=false,shiny=true,mutationId="",genes={patternId=patternId,primaryColorId="gold",secondaryColorId="blue",conditionId="rainbow",blend=55}}
 end}
@@ -85,13 +85,13 @@ end
 -- ===== Happy path =====
 local profile=fixture()
 local plain=idsIn(profile,"compy/variant/wavyA")
-assert(#plain==10)
+assert(#plain==50)
 local snapshot=F.canonical(profile)
 local nextBefore=profile.dinosaurIdentity.nextId
 local livingBefore=count(profile.dinosaurIdentity.instances)
 local quote,outcome,request=prepare(profile,"tok-1",plain)
 assert(quote.consentRequired==false and #quote.lossManifest==0)
-assert(quote.speciesId=="compy" and quote.patternId=="06_wavy_stripes" and quote.recipeVersion=="gold-same-species-pattern-10-v1")
+assert(quote.speciesId=="compy" and quote.patternId=="06_wavy_stripes" and quote.recipeVersion=="gold-same-species-pattern-50-v1")
 assert(rolls==1 and outcome.oddsVersion=="test-fixed-v1" and outcome.targetStage=="gold")
 local fused,status,result=F.apply(profile,OWNER,request,outcome,1234)
 assert(fused and status=="fused",tostring(status))
@@ -99,15 +99,15 @@ assert(F.canonical(profile)==snapshot,"input profile mutated")
 local state=fused.dinosaurIdentity
 local resultId=OWNER.."/d:"..nextBefore
 assert(result.resultId==resultId and state.nextId==nextBefore+1)
-assert(count(state.instances)==livingBefore-10+1)
+assert(count(state.instances)==livingBefore-50+1)
 for _,id in plain do assert(state.instances[id]==nil) end
 local gold=state.instances[resultId]
 assert(gold.stage=="gold" and gold.speciesId=="compy" and gold.bucketKey=="compy/gold")
 assert(gold.genes.patternId=="06_wavy_stripes" and gold.genes.primaryColorId=="gold" and gold.shiny==true)
 assert(next(gold.cosmetics.ownedAuraIds)==nil and next(gold.cosmetics.ownedTrailIds)==nil and gold.cosmetics.equippedAuraId=="")
-assert(gold.origin.kind=="fusion" and gold.origin.operationId=="fusion:tok-1" and #gold.origin.parents==10)
+assert(gold.origin.kind=="fusion" and gold.origin.operationId=="fusion:tok-1" and #gold.origin.parents==50 and gold.origin.parentStage=="base")
 assert(gold.origin.recipeVersion==quote.recipeVersion and gold.origin.oddsVersion=="test-fixed-v1")
-for _,p in gold.origin.parents do assert(p.cosmetics==nil and p.origin.kind=="hatch") end
+for _,p in gold.origin.parents do assert(p.cosmetics==nil and p.origin.kind=="hatch" and p.speciesId==nil and p.genes.patternId==nil) end
 -- Grouped projection: wavyA removed, Gold +1, every other bucket unchanged.
 local before=profile.collection
 local after=fused.collection
@@ -118,15 +118,15 @@ for _,key in {"wavyB","wavyC","spots"} do assert(same(after.compy.variants[key],
 -- Durable ledger + archived parent eggs.
 local entry=state.fusions["fusion:tok-1"]
 assert(entry.resultId==resultId and entry.committedAt==1234 and same(entry.parentIds,quote.donorIds))
-assert(#entry.parentEggIds==4,"parent eggs should be distinct")
-for i=1,4 do assert(state.eggs["egg-"..i] and table.find(entry.parentEggIds,"egg-"..i)) end
+assert(#entry.parentEggIds==50,"parent eggs should be distinct")
+for i=1,50 do assert(state.eggs["egg-"..i] and table.find(entry.parentEggIds,"egg-"..i)) end
 local lineage=assert(F.lineage(state,"fusion:tok-1"))
-assert(lineage.resultId==resultId and #lineage.parentIds==10 and count(lineage.parentEggs)==4)
+assert(lineage.resultId==resultId and #lineage.parentIds==50 and count(lineage.parentEggs)==50)
 assert(lineage.parentEggs["egg-1"].genes.patternId=="06_wavy_stripes")
 -- Reload: saved state reconciles unchanged; fused record and nextId stay.
 local reloaded=assert(I.reconcile(fused.collection,I.copy(state),OWNER))
 assert(same(reloaded,state))
-print("Fusion happy path passed: 10 consumed, one new server ID, nextId+1, guaranteed Gold, empty cosmetics, untouched input, grouped projection, ledger, parent eggs and reload")
+print("Fusion happy path passed: 50 consumed, one new server ID, nextId+1, guaranteed Gold, empty cosmetics, untouched input, grouped projection, ledger, parent eggs and reload")
 
 -- ===== Invalid donors (all fail before any write) =====
 local p=fixture()
@@ -136,42 +136,45 @@ local function bad(donors,expected,stage,owner)
  local q,reason=F.quote(st,owner or OWNER,stage or "gold",donors)
  assert(q==nil and reason==expected,expected..": got "..tostring(reason))
 end
-bad(take(A,9),"wrong_donor_count")
+bad(take(A,49),"wrong_donor_count")
 bad(concat(A,idsIn(p,"compy/variant/wavyB")),"wrong_donor_count")
 local extra=I.copy(A) extra.note="x" bad(extra,"wrong_donor_count")
 bad("u:1/d:1","wrong_donor_count")
-local dup=take(A,9) table.insert(dup,A[1]) bad(dup,"duplicate_donor")
-local missing=take(A,9) table.insert(missing,OWNER.."/d:9999") bad(missing,"donor_missing")
-local foreign=take(A,9) table.insert(foreign,"u:2/d:1") bad(foreign,"wrong_owner")
-local numeric=take(A,9) table.insert(numeric,42) bad(numeric,"invalid_donor_id")
-local plainBase=take(A,9) table.insert(plainBase,idsIn(p,"compy/base")[1]) bad(plainBase,"missing_pattern")
-local wrongStage=take(A,9) table.insert(wrongStage,idsIn(p,"compy/gold")[1]) bad(wrongStage,"wrong_stage")
-local species=take(A,9) table.insert(species,idsIn(p,"raptor/variant/wavyR")[1]) bad(species,"species_mismatch")
-local pattern=take(A,9) table.insert(pattern,idsIn(p,"compy/variant/spots")[1]) bad(pattern,"pattern_mismatch")
+local dup=take(A,49) table.insert(dup,A[1]) bad(dup,"duplicate_donor")
+local missing=take(A,49) table.insert(missing,OWNER.."/d:9999") bad(missing,"donor_missing")
+local foreign=take(A,49) table.insert(foreign,"u:2/d:1") bad(foreign,"wrong_owner")
+local numeric=take(A,49) table.insert(numeric,42) bad(numeric,"invalid_donor_id")
+local plainBase=take(A,49) table.insert(plainBase,idsIn(p,"compy/base")[1]) bad(plainBase,"missing_pattern")
+local wrongStage=take(A,49) table.insert(wrongStage,idsIn(p,"compy/gold")[1]) bad(wrongStage,"wrong_stage")
+local species=take(A,49) table.insert(species,idsIn(p,"raptor/variant/wavyR")[1]) bad(species,"species_mismatch")
+local pattern=take(A,49) table.insert(pattern,idsIn(p,"compy/variant/spots")[1]) bad(pattern,"pattern_mismatch")
 st.instances[A[3]].locked=true bad(A,"donor_locked") st.instances[A[3]].locked=nil
 st.instances[A[4]].favorited=true bad(A,"donor_locked") st.instances[A[4]].favorited=nil
 bad(A,"wrong_owner","gold","u:2")
-bad(A,"recipe_not_approved","emerald")
-bad(A,"recipe_not_approved","diamond")
+bad(take(A,10),"wrong_stage","emerald")
+bad(take(A,3),"wrong_stage","diamond")
+bad(A,"wrong_donor_count","emerald")
+bad(A,"wrong_donor_count","diamond")
+do local saved=F.Recipes.emerald.donorCount F.Recipes.emerald.donorCount=nil bad(take(A,10),"recipe_not_approved","emerald") F.Recipes.emerald.donorCount=saved end
 bad(A,"unknown_stage","base")
 bad(A,"unknown_stage","platinum")
 bad(A,"unknown_stage",5)
 assert(F.quote(nil,OWNER,"gold",A)==nil)
 -- Same rejections inside apply leave the profile untouched.
 local _,o1,r1=prepare(p,"inv",A)
-local r9=I.copy(r1) r9.donorIds=take(A,9) rejects(p,r9,o1,"wrong_donor_count")
+local r9=I.copy(r1) r9.donorIds=take(A,49) rejects(p,r9,o1,"wrong_donor_count")
 local rs=I.copy(r1) rs.donorIds=species rejects(p,rs,o1,"species_mismatch")
 local rt=I.copy(r1) rt.token="" rejects(p,rt,o1,"invalid_token")
 rt.token=string.rep("x",F.MaxTokenLength+1) rejects(p,rt,o1,"invalid_token")
 rt.token=7 rejects(p,rt,o1,"invalid_token")
 local ws=F.apply(p,"u:2",r1,o1) assert(ws==nil)
-print("Invalid donors passed: 9/11/non-list, duplicate, missing, foreign, non-string, no pattern, wrong stage/species/pattern, locked/favorited, wrong owner, unapproved Emerald/Diamond, unknown stage, bad token")
+print("Invalid donors passed: 49/51/non-list, duplicate, missing, foreign, non-string, no pattern, wrong stage/species/pattern, locked/favorited, wrong owner, Base donors for Emerald/Diamond, unapproved recipe, unknown stage, bad token")
 
 -- ===== Consent: valuable traits and purchased cosmetics =====
 p=fixture()
 A=idsIn(p,"compy/variant/wavyA")
 local B=idsIn(p,"compy/variant/wavyB")
-local mixed=concat(take(A,8),B)
+local mixed=concat(take(A,48),B)
 p.dinosaurIdentity.instances[A[1]].cosmetics.ownedAuraIds.meadow=true
 p.dinosaurIdentity.instances[A[1]].cosmetics.ownedTrailIds.fern=true
 p.dinosaurIdentity.instances[A[1]].cosmetics.equippedAuraId="meadow"
@@ -190,7 +193,7 @@ assert(next(out.cosmetics.ownedAuraIds)==nil and next(out.cosmetics.ownedTrailId
 for _,parent in out.origin.parents do assert(parent.cosmetics==nil) end
 assert(consented.collection.compy.variants.wavyA.count==2 and consented.collection.compy.variants.wavyB==nil)
 -- Big+mutation donor alone is also itemized.
-local q3=assert(F.quote(p.dinosaurIdentity,OWNER,"gold",concat(take(A,9),idsIn(p,"compy/variant/wavyC"))))
+local q3=assert(F.quote(p.dinosaurIdentity,OWNER,"gold",concat(take(A,49),idsIn(p,"compy/variant/wavyC"))))
 assert(q3.consentRequired and q3.lossManifest[#q3.lossManifest].big and q3.lossManifest[#q3.lossManifest].mutationId=="ember")
 -- Consent digest is bound to the exact loss set.
 p.dinosaurIdentity.instances[A[1]].cosmetics.ownedAuraIds.tidal=true
@@ -215,7 +218,7 @@ assert(s3=="duplicate" and c3==c1 and res3.traits.genes.primaryColorId=="gold")
 local reversed=I.copy(r5) reversed.donorIds={} for i=#A,1,-1 do table.insert(reversed.donorIds,A[i]) end
 local _,s4=F.apply(c1,OWNER,reversed,nil) assert(s4=="duplicate")
 -- Same token, different request -> conflict, no write.
-local conflict=I.copy(r5) conflict.donorIds=concat(take(A,8),idsIn(c1,"compy/variant/wavyB"))
+local conflict=I.copy(r5) conflict.donorIds=concat(take(A,48),idsIn(c1,"compy/variant/wavyB"))
 rejects(c1,conflict,o5,"token_conflict")
 -- Duplicate replay needs no odds/outcome.
 local _,s5=F.apply(c1,OWNER,r5,nil) assert(s5=="duplicate")
@@ -233,7 +236,7 @@ p=fixture()
 A=idsIn(p,"compy/variant/wavyA")
 B=idsIn(p,"compy/variant/wavyB")
 local _,oa,ra=prepare(p,"first",A)
-local overlap=concat(take(A,8),B)
+local overlap=concat(take(A,48),B)
 local _,ob,rb=prepare(p,"second",overlap,nil,true)
 local afterFirst=assert(F.apply(p,OWNER,ra,oa,1))
 rejects(afterFirst,rb,ob,"donor_missing","overlapping fusion")
@@ -259,25 +262,26 @@ assert(select(2,F.prepareOutcome(q7,{version="v",roll=function() return {big=fal
 assert(select(2,F.prepareOutcome(q7,{version="v",roll=function(_,pt) return {big=false,shiny=false,mutationId="",genes={patternId=pt,primaryColorId="a",secondaryColorId="b",conditionId="normal",blend=101}} end}))=="invalid_outcome")
 assert(select(2,F.prepareOutcome(q7,roller,function() return false end))=="invalid_outcome")
 -- Roller summaries are copies; mutation cannot affect the quote.
-assert(F.prepareOutcome(q7,{version="v",roll=function(s,pt) s.speciesId="trex" return roller.roll({donorCount=10,speciesId="compy"},pt) end}))
+assert(F.prepareOutcome(q7,{version="v",roll=function(s,pt) s.speciesId="trex" return roller.roll({donorCount=50,speciesId="compy"},pt) end}))
 assert(q7.summary.speciesId=="compy")
 rejects(p,r7,nil,"invalid_outcome","no outcome")
 local tampered=I.copy(o7) tampered.traits.genes.patternId="02_spots" rejects(p,r7,tampered,"invalid_outcome","pattern not locked")
 tampered=I.copy(o7) tampered.targetStage="diamond" rejects(p,r7,tampered,"invalid_outcome","stage from outcome")
 tampered=I.copy(o7) tampered.requestDigest="x" rejects(p,r7,tampered,"invalid_outcome","outcome for another request")
 -- Grouped/identity mismatch: projection cannot cover the consumption.
-local mismatch=I.copy(p) mismatch.collection.compy.variants.wavyA.count=9 rejects(mismatch,r7,o7,"grouped_mismatch")
+local mismatch=I.copy(p) mismatch.collection.compy.variants.wavyA.count=49 rejects(mismatch,r7,o7,"grouped_mismatch")
 mismatch=I.copy(p) mismatch.collection.compy=nil rejects(mismatch,r7,o7,"grouped_mismatch","missing species entry")
 -- Corrupt ledger / identity.
 local corrupt=I.copy(p) corrupt.dinosaurIdentity.fusions="bad" rejects(corrupt,r7,o7,"invalid_fusion_ledger")
 corrupt=I.copy(p) corrupt.dinosaurIdentity=nil rejects(corrupt,r7,o7,"identity_unavailable")
--- Fail-closed: an approved-looking Emerald recipe still has no grouped projection.
+-- Fail-closed: a stage without a grouped projection never commits.
 local emerald=F.Recipes.emerald
-F.Recipes.emerald={targetStage="emerald",sourceStage="base",donorCount=10,version="test-only"}
+F.Recipes.emerald={targetStage="emerald",sourceStage="base",donorCount=50,version="test-only"}
+F.GroupedProjection.emerald=nil
 local qe=assert(F.quote(p.dinosaurIdentity,OWNER,"emerald",A))
 local oe=assert(F.prepareOutcome(qe,roller))
 rejects(p,{token="em",targetStage="emerald",donorIds=A,quoteDigest=qe.quoteDigest},oe,"projection_unsupported")
-F.Recipes.emerald=emerald
+F.Recipes.emerald=emerald F.GroupedProjection.emerald=true
 assert(F.quote(p.dinosaurIdentity,OWNER,"emerald",A)==nil)
 -- A valid commit still succeeds after all the rejected attempts.
 assert(select(2,F.apply(p,OWNER,r7,o7,1))=="fused")
@@ -298,9 +302,9 @@ s8=assert(I.reconcile(f8.collection,s8,OWNER))
 f8.collection.compy.base+=5
 s8=assert(I.reconcile(f8.collection,s8,OWNER))
 assert(s8.instances[rid].origin.kind=="fusion")
-for i=1,4 do assert(s8.eggs["egg-"..i]) end
+for i=1,50 do assert(s8.eggs["egg-"..i]) end
 local lin=assert(F.lineage(s8,"fusion:lineage"))
-assert(count(lin.parentEggs)==4 and lin.parentEggs["egg-2"].eggId=="egg-2")
+assert(count(lin.parentEggs)==50 and lin.parentEggs["egg-2"].eggId=="egg-2")
 lin.parentEggs["egg-2"].eventId="tampered" assert(s8.eggs["egg-2"].eventId~="tampered")
 assert(F.lineage(s8,"fusion:none")==nil)
 -- Legacy Build 020 Gold->Diamond decrement spends the legacy Gold, keeps the fused one.
@@ -335,14 +339,14 @@ local sizes={}
 for round=1,20 do
  local e={eggId="bulk-"..round,kind="alpha_chest",genes=I.copy(bulk),reward={speciesId="compy",count=1}}
  local v=p.collection.compy.variants.bulk or {count=0,genes=I.copy(bulk),big=false,shiny=false,mutationId=""}
- for k=1,10 do
+ for k=1,50 do
   local ek=I.copy(e) ek.eggId=e.eggId.."-"..k
   v.count+=1 p.collection.compy.variants.bulk=v
   I.hatch(p.dinosaurIdentity,ek,"compy",1,key)
  end
  p.dinosaurIdentity=assert(I.reconcile(p.collection,p.dinosaurIdentity,OWNER))
  local donors=idsIn(p,key)
- assert(#donors==10)
+ assert(#donors==50)
  local _,ob2,rb2=prepare(p,"bulk-"..round,donors)
  local nextP,stt=F.apply(p,OWNER,rb2,ob2,round)
  assert(stt=="fused",tostring(stt))
@@ -350,10 +354,10 @@ for round=1,20 do
  sizes[round]=F.encodedSize(p.dinosaurIdentity)
 end
 assert(count(p.dinosaurIdentity.fusions)==20 and p.collection.compy.gold==21)
-assert(count(p.dinosaurIdentity.eggs)>=200,"all 200 parent eggs archived")
+assert(count(p.dinosaurIdentity.eggs)>=1000,"all 1000 parent eggs archived")
 local perFusion=(sizes[20]-sizes[10])/10
-assert(perFusion>0 and perFusion<20000,"per-fusion growth "..perFusion)
-print(string.format("Storage passed: 20 sequential fusions, 200 archived parent eggs, ~%d bytes per fusion (estimate), preflight ceiling %d bytes", perFusion, F.MaxSidecarBytes))
+assert(perFusion>0 and perFusion<60000,"per-fusion growth "..perFusion)
+print(string.format("Storage passed: 20 sequential 50-donor fusions, 1000 archived parent eggs, ~%d bytes per fusion (estimate), preflight ceiling %d bytes", perFusion, F.MaxSidecarBytes))
 -- The 3,000-identity ceiling still applies to the reconciled post-fusion state.
 local big=fixture()
 big.collection.compy.base=I.MaxInstances
@@ -491,14 +495,175 @@ local _,sx,resx=F.apply(f9,OWNER,req9,other,2)
 assert(sx=="duplicate" and same(resx.traits,r1.traits))
 -- Consent-bearing mixed donors: a production-roller fusion is schema-valid and versioned.
 local pm=fixture()
-local mixedDonors=concat(take(idsIn(pm,"compy/variant/wavyA"),7),idsIn(pm,"compy/variant/wavyB"),idsIn(pm,"compy/variant/wavyC"))
+local mixedDonors=concat(take(idsIn(pm,"compy/variant/wavyA"),47),idsIn(pm,"compy/variant/wavyB"),idsIn(pm,"compy/variant/wavyC"))
 local qm=assert(F.quote(pm.dinosaurIdentity,OWNER,"gold",mixedDonors))
 local dm=assert(O.distribution(qm.summary))
-assert(near(dm.shiny,0.1) and near(dm.big,0.05) and near(dm.mutation.ember,0.05) and near(dm.noMutation,0.95))
+assert(near(dm.shiny,0.02) and near(dm.big,0.01) and near(dm.mutation.ember,0.01) and near(dm.noMutation,0.99))
 local om=assert(F.prepareOutcome(qm,seededRoller(3),G.valid))
 local fm,sm=F.apply(pm,OWNER,{token="odds-mixed",targetStage="gold",donorIds=mixedDonors,quoteDigest=qm.quoteDigest,consentDigest=qm.consentDigest},om,1)
 assert(sm=="fused" and fm)
-print("Odds determinism passed: seeded roller reproducible, ledger/result carry fusion-odds-provisional-v1, retries replay the committed traits; 2 Shiny/1 BIG/1 Ember donors quote 10%/5%/5%")
+print("Odds determinism passed: seeded roller reproducible, ledger/result carry fusion-odds-provisional-v1, retries replay the committed traits; 2 Shiny/1 BIG/1 Ember of 50 donors quote 2%/1%/1%")
+local function ladderChain()
+-- ===== Ladder 50/10/3: Base -> Gold -> Emerald -> Diamond chain (owner decision 2026-10-13) =====
+assert(F.Recipes.gold.donorCount==50 and F.Recipes.gold.sourceStage=="base" and F.Recipes.gold.version=="gold-same-species-pattern-50-v1")
+assert(F.Recipes.emerald.donorCount==10 and F.Recipes.emerald.sourceStage=="gold" and F.Recipes.emerald.version=="emerald-same-species-pattern-10-v1")
+assert(F.Recipes.diamond.donorCount==3 and F.Recipes.diamond.sourceStage=="emerald" and F.Recipes.diamond.version=="diamond-same-species-pattern-3-v1")
+assert(F.MaxDonorCount==50 and I.MaxFusionParents==50 and F.GroupedProjection.emerald==true)
+local chain=fixture()
+local chainEgg=0
+local function makeGold(species,pattern,token)
+ local key="ladder-"..species.."-"..pattern
+ for _=1,50 do
+  chainEgg+=1
+  local g=genes(pattern)
+  local e={eggId="ladder-"..chainEgg,kind="alpha_chest",genes=I.copy(g),reward={speciesId=species,count=1}}
+  local entry=chain.collection[species]
+  local v=entry.variants[key] or {count=0,genes=I.copy(g),big=false,shiny=false,mutationId=""}
+  v.count+=1 entry.variants[key]=v
+  I.hatch(chain.dinosaurIdentity,e,species,1,species.."/variant/"..key)
+ end
+ chain.dinosaurIdentity=assert(I.reconcile(chain.collection,chain.dinosaurIdentity,OWNER))
+ local _,o,r=prepare(chain,token,idsIn(chain,species.."/variant/"..key),"gold")
+ local nextP,st,res=F.apply(chain,OWNER,r,o,1)
+ assert(st=="fused",tostring(st))
+ chain=nextP
+ return res.resultId
+end
+local function fuse(stage,token,donors)
+ local q,o,r=prepare(chain,token,donors,stage,true) -- test roller makes Shiny results, so consent applies
+ local nextP,st,res=F.apply(chain,OWNER,r,o,1)
+ assert(st=="fused",stage..": "..tostring(st))
+ chain=nextP
+ return res.resultId,q
+end
+local legacyGold=chain.collection.compy.gold -- 1 legacy Build 020 Gold (no genes, never a donor)
+local golds={}
+for i=1,10 do table.insert(golds,makeGold("compy","06_wavy_stripes","g"..i)) end
+local goldBytes=F.encodedSize(chain.dinosaurIdentity.instances[golds[1]])
+local goldLedgerBytes=F.encodedSize(chain.dinosaurIdentity.fusions["fusion:g1"])
+local eggBytes=F.encodedSize(chain.dinosaurIdentity.eggs["ladder-1"])
+assert(chain.collection.compy.gold==legacyGold+10)
+-- Higher-tier validation: wrong count, wrong stage, mixed species/pattern, legacy Gold.
+local spotsGold=makeGold("compy","02_spots","gs")
+local raptorGold=makeGold("raptor","06_wavy_stripes","gr")
+local function badChain(stage,donors,expected)
+ local q,reason=F.quote(chain.dinosaurIdentity,OWNER,stage,donors)
+ assert(q==nil and reason==expected,stage.." expected "..expected.." got "..tostring(reason))
+end
+badChain("emerald",take(golds,9),"wrong_donor_count")
+badChain("emerald",concat(golds,{spotsGold}),"wrong_donor_count")
+badChain("emerald",concat(take(golds,9),{spotsGold}),"pattern_mismatch")
+badChain("emerald",concat(take(golds,9),{raptorGold}),"species_mismatch")
+badChain("emerald",concat(take(golds,9),{idsIn(chain,"compy/variant/spots")[1]}),"wrong_stage")
+local legacyGoldId=nil
+for id,d in chain.dinosaurIdentity.instances do if d.bucketKey=="compy/gold" and d.origin.kind=="legacy_unknown" then legacyGoldId=id end end
+badChain("emerald",concat(take(golds,9),{legacyGoldId}),"missing_pattern")
+badChain("diamond",take(golds,3),"wrong_stage")
+-- Emerald 1: consumes 10 fused Golds, ledger records parentOperationIds.
+local emerald1,qe1=fuse("emerald","e1",golds)
+local em=chain.dinosaurIdentity.instances[emerald1]
+assert(em.stage=="emerald" and em.bucketKey=="compy/emerald" and em.genes.patternId=="06_wavy_stripes")
+assert(#em.origin.parents==10 and em.origin.parentStage=="gold" and em.origin.recipeVersion=="emerald-same-species-pattern-10-v1")
+for _,par in em.origin.parents do assert(par.origin.kind=="fusion" and par.origin.operationId and par.origin.parents==nil,"bounded, non-recursive") end
+local le=chain.dinosaurIdentity.fusions["fusion:e1"]
+assert(#le.parentOperationIds==10 and #le.parentEggIds==0)
+for i=1,10 do assert(table.find(le.parentOperationIds,"fusion:g"..i)) end
+assert(chain.collection.compy.gold==legacyGold+1 and chain.collection.compy.emerald==1)
+local emeraldBytes=F.encodedSize(em)
+local emeraldLedgerBytes=F.encodedSize(le)
+-- Ancestry by operation id: each Gold ledger still resolves its 50 parent eggs.
+for i=1,10 do local lin=assert(F.lineage(chain.dinosaurIdentity,"fusion:g"..i)) assert(count(lin.parentEggs)==50) end
+-- Reload reconciles unchanged with the additive Emerald counter.
+assert(same(assert(I.reconcile(chain.collection,I.copy(chain.dinosaurIdentity),OWNER)),chain.dinosaurIdentity))
+-- Two more Emeralds.
+local emeralds={emerald1}
+for e=2,3 do
+ local gs={}
+ for i=1,10 do table.insert(gs,makeGold("compy","06_wavy_stripes","g"..e.."-"..i)) end
+ table.insert(emeralds,(fuse("emerald","e"..e,gs)))
+end
+assert(chain.collection.compy.emerald==3)
+badChain("diamond",take(emeralds,2),"wrong_donor_count")
+-- Stale quote at a higher tier: a donor Emerald changes after quoting.
+local qd,od,rd=prepare(chain,"d1",emeralds,"diamond",true)
+local staleChain=I.copy(chain) staleChain.dinosaurIdentity.instances[emeralds[2]].cosmetics.ownedAuraIds.x=true
+rejects(staleChain,rd,od,"stale_quote","stale emerald donor")
+-- Consent: purchased FX on an Emerald donor requires the itemized consent digest.
+local consentChain=I.copy(chain) consentChain.dinosaurIdentity.instances[emeralds[1]].cosmetics.ownedTrailIds.fern=true
+local qc=assert(F.quote(consentChain.dinosaurIdentity,OWNER,"diamond",emeralds))
+local fernLoss=nil for _,l in qc.lossManifest do if l.instanceId==emeralds[1] then fernLoss=l end end
+assert(qc.consentRequired and qc.consentDigest~=qd.consentDigest and fernLoss and fernLoss.trailIds[1]=="fern")
+local oc=assert(F.prepareOutcome(qc,roller))
+rejects(consentChain,{token="dc",targetStage="diamond",donorIds=emeralds,quoteDigest=qc.quoteDigest},oc,"consent_required")
+-- Rollback: projection mismatch at Emerald stage leaves the input untouched.
+local mis=I.copy(chain) mis.collection.compy.emerald=2 rejects(mis,rd,od,"grouped_mismatch")
+-- Diamond: consumes 3 Emeralds.
+local diamondsBefore=chain.collection.compy.diamond
+local nd,sd,resd=F.apply(chain,OWNER,rd,od,9)
+assert(sd=="fused") chain=nd
+local dia=chain.dinosaurIdentity.instances[resd.resultId]
+assert(dia.stage=="diamond" and dia.bucketKey=="compy/diamond" and #dia.origin.parents==3 and dia.origin.parentStage=="emerald")
+assert(chain.collection.compy.emerald==0 and chain.collection.compy.diamond==diamondsBefore+1)
+local ld=chain.dinosaurIdentity.fusions["fusion:d1"]
+assert(#ld.parentOperationIds==3 and table.find(ld.parentOperationIds,"fusion:e1"))
+-- Idempotent replay of the Diamond after reload.
+local reloadedChain={collection=I.copy(chain.collection),dinosaurIdentity=assert(I.reconcile(chain.collection,I.copy(chain.dinosaurIdentity),OWNER))}
+assert(same(reloadedChain.dinosaurIdentity,chain.dinosaurIdentity))
+assert(select(2,F.apply(reloadedChain,OWNER,rd,nil))=="duplicate")
+-- Full ancestry walk by operation id: Diamond -> 3 Emeralds -> 30 Golds -> 1500 eggs.
+local eggsSeen,ops={},{"fusion:d1"}
+local goldOps=0
+while #ops>0 do
+ local op=table.remove(ops)
+ local l=chain.dinosaurIdentity.fusions[op]
+ if l.targetStage=="gold" then goldOps+=1 end
+ for _,e in l.parentEggIds do eggsSeen[e]=true end
+ for _,parentOp in l.parentOperationIds do table.insert(ops,parentOp) end
+end
+assert(goldOps==30 and count(eggsSeen)==1500)
+-- Legacy Build 020 Gold -> Diamond grouped decrement is unchanged: spends the legacy Gold.
+local legacy=I.copy(chain) legacy.collection.compy.gold-=1 legacy.collection.compy.diamond+=1
+local spentLegacy=assert(I.reconcile(legacy.collection,legacy.dinosaurIdentity,OWNER))
+assert(spentLegacy.instances[spotsGold] and spentLegacy.instances[legacyGoldId]==nil)
+-- A grouped Diamond decrement that would erase the crafted Diamond fails closed.
+local erase=I.copy(chain) erase.collection.compy.diamond=0
+assert(select(2,I.reconcile(erase.collection,erase.dinosaurIdentity,OWNER))=="protected_identity")
+local diaBytes=F.encodedSize(dia)
+local sidecar=F.encodedSize(chain.dinosaurIdentity)
+assert(sidecar<F.MaxSidecarBytes)
+print("Ladder chain passed: 30x Gold(50 Base) -> 3x Emerald(10 Gold) -> Diamond(3 Emerald); wrong counts, wrong stage, mixed species/pattern, legacy Gold, stale quote, consent, rollback, reload, replay, ancestry by operation id (30 Gold ledgers, 1500 eggs), legacy Gold->Diamond unchanged")
+print(string.format("Ladder bytes: Gold record %d, Gold ledger %d, archived egg %d (x50 per Gold), Emerald record %d, Emerald ledger %d, Diamond record %d, chain sidecar %d of %d",
+ goldBytes,goldLedgerBytes,eggBytes,emeraldBytes,emeraldLedgerBytes,diaBytes,sidecar,F.MaxSidecarBytes))
+
+-- Storage limit at 50-donor ledger size: fails closed with nothing consumed.
+local sp=fixture()
+local _,so,sr=prepare(sp,"cap50",idsIn(sp,"compy/variant/wavyA"))
+local okSize=F.encodedSize(assert(F.apply(sp,OWNER,sr,so,1)).dinosaurIdentity)
+local savedLimit=F.MaxSidecarBytes
+F.MaxSidecarBytes=okSize-1 rejects(sp,sr,so,"storage_limit","50-donor ledger over ceiling")
+F.MaxSidecarBytes=okSize assert(select(2,F.apply(sp,OWNER,sr,so,1))=="fused")
+F.MaxSidecarBytes=savedLimit
+print("Storage limit passed at 50-donor ledger size: ceiling-1 byte rejects, exact ceiling commits")
+
+-- Odds normalization uses the ACTUAL donor count N (50 / 10 / 3), never /10.
+local function summaryN(n,shiny,big,ember)
+ local s={speciesId="compy",patternId="06_wavy_stripes",targetStage="gold",donorCount=n,shinyCount=shiny,bigCount=big,
+  mutationCounts=if ember>0 then {ember=ember} else {},conditionCounts={normal=n},colors={}}
+ for _=1,n do table.insert(s.colors,{primaryColorId="green",secondaryColorId="blue",blend=20}) end
+ return s
+end
+for _,n in {50,10,3} do
+ for _,k in {0,1,n} do
+  local d=assert(O.distribution(summaryN(n,k,k,k)))
+  assert(near(d.shiny,0.5*k/n) and near(d.big,0.5*k/n) and near(d.noMutation,1-0.5*k/n))
+  assert(near(sum(d.condition),1) and near(sum(d.primaryColor),1))
+ end
+end
+assert(O.distribution(summaryN(50,51,0,0))==nil,"shiny count above N rejected")
+assert(qe1.summary.donorCount==10 and qd.summary.donorCount==3)
+print("Odds N passed: Shiny/BIG/mutation = 0.5 x donors/N for N=50/10/3 (1 Shiny of 50 = 1%, of 10 = 5%, of 3 = 16.7%)")
+end
+ladderChain()
 print("Fusion verified: validation, consent, atomic copy-on-write commit, idempotency, rollback, lineage, storage bounds and BD-064 provisional odds (normalization, sampling parity, determinism)")
 ''')
 if __name__ == '__main__':

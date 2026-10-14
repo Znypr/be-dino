@@ -6,13 +6,22 @@
 -- this module only explains and previews. Exercised by tools/verify_fusion_ui.py.
 local Sel = {}
 
-Sel.DonorCount = 10
--- Owner decision 2026-10-13: Gold active; Emerald/Diamond visible but locked.
+-- OWNER DECISION 2026-10-13 (docs/58): Gold = 50 Base, Emerald = 10 Gold,
+-- Diamond = 3 Emerald; same species + same pattern; all three tiers active. Mirrors
+-- IdentityFusion.Recipes (verify_fusion_ui.py asserts they match).
 Sel.Stages = {
-    {id = "gold", name = "Gold", source = "base", donorCount = 10, approved = true},
-    {id = "emerald", name = "Emerald", source = "gold", donorCount = nil, approved = false},
-    {id = "diamond", name = "Diamond", source = "emerald", donorCount = nil, approved = false},
+    {id = "gold", name = "Gold", source = "base", donorCount = 50, approved = true},
+    {id = "emerald", name = "Emerald", source = "gold", donorCount = 10, approved = true},
+    {id = "diamond", name = "Diamond", source = "emerald", donorCount = 3, approved = true},
 }
+-- Largest recipe; kept for older callers. Use Sel.donorCount(stage) instead.
+Sel.DonorCount = 50
+function Sel.donorCount(stageId: string?): number?
+    for _, s in Sel.Stages do if s.id == stageId and s.approved then return s.donorCount end end
+    return nil
+end
+-- Above this many slots the menu shows a compact n/N counter grid instead of cards.
+Sel.CompactSlotThreshold = 10
 Sel.LockedStageText = "Recipe not approved yet"
 Sel.ConditionOrder = {"cracked", "dirty", "normal", "rainbow", "astra"}
 
@@ -21,6 +30,11 @@ local function stageInfo(id: string?)
     return nil
 end
 Sel.stage = stageInfo
+function Sel.stageTitle(id: string?): string
+    if id == "base" then return "Base" end
+    local s = stageInfo(id)
+    return if s then s.name else tostring(id)
+end
 
 -- Display catalog ------------------------------------------------------------------
 local function titleCase(text: string): string
@@ -92,7 +106,7 @@ Sel.ReasonText = {
     locked = "Locked: unlock to use",
     favorited = "Favorited: unfavorite to use",
     recipe_not_approved = "Recipe not approved yet",
-    full = "All 10 slots are filled",
+    full = "All slots are filled",
 }
 
 -- Context: {targetStage, speciesId?, patternId?} where species/pattern come from the
@@ -261,7 +275,7 @@ function Sel.toggle(selection, d, targetStage: string, byId)
     if at then table.remove(result, at) return result, true, nil end
     local recipe = stageInfo(targetStage)
     if not recipe or not recipe.approved then return selection, false, "recipe_not_approved" end
-    if #result >= (recipe.donorCount or Sel.DonorCount) then return selection, false, "full" end
+    if #result >= recipe.donorCount then return selection, false, "full" end
     local reason = Sel.ineligibility(d, Sel.context(targetStage, result, byId, nil))
     if reason then return selection, false, reason end
     table.insert(result, d.instanceId)
@@ -272,8 +286,8 @@ end
 -- cosmetic-bearing / locked / favorited. Returns (selection, added, shortfall).
 function Sel.autoFill(dinos, selection, targetStage: string, filters, catalog)
     local recipe = stageInfo(targetStage)
-    if not recipe or not recipe.approved then return selection, 0, Sel.DonorCount end
-    local need = (recipe.donorCount or Sel.DonorCount) - #selection
+    if not recipe or not recipe.approved then return selection, 0, 0 end
+    local need = recipe.donorCount - #selection
     local byId = Sel.index(dinos)
     local result = table.clone(selection)
     if need <= 0 then return result, 0, 0 end
@@ -305,7 +319,7 @@ function Sel.autoFill(dinos, selection, targetStage: string, filters, catalog)
     return result, added, need - added
 end
 
--- Selected-donor histogram: "2 Shiny / 10" etc. Cosmetics are listed but not rarity.
+-- Selected-donor histogram: "2 Shiny / 50" etc. Cosmetics are listed but not rarity.
 function Sel.histogram(selection, byId)
     local h = {count = 0, shiny = 0, big = 0, mutations = {}, cosmetics = 0, valuable = 0}
     for _, id in selection do
@@ -502,9 +516,9 @@ Sel.FailureText = {
     consent_required = "Please review the itemized loss list and confirm again.",
     donor_missing = "A selected dino is no longer in your collection. Selection refreshed.",
     donor_locked = "A selected dino is locked or favorited. Selection refreshed.",
-    wrong_donor_count = "Exactly 10 matching dinos are required.",
-    species_mismatch = "All 10 dinos must be the same species.",
-    pattern_mismatch = "All 10 dinos must share the same egg pattern.",
+    wrong_donor_count = "Exactly the recipe count of matching dinos is required (50 Base, 10 Gold or 3 Emerald).",
+    species_mismatch = "All dinos must be the same species.",
+    pattern_mismatch = "All dinos must share the same egg pattern.",
     recipe_not_approved = "This recipe is not approved yet.",
     odds_not_approved = "Fusion odds are not approved yet. Nothing was consumed.",
     save_failed = "Saving failed. Nothing is lost; retrying with the same request.",
@@ -621,6 +635,7 @@ function Sel.revealSequence(quote, result, catalog)
 end
 
 -- Dino Details view model (BD-062) -------------------------------------------------
+Sel.DetailsParentLimit = 12
 Sel.EggSourceNames = {alpha_chest = "Run reward egg", run = "Run egg", crystal_shop = "Crystal Shop egg",
     chest_claim = "Reward egg", progression = "Progression egg"}
 
@@ -677,13 +692,19 @@ function Sel.details(d, catalog)
         for _, snap in snapshots do byParent[snap.instanceId] = snap end
         local ids = if #parentIds > 0 then parentIds else (function()
             local list = {} for _, snap in snapshots do table.insert(list, snap.instanceId) end return list end)()
-        for _, id in ids do
+        -- Bounded view: a Gold has 50 parents; list the first DetailsParentLimit.
+        local shown = math.min(#ids, Sel.DetailsParentLimit)
+        if #ids > shown then
+            table.insert(view.origin.lines, "Showing " .. shown .. " of " .. #ids .. " parents")
+        end
+        for i = 1, shown do
+            local id = ids[i]
             local snap = byParent[id]
             local eggId = snap and snap.origin and snap.origin.eggId
             local egg = eggId and eggs[eggId]
             if not egg and #eggs > 0 then for _, e in eggs do if e.eggId == eggId then egg = e end end end
             table.insert(view.origin.parents, {instanceId = id,
-                text = if snap then (lookup(catalog, "patterns", snap.genes and snap.genes.patternId) .. " " .. lookup(catalog, "species", snap.speciesId, "Dino")
+                text = if snap then (lookup(catalog, "patterns", (snap.genes and snap.genes.patternId) or g.patternId) .. " " .. lookup(catalog, "species", snap.speciesId or d.speciesId, "Dino")
                     .. (if snap.shiny then " • Shiny" else "") .. (if snap.big then " • BIG" else "")
                     .. (if type(snap.mutationId) == "string" and snap.mutationId ~= "" then " • " .. lookup(catalog, "mutations", snap.mutationId) else ""))
                     else id,

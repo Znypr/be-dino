@@ -79,7 +79,11 @@ assert(unsupported==nil and fusionReason=="missing_fusion_ledger")
 assert(state.instances[result.instanceId]==nil)
 assert(not pcall(I.fusionRecord,'new',fresh,{parents[1],parents[1]},'op','r','v'))
 -- Nested ancestry is referenced, never copied recursively.
-local higher=I.fusionRecord('higher',fresh,{result,parents[2]},'op2','r','v')
+local twin=I.copy(result) twin.instanceId='u:123/d:1001'
+-- Mixed-stage parents are rejected (every recipe consumes one source stage).
+assert(not pcall(I.fusionRecord,'mixed',fresh,{result,parents[2]},'op2','r','v'))
+local higher=I.fusionRecord('higher',{speciesId=fresh.speciesId,stage='emerald',genes=I.copy(fresh.genes)},{result,twin},'op2','r','v')
+assert(higher.origin.parentStage=='gold' and higher.origin.parents[1].speciesId==nil and higher.origin.parents[1].genes.patternId==nil)
 assert(higher.origin.parents[1].origin.operationId=='fusion-op')
 assert(higher.origin.parents[1].origin.parents==nil)
 print('150-egg reconciliation seconds:', os.clock()-started)

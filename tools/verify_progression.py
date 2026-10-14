@@ -372,17 +372,19 @@ local function claimAll(user, repo)
  return ids
 end
 local byBucket={}
-for round=1,12 do
+local donors=nil
+-- Gold = 50 Base donors of one species+pattern bucket (owner decision 2026-10-13).
+for round=1,200 do
  assert(LocalRepository.commitRunSettlement(localUser,"fusion-run-"..round,10))
  for _,id in claimAll(localUser,LocalRepository) do
   local d=LocalRepository.dinosaurDetails(localUser,id)
   byBucket[d.bucketKey]=byBucket[d.bucketKey] or {}
   table.insert(byBucket[d.bucketKey],id)
  end
+ for key,list in byBucket do if #list>=50 and string.find(key,"/variant/") and not donors then donors={table.unpack(list,1,50)} end end
+ if donors then break end
 end
-local donors=nil
-for key,list in byBucket do if #list>=10 and string.find(key,"/variant/") then donors={table.unpack(list,1,10)} end end
-assert(donors,"expected 10 same-bucket hatched donors")
+assert(donors,"expected 50 same-bucket hatched donors")
 local donorDetails=LocalRepository.dinosaurDetails(localUser,donors[1])
 assert(donorDetails.traitsKnown and donorDetails.genes.patternId~=nil)
 local fusionSpecies=donorDetails.speciesId
@@ -412,7 +414,7 @@ end}))
 -- Client-supplied stale digest and wrong-owner IDs are refused.
 local staleRequest=table.clone(request) staleRequest.quoteDigest="stale"
 assert(select(3,LocalRepository.fuseDinosaurs(localUser,staleRequest))=="stale_quote")
-local foreign=table.clone(donors) foreign[10]="u:123/d:1"
+local foreign=table.clone(donors) foreign[50]="u:123/d:1"
 assert(select(2,LocalRepository.quoteFusion(localUser,"gold",foreign))=="wrong_owner")
 assert(select(3,LocalRepository.fuseDinosaurs(localUser,{token=string.rep("x",81)}))=="invalid_token")
 -- Write outage: every attempt fails at the memory write; nothing is consumed.
@@ -444,7 +446,7 @@ for _,id in donors do assert(LocalRepository.dinosaurDetails(localUser,id)==nil)
 local gold=assert(LocalRepository.dinosaurDetails(localUser,committed.resultId))
 assert(gold.stage=="gold" and gold.origin.kind=="fusion" and gold.genes.blend==(donorDetails.genes.blend+37)%100)
 assert(gold.genes.patternId==donorDetails.genes.patternId and next(gold.cosmetics.ownedAuraIds)==nil)
-assert(#gold.lineage.parentIds==10 and next(gold.lineage.parentEggs)~=nil)
+assert(#gold.lineage.parentIds==50 and next(gold.lineage.parentEggs)~=nil)
 for _,egg in gold.lineage.parentEggs do assert(egg.genes.patternId==donorDetails.genes.patternId) end
 -- Duplicate confirm: same result, no reroll, no second consumption.
 local dupOk,dupResult,dupStatus=LocalRepository.fuseDinosaurs(localUser,request)
@@ -458,7 +460,7 @@ assert(select(3,LocalRepository.fuseDinosaurs(localUser,reuse))=="donor_missing"
 LocalRepository.release(localUser)
 assert(LocalRepository.load(localUser))
 local reloaded=assert(LocalRepository.dinosaurDetails(localUser,committed.resultId))
-assert(reloaded.origin.operationId=="fusion:repo-fuse-1" and #reloaded.lineage.parentIds==10)
+assert(reloaded.origin.operationId=="fusion:repo-fuse-1" and #reloaded.lineage.parentIds==50)
 local replayOk,replayResult,replayStatus=LocalRepository.fuseDinosaurs(localUser,request)
 assert(replayOk and replayStatus=="duplicate" and replayResult.resultId==committed.resultId and rolls==1)
 assert(transforms==persistentCalls and data['u:999']==nil)
@@ -511,7 +513,7 @@ assert(PersistentRepository.fusionStatus(pu))
 -- Hatches credit identities in the persisted sidecar (same UpdateAsync transform).
 traitRoll=0.5
 local hatched={}
-for round=1,6 do
+for round=1,20 do
  assert(PersistentRepository.commitRunSettlement(pu,"persist-run-"..round,10))
  for _,chest in pu.attrs.ChestQueueJson do
   local ok,h=PersistentRepository.claimChest(pu,chest.id)
@@ -519,13 +521,13 @@ for round=1,6 do
   for _,id in h.instanceIds do table.insert(hatched,id) end
  end
 end
-assert(#hatched==30) -- BD-044: 5 queued eggs claimed per 10-egg run, one identity each
+assert(#hatched==100) -- BD-044: 5 queued eggs claimed per 10-egg run, one identity each
 for _,id in hatched do
  local stored=data[KEY].dinosaurIdentity.instances[id]
  assert(stored and stored.origin.kind=="hatch" and data[KEY].dinosaurIdentity.eggs[stored.origin.eggId])
 end
-local donors={table.unpack(hatched,1,10)}
-local donors2={table.unpack(hatched,11,20)}
+local donors={table.unpack(hatched,1,50)}
+local donors2={table.unpack(hatched,51,100)}
 local quote=assert(PersistentRepository.quoteFusion(pu,"gold",donors))
 assert(quote.oddsVersion=="fusion-odds-provisional-v1" and quote.odds.primaryColor[quote.summary.colors[1].primaryColorId]==1)
 local request={token="persist-1",targetStage="gold",donorIds=donors,quoteDigest=quote.quoteDigest,consentDigest=quote.consentDigest}
@@ -545,7 +547,7 @@ data[KEY].session.leaseId=lease
 PersistentRepository.release(pu) assert(PersistentRepository.load(pu))
 -- Whole-profile byte preflight: a fusion that would exceed the budget is rejected.
 local budget=mutableConfig.IdentityFusionProfileBudgetBytes
-mutableConfig.IdentityFusionProfileBudgetBytes=IdentityFusion.encodedSize(data[KEY])-1000 -- below the post-fusion size
+mutableConfig.IdentityFusionProfileBudgetBytes=math.floor(IdentityFusion.encodedSize(data[KEY])/2) -- below the post-fusion size (50 donors shrink the sidecar a little)
 local okB,_,bytes=PersistentRepository.fuseDinosaurs(pu,request)
 mutableConfig.IdentityFusionProfileBudgetBytes=budget
 assert(not okB and bytes=="storage_limit" and donorsIntact(donors) and pu.attrs.ProfileState=="Loaded")
@@ -566,7 +568,7 @@ assert(dupOk and dupStatus=="duplicate" and dup.resultId==committed.resultId and
 PersistentRepository.release(pu)
 assert(PersistentRepository.load(pu))
 local reloaded=assert(PersistentRepository.dinosaurDetails(pu,committed.resultId))
-assert(reloaded.lineage and #reloaded.lineage.parentIds==10 and next(reloaded.lineage.parentEggs)~=nil)
+assert(reloaded.lineage and #reloaded.lineage.parentIds==50 and next(reloaded.lineage.parentEggs)~=nil)
 assert(select(3,PersistentRepository.fuseDinosaurs(pu,request))=="duplicate")
 -- Reconcile failure (over the 3,000-identity guard) suspends identity, never deletes it,
 -- and keeps the profile writable; recovering the grouped counts resumes identity.
@@ -674,7 +676,9 @@ assert(keys(q.quote.odds)=="big,condition,mutation,noMutation,primaryColor,secon
 assert(q.quote.oddsVersion=="fusion-odds-provisional-v1" and q.quote.odds.noMutation==1)
 local foreignIds=table.clone(donors2) foreignIds[1]="u:1/d:1"
 assert(invoke({action="quote",targetStage="gold",donorIds=foreignIds}).reason=="wrong_owner")
-assert(invoke({action="quote",targetStage="emerald",donorIds=donors2}).reason=="recipe_not_approved")
+assert(invoke({action="quote",targetStage="emerald",donorIds=donors2}).reason=="wrong_donor_count") -- Emerald is approved: 10 Gold, not 50 Base
+assert(invoke({action="quote",targetStage="platinum",donorIds=donors2}).reason=="unknown_stage")
+assert(invoke({action="quote",targetStage="gold",donorIds=table.move(donors2,1,10,1,{})}).reason=="wrong_donor_count")
 local fuseReq={action="fuse",token="remote-1",targetStage="gold",donorIds=donors2,quoteDigest=q.quote.quoteDigest,consentDigest=q.quote.consentDigest}
 assert(invoke({action="fuse",token="remote-0",targetStage="gold",donorIds=donors2,quoteDigest="stale"}).reason=="stale_quote")
 local fused=invoke(fuseReq)
@@ -702,8 +706,8 @@ local badRequests={1,"list",true,{},{action=5},{action="nope"},{action="list",cu
  {action="fuse",token=string.rep("t",81),targetStage="gold",donorIds=donors2,quoteDigest="d"},
  {action="fuse",token="t",targetStage="gold",donorIds=donors2},{action="fuse",token="t",targetStage="gold",donorIds=donors2,quoteDigest="d",consentDigest=5},
  {[1]="list"},{action="list",[2]=true}}
-local seventeen={} for i=1,17 do seventeen[i]="u:4242/d:"..i end
-table.insert(badRequests,{action="quote",targetStage="gold",donorIds=seventeen})
+local tooMany={} for i=1,51 do tooMany[i]="u:4242/d:"..i end -- one above the largest recipe (50)
+table.insert(badRequests,{action="quote",targetStage="gold",donorIds=tooMany})
 assert(invoke(nil).reason=="bad_request" and invoke().reason=="bad_request")
 for i=1,#badRequests do
  local response=invoke(badRequests[i])

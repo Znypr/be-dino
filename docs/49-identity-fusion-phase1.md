@@ -3,6 +3,8 @@
 Implemented 2026-10-13 on `claude/be-dino-development`, based on `50116b8`
 (BD-060 merge). Task status lives only in [Kanban](07-kanban.md). Owner intent is
 [the fusion specification](46-pattern-fusion-dino-identity-and-cosmetic-progression.md);
+
+> **2026-10-13 update:** the recipe is now Gold = 50 Base / Emerald = 10 Gold / Diamond = 3 Emerald: see [58](58-fusion-ladder-50-10-3.md). The 10-donor text below is historical.
 the identity sidecar this builds on is [BD-060](47-dinosaur-identity-foundation.md).
 
 **Scope: a disabled, development-only transaction foundation.** It is not playable

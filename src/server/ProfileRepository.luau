@@ -218,6 +218,9 @@ local function isValidProfile(profile: any): boolean
             or entry.base > 2000000000 or entry.gold > 2000000000 or entry.diamond > 2000000000 then
             return false
         end
+        -- Additive optional Emerald counter (fusion ladder 50/10/3); nil == 0.
+        if entry.emerald ~= nil and (typeof(entry.emerald) ~= "number" or entry.emerald < 0
+            or entry.emerald % 1 ~= 0 or entry.emerald > 2000000000) then return false end
         if not ProgressionRules.validEvents(entry.events) then return false end
         if not EggTraits.valid(entry.variants) then return false end
         for _,variant in entry.variants do
@@ -1012,7 +1015,7 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string): (boo
     if not knownSpecies(speciesId) then return false, "unknown_species" end
 
     local cachedEntry = cached.collection[speciesId]
-    if typeof(cachedEntry) ~= "table" or (cachedEntry.base + cachedEntry.gold + cachedEntry.diamond <= 0 and not ProgressionRules.eventMutation(cachedEntry) and not EggTraits.selected(cachedEntry)) then
+    if typeof(cachedEntry) ~= "table" or (cachedEntry.base + cachedEntry.gold + (cachedEntry.emerald or 0) + cachedEntry.diamond <= 0 and not ProgressionRules.eventMutation(cachedEntry) and not EggTraits.selected(cachedEntry)) then
         return false, "locked"
     end
     if cached.equippedSpeciesId == speciesId then
@@ -1031,7 +1034,7 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string): (boo
                 return nil
             end
             local entry = profileValue.collection[speciesId]
-            if typeof(entry) ~= "table" or (entry.base + entry.gold + entry.diamond <= 0 and not ProgressionRules.eventMutation(entry) and not EggTraits.selected(entry)) then
+            if typeof(entry) ~= "table" or (entry.base + entry.gold + (entry.emerald or 0) + entry.diamond <= 0 and not ProgressionRules.eventMutation(entry) and not EggTraits.selected(entry)) then
                 locked = true
                 return nil
             end

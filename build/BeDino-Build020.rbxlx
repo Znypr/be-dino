@@ -367414,13 +367414,22 @@ return Rules
 -- this module only explains and previews. Exercised by tools/verify_fusion_ui.py.
 local Sel = {}
 
-Sel.DonorCount = 10
--- Owner decision 2026-10-13: Gold active; Emerald/Diamond visible but locked.
+-- OWNER DECISION 2026-10-13 (docs/58): Gold = 50 Base, Emerald = 10 Gold,
+-- Diamond = 3 Emerald; same species + same pattern; all three tiers active. Mirrors
+-- IdentityFusion.Recipes (verify_fusion_ui.py asserts they match).
 Sel.Stages = {
-    {id = "gold", name = "Gold", source = "base", donorCount = 10, approved = true},
-    {id = "emerald", name = "Emerald", source = "gold", donorCount = nil, approved = false},
-    {id = "diamond", name = "Diamond", source = "emerald", donorCount = nil, approved = false},
+    {id = "gold", name = "Gold", source = "base", donorCount = 50, approved = true},
+    {id = "emerald", name = "Emerald", source = "gold", donorCount = 10, approved = true},
+    {id = "diamond", name = "Diamond", source = "emerald", donorCount = 3, approved = true},
 }
+-- Largest recipe; kept for older callers. Use Sel.donorCount(stage) instead.
+Sel.DonorCount = 50
+function Sel.donorCount(stageId: string?): number?
+    for _, s in Sel.Stages do if s.id == stageId and s.approved then return s.donorCount end end
+    return nil
+end
+-- Above this many slots the menu shows a compact n/N counter grid instead of cards.
+Sel.CompactSlotThreshold = 10
 Sel.LockedStageText = "Recipe not approved yet"
 Sel.ConditionOrder = {"cracked", "dirty", "normal", "rainbow", "astra"}
 
@@ -367429,6 +367438,11 @@ local function stageInfo(id: string?)
     return nil
 end
 Sel.stage = stageInfo
+function Sel.stageTitle(id: string?): string
+    if id == "base" then return "Base" end
+    local s = stageInfo(id)
+    return if s then s.name else tostring(id)
+end
 
 -- Display catalog ------------------------------------------------------------------
 local function titleCase(text: string): string
@@ -367500,7 +367514,7 @@ Sel.ReasonText = {
     locked = "Locked: unlock to use",
     favorited = "Favorited: unfavorite to use",
     recipe_not_approved = "Recipe not approved yet",
-    full = "All 10 slots are filled",
+    full = "All slots are filled",
 }
 
 -- Context: {targetStage, speciesId?, patternId?} where species/pattern come from the
@@ -367669,7 +367683,7 @@ function Sel.toggle(selection, d, targetStage: string, byId)
     if at then table.remove(result, at) return result, true, nil end
     local recipe = stageInfo(targetStage)
     if not recipe or not recipe.approved then return selection, false, "recipe_not_approved" end
-    if #result &gt;= (recipe.donorCount or Sel.DonorCount) then return selection, false, "full" end
+    if #result &gt;= recipe.donorCount then return selection, false, "full" end
     local reason = Sel.ineligibility(d, Sel.context(targetStage, result, byId, nil))
     if reason then return selection, false, reason end
     table.insert(result, d.instanceId)
@@ -367680,8 +367694,8 @@ end
 -- cosmetic-bearing / locked / favorited. Returns (selection, added, shortfall).
 function Sel.autoFill(dinos, selection, targetStage: string, filters, catalog)
     local recipe = stageInfo(targetStage)
-    if not recipe or not recipe.approved then return selection, 0, Sel.DonorCount end
-    local need = (recipe.donorCount or Sel.DonorCount) - #selection
+    if not recipe or not recipe.approved then return selection, 0, 0 end
+    local need = recipe.donorCount - #selection
     local byId = Sel.index(dinos)
     local result = table.clone(selection)
     if need &lt;= 0 then return result, 0, 0 end
@@ -367713,7 +367727,7 @@ function Sel.autoFill(dinos, selection, targetStage: string, filters, catalog)
     return result, added, need - added
 end
 
--- Selected-donor histogram: "2 Shiny / 10" etc. Cosmetics are listed but not rarity.
+-- Selected-donor histogram: "2 Shiny / 50" etc. Cosmetics are listed but not rarity.
 function Sel.histogram(selection, byId)
     local h = {count = 0, shiny = 0, big = 0, mutations = {}, cosmetics = 0, valuable = 0}
     for _, id in selection do
@@ -367910,9 +367924,9 @@ Sel.FailureText = {
     consent_required = "Please review the itemized loss list and confirm again.",
     donor_missing = "A selected dino is no longer in your collection. Selection refreshed.",
     donor_locked = "A selected dino is locked or favorited. Selection refreshed.",
-    wrong_donor_count = "Exactly 10 matching dinos are required.",
-    species_mismatch = "All 10 dinos must be the same species.",
-    pattern_mismatch = "All 10 dinos must share the same egg pattern.",
+    wrong_donor_count = "Exactly the recipe count of matching dinos is required (50 Base, 10 Gold or 3 Emerald).",
+    species_mismatch = "All dinos must be the same species.",
+    pattern_mismatch = "All dinos must share the same egg pattern.",
     recipe_not_approved = "This recipe is not approved yet.",
     odds_not_approved = "Fusion odds are not approved yet. Nothing was consumed.",
     save_failed = "Saving failed. Nothing is lost; retrying with the same request.",
@@ -368029,6 +368043,7 @@ function Sel.revealSequence(quote, result, catalog)
 end
 
 -- Dino Details view model (BD-062) -------------------------------------------------
+Sel.DetailsParentLimit = 12
 Sel.EggSourceNames = {alpha_chest = "Run reward egg", run = "Run egg", crystal_shop = "Crystal Shop egg",
     chest_claim = "Reward egg", progression = "Progression egg"}
 
@@ -368085,13 +368100,19 @@ function Sel.details(d, catalog)
         for _, snap in snapshots do byParent[snap.instanceId] = snap end
         local ids = if #parentIds &gt; 0 then parentIds else (function()
             local list = {} for _, snap in snapshots do table.insert(list, snap.instanceId) end return list end)()
-        for _, id in ids do
+        -- Bounded view: a Gold has 50 parents; list the first DetailsParentLimit.
+        local shown = math.min(#ids, Sel.DetailsParentLimit)
+        if #ids &gt; shown then
+            table.insert(view.origin.lines, "Showing " .. shown .. " of " .. #ids .. " parents")
+        end
+        for i = 1, shown do
+            local id = ids[i]
             local snap = byParent[id]
             local eggId = snap and snap.origin and snap.origin.eggId
             local egg = eggId and eggs[eggId]
             if not egg and #eggs &gt; 0 then for _, e in eggs do if e.eggId == eggId then egg = e end end end
             table.insert(view.origin.parents, {instanceId = id,
-                text = if snap then (lookup(catalog, "patterns", snap.genes and snap.genes.patternId) .. " " .. lookup(catalog, "species", snap.speciesId, "Dino")
+                text = if snap then (lookup(catalog, "patterns", (snap.genes and snap.genes.patternId) or g.patternId) .. " " .. lookup(catalog, "species", snap.speciesId or d.speciesId, "Dino")
                     .. (if snap.shiny then " • Shiny" else "") .. (if snap.big then " • BIG" else "")
                     .. (if type(snap.mutationId) == "string" and snap.mutationId ~= "" then " • " .. lookup(catalog, "mutations", snap.mutationId) else ""))
                     else id,
@@ -540277,6 +540298,8 @@ local function buckets(collection)
         for _, stage in {"base", "gold", "diamond"} do
             result[speciesId .. "/" .. stage] = {speciesId = speciesId, stage = stage, count = entry[stage]}
         end
+        -- Additive optional Emerald counter (BD-057 ladder 50/10/3): nil means 0.
+        result[speciesId .. "/emerald"] = {speciesId = speciesId, stage = "emerald", count = if entry.emerald == nil then 0 else entry.emerald}
         for mutationId, count in entry.events or {} do
             result[speciesId .. "/event/" .. mutationId] = {speciesId = speciesId, stage = "base", count = count, mutationId = mutationId}
         end
@@ -540422,26 +540445,33 @@ end
 
 -- Data contract only: caller supplies already rolled output. Does not consume or roll.
 -- Immediate parent snapshots retain traits and origins without recursively copying trees.
+-- Compact (ladder 50/10/3): speciesId, stage and genes.patternId are identical for every
+-- parent (recipe-locked), so they are stored once on the record (origin.parentStage)
+-- instead of 50 times. Readers fall back to the result's speciesId/pattern.
+Identity.MaxFusionParents = 50
 function Identity.fusionRecord(id, output, parents, operationId, recipeVersion, oddsVersion)
     assert(type(id) == "string" and #id &gt; 0 and #id &lt;= 120, "invalid result ID")
     assert(type(operationId) == "string" and #operationId &gt; 0 and #operationId &lt;= 120, "invalid operation ID")
     assert(type(recipeVersion) == "string" and #recipeVersion &gt; 0 and type(oddsVersion) == "string" and #oddsVersion &gt; 0, "versioned recipe and odds required")
     assert(type(output.genes) == "table" and output.genes.patternId ~= nil, "fresh output genes required")
     assert(output.stage == "gold" or output.stage == "emerald" or output.stage == "diamond", "invalid result stage")
-    assert(#parents &gt;= 2 and #parents &lt;= 10, "bounded immediate parents required")
+    assert(#parents &gt;= 2 and #parents &lt;= Identity.MaxFusionParents, "bounded immediate parents required")
     local snapshots, seen = {}, {}
+    local parentStage = parents[1] and parents[1].stage
     for _, parent in parents do
         assert(not seen[parent.instanceId] and parent.instanceId ~= id, "duplicate/cyclic parent")
         assert(parent.speciesId == output.speciesId and parent.genes
             and parent.genes.patternId == output.genes.patternId, "matching species/pattern required")
+        assert(parent.stage == parentStage, "single parent stage required")
         seen[parent.instanceId] = true
-        table.insert(snapshots, {instanceId = parent.instanceId, speciesId = parent.speciesId,
-            stage = parent.stage, genes = copy(parent.genes), big = parent.big, shiny = parent.shiny,
+        local genes = copy(parent.genes)
+        genes.patternId = nil
+        table.insert(snapshots, {instanceId = parent.instanceId, genes = genes, big = parent.big, shiny = parent.shiny,
             mutationId = parent.mutationId, origin = {kind = parent.origin.kind, eggId = parent.origin.eggId, operationId = parent.origin.operationId}})
     end
     -- Grouped compatibility projection: the plain stage bucket (BD-057).
     local result = record(id, output.speciesId .. "/" .. output.stage, output, {kind = "fusion", operationId = operationId,
-        recipeVersion = recipeVersion, oddsVersion = oddsVersion, parents = snapshots})
+        recipeVersion = recipeVersion, oddsVersion = oddsVersion, parentStage = parentStage, parents = snapshots})
     -- No parent cosmetic fields are copied into either output or lineage.
     return result
 end
@@ -540886,7 +540916,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local FusionService = {}
 FusionService.MaxListLimit = 200
 FusionService.DefaultListLimit = 100
-FusionService.MaxDonorIds = 16 -- IdentityFusion enforces the exact recipe count
+FusionService.MaxDonorIds = 50 -- largest recipe (Gold = 50 Base); IdentityFusion enforces the exact per-recipe count
 FusionService.MaxIdLength = 120
 FusionService.MaxDigestLength = 64
 FusionService.MaxTokenLength = 80
@@ -541070,20 +541100,23 @@ return FusionService
 local Identity = require(script.Parent.DinosaurIdentity)
 
 local Fusion = {}
-Fusion.Version = "bd057-phase1"
+Fusion.Version = "bd057-ladder-50-10-3"
 
--- Owner-confirmed order. Only the Gold recipe (10 same-species, same-pattern Base
--- instances) is approved. Emerald/Diamond costs are unapproved: they fail closed until
--- the owner signs off a simulated recipe; never invent a donor count here.
+-- OWNER DECISION 2026-10-13 (supersedes the 10-donor Gold rule; docs/58):
+-- same species + same pattern at every tier, guaranteed, consumes ALL donors and
+-- creates ONE new individual. Gold = 50 Base, Emerald = 10 Gold, Diamond = 3 Emerald.
+-- The donor count is per recipe; nothing else may hard-code it.
 Fusion.Ladder = {"base", "gold", "emerald", "diamond"}
 Fusion.Recipes = {
-    gold = {targetStage = "gold", sourceStage = "base", donorCount = 10, version = "gold-same-species-pattern-10-v1"},
-    emerald = {targetStage = "emerald", sourceStage = "gold", donorCount = nil, version = nil},
-    diamond = {targetStage = "diamond", sourceStage = "emerald", donorCount = nil, version = nil},
+    gold = {targetStage = "gold", sourceStage = "base", donorCount = 50, version = "gold-same-species-pattern-50-v1"},
+    emerald = {targetStage = "emerald", sourceStage = "gold", donorCount = 10, version = "emerald-same-species-pattern-10-v1"},
+    diamond = {targetStage = "diamond", sourceStage = "emerald", donorCount = 3, version = "diamond-same-species-pattern-3-v1"},
 }
--- Stages the grouped Build 020 collection can represent. Emerald needs an additive
--- grouped/schema change before any Emerald recipe can be enabled.
-Fusion.GroupedProjection = {gold = true, diamond = true}
+-- Largest approved donor count (remote/list bounds derive from this).
+Fusion.MaxDonorCount = 50
+-- Stages the grouped collection can represent. Emerald uses the additive optional
+-- collection[species].emerald counter (nil == 0).
+Fusion.GroupedProjection = {gold = true, emerald = true, diamond = true}
 
 -- Byte preflight for the sidecar after fusion. BD-060 measured ~938 KB per 1,000
 -- worst-case identities and a 4 MiB DataStore value limit; this leaves ~1 MiB for the
@@ -541169,6 +541202,15 @@ local function sequence(id: string, ownerKey: string): number?
     return n
 end
 
+-- A fused donor's origin embeds up to 50 immutable parent snapshots; the quote digest
+-- needs only the origin identity (kind/operation/versions), keeping quotes O(donors).
+local function compactOrigin(origin)
+    if type(origin) ~= "table" then return origin end
+    local slim = {}
+    for key, value in origin do if key ~= "parents" then slim[key] = value end end
+    return slim
+end
+
 local function hasCosmetics(instance): boolean
     local c = instance.cosmetics
     return type(c) == "table" and (next(c.ownedAuraIds or {}) ~= nil or next(c.ownedTrailIds or {}) ~= nil
@@ -541241,7 +541283,7 @@ function Fusion.quote(state, ownerKey: string, targetStage: any, donorIds: any)
         -- stage, protection) after quoting invalidates the quote.
         table.insert(snapshot, {instanceId = d.instanceId, bucketKey = d.bucketKey, stage = d.stage, speciesId = d.speciesId,
             genes = d.genes, big = d.big, shiny = d.shiny, mutationId = d.mutationId, cosmetics = d.cosmetics,
-            locked = d.locked, favorited = d.favorited, origin = d.origin})
+            locked = d.locked, favorited = d.favorited, origin = compactOrigin(d.origin)})
         -- Itemized irreversible loss: purchased looks AND valuable natural traits.
         local auras = sortedKeys(d.cosmetics and d.cosmetics.ownedAuraIds)
         local trails = sortedKeys(d.cosmetics and d.cosmetics.ownedTrailIds)
@@ -541306,8 +541348,8 @@ local function groupedCounter(entry, bucketKey: string, speciesId: string)
     local prefix = speciesId .. "/"
     if string.sub(bucketKey, 1, #prefix) ~= prefix then return nil end
     local rest = string.sub(bucketKey, #prefix + 1)
-    if rest == "base" or rest == "gold" or rest == "diamond" then
-        return function() return entry[rest] end, function(n) entry[rest] = n end
+    if rest == "base" or rest == "gold" or rest == "emerald" or rest == "diamond" then
+        return function() return entry[rest] or 0 end, function(n) entry[rest] = n end
     end
     local eventId = string.match(rest, "^event/(.+)$")
     if eventId then
@@ -542271,6 +542313,9 @@ local function isValidProfile(profile: any): boolean
             or entry.base &gt; 2000000000 or entry.gold &gt; 2000000000 or entry.diamond &gt; 2000000000 then
             return false
         end
+        -- Additive optional Emerald counter (fusion ladder 50/10/3); nil == 0.
+        if entry.emerald ~= nil and (typeof(entry.emerald) ~= "number" or entry.emerald &lt; 0
+            or entry.emerald % 1 ~= 0 or entry.emerald &gt; 2000000000) then return false end
         if not ProgressionRules.validEvents(entry.events) then return false end
         if not EggTraits.valid(entry.variants) then return false end
         for _,variant in entry.variants do
@@ -543065,7 +543110,7 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string): (boo
     if not knownSpecies(speciesId) then return false, "unknown_species" end
 
     local cachedEntry = cached.collection[speciesId]
-    if typeof(cachedEntry) ~= "table" or (cachedEntry.base + cachedEntry.gold + cachedEntry.diamond &lt;= 0 and not ProgressionRules.eventMutation(cachedEntry) and not EggTraits.selected(cachedEntry)) then
+    if typeof(cachedEntry) ~= "table" or (cachedEntry.base + cachedEntry.gold + (cachedEntry.emerald or 0) + cachedEntry.diamond &lt;= 0 and not ProgressionRules.eventMutation(cachedEntry) and not EggTraits.selected(cachedEntry)) then
         return false, "locked"
     end
     if cached.equippedSpeciesId == speciesId then
@@ -543084,7 +543129,7 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string): (boo
                 return nil
             end
             local entry = profileValue.collection[speciesId]
-            if typeof(entry) ~= "table" or (entry.base + entry.gold + entry.diamond &lt;= 0 and not ProgressionRules.eventMutation(entry) and not EggTraits.selected(entry)) then
+            if typeof(entry) ~= "table" or (entry.base + entry.gold + (entry.emerald or 0) + entry.diamond &lt;= 0 and not ProgressionRules.eventMutation(entry) and not EggTraits.selected(entry)) then
                 locked = true
                 return nil
             end
@@ -545743,11 +545788,14 @@ scheduleQuote = function()
     local recipe = Sel.stage(state.targetStage)
     if not recipe or not recipe.approved then
         state.quoteStatus, state.quoteMessage = "locked", Sel.LockedStageText
-    elseif #state.selection &lt; (recipe.donorCount or Sel.DonorCount) then
+    elseif #state.selection ~= recipe.donorCount then
+        -- Quotes are requested at EXACTLY the recipe count (50 / 10 / 3).
         state.quoteStatus = "need"
-        state.quoteMessage = "Select " .. ((recipe.donorCount or Sel.DonorCount) - #state.selection) .. " more matching dinos to see exact odds."
+        state.quoteMessage = if #state.selection &lt; recipe.donorCount
+            then "Select " .. (recipe.donorCount - #state.selection) .. " more matching dinos to see exact odds."
+            else "Too many dinos selected: remove " .. (#state.selection - recipe.donorCount) .. "."
     else
-        state.quoteStatus, state.quoteMessage = "loading", "Calculating exact odds for these 10 dinos..."
+        state.quoteStatus, state.quoteMessage = "loading", "Calculating exact odds for these " .. recipe.donorCount .. " dinos..."
         local key, donors, stage = currentKey(), table.clone(state.selection), state.targetStage
         task.delay(FusionMenu.QuoteDebounce, function()
             if serial ~= state.quoteSerial then return end
@@ -545870,8 +545918,31 @@ updateColumn = function()
     if not col.slots then return end
     for _, child in col.slots:GetChildren() do if not child:IsA("UIGridLayout") then child:Destroy() end end
     local recipe = Sel.stage(state.targetStage)
-    local need = (recipe and recipe.donorCount) or Sel.DonorCount
-    for i = 1, need do
+    local need = (recipe and recipe.donorCount) or 0
+    local stageName = if recipe then recipe.name else "?"
+    local counterMode = need &gt; Sel.CompactSlotThreshold
+    local slotLayout = col.slots:FindFirstChildOfClass("UIGridLayout")
+    if slotLayout then
+        -- One row of up to 10 slots (compact strip) or two rows of 5; 3 slots use thirds.
+        local perRow = if counterMode then 1 elseif col.compact then math.max(need, 1) else math.max(math.min(need, 5), 1)
+        local rows = if counterMode or col.compact then 1 else math.ceil(need / perRow)
+        local height = col.slotsHeight or 40
+        slotLayout.CellSize = if counterMode then UDim2.fromScale(1, 1)
+            else UDim2.new(1 / perRow, -4, 0, math.max(18, math.floor(height / rows) - 6))
+    end
+    if counterMode then
+        -- 50-donor Gold: a compact n/N progress counter (Android landscape safe); the
+        -- selected dinos stay highlighted in the grid and a tap there removes them.
+        local bar = W.box(col.slots, UDim2.new(), UDim2.new(), C.outline, 4)
+        bar.Name = "Counter"
+        local fill = W.box(bar, UDim2.fromScale(math.clamp(#state.selection / need, 0, 1), 1), UDim2.new(),
+            if #state.selection == need then C.accent else C.gold, 4)
+        fill.Name = "Fill"
+        local counter = W.label(bar, string.format("%d/%d selected • tap a dino card to remove", #state.selection, need),
+            UDim2.fromScale(1, 1), UDim2.new(), 16, C.text, true)
+        counter.Name = "CounterText"
+    end
+    for i = 1, if counterMode then 0 else need do
         local id = state.selection[i]
         local d = id and state.byId[id]
         if d and col.compact then
@@ -545903,11 +545974,11 @@ updateColumn = function()
         local l = W.label(odds, text, UDim2.new(1, -12, 0, height or 24), UDim2.new(), 18, color, true)
         l.LayoutOrder = order
     end
-    if state.targetStage ~= "gold" then
+    if not (recipe and recipe.approved) then
         line(string.upper(state.targetStage) .. " LOCKED", C.gold, 30)
-        line(Sel.LockedStageText .. ". Gold is the only approved recipe.", nil, 44)
+        line(Sel.LockedStageText .. ".", nil, 44)
     else
-        line("UPGRADED (guaranteed): 1 NEW Gold, stage + stats", C.accent, 40)
+        line("UPGRADED (guaranteed): 1 NEW " .. stageName .. " from " .. need .. " " .. Sel.stageTitle(recipe.source) .. ", stage + stats", C.accent, 40)
         if state.selection[1] and state.byId[state.selection[1]] then
             local g = state.byId[state.selection[1]].genes or {}
             line("PATTERN LOCKED: " .. Sel.name(catalog, "patterns", g.patternId), C.gold)
@@ -545932,14 +546003,19 @@ updateColumn = function()
 end
 
 local function renderBrowse()
-    setTitle("Pattern Fusion: 10 Base -&gt; 1 NEW Gold", C.purple)
+    local active = Sel.stage(state.targetStage)
+    setTitle(if active then string.format("Pattern Fusion: %d %s -&gt; 1 NEW %s", active.donorCount, Sel.stageTitle(active.source), active.name)
+        else "Pattern Fusion", C.purple)
     local root = body :: Frame
     local left = Instance.new("Frame")
     left.Name, left.BackgroundTransparency, left.Size, left.Parent = "Browse", 1, UDim2.new(.6, -6, 1, 0), root
     local right = W.box(root, UDim2.new(.4, -6, 1, 0), UDim2.new(.6, 6, 0, 0), C.card, 6)
     right.Name = "Ingredients"
     -- Row 1: target stage tabs + sort + auto-fill.
-    local tabs = {{"gold", "GOLD"}, {"emerald", "EMERALD (LOCKED)"}, {"diamond", "DIAMOND (LOCKED)"}}
+    local tabs = {}
+    for _, s in Sel.Stages do
+        table.insert(tabs, {s.id, string.upper(s.name) .. (if s.approved then " (" .. s.donorCount .. ")" else " (LOCKED)")})
+    end
     for i, tab in tabs do
         local stage = Sel.stage(tab[1])
         local b = W.button(left, tab[2], UDim2.new(.17, -4, 0, T), UDim2.new((i - 1) * .17, 0, 0, 0),
@@ -546009,6 +546085,7 @@ local function renderBrowse()
     local compact = gui ~= nil and (gui :: ScreenGui).AbsoluteSize.Y &lt; 450
     column.compact = compact
     local slotsHeight = if compact then 26 else T * 2 + 6
+    column.slotsHeight = slotsHeight
     local slotsBottom = T + 6 + slotsHeight
     column.count = W.label(right, "", UDim2.new(1, -100, 0, T), UDim2.fromOffset(6, 2), 24, C.gold, true)
     W.button(right, "CLEAR", UDim2.fromOffset(84, T), UDim2.new(1, -88, 0, 2), C.red, function()
@@ -546056,7 +546133,10 @@ end
 local function renderConfirm()
     local quote = state.quote
     if not quote or state.quoteKey ~= currentKey() then state.mode = "browse" render() return end
-    setTitle("Confirm Gold Fusion (no undo)", C.gold)
+    local recipe = Sel.stage(quote.targetStage or state.targetStage)
+    local stageName = if recipe then recipe.name else "?"
+    local donorTotal = #(quote.donorIds or state.selection)
+    setTitle("Confirm " .. stageName .. " Fusion (no undo)", C.gold)
     local root = body :: Frame
     local loss = Sel.lossSummary(quote, catalog)
     local list = W.scroll(root, UDim2.new(1, 0, 1, -(T + 14)), UDim2.new())
@@ -546067,10 +546147,10 @@ local function renderConfirm()
         local l = W.label(list, text, UDim2.new(1, -14, 0, height or (if #text &gt; 80 then 48 else 26)), UDim2.new(), 20, color, true)
         l.LayoutOrder = order
     end
-    line("GUARANTEED: 1 NEW Gold " .. Sel.name(catalog, "patterns", quote.patternId) .. " " .. Sel.name(catalog, "species", quote.speciesId)
-        .. " with the Gold stage upgrade. Its colors, condition, Shiny, BIG and mutation are freshly rolled.", C.accent, 48)
+    line("GUARANTEED: 1 NEW " .. stageName .. " " .. Sel.name(catalog, "patterns", quote.patternId) .. " " .. Sel.name(catalog, "species", quote.speciesId)
+        .. " with the " .. stageName .. " stage upgrade. Its colors, condition, Shiny, BIG and mutation are freshly rolled.", C.accent, 48)
     line("PATTERN LOCKED: " .. Sel.name(catalog, "patterns", quote.patternId), C.gold)
-    line("ALL 10 DINOS BELOW ARE CONSUMED:", C.red)
+    line("ALL " .. donorTotal .. " DINOS BELOW ARE CONSUMED:", C.red)
     for i, id in quote.donorIds or state.selection do
         local d = state.byId[id]
         line(i .. ". " .. (if d then donorLine(d) else id), if d and #Sel.valuableReasons(d) &gt; 0 then C.purple else nil)
@@ -546100,7 +546180,7 @@ local function renderConfirm()
             render()
         end).Name = "Acknowledge"
     else
-        W.button(root, "FUSE NOW (CONSUMES 10)", UDim2.new(.7, 0, 0, T + 4), UDim2.new(.3, 0, 1, -(T + 6)), C.accent, function()
+        W.button(root, "FUSE NOW (CONSUMES " .. donorTotal .. ")", UDim2.new(.7, 0, 0, T + 4), UDim2.new(.3, 0, 1, -(T + 6)), C.accent, function()
             if state.quoteKey ~= currentKey() then state.mode = "browse" render() return end
             local attempt = Sel.attempt(pendingAttempt, state.targetStage, quote.donorIds or state.selection, quote.quoteDigest, function()
                 return Http:GenerateGUID(false)
@@ -546130,7 +546210,7 @@ runFuse = function(attempt)
     fuseInFlight = true
     state.mode = "fusing"
     setTitle("Fusing...", C.gold)
-    renderStatus("Fusing your 10 dinos...\nThis request is saved: retries reuse the same token, so it can never fuse twice.", C.gold)
+    renderStatus("Fusing your " .. #attempt.donorIds .. " dinos...\nThis request is saved: retries reuse the same token, so it can never fuse twice.", C.gold)
     task.spawn(function()
         local tries = 0
         while true do
@@ -546224,7 +546304,7 @@ local function finalCard(root: Frame, result, stage)
         W.label(info, text, UDim2.new(1, -12, 0, if #text &gt; 44 then 46 else 28), UDim2.new(), 22, color, true).LayoutOrder = order
     end
     line(stage.title, C.gold)
-    line("Crafted Gold (earned) • guaranteed stage", C.accent)
+    line("Crafted " .. Sel.stageTitle(result.targetStage or "gold") .. " (earned) • guaranteed stage", C.accent)
     line("Pattern (locked): " .. Sel.name(catalog, "patterns", result.patternId or g.patternId))
     line("Colors: " .. Sel.geneLine(g, catalog))
     line("Condition: " .. Sel.name(catalog, "conditions", g.conditionId, "?"))
@@ -546302,7 +546382,7 @@ end
 
 local function renderUnavailable()
     setTitle("Fusion unavailable", C.card)
-    renderStatus("Fusion unavailable\nThe 10-dino Gold fusion is not enabled on this server yet. Nothing was changed.", C.gold,
+    renderStatus("Fusion unavailable\nPattern fusion is not enabled on this server yet. Nothing was changed.", C.gold,
         {{"CLOSE", C.red, function() FusionMenu.close() end, "Close"}})
 end
 

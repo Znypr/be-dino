@@ -9,20 +9,23 @@
 local Identity = require(script.Parent.DinosaurIdentity)
 
 local Fusion = {}
-Fusion.Version = "bd057-phase1"
+Fusion.Version = "bd057-ladder-50-10-3"
 
--- Owner-confirmed order. Only the Gold recipe (10 same-species, same-pattern Base
--- instances) is approved. Emerald/Diamond costs are unapproved: they fail closed until
--- the owner signs off a simulated recipe; never invent a donor count here.
+-- OWNER DECISION 2026-10-13 (supersedes the 10-donor Gold rule; docs/58):
+-- same species + same pattern at every tier, guaranteed, consumes ALL donors and
+-- creates ONE new individual. Gold = 50 Base, Emerald = 10 Gold, Diamond = 3 Emerald.
+-- The donor count is per recipe; nothing else may hard-code it.
 Fusion.Ladder = {"base", "gold", "emerald", "diamond"}
 Fusion.Recipes = {
-    gold = {targetStage = "gold", sourceStage = "base", donorCount = 10, version = "gold-same-species-pattern-10-v1"},
-    emerald = {targetStage = "emerald", sourceStage = "gold", donorCount = nil, version = nil},
-    diamond = {targetStage = "diamond", sourceStage = "emerald", donorCount = nil, version = nil},
+    gold = {targetStage = "gold", sourceStage = "base", donorCount = 50, version = "gold-same-species-pattern-50-v1"},
+    emerald = {targetStage = "emerald", sourceStage = "gold", donorCount = 10, version = "emerald-same-species-pattern-10-v1"},
+    diamond = {targetStage = "diamond", sourceStage = "emerald", donorCount = 3, version = "diamond-same-species-pattern-3-v1"},
 }
--- Stages the grouped Build 020 collection can represent. Emerald needs an additive
--- grouped/schema change before any Emerald recipe can be enabled.
-Fusion.GroupedProjection = {gold = true, diamond = true}
+-- Largest approved donor count (remote/list bounds derive from this).
+Fusion.MaxDonorCount = 50
+-- Stages the grouped collection can represent. Emerald uses the additive optional
+-- collection[species].emerald counter (nil == 0).
+Fusion.GroupedProjection = {gold = true, emerald = true, diamond = true}
 
 -- Byte preflight for the sidecar after fusion. BD-060 measured ~938 KB per 1,000
 -- worst-case identities and a 4 MiB DataStore value limit; this leaves ~1 MiB for the
@@ -108,6 +111,15 @@ local function sequence(id: string, ownerKey: string): number?
     return n
 end
 
+-- A fused donor's origin embeds up to 50 immutable parent snapshots; the quote digest
+-- needs only the origin identity (kind/operation/versions), keeping quotes O(donors).
+local function compactOrigin(origin)
+    if type(origin) ~= "table" then return origin end
+    local slim = {}
+    for key, value in origin do if key ~= "parents" then slim[key] = value end end
+    return slim
+end
+
 local function hasCosmetics(instance): boolean
     local c = instance.cosmetics
     return type(c) == "table" and (next(c.ownedAuraIds or {}) ~= nil or next(c.ownedTrailIds or {}) ~= nil
@@ -180,7 +192,7 @@ function Fusion.quote(state, ownerKey: string, targetStage: any, donorIds: any)
         -- stage, protection) after quoting invalidates the quote.
         table.insert(snapshot, {instanceId = d.instanceId, bucketKey = d.bucketKey, stage = d.stage, speciesId = d.speciesId,
             genes = d.genes, big = d.big, shiny = d.shiny, mutationId = d.mutationId, cosmetics = d.cosmetics,
-            locked = d.locked, favorited = d.favorited, origin = d.origin})
+            locked = d.locked, favorited = d.favorited, origin = compactOrigin(d.origin)})
         -- Itemized irreversible loss: purchased looks AND valuable natural traits.
         local auras = sortedKeys(d.cosmetics and d.cosmetics.ownedAuraIds)
         local trails = sortedKeys(d.cosmetics and d.cosmetics.ownedTrailIds)
@@ -245,8 +257,8 @@ local function groupedCounter(entry, bucketKey: string, speciesId: string)
     local prefix = speciesId .. "/"
     if string.sub(bucketKey, 1, #prefix) ~= prefix then return nil end
     local rest = string.sub(bucketKey, #prefix + 1)
-    if rest == "base" or rest == "gold" or rest == "diamond" then
-        return function() return entry[rest] end, function(n) entry[rest] = n end
+    if rest == "base" or rest == "gold" or rest == "emerald" or rest == "diamond" then
+        return function() return entry[rest] or 0 end, function(n) entry[rest] = n end
     end
     local eventId = string.match(rest, "^event/(.+)$")
     if eventId then
