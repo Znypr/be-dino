@@ -101,7 +101,7 @@ end
 
 local function exactOdds(odds: any)
     return {shiny = odds.shiny, big = odds.big, mutation = table.clone(odds.mutation), noMutation = odds.noMutation,
-        condition = table.clone(odds.condition), primaryColor = table.clone(odds.primaryColor),
+        primaryColor = table.clone(odds.primaryColor),
         secondaryColor = table.clone(odds.secondaryColor)}
 end
 

@@ -22,7 +22,7 @@ function Traits.selected(entry, preferredKey: string?)
     end
     for key, variant in (if entry then entry.variants or {} else {}) do
         local rank = (if variant.big then 2 else 0) + (if variant.shiny then 1 else 0)
-        if variant.genes then rank+=Genetics.condition(variant.genes.conditionId).stats*10 end
+        if variant.genes and variant.genes.conditionId then rank+=Genetics.condition(variant.genes.conditionId).stats*10 end
         if variant.count > 0 and (rank > best or (rank == best and selected and key < selected.key)) then
             best = rank
             selected = {key = key, big = variant.big, shiny = variant.shiny, mutationId = variant.mutationId,genes=variant.genes}

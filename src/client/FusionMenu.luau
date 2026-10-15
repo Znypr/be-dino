@@ -244,7 +244,6 @@ local function filterValueName(field: string, value): string
     if field == "speciesId" then return Sel.name(catalog, "species", value) end
     if field == "patternId" then return Sel.name(catalog, "patterns", value) end
     if field == "colorId" then return Sel.name(catalog, "colors", value) end
-    if field == "conditionId" then return Sel.name(catalog, "conditions", value) end
     if field == "mutationId" then return if value == "none" then "None" else Sel.name(catalog, "mutations", value) end
     if field == "shiny" or field == "big" then return if value then "Yes" else "No" end
     if field == "originKind" then return ({hatch = "Hatched", fusion = "Fused", legacy_unknown = "Older"})[value] or tostring(value) end
@@ -252,7 +251,7 @@ local function filterValueName(field: string, value): string
     if field == "stage" then return Sel.name(nil, "x", value) end
     return tostring(value)
 end
-local FilterLabels = {speciesId = "Species", patternId = "Pattern", stage = "Stage", colorId = "Color", conditionId = "Condition",
+local FilterLabels = {speciesId = "Species", patternId = "Pattern", stage = "Stage", colorId = "Color",
     shiny = "Shiny", big = "BIG", mutationId = "Mutation", originKind = "Origin", cosmetics = "Cosmetics"}
 
 local function cardLook(d)
@@ -538,7 +537,7 @@ local function donorLine(d): string
     local g = d.genes or {}
     local badges = Sel.badges(d, catalog)
     return Sel.name(catalog, "patterns", g.patternId) .. " " .. Sel.name(catalog, "species", d.speciesId) .. " • "
-        .. Sel.geneLine(g, catalog) .. " • " .. Sel.name(catalog, "conditions", g.conditionId, "?")
+        .. Sel.geneLine(g, catalog)
         .. (if #badges > 0 then " • " .. table.concat(badges, ", ") else "")
 end
 
@@ -560,7 +559,7 @@ local function renderConfirm()
         l.LayoutOrder = order
     end
     line("GUARANTEED: 1 NEW " .. stageName .. " " .. Sel.name(catalog, "patterns", quote.patternId) .. " " .. Sel.name(catalog, "species", quote.speciesId)
-        .. " with the " .. stageName .. " stage upgrade. Its colors, condition, Shiny, BIG and mutation are freshly rolled.", C.accent, 48)
+        .. " with the " .. stageName .. " stage upgrade. Its colors, Shiny, BIG and mutation are freshly rolled.", C.accent, 48)
     line("PATTERN LOCKED: " .. Sel.name(catalog, "patterns", quote.patternId), C.gold)
     line("ALL " .. donorTotal .. " DINOS BELOW ARE CONSUMED:", C.red)
     for i, id in quote.donorIds or state.selection do
@@ -719,7 +718,6 @@ local function finalCard(root: Frame, result, stage)
     line("Crafted " .. Sel.stageTitle(result.targetStage or "gold") .. " (earned) • guaranteed stage", C.accent)
     line("Pattern (locked): " .. Sel.name(catalog, "patterns", result.patternId or g.patternId))
     line("Colors: " .. Sel.geneLine(g, catalog))
-    line("Condition: " .. Sel.name(catalog, "conditions", g.conditionId, "?"))
     line("Shiny: " .. (if traits.shiny then "YES" else "No") .. " • BIG: " .. (if traits.big then "YES" else "No"))
     line("Mutation: " .. Sel.name(catalog, "mutations", traits.mutationId, "None"))
     line("Bought cosmetics: none (buy separately for this new dino)")

@@ -368084,13 +368084,13 @@ function Genetics.neutral(conditionId)
     return {conditionId=conditionId,hatchSuccess=true,primaryColorId="white",secondaryColorId="white",blend=100,patternId="01_blank"}
 end
 function Genetics.valid(g)
-    if typeof(g)~="table" or not Genetics.condition(g.conditionId) or not Genetics.color(g.primaryColorId)
+    if typeof(g)~="table" or (g.conditionId~=nil and not Genetics.condition(g.conditionId)) or not Genetics.color(g.primaryColorId)
         or not Genetics.color(g.secondaryColorId) or typeof(g.hatchSuccess)~="boolean"
         or typeof(g.blend)~="number" or g.blend~=g.blend or g.blend&lt;0 or g.blend&gt;100 or g.blend%1~=0 then return false end
     return (g.patternId==nil or table.find(Genetics.Patterns,g.patternId)~=nil) and (g.hatchSuccess or g.conditionId=="cracked")
 end
 function Genetics.key(g)
-    return g.conditionId..":"..g.primaryColorId..":"..g.secondaryColorId..":"..g.blend..(if g.patternId then ":"..g.patternId else "")
+    return (g.conditionId or "none")..":"..g.primaryColorId..":"..g.secondaryColorId..":"..g.blend..(if g.patternId then ":"..g.patternId else "")
 end
 function Genetics.tint(g)
     local a,b=Genetics.color(g.primaryColorId).rgb,Genetics.color(g.secondaryColorId).rgb
@@ -368483,7 +368483,7 @@ function Traits.selected(entry, preferredKey: string?)
     end
     for key, variant in (if entry then entry.variants or {} else {}) do
         local rank = (if variant.big then 2 else 0) + (if variant.shiny then 1 else 0)
-        if variant.genes then rank+=Genetics.condition(variant.genes.conditionId).stats*10 end
+        if variant.genes and variant.genes.conditionId then rank+=Genetics.condition(variant.genes.conditionId).stats*10 end
         if variant.count &gt; 0 and (rank &gt; best or (rank == best and selected and key &lt; selected.key)) then
             best = rank
             selected = {key = key, big = variant.big, shiny = variant.shiny, mutationId = variant.mutationId,genes=variant.genes}
@@ -368566,7 +368566,6 @@ end
 -- Above this many slots the menu shows a compact n/N counter grid instead of cards.
 Sel.CompactSlotThreshold = 10
 Sel.LockedStageText = "Recipe not approved yet"
-Sel.ConditionOrder = {"cracked", "dirty", "normal", "rainbow", "astra"}
 
 local function stageInfo(id: string?)
     for _, s in Sel.Stages do if s.id == id then return s end end
@@ -368599,7 +368598,7 @@ end
 
 function Sel.buildCatalog(config, progression, patterns)
     local catalog = {species = {}, speciesOrder = {}, patterns = {}, patternOrder = {}, colors = {},
-        colorOrder = {}, conditions = {}, mutations = {}, mutationOrder = {}, auras = {}, trails = {}}
+        colorOrder = {}, mutations = {}, mutationOrder = {}, auras = {}, trails = {}}
     for id, name in (config and config.SpeciesDisplayNames) or {} do catalog.species[id] = name end
     -- Base odds of ONE purchased egg (no run boost): species by weight, patterns equally likely, colors per slot by weight.
     catalog.speciesPct, catalog.speciesRarity, catalog.patternPct, catalog.colorPct = {}, {}, {}, {}
@@ -368617,7 +368616,6 @@ function Sel.buildCatalog(config, progression, patterns)
     for i, id in (config and config.SpeciesOrder) or {} do catalog.speciesOrder[id] = i end
     for i, id in patterns or {} do catalog.patterns[id] = Sel.patternName(id) catalog.patternOrder[id] = i end
     for i, row in (progression and progression.EggColors) or {} do catalog.colors[row.id] = row.name catalog.colorOrder[row.id] = i end
-    for _, row in (progression and progression.Conditions) or {} do catalog.conditions[row.id] = row.name end
     for i, row in (progression and progression.EventMutations) or {} do catalog.mutations[row.id] = row.name catalog.mutationOrder[row.id] = i end
     for _, row in (progression and progression.Auras) or {} do catalog.auras[row.id] = row.name end
     for _, row in (progression and progression.Trails) or {} do catalog.trails[row.id] = row.name end
@@ -368708,7 +368706,7 @@ end
 
 -- Filters --------------------------------------------------------------------------
 -- filters fields (all optional): speciesId, patternId, stage, colorId (either gene),
--- conditionId, shiny (bool), big (bool), mutationId ("none" or id), originKind,
+-- shiny (bool), big (bool), mutationId ("none" or id), originKind,
 -- cosmetics ("has" | "none" | "equipped").
 function Sel.matches(d, filters): boolean
     if not filters then return true end
@@ -368717,7 +368715,6 @@ function Sel.matches(d, filters): boolean
     if filters.patternId ~= nil and g.patternId ~= filters.patternId then return false end
     if filters.stage ~= nil and d.stage ~= filters.stage then return false end
     if filters.colorId ~= nil and g.primaryColorId ~= filters.colorId and g.secondaryColorId ~= filters.colorId then return false end
-    if filters.conditionId ~= nil and g.conditionId ~= filters.conditionId then return false end
     if filters.shiny ~= nil and (d.shiny == true) ~= filters.shiny then return false end
     if filters.big ~= nil and (d.big == true) ~= filters.big then return false end
     if filters.mutationId ~= nil and mutationOf(d) ~= filters.mutationId then return false end
@@ -368735,7 +368732,7 @@ function Sel.filter(dinos, filters)
 end
 
 -- Distinct values present in the list, for the cycling filter chips.
-Sel.FilterFields = {"speciesId", "patternId", "stage", "colorId", "conditionId", "shiny", "big", "mutationId", "originKind", "cosmetics"}
+Sel.FilterFields = {"speciesId", "patternId", "stage", "colorId", "shiny", "big", "mutationId", "originKind", "cosmetics"}
 function Sel.filterOptions(dinos, catalog)
     local seen = {}
     for _, field in Sel.FilterFields do seen[field] = {} end
@@ -368746,7 +368743,6 @@ function Sel.filterOptions(dinos, catalog)
         seen.stage[d.stage or ""] = true
         if g.primaryColorId then seen.colorId[g.primaryColorId] = true end
         if g.secondaryColorId then seen.colorId[g.secondaryColorId] = true end
-        if g.conditionId then seen.conditionId[g.conditionId] = true end
         seen.mutationId[mutationOf(d)] = true
         if d.originKind then seen.originKind[d.originKind] = true end
     end
@@ -368757,8 +368753,7 @@ function Sel.filterOptions(dinos, catalog)
         for value in seen[field] do if value ~= "" then table.insert(list, value) end end
         local rank = catalog and order[field] and catalog[order[field]] or {}
         table.sort(list, function(a, b)
-            local ra, rb = rank[a] or (if field == "conditionId" then table.find(Sel.ConditionOrder, a) else nil) or 999,
-                rank[b] or (if field == "conditionId" then table.find(Sel.ConditionOrder, b) else nil) or 999
+            local ra, rb = rank[a] or 999, rank[b] or 999
             if ra ~= rb then return ra &lt; rb end
             return tostring(a) &lt; tostring(b)
         end)
@@ -368784,14 +368779,13 @@ end
 -- Natural-trait rarity score. Cosmetics are deliberately EXCLUDED (BD-062).
 function Sel.rarityScore(d): number
     local g = genes(d)
-    local condition = table.find(Sel.ConditionOrder, g.conditionId or "") or 0
     return (if d.shiny == true then 40 else 0) + (if mutationOf(d) ~= "none" then 30 else 0)
-        + (if d.big == true then 20 else 0) + condition
+        + (if d.big == true then 20 else 0)
 end
 
-Sel.SortKeys = {"eligible", "rarest", "species", "pattern", "color", "condition", "recent", "selected"}
+Sel.SortKeys = {"eligible", "rarest", "species", "pattern", "color", "recent", "selected"}
 Sel.SortNames = {eligible = "Eligible first", rarest = "Rarest", species = "Species", pattern = "Pattern",
-    color = "Color", condition = "Condition", recent = "Newest", selected = "Selected first"}
+    color = "Color", recent = "Newest", selected = "Selected first"}
 
 function Sel.sort(dinos, key: string, ctx, selectedSet, catalog)
     local list = table.clone(dinos)
@@ -368810,7 +368804,6 @@ function Sel.sort(dinos, key: string, ctx, selectedSet, catalog)
         elseif key == "species" then x, y = speciesRank[a.speciesId] or 999, speciesRank[b.speciesId] or 999
         elseif key == "pattern" then x, y = tostring(ga.patternId or "~"), tostring(gb.patternId or "~")
         elseif key == "color" then x, y = colorRank[ga.primaryColorId] or 999, colorRank[gb.primaryColorId] or 999
-        elseif key == "condition" then x, y = -(table.find(Sel.ConditionOrder, ga.conditionId or "") or 0), -(table.find(Sel.ConditionOrder, gb.conditionId or "") or 0)
         elseif key == "recent" then x, y = -serial(a.instanceId), -serial(b.instanceId)
         elseif key == "selected" then x, y = if selectedSet[a.instanceId] then 0 else 1, if selectedSet[b.instanceId] then 0 else 1 end
         if x ~= nil and x ~= y then return x &lt; y end
@@ -368994,14 +368987,13 @@ function Sel.traitRows(odds, trait: string, catalog)
     elseif trait == "mutation" then
         return mapRows(odds.mutation, catalog, "mutations", if type(odds.noMutation) == "number"
             then {id = "none", label = "No mutation", p = odds.noMutation} else nil)
-    elseif trait == "condition" then return mapRows(odds.condition, catalog, "conditions")
     elseif trait == "primaryColor" or trait == "secondaryColor" then return mapRows(odds[trait], catalog, "colors") end
     return {}
 end
 
 Sel.OddsSections = {
     {trait = "shiny", title = "Shiny"}, {trait = "mutation", title = "Event mutation"},
-    {trait = "big", title = "BIG"}, {trait = "condition", title = "Condition"},
+    {trait = "big", title = "BIG"},
     {trait = "primaryColor", title = "Color 1"}, {trait = "secondaryColor", title = "Color 2"},
 }
 -- Returns {ok, sections={{title, trait, rows}}, error?}. Any malformed section makes
@@ -369179,7 +369171,6 @@ function Sel.revealSequence(quote, result, catalog)
         end
         add("primaryColor", "COLOR 1", g.primaryColorId)
         add("secondaryColor", "COLOR 2", g.secondaryColorId, if type(g.blend) == "number" then ("Blend " .. g.blend .. "% / " .. (100 - g.blend) .. "%") else nil)
-        add("condition", "CONDITION", g.conditionId)
         add("shiny", "SHINY", if traits.shiny then "yes" else "no")
         add("mutation", "MUTATION", if type(traits.mutationId) == "string" and traits.mutationId ~= "" then traits.mutationId else "none")
         add("big", "BIG", if traits.big then "yes" else "no")
@@ -369213,7 +369204,7 @@ Sel.geneLine = geneLine
 local function eggLine(egg, catalog): string
     if type(egg) ~= "table" then return "Original egg not recorded" end
     local g = egg.genes or {}
-    local parts = {lookup(catalog, "patterns", g.patternId), geneLine(g, catalog), lookup(catalog, "conditions", g.conditionId, "Unknown condition")}
+    local parts = {lookup(catalog, "patterns", g.patternId), geneLine(g, catalog)}
     if type(egg.eventId) == "string" and egg.eventId ~= "" and egg.eventId ~= "clear" then table.insert(parts, "Event: " .. titleCase((string.gsub(egg.eventId, "_", " ")))) end
     table.insert(parts, Sel.EggSourceNames[egg.kind] or (if type(egg.kind) == "string" then titleCase((string.gsub(egg.kind, "_", " "))) else "Unknown source"))
     return table.concat(parts, " • ")
@@ -370665,10 +370656,10 @@ M.StageRank = {base = 0, gold = 1, emerald = 2, diamond = 3}
 M.SortKeys = {"rarest", "recent", "color", "pattern", "species"}
 M.SortLabels = {rarest = "Rarest", recent = "Newest", color = "Color", pattern = "Pattern", species = "Species"}
 -- Filter groups in sheet order. Every field must exist in Sel.FilterFields. shiny/big are single "yes" chips.
-M.FilterGroups = {"colorId", "patternId", "mutationId", "shiny", "big", "stageId", "conditionId"}
+M.FilterGroups = {"colorId", "patternId", "mutationId", "shiny", "big", "stageId"}
 local FIELD = {stageId = "stage"}
 M.GroupLabels = {colorId = "Color", patternId = "Pattern", mutationId = "Mutation", shiny = "Shiny", big = "BIG",
-    stageId = "Stage", conditionId = "Condition"}
+    stageId = "Stage"}
 
 function M.field(group: string): string return FIELD[group] or group end
 
@@ -370749,7 +370740,7 @@ end
 function M.options(list, catalog)
     local o = Sel.filterOptions(list, catalog)
     local result: {[string]: {any}} = {
-        colorId = o.colorId, patternId = o.patternId, stageId = o.stage, conditionId = o.conditionId,
+        colorId = o.colorId, patternId = o.patternId, stageId = o.stage,
         shiny = {true}, big = {true}, mutationId = {},
     }
     -- Mutation chips: real mutations only ("none" is every other dino and adds nothing).
@@ -370766,7 +370757,6 @@ function M.valueName(group: string, value, catalog): string
     if group == "colorId" then return Sel.name(catalog, "colors", value) end
     if group == "patternId" then return Sel.name(catalog, "patterns", value) end
     if group == "mutationId" then return Sel.name(catalog, "mutations", value) end
-    if group == "conditionId" then return Sel.name(catalog, "conditions", value) end
     return tostring(value)
 end
 
@@ -544033,7 +544023,7 @@ return FoodService
 --   P(any event mutation) = MutationCoefficient * mutatedDonors / N
 --     P(mutation m)       = MutationCoefficient * donorsWith(m) / N  (proportional pick)
 --     P(no mutation)      = 1 - sum(P(m))
---   P(condition c)        = donorsWith(c) / N
+--   (no condition wheel: dinosaurs have no condition, only eggs do; v2)
 --   P(primary color k)    = donorsWithPrimary(k) / N
 --   P(secondary color k)  = donorsWithSecondary(k) / N
 --   blend                 = uniform integer 1..99, or 100 when both colors are equal
@@ -544045,7 +544035,7 @@ return FoodService
 -- a quote shown to the player is the distribution the server commits against.
 local FusionOdds = {}
 
-FusionOdds.Version = "fusion-odds-provisional-v1"
+FusionOdds.Version = "fusion-odds-provisional-v2"
 FusionOdds.ShinyCoefficient = 0.5 -- PROVISIONAL
 FusionOdds.BigCoefficient = 0.5 -- PROVISIONAL
 FusionOdds.MutationCoefficient = 0.5 -- PROVISIONAL
@@ -544053,7 +544043,7 @@ FusionOdds.BlendMin = 1 -- PROVISIONAL (matches Build 020 egg genes)
 FusionOdds.BlendMax = 99
 FusionOdds.EqualColorBlend = 100
 -- Fixed draw order; one uniform per wheel, always consumed (even when blend is fixed).
-FusionOdds.DrawOrder = {"shiny", "big", "mutation", "condition", "primaryColor", "secondaryColor", "blend"}
+FusionOdds.DrawOrder = {"shiny", "big", "mutation", "primaryColor", "secondaryColor", "blend"}
 
 local function sortedKeys(map): {string}
     local keys = {}
@@ -544075,7 +544065,7 @@ function FusionOdds.distribution(summary)
     if type(summary) ~= "table" then return nil, "invalid_summary" end
     local n = summary.donorCount
     if type(n) ~= "number" or n &lt; 1 or n % 1 ~= 0 or type(summary.colors) ~= "table" or #summary.colors ~= n
-        or type(summary.conditionCounts) ~= "table" or type(summary.mutationCounts) ~= "table"
+        or type(summary.mutationCounts) ~= "table"
         or type(summary.shinyCount) ~= "number" or type(summary.bigCount) ~= "number"
         or summary.shinyCount &lt; 0 or summary.shinyCount &gt; n or summary.bigCount &lt; 0 or summary.bigCount &gt; n then
         return nil, "invalid_summary"
@@ -544085,12 +544075,7 @@ function FusionOdds.distribution(summary)
         if type(id) ~= "string" or id == "" or type(count) ~= "number" or count &lt; 0 then return nil, "invalid_summary" end
         mutated += count
     end
-    local conditions = 0
-    for id, count in summary.conditionCounts do
-        if type(id) ~= "string" or type(count) ~= "number" or count &lt; 0 then return nil, "invalid_summary" end
-        conditions += count
-    end
-    if mutated &gt; n or conditions ~= n then return nil, "invalid_summary" end
+    if mutated &gt; n then return nil, "invalid_summary" end
 
     local mutation = {}
     local mutationTotal = 0
@@ -544114,7 +544099,6 @@ function FusionOdds.distribution(summary)
         big = FusionOdds.BigCoefficient * summary.bigCount / n,
         mutation = mutation,
         noMutation = math.max(0, 1 - mutationTotal),
-        condition = proportional(summary.conditionCounts, n),
         primaryColor = proportional(primary, n),
         secondaryColor = proportional(secondary, n),
         blend = {min = FusionOdds.BlendMin, max = FusionOdds.BlendMax, equalColors = FusionOdds.EqualColorBlend},
@@ -544158,10 +544142,10 @@ function FusionOdds.rollWith(summary, patternId: string, nextNumber: () -&gt; nu
         -- Clamp into [0, 1): Random:NextNumber() edge values must not escape a wheel.
         u[i] = math.clamp(value, 0, 1 - 2 ^ -53)
     end
-    local primary = pick(dist.primaryColor, u[5])
-    local secondary = pick(dist.secondaryColor, u[6])
+    local primary = pick(dist.primaryColor, u[4])
+    local secondary = pick(dist.secondaryColor, u[5])
     local blend = FusionOdds.BlendMin + math.min(FusionOdds.BlendMax - FusionOdds.BlendMin,
-        math.floor(u[7] * (FusionOdds.BlendMax - FusionOdds.BlendMin + 1)))
+        math.floor(u[6] * (FusionOdds.BlendMax - FusionOdds.BlendMin + 1)))
     if primary == secondary then blend = FusionOdds.EqualColorBlend end
     return {
         shiny = u[1] &lt; dist.shiny,
@@ -544169,7 +544153,6 @@ function FusionOdds.rollWith(summary, patternId: string, nextNumber: () -&gt; nu
         mutationId = pick(mutationWheel(dist), u[3]) or "",
         genes = {
             patternId = patternId,
-            conditionId = pick(dist.condition, u[4]),
             primaryColorId = primary,
             secondaryColorId = secondary,
             blend = blend,
@@ -544301,7 +544284,7 @@ end
 
 local function exactOdds(odds: any)
     return {shiny = odds.shiny, big = odds.big, mutation = table.clone(odds.mutation), noMutation = odds.noMutation,
-        condition = table.clone(odds.condition), primaryColor = table.clone(odds.primaryColor),
+        primaryColor = table.clone(odds.primaryColor),
         secondaryColor = table.clone(odds.secondaryColor)}
 end
 
@@ -544564,15 +544547,13 @@ function Fusion.quote(state, ownerKey: string, targetStage: any, donorIds: any)
 
     -- Neutral ingredient facts for a future BD-064 roller. Contains no probabilities.
     local summary = {speciesId = speciesId, patternId = patternId, targetStage = targetStage,
-        donorCount = #donors, shinyCount = 0, bigCount = 0, mutationCounts = {}, conditionCounts = {}, colors = {}}
+        donorCount = #donors, shinyCount = 0, bigCount = 0, mutationCounts = {}, colors = {}}
     local losses, sortedIds, snapshot = {}, {}, {}
     for _, d in donors do
         table.insert(sortedIds, d.instanceId)
         if d.shiny then summary.shinyCount += 1 end
         if d.big then summary.bigCount += 1 end
         if (d.mutationId or "") ~= "" then summary.mutationCounts[d.mutationId] = (summary.mutationCounts[d.mutationId] or 0) + 1 end
-        local conditionId = d.genes.conditionId or "unknown"
-        summary.conditionCounts[conditionId] = (summary.conditionCounts[conditionId] or 0) + 1
         table.insert(summary.colors, {primaryColorId = d.genes.primaryColorId, secondaryColorId = d.genes.secondaryColorId, blend = d.genes.blend})
         -- Exact frozen payload: any change to a donor (genes, traits, cosmetics,
         -- stage, protection) after quoting invalidates the quote.
@@ -544616,7 +544597,7 @@ local function validTraits(traits, patternId: string, validateGenes): boolean
     local genes = traits.genes
     if type(genes) ~= "table" or genes.patternId ~= patternId then return false end
     if type(genes.primaryColorId) ~= "string" or type(genes.secondaryColorId) ~= "string"
-        or type(genes.conditionId) ~= "string" or type(genes.blend) ~= "number"
+        or genes.conditionId ~= nil or type(genes.blend) ~= "number"
         or genes.blend ~= genes.blend or genes.blend &lt; 0 or genes.blend &gt; 100 then return false end
     for key, value in genes do
         if type(key) ~= "string" or (type(value) ~= "string" and type(value) ~= "number" and type(value) ~= "boolean") then return false end
@@ -549778,7 +549759,7 @@ end)
             <ProtectedString name="Source">--!strict
 -- BD-062 Dino Details for ONE individual dinosaur instance. Content comes from the
 -- server's `details` action and the pure FusionSelection.details view model:
--- hatched -&gt; original egg (genes, condition, event, source); fused -&gt; parent list,
+-- hatched -&gt; original egg (genes, event, source); fused -&gt; parent list,
 -- parent eggs, recipe/odds versions and "Crafted Gold (earned)". Never a fake Gold
 -- drop %, and bought cosmetics are listed separately and never count toward rarity.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -551125,7 +551106,6 @@ local function filterValueName(field: string, value): string
     if field == "speciesId" then return Sel.name(catalog, "species", value) end
     if field == "patternId" then return Sel.name(catalog, "patterns", value) end
     if field == "colorId" then return Sel.name(catalog, "colors", value) end
-    if field == "conditionId" then return Sel.name(catalog, "conditions", value) end
     if field == "mutationId" then return if value == "none" then "None" else Sel.name(catalog, "mutations", value) end
     if field == "shiny" or field == "big" then return if value then "Yes" else "No" end
     if field == "originKind" then return ({hatch = "Hatched", fusion = "Fused", legacy_unknown = "Older"})[value] or tostring(value) end
@@ -551133,7 +551113,7 @@ local function filterValueName(field: string, value): string
     if field == "stage" then return Sel.name(nil, "x", value) end
     return tostring(value)
 end
-local FilterLabels = {speciesId = "Species", patternId = "Pattern", stage = "Stage", colorId = "Color", conditionId = "Condition",
+local FilterLabels = {speciesId = "Species", patternId = "Pattern", stage = "Stage", colorId = "Color",
     shiny = "Shiny", big = "BIG", mutationId = "Mutation", originKind = "Origin", cosmetics = "Cosmetics"}
 
 local function cardLook(d)
@@ -551419,7 +551399,7 @@ local function donorLine(d): string
     local g = d.genes or {}
     local badges = Sel.badges(d, catalog)
     return Sel.name(catalog, "patterns", g.patternId) .. " " .. Sel.name(catalog, "species", d.speciesId) .. " • "
-        .. Sel.geneLine(g, catalog) .. " • " .. Sel.name(catalog, "conditions", g.conditionId, "?")
+        .. Sel.geneLine(g, catalog)
         .. (if #badges &gt; 0 then " • " .. table.concat(badges, ", ") else "")
 end
 
@@ -551441,7 +551421,7 @@ local function renderConfirm()
         l.LayoutOrder = order
     end
     line("GUARANTEED: 1 NEW " .. stageName .. " " .. Sel.name(catalog, "patterns", quote.patternId) .. " " .. Sel.name(catalog, "species", quote.speciesId)
-        .. " with the " .. stageName .. " stage upgrade. Its colors, condition, Shiny, BIG and mutation are freshly rolled.", C.accent, 48)
+        .. " with the " .. stageName .. " stage upgrade. Its colors, Shiny, BIG and mutation are freshly rolled.", C.accent, 48)
     line("PATTERN LOCKED: " .. Sel.name(catalog, "patterns", quote.patternId), C.gold)
     line("ALL " .. donorTotal .. " DINOS BELOW ARE CONSUMED:", C.red)
     for i, id in quote.donorIds or state.selection do
@@ -551600,7 +551580,6 @@ local function finalCard(root: Frame, result, stage)
     line("Crafted " .. Sel.stageTitle(result.targetStage or "gold") .. " (earned) • guaranteed stage", C.accent)
     line("Pattern (locked): " .. Sel.name(catalog, "patterns", result.patternId or g.patternId))
     line("Colors: " .. Sel.geneLine(g, catalog))
-    line("Condition: " .. Sel.name(catalog, "conditions", g.conditionId, "?"))
     line("Shiny: " .. (if traits.shiny then "YES" else "No") .. " • BIG: " .. (if traits.big then "YES" else "No"))
     line("Mutation: " .. Sel.name(catalog, "mutations", traits.mutationId, "None"))
     line("Bought cosmetics: none (buy separately for this new dino)")
