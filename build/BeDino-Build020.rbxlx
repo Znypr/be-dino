@@ -365042,44 +365042,113 @@ return Mixer
         <Properties>
           <string name="Name">AuthoredCreatures</string>
           <ProtectedString name="Source">--!strict
--- Client-local authored meshes. Twelve live allocations, released with their models.
+-- Client-local authored creatures (16 species + the egg) from CreatureData.
+--
+-- BD-219 root cause (Studio evidence, docs/96): AssetService:CreateMeshPartAsync(Content.fromObject(mesh)) does NOT
+-- copy the geometry into the MeshPart. The part's MeshContent keeps pointing at the EditableMesh, so once that mesh is
+-- destroyed the content has 0 faces and the part, and EVERY clone of it (world or ViewportFrame), renders as a box of
+-- the right Size. The old build destroyed the mesh right after creating the part ("the MeshPart owns a copy": wrong).
+--
+-- Now: ONE template per species, built once and kept for the whole session (its EditableMesh stays alive: at most 17
+-- small meshes, 916-2,010 triangles each, instead of one allocation per instance). Every instance is a Clone of the
+-- template part, which shares the live mesh. An uploaded mesh (CreatureMeshAssets or ReplicatedStorage.CreatureMeshes)
+-- is preferred when bound. Before anything is returned the content itself is checked (MeshSanity.contentLoaded): a part
+-- whose mesh is not really loaded is never handed out, so callers fall back to a 2D picture, never a cube.
 local Assets=game:GetService("AssetService")
 local RunService=game:GetService("RunService")
 local Http=game:GetService("HttpService")
+local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local Gate=require(script.Parent.LoadGate)
 local Creatures={}
 local Sanity=require(script.Parent.MeshSanity)
--- At most a few concurrent EditableMesh builds. Extra patient requests wait for a slot instead of failing.
+local Bindings=require(script.Parent.CreatureMeshAssets)
+-- At most a few concurrent template builds. Extra requests wait for a slot instead of failing.
 local gate=Gate.new(4)
 Creatures.Gate=gate
 local function frame(v) return CFrame.new(table.unpack(v)) end
 -- Used only when the caller has no genes (e.g. index entry never hatched); real genes are painted in place.
 Creatures.DefaultGenes={conditionId="normal",hatchSuccess=true,primaryColorId="green",secondaryColorId="white",blend=70,patternId="03_round_spots"}
+type Template={part: MeshPart,mesh: EditableMesh?,source: string,bones: {any},animations: any,height: number,triangles: number,extent: Vector3}
+local templates: {[string]: Template}={}
+local building: {[string]: boolean}={}
+local function publish()
+    local live=0
+    for _,t in templates do if t.mesh then live+=1 end end
+    pcall(function() workspace:SetAttribute("AuthoredMeshesLive",live) end)
+end
 function Creatures.has(id: string): boolean
     local source=script.Parent:FindFirstChild("CreatureData")
     return source~=nil and source:FindFirstChild(id)~=nil and RunService:IsClient()
 end
-local function build(id: string,genes: any?,patient: boolean): Model?
-    local source=script.Parent:FindFirstChild("CreatureData")
-    local module=if source then source:FindFirstChild(id) else nil
-    if not module or not RunService:IsClient() then return nil end
-    if patient then
-        if not Gate.acquire(gate,6,os.clock,task.wait) then return nil end
-    elseif not Gate.tryAcquire(gate) then return nil end
-    local mesh
-    local released=false
-    local function release() if not released then released=true Gate.release(gate) end end
-    local ok,result=pcall(function()
-        local data=Http:JSONDecode(require(module))
-        mesh=Assets:CreateEditableMesh()
-        assert(mesh,"EditableMesh memory budget exhausted")
-        local vertices,bones,uvs,normals={},{},{},{}
-        local low,high=Vector3.new(math.huge,math.huge,math.huge),Vector3.new(-math.huge,-math.huge,-math.huge)
-        for _,p in data.vertices do
-            local v=Vector3.new(table.unpack(p))
-            low,high=low:Min(v),high:Max(v)
-            table.insert(vertices,mesh:AddVertex(v))
+-- Content-level check: true only when the part really has mesh geometry to draw (never a box). Pure logic in MeshSanity.
+function Creatures.isLoaded(part: Instance): (boolean,string?)
+    if not part:IsA("MeshPart") then return true,nil end
+    local content=part.MeshContent
+    local sourceType=if content then content.SourceType.Name else "None"
+    local faces: number?=nil
+    if sourceType=="Object" then
+        local object=content.Object
+        if object then
+            local ok,count=pcall(function() return #(object :: any):GetFaces() end)
+            if ok and typeof(count)=="number" then faces=count end
         end
+    end
+    return Sanity.contentLoaded(sourceType,faces,part.MeshId)
+end
+-- Every MeshPart of a model is loaded (an authored body or an imported part). Used by previews before showing anything.
+function Creatures.verify(model: Instance): (boolean,string?)
+    for _,item in model:GetDescendants() do
+        if item:IsA("MeshPart") then
+            local ok,why=Creatures.isLoaded(item)
+            if not ok then return false,item.Name..": "..tostring(why) end
+        end
+    end
+    return true,nil
+end
+local function extentOf(data): Vector3
+    local low,high=Vector3.new(math.huge,math.huge,math.huge),Vector3.new(-math.huge,-math.huge,-math.huge)
+    for _,p in data.vertices do
+        local v=Vector3.new(table.unpack(p))
+        low,high=low:Min(v),high:Max(v)
+    end
+    return high-low
+end
+local function prepare(part: MeshPart)
+    for _,child in part:GetChildren() do child:Destroy() end -- bones/decals are rebuilt per instance from CreatureData
+    part.Name="AuthoredBody";part.Anchored=true;part.CanCollide=false;part.CanTouch=false;part.CanQuery=false;part.Massless=true
+    part.Material=Enum.Material.Plastic;part.Reflectance=0;part.Color=Color3.new(1,1,1) -- BD-173: matte; only fused tiers get a sheen, set elsewhere
+    part.TextureID="";part.TextureContent=Content.none
+end
+-- Uploaded mesh first (binding id, or an imported MeshPart dropped into ReplicatedStorage.CreatureMeshes); nil when none.
+local function uploadedPart(id: string,extent: Vector3,triangles: number): MeshPart?
+    local binding=Bindings[id]
+    local candidates: {() -&gt; MeshPart?}={}
+    if binding and typeof(binding.meshId)=="string" and binding.meshId~="" then
+        table.insert(candidates,function()
+            return Assets:CreateMeshPartAsync(Content.fromUri(binding.meshId),{CollisionFidelity=Enum.CollisionFidelity.Box,RenderFidelity=Enum.RenderFidelity.Automatic})
+        end)
+    end
+    local folder=ReplicatedStorage:FindFirstChild("CreatureMeshes")
+    local dropIn=if folder then folder:FindFirstChild(id) else nil
+    if dropIn and dropIn:IsA("MeshPart") then table.insert(candidates,function() return (dropIn :: MeshPart):Clone() end) end
+    for _,make in candidates do
+        local ok,part=pcall(make)
+        if ok and part then
+            local good,why=Sanity.check(extent,part.Size,triangles)
+            local loaded,why2=Creatures.isLoaded(part)
+            if good and loaded then prepare(part) return part end
+            warn("Be Dino uploaded mesh for "..id.." rejected ("..tostring(why or why2).."); using the runtime mesh")
+            part:Destroy()
+        elseif not ok then warn("Be Dino uploaded mesh for "..id.." failed: "..tostring(part)) end
+    end
+    return nil
+end
+local function runtimePart(data,extent: Vector3): (MeshPart,EditableMesh)
+    local mesh=Assets:CreateEditableMesh()
+    assert(mesh,"EditableMesh memory budget exhausted")
+    local ok,result=pcall(function()
+        local vertices,bones,uvs,normals={},{},{},{}
+        for _,p in data.vertices do table.insert(vertices,mesh:AddVertex(Vector3.new(table.unpack(p)))) end
         for _,b in data.bones do
             local params={Name=b.name,CFrame=frame(b.bind),Virtual=false}
             if b.parent&gt;0 then params.ParentId=bones[b.parent] end
@@ -365098,74 +365167,165 @@ local function build(id: string,genes: any?,patient: boolean): Model?
             mesh:SetFaceUVs(f,{uvs[n],uvs[n+1],uvs[n+2]})
             mesh:SetFaceNormals(f,{normals[n],normals[n+1],normals[n+2]})
         end
+        -- The EditableMesh is NOT destroyed: the part renders from it for as long as the template lives (see header).
         local part=Assets:CreateMeshPartAsync(Content.fromObject(mesh),{CollisionFidelity=Enum.CollisionFidelity.Box})
-        -- The MeshPart owns a copy: free the EditableMesh budget now, not when the model dies. Holding it made menus and
-        -- previews exhaust the budget so the real character fell back to the primitive blob.
-        mesh:Destroy() mesh=nil
-        release()
-        -- A MeshPart whose mesh did not really load renders as a plain cube/box: treat it as a failed load (retried by clone).
-        local ok2,why=Sanity.check(high-low,part.Size,data.triangles)
-        if not ok2 then part:Destroy() error("mesh sanity failed: "..tostring(why)) end
-        local model=Instance.new("Model")
-        model.Name=id
-        part.Name="AuthoredBody";part.Anchored=true;part.CanCollide=false;part.CanTouch=false;part.CanQuery=false;part.Massless=true
-        part.Material=Enum.Material.Plastic;part.Reflectance=0;part.Color=Color3.new(1,1,1) -- BD-173: matte; only fused tiers (Gold/Emerald/Diamond) get a sheen, set elsewhere
-        part:SetAttribute("GeneSpecies",id);part.Parent=model
-        model.WorldPivot=CFrame.new(0,-data.height/2,0)
-        model:SetAttribute("AuthoredCreature",true)
-        model:SetAttribute("Triangles",data.triangles)
-        local nodes,clips={},{Idle={},Move={}}
-        for i,b in data.bones do
-            local node=Instance.new("Bone");node.Name=b.name
-            node.CFrame=if b.parent&gt;0 then frame(data.bones[b.parent].bind):Inverse()*frame(b.bind) else frame(b.bind)
-            node.Parent=if b.parent&gt;0 then nodes[b.parent] else part
-            nodes[i]=node
-        end
-        for name,samples in data.animations do
-            for _,sample in samples do
-                local pose={};for _,v in sample do table.insert(pose,frame(v)) end
-                table.insert(clips[name],pose)
-            end
-        end
-        local elapsed,accumulator=0,0
-        local connection=RunService.Heartbeat:Connect(function(dt)
-            accumulator+=dt;if accumulator&lt;1/15 or not model.Parent then return end
-            elapsed+=accumulator;accumulator=0
-            if not require(script.Parent.UITheme).MotionEnabled then return end
-            local character=model.Parent
-            local root=if character:IsA("Model") then character:FindFirstChild("HumanoidRootPart") else nil
-            local camera=workspace.CurrentCamera
-            if root and camera and (camera.CFrame.Position-root.Position).Magnitude&gt;180 then return end
-            local clip=if root and root.AssemblyLinearVelocity.Magnitude&gt;2 then clips.Move else clips.Idle
-            local position=(elapsed%1)*4
-            local index=math.floor(position)+1;local blend=position%1
-            local scale=model:GetScale()
-            for i,node in nodes do
-                local pose=clip[index][i]:Lerp(clip[index+1][i],blend)
-                node.Transform=pose.Rotation+pose.Position*scale
-            end
-        end)
-        require(script.Parent.PatternGenes).apply(part,if genes then genes else Creatures.DefaultGenes)
-        model.Destroying:Once(function() connection:Disconnect() end)
-        return model
+        local good,why=Sanity.check(extent,part.Size,data.triangles)
+        if not good then part:Destroy() error("mesh sanity failed: "..tostring(why)) end
+        local loaded,why2=Creatures.isLoaded(part)
+        if not loaded then part:Destroy() error("mesh content not loaded: "..tostring(why2)) end
+        prepare(part)
+        return part
     end)
+    if not ok then mesh:Destroy() error(result) end
+    return result,mesh
+end
+local function dropTemplate(id: string)
+    local t=templates[id]
+    if not t then return end
+    templates[id]=nil
+    if t.mesh then t.mesh:Destroy() end
+    t.part:Destroy()
+    publish()
+end
+-- Builds (or waits for) the species template. Yields. nil when the data or the mesh APIs are unavailable.
+local function template(id: string,timeout: number): Template?
+    local source=script.Parent:FindFirstChild("CreatureData")
+    local module=if source then source:FindFirstChild(id) else nil
+    if not module or not RunService:IsClient() then return nil end
+    local started=os.clock()
+    while building[id] do
+        if os.clock()-started&gt;timeout then return nil end
+        task.wait(.05)
+    end
+    local existing=templates[id]
+    if existing then
+        -- A template whose mesh died (budget reclaim, Destroy by someone else) must never be cloned into a box.
+        if Creatures.isLoaded(existing.part) then return existing end
+        warn("Be Dino creature template for "..id.." lost its mesh; rebuilding")
+        dropTemplate(id)
+    end
+    if not Gate.acquire(gate,math.max(0,timeout-(os.clock()-started)),os.clock,task.wait) then return nil end
+    building[id]=true
+    local ok,result=pcall(function()
+        local data=Http:JSONDecode(require(module))
+        local extent=extentOf(data)
+        local part=uploadedPart(id,extent,data.triangles)
+        local mesh: EditableMesh?=nil
+        local sourceName="uploaded"
+        if not part then part,mesh=runtimePart(data,extent) sourceName="runtime" end
+        local t: Template={part=part,mesh=mesh,source=sourceName,bones=data.bones,animations=data.animations,height=data.height,triangles=data.triangles,extent=extent}
+        templates[id]=t
+        return t
+    end)
+    building[id]=nil
+    Gate.release(gate)
+    publish()
     if ok then return result end
-    if mesh then mesh:Destroy() end
-    release()
     warn("Be Dino creature unavailable: "..id.." ("..tostring(result)..")")
     return nil
 end
--- patient=true (previews): waits for a load slot and retries once; callers must be able to yield.
+-- Live instance parts per species (weak keys): the watchdog re-applies a rebuilt template mesh to them.
+local instances: {[string]: {[MeshPart]: any}}={} -- part -&gt; genes it was painted with
+local function instance(id: string,t: Template,genes: any?): Model?
+    local part=t.part:Clone()
+    local loaded,why=Creatures.isLoaded(part)
+    if not loaded then part:Destroy() warn("Be Dino creature clone for "..id.." has no mesh ("..tostring(why)..")") return nil end
+    local list=instances[id]
+    if not list then list=setmetatable({},{__mode="k"}) :: any instances[id]=list end
+    list[part]=if genes then genes else Creatures.DefaultGenes
+    local model=Instance.new("Model")
+    model.Name=id
+    part:SetAttribute("GeneSpecies",id);part:SetAttribute("MeshSource",t.source);part.Parent=model
+    model.WorldPivot=CFrame.new(0,-t.height/2,0)
+    model:SetAttribute("AuthoredCreature",true)
+    model:SetAttribute("Triangles",t.triangles)
+    model:SetAttribute("MeshSource",t.source)
+    local nodes,clips={},{Idle={},Move={}}
+    for i,b in t.bones do
+        local node=Instance.new("Bone");node.Name=b.name
+        node.CFrame=if b.parent&gt;0 then frame(t.bones[b.parent].bind):Inverse()*frame(b.bind) else frame(b.bind)
+        node.Parent=if b.parent&gt;0 then nodes[b.parent] else part
+        nodes[i]=node
+    end
+    for name,samples in t.animations do
+        for _,sample in samples do
+            local pose={};for _,v in sample do table.insert(pose,frame(v)) end
+            table.insert(clips[name],pose)
+        end
+    end
+    local elapsed,accumulator=0,0
+    local connection=RunService.Heartbeat:Connect(function(dt)
+        accumulator+=dt;if accumulator&lt;1/15 or not model.Parent then return end
+        elapsed+=accumulator;accumulator=0
+        if not require(script.Parent.UITheme).MotionEnabled then return end
+        local character=model.Parent
+        local root=if character:IsA("Model") then character:FindFirstChild("HumanoidRootPart") else nil
+        local camera=workspace.CurrentCamera
+        if root and camera and (camera.CFrame.Position-root.Position).Magnitude&gt;180 then return end
+        local clip=if root and root.AssemblyLinearVelocity.Magnitude&gt;2 then clips.Move else clips.Idle
+        local position=(elapsed%1)*4
+        local index=math.floor(position)+1;local blend=position%1
+        local scale=model:GetScale()
+        for i,node in nodes do
+            local pose=clip[index][i]:Lerp(clip[index+1][i],blend)
+            node.Transform=pose.Rotation+pose.Position*scale
+        end
+    end)
+    require(script.Parent.PatternGenes).apply(part,if genes then genes else Creatures.DefaultGenes)
+    model.Destroying:Once(function() connection:Disconnect() end)
+    return model
+end
+-- patient=true (previews): waits longer for a build slot and retries; callers must be able to yield (both paths yield
+-- while the species template is first built; later clones are immediate).
 function Creatures.clone(id: string,genes: any?,patient: boolean?): Model?
-    local model=build(id,genes,patient==true)
+    local timeout=if patient==true then 6 else 2
+    local t=template(id,timeout)
+    local model=if t then instance(id,t,genes) else nil
     if not model and patient==true and Creatures.has(id) then
         for _,delay in {.4,1.2} do
             task.wait(delay)
-            model=build(id,genes,true)
+            t=template(id,timeout)
+            model=if t then instance(id,t,genes) else nil
             if model then break end
         end
     end
     return model
+end
+-- Watchdog (client): if a species template loses its mesh after instances were handed out (engine budget reclaim, a
+-- stray Destroy), every live instance would turn into a box. Rebuild the template and re-apply its mesh to the live
+-- parts (MeshPart:ApplyMesh); when that is impossible the parts are hidden (invisible, never a cube).
+function Creatures.sweep(): number
+    local repaired=0
+    for id,list in instances do
+        local t=templates[id]
+        if t and Creatures.isLoaded(t.part) then continue end
+        local alive={}
+        for part,genes in list do if part.Parent then table.insert(alive,{part=part,genes=genes}) end end
+        if #alive==0 then continue end
+        local rebuilt=template(id,2)
+        for _,entry in alive do
+            local part=entry.part
+            if rebuilt then
+                -- ApplyMesh copies the template's (blank) texture too, so the pattern is painted again afterwards.
+                local ok=pcall(function() part:ApplyMesh(rebuilt.part) end)
+                if ok and Creatures.isLoaded(part) then
+                    pcall(function() require(script.Parent.PatternGenes).refresh(part,entry.genes) end)
+                    part.Transparency=0 part:SetAttribute("MeshLost",nil) repaired+=1 continue
+                end
+            end
+            part.Transparency=1 part:SetAttribute("MeshLost",true)
+        end
+    end
+    return repaired
+end
+if RunService:IsClient() then
+    task.spawn(function() while true do task.wait(2) pcall(Creatures.sweep) end end)
+end
+-- Diagnostics (Studio): live templates by source.
+function Creatures.stats(): {[string]: string}
+    local out={}
+    for id,t in templates do out[id]=t.source end
+    return out
 end
 return Creatures
 </ProtectedString>
@@ -367345,6 +367505,39 @@ return require(script.Parent.Chunks.therizinosaurus_1)..require(script.Parent.Ch
       </Item>
       <Item class="ModuleScript" referent="RBX187">
         <Properties>
+          <string name="Name">CreatureMeshAssets</string>
+          <ProtectedString name="Source">--!strict
+-- Uploaded mesh bindings for the 16 authored creatures and the egg (BD-219). The skinned FBX exports live in
+-- assets/blender/creatures/fbx (creature_&lt;species&gt;.fbx, same bone names, bind poses and UV layout as CreatureData).
+-- When the owner uploads one, put its mesh asset id here ("rbxassetid://..."); AuthoredCreatures then prefers the
+-- uploaded MeshPart over the runtime EditableMesh build, adds the same Bone instances (so Idle/Move poses and the
+-- 15 Hz pose interpolation keep working) and paints patterns on the same UVs. Empty = not uploaded: never invent IDs.
+-- Alternative drop-in without editing code: a MeshPart named &lt;species&gt; inside ReplicatedStorage.CreatureMeshes
+-- (an imported skinned mesh, Bones optional: missing ones are rebuilt from CreatureData).
+return {
+    egg = {meshId = ""},
+    archaeopteryx = {meshId = ""},
+    baryonyx = {meshId = ""},
+    brachiosaurus = {meshId = ""},
+    dimorphodon = {meshId = ""},
+    elasmosaurus = {meshId = ""},
+    gallimimus = {meshId = ""},
+    ichthyosaurus = {meshId = ""},
+    microraptor = {meshId = ""},
+    mosasaurus = {meshId = ""},
+    pachycephalosaurus = {meshId = ""},
+    parasaurolophus = {meshId = ""},
+    plesiosaurus = {meshId = ""},
+    pteranodon = {meshId = ""},
+    quetzalcoatlus = {meshId = ""},
+    spinosaurus = {meshId = ""},
+    therizinosaurus = {meshId = ""},
+}
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX188">
+        <Properties>
           <string name="Name">DinoMotion</string>
           <ProtectedString name="Source">--!strict
 -- BD-079 pure procedural action curves for the visual dino model. No Roblox APIs here, so the
@@ -367505,7 +367698,7 @@ return DinoMotion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX188">
+      <Item class="ModuleScript" referent="RBX189">
         <Properties>
           <string name="Name">DinosaurPreview</string>
           <ProtectedString name="Source">--!strict
@@ -367517,6 +367710,8 @@ local RunService=game:GetService("RunService")
 local Http=game:GetService("HttpService")
 local Appearance=require(script.Parent.EggAppearance)
 local MutationLook=require(script.Parent.MutationLook)
+local Authored=require(script.Parent.AuthoredCreatures)
+local Theme=require(script.Parent.UITheme)
 local function visible(view)
     local low,high=view.AbsolutePosition,view.AbsolutePosition+view.AbsoluteSize
     if view.AbsoluteSize.X&lt;=0 or view.AbsoluteSize.Y&lt;=0 then return false end
@@ -367533,13 +367728,27 @@ local function visible(view)
     end
     return true
 end
+-- BD-219: when no loaded 3D model is available the card shows the flat dino picture (never a box, never empty).
+local function dinoImage(viewport: ViewportFrame,gold: (boolean | string))
+    if viewport:FindFirstChild("DinoImageFallback") then return end
+    local image=Instance.new("ImageLabel")
+    image.Name,image.BackgroundTransparency,image.BorderSizePixel="DinoImageFallback",1,0
+    image.AnchorPoint,image.Position,image.Size=Vector2.new(.5,.5),UDim2.fromScale(.5,.5),UDim2.fromScale(.8,.8)
+    image.ScaleType,image.Image=Enum.ScaleType.Fit,Theme.ImageIds.dinos or ""
+    image.ImageColor3=if gold=="silhouette" then Color3.new(0,0,0) else Color3.new(1,1,1)
+    image.ImageTransparency=viewport.ImageTransparency -- hidden/faded exactly like the 3D view (hatch build-up keeps it invisible)
+    image.ZIndex,image.Parent=viewport.ZIndex+1,viewport
+    local follow=viewport:GetPropertyChangedSignal("ImageTransparency"):Connect(function() image.ImageTransparency=viewport.ImageTransparency end)
+    image.Destroying:Once(function() follow:Disconnect() end)
+    viewport:SetAttribute("PreviewFallback","DinoImage")
+end
 function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string)): ViewportFrame
     local viewport=Instance.new("ViewportFrame")
     viewport.Name,viewport.BackgroundTransparency="DinosaurPreview",1
     viewport.Size=UDim2.new(1,0,0,140)
     viewport.Ambient,viewport.LightColor,viewport.LightDirection=Color3.fromRGB(190,210,218),Color3.fromRGB(255,246,226),Vector3.new(-1,-1,-1)
     viewport.ZIndex,viewport.Parent=parent.ZIndex+1,parent
-    local function load()
+    local function load(): boolean
     local encoded=viewport:GetAttribute("TraitsJson")
     local traits=nil
     if encoded and gold~="silhouette" and gold~=true and gold~="gold" and gold~="diamond" and gold~="emerald" then
@@ -367547,9 +367756,11 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         if ok and typeof(decoded)=="table" then traits=decoded end
     end
     local model=Resources.clone(speciesId,if traits then traits.genes else nil,true)
-    if model and not viewport.Parent then model:Destroy();return end
+    if model and not viewport.Parent then model:Destroy();return false end
     -- Species with authored data must show the authored mesh, never any other (box) model.
-    if model and require(script.Parent.AuthoredCreatures).has(speciesId) and not model:GetAttribute("AuthoredCreature") then model:Destroy() model=nil end
+    if model and Authored.has(speciesId) and not model:GetAttribute("AuthoredCreature") then model:Destroy() model=nil end
+    -- Never show a model whose mesh content is not really loaded (it renders as a textured box).
+    if model and not Authored.verify(model) then model:Destroy() model=nil end
     if model then
         local world=Instance.new("WorldModel") world.Parent=viewport
         for _,item in model:GetDescendants() do
@@ -367571,6 +367782,8 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         end
         model:PivotTo(CFrame.new())
         model.Parent=world
+        local fallback=viewport:FindFirstChild("DinoImageFallback")
+        if fallback then fallback:Destroy() viewport:SetAttribute("PreviewFallback",nil) end
         if gold=="silhouette" then
             viewport.Ambient,viewport.LightColor=Color3.new(0,0,0),Color3.new(0,0,0)
         elseif traits and traits.genes then Appearance.apply(model,traits.genes) end
@@ -367597,7 +367810,10 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
             pcall(function() ContentProvider:PreloadAsync({image}) end)
             if image.Parent then viewport:SetAttribute("PreviewFallback","AssetThumbnail") end
         end)
+        return true
     end
+    if viewport.Parent then dinoImage(viewport,gold) end
+    return false
     end
     local data=script.Parent:FindFirstChild("CreatureData")
     if data and data:FindFirstChild(speciesId) then
@@ -367606,6 +367822,7 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
             elapsed+=dt;if elapsed&lt;.25 or loading then return end;elapsed=0
             local world=viewport:FindFirstChildOfClass("WorldModel")
             if visible(viewport) then
+                -- The flat picture stays up while loading retries (at most 8); it is replaced the moment a real model lands.
                 if not world and attempts&lt;8 then attempts+=1;loading=true;task.spawn(function() if viewport.Parent then load() end;loading=false end) end
             elseif world then world:Destroy();attempts=0 end
         end)
@@ -367617,7 +367834,7 @@ return Preview
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX189">
+      <Item class="ModuleScript" referent="RBX190">
         <Properties>
           <string name="Name">DinosaurVisual</string>
           <ProtectedString name="Source">--!strict
@@ -367864,7 +368081,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX190">
+      <Item class="ModuleScript" referent="RBX191">
         <Properties>
           <string name="Name">EffectAssets</string>
           <ProtectedString name="Source">--!nonstrict
@@ -367946,7 +368163,7 @@ return Assets
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX191">
+      <Item class="ModuleScript" referent="RBX192">
         <Properties>
           <string name="Name">EggAppearance</string>
           <ProtectedString name="Source">--!strict
@@ -367960,6 +368177,18 @@ local Overlays=require(script.Parent.ConditionOverlays)
 function Appearance.apply(container: Instance,genes,showCondition: boolean?)
     if not genes or not Genetics.valid(genes) then return end
     local tint=Genetics.tint(genes)
+    -- BD-216: the 2D egg picture fallback (ModelPreview.eggImage) takes the tint and the condition layer like EggPicture.
+    if container:GetAttribute("EggImageFallback")==true then
+        local shell2d=container:FindFirstChild("EggShell")
+        if shell2d and shell2d:IsA("ImageLabel") then shell2d.ImageColor3=tint end
+        local layer=container:FindFirstChild("EggCondition")
+        if layer and layer:IsA("ImageLabel") then
+            local look=Overlays.describe(genes.conditionId)
+            local id=if showCondition==true and look.assetId~="" then "rbxassetid://"..look.assetId else ""
+            layer.Image,layer.Visible=id,id~=""
+        end
+        return
+    end
     local shell,shellSize=nil,-1
     for _,part in container:GetDescendants() do
         if part:IsA("BasePart") then
@@ -367983,7 +368212,7 @@ return Appearance
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX192">
+      <Item class="ModuleScript" referent="RBX193">
         <Properties>
           <string name="Name">EggGenetics</string>
           <ProtectedString name="Source">--!strict
@@ -368037,7 +368266,7 @@ return Genetics
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX193">
+      <Item class="ModuleScript" referent="RBX194">
         <Properties>
           <string name="Name">EggOrigin</string>
           <ProtectedString name="Source">--!strict
@@ -368103,7 +368332,7 @@ return Origin
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX194">
+      <Item class="ModuleScript" referent="RBX195">
         <Properties>
           <string name="Name">EggOutcomeOdds</string>
           <ProtectedString name="Source">--!strict
@@ -368213,7 +368442,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX195">
+      <Item class="ModuleScript" referent="RBX196">
         <Properties>
           <string name="Name">EggOutcomeView</string>
           <ProtectedString name="Source">--!strict
@@ -368330,16 +368559,35 @@ return View
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX196">
+      <Item class="ModuleScript" referent="RBX197">
         <Properties>
           <string name="Name">EggPreview</string>
           <ProtectedString name="Source">--!strict
 -- Canonical authored egg; built-in geometry remains the API-unavailable fallback.
 local Egg={}
+-- The condition decoration (ConditionOverlays: a Decal with Face=Front) is projected onto the part's FRONT box face,
+-- i.e. the egg's local -Z side (Studio 2026-10-16, docs/96: pointing -Z at the camera shows the marks; pointing the
+-- UV-measured -X side there does not). Every egg preview looks along PreviewCamera's direction (1,.2,-.65), so the
+-- body is yawed once here so that -Z points at the camera: the marks face the viewer in the shop, the hatch and the
+-- Index alike. (Previews PivotTo the identity, so the turn is baked into the part, not the model pivot.)
+Egg.DecorationNormal=Vector3.new(0,0,-1)
+Egg.CameraDirection=Vector3.new(1,.2,-.65)
+local function faceYaw(): number
+    local want=Vector3.new(Egg.CameraDirection.X,0,Egg.CameraDirection.Z).Unit
+    local have=Vector3.new(Egg.DecorationNormal.X,0,Egg.DecorationNormal.Z).Unit
+    -- yaw about Y that turns `have` into `want` (Roblox CFrame.Angles(0,yaw,0) maps x,z -&gt; x cos + z sin, -x sin + z cos;
+    -- sign checked in Studio: the negative value turns the chosen side toward the camera, dot = 0.99)
+    return -math.atan2(have.X*want.Z-have.Z*want.X,have.X*want.X+have.Z*want.Z)
+end
+Egg.FaceYaw=faceYaw()
 function Egg.create(empty: boolean?): Model
     if not empty then
         local authored=require(script.Parent.AuthoredCreatures).clone("egg",nil,true)
-        if authored then return authored end
+        if authored then
+            local body=authored:FindFirstChild("AuthoredBody")
+            if body and body:IsA("BasePart") then body.CFrame=CFrame.Angles(0,Egg.FaceYaw,0)*body.CFrame end
+            return authored
+        end
     end
     local model=Instance.new("Model")
     model.Name="SmoothEggPreview"
@@ -368363,7 +368611,7 @@ return Egg
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX197">
+      <Item class="ModuleScript" referent="RBX198">
         <Properties>
           <string name="Name">EggsLogic</string>
           <ProtectedString name="Source">--!strict
@@ -368459,7 +368707,7 @@ return L
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX198">
+      <Item class="ModuleScript" referent="RBX199">
         <Properties>
           <string name="Name">EggTraits</string>
           <ProtectedString name="Source">--!strict
@@ -368510,7 +368758,7 @@ return Traits
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX199">
+      <Item class="ModuleScript" referent="RBX200">
         <Properties>
           <string name="Name">EventIconVectors</string>
           <ProtectedString name="Source">--!strict
@@ -368525,7 +368773,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX200">
+      <Item class="ModuleScript" referent="RBX201">
         <Properties>
           <string name="Name">FoodCatchRules</string>
           <ProtectedString name="Source">--!strict
@@ -368541,7 +368789,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX201">
+      <Item class="ModuleScript" referent="RBX202">
         <Properties>
           <string name="Name">FusionSelection</string>
           <ProtectedString name="Source">--!strict
@@ -369338,7 +369586,7 @@ return Sel
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX202">
+      <Item class="ModuleScript" referent="RBX203">
         <Properties>
           <string name="Name">FxRecipes</string>
           <ProtectedString name="Source">--!nonstrict
@@ -369623,7 +369871,7 @@ return R
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX203">
+      <Item class="ModuleScript" referent="RBX204">
         <Properties>
           <string name="Name">FxUi</string>
           <ProtectedString name="Source">--!nonstrict
@@ -369912,7 +370160,7 @@ return Ui
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX204">
+      <Item class="ModuleScript" referent="RBX205">
         <Properties>
           <string name="Name">GeneTextureAssets</string>
           <ProtectedString name="Source">--!strict
@@ -369960,7 +370208,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX205">
+      <Item class="ModuleScript" referent="RBX206">
         <Properties>
           <string name="Name">GeneTextures</string>
           <ProtectedString name="Source">--!strict
@@ -370016,7 +370264,7 @@ return Textures
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX206">
+      <Item class="ModuleScript" referent="RBX207">
         <Properties>
           <string name="Name">HatchFragments</string>
           <ProtectedString name="Source">--!strict
@@ -370049,7 +370297,7 @@ return F
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX207">
+      <Item class="ModuleScript" referent="RBX208">
         <Properties>
           <string name="Name">HatchFxPlan</string>
           <ProtectedString name="Source">--!strict
@@ -370253,7 +370501,7 @@ return P
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX208">
+      <Item class="ModuleScript" referent="RBX209">
         <Properties>
           <string name="Name">HatchPresentation</string>
           <ProtectedString name="Source">--!strict
@@ -370526,7 +370774,7 @@ return Hatch
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX209">
+      <Item class="ModuleScript" referent="RBX210">
         <Properties>
           <string name="Name">HatchTimeline</string>
           <ProtectedString name="Source">--!strict
@@ -370974,7 +371222,7 @@ return T
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX210">
+      <Item class="ModuleScript" referent="RBX211">
         <Properties>
           <string name="Name">IconRaster</string>
           <ProtectedString name="Source">--!strict
@@ -370983,7 +371231,7 @@ return {["amber"]={341,0,1,16777216,1,33554432,20,55923968,1,16777216,40,0,1,167
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX211">
+      <Item class="ModuleScript" referent="RBX212">
         <Properties>
           <string name="Name">IconTiles</string>
           <ProtectedString name="Source">--!strict
@@ -370992,7 +371240,7 @@ return {["dinos"]={["size"]=32,["colors"]={{104,48,36},{110,114,78},{0,29,13},{1
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX212">
+      <Item class="ModuleScript" referent="RBX213">
         <Properties>
           <string name="Name">IconVectors</string>
           <ProtectedString name="Source">--!strict
@@ -371001,7 +371249,7 @@ return {["home"]={{["x"]=21,["y"]=41,["w"]=60,["h"]=47,["color"]="#142035",["rad
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX213">
+      <Item class="ModuleScript" referent="RBX214">
         <Properties>
           <string name="Name">InspectMath</string>
           <ProtectedString name="Source">--!strict
@@ -371113,7 +371361,7 @@ return M
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX214">
+      <Item class="ModuleScript" referent="RBX215">
         <Properties>
           <string name="Name">IslandLayout</string>
           <ProtectedString name="Source">--!strict
@@ -371206,7 +371454,7 @@ return IslandLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX215">
+      <Item class="ModuleScript" referent="RBX216">
         <Properties>
           <string name="Name">LegacyGenePatterns</string>
           <ProtectedString name="Source">--!strict
@@ -371250,7 +371498,7 @@ return Legacy
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX216">
+      <Item class="ModuleScript" referent="RBX217">
         <Properties>
           <string name="Name">LoadGate</string>
           <ProtectedString name="Source">--!strict
@@ -371287,12 +371535,12 @@ return Gate
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX217">
+      <Item class="ModuleScript" referent="RBX218">
         <Properties>
           <string name="Name">MeshSanity</string>
           <ProtectedString name="Source">--!strict
--- Pure sanity check for a freshly built authored MeshPart. A mesh that did not really load renders as a plain
--- cube/box (or has zero size); the built part's size must match the extents of the source vertices.
+-- Pure sanity checks for authored MeshParts. A mesh that did not really load renders as a plain cube/box
+-- (or has zero size); the built part's size must match the extents of the source vertices.
 local Sanity = {}
 -- expected / actual: Vector3-like with X, Y, Z. Returns ok, reason.
 function Sanity.check(expected: any, actual: any, triangles: number?): (boolean, string?)
@@ -371312,18 +371560,56 @@ function Sanity.check(expected: any, actual: any, triangles: number?): (boolean,
     end
     return true, nil
 end
+-- The cube root cause (BD-219, Studio evidence 2026-10-16): a MeshPart made by CreateMeshPartAsync(Content.fromObject(mesh))
+-- does NOT own a copy of the geometry. Its MeshContent keeps pointing at the EditableMesh; once that is destroyed the
+-- object reports 0 vertices / 0 faces and the part (and every clone of it, in the world or a ViewportFrame) renders as a
+-- box of the right Size. Size alone can never catch it, so the loaded check looks at the content itself:
+--   sourceType: "Object" (Content.fromObject), "Uri" (uploaded asset) or "None"; faces: face count of the object (nil when
+--   it could not be read); meshId: the part's MeshId. Returns loaded, reason.
+function Sanity.contentLoaded(sourceType: string, faces: number?, meshId: string?): (boolean, string?)
+    if sourceType == "Object" then
+        if faces == nil then return false, "mesh object unreadable" end
+        if faces &lt;= 0 then return false, "editable mesh destroyed (0 faces)" end
+        return true, nil
+    end
+    if sourceType == "Uri" or (meshId ~= nil and meshId ~= "") then return true, nil end
+    return false, "no mesh content"
+end
 return Sanity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX218">
+      <Item class="ModuleScript" referent="RBX219">
         <Properties>
           <string name="Name">ModelPreview</string>
           <ProtectedString name="Source">--!strict
 local Resources=require(script.Parent.ResourceModels)
 local Egg=require(script.Parent.EggPreview)
 local Camera=require(script.Parent.PreviewCamera)
+local Authored=require(script.Parent.AuthoredCreatures)
+local Theme=require(script.Parent.UITheme)
 local ModelPreview={}
+-- BD-216/219: when the 3D egg is not available (mesh APIs off, budget, unloaded content) the preview shows the official
+-- 2D egg picture (shell + condition layer, tinted by EggAppearance), never a cube or a bare ball. Marked EggImageFallback.
+function ModelPreview.eggImage(viewport: ViewportFrame)
+    local shell=Theme.ImageIds.egg
+    viewport:SetAttribute("EggImageFallback",true)
+    viewport:SetAttribute("PreviewFallback","EggImage")
+    local function layer(name: string,z: number): ImageLabel
+        local item=Instance.new("ImageLabel")
+        item.Name,item.BackgroundTransparency,item.BorderSizePixel,item.Image=name,1,0,""
+        item.AnchorPoint,item.Position,item.Size=Vector2.new(.5,.5),UDim2.fromScale(.5,.5),UDim2.fromScale(.92,.92)
+        item.ScaleType,item.ZIndex,item.Parent=Enum.ScaleType.Fit,z,viewport
+        return item
+    end
+    local base=layer("EggShell",viewport.ZIndex+1)
+    if shell~=nil and shell~="" then base.Image=shell
+    else -- no uploaded egg picture either: a soft cream ellipse (still never a box)
+        base.BackgroundTransparency,base.BackgroundColor3,base.Size=0,Color3.fromRGB(255,244,214),UDim2.fromScale(.55,.8)
+        local corner=Instance.new("UICorner") corner.CornerRadius=UDim.new(.5,0) corner.Parent=base
+    end
+    layer("EggCondition",viewport.ZIndex+2).Visible=false
+end
 function ModelPreview.add(parent: GuiObject,id: string,empty: boolean?): ViewportFrame
     local viewport=Instance.new("ViewportFrame")
     viewport.BackgroundTransparency,viewport.Size=1,UDim2.fromScale(1,1)
@@ -371331,20 +371617,24 @@ function ModelPreview.add(parent: GuiObject,id: string,empty: boolean?): Viewpor
     viewport.ZIndex,viewport.Parent=parent.ZIndex+1,parent
     local model=if id=="egg" then Egg.create(empty) else Resources.clone(id,nil,true)
     if model and not viewport.Parent then model:Destroy();return viewport end
+    -- Never show a model whose mesh content is not really loaded (renders as a box): drop it and use the 2D picture.
+    if model and not Authored.verify(model) then model:Destroy() model=nil end
+    -- A real (non-empty) egg must be the authored 3D egg; the primitive ball cannot carry pattern or condition.
+    if model and id=="egg" and not empty and not model:GetAttribute("AuthoredCreature") then model:Destroy() model=nil end
     if model then
         for _,item in model:GetDescendants() do if item:IsA("BasePart") then item.Anchored=true end end
         model:PivotTo(CFrame.new())
         local world=Instance.new("WorldModel") world.Parent=viewport
         model.Parent=world
         Camera.bind(viewport,model,if id=="egg" then nil else id)
-    end
+    elseif id=="egg" and not empty then ModelPreview.eggImage(viewport) end
     return viewport
 end
 return ModelPreview
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX219">
+      <Item class="ModuleScript" referent="RBX220">
         <Properties>
           <string name="Name">MovementEnvelope</string>
           <ProtectedString name="Source">--!strict
@@ -371397,7 +371687,7 @@ return MovementEnvelope
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX220">
+      <Item class="ModuleScript" referent="RBX221">
         <Properties>
           <string name="Name">MutationEffects</string>
           <ProtectedString name="Source">-- Standalone client adapter. Upload BeDino_Soft_Smoke_256.png first.
@@ -371479,7 +371769,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX221">
+      <Item class="ModuleScript" referent="RBX222">
         <Properties>
           <string name="Name">MutationLook</string>
           <ProtectedString name="Source">--!strict
@@ -371567,7 +371857,7 @@ return Look
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX222">
+      <Item class="ModuleScript" referent="RBX223">
         <Properties>
           <string name="Name">MyDinos</string>
           <ProtectedString name="Source">--!strict
@@ -371746,7 +372036,7 @@ return M
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX223">
+      <Item class="ModuleScript" referent="RBX224">
         <Properties>
           <string name="Name">NavigationArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -371764,7 +372054,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX224">
+      <Item class="ModuleScript" referent="RBX225">
         <Properties>
           <string name="Name">NestQueue</string>
           <ProtectedString name="Source">--!strict
@@ -371825,7 +372115,7 @@ return NestQueue
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX225">
+      <Item class="ModuleScript" referent="RBX226">
         <Properties>
           <string name="Name">NextGoal</string>
           <ProtectedString name="Source">--!strict
@@ -371906,7 +372196,7 @@ return NextGoal
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX226">
+      <Item class="ModuleScript" referent="RBX227">
         <Properties>
           <string name="Name">NotifyQueue</string>
           <ProtectedString name="Source">--!strict
@@ -372119,7 +372409,7 @@ return Q
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX227">
+      <Item class="ModuleScript" referent="RBX228">
         <Properties>
           <string name="Name">PatternAtlasCache</string>
           <ProtectedString name="Source">--!strict
@@ -372205,7 +372495,7 @@ return Cache
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX228">
+      <Item class="ModuleScript" referent="RBX229">
         <Properties>
           <string name="Name">PatternGenes</string>
           <ProtectedString name="Source">--!strict
@@ -372381,6 +372671,17 @@ function Pattern.apply(part: MeshPart,genes): boolean
     end
     return paint(part,genes)
 end
+-- BD-219 watchdog: after MeshPart:ApplyMesh the part's TextureContent is gone but its atlas entry is still held, so
+-- apply() would return early. Put the held image back (or paint from scratch when nothing is held).
+function Pattern.refresh(part: MeshPart,genes): boolean
+    genes=tracked[part] or genes -- the genes painted last (EggAppearance may have repainted after the clone)
+    local entry=partEntry[part]
+    if entry then
+        part.Color=Color3.new(1,1,1);part.TextureContent=Content.fromObject(entry.image);part:SetAttribute("PatternLOD","texture")
+        return true
+    end
+    return Pattern.apply(part,genes)
+end
 -- Maintenance (client only): drop far parts to flat, then give the nearest flat parts a texture as slots free up.
 local function maintain()
     local camera=workspace.CurrentCamera
@@ -372411,7 +372712,7 @@ return Pattern
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX229">
+      <Item class="ModuleScript" referent="RBX230">
         <Properties>
           <string name="Name">PotionArt</string>
           <ProtectedString name="Source">--!strict
@@ -372547,7 +372848,7 @@ return PotionArt
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX230">
+      <Item class="ModuleScript" referent="RBX231">
         <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
@@ -372641,7 +372942,7 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX231">
+      <Item class="ModuleScript" referent="RBX232">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -372770,7 +373071,7 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX232">
+      <Item class="ModuleScript" referent="RBX233">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -373007,7 +373308,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX233">
+      <Item class="ModuleScript" referent="RBX234">
         <Properties>
           <string name="Name">RarityCurve</string>
           <ProtectedString name="Source">--!strict
@@ -373078,7 +373379,7 @@ return table.freeze(Curve)
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX234">
+      <Item class="ModuleScript" referent="RBX235">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -373087,7 +373388,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX235">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -373103,7 +373404,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -373171,7 +373472,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX238">
         <Properties>
           <string name="Name">RevealSkip</string>
           <ProtectedString name="Source">--!strict
@@ -373255,7 +373556,7 @@ return Skip
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -373347,7 +373648,7 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">Sfx</string>
           <ProtectedString name="Source">--!strict
@@ -373470,7 +373771,7 @@ return Sfx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -373518,7 +373819,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -373567,7 +373868,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">SpawnGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -373617,7 +373918,7 @@ return SpawnGeometry
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -373819,7 +374120,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -373851,7 +374152,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">UIFormat</string>
           <ProtectedString name="Source">--!strict
@@ -373895,7 +374196,7 @@ return UIFormat
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -373926,7 +374227,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -373950,7 +374251,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -374124,7 +374425,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -374155,7 +374456,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">WeatherLooks</string>
           <ProtectedString name="Source">--!strict
@@ -374277,7 +374578,7 @@ return Weather
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX251">
+      <Item class="ModuleScript" referent="RBX252">
         <Properties>
           <string name="Name">WeatherSounds</string>
           <ProtectedString name="Source">--!strict
@@ -374352,7 +374653,7 @@ return Sounds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX252">
+      <Item class="ModuleScript" referent="RBX253">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -374403,7 +374704,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX253">
+      <Item class="ModuleScript" referent="RBX254">
         <Properties>
           <string name="Name">WorldKitMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -374456,7 +374757,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX254">
+    <Item class="Folder" referent="RBX255">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -544011,15 +544312,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX255">
+  <Item class="ServerScriptService" referent="RBX256">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX256">
+    <Item class="Folder" referent="RBX257">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX257">
+      <Item class="ModuleScript" referent="RBX258">
         <Properties>
           <string name="Name">AdminService</string>
           <ProtectedString name="Source">--!strict
@@ -544133,7 +544434,7 @@ return AdminService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX258">
+      <Item class="ModuleScript" referent="RBX259">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -544403,7 +544704,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX259">
+      <Item class="Script" referent="RBX260">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -544571,7 +544872,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX260">
+      <Item class="ModuleScript" referent="RBX261">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -544681,7 +544982,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX261">
+      <Item class="ModuleScript" referent="RBX262">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -544774,7 +545075,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX262">
+      <Item class="ModuleScript" referent="RBX263">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -544910,7 +545211,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX263">
+      <Item class="ModuleScript" referent="RBX264">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -545124,7 +545425,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX264">
+      <Item class="ModuleScript" referent="RBX265">
         <Properties>
           <string name="Name">FallRecovery</string>
           <ProtectedString name="Source">--!strict
@@ -545190,7 +545491,7 @@ return FallRecovery
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX265">
+      <Item class="ModuleScript" referent="RBX266">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -545461,7 +545762,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX266">
+      <Item class="ModuleScript" referent="RBX267">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -545633,7 +545934,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX267">
+      <Item class="ModuleScript" referent="RBX268">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -545819,7 +546120,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX268">
+      <Item class="ModuleScript" referent="RBX269">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -546216,7 +546517,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX269">
+      <Item class="ModuleScript" referent="RBX270">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -546303,7 +546604,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX270">
+      <Item class="ModuleScript" referent="RBX271">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -546381,7 +546682,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX271">
+      <Item class="ModuleScript" referent="RBX272">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -546493,7 +546794,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX272">
+      <Item class="ModuleScript" referent="RBX273">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -546632,7 +546933,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX273">
+      <Item class="ModuleScript" referent="RBX274">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -546737,7 +547038,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX274">
+      <Item class="ModuleScript" referent="RBX275">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -546842,7 +547143,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX275">
+      <Item class="ModuleScript" referent="RBX276">
         <Properties>
           <string name="Name">PotionModels</string>
           <ProtectedString name="Source">--!strict
@@ -546894,7 +547195,7 @@ return Models
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX276">
+      <Item class="ModuleScript" referent="RBX277">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -547029,7 +547330,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX277">
+      <Item class="ModuleScript" referent="RBX278">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -548817,7 +549118,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX278">
+      <Item class="ModuleScript" referent="RBX279">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -549035,7 +549336,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX279">
+      <Item class="ModuleScript" referent="RBX280">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -549149,7 +549450,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX280">
+      <Item class="ModuleScript" referent="RBX281">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -549437,7 +549738,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX281">
+      <Item class="ModuleScript" referent="RBX282">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -549509,19 +549810,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX282">
+  <Item class="StarterPlayer" referent="RBX283">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX283">
+    <Item class="StarterPlayerScripts" referent="RBX284">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX284">
+      <Item class="Folder" referent="RBX285">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX285">
+        <Item class="LocalScript" referent="RBX286">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -549766,7 +550067,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX286">
+        <Item class="LocalScript" referent="RBX287">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -551325,7 +551626,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX287">
+        <Item class="LocalScript" referent="RBX288">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!nonstrict
@@ -551416,7 +551717,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX288">
+        <Item class="ModuleScript" referent="RBX289">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -551495,7 +551796,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX289">
+        <Item class="ModuleScript" referent="RBX290">
           <Properties>
             <string name="Name">DinoIndexPanels</string>
             <ProtectedString name="Source">--!strict
@@ -552031,7 +552332,7 @@ return Panels
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX290">
+        <Item class="LocalScript" referent="RBX291">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -552361,7 +552662,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX291">
+        <Item class="ModuleScript" referent="RBX292">
           <Properties>
             <string name="Name">EggPicture</string>
             <ProtectedString name="Source">--!strict
@@ -552438,7 +552739,7 @@ return EggPicture
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX292">
+        <Item class="ModuleScript" referent="RBX293">
           <Properties>
             <string name="Name">EggsScreen</string>
             <ProtectedString name="Source">--!strict
@@ -552634,7 +552935,7 @@ return EggsScreen
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX293">
+        <Item class="LocalScript" referent="RBX294">
           <Properties>
             <string name="Name">FoodGlow</string>
             <ProtectedString name="Source">--!strict
@@ -552860,7 +553161,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX294">
+        <Item class="ModuleScript" referent="RBX295">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -553727,7 +554028,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX295">
+        <Item class="ModuleScript" referent="RBX296">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -553829,7 +554130,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX296">
+        <Item class="ModuleScript" referent="RBX297">
           <Properties>
             <string name="Name">FxRig</string>
             <ProtectedString name="Source">--!nonstrict
@@ -554158,7 +554459,7 @@ return Rig
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX297">
+        <Item class="ModuleScript" referent="RBX298">
           <Properties>
             <string name="Name">HatchFx</string>
             <ProtectedString name="Source">--!nonstrict
@@ -554358,7 +554659,7 @@ return M
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX298">
+        <Item class="ModuleScript" referent="RBX299">
           <Properties>
             <string name="Name">HatchSequence</string>
             <ProtectedString name="Source">--!strict
@@ -555473,7 +555774,7 @@ return Seq
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX299">
+        <Item class="ModuleScript" referent="RBX300">
           <Properties>
             <string name="Name">InspectView</string>
             <ProtectedString name="Source">--!strict
@@ -555663,7 +555964,7 @@ return InspectView
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX300">
+        <Item class="LocalScript" referent="RBX301">
           <Properties>
             <string name="Name">JumpCarry</string>
             <ProtectedString name="Source">--!strict
@@ -555721,7 +556022,7 @@ if player.Character then task.spawn(bind, player.Character) end
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX301">
+        <Item class="ModuleScript" referent="RBX302">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -555812,7 +556113,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX302">
+        <Item class="LocalScript" referent="RBX303">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -556024,7 +556325,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX303">
+        <Item class="ModuleScript" referent="RBX304">
           <Properties>
             <string name="Name">VolumeSliders</string>
             <ProtectedString name="Source">--!strict
@@ -556105,7 +556406,7 @@ return Sliders
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX304">
+        <Item class="LocalScript" referent="RBX305">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -556172,7 +556473,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX305">
+        <Item class="LocalScript" referent="RBX306">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -556968,7 +557269,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX306">
+        <Item class="LocalScript" referent="RBX307">
           <Properties>
             <string name="Name">WorldCulling</string>
             <ProtectedString name="Source">--!strict
@@ -557095,7 +557396,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX307">
+        <Item class="LocalScript" referent="RBX308">
           <Properties>
             <string name="Name">WorldReady</string>
             <ProtectedString name="Source">--!strict
@@ -557133,7 +557434,7 @@ remote:FireServer()
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX308">
+  <Item class="Workspace" referent="RBX309">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

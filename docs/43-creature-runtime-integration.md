@@ -29,6 +29,8 @@ New world meshes use authored LOD1: **916–2,010 triangles**, one MeshPart, 10�
 
 Growth reuses the mesh, bones and image. It changes scale around the current ground pivot while temporarily releasing visual welds; it does not rebuild geometry at every food pickup. Gene changes repaint the existing image. Shiny resizes without restarting its emitters, and mutation wisps adapt to the current bounds.
 
+> **BD-219 (2026-10-16, [docs/96](96-no-more-cubes.md)):** the "12 live allocations, released with their models" scheme below is history. `CreateMeshPartAsync(Content.fromObject(mesh))` does not copy the mesh; destroying the EditableMesh left every part (and clone) drawing as a cube. Now one template EditableMesh per species stays alive for the session (at most 17), instances are clones, and a content-level loaded check plus a 2D fallback guard every preview.
+
 The client caps authored mesh allocations at 12, editable painted images at 32, and each expensive world effect at eight nearby players. Images are 128×128: the pixel storage cap is 2 MiB before engine overhead and source-mask caches. Offscreen/hidden index previews release meshes, images and camera connections. Index buttons maintain a minimum 45-pixel scaled touch height. Reduced-effects settings remove world mutation/Shiny animation. API or budget failures retain existing fallback paths.
 
 Common/Rare/Legendary aggregate egg weights remain **70/25/5**. Species weights are redistributed within those tiers to make the added species obtainable; individual old species odds therefore change for future rolls. Current in-game odds enumerate the actual configuration, including nine colours, eight patterns and uniform mixed shares.
