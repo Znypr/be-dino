@@ -22,7 +22,7 @@ local parent={ZIndex=20}
 -- Exercise fallback explicitly even after production bindings are populated.
 for key in Assets do Assets[key]="" end
 local Navigation='''+module('src/shared/NavigationArtwork.luau')+'''
-assert(Navigation.auras=="aura_meadow" and Navigation.potions=="potion_speed_Rare")
+assert(Navigation.auras=="aura_meadow" and Navigation.potions=="potion_speed_Common")
 local root=Artwork.build(parent,Navigation.auras,native)
 assert(root.Parent==parent and #nativeCalls==2 and nativeCalls[1]=="aura" and nativeCalls[2]=="dinos")
 nativeCalls={}
