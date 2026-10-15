@@ -8,6 +8,7 @@ return table.freeze({
     Gravity = 250,
     JumpPower = 56,
     TurnRate = 16, -- PROVISIONAL rad/s facing steer (Humanoid default ~8 gave a 0.38 s 180 turn)
+    CameraVerticalSmoothing = .12, -- BD-164: seconds; low-pass on the camera's vertical follow of the root (terrain rattle)
     CameraLiftSharpness = 7, -- PROVISIONAL: per-second exponential follow of growth camera lift
     MaxSlopeAngle = 46,
     -- BD-053 torso collider. Footprint grows with the dinosaur, but its underside is lifted so
