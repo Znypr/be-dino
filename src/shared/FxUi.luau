@@ -73,7 +73,7 @@ local function buildLayer(h, layer)
         for i = 1, n do L.dots[i] = dot(h.frame, z, true) end
     elseif k == "trail" then
         L.samples = {}
-        local n = if layer.id == "ribbon" then 12 elseif layer.id == "under" then 8 else 0
+        local n = if layer.id == "ribbon" then 24 elseif layer.id == "under" then 14 else 0 -- BD-215: long, readable ribbon
         for i = 1, n do L.samples[i] = dot(h.frame, z - 1, true) end
     end
     return L
@@ -188,7 +188,7 @@ local function stepHandle(h, dt: number)
                 if h.sampleClock >= 0.045 then
                     h.sampleClock = 0
                     table.insert(hist, 1, {headX, headY})
-                    if #hist > 16 then table.remove(hist) end
+                    if #hist > 34 then table.remove(hist) end
                 end
             end
             local n = #L.samples
@@ -199,7 +199,7 @@ local function stepHandle(h, dt: number)
                     local wrapped = math.abs(s[1] - headX) > 0.6 -- the runner looped around: hide the old tail
                     if wrapped then d.Visible = false
                     else
-                        local px = unit * (0.05 + layer.width * 0.12) * (1 - t * 0.8) * (if layer.id == "under" then 1.5 else 1)
+                        local px = unit * (0.09 + layer.width * 0.18) * (1 - t * 0.7) * (if layer.id == "under" then 1.5 else 1)
                         place(d, s[1] - 0.01, s[2], px, gradient(layer.color, t), 1 - layer.alpha * (1 - t * 0.9) * fade)
                     end
                 else d.Visible = false end
@@ -251,7 +251,7 @@ function Ui.mount(parent: GuiObject, kind: string, item, opts)
     frame.Parent = parent
     local h = {frame = frame, root = parent, kind = kind, resolved = resolved, z = parent.ZIndex + 2, time = 0, layers = {}, reduced = opts.reduce == true, hero = opts.hero == true}
     h.orb = dot(frame, h.z + 1, true)
-    h.orb.Size = UDim2.fromScale(0.16, 0.16)
+    h.orb.Size = UDim2.fromScale(if kind == "trail" then 0.22 else 0.16, if kind == "trail" then 0.22 else 0.16)
     h.orb.SizeConstraint = Enum.SizeConstraint.RelativeYY
     h.orb.BackgroundColor3, h.orb.BackgroundTransparency, h.orb.Visible = Color3.fromRGB(20, 32, 53), 0, kind == "trail"
     for _, layer in resolved.layers do table.insert(h.layers, buildLayer(h, layer)) end

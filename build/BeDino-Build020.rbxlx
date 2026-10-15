@@ -369694,7 +369694,7 @@ local function buildLayer(h, layer)
         for i = 1, n do L.dots[i] = dot(h.frame, z, true) end
     elseif k == "trail" then
         L.samples = {}
-        local n = if layer.id == "ribbon" then 12 elseif layer.id == "under" then 8 else 0
+        local n = if layer.id == "ribbon" then 24 elseif layer.id == "under" then 14 else 0 -- BD-215: long, readable ribbon
         for i = 1, n do L.samples[i] = dot(h.frame, z - 1, true) end
     end
     return L
@@ -369809,7 +369809,7 @@ local function stepHandle(h, dt: number)
                 if h.sampleClock &gt;= 0.045 then
                     h.sampleClock = 0
                     table.insert(hist, 1, {headX, headY})
-                    if #hist &gt; 16 then table.remove(hist) end
+                    if #hist &gt; 34 then table.remove(hist) end
                 end
             end
             local n = #L.samples
@@ -369820,7 +369820,7 @@ local function stepHandle(h, dt: number)
                     local wrapped = math.abs(s[1] - headX) &gt; 0.6 -- the runner looped around: hide the old tail
                     if wrapped then d.Visible = false
                     else
-                        local px = unit * (0.05 + layer.width * 0.12) * (1 - t * 0.8) * (if layer.id == "under" then 1.5 else 1)
+                        local px = unit * (0.09 + layer.width * 0.18) * (1 - t * 0.7) * (if layer.id == "under" then 1.5 else 1)
                         place(d, s[1] - 0.01, s[2], px, gradient(layer.color, t), 1 - layer.alpha * (1 - t * 0.9) * fade)
                     end
                 else d.Visible = false end
@@ -369872,7 +369872,7 @@ function Ui.mount(parent: GuiObject, kind: string, item, opts)
     frame.Parent = parent
     local h = {frame = frame, root = parent, kind = kind, resolved = resolved, z = parent.ZIndex + 2, time = 0, layers = {}, reduced = opts.reduce == true, hero = opts.hero == true}
     h.orb = dot(frame, h.z + 1, true)
-    h.orb.Size = UDim2.fromScale(0.16, 0.16)
+    h.orb.Size = UDim2.fromScale(if kind == "trail" then 0.22 else 0.16, if kind == "trail" then 0.22 else 0.16)
     h.orb.SizeConstraint = Enum.SizeConstraint.RelativeYY
     h.orb.BackgroundColor3, h.orb.BackgroundTransparency, h.orb.Visible = Color3.fromRGB(20, 32, 53), 0, kind == "trail"
     for _, layer in resolved.layers do table.insert(h.layers, buildLayer(h, layer)) end
@@ -372355,6 +372355,77 @@ local function stroke(parent: GuiObject, color: Color3, thickness: number)
     s.Color, s.Thickness, s.Parent = color, thickness, parent
     return s
 end
+-- BD-214: textured 3D models (Roblox generate_mesh, docs/77). The server caches stripped copies in
+-- ReplicatedStorage.PotionModels (Server/PotionModels); the vector flask above stays as the fallback.
+PotionArt.ModelAssets = {flask=114182681867384, jar=121478365783622, heart=126942715659365, claw=100441458834806}
+PotionArt.ReduceMotion = false
+function PotionArt.modelFor(kind: string, rarity: string): string
+    if rarity == "Legendary" then return "claw" end
+    return if kind == "loot" then "jar" elseif kind == "growth" then "heart" else "flask"
+end
+local spinning: {[Camera]: {focus: Vector3, dist: number, angle: number}} = setmetatable({}, {__mode = "k"}) :: any
+local spinConnection: RBXScriptConnection? = nil
+local function place(camera: Camera, s)
+    local eye = s.focus + Vector3.new(math.sin(s.angle) * s.dist, s.dist * .12, math.cos(s.angle) * s.dist)
+    camera.CFrame = CFrame.lookAt(eye, s.focus)
+end
+local function spin(dt: number)
+    local any = false
+    for camera, s in spinning do
+        if camera.Parent and camera:IsDescendantOf(game) then
+            any = true
+            s.angle += dt * .6
+            place(camera, s)
+        else spinning[camera] = nil end
+    end
+    if not any and spinConnection then spinConnection:Disconnect() spinConnection = nil end
+end
+local function mountModel(root: GuiObject, source: Model, tier: number, trim: Color3): boolean
+    local view = Instance.new("ViewportFrame")
+    view.Name, view.BackgroundTransparency, view.Size, view.ZIndex = "PotionModel", 1, UDim2.fromScale(1, 1), root.ZIndex + 4
+    view.Ambient, view.LightColor, view.LightDirection = Color3.fromRGB(170,170,180), Color3.new(1,1,1), Vector3.new(-1,-1,-.6)
+    local model = source:Clone()
+    model.Parent = view
+    local cf, size = model:GetBoundingBox()
+    local radius = math.max(size.X, size.Y, size.Z) * .5
+    if radius &lt;= 0 then view:Destroy() return false end
+    local camera = Instance.new("Camera")
+    camera.FieldOfView, camera.Parent = 40, view
+    view.CurrentCamera = camera
+    local s = {focus = cf.Position, dist = radius / math.tan(math.rad(20)) * 1.15, angle = .5}
+    place(camera, s)
+    view.Parent = root
+    -- Hide the vector flask but keep the rarity glow plate and pips (docs/88 tier frame).
+    for _, child in root:GetChildren() do
+        if child:IsA("GuiObject") and (child.Name == "Neck" or child.Name == "Glass" or child.Name == "Cork") then child.Visible = false end
+    end
+    if tier &gt;= 4 then view.ImageColor3 = Color3.new(1,1,1):Lerp(trim, .08) end
+    if not PotionArt.ReduceMotion then
+        spinning[camera] = s
+        if not spinConnection then spinConnection = game:GetService("RunService").Heartbeat:Connect(spin) end
+    end
+    return true
+end
+function PotionArt.attachModel(root: GuiObject, kind: string, rarity: string)
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local key = PotionArt.modelFor(kind, rarity)
+    local tier = PotionArt.rarityIndex(rarity)
+    local trim = PotionArt.RarityColor[rarity] or PotionArt.RarityColor.Common
+    local function try(): boolean
+        local folder = ReplicatedStorage:FindFirstChild("PotionModels")
+        local source = folder and folder:FindFirstChild(key)
+        if source and source:IsA("Model") then local ok, mounted = pcall(mountModel, root, source, tier, trim) return ok and mounted == true end
+        return false
+    end
+    if try() then return end
+    task.spawn(function() -- models stream in after the server loads them; give up quietly (flask stays) after 15 s
+        for _ = 1, 30 do
+            task.wait(.5)
+            if not root.Parent then return end
+            if try() then return end
+        end
+    end)
+end
 function PotionArt.rarityIndex(rarity: string): number
     return table.find(PotionArt.Rarities, rarity) or 1
 end
@@ -372378,6 +372449,7 @@ function PotionArt.build(root: GuiObject, kind: string, rarity: string)
     for i = 1, tier do
         frame(root, "Pip", .5 + (i - (tier + 1) / 2) * .11 - .03, .92, .06, .06, trim, z + 3, 1)
     end
+    if game ~= nil and game:GetService("RunService"):IsClient() then PotionArt.attachModel(root, kind, rarity) end
     return neck
 end
 return PotionArt
@@ -373626,7 +373698,7 @@ function Art.build(parent: GuiObject,id: string): Frame?
         local x,y=.12+t*.76,.34+(lane-1)*.2+math.sin(t*math.pi*1.5)*.14
         local dx,dy=(nextT-t)*.76,(math.sin(nextT*math.pi*1.5)-math.sin(t*math.pi*1.5))*.14
         part.AnchorPoint,part.Position=Vector2.new(.5,.5),UDim2.fromScale(x,y)
-        part.Size=UDim2.fromScale(math.sqrt(dx*dx+dy*dy)*2.2,.045*(1-t*.75))
+        part.Size=UDim2.fromScale(math.sqrt(dx*dx+dy*dy)*2.2,.09*(1-t*.6)) -- BD-215: thick enough to read on a phone
         part.Rotation=math.deg(math.atan2(dy,dx))
         part.BackgroundColor3=Color3.fromRGB(item.color[1],item.color[2],item.color[3]):Lerp(Color3.fromRGB(item.accent[1],item.accent[2],item.accent[3]),t)
         part.BackgroundTransparency,part.BorderSizePixel,part.ZIndex,part.Parent=t*.7,0,root.ZIndex,root
@@ -373748,6 +373820,7 @@ local Artwork = require(script.Parent.Artwork)
 local IconLayout = require(script.Parent.UIIconLayout)
 local TrailArtwork = require(script.Parent.TrailArtwork)
 local FxUi = require(script.Parent.FxUi)
+local PotionArt = require(script.Parent.PotionArt)
 local Theme = {}
 Theme.BackgroundImageId = ""
 Theme.MotionEnabled = true
@@ -373901,6 +373974,7 @@ function Theme.icon(parent: GuiObject,id: string): Frame?
         if art then FxUi.decorateIcon(art,id,not Theme.MotionEnabled) end -- docs/93: animated preview, static ribbon under it
         return art
     end
+    PotionArt.ReduceMotion=not Theme.MotionEnabled -- BD-214: 3D potion models spin slowly, still under Reduce Motion
     local icon=Artwork.build(parent,id,nativeIcon) or nativeIcon(parent,id)
     if icon and string.sub(id,1,5)=="aura_" then FxUi.decorateIcon(icon,id,not Theme.MotionEnabled) end
     return icon
@@ -544207,6 +544281,7 @@ if not Lighting:FindFirstChildOfClass("Atmosphere") then
     atmosphere.Parent = Lighting
 end
 require(script.Parent.ImportedResources).load()
+require(script.Parent.PotionModels).load() -- BD-214 textured potion models for menu ViewportFrames
 if Config.WorldArtMode=="BiomeKit" or Config.FoodArtMode=="Kit" then require(script.Parent.ImportedResources).loadWorldKit() end
 Arena.build()
 Leaderboards.start()
@@ -546523,6 +546598,58 @@ return MutationService
       </Item>
       <Item class="ModuleScript" referent="RBX273">
         <Properties>
+          <string name="Name">PotionModels</string>
+          <ProtectedString name="Source">--!strict
+-- BD-214: textured potion models (Roblox generate_mesh, published to the owner's account; docs/77) shown in menus through
+-- ViewportFrames (Shared/PotionArt). Loaded once on the server with InsertService, stripped to visual parts only, and cached
+-- in ReplicatedStorage.PotionModels. If a load fails the client keeps the vector flask fallback.
+local InsertService = game:GetService("InsertService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PotionArt = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PotionArt"))
+local Models = {}
+
+local KEEP = {MeshPart = true, SurfaceAppearance = true, Decal = true, Texture = true, Model = true, SpecialMesh = true, Part = true}
+
+local function sanitize(root: Instance): Model?
+    local model = Instance.new("Model")
+    for _, item in root:GetDescendants() do
+        if item:IsA("BasePart") and KEEP[item.ClassName] then
+            local copy = item:Clone()
+            for _, child in copy:GetDescendants() do
+                if not KEEP[child.ClassName] then child:Destroy() end
+            end
+            copy.Anchored, copy.CanCollide, copy.CanQuery, copy.CanTouch = true, false, false, false
+            copy.Parent = model
+        end
+    end
+    if #model:GetChildren() == 0 then model:Destroy() return nil end
+    return model
+end
+
+function Models.load()
+    local folder = ReplicatedStorage:FindFirstChild("PotionModels") or Instance.new("Folder")
+    folder.Name = "PotionModels"
+    folder.Parent = ReplicatedStorage
+    for key, assetId in PotionArt.ModelAssets do
+        if folder:FindFirstChild(key) then continue end
+        task.spawn(function()
+            local ok, result = pcall(function() return InsertService:LoadAsset(assetId) end)
+            if not ok or not result then warn("[PotionModels] load failed", key, assetId, result) return end
+            local model = sanitize(result)
+            result:Destroy()
+            if not model then warn("[PotionModels] no mesh parts in", key, assetId) return end
+            model.Name = key
+            model.Parent = folder
+        end)
+    end
+end
+
+return Models
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX274">
+        <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
 local Players = game:GetService("Players")
@@ -546656,7 +546783,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX274">
+      <Item class="ModuleScript" referent="RBX275">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -548444,7 +548571,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX275">
+      <Item class="ModuleScript" referent="RBX276">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -548662,7 +548789,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX276">
+      <Item class="ModuleScript" referent="RBX277">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -548776,7 +548903,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX277">
+      <Item class="ModuleScript" referent="RBX278">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -549039,7 +549166,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX278">
+      <Item class="ModuleScript" referent="RBX279">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -549111,19 +549238,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX279">
+  <Item class="StarterPlayer" referent="RBX280">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX280">
+    <Item class="StarterPlayerScripts" referent="RBX281">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX281">
+      <Item class="Folder" referent="RBX282">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX282">
+        <Item class="LocalScript" referent="RBX283">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -549368,7 +549495,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX283">
+        <Item class="LocalScript" referent="RBX284">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -549494,6 +549621,7 @@ end
 local function art(parent: GuiObject,id: string,x: number,y: number,size: number)
     local icon = Theme.icon(parent,id)
     if icon then icon.Position,icon.Size = UDim2.fromOffset(x,y),UDim2.fromOffset(size,size) end
+    return icon
 end
 local shade = Instance.new("TextButton")
 shade.Name,shade.Text,shade.Size = "ModalScrim","",UDim2.fromScale(1,1)
@@ -549927,8 +550055,9 @@ render=function(name: string)
             local card=box(body,slot*276,cardsY,264,cardsHeight,color,24)
             label(card,item.name,6,5,252,34,25)
             label(card,if isTrail then "Level "..item.level.." • "..(UIFormat.boost("Speed",item.speed) or "Speed") else (UIFormat.boost("Growth",item.growth) or "Growth"),4,42,256,30,19)
-            local iconSize=if isTrail then 60 else math.clamp(buyY-30-74,60,128) -- BD-177: big aura icon fills the card
-            art(card,(if isTrail then "trail_" else "aura_")..item.id,(264-iconSize)/2,if isTrail then 76 else 74+(buyY-30-74-iconSize)/2,iconSize)
+            local iconSize=math.clamp(buyY-30-74,60,128) -- BD-177/BD-215: big aura and trail art fills the card icon area
+            local shown=art(card,(if isTrail then "trail_" else "aura_")..item.id,(264-iconSize)/2,74+(buyY-30-74-iconSize)/2,iconSize)
+            if shown and isTrail then shown.Position,shown.Size=UDim2.fromOffset(8,74+(buyY-30-74-iconSize)/2),UDim2.fromOffset(248,iconSize) end
             label(card,if owned[item.id] then "Owned" else item.price.." Crystals",4,buyY-30,256,27,21,C.gold)
             local equipped=equippedId==item.id
             local locked=isTrail and num("AccountLevel")&lt;item.level and not owned[item.id]
@@ -550923,7 +551052,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX284">
+        <Item class="LocalScript" referent="RBX285">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!nonstrict
@@ -551014,7 +551143,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX285">
+        <Item class="ModuleScript" referent="RBX286">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -551093,7 +551222,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX286">
+        <Item class="ModuleScript" referent="RBX287">
           <Properties>
             <string name="Name">DinoIndexPanels</string>
             <ProtectedString name="Source">--!strict
@@ -551629,7 +551758,7 @@ return Panels
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX287">
+        <Item class="LocalScript" referent="RBX288">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -551952,7 +552081,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX288">
+        <Item class="ModuleScript" referent="RBX289">
           <Properties>
             <string name="Name">EggPicture</string>
             <ProtectedString name="Source">--!strict
@@ -552029,7 +552158,7 @@ return EggPicture
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX289">
+        <Item class="ModuleScript" referent="RBX290">
           <Properties>
             <string name="Name">EggsScreen</string>
             <ProtectedString name="Source">--!strict
@@ -552225,7 +552354,7 @@ return EggsScreen
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX290">
+        <Item class="ModuleScript" referent="RBX291">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -553092,7 +553221,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX291">
+        <Item class="ModuleScript" referent="RBX292">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -553194,7 +553323,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX292">
+        <Item class="ModuleScript" referent="RBX293">
           <Properties>
             <string name="Name">FxRig</string>
             <ProtectedString name="Source">--!nonstrict
@@ -553523,7 +553652,7 @@ return Rig
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX293">
+        <Item class="ModuleScript" referent="RBX294">
           <Properties>
             <string name="Name">HatchFx</string>
             <ProtectedString name="Source">--!nonstrict
@@ -553723,7 +553852,7 @@ return M
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX294">
+        <Item class="ModuleScript" referent="RBX295">
           <Properties>
             <string name="Name">HatchSequence</string>
             <ProtectedString name="Source">--!strict
@@ -554785,7 +554914,7 @@ return Seq
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX295">
+        <Item class="ModuleScript" referent="RBX296">
           <Properties>
             <string name="Name">InspectView</string>
             <ProtectedString name="Source">--!strict
@@ -554975,7 +555104,7 @@ return InspectView
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX296">
+        <Item class="ModuleScript" referent="RBX297">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -555066,7 +555195,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX297">
+        <Item class="LocalScript" referent="RBX298">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -555266,7 +555395,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX298">
+        <Item class="ModuleScript" referent="RBX299">
           <Properties>
             <string name="Name">VolumeSliders</string>
             <ProtectedString name="Source">--!strict
@@ -555347,7 +555476,7 @@ return Sliders
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX299">
+        <Item class="LocalScript" referent="RBX300">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -555414,7 +555543,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX300">
+        <Item class="LocalScript" referent="RBX301">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -556228,7 +556357,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX301">
+        <Item class="LocalScript" referent="RBX302">
           <Properties>
             <string name="Name">WorldCulling</string>
             <ProtectedString name="Source">--!strict
@@ -556356,7 +556485,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX302">
+  <Item class="Workspace" referent="RBX303">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>
