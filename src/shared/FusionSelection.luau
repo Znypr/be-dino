@@ -117,15 +117,16 @@ function Sel.isPlain(d): boolean
     return #Sel.valuableReasons(d) == 0 and d.locked ~= true and d.favorited ~= true
 end
 
+-- Card words for children (docs/96): short, plain, say what is wrong.
 Sel.ReasonText = {
-    wrong_stage = "Wrong stage for this recipe",
-    missing_pattern = "Egg pattern unknown (older copy)",
-    species_mismatch = "Different species",
+    wrong_stage = "Not the right stage",
+    missing_pattern = "Older dino: can't fuse",
+    species_mismatch = "Different dino",
     pattern_mismatch = "Different pattern",
-    locked = "Locked: unlock to use",
-    favorited = "Favorited: unfavorite to use",
-    recipe_not_approved = "Recipe not approved yet",
-    full = "All slots are filled",
+    locked = "Locked",
+    favorited = "Favourite",
+    recipe_not_approved = "Not ready yet",
+    full = "Slots are full",
 }
 
 -- Context: {targetStage, speciesId?, patternId?} where species/pattern come from the
@@ -764,6 +765,104 @@ function Sel.details(d, catalog)
     return view
 end
 
+
+-- Fusion Menu v2 (docs/96) ---------------------------------------------------------
+-- Big tier tab: {title = "GOLD", sub = "6 Base"}.
+function Sel.tabText(stageId: string)
+    local s = stageInfo(stageId)
+    if not s then return {title = string.upper(tostring(stageId)), sub = ""} end
+    return {title = string.upper(s.name), sub = if s.approved then s.donorCount .. " " .. Sel.stageTitle(s.source) else "Soon"}
+end
+
+-- The list is filtered automatically to dinos of the recipe's source stage (plus any
+-- optional filters). Wrong-stage copies are hidden instead of explained.
+function Sel.visibleFor(dinos, targetStage: string, filters)
+    local recipe = stageInfo(targetStage)
+    local result = {}
+    for _, d in dinos do
+        if recipe and d.stage == recipe.source and Sel.matches(d, filters) then table.insert(result, d) end
+    end
+    return result
+end
+
+-- Largest group of eligible copies for this recipe: {speciesId, patternId?, count}.
+-- Species only for Gold (any pattern); species + pattern for Emerald / Diamond.
+function Sel.bestGroup(dinos, targetStage: string)
+    local recipe = stageInfo(targetStage)
+    if not recipe or not recipe.approved then return nil end
+    local groups, best = {}, nil
+    for _, d in dinos do
+        if Sel.ineligibility(d, {targetStage = targetStage}) == nil then
+            local pattern = if recipe.anyPattern then nil else genes(d).patternId
+            local key = tostring(d.speciesId) .. "|" .. tostring(pattern or "*")
+            local g = groups[key]
+            if not g then g = {speciesId = d.speciesId, patternId = pattern, count = 0} groups[key] = g end
+            g.count += 1
+            if not best or g.count > best.count then best = g end
+        end
+    end
+    return best
+end
+
+-- One sentence under the tabs: what to do next, or why nothing can be made yet.
+function Sel.goalText(dinos, targetStage: string, selection, byId, catalog): string
+    local recipe = stageInfo(targetStage)
+    if not recipe or not recipe.approved then return Sel.LockedStageText end
+    local need = recipe.donorCount
+    local first = selection[1] and byId[selection[1]]
+    if first then
+        local left = need - #selection
+        local who = lookup(catalog, "species", first.speciesId, "dino")
+        if left <= 0 then return "Ready! Tap FUSE." end
+        return "Tap " .. left .. " more " .. who .. "."
+    end
+    local best = Sel.bestGroup(dinos, targetStage)
+    if not best then
+        return "You need " .. need .. " " .. Sel.stageTitle(recipe.source) .. " dinos of one kind. You have 0."
+    end
+    local who = lookup(catalog, "species", best.speciesId, "dino")
+    if best.count >= need then return "Tap " .. need .. " " .. who .. ", or Fill for me." end
+    return "You need " .. need .. " " .. who .. " to make a " .. recipe.name .. " " .. who .. ". You have " .. best.count .. "."
+end
+
+-- Exact server odds as short chips: {{title = "Shiny", chips = {{label = "Shiny 8%", p = .08}}}}.
+-- Same numbers as formatOdds (largest remainder, sums to 100%), only phrased simply.
+function Sel.oddsChips(odds, catalog)
+    local formatted = Sel.formatOdds(odds, catalog)
+    if not formatted.ok then return {ok = false, sections = {}, error = formatted.error} end
+    local sections = {}
+    for _, section in formatted.sections do
+        local chips = {}
+        for _, row in section.rows do
+            local label = row.label
+            if section.trait == "shiny" or section.trait == "big" then
+                label = if row.id == "yes" then row.label else "Not " .. string.lower(section.title)
+            elseif section.trait == "mutation" and row.id == "none" then label = "No mutation" end
+            table.insert(chips, {id = row.id, label = label .. " " .. row.text, p = row.p})
+        end
+        table.insert(sections, {title = if section.trait == "primaryColor" then "Colour 1" elseif section.trait == "secondaryColor" then "Colour 2" else section.title, trait = section.trait, chips = chips})
+    end
+    return {ok = true, sections = sections}
+end
+
+-- Card words: pattern line never says "Unknown pattern"; an older copy says so plainly.
+function Sel.cardPattern(d, catalog): string
+    local g = genes(d)
+    if type(g.patternId) ~= "string" or g.patternId == "" then return "Older dino" end
+    return lookup(catalog, "patterns", g.patternId)
+end
+-- Short trait words for a card: Shiny, BIG, mutation name, "Effects", Locked, Favourite.
+function Sel.cardTraits(d, catalog): {string}
+    local list = {}
+    if d.shiny == true then table.insert(list, "Shiny") end
+    if d.big == true then table.insert(list, "BIG") end
+    local m = mutationOf(d)
+    if m ~= "none" then table.insert(list, lookup(catalog, "mutations", m)) end
+    if Sel.hasCosmetics(d) then table.insert(list, "Effects") end
+    if d.locked == true then table.insert(list, "Locked") end
+    if d.favorited == true then table.insert(list, "Favourite") end
+    return list
+end
 
 -- Nav FUSION target. "menu" = new Pattern Fusion Menu; "legacy" = old Build 020 page
 -- (development profile only); "unavailable" = notify, open nothing.

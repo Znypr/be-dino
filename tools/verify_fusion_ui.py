@@ -377,7 +377,34 @@ local showing=false for _,l in gv.origin.lines do if l=="Showing 12 of 15 parent
 local plainFused=table.clone(fused) plainFused.cosmetics={ownedAuraIds={"royal"},ownedTrailIds={"astra"},equippedAuraId="royal",equippedTrailId="astra"}
 assert(S.details(plainFused,cat).prestige==fv.prestige)
 
-print("Fusion UI logic passed: ladder 6/3/2 stages (Gold any pattern), filters, sorts, eligibility reasons, plain-only auto-fill (fuzzed), exact 100% odds (fuzzed), loss summary, token reuse, committed reveal wheels (fuzzed) and truthful Dino Details")
+-- ===== Fusion Menu v2 helpers (docs/96): plain words, auto-filter, goal sentence, odds chips =====
+assert(S.tabText("gold").title=="GOLD" and S.tabText("gold").sub=="6 Base" and S.tabText("emerald").sub=="3 Gold" and S.tabText("diamond").sub=="2 Emerald")
+local vis=S.visibleFor(all,"gold",nil)
+assert(#vis==#all-1,"Gold lists Base copies only (the gold copy is hidden): "..#vis)
+assert(#S.visibleFor(all,"emerald",nil)==1 and #S.visibleFor(all,"diamond",nil)==0 and #S.visibleFor(all,"platinum",nil)==0)
+assert(#S.visibleFor(all,"gold",{speciesId="raptor"})==1,"optional filters still apply")
+local bg=S.bestGroup(all,"gold") assert(bg.speciesId=="compy" and bg.count==24 and bg.patternId==nil,"best group "..bg.count)
+assert(S.bestGroup(tier,"emerald").count==13 and S.bestGroup(tier,"emerald").patternId=="06_wavy_stripes","Emerald groups by pattern too")
+assert(S.bestGroup(all,"platinum")==nil)
+assert(S.goalText(all,"gold",{},byId,cat)=="Tap 6 Compy, or Fill for me.",S.goalText(all,"gold",{},byId,cat))
+assert(S.goalText({all[1],all[2]},"gold",{},byId,cat)=="You need 6 Compy to make a Gold Compy. You have 2.")
+assert(S.goalText({},"gold",{},byId,cat)=="You need 6 Base dinos of one kind. You have 0.")
+assert(S.goalText(all,"gold",{all[1].instanceId,all[2].instanceId},byId,cat)=="Tap 4 more Compy.")
+assert(S.goalText(all,"gold",full,byId,cat)=="Ready! Tap FUSE.")
+assert(S.goalText(all,"platinum",{},byId,cat)==S.LockedStageText)
+local chips=S.oddsChips(odds,cat)
+assert(chips.ok and #chips.sections==5 and chips.sections[1].chips[1].label=="Shiny 10%" and chips.sections[1].chips[2].label=="Not shiny 90%")
+assert(chips.sections[2].title=="Event mutation" and chips.sections[2].chips[1].label=="No mutation 85%" and chips.sections[2].chips[2].label=="Ember 10%")
+assert(chips.sections[3].chips[1].label=="BIG 5%" and chips.sections[3].chips[2].label=="Not big 95%")
+assert(chips.sections[4].title=="Colour 1" and chips.sections[5].title=="Colour 2" and chips.sections[5].chips[1].label=="Blue 70%")
+local chipTotal=0 for _,c in chips.sections[4].chips do chipTotal+=tonumber(string.match(c.label,"([%d%.]+)%%$")) end
+assert(math.abs(chipTotal-100)<1e-9,"chip percentages sum to 100")
+assert(not S.oddsChips({shiny=.1},cat).ok and not S.oddsChips(nil,cat).ok,"malformed odds give no chips")
+assert(S.cardPattern(legacy,cat)=="Older dino" and S.cardPattern(all[1],cat)=="Wavy Stripes")
+assert(table.concat(S.cardTraits(trail,cat),",")=="Effects" and table.concat(S.cardTraits(ember,cat),",")=="Ember" and S.cardTraits(locked,cat)[1]=="Locked" and S.cardTraits(fav,cat)[1]=="Favourite")
+for code,text in S.ReasonText do assert(#text<=24 and not string.find(text,"recipe") and not string.find(text,"species"),"plain short reason "..code) end
+
+print("Fusion UI logic passed: ladder 6/3/2 stages (Gold any pattern), filters, sorts, eligibility reasons, plain-only auto-fill (fuzzed), exact 100% odds (fuzzed), loss summary, token reuse, committed reveal wheels (fuzzed), truthful Dino Details and the v2 menu words (tabs, auto-filter, goal sentence, odds chips)")
 ''')
 
 
