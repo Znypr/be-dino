@@ -12,6 +12,9 @@ Q.MaxWaiting = 8
 Q.InfoGap = 1.5
 Q.KeyGap = 5
 Q.Priority = {info = 1, good = 1, warning = 2, major = 3} :: {[string]: number}
+-- A card is 440 px wide: long copy is cut at a word boundary with "..." so it never runs past the card.
+Q.MaxText = 30
+Q.MaxBody = 44
 Q.Duration = {info = 2.5, good = 3, warning = 4, major = 4.5} :: {[string]: number}
 
 export type Card = {text: string, body: string?, kind: string, key: string?, icon: string?, tint: string?,
@@ -40,6 +43,14 @@ function Q.new(): State
         lastInfoAt = -math.huge, seq = 0, stats = {shown = 0, merged = 0, dropped = 0}} :: State
 end
 
+function Q.clip(value: string, max: number): string
+    if #value <= max then return value end
+    local cut = string.sub(value, 1, max - 3)
+    local word = string.match(cut, "^(.*)%s+%S*$")
+    if word and #word >= max // 2 then cut = word end
+    return string.gsub(cut, "[%s%p]+$", "") .. "..."
+end
+
 local function kindOf(kind: any): string
     return if typeof(kind) == "string" and Q.Priority[kind] then kind else "info"
 end
@@ -53,6 +64,8 @@ end
 -- Returns "queued" | "merged" | "dropped".
 function Q.push(q: State, now: number, input: any): string
     if typeof(input) ~= "table" or typeof(input.text) ~= "string" or input.text == "" then return "dropped" end
+    input = {text = Q.clip(input.text, Q.MaxText), body = if typeof(input.body) == "string" then Q.clip(input.body, Q.MaxBody) else nil,
+        kind = input.kind, key = input.key, icon = input.icon, tint = input.tint, amount = input.amount, format = input.format}
     local kind = kindOf(input.kind)
     local key = if typeof(input.key) == "string" then input.key else nil
     local live = findKey(q.visible, key)

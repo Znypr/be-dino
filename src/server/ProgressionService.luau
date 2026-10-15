@@ -8,7 +8,20 @@ local Rules=require(ReplicatedStorage.Shared.ProgressionRules)
 local Resources=require(ReplicatedStorage.Shared.ResourceModels)
 local MovementEnvelope=require(ReplicatedStorage.Shared.MovementEnvelope)
 local GameConfig=require(ReplicatedStorage.Shared.Config)
+local ColourBonus=require(ReplicatedStorage.Shared.ColourBonus)
 local Service={}
+-- BD-172: colour growth bonus from the SERVER-held equipped genes (never client data); decoded once per distinct string.
+local colourCache={json="",percent=0,multiplier=1}
+local function colourGrowth(genesJson:any): (number,number)
+    if typeof(genesJson)~="string" then return 0,1 end
+    if colourCache.json~=genesJson then
+        local ok,genes=pcall(function() return Http:JSONDecode(genesJson) end)
+        colourCache.json=genesJson
+        colourCache.percent=if ok then ColourBonus.percent(Config.EggColors,genes) else 0
+        colourCache.multiplier=1+colourCache.percent/100
+    end
+    return colourCache.percent,colourCache.multiplier
+end
 local random=Random.new()
 local WeatherClock=require(ReplicatedStorage.Shared.WeatherClock)
 local clock=WeatherClock.new(workspace:GetServerTimeNow())
@@ -178,6 +191,9 @@ function Service.start(repository)
                     local growth,speed,loot=Rules.multipliers(p,player:GetAttribute("EquippedSpeciesId") or "compy",current,os.time(),player:GetAttribute("EquippedCondition"),mutation)
                     local adminGrowth,adminSpeed=adminMultipliers()
                     growth*=adminGrowth speed*=adminSpeed
+                    local colourPercent,colourMultiplier=colourGrowth(player:GetAttribute("EquippedGenesJson"))
+                    growth*=colourMultiplier -- BD-172: applied after the GrowthCap, so it is always an extra <= +10% on gained growth
+                    c:SetAttribute("ColourGrowthPercent",colourPercent) player:SetAttribute("ColourGrowthPercent",colourPercent)
                     c:SetAttribute("EventMutationId",if mutation then mutation.id else "")
                     c:SetAttribute("GrowthMultiplier",growth) c:SetAttribute("WeatherLootMultiplier",loot)
                     player:SetAttribute("GrowthMultiplier",growth) player:SetAttribute("SpeedMultiplier",speed) player:SetAttribute("LootMultiplier",loot)

@@ -36,7 +36,9 @@ FusionMenu.AutoRetries = 3
 FusionMenu.ReelTurns = 3
 FusionMenu.ReelSeconds = 1.7
 
+local ColourBonus = require(ReplicatedStorage.Shared.ColourBonus)
 local catalog = Sel.buildCatalog(Config, ProgressionConfig, EggGenetics.Patterns)
+catalog.colourBonus = function(genes) return ColourBonus.text(ProgressionConfig.EggColors, genes) end -- BD-172
 local player = Players.LocalPlayer
 
 local function remote(): RemoteFunction?

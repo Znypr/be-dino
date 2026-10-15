@@ -108,6 +108,16 @@ def static_checks():
     client = (ROOT / 'src/client/AdminPanel.client.luau').read_text(encoding='utf-8')
     if 'GetAttribute("IsAdmin") ~= true' not in client:
         errors.append('AdminPanel must wait for the server IsAdmin flag before building UI')
+    # UX (2026-10-15): all weather events pickable, a Start now / Stop pair, grouped sections, toasts told where the panel is.
+    for needle in ('for index, event in ProgressionConfig.Weather do', '"Start now"', '"Stop"', 'section("Weather")', 'section("Run")',
+                   'section("Debug")', 'AdminPanelRight'):
+        if needle not in client:
+            errors.append('AdminPanel is missing: ' + needle)
+    config = (ROOT / 'src/shared/ProgressionConfig.luau').read_text(encoding='utf-8')
+    start = config.index('Weather={') if 'Weather={' in config else config.index('Weather = {')
+    events = re.findall(r'\{id="(\w+)",name="[^"]+",rarity="\w+",weight=\d+,growth=', config[start:start + 3000])
+    if len(events) != 7:
+        errors.append('expected 7 weather events for the admin picker, found %d' % len(events))
     return errors
 
 

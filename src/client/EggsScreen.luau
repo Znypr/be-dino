@@ -65,7 +65,7 @@ function EggsScreen.render(ctx: any)
             local info = slotViews[i].info
             if info and info.state == "ready" then ctx.openNest(info.id)
             elseif info and info.state == "empty" then ctx.notify("Finish a run to earn a nest!", C.gold)
-            elseif info then ctx.notify("This nest is growing. Hang tight!", C.gold) end
+            elseif info then ctx.notify("Still growing. Hang tight!", C.gold) end
         end)
         slot.Name = "NestSlot" .. i
         local iconSize = nestH - 52
