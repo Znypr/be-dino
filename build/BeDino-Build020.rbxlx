@@ -364751,7 +364751,7 @@ local settings: {[string]: Setting} = {
     speedMultiplier = {label = "Run speed", min = 0.5, max = 3, step = 0.25, default = 1},
     -- "Feel" tuning (runtime only). Defaults mirror Config so Reset restores the shipped feel.
     gravity = {label = "Gravity", min = 150, max = 400, step = 10, default = 250, group = "feel", unit = ""},
-    jumpPower = {label = "Jump power", min = 40, max = 90, step = 2, default = 56, group = "feel", unit = ""},
+    jumpPower = {label = "Jump power", min = 40, max = 90, step = 2, default = 50, group = "feel", unit = ""},
     moveResponsiveness = {label = "Turn/stop responsiveness", min = 0.5, max = 2, step = 0.25, default = 1, group = "feel"},
     turnLean = {label = "Turn lean", min = 0, max = 3, step = 0.25, default = 1, group = "feel"},
     leapSpeed = {label = "Leap speed", min = 0.5, max = 1.5, step = 0.1, default = 1, group = "feel"},
@@ -365806,7 +365806,10 @@ return table.freeze({
     -- Movement feel (PROVISIONAL): default gravity 196.2 felt floaty. 250 + JumpPower 56 keeps a
     -- ~6.3 stud jump but cuts air time ~0.51s -&gt; ~0.45s; leap vertical speed is retuned in ProgressionConfig.
     Gravity = 250,
-    JumpPower = 56,
+    -- BD-212: jumps read as a forward bound: 50 -&gt; ~5.0 stud apex, ~0.40 s air (was 56: ~6.3, ~0.45 s),
+    -- and the client carries the run direction at JumpForwardCarry x speed while airborne.
+    JumpPower = 50,
+    JumpForwardCarry = 1.3, -- PROVISIONAL; MovementGuard allows WalkSpeed x MovementGuardSpeedTolerance (3)
     TurnRate = 16, -- PROVISIONAL rad/s facing steer (Humanoid default ~8 gave a 0.38 s 180 turn)
     CameraVerticalSmoothing = .12, -- BD-164: seconds; low-pass on the camera's vertical follow of the root (terrain rattle)
     CameraLiftSharpness = 7, -- PROVISIONAL: per-second exponential follow of growth camera lift
@@ -551742,6 +551745,8 @@ local function capture(rig: any): boolean
             count += 1
             local found = item:FindFirstChild("ResourceWeld")
             local weld = if found and found:IsA("Weld") and found.Part0 == rig.root then found else nil
+            -- BD-211: never write CFrame on a WeldConstraint-attached part: that drags the physics root.
+            if not weld and item:FindFirstChildOfClass("WeldConstraint") then count -= 1 continue end
             local rel = if weld then weld.C0 else inverse * item.CFrame
             local r = rel.Rotation
             local x, y, z = r.RightVector, r.UpVector, r.LookVector
@@ -551886,8 +551891,13 @@ local function step(rig: any, now: number, dt: number)
     -- Footfall bob: stride phase advances with distance, so the bob frequency follows speed. Grounded only.
     local humanoid = rig.character:FindFirstChildOfClass("Humanoid")
     if rig.isLocal and humanoid and speed &gt; 3 and humanoid.FloorMaterial ~= Enum.Material.Air then
-        rig.stride = (rig.stride or 0) + speed * dt * 1.6
-        rig.motion.bob = Motion.MaxBob * math.abs(math.sin(rig.stride)) * math.clamp(speed / 16, 0, 1)
+        -- BD-211: the old phase (speed * 1.6 rad/stud) bobbed ~11 times a second at full speed with a sharp
+        -- |sin| cusp, which read as a rattle. Footfalls now follow body length, capped at 2.5 steps a second,
+        -- with a smooth sin^2 curve.
+        local stride = math.pi * math.min(speed / math.max(rig.length, 2), 2.5) * dt
+        rig.stride = (rig.stride or 0) + stride
+        local s = math.sin(rig.stride)
+        rig.motion.bob = Motion.MaxBob * s * s * math.clamp(speed / 16, 0, 1)
     else
         rig.motion.bob = 0
     end
@@ -554975,7 +554985,65 @@ return InspectView
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX296">
+        <Item class="LocalScript" referent="RBX296">
+          <Properties>
+            <string name="Name">JumpCarry</string>
+            <ProtectedString name="Source">--!strict
+-- BD-212: a normal Space jump is a forward bound, not a straight hop. At take-off the local dino keeps
+-- its run direction with a small horizontal boost (scaled by its speed, none when standing still)
+-- until it lands. The E leap is separate (LeapService sets MovementSpeedLimit while it runs) and is
+-- left alone. The boost stays far inside MovementGuard's horizontal envelope (WalkSpeed x tolerance).
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
+
+local CARRY = Config.JumpForwardCarry -- PROVISIONAL horizontal speed multiplier while airborne
+local MIN_SPEED = 4 -- below this the jump stays a plain hop
+
+local carry: Vector3? = nil
+local humanoid: Humanoid? = nil
+local root: BasePart? = nil
+
+local function bind(character: Model)
+    carry = nil
+    local h = character:WaitForChild("Humanoid", 10)
+    local r = character:WaitForChild("HumanoidRootPart", 10)
+    if not h or not h:IsA("Humanoid") or not r or not r:IsA("BasePart") then return end
+    humanoid, root = h, r
+    h.StateChanged:Connect(function(_, new)
+        if new == Enum.HumanoidStateType.Jumping then
+            local v = r.AssemblyLinearVelocity
+            local flat = Vector3.new(v.X, 0, v.Z)
+            if flat.Magnitude &gt;= MIN_SPEED and character:GetAttribute("MovementSpeedLimit") == nil then
+                local speed = math.min(flat.Magnitude, h.WalkSpeed) * CARRY
+                carry = flat.Unit * speed
+            end
+        elseif new ~= Enum.HumanoidStateType.Freefall then
+            carry = nil
+        end
+    end)
+end
+
+RunService.Heartbeat:Connect(function()
+    local c, h, r = carry, humanoid, root
+    if not c or not h or not r or not r.Parent then return end
+    local state = h:GetState()
+    if state ~= Enum.HumanoidStateType.Jumping and state ~= Enum.HumanoidStateType.Freefall then carry = nil return end
+    -- Steering still works: follow the stick/keys, keep the boosted speed.
+    local dir = h.MoveDirection
+    if dir.Magnitude &lt; 0.1 then carry = nil return end
+    local boosted = Vector3.new(dir.X, 0, dir.Z).Unit * c.Magnitude
+    local v = r.AssemblyLinearVelocity
+    r.AssemblyLinearVelocity = Vector3.new(boosted.X, v.Y, boosted.Z)
+end)
+
+local player = Players.LocalPlayer
+player.CharacterAdded:Connect(bind)
+if player.Character then task.spawn(bind, player.Character) end
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="RBX297">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -555066,7 +555134,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX297">
+        <Item class="LocalScript" referent="RBX298">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -555111,11 +555179,14 @@ local function characterVisual(character: Model)
         if previous:GetAttribute("Scale")~=scale then
             local welds={}
             for _,item in previous:GetDescendants() do
-                if item:IsA("WeldConstraint") then item.Enabled=false;table.insert(welds,item) end
+                if item:IsA("Weld") or item:IsA("WeldConstraint") then item.Enabled=false;table.insert(welds,item) end
             end
             previous.WorldPivot=groundFrame()
             previous:ScaleTo(scale);previous:PivotTo(groundFrame());previous:SetAttribute("Scale",scale)
-            for _,weld in welds do weld.Enabled=true end
+            for _,weld in welds do
+                if weld:IsA("Weld") and weld.Part1 then weld.C0=root.CFrame:ToObjectSpace(weld.Part1.CFrame) end
+                weld.Enabled=true
+            end
         end
         hideShell(character)
         if previous:GetAttribute("GenesJson")~=genesJson then
@@ -555165,7 +555236,11 @@ local function characterVisual(character: Model)
             if mutation=="gold" or mutation=="diamond" then Resources.clearTextures(item) end
             if mutation == "gold" then item.Color = Color3.fromRGB(242,199,63) item.Material = Enum.Material.Metal
             elseif mutation == "diamond" then item.Color = Color3.fromRGB(85,213,245) item.Material = Enum.Material.Glass item.Reflectance=.2 end
-            local weld = Instance.new("WeldConstraint")
+            -- BD-211: a Weld (not a WeldConstraint) so DinoMotion poses edit C0. Writing part.CFrame on a
+            -- WeldConstraint-attached part drags the whole assembly, which made the root rattle every frame.
+            local weld = Instance.new("Weld")
+            weld.Name = "ResourceWeld"
+            weld.C0 = root.CFrame:ToObjectSpace(item.CFrame)
             weld.Part0, weld.Part1, weld.Parent = root, item, item
         end
     end
@@ -555266,7 +555341,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX298">
+        <Item class="ModuleScript" referent="RBX299">
           <Properties>
             <string name="Name">VolumeSliders</string>
             <ProtectedString name="Source">--!strict
@@ -555347,7 +555422,7 @@ return Sliders
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX299">
+        <Item class="LocalScript" referent="RBX300">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -555414,7 +555489,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX300">
+        <Item class="LocalScript" referent="RBX301">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -556228,7 +556303,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX301">
+        <Item class="LocalScript" referent="RBX302">
           <Properties>
             <string name="Name">WorldCulling</string>
             <ProtectedString name="Source">--!strict
@@ -556356,7 +556431,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX302">
+  <Item class="Workspace" referent="RBX303">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>
