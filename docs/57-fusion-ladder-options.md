@@ -3,6 +3,7 @@
 **STATUS: simulation for an OWNER DECISION (owner request 2026-10-13: "Simulate options and show me").
 No Emerald/Diamond cost is chosen or approved.** `Fusion.Recipes.emerald/diamond.donorCount` stay `nil` until the owner picks.
 **UPDATE 2026-10-14: the owner approved Gold 15 Base / Emerald 4 Gold / Diamond 2 Emerald; see section 12 (sections 1-11 are the history of the options and the superseded 50/10/3).**
+**UPDATE 2026-10-15: 4 eggs per run made 15/4/2 unreachable (Gold = median about 123 casual runs); the ladder is now 6/3/2 with any-pattern Gold, see [90](90-fusion-ladder-v2.md). Everything below is history at the old egg rates.**
 **This is a model, not measured gameplay.** Tool: `python tools/simulate_fusion_ladder.py` (deterministic; `--check` is a CI guard).
 Source rules: [46](46-pattern-fusion-dino-identity-and-cosmetic-progression.md) section 1, [49](49-identity-fusion-phase1.md), [53](53-bd064-fusion-server.md).
 

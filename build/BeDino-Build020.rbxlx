@@ -365712,7 +365712,8 @@ return table.freeze({
     PredationBaseRadius = 5.5,
     PredationMaxRadius = 9,
     PredationVerticalLimit = 7,
-    PredationGrowthPoints = 25,
+    GrowthPerFood = 0.5, -- owner 2026-10-15: growth gained per food point halved (typical 4-min run ~300 growth, was ~700); catches/eggs still use RAW food, scale curve unchanged
+    PredationGrowthPoints = 12.5, -- was 25; halved with GrowthPerFood
     RepeatVictimCatchCooldownSeconds = 60,
 
     -- BD-052: Home is a confirmed, immediate return; the 3-second stay-still channel is removed.
@@ -365815,8 +365816,8 @@ return table.freeze({
     AutoOpenRequiresPass = false,
     NestStorageCapacity = 5, -- owned nests (waiting + incubating + ready); when full a new nest is not granted
     NestIncubationSeconds = 10800, -- 3 h each; the next waiting nest starts the moment the previous becomes ready
-    NestMinSize = 10, -- eggs per nest, rolled deterministically from the run id at drop
-    NestMaxSize = 15,
+    NestMinSize = 6, -- (owner 2026-10-15: 6-12, was 10-15; a nest should out-produce a 4-5 egg run but not absurdly) eggs per nest, rolled deterministically from the run id at drop
+    NestMaxSize = 12,
     -- Hidden drop gate (never shown in the UI; measured on the server, never client-reported).
     NestMinRunSeconds = 120, -- PROVISIONAL: server clock from RunLifecycle.begin to settlement
     NestMinCatches = 1, -- PROVISIONAL: validated server CatchScore (run eggs) needed for a nest
@@ -368240,22 +368241,23 @@ return Rules
 -- this module only explains and previews. Exercised by tools/verify_fusion_ui.py.
 local Sel = {}
 
--- OWNER DECISION 2026-10-14 (docs/57): Gold = 15 Base, Emerald = 4 Gold,
--- Diamond = 2 Emerald; same species + same pattern; all three tiers active. Mirrors
--- IdentityFusion.Recipes (verify_fusion_ui.py asserts they match).
+-- OWNER DECISION 2026-10-15 (docs/90): Gold = 6 Base of the same species (ANY pattern; the
+-- Gold keeps the most common pattern), Emerald = 3 Gold, Diamond = 2 Emerald (same species +
+-- same pattern); all three tiers active. Mirrors IdentityFusion.Recipes (verify_fusion_ui.py
+-- asserts they match).
 Sel.Stages = {
-    {id = "gold", name = "Gold", source = "base", donorCount = 15, approved = true},
-    {id = "emerald", name = "Emerald", source = "gold", donorCount = 4, approved = true},
+    {id = "gold", name = "Gold", source = "base", donorCount = 6, anyPattern = true, approved = true},
+    {id = "emerald", name = "Emerald", source = "gold", donorCount = 3, approved = true},
     {id = "diamond", name = "Diamond", source = "emerald", donorCount = 2, approved = true},
 }
 -- Largest recipe; kept for older callers. Use Sel.donorCount(stage) instead.
-Sel.DonorCount = 15
+Sel.DonorCount = 6
 function Sel.donorCount(stageId: string?): number?
     for _, s in Sel.Stages do if s.id == stageId and s.approved then return s.donorCount end end
     return nil
 end
 -- Above this many slots the menu shows a compact n/N counter grid instead of cards.
-Sel.CompactSlotThreshold = 10
+Sel.CompactSlotThreshold = 10 -- unused by the 6/3/2 ladder (max 6 slots)
 Sel.LockedStageText = "Recipe not approved yet"
 
 local function stageInfo(id: string?)
@@ -368372,7 +368374,7 @@ function Sel.ineligibility(d, ctx): string?
     if d.locked == true then return "locked" end
     if d.favorited == true then return "favorited" end
     if ctx and ctx.speciesId and d.speciesId ~= ctx.speciesId then return "species_mismatch" end
-    if ctx and ctx.patternId and g.patternId ~= ctx.patternId then return "pattern_mismatch" end
+    if ctx and ctx.patternId and not recipe.anyPattern and g.patternId ~= ctx.patternId then return "pattern_mismatch" end
     return nil
 end
 
@@ -368544,7 +368546,7 @@ function Sel.autoFill(dinos, selection, targetStage: string, filters, catalog)
     for _, d in Sel.sort(dinos, "recent", ctx, nil, catalog) do
         -- Oldest first so newest hatches stay; "recent" is newest-first, so reverse below.
         if not taken[d.instanceId] and Sel.isPlain(d) and Sel.ineligibility(d, ctx) == nil then
-            local key = tostring(d.speciesId) .. "|" .. tostring(genes(d).patternId)
+            local key = tostring(d.speciesId) .. "|" .. (if recipe.anyPattern then "*" else tostring(genes(d).patternId))
             if not groups[key] then groups[key] = {} table.insert(order, key) end
             table.insert(groups[key], 1, d)
         end
@@ -368762,9 +368764,9 @@ Sel.FailureText = {
     consent_required = "Please review the itemized loss list and confirm again.",
     donor_missing = "A selected dino is no longer in your collection. Selection refreshed.",
     donor_locked = "A selected dino is locked or favorited. Selection refreshed.",
-    wrong_donor_count = "Exactly the recipe count of matching dinos is required (15 Base, 4 Gold or 2 Emerald).",
+    wrong_donor_count = "Exactly the recipe count of matching dinos is required (6 Base, 3 Gold or 2 Emerald).",
     species_mismatch = "All dinos must be the same species.",
-    pattern_mismatch = "All dinos must share the same egg pattern.",
+    pattern_mismatch = "Emerald and Diamond need dinos with the same pattern.",
     recipe_not_approved = "This recipe is not approved yet.",
     odds_not_approved = "Fusion odds are not approved yet. Nothing was consumed.",
     save_failed = "Saving failed. Nothing is lost; retrying with the same request.",
@@ -368953,7 +368955,7 @@ function Sel.details(d, catalog)
         for _, snap in snapshots do byParent[snap.instanceId] = snap end
         local ids = if #parentIds &gt; 0 then parentIds else (function()
             local list = {} for _, snap in snapshots do table.insert(list, snap.instanceId) end return list end)()
-        -- Bounded view: a Gold has 15 parents; list the first DetailsParentLimit.
+        -- Bounded view: a Gold has 6 parents; list the first DetailsParentLimit.
         local shown = math.min(#ids, Sel.DetailsParentLimit)
         if #ids &gt; shown then
             table.insert(view.origin.lines, "Showing " .. shown .. " of " .. #ids .. " parents")
@@ -370595,9 +370597,9 @@ return NestQueue
 local NextGoal = {}
 -- Mirrors FusionSelection.Stages (docs/58). Callers may pass opts.stages to stay in sync.
 NextGoal.Stages = {
-    {id = "gold", name = "Gold", source = "base", donorCount = 50},
-    {id = "emerald", name = "Emerald", source = "gold", donorCount = 10},
-    {id = "diamond", name = "Diamond", source = "emerald", donorCount = 3},
+    {id = "gold", name = "Gold", source = "base", donorCount = 6, anyPattern = true},
+    {id = "emerald", name = "Emerald", source = "gold", donorCount = 3},
+    {id = "diamond", name = "Diamond", source = "emerald", donorCount = 2},
 }
 
 -- Returns the best in-progress (or ready) fusion goal, or nil.
@@ -370611,6 +370613,9 @@ function NextGoal.fusion(dinos: any, opts: any)
             if type(d.speciesId) == "string" and type(pattern) == "string" and type(d.stage) == "string" then
                 local key = d.stage .. "|" .. d.speciesId .. "|" .. pattern
                 counts[key] = (counts[key] or 0) + 1
+                -- Any-pattern recipes (Gold) count the whole species.
+                local anyKey = d.stage .. "|" .. d.speciesId .. "|*"
+                counts[anyKey] = (counts[anyKey] or 0) + 1
             end
         end
     end
@@ -370618,7 +370623,7 @@ function NextGoal.fusion(dinos: any, opts: any)
     for key, count in counts do
         local stageId, species, pattern = string.match(key, "^([^|]*)|([^|]*)|(.*)$")
         for _, stage in stages do
-            if stage.source == stageId then
+            if stage.source == stageId and ((pattern == "*") == (stage.anyPattern == true)) then
                 local have = math.min(count, stage.donorCount)
                 local fraction = have / stage.donorCount
                 local ready = count &gt;= stage.donorCount
@@ -370634,9 +370639,10 @@ function NextGoal.fusion(dinos: any, opts: any)
     end
     if not best then return nil end
     local label = if opts.speciesName then opts.speciesName(best.species) else best.species
-    local patternLabel = if opts.patternName then opts.patternName(best.pattern) else best.pattern
-    local text = if best.ready then string.format("%s ready: fuse %s %s", best.stage.name, label, patternLabel)
-        else string.format("%s: %d/%d %s %s", best.stage.name, best.have, best.stage.donorCount, label, patternLabel)
+    local patternLabel = if best.pattern == "*" then "" elseif opts.patternName then opts.patternName(best.pattern) else best.pattern
+    patternLabel = if patternLabel == "" then "" else " " .. patternLabel
+    local text = if best.ready then string.format("%s ready: fuse %s%s", best.stage.name, label, patternLabel)
+        else string.format("%s: %d/%d %s%s", best.stage.name, best.have, best.stage.donorCount, label, patternLabel)
     return {kind = "fusion", text = text, fraction = best.fraction, ready = best.ready}
 end
 
@@ -543246,7 +543252,7 @@ local function buckets(collection)
         for _, stage in {"base", "gold", "diamond"} do
             result[speciesId .. "/" .. stage] = {speciesId = speciesId, stage = stage, count = entry[stage]}
         end
-        -- Additive optional Emerald counter (BD-057 ladder 15/4/2): nil means 0.
+        -- Additive optional Emerald counter (BD-057 ladder 6/3/2): nil means 0.
         result[speciesId .. "/emerald"] = {speciesId = speciesId, stage = "emerald", count = if entry.emerald == nil then 0 else entry.emerald}
         for mutationId, count in entry.events or {} do
             result[speciesId .. "/event/" .. mutationId] = {speciesId = speciesId, stage = "base", count = count, mutationId = mutationId}
@@ -543393,10 +543399,11 @@ end
 
 -- Data contract only: caller supplies already rolled output. Does not consume or roll.
 -- Immediate parent snapshots retain traits and origins without recursively copying trees.
--- Compact (ladder 15/4/2): speciesId, stage and genes.patternId are identical for every
--- parent (recipe-locked), so they are stored once on the record (origin.parentStage)
--- instead of 15 times. Readers fall back to the result's speciesId/pattern.
-Identity.MaxFusionParents = 15
+-- Compact (ladder 6/3/2): speciesId and stage are identical for every parent, so they are
+-- stored once on the record (origin.parentStage). genes.patternId is stored on a parent snapshot
+-- ONLY when it differs from the result (Gold takes the plurality pattern of mixed-pattern Base
+-- donors); readers fall back to the result's speciesId/pattern.
+Identity.MaxFusionParents = 6
 function Identity.fusionRecord(id, output, parents, operationId, recipeVersion, oddsVersion)
     assert(type(id) == "string" and #id &gt; 0 and #id &lt;= 120, "invalid result ID")
     assert(type(operationId) == "string" and #operationId &gt; 0 and #operationId &lt;= 120, "invalid operation ID")
@@ -543409,11 +543416,12 @@ function Identity.fusionRecord(id, output, parents, operationId, recipeVersion, 
     for _, parent in parents do
         assert(not seen[parent.instanceId] and parent.instanceId ~= id, "duplicate/cyclic parent")
         assert(parent.speciesId == output.speciesId and parent.genes
-            and parent.genes.patternId == output.genes.patternId, "matching species/pattern required")
+            and type(parent.genes.patternId) == "string"
+            and (parent.stage == "base" or parent.genes.patternId == output.genes.patternId), "matching species/pattern required")
         assert(parent.stage == parentStage, "single parent stage required")
         seen[parent.instanceId] = true
         local genes = copy(parent.genes)
-        genes.patternId = nil
+        if parent.genes.patternId == output.genes.patternId then genes.patternId = nil end
         table.insert(snapshots, {instanceId = parent.instanceId, genes = genes, big = parent.big, shiny = parent.shiny,
             mutationId = parent.mutationId, origin = {kind = parent.origin.kind, eggId = parent.origin.eggId, operationId = parent.origin.operationId}})
     end
@@ -543688,7 +543696,7 @@ function FoodService.start(dinosaur,repository)
                         end
                         c:SetAttribute("RunEggEvents",Http:JSONEncode(events))
                     end
-                    dinosaur.addGrowth(c, candidate.gained)
+                    dinosaur.addGrowth(c, candidate.gained * Config.GrowthPerFood)
                 end
             end
         end
@@ -543886,7 +543894,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local FusionService = {}
 FusionService.MaxListLimit = 200
 FusionService.DefaultListLimit = 100
-FusionService.MaxDonorIds = 15 -- largest recipe (Gold = 15 Base); IdentityFusion enforces the exact per-recipe count
+FusionService.MaxDonorIds = 6 -- largest recipe (Gold = 6 Base); IdentityFusion enforces the exact per-recipe count
 FusionService.MaxIdLength = 120
 FusionService.MaxDigestLength = 64
 FusionService.MaxTokenLength = 80
@@ -544070,20 +544078,21 @@ return FusionService
 local Identity = require(script.Parent.DinosaurIdentity)
 
 local Fusion = {}
-Fusion.Version = "bd057-ladder-15-4-2"
+Fusion.Version = "bd057-ladder-6-3-2"
 
--- OWNER DECISION 2026-10-14 (supersedes 50/10/3 of 2026-10-13 and the 10-donor Gold rule; docs/57, docs/58):
--- same species + same pattern at every tier, guaranteed, consumes ALL donors and
--- creates ONE new individual. Gold = 15 Base, Emerald = 4 Gold, Diamond = 2 Emerald.
+-- OWNER DECISION 2026-10-15 (docs/90; supersedes 15/4/2 of 2026-10-14): at about 4 eggs per run the
+-- old ladder was unreachable. Gold = 6 Base of the same SPECIES (any pattern: the Gold takes the
+-- most common donor pattern, ties -&gt; smallest pattern id), Emerald = 3 Gold and Diamond = 2 Emerald,
+-- both same species + same pattern. Guaranteed, consumes ALL donors, creates ONE new individual.
 -- The donor count is per recipe; nothing else may hard-code it.
 Fusion.Ladder = {"base", "gold", "emerald", "diamond"}
 Fusion.Recipes = {
-    gold = {targetStage = "gold", sourceStage = "base", donorCount = 15, version = "gold-same-species-pattern-15-v1"},
-    emerald = {targetStage = "emerald", sourceStage = "gold", donorCount = 4, version = "emerald-same-species-pattern-4-v1"},
-    diamond = {targetStage = "diamond", sourceStage = "emerald", donorCount = 2, version = "diamond-same-species-pattern-2-v1"},
+    gold = {targetStage = "gold", sourceStage = "base", donorCount = 6, anyPattern = true, version = "gold-same-species-6-v2"},
+    emerald = {targetStage = "emerald", sourceStage = "gold", donorCount = 3, version = "emerald-same-species-pattern-3-v2"},
+    diamond = {targetStage = "diamond", sourceStage = "emerald", donorCount = 2, version = "diamond-same-species-pattern-2-v2"},
 }
 -- Largest approved donor count (remote/list bounds derive from this).
-Fusion.MaxDonorCount = 15
+Fusion.MaxDonorCount = 6
 -- Stages the grouped collection can represent. Emerald uses the additive optional
 -- collection[species].emerald counter (nil == 0).
 Fusion.GroupedProjection = {gold = true, emerald = true, diamond = true}
@@ -544215,6 +544224,7 @@ function Fusion.quote(state, ownerKey: string, targetStage: any, donorIds: any)
 
     local seen, donors = {}, {}
     local speciesId, patternId = nil, nil
+    local patternVotes: {[string]: number} = {}
     for _, id in donorIds do
         if type(id) ~= "string" or #id &lt; 1 or #id &gt; 120 then return nil, "invalid_donor_id" end
         if seen[id] then return nil, "duplicate_donor" end
@@ -544232,10 +544242,19 @@ function Fusion.quote(state, ownerKey: string, targetStage: any, donorIds: any)
         speciesId = speciesId or instance.speciesId
         patternId = patternId or instance.genes.patternId
         if instance.speciesId ~= speciesId then return nil, "species_mismatch" end
-        if instance.genes.patternId ~= patternId then return nil, "pattern_mismatch" end
+        if not recipe.anyPattern and instance.genes.patternId ~= patternId then return nil, "pattern_mismatch" end
+        patternVotes[instance.genes.patternId] = (patternVotes[instance.genes.patternId] or 0) + 1
         table.insert(donors, instance)
     end
     table.sort(donors, function(a, b) return a.instanceId &lt; b.instanceId end)
+    if recipe.anyPattern then
+        -- Plurality pattern; ties go to the smallest pattern id (deterministic, client mirrors this).
+        local bestId, bestVotes = nil, 0
+        for id, votes in patternVotes do
+            if votes &gt; bestVotes or (votes == bestVotes and bestId ~= nil and id &lt; bestId) then bestId, bestVotes = id, votes end
+        end
+        patternId = bestId
+    end
 
     -- Neutral ingredient facts for a future BD-064 roller. Contains no probabilities.
     local summary = {speciesId = speciesId, patternId = patternId, targetStage = targetStage,
@@ -545473,7 +545492,7 @@ local function isValidProfile(profile: any): boolean
             or entry.base &gt; 2000000000 or entry.gold &gt; 2000000000 or entry.diamond &gt; 2000000000 then
             return false
         end
-        -- Additive optional Emerald counter (fusion ladder 15/4/2); nil == 0.
+        -- Additive optional Emerald counter (fusion ladder 6/3/2); nil == 0.
         if entry.emerald ~= nil and (typeof(entry.emerald) ~= "number" or entry.emerald &lt; 0
             or entry.emerald % 1 ~= 0 or entry.emerald &gt; 2000000000) then return false end
         if not ProgressionRules.validEvents(entry.events) then return false end
@@ -548591,7 +548610,7 @@ render=function(name: string)
         label(stage,rarityNames[index].." • "..FusionSelection.pct(100*(oddsWeight[selected] or 0)/oddsTotal).." of eggs",0,302,380,42,28)
         label(body,"YOUR COLLECTION",414,0,400,42,28)
         label(body,string.format("Base: %d • Gold: %d\nDiamond: %d",base,gold,diamond),414,62,400,92,25)
-        label(body,if event then event.name.." • "..table.concat(UIFormat.boostLines(event.growth,event.speed,1)," • ") else "Cosmetic fusion: 15 Base → Gold; 4 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
+        label(body,if event then event.name.." • "..table.concat(UIFormat.boostLines(event.growth,event.speed,1)," • ") else "Cosmetic fusion: 6 Base → Gold; 3 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
         local equipped=str("EquippedSpeciesId","compy")==selected
         button(body,if equipped then "EQUIPPED" elseif not owned then "LOCKED" else "EQUIP",426,273,372,52,if owned then C.accent else C.card,function()
             if not owned then notify("Hatch reward eggs to discover this dino") return end
@@ -550538,7 +550557,7 @@ return EggsScreen
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
--- BD-065 Fusion Menu (client). Ten same-species + same-pattern Base dinos -&gt; ONE NEW
+-- BD-065 Fusion Menu (client). Six same-species Base dinos (any pattern) -&gt; ONE NEW
 -- Gold. The server (ReplicatedStorage.BeDinoRemotes.FusionAction) owns every rule,
 -- odds table, consumption and roll; this module only lists, explains, previews the
 -- exact quoted odds, collects explicit consent and REVEALS the committed result.
@@ -550740,7 +550759,7 @@ scheduleQuote = function()
     if not recipe or not recipe.approved then
         state.quoteStatus, state.quoteMessage = "locked", Sel.LockedStageText
     elseif #state.selection ~= recipe.donorCount then
-        -- Quotes are requested at EXACTLY the recipe count (15 / 4 / 2).
+        -- Quotes are requested at EXACTLY the recipe count (6 / 3 / 2).
         state.quoteStatus = "need"
         state.quoteMessage = if #state.selection &lt; recipe.donorCount
             then "Select " .. (recipe.donorCount - #state.selection) .. " more matching dinos to see exact odds."
@@ -550881,7 +550900,7 @@ updateColumn = function()
             else UDim2.new(1 / perRow, -4, 0, math.max(18, math.floor(height / rows) - 6))
     end
     if counterMode then
-        -- 15-donor Gold: a compact n/N progress counter (Android landscape safe); the
+        -- Large recipe: a compact n/N progress counter (Android landscape safe); the
         -- selected dinos stay highlighted in the grid and a tap there removes them.
         local bar = W.box(col.slots, UDim2.new(), UDim2.new(), C.outline, 4)
         bar.Name = "Counter"
@@ -550929,7 +550948,9 @@ updateColumn = function()
         line(Sel.LockedStageText .. ".", nil, 44)
     else
         line("UPGRADED (guaranteed): 1 NEW " .. stageName .. " from " .. need .. " " .. Sel.stageTitle(recipe.source) .. ", stage + stats", C.accent, 40)
-        if state.selection[1] and state.byId[state.selection[1]] then
+        if recipe.anyPattern then
+            line("PATTERN: the most common pattern among your dinos", C.gold)
+        elseif state.selection[1] and state.byId[state.selection[1]] then
             local g = state.byId[state.selection[1]].genes or {}
             line("PATTERN LOCKED: " .. Sel.name(catalog, "patterns", g.patternId), C.gold)
         end
@@ -551099,7 +551120,7 @@ local function renderConfirm()
     end
     line("GUARANTEED: 1 NEW " .. stageName .. " " .. Sel.name(catalog, "patterns", quote.patternId) .. " " .. Sel.name(catalog, "species", quote.speciesId)
         .. " with the " .. stageName .. " stage upgrade. Its colors, Shiny, BIG and mutation are freshly rolled.", C.accent, 48)
-    line("PATTERN LOCKED: " .. Sel.name(catalog, "patterns", quote.patternId), C.gold)
+    line("PATTERN: " .. Sel.name(catalog, "patterns", quote.patternId) .. " (never rolled)", C.gold)
     line("ALL " .. donorTotal .. " DINOS BELOW ARE CONSUMED:", C.red)
     for i, id in quote.donorIds or state.selection do
         local d = state.byId[id]
@@ -551289,8 +551310,8 @@ startReveal = function(quote, result, status)
         end
         W.label(content, stage.title, UDim2.new(1, 0, 0, 44), UDim2.fromScale(0, .06), 34, C.gold)
         if stage.kind == "pattern" then
-            W.label(content, "PATTERN LOCKED: " .. string.upper(stage.value), UDim2.new(1, -40, 0, 60), UDim2.new(0, 20, .34, 0), 34, C.accent)
-            W.label(content, "Same-pattern recipe: the pattern is never rolled.", UDim2.new(1, -40, 0, 34), UDim2.new(0, 20, .6, 0), 20)
+            W.label(content, "PATTERN: " .. string.upper(stage.value), UDim2.new(1, -40, 0, 60), UDim2.new(0, 20, .34, 0), 34, C.accent)
+            W.label(content, "The pattern is never rolled.", UDim2.new(1, -40, 0, 34), UDim2.new(0, 20, .6, 0), 20)
         elseif stage.kind == "wheel" then
             local animate = motion() and auto
             reel(content, stage, animate)

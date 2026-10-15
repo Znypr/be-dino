@@ -418,7 +418,7 @@ local function claimAll(user, repo)
 end
 local byBucket={}
 local donors=nil
--- Gold = 15 Base donors of one species+pattern bucket (owner decision 2026-10-14).
+-- Gold = 6 Base donors of one species (any pattern; owner decision 2026-10-15), taken here from one bucket.
 for round=1,200 do
  assert(LocalRepository.commitRunSettlement(localUser,"fusion-run-"..round,10))
  for _,id in claimAll(localUser,LocalRepository) do
@@ -426,10 +426,10 @@ for round=1,200 do
   byBucket[d.bucketKey]=byBucket[d.bucketKey] or {}
   table.insert(byBucket[d.bucketKey],id)
  end
- for key,list in byBucket do if #list>=15 and string.find(key,"/variant/") and not donors then donors={table.unpack(list,1,15)} end end
+ for key,list in byBucket do if #list>=6 and string.find(key,"/variant/") and not donors then donors={table.unpack(list,1,6)} end end
  if donors then break end
 end
-assert(donors,"expected 15 same-bucket hatched donors")
+assert(donors,"expected 6 same-bucket hatched donors")
 local donorDetails=LocalRepository.dinosaurDetails(localUser,donors[1])
 assert(donorDetails.traitsKnown and donorDetails.genes.patternId~=nil)
 local fusionSpecies=donorDetails.speciesId
@@ -459,7 +459,7 @@ end}))
 -- Client-supplied stale digest and wrong-owner IDs are refused.
 local staleRequest=table.clone(request) staleRequest.quoteDigest="stale"
 assert(select(3,LocalRepository.fuseDinosaurs(localUser,staleRequest))=="stale_quote")
-local foreign=table.clone(donors) foreign[15]="u:123/d:1"
+local foreign=table.clone(donors) foreign[6]="u:123/d:1"
 assert(select(2,LocalRepository.quoteFusion(localUser,"gold",foreign))=="wrong_owner")
 assert(select(3,LocalRepository.fuseDinosaurs(localUser,{token=string.rep("x",81)}))=="invalid_token")
 -- Write outage: every attempt fails at the memory write; nothing is consumed.
@@ -491,7 +491,7 @@ for _,id in donors do assert(LocalRepository.dinosaurDetails(localUser,id)==nil)
 local gold=assert(LocalRepository.dinosaurDetails(localUser,committed.resultId))
 assert(gold.stage=="gold" and gold.origin.kind=="fusion" and gold.genes.blend==(donorDetails.genes.blend+37)%100)
 assert(gold.genes.patternId==donorDetails.genes.patternId and next(gold.cosmetics.ownedAuraIds)==nil)
-assert(#gold.lineage.parentIds==15 and next(gold.lineage.parentEggs)~=nil)
+assert(#gold.lineage.parentIds==6 and next(gold.lineage.parentEggs)~=nil)
 for _,egg in gold.lineage.parentEggs do assert(egg.genes.patternId==donorDetails.genes.patternId) end
 assert(gold.genes.conditionId==nil,"fused dinosaur stores no condition")
 for _,egg in gold.lineage.parentEggs do assert(egg.genes.conditionId~=nil,"parent egg condition stays retrievable") end
@@ -507,7 +507,7 @@ assert(select(3,LocalRepository.fuseDinosaurs(localUser,reuse))=="donor_missing"
 LocalRepository.release(localUser)
 assert(LocalRepository.load(localUser))
 local reloaded=assert(LocalRepository.dinosaurDetails(localUser,committed.resultId))
-assert(reloaded.origin.operationId=="fusion:repo-fuse-1" and #reloaded.lineage.parentIds==15)
+assert(reloaded.origin.operationId=="fusion:repo-fuse-1" and #reloaded.lineage.parentIds==6)
 local replayOk,replayResult,replayStatus=LocalRepository.fuseDinosaurs(localUser,request)
 assert(replayOk and replayStatus=="duplicate" and replayResult.resultId==committed.resultId and rolls==1)
 assert(transforms==persistentCalls and data['u:999']==nil)
@@ -573,8 +573,8 @@ for _,id in hatched do
  local stored=data[KEY].dinosaurIdentity.instances[id]
  assert(stored and stored.origin.kind=="hatch" and data[KEY].dinosaurIdentity.eggs[stored.origin.eggId])
 end
-local donors={table.unpack(hatched,1,15)}
-local donors2={table.unpack(hatched,16,30)}
+local donors={table.unpack(hatched,1,6)}
+local donors2={table.unpack(hatched,7,12)}
 local quote=assert(PersistentRepository.quoteFusion(pu,"gold",donors))
 assert(quote.oddsVersion=="fusion-odds-provisional-v2" and quote.odds.primaryColor[quote.summary.colors[1].primaryColorId]==1)
 local request={token="persist-1",targetStage="gold",donorIds=donors,quoteDigest=quote.quoteDigest,consentDigest=quote.consentDigest}
@@ -594,7 +594,7 @@ data[KEY].session.leaseId=lease
 PersistentRepository.release(pu) assert(PersistentRepository.load(pu))
 -- Whole-profile byte preflight: a fusion that would exceed the budget is rejected.
 local budget=mutableConfig.IdentityFusionProfileBudgetBytes
-mutableConfig.IdentityFusionProfileBudgetBytes=math.floor(IdentityFusion.encodedSize(data[KEY])/2) -- below the post-fusion size (15 donors shrink the sidecar a little)
+mutableConfig.IdentityFusionProfileBudgetBytes=math.floor(IdentityFusion.encodedSize(data[KEY])/2) -- below the post-fusion size (6 donors shrink the sidecar a little)
 local okB,_,bytes=PersistentRepository.fuseDinosaurs(pu,request)
 mutableConfig.IdentityFusionProfileBudgetBytes=budget
 assert(not okB and bytes=="storage_limit" and donorsIntact(donors) and pu.attrs.ProfileState=="Loaded")
@@ -615,7 +615,7 @@ assert(dupOk and dupStatus=="duplicate" and dup.resultId==committed.resultId and
 PersistentRepository.release(pu)
 assert(PersistentRepository.load(pu))
 local reloaded=assert(PersistentRepository.dinosaurDetails(pu,committed.resultId))
-assert(reloaded.lineage and #reloaded.lineage.parentIds==15 and next(reloaded.lineage.parentEggs)~=nil)
+assert(reloaded.lineage and #reloaded.lineage.parentIds==6 and next(reloaded.lineage.parentEggs)~=nil)
 assert(select(3,PersistentRepository.fuseDinosaurs(pu,request))=="duplicate")
 -- Reconcile failure (over the 3,000-identity guard) suspends identity, never deletes it,
 -- and keeps the profile writable; recovering the grouped counts resumes identity.
@@ -697,7 +697,7 @@ local function invoke(...) now+=1000 return remote.OnServerInvoke(pu,...) end --
 assert(PersistentRepository.load(pu))
 -- Contract keys.
 local function keys(t) local r={} for k in t do table.insert(r,k) end table.sort(r) return table.concat(r,",") end
-local list=invoke({action="list",limit=200}) -- 15-donor Gold leaves more than the default page of 100 owned dinos
+local list=invoke({action="list",limit=200}) -- 6-donor Gold leaves more than the default page of 100 owned dinos
 assert(list.ok and #list.dinosaurs>=10 and list.nextCursor==nil)
 local prev=0
 for _,d in list.dinosaurs do
@@ -723,9 +723,9 @@ assert(keys(q.quote.odds)=="big,mutation,noMutation,primaryColor,secondaryColor,
 assert(q.quote.oddsVersion=="fusion-odds-provisional-v2" and q.quote.odds.noMutation==1)
 local foreignIds=table.clone(donors2) foreignIds[1]="u:1/d:1"
 assert(invoke({action="quote",targetStage="gold",donorIds=foreignIds}).reason=="wrong_owner")
-assert(invoke({action="quote",targetStage="emerald",donorIds=donors2}).reason=="wrong_donor_count") -- Emerald is approved: 4 Gold, not 15 Base
+assert(invoke({action="quote",targetStage="emerald",donorIds=donors2}).reason=="wrong_donor_count") -- Emerald is approved: 3 Gold, not 6 Base
 assert(invoke({action="quote",targetStage="platinum",donorIds=donors2}).reason=="unknown_stage")
-assert(invoke({action="quote",targetStage="gold",donorIds=table.move(donors2,1,14,1,{})}).reason=="wrong_donor_count")
+assert(invoke({action="quote",targetStage="gold",donorIds=table.move(donors2,1,5,1,{})}).reason=="wrong_donor_count")
 local fuseReq={action="fuse",token="remote-1",targetStage="gold",donorIds=donors2,quoteDigest=q.quote.quoteDigest,consentDigest=q.quote.consentDigest}
 assert(invoke({action="fuse",token="remote-0",targetStage="gold",donorIds=donors2,quoteDigest="stale"}).reason=="stale_quote")
 local fused=invoke(fuseReq)
@@ -753,7 +753,7 @@ local badRequests={1,"list",true,{},{action=5},{action="nope"},{action="list",cu
  {action="fuse",token=string.rep("t",81),targetStage="gold",donorIds=donors2,quoteDigest="d"},
  {action="fuse",token="t",targetStage="gold",donorIds=donors2},{action="fuse",token="t",targetStage="gold",donorIds=donors2,quoteDigest="d",consentDigest=5},
  {[1]="list"},{action="list",[2]=true}}
-local tooMany={} for i=1,16 do tooMany[i]="u:4242/d:"..i end -- one above the largest recipe (15)
+local tooMany={} for i=1,7 do tooMany[i]="u:4242/d:"..i end -- one above the largest recipe (6)
 table.insert(badRequests,{action="quote",targetStage="gold",donorIds=tooMany})
 assert(invoke(nil).reason=="bad_request" and invoke().reason=="bad_request")
 for i=1,#badRequests do

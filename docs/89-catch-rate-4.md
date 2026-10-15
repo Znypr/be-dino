@@ -28,7 +28,7 @@ Expected eggs per run by tier, Common / Uncommon / Rare / Epic / Legendary:
 Previous 40/500 rate for comparison: 500 food gave 2.1 Rare+ eggs (now 0.16); 5,000 food gave 54.6 (now 1.74). docs/88 target "below about 30% for a normal 5-egg run" is met (15%).
 
 ## Honest caveats
-* **Fusion pacing is now 10x slower** (Gold = 15 Base of the same species + pattern). `tools/simulate_fusion_ladder.py` defaults were updated to 4 / 40 eggs per run; the ladder or egg sources need an owner review.
+* **(Resolved 2026-10-15 in [docs/90](90-fusion-ladder-v2.md): ladder redesigned to 6/3/2.) Fusion pacing was 10x slower** (Gold = 15 Base of the same species + pattern). `tools/simulate_fusion_ladder.py` defaults were updated to 4 / 40 eggs per run; the ladder or egg sources need an owner review.
 * Rare chance per egg is at most about 10% higher than the base odds at full boost. A smaller boost cannot make a short run "meaningful" without making rares easier; the owner decides if a different feel is wanted (docs/88 open questions).
 * The old docs/09 sample of 213/133/45/9 for a big run is no longer reachable with 40 eggs; the 40-egg mix is about 29 / 10 / 1.4 / 0.3 / 0.04.
 * The Eggs screen batch sizes and the Studio/phone feel are not verified.

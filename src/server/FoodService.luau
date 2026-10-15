@@ -256,7 +256,7 @@ function FoodService.start(dinosaur,repository)
                         end
                         c:SetAttribute("RunEggEvents",Http:JSONEncode(events))
                     end
-                    dinosaur.addGrowth(c, candidate.gained)
+                    dinosaur.addGrowth(c, candidate.gained * Config.GrowthPerFood)
                 end
             end
         end

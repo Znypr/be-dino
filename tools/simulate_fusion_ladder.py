@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Monte Carlo model of the Base -> Gold -> Emerald -> Diamond fusion ladder (BD-057/BD-058).
 
+CURRENT LADDER (owner 2026-10-15, docs/90): Gold = 6 Base of one species (ANY pattern, the Gold keeps the
+plurality pattern), Emerald = 3 Gold and Diamond = 2 Emerald (same species + pattern), at 4 eggs per run.
+The default run (`python tools/simulate_fusion_ladder.py`) prints the docs/90 table with the v2 model below
+(`ladder_v2`). Everything after this paragraph describes the OLDER same-pattern model, kept for comparison
+(`--legacy`).
+
 MODEL, NOT MEASURED GAMEPLAY. DEFAULT scenario = the owner-approved ladder (2026-10-14):
 Gold = 15 Base, Emerald = 4 Gold, Diamond = 2 Emerald, at 4 eggs per 500 food (BD-165; was 40) (supersedes
 50/10/3 of 2026-10-13). The old candidates remain as a comparison: pass `--gold-donors 50
@@ -191,6 +197,79 @@ def render(r):
     return "\n".join(L)
 
 
+V2_RECIPE = (6, 3, 2)  # Gold = 6 Base (any pattern), Emerald = 3 Gold, Diamond = 2 Emerald (same pattern)
+RUNS_PER_HOUR = 15  # a 4-minute run
+
+
+def ladder_v2(species, gold=6, emerald=3, diamond=2, rule="plurality", seed=1, eggs=4, ps=0.6, cap=8000):
+    """First run index at which each (species, stage) exists for one simulated casual player.
+    rule: 'plurality' (Gold any pattern, Emerald/Diamond same pattern), 'same' (old: same pattern everywhere).
+    The player is assumed to pick donors well: the pattern with the most stock is fused first.
+    Returns {(speciesId, 'g'|'e'|'d'): run}; missing key = not reached within `cap` runs."""
+    rng = random.Random(seed)
+    names = [n for n, _ in species]
+    weights = [w for _, w in species]
+    base, gold_s, em_s, first = {}, {}, {}, {}
+    for run_no in range(1, cap):
+        for _ in range(eggs):
+            if rng.random() > ps:
+                continue
+            s = rng.choices(names, weights)[0]
+            p = rng.randrange(PATTERNS)
+            b = base.setdefault(s, [0] * PATTERNS)
+            b[p] += 1
+            while (max(b) >= gold) if rule == "same" else (sum(b) >= gold):
+                pm = max(range(PATTERNS), key=lambda i: b[i])
+                need = gold
+                for i in [pm] + sorted((j for j in range(PATTERNS) if j != pm), key=lambda j: b[j]):
+                    t = min(b[i], need)
+                    b[i] -= t
+                    need -= t
+                gold_s.setdefault(s, [0] * PATTERNS)[pm] += 1
+                first.setdefault((s, "g"), run_no)
+            g = gold_s.get(s)
+            while g and max(g) >= emerald:
+                pm = max(range(PATTERNS), key=lambda i: g[i])
+                g[pm] -= emerald
+                em_s.setdefault(s, [0] * PATTERNS)[pm] += 1
+                first.setdefault((s, "e"), run_no)
+            e = em_s.get(s)
+            if e and max(e) >= diamond:
+                first.setdefault((s, "d"), run_no)
+    return first
+
+
+def v2_table(trials=40, cap=8000, seed=90, targets=("compy", "stegosaurus", "triceratops"), recipe=V2_RECIPE, rule="plurality", eggs=4):
+    species = load_species_weights()
+    res = {(t_, st): [] for t_ in targets for st in "ged"}
+    anyc = {st: [] for st in "ged"}
+    commons = [n for n, _ in species[:5]]  # the five Common species
+    for k in range(trials):
+        f = ladder_v2(species, *recipe, rule=rule, seed=seed + k, cap=cap, eggs=eggs)
+        for key in res:
+            res[key].append(f.get(key, cap))
+        for st in "ged":
+            hit = [f[(s, st)] for s in commons if (s, st) in f]
+            anyc[st].append(min(hit) if hit else cap)
+    return res, anyc
+
+
+def render_v2(trials, cap, recipe=V2_RECIPE, rule="plurality", eggs=4):
+    res, anyc = v2_table(trials, cap, recipe=recipe, rule=rule, eggs=eggs)
+    med = lambda v: sorted(v)[len(v) // 2]
+    out = [f"Ladder {recipe[0]}/{recipe[1]}/{recipe[2]} ({rule}), {eggs} eggs per step (a step is one 4-minute run when eggs = 4), hatch success 60%, {RUNS_PER_HOUR} steps/h, "
+           f"{trials} players, cap {cap} runs (a value at the cap means NOT reached)",
+           "| Target | Gold runs p50 (h) | Emerald runs p50 (h) | Diamond runs p50 (h) |", "|---|---:|---:|---:|"]
+
+    def cell(v):
+        m = med(v)
+        return f">{cap} (>{cap / RUNS_PER_HOUR:.0f} h)" if m >= cap else f"{m} ({m / RUNS_PER_HOUR:.1f} h)"
+    out.append("| any Common species | " + " | ".join(cell(anyc[s]) for s in "ged") + " |")
+    for tgt in sorted({k[0] for k in res}):
+        out.append(f"| {tgt} | " + " | ".join(cell(res[(tgt, s)]) for s in "ged") + " |")
+    return "\n".join(out)
+
+
 def check():
     """CI-safe: seeded 2k-trial run, monotonicity and sanity asserts. Must take < 10 s."""
     t0 = time.time()
@@ -212,20 +291,22 @@ def check():
     for b in bs:
         assert an[b]["mean"] <= tg[b]["mean"], "any-cell must not be slower than a fixed cell"
     assert abs(tg[10]["mean"] / (10 / q) - 1) < 0.06, "targeted MC mean off analytic B/q"
-    own = [15, 60, 120]  # Gold = 15 Base, Emerald = 15*4, Diamond = 15*4*2
-    og = targeted(own, q, 300, 5)
-    assert og[15]["p50"] < og[60]["p50"] < og[120]["p50"], "owner ladder must be monotone"
-    assert abs(og[15]["mean"] / (15 / q) - 1) < 0.15, "owner Gold targeted mean off analytic B/q"
     fusion = (ROOT / "src/server/IdentityFusion.luau").read_text(encoding="utf-8")
-    counts = [int(x) for x in re.findall(r"donorCount = (\d+), version", fusion)]
-    assert counts == [15, 4, 2], f"IdentityFusion recipes must be 15/4/2, got {counts}"
-    assert (GOLD_DONORS, GOLD_DONORS * 4, GOLD_DONORS * 4 * 2) == tuple(own), "default scenario must be 15/4/2"
-    hrs = hours_to_cells(any_cell(own, cell_probs(species), ps0, 150, 9))
-    for b, lo, hi in ((15, 1.3, 2.2), (60, 7.0, 10.5), (120, 15.0, 22.0)):
-        assert lo <= hrs[b] <= hi, f"any-cell median hours for {b} Base = {hrs[b]:.1f}, outside [{lo}, {hi}] (owner targets 1.7 / 8.8 / 18.7 h)"
+    counts = [int(x) for x in re.findall(r"donorCount = (\d+),", fusion)]
+    assert counts == list(V2_RECIPE), f"IdentityFusion recipes must be 6/3/2, got {counts}"
+    assert "anyPattern = true" in fusion.split("emerald =")[0], "Gold must be the any-pattern recipe"
+    # v2 pacing sanity (docs/90): first Gold of any Common in ~5-10 casual runs, Common Diamond within a few hundred runs.
+    res, anyc = v2_table(trials=12, cap=1500, targets=("compy",))
+    med = lambda v: sorted(v)[len(v) // 2]
+    assert 4 <= med(anyc["g"]) <= 12, f"any-Common first Gold p50 {med(anyc['g'])} runs, outside 4-12"
+    assert med(res[("compy", "g")]) <= 20 and med(res[("compy", "g")]) < med(res[("compy", "e")]) < med(res[("compy", "d")]), "ladder must be monotone"
+    assert med(res[("compy", "d")]) < 1500, "Common Diamond must be reachable"
+    old = v2_table(trials=6, cap=1500, targets=("compy",), recipe=(6, 3, 2), rule="same")[0]
+    assert med(old[("compy", "d")]) > med(res[("compy", "d")]), "same-pattern-everywhere must be slower than the chosen ladder"
     cfg = (ROOT / "src/shared/Config.luau").read_text(encoding="utf-8")
     assert re.search(r"FoodCatchRate = 4 / 500", cfg), "owner decision 2026-10-15: 4 catches per 500 food"
     assert targeted([10], q, 200, 3) == targeted([10], q, 200, 3), "not deterministic"
+    assert ladder_v2(species, seed=3, cap=200) == ladder_v2(species, seed=3, cap=200), "v2 not deterministic"
     dt = time.time() - t0
     assert dt < 10, f"check too slow: {dt:.1f}s"
     print(f"fusion ladder sim check OK in {dt:.1f}s (any-cell Gold p50={an[10]['p50']} eggs; "
@@ -250,9 +331,18 @@ def main(argv=None):
     ap.add_argument("--heavy-big-runs", type=int, default=3, help="of the heavy runs, how many are big (5,000-food, 40-egg) runs")
     ap.add_argument("--hours", action="store_true", help="print median hours to first Gold/Emerald/Diamond (any one species+pattern) at 180 dinos/h")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--legacy", action="store_true", help="run the older same-pattern model (docs/57) instead of the docs/90 table")
+    ap.add_argument("--v2-trials", type=int, default=40)
+    ap.add_argument("--v2-cap", type=int, default=8000, help="max runs simulated per player")
+    ap.add_argument("--v2-recipe", type=int, nargs=3, default=list(V2_RECIPE), metavar=("GOLD", "EMERALD", "DIAMOND"))
+    ap.add_argument("--v2-eggs", type=int, default=4, help="eggs per step (4 = one run; 13 = a run plus a 9-egg nest)")
+    ap.add_argument("--v2-rule", choices=("plurality", "same"), default="plurality")
     a = ap.parse_args(argv)
     if a.check:
         check()
+        return 0
+    if not a.legacy and not a.hours:
+        print(render_v2(a.v2_trials, a.v2_cap, tuple(a.v2_recipe), a.v2_rule, a.v2_eggs))
         return 0
     if a.hours:
         species = load_species_weights()

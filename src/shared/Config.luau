@@ -56,7 +56,8 @@ return table.freeze({
     PredationBaseRadius = 5.5,
     PredationMaxRadius = 9,
     PredationVerticalLimit = 7,
-    PredationGrowthPoints = 25,
+    GrowthPerFood = 0.5, -- owner 2026-10-15: growth gained per food point halved (typical 4-min run ~300 growth, was ~700); catches/eggs still use RAW food, scale curve unchanged
+    PredationGrowthPoints = 12.5, -- was 25; halved with GrowthPerFood
     RepeatVictimCatchCooldownSeconds = 60,
 
     -- BD-052: Home is a confirmed, immediate return; the 3-second stay-still channel is removed.
@@ -159,8 +160,8 @@ return table.freeze({
     AutoOpenRequiresPass = false,
     NestStorageCapacity = 5, -- owned nests (waiting + incubating + ready); when full a new nest is not granted
     NestIncubationSeconds = 10800, -- 3 h each; the next waiting nest starts the moment the previous becomes ready
-    NestMinSize = 10, -- eggs per nest, rolled deterministically from the run id at drop
-    NestMaxSize = 15,
+    NestMinSize = 6, -- (owner 2026-10-15: 6-12, was 10-15; a nest should out-produce a 4-5 egg run but not absurdly) eggs per nest, rolled deterministically from the run id at drop
+    NestMaxSize = 12,
     -- Hidden drop gate (never shown in the UI; measured on the server, never client-reported).
     NestMinRunSeconds = 120, -- PROVISIONAL: server clock from RunLifecycle.begin to settlement
     NestMinCatches = 1, -- PROVISIONAL: validated server CatchScore (run eggs) needed for a nest

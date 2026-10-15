@@ -11,7 +11,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local FusionService = {}
 FusionService.MaxListLimit = 200
 FusionService.DefaultListLimit = 100
-FusionService.MaxDonorIds = 15 -- largest recipe (Gold = 15 Base); IdentityFusion enforces the exact per-recipe count
+FusionService.MaxDonorIds = 6 -- largest recipe (Gold = 6 Base); IdentityFusion enforces the exact per-recipe count
 FusionService.MaxIdLength = 120
 FusionService.MaxDigestLength = 64
 FusionService.MaxTokenLength = 80
