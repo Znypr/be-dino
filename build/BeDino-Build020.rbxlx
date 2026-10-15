@@ -370087,11 +370087,14 @@ local function buildLayer(h, layer)
                 for i = 1, 3 do L.pool[i] = {obj = dot(h.frame, z, true), age = 1e9, life = layer.life} local s = Instance.new("UIStroke") s.Thickness = 2 s.Parent = L.pool[i].obj L.pool[i].obj.BackgroundTransparency = 1 L.pool[i].stroke = s end
             end
         else
-            for i = 1, cap do L.pool[i] = {obj = sprite(h.frame, z + 1, tex), age = 1e9, life = layer.life, x = 0, y = 0, vx = 0, vy = 0, rot = 0} end
+            -- BD-226: only an alpha upload goes into an ImageLabel (one 256 px cell, tinted). The built-in particle .dds sprites
+            -- draw as dark square boxes in 2D UI, so without a real alpha texture the puff is a soft round tinted dot instead.
+            local real = Assets.isRealUi(layer.tex)
+            for i = 1, cap do L.pool[i] = {obj = if real then sprite(h.frame, z + 1, tex) else dot(h.frame, z + 1, true), age = 1e9, life = layer.life, x = 0, y = 0, vx = 0, vy = 0, rot = 0} end
         end
     elseif k == "pillar" then
         -- FX v3 rays pillar: one sprite standing behind the dino, pulsing slowly (built-in sparkle until the upload resolves)
-        L.img = sprite(h.frame, z - 1, Assets.resolveUi(layer.tex))
+        if Assets.isRealUi(layer.tex) then L.img = sprite(h.frame, z - 1, Assets.resolveUi(layer.tex)) end -- BD-226: no built-in box
     elseif k == "ring" or k == "spiral" then
         L.dots = {}
         local n = if k == "ring" then 9 else 8
@@ -370194,7 +370197,7 @@ local function stepHandle(h, dt: number)
                     else p.obj.Visible = false end
                 end
             end
-        elseif k == "pillar" and Assets.isRealUi(layer.tex) then
+        elseif k == "pillar" and L.img then
             local glow = if h.reduced then 0.5 else Recipes.pulse(time, layer.hz)
             place(L.img, 0.5, 0.42, unit * 0.95, layer.color[#layer.color], 1 - layer.alpha * (0.55 + 0.45 * glow) * fade)
         elseif k == "ring" or k == "spiral" then
