@@ -294,9 +294,9 @@ def check_wiring():
     appearance = read('src/shared/EggAppearance.luau')
     traits = read('src/client/PreviewTraits.luau')
     # BD-170: Open starts the screen at once, Next egg stays in the sequence, the answer is supplied to the running screen.
-    assert 'if hatchNext() then open("hatch") end' in boot, 'Open / Next egg open the hatch screen immediately'
-    assert boot.count('if hatchNext() then open("hatch") end') >= 2, 'both Open and Next egg use the immediate path'
-    assert 'task.defer(waiting.supply)' in boot and 'pendingHatch' in boot, 'the server answer is handed to the waiting screen'
+    assert 'if (hatchState.next :: any)() then open("hatch") end' in boot, 'Open / Next egg open the hatch screen immediately'
+    assert boot.count('if (hatchState.next :: any)() then open("hatch") end') >= 2, 'both Open and Next egg use the immediate path'
+    assert 'task.defer(waiting.supply)' in boot and 'hatchState.pending' in boot, 'the server answer is handed to the waiting screen'
     assert 'finishBatch()' in boot and 'EggsLogic.afterReveal(skipAllReveals,remainingAfter)=="continue"' in boot, 'only the end of the batch leaves'
     assert 'open("eggs") end -- never leave an egg wobbling forever' in boot, 'a lost answer never strands the player'
     hatch_block = boot[boot.index('elseif name=="hatch" then'):boot.index('elseif name=="exit" then')]
