@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "94279b4220253727a12044cc2ff5e891860854734efc6ccc8c41cc0c571ec04f",
+  "place_sha256": "aeada0637c83d920a393462e2f3145cb73de1b729dc5c6daa6382328773986ec",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "33f6491c3921573cdf897028008998b4097b134df9aefad7dee98030a3e62262",
@@ -214,7 +214,7 @@
     "src/shared/ResourceModels.luau": "b021243e12db7f5705f8f54e810da482568c5097a1c307ffa5d8b3a81d1ddb4d",
     "src/shared/RevealSkip.luau": "3d35f316aa74ef7a143582e0f0dd48c640347918074a3f3edbf9e1c1aee6baf0",
     "src/shared/RuntimeMeshes.luau": "542db0c4f535afe0dbb1a591ef9567f26796f194ef38967373cf83fa8d710bda",
-    "src/shared/Sfx.luau": "a196e166d3ea8bbbbc2a1943d6de8acbc8d19abe0e9d6d938cac2a346ece3a17",
+    "src/shared/Sfx.luau": "c90167d78f9822baf7d2ec02748059c7de5cbb31006015f608fb921a8dd4f2cb",
     "src/shared/ShinyEffects.luau": "f5059433f066966709b9cc9e0a7aea6ac80e7f03a51ebd4edc134ab04da1d127",
     "src/shared/ShopOdds.luau": "c38149e210da89368bc3e0dc6a1e2463b7d04fe9a876e7f72a56a38d7d5d3017",
     "src/shared/TouchLayout.luau": "a1acd43184f9ee8c229ea99013a1e576c6473060a50b2fd4aadee4d912f50f88",
@@ -224,7 +224,8 @@
     "src/shared/UIIconLayout.luau": "8987e0064bdeb10556c6dec7d84d41243b72b6682c74a2300dff5a1e46c3cd69",
     "src/shared/UITheme.luau": "ebe8f366e81e3f0a34bd14f4a3560cdfffa50651a89f1e73df2a1a976d043ceb",
     "src/shared/WeatherClock.luau": "ae9d42007a3bb54610b478c906d9042859b735467af69ad9d1e8782ee6b33730",
-    "src/shared/WeatherLooks.luau": "03f982a9d4b3e64ea6677900b083c91bec0bf4e1528659ebcb6c7b360e0ec776",
+    "src/shared/WeatherLooks.luau": "0ad3d4335dc47d9530b4a3714d9754fd28d86ba1572aebbb36aa2e0bc00ee02f",
+    "src/shared/WeatherSounds.luau": "f17e56d29d0b2cf4456453e470cb7ef7a6ddf23386b90322fbf39fc82de5e881",
     "src/shared/WorldKitData.luau": "860dd88ae449c3daa82d1372148e02d50d0ccaa08c8fa5a21a003a75bb4abde2",
     "src/shared/WorldKitMeshAssets.luau": "7110648be06c6e602728e21ad96a833e4ad87d65c64fced492ef5bfcd9ce503f",
     "src/server/AdminService.luau": "b017aed5b20be0c7a2226618d128acf8e1415bf18ce260afcae3b9d45ff26ee9",
@@ -263,6 +264,7 @@
     "src/client/InspectView.luau": "af6e2c8413bdb4cf5a0e43aa48765bf02016ea77475e90761747b1cad4da0e0b",
     "src/client/PreviewTraits.luau": "9ab27bd37071412536083ac3a0993fb6344cf1de4ce79f5cc92abbfd55329958",
     "src/client/ResourceVisuals.client.luau": "734cbac841db6a6c88ccda176dabb6c3a9a626c158a10b7da3b1d1723335701d",
-    "src/client/WeatherVisuals.client.luau": "4055e97da0a56d8214f01e149df3e6dcaa9f157cdf697bf7dde4120a4a8ebc23"
+    "src/client/WeatherAudio.client.luau": "9ab0b960dd4560a5fdbfb775ba7554f06783d50fa4dbdb1eac4fde3229ebbebe",
+    "src/client/WeatherVisuals.client.luau": "1feb5c10c1423759fabd149720e8560a63a5f788e499472909dda6512e803bec"
   }
 }

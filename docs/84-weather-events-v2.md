@@ -59,6 +59,19 @@ motes, twinkling sky sparkles and a glow light that tints the ground and the din
 blue-violet, teal) that cycles in 26 s with slow noise and a per-object hue offset. Lighting.ColorShift_Top/Bottom, fog colour, ambient, Atmosphere
 colour/decay, bloom, exposure and star count follow the same cycle. Reduce Motion: static grade only, no shell, rays or particles.
 
+## Weather v3.1 fixes (owner playtest 2026-10-15)
+- Fog culls everything beyond FogEnd; that cut was the hard red/teal silhouette against the sky. A box of five fog-coloured slabs sits just inside FogEnd, so the
+  sky and the faded world are one colour (smooth, no edge). It also hides the default sun, moon and stars, so the blood moon shows exactly one moon. The default
+  Sky's celestial bodies are switched off during events too.
+- Readability: at 30 studs fog covers at most 10% (fog starts at 25-100 studs), blizzard view 110 (was 50), quake 220, volcano 320 with a brown-orange haze,
+  lighter fog-bank particles (transparency 0.82-0.9), no colour-shift tint. Enforced by `tools/verify_weather.py`. The tables above show the v3.0 numbers; the
+  current ones are in `WeatherLooks.luau`.
+- Earthquake: anchored on the terrain under the root (the ray ignores the dino), three flat segmented shock rings with thinning width, 12 radiating cracks, dust burst,
+  rock chips, camera shake and a quake cue for the sound layer.
+- Northern Lights: the ground ring, the SurfaceGui shell and the near rays are gone. The sky is the fog-coloured box (hue cycling) plus three high curtain arcs of 14
+  ribbons each, 230-300 studs out, with sparkles.
+- Audio: see docs/85. `weather_start` volume 0.2.
+
 ## Intensity and budgets
 Rain 1400 streaks/s (thunder 2000) with more splash and a darker grade; bolts every 2.2-5 s with two forks, 35% double strikes, sheet flashes every 1.2-3 s;
 blizzard 1300 flakes/s; volcano a lava bomb every 0.45-1.1 s and three eruption columns; quake shake 0.3 constant and 0.95 on bursts with much more dust.

@@ -42,7 +42,7 @@ for _, id in IDS do
 end
 assert(W.Looks.clear.density == 0 and W.Looks.clear.dof == 0)
 -- blizzard whiteout is 40..60 studs; the densest events are the shortest views; aurora keeps the widest view
-assert(W.Looks.blizzard.vis >= 40 and W.Looks.blizzard.vis <= 60)
+assert(W.Looks.blizzard.vis >= 80 and W.Looks.blizzard.vis <= 120, "blizzard view distance 80..120 (owner: must stay readable)")
 for _, id in IDS do assert(W.Looks[id].vis >= W.Looks.blizzard.vis) end
 assert(W.Looks.aurora.vis >= 250 and W.Looks.aurora.vis <= 600)
 -- denser fog = shorter view
@@ -50,8 +50,17 @@ local byDensity = table.clone(IDS) table.sort(byDensity, function(a, b) return W
 for i = 2, #byDensity do assert(W.Looks[byDensity[i - 1]].vis <= W.Looks[byDensity[i]].vis + 100, "density and visibility disagree") end
 assert(W.Looks.blizzard.density == W.Looks[byDensity[1]].density)
 -- stronger than v2 (recorded v2 densities): every event at least 1.3x denser than before
-local V2 = {rain = .28, thunder = .3, blizzard = .68, volcano = .4, aurora = .24, quake = .34, bloodmoon = .16}
-for id, old in V2 do assert(W.Looks[id].density >= old * 1.3, id .. " must be stronger than v2") end
+-- readability (owner 2026-10-15: volcano, blizzard and quake were opaque walls): at 30 studs the fog may cover at most 10%,
+-- the dino and ground stay visible to at least 40 studs in volcano, quake, rain and thunder, and the sky box colour equals the fog colour
+for _, id in IDS do
+    local look = W.Looks[id]
+    local at30 = math.max(0, 30 - look.fogStart) / (look.vis - look.fogStart)
+    assert(at30 <= .1, id .. " fog at 30 studs " .. at30)
+    assert(look.dome >= 0 and look.dome <= 1)
+end
+for _, id in {"volcano", "quake", "rain", "thunder", "bloodmoon", "aurora"} do assert(W.Looks[id].fogStart >= 40, id .. " keeps 40 studs clear") end
+assert(W.Looks.volcano.fog[1] <= 170 and W.Looks.volcano.sat <= .3 and W.Looks.volcano.bloom <= .7, "volcano is a brown-orange haze, not a red wall")
+assert(W.Looks.volcano.density <= .45 and W.Looks.quake.density <= .5 and W.Looks.blizzard.density <= .85, "atmosphere density stays readable")
 -- phone density halves every rate, so the phone budget is half
 for _, id in IDS do local c = W.concurrent(id) assert(c * .5 <= W.Budget.concurrent / 2) end
 assert(W.Budget.bolts >= 3 and W.Budget.bombs >= 5 and W.Budget.beams <= 160)
@@ -88,14 +97,33 @@ local m = W.mix({0, 100, 200}, {100, 200, 0}, .5) assert(m[1] == 50 and m[2] == 
 assert(W.lerp(2, 4, .25) == 2.5 and W.scale({100, 50, 0}, .5)[1] == 50)
 assert(W.strength(1, true) == 1 and W.strength(1, false) == .5 and W.strength(0, false) == 0, "Reduce Motion halves the grade")
 local s0, e0 = W.fog(W.Looks.blizzard, 0, 0, 100000) assert(s0 == 0 and math.abs(e0 - 100000) < 1e-3)
-local s1, e1 = W.fog(W.Looks.blizzard, 1, 0, 100000) assert(s1 == 12 and math.abs(e1 - 50) < 1e-6)
-local _, eh = W.fog(W.Looks.blizzard, .5, 0, 100000) assert(eh > 50 and eh < 200, "fog closes in smoothly (1/distance blend): " .. eh)
+local s1, e1 = W.fog(W.Looks.blizzard, 1, 0, 100000) assert(s1 == 25 and math.abs(e1 - 110) < 1e-6)
+local _, eh = W.fog(W.Looks.blizzard, .5, 0, 100000) assert(eh > 110 and eh < 400, "fog closes in smoothly (1/distance blend): " .. eh)
 print("WeatherLooks passed")
+
+-- weather audio table: ids stay empty until uploaded, volumes are kids-quiet, every event has a bed, fades are bounded
+assert(WS.MaxBed <= .3 and WS.MaxAccent <= .5 and WS.FadeSeconds >= 1.5)
+for name, entry in WS.Sounds do
+    assert(type(entry.id) == "string" and entry.volume > 0, name)
+    assert(entry.volume <= (if entry.loop then WS.MaxBed else WS.MaxAccent), name .. " too loud")
+    assert(entry.id == "" or WS.normalizeId(entry.id), name .. " malformed id")
+end
+for _, id in IDS do
+    local event = WS.Events[id] assert(event and WS.Sounds[event.bed] and WS.Sounds[event.bed].loop, id .. " needs a looping bed")
+    for cue, list in event.cues or {} do for _, item in list do assert(WS.Sounds[item[1]] and not WS.Sounds[item[1]].loop and item[2] >= 0, cue) end end
+end
+assert(WS.normalizeId("") == nil and WS.normalizeId("rbxassetid://0") == nil and WS.normalizeId("abc") == nil and WS.normalizeId("rbxassetid://12") == "rbxassetid://12")
+assert(WS.bedTarget("rain_bed", "rain", 1, true) == WS.Sounds.rain_bed.volume and WS.bedTarget("rain_bed", "thunder", 1, true) == 0 and WS.bedTarget("rain_bed", "rain", 1, false) == 0)
+assert(WS.bedTarget("rain_bed", "rain", .5, true) == WS.Sounds.rain_bed.volume * .5)
+local lvl = WS.step(0, .2, 1) assert(lvl > 0 and lvl < .2 and WS.step(.2, 0, 100) == 0 and WS.step(0, .2, 100) == .2, "fades are rate limited")
+assert(#WS.cue("thunder", "strike") == 2 and #WS.cue("rain", "strike") == 0 and #WS.cue("volcano", "eruption") == 1)
+local fired = {} WS.connect(function(n) table.insert(fired, n) end) WS.fire("quake") assert(fired[1] == "quake")
+print("WeatherSounds passed")
 '''
 
 
 def script():
-    return 'local W=' + module('src/shared/WeatherLooks.luau') + '\n' + BODY
+    return 'local W=' + module('src/shared/WeatherLooks.luau') + '\nlocal WS=' + module('src/shared/WeatherSounds.luau') + '\n' + BODY
 
 
 def scan():
@@ -111,6 +139,17 @@ def scan():
         end = src.index('\nend\n', start)
         assert 'Instance.new' not in src[start:end], name + ' creates Instances'
     assert 'Debris' not in src, 'one-shots are pooled, not Debris items'
+    for name in ('local function updateQuake', 'local function updateDome'):
+        start = src.index(name)
+        assert 'Instance.new' not in src[start:src.index('\nend\n', start)], name + ' creates Instances'
+    assert 'auroraRing' not in src and 'SurfaceGui' not in src, 'no ground ring or square sky shell around the dino (owner 2026-10-15)'
+    assert 'CelestialBodiesShown' in src, 'default sun and moon hidden during events (one moon only)'
+    audio = (ROOT / 'src/client/WeatherAudio.client.luau').read_text(encoding='utf-8')
+    assert 'WeatherSounds' in audio and 'normalizeId' in audio
+    sfx = (ROOT / 'src/shared/Sfx.luau').read_text(encoding='utf-8')
+    import re
+    volume = float(re.search(r'weather_start = \{id = "[^"]*", volume = ([\d.]+)', sfx).group(1))
+    assert volume <= .25, 'weather_start must stay quiet'
 
 
 if __name__ == '__main__':

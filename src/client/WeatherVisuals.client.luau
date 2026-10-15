@@ -12,6 +12,7 @@ local UserInputService=game:GetService("UserInputService")
 local Shared=game:GetService("ReplicatedStorage").Shared
 local Theme=require(Shared.UITheme)
 local WL=require(Shared.WeatherLooks)
+local WS=require(Shared.WeatherSounds)
 local player=Players.LocalPlayer
 local random=Random.new()
 local phone=UserInputService.TouchEnabled and not UserInputService.MouseEnabled
@@ -39,7 +40,7 @@ if not atmosphere then
     atmosphere=Instance.new("Atmosphere") atmosphere.Density,atmosphere.Offset,atmosphere.Glare,atmosphere.Haze=0,0,0,0
     atmosphere.Name="WeatherAtmosphere" atmosphere.Parent=Lighting
 end
-local sky=Lighting:FindFirstChildOfClass("Sky")
+local sky:Sky?=Lighting:FindFirstChildOfClass("Sky")
 local baseAmbient,baseOutdoor=Lighting.Ambient,Lighting.OutdoorAmbient
 local baseShiftTop,baseShiftBottom,baseExposure=Lighting.ColorShift_Top,Lighting.ColorShift_Bottom,Lighting.ExposureCompensation
 local baseStars=if sky then sky.StarCount else 0
@@ -84,7 +85,7 @@ local function fogBanks(id:string,color:ColorSequence,props:{[string]:any}?)
         local part=volume(Vector3.new(150,10,150))
         local p:{[string]:any}={
             Texture=TEX_SMOKE,Speed=NumberRange.new(2,6),EmissionDirection=Enum.NormalId.Top,SpreadAngle=Vector2.new(180,180),Size=seq(80,120,150),
-            Transparency=seq(1,.7,1),Color=color,Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-4,4),Drag=.4,
+            Transparency=seq(1,.84,1),Color=color,Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-4,4),Drag=.4,
         }
         if props then for key,value in props do p[key]=value end end
         addRig(id,part,offset,{emitter(part,id,"bank",p,1/#RING,true)})
@@ -146,7 +147,7 @@ do
     })
     local drift=emitter(side,"blizzard","drift",{
         Texture=TEX_SMOKE,Speed=NumberRange.new(22,34),EmissionDirection=Enum.NormalId.Right,
-        Size=seq(34,54),Transparency=seq(1,.74,1),Color=ColorSequence.new(Color3.fromRGB(238,246,255)),Rotation=NumberRange.new(0,360),
+        Size=seq(34,54),Transparency=seq(1,.88,1),Color=ColorSequence.new(Color3.fromRGB(238,246,255)),Rotation=NumberRange.new(0,360),
     })
     addRig("blizzard",sky,Vector3.new(0,36,0),{snow})
     addRig("blizzard",side,Vector3.new(-70,12,0),{gust,flurry,drift})
@@ -171,7 +172,7 @@ do
     })
     local ceiling=volume(Vector3.new(420,4,420))
     local haze=emitter(ceiling,"volcano","haze",{
-        Texture=TEX_SMOKE,Speed=NumberRange.new(2,6),EmissionDirection=Enum.NormalId.Bottom,Size=seq(160,230,300),Transparency=seq(1,.58,1),
+        Texture=TEX_SMOKE,Speed=NumberRange.new(2,6),EmissionDirection=Enum.NormalId.Bottom,Size=seq(160,230,300),Transparency=seq(1,.82,1),
         Color=ColorSequence.new(Color3.fromRGB(52,38,36),Color3.fromRGB(88,40,28)),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-3,3),
     },1,true)
     addRig("volcano",sky,Vector3.new(0,40,0),{ash})
@@ -192,7 +193,7 @@ do
         },1/#COLUMN_OFFSETS,true)
         rig.volcano=rig.volcano or {} for _,item in {plume,smoke} do table.insert(rig.volcano,item) end
     end
-    fogBanks("volcano",ColorSequence.new(Color3.fromRGB(200,70,36),Color3.fromRGB(70,40,36)))
+    fogBanks("volcano",ColorSequence.new(Color3.fromRGB(130,76,52),Color3.fromRGB(58,46,42)),{Transparency=seq(1,.9,1)})
 end
 -- AURORA (full-sky curtains below) + drifting motes, twinkling sky sparkle, low teal mist
 do
@@ -209,14 +210,14 @@ do
     },1,true)
     addRig("aurora",air,Vector3.new(0,8,0),{motes})
     addRig("aurora",dome,Vector3.new(0,170,0),{stars})
-    fogBanks("aurora",ColorSequence.new(Color3.fromRGB(80,230,200),Color3.fromRGB(170,120,255)),{Transparency=seq(1,.84,1),LightEmission=.6})
+    fogBanks("aurora",ColorSequence.new(Color3.fromRGB(80,230,200),Color3.fromRGB(170,120,255)),{Transparency=seq(1,.9,1),LightEmission=.6})
 end
 -- QUAKE (dust + falling rubble + dust haze)
 do
     local ground=volume(Vector3.new(70,.2,70))
     local dust=emitter(ground,"quake","dust",{
         Texture=TEX_SMOKE,Speed=NumberRange.new(3,9),EmissionDirection=Enum.NormalId.Top,
-        Size=seq(10,24,34),Transparency=seq(.65,.5,1),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-14,14),
+        Size=seq(10,24,34),Transparency=seq(.82,.7,1),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-14,14),
         Color=ColorSequence.new(Color3.fromRGB(196,170,128),Color3.fromRGB(160,138,104)),SpreadAngle=Vector2.new(30,30),
     })
     local top=volume(Vector3.new(60,1,60))
@@ -227,7 +228,7 @@ do
     })
     addRig("quake",ground,FEET,{dust})
     addRig("quake",top,Vector3.new(0,34,0),{rubble})
-    fogBanks("quake",ColorSequence.new(Color3.fromRGB(190,158,116),Color3.fromRGB(150,124,92)),{Transparency=seq(1,.66,1)})
+    fogBanks("quake",ColorSequence.new(Color3.fromRGB(190,158,116),Color3.fromRGB(150,124,92)),{Transparency=seq(1,.88,1)})
 end
 -- BLOOD MOON (red motes, ground fog, red fog walls)
 do
@@ -240,11 +241,11 @@ do
     local ground=volume(Vector3.new(90,.2,90))
     local fogBank=emitter(ground,"bloodmoon","fog",{
         Texture=TEX_SMOKE,Speed=NumberRange.new(1,3),EmissionDirection=Enum.NormalId.Top,
-        Size=seq(34,56),Transparency=seq(1,.72,1),Color=ColorSequence.new(Color3.fromRGB(150,16,40)),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-5,5),
+        Size=seq(34,56),Transparency=seq(1,.88,1),Color=ColorSequence.new(Color3.fromRGB(150,16,40)),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-5,5),
     })
     addRig("bloodmoon",air,Vector3.new(0,6,0),{motes})
     addRig("bloodmoon",ground,FEET,{fogBank})
-    fogBanks("bloodmoon",ColorSequence.new(Color3.fromRGB(170,18,44),Color3.fromRGB(90,8,28)),{Transparency=seq(1,.62,1),Size=seq(90,130,170)})
+    fogBanks("bloodmoon",ColorSequence.new(Color3.fromRGB(170,18,44),Color3.fromRGB(90,8,28)),{Transparency=seq(1,.88,1),Size=seq(90,130,170)})
 end
 
 -- ---------------------------------------------------------------- lights that keep the near area bright and carry the event colour
@@ -252,73 +253,61 @@ local lampPart=volume(Vector3.one)
 local lamp=Instance.new("PointLight") lamp.Name="WeatherLamp" lamp.Color,lamp.Range,lamp.Brightness,lamp.Shadows=Color3.fromRGB(255,244,226),32,0,false lamp.Parent=lampPart
 local glow=Instance.new("PointLight") glow.Name="WeatherGlow" glow.Range,glow.Brightness,glow.Shadows=40,0,false glow.Parent=lampPart
 
--- ---------------------------------------------------------------- sky props: blood moon + aurora rays/arcs/ring
+-- ---------------------------------------------------------------- sky props: blood moon, aurora curtains, fog-coloured sky box
 local moonCore=Instance.new("Part") moonCore.Name="EventMoon" moonCore.Shape=Enum.PartType.Ball
 moonCore.Anchored,moonCore.CanCollide,moonCore.CanTouch,moonCore.CanQuery,moonCore.CastShadow=true,false,false,false,false
-moonCore.Size,moonCore.Material,moonCore.Color,moonCore.Transparency,moonCore.Parent=Vector3.one*60,Enum.Material.Neon,Color3.fromRGB(255,48,76),1,folder
+moonCore.Size,moonCore.Material,moonCore.Color,moonCore.Transparency,moonCore.Parent=Vector3.one*60,Enum.Material.Neon,Color3.fromRGB(255,96,64),1,folder
 local halos:{Part}={}
 for i,spec in {{110,.74},{150,.88},{200,.94}} do
-    local halo=moonCore:Clone() halo.Name="EventMoonHalo"..i halo.Size=Vector3.one*spec[1] halo.Transparency=1 halo.Color=Color3.fromRGB(255,40,70) halo.Parent=folder
+    local halo=moonCore:Clone() halo.Name="EventMoonHalo"..i halo.Size=Vector3.one*spec[1] halo.Transparency=1 halo.Color=Color3.fromRGB(255,70,50) halo.Parent=folder
     table.insert(halos,halo)
 end
 local HALO_ALPHA={.74,.88,.94}
 local MOON_DIR=Vector3.new(-.32,.5,-.8).Unit
 
-local AURORA_RAYS=28
-type Ray={bottom:Attachment,top:Attachment,beam:Beam,angle:number,dist:number,height:number,layer:number,hue:number}
-local auroraRays:{Ray}={}
-for i=1,AURORA_RAYS do
-    local bottom=Instance.new("Attachment") bottom.Parent=workspace.Terrain
-    local top=Instance.new("Attachment") top.Parent=workspace.Terrain
-    local beam=Instance.new("Beam") beam.Attachment0,beam.Attachment1=bottom,top
-    local layer=(i-1)%4+1
-    beam.FaceCamera,beam.LightEmission,beam.LightInfluence,beam.Segments=true,1,0,1
-    beam.Width0,beam.Width1=70+layer*14,150+layer*34
-    beam.TextureMode=Enum.TextureMode.Stretch
-    beam.Enabled=false beam.Parent=folder
-    table.insert(auroraRays,{bottom=bottom,top=top,beam=beam,angle=(i-1)/AURORA_RAYS*math.pi*2,dist=250+layer*45,height=160+layer*30,layer=layer,hue=(i-1)/AURORA_RAYS})
-end
--- horizontal arcs: long rippling ribbons at different heights and speeds (parallax against the rays)
-local ARC_POINTS=10
-type Arc={points:{Attachment},beams:{Beam},phase:number,height:number,dist:number,center:number,speed:number}
-local arcs:{Arc}={}
-for c=1,5 do
-    local points:{Attachment}={} local beams:{Beam}={}
-    for i=1,ARC_POINTS do
-        local a=Instance.new("Attachment") a.Parent=workspace.Terrain table.insert(points,a)
-        if i>1 then
-            local beam=Instance.new("Beam") beam.Attachment0,beam.Attachment1=points[i-1],a
-            beam.FaceCamera,beam.Width0,beam.Width1,beam.LightEmission,beam.LightInfluence,beam.Segments=true,60+c*10,60+c*10,1,0,4
-            beam.TextureMode=Enum.TextureMode.Stretch
-            beam.Enabled=false beam.Parent=folder table.insert(beams,beam)
-        end
-    end
-    table.insert(arcs,{points=points,beams=beams,phase=c*1.7,height=70+c*38,dist=230+c*34,center=c*1.26,speed=.05+c*.018})
-end
-local auroraRing=Instance.new("Part") auroraRing.Name="AuroraRing" auroraRing.Shape=Enum.PartType.Cylinder
-auroraRing.Anchored,auroraRing.CanCollide,auroraRing.CanTouch,auroraRing.CanQuery,auroraRing.CastShadow=true,false,false,false,false
-auroraRing.Material,auroraRing.Size,auroraRing.Transparency=Enum.Material.Neon,Vector3.new(.3,64,64),1 auroraRing.Parent=folder
-
--- sky shell: two crossing ceiling layers and four walls, each a transparent part carrying a SurfaceGui whose UIGradient is recoloured from the
--- aurora hue cycle, so the whole sky is smoothly aurora-coloured from any camera angle (a Sky object cannot be tinted without uploaded textures)
-type Shell={part:Part,gui:SurfaceGui,grad:UIGradient,wall:boolean,hue:number,offset:CFrame,rot:number}
-local shell:{Shell}={}
-local function shellPart(size:Vector3,offset:CFrame,face:Enum.NormalId,wall:boolean,hue:number,rot:number)
-    local part=Instance.new("Part") part.Name="AuroraSky" part.Size=size
+-- Fog culls everything beyond FogEnd, which is the hard edge against the sky. A box of five fog-coloured slabs just inside FogEnd closes the sky,
+-- so the world fades into one colour with no silhouette (it also hides the default sun, moon and stars, so the blood moon is the only moon).
+local domeParts:{Part}={}
+for i=1,5 do
+    local part=Instance.new("Part") part.Name="WeatherSkyBox"..i
     part.Anchored,part.CanCollide,part.CanTouch,part.CanQuery,part.CastShadow=true,false,false,false,false
-    part.Transparency=1 part.Parent=folder
-    local gui=Instance.new("SurfaceGui") gui.Face=face gui.SizingMode=Enum.SurfaceGuiSizingMode.PixelsPerStud gui.PixelsPerStud=.5
-    gui.LightInfluence,gui.Brightness,gui.Enabled=0,4,false gui.Parent=part
-    local frame=Instance.new("Frame") frame.Size=UDim2.fromScale(1,1) frame.BackgroundColor3=Color3.new(1,1,1) frame.BorderSizePixel=0 frame.Parent=gui
-    local grad=Instance.new("UIGradient") grad.Rotation=rot grad.Parent=frame
-    table.insert(shell,{part=part,gui=gui,grad=grad,wall=wall,hue=hue,offset=offset,rot=rot})
+    part.Material,part.Transparency=Enum.Material.Neon,1 part.Position=Vector3.new(0,-4000,0) part.Parent=folder
+    domeParts[i]=part
 end
-shellPart(Vector3.new(1000,1,1000),CFrame.new(0,230,0),Enum.NormalId.Bottom,false,0,35)
-shellPart(Vector3.new(1000,1,1000),CFrame.new(0,226,0),Enum.NormalId.Bottom,false,.5,-50)
-for side=0,3 do
-    local a=side*math.pi/2
-    local pos=Vector3.new(math.cos(a)*300,100,math.sin(a)*300)
-    shellPart(Vector3.new(700,350,1),CFrame.lookAt(pos,Vector3.new(0,100,0)),Enum.NormalId.Front,true,side*.25,-90)
+local DOME_MAX=360 -- ramp reference; the box itself stays within 300 studs (farther slabs are not drawn)
+local function updateDome(root:Vector3?,color:Color3,fogEnd:number,vis:number)
+    local p=if root then math.clamp((DOME_MAX-fogEnd)/math.max(1,DOME_MAX-vis),0,1) else 0
+    if p<=.01 or not root then
+        if domeParts[1].Transparency<1 then for _,part in domeParts do part.Transparency=1 end end
+        return
+    end
+    local half=math.min(fogEnd*.9,300)
+    local ceilingY=half local floorY=-100
+    local tall=ceilingY-floorY
+    domeParts[1].Size=Vector3.new(half*2+4,2,half*2+4) domeParts[1].Position=root+Vector3.new(0,ceilingY,0)
+    for side=0,3 do
+        local a=side*math.pi/2 local pos=root+Vector3.new(math.cos(a)*half,floorY+tall/2,math.sin(a)*half)
+        local part=domeParts[side+2]
+        part.Size=Vector3.new(half*2+4,tall,2)
+        part.CFrame=CFrame.lookAt(pos,Vector3.new(root.X,pos.Y,root.Z))
+    end
+    for _,part in domeParts do part.Color=color part.Transparency=1-p end
+end
+
+-- aurora curtains: three high arcs of vertical ribbons (14 each) far out in the sky, swaying and hue-shifting, no beams near the dino
+local CURTAINS,CURTAIN_RAYS=3,14
+type CurtainRay={bottom:Attachment,top:Attachment,beam:Beam,curtain:number,index:number}
+local curtainRays:{CurtainRay}={}
+for c=1,CURTAINS do
+    for i=1,CURTAIN_RAYS do
+        local bottom=Instance.new("Attachment") bottom.Parent=workspace.Terrain
+        local top=Instance.new("Attachment") top.Parent=workspace.Terrain
+        local beam=Instance.new("Beam") beam.Attachment0,beam.Attachment1=bottom,top
+        beam.FaceCamera,beam.LightEmission,beam.LightInfluence,beam.Segments=true,1,0,1
+        beam.Width0,beam.Width1=70+c*14,110+c*20
+        beam.Enabled=false beam.Parent=folder
+        table.insert(curtainRays,{bottom=bottom,top=top,beam=beam,curtain=c,index=i})
+    end
 end
 
 -- ---------------------------------------------------------------- pooled one-shot effects (all Instances are created here, once)
@@ -327,6 +316,7 @@ local shake=0
 local pulse=0
 local rayParams=RaycastParams.new() rayParams.FilterType=Enum.RaycastFilterType.Exclude rayParams.FilterDescendantsInstances={folder}
 local function groundAt(position:Vector3):Vector3
+    rayParams.FilterDescendantsInstances={folder,player.Character or folder}
     local hit=workspace:Raycast(position+Vector3.new(0,260,0),Vector3.new(0,-600,0),rayParams)
     return if hit then hit.Position else Vector3.new(position.X,position.Y-3,position.Z)
 end
@@ -382,6 +372,7 @@ local function bolt(root:Vector3):boolean
         fork.CurveSize0=random:NextNumber(-10,10)
     end
     slot.active,slot.age,slot.flickered=true,0,false setBolt(slot,true)
+    WS.fire("strike")
     flash=math.max(flash,.8) shake=math.max(shake,if dist<120 then .7 else .45)
     return true
 end
@@ -472,6 +463,91 @@ local function updateBursts(dt:number)
     end
 end
 
+-- earthquake: layered, ground-anchored. Pooled: 3 rings of 16 segments (thick to thin as they fade), 12 radiating cracks, one dust and rock-chip emitter pair.
+type QRing={segs:{Part},active:boolean,age:number,delay:number,seconds:number,size:number,center:Vector3,color:Color3}
+local qRings:{QRing}={}
+local QSEG=16
+for _=1,3 do
+    local segs:{Part}={}
+    for i=1,QSEG do
+        local part=Instance.new("Part") part.Name="QuakeRing"
+        part.Anchored,part.CanCollide,part.CanTouch,part.CanQuery,part.CastShadow=true,false,false,false,false
+        part.Material,part.Size,part.Transparency=Enum.Material.Neon,Vector3.new(1,.3,1),1 part.Position=PARKED part.Parent=folder
+        segs[i]=part
+    end
+    table.insert(qRings,{segs=segs,active=false,age=0,delay=0,seconds=1,size=1,center=PARKED,color=Color3.new(1,1,1)})
+end
+type Crack={part:Part,active:boolean,age:number,length:number,dir:Vector3,origin:Vector3}
+local cracks:{Crack}={}
+for _=1,12 do
+    local part=Instance.new("Part") part.Name="QuakeCrack"
+    part.Anchored,part.CanCollide,part.CanTouch,part.CanQuery,part.CastShadow=true,false,false,false,false
+    part.Material,part.Color,part.Size,part.Transparency=Enum.Material.Slate,Color3.fromRGB(30,22,18),Vector3.new(.9,.12,1),1 part.Position=PARKED part.Parent=folder
+    table.insert(cracks,{part=part,active=false,age=0,length=20,dir=Vector3.xAxis,origin=PARKED})
+end
+local quakeHolder=Instance.new("Part") quakeHolder.Name="QuakeBurst" quakeHolder.Size,quakeHolder.Transparency=Vector3.one,1
+quakeHolder.Anchored,quakeHolder.CanCollide,quakeHolder.CanTouch,quakeHolder.CanQuery=true,false,false,false quakeHolder.Position=PARKED quakeHolder.Parent=folder
+local quakeDust=burstEmitter(quakeHolder,{Texture=TEX_SMOKE,Lifetime=NumberRange.new(1.6,2.6),Speed=NumberRange.new(24,52),EmissionDirection=Enum.NormalId.Top,
+    SpreadAngle=Vector2.new(82,82),Size=seq(8,18,26),Transparency=seq(.55,.7,1),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-40,40),Drag=2.5,
+    Color=ColorSequence.new(Color3.fromRGB(190,166,130),Color3.fromRGB(150,128,100))})
+local quakeChips=burstEmitter(quakeHolder,{Texture=TEX_SPARK,Lifetime=NumberRange.new(.9,1.6),Speed=NumberRange.new(26,56),EmissionDirection=Enum.NormalId.Top,
+    Acceleration=Vector3.new(0,-95,0),SpreadAngle=Vector2.new(75,75),Size=seq(1.2,.9,.5),Transparency=seq(0,0,.6),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-400,400),
+    Color=ColorSequence.new(Color3.fromRGB(96,80,66),Color3.fromRGB(60,52,46))})
+local function quakeBurst(ground:Vector3)
+    quakeHolder.Position=ground+Vector3.new(0,.6,0)
+    quakeDust.e:Emit(26) quakeChips.e:Emit(34)
+    local specs={{Color3.fromRGB(235,214,170),74,.9,0},{Color3.fromRGB(255,244,225),52,.8,.14},{Color3.fromRGB(150,120,86),104,1.15,.28}}
+    for i,ringSlot in qRings do
+        local spec=specs[i]
+        ringSlot.active,ringSlot.age,ringSlot.color,ringSlot.size,ringSlot.seconds,ringSlot.delay,ringSlot.center=true,0,spec[1],spec[2],spec[3],spec[4],ground
+    end
+    for i,crack in cracks do
+        local angle=(i-1)/#cracks*math.pi*2+random:NextNumber(-.2,.2)
+        crack.dir=Vector3.new(math.cos(angle),0,math.sin(angle))
+        crack.length=random:NextNumber(16,34) crack.origin=ground crack.age,crack.active=0,true
+    end
+    pulse=math.max(pulse,.7) shake=math.max(shake,1)
+    WS.fire("quake")
+end
+local function updateQuake(dt:number)
+    for _,r in qRings do
+        if r.active then
+            r.age+=dt
+            local t=(r.age-r.delay)/r.seconds
+            if t>=1 then
+                r.active=false for _,seg in r.segs do seg.Position=PARKED seg.Transparency=1 end
+            elseif t>=0 then
+                local ease=1-(1-t)^3
+                local radius=3+r.size*ease
+                local thick=3.2*(1-t)+.25
+                local segLen=radius*2*math.pi/QSEG*1.12
+                for i,seg in r.segs do
+                    local a=i/QSEG*math.pi*2
+                    local dir=Vector3.new(math.cos(a),0,math.sin(a))
+                    seg.Size=Vector3.new(thick,.35,segLen)
+                    seg.CFrame=CFrame.lookAt(r.center+dir*radius+Vector3.new(0,.25,0),r.center+dir*(radius+1)+Vector3.new(0,.25,0))
+                    seg.Color=r.color seg.Transparency=.15+.85*t^1.5
+                end
+            end
+        end
+    end
+    for _,c in cracks do
+        if c.active then
+            c.age+=dt
+            local grow=math.min(1,c.age/.3)
+            local len=c.length*(1-(1-grow)^2)
+            local fade=math.clamp((c.age-1.4)/1.2,0,1)
+            if fade>=1 then
+                c.active=false c.part.Position=PARKED c.part.Transparency=1
+            else
+                local center=c.origin+c.dir*(len/2)+Vector3.new(0,.18,0)
+                c.part.Size=Vector3.new(.9*(1-.5*grow),.12,math.max(.5,len))
+                c.part.CFrame=CFrame.lookAt(center,center+c.dir) c.part.Transparency=.05+.95*fade
+            end
+        end
+    end
+end
+
 -- lava bombs: WeatherLooks.Budget.bombs pooled glowing balls with a trail and a smoke tail
 type BombSlot={part:Part,trail:Trail,tail:Emitter,glow:PointLight,active:boolean,age:number,flight:number,start:Vector3,v:Vector3,target:Vector3}
 local bombSlots:{BombSlot}={}
@@ -514,12 +590,18 @@ local function updateBombs(dt:number,root:Vector3?)
                 slot.active=false slot.trail.Enabled=false slot.tail.e.Enabled=false slot.glow.Brightness=0 slot.part.Position=PARKED
                 local near=if root then (slot.target-root).Magnitude else 999
                 burst(slot.target,near<70)
+                if near<160 then WS.fire("eruption") end
                 if near<60 then shake=math.max(shake,.8*(1-near/70)+.2) end
             end
         end
     end
 end
+local function stopQuake()
+    for _,r in qRings do r.active=false for _,seg in r.segs do seg.Position=PARKED seg.Transparency=1 end end
+    for _,c in cracks do c.active=false c.part.Position=PARKED c.part.Transparency=1 end
+end
 local function stopOneShots()
+    stopQuake()
     for _,slot in bolts do slot.active=false setBolt(slot,false) end
     for _,slot in bombSlots do slot.active=false slot.trail.Enabled=false slot.tail.e.Enabled=false slot.glow.Brightness=0 slot.part.Position=PARKED end
 end
@@ -564,70 +646,29 @@ local function seqColor(a:{number},b:{number},c:{number}):ColorSequence
     return ColorSequence.new({ColorSequenceKeypoint.new(0,c3(a)),ColorSequenceKeypoint.new(.5,c3(b)),ColorSequenceKeypoint.new(1,c3(c))})
 end
 
-local function updateAurora(root:Vector3,now:number,on:boolean,zoom:number,recolor:boolean)
+local function updateAurora(root:Vector3,now:number,on:boolean,recolor:boolean)
     if on~=auroraWasOn then
         auroraWasOn=on
-        for _,r in auroraRays do r.beam.Enabled=on end
-        for _,arc in arcs do for _,b in arc.beams do b.Enabled=on end end
+        for _,r in curtainRays do r.beam.Enabled=on end
     end
-    if not on then
-        auroraRing.Transparency=1
-        if shell[1].gui.Enabled then for _,sh in shell do sh.gui.Enabled=false end end
-        return
-    end
-    for i,sh in shell do
-        sh.part.CFrame=CFrame.new(root)*sh.offset
-        if not sh.gui.Enabled then sh.gui.Enabled=true end
+    if not on then return end
+    for _,r in curtainRays do
+        local c,i=r.curtain,r.index
+        local center=c*2.1+now*.012*(if c%2==0 then 1 else -1)
+        local a=center+(i-(CURTAIN_RAYS+1)/2)/CURTAIN_RAYS*2.3+math.sin(now*.2+i*.5)*.035
+        local radius=165+c*24+math.sin(i*.9+now*.3+c)*14
+        local baseY=root.Y+70+c*26
+        local x,z=root.X+math.cos(a)*radius,root.Z+math.sin(a)*radius
+        r.bottom.WorldPosition=Vector3.new(x,baseY,z)
+        r.top.WorldPosition=Vector3.new(x+math.sin(now*.3+i)*8,baseY+170+math.sin(now*.4+i*.6+c)*45,z)
         if recolor then
-            local key={}
-            for n=0,4 do key[n+1]=ColorSequenceKeypoint.new(n/4,c3(WL.aurora(now,sh.hue+n*.14))) end
-            sh.grad.Color=ColorSequence.new(key)
-            sh.grad.Offset=Vector2.new(math.sin(now*.1+i*1.9)*.12,math.sin(now*.07+i)*.06)
-            local function tr(v:number):number return lerpNum(1,v,k) end
-            if sh.wall then
-                -- bottom (horizon) soft, top strong
-                sh.grad.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(.22,tr(.7)),NumberSequenceKeypoint.new(.6,tr(.5)),NumberSequenceKeypoint.new(1,tr(.4))})
-            else
-                -- curtain banding across the ceiling
-                sh.grad.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,tr(.5)),NumberSequenceKeypoint.new(.2,tr(.8)),NumberSequenceKeypoint.new(.4,tr(.48)),
-                    NumberSequenceKeypoint.new(.62,tr(.82)),NumberSequenceKeypoint.new(.8,tr(.52)),NumberSequenceKeypoint.new(1,tr(.76))})
-            end
+            local hue=i/CURTAIN_RAYS*.55+c*.21
+            local c0=WL.aurora(now,hue) local c1=WL.aurora(now+5,hue+.12) local c2=WL.aurora(now+10,hue+.3)
+            r.beam.Color=seqColor(c0,c1,WL.scale(c2,.7))
+            local a1=lerpNum(1,.62+.1*math.sin(now*1.3+i*1.9),k)
+            r.beam.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(.12,math.min(1,a1+.1)),NumberSequenceKeypoint.new(.5,a1),NumberSequenceKeypoint.new(.8,math.min(1,a1+.2)),NumberSequenceKeypoint.new(1,1)})
         end
     end
-    local scale=math.clamp(zoom/3,1,2)
-    for i,r in auroraRays do
-        local a=r.angle+now*.004*r.layer+math.sin(now*.05*(1+r.layer*.25)+r.hue*6.28)*.18
-        local d=(r.dist+math.sin(now*.11+i)*30)*scale
-        local inner=(.2+.1*r.layer)
-        local lean=a+.35*math.sin(now*.07+i*.9)
-        r.bottom.WorldPosition=root+Vector3.new(math.cos(a)*d,18+r.layer*8,math.sin(a)*d)
-        r.top.WorldPosition=root+Vector3.new(math.cos(lean)*d*inner,r.height*scale+math.sin(now*.5+r.hue*9)*34,math.sin(lean)*d*inner)
-        if recolor then
-            local c0=WL.aurora(now,r.hue) local c1=WL.aurora(now+6,r.hue+.18) local c2=WL.aurora(now+12,r.hue+.4)
-            r.beam.Color=seqColor(WL.scale(c0,.85),c1,c2)
-            local alpha=lerpNum(1,.84+.06*math.sin(now*1.6+i*2.1)+r.layer*.02,k)
-            r.beam.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(.14,math.min(1,alpha+.1)),NumberSequenceKeypoint.new(.5,alpha),NumberSequenceKeypoint.new(.86,math.min(1,alpha+.14)),NumberSequenceKeypoint.new(1,1)})
-        end
-    end
-    for ci,arc in arcs do
-        local center=arc.center+now*arc.speed*(if ci%2==0 then 1 else -1)
-        for i,point in arc.points do
-            local a=center+(i-5.5)*.2
-            local d=(arc.dist+math.sin(now*.3+i*.5+arc.phase)*22)*scale
-            point.WorldPosition=root+Vector3.new(math.cos(a)*d,arc.height*scale+math.sin(now*.55+i*.7+arc.phase)*20,math.sin(a)*d)
-        end
-        if recolor then
-            local alpha=lerpNum(1,.76+.06*math.sin(now*1.1+ci),k)
-            local fade=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(.3,alpha),NumberSequenceKeypoint.new(.7,alpha),NumberSequenceKeypoint.new(1,1)})
-            for j,b in arc.beams do
-                b.Color=ColorSequence.new(c3(WL.aurora(now,j/ARC_POINTS+ci*.2)),c3(WL.aurora(now,(j+1)/ARC_POINTS+ci*.2)))
-                b.Transparency=fade
-            end
-        end
-    end
-    auroraRing.CFrame=CFrame.new(root-Vector3.new(0,2.85,0))*CFrame.Angles(0,0,math.pi/2)
-    auroraRing.Color=c3(WL.aurora(now,.3))
-    auroraRing.Transparency=lerpNum(1,.82+.06*math.sin(now*2),k)
 end
 
 RunService.Heartbeat:Connect(function(dt)
@@ -651,7 +692,7 @@ RunService.Heartbeat:Connect(function(dt)
     -- aurora recolours the whole sky from the hue cycle; every other event uses its fixed look
     local tint,fog,decay,shiftTop,shiftBottom,amb,glowRgb=look.tint,look.fog,look.decay,look.shiftTop,look.shiftBottom,look.amb,look.glow
     if activeId=="aurora" then
-        fog=WL.scale(WL.aurora(animT,0),.8) decay=WL.scale(WL.aurora(animT,.45),.85)
+        fog=WL.scale(WL.aurora(animT,0),.3) decay=WL.scale(WL.aurora(animT,.45),.85)
         shiftTop=WL.scale(WL.aurora(animT,.25),.7) shiftBottom=WL.scale(WL.aurora(animT,.6),.5)
         amb=WL.scale(WL.aurora(animT,.1),.55) tint=WL.mix(WHITE,WL.aurora(animT,.35),.5) glowRgb=WL.aurora(animT,.7)
     end
@@ -667,13 +708,15 @@ RunService.Heartbeat:Connect(function(dt)
     atmosphere.Haze=lerpNum(baseAtmo.haze,math.max(baseAtmo.haze,look.haze),t)
     atmosphere.Glare=lerpNum(baseAtmo.glare,math.max(baseAtmo.glare,look.glare),t)
     local fogStart,fogEnd=WL.fog(look,t,baseFogStart,baseFogEnd)
-    Lighting.FogStart,Lighting.FogEnd=fogStart,fogEnd Lighting.FogColor=baseFogColor:Lerp(c3(fog),t)
+    local fogColor=baseFogColor:Lerp(c3(fog),t)
+    Lighting.FogStart,Lighting.FogEnd=fogStart,fogEnd Lighting.FogColor=fogColor
     atmosphere.Color=baseAtmo.color:Lerp(c3(fog),t)
     atmosphere.Decay=baseAtmo.decay:Lerp(c3(decay),t)
     -- sky treatment: colour shift on the sky dome and horizon, darker exposure, more stars
     Lighting.ColorShift_Top=baseShiftTop:Lerp(shiftOf(baseShiftTop,shiftTop),t)
     Lighting.ColorShift_Bottom=baseShiftBottom:Lerp(shiftOf(baseShiftBottom,shiftBottom),t)
     Lighting.ExposureCompensation=baseExposure+lerpNum(0,look.exposure,t)+flash*.9
+    if sky then sky.CelestialBodiesShown=activeId=="clear" or k<=0 end
     if sky and look.stars>=0 then
         local want=math.floor(lerpNum(baseStars,look.stars,t)/100)*100
         if want~=starsSet then starsSet=want sky.StarCount=want end
@@ -730,14 +773,14 @@ RunService.Heartbeat:Connect(function(dt)
         shake=math.max(shake,.3)
         if now>=nextQuakeBurst then
             nextQuakeBurst=now+random:NextNumber(2.5,4.5) quakeUntil=now+1.5
-            ring(groundAt(root),Color3.fromRGB(235,200,140),80,.9) pulse=.7
+            quakeBurst(groundAt(root))
         end
         if now<quakeUntil then shake=math.max(shake,.95) end
     end
     -- blood moon sky props
     local moonOn=live and activeId=="bloodmoon" and k>0
     if moonOn and root then
-        local base=root+MOON_DIR*230
+        local base=root+MOON_DIR*200
         moonCore.Position=base moonCore.Transparency=lerpNum(1,.04,k)
         local beat=1+math.sin(now*.7)*.05
         moonCore.Size=Vector3.one*60*beat
@@ -749,9 +792,10 @@ RunService.Heartbeat:Connect(function(dt)
     -- aurora: full-sky rays and arcs, ground ring (hue colours refreshed 10 times a second)
     colorClock+=dt local recolor=colorClock>=.1 if recolor then colorClock=0 end
     local auroraOn=live and activeId=="aurora" and k>0
-    updateAurora(root or Vector3.zero,now,auroraOn,zoom,recolor)
+    updateAurora(root or Vector3.zero,now,auroraOn,recolor)
+    updateDome(if live and cam then cam.CFrame.Position else nil,fogColor,fogEnd,look.vis)
     -- pooled one-shot effects
-    updateBolts(dt) updateRings(dt) updateBursts(dt) updateBombs(dt,root)
+    updateBolts(dt) updateRings(dt) updateBursts(dt) updateBombs(dt,root) updateQuake(dt)
     if shake>.01 and Theme.MotionEnabled then shake=math.max(0,shake-dt*(if activeId=="quake" then .5 else 1.1)) end
     if not Theme.MotionEnabled then shake=0 end
 end)
