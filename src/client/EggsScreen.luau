@@ -16,6 +16,9 @@ local ProgressionConfig = require(Shared.ProgressionConfig)
 local ProgressionRules = require(Shared.ProgressionRules)
 local UIFormat = require(Shared.UIFormat)
 local EggPicture = require(script.Parent.EggPicture)
+local FxUi = require(Shared.FxUi)
+local MutationLook = require(Shared.MutationLook)
+local Theme = require(Shared.UITheme)
 
 local EggsScreen = {}
 
@@ -122,6 +125,13 @@ function EggsScreen.render(ctx: any)
         if badge then
             local badgeChip = pill(stage, badge, badgeColor, 10, 8, 150, 30, 17)
             badgeChip.Name = "BadgeChip"
+        end
+        -- BD-162: a small live mutation preview (soft glow + motes) behind the egg; Reduce Motion shows one still glow.
+        local mutationLook = MutationLook.get(entry.mutationId)
+        if mutationLook then
+            local ok, handle = pcall(function() return FxUi.mount(stage, "mutation", mutationLook, {reduce = not Theme.MotionEnabled, detail = "lite"}) end)
+            local fxFrame: any = if ok and handle then (handle :: any).frame else nil
+            if fxFrame then fxFrame.ZIndex = math.max(1, egg.ZIndex - 1) fxFrame.Name = "FxUi_mutation_card" end
         end
     end
 

@@ -48,6 +48,25 @@ function Assets.resolve(key: string): string
     return Assets.Builtin[key] or Assets.Builtin.spark
 end
 
+-- Flipbook sheets (docs/93 section 8): 512 px square, 4 x 4 cells. A sprite showing a sheet MUST select one cell, otherwise the
+-- whole sheet is drawn. cellRect is pure: it returns nil while the key still uses a built-in sprite (single image, no cell).
+Assets.Sheets = {smokeSheet = {size = 512, grid = 4}, sparkSheet = {size = 512, grid = 4}, flameSheet = {size = 512, grid = 4}, crystalSheet = {size = 512, grid = 4}}
+function Assets.cellRect(key: string, cell: number): (number?, number?, number?)
+    local sheet = Assets.Sheets[key]
+    if not sheet or not Assets.isReal(key) then return nil, nil, nil end
+    local n = sheet.grid * sheet.grid
+    local c = (math.floor(cell) - 1) % n
+    local px = sheet.size / sheet.grid
+    return (c % sheet.grid) * px, math.floor(c / sheet.grid) * px, px
+end
+-- Applies the cell to an ImageLabel (no-op for built-in sprites). Returns true when a real sheet cell was set.
+function Assets.setCell(image: any, key: string, cell: number): boolean
+    local x, y, size = Assets.cellRect(key, cell)
+    if not x then return false end
+    image.ImageRectOffset, image.ImageRectSize = Vector2.new(x, y), Vector2.new(size, size)
+    return true
+end
+
 -- True when the key currently shows the real Blender art (used by docs and the QA overlay).
 function Assets.isReal(key: string): boolean
     local req = Assets.Requested[key]

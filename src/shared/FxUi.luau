@@ -49,14 +49,21 @@ local function buildLayer(h, layer)
     local k = layer.kind
     if k == "glow" then
         L.discs = {}
-        for i = 1, 3 do L.discs[i] = dot(h.frame, z, true) end
+        -- A real glowPlate upload (Blender, docs/93 section 8) replaces the plain discs automatically; until then rounded frames.
+        local plate = Assets.isReal("glowPlate")
+        for i = 1, 3 do L.discs[i] = if plate then sprite(h.frame, z, Assets.resolve("glowPlate")) else dot(h.frame, z, true) end
     elseif k == "emitter" then
         L.pool, L.acc = {}, 0
         local cap = math.clamp(math.ceil(layer.rate * layer.life * 2.2) + 1, 3, 14)
         local tex = Assets.resolve(layer.tex)
         if layer.shape == "Disc" then
             L.ripples = true
-            for i = 1, 3 do L.pool[i] = {obj = dot(h.frame, z, true), age = 1e9, life = layer.life} local s = Instance.new("UIStroke") s.Thickness = 2 s.Parent = L.pool[i].obj L.pool[i].obj.BackgroundTransparency = 1 L.pool[i].stroke = s end
+            if Assets.isReal(layer.tex) then
+                -- real thin-ring texture (ringShock): tinted sprite instead of a stroked frame
+                for i = 1, 3 do L.pool[i] = {obj = sprite(h.frame, z, tex), age = 1e9, life = layer.life} end
+            else
+                for i = 1, 3 do L.pool[i] = {obj = dot(h.frame, z, true), age = 1e9, life = layer.life} local s = Instance.new("UIStroke") s.Thickness = 2 s.Parent = L.pool[i].obj L.pool[i].obj.BackgroundTransparency = 1 L.pool[i].stroke = s end
+            end
         else
             for i = 1, cap do L.pool[i] = {obj = sprite(h.frame, z + 1, tex), age = 1e9, life = layer.life, x = 0, y = 0, vx = 0, vy = 0, rot = 0} end
         end
@@ -119,7 +126,8 @@ local function stepHandle(h, dt: number)
                         p.obj.Position = UDim2.fromScale(0.5, 0.78)
                         p.obj.Size = UDim2.fromOffset(d, d * 0.32)
                         p.obj.Visible = true
-                        p.stroke.Color, p.stroke.Transparency = c3(c), 1 - layer.alpha * (1 - t) * 0.8
+                        if p.stroke then p.stroke.Color, p.stroke.Transparency = c3(c), 1 - layer.alpha * (1 - t) * 0.8
+                        else p.obj.ImageColor3, p.obj.ImageTransparency = c3(c), 1 - layer.alpha * (1 - t) * 0.8 end
                     else p.obj.Visible = false end
                 end
             else
@@ -130,6 +138,7 @@ local function stepHandle(h, dt: number)
                     for _, p in L.pool do
                         if p.age > p.life then
                             p.age = 0
+                            Assets.setCell(p.obj, layer.tex, math.random(16)) -- flipbook sheets: one cell per particle (no-op for built-in sprites)
                             if aura then
                                 p.x, p.y = 0.28 + math.random() * 0.44, 0.7 + math.random() * 0.08
                                 p.vx, p.vy = (math.random() - 0.5) * 0.04, -(0.05 + layer.rise * 0.035 + layer.speed * 0.02)
@@ -213,7 +222,7 @@ local function loop(dt: number)
         local h = active[i]
         if not h.frame or not h.frame.Parent or not h.frame:IsDescendantOf(game) then
             kill(h) table.remove(active, i)
-        elseif h.frame.Parent and h.frame.Visible and h.frame.AbsoluteSize.X > 0 then
+        elseif h.frame.Parent and h.frame.Visible and h.frame.AbsoluteSize.X > 0 and not (h.root:IsA("GuiObject") and not h.root.Visible) then
             stepHandle(h, math.min(step, 0.1))
         end
     end
@@ -224,25 +233,32 @@ end
 -- (Reduce Motion trail, over the preview cap, unknown kind): the caller keeps its static art.
 function Ui.mount(parent: GuiObject, kind: string, item, opts)
     opts = opts or {}
-    if not item or #active >= MAX_ACTIVE then return nil end
+    if not item then return nil end
+    if #active >= MAX_ACTIVE then
+        -- A hero preview (hatch dino, Index / details hero) takes the slot of the oldest small one; small previews just wait.
+        local victim
+        if opts.hero then for i, other in active do if not other.hero and not victim then victim = i end end end
+        if not victim then return nil end
+        kill(active[victim]) table.remove(active, victim)
+    end
     if opts.reduce and kind == "trail" then return nil end
-    local resolved = Recipes.resolve(kind, item, {device = opts.device or "phone", reduce = opts.reduce})
+    local resolved = Recipes.resolve(kind, item, {device = opts.device or "phone", reduce = opts.reduce, detail = if opts.hero then nil else opts.detail})
     if #resolved.layers == 0 then return nil end
     local frame = Instance.new("Frame")
     frame.Name, frame.BackgroundTransparency, frame.BorderSizePixel, frame.ClipsDescendants = "FxUi_" .. kind .. "_" .. tostring(item.id), 1, 0, true
     frame.Size, frame.ZIndex = UDim2.fromScale(1, 1), parent.ZIndex + 1
     frame.Active = false
     frame.Parent = parent
-    local h = {frame = frame, root = parent, kind = kind, resolved = resolved, z = parent.ZIndex + 2, time = 0, layers = {}, reduced = opts.reduce == true}
+    local h = {frame = frame, root = parent, kind = kind, resolved = resolved, z = parent.ZIndex + 2, time = 0, layers = {}, reduced = opts.reduce == true, hero = opts.hero == true}
     h.orb = dot(frame, h.z + 1, true)
     h.orb.Size = UDim2.fromScale(0.16, 0.16)
     h.orb.SizeConstraint = Enum.SizeConstraint.RelativeYY
     h.orb.BackgroundColor3, h.orb.BackgroundTransparency, h.orb.Visible = Color3.fromRGB(20, 32, 53), 0, kind == "trail"
     for _, layer in resolved.layers do table.insert(h.layers, buildLayer(h, layer)) end
-    if opts.reduce then stepHandle(h, 0.5) return {destroy = function() kill(h) end} end
+    if opts.reduce then stepHandle(h, 0.5) return {destroy = function() kill(h) end, frame = frame} end
     table.insert(active, h)
     if not connection then connection = RunService.Heartbeat:Connect(loop) end
-    return {destroy = function() kill(h) end, resolved = resolved}
+    return {destroy = function() kill(h) end, resolved = resolved, frame = frame}
 end
 
 -- Shop / menu hook (UITheme.icon): "trail_<id>" replaces the static ribbon art with the live preview (static art stays under
@@ -263,4 +279,5 @@ function Ui.decorateIcon(icon: GuiObject, id: string, reduce: boolean)
 end
 
 Ui.activeCount = function() return #active end
+Ui.MaxActive = MAX_ACTIVE
 return Ui

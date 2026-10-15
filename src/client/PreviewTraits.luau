@@ -3,6 +3,7 @@ local RunService = game:GetService("RunService")
 local Theme = require(game:GetService("ReplicatedStorage").Shared.UITheme)
 local Appearance = require(game:GetService("ReplicatedStorage").Shared.EggAppearance)
 local MutationLook = require(game:GetService("ReplicatedStorage").Shared.MutationLook)
+local FxUi = require(game:GetService("ReplicatedStorage").Shared.FxUi)
 local PreviewTraits = {}
 -- BD-155: soft mutation cue shared by every preview. A small round badge in the mutation colour (top-left) with a
 -- gentle rim; dinosaur models also get the soft body tint from MutationLook. Eggs get the colour hint only (the shell
@@ -22,6 +23,14 @@ function PreviewTraits.mutation(view: ViewportFrame, mutationId: any, isEgg: boo
     rim.Color, rim.Thickness, rim.Transparency = MutationLook.color(look.rim), 2 + 2 * look.glow, .35
     rim.Parent = dot
     dot:SetAttribute("MutationId", look.id)
+    -- BD-162: heroes (hatch dino, Index / details hero; view height unknown or >= 120 px) get the layered live mutation preview. Thumbnails
+    -- (grid cards) keep the static badge. Reduce Motion: one still glow. FxUi caps the live previews at 8 (heroes win a slot).
+    for _, child in view:GetChildren() do if string.sub(child.Name, 1, 14) == "FxUi_mutation_" then child:Destroy() end end
+    local height = view.AbsoluteSize.Y
+    if height <= 0 then height = view.Size.Y.Offset end
+    if not isEgg and (height <= 0 or height >= 120) then
+        pcall(function() FxUi.mount(view, "mutation", look, {reduce = not Theme.MotionEnabled, hero = true}) end)
+    end
 end
 -- isEgg = true only for egg previews (BD-174: the egg condition overlay is never drawn on a dinosaur).
 function PreviewTraits.add(view: ViewportFrame, traits, isEgg: boolean?)
