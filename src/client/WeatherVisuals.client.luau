@@ -44,7 +44,16 @@ local sky:Sky?=Lighting:FindFirstChildOfClass("Sky")
 local baseAmbient,baseOutdoor=Lighting.Ambient,Lighting.OutdoorAmbient
 local baseShiftTop,baseShiftBottom,baseExposure=Lighting.ColorShift_Top,Lighting.ColorShift_Bottom,Lighting.ExposureCompensation
 local baseStars=if sky then sky.StarCount else 0
-local baseFogStart,baseFogEnd,baseFogColor=Lighting.FogStart,math.max(Lighting.FogEnd,1000),Lighting.FogColor
+-- BD-213 soft visibility: clear weather keeps a gentle haze, and FogEnd stays inside this device's prop cull radius
+-- (same device classes as WorldCulling.client.luau), so culled props are already lost in the haze and never pop.
+local CLEAR=WL.Looks.clear
+local fogCap=(function():number
+    local culling=require(Shared.Config).WorldCulling
+    if not culling or not culling.Enabled then return WL.fogCap(nil) end
+    local size=workspace.CurrentCamera.ViewportSize
+    local class=if not UserInputService.TouchEnabled then "Desktop" elseif math.min(size.X,size.Y)>=600 then "Tablet" else "Phone"
+    return WL.fogCap(culling[class].radius)
+end)()
 local baseAtmo={density=atmosphere.Density,offset=atmosphere.Offset,haze=atmosphere.Haze,glare=atmosphere.Glare,color=atmosphere.Color,decay=atmosphere.Decay}
 
 -- ---------------------------------------------------------------- particle helpers
@@ -265,34 +274,8 @@ end
 local HALO_ALPHA={.84,.93,.97}
 local MOON_DIR=Vector3.new(-.32,.5,-.8).Unit
 
--- Fog culls everything beyond FogEnd, which is the hard edge against the sky. A box of five fog-coloured slabs just inside FogEnd closes the sky,
--- so the world fades into one colour with no silhouette (it also hides the default sun, moon and stars, so the blood moon is the only moon).
-local domeParts:{Part}={}
-for i=1,5 do
-    local part=Instance.new("Part") part.Name="WeatherSkyBox"..i
-    part.Anchored,part.CanCollide,part.CanTouch,part.CanQuery,part.CastShadow=true,false,false,false,false
-    part.Material,part.Transparency=Enum.Material.Neon,1 part.Position=Vector3.new(0,-4000,0) part.Parent=folder
-    domeParts[i]=part
-end
-local DOME_MAX=460 -- ramp reference. Fog clips everything beyond FogEnd per pixel, so the box (corners at 1.73x half) stays inside it: half = 0.62 x FogEnd
-local function updateDome(root:Vector3?,color:Color3,fogEnd:number,vis:number)
-    local p=if root then math.clamp((DOME_MAX-fogEnd)/math.max(1,DOME_MAX-vis),0,1) else 0
-    if p<=.01 or not root then
-        if domeParts[1].Transparency<1 then for _,part in domeParts do part.Transparency=1 end end
-        return
-    end
-    local half=math.min(fogEnd*.62,300)
-    local ceilingY=half local floorY=-100
-    local tall=ceilingY-floorY
-    domeParts[1].Size=Vector3.new(half*2+4,2,half*2+4) domeParts[1].Position=root+Vector3.new(0,ceilingY,0)
-    for side=0,3 do
-        local a=side*math.pi/2 local pos=root+Vector3.new(math.cos(a)*half,floorY+tall/2,math.sin(a)*half)
-        local part=domeParts[side+2]
-        part.Size=Vector3.new(half*2+4,tall,2)
-        part.CFrame=CFrame.lookAt(pos,Vector3.new(root.X,pos.Y,root.Z))
-    end
-    for _,part in domeParts do part.Color=color part.Transparency=1-p end
-end
+-- BD-213: no fog-coloured sky box. A box inside FogEnd read as a flat opaque wall and cut the view short; the far view now
+-- dissolves through the classic fog ramp and the Atmosphere haze tints the sky (event sun and moon are hidden below).
 
 -- aurora curtains: three high arcs of vertical ribbons (14 each) far out in the sky, swaying and hue-shifting, no beams near the dino
 local CURTAINS,CURTAIN_RAYS=3,14
@@ -707,8 +690,8 @@ RunService.Heartbeat:Connect(function(dt)
     atmosphere.Offset=lerpNum(baseAtmo.offset,look.offset,t)
     atmosphere.Haze=lerpNum(baseAtmo.haze,math.max(baseAtmo.haze,look.haze),t)
     atmosphere.Glare=lerpNum(baseAtmo.glare,math.max(baseAtmo.glare,look.glare),t)
-    local fogStart,fogEnd=WL.fog(look,t,baseFogStart,baseFogEnd)
-    local fogColor=baseFogColor:Lerp(c3(fog),t)
+    local fogStart,fogEnd=WL.fog(look,t,CLEAR,fogCap)
+    local fogColor=c3(CLEAR.fog):Lerp(c3(fog),t)
     Lighting.FogStart,Lighting.FogEnd=fogStart,fogEnd Lighting.FogColor=fogColor
     atmosphere.Color=baseAtmo.color:Lerp(c3(fog),t)
     atmosphere.Decay=baseAtmo.decay:Lerp(c3(decay),t)
@@ -793,7 +776,6 @@ RunService.Heartbeat:Connect(function(dt)
     colorClock+=dt local recolor=colorClock>=.1 if recolor then colorClock=0 end
     local auroraOn=live and activeId=="aurora" and k>0
     updateAurora(root or Vector3.zero,now,auroraOn,recolor)
-    updateDome(if live and cam then cam.CFrame.Position else nil,fogColor,fogEnd,look.vis)
     -- pooled one-shot effects
     updateBolts(dt) updateRings(dt) updateBursts(dt) updateBombs(dt,root) updateQuake(dt)
     if shake>.01 and Theme.MotionEnabled then shake=math.max(0,shake-dt*(if activeId=="quake" then .5 else 1.1)) end
