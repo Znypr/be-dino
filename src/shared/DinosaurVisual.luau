@@ -138,7 +138,7 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
         part.Shape = shape or Enum.PartType.Ball
         part.Size = size * scale
         part.Color = color
-        part.Material = if mutation == "diamond" then Enum.Material.Glass elseif gold then Enum.Material.Metal else Enum.Material.SmoothPlastic
+        part.Material = if mutation == "diamond" then Enum.Material.Glass elseif gold then Enum.Material.Metal else Enum.Material.Plastic -- BD-173: matte unless fused
         part.CanCollide = false
         part.CanTouch = false
         part.CanQuery = false

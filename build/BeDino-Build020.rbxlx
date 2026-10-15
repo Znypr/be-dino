@@ -365011,7 +365011,7 @@ local function build(id: string,genes: any?,patient: boolean): Model?
         local model=Instance.new("Model")
         model.Name=id
         part.Name="AuthoredBody";part.Anchored=true;part.CanCollide=false;part.CanTouch=false;part.CanQuery=false;part.Massless=true
-        part.Material=Enum.Material.SmoothPlastic;part.Color=Color3.new(1,1,1)
+        part.Material=Enum.Material.Plastic;part.Reflectance=0;part.Color=Color3.new(1,1,1) -- BD-173: matte; only fused tiers (Gold/Emerald/Diamond) get a sheen, set elsewhere
         part:SetAttribute("GeneSpecies",id);part.Parent=model
         model.WorldPivot=CFrame.new(0,-data.height/2,0)
         model:SetAttribute("AuthoredCreature",true)
@@ -365703,7 +365703,7 @@ return table.freeze({
     StudioLocalProfilesEnabled = true, -- unpublished Studio only; never a live fallback
     StudioTestWalletEnabled = true, -- only unpublished, nonpersistent local profiles
     StudioTestCrystals = 1000000,
-    FoodCatchRate = 40 / 500, -- PROVISIONAL (owner 2026-10-13: 40 catches = 40 run eggs per 500 food; 5,000 food -&gt; 400; was 15/500); raw food points, growth boosts do not multiply catches
+    FoodCatchRate = 4 / 500, -- PROVISIONAL (owner 2026-10-15, BD-165: 500 food = 4 run eggs; 5,000 food -&gt; 40; was 40/500 on 2026-10-13, 15/500 before); raw food points, growth boosts do not multiply catches
     ProfileLoadWarningSeconds = 20,
 
     SpawnProtectionSeconds = 5,
@@ -365786,9 +365786,10 @@ return table.freeze({
     HatchRevealSeconds = 1, -- PROVISIONAL owner decision 2026-10-13: 1 s per egg reveal (was 5 s)
     -- PROVISIONAL run-size species boost (BD-044 five tiers). A batch of N run eggs multiplies each tier's
     -- weight by 1 + s * (SpeciesRunBoost[tier] - 1), s = (clamp(N, 1, EggRarityBoostMaxEggs) - 1) / (max - 1).
-    -- Tuned to the owner's examples: 40 eggs ~ 28 Common / 10 Uncommon / 2 Rare; 400 eggs ~ 211 / 134 / 44 / 9 / 1.
-    SpeciesRunBoost = {1, 1.9, 4.7, 4.5, 4},
-    EggRarityBoostMaxEggs = 400,
+    -- 2026-10-15 (BD-165, docs/88 exponential rarity): a full run is now ~4-40 eggs, so the boost is gentle and
+    -- caps at 40 eggs (5,000 food). Adjacent tier ratios stay 0.33 / 0.15 / 0.22 / 0.14 (never flatter than 1/3); Rare+ is at most ~10% easier at full boost.
+    SpeciesRunBoost = {1, 1, 1.1, 1.1, 1.1},
+    EggRarityBoostMaxEggs = 40,
     BigChance = 0.1,
     ShinyChance = 0.05,
     BigScaleMultiplier = 1.2,
@@ -365803,7 +365804,7 @@ return table.freeze({
     -- Run eggs beyond the five-slot reveal queue wait in a server-side ordered bank.
     RunRewardConfigVersion = 3, -- 3: five species rarity tiers + run-size boost (BD-044)
     HatchPageSize = 10, -- PROVISIONAL: queued run eggs committed per claim transaction; at 1 s/egg = 6 claims/min/player (size 5 would be 12/min and bust the 8/12-player budgets)
-    RunEggMaxPerRun = 500, -- PROVISIONAL: catches stop counting at 500 eggs per run (6,250 food); a 5,000-food run (400 eggs) is not truncated
+    RunEggMaxPerRun = 50, -- PROVISIONAL: catches stop counting at 50 eggs per run (6,250 food); a 5,000-food run (40 eggs) is not truncated
     RunEggBankCapacity = 1000, -- PROVISIONAL: banked run eggs behind the queue (~540 B each, ~0.54 MB); a run starts only while banked &lt;= capacity - RunEggMaxPerRun (500)
     SettledRunLedgerSize = 200, -- PROVISIONAL: settled run IDs kept for exactly-once settlement beyond recentOperations
     -- BD-090 Egg Nests v2 (owner 2026-10-14). ALL PROVISIONAL. A nest is a separate loot item
@@ -365818,14 +365819,14 @@ return table.freeze({
     NestMaxSize = 15,
     -- Hidden drop gate (never shown in the UI; measured on the server, never client-reported).
     NestMinRunSeconds = 120, -- PROVISIONAL: server clock from RunLifecycle.begin to settlement
-    NestMinCatches = 8, -- PROVISIONAL: validated server CatchScore (run eggs) needed for a nest
-    NestEggsPerExtraNest = 100, -- PROVISIONAL: +1 nest per 100 further catches on top of a qualified run
+    NestMinCatches = 1, -- PROVISIONAL: validated server CatchScore (run eggs) needed for a nest
+    NestEggsPerExtraNest = 10, -- PROVISIONAL (BD-165: was 100 at 40/500): +1 nest per 10 further catches on top of a qualified run
     NestMaxPerRun = 3, -- PROVISIONAL cap per run
     -- Luck tiers (index = nest.luck). PROVISIONAL, disclosed in the Nests menu. rarityBoostEggs feeds
     -- the run-batch species boost (EggRarityBoostMaxEggs = maximum), conditionLevels adds to the condition-upgrade level
     -- (clamped to the top tier), shinyChance applies even without irregular weather, bigChance replaces BigChance.
     NestLuckTiers = {
-        {rarityBoostEggs = 200, conditionLevels = 2, shinyChance = 0.03, bigChance = 0.2},
+        {rarityBoostEggs = 40, conditionLevels = 2, shinyChance = 0.03, bigChance = 0.2},
     },
     NestClaimRequestCooldownSeconds = 0.5,
     ChestClaimRequestCooldownSeconds = 0.35,
@@ -367398,6 +367399,8 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
                         if child:IsA("ParticleEmitter") or child:IsA("Highlight") or child:IsA("Light") or child:IsA("Trail") or child:IsA("Beam") then child:Destroy() end
                     end
                 elseif gold==true or gold=="gold" or gold=="diamond" or gold=="emerald" then Resources.clearTextures(item) end
+                -- BD-173: dinosaurs are matte; only fused tiers (Gold/Emerald/Diamond) keep a sheen below.
+                if gold~="silhouette" and gold~=true and gold~="gold" and gold~="diamond" and gold~="emerald" then item.Material,item.Reflectance=Enum.Material.Plastic,0 end
                 if gold == "diamond" then item.Color=Color3.fromRGB(85,213,245) item.Material=Enum.Material.Glass item.Reflectance=.2
                 elseif gold == "emerald" then item.Color=Color3.fromRGB(46,196,120) item.Material=Enum.Material.Metal item.Reflectance=.1
                 elseif gold == true or gold == "gold" then item.Color=Color3.fromRGB(242,199,63) item.Material=Enum.Material.Metal end
@@ -367593,7 +367596,7 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
         part.Shape = shape or Enum.PartType.Ball
         part.Size = size * scale
         part.Color = color
-        part.Material = if mutation == "diamond" then Enum.Material.Glass elseif gold then Enum.Material.Metal else Enum.Material.SmoothPlastic
+        part.Material = if mutation == "diamond" then Enum.Material.Glass elseif gold then Enum.Material.Metal else Enum.Material.Plastic -- BD-173: matte unless fused
         part.CanCollide = false
         part.CanTouch = false
         part.CanQuery = false
@@ -371122,11 +371125,11 @@ return table.freeze({
     GrowthCap=8, SpeedCap=2.2,
     AccountXPPerLevel=100, AccountMaxLevel=60,
     -- BD-044 PROVISIONAL run crystals (deterministic; the random 5/15/50 crystal box is retired).
-    -- Re-tuned 2026-10-13 for 40 eggs per 500 food:
+    -- Re-tuned 2026-10-15 (BD-165) for 4 eggs per 500 food, same example outputs as before:
     -- crystals = min(RunCrystalCap, (RunCrystalPerEggHundredths*min(eggs,RunCrystalTierEggs)
     --            + RunCrystalPerExtraEggHundredths*max(0,eggs-RunCrystalTierEggs)) // 100).
-    -- 40 eggs (500 food) -&gt; 30, 400 eggs (5,000 food) -&gt; 220 (owner's illustrative 30/220), 500 eggs -&gt; 273; cap 300 bounds it.
-    RunCrystalPerEggHundredths=75, RunCrystalTierEggs=40, RunCrystalPerExtraEggHundredths=53, RunCrystalCap=300,
+    -- 4 eggs (500 food) -&gt; 30, 40 eggs (5,000 food) -&gt; 220 (owner's illustrative 30/220), 50 eggs -&gt; 273; cap 300 bounds it.
+    RunCrystalPerEggHundredths=750, RunCrystalTierEggs=4, RunCrystalPerExtraEggHundredths=530, RunCrystalCap=300,
     RandomEggPrice=150,
     ConditionUpgrades={
         {level=1,price=100,requiredLevel=3},{level=2,price=300,requiredLevel=8},
@@ -371701,7 +371704,8 @@ function RuntimeMeshes.prepare()
                 local part = AssetService:CreateMeshPartAsync(Content.fromObject(mesh))
                 part.Name = id .. "Mesh"
                 part.Color = Color3.new(1, 1, 1)
-                part.Material = Enum.Material.SmoothPlastic
+                part.Material = Enum.Material.Plastic -- BD-173: matte dinosaurs
+                part.Reflectance = 0
                 part.Anchored = true
                 part.CanCollide, part.CanTouch, part.CanQuery = false, false, false
                 part.Massless = true
@@ -547227,7 +547231,7 @@ function RewardMath.computeRunReward(catchScore: any, runSeconds: any?)
         eggCount = eggCount,
         crystals = RewardMath.runCrystals(eggCount),
         nestCount = RewardMath.nestCount(eggCount, runSeconds),
-        accountXP = eggCount, -- unchanged rate: 1 account XP per catch (= per run egg)
+        accountXP = eggCount * 10, -- BD-165: catches are 10x fewer, so XP per catch is 10x to keep XP per run unchanged (500 food = 40 XP)
     }
 end
 

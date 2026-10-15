@@ -129,68 +129,70 @@ end
 ------------------------------------------------------------------ RewardMath
 assert(Rewards.runEggCount(0)==0 and Rewards.runEggCount(-5)==0 and Rewards.runEggCount(0/0)==0)
 assert(Rewards.runEggCount(-math.huge)==0 and Rewards.runEggCount(math.huge)==GameConfig.RunEggMaxPerRun)
-assert(Rewards.runEggCount(1e308)==500 and Rewards.runEggCount(501)==500 and Rewards.runEggCount(500)==500)
+assert(GameConfig.RunEggMaxPerRun==50 and Rewards.runEggCount(1e308)==50 and Rewards.runEggCount(51)==50 and Rewards.runEggCount(50)==50)
 assert(Rewards.runEggCount("15")==0 and Rewards.runEggCount(nil)==0 and Rewards.runEggCount(14.7)==14)
-assert(Rewards.runEggCount(40)==40 and Rewards.runEggCount(400)==400)
+assert(Rewards.runEggCount(40)==40 and Rewards.runEggCount(400)==50)
 local catches,carry=FoodCatchRules.award(500,0,1)
-assert(catches==40 and Rewards.runEggCount(catches)==40,"500 food -> 40 run eggs")
+assert(catches==4 and Rewards.runEggCount(catches)==4,"500 food -> 4 run eggs")
 catches=FoodCatchRules.award(5000,0,1)
-assert(catches==400 and Rewards.runEggCount(catches)==400,"5,000 food -> 400 run eggs")
-assert(Rewards.runCrystals(0)==0 and Rewards.runCrystals(40)==30 and Rewards.runCrystals(400)==220 and Rewards.runCrystals(500)==273)
+assert(catches==40 and Rewards.runEggCount(catches)==40,"5,000 food -> 40 run eggs")
+assert(Rewards.runCrystals(0)==0 and Rewards.runCrystals(4)==30 and Rewards.runCrystals(40)==220 and Rewards.runCrystals(50)==273)
 assert(Rewards.runCrystals(0/0)==0 and Rewards.runCrystals(-1)==0 and Rewards.runCrystals(math.huge)==273)
-assert(Rewards.nestCount(40)==0 and Rewards.nestCount(400)==0,"no run time -> never a nest")
-assert(Rewards.nestCount(7,600)==0 and Rewards.nestCount(8,119)==0 and Rewards.nestCount(8,120)==1 and Rewards.nestCount(0,600)==0)
-assert(Rewards.nestCount(40,200)==1 and Rewards.nestCount(108,200)==2 and Rewards.nestCount(400,200)==GameConfig.NestMaxPerRun)
-assert(Rewards.nestCount(500,200)==GameConfig.NestMaxPerRun and Rewards.nestCount(math.huge,math.huge)==GameConfig.NestMaxPerRun)
-assert(Rewards.nestCount(40,0/0)==0 and Rewards.nestCount(40,"200")==0 and Rewards.nestCount(40,-5)==0)
+assert(Rewards.nestCount(4)==0 and Rewards.nestCount(40)==0,"no run time -> never a nest")
+assert(Rewards.nestCount(0,600)==0 and Rewards.nestCount(1,119)==0 and Rewards.nestCount(1,120)==1)
+assert(Rewards.nestCount(4,200)==1 and Rewards.nestCount(11,200)==2 and Rewards.nestCount(40,200)==GameConfig.NestMaxPerRun)
+assert(Rewards.nestCount(50,200)==GameConfig.NestMaxPerRun and Rewards.nestCount(math.huge,math.huge)==GameConfig.NestMaxPerRun)
+assert(Rewards.nestCount(4,0/0)==0 and Rewards.nestCount(4,"200")==0 and Rewards.nestCount(4,-5)==0)
 local zero=Rewards.computeRunReward(0/0)
 assert(zero.eggCount==0 and zero.crystals==0 and zero.nestCount==0 and zero.accountXP==0)
 local previous=-1
-for n=0,500 do local c=Rewards.runCrystals(n) assert(c>=previous) previous=c end
-assert(#Rewards.runEggId(string.rep("x",64),500)<=80 and #(Rewards.nestId(string.rep("x",64),11)..":3")<=80)
-print("Reward math passed: 0/negative/NaN/inf/huge/non-number scores, 500->40 and 5,000->400 eggs, 30/220 crystals, hidden nest gate (run time + catches) with capped extras, bounded IDs")
+for n=0,50 do local c=Rewards.runCrystals(n) assert(c>=previous) previous=c end
+assert(#Rewards.runEggId(string.rep("x",64),50)<=80 and #(Rewards.nestId(string.rep("x",64),11)..":3")<=80)
+print("Reward math passed: 0/negative/NaN/inf/huge/non-number scores, 500->4 and 5,000->40 eggs, 30/220 crystals, hidden nest gate (run time + catches) with capped extras, bounded IDs")
 
------------------------------------------------------------------- 15-egg run
+------------------------------------------------------------------ 4-egg run (500 food)
 local now=os.time()
 local a=user(101)
 assert(Repository.load(a))
 local beforeCopies=totalCopies(data[key(a)])
-local ok,outcome,status=Repository.commitRunSettlement(a,"run-40",40,nil,200)
-assert(ok and status=="committed" and outcome.eggCount==40 and outcome.crystals==30 and outcome.nestCount==1)
+local ok,outcome,status=Repository.commitRunSettlement(a,"run-4",4,nil,200)
+assert(ok and status=="committed" and outcome.eggCount==4 and outcome.crystals==30 and outcome.nestCount==1)
 assert(totalCopies(data[key(a)])==beforeCopies,"settlement must not grant direct dinosaur copies")
-assert(#data[key(a)].eggs==5 and bankCount(a)==35 and data[key(a)].pendingChestGrants==0)
+assert(#data[key(a)].eggs==4 and bankCount(a)==0 and data[key(a)].pendingChestGrants==0)
 assert(data[key(a)].progression.crystals==30 and data[key(a)].progression.accountXP==40)
 local aNest=data[key(a)].eggNests[1]
 assert(#data[key(a)].eggNests==1 and aNest.state=="incubating" and aNest.readyAt>=now+GameConfig.NestIncubationSeconds and aNest.eggs==nil)
-assert(aNest.size>=GameConfig.NestMinSize and aNest.size<=GameConfig.NestMaxSize and aNest.luck==1 and aNest.droppedFromRun=="run-40")
+assert(aNest.size>=GameConfig.NestMinSize and aNest.size<=GameConfig.NestMaxSize and aNest.luck==1 and aNest.droppedFromRun=="run-4")
 local ids={}
 local lastRarity=0
 for _,egg in revealLine(a) do
  assert(not ids[egg.eggId]) ids[egg.eggId]=true
- assert(string.match(egg.eggId,"^run:run%-40:%d+$") and egg.reward.count==1 and egg.kind=="run_egg")
+ assert(string.match(egg.eggId,"^run:run%-4:%d+$") and egg.reward.count==1 and egg.kind=="run_egg")
  assert(Genetics.valid(egg.genes) and egg.traitRollVersion=="bd045-genes-v2" and egg.source.kind=="run")
  local rarity=GameConfig.SpeciesRarities[egg.reward.speciesId]
  assert(rarity>=lastRarity,"run batch must reveal in increasing rarity") lastRarity=rarity
 end
-assert(a.attrs.LastRewardText=="40 run eggs | 1 egg nest" and a.attrs.LastRunCrystals==30 and a.attrs.LastRunCrystalBox==0)
-assert(a.attrs.BankedRunEggCount==35 and a.attrs.QueuedEggsWaiting==35 and a.attrs.RunStartBlocked=="")
+assert(a.attrs.LastRewardText=="4 run eggs | 1 egg nest" and a.attrs.LastRunCrystals==30 and a.attrs.LastRunCrystalBox==0)
+assert(a.attrs.BankedRunEggCount==0 and a.attrs.QueuedEggsWaiting==0 and a.attrs.RunStartBlocked=="")
 -- Exactly once: replays (cached and uncached) change nothing.
 local snapshot=copy(data[key(a)])
-local dupOk,_,dupStatus=Repository.commitRunSettlement(a,"run-40",40)
+local dupOk,_,dupStatus=Repository.commitRunSettlement(a,"run-4",40)
 assert(dupOk and dupStatus=="duplicate" and same(snapshot,data[key(a)]))
 Repository.release(a) assert(Repository.load(a))
 snapshot=copy(data[key(a)])
-dupOk,_,dupStatus=Repository.commitRunSettlement(a,"run-40",400)
+dupOk,_,dupStatus=Repository.commitRunSettlement(a,"run-4",40)
 assert(dupOk and dupStatus=="duplicate" and same(snapshot,data[key(a)]),"replay with a different score must not re-settle")
-print("40-egg run passed: 40 banked eggs (5 queue + 35 bank), no direct copies, 30 crystals, 1 incubating nest, ascending rarity, exactly-once replays")
+print("4-egg run passed: 4 queued eggs (500 food), no direct copies, 30 crystals, 1 incubating nest, ascending rarity, exactly-once replays")
 
+-- Bulk-path stress tests below use run sizes far above the new per-run cap (BD-165), so lift the cap here.
+GameConfig.RunEggMaxPerRun=500
 ------------------------------------------------------------------ 150-egg run, reveal, reconnect
 local b=user(102)
 assert(Repository.load(b))
 local copiesBefore=totalCopies(data[key(b)])
 assert(Repository.commitRunSettlement(b,"run-400",400,nil,600))
 assert(#data[key(b)].eggs==5 and bankCount(b)==395)
-assert(#data[key(b)].eggNests==GameConfig.NestMaxPerRun and #b.attrs.NestsJson==GameConfig.NestMaxPerRun and data[key(b)].progression.crystals==220)
+assert(#data[key(b)].eggNests==GameConfig.NestMaxPerRun and #b.attrs.NestsJson==GameConfig.NestMaxPerRun and data[key(b)].progression.crystals==Rewards.runCrystals(400))
 assert(data[key(b)].eggNests[1].state=="incubating" and data[key(b)].eggNests[2].state=="waiting")
 local line=revealLine(b)
 assert(#line==400)
@@ -310,12 +312,12 @@ Repository.release(c) assert(Repository.load(c))
 failMode="once"
 local retried,_,retriedStatus=Repository.commitRunSettlement(c,"outage-run",40)
 assert(retried and retriedStatus=="committed" and #revealLine(c)==40,"transient outage retried inside the repository")
-assert(data[key(c)].progression.crystals==30)
+assert(data[key(c)].progression.crystals==Rewards.runCrystals(40))
 assert(select(3,Repository.commitRunSettlement(c,"outage-run",40))=="duplicate" and #revealLine(c)==40)
 -- Lost acknowledgement: the first write commits, the retry finds it and reports duplicate.
 failMode="ack_lost"
 local acked,_,ackStatus=Repository.commitRunSettlement(c,"ack-run",40)
-assert(acked and ackStatus=="duplicate" and #revealLine(c)==80 and data[key(c)].progression.crystals==60,"lost ack must not double-settle")
+assert(acked and ackStatus=="duplicate" and #revealLine(c)==80 and data[key(c)].progression.crystals==2*Rewards.runCrystals(40),"lost ack must not double-settle")
 data[key(c)].session.leaseId="other-server"
 snapshot=copy(data[key(c)])
 local lost,_,lostStatus=Repository.commitRunSettlement(c,"lease-run",40)
@@ -487,24 +489,28 @@ end
 local base=tierShares(1)
 assert(math.abs(base[1]-.72)<1e-9 and math.abs(base[5]-.001)<1e-9,"one egg = base odds (shop eggs disclose these)")
 local previous=nil
-for _,n in {1,15,40,100,200,400,1000} do
+for _,n in {1,4,10,20,40,100} do
  local sh=tierShares(n)
- for t=1,4 do assert(sh[t]>sh[t+1],"rarer tiers are always less likely") end
+ for t=1,4 do
+  assert(sh[t]>sh[t+1],"rarer tiers are always less likely")
+  local ratio=sh[t+1]/sh[t]
+  assert(ratio<=1/3+1e-9 and ratio>=1/8,"exponential: adjacent tier ratio stays within [1/8, 1/3], tier "..t.." n="..n)
+ end
  if previous then assert(sh[1]<=previous[1]+1e-12 and sh[3]>=previous[3]-1e-12 and sh[5]>=previous[5]-1e-12,"bigger runs expose rarer tiers") end
+ for t=3,5 do assert(sh[t]/base[t]<=1.1+1e-9,"BD-165: the run boost never makes a Rare+ tier more than 10% easier, tier "..t) end
  previous=sh
 end
-assert(same(tierShares(400),tierShares(1000)),"boost capped at EggRarityBoostMaxEggs")
--- Owner examples (docs/09): 40 eggs ~ 29 Common + 11 Uncommon; 400 eggs ~ 213 / 133 / 45 / 9 (+ rare Legendary).
-local s40,s400=tierShares(40),tierShares(400)
-assert(math.abs(40*s40[1]-29)<=2 and math.abs(40*s40[2]-11)<=2 and 40*(s40[3]+s40[4]+s40[5])<=3,"40-egg mix near the owner example")
-local want={213,133,45,9}
-for t=1,4 do assert(math.abs(400*s400[t]-want[t])<=want[t]*.1+1,"400-egg mix near the owner example, tier "..t) end
-assert(400*s400[5]>=.5 and 400*s400[5]<=2,"about one Legendary per 400-egg run")
+assert(same(tierShares(40),tierShares(1000)),"boost capped at EggRarityBoostMaxEggs (40 eggs = 5,000 food)")
+-- Expected mixes at the owner's two sizes (BD-165: 500 food = 4 eggs, 5,000 food = 40 eggs).
+local s4,s40=tierShares(4),tierShares(40)
+assert(4*s4[1]>=2.8 and 40*s40[1]>=27 and 40*(s40[3]+s40[4]+s40[5])<=2.6,"40-egg mix stays common-heavy with few rares")
+local pRare4=1-(1-(s4[3]+s4[4]+s4[5]))^4
+assert(pRare4<=.2,"docs/88 target: a 4-egg run holds a Rare+ egg well under 30% of the time: "..pRare4)
 -- Seeded rolls through the real computeChestReward agree with the analytic shares.
 local drawsT=40000 local seen={0,0,0,0,0}
 local tierRng=Random.new()
-for _=1,drawsT do local r=Rewards.computeChestReward(tierRng,400) seen[GameConfig.SpeciesRarities[r.speciesId]]+=1 end
-for t=1,5 do assert(math.abs(seen[t]/drawsT-s400[t])<=4*math.sqrt(s400[t]*(1-s400[t])/drawsT)+1e-4,"seeded tier "..t) end
+for _=1,drawsT do local r=Rewards.computeChestReward(tierRng,40) seen[GameConfig.SpeciesRarities[r.speciesId]]+=1 end
+for t=1,5 do assert(math.abs(seen[t]/drawsT-s40[t])<=4*math.sqrt(s40[t]*(1-s40[t])/drawsT)+1e-4,"seeded tier "..t) end
 -- Saved values from the three-tier scale migrate once, additively, never overclaiming.
 local function legacyProfile(id,rarest,skip,owned)
  local u=user(id) assert(Repository.load(u)) Repository.release(u)
@@ -533,9 +539,9 @@ end
 local broken=legacyProfile(2100,4,nil,{}) -- 4 was never valid on the old scale
 assert(not Repository.load(broken) and data[key(broken)].rarityScale==nil,"malformed legacy rarest is rejected, not rewritten")
 local fresh=user(2101) assert(Repository.load(fresh) and data[key(fresh)].rarityScale==5)
-print(string.format("Species tiers passed: 22 species in 5 tiers (%d/%d/%d/%d/%d); 40 eggs -> %.1f C / %.1f U / %.1f R+; 400 eggs -> %.0f / %.0f / %.0f / %.1f / %.1f; %d seeded rolls; legacy rarest/skip migration (%d cases) idempotent, malformed rejected",
- tierCount[1],tierCount[2],tierCount[3],tierCount[4],tierCount[5],40*s40[1],40*s40[2],40*(s40[3]+s40[4]+s40[5]),
- 400*s400[1],400*s400[2],400*s400[3],400*s400[4],400*s400[5],drawsT,#cases))
+print(string.format("Species tiers passed: 22 species in 5 tiers (%d/%d/%d/%d/%d); 4 eggs -> %.2f C / %.2f U / %.2f R+; 40 eggs -> %.1f / %.1f / %.2f / %.2f / %.3f; %d seeded rolls; legacy rarest/skip migration (%d cases) idempotent, malformed rejected",
+ tierCount[1],tierCount[2],tierCount[3],tierCount[4],tierCount[5],4*s4[1],4*s4[2],4*(s4[3]+s4[4]+s4[5]),
+ 40*s40[1],40*s40[2],40*s40[3],40*s40[4],40*s40[5],drawsT,#cases))
 
 ------------------------------------------------------------------ Seeded condition draws (BD-045)
 local counts={} local failedDraws=0

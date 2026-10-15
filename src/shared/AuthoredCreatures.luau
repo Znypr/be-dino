@@ -66,7 +66,7 @@ local function build(id: string,genes: any?,patient: boolean): Model?
         local model=Instance.new("Model")
         model.Name=id
         part.Name="AuthoredBody";part.Anchored=true;part.CanCollide=false;part.CanTouch=false;part.CanQuery=false;part.Massless=true
-        part.Material=Enum.Material.SmoothPlastic;part.Color=Color3.new(1,1,1)
+        part.Material=Enum.Material.Plastic;part.Reflectance=0;part.Color=Color3.new(1,1,1) -- BD-173: matte; only fused tiers (Gold/Emerald/Diamond) get a sheen, set elsewhere
         part:SetAttribute("GeneSpecies",id);part.Parent=model
         model.WorldPivot=CFrame.new(0,-data.height/2,0)
         model:SetAttribute("AuthoredCreature",true)

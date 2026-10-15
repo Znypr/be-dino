@@ -54,7 +54,7 @@ function RewardMath.computeRunReward(catchScore: any, runSeconds: any?)
         eggCount = eggCount,
         crystals = RewardMath.runCrystals(eggCount),
         nestCount = RewardMath.nestCount(eggCount, runSeconds),
-        accountXP = eggCount, -- unchanged rate: 1 account XP per catch (= per run egg)
+        accountXP = eggCount * 10, -- BD-165: catches are 10x fewer, so XP per catch is 10x to keep XP per run unchanged (500 food = 40 XP)
     }
 end
 
