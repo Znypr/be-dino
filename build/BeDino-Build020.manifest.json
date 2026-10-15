@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "90f59919ffd9efad9dd7f068de683e755e8f5a9d4f24f7c66ba423c5bcc5839e",
+  "place_sha256": "8de6e6422e241805c0825e8376f587655a08398712a164815195f957eb4accfe",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -190,7 +190,7 @@
     "src/shared/FoodCatchRules.luau": "c2c6cfa816271218494ca4116f70a1fc0b4b1e82ca2b6592d2d3280b43c4ecd4",
     "src/shared/FusionSelection.luau": "4cda80f90755429cfff5429fc0eabcce0ceba474a39e1325f23d18632480f946",
     "src/shared/FxRecipes.luau": "e7023b599cba3f3f02ce71f74c18fc08074be82959f41d494a04229513fd5347",
-    "src/shared/FxUi.luau": "7225590425bbbf80ec80c468d14e7d99a3002047ea518aff33596124814c8d3d",
+    "src/shared/FxUi.luau": "ae857dbcc12b1a7a5683b6a3e659df6fa93691c13abbc4727dc23fa07379d6b6",
     "src/shared/GeneTextureAssets.luau": "79f6f9c881ee1dd53339d188b8656339421489c0117ad6e04fceffd240972c26",
     "src/shared/GeneTextures.luau": "efceb4ab08639f0fce0fb212f4401bb43867c8d11d66f8245241ed639ff35787",
     "src/shared/HatchFragments.luau": "4fb383a9b89c2ff58ffc8b973ed8419d70cb34b840cc3d0662233bbf0c2931ee",
