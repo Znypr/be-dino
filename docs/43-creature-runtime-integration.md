@@ -47,3 +47,11 @@ Studio's documented `CreateAssetAsync` returned **“CreateAssetAsync and Create
 Published use of editable meshes/images needs the verified-owner **Allow Mesh & Image APIs** security setting. Its state and non-owner client access have not been certified for this build. See [Roblox's published-game requirements and memory limits](https://create.roblox.com/docs/reference/engine/classes/EditableMesh/RaycastLocal). Do not publish on the assumption that Studio success proves this setting or device budgets.
 
 Still required: physical-phone frame time/memory/thermal tests; maximum growth/BIG collision acceptance; published non-owner assets/API access; current persistent migration/rejoin; and visual review of legacy face preservation and the native egg reveal. Public drop balance remains provisional. The earlier shared egg/retention/species design documents remain the reference for work beyond this integration.
+
+## Legacy vs authored species and the one-image rule (BD-203 follow-up)
+
+**Authored** (EditableMesh from `CreatureData`, 1 MeshPart, 1 EditableImage when textured): archaeopteryx, baryonyx, brachiosaurus, dimorphodon, elasmosaurus, gallimimus, ichthyosaurus, microraptor, mosasaurus, pachycephalosaurus, parasaurolophus, plesiosaurus, pteranodon, quetzalcoatlus, spinosaurus, therizinosaurus (plus the egg).
+
+**Legacy** (uploaded MeshPart models loaded by `ImportedResources`: compy, raptor, stegosaurus, ankylosaurus, triceratops, tyrannosaurus): 7 MeshParts each (raptor 3), every part with its own fixed UV layout and neutral texture. The geometry is not in the repo, so UVs cannot be remapped into one atlas offline.
+
+Rule now: **every dino costs at most ONE EditableImage.** A legacy dino paints only its primary (largest) part; its other parts keep the neutral shading/eye texture (a plain uploaded asset, no EditableImage) tinted with the genes' blended colour (`PatternLOD=tint`). Far or over-cap dinos drop their one image to the same tint (`flat`), so eyes stay. Cap stays 30; `PatternAtlasCache.need()` counts distinct new keys. Trade-off: on legacy dinos the pattern is on the body only; migrating those six species to authored creatures (needs Blender sources) would restore full-body patterns.
