@@ -703,6 +703,9 @@ function Sel.details(d, catalog)
         },
         origin = {lines = {}, parents = {}},
     }
+    -- BD-172: optional hook set by the client (catalog.colourBonus(genes) -> "Colour bonus +3% growth" | nil); server stays authoritative.
+    local bonusText = if type(catalog.colourBonus) == "function" then catalog.colourBonus(g) else nil
+    if bonusText then table.insert(view.traits, 5, {label = "Colour bonus", value = (string.gsub(bonusText, "^Colour bonus ", ""))}) end
     local origin = type(d.origin) == "table" and d.origin or {}
     local lineage = d.lineage
     if origin.kind == "fusion" or type(lineage) == "table" then

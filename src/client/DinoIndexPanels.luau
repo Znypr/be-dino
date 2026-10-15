@@ -30,7 +30,9 @@ Panels.PageLimit = 200
 Panels.MaxPages = 10
 
 local player = Players.LocalPlayer
+local ColourBonus = require(ReplicatedStorage.Shared.ColourBonus)
 local catalog = Sel.buildCatalog(Config, ProgressionConfig, EggGenetics.Patterns)
+catalog.colourBonus = function(genes) return ColourBonus.text(ProgressionConfig.EggColors, genes) end -- BD-172
 
 local function remote(): RemoteFunction?
     local folder = ReplicatedStorage:FindFirstChild("BeDinoRemotes")
