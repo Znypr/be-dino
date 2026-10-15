@@ -4,6 +4,10 @@ Every art asset the game uses at runtime. Add a line here when an asset is added
 
 | Name | Type | Repo file | Roblox asset ID | Used by | Status |
 |---|---|---|---|---|---|
+| potion_model_flask | 3D model (Roblox generate_mesh): round flask, blue liquid, lightning charm | - (Roblox generate_mesh, 2026-10-15) | 114182681867384 (Model) | src/shared/PotionArt.luau ModelAssets.flask: speed potions Common-Epic (shop cards, confirm, POTIONS nav button) | in game via InsertService (src/server/PotionModels.luau); vector flask fallback |
+| potion_model_jar | 3D model (Roblox generate_mesh): squat jar, orange liquid, clover | - (Roblox generate_mesh, 2026-10-15) | 121478365783622 (Model) | PotionArt ModelAssets.jar: luck/loot potions Common-Epic | in game via InsertService; vector flask fallback |
+| potion_model_heart | 3D model (Roblox generate_mesh): heart bottle, green liquid, sprout | - (Roblox generate_mesh, 2026-10-15) | 126942715659365 (Model) | PotionArt ModelAssets.heart: growth potions Common-Epic | in game via InsertService; vector flask fallback |
+| potion_model_claw | 3D model (Roblox generate_mesh): dino-claw vial, purple sparkles | - (Roblox generate_mesh, 2026-10-15) | 100441458834806 (Model) | PotionArt ModelAssets.claw: every Legendary potion | in game via InsertService; vector flask fallback |
 | trophy | UI icon | resources/ui/v2/icons/trophy.png | 90878052837138 | src/shared/UITheme.luau via UIIconAssets.luau | in game |
 | dinos | UI icon | resources/ui/v2/icons/dinos.png | 122025247365244 | src/shared/UITheme.luau via UIIconAssets.luau | in game |
 | egg (premium blank egg) | UI icon | resources/ui/v2/icons/premium-egg-normal.png | 95856282289615 | src/shared/UITheme.luau via UIIconAssets.luau | in game |

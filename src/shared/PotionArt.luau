@@ -30,6 +30,77 @@ local function stroke(parent: GuiObject, color: Color3, thickness: number)
     s.Color, s.Thickness, s.Parent = color, thickness, parent
     return s
 end
+-- BD-214: textured 3D models (Roblox generate_mesh, docs/77). The server caches stripped copies in
+-- ReplicatedStorage.PotionModels (Server/PotionModels); the vector flask above stays as the fallback.
+PotionArt.ModelAssets = {flask=114182681867384, jar=121478365783622, heart=126942715659365, claw=100441458834806}
+PotionArt.ReduceMotion = false
+function PotionArt.modelFor(kind: string, rarity: string): string
+    if rarity == "Legendary" then return "claw" end
+    return if kind == "loot" then "jar" elseif kind == "growth" then "heart" else "flask"
+end
+local spinning: {[Camera]: {focus: Vector3, dist: number, angle: number}} = setmetatable({}, {__mode = "k"}) :: any
+local spinConnection: RBXScriptConnection? = nil
+local function place(camera: Camera, s)
+    local eye = s.focus + Vector3.new(math.sin(s.angle) * s.dist, s.dist * .12, math.cos(s.angle) * s.dist)
+    camera.CFrame = CFrame.lookAt(eye, s.focus)
+end
+local function spin(dt: number)
+    local any = false
+    for camera, s in spinning do
+        if camera.Parent and camera:IsDescendantOf(game) then
+            any = true
+            s.angle += dt * .6
+            place(camera, s)
+        else spinning[camera] = nil end
+    end
+    if not any and spinConnection then spinConnection:Disconnect() spinConnection = nil end
+end
+local function mountModel(root: GuiObject, source: Model, tier: number, trim: Color3): boolean
+    local view = Instance.new("ViewportFrame")
+    view.Name, view.BackgroundTransparency, view.Size, view.ZIndex = "PotionModel", 1, UDim2.fromScale(1, 1), root.ZIndex + 4
+    view.Ambient, view.LightColor, view.LightDirection = Color3.fromRGB(170,170,180), Color3.new(1,1,1), Vector3.new(-1,-1,-.6)
+    local model = source:Clone()
+    model.Parent = view
+    local cf, size = model:GetBoundingBox()
+    local radius = math.max(size.X, size.Y, size.Z) * .5
+    if radius <= 0 then view:Destroy() return false end
+    local camera = Instance.new("Camera")
+    camera.FieldOfView, camera.Parent = 40, view
+    view.CurrentCamera = camera
+    local s = {focus = cf.Position, dist = radius / math.tan(math.rad(20)) * 1.15, angle = .5}
+    place(camera, s)
+    view.Parent = root
+    -- Hide the vector flask but keep the rarity glow plate and pips (docs/88 tier frame).
+    for _, child in root:GetChildren() do
+        if child:IsA("GuiObject") and (child.Name == "Neck" or child.Name == "Glass" or child.Name == "Cork") then child.Visible = false end
+    end
+    if tier >= 4 then view.ImageColor3 = Color3.new(1,1,1):Lerp(trim, .08) end
+    if not PotionArt.ReduceMotion then
+        spinning[camera] = s
+        if not spinConnection then spinConnection = game:GetService("RunService").Heartbeat:Connect(spin) end
+    end
+    return true
+end
+function PotionArt.attachModel(root: GuiObject, kind: string, rarity: string)
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local key = PotionArt.modelFor(kind, rarity)
+    local tier = PotionArt.rarityIndex(rarity)
+    local trim = PotionArt.RarityColor[rarity] or PotionArt.RarityColor.Common
+    local function try(): boolean
+        local folder = ReplicatedStorage:FindFirstChild("PotionModels")
+        local source = folder and folder:FindFirstChild(key)
+        if source and source:IsA("Model") then local ok, mounted = pcall(mountModel, root, source, tier, trim) return ok and mounted == true end
+        return false
+    end
+    if try() then return end
+    task.spawn(function() -- models stream in after the server loads them; give up quietly (flask stays) after 15 s
+        for _ = 1, 30 do
+            task.wait(.5)
+            if not root.Parent then return end
+            if try() then return end
+        end
+    end)
+end
 function PotionArt.rarityIndex(rarity: string): number
     return table.find(PotionArt.Rarities, rarity) or 1
 end
@@ -53,6 +124,7 @@ function PotionArt.build(root: GuiObject, kind: string, rarity: string)
     for i = 1, tier do
         frame(root, "Pip", .5 + (i - (tier + 1) / 2) * .11 - .03, .92, .06, .06, trim, z + 3, 1)
     end
+    if game ~= nil and game:GetService("RunService"):IsClient() then PotionArt.attachModel(root, kind, rarity) end
     return neck
 end
 return PotionArt

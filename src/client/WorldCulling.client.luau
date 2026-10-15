@@ -48,9 +48,11 @@ local function addProp(folder: Instance, item: Instance, tries: number?)
 end
 local function setFood(pickup: BasePart, visible: boolean)
     local value = if visible then 0 else 1
-    pickup.LocalTransparencyModifier = value
+    -- Legacy food draws a LocalFoodMesh model (ResourceVisuals); its placeholder ball stays hidden when shown again.
+    pickup.LocalTransparencyModifier = if pickup:FindFirstChild("LocalFoodMesh") then 1 else value
     for _, d in pickup:GetDescendants() do if d:IsA("BasePart") then d.LocalTransparencyModifier = value end end
     foodShown[pickup] = visible
+    pickup:SetAttribute("Culled", not visible) -- FoodGlow hides its halo with the food
 end
 
 task.spawn(function()

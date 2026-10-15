@@ -4,6 +4,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
+local Layout = require(ReplicatedStorage.Shared.IslandLayout)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 local MovementGuard = {}
 local states: {[Player]: {
@@ -17,6 +19,11 @@ local started = false
 
 local function clear(player: Player)
     states[player] = nil
+end
+
+-- BD-210: forget the trusted baseline (after a server teleport such as fall recovery or run start).
+function MovementGuard.reset(player: Player)
+    clear(player)
 end
 
 function MovementGuard.start()
@@ -36,6 +43,12 @@ function MovementGuard.start()
 
                 if not character or not root or not root:IsA("BasePart") or not humanoid
                     or humanoid.Health <= 0 or character:GetAttribute("RunState") ~= "Active" then
+                    clear(player)
+                    continue
+                end
+                -- BD-210: a root below the floor is FallRecovery's job. Correcting it here snapped falling characters
+                -- back to mid-fall baselines under the map (an endless fall loop instead of a recovery).
+                if SpawnGeometry.fallen(Config, Layout, root.Position) then
                     clear(player)
                     continue
                 end

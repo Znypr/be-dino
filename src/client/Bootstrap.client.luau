@@ -121,6 +121,7 @@ end
 local function art(parent: GuiObject,id: string,x: number,y: number,size: number)
     local icon = Theme.icon(parent,id)
     if icon then icon.Position,icon.Size = UDim2.fromOffset(x,y),UDim2.fromOffset(size,size) end
+    return icon
 end
 local shade = Instance.new("TextButton")
 shade.Name,shade.Text,shade.Size = "ModalScrim","",UDim2.fromScale(1,1)
@@ -554,8 +555,9 @@ render=function(name: string)
             local card=box(body,slot*276,cardsY,264,cardsHeight,color,24)
             label(card,item.name,6,5,252,34,25)
             label(card,if isTrail then "Level "..item.level.." • "..(UIFormat.boost("Speed",item.speed) or "Speed") else (UIFormat.boost("Growth",item.growth) or "Growth"),4,42,256,30,19)
-            local iconSize=if isTrail then 60 else math.clamp(buyY-30-74,60,128) -- BD-177: big aura icon fills the card
-            art(card,(if isTrail then "trail_" else "aura_")..item.id,(264-iconSize)/2,if isTrail then 76 else 74+(buyY-30-74-iconSize)/2,iconSize)
+            local iconSize=math.clamp(buyY-30-74,60,128) -- BD-177/BD-215: big aura and trail art fills the card icon area
+            local shown=art(card,(if isTrail then "trail_" else "aura_")..item.id,(264-iconSize)/2,74+(buyY-30-74-iconSize)/2,iconSize)
+            if shown and isTrail then shown.Position,shown.Size=UDim2.fromOffset(8,74+(buyY-30-74-iconSize)/2),UDim2.fromOffset(248,iconSize) end
             label(card,if owned[item.id] then "Owned" else item.price.." Crystals",4,buyY-30,256,27,21,C.gold)
             local equipped=equippedId==item.id
             local locked=isTrail and num("AccountLevel")<item.level and not owned[item.id]

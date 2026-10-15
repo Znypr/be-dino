@@ -14,6 +14,7 @@ local ProfileRepository = require(script.Parent.ProfileRepository)
 local RunLifecycle = require(script.Parent.RunLifecycle)
 local VisualTestService = require(script.Parent.VisualTestService)
 local Leaderboards = require(script.Parent.Leaderboards)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 Players.CharacterAutoLoads = false
 
@@ -30,6 +31,7 @@ if not Lighting:FindFirstChildOfClass("Atmosphere") then
     atmosphere.Parent = Lighting
 end
 require(script.Parent.ImportedResources).load()
+require(script.Parent.PotionModels).load() -- BD-214 textured potion models for menu ViewportFrames
 if Config.WorldArtMode=="BiomeKit" or Config.FoodArtMode=="Kit" then require(script.Parent.ImportedResources).loadWorldKit() end
 Arena.build()
 Leaderboards.start()
@@ -63,6 +65,7 @@ CollectionService.start(ProfileRepository, Dinosaur)
 ChestService.start(ProfileRepository)
 MutationService.start(ProfileRepository, Dinosaur)
 MovementGuard.start()
+require(script.Parent.FallRecovery).start(MovementGuard.reset) -- BD-210 fall-out-of-world safety net
 VisualTestService.start(Dinosaur)
 require(script.Parent.ProgressionService).start(ProfileRepository)
 require(script.Parent.FusionService).start(ProfileRepository)
@@ -79,6 +82,11 @@ end
 
 local function spawnLoadedPlayer(player: Player)
     player.CanLoadCharacterAppearance = false
+    -- BD-210: no character before the world (terrain + hub) is built.
+    while workspace:GetAttribute("IslandTerrainReady") ~= true or not workspace:FindFirstChild("BeDinoArena") do
+        if not player.Parent then return end
+        task.wait(.2)
+    end
     local loaded = ProfileRepository.load(player)
     if not loaded or not player.Parent then
         warn("[Be Dino] profile load blocked character spawn for " .. player.Name)
@@ -108,9 +116,12 @@ local function setup(player: Player)
             return
         end
         RunLifecycle.prepareSanctuary(player, character)
+        -- BD-210: the character goes to the hub floor at once (before the dinosaur attach yields), not after it.
+        local hub = CFrame.new(SpawnGeometry.hubPoint(Config))
+        character:PivotTo(hub)
         task.spawn(function()
             Dinosaur.attach(character, Config.WalkSpeed, player)
-            if player.Character == character then character:PivotTo(CFrame.new(0, 11, Config.SanctuaryCenterZ)) end
+            if player.Character == character then character:PivotTo(hub) end
         end)
     end)
     task.spawn(spawnLoadedPlayer, player)

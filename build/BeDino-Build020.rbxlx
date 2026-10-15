@@ -364751,7 +364751,7 @@ local settings: {[string]: Setting} = {
     speedMultiplier = {label = "Run speed", min = 0.5, max = 3, step = 0.25, default = 1},
     -- "Feel" tuning (runtime only). Defaults mirror Config so Reset restores the shipped feel.
     gravity = {label = "Gravity", min = 150, max = 400, step = 10, default = 250, group = "feel", unit = ""},
-    jumpPower = {label = "Jump power", min = 40, max = 90, step = 2, default = 56, group = "feel", unit = ""},
+    jumpPower = {label = "Jump power", min = 40, max = 90, step = 2, default = 50, group = "feel", unit = ""},
     moveResponsiveness = {label = "Turn/stop responsiveness", min = 0.5, max = 2, step = 0.25, default = 1, group = "feel"},
     turnLean = {label = "Turn lean", min = 0, max = 3, step = 0.25, default = 1, group = "feel"},
     leapSpeed = {label = "Leap speed", min = 0.5, max = 1.5, step = 0.1, default = 1, group = "feel"},
@@ -365806,7 +365806,10 @@ return table.freeze({
     -- Movement feel (PROVISIONAL): default gravity 196.2 felt floaty. 250 + JumpPower 56 keeps a
     -- ~6.3 stud jump but cuts air time ~0.51s -&gt; ~0.45s; leap vertical speed is retuned in ProgressionConfig.
     Gravity = 250,
-    JumpPower = 56,
+    -- BD-212: jumps read as a forward bound: 50 -&gt; ~5.0 stud apex, ~0.40 s air (was 56: ~6.3, ~0.45 s),
+    -- and the client carries the run direction at JumpForwardCarry x speed while airborne.
+    JumpPower = 50,
+    JumpForwardCarry = 1.3, -- PROVISIONAL; MovementGuard allows WalkSpeed x MovementGuardSpeedTolerance (3)
     TurnRate = 16, -- PROVISIONAL rad/s facing steer (Humanoid default ~8 gave a 0.38 s 180 turn)
     CameraVerticalSmoothing = .12, -- BD-164: seconds; low-pass on the camera's vertical follow of the root (terrain rattle)
     CameraLiftSharpness = 7, -- PROVISIONAL: per-second exponential follow of growth camera lift
@@ -366047,6 +366050,10 @@ return table.freeze({
     MovementGuardSpeedTolerance = 3,
     MovementGuardBurstStuds = 4,
     MovementGuardRejectCooldownSeconds = 0.75,
+    -- BD-210 spawn safety: a run only starts once this client reports the island terrain under the spawn as loaded
+    -- (or after this many seconds in the hub, so a slow client is never locked out); falls are checked every tick.
+    WorldReadyTimeoutSeconds = 20,
+    FallRecoveryTickSeconds = 0.2,
     SecurityTestHarnessEnabled = false,
     ArtTestHarnessEnabled = false,
     ArtPreviewRequestCooldownSeconds = 0.25,
@@ -369694,7 +369701,7 @@ local function buildLayer(h, layer)
         for i = 1, n do L.dots[i] = dot(h.frame, z, true) end
     elseif k == "trail" then
         L.samples = {}
-        local n = if layer.id == "ribbon" then 12 elseif layer.id == "under" then 8 else 0
+        local n = if layer.id == "ribbon" then 24 elseif layer.id == "under" then 14 else 0 -- BD-215: long, readable ribbon
         for i = 1, n do L.samples[i] = dot(h.frame, z - 1, true) end
     end
     return L
@@ -369809,7 +369816,7 @@ local function stepHandle(h, dt: number)
                 if h.sampleClock &gt;= 0.045 then
                     h.sampleClock = 0
                     table.insert(hist, 1, {headX, headY})
-                    if #hist &gt; 16 then table.remove(hist) end
+                    if #hist &gt; 34 then table.remove(hist) end
                 end
             end
             local n = #L.samples
@@ -369820,7 +369827,7 @@ local function stepHandle(h, dt: number)
                     local wrapped = math.abs(s[1] - headX) &gt; 0.6 -- the runner looped around: hide the old tail
                     if wrapped then d.Visible = false
                     else
-                        local px = unit * (0.05 + layer.width * 0.12) * (1 - t * 0.8) * (if layer.id == "under" then 1.5 else 1)
+                        local px = unit * (0.09 + layer.width * 0.18) * (1 - t * 0.7) * (if layer.id == "under" then 1.5 else 1)
                         place(d, s[1] - 0.01, s[2], px, gradient(layer.color, t), 1 - layer.alpha * (1 - t * 0.9) * fade)
                     end
                 else d.Visible = false end
@@ -369872,7 +369879,7 @@ function Ui.mount(parent: GuiObject, kind: string, item, opts)
     frame.Parent = parent
     local h = {frame = frame, root = parent, kind = kind, resolved = resolved, z = parent.ZIndex + 2, time = 0, layers = {}, reduced = opts.reduce == true, hero = opts.hero == true}
     h.orb = dot(frame, h.z + 1, true)
-    h.orb.Size = UDim2.fromScale(0.16, 0.16)
+    h.orb.Size = UDim2.fromScale(if kind == "trail" then 0.22 else 0.16, if kind == "trail" then 0.22 else 0.16)
     h.orb.SizeConstraint = Enum.SizeConstraint.RelativeYY
     h.orb.BackgroundColor3, h.orb.BackgroundTransparency, h.orb.Visible = Color3.fromRGB(20, 32, 53), 0, kind == "trail"
     for _, layer in resolved.layers do table.insert(h.layers, buildLayer(h, layer)) end
@@ -372439,6 +372446,77 @@ local function stroke(parent: GuiObject, color: Color3, thickness: number)
     s.Color, s.Thickness, s.Parent = color, thickness, parent
     return s
 end
+-- BD-214: textured 3D models (Roblox generate_mesh, docs/77). The server caches stripped copies in
+-- ReplicatedStorage.PotionModels (Server/PotionModels); the vector flask above stays as the fallback.
+PotionArt.ModelAssets = {flask=114182681867384, jar=121478365783622, heart=126942715659365, claw=100441458834806}
+PotionArt.ReduceMotion = false
+function PotionArt.modelFor(kind: string, rarity: string): string
+    if rarity == "Legendary" then return "claw" end
+    return if kind == "loot" then "jar" elseif kind == "growth" then "heart" else "flask"
+end
+local spinning: {[Camera]: {focus: Vector3, dist: number, angle: number}} = setmetatable({}, {__mode = "k"}) :: any
+local spinConnection: RBXScriptConnection? = nil
+local function place(camera: Camera, s)
+    local eye = s.focus + Vector3.new(math.sin(s.angle) * s.dist, s.dist * .12, math.cos(s.angle) * s.dist)
+    camera.CFrame = CFrame.lookAt(eye, s.focus)
+end
+local function spin(dt: number)
+    local any = false
+    for camera, s in spinning do
+        if camera.Parent and camera:IsDescendantOf(game) then
+            any = true
+            s.angle += dt * .6
+            place(camera, s)
+        else spinning[camera] = nil end
+    end
+    if not any and spinConnection then spinConnection:Disconnect() spinConnection = nil end
+end
+local function mountModel(root: GuiObject, source: Model, tier: number, trim: Color3): boolean
+    local view = Instance.new("ViewportFrame")
+    view.Name, view.BackgroundTransparency, view.Size, view.ZIndex = "PotionModel", 1, UDim2.fromScale(1, 1), root.ZIndex + 4
+    view.Ambient, view.LightColor, view.LightDirection = Color3.fromRGB(170,170,180), Color3.new(1,1,1), Vector3.new(-1,-1,-.6)
+    local model = source:Clone()
+    model.Parent = view
+    local cf, size = model:GetBoundingBox()
+    local radius = math.max(size.X, size.Y, size.Z) * .5
+    if radius &lt;= 0 then view:Destroy() return false end
+    local camera = Instance.new("Camera")
+    camera.FieldOfView, camera.Parent = 40, view
+    view.CurrentCamera = camera
+    local s = {focus = cf.Position, dist = radius / math.tan(math.rad(20)) * 1.15, angle = .5}
+    place(camera, s)
+    view.Parent = root
+    -- Hide the vector flask but keep the rarity glow plate and pips (docs/88 tier frame).
+    for _, child in root:GetChildren() do
+        if child:IsA("GuiObject") and (child.Name == "Neck" or child.Name == "Glass" or child.Name == "Cork") then child.Visible = false end
+    end
+    if tier &gt;= 4 then view.ImageColor3 = Color3.new(1,1,1):Lerp(trim, .08) end
+    if not PotionArt.ReduceMotion then
+        spinning[camera] = s
+        if not spinConnection then spinConnection = game:GetService("RunService").Heartbeat:Connect(spin) end
+    end
+    return true
+end
+function PotionArt.attachModel(root: GuiObject, kind: string, rarity: string)
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local key = PotionArt.modelFor(kind, rarity)
+    local tier = PotionArt.rarityIndex(rarity)
+    local trim = PotionArt.RarityColor[rarity] or PotionArt.RarityColor.Common
+    local function try(): boolean
+        local folder = ReplicatedStorage:FindFirstChild("PotionModels")
+        local source = folder and folder:FindFirstChild(key)
+        if source and source:IsA("Model") then local ok, mounted = pcall(mountModel, root, source, tier, trim) return ok and mounted == true end
+        return false
+    end
+    if try() then return end
+    task.spawn(function() -- models stream in after the server loads them; give up quietly (flask stays) after 15 s
+        for _ = 1, 30 do
+            task.wait(.5)
+            if not root.Parent then return end
+            if try() then return end
+        end
+    end)
+end
 function PotionArt.rarityIndex(rarity: string): number
     return table.find(PotionArt.Rarities, rarity) or 1
 end
@@ -372462,6 +372540,7 @@ function PotionArt.build(root: GuiObject, kind: string, rarity: string)
     for i = 1, tier do
         frame(root, "Pip", .5 + (i - (tier + 1) / 2) * .11 - .03, .92, .06, .06, trim, z + 3, 1)
     end
+    if game ~= nil and game:GetService("RunService"):IsClient() then PotionArt.attachModel(root, kind, rarity) end
     return neck
 end
 return PotionArt
@@ -373490,6 +373569,56 @@ return Odds
       </Item>
       <Item class="ModuleScript" referent="RBX242">
         <Properties>
+          <string name="Name">SpawnGeometry</string>
+          <ProtectedString name="Source">--!strict
+-- BD-210: one place for every point a character is put into the world, and for "has it fallen out of the world".
+-- Pure functions of Config + IslandLayout so the offline verifier (tools/verify_spawn.py) checks the same numbers the
+-- server uses. The hub floor numbers mirror Arena.build (SanctuaryGround 110x6x95 at y=3, NestPlaza top at 6.5).
+local SpawnGeometry = {}
+SpawnGeometry.HubFloorY = 6 -- top of SanctuaryGround
+SpawnGeometry.HubHalfX, SpawnGeometry.HubHalfZ = 55, 47.5 -- SanctuaryGround footprint
+SpawnGeometry.DropClearance = 5 -- studs above the floor a character root is placed (it settles onto the floor)
+SpawnGeometry.VoxelMargin = 3 -- the voxel surface reads up to ~2 studs above IslandLayout.height (4-stud voxels)
+SpawnGeometry.TerrainBottom = -16 -- IslandTerrain fills voxels from y=-16 up to the surface
+SpawnGeometry.FallDepth = 20 -- a root this far below the floor under it has fallen out of the world
+
+function SpawnGeometry.inHub(config: any, x: number, z: number): boolean
+    return math.abs(x) &lt;= SpawnGeometry.HubHalfX and math.abs(z - config.SanctuaryCenterZ) &lt;= SpawnGeometry.HubHalfZ
+end
+function SpawnGeometry.inTerrain(config: any, x: number, z: number): boolean
+    local extent = config.ArenaHalfWidth + 8 -- IslandTerrain writes ArenaHalfWidth + 8
+    return math.abs(x) &lt;= extent and math.abs(z) &lt;= extent
+end
+-- Expected solid floor height under (x, z); nil when nothing solid was ever built there.
+function SpawnGeometry.floorY(config: any, layout: any, x: number, z: number): number?
+    if SpawnGeometry.inHub(config, x, z) then return SpawnGeometry.HubFloorY end
+    if SpawnGeometry.inTerrain(config, x, z) then return layout.height(x, z) end
+    return nil
+end
+-- True when a root at `position` is below anything it could stand on (or over a void well below the map).
+function SpawnGeometry.fallen(config: any, layout: any, position: Vector3): boolean
+    local floor = SpawnGeometry.floorY(config, layout, position.X, position.Z)
+    if floor then return position.Y &lt; floor - SpawnGeometry.FallDepth end
+    return position.Y &lt; SpawnGeometry.TerrainBottom - SpawnGeometry.FallDepth
+end
+-- Hub arrival point (sanctuary centre, on the NestPlaza).
+function SpawnGeometry.hubPoint(config: any): Vector3
+    return Vector3.new(0, SpawnGeometry.HubFloorY + SpawnGeometry.DropClearance, config.SanctuaryCenterZ)
+end
+-- Island run-start point: on the meadow at SpawnZ, a few studs above the terrain surface.
+function SpawnGeometry.islandPoint(layout: any): Vector3
+    return Vector3.new(0, layout.height(0, layout.SpawnZ) + SpawnGeometry.DropClearance + SpawnGeometry.VoxelMargin, layout.SpawnZ)
+end
+-- Where a fallen character is put back: the hub outside a run, the island spawn during one.
+function SpawnGeometry.recoveryPoint(config: any, layout: any, active: boolean): Vector3
+    return if active then SpawnGeometry.islandPoint(layout) else SpawnGeometry.hubPoint(config)
+end
+return SpawnGeometry
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX243">
+        <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
 -- BD-054: pure gameplay-HUD layout math for touch phones/tablets and desktop.
@@ -373690,7 +373819,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -373710,7 +373839,7 @@ function Art.build(parent: GuiObject,id: string): Frame?
         local x,y=.12+t*.76,.34+(lane-1)*.2+math.sin(t*math.pi*1.5)*.14
         local dx,dy=(nextT-t)*.76,(math.sin(nextT*math.pi*1.5)-math.sin(t*math.pi*1.5))*.14
         part.AnchorPoint,part.Position=Vector2.new(.5,.5),UDim2.fromScale(x,y)
-        part.Size=UDim2.fromScale(math.sqrt(dx*dx+dy*dy)*2.2,.045*(1-t*.75))
+        part.Size=UDim2.fromScale(math.sqrt(dx*dx+dy*dy)*2.2,.09*(1-t*.6)) -- BD-215: thick enough to read on a phone
         part.Rotation=math.deg(math.atan2(dy,dx))
         part.BackgroundColor3=Color3.fromRGB(item.color[1],item.color[2],item.color[3]):Lerp(Color3.fromRGB(item.accent[1],item.accent[2],item.accent[3]),t)
         part.BackgroundTransparency,part.BorderSizePixel,part.ZIndex,part.Parent=t*.7,0,root.ZIndex,root
@@ -373722,7 +373851,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">UIFormat</string>
           <ProtectedString name="Source">--!strict
@@ -373766,7 +373895,7 @@ return UIFormat
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -373797,7 +373926,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -373821,7 +373950,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -373832,6 +373961,7 @@ local Artwork = require(script.Parent.Artwork)
 local IconLayout = require(script.Parent.UIIconLayout)
 local TrailArtwork = require(script.Parent.TrailArtwork)
 local FxUi = require(script.Parent.FxUi)
+local PotionArt = require(script.Parent.PotionArt)
 local Theme = {}
 Theme.BackgroundImageId = ""
 Theme.MotionEnabled = true
@@ -373985,6 +374115,7 @@ function Theme.icon(parent: GuiObject,id: string): Frame?
         if art then FxUi.decorateIcon(art,id,not Theme.MotionEnabled) end -- docs/93: animated preview, static ribbon under it
         return art
     end
+    PotionArt.ReduceMotion=not Theme.MotionEnabled -- BD-214: 3D potion models spin slowly, still under Reduce Motion
     local icon=Artwork.build(parent,id,nativeIcon) or nativeIcon(parent,id)
     if icon and string.sub(id,1,5)=="aura_" then FxUi.decorateIcon(icon,id,not Theme.MotionEnabled) end
     return icon
@@ -373993,7 +374124,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -374024,7 +374155,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">WeatherLooks</string>
           <ProtectedString name="Source">--!strict
@@ -374146,7 +374277,7 @@ return Weather
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">WeatherSounds</string>
           <ProtectedString name="Source">--!strict
@@ -374221,7 +374352,7 @@ return Sounds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX251">
+      <Item class="ModuleScript" referent="RBX252">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -374272,7 +374403,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX252">
+      <Item class="ModuleScript" referent="RBX253">
         <Properties>
           <string name="Name">WorldKitMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -374325,7 +374456,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX253">
+    <Item class="Folder" referent="RBX254">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -543880,15 +544011,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX254">
+  <Item class="ServerScriptService" referent="RBX255">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX255">
+    <Item class="Folder" referent="RBX256">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX256">
+      <Item class="ModuleScript" referent="RBX257">
         <Properties>
           <string name="Name">AdminService</string>
           <ProtectedString name="Source">--!strict
@@ -544002,7 +544133,7 @@ return AdminService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX257">
+      <Item class="ModuleScript" referent="RBX258">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -544011,6 +544142,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Terrain = require(script.Parent.IslandTerrain)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
 local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
@@ -544197,7 +544329,9 @@ function Arena.build()
     end
     local spawn = Instance.new("SpawnLocation")
     spawn.Name = "PrototypeSpawn"
-    spawn.Size, spawn.Position = Vector3.new(12, 1, 12), Vector3.new(0, Layout.height(0,Layout.SpawnZ) + .5, Layout.SpawnZ)
+    -- BD-210: characters load in the hub (they used to load on the island and be moved to the hub after attach).
+    -- Run starts use SpawnGeometry.islandPoint, not this part.
+    spawn.Size, spawn.Position = Vector3.new(12, 1, 12), SpawnGeometry.hubPoint(Config) - Vector3.new(0, SpawnGeometry.DropClearance - .5, 0)
     spawn.Anchored, spawn.Neutral, spawn.Duration, spawn.Transparency = true, true, 0, 1
     spawn.CanCollide, spawn.CanQuery = false, false
     spawn.Parent = world
@@ -544269,7 +544403,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX258">
+      <Item class="Script" referent="RBX259">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -544288,6 +544422,7 @@ local ProfileRepository = require(script.Parent.ProfileRepository)
 local RunLifecycle = require(script.Parent.RunLifecycle)
 local VisualTestService = require(script.Parent.VisualTestService)
 local Leaderboards = require(script.Parent.Leaderboards)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 Players.CharacterAutoLoads = false
 
@@ -544304,6 +544439,7 @@ if not Lighting:FindFirstChildOfClass("Atmosphere") then
     atmosphere.Parent = Lighting
 end
 require(script.Parent.ImportedResources).load()
+require(script.Parent.PotionModels).load() -- BD-214 textured potion models for menu ViewportFrames
 if Config.WorldArtMode=="BiomeKit" or Config.FoodArtMode=="Kit" then require(script.Parent.ImportedResources).loadWorldKit() end
 Arena.build()
 Leaderboards.start()
@@ -544337,6 +544473,7 @@ CollectionService.start(ProfileRepository, Dinosaur)
 ChestService.start(ProfileRepository)
 MutationService.start(ProfileRepository, Dinosaur)
 MovementGuard.start()
+require(script.Parent.FallRecovery).start(MovementGuard.reset) -- BD-210 fall-out-of-world safety net
 VisualTestService.start(Dinosaur)
 require(script.Parent.ProgressionService).start(ProfileRepository)
 require(script.Parent.FusionService).start(ProfileRepository)
@@ -544353,6 +544490,11 @@ end
 
 local function spawnLoadedPlayer(player: Player)
     player.CanLoadCharacterAppearance = false
+    -- BD-210: no character before the world (terrain + hub) is built.
+    while workspace:GetAttribute("IslandTerrainReady") ~= true or not workspace:FindFirstChild("BeDinoArena") do
+        if not player.Parent then return end
+        task.wait(.2)
+    end
     local loaded = ProfileRepository.load(player)
     if not loaded or not player.Parent then
         warn("[Be Dino] profile load blocked character spawn for " .. player.Name)
@@ -544382,9 +544524,12 @@ local function setup(player: Player)
             return
         end
         RunLifecycle.prepareSanctuary(player, character)
+        -- BD-210: the character goes to the hub floor at once (before the dinosaur attach yields), not after it.
+        local hub = CFrame.new(SpawnGeometry.hubPoint(Config))
+        character:PivotTo(hub)
         task.spawn(function()
             Dinosaur.attach(character, Config.WalkSpeed, player)
-            if player.Character == character then character:PivotTo(CFrame.new(0, 11, Config.SanctuaryCenterZ)) end
+            if player.Character == character then character:PivotTo(hub) end
         end)
     end)
     task.spawn(spawnLoadedPlayer, player)
@@ -544426,7 +544571,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX259">
+      <Item class="ModuleScript" referent="RBX260">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -544536,7 +544681,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX260">
+      <Item class="ModuleScript" referent="RBX261">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -544629,7 +544774,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX261">
+      <Item class="ModuleScript" referent="RBX262">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -544765,7 +544910,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX262">
+      <Item class="ModuleScript" referent="RBX263">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -544979,7 +545124,73 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX263">
+      <Item class="ModuleScript" referent="RBX264">
+        <Properties>
+          <string name="Name">FallRecovery</string>
+          <ProtectedString name="Source">--!strict
+-- BD-210 safety net: a character whose root drops below the floor under it (SpawnGeometry.fallen) is put back at a safe
+-- point: the island spawn during a run, the hub otherwise. Server-side, so it also covers clients whose local terrain
+-- collision is late or missing. MovementGuard skips fallen characters so it never "corrects" them to mid-air baselines.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage.Shared.Config)
+local Layout = require(ReplicatedStorage.Shared.IslandLayout)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
+local FallRecovery = {}
+local started = false
+
+-- Server teleport of a client-owned character without the ownership race: the server takes physics ownership, moves
+-- the still assembly, and hands it back a moment later. (A plain server PivotTo let the client keep simulating from its
+-- stale state: Studio showed the root 50 studs off target for a frame right after the run-start teleport.)
+function FallRecovery.teleport(player: Player, character: Model, target: CFrame)
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root or not root:IsA("BasePart") then character:PivotTo(target) return end
+    local owned = pcall(function() root:SetNetworkOwner(nil) end)
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+    character:PivotTo(target)
+    if owned then
+        task.delay(.25, function()
+            if root.Parent and player.Parent and player.Character == character then
+                pcall(function() root:SetNetworkOwner(player) end)
+            end
+        end)
+    end
+end
+
+function FallRecovery.check(player: Player): boolean
+    local character = player.Character
+    local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+    local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+    if not character or not root or not root:IsA("BasePart") or not humanoid or humanoid.Health &lt;= 0 then return false end
+    if not SpawnGeometry.fallen(Config, Layout, root.Position) then return false end
+    local active = character:GetAttribute("RunState") == "Active"
+    local target = SpawnGeometry.recoveryPoint(Config, Layout, active)
+    local fellAt = root.Position
+    FallRecovery.teleport(player, character, CFrame.new(target))
+    local count = player:GetAttribute("FallRecoveries")
+    player:SetAttribute("FallRecoveries", (if typeof(count) == "number" then count else 0) + 1)
+    warn(string.format("[Be Dino] %s fell out of the world at %s; returned to %s", player.Name, tostring(fellAt), if active then "island spawn" else "hub"))
+    return true
+end
+
+function FallRecovery.start(onRecovered: ((Player) -&gt; ())?)
+    if started then return end
+    started = true
+    task.spawn(function()
+        while true do
+            task.wait(Config.FallRecoveryTickSeconds)
+            for _, player in Players:GetPlayers() do
+                if FallRecovery.check(player) and onRecovered then onRecovered(player) end
+            end
+        end
+    end)
+end
+return FallRecovery
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX265">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -545250,7 +545461,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX264">
+      <Item class="ModuleScript" referent="RBX266">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -545422,7 +545633,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX265">
+      <Item class="ModuleScript" referent="RBX267">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -545608,7 +545819,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX266">
+      <Item class="ModuleScript" referent="RBX268">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -546005,7 +546216,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX267">
+      <Item class="ModuleScript" referent="RBX269">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -546092,7 +546303,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX268">
+      <Item class="ModuleScript" referent="RBX270">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -546170,7 +546381,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX269">
+      <Item class="ModuleScript" referent="RBX271">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -546282,7 +546493,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX270">
+      <Item class="ModuleScript" referent="RBX272">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -546421,7 +546632,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX271">
+      <Item class="ModuleScript" referent="RBX273">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -546430,6 +546641,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
+local Layout = require(ReplicatedStorage.Shared.IslandLayout)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 local MovementGuard = {}
 local states: {[Player]: {
@@ -546443,6 +546656,11 @@ local started = false
 
 local function clear(player: Player)
     states[player] = nil
+end
+
+-- BD-210: forget the trusted baseline (after a server teleport such as fall recovery or run start).
+function MovementGuard.reset(player: Player)
+    clear(player)
 end
 
 function MovementGuard.start()
@@ -546462,6 +546680,12 @@ function MovementGuard.start()
 
                 if not character or not root or not root:IsA("BasePart") or not humanoid
                     or humanoid.Health &lt;= 0 or character:GetAttribute("RunState") ~= "Active" then
+                    clear(player)
+                    continue
+                end
+                -- BD-210: a root below the floor is FallRecovery's job. Correcting it here snapped falling characters
+                -- back to mid-fall baselines under the map (an endless fall loop instead of a recovery).
+                if SpawnGeometry.fallen(Config, Layout, root.Position) then
                     clear(player)
                     continue
                 end
@@ -546513,7 +546737,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX272">
+      <Item class="ModuleScript" referent="RBX274">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -546618,7 +546842,59 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX273">
+      <Item class="ModuleScript" referent="RBX275">
+        <Properties>
+          <string name="Name">PotionModels</string>
+          <ProtectedString name="Source">--!strict
+-- BD-214: textured potion models (Roblox generate_mesh, published to the owner's account; docs/77) shown in menus through
+-- ViewportFrames (Shared/PotionArt). Loaded once on the server with InsertService, stripped to visual parts only, and cached
+-- in ReplicatedStorage.PotionModels. If a load fails the client keeps the vector flask fallback.
+local InsertService = game:GetService("InsertService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PotionArt = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PotionArt"))
+local Models = {}
+
+local KEEP = {MeshPart = true, SurfaceAppearance = true, Decal = true, Texture = true, Model = true, SpecialMesh = true, Part = true}
+
+local function sanitize(root: Instance): Model?
+    local model = Instance.new("Model")
+    for _, item in root:GetDescendants() do
+        if item:IsA("BasePart") and KEEP[item.ClassName] then
+            local copy = item:Clone()
+            for _, child in copy:GetDescendants() do
+                if not KEEP[child.ClassName] then child:Destroy() end
+            end
+            copy.Anchored, copy.CanCollide, copy.CanQuery, copy.CanTouch = true, false, false, false
+            copy.Parent = model
+        end
+    end
+    if #model:GetChildren() == 0 then model:Destroy() return nil end
+    return model
+end
+
+function Models.load()
+    local folder = ReplicatedStorage:FindFirstChild("PotionModels") or Instance.new("Folder")
+    folder.Name = "PotionModels"
+    folder.Parent = ReplicatedStorage
+    for key, assetId in PotionArt.ModelAssets do
+        if folder:FindFirstChild(key) then continue end
+        task.spawn(function()
+            local ok, result = pcall(function() return InsertService:LoadAsset(assetId) end)
+            if not ok or not result then warn("[PotionModels] load failed", key, assetId, result) return end
+            local model = sanitize(result)
+            result:Destroy()
+            if not model then warn("[PotionModels] no mesh parts in", key, assetId) return end
+            model.Name = key
+            model.Parent = folder
+        end)
+    end
+end
+
+return Models
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX276">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -546753,7 +547029,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX274">
+      <Item class="ModuleScript" referent="RBX277">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -548541,7 +548817,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX275">
+      <Item class="ModuleScript" referent="RBX278">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -548759,7 +549035,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX276">
+      <Item class="ModuleScript" referent="RBX279">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -548873,7 +549149,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX277">
+      <Item class="ModuleScript" referent="RBX280">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -548881,6 +549157,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
 local Config = require(ReplicatedStorage.Shared.Config)
+local Layout = require(ReplicatedStorage.Shared.IslandLayout)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 local RunLifecycle = {}
 local lastExitRequest: {[Player]: number} = {}
@@ -548905,6 +549183,14 @@ local function activeCharacter(player: Player): Model?
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if not humanoid or humanoid.Health &lt;= 0 then return nil end
     return character
+end
+
+-- BD-210 run-start gate: server terrain built, and the client confirmed its local terrain (or the timeout passed).
+function RunLifecycle.worldReady(player: Player): boolean
+    if workspace:GetAttribute("IslandTerrainReady") ~= true then return false end
+    if player:GetAttribute("WorldReady") == true then return true end
+    local joinedAt = player:GetAttribute("JoinedAt")
+    return typeof(joinedAt) == "number" and os.clock() - joinedAt &gt;= Config.WorldReadyTimeoutSeconds
 end
 
 function RunLifecycle.configureSettlement(callback)
@@ -549087,11 +549373,26 @@ function RunLifecycle.start()
         if not character or character:GetAttribute("RunState") ~= "Sanctuary" or not character:GetAttribute("DinoAttached") then return end
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         if not humanoid or humanoid.Health &lt;= 0 then return end
-        local spawn = workspace.BeDinoArena:FindFirstChild("PrototypeSpawn")
-        if not spawn or not spawn:IsA("BasePart") then return end
-        character:PivotTo(spawn.CFrame + Vector3.new(0,5,0))
+        -- BD-210: never drop a dinosaur onto the island before the terrain exists on the server and, unless the
+        -- client is unusually slow, before this client reports the terrain under the spawn as loaded.
+        if not RunLifecycle.worldReady(player) then
+            player:SetAttribute("LastRunStartStatus", "WorldLoading")
+            return
+        end
+        require(script.Parent.FallRecovery).teleport(player, character, CFrame.new(SpawnGeometry.islandPoint(Layout)))
         RunLifecycle.begin(player, character)
     end)
+
+    local readyRemote = Instance.new("RemoteEvent")
+    readyRemote.Name = "ClientWorldReady"
+    readyRemote.Parent = folder
+    readyRemote.OnServerEvent:Connect(function(player: Player, ...)
+        if select("#", ...) ~= 0 then return end
+        player:SetAttribute("WorldReady", true)
+    end)
+    local function joined(player: Player) player:SetAttribute("JoinedAt", os.clock()) end
+    Players.PlayerAdded:Connect(joined)
+    for _, player in Players:GetPlayers() do if player:GetAttribute("JoinedAt") == nil then joined(player) end end
 
     local existing = folder:FindFirstChild("RequestEndRun")
     if existing and existing:IsA("RemoteEvent") then
@@ -549136,7 +549437,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX278">
+      <Item class="ModuleScript" referent="RBX281">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -549208,19 +549509,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX279">
+  <Item class="StarterPlayer" referent="RBX282">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX280">
+    <Item class="StarterPlayerScripts" referent="RBX283">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX281">
+      <Item class="Folder" referent="RBX284">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX282">
+        <Item class="LocalScript" referent="RBX285">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -549465,7 +549766,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX283">
+        <Item class="LocalScript" referent="RBX286">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -549591,6 +549892,7 @@ end
 local function art(parent: GuiObject,id: string,x: number,y: number,size: number)
     local icon = Theme.icon(parent,id)
     if icon then icon.Position,icon.Size = UDim2.fromOffset(x,y),UDim2.fromOffset(size,size) end
+    return icon
 end
 local shade = Instance.new("TextButton")
 shade.Name,shade.Text,shade.Size = "ModalScrim","",UDim2.fromScale(1,1)
@@ -550024,8 +550326,9 @@ render=function(name: string)
             local card=box(body,slot*276,cardsY,264,cardsHeight,color,24)
             label(card,item.name,6,5,252,34,25)
             label(card,if isTrail then "Level "..item.level.." • "..(UIFormat.boost("Speed",item.speed) or "Speed") else (UIFormat.boost("Growth",item.growth) or "Growth"),4,42,256,30,19)
-            local iconSize=if isTrail then 60 else math.clamp(buyY-30-74,60,128) -- BD-177: big aura icon fills the card
-            art(card,(if isTrail then "trail_" else "aura_")..item.id,(264-iconSize)/2,if isTrail then 76 else 74+(buyY-30-74-iconSize)/2,iconSize)
+            local iconSize=math.clamp(buyY-30-74,60,128) -- BD-177/BD-215: big aura and trail art fills the card icon area
+            local shown=art(card,(if isTrail then "trail_" else "aura_")..item.id,(264-iconSize)/2,74+(buyY-30-74-iconSize)/2,iconSize)
+            if shown and isTrail then shown.Position,shown.Size=UDim2.fromOffset(8,74+(buyY-30-74-iconSize)/2),UDim2.fromOffset(248,iconSize) end
             label(card,if owned[item.id] then "Owned" else item.price.." Crystals",4,buyY-30,256,27,21,C.gold)
             local equipped=equippedId==item.id
             local locked=isTrail and num("AccountLevel")&lt;item.level and not owned[item.id]
@@ -551022,7 +551325,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX284">
+        <Item class="LocalScript" referent="RBX287">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!nonstrict
@@ -551113,7 +551416,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX285">
+        <Item class="ModuleScript" referent="RBX288">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -551192,7 +551495,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX286">
+        <Item class="ModuleScript" referent="RBX289">
           <Properties>
             <string name="Name">DinoIndexPanels</string>
             <ProtectedString name="Source">--!strict
@@ -551728,7 +552031,7 @@ return Panels
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX287">
+        <Item class="LocalScript" referent="RBX290">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -551841,6 +552144,8 @@ local function capture(rig: any): boolean
             count += 1
             local found = item:FindFirstChild("ResourceWeld")
             local weld = if found and found:IsA("Weld") and found.Part0 == rig.root then found else nil
+            -- BD-211: never write CFrame on a WeldConstraint-attached part: that drags the physics root.
+            if not weld and item:FindFirstChildOfClass("WeldConstraint") then count -= 1 continue end
             local rel = if weld then weld.C0 else inverse * item.CFrame
             local r = rel.Rotation
             local x, y, z = r.RightVector, r.UpVector, r.LookVector
@@ -551985,8 +552290,13 @@ local function step(rig: any, now: number, dt: number)
     -- Footfall bob: stride phase advances with distance, so the bob frequency follows speed. Grounded only.
     local humanoid = rig.character:FindFirstChildOfClass("Humanoid")
     if rig.isLocal and humanoid and speed &gt; 3 and humanoid.FloorMaterial ~= Enum.Material.Air then
-        rig.stride = (rig.stride or 0) + speed * dt * 1.6
-        rig.motion.bob = Motion.MaxBob * math.abs(math.sin(rig.stride)) * math.clamp(speed / 16, 0, 1)
+        -- BD-211: the old phase (speed * 1.6 rad/stud) bobbed ~11 times a second at full speed with a sharp
+        -- |sin| cusp, which read as a rattle. Footfalls now follow body length, capped at 2.5 steps a second,
+        -- with a smooth sin^2 curve.
+        local stride = math.pi * math.min(speed / math.max(rig.length, 2), 2.5) * dt
+        rig.stride = (rig.stride or 0) + stride
+        local s = math.sin(rig.stride)
+        rig.motion.bob = Motion.MaxBob * s * s * math.clamp(speed / 16, 0, 1)
     else
         rig.motion.bob = 0
     end
@@ -552051,7 +552361,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX288">
+        <Item class="ModuleScript" referent="RBX291">
           <Properties>
             <string name="Name">EggPicture</string>
             <ProtectedString name="Source">--!strict
@@ -552128,7 +552438,7 @@ return EggPicture
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX289">
+        <Item class="ModuleScript" referent="RBX292">
           <Properties>
             <string name="Name">EggsScreen</string>
             <ProtectedString name="Source">--!strict
@@ -552324,7 +552634,233 @@ return EggsScreen
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX290">
+        <Item class="LocalScript" referent="RBX293">
+          <Properties>
+            <string name="Name">FoodGlow</string>
+            <ProtectedString name="Source">--!strict
+-- BD-222 food readability (owner playtest 2026-10-15: food was barely visible on grass). Client-only visuals:
+-- a soft halo + rim ring under each NEAR food (one pooled BillboardGui per slot, no PointLight, no extra parts),
+-- a slow bob and spin, a small sparkle every few seconds and a 1.25x look scale. Rarer food glows stronger in its
+-- rarity colour (docs/88 tiers; a server "FoodRarity" attribute wins, ready for BD-207 special foods).
+-- Budget: at most SLOTS foods are decorated (nearest within RADIUS); slots are reassigned every REASSIGN seconds,
+-- per-frame work touches only assigned slots and allocates nothing. Culled (WorldCulling "Culled" attribute) or eaten
+-- (server Transparency 1) food has its slot hidden. Reduce Motion: no bob/spin/sparkle, static glow.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Theme = require(Shared:WaitForChild("UITheme"))
+local Assets = require(Shared:WaitForChild("EffectAssets"))
+
+local SLOTS, RADIUS, REASSIGN, LOOK_SCALE = 40, 90, .5, 1.25
+local BOB, BOB_SPEED, SPIN_SPEED = .22, 1.6, .7
+local TIER_BY_NAME = {berry = "Common", fruit = "Uncommon", egg = "Rare", amber = "Epic"}
+local CREAM = Color3.fromRGB(255, 244, 200) -- warm base glow: reads on green grass, sand and rock alike
+local TIERS: {[string]: {ring: Color3, glow: number, ringT: number, size: number}} = {
+    Common = {ring = CREAM, glow = .45, ringT = .55, size = 3.2},
+    Uncommon = {ring = Color3.fromRGB(150, 255, 90), glow = .38, ringT = .3, size = 3.6},
+    Rare = {ring = Color3.fromRGB(46, 206, 255), glow = .3, ringT = .15, size = 4.2},
+    Epic = {ring = Color3.fromRGB(194, 86, 255), glow = .25, ringT = .08, size = 4.8},
+    Legendary = {ring = Color3.fromRGB(255, 210, 43), glow = .2, ringT = 0, size = 5.4},
+}
+local GLOW_IMAGE, RING_IMAGE, STAR_IMAGE = Assets.resolve("glowPlate"), Assets.resolve("ringSoft"), Assets.resolve("starFour")
+
+local player = Players.LocalPlayer
+local holder = Instance.new("Folder")
+holder.Name = "FoodGlow"
+holder.Parent = player:WaitForChild("PlayerGui")
+
+type Slot = {gui: BillboardGui, glow: ImageLabel, ring: ImageLabel, star: ImageLabel, food: BasePart?, phase: number}
+type Food = {part: BasePart, target: Instance?, base: CFrame, written: CFrame?, scaled: boolean, tier: string, slot: Slot?, d: number}
+local slots: {Slot} = {}
+local foods: {[BasePart]: Food} = {}
+local order: {Food} = {} -- reused every reassign, never reallocated
+
+local function image(parent: Instance, name: string, id: string, z: number): ImageLabel
+    local label = Instance.new("ImageLabel")
+    label.Name, label.Image, label.BackgroundTransparency, label.ZIndex = name, id, 1, z
+    label.AnchorPoint, label.Position, label.Size = Vector2.new(.5, .5), UDim2.fromScale(.5, .5), UDim2.fromScale(1, 1)
+    label.Parent = parent
+    return label
+end
+for i = 1, SLOTS do
+    local gui = Instance.new("BillboardGui")
+    gui.Name, gui.Enabled, gui.LightInfluence, gui.MaxDistance = "FoodGlow" .. i, false, 0, RADIUS * 1.2
+    gui.ResetOnSpawn = false
+    gui.Parent = holder
+    local glow = image(gui, "Glow", GLOW_IMAGE, 1)
+    glow.ImageColor3 = CREAM
+    local ring = image(gui, "Ring", RING_IMAGE, 2)
+    ring.Size = UDim2.fromScale(.62, .62)
+    local star = image(gui, "Sparkle", STAR_IMAGE, 3)
+    star.ImageTransparency, star.Size = 1, UDim2.fromScale(.3, .3)
+    slots[i] = {gui = gui, glow = glow, ring = ring, star = star, food = nil, phase = i * 1.37}
+end
+
+-- The visible art: Legacy mode draws a LocalFoodMesh model (ResourceVisuals); Kit mode / fallback draws the part itself.
+-- A server-cloned native model (rare fallback) is not animated, only haloed.
+local function targetOf(food: Food): Instance
+    local mesh = food.part:FindFirstChild("LocalFoodMesh")
+    if mesh then return mesh end
+    if food.part:FindFirstChildWhichIsA("Model") then return food.part :: Instance end
+    return food.part
+end
+local function pivotOf(target: Instance): CFrame
+    return if target:IsA("Model") then target:GetPivot() else (target :: BasePart).CFrame
+end
+local function setPivot(target: Instance, cf: CFrame)
+    if target:IsA("Model") then target:PivotTo(cf) else (target :: BasePart).CFrame = cf end
+end
+local function animatable(food: Food, target: Instance): boolean
+    return target ~= food.part or not food.part:FindFirstChildWhichIsA("Model")
+end
+local function hidden(food: Food): boolean
+    local part = food.part
+    if part:GetAttribute("Culled") == true then return true end
+    local native = part:FindFirstChildWhichIsA("Model")
+    if native and native.Name ~= "LocalFoodMesh" then
+        local piece = native:FindFirstChildWhichIsA("BasePart", true)
+        return piece ~= nil and piece.Transparency &gt;= 1
+    end
+    return part.Transparency &gt;= 1
+end
+local function restore(food: Food)
+    local target = food.target
+    if target and food.written and target.Parent then setPivot(target, food.base) end
+    food.written = nil
+end
+local function release(slot: Slot)
+    local food = if slot.food then foods[slot.food] else nil
+    if food then restore(food) food.slot = nil end
+    slot.food, slot.gui.Enabled, slot.gui.Adornee = nil, false, nil
+end
+local function bind(slot: Slot, food: Food)
+    slot.food, food.slot = food.part, slot
+    local tier = TIERS[food.tier] or TIERS.Common
+    local size = tier.size * math.max(1, food.part.Size.Y)
+    slot.gui.Adornee = food.part
+    slot.gui.Size = UDim2.fromScale(size, size)
+    slot.gui.StudsOffsetWorldSpace = Vector3.new(0, -food.part.Size.Y * .35, 0)
+    slot.glow.ImageTransparency, slot.glow.ImageColor3 = tier.glow, CREAM
+    slot.ring.ImageTransparency, slot.ring.ImageColor3 = tier.ringT, tier.ring
+    slot.star.ImageColor3 = tier.ring
+end
+
+local function track(item: Instance)
+    if not item:IsA("BasePart") or not item:GetAttribute("Points") or foods[item] then return end
+    local rarity = item:GetAttribute("FoodRarity")
+    foods[item] = {part = item, target = nil, base = item.CFrame, written = nil, scaled = false,
+        tier = if type(rarity) == "string" and TIERS[rarity] then rarity else (TIER_BY_NAME[item.Name] or "Common"), slot = nil, d = 0}
+end
+local function untrack(item: Instance)
+    local food = foods[item :: BasePart]
+    if food and food.slot then release(food.slot) end
+    foods[item :: BasePart] = nil
+end
+
+-- 1.25x look scale, once per food (Legacy mesh model or the part itself). Server Size/points/validation untouched.
+local function ensureScaled(food: Food, target: Instance)
+    if food.scaled and food.target == target then return end
+    if target:IsA("Model") then
+        if target:GetAttribute("GlowScaled") ~= true then
+            target:ScaleTo(target:GetScale() * LOOK_SCALE)
+            target:SetAttribute("GlowScaled", true)
+        end
+    elseif not food.scaled then
+        local part = target :: BasePart
+        part.Size *= LOOK_SCALE
+    end
+    food.scaled, food.target, food.written = true, target, nil
+    food.base = pivotOf(target)
+end
+
+local function byDistance(a: Food, b: Food): boolean return a.d &lt; b.d end
+local function reassign()
+    local character = player.Character
+    local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+    if not root or not root:IsA("BasePart") then return end
+    local origin = root.Position
+    local n = 0
+    for part, food in foods do
+        if part.Parent and not hidden(food) then
+            local d = (part.Position - origin).Magnitude
+            if d &lt; RADIUS then
+                food.d = d
+                n += 1
+                order[n] = food
+            end
+        end
+    end
+    for i = n + 1, #order do order[i] = nil end
+    table.sort(order, byDistance)
+    -- Free slots whose food fell out of the nearest set, then fill empty slots.
+    for _, slot in slots do
+        local food = if slot.food then foods[slot.food] else nil
+        if slot.food and (not food or not food.part.Parent or hidden(food) or food.d &gt;= RADIUS
+            or (n &gt; SLOTS and food.d &gt; order[SLOTS].d)) then release(slot) end
+    end
+    local free = 1
+    for i = 1, math.min(n, SLOTS) do
+        local food = order[i]
+        if not food.slot then
+            while free &lt;= SLOTS and slots[free].food do free += 1 end
+            if free &gt; SLOTS then break end
+            bind(slots[free], food)
+        end
+    end
+    player:SetAttribute("FoodGlowSlots", math.min(n, SLOTS) .. "/" .. SLOTS)
+end
+
+task.spawn(function()
+    local folder = workspace:WaitForChild("Food", 60)
+    if not folder then return end
+    for _, item in folder:GetChildren() do track(item) end
+    folder.ChildAdded:Connect(track)
+    folder.ChildRemoved:Connect(untrack)
+    local sinceAssign, clock = REASSIGN, 0
+    local wasMotion = Theme.MotionEnabled
+    RunService.Heartbeat:Connect(function(dt)
+        clock += dt
+        sinceAssign += dt
+        if sinceAssign &gt;= REASSIGN then sinceAssign = 0 reassign() end
+        local motion = Theme.MotionEnabled
+        for _, slot in slots do
+            local food = if slot.food then foods[slot.food] else nil
+            if not food then continue end
+            if hidden(food) then release(slot) continue end
+            slot.gui.Enabled = true
+            local target = targetOf(food)
+            ensureScaled(food, target)
+            if not animatable(food, target) then continue end
+            -- The server may move the food (respawn relocation): any pivot we did not write becomes the new base.
+            local now = pivotOf(target)
+            if food.written == nil or now ~= food.written then food.base = now end
+            if motion then
+                local t = clock + slot.phase
+                local cf = food.base * CFrame.new(0, BOB * (1 + math.sin(t * BOB_SPEED)), 0) * CFrame.Angles(0, (t * SPIN_SPEED) % (math.pi * 2), 0)
+                setPivot(target, cf)
+                food.written = pivotOf(target)
+                -- Sparkle: a short soft twinkle once every ~4 s per food, staggered by slot phase.
+                local s = (t % 4) / .6
+                if s &lt; 1 then
+                    slot.star.ImageTransparency = .15 + .85 * math.abs(s * 2 - 1)
+                    slot.star.Position = UDim2.fromScale(.5 + .14 * math.sin(slot.phase), .38)
+                    slot.star.Size = UDim2.fromScale(.18 + .16 * math.sin(s * math.pi), .18 + .16 * math.sin(s * math.pi))
+                elseif slot.star.ImageTransparency &lt; 1 then
+                    slot.star.ImageTransparency = 1
+                end
+            elseif wasMotion or food.written then
+                restore(food)
+                slot.star.ImageTransparency = 1
+            end
+        end
+        wasMotion = motion
+    end)
+end)
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="RBX294">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -553191,7 +553727,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX291">
+        <Item class="ModuleScript" referent="RBX295">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -553293,7 +553829,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX292">
+        <Item class="ModuleScript" referent="RBX296">
           <Properties>
             <string name="Name">FxRig</string>
             <ProtectedString name="Source">--!nonstrict
@@ -553622,7 +554158,7 @@ return Rig
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX293">
+        <Item class="ModuleScript" referent="RBX297">
           <Properties>
             <string name="Name">HatchFx</string>
             <ProtectedString name="Source">--!nonstrict
@@ -553822,7 +554358,7 @@ return M
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX294">
+        <Item class="ModuleScript" referent="RBX298">
           <Properties>
             <string name="Name">HatchSequence</string>
             <ProtectedString name="Source">--!strict
@@ -554937,7 +555473,7 @@ return Seq
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX295">
+        <Item class="ModuleScript" referent="RBX299">
           <Properties>
             <string name="Name">InspectView</string>
             <ProtectedString name="Source">--!strict
@@ -555127,7 +555663,65 @@ return InspectView
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX296">
+        <Item class="LocalScript" referent="RBX300">
+          <Properties>
+            <string name="Name">JumpCarry</string>
+            <ProtectedString name="Source">--!strict
+-- BD-212: a normal Space jump is a forward bound, not a straight hop. At take-off the local dino keeps
+-- its run direction with a small horizontal boost (scaled by its speed, none when standing still)
+-- until it lands. The E leap is separate (LeapService sets MovementSpeedLimit while it runs) and is
+-- left alone. The boost stays far inside MovementGuard's horizontal envelope (WalkSpeed x tolerance).
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
+
+local CARRY = Config.JumpForwardCarry -- PROVISIONAL horizontal speed multiplier while airborne
+local MIN_SPEED = 4 -- below this the jump stays a plain hop
+
+local carry: Vector3? = nil
+local humanoid: Humanoid? = nil
+local root: BasePart? = nil
+
+local function bind(character: Model)
+    carry = nil
+    local h = character:WaitForChild("Humanoid", 10)
+    local r = character:WaitForChild("HumanoidRootPart", 10)
+    if not h or not h:IsA("Humanoid") or not r or not r:IsA("BasePart") then return end
+    humanoid, root = h, r
+    h.StateChanged:Connect(function(_, new)
+        if new == Enum.HumanoidStateType.Jumping then
+            local v = r.AssemblyLinearVelocity
+            local flat = Vector3.new(v.X, 0, v.Z)
+            if flat.Magnitude &gt;= MIN_SPEED and character:GetAttribute("MovementSpeedLimit") == nil then
+                local speed = math.min(flat.Magnitude, h.WalkSpeed) * CARRY
+                carry = flat.Unit * speed
+            end
+        elseif new ~= Enum.HumanoidStateType.Freefall then
+            carry = nil
+        end
+    end)
+end
+
+RunService.Heartbeat:Connect(function()
+    local c, h, r = carry, humanoid, root
+    if not c or not h or not r or not r.Parent then return end
+    local state = h:GetState()
+    if state ~= Enum.HumanoidStateType.Jumping and state ~= Enum.HumanoidStateType.Freefall then carry = nil return end
+    -- Steering still works: follow the stick/keys, keep the boosted speed.
+    local dir = h.MoveDirection
+    if dir.Magnitude &lt; 0.1 then carry = nil return end
+    local boosted = Vector3.new(dir.X, 0, dir.Z).Unit * c.Magnitude
+    local v = r.AssemblyLinearVelocity
+    r.AssemblyLinearVelocity = Vector3.new(boosted.X, v.Y, boosted.Z)
+end)
+
+local player = Players.LocalPlayer
+player.CharacterAdded:Connect(bind)
+if player.Character then task.spawn(bind, player.Character) end
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="RBX301">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -555218,7 +555812,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX297">
+        <Item class="LocalScript" referent="RBX302">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -555263,11 +555857,14 @@ local function characterVisual(character: Model)
         if previous:GetAttribute("Scale")~=scale then
             local welds={}
             for _,item in previous:GetDescendants() do
-                if item:IsA("WeldConstraint") then item.Enabled=false;table.insert(welds,item) end
+                if item:IsA("Weld") or item:IsA("WeldConstraint") then item.Enabled=false;table.insert(welds,item) end
             end
             previous.WorldPivot=groundFrame()
             previous:ScaleTo(scale);previous:PivotTo(groundFrame());previous:SetAttribute("Scale",scale)
-            for _,weld in welds do weld.Enabled=true end
+            for _,weld in welds do
+                if weld:IsA("Weld") and weld.Part1 then weld.C0=root.CFrame:ToObjectSpace(weld.Part1.CFrame) end
+                weld.Enabled=true
+            end
         end
         hideShell(character)
         if previous:GetAttribute("GenesJson")~=genesJson then
@@ -555317,7 +555914,11 @@ local function characterVisual(character: Model)
             if mutation=="gold" or mutation=="diamond" then Resources.clearTextures(item) end
             if mutation == "gold" then item.Color = Color3.fromRGB(242,199,63) item.Material = Enum.Material.Metal
             elseif mutation == "diamond" then item.Color = Color3.fromRGB(85,213,245) item.Material = Enum.Material.Glass item.Reflectance=.2 end
-            local weld = Instance.new("WeldConstraint")
+            -- BD-211: a Weld (not a WeldConstraint) so DinoMotion poses edit C0. Writing part.CFrame on a
+            -- WeldConstraint-attached part drags the whole assembly, which made the root rattle every frame.
+            local weld = Instance.new("Weld")
+            weld.Name = "ResourceWeld"
+            weld.C0 = root.CFrame:ToObjectSpace(item.CFrame)
             weld.Part0, weld.Part1, weld.Parent = root, item, item
         end
     end
@@ -555408,7 +556009,12 @@ RunService.Heartbeat:Connect(function(dt)
             foods[item] = model
             item.LocalTransparencyModifier = 1
         end
-        model:PivotTo(CFrame.new(item.Position - Vector3.new(0, item.Size.Y / 2 + .08, 0)))
+        -- Re-pivot only when the server moved the food, so FoodGlow's local bob/spin is not reset every tick.
+        local at = item.Position
+        if model:GetAttribute("At") ~= at then
+            model:SetAttribute("At", at)
+            model:PivotTo(CFrame.new(at - Vector3.new(0, item.Size.Y / 2 + .08, 0)))
+        end
         for _, piece in model:GetDescendants() do
             if piece:IsA("BasePart") then piece.Transparency = item.Transparency end
         end
@@ -555418,7 +556024,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX298">
+        <Item class="ModuleScript" referent="RBX303">
           <Properties>
             <string name="Name">VolumeSliders</string>
             <ProtectedString name="Source">--!strict
@@ -555499,7 +556105,7 @@ return Sliders
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX299">
+        <Item class="LocalScript" referent="RBX304">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -555566,7 +556172,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX300">
+        <Item class="LocalScript" referent="RBX305">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -556362,7 +556968,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX301">
+        <Item class="LocalScript" referent="RBX306">
           <Properties>
             <string name="Name">WorldCulling</string>
             <ProtectedString name="Source">--!strict
@@ -556415,9 +557021,11 @@ local function addProp(folder: Instance, item: Instance, tries: number?)
 end
 local function setFood(pickup: BasePart, visible: boolean)
     local value = if visible then 0 else 1
-    pickup.LocalTransparencyModifier = value
+    -- Legacy food draws a LocalFoodMesh model (ResourceVisuals); its placeholder ball stays hidden when shown again.
+    pickup.LocalTransparencyModifier = if pickup:FindFirstChild("LocalFoodMesh") then 1 else value
     for _, d in pickup:GetDescendants() do if d:IsA("BasePart") then d.LocalTransparencyModifier = value end end
     foodShown[pickup] = visible
+    pickup:SetAttribute("Culled", not visible) -- FoodGlow hides its halo with the food
 end
 
 task.spawn(function()
@@ -556487,10 +557095,45 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
+        <Item class="LocalScript" referent="RBX307">
+          <Properties>
+            <string name="Name">WorldReady</string>
+            <ProtectedString name="Source">--!strict
+-- BD-210: tell the server when this client's own copy of the island terrain around the run spawn is loaded. The
+-- character's physics runs on this client, so a run that starts before the local terrain arrives drops the dinosaur
+-- straight through the world. The server waits for this (RunLifecycle.worldReady, with a timeout fallback).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Layout = require(Shared:WaitForChild("IslandLayout"))
+local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
+local remote = remotes:WaitForChild("ClientWorldReady") :: RemoteEvent
+
+local params = RaycastParams.new()
+params.FilterType = Enum.RaycastFilterType.Include
+params.FilterDescendantsInstances = {workspace.Terrain}
+local function terrainLoaded(): boolean
+    -- 5x5 grid, 48 studs wide, around the run spawn: every ray must land on terrain near the authored height.
+    for dx = -24, 24, 12 do
+        for dz = -24, 24, 12 do
+            local x, z = dx, Layout.SpawnZ + dz
+            local expected = Layout.height(x, z)
+            local hit = workspace:Raycast(Vector3.new(x, expected + 40, z), Vector3.new(0, -80, 0), params)
+            if not hit or math.abs(hit.Position.Y - expected) &gt; 4 then return false end
+        end
+    end
+    return true
+end
+
+while workspace:GetAttribute("IslandTerrainReady") ~= true or not terrainLoaded() do task.wait(.25) end
+task.wait(.5) -- one more beat for collision of the neighbouring voxel chunks
+remote:FireServer()
+</ProtectedString>
+          </Properties>
+        </Item>
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX302">
+  <Item class="Workspace" referent="RBX308">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>
