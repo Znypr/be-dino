@@ -7,7 +7,7 @@ def script():
     refresh=source[source.index('local function hideShell('):source.index('local function watchCharacter(')]
     return '''
 local clones,paints=0,0
-local frame=setmetatable({},{__mul=function()return frame end})
+local frame=setmetatable({},{__mul=function()return frame end,__index={ToObjectSpace=function()return frame end}})
 local CFrame={new=function()return frame end}
 local Enum={HumanoidRigType={R6="R6"}}
 local character={Parent=true,attrs={SpeciesId="brachiosaurus",VisualScale=1,MutationVisual="base",GenesJson="null"}}
@@ -21,7 +21,7 @@ local ReplicatedStorage={FindFirstChild=function()return nil end}
 local Http={JSONDecode=function(_,value)return if value=="null" then nil else {} end}
 local Appearance={apply=function()paints+=1 end}
 local MutationLook={apply=function()end}
-local weld={Enabled=true,IsA=function(_,c)return c=="WeldConstraint"end}
+local weld={Enabled=true,IsA=function(_,c)return c=="Weld"end}
 local Instance={new=function()return weld end}
 local Resources={clone=function()
  clones+=1
@@ -30,6 +30,7 @@ local Resources={clone=function()
  function model:GetAttribute(k)return self.attrs[k]end
  function model:SetAttribute(k,v)self.attrs[k]=v end
  function model:GetDescendants()return {part,weld}end
+ part.CFrame=frame;weld.Part1=part
  function model:ScaleTo(s)self.scale=s;assert(not self.Parent or not weld.Enabled,"growth resized a live weld") end
  function model:PivotTo()end
  function model:Destroy()self.destroyed=true end
