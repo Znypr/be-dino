@@ -4,7 +4,9 @@ local Textures=require(script.Parent.GeneTextures)
 local Appearance={}
 local Patterns=require(script.Parent.PatternGenes)
 local Overlays=require(script.Parent.ConditionOverlays)
-function Appearance.apply(container: Instance,genes)
+-- BD-174: the egg condition (Cracked, Dirty, Rainbow, Astra) belongs to EGG visuals only. Dinosaur models get colours and pattern
+-- but never the condition overlay or material. Callers that draw an egg pass showCondition = true.
+function Appearance.apply(container: Instance,genes,showCondition: boolean?)
     if not genes or not Genetics.valid(genes) then return end
     local tint=Genetics.tint(genes)
     local shell,shellSize=nil,-1
@@ -24,6 +26,6 @@ function Appearance.apply(container: Instance,genes)
             end
         end
     end
-    if shell then Overlays.apply(shell,genes.conditionId) end
+    if shell and showCondition==true then Overlays.apply(shell,genes.conditionId) end
 end
 return Appearance

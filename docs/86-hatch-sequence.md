@@ -13,3 +13,5 @@ Reduce Motion: no shake, zoom or particles; short fade, same tap flow.
 Sfx hooks (silent until ids are bound): `hatch_rattle`, `hatch_crack_stage`, `hatch_burst`, `hatch_reveal_common|uncommon|rare|epic|legendary`.
 
 Not verified: Android/phone hardware (only logic and Studio desktop).
+
+BD-170/171/174 update: Open starts the egg at once (plain Blender egg image, wobbling; the server answer is supplied later via `handle.supply`). Build-up is about 3.6 s: left bucket splashes (whole egg takes the colour, chip with name and tier), right bucket splashes (pattern revealed on the real 3D egg, chip with name and tier), then rattle and crack. Tiers use PROVISIONAL percent cut-offs (HatchTimeline.TierFloors). Next egg stays in the sequence until the batch ends. The egg condition is drawn on egg visuals only, never on dinosaur models or the reveal. Logic tests: tools/verify_hatch_sequence.py.

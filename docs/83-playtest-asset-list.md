@@ -131,3 +131,5 @@ Needs: the owner's PC with Blender open and the Blender MCP connected, and one R
 | Shop icons and badges | 23-24 | not started, after item 1 |
 | Food MeshParts | 25 | modelled, upload pending |
 | Sfx | section 4 | files exist, upload pending |
+
+| 31 | paint-bucket-v1.png (`paint_bucket`) | P1 | BD-171: one cartoon steel paint bucket with a wire handle, seen from the side, slightly tilted, open top showing a flat paint surface in plain white (the game tints it per colour). Square canvas, transparent background. Replaces the UI-shape placeholder in the hatch paint-bucket reveal. |

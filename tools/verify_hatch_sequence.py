@@ -20,7 +20,7 @@ local function near(a, b, e) return math.abs(a - b) <= (e or 1e-6) end
 
 -- Durations: ~3 s build-up, burst, settle, tap allowed only once the reveal has settled.
 local m, r = T.durations(true), T.durations(false)
-assert(m.build >= 2.8 and m.build <= 3.2, "build-up is about 3 s")
+assert(m.build >= 3.4 and m.build <= 3.8, "build-up is about 3.6 s: two paint buckets, then rattle and crack")
 assert(m.readyAt > m.build and m.readyAt <= 5, "tap becomes available shortly after the reveal")
 assert(r.build == 0 and r.readyAt <= .8, "reduced motion is a short fade")
 assert(T.phase(m, 0) == "build" and T.phase(m, m.build - .01) == "build" and T.phase(m, m.build) == "burst")
@@ -59,7 +59,7 @@ end
 
 -- Failed (Cracked) egg: same ~3 s build-up, then a splat; same tap flow and skip rules as any egg.
 local f, fr = T.durations(true, 1, true), T.durations(false, 1, true)
-assert(f.build == m.build and f.build >= 2.8 and f.build <= 3.2, "failed egg has the same ~3 s build-up")
+assert(f.build == m.build and f.build >= 3.4 and f.build <= 3.8, "failed egg has the same build-up")
 assert(f.burst > 0 and f.settle >= .8 and f.readyAt > f.build + f.burst and f.readyAt <= 5.5, "splat burst and settle, then ready")
 assert(T.durations(true, 5, true).readyAt == f.readyAt, "no Legendary hold for a failed egg")
 assert(fr.build == 0 and fr.readyAt == r.readyAt, "reduced motion failed egg is the short fade")
@@ -168,6 +168,90 @@ local weights = {{speciesId = "a", weight = 26}, {speciesId = "b", weight = 74}}
 assert(near(T.speciesPct(weights, "a"), 26) and T.speciesPct(weights, "zzz") == nil and T.speciesPct(nil, "a") == nil)
 assert(T.oddsLine("Rare", 12.5) == "Rare \u{2022} 12.5% of eggs" and T.oddsLine("Rare", nil) == "Rare")
 
+-- BD-170/171: pending start (Open animates at once), paint buckets, trait tiers, remapped cues.
+local P = m.paint
+assert(P.leftStart > 0 and P.leftStart < P.leftImpact and P.leftImpact < P.leftEnd and P.leftEnd <= P.rightStart, "left bucket first")
+assert(P.rightStart < P.rightImpact and P.rightImpact < P.rightEnd and P.rightEnd == P.endsAt and P.endsAt < m.build - 1, "right bucket second, cracks get >= 1 s")
+assert(P.leftEnd - P.leftStart <= 1 and P.rightEnd - P.rightStart <= 1, "each bucket is quick (<= 1 s)")
+assert(r.paint.endsAt == 0 and f.paint.endsAt == P.endsAt and T.durations(true, 5).paint.endsAt == P.endsAt, "same paint plan for failed and Legendary eggs; none in Reduced Motion")
+-- Pending: t holds at the first bucket until the result arrives; the visual clock keeps running.
+local ps = T.new(true, nil, nil, true)
+for _ = 1, 600 do T.step(ps, 1 / 60) end
+assert(near(ps.t, P.leftStart, 1e-6) and ps.idle > 9 and T.phase(ps.durs, ps.t) == "build", "holds at the first bucket while pending")
+assert(T.tap(ps) == "ignore" and T.skipAll(ps) == "ignore" and not ps.done and not ps.fastForwarded, "taps cannot skip an egg that has no result yet")
+assert(T.visualT(ps) > 9, "egg keeps wobbling while waiting")
+T.supply(ps, 5, false)
+assert(not ps.pending and ps.durs.readyAt == T.durations(true, 5, false).readyAt and ps.durs.build == m.build, "supply swaps in the real timing, build length unchanged")
+T.step(ps, .5) assert(ps.t > P.leftStart, "runs on after supply")
+local pr = T.new(false, nil, nil, true) T.step(pr, 1) assert(pr.t == 0 and pr.idle == 1, "Reduced Motion also waits for the result")
+local ns = T.new(true) T.step(ns, 1) assert(near(ns.t, 1) and ns.idle == 0, "a normal egg never idles")
+-- Egg clock and build progress: wobble below the first crack while painting, then up to EggClock across the cracks.
+assert(T.eggClock(m, 0) == 0 and near(T.eggClock(m, P.endsAt), T.WobbleClock) and near(T.eggClock(m, m.build), T.EggClock) and T.eggClock(r, 0) == T.EggClock)
+local lastClock = -1
+for i = 0, 360 do
+    local c = T.eggClock(m, i / 100) assert(c >= lastClock - 1e-9, "egg clock never runs backwards") lastClock = c
+    if i / 100 < P.endsAt then assert(c < .62, "no rattle beat or crack before the buckets are done") end
+end
+assert(T.buildProgress(m, 0) == 0 and T.buildProgress(m, P.endsAt) == 0 and near(T.buildProgress(m, m.build), 1))
+-- Bucket pose: arrives from the side, tilts toward the egg at impact, leaves; bounded.
+for _, side in {-1, 1} do
+    local x0, _, _, a0 = T.bucketPose(0, side) assert(math.abs(x0) >= 300 and a0 == 0, "starts off to the side, hidden")
+    local xi, yi, ri, ai = T.bucketPose(T.Paint.impact, side)
+    assert(math.sign(xi) == side and math.abs(xi) <= 170 and ai == 1, "hovers beside the egg at impact")
+    assert(math.sign(ri) == -side and math.abs(ri) >= 40 and math.abs(ri) <= 70, "tilts toward the egg (left bucket clockwise) to pour")
+    assert(yi < 0, "above the egg")
+    local xe, _, re, ae = T.bucketPose(1, side) assert(math.abs(xe) >= 300 and ae < .05 and near(re, 0, 1e-6), "leaves and fades")
+    for i = 0, 100 do local x, y, rot, a = T.bucketPose(i / 100, side) assert(math.abs(x) <= 345 and math.abs(y) <= 100 and math.abs(rot) <= 70.001 and a >= 0 and a <= 1) end
+end
+-- Paint state: wash is 0 before the impact and grows to 1, per bucket.
+local ps0, psA, psB = T.paintState(m, 0), T.paintState(m, P.leftImpact + .01), T.paintState(m, P.rightImpact + .5)
+assert(not ps0.left.impacted and ps0.left.wash == 0 and ps0.right.wash == 0)
+assert(psA.left.impacted and psA.left.wash > 0 and psA.left.wash < .5 and not psA.right.impacted and psA.right.wash == 0, "colour first, pattern still hidden")
+assert(psB.left.wash == 1 and psB.right.wash == 1)
+local rp = T.paintState(r, 0) assert(rp.left.wash == 1 and rp.right.wash == 1, "Reduced Motion shows the final look at once")
+-- Splash and droplets: bounded, fade out.
+local sc0, st0 = T.splash(0) local sc1, st1 = T.splash(.5)
+assert(sc0 > .3 and st0 == 0 and sc1 > 1.9 and st1 == 1 and select(2, T.splash(-1)) == 1)
+assert(T.PaintMax == 20 and T.MaxParticles + T.OrbitMax + T.FireworkMax + T.RainMax + T.PaintMax <= 100, "bounded pools")
+for _, side in {-1, 1} do
+    for i = 1, 10 do
+        for k = 0, 70 do
+            local dx, dy, tr = T.drop(i, 10, k / 100, side)
+            assert(math.abs(dx) <= 200 and dy >= -130 and dy <= 260 and tr >= 0 and tr <= 1, "droplet bounds")
+        end
+        local _, _, gone = T.drop(i, 10, .75, side) assert(gone == 1)
+    end
+end
+-- Trait tiers: Cream/Blue Common ... Black Mythic; a two-colour egg shows the rarer tier; Plain pattern is Common.
+local colors = {{id = "white", name = "Cream", weight = 5000}, {id = "blue", name = "Blue", weight = 2600}, {id = "green", name = "Green", weight = 1200},
+    {id = "teal", name = "Teal", weight = 400}, {id = "pink", name = "Pink", weight = 500}, {id = "gold", name = "Amber", weight = 250},
+    {id = "violet", name = "Purple", weight = 45}, {id = "red", name = "Red", weight = 4}, {id = "black", name = "Black", weight = 1}}
+local function color(a, b) return T.colorReveal(colors, {primaryColorId = a, secondaryColorId = b or a}) end
+assert(color("white").tierName == "Common" and color("blue").tierName == "Common" and color("green").tierName == "Uncommon")
+assert(color("pink").tierName == "Rare" and color("violet").tierName == "Epic" and color("red").tierName == "Legendary" and color("black").tierName == "Mythic")
+assert(color("blue").name == "Blue" and color("blue", "black").name == "Blue + Black" and color("blue", "black").tierName == "Mythic", "rarer colour sets the tier")
+assert(T.colorReveal(colors, {primaryColorId = "nope"}) == nil and T.colorReveal(nil, {}) == nil and T.colorReveal(colors, nil) == nil)
+local lastTier = 0 for _, id in {"white", "green", "pink", "violet", "red", "black"} do local t = color(id).tier assert(t > lastTier, "rarer colours never get a lower tier") lastTier = t end
+assert(T.tier(nil) == 1 and T.tier(100) == 1 and T.tier(0) == 6 and T.tier(25) == 1 and T.tier(24.9) == 2)
+local patternNames = {["03_round_spots"] = "Round Spots"}
+local patternList = {"01_blank", "02_emerald_islands", "03_round_spots", "04_bold_patches", "05_horizontal_bands", "06_wavy_stripes", "07_diamond_scales", "08_freckles"}
+local pat = T.patternReveal(patternList, "03_round_spots", function(id) return patternNames[id] or tostring(id) end)
+assert(pat.name == "Round Spots" and pat.tierName == "Uncommon" and not pat.plain and near(pat.pct, 12.5))
+local plain = T.patternReveal(patternList, "01_blank", function(id) return tostring(id) end)
+assert(plain.plain and plain.name == "Plain" and plain.tierName == "Common" and T.patternReveal(patternList, nil, tostring).plain)
+assert(T.paintLine(color("black")) == "Black \u{2022} Mythic" and T.paintLine(pat) == "Round Spots \u{2022} Uncommon")
+-- Cues: four paint cues sit in the bucket windows, rattle and cracks after them; only existing Sfx names.
+do
+    local cues = T.cues(m, 1, false, Sfx.revealName(1))
+    assert(cues[1].name == "pickup_lo" and near(cues[1].t, P.leftStart) and cues[2].name == "pickup" and near(cues[2].t, P.leftImpact), "left bucket: swoosh then splash")
+    assert(cues[3].name == "pickup_lo" and near(cues[3].t, P.rightStart) and cues[4].name == "pickup_hi" and near(cues[4].t, P.rightImpact), "right bucket: swoosh then splash")
+    for _, c in cues do
+        if c.name == "hatch_rattle" or c.name == "hatch_crack_stage" then assert(c.t >= P.endsAt and c.t <= m.build, "rattle and cracks come after the buckets") end
+        assert(Sfx.Sounds[c.name], "unknown Sfx hook " .. c.name)
+    end
+    for _, c in T.cues(r, 1, false, "hatch_reveal_common") do assert(c.name ~= "pickup_lo" and c.name ~= "pickup" and c.name ~= "pickup_hi", "no bucket cues in Reduced Motion") end
+end
+
 -- Sfx cues: time ordered, inside the sequence, named hooks only.
 for rarity = 1, 5 do
     local cues = T.cues(m, rarity, false, Sfx.revealName(rarity))
@@ -186,7 +270,7 @@ end
 assert(Sfx.revealName(nil) == "hatch_reveal_common" and Sfx.revealName(9) == "hatch_reveal_legendary")
 for _, name in {"hatch_rattle", "hatch_burst"} do assert(Sfx.Sounds[name].id == "", "no sound exists yet for " .. name) end
 assert(Sfx.normalizeId(Sfx.Sounds.hatch_crack_stage.id) ~= nil, "crack stage reuses the uploaded crack sound")
-print("Hatch sequence checks passed: ~3 s build-up, tap gating, skip rules, failed-egg splat, curves, particle caps, copy, Sfx cues")
+print("Hatch sequence checks passed: ~3.6 s build-up with paint buckets, pending start, tap gating, skip rules, failed-egg splat, curves, particle caps, copy, Sfx cues")
 '''
 
 
@@ -195,6 +279,64 @@ def script():
             'local script={Parent={RevealSkip=RS}}\nlocal function require(x) return x end\n'
             'local T=' + module('src/shared/HatchTimeline.luau') + '\n'
             'local Sfx=' + module('src/shared/Sfx.luau') + '\n' + BODY)
+
+
+def read(path):
+    return (ROOT / path).read_text(encoding='utf-8')
+
+
+def check_wiring():
+    """Source-level wiring for BD-170 / BD-171 / BD-174 (Instances cannot run in plain Luau; Studio checks drawing)."""
+    import re
+    boot = read('src/client/Bootstrap.client.luau')
+    seq = read('src/client/HatchSequence.luau')
+    pres = read('src/shared/HatchPresentation.luau')
+    appearance = read('src/shared/EggAppearance.luau')
+    traits = read('src/client/PreviewTraits.luau')
+    # BD-170: Open starts the screen at once, Next egg stays in the sequence, the answer is supplied to the running screen.
+    assert 'if hatchNext() then open("hatch") end' in boot, 'Open / Next egg open the hatch screen immediately'
+    assert boot.count('if hatchNext() then open("hatch") end') >= 2, 'both Open and Next egg use the immediate path'
+    assert 'task.defer(waiting.supply)' in boot and 'pendingHatch' in boot, 'the server answer is handed to the waiting screen'
+    assert 'finishBatch()' in boot and 'EggsLogic.afterReveal(skipAllReveals,remainingAfter)=="continue"' in boot, 'only the end of the batch leaves'
+    assert 'open("eggs") end -- never leave an egg wobbling forever' in boot, 'a lost answer never strands the player'
+    hatch_block = boot[boot.index('elseif name=="hatch" then'):boot.index('elseif name=="exit" then')]
+    assert 'HatchPresentation.add(body,nil,' in hatch_block, 'the egg is built without genes: plain and colourless at the start'
+    assert hatch_block.index('HatchPresentation.add') < hatch_block.index('Preview.add(body,id'), 'no dinosaur view before the answer exists'
+    assert 'condition.name' not in hatch_block and 'conditionId' not in hatch_block, 'BD-174: no condition text on the dinosaur reveal'
+    assert 'Timeline.new(motion, 1, false, a.result == nil)' in seq, 'the sequence starts pending when no result is known'
+    assert 'if state.pending then return end' in seq, 'taps are ignored until the answer arrives'
+    # BD-171: paint buckets drive the egg and use only existing Sfx names through HatchTimeline.cues.
+    for needle in ('Timeline.paintState(durs, t)', 'Timeline.bucketPose', 'a.paint.color(', 'a.paint.pattern(', 'Timeline.paintLine(reveal)', 'a.paint.finish()'):
+        assert needle in seq, needle
+    assert 'ModelPreview.add(holder,"egg")' in pres and 'is never shown' in pres, 'BD-170: the primitive/cube egg is never displayed'
+    assert re.search(r'view\.ImageTransparency,view\.Visible=1,false', pres), 'the real 3D egg stays hidden until the pattern splash'
+    assert 'Theme.ImageIds.egg or shellImage' in pres, 'the plain Blender egg image is the starting egg'
+    # BD-174: condition overlay only for eggs.
+    assert 'showCondition==true' in appearance and 'Overlays.apply(shell,genes.conditionId)' in appearance
+    assert 'Appearance.apply(view,traits.genes,isEgg==true)' in traits
+    calls = {}
+    for path in ('src/client/Bootstrap.client.luau', 'src/client/EggsScreen.luau', 'src/client/PreviewTraits.luau', 'src/client/ResourceVisuals.client.luau',
+                 'src/shared/DinosaurPreview.luau', 'src/shared/HatchPresentation.luau'):
+        for line in read(path).splitlines():
+            m = re.search(r"(?:Appearance|EggAppearance)\.apply\((.*)", line)
+            if m:
+                calls.setdefault(path, []).append(m.group(1).split(" end")[0].rstrip())
+    egg_files = {'src/shared/HatchPresentation.luau': 'genes,true', 'src/client/Bootstrap.client.luau': 'EggGenetics.neutral(row.id),true'}
+    for path, args in calls.items():
+        for arg in (a.rstrip(')') for a in args):
+            if path in egg_files:
+                assert arg.endswith(',true') or arg.endswith('true'), f'egg call must pass showCondition in {path}: {arg}'
+            elif path.endswith('PreviewTraits.luau'):
+                assert 'isEgg==true' in arg
+            else:
+                assert not arg.endswith('true'), f'dinosaur call must not show the condition in {path}: {arg}'
+    assert 'PreviewTraits.add(view, traits, true)' in read('src/client/EggsScreen.luau'), 'egg cards keep the condition look'
+    for path in ('src/client/DinoIndexPanels.luau', 'src/client/DinoDetails.luau'):
+        assert 'PreviewTraits.add(view, {' in read(path) or 'PreviewTraits.add(preview, {' in read(path)
+        assert ', true)' not in re.sub(r'\{[^}]*\}', '', ''.join(l for l in read(path).splitlines() if 'PreviewTraits.add' in l)), f'no condition on dinosaur previews in {path}'
+    details = read('src/shared/FusionSelection.luau')
+    assert 'label = "Condition"' not in details, 'BD-174: Dino Details has no condition row'
+    print('Wiring checks passed: Open/Next egg stay in the sequence, plain egg first, paint buckets, no cube egg, condition only on eggs')
 
 
 if __name__ == '__main__':
@@ -209,3 +351,4 @@ if __name__ == '__main__':
         if result.returncode or 'passed' not in result.stdout:
             print(result.stderr)
             raise SystemExit(result.returncode or 1)
+    check_wiring()

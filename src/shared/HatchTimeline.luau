@@ -5,12 +5,13 @@
 local RevealSkip = require(script.Parent.RevealSkip)
 local T = {}
 
--- Seconds. Full motion: ~3 s rattle/crack build-up, burst, dino reveal, then wait for a tap.
-T.Motion = {build = 3.0, burst = .6, settle = .8, tapGate = .5}
+-- Seconds. Full motion: ~3.6 s build-up (two paint-bucket splashes, then rattle/crack), burst, dino reveal, then wait for a tap.
+-- BD-171: the egg starts colourless and patternless; the left bucket colours it, the right bucket reveals the pattern.
+T.Motion = {build = 3.6, burst = .6, settle = .8, tapGate = .5}
 -- Reduced Motion (Theme.MotionEnabled false): no shake/zoom/particles, a short fade, same tap flow.
 T.Reduced = {build = 0, burst = 0, settle = .45, tapGate = .15}
 -- A failed (Cracked) egg: same ~3 s build-up, then a SPLAT instead of a dinosaur (shell halves bounce, yolk plops into a puddle).
-T.Splat = {build = 3.0, burst = .7, settle = 1.0, tapGate = .5}
+T.Splat = {build = 3.6, burst = .7, settle = 1.0, tapGate = .5}
 T.CrumbMax = 10 -- tiny shell crumbs of the splat (pooled; they reuse the sparkle pool)
 T.MaxParticles = 28
 T.OrbitMax = 12 -- twinkling sparkles orbiting the dinosaur after the reveal
@@ -18,13 +19,26 @@ T.FireworkMax = 24 -- Legendary gold fireworks: 3 bursts of 8
 T.RainMax = 14 -- Shiny gold sparkle rain
 T.CrackBeats = {.21, .46, .71} -- fractions of the build-up where the three crack stages start (HatchPresentation)
 T.EggClock = 3.2 -- HatchPresentation.update() time at the end of the build-up
+T.PaintMax = 20 -- paint droplets (two buckets x 10, pooled)
+-- Paint buckets (BD-171). Each bucket slides in, tilts, splashes at `impact` (fraction of its window) and leaves; both are quick.
+T.Paint = {leftStart = .45, rightStart = 1.3, window = .75, impact = .6, wash = .35}
+T.WobbleClock = .5 -- egg clock while painting (below the first rattle beat and crack stage, so no cracks show yet)
 
--- Legendary holds the reveal longer (+.5 s settle) before the tap prompt; the build-up stays about 3 s.
+-- Legendary holds the reveal longer (+.5 s settle) before the tap prompt; the build-up stays the same length.
+function T.paintPlan(motion: boolean)
+    if not motion then
+        return {leftStart = 0, leftImpact = 0, leftEnd = 0, rightStart = 0, rightImpact = 0, rightEnd = 0, endsAt = 0}
+    end
+    local p = T.Paint
+    return {leftStart = p.leftStart, leftImpact = p.leftStart + p.window * p.impact, leftEnd = p.leftStart + p.window,
+        rightStart = p.rightStart, rightImpact = p.rightStart + p.window * p.impact, rightEnd = p.rightStart + p.window,
+        endsAt = p.rightStart + p.window}
+end
 function T.durations(motion: boolean, rarity: number?, failed: boolean?)
     local d = if not motion then T.Reduced elseif failed then T.Splat else T.Motion
     local settle = d.settle + (if motion and not failed and (rarity or 1) >= 5 then .5 else 0)
     return {build = d.build, burst = d.burst, settle = settle, revealAt = d.build, readyAt = d.build + d.burst + settle,
-        tapGate = d.tapGate}
+        tapGate = d.tapGate, paint = T.paintPlan(motion)}
 end
 
 function T.phase(durs, t: number): string
@@ -34,18 +48,38 @@ function T.phase(durs, t: number): string
     return "ready"
 end
 
--- State machine: {t, fastForwarded, done}. All transitions are pure.
-function T.new(motion: boolean, rarity: number?, failed: boolean?)
-    return {t = 0, durs = T.durations(motion, rarity, failed), fastForwarded = false, done = false, motion = motion}
+-- State machine: {t, idle, pending, fastForwarded, done}. All transitions are pure.
+-- pending = the server result (species, colours, pattern) has not arrived yet: the egg keeps wobbling (idle grows, t holds
+-- at the first bucket) so Open starts the animation at once without waiting for the network (BD-170).
+function T.new(motion: boolean, rarity: number?, failed: boolean?, pending: boolean?)
+    return {t = 0, idle = 0, pending = pending == true, durs = T.durations(motion, rarity, failed), fastForwarded = false, done = false, motion = motion}
+end
+-- The result arrived: use the real timing (the build-up length never depends on rarity or failure).
+function T.supply(state, rarity: number?, failed: boolean?)
+    state.durs = T.durations(state.motion, rarity, failed)
+    state.pending = false
+    return state
+end
+function T.holdAt(state): number
+    return if state.motion then state.durs.paint.leftStart else 0
 end
 function T.step(state, dt: number)
     if state.done then return state end
-    state.t += math.max(0, dt)
+    dt = math.max(0, dt)
+    if state.pending then
+        local room = math.max(0, T.holdAt(state) - state.t)
+        state.t += math.min(dt, room)
+        state.idle += dt - math.min(dt, room)
+    else
+        state.t += dt
+    end
     return state
 end
+-- Visual clock for idle wobble: keeps moving while the sequence is waiting for the result.
+function T.visualT(state): number return state.t + state.idle end
 -- "advance" (next egg / done), "fastforward" (jump the build-up to the burst) or "ignore".
 function T.tapAction(state): string
-    if state.done then return "ignore" end
+    if state.done or state.pending then return "ignore" end
     local phase = T.phase(state.durs, state.t)
     if phase == "ready" then return "advance" end
     if phase == "build" and not state.fastForwarded and state.t >= state.durs.tapGate then return "fastforward" end
@@ -62,7 +96,7 @@ function T.tap(state): string
 end
 -- Skip all: fast-forward a running build-up; an already revealed egg moves on at once.
 function T.skipAll(state): string
-    if state.done then return "ignore" end
+    if state.done or state.pending then return "ignore" end
     local phase = T.phase(state.durs, state.t)
     if phase == "build" then
         state.t, state.fastForwarded = state.durs.build, true
@@ -120,6 +154,102 @@ end
 function T.easeOut(p: number): number
     local x = 1 - clamp01(p)
     return 1 - x * x * x
+end
+
+-- Rattle/crack progress 0..1: starts once both paint buckets are done and runs to the burst.
+function T.buildProgress(durs, t: number): number
+    local from = durs.paint.endsAt
+    if durs.build <= from then return 1 end
+    return clamp01((t - from) / (durs.build - from))
+end
+-- Time (seconds) of a point given as a fraction of the rattle/crack part of the build-up.
+function T.crackTime(durs, fraction: number): number
+    return durs.paint.endsAt + clamp01(fraction) * math.max(0, durs.build - durs.paint.endsAt)
+end
+-- HatchPresentation.update() clock: a slow wobble while painting, then the three crack stages across the rest of the build-up.
+function T.eggClock(durs, t: number): number
+    if durs.build <= 0 then return T.EggClock end
+    local from = durs.paint.endsAt
+    if t < from then return T.WobbleClock * clamp01(t / math.max(from, 1e-6)) end
+    return T.WobbleClock + (T.EggClock - T.WobbleClock) * T.buildProgress(durs, t)
+end
+
+-- Paint buckets (BD-171). side: -1 left bucket (colour), +1 right bucket (pattern). k = 0..1 over the bucket's window.
+-- Returns x offset from the egg centre (px), y offset (px), rotation (degrees, positive = clockwise) and alpha 0..1.
+function T.bucketPose(k: number, side: number): (number, number, number, number)
+    k = clamp01(k)
+    local arrive = T.easeOut(k / .35)
+    local leave = clamp01((k - .8) / .2)
+    local tilt = clamp01((k - .3) / .3)
+    local back = clamp01((k - .68) / .17)
+    local x = side * (150 + 190 * (1 - arrive) + 190 * leave * leave)
+    local y = -78 + 10 * math.sin(k * math.pi) - 14 * tilt
+    local rot = -side * 64 * tilt * (1 - back)
+    return x, y, rot, if k <= 0 then 0 else 1 - leave
+end
+-- Where each bucket is in its window at time t, and how far its colour has washed over the egg (0..1).
+function T.paintState(durs, t: number)
+    local p = durs.paint
+    local window = if p.endsAt > 0 then T.Paint.window else 0
+    local function bucket(start: number, impactAt: number)
+        if window <= 0 then return {k = 1, impacted = true, wash = 1, sinceImpact = 99} end
+        local since = t - impactAt
+        return {k = clamp01((t - start) / window), impacted = since >= 0, wash = if since <= 0 then 0 else T.easeOut(since / T.Paint.wash), sinceImpact = since}
+    end
+    return {left = bucket(p.leftStart, p.leftImpact), right = bucket(p.rightStart, p.rightImpact)}
+end
+-- Splash ring: s = seconds since the bucket hit the egg. Returns scale and transparency (1 = invisible).
+function T.splash(s: number): (number, number)
+    if s < 0 then return 0, 1 end
+    local k = clamp01(s / .5)
+    return .35 + 1.7 * T.easeOut(k), k
+end
+-- Paint droplet i of n, s seconds after impact, thrown up and out, leaning toward the bucket's side (-1 left, +1 right).
+-- Returns dx, dy (px from the splash point) and transparency (1 = gone).
+function T.drop(i: number, n: number, s: number, side: number): (number, number, number)
+    if s < 0 or s >= .7 then return 0, 0, 1 end
+    local a = (-.1 - .8 * ((i - 1) / math.max(1, n - 1))) * math.pi -- fan over the upper half
+    local speed = 110 + (i * 37) % 90
+    return math.cos(a) * speed * s + side * 50 * s, math.sin(a) * speed * s + 380 * s * s, clamp01((s - .3) / .4)
+end
+
+-- Trait rarity tiers for the paint reveal. Chance = percent of eggs; PROVISIONAL cut-offs, tuned so Cream/Blue are Common and Black is Mythic.
+T.TierNames = {"Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"}
+T.TierFloors = {25, 10, 2, .3, .03, 0}
+function T.tier(pct: number?): number
+    if pct == nil then return 1 end
+    for i, floor in T.TierFloors do if pct >= floor then return i end end
+    return #T.TierNames
+end
+-- colors = Config.EggColors rows {id, name, weight}; genes = {primaryColorId, secondaryColorId}. Returns nil without a known colour.
+-- A two-colour egg shows both names and the rarer colour's tier.
+function T.colorReveal(colors: any, genes: any)
+    if typeof(colors) ~= "table" or typeof(genes) ~= "table" then return nil end
+    local total = 0
+    for _, row in colors do total += row.weight end
+    local function find(id: any)
+        for _, row in colors do if row.id == id then return row end end
+        return nil
+    end
+    local a = find(genes.primaryColorId)
+    if not a or total <= 0 then return nil end
+    local b = find(genes.secondaryColorId) or a
+    local pct = math.min(100 * a.weight / total, 100 * b.weight / total)
+    local tier = T.tier(pct)
+    return {name = if a.id == b.id then a.name else a.name .. " + " .. b.name, pct = pct, tier = tier, tierName = T.TierNames[tier]}
+end
+-- patterns = ordered pattern ids (uniform odds); nameOf(id) -> display name. The blank pattern is "Plain" (Common).
+function T.patternReveal(patterns: any, patternId: string?, nameOf: (string?) -> string)
+    local count = if typeof(patterns) == "table" then #patterns else 0
+    if patternId == nil or patternId == "" or string.find(patternId, "blank", 1, true) then
+        return {name = "Plain", pct = 100, tier = 1, tierName = T.TierNames[1], plain = true}
+    end
+    local pct = if count > 0 then 100 / count else nil
+    local tier = T.tier(pct)
+    return {name = nameOf(patternId), pct = pct, tier = tier, tierName = T.TierNames[tier], plain = false}
+end
+function T.paintLine(reveal: any): string
+    return reveal.name .. " \u{2022} " .. reveal.tierName
 end
 
 -- Particles scale with rarity (1..5); Shiny and BIG add more; none when motion is off or the egg failed.
@@ -250,8 +380,16 @@ function T.cues(durs, rarity: number, failed: boolean, revealName: string)
     local cues = {}
     local build = durs.build
     if build > 0 then
-        for _, b in T.RattleBeats do table.insert(cues, {t = build * b / 3, name = "hatch_rattle"}) end
-        for _, f in T.CrackBeats do table.insert(cues, {t = build * f, name = "hatch_crack_stage"}) end
+        -- Paint buckets reuse existing Sfx names (no new sounds): swoosh = pickup_lo, colour splash = pickup, pattern splash = pickup_hi.
+        local p = durs.paint
+        if p.endsAt > 0 then
+            table.insert(cues, {t = p.leftStart, name = "pickup_lo"})
+            table.insert(cues, {t = p.leftImpact, name = "pickup"})
+            table.insert(cues, {t = p.rightStart, name = "pickup_lo"})
+            table.insert(cues, {t = p.rightImpact, name = "pickup_hi"})
+        end
+        for _, b in T.RattleBeats do table.insert(cues, {t = T.crackTime(durs, b / 3), name = "hatch_rattle"}) end
+        for _, f in T.CrackBeats do table.insert(cues, {t = T.crackTime(durs, f), name = "hatch_crack_stage"}) end
     end
     table.insert(cues, {t = build, name = "hatch_burst"})
     if not failed then table.insert(cues, {t = build + .12, name = revealName}) end
