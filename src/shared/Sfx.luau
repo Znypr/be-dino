@@ -105,6 +105,9 @@ function Sfx.play(name: string): boolean
             pool.sounds[pool.slot] = sound
         end
         sound.SoundId, sound.Volume, sound.PlaybackSpeed = assetId, entry.volume * Sfx.Master, entry.rate
+        -- Mixer: master x Sounds sliders (AudioMixer.luau). Outside Roblox/tests the require fails and the sound plays ungrouped.
+        local okMixer, mixer = pcall(function() return require((script :: any).Parent.AudioMixer) :: any end)
+        if okMixer then mixer.attach(sound, "sfx") end
         sound.TimePosition = 0
         sound:Play()
     end)

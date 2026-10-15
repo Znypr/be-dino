@@ -384,6 +384,8 @@ print("Fusion UI logic passed: ladder 6/3/2 stages (Gold any pattern), filters, 
 UI_MODULES = {
     'Config': 'src/shared/Config.luau',
     'ProgressionConfig': 'src/shared/ProgressionConfig.luau',
+    'RarityCurve': 'src/shared/RarityCurve.luau',
+    'ColourBonus': 'src/shared/ColourBonus.luau',
     'EggGenetics': 'src/shared/EggGenetics.luau',
     'FusionSelection': 'src/shared/FusionSelection.luau',
     'FusionWidgets': 'src/client/FusionWidgets.luau',

@@ -3,7 +3,7 @@ Updated 2026-10-14. This file is the canonical task tracker.
 
 **Current scope: GitHub main Build 020.** Use [the documentation authority guide](00-documentation-guide.md) to distinguish owner targets, committed source, historical build evidence and Studio/release acceptance. [Build 020 integration checklist](44-main-integration-checklist.md) records bounded passes and remaining gates, but **this file alone owns task statuses**. GitHub integration does not publish Roblox or certify paid items, physical-device performance or newest persistent migration.
 
-**Historical milestone summary:** Builds 005–013 established PvP, storage, collection, old direct-copy reward tests, earned chests, Gold and original procedural visuals. Those older checks are *not* proof the latest reward vision is implemented. For actual per-build acceptance consult the dated sections and historical evidence below. Physical-phone/mobile acceptance remains open, though earlier phone-emulator checks passed.
+**Historical milestone summary:** Builds 005â€“013 established PvP, storage, collection, old direct-copy reward tests, earned chests, Gold and original procedural visuals. Those older checks are *not* proof the latest reward vision is implemented. For actual per-build acceptance consult the dated sections and historical evidence below. Physical-phone/mobile acceptance remains open, though earlier phone-emulator checks passed.
 
 ## Board
 
@@ -18,14 +18,14 @@ Maximum player access/policy work remains in progress:
 
 | Backlog | Ready | In progress | Review / test | Blocked | Done |
 |---|---|---|---|---|---|
-| BD-017; BD-021–022; BD-035; **BD-044–056, BD-058–059, BD-061–065** | BD-027 | BD-043; BD-019 device/load (owner publish pending) | BD-006 mobile; BD-016 visual kit; BD-020 release/rollback (owner publish pending); BD-023–026; BD-028–034; BD-036–042; **BD-057 Phase 1; BD-060** | BD-004 private-place record (IDs pending) | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
+| BD-017; BD-021â€“022; BD-035; **BD-044â€“056, BD-058â€“059, BD-061â€“065** | BD-027 | BD-043; BD-019 device/load (owner publish pending) | BD-006 mobile; BD-016 visual kit; BD-020 release/rollback (owner publish pending); BD-023â€“026; BD-028â€“034; BD-036â€“042; **BD-057 Phase 1; BD-060** | BD-004 private-place record (IDs pending) | BD-001, BD-002, BD-003, BD-005, BD-007, BD-008, BD-009, BD-010, BD-011, BD-012, BD-013, BD-014, BD-015, BD-018 |
 
 Backlog means dependencies are not yet satisfied. `Review / test` means code exists but acceptance evidence is still required. `Done` requires a recorded artifact, decision or live test result. Keep at most one implementation task active at a time.
 
-### Studio check of merged main — 2026-10-13
+### Studio check of merged main â€” 2026-10-13
 
 Unpublished copy of `main` (`9a9b1ee`, GameId/PlaceId 0), Studio Play, one player. Floor food built
-(1,536 pickups, status Ready); a run started; 3 of 3 pickups eaten with growth 0 → 7; an eaten pickup
+(1,536 pickups, status Ready); a run started; 3 of 3 pickups eaten with growth 0 â†’ 7; an eaten pickup
 respawned after the 8 s configured delay; the Home request returned the dino to the Sanctuary.
 BD-027 stays Review / test pending phone and multi-client evidence. With the fusion flag on in that
 copy only, the real `FusionAction` remote answered over a real client connection: list, details,
@@ -33,12 +33,12 @@ copy only, the real `FusionAction` remote answered over a real client connection
 Not yet checked: Fusion Menu on screen, 1 s reveal and rarity-skip UI, Android layout, hill traction,
 world-art mode, a real 10-donor fusion through the game's own repository instance.
 
-### Milestone 1 owner decisions — 2026-10-13
+### Milestone 1 owner decisions â€” 2026-10-13
 
 Znypr set the first milestone and handed project lead to Claude:
-- **Milestone 1 = private playtest including fusion** (10 → Gold with odds, Fusion Menu,
+- **Milestone 1 = private playtest including fusion** (10 â†’ Gold with odds, Fusion Menu,
   persistent identities). Public launch is a later, evidence-based decision (BD-022).
-- **BD-044: exactly one dinosaur per successfully hatched egg**; the 1–3 copy split is retired
+- **BD-044: exactly one dinosaur per successfully hatched egg**; the 1â€“3 copy split is retired
   for new eggs. Failed Cracked eggs still yield nothing.
 - **Unapproved numbers** (run crystals, bonus nests, fusion trait odds, caps) may use
   provisional defaults, kept in config and labelled `PROVISIONAL` for later tuning.
@@ -51,7 +51,7 @@ Parallel workstreams (one branch and PR each): BD-044/045 reward loop; BD-052/05
 movement and mobile; BD-064 fusion server, odds and persistence; BD-062/065 Fusion Menu
 and Dino Details. Studio/Blender verification is run centrally.
 
-### BD-060 foundation — updated 2026-10-13
+### BD-060 foundation â€” updated 2026-10-13
 
 Implemented on `codex/bd-060-dinosaur-identity` from latest main `ad5245c`;
 **Review / test, not Done**. [Implementation and verification](47-dinosaur-identity-foundation.md).
@@ -74,7 +74,7 @@ transform for the Milestone 1 private playtest (fresh DataStore), with a whole-p
 byte preflight and fail-closed suspension for legacy/over-capacity profiles
 ([53](53-bd064-fusion-server.md)). Offline-tested only; Studio/DataStore pending.
 
-### BD-057 Phase 1 — updated 2026-10-13
+### BD-057 Phase 1 â€” updated 2026-10-13
 
 **2026-10-15 ladder v2 (owner, replaces 15/4/2 which became unreachable at 4 eggs per run):** Gold = 6 Base of one species (any pattern, plurality pattern kept), Emerald = 3 Gold, Diamond = 2 Emerald (same species + pattern) ([90](90-fusion-ladder-v2.md)); Studio verification pending. History: 15/4/2 of 2026-10-14 ([58](58-fusion-ladder-50-10-3.md)).
 
@@ -91,15 +91,15 @@ donors and the hard lock/favorite block are working defaults awaiting owner appr
 **2026-10-13:** BD-064 adds the PROVISIONAL production roller, the `FusionAction`
 remote and a persistent-playtest flag on top of this transaction (below).
 
-### BD-064 server — updated 2026-10-13
+### BD-064 server â€” updated 2026-10-13
 
 **2026-10-13 ladder:** odds normalize by actual donor count N; remote accepts up to 15 donors (was 50; [58](58-fusion-ladder-50-10-3.md)).
 
 Implemented on `claude/bd-064-fusion-server` from main `18856b4`; **Review / test, not Done**.
 [Implementation and evidence](53-bd064-fusion-server.md); [remote contract](52-fusion-remote-contract.md)
 for the BD-065 UI. `FusionOdds` `fusion-odds-provisional-v1` (PROVISIONAL: Shiny/BIG
-`0.5 × donors/10`, mutation `0.5 × mutated/10` split by donor counts, condition and
-colors proportional to donors, blend uniform 1–99 or 100, pattern locked) exposes the
+`0.5 Ã— donors/10`, mutation `0.5 Ã— mutated/10` split by donor counts, condition and
+colors proportional to donors, blend uniform 1â€“99 or 100, pattern locked) exposes the
 exact quote distribution and a consistent roll; `FusionAction` RemoteFunction
 (`list/details/quote/fuse`) validates every argument, rate-limits per player and never
 accepts client traits; `IdentityPersistentEnabled` enables identities + fusion on
@@ -137,8 +137,8 @@ ledger compaction before public release.
 | BD-015 | Done | P0 | Implement core UI and first-session guidance | BD-006, BD-012, BD-013, BD-014 |
 | BD-016 | Review / test | P1 | Produce and integrate dinosaur/map kit | BD-006, BD-007 |
 | BD-017 | Backlog | P1 | Integrate minimal sound feedback | BD-004, BD-008, BD-013 |
-| BD-018 | Done | P0 | Run multiplayer, security and persistence suite | BD-011–015 |
-| BD-019 | In progress | P0 | Run device/load and published-asset checks (offline load harness done; owner publish pending) | BD-015–017 |
+| BD-018 | Done | P0 | Run multiplayer, security and persistence suite | BD-011â€“015 |
+| BD-019 | In progress | P0 | Run device/load and published-asset checks (offline load harness done; owner publish pending) | BD-015â€“017 |
 | BD-020 | Review / test | P0 | Prepare private test release and rollback (tooling + runbook ready; owner publish pending) | BD-018, BD-019 |
 | BD-021 | Backlog | P0 | Observe community test and triage | BD-020 |
 | BD-022 | Backlog | P1 | Decide public alpha scope after test | BD-021 |
@@ -147,7 +147,7 @@ ledger compaction before public release.
 | BD-024 | Review / test | P1 | Restore visible egg previews | Build 017 |
 | BD-025 | Review / test | P1 | Enlarge centered dinosaur previews | Build 017 |
 | BD-026 | Review / test | P1 | Replace pixelated UI icon rendering everywhere | Build 017 |
-| BD-027 | Review / test | P0 | Verify visible floor food and close Build 017 regressions | BD-023–026 |
+| BD-027 | Review / test | P0 | Verify visible floor food and close Build 017 regressions | BD-023â€“026 |
 | BD-028 | Review / test | P1 | Persistent crystal currency and random map pickups | BD-027, BD-011 |
 | BD-029 | Review / test | P1 | Aura shop, ownership/equip and eating-growth effects | BD-028 |
 | BD-030 | Review / test | P1 | Forward leap with 60-second cooldown and HUD | BD-027, BD-006 |
@@ -171,7 +171,7 @@ ledger compaction before public release.
 | BD-048 | Backlog | P1 | Trail icon art, Blender world VFX and six rarity categories across ten trails | BD-038, BD-034 |
 | BD-049 | Review / test | P1 | Blender trees, vegetation, rock variants, map landmarks and optimized biome placement; kit + flagged grammar in [56](56-bd049-050-world-art.md), Studio/Android pending | BD-016 |
 | BD-050 | Review / test | P1 | Blender pickup/food model variants with intact food rewards and server validation; kit in [56](56-bd049-050-world-art.md), berry/fruit need MeshPart upload | BD-008 |
-| BD-051 | Review / test | P1 | Rotating Potion Shop offers every **2 minutes** (owner 2026-10-14; was five), rarity-weighted selection and 1–3 limited per-player stock ([60](60-bd051-potion-rotation.md); Studio/phone pending) | BD-032, BD-039 |
+| BD-051 | Review / test | P1 | Rotating Potion Shop offers every **2 minutes** (owner 2026-10-14; was five), rarity-weighted selection and 1â€“3 limited per-player stock ([60](60-bd051-potion-rotation.md); Studio/phone pending) | BD-032, BD-039 |
 | BD-052 | Review / test | P1 | Single bottom-center Home with confirmation and no three-second exit channel ([51](51-bd053-054-movement-mobile.md)) | BD-009 |
 | BD-053 | Review / test | P0 | Fix sliding and hill-climb movement on mountainous terrain ([51](51-bd053-054-movement-mobile.md)) | BD-006, BD-008 |
 | BD-054 | Review / test | P0 | Responsive phone/tablet touch-zone navigation/control placement and safe insets ([51](51-bd053-054-movement-mobile.md)) | BD-052, BD-046 |
@@ -185,7 +185,7 @@ ledger compaction before public release.
 | BD-062 | Review / test | P1 | Dino picker/details hatch egg or fused parent lineage, trait/cosmetic badges, hatch rarity vs conditional fusion odds/prestige. Client Dino Details built ([54](54-bd065-fusion-menu.md)); natural hatch odds math, Studio/Android verification pending | BD-059, BD-060, BD-057 |
 | BD-063 | Backlog | P1 | Pattern research/duplicate sink: deterministic earned-only progress toward species-pattern fusion donors | BD-057 |
 | BD-065 | Review / test | P1 | Dedicated Fusion Menu: species/trait filters, manual 15/4/2-donor selection, odds preview, loss warnings and staged wheel reveals. Client built against the `FusionAction` contract ([54](54-bd065-fusion-menu.md)); offline logic + mock UI smoke pass, Studio/Android verification pending | BD-057, BD-060, BD-064 **2026-10-14 owner ladder: 15/4/2 (was 50/10/3), see [58](58-fusion-ladder-50-10-3.md); Studio pending.** |
-| BD-064 | Review / test | P0 | Ingredient-influenced fusion trait RNG (2/10 Shiny → proposed 10%), versioned true odds, paid-random gate and atomic NEW result — PROVISIONAL `fusion-odds-provisional-v1` + `FusionAction` remote ([53](53-bd064-fusion-server.md)) | BD-057, BD-060 **2026-10-14 owner ladder: 15/4/2 (was 50/10/3), see [58](58-fusion-ladder-50-10-3.md); Studio pending.** |
+| BD-064 | Review / test | P0 | Ingredient-influenced fusion trait RNG (2/10 Shiny â†’ proposed 10%), versioned true odds, paid-random gate and atomic NEW result â€” PROVISIONAL `fusion-odds-provisional-v1` + `FusionAction` remote ([53](53-bd064-fusion-server.md)) | BD-057, BD-060 **2026-10-14 owner ladder: 15/4/2 (was 50/10/3), see [58](58-fusion-ladder-50-10-3.md); Studio pending.** |
 | BD-065 | Backlog | P1 | Dedicated Fusion Menu: species/trait filters, manual 15/4/2-donor selection, odds preview, loss warnings and staged wheel reveals | BD-057, BD-060, BD-064 **2026-10-14 owner ladder: 15/4/2 (was 50/10/3), see [58](58-fusion-ladder-50-10-3.md); Studio pending.** |
 
 ### BD-044: Owner-approved reward-loop correction (2026-10-08)
@@ -206,7 +206,7 @@ The newer owner's reward intent supersedes the 2026-09-17 test economy's `N(c)=c
 - [ ] Retune and test quantity (currently 1/2/3 copies per egg), species odds, egg outcomes/disclosure, fusion pacing, 150+ egg batch payloads and reward caps. Old `tools/economy_sim.py`, `tests/test_economy.py`, Config thresholds and Studio fixtures remain **historical tests** until deliberately replaced.
 - [ ] End-to-end multiplayer/rejoin/persistence, queue limits, migration, real-device interaction, UI and no paid-random regression verified with evidence before marking done. Do not touch persistent profiles or enable paid random items without a separate release review.
 
-### BD-045–BD-056: Owner feedback implementation (2026-10-08)
+### BD-045â€“BD-056: Owner feedback implementation (2026-10-08)
 
 **Status:** all Backlog/TODO. The **task index above is authoritative** for status, priority, dependencies and ownership. Rather than duplicate every subtask here, use the detailed [categorized owner feedback specification](45-owner-feedback-shop-hud-world-weather-tasks.md) for acceptance checklists, source references and design constraints.
 
@@ -214,19 +214,19 @@ The newer owner's reward intent supersedes the 2026-09-17 test economy's `N(c)=c
 - **Economy/shops:** BD-045 conditions (new starting odds **50/30/15/4.5/0.5**), BD-046 Shop entry, BD-047 category cards/icons and aura previews, BD-051 five-minute randomized potion offers.
 - **Art/world:** BD-048 ten trail assets and six proposed rarity classes, BD-049 reusable world props and landmarks, BD-050 food models, BD-055 environment-wide weather.
 - **Movement/UX:** BD-052 return confirmation, BD-053 terrain/sliding defect, BD-054 mobile/tablet touch placement, BD-056 growth and caught-egg HUD.
-- **Update 2026-10-13 — BD-052/053/054 are `Review / test`** ([implementation and evidence](51-bd053-054-movement-mobile.md)): root cause of sliding was the low torso collider wedging into slopes (now slope-clearance lifted, guard envelope shares `MaxSlopeAngle`); touch layout moved to `shared/TouchLayout` with safe insets and Roblox thumbstick/jump reserved zones; one bottom-center Home with Return/Cancel settles immediately through idempotent `tryEnd` (provisional predator-nearby refusal). Offline tests only; Studio checks and the owner Android checklist in doc 51 are the remaining gates. BD-054 dependency BD-046 (Shop entry) is not required for this layout pass.
+- **Update 2026-10-13 â€” BD-052/053/054 are `Review / test`** ([implementation and evidence](51-bd053-054-movement-mobile.md)): root cause of sliding was the low torso collider wedging into slopes (now slope-clearance lifted, guard envelope shares `MaxSlopeAngle`); touch layout moved to `shared/TouchLayout` with safe insets and Roblox thumbstick/jump reserved zones; one bottom-center Home with Return/Cancel settles immediately through idempotent `tryEnd` (provisional predator-nearby refusal). Offline tests only; Studio checks and the owner Android checklist in doc 51 are the remaining gates. BD-054 dependency BD-046 (Shop entry) is not required for this layout pass.
 - **Critical interaction:** BD-044 egg-per-catch target is not shipped. Do not label old catches/threshold eggs as equivalent, or unlock paid random items. New **Cracked 50%** selection combined with existing **80% failure on cracked** implies **40% total failed eggs at tier 0**, a high-risk balancing review.
 - **Completion gate:** each task requires its own code/assets, Studio/device/runtime acceptance and evidence. Neither planning text nor a similarly named pre-existing Build 020 feature closes it.
 
-### BD-057–BD-065: Pattern fusion, permanent dinosaur identity and earned prestige (2026-10-08)
+### BD-057â€“BD-065: Pattern fusion, permanent dinosaur identity and earned prestige (2026-10-08)
 
 **OWNER TARGET; only the disabled BD-057 Phase 1 transaction foundation exists ([49](49-identity-fusion-phase1.md)); task index above controls status.** Gold consumes **10 same-species + same-egg-pattern dinosaur instances** (example ten Wavy-Stripes Compies) and guarantees **ONE NEW Gold Wavy-Stripes Compy**; it **does NOT preserve the traits of a selected hero**. The new result's colors, condition, Shiny, event mutation and BIG are **rolled from versioned ingredient-dependent probabilities**. Pattern remains fixed by the same-pattern recipe. **Emerald comes after Gold and before Diamond**; higher-stage costs, additional materials and Obsidian/Celestial are proposals. Fusion always grants the guaranteed higher stage/stat improvement, never a random chance to lose all ingredients with nothing.
 
-Each hatched dinosaur keeps **its immutable originating egg record**, but the **NEW fusion output** instead stores **a parent-dino/source-egg lineage** and freshly rolled traits. A living dino can purchase many aura/trail options and switch between them; on fusion **all input dinos and their aura/trail purchases are consumed, with explicit loss confirmation**, and no bought cosmetics transfer to the new result. A dedicated **Fusion Menu** must sort/filter by species, Shiny, mutation, colors, pattern, condition and other traits, display selected ingredients, exact chances and input loss, then reveal each **server-committed trait** via entertaining, skippable wheel animations. **2/10 Shiny ingredients → 10% Shiny on result** is a **proposed formula**, not approved balance. Show true **hatch odds only for hatched dinos** versus **conditional fusion-outcome odds for fused ones**; earned tier is not a random drop %. Bought cosmetics are excluded. Blender Gold/Emerald/Diamond subtle/medium surfaces must preserve **the newly rolled output** DNA and support stacked new effects.
+Each hatched dinosaur keeps **its immutable originating egg record**, but the **NEW fusion output** instead stores **a parent-dino/source-egg lineage** and freshly rolled traits. A living dino can purchase many aura/trail options and switch between them; on fusion **all input dinos and their aura/trail purchases are consumed, with explicit loss confirmation**, and no bought cosmetics transfer to the new result. A dedicated **Fusion Menu** must sort/filter by species, Shiny, mutation, colors, pattern, condition and other traits, display selected ingredients, exact chances and input loss, then reveal each **server-committed trait** via entertaining, skippable wheel animations. **2/10 Shiny ingredients â†’ 10% Shiny on result** is a **proposed formula**, not approved balance. Show true **hatch odds only for hatched dinos** versus **conditional fusion-outcome odds for fused ones**; earned tier is not a random drop %. Bought cosmetics are excluded. Blender Gold/Emerald/Diamond subtle/medium surfaces must preserve **the newly rolled output** DNA and support stacked new effects.
 
-Complete ownership, recipes, safe handling of valuable donors/purchased cosmetics, **ingredient-dependent RNG and transparent wheel reveal (BD-064–065)**, deterministic duplicate-sink proposal (BD-063), lineage/migration, earned stats, Blender materials, multi-week balancing and tests are specified **only** in [the advanced fusion specification](46-pattern-fusion-dino-identity-and-cosmetic-progression.md). Roblox [paid-random rules](https://create.roblox.com/docs/production/monetization/paid-random-items) can cover synthesis when ingredients are Robux-linked; trace and restrict eligible inputs and keep paid flags disabled until approved. Build 020's 50/50 fusion remains current code, not new owner goal.
+Complete ownership, recipes, safe handling of valuable donors/purchased cosmetics, **ingredient-dependent RNG and transparent wheel reveal (BD-064â€“065)**, deterministic duplicate-sink proposal (BD-063), lineage/migration, earned stats, Blender materials, multi-week balancing and tests are specified **only** in [the advanced fusion specification](46-pattern-fusion-dino-identity-and-cosmetic-progression.md). Roblox [paid-random rules](https://create.roblox.com/docs/production/monetization/paid-random-items) can cover synthesis when ingredients are Robux-linked; trace and restrict eligible inputs and keep paid flags disabled until approved. Build 020's 50/50 fusion remains current code, not new owner goal.
 
-### Crystal Shops and Genetics, 2026-10-08 (BD-036–041)
+### Crystal Shops and Genetics, 2026-10-08 (BD-036â€“041)
 
 Implemented/private-test acceptance; not release certification. Full record:
 [shop/genetics acceptance](39-crystal-shops-and-genetics-acceptance.md),
@@ -266,7 +266,7 @@ Only unpublished Build 019 VisualUpgrade / GameId=PlaceId=0 was modified.
 
 ### UI motion and responsiveness, 2026-10-08 (BD-043)
 
-**In progress — UI-motion history/evidence reconciled into Build 020; latest device checks pending.**
+**In progress â€” UI-motion history/evidence reconciled into Build 020; latest device checks pending.**
 Merge `1799536` preserves newer genes, failure handling, authored previews and four
 Shiny glints. The shared theme/loading/preview motion had already been incorporated.
 See [main integration evidence](evidence/2026-10-08-main-integration/README.md).
@@ -378,7 +378,7 @@ Evidence: [screenshots and fixture boundaries](evidence/2026-10-08-hatching-and-
 BD-042 remains Review / test. The concurrently added BD-035-041 planning tasks
 retain their IDs and scope; this local gameplay pass does not complete those plans.
 
-### New proposed shop/egg systems, 2026-10-08 (BD-035–041)
+### New proposed shop/egg systems, 2026-10-08 (BD-035â€“041)
 
 **Shared visual reference:** [Egg appearance vision](39-egg-appearance-shared-vision.md) consolidates the owner review and archives pattern/color/condition/aura previews. Matte shell, tile/grass grounding and reusable Cracked/Dirty overlays are accepted directions; exact art-authoring weights are provisional; latest seven engulfing smoke/anime auras are review drafts. Rainbow/Astra rework resumed and the owner accepted Astra's brighter curved-vertical opal direction. [Combined-condition review evidence](evidence/2026-10-08-egg-condition-combinations/README.md) tests selected patterned/color/condition/Magma stacks. Local 1024-to-512 RGBA/alpha and camera/mesh checks are authoring evidence only; they do not close missing authored-runtime layers, uploads or Studio/device acceptance. Existing gameplay acceptance is recorded separately above.
 
@@ -388,7 +388,7 @@ retain their IDs and scope; this local gameplay pass does not complete those pla
 - [ ] **BD-038:** Replace/extend three cosmetic trails with **ten** crystal-priced tiered coloured walking trails, from free normal white to highest **Astra glitter**. Prices, speed buffs and required **persistent account levels** increase by tier; cap aggregate speed and migrate existing ownership.
 - [ ] **BD-039:** Crystal-priced 5-minute Speed Potion, reusing the existing potion inventory/expiry and server multipliers; avoid duplicate shops.
 - [ ] **BD-040:** Condition Shop progressively reduces Cracked odds/increases Rainbow/Astra odds with escalating level and crystal gates. User-confirmed 2026-10-08: Cracked **20% hatch success** and **80% speed/growth** if successful; Dirty 80%; Normal 100%; Rainbow 120%; Astra 180%. Factors affect **both movement speed and growth intake**, before final shared caps. Implementation, failed-hatch consolation and interaction tests remain Todo; this specification confirmation is not an acceptance pass.
-- [ ] **BD-041:** Two server-selected rarity-weighted egg colors and saved random visible coverage share, inherited by dinosaur; preserve tonal pattern contrast for matching genes. Vivid red is rare and pure black exceptionally rare. Reconcile percentage endpoints with that hierarchy; the shared art draft uses 1–99% for mixed genes and 100% for matching pairs, not approved public odds. Independent Normal/Big eggs (Big visuals 1.2x proposed, same stats), Shiny sparkle and immutable persistence remain in scope; see the existing tested BIG baseline before changing scale.
+- [ ] **BD-041:** Two server-selected rarity-weighted egg colors and saved random visible coverage share, inherited by dinosaur; preserve tonal pattern contrast for matching genes. Vivid red is rare and pure black exceptionally rare. Reconcile percentage endpoints with that hierarchy; the shared art draft uses 1â€“99% for mixed genes and 100% for matching pairs, not approved public odds. Independent Normal/Big eggs (Big visuals 1.2x proposed, same stats), Shiny sparkle and immutable persistence remain in scope; see the existing tested BIG baseline before changing scale.
 
 These are **planned**, not implemented or approved public balance. The earlier three-size proposal is superseded by **Normal and Big only**; shiny is not a stat condition. Existing BD-028/029/032/034 test evidence remains historical and does not certify these additions. [Detailed mechanics, proposed starting trail catalog, unresolved decisions and acceptance criteria](36-crystal-shops-egg-genetics-and-progression.md).
 
@@ -596,115 +596,115 @@ not extended to those cases; BD-019 and the larger device/multiplayer gates stay
 Both instances were left stopped; default viewport restored. The disposable source
 fixture was removed after testing. Fourteen archived PNGs passed image verification.
 
-### BD-001 — research
+### BD-001 â€” research
 Done. Initial screenshot/source research and planning documents were completed on 2026-09-17.
 
-### BD-002 — direction
+### BD-002 â€” direction
 Done. Znypr selected a private test, cute/simple ground arena and small complete progression loop.
 
-### BD-003 — setup/design blockers
-Done. Personal account, Studio installed, €0 target budget, immediate run dinosaur loot plus separate chest loot, increasing total copy rewards and stacked duplicates are confirmed.
+### BD-003 â€” setup/design blockers
+Done. Personal account, Studio installed, â‚¬0 target budget, immediate run dinosaur loot plus separate chest loot, increasing total copy rewards and stacked duplicates are confirmed.
 
-### BD-004 — reproducible project/private place
+### BD-004 â€” reproducible project/private place
 **Done when:** source mapping/build is reproducible and the actual private test experience/place is recorded with isolated test data.
 
 Source mapping, dependency-free Python packager and generated `.rbxlx` are working. A separate private test experience is now being used for DataStore testing, but the repository still does not record its experience/place IDs. That remains the blocker for closing BD-004.
 
-2026-10-13 (Milestone 1): the playtest uses a **new** private experience with a fresh DataStore; IDs are pending from Znypr. Record them in `PlaytestUniverseId` / `PlaytestPlaceId` in `src/shared/Config.luau` (placeholders marked `TODO(BD-004)`, right after `ProfileDataStoreName`) and in the release record of the [playtest runbook](55-playtest-release-runbook.md) §2/§6. `tools/verify_release.py --profile playtest` and `tools/build.py --profile playtest` fail until both are positive. Move to Done when that commit lands.
+2026-10-13 (Milestone 1): the playtest uses a **new** private experience with a fresh DataStore; IDs are pending from Znypr. Record them in `PlaytestUniverseId` / `PlaytestPlaceId` in `src/shared/Config.luau` (placeholders marked `TODO(BD-004)`, right after `ProfileDataStoreName`) and in the release record of the [playtest runbook](55-playtest-release-runbook.md) Â§2/Â§6. `tools/verify_release.py --profile playtest` and `tools/build.py --profile playtest` fail until both are positive. Move to Done when that commit lands.
 
-### BD-005 — persistence and remote contracts
+### BD-005 â€” persistence and remote contracts
 Done as a specification. `docs/13-persistence-remote-contracts.md` chooses a project-owned `DataStoreService`/`UpdateAsync` repository with leases, revisions, immutable operation outcomes and explicit remote validation. Durable implementation remains BD-011.
 
-### BD-006 — controller/camera
+### BD-006 â€” controller/camera
 **Done when:** desktop and touch movement work, min/max visual-size behavior is usable and two clients replicate correctly.
 
 Desktop evidence passed: movement, camera, dinosaur visibility, size behavior, reset isolation and two-client replication. Mobile/touch is still untested, so the task remains `Review / test`.
 
 2026-10-13 note: the touch HUD/control layout (BD-054), hill traction (BD-053) and Home (BD-052) changes in [51](51-bd053-054-movement-mobile.md) include the owner Android checklist that can also supply BD-006 mobile evidence.
 
-### BD-007 — asset kit
+### BD-007 â€” asset kit
 **Done when:** one original dinosaur silhouette/palette, manifest template and procedural fallback are reviewable.
 
 Done. `docs/23-original-asset-manifest.md` records the original procedural silhouettes, palettes, Gold treatment, arena kit, rights/source and zero external-asset dependency used by Build 013.
 
-### BD-008 — food/growth
+### BD-008 â€” food/growth
 Done. Znypr reported all Build 004 checklist cases working: pickup, growth, respawn, simultaneous ownership, remote growth replication and reset. The implementation remains bounded and server-owned; tuning is temporary.
 
-### BD-009 — PvP/spawn safety/run ending
-Done for desktop multiplayer. Znypr reported Build 005 tests 1–9 all working: spawn protection, standing-still exit, movement cancellation, equal-size safety, bigger-eats-smaller, protection after respawn, replication, exit-vs-predation race and Reset Character. The shared terminal guard produced no reported duplicate endings.
+### BD-009 â€” PvP/spawn safety/run ending
+Done for desktop multiplayer. Znypr reported Build 005 tests 1â€“9 all working: spawn protection, standing-still exit, movement cancellation, equal-size safety, bigger-eats-smaller, protection after respawn, replication, exit-vs-predation race and Reset Character. The shared terminal guard produced no reported duplicate endings.
 
-### BD-010 — alpha economy
-Done for private mechanics testing. `tools/economy_sim.py`, `tests/test_economy.py` and `docs/15-economy-simulation.md` define and verify the 0–5000 catch range, exact increasing copy totals, exponential rarity allocation, eligibility thresholds, independent chest grants, repeat-victim anti-farm proposal and 50-copy mutation risk.
+### BD-010 â€” alpha economy
+Done for private mechanics testing. `tools/economy_sim.py`, `tests/test_economy.py` and `docs/15-economy-simulation.md` define and verify the 0â€“5000 catch range, exact increasing copy totals, exponential rarity allocation, eligibility thresholds, independent chest grants, repeat-victim anti-farm proposal and 50-copy mutation risk.
 
 Important finding: one Common alpha species reaches 50 copies at catch score 62. The 50-copy mutation cost is therefore a mechanics-test value, not accepted public progression balance.
 
-### BD-011 — persistence/settlement
+### BD-011 â€” persistence/settlement
 **Done when:** rejoin, load failures, duplicate settlement, stale sessions and competing servers preserve committed inventory and immutable run outcomes.
 
-Build 006 runtime tests 1–10 passed. Confirmed: load/save/rejoin, exact +1 reward settlement, deliberate duplicate settlement does not double-grant, Reset Character settles the run, repeat-victim protection behaves as designed, disabling Studio API access fails closed with no playable dinosaur, and re-enabling access restores the prior profile. Znypr also confirmed Compy copies can increase above 3; the earlier apparent stop was the 60-second anti-farm window rather than a cap.
+Build 006 runtime tests 1â€“10 passed. Confirmed: load/save/rejoin, exact +1 reward settlement, deliberate duplicate settlement does not double-grant, Reset Character settles the run, repeat-victim protection behaves as designed, disabling Studio API access fails closed with no playable dinosaur, and re-enabling access restores the prior profile. Znypr also confirmed Compy copies can increase above 3; the earlier apparent stop was the 60-second anti-farm window rather than a cap.
 
 Build 007 completed the final acceptance case. Znypr confirmed the lease test passed in a new private test experience, earned copies persisted through a full restart, and the probe did not corrupt player progression. BD-011 is Done. The temporary lease probe is removed from normal runtime in Build 008.
 
-### BD-012 — collection/equip
+### BD-012 â€” collection/equip
 **Done when:** three species definitions, owned/locked counts and equip survive reconnect; invalid equip is rejected.
 
 Build 008 passed all eight runtime checks. Owned/locked counts, server rejection of locked T-Rex, one-time Triceratops test unlock, visual switching, Reset Character persistence and full reconnect persistence all worked. BD-012 is Done.
 
-### BD-013 — earned chest queue
+### BD-013 â€” earned chest queue
 **Done when:** server timestamps, offline elapsed time, duplicate claims and capacity/overflow policy pass. Chest loot remains independent from immediate run loot.
 
 Build 009 passed all eight runtime checks. The five-slot active queue, two-item overflow case, absolute offline timestamps, claim persistence, duplicate-claim protection and duplicate test-grant protection all worked. BD-013 is Done.
 
-### BD-014 — Gold mutation
+### BD-014 â€” Gold mutation
 **Done when:** atomic 50-copy conversion handles 49/50/51 copies, duplicate requests and equipped-copy semantics without negative counts.
 
 Build 010 passed all eight runtime checks. The 49-copy rejection, exact 50 and 51 conversions, duplicate mutation replay, equipped Gold-only semantics, Gold visual and reconnect persistence all worked. BD-014 is Done.
 
-### BD-015 — core UI
+### BD-015 â€” core UI
 **Done when:** lobby, HUD, run summary, collection and chest queue are usable on desktop/touch and large duplicate stacks render as grouped counts rather than hundreds of cards.
 
 Build 011 passed all eight checks. Tutorial, compact HUD, grouped collection rows, chest UI, Home, run summary and phone-landscape emulator layout/actions all worked, with development grant/setup controls absent. BD-015 is Done.
 
-### BD-016 — dinosaur/map kit
+### BD-016 â€” dinosaur/map kit
 **Done when:** three distinct original dinosaurs, one arena and Gold treatment pass collision/camera/permission checks. Procedural fallback is acceptable for the private test.
 
 Build 013 integrates the original procedural Compy, Triceratops, T-Rex, Gold treatment and meadow/nest environment kit. All decorative props are non-colliding and no external asset permissions are required. See `docs/24-visual-kit-test.md`.
 
-### BD-017 — audio
+### BD-017 â€” audio
 **Done when:** minimal effects work for a non-owner published tester with independent mute/volume behavior. Ambience is optional.
 
-### BD-018 — multiplayer/security/persistence suite
+### BD-018 â€” multiplayer/security/persistence suite
 Execute the verification matrix from `docs/06-roadmap-and-testing.md`. Source inspection is not runtime evidence.
 
 Build 012 passed all eight runtime checks. Malformed/flooded remotes, impossible movement correction, normal gameplay after attacks, two-client isolation, equal-size safety, one predation outcome, end-run-vs-predation terminal race and post-restart inventory persistence all passed. BD-018 is Done.
 
-### BD-019 — device/load/published assets
+### BD-019 â€” device/load/published assets
 Requires a real target phone plus the agreed multiplayer/pickup load test and non-owner asset checks.
 
-2026-10-13 — **In progress, owner publish pending.** `tools/verify_load.py` (in CI) runs the real ProfileRepository with a mocked, latency/throttle-modelled DataStore: 8 and 12 simulated players over 15 min pass with zero failed operations, no throttling and peak 55–57% of the 60 + 10×players/min budget. Report-only: a BD-044 150-egg simultaneous reveal sits at ~100% of budget and one equip-spamming client uses ~60% of an 8-player server's budget; batching egg claims and a per-player write budget are recommended. The Studio 2/4/8-client, desktop + Android and non-owner rows of the [runbook matrix](55-playtest-release-runbook.md) §5 remain to be executed after publish. Offline results are not device or live-DataStore evidence.
+2026-10-13 â€” **In progress, owner publish pending.** `tools/verify_load.py` (in CI) runs the real ProfileRepository with a mocked, latency/throttle-modelled DataStore: 8 and 12 simulated players over 15 min pass with zero failed operations, no throttling and peak 55â€“57% of the 60 + 10Ã—players/min budget. Report-only: a BD-044 150-egg simultaneous reveal sits at ~100% of budget and one equip-spamming client uses ~60% of an 8-player server's budget; batching egg claims and a per-player write budget are recommended. The Studio 2/4/8-client, desktop + Android and non-owner rows of the [runbook matrix](55-playtest-release-runbook.md) Â§5 remain to be executed after publish. Offline results are not device or live-DataStore evidence.
 
-### BD-020 — private release/rollback
+### BD-020 â€” private release/rollback
 Requires a known-good commit/build, private access settings, no public debug grants, known issues and a tested rollback.
 
-2026-10-13 — **Review / test, owner publish pending.** `python tools/build.py --profile playtest` produces a reproducible playtest place (playtest store name, `ReleaseProfile = "playtest"`, manifest with commit/dirty flag) and `tools/verify_release.py` enforces paid/test/debug flags off (default profile in CI). [Playtest runbook](55-playtest-release-runbook.md) holds gates, owner Studio publish steps, tagging (`playtest-m1-bNNN-rK`), release record, known-issues template, rollback/store-rotation and data-reset policy. Done requires the actual private publish, the recorded release row and a performed rollback drill.
+2026-10-13 â€” **Review / test, owner publish pending.** `python tools/build.py --profile playtest` produces a reproducible playtest place (playtest store name, `ReleaseProfile = "playtest"`, manifest with commit/dirty flag) and `tools/verify_release.py` enforces paid/test/debug flags off (default profile in CI). [Playtest runbook](55-playtest-release-runbook.md) holds gates, owner Studio publish steps, tagging (`playtest-m1-bNNN-rK`), release record, known-issues template, rollback/store-rotation and data-reset policy. Done requires the actual private publish, the recorded release row and a performed rollback drill.
 
-### BD-021 — observed community test
+### BD-021 â€” observed community test
 Run the small invited session only after BD-020. Capture friction, repeat-run behavior and defects separately from suggestions.
 
-### BD-022 — public-alpha decision
+### BD-022 â€” public-alpha decision
 Public scope is an evidence-based later decision. Passing code generation alone never triggers launch.
 
 ## Session log
-- 2026-09-18: Znypr reported Build 012 tests 1–8 passing; per-run Growth/Size/Catches correctly reset while persistent inventory remained. BD-018 moved to Done. BD-007 asset specification completed and Build 013 visual kit prepared for BD-016 testing.
+- 2026-09-18: Znypr reported Build 012 tests 1â€“8 passing; per-run Growth/Size/Catches correctly reset while persistent inventory remained. BD-018 moved to Done. BD-007 asset specification completed and Build 013 visual kit prepared for BD-016 testing.
 - 2026-09-18: Znypr reported all Build 011 core UI tests passing, including phone-landscape emulator interaction. BD-015 moved to Done. Build 012 security/multiplayer regression prepared for BD-018.
 - 2026-09-18: Znypr reported all Build 010 Gold mutation tests passing. BD-014 moved to Done. Build 011 core UI prepared for desktop and phone-landscape emulator verification.
 - 2026-09-18: Znypr reported all Build 009 chest queue tests passing. BD-013 moved to Done. Build 010 Gold mutation prepared for BD-014 runtime verification.
 - 2026-09-18: Znypr reported all Build 008 collection/equip tests passing. BD-012 moved to Done. Build 009 chest queue implemented for BD-013 runtime verification.
 - 2026-09-18: Znypr reported Build 007 checks passing in a new private test experience: Profile Loaded, fresh starter state, lease test PASS, reward gain, full restart and persisted copy count. BD-011 moved to Done. Build 008 collection/equip prepared for runtime verification.
 - 2026-09-17: Build 007 prepared for final BD-011 runtime verification. Added a temporary DataStore lease/stale-writer probe and HUD `Lease test` status. Final Build 007 CI passed and generated the test artifact.
-- 2026-09-17: Znypr reported Build 006 tests 1–10 passing. Rejoin persistence, duplicate settlement, Reset Character settlement, anti-farm behavior and fail-closed API/DataStore behavior passed. Compy copies were confirmed to continue above 3. BD-011 moved to Review / test pending the competing-session/stale-lease case.
-- 2026-09-17: Znypr reported Build 005 tests 1–9 all passing. BD-009 moved to Done for desktop multiplayer.
-- 2026-09-17: BD-010 economy simulation completed. Six deterministic tests pass across catch scores 0–5000. Private-test thresholds and chest grants are recorded in `docs/15-economy-simulation.md`; 50-copy Gold is flagged as intentionally fast test pacing.
+- 2026-09-17: Znypr reported Build 006 tests 1â€“10 passing. Rejoin persistence, duplicate settlement, Reset Character settlement, anti-farm behavior and fail-closed API/DataStore behavior passed. Compy copies were confirmed to continue above 3. BD-011 moved to Review / test pending the competing-session/stale-lease case.
+- 2026-09-17: Znypr reported Build 005 tests 1â€“9 all passing. BD-009 moved to Done for desktop multiplayer.
+- 2026-09-17: BD-010 economy simulation completed. Six deterministic tests pass across catch scores 0â€“5000. Private-test thresholds and chest grants are recorded in `docs/15-economy-simulation.md`; 50-copy Gold is flagged as intentionally fast test pacing.
 - 2026-09-17: Build 005 prepared. BD-005 specification completed. Added `RunLifecycle` and `PredationService`, one no-payload/rate-limited `RequestEndRun` remote, spawn protection, score-gated PvP, deterministic victim claim, temporary catch score, manual exit channel and a shared terminal guard. Generated build packages 8 scripts.
 - 2026-09-17: Znypr reported all Build 004 food/growth checklist cases working. BD-008 moved to Done.
 - 2026-09-17: Znypr reported all v003 desktop single-player checks and four two-client checks passed. Mobile remains untested, so BD-006 remains `Review / test`.
@@ -762,12 +762,12 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-160 | Parked | P3 | Monetization ideas, no code: auto-open pass, weather radar, shared Weather Call, nest warmer, hatch styles, mythic cosmetics, capacity upgrades. Principles: sell time, information and looks, never power or randomness for Robux ([86](86-monetization-ideas.md)). Owner 2026-10-15, not high priority | BD-153 |
 | BD-148 | In review (claude/eggs-screen: one Eggs screen, single next-egg card, auto-open by rarity, AutoOpenRequiresPass flag, no forced hatching; no new art) | P0 | Merge the Eggs and Nests menus: the left-rail "Eggs" button opens the Egg Nests screen (nest-first). Layout: five nest slots in a row, each with the egg-nest icon (docs/77 egg_nest, empty slots show a dim empty nest), a 3 h timer on the one being opened, "Queued" on the others, tap a READY nest to open it (reveal sequence, PR hatch-sequence). Header keeps "Nests 2/5" and the luck line. Remove the separate NESTS rail button; leftover banked run eggs stay as an "Eggs waiting: N" row with the HATCH button below the nests so nothing is lost. Owner 2026-10-14 | BD-090, BD-147 |
 | BD-147 | Backlog | P0 | Run rewards are nest-first: every finished run gives one egg nest, big runs give more (tiered by food: e.g. 1 nest at 500 food, 2 at 2,000, 3 at 5,000; numbers PROVISIONAL, balance in docs/71), capped by the 5-slot storage; each nest opens on a 3 h timer, one at a time, so a full set is 15 h. A run that would overflow storage shows "Nest storage full" and keeps the extra as a banked egg reward instead of losing it. Add the economy check (verify_nests.py) and a kid-short result line on the run summary: "+2 Egg Nests!". Needs Znypr to confirm the nest tiers | BD-090 |
-| BD-146 | Backlog | P0 | Selecting a new dino spawns it with the old primitive "balloon" visual on top (two visuals stacked). Remove the old DinoVisual before the new one attaches, never draw the procedural fallback when a real model is loading (show nothing or a short fade until it is ready), and recheck after the mesh-budget fix (PR #49). Owner screenshot 2026-10-14 | BD-044 |
-| BD-145 | Backlog | P1 | Dino Index placeholders for undiscovered dinos render as a black box instead of the species silhouette. Show the real species shape, dark and soft-edged, with "???" so kids can guess what is coming; works for the 17 authored-mesh species and the 6 packaged meshes | BD-146 |
+| BD-146 | Backlog | P0 | Selecting a new dino spawns it with the old primitive "balloon" visual on top (two visuals stacked). Remove the old DinoVisual before the new one attaches, never draw the procedural fallback when a real model is loading (show nothing or a short fade until it is ready), and recheck after the mesh-budget fix (PR #49). Owner screenshot 2026-10-14 | BD-044 **2026-10-15 note:** cause not reproduced or fixed (suspects: server DinoVisual shell vs client LocalMeshVisual in ResourceVisuals.client.luau when the client mesh clone fails); needs a Studio repro |
+| BD-145 | Review / test | P1 | Dino Index placeholders for undiscovered dinos render as a black box instead of the species silhouette. Show the real species shape, dark and soft-edged, with "???" so kids can guess what is coming; works for the 17 authored-mesh species and the 6 packaged meshes | BD-146 **2026-10-15:** code already renders dark silhouette viewports with "???" name/rarity (FusionSelection.indexCard) on Index cards and species page; not visually re-verified this pass (no screenshot tool for in-game GUI) |
 | BD-144 | Backlog | P1 | Potion button icon in the main menu is still the small code-drawn bottle and looks broken at menu size. Replace it with a proper illustrated potion icon (docs/83 item 21, ChatGPT kit style), sized and centred like the other menu icons (docs/72: 48/64 px readable) | docs/83 |
 | BD-143 | Backlog | P1 | Trail shop: full rework. Cards show a tiny white swoosh. Each trail gets a big animated preview (the real trail behind a running dino silhouette, or the Mythic Glow v2 ribbon looping), its class colour and rarity badge (6 classes), level requirement and speed stat in kid-short copy; locked trails show the preview dimmed with "Level 6". Uses the v2 textures and shop icons | BD-111, BD-113 |
 | BD-142 | Backlog | P1 | Aura shop: cards are boring and the icon is too small. Rework with a large live preview (dino on the rotating sigil, halo and pillar per tier), tier badge (T1/T2/T3), growth bonus as "Growth +35%", and owned or equipped state; should sell the "mythic" fantasy at first glance | BD-110, BD-087 |
-| BD-141 | Backlog | P1 | Condition shop displays are bugged: the five condition tiles show plain cream boxes instead of eggs with the accepted condition looks (Cracked, Dirty, Normal, Rainbow, Astra overlays, docs/39 and docs/77 IDs). Render the real egg with its overlay per tile, keep the percent line, check phone size | BD-039 |
+| BD-141 | Backlog | P1 | Condition shop displays are bugged: the five condition tiles show plain cream boxes instead of eggs with the accepted condition looks (Cracked, Dirty, Normal, Rainbow, Astra overlays, docs/39 and docs/77 IDs). Render the real egg with its overlay per tile, keep the percent line, check phone size | BD-039 **2026-10-15 note:** conditions tab now builds ModelPreview eggs per tile (Bootstrap ~line 486); not visually verified |
 | BD-140 | Backlog | P2 | Crystal shop: one card per crystal pack (art that grows with pack size, crystal amount, price, bonus tag) instead of the plain row list. Robux packs are off for the playtest, so keep the tab clearly "Coming soon" or hide it there | BD-004 |
 | BD-130 | In progress | P0 | Weather v2: per-event lighting grade, haze, bloom, particle rigs, bolts, lava bombs, quake shake, aurora curtains, blood moon, title card ([84](84-weather-events-v2.md)); owner feedback "weak, boring" | BD-120 |
 | BD-131 | Backlog | P1 | Weather particle textures from Blender (smoke, bolt, rain, snow, ember, dust, ring, curtain flipbooks) | BD-130 |
@@ -802,7 +802,7 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-168 | Review / test | P1 | Performance budget for the bigger world: measure parts, memory and fps on a real phone/low-end PC; add streaming/distance culling for props and food if needed before adding BD-167 volume. **Implemented (docs/89): client distance culling, per-device `Config.WorldCulling` budget, admin readout; desktop Studio numbers only, real phone still to measure** |
 | BD-170 | Review / test | P0 | Hatch flow bugs (owner): (1) clicking Open first shows a dino cycling through patterns, which is misleading and must not exist: Open starts the egg opening animation immediately; (2) the cube egg is still shown, use the real egg model or Blender image; (3) tapping Next egg drops the player back to the Eggs screen instead of staying in the opening sequence until the batch ends or the player exits |
 | BD-171 | Review / test | P0 | Paint-bucket colour reveal (owner design): the egg starts colourless and without pattern; a bucket on the left splashes and colours the whole egg (shows the colour name and its rarity tier, e.g. Mythic); a bucket on the right splashes and reveals the pattern (name and rarity); each bucket opens quickly. Gives colour and pattern more weight in the hatch. Sound cue per splash, tier-coloured bursts. Depends on BD-170 and the pure HatchTimeline |
-| BD-172 | Backlog | P1 | Colour growth bonus (owner proposal): colour gives a small permanent growth factor, about 1-5% by colour rarity (black 5%, double black 10%). Needs the colour rarity ladder, stacking rule with potions/fusion, display in the Index, balance against GrowthCap and server-side validation. PROVISIONAL numbers |
+| BD-172 | Review / test | P1 | Colour growth bonus (owner proposal): colour gives a small permanent growth factor, about 1-5% by colour rarity (black 5%, double black 10%). Needs the colour rarity ladder, stacking rule with potions/fusion, display in the Index, balance against GrowthCap and server-side validation. PROVISIONAL numbers **2026-10-15:** implemented, PROVISIONAL: +1% per colour tier (Common 0 .. Mythic 5), primary + secondary summed, cap +10%, multiplies gained growth server-side after GrowthCap from EquippedGenesJson; shown in Dino Details / My dinos ("Colour bonus +N% growth"), paint-bucket chip and Index card; docs/94, tools/verify_colour_bonus.py. Owner still to confirm numbers and fusion stacking |
 | BD-173 | Review / test | P1 | Dino material: dinos currently look slightly glossy and should be matte. Gloss/metal is reserved for fused tiers (Gold, Emerald, Diamond). Set material/roughness per species mesh and pattern texture, keep Mythic Glow separate |
 | BD-174 | Review / test | P0 | Egg condition shown on the dino (owner): condition (Cracked, Dirty, Rainbow, Astra...) must not appear on the dino. It only changes hatch odds, stats and how the EGG looks. Remove condition visuals/labels from dino models, Index cards and hero views; keep them on egg visuals and egg cards only. Review BD-103 wiring |
 | BD-175 | Review / test | P1 | Dino Index remembers its original egg (owner): each hatched copy keeps its egg metadata (condition, nest/run, time, colours); in the dino detail screen a small egg button shows the original egg (egg picture with condition look and facts). Needs a small egg icon asset, data already planned in AGENTS (egg lineage), older copies show "unknown egg". **2026-10-15:** egg button in My dinos detail opens a popup (EggOrigin view model, verify_egg_origin.py); older copies show Unknown egg; fused dinos say they have no single egg |
@@ -824,7 +824,9 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-188 | Backlog | P1 | Rings (docs/92 batch 3): soft rim ring and thin shock ring 256 px, thicker round variant for seismic. Roles: VFX artist (Claude, Blender) | BD-161, BD-162, BD-155 |
 | BD-189 | Backlog | P1 | Sparkle and motif sheets (docs/92 batch 4): droplets, soft sparks, snow crystals, pebbles/dust, embers, aurora ribbons (coloured), crimson motes, 512 px sheets. Roles: VFX artist (Claude, Blender) | BD-161, BD-162, BD-155 |
 | BD-190 | Backlog | P1 | Mutation badge icons (docs/92 batch 5): 7 icons 128 px (drop, bolt, snowflake, pebble, flame, ribbon, moon), readable at 64 px, replace the plain colour dot. Roles: VFX artist (Claude, Blender) | BD-161, BD-162, BD-155 |
-| BD-196 | Backlog (lead, Blender) | P1 | World kit v2, phase 2 ROCKS and BUSHES: 5+ rock variants per biome (boulders, slabs, basalt columns, sandstone, lava rock, crystal clusters), bushes (berry bush, flowering shrub, ferns, reeds/cattails, marsh plants), ground cover (6 flowers, clover, grass tufts). Same pipeline as BD-195, tri budget 100-400 |
+| BD-196 | Review / test (rocks batch exported: 12 FBX in assets/blender/world/fbx_v2 world_*; bushes and ground cover still to do) | P1 | World kit v2, phase 2 ROCKS and BUSHES: 5+ rock variants per biome (boulders, slabs, basalt columns, sandstone, lava rock, crystal clusters), bushes (berry bush, flowering shrub, ferns, reeds/cattails, marsh plants), ground cover (6 flowers, clover, grass tufts). Same pipeline as BD-195, tri budget 100-400 |
 | BD-197 | Backlog (lead, Blender) | P1 | World kit v2, phase 3 TREES: broadleaf, birch, palm, willow/marsh, conifer variants, baobab-style giants, burnt volcanic, dead trees; less blobby canopies, trunk flare, bark colour variation; 400-1,200 tris; giant class scaled in BiomePlacement. Pipeline as BD-195 |
 | BD-198 | Backlog (lead, Blender) | P2 | World kit v2, phase 4 LANDMARKS and STATUES: dino stone statues, totems, ruined pillars, fossil rib arch, giant egg monument, obelisk, ancient arch variants; placed as rare landmarks per biome; 1,000-3,000 tris, matte stone palette |
+| BD-202 | Review / test | P1 | Settings audio mixer (Everything/Sounds/Weather SoundGroups, session-only), admin panel UX (grouped, 7-event picker, Start/Stop), toast stacking and length clamp ([93](93-settings-audio-admin.md)); `tools/verify_audio.py` | none |
 | BD-199 | Backlog | P1 | Phase gate for BD-195..198: each batch reviewed on a contact sheet (lead), then in-game at dino scale in a fresh playtest build, then part-budget check after BD-168 culling (phone radius). Placement and biome distribution of new ids go to BiomePlacement via a separate agent task after the owner has imported the meshes |
+| BD-203 | Review | P0 | Pattern atlas: patterns and colours on ALL dinos on screen within the ~32 EditableImage cap. New pure `PatternAtlasCache` (shared per owner+genes, ref counted, warm LRU, hard cap 30), all-or-nothing per model, flat matte colour LOD when the cap is hit or the dino is far (>160 studs), maintenance loop upgrades nearest flat dinos as slots free, counters on workspace attributes `PatternImagesLive/Pinned`, `PatternCacheHits/Misses/Evictions/Denied`. Verified offline (tools/verify_pattern_atlas.py); Studio measurement in the PR | BD-150 |
