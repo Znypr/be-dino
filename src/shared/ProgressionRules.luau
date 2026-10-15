@@ -208,7 +208,8 @@ end
 function Rules.level(p)
     return math.min(Config.AccountMaxLevel,1+math.floor(math.sqrt((p.accountXP or 0)/Config.AccountXPPerLevel)))
 end
-function Rules.multipliers(p,species,weather,now,conditionId,mutation)
+-- BD-185: egg condition (Cracked/Dirty/Normal/Rainbow/Astra) is an EGG-only property; it never scales a living dino's stats.
+function Rules.multipliers(p,species,weather,now,mutation)
     local aura=Rules.item(Config.Auras,p.equippedAura)
     local factor=Config.RarityFactors[species] or 1
     local growth,speed,loot=1,1,1
@@ -224,9 +225,7 @@ function Rules.multipliers(p,species,weather,now,conditionId,mutation)
         end
     end
     local trail=Rules.item(Config.Trails,p.equippedTrail or "")
-    local condition=Genetics.condition(conditionId or "normal")
-    local stats=if condition then condition.stats else 1
-    return math.min(Config.GrowthCap,growth*stats*(if aura then aura.growth else 1)*(if mutation then mutation.growth else 1)),
-        math.min(Config.SpeedCap,speed*stats*(if trail then trail.speed else 1)*(if mutation then mutation.speed else 1)),loot
+    return math.min(Config.GrowthCap,growth*(if aura then aura.growth else 1)*(if mutation then mutation.growth else 1)),
+        math.min(Config.SpeedCap,speed*(if trail then trail.speed else 1)*(if mutation then mutation.speed else 1)),loot
 end
 return Rules

@@ -372574,7 +372574,8 @@ end
 function Rules.level(p)
     return math.min(Config.AccountMaxLevel,1+math.floor(math.sqrt((p.accountXP or 0)/Config.AccountXPPerLevel)))
 end
-function Rules.multipliers(p,species,weather,now,conditionId,mutation)
+-- BD-185: egg condition (Cracked/Dirty/Normal/Rainbow/Astra) is an EGG-only property; it never scales a living dino's stats.
+function Rules.multipliers(p,species,weather,now,mutation)
     local aura=Rules.item(Config.Auras,p.equippedAura)
     local factor=Config.RarityFactors[species] or 1
     local growth,speed,loot=1,1,1
@@ -372590,10 +372591,8 @@ function Rules.multipliers(p,species,weather,now,conditionId,mutation)
         end
     end
     local trail=Rules.item(Config.Trails,p.equippedTrail or "")
-    local condition=Genetics.condition(conditionId or "normal")
-    local stats=if condition then condition.stats else 1
-    return math.min(Config.GrowthCap,growth*stats*(if aura then aura.growth else 1)*(if mutation then mutation.growth else 1)),
-        math.min(Config.SpeedCap,speed*stats*(if trail then trail.speed else 1)*(if mutation then mutation.speed else 1)),loot
+    return math.min(Config.GrowthCap,growth*(if aura then aura.growth else 1)*(if mutation then mutation.growth else 1)),
+        math.min(Config.SpeedCap,speed*(if trail then trail.speed else 1)*(if mutation then mutation.speed else 1)),loot
 end
 return Rules
 </ProtectedString>
@@ -373136,7 +373135,7 @@ function Odds.lines(level)
     for _,row in Config.ChestQuantityWeights do table.insert(lines,string.format("%d %s: %.4f%%",row.count,if row.count==1 then "dinosaur" else "dinosaurs",100*row.weight/total)) end
     table.insert(lines,"Condition upgrade "..level.." ("..Progression.ConditionOddsVersion.."):")
     local percents=Odds.conditionPercents(level)
-    for i,row in Progression.Conditions do table.insert(lines,string.format("%s: %g%%; hatch %g%%; speed/growth %gx",row.name,percents[i],row.hatchChance*100,row.stats)) end
+    for i,row in Progression.Conditions do table.insert(lines,string.format("%s: %g%%; hatch %g%%",row.name,percents[i],row.hatchChance*100)) end
     table.insert(lines,"Failed egg: "..Outcomes.percent(Outcomes.failure(level)).." overall; no dinosaur or crystal refund")
     table.insert(lines,"Colors (each slot independently):")
     total=0 for _,row in Progression.EggColors do total+=row.weight end
@@ -546758,7 +546757,6 @@ local function syncAttributes(player: Player, profile: any)
     player:SetAttribute("EquippedBig", traits ~= nil and traits.big)
     player:SetAttribute("EquippedShiny", traits ~= nil and traits.shiny)
     player:SetAttribute("EquippedGenesJson",HttpService:JSONEncode(if traits then traits.genes else nil))
-    player:SetAttribute("EquippedCondition",if traits and traits.genes then traits.genes.conditionId else "normal")
     player:SetAttribute("AccountLevel",ProgressionRules.level(progress))
     player:SetAttribute("AccountXP",progress.accountXP or 0)
     player:SetAttribute("PlaySeconds", profile.metrics.playSeconds)
@@ -548393,7 +548391,7 @@ function Service.start(repository)
                 local c=player.Character
                 if p and c then
                     local mutation=Rules.item(Config.EventMutations,player:GetAttribute("EquippedEventMutation") or "")
-                    local growth,speed,loot=Rules.multipliers(p,player:GetAttribute("EquippedSpeciesId") or "compy",current,os.time(),player:GetAttribute("EquippedCondition"),mutation)
+                    local growth,speed,loot=Rules.multipliers(p,player:GetAttribute("EquippedSpeciesId") or "compy",current,os.time(),mutation)
                     local adminGrowth,adminSpeed=adminMultipliers()
                     growth*=adminGrowth speed*=adminSpeed
                     local colourPercent,colourMultiplier=colourGrowth(player:GetAttribute("EquippedGenesJson"))
@@ -554613,7 +554611,7 @@ local function hideShell(character: Model)
     local shell = character:FindFirstChild("DinoVisual")
     if not shell or not character:FindFirstChild("LocalMeshVisual") then return end
     for _, item in shell:GetDescendants() do
-        if item:IsA("BasePart") and item.Transparency ~= 1 then item.LocalTransparencyModifier = 1 item.Transparency = 1 end
+        if item:IsA("BasePart") and item.Transparency ~= 1 then item:SetAttribute("ShellTransparency",item.Transparency) item.LocalTransparencyModifier = 1 item.Transparency = 1 end
     end
 end
 local function characterVisual(character: Model)
@@ -554657,9 +554655,24 @@ local function characterVisual(character: Model)
     local okGenes,genes=pcall(function() return Http:JSONDecode(genesJson) end)
     local realGenes=if okGenes and typeof(genes)=="table" and mutation=="base" then genes else nil
     local model = Resources.clone(id,realGenes)
-    if not model then return end
+    if not model then
+        -- BD-146: the new species has no local mesh (yet). Never keep the OLD species on top: drop it and let the
+        -- server shell show until a retry (RuntimeMeshes.Ready / attribute change) succeeds.
+        if previous and (previous:GetAttribute("SpeciesId") ~= id or previous:GetAttribute("Mutation") ~= mutation) then
+            previous:Destroy()
+            local shell = character:FindFirstChild("DinoVisual")
+            if shell then
+                for _, item in shell:GetDescendants() do
+                    if item:IsA("BasePart") then item.LocalTransparencyModifier = 0 item.Transparency = item:GetAttribute("ShellTransparency") or 0 end
+                end
+            end
+        end
+        return
+    end
     if not character.Parent or not root.Parent then model:Destroy();return end
-    if previous then previous:Destroy() end
+    for _, extra in character:GetChildren() do
+        if extra.Name == "LocalMeshVisual" then extra:Destroy() end -- exactly one local visual per character
+    end
     local groundHeight = root.Size.Y / 2 + humanoid.HipHeight
     if humanoid.RigType == Enum.HumanoidRigType.R6 then
         local leg = character:FindFirstChild("Left Leg")
@@ -554684,12 +554697,8 @@ local function characterVisual(character: Model)
     end
     model.Parent = character
     if realGenes then Appearance.apply(model,realGenes) end
-    local fallback = character:FindFirstChild("DinoVisual")
-    if fallback then
-        for _, item in fallback:GetDescendants() do
-            if item:IsA("BasePart") then item.LocalTransparencyModifier = 1 item.Transparency = 1 end
-        end
-    end
+    hideShell(character)
+
 end
 local function watchCharacter(character: Model)
     if watched[character] then return end
@@ -554715,6 +554724,7 @@ local function watchCharacter(character: Model)
     end)
     character.DescendantAdded:Connect(function(item)
         if item:IsA("BasePart") and item:FindFirstAncestor("DinoVisual") and character:FindFirstChild("LocalMeshVisual") then
+            if item.Transparency ~= 1 then item:SetAttribute("ShellTransparency",item.Transparency) end
             item.LocalTransparencyModifier = 1 item.Transparency = 1
         end
     end)

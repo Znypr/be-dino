@@ -21,7 +21,7 @@ function Odds.lines(level)
     for _,row in Config.ChestQuantityWeights do table.insert(lines,string.format("%d %s: %.4f%%",row.count,if row.count==1 then "dinosaur" else "dinosaurs",100*row.weight/total)) end
     table.insert(lines,"Condition upgrade "..level.." ("..Progression.ConditionOddsVersion.."):")
     local percents=Odds.conditionPercents(level)
-    for i,row in Progression.Conditions do table.insert(lines,string.format("%s: %g%%; hatch %g%%; speed/growth %gx",row.name,percents[i],row.hatchChance*100,row.stats)) end
+    for i,row in Progression.Conditions do table.insert(lines,string.format("%s: %g%%; hatch %g%%",row.name,percents[i],row.hatchChance*100)) end
     table.insert(lines,"Failed egg: "..Outcomes.percent(Outcomes.failure(level)).." overall; no dinosaur or crystal refund")
     table.insert(lines,"Colors (each slot independently):")
     total=0 for _,row in Progression.EggColors do total+=row.weight end
