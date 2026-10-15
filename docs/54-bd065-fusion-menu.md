@@ -11,6 +11,8 @@ by a parallel task and **is not part of this change**.
 DataStore, odds or price changes. Nothing here has been run in Roblox Studio or on a
 phone yet (see [Verification pending](#verification-pending)).
 
+> **2026-10-15: the ladder is now 6 / 3 / 2 with an any-pattern Gold ([90](90-fusion-ladder-v2.md)); counts below are history.**
+>
 > **2026-10-14 update:** the recipe counts below are now 15 / 4 / 2 (Gold = 15 Base, Emerald = 4 Gold, Diamond = 2 Emerald; see [58](58-fusion-ladder-50-10-3.md)). The 10-Base text is the original BD-065 prototype; the menu reads counts from `FusionSelection.Stages`.
 
 ## Owner rules this UI follows (2026-10-13)

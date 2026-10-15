@@ -253,6 +253,8 @@ local function isValidProfile(profile: any): boolean
                 or typeof(nest.size) ~= "number" or nest.size % 1 ~= 0 or nest.size < 1 or nest.size > 50
                 or typeof(nest.luck) ~= "number" or nest.luck % 1 ~= 0 or nest.luck < 1 or nest.luck > #Config.NestLuckTiers
                 or (nest.state ~= "waiting" and nest.state ~= "incubating" and nest.state ~= "ready") then return false end
+            -- BD-156 (additive): the weather active when the nest dropped; absent on older nests (rolls no mutations).
+            if nest.weatherId ~= nil and (not validId(nest.weatherId) or not ProgressionRules.item(ProgressionConfig.Weather, nest.weatherId)) then return false end
             if nest.state ~= "waiting" and (typeof(nest.readyAt) ~= "number" or nest.readyAt ~= nest.readyAt
                 or nest.readyAt < 0 or nest.readyAt % 1 ~= 0 or nest.readyAt == math.huge) then return false end
             if nest.eggs ~= nil then -- legacy precommitted eggs (migrated Build 020 nests)
@@ -278,7 +280,7 @@ local function isValidProfile(profile: any): boolean
             or entry.base > 2000000000 or entry.gold > 2000000000 or entry.diamond > 2000000000 then
             return false
         end
-        -- Additive optional Emerald counter (fusion ladder 15/4/2); nil == 0.
+        -- Additive optional Emerald counter (fusion ladder 6/3/2); nil == 0.
         if entry.emerald ~= nil and (typeof(entry.emerald) ~= "number" or entry.emerald < 0
             or entry.emerald % 1 ~= 0 or entry.emerald > 2000000000) then return false end
         if not ProgressionRules.validEvents(entry.events) then return false end
@@ -838,7 +840,7 @@ end
 -- BD-044 settlement: catches -> exactly that many run eggs (capped per run), plus
 -- deterministic crystals and separate bonus nests. Every random draw is committed
 -- before UpdateAsync; settledRuns + recentOperations make the run exactly-once.
-function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number, eggEvents, runSeconds: number?)
+function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number, eggEvents, runSeconds: number?, weatherId: string?)
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
         return false, nil, "profile_not_loaded"
@@ -863,6 +865,9 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         return true, if cachedOperation then cachedOperation.outcome else nil, "duplicate"
     end
 
+    -- Only a known, non-clear weather is stored; anything else (nil, forged, "clear") means no tag.
+    local nestWeatherId: string? = nil
+    if typeof(weatherId) == "string" and weatherId ~= "clear" and ProgressionRules.item(ProgressionConfig.Weather, weatherId) then nestWeatherId = weatherId end
     local rng = Random.new()
     local tags = placeEggTags(eggEvents, eggCount)
     local runEggs = table.create(eggCount)
@@ -912,8 +917,10 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
             local granted = math.min(nestsEarned, math.max(0, Config.NestStorageCapacity - #profileValue.eggNests))
             for j = 1, granted do
                 local nestId = RewardMath.nestId(runId, j)
+                -- BD-156: a nest dropped during weather carries that weather's tag; its eggs roll the same event
+                -- mutation chance as run eggs when it is claimed. Clear weather stores nothing (additive field).
                 table.insert(profileValue.eggNests, {nestId = nestId, droppedFromRun = runId,
-                    size = RewardMath.nestSize(nestId), luck = 1, state = "waiting"})
+                    size = RewardMath.nestSize(nestId), luck = 1, state = "waiting", weatherId = nestWeatherId})
             end
             advanceNests(profileValue, now)
             outcome.nestCount = granted
@@ -1018,8 +1025,10 @@ local function rollNestEggs(profileValue: any, nest: any): {any}
     for k = 1, nest.size do
         local eggId = nest.nestId .. ":" .. tostring(k)
         local shinyRoll, bigRoll = rng:NextNumber(), rng:NextNumber()
+        -- BD-156: same per-egg event roll and chance as run eggs (ProgressionRules.eventEgg), only for weather nests.
+        local tag = if nest.weatherId then ProgressionRules.eventEgg(nest.weatherId, rng:NextNumber()) else nil
         table.insert(eggs, {
-            eggId = eggId, kind = "nest_egg", eventId = "clear", mutationId = "",
+            eggId = eggId, kind = "nest_egg", eventId = if tag then tag.eventId else "clear", mutationId = if tag then tag.mutationId else "",
             reward = RewardMath.computeChestReward(rng, tier.rarityBoostEggs),
             shiny = shinyRoll < tier.shinyChance, big = bigRoll < tier.bigChance,
             genes = EggGenetics.roll(level, rng), traitRollVersion = "bd045-genes-v2",

@@ -43,7 +43,7 @@ function DinoDetails.show(container: GuiObject, instanceId: string, catalog, cal
         local preview = Preview.add(stage, d.speciesId or "compy", if d.stage == "base" or d.stage == nil then "base" else d.stage)
         preview.Size, preview.Position = UDim2.fromScale(1, .72), UDim2.fromScale(0, .02)
         -- Gold/Diamond keep their stage material; Base shows the actual gene colors.
-        PreviewTraits.add(preview, {shiny = d.shiny, big = d.big, genes = if d.stage == "base" then d.genes else nil})
+        PreviewTraits.add(preview, {shiny = d.shiny, big = d.big, mutationId = if d.stage == "base" then d.mutationId else nil, genes = if d.stage == "base" then d.genes else nil})
         W.label(stage, view.prestige or "", UDim2.new(1, -12, .12, 0), UDim2.new(0, 6, .74, 0), 22, C.text)
         W.swatch(stage, d.genes, UDim2.new(1, -24, .08, 0), UDim2.new(0, 12, .88, 0))
         local facts = W.scroll(root, UDim2.new(.62, -18, 1, -(W.Touch + 26)), UDim2.new(.38, 6, 0, W.Touch + 16))

@@ -20,4 +20,6 @@ return {
     bloodmoon = "rbxassetid://123248871135913",
     egg_splat = "rbxassetid://90653261302119",
     egg_shell = "rbxassetid://81264206118496",
+    egg_green = "rbxassetid://107129283312327",
+    egg_nest_single = "rbxassetid://85647267539754",
 }

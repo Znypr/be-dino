@@ -1,5 +1,5 @@
 --!strict
--- BD-065 Fusion Menu (client). Ten same-species + same-pattern Base dinos -> ONE NEW
+-- BD-065 Fusion Menu (client). Six same-species Base dinos (any pattern) -> ONE NEW
 -- Gold. The server (ReplicatedStorage.BeDinoRemotes.FusionAction) owns every rule,
 -- odds table, consumption and roll; this module only lists, explains, previews the
 -- exact quoted odds, collects explicit consent and REVEALS the committed result.
@@ -201,7 +201,7 @@ scheduleQuote = function()
     if not recipe or not recipe.approved then
         state.quoteStatus, state.quoteMessage = "locked", Sel.LockedStageText
     elseif #state.selection ~= recipe.donorCount then
-        -- Quotes are requested at EXACTLY the recipe count (15 / 4 / 2).
+        -- Quotes are requested at EXACTLY the recipe count (6 / 3 / 2).
         state.quoteStatus = "need"
         state.quoteMessage = if #state.selection < recipe.donorCount
             then "Select " .. (recipe.donorCount - #state.selection) .. " more matching dinos to see exact odds."
@@ -342,7 +342,7 @@ updateColumn = function()
             else UDim2.new(1 / perRow, -4, 0, math.max(18, math.floor(height / rows) - 6))
     end
     if counterMode then
-        -- 15-donor Gold: a compact n/N progress counter (Android landscape safe); the
+        -- Large recipe: a compact n/N progress counter (Android landscape safe); the
         -- selected dinos stay highlighted in the grid and a tap there removes them.
         local bar = W.box(col.slots, UDim2.new(), UDim2.new(), C.outline, 4)
         bar.Name = "Counter"
@@ -390,7 +390,9 @@ updateColumn = function()
         line(Sel.LockedStageText .. ".", nil, 44)
     else
         line("UPGRADED (guaranteed): 1 NEW " .. stageName .. " from " .. need .. " " .. Sel.stageTitle(recipe.source) .. ", stage + stats", C.accent, 40)
-        if state.selection[1] and state.byId[state.selection[1]] then
+        if recipe.anyPattern then
+            line("PATTERN: the most common pattern among your dinos", C.gold)
+        elseif state.selection[1] and state.byId[state.selection[1]] then
             local g = state.byId[state.selection[1]].genes or {}
             line("PATTERN LOCKED: " .. Sel.name(catalog, "patterns", g.patternId), C.gold)
         end
@@ -560,7 +562,7 @@ local function renderConfirm()
     end
     line("GUARANTEED: 1 NEW " .. stageName .. " " .. Sel.name(catalog, "patterns", quote.patternId) .. " " .. Sel.name(catalog, "species", quote.speciesId)
         .. " with the " .. stageName .. " stage upgrade. Its colors, Shiny, BIG and mutation are freshly rolled.", C.accent, 48)
-    line("PATTERN LOCKED: " .. Sel.name(catalog, "patterns", quote.patternId), C.gold)
+    line("PATTERN: " .. Sel.name(catalog, "patterns", quote.patternId) .. " (never rolled)", C.gold)
     line("ALL " .. donorTotal .. " DINOS BELOW ARE CONSUMED:", C.red)
     for i, id in quote.donorIds or state.selection do
         local d = state.byId[id]
@@ -750,8 +752,8 @@ startReveal = function(quote, result, status)
         end
         W.label(content, stage.title, UDim2.new(1, 0, 0, 44), UDim2.fromScale(0, .06), 34, C.gold)
         if stage.kind == "pattern" then
-            W.label(content, "PATTERN LOCKED: " .. string.upper(stage.value), UDim2.new(1, -40, 0, 60), UDim2.new(0, 20, .34, 0), 34, C.accent)
-            W.label(content, "Same-pattern recipe: the pattern is never rolled.", UDim2.new(1, -40, 0, 34), UDim2.new(0, 20, .6, 0), 20)
+            W.label(content, "PATTERN: " .. string.upper(stage.value), UDim2.new(1, -40, 0, 60), UDim2.new(0, 20, .34, 0), 34, C.accent)
+            W.label(content, "The pattern is never rolled.", UDim2.new(1, -40, 0, 34), UDim2.new(0, 20, .6, 0), 20)
         elseif stage.kind == "wheel" then
             local animate = motion() and auto
             reel(content, stage, animate)

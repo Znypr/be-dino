@@ -27,15 +27,19 @@ local function opts(dinos) return {dinos = dinos, level = 3, xp = 450, perLevel 
  patternName = function(id) return id == "06_wavy_stripes" and "Wavy" or id end} end
 
 -- Best fusion progress across species + pattern wins.
-local goal = Goal.pick(opts(join(many(9, "compy", "06_wavy_stripes"), many(4, "compy", "03_round_spots"), many(2, "rex", "06_wavy_stripes"))))
-assert(goal.kind == "fusion" and goal.text == "Gold: 9/50 Compy Wavy", goal.text)
-assert(math.abs(goal.fraction - 9 / 50) < 1e-9)
--- A higher tier with a higher fraction wins (2/3 Diamond beats 9/50 Gold).
-goal = Goal.pick(opts(join(many(9, "compy", "06_wavy_stripes"), many(2, "rex", "03_round_spots", "emerald"))))
-assert(goal.text == "Diamond: 2/3 rex 03_round_spots", goal.text)
+local goal = Goal.pick(opts(join(many(4, "compy", "06_wavy_stripes"), many(1, "compy", "03_round_spots"), many(2, "rex", "06_wavy_stripes"))))
+-- Gold takes ANY pattern of one species (docs/90): 4 + 1 compy of two patterns count together, no pattern in the text.
+assert(goal.kind == "fusion" and goal.text == "Gold: 5/6 Compy", goal.text)
+assert(math.abs(goal.fraction - 5 / 6) < 1e-9)
+-- A higher tier with a higher fraction wins (1/2 Diamond beats 2/6 Gold); Diamond keeps its pattern.
+goal = Goal.pick(opts(join(many(2, "compy", "06_wavy_stripes"), many(1, "rex", "03_round_spots", "emerald"))))
+assert(goal.text == "Diamond: 1/2 rex 03_round_spots", goal.text)
+-- Emerald counts one species + pattern only (2 of 3 wavy Golds, the spotted one does not help).
+goal = Goal.pick(opts(join(many(2, "compy", "06_wavy_stripes", "gold"), many(1, "compy", "03_round_spots", "gold"))))
+assert(goal.text == "Emerald: 2/3 Compy Wavy", goal.text)
 -- Ready recipes win and say so; the count is capped at the recipe.
-goal = Goal.pick(opts(join(many(60, "compy", "06_wavy_stripes"), many(2, "rex", "03_round_spots", "emerald"))))
-assert(goal.ready == true and goal.text == "Gold ready: fuse Compy Wavy", goal.text)
+goal = Goal.pick(opts(join(many(60, "compy", "06_wavy_stripes"), many(1, "rex", "03_round_spots", "emerald"))))
+assert(goal.ready == true and goal.text == "Gold ready: fuse Compy", goal.text)
 -- Locked dinos do not count; diamonds have no next stage -> level fallback.
 goal = Goal.pick(opts({dino("compy", "06_wavy_stripes", "base", true), dino("compy", "06_wavy_stripes", "diamond")}))
 assert(goal.kind == "level", "nothing eligible -> level fallback")

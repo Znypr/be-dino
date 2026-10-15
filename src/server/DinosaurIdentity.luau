@@ -26,7 +26,7 @@ local function buckets(collection)
         for _, stage in {"base", "gold", "diamond"} do
             result[speciesId .. "/" .. stage] = {speciesId = speciesId, stage = stage, count = entry[stage]}
         end
-        -- Additive optional Emerald counter (BD-057 ladder 15/4/2): nil means 0.
+        -- Additive optional Emerald counter (BD-057 ladder 6/3/2): nil means 0.
         result[speciesId .. "/emerald"] = {speciesId = speciesId, stage = "emerald", count = if entry.emerald == nil then 0 else entry.emerald}
         for mutationId, count in entry.events or {} do
             result[speciesId .. "/event/" .. mutationId] = {speciesId = speciesId, stage = "base", count = count, mutationId = mutationId}
@@ -173,10 +173,11 @@ end
 
 -- Data contract only: caller supplies already rolled output. Does not consume or roll.
 -- Immediate parent snapshots retain traits and origins without recursively copying trees.
--- Compact (ladder 15/4/2): speciesId, stage and genes.patternId are identical for every
--- parent (recipe-locked), so they are stored once on the record (origin.parentStage)
--- instead of 15 times. Readers fall back to the result's speciesId/pattern.
-Identity.MaxFusionParents = 15
+-- Compact (ladder 6/3/2): speciesId and stage are identical for every parent, so they are
+-- stored once on the record (origin.parentStage). genes.patternId is stored on a parent snapshot
+-- ONLY when it differs from the result (Gold takes the plurality pattern of mixed-pattern Base
+-- donors); readers fall back to the result's speciesId/pattern.
+Identity.MaxFusionParents = 6
 function Identity.fusionRecord(id, output, parents, operationId, recipeVersion, oddsVersion)
     assert(type(id) == "string" and #id > 0 and #id <= 120, "invalid result ID")
     assert(type(operationId) == "string" and #operationId > 0 and #operationId <= 120, "invalid operation ID")
@@ -189,11 +190,12 @@ function Identity.fusionRecord(id, output, parents, operationId, recipeVersion, 
     for _, parent in parents do
         assert(not seen[parent.instanceId] and parent.instanceId ~= id, "duplicate/cyclic parent")
         assert(parent.speciesId == output.speciesId and parent.genes
-            and parent.genes.patternId == output.genes.patternId, "matching species/pattern required")
+            and type(parent.genes.patternId) == "string"
+            and (parent.stage == "base" or parent.genes.patternId == output.genes.patternId), "matching species/pattern required")
         assert(parent.stage == parentStage, "single parent stage required")
         seen[parent.instanceId] = true
         local genes = copy(parent.genes)
-        genes.patternId = nil
+        if parent.genes.patternId == output.genes.patternId then genes.patternId = nil end
         table.insert(snapshots, {instanceId = parent.instanceId, genes = genes, big = parent.big, shiny = parent.shiny,
             mutationId = parent.mutationId, origin = {kind = parent.origin.kind, eggId = parent.origin.eggId, operationId = parent.origin.operationId}})
     end

@@ -2,11 +2,32 @@
 local RunService = game:GetService("RunService")
 local Theme = require(game:GetService("ReplicatedStorage").Shared.UITheme)
 local Appearance = require(game:GetService("ReplicatedStorage").Shared.EggAppearance)
+local MutationLook = require(game:GetService("ReplicatedStorage").Shared.MutationLook)
 local PreviewTraits = {}
+-- BD-155: soft mutation cue shared by every preview. A small round badge in the mutation colour (top-left) with a
+-- gentle rim; dinosaur models also get the soft body tint from MutationLook. Eggs get the colour hint only (the shell
+-- keeps its gene colours). Static, so Reduce Motion needs no variant. Safe to call again (replaces the badge).
+function PreviewTraits.mutation(view: ViewportFrame, mutationId: any, isEgg: boolean?)
+    local look = MutationLook.get(mutationId)
+    local old = view:FindFirstChild("MutationBadge")
+    if old then old:Destroy() end
+    if not isEgg then MutationLook.apply(view, if look then look.id else nil) end
+    if not look then return end
+    local dot = Instance.new("Frame")
+    dot.Name, dot.BackgroundColor3, dot.BorderSizePixel = "MutationBadge", MutationLook.color(look.badge), 0
+    dot.AnchorPoint, dot.Position, dot.Size = Vector2.new(0, 0), UDim2.new(0, 6, 0, 6), UDim2.new(0, 22, 0, 22)
+    dot.ZIndex, dot.Parent = view.ZIndex + 2, view
+    local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(.5, 0) corner.Parent = dot
+    local rim = Instance.new("UIStroke")
+    rim.Color, rim.Thickness, rim.Transparency = MutationLook.color(look.rim), 2 + 2 * look.glow, .35
+    rim.Parent = dot
+    dot:SetAttribute("MutationId", look.id)
+end
 -- isEgg = true only for egg previews (BD-174: the egg condition overlay is never drawn on a dinosaur).
 function PreviewTraits.add(view: ViewportFrame, traits, isEgg: boolean?)
     if traits then view:SetAttribute("TraitsJson",game:GetService("HttpService"):JSONEncode(traits)) end
     if traits and traits.genes then Appearance.apply(view,traits.genes,isEgg==true) end
+    if traits and traits.mutationId and traits.mutationId ~= "" then PreviewTraits.mutation(view, traits.mutationId, isEgg == true) end
     if not traits or not (traits.shiny or traits.big) then return end
     local badge = Instance.new("TextLabel")
     badge.Name = "TraitBadge"

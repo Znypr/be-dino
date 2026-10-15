@@ -168,8 +168,13 @@ home(prey)
 assert(settlements==before+1 and prey:GetAttribute("LastRunEndReason")=="ManualExit","Home blocked by a distant or same-size dinosaur")
 Players.GetPlayers=function()return {}end
 print("Home passed: immediate single settlement, sanctuary/duplicate/death no-ops, refused only while a bigger dinosaur is within HomeThreatRadius")
+-- Owner 2026-10-15: growth gained per food point is halved; catches/eggs still use RAW food (FoodCatchRules.award).
+assert(Config.GrowthPerFood==0.5 and Config.PredationGrowthPoints==12.5,"growth pace")
+print("Growth pace passed: GrowthPerFood 0.5 (about 500 food -> 250 growth, was 500), predation 12.5, GrowthCap semantics unchanged")
 '''
 if __name__=='__main__':
+ src=(ROOT/'src/server/FoodService.luau').read_text(encoding='utf-8')
+ assert 'dinosaur.addGrowth(c, candidate.gained * Config.GrowthPerFood)' in src and 'FoodCatchRules.award(candidate.gained,' in src, 'growth halved but catches use raw food'
  p=argparse.ArgumentParser();p.add_argument('--runner',required=True);args=p.parse_args()
  with tempfile.TemporaryDirectory() as temp:
   path=Path(temp)/'verify.luau';path.write_text(script());subprocess.run([args.runner,str(path)],check=True)

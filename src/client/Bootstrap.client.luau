@@ -766,7 +766,7 @@ render=function(name: string)
         label(stage,rarityNames[index].." • "..FusionSelection.pct(100*(oddsWeight[selected] or 0)/oddsTotal).." of eggs",0,302,380,42,28)
         label(body,"YOUR COLLECTION",414,0,400,42,28)
         label(body,string.format("Base: %d • Gold: %d\nDiamond: %d",base,gold,diamond),414,62,400,92,25)
-        label(body,if event then event.name.." • "..table.concat(UIFormat.boostLines(event.growth,event.speed,1)," • ") else "Cosmetic fusion: 15 Base → Gold; 4 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
+        label(body,if event then event.name.." • "..table.concat(UIFormat.boostLines(event.growth,event.speed,1)," • ") else "Cosmetic fusion: 6 Base → Gold; 3 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
         local equipped=str("EquippedSpeciesId","compy")==selected
         button(body,if equipped then "EQUIPPED" elseif not owned then "LOCKED" else "EQUIP",426,273,372,52,if owned then C.accent else C.card,function()
             if not owned then notify("Hatch reward eggs to discover this dino") return end
@@ -857,7 +857,7 @@ render=function(name: string)
             -- colours and pattern only, never the egg condition.
             local view=Preview.add(body,id,"base")
             view.Position,view.Size=UDim2.fromOffset(160,-12),UDim2.fromOffset(504,260)
-            PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),genes=genes})
+            PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),genes=genes,mutationId=str("LastChestEventMutation")})
             view.Visible=false
             task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync(view:GetDescendants()) end) end)
             local rarity=speciesIndex(id)
@@ -883,8 +883,7 @@ render=function(name: string)
                 detailText=HatchTimeline.failChance((EggGenetics.condition("cracked") :: any).hatchChance)
             elseif mutation then
                 -- Event mutation: name and perk, tint the dinosaur. BD-174: the egg condition is never shown on the dinosaur.
-                local tint=mutationColor :: Color3
-                for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(tint,if genes then .35 else .55) end end
+                local tint=mutationColor :: Color3 -- BD-155: the dinosaur itself is tinted by PreviewTraits (MutationLook) when the view is created
                 detailText=mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
                 if not genes then detailColor=tint end
             elseif colorReveal and patternReveal then

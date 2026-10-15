@@ -25,7 +25,7 @@ local os=setmetatable({time=function() return fakeNow end},{__index=realOs})
 TESTS = r'''
 local H=3600
 local D=GameConfig.NestIncubationSeconds
-assert(D==3*H and GameConfig.NestStorageCapacity==5 and GameConfig.NestMinSize==10 and GameConfig.NestMaxSize==15)
+assert(D==3*H and GameConfig.NestStorageCapacity==5 and GameConfig.NestMinSize==6 and GameConfig.NestMaxSize==12)
 local function nests(u) return data[key(u)].eggNests or {} end
 local function jsonSize(v)
  if type(v)~="table" then return #tostring(v)+2 end
@@ -56,11 +56,11 @@ do
  for i=1,400 do
   local id=Rewards.nestId("run-"..i,1)
   local size=Rewards.nestSize(id)
-  assert(size>=10 and size<=15 and size==Rewards.nestSize(id)) seen[size]=true
+  assert(size>=6 and size<=12 and size==Rewards.nestSize(id)) seen[size]=true
  end
- for size=10,15 do assert(seen[size],"size "..size.." never rolled") end
+ for size=6,12 do assert(seen[size],"size "..size.." never rolled") end
 end
-print("Nest size passed: deterministic 10-15 from the nest id, every size reachable")
+print("Nest size passed: deterministic 6-12 from the nest id, every size reachable")
 
 ------------------------------------------------------------------ Hidden drop gate (server run time + server catches)
 local g=fresh(301)
@@ -168,6 +168,46 @@ while #data[key(o)].runEggBank<GameConfig.RunEggBankCapacity-1 do table.insert(d
 assert(select(3,Repository.claimNest(o,nid2))=="bank_full" and #nests(o)==1 and nests(o)[1].nestId==nid2)
 print("Open passed: eggs credited once at the queue front as nest_egg, duplicate/reload no-op, missing/invalid refused, bank_full keeps the nest")
 
+------------------------------------------------------------------ BD-156 weather nests roll event mutations
+do
+ local W=fresh(320)
+ -- the weather tag is stored only for a known, non-clear weather; forged/clear/nil store nothing (additive field)
+ for i,w in {"thunder","clear",false,"bogus-weather"} do
+  local ok=Repository.commitRunSettlement(W,"wx-run-"..i,8,nil,300,if w then w else nil)
+  assert(ok)
+ end
+ local tags={}
+ for _,n in nests(W) do tags[n.droppedFromRun]=n.weatherId end
+ assert(tags["wx-run-1"]=="thunder" and tags["wx-run-2"]==nil and tags["wx-run-3"]==nil and tags["wx-run-4"]==nil,"only a known weather is tagged")
+ -- saved profile with the new field reloads (valid) and a forged unknown tag is rejected by validation
+ Repository.release(W) assert(Repository.load(W))
+ local forged=copy(data[key(W)]) forged.eggNests[1].weatherId="nope"
+ data[key(W)]=forged Repository.release(W) assert(not Repository.load(W),"unknown weather tag must fail validation")
+ -- statistics: weather nests mutate at exactly the run-egg event chance, clear nests never
+ local thunder=nil for _,w in ProgressionConfig.Weather do if w.id=="thunder" then thunder=w end end
+ local V=fresh(321)
+ local total,mutated,clearMutated=0,0,0
+ for i=1,300 do
+  data[key(V)].runEggBank={} data[key(V)].eggs={} data[key(V)].eggNests=data[key(V)].eggNests or {}
+  table.insert(data[key(V)].eggNests,{nestId="wx-"..i,droppedFromRun="wx-run",size=15,luck=1,state="ready",readyAt=1,weatherId="thunder"})
+  table.insert(data[key(V)].eggNests,{nestId="cl-"..i,droppedFromRun="wx-run",size=15,luck=1,state="ready",readyAt=1})
+  assert(select(3,Repository.claimNest(V,"wx-"..i))=="opened")
+  for _,egg in revealLine(V) do
+   total+=1
+   assert(egg.eventId=="thunder" and egg.source.kind=="nest")
+   if egg.mutationId~="" then mutated+=1 assert(egg.mutationId==thunder.mutation) end
+  end
+  data[key(V)].runEggBank={} data[key(V)].eggs={}
+  assert(select(3,Repository.claimNest(V,"cl-"..i))=="opened")
+  for _,egg in revealLine(V) do assert(egg.eventId=="clear" and egg.mutationId=="") clearMutated+=1 end
+ end
+ local p=thunder.chance
+ local sigma=math.sqrt(total*p*(1-p))
+ assert(total==4500 and math.abs(mutated-total*p)<=4.5*sigma,"nest mutation rate "..mutated.."/"..total)
+ assert(clearMutated==4500)
+ print(string.format("Weather nests passed: tag stored only for known weather, forged tag invalid, %d/%d (%.2f%%) weather-nest eggs mutated vs run-egg chance %.1f%%, clear nests 0",mutated,total,100*mutated/total,100*p))
+end
+
 ------------------------------------------------------------------ Luck is applied and bounded
 do
  local L=fresh(306)
@@ -176,7 +216,7 @@ do
  local rng=Random.new()
  for i=1,200 do
   data[key(L)].runEggBank={} data[key(L)].eggs={} data[key(L)].eggNests=data[key(L)].eggNests or {}
-  table.insert(data[key(L)].eggNests,{nestId="luck-"..i,droppedFromRun="luck-run",size=15,luck=1,state="ready",readyAt=1})
+  table.insert(data[key(L)].eggNests,{nestId="luck-"..i,droppedFromRun="luck-run",size=12,luck=1,state="ready",readyAt=1})
   assert(select(3,Repository.claimNest(L,"luck-"..i))=="opened")
   for _,egg in revealLine(L) do
    total+=1 if egg.shiny then shiny+=1 end if egg.big then big+=1 end
@@ -186,7 +226,7 @@ do
    if GameConfig.SpeciesRarities[base.speciesId]>=2 then baseRare+=1 end
   end
  end
- assert(total==3000)
+ assert(total==200*12)
  local shinyRate,bigRate,crackedRate=shiny/total,big/total,cracked/total
  assert(math.abs(shinyRate-tier.shinyChance)<.015,"shiny "..shinyRate)
  assert(math.abs(bigRate-tier.bigChance)<.03,"big "..bigRate)
@@ -195,7 +235,7 @@ do
  assert(math.abs(crackedRate-.34)<.04,"cracked "..crackedRate)
  assert(rare>=baseRare*.97,"BD-165: nest rarity boost is mild by design but never worse than base: "..rare.." vs "..baseRare)
  assert(tier.rarityBoostEggs<=GameConfig.EggRarityBoostMaxEggs and tier.conditionLevels<=2 and tier.bigChance<=.25 and tier.shinyChance<=.05,"bounded")
- print(string.format("Luck passed: 3000 nest eggs Shiny %.1f%% BIG %.1f%% Cracked %.1f%% rare+ %d vs %d at no boost; bounded by config tier",shinyRate*100,bigRate*100,crackedRate*100,rare,baseRare))
+ print(string.format("Luck passed: 2400 nest eggs Shiny %.1f%% BIG %.1f%% Cracked %.1f%% rare+ %d vs %d at no boost; bounded by config tier",shinyRate*100,bigRate*100,crackedRate*100,rare,baseRare))
 end
 
 ------------------------------------------------------------------ Migration of Build 020 nests
