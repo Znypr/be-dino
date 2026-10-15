@@ -13,6 +13,7 @@ local Theme = require(Shared.UITheme)
 local Sfx = require(Shared.Sfx)
 local Timeline = require(Shared.HatchTimeline)
 local InspectView = require(script.Parent.InspectView)
+local HatchFx = require(script.Parent.HatchFx)
 
 local Seq = {}
 local CENTER_EGG = Vector2.new(412, 130) -- body coordinates (824 x 402 virtual px)
@@ -300,6 +301,7 @@ function Seq.play(args: Args): Handle
     local durs = state.durs
     local fx = ensureLayers(a.panel)
     local kit = fx.paint
+    local hx = HatchFx.begin(HatchFx.ensure(fx.back, fx.front), motion) -- layered 2D polish (bloom, rim sparks, puffs, motes, droplets)
     -- Result-dependent values. Neutral until applyResult() runs (Open pressed, server answer on its way).
     local rarity, failed = 1, false
     local TEAL = Color3.fromRGB(70, 205, 170)
@@ -434,6 +436,7 @@ function Seq.play(args: Args): Handle
         if tweenHint then tweenHint:Cancel() tweenHint = nil end
         if inspect then inspect.destroy() inspect = nil end
         restoreBody()
+        HatchFx.hide(hx)
         if overlay.Parent then overlay:Destroy() end
         if fx.back.Parent then
             fx.backdrop.BackgroundTransparency = 1
@@ -552,6 +555,7 @@ function Seq.play(args: Args): Handle
             elseif ring.Visible then
                 ring.Visible = false
             end
+            HatchFx.splash(hx, i, SPLASH_POINTS[i].X, SPLASH_POINTS[i].Y, if b.impacted then since else nil)
             for j = 1, 10 do
                 local d = kit.drops[(i - 1) * 10 + j]
                 local dx, dy, tr = Timeline.drop(j, 10, since, side)
@@ -625,6 +629,7 @@ function Seq.play(args: Args): Handle
     local function startReveal()
         revealStarted = true
         a.onReveal()
+        if not motion then HatchFx.update(hx, 0, 1, 0, not failed) end -- Reduce Motion: one static soft glow behind the dino
         if failed then
             local rise = if motion then 10 else 0
             fadeLabel(a.nameLabel, if motion then .25 else 0, .3, rise)
@@ -729,6 +734,7 @@ function Seq.play(args: Args): Handle
         punchStart = 1 + esc.punch
         -- Rarity palette: Common is lively teal, then the rarity colour up to gold for Legendary.
         glow = if failed then Color3.fromRGB(255, 205, 90) elseif rarity <= 1 then TEAL else r.color
+        HatchFx.style(hx, rarity, glow, failed)
         strength = .75 + .06 * rarity
         count = if failed then Timeline.crumbCount(motion) else Timeline.particleCount(rarity, r.shiny, r.big, motion, failed)
         orbit = Timeline.orbitCount(rarity, motion, failed)
@@ -792,6 +798,7 @@ function Seq.play(args: Args): Handle
             kit.splashes[i].BackgroundColor3 = paintColors[i]
             kit.splashes[i].BackgroundTransparency = .8
             local reveal = if i == 1 then r.colorReveal else r.patternReveal
+            HatchFx.paintStyle(hx, i, paintColors[i], if reveal then reveal.tier else 1)
             dropN[i] = if reveal then math.min(10, 4 + reveal.tier) else 5
             for j = 1, 10 do
                 local d = kit.drops[(i - 1) * 10 + j]
@@ -832,6 +839,7 @@ function Seq.play(args: Args): Handle
                 a.animateEgg(Timeline.eggClock(durs, t))
                 if not state.pending then updatePaint(t) end
                 local g = Timeline.glow(bp)
+                HatchFx.update(hx, vt, bp, nil, false)
                 for n, ring in fx.rings do
                     ring.BackgroundTransparency = 1 - .16 * g * strength * (1 - (n - 1) / (RING_N + 2))
                     fx.ringScales[n].Scale = (.35 + .5 * g) * (1 + .05 * math.sin(t * 9))
@@ -878,6 +886,7 @@ function Seq.play(args: Args): Handle
                     bodyRestored = true
                     restoreBody()
                 end
+                HatchFx.update(hx, vt, 1, since, revealStarted)
                 if not failed then
                     if revealStarted and dinoScale then dinoScale.Scale = Timeline.revealScale((since - revealT) / .8) * (if a.big then Timeline.stamp(since - impactAt - revealT) else 1) end
                     if a.big and since >= impactAt + revealT and since < impactAt + revealT + .25 then
