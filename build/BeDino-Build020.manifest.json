@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "f1fc3c6fa35561811910a6be7b80011e6c4ed3b1c18a04a2de93455148d8c5ca",
+  "place_sha256": "636d177931cb82a98fd37fafeca44b9fe76cc3510b001f6074ba2fe9b77bde4b",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "33f6491c3921573cdf897028008998b4097b134df9aefad7dee98030a3e62262",
@@ -11,7 +11,7 @@
     "src/shared/BiomeMap.luau": "34f7c83a4beb87771dc400137f63808df3138833cfbee579de313fbdb4d5058f",
     "src/shared/BiomePlacement.luau": "bd035baeb2ce80acc008fe8fd9535d1edcd20b0dba6dd118253d2f1ee363578d",
     "src/shared/ConditionOverlays.luau": "69b1725f10e0d8281514a237ba3f2ca0778a411c9f83af329725aba5c1f8c73d",
-    "src/shared/Config.luau": "5ca86d62b7532b8b99a6ac04096accb486a297a7ac541a78a2e359a22c526f56",
+    "src/shared/Config.luau": "80e6f68c4b48e0e07302f6fa3416309cfeb1c7d3cb78ea36b27e81563c356bd2",
     "src/shared/CosmeticEffects.luau": "b4d1123d8f1d5801b738483ae52c8fb97d49f953d2185e48e7fbb014b6e28c28",
     "src/shared/CreatureData/archaeopteryx.luau": "77b3395fd98c04ba78e305d35a9320c83e529bacc42a84baee6b12d061b225c4",
     "src/shared/CreatureData/baryonyx.luau": "8ec5bdfdd445ebb014be6089f2a09fabd909826d348782501306515dae85ee1c",
@@ -252,7 +252,7 @@
     "src/server/RewardMath.luau": "97ebf64fabbc2e63771da9df910a3244a078094581be8d71dad4effd07975c98",
     "src/server/RunLifecycle.luau": "4e9db52291f52a89fa15df2154b51a286c046122d7661130bf04045c704ef50e",
     "src/server/VisualTestService.luau": "ee48ddc907c11e5d1390483d570d9ab96fd01b3ee02493b5724a2ebcf1ef0773",
-    "src/client/AdminPanel.client.luau": "4d25c78679af2d75d8df673791d0d90f47f43d27aced68aad4a32f74106602b5",
+    "src/client/AdminPanel.client.luau": "18c4fd566ce540fb36484c910161d50e8913432abff8d4fa8fe9328487f2f7d8",
     "src/client/Bootstrap.client.luau": "7439adb9eb75345842a3043cdbcdd985d336dfcea674e5531e4dd26b8a75bc1e",
     "src/client/CosmeticVisuals.client.luau": "85d567cf577cf91bbc9402ee7a26f11bd705cf4ef8b328ecf350ae569bd82c06",
     "src/client/DinoDetails.luau": "210a42d822ed6d83378bbbf622c46c5becd06a789bab840c1a9a4d76d4e9d00e",
@@ -266,6 +266,7 @@
     "src/client/PreviewTraits.luau": "993d3a18f704cf8316846098bc6efd8e14b65b8f737b4e5ce9788631fde28f2a",
     "src/client/ResourceVisuals.client.luau": "734cbac841db6a6c88ccda176dabb6c3a9a626c158a10b7da3b1d1723335701d",
     "src/client/WeatherAudio.client.luau": "9ab0b960dd4560a5fdbfb775ba7554f06783d50fa4dbdb1eac4fde3229ebbebe",
-    "src/client/WeatherVisuals.client.luau": "eff21b55ecb5ceebf3060f1db0af8815f3d0dfc324feb64dff633a7c5b0bec64"
+    "src/client/WeatherVisuals.client.luau": "eff21b55ecb5ceebf3060f1db0af8815f3d0dfc324feb64dff633a7c5b0bec64",
+    "src/client/WorldCulling.client.luau": "bb3fe93d27b82a1a6fb24106869b211b7614a7c5692505d7ebe917be8d5d756a"
   }
 }

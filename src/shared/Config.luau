@@ -43,6 +43,16 @@ return table.freeze({
     WorldArtMode = "Legacy", -- "BiomeKit": BD-049 Blender props + placement grammar PROVISIONAL
     WorldArtSeed = 1404,
     WorldArtDensity = 1, -- the playtest profile sets 0.35 (docs/68 part budget); 1 is ~18k native parts
+    -- BD-168 client distance culling of decorative props/food (docs/89). PartBudget = max prop parts a client keeps parented;
+    -- radius = studs kept (hysteresis = +15%). Collision proxies, crystals, hub and server food logic are never culled.
+    WorldCulling = {
+        Enabled = true,
+        Hysteresis = 1.15,
+        FoodRadiusFactor = 1.25,
+        Phone = {radius = 190, budget = 1400},
+        Tablet = {radius = 280, budget = 2400},
+        Desktop = {radius = 440, budget = 5000},
+    },
     FoodKitVisualCap = 12, -- PROVISIONAL max native egg/amber kit models (about 115 parts each); other pickups keep the light ball
     StudioLocalProfilesEnabled = true, -- unpublished Studio only; never a live fallback
     StudioTestWalletEnabled = true, -- only unpublished, nonpersistent local profiles
