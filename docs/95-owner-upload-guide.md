@@ -2,7 +2,10 @@
 
 Everything below exists in the repo and works with fallbacks until it is uploaded. Uploading never breaks the game. Do these in Studio (Asset Manager) with the same account as before. After each group, tell the lead (chat) and, for images, paste the Roblox asset ids.
 
-## A. Models: Bulk Import (54 FBX)
+## A. Models: Bulk Import
+> **Update 2026-10-15:** the owner judged the rocks, plants, trees and landmarks below too low quality (code-built). Import ONLY the 16 food models for now. The rest are placeholders until replaced by generated or hand-modelled assets (BD-206).
+
+### Original list (54 FBX)
 Folder: `assets/blender/world/fbx_v2/`
 - food (16): food_berry_a-d, food_fruit_a-d, food_nut_a-b, food_amber_a-b, food_mush_a-d
 - rocks (12): world_boulder_a/b, world_boulder_mossy_a/b, world_slab_a, world_pebble_a, world_sandstone_a/b, world_lava_a/b, world_basalt_a, world_crystal_a
