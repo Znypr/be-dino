@@ -119,7 +119,7 @@ PROFILES: dict[str, list[Rule]] = {
         # one part, so density 1.25 (~1,250 props) is ~4.3k parts incl. food (tools/verify_world_art.py enforces <= 8,000).
         Rule("WorldArtMode", "set", "BiomeKit", reason="BD-049 new trees/rocks/landmarks (docs/68)"),
         Rule("FoodArtMode", "set", "Kit", reason="BD-050 food variants (docs/68)"),
-        Rule("WorldArtDensity", "set", 1.25, reason="PROVISIONAL: MeshPart props are 1 part each, phone budget (docs/68)"),
+        Rule("WorldArtDensity", "set", 1.25, reason="PROVISIONAL: world v2, 1 part per MeshPart prop, total under 8,000 (docs/68)"),
         # Future fusion/menu release keys (BD-064/BD-065) go here, e.g.
         # Rule("<FusionFlagName>", "set", True, missing="warn", reason="BD-064 fusion server"),
     ],
