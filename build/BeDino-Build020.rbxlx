@@ -365664,6 +365664,7 @@ return table.freeze({
     Gravity = 250,
     JumpPower = 56,
     TurnRate = 16, -- PROVISIONAL rad/s facing steer (Humanoid default ~8 gave a 0.38 s 180 turn)
+    CameraVerticalSmoothing = .12, -- BD-164: seconds; low-pass on the camera's vertical follow of the root (terrain rattle)
     CameraLiftSharpness = 7, -- PROVISIONAL: per-second exponential follow of growth camera lift
     MaxSlopeAngle = 46,
     -- BD-053 torso collider. Footprint grows with the dinosaur, but its underside is lifted so
@@ -371585,11 +371586,11 @@ Sfx.Sounds = {
     pickup_hi = {id = "rbxassetid://86225160041514", volume = .35, rate = 1, gap = .06},
     pickup_lo = {id = "rbxassetid://80767583749596", volume = .35, rate = 1, gap = .06},
     run_start = {id = "rbxassetid://87202810278231", volume = .25, rate = 1, gap = .5},
-    run_end = {id = "rbxassetid://127962506254484", volume = .6, rate = 1, gap = .5},
-    shop_buy = {id = "rbxassetid://102585210519734", volume = .6, rate = 1, gap = .15},
+    run_end = {id = "rbxassetid://127962506254484", volume = .3, rate = .92, gap = .5},
+    shop_buy = {id = "rbxassetid://102585210519734", volume = .35, rate = 1, gap = .15},
     shop_refresh = {id = "rbxassetid://91960074825710", volume = .45, rate = 1, gap = .5},
     weather_start = {id = "rbxassetid://120619985059497", volume = .6, rate = 1, gap = 1},
-    level_up = {id = "rbxassetid://135894580270926", volume = .7, rate = 1, gap = .5},
+    level_up = {id = "rbxassetid://135894580270926", volume = .4, rate = .95, gap = .5},
     fusion_reveal = {id = "rbxassetid://90816090310479", volume = .75, rate = 1, gap = .3},
     ui_click = {id = "rbxassetid://77237659470894", volume = .4, rate = 1, gap = .04},
 }
@@ -548760,6 +548761,8 @@ end)
 -- Movement feel: camera height follows growth every frame (not the 0.15 s HUD tick), and the
 -- pickup pop/sfx fire the frame GrowthScore replicates instead of waiting for the next tick.
 local cameraLift=0
+local smoothRootY: number?=nil
+local cameraLiftY=0
 RunService.RenderStepped:Connect(function(dt)
     local character=player.Character
     local humanoid=if character then character:FindFirstChildOfClass("Humanoid") else nil
@@ -548791,7 +548794,20 @@ RunService.RenderStepped:Connect(function(dt)
     end
     local target=((character :: Model):GetAttribute("VisualScale") or 1)-1
     cameraLift+=(target-cameraLift)*(1-math.exp(-dt*Config.CameraLiftSharpness))
-    humanoid.CameraOffset=Vector3.new(0,cameraLift*2,0)
+    cameraLiftY=cameraLift*2
+end)
+-- BD-164: terrain bumps move the root ~1 stud per step and the camera followed it 1:1 (rattle). Low-pass only the vertical
+-- follow (Config.CameraVerticalSmoothing); horizontal follow is untouched (no steering lag). Runs just before the
+-- camera each frame so it uses the same root height the camera is about to read. Snaps on teleports/falls.
+RunService:BindToRenderStep("BeDinoCameraSmooth",Enum.RenderPriority.Camera.Value-1,function(dt)
+    local character=player.Character
+    local humanoid=character and character:FindFirstChildOfClass("Humanoid")
+    local rootPart=character and character:FindFirstChild("HumanoidRootPart")
+    if not humanoid or not rootPart or not rootPart:IsA("BasePart") then smoothRootY=nil return end
+    local y=rootPart.Position.Y
+    if not smoothRootY or math.abs(y-smoothRootY)&gt;5 then smoothRootY=y end
+    smoothRootY+=(y-smoothRootY)*(1-math.exp(-dt/Config.CameraVerticalSmoothing))
+    humanoid.CameraOffset=Vector3.new(0,cameraLiftY+math.clamp(smoothRootY-y,-2.5,2.5),0)
 end)
 -- Reconcile a predicted leap: the server raising LeapReadyAt confirms it; if it has not within 0.6 s
 -- (cooldown/blocked/guard) cancel the pose and drop the extra horizontal speed.
@@ -548894,8 +548910,7 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
                 if nestOk and typeof(nestList)=="table" then
                     waitSeconds=NestQueue.secondsUntilAllReady(nestList,math.floor(workspace:GetServerTimeNow()),Config.NestIncubationSeconds)
                 end
-                notify("New Egg Nest!",C.gold,{icon="egg_nest",key="nest",body="Ready in "..UIFormat.duration(math.max(3600,waitSeconds))})
-                Sfx.play("shop_buy")
+                notify("New Egg Nest!",C.gold,{icon="egg_nest",key="nest",body="Ready in "..UIFormat.duration(math.max(3600,waitSeconds))}) -- no extra sound: it stacked with run_end (BD-166)
             end
             if num("LastRunCrystalBox")&gt;0 then
                 open("crystalReveal")
