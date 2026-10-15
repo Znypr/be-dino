@@ -326,72 +326,87 @@ assert(screen.Enabled and has(screen, "Fusion unavailable"), "unavailable screen
 press(byName(screen, "Close"))
 assert(not screen.Enabled)
 
--- 2) Remote present: paged list -> individual cards.
+-- 2) Remote present: paged list -> big cards, auto-filtered to the tier's source stage
+-- (Gold shows only the 64 Base copies; the 10 Gold and 3 Emerald are hidden, not explained).
 fusionRemote.Parent = Remotes
 assert(Menu.available())
 Menu.open() runFor(8)
-assert(#cards(screen) == 77, "paged list: " .. #cards(screen))
-assert(has(screen, "Egg pattern unknown"), "legacy copy with nil genes explained")
+assert(#cards(screen) == 64, "paged list filtered to Base: " .. #cards(screen))
+assert(has(screen, "Older dino: can't fuse") and not has(screen, "Unknown pattern"), "legacy copy with nil genes explained in plain words")
+assert(not has(screen, "Not the right stage"), "wrong-stage copies are hidden, never listed")
+assert(has(screen, "Tap 6 Compy, or Fill for me."), "goal sentence: " .. byName(screen, "Goal").Text)
+assert(byName(screen, "Filters") == nil, "filter chips collapsed behind the Filter button")
+assert(byName(screen, "Result") and has(screen, "Guaranteed: Gold!") and has(screen, "Pick 6 more to see your chances."), "result preview + simple empty state")
+for _, word in {"ROLLED", "UPGRADED", "exact odds from the server", "INGREDIENTS"} do assert(not has(screen, word), "jargon gone: " .. word) end
+-- Filter button reveals chips (Sort + 8 chips + Clear); pressing again hides them.
+press(byName(screen, "Filter")) runFor(.1)
+assert(byName(screen, "Filters") and byText(screen, "Sort:") and byText(screen, "Dino: All"), "chips shown")
+press(byName(screen, "Filter")) runFor(.1)
+assert(byName(screen, "Filters") == nil, "chips hidden")
 -- All three tiers ACTIVE: Emerald = 3 Gold, Diamond = 2 Emerald (quotes only at exactly N).
 press(byName(screen, "Stage_emerald")) runFor(1)
-assert(not has(screen, "EMERALD LOCKED") and has(screen, "3 Gold -> 1 NEW Emerald"), "emerald active")
-press(byText(screen, "AUTO-FILL PLAIN")) runFor(.1)
-assert(has(screen, "INGREDIENTS 3/3"), "emerald auto-fills 3 plain Golds")
-assert(byName(screen, "Slots") and #byName(screen, "Slots"):GetChildren() > 0 and byName(screen, "Counter") == nil, "3 slots, no counter")
+assert(#cards(screen) == 10 and has(screen, "Make a Emerald dino") and has(screen, "Put in 3 Gold"), "emerald lists the 10 Golds")
+press(byName(screen, "AutoFill")) runFor(.1)
+assert(byName(screen, "SlotCount").Text == "3 of 3", "emerald auto-fills 3 plain Golds")
+assert(byName(screen, "Slot_3") and byName(screen, "Empty_1") == nil and byName(screen, "Slot_4") == nil, "3 slots")
 runFor(1)
-assert(byName(screen, "Fuse").Text == "REVIEW & FUSE", "emerald quote at 3")
+assert(byName(screen, "Fuse").Text == "FUSE!", "emerald quote at 3")
 press(byName(screen, "Stage_diamond")) runFor(1)
-assert(not has(screen, "DIAMOND LOCKED") and has(screen, "2 Emerald -> 1 NEW Diamond"), "diamond active")
-press(byText(screen, "AUTO-FILL PLAIN")) runFor(.1)
-assert(has(screen, "INGREDIENTS 2/2"), "diamond auto-fills 2 plain Emeralds")
+assert(#cards(screen) == 3 and has(screen, "Put in 2 Emerald"), "diamond lists the 3 Emeralds")
+press(byName(screen, "AutoFill")) runFor(.1)
+assert(byName(screen, "SlotCount").Text == "2 of 2" and byName(screen, "Slot_2") and byName(screen, "Slot_3") == nil, "diamond auto-fills 2 plain Emeralds")
 runFor(1)
-assert(byName(screen, "Fuse").Text == "REVIEW & FUSE", "diamond quote at 2")
+assert(byName(screen, "Fuse").Text == "FUSE!", "diamond quote at 2")
 press(byName(screen, "Stage_gold")) runFor(1)
--- Auto-fill: 6 plain copies (slots, no counter), debounced quote, exact odds.
-press(byText(screen, "AUTO-FILL PLAIN")) runFor(.1)
-assert(has(screen, "INGREDIENTS 6/6"))
-assert(byName(screen, "Counter") == nil, "6 donors use slots, not the n/N counter")
-assert(has(screen, "Calculating exact odds"), "debounce pending")
+assert(byName(screen, "Empty_6") and byName(screen, "Fuse").Text == "Pick 6 more", "6 empty numbered slots")
+-- Fill for me: 6 plain copies in slots, debounced quote, exact odds as chips.
+press(byName(screen, "AutoFill")) runFor(.1)
+assert(byName(screen, "SlotCount").Text == "6 of 6" and byName(screen, "Slot_6"), "6 slots filled")
+assert(has(screen, "Working out your chances..."), "debounce pending")
+assert(has(screen, "Ready! Tap FUSE."), "goal sentence when full")
 runFor(1)
-assert(byName(screen, "Fuse").Text == "REVIEW & FUSE", "quote ready")
-assert(has(screen, "Shiny: Shiny 0% • Not Shiny 100%") and not has(screen, "Condition"), "exact odds shown, no condition wheel")
-assert(has(screen, "Different species"), "raptor card explains ineligibility")
--- Swap two plain donors for the aura and Shiny dinos: tap selected cards to remove them.
+assert(byName(screen, "Fuse").Text == "FUSE!", "quote ready")
+assert(has(screen, "Shiny 0%") and has(screen, "Not shiny 100%") and has(screen, "Green 60%") and has(screen, "Blue 40%") and not has(screen, "Condition"), "exact odds as chips, no condition")
+assert(has(screen, "Different dino"), "raptor card explains ineligibility in plain words")
+-- Tap a filled slot to take that dino out; tap a selected card to take another out.
+press(byName(screen, "Slot_1")) runFor(.1)
+assert(byName(screen, "SlotCount").Text == "5 of 6" and has(screen, "Tap 1 more Compy."), "slot tap removes")
 local removed = 0
 for _, c in cards(screen) do
-    if removed < 2 and has(c, "SELECTED") and not has(c, "VALUABLE") then press(c) removed += 1 end
+    if removed < 1 and has(c, "In slot") and not has(c, "Special") then press(c) removed += 1 end
 end
 runFor(.1)
-assert(has(screen, "INGREDIENTS 4/6"), "slots follow removal")
-assert(not byName(screen, "Fuse") or byName(screen, "Fuse").Text ~= "REVIEW & FUSE", "no quote below 6")
+assert(byName(screen, "SlotCount").Text == "4 of 6", "slots follow removal")
+assert(byName(screen, "Fuse").Text == "Pick 2 more", "no quote below 6")
 local auraCard, shinyCard
 for _, c in cards(screen) do
-    if has(c, "1 FX") then auraCard = c end
-    if has(c, "SHINY") then shinyCard = c end
+    if has(c, "Effects") then auraCard = c end
+    if has(c, "Shiny") then shinyCard = c end
 end
 press(auraCard) press(shinyCard) runFor(1)
-assert(has(screen, "SELECTED (VALUABLE)"), "valuable donors highlighted")
-assert(has(screen, "Shiny: Shiny 5% • Not Shiny 95%"), "fresh quote after selection change")
--- Confirmation: itemized loss + explicit acknowledgement before FUSE NOW exists.
+assert(has(screen, "• Special"), "special donors highlighted")
+assert(has(screen, "Shiny 5%") and has(screen, "Not shiny 95%"), "fresh quote after selection change")
+-- Confirmation: itemized loss + explicit acknowledgement before FUSE exists.
 press(byName(screen, "Fuse")) runFor(.1)
-assert(has(screen, "ALL 6 DINOS BELOW ARE CONSUMED") and has(screen, "1 aura and 0 trails will be lost: Meadow Glow"), "itemized loss")
-assert(has(screen, "Valuable donors consumed: Compy (Shiny)"))
+assert(has(screen, "All 6 dinos go away. You get 1 new Gold Compy.") and has(screen, "1 aura and 0 trails will be lost: Meadow Glow"), "itemized loss")
+assert(has(screen, "Special dinos going away: Compy (Shiny)"))
+assert(has(screen, "Shiny 5%") and byName(screen, "Result"), "confirm repeats the chances and the result preview")
 assert(byName(screen, "FuseNow") == nil, "acknowledgement required first")
 press(byName(screen, "Acknowledge")) runFor(.1)
 press(byName(screen, "FuseNow"))
 runFor(6)
 assert(#fuseTokens == 2 and fuseTokens[1] == fuseTokens[2], "lost response retried with the SAME token")
--- Reveal: pattern locked card first, then skip to the committed final card.
-assert(has(screen, "PATTERN LOCKED: WAVY STRIPES") or has(screen, "COLOR 1"), "reveal running")
+-- Reveal: pattern card first, then skip to the committed final card.
+assert(has(screen, "Pattern: Wavy Stripes") or has(screen, "Colour 1"), "reveal running")
 press(byName(screen, "Skip")) runFor(.1)
-assert(has(screen, "NEW WAVY STRIPES COMPY") and has(screen, "Crafted Gold (earned)") and not has(screen, "Condition"), "final card shows no condition")
+assert(has(screen, "NEW WAVY STRIPES COMPY!") and has(screen, "Gold stage: guaranteed") and has(screen, "Shiny!") and not has(screen, "Condition"), "final card shows no condition")
 local preview = byName(screen, "DinosaurPreview")
 assert(preview:GetAttribute("Stage") == "gold" and preview:GetAttribute("Shiny") == true, "gold preview with committed traits")
 -- BD-062 details of the new Gold.
 press(byName(screen, "ResultDetails")) runFor(1)
 assert(has(screen, "Gold Wavy Stripes Compy") and has(screen, "PRESTIGE: Crafted Gold (earned)") and has(screen, "Fused from 1 dinos"), "fused details")
 press(byText(screen, "BACK")) runFor(2)
-assert(#cards(screen) == 71, "donors consumed and list refreshed: " .. #cards(screen))
+assert(#cards(screen) == 58, "donors consumed and list refreshed: " .. #cards(screen))
 -- Hatched dino details from a card info button.
 press(byName(cards(screen)[1], "Details")) runFor(1)
 assert(has(screen, "ORIGINAL EGG") and has(screen, "Event: Rain") and has(screen, "Run reward egg"), "hatched details")
@@ -405,7 +420,7 @@ committed = nil
 dropNextFuse = false
 for i = 100, 149 do table.insert(owned, dino(i)) end
 Menu.open() runFor(8)
-press(byText(screen, "AUTO-FILL PLAIN")) runFor(1)
+press(byName(screen, "AutoFill")) runFor(1)
 press(byName(screen, "Fuse")) runFor(.1)
 local before = #fuseTokens
 dropNextFuse = true
@@ -426,14 +441,16 @@ press(byName(screen, "Skip")) runFor(.1)
 assert(has(screen, "NEW WAVY STRIPES COMPY"), "result shown after resume")
 Menu.close()
 
--- 4) Phone landscape safe area (740x340): compact read-only slot strip and a 44 px
--- touch-target audit of every button the browse/confirm screens create.
+-- 4) Phone landscape safe area (740x340): same three columns, smaller cards, and a 44 px
+-- touch-target audit of every button the browse (chips open) / confirm screens create.
 screen.AbsoluteSize = vec(740, 340)
 for i = 200, 249 do table.insert(owned, dino(i)) end
 Menu.open() runFor(8)
-press(byText(screen, "AUTO-FILL PLAIN")) runFor(1)
-for _, s in byName(screen, "Slots"):GetChildren() do assert(s.ClassName ~= "TextButton", "compact slot strip has no tiny slot buttons") end
-assert(byName(screen, "Counter") == nil and #byName(screen, "Slots"):GetChildren() > 1, "6 compact slot chips")
+press(byName(screen, "Filter")) runFor(.1)
+press(byName(screen, "AutoFill")) runFor(1)
+local slotButtons = 0
+for _, s in byName(screen, "Slots"):GetChildren() do if s.ClassName == "TextButton" then slotButtons += 1 end end
+assert(slotButtons == 6, "6 tappable slots on the phone too: " .. slotButtons)
 local function audit()
     local checked = 0
     for _, b in screen:GetDescendants() do
@@ -452,4 +469,4 @@ press(byName(screen, "Fuse")) runFor(.1)
 audited += audit()
 Menu.close()
 
-print("Fusion UI smoke passed: " .. audited .. " buttons >= 44 px in phone layout, unavailable fallback, paged list, 6/3/2 stage tabs, 6 slots, plain auto-fill, debounced exact odds, valuable highlight, itemized consent, same-token retry and resume, skippable reveal, fused/hatched details (" .. created .. " mock instances)")
+print("Fusion UI smoke passed: " .. audited .. " buttons >= 44 px in phone layout, unavailable fallback, paged list auto-filtered per tier, 6/3/2 tier tabs, tappable slots, Fill for me, collapsed filters, debounced odds chips, special highlight, itemized consent, same-token retry and resume, skippable reveal, fused/hatched details (" .. created .. " mock instances)")

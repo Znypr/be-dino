@@ -1,10 +1,13 @@
 --!strict
--- BD-065 Fusion Menu (client). Six same-species Base dinos (any pattern) -> ONE NEW
--- Gold. The server (ReplicatedStorage.BeDinoRemotes.FusionAction) owns every rule,
--- odds table, consumption and roll; this module only lists, explains, previews the
--- exact quoted odds, collects explicit consent and REVEALS the committed result.
--- Pure decisions live in Shared.FusionSelection (tested by tools/verify_fusion_ui.py).
--- If the remote is missing the menu shows "Fusion unavailable" and never errors.
+-- BD-065 / BD-217 Fusion Menu v2 (client, docs/96). Three columns a child reads in one
+-- glance: LEFT your dinos as big cards (already filtered to the chosen tier), CENTRE the
+-- 6 / 3 / 2 slots that fill on tap plus "Fill for me", RIGHT a big preview of the new dino
+-- with simple odds chips and ONE big FUSE button. The server
+-- (ReplicatedStorage.BeDinoRemotes.FusionAction) owns every rule, odds table, consumption
+-- and roll; this module only lists, previews the exact quoted odds in plain words,
+-- collects explicit consent and REVEALS the committed result. Pure decisions live in
+-- Shared.FusionSelection (tested by tools/verify_fusion_ui.py). If the remote is missing
+-- the menu shows "Fusion unavailable" and never errors.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Input = game:GetService("UserInputService")
@@ -40,6 +43,8 @@ local ColourBonus = require(ReplicatedStorage.Shared.ColourBonus)
 local catalog = Sel.buildCatalog(Config, ProgressionConfig, EggGenetics.Patterns)
 catalog.colourBonus = function(genes) return ColourBonus.text(ProgressionConfig.EggColors, genes) end -- BD-172
 local player = Players.LocalPlayer
+local SlotGrid = {gold = {3, 2}, emerald = {3, 1}, diamond = {2, 1}} -- columns, rows per tier
+local Dim = Color3.fromRGB(150, 150, 170)
 
 local function remote(): RemoteFunction?
     local folder = ReplicatedStorage:FindFirstChild("BeDinoRemotes")
@@ -70,7 +75,7 @@ local unseenResult = nil -- committed while the menu was closed; shown on re-ope
 
 local state = {
     open = false, mode = "browse", targetStage = "gold", dinos = {}, byId = {}, nextCursor = nil,
-    listError = nil, loading = false, selection = {}, filters = {}, sortKey = "eligible",
+    listError = nil, loading = false, selection = {}, filters = {}, sortKey = "eligible", filtersOpen = false,
     visible = FusionMenu.CardBatch, quote = nil, quoteKey = nil, quoteStatus = "idle", quoteMessage = "",
     quoteSerial = 0, viewSerial = 0, acknowledged = false,
 }
@@ -113,12 +118,12 @@ local function ensureGui()
     scrim.Name, scrim.Text, scrim.AutoButtonColor, scrim.Size = "FusionScrim", "", false, UDim2.fromScale(1, 1)
     scrim.BackgroundColor3, scrim.BackgroundTransparency = Color3.new(0, 0, 0), .42
     scrim.Parent = screen
-    local frame = W.box(scrim, UDim2.new(.97, -leftInset, .95, 0), UDim2.new(0, leftInset + 6, .5, 0), C.panel, 8)
+    local frame = W.box(scrim, UDim2.new(.97, -leftInset, .95, 0), UDim2.new(0, leftInset + 6, .5, 0), C.panel, 10)
     frame.Name, frame.AnchorPoint, frame.Active = "FusionPanel", Vector2.new(0, .5), true
     local limit = Instance.new("UISizeConstraint")
     limit.MaxSize, limit.Parent = Vector2.new(1180, 680), frame
     local header = W.box(frame, UDim2.new(1, -8, 0, T + 8), UDim2.fromOffset(4, 4), C.purple)
-    titleLabel = W.label(header, "Pattern Fusion", UDim2.new(1, -(T * 2 + 28), 1, -8), UDim2.fromOffset(12, 4), 30, nil, true)
+    titleLabel = W.label(header, "Fusion", UDim2.new(1, -(T * 2 + 28), 1, -8), UDim2.fromOffset(12, 4), 30, nil, true)
     W.button(header, "X", UDim2.new(0, T + 16, 0, T), UDim2.new(1, -(T + 20), 0, 4), C.red, function() FusionMenu.close() end)
     local content = Instance.new("Frame")
     content.Name, content.BackgroundTransparency, content.ClipsDescendants = "FusionBody", 1, true
@@ -206,10 +211,10 @@ scheduleQuote = function()
         -- Quotes are requested at EXACTLY the recipe count (6 / 3 / 2).
         state.quoteStatus = "need"
         state.quoteMessage = if #state.selection < recipe.donorCount
-            then "Select " .. (recipe.donorCount - #state.selection) .. " more matching dinos to see exact odds."
-            else "Too many dinos selected: remove " .. (#state.selection - recipe.donorCount) .. "."
+            then "Pick " .. (recipe.donorCount - #state.selection) .. " more to see your chances."
+            else "Too many: take " .. (#state.selection - recipe.donorCount) .. " out."
     else
-        state.quoteStatus, state.quoteMessage = "loading", "Calculating exact odds for these " .. recipe.donorCount .. " dinos..."
+        state.quoteStatus, state.quoteMessage = "loading", "Working out your chances..."
         local key, donors, stage = currentKey(), table.clone(state.selection), state.targetStage
         task.delay(FusionMenu.QuoteDebounce, function()
             if serial ~= state.quoteSerial then return end
@@ -217,14 +222,14 @@ scheduleQuote = function()
             if serial ~= state.quoteSerial or key ~= currentKey() then return end
             if type(response) == "table" and response.ok == true and type(response.quote) == "table"
                 and Sel.requestKey(stage, response.quote.donorIds or {}, "") ~= key then
-                state.quoteStatus, state.quoteMessage = "error", "The server quoted different dinos. Please reselect."
+                state.quoteStatus, state.quoteMessage = "error", "Something changed. Please pick again."
             elseif type(response) == "table" and response.ok == true and type(response.quote) == "table" then
                 local formatted = Sel.formatOdds(response.quote.odds, catalog)
                 if formatted.ok then
                     state.quote, state.quoteKey, state.quoteStatus = response.quote, key, "ready"
                     state.quoteMessage = ""
                 else
-                    state.quoteStatus, state.quoteMessage = "error", "Odds could not be read (" .. tostring(formatted.error) .. "). Fusion is disabled until they are."
+                    state.quoteStatus, state.quoteMessage = "error", "Chances could not be read (" .. tostring(formatted.error) .. "). Fusion is paused until they can."
                 end
             else
                 local reason = if type(response) == "table" then response.reason else "request_failed"
@@ -249,27 +254,33 @@ local function filterValueName(field: string, value): string
     if field == "mutationId" then return if value == "none" then "None" else Sel.name(catalog, "mutations", value) end
     if field == "shiny" or field == "big" then return if value then "Yes" else "No" end
     if field == "originKind" then return ({hatch = "Hatched", fusion = "Fused", legacy_unknown = "Older"})[value] or tostring(value) end
-    if field == "cosmetics" then return ({has = "Owns FX", none = "No FX", equipped = "Equipped"})[value] or tostring(value) end
-    if field == "stage" then return Sel.name(nil, "x", value) end
+    if field == "cosmetics" then return ({has = "Has effects", none = "No effects", equipped = "Wearing"})[value] or tostring(value) end
     return tostring(value)
 end
-local FilterLabels = {speciesId = "Species", patternId = "Pattern", stage = "Stage", colorId = "Color",
-    shiny = "Shiny", big = "BIG", mutationId = "Mutation", originKind = "Origin", cosmetics = "Cosmetics"}
+local FilterLabels = {speciesId = "Dino", patternId = "Pattern", colorId = "Colour",
+    shiny = "Shiny", big = "BIG", mutationId = "Mutation", originKind = "From", cosmetics = "Effects"}
+-- Stage is chosen by the tier tabs, so it is not a chip.
+local FilterChips = {"speciesId", "patternId", "colorId", "shiny", "big", "mutationId", "originKind", "cosmetics"}
+
+local function speciesName(d): string return Sel.name(catalog, "species", d.speciesId, "Dino") end
 
 local function cardLook(d)
     local entry = cards[d.instanceId]
     if not entry then return end
-    local selected = table.find(state.selection, d.instanceId) ~= nil
+    local at = table.find(state.selection, d.instanceId)
     local ctx = Sel.context(state.targetStage, state.selection, state.byId, state.filters)
-    local reason = if selected then nil else Sel.ineligibility(d, ctx)
+    local reason = if at then nil else Sel.ineligibility(d, ctx)
     local valuable = #Sel.valuableReasons(d) > 0
-    entry.stroke.Color = if selected then (if valuable then C.purple else C.gold) else C.outline
-    entry.stroke.Thickness = if selected then 5 else 3
-    entry.button.BackgroundColor3 = if reason then C.outline else (W.StageColors[d.stage] or C.card)
-    entry.status.Text = if selected then (if valuable then "SELECTED (VALUABLE)" else "SELECTED")
+    entry.stroke.Color = if at then (if valuable then C.purple else C.accent) else C.outline
+    entry.stroke.Thickness = if at then 5 else 3
+    entry.button.BackgroundColor3 = if reason then C.outline else C.card
+    entry.status.Text = if at then "In slot " .. at .. (if valuable then " • Special" else "")
         elseif reason then (Sel.ReasonText[reason] or reason)
-        elseif valuable then "Valuable: tap to add" else "Tap to add"
-    entry.status.TextColor3 = if selected then C.gold elseif reason then C.red elseif valuable then C.purple else C.accent
+        elseif valuable then "Special: tap to add" else "Tap to add"
+    entry.status.TextColor3 = if at then C.accent elseif reason then C.red elseif valuable then C.purple else C.text
+    entry.tick.Visible = at ~= nil
+    entry.tick.Text = if at then tostring(at) else ""
+    entry.dim.Visible = reason ~= nil
 end
 
 local function refreshCards()
@@ -282,6 +293,7 @@ local function toggle(d)
     local nextSelection, ok, reason = Sel.toggle(state.selection, d, state.targetStage, state.byId)
     if not ok then toast(Sel.ReasonText[reason] or tostring(reason), C.red) return end
     state.selection = nextSelection
+    Sfx.play("ui_click")
     refreshCards()
     scheduleQuote()
 end
@@ -290,10 +302,10 @@ local function buildGrid(grid: ScrollingFrame)
     for _, child in grid:GetChildren() do if not child:IsA("UIGridLayout") then child:Destroy() end end
     cards = {}
     local ctx = Sel.context(state.targetStage, state.selection, state.byId, state.filters)
-    local list = Sel.sort(Sel.filter(state.dinos, state.filters), state.sortKey, ctx, Sel.selectedSet(state.selection), catalog)
+    local list = Sel.sort(Sel.visibleFor(state.dinos, state.targetStage, state.filters), state.sortKey, ctx, Sel.selectedSet(state.selection), catalog)
     for i, d in list do
         if i > state.visible then
-            local more = W.button(grid, "SHOW MORE (" .. (#list - state.visible) .. ")", UDim2.new(), UDim2.new(), C.blue, function()
+            local more = W.button(grid, "Show more (" .. (#list - state.visible) .. ")", UDim2.new(), UDim2.new(), C.blue, function()
                 state.visible += FusionMenu.CardBatch
                 buildGrid(grid)
             end)
@@ -303,26 +315,77 @@ local function buildGrid(grid: ScrollingFrame)
         local g = d.genes or {}
         local card = Instance.new("TextButton")
         card.Name, card.Text, card.AutoButtonColor, card.LayoutOrder = "Dino_" .. i, "", false, i
-        card.BackgroundColor3 = W.StageColors[d.stage] or C.card
-        Theme.decorate(card, 6)
+        card.BackgroundColor3 = C.card
+        Theme.decorate(card, 10)
         card.Parent = grid
         card.Activated:Connect(function() toggle(d) end)
-        W.label(card, Sel.name(catalog, "species", d.speciesId), UDim2.new(1, -8, 0, 20), UDim2.fromOffset(4, 3), 18)
-        W.label(card, Sel.name(catalog, "patterns", g.patternId, "Unknown pattern") .. " • " .. Sel.name(nil, "x", d.stage), UDim2.new(1, -8, 0, 16), UDim2.fromOffset(4, 24), 14, C.gold)
-        W.swatch(card, g, UDim2.new(1, -16, 0, 9), UDim2.fromOffset(8, 43))
-        local badges = Sel.badges(d, catalog)
-        W.label(card, (if #badges > 0 then table.concat(badges, " • ") else ""), UDim2.new(1, -8, 0, 18), UDim2.fromOffset(4, 55), 15,
-            if #badges > 0 then C.purple else C.text)
-        local status = W.label(card, "", UDim2.new(1, -(T + 8), 0, T - 4), UDim2.new(0, 4, 1, -(T + 2)), 15)
+        -- Big picture first: the real dino (lazy, culled by DinosaurPreview) with its colours.
+        local view = Preview.add(card, d.speciesId or "compy", if d.stage == "base" or d.stage == nil then "base" else d.stage)
+        view.Size, view.Position = UDim2.new(1, -8, .5, 0), UDim2.new(0, 4, 0, 22)
+        PreviewTraits.add(view, {genes = if d.stage == "base" then g else nil})
+        W.label(card, speciesName(d), UDim2.new(1, -8, 0, 22), UDim2.fromOffset(4, 2), 20)
+        W.label(card, Sel.cardPattern(d, catalog), UDim2.new(1, -8, 0, 16), UDim2.new(0, 4, .5, 22), 14, C.gold)
+        W.swatch(card, g, UDim2.new(1, -16, 0, 8), UDim2.new(0, 8, .5, 40))
+        local traits = Sel.cardTraits(d, catalog)
+        W.label(card, table.concat(traits, " • "), UDim2.new(1, -8, 0, 16), UDim2.new(0, 4, .5, 50), 14, C.purple)
+        local status = W.label(card, "", UDim2.new(1, -(T + 8), 0, 20), UDim2.new(0, 4, 1, -24), 15)
         local info = W.button(card, "i", UDim2.fromOffset(T, T), UDim2.new(1, -(T + 2), 1, -(T + 2)), C.blue, function() openDetails(d.instanceId) end)
         info.Name = "Details"
+        local dim = Instance.new("Frame")
+        dim.Name, dim.Size, dim.BackgroundColor3, dim.BackgroundTransparency, dim.BorderSizePixel = "Dim", UDim2.fromScale(1, 1), C.outline, .55, 0
+        dim.ZIndex, dim.Visible, dim.Parent = card.ZIndex + 3, false, card
+        local tick = W.label(card, "", UDim2.fromOffset(30, 30), UDim2.fromOffset(4, 4), 18, C.outline)
+        tick.Name, tick.BackgroundTransparency, tick.BackgroundColor3, tick.ZIndex, tick.Visible = "Tick", 0, C.accent, card.ZIndex + 4, false
+        Theme.decorate(tick, 15)
         local stroke = card:FindFirstChildOfClass("UIStroke") :: UIStroke
-        cards[d.instanceId] = {button = card, stroke = stroke, status = status}
+        cards[d.instanceId] = {button = card, stroke = stroke, status = status, tick = tick, dim = dim}
         cardLook(d)
     end
     if #list == 0 then
-        local empty = W.label(grid, if state.loading then "Loading your dinos..." else "No dinos match these filters.", UDim2.new(), UDim2.new(), 20, C.gold)
+        local recipe = Sel.stage(state.targetStage)
+        local text = if state.loading then "Loading your dinos..."
+            elseif next(state.filters) ~= nil then "No dinos match. Tap Filter to clear."
+            else "No " .. (if recipe then Sel.stageTitle(recipe.source) else "") .. " dinos yet. Hatch more eggs!"
+        local empty = W.label(grid, text, UDim2.new(), UDim2.new(), 20, C.gold)
         empty.LayoutOrder = 0
+    end
+end
+
+-- Result preview (right column): big picture of the new dino + name + guarantee line.
+local function resultBox(parent: Frame, speciesId: string?, stageId: string, traits, big: boolean)
+    local recipe = Sel.stage(stageId)
+    local box = W.box(parent, UDim2.new(1, 0, if big then .62 else .5, 0), UDim2.new(), W.StageColors[stageId] or C.gold, 10)
+    box.Name = "Result"
+    local badge = W.label(box, "NEW " .. string.upper(if recipe then recipe.name else stageId), UDim2.new(.6, 0, 0, 26), UDim2.fromOffset(6, 4), 20, C.outline)
+    badge.Name, badge.BackgroundTransparency, badge.BackgroundColor3, badge.ZIndex = "Badge", 0, C.text, box.ZIndex + 2
+    Theme.decorate(badge, 13)
+    if speciesId then
+        local view = Preview.add(box, speciesId, stageId)
+        view.Size, view.Position = UDim2.new(1, -8, 1, -62), UDim2.fromOffset(4, 30)
+        PreviewTraits.add(view, traits)
+        local who = Sel.name(catalog, "species", speciesId, "Dino")
+        W.label(box, (if recipe then recipe.name else "") .. " " .. who, UDim2.new(1, -8, 0, 26), UDim2.new(0, 4, 1, -30), 22, C.text)
+    else
+        W.label(box, "?", UDim2.new(1, 0, 1, -60), UDim2.fromOffset(0, 30), 80, C.outline)
+        W.label(box, "Your new dino", UDim2.new(1, -8, 0, 26), UDim2.new(0, 4, 1, -30), 22, C.text)
+    end
+    return box
+end
+
+-- Odds chips in a grid; one short chip per outcome, exact server numbers.
+local function fillChips(scroll: ScrollingFrame, odds)
+    for _, child in scroll:GetChildren() do if not child:IsA("UIGridLayout") then child:Destroy() end end
+    local formatted = Sel.oddsChips(odds, catalog)
+    local order = 0
+    for _, section in formatted.sections do
+        for _, chip in section.chips do
+            order += 1
+            local c = W.label(scroll, chip.label, UDim2.new(), UDim2.new(), 16, C.text)
+            c.Name, c.BackgroundTransparency, c.BackgroundColor3, c.LayoutOrder = "Chip", 0, if section.trait == "primaryColor" or section.trait == "secondaryColor" then W.colorOf(chip.id) else C.card, order
+            if (section.trait == "shiny" or section.trait == "big") and chip.id == "yes" then c.BackgroundColor3 = C.purple end
+            if section.trait == "mutation" and chip.id ~= "none" then c.BackgroundColor3 = C.purple end
+            Theme.decorate(c, 12)
+        end
     end
 end
 
@@ -332,199 +395,171 @@ updateColumn = function()
     for _, child in col.slots:GetChildren() do if not child:IsA("UIGridLayout") then child:Destroy() end end
     local recipe = Sel.stage(state.targetStage)
     local need = (recipe and recipe.donorCount) or 0
-    local stageName = if recipe then recipe.name else "?"
-    local counterMode = need > Sel.CompactSlotThreshold
-    local slotLayout = col.slots:FindFirstChildOfClass("UIGridLayout")
-    if slotLayout then
-        -- One row of up to 10 slots (compact strip) or two rows of 5; 3 slots use thirds.
-        local perRow = if counterMode then 1 elseif col.compact then math.max(need, 1) else math.max(math.min(need, 5), 1)
-        local rows = if counterMode or col.compact then 1 else math.ceil(need / perRow)
-        local height = col.slotsHeight or 40
-        slotLayout.CellSize = if counterMode then UDim2.fromScale(1, 1)
-            else UDim2.new(1 / perRow, -4, 0, math.max(18, math.floor(height / rows) - 6))
-    end
-    if counterMode then
-        -- Large recipe: a compact n/N progress counter (Android landscape safe); the
-        -- selected dinos stay highlighted in the grid and a tap there removes them.
-        local bar = W.box(col.slots, UDim2.new(), UDim2.new(), C.outline, 4)
-        bar.Name = "Counter"
-        local fill = W.box(bar, UDim2.fromScale(math.clamp(#state.selection / need, 0, 1), 1), UDim2.new(),
-            if #state.selection == need then C.accent else C.gold, 4)
-        fill.Name = "Fill"
-        local counter = W.label(bar, string.format("%d/%d selected • tap a dino card to remove", #state.selection, need),
-            UDim2.fromScale(1, 1), UDim2.new(), 16, C.text, true)
-        counter.Name = "CounterText"
-    end
-    for i = 1, if counterMode then 0 else need do
+    local first = state.selection[1] and state.byId[state.selection[1]]
+    for i = 1, need do
         local id = state.selection[i]
         local d = id and state.byId[id]
-        if d and col.compact then
-            -- Phone landscape: slots are a compact read-only strip; tap the dino card to remove.
-            local chip = W.box(col.slots, UDim2.new(), UDim2.new(), if #Sel.valuableReasons(d) > 0 then C.purple else C.card, 3)
-            chip.LayoutOrder = i
-            W.swatch(chip, d.genes, UDim2.new(1, -4, 0, 6), UDim2.new(0, 2, 1, -8))
-        elseif d then
-            local slot = W.button(col.slots, string.sub(Sel.name(catalog, "species", d.speciesId), 1, 4), UDim2.new(), UDim2.new(), if #Sel.valuableReasons(d) > 0 then C.purple else C.card, function() toggle(d) end)
-            slot.LayoutOrder = i
-            W.swatch(slot, d.genes, UDim2.new(1, -8, 0, 5), UDim2.new(0, 4, 1, -9))
+        if d then
+            local slot = W.button(col.slots, "", UDim2.new(), UDim2.new(), if #Sel.valuableReasons(d) > 0 then C.purple else C.card, function() toggle(d) end)
+            slot.Name, slot.LayoutOrder = "Slot_" .. i, i
+            local view = Preview.add(slot, d.speciesId or "compy", if d.stage == "base" or d.stage == nil then "base" else d.stage)
+            view.Size, view.Position = UDim2.new(1, -4, 1, -22), UDim2.fromOffset(2, 2)
+            PreviewTraits.add(view, {genes = if d.stage == "base" then d.genes else nil})
+            W.swatch(slot, d.genes, UDim2.new(1, -8, 0, 6), UDim2.new(0, 4, 1, -20))
+            W.label(slot, "x", UDim2.fromOffset(20, 20), UDim2.new(1, -22, 0, 2), 14, C.red)
         else
-            local empty = W.box(col.slots, UDim2.new(), UDim2.new(), C.outline, 4)
-            empty.LayoutOrder = i
-            W.label(empty, tostring(i), UDim2.fromScale(1, 1), UDim2.new(), 16, Color3.fromRGB(120, 120, 140))
+            local empty = W.box(col.slots, UDim2.new(), UDim2.new(), C.outline, 8)
+            empty.Name, empty.LayoutOrder = "Empty_" .. i, i
+            W.label(empty, tostring(i), UDim2.fromScale(1, 1), UDim2.new(), 24, Dim)
         end
     end
-    local h = Sel.histogram(state.selection, state.byId)
-    col.count.Text = string.format("INGREDIENTS %d/%d", #state.selection, need)
-    local parts = {string.format("%d Shiny / %d", h.shiny, need), string.format("%d BIG", h.big)}
-    for id, n in h.mutations do table.insert(parts, Sel.name(catalog, "mutations", id) .. " x" .. n) end
-    if h.cosmetics > 0 then table.insert(parts, h.cosmetics .. " with bought FX (lost)") end
-    col.histogram.Text = table.concat(parts, " • ")
-    local odds = col.odds :: ScrollingFrame
-    for _, child in odds:GetChildren() do if not child:IsA("UIListLayout") then child:Destroy() end end
-    local order = 0
-    local function line(text: string, color: Color3?, height: number?)
-        order += 1
-        local l = W.label(odds, text, UDim2.new(1, -12, 0, height or 24), UDim2.new(), 18, color, true)
-        l.LayoutOrder = order
-    end
-    if not (recipe and recipe.approved) then
-        line(string.upper(state.targetStage) .. " LOCKED", C.gold, 30)
-        line(Sel.LockedStageText .. ".", nil, 44)
-    else
-        line("UPGRADED (guaranteed): 1 NEW " .. stageName .. " from " .. need .. " " .. Sel.stageTitle(recipe.source) .. ", stage + stats", C.accent, 40)
-        if recipe.anyPattern then
-            line("PATTERN: the most common pattern among your dinos", C.gold)
-        elseif state.selection[1] and state.byId[state.selection[1]] then
-            local g = state.byId[state.selection[1]].genes or {}
-            line("PATTERN LOCKED: " .. Sel.name(catalog, "patterns", g.patternId), C.gold)
-        end
-        line("ROLLED (exact odds from the server):", C.blue)
-        if state.quoteStatus == "ready" and state.quote then
-            local formatted = Sel.formatOdds(state.quote.odds, catalog)
-            for _, section in formatted.sections do
-                local texts = {}
-                for _, row in section.rows do table.insert(texts, row.label .. " " .. row.text) end
-                local text = section.title .. ": " .. table.concat(texts, " • ")
-                line(text, nil, if #text > 70 then 64 elseif #text > 36 then 44 else 24)
-            end
-            line("Odds version " .. tostring(state.quote.oddsVersion) .. " • recipe " .. tostring(state.quote.recipeVersion), Color3.fromRGB(170, 170, 190))
-        else
-            line(state.quoteMessage, if state.quoteStatus == "error" then C.red else C.gold, 44)
-        end
-    end
+    col.count.Text = string.format("%d of %d", #state.selection, need)
+    col.goal.Text = Sel.goalText(state.dinos, state.targetStage, state.selection, state.byId, catalog)
+    -- Right column: result preview + chips + FUSE.
+    local right = col.right :: Frame
+    for _, child in right:GetChildren() do if child.Name ~= "Fuse" then child:Destroy() end end
     local ready = state.quoteStatus == "ready" and state.quote ~= nil and state.quoteKey == currentKey()
+    local speciesId = if state.quote then state.quote.speciesId else (if first then first.speciesId else nil)
+    resultBox(right, speciesId, state.targetStage, nil, false)
+    local guarantee = W.label(right, if recipe and recipe.approved then "Guaranteed: " .. recipe.name .. "!" else Sel.LockedStageText, UDim2.new(1, 0, 0, 24), UDim2.new(0, 0, .5, 4), 20, C.accent)
+    guarantee.Name = "Guarantee"
+    local chips = Instance.new("ScrollingFrame")
+    chips.Name, chips.BackgroundTransparency, chips.BorderSizePixel = "Odds", 1, 0
+    chips.Size, chips.Position = UDim2.new(1, 0, .5, -(T + 40)), UDim2.new(0, 0, .5, 30)
+    chips.ScrollBarThickness, chips.AutomaticCanvasSize, chips.CanvasSize = 4, Enum.AutomaticSize.Y, UDim2.new()
+    chips.Parent = right
+    local layout = Instance.new("UIGridLayout")
+    layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.new(.5, -4, 0, 28), UDim2.fromOffset(4, 4), Enum.SortOrder.LayoutOrder
+    layout.Parent = chips
+    if ready then
+        fillChips(chips, (state.quote :: any).odds)
+    else
+        local msg = W.label(chips, state.quoteMessage, UDim2.new(), UDim2.new(), 18, if state.quoteStatus == "error" then C.red else C.gold)
+        msg.Name = "Message"
+        layout.CellSize = UDim2.new(1, 0, 0, 56)
+    end
     col.fuse.BackgroundColor3 = if ready then C.accent else C.card
-    col.fuse.Text = if ready then "REVIEW & FUSE" else "FUSE (" .. #state.selection .. "/" .. need .. ")"
+    col.fuse.Text = if ready then "FUSE!" elseif #state.selection < need then "Pick " .. (need - #state.selection) .. " more" else "FUSE"
 end
 
 local function renderBrowse()
     local active = Sel.stage(state.targetStage)
-    setTitle(if active then string.format("Pattern Fusion: %d %s -> 1 NEW %s", active.donorCount, Sel.stageTitle(active.source), active.name)
-        else "Pattern Fusion", C.purple)
+    setTitle(if active then "Make a " .. active.name .. " dino" else "Fusion", W.StageColors[state.targetStage] or C.purple)
     local root = body :: Frame
     local left = Instance.new("Frame")
-    left.Name, left.BackgroundTransparency, left.Size, left.Parent = "Browse", 1, UDim2.new(.6, -6, 1, 0), root
-    local right = W.box(root, UDim2.new(.4, -6, 1, 0), UDim2.new(.6, 6, 0, 0), C.card, 6)
-    right.Name = "Ingredients"
-    -- Row 1: target stage tabs + sort + auto-fill.
-    local tabs = {}
-    for _, s in Sel.Stages do
-        table.insert(tabs, {s.id, string.upper(s.name) .. (if s.approved then " (" .. s.donorCount .. ")" else " (LOCKED)")})
-    end
-    for i, tab in tabs do
-        local stage = Sel.stage(tab[1])
-        local b = W.button(left, tab[2], UDim2.new(.17, -4, 0, T), UDim2.new((i - 1) * .17, 0, 0, 0),
-            if state.targetStage == tab[1] then (W.StageColors[tab[1]] or C.gold) elseif stage and stage.approved then C.card else C.outline, function()
-                if state.targetStage == tab[1] then return end
-                state.targetStage = tab[1]
-                if not (stage and stage.approved) then toast(string.upper(tab[2]) .. ": " .. Sel.LockedStageText, C.gold) end
-                state.selection = {}
+    left.Name, left.BackgroundTransparency, left.Size, left.Parent = "Browse", 1, UDim2.new(.38, -6, 1, 0), root
+    local centre = W.box(root, UDim2.new(.28, -6, 1, 0), UDim2.new(.38, 3, 0, 0), C.card, 10)
+    centre.Name = "Ingredients"
+    local right = Instance.new("Frame")
+    right.Name, right.BackgroundTransparency, right.Size, right.Position, right.Parent = "ResultColumn", 1, UDim2.new(.34, -6, 1, 0), UDim2.new(.66, 6, 0, 0), root
+    -- Row 1: three big tier tabs.
+    local tabHeight = T + 12
+    for i, s in Sel.Stages do
+        local words = Sel.tabText(s.id)
+        local on = state.targetStage == s.id
+        local b = W.button(left, "", UDim2.new(1 / 3, -4, 0, tabHeight), UDim2.new((i - 1) / 3, 0, 0, 0),
+            if on then (W.StageColors[s.id] or C.gold) else C.card, function()
+                if state.targetStage == s.id then return end
+                state.targetStage = s.id
+                if not s.approved then toast(words.title .. ": " .. Sel.LockedStageText, C.gold) end
+                state.selection, state.visible = {}, FusionMenu.CardBatch
                 render()
                 scheduleQuote()
             end)
-        b.Name = "Stage_" .. tab[1]
+        b.Name = "Stage_" .. s.id
+        W.label(b, words.title, UDim2.new(1, -4, 0, 26), UDim2.fromOffset(2, 2), 22, if on then C.outline else C.text)
+        W.label(b, words.sub, UDim2.new(1, -4, 0, 18), UDim2.fromOffset(2, 28), 15, if on then C.outline else Dim)
     end
-    W.button(left, "SORT: " .. string.upper(Sel.SortNames[state.sortKey]), UDim2.new(.25, -4, 0, T), UDim2.new(.51, 0, 0, 0), C.blue, function()
-        local i = table.find(Sel.SortKeys, state.sortKey) or 1
-        state.sortKey = Sel.SortKeys[i % #Sel.SortKeys + 1]
+    -- Row 2: goal sentence + one Filter button.
+    local y = tabHeight + 6
+    column.goal = W.label(left, "", UDim2.new(1, -(T + 48), 0, T), UDim2.fromOffset(0, y), 18, C.gold, true)
+    column.goal.Name = "Goal"
+    local filterOn = state.filtersOpen or next(state.filters) ~= nil
+    W.button(left, "Filter", UDim2.fromOffset(T + 40, T), UDim2.new(1, -(T + 40), 0, y), if filterOn then C.blue else C.card, function()
+        state.filtersOpen = not state.filtersOpen
         render()
-    end)
-    W.button(left, "AUTO-FILL PLAIN", UDim2.new(.24, 0, 0, T), UDim2.new(.76, 0, 0, 0), C.accent, function()
-        local filled, added, short = Sel.autoFill(state.dinos, state.selection, state.targetStage, state.filters, catalog)
-        state.selection = filled
-        if added == 0 then toast("No plain matching dinos to add. Valuable dinos are never auto-filled.", C.gold)
-        elseif short > 0 then toast("Added " .. added .. " plain dinos; " .. short .. " more needed.", C.gold)
-        else toast("Added " .. added .. " plain dinos. Valuables were skipped.", C.accent) end
-        refreshCards()
-        scheduleQuote()
-    end)
-    -- Row 2: cycling filter chips (horizontal scroll for small screens).
-    local chips = Instance.new("ScrollingFrame")
-    chips.Name, chips.BackgroundTransparency, chips.BorderSizePixel = "Filters", 1, 0
-    chips.Size, chips.Position, chips.ScrollingDirection = UDim2.new(1, 0, 0, T + 8), UDim2.fromOffset(0, T + 6), Enum.ScrollingDirection.X
-    chips.ScrollBarThickness, chips.AutomaticCanvasSize, chips.CanvasSize = 4, Enum.AutomaticSize.X, UDim2.new()
-    chips.Parent = left
-    W.list(chips, 6, true)
-    local options = Sel.filterOptions(state.dinos, catalog)
-    local reset = W.button(chips, "RESET", UDim2.fromOffset(84, T), UDim2.new(), C.red, function()
-        state.filters, state.visible = {}, FusionMenu.CardBatch
-        render()
-    end)
-    reset.LayoutOrder = 0
-    for i, field in Sel.FilterFields do
-        local value = state.filters[field]
-        local chip = W.button(chips, FilterLabels[field] .. ": " .. filterValueName(field, value), UDim2.fromOffset(150, T), UDim2.new(),
-            if value ~= nil then C.blue else C.card, function()
-                state.filters[field] = Sel.cycle(options[field] or {}, state.filters[field])
-                state.visible = FusionMenu.CardBatch
-                render()
-            end)
-        chip.LayoutOrder = i
+    end).Name = "Filter"
+    y += T + 6
+    if state.filtersOpen then
+        -- Chips (tap to cycle, scroll sideways) live behind the Filter button.
+        local chips = Instance.new("ScrollingFrame")
+        chips.Name, chips.BackgroundTransparency, chips.BorderSizePixel = "Filters", 1, 0
+        chips.Size, chips.Position, chips.ScrollingDirection = UDim2.new(1, 0, 0, T + 8), UDim2.fromOffset(0, y), Enum.ScrollingDirection.X
+        chips.ScrollBarThickness, chips.AutomaticCanvasSize, chips.CanvasSize = 4, Enum.AutomaticSize.X, UDim2.new()
+        chips.Parent = left
+        W.list(chips, 6, true)
+        local options = Sel.filterOptions(state.dinos, catalog)
+        W.button(chips, "Sort: " .. Sel.SortNames[state.sortKey], UDim2.fromOffset(150, T), UDim2.new(), C.purple, function()
+            local i = table.find(Sel.SortKeys, state.sortKey) or 1
+            state.sortKey = Sel.SortKeys[i % #Sel.SortKeys + 1]
+            render()
+        end).LayoutOrder = 0
+        for i, field in FilterChips do
+            local value = state.filters[field]
+            local chip = W.button(chips, FilterLabels[field] .. ": " .. filterValueName(field, value), UDim2.fromOffset(150, T), UDim2.new(),
+                if value ~= nil then C.blue else C.card, function()
+                    state.filters[field] = Sel.cycle(options[field] or {}, state.filters[field])
+                    state.visible = FusionMenu.CardBatch
+                    render()
+                end)
+            chip.LayoutOrder = i
+        end
+        local reset = W.button(chips, "Clear", UDim2.fromOffset(84, T), UDim2.new(), C.red, function()
+            state.filters, state.visible, state.filtersOpen = {}, FusionMenu.CardBatch, false
+            render()
+        end)
+        reset.LayoutOrder = #FilterChips + 1
+        y += T + 12
     end
-    -- Grid of individual dinos.
-    local grid = W.scroll(left, UDim2.new(1, 0, 1, -(T * 2 + 20)), UDim2.fromOffset(0, T * 2 + 20))
+    -- Grid of big dino cards.
+    local grid = W.scroll(left, UDim2.new(1, 0, 1, -y), UDim2.fromOffset(0, y))
     grid.Name = "DinoGrid"
     local layout = Instance.new("UIGridLayout")
     local small = gui ~= nil and (gui :: ScreenGui).AbsoluteSize.Y < 520
-    layout.CellSize = if small then UDim2.fromOffset(118, 124) else UDim2.fromOffset(146, 132)
+    layout.CellSize = if small then UDim2.fromOffset(132, 150) else UDim2.fromOffset(160, 176)
     layout.CellPadding, layout.SortOrder = UDim2.fromOffset(6, 6), Enum.SortOrder.LayoutOrder
     layout.Parent = grid
     if state.listError and state.mode == "browse" then
         W.label(grid, "Could not load dinos: " .. Sel.failureMessage(state.listError), UDim2.new(), UDim2.new(), 20, C.red)
-        W.button(grid, "RETRY", UDim2.new(), UDim2.new(), C.blue, function() loadList() render() end)
+        W.button(grid, "Try again", UDim2.new(), UDim2.new(), C.blue, function() loadList() render() end)
     else
         buildGrid(grid)
     end
-    -- Right column: slots, histogram, odds, fuse.
-    -- Compact layout for short (phone landscape) safe areas: one read-only slot strip.
-    local compact = gui ~= nil and (gui :: ScreenGui).AbsoluteSize.Y < 450
-    column.compact = compact
-    local slotsHeight = if compact then 26 else T * 2 + 6
-    column.slotsHeight = slotsHeight
-    local slotsBottom = T + 6 + slotsHeight
-    column.count = W.label(right, "", UDim2.new(1, -100, 0, T), UDim2.fromOffset(6, 2), 24, C.gold, true)
-    W.button(right, "CLEAR", UDim2.fromOffset(84, T), UDim2.new(1, -88, 0, 2), C.red, function()
+    -- Centre column: slots, Fill for me, Clear.
+    local need = (active and active.donorCount) or 0
+    local cols, rows = table.unpack(SlotGrid[state.targetStage] or {3, 2})
+    W.label(centre, if active then "Put in " .. need .. " " .. Sel.stageTitle(active.source) else "", UDim2.new(1, -90, 0, 26), UDim2.fromOffset(8, 4), 20, C.text, true)
+    column.count = W.label(centre, "", UDim2.fromOffset(80, 26), UDim2.new(1, -86, 0, 4), 20, C.gold)
+    column.count.Name = "SlotCount"
+    local slots = Instance.new("Frame")
+    slots.Name, slots.BackgroundTransparency, slots.Size, slots.Position = "Slots", 1, UDim2.new(1, -12, 1, -(T + 46)), UDim2.fromOffset(6, 34)
+    slots.Parent = centre
+    local slotLayout = Instance.new("UIGridLayout")
+    slotLayout.CellSize = UDim2.new(1 / cols, -6, 1 / rows, -6)
+    slotLayout.CellPadding, slotLayout.SortOrder = UDim2.fromOffset(6, 6), Enum.SortOrder.LayoutOrder
+    slotLayout.HorizontalAlignment, slotLayout.VerticalAlignment = Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center
+    slotLayout.Parent = slots
+    column.slots = slots
+    W.button(centre, "Fill for me", UDim2.new(.62, -8, 0, T), UDim2.new(0, 6, 1, -(T + 6)), C.accent, function()
+        local filled, added, short = Sel.autoFill(state.dinos, state.selection, state.targetStage, state.filters, catalog)
+        state.selection = filled
+        if added == 0 then toast("No plain dinos to add. Special dinos are never picked for you.", C.gold)
+        elseif short > 0 then toast("Added " .. added .. ". You need " .. short .. " more.", C.gold)
+        else toast("Added " .. added .. " plain dinos.", C.accent) end
+        refreshCards()
+        scheduleQuote()
+    end).Name = "AutoFill"
+    W.button(centre, "Clear", UDim2.new(.38, -8, 0, T), UDim2.new(.62, 2, 1, -(T + 6)), C.red, function()
         state.selection = {}
         refreshCards()
         scheduleQuote()
     end).Name = "Clear"
-    local slots = Instance.new("Frame")
-    slots.Name, slots.BackgroundTransparency, slots.Size, slots.Position = "Slots", 1, UDim2.new(1, -12, 0, slotsHeight), UDim2.fromOffset(6, T + 6)
-    slots.Parent = right
-    local slotLayout = Instance.new("UIGridLayout")
-    slotLayout.CellSize = if compact then UDim2.new(.1, -3, 0, slotsHeight) else UDim2.new(.2, -5, 0, T)
-    slotLayout.CellPadding, slotLayout.SortOrder = if compact then UDim2.fromOffset(3, 0) else UDim2.fromOffset(5, 6), Enum.SortOrder.LayoutOrder
-    slotLayout.Parent = slots
-    column.slots = slots
-    column.histogram = W.label(right, "", UDim2.new(1, -12, 0, 20), UDim2.fromOffset(6, slotsBottom + 2), 16, C.text, true)
-    local odds = W.scroll(right, UDim2.new(1, -12, 1, -(slotsBottom + 26 + T + 14)), UDim2.fromOffset(6, slotsBottom + 24))
-    odds.Name = "Odds"
-    W.list(odds, 2)
-    column.odds = odds
-    column.fuse = W.button(right, "FUSE", UDim2.new(1, -12, 0, T + 4), UDim2.new(0, 6, 1, -(T + 10)), C.card, function()
+    -- Right column: result, chips, FUSE.
+    column.right = right
+    column.fuse = W.button(right, "FUSE", UDim2.new(1, 0, 0, T + 8), UDim2.new(0, 0, 1, -(T + 8)), C.card, function()
         local ready = state.quoteStatus == "ready" and state.quote ~= nil and state.quoteKey == currentKey()
         if not ready then
-            toast(if state.quoteStatus == "loading" then "Odds are still loading." else state.quoteMessage, C.gold)
+            toast(if state.quoteStatus == "loading" then "One moment..." else state.quoteMessage, C.gold)
             return
         end
         state.mode, state.acknowledged = "confirm", false
@@ -538,11 +573,8 @@ end
 local runFuse: (any) -> () = function() end
 
 local function donorLine(d): string
-    local g = d.genes or {}
-    local badges = Sel.badges(d, catalog)
-    return Sel.name(catalog, "patterns", g.patternId) .. " " .. Sel.name(catalog, "species", d.speciesId) .. " • "
-        .. Sel.geneLine(g, catalog)
-        .. (if #badges > 0 then " • " .. table.concat(badges, ", ") else "")
+    local traits = Sel.cardTraits(d, catalog)
+    return Sel.cardPattern(d, catalog) .. " " .. speciesName(d) .. (if #traits > 0 then " • " .. table.concat(traits, ", ") else "")
 end
 
 local function renderConfirm()
@@ -551,21 +583,26 @@ local function renderConfirm()
     local recipe = Sel.stage(quote.targetStage or state.targetStage)
     local stageName = if recipe then recipe.name else "?"
     local donorTotal = #(quote.donorIds or state.selection)
-    setTitle("Confirm " .. stageName .. " Fusion (no undo)", C.gold)
+    local who = Sel.name(catalog, "species", quote.speciesId, "Dino")
+    setTitle("Fuse " .. donorTotal .. " " .. who .. "?", C.gold)
     local root = body :: Frame
     local loss = Sel.lossSummary(quote, catalog)
-    local list = W.scroll(root, UDim2.new(1, 0, 1, -(T + 14)), UDim2.new())
+    -- Left: the new dino. Right: what goes away + chances.
+    local left = Instance.new("Frame")
+    left.Name, left.BackgroundTransparency, left.Size, left.Parent = "ConfirmResult", 1, UDim2.new(.34, -6, 1, -(T + 14)), root
+    resultBox(left, quote.speciesId, quote.targetStage or state.targetStage, nil, true)
+    W.label(left, "Guaranteed: " .. stageName .. " " .. who .. "!", UDim2.new(1, 0, 0, 26), UDim2.new(0, 0, .62, 4), 20, C.accent)
+    W.label(left, "Pattern: " .. Sel.name(catalog, "patterns", quote.patternId), UDim2.new(1, 0, 0, 22), UDim2.new(0, 0, .62, 32), 17, C.gold)
+    W.label(left, "Colours, Shiny, BIG and mutation are rolled new.", UDim2.new(1, 0, 0, 40), UDim2.new(0, 0, .62, 56), 15, C.text)
+    local list = W.scroll(root, UDim2.new(.66, -6, 1, -(T + 14)), UDim2.new(.34, 6, 0, 0))
     W.list(list, 3)
     local order = 0
     local function line(text: string, color: Color3?, height: number?)
         order += 1
-        local l = W.label(list, text, UDim2.new(1, -14, 0, height or (if #text > 80 then 48 else 26)), UDim2.new(), 20, color, true)
+        local l = W.label(list, text, UDim2.new(1, -14, 0, height or (if #text > 70 then 48 else 26)), UDim2.new(), 20, color, true)
         l.LayoutOrder = order
     end
-    line("GUARANTEED: 1 NEW " .. stageName .. " " .. Sel.name(catalog, "patterns", quote.patternId) .. " " .. Sel.name(catalog, "species", quote.speciesId)
-        .. " with the " .. stageName .. " stage upgrade. Its colors, Shiny, BIG and mutation are freshly rolled.", C.accent, 48)
-    line("PATTERN: " .. Sel.name(catalog, "patterns", quote.patternId) .. " (never rolled)", C.gold)
-    line("ALL " .. donorTotal .. " DINOS BELOW ARE CONSUMED:", C.red)
+    line("All " .. donorTotal .. " dinos go away. You get 1 new " .. stageName .. " " .. who .. ".", C.red, 30)
     for i, id in quote.donorIds or state.selection do
         local d = state.byId[id]
         line(i .. ". " .. (if d then donorLine(d) else id), if d and #Sel.valuableReasons(d) > 0 then C.purple else nil)
@@ -575,27 +612,33 @@ local function renderConfirm()
         local parts = {}
         for _, v in loss.valuables do
             local d = state.byId[v.instanceId]
-            table.insert(parts, (if d then Sel.name(catalog, "species", d.speciesId) else "Dino") .. " (" .. v.text .. ")")
+            table.insert(parts, (if d then speciesName(d) else "Dino") .. " (" .. v.text .. ")")
         end
-        line("Valuable donors consumed: " .. table.concat(parts, ", "), C.purple, 48)
+        line("Special dinos going away: " .. table.concat(parts, ", "), C.purple, 48)
     end
-    line("EXACT ROLL ODDS FOR THIS SELECTION:", C.blue)
-    for _, section in Sel.formatOdds(quote.odds, catalog).sections do
-        local texts = {}
-        for _, row in section.rows do table.insert(texts, row.label .. " " .. row.text) end
-        line(section.title .. ": " .. table.concat(texts, " • "), nil, 48)
-    end
-    line("Odds version " .. tostring(quote.oddsVersion) .. " • recipe " .. tostring(quote.recipeVersion) .. ". Wheels after fusion only reveal the saved result.", Color3.fromRGB(170, 170, 190), 48)
+    line("Your chances:", C.blue)
+    local chips = Instance.new("Frame")
+    chips.Name, chips.BackgroundTransparency, chips.LayoutOrder = "Odds", 1, order + 1
+    local sectionCount = 0
+    for _, s in Sel.oddsChips(quote.odds, catalog).sections do sectionCount += #s.chips end
+    chips.Size = UDim2.new(1, -14, 0, 32 * math.ceil(sectionCount / 3))
+    chips.Parent = list
+    local layout = Instance.new("UIGridLayout")
+    layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.new(1 / 3, -4, 0, 28), UDim2.fromOffset(4, 4), Enum.SortOrder.LayoutOrder
+    layout.Parent = chips
+    fillChips(chips :: any, quote.odds)
+    order += 1
+    line("Odds version " .. tostring(quote.oddsVersion) .. " • recipe " .. tostring(quote.recipeVersion) .. ". The reveal only shows the saved result.", Dim, 44)
     local needs = loss.needsConfirm
     local y = UDim2.new(0, 0, 1, -(T + 6))
-    W.button(root, "CANCEL", UDim2.new(.3, -6, 0, T + 4), y, C.red, function() state.mode = "browse" render() end)
+    W.button(root, "Not now", UDim2.new(.3, -6, 0, T + 4), y, C.red, function() state.mode = "browse" render() end)
     if needs and not state.acknowledged then
-        W.button(root, "I UNDERSTAND: " .. (loss.auraCount + loss.trailCount) .. " FX + " .. #loss.valuables .. " VALUABLE LOST", UDim2.new(.7, 0, 0, T + 4), UDim2.new(.3, 0, 1, -(T + 6)), C.gold, function()
+        W.button(root, "I understand: " .. (loss.auraCount + loss.trailCount) .. " effects + " .. #loss.valuables .. " special dinos go away", UDim2.new(.7, 0, 0, T + 4), UDim2.new(.3, 0, 1, -(T + 6)), C.gold, function()
             state.acknowledged = true
             render()
         end).Name = "Acknowledge"
     else
-        W.button(root, "FUSE NOW (CONSUMES " .. donorTotal .. ")", UDim2.new(.7, 0, 0, T + 4), UDim2.new(.3, 0, 1, -(T + 6)), C.accent, function()
+        W.button(root, "FUSE! (" .. donorTotal .. " go away)", UDim2.new(.7, 0, 0, T + 4), UDim2.new(.3, 0, 1, -(T + 6)), C.accent, function()
             if state.quoteKey ~= currentKey() then state.mode = "browse" render() return end
             local attempt = Sel.attempt(pendingAttempt, state.targetStage, quote.donorIds or state.selection, quote.quoteDigest, function()
                 return Http:GenerateGUID(false)
@@ -625,7 +668,7 @@ runFuse = function(attempt)
     fuseInFlight = true
     state.mode = "fusing"
     setTitle("Fusing...", C.gold)
-    renderStatus("Fusing your " .. #attempt.donorIds .. " dinos...\nThis request is saved: retries reuse the same token, so it can never fuse twice.", C.gold)
+    renderStatus("Fusing your " .. #attempt.donorIds .. " dinos...\nThis is saved: trying again can never fuse twice.", C.gold)
     task.spawn(function()
         local tries = 0
         while true do
@@ -642,14 +685,14 @@ runFuse = function(attempt)
                 loadList()
                 return
             elseif outcome.kind == "retry" and tries < FusionMenu.AutoRetries and outcome.reason ~= "lease_lost" then
-                if state.open then renderStatus(outcome.message .. "\n(attempt " .. (tries + 1) .. ")", C.gold) end
+                if state.open then renderStatus(outcome.message .. "\n(try " .. (tries + 1) .. ")", C.gold) end
                 task.wait(2 ^ tries)
             elseif outcome.kind == "retry" then
                 fuseInFlight = false
                 if not state.open then state.mode = "browse" return end
                 renderStatus(outcome.message, C.red, {
-                    {"RETRY (SAME REQUEST)", C.accent, function() runFuse(attempt) end, "Retry"},
-                    {"BACK", C.blue, function() state.mode = "browse" loadList() render() end, "Back"},
+                    {"Try again", C.accent, function() runFuse(attempt) end, "Retry"},
+                    {"Back", C.blue, function() state.mode = "browse" loadList() render() end, "Back"},
                 })
                 return
             else
@@ -666,6 +709,7 @@ end
 
 -- Reveal ---------------------------------------------------------------------------
 local reelPalette = {C.blue, C.purple, C.accent, C.gold, Color3.fromRGB(255, 120, 80), Color3.fromRGB(110, 120, 150)}
+local RevealTitles = {primaryColor = "Colour 1", secondaryColor = "Colour 2", shiny = "Shiny?", mutation = "Mutation?", big = "BIG?"}
 
 local function reel(parent: Instance, stage, animate: boolean)
     local frame = W.box(parent, UDim2.new(1, -24, 0, 70), UDim2.new(0, 12, .34, 0), C.outline, 6)
@@ -704,34 +748,55 @@ local function reel(parent: Instance, stage, animate: boolean)
     end
 end
 
+-- Celebration: the new dino pops in big (soft overshoot), facts in short lines.
 local function finalCard(root: Frame, result, stage)
     local traits = result.traits or {}
     local g = traits.genes or {}
-    local card = W.box(root, UDim2.new(.42, 0, .8, 0), UDim2.new(.03, 0, .04, 0), W.StageColors[result.targetStage or "gold"] or C.gold, 8)
-    local view = Preview.add(card, result.speciesId or "compy", result.targetStage or "gold")
-    view.Size, view.Position = UDim2.fromScale(1, .9), UDim2.fromScale(0, .05)
-    PreviewTraits.add(view, {shiny = traits.shiny, big = traits.big})
-    local info = W.scroll(root, UDim2.new(.52, 0, .8, 0), UDim2.new(.47, 0, .04, 0))
-    W.list(info, 3)
-    local order = 0
-    local function line(text: string, color: Color3?)
-        order += 1
-        W.label(info, text, UDim2.new(1, -12, 0, if #text > 44 then 46 else 28), UDim2.new(), 22, color, true).LayoutOrder = order
+    local stageId = result.targetStage or "gold"
+    local holder = Instance.new("Frame")
+    holder.BackgroundTransparency, holder.Size, holder.Position, holder.Parent = 1, UDim2.new(.46, 0, .9, 0), UDim2.new(.02, 0, .02, 0), root
+    resultBox(holder, result.speciesId or "compy", stageId, {shiny = traits.shiny, big = traits.big, mutationId = traits.mutationId}, true)
+    local pop = Instance.new("UIScale")
+    pop.Scale, pop.Parent = if motion() then .6 else 1, holder
+    if motion() then
+        TweenService:Create(pop, TweenInfo.new(.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
     end
-    line(stage.title, C.gold)
-    line("Crafted " .. Sel.stageTitle(result.targetStage or "gold") .. " (earned) • guaranteed stage", C.accent)
-    line("Pattern (locked): " .. Sel.name(catalog, "patterns", result.patternId or g.patternId))
-    line("Colors: " .. Sel.geneLine(g, catalog))
-    line("Shiny: " .. (if traits.shiny then "YES" else "No") .. " • BIG: " .. (if traits.big then "YES" else "No"))
-    line("Mutation: " .. Sel.name(catalog, "mutations", traits.mutationId, "None"))
-    line("Bought cosmetics: none (buy separately for this new dino)")
-    line("Odds version " .. tostring(result.oddsVersion or "?"), Color3.fromRGB(170, 170, 190))
-    if stage.replay then line("Already fused: showing your saved result.", C.blue) end
+    local chips = Instance.new("Frame")
+    chips.Name, chips.BackgroundTransparency, chips.Size, chips.Position, chips.Parent = "ResultChips", 1, UDim2.new(1, 0, .36, 0), UDim2.new(0, 0, .64, 0), holder
+    local layout = Instance.new("UIGridLayout")
+    layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.new(.5, -4, 0, 28), UDim2.fromOffset(4, 4), Enum.SortOrder.LayoutOrder
+    layout.Parent = chips
+    local n = 0
+    local function chip(text: string, color: Color3)
+        n += 1
+        local c = W.label(chips, text, UDim2.new(), UDim2.new(), 16, C.text)
+        c.BackgroundTransparency, c.BackgroundColor3, c.LayoutOrder = 0, color, n
+        Theme.decorate(c, 12)
+    end
+    chip(if traits.shiny then "Shiny!" else "Not shiny", if traits.shiny then C.purple else C.card)
+    chip(if traits.big then "BIG!" else "Not BIG", if traits.big then C.purple else C.card)
+    local mutation = Sel.name(catalog, "mutations", traits.mutationId, "")
+    chip(if mutation ~= "" then mutation .. "!" else "No mutation", if mutation ~= "" then C.purple else C.card)
+    chip(Sel.name(catalog, "colors", g.primaryColorId), W.colorOf(g.primaryColorId))
+    chip(Sel.name(catalog, "colors", g.secondaryColorId), W.colorOf(g.secondaryColorId))
+    local info = W.scroll(root, UDim2.new(.5, 0, .9, 0), UDim2.new(.49, 0, .02, 0))
+    W.list(info, 4)
+    local order = 0
+    local function line(text: string, color: Color3?, size: number?)
+        order += 1
+        W.label(info, text, UDim2.new(1, -12, 0, if #text > 40 then 48 else 32), UDim2.new(), size or 22, color, true).LayoutOrder = order
+    end
+    line(stage.title .. "!", C.gold, 30)
+    line(Sel.stageTitle(stageId) .. " stage: guaranteed. Made by you.", C.accent)
+    line("Pattern: " .. Sel.name(catalog, "patterns", result.patternId or g.patternId))
+    line("Colours: " .. Sel.geneLine(g, catalog))
+    line("No effects yet. Buy some for this new dino in the Shop.", Dim, 17)
+    line("Odds version " .. tostring(result.oddsVersion or "?"), Dim, 15)
+    if stage.replay then line("Already fused: this is your saved result.", C.blue) end
 end
 
 startReveal = function(quote, result, status)
     state.mode = "reveal"
-    Sfx.play("fusion_reveal")
     clearBody()
     local serial = state.viewSerial
     local root = body :: Frame
@@ -742,31 +807,34 @@ startReveal = function(quote, result, status)
     content.BackgroundTransparency, content.Size, content.Parent = 1, UDim2.new(1, 0, 1, -(T + 12)), root
     local advance: () -> ()
     local auto = true
+    local stepButtons = {}
     local function show(i: number)
         if serial ~= state.viewSerial then return end
         index = i
         content:ClearAllChildren()
         local stage = stages[i]
-        setTitle(if stage.kind == "final" then "Fusion complete!" else "Revealing " .. i .. " / " .. (#stages - 1), C.gold)
+        setTitle(if stage.kind == "final" then "Ta-da!" else "Rolling " .. i .. " of " .. (#stages - 1), C.gold)
         if stage.kind == "final" then
+            Sfx.play("fusion_reveal")
             finalCard(content, result, stage)
+            for _, b in stepButtons do b.Visible = false end -- only "See my dino" and X remain
             return
         end
-        W.label(content, stage.title, UDim2.new(1, 0, 0, 44), UDim2.fromScale(0, .06), 34, C.gold)
+        W.label(content, RevealTitles[stage.trait] or stage.title, UDim2.new(1, 0, 0, 44), UDim2.fromScale(0, .06), 34, C.gold)
         if stage.kind == "pattern" then
-            W.label(content, "PATTERN: " .. string.upper(stage.value), UDim2.new(1, -40, 0, 60), UDim2.new(0, 20, .34, 0), 34, C.accent)
-            W.label(content, "The pattern is never rolled.", UDim2.new(1, -40, 0, 34), UDim2.new(0, 20, .6, 0), 20)
+            W.label(content, "Pattern: " .. stage.value, UDim2.new(1, -40, 0, 60), UDim2.new(0, 20, .34, 0), 34, C.accent)
+            W.label(content, "The pattern stays the same.", UDim2.new(1, -40, 0, 34), UDim2.new(0, 20, .6, 0), 20)
         elseif stage.kind == "wheel" then
             local animate = motion() and auto
             reel(content, stage, animate)
             local valueLabel = W.label(content, "", UDim2.new(1, -40, 0, 48), UDim2.new(0, 20, .66, 0), 32, C.accent)
             local reveal = function()
-                if valueLabel.Parent then valueLabel.Text = string.upper(tostring(stage.value)) .. (if stage.detail then "  (" .. stage.detail .. ")" else "") end
+                if valueLabel.Parent then valueLabel.Text = tostring(stage.value) .. "!" .. (if stage.detail then "  (" .. stage.detail .. ")" else "") end
             end
             if animate then task.delay(FusionMenu.ReelSeconds, reveal) else reveal() end
         else
             -- Committed value outside the quoted table: state it plainly.
-            W.label(content, string.upper(tostring(stage.value)), UDim2.new(1, -40, 0, 60), UDim2.new(0, 20, .36, 0), 34, C.accent)
+            W.label(content, tostring(stage.value), UDim2.new(1, -40, 0, 60), UDim2.new(0, 20, .36, 0), 34, C.accent)
         end
         if auto then
             local wait = if motion() then FusionMenu.ReelSeconds + .9 else .6
@@ -775,9 +843,12 @@ startReveal = function(quote, result, status)
     end
     advance = function() if index < #stages then show(index + 1) end end
     local y = UDim2.new(0, 0, 1, -(T + 6))
-    W.button(root, "SKIP TO RESULT", UDim2.new(.32, -6, 0, T + 4), y, C.blue, function() auto = false show(#stages) end).Name = "Skip"
-    W.button(root, "NEXT", UDim2.new(.32, -6, 0, T + 4), UDim2.new(.33, 0, 1, -(T + 6)), C.accent, function() auto = false advance() end).Name = "Next"
-    W.button(root, "VIEW DETAILS", UDim2.new(.34, 0, 0, T + 4), UDim2.new(.66, 0, 1, -(T + 6)), C.purple, function()
+    local skip = W.button(root, "Skip", UDim2.new(.32, -6, 0, T + 4), y, C.blue, function() auto = false show(#stages) end)
+    skip.Name = "Skip"
+    local nextButton = W.button(root, "Next", UDim2.new(.32, -6, 0, T + 4), UDim2.new(.33, 0, 1, -(T + 6)), C.accent, function() auto = false advance() end)
+    nextButton.Name = "Next"
+    stepButtons = {skip, nextButton}
+    W.button(root, "See my dino", UDim2.new(.34, 0, 0, T + 4), UDim2.new(.66, 0, 1, -(T + 6)), C.purple, function()
         auto = false
         if type(result.resultId) == "string" then openDetails(result.resultId) end
     end).Name = "ResultDetails"
@@ -797,16 +868,16 @@ end
 
 local function renderUnavailable()
     setTitle("Fusion unavailable", C.card)
-    renderStatus("Fusion unavailable\nPattern fusion is not enabled on this server yet. Nothing was changed.", C.gold,
-        {{"CLOSE", C.red, function() FusionMenu.close() end, "Close"}})
+    renderStatus("Fusion unavailable\nFusion is not switched on here yet. Nothing was changed.", C.gold,
+        {{"Close", C.red, function() FusionMenu.close() end, "Close"}})
 end
 
 local function renderResume()
     local attempt = pendingAttempt
     setTitle("Checking your last fusion", C.gold)
-    renderStatus("Your last confirmed fusion did not get an answer.\nCHECK RESULT resends the SAME request: it either shows the saved result or finishes that one fusion. It never fuses twice.", C.gold, {
-        {"CHECK RESULT", C.accent, function() if attempt then runFuse(attempt) end end, "CheckResult"},
-        {"DISCARD", C.red, function() pendingAttempt = nil state.mode = "browse" render() end, "Discard"},
+    renderStatus("Your last fusion did not get an answer.\nCHECK RESULT asks again for the SAME fusion: it shows the saved result or finishes that one. It never fuses twice.", C.gold, {
+        {"Check result", C.accent, function() if attempt then runFuse(attempt) end end, "CheckResult"},
+        {"Forget it", C.red, function() pendingAttempt = nil state.mode = "browse" render() end, "Discard"},
     })
 end
 
@@ -833,7 +904,7 @@ function FusionMenu.open()
     if not FusionMenu.available() then state.mode = "unavailable" render() return end
     if fuseInFlight then
         state.mode = "fusing"
-        renderStatus("Your fusion is still being saved...\nRetries reuse the same token, so it can never fuse twice.", C.gold)
+        renderStatus("Your fusion is still being saved...\nTrying again can never fuse twice.", C.gold)
         return
     elseif unseenResult then
         -- Committed while closed: show the saved result without replaying odds.
