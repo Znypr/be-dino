@@ -65,7 +65,7 @@ local function refresh()
     end
 end
 function Leaderboards.start()
-    workspace.BeDinoArena.Sanctuary.SanctuarySign.Position=Vector3.new(0,35,402)
+    workspace.BeDinoArena.Sanctuary.SanctuarySign.Position=Vector3.new(0,35,Config.SanctuaryCenterZ+37)
     local folder=Instance.new("Folder") folder.Name="Leaderboards" folder.Parent=workspace.BeDinoArena.Sanctuary
     for i,definition in definitions do
         if not preview then stores[definition.id]=DataStoreService:GetOrderedDataStore(Config.ProfileDataStoreName.."_"..definition.id..(definition.store or "_v1")) end

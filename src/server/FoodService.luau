@@ -44,6 +44,7 @@ function FoodService.start(dinosaur,repository)
     local function groundAt(x: number, z: number): Vector3?
         -- Safe spawn remains clear. Ground's top is y=0.
         if (Vector2.new(x, z) - Vector2.new(0, 30)).Magnitude < 11 then return nil end
+        if Layout.inPool(x, z, 1.5) then return nil end -- marsh pools and the spring are decorative water
         local hit = workspace:Raycast(Vector3.new(x, Config.TerrainTop + 20, z), Vector3.new(0, -Config.TerrainTop - 60, 0), groundParams)
         local ground: Vector3
         if hit then
@@ -97,7 +98,8 @@ function FoodService.start(dinosaur,repository)
                 local proposed = Vector2.new(random:NextNumber(minX + 3, minX + sectorWidth - 3), random:NextNumber(minZ + 3, minZ + sectorWidth - 3))
                 if groundAt(proposed.X, proposed.Y) then center = proposed break end
             end
-            local starter = (sx == 7 or sx == 8) and sz == 8
+            local half = Config.FoodSectorCount // 2
+            local starter = (sx == half - 1 or sx == half) and sz == half
             if starter then center = Vector2.new(if sx == 7 then -15 else 15, 24) end
             for itemIndex = 1, Config.FoodClusterItems do
                 local roll, kind = random:NextInteger(1, 100), TYPES[1]
@@ -114,7 +116,7 @@ function FoodService.start(dinosaur,repository)
                     local mesh = if ok and model then model:FindFirstChildWhichIsA("MeshPart") else nil
                     if mesh then
                         mesh.Parent = nil
-                        mesh.Size *= kind.size / math.max(mesh.Size.X, mesh.Size.Y, mesh.Size.Z)
+                        mesh.Size *= kind.size * random:NextNumber(.86, 1.16) / math.max(mesh.Size.X, mesh.Size.Y, mesh.Size.Z) -- natural size variety
                         mesh.CFrame = CFrame.Angles(0, random:NextNumber(0, math.pi * 2), 0)
                         mesh.Name = kind.id
                         mesh.Color = Color3.new(1, 1, 1)
