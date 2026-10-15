@@ -80,9 +80,10 @@ end
 function L.afterRun(): string
     return "results"
 end
--- After one reveal: back to the Eggs screen unless the player chose "Skip all".
+-- After one reveal (BD-170): Next egg ALWAYS stays inside the opening sequence while eggs remain; only the end of the
+-- batch (or the player closing the screen) goes back to the Eggs screen. skipAll no longer changes that.
 function L.afterReveal(skipAll: boolean, remaining: number): string
-    if skipAll and remaining > 0 then return "continue" end
+    if remaining > 0 then return "continue" end
     return "eggs"
 end
 

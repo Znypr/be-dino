@@ -88,6 +88,8 @@ end
 local fusionTarget = "gold"
 local hatchPending = false
 local autoHatching = false
+-- BD-170: Open starts the hatch screen at once; the server answer is supplied to it later. pendingHatch = {version, supply, handle}.
+local hatchState: {pending: {version: number, supply: () -> (), handle: any}?, fresh: boolean, next: (() -> boolean)?} = {pending=nil, fresh=false, next=nil}
 local hatchCancelSerial = 0
 local function ownedTraits(id: string)
     return EggTraits.selected(decoded("CollectionJson","{}")[id])
@@ -388,18 +390,26 @@ local function finishBatch()
     emitHatchSummary()
     if #skippedEntries>0 then open("batchSummary") else open("eggs") end
 end
-local function hatchNext()
+-- Sends the claim for the next egg. Returns true when a request went out (the batch goes on), false when the batch ended
+-- or a request is already running.
+hatchState.next = function(): boolean
     local id=str("NextChestId")
     if id=="" or workspace:GetServerTimeNow()<num("NextChestReadyAt") then
         finishBatch()
-        return
+        return false
     end
-    if hatchPending then return end
+    if hatchPending then return false end
     hatchPending=true
     hatch:FireServer(id,Http:GenerateGUID(false))
     task.delay(8,function()
-        if hatchPending then hatchPending=false autoHatching=false skipAllReveals=false notify("Hatching stopped",C.red,{key="hatch_error",icon="egg",body="Tap an egg to try again"}) end
+        if hatchPending then
+            hatchPending=false autoHatching=false skipAllReveals=false
+            notify("Hatching stopped",C.red,{key="hatch_error",icon="egg",body="Tap an egg to try again"})
+            local waiting=hatchState.pending
+            if waiting and waiting.version==modalVersion and active=="hatch" and waiting.handle.pending() then open("eggs") end -- never leave an egg wobbling forever
+        end
     end)
+    return true
 end
 local function progression()
     local data=decoded("ProgressionJson","{}")
@@ -474,7 +484,7 @@ render=function(name: string)
                 label(body,row.name,x,cardsY+32,155,28,22)
                 local tile=box(body,x,cardsY+62,155,110,Color3.fromRGB(122,148,112):Lerp(C.panel,.25),24)
                 local view=ModelPreview.add(tile,"egg")
-                EggAppearance.apply(view,EggGenetics.neutral(row.id))
+                EggAppearance.apply(view,EggGenetics.neutral(row.id),true)
                 label(body,string.format("%g%%",weights[i]),x,cardsY+176,155,34,24,C.blue)
             end
             button(body,if upgrade then "UPGRADE: "..upgrade.price.." CRYSTALS" else "MAX LEVEL",142,cardsY+220,540,targetHeight,C.accent,function() if upgrade then open("conditionConfirm") end end).TextSize=20
@@ -787,7 +797,8 @@ render=function(name: string)
             openEgg=function()
                 if hatchPending then return end
                 autoHatching=true
-                hatchNext()
+                -- BD-170: the egg starts opening this very frame; the server answer is handed to the screen when it arrives.
+                if (hatchState.next :: any)() then open("hatch") end
             end,
             openSettings=function() open("settings") end,
             autoOpenText=autoOpenText,
@@ -799,63 +810,95 @@ render=function(name: string)
             end
         end)
     elseif name=="hatch" then
+        -- BD-170/171: the plain, colourless egg is on screen and wobbling the moment this opens (no dino, no cube, no pattern).
+        -- The server answer is handed to the running sequence through pendingHatch.supply() when it arrives.
         heading.Text,header.BackgroundColor3="An egg is hatching...",C.gold
         local version=modalVersion
-        local reward=str("LastChestRewardText","New dinosaur")
-        local failed=player:GetAttribute("LastChestFailed")==true
-        local genesOk,genes=pcall(function() return Http:JSONDecode(str("LastChestGenesJson","null")) end)
-        if not genesOk or typeof(genes)~="table" then genes=nil end
-        local id=string.match(reward,"x (%w+)") or "compy"
-        if not Config.SpeciesDisplayNames[id] then id="compy" end
-        local view=Preview.add(body,id,"base")
-        view.Position,view.Size=UDim2.fromOffset(160,-12),UDim2.fromOffset(504,260)
-        PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),genes=genes})
-        view.Visible=false
-        task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync(view:GetDescendants()) end) end)
-        local eggView,animateEgg,splitEgg=HatchPresentation.add(body,genes,rarityColors[speciesIndex(id)])
+        local eggView,animateEgg,splitEgg,paint=HatchPresentation.add(body,nil,rarityColors[1])
         eggView.Size=UDim2.fromOffset(304,260) -- HatchSequence centres and animates it
-        local rarity=speciesIndex(id)
-        local count=tonumber(string.match(reward,"^(%d+)x")) or 1
-        local displayName=Config.SpeciesDisplayNames[id] or id
-        local rewardLabel=label(body,if failed then HatchTimeline.FailTitle elseif count>1 then count.."x "..displayName else displayName,80,236,660,54,38,if failed then C.gold else rarityColors[rarity])
-        local oddsLabel=label(body,if failed then HatchTimeline.FailSub else HatchTimeline.oddsLine(rarityNames[rarity],HatchTimeline.speciesPct(Config.ChestSpeciesWeights,id),(FusionSelection :: any).pct or HatchTimeline.pct),80,288,660,28,22,C.text)
-        local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
-        local detailText,detailColor="",C.gold
-        local mutationColor=if mutation then Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3]) else nil
-        if genes then
-            local condition=EggGenetics.condition(genes.conditionId)
-            detailText=if failed then HatchTimeline.failChance(condition.hatchChance) else condition.name
-            -- Mutation audit: genes eggs (all new eggs) used to hide the mutation name/perk and tint.
-            if mutation and not failed then
-                local tint=mutationColor :: Color3
-                for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(tint,.35) end end
-                detailText=condition.name.." • "..mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
+        local rewardLabel=label(body,"",80,236,660,54,38,C.gold)
+        local oddsLabel=label(body,"",80,288,660,28,22,C.text)
+        local detailLabel=label(body,"",80,316,660,28,20,C.gold)
+        local remainingAfter,failedEgg=0,false
+        local handle: any=nil
+        local function supply()
+            if modalVersion~=version or active~="hatch" or not handle or not handle.pending() then return end
+            local reward=str("LastChestRewardText","New dinosaur")
+            local failed=player:GetAttribute("LastChestFailed")==true
+            failedEgg=failed
+            local genesOk,genes=pcall(function() return Http:JSONDecode(str("LastChestGenesJson","null")) end)
+            if not genesOk or typeof(genes)~="table" then genes=nil end
+            local geneticsOk=genes~=nil and EggGenetics.valid(genes)
+            local id=string.match(reward,"x (%w+)") or "compy"
+            if not Config.SpeciesDisplayNames[id] then id="compy" end
+            -- The dinosaur view only exists from here on and stays transparent until the burst. BD-174: PreviewTraits draws
+            -- colours and pattern only, never the egg condition.
+            local view=Preview.add(body,id,"base")
+            view.Position,view.Size=UDim2.fromOffset(160,-12),UDim2.fromOffset(504,260)
+            PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),genes=genes})
+            view.Visible=false
+            task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync(view:GetDescendants()) end) end)
+            local rarity=speciesIndex(id)
+            local count=tonumber(string.match(reward,"^(%d+)x")) or 1
+            local displayName=Config.SpeciesDisplayNames[id] or id
+            rewardLabel.Text=if failed then HatchTimeline.FailTitle elseif count>1 then count.."x "..displayName else displayName
+            rewardLabel.TextColor3=if failed then C.gold else rarityColors[rarity]
+            oddsLabel.Text=if failed then HatchTimeline.FailSub else HatchTimeline.oddsLine(rarityNames[rarity],HatchTimeline.speciesPct(Config.ChestSpeciesWeights,id),(FusionSelection :: any).pct or HatchTimeline.pct)
+            local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
+            local detailText,detailColor="",C.gold
+            local mutationColor=if mutation then Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3]) else nil
+            -- BD-171: the paint buckets name the colour and the pattern with their rarity tiers.
+            local colorReveal=if geneticsOk then HatchTimeline.colorReveal(ProgressionConfig.EggColors,genes) else nil
+            local patternReveal=if geneticsOk then HatchTimeline.patternReveal(EggGenetics.Patterns,genes.patternId,FusionSelection.patternName) else nil
+            local paintColors={rarityColors[rarity],rarityColors[rarity]}
+            if geneticsOk then
+                local tint=EggGenetics.tint(genes)
+                local second=EggGenetics.color(genes.secondaryColorId)
+                paintColors={tint,if genes.secondaryColorId~=genes.primaryColorId and second then Color3.fromRGB(second.rgb[1],second.rgb[2],second.rgb[3]) else tint:Lerp(Color3.new(0,0,0),.35)}
             end
-        elseif mutation then
-            local tint=mutationColor :: Color3
-            for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(tint,.55) end end
-            detailText=mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
-            detailColor=tint
+            if failed then
+                -- A cracked egg that does not hatch: the egg's own condition is the story (this is the EGG, not a dinosaur).
+                detailText=HatchTimeline.failChance((EggGenetics.condition("cracked") :: any).hatchChance)
+            elseif mutation then
+                -- Event mutation: name and perk, tint the dinosaur. BD-174: the egg condition is never shown on the dinosaur.
+                local tint=mutationColor :: Color3
+                for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(tint,if genes then .35 else .55) end end
+                detailText=mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
+                if not genes then detailColor=tint end
+            elseif colorReveal and patternReveal then
+                detailText=colorReveal.name.." • "..patternReveal.name
+            end
+            detailLabel.Text,detailLabel.TextColor3=detailText,detailColor
+            remainingAfter=HatchTimeline.remaining(str("NextChestId")~="" and workspace:GetServerTimeNow()>=num("NextChestReadyAt"),num("ActiveChestCount"),num("QueuedEggsWaiting"))
+            paint.setRarityColor(rarityColors[rarity])
+            handle.supply({
+                dino=view,rarity=rarity,color=rarityColors[rarity],failed=failed,
+                shiny=not failed and player:GetAttribute("LastChestShiny")==true,big=not failed and player:GetAttribute("LastChestBig")==true,
+                mutationName=if mutation and not failed then mutation.name else nil,mutationColor=mutationColor,
+                remaining=remainingAfter,genes=if geneticsOk then genes else nil,colorReveal=colorReveal,patternReveal=patternReveal,paintColors=paintColors,
+            })
         end
-        if failed and detailText=="" then detailText=HatchTimeline.failChance((EggGenetics.condition("cracked") :: any).hatchChance) end
-        local detailLabel=label(body,detailText,80,316,660,28,20,detailColor)
-        local remaining=HatchTimeline.remaining(str("NextChestId")~="" and workspace:GetServerTimeNow()>=num("NextChestReadyAt"),num("ActiveChestCount"),num("QueuedEggsWaiting"))
         Sfx.play("hatch_crack")
-        HatchSequence.play({
-            gui=gui,panel=panel,body=body,eggView=eggView,animateEgg=animateEgg,splitEgg=splitEgg,dino=view,
-            rarity=rarity,color=rarityColors[rarity],failed=failed,
-            shiny=not failed and player:GetAttribute("LastChestShiny")==true,big=not failed and player:GetAttribute("LastChestBig")==true,
-            mutationName=if mutation and not failed then mutation.name else nil,mutationColor=mutationColor,
-            nameLabel=rewardLabel,oddsLabel=oddsLabel,detailLabel=detailLabel,remaining=remaining,motion=motion,
+        handle=HatchSequence.play({
+            gui=gui,panel=panel,body=body,eggView=eggView,animateEgg=animateEgg,splitEgg=splitEgg,paint=paint,
+            nameLabel=rewardLabel,oddsLabel=oddsLabel,detailLabel=detailLabel,motion=motion,
             alive=function() return modalVersion==version and active=="hatch" end,
             flash=flash,
             onSkipAll=function() autoHatching=true skipAllReveals=true end,
-            onReveal=function() if modalVersion==version then heading.Text=if failed then "Oops! Splat!" else "You hatched a dinosaur!" end end,
+            onReveal=function() if modalVersion==version then heading.Text=if failedEgg then "Oops! Splat!" else "You hatched a dinosaur!" end end,
             onNext=function()
+                -- BD-170: Next egg stays inside the opening sequence; only the end of the batch returns to the Eggs screen.
                 heading.Text="An egg is hatching..."
-                if EggsLogic.afterReveal(skipAllReveals,remaining)=="continue" then autoHatching=true hatchNext() else finishBatch() end
+                if EggsLogic.afterReveal(skipAllReveals,remainingAfter)=="continue" then
+                    autoHatching=true
+                    if (hatchState.next :: any)() then open("hatch") end
+                else
+                    finishBatch()
+                end
             end,
         })
+        hatchState.pending={version=version,supply=supply,handle=handle}
+        if hatchState.fresh then hatchState.fresh=false supply() end
     elseif name=="exit" then
         -- BD-052: one confirmation, no stay-still channel; the server settles through tryEnd.
         heading.Text,header.BackgroundColor3="Return to Sanctuary?",C.red
@@ -1408,10 +1451,17 @@ player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function()
     table.insert(batchEntries,{rarity=rarity,name=Config.SpeciesDisplayNames[species] or species,failed=outcome.failed,shiny=outcome.shiny==true,big=outcome.big==true})
     if autoHatching and EggsLogic.shouldAutoOpen(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen(),rarity,outcome,skipAllReveals) then
         table.insert(skippedEntries,{rarity=rarity,speciesId=species,outcome=outcome})
-        task.delay(Config.ChestClaimRequestCooldownSeconds+.15,hatchNext) -- stay under the server claim cooldown
+        task.delay(Config.ChestClaimRequestCooldownSeconds+.15,function() (hatchState.next :: any)() end) -- stay under the server claim cooldown
         return
     end
-    task.defer(function() open("hatch") end)
+    -- BD-170: when Open (or Next egg) already put a waiting egg on screen, hand the answer to it; otherwise open the screen with the result.
+    local waiting=hatchState.pending
+    if waiting and waiting.version==modalVersion and active=="hatch" and waiting.handle.pending() then
+        task.defer(waiting.supply)
+    else
+        hatchState.fresh=true
+        task.defer(function() open("hatch") end)
+    end
 end)
 player:GetAttributeChangedSignal("LastRunEndAt"):Connect(function() if not autoHatching then open("results") end end)
 player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
