@@ -43,6 +43,16 @@ return table.freeze({
     WorldArtMode = "Legacy", -- "BiomeKit": BD-049 Blender props + placement grammar PROVISIONAL
     WorldArtSeed = 1404,
     WorldArtDensity = 1, -- the playtest profile sets 0.35 (docs/68 part budget); 1 is ~18k native parts
+    -- BD-168 client distance culling of decorative props/food (docs/89). PartBudget = max prop parts a client keeps parented;
+    -- radius = studs kept (hysteresis = +15%). Collision proxies, crystals, hub and server food logic are never culled.
+    WorldCulling = {
+        Enabled = true,
+        Hysteresis = 1.15,
+        FoodRadiusFactor = 1.25,
+        Phone = {radius = 190, budget = 1400},
+        Tablet = {radius = 280, budget = 2400},
+        Desktop = {radius = 440, budget = 5000},
+    },
     FoodKitVisualCap = 12, -- PROVISIONAL max native egg/amber kit models (about 115 parts each); other pickups keep the light ball
     StudioLocalProfilesEnabled = true, -- unpublished Studio only; never a live fallback
     StudioTestWalletEnabled = true, -- only unpublished, nonpersistent local profiles
@@ -134,8 +144,8 @@ return table.freeze({
     -- caps at 40 eggs (5,000 food). Adjacent tier ratios stay 0.33 / 0.15 / 0.22 / 0.14 (never flatter than 1/3); Rare+ is at most ~10% easier at full boost.
     SpeciesRunBoost = {1, 1, 1.1, 1.1, 1.1},
     EggRarityBoostMaxEggs = 40,
-    BigChance = 0.1,
-    ShinyChance = 0.05,
+    BigChance = 0.03, -- BD-184: Rare-tier chance (docs/88)
+    ShinyChance = 0.006, -- BD-184: Epic-tier chance, earned eggs in irregular weather only
     BigScaleMultiplier = 1.2,
     IrregularWeather = {volcano = true, aurora = true, quake = true, bloodmoon = true},
     DeveloperProducts = { [3717200374] = 500, [3717200467] = 1500, [3717200523] = 4000, [3717200920] = 10000, [3717200940] = 25000, [3717200979] = 90000 },
@@ -170,7 +180,7 @@ return table.freeze({
     -- the run-batch species boost (EggRarityBoostMaxEggs = maximum), conditionLevels adds to the condition-upgrade level
     -- (clamped to the top tier), shinyChance applies even without irregular weather, bigChance replaces BigChance.
     NestLuckTiers = {
-        {rarityBoostEggs = 40, conditionLevels = 2, shinyChance = 0.03, bigChance = 0.2},
+        {rarityBoostEggs = 40, conditionLevels = 2, shinyChance = 0.015, bigChance = 0.06},
     },
     NestClaimRequestCooldownSeconds = 0.5,
     ChestClaimRequestCooldownSeconds = 0.35,

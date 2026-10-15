@@ -29,17 +29,17 @@ assert(rw==512 and rh==1 and buffer.len(resized)==2048 and buffer.readu8(resized
 print("Gene texture pixels passed: painted-value detail and alpha retained; bounded 512px neutral texture sampling")
 for _,weather in {"clear","rain","thunder","blizzard","volcano","aurora","quake","bloodmoon"} do
  local shiny,big,stacked=0,0,0
- for a=0,99 do for b=0,99 do
-  local t=Traits.roll(weather,(a+.5)/100,(b+.5)/100)
+ for a=0,499 do for b=0,499 do
+  local t=Traits.roll(weather,(a+.5)/500,(b+.5)/500)
   shiny+=if t.shiny then 1 else 0
   big+=if t.big then 1 else 0
   stacked+=if t.shiny and t.big then 1 else 0
  end end
- assert(big==1000)
- assert(shiny==(if Config.IrregularWeather[weather] then 500 else 0))
- assert(stacked==(if Config.IrregularWeather[weather] then 50 else 0))
+ assert(big==7500) -- 3% BIG of 250,000 grid cells
+ assert(shiny==(if Config.IrregularWeather[weather] then 1500 else 0)) -- 0.6% Shiny
+ assert(stacked==(if Config.IrregularWeather[weather] then 45 else 0))
 end
-assert(not Traits.roll("volcano",.05,.1).shiny and not Traits.roll("volcano",.05,.1).big)
+assert(not Traits.roll("volcano",.006,.03).shiny and not Traits.roll("volcano",.006,.03).big)
 assert(Traits.valid({[':shiny:big']={mutationId="",shiny=true,big=true,count=1}}))
 assert(not Traits.valid({['bad']={mutationId="",shiny=true,big=true,count=1}}))
 assert(Config.BigScaleMultiplier==1.2)
@@ -75,19 +75,25 @@ for level,weights in Progression.ConditionWeights do
 end
 -- Tier 0 failure: 50% Cracked x 80% failure = 40% of eggs.
 assert(tier0[1]*4==20000)
-local palette={}
-for i=0,9999 do
- local n=0 local rng={NextNumber=function()n+=1 return if n==3 then (i+.5)/10000 else .5 end}
- local g=Genetics.roll(0,rng)
- palette[g.primaryColorId]=(palette[g.primaryColorId] or 0)+1
+-- BD-184: weights are out of EggColorWeightScale (10,000,000), so probe the middle and both edges of each colour's interval.
+local function colorAt(roll)
+ local n=0 local rng={NextNumber=function()n+=1 return if n==3 then roll else .5 end}
+ return Genetics.roll(0,rng).primaryColorId
 end
-for _,color in Progression.EggColors do assert(palette[color.id]==color.weight) end
-assert(palette.black==1)
+local cum,scale=0,Progression.EggColorWeightScale
+for _,color in Progression.EggColors do
+ assert(colorAt((cum+color.weight/2)/scale)==color.id,color.id)
+ assert(colorAt((cum+.001)/scale)==color.id,color.id.." lower edge")
+ cum+=color.weight
+ assert(colorAt((cum-.001)/scale)==color.id,color.id.." upper edge")
+end
+assert(cum==scale)
+assert(Progression.EggColors[9].id=="black" and Progression.EggColors[9].weight==512)
 assert(not Genetics.valid({conditionId="astra",hatchSuccess=false,primaryColorId="white",secondaryColorId="black",blend=80}))
 for i,trail in Progression.Trails do
  if i>1 then local prior=Progression.Trails[i-1] assert(trail.level>prior.level and trail.price>prior.price and trail.speed>prior.speed) end
 end
-print("Genetics passed: seven exact BD-045 condition distributions (tier 0 50/30/15/4.5/0.5, monotonic upgrades), 20% Cracked hatch success, weighted color slots, 1-in-10000 Black, size-only BIG 1.2x and ten increasing trail tiers")
+print("Genetics passed: seven exact BD-045 condition distributions (tier 0 50/30/15/4.5/0.5, monotonic upgrades), 20% Cracked hatch success, weighted color slots, exact tiered colour intervals (Black 0.00512%), size-only BIG 1.2x and ten increasing trail tiers")
 local previousRare,previousLegend=0,0
 for count=1,40,3 do
  local seen={}
@@ -108,7 +114,7 @@ for count=1,40,3 do
  assert(rare>previousRare and legend>previousLegend,"rarity boost not monotonic")
  previousRare,previousLegend=rare,legend
 end
-print("Egg rules passed: all 22 species, monotonic 1-40 egg rarity boost, exact independent 5% Shiny/10% BIG and 0.5% stacked outcomes")
+print("Egg rules passed: all 22 species, monotonic 1-40 egg rarity boost, exact independent 0.6% Shiny/3% BIG (BD-184) and stacked outcomes")
 '''
 
 
