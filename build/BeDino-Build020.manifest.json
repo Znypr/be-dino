@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "fc2ef009ef97a7f3d6b095bf4571189bec96f95f219488c6a392ce60f8ba2bb7",
+  "place_sha256": "779668349e618b6a439b02b644232c5ed7934d9bf00178ccd8a75c62dce93997",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "33f6491c3921573cdf897028008998b4097b134df9aefad7dee98030a3e62262",
@@ -213,8 +213,8 @@
     "src/shared/NestQueue.luau": "2fd6d7297c1ad48f0e4921de3a8fdfc771117f3a62614f3eeeeb229ce78a2fa7",
     "src/shared/NextGoal.luau": "bce6344693ae9e10dfc49adf7ae0ec85ba3226012ab7b361506825fb35e172a7",
     "src/shared/NotifyQueue.luau": "143266dd4187e55a72ca7ef59905d758bf1ceeb934a8b91a10147459055f4d33",
-    "src/shared/PatternAtlasCache.luau": "fbb493aab01ccb1e3cf7a300333292c63e3a3ae3fd79adf5f62114f9c9033b43",
-    "src/shared/PatternGenes.luau": "59a876769ae2244512669d1077b6fac33a42318235f7bfca4c50f168f5f44efd",
+    "src/shared/PatternAtlasCache.luau": "9a853f613a0a60da14c103641fc1f901620884a1b7752200f3d303dc9e6b4ec4",
+    "src/shared/PatternGenes.luau": "b0b8bec7b253ccf531310a2410f1e0e81e62a2fa11f98173ae89b912de59bb3f",
     "src/shared/PotionArt.luau": "a5d29fd4b89650cdc5d1d1ec7a06206016fbab436500e8f87f8595bc296c9bc1",
     "src/shared/PreviewCamera.luau": "b1ab444744c70fed9debe16be9db5f63269971d9263323413a5913f687661a05",
     "src/shared/ProgressionConfig.luau": "b5c99c802cc39682298bc02b5f18ba2cd3207a5825f5e2a4f161aa64d317b80c",
