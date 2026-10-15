@@ -10,6 +10,8 @@ These additions currently use the game's ground controller. Flight, diving, swim
 
 > **New visual expansion REQUESTED, not implemented in Build 020 (2026-10-08):** Gold → **Emerald** → Diamond should use **Blender-authored selective gloss/mineral overlays over the NEW fusion output's freshly rolled color/pattern identity**. The same-species/same-pattern recipe guarantees the pattern, but colors, condition, BIG/Shiny and mutation are **rolled from ingredient-influenced probabilities**, not copied from a lead donor. Compare **subtle and medium** with all newly rolled effects. Auras/trails **do not transfer from fused ingredients**; a new output may purchase fresh cosmetic styles. Existing Gold/Diamond is a Build 020 baseline only. [BD-057/061/064/065](46-pattern-fusion-dino-identity-and-cosmetic-progression.md).
 
+> **BD-185 (2026-10-15):** condition is an egg-only look/odds property; it never changes a living dino's stats (see docs/41).
+
 
 
 - Eight patterns are baked from the accepted egg material graphs onto each new creature's UVs. The earlier six uploaded species use the shared egg masks on their existing UV layouts and retain their neutral texture shading.
