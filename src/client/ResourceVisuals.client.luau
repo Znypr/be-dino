@@ -192,7 +192,12 @@ RunService.Heartbeat:Connect(function(dt)
             foods[item] = model
             item.LocalTransparencyModifier = 1
         end
-        model:PivotTo(CFrame.new(item.Position - Vector3.new(0, item.Size.Y / 2 + .08, 0)))
+        -- Re-pivot only when the server moved the food, so FoodGlow's local bob/spin is not reset every tick.
+        local at = item.Position
+        if model:GetAttribute("At") ~= at then
+            model:SetAttribute("At", at)
+            model:PivotTo(CFrame.new(at - Vector3.new(0, item.Size.Y / 2 + .08, 0)))
+        end
         for _, piece in model:GetDescendants() do
             if piece:IsA("BasePart") then piece.Transparency = item.Transparency end
         end
