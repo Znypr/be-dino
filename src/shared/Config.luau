@@ -6,7 +6,10 @@ return table.freeze({
     -- Movement feel (PROVISIONAL): default gravity 196.2 felt floaty. 250 + JumpPower 56 keeps a
     -- ~6.3 stud jump but cuts air time ~0.51s -> ~0.45s; leap vertical speed is retuned in ProgressionConfig.
     Gravity = 250,
-    JumpPower = 56,
+    -- BD-212: jumps read as a forward bound: 50 -> ~5.0 stud apex, ~0.40 s air (was 56: ~6.3, ~0.45 s),
+    -- and the client carries the run direction at JumpForwardCarry x speed while airborne.
+    JumpPower = 50,
+    JumpForwardCarry = 1.3, -- PROVISIONAL; MovementGuard allows WalkSpeed x MovementGuardSpeedTolerance (3)
     TurnRate = 16, -- PROVISIONAL rad/s facing steer (Humanoid default ~8 gave a 0.38 s 180 turn)
     CameraVerticalSmoothing = .12, -- BD-164: seconds; low-pass on the camera's vertical follow of the root (terrain rattle)
     CameraLiftSharpness = 7, -- PROVISIONAL: per-second exponential follow of growth camera lift

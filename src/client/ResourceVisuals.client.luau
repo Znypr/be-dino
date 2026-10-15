@@ -40,11 +40,14 @@ local function characterVisual(character: Model)
         if previous:GetAttribute("Scale")~=scale then
             local welds={}
             for _,item in previous:GetDescendants() do
-                if item:IsA("WeldConstraint") then item.Enabled=false;table.insert(welds,item) end
+                if item:IsA("Weld") or item:IsA("WeldConstraint") then item.Enabled=false;table.insert(welds,item) end
             end
             previous.WorldPivot=groundFrame()
             previous:ScaleTo(scale);previous:PivotTo(groundFrame());previous:SetAttribute("Scale",scale)
-            for _,weld in welds do weld.Enabled=true end
+            for _,weld in welds do
+                if weld:IsA("Weld") and weld.Part1 then weld.C0=root.CFrame:ToObjectSpace(weld.Part1.CFrame) end
+                weld.Enabled=true
+            end
         end
         hideShell(character)
         if previous:GetAttribute("GenesJson")~=genesJson then
@@ -94,7 +97,11 @@ local function characterVisual(character: Model)
             if mutation=="gold" or mutation=="diamond" then Resources.clearTextures(item) end
             if mutation == "gold" then item.Color = Color3.fromRGB(242,199,63) item.Material = Enum.Material.Metal
             elseif mutation == "diamond" then item.Color = Color3.fromRGB(85,213,245) item.Material = Enum.Material.Glass item.Reflectance=.2 end
-            local weld = Instance.new("WeldConstraint")
+            -- BD-211: a Weld (not a WeldConstraint) so DinoMotion poses edit C0. Writing part.CFrame on a
+            -- WeldConstraint-attached part drags the whole assembly, which made the root rattle every frame.
+            local weld = Instance.new("Weld")
+            weld.Name = "ResourceWeld"
+            weld.C0 = root.CFrame:ToObjectSpace(item.CFrame)
             weld.Part0, weld.Part1, weld.Parent = root, item, item
         end
     end
