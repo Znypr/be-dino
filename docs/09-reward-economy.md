@@ -8,14 +8,14 @@ Implemented on `claude/bd-044-reward-loop` (details, data shape and evidence: [5
 
 | Topic | Implemented behavior | Status |
 | --- | --- | --- |
-| Catches -> eggs | Every earned catch = one banked run egg (`FoodCatchRate 40/500` since owner decision 2026-10-13: 500 food -> 40, 5,000 -> 400; was 15/150); per-run cap 500 (PROVISIONAL) | Implemented, offline-tested |
+| Catches -> eggs | Every earned catch = one banked run egg (`FoodCatchRate 4/500` since owner decision 2026-10-15, BD-165: 500 food -> 4, 5,000 -> 40; was 40/400 on 2026-10-13 and 15/150 before, see [89](89-catch-rate-4.md)); per-run cap 50 (PROVISIONAL) | Implemented, offline-tested |
 | Direct copies / thresholds | `N(c)=c` settlement copies and 10/100/500 threshold eggs removed | Implemented |
 | Dinosaurs per egg | Owner decision 2026-10-13: exactly 1 per successful hatch; failed Cracked = 0; old saved 2-3-copy eggs keep their committed count | Implemented |
 | Reveal | Ordered reveal now 1 s/egg (owner 2026-10-13, PROVISIONAL `HatchRevealSeconds`); 5-slot queue refilled from a server-side ordered run-egg bank (1,000, PROVISIONAL; was 600); exactly-once via `settledRuns` + operation log | Implemented; 150-egg pacing UX still an owner decision |
-| Run crystals | PROVISIONAL deterministic `min(300, floor((75*min(n,40) + 53*max(0,n-40))/100))`: 40 -> 30, 400 -> 220 (old 15 -> 30, 150 -> 219 superseded 2026-10-13); random crystal box retired | Implemented, needs balance sign-off |
-| Bonus nests | Separate 5 nest slots + visible pending list; PROVISIONAL 40 eggs -> 1 nest, +1 per 72 eggs (400 -> 6: 5 slotted, 1 pending; was 15 / 27 / 150); 3 bonus eggs per nest, 300 s incubation; new runs blocked rather than losing eggs/nests when storage is near capacity | Implemented, needs balance/UX sign-off |
+| Run crystals | PROVISIONAL deterministic `min(300, floor((750*min(n,4) + 530*max(0,n-4))/100))`: 4 eggs -> 30, 40 -> 220 (unchanged per-run outputs; 2026-10-15 rescale of the 2026-10-13 40 -> 30, 400 -> 220); random crystal box retired | Implemented, needs balance sign-off |
+| Bonus nests | Separate 5 nest slots + visible pending list; PROVISIONAL 4 eggs -> 1 nest, +1 per 10 further eggs (2026-10-15 rescale; code caps at `NestMaxPerRun` 3 per run, the owner example of 6 offered is not yet implemented); 3 bonus eggs per nest, 300 s incubation; new runs blocked rather than losing eggs/nests when storage is near capacity | Implemented, needs balance/UX sign-off |
 | Condition odds (BD-045) | Tier 0 = 50/30/15/4.5/0.5 (`bd045-conditions-v1`, integer weights /10,000), PROVISIONAL monotonic tiers 1-6, Cracked 20% hatch success, versioned disclosure | Implemented; 40% tier-0 failure is a playtest risk |
-| Five species tiers | Common/Uncommon/Rare/Epic/Legendary, PROVISIONAL weights and run-size boost (40 eggs ~ 28/10/2; 400 eggs ~ 211/134/44/9/1), saved-value migration ([82](82-species-rarity-tiers.md)) | Implemented; Studio pending |
+| Five species tiers | Common/Uncommon/Rare/Epic/Legendary, PROVISIONAL weights and a gentle run-size boost (2026-10-15: gains {1,1,1.1,1.1,1.1}, full at 40 eggs; 4 eggs ~ 2.9/1.0/0.16 Rare+; 40 eggs ~ 28.7/9.6/1.4/0.3/0.04), saved-value migration ([82](82-species-rarity-tiers.md)) | Implemented; Studio pending |
 
 Milestone 1 is a private playtest in a new private place with fresh saves; all Robux/paid flags stay off.
 
@@ -33,8 +33,8 @@ A run accumulates **raw food/growth points**, producing a **catch count**, repre
 
 | Scenario | Food score | Catches = run eggs | Example egg rarity composition | Run crystals | Bonus nests |
 | --- | ---: | ---: | --- | ---: | --- |
-| **5-minute run** | **500** | **40** (superseded 2026-10-13: was 15) | **29 Common + 11 Uncommon (illustrative; old 15-egg split was 11 + 4)** | **30 illustrative ONLY** | **1** |
-| **Longer/higher-scoring run** | **5,000** | **400** (superseded 2026-10-13: was 150) | **213 Common + 133 Uncommon + 45 Rare + 9 Epic (illustrative scaling of the old 150-egg split 80/50/17/3)** | **220 in owner's example; final formula TBD** | **6 offered, at most 5 claimed if all 5 spots free** |
+| **5-minute run** | **500** | **4** (superseded 2026-10-15 by owner BD-165: was 40, before that 15) | **3 Common + 1 Uncommon (illustrative; expected 2.9 / 1.0 / 0.16 Rare+)** | **30 illustrative ONLY** | **1** |
+| **Longer/higher-scoring run** | **5,000** | **40** (superseded 2026-10-15 by owner BD-165: was 400, before that 150) | **29 Common + 10 Uncommon + 1 Rare (illustrative; expected 28.7 / 9.6 / 1.4 / 0.3 / 0.04)** | **220 in owner's example; final formula TBD** | **6 offered, at most 5 claimed if all 5 spots free** |
 
 **Rarity implementation gap (closed in code 2026-10-14, see [82](82-species-rarity-tiers.md)):** Build 020 had only **Common, Rare, Legendary** species tiers. The owner's examples require additional **Uncommon and Epic** tiers, including catalog classification, unlock thresholds, saved metadata, UI rarity ordering and weighted random rewards. This is a specific [BD-044](07-kanban.md) implementation subtask, not an assertion these tiers already exist.
 
@@ -61,3 +61,8 @@ The **complete legacy test parameters, 25–5000 score simulation table, chest r
 ## Update 2026-10-13: owner raised eggs per run
 
 Owner decision: catches (= run eggs) per 500 food rise from 15 to **40** so hatching many eggs is normal. All 15/150 numbers above in this document are the earlier example, kept as history; the 40/400 figures and all re-tuned dependants (run cap 500, bank 1,000, crystals 30/220, nests 1/6, run-start gates) are in [59-egg-rate-40.md](59-egg-rate-40.md).
+
+
+## Update 2026-10-15: owner cut eggs per run 10x (BD-165)
+
+Catches (= run eggs) per 500 food fall from 40 to **4** (5,000 food -> 40). Crystals, nests and account XP keep their per-run outputs; the species run-boost is gentler so rares do not get easier. All 40/400 numbers above are history; see [89-catch-rate-4.md](89-catch-rate-4.md).

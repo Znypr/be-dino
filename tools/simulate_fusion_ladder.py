@@ -2,7 +2,7 @@
 """Monte Carlo model of the Base -> Gold -> Emerald -> Diamond fusion ladder (BD-057/BD-058).
 
 MODEL, NOT MEASURED GAMEPLAY. DEFAULT scenario = the owner-approved ladder (2026-10-14):
-Gold = 15 Base, Emerald = 4 Gold, Diamond = 2 Emerald, at 40 eggs per 500 food (supersedes
+Gold = 15 Base, Emerald = 4 Gold, Diamond = 2 Emerald, at 4 eggs per 500 food (BD-165; was 40) (supersedes
 50/10/3 of 2026-10-13). The old candidates remain as a comparison: pass `--gold-donors 50
 --emerald-donors 10 --diamond-donors 3` (previous ladder) or `--gold-donors 10 --emerald-donors
 2 3 4 5 --diamond-donors 2 3 4 --eggs-small 15 --eggs-big 150`. See docs/57-fusion-ladder-options.md.
@@ -224,7 +224,7 @@ def check():
     for b, lo, hi in ((15, 1.3, 2.2), (60, 7.0, 10.5), (120, 15.0, 22.0)):
         assert lo <= hrs[b] <= hi, f"any-cell median hours for {b} Base = {hrs[b]:.1f}, outside [{lo}, {hi}] (owner targets 1.7 / 8.8 / 18.7 h)"
     cfg = (ROOT / "src/shared/Config.luau").read_text(encoding="utf-8")
-    assert re.search(r"FoodCatchRate = 40 / 500", cfg), "owner decision 2026-10-13: 40 catches per 500 food"
+    assert re.search(r"FoodCatchRate = 4 / 500", cfg), "owner decision 2026-10-15: 4 catches per 500 food"
     assert targeted([10], q, 200, 3) == targeted([10], q, 200, 3), "not deterministic"
     dt = time.time() - t0
     assert dt < 10, f"check too slow: {dt:.1f}s"
@@ -243,11 +243,11 @@ def main(argv=None):
     ap.add_argument("--emerald-donors", type=int, nargs="*", default=[4])
     ap.add_argument("--diamond-donors", type=int, nargs="*", default=[2])
     ap.add_argument("--gold-donors", type=int, default=GOLD_DONORS)
-    ap.add_argument("--eggs-small", type=int, default=40)
-    ap.add_argument("--eggs-big", type=int, default=400)
+    ap.add_argument("--eggs-small", type=int, default=4)
+    ap.add_argument("--eggs-big", type=int, default=40)
     ap.add_argument("--casual-runs", type=int, default=3, help="runs/day, all small")
     ap.add_argument("--heavy-runs", type=int, default=10, help="runs/day")
-    ap.add_argument("--heavy-big-runs", type=int, default=3, help="of the heavy runs, how many are big (5,000-food, 400-egg) runs")
+    ap.add_argument("--heavy-big-runs", type=int, default=3, help="of the heavy runs, how many are big (5,000-food, 40-egg) runs")
     ap.add_argument("--hours", action="store_true", help="print median hours to first Gold/Emerald/Diamond (any one species+pattern) at 180 dinos/h")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)

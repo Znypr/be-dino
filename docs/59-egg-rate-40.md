@@ -1,3 +1,5 @@
+> **SUPERSEDED 2026-10-15 (owner, BD-165):** the rate is now 4 catches per 500 food (5,000 -> 40). See [docs/89](89-catch-rate-4.md). Everything below is history.
+
 # 59. Egg rate 40 per 500 food (owner decision 2026-10-13)
 
 **Status: implemented in config and offline tests; PROVISIONAL values; Studio verification pending; not released.** Supersedes the 15-per-500 / 150-per-5,000 figures of BD-044 ([50](50-bd044-reward-loop.md), [09](09-reward-economy.md), `AGENTS.md`). The fusion ladder (Gold 50, Emerald 10 Gold, Diamond 3 Emerald) is implemented on another branch; pacing evidence is in [57 section 11](57-fusion-ladder-options.md).
