@@ -64,6 +64,16 @@ assert(W.Looks.volcano.density <= .45 and W.Looks.quake.density <= .5 and W.Look
 -- phone density halves every rate, so the phone budget is half
 for _, id in IDS do local c = W.concurrent(id) assert(c * .5 <= W.Budget.concurrent / 2) end
 assert(W.Budget.bolts >= 3 and W.Budget.bombs >= 5 and W.Budget.beams <= 160)
+-- earthquake v2 (owner 2026-10-15): a world event, not an aura. No falling rubble streaks; capped, pooled cracks away from the dino
+assert(W.Rigs.quake.rubble == nil, "no falling rubble sticks in the air")
+assert(W.Budget.cracks <= 4 and W.Budget.cracksPhone <= 2 and W.Budget.cracksPhone >= 1 and W.Budget.rocksPerCrack <= 4, "crack and rock caps")
+local Q = W.Quake
+assert(Q.grow >= .3 and Q.grow <= .8, "cracks grow over about half a second")
+assert(Q.life[1] >= 2 and Q.life[2] <= 6 and Q.close > 0, "cracks close after a few seconds")
+assert(Q.pulseEvery[1] >= 2 and Q.pulseEvery[2] <= 8 and Q.pulseSeconds <= 1.5, "short tremor pulses every few seconds")
+assert(Q.shake > 0 and Q.shake <= .5, "gentle camera rumble")
+assert(Q.clearOfDino >= 8 and Q.minDist > Q.clearOfDino and Q.maxDist <= 90 and Q.viewCone <= 70, "cracks open in view, never under the dino")
+assert(Q.width[1] >= 1 and Q.wobbleDegrees <= 4 and Q.wobbleMax <= 12 and Q.propMaxSize <= 10, "readable cracks, slight wobble of small props only")
 
 -- aurora: palette loops, stays bright, passes through green, teal, violet and magenta, and cycles in 20..30 s
 assert(W.AuroraPeriod >= 20 and W.AuroraPeriod <= 30)
@@ -169,6 +179,15 @@ def scan():
     for name in ('local function updateQuake',):
         start = src.index(name)
         assert 'Instance.new' not in src[start:src.index('\nend\n', start)], name + ' creates Instances'
+    # earthquake v2: no radial lines/rings around the dino, no spark-stick chips; cracks are wedge shapes, rumble only with motion
+    for gone in ('QuakeRing', 'quakeChips', 'quakeBurst(', 'rubble'):
+        assert gone not in src, 'old quake effect still present: ' + gone
+    assert 'Instance.new("WedgePart")' in src and 'QuakeCrackGlow' in src and 'cracksPhone' in src, 'quake cracks are pooled wedge shapes with a glow'
+    assert 'if motion and now<quakeUntil then shake=' in src, 'quake rumble is synced to pulses and off with Reduce Motion'
+    assert 'openCrack(root,not motion)' in src, 'Reduce Motion keeps static cracks'
+    stop = src[src.index('local function stopOneShots()'):]
+    assert 'stopQuake()' not in stop[:stop.index('\nend\n')],'Reduce Motion must not hide the (static) quake cracks'
+    assert 'WS.fire("quake")' in src, 'quake sound hook kept'
     assert 'auroraRing' not in src and 'SurfaceGui' not in src, 'no ground ring or square sky shell around the dino (owner 2026-10-15)'
     # BD-213: no opaque geometry inside FogEnd: no fog-coloured sky box, nothing sized from the fog distance
     assert 'WeatherSkyBox' not in src and 'updateDome' not in src, 'no opaque sky box inside FogEnd (reads as a wall)'

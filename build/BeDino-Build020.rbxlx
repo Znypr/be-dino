@@ -374320,10 +374320,18 @@ Weather.Rigs={
     blizzard={snow=spec(1300,3,4.2),gust=spec(50,1.4,2),drift=spec(16,2.6,3.4,true),bank=spec(16,7,9,true),flurry=spec(120,.9,1.3)},
     volcano={ash=spec(300,4,5.5),embers=spec(200,3,5),plume=spec(18,5,7,true),smoke=spec(12,8,11,true),haze=spec(5,10,12,true),bank=spec(8,9,11,true)},
     aurora={motes=spec(120,4,6),stars=spec(60,3,5),bank=spec(6,9,12,true)},
-    quake={dust=spec(110,3,4.5),rubble=spec(120,1.2,1.8),bank=spec(14,8,10,true)},
+    quake={dust=spec(50,3,4.5),bank=spec(14,8,10,true)},
     bloodmoon={motes=spec(140,4,6),fog=spec(16,5,7,true),bank=spec(14,9,11,true)},
 }
-Weather.Budget=table.freeze({concurrent=6000,bigConcurrent=500,bolts=4,bombs=6,beams=140})
+Weather.Budget=table.freeze({concurrent=6000,bigConcurrent=500,bolts=4,bombs=6,beams=140,cracks=4,cracksPhone=2,rocksPerCrack=3})
+-- Earthquake v2 (owner 2026-10-15): a WORLD event, not an aura. Ground cracks open at random spots in view (never under the dino),
+-- grow over `grow` s, glow faintly amber, puff dust and kick a few rock chunks, then close. Tremor pulses every `pulseEvery` s
+-- give a gentle camera rumble (`shake`, 0 with Reduce Motion) and a slight wobble of nearby small props.
+Weather.Quake=table.freeze({
+    grow=.5,life={3,4.5},close=.8,pulseEvery={3,5},pulseSeconds=.9,shake=.4,
+    minDist=18,maxDist=70,viewCone=55,clearOfDino=12,segments=4,length={10,18},width={1.4,2.4},
+    wobbleRadius=40,wobbleMax=10,wobbleDegrees=2.5,propMaxSize=9,
+})
 function Weather.concurrent(id:string):(number,number)
     local total,big=0,0
     for _,s in Weather.Rigs[id] do
@@ -556347,7 +556355,7 @@ end)
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
 -- Weather v3 (docs/84): client-local mood. Per event: Lighting grade, Atmosphere fog/haze, sky colour shift, bloom, depth of field,
--- distance fog banks, particle rigs that follow the player, pooled lightning, lava bombs, shock rings, quake shake,
+-- distance fog banks, particle rigs that follow the player, pooled lightning, lava bombs, shock rings, quake ground cracks,
 -- a full-sky aurora (rays + arcs + hue-cycling sky), blood moon with halos and a title card.
 -- Data and math live in Shared/WeatherLooks (offline-checked by tools/verify_weather.py).
 -- Nothing here is authoritative or collides; the server only publishes WeatherId / WeatherName.
@@ -556568,7 +556576,7 @@ do
     addRig("aurora",dome,Vector3.new(0,170,0),{stars})
     fogBanks("aurora",ColorSequence.new(Color3.fromRGB(80,230,200),Color3.fromRGB(170,120,255)),{Transparency=seq(1,.9,1),LightEmission=.6})
 end
--- QUAKE (dust + falling rubble + dust haze)
+-- QUAKE (light ground dust + dust haze; cracks, rocks and tremors are world one-shots below)
 do
     local ground=volume(Vector3.new(70,.2,70))
     local dust=emitter(ground,"quake","dust",{
@@ -556576,14 +556584,7 @@ do
         Size=seq(10,24,34),Transparency=seq(.82,.7,1),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-14,14),
         Color=ColorSequence.new(Color3.fromRGB(196,170,128),Color3.fromRGB(160,138,104)),SpreadAngle=Vector2.new(30,30),
     })
-    local top=volume(Vector3.new(60,1,60))
-    local rubble=emitter(top,"quake","rubble",{
-        Texture=TEX_SMOKE,Speed=NumberRange.new(2,6),EmissionDirection=Enum.NormalId.Bottom,
-        Acceleration=Vector3.new(0,-80,0),Size=seq(.9,1.7),Transparency=seq(0,0,.4),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-300,300),
-        Color=ColorSequence.new(Color3.fromRGB(110,92,74),Color3.fromRGB(78,70,64)),
-    })
     addRig("quake",ground,FEET,{dust})
-    addRig("quake",top,Vector3.new(0,34,0),{rubble})
     fogBanks("quake",ColorSequence.new(Color3.fromRGB(190,158,116),Color3.fromRGB(150,124,92)),{Transparency=seq(1,.88,1)})
 end
 -- BLOOD MOON (red motes, ground fog, red fog walls)
@@ -556720,7 +556721,7 @@ local function updateBolts(dt:number)
     end
 end
 
--- shock rings (lava impact, quake pulse)
+-- shock rings (lava impact)
 type RingSlot={part:Part,active:boolean,age:number,seconds:number,size:number}
 local ringSlots:{RingSlot}={}
 for _=1,6 do
@@ -556793,91 +556794,6 @@ local function updateBursts(dt:number)
     end
 end
 
--- earthquake: layered, ground-anchored. Pooled: 3 rings of 16 segments (thick to thin as they fade), 12 radiating cracks, one dust and rock-chip emitter pair.
-type QRing={segs:{Part},active:boolean,age:number,delay:number,seconds:number,size:number,center:Vector3,color:Color3}
-local qRings:{QRing}={}
-local QSEG=16
-for _=1,3 do
-    local segs:{Part}={}
-    for i=1,QSEG do
-        local part=Instance.new("Part") part.Name="QuakeRing"
-        part.Anchored,part.CanCollide,part.CanTouch,part.CanQuery,part.CastShadow=true,false,false,false,false
-        part.Material,part.Size,part.Transparency=Enum.Material.Neon,Vector3.new(1,.3,1),1 part.Position=PARKED part.Parent=folder
-        segs[i]=part
-    end
-    table.insert(qRings,{segs=segs,active=false,age=0,delay=0,seconds=1,size=1,center=PARKED,color=Color3.new(1,1,1)})
-end
-type Crack={part:Part,active:boolean,age:number,length:number,dir:Vector3,origin:Vector3}
-local cracks:{Crack}={}
-for _=1,12 do
-    local part=Instance.new("Part") part.Name="QuakeCrack"
-    part.Anchored,part.CanCollide,part.CanTouch,part.CanQuery,part.CastShadow=true,false,false,false,false
-    part.Material,part.Color,part.Size,part.Transparency=Enum.Material.Slate,Color3.fromRGB(30,22,18),Vector3.new(.9,.12,1),1 part.Position=PARKED part.Parent=folder
-    table.insert(cracks,{part=part,active=false,age=0,length=20,dir=Vector3.xAxis,origin=PARKED})
-end
-local quakeHolder=Instance.new("Part") quakeHolder.Name="QuakeBurst" quakeHolder.Size,quakeHolder.Transparency=Vector3.one,1
-quakeHolder.Anchored,quakeHolder.CanCollide,quakeHolder.CanTouch,quakeHolder.CanQuery=true,false,false,false quakeHolder.Position=PARKED quakeHolder.Parent=folder
-local quakeDust=burstEmitter(quakeHolder,{Texture=TEX_SMOKE,Lifetime=NumberRange.new(1.6,2.6),Speed=NumberRange.new(24,52),EmissionDirection=Enum.NormalId.Top,
-    SpreadAngle=Vector2.new(82,82),Size=seq(8,18,26),Transparency=seq(.55,.7,1),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-40,40),Drag=2.5,
-    Color=ColorSequence.new(Color3.fromRGB(190,166,130),Color3.fromRGB(150,128,100))})
-local quakeChips=burstEmitter(quakeHolder,{Texture=TEX_SPARK,Lifetime=NumberRange.new(.9,1.6),Speed=NumberRange.new(26,56),EmissionDirection=Enum.NormalId.Top,
-    Acceleration=Vector3.new(0,-95,0),SpreadAngle=Vector2.new(75,75),Size=seq(1.2,.9,.5),Transparency=seq(0,0,.6),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-400,400),
-    Color=ColorSequence.new(Color3.fromRGB(96,80,66),Color3.fromRGB(60,52,46))})
-local function quakeBurst(ground:Vector3)
-    quakeHolder.Position=ground+Vector3.new(0,.6,0)
-    quakeDust.e:Emit(26) quakeChips.e:Emit(34)
-    local specs={{Color3.fromRGB(235,214,170),74,.9,0},{Color3.fromRGB(255,244,225),52,.8,.14},{Color3.fromRGB(150,120,86),104,1.15,.28}}
-    for i,ringSlot in qRings do
-        local spec=specs[i]
-        ringSlot.active,ringSlot.age,ringSlot.color,ringSlot.size,ringSlot.seconds,ringSlot.delay,ringSlot.center=true,0,spec[1],spec[2],spec[3],spec[4],ground
-    end
-    for i,crack in cracks do
-        local angle=(i-1)/#cracks*math.pi*2+random:NextNumber(-.2,.2)
-        crack.dir=Vector3.new(math.cos(angle),0,math.sin(angle))
-        crack.length=random:NextNumber(16,34) crack.origin=ground crack.age,crack.active=0,true
-    end
-    pulse=math.max(pulse,.7) shake=math.max(shake,1)
-    WS.fire("quake")
-end
-local function updateQuake(dt:number)
-    for _,r in qRings do
-        if r.active then
-            r.age+=dt
-            local t=(r.age-r.delay)/r.seconds
-            if t&gt;=1 then
-                r.active=false for _,seg in r.segs do seg.Position=PARKED seg.Transparency=1 end
-            elseif t&gt;=0 then
-                local ease=1-(1-t)^3
-                local radius=3+r.size*ease
-                local thick=3.2*(1-t)+.25
-                local segLen=radius*2*math.pi/QSEG*1.12
-                for i,seg in r.segs do
-                    local a=i/QSEG*math.pi*2
-                    local dir=Vector3.new(math.cos(a),0,math.sin(a))
-                    seg.Size=Vector3.new(thick,.35,segLen)
-                    seg.CFrame=CFrame.lookAt(r.center+dir*radius+Vector3.new(0,.25,0),r.center+dir*(radius+1)+Vector3.new(0,.25,0))
-                    seg.Color=r.color seg.Transparency=.15+.85*t^1.5
-                end
-            end
-        end
-    end
-    for _,c in cracks do
-        if c.active then
-            c.age+=dt
-            local grow=math.min(1,c.age/.3)
-            local len=c.length*(1-(1-grow)^2)
-            local fade=math.clamp((c.age-1.4)/1.2,0,1)
-            if fade&gt;=1 then
-                c.active=false c.part.Position=PARKED c.part.Transparency=1
-            else
-                local center=c.origin+c.dir*(len/2)+Vector3.new(0,.18,0)
-                c.part.Size=Vector3.new(.9*(1-.5*grow),.12,math.max(.5,len))
-                c.part.CFrame=CFrame.lookAt(center,center+c.dir) c.part.Transparency=.05+.95*fade
-            end
-        end
-    end
-end
-
 -- lava bombs: WeatherLooks.Budget.bombs pooled glowing balls with a trail and a smoke tail
 type BombSlot={part:Part,trail:Trail,tail:Emitter,glow:PointLight,active:boolean,age:number,flight:number,start:Vector3,v:Vector3,target:Vector3}
 local bombSlots:{BombSlot}={}
@@ -556926,12 +556842,199 @@ local function updateBombs(dt:number,root:Vector3?)
         end
     end
 end
+-- earthquake v2 (owner 2026-10-15): a WORLD event, not an aura around the dino. Pooled ground cracks open at random spots in view
+-- (never under the dino): each is a jagged chain of flat, tapered wedge diamonds with a faint amber glow in its depth, a dust puff and
+-- a few bouncing rock chunks, then it closes. Tremor pulses rumble the camera gently and wobble nearby small props.
+-- Reduce Motion: cracks appear and fade in place; no shake, dust, rocks or wobble. Caps: WL.Budget.cracks (cracksPhone on phones).
+local QK=WL.Quake
+type CrackSeg={wedges:{BasePart},glow:BasePart,frame:CFrame,len:number,width:number,appear:number}
+type Crack={segs:{CrackSeg},holder:Part,dust:Emitter,active:boolean,age:number,life:number,static:boolean}
+type Rock={part:BasePart,active:boolean,age:number,v:Vector3,floor:number,bounces:number}
+type Wobble={part:BasePart,base:CFrame,last:CFrame,age:number,axis:Vector3}
+local cracks:{Crack}={}
+local rocks:{Rock}={}
+local wobbles:{Wobble}={}
+-- wedge layout of one diamond in the segment frame (-Z = along the crack, Y = ground normal): {x sign, z sign, wedge right, wedge up}
+local WEDGE_AXES={{1,1,Vector3.yAxis,Vector3.xAxis},{-1,1,-Vector3.yAxis,-Vector3.xAxis},{1,-1,-Vector3.yAxis,Vector3.xAxis},{-1,-1,Vector3.yAxis,-Vector3.xAxis}}
+local function quakePart(part:BasePart,name:string,color:Color3,material:Enum.Material):BasePart
+    part.Name=name part.Anchored,part.CanCollide,part.CanTouch,part.CanQuery,part.CastShadow=true,false,false,false,false
+    part.Material,part.Color,part.Transparency=material,color,1 part.Position=PARKED part.Parent=folder
+    return part
+end
+for _=1,if phone then WL.Budget.cracksPhone else WL.Budget.cracks do
+    local segs:{CrackSeg}={}
+    for _=1,QK.segments do
+        local wedges:{BasePart}={}
+        for i=1,4 do wedges[i]=quakePart(Instance.new("WedgePart"),"QuakeCrack",Color3.fromRGB(44,34,28),Enum.Material.Slate) end
+        local glowPart=quakePart(Instance.new("Part"),"QuakeCrackGlow",Color3.fromRGB(150,76,24),Enum.Material.Neon)
+        table.insert(segs,{wedges=wedges,glow=glowPart,frame=CFrame.new(PARKED),len=1,width=1,appear=0})
+    end
+    local holder=volume(Vector3.new(4,.4,12)) holder.Name="QuakeDust" holder.Position=PARKED
+    local dust=burstEmitter(holder,{Texture=TEX_SMOKE,Lifetime=NumberRange.new(1.6,2.4),Speed=NumberRange.new(3,8),EmissionDirection=Enum.NormalId.Top,
+        SpreadAngle=Vector2.new(35,35),Size=seq(4,9,12),Transparency=seq(.55,.72,1),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-20,20),Drag=1.5,
+        Acceleration=Vector3.new(0,1,0),Color=ColorSequence.new(Color3.fromRGB(196,172,136),Color3.fromRGB(160,138,108))})
+    table.insert(cracks,{segs=segs,holder=holder,dust=dust,active=false,age=0,life=4,static=false})
+    for _=1,WL.Budget.rocksPerCrack do
+        local rockPart=Instance.new("Part") rockPart.Shape=Enum.PartType.Ball
+        table.insert(rocks,{part=quakePart(rockPart,"QuakeRock",Color3.fromRGB(104,88,74),Enum.Material.Slate),active=false,age=0,v=Vector3.zero,floor=0,bounces=0})
+    end
+end
+local function quakeGround(position:Vector3):(Vector3?,Vector3)
+    rayParams.FilterDescendantsInstances={folder,player.Character or folder}
+    local hit=workspace:Raycast(position+Vector3.new(0,120,0),Vector3.new(0,-300,0),rayParams)
+    if not hit then return nil,Vector3.yAxis end
+    return hit.Position,(if hit.Normal.Y&gt;.6 then hit.Normal else Vector3.yAxis)
+end
+-- size and place one segment: g = open amount 0..1 (length and width), fade = 0..1 transparency
+local function layoutSeg(seg:CrackSeg,g:number,fade:number)
+    local h,w=math.max(.05,seg.len*.5*g),math.max(.05,seg.width*.5*math.sqrt(g)*(1-fade*.6))
+    for i,wedge in seg.wedges do
+        local a=WEDGE_AXES[i]
+        wedge.Size=Vector3.new(.3,w,h)
+        wedge.CFrame=seg.frame*CFrame.fromMatrix(Vector3.new(a[1]*w/2,0,a[2]*h/2),a[3],a[4])
+        wedge.Transparency=.04+.96*fade
+    end
+    seg.glow.Size=Vector3.new(math.max(.05,w*.55),.05,math.max(.05,h*1.5))
+    seg.glow.CFrame=seg.frame*CFrame.new(0,.16,0) seg.glow.Transparency=.55+.45*fade
+end
+local function parkCrack(crack:Crack)
+    crack.active=false crack.holder.Position=PARKED
+    for _,seg in crack.segs do
+        for _,wedge in seg.wedges do wedge.Position=PARKED wedge.Transparency=1 end
+        seg.glow.Position=PARKED seg.glow.Transparency=1
+    end
+end
+local function throwRock(from:Vector3,floor:number)
+    for _,rock in rocks do
+        if not rock.active then
+            local a=random:NextNumber(0,math.pi*2) local side=random:NextNumber(2,6)
+            rock.v=Vector3.new(math.cos(a)*side,random:NextNumber(10,17),math.sin(a)*side)
+            rock.active,rock.age,rock.floor,rock.bounces=true,0,floor,0
+            rock.part.Size=Vector3.one*random:NextNumber(.5,1.1) rock.part.Position=from+Vector3.new(0,.4,0) rock.part.Transparency=0
+            return
+        end
+    end
+end
+-- a few random tries in front of the camera, minDist..maxDist from the dino, every segment clear of the dino
+local function openCrack(root:Vector3,static:boolean)
+    local crack:Crack?=nil
+    for _,c in cracks do if not c.active then crack=c break end end
+    if not crack then return end
+    local cam=workspace.CurrentCamera
+    local look=if cam then cam.CFrame.LookVector*Vector3.new(1,0,1) else Vector3.zAxis
+    local heading=if look.Magnitude&gt;.01 then math.atan2(look.Z,look.X) else 0
+    for _=1,5 do
+        local a=heading+math.rad(random:NextNumber(-QK.viewCone,QK.viewCone)) local dist=random:NextNumber(QK.minDist,QK.maxDist)
+        local p=root+Vector3.new(math.cos(a)*dist,0,math.sin(a)*dist)
+        local dirAngle=random:NextNumber(0,math.pi*2)
+        local total=random:NextNumber(QK.length[1],QK.length[2]) local segLen=total/QK.segments
+        local width=random:NextNumber(QK.width[1],QK.width[2])
+        local frames:{CFrame}={} local floor=math.huge local ok=true
+        for i=1,QK.segments do
+            dirAngle+=math.rad(random:NextNumber(-28,28))
+            local dir=Vector3.new(math.cos(dirAngle),0,math.sin(dirAngle))
+            local hit,up=quakeGround(p+dir*(segLen/2))
+            if not hit or ((hit-root)*Vector3.new(1,0,1)).Magnitude&lt;QK.clearOfDino then ok=false break end
+            local forward=(dir-up*dir:Dot(up)).Unit
+            frames[i]=CFrame.fromMatrix(hit+up*.06,forward:Cross(up).Unit,up)
+            floor=math.min(floor,hit.Y) p+=dir*segLen
+        end
+        if ok then
+            crack.active,crack.age,crack.static=true,0,static
+            crack.life=random:NextNumber(QK.life[1],QK.life[2])
+            for i,seg in crack.segs do
+                seg.frame=frames[i] seg.len=segLen*1.35
+                seg.width=width*(.35+.65*math.sin(math.pi*(i-.5)/QK.segments))
+                seg.appear=(i-1)/QK.segments*QK.grow
+                layoutSeg(seg,if static then 1 else 0,0)
+            end
+            crack.holder.CFrame=frames[math.ceil(QK.segments/2)] crack.holder.Size=Vector3.new(width*1.5,.4,total)
+            if not static then
+                crack.dust.e:Emit(if phone then 4 else 8)
+                for _=1,WL.Budget.rocksPerCrack do throwRock(frames[random:NextInteger(1,#frames)].Position,floor) end
+            end
+            return
+        end
+    end
+end
+local wobbleParams=OverlapParams.new() wobbleParams.FilterType=Enum.RaycastFilterType.Exclude wobbleParams.MaxParts=60
+local function wobbleProps(root:Vector3)
+    wobbleParams.FilterDescendantsInstances={folder,player.Character or folder}
+    local count=#wobbles
+    for _,part in workspace:GetPartBoundsInRadius(root,QK.wobbleRadius,wobbleParams) do
+        if count&gt;=QK.wobbleMax then break end
+        local s=part.Size
+        if part.Anchored and not part:IsA("Terrain") and math.max(s.X,s.Y,s.Z)&lt;=QK.propMaxSize and part.Transparency&lt;1 then
+            local model=part:FindFirstAncestorWhichIsA("Model")
+            local busy=model~=nil and model:FindFirstChildWhichIsA("Humanoid")~=nil
+            for _,w in wobbles do if w.part==part then busy=true break end end
+            if not busy then
+                count+=1
+                local a=random:NextNumber(0,math.pi*2)
+                table.insert(wobbles,{part=part,base=part.CFrame,last=part.CFrame,age=0,axis=Vector3.new(math.cos(a),0,math.sin(a))})
+            end
+        end
+    end
+end
+local function quakePulse(root:Vector3,motion:boolean)
+    openCrack(root,not motion)
+    if random:NextNumber()&lt;.4 then openCrack(root,not motion) end
+    if motion then
+        for _,crack in cracks do if crack.active and crack.age&gt;QK.grow then crack.dust.e:Emit(if phone then 2 else 4) end end
+        wobbleProps(root)
+    end
+    WS.fire("quake")
+end
+local function updateQuake(dt:number)
+    for _,crack in cracks do
+        if crack.active then
+            crack.age+=dt
+            local closing=math.clamp((crack.age-crack.life)/QK.close,0,1)
+            if closing&gt;=1 then
+                parkCrack(crack)
+            elseif crack.static then
+                if closing&gt;0 then for _,seg in crack.segs do layoutSeg(seg,1,closing) end end
+            elseif crack.age&lt;QK.grow*1.6 or closing&gt;0 then
+                for _,seg in crack.segs do
+                    local g=math.clamp((crack.age-seg.appear)/(QK.grow/QK.segments*1.6),0,1)
+                    layoutSeg(seg,(1-(1-g)^2)*(1-closing),closing)
+                end
+            end
+        end
+    end
+    local gravity=Vector3.new(0,-70,0)
+    for _,rock in rocks do
+        if rock.active then
+            rock.age+=dt rock.v+=gravity*dt
+            local pos=rock.part.Position+rock.v*dt
+            local radius=rock.part.Size.Y/2
+            if pos.Y&lt;rock.floor+radius and rock.v.Y&lt;0 then
+                pos=Vector3.new(pos.X,rock.floor+radius,pos.Z) rock.bounces+=1
+                rock.v=if rock.bounces&gt;2 then Vector3.zero else Vector3.new(rock.v.X*.55,-rock.v.Y*.38,rock.v.Z*.55)
+            end
+            rock.part.Position=pos
+            rock.part.Transparency=math.clamp((rock.age-2.2)/.7,0,1)
+            if rock.age&gt;2.9 then rock.active=false rock.part.Position=PARKED rock.part.Transparency=1 end
+        end
+    end
+    for i=#wobbles,1,-1 do
+        local w=wobbles[i]
+        w.age+=dt
+        if w.part.Parent==nil or w.part.CFrame~=w.last then table.remove(wobbles,i) -- moved by something else: leave it alone
+        elseif w.age&gt;=QK.pulseSeconds then w.part.CFrame=w.base table.remove(wobbles,i)
+        else
+            local swing=math.sin(w.age*22)*(1-w.age/QK.pulseSeconds)*math.rad(QK.wobbleDegrees)
+            w.last=w.base*CFrame.fromAxisAngle(w.axis,swing) w.part.CFrame=w.last
+        end
+    end
+end
 local function stopQuake()
-    for _,r in qRings do r.active=false for _,seg in r.segs do seg.Position=PARKED seg.Transparency=1 end end
-    for _,c in cracks do c.active=false c.part.Position=PARKED c.part.Transparency=1 end
+    for _,crack in cracks do if crack.active then parkCrack(crack) end end
+    for _,rock in rocks do if rock.active then rock.active=false rock.part.Position=PARKED rock.part.Transparency=1 end end
+    for _,w in wobbles do if w.part.Parent and w.part.CFrame==w.last then w.part.CFrame=w.base end end
+    table.clear(wobbles)
 end
 local function stopOneShots()
-    stopQuake()
     for _,slot in bolts do slot.active=false setBolt(slot,false) end
     for _,slot in bombSlots do slot.active=false slot.trail.Enabled=false slot.tail.e.Enabled=false slot.glow.Brightness=0 slot.part.Position=PARKED end
 end
@@ -557098,15 +557201,14 @@ RunService.Heartbeat:Connect(function(dt)
         if nextDouble&gt;0 and now&gt;=nextDouble then nextDouble=0 bolt(root) end
         if now&gt;=nextFar then nextFar=now+random:NextNumber(1.2,3) flash=math.max(flash,.3) end
     end
-    -- quake shake, bursts and rings
-    if live and root and activeId=="quake" and k&gt;.3 then
-        shake=math.max(shake,.3)
+    -- quake: tremor pulses open ground cracks in view, with a gentle rumble synced to each pulse (none with Reduce Motion)
+    if root and activeId=="quake" and k&gt;.3 then
         if now&gt;=nextQuakeBurst then
-            nextQuakeBurst=now+random:NextNumber(2.5,4.5) quakeUntil=now+1.5
-            quakeBurst(groundAt(root))
+            nextQuakeBurst=now+random:NextNumber(WL.Quake.pulseEvery[1],WL.Quake.pulseEvery[2]) quakeUntil=now+WL.Quake.pulseSeconds
+            quakePulse(root,Theme.MotionEnabled)
         end
-        if now&lt;quakeUntil then shake=math.max(shake,.95) end
-    end
+        if motion and now&lt;quakeUntil then shake=math.max(shake,WL.Quake.shake*math.sin(math.pi*(1-(quakeUntil-now)/WL.Quake.pulseSeconds))) end
+    elseif activeId~="quake" or not root then stopQuake() end
     -- blood moon sky props
     local moonOn=live and activeId=="bloodmoon" and k&gt;0
     if moonOn and root then
@@ -557125,7 +557227,7 @@ RunService.Heartbeat:Connect(function(dt)
     updateAurora(root or Vector3.zero,now,auroraOn,recolor)
     -- pooled one-shot effects
     updateBolts(dt) updateRings(dt) updateBursts(dt) updateBombs(dt,root) updateQuake(dt)
-    if shake&gt;.01 and Theme.MotionEnabled then shake=math.max(0,shake-dt*(if activeId=="quake" then .5 else 1.1)) end
+    if shake&gt;.01 and Theme.MotionEnabled then shake=math.max(0,shake-dt*1.1) end
     if not Theme.MotionEnabled then shake=0 end
 end)
 -- camera shake is applied after the camera script each frame, so it never fights the game's own camera offset
