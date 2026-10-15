@@ -1,11 +1,22 @@
-# 85 Drop odds: dinosaurs, patterns and colors
+# 85 Drop odds: every rarity table (generated)
 
-Generated 2026-10-14 from the repo (`Config.ChestSpeciesWeights`, `EggGenetics`, `ProgressionConfig.EggColors`).
-All numbers are **provisional** and show the odds of **one purchased egg** (no run-size boost; bigger runs and nests shift odds toward higher rarities, see [82](82-species-rarity-tiers.md)).
+Generated from the repo by `python tools/generate_drop_odds.py --runner <luau.exe>` (`RarityCurve`, `Config`, `ProgressionConfig`). Do not edit by hand.
+All numbers are **provisional**. Rarity follows the **exponential ladder** of [88](88-exponential-rarity.md) (BD-184): each tier is 5 times rarer than the one below. Dinosaur species tier totals stay at 72 / 24 / 3.2 / 0.7 / 0.1 ([82](82-species-rarity-tiers.md)). Odds below are for **one purchased egg** (no run-size boost).
+
+## The shared ladder (`src/shared/RarityCurve.luau`)
+
+| Tier | Chance | About 1 in | Aura price (base 60) | Trail price (base 100) |
+|---|---:|---:|---:|---:|
+| Common | 80.01% | 1.25 | 60 | 100 |
+| Uncommon | 16% | 6.25 | 170 | 280 |
+| Rare | 3.2% | 31 | 470 | 780 |
+| Epic | 0.64% | 156 | 1,300 | 2,200 |
+| Legendary | 0.128% | 781 | 3,700 | 6,100 |
+| Mythic | 0.0256% | 3,906 | 10,000 | 17,000 |
+
+Systems with fewer tiers use the first N rows and renormalise (five tiers: 80.02 / 16 / 3.2 / 0.64 / 0.128). Prices grow x2.8 per tier, rounded to two figures. Species stop at Legendary.
 
 ## Dinosaurs (22 species)
-
-Percentages are the **base odds of one purchased egg**; they are shown on dinos in the Dino Index and Dino Details.
 
 | # | Dinosaur | Rarity | % |
 |---:|---|---|---:|
@@ -42,9 +53,9 @@ Percentages are the **base odds of one purchased egg**; they are shown on dinos 
 
 ## Patterns (8, eggs and the dinosaurs hatched from them)
 
-Every egg rolls one pattern; the hatched dinosaur keeps it. All 8 are equally likely (fusion needs the same species and pattern, so uneven pattern odds would change fusion pacing; not decided).
+All 8 are equally likely (owner 2026-10-15: fusion needs the same species and pattern, so odds stay uniform for now).
 
-| # | Pattern | Rarity | % |
+| # | Pattern | Label | % |
 |---:|---|---|---:|
 | 1 | Blank | Common | 12.5% |
 | 2 | Freckles | Common | 12.5% |
@@ -55,20 +66,72 @@ Every egg rolls one pattern; the hatched dinosaur keeps it. All 8 are equally li
 | 7 | Emerald islands | Epic | 12.5% |
 | 8 | Diamond scales | Legendary | 12.5% |
 
-## Colors (9, eggs and the dinosaurs hatched from them)
+## Colors (9, tiers of the ladder)
 
-Each egg has **two** color slots (primary and secondary), rolled independently with these odds. Matching slots make a solid color; otherwise a blend share is rolled.
+Each egg has **two** color slots rolled independently. Tier chances come from the ladder (six tiers, renormalised) and split inside a tier by the old weights.
 
-| # | Color | Rarity | % per slot | Both slots this color |
+| # | Color | Tier | % per slot | Both slots this color |
 |---:|---|---|---:|---:|
-| 1 | Cream | Common | 50% | 25% |
-| 2 | Blue | Common | 26% | 6.76% |
-| 3 | Green | Uncommon | 12% | 1.44% |
-| 4 | Pink | Uncommon | 5% | 0.25% |
-| 5 | Teal | Uncommon | 4% | 0.16% |
-| 6 | Amber | Rare | 2.5% | 0.0625% |
-| 7 | Purple | Epic | 0.45% | 1 in 49,383 |
-| 8 | Red | Legendary | 0.04% | 1 in 6,250,000 |
-| 9 | Black | Legendary | 0.01% | 1 in 100,000,000 |
+| 1 | Cream | Common | 52.63% | 1 in 3.61 |
+| 2 | Blue | Common | 27.37% | 1 in 13 |
+| 3 | Green | Uncommon | 16% | 1 in 39 |
+| 4 | Teal | Rare | 1.422% | 1 in 4,943 |
+| 5 | Pink | Rare | 1.778% | 1 in 3,164 |
+| 6 | Amber | Epic | 0.64% | 1 in 24,411 |
+| 7 | Purple | Legendary | 0.128% | 1 in 610,256 |
+| 8 | Red | Mythic | 0.02048% | 1 in 23,841,858 |
+| 9 | Black | Mythic | 0.00512% | 1 in 381,469,727 |
 
-Rarity for colors is a label from the percentage: Common 25%+, Uncommon 4%+, Rare 1%+, Epic 0.1%+, Legendary below that.
+## Mutations
+
+| Mutation | Tier | Chance | In a nest (lucky) |
+|---|---|---:|---:|
+| BIG (size 1.2x) | Rare | 3% | 6% |
+| Shiny (earned eggs, irregular weather only) | Epic | 0.6% | 1.5% |
+
+## Weather events (how often each is chosen)
+
+A new event starts after `WeatherInterval` 300 s of clear sky and lasts `WeatherDuration` 180 s: one event every 480 s = **7.5 events per hour** (3.8 in a 30 minute session). Tier split uses the five-tier ladder; two events in a tier share it.
+
+| Event | Tier | Chance per event | About one every |
+|---|---|---:|---:|
+| Rain | Common | 40.01% | 20 min |
+| Thunderstorm | Common | 40.01% | 20 min |
+| Blizzard | Uncommon | 8.003% | 100 min |
+| Volcanic Bloom | Rare | 3.201% | 4 hours |
+| Northern Lights | Legendary | 0.128% | 104 hours |
+| Earthquake | Uncommon | 8.003% | 100 min |
+| Blood Moon | Epic | 0.6402% | 21 hours |
+
+## Potion shop (rarity of each offer slot)
+
+| Tier | Chance |
+|---|---:|
+| Common | 80.02% |
+| Uncommon | 16% |
+| Rare | 3.201% |
+| Epic | 0.6402% |
+| Legendary | 0.13% |
+
+## Aura prices (crystals)
+
+| Aura | Tier | Price |
+|---|---|---:|
+| Meadow Glow | Common | 60 |
+| Tidal Halo | Rare | 470 |
+| Royal Nova | Legendary | 3,700 |
+
+## Trail prices (crystals)
+
+| Trail | Tier | Price |
+|---|---|---:|
+| Normal White | Common | 0 |
+| Fern Drift | Common | 100 |
+| Tidal Wake | Uncommon | 280 |
+| Ember Trail | Uncommon | 390 |
+| Violet Pulse | Rare | 780 |
+| Electric Arc | Rare | 1,100 |
+| Frost Comet | Epic | 2,200 |
+| Solar Flare | Epic | 3,100 |
+| Nova Ribbon | Legendary | 6,100 |
+| Astra | Mythic | 17,000 |

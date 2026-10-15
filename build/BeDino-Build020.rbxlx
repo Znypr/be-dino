@@ -365790,8 +365790,8 @@ return table.freeze({
     -- caps at 40 eggs (5,000 food). Adjacent tier ratios stay 0.33 / 0.15 / 0.22 / 0.14 (never flatter than 1/3); Rare+ is at most ~10% easier at full boost.
     SpeciesRunBoost = {1, 1, 1.1, 1.1, 1.1},
     EggRarityBoostMaxEggs = 40,
-    BigChance = 0.1,
-    ShinyChance = 0.05,
+    BigChance = 0.03, -- BD-184: Rare-tier chance (docs/88)
+    ShinyChance = 0.006, -- BD-184: Epic-tier chance, earned eggs in irregular weather only
     BigScaleMultiplier = 1.2,
     IrregularWeather = {volcano = true, aurora = true, quake = true, bloodmoon = true},
     DeveloperProducts = { [3717200374] = 500, [3717200467] = 1500, [3717200523] = 4000, [3717200920] = 10000, [3717200940] = 25000, [3717200979] = 90000 },
@@ -365826,7 +365826,7 @@ return table.freeze({
     -- the run-batch species boost (EggRarityBoostMaxEggs = maximum), conditionLevels adds to the condition-upgrade level
     -- (clamped to the top tier), shinyChance applies even without irregular weather, bigChance replaces BigChance.
     NestLuckTiers = {
-        {rarityBoostEggs = 40, conditionLevels = 2, shinyChance = 0.03, bigChance = 0.2},
+        {rarityBoostEggs = 40, conditionLevels = 2, shinyChance = 0.015, bigChance = 0.06},
     },
     NestClaimRequestCooldownSeconds = 0.5,
     ChestClaimRequestCooldownSeconds = 0.35,
@@ -371121,7 +371121,7 @@ return table.freeze({
     MaxCrystals=2000000000,
     CrystalCount=100, CrystalRespawnSeconds=90, CrystalValue=3,
     LeapCooldown=60, LeapHorizontalSpeed=72, LeapVerticalSpeed=72, LeapDuration=.7,
-    WeatherInterval=600, WeatherDuration=180,
+    WeatherInterval=300, WeatherDuration=180,
     GrowthCap=8, SpeedCap=2.2,
     AccountXPPerLevel=100, AccountMaxLevel=60,
     -- BD-044 PROVISIONAL run crystals (deterministic; the random 5/15/50 crystal box is retired).
@@ -371160,34 +371160,37 @@ return table.freeze({
         {1000,1800,4900,1600,700},
         {400,1500,5200,1900,1000},
     },
+    -- BD-184 / docs/88: colour weights out of EggColorWeightScale (10,000,000 = 100%): tier chances 80/16/3.2/0.64/0.128/0.0256
+    -- (RarityCurve, six tiers renormalised) split inside a tier by the old weights. Verified by tools/verify_rarity.py.
+    EggColorWeightScale=10000000,
     EggColors={
-        {id="white",name="Cream",weight=5000,rgb={247,234,196}},
-        {id="blue",name="Blue",weight=2600,rgb={36,132,211}},
-        {id="green",name="Green",weight=1200,rgb={29,175,75}},
-        {id="teal",name="Teal",weight=400,rgb={22,170,151}},
-        {id="pink",name="Pink",weight=500,rgb={215,72,147}},
-        {id="gold",name="Amber",weight=250,rgb={241,160,36}},
-        {id="violet",name="Purple",weight=45,rgb={158,80,203}},
-        {id="red",name="Red",weight=4,rgb={237,44,33}},
-        {id="black",name="Black",weight=1,rgb={29,34,41}},
+        {id="white",name="Cream",rarity="Common",weight=5263496,rgb={247,234,196}},
+        {id="blue",name="Blue",rarity="Common",weight=2737017,rgb={36,132,211}},
+        {id="green",name="Green",rarity="Uncommon",weight=1600102,rgb={29,175,75}},
+        {id="teal",name="Teal",rarity="Rare",weight=142231,rgb={22,170,151}},
+        {id="pink",name="Pink",rarity="Rare",weight=177789,rgb={215,72,147}},
+        {id="gold",name="Amber",rarity="Epic",weight=64004,rgb={241,160,36}},
+        {id="violet",name="Purple",rarity="Legendary",weight=12801,rgb={158,80,203}},
+        {id="red",name="Red",rarity="Mythic",weight=2048,rgb={237,44,33}},
+        {id="black",name="Black",rarity="Mythic",weight=512,rgb={29,34,41}},
     },
     RarityFactors={compy=1,triceratops=1.35,tyrannosaurus=1.75,raptor=1,stegosaurus=1.35,ankylosaurus=1.75,archaeopteryx=1,baryonyx=1.35,brachiosaurus=1.35,dimorphodon=1,elasmosaurus=1.75,gallimimus=1,ichthyosaurus=1.35,microraptor=1,mosasaurus=1.75,pachycephalosaurus=1.35,parasaurolophus=1.35,plesiosaurus=1.35,pteranodon=1.35,quetzalcoatlus=1.75,spinosaurus=1.75,therizinosaurus=1.75},
     Auras={
         {id="meadow",name="Meadow Glow",rarity="Common",price=60,growth=1.15,color={98,236,112}},
-        {id="tidal",name="Tidal Halo",rarity="Rare",price=240,growth=1.35,color={80,214,255}},
-        {id="royal",name="Royal Nova",rarity="Legendary",price=900,growth=1.7,color={180,106,255}},
+        {id="tidal",name="Tidal Halo",rarity="Rare",price=470,growth=1.35,color={80,214,255}},
+        {id="royal",name="Royal Nova",rarity="Legendary",price=3700,growth=1.7,color={180,106,255}},
     },
     Trails={
         {id="white",name="Normal White",rarity="Common",price=0,level=1,speed=1,color={245,247,255},accent={255,255,255},width=.35,lifetime=.6},
         {id="fern",name="Fern Drift",rarity="Common",price=100,level=3,speed=1.02,color={98,236,112},accent={225,255,190},width=.45,lifetime=.7,particles=3},
-        {id="tidal",name="Tidal Wake",rarity="Common",price=250,level=6,speed=1.04,color={80,214,255},accent={195,249,255},width=.5,lifetime=.8,particles=4},
-        {id="ember",name="Ember Trail",rarity="Rare",price=500,level=10,speed=1.06,color={255,116,62},accent={255,216,107},width=.55,lifetime=.85,particles=5},
-        {id="violet",name="Violet Pulse",rarity="Rare",price=900,level=15,speed=1.08,color={180,106,255},accent={255,171,241},width=.6,lifetime=.9,particles=6},
-        {id="electric",name="Electric Arc",rarity="Rare",price=1500,level=21,speed=1.10,color={80,243,255},accent={239,255,149},width=.65,lifetime=.95,particles=7},
-        {id="frost",name="Frost Comet",rarity="Rare",price=2400,level=28,speed=1.12,color={135,233,255},accent={255,255,255},width=.7,lifetime=1,particles=8},
-        {id="solar",name="Solar Flare",rarity="Legendary",price=3600,level=36,speed=1.14,color={255,213,94},accent={255,245,204},width=.75,lifetime=1.05,particles=9},
-        {id="nova",name="Nova Ribbon",rarity="Legendary",price=5500,level=45,speed=1.16,color={180,106,255},accent={255,215,115},width=.8,lifetime=1.2,particles=10},
-        {id="astra",name="Astra",rarity="Legendary",price=8500,level=60,speed=1.18,color={112,255,205},accent={255,130,232},width=.85,lifetime=1.3,particles=14},
+        {id="tidal",name="Tidal Wake",rarity="Uncommon",price=280,level=6,speed=1.04,color={80,214,255},accent={195,249,255},width=.5,lifetime=.8,particles=4},
+        {id="ember",name="Ember Trail",rarity="Uncommon",price=390,level=10,speed=1.06,color={255,116,62},accent={255,216,107},width=.55,lifetime=.85,particles=5},
+        {id="violet",name="Violet Pulse",rarity="Rare",price=780,level=15,speed=1.08,color={180,106,255},accent={255,171,241},width=.6,lifetime=.9,particles=6},
+        {id="electric",name="Electric Arc",rarity="Rare",price=1100,level=21,speed=1.10,color={80,243,255},accent={239,255,149},width=.65,lifetime=.95,particles=7},
+        {id="frost",name="Frost Comet",rarity="Epic",price=2200,level=28,speed=1.12,color={135,233,255},accent={255,255,255},width=.7,lifetime=1,particles=8},
+        {id="solar",name="Solar Flare",rarity="Epic",price=3100,level=36,speed=1.14,color={255,213,94},accent={255,245,204},width=.75,lifetime=1.05,particles=9},
+        {id="nova",name="Nova Ribbon",rarity="Legendary",price=6100,level=45,speed=1.16,color={180,106,255},accent={255,215,115},width=.8,lifetime=1.2,particles=10},
+        {id="astra",name="Astra",rarity="Mythic",price=17000,level=60,speed=1.18,color={112,255,205},accent={255,130,232},width=.85,lifetime=1.3,particles=14},
     },
     -- BD-051 + docs/68 PROVISIONAL rotating Potion Shop (one block; owner-approved 2026-10-14: restock every 2 minutes).
     -- Offers derive from the window number (floor(unixSeconds/PeriodSeconds)), so every server agrees and rejoining never rerolls.
@@ -371197,7 +371200,7 @@ return table.freeze({
     PotionShop={
         PeriodSeconds=120, OfferCount=6, MaxStock=3,
         Rarities={"Common","Uncommon","Rare","Epic","Legendary"},
-        RarityWeights={Common=50,Uncommon=28,Rare=14,Epic=6,Legendary=2},
+        RarityWeights={Common=80,Uncommon=16,Rare=3.2,Epic=0.64,Legendary=0.13},
         StockWeights={Common={60,30,10},Uncommon={60,30,10},Rare={60,30,10},Epic={1},Legendary={1}},
     },
     -- Prices rise with rarity, power and duration (docs/68). The six pre-catalog ids keep their data and values.
@@ -371216,13 +371219,13 @@ return table.freeze({
         {id="growth_legendary",name="Titan Tonic",kind="growth",rarity="Legendary",duration=900,multiplier=2,price=220},
     },
     Weather={
-        {id="rain",name="Rain",rarity="Common",weight=50,growth=1.25,speed=1,loot=1.1,mutation="dewdrop",chance=.02,icon="rain"},
-        {id="thunder",name="Thunderstorm",rarity="Rare",weight=30,growth=1.1,speed=1.15,loot=1.4,mutation="charged",chance=.04,icon="thunder"},
-        {id="blizzard",name="Blizzard",rarity="Rare",weight=20,growth=1.4,speed=1.05,loot=1.25,mutation="frost",chance=.04,icon="blizzard"},
-        {id="volcano",name="Volcanic Bloom",rarity="Legendary",weight=6,growth=1.2,speed=1,loot=1.65,mutation="ember",chance=.07,icon="volcano"},
-        {id="aurora",name="Northern Lights",rarity="Legendary",weight=6,growth=1.3,speed=1.1,loot=1.5,mutation="aurora",chance=.07,icon="aurora"},
-        {id="quake",name="Earthquake",rarity="Rare",weight=12,growth=1.1,speed=1,loot=1.4,mutation="seismic",chance=.05,icon="quake"},
-        {id="bloodmoon",name="Blood Moon",rarity="Legendary",weight=4,growth=1.15,speed=1.15,loot=1.75,mutation="bloodmoon",chance=.08,icon="bloodmoon"},
+        {id="rain",name="Rain",rarity="Common",weight=40,growth=1.25,speed=1,loot=1.1,mutation="dewdrop",chance=.02,icon="rain"},
+        {id="thunder",name="Thunderstorm",rarity="Common",weight=40,growth=1.1,speed=1.15,loot=1.4,mutation="charged",chance=.04,icon="thunder"},
+        {id="blizzard",name="Blizzard",rarity="Uncommon",weight=8,growth=1.4,speed=1.05,loot=1.25,mutation="frost",chance=.04,icon="blizzard"},
+        {id="volcano",name="Volcanic Bloom",rarity="Rare",weight=3.2,growth=1.2,speed=1,loot=1.65,mutation="ember",chance=.07,icon="volcano"},
+        {id="aurora",name="Northern Lights",rarity="Legendary",weight=0.128,growth=1.3,speed=1.1,loot=1.5,mutation="aurora",chance=.07,icon="aurora"},
+        {id="quake",name="Earthquake",rarity="Uncommon",weight=8,growth=1.1,speed=1,loot=1.4,mutation="seismic",chance=.05,icon="quake"},
+        {id="bloodmoon",name="Blood Moon",rarity="Epic",weight=0.64,growth=1.15,speed=1.15,loot=1.75,mutation="bloodmoon",chance=.08,icon="bloodmoon"},
     },
     -- Provisional event mutation perks; separate from cosmetic Gold/Diamond fusion.
     EventMutations={
@@ -371478,6 +371481,77 @@ return Rules
       </Item>
       <Item class="ModuleScript" referent="RBX224">
         <Properties>
+          <string name="Name">RarityCurve</string>
+          <ProtectedString name="Source">--!strict
+-- BD-184 / docs/88 exponential rarity. The ONE place that defines the shared six-tier ladder.
+-- Tier k (0 = Common) has chance proportional to Ratio^k (r = 1/5): 80 / 16 / 3.2 / 0.64 / 0.128 / 0.0256 %.
+-- Prices and effort grow PriceFactor (x2.8) per tier. Pure functions, no Roblox services.
+-- Config tables (ProgressionConfig, Config) keep literal numbers because the offline verifiers inline those files;
+-- tools/verify_rarity.py proves every literal still matches this module, so an owner tweak here is caught everywhere.
+local Curve = {}
+
+Curve.Names = table.freeze({"Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"})
+Curve.Ratio = 1 / 5
+Curve.PriceFactor = 2.8
+Curve.MinAdjacentRatio = 1 / 6 -- no table may be steeper than this
+Curve.MaxAdjacentRatio = 1 / 3 -- no boost may flatten adjacent tiers beyond this (each tier &gt;= 3x rarer)
+
+function Curve.tierCount(): number return #Curve.Names end
+
+-- 0-based tier index of a rarity name, nil when unknown.
+function Curve.index(name: string): number?
+    for i, n in Curve.Names do if n == name then return i - 1 end end
+    return nil
+end
+
+-- Unnormalised weight of tier k (Common = 1).
+function Curve.weight(tier: number, ratio: number?): number
+    return (ratio or Curve.Ratio) ^ tier
+end
+
+-- Chances (0..1) for the first `count` tiers, renormalised to sum to exactly 1.
+-- count 6: 80/16/3.2/0.64/0.128/0.0256 (of 99.9936); count 5: 80.02/16.00/3.20/0.64/0.128.
+function Curve.weights(count: number, ratio: number?): {number}
+    assert(count &gt;= 1 and count &lt;= #Curve.Names and count % 1 == 0, "RarityCurve: tier count")
+    local out, total = {}, 0
+    for k = 0, count - 1 do local w = Curve.weight(k, ratio) out[k + 1] = w total += w end
+    for k = 1, count do out[k] /= total end
+    return out
+end
+
+-- Price of tier k from a Common base price, rounded to two significant figures (60 -&gt; 60,170,470,1300,3700,10000).
+function Curve.price(tier: number, base: number, factor: number?): number
+    local raw = base * (factor or Curve.PriceFactor) ^ tier
+    if raw &lt; 100 then return math.floor(raw / 10 + .5) * 10 end
+    local magnitude = 10 ^ (math.floor(math.log10(raw)) - 1)
+    return math.floor(raw / magnitude + .5) * magnitude
+end
+
+-- Apply per-tier boost factors to tier weights, then flatten no adjacent pair beyond MaxAdjacentRatio: a boost may make a
+-- tier easier only until it is within `cap` of the tier below (a tier whose base ratio is already above the cap is left
+-- alone). Never reorders tiers. NOT renormalised: callers divide by the sum.
+function Curve.boost(weights: {number}, factors: {number}, maxRatio: number?): {number}
+    local cap = maxRatio or Curve.MaxAdjacentRatio
+    local out = {}
+    for i, w in weights do out[i] = w * (factors[i] or 1) end
+    for i = 2, #out do
+        local limit = out[i - 1] * cap
+        if out[i] &gt; limit then out[i] = math.max(limit, weights[i]) end
+    end
+    return out
+end
+
+-- Percent text for a chance in percent: 80 -&gt; "80%", 0.0256 -&gt; "0.0256%".
+function Curve.percentText(percent: number): string
+    return string.format("%g%%", tonumber(string.format("%.4g", percent)) :: number)
+end
+
+return table.freeze(Curve)
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX225">
+        <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
 -- Generated from resources/models OBJ/MTL.
@@ -371485,7 +371559,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX225">
+      <Item class="ModuleScript" referent="RBX226">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -371501,7 +371575,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX226">
+      <Item class="ModuleScript" referent="RBX227">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -371569,7 +371643,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX227">
+      <Item class="ModuleScript" referent="RBX228">
         <Properties>
           <string name="Name">RevealSkip</string>
           <ProtectedString name="Source">--!strict
@@ -371653,7 +371727,7 @@ return Skip
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX228">
+      <Item class="ModuleScript" referent="RBX229">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -371745,7 +371819,7 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX229">
+      <Item class="ModuleScript" referent="RBX230">
         <Properties>
           <string name="Name">Sfx</string>
           <ProtectedString name="Source">--!strict
@@ -371865,7 +371939,7 @@ return Sfx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX230">
+      <Item class="ModuleScript" referent="RBX231">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -371913,7 +371987,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX231">
+      <Item class="ModuleScript" referent="RBX232">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -371943,7 +372017,7 @@ function Odds.lines(level)
     table.insert(lines,"Failed egg: "..Outcomes.percent(Outcomes.failure(level)).." overall; no dinosaur or crystal refund")
     table.insert(lines,"Colors (each slot independently):")
     total=0 for _,row in Progression.EggColors do total+=row.weight end
-    for _,row in Progression.EggColors do table.insert(lines,string.format("%s: %.4f%% per slot",row.name,100*row.weight/total)) end
+    for _,row in Progression.EggColors do table.insert(lines,string.format("%s (%s): %.4f%% per slot",row.name,row.rarity or "Common",100*row.weight/total)) end
     for _,row in Progression.EggColors do if row.id=="black" then table.insert(lines,"Black / Black genes: "..Outcomes.percent((row.weight/total)^2)) end end
     local patterns=Outcomes.patterns()
     table.insert(lines,"Patterns: "..#patterns.." equally likely; "..Outcomes.percent(1/#patterns).." each")
@@ -371951,9 +372025,9 @@ function Odds.lines(level)
     table.insert(lines,if mode=="legacy" then "Primary share 0-100%: "..Outcomes.percent(1/101).." each"
         elseif mode=="uniform" then "Mixed share 1-99%: "..Outcomes.percent(1/99).." each; matching genes 100%"
         else "Mixed shares 1% and 99%: "..Outcomes.percent(2/101).." each; shares 2-98%: "..Outcomes.percent(1/101).." each; matching genes 100%")
-    table.insert(lines,"Normal size: 90%; BIG: 10% (size only, 1.2x)")
+    table.insert(lines,string.format("Normal size: %g%%; BIG (Rare): %g%% (size only, 1.2x)",100*(1-Config.BigChance),100*Config.BigChance))
     table.insert(lines,"Purchased eggs: clear-weather, Shiny 0%; event mutation 0%")
-    table.insert(lines,"Earned eggs: Shiny 5% during Volcano, Northern Lights, Earthquake or Blood Moon; otherwise 0%. BIG is independent.")
+    table.insert(lines,string.format("Earned eggs: Shiny (Epic) %g%% during Volcano, Northern Lights, Earthquake or Blood Moon; otherwise 0%%. BIG is independent.",100*Config.ShinyChance))
     table.insert(lines,"Each combined outcome multiplies its independent probabilities; only Cracked can fail.")
     table.insert(lines,"Displayed percentages are rounded; their total may differ from 100%. Filters retain original odds, not renormalized subset odds.")
     return lines
@@ -371962,7 +372036,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX232">
+      <Item class="ModuleScript" referent="RBX233">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -372164,7 +372238,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX233">
+      <Item class="ModuleScript" referent="RBX234">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -372196,7 +372270,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX234">
+      <Item class="ModuleScript" referent="RBX235">
         <Properties>
           <string name="Name">UIFormat</string>
           <ProtectedString name="Source">--!strict
@@ -372240,7 +372314,7 @@ return UIFormat
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX235">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -372269,7 +372343,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -372291,7 +372365,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX238">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -372323,8 +372397,8 @@ end
 Theme.Colors = {panel=Color3.fromRGB(42,40,53),card=Color3.fromRGB(61,58,73),outline=Color3.fromRGB(13,15,20),text=Color3.new(1,1,1),accent=Color3.fromRGB(93,237,31),gold=Color3.fromRGB(255,210,43),blue=Color3.fromRGB(46,206,255),purple=Color3.fromRGB(194,86,255),red=Color3.fromRGB(247,57,48)}
 -- One colour per rarity everywhere (species, potions): grey, green, blue, purple, gold. Index = rarity
 -- rank 1..5 (Config.SpeciesRarityNames); keyed by name too for potion rarity strings.
-Theme.RarityColors = {Color3.fromRGB(128,142,158),Theme.Colors.accent,Theme.Colors.blue,Theme.Colors.purple,Theme.Colors.gold}
-for index, name in {"Common","Uncommon","Rare","Epic","Legendary"} do Theme.RarityColors[name] = Theme.RarityColors[index] end
+Theme.RarityColors = {Color3.fromRGB(128,142,158),Theme.Colors.accent,Theme.Colors.blue,Theme.Colors.purple,Theme.Colors.gold,Theme.Colors.red}
+for index, name in {"Common","Uncommon","Rare","Epic","Legendary","Mythic"} do Theme.RarityColors[name] = Theme.RarityColors[index] end
 Theme.ImageIds = require(script.Parent.UIIconAssets)
 function Theme.imageContent(_id: string): Content? return nil end
 function Theme.decorate(object: GuiObject, radius: number)
@@ -372456,7 +372530,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -372487,7 +372561,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">WeatherLooks</string>
           <ProtectedString name="Source">--!strict
@@ -372596,7 +372670,7 @@ return Weather
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">WeatherSounds</string>
           <ProtectedString name="Source">--!strict
@@ -372671,7 +372745,7 @@ return Sounds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -372722,7 +372796,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">WorldKitMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -372775,7 +372849,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX243">
+    <Item class="Folder" referent="RBX244">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -542330,15 +542404,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX244">
+  <Item class="ServerScriptService" referent="RBX245">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX245">
+    <Item class="Folder" referent="RBX246">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">AdminService</string>
           <ProtectedString name="Source">--!strict
@@ -542452,7 +542526,7 @@ return AdminService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -542719,7 +542793,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX248">
+      <Item class="Script" referent="RBX249">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -542876,7 +542950,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -542986,7 +543060,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -543079,7 +543153,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX251">
+      <Item class="ModuleScript" referent="RBX252">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -543215,7 +543289,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX252">
+      <Item class="ModuleScript" referent="RBX253">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -543427,7 +543501,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX253">
+      <Item class="ModuleScript" referent="RBX254">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -543698,7 +543772,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX254">
+      <Item class="ModuleScript" referent="RBX255">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -543870,7 +543944,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX255">
+      <Item class="ModuleScript" referent="RBX256">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -544056,7 +544130,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX256">
+      <Item class="ModuleScript" referent="RBX257">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -544442,7 +544516,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX257">
+      <Item class="ModuleScript" referent="RBX258">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -544529,7 +544603,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX258">
+      <Item class="ModuleScript" referent="RBX259">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -544607,7 +544681,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX259">
+      <Item class="ModuleScript" referent="RBX260">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -544719,7 +544793,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX260">
+      <Item class="ModuleScript" referent="RBX261">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -544858,7 +544932,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX261">
+      <Item class="ModuleScript" referent="RBX262">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -544950,7 +545024,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX262">
+      <Item class="ModuleScript" referent="RBX263">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -545055,7 +545129,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX263">
+      <Item class="ModuleScript" referent="RBX264">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -545190,7 +545264,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX264">
+      <Item class="ModuleScript" referent="RBX265">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -546970,7 +547044,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX265">
+      <Item class="ModuleScript" referent="RBX266">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -547172,7 +547246,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX266">
+      <Item class="ModuleScript" referent="RBX267">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -547286,7 +547360,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX267">
+      <Item class="ModuleScript" referent="RBX268">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -547549,7 +547623,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX268">
+      <Item class="ModuleScript" referent="RBX269">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -547621,19 +547695,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX269">
+  <Item class="StarterPlayer" referent="RBX270">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX270">
+    <Item class="StarterPlayerScripts" referent="RBX271">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX271">
+      <Item class="Folder" referent="RBX272">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX272">
+        <Item class="LocalScript" referent="RBX273">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -547842,7 +547916,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX273">
+        <Item class="LocalScript" referent="RBX274">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -549367,7 +549441,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX274">
+        <Item class="LocalScript" referent="RBX275">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -549430,7 +549504,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX275">
+        <Item class="ModuleScript" referent="RBX276">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -549509,7 +549583,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX276">
+        <Item class="ModuleScript" referent="RBX277">
           <Properties>
             <string name="Name">DinoIndexPanels</string>
             <ProtectedString name="Source">--!strict
@@ -550001,7 +550075,7 @@ return Panels
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX277">
+        <Item class="LocalScript" referent="RBX278">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -550324,7 +550398,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX278">
+        <Item class="ModuleScript" referent="RBX279">
           <Properties>
             <string name="Name">EggsScreen</string>
             <ProtectedString name="Source">--!strict
@@ -550534,7 +550608,7 @@ return EggsScreen
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX279">
+        <Item class="ModuleScript" referent="RBX280">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -551397,7 +551471,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX280">
+        <Item class="ModuleScript" referent="RBX281">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -551499,7 +551573,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX281">
+        <Item class="ModuleScript" referent="RBX282">
           <Properties>
             <string name="Name">HatchSequence</string>
             <ProtectedString name="Source">--!strict
@@ -552549,7 +552623,7 @@ return Seq
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX282">
+        <Item class="ModuleScript" referent="RBX283">
           <Properties>
             <string name="Name">InspectView</string>
             <ProtectedString name="Source">--!strict
@@ -552739,7 +552813,7 @@ return InspectView
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX283">
+        <Item class="ModuleScript" referent="RBX284">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -552800,7 +552874,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX284">
+        <Item class="LocalScript" referent="RBX285">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -552987,7 +553061,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX285">
+        <Item class="LocalScript" referent="RBX286">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -553052,7 +553126,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX286">
+        <Item class="LocalScript" referent="RBX287">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -553869,7 +553943,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX287">
+  <Item class="Workspace" referent="RBX288">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>
