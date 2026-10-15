@@ -4,6 +4,7 @@ plus a source scan that WeatherVisuals builds every Instance up front (no Instan
 """
 from pathlib import Path
 import argparse
+import re
 import subprocess
 import tempfile
 ROOT = Path(__file__).resolve().parents[1]
@@ -51,12 +52,11 @@ for i = 2, #byDensity do assert(W.Looks[byDensity[i - 1]].vis <= W.Looks[byDensi
 assert(W.Looks.blizzard.density == W.Looks[byDensity[1]].density)
 -- stronger than v2 (recorded v2 densities): every event at least 1.3x denser than before
 -- readability (owner 2026-10-15: volcano, blizzard and quake were opaque walls): at 30 studs the fog may cover at most 10%,
--- the dino and ground stay visible to at least 40 studs in volcano, quake, rain and thunder, and the sky box colour equals the fog colour
+-- the dino and ground stay visible to at least 40 studs in volcano, quake, rain and thunder
 for _, id in IDS do
     local look = W.Looks[id]
     local at30 = math.max(0, 30 - look.fogStart) / (look.vis - look.fogStart)
     assert(at30 <= .1, id .. " fog at 30 studs " .. at30)
-    assert(look.dome >= 0 and look.dome <= 1)
 end
 for _, id in {"volcano", "quake", "rain", "thunder", "bloodmoon", "aurora"} do assert(W.Looks[id].fogStart >= 40, id .. " keeps 40 studs clear") end
 assert(W.Looks.volcano.fog[1] <= 170 and W.Looks.volcano.sat <= .3 and W.Looks.volcano.bloom <= .7, "volcano is a brown-orange haze, not a red wall")
@@ -96,9 +96,29 @@ assert(math.abs(s0[1] - s1[1]) + math.abs(s0[2] - s1[2]) + math.abs(s0[3] - s1[3
 local m = W.mix({0, 100, 200}, {100, 200, 0}, .5) assert(m[1] == 50 and m[2] == 150 and m[3] == 100)
 assert(W.lerp(2, 4, .25) == 2.5 and W.scale({100, 50, 0}, .5)[1] == 50)
 assert(W.strength(1, true) == 1 and W.strength(1, false) == .5 and W.strength(0, false) == 0, "Reduce Motion halves the grade")
-local s0, e0 = W.fog(W.Looks.blizzard, 0, 0, 100000) assert(s0 == 0 and math.abs(e0 - 100000) < 1e-3)
-local s1, e1 = W.fog(W.Looks.blizzard, 1, 0, 100000) assert(s1 == 25 and math.abs(e1 - 110) < 1e-6)
-local _, eh = W.fog(W.Looks.blizzard, .5, 0, 100000) assert(eh > 110 and eh < 400, "fog closes in smoothly (1/distance blend): " .. eh)
+local C = W.Looks.clear
+local s0, e0 = W.fog(W.Looks.blizzard, 0, C, math.huge) assert(s0 == C.fogStart and math.abs(e0 - C.vis) < 1e-3)
+local s1, e1 = W.fog(W.Looks.blizzard, 1, C, math.huge) assert(s1 == 25 and math.abs(e1 - 110) < 1e-6)
+local _, eh = W.fog(W.Looks.blizzard, .5, C, math.huge) assert(eh > 110 and eh < 400, "fog closes in smoothly (1/distance blend): " .. eh)
+-- BD-213 soft visibility: clear weather keeps a gentle far haze; per device class the fog end stays inside the prop cull
+-- radius (props detach/attach only where they are already fully fogged), the fade spans >= 55% of the view, the near
+-- 25 studs stay clear (blizzard whiteout excepted) and FogEnd only ever closes in smoothly over the event ramp.
+assert(C.fogStart >= 100 and C.vis >= 500 and C.vis <= 1500, "clear weather keeps a gentle far haze")
+assert(W.CullMargin < 1 and W.SoftRatio <= .5)
+for class, radius in CULL do
+    local cap = W.fogCap(radius)
+    for _, id in {"clear", table.unpack(IDS)} do
+        local prevEnd = math.huge
+        for step = 0, 20 do
+            local s, e = W.fog(W.Looks[id], step / 20, C, cap)
+            assert(e < radius, class .. " " .. id .. ": fog end " .. e .. " must be inside the cull radius " .. radius)
+            assert(e - s >= e * (1 - W.SoftRatio) - 1e-6, class .. " " .. id .. ": fog fade too short (reads as a wall)")
+            assert(s >= 25 or (id == "blizzard" and s >= 12), class .. " " .. id .. ": near area must stay clear, start " .. s)
+            assert(math.max(0, 30 - s) / (e - s) <= .12, class .. " " .. id .. ": fog at 30 studs")
+            assert(e <= prevEnd + 1e-6, class .. " " .. id .. ": view must close in smoothly") prevEnd = e
+        end
+    end
+end
 print("WeatherLooks passed")
 
 -- weather audio table: ids stay empty until uploaded, volumes are kids-quiet, every event has a bed, fades are bounded
@@ -122,8 +142,15 @@ print("WeatherSounds passed")
 '''
 
 
+def cull_radii():
+    cfg = (ROOT / 'src/shared/Config.luau').read_text(encoding='utf-8')
+    radii = {k: int(v) for k, v in re.findall(r'(Phone|Tablet|Desktop) = \{radius = (\d+)', cfg)}
+    assert set(radii) == {'Phone', 'Tablet', 'Desktop'}, 'WorldCulling radii not found in Config'
+    return 'local CULL={' + ','.join(f'{k}={v}' for k, v in radii.items()) + '}\n'
+
+
 def script():
-    return 'local W=' + module('src/shared/WeatherLooks.luau') + '\nlocal WS=' + module('src/shared/WeatherSounds.luau') + '\n' + BODY
+    return cull_radii() + 'local W=' + module('src/shared/WeatherLooks.luau') + '\nlocal WS=' + module('src/shared/WeatherSounds.luau') + '\n' + BODY
 
 
 def scan():
@@ -139,15 +166,18 @@ def scan():
         end = src.index('\nend\n', start)
         assert 'Instance.new' not in src[start:end], name + ' creates Instances'
     assert 'Debris' not in src, 'one-shots are pooled, not Debris items'
-    for name in ('local function updateQuake', 'local function updateDome'):
+    for name in ('local function updateQuake',):
         start = src.index(name)
         assert 'Instance.new' not in src[start:src.index('\nend\n', start)], name + ' creates Instances'
     assert 'auroraRing' not in src and 'SurfaceGui' not in src, 'no ground ring or square sky shell around the dino (owner 2026-10-15)'
+    # BD-213: no opaque geometry inside FogEnd: no fog-coloured sky box, nothing sized from the fog distance
+    assert 'WeatherSkyBox' not in src and 'updateDome' not in src, 'no opaque sky box inside FogEnd (reads as a wall)'
+    assert not re.search(r'Size\s*=[^\n]*fog(End|Cap)', src, re.I), 'no part sized from the fog distance'
+    assert 'WL.fog(look,t,CLEAR,fogCap)' in src and 'WorldCulling' in src, 'fog end must be capped by the device cull radius'
     assert 'CelestialBodiesShown' in src, 'default sun and moon hidden during events (one moon only)'
     audio = (ROOT / 'src/client/WeatherAudio.client.luau').read_text(encoding='utf-8')
     assert 'WeatherSounds' in audio and 'normalizeId' in audio
     sfx = (ROOT / 'src/shared/Sfx.luau').read_text(encoding='utf-8')
-    import re
     volume = float(re.search(r'weather_start = \{id = "[^"]*", volume = ([\d.]+)', sfx).group(1))
     assert volume <= .25, 'weather_start must stay quiet'
 
