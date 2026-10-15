@@ -44,6 +44,7 @@ jobs:
           python tools/verify_hatch_sequence.py --runner /tmp/luau/luau
           python tools/verify_inspect.py --runner /tmp/luau/luau
           python tools/verify_eggs_screen.py --runner /tmp/luau/luau
+          python tools/verify_egg_origin.py --runner /tmp/luau/luau
           python tools/verify_load_gate.py --runner /tmp/luau/luau
           python tools/verify_mesh_sanity.py --runner /tmp/luau/luau
           python tools/verify_dino_motion.py --runner /tmp/luau/luau
