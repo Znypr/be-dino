@@ -6,6 +6,7 @@ local Preview={}
 local RunService=game:GetService("RunService")
 local Http=game:GetService("HttpService")
 local Appearance=require(script.Parent.EggAppearance)
+local MutationLook=require(script.Parent.MutationLook)
 local function visible(view)
     local low,high=view.AbsolutePosition,view.AbsolutePosition+view.AbsoluteSize
     if view.AbsoluteSize.X<=0 or view.AbsoluteSize.Y<=0 then return false end
@@ -63,6 +64,7 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         if gold=="silhouette" then
             viewport.Ambient,viewport.LightColor=Color3.new(0,0,0),Color3.new(0,0,0)
         elseif traits and traits.genes then Appearance.apply(model,traits.genes) end
+        if traits and gold~="silhouette" then MutationLook.apply(model,traits.mutationId) end -- BD-155 (traits only decoded for base stage)
         Camera.bind(viewport,model,speciesId)
         task.spawn(function()
             local assets={}

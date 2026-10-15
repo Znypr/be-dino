@@ -232,7 +232,7 @@ function Panels.species(ctx)
         stage.ClipsDescendants = true
         local view = Preview.add(stage, speciesId, if stageName == nil then "base" else stageName)
         view.Size, view.Position = UDim2.fromScale(1, 1), UDim2.new()
-        PreviewTraits.add(view, if d then {shiny = d.shiny, big = d.big, genes = if d.stage == "base" then d.genes else nil} else nil)
+        PreviewTraits.add(view, if d then {shiny = d.shiny, big = d.big, mutationId = if d.stage == "base" then d.mutationId else nil, genes = if d.stage == "base" then d.genes else nil} else nil)
         hero = InspectView.attach(view, {hintPosition = UDim2.new(.5, 0, 0, 34), resetPosition = UDim2.new(1, -6, 0, 6)})
         titleLabel = W.label(left, speciesName, UDim2.fromOffset(296, 26), UDim2.fromOffset(0, 200), 22, C.text)
         if not d then
@@ -275,7 +275,7 @@ function Panels.species(ctx)
             if previewView then return end
             local view = Preview.add(button, speciesId, if d.stage == "base" then "base" else d.stage)
             view.Position, view.Size = UDim2.fromOffset(4, 4), UDim2.new(1, -8, 0, 74)
-            if d.stage == "base" and d.genes then PreviewTraits.add(view, {genes = d.genes}) end
+            if d.stage == "base" and (d.genes or (d.mutationId or "") ~= "") then PreviewTraits.add(view, {genes = d.genes, mutationId = d.mutationId}) end
             previewView = view
             entryRef.mounted = true
         end

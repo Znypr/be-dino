@@ -168,6 +168,46 @@ while #data[key(o)].runEggBank<GameConfig.RunEggBankCapacity-1 do table.insert(d
 assert(select(3,Repository.claimNest(o,nid2))=="bank_full" and #nests(o)==1 and nests(o)[1].nestId==nid2)
 print("Open passed: eggs credited once at the queue front as nest_egg, duplicate/reload no-op, missing/invalid refused, bank_full keeps the nest")
 
+------------------------------------------------------------------ BD-156 weather nests roll event mutations
+do
+ local W=fresh(320)
+ -- the weather tag is stored only for a known, non-clear weather; forged/clear/nil store nothing (additive field)
+ for i,w in {"thunder","clear",false,"bogus-weather"} do
+  local ok=Repository.commitRunSettlement(W,"wx-run-"..i,8,nil,300,if w then w else nil)
+  assert(ok)
+ end
+ local tags={}
+ for _,n in nests(W) do tags[n.droppedFromRun]=n.weatherId end
+ assert(tags["wx-run-1"]=="thunder" and tags["wx-run-2"]==nil and tags["wx-run-3"]==nil and tags["wx-run-4"]==nil,"only a known weather is tagged")
+ -- saved profile with the new field reloads (valid) and a forged unknown tag is rejected by validation
+ Repository.release(W) assert(Repository.load(W))
+ local forged=copy(data[key(W)]) forged.eggNests[1].weatherId="nope"
+ data[key(W)]=forged Repository.release(W) assert(not Repository.load(W),"unknown weather tag must fail validation")
+ -- statistics: weather nests mutate at exactly the run-egg event chance, clear nests never
+ local thunder=nil for _,w in ProgressionConfig.Weather do if w.id=="thunder" then thunder=w end end
+ local V=fresh(321)
+ local total,mutated,clearMutated=0,0,0
+ for i=1,300 do
+  data[key(V)].runEggBank={} data[key(V)].eggs={} data[key(V)].eggNests=data[key(V)].eggNests or {}
+  table.insert(data[key(V)].eggNests,{nestId="wx-"..i,droppedFromRun="wx-run",size=15,luck=1,state="ready",readyAt=1,weatherId="thunder"})
+  table.insert(data[key(V)].eggNests,{nestId="cl-"..i,droppedFromRun="wx-run",size=15,luck=1,state="ready",readyAt=1})
+  assert(select(3,Repository.claimNest(V,"wx-"..i))=="opened")
+  for _,egg in revealLine(V) do
+   total+=1
+   assert(egg.eventId=="thunder" and egg.source.kind=="nest")
+   if egg.mutationId~="" then mutated+=1 assert(egg.mutationId==thunder.mutation) end
+  end
+  data[key(V)].runEggBank={} data[key(V)].eggs={}
+  assert(select(3,Repository.claimNest(V,"cl-"..i))=="opened")
+  for _,egg in revealLine(V) do assert(egg.eventId=="clear" and egg.mutationId=="") clearMutated+=1 end
+ end
+ local p=thunder.chance
+ local sigma=math.sqrt(total*p*(1-p))
+ assert(total==4500 and math.abs(mutated-total*p)<=4.5*sigma,"nest mutation rate "..mutated.."/"..total)
+ assert(clearMutated==4500)
+ print(string.format("Weather nests passed: tag stored only for known weather, forged tag invalid, %d/%d (%.2f%%) weather-nest eggs mutated vs run-egg chance %.1f%%, clear nests 0",mutated,total,100*mutated/total,100*p))
+end
+
 ------------------------------------------------------------------ Luck is applied and bounded
 do
  local L=fresh(306)

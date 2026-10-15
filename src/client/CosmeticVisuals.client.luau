@@ -8,10 +8,12 @@ local Effects=require(Shared.CosmeticEffects)
 local Theme=require(Shared.UITheme)
 local Mutations=require(Shared.MutationEffects)
 local Shiny=require(Shared.ShinyEffects)
+local Look=require(Shared.MutationLook)
 local function destroy(state)
     state.effect:destroy()
     if state.mutation then state.mutation.Destroy() end
     if state.glints then state.glints.Destroy() end
+    if state.visual and state.visual.Parent and state.mutationId~="" then Look.apply(state.visual,nil) end -- restore the body colour
 end
 local states={}
 local elapsed=0
@@ -41,6 +43,7 @@ RunService.Heartbeat:Connect(function(dt)
                 if state then destroy(state) end
                 state={root=root,auraId=auraId,trailId=trailId,mutationId=mutationId,shiny=shiny,visual=visual,scale=scale,motion=Theme.MotionEnabled,effect=Effects.create(root,Rules.item(Config.Auras,auraId),Rules.item(Config.Trails,trailId),nil,false)}
                 if visual and visual:IsA("Model") then
+                    if (visual:GetAttribute("Mutation") or "base")=="base" then Look.apply(visual,mutationId) end -- BD-155: soft body tint, always (also with Reduce Motion); the mist below is the motion layer
                     state.mutation=Mutations.Create(visual,mutationId,"rbxassetid://105629313112163",not Theme.MotionEnabled)
                     if shiny then state.glints=Shiny.Create(visual,"rbxassetid://70885382548001",not Theme.MotionEnabled) end
                 end

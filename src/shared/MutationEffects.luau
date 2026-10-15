@@ -3,22 +3,15 @@
 local RunService = game:GetService("RunService")
 local Effects = {}
 local activeCount = 0
-local colors = {
- dewdrop = {Color3.fromRGB(43,154,111),Color3.fromRGB(112,244,191)},
- charged = {Color3.fromRGB(56,66,87),Color3.fromRGB(255,207,72)},
- frost = {Color3.fromRGB(112,184,211),Color3.fromRGB(175,235,255)},
- seismic = {Color3.fromRGB(133,97,62),Color3.fromRGB(210,173,113)},
- ember = {Color3.fromRGB(99,54,34),Color3.fromRGB(255,144,51)},
- aurora = {Color3.fromRGB(109,65,150),Color3.fromRGB(81,233,187)},
- bloodmoon = {Color3.fromRGB(122,26,46),Color3.fromRGB(250,67,102)},
-}
+local Look = require(script.Parent.MutationLook) -- BD-155: one shared look table
+local function paletteOf(id) local e=Look.get(id) if not e then return nil end return {Look.color(e.mist),Look.color(e.spark)} end
 local function anchor(parent)
  local p=Instance.new("Part");p.Name="MutationFXAnchor";p.Size=Vector3.new(.1,.1,.1)
  p.Transparency=1;p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.CastShadow=false;p.Parent=parent
  return p
 end
 function Effects.Create(model: Model, mutationId: string, smokeTexture: string, reducedEffects: boolean?)
- local palette=colors[mutationId]
+ local palette=paletteOf(mutationId)
  if not palette or not model.Parent or reducedEffects or activeCount>=8 then return nil end
  assert(type(smokeTexture)=="string" and smokeTexture:match("^rbxassetid://%d+$"),"Supply uploaded BeDino smoke texture asset ID")
  local folder=Instance.new("Folder");folder.Name="BeDinoMutation_"..mutationId;folder.Parent=workspace
