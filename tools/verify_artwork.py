@@ -22,12 +22,12 @@ local parent={ZIndex=20}
 -- Exercise fallback explicitly even after production bindings are populated.
 for key in Assets do Assets[key]="" end
 local Navigation='''+module('src/shared/NavigationArtwork.luau')+'''
-assert(Navigation.auras=="aura_meadow" and Navigation.potions=="potion_speed")
+assert(Navigation.auras=="aura_meadow" and Navigation.potions=="potion_speed_Rare")
 local root=Artwork.build(parent,Navigation.auras,native)
 assert(root.Parent==parent and #nativeCalls==2 and nativeCalls[1]=="aura" and nativeCalls[2]=="dinos")
 nativeCalls={}
 Artwork.build(parent,Navigation.potions,native)
-assert(#nativeCalls==1 and nativeCalls[1]=="speed")
+assert(#nativeCalls==0,"BD-176: menu potion is one vector bottle, no overlaid symbol")
 assert(Artwork.build(parent,"weather",native)==nil)
 -- Stub IDs are fixtures only, never written to the upload mapping.
 for key in Assets do Assets[key]="fixture://"..key end
@@ -50,7 +50,9 @@ Artwork.build(parent,"potion_growth",native)
 assert(#nativeCalls==1 and nativeCalls[1]=="leaf")
 nativeCalls={}
 Artwork.build(parent,Navigation.potions,native)
-assert(#nativeCalls==1 and nativeCalls[1]=="speed")
+assert(#nativeCalls==0)
+Artwork.build(parent,"potion_speed",native)
+assert(#nativeCalls==1 and nativeCalls[1]=="speed") -- legacy composed id still overlays (not used by the menu any more)
 -- docs/68: all 12 catalog potions render a native vector bottle (no symbol overlay, no native icon call) and are pairwise distinguishable.
 local Config='''+module('src/shared/ProgressionConfig.luau')+'''
 local seen,count={}, 0
