@@ -893,7 +893,7 @@ render=function(name: string)
                 detailText=mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
                 if not genes then detailColor=tint end
             elseif colorReveal and patternReveal then
-                detailText=colorReveal.name.." • "..patternReveal.name
+                detailText=HatchTimeline.detailLine(colorReveal,patternReveal,colorReveal.bonusText) -- BD-220: colour bonus shown once, here
             end
             detailLabel.Text,detailLabel.TextColor3=detailText,detailColor
             remainingAfter=HatchTimeline.remaining(str("NextChestId")~="" and workspace:GetServerTimeNow()>=num("NextChestReadyAt"),num("ActiveChestCount"),num("QueuedEggsWaiting"))
@@ -903,12 +903,14 @@ render=function(name: string)
                 shiny=not failed and player:GetAttribute("LastChestShiny")==true,big=not failed and player:GetAttribute("LastChestBig")==true,
                 mutationName=if mutation and not failed then mutation.name else nil,mutationColor=mutationColor,
                 remaining=remainingAfter,genes=if geneticsOk then genes else nil,colorReveal=colorReveal,patternReveal=patternReveal,paintColors=paintColors,
+                secondReveal=if geneticsOk then HatchTimeline.colorReveal(ProgressionConfig.EggColors,genes,"secondary") else nil, -- BD-220: right bucket
             })
         end
         Sfx.play("hatch_crack")
         handle=HatchSequence.play({
             gui=gui,panel=panel,body=body,eggView=eggView,animateEgg=animateEgg,splitEgg=splitEgg,paint=paint,
             nameLabel=rewardLabel,oddsLabel=oddsLabel,detailLabel=detailLabel,motion=motion,
+            eggCondition=HatchTimeline.queueCondition(queue(),str("NextChestId")), -- BD-223: the egg's condition look from the first frame
             alive=function() return modalVersion==version and active=="hatch" end,
             flash=flash,
             onSkipAll=function() autoHatching=true skipAllReveals=true end,
