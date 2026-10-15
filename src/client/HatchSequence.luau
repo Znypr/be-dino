@@ -502,7 +502,10 @@ function Seq.play(args: Args): Handle
         local reveal = if i == 1 then a.colorReveal else a.patternReveal
         if not reveal then return end
         local chip = kit.chips[i]
-        kit.chipLabels[i].Text = Timeline.paintLine(reveal)
+        local bonus = if i == 1 and type(reveal.bonusText) == "string" then reveal.bonusText else nil -- BD-172, set by Bootstrap from the server-held genes
+        kit.chipLabels[i].Text = if bonus then Timeline.paintLine(reveal) .. "\n" .. bonus else Timeline.paintLine(reveal)
+        chip.Size = UDim2.fromOffset(300, if bonus then 66 else 44)
+        kit.chipSwatches[i].Position = UDim2.fromOffset(24, if bonus then 33 else 22)
         kit.chipStrokes[i].Color = TIER_COLORS[reveal.tier] or WHITE
         kit.chipSwatches[i].BackgroundColor3 = paintColors[i]
         chip.Visible = true
