@@ -36,7 +36,10 @@ local PreviewCamera=(function()
 for _,id in {"compy","triceratops","tyrannosaurus","raptor","stegosaurus","ankylosaurus"} do
  for _,size in {{250,172},{274,230},{380,280},{120,146}} do
   local viewport={AbsoluteSize={X=size[1],Y=size[2]},Destroying=signal,GetPropertyChangedSignal=function()return signal end,GetAttributeChangedSignal=function()return signal end,GetAttribute=function()return nil end}
-  local model={Destroying=signal,GetBoundingBox=function()return identity,v(100,100,100)end,GetAttribute=function(_,key)return if key=="GeometryOrigin" then Vector3.zero else nil end,GetPivot=function()return identity end}
+  local lo,hi=v(1e9,1e9,1e9),v(-1e9,-1e9,-1e9)
+  for _,vx in Geometry[id].vertices do lo=lo:Min(v(vx[1],vx[2],vx[3])) hi=hi:Max(v(vx[1],vx[2],vx[3])) end
+  local extent=hi-lo
+  local model={Destroying=signal,GetBoundingBox=function()return identity,extent end,GetAttribute=function(_,key)return if key=="GeometryOrigin" then Vector3.zero else nil end,GetPivot=function()return identity end}
   PreviewCamera.bind(viewport,model,id)
   local cam=viewport.CurrentCamera
   local basis=cam.CFrame
@@ -65,6 +68,25 @@ for _,size in {{504,260},{250,128},{120,146}} do
   assert(depth>0 and math.abs(point:Dot(basis.XVector)/(depth*tan*size[1]/size[2]))<1 and math.abs(point:Dot(basis.YVector)/(depth*tan))<1,"imported bounds cropped")
  end end end
 end
+-- BD-180: a model whose live size differs from the stored template (BIG / gene scale / small species) is framed by its real box.
+for _,id in {"compy","triceratops","tyrannosaurus"} do
+ for _,factor in {.5,1.7} do
+  for _,size in {{250,172},{296,196},{120,146}} do
+   local lo,hi=v(1e9,1e9,1e9),v(-1e9,-1e9,-1e9)
+   for _,vx in Geometry[id].vertices do lo=lo:Min(v(vx[1],vx[2],vx[3])) hi=hi:Max(v(vx[1],vx[2],vx[3])) end
+   local extent=(hi-lo)*factor
+   local viewport={AbsoluteSize={X=size[1],Y=size[2]},Destroying=signal,GetPropertyChangedSignal=function()return signal end,GetAttributeChangedSignal=function()return signal end,GetAttribute=function()return nil end}
+   local model={Destroying=signal,GetBoundingBox=function()return identity,extent end,GetAttribute=function(_,key)return if key=="GeometryOrigin" then Vector3.zero else nil end,GetPivot=function()return identity end}
+   PreviewCamera.bind(viewport,model,id)
+   local cam=viewport.CurrentCamera local basis=cam.CFrame local tan=math.tan(math.rad(cam.FieldOfView/2))
+   for _,sx in {-1,1} do for _,sy in {-1,1} do for _,sz in {-1,1} do
+    local point=v(sx*extent.X/2,sy*extent.Y/2,sz*extent.Z/2)-basis.Position local depth=-point:Dot(basis.ZVector)
+    assert(depth>0 and math.abs(point:Dot(basis.XVector)/(depth*tan*size[1]/size[2]))<1 and math.abs(point:Dot(basis.YVector)/(depth*tan))<1,"scaled preview cropped")
+   end end end
+  end
+ end
+end
+print("Scaled previews passed: BIG and small models use their real bounds")
 print("Imported previews passed: actual bounding boxes replace incompatible native geometry in hatch/index/phone views")
 '''
 if __name__=='__main__':

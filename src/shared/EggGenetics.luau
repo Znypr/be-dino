@@ -33,13 +33,13 @@ function Genetics.neutral(conditionId)
     return {conditionId=conditionId,hatchSuccess=true,primaryColorId="white",secondaryColorId="white",blend=100,patternId="01_blank"}
 end
 function Genetics.valid(g)
-    if typeof(g)~="table" or not Genetics.condition(g.conditionId) or not Genetics.color(g.primaryColorId)
+    if typeof(g)~="table" or (g.conditionId~=nil and not Genetics.condition(g.conditionId)) or not Genetics.color(g.primaryColorId)
         or not Genetics.color(g.secondaryColorId) or typeof(g.hatchSuccess)~="boolean"
         or typeof(g.blend)~="number" or g.blend~=g.blend or g.blend<0 or g.blend>100 or g.blend%1~=0 then return false end
     return (g.patternId==nil or table.find(Genetics.Patterns,g.patternId)~=nil) and (g.hatchSuccess or g.conditionId=="cracked")
 end
 function Genetics.key(g)
-    return g.conditionId..":"..g.primaryColorId..":"..g.secondaryColorId..":"..g.blend..(if g.patternId then ":"..g.patternId else "")
+    return (g.conditionId or "none")..":"..g.primaryColorId..":"..g.secondaryColorId..":"..g.blend..(if g.patternId then ":"..g.patternId else "")
 end
 function Genetics.tint(g)
     local a,b=Genetics.color(g.primaryColorId).rgb,Genetics.color(g.secondaryColorId).rgb

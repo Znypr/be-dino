@@ -206,7 +206,7 @@ local dropNextFuse = true
 local committed = nil
 local function dino(i, over)
     local d = {instanceId = "u:1/d:" .. i, speciesId = "compy", stage = "base",
-        genes = {patternId = "06_wavy_stripes", primaryColorId = "green", secondaryColorId = "blue", blend = 20, conditionId = "normal"},
+        genes = {patternId = "06_wavy_stripes", primaryColorId = "green", secondaryColorId = "blue", blend = 20},
         big = false, shiny = false, mutationId = "", originKind = "hatch", locked = false, favorited = false,
         auraCount = 0, trailCount = 0, equippedAuraId = "", equippedTrailId = ""}
     for k, v in over or {} do d[k] = v end
@@ -264,7 +264,7 @@ local function handle(payload)
         return {ok = true, quote = {speciesId = "compy", patternId = "06_wavy_stripes", targetStage = payload.targetStage, donorIds = table.clone(payload.donorIds),
             lossManifest = manifest, consentRequired = consent, consentDigest = "cd", quoteDigest = "qd-" .. table.concat(payload.donorIds, ","),
             recipeVersion = "r1", oddsVersion = "o1",
-            odds = {shiny = .05 * shinyCount, big = 0, mutation = {}, noMutation = 1, condition = {normal = .7, rainbow = .3},
+            odds = {shiny = .05 * shinyCount, big = 0, mutation = {}, noMutation = 1,
                 primaryColor = {green = .6, blue = .4}, secondaryColor = {blue = 1}}}}
     elseif payload.action == "fuse" then
         table.insert(fuseTokens, payload.token)
@@ -278,7 +278,7 @@ local function handle(payload)
         assert(payload.consentDigest == (if needsConsent then "cd" else nil), "consent digest echoed only when required")
         committed = {resultId = "u:1/d:99", targetStage = "gold", speciesId = "compy", patternId = "06_wavy_stripes", oddsVersion = "o1",
             traits = {big = false, shiny = true, mutationId = "", genes = {patternId = "06_wavy_stripes", primaryColorId = "blue",
-                secondaryColorId = "blue", blend = 100, conditionId = "rainbow"}}}
+                secondaryColorId = "blue", blend = 100}}}
         local consumed = {}
         for _, id in payload.donorIds do consumed[id] = true end
         local kept = {}
@@ -354,7 +354,7 @@ assert(byName(screen, "Counter") and has(screen, "15/15 selected"), "compact n/N
 assert(has(screen, "Calculating exact odds"), "debounce pending")
 runFor(1)
 assert(byName(screen, "Fuse").Text == "REVIEW & FUSE", "quote ready")
-assert(has(screen, "Shiny: Shiny 0% • Not Shiny 100%") and has(screen, "Condition: Normal 70% • Rainbow 30%"), "exact odds shown")
+assert(has(screen, "Shiny: Shiny 0% • Not Shiny 100%") and not has(screen, "Condition"), "exact odds shown, no condition wheel")
 assert(has(screen, "Different species"), "raptor card explains ineligibility")
 -- Swap two plain donors for the aura and Shiny dinos: tap selected cards to remove them.
 local removed = 0
@@ -379,12 +379,12 @@ assert(has(screen, "Valuable donors consumed: Compy (Shiny)"))
 assert(byName(screen, "FuseNow") == nil, "acknowledgement required first")
 press(byName(screen, "Acknowledge")) runFor(.1)
 press(byName(screen, "FuseNow"))
-runFor(10)
+runFor(6)
 assert(#fuseTokens == 2 and fuseTokens[1] == fuseTokens[2], "lost response retried with the SAME token")
 -- Reveal: pattern locked card first, then skip to the committed final card.
-assert(has(screen, "PATTERN LOCKED: WAVY STRIPES") or has(screen, "COLOR 1") or has(screen, "CONDITION"), "reveal running")
+assert(has(screen, "PATTERN LOCKED: WAVY STRIPES") or has(screen, "COLOR 1"), "reveal running")
 press(byName(screen, "Skip")) runFor(.1)
-assert(has(screen, "NEW WAVY STRIPES COMPY") and has(screen, "Crafted Gold (earned)") and has(screen, "Condition: Rainbow"), "final card")
+assert(has(screen, "NEW WAVY STRIPES COMPY") and has(screen, "Crafted Gold (earned)") and not has(screen, "Condition"), "final card shows no condition")
 local preview = byName(screen, "DinosaurPreview")
 assert(preview:GetAttribute("Stage") == "gold" and preview:GetAttribute("Shiny") == true, "gold preview with committed traits")
 -- BD-062 details of the new Gold.
