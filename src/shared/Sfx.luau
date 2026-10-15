@@ -28,7 +28,7 @@ Sfx.Sounds = {
     run_end = {id = "rbxassetid://127962506254484", volume = .3, rate = .92, gap = .5},
     shop_buy = {id = "rbxassetid://102585210519734", volume = .35, rate = 1, gap = .15},
     shop_refresh = {id = "rbxassetid://91960074825710", volume = .45, rate = 1, gap = .5},
-    weather_start = {id = "rbxassetid://120619985059497", volume = .6, rate = 1, gap = 1},
+    weather_start = {id = "rbxassetid://120619985059497", volume = .2, rate = 1, gap = 1},
     level_up = {id = "rbxassetid://135894580270926", volume = .4, rate = .95, gap = .5},
     fusion_reveal = {id = "rbxassetid://90816090310479", volume = .75, rate = 1, gap = .3},
     ui_click = {id = "rbxassetid://77237659470894", volume = .4, rate = 1, gap = .04},
