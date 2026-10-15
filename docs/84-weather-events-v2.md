@@ -72,6 +72,17 @@ colour/decay, bloom, exposure and star count follow the same cycle. Reduce Motio
   ribbons each, 230-300 studs out, with sparkles.
 - Audio: see docs/85. `weather_start` volume 0.2.
 
+## Weather v3.2 soft visibility (BD-213, owner playtest 2026-10-15)
+Owner: "visibility randomly cuts off, it should be like a fog where visibility gradually fades, not suddenly". Two causes, both fixed:
+- The fog-coloured sky box from v3.1 sat inside FogEnd (half size 0.62 x FogEnd) and read as a flat opaque wall (the red wall in volcano) that cut the view short.
+  It is removed. The far view now dissolves through the classic fog ramp; the Atmosphere haze/colour tints the sky, and the default sun/moon stay hidden in events.
+- WorldCulling detaches props at 190/280/440 studs (phone/tablet/desktop) with no fade. FogEnd is now capped at 0.85 x the device's cull radius
+  (`WeatherLooks.fogCap`), so props are already fully fogged where they are attached or detached. FogStart is capped at 0.45 x FogEnd, so the fade always spans
+  at least 55% of the view. Clear weather keeps a gentle soft-blue haze (start 160, end 900, capped per device). Aurora fog now starts at 170 (was 280, too short a fade).
+- `tools/verify_weather.py` checks, per device class from Config and every event plus clear across the whole ramp: fog end inside the cull radius, fade span,
+  near 25 studs clear, smooth closing; and a source scan that no sky box or part sized from the fog distance exists.
+- Not covered: props culled by the part budget inside the radius still pop without a fade (budget is rarely reached at playtest density).
+
 ## Intensity and budgets
 Rain 1400 streaks/s (thunder 2000) with more splash and a darker grade; bolts every 2.2-5 s with two forks, 35% double strikes, sheet flashes every 1.2-3 s;
 blizzard 1300 flakes/s; volcano a lava bomb every 0.45-1.1 s and three eruption columns; quake shake 0.3 constant and 0.95 on bursts with much more dust.
