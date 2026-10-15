@@ -491,31 +491,52 @@ render=function(name: string)
             label(body,if upgrade then "Unlocks at level "..upgrade.requiredLevel else "Top level reached",0,cardsY+220+targetHeight+6,824,30,19,C.gold)
             return
         elseif cosmeticTab=="crystals" then
-            art(body,"amber",20,cardsY+12,220)
-            label(body,num("Crystals").." Crystals",270,cardsY,535,50,30,C.gold)
-            if not Config.CrystalPacksEnabled then label(body,"COMING SOON",270,cardsY+38,535,20,16,C.gold) end
+            -- BD-179: one card per pack in a 3-wide grid (same card look as the potion shop). Prices load from the marketplace.
+            label(body,"You have "..num("Crystals").." Crystals",0,cardsY-4,824,34,26,C.gold)
+            if not Config.CrystalPacksEnabled then label(body,"Coming soon!",0,cardsY+28,824,26,19,C.accent) end
             local products={} for id,amount in Config.DeveloperProducts do table.insert(products,{id=id,amount=amount}) end
             table.sort(products,function(a,b) return a.amount<b.amount end)
-            if #products==0 then label(body,"Robux packs unavailable",270,cardsY+70,535,80,27)
+            if #products==0 then label(body,"Crystal packs are not ready yet",0,cardsY+80,824,60,27)
             else
-                local list=Instance.new("ScrollingFrame") list.BackgroundTransparency,list.BorderSizePixel,list.Size,list.Position,list.CanvasSize,list.ZIndex,list.Parent=1,0,UDim2.fromOffset(535,250),UDim2.fromOffset(270,cardsY+60),UDim2.fromOffset(0,#products*(targetHeight+12)),24,body
+                local gridTop=cardsY+58
+                local grid=Instance.new("ScrollingFrame") grid.Name="CrystalGrid"
+                grid.BackgroundTransparency,grid.BorderSizePixel,grid.ScrollBarThickness,grid.ZIndex=1,0,8,body.ZIndex+1
+                grid.Position,grid.Size=UDim2.fromOffset(0,gridTop),UDim2.fromOffset(824,402-gridTop)
+                grid.CanvasSize=UDim2.fromOffset(0,math.ceil(#products/3)*152) grid.Parent=body
+                local cards={}
                 for i,product in products do
-                    local saleReady=false
-                    local rowY=(i-1)*(targetHeight+12)
-                    art(list,"amber",4,rowY+6,targetHeight-12)
-                    local b=button(list,product.amount.." CRYSTALS",targetHeight+4,rowY,516-targetHeight,targetHeight,C.gold,function() if saleReady then Marketplace:PromptProductPurchase(player,product.id) end end)
-                    task.spawn(function()
-                        local ok,info=pcall(function() return Marketplace:GetProductInfo(product.id,Enum.InfoType.Product) end)
-                        if b.Parent then
-                            if ok and info.IsForSale~=false and typeof(info.PriceInRobux)=="number" then
-                                saleReady=Config.CrystalPacksEnabled==true
-                                b.Text=product.amount.." CRYSTALS • R$ "..info.PriceInRobux
-                                b.Active=saleReady
-                                if not saleReady then b.BackgroundColor3=C.card end
-                            else b.Text=product.amount.." CRYSTALS • UNAVAILABLE" b.Active=false end
-                        end
-                    end)
+                    local x=((i-1)%3)*276 local y=math.floor((i-1)/3)*152
+                    local card=box(grid,x,y,264,144,C.card:Lerp(C.purple,.25),24)
+                    local iconSize=52+math.min(i,6)*4 -- art grows with pack size
+                    art(card,"amber",10+(76-iconSize)/2,8+(76-iconSize)/2,iconSize)
+                    label(card,tostring(product.amount),92,6,166,44,32,C.gold)
+                    label(card,"Crystals",92,48,166,26,19)
+                    local tag=label(card,"",92,74,166,20,15,C.accent) tag.Visible=false
+                    local b=button(card,"...",8,100,248,38,C.gold:Lerp(C.panel,.35),function() end)
+                    b.TextSize=19 b.Active=false
+                    cards[i]={button=b,tag=tag}
                 end
+                task.spawn(function()
+                    local prices={}
+                    for i,product in products do
+                        local ok,info=pcall(function() return Marketplace:GetProductInfo(product.id,Enum.InfoType.Product) end)
+                        if ok and info.IsForSale~=false and typeof(info.PriceInRobux)=="number" then prices[i]=info.PriceInRobux end
+                    end
+                    if not grid.Parent then return end
+                    local baseRate=if prices[1] then products[1].amount/prices[1] else nil
+                    for i,product in products do
+                        local c=cards[i]
+                        local price=prices[i]
+                        if price and Config.CrystalPacksEnabled==true then
+                            c.button.Text="R$ "..price c.button.Active=true c.button.BackgroundColor3=C.gold:Lerp(C.panel,.1)
+                            c.button.Activated:Connect(function() Marketplace:PromptProductPurchase(player,product.id) end)
+                        else c.button.Text=if price then "Soon" else "Not ready" end
+                        if price and baseRate and i>1 then
+                            local bonus=math.floor((product.amount/price/baseRate-1)*100+.5)
+                            if bonus>=1 then c.tag.Text="+"..bonus.."% extra" c.tag.Visible=true end
+                        end
+                    end
+                end)
             end
             return
         end
@@ -528,7 +549,8 @@ render=function(name: string)
             local card=box(body,slot*276,cardsY,264,cardsHeight,color,24)
             label(card,item.name,6,5,252,34,25)
             label(card,if isTrail then "Level "..item.level.." • "..(UIFormat.boost("Speed",item.speed) or "Speed") else (UIFormat.boost("Growth",item.growth) or "Growth"),4,42,256,30,19)
-            art(card,(if isTrail then "trail_" else "aura_")..item.id,102,76,60)
+            local iconSize=if isTrail then 60 else math.clamp(buyY-30-74,60,128) -- BD-177: big aura icon fills the card
+            art(card,(if isTrail then "trail_" else "aura_")..item.id,(264-iconSize)/2,if isTrail then 76 else 74+(buyY-30-74-iconSize)/2,iconSize)
             label(card,if owned[item.id] then "Owned" else item.price.." Crystals",4,buyY-30,256,27,21,C.gold)
             local equipped=equippedId==item.id
             local locked=isTrail and num("AccountLevel")<item.level and not owned[item.id]
@@ -1013,7 +1035,7 @@ rail=box(gui,14,0,186,382,C.panel,2)
 rail.AnchorPoint,rail.Position=Vector2.new(0,.5),UDim2.new(0,14,.5,0)
 local railScale=Instance.new("UIScale") railScale.Parent=rail
 local navigationButtons = {}
-for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"AURAS","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
+for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"SHOP","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
     local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() if entry[3]=="fusion" then openFusion() else open(entry[3]) end end)
     b.TextSize=20
     art(b,NavigationArtwork[entry[3]] or entry[2],5,6,40)
