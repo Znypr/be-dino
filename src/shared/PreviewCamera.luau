@@ -12,12 +12,27 @@ function PreviewCamera.bind(viewport: ViewportFrame, model: Model, geometryId: s
     local points={}
     local data=if geometryId and not model:GetAttribute("UploadedModelId") then Geometry[geometryId] else nil
     local origin=model:GetAttribute("GeometryOrigin") or Vector3.zero
-    if data then
-        for _,v in data.vertices do table.insert(points,model:GetPivot():PointToWorldSpace(Vector3.new(v[1],v[2],v[3])-origin)) end
-    else
+    local function boxCorners()
+        local corners={}
         for _,x in {-1,1} do for _,y in {-1,1} do for _,z in {-1,1} do
-            table.insert(points,bounds:PointToWorldSpace(Vector3.new(x*size.X/2,y*size.Y/2,z*size.Z/2)))
+            table.insert(corners,bounds:PointToWorldSpace(Vector3.new(x*size.X/2,y*size.Y/2,z*size.Z/2)))
         end end end
+        return corners
+    end
+    if data then
+        local gLow,gHigh=Vector3.new(math.huge,math.huge,math.huge),Vector3.new(-math.huge,-math.huge,-math.huge)
+        for _,v in data.vertices do
+            local local_=Vector3.new(v[1],v[2],v[3])
+            gLow,gHigh=gLow:Min(local_),gHigh:Max(local_)
+            table.insert(points,model:GetPivot():PointToWorldSpace(local_-origin))
+        end
+        -- BD-180: the stored mesh only describes the unscaled template. If the live model is bigger or smaller (BIG, gene
+        -- scale, species size) its real bounding box is the truth, so the preview can never crop a big or small dino.
+        local extent=gHigh-gLow
+        local tolerance=.1*math.max(extent.X,extent.Y,extent.Z)
+        if math.abs(extent.X-size.X)>tolerance or math.abs(extent.Y-size.Y)>tolerance or math.abs(extent.Z-size.Z)>tolerance then points=boxCorners() end
+    else
+        points=boxCorners()
     end
     local low,high=Vector3.new(math.huge,math.huge,math.huge),Vector3.new(-math.huge,-math.huge,-math.huge)
     for _,p in points do low=low:Min(p) high=high:Max(p) end
@@ -46,7 +61,7 @@ function PreviewCamera.bind(viewport: ViewportFrame, model: Model, geometryId: s
             local depth=corner:Dot(basis.ZVector)
             distance=math.max(distance,depth+math.abs(corner:Dot(basis.XVector))/horizontal,depth+math.abs(corner:Dot(basis.YVector))/vertical)
         end
-        camera.CFrame=CFrame.lookAt(target+direction*math.max(1,distance*1.045/(if typeof(zoom)=="number" and zoom>0 then zoom else 1)),target)
+        camera.CFrame=CFrame.lookAt(target+direction*math.max(1,distance*1.12/(if typeof(zoom)=="number" and zoom>0 then zoom else 1)),target)
     end
     frame(0)
     local resized=viewport:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() frame(0) end)
