@@ -4,6 +4,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Terrain = require(script.Parent.IslandTerrain)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
 local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
@@ -190,7 +191,9 @@ function Arena.build()
     end
     local spawn = Instance.new("SpawnLocation")
     spawn.Name = "PrototypeSpawn"
-    spawn.Size, spawn.Position = Vector3.new(12, 1, 12), Vector3.new(0, Layout.height(0,Layout.SpawnZ) + .5, Layout.SpawnZ)
+    -- BD-210: characters load in the hub (they used to load on the island and be moved to the hub after attach).
+    -- Run starts use SpawnGeometry.islandPoint, not this part.
+    spawn.Size, spawn.Position = Vector3.new(12, 1, 12), SpawnGeometry.hubPoint(Config) - Vector3.new(0, SpawnGeometry.DropClearance - .5, 0)
     spawn.Anchored, spawn.Neutral, spawn.Duration, spawn.Transparency = true, true, 0, 1
     spawn.CanCollide, spawn.CanQuery = false, false
     spawn.Parent = world

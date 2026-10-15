@@ -3,6 +3,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
 local Config = require(ReplicatedStorage.Shared.Config)
+local Layout = require(ReplicatedStorage.Shared.IslandLayout)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 local RunLifecycle = {}
 local lastExitRequest: {[Player]: number} = {}
@@ -27,6 +29,14 @@ local function activeCharacter(player: Player): Model?
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if not humanoid or humanoid.Health <= 0 then return nil end
     return character
+end
+
+-- BD-210 run-start gate: server terrain built, and the client confirmed its local terrain (or the timeout passed).
+function RunLifecycle.worldReady(player: Player): boolean
+    if workspace:GetAttribute("IslandTerrainReady") ~= true then return false end
+    if player:GetAttribute("WorldReady") == true then return true end
+    local joinedAt = player:GetAttribute("JoinedAt")
+    return typeof(joinedAt) == "number" and os.clock() - joinedAt >= Config.WorldReadyTimeoutSeconds
 end
 
 function RunLifecycle.configureSettlement(callback)
@@ -209,11 +219,26 @@ function RunLifecycle.start()
         if not character or character:GetAttribute("RunState") ~= "Sanctuary" or not character:GetAttribute("DinoAttached") then return end
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         if not humanoid or humanoid.Health <= 0 then return end
-        local spawn = workspace.BeDinoArena:FindFirstChild("PrototypeSpawn")
-        if not spawn or not spawn:IsA("BasePart") then return end
-        character:PivotTo(spawn.CFrame + Vector3.new(0,5,0))
+        -- BD-210: never drop a dinosaur onto the island before the terrain exists on the server and, unless the
+        -- client is unusually slow, before this client reports the terrain under the spawn as loaded.
+        if not RunLifecycle.worldReady(player) then
+            player:SetAttribute("LastRunStartStatus", "WorldLoading")
+            return
+        end
+        require(script.Parent.FallRecovery).teleport(player, character, CFrame.new(SpawnGeometry.islandPoint(Layout)))
         RunLifecycle.begin(player, character)
     end)
+
+    local readyRemote = Instance.new("RemoteEvent")
+    readyRemote.Name = "ClientWorldReady"
+    readyRemote.Parent = folder
+    readyRemote.OnServerEvent:Connect(function(player: Player, ...)
+        if select("#", ...) ~= 0 then return end
+        player:SetAttribute("WorldReady", true)
+    end)
+    local function joined(player: Player) player:SetAttribute("JoinedAt", os.clock()) end
+    Players.PlayerAdded:Connect(joined)
+    for _, player in Players:GetPlayers() do if player:GetAttribute("JoinedAt") == nil then joined(player) end end
 
     local existing = folder:FindFirstChild("RequestEndRun")
     if existing and existing:IsA("RemoteEvent") then

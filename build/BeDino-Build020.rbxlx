@@ -366050,6 +366050,10 @@ return table.freeze({
     MovementGuardSpeedTolerance = 3,
     MovementGuardBurstStuds = 4,
     MovementGuardRejectCooldownSeconds = 0.75,
+    -- BD-210 spawn safety: a run only starts once this client reports the island terrain under the spawn as loaded
+    -- (or after this many seconds in the hub, so a slow client is never locked out); falls are checked every tick.
+    WorldReadyTimeoutSeconds = 20,
+    FallRecoveryTickSeconds = 0.2,
     SecurityTestHarnessEnabled = false,
     ArtTestHarnessEnabled = false,
     ArtPreviewRequestCooldownSeconds = 0.25,
@@ -373481,6 +373485,56 @@ return Odds
       </Item>
       <Item class="ModuleScript" referent="RBX242">
         <Properties>
+          <string name="Name">SpawnGeometry</string>
+          <ProtectedString name="Source">--!strict
+-- BD-210: one place for every point a character is put into the world, and for "has it fallen out of the world".
+-- Pure functions of Config + IslandLayout so the offline verifier (tools/verify_spawn.py) checks the same numbers the
+-- server uses. The hub floor numbers mirror Arena.build (SanctuaryGround 110x6x95 at y=3, NestPlaza top at 6.5).
+local SpawnGeometry = {}
+SpawnGeometry.HubFloorY = 6 -- top of SanctuaryGround
+SpawnGeometry.HubHalfX, SpawnGeometry.HubHalfZ = 55, 47.5 -- SanctuaryGround footprint
+SpawnGeometry.DropClearance = 5 -- studs above the floor a character root is placed (it settles onto the floor)
+SpawnGeometry.VoxelMargin = 3 -- the voxel surface reads up to ~2 studs above IslandLayout.height (4-stud voxels)
+SpawnGeometry.TerrainBottom = -16 -- IslandTerrain fills voxels from y=-16 up to the surface
+SpawnGeometry.FallDepth = 20 -- a root this far below the floor under it has fallen out of the world
+
+function SpawnGeometry.inHub(config: any, x: number, z: number): boolean
+    return math.abs(x) &lt;= SpawnGeometry.HubHalfX and math.abs(z - config.SanctuaryCenterZ) &lt;= SpawnGeometry.HubHalfZ
+end
+function SpawnGeometry.inTerrain(config: any, x: number, z: number): boolean
+    local extent = config.ArenaHalfWidth + 8 -- IslandTerrain writes ArenaHalfWidth + 8
+    return math.abs(x) &lt;= extent and math.abs(z) &lt;= extent
+end
+-- Expected solid floor height under (x, z); nil when nothing solid was ever built there.
+function SpawnGeometry.floorY(config: any, layout: any, x: number, z: number): number?
+    if SpawnGeometry.inHub(config, x, z) then return SpawnGeometry.HubFloorY end
+    if SpawnGeometry.inTerrain(config, x, z) then return layout.height(x, z) end
+    return nil
+end
+-- True when a root at `position` is below anything it could stand on (or over a void well below the map).
+function SpawnGeometry.fallen(config: any, layout: any, position: Vector3): boolean
+    local floor = SpawnGeometry.floorY(config, layout, position.X, position.Z)
+    if floor then return position.Y &lt; floor - SpawnGeometry.FallDepth end
+    return position.Y &lt; SpawnGeometry.TerrainBottom - SpawnGeometry.FallDepth
+end
+-- Hub arrival point (sanctuary centre, on the NestPlaza).
+function SpawnGeometry.hubPoint(config: any): Vector3
+    return Vector3.new(0, SpawnGeometry.HubFloorY + SpawnGeometry.DropClearance, config.SanctuaryCenterZ)
+end
+-- Island run-start point: on the meadow at SpawnZ, a few studs above the terrain surface.
+function SpawnGeometry.islandPoint(layout: any): Vector3
+    return Vector3.new(0, layout.height(0, layout.SpawnZ) + SpawnGeometry.DropClearance + SpawnGeometry.VoxelMargin, layout.SpawnZ)
+end
+-- Where a fallen character is put back: the hub outside a run, the island spawn during one.
+function SpawnGeometry.recoveryPoint(config: any, layout: any, active: boolean): Vector3
+    return if active then SpawnGeometry.islandPoint(layout) else SpawnGeometry.hubPoint(config)
+end
+return SpawnGeometry
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX243">
+        <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
 -- BD-054: pure gameplay-HUD layout math for touch phones/tablets and desktop.
@@ -373681,7 +373735,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -373713,7 +373767,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">UIFormat</string>
           <ProtectedString name="Source">--!strict
@@ -373757,7 +373811,7 @@ return UIFormat
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -373788,7 +373842,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -373812,7 +373866,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -373986,7 +374040,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -374017,7 +374071,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">WeatherLooks</string>
           <ProtectedString name="Source">--!strict
@@ -374139,7 +374193,7 @@ return Weather
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">WeatherSounds</string>
           <ProtectedString name="Source">--!strict
@@ -374214,7 +374268,7 @@ return Sounds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX251">
+      <Item class="ModuleScript" referent="RBX252">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -374265,7 +374319,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX252">
+      <Item class="ModuleScript" referent="RBX253">
         <Properties>
           <string name="Name">WorldKitMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -374318,7 +374372,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX253">
+    <Item class="Folder" referent="RBX254">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -543873,15 +543927,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX254">
+  <Item class="ServerScriptService" referent="RBX255">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX255">
+    <Item class="Folder" referent="RBX256">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX256">
+      <Item class="ModuleScript" referent="RBX257">
         <Properties>
           <string name="Name">AdminService</string>
           <ProtectedString name="Source">--!strict
@@ -543995,7 +544049,7 @@ return AdminService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX257">
+      <Item class="ModuleScript" referent="RBX258">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -544004,6 +544058,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Terrain = require(script.Parent.IslandTerrain)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
 local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
@@ -544190,7 +544245,9 @@ function Arena.build()
     end
     local spawn = Instance.new("SpawnLocation")
     spawn.Name = "PrototypeSpawn"
-    spawn.Size, spawn.Position = Vector3.new(12, 1, 12), Vector3.new(0, Layout.height(0,Layout.SpawnZ) + .5, Layout.SpawnZ)
+    -- BD-210: characters load in the hub (they used to load on the island and be moved to the hub after attach).
+    -- Run starts use SpawnGeometry.islandPoint, not this part.
+    spawn.Size, spawn.Position = Vector3.new(12, 1, 12), SpawnGeometry.hubPoint(Config) - Vector3.new(0, SpawnGeometry.DropClearance - .5, 0)
     spawn.Anchored, spawn.Neutral, spawn.Duration, spawn.Transparency = true, true, 0, 1
     spawn.CanCollide, spawn.CanQuery = false, false
     spawn.Parent = world
@@ -544262,7 +544319,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX258">
+      <Item class="Script" referent="RBX259">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -544281,6 +544338,7 @@ local ProfileRepository = require(script.Parent.ProfileRepository)
 local RunLifecycle = require(script.Parent.RunLifecycle)
 local VisualTestService = require(script.Parent.VisualTestService)
 local Leaderboards = require(script.Parent.Leaderboards)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 Players.CharacterAutoLoads = false
 
@@ -544331,6 +544389,7 @@ CollectionService.start(ProfileRepository, Dinosaur)
 ChestService.start(ProfileRepository)
 MutationService.start(ProfileRepository, Dinosaur)
 MovementGuard.start()
+require(script.Parent.FallRecovery).start(MovementGuard.reset) -- BD-210 fall-out-of-world safety net
 VisualTestService.start(Dinosaur)
 require(script.Parent.ProgressionService).start(ProfileRepository)
 require(script.Parent.FusionService).start(ProfileRepository)
@@ -544347,6 +544406,11 @@ end
 
 local function spawnLoadedPlayer(player: Player)
     player.CanLoadCharacterAppearance = false
+    -- BD-210: no character before the world (terrain + hub) is built.
+    while workspace:GetAttribute("IslandTerrainReady") ~= true or not workspace:FindFirstChild("BeDinoArena") do
+        if not player.Parent then return end
+        task.wait(.2)
+    end
     local loaded = ProfileRepository.load(player)
     if not loaded or not player.Parent then
         warn("[Be Dino] profile load blocked character spawn for " .. player.Name)
@@ -544376,9 +544440,12 @@ local function setup(player: Player)
             return
         end
         RunLifecycle.prepareSanctuary(player, character)
+        -- BD-210: the character goes to the hub floor at once (before the dinosaur attach yields), not after it.
+        local hub = CFrame.new(SpawnGeometry.hubPoint(Config))
+        character:PivotTo(hub)
         task.spawn(function()
             Dinosaur.attach(character, Config.WalkSpeed, player)
-            if player.Character == character then character:PivotTo(CFrame.new(0, 11, Config.SanctuaryCenterZ)) end
+            if player.Character == character then character:PivotTo(hub) end
         end)
     end)
     task.spawn(spawnLoadedPlayer, player)
@@ -544420,7 +544487,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX259">
+      <Item class="ModuleScript" referent="RBX260">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -544530,7 +544597,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX260">
+      <Item class="ModuleScript" referent="RBX261">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -544623,7 +544690,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX261">
+      <Item class="ModuleScript" referent="RBX262">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -544759,7 +544826,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX262">
+      <Item class="ModuleScript" referent="RBX263">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -544973,7 +545040,73 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX263">
+      <Item class="ModuleScript" referent="RBX264">
+        <Properties>
+          <string name="Name">FallRecovery</string>
+          <ProtectedString name="Source">--!strict
+-- BD-210 safety net: a character whose root drops below the floor under it (SpawnGeometry.fallen) is put back at a safe
+-- point: the island spawn during a run, the hub otherwise. Server-side, so it also covers clients whose local terrain
+-- collision is late or missing. MovementGuard skips fallen characters so it never "corrects" them to mid-air baselines.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage.Shared.Config)
+local Layout = require(ReplicatedStorage.Shared.IslandLayout)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
+local FallRecovery = {}
+local started = false
+
+-- Server teleport of a client-owned character without the ownership race: the server takes physics ownership, moves
+-- the still assembly, and hands it back a moment later. (A plain server PivotTo let the client keep simulating from its
+-- stale state: Studio showed the root 50 studs off target for a frame right after the run-start teleport.)
+function FallRecovery.teleport(player: Player, character: Model, target: CFrame)
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root or not root:IsA("BasePart") then character:PivotTo(target) return end
+    local owned = pcall(function() root:SetNetworkOwner(nil) end)
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+    character:PivotTo(target)
+    if owned then
+        task.delay(.25, function()
+            if root.Parent and player.Parent and player.Character == character then
+                pcall(function() root:SetNetworkOwner(player) end)
+            end
+        end)
+    end
+end
+
+function FallRecovery.check(player: Player): boolean
+    local character = player.Character
+    local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+    local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+    if not character or not root or not root:IsA("BasePart") or not humanoid or humanoid.Health &lt;= 0 then return false end
+    if not SpawnGeometry.fallen(Config, Layout, root.Position) then return false end
+    local active = character:GetAttribute("RunState") == "Active"
+    local target = SpawnGeometry.recoveryPoint(Config, Layout, active)
+    local fellAt = root.Position
+    FallRecovery.teleport(player, character, CFrame.new(target))
+    local count = player:GetAttribute("FallRecoveries")
+    player:SetAttribute("FallRecoveries", (if typeof(count) == "number" then count else 0) + 1)
+    warn(string.format("[Be Dino] %s fell out of the world at %s; returned to %s", player.Name, tostring(fellAt), if active then "island spawn" else "hub"))
+    return true
+end
+
+function FallRecovery.start(onRecovered: ((Player) -&gt; ())?)
+    if started then return end
+    started = true
+    task.spawn(function()
+        while true do
+            task.wait(Config.FallRecoveryTickSeconds)
+            for _, player in Players:GetPlayers() do
+                if FallRecovery.check(player) and onRecovered then onRecovered(player) end
+            end
+        end
+    end)
+end
+return FallRecovery
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX265">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -545244,7 +545377,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX264">
+      <Item class="ModuleScript" referent="RBX266">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -545416,7 +545549,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX265">
+      <Item class="ModuleScript" referent="RBX267">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -545602,7 +545735,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX266">
+      <Item class="ModuleScript" referent="RBX268">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -545999,7 +546132,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX267">
+      <Item class="ModuleScript" referent="RBX269">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -546086,7 +546219,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX268">
+      <Item class="ModuleScript" referent="RBX270">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -546164,7 +546297,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX269">
+      <Item class="ModuleScript" referent="RBX271">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -546276,7 +546409,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX270">
+      <Item class="ModuleScript" referent="RBX272">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -546415,7 +546548,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX271">
+      <Item class="ModuleScript" referent="RBX273">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -546424,6 +546557,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
+local Layout = require(ReplicatedStorage.Shared.IslandLayout)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 local MovementGuard = {}
 local states: {[Player]: {
@@ -546437,6 +546572,11 @@ local started = false
 
 local function clear(player: Player)
     states[player] = nil
+end
+
+-- BD-210: forget the trusted baseline (after a server teleport such as fall recovery or run start).
+function MovementGuard.reset(player: Player)
+    clear(player)
 end
 
 function MovementGuard.start()
@@ -546456,6 +546596,12 @@ function MovementGuard.start()
 
                 if not character or not root or not root:IsA("BasePart") or not humanoid
                     or humanoid.Health &lt;= 0 or character:GetAttribute("RunState") ~= "Active" then
+                    clear(player)
+                    continue
+                end
+                -- BD-210: a root below the floor is FallRecovery's job. Correcting it here snapped falling characters
+                -- back to mid-fall baselines under the map (an endless fall loop instead of a recovery).
+                if SpawnGeometry.fallen(Config, Layout, root.Position) then
                     clear(player)
                     continue
                 end
@@ -546507,7 +546653,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX272">
+      <Item class="ModuleScript" referent="RBX274">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -546612,7 +546758,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX273">
+      <Item class="ModuleScript" referent="RBX275">
         <Properties>
           <string name="Name">PotionModels</string>
           <ProtectedString name="Source">--!strict
@@ -546664,7 +546810,7 @@ return Models
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX274">
+      <Item class="ModuleScript" referent="RBX276">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -546799,7 +546945,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX275">
+      <Item class="ModuleScript" referent="RBX277">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -548587,7 +548733,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX276">
+      <Item class="ModuleScript" referent="RBX278">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -548805,7 +548951,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX277">
+      <Item class="ModuleScript" referent="RBX279">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -548919,7 +549065,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX278">
+      <Item class="ModuleScript" referent="RBX280">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -548927,6 +549073,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
 local Config = require(ReplicatedStorage.Shared.Config)
+local Layout = require(ReplicatedStorage.Shared.IslandLayout)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 local RunLifecycle = {}
 local lastExitRequest: {[Player]: number} = {}
@@ -548951,6 +549099,14 @@ local function activeCharacter(player: Player): Model?
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if not humanoid or humanoid.Health &lt;= 0 then return nil end
     return character
+end
+
+-- BD-210 run-start gate: server terrain built, and the client confirmed its local terrain (or the timeout passed).
+function RunLifecycle.worldReady(player: Player): boolean
+    if workspace:GetAttribute("IslandTerrainReady") ~= true then return false end
+    if player:GetAttribute("WorldReady") == true then return true end
+    local joinedAt = player:GetAttribute("JoinedAt")
+    return typeof(joinedAt) == "number" and os.clock() - joinedAt &gt;= Config.WorldReadyTimeoutSeconds
 end
 
 function RunLifecycle.configureSettlement(callback)
@@ -549133,11 +549289,26 @@ function RunLifecycle.start()
         if not character or character:GetAttribute("RunState") ~= "Sanctuary" or not character:GetAttribute("DinoAttached") then return end
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         if not humanoid or humanoid.Health &lt;= 0 then return end
-        local spawn = workspace.BeDinoArena:FindFirstChild("PrototypeSpawn")
-        if not spawn or not spawn:IsA("BasePart") then return end
-        character:PivotTo(spawn.CFrame + Vector3.new(0,5,0))
+        -- BD-210: never drop a dinosaur onto the island before the terrain exists on the server and, unless the
+        -- client is unusually slow, before this client reports the terrain under the spawn as loaded.
+        if not RunLifecycle.worldReady(player) then
+            player:SetAttribute("LastRunStartStatus", "WorldLoading")
+            return
+        end
+        require(script.Parent.FallRecovery).teleport(player, character, CFrame.new(SpawnGeometry.islandPoint(Layout)))
         RunLifecycle.begin(player, character)
     end)
+
+    local readyRemote = Instance.new("RemoteEvent")
+    readyRemote.Name = "ClientWorldReady"
+    readyRemote.Parent = folder
+    readyRemote.OnServerEvent:Connect(function(player: Player, ...)
+        if select("#", ...) ~= 0 then return end
+        player:SetAttribute("WorldReady", true)
+    end)
+    local function joined(player: Player) player:SetAttribute("JoinedAt", os.clock()) end
+    Players.PlayerAdded:Connect(joined)
+    for _, player in Players:GetPlayers() do if player:GetAttribute("JoinedAt") == nil then joined(player) end end
 
     local existing = folder:FindFirstChild("RequestEndRun")
     if existing and existing:IsA("RemoteEvent") then
@@ -549182,7 +549353,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX279">
+      <Item class="ModuleScript" referent="RBX281">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -549254,19 +549425,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX280">
+  <Item class="StarterPlayer" referent="RBX282">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX281">
+    <Item class="StarterPlayerScripts" referent="RBX283">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX282">
+      <Item class="Folder" referent="RBX284">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX283">
+        <Item class="LocalScript" referent="RBX285">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -549511,7 +549682,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX284">
+        <Item class="LocalScript" referent="RBX286">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -551068,7 +551239,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX285">
+        <Item class="LocalScript" referent="RBX287">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!nonstrict
@@ -551159,7 +551330,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX286">
+        <Item class="ModuleScript" referent="RBX288">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -551238,7 +551409,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX287">
+        <Item class="ModuleScript" referent="RBX289">
           <Properties>
             <string name="Name">DinoIndexPanels</string>
             <ProtectedString name="Source">--!strict
@@ -551774,7 +551945,7 @@ return Panels
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX288">
+        <Item class="LocalScript" referent="RBX290">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -552104,7 +552275,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX289">
+        <Item class="ModuleScript" referent="RBX291">
           <Properties>
             <string name="Name">EggPicture</string>
             <ProtectedString name="Source">--!strict
@@ -552181,7 +552352,7 @@ return EggPicture
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX290">
+        <Item class="ModuleScript" referent="RBX292">
           <Properties>
             <string name="Name">EggsScreen</string>
             <ProtectedString name="Source">--!strict
@@ -552377,7 +552548,7 @@ return EggsScreen
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX291">
+        <Item class="ModuleScript" referent="RBX293">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -553244,7 +553415,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX292">
+        <Item class="ModuleScript" referent="RBX294">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -553346,7 +553517,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX293">
+        <Item class="ModuleScript" referent="RBX295">
           <Properties>
             <string name="Name">FxRig</string>
             <ProtectedString name="Source">--!nonstrict
@@ -553675,7 +553846,7 @@ return Rig
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX294">
+        <Item class="ModuleScript" referent="RBX296">
           <Properties>
             <string name="Name">HatchFx</string>
             <ProtectedString name="Source">--!nonstrict
@@ -553875,7 +554046,7 @@ return M
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX295">
+        <Item class="ModuleScript" referent="RBX297">
           <Properties>
             <string name="Name">HatchSequence</string>
             <ProtectedString name="Source">--!strict
@@ -554937,7 +555108,7 @@ return Seq
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX296">
+        <Item class="ModuleScript" referent="RBX298">
           <Properties>
             <string name="Name">InspectView</string>
             <ProtectedString name="Source">--!strict
@@ -555127,7 +555298,7 @@ return InspectView
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX297">
+        <Item class="LocalScript" referent="RBX299">
           <Properties>
             <string name="Name">JumpCarry</string>
             <ProtectedString name="Source">--!strict
@@ -555185,7 +555356,7 @@ if player.Character then task.spawn(bind, player.Character) end
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX298">
+        <Item class="ModuleScript" referent="RBX300">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -555276,7 +555447,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX299">
+        <Item class="LocalScript" referent="RBX301">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -555483,7 +555654,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX300">
+        <Item class="ModuleScript" referent="RBX302">
           <Properties>
             <string name="Name">VolumeSliders</string>
             <ProtectedString name="Source">--!strict
@@ -555564,7 +555735,7 @@ return Sliders
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX301">
+        <Item class="LocalScript" referent="RBX303">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -555631,7 +555802,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX302">
+        <Item class="LocalScript" referent="RBX304">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -556427,7 +556598,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX303">
+        <Item class="LocalScript" referent="RBX305">
           <Properties>
             <string name="Name">WorldCulling</string>
             <ProtectedString name="Source">--!strict
@@ -556552,10 +556723,45 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
+        <Item class="LocalScript" referent="RBX306">
+          <Properties>
+            <string name="Name">WorldReady</string>
+            <ProtectedString name="Source">--!strict
+-- BD-210: tell the server when this client's own copy of the island terrain around the run spawn is loaded. The
+-- character's physics runs on this client, so a run that starts before the local terrain arrives drops the dinosaur
+-- straight through the world. The server waits for this (RunLifecycle.worldReady, with a timeout fallback).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Layout = require(Shared:WaitForChild("IslandLayout"))
+local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
+local remote = remotes:WaitForChild("ClientWorldReady") :: RemoteEvent
+
+local params = RaycastParams.new()
+params.FilterType = Enum.RaycastFilterType.Include
+params.FilterDescendantsInstances = {workspace.Terrain}
+local function terrainLoaded(): boolean
+    -- 5x5 grid, 48 studs wide, around the run spawn: every ray must land on terrain near the authored height.
+    for dx = -24, 24, 12 do
+        for dz = -24, 24, 12 do
+            local x, z = dx, Layout.SpawnZ + dz
+            local expected = Layout.height(x, z)
+            local hit = workspace:Raycast(Vector3.new(x, expected + 40, z), Vector3.new(0, -80, 0), params)
+            if not hit or math.abs(hit.Position.Y - expected) &gt; 4 then return false end
+        end
+    end
+    return true
+end
+
+while workspace:GetAttribute("IslandTerrainReady") ~= true or not terrainLoaded() do task.wait(.25) end
+task.wait(.5) -- one more beat for collision of the neighbouring voxel chunks
+remote:FireServer()
+</ProtectedString>
+          </Properties>
+        </Item>
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX304">
+  <Item class="Workspace" referent="RBX307">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>
