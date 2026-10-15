@@ -172,6 +172,8 @@ for index, event in ProgressionConfig.Weather do
     b.LayoutOrder, b.TextScaled = index, true
     b.Activated:Connect(function() call("startWeather", event.id, chosenSeconds, event.name .. " started") end)
 end
+place(text(scroll, "World parts (BD-168)", 18, 24))
+local cullInfo = place(text(scroll, "", 14, 36))
 local stop = place(button(scroll, "Stop weather", C.red, UDim2.new(1, 0, 0, 36)))
 stop.Activated:Connect(function() call("stopWeather", nil, nil, "Weather stopped") end)
 local reset = place(button(scroll, "Reset sliders", C.card, UDim2.new(1, 0, 0, 36)))
@@ -185,6 +187,11 @@ task.spawn(function()
             local left = math.max(0, math.floor(endsAt - workspace:GetServerTimeNow()))
             weatherNow.Text = if (workspace:GetAttribute("WeatherId") or "clear") == "clear" then "Now: Clear"
                 else string.format("Now: %s (%d:%02d left)", name, left // 60, left % 60)
+        end
+        if panel.Visible then
+            cullInfo.Text = string.format("%s: %s props, %s parts (budget %s, radius %s)\nInstances: %d", tostring(player:GetAttribute("CullClass") or "?"),
+                tostring(player:GetAttribute("CullProps") or "?"), tostring(player:GetAttribute("CullParts") or "?"),
+                tostring(player:GetAttribute("CullBudget") or "?"), tostring(player:GetAttribute("CullRadius") or "?"), game:GetService("Stats").InstanceCount)
         end
         task.wait(.5)
     end

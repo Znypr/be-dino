@@ -58,7 +58,7 @@ local migrated=Rules.upgrade(legacy)
 assert(migrated.crystals==700 and migrated.auras.meadow and migrated.equippedTrail=="white")
 assert(not Rules.apply(legacy,"equipTrail","nova",0,false))
 assert(not Rules.apply(legacy,"buyTrail","nova",0,false))
-migrated.accountXP=193600 migrated.crystals=5600
+migrated.accountXP=193600 migrated.crystals=6200
 assert(Rules.apply(legacy,"buyTrail","nova",0,false) and migrated.crystals==100)
 assert(not Rules.apply(legacy,"buyTrail","nova",0,false) and migrated.crystals==100)
 assert(Rules.apply(legacy,"equipTrail","nova",0,false))
@@ -801,12 +801,12 @@ local Clock=CLOCK_MODULE
 local choiceCount=0
 local function choose()choiceCount+=1 return ProgressionConfig.Weather[2]end
 local clock=Clock.new(100)
-assert(not Clock.step(clock,699,choose) and choiceCount==0 and clock.current==nil)
-assert(Clock.step(clock,700,choose) and choiceCount==1 and clock.endsAt==880)
-assert(not Clock.step(clock,879,choose) and choiceCount==1)
-assert(Clock.step(clock,880,choose) and clock.current==nil and clock.nextAt==1480)
-assert(Clock.step(clock,1480,choose) and choiceCount==2)
-print("Weather clock passed: hidden choice until start, 600s clear interval, 180s event and end cleanup")
+assert(not Clock.step(clock,399,choose) and choiceCount==0 and clock.current==nil)
+assert(Clock.step(clock,400,choose) and choiceCount==1 and clock.endsAt==580)
+assert(not Clock.step(clock,579,choose) and choiceCount==1)
+assert(Clock.step(clock,580,choose) and clock.current==nil and clock.nextAt==880)
+assert(Clock.step(clock,880,choose) and choiceCount==2)
+print("Weather clock passed: hidden choice until start, 300s clear interval, 180s event and end cleanup")
 local function vec(x,y,z)
  return setmetatable({X=x,Y=y,Z=z},{__add=function(a,b)return vec(a.X+b.X,a.Y+b.Y,a.Z+b.Z)end,__sub=function(a,b)return vec(a.X-b.X,a.Y-b.Y,a.Z-b.Z)end,__mul=function(a,b)return vec(a.X*b,a.Y*b,a.Z*b)end,__index=function(a,k)if k=="Magnitude" then return math.sqrt(a.X*a.X+a.Y*a.Y+a.Z*a.Z)elseif k=="Unit" then return vec(a.X/a.Magnitude,a.Y/a.Magnitude,a.Z/a.Magnitude)end end})
 end
