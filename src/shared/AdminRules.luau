@@ -11,7 +11,7 @@ local settings: {[string]: Setting} = {
     speedMultiplier = {label = "Run speed", min = 0.5, max = 3, step = 0.25, default = 1},
     -- "Feel" tuning (runtime only). Defaults mirror Config so Reset restores the shipped feel.
     gravity = {label = "Gravity", min = 150, max = 400, step = 10, default = 250, group = "feel", unit = ""},
-    jumpPower = {label = "Jump power", min = 40, max = 90, step = 2, default = 56, group = "feel", unit = ""},
+    jumpPower = {label = "Jump power", min = 40, max = 90, step = 2, default = 50, group = "feel", unit = ""},
     moveResponsiveness = {label = "Turn/stop responsiveness", min = 0.5, max = 2, step = 0.25, default = 1, group = "feel"},
     turnLean = {label = "Turn lean", min = 0, max = 3, step = 0.25, default = 1, group = "feel"},
     leapSpeed = {label = "Leap speed", min = 0.5, max = 1.5, step = 0.1, default = 1, group = "feel"},
