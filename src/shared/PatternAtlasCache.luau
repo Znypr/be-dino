@@ -30,6 +30,14 @@ function Cache.free(self): number
     for _,entry in self.entries do if entry.refs<=0 then n+=1 end end
     return n
 end
+-- New images a set of keys would cost: distinct keys that are not already live (shared keys are free).
+function Cache.need(self,keys:{string}): number
+    local seen,n={},0
+    for _,key in keys do
+        if not seen[key] then seen[key]=true;if not self.entries[key] then n+=1 end end
+    end
+    return n
+end
 function Cache.evictOne(self): boolean
     local victim:Entry?=nil
     for _,entry in self.entries do

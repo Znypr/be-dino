@@ -34,33 +34,42 @@ assert(c:hasRoom(),"w4 still warm -> room")
 c:release(es[1]);c:release(es[3]);c:release(es[5]);c:release(n)
 for i=1,20 do assert(paint(c,"x"..i),"warm entries always make room");c:release(c.entries["x"..i]) end
 assert(c.live<=5)
--- 3. 12 distinct 7-part legacy dinos on cap 30: all-or-nothing per dino (free() check): 4 fully textured, 8 fully
---    flat, never half; freeing a dino lets a flat one upgrade whole.
+-- 3. ONE image per dino (legacy dinos texture only their primary part; the other 6 parts are tinted neutral textures
+--    that cost no EditableImage): 30 distinct patterned dinos of any species fit, the 31st is flat (never over cap),
+--    and a flat dino upgrades after one leaves.
 c=new(30)
-local texturedDinos,flatDinos,held=0,0,{}
+local held,flatDinos={},0
 local function dino(d)
-    if c:free()<7 then return false end
-    local mine={}
-    for p=1,7 do table.insert(mine,assert(paint(c,"dino"..d.."|part"..p))) end
-    held[d]=mine;return true
+    local key="dino"..d.."|primary"
+    if c:need({key})>c:free() then return false end
+    held[d]=assert(paint(c,key));return true
 end
-for d=1,12 do if dino(d) then texturedDinos+=1 else flatDinos+=1 end end
-assert(c.live<=30 and texturedDinos==4 and flatDinos==8,"tex "..texturedDinos.." flat "..flatDinos)
-for _,e in held[1] do c:release(e) end
-assert(c:free()>=7 and dino(5),"flat dino upgrades whole after a dino leaves")
--- warm dino 1 is evicted as needed; 20 more cycles never exceed the cap
-for d=13,40 do local ok=dino(d);if ok then for _,e in held[d] do c:release(e) end end assert(c.live<=30) end
+for d=1,40 do if not dino(d) then flatDinos+=1 end end
+assert(c.live==30 and flatDinos==10,"live "..c.live.." flat "..flatDinos)
+c:release(held[1]);assert(dino(41),"flat dino upgrades after a dino leaves")
+for d=42,80 do local ok=dino(d);if ok then c:release(held[d]) end assert(c.live<=30) end
+-- need(): distinct keys not already live; shared keys are free (the old per-part count over-counted a 7-part dino as 7)
+c=new(30);paint(c,"a")
+assert(c:need({"a","b","b","c"})==2,"a is live, b and c are new (b counted once)")
+assert(c:need({})==0 and c:need({"a","a"})==0)
+-- need() vs old over-count: a legacy dino costs 1, not its 7 parts
+assert(c:need({"legacy|x"})==1)
 -- 4. identical copies cost nothing: 40 dinos of one gene = 7 images
 c=new(30)
-for d=1,40 do for p=1,7 do paint(c,"same|part"..p) end end
-assert(c.live==7 and c.hits==40*7-7)
-local s=c:stats();assert(s.cap==30 and s.pinned==7 and s.warm==0)
+for d=1,40 do paint(c,"same|primary") end
+assert(c.live==1 and c.hits==39)
+local s=c:stats();assert(s.cap==30 and s.pinned==1 and s.warm==0)
 -- 5. remove drops dead entries
 c=new(2);local r=paint(c,"r");c:remove(r);assert(c.live==0)
-print("Pattern atlas cache passed: sharing, refcount, warm LRU, hard cap, 12-dino degradation, upgrade after release")
+print("Pattern atlas cache passed: sharing, refcount, warm LRU, hard cap, need-count, 30-dino one-image-each, upgrade after release")
 '''
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--runner',required=True);args=p.parse_args()
+    src=(ROOT/'src/shared/PatternGenes.luau').read_text()
+    for needle in ('primaryOf(part)~=part','atlas:need({sharedKey})','Textures.apply(part)','PatternLOD","tint"'):
+        assert needle in src,'PatternGenes lost the one-image-per-dino rule: '+needle
+    assert 'groupFlat' not in src and '#groupParts' not in src,'old per-part over-count returned'
+    assert 'Cache.new(30,' in src,'hard cap must stay 30'
     with tempfile.TemporaryDirectory() as f:
         path=Path(f)/'atlas.luau';path.write_text(LUA)
         raise SystemExit(subprocess.run([args.runner,str(path)]).returncode)
