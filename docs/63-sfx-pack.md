@@ -1,5 +1,7 @@
 # 63 - Original SFX pack
 
+> **Feel rule (2026-10-15):** sounds must be soft, calm and bubbly, never loud or sharp. See [docs/87](87-vision-and-feel-guide.md); it wins over older loudness values here.
+
 All sounds are synthesized by `tools/generate_sfx.py` (numpy: envelopes, filtered noise, FM/additive tones, small reverb tails). No samples or third-party audio are used, so the pack is original work. Output: 17 mono 16-bit 44.1 kHz WAVs (~1.5 MB total, each 0.05-2.5 s, peak about -3 dBFS, faded edges) plus `assets/audio/sfx/manifest.json` (duration, peak, suggested volume, suggested rate jitter, trigger). Overview image: `docs/evidence/2026-10-14-sfx-pack/sfx-overview.png`.
 
 Regenerate: `python tools/generate_sfx.py` (seeded, `--seed N` to vary). Verify: `python tools/generate_sfx.py --check` (CI) and `tests/test_sfx_pack.py`.

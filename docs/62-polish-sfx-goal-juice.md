@@ -1,5 +1,7 @@
 # 62 Polish: SFX hooks, next-goal HUD line, reveal juice
 
+> **Feel rule (2026-10-15):** sounds must be soft, calm and bubbly, never loud or sharp. See [docs/87](87-vision-and-feel-guide.md); it wins over older loudness values here.
+
 Follows the readiness audit (doc 61, items 2, 4, 5, 10, 11, 15). All numbers and sound ids are PROVISIONAL.
 
 ## What was added
