@@ -31,7 +31,7 @@ if not Lighting:FindFirstChildOfClass("Atmosphere") then
     atmosphere.Parent = Lighting
 end
 require(script.Parent.ImportedResources).load()
-require(script.Parent.PotionModels).load() -- BD-214 textured potion models for menu ViewportFrames
+-- BD-214 3D potion models are dormant (owner 2026-10-16: 2D icons in PotionArt.Images replace them); PotionModels.load() no longer runs
 if Config.WorldArtMode=="BiomeKit" or Config.FoodArtMode=="Kit" then require(script.Parent.ImportedResources).loadWorldKit() end
 Arena.build()
 Leaderboards.start()
