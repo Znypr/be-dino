@@ -16,10 +16,10 @@ M.StageRank = {base = 0, gold = 1, emerald = 2, diamond = 3}
 M.SortKeys = {"rarest", "recent", "color", "pattern", "species"}
 M.SortLabels = {rarest = "Rarest", recent = "Newest", color = "Color", pattern = "Pattern", species = "Species"}
 -- Filter groups in sheet order. Every field must exist in Sel.FilterFields. shiny/big are single "yes" chips.
-M.FilterGroups = {"colorId", "patternId", "mutationId", "shiny", "big", "stageId", "conditionId"}
+M.FilterGroups = {"colorId", "patternId", "mutationId", "shiny", "big", "stageId"}
 local FIELD = {stageId = "stage"}
 M.GroupLabels = {colorId = "Color", patternId = "Pattern", mutationId = "Mutation", shiny = "Shiny", big = "BIG",
-    stageId = "Stage", conditionId = "Condition"}
+    stageId = "Stage"}
 
 function M.field(group: string): string return FIELD[group] or group end
 
@@ -100,7 +100,7 @@ end
 function M.options(list, catalog)
     local o = Sel.filterOptions(list, catalog)
     local result: {[string]: {any}} = {
-        colorId = o.colorId, patternId = o.patternId, stageId = o.stage, conditionId = o.conditionId,
+        colorId = o.colorId, patternId = o.patternId, stageId = o.stage,
         shiny = {true}, big = {true}, mutationId = {},
     }
     -- Mutation chips: real mutations only ("none" is every other dino and adds nothing).
@@ -117,7 +117,6 @@ function M.valueName(group: string, value, catalog): string
     if group == "colorId" then return Sel.name(catalog, "colors", value) end
     if group == "patternId" then return Sel.name(catalog, "patterns", value) end
     if group == "mutationId" then return Sel.name(catalog, "mutations", value) end
-    if group == "conditionId" then return Sel.name(catalog, "conditions", value) end
     return tostring(value)
 end
 

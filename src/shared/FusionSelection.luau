@@ -23,7 +23,6 @@ end
 -- Above this many slots the menu shows a compact n/N counter grid instead of cards.
 Sel.CompactSlotThreshold = 10
 Sel.LockedStageText = "Recipe not approved yet"
-Sel.ConditionOrder = {"cracked", "dirty", "normal", "rainbow", "astra"}
 
 local function stageInfo(id: string?)
     for _, s in Sel.Stages do if s.id == id then return s end end
@@ -56,7 +55,7 @@ end
 
 function Sel.buildCatalog(config, progression, patterns)
     local catalog = {species = {}, speciesOrder = {}, patterns = {}, patternOrder = {}, colors = {},
-        colorOrder = {}, conditions = {}, mutations = {}, mutationOrder = {}, auras = {}, trails = {}}
+        colorOrder = {}, mutations = {}, mutationOrder = {}, auras = {}, trails = {}}
     for id, name in (config and config.SpeciesDisplayNames) or {} do catalog.species[id] = name end
     -- Base odds of ONE purchased egg (no run boost): species by weight, patterns equally likely, colors per slot by weight.
     catalog.speciesPct, catalog.speciesRarity, catalog.patternPct, catalog.colorPct = {}, {}, {}, {}
@@ -74,7 +73,6 @@ function Sel.buildCatalog(config, progression, patterns)
     for i, id in (config and config.SpeciesOrder) or {} do catalog.speciesOrder[id] = i end
     for i, id in patterns or {} do catalog.patterns[id] = Sel.patternName(id) catalog.patternOrder[id] = i end
     for i, row in (progression and progression.EggColors) or {} do catalog.colors[row.id] = row.name catalog.colorOrder[row.id] = i end
-    for _, row in (progression and progression.Conditions) or {} do catalog.conditions[row.id] = row.name end
     for i, row in (progression and progression.EventMutations) or {} do catalog.mutations[row.id] = row.name catalog.mutationOrder[row.id] = i end
     for _, row in (progression and progression.Auras) or {} do catalog.auras[row.id] = row.name end
     for _, row in (progression and progression.Trails) or {} do catalog.trails[row.id] = row.name end
@@ -165,7 +163,7 @@ end
 
 -- Filters --------------------------------------------------------------------------
 -- filters fields (all optional): speciesId, patternId, stage, colorId (either gene),
--- conditionId, shiny (bool), big (bool), mutationId ("none" or id), originKind,
+-- shiny (bool), big (bool), mutationId ("none" or id), originKind,
 -- cosmetics ("has" | "none" | "equipped").
 function Sel.matches(d, filters): boolean
     if not filters then return true end
@@ -174,7 +172,6 @@ function Sel.matches(d, filters): boolean
     if filters.patternId ~= nil and g.patternId ~= filters.patternId then return false end
     if filters.stage ~= nil and d.stage ~= filters.stage then return false end
     if filters.colorId ~= nil and g.primaryColorId ~= filters.colorId and g.secondaryColorId ~= filters.colorId then return false end
-    if filters.conditionId ~= nil and g.conditionId ~= filters.conditionId then return false end
     if filters.shiny ~= nil and (d.shiny == true) ~= filters.shiny then return false end
     if filters.big ~= nil and (d.big == true) ~= filters.big then return false end
     if filters.mutationId ~= nil and mutationOf(d) ~= filters.mutationId then return false end
@@ -192,7 +189,7 @@ function Sel.filter(dinos, filters)
 end
 
 -- Distinct values present in the list, for the cycling filter chips.
-Sel.FilterFields = {"speciesId", "patternId", "stage", "colorId", "conditionId", "shiny", "big", "mutationId", "originKind", "cosmetics"}
+Sel.FilterFields = {"speciesId", "patternId", "stage", "colorId", "shiny", "big", "mutationId", "originKind", "cosmetics"}
 function Sel.filterOptions(dinos, catalog)
     local seen = {}
     for _, field in Sel.FilterFields do seen[field] = {} end
@@ -203,7 +200,6 @@ function Sel.filterOptions(dinos, catalog)
         seen.stage[d.stage or ""] = true
         if g.primaryColorId then seen.colorId[g.primaryColorId] = true end
         if g.secondaryColorId then seen.colorId[g.secondaryColorId] = true end
-        if g.conditionId then seen.conditionId[g.conditionId] = true end
         seen.mutationId[mutationOf(d)] = true
         if d.originKind then seen.originKind[d.originKind] = true end
     end
@@ -214,8 +210,7 @@ function Sel.filterOptions(dinos, catalog)
         for value in seen[field] do if value ~= "" then table.insert(list, value) end end
         local rank = catalog and order[field] and catalog[order[field]] or {}
         table.sort(list, function(a, b)
-            local ra, rb = rank[a] or (if field == "conditionId" then table.find(Sel.ConditionOrder, a) else nil) or 999,
-                rank[b] or (if field == "conditionId" then table.find(Sel.ConditionOrder, b) else nil) or 999
+            local ra, rb = rank[a] or 999, rank[b] or 999
             if ra ~= rb then return ra < rb end
             return tostring(a) < tostring(b)
         end)
@@ -241,14 +236,13 @@ end
 -- Natural-trait rarity score. Cosmetics are deliberately EXCLUDED (BD-062).
 function Sel.rarityScore(d): number
     local g = genes(d)
-    local condition = table.find(Sel.ConditionOrder, g.conditionId or "") or 0
     return (if d.shiny == true then 40 else 0) + (if mutationOf(d) ~= "none" then 30 else 0)
-        + (if d.big == true then 20 else 0) + condition
+        + (if d.big == true then 20 else 0)
 end
 
-Sel.SortKeys = {"eligible", "rarest", "species", "pattern", "color", "condition", "recent", "selected"}
+Sel.SortKeys = {"eligible", "rarest", "species", "pattern", "color", "recent", "selected"}
 Sel.SortNames = {eligible = "Eligible first", rarest = "Rarest", species = "Species", pattern = "Pattern",
-    color = "Color", condition = "Condition", recent = "Newest", selected = "Selected first"}
+    color = "Color", recent = "Newest", selected = "Selected first"}
 
 function Sel.sort(dinos, key: string, ctx, selectedSet, catalog)
     local list = table.clone(dinos)
@@ -267,7 +261,6 @@ function Sel.sort(dinos, key: string, ctx, selectedSet, catalog)
         elseif key == "species" then x, y = speciesRank[a.speciesId] or 999, speciesRank[b.speciesId] or 999
         elseif key == "pattern" then x, y = tostring(ga.patternId or "~"), tostring(gb.patternId or "~")
         elseif key == "color" then x, y = colorRank[ga.primaryColorId] or 999, colorRank[gb.primaryColorId] or 999
-        elseif key == "condition" then x, y = -(table.find(Sel.ConditionOrder, ga.conditionId or "") or 0), -(table.find(Sel.ConditionOrder, gb.conditionId or "") or 0)
         elseif key == "recent" then x, y = -serial(a.instanceId), -serial(b.instanceId)
         elseif key == "selected" then x, y = if selectedSet[a.instanceId] then 0 else 1, if selectedSet[b.instanceId] then 0 else 1 end
         if x ~= nil and x ~= y then return x < y end
@@ -451,14 +444,13 @@ function Sel.traitRows(odds, trait: string, catalog)
     elseif trait == "mutation" then
         return mapRows(odds.mutation, catalog, "mutations", if type(odds.noMutation) == "number"
             then {id = "none", label = "No mutation", p = odds.noMutation} else nil)
-    elseif trait == "condition" then return mapRows(odds.condition, catalog, "conditions")
     elseif trait == "primaryColor" or trait == "secondaryColor" then return mapRows(odds[trait], catalog, "colors") end
     return {}
 end
 
 Sel.OddsSections = {
     {trait = "shiny", title = "Shiny"}, {trait = "mutation", title = "Event mutation"},
-    {trait = "big", title = "BIG"}, {trait = "condition", title = "Condition"},
+    {trait = "big", title = "BIG"},
     {trait = "primaryColor", title = "Color 1"}, {trait = "secondaryColor", title = "Color 2"},
 }
 -- Returns {ok, sections={{title, trait, rows}}, error?}. Any malformed section makes
@@ -636,7 +628,6 @@ function Sel.revealSequence(quote, result, catalog)
         end
         add("primaryColor", "COLOR 1", g.primaryColorId)
         add("secondaryColor", "COLOR 2", g.secondaryColorId, if type(g.blend) == "number" then ("Blend " .. g.blend .. "% / " .. (100 - g.blend) .. "%") else nil)
-        add("condition", "CONDITION", g.conditionId)
         add("shiny", "SHINY", if traits.shiny then "yes" else "no")
         add("mutation", "MUTATION", if type(traits.mutationId) == "string" and traits.mutationId ~= "" then traits.mutationId else "none")
         add("big", "BIG", if traits.big then "yes" else "no")
@@ -670,7 +661,7 @@ Sel.geneLine = geneLine
 local function eggLine(egg, catalog): string
     if type(egg) ~= "table" then return "Original egg not recorded" end
     local g = egg.genes or {}
-    local parts = {lookup(catalog, "patterns", g.patternId), geneLine(g, catalog), lookup(catalog, "conditions", g.conditionId, "Unknown condition")}
+    local parts = {lookup(catalog, "patterns", g.patternId), geneLine(g, catalog)}
     if type(egg.eventId) == "string" and egg.eventId ~= "" and egg.eventId ~= "clear" then table.insert(parts, "Event: " .. titleCase((string.gsub(egg.eventId, "_", " ")))) end
     table.insert(parts, Sel.EggSourceNames[egg.kind] or (if type(egg.kind) == "string" then titleCase((string.gsub(egg.kind, "_", " "))) else "Unknown source"))
     return table.concat(parts, " • ")

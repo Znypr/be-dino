@@ -443,7 +443,7 @@ assert(quote.consentRequired==(donorDetails.shiny or donorDetails.big or donorDe
 local request={token="repo-fuse-1",targetStage="gold",donorIds=donors,quoteDigest=quote.quoteDigest,consentDigest=quote.consentDigest}
 -- The production PROVISIONAL roller quotes exact odds; an invalid injected roller is
 -- refused before any write.
-assert(quote.oddsVersion=="fusion-odds-provisional-v1" and quote.odds.shiny==(if donorDetails.shiny then 0.5 else 0))
+assert(quote.oddsVersion=="fusion-odds-provisional-v2" and quote.odds.shiny==(if donorDetails.shiny then 0.5 else 0))
 assert(LocalRepository.setFusionTestRoller({}))
 local okNoOdds,_,noOdds=LocalRepository.fuseDinosaurs(localUser,request)
 assert(not okNoOdds and noOdds=="odds_not_approved" and LocalRepository.dinosaurDetails(localUser,donors[1]))
@@ -451,7 +451,7 @@ local rolls=0
 assert(LocalRepository.setFusionTestRoller({version="repo-test-v1",roll=function(_,patternId)
  rolls+=1
  -- Controlled test outcome: schema-valid genes with a distinguishable blend, no odds.
- local g=table.clone(donorDetails.genes) g.patternId=patternId g.blend=(g.blend+37)%100
+ local g=table.clone(donorDetails.genes) g.patternId=patternId g.conditionId=nil g.blend=(g.blend+37)%100
  return {big=false,shiny=false,mutationId="",genes=g}
 end}))
 -- Client-supplied stale digest and wrong-owner IDs are refused.
@@ -491,6 +491,8 @@ assert(gold.stage=="gold" and gold.origin.kind=="fusion" and gold.genes.blend==(
 assert(gold.genes.patternId==donorDetails.genes.patternId and next(gold.cosmetics.ownedAuraIds)==nil)
 assert(#gold.lineage.parentIds==15 and next(gold.lineage.parentEggs)~=nil)
 for _,egg in gold.lineage.parentEggs do assert(egg.genes.patternId==donorDetails.genes.patternId) end
+assert(gold.genes.conditionId==nil,"fused dinosaur stores no condition")
+for _,egg in gold.lineage.parentEggs do assert(egg.genes.conditionId~=nil,"parent egg condition stays retrievable") end
 -- Duplicate confirm: same result, no reroll, no second consumption.
 local dupOk,dupResult,dupStatus=LocalRepository.fuseDinosaurs(localUser,request)
 assert(dupOk and dupStatus=="duplicate" and dupResult.resultId==committed.resultId and rolls==1 and goldCount()==goldBefore+1)
@@ -572,7 +574,7 @@ end
 local donors={table.unpack(hatched,1,15)}
 local donors2={table.unpack(hatched,16,30)}
 local quote=assert(PersistentRepository.quoteFusion(pu,"gold",donors))
-assert(quote.oddsVersion=="fusion-odds-provisional-v1" and quote.odds.primaryColor[quote.summary.colors[1].primaryColorId]==1)
+assert(quote.oddsVersion=="fusion-odds-provisional-v2" and quote.odds.primaryColor[quote.summary.colors[1].primaryColorId]==1)
 local request={token="persist-1",targetStage="gold",donorIds=donors,quoteDigest=quote.quoteDigest,consentDigest=quote.consentDigest}
 local function donorsIntact(list) for _,id in list do if not data[KEY].dinosaurIdentity.instances[id] then return false end end return true end
 -- Outage: nothing consumed, ProfileState SaveFailed; recover by reload.
@@ -598,11 +600,11 @@ assert(data[KEY].dinosaurIdentity.fusions==nil)
 -- Success with the production PROVISIONAL roller (mocked Random): deterministic traits.
 local goldBefore=data[KEY].collection.raptor.gold
 local okF,committed,status=PersistentRepository.fuseDinosaurs(pu,request)
-assert(okF and status=="fused" and committed.oddsVersion=="fusion-odds-provisional-v1",tostring(status))
+assert(okF and status=="fused" and committed.oddsVersion=="fusion-odds-provisional-v2",tostring(status))
 assert(data[KEY].collection.raptor.gold==goldBefore+1)
 for _,id in donors do assert(data[KEY].dinosaurIdentity.instances[id]==nil) end
 local stored=data[KEY].dinosaurIdentity.instances[committed.resultId]
-assert(stored and stored.stage=="gold" and stored.origin.oddsVersion=="fusion-odds-provisional-v1")
+assert(stored and stored.stage=="gold" and stored.origin.oddsVersion=="fusion-odds-provisional-v2")
 assert(stored.genes.hatchSuccess==true and stored.genes.patternId==quote.patternId and stored.shiny==false)
 assert(data[KEY].dinosaurIdentity.fusions["fusion:persist-1"].outcome.resultId==committed.resultId)
 local dupOk,dup,dupStatus=PersistentRepository.fuseDinosaurs(pu,request)
@@ -715,8 +717,8 @@ assert(invoke({action="details",instanceId="u:1/d:1"}).reason=="donor_missing")
 local q=invoke({action="quote",targetStage="gold",donorIds=donors2})
 assert(q.ok and keys(q)=="ok,quote")
 assert(keys(q.quote)=="consentDigest,consentRequired,donorIds,lossManifest,odds,oddsVersion,patternId,quoteDigest,recipeVersion,speciesId,targetStage")
-assert(keys(q.quote.odds)=="big,condition,mutation,noMutation,primaryColor,secondaryColor,shiny")
-assert(q.quote.oddsVersion=="fusion-odds-provisional-v1" and q.quote.odds.noMutation==1)
+assert(keys(q.quote.odds)=="big,mutation,noMutation,primaryColor,secondaryColor,shiny")
+assert(q.quote.oddsVersion=="fusion-odds-provisional-v2" and q.quote.odds.noMutation==1)
 local foreignIds=table.clone(donors2) foreignIds[1]="u:1/d:1"
 assert(invoke({action="quote",targetStage="gold",donorIds=foreignIds}).reason=="wrong_owner")
 assert(invoke({action="quote",targetStage="emerald",donorIds=donors2}).reason=="wrong_donor_count") -- Emerald is approved: 4 Gold, not 15 Base
@@ -727,7 +729,7 @@ assert(invoke({action="fuse",token="remote-0",targetStage="gold",donorIds=donors
 local fused=invoke(fuseReq)
 assert(fused.ok and fused.status=="fused" and keys(fused)=="ok,result,status")
 assert(keys(fused.result)=="oddsVersion,patternId,resultId,speciesId,targetStage,traits")
-assert(keys(fused.result.traits)=="big,genes,mutationId,shiny" and fused.result.oddsVersion=="fusion-odds-provisional-v1")
+assert(keys(fused.result.traits)=="big,genes,mutationId,shiny" and fused.result.oddsVersion=="fusion-odds-provisional-v2")
 local again=invoke(fuseReq)
 assert(again.ok and again.status=="duplicate" and again.result.resultId==fused.result.resultId)
 local reuse=table.clone(fuseReq) reuse.token="remote-2"
