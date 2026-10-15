@@ -7,6 +7,7 @@
 | What are you trying to learn or change? | Canonical place | Ground truth / scope |
 | --- | --- | --- |
 | Overall player experience and long-term goals | [README](../README.md), [game design](03-game-design.md), [reward target](09-reward-economy.md) | Latest owner intent, **not** proof of implementation |
+| Feel, tone, sound, look and motion rules | [87-vision-and-feel-guide.md](87-vision-and-feel-guide.md) | Owner vision: calm, bubbly, friendly; applies to everything players see/hear |
 | AI/contributor behavior | [AGENTS.md](../AGENTS.md) | Read before planning or editing |
 | Tasks, priorities, dependencies and **status** | **[07-kanban.md](07-kanban.md)** | The **single live task board**; never maintain a competing board |
 | Detailed owner feedback: UI, shops, 3D assets, movement, weather | [45-owner-feedback-shop-hud-world-weather-tasks.md](45-owner-feedback-shop-hud-world-weather-tasks.md) | Acceptance details for **BD-045–056**; do not mirror status here |
