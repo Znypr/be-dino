@@ -68,6 +68,11 @@ end
 local pw={} for i=1,5 do pw[i]=Progression.PotionShop.RarityWeights[Progression.PotionShop.Rarities[i]] end
 local ps=sum(pw) local pc={} for i=1,5 do pc[i]=pw[i]/ps near(pc[i],w5[i],.03) end
 ladder("PotionShop",pc)
+-- 6b. Potion prices: cheapest potion of tier k is Curve.price(k,20); others in the tier stay within 1.5x of it.
+local cheapest={}
+for _,p in Progression.Potions do local t=assert(Curve.index(p.rarity)) if not cheapest[t] or p.price<cheapest[t] then cheapest[t]=p.price end end
+for t,price in cheapest do assert(price==Curve.price(t,20),"potion tier "..t.." price "..price) end
+for _,p in Progression.Potions do assert(p.price<=cheapest[Curve.index(p.rarity) :: number]*1.6) end
 -- 7. Auras and trails: price by tier follows x2.8; ids kept.
 local seenTier=-1
 for _,aura in Progression.Auras do
@@ -84,20 +89,21 @@ for i,trail in Progression.Trails do
  if i>2 then assert(trail.price>Progression.Trails[i-1].price) end
 end
 for t=1,5 do if firstOfTier[t] and firstOfTier[t-1] then local r=firstOfTier[t]/firstOfTier[t-1] assert(r>2.6 and r<2.95,"trail tier factor") end end
--- 8. Weather frequency: tier totals follow the five-tier ladder; Aurora is the rarest.
-local eventTier={} local wt=0
-for _,e in Progression.Weather do local t=assert(Curve.index(e.rarity),e.id) eventTier[t+1]=(eventTier[t+1] or 0)+e.weight wt+=e.weight end
-local ec={} for i=1,5 do ec[i]=eventTier[i]/wt near(ec[i],w5[i],.03) end
-ladder("Weather",ec)
+-- 8. Weather frequency is a DOCUMENTED EXCEPTION to the ladder (lead decision 2026-10-15, docs/88: weather is a show, not loot).
+-- Labels follow the tiers and every event in a higher tier is strictly rarer than every event in a lower tier; weights total 100.
+local wt=0 local tierOf={}
+for _,e in Progression.Weather do tierOf[e.id]=assert(Curve.index(e.rarity),e.id) wt+=e.weight end
+assert(wt==100,"weather weights must total 100")
+for _,a in Progression.Weather do for _,b in Progression.Weather do if tierOf[a.id]<tierOf[b.id] then assert(a.weight>b.weight,a.id.." must be more frequent than "..b.id) end end end
 local byId={} for _,e in Progression.Weather do byId[e.id]=e end
 assert(byId.rain.rarity=="Common" and byId.thunder.rarity=="Common" and byId.quake.rarity=="Uncommon" and byId.blizzard.rarity=="Uncommon" and byId.volcano.rarity=="Rare" and byId.bloodmoon.rarity=="Epic" and byId.aurora.rarity=="Legendary")
 for _,e in Progression.Weather do if e.id~="aurora" then assert(byId.aurora.weight<e.weight) end end
 local cycle=Progression.WeatherInterval+Progression.WeatherDuration
 local perHour=3600/cycle
 assert(perHour*.5>=3.5,"a 30 minute session must see 3-4 events on average")
--- P(at least 3 events in a 30 minute session) under independent cycles: events are a deterministic count (cycle-driven).
+assert(byId.aurora.weight/wt*perHour>=1/3,"Aurora must appear at least every 3 hours of play")
 local auroraP=byId.aurora.weight/wt
-print(string.format("Rarity passed: ladder %.4f/%.4f/%.4f/%.4f/%.4f/%.4f%%; colours, BIG/Shiny, potions, auras, trails, weather follow it",w6[1]*100,w6[2]*100,w6[3]*100,w6[4]*100,w6[5]*100,w6[6]*100))
+print(string.format("Rarity passed: ladder %.4f/%.4f/%.4f/%.4f/%.4f/%.4f%%; colours, BIG/Shiny, potion odds and prices, auras, trails follow it; weather is a documented exception",w6[1]*100,w6[2]*100,w6[3]*100,w6[4]*100,w6[5]*100,w6[6]*100))
 print(string.format("Weather cadence: cycle %ds = %.2f events/hour; 30 min = %.1f events, 60 min = %.1f; Aurora every %.0f hours (%.4f%% per event), Blood Moon every %.0f h, Volcano every %.1f h",cycle,perHour,perHour/2,perHour,1/(perHour*auroraP),auroraP*100,1/(perHour*byId.bloodmoon.weight/wt),1/(perHour*byId.volcano.weight/wt)))
 '''
 def script():

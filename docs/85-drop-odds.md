@@ -91,17 +91,17 @@ Each egg has **two** color slots rolled independently. Tier chances come from th
 
 ## Weather events (how often each is chosen)
 
-A new event starts after `WeatherInterval` 300 s of clear sky and lasts `WeatherDuration` 180 s: one event every 480 s = **7.5 events per hour** (3.8 in a 30 minute session). Tier split uses the five-tier ladder; two events in a tier share it.
+A new event starts after `WeatherInterval` 300 s of clear sky and lasts `WeatherDuration` 180 s: one event every 480 s = **7.5 events per hour** (3.8 in a 30 minute session). **Weather is an exception to the ladder** (weather is a show, not loot): labels follow the tiers and a higher tier is always rarer, but the weights are flat enough that every event is seen regularly (docs/88).
 
 | Event | Tier | Chance per event | About one every |
 |---|---|---:|---:|
-| Rain | Common | 40.01% | 20 min |
-| Thunderstorm | Common | 40.01% | 20 min |
-| Blizzard | Uncommon | 8.003% | 100 min |
-| Volcanic Bloom | Rare | 3.201% | 4 hours |
-| Northern Lights | Legendary | 0.128% | 104 hours |
-| Earthquake | Uncommon | 8.003% | 100 min |
-| Blood Moon | Epic | 0.6402% | 21 hours |
+| Rain | Common | 24% | 33 min |
+| Thunderstorm | Common | 22% | 36 min |
+| Blizzard | Uncommon | 15% | 53 min |
+| Volcanic Bloom | Rare | 10% | 80 min |
+| Northern Lights | Legendary | 6% | 2 hours |
+| Earthquake | Uncommon | 15% | 53 min |
+| Blood Moon | Epic | 8% | 100 min |
 
 ## Potion shop (rarity of each offer slot)
 

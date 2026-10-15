@@ -17,6 +17,7 @@ for _,e in Progression.Weather do out("WEATHER",e.name,e.rarity,100*e.weight/tot
 out("CYCLE",Progression.WeatherInterval,Progression.WeatherDuration)
 local pw=0 for _,r in Progression.PotionShop.Rarities do pw+=Progression.PotionShop.RarityWeights[r] end
 for _,r in Progression.PotionShop.Rarities do out("POTION",r,100*Progression.PotionShop.RarityWeights[r]/pw) end
+for _,po in Progression.Potions do out("POTIONPRICE",po.name,po.rarity,po.price) end
 for _,a in Progression.Auras do out("AURA",a.name,a.rarity,a.price) end
 for _,t in Progression.Trails do out("TRAIL",t.name,t.rarity,t.price) end
 '''
@@ -62,7 +63,7 @@ def render(rows):
     iv,du=[int(x) for x in g('CYCLE')[0]]
     cycle=iv+du;perh=3600/cycle
     L.append('\n## Weather events (how often each is chosen)\n')
-    L.append(f'A new event starts after `WeatherInterval` {iv} s of clear sky and lasts `WeatherDuration` {du} s: one event every {cycle} s = **{perh:.1f} events per hour** ({perh/2:.1f} in a 30 minute session). Tier split uses the five-tier ladder; two events in a tier share it.\n')
+    L.append(f'A new event starts after `WeatherInterval` {iv} s of clear sky and lasts `WeatherDuration` {du} s: one event every {cycle} s = **{perh:.1f} events per hour** ({perh/2:.1f} in a 30 minute session). **Weather is an exception to the ladder** (weather is a show, not loot): labels follow the tiers and a higher tier is always rarer, but the weights are flat enough that every event is seen regularly (docs/88).\n')
     L.append('| Event | Tier | Chance per event | About one every |\n|---|---|---:|---:|')
     for n,r,p in g('WEATHER'):
         p=float(p);hours=100/(p*perh)

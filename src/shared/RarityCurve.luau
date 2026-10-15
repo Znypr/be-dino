@@ -38,7 +38,7 @@ end
 -- Price of tier k from a Common base price, rounded to two significant figures (60 -> 60,170,470,1300,3700,10000).
 function Curve.price(tier: number, base: number, factor: number?): number
     local raw = base * (factor or Curve.PriceFactor) ^ tier
-    if raw < 100 then return math.floor(raw / 10 + .5) * 10 end
+    if raw < 10 then return math.floor(raw + .5) end
     local magnitude = 10 ^ (math.floor(math.log10(raw)) - 1)
     return math.floor(raw / magnitude + .5) * magnitude
 end
