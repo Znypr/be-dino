@@ -1,6 +1,13 @@
 # 97 Dino skins (owner idea, 2026-10-15)
 
-**Status: design proposal, not implemented.** Owner direction: every dino has one BASE look (cartoon style, generated with Roblox's mesh generator) and players can buy SKINS that restyle the same dino in a different material world. Each skin has its own personality, including how the dino "falls" when it loses a run.
+**Status: owner decisions 2026-10-16 recorded below; implementation not started.**
+
+## Owner decisions (2026-10-16)
+- **Base look for all dinos: LOW-POLY** (faceted, flat-shaded, made with Roblox's mesh generator, split into body parts for animation). First 3 species in development: Compy, Raptor, Triceratops.
+- **Unlockable skins (crystals or a season pass, to decide):** Animated-movie style and Anime style.
+- **Robux skins in the shop:** Bricks (toy-brick style, falls apart on defeat), Clay (squishes flat), Plushy (deflates).
+- 3D AI-generated potions replaced by owner-made 2D ChatGPT potion icons (glass look).
+ Owner direction: every dino has one BASE look (cartoon style, generated with Roblox's mesh generator) and players can buy SKINS that restyle the same dino in a different material world. Each skin has its own personality, including how the dino "falls" when it loses a run.
 
 ## Skins (first set)
 | Skin | Look | Defeat animation (kid friendly, funny, never violent) | Idle/move flavour |
