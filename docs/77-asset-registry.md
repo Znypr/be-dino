@@ -107,3 +107,9 @@ The 17-sound pack from `assets/audio/sfx/` (synthesized placeholders by `tools/g
 | sfx_ui_click | sound | assets/audio/sfx/ui_click.wav | 77237659470894 | src/shared/Sfx.luau | in game |
 | sfx_weather_start | sound | assets/audio/sfx/weather_start.wav | 120619985059497 | src/shared/Sfx.luau | in game |
 | paint_bucket | UI icon (planned) | resources/ui/v2/icons/paint-bucket-v1.png | - | src/client/HatchSequence.luau (reads Theme.ImageIds.paint_bucket; PLACEHOLDER UI-shape bucket until bound) | planned (docs/83 item 31) |
+| fx_glowPlate | effect texture (Blender, white on alpha) | resources/effects/fx-v2/glowPlate.png | - (awaiting owner upload) | src/shared/EffectAssets.luau Requested.glowPlate | rendered 2026-10-15, upload pending |
+| fx_ringSoft | effect texture (Blender, white on alpha) | resources/effects/fx-v2/ringSoft.png | - (awaiting owner upload) | src/shared/EffectAssets.luau Requested.ringSoft | rendered 2026-10-15, upload pending |
+| fx_ringShock | effect texture (Blender, white on alpha) | resources/effects/fx-v2/ringShock.png | - (awaiting owner upload) | src/shared/EffectAssets.luau Requested.ringShock | rendered 2026-10-15, upload pending |
+| fx_starFour | effect texture (Blender, white on alpha) | resources/effects/fx-v2/starFour.png | - (awaiting owner upload) | src/shared/EffectAssets.luau Requested.starFour | rendered 2026-10-15, upload pending |
+| fx_ribbonSoft | effect texture (Blender, white on alpha) | resources/effects/fx-v2/ribbonSoft.png | - (awaiting owner upload) | src/shared/EffectAssets.luau Requested.ribbonSoft | rendered 2026-10-15, upload pending |
+| fx_speedLine | effect texture (Blender, white on alpha) | resources/effects/fx-v2/speedLine.png | - (awaiting owner upload) | src/shared/EffectAssets.luau Requested.speedLine | rendered 2026-10-15, upload pending |
