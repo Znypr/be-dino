@@ -6,9 +6,9 @@
 local NextGoal = {}
 -- Mirrors FusionSelection.Stages (docs/58). Callers may pass opts.stages to stay in sync.
 NextGoal.Stages = {
-    {id = "gold", name = "Gold", source = "base", donorCount = 50},
-    {id = "emerald", name = "Emerald", source = "gold", donorCount = 10},
-    {id = "diamond", name = "Diamond", source = "emerald", donorCount = 3},
+    {id = "gold", name = "Gold", source = "base", donorCount = 6, anyPattern = true},
+    {id = "emerald", name = "Emerald", source = "gold", donorCount = 3},
+    {id = "diamond", name = "Diamond", source = "emerald", donorCount = 2},
 }
 
 -- Returns the best in-progress (or ready) fusion goal, or nil.
@@ -22,6 +22,9 @@ function NextGoal.fusion(dinos: any, opts: any)
             if type(d.speciesId) == "string" and type(pattern) == "string" and type(d.stage) == "string" then
                 local key = d.stage .. "|" .. d.speciesId .. "|" .. pattern
                 counts[key] = (counts[key] or 0) + 1
+                -- Any-pattern recipes (Gold) count the whole species.
+                local anyKey = d.stage .. "|" .. d.speciesId .. "|*"
+                counts[anyKey] = (counts[anyKey] or 0) + 1
             end
         end
     end
@@ -29,7 +32,7 @@ function NextGoal.fusion(dinos: any, opts: any)
     for key, count in counts do
         local stageId, species, pattern = string.match(key, "^([^|]*)|([^|]*)|(.*)$")
         for _, stage in stages do
-            if stage.source == stageId then
+            if stage.source == stageId and ((pattern == "*") == (stage.anyPattern == true)) then
                 local have = math.min(count, stage.donorCount)
                 local fraction = have / stage.donorCount
                 local ready = count >= stage.donorCount
@@ -45,9 +48,10 @@ function NextGoal.fusion(dinos: any, opts: any)
     end
     if not best then return nil end
     local label = if opts.speciesName then opts.speciesName(best.species) else best.species
-    local patternLabel = if opts.patternName then opts.patternName(best.pattern) else best.pattern
-    local text = if best.ready then string.format("%s ready: fuse %s %s", best.stage.name, label, patternLabel)
-        else string.format("%s: %d/%d %s %s", best.stage.name, best.have, best.stage.donorCount, label, patternLabel)
+    local patternLabel = if best.pattern == "*" then "" elseif opts.patternName then opts.patternName(best.pattern) else best.pattern
+    patternLabel = if patternLabel == "" then "" else " " .. patternLabel
+    local text = if best.ready then string.format("%s ready: fuse %s%s", best.stage.name, label, patternLabel)
+        else string.format("%s: %d/%d %s%s", best.stage.name, best.have, best.stage.donorCount, label, patternLabel)
     return {kind = "fusion", text = text, fraction = best.fraction, ready = best.ready}
 end
 

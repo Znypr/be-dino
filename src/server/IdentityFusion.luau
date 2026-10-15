@@ -9,20 +9,21 @@
 local Identity = require(script.Parent.DinosaurIdentity)
 
 local Fusion = {}
-Fusion.Version = "bd057-ladder-15-4-2"
+Fusion.Version = "bd057-ladder-6-3-2"
 
--- OWNER DECISION 2026-10-14 (supersedes 50/10/3 of 2026-10-13 and the 10-donor Gold rule; docs/57, docs/58):
--- same species + same pattern at every tier, guaranteed, consumes ALL donors and
--- creates ONE new individual. Gold = 15 Base, Emerald = 4 Gold, Diamond = 2 Emerald.
+-- OWNER DECISION 2026-10-15 (docs/90; supersedes 15/4/2 of 2026-10-14): at about 4 eggs per run the
+-- old ladder was unreachable. Gold = 6 Base of the same SPECIES (any pattern: the Gold takes the
+-- most common donor pattern, ties -> smallest pattern id), Emerald = 3 Gold and Diamond = 2 Emerald,
+-- both same species + same pattern. Guaranteed, consumes ALL donors, creates ONE new individual.
 -- The donor count is per recipe; nothing else may hard-code it.
 Fusion.Ladder = {"base", "gold", "emerald", "diamond"}
 Fusion.Recipes = {
-    gold = {targetStage = "gold", sourceStage = "base", donorCount = 15, version = "gold-same-species-pattern-15-v1"},
-    emerald = {targetStage = "emerald", sourceStage = "gold", donorCount = 4, version = "emerald-same-species-pattern-4-v1"},
-    diamond = {targetStage = "diamond", sourceStage = "emerald", donorCount = 2, version = "diamond-same-species-pattern-2-v1"},
+    gold = {targetStage = "gold", sourceStage = "base", donorCount = 6, anyPattern = true, version = "gold-same-species-6-v2"},
+    emerald = {targetStage = "emerald", sourceStage = "gold", donorCount = 3, version = "emerald-same-species-pattern-3-v2"},
+    diamond = {targetStage = "diamond", sourceStage = "emerald", donorCount = 2, version = "diamond-same-species-pattern-2-v2"},
 }
 -- Largest approved donor count (remote/list bounds derive from this).
-Fusion.MaxDonorCount = 15
+Fusion.MaxDonorCount = 6
 -- Stages the grouped collection can represent. Emerald uses the additive optional
 -- collection[species].emerald counter (nil == 0).
 Fusion.GroupedProjection = {gold = true, emerald = true, diamond = true}
@@ -154,6 +155,7 @@ function Fusion.quote(state, ownerKey: string, targetStage: any, donorIds: any)
 
     local seen, donors = {}, {}
     local speciesId, patternId = nil, nil
+    local patternVotes: {[string]: number} = {}
     for _, id in donorIds do
         if type(id) ~= "string" or #id < 1 or #id > 120 then return nil, "invalid_donor_id" end
         if seen[id] then return nil, "duplicate_donor" end
@@ -171,10 +173,19 @@ function Fusion.quote(state, ownerKey: string, targetStage: any, donorIds: any)
         speciesId = speciesId or instance.speciesId
         patternId = patternId or instance.genes.patternId
         if instance.speciesId ~= speciesId then return nil, "species_mismatch" end
-        if instance.genes.patternId ~= patternId then return nil, "pattern_mismatch" end
+        if not recipe.anyPattern and instance.genes.patternId ~= patternId then return nil, "pattern_mismatch" end
+        patternVotes[instance.genes.patternId] = (patternVotes[instance.genes.patternId] or 0) + 1
         table.insert(donors, instance)
     end
     table.sort(donors, function(a, b) return a.instanceId < b.instanceId end)
+    if recipe.anyPattern then
+        -- Plurality pattern; ties go to the smallest pattern id (deterministic, client mirrors this).
+        local bestId, bestVotes = nil, 0
+        for id, votes in patternVotes do
+            if votes > bestVotes or (votes == bestVotes and bestId ~= nil and id < bestId) then bestId, bestVotes = id, votes end
+        end
+        patternId = bestId
+    end
 
     -- Neutral ingredient facts for a future BD-064 roller. Contains no probabilities.
     local summary = {speciesId = speciesId, patternId = patternId, targetStage = targetStage,

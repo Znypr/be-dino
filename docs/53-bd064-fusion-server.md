@@ -177,4 +177,6 @@ DataStore with repeated transforms):
 - Locked/favorited fields have no setter yet; consent for Shiny/BIG/mutation donors
   remains a working default (BD-057).
 
+> **2026-10-15: the ladder is now 6 / 3 / 2 with an any-pattern Gold ([90](90-fusion-ladder-v2.md)); counts below are history.**
+>
 > **2026-10-14 update:** donor counts are per recipe (15/4/2; 50/10/3 on 2026-10-13), odds normalize by the actual donor count N, `FusionService.MaxDonorIds` is 15: see [58](58-fusion-ladder-50-10-3.md).
