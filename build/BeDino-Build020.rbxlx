@@ -367706,7 +367706,9 @@ local Textures=require(script.Parent.GeneTextures)
 local Appearance={}
 local Patterns=require(script.Parent.PatternGenes)
 local Overlays=require(script.Parent.ConditionOverlays)
-function Appearance.apply(container: Instance,genes)
+-- BD-174: the egg condition (Cracked, Dirty, Rainbow, Astra) belongs to EGG visuals only. Dinosaur models get colours and pattern
+-- but never the condition overlay or material. Callers that draw an egg pass showCondition = true.
+function Appearance.apply(container: Instance,genes,showCondition: boolean?)
     if not genes or not Genetics.valid(genes) then return end
     local tint=Genetics.tint(genes)
     local shell,shellSize=nil,-1
@@ -367726,7 +367728,7 @@ function Appearance.apply(container: Instance,genes)
             end
         end
     end
-    if shell then Overlays.apply(shell,genes.conditionId) end
+    if shell and showCondition==true then Overlays.apply(shell,genes.conditionId) end
 end
 return Appearance
 </ProtectedString>
@@ -368131,9 +368133,10 @@ end
 function L.afterRun(): string
     return "results"
 end
--- After one reveal: back to the Eggs screen unless the player chose "Skip all".
+-- After one reveal (BD-170): Next egg ALWAYS stays inside the opening sequence while eggs remain; only the end of the
+-- batch (or the player closing the screen) goes back to the Eggs screen. skipAll no longer changes that.
 function L.afterReveal(skipAll: boolean, remaining: number): string
-    if skipAll and remaining &gt; 0 then return "continue" end
+    if remaining &gt; 0 then return "continue" end
     return "eggs"
 end
 
@@ -368933,7 +368936,6 @@ function Sel.details(d, catalog)
             {label = "Pattern", value = lookup(catalog, "patterns", g.patternId, "Unknown") .. oddsText(nil, catalog.patternPct and catalog.patternPct[g.patternId])},
             {label = "Colors", value = geneLine(g, catalog)},
             {label = "Color odds", value = colorOdds(g, catalog)},
-            {label = "Condition", value = lookup(catalog, "conditions", g.conditionId, "Unknown")},
             {label = "Shiny", value = if d.shiny then "Yes" else "No"},
             {label = "BIG", value = if d.big then "Yes" else "No"},
             {label = "Mutation", value = lookup(catalog, "mutations", d.mutationId, "None")},
@@ -369193,7 +369195,7 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
     stage.Name,stage.BackgroundTransparency,stage.AnchorPoint="EggLayers",1,Vector2.new(.5,.5)
     stage.Position,stage.Size,stage.ZIndex,stage.Parent=UDim2.fromScale(.5,.5),UDim2.fromOffset(canvas,canvas),root.ZIndex,root
     local scale=Instance.new("UIScale") scale.Parent=stage
-    local tint=if genes and Genetics and Genetics.valid(genes) then Genetics.tint(genes) else Color3.new(1,1,1)
+    local paintTint=Color3.new(1,1,1)
     local function image(parentObject: GuiObject,id: string,z: number)
         local result=Instance.new("ImageLabel")
         result.BorderSizePixel=0
@@ -369201,16 +369203,37 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
         result.ZIndex,result.Parent=z,parentObject
         return result
     end
-    local fallback=ModelPreview.add(root,"egg")
-    fallback.Name="NativeHatchFallback"
-    fallback.ZIndex=root.ZIndex+2
-    Appearance.apply(fallback,genes)
-    local authored=fallback:FindFirstChild("AuthoredBody",true)~=nil
-    root:SetAttribute("ArtworkFallback",true)
+    -- BD-170/171: the egg starts as the plain cream Blender egg image (never a cube, visible at once, colourless, patternless).
+    -- The real 3D egg (authored mesh, carries colour, pattern and condition) is built in the background and only ever shown
+    -- once it is verified; a failed or primitive build is never displayed.
+    root:SetAttribute("ArtworkFallback",false)
     root:SetAttribute("ArtworkLoadState","Loading")
     local shell=image(stage,shellAsset,stage.ZIndex+2)
-    shell.Name,shell.ImageColor3="PorcelainShell",tint
-    shell.Visible=false
+    shell.Name,shell.ImageColor3="PorcelainShell",Color3.new(1,1,1)
+    local egg3d: ViewportFrame?=nil
+    local egg3dReady=false
+    local eggGenes=nil
+    local function applyGenes3d()
+        local view=egg3d
+        if view and egg3dReady and eggGenes and Genetics and Genetics.valid(eggGenes) then Appearance.apply(view,eggGenes,true) end
+    end
+    task.spawn(function()
+        -- Built inside a hidden holder so nothing (not even a half-built or primitive model) can flash on screen.
+        local holder=Instance.new("Frame")
+        holder.Name,holder.BackgroundTransparency,holder.Visible,holder.Size,holder.Parent="EggBuildHolder",1,false,UDim2.fromOffset(268,268),root
+        local view=ModelPreview.add(holder,"egg")
+        if not root.Parent then holder:Destroy() return end
+        local authored=view:FindFirstChild("AuthoredBody",true)~=nil
+        if not authored then holder:Destroy() return end -- the primitive ball/cube fallback is never shown
+        view.Name,view.ZIndex=("NativeHatchEgg"),root.ZIndex+2
+        view.AnchorPoint,view.Position,view.Size=Vector2.new(.5,.5),UDim2.fromScale(.5,.5),UDim2.fromOffset(268,268)
+        view.ImageTransparency,view.Visible=1,false
+        view.Parent=root
+        holder:Destroy()
+        egg3d,egg3dReady=view,true
+        root:SetAttribute("Egg3dReady",true)
+        applyGenes3d()
+    end)
     local crackStages={}
     for i,region in {{210,107,95,128,.68},{151,224,210,83,1.48},{151,306,210,80,2.28}} do
         local mask=Instance.new("Frame")
@@ -369246,10 +369269,9 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
             if status~=Enum.AssetFetchStatus.Success then failed=true end
         end) end)
         if not root.Parent or root:GetAttribute("Opening") then return end
-        local native=authored or not ok or failed
+        local native=not ok or failed
         root:SetAttribute("ArtworkFallback",native)
         root:SetAttribute("ArtworkLoadState",if native then "Unavailable" else "Loaded")
-        fallback.Visible=native
         shell.Visible=not native
         task.spawn(function() pcall(function() ContentProvider:PreloadAsync({crunch,chime}) end) end)
     end)
@@ -369269,7 +369291,6 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
             for _,span in Fragments.spans(polygon,y+2) do
                 local left,right=span[1],span[2]
                 local strip=image(group,shellAsset,group.ZIndex)
-                strip.ImageColor3=tint
                 -- Guard overlap avoids one-pixel seams when the phone UI scales.
                 strip.ImageRectOffset,strip.ImageRectSize=Vector2.new(left,y),Vector2.new(right-left,6)
                 strip.Position,strip.Size=UDim2.fromOffset((left-minX)*unit,(y-minY)*unit),UDim2.fromOffset((right-left)*unit,6*unit)
@@ -369315,9 +369336,10 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
             if success~=false then chime.Parent=parent chime:Play() game:GetService("Debris"):AddItem(chime,3) end
         end
         if not Theme.MotionEnabled then root:Destroy() return end
-        stage.Rotation=0 scale.Scale=1 shell.Visible=false fallback.Visible=false
+        stage.Rotation=0 scale.Scale=1 shell.Visible=false
+        if egg3d then egg3d.Visible=false end
         for _,step in crackStages do step.mask.Visible=false end
-        for _,piece in pieces do piece.group.Visible=root:GetAttribute("ArtworkFallback")~=true end
+        for _,piece in pieces do piece.group.GroupColor3=paintTint piece.group.Visible=root:GetAttribute("ArtworkFallback")~=true end
         local ring=Instance.new("UIStroke") ring.Color,ring.Thickness,ring.Transparency,ring.Parent=color,2,.15,halo
         Theme.animate(halo,.48,{BackgroundTransparency=1})
         Theme.animate(haloScale,.48,{Scale=1.7})
@@ -369351,7 +369373,42 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
             end
         end)
     end
-    return root,update,split
+    -- BD-171 paint API. The egg is neutral until setGenes(); color(wash) tints the whole egg, pattern(wash) fades in the real
+    -- 3D egg (colour + pattern + condition) over the plain one. Both are idempotent and safe to call every frame.
+    local paint={}
+    function paint.setGenes(newGenes)
+        if newGenes and Genetics and Genetics.valid(newGenes) then
+            eggGenes=newGenes
+            paintTint=Genetics.tint(newGenes)
+            applyGenes3d()
+        end
+    end
+    function paint.tint(): Color3 return paintTint end
+    -- The species rarity colour is only known once the answer arrives; it tints the burst halo and rays.
+    function paint.setRarityColor(newColor: Color3)
+        color=newColor
+        halo.BackgroundColor3=newColor
+    end
+    function paint.hasPattern(): boolean
+        return egg3dReady and eggGenes~=nil and root:GetAttribute("Opening")~=true
+    end
+    function paint.color(wash: number)
+        shell.ImageColor3=Color3.new(1,1,1):Lerp(paintTint,math.clamp(wash,0,1))
+    end
+    function paint.pattern(wash: number)
+        local view=egg3d
+        if not view or not paint.hasPattern() then return end
+        local w=math.clamp(wash,0,1)
+        view.Visible=w&gt;0
+        view.ImageTransparency=1-w
+        shell.ImageTransparency=if w&gt;=1 then 1 else w*.9
+    end
+    -- Show the finished egg at once (fast-forward, Reduced Motion).
+    function paint.finish()
+        paint.color(1)
+        paint.pattern(1)
+    end
+    return root,update,split,paint
 end
 return Hatch
 </ProtectedString>
@@ -369367,12 +369424,13 @@ return Hatch
 local RevealSkip = require(script.Parent.RevealSkip)
 local T = {}
 
--- Seconds. Full motion: ~3 s rattle/crack build-up, burst, dino reveal, then wait for a tap.
-T.Motion = {build = 3.0, burst = .6, settle = .8, tapGate = .5}
+-- Seconds. Full motion: ~3.6 s build-up (two paint-bucket splashes, then rattle/crack), burst, dino reveal, then wait for a tap.
+-- BD-171: the egg starts colourless and patternless; the left bucket colours it, the right bucket reveals the pattern.
+T.Motion = {build = 3.6, burst = .6, settle = .8, tapGate = .5}
 -- Reduced Motion (Theme.MotionEnabled false): no shake/zoom/particles, a short fade, same tap flow.
 T.Reduced = {build = 0, burst = 0, settle = .45, tapGate = .15}
 -- A failed (Cracked) egg: same ~3 s build-up, then a SPLAT instead of a dinosaur (shell halves bounce, yolk plops into a puddle).
-T.Splat = {build = 3.0, burst = .7, settle = 1.0, tapGate = .5}
+T.Splat = {build = 3.6, burst = .7, settle = 1.0, tapGate = .5}
 T.CrumbMax = 10 -- tiny shell crumbs of the splat (pooled; they reuse the sparkle pool)
 T.MaxParticles = 28
 T.OrbitMax = 12 -- twinkling sparkles orbiting the dinosaur after the reveal
@@ -369380,13 +369438,26 @@ T.FireworkMax = 24 -- Legendary gold fireworks: 3 bursts of 8
 T.RainMax = 14 -- Shiny gold sparkle rain
 T.CrackBeats = {.21, .46, .71} -- fractions of the build-up where the three crack stages start (HatchPresentation)
 T.EggClock = 3.2 -- HatchPresentation.update() time at the end of the build-up
+T.PaintMax = 20 -- paint droplets (two buckets x 10, pooled)
+-- Paint buckets (BD-171). Each bucket slides in, tilts, splashes at `impact` (fraction of its window) and leaves; both are quick.
+T.Paint = {leftStart = .45, rightStart = 1.3, window = .75, impact = .6, wash = .35}
+T.WobbleClock = .5 -- egg clock while painting (below the first rattle beat and crack stage, so no cracks show yet)
 
--- Legendary holds the reveal longer (+.5 s settle) before the tap prompt; the build-up stays about 3 s.
+-- Legendary holds the reveal longer (+.5 s settle) before the tap prompt; the build-up stays the same length.
+function T.paintPlan(motion: boolean)
+    if not motion then
+        return {leftStart = 0, leftImpact = 0, leftEnd = 0, rightStart = 0, rightImpact = 0, rightEnd = 0, endsAt = 0}
+    end
+    local p = T.Paint
+    return {leftStart = p.leftStart, leftImpact = p.leftStart + p.window * p.impact, leftEnd = p.leftStart + p.window,
+        rightStart = p.rightStart, rightImpact = p.rightStart + p.window * p.impact, rightEnd = p.rightStart + p.window,
+        endsAt = p.rightStart + p.window}
+end
 function T.durations(motion: boolean, rarity: number?, failed: boolean?)
     local d = if not motion then T.Reduced elseif failed then T.Splat else T.Motion
     local settle = d.settle + (if motion and not failed and (rarity or 1) &gt;= 5 then .5 else 0)
     return {build = d.build, burst = d.burst, settle = settle, revealAt = d.build, readyAt = d.build + d.burst + settle,
-        tapGate = d.tapGate}
+        tapGate = d.tapGate, paint = T.paintPlan(motion)}
 end
 
 function T.phase(durs, t: number): string
@@ -369396,18 +369467,38 @@ function T.phase(durs, t: number): string
     return "ready"
 end
 
--- State machine: {t, fastForwarded, done}. All transitions are pure.
-function T.new(motion: boolean, rarity: number?, failed: boolean?)
-    return {t = 0, durs = T.durations(motion, rarity, failed), fastForwarded = false, done = false, motion = motion}
+-- State machine: {t, idle, pending, fastForwarded, done}. All transitions are pure.
+-- pending = the server result (species, colours, pattern) has not arrived yet: the egg keeps wobbling (idle grows, t holds
+-- at the first bucket) so Open starts the animation at once without waiting for the network (BD-170).
+function T.new(motion: boolean, rarity: number?, failed: boolean?, pending: boolean?)
+    return {t = 0, idle = 0, pending = pending == true, durs = T.durations(motion, rarity, failed), fastForwarded = false, done = false, motion = motion}
+end
+-- The result arrived: use the real timing (the build-up length never depends on rarity or failure).
+function T.supply(state, rarity: number?, failed: boolean?)
+    state.durs = T.durations(state.motion, rarity, failed)
+    state.pending = false
+    return state
+end
+function T.holdAt(state): number
+    return if state.motion then state.durs.paint.leftStart else 0
 end
 function T.step(state, dt: number)
     if state.done then return state end
-    state.t += math.max(0, dt)
+    dt = math.max(0, dt)
+    if state.pending then
+        local room = math.max(0, T.holdAt(state) - state.t)
+        state.t += math.min(dt, room)
+        state.idle += dt - math.min(dt, room)
+    else
+        state.t += dt
+    end
     return state
 end
+-- Visual clock for idle wobble: keeps moving while the sequence is waiting for the result.
+function T.visualT(state): number return state.t + state.idle end
 -- "advance" (next egg / done), "fastforward" (jump the build-up to the burst) or "ignore".
 function T.tapAction(state): string
-    if state.done then return "ignore" end
+    if state.done or state.pending then return "ignore" end
     local phase = T.phase(state.durs, state.t)
     if phase == "ready" then return "advance" end
     if phase == "build" and not state.fastForwarded and state.t &gt;= state.durs.tapGate then return "fastforward" end
@@ -369424,7 +369515,7 @@ function T.tap(state): string
 end
 -- Skip all: fast-forward a running build-up; an already revealed egg moves on at once.
 function T.skipAll(state): string
-    if state.done then return "ignore" end
+    if state.done or state.pending then return "ignore" end
     local phase = T.phase(state.durs, state.t)
     if phase == "build" then
         state.t, state.fastForwarded = state.durs.build, true
@@ -369482,6 +369573,102 @@ end
 function T.easeOut(p: number): number
     local x = 1 - clamp01(p)
     return 1 - x * x * x
+end
+
+-- Rattle/crack progress 0..1: starts once both paint buckets are done and runs to the burst.
+function T.buildProgress(durs, t: number): number
+    local from = durs.paint.endsAt
+    if durs.build &lt;= from then return 1 end
+    return clamp01((t - from) / (durs.build - from))
+end
+-- Time (seconds) of a point given as a fraction of the rattle/crack part of the build-up.
+function T.crackTime(durs, fraction: number): number
+    return durs.paint.endsAt + clamp01(fraction) * math.max(0, durs.build - durs.paint.endsAt)
+end
+-- HatchPresentation.update() clock: a slow wobble while painting, then the three crack stages across the rest of the build-up.
+function T.eggClock(durs, t: number): number
+    if durs.build &lt;= 0 then return T.EggClock end
+    local from = durs.paint.endsAt
+    if t &lt; from then return T.WobbleClock * clamp01(t / math.max(from, 1e-6)) end
+    return T.WobbleClock + (T.EggClock - T.WobbleClock) * T.buildProgress(durs, t)
+end
+
+-- Paint buckets (BD-171). side: -1 left bucket (colour), +1 right bucket (pattern). k = 0..1 over the bucket's window.
+-- Returns x offset from the egg centre (px), y offset (px), rotation (degrees, positive = clockwise) and alpha 0..1.
+function T.bucketPose(k: number, side: number): (number, number, number, number)
+    k = clamp01(k)
+    local arrive = T.easeOut(k / .35)
+    local leave = clamp01((k - .8) / .2)
+    local tilt = clamp01((k - .3) / .3)
+    local back = clamp01((k - .68) / .17)
+    local x = side * (150 + 190 * (1 - arrive) + 190 * leave * leave)
+    local y = -78 + 10 * math.sin(k * math.pi) - 14 * tilt
+    local rot = -side * 64 * tilt * (1 - back)
+    return x, y, rot, if k &lt;= 0 then 0 else 1 - leave
+end
+-- Where each bucket is in its window at time t, and how far its colour has washed over the egg (0..1).
+function T.paintState(durs, t: number)
+    local p = durs.paint
+    local window = if p.endsAt &gt; 0 then T.Paint.window else 0
+    local function bucket(start: number, impactAt: number)
+        if window &lt;= 0 then return {k = 1, impacted = true, wash = 1, sinceImpact = 99} end
+        local since = t - impactAt
+        return {k = clamp01((t - start) / window), impacted = since &gt;= 0, wash = if since &lt;= 0 then 0 else T.easeOut(since / T.Paint.wash), sinceImpact = since}
+    end
+    return {left = bucket(p.leftStart, p.leftImpact), right = bucket(p.rightStart, p.rightImpact)}
+end
+-- Splash ring: s = seconds since the bucket hit the egg. Returns scale and transparency (1 = invisible).
+function T.splash(s: number): (number, number)
+    if s &lt; 0 then return 0, 1 end
+    local k = clamp01(s / .5)
+    return .35 + 1.7 * T.easeOut(k), k
+end
+-- Paint droplet i of n, s seconds after impact, thrown up and out, leaning toward the bucket's side (-1 left, +1 right).
+-- Returns dx, dy (px from the splash point) and transparency (1 = gone).
+function T.drop(i: number, n: number, s: number, side: number): (number, number, number)
+    if s &lt; 0 or s &gt;= .7 then return 0, 0, 1 end
+    local a = (-.1 - .8 * ((i - 1) / math.max(1, n - 1))) * math.pi -- fan over the upper half
+    local speed = 110 + (i * 37) % 90
+    return math.cos(a) * speed * s + side * 50 * s, math.sin(a) * speed * s + 380 * s * s, clamp01((s - .3) / .4)
+end
+
+-- Trait rarity tiers for the paint reveal. Chance = percent of eggs; PROVISIONAL cut-offs, tuned so Cream/Blue are Common and Black is Mythic.
+T.TierNames = {"Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"}
+T.TierFloors = {25, 10, 2, .3, .03, 0}
+function T.tier(pct: number?): number
+    if pct == nil then return 1 end
+    for i, floor in T.TierFloors do if pct &gt;= floor then return i end end
+    return #T.TierNames
+end
+-- colors = Config.EggColors rows {id, name, weight}; genes = {primaryColorId, secondaryColorId}. Returns nil without a known colour.
+-- A two-colour egg shows both names and the rarer colour's tier.
+function T.colorReveal(colors: any, genes: any)
+    if typeof(colors) ~= "table" or typeof(genes) ~= "table" then return nil end
+    local total = 0
+    for _, row in colors do total += row.weight end
+    local function find(id: any)
+        for _, row in colors do if row.id == id then return row end end
+        return nil
+    end
+    local a = find(genes.primaryColorId)
+    if not a or total &lt;= 0 then return nil end
+    local b = find(genes.secondaryColorId) or a
+    local pct = math.min(100 * a.weight / total, 100 * b.weight / total)
+    local tier = T.tier(pct)
+    return {name = if a.id == b.id then a.name else a.name .. " + " .. b.name, pct = pct, tier = tier, tierName = T.TierNames[tier]}
+end
+-- patterns = ordered pattern ids (uniform odds); nameOf(id) -&gt; display name. The blank pattern is "Plain" (Common).
+function T.patternReveal(patterns: any, patternId: string?, nameOf: (string?) -&gt; string)
+    local count = if typeof(patterns) == "table" then #patterns else 0
+    if patternId == nil or patternId == "" or string.find(patternId, "blank", 1, true) then
+        return {name = "Plain", pct = 100, tier = 1, tierName = T.TierNames[1], plain = true}
+    end
+    local pct = if count &gt; 0 then 100 / count else nil
+    local tier = T.tier(pct)
+    return {name = nameOf(patternId), pct = pct, tier = tier, tierName = T.TierNames[tier], plain = false}
+end
+function T.paintLine(reveal: any): string
+    return reveal.name .. " \u{2022} " .. reveal.tierName
 end
 
 -- Particles scale with rarity (1..5); Shiny and BIG add more; none when motion is off or the egg failed.
@@ -369612,8 +369799,16 @@ function T.cues(durs, rarity: number, failed: boolean, revealName: string)
     local cues = {}
     local build = durs.build
     if build &gt; 0 then
-        for _, b in T.RattleBeats do table.insert(cues, {t = build * b / 3, name = "hatch_rattle"}) end
-        for _, f in T.CrackBeats do table.insert(cues, {t = build * f, name = "hatch_crack_stage"}) end
+        -- Paint buckets reuse existing Sfx names (no new sounds): swoosh = pickup_lo, colour splash = pickup, pattern splash = pickup_hi.
+        local p = durs.paint
+        if p.endsAt &gt; 0 then
+            table.insert(cues, {t = p.leftStart, name = "pickup_lo"})
+            table.insert(cues, {t = p.leftImpact, name = "pickup"})
+            table.insert(cues, {t = p.rightStart, name = "pickup_lo"})
+            table.insert(cues, {t = p.rightImpact, name = "pickup_hi"})
+        end
+        for _, b in T.RattleBeats do table.insert(cues, {t = T.crackTime(durs, b / 3), name = "hatch_rattle"}) end
+        for _, f in T.CrackBeats do table.insert(cues, {t = T.crackTime(durs, f), name = "hatch_crack_stage"}) end
     end
     table.insert(cues, {t = build, name = "hatch_burst"})
     if not failed then table.insert(cues, {t = build + .12, name = revealName}) end
@@ -372343,11 +372538,11 @@ Weather.Looks={
     -- aurora colours (fog, decay, shifts, ambient, tint, glow) are overwritten every frame from Weather.aurora(); these are the mid values
     aurora=look({tint=rgb(176,255,230),sat=.4,contrast=.1,bright=-.04,fog=rgb(40,200,170),decay=rgb(60,80,180),density=.32,offset=0,haze=1.4,bloom=1.2,rays=.05,
         rayTint=rgb(140,255,220),amb=rgb(70,130,120),dof=.2,dofFocus=120,exposure=-.2,lamp=.5,
-        glow=rgb(60,255,170),glowBright=1.3,glowRange=60,fogStart=270,dome=.45,vis=330,stars=5000}),
+        glow=rgb(60,255,170),glowBright=1.3,glowRange=60,fogStart=280,dome=.45,vis=400,stars=5000}),
     quake=look({tint=rgb(232,200,156),sat=-.14,contrast=.16,bright=-.06,fog=rgb(198,176,146),decay=rgb(130,100,70),density=.45,offset=0,haze=3,bloom=.15,
         amb=rgb(150,126,96),dof=.35,dofFocus=70,lamp=.6,fogStart=40,dome=.12,vis=220}),
-    bloodmoon=look({tint=rgb(255,140,150),sat=.45,contrast=.18,bright=0,fog=rgb(66,14,24),decay=rgb(100,10,30),density=.4,offset=0,haze=2.8,glare=.5,bloom=.8,rays=.12,
-        rayTint=rgb(255,60,80),amb=rgb(165,38,56),dof=.3,dofFocus=80,exposure=-.15,lamp=1.2,glow=rgb(255,40,70),glowBright=.5,glowRange=60,fogStart=100,dome=.18,vis=300}),
+    bloodmoon=look({tint=rgb(255,140,150),sat=.45,contrast=.18,bright=0,fog=rgb(66,14,24),decay=rgb(100,10,30),density=.4,offset=0,haze=2.8,glare=.5,bloom=.5,rays=.12,
+        rayTint=rgb(255,60,80),amb=rgb(165,38,56),dof=.3,dofFocus=80,exposure=-.15,lamp=1.2,glow=rgb(255,40,70),glowBright=.5,glowRange=60,fogStart=100,dome=.18,vis=360}),
 }
 Weather.Ids=table.freeze({"rain","thunder","blizzard","volcano","aurora","quake","bloodmoon"})
 
@@ -547755,6 +547950,8 @@ end
 local fusionTarget = "gold"
 local hatchPending = false
 local autoHatching = false
+-- BD-170: Open starts the hatch screen at once; the server answer is supplied to it later. pendingHatch = {version, supply, handle}.
+local hatchState: {pending: {version: number, supply: () -&gt; (), handle: any}?, fresh: boolean, next: (() -&gt; boolean)?} = {pending=nil, fresh=false, next=nil}
 local hatchCancelSerial = 0
 local function ownedTraits(id: string)
     return EggTraits.selected(decoded("CollectionJson","{}")[id])
@@ -548055,18 +548252,26 @@ local function finishBatch()
     emitHatchSummary()
     if #skippedEntries&gt;0 then open("batchSummary") else open("eggs") end
 end
-local function hatchNext()
+-- Sends the claim for the next egg. Returns true when a request went out (the batch goes on), false when the batch ended
+-- or a request is already running.
+hatchState.next = function(): boolean
     local id=str("NextChestId")
     if id=="" or workspace:GetServerTimeNow()&lt;num("NextChestReadyAt") then
         finishBatch()
-        return
+        return false
     end
-    if hatchPending then return end
+    if hatchPending then return false end
     hatchPending=true
     hatch:FireServer(id,Http:GenerateGUID(false))
     task.delay(8,function()
-        if hatchPending then hatchPending=false autoHatching=false skipAllReveals=false notify("Hatching stopped",C.red,{key="hatch_error",icon="egg",body="Tap an egg to try again"}) end
+        if hatchPending then
+            hatchPending=false autoHatching=false skipAllReveals=false
+            notify("Hatching stopped",C.red,{key="hatch_error",icon="egg",body="Tap an egg to try again"})
+            local waiting=hatchState.pending
+            if waiting and waiting.version==modalVersion and active=="hatch" and waiting.handle.pending() then open("eggs") end -- never leave an egg wobbling forever
+        end
     end)
+    return true
 end
 local function progression()
     local data=decoded("ProgressionJson","{}")
@@ -548141,7 +548346,7 @@ render=function(name: string)
                 label(body,row.name,x,cardsY+32,155,28,22)
                 local tile=box(body,x,cardsY+62,155,110,Color3.fromRGB(122,148,112):Lerp(C.panel,.25),24)
                 local view=ModelPreview.add(tile,"egg")
-                EggAppearance.apply(view,EggGenetics.neutral(row.id))
+                EggAppearance.apply(view,EggGenetics.neutral(row.id),true)
                 label(body,string.format("%g%%",weights[i]),x,cardsY+176,155,34,24,C.blue)
             end
             button(body,if upgrade then "UPGRADE: "..upgrade.price.." CRYSTALS" else "MAX LEVEL",142,cardsY+220,540,targetHeight,C.accent,function() if upgrade then open("conditionConfirm") end end).TextSize=20
@@ -548454,7 +548659,8 @@ render=function(name: string)
             openEgg=function()
                 if hatchPending then return end
                 autoHatching=true
-                hatchNext()
+                -- BD-170: the egg starts opening this very frame; the server answer is handed to the screen when it arrives.
+                if (hatchState.next :: any)() then open("hatch") end
             end,
             openSettings=function() open("settings") end,
             autoOpenText=autoOpenText,
@@ -548466,63 +548672,95 @@ render=function(name: string)
             end
         end)
     elseif name=="hatch" then
+        -- BD-170/171: the plain, colourless egg is on screen and wobbling the moment this opens (no dino, no cube, no pattern).
+        -- The server answer is handed to the running sequence through pendingHatch.supply() when it arrives.
         heading.Text,header.BackgroundColor3="An egg is hatching...",C.gold
         local version=modalVersion
-        local reward=str("LastChestRewardText","New dinosaur")
-        local failed=player:GetAttribute("LastChestFailed")==true
-        local genesOk,genes=pcall(function() return Http:JSONDecode(str("LastChestGenesJson","null")) end)
-        if not genesOk or typeof(genes)~="table" then genes=nil end
-        local id=string.match(reward,"x (%w+)") or "compy"
-        if not Config.SpeciesDisplayNames[id] then id="compy" end
-        local view=Preview.add(body,id,"base")
-        view.Position,view.Size=UDim2.fromOffset(160,-12),UDim2.fromOffset(504,260)
-        PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),genes=genes})
-        view.Visible=false
-        task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync(view:GetDescendants()) end) end)
-        local eggView,animateEgg,splitEgg=HatchPresentation.add(body,genes,rarityColors[speciesIndex(id)])
+        local eggView,animateEgg,splitEgg,paint=HatchPresentation.add(body,nil,rarityColors[1])
         eggView.Size=UDim2.fromOffset(304,260) -- HatchSequence centres and animates it
-        local rarity=speciesIndex(id)
-        local count=tonumber(string.match(reward,"^(%d+)x")) or 1
-        local displayName=Config.SpeciesDisplayNames[id] or id
-        local rewardLabel=label(body,if failed then HatchTimeline.FailTitle elseif count&gt;1 then count.."x "..displayName else displayName,80,236,660,54,38,if failed then C.gold else rarityColors[rarity])
-        local oddsLabel=label(body,if failed then HatchTimeline.FailSub else HatchTimeline.oddsLine(rarityNames[rarity],HatchTimeline.speciesPct(Config.ChestSpeciesWeights,id),(FusionSelection :: any).pct or HatchTimeline.pct),80,288,660,28,22,C.text)
-        local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
-        local detailText,detailColor="",C.gold
-        local mutationColor=if mutation then Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3]) else nil
-        if genes then
-            local condition=EggGenetics.condition(genes.conditionId)
-            detailText=if failed then HatchTimeline.failChance(condition.hatchChance) else condition.name
-            -- Mutation audit: genes eggs (all new eggs) used to hide the mutation name/perk and tint.
-            if mutation and not failed then
-                local tint=mutationColor :: Color3
-                for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(tint,.35) end end
-                detailText=condition.name.." • "..mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
+        local rewardLabel=label(body,"",80,236,660,54,38,C.gold)
+        local oddsLabel=label(body,"",80,288,660,28,22,C.text)
+        local detailLabel=label(body,"",80,316,660,28,20,C.gold)
+        local remainingAfter,failedEgg=0,false
+        local handle: any=nil
+        local function supply()
+            if modalVersion~=version or active~="hatch" or not handle or not handle.pending() then return end
+            local reward=str("LastChestRewardText","New dinosaur")
+            local failed=player:GetAttribute("LastChestFailed")==true
+            failedEgg=failed
+            local genesOk,genes=pcall(function() return Http:JSONDecode(str("LastChestGenesJson","null")) end)
+            if not genesOk or typeof(genes)~="table" then genes=nil end
+            local geneticsOk=genes~=nil and EggGenetics.valid(genes)
+            local id=string.match(reward,"x (%w+)") or "compy"
+            if not Config.SpeciesDisplayNames[id] then id="compy" end
+            -- The dinosaur view only exists from here on and stays transparent until the burst. BD-174: PreviewTraits draws
+            -- colours and pattern only, never the egg condition.
+            local view=Preview.add(body,id,"base")
+            view.Position,view.Size=UDim2.fromOffset(160,-12),UDim2.fromOffset(504,260)
+            PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),genes=genes})
+            view.Visible=false
+            task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync(view:GetDescendants()) end) end)
+            local rarity=speciesIndex(id)
+            local count=tonumber(string.match(reward,"^(%d+)x")) or 1
+            local displayName=Config.SpeciesDisplayNames[id] or id
+            rewardLabel.Text=if failed then HatchTimeline.FailTitle elseif count&gt;1 then count.."x "..displayName else displayName
+            rewardLabel.TextColor3=if failed then C.gold else rarityColors[rarity]
+            oddsLabel.Text=if failed then HatchTimeline.FailSub else HatchTimeline.oddsLine(rarityNames[rarity],HatchTimeline.speciesPct(Config.ChestSpeciesWeights,id),(FusionSelection :: any).pct or HatchTimeline.pct)
+            local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
+            local detailText,detailColor="",C.gold
+            local mutationColor=if mutation then Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3]) else nil
+            -- BD-171: the paint buckets name the colour and the pattern with their rarity tiers.
+            local colorReveal=if geneticsOk then HatchTimeline.colorReveal(ProgressionConfig.EggColors,genes) else nil
+            local patternReveal=if geneticsOk then HatchTimeline.patternReveal(EggGenetics.Patterns,genes.patternId,FusionSelection.patternName) else nil
+            local paintColors={rarityColors[rarity],rarityColors[rarity]}
+            if geneticsOk then
+                local tint=EggGenetics.tint(genes)
+                local second=EggGenetics.color(genes.secondaryColorId)
+                paintColors={tint,if genes.secondaryColorId~=genes.primaryColorId and second then Color3.fromRGB(second.rgb[1],second.rgb[2],second.rgb[3]) else tint:Lerp(Color3.new(0,0,0),.35)}
             end
-        elseif mutation then
-            local tint=mutationColor :: Color3
-            for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(tint,.55) end end
-            detailText=mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
-            detailColor=tint
+            if failed then
+                -- A cracked egg that does not hatch: the egg's own condition is the story (this is the EGG, not a dinosaur).
+                detailText=HatchTimeline.failChance((EggGenetics.condition("cracked") :: any).hatchChance)
+            elseif mutation then
+                -- Event mutation: name and perk, tint the dinosaur. BD-174: the egg condition is never shown on the dinosaur.
+                local tint=mutationColor :: Color3
+                for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(tint,if genes then .35 else .55) end end
+                detailText=mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
+                if not genes then detailColor=tint end
+            elseif colorReveal and patternReveal then
+                detailText=colorReveal.name.." • "..patternReveal.name
+            end
+            detailLabel.Text,detailLabel.TextColor3=detailText,detailColor
+            remainingAfter=HatchTimeline.remaining(str("NextChestId")~="" and workspace:GetServerTimeNow()&gt;=num("NextChestReadyAt"),num("ActiveChestCount"),num("QueuedEggsWaiting"))
+            paint.setRarityColor(rarityColors[rarity])
+            handle.supply({
+                dino=view,rarity=rarity,color=rarityColors[rarity],failed=failed,
+                shiny=not failed and player:GetAttribute("LastChestShiny")==true,big=not failed and player:GetAttribute("LastChestBig")==true,
+                mutationName=if mutation and not failed then mutation.name else nil,mutationColor=mutationColor,
+                remaining=remainingAfter,genes=if geneticsOk then genes else nil,colorReveal=colorReveal,patternReveal=patternReveal,paintColors=paintColors,
+            })
         end
-        if failed and detailText=="" then detailText=HatchTimeline.failChance((EggGenetics.condition("cracked") :: any).hatchChance) end
-        local detailLabel=label(body,detailText,80,316,660,28,20,detailColor)
-        local remaining=HatchTimeline.remaining(str("NextChestId")~="" and workspace:GetServerTimeNow()&gt;=num("NextChestReadyAt"),num("ActiveChestCount"),num("QueuedEggsWaiting"))
         Sfx.play("hatch_crack")
-        HatchSequence.play({
-            gui=gui,panel=panel,body=body,eggView=eggView,animateEgg=animateEgg,splitEgg=splitEgg,dino=view,
-            rarity=rarity,color=rarityColors[rarity],failed=failed,
-            shiny=not failed and player:GetAttribute("LastChestShiny")==true,big=not failed and player:GetAttribute("LastChestBig")==true,
-            mutationName=if mutation and not failed then mutation.name else nil,mutationColor=mutationColor,
-            nameLabel=rewardLabel,oddsLabel=oddsLabel,detailLabel=detailLabel,remaining=remaining,motion=motion,
+        handle=HatchSequence.play({
+            gui=gui,panel=panel,body=body,eggView=eggView,animateEgg=animateEgg,splitEgg=splitEgg,paint=paint,
+            nameLabel=rewardLabel,oddsLabel=oddsLabel,detailLabel=detailLabel,motion=motion,
             alive=function() return modalVersion==version and active=="hatch" end,
             flash=flash,
             onSkipAll=function() autoHatching=true skipAllReveals=true end,
-            onReveal=function() if modalVersion==version then heading.Text=if failed then "Oops! Splat!" else "You hatched a dinosaur!" end end,
+            onReveal=function() if modalVersion==version then heading.Text=if failedEgg then "Oops! Splat!" else "You hatched a dinosaur!" end end,
             onNext=function()
+                -- BD-170: Next egg stays inside the opening sequence; only the end of the batch returns to the Eggs screen.
                 heading.Text="An egg is hatching..."
-                if EggsLogic.afterReveal(skipAllReveals,remaining)=="continue" then autoHatching=true hatchNext() else finishBatch() end
+                if EggsLogic.afterReveal(skipAllReveals,remainingAfter)=="continue" then
+                    autoHatching=true
+                    if (hatchState.next :: any)() then open("hatch") end
+                else
+                    finishBatch()
+                end
             end,
         })
+        hatchState.pending={version=version,supply=supply,handle=handle}
+        if hatchState.fresh then hatchState.fresh=false supply() end
     elseif name=="exit" then
         -- BD-052: one confirmation, no stay-still channel; the server settles through tryEnd.
         heading.Text,header.BackgroundColor3="Return to Sanctuary?",C.red
@@ -549075,10 +549313,17 @@ player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function()
     table.insert(batchEntries,{rarity=rarity,name=Config.SpeciesDisplayNames[species] or species,failed=outcome.failed,shiny=outcome.shiny==true,big=outcome.big==true})
     if autoHatching and EggsLogic.shouldAutoOpen(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen(),rarity,outcome,skipAllReveals) then
         table.insert(skippedEntries,{rarity=rarity,speciesId=species,outcome=outcome})
-        task.delay(Config.ChestClaimRequestCooldownSeconds+.15,hatchNext) -- stay under the server claim cooldown
+        task.delay(Config.ChestClaimRequestCooldownSeconds+.15,function() (hatchState.next :: any)() end) -- stay under the server claim cooldown
         return
     end
-    task.defer(function() open("hatch") end)
+    -- BD-170: when Open (or Next egg) already put a waiting egg on screen, hand the answer to it; otherwise open the screen with the result.
+    local waiting=hatchState.pending
+    if waiting and waiting.version==modalVersion and active=="hatch" and waiting.handle.pending() then
+        task.defer(waiting.supply)
+    else
+        hatchState.fresh=true
+        task.defer(function() open("hatch") end)
+    end
 end)
 player:GetAttributeChangedSignal("LastRunEndAt"):Connect(function() if not autoHatching then open("results") end end)
 player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
@@ -550141,7 +550386,7 @@ end
 function EggsScreen.safeEggView(card: GuiObject, empty: boolean, size: number, x: number, y: number, traits: any): ViewportFrame
     local view = ModelPreview.add(card, "egg", empty)
     view.Position, view.Size = UDim2.fromOffset(x, y), UDim2.fromOffset(size, size)
-    local function finish() if traits then PreviewTraits.add(view, traits) end end
+    local function finish() if traits then PreviewTraits.add(view, traits, true) end end
     local parts = meshParts(view)
     if #parts == 0 then finish() return view end
     local blank = false
@@ -550619,7 +550864,7 @@ local function buildGrid(grid: ScrollingFrame)
         W.label(card, Sel.name(catalog, "patterns", g.patternId, "Unknown pattern") .. " • " .. Sel.name(nil, "x", d.stage), UDim2.new(1, -8, 0, 16), UDim2.fromOffset(4, 24), 14, C.gold)
         W.swatch(card, g, UDim2.new(1, -16, 0, 9), UDim2.fromOffset(8, 43))
         local badges = Sel.badges(d, catalog)
-        W.label(card, (if #badges &gt; 0 then table.concat(badges, " • ") else Sel.name(catalog, "conditions", g.conditionId, "")), UDim2.new(1, -8, 0, 18), UDim2.fromOffset(4, 55), 15,
+        W.label(card, (if #badges &gt; 0 then table.concat(badges, " • ") else ""), UDim2.new(1, -8, 0, 18), UDim2.fromOffset(4, 55), 15,
             if #badges &gt; 0 then C.purple else C.text)
         local status = W.label(card, "", UDim2.new(1, -(T + 8), 0, T - 4), UDim2.new(0, 4, 1, -(T + 2)), 15)
         local info = W.button(card, "i", UDim2.fromOffset(T, T), UDim2.new(1, -(T + 2), 1, -(T + 2)), C.blue, function() openDetails(d.instanceId) end)
@@ -551310,11 +551555,6 @@ local SHELL_START_Y, SHELL_FALL = 112, 70
 local CREAM = Color3.fromRGB(255, 244, 214)
 local YOLK_GOLD = Color3.fromRGB(255, 196, 38)
 
-type Layers = {splat: Splat, back: Frame, front: Frame, backdrop: Frame, rings: {Frame}, ringScales: {UIScale}, rays: {Frame}, motes: {Frame},
-    podium: {Frame}, particles: {Frame}, fw: {Frame}, rain: {Frame}, shocks: {Frame}, shockStrokes: {UIStroke}, shockScales: {UIScale},
-    arcs: {Frame}, shimmer: Frame, shimmerGradient: UIGradient}
-local layers: Layers? = nil
-
 local function corner(parent: Instance, radius: UDim?)
     local c = Instance.new("UICorner")
     c.CornerRadius = radius or UDim.new(1, 0)
@@ -551327,6 +551567,81 @@ local function dot(parent: Instance, name: string, z: number, w: number, h: numb
     if round then corner(f) end
     return f
 end
+
+-- Paint-bucket kit (BD-171), built once and reused. PLACEHOLDER shapes until the paint_bucket icon (docs/83 item 31) is uploaded and
+-- bound in UIIconAssets; the splashes, droplets and chips are effects/UI, not art. Positions are body coordinates.
+type PaintKit = {buckets: {CanvasGroup}, bucketPaint: {Frame}, bucketImages: {ImageLabel}, bucketShapes: {Frame}, streams: {Frame},
+    splashes: {Frame}, splashStrokes: {UIStroke}, splashScales: {UIScale}, drops: {Frame}, chips: {Frame}, chipLabels: {TextLabel},
+    chipScales: {UIScale}, chipSwatches: {Frame}, chipStrokes: {UIStroke}}
+local SPLASH_POINTS = {Vector2.new(412 - 40, 100), Vector2.new(412 + 40, 100)}
+local CHIP_CENTERS = {Vector2.new(262, 292), Vector2.new(562, 292)}
+local BUCKET_STEEL = Color3.fromRGB(118, 132, 156)
+local TIER_COLORS: {Color3} = {Color3.fromRGB(70, 205, 170), Color3.fromRGB(110, 205, 90), Color3.fromRGB(70, 150, 255),
+    Color3.fromRGB(180, 100, 255), Color3.fromRGB(255, 190, 50), Color3.fromRGB(255, 70, 190)}
+local function buildPaint(front: Frame): PaintKit
+    local kit: PaintKit = {buckets = {}, bucketPaint = {}, bucketImages = {}, bucketShapes = {}, streams = {}, splashes = {}, splashStrokes = {},
+        splashScales = {}, drops = {}, chips = {}, chipLabels = {}, chipScales = {}, chipSwatches = {}, chipStrokes = {}}
+    local bucketIcon = (Theme.ImageIds :: any).paint_bucket
+    for i = 1, 2 do
+        local group = Instance.new("CanvasGroup")
+        group.Name, group.BackgroundTransparency, group.AnchorPoint, group.Visible = "PaintBucket" .. i, 1, Vector2.new(.5, .5), false
+        group.Size, group.ZIndex, group.Active, group.Parent = UDim2.fromOffset(92, 92), 26, false, front
+        local shapes = Instance.new("Frame") -- PLACEHOLDER bucket made of UI shapes; hidden once the real icon is bound
+        shapes.Name, shapes.BackgroundTransparency, shapes.Size, shapes.ZIndex, shapes.Parent = "NativeBucket", 1, UDim2.fromScale(1, 1), 26, group
+        local handle = Instance.new("Frame")
+        handle.BackgroundTransparency, handle.Position, handle.Size, handle.ZIndex, handle.Parent = 1, UDim2.fromOffset(14, 2), UDim2.fromOffset(64, 58), 26, shapes
+        corner(handle)
+        local hs = Instance.new("UIStroke") hs.Color, hs.Thickness, hs.Parent = Color3.fromRGB(70, 80, 100), 5, handle
+        local body = Instance.new("Frame")
+        body.BackgroundColor3, body.BorderSizePixel, body.Position, body.Size, body.ZIndex, body.Parent = BUCKET_STEEL, 0, UDim2.fromOffset(16, 34), UDim2.fromOffset(60, 52), 27, shapes
+        corner(body, UDim.new(0, 10))
+        local bs = Instance.new("UIStroke") bs.Color, bs.Thickness, bs.Parent = Color3.fromRGB(52, 60, 80), 4, body
+        local band = Instance.new("Frame")
+        band.BackgroundColor3, band.BorderSizePixel, band.Position, band.Size, band.ZIndex, band.Parent = Color3.fromRGB(150, 164, 188), 0, UDim2.fromOffset(6, 12), UDim2.new(1, -12, 0, 8), 28, body
+        corner(band)
+        local rim = Instance.new("Frame")
+        rim.BackgroundColor3, rim.BorderSizePixel, rim.Position, rim.Size, rim.ZIndex, rim.Parent = Color3.fromRGB(88, 100, 124), 0, UDim2.fromOffset(10, 26), UDim2.fromOffset(72, 20), 28, shapes
+        corner(rim)
+        local top = Instance.new("Frame")
+        top.Name, top.BackgroundColor3, top.BorderSizePixel, top.Position, top.Size, top.ZIndex, top.Parent = "PaintSurface", WHITE, 0, UDim2.fromOffset(15, 29), UDim2.fromOffset(62, 12), 29, shapes
+        corner(top)
+        local image = Instance.new("ImageLabel")
+        image.Name, image.BackgroundTransparency, image.Size, image.ZIndex, image.Visible = "BucketImage", 1, UDim2.fromScale(1, 1), 26, false
+        image.Parent = group
+        if typeof(bucketIcon) == "string" and bucketIcon ~= "" then image.Image, image.Visible, shapes.Visible = bucketIcon, true, false end
+        kit.buckets[i], kit.bucketPaint[i], kit.bucketImages[i], kit.bucketShapes[i] = group, top, image, shapes
+        local stream = dot(front, "PaintStream" .. i, 25, 9, 60, false)
+        stream.AnchorPoint = Vector2.new(.5, 0)
+        corner(stream)
+        kit.streams[i] = stream
+        local splash = dot(front, "PaintSplash" .. i, 25, 190, 190, true)
+        local stroke = Instance.new("UIStroke") stroke.Thickness, stroke.Transparency, stroke.Parent = 9, 1, splash
+        local scale = Instance.new("UIScale") scale.Parent = splash
+        kit.splashes[i], kit.splashStrokes[i], kit.splashScales[i] = splash, stroke, scale
+        local chip = Instance.new("Frame")
+        chip.Name, chip.BackgroundColor3, chip.AnchorPoint, chip.Visible = "PaintChip" .. i, Color3.fromRGB(28, 34, 52), Vector2.new(.5, .5), false
+        chip.Position, chip.Size, chip.ZIndex, chip.Parent = UDim2.fromOffset(CHIP_CENTERS[i].X, CHIP_CENTERS[i].Y), UDim2.fromOffset(300, 44), 27, front
+        corner(chip)
+        local cs = Instance.new("UIStroke") cs.Thickness, cs.Color, cs.Parent = 3, WHITE, chip
+        local sc = Instance.new("UIScale") sc.Scale, sc.Parent = 0, chip
+        local swatch = Instance.new("Frame")
+        swatch.Name, swatch.BackgroundColor3, swatch.AnchorPoint, swatch.Position, swatch.Size, swatch.ZIndex, swatch.Parent = "Swatch", WHITE, Vector2.new(.5, .5), UDim2.fromOffset(24, 22), UDim2.fromOffset(22, 22), 28, chip
+        corner(swatch)
+        local ss = Instance.new("UIStroke") ss.Color, ss.Thickness, ss.Parent = Color3.new(0, 0, 0), 2, swatch
+        local text = Instance.new("TextLabel")
+        text.BackgroundTransparency, text.Position, text.Size, text.Font, text.TextColor3 = 1, UDim2.fromOffset(44, 2), UDim2.new(1, -52, 1, -4), Enum.Font.FredokaOne, WHITE
+        text.TextScaled, text.TextStrokeTransparency, text.TextStrokeColor3, text.ZIndex, text.Parent = true, 0, Color3.new(0, 0, 0), 28, chip
+        local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 26, 11, text
+        kit.chips[i], kit.chipLabels[i], kit.chipScales[i], kit.chipSwatches[i], kit.chipStrokes[i] = chip, text, sc, swatch, cs
+    end
+    for i = 1, Timeline.PaintMax do kit.drops[i] = dot(front, "PaintDrop" .. i, 26, 10, 10, true) end
+    return kit
+end
+
+type Layers = {paint: PaintKit, splat: Splat, back: Frame, front: Frame, backdrop: Frame, rings: {Frame}, ringScales: {UIScale}, rays: {Frame}, motes: {Frame},
+    podium: {Frame}, particles: {Frame}, fw: {Frame}, rain: {Frame}, shocks: {Frame}, shockStrokes: {UIStroke}, shockScales: {UIScale},
+    arcs: {Frame}, shimmer: Frame, shimmerGradient: UIGradient}
+local layers: Layers? = nil
 
 local function buildSplat(front: Frame): Splat
     -- PLACEHOLDER (docs/72): the egg-white puddle, yolk and shell cups below are native shape stacks. They are replaced by the
@@ -551432,7 +551747,7 @@ local function ensureLayers(panel: GuiObject): Layers
     sg.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(.38, 1), NumberSequenceKeypoint.new(.5, .35),
         NumberSequenceKeypoint.new(.62, 1), NumberSequenceKeypoint.new(1, 1)})
     sg.Parent = shimmer
-    local created: Layers = {splat = buildSplat(front), back = back, front = front, backdrop = backdrop, rings = rings, ringScales = ringScales, rays = rays, motes = motes, podium = podium,
+    local created: Layers = {paint = buildPaint(front), splat = buildSplat(front), back = back, front = front, backdrop = backdrop, rings = rings, ringScales = ringScales, rays = rays, motes = motes, podium = podium,
         particles = particles, fw = fw, rain = rain, shocks = shocks, shockStrokes = shockStrokes, shockScales = shockScales, arcs = arcs,
         shimmer = shimmer, shimmerGradient = sg}
     layers = created
@@ -551481,28 +551796,42 @@ local function ribbon(parent: GuiObject, text: string, color: Color3, cx: number
     return f, scale, stroke
 end
 
+-- What the server committed for this egg (never changed here). Supplied at start for a known egg, or later through handle.supply().
+export type Result = {
+    dino: GuiObject, rarity: number, color: Color3, failed: boolean, shiny: boolean, big: boolean,
+    mutationName: string?, mutationColor: Color3?, remaining: number,
+    genes: any?, colorReveal: any?, patternReveal: any?, paintColors: {Color3}?,
+}
 export type Args = {
     gui: ScreenGui, panel: GuiObject, body: GuiObject,
-    eggView: GuiObject, animateEgg: (number) -&gt; (), splitEgg: (boolean?) -&gt; (),
-    dino: GuiObject, rarity: number, color: Color3, failed: boolean, shiny: boolean, big: boolean,
-    mutationName: string?, mutationColor: Color3?,
+    eggView: GuiObject, animateEgg: (number) -&gt; (), splitEgg: (boolean?) -&gt; (), paint: any,
     nameLabel: TextLabel, oddsLabel: TextLabel, detailLabel: TextLabel,
-    remaining: number, motion: boolean,
+    motion: boolean,
     alive: () -&gt; boolean, flash: (Color3, number) -&gt; (),
     onNext: () -&gt; (), onSkipAll: () -&gt; (), onReveal: () -&gt; (),
+    result: Result?, -- nil = Open was just pressed and the server answer has not arrived: the egg already wobbles (BD-170)
 }
+export type Handle = {cancel: () -&gt; (), supply: (Result) -&gt; (), pending: () -&gt; boolean}
 
--- Returns {cancel}. onNext runs once after the player taps on the revealed egg.
-function Seq.play(a: Args)
+-- Returns {cancel, supply, pending}. onNext runs once after the player taps on the revealed egg.
+function Seq.play(args: Args): Handle
+    local a: any = args -- result fields are merged in by applyResult
     local motion = a.motion
-    local rarity = math.clamp(a.rarity, 1, 5)
-    local state = Timeline.new(motion, rarity, a.failed)
+    local state = Timeline.new(motion, 1, false, a.result == nil)
     local durs = state.durs
-    local esc = Timeline.escalation(rarity, motion)
     local fx = ensureLayers(a.panel)
-    local failed = a.failed
-    -- Rarity palette: Common is lively teal, then the rarity colour up to gold for Legendary.
-    local glow = if a.failed then Color3.fromRGB(255, 205, 90) elseif rarity &lt;= 1 then Color3.fromRGB(70, 205, 170) else a.color
+    local kit = fx.paint
+    -- Result-dependent values. Neutral until applyResult() runs (Open pressed, server answer on its way).
+    local rarity, failed = 1, false
+    local TEAL = Color3.fromRGB(70, 205, 170)
+    local glow = TEAL
+    local strength = .81
+    local esc = Timeline.escalation(1, motion)
+    local count, orbit = 0, 0
+    local palette: {Color3} = {glow, WHITE}
+    local cues: {{t: number, name: string}} = {}
+    local cueIndex = 1
+    local punchStart = 1 + esc.punch
     local bodyHomePos, bodyHomeAnchor = a.body.Position, a.body.AnchorPoint
     local connections: {RBXScriptConnection} = {}
     local finished = false
@@ -551510,33 +551839,14 @@ function Seq.play(a: Args)
 
     a.eggView.AnchorPoint = Vector2.new(.5, .5)
     a.eggView.Position = UDim2.fromOffset(CENTER_EGG.X, CENTER_EGG.Y)
-    a.dino.AnchorPoint = Vector2.new(.5, .5)
-    a.dino.Position = UDim2.fromOffset(CENTER_DINO.X, CENTER_DINO.Y)
     local eggZoom = Instance.new("UIScale") eggZoom.Parent = a.eggView
-    local dinoScale = Instance.new("UIScale") dinoScale.Scale, dinoScale.Parent = if motion then .25 else 1, a.dino
+    local dinoScale: UIScale? = nil
     local bodyScale = Instance.new("UIScale") bodyScale.Parent = a.body
     if motion then
         a.body.AnchorPoint, a.body.Position = Vector2.new(.5, .5), UDim2.fromOffset(BODY_CENTER.X, BODY_CENTER.Y)
     end
-    -- Keep the viewport visible but transparent so DinosaurPreview loads the model during the build-up.
-    a.dino.Visible = not failed
-    local dinoView = a.dino :: any
-    dinoView.ImageTransparency = 1
 
-    -- Name: big white fill with a thick rarity-coloured stroke. Rarity line sits on a coloured pill.
     local nameStroke = a.nameLabel:FindFirstChildOfClass("UIStroke")
-    if not failed then
-        a.nameLabel.TextColor3, a.nameLabel.TextSize = WHITE, 48
-        a.nameLabel.TextStrokeColor3 = glow:Lerp(Color3.new(0, 0, 0), .45)
-        if nameStroke then nameStroke.Color, nameStroke.Thickness = glow:Lerp(Color3.new(0, 0, 0), .35), 5 end
-        a.oddsLabel.TextColor3 = WHITE
-    end
-    if failed then
-        -- Funny, not sad: warm cream title with a brown outline, soft cream lines under it (no red).
-        a.nameLabel.TextColor3, a.nameLabel.TextStrokeColor3 = Color3.fromRGB(255, 236, 150), Color3.fromRGB(110, 70, 15)
-        if nameStroke then nameStroke.Color, nameStroke.Thickness = Color3.fromRGB(110, 70, 15), 5 end
-        a.oddsLabel.TextColor3, a.detailLabel.TextColor3 = WHITE, Color3.fromRGB(255, 226, 140)
-    end
     for _, l in {a.nameLabel, a.oddsLabel, a.detailLabel} do hideLabel(l) end
     local pill = Instance.new("Frame")
     pill.Name, pill.BackgroundColor3, pill.AnchorPoint, pill.Visible = "RarityPill", glow:Lerp(Color3.new(0, 0, 0), .4), Vector2.new(.5, .5), false
@@ -551556,46 +551866,33 @@ function Seq.play(a: Args)
     sg.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(.5, .35), NumberSequenceKeypoint.new(1, 1)})
     sg.Parent = sweep
 
-    -- Ribbons (Shiny / BIG / mutation) and the tap hint.
+    -- Ribbons (Shiny / BIG / mutation, created once the result is known) and the tap hint.
     local badges: {{any}} = {}
     local pulseStrokes: {UIStroke} = {}
     local function addRibbon(text: string, color: Color3, cx: number, cy: number, w: number, tilt: number)
         local f, s, st = ribbon(a.body, text, color, cx, cy, w, tilt)
         table.insert(badges, {f, s}) table.insert(pulseStrokes, st)
     end
-    if a.shiny then addRibbon("SHINY", Theme.Colors.gold, 100, 52, 170, -7) end
-    if a.big then addRibbon("BIG", Theme.Colors.purple, 724, 52, 150, 7) end
-    if a.mutationName then addRibbon(string.upper(a.mutationName), a.mutationColor or Theme.Colors.gold, 116, if a.shiny then 108 else 52, 210, -4) end
     local hint = Instance.new("TextLabel")
     hint.Name, hint.BackgroundTransparency, hint.Position, hint.Size = "TapHint", 1, UDim2.fromOffset(152, 350), UDim2.fromOffset(520, 46)
-    hint.Font, hint.TextColor3, hint.TextScaled, hint.Text = Enum.Font.FredokaOne, WHITE, true, Timeline.hint(a.remaining)
+    hint.Font, hint.TextColor3, hint.TextScaled, hint.Text = Enum.Font.FredokaOne, WHITE, true, Timeline.hint(0)
     hint.TextStrokeTransparency, hint.TextStrokeColor3, hint.ZIndex, hint.Visible = 0, Theme.Colors.outline, a.body.ZIndex + 6, false
     hint.Parent = a.body
     local hintLimit = Instance.new("UITextSizeConstraint") hintLimit.MaxTextSize, hintLimit.MinTextSize, hintLimit.Parent = 34, 12, hint
 
-    -- Full-screen tap target (&gt;= 44 px everywhere) plus a small "Skip all" while more eggs wait.
+    -- Full-screen tap target (&gt;= 44 px everywhere) plus a small "Skip all" while more eggs wait. Taps are ignored until the result is in.
     local overlay = Instance.new("TextButton")
     overlay.Name, overlay.Text, overlay.BackgroundTransparency, overlay.AutoButtonColor = "HatchTapCatcher", "", 1, false
     overlay.Size, overlay.ZIndex, overlay.Parent = UDim2.fromScale(1, 1), 46, a.gui
     local skipButton: TextButton? = nil
-    if a.remaining &gt; 0 then
-        local b = Instance.new("TextButton")
-        b.Name, b.Text, b.AnchorPoint, b.AutoButtonColor = "SkipAll", "Skip all", Vector2.new(1, 1), true
-        b.Position, b.Size, b.BackgroundColor3 = UDim2.new(1, -12, 1, -12), UDim2.fromOffset(132, 46), Theme.Colors.card
-        b.Font, b.TextSize, b.TextColor3, b.ZIndex, b.Parent = Enum.Font.FredokaOne, 22, Theme.Colors.text, 47, overlay
-        local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 12) c.Parent = b
-        local s = Instance.new("UIStroke") s.Color, s.Thickness, s.Parent = Theme.Colors.outline, 2, b
-        skipButton = b
-    end
 
-    -- Reset the pooled effects and tint them for this egg.
-    local strength = .75 + .06 * rarity
-    fx.backdrop.BackgroundColor3, fx.backdrop.BackgroundTransparency = glow:Lerp(Color3.new(0, 0, 0), .78), 1
+    -- Pooled effects start neutral; applyResult() tints them for the egg.
     for i, ring in fx.rings do
         ring.BackgroundColor3 = glow:Lerp(WHITE, (1 - (i - 1) / (RING_N - 1)) * .5)
         ring.BackgroundTransparency = 1
         fx.ringScales[i].Scale = .6
     end
+    fx.backdrop.BackgroundTransparency = 1
     for i, ray in fx.rays do
         ray.BackgroundColor3, ray.BackgroundTransparency = glow:Lerp(WHITE, .4), 1
         ray.Size = UDim2.fromOffset(if i &lt;= 3 then 90 else 56, 760)
@@ -551623,24 +551920,32 @@ function Seq.play(a: Args)
         splat.shellImages[i].Rotation = if i == 2 then 14 else 0
     end
     for i, s in fx.shocks do s.Visible, fx.shockStrokes[i].Color, fx.shockStrokes[i].Transparency = false, glow:Lerp(WHITE, .3), 1 end
+    for i = 1, 2 do
+        kit.buckets[i].Visible, kit.streams[i].Visible, kit.splashes[i].Visible, kit.chips[i].Visible = false, false, false, false
+        kit.chipScales[i].Scale = 0
+    end
+    for _, d in kit.drops do d.Visible = false end
 
-    local count = if failed then Timeline.crumbCount(motion) else Timeline.particleCount(rarity, a.shiny, a.big, motion, failed)
-    local orbit = Timeline.orbitCount(rarity, motion, failed)
-    local px, py, vx, vy, life = table.create(count, 0), table.create(count, 0), table.create(count, 0), table.create(count, 0), table.create(count, 0)
-    local palette = if failed then {CREAM, WHITE, YOLK_GOLD, Color3.fromRGB(225, 190, 130)} else {glow, WHITE, Theme.Colors.gold, glow:Lerp(WHITE, .5), Theme.RarityColors[math.min(5, rarity + 1)]}
-    local cues = Timeline.cues(durs, rarity, failed, Sfx.revealName(rarity))
-    local cueIndex = 1
+    local px, py, vx, vy, life = table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0)
     local burstDone, revealStarted, readyShown, bodyRestored = false, false, false, false
-    local burstAt = durs.build
     local tweenHint: Tween? = nil
-    local punchStart = 1 + esc.punch
     local impactAt = .95
     local level = 0 -- overall glow level 0..1
     local revealT = 0 -- seconds after the burst when the dinosaur actually appeared
+    local chipShown = {false, false}
+    local dropN = {0, 0}
+    local lastWash = {-1, -1}
+    local paintColors: {Color3} = {WHITE, WHITE}
 
     local function restoreBody()
         a.body.AnchorPoint, a.body.Position = bodyHomeAnchor, bodyHomePos
         bodyScale.Scale = 1
+    end
+    local function hidePaint()
+        for i = 1, 2 do
+            kit.buckets[i].Visible, kit.streams[i].Visible, kit.splashes[i].Visible, kit.chips[i].Visible = false, false, false, false
+        end
+        for _, d in kit.drops do d.Visible = false end
     end
     local function finish()
         if finished then return end
@@ -551667,6 +551972,7 @@ function Seq.play(a: Args)
             for _, f in fx.splat.lobes do f.Visible = false end
             for _, f in fx.splat.drips do f.Visible = false end
             for _, f in fx.splat.shells do f.Visible = false end
+            hidePaint()
         end
     end
 
@@ -551712,10 +552018,83 @@ function Seq.play(a: Args)
         end
     end
 
+    -- BD-171 paint buckets: pose, pour stream, splash ring and droplets of both buckets, plus the colour/pattern chips.
+    local function showChip(i: number)
+        local reveal = if i == 1 then a.colorReveal else a.patternReveal
+        if not reveal then return end
+        local chip = kit.chips[i]
+        kit.chipLabels[i].Text = Timeline.paintLine(reveal)
+        kit.chipStrokes[i].Color = TIER_COLORS[reveal.tier] or WHITE
+        kit.chipSwatches[i].BackgroundColor3 = paintColors[i]
+        chip.Visible = true
+        TweenService:Create(kit.chipScales[i], TweenInfo.new(.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        if reveal.tier &gt;= 4 then
+            Sfx.play(Sfx.revealName(math.clamp(reveal.tier - 1, 1, 5))) -- Epic and above get the rarity sting
+            if reveal.tier &gt;= 5 then a.flash(TIER_COLORS[reveal.tier] or WHITE, .12) end
+        end
+    end
+    local function updatePaint(t: number)
+        local ps = Timeline.paintState(durs, t)
+        for i = 1, 2 do
+            local side = if i == 1 then -1 else 1
+            local b = if i == 1 then ps.left else ps.right
+            local bucket, stream = kit.buckets[i], kit.streams[i]
+            local x, y, rot, alpha = Timeline.bucketPose(b.k, side)
+            local show = b.k &gt; 0 and b.k &lt; 1
+            bucket.Visible = show
+            stream.Visible = false
+            if show then
+                bucket.Position, bucket.Rotation, bucket.GroupTransparency = UDim2.fromOffset(CENTER_EGG.X + x, CENTER_EGG.Y + y), rot, 1 - alpha
+                -- Pour stream: grows from the tilted rim to the egg, thins out just after the splash.
+                local grow = math.clamp((b.k - .46) / .14, 0, 1)
+                local thin = 1 - math.clamp((b.k - (Timeline.Paint.impact + .04)) / .12, 0, 1)
+                if grow &gt; 0 and thin &gt; 0 then
+                    local rr = math.rad(rot)
+                    local lx, ly = -side * 34, -22
+                    local lipX = CENTER_EGG.X + x + lx * math.cos(rr) - ly * math.sin(rr)
+                    local lipY = CENTER_EGG.Y + y + lx * math.sin(rr) + ly * math.cos(rr)
+                    local target = SPLASH_POINTS[i]
+                    local dx, dy = target.X - lipX, target.Y - lipY
+                    stream.Visible = true
+                    stream.BackgroundColor3 = paintColors[i]
+                    stream.Position, stream.Size, stream.Rotation = UDim2.fromOffset(lipX, lipY), UDim2.fromOffset(9 * thin, math.sqrt(dx * dx + dy * dy) * grow), math.deg(math.atan2(-dx, dy))
+                end
+            end
+            local since = b.sinceImpact
+            local ring = kit.splashes[i]
+            if b.impacted and since &lt; .5 then
+                local sc, tr = Timeline.splash(since)
+                ring.Visible = true
+                ring.Position = UDim2.fromOffset(SPLASH_POINTS[i].X, SPLASH_POINTS[i].Y)
+                kit.splashScales[i].Scale, kit.splashStrokes[i].Transparency = sc, tr
+            elseif ring.Visible then
+                ring.Visible = false
+            end
+            for j = 1, 10 do
+                local d = kit.drops[(i - 1) * 10 + j]
+                local dx, dy, tr = Timeline.drop(j, 10, since, side)
+                if b.impacted and tr &lt; 1 and j &lt;= dropN[i] then
+                    d.Visible = true
+                    d.Position, d.BackgroundTransparency = UDim2.fromOffset(SPLASH_POINTS[i].X + dx, SPLASH_POINTS[i].Y + dy), tr
+                elseif d.Visible then
+                    d.Visible = false
+                end
+            end
+            if b.impacted and not chipShown[i] then
+                chipShown[i] = true
+                showChip(i)
+            end
+        end
+        if ps.left.wash ~= lastWash[1] then lastWash[1] = ps.left.wash a.paint.color(ps.left.wash) end
+        if ps.right.wash ~= lastWash[2] then lastWash[2] = ps.right.wash a.paint.pattern(ps.right.wash) end
+    end
+
     local function burst()
         burstDone = true
         a.eggView.Rotation = 0
         eggZoom.Scale = 1
+        hidePaint()
+        a.paint.finish() -- fast-forwarded or Reduced Motion: the egg shows its final colour and pattern before it opens
         if motion then a.body.Position = UDim2.fromOffset(BODY_CENTER.X, BODY_CENTER.Y) end
         if motion then a.animateEgg(Timeline.EggClock) end
         a.splitEgg(not failed)
@@ -551844,17 +552223,11 @@ function Seq.play(a: Args)
     local function onTap()
         if finished then return end
         if inspect and (inspect :: InspectView.Handle).wasDrag() then return end -- a drag turns the dino, it never advances
+        if state.pending then return end -- Open was just pressed: nothing to skip yet
         if not failed and not revealStarted then return end -- never advance past an egg whose dinosaur is not shown yet
         if Timeline.tap(state) == "advance" then advance() end
     end
     overlay.Activated:Connect(onTap)
-    if skipButton then
-        skipButton.Activated:Connect(function()
-            if finished then return end
-            a.onSkipAll()
-            if Timeline.skipAll(state) == "advance" then advance() end
-        end)
-    end
     table.insert(connections, Input.InputBegan:Connect(function(input, processed)
         if processed then return end
         local k = input.KeyCode
@@ -551863,31 +552236,120 @@ function Seq.play(a: Args)
 
     local function place(f: Frame, x: number, y: number) f.Position = UDim2.fromOffset(x, y) end
 
+    -- The server answer: styles everything that depends on the egg's species, rarity, colour and pattern, then lets the build-up run on.
+    local function applyResult(r: Result)
+        for k, v in r :: any do a[k] = v end
+        rarity = math.clamp(r.rarity, 1, 5)
+        failed = r.failed
+        Timeline.supply(state, rarity, failed)
+        durs = state.durs
+        esc = Timeline.escalation(rarity, motion)
+        punchStart = 1 + esc.punch
+        -- Rarity palette: Common is lively teal, then the rarity colour up to gold for Legendary.
+        glow = if failed then Color3.fromRGB(255, 205, 90) elseif rarity &lt;= 1 then TEAL else r.color
+        strength = .75 + .06 * rarity
+        count = if failed then Timeline.crumbCount(motion) else Timeline.particleCount(rarity, r.shiny, r.big, motion, failed)
+        orbit = Timeline.orbitCount(rarity, motion, failed)
+        palette = if failed then {CREAM, WHITE, YOLK_GOLD, Color3.fromRGB(225, 190, 130)} else {glow, WHITE, Theme.Colors.gold, glow:Lerp(WHITE, .5), Theme.RarityColors[math.min(5, rarity + 1)]}
+        cues = Timeline.cues(durs, rarity, failed, Sfx.revealName(rarity))
+        cueIndex = 1
+        a.dino.AnchorPoint = Vector2.new(.5, .5)
+        a.dino.Position = UDim2.fromOffset(CENTER_DINO.X, CENTER_DINO.Y)
+        local scaleObject = Instance.new("UIScale")
+        scaleObject.Scale, scaleObject.Parent = if motion then .25 else 1, a.dino
+        dinoScale = scaleObject
+        -- Keep the viewport visible but transparent so DinosaurPreview loads the model during the build-up.
+        a.dino.Visible = not failed
+        local dinoView = a.dino :: any
+        dinoView.ImageTransparency = 1
+        -- Name: big white fill with a thick rarity-coloured stroke. Rarity line sits on a coloured pill.
+        if not failed then
+            a.nameLabel.TextColor3, a.nameLabel.TextSize = WHITE, 48
+            a.nameLabel.TextStrokeColor3 = glow:Lerp(Color3.new(0, 0, 0), .45)
+            if nameStroke then nameStroke.Color, nameStroke.Thickness = glow:Lerp(Color3.new(0, 0, 0), .35), 5 end
+            a.oddsLabel.TextColor3 = WHITE
+        else
+            -- Funny, not sad: warm cream title with a brown outline, soft cream lines under it (no red).
+            a.nameLabel.TextColor3, a.nameLabel.TextStrokeColor3 = Color3.fromRGB(255, 236, 150), Color3.fromRGB(110, 70, 15)
+            if nameStroke then nameStroke.Color, nameStroke.Thickness = Color3.fromRGB(110, 70, 15), 5 end
+            a.oddsLabel.TextColor3, a.detailLabel.TextColor3 = WHITE, Color3.fromRGB(255, 226, 140)
+        end
+        pill.BackgroundColor3, pillStroke.Color = glow:Lerp(Color3.new(0, 0, 0), .4), glow:Lerp(WHITE, .25)
+        if r.shiny then addRibbon("SHINY", Theme.Colors.gold, 100, 52, 170, -7) end
+        if r.big then addRibbon("BIG", Theme.Colors.purple, 724, 52, 150, 7) end
+        if r.mutationName then addRibbon(string.upper(r.mutationName), r.mutationColor or Theme.Colors.gold, 116, if r.shiny then 108 else 52, 210, -4) end
+        hint.Text = Timeline.hint(r.remaining)
+        if r.remaining &gt; 0 and not skipButton then
+            local b = Instance.new("TextButton")
+            b.Name, b.Text, b.AnchorPoint, b.AutoButtonColor = "SkipAll", "Skip all", Vector2.new(1, 1), true
+            b.Position, b.Size, b.BackgroundColor3 = UDim2.new(1, -12, 1, -12), UDim2.fromOffset(132, 46), Theme.Colors.card
+            b.Font, b.TextSize, b.TextColor3, b.ZIndex, b.Parent = Enum.Font.FredokaOne, 22, Theme.Colors.text, 47, overlay
+            local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 12) c.Parent = b
+            local s = Instance.new("UIStroke") s.Color, s.Thickness, s.Parent = Theme.Colors.outline, 2, b
+            skipButton = b
+            b.Activated:Connect(function()
+                if finished then return end
+                a.onSkipAll()
+                if Timeline.skipAll(state) == "advance" then advance() end
+            end)
+        end
+        -- Tint the pooled effects for this egg.
+        fx.backdrop.BackgroundColor3 = glow:Lerp(Color3.new(0, 0, 0), .78)
+        for i, ring in fx.rings do ring.BackgroundColor3 = glow:Lerp(WHITE, (1 - (i - 1) / (RING_N - 1)) * .5) end
+        for _, ray in fx.rays do ray.BackgroundColor3 = glow:Lerp(WHITE, .4) end
+        for _, m in fx.motes do m.BackgroundColor3 = glow:Lerp(WHITE, .5) end
+        for i, p in fx.podium do p.BackgroundColor3 = glow:Lerp(WHITE, if i == 1 then .1 else .4) end
+        for i, s in fx.shocks do fx.shockStrokes[i].Color = glow:Lerp(WHITE, .3) end
+        -- Paint buckets: colour bucket pours the egg colour, pattern bucket pours the pattern's accent colour.
+        a.paint.setGenes(r.genes)
+        local colors = r.paintColors
+        paintColors = {if colors then colors[1] else WHITE, if colors then colors[2] else WHITE}
+        for i = 1, 2 do
+            kit.bucketPaint[i].BackgroundColor3 = paintColors[i]
+            kit.splashStrokes[i].Color = paintColors[i]
+            kit.splashes[i].BackgroundColor3 = paintColors[i]
+            kit.splashes[i].BackgroundTransparency = .8
+            local reveal = if i == 1 then r.colorReveal else r.patternReveal
+            dropN[i] = if reveal then math.min(10, 4 + reveal.tier) else 5
+            for j = 1, 10 do
+                local d = kit.drops[(i - 1) * 10 + j]
+                d.BackgroundColor3 = if j % 3 == 0 then paintColors[i]:Lerp(WHITE, .45) else paintColors[i]
+                local size = 7 + (j * 5) % 7
+                d.Size = UDim2.fromOffset(size, size)
+            end
+        end
+        if not motion then a.paint.finish() end
+    end
+
     table.insert(connections, RunService.Heartbeat:Connect(function(dt)
         if finished then return end
-        if not a.alive() or not a.dino.Parent then finish() return end
+        if not a.alive() or (a.dino and not a.dino.Parent) then finish() return end
         local frameDt = math.min(dt, 1 / 20) -- a hitch must not skip the whole build-up
         Timeline.step(state, frameDt)
         local t = state.t
+        local vt = Timeline.visualT(state)
 
         while cueIndex &lt;= #cues and cues[cueIndex].t &lt;= t do
             Sfx.play(cues[cueIndex].name)
             cueIndex += 1
         end
 
-        if t &lt; burstAt then
+        if t &lt; durs.build then
             if motion then
-                local p = t / durs.build
-                local i = Timeline.intensity(p)
+                local bp = Timeline.buildProgress(durs, t)
+                local i = Timeline.intensity(bp)
                 local rot, dx, dy = Timeline.rattle(t, i)
                 local sx, sy = Timeline.shakeOffset(t, i * esc.shakeScale)
-                a.eggView.Rotation = rot * esc.shakeScale
-                a.eggView.Position = UDim2.fromOffset(CENTER_EGG.X + dx * esc.shakeScale, CENTER_EGG.Y + dy * esc.shakeScale)
-                eggZoom.Scale = Timeline.zoom(p)
-                bodyScale.Scale = Timeline.cameraZoom(p)
+                -- A gentle sway while the buckets paint (and while the server answer is still on its way).
+                local swayAmp = 1 - math.clamp(bp * 4, 0, 1)
+                a.eggView.Rotation = rot * esc.shakeScale + math.sin(vt * 3.4) * 2.8 * swayAmp
+                a.eggView.Position = UDim2.fromOffset(CENTER_EGG.X + dx * esc.shakeScale, CENTER_EGG.Y + dy * esc.shakeScale + math.sin(vt * 2.3) * 3 * swayAmp)
+                eggZoom.Scale = Timeline.zoom(bp)
+                bodyScale.Scale = Timeline.cameraZoom(bp)
                 a.body.Position = UDim2.fromOffset(BODY_CENTER.X + sx, BODY_CENTER.Y + sy)
-                a.animateEgg(p * Timeline.EggClock)
-                local g = Timeline.glow(p)
+                a.animateEgg(Timeline.eggClock(durs, t))
+                if not state.pending then updatePaint(t) end
+                local g = Timeline.glow(bp)
                 for n, ring in fx.rings do
                     ring.BackgroundTransparency = 1 - .16 * g * strength * (1 - (n - 1) / (RING_N + 2))
                     fx.ringScales[n].Scale = (.35 + .5 * g) * (1 + .05 * math.sin(t * 9))
@@ -551912,12 +552374,14 @@ function Seq.play(a: Args)
                     m.BackgroundTransparency = 1 - .6 * g
                 end
             end
+        elseif state.pending then
+            return -- Reduced Motion: wait for the server answer before opening anything
         else
             if not burstDone then burst() end
-            local since = t - burstAt
+            local since = t - durs.build
             -- Wait (up to 2.5 s) for the real model instead of revealing an empty viewport.
             local modelReady = failed or a.dino:FindFirstChildOfClass("WorldModel") ~= nil or since &gt; 2.5
-            if not revealStarted and modelReady and t &gt;= burstAt + (if motion then .1 else 0) then revealT = since startReveal() end
+            if not revealStarted and modelReady and t &gt;= durs.build + (if motion then .1 else 0) then revealT = since startReveal() end
             if motion then
                 -- camera push-in releases with a short ease (stronger punch for rarer eggs)
                 if since &lt; .45 then
@@ -551933,7 +552397,7 @@ function Seq.play(a: Args)
                     restoreBody()
                 end
                 if not failed then
-                    if revealStarted then dinoScale.Scale = Timeline.revealScale((since - revealT) / .8) * (if a.big then Timeline.stamp(since - impactAt - revealT) else 1) end
+                    if revealStarted and dinoScale then dinoScale.Scale = Timeline.revealScale((since - revealT) / .8) * (if a.big then Timeline.stamp(since - impactAt - revealT) else 1) end
                     if a.big and since &gt;= impactAt + revealT and since &lt; impactAt + revealT + .25 then
                         local k = 1 - (since - impactAt - revealT) / .25
                         a.body.AnchorPoint = Vector2.new(.5, .5)
@@ -552083,12 +552547,18 @@ function Seq.play(a: Args)
                 end
             end
         end
-        if not motion and not bodyRestored then bodyRestored = true restoreBody() end
-        if not readyShown and (revealStarted or failed) and t &gt;= durs.readyAt + revealT then showHint() end
+        if not motion and not bodyRestored and not state.pending then bodyRestored = true restoreBody() end
+        if not readyShown and (revealStarted or failed) and not state.pending and t &gt;= durs.readyAt + revealT then showHint() end
     end))
 
+    if a.result then applyResult(a.result) end
     return {
         cancel = function() finish() end,
+        supply = function(r: Result)
+            if finished or not state.pending then return end
+            applyResult(r)
+        end,
+        pending = function() return state.pending end,
     }
 end
 
@@ -552294,9 +552764,10 @@ local RunService = game:GetService("RunService")
 local Theme = require(game:GetService("ReplicatedStorage").Shared.UITheme)
 local Appearance = require(game:GetService("ReplicatedStorage").Shared.EggAppearance)
 local PreviewTraits = {}
-function PreviewTraits.add(view: ViewportFrame, traits)
+-- isEgg = true only for egg previews (BD-174: the egg condition overlay is never drawn on a dinosaur).
+function PreviewTraits.add(view: ViewportFrame, traits, isEgg: boolean?)
     if traits then view:SetAttribute("TraitsJson",game:GetService("HttpService"):JSONEncode(traits)) end
-    if traits and traits.genes then Appearance.apply(view,traits.genes) end
+    if traits and traits.genes then Appearance.apply(view,traits.genes,isEgg==true) end
     if not traits or not (traits.shiny or traits.big) then return end
     local badge = Instance.new("TextLabel")
     badge.Name = "TraitBadge"
@@ -552865,7 +553336,7 @@ for i,spec in {{110,.74},{150,.88},{200,.94}} do
     local halo=moonCore:Clone() halo.Name="EventMoonHalo"..i halo.Size=Vector3.one*spec[1] halo.Transparency=1 halo.Color=Color3.fromRGB(255,70,50) halo.Parent=folder
     table.insert(halos,halo)
 end
-local HALO_ALPHA={.74,.88,.94}
+local HALO_ALPHA={.84,.93,.97}
 local MOON_DIR=Vector3.new(-.32,.5,-.8).Unit
 
 -- Fog culls everything beyond FogEnd, which is the hard edge against the sky. A box of five fog-coloured slabs just inside FogEnd closes the sky,
@@ -552877,14 +553348,14 @@ for i=1,5 do
     part.Material,part.Transparency=Enum.Material.Neon,1 part.Position=Vector3.new(0,-4000,0) part.Parent=folder
     domeParts[i]=part
 end
-local DOME_MAX=360 -- ramp reference; the box itself stays within 300 studs (farther slabs are not drawn)
+local DOME_MAX=460 -- ramp reference. Fog clips everything beyond FogEnd per pixel, so the box (corners at 1.73x half) stays inside it: half = 0.62 x FogEnd
 local function updateDome(root:Vector3?,color:Color3,fogEnd:number,vis:number)
     local p=if root then math.clamp((DOME_MAX-fogEnd)/math.max(1,DOME_MAX-vis),0,1) else 0
     if p&lt;=.01 or not root then
         if domeParts[1].Transparency&lt;1 then for _,part in domeParts do part.Transparency=1 end end
         return
     end
-    local half=math.min(fogEnd*.9,300)
+    local half=math.min(fogEnd*.62,300)
     local ceilingY=half local floorY=-100
     local tall=ceilingY-floorY
     domeParts[1].Size=Vector3.new(half*2+4,2,half*2+4) domeParts[1].Position=root+Vector3.new(0,ceilingY,0)
@@ -552906,7 +553377,7 @@ for c=1,CURTAINS do
         local bottom=Instance.new("Attachment") bottom.Parent=workspace.Terrain
         local top=Instance.new("Attachment") top.Parent=workspace.Terrain
         local beam=Instance.new("Beam") beam.Attachment0,beam.Attachment1=bottom,top
-        beam.FaceCamera,beam.LightEmission,beam.LightInfluence,beam.Segments=true,1,0,1
+        beam.FaceCamera,beam.LightEmission,beam.LightInfluence,beam.Segments=true,1,0,12
         beam.Width0,beam.Width1=70+c*14,110+c*20
         beam.Enabled=false beam.Parent=folder
         table.insert(curtainRays,{bottom=bottom,top=top,beam=beam,curtain=c,index=i})
@@ -553259,7 +553730,7 @@ local function updateAurora(root:Vector3,now:number,on:boolean,recolor:boolean)
         local c,i=r.curtain,r.index
         local center=c*2.1+now*.012*(if c%2==0 then 1 else -1)
         local a=center+(i-(CURTAIN_RAYS+1)/2)/CURTAIN_RAYS*2.3+math.sin(now*.2+i*.5)*.035
-        local radius=165+c*24+math.sin(i*.9+now*.3+c)*14
+        local radius=150+c*22+math.sin(i*.9+now*.3+c)*12
         local baseY=root.Y+70+c*26
         local x,z=root.X+math.cos(a)*radius,root.Z+math.sin(a)*radius
         r.bottom.WorldPosition=Vector3.new(x,baseY,z)
@@ -553268,7 +553739,7 @@ local function updateAurora(root:Vector3,now:number,on:boolean,recolor:boolean)
             local hue=i/CURTAIN_RAYS*.55+c*.21
             local c0=WL.aurora(now,hue) local c1=WL.aurora(now+5,hue+.12) local c2=WL.aurora(now+10,hue+.3)
             r.beam.Color=seqColor(c0,c1,WL.scale(c2,.7))
-            local a1=lerpNum(1,.62+.1*math.sin(now*1.3+i*1.9),k)
+            local a1=lerpNum(1,.8+.08*math.sin(now*1.3+i*1.9),k)
             r.beam.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(.12,math.min(1,a1+.1)),NumberSequenceKeypoint.new(.5,a1),NumberSequenceKeypoint.new(.8,math.min(1,a1+.2)),NumberSequenceKeypoint.new(1,1)})
         end
     end
@@ -553383,7 +553854,7 @@ RunService.Heartbeat:Connect(function(dt)
     -- blood moon sky props
     local moonOn=live and activeId=="bloodmoon" and k&gt;0
     if moonOn and root then
-        local base=root+MOON_DIR*200
+        local base=root+MOON_DIR*150
         moonCore.Position=base moonCore.Transparency=lerpNum(1,.04,k)
         local beat=1+math.sin(now*.7)*.05
         moonCore.Size=Vector3.one*60*beat

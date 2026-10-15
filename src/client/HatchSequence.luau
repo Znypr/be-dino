@@ -34,11 +34,6 @@ local SHELL_START_Y, SHELL_FALL = 112, 70
 local CREAM = Color3.fromRGB(255, 244, 214)
 local YOLK_GOLD = Color3.fromRGB(255, 196, 38)
 
-type Layers = {splat: Splat, back: Frame, front: Frame, backdrop: Frame, rings: {Frame}, ringScales: {UIScale}, rays: {Frame}, motes: {Frame},
-    podium: {Frame}, particles: {Frame}, fw: {Frame}, rain: {Frame}, shocks: {Frame}, shockStrokes: {UIStroke}, shockScales: {UIScale},
-    arcs: {Frame}, shimmer: Frame, shimmerGradient: UIGradient}
-local layers: Layers? = nil
-
 local function corner(parent: Instance, radius: UDim?)
     local c = Instance.new("UICorner")
     c.CornerRadius = radius or UDim.new(1, 0)
@@ -51,6 +46,81 @@ local function dot(parent: Instance, name: string, z: number, w: number, h: numb
     if round then corner(f) end
     return f
 end
+
+-- Paint-bucket kit (BD-171), built once and reused. PLACEHOLDER shapes until the paint_bucket icon (docs/83 item 31) is uploaded and
+-- bound in UIIconAssets; the splashes, droplets and chips are effects/UI, not art. Positions are body coordinates.
+type PaintKit = {buckets: {CanvasGroup}, bucketPaint: {Frame}, bucketImages: {ImageLabel}, bucketShapes: {Frame}, streams: {Frame},
+    splashes: {Frame}, splashStrokes: {UIStroke}, splashScales: {UIScale}, drops: {Frame}, chips: {Frame}, chipLabels: {TextLabel},
+    chipScales: {UIScale}, chipSwatches: {Frame}, chipStrokes: {UIStroke}}
+local SPLASH_POINTS = {Vector2.new(412 - 40, 100), Vector2.new(412 + 40, 100)}
+local CHIP_CENTERS = {Vector2.new(262, 292), Vector2.new(562, 292)}
+local BUCKET_STEEL = Color3.fromRGB(118, 132, 156)
+local TIER_COLORS: {Color3} = {Color3.fromRGB(70, 205, 170), Color3.fromRGB(110, 205, 90), Color3.fromRGB(70, 150, 255),
+    Color3.fromRGB(180, 100, 255), Color3.fromRGB(255, 190, 50), Color3.fromRGB(255, 70, 190)}
+local function buildPaint(front: Frame): PaintKit
+    local kit: PaintKit = {buckets = {}, bucketPaint = {}, bucketImages = {}, bucketShapes = {}, streams = {}, splashes = {}, splashStrokes = {},
+        splashScales = {}, drops = {}, chips = {}, chipLabels = {}, chipScales = {}, chipSwatches = {}, chipStrokes = {}}
+    local bucketIcon = (Theme.ImageIds :: any).paint_bucket
+    for i = 1, 2 do
+        local group = Instance.new("CanvasGroup")
+        group.Name, group.BackgroundTransparency, group.AnchorPoint, group.Visible = "PaintBucket" .. i, 1, Vector2.new(.5, .5), false
+        group.Size, group.ZIndex, group.Active, group.Parent = UDim2.fromOffset(92, 92), 26, false, front
+        local shapes = Instance.new("Frame") -- PLACEHOLDER bucket made of UI shapes; hidden once the real icon is bound
+        shapes.Name, shapes.BackgroundTransparency, shapes.Size, shapes.ZIndex, shapes.Parent = "NativeBucket", 1, UDim2.fromScale(1, 1), 26, group
+        local handle = Instance.new("Frame")
+        handle.BackgroundTransparency, handle.Position, handle.Size, handle.ZIndex, handle.Parent = 1, UDim2.fromOffset(14, 2), UDim2.fromOffset(64, 58), 26, shapes
+        corner(handle)
+        local hs = Instance.new("UIStroke") hs.Color, hs.Thickness, hs.Parent = Color3.fromRGB(70, 80, 100), 5, handle
+        local body = Instance.new("Frame")
+        body.BackgroundColor3, body.BorderSizePixel, body.Position, body.Size, body.ZIndex, body.Parent = BUCKET_STEEL, 0, UDim2.fromOffset(16, 34), UDim2.fromOffset(60, 52), 27, shapes
+        corner(body, UDim.new(0, 10))
+        local bs = Instance.new("UIStroke") bs.Color, bs.Thickness, bs.Parent = Color3.fromRGB(52, 60, 80), 4, body
+        local band = Instance.new("Frame")
+        band.BackgroundColor3, band.BorderSizePixel, band.Position, band.Size, band.ZIndex, band.Parent = Color3.fromRGB(150, 164, 188), 0, UDim2.fromOffset(6, 12), UDim2.new(1, -12, 0, 8), 28, body
+        corner(band)
+        local rim = Instance.new("Frame")
+        rim.BackgroundColor3, rim.BorderSizePixel, rim.Position, rim.Size, rim.ZIndex, rim.Parent = Color3.fromRGB(88, 100, 124), 0, UDim2.fromOffset(10, 26), UDim2.fromOffset(72, 20), 28, shapes
+        corner(rim)
+        local top = Instance.new("Frame")
+        top.Name, top.BackgroundColor3, top.BorderSizePixel, top.Position, top.Size, top.ZIndex, top.Parent = "PaintSurface", WHITE, 0, UDim2.fromOffset(15, 29), UDim2.fromOffset(62, 12), 29, shapes
+        corner(top)
+        local image = Instance.new("ImageLabel")
+        image.Name, image.BackgroundTransparency, image.Size, image.ZIndex, image.Visible = "BucketImage", 1, UDim2.fromScale(1, 1), 26, false
+        image.Parent = group
+        if typeof(bucketIcon) == "string" and bucketIcon ~= "" then image.Image, image.Visible, shapes.Visible = bucketIcon, true, false end
+        kit.buckets[i], kit.bucketPaint[i], kit.bucketImages[i], kit.bucketShapes[i] = group, top, image, shapes
+        local stream = dot(front, "PaintStream" .. i, 25, 9, 60, false)
+        stream.AnchorPoint = Vector2.new(.5, 0)
+        corner(stream)
+        kit.streams[i] = stream
+        local splash = dot(front, "PaintSplash" .. i, 25, 190, 190, true)
+        local stroke = Instance.new("UIStroke") stroke.Thickness, stroke.Transparency, stroke.Parent = 9, 1, splash
+        local scale = Instance.new("UIScale") scale.Parent = splash
+        kit.splashes[i], kit.splashStrokes[i], kit.splashScales[i] = splash, stroke, scale
+        local chip = Instance.new("Frame")
+        chip.Name, chip.BackgroundColor3, chip.AnchorPoint, chip.Visible = "PaintChip" .. i, Color3.fromRGB(28, 34, 52), Vector2.new(.5, .5), false
+        chip.Position, chip.Size, chip.ZIndex, chip.Parent = UDim2.fromOffset(CHIP_CENTERS[i].X, CHIP_CENTERS[i].Y), UDim2.fromOffset(300, 44), 27, front
+        corner(chip)
+        local cs = Instance.new("UIStroke") cs.Thickness, cs.Color, cs.Parent = 3, WHITE, chip
+        local sc = Instance.new("UIScale") sc.Scale, sc.Parent = 0, chip
+        local swatch = Instance.new("Frame")
+        swatch.Name, swatch.BackgroundColor3, swatch.AnchorPoint, swatch.Position, swatch.Size, swatch.ZIndex, swatch.Parent = "Swatch", WHITE, Vector2.new(.5, .5), UDim2.fromOffset(24, 22), UDim2.fromOffset(22, 22), 28, chip
+        corner(swatch)
+        local ss = Instance.new("UIStroke") ss.Color, ss.Thickness, ss.Parent = Color3.new(0, 0, 0), 2, swatch
+        local text = Instance.new("TextLabel")
+        text.BackgroundTransparency, text.Position, text.Size, text.Font, text.TextColor3 = 1, UDim2.fromOffset(44, 2), UDim2.new(1, -52, 1, -4), Enum.Font.FredokaOne, WHITE
+        text.TextScaled, text.TextStrokeTransparency, text.TextStrokeColor3, text.ZIndex, text.Parent = true, 0, Color3.new(0, 0, 0), 28, chip
+        local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 26, 11, text
+        kit.chips[i], kit.chipLabels[i], kit.chipScales[i], kit.chipSwatches[i], kit.chipStrokes[i] = chip, text, sc, swatch, cs
+    end
+    for i = 1, Timeline.PaintMax do kit.drops[i] = dot(front, "PaintDrop" .. i, 26, 10, 10, true) end
+    return kit
+end
+
+type Layers = {paint: PaintKit, splat: Splat, back: Frame, front: Frame, backdrop: Frame, rings: {Frame}, ringScales: {UIScale}, rays: {Frame}, motes: {Frame},
+    podium: {Frame}, particles: {Frame}, fw: {Frame}, rain: {Frame}, shocks: {Frame}, shockStrokes: {UIStroke}, shockScales: {UIScale},
+    arcs: {Frame}, shimmer: Frame, shimmerGradient: UIGradient}
+local layers: Layers? = nil
 
 local function buildSplat(front: Frame): Splat
     -- PLACEHOLDER (docs/72): the egg-white puddle, yolk and shell cups below are native shape stacks. They are replaced by the
@@ -156,7 +226,7 @@ local function ensureLayers(panel: GuiObject): Layers
     sg.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(.38, 1), NumberSequenceKeypoint.new(.5, .35),
         NumberSequenceKeypoint.new(.62, 1), NumberSequenceKeypoint.new(1, 1)})
     sg.Parent = shimmer
-    local created: Layers = {splat = buildSplat(front), back = back, front = front, backdrop = backdrop, rings = rings, ringScales = ringScales, rays = rays, motes = motes, podium = podium,
+    local created: Layers = {paint = buildPaint(front), splat = buildSplat(front), back = back, front = front, backdrop = backdrop, rings = rings, ringScales = ringScales, rays = rays, motes = motes, podium = podium,
         particles = particles, fw = fw, rain = rain, shocks = shocks, shockStrokes = shockStrokes, shockScales = shockScales, arcs = arcs,
         shimmer = shimmer, shimmerGradient = sg}
     layers = created
@@ -205,28 +275,42 @@ local function ribbon(parent: GuiObject, text: string, color: Color3, cx: number
     return f, scale, stroke
 end
 
+-- What the server committed for this egg (never changed here). Supplied at start for a known egg, or later through handle.supply().
+export type Result = {
+    dino: GuiObject, rarity: number, color: Color3, failed: boolean, shiny: boolean, big: boolean,
+    mutationName: string?, mutationColor: Color3?, remaining: number,
+    genes: any?, colorReveal: any?, patternReveal: any?, paintColors: {Color3}?,
+}
 export type Args = {
     gui: ScreenGui, panel: GuiObject, body: GuiObject,
-    eggView: GuiObject, animateEgg: (number) -> (), splitEgg: (boolean?) -> (),
-    dino: GuiObject, rarity: number, color: Color3, failed: boolean, shiny: boolean, big: boolean,
-    mutationName: string?, mutationColor: Color3?,
+    eggView: GuiObject, animateEgg: (number) -> (), splitEgg: (boolean?) -> (), paint: any,
     nameLabel: TextLabel, oddsLabel: TextLabel, detailLabel: TextLabel,
-    remaining: number, motion: boolean,
+    motion: boolean,
     alive: () -> boolean, flash: (Color3, number) -> (),
     onNext: () -> (), onSkipAll: () -> (), onReveal: () -> (),
+    result: Result?, -- nil = Open was just pressed and the server answer has not arrived: the egg already wobbles (BD-170)
 }
+export type Handle = {cancel: () -> (), supply: (Result) -> (), pending: () -> boolean}
 
--- Returns {cancel}. onNext runs once after the player taps on the revealed egg.
-function Seq.play(a: Args)
+-- Returns {cancel, supply, pending}. onNext runs once after the player taps on the revealed egg.
+function Seq.play(args: Args): Handle
+    local a: any = args -- result fields are merged in by applyResult
     local motion = a.motion
-    local rarity = math.clamp(a.rarity, 1, 5)
-    local state = Timeline.new(motion, rarity, a.failed)
+    local state = Timeline.new(motion, 1, false, a.result == nil)
     local durs = state.durs
-    local esc = Timeline.escalation(rarity, motion)
     local fx = ensureLayers(a.panel)
-    local failed = a.failed
-    -- Rarity palette: Common is lively teal, then the rarity colour up to gold for Legendary.
-    local glow = if a.failed then Color3.fromRGB(255, 205, 90) elseif rarity <= 1 then Color3.fromRGB(70, 205, 170) else a.color
+    local kit = fx.paint
+    -- Result-dependent values. Neutral until applyResult() runs (Open pressed, server answer on its way).
+    local rarity, failed = 1, false
+    local TEAL = Color3.fromRGB(70, 205, 170)
+    local glow = TEAL
+    local strength = .81
+    local esc = Timeline.escalation(1, motion)
+    local count, orbit = 0, 0
+    local palette: {Color3} = {glow, WHITE}
+    local cues: {{t: number, name: string}} = {}
+    local cueIndex = 1
+    local punchStart = 1 + esc.punch
     local bodyHomePos, bodyHomeAnchor = a.body.Position, a.body.AnchorPoint
     local connections: {RBXScriptConnection} = {}
     local finished = false
@@ -234,33 +318,14 @@ function Seq.play(a: Args)
 
     a.eggView.AnchorPoint = Vector2.new(.5, .5)
     a.eggView.Position = UDim2.fromOffset(CENTER_EGG.X, CENTER_EGG.Y)
-    a.dino.AnchorPoint = Vector2.new(.5, .5)
-    a.dino.Position = UDim2.fromOffset(CENTER_DINO.X, CENTER_DINO.Y)
     local eggZoom = Instance.new("UIScale") eggZoom.Parent = a.eggView
-    local dinoScale = Instance.new("UIScale") dinoScale.Scale, dinoScale.Parent = if motion then .25 else 1, a.dino
+    local dinoScale: UIScale? = nil
     local bodyScale = Instance.new("UIScale") bodyScale.Parent = a.body
     if motion then
         a.body.AnchorPoint, a.body.Position = Vector2.new(.5, .5), UDim2.fromOffset(BODY_CENTER.X, BODY_CENTER.Y)
     end
-    -- Keep the viewport visible but transparent so DinosaurPreview loads the model during the build-up.
-    a.dino.Visible = not failed
-    local dinoView = a.dino :: any
-    dinoView.ImageTransparency = 1
 
-    -- Name: big white fill with a thick rarity-coloured stroke. Rarity line sits on a coloured pill.
     local nameStroke = a.nameLabel:FindFirstChildOfClass("UIStroke")
-    if not failed then
-        a.nameLabel.TextColor3, a.nameLabel.TextSize = WHITE, 48
-        a.nameLabel.TextStrokeColor3 = glow:Lerp(Color3.new(0, 0, 0), .45)
-        if nameStroke then nameStroke.Color, nameStroke.Thickness = glow:Lerp(Color3.new(0, 0, 0), .35), 5 end
-        a.oddsLabel.TextColor3 = WHITE
-    end
-    if failed then
-        -- Funny, not sad: warm cream title with a brown outline, soft cream lines under it (no red).
-        a.nameLabel.TextColor3, a.nameLabel.TextStrokeColor3 = Color3.fromRGB(255, 236, 150), Color3.fromRGB(110, 70, 15)
-        if nameStroke then nameStroke.Color, nameStroke.Thickness = Color3.fromRGB(110, 70, 15), 5 end
-        a.oddsLabel.TextColor3, a.detailLabel.TextColor3 = WHITE, Color3.fromRGB(255, 226, 140)
-    end
     for _, l in {a.nameLabel, a.oddsLabel, a.detailLabel} do hideLabel(l) end
     local pill = Instance.new("Frame")
     pill.Name, pill.BackgroundColor3, pill.AnchorPoint, pill.Visible = "RarityPill", glow:Lerp(Color3.new(0, 0, 0), .4), Vector2.new(.5, .5), false
@@ -280,46 +345,33 @@ function Seq.play(a: Args)
     sg.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(.5, .35), NumberSequenceKeypoint.new(1, 1)})
     sg.Parent = sweep
 
-    -- Ribbons (Shiny / BIG / mutation) and the tap hint.
+    -- Ribbons (Shiny / BIG / mutation, created once the result is known) and the tap hint.
     local badges: {{any}} = {}
     local pulseStrokes: {UIStroke} = {}
     local function addRibbon(text: string, color: Color3, cx: number, cy: number, w: number, tilt: number)
         local f, s, st = ribbon(a.body, text, color, cx, cy, w, tilt)
         table.insert(badges, {f, s}) table.insert(pulseStrokes, st)
     end
-    if a.shiny then addRibbon("SHINY", Theme.Colors.gold, 100, 52, 170, -7) end
-    if a.big then addRibbon("BIG", Theme.Colors.purple, 724, 52, 150, 7) end
-    if a.mutationName then addRibbon(string.upper(a.mutationName), a.mutationColor or Theme.Colors.gold, 116, if a.shiny then 108 else 52, 210, -4) end
     local hint = Instance.new("TextLabel")
     hint.Name, hint.BackgroundTransparency, hint.Position, hint.Size = "TapHint", 1, UDim2.fromOffset(152, 350), UDim2.fromOffset(520, 46)
-    hint.Font, hint.TextColor3, hint.TextScaled, hint.Text = Enum.Font.FredokaOne, WHITE, true, Timeline.hint(a.remaining)
+    hint.Font, hint.TextColor3, hint.TextScaled, hint.Text = Enum.Font.FredokaOne, WHITE, true, Timeline.hint(0)
     hint.TextStrokeTransparency, hint.TextStrokeColor3, hint.ZIndex, hint.Visible = 0, Theme.Colors.outline, a.body.ZIndex + 6, false
     hint.Parent = a.body
     local hintLimit = Instance.new("UITextSizeConstraint") hintLimit.MaxTextSize, hintLimit.MinTextSize, hintLimit.Parent = 34, 12, hint
 
-    -- Full-screen tap target (>= 44 px everywhere) plus a small "Skip all" while more eggs wait.
+    -- Full-screen tap target (>= 44 px everywhere) plus a small "Skip all" while more eggs wait. Taps are ignored until the result is in.
     local overlay = Instance.new("TextButton")
     overlay.Name, overlay.Text, overlay.BackgroundTransparency, overlay.AutoButtonColor = "HatchTapCatcher", "", 1, false
     overlay.Size, overlay.ZIndex, overlay.Parent = UDim2.fromScale(1, 1), 46, a.gui
     local skipButton: TextButton? = nil
-    if a.remaining > 0 then
-        local b = Instance.new("TextButton")
-        b.Name, b.Text, b.AnchorPoint, b.AutoButtonColor = "SkipAll", "Skip all", Vector2.new(1, 1), true
-        b.Position, b.Size, b.BackgroundColor3 = UDim2.new(1, -12, 1, -12), UDim2.fromOffset(132, 46), Theme.Colors.card
-        b.Font, b.TextSize, b.TextColor3, b.ZIndex, b.Parent = Enum.Font.FredokaOne, 22, Theme.Colors.text, 47, overlay
-        local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 12) c.Parent = b
-        local s = Instance.new("UIStroke") s.Color, s.Thickness, s.Parent = Theme.Colors.outline, 2, b
-        skipButton = b
-    end
 
-    -- Reset the pooled effects and tint them for this egg.
-    local strength = .75 + .06 * rarity
-    fx.backdrop.BackgroundColor3, fx.backdrop.BackgroundTransparency = glow:Lerp(Color3.new(0, 0, 0), .78), 1
+    -- Pooled effects start neutral; applyResult() tints them for the egg.
     for i, ring in fx.rings do
         ring.BackgroundColor3 = glow:Lerp(WHITE, (1 - (i - 1) / (RING_N - 1)) * .5)
         ring.BackgroundTransparency = 1
         fx.ringScales[i].Scale = .6
     end
+    fx.backdrop.BackgroundTransparency = 1
     for i, ray in fx.rays do
         ray.BackgroundColor3, ray.BackgroundTransparency = glow:Lerp(WHITE, .4), 1
         ray.Size = UDim2.fromOffset(if i <= 3 then 90 else 56, 760)
@@ -347,24 +399,32 @@ function Seq.play(a: Args)
         splat.shellImages[i].Rotation = if i == 2 then 14 else 0
     end
     for i, s in fx.shocks do s.Visible, fx.shockStrokes[i].Color, fx.shockStrokes[i].Transparency = false, glow:Lerp(WHITE, .3), 1 end
+    for i = 1, 2 do
+        kit.buckets[i].Visible, kit.streams[i].Visible, kit.splashes[i].Visible, kit.chips[i].Visible = false, false, false, false
+        kit.chipScales[i].Scale = 0
+    end
+    for _, d in kit.drops do d.Visible = false end
 
-    local count = if failed then Timeline.crumbCount(motion) else Timeline.particleCount(rarity, a.shiny, a.big, motion, failed)
-    local orbit = Timeline.orbitCount(rarity, motion, failed)
-    local px, py, vx, vy, life = table.create(count, 0), table.create(count, 0), table.create(count, 0), table.create(count, 0), table.create(count, 0)
-    local palette = if failed then {CREAM, WHITE, YOLK_GOLD, Color3.fromRGB(225, 190, 130)} else {glow, WHITE, Theme.Colors.gold, glow:Lerp(WHITE, .5), Theme.RarityColors[math.min(5, rarity + 1)]}
-    local cues = Timeline.cues(durs, rarity, failed, Sfx.revealName(rarity))
-    local cueIndex = 1
+    local px, py, vx, vy, life = table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0)
     local burstDone, revealStarted, readyShown, bodyRestored = false, false, false, false
-    local burstAt = durs.build
     local tweenHint: Tween? = nil
-    local punchStart = 1 + esc.punch
     local impactAt = .95
     local level = 0 -- overall glow level 0..1
     local revealT = 0 -- seconds after the burst when the dinosaur actually appeared
+    local chipShown = {false, false}
+    local dropN = {0, 0}
+    local lastWash = {-1, -1}
+    local paintColors: {Color3} = {WHITE, WHITE}
 
     local function restoreBody()
         a.body.AnchorPoint, a.body.Position = bodyHomeAnchor, bodyHomePos
         bodyScale.Scale = 1
+    end
+    local function hidePaint()
+        for i = 1, 2 do
+            kit.buckets[i].Visible, kit.streams[i].Visible, kit.splashes[i].Visible, kit.chips[i].Visible = false, false, false, false
+        end
+        for _, d in kit.drops do d.Visible = false end
     end
     local function finish()
         if finished then return end
@@ -391,6 +451,7 @@ function Seq.play(a: Args)
             for _, f in fx.splat.lobes do f.Visible = false end
             for _, f in fx.splat.drips do f.Visible = false end
             for _, f in fx.splat.shells do f.Visible = false end
+            hidePaint()
         end
     end
 
@@ -436,10 +497,83 @@ function Seq.play(a: Args)
         end
     end
 
+    -- BD-171 paint buckets: pose, pour stream, splash ring and droplets of both buckets, plus the colour/pattern chips.
+    local function showChip(i: number)
+        local reveal = if i == 1 then a.colorReveal else a.patternReveal
+        if not reveal then return end
+        local chip = kit.chips[i]
+        kit.chipLabels[i].Text = Timeline.paintLine(reveal)
+        kit.chipStrokes[i].Color = TIER_COLORS[reveal.tier] or WHITE
+        kit.chipSwatches[i].BackgroundColor3 = paintColors[i]
+        chip.Visible = true
+        TweenService:Create(kit.chipScales[i], TweenInfo.new(.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        if reveal.tier >= 4 then
+            Sfx.play(Sfx.revealName(math.clamp(reveal.tier - 1, 1, 5))) -- Epic and above get the rarity sting
+            if reveal.tier >= 5 then a.flash(TIER_COLORS[reveal.tier] or WHITE, .12) end
+        end
+    end
+    local function updatePaint(t: number)
+        local ps = Timeline.paintState(durs, t)
+        for i = 1, 2 do
+            local side = if i == 1 then -1 else 1
+            local b = if i == 1 then ps.left else ps.right
+            local bucket, stream = kit.buckets[i], kit.streams[i]
+            local x, y, rot, alpha = Timeline.bucketPose(b.k, side)
+            local show = b.k > 0 and b.k < 1
+            bucket.Visible = show
+            stream.Visible = false
+            if show then
+                bucket.Position, bucket.Rotation, bucket.GroupTransparency = UDim2.fromOffset(CENTER_EGG.X + x, CENTER_EGG.Y + y), rot, 1 - alpha
+                -- Pour stream: grows from the tilted rim to the egg, thins out just after the splash.
+                local grow = math.clamp((b.k - .46) / .14, 0, 1)
+                local thin = 1 - math.clamp((b.k - (Timeline.Paint.impact + .04)) / .12, 0, 1)
+                if grow > 0 and thin > 0 then
+                    local rr = math.rad(rot)
+                    local lx, ly = -side * 34, -22
+                    local lipX = CENTER_EGG.X + x + lx * math.cos(rr) - ly * math.sin(rr)
+                    local lipY = CENTER_EGG.Y + y + lx * math.sin(rr) + ly * math.cos(rr)
+                    local target = SPLASH_POINTS[i]
+                    local dx, dy = target.X - lipX, target.Y - lipY
+                    stream.Visible = true
+                    stream.BackgroundColor3 = paintColors[i]
+                    stream.Position, stream.Size, stream.Rotation = UDim2.fromOffset(lipX, lipY), UDim2.fromOffset(9 * thin, math.sqrt(dx * dx + dy * dy) * grow), math.deg(math.atan2(-dx, dy))
+                end
+            end
+            local since = b.sinceImpact
+            local ring = kit.splashes[i]
+            if b.impacted and since < .5 then
+                local sc, tr = Timeline.splash(since)
+                ring.Visible = true
+                ring.Position = UDim2.fromOffset(SPLASH_POINTS[i].X, SPLASH_POINTS[i].Y)
+                kit.splashScales[i].Scale, kit.splashStrokes[i].Transparency = sc, tr
+            elseif ring.Visible then
+                ring.Visible = false
+            end
+            for j = 1, 10 do
+                local d = kit.drops[(i - 1) * 10 + j]
+                local dx, dy, tr = Timeline.drop(j, 10, since, side)
+                if b.impacted and tr < 1 and j <= dropN[i] then
+                    d.Visible = true
+                    d.Position, d.BackgroundTransparency = UDim2.fromOffset(SPLASH_POINTS[i].X + dx, SPLASH_POINTS[i].Y + dy), tr
+                elseif d.Visible then
+                    d.Visible = false
+                end
+            end
+            if b.impacted and not chipShown[i] then
+                chipShown[i] = true
+                showChip(i)
+            end
+        end
+        if ps.left.wash ~= lastWash[1] then lastWash[1] = ps.left.wash a.paint.color(ps.left.wash) end
+        if ps.right.wash ~= lastWash[2] then lastWash[2] = ps.right.wash a.paint.pattern(ps.right.wash) end
+    end
+
     local function burst()
         burstDone = true
         a.eggView.Rotation = 0
         eggZoom.Scale = 1
+        hidePaint()
+        a.paint.finish() -- fast-forwarded or Reduced Motion: the egg shows its final colour and pattern before it opens
         if motion then a.body.Position = UDim2.fromOffset(BODY_CENTER.X, BODY_CENTER.Y) end
         if motion then a.animateEgg(Timeline.EggClock) end
         a.splitEgg(not failed)
@@ -568,17 +702,11 @@ function Seq.play(a: Args)
     local function onTap()
         if finished then return end
         if inspect and (inspect :: InspectView.Handle).wasDrag() then return end -- a drag turns the dino, it never advances
+        if state.pending then return end -- Open was just pressed: nothing to skip yet
         if not failed and not revealStarted then return end -- never advance past an egg whose dinosaur is not shown yet
         if Timeline.tap(state) == "advance" then advance() end
     end
     overlay.Activated:Connect(onTap)
-    if skipButton then
-        skipButton.Activated:Connect(function()
-            if finished then return end
-            a.onSkipAll()
-            if Timeline.skipAll(state) == "advance" then advance() end
-        end)
-    end
     table.insert(connections, Input.InputBegan:Connect(function(input, processed)
         if processed then return end
         local k = input.KeyCode
@@ -587,31 +715,120 @@ function Seq.play(a: Args)
 
     local function place(f: Frame, x: number, y: number) f.Position = UDim2.fromOffset(x, y) end
 
+    -- The server answer: styles everything that depends on the egg's species, rarity, colour and pattern, then lets the build-up run on.
+    local function applyResult(r: Result)
+        for k, v in r :: any do a[k] = v end
+        rarity = math.clamp(r.rarity, 1, 5)
+        failed = r.failed
+        Timeline.supply(state, rarity, failed)
+        durs = state.durs
+        esc = Timeline.escalation(rarity, motion)
+        punchStart = 1 + esc.punch
+        -- Rarity palette: Common is lively teal, then the rarity colour up to gold for Legendary.
+        glow = if failed then Color3.fromRGB(255, 205, 90) elseif rarity <= 1 then TEAL else r.color
+        strength = .75 + .06 * rarity
+        count = if failed then Timeline.crumbCount(motion) else Timeline.particleCount(rarity, r.shiny, r.big, motion, failed)
+        orbit = Timeline.orbitCount(rarity, motion, failed)
+        palette = if failed then {CREAM, WHITE, YOLK_GOLD, Color3.fromRGB(225, 190, 130)} else {glow, WHITE, Theme.Colors.gold, glow:Lerp(WHITE, .5), Theme.RarityColors[math.min(5, rarity + 1)]}
+        cues = Timeline.cues(durs, rarity, failed, Sfx.revealName(rarity))
+        cueIndex = 1
+        a.dino.AnchorPoint = Vector2.new(.5, .5)
+        a.dino.Position = UDim2.fromOffset(CENTER_DINO.X, CENTER_DINO.Y)
+        local scaleObject = Instance.new("UIScale")
+        scaleObject.Scale, scaleObject.Parent = if motion then .25 else 1, a.dino
+        dinoScale = scaleObject
+        -- Keep the viewport visible but transparent so DinosaurPreview loads the model during the build-up.
+        a.dino.Visible = not failed
+        local dinoView = a.dino :: any
+        dinoView.ImageTransparency = 1
+        -- Name: big white fill with a thick rarity-coloured stroke. Rarity line sits on a coloured pill.
+        if not failed then
+            a.nameLabel.TextColor3, a.nameLabel.TextSize = WHITE, 48
+            a.nameLabel.TextStrokeColor3 = glow:Lerp(Color3.new(0, 0, 0), .45)
+            if nameStroke then nameStroke.Color, nameStroke.Thickness = glow:Lerp(Color3.new(0, 0, 0), .35), 5 end
+            a.oddsLabel.TextColor3 = WHITE
+        else
+            -- Funny, not sad: warm cream title with a brown outline, soft cream lines under it (no red).
+            a.nameLabel.TextColor3, a.nameLabel.TextStrokeColor3 = Color3.fromRGB(255, 236, 150), Color3.fromRGB(110, 70, 15)
+            if nameStroke then nameStroke.Color, nameStroke.Thickness = Color3.fromRGB(110, 70, 15), 5 end
+            a.oddsLabel.TextColor3, a.detailLabel.TextColor3 = WHITE, Color3.fromRGB(255, 226, 140)
+        end
+        pill.BackgroundColor3, pillStroke.Color = glow:Lerp(Color3.new(0, 0, 0), .4), glow:Lerp(WHITE, .25)
+        if r.shiny then addRibbon("SHINY", Theme.Colors.gold, 100, 52, 170, -7) end
+        if r.big then addRibbon("BIG", Theme.Colors.purple, 724, 52, 150, 7) end
+        if r.mutationName then addRibbon(string.upper(r.mutationName), r.mutationColor or Theme.Colors.gold, 116, if r.shiny then 108 else 52, 210, -4) end
+        hint.Text = Timeline.hint(r.remaining)
+        if r.remaining > 0 and not skipButton then
+            local b = Instance.new("TextButton")
+            b.Name, b.Text, b.AnchorPoint, b.AutoButtonColor = "SkipAll", "Skip all", Vector2.new(1, 1), true
+            b.Position, b.Size, b.BackgroundColor3 = UDim2.new(1, -12, 1, -12), UDim2.fromOffset(132, 46), Theme.Colors.card
+            b.Font, b.TextSize, b.TextColor3, b.ZIndex, b.Parent = Enum.Font.FredokaOne, 22, Theme.Colors.text, 47, overlay
+            local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 12) c.Parent = b
+            local s = Instance.new("UIStroke") s.Color, s.Thickness, s.Parent = Theme.Colors.outline, 2, b
+            skipButton = b
+            b.Activated:Connect(function()
+                if finished then return end
+                a.onSkipAll()
+                if Timeline.skipAll(state) == "advance" then advance() end
+            end)
+        end
+        -- Tint the pooled effects for this egg.
+        fx.backdrop.BackgroundColor3 = glow:Lerp(Color3.new(0, 0, 0), .78)
+        for i, ring in fx.rings do ring.BackgroundColor3 = glow:Lerp(WHITE, (1 - (i - 1) / (RING_N - 1)) * .5) end
+        for _, ray in fx.rays do ray.BackgroundColor3 = glow:Lerp(WHITE, .4) end
+        for _, m in fx.motes do m.BackgroundColor3 = glow:Lerp(WHITE, .5) end
+        for i, p in fx.podium do p.BackgroundColor3 = glow:Lerp(WHITE, if i == 1 then .1 else .4) end
+        for i, s in fx.shocks do fx.shockStrokes[i].Color = glow:Lerp(WHITE, .3) end
+        -- Paint buckets: colour bucket pours the egg colour, pattern bucket pours the pattern's accent colour.
+        a.paint.setGenes(r.genes)
+        local colors = r.paintColors
+        paintColors = {if colors then colors[1] else WHITE, if colors then colors[2] else WHITE}
+        for i = 1, 2 do
+            kit.bucketPaint[i].BackgroundColor3 = paintColors[i]
+            kit.splashStrokes[i].Color = paintColors[i]
+            kit.splashes[i].BackgroundColor3 = paintColors[i]
+            kit.splashes[i].BackgroundTransparency = .8
+            local reveal = if i == 1 then r.colorReveal else r.patternReveal
+            dropN[i] = if reveal then math.min(10, 4 + reveal.tier) else 5
+            for j = 1, 10 do
+                local d = kit.drops[(i - 1) * 10 + j]
+                d.BackgroundColor3 = if j % 3 == 0 then paintColors[i]:Lerp(WHITE, .45) else paintColors[i]
+                local size = 7 + (j * 5) % 7
+                d.Size = UDim2.fromOffset(size, size)
+            end
+        end
+        if not motion then a.paint.finish() end
+    end
+
     table.insert(connections, RunService.Heartbeat:Connect(function(dt)
         if finished then return end
-        if not a.alive() or not a.dino.Parent then finish() return end
+        if not a.alive() or (a.dino and not a.dino.Parent) then finish() return end
         local frameDt = math.min(dt, 1 / 20) -- a hitch must not skip the whole build-up
         Timeline.step(state, frameDt)
         local t = state.t
+        local vt = Timeline.visualT(state)
 
         while cueIndex <= #cues and cues[cueIndex].t <= t do
             Sfx.play(cues[cueIndex].name)
             cueIndex += 1
         end
 
-        if t < burstAt then
+        if t < durs.build then
             if motion then
-                local p = t / durs.build
-                local i = Timeline.intensity(p)
+                local bp = Timeline.buildProgress(durs, t)
+                local i = Timeline.intensity(bp)
                 local rot, dx, dy = Timeline.rattle(t, i)
                 local sx, sy = Timeline.shakeOffset(t, i * esc.shakeScale)
-                a.eggView.Rotation = rot * esc.shakeScale
-                a.eggView.Position = UDim2.fromOffset(CENTER_EGG.X + dx * esc.shakeScale, CENTER_EGG.Y + dy * esc.shakeScale)
-                eggZoom.Scale = Timeline.zoom(p)
-                bodyScale.Scale = Timeline.cameraZoom(p)
+                -- A gentle sway while the buckets paint (and while the server answer is still on its way).
+                local swayAmp = 1 - math.clamp(bp * 4, 0, 1)
+                a.eggView.Rotation = rot * esc.shakeScale + math.sin(vt * 3.4) * 2.8 * swayAmp
+                a.eggView.Position = UDim2.fromOffset(CENTER_EGG.X + dx * esc.shakeScale, CENTER_EGG.Y + dy * esc.shakeScale + math.sin(vt * 2.3) * 3 * swayAmp)
+                eggZoom.Scale = Timeline.zoom(bp)
+                bodyScale.Scale = Timeline.cameraZoom(bp)
                 a.body.Position = UDim2.fromOffset(BODY_CENTER.X + sx, BODY_CENTER.Y + sy)
-                a.animateEgg(p * Timeline.EggClock)
-                local g = Timeline.glow(p)
+                a.animateEgg(Timeline.eggClock(durs, t))
+                if not state.pending then updatePaint(t) end
+                local g = Timeline.glow(bp)
                 for n, ring in fx.rings do
                     ring.BackgroundTransparency = 1 - .16 * g * strength * (1 - (n - 1) / (RING_N + 2))
                     fx.ringScales[n].Scale = (.35 + .5 * g) * (1 + .05 * math.sin(t * 9))
@@ -636,12 +853,14 @@ function Seq.play(a: Args)
                     m.BackgroundTransparency = 1 - .6 * g
                 end
             end
+        elseif state.pending then
+            return -- Reduced Motion: wait for the server answer before opening anything
         else
             if not burstDone then burst() end
-            local since = t - burstAt
+            local since = t - durs.build
             -- Wait (up to 2.5 s) for the real model instead of revealing an empty viewport.
             local modelReady = failed or a.dino:FindFirstChildOfClass("WorldModel") ~= nil or since > 2.5
-            if not revealStarted and modelReady and t >= burstAt + (if motion then .1 else 0) then revealT = since startReveal() end
+            if not revealStarted and modelReady and t >= durs.build + (if motion then .1 else 0) then revealT = since startReveal() end
             if motion then
                 -- camera push-in releases with a short ease (stronger punch for rarer eggs)
                 if since < .45 then
@@ -657,7 +876,7 @@ function Seq.play(a: Args)
                     restoreBody()
                 end
                 if not failed then
-                    if revealStarted then dinoScale.Scale = Timeline.revealScale((since - revealT) / .8) * (if a.big then Timeline.stamp(since - impactAt - revealT) else 1) end
+                    if revealStarted and dinoScale then dinoScale.Scale = Timeline.revealScale((since - revealT) / .8) * (if a.big then Timeline.stamp(since - impactAt - revealT) else 1) end
                     if a.big and since >= impactAt + revealT and since < impactAt + revealT + .25 then
                         local k = 1 - (since - impactAt - revealT) / .25
                         a.body.AnchorPoint = Vector2.new(.5, .5)
@@ -807,12 +1026,18 @@ function Seq.play(a: Args)
                 end
             end
         end
-        if not motion and not bodyRestored then bodyRestored = true restoreBody() end
-        if not readyShown and (revealStarted or failed) and t >= durs.readyAt + revealT then showHint() end
+        if not motion and not bodyRestored and not state.pending then bodyRestored = true restoreBody() end
+        if not readyShown and (revealStarted or failed) and not state.pending and t >= durs.readyAt + revealT then showHint() end
     end))
 
+    if a.result then applyResult(a.result) end
     return {
         cancel = function() finish() end,
+        supply = function(r: Result)
+            if finished or not state.pending then return end
+            applyResult(r)
+        end,
+        pending = function() return state.pending end,
     }
 end
 

@@ -25,7 +25,7 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
     stage.Name,stage.BackgroundTransparency,stage.AnchorPoint="EggLayers",1,Vector2.new(.5,.5)
     stage.Position,stage.Size,stage.ZIndex,stage.Parent=UDim2.fromScale(.5,.5),UDim2.fromOffset(canvas,canvas),root.ZIndex,root
     local scale=Instance.new("UIScale") scale.Parent=stage
-    local tint=if genes and Genetics and Genetics.valid(genes) then Genetics.tint(genes) else Color3.new(1,1,1)
+    local paintTint=Color3.new(1,1,1)
     local function image(parentObject: GuiObject,id: string,z: number)
         local result=Instance.new("ImageLabel")
         result.BorderSizePixel=0
@@ -33,16 +33,37 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
         result.ZIndex,result.Parent=z,parentObject
         return result
     end
-    local fallback=ModelPreview.add(root,"egg")
-    fallback.Name="NativeHatchFallback"
-    fallback.ZIndex=root.ZIndex+2
-    Appearance.apply(fallback,genes)
-    local authored=fallback:FindFirstChild("AuthoredBody",true)~=nil
-    root:SetAttribute("ArtworkFallback",true)
+    -- BD-170/171: the egg starts as the plain cream Blender egg image (never a cube, visible at once, colourless, patternless).
+    -- The real 3D egg (authored mesh, carries colour, pattern and condition) is built in the background and only ever shown
+    -- once it is verified; a failed or primitive build is never displayed.
+    root:SetAttribute("ArtworkFallback",false)
     root:SetAttribute("ArtworkLoadState","Loading")
     local shell=image(stage,shellAsset,stage.ZIndex+2)
-    shell.Name,shell.ImageColor3="PorcelainShell",tint
-    shell.Visible=false
+    shell.Name,shell.ImageColor3="PorcelainShell",Color3.new(1,1,1)
+    local egg3d: ViewportFrame?=nil
+    local egg3dReady=false
+    local eggGenes=nil
+    local function applyGenes3d()
+        local view=egg3d
+        if view and egg3dReady and eggGenes and Genetics and Genetics.valid(eggGenes) then Appearance.apply(view,eggGenes,true) end
+    end
+    task.spawn(function()
+        -- Built inside a hidden holder so nothing (not even a half-built or primitive model) can flash on screen.
+        local holder=Instance.new("Frame")
+        holder.Name,holder.BackgroundTransparency,holder.Visible,holder.Size,holder.Parent="EggBuildHolder",1,false,UDim2.fromOffset(268,268),root
+        local view=ModelPreview.add(holder,"egg")
+        if not root.Parent then holder:Destroy() return end
+        local authored=view:FindFirstChild("AuthoredBody",true)~=nil
+        if not authored then holder:Destroy() return end -- the primitive ball/cube fallback is never shown
+        view.Name,view.ZIndex=("NativeHatchEgg"),root.ZIndex+2
+        view.AnchorPoint,view.Position,view.Size=Vector2.new(.5,.5),UDim2.fromScale(.5,.5),UDim2.fromOffset(268,268)
+        view.ImageTransparency,view.Visible=1,false
+        view.Parent=root
+        holder:Destroy()
+        egg3d,egg3dReady=view,true
+        root:SetAttribute("Egg3dReady",true)
+        applyGenes3d()
+    end)
     local crackStages={}
     for i,region in {{210,107,95,128,.68},{151,224,210,83,1.48},{151,306,210,80,2.28}} do
         local mask=Instance.new("Frame")
@@ -78,10 +99,9 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
             if status~=Enum.AssetFetchStatus.Success then failed=true end
         end) end)
         if not root.Parent or root:GetAttribute("Opening") then return end
-        local native=authored or not ok or failed
+        local native=not ok or failed
         root:SetAttribute("ArtworkFallback",native)
         root:SetAttribute("ArtworkLoadState",if native then "Unavailable" else "Loaded")
-        fallback.Visible=native
         shell.Visible=not native
         task.spawn(function() pcall(function() ContentProvider:PreloadAsync({crunch,chime}) end) end)
     end)
@@ -101,7 +121,6 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
             for _,span in Fragments.spans(polygon,y+2) do
                 local left,right=span[1],span[2]
                 local strip=image(group,shellAsset,group.ZIndex)
-                strip.ImageColor3=tint
                 -- Guard overlap avoids one-pixel seams when the phone UI scales.
                 strip.ImageRectOffset,strip.ImageRectSize=Vector2.new(left,y),Vector2.new(right-left,6)
                 strip.Position,strip.Size=UDim2.fromOffset((left-minX)*unit,(y-minY)*unit),UDim2.fromOffset((right-left)*unit,6*unit)
@@ -147,9 +166,10 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
             if success~=false then chime.Parent=parent chime:Play() game:GetService("Debris"):AddItem(chime,3) end
         end
         if not Theme.MotionEnabled then root:Destroy() return end
-        stage.Rotation=0 scale.Scale=1 shell.Visible=false fallback.Visible=false
+        stage.Rotation=0 scale.Scale=1 shell.Visible=false
+        if egg3d then egg3d.Visible=false end
         for _,step in crackStages do step.mask.Visible=false end
-        for _,piece in pieces do piece.group.Visible=root:GetAttribute("ArtworkFallback")~=true end
+        for _,piece in pieces do piece.group.GroupColor3=paintTint piece.group.Visible=root:GetAttribute("ArtworkFallback")~=true end
         local ring=Instance.new("UIStroke") ring.Color,ring.Thickness,ring.Transparency,ring.Parent=color,2,.15,halo
         Theme.animate(halo,.48,{BackgroundTransparency=1})
         Theme.animate(haloScale,.48,{Scale=1.7})
@@ -183,6 +203,41 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
             end
         end)
     end
-    return root,update,split
+    -- BD-171 paint API. The egg is neutral until setGenes(); color(wash) tints the whole egg, pattern(wash) fades in the real
+    -- 3D egg (colour + pattern + condition) over the plain one. Both are idempotent and safe to call every frame.
+    local paint={}
+    function paint.setGenes(newGenes)
+        if newGenes and Genetics and Genetics.valid(newGenes) then
+            eggGenes=newGenes
+            paintTint=Genetics.tint(newGenes)
+            applyGenes3d()
+        end
+    end
+    function paint.tint(): Color3 return paintTint end
+    -- The species rarity colour is only known once the answer arrives; it tints the burst halo and rays.
+    function paint.setRarityColor(newColor: Color3)
+        color=newColor
+        halo.BackgroundColor3=newColor
+    end
+    function paint.hasPattern(): boolean
+        return egg3dReady and eggGenes~=nil and root:GetAttribute("Opening")~=true
+    end
+    function paint.color(wash: number)
+        shell.ImageColor3=Color3.new(1,1,1):Lerp(paintTint,math.clamp(wash,0,1))
+    end
+    function paint.pattern(wash: number)
+        local view=egg3d
+        if not view or not paint.hasPattern() then return end
+        local w=math.clamp(wash,0,1)
+        view.Visible=w>0
+        view.ImageTransparency=1-w
+        shell.ImageTransparency=if w>=1 then 1 else w*.9
+    end
+    -- Show the finished egg at once (fast-forward, Reduced Motion).
+    function paint.finish()
+        paint.color(1)
+        paint.pattern(1)
+    end
+    return root,update,split,paint
 end
 return Hatch

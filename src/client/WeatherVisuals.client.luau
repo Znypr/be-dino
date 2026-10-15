@@ -262,7 +262,7 @@ for i,spec in {{110,.74},{150,.88},{200,.94}} do
     local halo=moonCore:Clone() halo.Name="EventMoonHalo"..i halo.Size=Vector3.one*spec[1] halo.Transparency=1 halo.Color=Color3.fromRGB(255,70,50) halo.Parent=folder
     table.insert(halos,halo)
 end
-local HALO_ALPHA={.74,.88,.94}
+local HALO_ALPHA={.84,.93,.97}
 local MOON_DIR=Vector3.new(-.32,.5,-.8).Unit
 
 -- Fog culls everything beyond FogEnd, which is the hard edge against the sky. A box of five fog-coloured slabs just inside FogEnd closes the sky,
@@ -274,14 +274,14 @@ for i=1,5 do
     part.Material,part.Transparency=Enum.Material.Neon,1 part.Position=Vector3.new(0,-4000,0) part.Parent=folder
     domeParts[i]=part
 end
-local DOME_MAX=360 -- ramp reference; the box itself stays within 300 studs (farther slabs are not drawn)
+local DOME_MAX=460 -- ramp reference. Fog clips everything beyond FogEnd per pixel, so the box (corners at 1.73x half) stays inside it: half = 0.62 x FogEnd
 local function updateDome(root:Vector3?,color:Color3,fogEnd:number,vis:number)
     local p=if root then math.clamp((DOME_MAX-fogEnd)/math.max(1,DOME_MAX-vis),0,1) else 0
     if p<=.01 or not root then
         if domeParts[1].Transparency<1 then for _,part in domeParts do part.Transparency=1 end end
         return
     end
-    local half=math.min(fogEnd*.9,300)
+    local half=math.min(fogEnd*.62,300)
     local ceilingY=half local floorY=-100
     local tall=ceilingY-floorY
     domeParts[1].Size=Vector3.new(half*2+4,2,half*2+4) domeParts[1].Position=root+Vector3.new(0,ceilingY,0)
@@ -303,7 +303,7 @@ for c=1,CURTAINS do
         local bottom=Instance.new("Attachment") bottom.Parent=workspace.Terrain
         local top=Instance.new("Attachment") top.Parent=workspace.Terrain
         local beam=Instance.new("Beam") beam.Attachment0,beam.Attachment1=bottom,top
-        beam.FaceCamera,beam.LightEmission,beam.LightInfluence,beam.Segments=true,1,0,1
+        beam.FaceCamera,beam.LightEmission,beam.LightInfluence,beam.Segments=true,1,0,12
         beam.Width0,beam.Width1=70+c*14,110+c*20
         beam.Enabled=false beam.Parent=folder
         table.insert(curtainRays,{bottom=bottom,top=top,beam=beam,curtain=c,index=i})
@@ -656,7 +656,7 @@ local function updateAurora(root:Vector3,now:number,on:boolean,recolor:boolean)
         local c,i=r.curtain,r.index
         local center=c*2.1+now*.012*(if c%2==0 then 1 else -1)
         local a=center+(i-(CURTAIN_RAYS+1)/2)/CURTAIN_RAYS*2.3+math.sin(now*.2+i*.5)*.035
-        local radius=165+c*24+math.sin(i*.9+now*.3+c)*14
+        local radius=150+c*22+math.sin(i*.9+now*.3+c)*12
         local baseY=root.Y+70+c*26
         local x,z=root.X+math.cos(a)*radius,root.Z+math.sin(a)*radius
         r.bottom.WorldPosition=Vector3.new(x,baseY,z)
@@ -665,7 +665,7 @@ local function updateAurora(root:Vector3,now:number,on:boolean,recolor:boolean)
             local hue=i/CURTAIN_RAYS*.55+c*.21
             local c0=WL.aurora(now,hue) local c1=WL.aurora(now+5,hue+.12) local c2=WL.aurora(now+10,hue+.3)
             r.beam.Color=seqColor(c0,c1,WL.scale(c2,.7))
-            local a1=lerpNum(1,.62+.1*math.sin(now*1.3+i*1.9),k)
+            local a1=lerpNum(1,.8+.08*math.sin(now*1.3+i*1.9),k)
             r.beam.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(.12,math.min(1,a1+.1)),NumberSequenceKeypoint.new(.5,a1),NumberSequenceKeypoint.new(.8,math.min(1,a1+.2)),NumberSequenceKeypoint.new(1,1)})
         end
     end
@@ -780,7 +780,7 @@ RunService.Heartbeat:Connect(function(dt)
     -- blood moon sky props
     local moonOn=live and activeId=="bloodmoon" and k>0
     if moonOn and root then
-        local base=root+MOON_DIR*200
+        local base=root+MOON_DIR*150
         moonCore.Position=base moonCore.Transparency=lerpNum(1,.04,k)
         local beat=1+math.sin(now*.7)*.05
         moonCore.Size=Vector3.one*60*beat

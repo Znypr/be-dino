@@ -42,7 +42,7 @@ end
 function EggsScreen.safeEggView(card: GuiObject, empty: boolean, size: number, x: number, y: number, traits: any): ViewportFrame
     local view = ModelPreview.add(card, "egg", empty)
     view.Position, view.Size = UDim2.fromOffset(x, y), UDim2.fromOffset(size, size)
-    local function finish() if traits then PreviewTraits.add(view, traits) end end
+    local function finish() if traits then PreviewTraits.add(view, traits, true) end end
     local parts = meshParts(view)
     if #parts == 0 then finish() return view end
     local blank = false

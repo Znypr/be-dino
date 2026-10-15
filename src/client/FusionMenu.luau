@@ -310,7 +310,7 @@ local function buildGrid(grid: ScrollingFrame)
         W.label(card, Sel.name(catalog, "patterns", g.patternId, "Unknown pattern") .. " • " .. Sel.name(nil, "x", d.stage), UDim2.new(1, -8, 0, 16), UDim2.fromOffset(4, 24), 14, C.gold)
         W.swatch(card, g, UDim2.new(1, -16, 0, 9), UDim2.fromOffset(8, 43))
         local badges = Sel.badges(d, catalog)
-        W.label(card, (if #badges > 0 then table.concat(badges, " • ") else Sel.name(catalog, "conditions", g.conditionId, "")), UDim2.new(1, -8, 0, 18), UDim2.fromOffset(4, 55), 15,
+        W.label(card, (if #badges > 0 then table.concat(badges, " • ") else ""), UDim2.new(1, -8, 0, 18), UDim2.fromOffset(4, 55), 15,
             if #badges > 0 then C.purple else C.text)
         local status = W.label(card, "", UDim2.new(1, -(T + 8), 0, T - 4), UDim2.new(0, 4, 1, -(T + 2)), 15)
         local info = W.button(card, "i", UDim2.fromOffset(T, T), UDim2.new(1, -(T + 2), 1, -(T + 2)), C.blue, function() openDetails(d.instanceId) end)

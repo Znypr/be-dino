@@ -3,9 +3,10 @@ local RunService = game:GetService("RunService")
 local Theme = require(game:GetService("ReplicatedStorage").Shared.UITheme)
 local Appearance = require(game:GetService("ReplicatedStorage").Shared.EggAppearance)
 local PreviewTraits = {}
-function PreviewTraits.add(view: ViewportFrame, traits)
+-- isEgg = true only for egg previews (BD-174: the egg condition overlay is never drawn on a dinosaur).
+function PreviewTraits.add(view: ViewportFrame, traits, isEgg: boolean?)
     if traits then view:SetAttribute("TraitsJson",game:GetService("HttpService"):JSONEncode(traits)) end
-    if traits and traits.genes then Appearance.apply(view,traits.genes) end
+    if traits and traits.genes then Appearance.apply(view,traits.genes,isEgg==true) end
     if not traits or not (traits.shiny or traits.big) then return end
     local badge = Instance.new("TextLabel")
     badge.Name = "TraitBadge"

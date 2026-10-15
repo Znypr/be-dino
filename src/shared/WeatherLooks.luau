@@ -40,11 +40,11 @@ Weather.Looks={
     -- aurora colours (fog, decay, shifts, ambient, tint, glow) are overwritten every frame from Weather.aurora(); these are the mid values
     aurora=look({tint=rgb(176,255,230),sat=.4,contrast=.1,bright=-.04,fog=rgb(40,200,170),decay=rgb(60,80,180),density=.32,offset=0,haze=1.4,bloom=1.2,rays=.05,
         rayTint=rgb(140,255,220),amb=rgb(70,130,120),dof=.2,dofFocus=120,exposure=-.2,lamp=.5,
-        glow=rgb(60,255,170),glowBright=1.3,glowRange=60,fogStart=270,dome=.45,vis=330,stars=5000}),
+        glow=rgb(60,255,170),glowBright=1.3,glowRange=60,fogStart=280,dome=.45,vis=400,stars=5000}),
     quake=look({tint=rgb(232,200,156),sat=-.14,contrast=.16,bright=-.06,fog=rgb(198,176,146),decay=rgb(130,100,70),density=.45,offset=0,haze=3,bloom=.15,
         amb=rgb(150,126,96),dof=.35,dofFocus=70,lamp=.6,fogStart=40,dome=.12,vis=220}),
-    bloodmoon=look({tint=rgb(255,140,150),sat=.45,contrast=.18,bright=0,fog=rgb(66,14,24),decay=rgb(100,10,30),density=.4,offset=0,haze=2.8,glare=.5,bloom=.8,rays=.12,
-        rayTint=rgb(255,60,80),amb=rgb(165,38,56),dof=.3,dofFocus=80,exposure=-.15,lamp=1.2,glow=rgb(255,40,70),glowBright=.5,glowRange=60,fogStart=100,dome=.18,vis=300}),
+    bloodmoon=look({tint=rgb(255,140,150),sat=.45,contrast=.18,bright=0,fog=rgb(66,14,24),decay=rgb(100,10,30),density=.4,offset=0,haze=2.8,glare=.5,bloom=.5,rays=.12,
+        rayTint=rgb(255,60,80),amb=rgb(165,38,56),dof=.3,dofFocus=80,exposure=-.15,lamp=1.2,glow=rgb(255,40,70),glowBright=.5,glowRange=60,fogStart=100,dome=.18,vis=360}),
 }
 Weather.Ids=table.freeze({"rain","thunder","blizzard","volcano","aurora","quake","bloodmoon"})
 
