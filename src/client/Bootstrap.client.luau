@@ -89,8 +89,7 @@ local fusionTarget = "gold"
 local hatchPending = false
 local autoHatching = false
 -- BD-170: Open starts the hatch screen at once; the server answer is supplied to it later. pendingHatch = {version, supply, handle}.
-local pendingHatch: {version: number, supply: () -> (), handle: any}? = nil
-local hatchResultFresh = false -- the next render("hatch") already has its result (opened by the answer, not by a button)
+local hatchState: {pending: {version: number, supply: () -> (), handle: any}?, fresh: boolean, next: (() -> boolean)?} = {pending=nil, fresh=false, next=nil}
 local hatchCancelSerial = 0
 local function ownedTraits(id: string)
     return EggTraits.selected(decoded("CollectionJson","{}")[id])
@@ -393,7 +392,7 @@ local function finishBatch()
 end
 -- Sends the claim for the next egg. Returns true when a request went out (the batch goes on), false when the batch ended
 -- or a request is already running.
-local function hatchNext(): boolean
+hatchState.next = function(): boolean
     local id=str("NextChestId")
     if id=="" or workspace:GetServerTimeNow()<num("NextChestReadyAt") then
         finishBatch()
@@ -406,7 +405,7 @@ local function hatchNext(): boolean
         if hatchPending then
             hatchPending=false autoHatching=false skipAllReveals=false
             notify("Hatching stopped",C.red,{key="hatch_error",icon="egg",body="Tap an egg to try again"})
-            local waiting=pendingHatch
+            local waiting=hatchState.pending
             if waiting and waiting.version==modalVersion and active=="hatch" and waiting.handle.pending() then open("eggs") end -- never leave an egg wobbling forever
         end
     end)
@@ -799,7 +798,7 @@ render=function(name: string)
                 if hatchPending then return end
                 autoHatching=true
                 -- BD-170: the egg starts opening this very frame; the server answer is handed to the screen when it arrives.
-                if hatchNext() then open("hatch") end
+                if (hatchState.next :: any)() then open("hatch") end
             end,
             openSettings=function() open("settings") end,
             autoOpenText=autoOpenText,
@@ -892,14 +891,14 @@ render=function(name: string)
                 heading.Text="An egg is hatching..."
                 if EggsLogic.afterReveal(skipAllReveals,remainingAfter)=="continue" then
                     autoHatching=true
-                    if hatchNext() then open("hatch") end
+                    if (hatchState.next :: any)() then open("hatch") end
                 else
                     finishBatch()
                 end
             end,
         })
-        pendingHatch={version=version,supply=supply,handle=handle}
-        if hatchResultFresh then hatchResultFresh=false supply() end
+        hatchState.pending={version=version,supply=supply,handle=handle}
+        if hatchState.fresh then hatchState.fresh=false supply() end
     elseif name=="exit" then
         -- BD-052: one confirmation, no stay-still channel; the server settles through tryEnd.
         heading.Text,header.BackgroundColor3="Return to Sanctuary?",C.red
@@ -1452,15 +1451,15 @@ player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function()
     table.insert(batchEntries,{rarity=rarity,name=Config.SpeciesDisplayNames[species] or species,failed=outcome.failed,shiny=outcome.shiny==true,big=outcome.big==true})
     if autoHatching and EggsLogic.shouldAutoOpen(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen(),rarity,outcome,skipAllReveals) then
         table.insert(skippedEntries,{rarity=rarity,speciesId=species,outcome=outcome})
-        task.delay(Config.ChestClaimRequestCooldownSeconds+.15,hatchNext) -- stay under the server claim cooldown
+        task.delay(Config.ChestClaimRequestCooldownSeconds+.15,function() (hatchState.next :: any)() end) -- stay under the server claim cooldown
         return
     end
     -- BD-170: when Open (or Next egg) already put a waiting egg on screen, hand the answer to it; otherwise open the screen with the result.
-    local waiting=pendingHatch
+    local waiting=hatchState.pending
     if waiting and waiting.version==modalVersion and active=="hatch" and waiting.handle.pending() then
         task.defer(waiting.supply)
     else
-        hatchResultFresh=true
+        hatchState.fresh=true
         task.defer(function() open("hatch") end)
     end
 end)

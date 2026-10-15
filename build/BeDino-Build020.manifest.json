@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "b3ab0b75e7f979d6cd1fe19f44f73591b419cbb8c2f13157301ff7708a159ac2",
+  "place_sha256": "6b3e5c91e9f35ea570b6941ff2da6eb52e93f12d935589e170a5d76e065db7d0",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "33f6491c3921573cdf897028008998b4097b134df9aefad7dee98030a3e62262",
@@ -251,7 +251,7 @@
     "src/server/RunLifecycle.luau": "4e9db52291f52a89fa15df2154b51a286c046122d7661130bf04045c704ef50e",
     "src/server/VisualTestService.luau": "ee48ddc907c11e5d1390483d570d9ab96fd01b3ee02493b5724a2ebcf1ef0773",
     "src/client/AdminPanel.client.luau": "4d25c78679af2d75d8df673791d0d90f47f43d27aced68aad4a32f74106602b5",
-    "src/client/Bootstrap.client.luau": "98c640cde7ef3151b592557f0c94a8319e5862d5b27954d52883e7c14c243eaa",
+    "src/client/Bootstrap.client.luau": "5d68f8bf9bdbb9aa024694333baeeb0c0e28c2b708896c195eaddeba635d6ad8",
     "src/client/CosmeticVisuals.client.luau": "85d567cf577cf91bbc9402ee7a26f11bd705cf4ef8b328ecf350ae569bd82c06",
     "src/client/DinoDetails.luau": "2997fa1005dd0d38bcc1cca686c7d40301f1a6c10b6922e80943b0d911a7795a",
     "src/client/DinoIndexPanels.luau": "44dc4786371c4e7d684a466d7afc59e3f9f5e29ba4222676f70c6f9c5e2f0ef0",
