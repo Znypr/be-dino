@@ -144,8 +144,8 @@ return table.freeze({
     -- caps at 40 eggs (5,000 food). Adjacent tier ratios stay 0.33 / 0.15 / 0.22 / 0.14 (never flatter than 1/3); Rare+ is at most ~10% easier at full boost.
     SpeciesRunBoost = {1, 1, 1.1, 1.1, 1.1},
     EggRarityBoostMaxEggs = 40,
-    BigChance = 0.1,
-    ShinyChance = 0.05,
+    BigChance = 0.03, -- BD-184: Rare-tier chance (docs/88)
+    ShinyChance = 0.006, -- BD-184: Epic-tier chance, earned eggs in irregular weather only
     BigScaleMultiplier = 1.2,
     IrregularWeather = {volcano = true, aurora = true, quake = true, bloodmoon = true},
     DeveloperProducts = { [3717200374] = 500, [3717200467] = 1500, [3717200523] = 4000, [3717200920] = 10000, [3717200940] = 25000, [3717200979] = 90000 },
@@ -180,7 +180,7 @@ return table.freeze({
     -- the run-batch species boost (EggRarityBoostMaxEggs = maximum), conditionLevels adds to the condition-upgrade level
     -- (clamped to the top tier), shinyChance applies even without irregular weather, bigChance replaces BigChance.
     NestLuckTiers = {
-        {rarityBoostEggs = 40, conditionLevels = 2, shinyChance = 0.03, bigChance = 0.2},
+        {rarityBoostEggs = 40, conditionLevels = 2, shinyChance = 0.015, bigChance = 0.06},
     },
     NestClaimRequestCooldownSeconds = 0.5,
     ChestClaimRequestCooldownSeconds = 0.35,
