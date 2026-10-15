@@ -25,7 +25,7 @@ local n=0
 local function dino(over)
  n+=1
  local d={instanceId="u:1/d:"..n,speciesId="compy",stage="base",
-  genes={patternId="06_wavy_stripes",primaryColorId="green",secondaryColorId="blue",blend=20,conditionId="normal"},
+  genes={patternId="06_wavy_stripes",primaryColorId="green",secondaryColorId="blue",blend=20},
   big=false,shiny=false,mutationId="",originKind="hatch",locked=false,favorited=false,auraCount=0,trailCount=0,equippedAuraId="",equippedTrailId=""}
  for k,v in over or {} do if k=="genes" then for gk,gv in v do d.genes[gk]=gv end else d[k]=v end end
  return d
@@ -42,7 +42,7 @@ local aura=dino({auraCount=2}) local trail=dino({trailCount=1,equippedTrailId="f
 local locked=dino({locked=true}) local fav=dino({favorited=true})
 local spots=dino({genes={patternId="03_round_spots"}}) local raptor=dino({speciesId="raptor"})
 local gold=dino({stage="gold"}) local legacy=dino({originKind="legacy_unknown"}) legacy.genes={}
-local rainbow=dino({genes={conditionId="rainbow",primaryColorId="red"}})
+local rainbow=dino({genes={primaryColorId="red"}})
 for _,d in {shiny,big,ember,aura,trail,locked,fav,spots,raptor,gold,legacy,rainbow} do table.insert(all,d) end
 local byId=S.index(all)
 
@@ -93,14 +93,14 @@ assert(#S.filter(all,{speciesId="raptor"})==1)
 assert(#S.filter(all,{patternId="03_round_spots"})==1)
 assert(#S.filter(all,{stage="gold"})==1)
 assert(#S.filter(all,{colorId="red"})==1 and #S.filter(all,{colorId="blue"})==#all-1)
-assert(#S.filter(all,{conditionId="rainbow"})==1)
+assert(#S.filter(all,{conditionId="rainbow"})==#all,"dinosaurs have no condition: a stale condition filter is ignored")
 assert(#S.filter(all,{originKind="legacy_unknown"})==1)
 assert(#S.filter(all,{cosmetics="has"})==2 and #S.filter(all,{cosmetics="equipped"})==1 and #S.filter(all,{cosmetics="none"})==#all-2)
 assert(#S.filter(all,{speciesId="compy",patternId="06_wavy_stripes",shiny=false,stage="base"})==#all-5)
 local opts=S.filterOptions(all,cat)
 assert(opts.speciesId[1]=="compy" and opts.speciesId[2]=="raptor")
 assert(has(opts.mutationId,"ember") and has(opts.mutationId,"none"))
-assert(opts.conditionId[1]=="normal" and opts.conditionId[2]=="rainbow")
+assert(opts.conditionId==nil,"no condition filter options for dinosaurs")
 assert(S.cycle(opts.speciesId,nil)=="compy" and S.cycle(opts.speciesId,"compy")=="raptor" and S.cycle(opts.speciesId,"raptor")==nil)
 
 -- ===== Sorting =====
@@ -116,8 +116,7 @@ local recent=S.sort(all,"recent",ctx,nil,cat)
 assert(recent[1]==rainbow and recent[#recent]==all[1])
 local species=S.sort(all,"species",ctx,nil,cat)
 assert(species[#species]==raptor)
-local cond=S.sort(all,"condition",ctx,nil,cat)
-assert(cond[1]==rainbow)
+for _,key in S.SortKeys do assert(key~="condition") end
 local sel=S.sort(all,"selected",ctx,{[raptor.instanceId]=true},cat)
 assert(sel[1]==raptor)
 -- Deterministic: same input gives same order twice.
@@ -198,7 +197,6 @@ assert(table.concat(S.badges(ember,cat),",")=="Ember")
 -- ===== Odds formatting: always sums to exactly 100% =====
 local function units(section) local t=0 for _,r in section.rows do t+=r.units end return t,section.rows[1].decimals end
 local odds={shiny=.1,big=.05,mutation={ember=.1,frost=.05},noMutation=.85,
- condition={cracked=.2,dirty=.25,normal=.45,rainbow=.09,astra=.01},
  primaryColor={green=1/3,blue=1/3,white=1/3},secondaryColor={blue=.7,teal=.2999,black=.0001}}
 local f=S.formatOdds(odds,cat)
 assert(f.ok,tostring(f.error))
@@ -209,14 +207,15 @@ end
 local function row(section,id) for _,r in section.rows do if r.id==id then return r end end end
 assert(row(f.sections[1],"yes").text=="10%" and row(f.sections[1],"no").text=="90%")
 assert(f.sections[1].rows[1].id=="yes","yes/no fixed order")
-assert(f.sections[4].rows[1].id=="normal","maps sorted by probability")
+assert(f.sections[5].rows[1].id=="blue","maps sorted by probability")
+assert(#f.sections==5)
+for _,section in f.sections do assert(section.trait~="condition") end
 assert(row(f.sections[2],"none").text=="85%" and row(f.sections[2],"ember").label=="Ember")
-assert(row(f.sections[4],"astra").text=="1%" and row(f.sections[4],"astra").label=="Astra")
-local thirds=f.sections[5]
+local thirds=f.sections[4]
 local tt=units(thirds) assert(tt==1000)
 local labels={} for _,r in thirds.rows do table.insert(labels,r.text) end
 assert(table.concat(labels,",")=="33.4%,33.3%,33.3%","largest remainder "..table.concat(labels,","))
-local c2=f.sections[6] assert(c2.rows[1].decimals==2 and row(c2,"black").text=="0.01%")
+local c2=f.sections[5] assert(c2.rows[1].decimals==2 and row(c2,"black").text=="0.01%")
 -- 2/10 Shiny proposed example renders as 10%.
 local r=S.percentRows({{id="yes",label="Shiny",p=.1},{id="no",label="Not",p=.9}})
 assert(r[1].text=="10%")
@@ -269,7 +268,7 @@ o=S.settle(again,{ok=false,reason="save_failed"}) assert(o.kind=="retry")
 o=S.settle(again,{ok=false,reason="rate_limited"}) assert(o.kind=="retry")
 -- Server duplicate returns committed result; attempt settles.
 local committed={resultId="u:1/d:99",targetStage="gold",speciesId="compy",patternId="06_wavy_stripes",oddsVersion="v1",
- traits={big=false,shiny=true,mutationId="ember",genes={patternId="06_wavy_stripes",primaryColorId="blue",secondaryColorId="teal",blend=55,conditionId="rainbow"}}}
+ traits={big=false,shiny=true,mutationId="ember",genes={patternId="06_wavy_stripes",primaryColorId="blue",secondaryColorId="teal",blend=55}}}
 o=S.settle(again,{ok=true,status="duplicate",result=committed}) assert(o.kind=="success" and o.status=="duplicate" and again.state=="settled")
 -- A settled attempt is never reused for a new confirmation.
 local fresh,re3=S.attempt(again,"gold",donors,"q1",newToken) assert(not re3 and fresh.token=="tok-2")
@@ -292,8 +291,8 @@ assert(string.find(S.failureMessage("weird_new_reason"),"weird new reason"))
 local seq=S.revealSequence(quote,committed,cat)
 assert(seq[1].kind=="pattern" and seq[1].value=="Wavy Stripes")
 local order={} for _,st in seq do table.insert(order,st.trait or st.kind) end
-assert(table.concat(order,",")=="pattern,primaryColor,secondaryColor,condition,shiny,mutation,big,final",table.concat(order,","))
-local expect={primaryColor="blue",secondaryColor="teal",condition="rainbow",shiny="yes",mutation="ember",big="no"}
+assert(table.concat(order,",")=="pattern,primaryColor,secondaryColor,shiny,mutation,big,final",table.concat(order,","))
+local expect={primaryColor="blue",secondaryColor="teal",shiny="yes",mutation="ember",big="no"}
 for _,st in seq do
  if st.kind=="wheel" then
   local seg=st.segments[st.landingIndex]
@@ -309,7 +308,7 @@ for _,st in seq do
  end
 end
 assert(seq[3].detail=="Blend 55% / 45%")
-assert(seq[5].value=="Shiny" and seq[6].value=="Ember" and seq[7].value=="Not BIG")
+assert(seq[4].value=="Shiny" and seq[5].value=="Ember" and seq[6].value=="Not BIG")
 assert(seq[#seq].kind=="final" and seq[#seq].title=="NEW WAVY STRIPES COMPY" and seq[#seq].replay==false)
 -- Committed value outside the quoted odds: shown plainly, never animated as a guess.
 local odd=table.clone(committed) odd.traits=table.clone(committed.traits) odd.traits.genes=table.clone(committed.traits.genes)
@@ -325,9 +324,9 @@ for trial=1,200 do
  for _,cid in colors do local w=rnd()+.01 m[cid]=w tot+=w end
  for k,v in m do m[k]=v/tot end
  local pick=colors[math.floor(rnd()*5)+1]
- local q={odds={shiny=rnd(),big=rnd(),mutation={frost=.2},noMutation=.8,condition={normal=1},primaryColor=m,secondaryColor=m}}
+ local q={odds={shiny=rnd(),big=rnd(),mutation={frost=.2},noMutation=.8,primaryColor=m,secondaryColor=m}}
  local res={patternId="02_emerald_islands",speciesId="raptor",targetStage="gold",traits={shiny=rnd()<.5,big=rnd()<.5,mutationId=if rnd()<.5 then "frost" else "",
-  genes={patternId="02_emerald_islands",primaryColorId=pick,secondaryColorId=pick,blend=100,conditionId="normal"}}}
+  genes={patternId="02_emerald_islands",primaryColorId=pick,secondaryColorId=pick,blend=100}}}
  for _,st in S.revealSequence(q,res,cat) do
   if st.kind=="wheel" then assert(st.segments[st.landingIndex].id==st.committed) end
   if st.kind=="card" then error("unexpected mismatch "..trial) end
@@ -335,7 +334,7 @@ for trial=1,200 do
 end
 
 -- ===== Dino Details =====
-local hatched={instanceId="u:1/d:5",speciesId="compy",stage="base",genes={patternId="06_wavy_stripes",primaryColorId="green",secondaryColorId="blue",blend=20,conditionId="normal"},
+local hatched={instanceId="u:1/d:5",speciesId="compy",stage="base",genes={patternId="06_wavy_stripes",primaryColorId="green",secondaryColorId="blue",blend=20},
  shiny=false,big=false,mutationId="",origin={kind="hatch",eggId="egg-1"},
  originalEgg={eggId="egg-1",kind="alpha_chest",eventId="rain",genes={patternId="06_wavy_stripes",primaryColorId="green",secondaryColorId="blue",blend=20,conditionId="normal"}},
  cosmetics={ownedAuraIds={"meadow"},ownedTrailIds={},equippedAuraId="meadow",equippedTrailId=""}}

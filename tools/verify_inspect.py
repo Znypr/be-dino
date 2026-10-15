@@ -94,7 +94,7 @@ local n = 0
 local function dino(over)
     n += 1
     local d = {instanceId = "u:1/d:" .. n, speciesId = "compy", stage = "base",
-        genes = {patternId = "06_wavy_stripes", primaryColorId = "green", secondaryColorId = "blue", blend = 20, conditionId = "normal", hatchSuccess = true},
+        genes = {patternId = "06_wavy_stripes", primaryColorId = "green", secondaryColorId = "blue", blend = 20, hatchSuccess = true},
         big = false, shiny = false, mutationId = "", originKind = "hatch", locked = false, favorited = false, auraCount = 0, trailCount = 0}
     for k, v in over or {} do if k == "genes" then for gk, gv in v do d.genes[gk] = gv end else d[k] = v end end
     return d
@@ -104,7 +104,7 @@ for _ = 1, 14 do table.insert(all, dino()) end
 local shiny = dino({shiny = true}) local big = dino({big = true, genes = {primaryColorId = "red"}})
 local spots = dino({genes = {patternId = "03_round_spots", primaryColorId = "red"}})
 local gold = dino({stage = "gold"}) local diamond = dino({stage = "diamond", genes = {patternId = "08_freckles"}})
-local rainbow = dino({genes = {conditionId = "rainbow", primaryColorId = "red"}})
+local rainbow = dino({genes = {primaryColorId = "red"}})
 local ember = dino({mutationId = "ember"})
 local raptor = dino({speciesId = "raptor"})
 for _, d in {shiny, big, spots, gold, diamond, rainbow, ember, raptor} do table.insert(all, d) end
@@ -123,7 +123,8 @@ for _, key in M.SortKeys do assert(table.find(Sel.SortKeys, key) and M.SortLabel
 assert(Sel.SortNames.recent == "Newest" and M.SortLabels.recent == "Newest" and M.SortLabels.rarest == Sel.SortNames.rarest)
 local function ids(list) local r = {} for _, d in list do table.insert(r, d.instanceId) end return table.concat(r, ",") end
 local options = M.options(mine, cat)
-local samples = {colorId = "red", patternId = "03_round_spots", mutationId = "ember", shiny = true, big = true, stageId = "gold", conditionId = "rainbow"}
+local samples = {colorId = "red", patternId = "03_round_spots", mutationId = "ember", shiny = true, big = true, stageId = "gold"}
+assert(not table.find(M.FilterGroups, "conditionId") and options.conditionId == nil, "dinosaurs have no Condition filter")
 for group, value in samples do
     assert(table.find(options[group], value), "option present for " .. group)
     local filters = {[M.field(group)] = value}

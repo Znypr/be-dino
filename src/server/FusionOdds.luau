@@ -12,7 +12,7 @@
 --   P(any event mutation) = MutationCoefficient * mutatedDonors / N
 --     P(mutation m)       = MutationCoefficient * donorsWith(m) / N  (proportional pick)
 --     P(no mutation)      = 1 - sum(P(m))
---   P(condition c)        = donorsWith(c) / N
+--   (no condition wheel: dinosaurs have no condition, only eggs do; v2)
 --   P(primary color k)    = donorsWithPrimary(k) / N
 --   P(secondary color k)  = donorsWithSecondary(k) / N
 --   blend                 = uniform integer 1..99, or 100 when both colors are equal
@@ -24,7 +24,7 @@
 -- a quote shown to the player is the distribution the server commits against.
 local FusionOdds = {}
 
-FusionOdds.Version = "fusion-odds-provisional-v1"
+FusionOdds.Version = "fusion-odds-provisional-v2"
 FusionOdds.ShinyCoefficient = 0.5 -- PROVISIONAL
 FusionOdds.BigCoefficient = 0.5 -- PROVISIONAL
 FusionOdds.MutationCoefficient = 0.5 -- PROVISIONAL
@@ -32,7 +32,7 @@ FusionOdds.BlendMin = 1 -- PROVISIONAL (matches Build 020 egg genes)
 FusionOdds.BlendMax = 99
 FusionOdds.EqualColorBlend = 100
 -- Fixed draw order; one uniform per wheel, always consumed (even when blend is fixed).
-FusionOdds.DrawOrder = {"shiny", "big", "mutation", "condition", "primaryColor", "secondaryColor", "blend"}
+FusionOdds.DrawOrder = {"shiny", "big", "mutation", "primaryColor", "secondaryColor", "blend"}
 
 local function sortedKeys(map): {string}
     local keys = {}
@@ -54,7 +54,7 @@ function FusionOdds.distribution(summary)
     if type(summary) ~= "table" then return nil, "invalid_summary" end
     local n = summary.donorCount
     if type(n) ~= "number" or n < 1 or n % 1 ~= 0 or type(summary.colors) ~= "table" or #summary.colors ~= n
-        or type(summary.conditionCounts) ~= "table" or type(summary.mutationCounts) ~= "table"
+        or type(summary.mutationCounts) ~= "table"
         or type(summary.shinyCount) ~= "number" or type(summary.bigCount) ~= "number"
         or summary.shinyCount < 0 or summary.shinyCount > n or summary.bigCount < 0 or summary.bigCount > n then
         return nil, "invalid_summary"
@@ -64,12 +64,7 @@ function FusionOdds.distribution(summary)
         if type(id) ~= "string" or id == "" or type(count) ~= "number" or count < 0 then return nil, "invalid_summary" end
         mutated += count
     end
-    local conditions = 0
-    for id, count in summary.conditionCounts do
-        if type(id) ~= "string" or type(count) ~= "number" or count < 0 then return nil, "invalid_summary" end
-        conditions += count
-    end
-    if mutated > n or conditions ~= n then return nil, "invalid_summary" end
+    if mutated > n then return nil, "invalid_summary" end
 
     local mutation = {}
     local mutationTotal = 0
@@ -93,7 +88,6 @@ function FusionOdds.distribution(summary)
         big = FusionOdds.BigCoefficient * summary.bigCount / n,
         mutation = mutation,
         noMutation = math.max(0, 1 - mutationTotal),
-        condition = proportional(summary.conditionCounts, n),
         primaryColor = proportional(primary, n),
         secondaryColor = proportional(secondary, n),
         blend = {min = FusionOdds.BlendMin, max = FusionOdds.BlendMax, equalColors = FusionOdds.EqualColorBlend},
@@ -137,10 +131,10 @@ function FusionOdds.rollWith(summary, patternId: string, nextNumber: () -> numbe
         -- Clamp into [0, 1): Random:NextNumber() edge values must not escape a wheel.
         u[i] = math.clamp(value, 0, 1 - 2 ^ -53)
     end
-    local primary = pick(dist.primaryColor, u[5])
-    local secondary = pick(dist.secondaryColor, u[6])
+    local primary = pick(dist.primaryColor, u[4])
+    local secondary = pick(dist.secondaryColor, u[5])
     local blend = FusionOdds.BlendMin + math.min(FusionOdds.BlendMax - FusionOdds.BlendMin,
-        math.floor(u[7] * (FusionOdds.BlendMax - FusionOdds.BlendMin + 1)))
+        math.floor(u[6] * (FusionOdds.BlendMax - FusionOdds.BlendMin + 1)))
     if primary == secondary then blend = FusionOdds.EqualColorBlend end
     return {
         shiny = u[1] < dist.shiny,
@@ -148,7 +142,6 @@ function FusionOdds.rollWith(summary, patternId: string, nextNumber: () -> numbe
         mutationId = pick(mutationWheel(dist), u[3]) or "",
         genes = {
             patternId = patternId,
-            conditionId = pick(dist.condition, u[4]),
             primaryColorId = primary,
             secondaryColorId = secondary,
             blend = blend,

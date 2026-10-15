@@ -178,15 +178,13 @@ function Fusion.quote(state, ownerKey: string, targetStage: any, donorIds: any)
 
     -- Neutral ingredient facts for a future BD-064 roller. Contains no probabilities.
     local summary = {speciesId = speciesId, patternId = patternId, targetStage = targetStage,
-        donorCount = #donors, shinyCount = 0, bigCount = 0, mutationCounts = {}, conditionCounts = {}, colors = {}}
+        donorCount = #donors, shinyCount = 0, bigCount = 0, mutationCounts = {}, colors = {}}
     local losses, sortedIds, snapshot = {}, {}, {}
     for _, d in donors do
         table.insert(sortedIds, d.instanceId)
         if d.shiny then summary.shinyCount += 1 end
         if d.big then summary.bigCount += 1 end
         if (d.mutationId or "") ~= "" then summary.mutationCounts[d.mutationId] = (summary.mutationCounts[d.mutationId] or 0) + 1 end
-        local conditionId = d.genes.conditionId or "unknown"
-        summary.conditionCounts[conditionId] = (summary.conditionCounts[conditionId] or 0) + 1
         table.insert(summary.colors, {primaryColorId = d.genes.primaryColorId, secondaryColorId = d.genes.secondaryColorId, blend = d.genes.blend})
         -- Exact frozen payload: any change to a donor (genes, traits, cosmetics,
         -- stage, protection) after quoting invalidates the quote.
@@ -230,7 +228,7 @@ local function validTraits(traits, patternId: string, validateGenes): boolean
     local genes = traits.genes
     if type(genes) ~= "table" or genes.patternId ~= patternId then return false end
     if type(genes.primaryColorId) ~= "string" or type(genes.secondaryColorId) ~= "string"
-        or type(genes.conditionId) ~= "string" or type(genes.blend) ~= "number"
+        or genes.conditionId ~= nil or type(genes.blend) ~= "number"
         or genes.blend ~= genes.blend or genes.blend < 0 or genes.blend > 100 then return false end
     for key, value in genes do
         if type(key) ~= "string" or (type(value) ~= "string" and type(value) ~= "number" and type(value) ~= "boolean") then return false end
