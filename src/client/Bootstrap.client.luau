@@ -1278,6 +1278,8 @@ end)
 -- Movement feel: camera height follows growth every frame (not the 0.15 s HUD tick), and the
 -- pickup pop/sfx fire the frame GrowthScore replicates instead of waiting for the next tick.
 local cameraLift=0
+local smoothRootY: number?=nil
+local cameraLiftY=0
 RunService.RenderStepped:Connect(function(dt)
     local character=player.Character
     local humanoid=if character then character:FindFirstChildOfClass("Humanoid") else nil
@@ -1309,7 +1311,20 @@ RunService.RenderStepped:Connect(function(dt)
     end
     local target=((character :: Model):GetAttribute("VisualScale") or 1)-1
     cameraLift+=(target-cameraLift)*(1-math.exp(-dt*Config.CameraLiftSharpness))
-    humanoid.CameraOffset=Vector3.new(0,cameraLift*2,0)
+    cameraLiftY=cameraLift*2
+end)
+-- BD-164: terrain bumps move the root ~1 stud per step and the camera followed it 1:1 (rattle). Low-pass only the vertical
+-- follow (Config.CameraVerticalSmoothing); horizontal follow is untouched (no steering lag). Runs just before the
+-- camera each frame so it uses the same root height the camera is about to read. Snaps on teleports/falls.
+RunService:BindToRenderStep("BeDinoCameraSmooth",Enum.RenderPriority.Camera.Value-1,function(dt)
+    local character=player.Character
+    local humanoid=character and character:FindFirstChildOfClass("Humanoid")
+    local rootPart=character and character:FindFirstChild("HumanoidRootPart")
+    if not humanoid or not rootPart or not rootPart:IsA("BasePart") then smoothRootY=nil return end
+    local y=rootPart.Position.Y
+    if not smoothRootY or math.abs(y-smoothRootY)>5 then smoothRootY=y end
+    smoothRootY+=(y-smoothRootY)*(1-math.exp(-dt/Config.CameraVerticalSmoothing))
+    humanoid.CameraOffset=Vector3.new(0,cameraLiftY+math.clamp(smoothRootY-y,-2.5,2.5),0)
 end)
 -- Reconcile a predicted leap: the server raising LeapReadyAt confirms it; if it has not within 0.6 s
 -- (cooldown/blocked/guard) cancel the pose and drop the extra horizontal speed.
@@ -1412,8 +1427,7 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
                 if nestOk and typeof(nestList)=="table" then
                     waitSeconds=NestQueue.secondsUntilAllReady(nestList,math.floor(workspace:GetServerTimeNow()),Config.NestIncubationSeconds)
                 end
-                notify("New Egg Nest!",C.gold,{icon="egg_nest",key="nest",body="Ready in "..UIFormat.duration(math.max(3600,waitSeconds))})
-                Sfx.play("shop_buy")
+                notify("New Egg Nest!",C.gold,{icon="egg_nest",key="nest",body="Ready in "..UIFormat.duration(math.max(3600,waitSeconds))}) -- no extra sound: it stacked with run_end (BD-166)
             end
             if num("LastRunCrystalBox")>0 then
                 open("crystalReveal")

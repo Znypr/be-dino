@@ -50,3 +50,13 @@ Tests: `tools/verify_potion_shop.py` (catalog validity, naming, price ordering, 
 - Density 0.35 is sparse (14 trees on a 460-wide map); raise it once MeshParts are uploaded.
 - The legacy part counts are static estimates, not a Studio measurement.
 - Loot potions and the new prices are untuned; native part total still excludes terrain and hub.
+
+## World v2 (2026-10-15, owner feedback: trim vegetation, patchy looping grass, tiny trees, small map)
+All numbers PROVISIONAL. Branch `claude/world-v2`.
+- **Map:** `ArenaHalfWidth` 260 -> **416** (832 x 832, 1.6x wide, 2.56x area). `IslandLayout.Scale = 1.6` scales peaks, meadow and edge ramp (gentler slopes; steepest authored slope still < 46 deg); added rolling hills and marsh basins with decorative water discs (`IslandLayout.Pools`). Food: 20 x 20 sectors x 6 = 2,400 pickups (was 16 x 16). Crystal pickups 64 -> 100 over the full island, now one MeshPart each (the legacy amber model was 21 parts x 64). Hub moved to `Config.SanctuaryCenterZ` = 521.
+- **Sub-biomes** (`src/shared/BiomeMap.luau`, seeded by `WorldArtSeed`, warped blobs + per-biome noise, sharpened weights; terrain and props dither between biomes by weight so borders are mixed bands): Meadow (13%), Fern Forest (33%), Conifer Highlands (24%), Marsh (8%), Rocky Badlands (10%), Volcanic Slopes (11%). Each has its own terrain materials/colours (Grass, LeafyGrass, Mud, Ground, Sand, Sandstone, Slate, Basalt, CrackedLava veins) and kit mix.
+- **Scale classes:** trees 0.95-1.5x, **giants 2.4-4x** (conifer_l up to 105 studs; canopy/cycad/dead; giant boulders and spires in the badlands/volcano), only >= 150 studs from spawn, colliders scale with the mesh. Measured: a compy at max growth (x4) is ~22 studs tall, the old tallest tree ~26-29.
+- **Density:** playtest `WorldArtDensity` 1.25 keeps; layers tree/giant/log/rock/shrub/groundcover; 3,551 placements (614 trees, 48 giants, 56 fallen logs (dead trees on their side), 187 rocks, 1,125 shrubs, 1,517 cover) = 4,625 kit parts (`PartBudget` 3,700 at density 1).
+- **Grass:** terrain no longer one Grass colour (material mix + colours by biome, dappled by 2-octave noise); Terrain Decoration on; ground cover is clustered by a patch noise field with 1-2 companions per tuft, flower meadows from a bloom field, random yaw/scale 1.7-2.9x, no grid.
+- **Budget (Studio measured, playtest):** ~7,384 BaseParts client side (4,625 kit + 2,375 food + ~400 other) under the 8,000 ceiling. `verify_world_art.py` asserts world <= 5,000, food <= 2,600, total <= 8,000 with 600 other.
+- **Haze:** server creates a gentle `WorldHaze` Atmosphere (density .22, haze 1.15); WeatherVisuals adopts it as its base.
