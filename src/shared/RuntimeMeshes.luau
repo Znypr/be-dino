@@ -46,7 +46,8 @@ function RuntimeMeshes.prepare()
                 local part = AssetService:CreateMeshPartAsync(Content.fromObject(mesh))
                 part.Name = id .. "Mesh"
                 part.Color = Color3.new(1, 1, 1)
-                part.Material = Enum.Material.SmoothPlastic
+                part.Material = Enum.Material.Plastic -- BD-173: matte dinosaurs
+                part.Reflectance = 0
                 part.Anchored = true
                 part.CanCollide, part.CanTouch, part.CanQuery = false, false, false
                 part.Massless = true

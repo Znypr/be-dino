@@ -1,3 +1,5 @@
+> **Updated 2026-10-15 (BD-165):** the boost below was re-tuned for 4 / 40 eggs per run: `SpeciesRunBoost = {1,1,1.1,1.1,1.1}`, full at 40 eggs, nest luck `rarityBoostEggs = 40`. The 40 / 400-egg rows and the owner example mixes are history; see [docs/89](89-catch-rate-4.md).
+
 # 82 Five species rarity tiers (BD-044 taxonomy), 2026-10-14
 
 Status: **Review / test**. Code, offline tests and simulation are done; Studio and phone checks are pending.
