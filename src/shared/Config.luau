@@ -247,6 +247,10 @@ return table.freeze({
     MovementGuardSpeedTolerance = 3,
     MovementGuardBurstStuds = 4,
     MovementGuardRejectCooldownSeconds = 0.75,
+    -- BD-210 spawn safety: a run only starts once this client reports the island terrain under the spawn as loaded
+    -- (or after this many seconds in the hub, so a slow client is never locked out); falls are checked every tick.
+    WorldReadyTimeoutSeconds = 20,
+    FallRecoveryTickSeconds = 0.2,
     SecurityTestHarnessEnabled = false,
     ArtTestHarnessEnabled = false,
     ArtPreviewRequestCooldownSeconds = 0.25,
