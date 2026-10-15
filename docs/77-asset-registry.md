@@ -104,3 +104,4 @@ The 17-sound pack from `assets/audio/sfx/` (synthesized placeholders by `tools/g
 | sfx_shop_refresh | sound | assets/audio/sfx/shop_refresh.wav | 91960074825710 | src/shared/Sfx.luau | in game |
 | sfx_ui_click | sound | assets/audio/sfx/ui_click.wav | 77237659470894 | src/shared/Sfx.luau | in game |
 | sfx_weather_start | sound | assets/audio/sfx/weather_start.wav | 120619985059497 | src/shared/Sfx.luau | in game |
+| paint_bucket | UI icon (planned) | resources/ui/v2/icons/paint-bucket-v1.png | - | src/client/HatchSequence.luau (reads Theme.ImageIds.paint_bucket; PLACEHOLDER UI-shape bucket until bound) | planned (docs/83 item 31) |

@@ -705,7 +705,6 @@ function Sel.details(d, catalog)
             {label = "Pattern", value = lookup(catalog, "patterns", g.patternId, "Unknown") .. oddsText(nil, catalog.patternPct and catalog.patternPct[g.patternId])},
             {label = "Colors", value = geneLine(g, catalog)},
             {label = "Color odds", value = colorOdds(g, catalog)},
-            {label = "Condition", value = lookup(catalog, "conditions", g.conditionId, "Unknown")},
             {label = "Shiny", value = if d.shiny then "Yes" else "No"},
             {label = "BIG", value = if d.big then "Yes" else "No"},
             {label = "Mutation", value = lookup(catalog, "mutations", d.mutationId, "None")},

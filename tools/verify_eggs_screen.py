@@ -67,7 +67,7 @@ assert(#L.summaryLines({total = 0, failed = 0, byRarity = {0, 0, 0, 0, 0}}) == 1
 
 -- Never forced into hatching.
 assert(L.afterRun() == "results")
-assert(L.afterReveal(false, 5) == "eggs" and L.afterReveal(false, 0) == "eggs" and L.afterReveal(true, 3) == "continue" and L.afterReveal(true, 0) == "eggs")
+assert(L.afterReveal(false, 5) == "continue" and L.afterReveal(false, 0) == "eggs" and L.afterReveal(true, 3) == "continue" and L.afterReveal(true, 0) == "eggs", "BD-170: Next egg never drops back to the Eggs screen while eggs remain")
 print("Eggs screen checks passed: nest slots, single egg card, auto-open rules, pass gate, summary, never-forced hatching")
 '''
 
