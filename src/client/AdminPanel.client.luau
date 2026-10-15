@@ -33,29 +33,30 @@ local function text(parent: Instance, value: string, size: number, height: numbe
 end
 local function button(parent: Instance, value: string, color: Color3, size: UDim2): TextButton
     local b = Instance.new("TextButton")
-    b.Size, b.BackgroundColor3, b.Text, b.TextSize, b.TextColor3 = size, color, value, 16, C.text
+    b.Size, b.BackgroundColor3, b.Text, b.TextSize, b.TextColor3 = size, color, value, 22, C.text
+    b.Font = Enum.Font.FredokaOne
     b.AutoButtonColor = false
     b.Parent = parent
     Theme.decorate(b, 8)
     return b
 end
 
-local toggle = button(gui, "Admin", C.purple, UDim2.fromOffset(84, 36))
+local toggle = button(gui, "Admin", C.purple, UDim2.fromOffset(120, 48))
 toggle.Name, toggle.Position = "AdminToggle", UDim2.fromOffset(14, 8)
 
 local panel = Instance.new("Frame")
 panel.Name, panel.BackgroundColor3, panel.Visible = "AdminPanel", C.panel, false
-panel.Position, panel.Size = UDim2.fromOffset(14, 52), UDim2.new(0, 320, 1, -64)
+panel.Position, panel.Size = UDim2.fromOffset(14, 64), UDim2.new(0, 420, 1, -76)
 panel.Parent = gui
 Theme.decorate(panel, 12)
-local sizeLimit = Instance.new("UISizeConstraint") sizeLimit.MaxSize = Vector2.new(320, 640) sizeLimit.Parent = panel
+local sizeLimit = Instance.new("UISizeConstraint") sizeLimit.MaxSize = Vector2.new(420, 760) sizeLimit.Parent = panel
 local scroll = Instance.new("ScrollingFrame")
 scroll.BackgroundTransparency, scroll.BorderSizePixel, scroll.ScrollBarThickness = 1, 0, 6
 scroll.Position, scroll.Size = UDim2.fromOffset(10, 8), UDim2.new(1, -20, 1, -16)
 scroll.AutomaticCanvasSize, scroll.CanvasSize = Enum.AutomaticSize.Y, UDim2.new()
 scroll.Parent = panel
 local list = Instance.new("UIListLayout")
-list.Padding, list.SortOrder = UDim.new(0, 6), Enum.SortOrder.LayoutOrder
+list.Padding, list.SortOrder = UDim.new(0, 8), Enum.SortOrder.LayoutOrder
 list.Parent = scroll
 
 local order = 0
@@ -64,8 +65,8 @@ local function place<T>(object: T): T
     (object :: any).LayoutOrder = order
     return object
 end
-place(text(scroll, "Admin (only you)", 22, 28))
-local status = place(text(scroll, "Changes last until the server restarts.", 14, 34))
+place(text(scroll, "Admin (only you)", 28, 36))
+local status = place(text(scroll, "Changes last until the server restarts.", 18, 46))
 status.TextColor3 = C.gold
 
 local function call(action: string, a: any?, b: any?, done: string?)
@@ -78,29 +79,87 @@ local function call(action: string, a: any?, b: any?, done: string?)
     end)
 end
 
+-- Weather: pick one of the events, then Start now / Stop. A length row sets how long it lasts.
+local function section(title: string)
+    local header = place(text(scroll, title, 24, 34))
+    header.TextColor3 = C.gold
+    local line = Instance.new("Frame")
+    line.BackgroundColor3, line.BorderSizePixel, line.Position, line.Size, line.Parent = C.gold, 0, UDim2.new(0, 0, 1, -3), UDim2.new(1, 0, 0, 2), header
+end
+section("Weather")
+local weatherNow = place(text(scroll, "", 20, 28))
+local chosenSeconds = ProgressionConfig.WeatherDuration
+local chosenEvent: string = ProgressionConfig.Weather[1].id
+local function row(height: number): Frame
+    local frame = place(Instance.new("Frame"))
+    frame.BackgroundTransparency, frame.Size, frame.Parent = 1, UDim2.new(1, 0, 0, height), scroll
+    return frame
+end
+local lengthRow = row(48)
+local rowLayout = Instance.new("UIListLayout")
+rowLayout.FillDirection, rowLayout.Padding = Enum.FillDirection.Horizontal, UDim.new(0, 8)
+rowLayout.Parent = lengthRow
+local lengths = {{label = "1 min", seconds = 60}, {label = "3 min", seconds = 180}, {label = "10 min", seconds = 600}}
+local lengthButtons: {[TextButton]: number} = {}
+local eventButtons: {[TextButton]: string} = {}
+local function refresh()
+    for b, seconds in lengthButtons do b.BackgroundColor3 = if seconds == chosenSeconds then C.blue else C.card end
+    for b, id in eventButtons do b.BackgroundColor3 = if id == chosenEvent then C.accent else C.card end
+end
+for _, entry in lengths do
+    local b = button(lengthRow, entry.label, C.card, UDim2.new(1 / 3, -6, 1, 0))
+    lengthButtons[b] = entry.seconds
+    b.Activated:Connect(function() chosenSeconds = entry.seconds refresh() end)
+end
+local grid = place(Instance.new("Frame"))
+grid.BackgroundTransparency, grid.AutomaticSize, grid.Size, grid.Parent = 1, Enum.AutomaticSize.Y, UDim2.new(1, 0, 0, 0), scroll
+local gridLayout = Instance.new("UIGridLayout")
+gridLayout.CellSize, gridLayout.CellPadding = UDim2.new(.5, -4, 0, 48), UDim2.fromOffset(8, 8)
+gridLayout.SortOrder, gridLayout.Parent = Enum.SortOrder.LayoutOrder, grid
+for index, event in ProgressionConfig.Weather do
+    local b = button(grid, event.name, C.card, UDim2.new())
+    b.LayoutOrder, b.TextScaled = index, true
+    eventButtons[b] = event.id
+    b.Activated:Connect(function() chosenEvent = event.id refresh() end)
+end
+local startStop = row(56)
+local startLayout = Instance.new("UIListLayout")
+startLayout.FillDirection, startLayout.Padding = Enum.FillDirection.Horizontal, UDim.new(0, 8)
+startLayout.Parent = startStop
+local start = button(startStop, "Start now", C.accent, UDim2.new(.5, -4, 1, 0))
+start.Activated:Connect(function() call("startWeather", chosenEvent, chosenSeconds, "Weather started") end)
+local stop = button(startStop, "Stop", C.red, UDim2.new(.5, -4, 1, 0))
+stop.Activated:Connect(function() call("stopWeather", nil, nil, "Weather stopped") end)
+refresh()
+
 -- Sliders: the label updates while dragging; the value is sent once on release.
 local dragging: {key: string, apply: (number) -> (), send: () -> ()}? = nil
 local feelHeaderShown = false
+local runHeaderShown = false
 for _, key in Rules.SettingOrder do
     local spec = Rules.Settings[key]
+    if spec.group ~= "feel" and not runHeaderShown then
+        runHeaderShown = true
+        section("Run")
+    end
     if spec.group == "feel" and not feelHeaderShown then
         feelHeaderShown = true
-        place(text(scroll, "Feel (live, not saved)", 18, 24))
+        section("Feel (live, not saved)")
     end
     local holder = place(Instance.new("Frame"))
-    holder.BackgroundTransparency, holder.Size, holder.Parent = 1, UDim2.new(1, 0, 0, 62), scroll
-    local label = text(holder, "", 16, 22)
+    holder.BackgroundTransparency, holder.Size, holder.Parent = 1, UDim2.new(1, 0, 0, 76), scroll
+    local label = text(holder, "", 20, 28)
     local track = Instance.new("Frame")
-    track.BackgroundColor3, track.Position, track.Size = C.card, UDim2.fromOffset(8, 30), UDim2.new(1, -16, 0, 12)
+    track.BackgroundColor3, track.Position, track.Size = C.card, UDim2.fromOffset(12, 42), UDim2.new(1, -24, 0, 16)
     track.Active, track.Parent = true, holder
     Theme.decorate(track, 6)
     local fill = Instance.new("Frame")
     fill.BackgroundColor3, fill.BorderSizePixel, fill.Parent = C.accent, 0, track
     local fillCorner = Instance.new("UICorner") fillCorner.CornerRadius = UDim.new(0, 6) fillCorner.Parent = fill
     local knob = Instance.new("Frame")
-    knob.AnchorPoint, knob.Size, knob.BackgroundColor3, knob.ZIndex = Vector2.new(.5, .5), UDim2.fromOffset(24, 24), C.gold, 2
+    knob.AnchorPoint, knob.Size, knob.BackgroundColor3, knob.ZIndex = Vector2.new(.5, .5), UDim2.fromOffset(32, 32), C.gold, 2
     knob.Parent = track
-    Theme.decorate(knob, 12)
+    Theme.decorate(knob, 16)
     local function show(value: number)
         local fraction = Rules.toFraction(key, value)
         label.Text = spec.label .. ": " .. Rules.format(value, key)
@@ -142,41 +201,10 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- Weather: pick a length, then tap an event to start it now.
-place(text(scroll, "Weather", 18, 24))
-local weatherNow = place(text(scroll, "", 14, 20))
-local lengths = {{label = "1 min", seconds = 60}, {label = "3 min", seconds = 180}, {label = "10 min", seconds = 600}}
-local chosenSeconds = ProgressionConfig.WeatherDuration
-local lengthRow = place(Instance.new("Frame"))
-lengthRow.BackgroundTransparency, lengthRow.Size, lengthRow.Parent = 1, UDim2.new(1, 0, 0, 34), scroll
-local rowLayout = Instance.new("UIListLayout")
-rowLayout.FillDirection, rowLayout.Padding = Enum.FillDirection.Horizontal, UDim.new(0, 6)
-rowLayout.Parent = lengthRow
-local lengthButtons: {[TextButton]: number} = {}
-local function refreshLengths()
-    for b, seconds in lengthButtons do b.BackgroundColor3 = if seconds == chosenSeconds then C.blue else C.card end
-end
-for _, entry in lengths do
-    local b = button(lengthRow, entry.label, C.card, UDim2.new(1 / 3, -4, 1, 0))
-    lengthButtons[b] = entry.seconds
-    b.Activated:Connect(function() chosenSeconds = entry.seconds refreshLengths() end)
-end
-refreshLengths()
-local grid = place(Instance.new("Frame"))
-grid.BackgroundTransparency, grid.AutomaticSize, grid.Size, grid.Parent = 1, Enum.AutomaticSize.Y, UDim2.new(1, 0, 0, 0), scroll
-local gridLayout = Instance.new("UIGridLayout")
-gridLayout.CellSize, gridLayout.CellPadding = UDim2.new(.5, -4, 0, 36), UDim2.fromOffset(6, 6)
-gridLayout.SortOrder, gridLayout.Parent = Enum.SortOrder.LayoutOrder, grid
-for index, event in ProgressionConfig.Weather do
-    local b = button(grid, event.name, C.card, UDim2.new())
-    b.LayoutOrder, b.TextScaled = index, true
-    b.Activated:Connect(function() call("startWeather", event.id, chosenSeconds, event.name .. " started") end)
-end
-place(text(scroll, "World parts (BD-168)", 18, 24))
-local cullInfo = place(text(scroll, "", 14, 36))
-local stop = place(button(scroll, "Stop weather", C.red, UDim2.new(1, 0, 0, 36)))
-stop.Activated:Connect(function() call("stopWeather", nil, nil, "Weather stopped") end)
-local reset = place(button(scroll, "Reset sliders", C.card, UDim2.new(1, 0, 0, 36)))
+section("Debug")
+local cullInfo = place(text(scroll, "", 18, 80))
+cullInfo.TextYAlignment = Enum.TextYAlignment.Top
+local reset = place(button(scroll, "Reset sliders", C.card, UDim2.new(1, 0, 0, 48)))
 reset.Activated:Connect(function() call("reset", nil, nil, "Sliders reset") end)
 
 task.spawn(function()
@@ -199,6 +227,7 @@ end)
 
 local function setOpen(open: boolean)
     panel.Visible = open
+    player:SetAttribute("AdminPanelRight", if open then panel.AbsolutePosition.X + panel.AbsoluteSize.X else 0) -- toasts read this and slide clear
     toggle.BackgroundColor3 = if open then C.gold else C.purple
 end
 toggle.Activated:Connect(function() setOpen(not panel.Visible) end)
@@ -206,5 +235,5 @@ UserInputService.InputBegan:Connect(function(input, processed)
     if not processed and input.KeyCode == Enum.KeyCode.F2 then setOpen(not panel.Visible) end
 end)
 player:GetAttributeChangedSignal("IsAdmin"):Connect(function()
-    if player:GetAttribute("IsAdmin") ~= true then gui:Destroy() end
+    if player:GetAttribute("IsAdmin") ~= true then player:SetAttribute("AdminPanelRight", 0) gui:Destroy() end
 end)

@@ -7,6 +7,7 @@ local SoundService=game:GetService("SoundService")
 local Shared=game:GetService("ReplicatedStorage").Shared
 local Theme=require(Shared.UITheme)
 local WS=require(Shared.WeatherSounds)
+local Mixer=require(Shared.AudioMixer)
 
 local folder=Instance.new("Folder") folder.Name="WeatherAudio" folder.Parent=SoundService
 local beds:{[string]:Sound}={}
@@ -19,6 +20,7 @@ for name,entry in WS.Sounds do
     if assetId then
         local sound=Instance.new("Sound") sound.Name=name sound.SoundId=assetId sound.Volume=0 sound.Looped=entry.loop
         sound.RollOffMaxDistance=0 sound.Parent=folder
+        Mixer.attach(sound,"ambience") -- weather beds and accents follow the Weather slider
         if entry.loop then beds[name]=sound levels[name]=0 else accents[name]={sound=sound,last=-100} end
     end
 end

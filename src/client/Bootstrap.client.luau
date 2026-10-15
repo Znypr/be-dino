@@ -210,6 +210,11 @@ drawToasts=function()
     end
 end
 local function pumpToasts()
+    -- Slide the stack right, clear of the owner's admin panel (AdminPanel sets AdminPanelRight: px from the left edge, 0 = closed).
+    local panelRight=player:GetAttribute("AdminPanelRight") or 0
+    local half,halfCard=gui.AbsoluteSize.X/2,220*toastScale.Scale
+    local shift=if panelRight>0 then math.clamp(panelRight+12+halfCard-half,0,math.max(0,half-halfCard)) else 0
+    if toastLayer.Position.X.Offset~=shift then toastLayer.Position=UDim2.new(.5,shift,0,80) end
     if NotifyQueue.update(notifyQueue,os.clock(),shade.Visible) then drawToasts() end
 end
 -- Existing call sites keep notify(text,color); opts adds {kind,key,icon,body,tint,amount,format}.
@@ -333,7 +338,7 @@ openFusion=function()
         local target=FusionSelection.navTarget({menuLoaded=fusionMenuOk,remote=fn~=nil,probe=fusionProbe,profile=Config.ReleaseProfile})
         if target=="menu" then showFusionMenu()
         elseif target=="legacy" then open("fusion")
-        else notify("Fusion is not available on this server yet",C.gold) end
+        else notify("Fusion is coming soon",C.gold) end
     end
     if fn and fusionMenuOk and fusionProbe==nil then
         task.spawn(function()
@@ -769,7 +774,7 @@ render=function(name: string)
         label(body,if event then event.name.." • "..table.concat(UIFormat.boostLines(event.growth,event.speed,1)," • ") else "Cosmetic fusion: 6 Base → Gold; 3 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
         local equipped=str("EquippedSpeciesId","compy")==selected
         button(body,if equipped then "EQUIPPED" elseif not owned then "LOCKED" else "EQUIP",426,273,372,52,if owned then C.accent else C.card,function()
-            if not owned then notify("Hatch reward eggs to discover this dino") return end
+            if not owned then notify("Hatch eggs to find this dino") return end
             if not equipped then notify("Equipping...",C.blue) equip:FireServer(selected,Http:GenerateGUID(false)) end
         end)
         button(body,"BACK TO INDEX",426,341,372,45,C.blue,function() open("collection") end)
@@ -973,25 +978,28 @@ render=function(name: string)
         button(body,"DONE",424,300,370,64,C.accent,function() skippedEntries={} open("eggs") end)
     elseif name=="settings" then
         heading.Text,header.BackgroundColor3="Settings",C.purple
-        label(body,"Visual effects",24,24,410,56,30)
-        button(body,if motion then "ON" else "OFF",560,24,230,56,if motion then C.accent else C.card,function() motion=not motion Theme.MotionEnabled=motion open("settings") end)
-        label(body,"Camera distance",24,114,410,56,30)
-        button(body,"RESET CAMERA",470,114,320,56,C.blue,function() player.CameraMaxZoomDistance=Config.CameraMaxZoom notify("Camera reset",C.blue) end)
-        label(body,"Hatch sounds",24,182,410,44,26)
-        button(body,if Theme.HatchSoundEnabled~=false then "SOUND ON" else "SOUND OFF",560,182,230,44,C.blue,function() Theme.HatchSoundEnabled=Theme.HatchSoundEnabled==false open("settings") end).TextSize=20
-        button(body,"HOW TO PLAY",24,238,370,64,C.gold,function() open("tutorial") end)
-        label(body,"Auto-open:",24,312,160,52,24)
+        -- Two columns of buttons, then three volume bars (AudioMixer, session-only), then auto-open. Body is 824 x 402.
+        label(body,"Visual effects",0,0,250,48,28)
+        button(body,if motion then "ON" else "OFF",270,0,140,48,if motion then C.accent else C.card,function() motion=not motion Theme.MotionEnabled=motion open("settings") end)
+        label(body,"Camera",0,56,250,48,28)
+        button(body,"RESET",270,56,140,48,C.blue,function() player.CameraMaxZoomDistance=Config.CameraMaxZoom notify("Camera reset",C.blue) end)
+        label(body,"Sound",0,112,250,48,28)
+        button(body,if Theme.HatchSoundEnabled~=false then "ON" else "OFF",270,112,140,48,if Theme.HatchSoundEnabled~=false then C.accent else C.card,function() Theme.HatchSoundEnabled=Theme.HatchSoundEnabled==false open("settings") end)
+        button(body,"HOW TO PLAY",440,0,384,52,C.gold,function() open("tutorial") end)
+        button(body,"FOOD GUIDE",440,60,384,52,C.accent,function() open("food") end)
+        local Volume=require(script.Parent.VolumeSliders)
+        for i,key in require(Shared.AudioMixer).Order do Volume.row(body,key,0,168+(i-1)*46,824,25) end
+        button(body,"RESET SOUND",440,120,384,44,C.card,function() require(Shared.AudioMixer).reset() open("settings") end).TextSize=20
         local locked=EggsLogic.locked(Config.AutoOpenRequiresPass,ownsAutoOpen())
         local chosen=RevealSkip.set(autoOpenSelection())
         for i,rarityName in RevealSkip.Names do
             -- Five rarities: name on top, state below; rarity colour while shown, dark while skipped.
-            button(body,rarityName.."\n"..(if locked then "LOCKED" elseif chosen[i] then "AUTO" else "SHOW"),190+(i-1)*126,312,120,52,if chosen[i] then C.card else rarityColors[i],function()
+            button(body,rarityName.."\n"..(if locked then "LOCKED" elseif chosen[i] then "AUTO" else "SHOW"),176+(i-1)*130,312,124,52,if chosen[i] then C.card else rarityColors[i],function()
                 if locked then notify("Auto-open needs a pass",C.gold) return end
                 setSkipRemote:FireServer(RevealSkip.toggle(decoded("RevealSkipJson","[]"),i))
             end).TextSize=16
         end
-        button(body,"FOOD GUIDE",424,238,366,64,C.accent,function() open("food") end)
-        label(body,"Shiny, BIG and special eggs always show. Auto-opened eggs are still saved!",24,370,766,30,18)
+        label(body,"Shiny, BIG and special eggs always show. Auto-opened eggs are still saved!",0,370,824,30,18)
     elseif name=="food" then
         heading.Text,header.BackgroundColor3="Food & Growth",C.accent
         local types={{"Berries","leaf",1,C.accent},{"Fruit","leaf",4,C.gold},{"Eggs","egg",15,C.blue},{"Crystals","amber",50,C.purple}}
