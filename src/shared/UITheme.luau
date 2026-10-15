@@ -5,6 +5,7 @@ local EventVectors = require(script.Parent.EventIconVectors)
 local Artwork = require(script.Parent.Artwork)
 local IconLayout = require(script.Parent.UIIconLayout)
 local TrailArtwork = require(script.Parent.TrailArtwork)
+local FxUi = require(script.Parent.FxUi)
 local Theme = {}
 Theme.BackgroundImageId = ""
 Theme.MotionEnabled = true
@@ -153,7 +154,13 @@ local function nativeIcon(parent: GuiObject,id: string): Frame?
 end
 function Theme.icon(parent: GuiObject,id: string): Frame?
     local trail=string.match(id,"^trail_(%w+)$")
-    if trail then return TrailArtwork.build(parent,trail) end
-    return Artwork.build(parent,id,nativeIcon) or nativeIcon(parent,id)
+    if trail then
+        local art=TrailArtwork.build(parent,trail)
+        if art then FxUi.decorateIcon(art,id,not Theme.MotionEnabled) end -- docs/93: animated preview, static ribbon under it
+        return art
+    end
+    local icon=Artwork.build(parent,id,nativeIcon) or nativeIcon(parent,id)
+    if icon and string.sub(id,1,5)=="aura_" then FxUi.decorateIcon(icon,id,not Theme.MotionEnabled) end
+    return icon
 end
 return Theme

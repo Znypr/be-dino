@@ -367859,6 +367859,69 @@ return Dinosaur
       </Item>
       <Item class="ModuleScript" referent="RBX190">
         <Properties>
+          <string name="Name">EffectAssets</string>
+          <ProtectedString name="Source">--!nonstrict
+-- Texture keys for FX (docs/93). The recipes only name SEMANTIC keys; this table maps a key to a real texture.
+-- Rule (AGENTS.md / docs/83): IDs come only from a real upload. `uploaded` stays "" until the lead renders and uploads the
+-- Blender request (docs/93 section 8). While a key is empty we fall back to the engine's built-in white sprites, which are
+-- tinted and layered at runtime. Never write an invented rbxassetid here.
+local Assets = {}
+
+-- Built-in engine sprites (no upload needed).
+Assets.Builtin = {
+    smoke = "rbxasset://textures/particles/smoke_main.dds",
+    spark = "rbxasset://textures/particles/sparkles_main.dds",
+    fire = "rbxasset://textures/particles/fire_main.dds",
+}
+
+-- Already-uploaded soft smoke used by the mutation mist since BD-155 (kept as-is, NOT new).
+Assets.Uploaded = {
+    softMist = "rbxassetid://105629313112163",
+}
+
+-- Blender requests (docs/93 section 8). key -&gt; upload id (empty until rendered and uploaded) and the built-in used meanwhile.
+Assets.Requested = {
+    glowPlate = {id = "", fallback = "spark"},     -- neutral radial glow, 256 px
+    ringSoft = {id = "", fallback = "spark"},      -- soft rim ring, 256 px
+    ringShock = {id = "", fallback = "spark"},     -- thin shock ring, 256 px
+    smokeSheet = {id = "", fallback = "smoke"},    -- layered smoke 4x4 flipbook, 512 px
+    sparkSheet = {id = "", fallback = "spark"},    -- soft sparks, 4-point stars, bubbles 4x4, 512 px
+    flameSheet = {id = "", fallback = "fire"},     -- soft flame wisps 4x4, 512 px
+    ribbonSoft = {id = "", fallback = "spark"},    -- soft tapered ribbon strip for Trail/Beam, 512x64
+    speedLine = {id = "", fallback = "spark"},     -- thin speed streak strip, 512x32
+    starFour = {id = "", fallback = "spark"},      -- four-point twinkle, 128 px
+    crystalSheet = {id = "", fallback = "spark"},  -- frost crystals, droplets, pebbles, embers 4x4
+}
+
+local function valid(id: any): boolean
+    return type(id) == "string" and string.match(id, "^rbxassetid://%d+$") ~= nil
+end
+Assets.isValid = valid
+
+-- Semantic key -&gt; texture string. Unknown keys fall back to the built-in sparkle.
+function Assets.resolve(key: string): string
+    local up = Assets.Uploaded[key]
+    if valid(up) then return up end
+    local req = Assets.Requested[key]
+    if req then
+        if valid(req.id) then return req.id end
+        return Assets.Builtin[req.fallback] or Assets.Builtin.spark
+    end
+    return Assets.Builtin[key] or Assets.Builtin.spark
+end
+
+-- True when the key currently shows the real Blender art (used by docs and the QA overlay).
+function Assets.isReal(key: string): boolean
+    local req = Assets.Requested[key]
+    return (req ~= nil and valid(req.id)) or valid(Assets.Uploaded[key])
+end
+
+return Assets
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX191">
+        <Properties>
           <string name="Name">EggAppearance</string>
           <ProtectedString name="Source">--!strict
 local Genetics=require(script.Parent.EggGenetics)
@@ -367894,7 +367957,7 @@ return Appearance
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX191">
+      <Item class="ModuleScript" referent="RBX192">
         <Properties>
           <string name="Name">EggGenetics</string>
           <ProtectedString name="Source">--!strict
@@ -367948,7 +368011,7 @@ return Genetics
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX192">
+      <Item class="ModuleScript" referent="RBX193">
         <Properties>
           <string name="Name">EggOrigin</string>
           <ProtectedString name="Source">--!strict
@@ -368014,7 +368077,7 @@ return Origin
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX193">
+      <Item class="ModuleScript" referent="RBX194">
         <Properties>
           <string name="Name">EggOutcomeOdds</string>
           <ProtectedString name="Source">--!strict
@@ -368124,7 +368187,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX194">
+      <Item class="ModuleScript" referent="RBX195">
         <Properties>
           <string name="Name">EggOutcomeView</string>
           <ProtectedString name="Source">--!strict
@@ -368241,7 +368304,7 @@ return View
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX195">
+      <Item class="ModuleScript" referent="RBX196">
         <Properties>
           <string name="Name">EggPreview</string>
           <ProtectedString name="Source">--!strict
@@ -368274,7 +368337,7 @@ return Egg
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX196">
+      <Item class="ModuleScript" referent="RBX197">
         <Properties>
           <string name="Name">EggsLogic</string>
           <ProtectedString name="Source">--!strict
@@ -368370,7 +368433,7 @@ return L
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX197">
+      <Item class="ModuleScript" referent="RBX198">
         <Properties>
           <string name="Name">EggTraits</string>
           <ProtectedString name="Source">--!strict
@@ -368421,7 +368484,7 @@ return Traits
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX198">
+      <Item class="ModuleScript" referent="RBX199">
         <Properties>
           <string name="Name">EventIconVectors</string>
           <ProtectedString name="Source">--!strict
@@ -368436,7 +368499,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX199">
+      <Item class="ModuleScript" referent="RBX200">
         <Properties>
           <string name="Name">FoodCatchRules</string>
           <ProtectedString name="Source">--!strict
@@ -368452,7 +368515,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX200">
+      <Item class="ModuleScript" referent="RBX201">
         <Properties>
           <string name="Name">FusionSelection</string>
           <ProtectedString name="Source">--!strict
@@ -369249,7 +369312,564 @@ return Sel
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX201">
+      <Item class="ModuleScript" referent="RBX202">
+        <Properties>
+          <string name="Name">FxRecipes</string>
+          <ProtectedString name="Source">--!nonstrict
+-- docs/93 anime-style FX recipes (BD-161 / BD-162 / BD-163). PURE data and maths (RGB triples, no Roblox types), so it is
+-- verified offline by tools/verify_fx.py. The client builds instances from it (client FxRig for the world dino,
+-- shared FxUi for menu/shop previews). Rarity -&gt; layers: more layers, more colours, slightly livelier, never louder than
+-- the budget: layers are added in PRIORITY order and the first one that does not fit the device budget stops the list.
+local R = {}
+
+R.Tiers = {"Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"}
+R.TierIndex = {Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5, Mythic = 6}
+R.LayerCount = {2, 3, 4, 5, 6, 7}   -- how many priority layers a tier shows
+R.ColorCount = {2, 3, 3, 4, 5, 6}   -- how many palette colours a tier may use (anime: more hues with rarity)
+R.MutationTier = "Rare"             -- weather mutations read as Rare-level looks (4 layers + a one-shot pop)
+
+-- Per-device budgets, PER DINO (docs/93 section 6). `alive` = particles alive at once (rate * lifetime, after rateScale).
+R.Devices = {
+    phone   = {emitters = 3, beams = 3, trails = 2, parts = 1, lights = 1, alive = 18, rateScale = 0.5,  burst = 6,  fullDinos = 1},
+    tablet  = {emitters = 5, beams = 5, trails = 3, parts = 1, lights = 1, alive = 30, rateScale = 0.75, burst = 10, fullDinos = 2},
+    desktop = {emitters = 6, beams = 8, trails = 4, parts = 1, lights = 1, alive = 45, rateScale = 1.0,  burst = 14, fullDinos = 3},
+}
+R.DeviceOrder = {"phone", "tablet", "desktop"}
+R.LiteLayers = 2 -- distant / extra dinos: only the first two priority layers, rates x0.6
+
+-- Calm timing limits the verifier enforces (docs/87).
+R.Timing = {
+    pulseHz = 0.55,      -- breathing glow, slower than a heartbeat
+    ringSpinMax = 1.0,   -- radians per second, any orbit
+    maxLife = 2.2,       -- seconds, any particle
+    maxSpeed = 3.5,      -- studs per second, any particle
+    fadeIn = 0.35,       -- effect fade-in on equip / appear
+    burstSeconds = 0.6,  -- one-shot pop length
+    maxMistAlpha = 0.5,  -- peak opacity of any smoke layer (dino stays readable)
+    maxSparkAlpha = 0.9,
+    minRingRadius = 1.2, -- rings stay outside the body (scale 1 studs)
+    maxParticleSize = 1.6,
+}
+
+-- Named curves: lists of {t, value}. Particle/UI code samples them; values are multipliers 0..1+ or transparency.
+R.Curves = {
+    fadeInOut = {{0, 1}, {0.18, 0.3}, {0.55, 0.5}, {1, 1}},      -- transparency: fast ease-in, long soft fade-out
+    sizeGrow  = {{0, 0.4}, {0.35, 1}, {1, 1.25}},                -- smoke puffs swell as they rise
+    sizePop   = {{0, 0}, {0.2, 1}, {1, 0}},                      -- sparkles pop then shrink away
+    taper     = {{0, 1}, {1, 0}},                                -- trail width
+    trailAlpha = {{0, 0.12}, {0.5, 0.5}, {1, 1}},                -- trail transparency along its length
+}
+
+function R.sample(curve, t: number): number
+    if t &lt;= curve[1][1] then return curve[1][2] end
+    for i = 2, #curve do
+        local a, b = curve[i - 1], curve[i]
+        if t &lt;= b[1] then
+            local f = (t - a[1]) / math.max(b[1] - a[1], 1e-6)
+            return a[2] + (b[2] - a[2]) * f
+        end
+    end
+    return curve[#curve][2]
+end
+function R.easeOutCubic(t: number): number local u = 1 - math.clamp(t, 0, 1) return 1 - u * u * u end
+function R.easeInOutSine(t: number): number return -(math.cos(math.pi * math.clamp(t, 0, 1)) - 1) / 2 end
+function R.pulse(time: number, hz: number?): number return 0.5 + 0.5 * math.sin(time * 2 * math.pi * (hz or R.Timing.pulseHz)) end
+
+-- ---------------------------------------------------------------- colour maths (RGB 0..255)
+local function mix(a, b, f) return {a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f, a[3] + (b[3] - a[3]) * f} end
+local function toHsv(c)
+    local r, g, b = c[1] / 255, c[2] / 255, c[3] / 255
+    local mx, mn = math.max(r, g, b), math.min(r, g, b)
+    local d = mx - mn
+    local h = 0
+    if d &gt; 0 then
+        if mx == r then h = ((g - b) / d) % 6 elseif mx == g then h = (b - r) / d + 2 else h = (r - g) / d + 4 end
+        h /= 6
+    end
+    return h, (if mx == 0 then 0 else d / mx), mx
+end
+local function fromHsv(h, s, v)
+    h = h % 1
+    local i = math.floor(h * 6)
+    local f = h * 6 - i
+    local p, q, t = v * (1 - s), v * (1 - f * s), v * (1 - (1 - f) * s)
+    local r, g, b
+    local k = i % 6
+    if k == 0 then r, g, b = v, t, p elseif k == 1 then r, g, b = q, v, p elseif k == 2 then r, g, b = p, v, t
+    elseif k == 3 then r, g, b = p, q, v elseif k == 4 then r, g, b = t, p, v else r, g, b = v, p, q end
+    return {r * 255, g * 255, b * 255}
+end
+local function hueShift(c, turns)
+    local h, s, v = toHsv(c)
+    return fromHsv(h + turns, math.clamp(s, 0.45, 0.9), math.max(v, 0.85))
+end
+R.mix = mix
+function R.distance(a, b) return math.abs(a[1] - b[1]) + math.abs(a[2] - b[2]) + math.abs(a[3] - b[3]) end
+
+-- Palette: ordered by importance. Anime shading rule: the SHADOW colour is a cooler, darker shift (not black), the GLINT is
+-- a near-white tint. Tier t may use the first ColorCount[t] entries.
+R.PaletteNames = {"primary", "accent", "deep", "light", "hueA", "hueB"}
+function R.palette(primary, accent, tierIndex: number)
+    local acc = accent or mix(primary, {255, 255, 255}, 0.65)
+    local all = {
+        primary = primary,
+        accent = acc,
+        deep = mix(primary, {28, 36, 92}, 0.45),
+        light = mix(primary, {255, 255, 255}, 0.55),
+        hueA = hueShift(primary, 0.11),
+        hueB = hueShift(primary, 0.33),
+    }
+    local count = R.ColorCount[math.clamp(tierIndex, 1, 6)]
+    local list = {}
+    for i = 1, count do list[i] = all[R.PaletteNames[i]] end
+    return list, all, count
+end
+
+-- ---------------------------------------------------------------- layer templates (PRIORITY order, tier-1 values)
+-- kind: glow (PointLight) | emitter (ParticleEmitter) | ring (orbiting beams) | spiral (rising beams) | trail | burst (one shot)
+-- grad: palette names used for the colour gradient (names beyond the tier's ColorCount fall back to primary).
+-- onlyMoving: trail / run effects, emitted only while the dino moves.
+R.Templates = {
+    aura = {
+        {id = "glow", kind = "glow", brightness = 0.42, range = 7, grad = {"primary"}},
+        {id = "motes", kind = "emitter", tex = "sparkSheet", rate = 8, life = 1.1, size = 0.22, speed = 0.8, rise = 1.3, alpha = 0.8,
+            light = 0.85, shape = "Cylinder", grad = {"primary", "accent"}, curve = "sizePop"},
+        {id = "mist", kind = "emitter", tex = "smokeSheet", rate = 3, life = 1.6, size = 1.0, speed = 0.3, rise = 0.7, alpha = 0.4,
+            light = 0.1, shape = "Cylinder", grad = {"deep", "primary"}, curve = "sizeGrow", spin = 18},
+        {id = "ring", kind = "ring", beams = 3, radius = 2.1, height = -1.55, spin = 0.45, width = 0.1, alpha = 0.7, grad = {"primary", "accent"}},
+        {id = "ripple", kind = "emitter", tex = "ringShock", rate = 1.1, life = 1.4, size = 1.3, grow = 2.2, speed = 1.4, rise = 0, alpha = 0.5,
+            light = 0.6, shape = "Disc", outward = true, grad = {"accent", "light"}, curve = "sizeGrow"},
+        {id = "ribbon", kind = "spiral", beams = 2, radius = 1.5, low = -1.5, high = 1.0, spin = 0.7, width = 0.16, alpha = 0.65, grad = {"deep", "primary", "light"}},
+        {id = "crown", kind = "ring", beams = 3, radius = 1.25, height = 0.65, spin = -0.6, width = 0.07, alpha = 0.6, grad = {"hueA", "accent", "hueB"}},
+    },
+    trail = {
+        {id = "ribbon", kind = "trail", width = 1, life = 1, alpha = 0.88, light = 0.8, grad = {"primary", "accent"}},
+        {id = "shed", kind = "emitter", tex = "sparkSheet", rate = 3, life = 0.9, size = 0.2, speed = 1.0, rise = 0.2, alpha = 0.85,
+            light = 0.85, onlyMoving = true, grad = {"primary", "accent"}, curve = "sizePop"},
+        {id = "under", kind = "trail", width = 1.9, life = 0.8, alpha = 0.38, light = 0.5, grad = {"deep", "primary"}},
+        {id = "puffs", kind = "emitter", tex = "smokeSheet", rate = 3, life = 1.2, size = 0.8, speed = 0.4, rise = 0.3, alpha = 0.35,
+            light = 0.1, onlyMoving = true, grad = {"deep", "primary"}, curve = "sizeGrow", spin = 20},
+        {id = "lines", kind = "trail", count = 2, width = 0.22, life = 0.7, alpha = 0.7, light = 0.9, offset = 0.9, grad = {"light", "accent"}},
+        {id = "stars", kind = "emitter", tex = "starFour", rate = 1.5, life = 1.6, size = 0.42, speed = 0.5, rise = 0.5, alpha = 0.9,
+            light = 1, onlyMoving = true, grad = {"accent", "light", "hueA"}, curve = "sizePop", spin = 40},
+        {id = "pop", kind = "burst", tex = "sparkSheet", count = 6, life = 0.6, size = 0.34, speed = 3, alpha = 0.9, light = 0.9, grad = {"accent", "light", "hueB"}},
+    },
+    mutation = {
+        {id = "glow", kind = "glow", brightness = 0.4, range = 7, grad = {"primary"}},
+        {id = "motif", kind = "emitter", tex = "sparkSheet", rate = 6, life = 1.2, size = 0.24, speed = 0.7, rise = 0.9, alpha = 0.8,
+            light = 0.8, shape = "Cylinder", grad = {"primary", "accent"}, curve = "sizePop"},
+        {id = "mist", kind = "emitter", tex = "smokeSheet", rate = 3, life = 1.7, size = 1.1, speed = 0.3, rise = 0.5, alpha = 0.42,
+            light = 0.12, shape = "Cylinder", grad = {"deep", "primary"}, curve = "sizeGrow", spin = 15},
+        {id = "ring", kind = "ring", beams = 3, radius = 1.9, height = -0.6, spin = 0.4, width = 0.09, alpha = 0.6, grad = {"primary", "accent"}},
+        {id = "ripple", kind = "emitter", tex = "ringShock", rate = 1.0, life = 1.4, size = 1.2, grow = 2.0, speed = 1.2, rise = 0, alpha = 0.45,
+            light = 0.6, shape = "Disc", outward = true, grad = {"accent", "light"}, curve = "sizeGrow"},
+        {id = "ribbon", kind = "spiral", beams = 2, radius = 1.4, low = -1.4, high = 1.0, spin = 0.6, width = 0.14, alpha = 0.55, grad = {"deep", "primary", "light"}},
+        {id = "pop", kind = "burst", tex = "sparkSheet", count = 8, life = 0.6, size = 0.3, speed = 2.6, alpha = 0.9, light = 0.9, grad = {"accent", "light", "hueB"}},
+    },
+}
+
+-- Per-mutation motif: tweaks the shared "motif" layer so each mutation reads differently (shape of motion, texture, mood).
+R.Motifs = {
+    dewdrop = {tex = "sparkSheet", rise = 0.5, speed = 0.5, size = 1.15, rate = 1.0},   -- slow round droplets / bubbles
+    charged = {tex = "starFour", rise = 0.3, speed = 1.6, size = 0.8, rate = 1.3},       -- zippy small zig sparks
+    frost = {tex = "crystalSheet", rise = -0.4, speed = 0.4, size = 1.1, rate = 1.0},    -- crystals drift DOWN gently
+    seismic = {tex = "crystalSheet", rise = 0.2, speed = 0.6, size = 1.2, rate = 0.8},   -- pebbles and dust
+    ember = {tex = "flameSheet", rise = 1.8, speed = 0.9, size = 1.0, rate = 1.1},       -- embers rise
+    aurora = {tex = "sparkSheet", rise = 0.8, speed = 0.7, size = 1.0, rate = 1.0, hues = true}, -- ribbons drift green/blue/violet
+    bloodmoon = {tex = "glowPlate", rise = 0.3, speed = 0.3, size = 1.3, rate = 0.7},    -- slow round crimson motes
+}
+
+-- ---------------------------------------------------------------- cost and resolve
+local function newCost() return {emitters = 0, beams = 0, trails = 0, parts = 0, lights = 0, alive = 0, burst = 0} end
+function R.layerCost(layer)
+    local c = newCost()
+    local k = layer.kind
+    if k == "glow" then c.lights = 1
+    elseif k == "emitter" then c.emitters = 1 c.alive = layer.rate * layer.life
+    elseif k == "burst" then c.emitters = 1 c.burst = layer.count
+    elseif k == "ring" or k == "spiral" then c.beams = layer.beams
+    elseif k == "trail" then c.trails = layer.count or 1 end
+    return c
+end
+local function needsAnchor(layer) return layer.shape ~= nil or layer.kind == "ring" or layer.kind == "spiral" end
+function R.totalCost(layers)
+    local total = newCost()
+    local anchor = false
+    for _, layer in layers do
+        local c = R.layerCost(layer)
+        for k, v in c do total[k] += v end
+        if needsAnchor(layer) then anchor = true end
+    end
+    total.parts = if anchor then 1 else 0
+    return total
+end
+local function fits(total, budget)
+    return total.emitters &lt;= budget.emitters and total.beams &lt;= budget.beams and total.trails &lt;= budget.trails
+        and total.parts &lt;= budget.parts and total.lights &lt;= budget.lights and total.alive &lt;= budget.alive + 1e-6
+        and total.burst &lt;= budget.burst
+end
+
+local function copy(t) local o = {} for k, v in t do o[k] = v end return o end
+
+-- item: the ProgressionConfig row (aura/trail: id, rarity, color, accent, width, lifetime, particles) or a MutationLook entry
+-- (mutation: id, spark, rim, mist). kind: "aura" | "trail" | "mutation". opts: {device="desktop", reduce=bool, detail="full"|"lite"}.
+function R.resolve(kind: string, item, opts)
+    opts = opts or {}
+    local device = R.Devices[opts.device or "desktop"] or R.Devices.desktop
+    local tierName = if kind == "mutation" then R.MutationTier else (item.rarity or "Common")
+    local tier = R.TierIndex[tierName] or 1
+    local primary, accent
+    if kind == "mutation" then primary, accent = item.spark, item.rim
+        if item.mist then accent = mix(item.rim, {255, 255, 255}, 0.45) end
+    else
+        primary = item.color
+        accent = item.accent or (if item.id == "royal" then {255, 215, 115} else nil)
+    end
+    local palette, named, colorCount = R.palette(primary, accent, tier)
+    if kind == "mutation" and item.mist then named.deep = item.mist end -- the look table owns the shadow colour
+    local out = {kind = kind, id = item.id, tier = tier, tierName = tierName, device = opts.device or "desktop", palette = palette,
+        named = named, colorCount = colorCount, reduced = opts.reduce == true, layers = {}}
+    local templates = R.Templates[kind]
+    if not templates then return out end
+
+    if opts.reduce then
+        -- Reduce Motion: no particles, no beams, no looping. Aura/mutation keep one still, soft glow; trails keep ONE short ribbon
+        -- (it only follows the dino, it never animates by itself).
+        if kind == "trail" then
+            local t = copy(templates[1])
+            t.life = 0.45 t.width *= (item.width or 0.5) t.alpha = 0.7 t.grad = {"primary", "accent"}
+            table.insert(out.layers, t)
+        else
+            local g = copy(templates[1])
+            g.brightness = math.min(g.brightness, 0.4)
+            table.insert(out.layers, g)
+        end
+        out.cost = R.totalCost(out.layers)
+        return out
+    end
+
+    local lite = opts.detail == "lite"
+    local limit = if lite then R.LiteLayers else R.LayerCount[tier]
+    local rateF = (1 + 0.1 * (tier - 1)) * (if lite then 0.6 else 1) * device.rateScale
+    local sizeF = 1 + 0.05 * (tier - 1)
+    local motif = if kind == "mutation" then R.Motifs[item.id] else nil
+    for _, tpl in templates do
+        if #out.layers &gt;= limit then break end
+        local layer = copy(tpl)
+        if layer.rate then layer.rate *= rateF end
+        if layer.size then layer.size *= sizeF end
+        if layer.id == "shed" then layer.rate = math.max(2, (item.particles or 2) * 1.2) * rateF end
+        if kind == "trail" and layer.kind == "trail" then
+            layer.width *= (item.width or 0.5)
+            layer.life *= (item.lifetime or 0.7)
+        end
+        if layer.id == "motif" and motif then
+            layer.tex, layer.rise, layer.speed = motif.tex, motif.rise, motif.speed
+            layer.size *= motif.size layer.rate *= motif.rate
+            if motif.hues then layer.grad = {"primary", "hueA", "hueB"} end
+        end
+        if tier &gt;= 5 and layer.kind == "emitter" and layer.id ~= "mist" and #layer.grad &gt;= 2 then
+            layer.grad = {"light", "primary", "accent", "deep"} -- full-spectrum cycle for the top tiers
+        end
+        layer.color = {}
+        for i, name in layer.grad do
+            local base = named[name]
+            local usable = false
+            for j = 1, colorCount do if R.PaletteNames[j] == name then usable = true end end
+            layer.color[i] = if usable then base else named.primary
+        end
+        local candidate = copy(out.layers)
+        table.insert(candidate, layer)
+        if not fits(R.totalCost(candidate), device) then break end
+        table.insert(out.layers, layer)
+    end
+    out.cost = R.totalCost(out.layers)
+    return out
+end
+
+-- Which device class: phone = touch and no mouse; tablet = touch with a big screen; desktop otherwise (pure: caller passes facts).
+function R.deviceClass(touch: boolean, mouse: boolean, shortSidePixels: number): string
+    if touch and not mouse then return if shortSidePixels &gt;= 700 then "tablet" else "phone" end
+    return "desktop"
+end
+
+return R
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX203">
+        <Properties>
+          <string name="Name">FxUi</string>
+          <ProtectedString name="Source">--!nonstrict
+-- docs/93: animated FX previews inside normal UI (shop cards, menus). ParticleEmitter / Beam / Trail do not draw inside
+-- ViewportFrames, so this is the 2D twin of client/FxRig: it reads the SAME Shared/FxRecipes layers and plays them as pooled
+-- sprites (soft glow discs, orbit dots with front/back depth, particle sprites, a trailing ribbon behind a runner orb).
+-- One shared 30 Hz loop for all previews; a preview stops by itself when its frame leaves the game. Reduce Motion: aura/
+-- mutation show one still glow; trails return nil so the caller keeps the static ribbon art.
+local RunService = game:GetService("RunService")
+local Recipes = require(script.Parent.FxRecipes)
+local Assets = require(script.Parent.EffectAssets)
+
+local Ui = {}
+local MAX_ACTIVE = 8
+local active = {}
+local connection
+local clock = 0
+
+local function c3(c) return Color3.fromRGB(math.clamp(math.floor(c[1] + 0.5), 0, 255), math.clamp(math.floor(c[2] + 0.5), 0, 255), math.clamp(math.floor(c[3] + 0.5), 0, 255)) end
+local function gradient(colors, t: number)
+    if #colors == 1 then return colors[1] end
+    local f = math.clamp(t, 0, 1) * (#colors - 1)
+    local i = math.min(math.floor(f) + 1, #colors - 1)
+    return Recipes.mix(colors[i], colors[i + 1], f - (i - 1))
+end
+
+local function dot(parent, z: number, circle: boolean): Frame
+    local f = Instance.new("Frame")
+    f.AnchorPoint, f.BorderSizePixel, f.ZIndex, f.Visible = Vector2.new(0.5, 0.5), 0, z, false
+    if circle then local c = Instance.new("UICorner") c.CornerRadius = UDim.new(1, 0) c.Parent = f end
+    f.Parent = parent
+    return f
+end
+local function sprite(parent, z: number, texture: string): ImageLabel
+    local i = Instance.new("ImageLabel")
+    i.BackgroundTransparency, i.BorderSizePixel, i.Image, i.AnchorPoint, i.ZIndex, i.Visible = 1, 0, texture, Vector2.new(0.5, 0.5), z, false
+    i.Parent = parent
+    return i
+end
+local function place(obj, x: number, y: number, px: number, color, transparency: number)
+    obj.Position = UDim2.fromScale(x, y)
+    obj.Size = UDim2.fromOffset(px, px)
+    if obj:IsA("ImageLabel") then obj.ImageColor3, obj.ImageTransparency = c3(color), transparency
+    else obj.BackgroundColor3, obj.BackgroundTransparency = c3(color), transparency end
+    obj.Visible = true
+end
+
+local function buildLayer(h, layer)
+    local z = h.z
+    local L = {layer = layer, kind = layer.kind}
+    local k = layer.kind
+    if k == "glow" then
+        L.discs = {}
+        for i = 1, 3 do L.discs[i] = dot(h.frame, z, true) end
+    elseif k == "emitter" then
+        L.pool, L.acc = {}, 0
+        local cap = math.clamp(math.ceil(layer.rate * layer.life * 2.2) + 1, 3, 14)
+        local tex = Assets.resolve(layer.tex)
+        if layer.shape == "Disc" then
+            L.ripples = true
+            for i = 1, 3 do L.pool[i] = {obj = dot(h.frame, z, true), age = 1e9, life = layer.life} local s = Instance.new("UIStroke") s.Thickness = 2 s.Parent = L.pool[i].obj L.pool[i].obj.BackgroundTransparency = 1 L.pool[i].stroke = s end
+        else
+            for i = 1, cap do L.pool[i] = {obj = sprite(h.frame, z + 1, tex), age = 1e9, life = layer.life, x = 0, y = 0, vx = 0, vy = 0, rot = 0} end
+        end
+    elseif k == "ring" or k == "spiral" then
+        L.dots = {}
+        local n = if k == "ring" then 9 else 8
+        for i = 1, n do L.dots[i] = dot(h.frame, z, true) end
+    elseif k == "trail" then
+        L.samples = {}
+        local n = if layer.id == "ribbon" then 12 elseif layer.id == "under" then 8 else 0
+        for i = 1, n do L.samples[i] = dot(h.frame, z - 1, true) end
+    end
+    return L
+end
+
+local function runner(h, time: number)
+    local phase = (time * 0.32) % 1
+    return 0.14 + 0.72 * phase, 0.52 + 0.1 * math.sin(phase * math.pi * 2) - 0.05
+end
+
+local function stepHandle(h, dt: number)
+    local frame = h.frame
+    local size = frame.AbsoluteSize
+    local unit = math.max(math.min(size.X, size.Y), 24)
+    h.time += dt
+    local time = h.time
+    local fade = Recipes.easeOutCubic(time / Recipes.Timing.fadeIn)
+    local aura = h.kind ~= "trail"
+    if h.orb then
+        if aura then
+            h.orb.Position = UDim2.fromScale(0.5, 0.58)
+        else
+            local rx, ry = runner(h, time)
+            h.orb.Position = UDim2.fromScale(rx, ry)
+        end
+    end
+    local headX, headY = runner(h, time)
+    local pulse = if h.reduced then 0.5 else Recipes.pulse(time)
+    for _, L in h.layers do
+        local layer, k = L.layer, L.kind
+        if k == "glow" then
+            for i, d in L.discs do
+                local r = unit * (0.55 + 0.22 * i) * (0.92 + 0.08 * pulse)
+                place(d, 0.5, if aura then 0.58 else 0.55, r, layer.color[1], 0.78 + 0.07 * i + (1 - fade) * 0.2)
+            end
+        elseif k == "emitter" then
+            local sizePx = layer.size * unit * 0.3
+            if L.ripples then
+                L.acc += dt * layer.rate * 2
+                if L.acc &gt;= 1 then
+                    L.acc -= 1
+                    for _, p in L.pool do if p.age &gt; p.life then p.age = 0 break end end
+                end
+                for _, p in L.pool do
+                    p.age += dt
+                    if p.age &lt;= p.life then
+                        local t = p.age / p.life
+                        local d = unit * (0.3 + 0.9 * t)
+                        local c = gradient(layer.color, t)
+                        p.obj.Position = UDim2.fromScale(0.5, 0.78)
+                        p.obj.Size = UDim2.fromOffset(d, d * 0.32)
+                        p.obj.Visible = true
+                        p.stroke.Color, p.stroke.Transparency = c3(c), 1 - layer.alpha * (1 - t) * 0.8
+                    else p.obj.Visible = false end
+                end
+            else
+                local emits = not layer.onlyMoving or not aura
+                L.acc += dt * layer.rate * 2.2 * (if emits then 1 else 0)
+                while L.acc &gt;= 1 do
+                    L.acc -= 1
+                    for _, p in L.pool do
+                        if p.age &gt; p.life then
+                            p.age = 0
+                            if aura then
+                                p.x, p.y = 0.28 + math.random() * 0.44, 0.7 + math.random() * 0.08
+                                p.vx, p.vy = (math.random() - 0.5) * 0.04, -(0.05 + layer.rise * 0.035 + layer.speed * 0.02)
+                            else
+                                p.x, p.y = headX - 0.04, headY + (math.random() - 0.5) * 0.08
+                                p.vx, p.vy = -(0.02 + layer.speed * 0.03), (math.random() - 0.5) * 0.04 - layer.rise * 0.02
+                            end
+                            break
+                        end
+                    end
+                end
+                for _, p in L.pool do
+                    p.age += dt
+                    if p.age &lt;= p.life then
+                        local t = p.age / p.life
+                        p.x += p.vx * dt p.y += p.vy * dt
+                        local curve = if layer.curve == "sizePop" then Recipes.Curves.sizePop else Recipes.Curves.sizeGrow
+                        local px = math.max(2, sizePx * Recipes.sample(curve, t) * (if layer.curve == "sizeGrow" then 2.2 else 1.4))
+                        local opacity = layer.alpha * math.clamp((1 - Recipes.sample(Recipes.Curves.fadeInOut, t)) / 0.7, 0, 1) * fade
+                        p.obj.Rotation = p.rot + (layer.spin or 0) * p.age
+                        place(p.obj, p.x, p.y, px, gradient(layer.color, t), 1 - opacity)
+                    else p.obj.Visible = false end
+                end
+            end
+        elseif k == "ring" or k == "spiral" then
+            local n = #L.dots
+            local rx = 0.2 + layer.radius * 0.07
+            for i, d in L.dots do
+                local a = time * layer.spin * 1.4 + (i - 1) * (2 * math.pi / n)
+                local depth = math.sin(a) -- +1 front, -1 back
+                local x, y
+                if k == "ring" then
+                    x, y = 0.5 + math.cos(a) * rx, 0.58 + (layer.height * -0.05) + depth * 0.075
+                else
+                    local u = (i - 1) / (n - 1)
+                    x, y = 0.5 + math.cos(a + u * 3) * rx * (1 - 0.35 * u), 0.8 - u * 0.5 + depth * 0.03
+                end
+                local px = unit * (0.045 + layer.width * 0.18) * (0.75 + 0.25 * depth)
+                d.ZIndex = if depth &gt; 0 then h.z + 3 else h.z - 1 -- orbit passes in FRONT of and BEHIND the dino: depth
+                place(d, x, y, px, gradient(layer.color, (i - 1) / math.max(n - 1, 1)), 1 - layer.alpha * (0.55 + 0.35 * depth) * fade)
+            end
+        elseif k == "trail" and #L.samples &gt; 0 then
+            if not h.history then h.history = {} end
+            local hist = h.history
+            if layer.id == "ribbon" then
+                h.sampleClock = (h.sampleClock or 0) + dt
+                if h.sampleClock &gt;= 0.045 then
+                    h.sampleClock = 0
+                    table.insert(hist, 1, {headX, headY})
+                    if #hist &gt; 16 then table.remove(hist) end
+                end
+            end
+            local n = #L.samples
+            for i, d in L.samples do
+                local s = hist[math.floor((i - 1) * #hist / n) + 1]
+                if s then
+                    local t = (i - 1) / n
+                    local wrapped = math.abs(s[1] - headX) &gt; 0.6 -- the runner looped around: hide the old tail
+                    if wrapped then d.Visible = false
+                    else
+                        local px = unit * (0.05 + layer.width * 0.12) * (1 - t * 0.8) * (if layer.id == "under" then 1.5 else 1)
+                        place(d, s[1] - 0.01, s[2], px, gradient(layer.color, t), 1 - layer.alpha * (1 - t * 0.9) * fade)
+                    end
+                else d.Visible = false end
+            end
+        end
+    end
+end
+
+local function kill(h)
+    if h.frame then h.frame:Destroy() end
+    h.frame = nil
+end
+
+local function loop(dt: number)
+    clock += dt
+    if clock &lt; 1 / 30 then return end
+    local step = clock
+    clock = 0
+    for i = #active, 1, -1 do
+        local h = active[i]
+        if not h.frame or not h.frame.Parent or not h.frame:IsDescendantOf(game) then
+            kill(h) table.remove(active, i)
+        elseif h.frame.Parent and h.frame.Visible and h.frame.AbsoluteSize.X &gt; 0 then
+            stepHandle(h, math.min(step, 0.1))
+        end
+    end
+    if #active == 0 and connection then connection:Disconnect() connection = nil end
+end
+
+-- kind: "aura" | "trail" | "mutation"; item: ProgressionConfig row or MutationLook entry. Returns a handle {destroy} or nil
+-- (Reduce Motion trail, over the preview cap, unknown kind): the caller keeps its static art.
+function Ui.mount(parent: GuiObject, kind: string, item, opts)
+    opts = opts or {}
+    if not item or #active &gt;= MAX_ACTIVE then return nil end
+    if opts.reduce and kind == "trail" then return nil end
+    local resolved = Recipes.resolve(kind, item, {device = opts.device or "phone", reduce = opts.reduce})
+    if #resolved.layers == 0 then return nil end
+    local frame = Instance.new("Frame")
+    frame.Name, frame.BackgroundTransparency, frame.BorderSizePixel, frame.ClipsDescendants = "FxUi_" .. kind .. "_" .. tostring(item.id), 1, 0, true
+    frame.Size, frame.ZIndex = UDim2.fromScale(1, 1), parent.ZIndex + 1
+    frame.Active = false
+    frame.Parent = parent
+    local h = {frame = frame, root = parent, kind = kind, resolved = resolved, z = parent.ZIndex + 2, time = 0, layers = {}, reduced = opts.reduce == true}
+    h.orb = dot(frame, h.z + 1, true)
+    h.orb.Size = UDim2.fromScale(0.16, 0.16)
+    h.orb.SizeConstraint = Enum.SizeConstraint.RelativeYY
+    h.orb.BackgroundColor3, h.orb.BackgroundTransparency, h.orb.Visible = Color3.fromRGB(20, 32, 53), 0, kind == "trail"
+    for _, layer in resolved.layers do table.insert(h.layers, buildLayer(h, layer)) end
+    if opts.reduce then stepHandle(h, 0.5) return {destroy = function() kill(h) end} end
+    table.insert(active, h)
+    if not connection then connection = RunService.Heartbeat:Connect(loop) end
+    return {destroy = function() kill(h) end, resolved = resolved}
+end
+
+-- Shop / menu hook (UITheme.icon): "trail_&lt;id&gt;" replaces the static ribbon art with the live preview (static art stays under
+-- it and returns when Reduce Motion is on); "aura_&lt;id&gt;" overlays the animated aura on the existing icon.
+function Ui.decorateIcon(icon: GuiObject, id: string, reduce: boolean)
+    local Config = require(script.Parent.ProgressionConfig)
+    local Rules = require(script.Parent.ProgressionRules)
+    local trailId = string.match(id, "^trail_(%w+)$")
+    local auraId = string.match(id, "^aura_(%w+)$")
+    if trailId then
+        local handle = Ui.mount(icon, "trail", Rules.item(Config.Trails, trailId), {reduce = reduce})
+        if handle then for _, child in icon:GetChildren() do if child:IsA("GuiObject") and not string.match(child.Name, "^FxUi_") then child.Visible = false end end end
+        return handle
+    elseif auraId then
+        return Ui.mount(icon, "aura", Rules.item(Config.Auras, auraId), {reduce = reduce})
+    end
+    return nil
+end
+
+Ui.activeCount = function() return #active end
+return Ui
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX204">
         <Properties>
           <string name="Name">GeneTextureAssets</string>
           <ProtectedString name="Source">--!strict
@@ -369297,7 +369917,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX202">
+      <Item class="ModuleScript" referent="RBX205">
         <Properties>
           <string name="Name">GeneTextures</string>
           <ProtectedString name="Source">--!strict
@@ -369353,7 +369973,7 @@ return Textures
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX203">
+      <Item class="ModuleScript" referent="RBX206">
         <Properties>
           <string name="Name">HatchFragments</string>
           <ProtectedString name="Source">--!strict
@@ -369386,7 +370006,7 @@ return F
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX204">
+      <Item class="ModuleScript" referent="RBX207">
         <Properties>
           <string name="Name">HatchPresentation</string>
           <ProtectedString name="Source">--!strict
@@ -369636,7 +370256,7 @@ return Hatch
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX205">
+      <Item class="ModuleScript" referent="RBX208">
         <Properties>
           <string name="Name">HatchTimeline</string>
           <ProtectedString name="Source">--!strict
@@ -370042,7 +370662,7 @@ return T
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX206">
+      <Item class="ModuleScript" referent="RBX209">
         <Properties>
           <string name="Name">IconRaster</string>
           <ProtectedString name="Source">--!strict
@@ -370051,7 +370671,7 @@ return {["amber"]={341,0,1,16777216,1,33554432,20,55923968,1,16777216,40,0,1,167
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX207">
+      <Item class="ModuleScript" referent="RBX210">
         <Properties>
           <string name="Name">IconTiles</string>
           <ProtectedString name="Source">--!strict
@@ -370060,7 +370680,7 @@ return {["dinos"]={["size"]=32,["colors"]={{104,48,36},{110,114,78},{0,29,13},{1
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX208">
+      <Item class="ModuleScript" referent="RBX211">
         <Properties>
           <string name="Name">IconVectors</string>
           <ProtectedString name="Source">--!strict
@@ -370069,7 +370689,7 @@ return {["home"]={{["x"]=21,["y"]=41,["w"]=60,["h"]=47,["color"]="#142035",["rad
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX209">
+      <Item class="ModuleScript" referent="RBX212">
         <Properties>
           <string name="Name">InspectMath</string>
           <ProtectedString name="Source">--!strict
@@ -370181,7 +370801,7 @@ return M
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX210">
+      <Item class="ModuleScript" referent="RBX213">
         <Properties>
           <string name="Name">IslandLayout</string>
           <ProtectedString name="Source">--!strict
@@ -370274,7 +370894,7 @@ return IslandLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX211">
+      <Item class="ModuleScript" referent="RBX214">
         <Properties>
           <string name="Name">LegacyGenePatterns</string>
           <ProtectedString name="Source">--!strict
@@ -370318,7 +370938,7 @@ return Legacy
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX212">
+      <Item class="ModuleScript" referent="RBX215">
         <Properties>
           <string name="Name">LoadGate</string>
           <ProtectedString name="Source">--!strict
@@ -370355,7 +370975,7 @@ return Gate
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX213">
+      <Item class="ModuleScript" referent="RBX216">
         <Properties>
           <string name="Name">MeshSanity</string>
           <ProtectedString name="Source">--!strict
@@ -370384,7 +371004,7 @@ return Sanity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX214">
+      <Item class="ModuleScript" referent="RBX217">
         <Properties>
           <string name="Name">ModelPreview</string>
           <ProtectedString name="Source">--!strict
@@ -370412,7 +371032,7 @@ return ModelPreview
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX215">
+      <Item class="ModuleScript" referent="RBX218">
         <Properties>
           <string name="Name">MovementEnvelope</string>
           <ProtectedString name="Source">--!strict
@@ -370465,7 +371085,7 @@ return MovementEnvelope
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX216">
+      <Item class="ModuleScript" referent="RBX219">
         <Properties>
           <string name="Name">MutationEffects</string>
           <ProtectedString name="Source">-- Standalone client adapter. Upload BeDino_Soft_Smoke_256.png first.
@@ -370547,7 +371167,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX217">
+      <Item class="ModuleScript" referent="RBX220">
         <Properties>
           <string name="Name">MutationLook</string>
           <ProtectedString name="Source">--!strict
@@ -370635,7 +371255,7 @@ return Look
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX218">
+      <Item class="ModuleScript" referent="RBX221">
         <Properties>
           <string name="Name">MyDinos</string>
           <ProtectedString name="Source">--!strict
@@ -370814,7 +371434,7 @@ return M
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX219">
+      <Item class="ModuleScript" referent="RBX222">
         <Properties>
           <string name="Name">NavigationArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -370832,7 +371452,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX220">
+      <Item class="ModuleScript" referent="RBX223">
         <Properties>
           <string name="Name">NestQueue</string>
           <ProtectedString name="Source">--!strict
@@ -370893,7 +371513,7 @@ return NestQueue
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX221">
+      <Item class="ModuleScript" referent="RBX224">
         <Properties>
           <string name="Name">NextGoal</string>
           <ProtectedString name="Source">--!strict
@@ -370974,7 +371594,7 @@ return NextGoal
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX222">
+      <Item class="ModuleScript" referent="RBX225">
         <Properties>
           <string name="Name">NotifyQueue</string>
           <ProtectedString name="Source">--!strict
@@ -371187,7 +371807,7 @@ return Q
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX223">
+      <Item class="ModuleScript" referent="RBX226">
         <Properties>
           <string name="Name">PatternAtlasCache</string>
           <ProtectedString name="Source">--!strict
@@ -371265,7 +371885,7 @@ return Cache
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX224">
+      <Item class="ModuleScript" referent="RBX227">
         <Properties>
           <string name="Name">PatternGenes</string>
           <ProtectedString name="Source">--!strict
@@ -371454,7 +372074,7 @@ return Pattern
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX225">
+      <Item class="ModuleScript" referent="RBX228">
         <Properties>
           <string name="Name">PotionArt</string>
           <ProtectedString name="Source">--!strict
@@ -371518,7 +372138,7 @@ return PotionArt
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX226">
+      <Item class="ModuleScript" referent="RBX229">
         <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
@@ -371612,7 +372232,7 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX227">
+      <Item class="ModuleScript" referent="RBX230">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -371741,7 +372361,7 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX228">
+      <Item class="ModuleScript" referent="RBX231">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -371979,7 +372599,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX229">
+      <Item class="ModuleScript" referent="RBX232">
         <Properties>
           <string name="Name">RarityCurve</string>
           <ProtectedString name="Source">--!strict
@@ -372050,7 +372670,7 @@ return table.freeze(Curve)
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX230">
+      <Item class="ModuleScript" referent="RBX233">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -372059,7 +372679,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX231">
+      <Item class="ModuleScript" referent="RBX234">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -372075,7 +372695,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX232">
+      <Item class="ModuleScript" referent="RBX235">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -372143,7 +372763,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX233">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">RevealSkip</string>
           <ProtectedString name="Source">--!strict
@@ -372227,7 +372847,7 @@ return Skip
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX234">
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -372319,7 +372939,7 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX235">
+      <Item class="ModuleScript" referent="RBX238">
         <Properties>
           <string name="Name">Sfx</string>
           <ProtectedString name="Source">--!strict
@@ -372442,7 +373062,7 @@ return Sfx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -372490,7 +373110,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -372539,7 +373159,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -372741,7 +373361,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -372773,7 +373393,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">UIFormat</string>
           <ProtectedString name="Source">--!strict
@@ -372817,7 +373437,7 @@ return UIFormat
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -372848,7 +373468,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -372872,7 +373492,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -372882,6 +373502,7 @@ local EventVectors = require(script.Parent.EventIconVectors)
 local Artwork = require(script.Parent.Artwork)
 local IconLayout = require(script.Parent.UIIconLayout)
 local TrailArtwork = require(script.Parent.TrailArtwork)
+local FxUi = require(script.Parent.FxUi)
 local Theme = {}
 Theme.BackgroundImageId = ""
 Theme.MotionEnabled = true
@@ -373030,14 +373651,20 @@ local function nativeIcon(parent: GuiObject,id: string): Frame?
 end
 function Theme.icon(parent: GuiObject,id: string): Frame?
     local trail=string.match(id,"^trail_(%w+)$")
-    if trail then return TrailArtwork.build(parent,trail) end
-    return Artwork.build(parent,id,nativeIcon) or nativeIcon(parent,id)
+    if trail then
+        local art=TrailArtwork.build(parent,trail)
+        if art then FxUi.decorateIcon(art,id,not Theme.MotionEnabled) end -- docs/93: animated preview, static ribbon under it
+        return art
+    end
+    local icon=Artwork.build(parent,id,nativeIcon) or nativeIcon(parent,id)
+    if icon and string.sub(id,1,5)=="aura_" then FxUi.decorateIcon(icon,id,not Theme.MotionEnabled) end
+    return icon
 end
 return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -373068,7 +373695,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">WeatherLooks</string>
           <ProtectedString name="Source">--!strict
@@ -373177,7 +373804,7 @@ return Weather
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">WeatherSounds</string>
           <ProtectedString name="Source">--!strict
@@ -373252,7 +373879,7 @@ return Sounds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -373303,7 +373930,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">WorldKitMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -373356,7 +373983,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX249">
+    <Item class="Folder" referent="RBX252">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -542911,15 +543538,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX250">
+  <Item class="ServerScriptService" referent="RBX253">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX251">
+    <Item class="Folder" referent="RBX254">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX252">
+      <Item class="ModuleScript" referent="RBX255">
         <Properties>
           <string name="Name">AdminService</string>
           <ProtectedString name="Source">--!strict
@@ -543033,7 +543660,7 @@ return AdminService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX253">
+      <Item class="ModuleScript" referent="RBX256">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -543300,7 +543927,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX254">
+      <Item class="Script" referent="RBX257">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -543457,7 +544084,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX255">
+      <Item class="ModuleScript" referent="RBX258">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -543567,7 +544194,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX256">
+      <Item class="ModuleScript" referent="RBX259">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -543660,7 +544287,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX257">
+      <Item class="ModuleScript" referent="RBX260">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -543796,7 +544423,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX258">
+      <Item class="ModuleScript" referent="RBX261">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -544010,7 +544637,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX259">
+      <Item class="ModuleScript" referent="RBX262">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -544281,7 +544908,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX260">
+      <Item class="ModuleScript" referent="RBX263">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -544453,7 +545080,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX261">
+      <Item class="ModuleScript" referent="RBX264">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -544639,7 +545266,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX262">
+      <Item class="ModuleScript" referent="RBX265">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -545036,7 +545663,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX263">
+      <Item class="ModuleScript" referent="RBX266">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -545123,7 +545750,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX264">
+      <Item class="ModuleScript" referent="RBX267">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -545201,7 +545828,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX265">
+      <Item class="ModuleScript" referent="RBX268">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -545313,7 +545940,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX266">
+      <Item class="ModuleScript" referent="RBX269">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -545452,7 +546079,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX267">
+      <Item class="ModuleScript" referent="RBX270">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -545544,7 +546171,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX268">
+      <Item class="ModuleScript" referent="RBX271">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -545649,7 +546276,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX269">
+      <Item class="ModuleScript" referent="RBX272">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -545784,7 +546411,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX270">
+      <Item class="ModuleScript" referent="RBX273">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -547573,7 +548200,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX271">
+      <Item class="ModuleScript" referent="RBX274">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -547791,7 +548418,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX272">
+      <Item class="ModuleScript" referent="RBX275">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -547905,7 +548532,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX273">
+      <Item class="ModuleScript" referent="RBX276">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -548168,7 +548795,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX274">
+      <Item class="ModuleScript" referent="RBX277">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -548240,19 +548867,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX275">
+  <Item class="StarterPlayer" referent="RBX278">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX276">
+    <Item class="StarterPlayerScripts" referent="RBX279">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX277">
+      <Item class="Folder" referent="RBX280">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX278">
+        <Item class="LocalScript" referent="RBX281">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -548497,7 +549124,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX279">
+        <Item class="LocalScript" referent="RBX282">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -550052,23 +550679,25 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX280">
+        <Item class="LocalScript" referent="RBX283">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
-            <ProtectedString name="Source">--!strict
+            <ProtectedString name="Source">--!nonstrict
+-- World cosmetics. docs/93: auras, trails and event mutations are all built by client/FxRig from Shared/FxRecipes
+-- (layered anime-style looks that grow with rarity, budgeted per device, Reduce Motion = one soft light / one short ribbon).
+-- Replaces the old CosmeticEffects strips and the MutationEffects mist (those modules stay for history and tests).
 local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
 local Shared=game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config=require(Shared.ProgressionConfig)
 local Rules=require(Shared.ProgressionRules)
-local Effects=require(Shared.CosmeticEffects)
 local Theme=require(Shared.UITheme)
-local Mutations=require(Shared.MutationEffects)
 local Shiny=require(Shared.ShinyEffects)
 local Look=require(Shared.MutationLook)
+local Recipes=require(Shared.FxRecipes)
+local Rig=require(script.Parent.FxRig)
 local function destroy(state)
-    state.effect:destroy()
-    if state.mutation then state.mutation.Destroy() end
+    for _,rig in state.rigs do rig:destroy() end
     if state.glints then state.glints.Destroy() end
     if state.visual and state.visual.Parent and state.mutationId~="" then Look.apply(state.visual,nil) end -- restore the body colour
 end
@@ -550081,13 +550710,24 @@ RunService.Heartbeat:Connect(function(dt)
     local camera=workspace.CurrentCamera
     local keep={}
     local count=0
-    -- Own equipment wins the distance budget; never create unbounded particle pools.
+    local device=Rig.device()
+    local fullDinos=Recipes.Devices[device].fullDinos
+    -- Own equipment wins the distance budget; nearest dinos get full detail, the rest a lite look. Never unbounded pools.
+    local distance={}
     local players=Players:GetPlayers()
-    table.sort(players,function(a,b) return a==Players.LocalPlayer and b~=Players.LocalPlayer end)
+    for _,player in players do
+        local root=if player.Character then player.Character:FindFirstChild("HumanoidRootPart") else nil
+        distance[player]=if root and root:IsA("BasePart") and camera then (camera.CFrame.Position-root.Position).Magnitude else math.huge
+    end
+    table.sort(players,function(a,b)
+        if a==Players.LocalPlayer then return b~=Players.LocalPlayer end
+        if b==Players.LocalPlayer then return false end
+        return distance[a]&lt;distance[b]
+    end)
     for _,player in players do
         local character=player.Character
         local root=if character then character:FindFirstChild("HumanoidRootPart") else nil
-        if root and root:IsA("BasePart") and camera and (camera.CFrame.Position-root.Position).Magnitude&lt;180 and count&lt;8 then
+        if root and root:IsA("BasePart") and camera and distance[player]&lt;180 and count&lt;8 then
             count+=1 keep[player]=true
             local auraId=character:GetAttribute("EquippedAuraId") or ""
             local trailId=character:GetAttribute("EquippedTrailId") or ""
@@ -550095,14 +550735,24 @@ RunService.Heartbeat:Connect(function(dt)
             local shiny=character:GetAttribute("ShinyDinosaur")==true
             local visual=character:FindFirstChild("LocalMeshVisual") or character:FindFirstChild("DinoVisual")
             local scale=character:GetAttribute("VisualScale") or 1
+            local detail=if player==Players.LocalPlayer or (distance[player]&lt;=25 and count&lt;=fullDinos) then "full" else "lite"
             local state=states[player]
-            if not state or state.root~=root or state.auraId~=auraId or state.trailId~=trailId or state.mutationId~=mutationId or state.shiny~=shiny or state.visual~=visual or state.motion~=Theme.MotionEnabled then
+            if not state or state.root~=root or state.auraId~=auraId or state.trailId~=trailId or state.mutationId~=mutationId or state.shiny~=shiny or state.visual~=visual or state.motion~=Theme.MotionEnabled or state.detail~=detail then
                 if state then destroy(state) end
-                state={root=root,auraId=auraId,trailId=trailId,mutationId=mutationId,shiny=shiny,visual=visual,scale=scale,motion=Theme.MotionEnabled,effect=Effects.create(root,Rules.item(Config.Auras,auraId),Rules.item(Config.Trails,trailId),nil,false)}
+                state={root=root,auraId=auraId,trailId=trailId,mutationId=mutationId,shiny=shiny,visual=visual,scale=scale,motion=Theme.MotionEnabled,detail=detail,rigs={}}
+                local reduce=not Theme.MotionEnabled
+                -- A second or third rig on the same dino always uses the lite layer count so the combined look stays inside one budget.
+                local function add(kind: string,item: any)
+                    if not item then return end
+                    local rigDetail=if #state.rigs&gt;0 then "lite" else detail
+                    table.insert(state.rigs,Rig.attach(root,kind,item,{reduce=reduce,detail=rigDetail,device=device}))
+                end
+                add("aura",Rules.item(Config.Auras,auraId))
+                add("trail",Rules.item(Config.Trails,trailId))
+                add("mutation",Look.get(mutationId))
                 if visual and visual:IsA("Model") then
-                    if (visual:GetAttribute("Mutation") or "base")=="base" then Look.apply(visual,mutationId) end -- BD-155: soft body tint, always (also with Reduce Motion); the mist below is the motion layer
-                    state.mutation=Mutations.Create(visual,mutationId,"rbxassetid://105629313112163",not Theme.MotionEnabled)
-                    if shiny then state.glints=Shiny.Create(visual,"rbxassetid://70885382548001",not Theme.MotionEnabled) end
+                    if (visual:GetAttribute("Mutation") or "base")=="base" then Look.apply(visual,mutationId) end -- BD-155: soft body tint, always (also with Reduce Motion)
+                    if shiny then state.glints=Shiny.Create(visual,"rbxassetid://70885382548001",reduce) end
                 end
                 states[player]=state
             end
@@ -550110,7 +550760,9 @@ RunService.Heartbeat:Connect(function(dt)
                 if state.glints then state.glints.Resize() end
                 state.scale=scale
             end
-            state.effect:update(character:GetAttribute("VisualScale") or 1,os.clock(),Theme.MotionEnabled)
+            local velocity=root.AssemblyLinearVelocity
+            local moving=Vector3.new(velocity.X,0,velocity.Z).Magnitude&gt;1
+            for _,rig in state.rigs do rig:update(scale,os.clock(),moving) end
         end
     end
     for player,state in states do if not keep[player] then destroy(state) states[player]=nil end end
@@ -550118,7 +550770,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX281">
+        <Item class="ModuleScript" referent="RBX284">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -550197,7 +550849,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX282">
+        <Item class="ModuleScript" referent="RBX285">
           <Properties>
             <string name="Name">DinoIndexPanels</string>
             <ProtectedString name="Source">--!strict
@@ -550733,7 +551385,7 @@ return Panels
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX283">
+        <Item class="LocalScript" referent="RBX286">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -551056,7 +551708,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX284">
+        <Item class="ModuleScript" referent="RBX287">
           <Properties>
             <string name="Name">EggPicture</string>
             <ProtectedString name="Source">--!strict
@@ -551133,7 +551785,7 @@ return EggPicture
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX285">
+        <Item class="ModuleScript" referent="RBX288">
           <Properties>
             <string name="Name">EggsScreen</string>
             <ProtectedString name="Source">--!strict
@@ -551319,7 +551971,7 @@ return EggsScreen
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX286">
+        <Item class="ModuleScript" referent="RBX289">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -552186,7 +552838,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX287">
+        <Item class="ModuleScript" referent="RBX290">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -552288,7 +552940,336 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX288">
+        <Item class="ModuleScript" referent="RBX291">
+          <Properties>
+            <string name="Name">FxRig</string>
+            <ProtectedString name="Source">--!nonstrict
+-- docs/93: builds ONE dino's anime-style layered effect (aura, trail or mutation) from a Shared/FxRecipes recipe.
+-- Client only; local instances, nothing replicates. Pooled instances, one invisible anchor part at most, every layer
+-- counted against the device budget in the recipe. Rig API:
+--   local rig = FxRig.attach(root, "aura"|"trail"|"mutation", item, {reduce=bool, detail="full"|"lite", device=?})
+--   rig:update(scale, time, moving)   -- call at &lt;= 30 Hz
+--   rig:burst()                       -- one-shot pop (also fired once on attach for aura/mutation, never with Reduce Motion)
+--   rig:destroy()                     -- returns every instance to the pool
+-- World only: ParticleEmitter / Beam / Trail do not draw inside ViewportFrames, so menus use Shared/FxUi (same recipes).
+local UserInputService = game:GetService("UserInputService")
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Recipes = require(Shared.FxRecipes)
+local Assets = require(Shared.EffectAssets)
+
+local Rig = {}
+Rig.__index = Rig
+
+-- ---------------------------------------------------------------- device class (cached)
+local deviceName: string? = nil
+function Rig.device(): string
+    if deviceName then return deviceName end
+    local camera = workspace.CurrentCamera
+    local size = if camera then camera.ViewportSize else Vector2.new(1920, 1080)
+    deviceName = Recipes.deviceClass(UserInputService.TouchEnabled, UserInputService.MouseEnabled, math.min(size.X, size.Y))
+    return deviceName
+end
+
+-- ---------------------------------------------------------------- pool
+local POOL_CAP = 64
+local pool: {[string]: {Instance}} = {}
+local function acquire(class: string): Instance
+    local list = pool[class]
+    if list and #list &gt; 0 then return table.remove(list) end
+    return Instance.new(class)
+end
+local function release(inst: Instance)
+    local class = inst.ClassName
+    if class == "Trail" then (inst :: Trail):Clear() end
+    if class == "ParticleEmitter" then (inst :: ParticleEmitter).Enabled = false end
+    if class == "Trail" or class == "Beam" then (inst :: any).Enabled = false end
+    if class == "Attachment" or class == "ParticleEmitter" or class == "Beam" or class == "Trail" then
+        local list = pool[class]
+        if not list then list = {} pool[class] = list end
+        if #list &lt; POOL_CAP then
+            inst.Parent = nil
+            if class == "Attachment" then (inst :: Attachment).CFrame = CFrame.new() end
+            table.insert(list, inst)
+            return
+        end
+    end
+    inst:Destroy()
+end
+Rig._acquire, Rig._release = acquire, release -- exposed for tests
+
+-- ---------------------------------------------------------------- conversions
+local function c3(c: {number}): Color3
+    return Color3.fromRGB(math.clamp(math.floor(c[1] + 0.5), 0, 255), math.clamp(math.floor(c[2] + 0.5), 0, 255), math.clamp(math.floor(c[3] + 0.5), 0, 255))
+end
+local function colorSeq(colors: {{number}}): ColorSequence
+    if #colors == 1 then return ColorSequence.new(c3(colors[1])) end
+    local keys = {}
+    for i, c in colors do keys[i] = ColorSequenceKeypoint.new((i - 1) / (#colors - 1), c3(c)) end
+    return ColorSequence.new(keys)
+end
+local function fadeSeq(alpha: number): NumberSequence -- soft in, long soft out (Recipes.Curves.fadeInOut spirit)
+    local peak = 1 - alpha
+    return NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, peak),
+        NumberSequenceKeypoint.new(0.6, peak + (1 - peak) * 0.4), NumberSequenceKeypoint.new(1, 1)})
+end
+local function sizeSeq(layer, scale: number): NumberSequence
+    local s = layer.size * scale
+    if layer.grow then
+        return NumberSequence.new({NumberSequenceKeypoint.new(0, s * 0.3), NumberSequenceKeypoint.new(1, s * layer.grow)})
+    elseif layer.curve == "sizePop" then
+        return NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.2, s), NumberSequenceKeypoint.new(1, 0)})
+    end
+    return NumberSequence.new({NumberSequenceKeypoint.new(0, s * 0.4), NumberSequenceKeypoint.new(0.35, s), NumberSequenceKeypoint.new(1, s * 1.25)})
+end
+local function orient(position: Vector3, angle: number): CFrame -- attachment X axis = orbit tangent (beam curves follow it)
+    local tangent = Vector3.new(-math.sin(angle), 0, math.cos(angle))
+    return CFrame.fromMatrix(position, tangent, Vector3.yAxis, tangent:Cross(Vector3.yAxis))
+end
+
+-- ---------------------------------------------------------------- build
+local FEET = -1.7 -- anchor height below the root part (studs at scale 1)
+
+function Rig.attach(root: BasePart, kind: string, item, opts)
+    opts = opts or {}
+    local device = opts.device or Rig.device()
+    local resolved = Recipes.resolve(kind, item, {device = device, reduce = opts.reduce, detail = opts.detail})
+    local self = setmetatable({root = root, resolved = resolved, scale = 1, lastScale = -1, age = 0, wasMoving = false, lastPop = -10,
+        objects = {}, emitters = {}, moving = {}, orbits = {}, trails = {}, beams = {}, lights = {}, bursts = {}, alive = true}, Rig)
+
+    local function own(inst: Instance) table.insert(self.objects, inst) return inst end
+    local function needsAnchor(): boolean
+        return resolved.cost.parts &gt; 0
+    end
+    local anchor: Part? = nil
+    if needsAnchor() then
+        local part = Instance.new("Part")
+        part.Name = "FxAnchor_" .. kind
+        part.Size = Vector3.new(2.6, 0.2, 2.6)
+        part.Transparency, part.Anchored, part.CanCollide, part.CanTouch, part.CanQuery, part.CastShadow = 1, true, false, false, false, false
+        part.CFrame = CFrame.new(root.Position + Vector3.new(0, FEET, 0))
+        local folder = workspace:FindFirstChild("LocalDinoFX")
+        if not folder then folder = Instance.new("Folder") folder.Name = "LocalDinoFX" folder.Parent = workspace end
+        part.Parent = folder
+        anchor = part
+        self.anchor = part
+    end
+    local function attachment(parent: Instance, name: string): Attachment
+        local a = acquire("Attachment") :: Attachment
+        a.Name, a.Parent = name, parent
+        own(a)
+        return a
+    end
+
+    for _, layer in resolved.layers do
+        local k = layer.kind
+        if k == "glow" then
+            local a = attachment(root, "FxGlow")
+            local light = Instance.new("PointLight")
+            light.Color, light.Range, light.Shadows, light.Brightness, light.Parent = c3(layer.color[1]), layer.range, false, 0, a
+            own(light)
+            table.insert(self.lights, {light = light, layer = layer})
+        elseif k == "emitter" or k == "burst" then
+            local parent: Instance
+            local emitsMoving = layer.onlyMoving == true
+            if emitsMoving then
+                parent = attachment(root, "FxTail")
+                parent.Position = Vector3.new(0, -0.9, 1.4)
+            elseif layer.shape and anchor then
+                parent = anchor
+            else
+                parent = attachment(root, "FxBody")
+                parent.Position = Vector3.new(0, -1, 0)
+            end
+            local e = acquire("ParticleEmitter") :: ParticleEmitter
+            e.Name = "Fx_" .. layer.id
+            e.Texture = Assets.resolve(layer.tex)
+            e.Color = colorSeq(layer.color)
+            e.Transparency = fadeSeq(layer.alpha)
+            e.Size = sizeSeq(layer, 1)
+            e.Lifetime = NumberRange.new(layer.life * 0.8, layer.life)
+            e.Speed = NumberRange.new(layer.speed * 0.5, layer.speed)
+            e.LightEmission = layer.light or 0.5
+            e.Rotation = NumberRange.new(-180, 180)
+            e.RotSpeed = if layer.spin then NumberRange.new(-layer.spin, layer.spin) else NumberRange.new(0, 0)
+            e.LockedToPart = false
+            e.Squash = NumberSequence.new(0)
+            e.Drag = 0
+            e.Shape, e.ShapeInOut, e.ShapeStyle = Enum.ParticleEmitterShape.Box, Enum.ParticleEmitterShapeInOut.Outward, Enum.ParticleEmitterShapeStyle.Volume
+            e.FlipbookLayout = if Assets.isReal(layer.tex) then Enum.ParticleFlipbookLayout.Grid4x4 else Enum.ParticleFlipbookLayout.None
+            if Assets.isReal(layer.tex) then e.FlipbookMode = Enum.ParticleFlipbookMode.Random end
+            if k == "burst" then
+                e.Rate = 0
+                e.SpreadAngle = Vector2.new(180, 180)
+                e.Acceleration = Vector3.new(0, 0.5, 0)
+                e.EmissionDirection = Enum.NormalId.Top
+                e.Enabled = false
+            else
+                e.Rate = layer.rate
+                e.Acceleration = Vector3.new(0, layer.rise or 0, 0)
+                e.EmissionDirection = Enum.NormalId.Top
+                e.SpreadAngle = Vector2.new(30, 30)
+                if layer.shape == "Disc" then
+                    e.Shape, e.ShapeInOut, e.ShapeStyle = Enum.ParticleEmitterShape.Disc, Enum.ParticleEmitterShapeInOut.Outward, Enum.ParticleEmitterShapeStyle.Surface
+                    e.SpreadAngle = Vector2.new(0, 0)
+                    e.Acceleration = Vector3.zero
+                elseif layer.shape == "Cylinder" then
+                    e.SpreadAngle = Vector2.new(35, 35)
+                end
+                e.Enabled = false
+            end
+            e.Parent = parent
+            own(e)
+            local entry = {emitter = e, layer = layer, moving = emitsMoving}
+            if k == "burst" then table.insert(self.bursts, entry) else
+                table.insert(self.emitters, entry)
+            end
+        elseif k == "ring" or k == "spiral" then
+            local n = layer.beams
+            local points = {}
+            local stepAngle = 2 * math.pi / n
+            for i = 1, n do
+                local a0 = attachment(anchor, "FxOrbit")
+                local a1 = if k == "spiral" then attachment(anchor, "FxOrbitHigh") else nil
+                points[i] = {a0, a1}
+            end
+            for i = 1, n do
+                local beam = acquire("Beam") :: Beam
+                beam.Name = "Fx_" .. layer.id
+                beam.Texture = if Assets.isReal("ribbonSoft") then Assets.resolve("ribbonSoft") else ""
+                beam.Color = colorSeq(layer.color)
+                beam.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.92), NumberSequenceKeypoint.new(0.2, 1 - layer.alpha),
+                    NumberSequenceKeypoint.new(0.8, 1 - layer.alpha), NumberSequenceKeypoint.new(1, 0.92)})
+                beam.LightEmission, beam.FaceCamera, beam.Segments, beam.Enabled = 0.9, true, 10, true
+                if k == "ring" then
+                    beam.Attachment0, beam.Attachment1 = points[i][1], points[i % n + 1][1]
+                else
+                    beam.Attachment0, beam.Attachment1 = points[i][1], points[i][2]
+                end
+                beam.Parent = anchor
+                own(beam)
+                table.insert(self.beams, {beam = beam, layer = layer, k = k})
+            end
+            table.insert(self.orbits, {points = points, layer = layer, n = n, step = stepAngle, k = k})
+        elseif k == "trail" then
+            local count = layer.count or 1
+            for i = 1, count do
+                local side = if count == 1 then 0 else (if i == 1 then -1 else 1)
+                local a, b = attachment(root, "FxTrailA"), attachment(root, "FxTrailB")
+                local ribbon = acquire("Trail") :: Trail
+                ribbon.Name = "Fx_" .. layer.id
+                ribbon.Attachment0, ribbon.Attachment1 = a, b
+                ribbon.Color = colorSeq(layer.color)
+                ribbon.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1 - layer.alpha), NumberSequenceKeypoint.new(0.5, 1 - layer.alpha * 0.5), NumberSequenceKeypoint.new(1, 1)})
+                ribbon.WidthScale = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0)})
+                ribbon.Lifetime, ribbon.MinLength, ribbon.FaceCamera, ribbon.LightEmission = layer.life, 0.12, true, layer.light or 0.8
+                ribbon.Texture = if Assets.isReal("ribbonSoft") then Assets.resolve("ribbonSoft") else ""
+                ribbon.Enabled = false
+                ribbon.Parent = root
+                own(ribbon)
+                table.insert(self.trails, {ribbon = ribbon, a = a, b = b, side = side, layer = layer, lines = layer.id == "lines"})
+            end
+        end
+    end
+    self._anchorPart = anchor
+    self.fade = 0
+    if not opts.reduce then self:burst() end -- equip pop (aura / mutation); trails pop when they start moving
+    return self
+end
+
+-- ---------------------------------------------------------------- runtime
+function Rig:burst()
+    if not self.alive or self.resolved.reduced then return end
+    for _, entry in self.bursts do
+        if entry.emitter.Parent then entry.emitter:Emit(entry.layer.count) end
+    end
+end
+
+function Rig:update(scale: number, time: number, moving: boolean)
+    if not self.alive then return end
+    local root = self.root
+    if not root.Parent then self:destroy() return end
+    local reduced = self.resolved.reduced
+    self.age += 1 / 30
+    local fade = if reduced then 1 else Recipes.easeOutCubic(self.age / Recipes.Timing.fadeIn)
+    local anchor = self._anchorPart
+    local rebuild = math.abs(scale - self.lastScale) &gt; 0.05 * math.max(self.lastScale, 0.05)
+    if anchor then
+        anchor.CFrame = CFrame.new(root.Position + Vector3.new(0, FEET * scale, 0))
+        if rebuild then anchor.Size = Vector3.new(2.6 * scale, 0.2, 2.6 * scale) end
+    end
+    local pulse = if reduced then 0.5 else Recipes.pulse(time)
+    for _, entry in self.lights do
+        entry.light.Brightness = entry.layer.brightness * (0.75 + 0.25 * pulse) * fade
+        if rebuild then entry.light.Range = entry.layer.range * scale end
+    end
+    for _, entry in self.emitters do
+        local e = entry.emitter
+        local on = (not entry.moving) or moving
+        e.Enabled = on
+        if on and fade &lt; 1 then e.Rate = entry.layer.rate * fade elseif on and e.Rate ~= entry.layer.rate then e.Rate = entry.layer.rate end
+        if rebuild then e.Size = sizeSeq(entry.layer, scale) end
+        if on and entry.layer.shape == "Disc" and anchor then
+            e.Speed = NumberRange.new(entry.layer.speed * 0.5 * scale, entry.layer.speed * scale)
+        end
+    end
+    -- orbits: rings turn slowly (docs/93 timing), spirals rise and sweep
+    for _, orbit in self.orbits do
+        local layer = orbit.layer
+        local base = time * layer.spin
+        local r = layer.radius * scale
+        local k = (4 / 3) * math.tan(orbit.step / 4) * r
+        for i, pair in orbit.points do
+            local angle = base + (i - 1) * orbit.step
+            if orbit.k == "ring" then
+                local y = (layer.height - FEET) * scale
+                pair[1].CFrame = orient(Vector3.new(math.cos(angle) * r, y, math.sin(angle) * r), angle)
+            else
+                local lowAngle = base + (i - 1) * orbit.step
+                local highAngle = lowAngle + 2.0
+                pair[1].CFrame = orient(Vector3.new(math.cos(lowAngle) * r, (layer.low - FEET) * scale, math.sin(lowAngle) * r), lowAngle)
+                pair[2].CFrame = orient(Vector3.new(math.cos(highAngle) * r * 0.8, (layer.high - FEET) * scale, math.sin(highAngle) * r * 0.8), highAngle)
+            end
+        end
+        for _, b in self.beams do
+            if b.layer == layer then
+                local width = layer.width * scale
+                b.beam.Width0, b.beam.Width1 = width, if orbit.k == "spiral" then width * 0.15 else width
+                local curve = if orbit.k == "ring" then k else r * 0.6
+                b.beam.CurveSize0, b.beam.CurveSize1 = curve, if orbit.k == "ring" then curve else -curve * 0.8
+            end
+        end
+    end
+    -- trails: only while moving; pop sparkles when starting to run
+    for _, entry in self.trails do
+        local layer = entry.layer
+        local x = if entry.lines then entry.side * (layer.offset or 0.9) * scale else 0
+        entry.a.Position = Vector3.new(x, -0.55 * scale, 1.3 * scale)
+        local height = layer.width * scale
+        entry.b.Position = entry.a.Position + Vector3.new(0, -math.max(height, 0.08), 0)
+        if not moving and entry.ribbon.Enabled then entry.ribbon:Clear() end
+        entry.ribbon.Enabled = moving
+    end
+    if moving and not self.wasMoving and time - self.lastPop &gt; 1.5 then
+        self.lastPop = time
+        self:burst()
+    end
+    self.wasMoving = moving
+    self.scale, self.lastScale = scale, scale
+end
+
+function Rig:destroy()
+    if not self.alive then return end
+    self.alive = false
+    for _, inst in self.objects do release(inst) end
+    self.objects = {}
+    if self._anchorPart then self._anchorPart:Destroy() end
+end
+
+return Rig
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="RBX292">
           <Properties>
             <string name="Name">HatchSequence</string>
             <ProtectedString name="Source">--!strict
@@ -553341,7 +554322,7 @@ return Seq
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX289">
+        <Item class="ModuleScript" referent="RBX293">
           <Properties>
             <string name="Name">InspectView</string>
             <ProtectedString name="Source">--!strict
@@ -553531,7 +554512,7 @@ return InspectView
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX290">
+        <Item class="ModuleScript" referent="RBX294">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -553613,7 +554594,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX291">
+        <Item class="LocalScript" referent="RBX295">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -553801,7 +554782,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX292">
+        <Item class="ModuleScript" referent="RBX296">
           <Properties>
             <string name="Name">VolumeSliders</string>
             <ProtectedString name="Source">--!strict
@@ -553882,7 +554863,7 @@ return Sliders
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX293">
+        <Item class="LocalScript" referent="RBX297">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -553949,7 +554930,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX294">
+        <Item class="LocalScript" referent="RBX298">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -554763,7 +555744,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX295">
+        <Item class="LocalScript" referent="RBX299">
           <Properties>
             <string name="Name">WorldCulling</string>
             <ProtectedString name="Source">--!strict
@@ -554891,7 +555872,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX296">
+  <Item class="Workspace" referent="RBX300">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>
