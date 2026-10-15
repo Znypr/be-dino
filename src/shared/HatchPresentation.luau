@@ -85,6 +85,7 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
     local function sound(id: string,volume: number,pitch: number)
         local s=Instance.new("Sound")
         s.SoundId,s.Volume,s.PlaybackSpeed,s.Parent=id,volume,pitch,root
+        pcall(function() (require((script :: any).Parent.AudioMixer) :: any).attach(s,"sfx") end) -- mixer: Sounds slider
         table.insert(sounds,s)
         return s
     end

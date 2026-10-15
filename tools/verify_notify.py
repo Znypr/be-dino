@@ -89,6 +89,15 @@ assert(s.kind == "major" and s.body == "Best: BIG Legendary Tyrannosaurus")
 s = Q.hatchSummary({{failed = true}, {failed = true}}, names)
 assert(s.text == "0 dinos hatched" and s.body == "The cracked eggs crumbled")
 
+-- Long copy is clipped at a word boundary so it fits the 440 px card (title 30, second line 44 characters).
+assert(Q.clip("Short", 30) == "Short")
+local long = Q.clip("Fusion is not available on this server yet", Q.MaxText)
+assert(#long <= Q.MaxText and string.sub(long, -3) == "..." and not string.find(long, " %.%.%."), long)
+q = Q.new()
+Q.push(q, 0, {text = string.rep("word ", 20), body = string.rep("x", 100), kind = "warning"}) Q.update(q, 0)
+assert(#q.visible[1].text <= Q.MaxText and #q.visible[1].body <= Q.MaxBody, "push clips title and body")
+assert(Q.MaxVisible == 3, "never more than 3 cards")
+
 -- Status codes become short copy; raw codes never reach the screen.
 assert(Q.statusText("insufficient_crystals") == "Not enough Crystals" and Q.statusText("some_new_code") == "Something went wrong. Try again" and Q.statusText(nil) == "Something went wrong. Try again")
 for code, text in Q.StatusText do assert(not string.find(text, "_") and #text <= 44, code) end
