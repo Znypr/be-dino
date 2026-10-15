@@ -130,7 +130,7 @@ function EggsScreen.render(ctx: any)
     label(card, "Next egg", 14, 6, 200, 28, 22, C.gold).TextXAlignment = Enum.TextXAlignment.Left
     local look = FusionSelection.eggSlotLook(entry, entry ~= nil and EggGenetics.valid(entry.genes))
     local viewSize = math.clamp(cardH - 50, 96, 170)
-    EggsScreen.safeEggView(card, look == "empty", viewSize, 16, 38, if entry then (if look == "genes" then entry else {shiny = entry.shiny, big = entry.big}) else nil)
+    EggsScreen.safeEggView(card, look == "empty", viewSize, 16, 38, if entry then (if look == "genes" then entry else {shiny = entry.shiny, big = entry.big, mutationId = entry.mutationId}) else nil)
 
     local infoX = 16 + viewSize + 14
     local infoW = 824 - infoX - 14

@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local RuntimeMeshes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("RuntimeMeshes"))
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Appearance = require(ReplicatedStorage.Shared.EggAppearance)
+local MutationLook = require(ReplicatedStorage.Shared.MutationLook)
 local Http = game:GetService("HttpService")
 local watched = setmetatable({}, {__mode = "k"})
 -- The server shell (DinoVisual) shares geometry with the local mesh; keep it invisible on this client or its
@@ -48,7 +49,7 @@ local function characterVisual(character: Model)
         hideShell(character)
         if previous:GetAttribute("GenesJson")~=genesJson then
             local ok,genes=pcall(function() return Http:JSONDecode(genesJson) end)
-            if ok and typeof(genes)=="table" and mutation=="base" then Appearance.apply(previous,genes) end
+            if ok and typeof(genes)=="table" and mutation=="base" then Appearance.apply(previous,genes) MutationLook.apply(previous,character:GetAttribute("EventMutationId")) end
             previous:SetAttribute("GenesJson",genesJson)
         end
         return

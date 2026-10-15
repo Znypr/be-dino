@@ -367354,6 +367354,7 @@ local Preview={}
 local RunService=game:GetService("RunService")
 local Http=game:GetService("HttpService")
 local Appearance=require(script.Parent.EggAppearance)
+local MutationLook=require(script.Parent.MutationLook)
 local function visible(view)
     local low,high=view.AbsolutePosition,view.AbsolutePosition+view.AbsoluteSize
     if view.AbsoluteSize.X&lt;=0 or view.AbsoluteSize.Y&lt;=0 then return false end
@@ -367411,6 +367412,7 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         if gold=="silhouette" then
             viewport.Ambient,viewport.LightColor=Color3.new(0,0,0),Color3.new(0,0,0)
         elseif traits and traits.genes then Appearance.apply(model,traits.genes) end
+        if traits and gold~="silhouette" then MutationLook.apply(model,traits.mutationId) end -- BD-155 (traits only decoded for base stage)
         Camera.bind(viewport,model,speciesId)
         task.spawn(function()
             local assets={}
@@ -370245,22 +370247,15 @@ return MovementEnvelope
 local RunService = game:GetService("RunService")
 local Effects = {}
 local activeCount = 0
-local colors = {
- dewdrop = {Color3.fromRGB(43,154,111),Color3.fromRGB(112,244,191)},
- charged = {Color3.fromRGB(56,66,87),Color3.fromRGB(255,207,72)},
- frost = {Color3.fromRGB(112,184,211),Color3.fromRGB(175,235,255)},
- seismic = {Color3.fromRGB(133,97,62),Color3.fromRGB(210,173,113)},
- ember = {Color3.fromRGB(99,54,34),Color3.fromRGB(255,144,51)},
- aurora = {Color3.fromRGB(109,65,150),Color3.fromRGB(81,233,187)},
- bloodmoon = {Color3.fromRGB(122,26,46),Color3.fromRGB(250,67,102)},
-}
+local Look = require(script.Parent.MutationLook) -- BD-155: one shared look table
+local function paletteOf(id) local e=Look.get(id) if not e then return nil end return {Look.color(e.mist),Look.color(e.spark)} end
 local function anchor(parent)
  local p=Instance.new("Part");p.Name="MutationFXAnchor";p.Size=Vector3.new(.1,.1,.1)
  p.Transparency=1;p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.CastShadow=false;p.Parent=parent
  return p
 end
 function Effects.Create(model: Model, mutationId: string, smokeTexture: string, reducedEffects: boolean?)
- local palette=colors[mutationId]
+ local palette=paletteOf(mutationId)
  if not palette or not model.Parent or reducedEffects or activeCount&gt;=8 then return nil end
  assert(type(smokeTexture)=="string" and smokeTexture:match("^rbxassetid://%d+$"),"Supply uploaded BeDino smoke texture asset ID")
  local folder=Instance.new("Folder");folder.Name="BeDinoMutation_"..mutationId;folder.Parent=workspace
@@ -370327,6 +370322,94 @@ return Effects
         </Properties>
       </Item>
       <Item class="ModuleScript" referent="RBX214">
+        <Properties>
+          <string name="Name">MutationLook</string>
+          <ProtectedString name="Source">--!strict
+-- BD-155: the ONE look table for event mutations. Pure data (RGB triples, no Roblox types) plus two small appliers.
+-- Everything that shows a mutation reads this: the world dino (CosmeticVisuals), Dino Index / My dinos / detail
+-- previews and the hatch dino (via PreviewTraits), egg cards (colour hint) and the mist (MutationEffects).
+-- Calm and bubbly (docs/87): soft tint, soft glow, dinos stay matte (no Neon/Metal/Glass, no reflectance).
+-- Conditions are egg-only and never appear here. Fusion tiers (Gold/Emerald/Diamond) never get a mutation tint.
+local Look = {}
+
+export type Entry = {
+    id: string, name: string,
+    tint: {number},       -- body colour the dino is gently pulled toward
+    amount: number,       -- 0..1 pull toward tint (kept low: shell/gene colours must stay readable)
+    rim: {number},        -- soft rim / glow colour (lights, badge outline)
+    glow: number,         -- 0..1 glow strength (PointLight brightness / badge halo scale)
+    material: string,     -- Enum.Material name; always matte (Plastic)
+    mist: {number},       -- smoke colour (dark tone of the particle palette)
+    spark: {number},      -- accent colour of beams / sparkles
+    badge: {number},      -- badge / icon colour (same as ProgressionConfig.EventMutations colour)
+    mood: string,
+}
+
+Look.Order = {"dewdrop", "charged", "frost", "seismic", "ember", "aurora", "bloodmoon"}
+Look.MaxAmount = 0.35 -- hard ceiling for any tint pull (verified)
+Look.Entries = {
+    dewdrop = {id = "dewdrop", name = "Dewdrop", tint = {120, 226, 190}, amount = 0.22, rim = {112, 244, 191}, glow = 0.35, material = "Plastic",
+        mist = {43, 154, 111}, spark = {112, 244, 191}, badge = {85, 216, 176}, mood = "fresh, dewy, playful"},
+    charged = {id = "charged", name = "Charged", tint = {255, 226, 120}, amount = 0.22, rim = {255, 207, 72}, glow = 0.5, material = "Plastic",
+        mist = {56, 66, 87}, spark = {255, 207, 72}, badge = {255, 218, 88}, mood = "zippy, bright, tingly"},
+    frost = {id = "frost", name = "Frost", tint = {160, 232, 255}, amount = 0.26, rim = {175, 235, 255}, glow = 0.35, material = "Plastic",
+        mist = {112, 184, 211}, spark = {175, 235, 255}, badge = {135, 233, 255}, mood = "crisp, sparkly, cool"},
+    seismic = {id = "seismic", name = "Seismic", tint = {226, 190, 130}, amount = 0.22, rim = {210, 173, 113}, glow = 0.2, material = "Plastic",
+        mist = {133, 97, 62}, spark = {210, 173, 113}, badge = {220, 180, 115}, mood = "warm, sturdy, rumbly"},
+    ember = {id = "ember", name = "Ember", tint = {255, 140, 90}, amount = 0.24, rim = {255, 144, 51}, glow = 0.55, material = "Plastic",
+        mist = {99, 54, 34}, spark = {255, 144, 51}, badge = {255, 116, 62}, mood = "cozy campfire glow"},
+    aurora = {id = "aurora", name = "Aurora", tint = {140, 250, 220}, amount = 0.24, rim = {81, 233, 187}, glow = 0.6, material = "Plastic",
+        mist = {109, 65, 150}, spark = {81, 233, 187}, badge = {112, 255, 205}, mood = "dreamy, shimmering, magical"},
+    bloodmoon = {id = "bloodmoon", name = "Blood Moon", tint = {255, 120, 150}, amount = 0.24, rim = {250, 67, 102}, glow = 0.5, material = "Plastic",
+        mist = {122, 26, 46}, spark = {250, 67, 102}, badge = {255, 85, 128}, mood = "moody but cozy"},
+}
+
+function Look.get(id: any): Entry?
+    if type(id) ~= "string" or id == "" then return nil end
+    return (Look.Entries :: any)[id]
+end
+
+function Look.color(rgb: {number}): Color3 return Color3.fromRGB(rgb[1], rgb[2], rgb[3]) end
+
+-- Pure maths: pull a base colour (0-255 triple) toward the mutation tint. amount defaults to the entry's own.
+function Look.blend(base: {number}, id: string, amount: number?): {number}
+    local entry = Look.get(id)
+    if not entry then return {base[1], base[2], base[3]} end
+    local a = math.clamp(amount or entry.amount, 0, Look.MaxAmount)
+    return {base[1] + (entry.tint[1] - base[1]) * a, base[2] + (entry.tint[2] - base[2]) * a, base[3] + (entry.tint[3] - base[3]) * a}
+end
+
+-- Tints every BasePart under a model/viewport once and idempotently. The part remembers its own colour (MutBase)
+-- and the colour it painted (MutOut): if something else recolours it meanwhile (genes), the new colour becomes the
+-- base. Materials are never changed (dinos stay matte). id nil/"" restores the original colour.
+function Look.apply(container: Instance, id: any, amount: number?)
+    local entry = Look.get(id)
+    for _, part in container:GetDescendants() do
+        if part:IsA("BasePart") then
+            local out = part:GetAttribute("MutOut")
+            local base = part:GetAttribute("MutBase")
+            if typeof(out) ~= "Color3" or typeof(base) ~= "Color3" or part.Color ~= out then base = part.Color end
+            if entry then
+                local b = base :: Color3
+                local pulled = Look.blend({b.R * 255, b.G * 255, b.B * 255}, entry.id, amount)
+                local colour = Color3.fromRGB(math.floor(pulled[1] + .5), math.floor(pulled[2] + .5), math.floor(pulled[3] + .5))
+                part:SetAttribute("MutBase", b)
+                part:SetAttribute("MutOut", colour)
+                part.Color = colour
+            elseif typeof(out) == "Color3" and typeof(base) == "Color3" then
+                if part.Color == out then part.Color = base end
+                part:SetAttribute("MutBase", nil)
+                part:SetAttribute("MutOut", nil)
+            end
+        end
+    end
+end
+
+return Look
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX215">
         <Properties>
           <string name="Name">MyDinos</string>
           <ProtectedString name="Source">--!strict
@@ -370505,7 +370588,7 @@ return M
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX215">
+      <Item class="ModuleScript" referent="RBX216">
         <Properties>
           <string name="Name">NavigationArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -370523,7 +370606,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX216">
+      <Item class="ModuleScript" referent="RBX217">
         <Properties>
           <string name="Name">NestQueue</string>
           <ProtectedString name="Source">--!strict
@@ -370584,7 +370667,7 @@ return NestQueue
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX217">
+      <Item class="ModuleScript" referent="RBX218">
         <Properties>
           <string name="Name">NextGoal</string>
           <ProtectedString name="Source">--!strict
@@ -370661,7 +370744,7 @@ return NextGoal
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX218">
+      <Item class="ModuleScript" referent="RBX219">
         <Properties>
           <string name="Name">NotifyQueue</string>
           <ProtectedString name="Source">--!strict
@@ -370861,7 +370944,7 @@ return Q
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX219">
+      <Item class="ModuleScript" referent="RBX220">
         <Properties>
           <string name="Name">PatternGenes</string>
           <ProtectedString name="Source">--!strict
@@ -370969,7 +371052,7 @@ return Pattern
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX220">
+      <Item class="ModuleScript" referent="RBX221">
         <Properties>
           <string name="Name">PotionArt</string>
           <ProtectedString name="Source">--!strict
@@ -371033,7 +371116,7 @@ return PotionArt
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX221">
+      <Item class="ModuleScript" referent="RBX222">
         <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
@@ -371127,7 +371210,7 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX222">
+      <Item class="ModuleScript" referent="RBX223">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -371253,7 +371336,7 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX223">
+      <Item class="ModuleScript" referent="RBX224">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -371491,7 +371574,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX224">
+      <Item class="ModuleScript" referent="RBX225">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -371500,7 +371583,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX225">
+      <Item class="ModuleScript" referent="RBX226">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -371516,7 +371599,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX226">
+      <Item class="ModuleScript" referent="RBX227">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -371584,7 +371667,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX227">
+      <Item class="ModuleScript" referent="RBX228">
         <Properties>
           <string name="Name">RevealSkip</string>
           <ProtectedString name="Source">--!strict
@@ -371668,7 +371751,7 @@ return Skip
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX228">
+      <Item class="ModuleScript" referent="RBX229">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -371760,7 +371843,7 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX229">
+      <Item class="ModuleScript" referent="RBX230">
         <Properties>
           <string name="Name">Sfx</string>
           <ProtectedString name="Source">--!strict
@@ -371880,7 +371963,7 @@ return Sfx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX230">
+      <Item class="ModuleScript" referent="RBX231">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -371928,7 +372011,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX231">
+      <Item class="ModuleScript" referent="RBX232">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -371977,7 +372060,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX232">
+      <Item class="ModuleScript" referent="RBX233">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -372179,7 +372262,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX233">
+      <Item class="ModuleScript" referent="RBX234">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -372211,7 +372294,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX234">
+      <Item class="ModuleScript" referent="RBX235">
         <Properties>
           <string name="Name">UIFormat</string>
           <ProtectedString name="Source">--!strict
@@ -372255,7 +372338,7 @@ return UIFormat
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX235">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -372284,7 +372367,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -372306,7 +372389,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX238">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -372471,7 +372554,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -372502,7 +372585,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">WeatherLooks</string>
           <ProtectedString name="Source">--!strict
@@ -372611,7 +372694,7 @@ return Weather
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">WeatherSounds</string>
           <ProtectedString name="Source">--!strict
@@ -372686,7 +372769,7 @@ return Sounds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -372737,7 +372820,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">WorldKitMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -372790,7 +372873,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX243">
+    <Item class="Folder" referent="RBX244">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -542345,15 +542428,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX244">
+  <Item class="ServerScriptService" referent="RBX245">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX245">
+    <Item class="Folder" referent="RBX246">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">AdminService</string>
           <ProtectedString name="Source">--!strict
@@ -542467,7 +542550,7 @@ return AdminService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -542734,7 +542817,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX248">
+      <Item class="Script" referent="RBX249">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -542775,7 +542858,7 @@ Leaderboards.start()
 
 ProfileRepository.start()
 RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string, eggEvents, runSeconds)
-    local ok = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents, runSeconds)
+    local ok = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents, runSeconds, workspace:GetAttribute("WeatherId")) -- BD-156: nests dropped in weather carry it
     if not ok then
         warn(string.format("[Be Dino] settlement failed for %s (%s)", player.Name, reason))
         return false
@@ -542891,7 +542974,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -543001,7 +543084,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -543094,7 +543177,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX251">
+      <Item class="ModuleScript" referent="RBX252">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -543230,7 +543313,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX252">
+      <Item class="ModuleScript" referent="RBX253">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -543442,7 +543525,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX253">
+      <Item class="ModuleScript" referent="RBX254">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -543713,7 +543796,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX254">
+      <Item class="ModuleScript" referent="RBX255">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -543885,7 +543968,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX255">
+      <Item class="ModuleScript" referent="RBX256">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -544071,7 +544154,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX256">
+      <Item class="ModuleScript" referent="RBX257">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -544457,7 +544540,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX257">
+      <Item class="ModuleScript" referent="RBX258">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -544544,7 +544627,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX258">
+      <Item class="ModuleScript" referent="RBX259">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -544622,7 +544705,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX259">
+      <Item class="ModuleScript" referent="RBX260">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -544734,7 +544817,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX260">
+      <Item class="ModuleScript" referent="RBX261">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -544873,7 +544956,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX261">
+      <Item class="ModuleScript" referent="RBX262">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -544965,7 +545048,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX262">
+      <Item class="ModuleScript" referent="RBX263">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -545070,7 +545153,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX263">
+      <Item class="ModuleScript" referent="RBX264">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -545205,7 +545288,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX264">
+      <Item class="ModuleScript" referent="RBX265">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -545463,6 +545546,8 @@ local function isValidProfile(profile: any): boolean
                 or typeof(nest.size) ~= "number" or nest.size % 1 ~= 0 or nest.size &lt; 1 or nest.size &gt; 50
                 or typeof(nest.luck) ~= "number" or nest.luck % 1 ~= 0 or nest.luck &lt; 1 or nest.luck &gt; #Config.NestLuckTiers
                 or (nest.state ~= "waiting" and nest.state ~= "incubating" and nest.state ~= "ready") then return false end
+            -- BD-156 (additive): the weather active when the nest dropped; absent on older nests (rolls no mutations).
+            if nest.weatherId ~= nil and (not validId(nest.weatherId) or not ProgressionRules.item(ProgressionConfig.Weather, nest.weatherId)) then return false end
             if nest.state ~= "waiting" and (typeof(nest.readyAt) ~= "number" or nest.readyAt ~= nest.readyAt
                 or nest.readyAt &lt; 0 or nest.readyAt % 1 ~= 0 or nest.readyAt == math.huge) then return false end
             if nest.eggs ~= nil then -- legacy precommitted eggs (migrated Build 020 nests)
@@ -546048,7 +546133,7 @@ end
 -- BD-044 settlement: catches -&gt; exactly that many run eggs (capped per run), plus
 -- deterministic crystals and separate bonus nests. Every random draw is committed
 -- before UpdateAsync; settledRuns + recentOperations make the run exactly-once.
-function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number, eggEvents, runSeconds: number?)
+function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number, eggEvents, runSeconds: number?, weatherId: string?)
     local cached = profiles[player]
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
         return false, nil, "profile_not_loaded"
@@ -546073,6 +546158,9 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         return true, if cachedOperation then cachedOperation.outcome else nil, "duplicate"
     end
 
+    -- Only a known, non-clear weather is stored; anything else (nil, forged, "clear") means no tag.
+    local nestWeatherId: string? = nil
+    if typeof(weatherId) == "string" and weatherId ~= "clear" and ProgressionRules.item(ProgressionConfig.Weather, weatherId) then nestWeatherId = weatherId end
     local rng = Random.new()
     local tags = placeEggTags(eggEvents, eggCount)
     local runEggs = table.create(eggCount)
@@ -546122,8 +546210,10 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
             local granted = math.min(nestsEarned, math.max(0, Config.NestStorageCapacity - #profileValue.eggNests))
             for j = 1, granted do
                 local nestId = RewardMath.nestId(runId, j)
+                -- BD-156: a nest dropped during weather carries that weather's tag; its eggs roll the same event
+                -- mutation chance as run eggs when it is claimed. Clear weather stores nothing (additive field).
                 table.insert(profileValue.eggNests, {nestId = nestId, droppedFromRun = runId,
-                    size = RewardMath.nestSize(nestId), luck = 1, state = "waiting"})
+                    size = RewardMath.nestSize(nestId), luck = 1, state = "waiting", weatherId = nestWeatherId})
             end
             advanceNests(profileValue, now)
             outcome.nestCount = granted
@@ -546228,8 +546318,10 @@ local function rollNestEggs(profileValue: any, nest: any): {any}
     for k = 1, nest.size do
         local eggId = nest.nestId .. ":" .. tostring(k)
         local shinyRoll, bigRoll = rng:NextNumber(), rng:NextNumber()
+        -- BD-156: same per-egg event roll and chance as run eggs (ProgressionRules.eventEgg), only for weather nests.
+        local tag = if nest.weatherId then ProgressionRules.eventEgg(nest.weatherId, rng:NextNumber()) else nil
         table.insert(eggs, {
-            eggId = eggId, kind = "nest_egg", eventId = "clear", mutationId = "",
+            eggId = eggId, kind = "nest_egg", eventId = if tag then tag.eventId else "clear", mutationId = if tag then tag.mutationId else "",
             reward = RewardMath.computeChestReward(rng, tier.rarityBoostEggs),
             shiny = shinyRoll &lt; tier.shinyChance, big = bigRoll &lt; tier.bigChance,
             genes = EggGenetics.roll(level, rng), traitRollVersion = "bd045-genes-v2",
@@ -546985,7 +547077,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX265">
+      <Item class="ModuleScript" referent="RBX266">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -547187,7 +547279,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX266">
+      <Item class="ModuleScript" referent="RBX267">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -547301,7 +547393,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX267">
+      <Item class="ModuleScript" referent="RBX268">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -547564,7 +547656,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX268">
+      <Item class="ModuleScript" referent="RBX269">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -547636,19 +547728,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX269">
+  <Item class="StarterPlayer" referent="RBX270">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX270">
+    <Item class="StarterPlayerScripts" referent="RBX271">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX271">
+      <Item class="Folder" referent="RBX272">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX272">
+        <Item class="LocalScript" referent="RBX273">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -547857,7 +547949,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX273">
+        <Item class="LocalScript" referent="RBX274">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -548719,7 +548811,7 @@ render=function(name: string)
             -- colours and pattern only, never the egg condition.
             local view=Preview.add(body,id,"base")
             view.Position,view.Size=UDim2.fromOffset(160,-12),UDim2.fromOffset(504,260)
-            PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),genes=genes})
+            PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),genes=genes,mutationId=str("LastChestEventMutation")})
             view.Visible=false
             task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync(view:GetDescendants()) end) end)
             local rarity=speciesIndex(id)
@@ -548745,8 +548837,7 @@ render=function(name: string)
                 detailText=HatchTimeline.failChance((EggGenetics.condition("cracked") :: any).hatchChance)
             elseif mutation then
                 -- Event mutation: name and perk, tint the dinosaur. BD-174: the egg condition is never shown on the dinosaur.
-                local tint=mutationColor :: Color3
-                for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(tint,if genes then .35 else .55) end end
+                local tint=mutationColor :: Color3 -- BD-155: the dinosaur itself is tinted by PreviewTraits (MutationLook) when the view is created
                 detailText=mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
                 if not genes then detailColor=tint end
             elseif colorReveal and patternReveal then
@@ -549404,7 +549495,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX274">
+        <Item class="LocalScript" referent="RBX275">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -549417,10 +549508,12 @@ local Effects=require(Shared.CosmeticEffects)
 local Theme=require(Shared.UITheme)
 local Mutations=require(Shared.MutationEffects)
 local Shiny=require(Shared.ShinyEffects)
+local Look=require(Shared.MutationLook)
 local function destroy(state)
     state.effect:destroy()
     if state.mutation then state.mutation.Destroy() end
     if state.glints then state.glints.Destroy() end
+    if state.visual and state.visual.Parent and state.mutationId~="" then Look.apply(state.visual,nil) end -- restore the body colour
 end
 local states={}
 local elapsed=0
@@ -549450,6 +549543,7 @@ RunService.Heartbeat:Connect(function(dt)
                 if state then destroy(state) end
                 state={root=root,auraId=auraId,trailId=trailId,mutationId=mutationId,shiny=shiny,visual=visual,scale=scale,motion=Theme.MotionEnabled,effect=Effects.create(root,Rules.item(Config.Auras,auraId),Rules.item(Config.Trails,trailId),nil,false)}
                 if visual and visual:IsA("Model") then
+                    if (visual:GetAttribute("Mutation") or "base")=="base" then Look.apply(visual,mutationId) end -- BD-155: soft body tint, always (also with Reduce Motion); the mist below is the motion layer
                     state.mutation=Mutations.Create(visual,mutationId,"rbxassetid://105629313112163",not Theme.MotionEnabled)
                     if shiny then state.glints=Shiny.Create(visual,"rbxassetid://70885382548001",not Theme.MotionEnabled) end
                 end
@@ -549467,7 +549561,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX275">
+        <Item class="ModuleScript" referent="RBX276">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -549515,7 +549609,7 @@ function DinoDetails.show(container: GuiObject, instanceId: string, catalog, cal
         local preview = Preview.add(stage, d.speciesId or "compy", if d.stage == "base" or d.stage == nil then "base" else d.stage)
         preview.Size, preview.Position = UDim2.fromScale(1, .72), UDim2.fromScale(0, .02)
         -- Gold/Diamond keep their stage material; Base shows the actual gene colors.
-        PreviewTraits.add(preview, {shiny = d.shiny, big = d.big, genes = if d.stage == "base" then d.genes else nil})
+        PreviewTraits.add(preview, {shiny = d.shiny, big = d.big, mutationId = if d.stage == "base" then d.mutationId else nil, genes = if d.stage == "base" then d.genes else nil})
         W.label(stage, view.prestige or "", UDim2.new(1, -12, .12, 0), UDim2.new(0, 6, .74, 0), 22, C.text)
         W.swatch(stage, d.genes, UDim2.new(1, -24, .08, 0), UDim2.new(0, 12, .88, 0))
         local facts = W.scroll(root, UDim2.new(.62, -18, 1, -(W.Touch + 26)), UDim2.new(.38, 6, 0, W.Touch + 16))
@@ -549546,7 +549640,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX276">
+        <Item class="ModuleScript" referent="RBX277">
           <Properties>
             <string name="Name">DinoIndexPanels</string>
             <ProtectedString name="Source">--!strict
@@ -549783,7 +549877,7 @@ function Panels.species(ctx)
         stage.ClipsDescendants = true
         local view = Preview.add(stage, speciesId, if stageName == nil then "base" else stageName)
         view.Size, view.Position = UDim2.fromScale(1, 1), UDim2.new()
-        PreviewTraits.add(view, if d then {shiny = d.shiny, big = d.big, genes = if d.stage == "base" then d.genes else nil} else nil)
+        PreviewTraits.add(view, if d then {shiny = d.shiny, big = d.big, mutationId = if d.stage == "base" then d.mutationId else nil, genes = if d.stage == "base" then d.genes else nil} else nil)
         hero = InspectView.attach(view, {hintPosition = UDim2.new(.5, 0, 0, 34), resetPosition = UDim2.new(1, -6, 0, 6)})
         titleLabel = W.label(left, speciesName, UDim2.fromOffset(296, 26), UDim2.fromOffset(0, 200), 22, C.text)
         if not d then
@@ -549826,7 +549920,7 @@ function Panels.species(ctx)
             if previewView then return end
             local view = Preview.add(button, speciesId, if d.stage == "base" then "base" else d.stage)
             view.Position, view.Size = UDim2.fromOffset(4, 4), UDim2.new(1, -8, 0, 74)
-            if d.stage == "base" and d.genes then PreviewTraits.add(view, {genes = d.genes}) end
+            if d.stage == "base" and (d.genes or (d.mutationId or "") ~= "") then PreviewTraits.add(view, {genes = d.genes, mutationId = d.mutationId}) end
             previewView = view
             entryRef.mounted = true
         end
@@ -550038,7 +550132,7 @@ return Panels
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX277">
+        <Item class="LocalScript" referent="RBX278">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -550361,7 +550455,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX278">
+        <Item class="ModuleScript" referent="RBX279">
           <Properties>
             <string name="Name">EggsScreen</string>
             <ProtectedString name="Source">--!strict
@@ -550496,7 +550590,7 @@ function EggsScreen.render(ctx: any)
     label(card, "Next egg", 14, 6, 200, 28, 22, C.gold).TextXAlignment = Enum.TextXAlignment.Left
     local look = FusionSelection.eggSlotLook(entry, entry ~= nil and EggGenetics.valid(entry.genes))
     local viewSize = math.clamp(cardH - 50, 96, 170)
-    EggsScreen.safeEggView(card, look == "empty", viewSize, 16, 38, if entry then (if look == "genes" then entry else {shiny = entry.shiny, big = entry.big}) else nil)
+    EggsScreen.safeEggView(card, look == "empty", viewSize, 16, 38, if entry then (if look == "genes" then entry else {shiny = entry.shiny, big = entry.big, mutationId = entry.mutationId}) else nil)
 
     local infoX = 16 + viewSize + 14
     local infoW = 824 - infoX - 14
@@ -550571,7 +550665,7 @@ return EggsScreen
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX279">
+        <Item class="ModuleScript" referent="RBX280">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -551434,7 +551528,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX280">
+        <Item class="ModuleScript" referent="RBX281">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -551536,7 +551630,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX281">
+        <Item class="ModuleScript" referent="RBX282">
           <Properties>
             <string name="Name">HatchSequence</string>
             <ProtectedString name="Source">--!strict
@@ -552586,7 +552680,7 @@ return Seq
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX282">
+        <Item class="ModuleScript" referent="RBX283">
           <Properties>
             <string name="Name">InspectView</string>
             <ProtectedString name="Source">--!strict
@@ -552776,18 +552870,39 @@ return InspectView
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX283">
+        <Item class="ModuleScript" referent="RBX284">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
 local RunService = game:GetService("RunService")
 local Theme = require(game:GetService("ReplicatedStorage").Shared.UITheme)
 local Appearance = require(game:GetService("ReplicatedStorage").Shared.EggAppearance)
+local MutationLook = require(game:GetService("ReplicatedStorage").Shared.MutationLook)
 local PreviewTraits = {}
+-- BD-155: soft mutation cue shared by every preview. A small round badge in the mutation colour (top-left) with a
+-- gentle rim; dinosaur models also get the soft body tint from MutationLook. Eggs get the colour hint only (the shell
+-- keeps its gene colours). Static, so Reduce Motion needs no variant. Safe to call again (replaces the badge).
+function PreviewTraits.mutation(view: ViewportFrame, mutationId: any, isEgg: boolean?)
+    local look = MutationLook.get(mutationId)
+    local old = view:FindFirstChild("MutationBadge")
+    if old then old:Destroy() end
+    if not isEgg then MutationLook.apply(view, if look then look.id else nil) end
+    if not look then return end
+    local dot = Instance.new("Frame")
+    dot.Name, dot.BackgroundColor3, dot.BorderSizePixel = "MutationBadge", MutationLook.color(look.badge), 0
+    dot.AnchorPoint, dot.Position, dot.Size = Vector2.new(0, 0), UDim2.new(0, 6, 0, 6), UDim2.new(0, 22, 0, 22)
+    dot.ZIndex, dot.Parent = view.ZIndex + 2, view
+    local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(.5, 0) corner.Parent = dot
+    local rim = Instance.new("UIStroke")
+    rim.Color, rim.Thickness, rim.Transparency = MutationLook.color(look.rim), 2 + 2 * look.glow, .35
+    rim.Parent = dot
+    dot:SetAttribute("MutationId", look.id)
+end
 -- isEgg = true only for egg previews (BD-174: the egg condition overlay is never drawn on a dinosaur).
 function PreviewTraits.add(view: ViewportFrame, traits, isEgg: boolean?)
     if traits then view:SetAttribute("TraitsJson",game:GetService("HttpService"):JSONEncode(traits)) end
     if traits and traits.genes then Appearance.apply(view,traits.genes,isEgg==true) end
+    if traits and traits.mutationId and traits.mutationId ~= "" then PreviewTraits.mutation(view, traits.mutationId, isEgg == true) end
     if not traits or not (traits.shiny or traits.big) then return end
     local badge = Instance.new("TextLabel")
     badge.Name = "TraitBadge"
@@ -552837,7 +552952,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX284">
+        <Item class="LocalScript" referent="RBX285">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -552847,6 +552962,7 @@ local RunService = game:GetService("RunService")
 local RuntimeMeshes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("RuntimeMeshes"))
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Appearance = require(ReplicatedStorage.Shared.EggAppearance)
+local MutationLook = require(ReplicatedStorage.Shared.MutationLook)
 local Http = game:GetService("HttpService")
 local watched = setmetatable({}, {__mode = "k"})
 -- The server shell (DinoVisual) shares geometry with the local mesh; keep it invisible on this client or its
@@ -552890,7 +553006,7 @@ local function characterVisual(character: Model)
         hideShell(character)
         if previous:GetAttribute("GenesJson")~=genesJson then
             local ok,genes=pcall(function() return Http:JSONDecode(genesJson) end)
-            if ok and typeof(genes)=="table" and mutation=="base" then Appearance.apply(previous,genes) end
+            if ok and typeof(genes)=="table" and mutation=="base" then Appearance.apply(previous,genes) MutationLook.apply(previous,character:GetAttribute("EventMutationId")) end
             previous:SetAttribute("GenesJson",genesJson)
         end
         return
@@ -553024,7 +553140,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX285">
+        <Item class="LocalScript" referent="RBX286">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -553089,7 +553205,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX286">
+        <Item class="LocalScript" referent="RBX287">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -553906,7 +554022,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX287">
+  <Item class="Workspace" referent="RBX288">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

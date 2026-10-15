@@ -36,7 +36,7 @@ Leaderboards.start()
 
 ProfileRepository.start()
 RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string, eggEvents, runSeconds)
-    local ok = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents, runSeconds)
+    local ok = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents, runSeconds, workspace:GetAttribute("WeatherId")) -- BD-156: nests dropped in weather carry it
     if not ok then
         warn(string.format("[Be Dino] settlement failed for %s (%s)", player.Name, reason))
         return false

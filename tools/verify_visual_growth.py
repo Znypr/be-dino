@@ -19,6 +19,7 @@ function character:FindFirstChildOfClass()return humanoid end
 local ReplicatedStorage={FindFirstChild=function()return nil end}
 local Http={JSONDecode=function(_,value)return if value=="null" then nil else {} end}
 local Appearance={apply=function()paints+=1 end}
+local MutationLook={apply=function()end}
 local weld={Enabled=true,IsA=function(_,c)return c=="WeldConstraint"end}
 local Instance={new=function()return weld end}
 local Resources={clone=function()

@@ -72,3 +72,6 @@ Each egg has **two** color slots (primary and secondary), rolled independently w
 | 9 | Black | Legendary | 0.01% | 1 in 100,000,000 |
 
 Rarity for colors is a label from the percentage: Common 25%+, Uncommon 4%+, Rare 1%+, Epic 0.1%+, Legendary below that.
+
+## Nest eggs and weather (BD-156)
+A nest dropped while a weather event is active remembers that weather. When it is claimed, **each of its eggs** rolls the same event-mutation chance as a run egg caught in that weather (Rain 2%, Thunderstorm 4%, Blizzard 4%, Earthquake 5%, Volcanic Bloom 7%, Northern Lights 7%, Blood Moon 8%; the table in `ProgressionConfig.Weather` is the source), so nests are never luckier for mutations than a run. Nests dropped in clear weather roll no mutation. Nest luck for Shiny and BIG is separate and unchanged (3% and 20%, `Config.NestLuckTiers`). These numbers are provisional and will move with the exponential rarity rework (BD-184).

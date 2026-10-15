@@ -857,7 +857,7 @@ render=function(name: string)
             -- colours and pattern only, never the egg condition.
             local view=Preview.add(body,id,"base")
             view.Position,view.Size=UDim2.fromOffset(160,-12),UDim2.fromOffset(504,260)
-            PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),genes=genes})
+            PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),genes=genes,mutationId=str("LastChestEventMutation")})
             view.Visible=false
             task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync(view:GetDescendants()) end) end)
             local rarity=speciesIndex(id)
@@ -883,8 +883,7 @@ render=function(name: string)
                 detailText=HatchTimeline.failChance((EggGenetics.condition("cracked") :: any).hatchChance)
             elseif mutation then
                 -- Event mutation: name and perk, tint the dinosaur. BD-174: the egg condition is never shown on the dinosaur.
-                local tint=mutationColor :: Color3
-                for _,part in view:GetDescendants() do if part:IsA("BasePart") then part.Color=part.Color:Lerp(tint,if genes then .35 else .55) end end
+                local tint=mutationColor :: Color3 -- BD-155: the dinosaur itself is tinted by PreviewTraits (MutationLook) when the view is created
                 detailText=mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
                 if not genes then detailColor=tint end
             elseif colorReveal and patternReveal then
