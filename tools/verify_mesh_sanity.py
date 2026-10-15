@@ -41,6 +41,16 @@ for _, c in cases do
     assert(not Sanity.check(e, e, 2), c[1] .. " too few triangles must fail")
 end
 print("Mesh sanity checks passed for " .. #cases .. " authored creatures (real extents pass; cube, empty, NaN and tiny meshes rejected)")
+-- BD-219 content check: a MeshPart whose EditableMesh was destroyed keeps its Size but has 0 faces and draws as a box.
+assert(Sanity.contentLoaded("Object", 1400, "") == true, "live editable mesh is loaded")
+assert(Sanity.contentLoaded("Object", 0, "") == false, "destroyed editable mesh (0 faces) is NOT loaded")
+assert(Sanity.contentLoaded("Object", nil, "") == false, "unreadable editable mesh is NOT loaded")
+assert(Sanity.contentLoaded("Uri", nil, "rbxassetid://1") == true, "uploaded mesh is loaded")
+assert(Sanity.contentLoaded("None", nil, "rbxassetid://1") == true, "legacy MeshId part is loaded")
+assert(Sanity.contentLoaded("None", nil, "") == false, "no mesh at all is NOT loaded")
+local _, why = Sanity.contentLoaded("Object", 0, "")
+assert(string.find(why, "destroyed"), "reason names the destroyed mesh")
+print("Mesh content checks passed: destroyed/empty editable meshes are rejected, live and uploaded meshes accepted")
 '''
 
 if __name__ == '__main__':
@@ -58,6 +68,6 @@ if __name__ == '__main__':
         path.write_text('local Sanity=' + source + '\n' + BODY.replace('__CASES__', lua), encoding='utf-8')
         result = subprocess.run([args.runner, str(path)], capture_output=True, text=True, encoding='utf-8')
         print(result.stdout, end='')
-        if result.returncode or 'passed' not in result.stdout:
+        if result.returncode or 'content checks passed' not in result.stdout:
             print(result.stderr)
             raise SystemExit(result.returncode or 1)

@@ -9,6 +9,18 @@ local Overlays=require(script.Parent.ConditionOverlays)
 function Appearance.apply(container: Instance,genes,showCondition: boolean?)
     if not genes or not Genetics.valid(genes) then return end
     local tint=Genetics.tint(genes)
+    -- BD-216: the 2D egg picture fallback (ModelPreview.eggImage) takes the tint and the condition layer like EggPicture.
+    if container:GetAttribute("EggImageFallback")==true then
+        local shell2d=container:FindFirstChild("EggShell")
+        if shell2d and shell2d:IsA("ImageLabel") then shell2d.ImageColor3=tint end
+        local layer=container:FindFirstChild("EggCondition")
+        if layer and layer:IsA("ImageLabel") then
+            local look=Overlays.describe(genes.conditionId)
+            local id=if showCondition==true and look.assetId~="" then "rbxassetid://"..look.assetId else ""
+            layer.Image,layer.Visible=id,id~=""
+        end
+        return
+    end
     local shell,shellSize=nil,-1
     for _,part in container:GetDescendants() do
         if part:IsA("BasePart") then

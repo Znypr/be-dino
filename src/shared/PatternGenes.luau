@@ -171,6 +171,17 @@ function Pattern.apply(part: MeshPart,genes): boolean
     end
     return paint(part,genes)
 end
+-- BD-219 watchdog: after MeshPart:ApplyMesh the part's TextureContent is gone but its atlas entry is still held, so
+-- apply() would return early. Put the held image back (or paint from scratch when nothing is held).
+function Pattern.refresh(part: MeshPart,genes): boolean
+    genes=tracked[part] or genes -- the genes painted last (EggAppearance may have repainted after the clone)
+    local entry=partEntry[part]
+    if entry then
+        part.Color=Color3.new(1,1,1);part.TextureContent=Content.fromObject(entry.image);part:SetAttribute("PatternLOD","texture")
+        return true
+    end
+    return Pattern.apply(part,genes)
+end
 -- Maintenance (client only): drop far parts to flat, then give the nearest flat parts a texture as slots free up.
 local function maintain()
     local camera=workspace.CurrentCamera
