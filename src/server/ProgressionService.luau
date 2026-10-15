@@ -188,7 +188,7 @@ function Service.start(repository)
                 local c=player.Character
                 if p and c then
                     local mutation=Rules.item(Config.EventMutations,player:GetAttribute("EquippedEventMutation") or "")
-                    local growth,speed,loot=Rules.multipliers(p,player:GetAttribute("EquippedSpeciesId") or "compy",current,os.time(),player:GetAttribute("EquippedCondition"),mutation)
+                    local growth,speed,loot=Rules.multipliers(p,player:GetAttribute("EquippedSpeciesId") or "compy",current,os.time(),mutation)
                     local adminGrowth,adminSpeed=adminMultipliers()
                     growth*=adminGrowth speed*=adminSpeed
                     local colourPercent,colourMultiplier=colourGrowth(player:GetAttribute("EquippedGenesJson"))
