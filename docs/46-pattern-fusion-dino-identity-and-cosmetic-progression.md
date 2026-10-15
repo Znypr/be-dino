@@ -1,5 +1,8 @@
 # Pattern-specific fusion, durable dinosaur identity and per-dino cosmetics
 
+> **Owner decision 2026-10-15 (supersedes every "condition" roll/filter/odds mention below): dinosaurs have NO condition.** Conditions exist only on eggs (look and how many dinos they yield). Fusion rolls only colors, Shiny, BIG and event mutation (odds version `fusion-odds-provisional-v2`, no condition wheel); fused outputs store no `conditionId`; My dinos, Index, details, fusion picker/confirm/reveal show none. The original egg's condition remains in the egg lineage. Legacy saves keep any stored dino `conditionId` untouched but ignored.
+
+
 **Owner decisions: 2026-10-08. Status: TARGET / PLANNED, NOT IN BUILD 020.** A disabled BD-057 Phase 1 transaction foundation exists since 2026-10-13: [49-identity-fusion-phase1](49-identity-fusion-phase1.md). This specification covers **BD-057–BD-065**. [Task status](07-kanban.md) is canonical; current implementation is [Build 020](44-main-integration-checklist.md). Read [egg provenance and outcome contract](41-egg-outcomes-contract.md), [22-creature appearance](43-creature-runtime-integration.md), [shop/genetics spec](36-crystal-shops-egg-genetics-and-progression.md), [original layered egg art direction](39-egg-appearance-shared-vision.md) and [BD-044 egg-per-catch migration](09-reward-economy.md).
 
 ## Vision and settled owner rules

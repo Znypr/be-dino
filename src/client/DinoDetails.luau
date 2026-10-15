@@ -1,7 +1,7 @@
 --!strict
 -- BD-062 Dino Details for ONE individual dinosaur instance. Content comes from the
 -- server's `details` action and the pure FusionSelection.details view model:
--- hatched -> original egg (genes, condition, event, source); fused -> parent list,
+-- hatched -> original egg (genes, event, source); fused -> parent list,
 -- parent eggs, recipe/odds versions and "Crafted Gold (earned)". Never a fake Gold
 -- drop %, and bought cosmetics are listed separately and never count toward rarity.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
