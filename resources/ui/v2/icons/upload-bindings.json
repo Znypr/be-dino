@@ -101,6 +101,16 @@
       "key": "egg_shell",
       "source": "egg-shell-v1.png",
       "robloxAssetId": "81264206118496"
+    },
+    {
+      "key": "egg_green",
+      "source": "egg-green-v1.png",
+      "robloxAssetId": "107129283312327"
+    },
+    {
+      "key": "egg_nest_single",
+      "source": "egg-nest-single-v1.png",
+      "robloxAssetId": "85647267539754"
     }
   ]
 }

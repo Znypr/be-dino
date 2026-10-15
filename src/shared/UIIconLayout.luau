@@ -13,4 +13,6 @@ return {
     bloodmoon = .93,
     egg_splat = 1,
     egg_shell = 1,
+    egg_green = 1,
+    egg_nest_single = 1,
 }

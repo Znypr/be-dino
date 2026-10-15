@@ -330,7 +330,7 @@ def check_wiring():
                 assert 'isEgg==true' in arg
             else:
                 assert not arg.endswith('true'), f'dinosaur call must not show the condition in {path}: {arg}'
-    assert 'PreviewTraits.add(view, traits, true)' in read('src/client/EggsScreen.luau'), 'egg cards keep the condition look'
+    assert 'Overlays.describe(genes.conditionId)' in read('src/client/EggPicture.luau'), 'egg cards keep the condition look'
     for path in ('src/client/DinoIndexPanels.luau', 'src/client/DinoDetails.luau'):
         assert 'PreviewTraits.add(view, {' in read(path) or 'PreviewTraits.add(preview, {' in read(path)
         assert ', true)' not in re.sub(r'\{[^}]*\}', '', ''.join(l for l in read(path).splitlines() if 'PreviewTraits.add' in l)), f'no condition on dinosaur previews in {path}'

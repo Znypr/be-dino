@@ -21,7 +21,9 @@ Every art asset the game uses at runtime. Add a line here when an asset is added
 | quake | UI icon | resources/ui/v2/icons/weather-quake-v1.png | 121965025477639 | src/shared/UITheme.luau via UIIconAssets.luau | uploaded, bound (Studio check pending) |
 | bloodmoon | UI icon | resources/ui/v2/icons/weather-bloodmoon-v1.png | 123248871135913 | src/shared/UITheme.luau via UIIconAssets.luau | uploaded, bound (Studio check pending) |
 | egg_nest | UI icon | resources/ui/v2/icons/egg-nest-v1.png | 127462994652706 | src/shared/UITheme.luau via UIIconAssets.luau | in game |
-| egg-green-v1 | UI icon | resources/ui/v2/icons/egg-green-v1.png | - | (none yet) | planned |
+| egg_green | UI icon | resources/ui/v2/icons/egg-green-v1.png | 107129283312327 | src/shared/NavigationArtwork.luau (Eggs menu button, BD-176), src/client/DinoIndexPanels.luau (egg button, BD-175) | uploaded, bound (Studio check pending) |
+| egg_nest_single | UI icon | resources/ui/v2/icons/egg-nest-single-v1.png | 85647267539754 | src/client/EggsScreen.luau (nest slots, BD-169) | uploaded, bound (Studio check pending) |
+| egg_stage (tile floor) | UI art | - | - | src/client/EggPicture.luau `stage` draws a code-built tile floor | PLACEHOLDER: needs a Blender tile-floor render + upload (BD-169) |
 | egg_splat | UI icon | resources/ui/v2/icons/egg-splat-v1.png | 90653261302119 | src/client/HatchSequence.luau via UIIconAssets.luau (failed Cracked egg; native shapes until bound) | uploaded, bound (Studio check pending) |
 | egg_shell | UI icon | resources/ui/v2/icons/egg-shell-v1.png | 81264206118496 | src/client/HatchSequence.luau via UIIconAssets.luau (two shell halves; native shapes until bound) | uploaded, bound (Studio check pending) |
 | fossil_centerpiece | UI icon (layer) | resources/ui/v2/layers/fossil-centerpiece-v1.png | 86663955990810 | src/shared/Artwork.luau via ArtworkAssets.luau | in game |
