@@ -83,4 +83,4 @@ Per asset: tree s/m/l 80/120/160, shrub 60, ground cover 40, prehistoric plants 
 
 Studio run with `WorldArtMode = "BiomeKit"` and `FoodArtMode = "Kit"`: collider fit, foot clipping on slopes, BIG-scale clearance through paths and the stone arch, food visibility among foliage, 8-12 player frame time, physical Android phone and landscape tablet. Risks: wedge part count on low-end phones, possible food hidden inside bushes (foliage has no query proxy), amber silhouette needs owner art approval, landmark sites are PROVISIONAL.
 
-Performance budget and distance culling for these props: see [docs/89](89-world-performance-culling.md) (BD-168).
+Performance budget and distance culling for these props: see [docs/89](91-world-performance-culling.md) (BD-168).

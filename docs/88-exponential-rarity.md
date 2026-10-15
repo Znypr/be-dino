@@ -24,7 +24,39 @@ Example for 5 tiers with r = 1/4: Common 75%, Uncommon 19%, Rare 4.7%, Epic 1.2%
 4. Regenerate docs/85 with the new tables, and show rarity colours and percentages in the UI.
 5. Keep paid-random disclosure rules ([docs/43](43-player-access-and-paid-random-policy.md)): published odds must match the code.
 
-## Open questions for the owner
-- Preferred ratio r (1/4 steep-ish, 1/5 steeper, 1/6 very steep)?
-- Should patterns stay uniform (fusion simplicity) or get tiers?
-- Target rarity of "Legendary within a normal 5-egg run" (about 1.5% suggested).
+## Owner decisions (2026-10-15)
+- Steepness: **r = 1/5** (each tier 5 times rarer). Owner left 4/5/6 to the lead; 5 is the vision-compatible middle.
+- **Patterns stay equally likely** for now (fusion recipes need it). Revisit later.
+- One **shared six-tier ladder** for every system, below.
+
+## The tier ladder (PROPOSED, all systems use it)
+| # | Tier | Chance of this tier (r = 1/5) | About 1 in | Price / effort factor (x2.8 per tier) |
+|---:|---|---:|---:|---:|
+| 0 | Common | 80.0% | 1.25 | 1 |
+| 1 | Uncommon | 16.0% | 6 | 2.8 |
+| 2 | Rare | 3.2% | 31 | 7.8 |
+| 3 | Epic | 0.64% | 156 | 22 |
+| 4 | Legendary | 0.128% | 781 | 61 |
+| 5 | Mythic | 0.0256% | 3,906 | 172 |
+
+Systems with fewer than six tiers use the first N rows and renormalise (for example five tiers: 80.1 / 16.0 / 3.2 / 0.64 / 0.13). **Mythic is the top tier for colours, mutations, auras, trails and potions; dinosaur species stop at Legendary** (as today).
+A "normal" 5-egg run therefore has about a 0.6% chance of containing one Legendary dino from base odds alone (5 x 0.128%), and the run-size boost may lift that only slightly (target at most about 1.5%).
+
+## Table: where every system stands today and what it becomes
+| System | Today (code) | Proposed | Status |
+|---|---|---|---|
+| Dinosaur species (22) | Common 72%, Uncommon 24%, Rare 3.2%, Epic 0.7%, Legendary 0.1% (docs/85) | Already close; keep the five tier totals, check each species inside its tier. Legendary 0.1% = 3 species | OK, keep |
+| Run-size boost | Rare and above x4-4.7 at full boost; 40 eggs per 500 food | Cap so adjacent tier ratio never falls below 1/6; eggs per run 10x fewer (BD-165) | Change (BD-184) |
+| Egg colours (9) | Cream 50%, Blue 26%, Green 12%, Pink 5%, Teal 4%, Amber 2.5%, Purple 0.45%, Red 0.04%, Black 0.01% | Group: Common = Cream, Blue; Uncommon = Green; Rare = Pink, Teal; Epic = Amber; Legendary = Purple; Mythic = Red, Black. Tier chances from the ladder, split inside a tier. Colour growth bonus 1-5% rises by tier (BD-172) | Change |
+| Patterns (8) | 12.5% each | Stay equal (owner) | Keep |
+| Egg conditions (5) | Cracked 50%, Dirty 30%, Normal 15%, Rainbow 4.5%, Astra 0.5% (owner-approved 2026-10-08) | Keep for now (they limit dinos, owner design); Rainbow and Astra are Epic and Legendary-like top steps. Revisit with a 5-step r = 1/3.5 curve if owner wants strict exponential | Owner call later |
+| Mutations: BIG | 10% | Rare tier: about 3% (nest luck up to 6%) | Change |
+| Mutations: Shiny (weather only) | 5% during irregular weather | Epic tier: about 0.6% (up to 1.5% in nests/weather) | Change |
+| Event mutations (per weather event) | event-bound | Ordered by event rarity below | Review |
+| Weather events (7) | every event can start with the same frequency | Frequency ladder: Rain, Thunder = Common; Quake, Blizzard = Uncommon; Volcano = Rare; Blood Moon = Epic; Aurora = Legendary. Duration unchanged | Change |
+| Potions (12, 5 rarity frames) | Shop weights Common 50, Uncommon 28, Rare 14, Epic 6, Legendary 2 | 80 / 16 / 3.2 / 0.64 / 0.13 (five tiers); price factor x2.8 per tier | Change |
+| Auras (3 today) | Meadow 60 (Common), Tidal 240 (Rare), Royal 900 (Legendary) | Price by tier: 60 / 170 / 470 / 1,300 / 3,700 / 10,000 for Common to Mythic; add tiers over time | Change |
+| Trails (10 today) | 0, 100, 250, 500, 900, 1,500, 2,400, 3,600, 5,500, 8,500 crystals (Common to Legendary) | Re-map to 6 tiers with prices 100 / 280 / 780 / 2,200 / 6,100 / 17,000; Mythic trails are new | Change |
+| Nest luck | boost up to 200 eggs, big 20%, shiny 3% | Scale with the ladder (keep nests lucky but not flat) | Change |
+
+All "Proposed" values are provisional until the owner approves the table; the code must read them from one place (`RarityCurve`, BD-184) and `docs/85-drop-odds.md` is regenerated from it.

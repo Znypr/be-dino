@@ -57,7 +57,7 @@ return table.freeze({
     StudioLocalProfilesEnabled = true, -- unpublished Studio only; never a live fallback
     StudioTestWalletEnabled = true, -- only unpublished, nonpersistent local profiles
     StudioTestCrystals = 1000000,
-    FoodCatchRate = 40 / 500, -- PROVISIONAL (owner 2026-10-13: 40 catches = 40 run eggs per 500 food; 5,000 food -> 400; was 15/500); raw food points, growth boosts do not multiply catches
+    FoodCatchRate = 4 / 500, -- PROVISIONAL (owner 2026-10-15, BD-165: 500 food = 4 run eggs; 5,000 food -> 40; was 40/500 on 2026-10-13, 15/500 before); raw food points, growth boosts do not multiply catches
     ProfileLoadWarningSeconds = 20,
 
     SpawnProtectionSeconds = 5,
@@ -140,9 +140,10 @@ return table.freeze({
     HatchRevealSeconds = 1, -- PROVISIONAL owner decision 2026-10-13: 1 s per egg reveal (was 5 s)
     -- PROVISIONAL run-size species boost (BD-044 five tiers). A batch of N run eggs multiplies each tier's
     -- weight by 1 + s * (SpeciesRunBoost[tier] - 1), s = (clamp(N, 1, EggRarityBoostMaxEggs) - 1) / (max - 1).
-    -- Tuned to the owner's examples: 40 eggs ~ 28 Common / 10 Uncommon / 2 Rare; 400 eggs ~ 211 / 134 / 44 / 9 / 1.
-    SpeciesRunBoost = {1, 1.9, 4.7, 4.5, 4},
-    EggRarityBoostMaxEggs = 400,
+    -- 2026-10-15 (BD-165, docs/88 exponential rarity): a full run is now ~4-40 eggs, so the boost is gentle and
+    -- caps at 40 eggs (5,000 food). Adjacent tier ratios stay 0.33 / 0.15 / 0.22 / 0.14 (never flatter than 1/3); Rare+ is at most ~10% easier at full boost.
+    SpeciesRunBoost = {1, 1, 1.1, 1.1, 1.1},
+    EggRarityBoostMaxEggs = 40,
     BigChance = 0.1,
     ShinyChance = 0.05,
     BigScaleMultiplier = 1.2,
@@ -157,7 +158,7 @@ return table.freeze({
     -- Run eggs beyond the five-slot reveal queue wait in a server-side ordered bank.
     RunRewardConfigVersion = 3, -- 3: five species rarity tiers + run-size boost (BD-044)
     HatchPageSize = 10, -- PROVISIONAL: queued run eggs committed per claim transaction; at 1 s/egg = 6 claims/min/player (size 5 would be 12/min and bust the 8/12-player budgets)
-    RunEggMaxPerRun = 500, -- PROVISIONAL: catches stop counting at 500 eggs per run (6,250 food); a 5,000-food run (400 eggs) is not truncated
+    RunEggMaxPerRun = 50, -- PROVISIONAL: catches stop counting at 50 eggs per run (6,250 food); a 5,000-food run (40 eggs) is not truncated
     RunEggBankCapacity = 1000, -- PROVISIONAL: banked run eggs behind the queue (~540 B each, ~0.54 MB); a run starts only while banked <= capacity - RunEggMaxPerRun (500)
     SettledRunLedgerSize = 200, -- PROVISIONAL: settled run IDs kept for exactly-once settlement beyond recentOperations
     -- BD-090 Egg Nests v2 (owner 2026-10-14). ALL PROVISIONAL. A nest is a separate loot item
@@ -172,14 +173,14 @@ return table.freeze({
     NestMaxSize = 15,
     -- Hidden drop gate (never shown in the UI; measured on the server, never client-reported).
     NestMinRunSeconds = 120, -- PROVISIONAL: server clock from RunLifecycle.begin to settlement
-    NestMinCatches = 8, -- PROVISIONAL: validated server CatchScore (run eggs) needed for a nest
-    NestEggsPerExtraNest = 100, -- PROVISIONAL: +1 nest per 100 further catches on top of a qualified run
+    NestMinCatches = 1, -- PROVISIONAL: validated server CatchScore (run eggs) needed for a nest
+    NestEggsPerExtraNest = 10, -- PROVISIONAL (BD-165: was 100 at 40/500): +1 nest per 10 further catches on top of a qualified run
     NestMaxPerRun = 3, -- PROVISIONAL cap per run
     -- Luck tiers (index = nest.luck). PROVISIONAL, disclosed in the Nests menu. rarityBoostEggs feeds
     -- the run-batch species boost (EggRarityBoostMaxEggs = maximum), conditionLevels adds to the condition-upgrade level
     -- (clamped to the top tier), shinyChance applies even without irregular weather, bigChance replaces BigChance.
     NestLuckTiers = {
-        {rarityBoostEggs = 200, conditionLevels = 2, shinyChance = 0.03, bigChance = 0.2},
+        {rarityBoostEggs = 40, conditionLevels = 2, shinyChance = 0.03, bigChance = 0.2},
     },
     NestClaimRequestCooldownSeconds = 0.5,
     ChestClaimRequestCooldownSeconds = 0.35,

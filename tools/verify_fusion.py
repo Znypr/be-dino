@@ -23,7 +23,7 @@ def script():
 local function count(t) local n=0 for _ in t do n+=1 end return n end
 local same=function(a,b) return F.canonical(a)==F.canonical(b) end
 local OWNER="u:1"
-local function genes(pattern,primary) return {patternId=pattern,primaryColorId=primary or "green",secondaryColorId="blue",blend=20,conditionId="normal",hatchSuccess=true} end
+local function genes(pattern,primary) return {patternId=pattern,primaryColorId=primary or "green",secondaryColorId="blue",blend=20,hatchSuccess=true} end
 
 -- Fixture: grouped collection + reconciled identity sidecar built through the real
 -- BD-060 hatch/reconcile path (variants carry saved egg patterns; plain buckets do not).
@@ -64,7 +64,7 @@ local roller={version="test-fixed-v1",roll=function(summary,patternId)
  rolls+=1
  assert(summary.donorCount==F.Recipes[summary.targetStage or "gold"].donorCount and type(summary.speciesId)=="string")
  for k,v in summary do assert(type(k)=="string" and not string.find(k,"prob") and not string.find(k,"odds")) end
- return {big=false,shiny=true,mutationId="",genes={patternId=patternId,primaryColorId="gold",secondaryColorId="blue",conditionId="rainbow",blend=55}}
+ return {big=false,shiny=true,mutationId="",genes={patternId=patternId,primaryColorId="gold",secondaryColorId="blue",blend=55}}
 end}
 
 -- Full prepare path used by callers: quote -> outcome once -> apply inside the transform.
@@ -257,9 +257,10 @@ assert(F.prepareOutcome(q7,nil)==nil)
 assert(select(2,F.prepareOutcome(q7,nil))=="odds_not_approved")
 assert(select(2,F.prepareOutcome(q7,{version="",roll=roller.roll}))=="odds_not_approved")
 assert(select(2,F.prepareOutcome(q7,{version="v",roll=function() error("boom") end}))=="invalid_outcome")
-assert(select(2,F.prepareOutcome(q7,{version="v",roll=function(_,pt) return {big=false,shiny=false,mutationId="",stage="diamond",genes={patternId=pt,primaryColorId="a",secondaryColorId="b",conditionId="normal",blend=1}} end}))=="invalid_outcome")
-assert(select(2,F.prepareOutcome(q7,{version="v",roll=function() return {big=false,shiny=false,mutationId="",genes={patternId="02_spots",primaryColorId="a",secondaryColorId="b",conditionId="normal",blend=1}} end}))=="invalid_outcome")
-assert(select(2,F.prepareOutcome(q7,{version="v",roll=function(_,pt) return {big=false,shiny=false,mutationId="",genes={patternId=pt,primaryColorId="a",secondaryColorId="b",conditionId="normal",blend=101}} end}))=="invalid_outcome")
+assert(select(2,F.prepareOutcome(q7,{version="v",roll=function(_,pt) return {big=false,shiny=false,mutationId="",stage="diamond",genes={patternId=pt,primaryColorId="a",secondaryColorId="b",blend=1}} end}))=="invalid_outcome")
+assert(select(2,F.prepareOutcome(q7,{version="v",roll=function() return {big=false,shiny=false,mutationId="",genes={patternId="02_spots",primaryColorId="a",secondaryColorId="b",blend=1}} end}))=="invalid_outcome")
+assert(select(2,F.prepareOutcome(q7,{version="v",roll=function(_,pt) return {big=false,shiny=false,mutationId="",genes={patternId=pt,primaryColorId="a",secondaryColorId="b",blend=101}} end}))=="invalid_outcome")
+assert(select(2,F.prepareOutcome(q7,{version="v",roll=function(_,pt) return {big=false,shiny=false,mutationId="",genes={patternId=pt,primaryColorId="a",secondaryColorId="b",conditionId="normal",blend=1}} end}))=="invalid_outcome","a rolled condition on a dinosaur is rejected")
 assert(select(2,F.prepareOutcome(q7,roller,function() return false end))=="invalid_outcome")
 -- Roller summaries are copies; mutation cannot affect the quote.
 assert(F.prepareOutcome(q7,{version="v",roll=function(s,pt) s.speciesId="trex" return roller.roll({donorCount=15,speciesId="compy"},pt) end}))
@@ -364,13 +365,13 @@ big.collection.compy.base=I.MaxInstances
 local _,obg,rbg=prepare(fixture(),"cap",idsIn(fixture(),"compy/variant/wavyA"))
 rejects(big,rbg,obg,"identity_capacity")
 -- ===== BD-064 PROVISIONAL odds (FusionOdds) =====
-assert(O.Version=="fusion-odds-provisional-v1")
+assert(O.Version=="fusion-odds-provisional-v2")
 local function near(a,b,eps) return math.abs(a-b)<=(eps or 1e-12) end
 local function sum(t) local s=0 for _,v in t do s+=v end return s end
 -- Summary builder in IdentityFusion's neutral shape.
 local function summaryOf(spec)
  local s={speciesId="compy",patternId="06_wavy_stripes",targetStage="gold",donorCount=10,shinyCount=spec.shiny or 0,
-  bigCount=spec.big or 0,mutationCounts=spec.mutations or {},conditionCounts=spec.conditions or {normal=10},colors={}}
+  bigCount=spec.big or 0,mutationCounts=spec.mutations or {},colors={}}
  for i=1,10 do
   local c=(spec.colors or {})[i] or {"green","blue"}
   table.insert(s.colors,{primaryColorId=c[1],secondaryColorId=c[2],blend=20})
@@ -380,7 +381,8 @@ end
 local function checkNormalized(d)
  assert(d.shiny>=0 and d.shiny<=1 and d.big>=0 and d.big<=1)
  assert(near(sum(d.mutation)+d.noMutation,1),"mutation wheel sums to 1")
- assert(near(sum(d.condition),1) and near(sum(d.primaryColor),1) and near(sum(d.secondaryColor),1))
+ assert(d.condition==nil,"dinosaurs have no condition wheel")
+ assert(near(sum(d.primaryColor),1) and near(sum(d.secondaryColor),1))
  assert(near(sum(O.mutationWheel(d)),1))
 end
 -- Shiny 0/2/10 donors and BIG.
@@ -390,13 +392,11 @@ for _,case in {{0,0},{1,0.05},{2,0.1},{5,0.25},{10,0.5}} do
  assert(near(d.shiny,case[2]) and near(d.big,case[2]),"shiny "..case[1])
 end
 -- Mutations: P(any) = 0.5 x mutated/10, specific proportional to donor counts.
-local mixedSpec={shiny=2,big=1,mutations={ember=2,frost=1},conditions={normal=6,rainbow=3,cracked=1},
+local mixedSpec={shiny=2,big=1,mutations={ember=2,frost=1},
  colors={{"green","blue"},{"green","blue"},{"green","green"},{"red","blue"},{"green","white"},{"green","blue"},{"teal","blue"},{"green","blue"},{"green","blue"},{"green","blue"}}}
 local mixed=assert(O.distribution(summaryOf(mixedSpec)))
 checkNormalized(mixed)
 assert(near(mixed.mutation.ember,0.1) and near(mixed.mutation.frost,0.05) and near(mixed.noMutation,0.85))
-assert(near(mixed.condition.normal,0.6) and near(mixed.condition.rainbow,0.3) and near(mixed.condition.cracked,0.1))
-assert(mixed.condition.astra==nil,"no condition from 0% ancestry")
 assert(near(mixed.primaryColor.green,0.8) and near(mixed.primaryColor.red,0.1) and near(mixed.primaryColor.teal,0.1))
 assert(near(mixed.secondaryColor.blue,0.8) and near(mixed.secondaryColor.green,0.1) and near(mixed.secondaryColor.white,0.1))
 assert(mixed.primaryColor.black==nil and mixed.secondaryColor.black==nil,"no color from 0% ancestry")
@@ -408,10 +408,9 @@ assert(next(none.mutation)==nil and none.noMutation==1 and none.shiny==0 and non
 assert(O.distribution(nil)==nil)
 local broken=summaryOf({}) broken.donorCount=0 assert(O.distribution(broken)==nil)
 broken=summaryOf({}) broken.shinyCount=11 assert(O.distribution(broken)==nil)
-broken=summaryOf({}) broken.conditionCounts={normal=9} assert(O.distribution(broken)==nil)
 broken=summaryOf({}) broken.mutationCounts={ember=11} assert(O.distribution(broken)==nil)
 broken=summaryOf({}) table.remove(broken.colors) assert(O.distribution(broken)==nil)
-print("Odds normalization passed: 0/1/2/5/10 Shiny -> 0/5/10/25/50%, BIG, proportional mutations/no-mutation, condition and color wheels sum to 1, no 0%-ancestry outcomes")
+print("Odds normalization passed: 0/1/2/5/10 Shiny -> 0/5/10/25/50%, BIG, proportional mutations/no-mutation, color wheels sum to 1, no 0%-ancestry outcomes")
 
 -- Parity: sampling the roll function reproduces the quoted distribution.
 -- Luau's seeded math.random (PCG32) gives reproducible uniforms in [0, 1).
@@ -421,7 +420,7 @@ local function seededUniform(seed)
 end
 local N=200000
 local next01=seededUniform(20261013)
-local counts={shiny=0,big=0,mutation={},condition={},primary={},secondary={}}
+local counts={shiny=0,big=0,mutation={},primary={},secondary={}}
 local blendMin,blendMax,blendSum,equalBlend=1000,-1,0,0
 for _=1,N do
  local t=O.rollWith(summaryOf(mixedSpec),"06_wavy_stripes",next01)
@@ -429,7 +428,7 @@ for _=1,N do
  if t.shiny then counts.shiny+=1 end
  if t.big then counts.big+=1 end
  counts.mutation[t.mutationId]=(counts.mutation[t.mutationId] or 0)+1
- counts.condition[t.genes.conditionId]=(counts.condition[t.genes.conditionId] or 0)+1
+ assert(t.genes.conditionId==nil,"rolled dinosaur genes never carry a condition")
  counts.primary[t.genes.primaryColorId]=(counts.primary[t.genes.primaryColorId] or 0)+1
  counts.secondary[t.genes.secondaryColorId]=(counts.secondary[t.genes.secondaryColorId] or 0)+1
  if t.genes.primaryColorId==t.genes.secondaryColorId then
@@ -446,8 +445,6 @@ end
 parity(counts.shiny,mixed.shiny,"shiny") parity(counts.big,mixed.big,"big")
 for id,p in O.mutationWheel(mixed) do parity(counts.mutation[id] or 0,p,"mutation "..id) end
 for id in counts.mutation do assert(O.mutationWheel(mixed)[id],"unquoted mutation "..id) end
-for id,p in mixed.condition do parity(counts.condition[id] or 0,p,"condition "..id) end
-for id in counts.condition do assert(mixed.condition[id],"unquoted condition "..id) end
 for id,p in mixed.primaryColor do parity(counts.primary[id] or 0,p,"primary "..id) end
 for id in counts.primary do assert(mixed.primaryColor[id],"unquoted primary "..id) end
 for id,p in mixed.secondaryColor do parity(counts.secondary[id] or 0,p,"secondary "..id) end
@@ -468,7 +465,7 @@ local edge=O.rollWith(summaryOf(mixedSpec),"06_wavy_stripes",function() return 1
 assert(G.valid(edge.genes) and edge.mutationId=="frost" and edge.shiny==false)
 local low=O.rollWith(summaryOf(mixedSpec),"06_wavy_stripes",function() return 0 end)
 assert(low.shiny and low.big and low.mutationId=="" and G.valid(low.genes))
-print(string.format("Odds parity passed: %d samples match the quoted distribution within 5 SE for Shiny, BIG, mutations, condition, both colors; blend uniform 1-99, equal colors -> 100; genes pass EggGenetics.valid",N))
+print(string.format("Odds parity passed: %d samples match the quoted distribution within 5 SE for Shiny, BIG, mutations, both colors; blend uniform 1-99, equal colors -> 100; genes pass EggGenetics.valid",N))
 
 -- Determinism: a seeded roller yields the same traits; the committed outcome is fixed.
 local function seededRoller(seed)
@@ -481,8 +478,8 @@ local r1=assert(F.prepareOutcome(q9,seededRoller(7),G.valid))
 local r2=assert(F.prepareOutcome(q9,seededRoller(7),G.valid))
 assert(same(r1,r2) and r1.oddsVersion==O.Version,"same seed, same outcome")
 local d9=assert(O.distribution(q9.summary))
-assert(d9.primaryColor.green==1 and d9.secondaryColor.blue==1 and d9.condition.normal==1)
-assert(r1.traits.genes.primaryColorId=="green" and r1.traits.genes.secondaryColorId=="blue" and r1.traits.genes.patternId=="06_wavy_stripes")
+assert(d9.primaryColor.green==1 and d9.secondaryColor.blue==1)
+assert(r1.traits.genes.conditionId==nil and r1.traits.genes.primaryColorId=="green" and r1.traits.genes.secondaryColorId=="blue" and r1.traits.genes.patternId=="06_wavy_stripes")
 assert(r1.traits.shiny==false and r1.traits.big==false and r1.traits.mutationId=="","plain donors cannot yield Shiny/BIG/mutation")
 local req9={token="odds-1",targetStage="gold",donorIds=A9,quoteDigest=q9.quoteDigest}
 local f9,s9,res9=F.apply(p9,OWNER,req9,r1,1)
@@ -502,7 +499,7 @@ assert(near(dm.shiny,1/15) and near(dm.big,1/30) and near(dm.mutation.ember,1/30
 local om=assert(F.prepareOutcome(qm,seededRoller(3),G.valid))
 local fm,sm=F.apply(pm,OWNER,{token="odds-mixed",targetStage="gold",donorIds=mixedDonors,quoteDigest=qm.quoteDigest,consentDigest=qm.consentDigest},om,1)
 assert(sm=="fused" and fm)
-print("Odds determinism passed: seeded roller reproducible, ledger/result carry fusion-odds-provisional-v1, retries replay the committed traits; 2 Shiny/1 BIG/1 Ember of 15 donors quote 6.67%/3.33%/3.33%")
+print("Odds determinism passed: seeded roller reproducible, ledger/result carry fusion-odds-provisional-v2, retries replay the committed traits; 2 Shiny/1 BIG/1 Ember of 15 donors quote 6.67%/3.33%/3.33%")
 local function ladderChain()
 -- ===== Ladder 15/4/2: Base -> Gold -> Emerald -> Diamond chain (owner decision 2026-10-14) =====
 assert(F.Recipes.gold.donorCount==15 and F.Recipes.gold.sourceStage=="base" and F.Recipes.gold.version=="gold-same-species-pattern-15-v1")
@@ -648,7 +645,7 @@ print("Storage limit passed at 15-donor ledger size: ceiling-1 byte rejects, exa
 -- Odds normalization uses the ACTUAL donor count N (15 / 4 / 2), never /10.
 local function summaryN(n,shiny,big,ember)
  local s={speciesId="compy",patternId="06_wavy_stripes",targetStage="gold",donorCount=n,shinyCount=shiny,bigCount=big,
-  mutationCounts=if ember>0 then {ember=ember} else {},conditionCounts={normal=n},colors={}}
+  mutationCounts=if ember>0 then {ember=ember} else {},colors={}}
  for _=1,n do table.insert(s.colors,{primaryColorId="green",secondaryColorId="blue",blend=20}) end
  return s
 end
@@ -656,7 +653,7 @@ for _,n in {15,4,2} do
  for _,k in {0,1,n} do
   local d=assert(O.distribution(summaryN(n,k,k,k)))
   assert(near(d.shiny,0.5*k/n) and near(d.big,0.5*k/n) and near(d.noMutation,1-0.5*k/n))
-  assert(near(sum(d.condition),1) and near(sum(d.primaryColor),1))
+  assert(near(sum(d.primaryColor),1))
  end
 end
 assert(O.distribution(summaryN(15,16,0,0))==nil,"shiny count above N rejected")
