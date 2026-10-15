@@ -20,6 +20,8 @@ local MyDinos = require(Shared.MyDinos)
 local PreviewTraits = require(script.Parent.PreviewTraits)
 local InspectView = require(script.Parent.InspectView)
 local W = require(script.Parent.FusionWidgets)
+local EggOrigin = require(Shared.EggOrigin)
+local EggPicture = require(script.Parent.EggPicture)
 local C = W.Colors
 
 local Panels = {}
@@ -112,6 +114,34 @@ local function chipButton(parent: GuiObject, text: string, height: number, on: b
     b.Activated:Connect(callback)
     b.Parent = parent
     return b
+end
+
+
+-- BD-175: popup with the ORIGINAL egg of one dino copy. details = server details copy (or nil while loading/unavailable).
+local function eggPopup(host: GuiObject, details: any, loading: boolean)
+    local scrim = Instance.new("TextButton")
+    scrim.Name, scrim.Text, scrim.AutoButtonColor, scrim.Size = "EggPopup", "", false, UDim2.fromScale(1, 1)
+    scrim.BackgroundColor3, scrim.BackgroundTransparency, scrim.ZIndex, scrim.Parent = Color3.new(0, 0, 0), .45, 40, host
+    local card = W.box(scrim, UDim2.fromOffset(440, 300), UDim2.new(), C.panel, 24)
+    card.AnchorPoint, card.Position, card.ZIndex = Vector2.new(.5, .5), UDim2.fromScale(.5, .5), 41
+    local view = if loading then {kind = "loading", title = "Looking...", lines = {}} else EggOrigin.view(details, catalog, Sel, function(id) local c = EggGenetics.condition(id) return if c then c.name else nil end)
+    W.label(card, view.title, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 6), 28, C.gold, true).ZIndex = 42
+    local stage = EggPicture.stage(card, 170, 170, C.blue)
+    stage.Position, stage.ZIndex = UDim2.fromOffset(12, 54), 42
+    local genes = if view.kind == "egg" and view.genes and EggGenetics.valid(view.genes) then view.genes else nil
+    local egg = EggPicture.add(stage, genes, 150)
+    egg.Position = UDim2.fromOffset(10, 10)
+    if view.kind ~= "egg" then for _, item in egg:GetDescendants() do if item:IsA("ImageLabel") then item.ImageTransparency = .6 end end end
+    local list = Instance.new("Frame")
+    list.Name, list.BackgroundTransparency, list.Size, list.Position, list.ZIndex, list.Parent = "EggFacts", 1, UDim2.fromOffset(232, 190), UDim2.fromOffset(196, 54), 42, card
+    local layout = Instance.new("UIListLayout") layout.Padding, layout.Parent = UDim.new(0, 4), list
+    for i, text in view.lines do
+        local l = W.label(list, text, UDim2.new(1, 0, 0, if #text > 24 then 44 else 24), UDim2.new(), 17, if i == 1 and view.kind == "egg" then C.purple else nil, true)
+        l.LayoutOrder, l.ZIndex = i, 43
+    end
+    local close = W.button(card, "OK", UDim2.fromOffset(140, math.max(48, W.Touch)), UDim2.new(.5, -70, 1, -(math.max(48, W.Touch) + 10)), C.accent, function() scrim:Destroy() end)
+    close.ZIndex = 43
+    scrim.Activated:Connect(function() scrim:Destroy() end)
 end
 
 -- ctx: body, speciesId, owned, color, fallbackStage, fallbackLine, scale(), equipped() -> attrs, equip(id, key),
@@ -242,6 +272,18 @@ function Panels.species(ctx)
             W.list(list, 2)
             traitsList = list
             loadDetails(d)
+        end
+        if d then
+            local eggButton = Theme.icon(stage, "egg_green")
+            local hit = Instance.new("TextButton")
+            hit.Name, hit.Text, hit.BackgroundColor3, hit.BackgroundTransparency = "EggButton", "", C.card, .25
+            hit.Size, hit.Position, hit.ZIndex, hit.Parent = UDim2.fromOffset(48, 48), UDim2.new(1, -54, 1, -54), stage.ZIndex + 6, stage
+            local hitCorner = Instance.new("UICorner") hitCorner.CornerRadius = UDim.new(.5, 0) hitCorner.Parent = hit
+            if eggButton then eggButton.Size, eggButton.Position, eggButton.ZIndex, eggButton.Parent = UDim2.fromOffset(40, 40), UDim2.fromOffset(4, 4), hit.ZIndex + 1, hit end
+            hit.Activated:Connect(function()
+                local response = st.details[d.instanceId]
+                eggPopup(root, if type(response) == "table" then response else nil, response == "loading")
+            end)
         end
         local equip = W.button(left, "EQUIP", UDim2.fromOffset(196, math.max(52, T)), UDim2.fromOffset(0, 402 - math.max(52, T)), C.accent, function()
             if d then

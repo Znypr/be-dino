@@ -2,7 +2,7 @@
 -- Logical page IDs select shared artwork compositions, not flattened exports.
 return {
     collection = "dinos",
-    eggs = "egg",
+    eggs = "egg_green", -- BD-176: green-spotted egg (uploaded)
     nests = "egg_nest",
     fusion = "fusion",
     home = "home",
