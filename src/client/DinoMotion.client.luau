@@ -108,6 +108,8 @@ local function capture(rig: any): boolean
             count += 1
             local found = item:FindFirstChild("ResourceWeld")
             local weld = if found and found:IsA("Weld") and found.Part0 == rig.root then found else nil
+            -- BD-211: never write CFrame on a WeldConstraint-attached part: that drags the physics root.
+            if not weld and item:FindFirstChildOfClass("WeldConstraint") then count -= 1 continue end
             local rel = if weld then weld.C0 else inverse * item.CFrame
             local r = rel.Rotation
             local x, y, z = r.RightVector, r.UpVector, r.LookVector
@@ -252,8 +254,13 @@ local function step(rig: any, now: number, dt: number)
     -- Footfall bob: stride phase advances with distance, so the bob frequency follows speed. Grounded only.
     local humanoid = rig.character:FindFirstChildOfClass("Humanoid")
     if rig.isLocal and humanoid and speed > 3 and humanoid.FloorMaterial ~= Enum.Material.Air then
-        rig.stride = (rig.stride or 0) + speed * dt * 1.6
-        rig.motion.bob = Motion.MaxBob * math.abs(math.sin(rig.stride)) * math.clamp(speed / 16, 0, 1)
+        -- BD-211: the old phase (speed * 1.6 rad/stud) bobbed ~11 times a second at full speed with a sharp
+        -- |sin| cusp, which read as a rattle. Footfalls now follow body length, capped at 2.5 steps a second,
+        -- with a smooth sin^2 curve.
+        local stride = math.pi * math.min(speed / math.max(rig.length, 2), 2.5) * dt
+        rig.stride = (rig.stride or 0) + stride
+        local s = math.sin(rig.stride)
+        rig.motion.bob = Motion.MaxBob * s * s * math.clamp(speed / 16, 0, 1)
     else
         rig.motion.bob = 0
     end
