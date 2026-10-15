@@ -368109,14 +368109,14 @@ Assets.Requested = {
     ringSoft = {id = "", fallback = "spark"},      -- soft rim ring, 256 px
     ringShock = {id = "", fallback = "spark"},     -- thin shock ring, 256 px
     -- FX v3 (owner uploads 2026-10-16, docs/77 fx3_*): anime cel sheets, white on transparent, 4x4 cells of 256 px.
-    smokeSheet = {id = "rbxassetid://140058716506789", fallback = "smoke"}, -- fx3 smoke-anime: puff grows, then breaks into curls
-    sparkSheet = {id = "rbxassetid://97747398683135", fallback = "spark"},  -- fx3 sparkle: star grows, then shrinks
-    flameSheet = {id = "rbxassetid://81481519628921", fallback = "fire"},   -- fx3 flame: 16 flame shapes (random frame)
-    swirl = {id = "rbxassetid://99422347356351", fallback = "spark"},       -- fx3 swirl: rotating energy swirl (loop)
-    rays = {id = "rbxassetid://89127115370689", fallback = "spark"},        -- fx3 rays: single image, rising aura light rays
+    smokeSheet = {id = "rbxassetid://109810080362045", fallback = "smoke"}, -- fx3 smoke-anime: puff grows, then breaks into curls
+    sparkSheet = {id = "rbxassetid://71657118485647", fallback = "spark"},  -- fx3 sparkle: star grows, then shrinks
+    flameSheet = {id = "rbxassetid://105817278245256", fallback = "fire"},   -- fx3 flame: 16 flame shapes (random frame)
+    swirl = {id = "rbxassetid://84584423423015", fallback = "spark"},       -- fx3 swirl: rotating energy swirl (loop)
+    rays = {id = "rbxassetid://99778248779183", fallback = "spark"},        -- fx3 rays: single image, rising aura light rays
     ribbonSoft = {id = "", fallback = "spark"},    -- soft tapered ribbon strip for Trail/Beam, 512x64
     speedLine = {id = "", fallback = "spark"},     -- thin speed streak strip, 512x32
-    starFour = {id = "rbxassetid://97747398683135", fallback = "spark"},    -- four-point twinkle: the fx3 sparkle sheet
+    starFour = {id = "rbxassetid://71657118485647", fallback = "spark"},    -- four-point twinkle: the fx3 sparkle sheet
     crystalSheet = {id = "", fallback = "spark"},  -- frost crystals, droplets, pebbles, embers 4x4
 }
 
@@ -368149,8 +368149,9 @@ Assets.LoopFps = 10
 -- white-on-alpha PNGs in resources/effects/fx-v3. Until they are re-uploaded with alpha:
 --   * world ParticleEmitters draw them additively (LightEmission 1), so black adds nothing and only the white shape shows;
 --   * 2D UI (FxUi, HatchFx) cannot blend additively, so it keeps the built-in sprites (resolveUi / isRealUi / setCell).
--- After a re-upload with alpha: put the new id in Requested and set the key true in HasAlpha.
-Assets.HasAlpha = {}
+-- 2026-10-16: all five re-uploaded WITH alpha (Studio: corner alpha 0, 1024 px), so HasAlpha is true for every fx3 key.
+-- Clearing a key falls back to additive world / built-in UI sprites.
+Assets.HasAlpha = {smokeSheet = true, sparkSheet = true, flameSheet = true, starFour = true, swirl = true, rays = true}
 Assets.Additive = {}
 for _, key in {"smokeSheet", "sparkSheet", "flameSheet", "starFour", "swirl", "rays"} do Assets.Additive[key] = true end
 function Assets.isAdditive(key: string): boolean return Assets.Additive[key] == true and not Assets.HasAlpha[key] end

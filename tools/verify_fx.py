@@ -170,7 +170,7 @@ def scan():
         assert not re.search(r'rbxassetid://\d+', (ROOT / path).read_text(encoding='utf-8')), path + ' must not contain asset ids'
     ids = re.findall(r'rbxassetid://(\d+)', (ROOT / 'src/shared/EffectAssets.luau').read_text(encoding='utf-8'))
     # Real uploads only: the BD-155 soft mist plus the five FX v3 owner uploads (docs/77 fx3_* rows, 2026-10-16).
-    real = {'105629313112163', '140058716506789', '81481519628921', '97747398683135', '99422347356351', '89127115370689'}
+    real = {'105629313112163', '109810080362045', '105817278245256', '71657118485647', '84584423423015', '99778248779183'}
     assert set(ids) == real, 'EffectAssets may only contain registered real uploads: ' + str(ids)
     registry = (ROOT / 'docs/77-asset-registry.md').read_text(encoding='utf-8')
     for i in real - {'105629313112163'}:
