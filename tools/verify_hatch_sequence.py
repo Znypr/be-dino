@@ -171,7 +171,8 @@ assert(T.oddsLine("Rare", 12.5) == "Rare \u{2022} 12.5% of eggs" and T.oddsLine(
 -- BD-170/171: pending start (Open animates at once), paint buckets, trait tiers, remapped cues.
 local P = m.paint
 assert(P.leftStart > 0 and P.leftStart < P.leftImpact and P.leftImpact < P.leftEnd and P.leftEnd <= P.rightStart, "left bucket first")
-assert(P.rightStart < P.rightImpact and P.rightImpact < P.rightEnd and P.rightEnd == P.endsAt and P.endsAt < m.build - 1, "right bucket second, cracks get >= 1 s")
+assert(P.rightStart < P.rightImpact and P.rightImpact < P.rightEnd and P.rightEnd < P.patternAt and P.patternAt < P.patternEnd and P.patternEnd == P.endsAt, "right bucket second, then the pattern (BD-220)")
+assert(P.endsAt < m.build - 1.2, "rattle and cracks still get >= 1.2 s after the pattern")
 assert(P.leftEnd - P.leftStart <= 1 and P.rightEnd - P.rightStart <= 1, "each bucket is quick (<= 1 s)")
 assert(r.paint.endsAt == 0 and f.paint.endsAt == P.endsAt and T.durations(true, 5).paint.endsAt == P.endsAt, "same paint plan for failed and Legendary eggs; none in Reduced Motion")
 -- Pending: t holds at the first bucket until the result arrives; the visual clock keeps running.
@@ -197,17 +198,21 @@ assert(T.buildProgress(m, 0) == 0 and T.buildProgress(m, P.endsAt) == 0 and near
 for _, side in {-1, 1} do
     local x0, _, _, a0 = T.bucketPose(0, side) assert(math.abs(x0) >= 300 and a0 == 0, "starts off to the side, hidden")
     local xi, yi, ri, ai = T.bucketPose(T.Paint.impact, side)
-    assert(math.sign(xi) == side and math.abs(xi) <= 170 and ai == 1, "hovers beside the egg at impact")
+    assert(math.sign(xi) == side and near(math.abs(xi), T.BucketX, 1e-6) and ai == 1, "hovers beside the egg at impact, right above its chip")
     assert(math.sign(ri) == -side and math.abs(ri) >= 40 and math.abs(ri) <= 70, "tilts toward the egg (left bucket clockwise) to pour")
     assert(yi < 0, "above the egg")
     local xe, _, re, ae = T.bucketPose(1, side) assert(math.abs(xe) >= 300 and ae < .05 and near(re, 0, 1e-6), "leaves and fades")
-    for i = 0, 100 do local x, y, rot, a = T.bucketPose(i / 100, side) assert(math.abs(x) <= 345 and math.abs(y) <= 100 and math.abs(rot) <= 70.001 and a >= 0 and a <= 1) end
+    for i = 0, 100 do local x, y, rot, a = T.bucketPose(i / 100, side) assert(math.abs(x) <= 390 and math.abs(y) <= 100 and math.abs(rot) <= 70.001 and a >= 0 and a <= 1) end
 end
 -- Paint state: wash is 0 before the impact and grows to 1, per bucket.
 local ps0, psA, psB = T.paintState(m, 0), T.paintState(m, P.leftImpact + .01), T.paintState(m, P.rightImpact + .5)
 assert(not ps0.left.impacted and ps0.left.wash == 0 and ps0.right.wash == 0)
 assert(psA.left.impacted and psA.left.wash > 0 and psA.left.wash < .5 and not psA.right.impacted and psA.right.wash == 0, "colour first, pattern still hidden")
 assert(psB.left.wash == 1 and psB.right.wash == 1)
+-- BD-220: the pattern fades in only after both buckets.
+local psC = T.paintState(m, P.patternAt - .01) assert(psC.right.wash > .9 and psC.pattern == 0 and not psC.patternShown, "pattern still hidden right after the second splash")
+local pp = T.paintState(m, P.patternAt + T.Paint.patternWash / 2) assert(pp.patternShown and pp.pattern > 0 and pp.pattern < 1)
+assert(T.paintState(m, P.patternEnd + .01).pattern == 1 and T.paintState(r, 0).pattern == 1, "pattern fully shown at the end; Reduced Motion at once")
 local rp = T.paintState(r, 0) assert(rp.left.wash == 1 and rp.right.wash == 1, "Reduced Motion shows the final look at once")
 -- Splash and droplets: bounded, fade out.
 local sc0, st0 = T.splash(0) local sc1, st1 = T.splash(.5)
@@ -229,7 +234,12 @@ local colors = {{id = "white", name = "Cream", weight = 5000}, {id = "blue", nam
 local function color(a, b) return T.colorReveal(colors, {primaryColorId = a, secondaryColorId = b or a}) end
 assert(color("white").tierName == "Common" and color("blue").tierName == "Common" and color("green").tierName == "Uncommon")
 assert(color("pink").tierName == "Rare" and color("violet").tierName == "Epic" and color("red").tierName == "Legendary" and color("black").tierName == "Mythic")
-assert(color("blue").name == "Blue" and color("blue", "black").name == "Blue + Black" and color("blue", "black").tierName == "Mythic", "rarer colour sets the tier")
+-- BD-220: one colour per chip, never "A + B"; the right bucket gets the secondary colour with its own tier.
+assert(color("blue").name == "Blue" and color("blue", "black").name == "Blue" and color("blue", "black").tierName == "Common", "left chip = primary colour only")
+local second = T.colorReveal(colors, {primaryColorId = "blue", secondaryColorId = "black"}, "secondary")
+assert(second.name == "Black" and second.tierName == "Mythic", "right chip = secondary colour and its tier")
+assert(T.colorReveal(colors, {primaryColorId = "green", secondaryColorId = "nope"}, "secondary").name == "Green", "missing secondary falls back to the primary")
+for _, row in colors do assert(not string.find(color(row.id, "black").name, "+", 1, true)) end
 assert(T.colorReveal(colors, {primaryColorId = "nope"}) == nil and T.colorReveal(nil, {}) == nil and T.colorReveal(colors, nil) == nil)
 local lastTier = 0 for _, id in {"white", "green", "pink", "violet", "red", "black"} do local t = color(id).tier assert(t > lastTier, "rarer colours never get a lower tier") lastTier = t end
 assert(T.tier(nil) == 1 and T.tier(100) == 1 and T.tier(0) == 6 and T.tier(25) == 1 and T.tier(24.9) == 2)
@@ -240,6 +250,18 @@ assert(pat.name == "Round Spots" and pat.tierName == "Uncommon" and not pat.plai
 local plain = T.patternReveal(patternList, "01_blank", function(id) return tostring(id) end)
 assert(plain.plain and plain.name == "Plain" and plain.tierName == "Common" and T.patternReveal(patternList, nil, tostring).plain)
 assert(T.paintLine(color("black")) == "Black \u{2022} Mythic" and T.paintLine(pat) == "Round Spots \u{2022} Uncommon")
+assert(T.patternLabel(pat) == "Round Spots" and T.patternLabel(plain) == "No pattern" and T.patternLabel(nil) == "")
+assert(T.detailLine(color("green"), pat, "Colour bonus +2% growth") == "Green \u{2022} Round Spots \u{2022} Colour bonus +2% growth", "bonus once, on the final card")
+assert(T.detailLine(color("green"), pat, nil) == "Green \u{2022} Round Spots" and T.detailLine(nil, pat, nil) == "")
+-- BD-223: condition chip from the first frame; Cracked gets a short hatch hint; Normal shows nothing.
+assert(T.conditionChip({id = "cracked", name = "Cracked", hatchChance = .2}) == "Cracked \u{2022} hatches 1 in 5")
+assert(T.conditionChip({id = "dirty", name = "Dirty", hatchChance = 1}) == "Dirty" and T.conditionChip({id = "rainbow", name = "Rainbow"}) == "Rainbow")
+assert(T.conditionChip({id = "normal", name = "Normal", hatchChance = 1}) == nil and T.conditionChip(nil) == nil)
+assert(T.hatchHint(.3) == "hatches 30%" and T.hatchHint(1) == "" and T.hatchHint(nil) == "")
+for _, c in {"Cracked \u{2022} hatches 1 in 5", "Rainbow", "Astra"} do assert(#c <= 28 and not string.find(c, "\n"), "one short line") end
+local q = {{id = "a", genes = {conditionId = "dirty"}}, {id = "b", genes = {conditionId = "cracked"}}}
+assert(T.queueCondition(q, "b") == "cracked" and T.queueCondition(q, "zzz") == "dirty" and T.queueCondition({}, "a") == nil and T.queueCondition(nil, "a") == nil)
+assert(T.queueCondition({{id = "a", genes = "bad"}}, "a") == nil)
 -- Cues: four paint cues sit in the bucket windows, rattle and cracks after them; only existing Sfx names.
 do
     local cues = T.cues(m, 1, false, Sfx.revealName(1))
@@ -306,8 +328,17 @@ def check_wiring():
     assert 'Timeline.new(motion, 1, false, a.result == nil)' in seq, 'the sequence starts pending when no result is known'
     assert 'if state.pending then return end' in seq, 'taps are ignored until the answer arrives'
     # BD-171: paint buckets drive the egg and use only existing Sfx names through HatchTimeline.cues.
-    for needle in ('Timeline.paintState(durs, t)', 'Timeline.bucketPose', 'a.paint.color(', 'a.paint.pattern(', 'Timeline.paintLine(reveal)', 'a.paint.finish()'):
+    for needle in ('Timeline.paintState(durs, t)', 'Timeline.bucketPose', 'a.paint.color(', 'a.paint.second(', 'a.paint.pattern(', 'a.paint.finish()',
+                   'Timeline.patternLabel(', 'a.paint.setCondition(id)', 'setCondition(a.eggCondition)', 'Timeline.conditionChip(', 'FxPlan.Chips'):
         assert needle in seq, needle
+    # BD-220: chips show ONE colour each (left primary, right secondary), never the pattern, never a bonus line.
+    assert 'a.secondReveal or a.colorReveal' in seq and 'bonusText' not in seq and 'CHIP_CENTERS' not in seq
+    assert 'secondReveal=if geneticsOk then HatchTimeline.colorReveal(ProgressionConfig.EggColors,genes,"secondary")' in boot
+    assert 'HatchTimeline.detailLine(colorReveal,patternReveal,colorReveal.bonusText)' in boot, 'colour bonus once on the final card'
+    # BD-223: the hatching egg shows its condition from the first frame, kept through the splashes.
+    assert 'eggCondition=HatchTimeline.queueCondition(queue(),str("NextChestId"))' in boot
+    assert 'function paint.setCondition' in pres and 'Overlays.describe(conditionId)' in pres and 'condition.ImageTransparency=shell.ImageTransparency' in pres
+    assert 'function paint.second' in pres
     assert 'ModelPreview.add(holder,"egg")' in pres and 'is never shown' in pres, 'BD-170: the primitive/cube egg is never displayed'
     assert re.search(r'view\.ImageTransparency,view\.Visible=1,false', pres), 'the real 3D egg stays hidden until the pattern splash'
     assert 'Theme.ImageIds.egg or shellImage' in pres, 'the plain Blender egg image is the starting egg'

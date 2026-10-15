@@ -366050,6 +366050,10 @@ return table.freeze({
     MovementGuardSpeedTolerance = 3,
     MovementGuardBurstStuds = 4,
     MovementGuardRejectCooldownSeconds = 0.75,
+    -- BD-210 spawn safety: a run only starts once this client reports the island terrain under the spawn as loaded
+    -- (or after this many seconds in the hub, so a slow client is never locked out); falls are checked every tick.
+    WorldReadyTimeoutSeconds = 20,
+    FallRecoveryTickSeconds = 0.2,
     SecurityTestHarnessEnabled = false,
     ArtTestHarnessEnabled = false,
     ArtPreviewRequestCooldownSeconds = 0.25,
@@ -370181,11 +370185,30 @@ function P.mote(i: number, time: number, tier: number)
     return x, y, size, opacity
 end
 
+-- ---------------------------------------------------------------- reveal chips (BD-220 / BD-223)
+-- Centre x, centre y, width, height in panel px. One colour chip right UNDER each paint bucket (bucket hovers at egg x -/+ HatchTimeline.BucketX),
+-- the pattern label just under the egg, the condition chip below it. One line each; none overlap (verified at every phone scale, since the
+-- whole panel scales uniformly).
+P.Chips = {
+    left = {147, 160, 210, 50},
+    right = {677, 160, 210, 50},
+    pattern = {412, 292, 220, 34},
+    condition = {412, 335, 300, 36},
+}
+function P.chipRect(name: string): {number}
+    local c = P.Chips[name]
+    return {c[1] - c[3] / 2, c[2] - c[4] / 2, c[1] + c[3] / 2, c[2] + c[4] / 2}
+end
+function P.overlaps(a: {number}, b: {number}): boolean
+    return a[1] &lt; b[3] and b[1] &lt; a[3] and a[2] &lt; b[4] and b[2] &lt; a[4]
+end
+
 -- ---------------------------------------------------------------- foreground sparkle pass
 -- Keep-out rectangles {x0, y0, x1, y1} in panel px: the dinosaur, the name / rarity area, the paint chips, the tap hint, the ribbons.
 P.KeepOut = {
     {212, 0, 612, 262},    -- the dinosaur (and the egg)
-    {112, 255, 712, 330},  -- paint chips (colour + pattern, with the bonus line)
+    P.chipRect("left"), P.chipRect("right"), -- colour chips under the buckets
+    {262, 262, 562, 330},  -- pattern label, condition chip, name / rarity pill
     {152, 327, 672, 373},  -- tap hint
     {11, 26, 221, 132},    -- Shiny / mutation ribbons (left)
     {649, 36, 799, 70},    -- BIG ribbon (right)
@@ -370196,8 +370219,8 @@ function P.fgSpark(i: number, n: number, time: number)
     local lane = math.floor((i - 1) / 2)
     local x0 = if left then 14 else 732
     local x = x0 + ((lane * 29 + i * 11) % 64) + math.sin(time * 0.8 + i) * 6
-    local span = 240
-    local y = 150 + ((time * (14 + (i % 3) * 5) + i * 71) % span)
+    local span = 180
+    local y = 200 +((time * (14 + (i % 3) * 5) + i * 71) % span)
     local size = math.min(P.Limits.fgSize, 6 + (i % 3) * 2)
     local opacity = math.min(P.Limits.fgAlpha, 0.12 + 0.4 * math.abs(math.sin(time * 1.6 + i * 2.1)))
     return x, y, size, opacity
@@ -370242,6 +370265,7 @@ local ContentProvider=game:GetService("ContentProvider")
 local RunService=game:GetService("RunService")
 local ModelPreview=require(script.Parent.ModelPreview)
 local Appearance=require(script.Parent.EggAppearance)
+local Overlays=require(script.Parent.ConditionOverlays)
 local Hatch={}
 local shellImage="rbxassetid://95856282289615"
 local crackImage="rbxassetid://126956807167774"
@@ -370275,6 +370299,10 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
     root:SetAttribute("ArtworkLoadState","Loading")
     local shell=image(stage,shellAsset,stage.ZIndex+2)
     shell.Name,shell.ImageColor3="PorcelainShell",Color3.new(1,1,1)
+    -- BD-223: the egg's condition look (same Blender overlay layer as the Eggs screen, EggPicture) from the first frame, kept
+    -- through the paint splashes; it fades out with the plain shell when the real 3D egg (which carries the condition) fades in.
+    local condition=image(stage,"",stage.ZIndex+3)
+    condition.Name,condition.Visible="ConditionLayer",false
     local egg3d: ViewportFrame?=nil
     local egg3dReady=false
     local eggGenes=nil
@@ -370304,7 +370332,7 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
         local mask=Instance.new("Frame")
         mask.Name,mask.BackgroundTransparency="CrackStage"..i,1
         mask.Position,mask.Size=UDim2.fromOffset(region[1]*unit,region[2]*unit),UDim2.fromOffset(region[3]*unit,0)
-        mask.ZIndex,mask.Parent=stage.ZIndex+3,stage
+        mask.ZIndex,mask.Parent=stage.ZIndex+4,stage
         local cracks=image(mask,cracksAsset,mask.ZIndex)
         cracks.ImageRectOffset,cracks.ImageRectSize=Vector2.new(region[1],region[2]),Vector2.new(region[3],1)
         cracks.Visible=false
@@ -370351,7 +370379,7 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
         local group=Instance.new("CanvasGroup")
         group.Name,group.BackgroundTransparency,group.AnchorPoint="ShellFragment"..index,1,Vector2.new(.5,.5)
         group.Size,group.Position,group.Visible=UDim2.fromOffset((maxX-minX)*unit,(maxY-minY)*unit),UDim2.fromOffset(home.X,home.Y),false
-        group.ZIndex,group.Parent=stage.ZIndex+4,stage
+        group.ZIndex,group.Parent=stage.ZIndex+5,stage
         local strips={}
         for y=107,383,4 do
             for _,span in Fragments.spans(polygon,y+2) do
@@ -370402,7 +370430,7 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
             if success~=false then chime.Parent=parent chime:Play() game:GetService("Debris"):AddItem(chime,3) end
         end
         if not Theme.MotionEnabled then root:Destroy() return end
-        stage.Rotation=0 scale.Scale=1 shell.Visible=false
+        stage.Rotation=0 scale.Scale=1 shell.Visible=false condition.Visible=false
         if egg3d then egg3d.Visible=false end
         for _,step in crackStages do step.mask.Visible=false end
         for _,piece in pieces do piece.group.GroupColor3=paintTint piece.group.Visible=root:GetAttribute("ArtworkFallback")~=true end
@@ -370441,11 +370469,24 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
     end
     -- BD-171 paint API. The egg is neutral until setGenes(); color(wash) tints the whole egg, pattern(wash) fades in the real
     -- 3D egg (colour + pattern + condition) over the plain one. Both are idempotent and safe to call every frame.
+    -- BD-220: color(wash) = left bucket (primary colour), second(wash) = right bucket (blends in the secondary colour),
+    -- pattern(wash) = the pattern fading in after both buckets.
     local paint={}
+    local primaryTint=Color3.new(1,1,1)
+    -- Condition overlay (id from the queue at the start, then the server answer). Normal / unknown / unbound art shows nothing.
+    function paint.setCondition(conditionId: string?)
+        local look=Overlays.describe(conditionId)
+        local id=if look.assetId~="" then "rbxassetid://"..look.assetId else ""
+        condition.Image=id
+        condition.Visible=id~="" and root:GetAttribute("Opening")~=true
+    end
     function paint.setGenes(newGenes)
         if newGenes and Genetics and Genetics.valid(newGenes) then
             eggGenes=newGenes
             paintTint=Genetics.tint(newGenes)
+            local first=Genetics.color(newGenes.primaryColorId)
+            primaryTint=if first then Color3.fromRGB(first.rgb[1],first.rgb[2],first.rgb[3]) else paintTint
+            if newGenes.conditionId then paint.setCondition(newGenes.conditionId) end
             applyGenes3d()
         end
     end
@@ -370459,7 +370500,10 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
         return egg3dReady and eggGenes~=nil and root:GetAttribute("Opening")~=true
     end
     function paint.color(wash: number)
-        shell.ImageColor3=Color3.new(1,1,1):Lerp(paintTint,math.clamp(wash,0,1))
+        shell.ImageColor3=Color3.new(1,1,1):Lerp(primaryTint,math.clamp(wash,0,1))
+    end
+    function paint.second(wash: number)
+        shell.ImageColor3=primaryTint:Lerp(paintTint,math.clamp(wash,0,1))
     end
     function paint.pattern(wash: number)
         local view=egg3d
@@ -370468,10 +370512,12 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
         view.Visible=w&gt;0
         view.ImageTransparency=1-w
         shell.ImageTransparency=if w&gt;=1 then 1 else w*.9
+        condition.ImageTransparency=shell.ImageTransparency
     end
     -- Show the finished egg at once (fast-forward, Reduced Motion).
     function paint.finish()
         paint.color(1)
+        paint.second(1)
         paint.pattern(1)
     end
     return root,update,split,paint
@@ -370491,7 +370537,8 @@ local RevealSkip = require(script.Parent.RevealSkip)
 local T = {}
 
 -- Seconds. Full motion: ~3.6 s build-up (two paint-bucket splashes, then rattle/crack), burst, dino reveal, then wait for a tap.
--- BD-171: the egg starts colourless and patternless; the left bucket colours it, the right bucket reveals the pattern.
+-- BD-220: the egg starts colourless but already shows its condition (BD-223); the left bucket pours the primary colour, the right
+-- bucket the secondary colour, then the pattern fades in on the egg with its own small label. Rattle and cracks follow.
 T.Motion = {build = 3.6, burst = .6, settle = .8, tapGate = .5}
 -- Reduced Motion (Theme.MotionEnabled false): no shake/zoom/particles, a short fade, same tap flow.
 T.Reduced = {build = 0, burst = 0, settle = .45, tapGate = .15}
@@ -370506,18 +370553,20 @@ T.CrackBeats = {.21, .46, .71} -- fractions of the build-up where the three crac
 T.EggClock = 3.2 -- HatchPresentation.update() time at the end of the build-up
 T.PaintMax = 20 -- paint droplets (two buckets x 10, pooled)
 -- Paint buckets (BD-171). Each bucket slides in, tilts, splashes at `impact` (fraction of its window) and leaves; both are quick.
-T.Paint = {leftStart = .45, rightStart = 1.3, window = .75, impact = .6, wash = .35}
+T.Paint = {leftStart = .35, rightStart = 1.1, window = .75, impact = .6, wash = .35, patternDelay = .05, patternWash = .4}
 T.WobbleClock = .5 -- egg clock while painting (below the first rattle beat and crack stage, so no cracks show yet)
 
 -- Legendary holds the reveal longer (+.5 s settle) before the tap prompt; the build-up stays the same length.
 function T.paintPlan(motion: boolean)
     if not motion then
-        return {leftStart = 0, leftImpact = 0, leftEnd = 0, rightStart = 0, rightImpact = 0, rightEnd = 0, endsAt = 0}
+        return {leftStart = 0, leftImpact = 0, leftEnd = 0, rightStart = 0, rightImpact = 0, rightEnd = 0, patternAt = 0, patternEnd = 0, endsAt = 0}
     end
     local p = T.Paint
+    local rightEnd = p.rightStart + p.window
+    local patternAt = rightEnd + p.patternDelay
     return {leftStart = p.leftStart, leftImpact = p.leftStart + p.window * p.impact, leftEnd = p.leftStart + p.window,
-        rightStart = p.rightStart, rightImpact = p.rightStart + p.window * p.impact, rightEnd = p.rightStart + p.window,
-        endsAt = p.rightStart + p.window}
+        rightStart = p.rightStart, rightImpact = p.rightStart + p.window * p.impact, rightEnd = rightEnd,
+        patternAt = patternAt, patternEnd = patternAt + p.patternWash, endsAt = patternAt + p.patternWash}
 end
 function T.durations(motion: boolean, rarity: number?, failed: boolean?)
     local d = if not motion then T.Reduced elseif failed then T.Splat else T.Motion
@@ -370659,15 +370708,16 @@ function T.eggClock(durs, t: number): number
     return T.WobbleClock + (T.EggClock - T.WobbleClock) * T.buildProgress(durs, t)
 end
 
--- Paint buckets (BD-171). side: -1 left bucket (colour), +1 right bucket (pattern). k = 0..1 over the bucket's window.
+-- Paint buckets (BD-171/220). side: -1 left bucket (primary colour), +1 right bucket (secondary colour). k = 0..1 over the window.
 -- Returns x offset from the egg centre (px), y offset (px), rotation (degrees, positive = clockwise) and alpha 0..1.
+T.BucketX = 265 -- hover distance from the egg centre; each colour chip sits right under its bucket (HatchFxPlan.Chips)
 function T.bucketPose(k: number, side: number): (number, number, number, number)
     k = clamp01(k)
     local arrive = T.easeOut(k / .35)
     local leave = clamp01((k - .8) / .2)
     local tilt = clamp01((k - .3) / .3)
     local back = clamp01((k - .68) / .17)
-    local x = side * (150 + 190 * (1 - arrive) + 190 * leave * leave)
+    local x = side * (T.BucketX + 120 * (1 - arrive) + 120 * leave * leave)
     local y = -78 + 10 * math.sin(k * math.pi) - 14 * tilt
     local rot = -side * 64 * tilt * (1 - back)
     return x, y, rot, if k &lt;= 0 then 0 else 1 - leave
@@ -370681,7 +370731,9 @@ function T.paintState(durs, t: number)
         local since = t - impactAt
         return {k = clamp01((t - start) / window), impacted = since &gt;= 0, wash = if since &lt;= 0 then 0 else T.easeOut(since / T.Paint.wash), sinceImpact = since}
     end
-    return {left = bucket(p.leftStart, p.leftImpact), right = bucket(p.rightStart, p.rightImpact)}
+    local pattern = if window &lt;= 0 then 1 elseif t &lt;= p.patternAt then 0 else T.easeOut((t - p.patternAt) / T.Paint.patternWash)
+    return {left = bucket(p.leftStart, p.leftImpact), right = bucket(p.rightStart, p.rightImpact), pattern = pattern,
+        patternShown = window &lt;= 0 or t &gt;= p.patternAt}
 end
 -- Splash ring: s = seconds since the bucket hit the egg. Returns scale and transparency (1 = invisible).
 function T.splash(s: number): (number, number)
@@ -370707,8 +370759,9 @@ function T.tier(pct: number?): number
     return #T.TierNames
 end
 -- colors = Config.EggColors rows {id, name, weight}; genes = {primaryColorId, secondaryColorId}. Returns nil without a known colour.
--- A two-colour egg shows both names and the rarer colour's tier.
-function T.colorReveal(colors: any, genes: any)
+-- BD-220: ONE colour per reveal (one chip per bucket). which = "secondary" for the right bucket; a one-colour egg shows its
+-- primary colour on both chips.
+function T.colorReveal(colors: any, genes: any, which: string?)
     if typeof(colors) ~= "table" or typeof(genes) ~= "table" then return nil end
     local total = 0
     for _, row in colors do total += row.weight end
@@ -370718,10 +370771,10 @@ function T.colorReveal(colors: any, genes: any)
     end
     local a = find(genes.primaryColorId)
     if not a or total &lt;= 0 then return nil end
-    local b = find(genes.secondaryColorId) or a
-    local pct = math.min(100 * a.weight / total, 100 * b.weight / total)
+    local row = if which == "secondary" then (find(genes.secondaryColorId) or a) else a
+    local pct = 100 * row.weight / total
     local tier = T.tier(pct)
-    return {name = if a.id == b.id then a.name else a.name .. " + " .. b.name, pct = pct, tier = tier, tierName = T.TierNames[tier]}
+    return {name = row.name, pct = pct, tier = tier, tierName = T.TierNames[tier]}
 end
 -- patterns = ordered pattern ids (uniform odds); nameOf(id) -&gt; display name. The blank pattern is "Plain" (Common).
 function T.patternReveal(patterns: any, patternId: string?, nameOf: (string?) -&gt; string)
@@ -370735,6 +370788,41 @@ function T.patternReveal(patterns: any, patternId: string?, nameOf: (string?) -&
 end
 function T.paintLine(reveal: any): string
     return reveal.name .. " \u{2022} " .. reveal.tierName
+end
+-- Final reveal card detail line: primary colour, pattern and (shown once, BD-220) the colour growth bonus.
+function T.detailLine(colorReveal: any, patternReveal: any, bonusText: string?): string
+    if not colorReveal or not patternReveal then return "" end
+    local s = colorReveal.name .. " \u{2022} " .. patternReveal.name
+    if bonusText and bonusText ~= "" then s ..= " \u{2022} " .. bonusText end
+    return s
+end
+-- Pattern label on the egg after the buckets (BD-220), one short line.
+function T.patternLabel(reveal: any): string
+    if not reveal then return "" end
+    return if reveal.plain then "No pattern" else reveal.name
+end
+
+-- BD-223: condition chip shown from the first frame of the hatch. nil for a Normal egg. Cracked adds its hatch chance.
+function T.hatchHint(hatchChance: number?): string
+    if hatchChance == nil or hatchChance &lt;= 0 or hatchChance &gt;= 1 then return "" end
+    local n = 1 / hatchChance
+    local r = math.floor(n + .5)
+    if r &gt;= 2 and math.abs(n - r) &lt; .02 then return "hatches 1 in " .. r end
+    return "hatches " .. T.pct(100 * hatchChance)
+end
+function T.conditionChip(condition: any): string?
+    if typeof(condition) ~= "table" or type(condition.name) ~= "string" or condition.id == nil or condition.id == "normal" then return nil end
+    local hint = T.hatchHint(condition.hatchChance)
+    return condition.name .. (if hint ~= "" then " \u{2022} " .. hint else "")
+end
+-- Condition id of the egg about to open, from the client queue (ChestQueueJson), before the server answer arrives.
+function T.queueCondition(queue: any, nextId: string?): string?
+    if typeof(queue) ~= "table" then return nil end
+    local entry = nil
+    for _, item in queue do if typeof(item) == "table" and item.id == nextId then entry = item break end end
+    entry = entry or queue[1]
+    if typeof(entry) ~= "table" or typeof(entry.genes) ~= "table" or typeof(entry.genes.conditionId) ~= "string" then return nil end
+    return entry.genes.conditionId
 end
 
 -- Particles scale with rarity (1..5); Shiny and BIG add more; none when motion is off or the egg failed.
@@ -370865,7 +370953,7 @@ function T.cues(durs, rarity: number, failed: boolean, revealName: string)
     local cues = {}
     local build = durs.build
     if build &gt; 0 then
-        -- Paint buckets reuse existing Sfx names (no new sounds): swoosh = pickup_lo, colour splash = pickup, pattern splash = pickup_hi.
+        -- Paint buckets reuse existing Sfx names (no new sounds): swoosh = pickup_lo, primary splash = pickup, secondary splash = pickup_hi.
         local p = durs.paint
         if p.endsAt &gt; 0 then
             table.insert(cues, {t = p.leftStart, name = "pickup_lo"})
@@ -373481,6 +373569,56 @@ return Odds
       </Item>
       <Item class="ModuleScript" referent="RBX242">
         <Properties>
+          <string name="Name">SpawnGeometry</string>
+          <ProtectedString name="Source">--!strict
+-- BD-210: one place for every point a character is put into the world, and for "has it fallen out of the world".
+-- Pure functions of Config + IslandLayout so the offline verifier (tools/verify_spawn.py) checks the same numbers the
+-- server uses. The hub floor numbers mirror Arena.build (SanctuaryGround 110x6x95 at y=3, NestPlaza top at 6.5).
+local SpawnGeometry = {}
+SpawnGeometry.HubFloorY = 6 -- top of SanctuaryGround
+SpawnGeometry.HubHalfX, SpawnGeometry.HubHalfZ = 55, 47.5 -- SanctuaryGround footprint
+SpawnGeometry.DropClearance = 5 -- studs above the floor a character root is placed (it settles onto the floor)
+SpawnGeometry.VoxelMargin = 3 -- the voxel surface reads up to ~2 studs above IslandLayout.height (4-stud voxels)
+SpawnGeometry.TerrainBottom = -16 -- IslandTerrain fills voxels from y=-16 up to the surface
+SpawnGeometry.FallDepth = 20 -- a root this far below the floor under it has fallen out of the world
+
+function SpawnGeometry.inHub(config: any, x: number, z: number): boolean
+    return math.abs(x) &lt;= SpawnGeometry.HubHalfX and math.abs(z - config.SanctuaryCenterZ) &lt;= SpawnGeometry.HubHalfZ
+end
+function SpawnGeometry.inTerrain(config: any, x: number, z: number): boolean
+    local extent = config.ArenaHalfWidth + 8 -- IslandTerrain writes ArenaHalfWidth + 8
+    return math.abs(x) &lt;= extent and math.abs(z) &lt;= extent
+end
+-- Expected solid floor height under (x, z); nil when nothing solid was ever built there.
+function SpawnGeometry.floorY(config: any, layout: any, x: number, z: number): number?
+    if SpawnGeometry.inHub(config, x, z) then return SpawnGeometry.HubFloorY end
+    if SpawnGeometry.inTerrain(config, x, z) then return layout.height(x, z) end
+    return nil
+end
+-- True when a root at `position` is below anything it could stand on (or over a void well below the map).
+function SpawnGeometry.fallen(config: any, layout: any, position: Vector3): boolean
+    local floor = SpawnGeometry.floorY(config, layout, position.X, position.Z)
+    if floor then return position.Y &lt; floor - SpawnGeometry.FallDepth end
+    return position.Y &lt; SpawnGeometry.TerrainBottom - SpawnGeometry.FallDepth
+end
+-- Hub arrival point (sanctuary centre, on the NestPlaza).
+function SpawnGeometry.hubPoint(config: any): Vector3
+    return Vector3.new(0, SpawnGeometry.HubFloorY + SpawnGeometry.DropClearance, config.SanctuaryCenterZ)
+end
+-- Island run-start point: on the meadow at SpawnZ, a few studs above the terrain surface.
+function SpawnGeometry.islandPoint(layout: any): Vector3
+    return Vector3.new(0, layout.height(0, layout.SpawnZ) + SpawnGeometry.DropClearance + SpawnGeometry.VoxelMargin, layout.SpawnZ)
+end
+-- Where a fallen character is put back: the hub outside a run, the island spawn during one.
+function SpawnGeometry.recoveryPoint(config: any, layout: any, active: boolean): Vector3
+    return if active then SpawnGeometry.islandPoint(layout) else SpawnGeometry.hubPoint(config)
+end
+return SpawnGeometry
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX243">
+        <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
 -- BD-054: pure gameplay-HUD layout math for touch phones/tablets and desktop.
@@ -373681,7 +373819,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -373713,7 +373851,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">UIFormat</string>
           <ProtectedString name="Source">--!strict
@@ -373757,7 +373895,7 @@ return UIFormat
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -373788,7 +373926,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -373812,7 +373950,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -373986,7 +374124,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -374017,7 +374155,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">WeatherLooks</string>
           <ProtectedString name="Source">--!strict
@@ -374147,7 +374285,7 @@ return Weather
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">WeatherSounds</string>
           <ProtectedString name="Source">--!strict
@@ -374222,7 +374360,7 @@ return Sounds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX251">
+      <Item class="ModuleScript" referent="RBX252">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -374273,7 +374411,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX252">
+      <Item class="ModuleScript" referent="RBX253">
         <Properties>
           <string name="Name">WorldKitMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -374326,7 +374464,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX253">
+    <Item class="Folder" referent="RBX254">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -543881,15 +544019,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX254">
+  <Item class="ServerScriptService" referent="RBX255">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX255">
+    <Item class="Folder" referent="RBX256">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX256">
+      <Item class="ModuleScript" referent="RBX257">
         <Properties>
           <string name="Name">AdminService</string>
           <ProtectedString name="Source">--!strict
@@ -544003,7 +544141,7 @@ return AdminService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX257">
+      <Item class="ModuleScript" referent="RBX258">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -544012,6 +544150,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Terrain = require(script.Parent.IslandTerrain)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
 local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
@@ -544198,7 +544337,9 @@ function Arena.build()
     end
     local spawn = Instance.new("SpawnLocation")
     spawn.Name = "PrototypeSpawn"
-    spawn.Size, spawn.Position = Vector3.new(12, 1, 12), Vector3.new(0, Layout.height(0,Layout.SpawnZ) + .5, Layout.SpawnZ)
+    -- BD-210: characters load in the hub (they used to load on the island and be moved to the hub after attach).
+    -- Run starts use SpawnGeometry.islandPoint, not this part.
+    spawn.Size, spawn.Position = Vector3.new(12, 1, 12), SpawnGeometry.hubPoint(Config) - Vector3.new(0, SpawnGeometry.DropClearance - .5, 0)
     spawn.Anchored, spawn.Neutral, spawn.Duration, spawn.Transparency = true, true, 0, 1
     spawn.CanCollide, spawn.CanQuery = false, false
     spawn.Parent = world
@@ -544270,7 +544411,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX258">
+      <Item class="Script" referent="RBX259">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -544289,6 +544430,7 @@ local ProfileRepository = require(script.Parent.ProfileRepository)
 local RunLifecycle = require(script.Parent.RunLifecycle)
 local VisualTestService = require(script.Parent.VisualTestService)
 local Leaderboards = require(script.Parent.Leaderboards)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 Players.CharacterAutoLoads = false
 
@@ -544339,6 +544481,7 @@ CollectionService.start(ProfileRepository, Dinosaur)
 ChestService.start(ProfileRepository)
 MutationService.start(ProfileRepository, Dinosaur)
 MovementGuard.start()
+require(script.Parent.FallRecovery).start(MovementGuard.reset) -- BD-210 fall-out-of-world safety net
 VisualTestService.start(Dinosaur)
 require(script.Parent.ProgressionService).start(ProfileRepository)
 require(script.Parent.FusionService).start(ProfileRepository)
@@ -544355,6 +544498,11 @@ end
 
 local function spawnLoadedPlayer(player: Player)
     player.CanLoadCharacterAppearance = false
+    -- BD-210: no character before the world (terrain + hub) is built.
+    while workspace:GetAttribute("IslandTerrainReady") ~= true or not workspace:FindFirstChild("BeDinoArena") do
+        if not player.Parent then return end
+        task.wait(.2)
+    end
     local loaded = ProfileRepository.load(player)
     if not loaded or not player.Parent then
         warn("[Be Dino] profile load blocked character spawn for " .. player.Name)
@@ -544384,9 +544532,12 @@ local function setup(player: Player)
             return
         end
         RunLifecycle.prepareSanctuary(player, character)
+        -- BD-210: the character goes to the hub floor at once (before the dinosaur attach yields), not after it.
+        local hub = CFrame.new(SpawnGeometry.hubPoint(Config))
+        character:PivotTo(hub)
         task.spawn(function()
             Dinosaur.attach(character, Config.WalkSpeed, player)
-            if player.Character == character then character:PivotTo(CFrame.new(0, 11, Config.SanctuaryCenterZ)) end
+            if player.Character == character then character:PivotTo(hub) end
         end)
     end)
     task.spawn(spawnLoadedPlayer, player)
@@ -544428,7 +544579,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX259">
+      <Item class="ModuleScript" referent="RBX260">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -544538,7 +544689,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX260">
+      <Item class="ModuleScript" referent="RBX261">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -544631,7 +544782,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX261">
+      <Item class="ModuleScript" referent="RBX262">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -544767,7 +544918,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX262">
+      <Item class="ModuleScript" referent="RBX263">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -544981,7 +545132,73 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX263">
+      <Item class="ModuleScript" referent="RBX264">
+        <Properties>
+          <string name="Name">FallRecovery</string>
+          <ProtectedString name="Source">--!strict
+-- BD-210 safety net: a character whose root drops below the floor under it (SpawnGeometry.fallen) is put back at a safe
+-- point: the island spawn during a run, the hub otherwise. Server-side, so it also covers clients whose local terrain
+-- collision is late or missing. MovementGuard skips fallen characters so it never "corrects" them to mid-air baselines.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage.Shared.Config)
+local Layout = require(ReplicatedStorage.Shared.IslandLayout)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
+local FallRecovery = {}
+local started = false
+
+-- Server teleport of a client-owned character without the ownership race: the server takes physics ownership, moves
+-- the still assembly, and hands it back a moment later. (A plain server PivotTo let the client keep simulating from its
+-- stale state: Studio showed the root 50 studs off target for a frame right after the run-start teleport.)
+function FallRecovery.teleport(player: Player, character: Model, target: CFrame)
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root or not root:IsA("BasePart") then character:PivotTo(target) return end
+    local owned = pcall(function() root:SetNetworkOwner(nil) end)
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+    character:PivotTo(target)
+    if owned then
+        task.delay(.25, function()
+            if root.Parent and player.Parent and player.Character == character then
+                pcall(function() root:SetNetworkOwner(player) end)
+            end
+        end)
+    end
+end
+
+function FallRecovery.check(player: Player): boolean
+    local character = player.Character
+    local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+    local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+    if not character or not root or not root:IsA("BasePart") or not humanoid or humanoid.Health &lt;= 0 then return false end
+    if not SpawnGeometry.fallen(Config, Layout, root.Position) then return false end
+    local active = character:GetAttribute("RunState") == "Active"
+    local target = SpawnGeometry.recoveryPoint(Config, Layout, active)
+    local fellAt = root.Position
+    FallRecovery.teleport(player, character, CFrame.new(target))
+    local count = player:GetAttribute("FallRecoveries")
+    player:SetAttribute("FallRecoveries", (if typeof(count) == "number" then count else 0) + 1)
+    warn(string.format("[Be Dino] %s fell out of the world at %s; returned to %s", player.Name, tostring(fellAt), if active then "island spawn" else "hub"))
+    return true
+end
+
+function FallRecovery.start(onRecovered: ((Player) -&gt; ())?)
+    if started then return end
+    started = true
+    task.spawn(function()
+        while true do
+            task.wait(Config.FallRecoveryTickSeconds)
+            for _, player in Players:GetPlayers() do
+                if FallRecovery.check(player) and onRecovered then onRecovered(player) end
+            end
+        end
+    end)
+end
+return FallRecovery
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX265">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -545252,7 +545469,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX264">
+      <Item class="ModuleScript" referent="RBX266">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -545424,7 +545641,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX265">
+      <Item class="ModuleScript" referent="RBX267">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -545610,7 +545827,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX266">
+      <Item class="ModuleScript" referent="RBX268">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -546007,7 +546224,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX267">
+      <Item class="ModuleScript" referent="RBX269">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -546094,7 +546311,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX268">
+      <Item class="ModuleScript" referent="RBX270">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -546172,7 +546389,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX269">
+      <Item class="ModuleScript" referent="RBX271">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -546284,7 +546501,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX270">
+      <Item class="ModuleScript" referent="RBX272">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -546423,7 +546640,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX271">
+      <Item class="ModuleScript" referent="RBX273">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -546432,6 +546649,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
+local Layout = require(ReplicatedStorage.Shared.IslandLayout)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 local MovementGuard = {}
 local states: {[Player]: {
@@ -546445,6 +546664,11 @@ local started = false
 
 local function clear(player: Player)
     states[player] = nil
+end
+
+-- BD-210: forget the trusted baseline (after a server teleport such as fall recovery or run start).
+function MovementGuard.reset(player: Player)
+    clear(player)
 end
 
 function MovementGuard.start()
@@ -546464,6 +546688,12 @@ function MovementGuard.start()
 
                 if not character or not root or not root:IsA("BasePart") or not humanoid
                     or humanoid.Health &lt;= 0 or character:GetAttribute("RunState") ~= "Active" then
+                    clear(player)
+                    continue
+                end
+                -- BD-210: a root below the floor is FallRecovery's job. Correcting it here snapped falling characters
+                -- back to mid-fall baselines under the map (an endless fall loop instead of a recovery).
+                if SpawnGeometry.fallen(Config, Layout, root.Position) then
                     clear(player)
                     continue
                 end
@@ -546515,7 +546745,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX272">
+      <Item class="ModuleScript" referent="RBX274">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -546620,7 +546850,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX273">
+      <Item class="ModuleScript" referent="RBX275">
         <Properties>
           <string name="Name">PotionModels</string>
           <ProtectedString name="Source">--!strict
@@ -546672,7 +546902,7 @@ return Models
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX274">
+      <Item class="ModuleScript" referent="RBX276">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -546807,7 +547037,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX275">
+      <Item class="ModuleScript" referent="RBX277">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -548595,7 +548825,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX276">
+      <Item class="ModuleScript" referent="RBX278">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -548813,7 +549043,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX277">
+      <Item class="ModuleScript" referent="RBX279">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -548927,7 +549157,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX278">
+      <Item class="ModuleScript" referent="RBX280">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -548935,6 +549165,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
 local Config = require(ReplicatedStorage.Shared.Config)
+local Layout = require(ReplicatedStorage.Shared.IslandLayout)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 local RunLifecycle = {}
 local lastExitRequest: {[Player]: number} = {}
@@ -548959,6 +549191,14 @@ local function activeCharacter(player: Player): Model?
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if not humanoid or humanoid.Health &lt;= 0 then return nil end
     return character
+end
+
+-- BD-210 run-start gate: server terrain built, and the client confirmed its local terrain (or the timeout passed).
+function RunLifecycle.worldReady(player: Player): boolean
+    if workspace:GetAttribute("IslandTerrainReady") ~= true then return false end
+    if player:GetAttribute("WorldReady") == true then return true end
+    local joinedAt = player:GetAttribute("JoinedAt")
+    return typeof(joinedAt) == "number" and os.clock() - joinedAt &gt;= Config.WorldReadyTimeoutSeconds
 end
 
 function RunLifecycle.configureSettlement(callback)
@@ -549141,11 +549381,26 @@ function RunLifecycle.start()
         if not character or character:GetAttribute("RunState") ~= "Sanctuary" or not character:GetAttribute("DinoAttached") then return end
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         if not humanoid or humanoid.Health &lt;= 0 then return end
-        local spawn = workspace.BeDinoArena:FindFirstChild("PrototypeSpawn")
-        if not spawn or not spawn:IsA("BasePart") then return end
-        character:PivotTo(spawn.CFrame + Vector3.new(0,5,0))
+        -- BD-210: never drop a dinosaur onto the island before the terrain exists on the server and, unless the
+        -- client is unusually slow, before this client reports the terrain under the spawn as loaded.
+        if not RunLifecycle.worldReady(player) then
+            player:SetAttribute("LastRunStartStatus", "WorldLoading")
+            return
+        end
+        require(script.Parent.FallRecovery).teleport(player, character, CFrame.new(SpawnGeometry.islandPoint(Layout)))
         RunLifecycle.begin(player, character)
     end)
+
+    local readyRemote = Instance.new("RemoteEvent")
+    readyRemote.Name = "ClientWorldReady"
+    readyRemote.Parent = folder
+    readyRemote.OnServerEvent:Connect(function(player: Player, ...)
+        if select("#", ...) ~= 0 then return end
+        player:SetAttribute("WorldReady", true)
+    end)
+    local function joined(player: Player) player:SetAttribute("JoinedAt", os.clock()) end
+    Players.PlayerAdded:Connect(joined)
+    for _, player in Players:GetPlayers() do if player:GetAttribute("JoinedAt") == nil then joined(player) end end
 
     local existing = folder:FindFirstChild("RequestEndRun")
     if existing and existing:IsA("RemoteEvent") then
@@ -549190,7 +549445,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX279">
+      <Item class="ModuleScript" referent="RBX281">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -549262,19 +549517,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX280">
+  <Item class="StarterPlayer" referent="RBX282">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX281">
+    <Item class="StarterPlayerScripts" referent="RBX283">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX282">
+      <Item class="Folder" referent="RBX284">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX283">
+        <Item class="LocalScript" referent="RBX285">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -549519,7 +549774,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX284">
+        <Item class="LocalScript" referent="RBX286">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -550419,7 +550674,7 @@ render=function(name: string)
                 detailText=mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
                 if not genes then detailColor=tint end
             elseif colorReveal and patternReveal then
-                detailText=colorReveal.name.." • "..patternReveal.name
+                detailText=HatchTimeline.detailLine(colorReveal,patternReveal,colorReveal.bonusText) -- BD-220: colour bonus shown once, here
             end
             detailLabel.Text,detailLabel.TextColor3=detailText,detailColor
             remainingAfter=HatchTimeline.remaining(str("NextChestId")~="" and workspace:GetServerTimeNow()&gt;=num("NextChestReadyAt"),num("ActiveChestCount"),num("QueuedEggsWaiting"))
@@ -550429,12 +550684,14 @@ render=function(name: string)
                 shiny=not failed and player:GetAttribute("LastChestShiny")==true,big=not failed and player:GetAttribute("LastChestBig")==true,
                 mutationName=if mutation and not failed then mutation.name else nil,mutationColor=mutationColor,
                 remaining=remainingAfter,genes=if geneticsOk then genes else nil,colorReveal=colorReveal,patternReveal=patternReveal,paintColors=paintColors,
+                secondReveal=if geneticsOk then HatchTimeline.colorReveal(ProgressionConfig.EggColors,genes,"secondary") else nil, -- BD-220: right bucket
             })
         end
         Sfx.play("hatch_crack")
         handle=HatchSequence.play({
             gui=gui,panel=panel,body=body,eggView=eggView,animateEgg=animateEgg,splitEgg=splitEgg,paint=paint,
             nameLabel=rewardLabel,oddsLabel=oddsLabel,detailLabel=detailLabel,motion=motion,
+            eggCondition=HatchTimeline.queueCondition(queue(),str("NextChestId")), -- BD-223: the egg's condition look from the first frame
             alive=function() return modalVersion==version and active=="hatch" end,
             flash=flash,
             onSkipAll=function() autoHatching=true skipAllReveals=true end,
@@ -551076,7 +551333,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX285">
+        <Item class="LocalScript" referent="RBX287">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!nonstrict
@@ -551167,7 +551424,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX286">
+        <Item class="ModuleScript" referent="RBX288">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -551246,7 +551503,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX287">
+        <Item class="ModuleScript" referent="RBX289">
           <Properties>
             <string name="Name">DinoIndexPanels</string>
             <ProtectedString name="Source">--!strict
@@ -551782,7 +552039,7 @@ return Panels
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX288">
+        <Item class="LocalScript" referent="RBX290">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -552112,7 +552369,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX289">
+        <Item class="ModuleScript" referent="RBX291">
           <Properties>
             <string name="Name">EggPicture</string>
             <ProtectedString name="Source">--!strict
@@ -552189,7 +552446,7 @@ return EggPicture
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX290">
+        <Item class="ModuleScript" referent="RBX292">
           <Properties>
             <string name="Name">EggsScreen</string>
             <ProtectedString name="Source">--!strict
@@ -552385,7 +552642,233 @@ return EggsScreen
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX291">
+        <Item class="LocalScript" referent="RBX293">
+          <Properties>
+            <string name="Name">FoodGlow</string>
+            <ProtectedString name="Source">--!strict
+-- BD-222 food readability (owner playtest 2026-10-15: food was barely visible on grass). Client-only visuals:
+-- a soft halo + rim ring under each NEAR food (one pooled BillboardGui per slot, no PointLight, no extra parts),
+-- a slow bob and spin, a small sparkle every few seconds and a 1.25x look scale. Rarer food glows stronger in its
+-- rarity colour (docs/88 tiers; a server "FoodRarity" attribute wins, ready for BD-207 special foods).
+-- Budget: at most SLOTS foods are decorated (nearest within RADIUS); slots are reassigned every REASSIGN seconds,
+-- per-frame work touches only assigned slots and allocates nothing. Culled (WorldCulling "Culled" attribute) or eaten
+-- (server Transparency 1) food has its slot hidden. Reduce Motion: no bob/spin/sparkle, static glow.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Theme = require(Shared:WaitForChild("UITheme"))
+local Assets = require(Shared:WaitForChild("EffectAssets"))
+
+local SLOTS, RADIUS, REASSIGN, LOOK_SCALE = 40, 90, .5, 1.25
+local BOB, BOB_SPEED, SPIN_SPEED = .22, 1.6, .7
+local TIER_BY_NAME = {berry = "Common", fruit = "Uncommon", egg = "Rare", amber = "Epic"}
+local CREAM = Color3.fromRGB(255, 244, 200) -- warm base glow: reads on green grass, sand and rock alike
+local TIERS: {[string]: {ring: Color3, glow: number, ringT: number, size: number}} = {
+    Common = {ring = CREAM, glow = .45, ringT = .55, size = 3.2},
+    Uncommon = {ring = Color3.fromRGB(150, 255, 90), glow = .38, ringT = .3, size = 3.6},
+    Rare = {ring = Color3.fromRGB(46, 206, 255), glow = .3, ringT = .15, size = 4.2},
+    Epic = {ring = Color3.fromRGB(194, 86, 255), glow = .25, ringT = .08, size = 4.8},
+    Legendary = {ring = Color3.fromRGB(255, 210, 43), glow = .2, ringT = 0, size = 5.4},
+}
+local GLOW_IMAGE, RING_IMAGE, STAR_IMAGE = Assets.resolve("glowPlate"), Assets.resolve("ringSoft"), Assets.resolve("starFour")
+
+local player = Players.LocalPlayer
+local holder = Instance.new("Folder")
+holder.Name = "FoodGlow"
+holder.Parent = player:WaitForChild("PlayerGui")
+
+type Slot = {gui: BillboardGui, glow: ImageLabel, ring: ImageLabel, star: ImageLabel, food: BasePart?, phase: number}
+type Food = {part: BasePart, target: Instance?, base: CFrame, written: CFrame?, scaled: boolean, tier: string, slot: Slot?, d: number}
+local slots: {Slot} = {}
+local foods: {[BasePart]: Food} = {}
+local order: {Food} = {} -- reused every reassign, never reallocated
+
+local function image(parent: Instance, name: string, id: string, z: number): ImageLabel
+    local label = Instance.new("ImageLabel")
+    label.Name, label.Image, label.BackgroundTransparency, label.ZIndex = name, id, 1, z
+    label.AnchorPoint, label.Position, label.Size = Vector2.new(.5, .5), UDim2.fromScale(.5, .5), UDim2.fromScale(1, 1)
+    label.Parent = parent
+    return label
+end
+for i = 1, SLOTS do
+    local gui = Instance.new("BillboardGui")
+    gui.Name, gui.Enabled, gui.LightInfluence, gui.MaxDistance = "FoodGlow" .. i, false, 0, RADIUS * 1.2
+    gui.ResetOnSpawn = false
+    gui.Parent = holder
+    local glow = image(gui, "Glow", GLOW_IMAGE, 1)
+    glow.ImageColor3 = CREAM
+    local ring = image(gui, "Ring", RING_IMAGE, 2)
+    ring.Size = UDim2.fromScale(.62, .62)
+    local star = image(gui, "Sparkle", STAR_IMAGE, 3)
+    star.ImageTransparency, star.Size = 1, UDim2.fromScale(.3, .3)
+    slots[i] = {gui = gui, glow = glow, ring = ring, star = star, food = nil, phase = i * 1.37}
+end
+
+-- The visible art: Legacy mode draws a LocalFoodMesh model (ResourceVisuals); Kit mode / fallback draws the part itself.
+-- A server-cloned native model (rare fallback) is not animated, only haloed.
+local function targetOf(food: Food): Instance
+    local mesh = food.part:FindFirstChild("LocalFoodMesh")
+    if mesh then return mesh end
+    if food.part:FindFirstChildWhichIsA("Model") then return food.part :: Instance end
+    return food.part
+end
+local function pivotOf(target: Instance): CFrame
+    return if target:IsA("Model") then target:GetPivot() else (target :: BasePart).CFrame
+end
+local function setPivot(target: Instance, cf: CFrame)
+    if target:IsA("Model") then target:PivotTo(cf) else (target :: BasePart).CFrame = cf end
+end
+local function animatable(food: Food, target: Instance): boolean
+    return target ~= food.part or not food.part:FindFirstChildWhichIsA("Model")
+end
+local function hidden(food: Food): boolean
+    local part = food.part
+    if part:GetAttribute("Culled") == true then return true end
+    local native = part:FindFirstChildWhichIsA("Model")
+    if native and native.Name ~= "LocalFoodMesh" then
+        local piece = native:FindFirstChildWhichIsA("BasePart", true)
+        return piece ~= nil and piece.Transparency &gt;= 1
+    end
+    return part.Transparency &gt;= 1
+end
+local function restore(food: Food)
+    local target = food.target
+    if target and food.written and target.Parent then setPivot(target, food.base) end
+    food.written = nil
+end
+local function release(slot: Slot)
+    local food = if slot.food then foods[slot.food] else nil
+    if food then restore(food) food.slot = nil end
+    slot.food, slot.gui.Enabled, slot.gui.Adornee = nil, false, nil
+end
+local function bind(slot: Slot, food: Food)
+    slot.food, food.slot = food.part, slot
+    local tier = TIERS[food.tier] or TIERS.Common
+    local size = tier.size * math.max(1, food.part.Size.Y)
+    slot.gui.Adornee = food.part
+    slot.gui.Size = UDim2.fromScale(size, size)
+    slot.gui.StudsOffsetWorldSpace = Vector3.new(0, -food.part.Size.Y * .35, 0)
+    slot.glow.ImageTransparency, slot.glow.ImageColor3 = tier.glow, CREAM
+    slot.ring.ImageTransparency, slot.ring.ImageColor3 = tier.ringT, tier.ring
+    slot.star.ImageColor3 = tier.ring
+end
+
+local function track(item: Instance)
+    if not item:IsA("BasePart") or not item:GetAttribute("Points") or foods[item] then return end
+    local rarity = item:GetAttribute("FoodRarity")
+    foods[item] = {part = item, target = nil, base = item.CFrame, written = nil, scaled = false,
+        tier = if type(rarity) == "string" and TIERS[rarity] then rarity else (TIER_BY_NAME[item.Name] or "Common"), slot = nil, d = 0}
+end
+local function untrack(item: Instance)
+    local food = foods[item :: BasePart]
+    if food and food.slot then release(food.slot) end
+    foods[item :: BasePart] = nil
+end
+
+-- 1.25x look scale, once per food (Legacy mesh model or the part itself). Server Size/points/validation untouched.
+local function ensureScaled(food: Food, target: Instance)
+    if food.scaled and food.target == target then return end
+    if target:IsA("Model") then
+        if target:GetAttribute("GlowScaled") ~= true then
+            target:ScaleTo(target:GetScale() * LOOK_SCALE)
+            target:SetAttribute("GlowScaled", true)
+        end
+    elseif not food.scaled then
+        local part = target :: BasePart
+        part.Size *= LOOK_SCALE
+    end
+    food.scaled, food.target, food.written = true, target, nil
+    food.base = pivotOf(target)
+end
+
+local function byDistance(a: Food, b: Food): boolean return a.d &lt; b.d end
+local function reassign()
+    local character = player.Character
+    local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+    if not root or not root:IsA("BasePart") then return end
+    local origin = root.Position
+    local n = 0
+    for part, food in foods do
+        if part.Parent and not hidden(food) then
+            local d = (part.Position - origin).Magnitude
+            if d &lt; RADIUS then
+                food.d = d
+                n += 1
+                order[n] = food
+            end
+        end
+    end
+    for i = n + 1, #order do order[i] = nil end
+    table.sort(order, byDistance)
+    -- Free slots whose food fell out of the nearest set, then fill empty slots.
+    for _, slot in slots do
+        local food = if slot.food then foods[slot.food] else nil
+        if slot.food and (not food or not food.part.Parent or hidden(food) or food.d &gt;= RADIUS
+            or (n &gt; SLOTS and food.d &gt; order[SLOTS].d)) then release(slot) end
+    end
+    local free = 1
+    for i = 1, math.min(n, SLOTS) do
+        local food = order[i]
+        if not food.slot then
+            while free &lt;= SLOTS and slots[free].food do free += 1 end
+            if free &gt; SLOTS then break end
+            bind(slots[free], food)
+        end
+    end
+    player:SetAttribute("FoodGlowSlots", math.min(n, SLOTS) .. "/" .. SLOTS)
+end
+
+task.spawn(function()
+    local folder = workspace:WaitForChild("Food", 60)
+    if not folder then return end
+    for _, item in folder:GetChildren() do track(item) end
+    folder.ChildAdded:Connect(track)
+    folder.ChildRemoved:Connect(untrack)
+    local sinceAssign, clock = REASSIGN, 0
+    local wasMotion = Theme.MotionEnabled
+    RunService.Heartbeat:Connect(function(dt)
+        clock += dt
+        sinceAssign += dt
+        if sinceAssign &gt;= REASSIGN then sinceAssign = 0 reassign() end
+        local motion = Theme.MotionEnabled
+        for _, slot in slots do
+            local food = if slot.food then foods[slot.food] else nil
+            if not food then continue end
+            if hidden(food) then release(slot) continue end
+            slot.gui.Enabled = true
+            local target = targetOf(food)
+            ensureScaled(food, target)
+            if not animatable(food, target) then continue end
+            -- The server may move the food (respawn relocation): any pivot we did not write becomes the new base.
+            local now = pivotOf(target)
+            if food.written == nil or now ~= food.written then food.base = now end
+            if motion then
+                local t = clock + slot.phase
+                local cf = food.base * CFrame.new(0, BOB * (1 + math.sin(t * BOB_SPEED)), 0) * CFrame.Angles(0, (t * SPIN_SPEED) % (math.pi * 2), 0)
+                setPivot(target, cf)
+                food.written = pivotOf(target)
+                -- Sparkle: a short soft twinkle once every ~4 s per food, staggered by slot phase.
+                local s = (t % 4) / .6
+                if s &lt; 1 then
+                    slot.star.ImageTransparency = .15 + .85 * math.abs(s * 2 - 1)
+                    slot.star.Position = UDim2.fromScale(.5 + .14 * math.sin(slot.phase), .38)
+                    slot.star.Size = UDim2.fromScale(.18 + .16 * math.sin(s * math.pi), .18 + .16 * math.sin(s * math.pi))
+                elseif slot.star.ImageTransparency &lt; 1 then
+                    slot.star.ImageTransparency = 1
+                end
+            elseif wasMotion or food.written then
+                restore(food)
+                slot.star.ImageTransparency = 1
+            end
+        end
+        wasMotion = motion
+    end)
+end)
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="RBX294">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -553252,7 +553735,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX292">
+        <Item class="ModuleScript" referent="RBX295">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -553354,7 +553837,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX293">
+        <Item class="ModuleScript" referent="RBX296">
           <Properties>
             <string name="Name">FxRig</string>
             <ProtectedString name="Source">--!nonstrict
@@ -553683,7 +554166,7 @@ return Rig
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX294">
+        <Item class="ModuleScript" referent="RBX297">
           <Properties>
             <string name="Name">HatchFx</string>
             <ProtectedString name="Source">--!nonstrict
@@ -553883,7 +554366,7 @@ return M
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX295">
+        <Item class="ModuleScript" referent="RBX298">
           <Properties>
             <string name="Name">HatchSequence</string>
             <ProtectedString name="Source">--!strict
@@ -553900,6 +554383,8 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Theme = require(Shared.UITheme)
 local Sfx = require(Shared.Sfx)
 local Timeline = require(Shared.HatchTimeline)
+local FxPlan = require(Shared.HatchFxPlan)
+local EggGenetics = require(Shared.EggGenetics)
 local InspectView = require(script.Parent.InspectView)
 local HatchFx = require(script.Parent.HatchFx)
 
@@ -553940,15 +554425,31 @@ end
 -- bound in UIIconAssets; the splashes, droplets and chips are effects/UI, not art. Positions are body coordinates.
 type PaintKit = {buckets: {CanvasGroup}, bucketPaint: {Frame}, bucketImages: {ImageLabel}, bucketShapes: {Frame}, streams: {Frame},
     splashes: {Frame}, splashStrokes: {UIStroke}, splashScales: {UIScale}, drops: {Frame}, chips: {Frame}, chipLabels: {TextLabel},
-    chipScales: {UIScale}, chipSwatches: {Frame}, chipStrokes: {UIStroke}}
+    chipScales: {UIScale}, chipSwatches: {Frame}, chipStrokes: {UIStroke}, chipBadges: {Frame}, chipBadgeLabels: {TextLabel},
+    patternChip: Frame, patternLabel: TextLabel, patternScale: UIScale, patternStroke: UIStroke,
+    conditionChip: Frame, conditionLabel: TextLabel, conditionStroke: UIStroke}
 local SPLASH_POINTS = {Vector2.new(412 - 40, 100), Vector2.new(412 + 40, 100)}
-local CHIP_CENTERS = {Vector2.new(262, 292), Vector2.new(562, 292)}
 local BUCKET_STEEL = Color3.fromRGB(118, 132, 156)
-local TIER_COLORS: {Color3} = {Color3.fromRGB(70, 205, 170), Color3.fromRGB(110, 205, 90), Color3.fromRGB(70, 150, 255),
-    Color3.fromRGB(180, 100, 255), Color3.fromRGB(255, 190, 50), Color3.fromRGB(255, 70, 190)}
+local CHIP_FILL = Color3.fromRGB(42, 40, 53) -- Theme.Colors.panel: the game's chunky dark chip
+local TIER_COLORS: {Color3} = Theme.RarityColors -- Common grey .. Mythic red, the game's one rarity palette
+-- BD-220 chip in the game UI style (docs/72): chunky rounded dark pill, thick rarity-coloured border, ONE line, big text.
+-- spec = HatchFxPlan.Chips row {cx, cy, w, h}. Returns the frame, its label, scale and border.
+local function chipFrame(front: Frame, name: string, spec: {number}, textLeft: number, textRight: number): (Frame, TextLabel, UIScale, UIStroke)
+    local chip = Instance.new("Frame")
+    chip.Name, chip.BackgroundColor3, chip.AnchorPoint, chip.Visible = name, CHIP_FILL, Vector2.new(.5, .5), false
+    chip.Position, chip.Size, chip.ZIndex, chip.Parent = UDim2.fromOffset(spec[1], spec[2]), UDim2.fromOffset(spec[3], spec[4]), 27, front
+    corner(chip)
+    local stroke = Instance.new("UIStroke") stroke.Thickness, stroke.Color, stroke.ApplyStrokeMode, stroke.Parent = 4, WHITE, Enum.ApplyStrokeMode.Border, chip
+    local scale = Instance.new("UIScale") scale.Scale, scale.Parent = 0, chip
+    local text = Instance.new("TextLabel")
+    text.Name, text.BackgroundTransparency, text.Position, text.Size, text.Font, text.TextColor3 = "Text", 1, UDim2.fromOffset(textLeft, 3), UDim2.new(1, -(textLeft + textRight), 1, -6), Enum.Font.FredokaOne, WHITE
+    text.TextScaled, text.TextWrapped, text.TextStrokeTransparency, text.TextStrokeColor3, text.ZIndex, text.Parent = true, false, 0, Theme.Colors.outline, 28, chip
+    local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 30, 12, text
+    return chip, text, scale, stroke
+end
 local function buildPaint(front: Frame): PaintKit
-    local kit: PaintKit = {buckets = {}, bucketPaint = {}, bucketImages = {}, bucketShapes = {}, streams = {}, splashes = {}, splashStrokes = {},
-        splashScales = {}, drops = {}, chips = {}, chipLabels = {}, chipScales = {}, chipSwatches = {}, chipStrokes = {}}
+    local kit: any = {buckets = {}, bucketPaint = {}, bucketImages = {}, bucketShapes = {}, streams = {}, splashes = {}, splashStrokes = {},
+        splashScales = {}, drops = {}, chips = {}, chipLabels = {}, chipScales = {}, chipSwatches = {}, chipStrokes = {}, chipBadges = {}, chipBadgeLabels = {}}
     local bucketIcon = (Theme.ImageIds :: any).paint_bucket
     for i = 1, 2 do
         local group = Instance.new("CanvasGroup")
@@ -553986,22 +554487,31 @@ local function buildPaint(front: Frame): PaintKit
         local stroke = Instance.new("UIStroke") stroke.Thickness, stroke.Transparency, stroke.Parent = 9, 1, splash
         local scale = Instance.new("UIScale") scale.Parent = splash
         kit.splashes[i], kit.splashStrokes[i], kit.splashScales[i] = splash, stroke, scale
-        local chip = Instance.new("Frame")
-        chip.Name, chip.BackgroundColor3, chip.AnchorPoint, chip.Visible = "PaintChip" .. i, Color3.fromRGB(28, 34, 52), Vector2.new(.5, .5), false
-        chip.Position, chip.Size, chip.ZIndex, chip.Parent = UDim2.fromOffset(CHIP_CENTERS[i].X, CHIP_CENTERS[i].Y), UDim2.fromOffset(300, 44), 27, front
-        corner(chip)
-        local cs = Instance.new("UIStroke") cs.Thickness, cs.Color, cs.Parent = 3, WHITE, chip
-        local sc = Instance.new("UIScale") sc.Scale, sc.Parent = 0, chip
+        -- Colour chip right under its bucket: [swatch] Name [TIER badge], one line.
+        local spec = FxPlan.Chips[if i == 1 then "left" else "right"]
+        local chip, text, sc, cs = chipFrame(front, "PaintChip" .. i, spec, 46, 92)
         local swatch = Instance.new("Frame")
-        swatch.Name, swatch.BackgroundColor3, swatch.AnchorPoint, swatch.Position, swatch.Size, swatch.ZIndex, swatch.Parent = "Swatch", WHITE, Vector2.new(.5, .5), UDim2.fromOffset(24, 22), UDim2.fromOffset(22, 22), 28, chip
+        swatch.Name, swatch.BackgroundColor3, swatch.AnchorPoint, swatch.Position, swatch.Size, swatch.ZIndex, swatch.Parent = "Swatch", WHITE, Vector2.new(.5, .5), UDim2.new(0, 25, .5, 0), UDim2.fromOffset(30, 30), 28, chip
         corner(swatch)
-        local ss = Instance.new("UIStroke") ss.Color, ss.Thickness, ss.Parent = Color3.new(0, 0, 0), 2, swatch
-        local text = Instance.new("TextLabel")
-        text.BackgroundTransparency, text.Position, text.Size, text.Font, text.TextColor3 = 1, UDim2.fromOffset(44, 2), UDim2.new(1, -52, 1, -4), Enum.Font.FredokaOne, WHITE
-        text.TextScaled, text.TextStrokeTransparency, text.TextStrokeColor3, text.ZIndex, text.Parent = true, 0, Color3.new(0, 0, 0), 28, chip
-        local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 26, 11, text
+        local ss = Instance.new("UIStroke") ss.Color, ss.Thickness, ss.Parent = WHITE, 3, swatch
+        local badge = Instance.new("Frame")
+        badge.Name, badge.AnchorPoint, badge.Position, badge.Size, badge.ZIndex, badge.Parent = "TierBadge", Vector2.new(1, .5), UDim2.new(1, -8, .5, 0), UDim2.fromOffset(82, 30), 28, chip
+        corner(badge, UDim.new(0, 10))
+        local bs = Instance.new("UIStroke") bs.Color, bs.Thickness, bs.Parent = Theme.Colors.outline, 2, badge
+        local badgeText = Instance.new("TextLabel")
+        badgeText.BackgroundTransparency, badgeText.Position, badgeText.Size, badgeText.Font, badgeText.TextColor3 = 1, UDim2.fromOffset(4, 2), UDim2.new(1, -8, 1, -4), Enum.Font.FredokaOne, WHITE
+        badgeText.TextScaled, badgeText.TextStrokeTransparency, badgeText.TextStrokeColor3, badgeText.ZIndex, badgeText.Parent = true, 0, Theme.Colors.outline, 29, badge
+        local bl = Instance.new("UITextSizeConstraint") bl.MaxTextSize, bl.MinTextSize, bl.Parent = 18, 10, badgeText
         kit.chips[i], kit.chipLabels[i], kit.chipScales[i], kit.chipSwatches[i], kit.chipStrokes[i] = chip, text, sc, swatch, cs
+        kit.chipBadges[i], kit.chipBadgeLabels[i] = badge, badgeText
     end
+    -- Pattern label on the egg after the buckets, and the condition chip shown from the first frame (BD-220 / BD-223).
+    local pchip, ptext, pscale, pstroke = chipFrame(front, "PatternChip", FxPlan.Chips.pattern, 12, 12)
+    pstroke.Thickness = 3
+    kit.patternChip, kit.patternLabel, kit.patternScale, kit.patternStroke = pchip, ptext, pscale, pstroke
+    local cchip, ctext, cscale, cstroke = chipFrame(front, "ConditionChip", FxPlan.Chips.condition, 12, 12)
+    cscale.Scale, cstroke.Thickness = 1, 3
+    kit.conditionChip, kit.conditionLabel, kit.conditionStroke = cchip, ctext, cstroke
     for i = 1, Timeline.PaintMax do kit.drops[i] = dot(front, "PaintDrop" .. i, 26, 10, 10, true) end
     return kit
 end
@@ -554168,7 +554678,7 @@ end
 export type Result = {
     dino: GuiObject, rarity: number, color: Color3, failed: boolean, shiny: boolean, big: boolean,
     mutationName: string?, mutationColor: Color3?, remaining: number,
-    genes: any?, colorReveal: any?, patternReveal: any?, paintColors: {Color3}?,
+    genes: any?, colorReveal: any?, secondReveal: any?, patternReveal: any?, paintColors: {Color3}?,
 }
 export type Args = {
     gui: ScreenGui, panel: GuiObject, body: GuiObject,
@@ -554178,6 +554688,7 @@ export type Args = {
     alive: () -&gt; boolean, flash: (Color3, number) -&gt; (),
     onNext: () -&gt; (), onSkipAll: () -&gt; (), onReveal: () -&gt; (),
     result: Result?, -- nil = Open was just pressed and the server answer has not arrived: the egg already wobbles (BD-170)
+    eggCondition: string?, -- BD-223: condition id of the egg being opened (client queue), shown from the first frame
 }
 export type Handle = {cancel: () -&gt; (), supply: (Result) -&gt; (), pending: () -&gt; boolean}
 
@@ -554293,6 +554804,7 @@ function Seq.play(args: Args): Handle
         kit.buckets[i].Visible, kit.streams[i].Visible, kit.splashes[i].Visible, kit.chips[i].Visible = false, false, false, false
         kit.chipScales[i].Scale = 0
     end
+    kit.patternChip.Visible, kit.patternScale.Scale, kit.conditionChip.Visible = false, 0, false
     for _, d in kit.drops do d.Visible = false end
 
     local px, py, vx, vy, life = table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0)
@@ -554301,9 +554813,9 @@ function Seq.play(args: Args): Handle
     local impactAt = .95
     local level = 0 -- overall glow level 0..1
     local revealT = 0 -- seconds after the burst when the dinosaur actually appeared
-    local chipShown = {false, false}
+    local chipShown = {false, false, false}
     local dropN = {0, 0}
-    local lastWash = {-1, -1}
+    local lastWash = {-1, -1, -1}
     local paintColors: {Color3} = {WHITE, WHITE}
 
     local function restoreBody()
@@ -554314,6 +554826,7 @@ function Seq.play(args: Args): Handle
         for i = 1, 2 do
             kit.buckets[i].Visible, kit.streams[i].Visible, kit.splashes[i].Visible, kit.chips[i].Visible = false, false, false, false
         end
+        kit.patternChip.Visible, kit.conditionChip.Visible = false, false
         for _, d in kit.drops do d.Visible = false end
     end
     local function finish()
@@ -554388,15 +554901,27 @@ function Seq.play(args: Args): Handle
         end
     end
 
-    -- BD-171 paint buckets: pose, pour stream, splash ring and droplets of both buckets, plus the colour/pattern chips.
+    -- BD-223: the egg's condition look and chip from the first frame (queue id now; the server answer replaces it).
+    local conditionId: string? = nil
+    local function setCondition(id: string?)
+        if id == conditionId or burstDone then return end
+        conditionId = id
+        a.paint.setCondition(id)
+        local text = Timeline.conditionChip(if id then EggGenetics.condition(id) else nil)
+        kit.conditionChip.Visible = text ~= nil
+        if text then
+            kit.conditionLabel.Text = text
+            kit.conditionStroke.Color = if id == "cracked" then Theme.Colors.gold else WHITE
+        end
+    end
+    -- BD-220 paint buckets: pose, pour stream, splash ring and droplets of both buckets; ONE colour chip under each bucket.
     local function showChip(i: number)
-        local reveal = if i == 1 then a.colorReveal else a.patternReveal
+        local reveal = if i == 1 then a.colorReveal else (a.secondReveal or a.colorReveal)
         if not reveal then return end
         local chip = kit.chips[i]
-        local bonus = if i == 1 and type(reveal.bonusText) == "string" then reveal.bonusText else nil -- BD-172, set by Bootstrap from the server-held genes
-        kit.chipLabels[i].Text = if bonus then Timeline.paintLine(reveal) .. "\n" .. bonus else Timeline.paintLine(reveal)
-        chip.Size = UDim2.fromOffset(300, if bonus then 66 else 44)
-        kit.chipSwatches[i].Position = UDim2.fromOffset(24, if bonus then 33 else 22)
+        kit.chipLabels[i].Text = reveal.name
+        kit.chipBadgeLabels[i].Text = string.upper(reveal.tierName)
+        kit.chipBadges[i].BackgroundColor3 = TIER_COLORS[reveal.tier] or WHITE
         kit.chipStrokes[i].Color = TIER_COLORS[reveal.tier] or WHITE
         kit.chipSwatches[i].BackgroundColor3 = paintColors[i]
         chip.Visible = true
@@ -554460,7 +554985,16 @@ function Seq.play(args: Args): Handle
             end
         end
         if ps.left.wash ~= lastWash[1] then lastWash[1] = ps.left.wash a.paint.color(ps.left.wash) end
-        if ps.right.wash ~= lastWash[2] then lastWash[2] = ps.right.wash a.paint.pattern(ps.right.wash) end
+        if ps.right.wash ~= lastWash[2] then lastWash[2] = ps.right.wash a.paint.second(ps.right.wash) end
+        if ps.pattern ~= lastWash[3] then lastWash[3] = ps.pattern a.paint.pattern(ps.pattern) end
+        local pattern = a.patternReveal
+        if ps.patternShown and not chipShown[3] and pattern then
+            chipShown[3] = true
+            kit.patternLabel.Text = Timeline.patternLabel(pattern)
+            kit.patternStroke.Color = TIER_COLORS[pattern.tier] or WHITE
+            kit.patternChip.Visible = true
+            TweenService:Create(kit.patternScale, TweenInfo.new(.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        end
     end
 
     local function burst()
@@ -554678,6 +555212,7 @@ function Seq.play(args: Args): Handle
         for i, s in fx.shocks do fx.shockStrokes[i].Color = glow:Lerp(WHITE, .3) end
         -- Paint buckets: colour bucket pours the egg colour, pattern bucket pours the pattern's accent colour.
         a.paint.setGenes(r.genes)
+        if r.genes and typeof(r.genes.conditionId) == "string" then setCondition(r.genes.conditionId) end
         local colors = r.paintColors
         paintColors = {if colors then colors[1] else WHITE, if colors then colors[2] else WHITE}
         for i = 1, 2 do
@@ -554685,7 +555220,7 @@ function Seq.play(args: Args): Handle
             kit.splashStrokes[i].Color = paintColors[i]
             kit.splashes[i].BackgroundColor3 = paintColors[i]
             kit.splashes[i].BackgroundTransparency = .8
-            local reveal = if i == 1 then r.colorReveal else r.patternReveal
+            local reveal = if i == 1 then r.colorReveal else (r.secondReveal or r.colorReveal)
             HatchFx.paintStyle(hx, i, paintColors[i], if reveal then reveal.tier else 1)
             dropN[i] = if reveal then math.min(10, 4 + reveal.tier) else 5
             for j = 1, 10 do
@@ -554930,6 +555465,7 @@ function Seq.play(args: Args): Handle
         if not readyShown and (revealStarted or failed) and not state.pending and t &gt;= durs.readyAt + revealT then showHint() end
     end))
 
+    setCondition(a.eggCondition)
     if a.result then applyResult(a.result) end
     return {
         cancel = function() finish() end,
@@ -554945,7 +555481,7 @@ return Seq
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX296">
+        <Item class="ModuleScript" referent="RBX299">
           <Properties>
             <string name="Name">InspectView</string>
             <ProtectedString name="Source">--!strict
@@ -555135,7 +555671,7 @@ return InspectView
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX297">
+        <Item class="LocalScript" referent="RBX300">
           <Properties>
             <string name="Name">JumpCarry</string>
             <ProtectedString name="Source">--!strict
@@ -555193,7 +555729,7 @@ if player.Character then task.spawn(bind, player.Character) end
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX298">
+        <Item class="ModuleScript" referent="RBX301">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -555284,7 +555820,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX299">
+        <Item class="LocalScript" referent="RBX302">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -555481,7 +556017,12 @@ RunService.Heartbeat:Connect(function(dt)
             foods[item] = model
             item.LocalTransparencyModifier = 1
         end
-        model:PivotTo(CFrame.new(item.Position - Vector3.new(0, item.Size.Y / 2 + .08, 0)))
+        -- Re-pivot only when the server moved the food, so FoodGlow's local bob/spin is not reset every tick.
+        local at = item.Position
+        if model:GetAttribute("At") ~= at then
+            model:SetAttribute("At", at)
+            model:PivotTo(CFrame.new(at - Vector3.new(0, item.Size.Y / 2 + .08, 0)))
+        end
         for _, piece in model:GetDescendants() do
             if piece:IsA("BasePart") then piece.Transparency = item.Transparency end
         end
@@ -555491,7 +556032,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX300">
+        <Item class="ModuleScript" referent="RBX303">
           <Properties>
             <string name="Name">VolumeSliders</string>
             <ProtectedString name="Source">--!strict
@@ -555572,7 +556113,7 @@ return Sliders
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX301">
+        <Item class="LocalScript" referent="RBX304">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -555639,7 +556180,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX302">
+        <Item class="LocalScript" referent="RBX305">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -556529,7 +557070,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX303">
+        <Item class="LocalScript" referent="RBX306">
           <Properties>
             <string name="Name">WorldCulling</string>
             <ProtectedString name="Source">--!strict
@@ -556582,9 +557123,11 @@ local function addProp(folder: Instance, item: Instance, tries: number?)
 end
 local function setFood(pickup: BasePart, visible: boolean)
     local value = if visible then 0 else 1
-    pickup.LocalTransparencyModifier = value
+    -- Legacy food draws a LocalFoodMesh model (ResourceVisuals); its placeholder ball stays hidden when shown again.
+    pickup.LocalTransparencyModifier = if pickup:FindFirstChild("LocalFoodMesh") then 1 else value
     for _, d in pickup:GetDescendants() do if d:IsA("BasePart") then d.LocalTransparencyModifier = value end end
     foodShown[pickup] = visible
+    pickup:SetAttribute("Culled", not visible) -- FoodGlow hides its halo with the food
 end
 
 task.spawn(function()
@@ -556654,10 +557197,45 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
+        <Item class="LocalScript" referent="RBX307">
+          <Properties>
+            <string name="Name">WorldReady</string>
+            <ProtectedString name="Source">--!strict
+-- BD-210: tell the server when this client's own copy of the island terrain around the run spawn is loaded. The
+-- character's physics runs on this client, so a run that starts before the local terrain arrives drops the dinosaur
+-- straight through the world. The server waits for this (RunLifecycle.worldReady, with a timeout fallback).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Layout = require(Shared:WaitForChild("IslandLayout"))
+local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
+local remote = remotes:WaitForChild("ClientWorldReady") :: RemoteEvent
+
+local params = RaycastParams.new()
+params.FilterType = Enum.RaycastFilterType.Include
+params.FilterDescendantsInstances = {workspace.Terrain}
+local function terrainLoaded(): boolean
+    -- 5x5 grid, 48 studs wide, around the run spawn: every ray must land on terrain near the authored height.
+    for dx = -24, 24, 12 do
+        for dz = -24, 24, 12 do
+            local x, z = dx, Layout.SpawnZ + dz
+            local expected = Layout.height(x, z)
+            local hit = workspace:Raycast(Vector3.new(x, expected + 40, z), Vector3.new(0, -80, 0), params)
+            if not hit or math.abs(hit.Position.Y - expected) &gt; 4 then return false end
+        end
+    end
+    return true
+end
+
+while workspace:GetAttribute("IslandTerrainReady") ~= true or not terrainLoaded() do task.wait(.25) end
+task.wait(.5) -- one more beat for collision of the neighbouring voxel chunks
+remote:FireServer()
+</ProtectedString>
+          </Properties>
+        </Item>
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX304">
+  <Item class="Workspace" referent="RBX308">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

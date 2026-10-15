@@ -7,7 +7,7 @@ import argparse,subprocess,tempfile
 ROOT=Path(__file__).resolve().parents[1]
 def wrapped(path):return '(function()\n'+(ROOT/path).read_text()+'\nend)()'
 def script():
- return 'local Config='+wrapped('src/shared/Config.luau')+'\nlocal script={Parent={Config="Config"}}\nlocal require=function()return Config end\nlocal FoodCatchRules='+wrapped('src/shared/FoodCatchRules.luau')+'\nlocal Layout='+wrapped('src/shared/IslandLayout.luau')+'\n'+'''
+ return 'local Config='+wrapped('src/shared/Config.luau')+'\nlocal script={Parent={Config="Config",FallRecovery="FallRecovery"}}\nlocal require=function()return Config end\nlocal FoodCatchRules='+wrapped('src/shared/FoodCatchRules.luau')+'\nlocal Layout='+wrapped('src/shared/IslandLayout.luau')+'\n'+'''
 local whole,carry=FoodCatchRules.award(500,0,1)
 assert(whole==4 and carry<1e-8)
 local accumulated,total=0,0
@@ -23,7 +23,8 @@ local function vector(x,y,z)
 end
 local Vector3={new=vector,one=vector(1,1,1),xAxis=vector(1,0,0),zAxis=vector(0,0,1)}
 local Vector2={new=vector}
-local CFrame={new=vector}
+local CFrame={new=function(x,y,z)if type(x)=='table' then return x end return vector(x,y,z)end}
+local SpawnGeometry=@SPAWN@
 local Color3={fromRGB=function(...)return {...}end,new=function(...)return {...}end}
 local UDim2={fromOffset=function(...)return {...}end,fromScale=function(...)return {...}end}
 local Enum={RaycastFilterType={Include="Include"},Material={Water="Water",Grass="Grass",SmoothPlastic="SmoothPlastic"},PartType={Ball="Ball"},Font={FredokaOne="FredokaOne"}}
@@ -33,12 +34,13 @@ local Random={new=function(seed)
  return {NextNumber=function(_,low,high)low=low or 0 high=high or 1 return low+math.random()*(high-low)end,NextInteger=function(_,low,high)return math.random(low,high)end}
 end}
 local noop={Connect=function(self,fn)self.callback=fn end}
-local Players={PlayerRemoving=noop,GetPlayers=function()return {}end}
+local Players={PlayerRemoving=noop,PlayerAdded={Connect=function()end},GetPlayers=function()return {}end}
 local Remotes={children={}}
 function Remotes:FindFirstChild(name)return self.children[name]end
 local Workspace={BeDinoArena={},Terrain={},attrs={}}
 function Workspace:SetAttribute(k,v)self.attrs[k]=v end
 function Workspace:GetServerTimeNow()return 100 end
+function Workspace:GetAttribute(k)return self.attrs[k]end
 local rays=0
 local missingTerrain=false
 local artFailure=false
@@ -53,12 +55,12 @@ function Workspace:Raycast(origin,direction,params)
  return nil
 end
 local workspace=Workspace
-local Storage={Shared={Config="Config",FoodCatchRules="FoodCatchRules",MovementEnvelope="Envelope",ResourceModels="Resources",IslandLayout="Layout"}}
+local Storage={Shared={Config="Config",FoodCatchRules="FoodCatchRules",MovementEnvelope="Envelope",ResourceModels="Resources",IslandLayout="Layout",SpawnGeometry="SpawnGeometry"}}
 function Storage:FindFirstChild(name)return if name=="BeDinoRemotes" then Remotes else nil end
 local guid=0
 local Http={GenerateGUID=function()guid+=1 return tostring(guid)end}
 local game={GetService=function(self,name)return ({Players=Players,ReplicatedStorage=Storage,HttpService=Http})[name]end}
-local require=function(id)if id=="Config" then return Config elseif id=="FoodCatchRules" then return FoodCatchRules elseif id=="Layout" then return Layout elseif id=="Resources" then return {clone=function()if artFailure then error("art failure") end return nil end} else return {plausible=function()return true end} end end
+local require=function(id)if id=="Config" then return Config elseif id=="FoodCatchRules" then return FoodCatchRules elseif id=="Layout" then return Layout elseif id=="SpawnGeometry" then return SpawnGeometry elseif id=="FallRecovery" then return {teleport=function(_,c,cf)c:PivotTo(cf)end} elseif id=="Resources" then return {clone=function()if artFailure then error("art failure") end return nil end} else return {plausible=function()return true end} end end
 local created={}
 local Instance={new=function(kind)
  local o={attrs={},Name="",kind=kind,OnServerEvent={Connect=function(self,fn)self.callback=fn end}}
@@ -117,6 +119,18 @@ local settlements=0
 Lifecycle.configureSettlement(function()settlements+=1 return true end)
 Lifecycle.start()
 player:LoadCharacterAsync()
+-- BD-210 gate: no run start before the server terrain is built and this client reported its local terrain.
+Remotes.children.RequestStartRun.OnServerEvent.callback(player)
+assert(player.Character:GetAttribute("RunState")=="Sanctuary" and player:GetAttribute("LastRunStartStatus")=="WorldLoading","run started before terrain")
+Workspace.attrs.IslandTerrainReady=true
+Remotes.children.RequestStartRun.OnServerEvent.callback(player)
+assert(player.Character:GetAttribute("RunState")=="Sanctuary","run started before the client terrain handshake")
+Remotes.children.ClientWorldReady.OnServerEvent.callback(player,"junk")
+assert(player:GetAttribute("WorldReady")==nil,"malformed ready accepted")
+Remotes.children.ClientWorldReady.OnServerEvent.callback(player)
+assert(player:GetAttribute("WorldReady")==true)
+player:SetAttribute("LastRunStartStatus",nil)
+print("Spawn gate passed: run start waits for server terrain and the client terrain handshake")
 assert(player.Character:GetAttribute("RunState")=="Sanctuary")
 local start=Remotes.children.RequestStartRun.OnServerEvent.callback
 start(player,"extra")
@@ -149,7 +163,7 @@ home(player)
 assert(settlements==2,"Home in sanctuary must not settle")
 assert(not Lifecycle.tryEnd(player,running,"Death") and settlements==2,"death after Home settled twice")
 local function newPlayer()
- local p={Parent=true,attrs={ProfileState="Loaded"}}
+ local p={Parent=true,attrs={ProfileState="Loaded",WorldReady=true}}
  p.GetAttribute,p.SetAttribute,p.LoadCharacterAsync=player.GetAttribute,player.SetAttribute,player.LoadCharacterAsync
  p:LoadCharacterAsync() start(p)
  p.Character:SetAttribute("SpawnProtectionEndsAt",0)
@@ -177,4 +191,4 @@ if __name__=='__main__':
  assert 'dinosaur.addGrowth(c, candidate.gained * Config.GrowthPerFood)' in src and 'FoodCatchRules.award(candidate.gained,' in src, 'growth halved but catches use raw food'
  p=argparse.ArgumentParser();p.add_argument('--runner',required=True);args=p.parse_args()
  with tempfile.TemporaryDirectory() as temp:
-  path=Path(temp)/'verify.luau';path.write_text(script());subprocess.run([args.runner,str(path)],check=True)
+  path=Path(temp)/'verify.luau';path.write_text(script().replace('@SPAWN@',wrapped('src/shared/SpawnGeometry.luau')));subprocess.run([args.runner,str(path)],check=True)
