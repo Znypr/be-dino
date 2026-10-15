@@ -715,7 +715,7 @@ render=function(name: string)
             label(card,look.rarityText or (rarityNames[rarity].." • "..FusionSelection.pct(100*(oddsWeight[id] or 0)/oddsTotal).." of eggs"),4,44,256,25,18)
             if found then
                 hero(card,id,7,70,250,128,bestMutation(id))
-                label(card,if event then event.name.." mutation" elseif ownedTraits(id) then "Special variant" else string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond),5,201,254,25,15)
+                label(card,if event then event.name.." mutation" elseif ownedTraits(id) then (require(Shared.ColourBonus).text(ProgressionConfig.EggColors,(ownedTraits(id) :: any).genes) or "Special variant") else string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond),5,201,254,25,15)
                 button(card,"VIEW DINO",12,233,240,cardButtonHeight,C.card,function() selected=id open("detail") end)
             else
                 -- No button: silhouette block re-centered in the freed space. Soft edge = a faint, slightly larger
@@ -871,6 +871,7 @@ render=function(name: string)
             local mutationColor=if mutation then Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3]) else nil
             -- BD-171: the paint buckets name the colour and the pattern with their rarity tiers.
             local colorReveal=if geneticsOk then HatchTimeline.colorReveal(ProgressionConfig.EggColors,genes) else nil
+            if colorReveal then colorReveal.bonusText=require(Shared.ColourBonus).text(ProgressionConfig.EggColors,genes) end -- BD-172
             local patternReveal=if geneticsOk then HatchTimeline.patternReveal(EggGenetics.Patterns,genes.patternId,FusionSelection.patternName) else nil
             local paintColors={rarityColors[rarity],rarityColors[rarity]}
             if geneticsOk then
