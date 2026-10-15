@@ -22,12 +22,15 @@ Assets.Requested = {
     glowPlate = {id = "", fallback = "spark"},     -- neutral radial glow, 256 px
     ringSoft = {id = "", fallback = "spark"},      -- soft rim ring, 256 px
     ringShock = {id = "", fallback = "spark"},     -- thin shock ring, 256 px
-    smokeSheet = {id = "", fallback = "smoke"},    -- layered smoke 4x4 flipbook, 512 px
-    sparkSheet = {id = "", fallback = "spark"},    -- soft sparks, 4-point stars, bubbles 4x4, 512 px
-    flameSheet = {id = "", fallback = "fire"},     -- soft flame wisps 4x4, 512 px
+    -- FX v3 (owner uploads 2026-10-16, docs/77 fx3_*): anime cel sheets, white on transparent, 4x4 cells of 256 px.
+    smokeSheet = {id = "rbxassetid://140058716506789", fallback = "smoke"}, -- fx3 smoke-anime: puff grows, then breaks into curls
+    sparkSheet = {id = "rbxassetid://97747398683135", fallback = "spark"},  -- fx3 sparkle: star grows, then shrinks
+    flameSheet = {id = "rbxassetid://81481519628921", fallback = "fire"},   -- fx3 flame: 16 flame shapes (random frame)
+    swirl = {id = "rbxassetid://99422347356351", fallback = "spark"},       -- fx3 swirl: rotating energy swirl (loop)
+    rays = {id = "rbxassetid://89127115370689", fallback = "spark"},        -- fx3 rays: single image, rising aura light rays
     ribbonSoft = {id = "", fallback = "spark"},    -- soft tapered ribbon strip for Trail/Beam, 512x64
     speedLine = {id = "", fallback = "spark"},     -- thin speed streak strip, 512x32
-    starFour = {id = "", fallback = "spark"},      -- four-point twinkle, 128 px
+    starFour = {id = "rbxassetid://97747398683135", fallback = "spark"},    -- four-point twinkle: the fx3 sparkle sheet
     crystalSheet = {id = "", fallback = "spark"},  -- frost crystals, droplets, pebbles, embers 4x4
 }
 
@@ -48,9 +51,25 @@ function Assets.resolve(key: string): string
     return Assets.Builtin[key] or Assets.Builtin.spark
 end
 
--- Flipbook sheets (docs/93 section 8): 512 px square, 4 x 4 cells. A sprite showing a sheet MUST select one cell, otherwise the
+-- Flipbook sheets (docs/93 section 8): square, 4 x 4 cells (fx3 sheets are 1024 px, 256 px cells; Roblox stores at most 1024). A sprite showing a sheet MUST select one cell, otherwise the
 -- whole sheet is drawn. cellRect is pure: it returns nil while the key still uses a built-in sprite (single image, no cell).
-Assets.Sheets = {smokeSheet = {size = 512, grid = 4}, sparkSheet = {size = 512, grid = 4}, flameSheet = {size = 512, grid = 4}, crystalSheet = {size = 512, grid = 4}}
+Assets.Sheets = {smokeSheet = {size = 1024, grid = 4}, sparkSheet = {size = 1024, grid = 4}, flameSheet = {size = 1024, grid = 4},
+    starFour = {size = 1024, grid = 4}, swirl = {size = 1024, grid = 4}, crystalSheet = {size = 512, grid = 4}}
+-- How the 16 cells play (ParticleEmitter.FlipbookMode name): OneShot = in order over the particle life, Random = one random shape,
+-- Loop = cycles at LoopFps. Keys not listed play Random.
+Assets.FlipbookMode = {smokeSheet = "OneShot", sparkSheet = "OneShot", starFour = "OneShot", flameSheet = "Random", swirl = "Loop", crystalSheet = "Random"}
+Assets.LoopFps = 10
+-- Sheets whose upload may carry a black background: draw them additively (LightEmission 1) so black never shows.
+Assets.Additive = {swirl = true, rays = true}
+function Assets.mode(key: string): string return Assets.FlipbookMode[key] or "Random" end
+function Assets.isSheet(key: string): boolean return Assets.Sheets[key] ~= nil and Assets.isReal(key) end
+-- Pure: which cell (1..16) a 2D sprite shows. t = 0..1 of its life, age = seconds alive, seed = the sprite's random pick.
+function Assets.frameAt(key: string, t: number, age: number, seed: number): number
+    local mode = Assets.mode(key)
+    if mode == "OneShot" then return math.clamp(math.floor(math.clamp(t, 0, 1) * 16) + 1, 1, 16) end
+    if mode == "Loop" then return math.floor(age * Assets.LoopFps + seed) % 16 + 1 end
+    return (math.floor(seed) - 1) % 16 + 1
+end
 function Assets.cellRect(key: string, cell: number): (number?, number?, number?)
     local sheet = Assets.Sheets[key]
     if not sheet or not Assets.isReal(key) then return nil, nil, nil end

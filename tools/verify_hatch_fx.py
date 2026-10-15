@@ -173,20 +173,29 @@ for _, side in {-1, 1} do
     end
 end
 assert(P.counts(6, "desktop", false).drops > P.counts(1, "desktop", false).drops, "rarer reveals splash more droplets")
--- 10. Flipbook cells + real-id switch (EffectAssets): fallback shows no cell, a real id selects one of 16 cells of the 512 px sheet.
-assert(A.cellRect("smokeSheet", 1) == nil, "no cell while the key still uses a built-in sprite")
+-- 10. Flipbook cells + real-id switch (EffectAssets): fallback shows no cell, a real id selects one of 16 cells of the sheet.
+-- FX v3 (2026-10-16): smoke / sparkle / flame / swirl are real 1024 px uploads (256 px cells); crystalSheet still falls back.
+assert(A.cellRect("crystalSheet", 1) == nil, "no cell while the key still uses a built-in sprite")
 assert(A.resolve("glowPlate") == A.Builtin.spark and not A.isReal("glowPlate"))
+assert(A.isReal("smokeSheet") and A.isReal("sparkSheet") and A.isReal("starFour") and A.isReal("flameSheet") and A.isReal("swirl") and A.isReal("rays"))
+local savedGlow, savedRing = A.Requested.glowPlate.id, A.Requested.ringShock.id
 local fakeId = "rbxassetid://1234567"
-A.Requested.smokeSheet.id = fakeId A.Requested.glowPlate.id = fakeId A.Requested.ringShock.id = fakeId
-assert(A.isReal("smokeSheet") and A.resolve("smokeSheet") == fakeId and A.resolve("glowPlate") == fakeId and A.resolve("ringShock") == fakeId, "real ids are used automatically")
-local seen = {}
-for cell = 1, 32 do
-    local x, y, size = A.cellRect("smokeSheet", cell)
-    assert(x and size == 128 and x >= 0 and y >= 0 and x + size <= 512 and y + size <= 512, "cell inside the sheet")
-    if cell <= 16 then assert(not seen[x .. "," .. y], "16 distinct cells") seen[x .. "," .. y] = true end
+A.Requested.glowPlate.id = fakeId A.Requested.ringShock.id = fakeId
+assert(A.resolve("glowPlate") == fakeId and A.resolve("ringShock") == fakeId, "real ids are used automatically")
+A.Requested.glowPlate.id, A.Requested.ringShock.id = savedGlow, savedRing
+for _, key in {"smokeSheet", "sparkSheet", "starFour", "flameSheet", "swirl"} do
+    local seen = {}
+    for cell = 1, 32 do
+        local x, y, size = A.cellRect(key, cell)
+        assert(x and size == 256 and x >= 0 and y >= 0 and x + size <= 1024 and y + size <= 1024, key .. " cell inside the sheet")
+        if cell <= 16 then assert(not seen[x .. "," .. y], "16 distinct cells") seen[x .. "," .. y] = true end
+    end
 end
-assert(A.cellRect("glowPlate", 3) == nil, "single images have no cells")
-A.Requested.smokeSheet.id, A.Requested.glowPlate.id, A.Requested.ringShock.id = "", "", ""
+assert(A.cellRect("glowPlate", 3) == nil and A.cellRect("rays", 3) == nil, "single images have no cells")
+-- hatch puff (smoke-anime, OneShot) plays its cells in order across the puff life
+local last = 0
+for k = 0, 20 do local c = A.frameAt("smokeSheet", k / 20 * 0.999, 0, 3) assert(c >= last) last = c end
+assert(last == 16)
 print("HatchFxPlan checks passed")
 '''
 

@@ -89,7 +89,7 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
     local device = opts.device or Rig.device()
     local resolved = Recipes.resolve(kind, item, {device = device, reduce = opts.reduce, detail = opts.detail})
     local self = setmetatable({root = root, resolved = resolved, scale = 1, lastScale = -1, age = 0, wasMoving = false, lastPop = -10,
-        objects = {}, emitters = {}, moving = {}, orbits = {}, trails = {}, beams = {}, lights = {}, bursts = {}, alive = true}, Rig)
+        objects = {}, emitters = {}, moving = {}, orbits = {}, trails = {}, beams = {}, lights = {}, bursts = {}, pillars = {}, alive = true}, Rig)
 
     local function own(inst: Instance) table.insert(self.objects, inst) return inst end
     local function needsAnchor(): boolean
@@ -129,6 +129,9 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
             if emitsMoving then
                 parent = attachment(root, "FxTail")
                 parent.Position = Vector3.new(0, -0.9, 1.4)
+            elseif layer.flat then
+                parent = attachment(root, "FxFeet") -- swirl lies flat, centred under the dino
+                parent.Position = Vector3.new(0, FEET + 0.15, 0)
             elseif layer.shape and anchor then
                 parent = anchor
             else
@@ -143,15 +146,23 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
             e.Size = sizeSeq(layer, 1)
             e.Lifetime = NumberRange.new(layer.life * 0.8, layer.life)
             e.Speed = NumberRange.new(layer.speed * 0.5, layer.speed)
-            e.LightEmission = layer.light or 0.5
+            e.LightEmission = if Assets.Additive[layer.tex] then 1 else (layer.light or 0.5)
             e.Rotation = NumberRange.new(-180, 180)
             e.RotSpeed = if layer.spin then NumberRange.new(-layer.spin, layer.spin) else NumberRange.new(0, 0)
             e.LockedToPart = false
             e.Squash = NumberSequence.new(0)
             e.Drag = 0
             e.Shape, e.ShapeInOut, e.ShapeStyle = Enum.ParticleEmitterShape.Box, Enum.ParticleEmitterShapeInOut.Outward, Enum.ParticleEmitterShapeStyle.Volume
-            e.FlipbookLayout = if Assets.isReal(layer.tex) then Enum.ParticleFlipbookLayout.Grid4x4 else Enum.ParticleFlipbookLayout.None
-            if Assets.isReal(layer.tex) then e.FlipbookMode = Enum.ParticleFlipbookMode.Random end
+            -- FX v3 sheets: OneShot plays the 16 cells in order over each particle's life (smoke, sparkle), Random picks one
+            -- shape (flame), Loop cycles (swirl). Single images and built-in sprites have no flipbook.
+            local sheet = Assets.isSheet(layer.tex)
+            e.FlipbookLayout = if sheet then Enum.ParticleFlipbookLayout.Grid4x4 else Enum.ParticleFlipbookLayout.None
+            if sheet then
+                e.FlipbookMode = (Enum.ParticleFlipbookMode :: any)[Assets.mode(layer.tex)]
+                e.FlipbookFramerate = NumberRange.new(Assets.LoopFps)
+                e.FlipbookStartRandom = Assets.mode(layer.tex) ~= "OneShot"
+            end
+            e.Orientation = if layer.flat then Enum.ParticleOrientation.VelocityPerpendicular else Enum.ParticleOrientation.FacingCamera
             if k == "burst" then
                 e.Rate = 0
                 e.SpreadAngle = Vector2.new(180, 180)
@@ -170,6 +181,9 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
                 elseif layer.shape == "Cylinder" then
                     e.SpreadAngle = Vector2.new(35, 35)
                 end
+                if layer.flat then
+                    e.Shape, e.SpreadAngle, e.Acceleration = Enum.ParticleEmitterShape.Box, Vector2.zero, Vector3.zero
+                end
                 e.Enabled = false
             end
             e.Parent = parent
@@ -178,6 +192,18 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
             if k == "burst" then table.insert(self.bursts, entry) else
                 table.insert(self.emitters, entry)
             end
+        elseif k == "pillar" and anchor then
+            -- Rays pillar (FX v3, Epic+): one camera-facing image standing on the feet, pushed slightly behind the dino, pulsing slowly.
+            local board = Instance.new("BillboardGui")
+            board.Name = "Fx_" .. layer.id
+            board.LightInfluence, board.AlwaysOnTop, board.ResetOnSpawn, board.MaxDistance = 0, false, false, 220
+            local img = Instance.new("ImageLabel")
+            img.BackgroundTransparency, img.Size, img.Image, img.ImageTransparency = 1, UDim2.fromScale(1, 1), Assets.resolve(layer.tex), 1
+            img.ImageColor3 = c3(layer.color[#layer.color])
+            img.Parent = board
+            board.Adornee, board.Parent = anchor, anchor
+            own(board)
+            table.insert(self.pillars, {board = board, img = img, layer = layer})
         elseif k == "ring" or k == "spiral" then
             local n = layer.beams
             local points = {}
@@ -256,6 +282,16 @@ function Rig:update(scale: number, time: number, moving: boolean)
     for _, entry in self.lights do
         entry.light.Brightness = entry.layer.brightness * (0.75 + 0.25 * pulse) * fade
         if rebuild then entry.light.Range = entry.layer.range * scale end
+    end
+    for _, entry in self.pillars do
+        local layer = entry.layer
+        if rebuild then
+            entry.board.Size = UDim2.fromScale(layer.width * scale, layer.height * scale)
+            -- bottom on the feet; StudsOffset is camera-relative, so -Z keeps it BEHIND the dino from any view angle
+            entry.board.StudsOffset = Vector3.new(0, layer.height * scale * 0.5, -1.6 * scale)
+        end
+        local glow = if reduced then 0.5 else Recipes.pulse(time, layer.hz)
+        entry.img.ImageTransparency = 1 - layer.alpha * (0.55 + 0.45 * glow) * fade
     end
     for _, entry in self.emitters do
         local e = entry.emitter

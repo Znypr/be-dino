@@ -8,14 +8,15 @@ local R = {}
 R.Tiers = {"Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"}
 R.TierIndex = {Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5, Mythic = 6}
 R.LayerCount = {2, 3, 4, 5, 6, 7}   -- how many priority layers a tier shows
+R.LayerCountByKind = {aura = {2, 3, 4, 6, 7, 8}} -- auras: Epic gains flame AND rays (FX v3)
 R.ColorCount = {2, 3, 3, 4, 5, 6}   -- how many palette colours a tier may use (anime: more hues with rarity)
 R.MutationTier = "Rare"             -- weather mutations read as Rare-level looks (4 layers + a one-shot pop)
 
 -- Per-device budgets, PER DINO (docs/93 section 6). `alive` = particles alive at once (rate * lifetime, after rateScale).
 R.Devices = {
-    phone   = {emitters = 3, beams = 3, trails = 2, parts = 1, lights = 1, alive = 18, rateScale = 0.5,  burst = 6,  fullDinos = 1},
-    tablet  = {emitters = 5, beams = 5, trails = 3, parts = 1, lights = 1, alive = 30, rateScale = 0.75, burst = 10, fullDinos = 2},
-    desktop = {emitters = 6, beams = 8, trails = 4, parts = 1, lights = 1, alive = 45, rateScale = 1.0,  burst = 14, fullDinos = 3},
+    phone   = {sprites = 1, emitters = 3, beams = 3, trails = 2, parts = 1, lights = 1, alive = 18, rateScale = 0.5,  burst = 6,  fullDinos = 1},
+    tablet  = {sprites = 1, emitters = 5, beams = 5, trails = 3, parts = 1, lights = 1, alive = 30, rateScale = 0.75, burst = 10, fullDinos = 2},
+    desktop = {sprites = 1, emitters = 6, beams = 8, trails = 4, parts = 1, lights = 1, alive = 45, rateScale = 1.0,  burst = 14, fullDinos = 3},
 }
 R.DeviceOrder = {"phone", "tablet", "desktop"}
 R.LiteLayers = 2 -- distant / extra dinos: only the first two priority layers, rates x0.6
@@ -113,12 +114,19 @@ end
 -- grad: palette names used for the colour gradient (names beyond the tier's ColorCount fall back to primary).
 -- onlyMoving: trail / run effects, emitted only while the dino moves.
 R.Templates = {
+    -- FX v3 (owner 2026-10-16): every aura tier has anime smoke puffs; Rare+ sparkles; Epic+ flame wisps and a slow-pulsing rays
+    -- pillar behind the dino; Legendary+ a swirl at the feet. minTier layers are skipped (not counted) below their tier.
     aura = {
         {id = "glow", kind = "glow", brightness = 0.42, range = 7, grad = {"primary"}},
-        {id = "motes", kind = "emitter", tex = "sparkSheet", rate = 8, life = 1.1, size = 0.22, speed = 0.8, rise = 1.3, alpha = 0.8,
-            light = 0.85, shape = "Cylinder", grad = {"primary", "accent"}, curve = "sizePop"},
         {id = "mist", kind = "emitter", tex = "smokeSheet", rate = 3, life = 1.6, size = 1.0, speed = 0.3, rise = 0.7, alpha = 0.4,
             light = 0.1, shape = "Cylinder", grad = {"deep", "primary"}, curve = "sizeGrow", spin = 18},
+        {id = "motes", kind = "emitter", tex = "sparkSheet", minTier = 3, rate = 8, life = 1.1, size = 0.3, speed = 0.8, rise = 1.3, alpha = 0.8,
+            light = 0.85, shape = "Cylinder", grad = {"primary", "accent"}, curve = "sizePop"},
+        {id = "flame", kind = "emitter", tex = "flameSheet", minTier = 4, rate = 2, life = 0.9, size = 0.55, speed = 0.6, rise = 1.6, alpha = 0.75,
+            light = 0.8, shape = "Cylinder", grad = {"light", "primary"}, curve = "sizePop"},
+        {id = "rays", kind = "pillar", tex = "rays", minTier = 4, width = 3.2, height = 5.2, alpha = 0.5, hz = 0.25, grad = {"light", "primary"}},
+        {id = "swirl", kind = "emitter", tex = "swirl", minTier = 5, rate = 0.6, life = 2.0, size = 1.25, speed = 0.05, rise = 0, alpha = 0.6,
+            light = 1, shape = "Cylinder", flat = true, grad = {"accent", "primary"}, curve = "sizeGrow"},
         {id = "ring", kind = "ring", beams = 3, radius = 2.1, height = -1.55, spin = 0.45, width = 0.1, alpha = 0.7, grad = {"primary", "accent"}},
         {id = "ripple", kind = "emitter", tex = "ringShock", rate = 1.1, life = 1.4, size = 1.3, grow = 2.2, speed = 1.4, rise = 0, alpha = 0.5,
             light = 0.6, shape = "Disc", outward = true, grad = {"accent", "light"}, curve = "sizeGrow"},
@@ -163,7 +171,7 @@ R.Motifs = {
 }
 
 -- ---------------------------------------------------------------- cost and resolve
-local function newCost() return {emitters = 0, beams = 0, trails = 0, parts = 0, lights = 0, alive = 0, burst = 0} end
+local function newCost() return {emitters = 0, beams = 0, trails = 0, parts = 0, lights = 0, alive = 0, burst = 0, sprites = 0} end
 function R.layerCost(layer)
     local c = newCost()
     local k = layer.kind
@@ -171,10 +179,11 @@ function R.layerCost(layer)
     elseif k == "emitter" then c.emitters = 1 c.alive = layer.rate * layer.life
     elseif k == "burst" then c.emitters = 1 c.burst = layer.count
     elseif k == "ring" or k == "spiral" then c.beams = layer.beams
-    elseif k == "trail" then c.trails = layer.count or 1 end
+    elseif k == "trail" then c.trails = layer.count or 1
+    elseif k == "pillar" then c.sprites = 1 end
     return c
 end
-local function needsAnchor(layer) return layer.shape ~= nil or layer.kind == "ring" or layer.kind == "spiral" end
+local function needsAnchor(layer) return layer.shape ~= nil or layer.kind == "ring" or layer.kind == "spiral" or layer.kind == "pillar" end
 function R.totalCost(layers)
     local total = newCost()
     local anchor = false
@@ -189,7 +198,7 @@ end
 local function fits(total, budget)
     return total.emitters <= budget.emitters and total.beams <= budget.beams and total.trails <= budget.trails
         and total.parts <= budget.parts and total.lights <= budget.lights and total.alive <= budget.alive + 1e-6
-        and total.burst <= budget.burst
+        and total.burst <= budget.burst and total.sprites <= (budget.sprites or 0)
 end
 
 local function copy(t) local o = {} for k, v in t do o[k] = v end return o end
@@ -232,12 +241,13 @@ function R.resolve(kind: string, item, opts)
     end
 
     local lite = opts.detail == "lite"
-    local limit = if lite then R.LiteLayers else R.LayerCount[tier]
+    local limit = if lite then R.LiteLayers else (R.LayerCountByKind[kind] or R.LayerCount)[tier]
     local rateF = (1 + 0.1 * (tier - 1)) * (if lite then 0.6 else 1) * device.rateScale
     local sizeF = 1 + 0.05 * (tier - 1)
     local motif = if kind == "mutation" then R.Motifs[item.id] else nil
     for _, tpl in templates do
         if #out.layers >= limit then break end
+        if tpl.minTier and tier < tpl.minTier then continue end
         local layer = copy(tpl)
         if layer.rate then layer.rate *= rateF end
         if layer.size then layer.size *= sizeF end
@@ -263,7 +273,10 @@ function R.resolve(kind: string, item, opts)
         end
         local candidate = copy(out.layers)
         table.insert(candidate, layer)
-        if not fits(R.totalCost(candidate), device) then break end
+        if not fits(R.totalCost(candidate), device) then
+            if tpl.minTier then continue end -- a tier extra that does not fit this device is skipped, the core layers go on
+            break
+        end
         table.insert(out.layers, layer)
     end
     out.cost = R.totalCost(out.layers)

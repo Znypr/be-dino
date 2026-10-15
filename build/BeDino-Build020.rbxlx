@@ -368108,12 +368108,15 @@ Assets.Requested = {
     glowPlate = {id = "", fallback = "spark"},     -- neutral radial glow, 256 px
     ringSoft = {id = "", fallback = "spark"},      -- soft rim ring, 256 px
     ringShock = {id = "", fallback = "spark"},     -- thin shock ring, 256 px
-    smokeSheet = {id = "", fallback = "smoke"},    -- layered smoke 4x4 flipbook, 512 px
-    sparkSheet = {id = "", fallback = "spark"},    -- soft sparks, 4-point stars, bubbles 4x4, 512 px
-    flameSheet = {id = "", fallback = "fire"},     -- soft flame wisps 4x4, 512 px
+    -- FX v3 (owner uploads 2026-10-16, docs/77 fx3_*): anime cel sheets, white on transparent, 4x4 cells of 256 px.
+    smokeSheet = {id = "rbxassetid://140058716506789", fallback = "smoke"}, -- fx3 smoke-anime: puff grows, then breaks into curls
+    sparkSheet = {id = "rbxassetid://97747398683135", fallback = "spark"},  -- fx3 sparkle: star grows, then shrinks
+    flameSheet = {id = "rbxassetid://81481519628921", fallback = "fire"},   -- fx3 flame: 16 flame shapes (random frame)
+    swirl = {id = "rbxassetid://99422347356351", fallback = "spark"},       -- fx3 swirl: rotating energy swirl (loop)
+    rays = {id = "rbxassetid://89127115370689", fallback = "spark"},        -- fx3 rays: single image, rising aura light rays
     ribbonSoft = {id = "", fallback = "spark"},    -- soft tapered ribbon strip for Trail/Beam, 512x64
     speedLine = {id = "", fallback = "spark"},     -- thin speed streak strip, 512x32
-    starFour = {id = "", fallback = "spark"},      -- four-point twinkle, 128 px
+    starFour = {id = "rbxassetid://97747398683135", fallback = "spark"},    -- four-point twinkle: the fx3 sparkle sheet
     crystalSheet = {id = "", fallback = "spark"},  -- frost crystals, droplets, pebbles, embers 4x4
 }
 
@@ -368134,9 +368137,25 @@ function Assets.resolve(key: string): string
     return Assets.Builtin[key] or Assets.Builtin.spark
 end
 
--- Flipbook sheets (docs/93 section 8): 512 px square, 4 x 4 cells. A sprite showing a sheet MUST select one cell, otherwise the
+-- Flipbook sheets (docs/93 section 8): square, 4 x 4 cells (fx3 sheets are 1024 px, 256 px cells; Roblox stores at most 1024). A sprite showing a sheet MUST select one cell, otherwise the
 -- whole sheet is drawn. cellRect is pure: it returns nil while the key still uses a built-in sprite (single image, no cell).
-Assets.Sheets = {smokeSheet = {size = 512, grid = 4}, sparkSheet = {size = 512, grid = 4}, flameSheet = {size = 512, grid = 4}, crystalSheet = {size = 512, grid = 4}}
+Assets.Sheets = {smokeSheet = {size = 1024, grid = 4}, sparkSheet = {size = 1024, grid = 4}, flameSheet = {size = 1024, grid = 4},
+    starFour = {size = 1024, grid = 4}, swirl = {size = 1024, grid = 4}, crystalSheet = {size = 512, grid = 4}}
+-- How the 16 cells play (ParticleEmitter.FlipbookMode name): OneShot = in order over the particle life, Random = one random shape,
+-- Loop = cycles at LoopFps. Keys not listed play Random.
+Assets.FlipbookMode = {smokeSheet = "OneShot", sparkSheet = "OneShot", starFour = "OneShot", flameSheet = "Random", swirl = "Loop", crystalSheet = "Random"}
+Assets.LoopFps = 10
+-- Sheets whose upload may carry a black background: draw them additively (LightEmission 1) so black never shows.
+Assets.Additive = {swirl = true, rays = true}
+function Assets.mode(key: string): string return Assets.FlipbookMode[key] or "Random" end
+function Assets.isSheet(key: string): boolean return Assets.Sheets[key] ~= nil and Assets.isReal(key) end
+-- Pure: which cell (1..16) a 2D sprite shows. t = 0..1 of its life, age = seconds alive, seed = the sprite's random pick.
+function Assets.frameAt(key: string, t: number, age: number, seed: number): number
+    local mode = Assets.mode(key)
+    if mode == "OneShot" then return math.clamp(math.floor(math.clamp(t, 0, 1) * 16) + 1, 1, 16) end
+    if mode == "Loop" then return math.floor(age * Assets.LoopFps + seed) % 16 + 1 end
+    return (math.floor(seed) - 1) % 16 + 1
+end
 function Assets.cellRect(key: string, cell: number): (number?, number?, number?)
     local sheet = Assets.Sheets[key]
     if not sheet or not Assets.isReal(key) then return nil, nil, nil end
@@ -369698,14 +369717,15 @@ local R = {}
 R.Tiers = {"Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"}
 R.TierIndex = {Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5, Mythic = 6}
 R.LayerCount = {2, 3, 4, 5, 6, 7}   -- how many priority layers a tier shows
+R.LayerCountByKind = {aura = {2, 3, 4, 6, 7, 8}} -- auras: Epic gains flame AND rays (FX v3)
 R.ColorCount = {2, 3, 3, 4, 5, 6}   -- how many palette colours a tier may use (anime: more hues with rarity)
 R.MutationTier = "Rare"             -- weather mutations read as Rare-level looks (4 layers + a one-shot pop)
 
 -- Per-device budgets, PER DINO (docs/93 section 6). `alive` = particles alive at once (rate * lifetime, after rateScale).
 R.Devices = {
-    phone   = {emitters = 3, beams = 3, trails = 2, parts = 1, lights = 1, alive = 18, rateScale = 0.5,  burst = 6,  fullDinos = 1},
-    tablet  = {emitters = 5, beams = 5, trails = 3, parts = 1, lights = 1, alive = 30, rateScale = 0.75, burst = 10, fullDinos = 2},
-    desktop = {emitters = 6, beams = 8, trails = 4, parts = 1, lights = 1, alive = 45, rateScale = 1.0,  burst = 14, fullDinos = 3},
+    phone   = {sprites = 1, emitters = 3, beams = 3, trails = 2, parts = 1, lights = 1, alive = 18, rateScale = 0.5,  burst = 6,  fullDinos = 1},
+    tablet  = {sprites = 1, emitters = 5, beams = 5, trails = 3, parts = 1, lights = 1, alive = 30, rateScale = 0.75, burst = 10, fullDinos = 2},
+    desktop = {sprites = 1, emitters = 6, beams = 8, trails = 4, parts = 1, lights = 1, alive = 45, rateScale = 1.0,  burst = 14, fullDinos = 3},
 }
 R.DeviceOrder = {"phone", "tablet", "desktop"}
 R.LiteLayers = 2 -- distant / extra dinos: only the first two priority layers, rates x0.6
@@ -369803,12 +369823,19 @@ end
 -- grad: palette names used for the colour gradient (names beyond the tier's ColorCount fall back to primary).
 -- onlyMoving: trail / run effects, emitted only while the dino moves.
 R.Templates = {
+    -- FX v3 (owner 2026-10-16): every aura tier has anime smoke puffs; Rare+ sparkles; Epic+ flame wisps and a slow-pulsing rays
+    -- pillar behind the dino; Legendary+ a swirl at the feet. minTier layers are skipped (not counted) below their tier.
     aura = {
         {id = "glow", kind = "glow", brightness = 0.42, range = 7, grad = {"primary"}},
-        {id = "motes", kind = "emitter", tex = "sparkSheet", rate = 8, life = 1.1, size = 0.22, speed = 0.8, rise = 1.3, alpha = 0.8,
-            light = 0.85, shape = "Cylinder", grad = {"primary", "accent"}, curve = "sizePop"},
         {id = "mist", kind = "emitter", tex = "smokeSheet", rate = 3, life = 1.6, size = 1.0, speed = 0.3, rise = 0.7, alpha = 0.4,
             light = 0.1, shape = "Cylinder", grad = {"deep", "primary"}, curve = "sizeGrow", spin = 18},
+        {id = "motes", kind = "emitter", tex = "sparkSheet", minTier = 3, rate = 8, life = 1.1, size = 0.3, speed = 0.8, rise = 1.3, alpha = 0.8,
+            light = 0.85, shape = "Cylinder", grad = {"primary", "accent"}, curve = "sizePop"},
+        {id = "flame", kind = "emitter", tex = "flameSheet", minTier = 4, rate = 2, life = 0.9, size = 0.55, speed = 0.6, rise = 1.6, alpha = 0.75,
+            light = 0.8, shape = "Cylinder", grad = {"light", "primary"}, curve = "sizePop"},
+        {id = "rays", kind = "pillar", tex = "rays", minTier = 4, width = 3.2, height = 5.2, alpha = 0.5, hz = 0.25, grad = {"light", "primary"}},
+        {id = "swirl", kind = "emitter", tex = "swirl", minTier = 5, rate = 0.6, life = 2.0, size = 1.25, speed = 0.05, rise = 0, alpha = 0.6,
+            light = 1, shape = "Cylinder", flat = true, grad = {"accent", "primary"}, curve = "sizeGrow"},
         {id = "ring", kind = "ring", beams = 3, radius = 2.1, height = -1.55, spin = 0.45, width = 0.1, alpha = 0.7, grad = {"primary", "accent"}},
         {id = "ripple", kind = "emitter", tex = "ringShock", rate = 1.1, life = 1.4, size = 1.3, grow = 2.2, speed = 1.4, rise = 0, alpha = 0.5,
             light = 0.6, shape = "Disc", outward = true, grad = {"accent", "light"}, curve = "sizeGrow"},
@@ -369853,7 +369880,7 @@ R.Motifs = {
 }
 
 -- ---------------------------------------------------------------- cost and resolve
-local function newCost() return {emitters = 0, beams = 0, trails = 0, parts = 0, lights = 0, alive = 0, burst = 0} end
+local function newCost() return {emitters = 0, beams = 0, trails = 0, parts = 0, lights = 0, alive = 0, burst = 0, sprites = 0} end
 function R.layerCost(layer)
     local c = newCost()
     local k = layer.kind
@@ -369861,10 +369888,11 @@ function R.layerCost(layer)
     elseif k == "emitter" then c.emitters = 1 c.alive = layer.rate * layer.life
     elseif k == "burst" then c.emitters = 1 c.burst = layer.count
     elseif k == "ring" or k == "spiral" then c.beams = layer.beams
-    elseif k == "trail" then c.trails = layer.count or 1 end
+    elseif k == "trail" then c.trails = layer.count or 1
+    elseif k == "pillar" then c.sprites = 1 end
     return c
 end
-local function needsAnchor(layer) return layer.shape ~= nil or layer.kind == "ring" or layer.kind == "spiral" end
+local function needsAnchor(layer) return layer.shape ~= nil or layer.kind == "ring" or layer.kind == "spiral" or layer.kind == "pillar" end
 function R.totalCost(layers)
     local total = newCost()
     local anchor = false
@@ -369879,7 +369907,7 @@ end
 local function fits(total, budget)
     return total.emitters &lt;= budget.emitters and total.beams &lt;= budget.beams and total.trails &lt;= budget.trails
         and total.parts &lt;= budget.parts and total.lights &lt;= budget.lights and total.alive &lt;= budget.alive + 1e-6
-        and total.burst &lt;= budget.burst
+        and total.burst &lt;= budget.burst and total.sprites &lt;= (budget.sprites or 0)
 end
 
 local function copy(t) local o = {} for k, v in t do o[k] = v end return o end
@@ -369922,12 +369950,13 @@ function R.resolve(kind: string, item, opts)
     end
 
     local lite = opts.detail == "lite"
-    local limit = if lite then R.LiteLayers else R.LayerCount[tier]
+    local limit = if lite then R.LiteLayers else (R.LayerCountByKind[kind] or R.LayerCount)[tier]
     local rateF = (1 + 0.1 * (tier - 1)) * (if lite then 0.6 else 1) * device.rateScale
     local sizeF = 1 + 0.05 * (tier - 1)
     local motif = if kind == "mutation" then R.Motifs[item.id] else nil
     for _, tpl in templates do
         if #out.layers &gt;= limit then break end
+        if tpl.minTier and tier &lt; tpl.minTier then continue end
         local layer = copy(tpl)
         if layer.rate then layer.rate *= rateF end
         if layer.size then layer.size *= sizeF end
@@ -369953,7 +369982,10 @@ function R.resolve(kind: string, item, opts)
         end
         local candidate = copy(out.layers)
         table.insert(candidate, layer)
-        if not fits(R.totalCost(candidate), device) then break end
+        if not fits(R.totalCost(candidate), device) then
+            if tpl.minTier then continue end -- a tier extra that does not fit this device is skipped, the core layers go on
+            break
+        end
         table.insert(out.layers, layer)
     end
     out.cost = R.totalCost(out.layers)
@@ -370042,6 +370074,9 @@ local function buildLayer(h, layer)
         else
             for i = 1, cap do L.pool[i] = {obj = sprite(h.frame, z + 1, tex), age = 1e9, life = layer.life, x = 0, y = 0, vx = 0, vy = 0, rot = 0} end
         end
+    elseif k == "pillar" then
+        -- FX v3 rays pillar: one sprite standing behind the dino, pulsing slowly (built-in sparkle until the upload resolves)
+        L.img = sprite(h.frame, z - 1, Assets.resolve(layer.tex))
     elseif k == "ring" or k == "spiral" then
         L.dots = {}
         local n = if k == "ring" then 9 else 8
@@ -370113,8 +370148,10 @@ local function stepHandle(h, dt: number)
                     for _, p in L.pool do
                         if p.age &gt; p.life then
                             p.age = 0
-                            Assets.setCell(p.obj, layer.tex, math.random(16)) -- flipbook sheets: one cell per particle (no-op for built-in sprites)
-                            if aura then
+                            p.seed, p.cell = math.random(16), 0
+                            if layer.flat then
+                                p.x, p.y, p.vx, p.vy = 0.5, 0.8, 0, 0 -- swirl at the feet
+                            elseif aura then
                                 p.x, p.y = 0.28 + math.random() * 0.44, 0.7 + math.random() * 0.08
                                 p.vx, p.vy = (math.random() - 0.5) * 0.04, -(0.05 + layer.rise * 0.035 + layer.speed * 0.02)
                             else
@@ -370130,14 +370167,21 @@ local function stepHandle(h, dt: number)
                     if p.age &lt;= p.life then
                         local t = p.age / p.life
                         p.x += p.vx * dt p.y += p.vy * dt
+                        -- flipbook (FX v3): step through the 4x4 cells like the world emitter (OneShot in order, Random one shape, Loop cycles)
+                        local cell = Assets.frameAt(layer.tex, t, p.age, p.seed or 1)
+                        if cell ~= p.cell then p.cell = cell Assets.setCell(p.obj, layer.tex, cell) end
                         local curve = if layer.curve == "sizePop" then Recipes.Curves.sizePop else Recipes.Curves.sizeGrow
                         local px = math.max(2, sizePx * Recipes.sample(curve, t) * (if layer.curve == "sizeGrow" then 2.2 else 1.4))
                         local opacity = layer.alpha * math.clamp((1 - Recipes.sample(Recipes.Curves.fadeInOut, t)) / 0.7, 0, 1) * fade
                         p.obj.Rotation = p.rot + (layer.spin or 0) * p.age
                         place(p.obj, p.x, p.y, px, gradient(layer.color, t), 1 - opacity)
+                        if layer.flat then p.obj.Size = UDim2.fromOffset(px * 1.6, px * 0.6) end
                     else p.obj.Visible = false end
                 end
             end
+        elseif k == "pillar" then
+            local glow = if h.reduced then 0.5 else Recipes.pulse(time, layer.hz)
+            place(L.img, 0.5, 0.42, unit * 0.95, layer.color[#layer.color], 1 - layer.alpha * (0.55 + 0.45 * glow) * fade)
         elseif k == "ring" or k == "spiral" then
             local n = #L.dots
             local rx = 0.2 + layer.radius * 0.07
@@ -554402,7 +554446,7 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
     local device = opts.device or Rig.device()
     local resolved = Recipes.resolve(kind, item, {device = device, reduce = opts.reduce, detail = opts.detail})
     local self = setmetatable({root = root, resolved = resolved, scale = 1, lastScale = -1, age = 0, wasMoving = false, lastPop = -10,
-        objects = {}, emitters = {}, moving = {}, orbits = {}, trails = {}, beams = {}, lights = {}, bursts = {}, alive = true}, Rig)
+        objects = {}, emitters = {}, moving = {}, orbits = {}, trails = {}, beams = {}, lights = {}, bursts = {}, pillars = {}, alive = true}, Rig)
 
     local function own(inst: Instance) table.insert(self.objects, inst) return inst end
     local function needsAnchor(): boolean
@@ -554442,6 +554486,9 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
             if emitsMoving then
                 parent = attachment(root, "FxTail")
                 parent.Position = Vector3.new(0, -0.9, 1.4)
+            elseif layer.flat then
+                parent = attachment(root, "FxFeet") -- swirl lies flat, centred under the dino
+                parent.Position = Vector3.new(0, FEET + 0.15, 0)
             elseif layer.shape and anchor then
                 parent = anchor
             else
@@ -554456,15 +554503,23 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
             e.Size = sizeSeq(layer, 1)
             e.Lifetime = NumberRange.new(layer.life * 0.8, layer.life)
             e.Speed = NumberRange.new(layer.speed * 0.5, layer.speed)
-            e.LightEmission = layer.light or 0.5
+            e.LightEmission = if Assets.Additive[layer.tex] then 1 else (layer.light or 0.5)
             e.Rotation = NumberRange.new(-180, 180)
             e.RotSpeed = if layer.spin then NumberRange.new(-layer.spin, layer.spin) else NumberRange.new(0, 0)
             e.LockedToPart = false
             e.Squash = NumberSequence.new(0)
             e.Drag = 0
             e.Shape, e.ShapeInOut, e.ShapeStyle = Enum.ParticleEmitterShape.Box, Enum.ParticleEmitterShapeInOut.Outward, Enum.ParticleEmitterShapeStyle.Volume
-            e.FlipbookLayout = if Assets.isReal(layer.tex) then Enum.ParticleFlipbookLayout.Grid4x4 else Enum.ParticleFlipbookLayout.None
-            if Assets.isReal(layer.tex) then e.FlipbookMode = Enum.ParticleFlipbookMode.Random end
+            -- FX v3 sheets: OneShot plays the 16 cells in order over each particle's life (smoke, sparkle), Random picks one
+            -- shape (flame), Loop cycles (swirl). Single images and built-in sprites have no flipbook.
+            local sheet = Assets.isSheet(layer.tex)
+            e.FlipbookLayout = if sheet then Enum.ParticleFlipbookLayout.Grid4x4 else Enum.ParticleFlipbookLayout.None
+            if sheet then
+                e.FlipbookMode = (Enum.ParticleFlipbookMode :: any)[Assets.mode(layer.tex)]
+                e.FlipbookFramerate = NumberRange.new(Assets.LoopFps)
+                e.FlipbookStartRandom = Assets.mode(layer.tex) ~= "OneShot"
+            end
+            e.Orientation = if layer.flat then Enum.ParticleOrientation.VelocityPerpendicular else Enum.ParticleOrientation.FacingCamera
             if k == "burst" then
                 e.Rate = 0
                 e.SpreadAngle = Vector2.new(180, 180)
@@ -554483,6 +554538,9 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
                 elseif layer.shape == "Cylinder" then
                     e.SpreadAngle = Vector2.new(35, 35)
                 end
+                if layer.flat then
+                    e.Shape, e.SpreadAngle, e.Acceleration = Enum.ParticleEmitterShape.Box, Vector2.zero, Vector3.zero
+                end
                 e.Enabled = false
             end
             e.Parent = parent
@@ -554491,6 +554549,18 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
             if k == "burst" then table.insert(self.bursts, entry) else
                 table.insert(self.emitters, entry)
             end
+        elseif k == "pillar" and anchor then
+            -- Rays pillar (FX v3, Epic+): one camera-facing image standing on the feet, pushed slightly behind the dino, pulsing slowly.
+            local board = Instance.new("BillboardGui")
+            board.Name = "Fx_" .. layer.id
+            board.LightInfluence, board.AlwaysOnTop, board.ResetOnSpawn, board.MaxDistance = 0, false, false, 220
+            local img = Instance.new("ImageLabel")
+            img.BackgroundTransparency, img.Size, img.Image, img.ImageTransparency = 1, UDim2.fromScale(1, 1), Assets.resolve(layer.tex), 1
+            img.ImageColor3 = c3(layer.color[#layer.color])
+            img.Parent = board
+            board.Adornee, board.Parent = anchor, anchor
+            own(board)
+            table.insert(self.pillars, {board = board, img = img, layer = layer})
         elseif k == "ring" or k == "spiral" then
             local n = layer.beams
             local points = {}
@@ -554569,6 +554639,16 @@ function Rig:update(scale: number, time: number, moving: boolean)
     for _, entry in self.lights do
         entry.light.Brightness = entry.layer.brightness * (0.75 + 0.25 * pulse) * fade
         if rebuild then entry.light.Range = entry.layer.range * scale end
+    end
+    for _, entry in self.pillars do
+        local layer = entry.layer
+        if rebuild then
+            entry.board.Size = UDim2.fromScale(layer.width * scale, layer.height * scale)
+            -- bottom on the feet; StudsOffset is camera-relative, so -Z keeps it BEHIND the dino from any view angle
+            entry.board.StudsOffset = Vector3.new(0, layer.height * scale * 0.5, -1.6 * scale)
+        end
+        local glow = if reduced then 0.5 else Recipes.pulse(time, layer.hz)
+        entry.img.ImageTransparency = 1 - layer.alpha * (0.55 + 0.45 * glow) * fade
     end
     for _, entry in self.emitters do
         local e = entry.emitter
@@ -554663,7 +554743,7 @@ local function triple(c: Color3) return {c.R * 255, c.G * 255, c.B * 255} end
 
 -- shape: "disc" | "ring" | "spark" | "puff". A real texture (Assets) makes it an ImageLabel, otherwise a native shape.
 local function node(parent, z: number, key: string, shape: string, seed: number)
-    local n = {shape = shape}
+    local n = {shape = shape, key = key, seed = seed, cell = 0}
     if Assets.isReal(key) then
         local i = Instance.new("ImageLabel")
         i.BackgroundTransparency, i.BorderSizePixel, i.Image = 1, 0, Assets.resolve(key)
@@ -554694,6 +554774,13 @@ local function put(n, x: number, y: number, size: number, color: Color3, opacity
     elseif n.stroke then n.stroke.Color, n.stroke.Transparency = color, 1 - opacity
     else o.BackgroundColor3, o.BackgroundTransparency = color, 1 - opacity end
     o.Visible = opacity &gt; 0.01
+end
+-- FX v3 flipbooks: show cell `Assets.frameAt` (OneShot plays in order over t 0..1, otherwise loops / random). No-op for single images.
+local function flip(n, t: number, age: number)
+    if not n.img or not Assets.isSheet(n.key) then return end
+    local cell = if Assets.mode(n.key) == "OneShot" and t &gt;= 0 then Assets.frameAt(n.key, t, age, n.seed)
+        else math.floor(age * Assets.LoopFps + n.seed * 3) % 16 + 1
+    if cell ~= n.cell then n.cell = cell Assets.setCell(n.obj, n.key, cell) end
 end
 local function hideAll(list) for _, n in list do n.obj.Visible = false end end
 
@@ -554785,6 +554872,7 @@ function M.update(h, vt: number, bp: number, since: number?, revealed: boolean)
         if i &lt;= c.sparks and showSparks then
             local dx, dy, depth, opacity, size = Plan.rimSpark(i, c.sparks, vt, h.tier, bp)
             n.obj.ZIndex = if depth &gt; 0 then 23 else 22
+            flip(n, ((vt * 0.8 + i * 0.37) % 1), vt)
             put(n, cx + dx, cy + dy, size, pal[(i - 1) % #pal + 1], opacity)
         else n.obj.Visible = false end
     end
@@ -554792,6 +554880,7 @@ function M.update(h, vt: number, bp: number, since: number?, revealed: boolean)
     for i, n in p.motes do
         if i &lt;= c.motes and (not failed or not since) then
             local x, y, size, opacity = Plan.mote(i, vt, h.tier)
+            flip(n, ((vt * 0.6 + i * 0.29) % 1), vt)
             put(n, x, y, size, pal[(i * 2 - 1) % #pal + 1]:Lerp(WHITE, 0.35), opacity * (0.4 + 0.6 * math.clamp(bp * 2, 0, 1)))
         else n.obj.Visible = false end
     end
@@ -554799,6 +554888,7 @@ function M.update(h, vt: number, bp: number, since: number?, revealed: boolean)
     for i, n in p.puffs do
         if since and i &lt;= c.puffs then
             local dx, dy, size, opacity = Plan.puff(i, c.puffs, since)
+            flip(n, since / Plan.Limits.puffLife, since) -- smoke-anime poof: grows, then breaks into curls
             put(n, cx + dx, cy + dy, size, if failed then Color3.fromRGB(255, 244, 214) else h.color:Lerp(WHITE, 0.6), opacity)
         else n.obj.Visible = false end
     end
@@ -554812,6 +554902,7 @@ function M.update(h, vt: number, bp: number, since: number?, revealed: boolean)
     for i, n in p.fg do
         if since and revealed and not failed and i &lt;= c.fg then
             local x, y, size, opacity = Plan.fgSpark(i, c.fg, vt)
+            flip(n, ((vt * 0.7 + i * 0.41) % 1), vt)
             put(n, x, y, size, pal[(i * 3 - 1) % #pal + 1]:Lerp(WHITE, 0.4), opacity * math.clamp((since - 0.5) / 0.6, 0, 1))
         else n.obj.Visible = false end
     end
@@ -556676,6 +556767,13 @@ local DENSITY=if phone then .5 else 1
 local TEX_SMOKE="rbxasset://textures/particles/smoke_main.dds"
 local TEX_SPARK="rbxasset://textures/particles/sparkles_main.dds"
 local TEX_FIRE="rbxasset://textures/particles/fire_main.dds"
+-- Quake dust puffs use the FX v3 anime smoke flipbook (docs/77 fx3_smoke-anime): 16 cells played in order over each puff's life.
+local DUST_FX=(function()
+    local Assets=require(Shared.EffectAssets)
+    local sheet=Assets.isSheet("smokeSheet")
+    return {Texture=Assets.resolve("smokeSheet"),FlipbookLayout=if sheet then Enum.ParticleFlipbookLayout.Grid4x4 else Enum.ParticleFlipbookLayout.None,
+        FlipbookMode=Enum.ParticleFlipbookMode.OneShot}
+end)()
 
 local folder=Instance.new("Folder") folder.Name="LocalWeatherFX" folder.Parent=workspace
 local function c3(c:{number}):Color3 return Color3.fromRGB(c[1],c[2],c[3]) end
@@ -556881,7 +556979,7 @@ end
 do
     local ground=volume(Vector3.new(70,.2,70))
     local dust=emitter(ground,"quake","dust",{
-        Texture=TEX_SMOKE,Speed=NumberRange.new(3,9),EmissionDirection=Enum.NormalId.Top,
+        Texture=DUST_FX.Texture,FlipbookLayout=DUST_FX.FlipbookLayout,FlipbookMode=DUST_FX.FlipbookMode,Speed=NumberRange.new(3,9),EmissionDirection=Enum.NormalId.Top,
         Size=seq(10,24,34),Transparency=seq(.82,.7,1),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-14,14),
         Color=ColorSequence.new(Color3.fromRGB(196,170,128),Color3.fromRGB(160,138,104)),SpreadAngle=Vector2.new(30,30),
     })
@@ -557171,7 +557269,7 @@ for _=1,if phone then WL.Budget.cracksPhone else WL.Budget.cracks do
         table.insert(segs,{wedges=wedges,glow=glowPart,frame=CFrame.new(PARKED),len=1,width=1,appear=0})
     end
     local holder=volume(Vector3.new(4,.4,12)) holder.Name="QuakeDust" holder.Position=PARKED
-    local dust=burstEmitter(holder,{Texture=TEX_SMOKE,Lifetime=NumberRange.new(1.6,2.4),Speed=NumberRange.new(3,8),EmissionDirection=Enum.NormalId.Top,
+    local dust=burstEmitter(holder,{Texture=DUST_FX.Texture,FlipbookLayout=DUST_FX.FlipbookLayout,FlipbookMode=DUST_FX.FlipbookMode,Lifetime=NumberRange.new(1.6,2.4),Speed=NumberRange.new(3,8),EmissionDirection=Enum.NormalId.Top,
         SpreadAngle=Vector2.new(35,35),Size=seq(4,9,12),Transparency=seq(.55,.72,1),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-20,20),Drag=1.5,
         Acceleration=Vector3.new(0,1,0),Color=ColorSequence.new(Color3.fromRGB(196,172,136),Color3.fromRGB(160,138,108))})
     table.insert(cracks,{segs=segs,holder=holder,dust=dust,active=false,age=0,life=4,static=false})
