@@ -30,7 +30,17 @@ local function stroke(parent: GuiObject, color: Color3, thickness: number)
     s.Color, s.Thickness, s.Parent = color, thickness, parent
     return s
 end
--- BD-214: textured 3D models (Roblox generate_mesh, docs/77). The server caches stripped copies in
+-- Owner 2026-10-16: 2D glossy glass icons drawn by the owner (ChatGPT), keyed "<kind>_<rarity lowercase>" = potion id.
+-- They replace the BD-214 3D models (clay look). The vector flask above stays only as the fallback if an image fails.
+PotionArt.Images = {
+    speed_common="rbxassetid://110990547415973", growth_common="rbxassetid://71099361385349", loot_common="rbxassetid://72613159820037",
+    speed_uncommon="rbxassetid://123857884398526", growth_uncommon="rbxassetid://73663109855534",
+    speed_rare="rbxassetid://136790833155040", growth_rare="rbxassetid://76241844530193", loot_rare="rbxassetid://99599838090394",
+    growth_epic="rbxassetid://82640088651748", loot_epic="rbxassetid://120610332067181",
+    speed_legendary="rbxassetid://137961257014166", growth_legendary="rbxassetid://121220773132781",
+}
+PotionArt.UseModels = false -- dormant BD-214 3D path; keep false
+-- BD-214 (dormant): textured 3D models (Roblox generate_mesh, docs/77). The server caches stripped copies in
 -- ReplicatedStorage.PotionModels (Server/PotionModels); the vector flask above stays as the fallback.
 PotionArt.ModelAssets = {flask=114182681867384, jar=121478365783622, heart=126942715659365, claw=100441458834806}
 PotionArt.ReduceMotion = false
@@ -101,6 +111,44 @@ function PotionArt.attachModel(root: GuiObject, kind: string, rarity: string)
         end
     end)
 end
+local bobbing: {[ImageLabel]: number} = setmetatable({}, {__mode = "k"}) :: any
+local bobConnection: RBXScriptConnection? = nil
+local function bob()
+    local t, any = os.clock(), false
+    for image, phase in bobbing do
+        if image.Parent and image:IsDescendantOf(game) then
+            any = true
+            image.Position = UDim2.fromScale(.5, .46 + math.sin(t * 1.6 + phase) * .015)
+        else bobbing[image] = nil end
+    end
+    if not any and bobConnection then bobConnection:Disconnect() bobConnection = nil end
+end
+-- Image sits above the rarity glow but below the pips, so the tier frame stays readable.
+function PotionArt.attachImage(root: GuiObject, uri: string, z: number, flask: {GuiObject})
+    local image = Instance.new("ImageLabel")
+    image.Name, image.Image, image.BackgroundTransparency = "PotionImage", uri, 1
+    image.ScaleType, image.AnchorPoint = Enum.ScaleType.Fit, Vector2.new(.5, .5)
+    image.Position, image.Size, image.ZIndex = UDim2.fromScale(.5, .46), UDim2.fromScale(.9, .84), z + 2
+    image.Parent = root
+    for _, part in flask do part.Visible = false end
+    if game == nil or not game:GetService("RunService"):IsClient() then return end
+    task.spawn(function() -- fallback: show the vector flask again if the image never loads
+        local ContentProvider = game:GetService("ContentProvider")
+        local ok = pcall(function() ContentProvider:PreloadAsync({image}) end)
+        if not root.Parent then return end
+        if not ok or not image.IsLoaded then
+            for _ = 1, 20 do if image.IsLoaded or not root.Parent then break end task.wait(.5) end
+        end
+        if root.Parent and not image.IsLoaded then
+            image.Visible = false
+            for _, f in flask do f.Visible = true end
+        end
+    end)
+    if not PotionArt.ReduceMotion then
+        bobbing[image] = math.random() * 6
+        if not bobConnection then bobConnection = game:GetService("RunService").Heartbeat:Connect(bob) end
+    end
+end
 function PotionArt.rarityIndex(rarity: string): number
     return table.find(PotionArt.Rarities, rarity) or 1
 end
@@ -119,12 +167,14 @@ function PotionArt.build(root: GuiObject, kind: string, rarity: string)
     -- Liquid fills the lower 65% of the body, clipped by matching corners.
     frame(body, "Liquid", .06, .35, .88, .59, shape.liquid, z + 2, shape.corner, .05)
     frame(body, "Shine", .14, .14, .12, .3, Color3.new(1,1,1), z + 3, 1, .45)
-    frame(root, "Cork", n[1] - .02, n[3] - .06, n[2] + .04, .1, trim, z + 3, .35)
+    local cork = frame(root, "Cork", n[1] - .02, n[3] - .06, n[2] + .04, .1, trim, z + 3, .35)
     -- Pips (1 per tier) make rarity readable without colour.
     for i = 1, tier do
         frame(root, "Pip", .5 + (i - (tier + 1) / 2) * .11 - .03, .92, .06, .06, trim, z + 3, 1)
     end
-    if game ~= nil and game:GetService("RunService"):IsClient() then PotionArt.attachModel(root, kind, rarity) end
+    local uri = PotionArt.Images[kind .. "_" .. string.lower(rarity)]
+    if uri then PotionArt.attachImage(root, uri, z, {neck, body, cork}) end
+    if PotionArt.UseModels and game ~= nil and game:GetService("RunService"):IsClient() then PotionArt.attachModel(root, kind, rarity) end
     return neck
 end
 return PotionArt
