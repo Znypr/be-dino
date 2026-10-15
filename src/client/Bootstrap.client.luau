@@ -490,6 +490,7 @@ render=function(name: string)
                 label(body,row.name,x,cardsY+32,155,28,22)
                 local tile=box(body,x,cardsY+62,155,110,Color3.fromRGB(122,148,112):Lerp(C.panel,.25),24)
                 local view=ModelPreview.add(tile,"egg")
+                view:SetAttribute("InspectZoom",1.6) -- BD-226: bigger egg so cracks/dirt/stars read at card size
                 EggAppearance.apply(view,EggGenetics.neutral(row.id),true)
                 label(body,string.format("%g%%",weights[i]),x,cardsY+176,155,34,24,C.blue)
             end

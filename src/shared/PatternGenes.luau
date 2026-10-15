@@ -130,7 +130,10 @@ local function paint(part: MeshPart,genes): boolean
         local rank=tonumber(string.sub(mask,i,i+1),16)
         if rank<254 then histogram[rank+1]+=1;count+=1 end
     end
-    local same=genes.primaryColorId==genes.secondaryColorId
+    -- BD-226: a plain (01_blank) egg has no pattern to show; the same-family lighter/darker split would cut the shell into a
+    -- lit half and a dark half (owner: "half dark"), so a blank egg stays one even colour.
+    local plainEgg=part:GetAttribute("GeneSpecies")=="egg" and (genes.patternId==nil or genes.patternId=="01_blank")
+    local same=genes.primaryColorId==genes.secondaryColorId and not plainEgg
     local target=math.floor(count*(if same then .5 else genes.blend/100))
     local threshold=253;local cumulative=0
     for rank=0,253 do

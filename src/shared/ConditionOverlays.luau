@@ -7,8 +7,10 @@ Overlays.Layers={
     normal={layer="clean",assetId="",material=Enum.Material.SmoothPlastic,reflectance=0},
     cracked={layer="cracked_fractures",assetId="126956807167774",material=Enum.Material.Plastic,reflectance=0},
     dirty={layer="dirty_smudges",assetId="105931497056313",material=Enum.Material.Plastic,reflectance=0},
-    rainbow={layer="rainbow_flank_stars",assetId="117352915695915",material=Enum.Material.SmoothPlastic,reflectance=0.08},
-    astra={layer="astra_opal_streaks",assetId="102255733208943",material=Enum.Material.SmoothPlastic,reflectance=0.15},
+    -- BD-226: the Rainbow/Astra art is faint at card size, so its decal is stacked (`stack` copies, same bound asset) and an
+    -- Astra egg preview gets a soft cosmic tint (`previewTint`, applied to the ViewportFrame by EggAppearance). No new art.
+    rainbow={layer="rainbow_flank_stars",assetId="117352915695915",material=Enum.Material.SmoothPlastic,reflectance=0.08,stack=3},
+    astra={layer="astra_opal_streaks",assetId="102255733208943",material=Enum.Material.SmoothPlastic,reflectance=0.15,stack=3,previewTint=Color3.fromRGB(185,170,255)},
 }
 function Overlays.describe(conditionId: string?)
     local layer=Overlays.Layers[conditionId or "normal"] or Overlays.Layers.normal
@@ -20,8 +22,9 @@ function Overlays.signature(conditionId: string?): string
 end
 function Overlays.apply(shell: BasePart,conditionId: string?)
     local l=Overlays.describe(conditionId)
-    local old=shell:FindFirstChild("ConditionOverlay")
-    if old then old:Destroy() end
+    for _,old in shell:GetChildren() do
+        if old:IsA("Decal") and (old.Name=="ConditionOverlay" or old.Name=="ConditionOverlayBoost") then old:Destroy() end
+    end
     shell:SetAttribute("ConditionLayer",l.layer)
     if shell:GetAttribute("ConditionOriginalMaterial")==nil then shell:SetAttribute("ConditionOriginalMaterial",shell.Material.Name) end
     shell.Material,shell.Reflectance=l.material,l.reflectance
@@ -29,6 +32,10 @@ function Overlays.apply(shell: BasePart,conditionId: string?)
         local decal=Instance.new("Decal")
         decal.Name,decal.Texture,decal.Face="ConditionOverlay","rbxassetid://"..l.assetId,Enum.NormalId.Front
         decal.Transparency,decal.Parent=0,shell
+        for _=2,(l :: any).stack or 1 do
+            local copy=decal:Clone()
+            copy.Name,copy.Parent="ConditionOverlayBoost",shell
+        end
     end
 end
 return Overlays

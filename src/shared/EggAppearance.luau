@@ -39,5 +39,10 @@ function Appearance.apply(container: Instance,genes,showCondition: boolean?)
         end
     end
     if shell and showCondition==true then Overlays.apply(shell,genes.conditionId) end
+    -- BD-226: Astra's cosmic tint lives on the preview viewport (a MeshPart's Color does not tint its texture).
+    if showCondition==true and container:IsA("ViewportFrame") then
+        local tint3=(Overlays.describe(genes.conditionId) :: any).previewTint
+        container.ImageColor3=if typeof(tint3)=="Color3" then tint3 else Color3.new(1,1,1)
+    end
 end
 return Appearance
