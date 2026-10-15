@@ -146,7 +146,7 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
             e.Size = sizeSeq(layer, 1)
             e.Lifetime = NumberRange.new(layer.life * 0.8, layer.life)
             e.Speed = NumberRange.new(layer.speed * 0.5, layer.speed)
-            e.LightEmission = if Assets.Additive[layer.tex] then 1 else (layer.light or 0.5)
+            e.LightEmission = if Assets.isAdditive(layer.tex) then 1 else (layer.light or 0.5)
             e.Rotation = NumberRange.new(-180, 180)
             e.RotSpeed = if layer.spin then NumberRange.new(-layer.spin, layer.spin) else NumberRange.new(0, 0)
             e.LockedToPart = false
@@ -192,7 +192,8 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
             if k == "burst" then table.insert(self.bursts, entry) else
                 table.insert(self.emitters, entry)
             end
-        elseif k == "pillar" and anchor then
+        elseif k == "pillar" and anchor and not Assets.isAdditive(layer.tex) then
+            -- (skipped while the rays upload is opaque on black: a BillboardGui cannot blend additively, docs EffectAssets.HasAlpha)
             -- Rays pillar (FX v3, Epic+): one camera-facing image standing on the feet, pushed slightly behind the dino, pulsing slowly.
             local board = Instance.new("BillboardGui")
             board.Name = "Fx_" .. layer.id

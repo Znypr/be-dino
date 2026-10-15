@@ -368145,8 +368145,21 @@ Assets.Sheets = {smokeSheet = {size = 1024, grid = 4}, sparkSheet = {size = 1024
 -- Loop = cycles at LoopFps. Keys not listed play Random.
 Assets.FlipbookMode = {smokeSheet = "OneShot", sparkSheet = "OneShot", starFour = "OneShot", flameSheet = "Random", swirl = "Loop", crystalSheet = "Random"}
 Assets.LoopFps = 10
--- Sheets whose upload may carry a black background: draw them additively (LightEmission 1) so black never shows.
-Assets.Additive = {swirl = true, rays = true}
+-- Studio check 2026-10-16 (AssetService EditableImage): the five fx3 uploads are OPAQUE on black (no alpha), unlike the
+-- white-on-alpha PNGs in resources/effects/fx-v3. Until they are re-uploaded with alpha:
+--   * world ParticleEmitters draw them additively (LightEmission 1), so black adds nothing and only the white shape shows;
+--   * 2D UI (FxUi, HatchFx) cannot blend additively, so it keeps the built-in sprites (resolveUi / isRealUi / setCell).
+-- After a re-upload with alpha: put the new id in Requested and set the key true in HasAlpha.
+Assets.HasAlpha = {}
+Assets.Additive = {}
+for _, key in {"smokeSheet", "sparkSheet", "flameSheet", "starFour", "swirl", "rays"} do Assets.Additive[key] = true end
+function Assets.isAdditive(key: string): boolean return Assets.Additive[key] == true and not Assets.HasAlpha[key] end
+function Assets.isRealUi(key: string): boolean return Assets.isReal(key) and not Assets.isAdditive(key) end
+function Assets.resolveUi(key: string): string
+    if Assets.isRealUi(key) then return Assets.resolve(key) end
+    local req = Assets.Requested[key]
+    return Assets.Builtin[if req then req.fallback else key] or Assets.Builtin.spark
+end
 function Assets.mode(key: string): string return Assets.FlipbookMode[key] or "Random" end
 function Assets.isSheet(key: string): boolean return Assets.Sheets[key] ~= nil and Assets.isReal(key) end
 -- Pure: which cell (1..16) a 2D sprite shows. t = 0..1 of its life, age = seconds alive, seed = the sprite's random pick.
@@ -368166,6 +368179,7 @@ function Assets.cellRect(key: string, cell: number): (number?, number?, number?)
 end
 -- Applies the cell to an ImageLabel (no-op for built-in sprites). Returns true when a real sheet cell was set.
 function Assets.setCell(image: any, key: string, cell: number): boolean
+    if not Assets.isRealUi(key) then return false end
     local x, y, size = Assets.cellRect(key, cell)
     if not x then return false end
     image.ImageRectOffset, image.ImageRectSize = Vector2.new(x, y), Vector2.new(size, size)
@@ -370058,14 +370072,14 @@ local function buildLayer(h, layer)
         L.discs = {}
         -- A real glowPlate upload (Blender, docs/93 section 8) replaces the plain discs automatically; until then rounded frames.
         local plate = Assets.isReal("glowPlate")
-        for i = 1, 3 do L.discs[i] = if plate then sprite(h.frame, z, Assets.resolve("glowPlate")) else dot(h.frame, z, true) end
+        for i = 1, 3 do L.discs[i] = if plate then sprite(h.frame, z, Assets.resolveUi("glowPlate")) else dot(h.frame, z, true) end
     elseif k == "emitter" then
         L.pool, L.acc = {}, 0
         local cap = math.clamp(math.ceil(layer.rate * layer.life * 2.2) + 1, 3, 14)
-        local tex = Assets.resolve(layer.tex)
+        local tex = Assets.resolveUi(layer.tex) -- built-in sprite while an upload has no alpha (EffectAssets.HasAlpha)
         if layer.shape == "Disc" then
             L.ripples = true
-            if Assets.isReal(layer.tex) then
+            if Assets.isRealUi(layer.tex) then
                 -- real thin-ring texture (ringShock): tinted sprite instead of a stroked frame
                 for i = 1, 3 do L.pool[i] = {obj = sprite(h.frame, z, tex), age = 1e9, life = layer.life} end
             else
@@ -370076,7 +370090,7 @@ local function buildLayer(h, layer)
         end
     elseif k == "pillar" then
         -- FX v3 rays pillar: one sprite standing behind the dino, pulsing slowly (built-in sparkle until the upload resolves)
-        L.img = sprite(h.frame, z - 1, Assets.resolve(layer.tex))
+        L.img = sprite(h.frame, z - 1, Assets.resolveUi(layer.tex))
     elseif k == "ring" or k == "spiral" then
         L.dots = {}
         local n = if k == "ring" then 9 else 8
@@ -370179,7 +370193,7 @@ local function stepHandle(h, dt: number)
                     else p.obj.Visible = false end
                 end
             end
-        elseif k == "pillar" then
+        elseif k == "pillar" and Assets.isRealUi(layer.tex) then
             local glow = if h.reduced then 0.5 else Recipes.pulse(time, layer.hz)
             place(L.img, 0.5, 0.42, unit * 0.95, layer.color[#layer.color], 1 - layer.alpha * (0.55 + 0.45 * glow) * fade)
         elseif k == "ring" or k == "spiral" then
@@ -554503,7 +554517,7 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
             e.Size = sizeSeq(layer, 1)
             e.Lifetime = NumberRange.new(layer.life * 0.8, layer.life)
             e.Speed = NumberRange.new(layer.speed * 0.5, layer.speed)
-            e.LightEmission = if Assets.Additive[layer.tex] then 1 else (layer.light or 0.5)
+            e.LightEmission = if Assets.isAdditive(layer.tex) then 1 else (layer.light or 0.5)
             e.Rotation = NumberRange.new(-180, 180)
             e.RotSpeed = if layer.spin then NumberRange.new(-layer.spin, layer.spin) else NumberRange.new(0, 0)
             e.LockedToPart = false
@@ -554549,7 +554563,8 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
             if k == "burst" then table.insert(self.bursts, entry) else
                 table.insert(self.emitters, entry)
             end
-        elseif k == "pillar" and anchor then
+        elseif k == "pillar" and anchor and not Assets.isAdditive(layer.tex) then
+            -- (skipped while the rays upload is opaque on black: a BillboardGui cannot blend additively, docs EffectAssets.HasAlpha)
             -- Rays pillar (FX v3, Epic+): one camera-facing image standing on the feet, pushed slightly behind the dino, pulsing slowly.
             local board = Instance.new("BillboardGui")
             board.Name = "Fx_" .. layer.id
@@ -554744,9 +554759,9 @@ local function triple(c: Color3) return {c.R * 255, c.G * 255, c.B * 255} end
 -- shape: "disc" | "ring" | "spark" | "puff". A real texture (Assets) makes it an ImageLabel, otherwise a native shape.
 local function node(parent, z: number, key: string, shape: string, seed: number)
     local n = {shape = shape, key = key, seed = seed, cell = 0}
-    if Assets.isReal(key) then
+    if Assets.isRealUi(key) then
         local i = Instance.new("ImageLabel")
-        i.BackgroundTransparency, i.BorderSizePixel, i.Image = 1, 0, Assets.resolve(key)
+        i.BackgroundTransparency, i.BorderSizePixel, i.Image = 1, 0, Assets.resolveUi(key)
         Assets.setCell(i, key, seed)
         n.obj, n.img = i, true
     else
@@ -554777,7 +554792,7 @@ local function put(n, x: number, y: number, size: number, color: Color3, opacity
 end
 -- FX v3 flipbooks: show cell `Assets.frameAt` (OneShot plays in order over t 0..1, otherwise loops / random). No-op for single images.
 local function flip(n, t: number, age: number)
-    if not n.img or not Assets.isSheet(n.key) then return end
+    if not n.img or not Assets.isSheet(n.key) or not Assets.isRealUi(n.key) then return end
     local cell = if Assets.mode(n.key) == "OneShot" and t &gt;= 0 then Assets.frameAt(n.key, t, age, n.seed)
         else math.floor(age * Assets.LoopFps + n.seed * 3) % 16 + 1
     if cell ~= n.cell then n.cell = cell Assets.setCell(n.obj, n.key, cell) end
@@ -556770,8 +556785,9 @@ local TEX_FIRE="rbxasset://textures/particles/fire_main.dds"
 -- Quake dust puffs use the FX v3 anime smoke flipbook (docs/77 fx3_smoke-anime): 16 cells played in order over each puff's life.
 local DUST_FX=(function()
     local Assets=require(Shared.EffectAssets)
-    local sheet=Assets.isSheet("smokeSheet")
-    return {Texture=Assets.resolve("smokeSheet"),FlipbookLayout=if sheet then Enum.ParticleFlipbookLayout.Grid4x4 else Enum.ParticleFlipbookLayout.None,
+    -- dust is a soft tan haze, so it needs the alpha upload (EffectAssets.HasAlpha); additive black-backed smoke would glow
+    local sheet=Assets.isSheet("smokeSheet") and not Assets.isAdditive("smokeSheet")
+    return {Texture=if sheet then Assets.resolve("smokeSheet") else Assets.Builtin.smoke,FlipbookLayout=if sheet then Enum.ParticleFlipbookLayout.Grid4x4 else Enum.ParticleFlipbookLayout.None,
         FlipbookMode=Enum.ParticleFlipbookMode.OneShot}
 end)()
 

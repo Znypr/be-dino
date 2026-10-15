@@ -192,6 +192,12 @@ for _, key in {"smokeSheet", "sparkSheet", "starFour", "flameSheet", "swirl"} do
     end
 end
 assert(A.cellRect("glowPlate", 3) == nil and A.cellRect("rays", 3) == nil, "single images have no cells")
+-- the fx3 uploads are opaque on black: world draws them additively, UI keeps built-in sprites until HasAlpha is set
+assert(A.isAdditive("smokeSheet") and not A.isRealUi("smokeSheet") and A.resolveUi("smokeSheet") == A.Builtin.smoke and A.resolveUi("rays") == A.Builtin.spark)
+local probe = {} assert(A.setCell(probe, "smokeSheet", 3) == false and probe.ImageRectSize == nil, "no cell on a built-in UI sprite")
+A.HasAlpha.smokeSheet = true
+assert(not A.isAdditive("smokeSheet") and A.isRealUi("smokeSheet") and A.resolveUi("smokeSheet") == A.resolve("smokeSheet"))
+A.HasAlpha.smokeSheet = nil
 -- hatch puff (smoke-anime, OneShot) plays its cells in order across the puff life
 local last = 0
 for k = 0, 20 do local c = A.frameAt("smokeSheet", k / 20 * 0.999, 0, 3) assert(c >= last) last = c end

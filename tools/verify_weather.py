@@ -190,7 +190,7 @@ def scan():
     assert 'WS.fire("quake")' in src, 'quake sound hook kept'
     # FX v3: quake dust puffs (ambient + crack bursts) use the anime smoke flipbook through EffectAssets, never a raw id here
     assert src.count('Texture=DUST_FX.Texture,FlipbookLayout=DUST_FX.FlipbookLayout,FlipbookMode=DUST_FX.FlipbookMode') == 2, 'quake dust uses smoke-anime'
-    assert 'Assets.resolve("smokeSheet")' in src and not re.search(r'rbxassetid://\d+', src), 'dust texture comes from EffectAssets'
+    assert 'Assets.resolve("smokeSheet")' in src and 'Assets.isAdditive("smokeSheet")' in src and not re.search(r'rbxassetid://\d+', src), 'dust texture comes from EffectAssets'
     assert 'auroraRing' not in src and 'SurfaceGui' not in src, 'no ground ring or square sky shell around the dino (owner 2026-10-15)'
     # BD-213: no opaque geometry inside FogEnd: no fog-coloured sky box, nothing sized from the fog distance
     assert 'WeatherSkyBox' not in src and 'updateDome' not in src, 'no opaque sky box inside FogEnd (reads as a wall)'

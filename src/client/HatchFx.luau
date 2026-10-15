@@ -22,9 +22,9 @@ local function triple(c: Color3) return {c.R * 255, c.G * 255, c.B * 255} end
 -- shape: "disc" | "ring" | "spark" | "puff". A real texture (Assets) makes it an ImageLabel, otherwise a native shape.
 local function node(parent, z: number, key: string, shape: string, seed: number)
     local n = {shape = shape, key = key, seed = seed, cell = 0}
-    if Assets.isReal(key) then
+    if Assets.isRealUi(key) then
         local i = Instance.new("ImageLabel")
-        i.BackgroundTransparency, i.BorderSizePixel, i.Image = 1, 0, Assets.resolve(key)
+        i.BackgroundTransparency, i.BorderSizePixel, i.Image = 1, 0, Assets.resolveUi(key)
         Assets.setCell(i, key, seed)
         n.obj, n.img = i, true
     else
@@ -55,7 +55,7 @@ local function put(n, x: number, y: number, size: number, color: Color3, opacity
 end
 -- FX v3 flipbooks: show cell `Assets.frameAt` (OneShot plays in order over t 0..1, otherwise loops / random). No-op for single images.
 local function flip(n, t: number, age: number)
-    if not n.img or not Assets.isSheet(n.key) then return end
+    if not n.img or not Assets.isSheet(n.key) or not Assets.isRealUi(n.key) then return end
     local cell = if Assets.mode(n.key) == "OneShot" and t >= 0 then Assets.frameAt(n.key, t, age, n.seed)
         else math.floor(age * Assets.LoopFps + n.seed * 3) % 16 + 1
     if cell ~= n.cell then n.cell = cell Assets.setCell(n.obj, n.key, cell) end

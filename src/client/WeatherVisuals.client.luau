@@ -23,8 +23,9 @@ local TEX_FIRE="rbxasset://textures/particles/fire_main.dds"
 -- Quake dust puffs use the FX v3 anime smoke flipbook (docs/77 fx3_smoke-anime): 16 cells played in order over each puff's life.
 local DUST_FX=(function()
     local Assets=require(Shared.EffectAssets)
-    local sheet=Assets.isSheet("smokeSheet")
-    return {Texture=Assets.resolve("smokeSheet"),FlipbookLayout=if sheet then Enum.ParticleFlipbookLayout.Grid4x4 else Enum.ParticleFlipbookLayout.None,
+    -- dust is a soft tan haze, so it needs the alpha upload (EffectAssets.HasAlpha); additive black-backed smoke would glow
+    local sheet=Assets.isSheet("smokeSheet") and not Assets.isAdditive("smokeSheet")
+    return {Texture=if sheet then Assets.resolve("smokeSheet") else Assets.Builtin.smoke,FlipbookLayout=if sheet then Enum.ParticleFlipbookLayout.Grid4x4 else Enum.ParticleFlipbookLayout.None,
         FlipbookMode=Enum.ParticleFlipbookMode.OneShot}
 end)()
 

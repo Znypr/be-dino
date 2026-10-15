@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "2d179e4d65ed6d1510fa3b5b6648992450fed08cb28aaedceca5c49916b50084",
+  "place_sha256": "358c413607b139f86128fe39d8a8e53e237c4dec1cb60ecab7f739681ebff671",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -177,7 +177,7 @@
     "src/shared/DinoMotion.luau": "28400afad06ebdf9fb9ac83bf41b229807db80c51f6de201e03b633fdc375b51",
     "src/shared/DinosaurPreview.luau": "dbb42a7ee16432626ead8cef4e092f094f590d8c9b398c8b62e88e4efe92d797",
     "src/shared/DinosaurVisual.luau": "d6ae15306c4a9442e0c984adf9229213c089277075534e37d55e9476c7dec509",
-    "src/shared/EffectAssets.luau": "d5e6ab3a272eac70d6e8974c9e9b045bb3285cc2bfc463cbe3ad68fd9bdb917c",
+    "src/shared/EffectAssets.luau": "e64cdb55b440ec3ecf39937b88216eae742bca8f7bd85c7d323d0af0547c245c",
     "src/shared/EggAppearance.luau": "a0e61f1f9e850572b5dc7f9a4790f365a8754170173997ccf7bcd6a0e51e2af0",
     "src/shared/EggGenetics.luau": "b3ff8c3c73b04318aff98c335fa6ae4a22553768f0b768468e3a168728ca2add",
     "src/shared/EggOrigin.luau": "36dafc6b1983606b815b2a77e9e9dfbb13aaa1ec32d4f4d8bbcaa36e9b8f9bd5",
@@ -190,7 +190,7 @@
     "src/shared/FoodCatchRules.luau": "c2c6cfa816271218494ca4116f70a1fc0b4b1e82ca2b6592d2d3280b43c4ecd4",
     "src/shared/FusionSelection.luau": "4cda80f90755429cfff5429fc0eabcce0ceba474a39e1325f23d18632480f946",
     "src/shared/FxRecipes.luau": "e7023b599cba3f3f02ce71f74c18fc08074be82959f41d494a04229513fd5347",
-    "src/shared/FxUi.luau": "ab60e2d7f0678d965a8f3d56622878d869ed8c62ab00e20bba474cb1077a0543",
+    "src/shared/FxUi.luau": "7225590425bbbf80ec80c468d14e7d99a3002047ea518aff33596124814c8d3d",
     "src/shared/GeneTextureAssets.luau": "79f6f9c881ee1dd53339d188b8656339421489c0117ad6e04fceffd240972c26",
     "src/shared/GeneTextures.luau": "efceb4ab08639f0fce0fb212f4401bb43867c8d11d66f8245241ed639ff35787",
     "src/shared/HatchFragments.luau": "4fb383a9b89c2ff58ffc8b973ed8419d70cb34b840cc3d0662233bbf0c2931ee",
@@ -277,8 +277,8 @@
     "src/client/FoodGlow.client.luau": "192e340c747a1ee97f34063f318c419a1107c2cd71cb1dc6e5000334ac83690e",
     "src/client/FusionMenu.luau": "0c28891bea285dd10f946ea08bbd3c573c84cdaf9f937272ac950622dafbefbf",
     "src/client/FusionWidgets.luau": "f0428582feecd3f1601972a48973cccc879db1b97aa2b7171f0a286a7ce9ecc5",
-    "src/client/FxRig.luau": "83bef7e56ef4bf99595d118bb7e945c805f3a340ab7547eefed74f616c9dd15c",
-    "src/client/HatchFx.luau": "5f952e94e9198927ca0c2b9881cbabc528a184eeb63df8f047d30b4b30191d13",
+    "src/client/FxRig.luau": "7d5611ab246b36032d5ee3fb3bfb97321d04a2808495f1c06aa5f5577ad37aed",
+    "src/client/HatchFx.luau": "589090489ea188b7a0c330c8b865f239c970c106daaeb702b01d214e38fc24f9",
     "src/client/HatchSequence.luau": "7f812bea703a3219220ec95c21c28a96f99d938c811ddad6b002cfd18c2d436f",
     "src/client/InspectView.luau": "af6e2c8413bdb4cf5a0e43aa48765bf02016ea77475e90761747b1cad4da0e0b",
     "src/client/JumpCarry.client.luau": "00398d26593b2042edd83228148424288e54f8501ba7e114bb64d073176e699a",
@@ -286,7 +286,7 @@
     "src/client/ResourceVisuals.client.luau": "372b1aadb60f5859ba5220421dd22aad01e1e3f046fec325a7363488b2e73b3d",
     "src/client/VolumeSliders.luau": "c1c8fcc997d9f2a1e2be40950f2b58d6de30bf3236dc142878b7ceaa2804f4e2",
     "src/client/WeatherAudio.client.luau": "a2656eef91d2859682a8c0168a71622b27470b775ab7f2b766b8380907286ec0",
-    "src/client/WeatherVisuals.client.luau": "56a17ed33671e9d957e27149bb7c81391480da4fbcf2121eaea8493fa84e7bb9",
+    "src/client/WeatherVisuals.client.luau": "ec4ff4fc77077602154d372ea1502b14341d581b8850d38216d135236b1a19d9",
     "src/client/WorldCulling.client.luau": "47eae7e3f25d6717d1f63438ffd8489bf399e9e4511faa0a7e5298f467a73682",
     "src/client/WorldReady.client.luau": "d7412e4f370a17b6a1e009a8d77fa11141a914503ee0ccc77a1e9039ced88e6c"
   }

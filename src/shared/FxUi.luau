@@ -51,14 +51,14 @@ local function buildLayer(h, layer)
         L.discs = {}
         -- A real glowPlate upload (Blender, docs/93 section 8) replaces the plain discs automatically; until then rounded frames.
         local plate = Assets.isReal("glowPlate")
-        for i = 1, 3 do L.discs[i] = if plate then sprite(h.frame, z, Assets.resolve("glowPlate")) else dot(h.frame, z, true) end
+        for i = 1, 3 do L.discs[i] = if plate then sprite(h.frame, z, Assets.resolveUi("glowPlate")) else dot(h.frame, z, true) end
     elseif k == "emitter" then
         L.pool, L.acc = {}, 0
         local cap = math.clamp(math.ceil(layer.rate * layer.life * 2.2) + 1, 3, 14)
-        local tex = Assets.resolve(layer.tex)
+        local tex = Assets.resolveUi(layer.tex) -- built-in sprite while an upload has no alpha (EffectAssets.HasAlpha)
         if layer.shape == "Disc" then
             L.ripples = true
-            if Assets.isReal(layer.tex) then
+            if Assets.isRealUi(layer.tex) then
                 -- real thin-ring texture (ringShock): tinted sprite instead of a stroked frame
                 for i = 1, 3 do L.pool[i] = {obj = sprite(h.frame, z, tex), age = 1e9, life = layer.life} end
             else
@@ -69,7 +69,7 @@ local function buildLayer(h, layer)
         end
     elseif k == "pillar" then
         -- FX v3 rays pillar: one sprite standing behind the dino, pulsing slowly (built-in sparkle until the upload resolves)
-        L.img = sprite(h.frame, z - 1, Assets.resolve(layer.tex))
+        L.img = sprite(h.frame, z - 1, Assets.resolveUi(layer.tex))
     elseif k == "ring" or k == "spiral" then
         L.dots = {}
         local n = if k == "ring" then 9 else 8
@@ -172,7 +172,7 @@ local function stepHandle(h, dt: number)
                     else p.obj.Visible = false end
                 end
             end
-        elseif k == "pillar" then
+        elseif k == "pillar" and Assets.isRealUi(layer.tex) then
             local glow = if h.reduced then 0.5 else Recipes.pulse(time, layer.hz)
             place(L.img, 0.5, 0.42, unit * 0.95, layer.color[#layer.color], 1 - layer.alpha * (0.55 + 0.45 * glow) * fade)
         elseif k == "ring" or k == "spiral" then

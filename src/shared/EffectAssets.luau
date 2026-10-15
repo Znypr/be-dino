@@ -59,8 +59,21 @@ Assets.Sheets = {smokeSheet = {size = 1024, grid = 4}, sparkSheet = {size = 1024
 -- Loop = cycles at LoopFps. Keys not listed play Random.
 Assets.FlipbookMode = {smokeSheet = "OneShot", sparkSheet = "OneShot", starFour = "OneShot", flameSheet = "Random", swirl = "Loop", crystalSheet = "Random"}
 Assets.LoopFps = 10
--- Sheets whose upload may carry a black background: draw them additively (LightEmission 1) so black never shows.
-Assets.Additive = {swirl = true, rays = true}
+-- Studio check 2026-10-16 (AssetService EditableImage): the five fx3 uploads are OPAQUE on black (no alpha), unlike the
+-- white-on-alpha PNGs in resources/effects/fx-v3. Until they are re-uploaded with alpha:
+--   * world ParticleEmitters draw them additively (LightEmission 1), so black adds nothing and only the white shape shows;
+--   * 2D UI (FxUi, HatchFx) cannot blend additively, so it keeps the built-in sprites (resolveUi / isRealUi / setCell).
+-- After a re-upload with alpha: put the new id in Requested and set the key true in HasAlpha.
+Assets.HasAlpha = {}
+Assets.Additive = {}
+for _, key in {"smokeSheet", "sparkSheet", "flameSheet", "starFour", "swirl", "rays"} do Assets.Additive[key] = true end
+function Assets.isAdditive(key: string): boolean return Assets.Additive[key] == true and not Assets.HasAlpha[key] end
+function Assets.isRealUi(key: string): boolean return Assets.isReal(key) and not Assets.isAdditive(key) end
+function Assets.resolveUi(key: string): string
+    if Assets.isRealUi(key) then return Assets.resolve(key) end
+    local req = Assets.Requested[key]
+    return Assets.Builtin[if req then req.fallback else key] or Assets.Builtin.spark
+end
 function Assets.mode(key: string): string return Assets.FlipbookMode[key] or "Random" end
 function Assets.isSheet(key: string): boolean return Assets.Sheets[key] ~= nil and Assets.isReal(key) end
 -- Pure: which cell (1..16) a 2D sprite shows. t = 0..1 of its life, age = seconds alive, seed = the sprite's random pick.
@@ -80,6 +93,7 @@ function Assets.cellRect(key: string, cell: number): (number?, number?, number?)
 end
 -- Applies the cell to an ImageLabel (no-op for built-in sprites). Returns true when a real sheet cell was set.
 function Assets.setCell(image: any, key: string, cell: number): boolean
+    if not Assets.isRealUi(key) then return false end
     local x, y, size = Assets.cellRect(key, cell)
     if not x then return false end
     image.ImageRectOffset, image.ImageRectSize = Vector2.new(x, y), Vector2.new(size, size)
