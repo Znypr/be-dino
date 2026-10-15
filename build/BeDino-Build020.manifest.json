@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "11c6b61384af98070144e26d8d3860dd45bf0e2cc3c67eab4796dd5548f9eae8",
+  "place_sha256": "3a4f9ffe10e486e42ad03066cf31adfe3014c83457b5ed47ede138cba42570e6",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "33f6491c3921573cdf897028008998b4097b134df9aefad7dee98030a3e62262",
@@ -270,6 +270,7 @@
     "src/client/DinoMotion.client.luau": "86896b394b2ede2c4e4c6eaece7f242b25acf090bba4cae5ebe984525c45b270",
     "src/client/EggPicture.luau": "66ff407ca10ea1297356217e40eb01e70370096eb48ec4d5635381ac627a7657",
     "src/client/EggsScreen.luau": "0eb169590c5778a2a2087ded7ff26f0829bbac39e7a0db324becfb9faba28ab7",
+    "src/client/FoodGlow.client.luau": "192e340c747a1ee97f34063f318c419a1107c2cd71cb1dc6e5000334ac83690e",
     "src/client/FusionMenu.luau": "2f5f0ca3ee9ff7bb4891a0cb59ba7e7a053fe0b4f92a35e6885fed39b5da23e4",
     "src/client/FusionWidgets.luau": "f0428582feecd3f1601972a48973cccc879db1b97aa2b7171f0a286a7ce9ecc5",
     "src/client/FxRig.luau": "ef2fca7315d87e1dcbe7bcaa6305769ce5ae8ccb6143740afe02cdd0deba89a6",
@@ -277,10 +278,10 @@
     "src/client/HatchSequence.luau": "549999723247d62bd8b41ce5169c9f5ff3ab867d88a73b404799e2ae795d9e4f",
     "src/client/InspectView.luau": "af6e2c8413bdb4cf5a0e43aa48765bf02016ea77475e90761747b1cad4da0e0b",
     "src/client/PreviewTraits.luau": "c7154bd43e83dd787248878d1ec7d144aeebc914d679f3a2892f11fd3ba1677f",
-    "src/client/ResourceVisuals.client.luau": "80b56a1b513a019bd2e08456397ff05fb138351ce2f3cb7e3ac499c6282aebba",
+    "src/client/ResourceVisuals.client.luau": "d26c3598ac134043056890c7de6094528062ca87012d441fc85accd4e787b32a",
     "src/client/VolumeSliders.luau": "c1c8fcc997d9f2a1e2be40950f2b58d6de30bf3236dc142878b7ceaa2804f4e2",
     "src/client/WeatherAudio.client.luau": "a2656eef91d2859682a8c0168a71622b27470b775ab7f2b766b8380907286ec0",
     "src/client/WeatherVisuals.client.luau": "fd6a38523ae23a2d2a2a898d74727cf9a593b61cf20d761017a5898e54839205",
-    "src/client/WorldCulling.client.luau": "bb3fe93d27b82a1a6fb24106869b211b7614a7c5692505d7ebe917be8d5d756a"
+    "src/client/WorldCulling.client.luau": "47eae7e3f25d6717d1f63438ffd8489bf399e9e4511faa0a7e5298f467a73682"
   }
 }
