@@ -20,6 +20,15 @@ Players.CharacterAutoLoads = false
 Lighting.ClockTime = 14
 Lighting.Brightness = 2
 Lighting.Ambient = Color3.fromRGB(130, 143, 148)
+-- World v2 distance haze: a gentle default Atmosphere so the 832-stud island fades into depth. The client weather script
+-- adopts an existing Atmosphere as its base (it only ever raises density/haze above these values), so they cooperate.
+if not Lighting:FindFirstChildOfClass("Atmosphere") then
+    local atmosphere = Instance.new("Atmosphere")
+    atmosphere.Name = "WorldHaze"
+    atmosphere.Density, atmosphere.Offset, atmosphere.Glare, atmosphere.Haze = .22, .12, 0, 1.15
+    atmosphere.Color, atmosphere.Decay = Color3.fromRGB(190, 208, 214), Color3.fromRGB(148, 176, 190)
+    atmosphere.Parent = Lighting
+end
 require(script.Parent.ImportedResources).load()
 if Config.WorldArtMode=="BiomeKit" or Config.FoodArtMode=="Kit" then require(script.Parent.ImportedResources).loadWorldKit() end
 Arena.build()
@@ -101,7 +110,7 @@ local function setup(player: Player)
         RunLifecycle.prepareSanctuary(player, character)
         task.spawn(function()
             Dinosaur.attach(character, Config.WalkSpeed, player)
-            if player.Character == character then character:PivotTo(CFrame.new(0, 11, 365)) end
+            if player.Character == character then character:PivotTo(CFrame.new(0, 11, Config.SanctuaryCenterZ)) end
         end)
     end)
     task.spawn(spawnLoadedPlayer, player)
