@@ -127,6 +127,22 @@ end
 for key, id in Assets.Uploaded do assert(Assets.isValid(id), key) end
 assert(not Assets.isValid("rbxassetid://") and not Assets.isValid("rbxassetid://abc") and Assets.isValid("rbxassetid://123"))
 assert(Assets.resolve("nothing") == Assets.Builtin.spark and Assets.resolve("glowPlate") == Assets.Builtin.spark)
+-- 8. FX v3: flipbook modes and the aura tier rules (all: smoke; Rare+: sparkles; Epic+: flame + rays; Legendary+: swirl at the feet).
+assert(Assets.mode("smokeSheet") == "OneShot" and Assets.mode("sparkSheet") == "OneShot" and Assets.mode("flameSheet") == "Random" and Assets.mode("swirl") == "Loop")
+assert(Assets.isSheet("smokeSheet") and Assets.isSheet("swirl") and not Assets.isSheet("rays") and Assets.isReal("rays"))
+assert(Assets.frameAt("smokeSheet", 0, 0, 5) == 1 and Assets.frameAt("smokeSheet", 0.999, 0, 5) == 16 and Assets.frameAt("flameSheet", 0.5, 1, 7) == 7)
+assert(Assets.frameAt("swirl", 0, 1.0, 0) == (Assets.LoopFps % 16) + 1)
+for t, name in R.Tiers do
+    local item = {} for k, v in synthetic do item[k] = v end
+    item.rarity = name
+    local res = R.resolve("aura", item, {device = "desktop"})
+    assert(layerById(res, "mist"), name .. " aura has smoke")
+    assert((layerById(res, "motes") ~= nil) == (t >= 3), name .. " sparkles from Rare")
+    assert((layerById(res, "flame") ~= nil) == (t >= 4) and (layerById(res, "rays") ~= nil) == (t >= 4), name .. " flame + rays from Epic")
+    assert((layerById(res, "swirl") ~= nil) == (t >= 5), name .. " swirl from Legendary")
+    local rays = layerById(res, "rays")
+    if rays then assert(rays.hz <= TIME.pulseHz and rays.alpha <= TIME.maxMistAlpha, "rays pulse slowly and stay soft") end
+end
 print(string.format("FxRecipes passed: %d resolutions (auras %d, trails %d, mutations %d) x 3 devices, tiers monotonic, phone rate x0.5, Reduce Motion light/ribbon only",
     count, #Config.Auras, #Config.Trails, #Look.Order))
 '''
@@ -153,7 +169,12 @@ def scan():
     for path in ['src/shared/FxRecipes.luau', 'src/shared/FxUi.luau', 'src/client/FxRig.luau']:
         assert not re.search(r'rbxassetid://\d+', (ROOT / path).read_text(encoding='utf-8')), path + ' must not contain asset ids'
     ids = re.findall(r'rbxassetid://(\d+)', (ROOT / 'src/shared/EffectAssets.luau').read_text(encoding='utf-8'))
-    assert ids == ['105629313112163'], 'EffectAssets may only contain the already-uploaded soft mist id'
+    # Real uploads only: the BD-155 soft mist plus the five FX v3 owner uploads (docs/77 fx3_* rows, 2026-10-16).
+    real = {'105629313112163', '140058716506789', '81481519628921', '97747398683135', '99422347356351', '89127115370689'}
+    assert set(ids) == real, 'EffectAssets may only contain registered real uploads: ' + str(ids)
+    registry = (ROOT / 'docs/77-asset-registry.md').read_text(encoding='utf-8')
+    for i in real - {'105629313112163'}:
+        assert 'rbxassetid://' + i in registry, i + ' must be in the asset registry'
     # Bootstrap is at Luau's 200 local-register limit: it must not gain top-level locals for this feature.
     assert 'FxRig' not in (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8')
     print('Source scan passed: world dino and shop previews use the FX framework, no invented asset ids')

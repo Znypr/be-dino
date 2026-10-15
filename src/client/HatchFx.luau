@@ -21,10 +21,10 @@ local function triple(c: Color3) return {c.R * 255, c.G * 255, c.B * 255} end
 
 -- shape: "disc" | "ring" | "spark" | "puff". A real texture (Assets) makes it an ImageLabel, otherwise a native shape.
 local function node(parent, z: number, key: string, shape: string, seed: number)
-    local n = {shape = shape}
-    if Assets.isReal(key) then
+    local n = {shape = shape, key = key, seed = seed, cell = 0}
+    if Assets.isRealUi(key) then
         local i = Instance.new("ImageLabel")
-        i.BackgroundTransparency, i.BorderSizePixel, i.Image = 1, 0, Assets.resolve(key)
+        i.BackgroundTransparency, i.BorderSizePixel, i.Image = 1, 0, Assets.resolveUi(key)
         Assets.setCell(i, key, seed)
         n.obj, n.img = i, true
     else
@@ -52,6 +52,13 @@ local function put(n, x: number, y: number, size: number, color: Color3, opacity
     elseif n.stroke then n.stroke.Color, n.stroke.Transparency = color, 1 - opacity
     else o.BackgroundColor3, o.BackgroundTransparency = color, 1 - opacity end
     o.Visible = opacity > 0.01
+end
+-- FX v3 flipbooks: show cell `Assets.frameAt` (OneShot plays in order over t 0..1, otherwise loops / random). No-op for single images.
+local function flip(n, t: number, age: number)
+    if not n.img or not Assets.isSheet(n.key) or not Assets.isRealUi(n.key) then return end
+    local cell = if Assets.mode(n.key) == "OneShot" and t >= 0 then Assets.frameAt(n.key, t, age, n.seed)
+        else math.floor(age * Assets.LoopFps + n.seed * 3) % 16 + 1
+    if cell ~= n.cell then n.cell = cell Assets.setCell(n.obj, n.key, cell) end
 end
 local function hideAll(list) for _, n in list do n.obj.Visible = false end end
 
@@ -143,6 +150,7 @@ function M.update(h, vt: number, bp: number, since: number?, revealed: boolean)
         if i <= c.sparks and showSparks then
             local dx, dy, depth, opacity, size = Plan.rimSpark(i, c.sparks, vt, h.tier, bp)
             n.obj.ZIndex = if depth > 0 then 23 else 22
+            flip(n, ((vt * 0.8 + i * 0.37) % 1), vt)
             put(n, cx + dx, cy + dy, size, pal[(i - 1) % #pal + 1], opacity)
         else n.obj.Visible = false end
     end
@@ -150,6 +158,7 @@ function M.update(h, vt: number, bp: number, since: number?, revealed: boolean)
     for i, n in p.motes do
         if i <= c.motes and (not failed or not since) then
             local x, y, size, opacity = Plan.mote(i, vt, h.tier)
+            flip(n, ((vt * 0.6 + i * 0.29) % 1), vt)
             put(n, x, y, size, pal[(i * 2 - 1) % #pal + 1]:Lerp(WHITE, 0.35), opacity * (0.4 + 0.6 * math.clamp(bp * 2, 0, 1)))
         else n.obj.Visible = false end
     end
@@ -157,6 +166,7 @@ function M.update(h, vt: number, bp: number, since: number?, revealed: boolean)
     for i, n in p.puffs do
         if since and i <= c.puffs then
             local dx, dy, size, opacity = Plan.puff(i, c.puffs, since)
+            flip(n, since / Plan.Limits.puffLife, since) -- smoke-anime poof: grows, then breaks into curls
             put(n, cx + dx, cy + dy, size, if failed then Color3.fromRGB(255, 244, 214) else h.color:Lerp(WHITE, 0.6), opacity)
         else n.obj.Visible = false end
     end
@@ -170,6 +180,7 @@ function M.update(h, vt: number, bp: number, since: number?, revealed: boolean)
     for i, n in p.fg do
         if since and revealed and not failed and i <= c.fg then
             local x, y, size, opacity = Plan.fgSpark(i, c.fg, vt)
+            flip(n, ((vt * 0.7 + i * 0.41) % 1), vt)
             put(n, x, y, size, pal[(i * 3 - 1) % #pal + 1]:Lerp(WHITE, 0.4), opacity * math.clamp((since - 0.5) / 0.6, 0, 1))
         else n.obj.Visible = false end
     end

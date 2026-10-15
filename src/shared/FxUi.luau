@@ -51,14 +51,14 @@ local function buildLayer(h, layer)
         L.discs = {}
         -- A real glowPlate upload (Blender, docs/93 section 8) replaces the plain discs automatically; until then rounded frames.
         local plate = Assets.isReal("glowPlate")
-        for i = 1, 3 do L.discs[i] = if plate then sprite(h.frame, z, Assets.resolve("glowPlate")) else dot(h.frame, z, true) end
+        for i = 1, 3 do L.discs[i] = if plate then sprite(h.frame, z, Assets.resolveUi("glowPlate")) else dot(h.frame, z, true) end
     elseif k == "emitter" then
         L.pool, L.acc = {}, 0
         local cap = math.clamp(math.ceil(layer.rate * layer.life * 2.2) + 1, 3, 14)
-        local tex = Assets.resolve(layer.tex)
+        local tex = Assets.resolveUi(layer.tex) -- built-in sprite while an upload has no alpha (EffectAssets.HasAlpha)
         if layer.shape == "Disc" then
             L.ripples = true
-            if Assets.isReal(layer.tex) then
+            if Assets.isRealUi(layer.tex) then
                 -- real thin-ring texture (ringShock): tinted sprite instead of a stroked frame
                 for i = 1, 3 do L.pool[i] = {obj = sprite(h.frame, z, tex), age = 1e9, life = layer.life} end
             else
@@ -67,6 +67,9 @@ local function buildLayer(h, layer)
         else
             for i = 1, cap do L.pool[i] = {obj = sprite(h.frame, z + 1, tex), age = 1e9, life = layer.life, x = 0, y = 0, vx = 0, vy = 0, rot = 0} end
         end
+    elseif k == "pillar" then
+        -- FX v3 rays pillar: one sprite standing behind the dino, pulsing slowly (built-in sparkle until the upload resolves)
+        L.img = sprite(h.frame, z - 1, Assets.resolveUi(layer.tex))
     elseif k == "ring" or k == "spiral" then
         L.dots = {}
         local n = if k == "ring" then 9 else 8
@@ -138,8 +141,10 @@ local function stepHandle(h, dt: number)
                     for _, p in L.pool do
                         if p.age > p.life then
                             p.age = 0
-                            Assets.setCell(p.obj, layer.tex, math.random(16)) -- flipbook sheets: one cell per particle (no-op for built-in sprites)
-                            if aura then
+                            p.seed, p.cell = math.random(16), 0
+                            if layer.flat then
+                                p.x, p.y, p.vx, p.vy = 0.5, 0.8, 0, 0 -- swirl at the feet
+                            elseif aura then
                                 p.x, p.y = 0.28 + math.random() * 0.44, 0.7 + math.random() * 0.08
                                 p.vx, p.vy = (math.random() - 0.5) * 0.04, -(0.05 + layer.rise * 0.035 + layer.speed * 0.02)
                             else
@@ -155,14 +160,21 @@ local function stepHandle(h, dt: number)
                     if p.age <= p.life then
                         local t = p.age / p.life
                         p.x += p.vx * dt p.y += p.vy * dt
+                        -- flipbook (FX v3): step through the 4x4 cells like the world emitter (OneShot in order, Random one shape, Loop cycles)
+                        local cell = Assets.frameAt(layer.tex, t, p.age, p.seed or 1)
+                        if cell ~= p.cell then p.cell = cell Assets.setCell(p.obj, layer.tex, cell) end
                         local curve = if layer.curve == "sizePop" then Recipes.Curves.sizePop else Recipes.Curves.sizeGrow
                         local px = math.max(2, sizePx * Recipes.sample(curve, t) * (if layer.curve == "sizeGrow" then 2.2 else 1.4))
                         local opacity = layer.alpha * math.clamp((1 - Recipes.sample(Recipes.Curves.fadeInOut, t)) / 0.7, 0, 1) * fade
                         p.obj.Rotation = p.rot + (layer.spin or 0) * p.age
                         place(p.obj, p.x, p.y, px, gradient(layer.color, t), 1 - opacity)
+                        if layer.flat then p.obj.Size = UDim2.fromOffset(px * 1.6, px * 0.6) end
                     else p.obj.Visible = false end
                 end
             end
+        elseif k == "pillar" and Assets.isRealUi(layer.tex) then
+            local glow = if h.reduced then 0.5 else Recipes.pulse(time, layer.hz)
+            place(L.img, 0.5, 0.42, unit * 0.95, layer.color[#layer.color], 1 - layer.alpha * (0.55 + 0.45 * glow) * fade)
         elseif k == "ring" or k == "spiral" then
             local n = #L.dots
             local rx = 0.2 + layer.radius * 0.07

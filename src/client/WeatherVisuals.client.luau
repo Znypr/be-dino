@@ -20,6 +20,14 @@ local DENSITY=if phone then .5 else 1
 local TEX_SMOKE="rbxasset://textures/particles/smoke_main.dds"
 local TEX_SPARK="rbxasset://textures/particles/sparkles_main.dds"
 local TEX_FIRE="rbxasset://textures/particles/fire_main.dds"
+-- Quake dust puffs use the FX v3 anime smoke flipbook (docs/77 fx3_smoke-anime): 16 cells played in order over each puff's life.
+local DUST_FX=(function()
+    local Assets=require(Shared.EffectAssets)
+    -- dust is a soft tan haze, so it needs the alpha upload (EffectAssets.HasAlpha); additive black-backed smoke would glow
+    local sheet=Assets.isSheet("smokeSheet") and not Assets.isAdditive("smokeSheet")
+    return {Texture=if sheet then Assets.resolve("smokeSheet") else Assets.Builtin.smoke,FlipbookLayout=if sheet then Enum.ParticleFlipbookLayout.Grid4x4 else Enum.ParticleFlipbookLayout.None,
+        FlipbookMode=Enum.ParticleFlipbookMode.OneShot}
+end)()
 
 local folder=Instance.new("Folder") folder.Name="LocalWeatherFX" folder.Parent=workspace
 local function c3(c:{number}):Color3 return Color3.fromRGB(c[1],c[2],c[3]) end
@@ -225,7 +233,7 @@ end
 do
     local ground=volume(Vector3.new(70,.2,70))
     local dust=emitter(ground,"quake","dust",{
-        Texture=TEX_SMOKE,Speed=NumberRange.new(3,9),EmissionDirection=Enum.NormalId.Top,
+        Texture=DUST_FX.Texture,FlipbookLayout=DUST_FX.FlipbookLayout,FlipbookMode=DUST_FX.FlipbookMode,Speed=NumberRange.new(3,9),EmissionDirection=Enum.NormalId.Top,
         Size=seq(10,24,34),Transparency=seq(.82,.7,1),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-14,14),
         Color=ColorSequence.new(Color3.fromRGB(196,170,128),Color3.fromRGB(160,138,104)),SpreadAngle=Vector2.new(30,30),
     })
@@ -515,7 +523,7 @@ for _=1,if phone then WL.Budget.cracksPhone else WL.Budget.cracks do
         table.insert(segs,{wedges=wedges,glow=glowPart,frame=CFrame.new(PARKED),len=1,width=1,appear=0})
     end
     local holder=volume(Vector3.new(4,.4,12)) holder.Name="QuakeDust" holder.Position=PARKED
-    local dust=burstEmitter(holder,{Texture=TEX_SMOKE,Lifetime=NumberRange.new(1.6,2.4),Speed=NumberRange.new(3,8),EmissionDirection=Enum.NormalId.Top,
+    local dust=burstEmitter(holder,{Texture=DUST_FX.Texture,FlipbookLayout=DUST_FX.FlipbookLayout,FlipbookMode=DUST_FX.FlipbookMode,Lifetime=NumberRange.new(1.6,2.4),Speed=NumberRange.new(3,8),EmissionDirection=Enum.NormalId.Top,
         SpreadAngle=Vector2.new(35,35),Size=seq(4,9,12),Transparency=seq(.55,.72,1),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-20,20),Drag=1.5,
         Acceleration=Vector3.new(0,1,0),Color=ColorSequence.new(Color3.fromRGB(196,172,136),Color3.fromRGB(160,138,108))})
     table.insert(cracks,{segs=segs,holder=holder,dust=dust,active=false,age=0,life=4,static=false})
