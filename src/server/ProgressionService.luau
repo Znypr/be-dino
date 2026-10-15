@@ -57,7 +57,8 @@ local function crystalSpawns(repository)
     local obstacles=RaycastParams.new() obstacles.FilterType=Enum.RaycastFilterType.Include obstacles.FilterDescendantsInstances={workspace.BeDinoArena,workspace.Terrain}
     local function place(entry)
         for _=1,60 do
-            local x,z=random:NextNumber(-245,245),random:NextNumber(-245,245)
+            local reach=require(ReplicatedStorage.Shared.Config).ArenaHalfWidth-15
+            local x,z=random:NextNumber(-reach,reach),random:NextNumber(-reach,reach)
             local hit=workspace:Raycast(Vector3.new(x,140,z),Vector3.new(0,-180,0),terrain)
             if hit and hit.Material~=Enum.Material.Water and hit.Normal.Y>.65 and Vector2.new(x,z-30).Magnitude>12 then
                 local position=hit.Position+Vector3.new(0,1.4,0)
@@ -79,7 +80,9 @@ local function crystalSpawns(repository)
         local part=Instance.new("Part") part.Name="CrystalPickup" part.Shape=Enum.PartType.Ball part.Size=Vector3.one*1.3
         part.Anchored,part.CanCollide,part.CanTouch,part.CanQuery=true,false,false,false
         part.Material,part.Color=Enum.Material.Neon,Color3.fromRGB(255,200,66)
-        local model=Resources.clone("amber") if model then model:ScaleTo(1.5) model.Parent=part end
+        local model=Resources.clone("food_amber_a") -- one MeshPart (the legacy amber model is 21 parts x 64 crystals)
+        if model then model:ScaleTo(2.2) else model=Resources.clone("amber") if model then model:ScaleTo(1.5) end end
+        if model then model.Parent=part end
         local hint=Instance.new("BillboardGui") hint.Size=UDim2.fromOffset(100,28) hint.StudsOffset=Vector3.new(0,1.5,0) hint.MaxDistance=45 hint.Parent=part
         local text=Instance.new("TextLabel") text.Size=UDim2.fromScale(1,1) text.BackgroundTransparency=1
         text.Text="+3 Crystals" text.TextColor3=part.Color text.TextSize=18 text.Font=Enum.Font.FredokaOne text.TextStrokeTransparency=0 text.Parent=hint

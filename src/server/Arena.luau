@@ -5,6 +5,7 @@ local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Terrain = require(script.Parent.IslandTerrain)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
+local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
 local KitMeshes = require(ReplicatedStorage.Shared.WorldKitMeshAssets)
 local Arena = {}
@@ -77,7 +78,23 @@ local function fern(parent: Instance, position: Vector3, scale: number, yaw: num
         leaf.CFrame = CFrame.new(leaf.Position) * CFrame.Angles(-0.28, angle, 0)
     end
 end
--- BD-049 BiomeKit dressing: noncolliding kit visuals plus simplified invisible box colliders.
+-- One kit prop = the uploaded MeshPart model (1 part) plus simplified invisible box colliders scaled with it.
+local function kitProp(folder: Instance, id: string, pivot: CFrame, scale: number): boolean
+    local model = Resources.clone(id)
+    if model then
+        model:ScaleTo(scale)
+        model:PivotTo(pivot)
+        model.Parent = folder
+    end
+    for _, c in KitData[id].colliders do
+        local collider = part(folder, id .. "Collider", Vector3.new(c[4], c[5], c[6]) * scale, Vector3.zero,
+            Color3.fromRGB(113, 133, 139), Enum.Material.Slate, true)
+        collider.CFrame = pivot * CFrame.new(Vector3.new(c[1], c[2], c[3]) * scale) * CFrame.Angles(0, c[7], 0)
+        collider.Transparency = 1
+    end
+    return model ~= nil
+end
+-- BD-049 BiomeKit dressing (world v2): sub-biome driven kit props, giants, fallen logs, understory and ground cover.
 local function biomeKit(parent: Instance)
     local folder = Instance.new("Folder")
     folder.Name, folder.Parent = "WorldKit", parent
@@ -89,31 +106,50 @@ local function biomeKit(parent: Instance)
         if template and template:IsA("MeshPart") then meshes[id] = true end
     end
     local placed = Biome.generate({seed = Config.WorldArtSeed, density = Config.WorldArtDensity,
-        extent = Config.ArenaHalfWidth, height = Layout.height, kit = KitData, meshes = meshes})
+        extent = Config.ArenaHalfWidth, height = Layout.height, kit = KitData, meshes = meshes, map = BiomeMap, layout = Layout})
     local missing = 0
+    local counts = {tree = 0, giant = 0, log = 0, rock = 0, shrub = 0, groundcover = 0, landmark = 0}
     for i, p in placed do
-        local pivot = CFrame.new(p.x, p.y, p.z) * CFrame.Angles(0, p.yaw, 0)
-        local model = Resources.clone(p.id)
-        if model then
-            model:ScaleTo(p.scale)
-            model:PivotTo(pivot)
-            model.Parent = folder
-        else
+        counts[p.layer] += 1
+        local pivot = CFrame.new(p.x, p.y, p.z) * CFrame.Angles(0, p.yaw, 0) * CFrame.Angles(0, 0, p.roll)
+        if p.layer == "log" then
+            -- A dead tree on its side: one box along the whole trunk replaces the (upright) kit collider.
+            local data = KitData[p.id]
+            local model = Resources.clone(p.id)
+            if model then model:ScaleTo(p.scale) model:PivotTo(pivot) model.Parent = folder else missing += 1 end
+            local c = data.colliders[1]
+            local collider = part(folder, p.id .. "Collider", Vector3.new(c[4], data.extent[2] * .9, c[6]) * p.scale, Vector3.zero,
+                Color3.fromRGB(113, 133, 139), Enum.Material.Slate, true)
+            collider.CFrame = pivot * CFrame.new(0, data.extent[2] * .45 * p.scale, 0)
+            collider.Transparency = 1
+        elseif not kitProp(folder, p.id, pivot, p.scale) then
             missing += 1
         end
-        for _, c in KitData[p.id].colliders do
-            local collider = part(folder, p.id .. "Collider", Vector3.new(c[4], c[5], c[6]) * p.scale, Vector3.zero,
-                Color3.fromRGB(113, 133, 139), Enum.Material.Slate, true)
-            collider.CFrame = pivot * CFrame.new(Vector3.new(c[1], c[2], c[3]) * p.scale) * CFrame.Angles(0, c[7], 0)
-            collider.Transparency = 1
-        end
-        if i % 25 == 0 then task.wait() end
+        if i % 40 == 0 then task.wait() end
     end
     workspace:SetAttribute("WorldKitPlacements", #placed)
     workspace:SetAttribute("WorldKitTriangles", Biome.triangles(placed, KitData))
     workspace:SetAttribute("WorldKitParts", Biome.parts(placed, KitData, meshes))
     workspace:SetAttribute("WorldKitMissing", missing)
+    for layer, n in counts do workspace:SetAttribute("WorldKit_" .. layer, n) end
 end
+-- Flat water discs fill the marsh basins and the spring (decorative: they never block movement, like the old pool).
+local function pools(parent: Instance)
+    for i, pool in Layout.Pools do
+        local y = Layout.waterLevel(pool)
+        local disc = part(parent, if pool.spring then "SpringWater" else "MarshWater", Vector3.new(.3, pool.rz * 2, pool.rx * 2),
+            Vector3.new(pool.x, y, pool.z), if pool.spring then Color3.fromRGB(77, 192, 200) else Color3.fromRGB(78, 132, 122), Enum.Material.Glass, false)
+        disc.Shape = Enum.PartType.Cylinder
+        disc.CFrame = CFrame.new(pool.x, y, pool.z) * CFrame.Angles(0, 0, math.pi / 2)
+        disc.Transparency = if pool.spring then .28 else .2
+        if pool.spring then
+            local falls = part(parent, "Waterfall", Vector3.new(12, 16, .3) * Layout.Scale,
+                Vector3.new(pool.x + 5, y + 8 * Layout.Scale, pool.z - 19), Color3.fromRGB(183, 236, 232), Enum.Material.Glass, false)
+            falls.Transparency = .4
+        end
+    end
+end
+
 function Arena.build()
     local old = workspace:FindFirstChild("BeDinoArena")
     if old then old:Destroy() end
@@ -133,25 +169,35 @@ function Arena.build()
         boundary.Transparency = 1
     end
     local random = Random.new(1404)
+    local S = Layout.Scale
+    local kitMode = Config.WorldArtMode == "BiomeKit"
     for side = 1, 4 do
-        -- BiomeKit keeps every third legacy ring rock (part budget, docs/68); Legacy keeps all twelve per side.
-        for i = 0, 11, (if Config.WorldArtMode == "BiomeKit" then 3 else 1) do
-            local t = -extent + i * extent * 2 / 11
+        -- BiomeKit: every third legacy ring slot, as kit boulders (one MeshPart each, no 41-part legacy rock); Legacy: all.
+        local slots = if kitMode then 5 else 11
+        for i = 0, slots do
+            local t = -extent + i * extent * 2 / slots
             local position = if side == 1 then Vector3.new(t, 0, -extent - 5)
                 elseif side == 2 then Vector3.new(t, 0, extent + 5)
                 elseif side == 3 then Vector3.new(-extent - 5, 0, t) else Vector3.new(extent + 5, 0, t)
-            rock(world, Vector3.new(position.X, Layout.height(position.X,position.Z), position.Z), random:NextNumber(2.4, 3.7), random:NextNumber(0, math.pi * 2))
+            local ground = Vector3.new(position.X, Layout.height(position.X, position.Z), position.Z)
+            local yaw = random:NextNumber(0, math.pi * 2)
+            if kitMode then
+                kitProp(world, if i % 2 == 0 then "world_boulder_bare_l" else "world_boulder_mossy_l", CFrame.new(ground) * CFrame.Angles(0, yaw, 0), random:NextNumber(1.6, 2.6))
+            else
+                rock(world, ground, random:NextNumber(2.4, 3.7) * S, yaw)
+            end
         end
     end
     local spawn = Instance.new("SpawnLocation")
     spawn.Name = "PrototypeSpawn"
-    spawn.Size, spawn.Position = Vector3.new(12, 1, 12), Vector3.new(0, Layout.height(0,30) + .5, 30)
+    spawn.Size, spawn.Position = Vector3.new(12, 1, 12), Vector3.new(0, Layout.height(0,Layout.SpawnZ) + .5, Layout.SpawnZ)
     spawn.Anchored, spawn.Neutral, spawn.Duration, spawn.Transparency = true, true, 0, 1
     spawn.CanCollide, spawn.CanQuery = false, false
     spawn.Parent = world
     -- Authored landmark centers; within each, offset props avoid a uniform grid.
-    if Config.WorldArtMode == "BiomeKit" then biomeKit(world) else
-    for _, center in {Vector3.new(-105,0,80), Vector3.new(105,0,-80), Vector3.new(-125,0,-100), Vector3.new(128,0,102), Vector3.new(-190,0,15), Vector3.new(182,0,20), Vector3.new(0,0,-180), Vector3.new(15,0,190)} do
+    if kitMode then biomeKit(world) else
+    for _, c in {Vector3.new(-105,0,80), Vector3.new(105,0,-80), Vector3.new(-125,0,-100), Vector3.new(128,0,102), Vector3.new(-190,0,15), Vector3.new(182,0,20), Vector3.new(0,0,-180), Vector3.new(15,0,190)} do
+        local center = c * S
         for i = 1, 4 do
             local angle = i * 1.65 + random:NextNumber(-.4, .4)
             local position = center + Vector3.new(math.cos(angle) * 12, 0, math.sin(angle) * 10)
@@ -165,46 +211,46 @@ function Arena.build()
         end
     end
     -- Scattered smaller vegetation connects landmarks while the central chase lane stays open.
-    for i = 1, 65 do
-        local angle, radius = i * 2.4, random:NextNumber(36,230)
+    for i = 1, 65 * 2 do
+        local angle, radius = i * 2.4, random:NextNumber(36,230) * S
         local position = Vector3.new(math.cos(angle)*radius,0,math.sin(angle)*radius)
         position = Vector3.new(position.X,Layout.height(position.X,position.Z),position.Z)
         if (position - Vector3.new(0,0,30)).Magnitude > 14 then fern(world, position, 1.2, angle) end
     end
     end -- Legacy dressing
-    -- Stone arch landmark with an open passage.
-    for _, x in {-96,-64} do
-        local y = Layout.height(x,-15)
-        part(world,"ArchPillar",Vector3.new(7,23,8),Vector3.new(x,y+11.5,-15),Color3.fromRGB(142,153,140),Enum.Material.Rock,true)
+    -- Stone arch landmark (1.6x with the island) with an open passage.
+    local archZ = -15 * S
+    for _, x in {-96 * S, -64 * S} do
+        local y = Layout.height(x, archZ)
+        part(world,"ArchPillar",Vector3.new(7,23,8) * S,Vector3.new(x,y+11.5*S,archZ),Color3.fromRGB(142,153,140),Enum.Material.Rock,true)
     end
-    part(world,"ArchTop",Vector3.new(42,6,9),Vector3.new(-80,Layout.height(-80,-15)+24,-15),Color3.fromRGB(148,157,139),Enum.Material.Rock,true)
-    -- Shallow decorative spring; water does not block navigation.
-    local poolY = Layout.height(110,-40)+.2
-    local pool = part(world,"SpringWater",Vector3.new(32,.18,25),Vector3.new(110,poolY,-40),Color3.fromRGB(77,192,200),Enum.Material.Glass,false)
-    pool.Transparency = .28
-    local falls = part(world,"Waterfall",Vector3.new(12,16,.3),Vector3.new(113,poolY+8,-52),Color3.fromRGB(183,236,232),Enum.Material.Glass,false)
-    falls.Transparency = .4
+    part(world,"ArchTop",Vector3.new(42,6,9) * S,Vector3.new(-80*S,Layout.height(-80*S,archZ)+24*S,archZ),Color3.fromRGB(148,157,139),Enum.Material.Rock,true)
+    -- Spring and marsh water; neither blocks navigation.
+    pools(world)
     for i = 1, 4 do
         local x,z = 30+i*10,-30
         part(world,"JumpStone",Vector3.new(6,1.2+i*.4,6),Vector3.new(x,Layout.height(x,z)+.6+i*.2,z),Color3.fromRGB(133,147,143),Enum.Material.Slate,true)
     end
     -- Separate safe hub beyond the north boundary, with explicit server-owned entry.
     local hub = Instance.new("Model")
+    local cz = Config.SanctuaryCenterZ
     hub.Name, hub.Parent = "Sanctuary", world
-    part(hub,"SanctuaryGround",Vector3.new(110,6,95),Vector3.new(0,3,365),Color3.fromRGB(111,178,91),Enum.Material.Grass,true)
-    part(hub,"NestPlaza",Vector3.new(34,.5,30),Vector3.new(0,6.25,365),Color3.fromRGB(223,205,154),Enum.Material.Sandstone,true)
+    part(hub,"SanctuaryGround",Vector3.new(110,6,95),Vector3.new(0,3,cz),Color3.fromRGB(111,178,91),Enum.Material.Grass,true)
+    part(hub,"NestPlaza",Vector3.new(34,.5,30),Vector3.new(0,6.25,cz),Color3.fromRGB(223,205,154),Enum.Material.Sandstone,true)
     for _, x in {-48,48} do
-        part(hub,"HubFence",Vector3.new(2,10,92),Vector3.new(x,11,365),Color3.fromRGB(83,131,73),Enum.Material.Wood,true)
+        part(hub,"HubFence",Vector3.new(2,10,92),Vector3.new(x,11,cz),Color3.fromRGB(83,131,73),Enum.Material.Wood,true)
     end
-    for _, z in {322,408} do
+    for _, z in {cz-43,cz+43} do
         part(hub,"HubFence",Vector3.new(96,10,2),Vector3.new(0,11,z),Color3.fromRGB(83,131,73),Enum.Material.Wood,true)
     end
-    for _, x in {-32,32} do tree(hub,Vector3.new(x,6,380),1.2,x) end
+    for _, x in {-32,32} do
+        if kitMode then kitProp(hub, "world_tree_conifer_m", CFrame.new(x, 6, cz + 15) * CFrame.Angles(0, x, 0), 1.2) else tree(hub,Vector3.new(x,6,cz+15),1.2,x) end
+    end
     for i = 1,5 do
-        local nest = part(hub,"EggNest",Vector3.new(5,1,5),Vector3.new(-18+i*6,6.6,385),Color3.fromRGB(174,129,70),Enum.Material.Wood,false)
+        local nest = part(hub,"EggNest",Vector3.new(5,1,5),Vector3.new(-18+i*6,6.6,cz+20),Color3.fromRGB(174,129,70),Enum.Material.Wood,false)
         nest.Shape = Enum.PartType.Cylinder
     end
-    local sign = part(hub,"SanctuarySign",Vector3.new(30,7,1),Vector3.new(0,15,402),Color3.fromRGB(27,76,51),Enum.Material.Wood,false)
+    local sign = part(hub,"SanctuarySign",Vector3.new(30,7,1),Vector3.new(0,15,cz+37),Color3.fromRGB(27,76,51),Enum.Material.Wood,false)
     local surface = Instance.new("SurfaceGui")
     surface.Face, surface.CanvasSize, surface.Parent = Enum.NormalId.Front, Vector2.new(600,140), sign
     local label = Instance.new("TextLabel")

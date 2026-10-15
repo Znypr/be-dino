@@ -12,11 +12,11 @@ local require=function(_) return Config end
 local workspace={Gravity=196.2}
 local Vector2={new=function(x,y) return {Magnitude=math.sqrt(x*x+y*y)} end}
 '''+ 'local Layout = '+wrapped('src/shared/IslandLayout.luau')+'\nlocal Envelope = '+wrapped('src/shared/MovementEnvelope.luau')+'\nlocal Geometry = '+wrapped('src/shared/ResourceGeometry.luau')+'\nlocal Icons = '+wrapped('src/shared/IconRaster.luau')+'\n'+'''
-assert(Config.ArenaHalfWidth==260)
-assert(Config.FoodSectorCount==16)
+assert(Config.ArenaHalfWidth==416)
+assert(Config.FoodSectorCount==20)
 local high=0
-for x=-260,260,4 do
- for z=-260,260,4 do
+for x=-416,416,4 do
+ for z=-416,416,4 do
   local h=Layout.height(x,z)
   assert(h==h and h<Config.TerrainTop and h>-16, "height outside voxel region")
   high=math.max(high,h)
