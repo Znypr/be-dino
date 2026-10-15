@@ -365124,7 +365124,7 @@ local function build(id: string,genes: any?,patient: boolean): Model?
         local model=Instance.new("Model")
         model.Name=id
         part.Name="AuthoredBody";part.Anchored=true;part.CanCollide=false;part.CanTouch=false;part.CanQuery=false;part.Massless=true
-        part.Material=Enum.Material.SmoothPlastic;part.Color=Color3.new(1,1,1)
+        part.Material=Enum.Material.Plastic;part.Reflectance=0;part.Color=Color3.new(1,1,1) -- BD-173: matte; only fused tiers (Gold/Emerald/Diamond) get a sheen, set elsewhere
         part:SetAttribute("GeneSpecies",id);part.Parent=model
         model.WorldPivot=CFrame.new(0,-data.height/2,0)
         model:SetAttribute("AuthoredCreature",true)
@@ -365812,11 +365812,21 @@ return table.freeze({
     WorldArtMode = "Legacy", -- "BiomeKit": BD-049 Blender props + placement grammar PROVISIONAL
     WorldArtSeed = 1404,
     WorldArtDensity = 1, -- the playtest profile sets 0.35 (docs/68 part budget); 1 is ~18k native parts
+    -- BD-168 client distance culling of decorative props/food (docs/89). PartBudget = max prop parts a client keeps parented;
+    -- radius = studs kept (hysteresis = +15%). Collision proxies, crystals, hub and server food logic are never culled.
+    WorldCulling = {
+        Enabled = true,
+        Hysteresis = 1.15,
+        FoodRadiusFactor = 1.25,
+        Phone = {radius = 190, budget = 1400},
+        Tablet = {radius = 280, budget = 2400},
+        Desktop = {radius = 440, budget = 5000},
+    },
     FoodKitVisualCap = 12, -- PROVISIONAL max native egg/amber kit models (about 115 parts each); other pickups keep the light ball
     StudioLocalProfilesEnabled = true, -- unpublished Studio only; never a live fallback
     StudioTestWalletEnabled = true, -- only unpublished, nonpersistent local profiles
     StudioTestCrystals = 1000000,
-    FoodCatchRate = 40 / 500, -- PROVISIONAL (owner 2026-10-13: 40 catches = 40 run eggs per 500 food; 5,000 food -&gt; 400; was 15/500); raw food points, growth boosts do not multiply catches
+    FoodCatchRate = 4 / 500, -- PROVISIONAL (owner 2026-10-15, BD-165: 500 food = 4 run eggs; 5,000 food -&gt; 40; was 40/500 on 2026-10-13, 15/500 before); raw food points, growth boosts do not multiply catches
     ProfileLoadWarningSeconds = 20,
 
     SpawnProtectionSeconds = 5,
@@ -365899,9 +365909,10 @@ return table.freeze({
     HatchRevealSeconds = 1, -- PROVISIONAL owner decision 2026-10-13: 1 s per egg reveal (was 5 s)
     -- PROVISIONAL run-size species boost (BD-044 five tiers). A batch of N run eggs multiplies each tier's
     -- weight by 1 + s * (SpeciesRunBoost[tier] - 1), s = (clamp(N, 1, EggRarityBoostMaxEggs) - 1) / (max - 1).
-    -- Tuned to the owner's examples: 40 eggs ~ 28 Common / 10 Uncommon / 2 Rare; 400 eggs ~ 211 / 134 / 44 / 9 / 1.
-    SpeciesRunBoost = {1, 1.9, 4.7, 4.5, 4},
-    EggRarityBoostMaxEggs = 400,
+    -- 2026-10-15 (BD-165, docs/88 exponential rarity): a full run is now ~4-40 eggs, so the boost is gentle and
+    -- caps at 40 eggs (5,000 food). Adjacent tier ratios stay 0.33 / 0.15 / 0.22 / 0.14 (never flatter than 1/3); Rare+ is at most ~10% easier at full boost.
+    SpeciesRunBoost = {1, 1, 1.1, 1.1, 1.1},
+    EggRarityBoostMaxEggs = 40,
     BigChance = 0.1,
     ShinyChance = 0.05,
     BigScaleMultiplier = 1.2,
@@ -365916,7 +365927,7 @@ return table.freeze({
     -- Run eggs beyond the five-slot reveal queue wait in a server-side ordered bank.
     RunRewardConfigVersion = 3, -- 3: five species rarity tiers + run-size boost (BD-044)
     HatchPageSize = 10, -- PROVISIONAL: queued run eggs committed per claim transaction; at 1 s/egg = 6 claims/min/player (size 5 would be 12/min and bust the 8/12-player budgets)
-    RunEggMaxPerRun = 500, -- PROVISIONAL: catches stop counting at 500 eggs per run (6,250 food); a 5,000-food run (400 eggs) is not truncated
+    RunEggMaxPerRun = 50, -- PROVISIONAL: catches stop counting at 50 eggs per run (6,250 food); a 5,000-food run (40 eggs) is not truncated
     RunEggBankCapacity = 1000, -- PROVISIONAL: banked run eggs behind the queue (~540 B each, ~0.54 MB); a run starts only while banked &lt;= capacity - RunEggMaxPerRun (500)
     SettledRunLedgerSize = 200, -- PROVISIONAL: settled run IDs kept for exactly-once settlement beyond recentOperations
     -- BD-090 Egg Nests v2 (owner 2026-10-14). ALL PROVISIONAL. A nest is a separate loot item
@@ -365931,14 +365942,14 @@ return table.freeze({
     NestMaxSize = 15,
     -- Hidden drop gate (never shown in the UI; measured on the server, never client-reported).
     NestMinRunSeconds = 120, -- PROVISIONAL: server clock from RunLifecycle.begin to settlement
-    NestMinCatches = 8, -- PROVISIONAL: validated server CatchScore (run eggs) needed for a nest
-    NestEggsPerExtraNest = 100, -- PROVISIONAL: +1 nest per 100 further catches on top of a qualified run
+    NestMinCatches = 1, -- PROVISIONAL: validated server CatchScore (run eggs) needed for a nest
+    NestEggsPerExtraNest = 10, -- PROVISIONAL (BD-165: was 100 at 40/500): +1 nest per 10 further catches on top of a qualified run
     NestMaxPerRun = 3, -- PROVISIONAL cap per run
     -- Luck tiers (index = nest.luck). PROVISIONAL, disclosed in the Nests menu. rarityBoostEggs feeds
     -- the run-batch species boost (EggRarityBoostMaxEggs = maximum), conditionLevels adds to the condition-upgrade level
     -- (clamped to the top tier), shinyChance applies even without irregular weather, bigChance replaces BigChance.
     NestLuckTiers = {
-        {rarityBoostEggs = 200, conditionLevels = 2, shinyChance = 0.03, bigChance = 0.2},
+        {rarityBoostEggs = 40, conditionLevels = 2, shinyChance = 0.03, bigChance = 0.2},
     },
     NestClaimRequestCooldownSeconds = 0.5,
     ChestClaimRequestCooldownSeconds = 0.35,
@@ -367688,6 +367699,8 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
                         if child:IsA("ParticleEmitter") or child:IsA("Highlight") or child:IsA("Light") or child:IsA("Trail") or child:IsA("Beam") then child:Destroy() end
                     end
                 elseif gold==true or gold=="gold" or gold=="diamond" or gold=="emerald" then Resources.clearTextures(item) end
+                -- BD-173: dinosaurs are matte; only fused tiers (Gold/Emerald/Diamond) keep a sheen below.
+                if gold~="silhouette" and gold~=true and gold~="gold" and gold~="diamond" and gold~="emerald" then item.Material,item.Reflectance=Enum.Material.Plastic,0 end
                 if gold == "diamond" then item.Color=Color3.fromRGB(85,213,245) item.Material=Enum.Material.Glass item.Reflectance=.2
                 elseif gold == "emerald" then item.Color=Color3.fromRGB(46,196,120) item.Material=Enum.Material.Metal item.Reflectance=.1
                 elseif gold == true or gold == "gold" then item.Color=Color3.fromRGB(242,199,63) item.Material=Enum.Material.Metal end
@@ -367883,7 +367896,7 @@ function Dinosaur.render(character: Model, scale: number, requestedSpeciesId: st
         part.Shape = shape or Enum.PartType.Ball
         part.Size = size * scale
         part.Color = color
-        part.Material = if mutation == "diamond" then Enum.Material.Glass elseif gold then Enum.Material.Metal else Enum.Material.SmoothPlastic
+        part.Material = if mutation == "diamond" then Enum.Material.Glass elseif gold then Enum.Material.Metal else Enum.Material.Plastic -- BD-173: matte unless fused
         part.CanCollide = false
         part.CanTouch = false
         part.CanQuery = false
@@ -371449,11 +371462,11 @@ return table.freeze({
     GrowthCap=8, SpeedCap=2.2,
     AccountXPPerLevel=100, AccountMaxLevel=60,
     -- BD-044 PROVISIONAL run crystals (deterministic; the random 5/15/50 crystal box is retired).
-    -- Re-tuned 2026-10-13 for 40 eggs per 500 food:
+    -- Re-tuned 2026-10-15 (BD-165) for 4 eggs per 500 food, same example outputs as before:
     -- crystals = min(RunCrystalCap, (RunCrystalPerEggHundredths*min(eggs,RunCrystalTierEggs)
     --            + RunCrystalPerExtraEggHundredths*max(0,eggs-RunCrystalTierEggs)) // 100).
-    -- 40 eggs (500 food) -&gt; 30, 400 eggs (5,000 food) -&gt; 220 (owner's illustrative 30/220), 500 eggs -&gt; 273; cap 300 bounds it.
-    RunCrystalPerEggHundredths=75, RunCrystalTierEggs=40, RunCrystalPerExtraEggHundredths=53, RunCrystalCap=300,
+    -- 4 eggs (500 food) -&gt; 30, 40 eggs (5,000 food) -&gt; 220 (owner's illustrative 30/220), 50 eggs -&gt; 273; cap 300 bounds it.
+    RunCrystalPerEggHundredths=750, RunCrystalTierEggs=4, RunCrystalPerExtraEggHundredths=530, RunCrystalCap=300,
     RandomEggPrice=150,
     ConditionUpgrades={
         {level=1,price=100,requiredLevel=3},{level=2,price=300,requiredLevel=8},
@@ -372028,7 +372041,8 @@ function RuntimeMeshes.prepare()
                 local part = AssetService:CreateMeshPartAsync(Content.fromObject(mesh))
                 part.Name = id .. "Mesh"
                 part.Color = Color3.new(1, 1, 1)
-                part.Material = Enum.Material.SmoothPlastic
+                part.Material = Enum.Material.Plastic -- BD-173: matte dinosaurs
+                part.Reflectance = 0
                 part.Anchored = true
                 part.CanCollide, part.CanTouch, part.CanQuery = false, false, false
                 part.Massless = true
@@ -547554,7 +547568,7 @@ function RewardMath.computeRunReward(catchScore: any, runSeconds: any?)
         eggCount = eggCount,
         crystals = RewardMath.runCrystals(eggCount),
         nestCount = RewardMath.nestCount(eggCount, runSeconds),
-        accountXP = eggCount, -- unchanged rate: 1 account XP per catch (= per run egg)
+        accountXP = eggCount * 10, -- BD-165: catches are 10x fewer, so XP per catch is 10x to keep XP per run unchanged (500 food = 40 XP)
     }
 end
 
@@ -548133,6 +548147,8 @@ for index, event in ProgressionConfig.Weather do
     b.LayoutOrder, b.TextScaled = index, true
     b.Activated:Connect(function() call("startWeather", event.id, chosenSeconds, event.name .. " started") end)
 end
+place(text(scroll, "World parts (BD-168)", 18, 24))
+local cullInfo = place(text(scroll, "", 14, 36))
 local stop = place(button(scroll, "Stop weather", C.red, UDim2.new(1, 0, 0, 36)))
 stop.Activated:Connect(function() call("stopWeather", nil, nil, "Weather stopped") end)
 local reset = place(button(scroll, "Reset sliders", C.card, UDim2.new(1, 0, 0, 36)))
@@ -548146,6 +548162,11 @@ task.spawn(function()
             local left = math.max(0, math.floor(endsAt - workspace:GetServerTimeNow()))
             weatherNow.Text = if (workspace:GetAttribute("WeatherId") or "clear") == "clear" then "Now: Clear"
                 else string.format("Now: %s (%d:%02d left)", name, left // 60, left % 60)
+        end
+        if panel.Visible then
+            cullInfo.Text = string.format("%s: %s props, %s parts (budget %s, radius %s)\nInstances: %d", tostring(player:GetAttribute("CullClass") or "?"),
+                tostring(player:GetAttribute("CullProps") or "?"), tostring(player:GetAttribute("CullParts") or "?"),
+                tostring(player:GetAttribute("CullBudget") or "?"), tostring(player:GetAttribute("CullRadius") or "?"), game:GetService("Stats").InstanceCount)
         end
         task.wait(.5)
     end
@@ -554226,10 +554247,135 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
+        <Item class="LocalScript" referent="RBX289">
+          <Properties>
+            <string name="Name">WorldCulling</string>
+            <ProtectedString name="Source">--!strict
+-- BD-168 distance culling for decorative world props and food (docs/89). Client-only visuals: collision proxies
+-- (parts named *Collider), crystals, the hub and server food logic are untouched. Props beyond the radius are parented
+-- to nil (not rendered, no scene cost); food is hidden with LocalTransparencyModifier so server writes still land.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local settings = Config.WorldCulling
+if not settings or not settings.Enabled then return end
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+local function deviceClass(): string
+    if not UserInputService.TouchEnabled then return "Desktop" end
+    local size = camera.ViewportSize
+    return if math.min(size.X, size.Y) &gt;= 600 then "Tablet" else "Phone"
+end
+local class = deviceClass()
+local limits = settings[class]
+local override = workspace:GetAttribute("PartBudgetOverride") -- admin/test hook, optional
+local radius, budget = limits.radius, (if typeof(override) == "number" then override else limits.budget)
+
+type Prop = {item: Instance, folder: Instance, pos: Vector3, parts: number, shown: boolean}
+local props: {Prop} = {}
+local foods: {[BasePart]: boolean} = {}
+local foodShown: {[BasePart]: boolean} = {}
+local dirty = true -- new props arrive over several frames: re-evaluate even if the player stands still
+local known: {[Instance]: boolean} = {} -- re-parenting a shown prop fires ChildAdded again
+
+local function countParts(item: Instance): number
+    local n = if item:IsA("BasePart") then 1 else 0
+    for _, d in item:GetDescendants() do if d:IsA("BasePart") then n += 1 end end
+    return n
+end
+local function addProp(folder: Instance, item: Instance, tries: number?)
+    if known[item] or string.sub(item.Name, -8) == "Collider" then return end
+    -- A model can replicate before its mesh child: locate the first part, retrying briefly if it has not arrived yet.
+    local first: BasePart? = if item:IsA("BasePart") then item else item:FindFirstChildWhichIsA("BasePart", true)
+    if not first then
+        local left = (tries or 0) + 1
+        if left &lt;= 8 and item:IsA("Model") then task.delay(.5, function() addProp(folder, item, left) end) end
+        return
+    end
+    known[item] = true
+    dirty = true
+    table.insert(props, {item = item, folder = folder, pos = first.Position, parts = countParts(item), shown = true})
+end
+local function setFood(pickup: BasePart, visible: boolean)
+    local value = if visible then 0 else 1
+    pickup.LocalTransparencyModifier = value
+    for _, d in pickup:GetDescendants() do if d:IsA("BasePart") then d.LocalTransparencyModifier = value end end
+    foodShown[pickup] = visible
+end
+
+task.spawn(function()
+    local arena = workspace:WaitForChild("BeDinoArena", 60)
+    local kit = if arena then arena:WaitForChild("WorldKit", 20) else nil
+    if kit then
+        for _, item in kit:GetChildren() do addProp(kit, item) end
+        kit.ChildAdded:Connect(function(item) addProp(kit, item) end) -- the server places props over several frames
+    end
+    local food = workspace:WaitForChild("Food", 60)
+    if food then
+        for _, item in food:GetChildren() do if item:IsA("BasePart") then foods[item] = true end end
+        food.ChildAdded:Connect(function(item) if item:IsA("BasePart") then foods[item] = true end end)
+        food.ChildRemoved:Connect(function(item) if item:IsA("BasePart") then foods[item] = nil foodShown[item] = nil end end)
+    end
+    local last: Vector3? = nil
+    local lastBudget = budget
+    while true do
+        local character = player.Character
+        local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+        local override2 = workspace:GetAttribute("PartBudgetOverride")
+        if typeof(override2) == "number" then budget = override2 end
+        if root and root:IsA("BasePart") and (dirty or not last or (root.Position - last).Magnitude &gt; 6 or budget ~= lastBudget) then
+            last, lastBudget, dirty = root.Position, budget, false
+            local origin = root.Position
+            local inner, outer = radius, radius * settings.Hysteresis
+            local candidates: {Prop} = {}
+            for _, prop in props do
+                local d = (prop.pos - origin).Magnitude
+                if d &lt; (if prop.shown then outer else inner) then
+                    local loose: any = prop
+                    loose.d = d
+                    table.insert(candidates, prop)
+                elseif prop.shown then
+                    prop.shown = false
+                    prop.item.Parent = nil
+                end
+            end
+            -- Part budget: nearest props win; the rest of the candidates are culled even inside the radius.
+            table.sort(candidates, function(a, b) return (a :: any).d &lt; (b :: any).d end)
+            local used, visibleProps = 0, 0
+            for _, prop in candidates do
+                if used + prop.parts &lt;= budget then
+                    used += prop.parts
+                    visibleProps += 1
+                    if not prop.shown then prop.shown = true prop.item.Parent = prop.folder end
+                elseif prop.shown then
+                    prop.shown = false
+                    prop.item.Parent = nil
+                end
+            end
+            local foodRadius = radius * settings.FoodRadiusFactor
+            for pickup in foods do
+                local d = (pickup.Position - origin).Magnitude
+                local want = d &lt; (if foodShown[pickup] ~= false then foodRadius * settings.Hysteresis else foodRadius)
+                if foodShown[pickup] ~= want then setFood(pickup, want) end
+            end
+            player:SetAttribute("CullClass", class)
+            player:SetAttribute("CullRadius", radius)
+            player:SetAttribute("CullBudget", budget)
+            player:SetAttribute("CullProps", visibleProps .. "/" .. #props)
+            player:SetAttribute("CullParts", used)
+        end
+        task.wait(.4)
+    end
+end)
+</ProtectedString>
+          </Properties>
+        </Item>
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX289">
+  <Item class="Workspace" referent="RBX290">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

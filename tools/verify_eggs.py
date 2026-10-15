@@ -89,7 +89,7 @@ for i,trail in Progression.Trails do
 end
 print("Genetics passed: seven exact BD-045 condition distributions (tier 0 50/30/15/4.5/0.5, monotonic upgrades), 20% Cracked hatch success, weighted color slots, 1-in-10000 Black, size-only BIG 1.2x and ten increasing trail tiers")
 local previousRare,previousLegend=0,0
-for count=1,15 do
+for count=1,40,3 do
  local seen={}
  local rare,legend=0,0
  for i=0,9999 do
@@ -108,7 +108,7 @@ for count=1,15 do
  assert(rare>previousRare and legend>previousLegend,"rarity boost not monotonic")
  previousRare,previousLegend=rare,legend
 end
-print("Egg rules passed: all 22 species, monotonic 1-15 egg rarity boost, exact independent 5% Shiny/10% BIG and 0.5% stacked outcomes")
+print("Egg rules passed: all 22 species, monotonic 1-40 egg rarity boost, exact independent 5% Shiny/10% BIG and 0.5% stacked outcomes")
 '''
 
 
