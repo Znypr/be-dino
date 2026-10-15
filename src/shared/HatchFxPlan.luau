@@ -131,11 +131,30 @@ function P.mote(i: number, time: number, tier: number)
     return x, y, size, opacity
 end
 
+-- ---------------------------------------------------------------- reveal chips (BD-220 / BD-223)
+-- Centre x, centre y, width, height in panel px. One colour chip right UNDER each paint bucket (bucket hovers at egg x -/+ HatchTimeline.BucketX),
+-- the pattern label just under the egg, the condition chip below it. One line each; none overlap (verified at every phone scale, since the
+-- whole panel scales uniformly).
+P.Chips = {
+    left = {147, 160, 210, 50},
+    right = {677, 160, 210, 50},
+    pattern = {412, 292, 220, 34},
+    condition = {412, 335, 300, 36},
+}
+function P.chipRect(name: string): {number}
+    local c = P.Chips[name]
+    return {c[1] - c[3] / 2, c[2] - c[4] / 2, c[1] + c[3] / 2, c[2] + c[4] / 2}
+end
+function P.overlaps(a: {number}, b: {number}): boolean
+    return a[1] < b[3] and b[1] < a[3] and a[2] < b[4] and b[2] < a[4]
+end
+
 -- ---------------------------------------------------------------- foreground sparkle pass
 -- Keep-out rectangles {x0, y0, x1, y1} in panel px: the dinosaur, the name / rarity area, the paint chips, the tap hint, the ribbons.
 P.KeepOut = {
     {212, 0, 612, 262},    -- the dinosaur (and the egg)
-    {112, 255, 712, 330},  -- paint chips (colour + pattern, with the bonus line)
+    P.chipRect("left"), P.chipRect("right"), -- colour chips under the buckets
+    {262, 262, 562, 330},  -- pattern label, condition chip, name / rarity pill
     {152, 327, 672, 373},  -- tap hint
     {11, 26, 221, 132},    -- Shiny / mutation ribbons (left)
     {649, 36, 799, 70},    -- BIG ribbon (right)
@@ -146,8 +165,8 @@ function P.fgSpark(i: number, n: number, time: number)
     local lane = math.floor((i - 1) / 2)
     local x0 = if left then 14 else 732
     local x = x0 + ((lane * 29 + i * 11) % 64) + math.sin(time * 0.8 + i) * 6
-    local span = 240
-    local y = 150 + ((time * (14 + (i % 3) * 5) + i * 71) % span)
+    local span = 180
+    local y = 200 +((time * (14 + (i % 3) * 5) + i * 71) % span)
     local size = math.min(P.Limits.fgSize, 6 + (i % 3) * 2)
     local opacity = math.min(P.Limits.fgAlpha, 0.12 + 0.4 * math.abs(math.sin(time * 1.6 + i * 2.1)))
     return x, y, size, opacity

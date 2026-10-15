@@ -370185,11 +370185,30 @@ function P.mote(i: number, time: number, tier: number)
     return x, y, size, opacity
 end
 
+-- ---------------------------------------------------------------- reveal chips (BD-220 / BD-223)
+-- Centre x, centre y, width, height in panel px. One colour chip right UNDER each paint bucket (bucket hovers at egg x -/+ HatchTimeline.BucketX),
+-- the pattern label just under the egg, the condition chip below it. One line each; none overlap (verified at every phone scale, since the
+-- whole panel scales uniformly).
+P.Chips = {
+    left = {147, 160, 210, 50},
+    right = {677, 160, 210, 50},
+    pattern = {412, 292, 220, 34},
+    condition = {412, 335, 300, 36},
+}
+function P.chipRect(name: string): {number}
+    local c = P.Chips[name]
+    return {c[1] - c[3] / 2, c[2] - c[4] / 2, c[1] + c[3] / 2, c[2] + c[4] / 2}
+end
+function P.overlaps(a: {number}, b: {number}): boolean
+    return a[1] &lt; b[3] and b[1] &lt; a[3] and a[2] &lt; b[4] and b[2] &lt; a[4]
+end
+
 -- ---------------------------------------------------------------- foreground sparkle pass
 -- Keep-out rectangles {x0, y0, x1, y1} in panel px: the dinosaur, the name / rarity area, the paint chips, the tap hint, the ribbons.
 P.KeepOut = {
     {212, 0, 612, 262},    -- the dinosaur (and the egg)
-    {112, 255, 712, 330},  -- paint chips (colour + pattern, with the bonus line)
+    P.chipRect("left"), P.chipRect("right"), -- colour chips under the buckets
+    {262, 262, 562, 330},  -- pattern label, condition chip, name / rarity pill
     {152, 327, 672, 373},  -- tap hint
     {11, 26, 221, 132},    -- Shiny / mutation ribbons (left)
     {649, 36, 799, 70},    -- BIG ribbon (right)
@@ -370200,8 +370219,8 @@ function P.fgSpark(i: number, n: number, time: number)
     local lane = math.floor((i - 1) / 2)
     local x0 = if left then 14 else 732
     local x = x0 + ((lane * 29 + i * 11) % 64) + math.sin(time * 0.8 + i) * 6
-    local span = 240
-    local y = 150 + ((time * (14 + (i % 3) * 5) + i * 71) % span)
+    local span = 180
+    local y = 200 +((time * (14 + (i % 3) * 5) + i * 71) % span)
     local size = math.min(P.Limits.fgSize, 6 + (i % 3) * 2)
     local opacity = math.min(P.Limits.fgAlpha, 0.12 + 0.4 * math.abs(math.sin(time * 1.6 + i * 2.1)))
     return x, y, size, opacity
@@ -370246,6 +370265,7 @@ local ContentProvider=game:GetService("ContentProvider")
 local RunService=game:GetService("RunService")
 local ModelPreview=require(script.Parent.ModelPreview)
 local Appearance=require(script.Parent.EggAppearance)
+local Overlays=require(script.Parent.ConditionOverlays)
 local Hatch={}
 local shellImage="rbxassetid://95856282289615"
 local crackImage="rbxassetid://126956807167774"
@@ -370279,6 +370299,10 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
     root:SetAttribute("ArtworkLoadState","Loading")
     local shell=image(stage,shellAsset,stage.ZIndex+2)
     shell.Name,shell.ImageColor3="PorcelainShell",Color3.new(1,1,1)
+    -- BD-223: the egg's condition look (same Blender overlay layer as the Eggs screen, EggPicture) from the first frame, kept
+    -- through the paint splashes; it fades out with the plain shell when the real 3D egg (which carries the condition) fades in.
+    local condition=image(stage,"",stage.ZIndex+3)
+    condition.Name,condition.Visible="ConditionLayer",false
     local egg3d: ViewportFrame?=nil
     local egg3dReady=false
     local eggGenes=nil
@@ -370308,7 +370332,7 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
         local mask=Instance.new("Frame")
         mask.Name,mask.BackgroundTransparency="CrackStage"..i,1
         mask.Position,mask.Size=UDim2.fromOffset(region[1]*unit,region[2]*unit),UDim2.fromOffset(region[3]*unit,0)
-        mask.ZIndex,mask.Parent=stage.ZIndex+3,stage
+        mask.ZIndex,mask.Parent=stage.ZIndex+4,stage
         local cracks=image(mask,cracksAsset,mask.ZIndex)
         cracks.ImageRectOffset,cracks.ImageRectSize=Vector2.new(region[1],region[2]),Vector2.new(region[3],1)
         cracks.Visible=false
@@ -370355,7 +370379,7 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
         local group=Instance.new("CanvasGroup")
         group.Name,group.BackgroundTransparency,group.AnchorPoint="ShellFragment"..index,1,Vector2.new(.5,.5)
         group.Size,group.Position,group.Visible=UDim2.fromOffset((maxX-minX)*unit,(maxY-minY)*unit),UDim2.fromOffset(home.X,home.Y),false
-        group.ZIndex,group.Parent=stage.ZIndex+4,stage
+        group.ZIndex,group.Parent=stage.ZIndex+5,stage
         local strips={}
         for y=107,383,4 do
             for _,span in Fragments.spans(polygon,y+2) do
@@ -370406,7 +370430,7 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
             if success~=false then chime.Parent=parent chime:Play() game:GetService("Debris"):AddItem(chime,3) end
         end
         if not Theme.MotionEnabled then root:Destroy() return end
-        stage.Rotation=0 scale.Scale=1 shell.Visible=false
+        stage.Rotation=0 scale.Scale=1 shell.Visible=false condition.Visible=false
         if egg3d then egg3d.Visible=false end
         for _,step in crackStages do step.mask.Visible=false end
         for _,piece in pieces do piece.group.GroupColor3=paintTint piece.group.Visible=root:GetAttribute("ArtworkFallback")~=true end
@@ -370445,11 +370469,24 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
     end
     -- BD-171 paint API. The egg is neutral until setGenes(); color(wash) tints the whole egg, pattern(wash) fades in the real
     -- 3D egg (colour + pattern + condition) over the plain one. Both are idempotent and safe to call every frame.
+    -- BD-220: color(wash) = left bucket (primary colour), second(wash) = right bucket (blends in the secondary colour),
+    -- pattern(wash) = the pattern fading in after both buckets.
     local paint={}
+    local primaryTint=Color3.new(1,1,1)
+    -- Condition overlay (id from the queue at the start, then the server answer). Normal / unknown / unbound art shows nothing.
+    function paint.setCondition(conditionId: string?)
+        local look=Overlays.describe(conditionId)
+        local id=if look.assetId~="" then "rbxassetid://"..look.assetId else ""
+        condition.Image=id
+        condition.Visible=id~="" and root:GetAttribute("Opening")~=true
+    end
     function paint.setGenes(newGenes)
         if newGenes and Genetics and Genetics.valid(newGenes) then
             eggGenes=newGenes
             paintTint=Genetics.tint(newGenes)
+            local first=Genetics.color(newGenes.primaryColorId)
+            primaryTint=if first then Color3.fromRGB(first.rgb[1],first.rgb[2],first.rgb[3]) else paintTint
+            if newGenes.conditionId then paint.setCondition(newGenes.conditionId) end
             applyGenes3d()
         end
     end
@@ -370463,7 +370500,10 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
         return egg3dReady and eggGenes~=nil and root:GetAttribute("Opening")~=true
     end
     function paint.color(wash: number)
-        shell.ImageColor3=Color3.new(1,1,1):Lerp(paintTint,math.clamp(wash,0,1))
+        shell.ImageColor3=Color3.new(1,1,1):Lerp(primaryTint,math.clamp(wash,0,1))
+    end
+    function paint.second(wash: number)
+        shell.ImageColor3=primaryTint:Lerp(paintTint,math.clamp(wash,0,1))
     end
     function paint.pattern(wash: number)
         local view=egg3d
@@ -370472,10 +370512,12 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
         view.Visible=w&gt;0
         view.ImageTransparency=1-w
         shell.ImageTransparency=if w&gt;=1 then 1 else w*.9
+        condition.ImageTransparency=shell.ImageTransparency
     end
     -- Show the finished egg at once (fast-forward, Reduced Motion).
     function paint.finish()
         paint.color(1)
+        paint.second(1)
         paint.pattern(1)
     end
     return root,update,split,paint
@@ -370495,7 +370537,8 @@ local RevealSkip = require(script.Parent.RevealSkip)
 local T = {}
 
 -- Seconds. Full motion: ~3.6 s build-up (two paint-bucket splashes, then rattle/crack), burst, dino reveal, then wait for a tap.
--- BD-171: the egg starts colourless and patternless; the left bucket colours it, the right bucket reveals the pattern.
+-- BD-220: the egg starts colourless but already shows its condition (BD-223); the left bucket pours the primary colour, the right
+-- bucket the secondary colour, then the pattern fades in on the egg with its own small label. Rattle and cracks follow.
 T.Motion = {build = 3.6, burst = .6, settle = .8, tapGate = .5}
 -- Reduced Motion (Theme.MotionEnabled false): no shake/zoom/particles, a short fade, same tap flow.
 T.Reduced = {build = 0, burst = 0, settle = .45, tapGate = .15}
@@ -370510,18 +370553,20 @@ T.CrackBeats = {.21, .46, .71} -- fractions of the build-up where the three crac
 T.EggClock = 3.2 -- HatchPresentation.update() time at the end of the build-up
 T.PaintMax = 20 -- paint droplets (two buckets x 10, pooled)
 -- Paint buckets (BD-171). Each bucket slides in, tilts, splashes at `impact` (fraction of its window) and leaves; both are quick.
-T.Paint = {leftStart = .45, rightStart = 1.3, window = .75, impact = .6, wash = .35}
+T.Paint = {leftStart = .35, rightStart = 1.1, window = .75, impact = .6, wash = .35, patternDelay = .05, patternWash = .4}
 T.WobbleClock = .5 -- egg clock while painting (below the first rattle beat and crack stage, so no cracks show yet)
 
 -- Legendary holds the reveal longer (+.5 s settle) before the tap prompt; the build-up stays the same length.
 function T.paintPlan(motion: boolean)
     if not motion then
-        return {leftStart = 0, leftImpact = 0, leftEnd = 0, rightStart = 0, rightImpact = 0, rightEnd = 0, endsAt = 0}
+        return {leftStart = 0, leftImpact = 0, leftEnd = 0, rightStart = 0, rightImpact = 0, rightEnd = 0, patternAt = 0, patternEnd = 0, endsAt = 0}
     end
     local p = T.Paint
+    local rightEnd = p.rightStart + p.window
+    local patternAt = rightEnd + p.patternDelay
     return {leftStart = p.leftStart, leftImpact = p.leftStart + p.window * p.impact, leftEnd = p.leftStart + p.window,
-        rightStart = p.rightStart, rightImpact = p.rightStart + p.window * p.impact, rightEnd = p.rightStart + p.window,
-        endsAt = p.rightStart + p.window}
+        rightStart = p.rightStart, rightImpact = p.rightStart + p.window * p.impact, rightEnd = rightEnd,
+        patternAt = patternAt, patternEnd = patternAt + p.patternWash, endsAt = patternAt + p.patternWash}
 end
 function T.durations(motion: boolean, rarity: number?, failed: boolean?)
     local d = if not motion then T.Reduced elseif failed then T.Splat else T.Motion
@@ -370663,15 +370708,16 @@ function T.eggClock(durs, t: number): number
     return T.WobbleClock + (T.EggClock - T.WobbleClock) * T.buildProgress(durs, t)
 end
 
--- Paint buckets (BD-171). side: -1 left bucket (colour), +1 right bucket (pattern). k = 0..1 over the bucket's window.
+-- Paint buckets (BD-171/220). side: -1 left bucket (primary colour), +1 right bucket (secondary colour). k = 0..1 over the window.
 -- Returns x offset from the egg centre (px), y offset (px), rotation (degrees, positive = clockwise) and alpha 0..1.
+T.BucketX = 265 -- hover distance from the egg centre; each colour chip sits right under its bucket (HatchFxPlan.Chips)
 function T.bucketPose(k: number, side: number): (number, number, number, number)
     k = clamp01(k)
     local arrive = T.easeOut(k / .35)
     local leave = clamp01((k - .8) / .2)
     local tilt = clamp01((k - .3) / .3)
     local back = clamp01((k - .68) / .17)
-    local x = side * (150 + 190 * (1 - arrive) + 190 * leave * leave)
+    local x = side * (T.BucketX + 120 * (1 - arrive) + 120 * leave * leave)
     local y = -78 + 10 * math.sin(k * math.pi) - 14 * tilt
     local rot = -side * 64 * tilt * (1 - back)
     return x, y, rot, if k &lt;= 0 then 0 else 1 - leave
@@ -370685,7 +370731,9 @@ function T.paintState(durs, t: number)
         local since = t - impactAt
         return {k = clamp01((t - start) / window), impacted = since &gt;= 0, wash = if since &lt;= 0 then 0 else T.easeOut(since / T.Paint.wash), sinceImpact = since}
     end
-    return {left = bucket(p.leftStart, p.leftImpact), right = bucket(p.rightStart, p.rightImpact)}
+    local pattern = if window &lt;= 0 then 1 elseif t &lt;= p.patternAt then 0 else T.easeOut((t - p.patternAt) / T.Paint.patternWash)
+    return {left = bucket(p.leftStart, p.leftImpact), right = bucket(p.rightStart, p.rightImpact), pattern = pattern,
+        patternShown = window &lt;= 0 or t &gt;= p.patternAt}
 end
 -- Splash ring: s = seconds since the bucket hit the egg. Returns scale and transparency (1 = invisible).
 function T.splash(s: number): (number, number)
@@ -370711,8 +370759,9 @@ function T.tier(pct: number?): number
     return #T.TierNames
 end
 -- colors = Config.EggColors rows {id, name, weight}; genes = {primaryColorId, secondaryColorId}. Returns nil without a known colour.
--- A two-colour egg shows both names and the rarer colour's tier.
-function T.colorReveal(colors: any, genes: any)
+-- BD-220: ONE colour per reveal (one chip per bucket). which = "secondary" for the right bucket; a one-colour egg shows its
+-- primary colour on both chips.
+function T.colorReveal(colors: any, genes: any, which: string?)
     if typeof(colors) ~= "table" or typeof(genes) ~= "table" then return nil end
     local total = 0
     for _, row in colors do total += row.weight end
@@ -370722,10 +370771,10 @@ function T.colorReveal(colors: any, genes: any)
     end
     local a = find(genes.primaryColorId)
     if not a or total &lt;= 0 then return nil end
-    local b = find(genes.secondaryColorId) or a
-    local pct = math.min(100 * a.weight / total, 100 * b.weight / total)
+    local row = if which == "secondary" then (find(genes.secondaryColorId) or a) else a
+    local pct = 100 * row.weight / total
     local tier = T.tier(pct)
-    return {name = if a.id == b.id then a.name else a.name .. " + " .. b.name, pct = pct, tier = tier, tierName = T.TierNames[tier]}
+    return {name = row.name, pct = pct, tier = tier, tierName = T.TierNames[tier]}
 end
 -- patterns = ordered pattern ids (uniform odds); nameOf(id) -&gt; display name. The blank pattern is "Plain" (Common).
 function T.patternReveal(patterns: any, patternId: string?, nameOf: (string?) -&gt; string)
@@ -370739,6 +370788,41 @@ function T.patternReveal(patterns: any, patternId: string?, nameOf: (string?) -&
 end
 function T.paintLine(reveal: any): string
     return reveal.name .. " \u{2022} " .. reveal.tierName
+end
+-- Final reveal card detail line: primary colour, pattern and (shown once, BD-220) the colour growth bonus.
+function T.detailLine(colorReveal: any, patternReveal: any, bonusText: string?): string
+    if not colorReveal or not patternReveal then return "" end
+    local s = colorReveal.name .. " \u{2022} " .. patternReveal.name
+    if bonusText and bonusText ~= "" then s ..= " \u{2022} " .. bonusText end
+    return s
+end
+-- Pattern label on the egg after the buckets (BD-220), one short line.
+function T.patternLabel(reveal: any): string
+    if not reveal then return "" end
+    return if reveal.plain then "No pattern" else reveal.name
+end
+
+-- BD-223: condition chip shown from the first frame of the hatch. nil for a Normal egg. Cracked adds its hatch chance.
+function T.hatchHint(hatchChance: number?): string
+    if hatchChance == nil or hatchChance &lt;= 0 or hatchChance &gt;= 1 then return "" end
+    local n = 1 / hatchChance
+    local r = math.floor(n + .5)
+    if r &gt;= 2 and math.abs(n - r) &lt; .02 then return "hatches 1 in " .. r end
+    return "hatches " .. T.pct(100 * hatchChance)
+end
+function T.conditionChip(condition: any): string?
+    if typeof(condition) ~= "table" or type(condition.name) ~= "string" or condition.id == nil or condition.id == "normal" then return nil end
+    local hint = T.hatchHint(condition.hatchChance)
+    return condition.name .. (if hint ~= "" then " \u{2022} " .. hint else "")
+end
+-- Condition id of the egg about to open, from the client queue (ChestQueueJson), before the server answer arrives.
+function T.queueCondition(queue: any, nextId: string?): string?
+    if typeof(queue) ~= "table" then return nil end
+    local entry = nil
+    for _, item in queue do if typeof(item) == "table" and item.id == nextId then entry = item break end end
+    entry = entry or queue[1]
+    if typeof(entry) ~= "table" or typeof(entry.genes) ~= "table" or typeof(entry.genes.conditionId) ~= "string" then return nil end
+    return entry.genes.conditionId
 end
 
 -- Particles scale with rarity (1..5); Shiny and BIG add more; none when motion is off or the egg failed.
@@ -370869,7 +370953,7 @@ function T.cues(durs, rarity: number, failed: boolean, revealName: string)
     local cues = {}
     local build = durs.build
     if build &gt; 0 then
-        -- Paint buckets reuse existing Sfx names (no new sounds): swoosh = pickup_lo, colour splash = pickup, pattern splash = pickup_hi.
+        -- Paint buckets reuse existing Sfx names (no new sounds): swoosh = pickup_lo, primary splash = pickup, secondary splash = pickup_hi.
         local p = durs.paint
         if p.endsAt &gt; 0 then
             table.insert(cues, {t = p.leftStart, name = "pickup_lo"})
@@ -550582,7 +550666,7 @@ render=function(name: string)
                 detailText=mutation.name.." • "..table.concat(UIFormat.boostLines(mutation.growth,mutation.speed,1)," • ")
                 if not genes then detailColor=tint end
             elseif colorReveal and patternReveal then
-                detailText=colorReveal.name.." • "..patternReveal.name
+                detailText=HatchTimeline.detailLine(colorReveal,patternReveal,colorReveal.bonusText) -- BD-220: colour bonus shown once, here
             end
             detailLabel.Text,detailLabel.TextColor3=detailText,detailColor
             remainingAfter=HatchTimeline.remaining(str("NextChestId")~="" and workspace:GetServerTimeNow()&gt;=num("NextChestReadyAt"),num("ActiveChestCount"),num("QueuedEggsWaiting"))
@@ -550592,12 +550676,14 @@ render=function(name: string)
                 shiny=not failed and player:GetAttribute("LastChestShiny")==true,big=not failed and player:GetAttribute("LastChestBig")==true,
                 mutationName=if mutation and not failed then mutation.name else nil,mutationColor=mutationColor,
                 remaining=remainingAfter,genes=if geneticsOk then genes else nil,colorReveal=colorReveal,patternReveal=patternReveal,paintColors=paintColors,
+                secondReveal=if geneticsOk then HatchTimeline.colorReveal(ProgressionConfig.EggColors,genes,"secondary") else nil, -- BD-220: right bucket
             })
         end
         Sfx.play("hatch_crack")
         handle=HatchSequence.play({
             gui=gui,panel=panel,body=body,eggView=eggView,animateEgg=animateEgg,splitEgg=splitEgg,paint=paint,
             nameLabel=rewardLabel,oddsLabel=oddsLabel,detailLabel=detailLabel,motion=motion,
+            eggCondition=HatchTimeline.queueCondition(queue(),str("NextChestId")), -- BD-223: the egg's condition look from the first frame
             alive=function() return modalVersion==version and active=="hatch" end,
             flash=flash,
             onSkipAll=function() autoHatching=true skipAllReveals=true end,
@@ -554289,6 +554375,8 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Theme = require(Shared.UITheme)
 local Sfx = require(Shared.Sfx)
 local Timeline = require(Shared.HatchTimeline)
+local FxPlan = require(Shared.HatchFxPlan)
+local EggGenetics = require(Shared.EggGenetics)
 local InspectView = require(script.Parent.InspectView)
 local HatchFx = require(script.Parent.HatchFx)
 
@@ -554329,15 +554417,31 @@ end
 -- bound in UIIconAssets; the splashes, droplets and chips are effects/UI, not art. Positions are body coordinates.
 type PaintKit = {buckets: {CanvasGroup}, bucketPaint: {Frame}, bucketImages: {ImageLabel}, bucketShapes: {Frame}, streams: {Frame},
     splashes: {Frame}, splashStrokes: {UIStroke}, splashScales: {UIScale}, drops: {Frame}, chips: {Frame}, chipLabels: {TextLabel},
-    chipScales: {UIScale}, chipSwatches: {Frame}, chipStrokes: {UIStroke}}
+    chipScales: {UIScale}, chipSwatches: {Frame}, chipStrokes: {UIStroke}, chipBadges: {Frame}, chipBadgeLabels: {TextLabel},
+    patternChip: Frame, patternLabel: TextLabel, patternScale: UIScale, patternStroke: UIStroke,
+    conditionChip: Frame, conditionLabel: TextLabel, conditionStroke: UIStroke}
 local SPLASH_POINTS = {Vector2.new(412 - 40, 100), Vector2.new(412 + 40, 100)}
-local CHIP_CENTERS = {Vector2.new(262, 292), Vector2.new(562, 292)}
 local BUCKET_STEEL = Color3.fromRGB(118, 132, 156)
-local TIER_COLORS: {Color3} = {Color3.fromRGB(70, 205, 170), Color3.fromRGB(110, 205, 90), Color3.fromRGB(70, 150, 255),
-    Color3.fromRGB(180, 100, 255), Color3.fromRGB(255, 190, 50), Color3.fromRGB(255, 70, 190)}
+local CHIP_FILL = Color3.fromRGB(42, 40, 53) -- Theme.Colors.panel: the game's chunky dark chip
+local TIER_COLORS: {Color3} = Theme.RarityColors -- Common grey .. Mythic red, the game's one rarity palette
+-- BD-220 chip in the game UI style (docs/72): chunky rounded dark pill, thick rarity-coloured border, ONE line, big text.
+-- spec = HatchFxPlan.Chips row {cx, cy, w, h}. Returns the frame, its label, scale and border.
+local function chipFrame(front: Frame, name: string, spec: {number}, textLeft: number, textRight: number): (Frame, TextLabel, UIScale, UIStroke)
+    local chip = Instance.new("Frame")
+    chip.Name, chip.BackgroundColor3, chip.AnchorPoint, chip.Visible = name, CHIP_FILL, Vector2.new(.5, .5), false
+    chip.Position, chip.Size, chip.ZIndex, chip.Parent = UDim2.fromOffset(spec[1], spec[2]), UDim2.fromOffset(spec[3], spec[4]), 27, front
+    corner(chip)
+    local stroke = Instance.new("UIStroke") stroke.Thickness, stroke.Color, stroke.ApplyStrokeMode, stroke.Parent = 4, WHITE, Enum.ApplyStrokeMode.Border, chip
+    local scale = Instance.new("UIScale") scale.Scale, scale.Parent = 0, chip
+    local text = Instance.new("TextLabel")
+    text.Name, text.BackgroundTransparency, text.Position, text.Size, text.Font, text.TextColor3 = "Text", 1, UDim2.fromOffset(textLeft, 3), UDim2.new(1, -(textLeft + textRight), 1, -6), Enum.Font.FredokaOne, WHITE
+    text.TextScaled, text.TextWrapped, text.TextStrokeTransparency, text.TextStrokeColor3, text.ZIndex, text.Parent = true, false, 0, Theme.Colors.outline, 28, chip
+    local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 30, 12, text
+    return chip, text, scale, stroke
+end
 local function buildPaint(front: Frame): PaintKit
-    local kit: PaintKit = {buckets = {}, bucketPaint = {}, bucketImages = {}, bucketShapes = {}, streams = {}, splashes = {}, splashStrokes = {},
-        splashScales = {}, drops = {}, chips = {}, chipLabels = {}, chipScales = {}, chipSwatches = {}, chipStrokes = {}}
+    local kit: any = {buckets = {}, bucketPaint = {}, bucketImages = {}, bucketShapes = {}, streams = {}, splashes = {}, splashStrokes = {},
+        splashScales = {}, drops = {}, chips = {}, chipLabels = {}, chipScales = {}, chipSwatches = {}, chipStrokes = {}, chipBadges = {}, chipBadgeLabels = {}}
     local bucketIcon = (Theme.ImageIds :: any).paint_bucket
     for i = 1, 2 do
         local group = Instance.new("CanvasGroup")
@@ -554375,22 +554479,31 @@ local function buildPaint(front: Frame): PaintKit
         local stroke = Instance.new("UIStroke") stroke.Thickness, stroke.Transparency, stroke.Parent = 9, 1, splash
         local scale = Instance.new("UIScale") scale.Parent = splash
         kit.splashes[i], kit.splashStrokes[i], kit.splashScales[i] = splash, stroke, scale
-        local chip = Instance.new("Frame")
-        chip.Name, chip.BackgroundColor3, chip.AnchorPoint, chip.Visible = "PaintChip" .. i, Color3.fromRGB(28, 34, 52), Vector2.new(.5, .5), false
-        chip.Position, chip.Size, chip.ZIndex, chip.Parent = UDim2.fromOffset(CHIP_CENTERS[i].X, CHIP_CENTERS[i].Y), UDim2.fromOffset(300, 44), 27, front
-        corner(chip)
-        local cs = Instance.new("UIStroke") cs.Thickness, cs.Color, cs.Parent = 3, WHITE, chip
-        local sc = Instance.new("UIScale") sc.Scale, sc.Parent = 0, chip
+        -- Colour chip right under its bucket: [swatch] Name [TIER badge], one line.
+        local spec = FxPlan.Chips[if i == 1 then "left" else "right"]
+        local chip, text, sc, cs = chipFrame(front, "PaintChip" .. i, spec, 46, 92)
         local swatch = Instance.new("Frame")
-        swatch.Name, swatch.BackgroundColor3, swatch.AnchorPoint, swatch.Position, swatch.Size, swatch.ZIndex, swatch.Parent = "Swatch", WHITE, Vector2.new(.5, .5), UDim2.fromOffset(24, 22), UDim2.fromOffset(22, 22), 28, chip
+        swatch.Name, swatch.BackgroundColor3, swatch.AnchorPoint, swatch.Position, swatch.Size, swatch.ZIndex, swatch.Parent = "Swatch", WHITE, Vector2.new(.5, .5), UDim2.new(0, 25, .5, 0), UDim2.fromOffset(30, 30), 28, chip
         corner(swatch)
-        local ss = Instance.new("UIStroke") ss.Color, ss.Thickness, ss.Parent = Color3.new(0, 0, 0), 2, swatch
-        local text = Instance.new("TextLabel")
-        text.BackgroundTransparency, text.Position, text.Size, text.Font, text.TextColor3 = 1, UDim2.fromOffset(44, 2), UDim2.new(1, -52, 1, -4), Enum.Font.FredokaOne, WHITE
-        text.TextScaled, text.TextStrokeTransparency, text.TextStrokeColor3, text.ZIndex, text.Parent = true, 0, Color3.new(0, 0, 0), 28, chip
-        local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 26, 11, text
+        local ss = Instance.new("UIStroke") ss.Color, ss.Thickness, ss.Parent = WHITE, 3, swatch
+        local badge = Instance.new("Frame")
+        badge.Name, badge.AnchorPoint, badge.Position, badge.Size, badge.ZIndex, badge.Parent = "TierBadge", Vector2.new(1, .5), UDim2.new(1, -8, .5, 0), UDim2.fromOffset(82, 30), 28, chip
+        corner(badge, UDim.new(0, 10))
+        local bs = Instance.new("UIStroke") bs.Color, bs.Thickness, bs.Parent = Theme.Colors.outline, 2, badge
+        local badgeText = Instance.new("TextLabel")
+        badgeText.BackgroundTransparency, badgeText.Position, badgeText.Size, badgeText.Font, badgeText.TextColor3 = 1, UDim2.fromOffset(4, 2), UDim2.new(1, -8, 1, -4), Enum.Font.FredokaOne, WHITE
+        badgeText.TextScaled, badgeText.TextStrokeTransparency, badgeText.TextStrokeColor3, badgeText.ZIndex, badgeText.Parent = true, 0, Theme.Colors.outline, 29, badge
+        local bl = Instance.new("UITextSizeConstraint") bl.MaxTextSize, bl.MinTextSize, bl.Parent = 18, 10, badgeText
         kit.chips[i], kit.chipLabels[i], kit.chipScales[i], kit.chipSwatches[i], kit.chipStrokes[i] = chip, text, sc, swatch, cs
+        kit.chipBadges[i], kit.chipBadgeLabels[i] = badge, badgeText
     end
+    -- Pattern label on the egg after the buckets, and the condition chip shown from the first frame (BD-220 / BD-223).
+    local pchip, ptext, pscale, pstroke = chipFrame(front, "PatternChip", FxPlan.Chips.pattern, 12, 12)
+    pstroke.Thickness = 3
+    kit.patternChip, kit.patternLabel, kit.patternScale, kit.patternStroke = pchip, ptext, pscale, pstroke
+    local cchip, ctext, cscale, cstroke = chipFrame(front, "ConditionChip", FxPlan.Chips.condition, 12, 12)
+    cscale.Scale, cstroke.Thickness = 1, 3
+    kit.conditionChip, kit.conditionLabel, kit.conditionStroke = cchip, ctext, cstroke
     for i = 1, Timeline.PaintMax do kit.drops[i] = dot(front, "PaintDrop" .. i, 26, 10, 10, true) end
     return kit
 end
@@ -554557,7 +554670,7 @@ end
 export type Result = {
     dino: GuiObject, rarity: number, color: Color3, failed: boolean, shiny: boolean, big: boolean,
     mutationName: string?, mutationColor: Color3?, remaining: number,
-    genes: any?, colorReveal: any?, patternReveal: any?, paintColors: {Color3}?,
+    genes: any?, colorReveal: any?, secondReveal: any?, patternReveal: any?, paintColors: {Color3}?,
 }
 export type Args = {
     gui: ScreenGui, panel: GuiObject, body: GuiObject,
@@ -554567,6 +554680,7 @@ export type Args = {
     alive: () -&gt; boolean, flash: (Color3, number) -&gt; (),
     onNext: () -&gt; (), onSkipAll: () -&gt; (), onReveal: () -&gt; (),
     result: Result?, -- nil = Open was just pressed and the server answer has not arrived: the egg already wobbles (BD-170)
+    eggCondition: string?, -- BD-223: condition id of the egg being opened (client queue), shown from the first frame
 }
 export type Handle = {cancel: () -&gt; (), supply: (Result) -&gt; (), pending: () -&gt; boolean}
 
@@ -554682,6 +554796,7 @@ function Seq.play(args: Args): Handle
         kit.buckets[i].Visible, kit.streams[i].Visible, kit.splashes[i].Visible, kit.chips[i].Visible = false, false, false, false
         kit.chipScales[i].Scale = 0
     end
+    kit.patternChip.Visible, kit.patternScale.Scale, kit.conditionChip.Visible = false, 0, false
     for _, d in kit.drops do d.Visible = false end
 
     local px, py, vx, vy, life = table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0)
@@ -554690,9 +554805,9 @@ function Seq.play(args: Args): Handle
     local impactAt = .95
     local level = 0 -- overall glow level 0..1
     local revealT = 0 -- seconds after the burst when the dinosaur actually appeared
-    local chipShown = {false, false}
+    local chipShown = {false, false, false}
     local dropN = {0, 0}
-    local lastWash = {-1, -1}
+    local lastWash = {-1, -1, -1}
     local paintColors: {Color3} = {WHITE, WHITE}
 
     local function restoreBody()
@@ -554703,6 +554818,7 @@ function Seq.play(args: Args): Handle
         for i = 1, 2 do
             kit.buckets[i].Visible, kit.streams[i].Visible, kit.splashes[i].Visible, kit.chips[i].Visible = false, false, false, false
         end
+        kit.patternChip.Visible, kit.conditionChip.Visible = false, false
         for _, d in kit.drops do d.Visible = false end
     end
     local function finish()
@@ -554777,15 +554893,27 @@ function Seq.play(args: Args): Handle
         end
     end
 
-    -- BD-171 paint buckets: pose, pour stream, splash ring and droplets of both buckets, plus the colour/pattern chips.
+    -- BD-223: the egg's condition look and chip from the first frame (queue id now; the server answer replaces it).
+    local conditionId: string? = nil
+    local function setCondition(id: string?)
+        if id == conditionId or burstDone then return end
+        conditionId = id
+        a.paint.setCondition(id)
+        local text = Timeline.conditionChip(if id then EggGenetics.condition(id) else nil)
+        kit.conditionChip.Visible = text ~= nil
+        if text then
+            kit.conditionLabel.Text = text
+            kit.conditionStroke.Color = if id == "cracked" then Theme.Colors.gold else WHITE
+        end
+    end
+    -- BD-220 paint buckets: pose, pour stream, splash ring and droplets of both buckets; ONE colour chip under each bucket.
     local function showChip(i: number)
-        local reveal = if i == 1 then a.colorReveal else a.patternReveal
+        local reveal = if i == 1 then a.colorReveal else (a.secondReveal or a.colorReveal)
         if not reveal then return end
         local chip = kit.chips[i]
-        local bonus = if i == 1 and type(reveal.bonusText) == "string" then reveal.bonusText else nil -- BD-172, set by Bootstrap from the server-held genes
-        kit.chipLabels[i].Text = if bonus then Timeline.paintLine(reveal) .. "\n" .. bonus else Timeline.paintLine(reveal)
-        chip.Size = UDim2.fromOffset(300, if bonus then 66 else 44)
-        kit.chipSwatches[i].Position = UDim2.fromOffset(24, if bonus then 33 else 22)
+        kit.chipLabels[i].Text = reveal.name
+        kit.chipBadgeLabels[i].Text = string.upper(reveal.tierName)
+        kit.chipBadges[i].BackgroundColor3 = TIER_COLORS[reveal.tier] or WHITE
         kit.chipStrokes[i].Color = TIER_COLORS[reveal.tier] or WHITE
         kit.chipSwatches[i].BackgroundColor3 = paintColors[i]
         chip.Visible = true
@@ -554849,7 +554977,16 @@ function Seq.play(args: Args): Handle
             end
         end
         if ps.left.wash ~= lastWash[1] then lastWash[1] = ps.left.wash a.paint.color(ps.left.wash) end
-        if ps.right.wash ~= lastWash[2] then lastWash[2] = ps.right.wash a.paint.pattern(ps.right.wash) end
+        if ps.right.wash ~= lastWash[2] then lastWash[2] = ps.right.wash a.paint.second(ps.right.wash) end
+        if ps.pattern ~= lastWash[3] then lastWash[3] = ps.pattern a.paint.pattern(ps.pattern) end
+        local pattern = a.patternReveal
+        if ps.patternShown and not chipShown[3] and pattern then
+            chipShown[3] = true
+            kit.patternLabel.Text = Timeline.patternLabel(pattern)
+            kit.patternStroke.Color = TIER_COLORS[pattern.tier] or WHITE
+            kit.patternChip.Visible = true
+            TweenService:Create(kit.patternScale, TweenInfo.new(.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        end
     end
 
     local function burst()
@@ -555067,6 +555204,7 @@ function Seq.play(args: Args): Handle
         for i, s in fx.shocks do fx.shockStrokes[i].Color = glow:Lerp(WHITE, .3) end
         -- Paint buckets: colour bucket pours the egg colour, pattern bucket pours the pattern's accent colour.
         a.paint.setGenes(r.genes)
+        if r.genes and typeof(r.genes.conditionId) == "string" then setCondition(r.genes.conditionId) end
         local colors = r.paintColors
         paintColors = {if colors then colors[1] else WHITE, if colors then colors[2] else WHITE}
         for i = 1, 2 do
@@ -555074,7 +555212,7 @@ function Seq.play(args: Args): Handle
             kit.splashStrokes[i].Color = paintColors[i]
             kit.splashes[i].BackgroundColor3 = paintColors[i]
             kit.splashes[i].BackgroundTransparency = .8
-            local reveal = if i == 1 then r.colorReveal else r.patternReveal
+            local reveal = if i == 1 then r.colorReveal else (r.secondReveal or r.colorReveal)
             HatchFx.paintStyle(hx, i, paintColors[i], if reveal then reveal.tier else 1)
             dropN[i] = if reveal then math.min(10, 4 + reveal.tier) else 5
             for j = 1, 10 do
@@ -555319,6 +555457,7 @@ function Seq.play(args: Args): Handle
         if not readyShown and (revealStarted or failed) and not state.pending and t &gt;= durs.readyAt + revealT then showHint() end
     end))
 
+    setCondition(a.eggCondition)
     if a.result then applyResult(a.result) end
     return {
         cancel = function() finish() end,

@@ -7,6 +7,7 @@ local ContentProvider=game:GetService("ContentProvider")
 local RunService=game:GetService("RunService")
 local ModelPreview=require(script.Parent.ModelPreview)
 local Appearance=require(script.Parent.EggAppearance)
+local Overlays=require(script.Parent.ConditionOverlays)
 local Hatch={}
 local shellImage="rbxassetid://95856282289615"
 local crackImage="rbxassetid://126956807167774"
@@ -40,6 +41,10 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
     root:SetAttribute("ArtworkLoadState","Loading")
     local shell=image(stage,shellAsset,stage.ZIndex+2)
     shell.Name,shell.ImageColor3="PorcelainShell",Color3.new(1,1,1)
+    -- BD-223: the egg's condition look (same Blender overlay layer as the Eggs screen, EggPicture) from the first frame, kept
+    -- through the paint splashes; it fades out with the plain shell when the real 3D egg (which carries the condition) fades in.
+    local condition=image(stage,"",stage.ZIndex+3)
+    condition.Name,condition.Visible="ConditionLayer",false
     local egg3d: ViewportFrame?=nil
     local egg3dReady=false
     local eggGenes=nil
@@ -69,7 +74,7 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
         local mask=Instance.new("Frame")
         mask.Name,mask.BackgroundTransparency="CrackStage"..i,1
         mask.Position,mask.Size=UDim2.fromOffset(region[1]*unit,region[2]*unit),UDim2.fromOffset(region[3]*unit,0)
-        mask.ZIndex,mask.Parent=stage.ZIndex+3,stage
+        mask.ZIndex,mask.Parent=stage.ZIndex+4,stage
         local cracks=image(mask,cracksAsset,mask.ZIndex)
         cracks.ImageRectOffset,cracks.ImageRectSize=Vector2.new(region[1],region[2]),Vector2.new(region[3],1)
         cracks.Visible=false
@@ -116,7 +121,7 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
         local group=Instance.new("CanvasGroup")
         group.Name,group.BackgroundTransparency,group.AnchorPoint="ShellFragment"..index,1,Vector2.new(.5,.5)
         group.Size,group.Position,group.Visible=UDim2.fromOffset((maxX-minX)*unit,(maxY-minY)*unit),UDim2.fromOffset(home.X,home.Y),false
-        group.ZIndex,group.Parent=stage.ZIndex+4,stage
+        group.ZIndex,group.Parent=stage.ZIndex+5,stage
         local strips={}
         for y=107,383,4 do
             for _,span in Fragments.spans(polygon,y+2) do
@@ -167,7 +172,7 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
             if success~=false then chime.Parent=parent chime:Play() game:GetService("Debris"):AddItem(chime,3) end
         end
         if not Theme.MotionEnabled then root:Destroy() return end
-        stage.Rotation=0 scale.Scale=1 shell.Visible=false
+        stage.Rotation=0 scale.Scale=1 shell.Visible=false condition.Visible=false
         if egg3d then egg3d.Visible=false end
         for _,step in crackStages do step.mask.Visible=false end
         for _,piece in pieces do piece.group.GroupColor3=paintTint piece.group.Visible=root:GetAttribute("ArtworkFallback")~=true end
@@ -206,11 +211,24 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
     end
     -- BD-171 paint API. The egg is neutral until setGenes(); color(wash) tints the whole egg, pattern(wash) fades in the real
     -- 3D egg (colour + pattern + condition) over the plain one. Both are idempotent and safe to call every frame.
+    -- BD-220: color(wash) = left bucket (primary colour), second(wash) = right bucket (blends in the secondary colour),
+    -- pattern(wash) = the pattern fading in after both buckets.
     local paint={}
+    local primaryTint=Color3.new(1,1,1)
+    -- Condition overlay (id from the queue at the start, then the server answer). Normal / unknown / unbound art shows nothing.
+    function paint.setCondition(conditionId: string?)
+        local look=Overlays.describe(conditionId)
+        local id=if look.assetId~="" then "rbxassetid://"..look.assetId else ""
+        condition.Image=id
+        condition.Visible=id~="" and root:GetAttribute("Opening")~=true
+    end
     function paint.setGenes(newGenes)
         if newGenes and Genetics and Genetics.valid(newGenes) then
             eggGenes=newGenes
             paintTint=Genetics.tint(newGenes)
+            local first=Genetics.color(newGenes.primaryColorId)
+            primaryTint=if first then Color3.fromRGB(first.rgb[1],first.rgb[2],first.rgb[3]) else paintTint
+            if newGenes.conditionId then paint.setCondition(newGenes.conditionId) end
             applyGenes3d()
         end
     end
@@ -224,7 +242,10 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
         return egg3dReady and eggGenes~=nil and root:GetAttribute("Opening")~=true
     end
     function paint.color(wash: number)
-        shell.ImageColor3=Color3.new(1,1,1):Lerp(paintTint,math.clamp(wash,0,1))
+        shell.ImageColor3=Color3.new(1,1,1):Lerp(primaryTint,math.clamp(wash,0,1))
+    end
+    function paint.second(wash: number)
+        shell.ImageColor3=primaryTint:Lerp(paintTint,math.clamp(wash,0,1))
     end
     function paint.pattern(wash: number)
         local view=egg3d
@@ -233,10 +254,12 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
         view.Visible=w>0
         view.ImageTransparency=1-w
         shell.ImageTransparency=if w>=1 then 1 else w*.9
+        condition.ImageTransparency=shell.ImageTransparency
     end
     -- Show the finished egg at once (fast-forward, Reduced Motion).
     function paint.finish()
         paint.color(1)
+        paint.second(1)
         paint.pattern(1)
     end
     return root,update,split,paint

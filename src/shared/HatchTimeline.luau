@@ -6,7 +6,8 @@ local RevealSkip = require(script.Parent.RevealSkip)
 local T = {}
 
 -- Seconds. Full motion: ~3.6 s build-up (two paint-bucket splashes, then rattle/crack), burst, dino reveal, then wait for a tap.
--- BD-171: the egg starts colourless and patternless; the left bucket colours it, the right bucket reveals the pattern.
+-- BD-220: the egg starts colourless but already shows its condition (BD-223); the left bucket pours the primary colour, the right
+-- bucket the secondary colour, then the pattern fades in on the egg with its own small label. Rattle and cracks follow.
 T.Motion = {build = 3.6, burst = .6, settle = .8, tapGate = .5}
 -- Reduced Motion (Theme.MotionEnabled false): no shake/zoom/particles, a short fade, same tap flow.
 T.Reduced = {build = 0, burst = 0, settle = .45, tapGate = .15}
@@ -21,18 +22,20 @@ T.CrackBeats = {.21, .46, .71} -- fractions of the build-up where the three crac
 T.EggClock = 3.2 -- HatchPresentation.update() time at the end of the build-up
 T.PaintMax = 20 -- paint droplets (two buckets x 10, pooled)
 -- Paint buckets (BD-171). Each bucket slides in, tilts, splashes at `impact` (fraction of its window) and leaves; both are quick.
-T.Paint = {leftStart = .45, rightStart = 1.3, window = .75, impact = .6, wash = .35}
+T.Paint = {leftStart = .35, rightStart = 1.1, window = .75, impact = .6, wash = .35, patternDelay = .05, patternWash = .4}
 T.WobbleClock = .5 -- egg clock while painting (below the first rattle beat and crack stage, so no cracks show yet)
 
 -- Legendary holds the reveal longer (+.5 s settle) before the tap prompt; the build-up stays the same length.
 function T.paintPlan(motion: boolean)
     if not motion then
-        return {leftStart = 0, leftImpact = 0, leftEnd = 0, rightStart = 0, rightImpact = 0, rightEnd = 0, endsAt = 0}
+        return {leftStart = 0, leftImpact = 0, leftEnd = 0, rightStart = 0, rightImpact = 0, rightEnd = 0, patternAt = 0, patternEnd = 0, endsAt = 0}
     end
     local p = T.Paint
+    local rightEnd = p.rightStart + p.window
+    local patternAt = rightEnd + p.patternDelay
     return {leftStart = p.leftStart, leftImpact = p.leftStart + p.window * p.impact, leftEnd = p.leftStart + p.window,
-        rightStart = p.rightStart, rightImpact = p.rightStart + p.window * p.impact, rightEnd = p.rightStart + p.window,
-        endsAt = p.rightStart + p.window}
+        rightStart = p.rightStart, rightImpact = p.rightStart + p.window * p.impact, rightEnd = rightEnd,
+        patternAt = patternAt, patternEnd = patternAt + p.patternWash, endsAt = patternAt + p.patternWash}
 end
 function T.durations(motion: boolean, rarity: number?, failed: boolean?)
     local d = if not motion then T.Reduced elseif failed then T.Splat else T.Motion
@@ -174,15 +177,16 @@ function T.eggClock(durs, t: number): number
     return T.WobbleClock + (T.EggClock - T.WobbleClock) * T.buildProgress(durs, t)
 end
 
--- Paint buckets (BD-171). side: -1 left bucket (colour), +1 right bucket (pattern). k = 0..1 over the bucket's window.
+-- Paint buckets (BD-171/220). side: -1 left bucket (primary colour), +1 right bucket (secondary colour). k = 0..1 over the window.
 -- Returns x offset from the egg centre (px), y offset (px), rotation (degrees, positive = clockwise) and alpha 0..1.
+T.BucketX = 265 -- hover distance from the egg centre; each colour chip sits right under its bucket (HatchFxPlan.Chips)
 function T.bucketPose(k: number, side: number): (number, number, number, number)
     k = clamp01(k)
     local arrive = T.easeOut(k / .35)
     local leave = clamp01((k - .8) / .2)
     local tilt = clamp01((k - .3) / .3)
     local back = clamp01((k - .68) / .17)
-    local x = side * (150 + 190 * (1 - arrive) + 190 * leave * leave)
+    local x = side * (T.BucketX + 120 * (1 - arrive) + 120 * leave * leave)
     local y = -78 + 10 * math.sin(k * math.pi) - 14 * tilt
     local rot = -side * 64 * tilt * (1 - back)
     return x, y, rot, if k <= 0 then 0 else 1 - leave
@@ -196,7 +200,9 @@ function T.paintState(durs, t: number)
         local since = t - impactAt
         return {k = clamp01((t - start) / window), impacted = since >= 0, wash = if since <= 0 then 0 else T.easeOut(since / T.Paint.wash), sinceImpact = since}
     end
-    return {left = bucket(p.leftStart, p.leftImpact), right = bucket(p.rightStart, p.rightImpact)}
+    local pattern = if window <= 0 then 1 elseif t <= p.patternAt then 0 else T.easeOut((t - p.patternAt) / T.Paint.patternWash)
+    return {left = bucket(p.leftStart, p.leftImpact), right = bucket(p.rightStart, p.rightImpact), pattern = pattern,
+        patternShown = window <= 0 or t >= p.patternAt}
 end
 -- Splash ring: s = seconds since the bucket hit the egg. Returns scale and transparency (1 = invisible).
 function T.splash(s: number): (number, number)
@@ -222,8 +228,9 @@ function T.tier(pct: number?): number
     return #T.TierNames
 end
 -- colors = Config.EggColors rows {id, name, weight}; genes = {primaryColorId, secondaryColorId}. Returns nil without a known colour.
--- A two-colour egg shows both names and the rarer colour's tier.
-function T.colorReveal(colors: any, genes: any)
+-- BD-220: ONE colour per reveal (one chip per bucket). which = "secondary" for the right bucket; a one-colour egg shows its
+-- primary colour on both chips.
+function T.colorReveal(colors: any, genes: any, which: string?)
     if typeof(colors) ~= "table" or typeof(genes) ~= "table" then return nil end
     local total = 0
     for _, row in colors do total += row.weight end
@@ -233,10 +240,10 @@ function T.colorReveal(colors: any, genes: any)
     end
     local a = find(genes.primaryColorId)
     if not a or total <= 0 then return nil end
-    local b = find(genes.secondaryColorId) or a
-    local pct = math.min(100 * a.weight / total, 100 * b.weight / total)
+    local row = if which == "secondary" then (find(genes.secondaryColorId) or a) else a
+    local pct = 100 * row.weight / total
     local tier = T.tier(pct)
-    return {name = if a.id == b.id then a.name else a.name .. " + " .. b.name, pct = pct, tier = tier, tierName = T.TierNames[tier]}
+    return {name = row.name, pct = pct, tier = tier, tierName = T.TierNames[tier]}
 end
 -- patterns = ordered pattern ids (uniform odds); nameOf(id) -> display name. The blank pattern is "Plain" (Common).
 function T.patternReveal(patterns: any, patternId: string?, nameOf: (string?) -> string)
@@ -250,6 +257,41 @@ function T.patternReveal(patterns: any, patternId: string?, nameOf: (string?) ->
 end
 function T.paintLine(reveal: any): string
     return reveal.name .. " \u{2022} " .. reveal.tierName
+end
+-- Final reveal card detail line: primary colour, pattern and (shown once, BD-220) the colour growth bonus.
+function T.detailLine(colorReveal: any, patternReveal: any, bonusText: string?): string
+    if not colorReveal or not patternReveal then return "" end
+    local s = colorReveal.name .. " \u{2022} " .. patternReveal.name
+    if bonusText and bonusText ~= "" then s ..= " \u{2022} " .. bonusText end
+    return s
+end
+-- Pattern label on the egg after the buckets (BD-220), one short line.
+function T.patternLabel(reveal: any): string
+    if not reveal then return "" end
+    return if reveal.plain then "No pattern" else reveal.name
+end
+
+-- BD-223: condition chip shown from the first frame of the hatch. nil for a Normal egg. Cracked adds its hatch chance.
+function T.hatchHint(hatchChance: number?): string
+    if hatchChance == nil or hatchChance <= 0 or hatchChance >= 1 then return "" end
+    local n = 1 / hatchChance
+    local r = math.floor(n + .5)
+    if r >= 2 and math.abs(n - r) < .02 then return "hatches 1 in " .. r end
+    return "hatches " .. T.pct(100 * hatchChance)
+end
+function T.conditionChip(condition: any): string?
+    if typeof(condition) ~= "table" or type(condition.name) ~= "string" or condition.id == nil or condition.id == "normal" then return nil end
+    local hint = T.hatchHint(condition.hatchChance)
+    return condition.name .. (if hint ~= "" then " \u{2022} " .. hint else "")
+end
+-- Condition id of the egg about to open, from the client queue (ChestQueueJson), before the server answer arrives.
+function T.queueCondition(queue: any, nextId: string?): string?
+    if typeof(queue) ~= "table" then return nil end
+    local entry = nil
+    for _, item in queue do if typeof(item) == "table" and item.id == nextId then entry = item break end end
+    entry = entry or queue[1]
+    if typeof(entry) ~= "table" or typeof(entry.genes) ~= "table" or typeof(entry.genes.conditionId) ~= "string" then return nil end
+    return entry.genes.conditionId
 end
 
 -- Particles scale with rarity (1..5); Shiny and BIG add more; none when motion is off or the egg failed.
@@ -380,7 +422,7 @@ function T.cues(durs, rarity: number, failed: boolean, revealName: string)
     local cues = {}
     local build = durs.build
     if build > 0 then
-        -- Paint buckets reuse existing Sfx names (no new sounds): swoosh = pickup_lo, colour splash = pickup, pattern splash = pickup_hi.
+        -- Paint buckets reuse existing Sfx names (no new sounds): swoosh = pickup_lo, primary splash = pickup, secondary splash = pickup_hi.
         local p = durs.paint
         if p.endsAt > 0 then
             table.insert(cues, {t = p.leftStart, name = "pickup_lo"})

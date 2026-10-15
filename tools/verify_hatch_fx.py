@@ -129,7 +129,33 @@ for i = 1, 6 do
         assert(size <= L.fgSize and op <= L.fgAlpha + 1e-9, "foreground stays small and gentle")
     end
 end
-assert(P.inKeepOut(412, 100) and P.inKeepOut(262, 292) and P.inKeepOut(412, 350), "keep-out zones cover dino, chips, hint")
+assert(P.inKeepOut(412, 100) and P.inKeepOut(147, 160) and P.inKeepOut(677, 160) and P.inKeepOut(412, 292) and P.inKeepOut(412, 350), "keep-out zones cover dino, chips, hint")
+-- BD-220 / BD-223 chips: one under each bucket (bucket hover x = egg x -/+ 265), none overlap, all inside the panel. The panel
+-- scales uniformly, so no overlap here means no overlap at any phone size.
+do
+    local names = {"left", "right", "pattern", "condition"}
+    for i, a in names do
+        local ra = P.chipRect(a)
+        assert(ra[1] >= 0 and ra[3] <= 824 and ra[2] >= 0 and ra[4] <= 402, a .. " chip inside the panel")
+        assert(P.Chips[a][4] <= 50, a .. " chip is one line")
+        for j = i + 1, #names do assert(not P.overlaps(ra, P.chipRect(names[j])), a .. " overlaps " .. names[j]) end
+    end
+    assert(P.Chips.left[1] == 412 - 265 and P.Chips.right[1] == 412 + 265, "colour chips sit right under their buckets")
+    assert(P.Chips.left[2] > 100 and P.Chips.right[2] == P.Chips.left[2], "both colour chips below the buckets, same row")
+    -- splash droplets (both systems) never land on a colour chip
+    for _, side in {-1, 1} do
+        for j = 1, 12 do
+            for k = 0, 54 do
+                local dx, dy = P.drop(j, 12, k * 0.01, side)
+                for _, n in {"left", "right"} do
+                    local rc = P.chipRect(n)
+                    local x, y = 412 + side * 40 + dx, 100 + dy
+                    assert(not (x >= rc[1] and x <= rc[3] and y >= rc[2] and y <= rc[4]), "droplet lands on the " .. n .. " chip")
+                end
+            end
+        end
+    end
+end
 -- 9. Paint droplets: low arcs, end, never reach the chips (y 255+) from the splash points (y 100), colours per side.
 for _, side in {-1, 1} do
     for tier = 1, 6 do
@@ -139,7 +165,7 @@ for _, side in {-1, 1} do
                 local s = k * 0.01
                 local dx, dy, op, size = P.drop(j, n, s, side)
                 assert(op >= 0 and op <= L.maxAlpha and size >= 3 and size <= L.dropSize, "drop bounds op " .. op .. " size " .. size)
-                assert(dy <= L.maxFall + 1e-9 and 100 + dy < 255, "droplet stays clear of the chips")
+                assert(dy <= L.maxFall + 1e-9 and 100 + dy < 255, "droplet stays clear of the pattern / condition chips")
                 assert(math.abs(dx) <= 120, "droplet stays near the splash")
             end
             assert(select(3, P.drop(j, n, L.dropLife + 0.01, side)) == 0, "droplets end")

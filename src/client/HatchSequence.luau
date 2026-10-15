@@ -12,6 +12,8 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Theme = require(Shared.UITheme)
 local Sfx = require(Shared.Sfx)
 local Timeline = require(Shared.HatchTimeline)
+local FxPlan = require(Shared.HatchFxPlan)
+local EggGenetics = require(Shared.EggGenetics)
 local InspectView = require(script.Parent.InspectView)
 local HatchFx = require(script.Parent.HatchFx)
 
@@ -52,15 +54,31 @@ end
 -- bound in UIIconAssets; the splashes, droplets and chips are effects/UI, not art. Positions are body coordinates.
 type PaintKit = {buckets: {CanvasGroup}, bucketPaint: {Frame}, bucketImages: {ImageLabel}, bucketShapes: {Frame}, streams: {Frame},
     splashes: {Frame}, splashStrokes: {UIStroke}, splashScales: {UIScale}, drops: {Frame}, chips: {Frame}, chipLabels: {TextLabel},
-    chipScales: {UIScale}, chipSwatches: {Frame}, chipStrokes: {UIStroke}}
+    chipScales: {UIScale}, chipSwatches: {Frame}, chipStrokes: {UIStroke}, chipBadges: {Frame}, chipBadgeLabels: {TextLabel},
+    patternChip: Frame, patternLabel: TextLabel, patternScale: UIScale, patternStroke: UIStroke,
+    conditionChip: Frame, conditionLabel: TextLabel, conditionStroke: UIStroke}
 local SPLASH_POINTS = {Vector2.new(412 - 40, 100), Vector2.new(412 + 40, 100)}
-local CHIP_CENTERS = {Vector2.new(262, 292), Vector2.new(562, 292)}
 local BUCKET_STEEL = Color3.fromRGB(118, 132, 156)
-local TIER_COLORS: {Color3} = {Color3.fromRGB(70, 205, 170), Color3.fromRGB(110, 205, 90), Color3.fromRGB(70, 150, 255),
-    Color3.fromRGB(180, 100, 255), Color3.fromRGB(255, 190, 50), Color3.fromRGB(255, 70, 190)}
+local CHIP_FILL = Color3.fromRGB(42, 40, 53) -- Theme.Colors.panel: the game's chunky dark chip
+local TIER_COLORS: {Color3} = Theme.RarityColors -- Common grey .. Mythic red, the game's one rarity palette
+-- BD-220 chip in the game UI style (docs/72): chunky rounded dark pill, thick rarity-coloured border, ONE line, big text.
+-- spec = HatchFxPlan.Chips row {cx, cy, w, h}. Returns the frame, its label, scale and border.
+local function chipFrame(front: Frame, name: string, spec: {number}, textLeft: number, textRight: number): (Frame, TextLabel, UIScale, UIStroke)
+    local chip = Instance.new("Frame")
+    chip.Name, chip.BackgroundColor3, chip.AnchorPoint, chip.Visible = name, CHIP_FILL, Vector2.new(.5, .5), false
+    chip.Position, chip.Size, chip.ZIndex, chip.Parent = UDim2.fromOffset(spec[1], spec[2]), UDim2.fromOffset(spec[3], spec[4]), 27, front
+    corner(chip)
+    local stroke = Instance.new("UIStroke") stroke.Thickness, stroke.Color, stroke.ApplyStrokeMode, stroke.Parent = 4, WHITE, Enum.ApplyStrokeMode.Border, chip
+    local scale = Instance.new("UIScale") scale.Scale, scale.Parent = 0, chip
+    local text = Instance.new("TextLabel")
+    text.Name, text.BackgroundTransparency, text.Position, text.Size, text.Font, text.TextColor3 = "Text", 1, UDim2.fromOffset(textLeft, 3), UDim2.new(1, -(textLeft + textRight), 1, -6), Enum.Font.FredokaOne, WHITE
+    text.TextScaled, text.TextWrapped, text.TextStrokeTransparency, text.TextStrokeColor3, text.ZIndex, text.Parent = true, false, 0, Theme.Colors.outline, 28, chip
+    local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 30, 12, text
+    return chip, text, scale, stroke
+end
 local function buildPaint(front: Frame): PaintKit
-    local kit: PaintKit = {buckets = {}, bucketPaint = {}, bucketImages = {}, bucketShapes = {}, streams = {}, splashes = {}, splashStrokes = {},
-        splashScales = {}, drops = {}, chips = {}, chipLabels = {}, chipScales = {}, chipSwatches = {}, chipStrokes = {}}
+    local kit: any = {buckets = {}, bucketPaint = {}, bucketImages = {}, bucketShapes = {}, streams = {}, splashes = {}, splashStrokes = {},
+        splashScales = {}, drops = {}, chips = {}, chipLabels = {}, chipScales = {}, chipSwatches = {}, chipStrokes = {}, chipBadges = {}, chipBadgeLabels = {}}
     local bucketIcon = (Theme.ImageIds :: any).paint_bucket
     for i = 1, 2 do
         local group = Instance.new("CanvasGroup")
@@ -98,22 +116,31 @@ local function buildPaint(front: Frame): PaintKit
         local stroke = Instance.new("UIStroke") stroke.Thickness, stroke.Transparency, stroke.Parent = 9, 1, splash
         local scale = Instance.new("UIScale") scale.Parent = splash
         kit.splashes[i], kit.splashStrokes[i], kit.splashScales[i] = splash, stroke, scale
-        local chip = Instance.new("Frame")
-        chip.Name, chip.BackgroundColor3, chip.AnchorPoint, chip.Visible = "PaintChip" .. i, Color3.fromRGB(28, 34, 52), Vector2.new(.5, .5), false
-        chip.Position, chip.Size, chip.ZIndex, chip.Parent = UDim2.fromOffset(CHIP_CENTERS[i].X, CHIP_CENTERS[i].Y), UDim2.fromOffset(300, 44), 27, front
-        corner(chip)
-        local cs = Instance.new("UIStroke") cs.Thickness, cs.Color, cs.Parent = 3, WHITE, chip
-        local sc = Instance.new("UIScale") sc.Scale, sc.Parent = 0, chip
+        -- Colour chip right under its bucket: [swatch] Name [TIER badge], one line.
+        local spec = FxPlan.Chips[if i == 1 then "left" else "right"]
+        local chip, text, sc, cs = chipFrame(front, "PaintChip" .. i, spec, 46, 92)
         local swatch = Instance.new("Frame")
-        swatch.Name, swatch.BackgroundColor3, swatch.AnchorPoint, swatch.Position, swatch.Size, swatch.ZIndex, swatch.Parent = "Swatch", WHITE, Vector2.new(.5, .5), UDim2.fromOffset(24, 22), UDim2.fromOffset(22, 22), 28, chip
+        swatch.Name, swatch.BackgroundColor3, swatch.AnchorPoint, swatch.Position, swatch.Size, swatch.ZIndex, swatch.Parent = "Swatch", WHITE, Vector2.new(.5, .5), UDim2.new(0, 25, .5, 0), UDim2.fromOffset(30, 30), 28, chip
         corner(swatch)
-        local ss = Instance.new("UIStroke") ss.Color, ss.Thickness, ss.Parent = Color3.new(0, 0, 0), 2, swatch
-        local text = Instance.new("TextLabel")
-        text.BackgroundTransparency, text.Position, text.Size, text.Font, text.TextColor3 = 1, UDim2.fromOffset(44, 2), UDim2.new(1, -52, 1, -4), Enum.Font.FredokaOne, WHITE
-        text.TextScaled, text.TextStrokeTransparency, text.TextStrokeColor3, text.ZIndex, text.Parent = true, 0, Color3.new(0, 0, 0), 28, chip
-        local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize, limit.MinTextSize, limit.Parent = 26, 11, text
+        local ss = Instance.new("UIStroke") ss.Color, ss.Thickness, ss.Parent = WHITE, 3, swatch
+        local badge = Instance.new("Frame")
+        badge.Name, badge.AnchorPoint, badge.Position, badge.Size, badge.ZIndex, badge.Parent = "TierBadge", Vector2.new(1, .5), UDim2.new(1, -8, .5, 0), UDim2.fromOffset(82, 30), 28, chip
+        corner(badge, UDim.new(0, 10))
+        local bs = Instance.new("UIStroke") bs.Color, bs.Thickness, bs.Parent = Theme.Colors.outline, 2, badge
+        local badgeText = Instance.new("TextLabel")
+        badgeText.BackgroundTransparency, badgeText.Position, badgeText.Size, badgeText.Font, badgeText.TextColor3 = 1, UDim2.fromOffset(4, 2), UDim2.new(1, -8, 1, -4), Enum.Font.FredokaOne, WHITE
+        badgeText.TextScaled, badgeText.TextStrokeTransparency, badgeText.TextStrokeColor3, badgeText.ZIndex, badgeText.Parent = true, 0, Theme.Colors.outline, 29, badge
+        local bl = Instance.new("UITextSizeConstraint") bl.MaxTextSize, bl.MinTextSize, bl.Parent = 18, 10, badgeText
         kit.chips[i], kit.chipLabels[i], kit.chipScales[i], kit.chipSwatches[i], kit.chipStrokes[i] = chip, text, sc, swatch, cs
+        kit.chipBadges[i], kit.chipBadgeLabels[i] = badge, badgeText
     end
+    -- Pattern label on the egg after the buckets, and the condition chip shown from the first frame (BD-220 / BD-223).
+    local pchip, ptext, pscale, pstroke = chipFrame(front, "PatternChip", FxPlan.Chips.pattern, 12, 12)
+    pstroke.Thickness = 3
+    kit.patternChip, kit.patternLabel, kit.patternScale, kit.patternStroke = pchip, ptext, pscale, pstroke
+    local cchip, ctext, cscale, cstroke = chipFrame(front, "ConditionChip", FxPlan.Chips.condition, 12, 12)
+    cscale.Scale, cstroke.Thickness = 1, 3
+    kit.conditionChip, kit.conditionLabel, kit.conditionStroke = cchip, ctext, cstroke
     for i = 1, Timeline.PaintMax do kit.drops[i] = dot(front, "PaintDrop" .. i, 26, 10, 10, true) end
     return kit
 end
@@ -280,7 +307,7 @@ end
 export type Result = {
     dino: GuiObject, rarity: number, color: Color3, failed: boolean, shiny: boolean, big: boolean,
     mutationName: string?, mutationColor: Color3?, remaining: number,
-    genes: any?, colorReveal: any?, patternReveal: any?, paintColors: {Color3}?,
+    genes: any?, colorReveal: any?, secondReveal: any?, patternReveal: any?, paintColors: {Color3}?,
 }
 export type Args = {
     gui: ScreenGui, panel: GuiObject, body: GuiObject,
@@ -290,6 +317,7 @@ export type Args = {
     alive: () -> boolean, flash: (Color3, number) -> (),
     onNext: () -> (), onSkipAll: () -> (), onReveal: () -> (),
     result: Result?, -- nil = Open was just pressed and the server answer has not arrived: the egg already wobbles (BD-170)
+    eggCondition: string?, -- BD-223: condition id of the egg being opened (client queue), shown from the first frame
 }
 export type Handle = {cancel: () -> (), supply: (Result) -> (), pending: () -> boolean}
 
@@ -405,6 +433,7 @@ function Seq.play(args: Args): Handle
         kit.buckets[i].Visible, kit.streams[i].Visible, kit.splashes[i].Visible, kit.chips[i].Visible = false, false, false, false
         kit.chipScales[i].Scale = 0
     end
+    kit.patternChip.Visible, kit.patternScale.Scale, kit.conditionChip.Visible = false, 0, false
     for _, d in kit.drops do d.Visible = false end
 
     local px, py, vx, vy, life = table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0), table.create(Timeline.MaxParticles, 0)
@@ -413,9 +442,9 @@ function Seq.play(args: Args): Handle
     local impactAt = .95
     local level = 0 -- overall glow level 0..1
     local revealT = 0 -- seconds after the burst when the dinosaur actually appeared
-    local chipShown = {false, false}
+    local chipShown = {false, false, false}
     local dropN = {0, 0}
-    local lastWash = {-1, -1}
+    local lastWash = {-1, -1, -1}
     local paintColors: {Color3} = {WHITE, WHITE}
 
     local function restoreBody()
@@ -426,6 +455,7 @@ function Seq.play(args: Args): Handle
         for i = 1, 2 do
             kit.buckets[i].Visible, kit.streams[i].Visible, kit.splashes[i].Visible, kit.chips[i].Visible = false, false, false, false
         end
+        kit.patternChip.Visible, kit.conditionChip.Visible = false, false
         for _, d in kit.drops do d.Visible = false end
     end
     local function finish()
@@ -500,15 +530,27 @@ function Seq.play(args: Args): Handle
         end
     end
 
-    -- BD-171 paint buckets: pose, pour stream, splash ring and droplets of both buckets, plus the colour/pattern chips.
+    -- BD-223: the egg's condition look and chip from the first frame (queue id now; the server answer replaces it).
+    local conditionId: string? = nil
+    local function setCondition(id: string?)
+        if id == conditionId or burstDone then return end
+        conditionId = id
+        a.paint.setCondition(id)
+        local text = Timeline.conditionChip(if id then EggGenetics.condition(id) else nil)
+        kit.conditionChip.Visible = text ~= nil
+        if text then
+            kit.conditionLabel.Text = text
+            kit.conditionStroke.Color = if id == "cracked" then Theme.Colors.gold else WHITE
+        end
+    end
+    -- BD-220 paint buckets: pose, pour stream, splash ring and droplets of both buckets; ONE colour chip under each bucket.
     local function showChip(i: number)
-        local reveal = if i == 1 then a.colorReveal else a.patternReveal
+        local reveal = if i == 1 then a.colorReveal else (a.secondReveal or a.colorReveal)
         if not reveal then return end
         local chip = kit.chips[i]
-        local bonus = if i == 1 and type(reveal.bonusText) == "string" then reveal.bonusText else nil -- BD-172, set by Bootstrap from the server-held genes
-        kit.chipLabels[i].Text = if bonus then Timeline.paintLine(reveal) .. "\n" .. bonus else Timeline.paintLine(reveal)
-        chip.Size = UDim2.fromOffset(300, if bonus then 66 else 44)
-        kit.chipSwatches[i].Position = UDim2.fromOffset(24, if bonus then 33 else 22)
+        kit.chipLabels[i].Text = reveal.name
+        kit.chipBadgeLabels[i].Text = string.upper(reveal.tierName)
+        kit.chipBadges[i].BackgroundColor3 = TIER_COLORS[reveal.tier] or WHITE
         kit.chipStrokes[i].Color = TIER_COLORS[reveal.tier] or WHITE
         kit.chipSwatches[i].BackgroundColor3 = paintColors[i]
         chip.Visible = true
@@ -572,7 +614,16 @@ function Seq.play(args: Args): Handle
             end
         end
         if ps.left.wash ~= lastWash[1] then lastWash[1] = ps.left.wash a.paint.color(ps.left.wash) end
-        if ps.right.wash ~= lastWash[2] then lastWash[2] = ps.right.wash a.paint.pattern(ps.right.wash) end
+        if ps.right.wash ~= lastWash[2] then lastWash[2] = ps.right.wash a.paint.second(ps.right.wash) end
+        if ps.pattern ~= lastWash[3] then lastWash[3] = ps.pattern a.paint.pattern(ps.pattern) end
+        local pattern = a.patternReveal
+        if ps.patternShown and not chipShown[3] and pattern then
+            chipShown[3] = true
+            kit.patternLabel.Text = Timeline.patternLabel(pattern)
+            kit.patternStroke.Color = TIER_COLORS[pattern.tier] or WHITE
+            kit.patternChip.Visible = true
+            TweenService:Create(kit.patternScale, TweenInfo.new(.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        end
     end
 
     local function burst()
@@ -790,6 +841,7 @@ function Seq.play(args: Args): Handle
         for i, s in fx.shocks do fx.shockStrokes[i].Color = glow:Lerp(WHITE, .3) end
         -- Paint buckets: colour bucket pours the egg colour, pattern bucket pours the pattern's accent colour.
         a.paint.setGenes(r.genes)
+        if r.genes and typeof(r.genes.conditionId) == "string" then setCondition(r.genes.conditionId) end
         local colors = r.paintColors
         paintColors = {if colors then colors[1] else WHITE, if colors then colors[2] else WHITE}
         for i = 1, 2 do
@@ -797,7 +849,7 @@ function Seq.play(args: Args): Handle
             kit.splashStrokes[i].Color = paintColors[i]
             kit.splashes[i].BackgroundColor3 = paintColors[i]
             kit.splashes[i].BackgroundTransparency = .8
-            local reveal = if i == 1 then r.colorReveal else r.patternReveal
+            local reveal = if i == 1 then r.colorReveal else (r.secondReveal or r.colorReveal)
             HatchFx.paintStyle(hx, i, paintColors[i], if reveal then reveal.tier else 1)
             dropN[i] = if reveal then math.min(10, 4 + reveal.tier) else 5
             for j = 1, 10 do
@@ -1042,6 +1094,7 @@ function Seq.play(args: Args): Handle
         if not readyShown and (revealStarted or failed) and not state.pending and t >= durs.readyAt + revealT then showHint() end
     end))
 
+    setCondition(a.eggCondition)
     if a.result then applyResult(a.result) end
     return {
         cancel = function() finish() end,
