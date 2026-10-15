@@ -37,6 +37,9 @@ See `RewardMath.computeChestReward`. Direct run copies are a separate **legacy**
 
 ## Conditions And Upgrade Distributions
 
+
+> **Owner decision 2026-10-15 (BD-185, implemented):** a condition (Cracked/Dirty/Normal/Rainbow/Astra) belongs to the EGG only: it sets egg look, odds and Cracked hatch success. It no longer multiplies a living dinosaur's speed/growth; `Rules.multipliers` takes no condition and the `EquippedCondition` attribute is gone. Saved `genes.conditionId` stays loadable and is ignored for stats. The `.8/1/1.2/1.8` factors in older docs are historical. Gap: Rainbow/Astra lost their 1.2x/1.8x boost (Cracked/Dirty their 0.8x), so no pace data exists for them; growth pacing now comes from the colour growth bonus (BD-172), potions, auras and fusion tiers. Re-tune only if playtests show a gap.
+
 > **BD-044/BD-045 update (2026-10-13, Review / test, Studio pending):** new eggs use
 > `bd045-conditions-v1` (tier 0 50/30/15/4.5/0.5, PROVISIONAL tiers 1-6) and hatch
 > exactly one dinosaur; the table below is the **historical Build 020** distribution that

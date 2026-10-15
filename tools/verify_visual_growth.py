@@ -16,6 +16,7 @@ local humanoid={HipHeight=2,RigType="R15"}
 function character:GetAttribute(key)return self.attrs[key]end
 function character:FindFirstChild(name)return if name=="HumanoidRootPart" then root elseif name=="LocalMeshVisual" then self.visual else nil end
 function character:FindFirstChildOfClass()return humanoid end
+function character:GetChildren()return self.visual and {self.visual} or {} end
 local ReplicatedStorage={FindFirstChild=function()return nil end}
 local Http={JSONDecode=function(_,value)return if value=="null" then nil else {} end}
 local Appearance={apply=function()paints+=1 end}

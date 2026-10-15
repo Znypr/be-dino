@@ -14,7 +14,7 @@ local function hideShell(character: Model)
     local shell = character:FindFirstChild("DinoVisual")
     if not shell or not character:FindFirstChild("LocalMeshVisual") then return end
     for _, item in shell:GetDescendants() do
-        if item:IsA("BasePart") and item.Transparency ~= 1 then item.LocalTransparencyModifier = 1 item.Transparency = 1 end
+        if item:IsA("BasePart") and item.Transparency ~= 1 then item:SetAttribute("ShellTransparency",item.Transparency) item.LocalTransparencyModifier = 1 item.Transparency = 1 end
     end
 end
 local function characterVisual(character: Model)
@@ -58,9 +58,24 @@ local function characterVisual(character: Model)
     local okGenes,genes=pcall(function() return Http:JSONDecode(genesJson) end)
     local realGenes=if okGenes and typeof(genes)=="table" and mutation=="base" then genes else nil
     local model = Resources.clone(id,realGenes)
-    if not model then return end
+    if not model then
+        -- BD-146: the new species has no local mesh (yet). Never keep the OLD species on top: drop it and let the
+        -- server shell show until a retry (RuntimeMeshes.Ready / attribute change) succeeds.
+        if previous and (previous:GetAttribute("SpeciesId") ~= id or previous:GetAttribute("Mutation") ~= mutation) then
+            previous:Destroy()
+            local shell = character:FindFirstChild("DinoVisual")
+            if shell then
+                for _, item in shell:GetDescendants() do
+                    if item:IsA("BasePart") then item.LocalTransparencyModifier = 0 item.Transparency = item:GetAttribute("ShellTransparency") or 0 end
+                end
+            end
+        end
+        return
+    end
     if not character.Parent or not root.Parent then model:Destroy();return end
-    if previous then previous:Destroy() end
+    for _, extra in character:GetChildren() do
+        if extra.Name == "LocalMeshVisual" then extra:Destroy() end -- exactly one local visual per character
+    end
     local groundHeight = root.Size.Y / 2 + humanoid.HipHeight
     if humanoid.RigType == Enum.HumanoidRigType.R6 then
         local leg = character:FindFirstChild("Left Leg")
@@ -85,12 +100,8 @@ local function characterVisual(character: Model)
     end
     model.Parent = character
     if realGenes then Appearance.apply(model,realGenes) end
-    local fallback = character:FindFirstChild("DinoVisual")
-    if fallback then
-        for _, item in fallback:GetDescendants() do
-            if item:IsA("BasePart") then item.LocalTransparencyModifier = 1 item.Transparency = 1 end
-        end
-    end
+    hideShell(character)
+
 end
 local function watchCharacter(character: Model)
     if watched[character] then return end
@@ -116,6 +127,7 @@ local function watchCharacter(character: Model)
     end)
     character.DescendantAdded:Connect(function(item)
         if item:IsA("BasePart") and item:FindFirstAncestor("DinoVisual") and character:FindFirstChild("LocalMeshVisual") then
+            if item.Transparency ~= 1 then item:SetAttribute("ShellTransparency",item.Transparency) end
             item.LocalTransparencyModifier = 1 item.Transparency = 1
         end
     end)

@@ -320,8 +320,8 @@ assert(Repository.progressionAction(shopper,"buyTrail","fern","buy-fern",false))
 assert(Repository.progressionAction(shopper,"buyTrail","fern","buy-fern",false))
 assert(Repository.progression(shopper).crystals==341)
 assert(Repository.progressionAction(shopper,"equipTrail","fern","equip-fern",false))
-local growth,speed=Rules.multipliers(Repository.progression(shopper),"compy",nil,0,"dirty")
-assert(math.abs(growth-.8)<1e-8 and math.abs(speed-.816)<1e-8)
+local growth,speed=Rules.multipliers(Repository.progression(shopper),"compy",nil,0)
+assert(math.abs(growth-1)<1e-8 and math.abs(speed-1.02)<1e-8) -- BD-185: stored egg condition never changes dino stats
 assert(Repository.progressionAction(shopper,"upgradeCondition","1","policy-block",false)==false)
 mutableConfig.DeveloperProducts={} -- No Robux-buyable currency: earned-only path.
 assert(Repository.progressionAction(shopper,"upgradeCondition","1","condition-1",false))
