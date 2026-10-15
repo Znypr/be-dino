@@ -1,4 +1,4 @@
-# 96 No more cubes: root cause and fix for cube eggs and cube dinos (BD-216, BD-219)
+# 98 No more cubes: root cause and fix for cube eggs and cube dinos (BD-216, BD-219)
 
 16 October 2026. Studio evidence from an unpublished playtest build (PlaceId 0, owner Studio, Play Solo client).
 

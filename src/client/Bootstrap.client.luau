@@ -801,7 +801,7 @@ render=function(name: string)
         end)
         button(body,"CHOOSE DINO",70,342,264,47,C.blue,function() open("collection") end)
         local patternHeight=math.min(60,math.max(47,45/viewportScale()))
-        if fusionMenuOk then button(body,"PATTERN FUSION: 15 -> NEW GOLD",400,402-patternHeight,400,patternHeight,C.purple,function() close() FusionMenu.open() end).TextSize=20 end
+        if fusionMenuOk then button(body,"PATTERN FUSION: 6 -> NEW GOLD",400,402-patternHeight,400,patternHeight,C.purple,function() close() FusionMenu.open() end).TextSize=20 end
     elseif name=="fusionConfirm" then
         local diamond=fusionTarget=="diamond"
         local cost=if diamond then Config.DiamondMutationCost else Config.GoldMutationCost
