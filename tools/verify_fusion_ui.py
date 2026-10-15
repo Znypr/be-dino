@@ -33,7 +33,7 @@ end
 local function ids(list) local r={} for _,d in list do table.insert(r,d.instanceId) end return r end
 local function has(t,v) return table.find(t,v)~=nil end
 
--- Fixture: 17 plain wavy compies (Gold = 15 Base) + valuables + mismatches.
+-- Fixture: 17 plain wavy compies (Gold = 6 Base) + valuables + mismatches.
 local all={}
 local plain={}
 for i=1,17 do local d=dino() table.insert(all,d) table.insert(plain,d.instanceId) end
@@ -70,7 +70,10 @@ assert(S.ineligibility(gold,ctx)=="wrong_stage")
 assert(S.ineligibility(legacy,ctx)=="missing_pattern")
 assert(S.ineligibility(locked,ctx)=="locked")
 assert(S.ineligibility(fav,ctx)=="favorited")
-assert(S.ineligibility(spots,ctx)=="pattern_mismatch")
+assert(S.ineligibility(spots,ctx)==nil,"Gold takes any pattern of the species")
+local goldSpots=dino({stage="gold",genes={patternId="03_round_spots"}})
+assert(S.ineligibility(goldSpots,{targetStage="emerald",speciesId="compy",patternId="06_wavy_stripes"})=="pattern_mismatch")
+assert(S.ineligibility(goldSpots,{targetStage="emerald",speciesId="compy"})==nil)
 assert(S.ineligibility(raptor,ctx)=="species_mismatch")
 assert(S.ineligibility(all[1],{targetStage="emerald"})=="wrong_stage")
 assert(S.ineligibility(all[1],{targetStage="diamond"})=="wrong_stage")
@@ -80,9 +83,10 @@ for _,code in {"wrong_stage","missing_pattern","locked","favorited","pattern_mis
 -- Valuables are ELIGIBLE (manual selection allowed) but not plain.
 for _,d in {shiny,big,ember,aura,trail} do assert(S.ineligibility(d,ctx)==nil and not S.isPlain(d)) end
 assert(#S.valuableReasons(trail)==1 and S.valuableReasons(trail)[1]=="cosmetics")
--- Owner decision 2026-10-14: ladder 15/4/2, all tiers active.
+-- Owner decision 2026-10-15: ladder 6/3/2 (Gold any pattern), all tiers active.
 assert(S.stage("gold").approved and S.stage("emerald").approved and S.stage("diamond").approved)
-assert(S.donorCount("gold")==15 and S.donorCount("emerald")==4 and S.donorCount("diamond")==2 and S.donorCount("platinum")==nil)
+assert(S.donorCount("gold")==6 and S.donorCount("emerald")==3 and S.donorCount("diamond")==2 and S.donorCount("platinum")==nil)
+assert(S.stage("gold").anyPattern==true and S.stage("emerald").anyPattern==nil and S.stage("diamond").anyPattern==nil)
 assert(S.stage("emerald").source=="gold" and S.stage("diamond").source=="emerald" and S.stageTitle("base")=="Base")
 
 -- ===== Filters =====
@@ -105,9 +109,9 @@ assert(S.cycle(opts.speciesId,nil)=="compy" and S.cycle(opts.speciesId,"compy")=
 
 -- ===== Sorting =====
 local sorted=S.sort(all,"eligible",ctx,nil,cat)
-for i=1,18 do assert(S.isPlain(sorted[i]) and S.ineligibility(sorted[i],ctx)==nil,"plain eligible first "..i) end
-for i=19,23 do assert(not S.isPlain(sorted[i]) and S.ineligibility(sorted[i],ctx)==nil,"valuable eligible next "..i) end
-for i=24,#sorted do assert(S.ineligibility(sorted[i],ctx)~=nil,"ineligible last "..i) end
+for i=1,19 do assert(S.isPlain(sorted[i]) and S.ineligibility(sorted[i],ctx)==nil,"plain eligible first "..i) end
+for i=20,24 do assert(not S.isPlain(sorted[i]) and S.ineligibility(sorted[i],ctx)==nil,"valuable eligible next "..i) end
+for i=25,#sorted do assert(S.ineligibility(sorted[i],ctx)~=nil,"ineligible last "..i) end
 local rarest=S.sort(all,"rarest",ctx,nil,cat)
 assert(rarest[1]==shiny and rarest[2]==ember and rarest[3]==big,"rarity order")
 -- Cosmetics never raise rarity.
@@ -125,44 +129,44 @@ assert(table.concat(ids(S.sort(all,"color",ctx,nil,cat)),",")==table.concat(ids(
 -- ===== Toggle =====
 local s,ok,why={},nil,nil
 s,ok,why=S.toggle(s,shiny,"gold",byId) assert(ok and #s==1,"manual valuable select allowed")
-s,ok,why=S.toggle(s,spots,"gold",byId) assert(not ok and why=="pattern_mismatch" and #s==1)
+s,ok,why=S.toggle(s,spots,"gold",byId) assert(ok and #s==2,"any pattern for Gold") s=S.toggle(s,spots,"gold",byId) assert(#s==1)
 s,ok,why=S.toggle(s,raptor,"gold",byId) assert(not ok and why=="species_mismatch")
 s,ok,why=S.toggle(s,locked,"gold",byId) assert(not ok and why=="locked")
 s,ok,why=S.toggle(s,all[1],"emerald",byId) assert(not ok and why=="wrong_stage")
 s,ok,why=S.toggle(s,all[1],"platinum",byId) assert(not ok and why=="recipe_not_approved")
 s,ok,why=S.toggle(s,shiny,"gold",byId) assert(ok and #s==0,"deselect")
-local full={} for i=1,15 do full=S.toggle(full,all[i],"gold",byId) end
-assert(#full==15)
-local _,okFull,whyFull=S.toggle(full,all[16],"gold",byId) assert(not okFull and whyFull=="full")
+local full={} for i=1,6 do full=S.toggle(full,all[i],"gold",byId) end
+assert(#full==6)
+local _,okFull,whyFull=S.toggle(full,all[7],"gold",byId) assert(not okFull and whyFull=="full")
 
 -- ===== Auto-fill never picks valuables =====
 local filled,added,short=S.autoFill(all,{},"gold",nil,cat)
-assert(#filled==15 and added==15 and short==0)
+assert(#filled==6 and added==6 and short==0)
 for _,id in filled do assert(has(plain,id),"auto-fill picked non-plain "..id) end
 -- Keeps a manual Shiny and fills only plain copies around it.
 local manual=S.toggle({},shiny,"gold",byId)
 filled,added,short=S.autoFill(all,manual,"gold",nil,cat)
-assert(#filled==15 and added==14 and filled[1]==shiny.instanceId)
-for i=2,15 do assert(has(plain,filled[i])) end
+assert(#filled==6 and added==5 and filled[1]==shiny.instanceId)
+for i=2,6 do assert(has(plain,filled[i])) end
 -- Shortfall when not enough plain copies: never tops up with valuables.
 local few={shiny,big,ember,aura,trail,locked,fav,all[1],all[2],all[3]}
 filled,added,short=S.autoFill(few,{},"gold",nil,cat)
-assert(added==3 and short==12 and #filled==3)
+assert(added==3 and short==3 and #filled==3)
 for _,id in filled do assert(byId[id].shiny==false and byId[id].big==false and byId[id].mutationId=="" and not S.hasCosmetics(byId[id])) end
 -- Anchored to selected species/pattern.
 local anchored=S.autoFill({spots,dino({genes={patternId="03_round_spots"}}),all[1],all[2]},{spots.instanceId},"gold",nil,cat)
-assert(#anchored==2 and byId[anchored[1]]==spots)
+assert(#anchored==4 and byId[anchored[1]]==spots,"Gold auto-fill ignores pattern")
 local plain_base={} for _,d in all do if d.stage=="base" then table.insert(plain_base,d) end end
 -- Base dinos never fill a higher tier; unknown stages fill nothing.
 local none,a2=S.autoFill(plain_base,{},"emerald",nil,cat) assert(#none==0 and a2==0)
 local none2,a3,short3=S.autoFill(all,{},"platinum",nil,cat) assert(#none2==0 and a3==0 and short3==0)
--- Emerald auto-fills exactly 4 plain Golds; Diamond exactly 2 plain Emeralds (genes from fused records).
+-- Emerald auto-fills exactly 3 plain Golds; Diamond exactly 2 plain Emeralds (genes from fused records).
 local tier={}
 for i=1,12 do table.insert(tier,dino({stage="gold"})) end
 for i=1,4 do table.insert(tier,dino({stage="emerald"})) end
 table.insert(tier,dino({stage="gold",genes={patternId="03_round_spots"}}))
 table.insert(tier,dino({stage="gold",shiny=true}))
-local te=S.autoFill(tier,{},"emerald",nil,cat) assert(#te==4)
+local te=S.autoFill(tier,{},"emerald",nil,cat) assert(#te==3)
 local tIdx=S.index(tier)
 for _,id in te do assert(tIdx[id].stage=="gold" and tIdx[id].genes.patternId=="06_wavy_stripes" and not tIdx[id].shiny) end
 local td,addD,shortD=S.autoFill(tier,{},"diamond",nil,cat) assert(#td==2 and addD==2 and shortD==0)
@@ -180,11 +184,11 @@ for trial=1,200 do
  end
  local idx=S.index(pop)
  local out=S.autoFill(pop,{},"gold",nil,cat)
- assert(#out<=15)
+ assert(#out<=6)
  local first=out[1] and idx[out[1]]
  for _,id in out do
   local d=idx[id]
-  assert(S.isPlain(d) and d.stage=="base" and d.speciesId==first.speciesId and d.genes.patternId==first.genes.patternId,"fuzz "..trial)
+  assert(S.isPlain(d) and d.stage=="base" and d.speciesId==first.speciesId,"fuzz "..trial)
  end
 end
 
@@ -364,7 +368,7 @@ assert(old.origin.kind=="unknown" and string.find(old.origin.lines[1],"not guess
 -- 15-parent compact lineage (no per-parent speciesId/patternId): bounded view.
 local bigParents,bigIds={},{}
 for i=1,15 do table.insert(bigParents,{instanceId="u:1/d:"..(1000+i),genes={primaryColorId="green"},shiny=i==1,origin={kind="hatch",eggId="egg-"..i}}) table.insert(bigIds,"u:1/d:"..(1000+i)) end
-local gv=S.details({instanceId="u:1/d:2000",speciesId="compy",stage="gold",genes={patternId="06_wavy_stripes"},origin={kind="fusion",recipeVersion="gold-same-species-pattern-15-v1",oddsVersion="o",parentStage="base",parents=bigParents},
+local gv=S.details({instanceId="u:1/d:2000",speciesId="compy",stage="gold",genes={patternId="06_wavy_stripes"},origin={kind="fusion",recipeVersion="gold-same-species-6-v2",oddsVersion="o",parentStage="base",parents=bigParents},
  lineage={parentIds=bigIds,parentEggs={}},cosmetics={}},cat)
 assert(gv.origin.lines[1]=="Fused from 15 dinos" and #gv.origin.parents==S.DetailsParentLimit)
 assert(gv.origin.parents[1].text=="Wavy Stripes Compy • Shiny","compact snapshot falls back to result species/pattern")
@@ -373,7 +377,7 @@ local showing=false for _,l in gv.origin.lines do if l=="Showing 12 of 15 parent
 local plainFused=table.clone(fused) plainFused.cosmetics={ownedAuraIds={"royal"},ownedTrailIds={"astra"},equippedAuraId="royal",equippedTrailId="astra"}
 assert(S.details(plainFused,cat).prestige==fv.prestige)
 
-print("Fusion UI logic passed: ladder 15/4/2 stages, filters, sorts, eligibility reasons, plain-only auto-fill (fuzzed), exact 100% odds (fuzzed), loss summary, token reuse, committed reveal wheels (fuzzed) and truthful Dino Details")
+print("Fusion UI logic passed: ladder 6/3/2 stages (Gold any pattern), filters, sorts, eligibility reasons, plain-only auto-fill (fuzzed), exact 100% odds (fuzzed), loss summary, token reuse, committed reveal wheels (fuzzed) and truthful Dino Details")
 ''')
 
 
@@ -414,12 +418,12 @@ def run(runner, source, name):
 def check_recipes():
     server = (ROOT / 'src/server/IdentityFusion.luau').read_text(encoding='utf-8')
     client = (ROOT / 'src/shared/FusionSelection.luau').read_text(encoding='utf-8')
-    for stage, count in (('gold', 15), ('emerald', 4), ('diamond', 2)):
+    for stage, count in (('gold', 6), ('emerald', 3), ('diamond', 2)):
         assert re.search(r'%s = \{targetStage = "%s", sourceStage = "\w+", donorCount = %d,' % (stage, stage, count), server), stage
-        assert re.search(r'\{id = "%s", name = "\w+", source = "\w+", donorCount = %d, approved = true\}' % (stage, count), client), stage
+        assert re.search(r'\{id = "%s", name = "\w+", source = "\w+", donorCount = %d(?:, anyPattern = true)?, approved = true\}' % (stage, count), client), stage
     service = (ROOT / 'src/server/FusionService.luau').read_text(encoding='utf-8')
-    assert 'FusionService.MaxDonorIds = 15' in service
-    print('Recipe parity passed: IdentityFusion, FusionSelection and FusionService agree on 15/4/2')
+    assert 'FusionService.MaxDonorIds = 6' in service
+    print('Recipe parity passed: IdentityFusion, FusionSelection and FusionService agree on 6/3/2')
 
 
 if __name__ == '__main__':

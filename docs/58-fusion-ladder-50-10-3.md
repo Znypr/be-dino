@@ -1,6 +1,8 @@
 # 58. Fusion ladder 15 / 4 / 2 (BD-057 / BD-064 / BD-065; file name kept from the 50 / 10 / 3 version)
 
-**Owner-approved 2026-10-14 (current): Gold = 15 Base, Emerald = 4 Gold, Diamond = 2 Emerald.** This replaces the 50 / 10 / 3 ladder of 2026-10-13 (Gold 50 Base, Emerald 10 Gold, Diamond 3 Emerald); pacing for the new numbers is in [57 section 12](57-fusion-ladder-options.md). Everything below describes the current 15 / 4 / 2 code; the 50 / 10 / 3 measurements are kept only as history.
+**SUPERSEDED 2026-10-15 by [90](90-fusion-ladder-v2.md): Gold = 6 Base (any pattern of one species), Emerald = 3 Gold, Diamond = 2 Emerald. The text below describes 15/4/2 and is history; the data-contract notes (compact lineage, sidecar bytes) still apply with smaller counts.**
+
+**Owner-approved 2026-10-14 (then current): Gold = 15 Base, Emerald = 4 Gold, Diamond = 2 Emerald.** This replaces the 50 / 10 / 3 ladder of 2026-10-13 (Gold 50 Base, Emerald 10 Gold, Diamond 3 Emerald); pacing for the new numbers is in [57 section 12](57-fusion-ladder-options.md). Everything below describes the current 15 / 4 / 2 code; the 50 / 10 / 3 measurements are kept only as history.
 
 Same species and same
 saved egg pattern at every tier; the stage is guaranteed; every donor is consumed into **ONE NEW individual** (new ID,

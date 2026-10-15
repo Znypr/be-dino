@@ -25,7 +25,7 @@ local os=setmetatable({time=function() return fakeNow end},{__index=realOs})
 TESTS = r'''
 local H=3600
 local D=GameConfig.NestIncubationSeconds
-assert(D==3*H and GameConfig.NestStorageCapacity==5 and GameConfig.NestMinSize==10 and GameConfig.NestMaxSize==15)
+assert(D==3*H and GameConfig.NestStorageCapacity==5 and GameConfig.NestMinSize==6 and GameConfig.NestMaxSize==12)
 local function nests(u) return data[key(u)].eggNests or {} end
 local function jsonSize(v)
  if type(v)~="table" then return #tostring(v)+2 end
@@ -56,11 +56,11 @@ do
  for i=1,400 do
   local id=Rewards.nestId("run-"..i,1)
   local size=Rewards.nestSize(id)
-  assert(size>=10 and size<=15 and size==Rewards.nestSize(id)) seen[size]=true
+  assert(size>=6 and size<=12 and size==Rewards.nestSize(id)) seen[size]=true
  end
- for size=10,15 do assert(seen[size],"size "..size.." never rolled") end
+ for size=6,12 do assert(seen[size],"size "..size.." never rolled") end
 end
-print("Nest size passed: deterministic 10-15 from the nest id, every size reachable")
+print("Nest size passed: deterministic 6-12 from the nest id, every size reachable")
 
 ------------------------------------------------------------------ Hidden drop gate (server run time + server catches)
 local g=fresh(301)
@@ -216,7 +216,7 @@ do
  local rng=Random.new()
  for i=1,200 do
   data[key(L)].runEggBank={} data[key(L)].eggs={} data[key(L)].eggNests=data[key(L)].eggNests or {}
-  table.insert(data[key(L)].eggNests,{nestId="luck-"..i,droppedFromRun="luck-run",size=15,luck=1,state="ready",readyAt=1})
+  table.insert(data[key(L)].eggNests,{nestId="luck-"..i,droppedFromRun="luck-run",size=12,luck=1,state="ready",readyAt=1})
   assert(select(3,Repository.claimNest(L,"luck-"..i))=="opened")
   for _,egg in revealLine(L) do
    total+=1 if egg.shiny then shiny+=1 end if egg.big then big+=1 end
@@ -226,7 +226,7 @@ do
    if GameConfig.SpeciesRarities[base.speciesId]>=2 then baseRare+=1 end
   end
  end
- assert(total==3000)
+ assert(total==200*12)
  local shinyRate,bigRate,crackedRate=shiny/total,big/total,cracked/total
  assert(math.abs(shinyRate-tier.shinyChance)<.015,"shiny "..shinyRate)
  assert(math.abs(bigRate-tier.bigChance)<.03,"big "..bigRate)
@@ -235,7 +235,7 @@ do
  assert(math.abs(crackedRate-.34)<.04,"cracked "..crackedRate)
  assert(rare>=baseRare*.97,"BD-165: nest rarity boost is mild by design but never worse than base: "..rare.." vs "..baseRare)
  assert(tier.rarityBoostEggs<=GameConfig.EggRarityBoostMaxEggs and tier.conditionLevels<=2 and tier.bigChance<=.25 and tier.shinyChance<=.05,"bounded")
- print(string.format("Luck passed: 3000 nest eggs Shiny %.1f%% BIG %.1f%% Cracked %.1f%% rare+ %d vs %d at no boost; bounded by config tier",shinyRate*100,bigRate*100,crackedRate*100,rare,baseRare))
+ print(string.format("Luck passed: 2400 nest eggs Shiny %.1f%% BIG %.1f%% Cracked %.1f%% rare+ %d vs %d at no boost; bounded by config tier",shinyRate*100,bigRate*100,crackedRate*100,rare,baseRare))
 end
 
 ------------------------------------------------------------------ Migration of Build 020 nests

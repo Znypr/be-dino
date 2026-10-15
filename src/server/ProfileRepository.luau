@@ -280,7 +280,7 @@ local function isValidProfile(profile: any): boolean
             or entry.base > 2000000000 or entry.gold > 2000000000 or entry.diamond > 2000000000 then
             return false
         end
-        -- Additive optional Emerald counter (fusion ladder 15/4/2); nil == 0.
+        -- Additive optional Emerald counter (fusion ladder 6/3/2); nil == 0.
         if entry.emerald ~= nil and (typeof(entry.emerald) ~= "number" or entry.emerald < 0
             or entry.emerald % 1 ~= 0 or entry.emerald > 2000000000) then return false end
         if not ProgressionRules.validEvents(entry.events) then return false end

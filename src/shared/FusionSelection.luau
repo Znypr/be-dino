@@ -6,22 +6,23 @@
 -- this module only explains and previews. Exercised by tools/verify_fusion_ui.py.
 local Sel = {}
 
--- OWNER DECISION 2026-10-14 (docs/57): Gold = 15 Base, Emerald = 4 Gold,
--- Diamond = 2 Emerald; same species + same pattern; all three tiers active. Mirrors
--- IdentityFusion.Recipes (verify_fusion_ui.py asserts they match).
+-- OWNER DECISION 2026-10-15 (docs/90): Gold = 6 Base of the same species (ANY pattern; the
+-- Gold keeps the most common pattern), Emerald = 3 Gold, Diamond = 2 Emerald (same species +
+-- same pattern); all three tiers active. Mirrors IdentityFusion.Recipes (verify_fusion_ui.py
+-- asserts they match).
 Sel.Stages = {
-    {id = "gold", name = "Gold", source = "base", donorCount = 15, approved = true},
-    {id = "emerald", name = "Emerald", source = "gold", donorCount = 4, approved = true},
+    {id = "gold", name = "Gold", source = "base", donorCount = 6, anyPattern = true, approved = true},
+    {id = "emerald", name = "Emerald", source = "gold", donorCount = 3, approved = true},
     {id = "diamond", name = "Diamond", source = "emerald", donorCount = 2, approved = true},
 }
 -- Largest recipe; kept for older callers. Use Sel.donorCount(stage) instead.
-Sel.DonorCount = 15
+Sel.DonorCount = 6
 function Sel.donorCount(stageId: string?): number?
     for _, s in Sel.Stages do if s.id == stageId and s.approved then return s.donorCount end end
     return nil
 end
 -- Above this many slots the menu shows a compact n/N counter grid instead of cards.
-Sel.CompactSlotThreshold = 10
+Sel.CompactSlotThreshold = 10 -- unused by the 6/3/2 ladder (max 6 slots)
 Sel.LockedStageText = "Recipe not approved yet"
 
 local function stageInfo(id: string?)
@@ -138,7 +139,7 @@ function Sel.ineligibility(d, ctx): string?
     if d.locked == true then return "locked" end
     if d.favorited == true then return "favorited" end
     if ctx and ctx.speciesId and d.speciesId ~= ctx.speciesId then return "species_mismatch" end
-    if ctx and ctx.patternId and g.patternId ~= ctx.patternId then return "pattern_mismatch" end
+    if ctx and ctx.patternId and not recipe.anyPattern and g.patternId ~= ctx.patternId then return "pattern_mismatch" end
     return nil
 end
 
@@ -310,7 +311,7 @@ function Sel.autoFill(dinos, selection, targetStage: string, filters, catalog)
     for _, d in Sel.sort(dinos, "recent", ctx, nil, catalog) do
         -- Oldest first so newest hatches stay; "recent" is newest-first, so reverse below.
         if not taken[d.instanceId] and Sel.isPlain(d) and Sel.ineligibility(d, ctx) == nil then
-            local key = tostring(d.speciesId) .. "|" .. tostring(genes(d).patternId)
+            local key = tostring(d.speciesId) .. "|" .. (if recipe.anyPattern then "*" else tostring(genes(d).patternId))
             if not groups[key] then groups[key] = {} table.insert(order, key) end
             table.insert(groups[key], 1, d)
         end
@@ -528,9 +529,9 @@ Sel.FailureText = {
     consent_required = "Please review the itemized loss list and confirm again.",
     donor_missing = "A selected dino is no longer in your collection. Selection refreshed.",
     donor_locked = "A selected dino is locked or favorited. Selection refreshed.",
-    wrong_donor_count = "Exactly the recipe count of matching dinos is required (15 Base, 4 Gold or 2 Emerald).",
+    wrong_donor_count = "Exactly the recipe count of matching dinos is required (6 Base, 3 Gold or 2 Emerald).",
     species_mismatch = "All dinos must be the same species.",
-    pattern_mismatch = "All dinos must share the same egg pattern.",
+    pattern_mismatch = "Emerald and Diamond need dinos with the same pattern.",
     recipe_not_approved = "This recipe is not approved yet.",
     odds_not_approved = "Fusion odds are not approved yet. Nothing was consumed.",
     save_failed = "Saving failed. Nothing is lost; retrying with the same request.",
@@ -719,7 +720,7 @@ function Sel.details(d, catalog)
         for _, snap in snapshots do byParent[snap.instanceId] = snap end
         local ids = if #parentIds > 0 then parentIds else (function()
             local list = {} for _, snap in snapshots do table.insert(list, snap.instanceId) end return list end)()
-        -- Bounded view: a Gold has 15 parents; list the first DetailsParentLimit.
+        -- Bounded view: a Gold has 6 parents; list the first DetailsParentLimit.
         local shown = math.min(#ids, Sel.DetailsParentLimit)
         if #ids > shown then
             table.insert(view.origin.lines, "Showing " .. shown .. " of " .. #ids .. " parents")

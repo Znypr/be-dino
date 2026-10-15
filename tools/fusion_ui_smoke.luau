@@ -250,7 +250,7 @@ local function handle(payload)
         copy.cosmetics = {ownedAuraIds = {}, ownedTrailIds = {}}
         return {ok = true, dinosaur = copy}
     elseif payload.action == "quote" then
-        local need = ({gold = 15, emerald = 4, diamond = 2})[payload.targetStage]
+        local need = ({gold = 6, emerald = 3, diamond = 2})[payload.targetStage]
         assert(need and #payload.donorIds == need, "quote only requested at exactly the recipe count: " .. tostring(payload.targetStage) .. " " .. #payload.donorIds)
         local manifest, consent, shinyCount = {}, false, 0
         for _, id in payload.donorIds do
@@ -332,14 +332,14 @@ assert(Menu.available())
 Menu.open() runFor(8)
 assert(#cards(screen) == 77, "paged list: " .. #cards(screen))
 assert(has(screen, "Egg pattern unknown"), "legacy copy with nil genes explained")
--- All three tiers ACTIVE: Emerald = 4 Gold, Diamond = 2 Emerald (quotes only at exactly N).
+-- All three tiers ACTIVE: Emerald = 3 Gold, Diamond = 2 Emerald (quotes only at exactly N).
 press(byName(screen, "Stage_emerald")) runFor(1)
-assert(not has(screen, "EMERALD LOCKED") and has(screen, "4 Gold -> 1 NEW Emerald"), "emerald active")
+assert(not has(screen, "EMERALD LOCKED") and has(screen, "3 Gold -> 1 NEW Emerald"), "emerald active")
 press(byText(screen, "AUTO-FILL PLAIN")) runFor(.1)
-assert(has(screen, "INGREDIENTS 4/4"), "emerald auto-fills 4 plain Golds")
-assert(byName(screen, "Slots") and #byName(screen, "Slots"):GetChildren() > 0 and byName(screen, "Counter") == nil, "4 slots, no counter")
+assert(has(screen, "INGREDIENTS 3/3"), "emerald auto-fills 3 plain Golds")
+assert(byName(screen, "Slots") and #byName(screen, "Slots"):GetChildren() > 0 and byName(screen, "Counter") == nil, "3 slots, no counter")
 runFor(1)
-assert(byName(screen, "Fuse").Text == "REVIEW & FUSE", "emerald quote at 4")
+assert(byName(screen, "Fuse").Text == "REVIEW & FUSE", "emerald quote at 3")
 press(byName(screen, "Stage_diamond")) runFor(1)
 assert(not has(screen, "DIAMOND LOCKED") and has(screen, "2 Emerald -> 1 NEW Diamond"), "diamond active")
 press(byText(screen, "AUTO-FILL PLAIN")) runFor(.1)
@@ -347,10 +347,10 @@ assert(has(screen, "INGREDIENTS 2/2"), "diamond auto-fills 2 plain Emeralds")
 runFor(1)
 assert(byName(screen, "Fuse").Text == "REVIEW & FUSE", "diamond quote at 2")
 press(byName(screen, "Stage_gold")) runFor(1)
--- Auto-fill: 15 plain copies (compact counter), debounced quote, exact odds.
+-- Auto-fill: 6 plain copies (slots, no counter), debounced quote, exact odds.
 press(byText(screen, "AUTO-FILL PLAIN")) runFor(.1)
-assert(has(screen, "INGREDIENTS 15/15"))
-assert(byName(screen, "Counter") and has(screen, "15/15 selected"), "compact n/N counter for 15 donors")
+assert(has(screen, "INGREDIENTS 6/6"))
+assert(byName(screen, "Counter") == nil, "6 donors use slots, not the n/N counter")
 assert(has(screen, "Calculating exact odds"), "debounce pending")
 runFor(1)
 assert(byName(screen, "Fuse").Text == "REVIEW & FUSE", "quote ready")
@@ -362,8 +362,8 @@ for _, c in cards(screen) do
     if removed < 2 and has(c, "SELECTED") and not has(c, "VALUABLE") then press(c) removed += 1 end
 end
 runFor(.1)
-assert(has(screen, "INGREDIENTS 13/15") and has(screen, "13/15 selected"), "counter follows removal")
-assert(not byName(screen, "Fuse") or byName(screen, "Fuse").Text ~= "REVIEW & FUSE", "no quote below 15")
+assert(has(screen, "INGREDIENTS 4/6"), "slots follow removal")
+assert(not byName(screen, "Fuse") or byName(screen, "Fuse").Text ~= "REVIEW & FUSE", "no quote below 6")
 local auraCard, shinyCard
 for _, c in cards(screen) do
     if has(c, "1 FX") then auraCard = c end
@@ -374,7 +374,7 @@ assert(has(screen, "SELECTED (VALUABLE)"), "valuable donors highlighted")
 assert(has(screen, "Shiny: Shiny 5% • Not Shiny 95%"), "fresh quote after selection change")
 -- Confirmation: itemized loss + explicit acknowledgement before FUSE NOW exists.
 press(byName(screen, "Fuse")) runFor(.1)
-assert(has(screen, "ALL 15 DINOS BELOW ARE CONSUMED") and has(screen, "1 aura and 0 trails will be lost: Meadow Glow"), "itemized loss")
+assert(has(screen, "ALL 6 DINOS BELOW ARE CONSUMED") and has(screen, "1 aura and 0 trails will be lost: Meadow Glow"), "itemized loss")
 assert(has(screen, "Valuable donors consumed: Compy (Shiny)"))
 assert(byName(screen, "FuseNow") == nil, "acknowledgement required first")
 press(byName(screen, "Acknowledge")) runFor(.1)
@@ -391,7 +391,7 @@ assert(preview:GetAttribute("Stage") == "gold" and preview:GetAttribute("Shiny")
 press(byName(screen, "ResultDetails")) runFor(1)
 assert(has(screen, "Gold Wavy Stripes Compy") and has(screen, "PRESTIGE: Crafted Gold (earned)") and has(screen, "Fused from 1 dinos"), "fused details")
 press(byText(screen, "BACK")) runFor(2)
-assert(#cards(screen) == 62, "donors consumed and list refreshed: " .. #cards(screen))
+assert(#cards(screen) == 71, "donors consumed and list refreshed: " .. #cards(screen))
 -- Hatched dino details from a card info button.
 press(byName(cards(screen)[1], "Details")) runFor(1)
 assert(has(screen, "ORIGINAL EGG") and has(screen, "Event: Rain") and has(screen, "Run reward egg"), "hatched details")
@@ -432,8 +432,8 @@ screen.AbsoluteSize = vec(740, 340)
 for i = 200, 249 do table.insert(owned, dino(i)) end
 Menu.open() runFor(8)
 press(byText(screen, "AUTO-FILL PLAIN")) runFor(1)
-for _, s in byName(screen, "Slots"):GetChildren() do assert(s.ClassName ~= "TextButton", "15-donor counter has no tiny slot buttons") end
-assert(byName(screen, "Counter") and byName(screen, "Slots"):FindFirstChildOfClass("UIGridLayout").CellSize.Y.Scale == 1, "counter fills the compact strip")
+for _, s in byName(screen, "Slots"):GetChildren() do assert(s.ClassName ~= "TextButton", "compact slot strip has no tiny slot buttons") end
+assert(byName(screen, "Counter") == nil and #byName(screen, "Slots"):GetChildren() > 1, "6 compact slot chips")
 local function audit()
     local checked = 0
     for _, b in screen:GetDescendants() do
@@ -452,4 +452,4 @@ press(byName(screen, "Fuse")) runFor(.1)
 audited += audit()
 Menu.close()
 
-print("Fusion UI smoke passed: " .. audited .. " buttons >= 44 px in phone layout, unavailable fallback, paged list, 15/4/2 stage tabs, 15-donor counter, plain auto-fill, debounced exact odds, valuable highlight, itemized consent, same-token retry and resume, skippable reveal, fused/hatched details (" .. created .. " mock instances)")
+print("Fusion UI smoke passed: " .. audited .. " buttons >= 44 px in phone layout, unavailable fallback, paged list, 6/3/2 stage tabs, 6 slots, plain auto-fill, debounced exact odds, valuable highlight, itemized consent, same-token retry and resume, skippable reveal, fused/hatched details (" .. created .. " mock instances)")
