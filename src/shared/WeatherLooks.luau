@@ -61,10 +61,18 @@ Weather.Rigs={
     blizzard={snow=spec(1300,3,4.2),gust=spec(50,1.4,2),drift=spec(16,2.6,3.4,true),bank=spec(16,7,9,true),flurry=spec(120,.9,1.3)},
     volcano={ash=spec(300,4,5.5),embers=spec(200,3,5),plume=spec(18,5,7,true),smoke=spec(12,8,11,true),haze=spec(5,10,12,true),bank=spec(8,9,11,true)},
     aurora={motes=spec(120,4,6),stars=spec(60,3,5),bank=spec(6,9,12,true)},
-    quake={dust=spec(110,3,4.5),rubble=spec(120,1.2,1.8),bank=spec(14,8,10,true)},
+    quake={dust=spec(50,3,4.5),bank=spec(14,8,10,true)},
     bloodmoon={motes=spec(140,4,6),fog=spec(16,5,7,true),bank=spec(14,9,11,true)},
 }
-Weather.Budget=table.freeze({concurrent=6000,bigConcurrent=500,bolts=4,bombs=6,beams=140})
+Weather.Budget=table.freeze({concurrent=6000,bigConcurrent=500,bolts=4,bombs=6,beams=140,cracks=4,cracksPhone=2,rocksPerCrack=3})
+-- Earthquake v2 (owner 2026-10-15): a WORLD event, not an aura. Ground cracks open at random spots in view (never under the dino),
+-- grow over `grow` s, glow faintly amber, puff dust and kick a few rock chunks, then close. Tremor pulses every `pulseEvery` s
+-- give a gentle camera rumble (`shake`, 0 with Reduce Motion) and a slight wobble of nearby small props.
+Weather.Quake=table.freeze({
+    grow=.5,life={3,4.5},close=.8,pulseEvery={3,5},pulseSeconds=.9,shake=.4,
+    minDist=18,maxDist=70,viewCone=55,clearOfDino=12,segments=4,length={10,18},width={1.4,2.4},
+    wobbleRadius=40,wobbleMax=10,wobbleDegrees=2.5,propMaxSize=9,
+})
 function Weather.concurrent(id:string):(number,number)
     local total,big=0,0
     for _,s in Weather.Rigs[id] do
