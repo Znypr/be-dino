@@ -10,17 +10,18 @@ def lua(value):
 def wrap(path):return '(function()\n'+(ROOT/path).read_text()+'\nend)()'
 def script():
     data=json.loads((ROOT/'resources/creatures/brachiosaurus-genes.json').read_text())
-    s='local Config='+wrap('src/shared/ProgressionConfig.luau')+'\nlocal script={Parent={}}\nlocal require=function()return Config end\nlocal Genetics='+wrap('src/shared/EggGenetics.luau')+'\n'
+    s='local Config='+wrap('src/shared/ProgressionConfig.luau')+'\nlocal script={Parent={}}\nlocal require=function()return Config end\nlocal Genetics='+wrap('src/shared/EggGenetics.luau')+'\nlocal Cache='+wrap('src/shared/PatternAtlasCache.luau')+'\n'
     s+='local data='+lua(data)+'\n'+'''
 local current
 local Assets={CreateEditableImage=function()return {WritePixelsBuffer=function(_,_,_,pixels) current=pixels end,Destroy=function()end}end}
-local game={GetService=function(_,name)return if name=="AssetService" then Assets else {JSONDecode=function()return data end}end}
-local script={Parent={EggGenetics="Genetics",FindFirstChild=function()return {FindFirstChild=function()return "Data" end}end}}
-local require=function(id)return if id=="Genetics" then Genetics else "Data" end
+local workspace={SetAttribute=function()end}
+local game={GetService=function(_,name)return if name=="AssetService" then Assets else {JSONDecode=function()return data end,IsClient=function()return false end}end}
+local script={Parent={PatternAtlasCache="Cache",EggGenetics="Genetics",FindFirstChild=function()return {FindFirstChild=function()return "Data" end}end}}
+local require=function(id)return if id=="Genetics" then Genetics elseif id=="Cache" then Cache else "Data" end
 local Vector2={new=function()return {}end,zero={}}
-local Content={fromObject=function(x)return x end}
-local Color3={new=function()return {}end}
-local part={Parent=true,GetAttribute=function()return "brachiosaurus" end,GetChildren=function()return {}end,Destroying={Once=function()end}}
+local Color3={new=function()return {}end,fromRGB=function()return {}end}
+local Content={fromObject=function(x)return x end,none={}}
+local part={Parent=true,GetAttribute=function()return "brachiosaurus" end,GetChildren=function()return {}end,SetAttribute=function()end,IsA=function()return true end,FindFirstAncestorOfClass=function()return nil end,IsDescendantOf=function()return false end,Destroying={Once=function()end}}
 '''
     s+='local Pattern='+wrap('src/shared/PatternGenes.luau')+'\n'+'''
 for name,mask in data.patterns do
@@ -60,7 +61,7 @@ assert(redLook~=blueLook and redLook~=defaultLook,"colors X must differ from oth
 local legacy={conditionId="normal",hatchSuccess=true,primaryColorId="white",secondaryColorId="black",blend=80}
 assert(Genetics.key(legacy)=="normal:white:black:80")
 local invalid=table.clone(legacy);invalid.patternId="unknown";assert(not Genetics.valid(invalid))
-print("Authored genes passed: 8 masks × 4 exact UV coverage ratios, fixed facial pixels, same-family contrast and legacy saved keys")
+print("Authored genes passed: 8 masks Ã— 4 exact UV coverage ratios, fixed facial pixels, same-family contrast and legacy saved keys")
 '''
     return s
 def check_wiring():
