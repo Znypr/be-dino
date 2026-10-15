@@ -365927,8 +365927,10 @@ Overlays.Layers={
     normal={layer="clean",assetId="",material=Enum.Material.SmoothPlastic,reflectance=0},
     cracked={layer="cracked_fractures",assetId="126956807167774",material=Enum.Material.Plastic,reflectance=0},
     dirty={layer="dirty_smudges",assetId="105931497056313",material=Enum.Material.Plastic,reflectance=0},
-    rainbow={layer="rainbow_flank_stars",assetId="117352915695915",material=Enum.Material.SmoothPlastic,reflectance=0.08},
-    astra={layer="astra_opal_streaks",assetId="102255733208943",material=Enum.Material.SmoothPlastic,reflectance=0.15},
+    -- BD-226: the Rainbow/Astra art is faint at card size, so its decal is stacked (`stack` copies, same bound asset) and an
+    -- Astra egg preview gets a soft cosmic tint (`previewTint`, applied to the ViewportFrame by EggAppearance). No new art.
+    rainbow={layer="rainbow_flank_stars",assetId="117352915695915",material=Enum.Material.SmoothPlastic,reflectance=0.08,stack=3},
+    astra={layer="astra_opal_streaks",assetId="102255733208943",material=Enum.Material.SmoothPlastic,reflectance=0.15,stack=3,previewTint=Color3.fromRGB(185,170,255)},
 }
 function Overlays.describe(conditionId: string?)
     local layer=Overlays.Layers[conditionId or "normal"] or Overlays.Layers.normal
@@ -365940,8 +365942,9 @@ function Overlays.signature(conditionId: string?): string
 end
 function Overlays.apply(shell: BasePart,conditionId: string?)
     local l=Overlays.describe(conditionId)
-    local old=shell:FindFirstChild("ConditionOverlay")
-    if old then old:Destroy() end
+    for _,old in shell:GetChildren() do
+        if old:IsA("Decal") and (old.Name=="ConditionOverlay" or old.Name=="ConditionOverlayBoost") then old:Destroy() end
+    end
     shell:SetAttribute("ConditionLayer",l.layer)
     if shell:GetAttribute("ConditionOriginalMaterial")==nil then shell:SetAttribute("ConditionOriginalMaterial",shell.Material.Name) end
     shell.Material,shell.Reflectance=l.material,l.reflectance
@@ -365949,6 +365952,10 @@ function Overlays.apply(shell: BasePart,conditionId: string?)
         local decal=Instance.new("Decal")
         decal.Name,decal.Texture,decal.Face="ConditionOverlay","rbxassetid://"..l.assetId,Enum.NormalId.Front
         decal.Transparency,decal.Parent=0,shell
+        for _=2,(l :: any).stack or 1 do
+            local copy=decal:Clone()
+            copy.Name,copy.Parent="ConditionOverlayBoost",shell
+        end
     end
 end
 return Overlays
@@ -368241,6 +368248,11 @@ function Appearance.apply(container: Instance,genes,showCondition: boolean?)
         end
     end
     if shell and showCondition==true then Overlays.apply(shell,genes.conditionId) end
+    -- BD-226: Astra's cosmic tint lives on the preview viewport (a MeshPart's Color does not tint its texture).
+    if showCondition==true and container:IsA("ViewportFrame") then
+        local tint3=(Overlays.describe(genes.conditionId) :: any).previewTint
+        container.ImageColor3=if typeof(tint3)=="Color3" then tint3 else Color3.new(1,1,1)
+    end
 end
 return Appearance
 </ProtectedString>
@@ -371775,6 +371787,12 @@ function ModelPreview.add(parent: GuiObject,id: string,empty: boolean?): Viewpor
     local viewport=Instance.new("ViewportFrame")
     viewport.BackgroundTransparency,viewport.Size=1,UDim2.fromScale(1,1)
     viewport.Ambient,viewport.LightColor,viewport.LightDirection=Color3.fromRGB(193,211,220),Color3.fromRGB(255,246,220),Vector3.new(-1,-1,-1)
+    if id=="egg" then
+        -- BD-226 (docs/87 calm, bubbly): an egg is lit softly from the camera side (PreviewCamera looks along Egg.CameraDirection),
+        -- with a high ambient, so no half of the shell turns black and the condition marks on the camera-facing side read clearly.
+        viewport.Ambient,viewport.LightColor=Color3.fromRGB(196,196,204),Color3.fromRGB(120,116,106)
+        viewport.LightDirection=Vector3.new(-Egg.CameraDirection.X,-.7,-Egg.CameraDirection.Z)
+    end
     viewport.ZIndex,viewport.Parent=parent.ZIndex+1,parent
     local model=if id=="egg" then Egg.create(empty) else Resources.clone(id,nil,true)
     if model and not viewport.Parent then model:Destroy();return viewport end
@@ -372791,7 +372809,10 @@ local function paint(part: MeshPart,genes): boolean
         local rank=tonumber(string.sub(mask,i,i+1),16)
         if rank&lt;254 then histogram[rank+1]+=1;count+=1 end
     end
-    local same=genes.primaryColorId==genes.secondaryColorId
+    -- BD-226: a plain (01_blank) egg has no pattern to show; the same-family lighter/darker split would cut the shell into a
+    -- lit half and a dark half (owner: "half dark"), so a blank egg stays one even colour.
+    local plainEgg=part:GetAttribute("GeneSpecies")=="egg" and (genes.patternId==nil or genes.patternId=="01_blank")
+    local same=genes.primaryColorId==genes.secondaryColorId and not plainEgg
     local target=math.floor(count*(if same then .5 else genes.blend/100))
     local threshold=253;local cumulative=0
     for rank=0,253 do
@@ -550781,6 +550802,7 @@ render=function(name: string)
                 label(body,row.name,x,cardsY+32,155,28,22)
                 local tile=box(body,x,cardsY+62,155,110,Color3.fromRGB(122,148,112):Lerp(C.panel,.25),24)
                 local view=ModelPreview.add(tile,"egg")
+                view:SetAttribute("InspectZoom",1.6) -- BD-226: bigger egg so cracks/dirt/stars read at card size
                 EggAppearance.apply(view,EggGenetics.neutral(row.id),true)
                 label(body,string.format("%g%%",weights[i]),x,cardsY+176,155,34,24,C.blue)
             end

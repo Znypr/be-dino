@@ -30,6 +30,12 @@ function ModelPreview.add(parent: GuiObject,id: string,empty: boolean?): Viewpor
     local viewport=Instance.new("ViewportFrame")
     viewport.BackgroundTransparency,viewport.Size=1,UDim2.fromScale(1,1)
     viewport.Ambient,viewport.LightColor,viewport.LightDirection=Color3.fromRGB(193,211,220),Color3.fromRGB(255,246,220),Vector3.new(-1,-1,-1)
+    if id=="egg" then
+        -- BD-226 (docs/87 calm, bubbly): an egg is lit softly from the camera side (PreviewCamera looks along Egg.CameraDirection),
+        -- with a high ambient, so no half of the shell turns black and the condition marks on the camera-facing side read clearly.
+        viewport.Ambient,viewport.LightColor=Color3.fromRGB(196,196,204),Color3.fromRGB(120,116,106)
+        viewport.LightDirection=Vector3.new(-Egg.CameraDirection.X,-.7,-Egg.CameraDirection.Z)
+    end
     viewport.ZIndex,viewport.Parent=parent.ZIndex+1,parent
     local model=if id=="egg" then Egg.create(empty) else Resources.clone(id,nil,true)
     if model and not viewport.Parent then model:Destroy();return viewport end
