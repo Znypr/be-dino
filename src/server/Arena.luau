@@ -69,7 +69,7 @@ local function tree(parent: Instance, position: Vector3, scale: number, yaw: num
         trunk.CFrame = CFrame.new(trunk.Position) * CFrame.Angles(0, yaw, math.pi / 2)
         for _, offset in {Vector3.new(0, 9, 0), Vector3.new(2.7, 8.5, 0.4), Vector3.new(-2.3, 8.9, -0.8)} do
             local crown = part(parent, "Canopy", Vector3.new(5.5, 3.5, 5.5) * scale,
-                position + offset * scale, Color3.fromRGB(64, 144, 112), Enum.Material.SmoothPlastic, false)
+                position + offset * scale, Color3.fromRGB(76, 138, 100), Enum.Material.SmoothPlastic, false) -- BD-460: was 64,144,112 (mint)
             crown.Shape = Enum.PartType.Ball
         end
     end
@@ -81,7 +81,7 @@ local function fern(parent: Instance, position: Vector3, scale: number, yaw: num
         local angle = yaw + i * math.pi * 2 / 7
         local leaf = part(parent, "FernLeaf", Vector3.new(0.45, 0.16, 2.0) * scale,
             position + Vector3.new(math.sin(angle) * .6, .6, math.cos(angle) * .6) * scale,
-            Color3.fromRGB(106, 180, 125), Enum.Material.SmoothPlastic, false)
+            Color3.fromRGB(112, 164, 116), Enum.Material.SmoothPlastic, false) -- BD-460: was 106,180,125
         leaf.Shape = Enum.PartType.Ball
         leaf.CFrame = CFrame.new(leaf.Position) * CFrame.Angles(-0.28, angle, 0)
     end

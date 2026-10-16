@@ -52,6 +52,13 @@ local TREES = {
     world_landmark_dino_statue = "landmark_dino_statue",
 }
 Generated.KitMap = TREES
+-- BD-460 (docs/138): per-asset foliage tone. Multiplies the mesh's own texture (SurfaceAppearance.Color, applied once per key on the template, so
+-- no per-prop or per-frame cost). Less blue and a little less green/red: the minty crowns turn leaf green and the sunlit treetops stop clipping.
+-- Only foliage keys; rocks, the burnt tree and the landmark keep their art colours. Every channel in [0.75, 1] (checked by verify_world_art).
+Generated.Tone = {
+    tree_broadleaf = {.94, .92, .80}, tree_birch = {.94, .92, .80}, tree_jungle_giant = {.94, .92, .80},
+    tree_palm = {.95, .93, .84}, tree_pine = {.95, .94, .86}, bush = {.94, .92, .82},
+}
 local BARE = {world_boulder_bare_s = true, world_boulder_bare_m = true, world_boulder_bare_l = true}
 Generated.BareIds = BARE
 function Generated.visualFor(id: string, biome: string, roll: number): string?

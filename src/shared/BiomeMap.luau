@@ -47,8 +47,11 @@ BiomeMap.Ground = {
 BiomeMap.Rock = {meadow = "Rock", fern = "Rock", conifer = "Slate", marsh = "Mud", badlands = "Sandstone", volcanic = "Basalt"}
 -- Global colours the terrain painter sets (SetMaterialColor): chosen so each biome reads differently at a glance.
 BiomeMap.Colors = {
-    Grass = {132, 170, 84},
-    LeafyGrass = {62, 124, 78},
+    -- BD-460 (docs/138, owner 2026-10-16: built-in Grass, the BeDino_Meadow override is unbound). The built-in Grass albedo is pale and grey-green, so the colour
+    -- multiplier must be rich and warm: low blue is what removes the grey. Studio A/B (docs/138): A 118,164,72, B 102,150,60 (deeper),
+    -- C 132,166,68 (sunny); owner picked C on 2026-10-16. Original before BD-460: 132,170,84.
+    Grass = {132, 166, 68}, -- S .59, V .65
+    LeafyGrass = {88, 132, 62}, -- S .53, V .52; was 62,124,78 (dark teal patches). Alternatives: 76,124,60 (deeper), 100,138,66 (lighter)
     Mud = {92, 76, 55},
     Ground = {112, 100, 66},
     Sand = {214, 190, 136},

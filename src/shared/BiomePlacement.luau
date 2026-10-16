@@ -108,16 +108,16 @@ local function scaled(points: {{number}}): {{number}}
 end
 -- Navigation corridors kept clear of blocking props (x,z polylines, half-width in studs).
 BiomePlacement.Paths = {
-    {width = 16, points = scaled({{0, 30}, {-40, 8}, {-80, -15}, {-125, -100}})},
-    {width = 16, points = scaled({{0, 30}, {40, -30}, {110, -40}, {105, -80}})},
-    {width = 14, points = scaled({{0, 30}, {0, -180}})},
-    {width = 14, points = scaled({{0, 30}, {15, 190}, {0, 255}})},
-    {width = 14, points = scaled({{0, 30}, {-105, 80}, {-190, 15}})},
-    {width = 14, points = scaled({{0, 30}, {128, 102}, {182, 20}})},
+    {width = 18, points = scaled({{0, 30}, {-40, 8}, {-80, -15}, {-125, -100}})},
+    {width = 18, points = scaled({{0, 30}, {40, -30}, {110, -40}, {105, -80}})},
+    {width = 16, points = scaled({{0, 30}, {0, -180}})},
+    {width = 16, points = scaled({{0, 30}, {15, 190}, {0, 255}})},
+    {width = 16, points = scaled({{0, 30}, {-105, 80}, {-190, 15}})},
+    {width = 16, points = scaled({{0, 30}, {128, 102}, {182, 20}})},
 }
 -- Circles that stay clear: spawn meadow, jump stones, legacy arch, spring, sanctuary approach.
 BiomePlacement.KeepOuts = {
-    {x = 0, z = 30, radius = 56, all = false},
+    {x = 0, z = 30, radius = 64, all = false}, -- BD-460: spawn meadow 56 -> 64 (and paths +2 wide above): clearer main routes, dense elsewhere
     {x = 0, z = 30, radius = 20, all = true},
     {x = 55, z = -30, radius = 26, all = true},
     {x = -128, z = -24, radius = 52, all = true},
@@ -295,7 +295,7 @@ BiomePlacement.field = field
 -- deterministic from the placement hash; every channel stays in [0.80, 1.0] so the vertex-colour palette is only dimmed/warmed.
 BiomePlacement.TintMin = .8
 BiomePlacement.BiomeWarmth = { -- extra (r, g, b) multipliers per sub-biome, each in [0.9, 1.0]
-    meadow = {1, 1, .95}, fern = {.95, 1, .95}, conifer = {.93, .98, 1}, marsh = {.92, 1, .97},
+    meadow = {1, .97, .93}, fern = {.96, .98, .93}, conifer = {.93, .98, 1}, marsh = {.92, 1, .97},
     badlands = {1, .96, .9}, volcanic = {1, .92, .9},
 }
 function BiomePlacement.tint(biome: string, h1: number, h2: number): (number, number, number)

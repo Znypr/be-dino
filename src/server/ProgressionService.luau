@@ -47,7 +47,7 @@ local function applyWeather()
     current,weatherEnds,nextWeather=clock.current,clock.endsAt,clock.nextAt
     local night=current and table.find({"thunder","bloodmoon","aurora"},current.id)~=nil
     Lighting.ClockTime=if night then 19 elseif current and current.id=="volcano" then 17 else 14
-    Lighting.Brightness=if night then .9 elseif current then 1.6 else 2
+    Lighting.Brightness=if night then .9 elseif current then 1.6 else GameConfig.IslandLight.Brightness -- BD-460: clear = the island base light
     weatherAttributes()
 end
 -- BD-120 owner admin panel (AdminService validates the caller and arguments).
