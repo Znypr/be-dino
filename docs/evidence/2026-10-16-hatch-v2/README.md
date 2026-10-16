@@ -39,10 +39,26 @@ Defects found in pass 1 and fixed before pass 2: the tipping bucket swung above 
 | 26, 27 | burst | fragments, flash |
 | 30 | reveal | Raptor |
 
-Numbers (pass 2, Play Solo client, this PC with three Studios open): bake 256 px = 256 KiB (one image per panel), source read once (egg texture 1024 px + egg mesh), no `[Be Dino] hatch v2` warning in the client log (bake path, not a fallback), 15 fps during the reveal (three Studio instances on one PC: not representative; pass 1 of the v1 look measured the same in docs/113), client memory 3,435 MB total (Studio session).
+Numbers (passes 2-4, Play Solo client, this PC with two or three Studios open): bake 256 px = 256 KiB (one image per panel), source read once (egg texture 1024 px + egg mesh), no `[Be Dino] hatch v2` warning in the client log (bake path, not a fallback), 15 fps during the reveal (three Studio instances on one PC: not representative; pass 1 of the v1 look measured the same in docs/113), client memory 3,435 MB total (Studio session).
 
-## Pass 3 (black-frame and neutral-shell fixes)
-See the table at the end of this file (added after the run).
+## Pass 3 (black-frame and neutral-shell fixes, final code of this PR): Blue / Blue (same family) / Wavy Stripes, Dirty egg
+`pass3-contact-sheet.jpg` = 46 frames at 250 ms; `pass3-NN.jpg` = single frames.
+
+| Frame | Beat | What it shows |
+|---|---|---|
+| 06 | first frame | the bare pale shell from the first frame (no black frame any more); "Dirty" chip |
+| 07, 08 | bucket 1 | barrel arrives from the left with its overshoot, tips |
+| 09, 10 | impact 1 | "Blue - COMMON" chip, blue crown, blue flood from the upper-left flank; drip streak under the splash |
+| 11 | coat 1 | the whole egg blue, wet edge gone, gloss drying |
+| 13, 14 | bucket 2 | right barrel tips, the blue arc flows to the egg |
+| 15, 16 | impact 2 | crown, chip (same-family genes: the accent is the darker blue) |
+| 17, 18, 19 | coat 2 | darker wavy stripes painted over the blue, "Wavy Stripes" chip |
+| 21, 22 | condition | the Dirty smudge overlay fades in on the painted egg (brown marks) |
+| 24 | rattle + glow | |
+| 26, 27 | burst | fragments and reveal (Raptor) |
+
+## Pass 4 (same code, next egg): Blue / Cream / Freckles, Normal egg
+`pass4-contact-sheet.jpg` = 24 frames at 250 ms; `pass4-NN.jpg`. The tap meant to fast-forward landed during the pending hold (taps are ignored until the server answer arrives, by design), so the egg played in full: 02-03 "Tap for next egg", 05-08 bucket 1 and the blue flood, 12-15 bucket 2 with the cream arc and the cream freckles painted dot by dot, 17-21 freckles done, glow, 23 burst. Fast-forward and Skip all are covered by the pure tests (`tools/verify_hatch_v2.py`, `verify_hatch_sequence.py`), not by a still.
 
 ## Honest rating against docs/87 (agent's eye, out of 10)
 
