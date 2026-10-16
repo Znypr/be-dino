@@ -79,10 +79,12 @@ end
 -- Flipbook sheets (docs/93 section 8): square, 4 x 4 cells (fx3 sheets are 1024 px, 256 px cells; Roblox stores at most 1024). A sprite showing a sheet MUST select one cell, otherwise the
 -- whole sheet is drawn. cellRect is pure: it returns nil while the key still uses a built-in sprite (single image, no cell).
 Assets.Sheets = {smokeSheet = {size = 1024, grid = 4}, sparkSheet = {size = 1024, grid = 4}, flameSheet = {size = 1024, grid = 4},
-    starFour = {size = 1024, grid = 4}, swirl = {size = 1024, grid = 4}, crystalSheet = {size = 512, grid = 4}}
+    starFour = {size = 1024, grid = 4}, swirl = {size = 1024, grid = 4}, crystalSheet = {size = 512, grid = 4},
+    paintCrown = {size = 1024, grid = 4}, paintDrips = {size = 1024, grid = 4}, paintDroplet = {size = 1024, grid = 4}}
 -- How the 16 cells play (ParticleEmitter.FlipbookMode name): OneShot = in order over the particle life, Random = one random shape,
 -- Loop = cycles at LoopFps. Keys not listed play Random.
-Assets.FlipbookMode = {smokeSheet = "OneShot", sparkSheet = "OneShot", starFour = "OneShot", flameSheet = "Random", swirl = "Loop", crystalSheet = "Random"}
+Assets.FlipbookMode = {smokeSheet = "OneShot", sparkSheet = "OneShot", starFour = "OneShot", flameSheet = "Random", swirl = "Loop", crystalSheet = "Random",
+    paintCrown = "OneShot", paintDrips = "OneShot", paintDroplet = "Random"}
 Assets.LoopFps = 10
 -- Studio check 2026-10-16 (AssetService EditableImage): the five fx3 uploads are OPAQUE on black (no alpha), unlike the
 -- white-on-alpha PNGs in resources/effects/fx-v3. Until they are re-uploaded with alpha:
@@ -90,7 +92,7 @@ Assets.LoopFps = 10
 --   * 2D UI (FxUi, HatchFx) cannot blend additively, so it keeps the built-in sprites (resolveUi / isRealUi / setCell).
 -- 2026-10-16: all five re-uploaded WITH alpha (Studio: corner alpha 0, 1024 px), so HasAlpha is true for every fx3 key.
 -- Clearing a key falls back to additive world / built-in UI sprites.
-Assets.HasAlpha = {smokeSheet = true, sparkSheet = true, flameSheet = true, starFour = true, swirl = true, rays = true}
+Assets.HasAlpha = {smokeSheet = true, sparkSheet = true, flameSheet = true, starFour = true, swirl = true, rays = true, paintCrown = true, paintDrips = true, paintDroplet = true} -- paint sheets are white on alpha (docs/118 s4 C)
 Assets.Additive = {}
 for _, key in {"smokeSheet", "sparkSheet", "flameSheet", "starFour", "swirl", "rays"} do Assets.Additive[key] = true end
 function Assets.isAdditive(key: string): boolean return Assets.Additive[key] == true and not Assets.HasAlpha[key] end

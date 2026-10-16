@@ -139,6 +139,30 @@ function T.hint(remaining: number): string
     if remaining > 0 then return "Tap for next egg (" .. tostring(remaining) .. " left)" end
     return "Done"
 end
+-- BD-444 (docs/132): "Egg 3 of 15" counter. `batch` is plain module state {left, index, total}. A new batch starts when the
+-- eggs left do not follow on from the previous egg (first egg, a new party, or a closed screen), so a stale count never shows.
+function T.newBatch() return {left = nil, index = 0, total = 0} end
+function T.batchStep(batch: any, remaining: number): (number, number)
+    if batch.left == nil or remaining ~= batch.left - 1 then
+        batch.index, batch.total = 1, remaining + 1
+    else
+        batch.index += 1
+    end
+    batch.left = remaining
+    return batch.index, batch.total
+end
+-- The egg counts arrive a moment after the result (BD-380): re-count the eggs left, keep the egg number.
+function T.batchRefine(batch: any, remaining: number): (number, number)
+    batch.left, batch.total = remaining, batch.index + remaining
+    return batch.index, batch.total
+end
+function T.counterText(index: number, total: number): string
+    if total < 2 then return "" end
+    return "Egg " .. tostring(index) .. " of " .. tostring(total)
+end
+-- "Skip all" button copy (kid words, docs/72).
+T.SkipText = "Skip the rest"
+
 -- Remaining eggs after this one; `more` is whether another egg can be claimed right now.
 function T.remaining(more: boolean, active: number, waiting: number): number
     if not more then return 0 end

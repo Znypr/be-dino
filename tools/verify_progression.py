@@ -122,7 +122,7 @@ local require=function(id) assert(id=="Identity") return Identity end
 local IdentityFusion=IDENTITY_FUSION_MODULE
 local FusionOdds=FUSION_ODDS_MODULE
 local PrivateStateStub={set=function(p,k,v) p.attrs[k]=v end,get=function(p,k) return p.attrs[k] end,forget=function() end} -- BD-360: the real module is tested by verify_private_state; here owner-only values land in attrs
-local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState",RareHatchService="RareHatchService"}}
+local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState",RareHatchService="RareHatchService",CosmeticOwnership="Cosmetic"}}
 local rewardSpecies=nil
 local NestQueue=NEST_QUEUE_MODULE
 local FtueRules=FTUE_RULES_MODULE
@@ -130,6 +130,7 @@ local SettingsModel=SETTINGS_MODEL_MODULE
 local Rewards=nil
 local require=function(id)
  if id=="PrivateState" then return PrivateStateStub end
+ if id=="Cosmetic" then return COSMETIC_OWNERSHIP_MODULE end
  if id=="RareHatchService" then return {record=function() end} end -- BD-428: tested by verify_rare_hatch
  if id=="FusionOdds" then return FusionOdds end
  if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig elseif id=="Rules" then return Rules elseif id=="Rewards" then return Rewards elseif id=="NestQueue" then return NestQueue elseif id=="FtueRules" then return FtueRules elseif id=="SettingsModel" then return SettingsModel end
@@ -468,6 +469,14 @@ assert(select(3,LocalRepository.fuseDinosaurs(localUser,{token="off"}))=="fusion
 assert(LocalRepository.setFusionTestRoller({})==false)
 mutableConfig.IdentityFusionPreviewEnabled=true
 local quote=assert(LocalRepository.quoteFusion(localUser,"gold",donors))
+-- BD-059 phase 2: the cosmetic loss notice rides on the quote only when the per-dino flag is on.
+assert(quote.cosmeticNotice==nil and GameConfig.PerDinoCosmeticsEnabled==false)
+do
+ mutableConfig.PerDinoCosmeticsEnabled=true
+ local noticeQuote=assert(LocalRepository.quoteFusion(localUser,"gold",donors))
+ assert(noticeQuote.cosmeticNotice and noticeQuote.cosmeticNotice.enabled and noticeQuote.cosmeticNotice.legacyKept and type(noticeQuote.cosmeticNotice.lostAuraIds)=="table")
+ mutableConfig.PerDinoCosmeticsEnabled=false
+end
 assert(quote.consentRequired==(donorDetails.shiny or donorDetails.big or donorDetails.mutationId~=""))
 local request={token="repo-fuse-1",targetStage="gold",donorIds=donors,quoteDigest=quote.quoteDigest,consentDigest=quote.consentDigest}
 -- The production PROVISIONAL roller quotes exact odds; an invalid injected roller is
@@ -914,7 +923,7 @@ blocked=false
 leapNow=300 h.FloorMaterial="air" local before=user.attrs.LeapReadyAt activate(user) assert(user.attrs.LeapReadyAt==before,"no leap from the air")
 print("Leap handler passed: client-owned leap (no ownership change, no server velocity), envelope distance/height/speed/lift, wall rollback, 30s penalty, cooldown and air rejection")
 """
- return s.replace('FTUE_RULES_MODULE',module('src/shared/FtueRules.luau')).replace('FUSION_ODDS_MODULE',module('src/server/FusionOdds.luau')).replace('FUSION_SERVICE_MODULE',module('src/server/FusionService.luau')).replace('IDENTITY_FUSION_MODULE',module('src/server/IdentityFusion.luau')).replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('NEST_QUEUE_MODULE',module('src/shared/NestQueue.luau')).replace('SETTINGS_MODEL_MODULE',module('src/shared/SettingsModel.luau')).replace('REWARDS_MODULE',module('src/server/RewardMath.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))
+ return s.replace('FTUE_RULES_MODULE',module('src/shared/FtueRules.luau')).replace('FUSION_ODDS_MODULE',module('src/server/FusionOdds.luau')).replace('FUSION_SERVICE_MODULE',module('src/server/FusionService.luau')).replace('IDENTITY_FUSION_MODULE',module('src/server/IdentityFusion.luau')).replace('COSMETIC_OWNERSHIP_MODULE',module('src/server/CosmeticOwnership.luau')).replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('NEST_QUEUE_MODULE',module('src/shared/NestQueue.luau')).replace('SETTINGS_MODEL_MODULE',module('src/shared/SettingsModel.luau')).replace('REWARDS_MODULE',module('src/server/RewardMath.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))
 if __name__=='__main__':
  parser=argparse.ArgumentParser();parser.add_argument('--runner',required=True);args=parser.parse_args()
  with tempfile.TemporaryDirectory() as d:

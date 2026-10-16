@@ -257,7 +257,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "paintCrown",
    "group": "Requested.paintCrown",
-   "pending": "BD-397 HatchEggV2 paint flipbooks"
+   "reader": [
+    "src/client/HatchEggV2.luau",
+    "paintCrown"
+   ]
   },
   {
    "name": "paintDrips",
@@ -275,7 +278,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "paintDroplet",
    "group": "Requested.paintDroplet",
-   "pending": "BD-397 HatchEggV2 paint flipbooks"
+   "reader": [
+    "src/client/HatchEggV2.luau",
+    "paintDroplet"
+   ]
   },
   {
    "name": "paintGloss",

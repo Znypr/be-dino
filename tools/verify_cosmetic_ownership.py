@@ -79,7 +79,50 @@ for _,d in fusedState.instances do
  assert(next(d.cosmetics.ownedAuraIds)==nil and next(d.cosmetics.ownedTrailIds)==nil,"fusion output carries no cosmetics")
 end
 assert(fused.progression.auras.meadow==true and fused.progression.trails.white==true,"legacy account purchases untouched")
-print("Cosmetic ownership verified: flag-off parity, per-dino grants (idempotent, copy-on-write), legacy grandfathered, rollback view, fusion notice and consent, legacy kept")
+
+-- Phase 2: apply() on a live profile (stub rules: the real ProgressionRules run in verify_progression/verify_rollback).
+local cfg={Auras={{id="meadow",price=60},{id="tidal",price=470},{id="royal",price=3700}},Trails={{id="white",price=0,level=1},{id="fern",price=50,level=3}}}
+local rules={item=function(cat,id) for _,i in cat do if i.id==id then return i end end return nil end,
+ level=function(p) return p.level or 1 end,upgrade=function(pr) return pr.progression end}
+local function live()
+ local pr={equippedSpeciesId="compy",equippedVariantKey="wavy",progression={crystals=500,level=1,auras={meadow=true},trails={white=true},equippedAura="",equippedTrail="white",potions={},buffs={}}}
+ return pr
+end
+local lp=live()
+lp.dinosaurIdentity=s1
+local ctx={rules=rules,config=cfg,identityOk=true}
+-- equipped instance = lowest sequence of the equipped stack
+local eq=C.equippedInstanceId(lp.dinosaurIdentity,"compy","wavy")
+assert(eq==ids[1] and C.equippedInstanceId(lp.dinosaurIdentity,"compy","nope")==nil and C.equippedInstanceId(lp.dinosaurIdentity,"rex",nil)==nil)
+local ok,status,bound=C.apply(lp,"buyAura","tidal",ctx)
+assert(not ok and status=="already_owned","tidal already granted to dino 1 in the grant test")
+ok,status,bound=C.apply(lp,"buyTrail","white",ctx) assert(not ok and status=="already_owned","legacy item is not re-bought")
+ok,status=C.apply(lp,"buyTrail","fern",ctx) assert(not ok and status=="level_locked")
+lp.progression.level=3
+local lp2=live() lp2.dinosaurIdentity=profile.dinosaurIdentity lp2.progression.level=3
+ok,status,bound=C.apply(lp2,"buyTrail","fern",ctx)
+assert(ok and status=="purchased" and bound==ids[1] and lp2.progression.crystals==450)
+assert(lp2.progression.trails.fern==nil,"account-wide trails untouched")
+assert(lp2.dinosaurIdentity.instances[ids[1]].cosmetics.ownedTrailIds.fern==true and lp2.dinosaurIdentity.instances[ids[2]].cosmetics.ownedTrailIds.fern==nil)
+assert(profile.dinosaurIdentity.instances[ids[1]].cosmetics.ownedTrailIds.fern==nil,"original sidecar copy untouched")
+lp2.progression.crystals=10
+ok,status=C.apply(lp2,"buyAura","royal",ctx) assert(not ok and status=="insufficient_crystals" and lp2.progression.crystals==10)
+ok,status=C.apply(lp2,"equipTrail","fern",ctx) assert(ok and status=="equipped")
+assert(lp2.dinosaurIdentity.instances[ids[1]].cosmetics.equippedTrailId=="fern" and lp2.progression.equippedTrail=="white")
+local v=C.view(lp2.progression,lp2.dinosaurIdentity,"compy","wavy")
+assert(v.equippedTrail=="fern" and v.trails.fern==true and v.trails.white==true and lp2.progression.trails.fern==nil)
+ok,status=C.apply(lp2,"equipAura","royal",ctx) assert(not ok and status=="not_owned")
+ok,status=C.apply(lp2,"equipTrail","white",ctx) assert(ok and lp2.dinosaurIdentity.instances[ids[1]].cosmetics.equippedTrailId=="" and C.view(lp2.progression,lp2.dinosaurIdentity,"compy","wavy").equippedTrail=="white")
+ok,status=C.apply(lp2,"equipTrail","",ctx) assert(ok and lp2.progression.equippedTrail=="")
+-- Another dino of the same stack is unaffected; no instance / identity off = refused, nothing changed.
+lp2.equippedVariantKey=nil lp2.equippedSpeciesId="rex"
+ok,status=C.apply(lp2,"buyAura","meadow",ctx) assert(not ok and status=="no_dino_instance")
+ctx.identityOk=false lp2.equippedSpeciesId="compy" lp2.equippedVariantKey="wavy"
+ok,status=C.apply(lp2,"buyAura","tidal",ctx) assert(not ok and status=="no_dino_instance")
+assert(C.view(lp2.progression,lp2.dinosaurIdentity,"rex",nil)==lp2.progression)
+local qn=C.fusionNotice(assert(F.quote(lp2.dinosaurIdentity,OWNER,"gold",ids)),lp2.progression,true)
+assert(qn.irreversible and qn.lostTrailIds[1]=="fern" and qn.lostAuraIds[1]=="tidal" and qn.legacyKept)
+print("Cosmetic ownership verified: flag-off parity, phase 2 apply/view (buy bound to equipped dino, equip own+legacy only, refusals), per-dino grants (idempotent, copy-on-write), legacy grandfathered, rollback view, fusion notice and consent, legacy kept")
 ''')
 if __name__ == '__main__':
     parser=argparse.ArgumentParser(); parser.add_argument('--runner',required=True); args=parser.parse_args()

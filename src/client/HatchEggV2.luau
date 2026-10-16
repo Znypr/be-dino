@@ -53,6 +53,10 @@ local function sprite(parent, z: number, key: string): ImageLabel
     i.Parent = parent
     return i
 end
+-- A paint flipbook slot (paintCrown, paintDroplet) when the owner bound it, else the smoke sheet stand-in. Never blank.
+local function paintKey(key: string): string
+    return if Fx.isRealUi(key) then key else "smokeSheet"
+end
 local function streak(parent, z: number): Frame
     local f = Instance.new("Frame")
     f.BackgroundColor3, f.BorderSizePixel, f.AnchorPoint, f.ZIndex, f.Visible = WHITE, 0, Vector2.new(.5, 0), z, false
@@ -115,11 +119,13 @@ local function scene(back: Frame, front: Frame)
         end
     end
     local pools = {blobs = {}, crown = {{}, {}}, drips = {{}, {}}, puddle = {}}
-    for i = 1, budget.streamBlobs do pools.blobs[i] = sprite(front, 25, "smokeSheet") Fx.setCell(pools.blobs[i], "smokeSheet", 1 + (i * 5) % 16) end
+    -- owner paint flipbooks (docs/118 s9): each reads its EffectAssets slot; an empty slot keeps the smoke sheet stand-in
+    local kDrop, kCrown = paintKey("paintDroplet"), paintKey("paintCrown")
+    for i = 1, budget.streamBlobs do pools.blobs[i] = sprite(front, 25, kDrop) Fx.setCell(pools.blobs[i], kDrop, 1 + (i * 5) % 16) end
     for side = 1, 2 do
-        for i = 1, budget.crown do pools.crown[side][i] = sprite(front, 26, "smokeSheet") Fx.setCell(pools.crown[side][i], "smokeSheet", 1 + (i * 3 + side) % 16) end
+        for i = 1, budget.crown do pools.crown[side][i] = sprite(front, 26, kCrown) Fx.setCell(pools.crown[side][i], kCrown, 1 + (i * 3 + side) % 16) end
         for i = 1, budget.drips do pools.drips[side][i] = streak(front, 25) end
-        pools.puddle[side] = sprite(front, 25, "smokeSheet") Fx.setCell(pools.puddle[side], "smokeSheet", 6)
+        pools.puddle[side] = sprite(front, 25, kCrown) Fx.setCell(pools.puddle[side], kCrown, if kCrown == "smokeSheet" then 6 else 16)
     end
     s = {back = back, front = front, viewport = viewport, camera = camera, world = world, egg = egg, eggSize = egg.Size, buckets = buckets,
         pools = pools, budget = budget, device = device, image = nil, imageTried = false, longest = longest * scale}

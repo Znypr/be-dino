@@ -238,7 +238,26 @@ def check_wiring():
     config = read('src/shared/Config.luau')
     assert re.search(r'^    HatchV2 = false,', config, re.M), 'Config.HatchV2 ships false'
     server = read('src/server/Bootstrap.server.luau')
-    assert 'if Config.HatchV2 then task.spawn(function() require(script.Parent.ImportedResources).loadHatchV2() end) end' in server, 'loader guarded by the flag'
+    assert 'HatchV2Assets).enabled(Config, game:GetService("RunService"):IsStudio() and game.GameId == 0) then task.spawn(function() require(script.Parent.ImportedResources).loadHatchV2() end) end' in server, 'loader guarded by the flag or the unpublished-Studio preview'
+    assert re.search(r'^    HatchV2Preview = false,', config, re.M), 'Config.HatchV2Preview ships false'
+    prof = read('tools/release_profiles.py')
+    common = prof.split('PROFILES: dict')[0]
+    assert '_flag_off("HatchV2",' in common and '_flag_off("HatchV2Preview",' in common, 'both flags pinned off in default AND playtest (COMMON_RULES)'
+    for q in ('HatchV2', 'HatchV2Preview'):
+        assert f'Rule("{q}", "set"' not in prof, q + ' must never be set true by a profile'
+    # asset slots: every Hatch v2 asset reads from its slot; empty slot = safe placeholder (docs/118 s9)
+    view_src = read('src/client/HatchEggV2.luau')
+    assert 'local function paintKey' in view_src and 'Fx.isRealUi(key) then key else "smokeSheet"' in view_src, 'empty paint slot falls back to the smoke sheet'
+    for key in ('paintCrown', 'paintDroplet'):
+        assert f'paintKey("{key}")' in view_src, key + ' read from its slot'
+        assert key in read('src/shared/EffectAssets.luau')
+    assert 'Bindings' not in view_src and 'rbxassetid://' not in view_src, 'no id hardcoded in the egg view'
+    slots = {s['name']: s for s in __import__('json').loads(read('tools/asset_slots.json'))['slots']}
+    for name in ('hatch_bucket', 'paintCrown', 'paintDrips', 'paintDroplet', 'paintGloss'):
+        assert name in slots, name + ' slot missing'
+        assert slots[name].get('reader') or slots[name].get('pending'), name + ' neither read nor tracked'
+    seqsrc = read('src/client/HatchSequence.luau')
+    assert 'V2Assets.enabled(Config, RunService:IsStudio() and game.GameId == 0)' in seqsrc and 'Config.HatchV2 ==' not in seqsrc
     imp = read('src/server/ImportedResources.luau')
     assert 'function Import.loadHatchV2' in imp and 'HatchV2Assets' in imp and 'InsertService:LoadAsset' in imp and 'HatchV2MeshFailed' in imp
     assets = read('src/shared/HatchV2Assets.luau')
@@ -250,7 +269,7 @@ def check_wiring():
         assert i in registry, f'{i} missing in docs/77'
     assert 'hatch_v2_bucket_placeholder' in registry and 'PLACEHOLDER' in registry
     seq = read('src/client/HatchSequence.luau')
-    for needle in ('if Config.HatchV2 == true then EggV2.create(fx.back, fx.front, motion) else nil', 'Timeline.useV2(state, true)',
+    for needle in ('if V2Assets.enabled(Config, RunService:IsStudio() and game.GameId == 0) then EggV2.create(fx.back, fx.front, motion) else nil', 'Timeline.useV2(state, true)',
                    'EggV2.setGenes(v2, g, a.eggId, base, accent, plain)', 'EggV2.burst(v2) a.eggView.Visible = true', 'EggV2.stop(v2)',
                    'EggV2.setCondition(v2, id)', 'if not motion then EggV2.finish(v2) end', 'Timeline.new(motion, 1, false, a.result == nil)'):
         assert needle in seq, needle

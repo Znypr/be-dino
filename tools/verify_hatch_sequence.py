@@ -41,6 +41,17 @@ assert(T.phase(s.durs, s.t) == "ready" and not s.done, "waits for a tap")
 -- Reduced motion: same tap-to-continue flow.
 s = T.new(false) assert(T.tap(s) == "ignore")
 T.step(s, r.readyAt + .01) assert(T.tap(s) == "advance")
+-- BD-444: "Egg N of M" counter and the skip button copy.
+do
+    local b = T.newBatch()
+    local i, n = T.batchStep(b, 14) assert(i == 1 and n == 15 and T.counterText(i, n) == "Egg 1 of 15")
+    i, n = T.batchStep(b, 13) assert(i == 2 and n == 15)
+    i, n = T.batchRefine(b, 12) assert(i == 2 and n == 14, "refine keeps the egg number")
+    i, n = T.batchStep(b, 11) assert(i == 3 and n == 14)
+    i, n = T.batchStep(b, 3) assert(i == 1 and n == 4, "a gap starts a new party")
+    i, n = T.batchStep(b, 0) assert(i == 1 and n == 1 and T.counterText(i, n) == "", "single egg shows no counter")
+    assert(T.SkipText == "Skip the rest" and #T.SkipText <= 16)
+end
 -- Skip all.
 s = T.new(true) T.step(s, 1) assert(T.skipAll(s) == "fastforward" and near(s.t, m.build) and not s.done)
 s = T.new(true) T.step(s, m.readyAt + .1) assert(T.skipAll(s) == "advance" and s.done)
@@ -342,6 +353,7 @@ def check_wiring():
     assert 'if (hatchState.next :: any)() then open("hatch") end' in boot, 'Open / Next egg open the hatch screen immediately'
     assert boot.count('if (hatchState.next :: any)() then open("hatch") end') >= 2, 'both Open and Next egg use the immediate path'
     assert 'task.defer(waiting.supply)' in boot and 'hatchState.pending' in boot, 'the server answer is handed to the waiting screen'
+    assert 'EggCounter' in seq and 'Timeline.batchStep' in seq and 'Timeline.SkipText' in seq and 'UDim2.fromOffset(176, 48)' in seq, 'BD-444 counter + skip button (>= 44 px)'
     assert 'finishBatch()' in boot and 'EggsLogic.afterReveal(skipAllReveals,remainingAfter)=="continue"' in boot, 'only the end of the batch leaves'
     assert 'open("eggs") end -- never leave an egg wobbling forever' in boot, 'a lost answer never strands the player'
     hatch_block = boot[boot.index('elseif name=="hatch" then'):boot.index('elseif name=="exit" then')]
