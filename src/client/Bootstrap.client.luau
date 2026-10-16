@@ -1520,7 +1520,7 @@ RunService.Heartbeat:Connect(function(dt)
     end
     refreshProgressionHUD()
     if active=="eggs" and refreshEggs then refreshEggs() end
-    if player:GetAttribute("ProfileState")=="Loaded" and state=="Sanctuary" and not seenTutorial then seenTutorial=true open("tutorial") end
+    if player:GetAttribute("ProfileState")=="Loaded" and state=="Sanctuary" and not seenTutorial and player:GetAttribute("DemoSkipTutorial")~=true then seenTutorial=true open("tutorial") end
 end)
 local refreshQueued=false
 local function scheduleModalRefresh()
@@ -1563,6 +1563,27 @@ PrivateState.onChanged("LastClaimedChestId", function()
         task.defer(function() open("hatch") end)
     end
 end)
+-- docs/133 demo hook (client attribute, set only by the dev-only trailer director sets DemoStartHatch to open the first waiting egg exactly like OPEN on the Eggs screen.
+do -- same effect as pressing OPEN: nothing is granted here, so no flag is needed
+    player:GetAttributeChangedSignal("DemoStartHatch"):Connect(function()
+        if player:GetAttribute("DemoStartHatch")~=true or hatchPending then return end
+        player:SetAttribute("DemoStartHatch",nil)
+        autoHatching=true
+        if (hatchState.next :: any)() then open("hatch") end
+    end)
+end
+do -- docs/133 demo hooks (dev-only trailer director): skip the welcome (How to play) modal, and close whatever modal is open
+    player:GetAttributeChangedSignal("DemoSkipTutorial"):Connect(function()
+        if player:GetAttribute("DemoSkipTutorial")~=true then return end
+        seenTutorial=true
+        if active=="tutorial" then close() end
+    end)
+    player:GetAttributeChangedSignal("DemoCloseModal"):Connect(function()
+        if player:GetAttribute("DemoCloseModal")~=true then return end
+        player:SetAttribute("DemoCloseModal",nil)
+        close()
+    end)
+end
 player:GetAttributeChangedSignal("LastRunEndAt"):Connect(function() if not autoHatching then open("results") end end)
 PrivateState.onChanged("LastSettledRunId", function()
     local serial=hatchCancelSerial
