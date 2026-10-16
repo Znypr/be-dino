@@ -36,6 +36,8 @@ Note: the older fx-v2 smoke, spark and flame sheets are superseded by the upload
 | Royal Nova aura icon | BD-101 (aura part) | ChatGPT ICON block | `resources/ui/v2/items/aura-royal-v1.png` | 1024 PNG, matches Meadow and Tidal | aura shop card | TABLE/AUTO | 109 D3 |
 | Potion rarity frames (5, P2) | BD-101 | ChatGPT | `resources/ui/v2/components/frame-{common,uncommon,rare,epic,legendary}-v1.png` | 512x512 9-slice, empty centre | potion shop cards | CODE | 109 D3 |
 | Combat HUD art, crystal pack icons, cave sign medallions (P2) | BD-248, BD-331, docs/104 | ChatGPT | see 109 E1-E3 | 1024 PNG | CombatHud, crystal cards, cave sign SurfaceGuis | CODE | 109 E1-E3 |
+| Rare hatch fanfare sound (optional, `shiny_bang` plays meanwhile) | BD-428 | Owner or sound lab (docs/110) | - | 2-3 s, .ogg/.mp3 | `Sfx.Sounds` (new `rare_hatch_fanfare`) | after upload | Bright kid-friendly celebration jingle, no harsh peak |
+| Confetti sheet (optional, fx3 sparkle tinted meanwhile) | BD-428 | Blender render | `resources/effects/fx-v3/confetti.png` | 1024x1024 4x4, white on alpha | `RareHatchClient` | after upload | Squares, ribbons and stars, 16 cells |
 
 ## 3. Hatch v2 (3D and paint flipbooks, docs/118, BD-397; flag `Config.HatchV2 = false`)
 
