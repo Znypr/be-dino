@@ -14,3 +14,6 @@ build/BeDino-Build[0-9][0-9][0-9].manifest.json
 build/fx-frames/
 build/fx-preview/
 *.blend1
+
+# BD-131 intermediate Blender frames (tools/render_weather_textures.py); the assembled sheets live in resources/effects/fx-v2/
+build/fx-weather-frames/
