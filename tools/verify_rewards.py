@@ -177,7 +177,7 @@ for _,egg in revealLine(a) do
  local rarity=GameConfig.SpeciesRarities[egg.reward.speciesId]
  assert(rarity>=lastRarity,"run batch must reveal in increasing rarity") lastRarity=rarity
 end
-assert(a.attrs.LastRewardText=="4 run eggs | 1 egg nest" and a.attrs.LastRunCrystals==30 and a.attrs.LastRunCrystalBox==0)
+assert(a.attrs.LastRewardText=="4 eggs + 1 nest" and a.attrs.LastRunCrystals==30 and a.attrs.LastRunCrystalBox==0)
 assert(a.attrs.BankedRunEggCount==0 and a.attrs.QueuedEggsWaiting==0 and a.attrs.RunStartBlocked=="")
 -- Exactly once: replays (cached and uncached) change nothing.
 local snapshot=copy(data[key(a)])
@@ -381,7 +381,7 @@ assert(select(3,Repository.commitRunSettlement(e,"too-many-tags",1,tags))=="inva
 assert(select(3,Repository.commitRunSettlement(e,"bad-tag",5,{{eventId="volcano",mutationId="frost"}}))=="invalid_egg_events")
 assert(select(3,Repository.commitRunSettlement(e,string.rep("r",65),5))=="invalid_run_id")
 local empty,emptyOutcome=Repository.commitRunSettlement(e,"zero-run",0)
-assert(empty and emptyOutcome.eggCount==0 and e.attrs.LastRewardText=="no run eggs")
+assert(empty and emptyOutcome.eggCount==0 and e.attrs.LastRewardText=="no eggs")
 print("Event tags passed: catch-ordinal weather/mutation tags land on the right eggs; invalid/oversized tags and run IDs rejected; zero-catch run")
 
 ------------------------------------------------------------------ Storage bound

@@ -4,6 +4,7 @@
 -- The auto-open choice is a UI preference: the server never trusts it and still credits every egg
 -- through the normal claim path. src/client/EggsScreen.luau only draws; tools/verify_eggs_screen.py tests this.
 local RevealSkip = require(script.Parent.RevealSkip)
+local Copy = require(script.Parent.FtueP1)
 local L = {}
 
 -- Five nest slots (capacity), index = queue order. nests are NestQueue.project() results.
@@ -29,11 +30,10 @@ function L.nestHeader(nests: {any}, capacity: number): string
     return string.format("Nests %d/%d", math.min(#nests, capacity), capacity)
 end
 
--- BD-259: the "Eggs waiting" number = every caught egg still to open AFTER the one on the card: the other eggs already in
--- the line (ActiveChestCount minus the card egg) plus the banked ones (QueuedEggsWaiting). Before, only the banked ones were
--- counted, so 31 run eggs read 26 (31 - the 5 in the line).
+-- BD-259 / BD-369: the "Eggs waiting" number = EVERY unopened egg, the one on the card included (a READY card must never sit
+-- beside "0"): the eggs in the line (ActiveChestCount) plus the banked ones (QueuedEggsWaiting). 31 run eggs read 31.
 function L.waitingTotal(active: number, banked: number, hasCard: boolean): number
-    return math.max(0, math.floor(banked)) + math.max(0, math.floor(active) - (if hasCard then 1 else 0))
+    return math.max(0, math.floor(banked)) + math.max(0, math.floor(active))
 end
 
 -- Single next-egg card. entry = ChestQueueJson entry or nil; waiting = QueuedEggsWaiting.
@@ -51,7 +51,7 @@ function L.cardCopy(card: any): (string, string)
     if card.kind == "ready" then return "READY!", "OPEN" end
     if card.kind == "growing" then return "Growing...", "GROWING" end
     if card.kind == "banked" then return "Eggs are on the way", "WAIT" end
-    return "No eggs yet. Finish a run to catch some!", "NO EGGS"
+    return Copy.EmptyStatus, Copy.EmptyButton
 end
 
 -- Auto-open per rarity. selection = the stored rarity list (RevealSkip format).

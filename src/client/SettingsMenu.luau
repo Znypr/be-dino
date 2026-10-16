@@ -77,6 +77,15 @@ local function drawControls(body: Instance, ctx: Context)
         toggle(body, ctx, 2, "Peaceful", Model.peaceful(), function() Model.set("peaceful", not Model.peaceful()) ctx.open("settings") end)
         ctx.label(body, "Peaceful: no biting, nobody can bite you. Starts next run", 0, TOP + 3 * ROW, 824, 30, 20, C.gold)
     end
+    -- BD-374: the keys (or phone controls) in two short lines under the last row; read from the real input code.
+    local Config = require(Shared:WaitForChild("Config"))
+    local used = 2 + (if Config.CombatEnabled then 2 else 0) + (if Config.CaveHub then 1 else 0)
+    local lines = require(Shared:WaitForChild("FtueP1")).controlsLines(game:GetService("UserInputService").TouchEnabled, Config.CombatEnabled == true)
+    for i, line in lines do
+        local row = ctx.label(body, line, 0, TOP + used * ROW + 2 + (i - 1) * 26, 824, 26, 19, C.text)
+        row.Name = "ControlsLine" .. i
+        row.TextXAlignment = Enum.TextXAlignment.Left
+    end
 end
 
 -- Draws the tab bar and the active tab. Returns the active tab id; the Help tab is completed by the caller (guides, auto-open).

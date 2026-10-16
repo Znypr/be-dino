@@ -24,7 +24,7 @@ end
 -- Only active boosts, in a fixed order; empty table when nothing is active.
 function UIFormat.boostLines(growth: number,speed: number,loot: number): {string}
     local lines={}
-    for _,pair in {{"Speed",speed},{"Growth",growth},{"Loot",loot}} do
+    for _,pair in {{"Speed",speed},{"Growth",growth},{"Eggs",loot}} do
         local line=UIFormat.boost(pair[1] :: string,pair[2] :: number)
         if line then table.insert(lines,line) end
     end

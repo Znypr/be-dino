@@ -295,6 +295,7 @@ local popLabel=label(gui,"",0,0,160,40,28,C.accent)
 popLabel.AnchorPoint,popLabel.Position,popLabel.Visible,popLabel.ZIndex=Vector2.new(.5,.5),UDim2.fromScale(.5,.4),false,43
 local popSerial=0
 local function pickupPop(text: string)
+    if not require(Shared.FtueP1).worldTextAllowed(shade.Visible) then return end -- BD-379: nothing floats over a menu
     popSerial+=1
     local serial=popSerial
     popLabel.Text=text
@@ -315,6 +316,7 @@ local function open(name: string)
     body:ClearAllChildren()
     require(script.Parent.ModalCompact).layout()
     shade.Visible=true
+    popSerial+=1 popLabel.Visible=false -- BD-379
     if not wasVisible then
         scale.Scale=viewportScale()*(if motion then .96 else 1)
         shade.BackgroundTransparency=1
@@ -493,7 +495,7 @@ render=function(name: string)
             local weights=ShopOdds.conditionPercents(p.conditionLevel or 0) -- BD-045: normalized percents
             local upgrade=ProgressionConfig.ConditionUpgrades[(p.conditionLevel or 0)+1]
             -- docs/73: plain egg per condition on a floor swatch; chance only (no stats text, no odds screen).
-            label(body,"Condition level "..(p.conditionLevel or 0),0,cardsY,824,30,24,C.gold)
+            label(body,require(Shared.FtueP1).ConditionsHeader,0,cardsY,824,30,20,C.gold) -- BD-372: the safe-first-eggs note, no level number
             for i,row in ProgressionConfig.Conditions do
                 local x=(i-1)*165
                 label(body,row.name,x,cardsY+32,155,28,22)
@@ -503,8 +505,12 @@ render=function(name: string)
                 EggAppearance.apply(view,EggGenetics.neutral(row.id),true)
                 label(body,string.format("%g%%",weights[i]),x,cardsY+176,155,34,24,C.blue)
             end
-            button(body,if upgrade then "UPGRADE: "..upgrade.price.." CRYSTALS" else "MAX LEVEL",142,cardsY+220,540,targetHeight,C.accent,function() if upgrade then open("conditionConfirm") end end).TextSize=20
-            label(body,require(Shared.OddsCopy).upgradeUnlock(if upgrade then upgrade.requiredLevel else nil,num("AccountLevel")),0,cardsY+220+targetHeight+6,824,30,19,C.gold)
+            local upgradeText,upgradeOk=require(Shared.FtueP1).upgradeButton(upgrade,num("AccountLevel"),num("Crystals")) -- BD-372: grey with the reason, never green over a lock
+            local upgradeButton=button(body,upgradeText,142,cardsY+220,540,targetHeight,if upgradeOk then C.accent else C.card,function() if upgradeOk and upgrade then open("conditionConfirm") end end)
+            upgradeButton.TextSize=20
+            upgradeButton.Name=if upgradeOk then "UpgradeButton" else "UpgradeLocked"
+            if not upgradeOk then upgradeButton.AutoButtonColor=false upgradeButton.TextTransparency=.15 end
+            label(body,require(Shared.FtueP1).upgradeHint(upgrade,num("AccountLevel")),0,cardsY+220+targetHeight+6,824,30,19,C.gold)
             return
         elseif cosmeticTab=="crystals" then
             -- BD-179: one card per pack in a 3-wide grid (same card look as the potion shop). Prices load from the marketplace.
@@ -764,7 +770,7 @@ render=function(name: string)
             label(card,look.rarityText or (rarityNames[rarity].." • "..FusionSelection.pct(100*(oddsWeight[id] or 0)/oddsTotal).." of eggs"),4,if lay.compact then 28 else 44,256,if lay.compact then 20 else 25,if lay.compact then 15 else 18)
             if found then
                 hero(card,id,7,lay.heroY,250,lay.heroHeight,bestMutation(id))
-                label(card,if event then "" elseif ownedTraits(id) then (require(Shared.ColourBonus).text(ProgressionConfig.EggColors,(ownedTraits(id) :: any).genes) or "Special variant") else string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond),5,lay.detailY,254,if lay.compact then 22 else 25,if lay.compact then 13 else 15)
+                label(card,if event then "" elseif ownedTraits(id) then (require(Shared.ColourBonus).text(ProgressionConfig.EggColors,(ownedTraits(id) :: any).genes) or "Special variant") else require(Shared.FtueP1).indexCount(base,gold,diamond),5,lay.detailY,254,if lay.compact then 22 else 25,if lay.compact then 14 else 16)
                 if event then require(script.Parent.MutationBadge).chip(card,event.id,UDim2.new(0.5,0,0,lay.detailY),Vector2.new(0.5,0)) end -- BD-352: real badge, not 9 px text
                 if lay.compact then
                     local tap=Instance.new("TextButton") -- the whole card opens the dino (no VIEW DINO bar when short)
@@ -896,6 +902,12 @@ render=function(name: string)
             end,
             openSettings=function() open("settings") end,
             autoOpenText=autoOpenText,
+            -- BD-369: the empty card is a way out, not a dead end; the cracked hint needs the dino count.
+            explore=function()
+                local character=player.Character
+                if character and character:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() close() else close() end
+            end,
+            collectionCopies=function() return require(Shared.FtueRules).collectionCopies(decoded("CollectionJson","{}")) end,
         })
         task.spawn(function() -- live countdowns; stops when the screen is left
             while modalVersion==version and active=="eggs" do
@@ -972,6 +984,8 @@ render=function(name: string)
                 remaining=remainingAfter,genes=if geneticsOk then genes else nil,colorReveal=colorReveal,patternReveal=patternReveal,paintColors=paintColors,
                 secondReveal=if geneticsOk then HatchTimeline.colorReveal(ProgressionConfig.EggColors,genes,"secondary") else nil, -- BD-220: right bucket
             })
+            -- BD-380: the egg counts are published a moment after the result; re-count so the hint equals the eggs really left.
+            task.delay(.6,function() if modalVersion==version and active=="hatch" and handle then (handle :: any).setRemaining(HatchTimeline.remaining(str("NextChestId")~="",num("ActiveChestCount"),num("QueuedEggsWaiting"))) end end)
         end
         Sfx.play("hatch_crack")
         handle=HatchSequence.play({
@@ -982,6 +996,11 @@ render=function(name: string)
             flash=flash,
             onSkipAll=function() autoHatching=true skipAllReveals=true end,
             onReveal=function() if modalVersion==version then heading.Text=if failedEgg then "Oops! Splat!" else "You hatched a dinosaur!" end end,
+            onAgain=function() -- BD-371: after a splat with no eggs left, TRY AGAIN goes straight back to the island
+                autoHatching=false skipAllReveals=false emitHatchSummary() close()
+                local character=player.Character
+                if character and character:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() end
+            end,
             onNext=function()
                 -- BD-170: Next egg stays inside the opening sequence; only the end of the batch returns to the Eggs screen.
                 heading.Text="An egg is hatching..."
@@ -997,7 +1016,7 @@ render=function(name: string)
         if hatchState.fresh then hatchState.fresh=false supply() end
     elseif name=="exit" then
         -- BD-052: one confirmation, no stay-still channel; the server settles through tryEnd.
-        heading.Text,header.BackgroundColor3="Return to Sanctuary?",C.red
+        heading.Text,header.BackgroundColor3="Go home?",C.red
         art(body,"home",36,28,214)
         label(body,require(Shared.FtueCopy).homeConfirmLine,300,8,500,100,28,C.gold)
         local character=player.Character
@@ -1005,10 +1024,10 @@ render=function(name: string)
         local growth=if character then character:GetAttribute("GrowthScore") or 0 else 0
         label(body,require(Shared.FtueCopy).homeConfirmTotals(catches,growth),300,116,500,60,22)
         local buttonHeight=if touchMode() then math.max(68,46/viewportScale()) else 68
-        button(body,"RETURN",300,396-buttonHeight,244,buttonHeight,C.accent,function()
+        button(body,"GO HOME",300,396-buttonHeight,244,buttonHeight,C.accent,function()
             local current=player.Character
             close()
-            if current and current:GetAttribute("RunState")=="Active" then endRun:FireServer() notify("Returning to Sanctuary...",C.gold) end
+            if current and current:GetAttribute("RunState")=="Active" then endRun:FireServer() notify("Going home...",C.gold) end
         end)
         button(body,"CANCEL",556,396-buttonHeight,244,buttonHeight,C.blue,close)
     elseif name=="crystalReveal" then
@@ -1500,13 +1519,7 @@ RunService.Heartbeat:Connect(function(dt)
     end
     local ok,tags=pcall(function() return Http:JSONDecode(if character then character:GetAttribute("RunEggEvents") or "[]" else "[]") end)
     if ok and typeof(tags)=="table" then
-        if #tags>lastEggCount and state=="Active" then
-            -- BD-154: several eggs can land in one tick (Food worth x10, big pickups): look at every new tag, not only the last.
-            local mutation=nil
-            for i=#tags,lastEggCount+1,-1 do mutation=mutation or ProgressionRules.item(ProgressionConfig.EventMutations,tags[i].mutationId or "") end
-            -- Plain eggs show on the HUD counter; only special eggs get a card (docs/65).
-            if mutation then notify(mutation.name.." egg caught!",C.gold,{kind="major",icon="egg",body="Hatch it at Home",key="mutation_egg",live=true}) end
-        end
+        -- BD-154/BD-378: the found-egg toast (HudV2) names weather eggs; no second card from here.
         lastEggCount=#tags
     end
     refreshProgressionHUD()
