@@ -6,7 +6,7 @@ local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local FoodCatchRules = require(ReplicatedStorage.Shared.FoodCatchRules)
-local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
+local RunEggTags = require(ReplicatedStorage.Shared.RunEggTags) -- BD-236: pure catch-time tag glue (tested)
 local Http = game:GetService("HttpService")
 local eventRandom = Random.new()
 local FoodService = {}
@@ -241,7 +241,7 @@ function FoodService.start(dinosaur,repository)
                     local whole, carry = FoodCatchRules.award(candidate.gained, c:GetAttribute("FoodCatchCarry") or 0, c:GetAttribute("WeatherLootMultiplier") or 1)
                     c:SetAttribute("FoodCatchCarry", carry)
                     local before=c:GetAttribute("CatchScore") or 0
-                    local after=math.min(Config.MaxCatchScore,Config.RunEggMaxPerRun,before+whole)
+                    local after=RunEggTags.nextScore(before,whole,Config.MaxCatchScore,Config.RunEggMaxPerRun)
                     c:SetAttribute("CatchScore",after)
                     -- BD-044: every catch is one run egg. Only eggs caught during weather carry a
                     -- compact catch-time tag {eventId, mutationId, n=catch ordinal}; clear-weather
@@ -250,10 +250,7 @@ function FoodService.start(dinosaur,repository)
                     if after>before and weatherId~="clear" then
                         local ok,events=pcall(function() return Http:JSONDecode(c:GetAttribute("RunEggEvents") or "[]") end)
                         if not ok or typeof(events)~="table" then events={} end
-                        for n=before+1,after do
-                            local tag=ProgressionRules.eventEgg(weatherId,eventRandom:NextNumber())
-                            if tag.eventId~="clear" then tag.n=n table.insert(events,tag) end
-                        end
+                        RunEggTags.apply(events,weatherId,before,after,function() return eventRandom:NextNumber() end)
                         c:SetAttribute("RunEggEvents",Http:JSONEncode(events))
                     end
                     dinosaur.addGrowth(c, candidate.gained * Config.GrowthPerFood)

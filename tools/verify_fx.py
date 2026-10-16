@@ -77,7 +77,7 @@ for _, dev in R.DeviceOrder do
         for k, v in res.cost do if budget[k] then assert(v <= budget[k] + 1e-6, id .. " " .. dev .. " " .. k) end end
         calm(res, "mut." .. id .. "." .. dev)
         local lite = R.resolve("mutation", e, {device = dev, detail = "lite"})
-        assert(#lite.layers <= R.LiteLayers and lite.cost.alive <= res.cost.alive + 1e-6, "lite never costs more")
+        assert(#lite.layers <= R.MutationLiteLayers and layerById(lite, "ring") and layerById(lite, "motif") and lite.cost.alive <= res.cost.alive + 1e-6, "lite never costs more")
     end
 end
 -- 3. Rarity ordering across the real catalog: a higher-tier trail never has fewer layers than any lower-tier one on desktop.
@@ -100,7 +100,7 @@ assert(R.Devices.phone.rateScale == 0.5)
 for i = 2, 3 do local a, b = R.Devices[R.DeviceOrder[i - 1]], R.Devices[R.DeviceOrder[i]] for _, k in {"emitters", "beams", "trails", "alive", "burst"} do assert(b[k] >= a[k], k .. " budget grows with device") end end
 -- 5. Reduce Motion: no emitters, no beams, no bursts; one soft light (aura/mutation) or one short ribbon (trail).
 for _, a in Config.Auras do local r = R.resolve("aura", a, {reduce = true}) assert(r.cost.emitters == 0 and r.cost.beams == 0 and r.cost.burst == 0 and r.cost.trails == 0 and r.cost.lights == 1 and r.reduced) end
-for _, id in Look.Order do local r = R.resolve("mutation", Look.get(id), {reduce = true}) assert(r.cost.emitters == 0 and r.cost.beams == 0 and r.cost.lights == 1) end
+for _, id in Look.Order do local r = R.resolve("mutation", Look.get(id), {reduce = true}) assert(r.cost.emitters == 0 and r.cost.burst == 0 and r.cost.lights == 1 and r.cost.beams == 3 and r.layers[2].id == "ring" and r.layers[2].spin == 0, "Reduce Motion: still glow + a STILL ground ring (BD-353)") end
 for _, tr in Config.Trails do local r = R.resolve("trail", tr, {reduce = true}) assert(r.cost.emitters == 0 and r.cost.beams == 0 and r.cost.trails == 1 and r.layers[1].life <= 0.5) end
 -- 6. Curves and maths.
 for name, curve in R.Curves do
@@ -142,6 +142,53 @@ for t, name in R.Tiers do
     assert((layerById(res, "swirl") ~= nil) == (t >= 5), name .. " swirl from Legendary")
     local rays = layerById(res, "rays")
     if rays then assert(rays.hz <= TIME.pulseHz and rays.alpha <= TIME.maxMistAlpha, "rays pulse slowly and stay soft") end
+end
+-- 7. BD-353 stacked budget by particle count: a mutated dino (mutation full + aura lite + trail lite, the worst case with all three
+-- equipped) never exceeds the device's 45/30/18 alive particles; 12 such dinos (1 full + 11 lite mutation looks) stay inside 12 x budget.
+do
+    local aura, trail = Config.Auras[#Config.Auras], Config.Trails[#Config.Trails]
+    for _, dev in R.DeviceOrder do
+        local cap = R.Devices[dev].alive
+        for _, id in Look.Order do
+            local e = Look.get(id)
+            local full = R.resolve("mutation", e, {device = dev})
+            local lite = R.resolve("mutation", e, {device = dev, detail = "lite"})
+            local stack = full.cost.alive + R.resolve("aura", aura, {device = dev, detail = "lite"}).cost.alive + R.resolve("trail", trail, {device = dev, detail = "lite"}).cost.alive
+            assert(stack <= cap + 1e-6, id .. " " .. dev .. " stacked alive " .. stack .. " > " .. cap)
+            local liteStack = lite.cost.alive + R.resolve("aura", aura, {device = dev, detail = "lite"}).cost.alive + R.resolve("trail", trail, {device = dev, detail = "lite"}).cost.alive
+            assert(liteStack <= cap + 1e-6, id .. " " .. dev .. " lite stack alive " .. liteStack)
+            local twelve = stack + 11 * liteStack
+            assert(twelve <= 12 * cap + 1e-6, id .. " " .. dev .. " 12 dinos alive " .. twelve)
+            local ring = full.layers[2]
+            assert(ring.id == "ring" and ring.width >= 0.2 and ring.alpha >= 0.7 and ring.radius >= 2, "ground ring is wide and bright enough")
+            if dev == "desktop" then print(string.format("%-9s desktop: mutation %4.1f alive, stack %4.1f/%d, 12 dinos %5.1f/%d", id, full.cost.alive, stack, cap, twelve, 12 * cap)) end
+        end
+    end
+end
+-- 8. every resolved layer (all kinds, tiers, devices, detail levels, Reduce Motion) carries a non-empty colour table (FxRig.colorSeq nil bug)
+do
+    local function check(res, label)
+        for _, l in res.layers do
+            assert(type(l.color) == "table" and #l.color >= 1 and #l.color == #l.grad, label .. "." .. l.id .. " has colours")
+            for _, c in l.color do assert(type(c) == "table" and #c == 3, label .. "." .. l.id .. " colour triple") end
+        end
+    end
+    for _, dev in R.DeviceOrder do
+        for _, reduce in {false, true} do
+            for _, detail in {"full", "lite"} do
+                local o = {device = dev, reduce = reduce, detail = detail}
+                for t, name in R.Tiers do
+                    for _, kind in {"aura", "trail"} do
+                        local item = {id = "x", rarity = name, color = {200, 120, 80}, accent = {250, 220, 120}, width = 0.5, lifetime = 0.7, particles = 3}
+                        check(R.resolve(kind, item, o), kind .. name)
+                    end
+                end
+                for _, a in Config.Auras do check(R.resolve("aura", a, o), a.id) end
+                for _, tr in Config.Trails do check(R.resolve("trail", tr, o), tr.id) end
+                for _, id in Look.Order do check(R.resolve("mutation", Look.get(id), o), id) end
+            end
+        end
+    end
 end
 print(string.format("FxRecipes passed: %d resolutions (auras %d, trails %d, mutations %d) x 3 devices, tiers monotonic, phone rate x0.5, Reduce Motion light/ribbon only",
     count, #Config.Auras, #Config.Trails, #Look.Order))

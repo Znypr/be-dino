@@ -20,6 +20,7 @@ R.Devices = {
 }
 R.DeviceOrder = {"phone", "tablet", "desktop"}
 R.LiteLayers = 2 -- distant / extra dinos: only the first two priority layers, rates x0.6
+R.MutationLiteLayers = 3 -- BD-353: a mutation keeps glow + ground ring + motes even in the lite look (aura / trail drop layers instead)
 
 -- Calm timing limits the verifier enforces (docs/87).
 R.Timing = {
@@ -145,13 +146,15 @@ R.Templates = {
             light = 1, onlyMoving = true, grad = {"accent", "light", "hueA"}, curve = "sizePop", spin = 40},
         {id = "pop", kind = "burst", tex = "sparkSheet", count = 6, life = 0.6, size = 0.34, speed = 3, alpha = 0.9, light = 0.9, grad = {"accent", "light", "hueB"}},
     },
+    -- BD-353: calm but clearly visible from ~20 studs. Priority: glow, a soft coloured GROUND RING (wider, brighter than before),
+    -- slow rising motes, a little mist. Even the lite look (aura equipped / far dino, MutationLiteLayers) keeps glow + ring + motes.
     mutation = {
-        {id = "glow", kind = "glow", brightness = 0.4, range = 7, grad = {"primary"}},
-        {id = "motif", kind = "emitter", tex = "sparkSheet", rate = 6, life = 1.2, size = 0.24, speed = 0.7, rise = 0.9, alpha = 0.8,
+        {id = "glow", kind = "glow", brightness = 0.5, range = 8, grad = {"primary"}},
+        {id = "ring", kind = "ring", beams = 3, radius = 2.2, height = -1.55, spin = 0.3, width = 0.24, alpha = 0.8, grad = {"primary", "accent"}},
+        {id = "motif", kind = "emitter", tex = "sparkSheet", rate = 4, life = 1.8, size = 0.3, speed = 0.4, rise = 0.5, alpha = 0.85,
             light = 0.8, shape = "Cylinder", grad = {"primary", "accent"}, curve = "sizePop"},
         {id = "mist", kind = "emitter", tex = "smokeSheet", rate = 3, life = 1.7, size = 1.1, speed = 0.3, rise = 0.5, alpha = 0.42,
             light = 0.12, shape = "Cylinder", grad = {"deep", "primary"}, curve = "sizeGrow", spin = 15},
-        {id = "ring", kind = "ring", beams = 3, radius = 1.9, height = -0.6, spin = 0.4, width = 0.09, alpha = 0.6, grad = {"primary", "accent"}},
         {id = "ripple", kind = "emitter", tex = "ringShock", rate = 1.0, life = 1.4, size = 1.2, grow = 2.0, speed = 1.2, rise = 0, alpha = 0.45,
             light = 0.6, shape = "Disc", outward = true, grad = {"accent", "light"}, curve = "sizeGrow"},
         {id = "ribbon", kind = "spiral", beams = 2, radius = 1.4, low = -1.4, high = 1.0, spin = 0.6, width = 0.14, alpha = 0.55, grad = {"deep", "primary", "light"}},
@@ -224,24 +227,43 @@ function R.resolve(kind: string, item, opts)
     local templates = R.Templates[kind]
     if not templates then return out end
 
+    -- Every layer needs a colour table (names beyond the tier's palette fall back to primary). The Reduce Motion layers used to
+    -- skip this, so FxRig.colorSeq(nil) threw "attempt to get length of a nil value" (weather QA 2026-10-16).
+    local function colorize(layer)
+        layer.color = {}
+        for i, name in layer.grad do
+            local usable = false
+            for j = 1, colorCount do if R.PaletteNames[j] == name then usable = true end end
+            layer.color[i] = if usable then named[name] else named.primary
+        end
+    end
     if opts.reduce then
         -- Reduce Motion: no particles, no beams, no looping. Aura/mutation keep one still, soft glow; trails keep ONE short ribbon
         -- (it only follows the dino, it never animates by itself).
         if kind == "trail" then
             local t = copy(templates[1])
             t.life = 0.45 t.width *= (item.width or 0.5) t.alpha = 0.7 t.grad = {"primary", "accent"}
+            colorize(t)
             table.insert(out.layers, t)
         else
             local g = copy(templates[1])
             g.brightness = math.min(g.brightness, 0.4)
+            colorize(g)
             table.insert(out.layers, g)
+            if kind == "mutation" then
+                -- BD-353: Reduce Motion keeps the mutation readable: the same ground ring, standing still (spin 0), no particles.
+                local ring = copy(templates[2])
+                ring.spin, ring.alpha = 0, 0.7
+                colorize(ring)
+                table.insert(out.layers, ring)
+            end
         end
         out.cost = R.totalCost(out.layers)
         return out
     end
 
     local lite = opts.detail == "lite"
-    local limit = if lite then R.LiteLayers else (R.LayerCountByKind[kind] or R.LayerCount)[tier]
+    local limit = if lite then (if kind == "mutation" then R.MutationLiteLayers else R.LiteLayers) else (R.LayerCountByKind[kind] or R.LayerCount)[tier]
     local rateF = (1 + 0.1 * (tier - 1)) * (if lite then 0.6 else 1) * device.rateScale
     local sizeF = 1 + 0.05 * (tier - 1)
     local motif = if kind == "mutation" then R.Motifs[item.id] else nil

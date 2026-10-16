@@ -70,17 +70,24 @@ def scan():
     assert 'dewdrop = {Color3' not in (ROOT / 'src/shared/MutationEffects.luau').read_text(encoding='utf-8')
     # BD-154: every visible/gettable hook is still wired
     wired = {
-        'src/server/FoodService.luau': 'ProgressionRules.eventEgg(weatherId',
+        'src/server/FoodService.luau': 'RunEggTags.apply(events,weatherId',
         'src/client/Bootstrap.client.luau': 'for i=#tags,lastEggCount+1,-1',
         'src/client/HatchSequence.luau': 'r.mutationName',
         'src/client/EggsScreen.luau': 'MutationLook.get(entry.mutationId)',
-        'src/client/CosmeticVisuals.client.luau': 'kind=="mutation" and auraId==""',  # mutation takes the full FX slot (QA 2026-10-16)
+        'src/client/CosmeticVisuals.client.luau': 'kind~="mutation" and (#state.rigs>0 or mutationId~="")',  # BD-353: mutation keeps its own detail, aura/trail go lite
         'src/client/DinoIndexPanels.luau': 'mutationId = if d.stage == "base"',
     }
     for path, needle in wired.items():
         assert needle in (ROOT / path).read_text(encoding='utf-8'), path + ' lost its mutation hook: ' + needle
-    assert 'MutationLook.color(entry.badge)' in (ROOT / 'src/client/DinoIndexPanels.luau').read_text(encoding='utf-8'), 'My dinos mutation chip must use the look badge colour'
-    print('Source scan passed: world dino, previews and mist all read MutationLook')
+    assert 'MutationBadge.chip(' in (ROOT / 'src/client/DinoIndexPanels.luau').read_text(encoding='utf-8'), 'My dinos mutation chip must use the look badge colour'
+    # BD-351/352: readable badge, calm hero smoke behind the dino, drag pill off the head
+    badge = (ROOT / 'src/client/MutationBadge.luau').read_text(encoding='utf-8')
+    assert 'Badge.MinTextSize = 14' in badge and 'Look.color(look.badge)' in badge and 'TextSize, text.TextColor3' in badge, 'badge: own colour, text >= 14 px'
+    fxui = (ROOT / 'src/shared/FxUi.luau').read_text(encoding='utf-8')
+    assert 'Ui.HeroSmokeSize, Ui.HeroSmokeAlpha, Ui.HeroSmokeRate = 0.4, 0.5, 0.5' in fxui and 'frame.ZIndex = math.max(view.ZIndex - 1, 0)' in fxui, 'hero smoke is thin and behind the viewport'
+    hatch = (ROOT / 'src/client/HatchSequence.luau').read_text(encoding='utf-8')
+    assert 'hintPosition = UDim2.fromScale(.17, .6)' in hatch and 'hintPosition = UDim2.fromScale(.5, .37)' not in hatch, 'Drag to turn must stay off the dino head'
+    print('Source scan passed: world dino, previews and mist all read MutationLook; badge, hero smoke and drag pill rules hold')
 
 
 if __name__ == '__main__':
