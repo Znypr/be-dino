@@ -169,7 +169,11 @@ def static_checks():
     hook = [l for l in boot.splitlines() if l.startswith('require(script.Parent.HubTravelClient).attach(')]
     assert len(hook) == 1, 'one statement-level attach hook in client Bootstrap'
     assert 'local HubTravel' not in boot, 'no new top-level local in client Bootstrap'
-    assert boot.count('HubTravelClient).press(') == 2, 'rail loop and results OPEN EGGS call press'
+    # Three intentional callers: rail loop (BD-288), results OPEN EGGS (3fdea6b), crystal HUD -> Shop (BD-046, PR #292, press("auras")).
+    assert boot.count('HubTravelClient).press(') == 3, 'rail loop, results OPEN EGGS and crystal HUD call press'
+    assert 'HubTravelClient).press(entry[3])' in boot, 'rail loop calls press'
+    assert 'HubTravelClient).press("eggs")' in boot, 'results OPEN EGGS calls press'
+    assert 'HubTravelClient).press("auras")' in boot, 'crystal HUD opens the Shop through press'
     assert 'UDim2.new(0.5, 0, 1, -Rules.ChipBottom)' in client, 'chip position comes from the rules (above EXPLORE ISLAND)'
     gate = (ROOT / 'src/client/HubGateClient.luau').read_text()
     assert 'GateBarBottom' in gate, 'gate bar position comes from the rules (above the chip)'
