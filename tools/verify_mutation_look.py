@@ -74,10 +74,12 @@ def scan():
         'src/client/Bootstrap.client.luau': 'for i=#tags,lastEggCount+1,-1',
         'src/client/HatchSequence.luau': 'r.mutationName',
         'src/client/EggsScreen.luau': 'MutationLook.get(entry.mutationId)',
+        'src/client/CosmeticVisuals.client.luau': 'kind=="mutation" and auraId==""',  # mutation takes the full FX slot (QA 2026-10-16)
         'src/client/DinoIndexPanels.luau': 'mutationId = if d.stage == "base"',
     }
     for path, needle in wired.items():
         assert needle in (ROOT / path).read_text(encoding='utf-8'), path + ' lost its mutation hook: ' + needle
+    assert 'MutationLook.color(entry.badge)' in (ROOT / 'src/client/DinoIndexPanels.luau').read_text(encoding='utf-8'), 'My dinos mutation chip must use the look badge colour'
     print('Source scan passed: world dino, previews and mist all read MutationLook')
 
 

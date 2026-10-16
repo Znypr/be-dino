@@ -17,6 +17,7 @@ local Theme = require(Shared.UITheme)
 local Preview = require(Shared.DinosaurPreview)
 local Sel = require(Shared.FusionSelection)
 local MyDinos = require(Shared.MyDinos)
+local MutationLook = require(Shared.MutationLook)
 local PreviewTraits = require(script.Parent.PreviewTraits)
 local InspectView = require(script.Parent.InspectView)
 local W = require(script.Parent.FusionWidgets)
@@ -331,7 +332,12 @@ function Panels.species(ctx)
         local y = 7
         for _, text in MyDinos.ribbons(d, catalog) do
             if y > 45 then break end
-            pill(button, text, if text == "SHINY" then C.gold else C.purple, UDim2.fromOffset(54, 16), UDim2.fromOffset(7, y), if text == "SHINY" then C.outline else C.text)
+            -- QA 2026-10-16: a mutation chip wears its own badge colour (was one purple for all seven), dark text on the soft colour.
+            local badgeColor: Color3? = nil
+            for _, entry in MutationLook.Entries do
+                if string.upper(entry.name) == text then badgeColor = MutationLook.color(entry.badge) end
+            end
+            pill(button, text, if text == "SHINY" then C.gold else (badgeColor or C.purple), UDim2.fromOffset(54, 16), UDim2.fromOffset(7, y), if text == "SHINY" or badgeColor then C.outline else C.text)
             y += 19
         end
         W.label(button, Sel.name(catalog, "patterns", g.patternId, "Plain"), UDim2.new(1, -8, 0, 17), UDim2.fromOffset(4, 82), 14)
