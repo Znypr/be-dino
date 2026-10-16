@@ -1510,7 +1510,7 @@ RunService.Heartbeat:Connect(function(dt)
     end
     refreshProgressionHUD()
     if active=="eggs" and refreshEggs then refreshEggs() end
-    if player:GetAttribute("ProfileState")=="Loaded" and state=="Sanctuary" and not seenTutorial then seenTutorial=true open("tutorial") end
+    if player:GetAttribute("ProfileState")=="Loaded" and state=="Sanctuary" and not seenTutorial and player:GetAttribute("DemoSkipTutorial")~=true then seenTutorial=true open("tutorial") end
 end)
 local refreshQueued=false
 local function scheduleModalRefresh()

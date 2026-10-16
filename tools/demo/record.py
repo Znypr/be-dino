@@ -94,6 +94,9 @@ def window_geometry(title: str):
     if user32.IsIconic(found[0]):  # a minimised window has no pixels to grab: restore it first
         user32.ShowWindow(found[0], 9)
         time.sleep(1.5)
+    user32.ShowWindow(found[0], 5)
+    user32.SetForegroundWindow(found[0])  # a window behind others stops repainting under gdigrab: bring it to the front
+    time.sleep(0.8)
     win = rect_of(found[0])
     rects = []
 
@@ -164,6 +167,13 @@ def refine_crop(ffmpeg: str, title: str, crop: str) -> str:
     return f"crop={nw}:{nh}:{x + l + 1}:{y + t + 1}"
 
 
+def trim_crop(crop: str, trim: str) -> str:
+    """Trim extra pixels (left,top,right,bottom) off a crop filter, e.g. Roblox's top-left menu icons that Studio cannot hide."""
+    l, t, r, b = (int(v) for v in trim.split(","))
+    w, h, x, y = (int(v) for v in crop.split("=")[1].split(":"))
+    return f"crop={(w - l - r) // 2 * 2}:{(h - t - b) // 2 * 2}:{x + l}:{y + t}"
+
+
 def resolve_title(fragment: str, titles: list[str] | None = None) -> str | None:
     for title in (list_windows() if titles is None else titles):
         if fragment.lower() in title.lower():
@@ -199,6 +209,7 @@ def selftest() -> int:
     assert pick_viewport(win, [(0, 138, 1920, 963), (106, 167, 1551, 960), (1557, 138, 1920, 963), (104, 165, 1553, 962)]) == (106, 167, 1551, 960)
     assert pick_viewport(win, [(0, 0, 10, 10)]) is None
     assert crop_filter(win, (106, 167, 1551, 960), 2) == "crop=1440:788:116:177"
+    assert trim_crop("crop=100:50:10:20", "0,6,4,0") == "crop=96:44:10:26"
     assert "crop=10:10:1:2,scale" in " ".join(build_command("ffmpeg", "t", "o", 1, crop="crop=10:10:1:2"))
     blue, other = bytes((40, 80, 230)), bytes((120, 90, 60))
     w, h = 200, 200
@@ -219,6 +230,7 @@ def main() -> int:
     ap.add_argument("--crf", type=int, default=18)
     ap.add_argument("--mouse", action="store_true", help="draw the mouse cursor (off by default)")
     ap.add_argument("--crop", help="x,y,w,h in pixels inside the window capture (overrides viewport detection)")
+    ap.add_argument("--trim", default="0,0,0,0", help="extra pixels to trim after viewport detection: left,top,right,bottom")
     ap.add_argument("--no-crop", action="store_true", help="record the whole Studio window")
     ap.add_argument("--list-windows", action="store_true")
     ap.add_argument("--selftest", action="store_true")
@@ -241,7 +253,7 @@ def main() -> int:
     elif not args.no_crop:
         geo = window_geometry(title)
         if geo and geo[1]:
-            crop = refine_crop(find_ffmpeg(), title, crop_filter(*geo))
+            crop = trim_crop(refine_crop(find_ffmpeg(), title, crop_filter(*geo)), args.trim)
         else:
             print("Could not find the 3D viewport; pass --crop x,y,w,h or --no-crop.", file=sys.stderr)
             return 3

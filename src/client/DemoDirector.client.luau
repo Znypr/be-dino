@@ -23,6 +23,7 @@ local player = Players.LocalPlayer
 local slot = Instance.new("StringValue")
 slot.Name = "BeDinoDemoShot"
 slot.Parent = player
+player:SetAttribute("DemoSkipTutorial", true) -- the welcome (How to play) modal never opens while the director is on
 
 local gui = Instance.new("ScreenGui")
 gui.Name, gui.ResetOnSpawn, gui.DisplayOrder, gui.IgnoreGuiInset = "BeDinoDemoDirector", false, 999, true
@@ -66,14 +67,19 @@ topBar.ZIndex, bottomBar.ZIndex = 3, 3
 -- because the game's own scripts flip those frames back on.
 local chromeKeep = {ModalScrim = true, Toasts = true, RevealFlash = true}
 local chromeOn = false
+local chromeHooked = false
 local function enforceChrome()
     local main = player.PlayerGui:FindFirstChild("BeDinoUI")
     if not main then return end
     for _, child in main:GetChildren() do
         if child:IsA("GuiObject") and not chromeKeep[child.Name] then child.Visible = false end
     end
-    local skip = main:FindFirstDescendant("SkipAll")
-    if skip and skip:IsA("GuiObject") then skip.Visible = false end
+    if not chromeHooked then -- the hatch screen's "Skip all" button is rebuilt per egg: hide each new one the moment it appears
+        chromeHooked = true
+        local function hideSkip(d: Instance) if d.Name == "SkipAll" and d:IsA("GuiObject") then d.Visible = false end end
+        for _, d in main:GetDescendants() do hideSkip(d) end
+        main.DescendantAdded:Connect(function(d) if chromeOn then hideSkip(d) end end)
+    end
 end
 
 local hiddenGuis: {ScreenGui} = {}
@@ -82,6 +88,7 @@ local function setHud(visible: boolean)
         for _, g in hiddenGuis do g.Enabled = true end
         hiddenGuis = {}
         pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, true) end)
+        pcall(function() StarterGui:SetCore("TopbarEnabled", true) end)
     else
         for _, g in player.PlayerGui:GetChildren() do
             if g:IsA("ScreenGui") and g ~= gui and g.Enabled and g.Name ~= "BeDinoUI" then
@@ -90,6 +97,7 @@ local function setHud(visible: boolean)
             end
         end
         pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, false) end)
+        pcall(function() StarterGui:SetCore("TopbarEnabled", false) end) -- the Roblox logo / menu / chat icons top-left
     end
 end
 

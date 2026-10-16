@@ -48,22 +48,14 @@
             {
               "kind": "equipSpecies",
               "speciesId": "compy",
-              "startRun": true
+              "startRun": true,
+              "place": {
+                "x": 0,
+                "z": 40,
+                "fx": 0,
+                "fz": -1
+              }
             }
-          ]
-        },
-        {
-          "at": 4.2,
-          "kind": "teleport",
-          "pos": [
-            0,
-            0,
-            40
-          ],
-          "ground": true,
-          "face": [
-            0,
-            -1
           ]
         },
         {
@@ -108,22 +100,14 @@
             {
               "kind": "equipSpecies",
               "speciesId": "pteranodon",
-              "startRun": true
+              "startRun": true,
+              "place": {
+                "x": 0,
+                "z": 40,
+                "fx": 0,
+                "fz": -1
+              }
             }
-          ]
-        },
-        {
-          "at": 4.2,
-          "kind": "teleport",
-          "pos": [
-            0,
-            0,
-            40
-          ],
-          "ground": true,
-          "face": [
-            0,
-            -1
           ]
         },
         {
@@ -163,9 +147,9 @@
       "camera": {
         "kind": "track",
         "offset": [
-          11,
+          0,
           4,
-          3
+          11
         ],
         "lookHeight": 1.5
       },
@@ -178,48 +162,40 @@
             {
               "kind": "equipSpecies",
               "speciesId": "mosasaurus",
-              "startRun": true
+              "startRun": true,
+              "place": {
+                "x": 158,
+                "z": -58,
+                "fx": 1,
+                "fz": 0
+              }
             }
-          ]
-        },
-        {
-          "at": 4.2,
-          "kind": "teleport",
-          "pos": [
-            -45,
-            0,
-            300
-          ],
-          "ground": true,
-          "face": [
-            0,
-            -1
           ]
         },
         {
           "at": 4.8,
           "kind": "move",
           "dir": [
-            0,
-            -1
+            1,
+            0
           ],
-          "seconds": 1.5
+          "seconds": 1.0
         },
         {
-          "at": 6.4,
+          "at": 6.0,
           "kind": "dash"
         },
         {
-          "at": 8.0,
+          "at": 7.6,
           "kind": "move",
           "dir": [
-            0,
-            -1
+            1,
+            0
           ],
-          "seconds": 0.8
+          "seconds": 0.6
         },
         {
-          "at": 9.6,
+          "at": 9.3,
           "kind": "dash"
         }
       ]
@@ -247,22 +223,14 @@
             {
               "kind": "equipSpecies",
               "speciesId": "ankylosaurus",
-              "startRun": true
+              "startRun": true,
+              "place": {
+                "x": 0,
+                "z": 40,
+                "fx": 0,
+                "fz": -1
+              }
             }
-          ]
-        },
-        {
-          "at": 4.2,
-          "kind": "teleport",
-          "pos": [
-            0,
-            0,
-            40
-          ],
-          "ground": true,
-          "face": [
-            0,
-            -1
           ]
         },
         {

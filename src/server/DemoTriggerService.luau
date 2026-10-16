@@ -100,6 +100,21 @@ local function startRunWhenReady(player: Player, seconds: number): boolean
     return false
 end
 
+-- Puts the character on the ground at (x, z) facing (fx, fz) with the same ownership-safe teleport the run start uses.
+local function placeOnGround(player: Player, spec: any)
+    local character = player.Character
+    if not character or typeof(spec) ~= "table" or typeof(spec.x) ~= "number" or typeof(spec.z) ~= "number" then return end
+    local params = RaycastParams.new()
+    params.IgnoreWater = true
+    params.FilterType = Enum.RaycastFilterType.Include
+    params.FilterDescendantsInstances = {workspace.Terrain}
+    local hit = workspace:Raycast(Vector3.new(spec.x, 500, spec.z), Vector3.new(0, -1000, 0), params)
+    if not hit then warn("[DemoTrigger] no ground at the requested spot") return end
+    local from = hit.Position + Vector3.new(0, 4, 0)
+    local fx, fz = spec.fx or 0, spec.fz or -1
+    require(script.Parent.FallRecovery).teleport(player, character, CFrame.lookAt(from, from + Vector3.new(fx, 0, fz))) -- a plain PivotTo is overridden by the client's physics
+end
+
 function DemoTriggerService.start(profileRepository)
     if not (RunService:IsStudio() and game.GameId == 0 and Config.DemoDirectorEnabled == true) then return end
     local ProgressionService = require(script.Parent.ProgressionService)
@@ -133,7 +148,13 @@ function DemoTriggerService.start(profileRepository)
                 task.spawn(function()
                     local loaded, err = pcall(function() player:LoadCharacterAsync() end)
                     if not loaded then warn("[DemoTrigger] respawn failed: " .. tostring(err)) return end
-                    if runAfter and not startRunWhenReady(player, 15) then warn("[DemoTrigger] run did not start") end
+                    if runAfter then
+                        if startRunWhenReady(player, 15) then
+                            if request.place ~= nil then task.wait(0.3) placeOnGround(player, request.place) end
+                        else
+                            warn("[DemoTrigger] run did not start")
+                        end
+                    end
                 end)
             end
             return ok, status
