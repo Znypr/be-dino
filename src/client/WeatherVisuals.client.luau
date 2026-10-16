@@ -13,6 +13,7 @@ local Shared=game:GetService("ReplicatedStorage").Shared
 local Theme=require(Shared.UITheme)
 local WL=require(Shared.WeatherLooks)
 local WS=require(Shared.WeatherSounds)
+local Cave=require(script.Parent.CaveAtmosphere) -- BD-286: cave-only look and weather stays outside (no-op while Config.CaveHub is false)
 local player=Players.LocalPlayer
 local random=Random.new()
 local phone=UserInputService.TouchEnabled and not UserInputService.MouseEnabled
@@ -824,7 +825,7 @@ RunService.Heartbeat:Connect(function(dt)
     -- particle rigs follow the player; only the active weather emits (BD-265: Settings Weather Full / Lite / Off; haze, light and title stay)
     local weatherFactor=require(Shared.SettingsModel).factor(require(Shared.SettingsModel).weather())
     for weatherId,list in rig do
-        local on=motion and weatherId==activeId and k>0
+        local on=motion and weatherId==activeId and k>0 and not Cave.inside()
         local scaleRate=math.min(zoom*zoom,5)
         for _,item in list do
             item.e.Enabled=on and weatherFactor>0 item.e.Rate=item.rate*k*weatherFactor*(if item.fixed then 1 else scaleRate)
@@ -883,6 +884,7 @@ RunService.Heartbeat:Connect(function(dt)
     updateBolts(dt) updateRings(dt) updateBursts(dt) updateBombs(dt,root) updateQuake(dt)
     if shake>.01 and Theme.MotionEnabled then shake=math.max(0,shake-dt*1.1) end
     if not Theme.MotionEnabled then shake=0 end
+    Cave.step(dt) -- last: the cave look is written after the weather values above
 end)
 -- camera shake is applied after the camera script each frame, so it never fights the game's own camera offset
 RunService:BindToRenderStep("WeatherShake",Enum.RenderPriority.Camera.Value+1,function()

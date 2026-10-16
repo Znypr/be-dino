@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "33e2a5f7327cd0a68ab034a12ca67c8e5d4a8509f629e57719719899ae4c9255",
+  "place_sha256": "2277292a4042840217af5ac9e620463e8689e2b8ef91f60e457f1d3d66da5ff2",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -12,8 +12,9 @@
     "src/shared/BiomeMap.luau": "34f7c83a4beb87771dc400137f63808df3138833cfbee579de313fbdb4d5058f",
     "src/shared/BiomePlacement.luau": "1ce66de5fd202174cc573bcaa648e81c227efeb571d81f8328af5082b3bc6969",
     "src/shared/CameraOcclusion.luau": "b88afa12979540191a9b819a0901a8d60044bc40e472b99f23543c52988238cf",
-    "src/shared/CaveHubLayout.luau": "dcfdfb065e0444de590e48b823fcbe957d77d3f495f17fd7b73536730efd171c",
-    "src/shared/CaveTerrainRules.luau": "5a93a5066fa9cb8ec6b52d0fdab95d20e1e3cb7bdfdb0eda5d7c64c8c60a7cac",
+    "src/shared/CaveHubLayout.luau": "571d7114e4126cca20c426c664552c456943fb48d772ac60769ef50a242a66be",
+    "src/shared/CaveLightingRules.luau": "b453b42fab4ae1b77b78bf1b6a4a956136f189ca02bed7e0d253c3ef6e16aa91",
+    "src/shared/CaveTerrainRules.luau": "03fe411ad12ac0b651822ec82bc3d8b32998acd3c1ebc4889ca1eedf9216333d",
     "src/shared/ClassMovement.luau": "e5fd1d83e6edb2695ae4acbc54e65828c8879a7578dea77d70a44fe209e67f59",
     "src/shared/ColourBonus.luau": "da7cc4479d5c2633081cfe528221ad31e5646704b17626f6d379a3f2d62612de",
     "src/shared/CombatConfig.luau": "d0f263beff655b036c4031668c496befa493bbdbb246c76f4b4ac7474038b0e7",
@@ -263,8 +264,9 @@
     "src/shared/WorldKitData.luau": "860dd88ae449c3daa82d1372148e02d50d0ccaa08c8fa5a21a003a75bb4abde2",
     "src/shared/WorldKitMeshAssets.luau": "7110648be06c6e602728e21ad96a833e4ad87d65c64fced492ef5bfcd9ce503f",
     "src/server/AdminService.luau": "b017aed5b20be0c7a2226618d128acf8e1415bf18ce260afcae3b9d45ff26ee9",
-    "src/server/Arena.luau": "327432e71428a3b3d59f0d523f66065bd6fe45ae029e33839ee5d74aa4757d05",
+    "src/server/Arena.luau": "a77189167ead97a2a0d990fb77a1cd4727d5bfea6e42acce209624df5d4c6986",
     "src/server/Bootstrap.server.luau": "c2c3c1ad0197174eb0f40f3bc4a584d58efd004b1a0581b65c13d6c0842bfdc9",
+    "src/server/CaveLighting.luau": "592887ecd25e15aae3ed52e891e484f25d5a7f06c3e21e7b6fe5f6d5ba329d85",
     "src/server/CaveTerrain.luau": "09924cf7125d562f57b771900a04aefb6c3272524dd72fd67d6ad0811a6adc8a",
     "src/server/ChestService.luau": "1b18c02193bfc90511e787cb01d7a94fcff24228b1ebe5519a5bd2eb6f28cffa",
     "src/server/CollectionService.luau": "9f50dc992e286fc0d3df30c86c37f71d46c584ca01a77f48c42fde9b8fa17d1a",
@@ -294,6 +296,7 @@
     "src/client/AdminPanel.client.luau": "4834c3ac9855f3dd986de7bd27a9e9de3123fe43e1d5dff3bfaf7e041ea661cc",
     "src/client/Bootstrap.client.luau": "1949ce4697c017d5e0b6dee51b094ce3f37cc9590018235c5e6a5afd80f2edad",
     "src/client/CameraOcclusion.client.luau": "5e0b79f8433683ac09771383077e3692815335055723739355a82f468e0635d5",
+    "src/client/CaveAtmosphere.luau": "1330f8c43abbec254d162a9e2e0cd9d5ffa916e0b6cff356d00cc88c1a761eb7",
     "src/client/CombatHud.luau": "78b006d926a2cd8e6165f7f85c2869cae4a6dd8d5cf8ab6c0138e067c6d3236a",
     "src/client/CosmeticVisuals.client.luau": "14472f893118c993f1257be98d661dd73bf1213e61d851c5747b028abfa8b8a2",
     "src/client/DinoDetails.luau": "7f3a9fa573921e2956787f274eff35a00fda47ed562ee75ec6bf67e65554047c",
@@ -318,7 +321,7 @@
     "src/client/ShopCard.luau": "b0fdc8994581d6902f4f697f65696c7b9b558e7f211ef599e657cf257960c779",
     "src/client/VolumeSliders.luau": "c1c8fcc997d9f2a1e2be40950f2b58d6de30bf3236dc142878b7ceaa2804f4e2",
     "src/client/WeatherAudio.client.luau": "a2656eef91d2859682a8c0168a71622b27470b775ab7f2b766b8380907286ec0",
-    "src/client/WeatherVisuals.client.luau": "4b3b7fc123055ce1129c448c785d0922a4ed1bcb15248acf7c97ab23734f763e",
+    "src/client/WeatherVisuals.client.luau": "16d308b4a1f749167691625d182f7537b6c8cb01835d078a09919328cdc77df5",
     "src/client/WorldCulling.client.luau": "47eae7e3f25d6717d1f63438ffd8489bf399e9e4511faa0a7e5298f467a73682",
     "src/client/WorldReady.client.luau": "d7412e4f370a17b6a1e009a8d77fa11141a914503ee0ccc77a1e9039ced88e6c"
   }

@@ -260,7 +260,7 @@ for _,h in L.holes do
 end
 assert(math.abs(C.ceilingY(0,580)-(6+62))<1e-6,"62 studs over the centre")
 assert(C.Fall.crackHeight+2<=C.ceilingY(C.Fall.x,C.Fall.z+580)-C.FloorY+30,"lava crack under the back-wall ceiling")
-assert(C.Fall.width==40 and C.Fall.height==48 and C.Pool.r>=10,"lava falls 40 x 48 into a pool")
+assert(C.Fall.width==40 and C.Fall.height==32 and C.Pool.r>=10,"lava falls 40 x 32 into a pool (BD-295: fits under the 38 stud back-wall ceiling)")
 assert(counts.cave_lava_fall==1 and counts.lava_pool_disc==1 and counts.cave_lava_rim_rock==6 and counts.cave_stepping_stone==4,"lava props present")
 assert(#L.lights<=C.MaxLights,"<= 16 lights: "..#L.lights)
 

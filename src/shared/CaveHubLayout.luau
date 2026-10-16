@@ -86,7 +86,7 @@ local STATION_DEFS = {
     {id = "fame", x = 48, z = 76, w = 24, d = 24, r = 12, sign = "TOP DINOS", rail = ""},
 }
 local POOL = {x = -4, z = 86, r = 11} -- lava pool (scenic, fenced; local coords)
-local FALL = {x = -4, z = 100, width = 40, height = 48, crackHeight = 40} -- lava sheet on the back wall
+local FALL = {x = -4, z = 100, width = 40, height = 32, crackHeight = 26} -- lava sheet on the back wall (BD-295: 32 high so it fits under the back-wall ceiling, which is only 38 over the floor)
 CaveHubLayout.Pool, CaveHubLayout.Fall = POOL, FALL
 
 -- Ceiling holes: radius over Heart, Potion Stall, Egg Nests, Style Grotto (docs/104 s4).
@@ -108,10 +108,10 @@ local KINDS: {[string]: any} = {
     rock_crystal = {3, 4, 3, 2500, "rocks"},
     rock_pebbles = {3, 0.5, 3, 600, "rocks", walk = true},
     cave_light_cone = {14, 40, 14, 400, "lights", hang = true},
-    cave_lava_fall = {40, 48, 6, 5000, "lava", hang = true},
+    cave_lava_fall = {40, 32, 6, 5000, "lava", hang = true}, -- BD-295: was 40 x 48
     cave_lava_rim_rock = {5, 3, 4, 1500, "lava"},
     cave_stepping_stone = {4, 0.8, 4, 400, "lava", walk = true},
-    lava_pool_disc = {26, 0.3, 26, 200, "lava", walk = true},
+    lava_pool_disc = {18, 0.3, 18, 200, "lava"}, -- BD-295: 18 wide inside the 22 wide basin, not walkable (was 26 wide, walk = true)
     hub_stall_potion = {14, 10, 7, 5000, "station", collider = true},
     hub_cauldron = {3, 3, 3, 1800, "station"},
     hub_crate = {2.5, 2.5, 2.5, 600, "station"},

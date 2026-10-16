@@ -4,6 +4,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Terrain = require(script.Parent.IslandTerrain)
 local CaveTerrain = require(script.Parent.CaveTerrain)
+local CaveLighting = require(script.Parent.CaveLighting)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 local CaveHubLayout = require(ReplicatedStorage.Shared.CaveHubLayout)
@@ -278,6 +279,7 @@ function Arena.build()
         hub.Name, hub.Parent = "Sanctuary", world
         local anchor = part(hub, "SanctuarySign", Vector3.new(1, 1, 1), Vector3.new(0, 35, caveHub.centerZ + 37), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, false)
         anchor.Transparency = 1
+        CaveLighting.build(hub) -- BD-286: light shafts, warm fill, lava glow, gate arch light (flag on only)
     else
         local hub = Instance.new("Model")
         local cz = CaveHubLayout.hub(Config).centerZ -- BD-280: one hub geometry source (the cave shell itself is BD-281)
