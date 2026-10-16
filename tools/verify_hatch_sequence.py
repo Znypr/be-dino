@@ -158,7 +158,7 @@ assert(not e1.shock and e3.shock and not e3.arcs and e4.arcs and e4.shakeScale >
 local er = T.escalation(5, false) assert(not er.shock and not er.arcs and not er.fireworks and er.shakeScale == 1)
 assert(T.orbitCount(5, true, false) <= T.OrbitMax and T.orbitCount(1, true, false) < T.orbitCount(5, true, false) and T.orbitCount(5, false, false) == 0)
 assert(T.MaxParticles + T.OrbitMax + T.FireworkMax + T.RainMax <= 80, "bounded pools")
-assert(T.stamp(-1) == 1 and T.stamp(0) > 1.3 and T.stamp(.25) == 1 and T.stamp(.1) < T.stamp(0))
+assert(T.stamp(-1) == 1 and T.stamp(0) > 1.1 and T.stamp(0) <= 1.13 and T.stamp(.25) == 1 and T.stamp(.1) < T.stamp(0))
 
 -- Copy.
 assert(T.hint(3) == "Tap for next egg (3 left)" and T.hint(1) == "Tap for next egg (1 left)" and T.hint(0) == "Done")

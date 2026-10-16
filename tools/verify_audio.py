@@ -48,6 +48,13 @@ assert(S.cueSlot(10 + wait + 1, 10, 1) == nil, "too late: dropped")
 assert(S.cueSlot(free2, 100, 1) == 100)
 -- The cue table: the run end chime is short and soft, level_up stays quiet.
 assert(S.Sounds.run_end.len <= .7 and S.Sounds.run_end.volume <= .25 and S.Sounds.level_up.len >= 1)
+-- BD-081 audit: global rapid throttle for pickups, volume clamp.
+assert(S.rapidThrottled("pickup", 10, 10.05) and S.rapidThrottled("pickup_hi", 10, 10.05), "variants share the throttle")
+assert(not S.rapidThrottled("pickup", 10, 10 + S.RapidGap + .01) and not S.rapidThrottled("pickup", nil, 10))
+assert(not S.rapidThrottled("shop_buy", 10, 10.01), "other cues are unaffected")
+assert(S.clampVolume(2) == S.MaxCueVolume and S.clampVolume(.3) == .3 and S.clampVolume(-1) == 0)
+assert(S.MaxCueVolume <= .9)
+for _, e in S.Sounds do assert(e.gap >= 0 and e.volume > 0) end
 print("Reward cue checks passed: one at a time, 0.6 s stagger, drop when late")
 '''
 

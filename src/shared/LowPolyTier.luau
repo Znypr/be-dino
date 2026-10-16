@@ -14,7 +14,7 @@ export type Entry = {
     reflectance: number,   -- 0..0.3
     sparkle: {number},     -- sparkle colour
     sparkleRate: number,   -- particles per second on the body part (0 = none) at dino size 3 studs; Reduce Motion -> 0
-    sheen: number,         -- BD-308: 0..MaxSheen lift of the facets the source texture already lit (reads as gloss in flat light)
+    satKeep: number?, sheen: number,         -- BD-308: 0..MaxSheen lift of the facets the source texture already lit (reads as gloss in flat light)
 }
 Tier.Order = {"gold", "emerald", "diamond"}
 Tier.MaxAmount = 0.8
@@ -25,7 +25,7 @@ Tier.Entries = {
         sparkle = {255, 230, 150}, sparkleRate = 1.5, sheen = 0.45},
     emerald = {id = "emerald", name = "Emerald", tint = {60, 220, 140}, amount = 0.40, trimAmount = 0.75, material = "Glass", reflectance = 0.10,
         sparkle = {170, 255, 205}, sparkleRate = 2, sheen = 0.35},
-    diamond = {id = "diamond", name = "Diamond", tint = {215, 244, 255}, amount = 0.35, trimAmount = 0.70, material = "Glass", reflectance = 0.22,
+    diamond = {id = "diamond", name = "Diamond", tint = {170, 232, 255}, amount = 0.50, satKeep = 0.5, trimAmount = 0.75, material = "Glass", reflectance = 0.22,
         sparkle = {235, 250, 255}, sparkleRate = 3, sheen = 0.6},
 }
 -- BD-308 baked sheen: the generated textures carry flat facet shading (k = pixel luma / species body luma, 0.3..1.6). On a fused
@@ -52,7 +52,7 @@ function Tier.blend(r: number, g: number, b: number, entry: Entry, secondary: bo
     local sat = if mx > 0 then (mx - mn) / mx else 0
     local nmx, nmn = math.max(nr, ng, nb), math.min(nr, ng, nb)
     local nsat = if nmx > 0 then (nmx - nmn) / nmx else 0
-    local want = math.min(sat, 0.85)
+    local want = math.min(sat, 0.85) * (if secondary then 1 else (entry.satKeep or 1))
     if nsat < want and nmx > 0 then -- re-saturate around the new max channel
         local k = (1 - want) * nmx
         local scale = (nmx - k) / math.max(nmx - nmn, 1e-6)

@@ -36,6 +36,18 @@ Sfx.Sounds = {
 }
 Sfx.Master = .5 -- global gain; synthesized placeholder sounds were far too loud (owner, 2026-10-15)
 Sfx.PoolSize = 3
+-- BD-081 audit (docs/100): no cue may exceed MaxCueVolume before Master x group (clamped in Sfx.play, asset ids unchanged).
+Sfx.MaxCueVolume = .9
+-- Rapid cues (food/pickup ticks) share ONE throttle across variants and call sites (Bootstrap + DinoMotion + CombatHud
+-- can all fire pickup in the same frame): at most one per RapidGap seconds, whichever variant.
+Sfx.RapidNames = {pickup = true, pickup_hi = true, pickup_lo = true}
+Sfx.RapidGap = .15
+function Sfx.rapidThrottled(name: string, lastRapid: number?, now: number): boolean
+    return Sfx.RapidNames[name] == true and lastRapid ~= nil and now - lastRapid < Sfx.RapidGap
+end
+function Sfx.clampVolume(v: number): number
+    return math.clamp(v, 0, Sfx.MaxCueVolume)
+end
 Sfx.Group = "BeDinoSfx"
 
 -- BD-258: reward cues (run_end, level_up, nest opened ...) play ONE AT A TIME. Pure: given the time the last cue
@@ -80,6 +92,7 @@ end
 
 local pools: {[string]: {sounds: {Sound}, slot: number}} = {}
 local lastPlayed: {[string]: number} = {}
+local lastRapid: number? = nil
 local folder: Instance? = nil
 
 local function enabled(): boolean
@@ -96,7 +109,7 @@ function Sfx.play(name: string): boolean
     local assetId = Sfx.normalizeId(entry.id)
     if not assetId or not enabled() then return false end
     local now = os.clock()
-    if Sfx.throttled(entry, lastPlayed[name], now) then return false end
+    if Sfx.throttled(entry, lastPlayed[name], now) or Sfx.rapidThrottled(name, lastRapid, now) then return false end
     local ok = pcall(function()
         if not folder or not folder.Parent then
             local created = Instance.new("Folder")
@@ -115,14 +128,17 @@ function Sfx.play(name: string): boolean
             sound.Parent = folder
             pool.sounds[pool.slot] = sound
         end
-        sound.SoundId, sound.Volume, sound.PlaybackSpeed = assetId, entry.volume * Sfx.Master, entry.rate
+        sound.SoundId, sound.Volume, sound.PlaybackSpeed = assetId, Sfx.clampVolume(entry.volume) * Sfx.Master, entry.rate
         -- Mixer: master x Sounds sliders (AudioMixer.luau). Outside Roblox/tests the require fails and the sound plays ungrouped.
         local okMixer, mixer = pcall(function() return require((script :: any).Parent.AudioMixer) :: any end)
         if okMixer then mixer.attach(sound, "sfx") end
         sound.TimePosition = 0
         sound:Play()
     end)
-    if ok then lastPlayed[name] = now end
+    if ok then
+        lastPlayed[name] = now
+        if Sfx.RapidNames[name] then lastRapid = now end
+    end
     return ok
 end
 

@@ -373381,7 +373381,7 @@ end
 -- BIG "stamp": starts 35% oversize and slams to 1 in .25 s.
 function T.stamp(s: number): number
     if s &lt; 0 or s &gt;= .25 then return 1 end
-    return 1 + .35 * (1 - s / .25) ^ 2
+    return 1 + .12 * (1 - s / .25) ^ 2 -- BD-327b: was .35, a BIG dino crossed the top edge of the panel at the stamp (seen in Studio)
 end
 function T.burstStrength(rarity: number): number return .18 + .08 * math.clamp(rarity, 1, 5) end -- screen flash alpha
 
@@ -374558,10 +374558,8 @@ local function sparkle(container: Instance, body: BasePart?, entry: any?)
     emitter.Speed, emitter.SpreadAngle, emitter.Rotation = NumberRange.new(0.2, 0.5), Vector2.new(180, 180), NumberRange.new(0, 360)
     emitter.Parent = body
 end
-local function tintColor(species: string, textureId: string, spec: Texture.Spec): Color3
-    local base = Texture.baseOf(textureId) or Recolor.baseOf(species)
-    return Color3.new(Recolor.flatTint(base, spec.primary.R, spec.primary.G, spec.primary.B))
-end
+-- Fallback (bake denied / cache full / far away): the model's OWN texture stays (eyes, belly, claws intact, species colour). A plain
+-- MeshPart.Color is ignored on a textured MeshPart in Studio, so no tint is applied (docs/105: option 'keep the original texture').
 -- One part's bake (body/head 256 px, other parts 128 px; BD-306): texture on success, the cheap tint when denied / full / failed.
 local function partBake(container: Instance, species: string, part: MeshPart, textureId: string, role: string, spec: Texture.Spec, key: string)
     part:SetAttribute("LPLod", "baking")
@@ -374569,7 +374567,7 @@ local function partBake(container: Instance, species: string, part: MeshPart, te
     local content = Texture.acquire(part, textureId, species, spec, geom, Texture.sizeFor(role))
     if not part.Parent or container:GetAttribute("LPLookKey") ~= key then return end
     if content then part.TextureContent, part.Color = content, Color3.new(1, 1, 1) part:SetAttribute("LPLod", "texture")
-    else part.TextureID = textureId part.Color = tintColor(species, textureId, spec) part:SetAttribute("LPLod", "tint") end
+    else part.TextureID = textureId part.Color = Color3.new(1, 1, 1) part:SetAttribute("LPLod", "tint") end
 end
 function LowPoly.tint(container: Instance, genes: any)
     if genes then genesOf[container] = genes else genes = genesOf[container] end
@@ -374584,6 +374582,10 @@ function LowPoly.tint(container: Instance, genes: any)
         spec = {primary = primary, secondary = Color3.fromRGB(b[1], b[2], b[3]), same = genes.primaryColorId == genes.secondaryColorId,
             primaryShare = math.clamp((genes.blend or 50) / 100, 0, 1), patternId = patternId, tier = if entry then entry.id else nil, seedName = ""}
     elseif not entry then return end
+    if not spec then -- no genes (Index stage tiles, fusion previews): a fused tier still bakes over the species' own colour, so the tier reads (BD-326)
+        local own = Color3.new(1, 1, 1)
+        spec = {primary = own, secondary = own, same = false, primaryShare = 1, patternId = "01_blank", tier = (entry :: any).id, seedName = "", own = true}
+    end
     local camera = workspace.CurrentCamera
     local body: BasePart? = nil
     local textured: {{part: MeshPart, textureId: string, role: string}} = {}
@@ -374614,7 +374616,7 @@ function LowPoly.tint(container: Instance, genes: any)
     for _, t in textured do
         Texture.release(t.part)
         t.part.TextureID = t.textureId
-        t.part.Color = tintColor(species, t.textureId, s)
+        t.part.Color = Color3.new(1, 1, 1)
         t.part:SetAttribute("LPLod", "tint")
     end
     if far then container:SetAttribute("LPLod", "tint") return end
@@ -375289,7 +375291,7 @@ local reading = 0
 -- Geometry of the TEMPLATE part (unscaled, unposed) so the 3D pattern reads its model-space position: meshId, cframe relative to the
 -- model centre, scale = part.Size / part.MeshSize, norm = 1 / longest model side.
 export type Geom = {meshId: string, cframe: CFrame, scale: Vector3, norm: number}
-export type Spec = {primary: Color3, secondary: Color3, same: boolean, primaryShare: number, patternId: string, tier: string?, seedName: string}
+export type Spec = {primary: Color3, secondary: Color3, same: boolean, primaryShare: number, patternId: string, tier: string?, seedName: string, own: boolean?}
 -- Test hook (Studio only, BD-309): workspace attribute LowPolyDenyEditable = "mesh" | "image" | "all" simulates a server that may
 -- not open the owner's assets (CreateEditableMeshAsync / CreateEditableImageAsync return nil), so the fallbacks can be exercised
 -- without a second account: "mesh" -&gt; UV-space (jigsaw) patterns, "image" / "all" -&gt; plain tint.
@@ -375412,7 +375414,7 @@ end
 -- Stable cache key: everything that changes the pixels. Pure (tested): same spec -&gt; same key, any change -&gt; a different key.
 function Texture.key(textureId: string, spec: Spec): string
     return string.format("%s|%s|%s|%s|%s|%d|%s", textureId, spec.patternId, q(spec.primary), q(spec.secondary), if spec.same then "s" else "d",
-        math.floor(math.clamp(spec.primaryShare, 0, 1) * 20 + 0.5), spec.tier or "base")
+        math.floor(math.clamp(spec.primaryShare, 0, 1) * 20 + 0.5), (spec.tier or "base") .. (if spec.own then "|own" else ""))
 end
 -- Pure pixel pass (shared with the verifier through LowPolyRecolor/LowPolyPattern/LowPolyTier): writes the baked RGBA into out.
 -- size defaults to Pattern.Size.
@@ -375424,6 +375426,7 @@ function Texture.paint(src: buffer, weights: {number}, mask: {number}, spec: Spe
         ar, ag, ab = ar * 0.86, ag * 0.86, ab * 0.86
         br, bg, bb = math.min(1, br * 1.08 + 0.05), math.min(1, bg * 1.08 + 0.05), math.min(1, bb * 1.08 + 0.05)
     end
+    if spec.own then ar, ag, ab, br, bg, bb = base[1], base[2], base[3], base[1], base[2], base[3] end -- no genes: the tier tints the species' own colour
     local tier = Tier.get(spec.tier)
     for y = 0, size - 1 do
         if onRow then onRow(y) end
@@ -375538,7 +375541,7 @@ export type Entry = {
     reflectance: number,   -- 0..0.3
     sparkle: {number},     -- sparkle colour
     sparkleRate: number,   -- particles per second on the body part (0 = none) at dino size 3 studs; Reduce Motion -&gt; 0
-    sheen: number,         -- BD-308: 0..MaxSheen lift of the facets the source texture already lit (reads as gloss in flat light)
+    satKeep: number?, sheen: number,         -- BD-308: 0..MaxSheen lift of the facets the source texture already lit (reads as gloss in flat light)
 }
 Tier.Order = {"gold", "emerald", "diamond"}
 Tier.MaxAmount = 0.8
@@ -375549,7 +375552,7 @@ Tier.Entries = {
         sparkle = {255, 230, 150}, sparkleRate = 1.5, sheen = 0.45},
     emerald = {id = "emerald", name = "Emerald", tint = {60, 220, 140}, amount = 0.40, trimAmount = 0.75, material = "Glass", reflectance = 0.10,
         sparkle = {170, 255, 205}, sparkleRate = 2, sheen = 0.35},
-    diamond = {id = "diamond", name = "Diamond", tint = {215, 244, 255}, amount = 0.35, trimAmount = 0.70, material = "Glass", reflectance = 0.22,
+    diamond = {id = "diamond", name = "Diamond", tint = {170, 232, 255}, amount = 0.50, satKeep = 0.5, trimAmount = 0.75, material = "Glass", reflectance = 0.22,
         sparkle = {235, 250, 255}, sparkleRate = 3, sheen = 0.6},
 }
 -- BD-308 baked sheen: the generated textures carry flat facet shading (k = pixel luma / species body luma, 0.3..1.6). On a fused
@@ -375576,7 +375579,7 @@ function Tier.blend(r: number, g: number, b: number, entry: Entry, secondary: bo
     local sat = if mx &gt; 0 then (mx - mn) / mx else 0
     local nmx, nmn = math.max(nr, ng, nb), math.min(nr, ng, nb)
     local nsat = if nmx &gt; 0 then (nmx - nmn) / nmx else 0
-    local want = math.min(sat, 0.85)
+    local want = math.min(sat, 0.85) * (if secondary then 1 else (entry.satKeep or 1))
     if nsat &lt; want and nmx &gt; 0 then -- re-saturate around the new max channel
         local k = (1 - want) * nmx
         local scale = (nmx - k) / math.max(nmx - nmn, 1e-6)
@@ -378778,6 +378781,18 @@ Sfx.Sounds = {
 }
 Sfx.Master = .5 -- global gain; synthesized placeholder sounds were far too loud (owner, 2026-10-15)
 Sfx.PoolSize = 3
+-- BD-081 audit (docs/100): no cue may exceed MaxCueVolume before Master x group (clamped in Sfx.play, asset ids unchanged).
+Sfx.MaxCueVolume = .9
+-- Rapid cues (food/pickup ticks) share ONE throttle across variants and call sites (Bootstrap + DinoMotion + CombatHud
+-- can all fire pickup in the same frame): at most one per RapidGap seconds, whichever variant.
+Sfx.RapidNames = {pickup = true, pickup_hi = true, pickup_lo = true}
+Sfx.RapidGap = .15
+function Sfx.rapidThrottled(name: string, lastRapid: number?, now: number): boolean
+    return Sfx.RapidNames[name] == true and lastRapid ~= nil and now - lastRapid &lt; Sfx.RapidGap
+end
+function Sfx.clampVolume(v: number): number
+    return math.clamp(v, 0, Sfx.MaxCueVolume)
+end
 Sfx.Group = "BeDinoSfx"
 
 -- BD-258: reward cues (run_end, level_up, nest opened ...) play ONE AT A TIME. Pure: given the time the last cue
@@ -378822,6 +378837,7 @@ end
 
 local pools: {[string]: {sounds: {Sound}, slot: number}} = {}
 local lastPlayed: {[string]: number} = {}
+local lastRapid: number? = nil
 local folder: Instance? = nil
 
 local function enabled(): boolean
@@ -378838,7 +378854,7 @@ function Sfx.play(name: string): boolean
     local assetId = Sfx.normalizeId(entry.id)
     if not assetId or not enabled() then return false end
     local now = os.clock()
-    if Sfx.throttled(entry, lastPlayed[name], now) then return false end
+    if Sfx.throttled(entry, lastPlayed[name], now) or Sfx.rapidThrottled(name, lastRapid, now) then return false end
     local ok = pcall(function()
         if not folder or not folder.Parent then
             local created = Instance.new("Folder")
@@ -378857,14 +378873,17 @@ function Sfx.play(name: string): boolean
             sound.Parent = folder
             pool.sounds[pool.slot] = sound
         end
-        sound.SoundId, sound.Volume, sound.PlaybackSpeed = assetId, entry.volume * Sfx.Master, entry.rate
+        sound.SoundId, sound.Volume, sound.PlaybackSpeed = assetId, Sfx.clampVolume(entry.volume) * Sfx.Master, entry.rate
         -- Mixer: master x Sounds sliders (AudioMixer.luau). Outside Roblox/tests the require fails and the sound plays ungrouped.
         local okMixer, mixer = pcall(function() return require((script :: any).Parent.AudioMixer) :: any end)
         if okMixer then mixer.attach(sound, "sfx") end
         sound.TimePosition = 0
         sound:Play()
     end)
-    if ok then lastPlayed[name] = now end
+    if ok then
+        lastPlayed[name] = now
+        if Sfx.RapidNames[name] then lastRapid = now end
+    end
     return ok
 end
 
@@ -563317,7 +563336,7 @@ function Seq.play(args: Args): Handle
                     if a.big and since &gt;= impactAt + revealT and since &lt; impactAt + revealT + .25 then
                         local k = 1 - (since - impactAt - revealT) / .25
                         a.body.AnchorPoint = Vector2.new(.5, .5)
-                        a.body.Position = UDim2.fromOffset(BODY_CENTER.X + math.sin(since * 120) * 4 * k, BODY_CENTER.Y + math.cos(since * 100) * 3 * k)
+                        a.body.Position = UDim2.fromOffset(BODY_CENTER.X + math.sin(since * 120) * 2 * k, BODY_CENTER.Y + math.cos(since * 100) * 1.5 * k)
                     elseif a.big and since &gt;= impactAt + .25 and bodyRestored then
                         a.body.AnchorPoint, a.body.Position = bodyHomeAnchor, bodyHomePos
                     end
