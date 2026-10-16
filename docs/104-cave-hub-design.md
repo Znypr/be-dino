@@ -171,7 +171,7 @@ All are **Roblox generate_mesh in the owner's Studio**, matte low-poly, soft rou
 | 6 | `cave_moss_patch` | "Low-poly soft moss patch, lumpy green cushion with tiny lighter tips, matte, flat underside" | 5 x 0.8 x 4 | 24 |
 | 7 | `cave_moss_hang` | "Low-poly hanging moss curtain, soft green drooping strands, matte" | 4 x 5 x 1 | 10 |
 | 8 | `cave_light_cone` | "Soft tapered cone volume, smooth, plain white, no texture detail, for a light shaft" | 14 x 40 x 14 | 4 |
-| 9 | `cave_lava_fall` | "Low-poly lava waterfall sheet, rippled front surface, bright orange with darker crust streaks, matte emissive look" | 40 x 48 x 6 | 1 |
+| 9 | `cave_lava_fall` | "Low-poly lava waterfall sheet, rippled front surface, bright orange with darker crust streaks, matte emissive look" | 40 x 32 x 6 (BD-295: was 48) | 1 |
 | 10 | `cave_lava_rim_rock` | "Low-poly dark basalt rim rock with glowing orange cracks, rounded, matte" | 5 x 3 x 4 | 10 |
 | 11 | `cave_stepping_stone` | "Low-poly round flat stepping stone, dark basalt, rounded edge, matte" | 4 x 0.8 x 4 | 7 |
 | 12 | `hub_stall_potion` | "Low-poly wooden market stall with a striped purple and cream canopy, wooden counter and two posts, cozy, matte, game asset" | 14 x 10 x 7 | 1 |
@@ -245,6 +245,8 @@ Dependencies: 263 -> 264 -> 265; 266 -> 268 <- 267; 268 -> 269/270; 264 -> 271 -
 - One geometry source: `CaveHubLayout.hub(config)` gives centre z, floor y, half extents and the biome rect. `SpawnGeometry` (so `FallRecovery`/`MovementGuard`), `Arena` and `Leaderboards.start` read it. Flag off = z 521, floor 6, half extents 55 x 47.5, biome 473..569, byte-for-byte as before (checked against a snapshot in `verify_cave_hub.py`). `BiomePlacement.Sanctuary` is still the old literal: nothing reads it at runtime and BD-281 must make it follow `hub(config).biome` when the flag is on.
 
 - BD-281 (2026-10-16): terrain shell rules in `CaveTerrainRules` + writer `CaveTerrain` (flag off, no Studio evidence yet). `CaveHubLayout.Biome` is now {-150..150, 450..710} so the 12 stud rough shell fits; `BiomePlacement.useHub` applies it when the flag is on. The lava pool basin is terrain 2 studs deep, the `lava_pool_disc` prop would cover it. Cobblestone and CrackedLava get cave-only terrain colours.
+
+- BD-286 / BD-295 / BD-296 (2026-10-16, flag off): lighting is `CaveLightingRules` (pure) + `CaveLighting` (server FX and lights) + `CaveAtmosphere` (client, only while inside). The shaft beams are plain 0.9 transparent cylinder Parts marked `IsLightingFx` (lighting FX, not model art; BD-282's cone mesh replaces them); lights sit on Attachments under Terrain (no extra parts); 16 lights in all; the gate arch light is 2.0 (the others 0.3-0.6). The lava sheet is now **40 x 32** (was 48) with a 26 high crack band, because the back-wall ceiling is only about 38-44 over the floor; `lava_pool_disc` is **18 wide** (the basin is 22) and **not walkable**. The cave wall stays Limestone, colour 196/172/150: Sandstone, Slate and Rock colours are the island's (set globally by BiomeMap), and Rock/Slate looked dark and cold in Studio. Evidence: `docs/evidence/2026-10-16-cave-lighting/`.
 
 ## 15. Open questions for the owner
 1. **Cave size**: 260 x 220 studs with 48+ studs between stations. Big enough, or bigger (the island is 832 studs across)?
