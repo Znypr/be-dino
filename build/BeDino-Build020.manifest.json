@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "4478071140a835106e800519a7771c9b8f8f915b17f188d68bc60261bb8910ee",
+  "place_sha256": "a3e535cbfc3f86543515638c16df48ea74f8e72ffac4a5de6a580b4235683d9c",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -201,7 +201,7 @@
     "src/shared/EggTraits.luau": "0ffc59f30ffdcd04b6be336d87dc9fb8f73c9334b12bfa73a09c23171a01ebc3",
     "src/shared/EventIconVectors.luau": "4a5bf43178f8adfaedcc64300ba7991b3a61f025cd741bf60c539415a15609b0",
     "src/shared/FoodCatchRules.luau": "c2c6cfa816271218494ca4116f70a1fc0b4b1e82ca2b6592d2d3280b43c4ecd4",
-    "src/shared/FusionSelection.luau": "4cda80f90755429cfff5429fc0eabcce0ceba474a39e1325f23d18632480f946",
+    "src/shared/FusionSelection.luau": "7e01a8b58e7fe8efc1ac17be681eabd37ebdb51fcce460177943659b115e1f82",
     "src/shared/FxRecipes.luau": "e7023b599cba3f3f02ce71f74c18fc08074be82959f41d494a04229513fd5347",
     "src/shared/FxUi.luau": "bb419258ddf565ef3eb25284b7bbf514d84127c4a80b7ccab9b52e49947b560e",
     "src/shared/GeneTextureAssets.luau": "79f6f9c881ee1dd53339d188b8656339421489c0117ad6e04fceffd240972c26",
@@ -324,7 +324,7 @@
     "src/client/EggPicture.luau": "66ff407ca10ea1297356217e40eb01e70370096eb48ec4d5635381ac627a7657",
     "src/client/EggsScreen.luau": "de3a8a6b90c8eb81ec18b4009f8d3f6c70d286fad0c6245ac9073bdc77dcfa87",
     "src/client/FoodGlow.client.luau": "192e340c747a1ee97f34063f318c419a1107c2cd71cb1dc6e5000334ac83690e",
-    "src/client/FusionMenu.luau": "ce293e26e57fca2345e4bb20550967241716d99c3f4607eacb12a85d8e03eb74",
+    "src/client/FusionMenu.luau": "fc42f5440d2c08beb1c39ff5ca008255beb83c4e06d35aa07093211630f9b766",
     "src/client/FusionWidgets.luau": "d9784151248850efedddcba20f4540bd0bbafc6fbeb3d198a7203c78814ac0c4",
     "src/client/FxRig.luau": "7d5611ab246b36032d5ee3fb3bfb97321d04a2808495f1c06aa5f5577ad37aed",
     "src/client/HatchFx.luau": "589090489ea188b7a0c330c8b865f239c970c106daaeb702b01d214e38fc24f9",

@@ -655,10 +655,17 @@ Sel.EggSourceNames = {alpha_chest = "Run reward egg", run = "Run egg", crystal_s
 local function geneLine(g, catalog): string
     if type(g) ~= "table" or not g.primaryColorId then return "Unknown genes" end
     local blend = tonumber(g.blend) or 100
+    -- One colour (same twice, or a 100% blend): say it once, not "Cream 100% / Cream 0%".
+    if blend >= 100 or g.primaryColorId == g.secondaryColorId then return lookup(catalog, "colors", g.primaryColorId) end
     return lookup(catalog, "colors", g.primaryColorId) .. " " .. blend .. "% / "
         .. lookup(catalog, "colors", g.secondaryColorId) .. " " .. (100 - blend) .. "%"
 end
 Sel.geneLine = geneLine
+
+-- "a Gold" / "an Emerald" (child-facing copy must not say "a Emerald").
+function Sel.article(word: string): string
+    return if string.find(string.lower(word), "^[aeiou]") then "an" else "a"
+end
 
 local function eggLine(egg, catalog): string
     if type(egg) ~= "table" then return "Original egg not recorded" end
@@ -822,7 +829,7 @@ function Sel.goalText(dinos, targetStage: string, selection, byId, catalog): str
     end
     local who = lookup(catalog, "species", best.speciesId, "dino")
     if best.count >= need then return "Tap " .. need .. " " .. who .. ", or Fill for me." end
-    return "You need " .. need .. " " .. who .. " to make a " .. recipe.name .. " " .. who .. ". You have " .. best.count .. "."
+    return "You need " .. need .. " " .. who .. " to make " .. Sel.article(recipe.name) .. " " .. recipe.name .. " " .. who .. ". You have " .. best.count .. "."
 end
 
 -- Exact server odds as short chips: {{title = "Shiny", chips = {{label = "Shiny 8%", p = .08}}}}.

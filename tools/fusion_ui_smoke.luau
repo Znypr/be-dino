@@ -345,7 +345,7 @@ press(byName(screen, "Filter")) runFor(.1)
 assert(byName(screen, "Filters") == nil, "chips hidden")
 -- All three tiers ACTIVE: Emerald = 3 Gold, Diamond = 2 Emerald (quotes only at exactly N).
 press(byName(screen, "Stage_emerald")) runFor(1)
-assert(#cards(screen) == 10 and has(screen, "Make a Emerald dino") and has(screen, "Put in 3 Gold"), "emerald lists the 10 Golds")
+assert(#cards(screen) == 10 and has(screen, "Make an Emerald dino") and has(screen, "Put in 3 Gold"), "emerald lists the 10 Golds")
 press(byName(screen, "AutoFill")) runFor(.1)
 assert(byName(screen, "SlotCount").Text == "3 of 3", "emerald auto-fills 3 plain Golds")
 assert(byName(screen, "Slot_3") and byName(screen, "Empty_1") == nil and byName(screen, "Slot_4") == nil, "3 slots")
