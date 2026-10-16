@@ -56,3 +56,16 @@ Weather, species / colour / potion odds (RarityCurve work), crystals, bank capac
 
 ## 7. Tests and tools
 `tools/verify_fusion.py` (6/3/2 chain, wrong counts, mixed-pattern Gold plurality / tie / lineage, species and pattern mismatches at Emerald and Diamond, consent, rollback, odds N), `verify_fusion_ui.py` and `fusion_ui_smoke.luau` (6 slots, auto-fill ignoring pattern for Gold only, recipe parity), `verify_next_goal.py`, `verify_progression.py`, `verify_nests.py` (6-12), `verify_gameplay.py` (growth pace), `tools/simulate_fusion_ladder.py --check` (recipe parity with the code and pacing bands).
+
+
+## 6. Growth 5x slower (BD-386, owner playtest 2026-10-16)
+`Config.GrowthPerFood` 0.5 -> **0.1** and `Config.PredationGrowthPoints` 12.5 -> **2.5**. Eggs are untouched: `FoodCatchRules.award` still uses raw food points (4 eggs per 500), so eggs per run do not change (`verify_gameplay.py` asserts `FoodCatchRate == 4/500` and the raw-food call). Colour/growth multipliers still multiply the new number, so tiers stay relative. The size curve `scale = min(4, sqrt(1 + growth / 50))` is unchanged.
+
+| Food eaten | Growth before | Scale before | Growth now | Scale now |
+| ---: | ---: | ---: | ---: | ---: |
+| 100 | 50 | 1.41 | 10 | 1.10 |
+| 500 (a normal 5 minute run) | 250 | 2.45 | 50 | 1.41 |
+| 1,000 | 500 | 3.32 | 100 | 1.73 |
+| size cap 4.0 | 750 growth = 1,500 food | | 750 growth = 7,500 food | |
+
+The HUD SIZE bar (`HudRules.barFill`) is now measured against `BarFullGrowth = 60` (about 600 food, a normal 5 minute run) instead of the 4x cap, otherwise it would sit near empty all run; the dino body still follows `sizeFor`. Phone budget is unaffected (smaller dinos are cheaper). Food density went up in BD-387 (+33% pickups), which also raises food per minute and so eggs per minute slightly; that is the owner's "more food" request, not a rate change.

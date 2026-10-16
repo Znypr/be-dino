@@ -31,8 +31,7 @@ function W.label(parent: Instance, text: string, size: UDim2, position: UDim2, m
         -- QA 2026-10-16: dark text on a light badge/tab (GOLD, NEW GOLD, slot numbers) turned into a blob with a dark outline.
         t.TextStrokeTransparency = 1
     else
-        local outline = Instance.new("UIStroke")
-        outline.ApplyStrokeMode, outline.Color, outline.Thickness, outline.Parent = Enum.ApplyStrokeMode.Contextual, C.outline, 1.5, t
+        Theme.TextStyle.apply(t) -- BD-390: shared readable style (light fill, dark stroke 2..3)
     end
     t.Parent = parent
     return t

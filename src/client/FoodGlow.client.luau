@@ -13,7 +13,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Theme = require(Shared:WaitForChild("UITheme"))
 local Assets = require(Shared:WaitForChild("EffectAssets"))
 
-local SLOTS, RADIUS, REASSIGN, LOOK_SCALE = 40, 90, .5, 1.25
+local SLOTS, RADIUS, REASSIGN, LOOK_SCALE = 56, 130, .5, 1.3 -- BD-387: more and farther halos so food reads from afar
 local BOB, BOB_SPEED, SPIN_SPEED = .22, 1.6, .7
 local TIER_BY_NAME = {berry = "Common", fruit = "Uncommon", egg = "Rare", amber = "Epic"}
 local CREAM = Color3.fromRGB(255, 244, 200) -- warm base glow: reads on green grass, sand and rock alike

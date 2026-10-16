@@ -163,6 +163,7 @@ local function apply(rig: any, now: number, dt: number, amp: number, npc: Model?
         ctx.p = if dur > 0 then math.clamp(elapsed / dur, 0, 1) else 0
         k = Pose.actionWeight(phase, ctx.p)
     end
+    local bob = Pose.bob(now + rig.seed, rig.phase, rig.speed, amp, rig.class) * height -- BD-388: one shared translation for every part
     for _, item in rig.parts do
         local part = item.part :: MeshPart
         if not part.Parent then continue end
@@ -172,7 +173,10 @@ local function apply(rig: any, now: number, dt: number, amp: number, npc: Model?
             item.weld.C1 = CFrame.identity
         else
             local pivot = pivotFor(item.role, part.Size, item.side)
-            local anim = CFrame.new(pivot) * CFrame.Angles(out.pitch, out.yaw, out.roll) * CFrame.new(-pivot)
+            -- Joint pivot rotation (the anchor never moves, no stretch) + shared whole-body bob + head peck forward in studs (-Z), both
+            -- expressed in the part's own frame through the weld's rest rotation.
+            local shift = item.weld.C0.Rotation:Inverse() * Vector3.new(0, bob, -out.fwd)
+            local anim = CFrame.new(shift) * CFrame.new(pivot) * CFrame.Angles(out.pitch, out.yaw, out.roll) * CFrame.new(-pivot)
                 * CFrame.new(0, out.dy * height, out.dz * height)
             item.weld.C1 = anim:Inverse()
         end

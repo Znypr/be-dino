@@ -99,10 +99,8 @@ local function label(parent: Instance,text: string,x: number,y: number,w: number
     local t = Instance.new("TextLabel")
     t.BackgroundTransparency,t.Position,t.Size = 1,UDim2.fromOffset(x,y),UDim2.fromOffset(w,h)
     t.Font,t.TextSize,t.Text,t.TextColor3 = Enum.Font.FredokaOne,size,text,color or C.text
-    t.TextStrokeTransparency,t.TextStrokeColor3 = 0,C.outline
     t.TextWrapped,t.ZIndex,t.Parent = true,if parent:IsA("GuiObject") then parent.ZIndex+1 else 1,parent
-    local outline = Instance.new("UIStroke")
-    outline.ApplyStrokeMode,outline.Color,outline.Thickness,outline.Parent = Enum.ApplyStrokeMode.Contextual,C.outline,2,t
+    Theme.TextStyle.apply(t) -- BD-390: one readable style (light fill + dark stroke 2..3)
     return t
 end
 local function box(parent: Instance,x: number,y: number,w: number,h: number,color: Color3,z: number): Frame
@@ -300,9 +298,11 @@ local function pickupPop(text: string)
     local serial=popSerial
     popLabel.Text=text
     popLabel.Visible=true
-    popLabel.TextTransparency,popLabel.TextStrokeTransparency=0,0
+    popLabel.TextTransparency=0
     popLabel.Position=UDim2.fromScale(.5,.4)
-    Theme.animate(popLabel,.5,{Position=UDim2.fromScale(.5,if motion then .33 else .4),TextTransparency=1,TextStrokeTransparency=1})
+    local popStroke=Theme.TextStyle.apply(popLabel,Color3.new(1,1,1)) -- BD-390: white fill + 3 px dark stroke; fades together
+    Theme.animate(popLabel,.5,{Position=UDim2.fromScale(.5,if motion then .33 else .4),TextTransparency=1})
+    Theme.animate(popStroke,.5,{Transparency=1})
     task.delay(.55,function() if serial==popSerial then popLabel.Visible=false end end)
 end
 local render
