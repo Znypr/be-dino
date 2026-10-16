@@ -110,7 +110,25 @@ S.set("teleportShops","junk") assert(S.teleportShops()==false,"junk is not true"
 -- ---- acceptance walk 2026-10-16: the chip sat on top of EXPLORE ISLAND (60 px button, 24 px margin) and the gate bar sat on the chip
 assert(R.ChipBottom>=60+24+8,"chip clears the EXPLORE ISLAND button")
 assert(R.GateBarBottom>=R.ChipBottom+48,"gate bar clears the chip (chip is 48 px high)")
-print("hub travel client: mapping, flag-off identity, dimming, toggle, copy, fade, chip, setting ok")
+-- ---- BD-382: one tap on the rail / chip while a scrim is up routes (close and travel); otherwise the scrim keeps the tap
+local T={
+ {kind="rail",destination="fusion",x=14,y=100,w=172,h=54},
+ {kind="rail",destination="eggs",x=14,y=162,w=172,h=54},
+ {kind="rail",destination="auras",x=14,y=224,w=172,h=54,enabled=false},
+ {kind="chip",x=400,y=700,w=240,h=48},
+}
+local hit=R.routeScrimTap(true,true,50,120,T)
+assert(hit and hit.kind=="rail" and hit.destination=="fusion","tap on FUSION routes to fusion")
+hit=R.routeScrimTap(true,true,50,180,T) assert(hit and hit.destination=="eggs")
+hit=R.routeScrimTap(true,true,500,720,T) assert(hit and hit.kind=="chip","tap on the chip routes to the heart")
+assert(R.routeScrimTap(true,true,50,240,T)==nil,"a dimmed (in a run) rail button is not routed")
+assert(R.routeScrimTap(true,true,600,300,T)==nil,"a tap on the panel / empty scrim stays the scrim's")
+assert(R.routeScrimTap(true,true,14,100,T)~=nil and R.routeScrimTap(true,true,186,100,T)==nil and R.routeScrimTap(true,true,100,154,T)==nil,"rect edges: left/top inclusive, right/bottom exclusive")
+assert(R.routeScrimTap(true,false,50,120,T)==nil,"no scrim: the button handles its own tap, never routed twice")
+assert(R.routeScrimTap(false,true,50,120,T)==nil and R.routeScrimTap(nil,true,50,120,T)==nil,"flag off: never routed")
+assert(R.routeScrimTap(true,true,"x",120,T)==nil and R.routeScrimTap(true,true,50,120,nil)==nil and R.routeScrimTap(true,true,50,120,{5,"a"})==nil,"junk answers nil")
+assert(R.SettleSeconds>0 and R.SettleSeconds<0.18,"settle wait is short")
+print("hub travel client: mapping, flag-off identity, dimming, toggle, copy, fade, chip, setting, scrim routing ok")
 '''
 
 def script():
@@ -133,6 +151,8 @@ def static_checks():
     for banned in ('Instance.new', 'game:GetService', 'Vector3', 'workspace', 'os.clock', 'task.', 'require('):
         assert banned not in rules, 'HubTravelClientRules stays pure: ' + banned
     client = (ROOT / 'src/client/HubTravelClient.luau').read_text()
+    assert 'UserInputService.InputEnded:Connect(routeTap)' in client and 'Rules.routeScrimTap(' in client, 'BD-382 scrim tap routing wired'
+    assert 'BeDinoFusionUI' in client and 'ModalScrim' in client and 'FusionMenu' in client, 'BD-382 covers ModalScrim and the Fusion ScreenGui'
     attach = client[client.index('function Client.attach'):]
     assert 'Config.CaveHub ~= true' in attach.splitlines()[1], 'attach is a no-op with the flag off'
     press = client[client.index('function Client.press'):]

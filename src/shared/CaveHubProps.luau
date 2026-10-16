@@ -87,9 +87,9 @@ Props.MinScale, Props.MaxScale = 0.25, 6 -- sane bounds of the uniform scale app
 -- Lava waterfall FX numbers (docs/104 s5, BD-285). Textures only from EffectAssets (flameSheet, smokeSheet, sparkSheet, swirl).
 Props.Lava = {
     sheetOffsetDz = 5, -- sheet sits this far behind CaveHubLayout.Fall.z (inside the falls recess)
-    sheetTransparency = 0.5, sheetColor = {255, 110, 30}, -- BD-285 QA: a thin warm glow body; the scrolling flame layers (CaveLavaRules) are drawn on it
+    sheetTransparency = 0.9, sheetColor = {255, 110, 30}, -- BD-285 QA: a thin warm glow body; the scrolling flame layers (CaveLavaRules) are drawn on it
     discTransparency = 0.25, discColor = {255, 110, 35}, discSpinSeconds = 60, discDrop = 0.6,
-    fxPartBudget = 2, -- sheet + disc (they stand in for the cave_lava_fall and lava_pool_disc rows; emitters sit on them)
+    fxPartBudget = 7, -- BD-385: 3 layered sheets + 3 glow discs + the pool disc (the sheet and disc stand in for the cave_lava_fall and lava_pool_disc rows; 5 extra FX parts)
     -- emitter rates, the scrolling layers and the phone / Reduce Motion rules live in CaveLavaRules (25 per second desktop, 10 phone)
 }
 

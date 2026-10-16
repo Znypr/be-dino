@@ -101,7 +101,7 @@ for _,p in L.props do if p.key=="lava_pool_disc" then assert(not p.walk and p.w<
 
 -- ---- BD-296 wall material: Limestone is the only cave-only wall material (Sandstone / Slate / Rock colours are the island's, set globally)
 local Col=Terrain.Colors
-assert(Col.Limestone and Col.Limestone[1]>=190 and Col.Limestone[1]>=Col.Limestone[2] and Col.Limestone[2]>=Col.Limestone[3],"warm light Limestone walls")
+assert(Col.Limestone and Col.Limestone[1]>=140 and Col.Limestone[1]<=175 and Col.Limestone[1]-Col.Limestone[3]<=12,"BD-384: soft cool grey Limestone walls (the warm lamps carry the colour)")
 for _,m in {"Sandstone","Slate","Rock","Basalt","Grass","LeafyGrass","Mud","Ground","Sand"} do assert(Col[m]==nil,"cave never recolours the island material "..m) end
 
 -- ---- cave look
@@ -161,6 +161,13 @@ def static_checks():
     assert 'WeatherDof' in client and 'dof.Enabled = false' in client and 's.dof ~= nil' in client, 'weather DepthOfField off in the cave, restored outside'
     weather = (ROOT / 'src/client/WeatherVisuals.client.luau').read_text()
     assert 'Cave.step(dt)' in weather and 'not Cave.inside()' in weather, 'weather calls the cave look last and keeps its rigs outside'
+    # BD-383: every additive weather effect (WeatherGrade / Bloom / Rays / haze / exposure / lamps) scales by the weather strength t,
+    # and t is multiplied by (1 - Cave.amount()), so inside the hall the weather writes neutral values (grey Blizzard cave).
+    assert 'local t=WL.strength(k,Theme.MotionEnabled)*outside' in weather and 'outside=1-Cave.amount()' in weather, 'BD-383 weather strength fades out in the cave'
+    for needle in ('grade.TintColor=c3(WL.mix(WHITE,tint,t))', 'bloom.Intensity=lerpNum(0,look.bloom,t)', 'rays.Intensity=lerpNum(0,look.rays,t)', 'lamp.Brightness=look.lamp*t'):
+        assert needle in weather, 'BD-383 effect still driven by the faded t: ' + needle
+    assert '*outside' in weather.split('grade.Brightness=', 1)[1].split(chr(10), 1)[0], 'BD-383 flash/pulse scaled too'
+    assert 'flash*.9*outside' in weather, 'BD-383 flash exposure scaled'
     rules = (ROOT / 'src/shared/CaveLightingRules.luau').read_text()
     for banned in ('Instance.new', 'game:GetService', 'Vector3', 'workspace', 'Config'):
         assert banned not in rules, 'CaveLightingRules stays pure: ' + banned

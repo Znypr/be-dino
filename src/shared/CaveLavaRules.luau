@@ -12,11 +12,30 @@ Rules.FxBudget = {desktop = 25, phone = 10} -- particles per second for the whol
 
 -- Scrolling layers on the sheet, back to front. tileStuds = one tile of the 4 x 4 sheet in studs (a cell is a quarter of it),
 -- speed = studs per second falling (down), offsetU = sideways shift in studs so the layers do not line up, alpha = ImageTransparency.
+-- BD-385: each layer is its OWN translucent sheet (3 sheets, a little apart in depth, a little narrower and shorter the nearer
+-- they are) so the falls read as layered flowing lava instead of one flat flame billboard. dz = studs in FRONT of the back sheet,
+-- widthInset / heightInset = studs the sheet is narrower / shorter than the falls, fade = fraction of the sheet on each side
+-- that fades to nothing (soft alpha edges: no hard rectangle). Speeds are slow and different (calm, docs/87).
 Rules.Layers = {
-    {name = "FlamesBack", key = "flameSheet", tileStuds = 52, speed = 4.5, offsetU = 0, alpha = 0.55, color = {255, 150, 50}},
-    {name = "SwirlMid", key = "swirl", tileStuds = 26, speed = 2.5, offsetU = 5, alpha = 0.7, color = {255, 190, 100}},
-    {name = "FlamesFront", key = "flameSheet", tileStuds = 36, speed = 7.5, offsetU = 9, alpha = 0.55, color = {255, 214, 120}},
+    {name = "FlamesBack", key = "swirl", tileStuds = 40, speed = 2.6, offsetU = 0, alpha = 0.4, color = {255, 120, 40}, dz = 0, widthInset = 0, heightInset = 0, fade = 0.16},
+    {name = "SwirlMid", key = "flameSheet", tileStuds = 30, speed = 1.7, offsetU = 5, alpha = 0.78, color = {255, 180, 90}, dz = 0.5, widthInset = 3, heightInset = 2, fade = 0.2},
+    {name = "FlamesFront", key = "swirl", tileStuds = 24, speed = 4.0, offsetU = 9, alpha = 0.55, color = {255, 206, 110}, dz = 1.0, widthInset = 6, heightInset = 5, fade = 0.24},
 }
+-- Soft alpha gradient (UIGradient Transparency keypoints, 0 = opaque) for one edge fade: 1 at the edge, 0 inside `fade`.
+function Rules.edgeFade(fade: number): {{number}}
+    return {{0, 1}, {fade * 0.45, 0.7}, {fade, 0}, {1 - fade, 0}, {1 - fade * 0.45, 0.7}, {1, 1}}
+end
+-- Sheet size in studs for a layer on a falls of width x height.
+function Rules.sheetSize(layer: any, width: number, height: number): (number, number)
+    return math.max(4, width - layer.widthInset), math.max(4, height - layer.heightInset)
+end
+-- Glowing base pool in front of the falls: stacked flat discs, brighter in the middle (stepped soft edge), no lights added (16-light cap).
+Rules.Glow = {
+    {diameter = 22, transparency = 0.82, color = {255, 120, 40}},
+    {diameter = 15, transparency = 0.7, color = {255, 150, 60}},
+    {diameter = 8, transparency = 0.55, color = {255, 190, 100}},
+}
+Rules.GlowFront = 2.5 -- studs in front of the back sheet
 
 -- Particles per second, desktop. Their sum stays under Rules.FxBudget.desktop; phones scale every rate by phoneScale().
 Rules.Rates = {

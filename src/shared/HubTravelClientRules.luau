@@ -81,4 +81,24 @@ function Rules.readAck(ack: any, station: string): (boolean, string?)
     return false, if typeof(reason) == "string" then reason else "error"
 end
 
+-- BD-382: a modal scrim (ModalScrim, or Fusion's own ScreenGui scrim) sinks every click, so a rail button or the "Back to the
+-- middle" chip underneath would only dismiss the menu (two taps to travel between open stations). The client therefore routes a
+-- tap that lands on the rail / chip while a scrim is up: it closes the open menu and travels in ONE tap.
+-- targets = list of {kind = "rail" | "chip", destination = string?, x, y, w, h, enabled = bool?} in the same space as (px, py).
+-- Returns nil (the tap belongs to the scrim) or {kind = "rail", destination} | {kind = "chip"}. Later targets win overlaps.
+Rules.SettleSeconds = 0.05 -- wait this long after the tap so the scrim's own close has run first (it must not close the new menu)
+function Rules.routeScrimTap(caveHub: any, scrimUp: any, px: any, py: any, targets: any): any
+    if caveHub ~= true or scrimUp ~= true or typeof(px) ~= "number" or typeof(py) ~= "number" or typeof(targets) ~= "table" then return nil end
+    local hit: any = nil
+    for _, t in targets do
+        if typeof(t) == "table" and t.enabled ~= false and typeof(t.x) == "number" and typeof(t.y) == "number"
+            and typeof(t.w) == "number" and typeof(t.h) == "number"
+            and px >= t.x and px < t.x + t.w and py >= t.y and py < t.y + t.h then
+            if t.kind == "chip" then hit = {kind = "chip"}
+            elseif t.kind == "rail" and typeof(t.destination) == "string" then hit = {kind = "rail", destination = t.destination} end
+        end
+    end
+    return hit
+end
+
 return Rules
