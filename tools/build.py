@@ -8,7 +8,11 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 import xml.etree.ElementTree as ET
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import tier_coat  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -112,8 +116,27 @@ def build(project_path=ROOT / "default.project.json", transform=None):
     for name, spec in sorted(tree.items()):
         if not name.startswith("$"):
             descend(root, name, spec)
+    add_tier_coat_templates(root, item, project_path.parent)
     ET.indent(root, space="  ")
     return ET.tostring(root, encoding="utf-8", xml_declaration=True), sources
+
+
+def add_tier_coat_templates(root, item, project_root):
+    """ReplicatedStorage.TierCoatTemplates: one SurfaceAppearance per (species, part, tier) with a ColorMap id in Tier.Maps (LowPolyTier.luau).
+    A SurfaceAppearance created by a script at runtime does not render in Roblox, so it is authored here, at build time, and only cloned by
+    LowPolyDinos. No ids yet (or no LowPolyTier / ReplicatedStorage in a test project) = an empty folder / nothing."""
+    storage = next((n for n in root.findall("Item") if n.attrib["class"] == "ReplicatedStorage"), None)
+    if storage is None or not (project_root / tier_coat.TIER_SOURCE).exists():
+        return
+    folder = item(storage, tier_coat.FOLDER, "Folder")
+    for t in tier_coat.load_templates(project_root):
+        node = item(folder, t["name"], "SurfaceAppearance")
+        props = node.find("Properties")
+        for key in ("ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap"):
+            if t[key]:
+                content = ET.SubElement(props, "Content", {"name": key})
+                ET.SubElement(content, "url").text = t[key]
+        ET.SubElement(props, "token", {"name": "AlphaMode"}).text = str(tier_coat.ALPHA_MODE_TRANSPARENCY)
 
 
 CONFIG_PATH = "src/shared/Config.luau"

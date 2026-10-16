@@ -115,7 +115,9 @@ local function rim(container: Instance, entry: any?, body: BasePart?)
     if own or rimCount() < cap then
         local h = Instance.new("Highlight")
         h.Name, h.Adornee = "LPTierRim", container
-        h.FillColor, h.OutlineColor, h.FillTransparency, h.OutlineTransparency = col, col:Lerp(Color3.new(1, 1, 1), Tier.HighlightWhiten), Tier.HighlightFill, 0
+        local o = entry.outline
+        local outlineCol = if o then Color3.fromRGB(o[1], o[2], o[3]) else col:Lerp(Color3.new(1, 1, 1), Tier.HighlightWhiten)
+        h.FillColor, h.OutlineColor, h.FillTransparency, h.OutlineTransparency = col, outlineCol, entry.rimFill or Tier.HighlightFill, 0
         h.DepthMode = Enum.HighlightDepthMode.Occluded
         h.Parent = container
         liveRims[h] = true
@@ -157,6 +159,12 @@ local function partBake(container: Instance, species: string, part: MeshPart, te
     if content then part.TextureContent, part.Color = content, Color3.new(1, 1, 1) part:SetAttribute("LPLod", "texture")
     else part.TextureID = textureId part.Color = Color3.new(1, 1, 1) part:SetAttribute("LPLod", "tint") end
 end
+-- Template lookup: ReplicatedStorage.TierCoatTemplates is written by tools/build.py (tools/tier_coat.py) from Tier.Maps.
+local function coatTemplate(species: string, partName: string, tierId: string): Instance?
+    local folder = ReplicatedStorage:FindFirstChild(Tier.TemplateFolder)
+    local item = if folder then folder:FindFirstChild(Tier.templateName(species, partName, tierId)) else nil
+    return if item and item:IsA("SurfaceAppearance") then item else nil
+end
 -- 2026-10-16 FINAL owner rule: "same exact colours and pattern, plus a semi-translucent glossy tier layer over it". The layer is a second,
 -- slightly inflated copy of each textured body MeshPart (same mesh, welded, no collision / query / touch, Massless): +1 part per textured part
 -- (a 7-part dino stays well inside the low-poly part budget; tris double only on those parts, no extra textures). Previews/ViewportFrames get it too.
@@ -176,15 +184,12 @@ local function shells(container: Instance, entry: any?)
             shell.Material = (Enum.Material :: any)[entry.shellMaterial] or Enum.Material.SmoothPlastic
             shell.Reflectance = math.min(entry.shellReflectance, Tier.MaxShellReflectance)
             shell.Transparency = math.clamp(entry.shellTransparency, Tier.ShellTransparency[1], Tier.ShellTransparency[2])
-            local bySpecies = (Tier.Maps :: any).color[tostring(container:GetAttribute("LPSpecies") or container.Name)]
-            local mapId = if bySpecies and bySpecies[p.Name] then bySpecies[p.Name][entry.id] else nil
-            if mapId and mapId ~= "" then -- baked crystal coat: alpha lives in the ColorMap, so the part itself is opaque
-                local sa = Instance.new("SurfaceAppearance")
-                sa.AlphaMode = Enum.AlphaMode.Transparency
-                sa.ColorMap = mapId
-                sa.NormalMap, sa.RoughnessMap = (Tier.Maps :: any).normal, (Tier.Maps :: any).roughness
-                sa.Parent = shell
-                shell.Transparency = 0
+            -- approach C (docs/115): the SurfaceAppearance is a TEMPLATE authored in the place at build time (a runtime-made one does not render)
+            -- and only CLONED here. No template for this species / part / tier (no map yet) = the plain translucent shell above, unchanged.
+            local tpl = coatTemplate(tostring(container:GetAttribute("LPSpecies") or container.Name), p.Name, entry.id)
+            if tpl then -- alpha lives in the ColorMap (AlphaMode Transparency), so the part itself is opaque and its look comes from the maps
+                shell.Material, shell.Reflectance, shell.Color, shell.Transparency = Enum.Material.SmoothPlastic, 0, Color3.new(1, 1, 1), 0
+                tpl:Clone().Parent = shell
             end
             shell.CanCollide, shell.CanQuery, shell.CanTouch, shell.Massless, shell.CastShadow = false, false, false, true, false
             shell.CFrame = p.CFrame

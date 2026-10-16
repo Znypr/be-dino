@@ -20,6 +20,7 @@ export type Entry = {
     sparkleCount: number,  -- concurrent twinkles at normal size (rate = count / lifetime)
     sparkleSize: number,   -- relative size of one spark (grows per tier)
     rim: {number}, rimTransparency: number, shell: {number}, shellTransparency: number, shellMaterial: string, accentMaterial: string, shellReflectance: number, -- 2026-10-16 owner rule: semi-translucent glossy tier layer over the whole body (an inflated shell copy of each textured part)
+    outline: {number}?, rimFill: number?, -- optional Highlight overrides (Gold, 2026-10-16: outline exactly this colour, FillTransparency 1 = no fill); nil = rim lerped to white + Tier.HighlightFill
     shimmer: {{number}}?, shimmerSpeed: number?, -- Diamond only: rainbow colours the sparks cycle through (static colours under Reduce Motion)
             -- BD-308: 0..MaxSheen lift of the facets the source texture already lit (reads as gloss in flat light)
 }
@@ -34,18 +35,58 @@ Tier.SparkleLife = {1.0, 1.4}
 function Tier.sparkleAlive(entry: Entry, lite: boolean): number
     return entry.sparkleCount / Tier.SparkleBase * Tier.SparkleLife[2] * (if lite then 0.5 else 1)
 end
--- 2026-10-16 round 9: baked crystal-coat maps (Blender bakes in each part's ORIGINAL Roblox UV space, resources/effects/tiers/raptor-<part>-<tier>-color.png,
--- docs/77). ColorMap = tier colour WITH alpha: ~0.9 at silhouette / thin edges (view-averaged edge value), ~0.1 in the middle so the stripes show,
--- plus a few large facet highlights. TODO(owner): upload the PNGs and paste the asset ids. While an id is empty the shell stays a plain Glass part.
--- Maps.color[species][partName][tierId] = rbxassetid string. Normal / Roughness are tileable large-facet maps shared by all tiers.
--- Only the raptor (T-Rex) has been baked; other species keep the plain Glass shell until their OBJ+UVs are exported.
-local RAPTOR_PARTS = {"body_geom", "head_geom", "tail_geom", "leftarm_geom", "rightarm_geom", "leftleg_geom", "rightleg_geom"}
-local raptorColor = {}
-for _, part in RAPTOR_PARTS do raptorColor[part] = {gold = "", emerald = "", diamond = ""} end
+-- 2026-10-16 tier coat maps (docs/114 s8.6, docs/115 "fused tier look", "approach C"). Baked crystal-coat ColorMaps (Blender bakes in each part's
+-- ORIGINAL Roblox UV space, resources/effects/tiers/<species>-<part>-<tier>-color.png, docs/77): tier colour WITH alpha, ~0.9 at silhouette / thin
+-- edges and ~0.1 in the middle so the runtime-baked stripes show through. Normal / Roughness are shared by all tiers; Metalness is OPTIONAL.
+-- STUDIO FACT (lead, control-tested): a SurfaceAppearance made by a script at runtime does NOT render, one authored in the place (edit time) and
+-- cloned does. So these ids are NEVER used by runtime code: tools/build.py reads this table (tools/tier_coat.py) and writes one SurfaceAppearance per
+-- (species, part, tier) with a ColorMap id into ReplicatedStorage.TierCoatTemplates (name = Tier.templateName), and LowPolyDinos CLONES it onto the
+-- LPTierShell. No template (empty id) = today's plain translucent shell. Keep this table plain literals ("rbxassetid://<id>" or ""): the build parses it.
+-- Maps.color[species][partName][tierId]. Only the raptor Gold is uploaded (owner account, owner-approved test assets); every other cell is "" until
+-- baked and uploaded (docs/120). Metalness: the first test map (98581639691267) FAILED to fetch, so it is empty; a metal id is added to the template
+-- only when it is a valid id.
+Tier.TemplateFolder = "TierCoatTemplates"
 Tier.Maps = {
-    color = {raptor = raptorColor},
-    normal = "", roughness = "",
+    color = {
+        compy = {},
+        triceratops = {},
+        tyrannosaurus = {},
+        raptor = {
+            body_geom = {gold = "rbxassetid://90178136236675", emerald = "", diamond = ""},
+            head_geom = {gold = "rbxassetid://109694992867474", emerald = "", diamond = ""},
+            tail_geom = {gold = "rbxassetid://72434414127601", emerald = "", diamond = ""},
+            leftarm_geom = {gold = "rbxassetid://136130436024752", emerald = "", diamond = ""},
+            rightarm_geom = {gold = "rbxassetid://127842664163981", emerald = "", diamond = ""},
+            leftleg_geom = {gold = "rbxassetid://110600068291712", emerald = "", diamond = ""},
+            rightleg_geom = {gold = "rbxassetid://86375362214763", emerald = "", diamond = ""},
+        },
+        stegosaurus = {},
+        ankylosaurus = {},
+        archaeopteryx = {},
+        baryonyx = {},
+        brachiosaurus = {},
+        dimorphodon = {},
+        elasmosaurus = {},
+        gallimimus = {},
+        ichthyosaurus = {},
+        microraptor = {},
+        mosasaurus = {},
+        pachycephalosaurus = {},
+        parasaurolophus = {},
+        plesiosaurus = {},
+        pteranodon = {},
+        quetzalcoatlus = {},
+        spinosaurus = {},
+        therizinosaurus = {},
+    },
+    normal = "rbxassetid://80731894232842",
+    roughness = "rbxassetid://96432641754187",
+    metalness = "",
 }
+-- Template name in ReplicatedStorage.TierCoatTemplates (one SurfaceAppearance per species / part / tier that has a ColorMap id).
+function Tier.templateName(species: string, partName: string, tierId: string): string
+    return species .. "_" .. partName .. "_" .. tierId
+end
 Tier.AccentWords = {"claw", "toe", "horn", "spike", "tooth", "teeth", "nail"}
 Tier.MaxReflectance = 0.3
 Tier.ShellScale = 1.015        -- the shell is the body mesh inflated by this much (one extra MeshPart per textured part, same mesh)
@@ -64,7 +105,7 @@ Tier.Entries = {
     -- Gold = rich warm gold, Emerald = deep jewel green, Diamond = icy white-blue with a rainbow shimmer. Gloss, sheen, sparkle rate and sparkle size all grow per tier.
     gold = {id = "gold", name = "Gold", tint = {255, 190, 30}, amount = 0.55, trimAmount = 0.8, material = "Metal", reflectance = 0.18,
         sparkle = {255, 232, 140}, sparkleRate = 2.5, sparkleCount = 4, sparkleSize = 1.4, accent = {255, 200, 30}, accentAmount = 0.9, sheen = 0.5, gain = 1.1, satGain = 1.2,
-        rim = {255, 190, 40}, rimTransparency = 0.15, shell = {255, 170, 30}, shellTransparency = 0.5, shellMaterial = "Glass", accentMaterial = "Metal", shellReflectance = 0.5},
+        rim = {255, 190, 40}, outline = {255, 230, 140}, rimFill = 1, rimTransparency = 0.15, shell = {255, 170, 30}, shellTransparency = 0.5, shellMaterial = "Glass", accentMaterial = "Metal", shellReflectance = 0.5},
     emerald = {id = "emerald", name = "Emerald", tint = {16, 190, 96}, amount = 0.45, trimAmount = 0.8, material = "Glass", reflectance = 0.23,
         sparkle = {150, 255, 195}, sparkleRate = 4.2, sparkleCount = 6, sparkleSize = 1.65, accent = {10, 235, 120}, accentAmount = 0.9, sheen = 0.6, gain = 0.97, satGain = 1.25,
         rim = {40, 255, 140}, rimTransparency = 0.15, shell = {40, 255, 120}, shellTransparency = 0.5, shellMaterial = "Glass", accentMaterial = "Glass", shellReflectance = 0.5},
