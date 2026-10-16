@@ -185,6 +185,7 @@ local stubs = {
         v.Parent = parent
         return v
     end},
+    OddsCopy = {fusionCalm = "Odds are shown before you fuse", fusionDetails = "Fusion uses no real money in this version. The chances above are exact and are shown before you fuse."},
     PreviewTraits = {add = function(view, traits) view:SetAttribute("Shiny", traits and traits.shiny) end},
 }
 local function requireModule(inst)
@@ -193,7 +194,7 @@ local function requireModule(inst)
     if loaded[name] == nil then loaded[name] = sources[name](inst, requireModule) end
     return loaded[name]
 end
-for _, name in {"Config", "ProgressionConfig", "RarityCurve", "ColourBonus", "EggGenetics", "FusionSelection", "UITheme", "DinosaurPreview", "Sfx"} do
+for _, name in {"Config", "ProgressionConfig", "RarityCurve", "ColourBonus", "EggGenetics", "FusionSelection", "UITheme", "DinosaurPreview", "Sfx", "OddsCopy"} do
     local m = Instance.new("ModuleScript") m.Name = name m.Parent = SharedFolder
 end
 for _, name in {"FusionWidgets", "DinoDetails", "PreviewTraits", "FusionMenu"} do
@@ -366,7 +367,7 @@ assert(has(screen, "Working out your chances..."), "debounce pending")
 assert(has(screen, "Ready! Tap FUSE."), "goal sentence when full")
 runFor(1)
 assert(byName(screen, "Fuse").Text == "FUSE!", "quote ready")
-assert(has(screen, "Shiny 0%") and has(screen, "Not shiny 100%") and has(screen, "Green 60%") and has(screen, "Blue 40%") and not has(screen, "Condition"), "exact odds as chips, no condition")
+assert(has(screen, "Yes 0%") and has(screen, "No 100%") and has(screen, "Green 60%") and has(screen, "Blue 40%") and not has(screen, "Condition"), "exact odds as chips, no condition")
 assert(has(screen, "Different dino"), "raptor card explains ineligibility in plain words")
 -- Tap a filled slot to take that dino out; tap a selected card to take another out.
 press(byName(screen, "Slot_1")) runFor(.1)
@@ -384,13 +385,18 @@ for _, c in cards(screen) do
     if has(c, "Shiny") then shinyCard = c end
 end
 press(auraCard) press(shinyCard) runFor(1)
-assert(has(screen, "• Special"), "special donors highlighted")
-assert(has(screen, "Shiny 5%") and has(screen, "Not shiny 95%"), "fresh quote after selection change")
+assert(has(screen, "(Special)"), "special donors highlighted")
+assert(has(screen, "Yes 5%") and has(screen, "No 95%"), "fresh quote after selection change")
+-- BD-344 / BD-347: every chip group has a heading, the calm odds line sits by FUSE, the toast rides the top.
+for _, heading in {"Colour 1", "Colour 2", "Pattern", "Shiny", "Event", "BIG"} do assert(has(screen, heading), "odds heading " .. heading) end
+assert(byName(screen, "OddsNote") and byName(screen, "OddsNote").Text == "Odds are shown before you fuse", "calm line beside FUSE")
+assert(byName(screen, "FusionToast").Position.Y.Scale == 0, "toast rides the top")
 -- Confirmation: itemized loss + explicit acknowledgement before FUSE exists.
 press(byName(screen, "Fuse")) runFor(.1)
 assert(has(screen, "All 6 dinos go away. You get 1 new Gold Compy.") and has(screen, "1 aura and 0 trails will be lost: Meadow Glow"), "itemized loss")
 assert(has(screen, "Special dinos going away: Compy (Shiny)"))
-assert(has(screen, "Shiny 5%") and byName(screen, "Result"), "confirm repeats the chances and the result preview")
+assert(has(screen, "Yes 5%") and byName(screen, "Result"), "confirm repeats the chances and the result preview")
+assert(has(screen, "Fusion uses no real money in this version") and has(screen, "Colour 1"), "BD-347 details line + headings on confirm")
 assert(byName(screen, "FuseNow") == nil, "acknowledgement required first")
 press(byName(screen, "Acknowledge")) runFor(.1)
 press(byName(screen, "FuseNow"))

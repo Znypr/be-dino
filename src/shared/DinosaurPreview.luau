@@ -40,17 +40,33 @@ local function dinoImage(viewport: ViewportFrame,gold: (boolean | string))
     image.Destroying:Once(function() follow:Disconnect() end)
     viewport:SetAttribute("PreviewFallback","DinoImage")
 end
+-- BD-345: a fused output shows ITS OWN rolled colours under the tier. Low-poly dinos bake the genes under the tier tint
+-- (LowPoly.tint); legacy models keep the Metal/Glass sheen and pull the gene colour 30% toward the tier colour so the colours still read.
+local TierColors={gold=Color3.fromRGB(242,199,63),emerald=Color3.fromRGB(46,196,120),diamond=Color3.fromRGB(85,213,245)}
+function Preview.tierName(gold:(boolean|string)):string?
+    if gold==true then return "gold" end
+    if gold=="gold" or gold=="emerald" or gold=="diamond" then return gold :: string end
+    return nil
+end
+function Preview.tierBlend(container:Instance,tier:string?)
+    local color=if tier then TierColors[tier] else nil
+    if not color then return end
+    for _,item in container:GetDescendants() do
+        if item:IsA("BasePart") then item.Color=item.Color:Lerp(color,.3) end
+    end
+end
 function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string)): ViewportFrame
     local viewport=Instance.new("ViewportFrame")
     viewport.Name,viewport.BackgroundTransparency="DinosaurPreview",1
     viewport.Size=UDim2.new(1,0,0,140)
     viewport.Ambient,viewport.LightColor,viewport.LightDirection=Color3.fromRGB(190,210,218),Color3.fromRGB(255,246,226),Vector3.new(-1,-1,-1)
     viewport.ZIndex,viewport.Parent=parent.ZIndex+1,parent
+    viewport:SetAttribute("PreviewTier",Preview.tierName(gold))
     local function load(): boolean
     local encoded=viewport:GetAttribute("TraitsJson")
     local traits=nil
     local fused=gold==true or gold=="gold" or gold=="diamond" or gold=="emerald"
-    if encoded and gold~="silhouette" and (not fused or LowPoly.enabled()) then -- BD-061: a low-poly fused dino shows its genes under the tier
+    if encoded and gold~="silhouette" then -- BD-061 / BD-345: a fused dino (low-poly or legacy) shows its own genes under the tier
         local ok,decoded=pcall(function() return Http:JSONDecode(encoded) end)
         if ok and typeof(decoded)=="table" then traits=decoded end
     end
@@ -90,6 +106,7 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
             viewport.Ambient,viewport.LightColor=Color3.new(0,0,0),Color3.new(0,0,0)
         elseif traits and traits.genes then Appearance.apply(model,traits.genes)
         elseif lowPoly and fused then LowPoly.applyTier(model,gold) end
+        if fused and not lowPoly and traits and traits.genes then Preview.tierBlend(model,Preview.tierName(gold)) end
         if traits and gold~="silhouette" and not fused then MutationLook.apply(model,traits.mutationId) end -- BD-155 (fused tiers never get a mutation tint)
         Camera.bind(viewport,model,speciesId)
         task.spawn(function()

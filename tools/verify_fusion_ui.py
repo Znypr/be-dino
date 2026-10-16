@@ -396,11 +396,39 @@ assert(S.goalText(all,"gold",{all[1].instanceId,all[2].instanceId},byId,cat)=="T
 assert(S.goalText(all,"gold",full,byId,cat)=="Ready! Tap FUSE.")
 assert(S.goalText(all,"platinum",{},byId,cat)==S.LockedStageText)
 local chips=S.oddsChips(odds,cat)
-assert(chips.ok and #chips.sections==5 and chips.sections[1].chips[1].label=="Shiny 10%" and chips.sections[1].chips[2].label=="Not shiny 90%")
-assert(chips.sections[2].title=="Event mutation" and chips.sections[2].chips[1].label=="No mutation 85%" and chips.sections[2].chips[2].label=="Ember 10%")
-assert(chips.sections[3].chips[1].label=="BIG 5%" and chips.sections[3].chips[2].label=="Not big 95%")
-assert(chips.sections[4].title=="Colour 1" and chips.sections[5].title=="Colour 2" and chips.sections[5].chips[1].label=="Blue 70%")
-local chipTotal=0 for _,c in chips.sections[4].chips do chipTotal+=tonumber(string.match(c.label,"([%d%.]+)%%$")) end
+assert(chips.ok and #chips.sections==5)
+-- BD-344: headings in reading order Colour 1, Colour 2, (Pattern), Shiny, Event, BIG; "Yes/No" chips, no duplicate unlabeled names
+assert(chips.sections[1].title=="Colour 1" and chips.sections[2].title=="Colour 2" and chips.sections[2].chips[1].label=="Blue 70%")
+assert(chips.sections[3].title=="Shiny" and chips.sections[3].chips[1].label=="Yes 10%" and chips.sections[3].chips[2].label=="No 90%")
+assert(chips.sections[4].title=="Event" and chips.sections[4].chips[1].label=="None 85%" and chips.sections[4].chips[2].label=="Ember 10%")
+assert(chips.sections[5].title=="BIG" and chips.sections[5].chips[1].label=="Yes 5%" and chips.sections[5].chips[2].label=="No 95%")
+local withPattern=S.oddsChips(odds,cat,"06_wavy_stripes")
+assert(#withPattern.sections==6 and withPattern.sections[3].title=="Pattern" and withPattern.sections[3].chips[1].label:find("%(locked%)"))
+for _,sec in withPattern.sections do assert(type(sec.title)=="string" and sec.title~="" and #sec.chips>0) end
+assert(S.sectionHeight(1,3)==S.ChipHeadingHeight+(S.ChipHeight+S.ChipGap) and S.sectionHeight(7,3)==S.ChipHeadingHeight+3*(S.ChipHeight+S.ChipGap))
+assert(S.chipColumns(360,110)==3 and S.chipColumns(200,110)==1 and S.chipColumns(90,110)==1 and S.chipColumns(1000,110)==4)
+-- BD-345: preview traits keep the fused output's OWN genes (never a donor's, never a mutation tint on a fused tier)
+local pt=S.previewTraits({stage="gold",genes={patternId="06_wavy_stripes",primaryColorId="cream",secondaryColorId="blue",blend=60},shiny=true,mutationId="ember"})
+assert(pt.genes.primaryColorId=="cream" and pt.genes.patternId=="06_wavy_stripes" and pt.shiny==true and pt.big==false and pt.mutationId==nil)
+assert(S.previewTraits({stage="base",genes={primaryColorId="green"},mutationId="ember"}).mutationId=="ember")
+assert(S.previewTraits({stage="emerald",genes={}}).genes==nil and S.previewTraits(nil)==nil)
+-- BD-346: step pacing, chance bar, Fill for me explanations, consumed donors leave the list
+for _,k in {"pattern","wheel","card"} do for _,m in {true,false} do assert(S.stepSeconds(k,m,.1)>=1.2) end end
+assert(S.stepSeconds("wheel",true,1.7)>S.stepSeconds("wheel",false,1.7))
+local bar=S.chanceBar({segments={{id="yes",p=.1},{id="no",p=.9}},committed="yes"})
+assert(bar.landedYes and bar.outcome=="YES!" and math.abs(bar.marker-.05)<1e-9 and math.abs(bar.yesShare-.1)<1e-9)
+local bar2=S.chanceBar({segments={{id="yes",p=.1},{id="no",p=.9}},committed="no"})
+assert(not bar2.landedYes and bar2.outcome=="NOT THIS TIME" and bar2.marker>bar2.yesShare and bar2.marker<1)
+local fillA={dino(),dino(),dino()}
+local idx=S.index(fillA)
+assert(S.autoFillMessage(fillA,{},{fillA[1].instanceId},"gold",idx,cat):find("need 5 more"))
+local six={} for i=1,6 do table.insert(six,fillA[1].instanceId) end
+assert(S.autoFillMessage(fillA,{fillA[1].instanceId},six,"gold",idx,cat)=="Filled! Tap FUSE.")
+local msgEmerald=S.autoFillMessage(fillA,{fillA[1].instanceId},{fillA[1].instanceId},"emerald",idx,cat)
+assert(msgEmerald:find("Tap Clear") and msgEmerald:find("Wavy"),msgEmerald)
+assert(S.autoFillMessage(fillA,{},{},"gold",idx,cat):find("No plain dinos"))
+assert(#S.withoutIds(fillA,{fillA[1].instanceId})==2 and S.withoutIds(fillA,{})[1]==fillA[1])
+local chipTotal=0 for _,c in chips.sections[1].chips do chipTotal+=tonumber(string.match(c.label,"([%d%.]+)%%$")) end
 assert(math.abs(chipTotal-100)<1e-9,"chip percentages sum to 100")
 assert(not S.oddsChips({shiny=.1},cat).ok and not S.oddsChips(nil,cat).ok,"malformed odds give no chips")
 assert(S.cardPattern(legacy,cat)=="Older dino" and S.cardPattern(all[1],cat)=="Wavy Stripes")
@@ -455,6 +483,11 @@ def check_recipes():
         assert re.search(r'\{id = "%s", name = "\w+", source = "\w+", donorCount = %d(?:, anyPattern = true)?, approved = true\}' % (stage, count), client), stage
     service = (ROOT / 'src/server/FusionService.luau').read_text(encoding='utf-8')
     assert 'FusionService.MaxDonorIds = 6' in service
+    copy = (ROOT / 'src/shared/OddsCopy.luau').read_text(encoding='utf-8')
+    smoke = (ROOT / 'tools/fusion_ui_smoke.luau').read_text(encoding='utf-8')
+    for name in ('fusionCalm', 'fusionDetails'):  # BD-347: the smoke stub must carry the exact shipped wording
+        text = re.search(r'Copy\.%s = "([^"]+)"' % name, copy).group(1)
+        assert '%s = "%s"' % (name, text) in smoke, name
     print('Recipe parity passed: IdentityFusion, FusionSelection and FusionService agree on 6/3/2')
 
 

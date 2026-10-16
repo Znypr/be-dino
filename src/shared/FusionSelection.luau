@@ -334,6 +334,33 @@ function Sel.autoFill(dinos, selection, targetStage: string, filters, catalog)
     return result, added, need - added
 end
 
+-- BD-346: why "Fill for me" added what it did. Never silent: the child is told what to do next.
+function Sel.autoFillMessage(dinos, selectionBefore, selectionAfter, targetStage: string, byId, catalog): string
+    local recipe = stageInfo(targetStage)
+    if not recipe or not recipe.approved then return Sel.LockedStageText end
+    local need = recipe.donorCount
+    local added = #selectionAfter - #selectionBefore
+    local left = need - #selectionAfter
+    if added > 0 and left <= 0 then return "Filled! Tap FUSE." end
+    if added > 0 then return "Added " .. added .. ". You need " .. left .. " more." end
+    if need - #selectionBefore <= 0 then return "All " .. need .. " places are full." end
+    local first = selectionBefore[1] and byId[selectionBefore[1]]
+    if first then
+        local who = lookup(catalog, "species", first.speciesId, "dino")
+        local pattern = if recipe.anyPattern then "" else (Sel.cardPattern(first, catalog) .. " ")
+        return "No more plain " .. pattern .. who .. " to add. Tap Clear to pick another."
+    end
+    return "No plain dinos to add. Special dinos are never picked for you."
+end
+-- Consumed donors leave the list at once, so a click right after a fusion never fills with dinos that are gone.
+function Sel.withoutIds(dinos, ids)
+    local gone = {}
+    for _, id in ids do gone[id] = true end
+    local kept = {}
+    for _, d in dinos do if not gone[d.instanceId] then table.insert(kept, d) end end
+    return kept
+end
+
 -- Selected-donor histogram: "2 Shiny / 15" etc. Cosmetics are listed but not rarity.
 function Sel.histogram(selection, byId)
     local h = {count = 0, shiny = 0, big = 0, mutations = {}, cosmetics = 0, valuable = 0}
@@ -616,6 +643,26 @@ function Sel.reelOffset(stage, turns: number): number
     return turns + (stage.landingFraction or 0)
 end
 
+-- BD-346: every reveal step stays up long enough to read (docs/87): never under 1.2 s, even on the Reduce Motion path.
+Sel.MinStepSeconds = 1.2
+function Sel.stepSeconds(kind: string, motionOn: boolean, reelSeconds: number): number
+    local wanted = if kind == "pattern" then 2.2 elseif motionOn then reelSeconds + 1.4 else 1.6
+    return math.max(Sel.MinStepSeconds, wanted)
+end
+-- BD-346: Shiny / BIG as a readable bar: YES share and NO share, the marker inside the committed share (never on the label).
+function Sel.chanceBar(stage)
+    local yes, no = 0, 0
+    for _, seg in stage.segments or {} do
+        if seg.id == "yes" then yes = seg.p elseif seg.id == "no" then no = seg.p end
+    end
+    local total = math.max(yes + no, 1e-9)
+    local yesShare = yes / total
+    local landedYes = stage.committed == "yes"
+    local marker = if landedYes then yesShare / 2 else yesShare + (1 - yesShare) / 2
+    return {yesShare = yesShare, landedYes = landedYes, marker = marker,
+        outcome = if landedYes then "YES!" else "NOT THIS TIME"}
+end
+
 function Sel.revealSequence(quote, result, catalog)
     local traits = type(result) == "table" and result.traits or {}
     local g = traits.genes or {}
@@ -834,7 +881,11 @@ end
 
 -- Exact server odds as short chips: {{title = "Shiny", chips = {{label = "Shiny 8%", p = .08}}}}.
 -- Same numbers as formatOdds (largest remainder, sums to 100%), only phrased simply.
-function Sel.oddsChips(odds, catalog)
+-- BD-344: every section has a HEADING the screen draws (Colour 1 / Colour 2 / Pattern / Shiny / Event / BIG), in the
+-- order a child reads a dino (colours, pattern, then the lucky bits). The locked pattern is a one-chip section.
+Sel.ChipOrder = {primaryColor = 1, secondaryColor = 2, pattern = 3, shiny = 4, mutation = 5, big = 6}
+Sel.ChipHeadings = {primaryColor = "Colour 1", secondaryColor = "Colour 2", pattern = "Pattern", shiny = "Shiny", mutation = "Event", big = "BIG"}
+function Sel.oddsChips(odds, catalog, patternId: string?)
     local formatted = Sel.formatOdds(odds, catalog)
     if not formatted.ok then return {ok = false, sections = {}, error = formatted.error} end
     local sections = {}
@@ -843,13 +894,38 @@ function Sel.oddsChips(odds, catalog)
         for _, row in section.rows do
             local label = row.label
             if section.trait == "shiny" or section.trait == "big" then
-                label = if row.id == "yes" then row.label else "Not " .. string.lower(section.title)
-            elseif section.trait == "mutation" and row.id == "none" then label = "No mutation" end
+                label = if row.id == "yes" then "Yes" else "No"
+            elseif section.trait == "mutation" and row.id == "none" then label = "None" end
             table.insert(chips, {id = row.id, label = label .. " " .. row.text, p = row.p})
         end
-        table.insert(sections, {title = if section.trait == "primaryColor" then "Colour 1" elseif section.trait == "secondaryColor" then "Colour 2" else section.title, trait = section.trait, chips = chips})
+        table.insert(sections, {title = Sel.ChipHeadings[section.trait] or section.title, trait = section.trait, chips = chips})
     end
+    if type(patternId) == "string" and patternId ~= "" then
+        table.insert(sections, {title = "Pattern", trait = "pattern", chips = {{id = patternId, label = lookup(catalog, "patterns", patternId) .. " (locked)", p = 1}}})
+    end
+    table.sort(sections, function(a, b) return (Sel.ChipOrder[a.trait] or 9) < (Sel.ChipOrder[b.trait] or 9) end)
     return {ok = true, sections = sections}
+end
+
+-- BD-344: height of one odds section (heading + wrapped chip rows) so a section never overflows or hides under FUSE.
+Sel.ChipHeadingHeight, Sel.ChipHeight, Sel.ChipGap = 24, 34, 4
+function Sel.sectionHeight(chipCount: number, columns: number): number
+    local rows = math.ceil(math.max(chipCount, 1) / math.max(columns, 1))
+    return Sel.ChipHeadingHeight + rows * (Sel.ChipHeight + Sel.ChipGap)
+end
+-- Columns that keep every chip at least `minWidth` px wide (a long "Cream 66.7%" never squeezes into a third of 130 px).
+function Sel.chipColumns(totalWidth: number, minWidth: number): number
+    return math.clamp(math.floor((totalWidth + Sel.ChipGap) / (minWidth + Sel.ChipGap)), 1, 4)
+end
+
+-- BD-345: traits handed to DinosaurPreview. A fused Gold/Emerald/Diamond keeps ITS OWN rolled gene colours and pattern
+-- (the preview puts the tier over them); mutation tints never apply to fused tiers (BD-155). Never reads a donor.
+function Sel.previewTraits(d)
+    if type(d) ~= "table" then return nil end
+    local g = if type(d.genes) == "table" and next(d.genes) ~= nil then d.genes else nil
+    local base = d.stage == nil or d.stage == "base"
+    local mutation = if base and type(d.mutationId) == "string" and d.mutationId ~= "" then d.mutationId else nil
+    return {genes = g, shiny = d.shiny == true, big = d.big == true, mutationId = mutation}
 end
 
 -- Card words: pattern line never says "Unknown pattern"; an older copy says so plainly.
