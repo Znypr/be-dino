@@ -1,4 +1,4 @@
-# 136 Dino skins: full spec (docs only, 2026-10-16)
+# 137 Dino skins: full spec (docs only, 2026-10-16)
 
 **Status: SPEC. Nothing here is built.** Task: BD-224 (this spec) and new Backlog rows BD-454..BD-459. Extends [97](97-dino-skins.md) (owner idea and decisions), which stays the idea record. Owner rule: features are specced and prioritized before being built. Everything below is a **proposal** until the owner answers section 15. Facts already decided by the owner are marked OWNER.
 
