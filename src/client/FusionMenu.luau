@@ -451,7 +451,7 @@ end
 
 local function renderBrowse()
     local active = Sel.stage(state.targetStage)
-    setTitle(if active then "Make a " .. active.name .. " dino" else "Fusion", W.StageColors[state.targetStage] or C.purple)
+    setTitle(if active then "Make " .. Sel.article(active.name) .. " " .. active.name .. " dino" else "Fusion", W.StageColors[state.targetStage] or C.purple)
     local root = body :: Frame
     local left = Instance.new("Frame")
     left.Name, left.BackgroundTransparency, left.Size, left.Parent = "Browse", 1, UDim2.new(.38, -6, 1, 0), root
@@ -640,7 +640,8 @@ local function renderConfirm()
     layout.Parent = chips
     fillChips(chips :: any, quote.odds)
     order += 1
-    line("Odds version " .. tostring(quote.oddsVersion) .. " • recipe " .. tostring(quote.recipeVersion) .. ". The reveal only shows the saved result.", Dim, 44)
+    -- docs/72: no version strings for children (the quote still carries them for the server ledger).
+    line("The wheels only show the result that is already saved.", Dim, 24)
     local needs = loss.needsConfirm
     local y = UDim2.new(0, 0, 1, -(T + 6))
     W.button(root, "Not now", UDim2.new(.3, -6, 0, T + 4), y, C.red, function() state.mode = "browse" render() end)
@@ -803,7 +804,6 @@ local function finalCard(root: Frame, result, stage)
     line("Pattern: " .. Sel.name(catalog, "patterns", result.patternId or g.patternId))
     line("Colours: " .. Sel.geneLine(g, catalog))
     line("No effects yet. Buy some for this new dino in the Shop.", Dim, 17)
-    line("Odds version " .. tostring(result.oddsVersion or "?"), Dim, 16)
     if stage.replay then line("Already fused: this is your saved result.", C.blue) end
 end
 
