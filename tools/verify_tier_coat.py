@@ -149,8 +149,8 @@ if 'ReplicatedStorage:FindFirstChild(Tier.TemplateFolder)' not in dinos or 'item
 if 'Tier.UseGlowShells = false' not in tier_src:
     err('glow shells must stay OFF while the coat is tuned')
 gold = re.search(r'gold = \{id = "gold".*?\n(?=    emerald)', tier_src, re.S).group(0)
-if 'outline = {255, 230, 140}' not in gold or 'rimFill = 1' not in gold:
-    err('Gold Highlight must be outline 255,230,140 with FillTransparency 1')
+if 'outline = {255, 225, 130}' not in gold or 'rimFill = 0.62' not in gold:
+    err('Gold Highlight must be outline 255,225,130 with a 0.62 gold fill (lead Studio tuning 2026-10-17)')
 if 'entry.rimFill or Tier.HighlightFill, 0' not in dinos or 'Color3.fromRGB(o[1], o[2], o[3])' not in dinos:
     err('rim Highlight must use the entry outline / rimFill with OutlineTransparency 0')
 for tid in ('emerald', 'diamond'):
@@ -185,6 +185,8 @@ table.sort(rows)
 print(table.concat(rows, "\n"))
 print("SHARED|" .. Tier.Maps.normal .. "|" .. Tier.Maps.roughness .. "|" .. Tier.Maps.metalness)
 print("NAME|" .. Tier.templateName("raptor", "body_geom", "gold") .. "|" .. Tier.TemplateFolder)
+-- the real low-poly part names carry brackets, quotes and spaces (lead Studio check 2026-10-17)
+print("REAL|" .. Tier.templateName("raptor", '["body"]_geom', "gold") .. "|" .. Tier.templateName("raptor", '"left arm"_geom', "gold") .. "|" .. Tier.templateName("raptor", '"right leg"]_geom', "gold"))
 '''
 
 
@@ -199,11 +201,13 @@ def luau_check(runner):
         return
     lines = r.stdout.strip().split('\n')
     py_rows = sorted(f'{s}|{p_}|{t}|{i}' for s, parts in color.items() for p_, tiers in parts.items() for t, i in tiers.items())
-    lu_rows = sorted(l for l in lines if l.count('|') == 3 and not l.startswith(('SHARED', 'NAME')))
+    lu_rows = sorted(l for l in lines if l.count('|') == 3 and not l.startswith(('SHARED', 'NAME', 'REAL')))
     if py_rows != lu_rows:
         err('build reader and Luau disagree on Tier.Maps.color')
     if f'SHARED|{maps["normal"]}|{maps["roughness"]}|{maps["metalness"]}' not in lines:
         err('build reader and Luau disagree on the shared maps')
+    if 'REAL|raptor_body_geom_gold|raptor_leftarm_geom_gold|raptor_rightleg_geom_gold' not in lines:
+        err('Tier.templateName must strip the brackets/quotes/spaces of real low-poly part names (no template would match in game)')
     if f'NAME|{tier_coat.template_name("raptor", "body_geom", "gold")}|{tier_coat.FOLDER}' not in lines:
         err('Tier.templateName / TemplateFolder differ from tools/tier_coat.py')
 

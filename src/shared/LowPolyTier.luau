@@ -85,7 +85,9 @@ Tier.Maps = {
 }
 -- Template name in ReplicatedStorage.TierCoatTemplates (one SurfaceAppearance per species / part / tier that has a ColorMap id).
 function Tier.templateName(species: string, partName: string, tierId: string): string
-    return species .. "_" .. partName .. "_" .. tierId
+    -- Low-poly part names carry the generator's brackets, quotes and spaces (e.g. `["body"]_geom`, `"left arm"_geom`); the template
+    -- and Tier.Maps keys are the bare names (`body_geom`, `leftarm_geom`). Lead Studio check 2026-10-17: without this no template matched.
+    return species .. "_" .. (string.gsub(partName, "[^%w_]", "")) .. "_" .. tierId
 end
 Tier.AccentWords = {"claw", "toe", "horn", "spike", "tooth", "teeth", "nail"}
 Tier.MaxReflectance = 0.3
@@ -105,7 +107,8 @@ Tier.Entries = {
     -- Gold = rich warm gold, Emerald = deep jewel green, Diamond = icy white-blue with a rainbow shimmer. Gloss, sheen, sparkle rate and sparkle size all grow per tier.
     gold = {id = "gold", name = "Gold", tint = {255, 190, 30}, amount = 0.55, trimAmount = 0.8, material = "Metal", reflectance = 0.18,
         sparkle = {255, 232, 140}, sparkleRate = 2.5, sparkleCount = 4, sparkleSize = 1.4, accent = {255, 200, 30}, accentAmount = 0.9, sheen = 0.5, gain = 1.1, satGain = 1.2,
-        rim = {255, 190, 40}, outline = {255, 230, 140}, rimFill = 1, rimTransparency = 0.15, shell = {255, 170, 30}, shellTransparency = 0.5, shellMaterial = "Glass", accentMaterial = "Metal", shellReflectance = 0.5},
+        rim = {255, 190, 60}, outline = {255, 225, 130}, rimFill = 0.62, -- lead Studio 2026-10-17: the edge-bleed coat is only ~18% opaque, so a 0.62 gold Highlight fill carries the gold at every quality level while the stripes stay visible
+        rimTransparency = 0.15, shell = {255, 170, 30}, shellTransparency = 0.5, shellMaterial = "Glass", accentMaterial = "Metal", shellReflectance = 0.5},
     emerald = {id = "emerald", name = "Emerald", tint = {16, 190, 96}, amount = 0.45, trimAmount = 0.8, material = "Glass", reflectance = 0.23,
         sparkle = {150, 255, 195}, sparkleRate = 4.2, sparkleCount = 6, sparkleSize = 1.65, accent = {10, 235, 120}, accentAmount = 0.9, sheen = 0.6, gain = 0.97, satGain = 1.25,
         rim = {40, 255, 140}, rimTransparency = 0.15, shell = {40, 255, 120}, shellTransparency = 0.5, shellMaterial = "Glass", accentMaterial = "Glass", shellReflectance = 0.5},
