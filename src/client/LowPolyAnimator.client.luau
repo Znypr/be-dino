@@ -14,10 +14,12 @@ local RANGE, REMOTE_STEP, RUN_SPEED = 80, 1 / 20, 24
 local rigs: {[Model]: any} = {}
 local out = Pose.new()
 
-local function pivotFor(role: string, size: Vector3): Vector3
+local function pivotFor(role: string, size: Vector3, side: number): Vector3
+    if role == "wing" or role == "flipper" then return Vector3.new(-side * size.X / 2, 0, 0) end -- inner edge, at the body
     if role == "head" then return Vector3.new(0, -size.Y / 2, size.Z / 2) end -- neck, bottom back
     if role == "tail" then return Vector3.new(0, 0, -size.Z / 2) end -- tail root: the front (-Z) end meets the body
     if role == "arm" or role == "leg" then return Vector3.new(0, size.Y / 2, 0) end -- hip/shoulder
+    if role == "neck" then return Vector3.new(0, -size.Y / 2, size.Z / 2) end -- neck base, like the head
     return Vector3.zero
 end
 
@@ -44,11 +46,11 @@ local function apply(rig: any, now: number, dt: number, amp: number)
     for _, item in rig.parts do
         local part = item.part :: MeshPart
         if not part.Parent then continue end
-        Pose.sample(item.role, item.side, item.lead, now + rig.seed, rig.phase, rig.speed, amp, out)
-        if amp == 0 then
+        Pose.sample(item.role, item.side, item.lead, now + rig.seed, rig.phase, rig.speed, amp, out, rig.class)
+        if amp == 0 and item.role ~= "wing" then
             item.weld.C1 = CFrame.identity
         else
-            local pivot = pivotFor(item.role, part.Size)
+            local pivot = pivotFor(item.role, part.Size, item.side)
             local anim = CFrame.new(pivot) * CFrame.Angles(out.pitch, out.yaw, out.roll) * CFrame.new(-pivot)
                 * CFrame.new(0, out.dy * height, out.dz * height)
             item.weld.C1 = anim:Inverse()
@@ -79,7 +81,7 @@ RunService.Heartbeat:Connect(function(dt)
         if not rig or rig.visual ~= visual then
             local _, size = visual:GetBoundingBox()
             rig = {visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0,
-                height = math.max(size.Y, 1), seed = math.random() * 10}
+                height = math.max(size.Y, 1), class = visual:GetAttribute("LPClass"), seed = math.random() * 10}
             rigs[character] = rig
         end
         if player == Players.LocalPlayer then
