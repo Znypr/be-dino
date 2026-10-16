@@ -144,6 +144,23 @@ local function watchCharacter(character: Model)
         end
     end)
     refresh()
+    -- BD-389: on a respawn (after a run or a hatch) the attributes are already set when the character arrives, so no attribute change ever
+    -- re-runs characterVisual if the Humanoid/RootPart had not streamed in yet: the old legacy shell stayed visible. Parts arriving
+    -- and a short retry ladder (until the local mesh exists, or the low-poly template has loaded) close that gap.
+    for _, partName in {"HumanoidRootPart", "Humanoid"} do
+        local existing = character:FindFirstChild(partName)
+        if not existing then
+            local conn
+            conn = character.ChildAdded:Connect(function(child) if child.Name == partName then conn:Disconnect() refresh() end end)
+        end
+    end
+    task.spawn(function()
+        for _, wait in {0.3, 0.7, 1.5, 3, 6, 10} do
+            task.wait(wait)
+            if not character.Parent then return end
+            if not character:FindFirstChild("LocalMeshVisual") then refresh() end
+        end
+    end)
 end
 local function watchPlayer(player: Player)
     player.CharacterAdded:Connect(watchCharacter)

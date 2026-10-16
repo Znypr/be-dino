@@ -25,8 +25,9 @@ local BAR_W, BAR_H = 250, 34
 local function text(parent: Instance, name: string, size: number, color: Color3, x: number): TextLabel
     local t = Instance.new("TextLabel")
     t.Name, t.BackgroundTransparency, t.Font, t.TextSize, t.TextColor3 = name, 1, Enum.Font.FredokaOne, size, color
-    t.TextStrokeTransparency, t.TextStrokeColor3, t.TextXAlignment, t.ZIndex = 0.2, C.outline, Enum.TextXAlignment.Left, 6
+    t.TextXAlignment, t.ZIndex = Enum.TextXAlignment.Left, 6
     t.Position, t.Size, t.Parent = UDim2.new(0, x, 0, 0), UDim2.new(1, -x - 6, 1, 0), parent
+    Theme.TextStyle.apply(t) -- BD-390
     return t
 end
 
@@ -79,7 +80,8 @@ function Hud.attach(hud: Frame, gui: ScreenGui, hooks: any?)
     -- BD-366: calm one-line goal hint under the SIZE bar until the profile has found its first egg.
     local hint = Instance.new("TextLabel")
     hint.Name, hint.BackgroundTransparency, hint.Font, hint.TextSize, hint.TextColor3 = "GoalHint", 1, Enum.Font.FredokaOne, 20, C.text
-    hint.TextStrokeTransparency, hint.TextStrokeColor3, hint.TextWrapped, hint.Visible, hint.ZIndex = 0.2, C.outline, true, false, 6
+    hint.TextWrapped, hint.Visible, hint.ZIndex = true, false, 6
+    Theme.TextStyle.apply(hint) -- BD-390
     hint.AnchorPoint, hint.Position, hint.Size, hint.Parent = Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 102), UDim2.fromOffset(360, 28), gui
     hintLabel = hint
     local sessionCatch, nearFood, lastNear = false, false, -10

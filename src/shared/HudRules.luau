@@ -40,8 +40,11 @@ function Rules.sizeFor(growth: any): number
 end
 
 -- Bar fill 0..1: 0 at the starting size, 1 at the biggest size. Bad input is an empty bar, never an error.
+-- BD-386: growth per food is 5x slower, so the bar is measured against a normal five-minute run of about 500 food = 50 growth (BarFullGrowth 60),
+-- not the 4x size cap; the body still follows sizeFor. Otherwise the bar would sit near empty all run.
+Rules.BarFullGrowth = 60
 function Rules.barFill(growth: any): number
-    return math.clamp((Rules.sizeFor(growth) - 1) / (Rules.MaxSize - 1), 0, 1)
+    return math.clamp((Rules.sizeFor(growth) - 1) / (Rules.sizeFor(Rules.BarFullGrowth) - 1), 0, 1)
 end
 
 -- Should the egg icon pop? Only when the count really grew and the player is in a run (not when a new run resets to 0,

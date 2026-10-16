@@ -22,10 +22,11 @@ assert(R.eggsText(12)=="EGGS 12" and R.eggsText(nil)=="EGGS 0")
 for _,n in {0,1,15,150,999,1000,9999,12345,999499,1e7} do assert(#R.eggsText(n)<=11,"fits the plate: "..n) end
 -- bar
 assert(R.barFill(0)==0 and R.barFill(-9)==0 and R.barFill(nil)==0 and R.barFill("x")==0 and R.barFill(0/0)==0)
-assert(R.barFill(750)==1 and R.barFill(1e9)==1,"full at the biggest size")
+assert(R.barFill(60)==1 and R.barFill(1e9)==1,"full at a normal 5 minute run (BD-386)")
+assert(R.barFill(50)>0.85 and R.barFill(5)>0.05 and R.barFill(5)<0.2,"500 food nearly fills, early food shows")
 local last=-1
 for g=0,800,10 do local f=R.barFill(g) assert(f>=0 and f<=1 and f>=last,"monotonic clamp "..g) last=f end
-assert(math.abs(R.barFill(150)-((2-1)/3))<1e-9,"sqrt(1+150/50)=2")
+assert(math.abs(R.sizeFor(150)-2)<1e-9,"sqrt(1+150/50)=2 body curve unchanged")
 assert(R.SizeWord=="SIZE" and R.EggsWord=="EGGS")
 -- pop
 assert(R.shouldPop(3,4,true,true,5),"grew in a run pops")

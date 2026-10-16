@@ -169,6 +169,7 @@ local sources = MODULE_SOURCES
 local loaded = {}
 local Theme = {MotionEnabled = true, Colors = {panel = color(0, 0, 0), card = color(0, 0, 0), outline = color(0, 0, 0),
     text = color(1, 1, 1), accent = color(0, 1, 0), gold = color(1, 1, 0), blue = color(0, 0, 1), purple = color(1, 0, 1), red = color(1, 0, 0)}}
+Theme.TextStyle = {apply = function(label) label.TextStrokeTransparency = 1 local stroke = Instance.new("UIStroke") stroke.Parent = label return stroke end} -- BD-390
 function Theme.decorate(object)
     Instance.new("UIStroke").Parent = object
     Instance.new("UICorner").Parent = object

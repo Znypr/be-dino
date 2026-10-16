@@ -83,12 +83,12 @@ assert(Workspace.attrs.FoodSpawnStatus=="Ready")
 assert(rays>5000 and #warnings==0)
 local starter=0
 for _,item in created do
- if item.kind=="Part" and item.attrs.StarterFood then
+ if item.kind=="Part" and item.attrs.StarterFood and item.Position then -- BD-387: a starter item that found no ground was destroyed before being placed
   starter+=1
   assert((vector(item.Position.X,0,item.Position.Z)-vector(0,0,30)).Magnitude<25,"starter food too far from entry")
  end
 end
-assert(starter==12,"two entrance clusters must survive placement")
+assert(starter>=12 and starter<=2*Config.FoodClusterItems,"two entrance clusters must survive placement (BD-387: up to 8 items each, at least the old 6)")
 missingTerrain=true
 Food.start({})
 assert(Workspace.attrs.FoodCount>1400 and Workspace.attrs.FoodPlacementFallbacks>0,"heightfield fallback produced an empty map")
@@ -183,8 +183,8 @@ assert(settlements==before+1 and prey:GetAttribute("LastRunEndReason")=="ManualE
 Players.GetPlayers=function()return {}end
 print("Home passed: immediate single settlement, sanctuary/duplicate/death no-ops, refused only while a bigger dinosaur is within HomeThreatRadius")
 -- Owner 2026-10-15: growth gained per food point is halved; catches/eggs still use RAW food (FoodCatchRules.award).
-assert(Config.GrowthPerFood==0.5 and Config.PredationGrowthPoints==12.5,"growth pace")
-print("Growth pace passed: GrowthPerFood 0.5 (about 500 food -> 250 growth, was 500), predation 12.5, GrowthCap semantics unchanged")
+assert(Config.GrowthPerFood==0.1 and Config.PredationGrowthPoints==2.5 and Config.FoodCatchRate==4/500,"growth pace")
+print("Growth pace passed: GrowthPerFood 0.1 (500 food -> 50 growth, was 250; BD-386), predation 2.5, eggs on raw food, GrowthCap semantics unchanged")
 '''
 if __name__=='__main__':
  src=(ROOT/'src/server/FoodService.luau').read_text(encoding='utf-8')
