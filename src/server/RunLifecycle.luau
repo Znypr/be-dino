@@ -22,6 +22,7 @@ function RunLifecycle.prepareSanctuary(player: Player, character: Model)
     character:SetAttribute("WeatherLootCarry",0)
     character:SetAttribute("RunEggEvents","[]")
     player:SetAttribute("Location", "Sanctuary")
+    player:SetAttribute("HubStation", nil) -- BD-319: a respawn or run return is no longer "standing at" the last fast-travel station (the attribute is public)
 end
 
 local function activeCharacter(player: Player): Model?
@@ -54,6 +55,7 @@ function RunLifecycle.begin(player: Player, character: Model)
         return
     end
     if character:GetAttribute("RunId") ~= nil then return end
+    player:SetAttribute("HubStation", nil) -- BD-319: leaving the hub for a run clears the public station marker
     local newRunId = HttpService:GenerateGUID(false)
     character:SetAttribute("RunId", newRunId)
     local startedNow = workspace:GetServerTimeNow()

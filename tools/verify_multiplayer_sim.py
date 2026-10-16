@@ -80,6 +80,15 @@ STATIC = [
     ("src/server/Bootstrap.server.luau", r"SessionBusy[\s\S]{0,200}task\.wait\(5\)", "load retries while another session holds the lease"),
     ("src/server/CombatService.luau", r"BiteCooldownSeconds[\s\S]{0,260}local candidates", "bite cooldown is checked before the O(players) scan"),
     ("src/server/ProgressionService.luau", r"pcall\(repository\.progressionAction", "the busy flag cannot stick after a thrown error"),
+    # BD-319: replicated features added after BD-358.
+    ("src/server/HubTravelService.luau", r"sessions\[player\] = session[\s\S]*PlayerRemoving:Connect\(function\(player\) sessions\[player\] = nil end\)", "HubTravel keeps one rate-limit session per player and frees it on leave"),
+    ("src/server/HubTravelService.luau", r"select\(\"#\", \.\.\.\) ~= 1", "HubTravel refuses extra arguments"),
+    ("src/server/HubTravelService.luau", r"hasPerk\(progress, \"fastTravel\"\)", "HubTravel reads the perk from the caller's own profile"),
+    ("src/server/ChestService.luau", r"lastSettings, player, 0\.5[\s\S]{0,80}setSettings\(player, selection\)", "SetSettings is throttled per player and writes only the caller's profile"),
+    ("src/server/ChestService.luau", r"lastSettings\[player\] = nil", "SetSettings throttle entry is freed on leave"),
+    ("src/server/ProfileRepository.luau", r"action==\"buyPerk\" and \(Config\.FastTravelPerk~=true or Config\.CaveHub~=true\)", "buyPerk is refused while the perk or cave flag is off"),
+    ("src/server/RunLifecycle.luau", r"SetAttribute\(\"HubStation\", nil\)", "the public HubStation marker is cleared on respawn and run start"),
+    ("src/server/Leaderboards.luau", r"Writes\.shouldWrite\(writeState,definition\.id,userId", "leaderboard writes go through the per-user write gate"),
 ]
 
 
