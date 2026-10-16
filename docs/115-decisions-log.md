@@ -94,7 +94,7 @@ Extracted from the kanban owner log, AGENTS.md, docs and the lead sessions. "LEA
 - OWNER (2026-10-16) Q1 growth pacing: KEEP the current pacing (`GrowthPerFood` 0.1, cap 4). A normal 5-minute run stays at about size 1.5; gigantic is a rare long-run reward. The Medium/Colossal vegetation bands and the growth camera curve therefore matter mainly for long runs; BD-470..BD-477 were re-prioritised (docs/139 s15). Resolves docs/116 C-24.
 - OWNER (2026-10-16) Q2 intimidation: AWE ONLY. Size, footsteps, shadow and camera framing; no fear mechanics and no small-dino reactions (BD-478). Resolves the "intimidated" half of docs/116 C-25 (the screen-share part, docs/139 Q8, stays open).
 - OWNER (2026-10-16) Q5 art: Blender is ALLOWED for colossal and redesigned tree art. Separately the owner approved the script-built V3 trees (broadleaf, conifer, palm) as a scoped exception, recorded by the tree test PR (docs/140-tree-quality-test.md). Resolves docs/116 C-26 for trees; D8/D15 (generated meshes only) otherwise unchanged.
-- Still OPEN from docs/139: Q3 (are regular trees outgrown), Q4 (mix), Q6 (giant collision), Q7-Q9 (camera risk, screen share, fog), Q10-Q12.
+- ~~Still OPEN from docs/139: Q3 (are regular trees outgrown), Q4 (mix), Q6 (giant collision), Q7-Q9 (camera risk, screen share, fog), Q10-Q12.~~ All decided by the LEAD under the owner's delegation, see "LEAD decisions 2026-10-16 (owner delegated)" at the end of this file.
 
 ## 2026-10-16 (fused tier look, Gold/Emerald/Diamond)
 - OWNER 2026-10-16: a fused tier keeps the dino's EXACT colours and pattern, covered by a semi-translucent, glossy tier coat (Gold: warm amber/gold; Emerald: green gem with mint glow; Diamond: icy blue-white crystal), horns and claws fully in the tier colour, plus a bright tier-coloured outline with colour bleeding inward from the edge. The reference is the owner's 4-panel purple/red-striped T-Rex image. Gold first; Emerald/Diamond use non-metallic crystal finishes once Gold is approved. Extra particles/glow stay off while the coat is tuned (owner, relaying an outside review). Status: IN PROGRESS, not final (PR #291 `tier-shiny`).
@@ -108,3 +108,55 @@ Extracted from the kanban owner log, AGENTS.md, docs and the lead sessions. "LEA
 ## 2026-10-16 (mutation badge icons and FX textures)
 - OWNER 2026-10-16: the 7 mutation badge icons (BD-190, `resources/ui/v2/icons/mutation-<id>-v1.png`; symbol outlines modelled by a script in Blender, then extruded, bevelled and rendered there) are APPROVED AS IS as final UI art. This is an explicit, scoped exception to the 2026-10-15 'no code-built models' rule, like the V3 trees; it covers only these 7 icons. The owner saw the contact sheet at 128/64/32 px (docs/evidence/2026-10-16-vfx/) and chose not to simplify the snowflake, pebble and ribbon for 32 px.
 - OWNER 2026-10-16: the BD-186/BD-188 glow plate and ring textures (Blender renders, PR #308) are approved; both art PRs merge, and the game is unchanged until the owner uploads them.
+
+## LEAD decisions 2026-10-16 (owner delegated): skins, gifting, giant dinos
+The owner delegated these on 2026-10-16: "just merge, take full autonomy, do decisions for me". The LEAD decided every open question of [137](137-dino-skins-spec.md) s15 (15), [134](134-gifting-spec.md) s10 (8) and [139](139-giant-dino-vegetation-scale.md) s14 (Q3, Q4, Q6-Q12), choosing the spec's recommendation unless it clashed with the handbook, [87](87-vision-and-feel-guide.md), this log or Roblox policy (then the safest option for the calm, kid-friendly vibe, phone performance and server authority). **The owner may overrule any row.** Each decision is also written next to its question in the spec, marked "LEAD decision (owner delegated 2026-10-16)". **Robux rule:** every Robux or paid item is "decided in principle, enable needs owner go-ahead": all flags stay off, nothing random is for sale, `PolicyService` is respected, and no release flag is flipped for real players. Resolves docs/116 C-11, Q5, C-23, C-25 (screen-share half), C-27 and C-36. Tasks: BD-450, BD-454 and BD-470 are Done (the recorded decisions are their deliverable).
+
+### Skins ([137](137-dino-skins-spec.md) s15)
+| # | Decision | Reason | Enable needs owner go-ahead? |
+|---|---|---|---|
+| SK1 | One purchase per STYLE for the whole account (`ownedSkins`) | no 88-product trap for kids, survives fusion, one owner record for gifts | yes |
+| SK2 | Equipped per dino copy plus an account default | dress your favourite, fused output starts on the default | no |
+| SK3 | Anime and Movie: crystals only, later (P6), no season pass | earnable looks, no pass or timer pressure | no (crystals) |
+| SK4 | The four Robux skins share ONE price tier; Robux amount set by the owner in Creator Hub; `Config.SkinProducts` stays empty | fair and simple; money is the owner's call | yes |
+| SK5 | A skin survives fusion; a fused output starts on the account default; never in the loss warning | a bought look is never destroyed by a mechanic | no |
+| SK6 | Tier look = sheen and trim overlay on any skin, no per-tier skin models (does not settle 116 Q12) | matches the owner tier rule, keeps the asset budget flat | no |
+| SK7 | Order: Compy, Raptor, Triceratops, then Ankylosaurus (Armored), Pteranodon (Fly), Plesiosaurus (Water), then the rest by class | test every rig family early | no |
+| SK8 | A style is sold only when the 3 pilot species and one species per class have it; others show "Coming soon" | a child must not pay for a look that fits almost none of their dinos | yes |
+| SK9 | Balloon is a treatment of the generated Base mesh (no code-built geometry, no extra upload); generated mesh only as a fallback | honours "no art upload needed" and D8/D15 | yes |
+| SK10 | Admin may revoke a skin entitlement (chargeback, abuse), logged by UserId only | Roblox chargebacks need a way out | no |
+| SK11 | Pilot reuses the soft defeat cue; per-skin sounds ship only after the owner listens | agents cannot hear | no |
+| SK12 | Other players see your skin; full skins on the nearest 8 dinos, Base beyond | phone budget, nearest-first FX rule | no |
+| SK13 | No extra free skin; free looks are Base and the crystal-unlocked styles | no new unlock system | no |
+| SK14 | No seasonal or limited skins, no countdown copy | no pressure for children | no |
+| SK15 | Compy pilot (BD-455) may run in parallel, Studio-only; BD-456 onwards waits for the owner's phone verdict on the low-poly base | cheap proof, no schema or shop commitment yet | no |
+
+### Gifting ([134](134-gifting-spec.md) s10)
+| # | Decision | Reason | Enable needs owner go-ahead? |
+|---|---|---|---|
+| GF1 | Friends only; recipient Settings "From friends" (default) or "Nobody", no "Anyone"; preference mirrored into the Gifts store for offline checks | children's game, no stranger contact | yes |
+| GF2 | Giftable at launch: skins only; crystal packs after they are playtested; a bundle is a fixed set of skins; admin gifts may send skins and crystals | skins are the only item with an owner record; nothing random | yes |
+| GF3 | Skins are per account style (same as SK1) | one owner record | yes |
+| GF4 | Gift price = own-use price, no markup | no trap, parent-friendly | yes |
+| GF5 | Show the sender's display name, no anonymous gifts, never logged | friends-only makes the name known; anonymity helps abuse | no |
+| GF6 | Preset messages only, no free text yet | no filter dependency, no free text between kids | no |
+| GF7 | Admin gifts read "A gift from the Be Dino team!" | clear, no personal data | no |
+| GF8 | Creator Hub gift products are created only when BD-453 starts, after the skin products (BD-459); flags stay off | policy and playtest order | yes |
+
+### Giant dinos vs the jungle ([139](139-giant-dino-vegetation-scale.md) s14; Q1, Q2, Q5 were owner answers)
+| # | Decision | Reason | Enable needs owner go-ahead? |
+|---|---|---|---|
+| GD3 | Ordinary trees are outgrown only by a long-run giant (size 3 or more); a normal run still feels small; colossal trees stay taller | owner wording plus the Q1 rare-long-run answer | no |
+| GD4 | Mix counted over trees plus giants of 12 studs and up; start 68 / 27 / 5, test up to 65 / 27 / 8, never 10% unless phone numbers pass; groves of 2 to 4 | small steps, flat phone triangles | no |
+| GD6 | Trample plus a soft rustle for giants, built only if the walk-through shows a wedge | stuck giants feel worse than a rustle | no |
+| GD7 | Camera: distance, aim and FOV 70 to 80 first; pitch cap only after a passing phone drag spike | avoids touch jitter and the BD-164 rattle | no |
+| GD8 | Max dino fills 38% growing to 55% of the screen (never above today's 61%); drop to 50% if the 844 x 390 phone shots hide food or controls | awe (Q2) with a phone guard | no |
+| GD9 | Fog start measured from the dino, only when the camera is pulled out for size | keeps the tuned D10 look for normal runs | no |
+| GD10 | Scale table folded into BD-471 (absorbs BD-407); food and crystals do not scale now (visual-only x1.5 at most if T2 shows it unreadable) | no balance risk for a rare moment | no |
+| GD11 | Hills stay; a maxed dino is bigger than the hills (intended) | the owner's "too big for the surroundings" fantasy | no |
+| GD12 | Larger colossal cull radius (ceiling 420 on phones) only if BD-085 passes, else fade by distance | phone performance gate | no |
+
+### Task effects (2026-10-16)
+- Done with "evidence: decisions recorded in docs/115 LEAD decisions 2026-10-16": BD-450 (gifting), BD-454 (skins), BD-470 (giant dinos).
+- Priorities: BD-224 and BD-455 P1 -> P2 (no skin can be sold in session 1, the P1 backlog is already 30 rows; BD-455 still goes first when a generator slot is free). BD-453 now also depends on BD-459. BD-471, BD-473 stay P2; BD-472, BD-474 to BD-478 stay P3 (reasons in docs/139 s15). BD-451, BD-452 stay P2, BD-456 to BD-458 P2, BD-459 P3.
+- Not decided here: docs/116 Q1, Q4, Q6, Q7, Q9, Q10 (price already 500), Q11, Q12 and the PROVISIONAL numbers (prices, Robux amounts) stay open.
