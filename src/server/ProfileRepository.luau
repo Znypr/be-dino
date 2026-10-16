@@ -12,6 +12,7 @@ local NestQueue = require(ReplicatedStorage.Shared.NestQueue)
 local ProgressionConfig = require(ReplicatedStorage.Shared.ProgressionConfig)
 
 local ProfileRepository = {}
+local PrivateState = require(script.Parent.PrivateState)
 local DinosaurIdentity = require(script.Parent.DinosaurIdentity)
 local IdentityFusion = require(script.Parent.IdentityFusion)
 local FusionOdds = require(script.Parent.FusionOdds)
@@ -460,33 +461,33 @@ end
 
 local function syncAttributes(player: Player, profile: any)
     local progress=ProgressionRules.upgrade(profile)
-    player:SetAttribute("StudioTestWallet", localPreview and Config.StudioTestWalletEnabled)
-    player:SetAttribute("CollectionJson", HttpService:JSONEncode(profile.collection))
-    player:SetAttribute("Crystals",progress.crystals)
-    player:SetAttribute("ProgressionJson",HttpService:JSONEncode(progress))
+    PrivateState.set(player, "StudioTestWallet", localPreview and Config.StudioTestWalletEnabled)
+    PrivateState.set(player, "CollectionJson", HttpService:JSONEncode(profile.collection))
+    PrivateState.set(player, "Crystals",progress.crystals)
+    PrivateState.set(player, "ProgressionJson",HttpService:JSONEncode(progress))
     player:SetAttribute("EquippedAura",progress.equippedAura)
     local collection = profile.collection
-    player:SetAttribute("CompyCopies", collection.compy.base)
-    player:SetAttribute("CompyGold", collection.compy.gold)
-    player:SetAttribute("TriceratopsCopies", collection.triceratops.base)
-    player:SetAttribute("TriceratopsGold", collection.triceratops.gold)
-    player:SetAttribute("TyrannosaurusCopies", collection.tyrannosaurus.base)
-    player:SetAttribute("TyrannosaurusGold", collection.tyrannosaurus.gold)
-    player:SetAttribute("PendingChestGrants", profile.pendingChestGrants or 0)
-    player:SetAttribute("ProfileRevision", profile.revision or 0)
+    PrivateState.set(player, "CompyCopies", collection.compy.base)
+    PrivateState.set(player, "CompyGold", collection.compy.gold)
+    PrivateState.set(player, "TriceratopsCopies", collection.triceratops.base)
+    PrivateState.set(player, "TriceratopsGold", collection.triceratops.gold)
+    PrivateState.set(player, "TyrannosaurusCopies", collection.tyrannosaurus.base)
+    PrivateState.set(player, "TyrannosaurusGold", collection.tyrannosaurus.gold)
+    PrivateState.set(player, "PendingChestGrants", profile.pendingChestGrants or 0)
+    PrivateState.set(player, "ProfileRevision", profile.revision or 0)
     player:SetAttribute("EquippedSpeciesId", profile.equippedSpeciesId)
     local traits = EggTraits.selected(collection[profile.equippedSpeciesId], profile.equippedVariantKey)
     player:SetAttribute("EquippedBig", traits ~= nil and traits.big)
     player:SetAttribute("EquippedShiny", traits ~= nil and traits.shiny)
     player:SetAttribute("EquippedGenesJson",HttpService:JSONEncode(if traits then traits.genes else nil))
     player:SetAttribute("AccountLevel",ProgressionRules.level(progress))
-    player:SetAttribute("AccountXP",progress.accountXP or 0)
-    player:SetAttribute("PlaySeconds", profile.metrics.playSeconds)
-    player:SetAttribute("RarestCaught", profile.metrics.rarest)
-    player:SetAttribute("RobuxSpent", profile.metrics.robux)
+    PrivateState.set(player, "AccountXP",progress.accountXP or 0)
+    PrivateState.set(player, "PlaySeconds", profile.metrics.playSeconds)
+    PrivateState.set(player, "RarestCaught", profile.metrics.rarest)
+    PrivateState.set(player, "RobuxSpent", profile.metrics.robux)
     local eventMutation=if traits then ProgressionRules.item(ProgressionConfig.EventMutations,traits.mutationId) else ProgressionRules.eventMutation(collection[profile.equippedSpeciesId])
     player:SetAttribute("EquippedEventMutation",if eventMutation then eventMutation.id else "")
-    player:SetAttribute("ActiveChestCount", #profile.eggs)
+    PrivateState.set(player, "ActiveChestCount", #profile.eggs)
     local chestSummary = {}
     for index, chest in profile.eggs do
         if index > Config.ChestQueueCapacity then break end
@@ -501,31 +502,31 @@ local function syncAttributes(player: Player, profile: any)
             genes=chest.genes,
         })
     end
-    player:SetAttribute("ChestQueueJson", HttpService:JSONEncode(chestSummary))
+    PrivateState.set(player, "ChestQueueJson", HttpService:JSONEncode(chestSummary))
     -- BD-044: banked run eggs and separate bonus nests (counts and slot summaries only).
     local banked = if typeof(profile.runEggBank) == "table" then #profile.runEggBank else 0
-    player:SetAttribute("BankedRunEggCount", banked)
-    player:SetAttribute("QueuedEggsWaiting", banked + (profile.pendingChestGrants or 0))
+    PrivateState.set(player, "BankedRunEggCount", banked)
+    PrivateState.set(player, "QueuedEggsWaiting", banked + (profile.pendingChestGrants or 0))
     local nestSummary = {}
     for _, nest in profile.eggNests or {} do
         table.insert(nestSummary, {id = nest.nestId, size = nest.size, luck = nest.luck, state = nest.state, readyAt = nest.readyAt})
     end
-    player:SetAttribute("NestsJson", HttpService:JSONEncode(nestSummary))
-    player:SetAttribute("RevealSkipJson", HttpService:JSONEncode(profile.revealSkip or {}))
+    PrivateState.set(player, "NestsJson", HttpService:JSONEncode(nestSummary))
+    PrivateState.set(player, "RevealSkipJson", HttpService:JSONEncode(profile.revealSkip or {}))
     -- BD-264: per-player settings; profiles saved before settings v2 have no field and read as defaults.
-    player:SetAttribute("SettingsJson", HttpService:JSONEncode(SettingsModel.toStore(SettingsModel.fromStore(profile.settings))))
-    player:SetAttribute("RunStartBlocked", ProfileRepository.runStartBlockReason(profile))
+    PrivateState.set(player, "SettingsJson", HttpService:JSONEncode(SettingsModel.toStore(SettingsModel.fromStore(profile.settings))))
+    PrivateState.set(player, "RunStartBlocked", ProfileRepository.runStartBlockReason(profile))
     local nextChest = profile.eggs[1]
     local buffered = revealBuffer[player]
     if buffered and #buffered > 0 then
-        player:SetAttribute("NextChestId", buffered[1].eggId)
-        player:SetAttribute("NextChestReadyAt", 0)
+        PrivateState.set(player, "NextChestId", buffered[1].eggId)
+        PrivateState.set(player, "NextChestReadyAt", 0)
     elseif typeof(nextChest) == "table" then
-        player:SetAttribute("NextChestId", nextChest.eggId)
-        player:SetAttribute("NextChestReadyAt", nextChest.readyAt)
+        PrivateState.set(player, "NextChestId", nextChest.eggId)
+        PrivateState.set(player, "NextChestReadyAt", nextChest.readyAt)
     else
-        player:SetAttribute("NextChestId", "")
-        player:SetAttribute("NextChestReadyAt", 0)
+        PrivateState.set(player, "NextChestId", "")
+        PrivateState.set(player, "NextChestReadyAt", 0)
     end
 end
 
@@ -712,7 +713,7 @@ end
 local function paidRandomBlocked(player: Player, profile: any): boolean
     local robuxLinked = Config.CrystalPacksEnabled == true
         or (type(profile.metrics) == "table" and type(profile.metrics.robux) == "number" and profile.metrics.robux > 0)
-    return robuxLinked and (not Config.PaidRandomItemsEnabled or player:GetAttribute("PaidRandomEligible") ~= true)
+    return robuxLinked and (not Config.PaidRandomItemsEnabled or PrivateState.get(player, "PaidRandomEligible") ~= true)
 end
 
 -- Shared precondition for every fusion read/write. Returns cached profile or nil, reason.
@@ -1016,7 +1017,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     local cachedOperation = findOperation(cached, operationId)
     if cachedOperation or hasSettledRun(cached, runId) then
         -- Cheap replay: skip preparing up to 300 eggs for a run that already committed.
-        player:SetAttribute("LastSettledRunId", runId)
+        PrivateState.set(player, "LastSettledRunId", runId)
         return true, if cachedOperation then cachedOperation.outcome else nil, "duplicate"
     end
 
@@ -1122,14 +1123,14 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     if profiles[player] then syncAttributes(player, profiles[player]) end
     local committedOutcome = if duplicate then duplicateOutcome else outcome
     if committedOutcome then
-        player:SetAttribute("LastRewardText", runRewardText(committedOutcome))
-        player:SetAttribute("LastRunCrystals", committedOutcome.crystals or 0)
-        player:SetAttribute("LastRunCrystalBox", committedOutcome.crystalBox or 0)
-        player:SetAttribute("LastRunEggCount", committedOutcome.eggCount or committedOutcome.chestCount or 0)
-        player:SetAttribute("LastRunNestCount", committedOutcome.nestCount or 0)
-        player:SetAttribute("LastRunNestFull", committedOutcome.nestFull == true)
+        PrivateState.set(player, "LastRewardText", runRewardText(committedOutcome))
+        PrivateState.set(player, "LastRunCrystals", committedOutcome.crystals or 0)
+        PrivateState.set(player, "LastRunCrystalBox", committedOutcome.crystalBox or 0)
+        PrivateState.set(player, "LastRunEggCount", committedOutcome.eggCount or committedOutcome.chestCount or 0)
+        PrivateState.set(player, "LastRunNestCount", committedOutcome.nestCount or 0)
+        PrivateState.set(player, "LastRunNestFull", committedOutcome.nestFull == true)
     end
-    player:SetAttribute("LastSettledRunId", runId)
+    PrivateState.set(player, "LastSettledRunId", runId)
     if priorState == "SaveFailed" and player:GetAttribute("ProfileState") == "SaveFailed" then player:SetAttribute("ProfileState", "Loaded") end
     return true, committedOutcome, if duplicate then "duplicate" else "committed"
 end
@@ -1569,13 +1570,13 @@ local function applyHatch(profileValue: any, chest: any, index: number, outcome:
 end
 
 local function publishHatch(player: Player, chestId: string, committedOutcome: any)
-    player:SetAttribute("LastChestRewardText", string.format("%dx %s", committedOutcome.count, committedOutcome.speciesId))
-    player:SetAttribute("LastChestEventMutation",committedOutcome.eventMutationId or "")
-    player:SetAttribute("LastChestBig",committedOutcome.big == true)
-    player:SetAttribute("LastChestShiny",committedOutcome.shiny == true)
-    player:SetAttribute("LastChestGenesJson",HttpService:JSONEncode(committedOutcome.genes))
-    player:SetAttribute("LastChestFailed",committedOutcome.failed==true)
-    player:SetAttribute("LastClaimedChestId", chestId)
+    PrivateState.set(player, "LastChestRewardText", string.format("%dx %s", committedOutcome.count, committedOutcome.speciesId))
+    PrivateState.set(player, "LastChestEventMutation",committedOutcome.eventMutationId or "")
+    PrivateState.set(player, "LastChestBig",committedOutcome.big == true)
+    PrivateState.set(player, "LastChestShiny",committedOutcome.shiny == true)
+    PrivateState.set(player, "LastChestGenesJson",HttpService:JSONEncode(committedOutcome.genes))
+    PrivateState.set(player, "LastChestFailed",committedOutcome.failed==true)
+    PrivateState.set(player, "LastClaimedChestId", chestId)
 end
 
 function ProfileRepository.claimChest(player: Player, chestId: string)
@@ -1855,7 +1856,7 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
     if not ProfileRepository.isLoaded(player) then return false,"profile_not_loaded" end
     if typeof(token)~="string" or #token<1 or #token>80 then return false,"invalid_token" end
     if (action=="buyEgg" or action=="upgradeCondition") and next(Config.DeveloperProducts)~=nil
-        and (not Config.PaidRandomItemsEnabled or player:GetAttribute("PaidRandomEligible")~=true) then return false,"random_items_unavailable" end
+        and (not Config.PaidRandomItemsEnabled or PrivateState.get(player, "PaidRandomEligible")~=true) then return false,"random_items_unavailable" end
     local eggId=nil
     local egg=nil
     local purchaseConditionLevel=ProfileRepository.progression(player).conditionLevel
@@ -2025,6 +2026,7 @@ function ProfileRepository.release(player: Player)
     pendingSettlements[player] = nil
     local cached = profiles[player]
     profiles[player] = nil
+    PrivateState.forget(player) -- BD-360: the owner-only values go with the profile
     if not cached then return end
 
     local userId = player.UserId

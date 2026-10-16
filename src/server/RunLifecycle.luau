@@ -7,6 +7,7 @@ local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 local RunLifecycle = {}
+local PrivateState = require(script.Parent.PrivateState)
 local lastExitRequest: {[Player]: number} = {}
 local requestEndRun: RemoteEvent? = nil
 local settleRun = nil
@@ -47,7 +48,7 @@ function RunLifecycle.begin(player: Player, character: Model)
     if player:GetAttribute("ProfileState") ~= "Loaded" then return end
     -- BD-044: a run starts only when the egg bank and pending-nest list have room for a
     -- maximum run, so settlement never has to drop or refuse earned eggs/nests.
-    local blocked = player:GetAttribute("RunStartBlocked")
+    local blocked = PrivateState.get(player, "RunStartBlocked")
     if typeof(blocked) == "string" and blocked ~= "" then
         player:SetAttribute("LastRunStartStatus", blocked)
         return

@@ -63,8 +63,8 @@ local selected = "compy"
 local seenTutorial = false
 local lastGrowth = 0
 local lastEggCount = 0
-local function num(id: string): number return player:GetAttribute(id) or 0 end
-local function str(id: string,fallback: string?): string return player:GetAttribute(id) or fallback or "" end
+local PrivateState=require(script.Parent.PrivateState) -- BD-360: owner-only values arrive by remote, public ones stay attributes
+local num,str=PrivateState.num,PrivateState.str -- same call shape as before; private names read the cache, public ones the attribute
 local jsonCache = {}
 local function decoded(attribute: string, fallback: string)
     local raw=str(attribute,fallback)
@@ -918,7 +918,7 @@ render=function(name: string)
         local function supply()
             if modalVersion~=version or active~="hatch" or not handle or not handle.pending() then return end
             local reward=str("LastChestRewardText","New dinosaur")
-            local failed=player:GetAttribute("LastChestFailed")==true
+            local failed=PrivateState.get("LastChestFailed")==true
             failedEgg=failed
             local genesOk,genes=pcall(function() return Http:JSONDecode(str("LastChestGenesJson","null")) end)
             if not genesOk or typeof(genes)~="table" then genes=nil end
@@ -929,7 +929,7 @@ render=function(name: string)
             -- colours and pattern only, never the egg condition.
             local view=Preview.add(body,id,"base")
             view.Position,view.Size=UDim2.fromOffset(160,-12),UDim2.fromOffset(504,260)
-            PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),genes=genes,mutationId=str("LastChestEventMutation")})
+            PreviewTraits.add(view,{big=PrivateState.get("LastChestBig"),shiny=PrivateState.get("LastChestShiny"),genes=genes,mutationId=str("LastChestEventMutation")})
             view.Visible=false
             task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync(view:GetDescendants()) end) end)
             local rarity=speciesIndex(id)
@@ -967,7 +967,7 @@ render=function(name: string)
             paint.setRarityColor(rarityColors[rarity])
             handle.supply({
                 dino=view,rarity=rarity,color=rarityColors[rarity],failed=failed,
-                shiny=not failed and player:GetAttribute("LastChestShiny")==true,big=not failed and player:GetAttribute("LastChestBig")==true,
+                shiny=not failed and PrivateState.get("LastChestShiny")==true,big=not failed and PrivateState.get("LastChestBig")==true,
                 mutationName=if mutation and not failed then mutation.name else nil,mutationColor=mutationColor,
                 remaining=remainingAfter,genes=if geneticsOk then genes else nil,colorReveal=colorReveal,patternReveal=patternReveal,paintColors=paintColors,
                 secondReveal=if geneticsOk then HatchTimeline.colorReveal(ProgressionConfig.EggColors,genes,"secondary") else nil, -- BD-220: right bucket
@@ -999,11 +999,11 @@ render=function(name: string)
         -- BD-052: one confirmation, no stay-still channel; the server settles through tryEnd.
         heading.Text,header.BackgroundColor3="Return to Sanctuary?",C.red
         art(body,"home",36,28,214)
-        label(body,"Your current run will end and rewards will be banked.",300,8,500,100,28,C.gold)
+        label(body,require(Shared.FtueCopy).homeConfirmLine,300,8,500,100,28,C.gold)
         local character=player.Character
         local catches=if character then character:GetAttribute("CatchScore") or 0 else 0
         local growth=if character then character:GetAttribute("GrowthScore") or 0 else 0
-        label(body,string.format("Banking %d catches  •  %d growth",catches,math.floor(growth)),300,116,500,60,22)
+        label(body,require(Shared.FtueCopy).homeConfirmTotals(catches,growth),300,116,500,60,22)
         local buttonHeight=if touchMode() then math.max(68,46/viewportScale()) else 68
         button(body,"RETURN",300,396-buttonHeight,244,buttonHeight,C.accent,function()
             local current=player.Character
@@ -1032,7 +1032,7 @@ render=function(name: string)
         if oops>0 then label(body,"Your eggs are safe!",30,0,760,30,24,C.blue) end
         art(body,"trophy",24,42+oops,240)
         label(body,"Growth  "..math.floor(num("LastRunGrowthScore")),300,18+oops,500,60,34,C.accent)
-        label(body,"Catches  "..num("LastRunCatchScore"),300,93+oops,500,60,34,C.blue)
+        label(body,require(Shared.FtueCopy).runCompleteEggsLabel.."  "..num("LastRunCatchScore"),300,93+oops,500,60,34,C.blue)
         label(body,str("LastRewardText","Saving rewards..."),290,168+oops,510,100,24,C.gold)
         label(body,"+"..num("LastRunCrystals").." Crystals • Level "..num("AccountLevel"),30,302,760,40,21)
         local hasEggs=str("NextChestId")~="" or num("QueuedEggsWaiting")>0 or #decoded("NestsJson","[]")>0
@@ -1079,7 +1079,7 @@ render=function(name: string)
         label(body,string.format("Eat 500 food to earn %d eggs. Some weather gives more!",math.floor(500*Config.FoodCatchRate+.5)),18,316,788,72,23)
     elseif name=="tutorial" then
         heading.Text,header.BackgroundColor3="Welcome to Be Dino!",C.blue
-        local steps={{"1","EAT & GROW","Find small food clusters across the island."},{"2","JUMP & EXPLORE","Space to jump, E to leap. Buttons on mobile."},{"3","BANK & HATCH","Return to sanctuary to bank catches and eggs."}}
+        local steps=require(Shared.FtueCopy).tutorialSteps
         for i,step in steps do
             local card=box(body,(i-1)*276,0,264,278,C.card,24)
             local stepColor=({C.accent,C.blue,C.gold})[i]
@@ -1158,7 +1158,7 @@ local function refreshCrystals()
     end
     crystalInitialized=true
 end
-player:GetAttributeChangedSignal("Crystals"):Connect(refreshCrystals)
+PrivateState.onChanged("Crystals", refreshCrystals)
 refreshCrystals()
 -- Polish: persistent "next goal" line under the crystal HUD (top-right, clear of the thumbstick/jump area).
 local goalHUD=box(gui,0,0,260,30,C.panel,2)
@@ -1196,7 +1196,7 @@ local function loadGoalDinos()
     end)
 end
 for _,attribute in {"CollectionJson","AccountLevel","AccountXP"} do
-    player:GetAttributeChangedSignal(attribute):Connect(function() refreshGoal() if attribute=="CollectionJson" then loadGoalDinos() end end)
+    PrivateState.onChanged(attribute, function() refreshGoal() if attribute=="CollectionJson" then loadGoalDinos() end end)
 end
 refreshGoal()
 loadGoalDinos()
@@ -1525,17 +1525,17 @@ local function scheduleModalRefresh()
     end)
 end
 for _,attribute in {"EquippedSpeciesId","CollectionJson","ChestQueueJson","ProgressionJson","NestsJson","QueuedEggsWaiting","RevealSkipJson"} do
-    player:GetAttributeChangedSignal(attribute):Connect(function()
+    PrivateState.onChanged(attribute, function()
         scheduleModalRefresh()
     end)
 end
-player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function()
+PrivateState.onChanged("LastClaimedChestId", function()
     hatchPending=false
     -- Skippable eggs (selected rarities, nothing notable) are already credited: no animation.
     local species=string.match(str("LastChestRewardText"),"x (%w+)") or "compy"
     local okGenes,genes=pcall(function() return Http:JSONDecode(str("LastChestGenesJson","null")) end)
-    local outcome={big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),eventMutationId=str("LastChestEventMutation"),
-        genes=if okGenes and typeof(genes)=="table" then genes else nil,failed=player:GetAttribute("LastChestFailed")==true}
+    local outcome={big=PrivateState.get("LastChestBig"),shiny=PrivateState.get("LastChestShiny"),eventMutationId=str("LastChestEventMutation"),
+        genes=if okGenes and typeof(genes)=="table" then genes else nil,failed=PrivateState.get("LastChestFailed")==true}
     local rarity=speciesIndex(species)
     table.insert(batchEntries,{rarity=rarity,name=Config.SpeciesDisplayNames[species] or species,failed=outcome.failed,shiny=outcome.shiny==true,big=outcome.big==true})
     if autoHatching and EggsLogic.shouldAutoOpen(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen(),rarity,outcome,skipAllReveals) then
@@ -1553,7 +1553,7 @@ player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function()
     end
 end)
 player:GetAttributeChangedSignal("LastRunEndAt"):Connect(function() if not autoHatching then open("results") end end)
-player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
+PrivateState.onChanged("LastSettledRunId", function()
     local serial=hatchCancelSerial
     task.spawn(function()
         local deadline=os.clock()+15
@@ -1586,9 +1586,9 @@ player:GetAttributeChangedSignal("LastNestClaimAt"):Connect(function()
     Sfx.playCue("level_up")
     notify("Nest opened!",C.accent,{icon="egg_nest",body="Open your eggs when ready"})
 end)
-player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)
+PrivateState.onChanged("LastRewardText", function() if active=="results" then body:ClearAllChildren() render(active) end end)
 for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus","LastNestClaimStatus","LastRunStartStatus"} do
-    player:GetAttributeChangedSignal(attribute):Connect(function()
+    PrivateState.onChanged(attribute, function()
         local status=str(attribute)
         if attribute=="LastChestClaimStatus" then hatchPending=false end
         if status=="claimed" then return

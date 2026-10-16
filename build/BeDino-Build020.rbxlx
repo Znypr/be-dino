@@ -370908,6 +370908,37 @@ return Rules
       </Item>
       <Item class="ModuleScript" referent="RBX215">
         <Properties>
+          <string name="Name">FtueCopy</string>
+          <ProtectedString name="Source">--!strict
+-- First-time-player copy (docs/112 audit, BD-370). Plain words for 7 to 10 year olds (docs/72): no "catches",
+-- "banked" or "bank". Pure strings, no Instances. Checked by tools/verify_ftue_copy.py.
+local Copy = {}
+
+Copy.tutorialSteps = {
+    { "1", "EAT &amp; GROW", "Walk into food to eat it. Eat lots to find eggs!" },
+    { "2", "JUMP &amp; EXPLORE", "Space to jump, E to leap. Buttons on phone." },
+    { "3", "SAVE &amp; HATCH", "Tap HOME to save your eggs. Then open them!" },
+}
+
+Copy.homeConfirmLine = "Your run ends and your eggs are saved."
+
+local function plural(n: number, one: string, many: string): string
+    return if n == 1 then "1 " .. one else string.format("%d %s", n, many)
+end
+
+-- "You found 1 egg  •  Growth 65" (was "Banking 1 catches  •  65 growth")
+function Copy.homeConfirmTotals(eggs: number, growth: number): string
+    return string.format("You found %s  •  Growth %d", plural(eggs, "egg", "eggs"), math.floor(growth))
+end
+
+Copy.runCompleteEggsLabel = "Eggs found"
+
+return Copy
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX216">
+        <Properties>
           <string name="Name">FusionSelection</string>
           <ProtectedString name="Source">--!strict
 -- BD-065 / BD-062 pure client-side fusion logic. No Instances, services, RNG or
@@ -371885,7 +371916,7 @@ return Sel
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX216">
+      <Item class="ModuleScript" referent="RBX217">
         <Properties>
           <string name="Name">FxRecipes</string>
           <ProtectedString name="Source">--!nonstrict
@@ -372205,7 +372236,7 @@ return R
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX217">
+      <Item class="ModuleScript" referent="RBX218">
         <Properties>
           <string name="Name">FxUi</string>
           <ProtectedString name="Source">--!nonstrict
@@ -372609,7 +372640,7 @@ return Ui
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX218">
+      <Item class="ModuleScript" referent="RBX219">
         <Properties>
           <string name="Name">GeneTextureAssets</string>
           <ProtectedString name="Source">--!strict
@@ -372657,7 +372688,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX219">
+      <Item class="ModuleScript" referent="RBX220">
         <Properties>
           <string name="Name">GeneTextures</string>
           <ProtectedString name="Source">--!strict
@@ -372713,7 +372744,7 @@ return Textures
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX220">
+      <Item class="ModuleScript" referent="RBX221">
         <Properties>
           <string name="Name">HatchFragments</string>
           <ProtectedString name="Source">--!strict
@@ -372746,7 +372777,7 @@ return F
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX221">
+      <Item class="ModuleScript" referent="RBX222">
         <Properties>
           <string name="Name">HatchFxPlan</string>
           <ProtectedString name="Source">--!strict
@@ -372950,7 +372981,7 @@ return P
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX222">
+      <Item class="ModuleScript" referent="RBX223">
         <Properties>
           <string name="Name">HatchPresentation</string>
           <ProtectedString name="Source">--!strict
@@ -373223,7 +373254,7 @@ return Hatch
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX223">
+      <Item class="ModuleScript" referent="RBX224">
         <Properties>
           <string name="Name">HatchTimeline</string>
           <ProtectedString name="Source">--!strict
@@ -373671,7 +373702,7 @@ return T
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX224">
+      <Item class="ModuleScript" referent="RBX225">
         <Properties>
           <string name="Name">HubGuideRules</string>
           <ProtectedString name="Source">--!strict
@@ -373853,7 +373884,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX225">
+      <Item class="ModuleScript" referent="RBX226">
         <Properties>
           <string name="Name">HubSignCopy</string>
           <ProtectedString name="Source">--!strict
@@ -373907,7 +373938,7 @@ return Copy
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX226">
+      <Item class="ModuleScript" referent="RBX227">
         <Properties>
           <string name="Name">HubTravelClientRules</string>
           <ProtectedString name="Source">--!strict
@@ -373995,7 +374026,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX227">
+      <Item class="ModuleScript" referent="RBX228">
         <Properties>
           <string name="Name">HubTravelRules</string>
           <ProtectedString name="Source">--!strict
@@ -374081,7 +374112,7 @@ return HubTravelRules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX228">
+      <Item class="ModuleScript" referent="RBX229">
         <Properties>
           <string name="Name">HubWalkUpRules</string>
           <ProtectedString name="Source">--!strict
@@ -374157,7 +374188,7 @@ return HubWalkUpRules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX229">
+      <Item class="ModuleScript" referent="RBX230">
         <Properties>
           <string name="Name">HudRules</string>
           <ProtectedString name="Source">--!strict
@@ -374225,7 +374256,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX230">
+      <Item class="ModuleScript" referent="RBX231">
         <Properties>
           <string name="Name">IconRaster</string>
           <ProtectedString name="Source">--!strict
@@ -374234,7 +374265,7 @@ return {["amber"]={341,0,1,16777216,1,33554432,20,55923968,1,16777216,40,0,1,167
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX231">
+      <Item class="ModuleScript" referent="RBX232">
         <Properties>
           <string name="Name">IconTiles</string>
           <ProtectedString name="Source">--!strict
@@ -374243,7 +374274,7 @@ return {["dinos"]={["size"]=32,["colors"]={{104,48,36},{110,114,78},{0,29,13},{1
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX232">
+      <Item class="ModuleScript" referent="RBX233">
         <Properties>
           <string name="Name">IconVectors</string>
           <ProtectedString name="Source">--!strict
@@ -374252,7 +374283,7 @@ return {["home"]={{["x"]=21,["y"]=41,["w"]=60,["h"]=47,["color"]="#142035",["rad
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX233">
+      <Item class="ModuleScript" referent="RBX234">
         <Properties>
           <string name="Name">IndexProgress</string>
           <ProtectedString name="Source">--!strict
@@ -374303,7 +374334,7 @@ return Progress
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX234">
+      <Item class="ModuleScript" referent="RBX235">
         <Properties>
           <string name="Name">InspectMath</string>
           <ProtectedString name="Source">--!strict
@@ -374415,7 +374446,7 @@ return M
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX235">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">IslandLayout</string>
           <ProtectedString name="Source">--!strict
@@ -374508,7 +374539,7 @@ return IslandLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">LegacyGenePatterns</string>
           <ProtectedString name="Source">--!strict
@@ -374552,7 +374583,7 @@ return Legacy
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX238">
         <Properties>
           <string name="Name">LoadGate</string>
           <ProtectedString name="Source">--!strict
@@ -374589,7 +374620,7 @@ return Gate
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">LowPolyDinoAssets</string>
           <ProtectedString name="Source">--!strict
@@ -374632,7 +374663,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">LowPolyDinos</string>
           <ProtectedString name="Source">--!strict
@@ -374874,7 +374905,7 @@ return LowPoly
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">LowPolyPattern</string>
           <ProtectedString name="Source">--!strict
@@ -375156,7 +375187,7 @@ return Pattern
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">LowPolyPose</string>
           <ProtectedString name="Source">--!strict
@@ -375358,7 +375389,7 @@ return Pose
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">LowPolyRecolor</string>
           <ProtectedString name="Source">--!strict
@@ -375411,7 +375442,7 @@ return Recolor
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">LowPolyTexture</string>
           <ProtectedString name="Source">--!strict
@@ -375682,7 +375713,7 @@ return Texture
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">LowPolyTier</string>
           <ProtectedString name="Source">--!strict
@@ -375751,7 +375782,7 @@ return Tier
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">MeshSanity</string>
           <ProtectedString name="Source">--!strict
@@ -375795,7 +375826,7 @@ return Sanity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">ModelPreview</string>
           <ProtectedString name="Source">--!strict
@@ -375856,7 +375887,7 @@ return ModelPreview
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">MovementEnvelope</string>
           <ProtectedString name="Source">--!strict
@@ -375909,7 +375940,7 @@ return MovementEnvelope
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">MutationEffects</string>
           <ProtectedString name="Source">-- Standalone client adapter. Upload BeDino_Soft_Smoke_256.png first.
@@ -375991,7 +376022,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">MutationLook</string>
           <ProtectedString name="Source">--!strict
@@ -376079,7 +376110,7 @@ return Look
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">MyDinos</string>
           <ProtectedString name="Source">--!strict
@@ -376258,7 +376289,7 @@ return M
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX251">
+      <Item class="ModuleScript" referent="RBX252">
         <Properties>
           <string name="Name">NavigationArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -376276,7 +376307,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX252">
+      <Item class="ModuleScript" referent="RBX253">
         <Properties>
           <string name="Name">NestQueue</string>
           <ProtectedString name="Source">--!strict
@@ -376348,7 +376379,7 @@ return NestQueue
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX253">
+      <Item class="ModuleScript" referent="RBX254">
         <Properties>
           <string name="Name">NextGoal</string>
           <ProtectedString name="Source">--!strict
@@ -376429,7 +376460,7 @@ return NextGoal
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX254">
+      <Item class="ModuleScript" referent="RBX255">
         <Properties>
           <string name="Name">NotifyQueue</string>
           <ProtectedString name="Source">--!strict
@@ -376643,7 +376674,7 @@ return Q
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX255">
+      <Item class="ModuleScript" referent="RBX256">
         <Properties>
           <string name="Name">NpcLowPoly</string>
           <ProtectedString name="Source">--!strict
@@ -376689,7 +376720,7 @@ return NpcLowPoly
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX256">
+      <Item class="ModuleScript" referent="RBX257">
         <Properties>
           <string name="Name">NpcPredatorRules</string>
           <ProtectedString name="Source">--!strict
@@ -377284,7 +377315,7 @@ return Npc
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX257">
+      <Item class="ModuleScript" referent="RBX258">
         <Properties>
           <string name="Name">OddsCopy</string>
           <ProtectedString name="Source">--!strict
@@ -377407,7 +377438,7 @@ return Copy
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX258">
+      <Item class="ModuleScript" referent="RBX259">
         <Properties>
           <string name="Name">PatternAtlasCache</string>
           <ProtectedString name="Source">--!strict
@@ -377493,7 +377524,7 @@ return Cache
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX259">
+      <Item class="ModuleScript" referent="RBX260">
         <Properties>
           <string name="Name">PatternGenes</string>
           <ProtectedString name="Source">--!strict
@@ -377713,7 +377744,7 @@ return Pattern
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX260">
+      <Item class="ModuleScript" referent="RBX261">
         <Properties>
           <string name="Name">PhoneScale</string>
           <ProtectedString name="Source">--!strict
@@ -377791,7 +377822,7 @@ return PhoneScale
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX261">
+      <Item class="ModuleScript" referent="RBX262">
         <Properties>
           <string name="Name">PotionArt</string>
           <ProtectedString name="Source">--!strict
@@ -377977,7 +378008,7 @@ return PotionArt
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX262">
+      <Item class="ModuleScript" referent="RBX263">
         <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
@@ -378071,7 +378102,170 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX263">
+      <Item class="ModuleScript" referent="RBX264">
+        <Properties>
+          <string name="Name">PrivateStateCore</string>
+          <ProtectedString name="Source">--!strict
+-- BD-360: owner-only player state. Player attributes replicate to EVERY client, so the large or sensitive values
+-- (collection, egg and nest queues, crystals, settings, run summary) travel by RemoteEvent to their owner only.
+-- This module is the pure core shared by the server sender and the client cache: the classification table, the
+-- coalescing buffer, and the snapshot/delta messages. Docs: docs/112-private-state.md.
+local Core = {}
+
+Core.CoalesceSeconds = 0.2 -- changes made inside one window leave as one message
+
+-- PRIVATE: only the owner needs it. Never set as a Player attribute (tools/verify_private_state.py enforces this).
+local PRIVATE = {
+    -- inventory and progression
+    "CollectionJson", "ProgressionJson", "SettingsJson", "RevealSkipJson",
+    "Crystals", "AccountXP", "PlaySeconds", "RarestCaught", "RobuxSpent", "ProfileRevision",
+    "CompyCopies", "CompyGold", "TriceratopsCopies", "TriceratopsGold", "TyrannosaurusCopies", "TyrannosaurusGold",
+    -- egg and nest queues
+    "ChestQueueJson", "NestsJson", "PendingChestGrants", "ActiveChestCount", "BankedRunEggCount", "QueuedEggsWaiting",
+    "NextChestId", "NextChestReadyAt", "RunStartBlocked",
+    -- run and hatch summaries
+    "LastChestBig", "LastChestShiny", "LastChestFailed", "LastChestGenesJson", "LastChestRewardText", "LastChestEventMutation",
+    "LastClaimedChestId", "LastSettledRunId", "LastRewardText", "LastRunCrystals", "LastRunCrystalBox", "LastRunEggCount", "LastRunNestCount", "LastRunNestFull",
+    -- owner-only multipliers and policy flags
+    "GrowthMultiplier", "SpeedMultiplier", "LootMultiplier", "ColourGrowthPercent", "StudioTestWallet", "PaidRandomEligible",
+}
+
+-- PUBLIC: other clients (or the loading screen and admin hooks) may read it, or it is a tiny status string/number.
+-- "render" = needed to draw or rank another player; "status" = tiny diagnostic/test hook (docs/79), accepted leak.
+local PUBLIC: {[string]: string} = {
+    EquippedSpeciesId = "render", EquippedBig = "render", EquippedShiny = "render", EquippedGenesJson = "render",
+    EquippedEventMutation = "render", EquippedAura = "render", AccountLevel = "render",
+    ProfileState = "state", ProfileMode = "state", CharacterState = "state", Location = "state", WorldReady = "state",
+    IsAdmin = "state", JoinedAt = "state", HubStation = "state",
+    LastRunId = "run", LastRunEndAt = "run", LastRunEndReason = "run", LastRunCatchScore = "run", LastRunGrowthScore = "run",
+    LastNestClaimAt = "status", LastExitStatusAt = "status", LastMutationToken = "status", LastPredatorUserId = "status", LeapReadyAt = "status",
+    LastBiteStatus = "status", LastChestClaimStatus = "status", LastChestTestGrantStatus = "status", LastCollectionGrantStatus = "status",
+    LastCrystalStatus = "status", LastEquipStatus = "status", LastExitStatus = "status", LastLeapStatus = "status",
+    LastMutationSetupStatus = "status", LastMutationStatus = "status", LastNestClaimStatus = "status", LastRunStartStatus = "status",
+    LastSettlementProbe = "status", MovementSecurityStatus = "status", LeapRejectCount = "status", FallRecoveries = "status", ArtPreviewStatus = "status", MovementRejectCount = "status",
+}
+
+Core.Private = {} :: {[string]: boolean}
+for _, name in PRIVATE do Core.Private[name] = true end
+Core.Public = PUBLIC
+Core.PrivateNames = PRIVATE
+
+-- "private", "public", or nil (unclassified: the static check fails the build on those).
+function Core.classify(name: string): string?
+    if Core.Private[name] then return "private" end
+    if PUBLIC[name] then return "public" end
+    return nil
+end
+
+function Core.isPrivate(name: string): boolean return Core.Private[name] == true end
+
+-- Rough wire size of a value in bytes (strings dominate; used by tests and the diagnostics line).
+function Core.bytes(value: any): number
+    local t = typeof(value)
+    if t == "string" then return #value + 2 end
+    if t == "number" then return 8 end
+    if t == "boolean" then return 1 end
+    if t == "table" then
+        local n = 4
+        for k, v in value do n += Core.bytes(k) + Core.bytes(v) end
+        return n
+    end
+    return 0
+end
+
+-- Server side: one buffer per player. dirty keeps the ORDER of the sets, because the client reacts to
+-- LastClaimedChestId only after the LastChest* values beside it were set.
+export type Buffer = {values: {[string]: any}, sent: {[string]: any}, dirty: {string}, queued: {[string]: boolean}, seq: number, ready: boolean, scheduled: boolean}
+
+function Core.newBuffer(): Buffer
+    return {values = {}, sent = {}, dirty = {}, queued = {}, seq = 0, ready = false, scheduled = false}
+end
+
+-- Returns true when the value changed and a send is now due.
+function Core.set(buffer: Buffer, name: string, value: any): boolean
+    if buffer.values[name] == value then return false end
+    buffer.values[name] = value
+    if buffer.queued[name] == nil then
+        buffer.queued[name] = true
+        table.insert(buffer.dirty, name)
+    end
+    return true
+end
+
+function Core.snapshotMessage(buffer: Buffer): any
+    buffer.seq += 1
+    local data = {}
+    for name, value in buffer.values do data[name] = value end
+    buffer.sent = table.clone(buffer.values)
+    buffer.dirty, buffer.queued = {}, {}
+    return {k = "s", v = buffer.seq, d = data}
+end
+
+-- A delta holds only what really differs from the last message sent (a value set back to what the client has is dropped).
+function Core.deltaMessage(buffer: Buffer): any?
+    local order, data, removed = {}, {}, {}
+    for _, name in buffer.dirty do
+        local value = buffer.values[name]
+        if value ~= buffer.sent[name] then
+            table.insert(order, name)
+            if value == nil then table.insert(removed, name) else data[name] = value end
+            buffer.sent[name] = value
+        end
+    end
+    buffer.dirty, buffer.queued = {}, {}
+    if #order == 0 then return nil end
+    buffer.seq += 1
+    return {k = "d", v = buffer.seq, o = order, d = data, x = if #removed &gt; 0 then removed else nil}
+end
+
+-- Client side cache. apply returns the names that changed, in set order, or "gap" when a delta was missed (ask for a snapshot).
+export type Cache = {values: {[string]: any}, seq: number, received: boolean}
+
+function Core.newCache(): Cache
+    return {values = {}, seq = 0, received = false}
+end
+
+function Core.apply(cache: Cache, message: any): ({string}, string?)
+    if typeof(message) ~= "table" then return {}, "bad" end
+    local changed: {string} = {}
+    if message.k == "s" and typeof(message.d) == "table" and typeof(message.v) == "number" then
+        for name, value in message.d do
+            if Core.isPrivate(name) and cache.values[name] ~= value then table.insert(changed, name) end
+        end
+        for name in cache.values do
+            if message.d[name] == nil then table.insert(changed, name) end
+        end
+        table.sort(changed)
+        local nextValues = {}
+        for name, value in message.d do if Core.isPrivate(name) then nextValues[name] = value end end
+        cache.values, cache.seq, cache.received = nextValues, message.v, true
+        return changed, nil
+    end
+    if message.k == "d" and typeof(message.d) == "table" and typeof(message.o) == "table" and typeof(message.v) == "number" then
+        if not cache.received or message.v ~= cache.seq + 1 then
+            if message.v &lt;= cache.seq then return {}, nil end -- an old duplicate
+            return {}, "gap"
+        end
+        cache.seq = message.v
+        for name, value in message.d do
+            if Core.isPrivate(name) then cache.values[name] = value end
+        end
+        if typeof(message.x) == "table" then
+            for _, name in message.x do cache.values[name] = nil end
+        end
+        for _, name in message.o do
+            if typeof(name) == "string" and Core.isPrivate(name) then table.insert(changed, name) end
+        end
+        return changed, nil
+    end
+    return {}, "bad"
+end
+
+return Core
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX265">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -378206,7 +378400,7 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX264">
+      <Item class="ModuleScript" referent="RBX266">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -378443,7 +378637,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX265">
+      <Item class="ModuleScript" referent="RBX267">
         <Properties>
           <string name="Name">RarityCurve</string>
           <ProtectedString name="Source">--!strict
@@ -378514,7 +378708,7 @@ return table.freeze(Curve)
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX266">
+      <Item class="ModuleScript" referent="RBX268">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -378523,7 +378717,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX267">
+      <Item class="ModuleScript" referent="RBX269">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -378539,7 +378733,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX268">
+      <Item class="ModuleScript" referent="RBX270">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -378610,7 +378804,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX269">
+      <Item class="ModuleScript" referent="RBX271">
         <Properties>
           <string name="Name">RevealSkip</string>
           <ProtectedString name="Source">--!strict
@@ -378694,7 +378888,7 @@ return Skip
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX270">
+      <Item class="ModuleScript" referent="RBX272">
         <Properties>
           <string name="Name">RunEggTags</string>
           <ProtectedString name="Source">--!strict
@@ -378733,7 +378927,7 @@ return Tags
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX271">
+      <Item class="ModuleScript" referent="RBX273">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -378825,7 +379019,7 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX272">
+      <Item class="ModuleScript" referent="RBX274">
         <Properties>
           <string name="Name">SettingsModel</string>
           <ProtectedString name="Source">--!strict
@@ -378945,7 +379139,7 @@ return Model
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX273">
+      <Item class="ModuleScript" referent="RBX275">
         <Properties>
           <string name="Name">Sfx</string>
           <ProtectedString name="Source">--!strict
@@ -379165,7 +379359,7 @@ return Sfx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX274">
+      <Item class="ModuleScript" referent="RBX276">
         <Properties>
           <string name="Name">SfxRules</string>
           <ProtectedString name="Source">--!strict
@@ -379285,7 +379479,7 @@ return R
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX275">
+      <Item class="ModuleScript" referent="RBX277">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -379333,7 +379527,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX276">
+      <Item class="ModuleScript" referent="RBX278">
         <Properties>
           <string name="Name">ShopCardState</string>
           <ProtectedString name="Source">--!strict
@@ -379371,7 +379565,7 @@ return State
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX277">
+      <Item class="ModuleScript" referent="RBX279">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -379420,7 +379614,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX278">
+      <Item class="ModuleScript" referent="RBX280">
         <Properties>
           <string name="Name">ShopPreview</string>
           <ProtectedString name="Source">--!strict
@@ -379488,7 +379682,7 @@ return P
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX279">
+      <Item class="ModuleScript" referent="RBX281">
         <Properties>
           <string name="Name">SpawnGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -379542,7 +379736,7 @@ return SpawnGeometry
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX280">
+      <Item class="ModuleScript" referent="RBX282">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -379758,7 +379952,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX281">
+      <Item class="ModuleScript" referent="RBX283">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -379790,7 +379984,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX282">
+      <Item class="ModuleScript" referent="RBX284">
         <Properties>
           <string name="Name">UIFormat</string>
           <ProtectedString name="Source">--!strict
@@ -379834,7 +380028,7 @@ return UIFormat
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX283">
+      <Item class="ModuleScript" referent="RBX285">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -379865,7 +380059,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX284">
+      <Item class="ModuleScript" referent="RBX286">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -379889,7 +380083,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX285">
+      <Item class="ModuleScript" referent="RBX287">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -380063,7 +380257,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX286">
+      <Item class="ModuleScript" referent="RBX288">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -380094,7 +380288,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX287">
+      <Item class="ModuleScript" referent="RBX289">
         <Properties>
           <string name="Name">WeatherLooks</string>
           <ProtectedString name="Source">--!strict
@@ -380235,7 +380429,7 @@ return Weather
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX288">
+      <Item class="ModuleScript" referent="RBX290">
         <Properties>
           <string name="Name">WeatherSounds</string>
           <ProtectedString name="Source">--!strict
@@ -380310,7 +380504,7 @@ return Sounds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX289">
+      <Item class="ModuleScript" referent="RBX291">
         <Properties>
           <string name="Name">WorldGeneratedMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -380368,7 +380562,7 @@ return Generated
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX290">
+      <Item class="ModuleScript" referent="RBX292">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -380419,7 +380613,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX291">
+      <Item class="ModuleScript" referent="RBX293">
         <Properties>
           <string name="Name">WorldKitMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -380472,7 +380666,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX292">
+    <Item class="Folder" referent="RBX294">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -550027,15 +550221,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX293">
+  <Item class="ServerScriptService" referent="RBX295">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX294">
+    <Item class="Folder" referent="RBX296">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX295">
+      <Item class="ModuleScript" referent="RBX297">
         <Properties>
           <string name="Name">AdminService</string>
           <ProtectedString name="Source">--!strict
@@ -550149,7 +550343,7 @@ return AdminService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX296">
+      <Item class="ModuleScript" referent="RBX298">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -550470,7 +550664,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX297">
+      <Item class="Script" referent="RBX299">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -550514,6 +550708,7 @@ if Config.WorldGeneratedMeshes and Config.WorldArtMode=="BiomeKit" then require(
 Arena.build()
 Leaderboards.start()
 
+require(script.Parent.PrivateState).start() -- BD-360 owner-only channel, before any profile can load
 ProfileRepository.start()
 -- BD-354: PlayerRemoving and BindToClose share one idempotent, awaitable leave path (settle once, release once).
 local leaving = LeaveCoordinator.new({
@@ -550649,7 +550844,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX298">
+      <Item class="ModuleScript" referent="RBX300">
         <Properties>
           <string name="Name">CaveLavaFx</string>
           <ProtectedString name="Source">--!strict
@@ -550837,7 +551032,7 @@ return CaveLavaFx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX299">
+      <Item class="ModuleScript" referent="RBX301">
         <Properties>
           <string name="Name">CaveLighting</string>
           <ProtectedString name="Source">--!strict
@@ -550951,7 +551146,7 @@ return CaveLighting
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX300">
+      <Item class="ModuleScript" referent="RBX302">
         <Properties>
           <string name="Name">CaveProps</string>
           <ProtectedString name="Source">--!strict
@@ -551171,7 +551366,7 @@ return CaveProps
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX301">
+      <Item class="ModuleScript" referent="RBX303">
         <Properties>
           <string name="Name">CaveTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -551230,7 +551425,7 @@ return CaveTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX302">
+      <Item class="ModuleScript" referent="RBX304">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -551350,7 +551545,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX303">
+      <Item class="ModuleScript" referent="RBX305">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -551443,7 +551638,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX304">
+      <Item class="ModuleScript" referent="RBX306">
         <Properties>
           <string name="Name">CombatService</string>
           <ProtectedString name="Source">--!strict
@@ -551464,6 +551659,7 @@ local TeamUp = require(ReplicatedStorage.Shared.CombatTeamUp)
 local NpcRules = require(ReplicatedStorage.Shared.NpcPredatorRules)
 
 local CombatService = {}
+local PrivateState = require(script.Parent.PrivateState)
 
 local function numberAttribute(instance: Instance, name: string, fallback: number): number
     local value = instance:GetAttribute(name)
@@ -551471,7 +551667,7 @@ local function numberAttribute(instance: Instance, name: string, fallback: numbe
 end
 
 local function peacefulFor(player: Player): boolean
-    local raw = player:GetAttribute("SettingsJson")
+    local raw = PrivateState.get(player, "SettingsJson")
     if typeof(raw) ~= "string" or raw == "" then return false end
     local ok, decoded = pcall(function() return HttpService:JSONDecode(raw) end)
     return ok and SettingsModel.fromStore(decoded).peaceful
@@ -551689,7 +551885,7 @@ return CombatService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX305">
+      <Item class="ModuleScript" referent="RBX307">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -551697,6 +551893,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PhysicsService = game:GetService("PhysicsService")
 local Dinosaur = {}
+local PrivateState = require(script.Parent.PrivateState)
 local Visual = require(ReplicatedStorage.Shared.DinosaurVisual)
 local Config = require(ReplicatedStorage.Shared.Config)
 local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
@@ -551744,7 +551941,7 @@ end
 function Dinosaur.refreshForPlayer(character: Model, player: Player)
     local equipped = player:GetAttribute("EquippedSpeciesId")
     local speciesId = if typeof(equipped) == "string" then equipped else "compy"
-    local ok, collection = pcall(function() return game:GetService("HttpService"):JSONDecode(player:GetAttribute("CollectionJson") or "{}") end)
+    local ok, collection = pcall(function() return game:GetService("HttpService"):JSONDecode(PrivateState.get(player, "CollectionJson") or "{}") end)
     local entry = if ok then collection[speciesId] else nil
     local mutation = if entry and (entry.diamond or 0) &gt; 0 then "diamond" elseif entry and (entry.emerald or 0) &gt; 0 then "emerald" elseif entry and (entry.gold or 0) &gt; 0 then "gold" else "base"
     if player:GetAttribute("EquippedGenesJson") and player:GetAttribute("EquippedGenesJson")~="null" then mutation="base" end
@@ -551825,7 +552022,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX306">
+      <Item class="ModuleScript" referent="RBX308">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -552039,7 +552236,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX307">
+      <Item class="ModuleScript" referent="RBX309">
         <Properties>
           <string name="Name">FallRecovery</string>
           <ProtectedString name="Source">--!strict
@@ -552105,7 +552302,7 @@ return FallRecovery
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX308">
+      <Item class="ModuleScript" referent="RBX310">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -552377,7 +552574,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX309">
+      <Item class="ModuleScript" referent="RBX311">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -552549,7 +552746,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX310">
+      <Item class="ModuleScript" referent="RBX312">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -552735,7 +552932,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX311">
+      <Item class="ModuleScript" referent="RBX313">
         <Properties>
           <string name="Name">HubGateService</string>
           <ProtectedString name="Source">--!strict
@@ -552844,7 +553041,7 @@ return HubGateService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX312">
+      <Item class="ModuleScript" referent="RBX314">
         <Properties>
           <string name="Name">HubTravelService</string>
           <ProtectedString name="Source">--!strict
@@ -552928,7 +553125,7 @@ return HubTravelService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX313">
+      <Item class="ModuleScript" referent="RBX315">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -553325,7 +553522,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX314">
+      <Item class="ModuleScript" referent="RBX316">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -553446,7 +553643,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX315">
+      <Item class="ModuleScript" referent="RBX317">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -553526,7 +553723,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX316">
+      <Item class="ModuleScript" referent="RBX318">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -553536,6 +553733,7 @@ local RunService=game:GetService("RunService")
 local Config=require(game:GetService("ReplicatedStorage").Shared.Config)
 local Theme=require(game:GetService("ReplicatedStorage").Shared.UITheme)
 local CaveHubLayout=require(game:GetService("ReplicatedStorage").Shared.CaveHubLayout)
+local PrivateState=require(script.Parent.PrivateState)
 local Leaderboards={}
 local preview=RunService:IsStudio() and game.GameId==0
 local rows={}
@@ -553552,7 +553750,7 @@ function Leaderboards.publish(player: Player, metrics)
     if not metrics and player:GetAttribute("ProfileState")~="Loaded" then return end
     names[player.UserId]=player.Name
     for _,definition in definitions do
-        local value=if metrics then metrics[definition.id] else player:GetAttribute(definition.attribute) or 0
+        local value=if metrics then metrics[definition.id] else PrivateState.get(player,definition.attribute) or 0
         if preview then
             rows[definition.id]=rows[definition.id] or {}
             rows[definition.id][player.UserId]=value
@@ -553650,7 +553848,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX317">
+      <Item class="ModuleScript" referent="RBX319">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -553789,7 +553987,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX318">
+      <Item class="ModuleScript" referent="RBX320">
         <Properties>
           <string name="Name">LeaveCoordinator</string>
           <ProtectedString name="Source">--!strict
@@ -553872,7 +554070,7 @@ return LeaveCoordinator
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX319">
+      <Item class="ModuleScript" referent="RBX321">
         <Properties>
           <string name="Name">LowPolyDinoLoader</string>
           <ProtectedString name="Source">--!strict
@@ -553925,7 +554123,7 @@ return Loader
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX320">
+      <Item class="ModuleScript" referent="RBX322">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -554030,7 +554228,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX321">
+      <Item class="ModuleScript" referent="RBX323">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -554135,7 +554333,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX322">
+      <Item class="ModuleScript" referent="RBX324">
         <Properties>
           <string name="Name">NpcPredatorService</string>
           <ProtectedString name="Source">--!strict
@@ -554403,7 +554601,7 @@ return NpcPredatorService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX323">
+      <Item class="ModuleScript" referent="RBX325">
         <Properties>
           <string name="Name">PotionModels</string>
           <ProtectedString name="Source">--!strict
@@ -554455,7 +554653,7 @@ return Models
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX324">
+      <Item class="ModuleScript" referent="RBX326">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -554592,7 +554790,115 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX325">
+      <Item class="ModuleScript" referent="RBX327">
+        <Properties>
+          <string name="Name">PrivateState</string>
+          <ProtectedString name="Source">--!strict
+-- BD-360: server side of the owner-only state channel (docs/112). set/get replace Player:SetAttribute/GetAttribute for the
+-- PRIVATE names in Shared/PrivateStateCore. Values live only in server memory; the owner gets one snapshot when its client
+-- says hello and then deltas, coalesced for Core.CoalesceSeconds. Nobody else ever receives them.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Core = require(ReplicatedStorage.Shared.PrivateStateCore)
+
+local PrivateState = {}
+local buffers: {[Player]: Core.Buffer} = setmetatable({}, {__mode = "k"}) :: any
+local remote: RemoteEvent? = nil
+local stats = {snapshots = 0, deltas = 0, bytes = 0}
+PrivateState.stats = stats
+
+local function bufferOf(player: Player): Core.Buffer
+    local buffer = buffers[player]
+    if not buffer then
+        buffer = Core.newBuffer()
+        buffers[player] = buffer
+    end
+    return buffer
+end
+
+local function send(player: Player, message: any)
+    local target = remote
+    if not target then return end
+    stats.bytes += Core.bytes(message)
+    target:FireClient(player, message)
+end
+
+function PrivateState.flush(player: Player)
+    local buffer = buffers[player]
+    if not buffer then return end
+    buffer.scheduled = false
+    if not buffer.ready then return end -- the client has not said hello yet: the snapshot will carry everything
+    local message = Core.deltaMessage(buffer)
+    if message then
+        stats.deltas += 1
+        send(player, message)
+    end
+end
+
+function PrivateState.sendSnapshot(player: Player)
+    local buffer = bufferOf(player)
+    buffer.ready = true
+    stats.snapshots += 1
+    send(player, Core.snapshotMessage(buffer))
+end
+
+function PrivateState.set(player: Player, name: string, value: any)
+    assert(Core.isPrivate(name), "PrivateState.set: not a private name: " .. tostring(name))
+    local buffer = bufferOf(player)
+    if not Core.set(buffer, name, value) then return end
+    if buffer.ready and not buffer.scheduled then
+        buffer.scheduled = true
+        task.delay(Core.CoalesceSeconds, PrivateState.flush, player)
+    end
+end
+
+function PrivateState.get(player: Player, name: string): any
+    local buffer = buffers[player]
+    return if buffer then buffer.values[name] else nil
+end
+
+-- A copy of everything held for the player (tests and the admin size probe).
+function PrivateState.snapshot(player: Player): {[string]: any}
+    local buffer = buffers[player]
+    return if buffer then table.clone(buffer.values) else {}
+end
+
+function PrivateState.forget(player: Player)
+    buffers[player] = nil
+end
+
+function PrivateState.start()
+    local folder = ReplicatedStorage:FindFirstChild("BeDinoRemotes") :: Folder?
+    if not folder then
+        folder = Instance.new("Folder")
+        folder.Name = "BeDinoRemotes"
+        folder.Parent = ReplicatedStorage
+    end
+    local event = Instance.new("RemoteEvent")
+    event.Name = "PrivateState"
+    event.Parent = folder
+    remote = event
+    -- hello = "I am listening": sent once per client start and again whenever a delta was missed. A rejoin is a new
+    -- client, so it says hello again and receives the full snapshot.
+    local lastHello: {[Player]: number} = setmetatable({}, {__mode = "k"}) :: any
+    event.OnServerEvent:Connect(function(player: Player)
+        local now = os.clock()
+        if now - (lastHello[player] or -math.huge) &lt; 0.5 then return end
+        lastHello[player] = now
+        PrivateState.sendSnapshot(player)
+    end)
+    Players.PlayerRemoving:Connect(function(player: Player)
+        local buffer = buffers[player]
+        if buffer then buffer.ready = false end -- stop sending; the values stay readable until release
+    end)
+end
+
+return PrivateState
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX328">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -554609,6 +554915,7 @@ local NestQueue = require(ReplicatedStorage.Shared.NestQueue)
 local ProgressionConfig = require(ReplicatedStorage.Shared.ProgressionConfig)
 
 local ProfileRepository = {}
+local PrivateState = require(script.Parent.PrivateState)
 local DinosaurIdentity = require(script.Parent.DinosaurIdentity)
 local IdentityFusion = require(script.Parent.IdentityFusion)
 local FusionOdds = require(script.Parent.FusionOdds)
@@ -555057,33 +555364,33 @@ end
 
 local function syncAttributes(player: Player, profile: any)
     local progress=ProgressionRules.upgrade(profile)
-    player:SetAttribute("StudioTestWallet", localPreview and Config.StudioTestWalletEnabled)
-    player:SetAttribute("CollectionJson", HttpService:JSONEncode(profile.collection))
-    player:SetAttribute("Crystals",progress.crystals)
-    player:SetAttribute("ProgressionJson",HttpService:JSONEncode(progress))
+    PrivateState.set(player, "StudioTestWallet", localPreview and Config.StudioTestWalletEnabled)
+    PrivateState.set(player, "CollectionJson", HttpService:JSONEncode(profile.collection))
+    PrivateState.set(player, "Crystals",progress.crystals)
+    PrivateState.set(player, "ProgressionJson",HttpService:JSONEncode(progress))
     player:SetAttribute("EquippedAura",progress.equippedAura)
     local collection = profile.collection
-    player:SetAttribute("CompyCopies", collection.compy.base)
-    player:SetAttribute("CompyGold", collection.compy.gold)
-    player:SetAttribute("TriceratopsCopies", collection.triceratops.base)
-    player:SetAttribute("TriceratopsGold", collection.triceratops.gold)
-    player:SetAttribute("TyrannosaurusCopies", collection.tyrannosaurus.base)
-    player:SetAttribute("TyrannosaurusGold", collection.tyrannosaurus.gold)
-    player:SetAttribute("PendingChestGrants", profile.pendingChestGrants or 0)
-    player:SetAttribute("ProfileRevision", profile.revision or 0)
+    PrivateState.set(player, "CompyCopies", collection.compy.base)
+    PrivateState.set(player, "CompyGold", collection.compy.gold)
+    PrivateState.set(player, "TriceratopsCopies", collection.triceratops.base)
+    PrivateState.set(player, "TriceratopsGold", collection.triceratops.gold)
+    PrivateState.set(player, "TyrannosaurusCopies", collection.tyrannosaurus.base)
+    PrivateState.set(player, "TyrannosaurusGold", collection.tyrannosaurus.gold)
+    PrivateState.set(player, "PendingChestGrants", profile.pendingChestGrants or 0)
+    PrivateState.set(player, "ProfileRevision", profile.revision or 0)
     player:SetAttribute("EquippedSpeciesId", profile.equippedSpeciesId)
     local traits = EggTraits.selected(collection[profile.equippedSpeciesId], profile.equippedVariantKey)
     player:SetAttribute("EquippedBig", traits ~= nil and traits.big)
     player:SetAttribute("EquippedShiny", traits ~= nil and traits.shiny)
     player:SetAttribute("EquippedGenesJson",HttpService:JSONEncode(if traits then traits.genes else nil))
     player:SetAttribute("AccountLevel",ProgressionRules.level(progress))
-    player:SetAttribute("AccountXP",progress.accountXP or 0)
-    player:SetAttribute("PlaySeconds", profile.metrics.playSeconds)
-    player:SetAttribute("RarestCaught", profile.metrics.rarest)
-    player:SetAttribute("RobuxSpent", profile.metrics.robux)
+    PrivateState.set(player, "AccountXP",progress.accountXP or 0)
+    PrivateState.set(player, "PlaySeconds", profile.metrics.playSeconds)
+    PrivateState.set(player, "RarestCaught", profile.metrics.rarest)
+    PrivateState.set(player, "RobuxSpent", profile.metrics.robux)
     local eventMutation=if traits then ProgressionRules.item(ProgressionConfig.EventMutations,traits.mutationId) else ProgressionRules.eventMutation(collection[profile.equippedSpeciesId])
     player:SetAttribute("EquippedEventMutation",if eventMutation then eventMutation.id else "")
-    player:SetAttribute("ActiveChestCount", #profile.eggs)
+    PrivateState.set(player, "ActiveChestCount", #profile.eggs)
     local chestSummary = {}
     for index, chest in profile.eggs do
         if index &gt; Config.ChestQueueCapacity then break end
@@ -555098,31 +555405,31 @@ local function syncAttributes(player: Player, profile: any)
             genes=chest.genes,
         })
     end
-    player:SetAttribute("ChestQueueJson", HttpService:JSONEncode(chestSummary))
+    PrivateState.set(player, "ChestQueueJson", HttpService:JSONEncode(chestSummary))
     -- BD-044: banked run eggs and separate bonus nests (counts and slot summaries only).
     local banked = if typeof(profile.runEggBank) == "table" then #profile.runEggBank else 0
-    player:SetAttribute("BankedRunEggCount", banked)
-    player:SetAttribute("QueuedEggsWaiting", banked + (profile.pendingChestGrants or 0))
+    PrivateState.set(player, "BankedRunEggCount", banked)
+    PrivateState.set(player, "QueuedEggsWaiting", banked + (profile.pendingChestGrants or 0))
     local nestSummary = {}
     for _, nest in profile.eggNests or {} do
         table.insert(nestSummary, {id = nest.nestId, size = nest.size, luck = nest.luck, state = nest.state, readyAt = nest.readyAt})
     end
-    player:SetAttribute("NestsJson", HttpService:JSONEncode(nestSummary))
-    player:SetAttribute("RevealSkipJson", HttpService:JSONEncode(profile.revealSkip or {}))
+    PrivateState.set(player, "NestsJson", HttpService:JSONEncode(nestSummary))
+    PrivateState.set(player, "RevealSkipJson", HttpService:JSONEncode(profile.revealSkip or {}))
     -- BD-264: per-player settings; profiles saved before settings v2 have no field and read as defaults.
-    player:SetAttribute("SettingsJson", HttpService:JSONEncode(SettingsModel.toStore(SettingsModel.fromStore(profile.settings))))
-    player:SetAttribute("RunStartBlocked", ProfileRepository.runStartBlockReason(profile))
+    PrivateState.set(player, "SettingsJson", HttpService:JSONEncode(SettingsModel.toStore(SettingsModel.fromStore(profile.settings))))
+    PrivateState.set(player, "RunStartBlocked", ProfileRepository.runStartBlockReason(profile))
     local nextChest = profile.eggs[1]
     local buffered = revealBuffer[player]
     if buffered and #buffered &gt; 0 then
-        player:SetAttribute("NextChestId", buffered[1].eggId)
-        player:SetAttribute("NextChestReadyAt", 0)
+        PrivateState.set(player, "NextChestId", buffered[1].eggId)
+        PrivateState.set(player, "NextChestReadyAt", 0)
     elseif typeof(nextChest) == "table" then
-        player:SetAttribute("NextChestId", nextChest.eggId)
-        player:SetAttribute("NextChestReadyAt", nextChest.readyAt)
+        PrivateState.set(player, "NextChestId", nextChest.eggId)
+        PrivateState.set(player, "NextChestReadyAt", nextChest.readyAt)
     else
-        player:SetAttribute("NextChestId", "")
-        player:SetAttribute("NextChestReadyAt", 0)
+        PrivateState.set(player, "NextChestId", "")
+        PrivateState.set(player, "NextChestReadyAt", 0)
     end
 end
 
@@ -555309,7 +555616,7 @@ end
 local function paidRandomBlocked(player: Player, profile: any): boolean
     local robuxLinked = Config.CrystalPacksEnabled == true
         or (type(profile.metrics) == "table" and type(profile.metrics.robux) == "number" and profile.metrics.robux &gt; 0)
-    return robuxLinked and (not Config.PaidRandomItemsEnabled or player:GetAttribute("PaidRandomEligible") ~= true)
+    return robuxLinked and (not Config.PaidRandomItemsEnabled or PrivateState.get(player, "PaidRandomEligible") ~= true)
 end
 
 -- Shared precondition for every fusion read/write. Returns cached profile or nil, reason.
@@ -555613,7 +555920,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     local cachedOperation = findOperation(cached, operationId)
     if cachedOperation or hasSettledRun(cached, runId) then
         -- Cheap replay: skip preparing up to 300 eggs for a run that already committed.
-        player:SetAttribute("LastSettledRunId", runId)
+        PrivateState.set(player, "LastSettledRunId", runId)
         return true, if cachedOperation then cachedOperation.outcome else nil, "duplicate"
     end
 
@@ -555719,14 +556026,14 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     if profiles[player] then syncAttributes(player, profiles[player]) end
     local committedOutcome = if duplicate then duplicateOutcome else outcome
     if committedOutcome then
-        player:SetAttribute("LastRewardText", runRewardText(committedOutcome))
-        player:SetAttribute("LastRunCrystals", committedOutcome.crystals or 0)
-        player:SetAttribute("LastRunCrystalBox", committedOutcome.crystalBox or 0)
-        player:SetAttribute("LastRunEggCount", committedOutcome.eggCount or committedOutcome.chestCount or 0)
-        player:SetAttribute("LastRunNestCount", committedOutcome.nestCount or 0)
-        player:SetAttribute("LastRunNestFull", committedOutcome.nestFull == true)
+        PrivateState.set(player, "LastRewardText", runRewardText(committedOutcome))
+        PrivateState.set(player, "LastRunCrystals", committedOutcome.crystals or 0)
+        PrivateState.set(player, "LastRunCrystalBox", committedOutcome.crystalBox or 0)
+        PrivateState.set(player, "LastRunEggCount", committedOutcome.eggCount or committedOutcome.chestCount or 0)
+        PrivateState.set(player, "LastRunNestCount", committedOutcome.nestCount or 0)
+        PrivateState.set(player, "LastRunNestFull", committedOutcome.nestFull == true)
     end
-    player:SetAttribute("LastSettledRunId", runId)
+    PrivateState.set(player, "LastSettledRunId", runId)
     if priorState == "SaveFailed" and player:GetAttribute("ProfileState") == "SaveFailed" then player:SetAttribute("ProfileState", "Loaded") end
     return true, committedOutcome, if duplicate then "duplicate" else "committed"
 end
@@ -556166,13 +556473,13 @@ local function applyHatch(profileValue: any, chest: any, index: number, outcome:
 end
 
 local function publishHatch(player: Player, chestId: string, committedOutcome: any)
-    player:SetAttribute("LastChestRewardText", string.format("%dx %s", committedOutcome.count, committedOutcome.speciesId))
-    player:SetAttribute("LastChestEventMutation",committedOutcome.eventMutationId or "")
-    player:SetAttribute("LastChestBig",committedOutcome.big == true)
-    player:SetAttribute("LastChestShiny",committedOutcome.shiny == true)
-    player:SetAttribute("LastChestGenesJson",HttpService:JSONEncode(committedOutcome.genes))
-    player:SetAttribute("LastChestFailed",committedOutcome.failed==true)
-    player:SetAttribute("LastClaimedChestId", chestId)
+    PrivateState.set(player, "LastChestRewardText", string.format("%dx %s", committedOutcome.count, committedOutcome.speciesId))
+    PrivateState.set(player, "LastChestEventMutation",committedOutcome.eventMutationId or "")
+    PrivateState.set(player, "LastChestBig",committedOutcome.big == true)
+    PrivateState.set(player, "LastChestShiny",committedOutcome.shiny == true)
+    PrivateState.set(player, "LastChestGenesJson",HttpService:JSONEncode(committedOutcome.genes))
+    PrivateState.set(player, "LastChestFailed",committedOutcome.failed==true)
+    PrivateState.set(player, "LastClaimedChestId", chestId)
 end
 
 function ProfileRepository.claimChest(player: Player, chestId: string)
@@ -556452,7 +556759,7 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
     if not ProfileRepository.isLoaded(player) then return false,"profile_not_loaded" end
     if typeof(token)~="string" or #token&lt;1 or #token&gt;80 then return false,"invalid_token" end
     if (action=="buyEgg" or action=="upgradeCondition") and next(Config.DeveloperProducts)~=nil
-        and (not Config.PaidRandomItemsEnabled or player:GetAttribute("PaidRandomEligible")~=true) then return false,"random_items_unavailable" end
+        and (not Config.PaidRandomItemsEnabled or PrivateState.get(player, "PaidRandomEligible")~=true) then return false,"random_items_unavailable" end
     local eggId=nil
     local egg=nil
     local purchaseConditionLevel=ProfileRepository.progression(player).conditionLevel
@@ -556622,6 +556929,7 @@ function ProfileRepository.release(player: Player)
     pendingSettlements[player] = nil
     local cached = profiles[player]
     profiles[player] = nil
+    PrivateState.forget(player) -- BD-360: the owner-only values go with the profile
     if not cached then return end
 
     local userId = player.UserId
@@ -556660,7 +556968,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX326">
+      <Item class="ModuleScript" referent="RBX329">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -556675,6 +556983,7 @@ local MovementEnvelope=require(ReplicatedStorage.Shared.MovementEnvelope)
 local GameConfig=require(ReplicatedStorage.Shared.Config)
 local ColourBonus=require(ReplicatedStorage.Shared.ColourBonus)
 local Service={}
+local PrivateState = require(script.Parent.PrivateState)
 -- BD-172: colour growth bonus from the SERVER-held equipped genes (never client data); decoded once per distinct string.
 local colourCache={json="",percent=0,multiplier=1}
 local function colourGrowth(genesJson:any): (number,number)
@@ -556822,9 +557131,9 @@ local function crystalSpawns(repository)
 end
 function Service.start(repository)
     local function policy(player)
-        player:SetAttribute("PaidRandomEligible",false)
+        PrivateState.set(player, "PaidRandomEligible",false)
         local ok,info=pcall(function() return game:GetService("PolicyService"):GetPolicyInfoForPlayerAsync(player) end)
-        if player.Parent then player:SetAttribute("PaidRandomEligible",ok and typeof(info)=="table" and info.ArePaidRandomItemsRestricted==false) end
+        if player.Parent then PrivateState.set(player, "PaidRandomEligible",ok and typeof(info)=="table" and info.ArePaidRandomItemsRestricted==false) end
     end
     Players.PlayerAdded:Connect(function(player) task.spawn(policy,player) end)
     for _,player in Players:GetPlayers() do task.spawn(policy,player) end
@@ -556860,10 +557169,10 @@ function Service.start(repository)
                     growth*=adminGrowth speed*=adminSpeed
                     local colourPercent,colourMultiplier=colourGrowth(player:GetAttribute("EquippedGenesJson"))
                     growth*=colourMultiplier -- BD-172: applied after the GrowthCap, so it is always an extra &lt;= +10% on gained growth
-                    c:SetAttribute("ColourGrowthPercent",colourPercent) player:SetAttribute("ColourGrowthPercent",colourPercent)
+                    c:SetAttribute("ColourGrowthPercent",colourPercent) PrivateState.set(player, "ColourGrowthPercent",colourPercent)
                     c:SetAttribute("EventMutationId",if mutation then mutation.id else "")
                     c:SetAttribute("GrowthMultiplier",growth) c:SetAttribute("WeatherLootMultiplier",loot)
-                    player:SetAttribute("GrowthMultiplier",growth) player:SetAttribute("SpeedMultiplier",speed) player:SetAttribute("LootMultiplier",loot)
+                    PrivateState.set(player, "GrowthMultiplier",growth) PrivateState.set(player, "SpeedMultiplier",speed) PrivateState.set(player, "LootMultiplier",loot)
                     local h=c:FindFirstChildOfClass("Humanoid")
                     if h then h.WalkSpeed=GameConfig.WalkSpeed*(if c:GetAttribute("RunState")=="Active" then speed else 1) end
                     c:SetAttribute("EquippedAuraId",p.equippedAura)
@@ -556880,7 +557189,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX327">
+      <Item class="ModuleScript" referent="RBX330">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -556994,7 +557303,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX328">
+      <Item class="ModuleScript" referent="RBX331">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -557006,6 +557315,7 @@ local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 local RunLifecycle = {}
+local PrivateState = require(script.Parent.PrivateState)
 local lastExitRequest: {[Player]: number} = {}
 local requestEndRun: RemoteEvent? = nil
 local settleRun = nil
@@ -557046,7 +557356,7 @@ function RunLifecycle.begin(player: Player, character: Model)
     if player:GetAttribute("ProfileState") ~= "Loaded" then return end
     -- BD-044: a run starts only when the egg bank and pending-nest list have room for a
     -- maximum run, so settlement never has to drop or refuse earned eggs/nests.
-    local blocked = player:GetAttribute("RunStartBlocked")
+    local blocked = PrivateState.get(player, "RunStartBlocked")
     if typeof(blocked) == "string" and blocked ~= "" then
         player:SetAttribute("LastRunStartStatus", blocked)
         return
@@ -557304,7 +557614,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX329">
+      <Item class="ModuleScript" referent="RBX332">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -557376,19 +557686,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX330">
+  <Item class="StarterPlayer" referent="RBX333">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX331">
+    <Item class="StarterPlayerScripts" referent="RBX334">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX332">
+      <Item class="Folder" referent="RBX335">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX333">
+        <Item class="LocalScript" referent="RBX336">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -557647,7 +557957,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX334">
+        <Item class="LocalScript" referent="RBX337">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -557715,8 +558025,8 @@ local selected = "compy"
 local seenTutorial = false
 local lastGrowth = 0
 local lastEggCount = 0
-local function num(id: string): number return player:GetAttribute(id) or 0 end
-local function str(id: string,fallback: string?): string return player:GetAttribute(id) or fallback or "" end
+local PrivateState=require(script.Parent.PrivateState) -- BD-360: owner-only values arrive by remote, public ones stay attributes
+local num,str=PrivateState.num,PrivateState.str -- same call shape as before; private names read the cache, public ones the attribute
 local jsonCache = {}
 local function decoded(attribute: string, fallback: string)
     local raw=str(attribute,fallback)
@@ -558570,7 +558880,7 @@ render=function(name: string)
         local function supply()
             if modalVersion~=version or active~="hatch" or not handle or not handle.pending() then return end
             local reward=str("LastChestRewardText","New dinosaur")
-            local failed=player:GetAttribute("LastChestFailed")==true
+            local failed=PrivateState.get("LastChestFailed")==true
             failedEgg=failed
             local genesOk,genes=pcall(function() return Http:JSONDecode(str("LastChestGenesJson","null")) end)
             if not genesOk or typeof(genes)~="table" then genes=nil end
@@ -558581,7 +558891,7 @@ render=function(name: string)
             -- colours and pattern only, never the egg condition.
             local view=Preview.add(body,id,"base")
             view.Position,view.Size=UDim2.fromOffset(160,-12),UDim2.fromOffset(504,260)
-            PreviewTraits.add(view,{big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),genes=genes,mutationId=str("LastChestEventMutation")})
+            PreviewTraits.add(view,{big=PrivateState.get("LastChestBig"),shiny=PrivateState.get("LastChestShiny"),genes=genes,mutationId=str("LastChestEventMutation")})
             view.Visible=false
             task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync(view:GetDescendants()) end) end)
             local rarity=speciesIndex(id)
@@ -558619,7 +558929,7 @@ render=function(name: string)
             paint.setRarityColor(rarityColors[rarity])
             handle.supply({
                 dino=view,rarity=rarity,color=rarityColors[rarity],failed=failed,
-                shiny=not failed and player:GetAttribute("LastChestShiny")==true,big=not failed and player:GetAttribute("LastChestBig")==true,
+                shiny=not failed and PrivateState.get("LastChestShiny")==true,big=not failed and PrivateState.get("LastChestBig")==true,
                 mutationName=if mutation and not failed then mutation.name else nil,mutationColor=mutationColor,
                 remaining=remainingAfter,genes=if geneticsOk then genes else nil,colorReveal=colorReveal,patternReveal=patternReveal,paintColors=paintColors,
                 secondReveal=if geneticsOk then HatchTimeline.colorReveal(ProgressionConfig.EggColors,genes,"secondary") else nil, -- BD-220: right bucket
@@ -558651,11 +558961,11 @@ render=function(name: string)
         -- BD-052: one confirmation, no stay-still channel; the server settles through tryEnd.
         heading.Text,header.BackgroundColor3="Return to Sanctuary?",C.red
         art(body,"home",36,28,214)
-        label(body,"Your current run will end and rewards will be banked.",300,8,500,100,28,C.gold)
+        label(body,require(Shared.FtueCopy).homeConfirmLine,300,8,500,100,28,C.gold)
         local character=player.Character
         local catches=if character then character:GetAttribute("CatchScore") or 0 else 0
         local growth=if character then character:GetAttribute("GrowthScore") or 0 else 0
-        label(body,string.format("Banking %d catches  •  %d growth",catches,math.floor(growth)),300,116,500,60,22)
+        label(body,require(Shared.FtueCopy).homeConfirmTotals(catches,growth),300,116,500,60,22)
         local buttonHeight=if touchMode() then math.max(68,46/viewportScale()) else 68
         button(body,"RETURN",300,396-buttonHeight,244,buttonHeight,C.accent,function()
             local current=player.Character
@@ -558684,7 +558994,7 @@ render=function(name: string)
         if oops&gt;0 then label(body,"Your eggs are safe!",30,0,760,30,24,C.blue) end
         art(body,"trophy",24,42+oops,240)
         label(body,"Growth  "..math.floor(num("LastRunGrowthScore")),300,18+oops,500,60,34,C.accent)
-        label(body,"Catches  "..num("LastRunCatchScore"),300,93+oops,500,60,34,C.blue)
+        label(body,require(Shared.FtueCopy).runCompleteEggsLabel.."  "..num("LastRunCatchScore"),300,93+oops,500,60,34,C.blue)
         label(body,str("LastRewardText","Saving rewards..."),290,168+oops,510,100,24,C.gold)
         label(body,"+"..num("LastRunCrystals").." Crystals • Level "..num("AccountLevel"),30,302,760,40,21)
         local hasEggs=str("NextChestId")~="" or num("QueuedEggsWaiting")&gt;0 or #decoded("NestsJson","[]")&gt;0
@@ -558731,7 +559041,7 @@ render=function(name: string)
         label(body,string.format("Eat 500 food to earn %d eggs. Some weather gives more!",math.floor(500*Config.FoodCatchRate+.5)),18,316,788,72,23)
     elseif name=="tutorial" then
         heading.Text,header.BackgroundColor3="Welcome to Be Dino!",C.blue
-        local steps={{"1","EAT &amp; GROW","Find small food clusters across the island."},{"2","JUMP &amp; EXPLORE","Space to jump, E to leap. Buttons on mobile."},{"3","BANK &amp; HATCH","Return to sanctuary to bank catches and eggs."}}
+        local steps=require(Shared.FtueCopy).tutorialSteps
         for i,step in steps do
             local card=box(body,(i-1)*276,0,264,278,C.card,24)
             local stepColor=({C.accent,C.blue,C.gold})[i]
@@ -558810,7 +559120,7 @@ local function refreshCrystals()
     end
     crystalInitialized=true
 end
-player:GetAttributeChangedSignal("Crystals"):Connect(refreshCrystals)
+PrivateState.onChanged("Crystals", refreshCrystals)
 refreshCrystals()
 -- Polish: persistent "next goal" line under the crystal HUD (top-right, clear of the thumbstick/jump area).
 local goalHUD=box(gui,0,0,260,30,C.panel,2)
@@ -558848,7 +559158,7 @@ local function loadGoalDinos()
     end)
 end
 for _,attribute in {"CollectionJson","AccountLevel","AccountXP"} do
-    player:GetAttributeChangedSignal(attribute):Connect(function() refreshGoal() if attribute=="CollectionJson" then loadGoalDinos() end end)
+    PrivateState.onChanged(attribute, function() refreshGoal() if attribute=="CollectionJson" then loadGoalDinos() end end)
 end
 refreshGoal()
 loadGoalDinos()
@@ -559177,17 +559487,17 @@ local function scheduleModalRefresh()
     end)
 end
 for _,attribute in {"EquippedSpeciesId","CollectionJson","ChestQueueJson","ProgressionJson","NestsJson","QueuedEggsWaiting","RevealSkipJson"} do
-    player:GetAttributeChangedSignal(attribute):Connect(function()
+    PrivateState.onChanged(attribute, function()
         scheduleModalRefresh()
     end)
 end
-player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function()
+PrivateState.onChanged("LastClaimedChestId", function()
     hatchPending=false
     -- Skippable eggs (selected rarities, nothing notable) are already credited: no animation.
     local species=string.match(str("LastChestRewardText"),"x (%w+)") or "compy"
     local okGenes,genes=pcall(function() return Http:JSONDecode(str("LastChestGenesJson","null")) end)
-    local outcome={big=player:GetAttribute("LastChestBig"),shiny=player:GetAttribute("LastChestShiny"),eventMutationId=str("LastChestEventMutation"),
-        genes=if okGenes and typeof(genes)=="table" then genes else nil,failed=player:GetAttribute("LastChestFailed")==true}
+    local outcome={big=PrivateState.get("LastChestBig"),shiny=PrivateState.get("LastChestShiny"),eventMutationId=str("LastChestEventMutation"),
+        genes=if okGenes and typeof(genes)=="table" then genes else nil,failed=PrivateState.get("LastChestFailed")==true}
     local rarity=speciesIndex(species)
     table.insert(batchEntries,{rarity=rarity,name=Config.SpeciesDisplayNames[species] or species,failed=outcome.failed,shiny=outcome.shiny==true,big=outcome.big==true})
     if autoHatching and EggsLogic.shouldAutoOpen(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen(),rarity,outcome,skipAllReveals) then
@@ -559205,7 +559515,7 @@ player:GetAttributeChangedSignal("LastClaimedChestId"):Connect(function()
     end
 end)
 player:GetAttributeChangedSignal("LastRunEndAt"):Connect(function() if not autoHatching then open("results") end end)
-player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
+PrivateState.onChanged("LastSettledRunId", function()
     local serial=hatchCancelSerial
     task.spawn(function()
         local deadline=os.clock()+15
@@ -559238,9 +559548,9 @@ player:GetAttributeChangedSignal("LastNestClaimAt"):Connect(function()
     Sfx.playCue("level_up")
     notify("Nest opened!",C.accent,{icon="egg_nest",body="Open your eggs when ready"})
 end)
-player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)
+PrivateState.onChanged("LastRewardText", function() if active=="results" then body:ClearAllChildren() render(active) end end)
 for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus","LastNestClaimStatus","LastRunStartStatus"} do
-    player:GetAttributeChangedSignal(attribute):Connect(function()
+    PrivateState.onChanged(attribute, function()
         local status=str(attribute)
         if attribute=="LastChestClaimStatus" then hatchPending=false end
         if status=="claimed" then return
@@ -559261,7 +559571,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX335">
+        <Item class="LocalScript" referent="RBX338">
           <Properties>
             <string name="Name">CameraOcclusion</string>
             <ProtectedString name="Source">--!strict
@@ -559366,7 +559676,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX336">
+        <Item class="ModuleScript" referent="RBX339">
           <Properties>
             <string name="Name">CaveAtmosphere</string>
             <ProtectedString name="Source">--!strict
@@ -559500,7 +559810,7 @@ return Cave
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX337">
+        <Item class="ModuleScript" referent="RBX340">
           <Properties>
             <string name="Name">CaveLavaClient</string>
             <ProtectedString name="Source">--!strict
@@ -559616,7 +559926,7 @@ return Lava
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX338">
+        <Item class="ModuleScript" referent="RBX341">
           <Properties>
             <string name="Name">CombatHud</string>
             <ProtectedString name="Source">--!strict
@@ -559950,7 +560260,7 @@ return Hud
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX339">
+        <Item class="LocalScript" referent="RBX342">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!nonstrict
@@ -560044,7 +560354,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX340">
+        <Item class="ModuleScript" referent="RBX343">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -560123,7 +560433,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX341">
+        <Item class="ModuleScript" referent="RBX344">
           <Properties>
             <string name="Name">DinoIndexPanels</string>
             <ProtectedString name="Source">--!strict
@@ -560671,7 +560981,7 @@ return Panels
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX342">
+        <Item class="LocalScript" referent="RBX345">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -561001,7 +561311,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX343">
+        <Item class="ModuleScript" referent="RBX346">
           <Properties>
             <string name="Name">EggPicture</string>
             <ProtectedString name="Source">--!strict
@@ -561078,7 +561388,7 @@ return EggPicture
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX344">
+        <Item class="ModuleScript" referent="RBX347">
           <Properties>
             <string name="Name">EggsScreen</string>
             <ProtectedString name="Source">--!strict
@@ -561274,7 +561584,7 @@ return EggsScreen
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX345">
+        <Item class="LocalScript" referent="RBX348">
           <Properties>
             <string name="Name">FoodGlow</string>
             <ProtectedString name="Source">--!strict
@@ -561500,7 +561810,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX346">
+        <Item class="ModuleScript" referent="RBX349">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -562535,7 +562845,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX347">
+        <Item class="ModuleScript" referent="RBX350">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -562645,7 +562955,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX348">
+        <Item class="ModuleScript" referent="RBX351">
           <Properties>
             <string name="Name">FxRig</string>
             <ProtectedString name="Source">--!nonstrict
@@ -563012,7 +563322,7 @@ return Rig
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX349">
+        <Item class="ModuleScript" referent="RBX352">
           <Properties>
             <string name="Name">HatchFx</string>
             <ProtectedString name="Source">--!nonstrict
@@ -563223,7 +563533,7 @@ return M
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX350">
+        <Item class="ModuleScript" referent="RBX353">
           <Properties>
             <string name="Name">HatchSequence</string>
             <ProtectedString name="Source">--!strict
@@ -564339,7 +564649,7 @@ return Seq
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX351">
+        <Item class="ModuleScript" referent="RBX354">
           <Properties>
             <string name="Name">HubGateClient</string>
             <ProtectedString name="Source">--!strict
@@ -564406,7 +564716,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX352">
+        <Item class="ModuleScript" referent="RBX355">
           <Properties>
             <string name="Name">HubGuideClient</string>
             <ProtectedString name="Source">--!strict
@@ -564519,7 +564829,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX353">
+        <Item class="ModuleScript" referent="RBX356">
           <Properties>
             <string name="Name">HubTravelClient</string>
             <ProtectedString name="Source">--!strict
@@ -564693,7 +565003,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX354">
+        <Item class="ModuleScript" referent="RBX357">
           <Properties>
             <string name="Name">HubWalkUpClient</string>
             <ProtectedString name="Source">--!strict
@@ -564790,7 +565100,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX355">
+        <Item class="ModuleScript" referent="RBX358">
           <Properties>
             <string name="Name">HudV2</string>
             <ProtectedString name="Source">--!strict
@@ -564911,7 +565221,7 @@ return Hud
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX356">
+        <Item class="ModuleScript" referent="RBX359">
           <Properties>
             <string name="Name">InspectView</string>
             <ProtectedString name="Source">--!strict
@@ -565103,7 +565413,7 @@ return InspectView
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX357">
+        <Item class="LocalScript" referent="RBX360">
           <Properties>
             <string name="Name">JumpCarry</string>
             <ProtectedString name="Source">--!strict
@@ -565161,7 +565471,7 @@ if player.Character then task.spawn(bind, player.Character) end
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX358">
+        <Item class="LocalScript" referent="RBX361">
           <Properties>
             <string name="Name">LowPolyAnimator</string>
             <ProtectedString name="Source">--!strict
@@ -565408,7 +565718,7 @@ Players.PlayerRemoving:Connect(function(player) if player.Character then untrack
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX359">
+        <Item class="ModuleScript" referent="RBX362">
           <Properties>
             <string name="Name">ModalCompact</string>
             <ProtectedString name="Source">--!strict
@@ -565559,7 +565869,7 @@ return M
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX360">
+        <Item class="ModuleScript" referent="RBX363">
           <Properties>
             <string name="Name">MutationBadge</string>
             <ProtectedString name="Source">--!strict
@@ -565610,7 +565920,7 @@ return Badge
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX361">
+        <Item class="ModuleScript" referent="RBX364">
           <Properties>
             <string name="Name">NpcMotion</string>
             <ProtectedString name="Source">--!strict
@@ -565680,7 +565990,7 @@ return Motion
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX362">
+        <Item class="ModuleScript" referent="RBX365">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -565783,7 +566093,111 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX363">
+        <Item class="ModuleScript" referent="RBX366">
+          <Properties>
+            <string name="Name">PrivateState</string>
+            <ProtectedString name="Source">--!strict
+-- BD-360: client cache of the owner-only values (docs/112). Same shape the UI already used with Player attributes:
+-- get/num/str read a value, onChanged(name, fn) replaces GetAttributeChangedSignal. PUBLIC names still come from the
+-- Player attributes, so UI code can call one getter for both. Before the first snapshot every read gives nil/0/"" and
+-- isReady() is false, which is what the screens already treat as "not loaded yet".
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Core = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PrivateStateCore"))
+
+local PrivateState = {}
+local player = Players.LocalPlayer
+local cache = Core.newCache()
+local listeners: {[string]: {[number]: (any) -&gt; ()}} = {}
+local anyListeners: {[number]: (string) -&gt; ()} = {}
+local nextId = 0
+local remote: RemoteEvent? = nil
+
+local function connection(bucket: {[number]: any}, fn: any)
+    nextId += 1
+    local id = nextId
+    bucket[id] = fn
+    return {Disconnect = function() bucket[id] = nil end}
+end
+
+function PrivateState.isReady(): boolean return cache.received end
+
+function PrivateState.get(name: string): any
+    if Core.isPrivate(name) then return cache.values[name] end
+    return player:GetAttribute(name)
+end
+
+function PrivateState.num(name: string): number
+    local value = PrivateState.get(name)
+    return if typeof(value) == "number" then value else 0
+end
+
+function PrivateState.str(name: string, fallback: string?): string
+    local value = PrivateState.get(name)
+    return if typeof(value) == "string" then value else (fallback or "")
+end
+
+-- fn(value) runs after every change of name, for private and public names alike.
+function PrivateState.onChanged(name: string, fn: (any) -&gt; ())
+    if not Core.isPrivate(name) then
+        return player:GetAttributeChangedSignal(name):Connect(function() fn(player:GetAttribute(name)) end)
+    end
+    local bucket = listeners[name]
+    if not bucket then bucket = {}; listeners[name] = bucket end
+    return connection(bucket, fn)
+end
+
+-- fn(name) runs for every private change (used by the diagnostics line and the tests).
+function PrivateState.onAnyChanged(fn: (string) -&gt; ())
+    return connection(anyListeners, fn)
+end
+
+local function fire(names: {string})
+    for _, name in names do
+        local value = cache.values[name]
+        local bucket = listeners[name]
+        if bucket then
+            for _, fn in table.clone(bucket) do
+                local ok, err = pcall(fn, value)
+                if not ok then warn("[Be Dino] PrivateState listener failed for " .. name .. ": " .. tostring(err)) end
+            end
+        end
+        for _, fn in table.clone(anyListeners) do pcall(fn, name) end
+    end
+end
+
+-- Used by the receiver and by tests: apply one server message.
+function PrivateState.receive(message: any)
+    local changed, problem = Core.apply(cache, message)
+    if problem == "gap" then
+        local target = remote
+        if target then target:FireServer("resync") end
+        return
+    end
+    fire(changed)
+end
+
+task.spawn(function()
+    local folder = ReplicatedStorage:WaitForChild("BeDinoRemotes", 30)
+    local event = if folder then folder:WaitForChild("PrivateState", 30) else nil
+    if not event or not event:IsA("RemoteEvent") then
+        warn("[Be Dino] PrivateState remote not found: owner-only data will not load")
+        return
+    end
+    remote = event
+    event.OnClientEvent:Connect(PrivateState.receive)
+    for _ = 1, 15 do -- hello until the first snapshot arrived (the server answers at once)
+        if cache.received then return end
+        event:FireServer("hello")
+        task.wait(2)
+    end
+end)
+
+return PrivateState
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="LocalScript" referent="RBX367">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -566015,7 +566429,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX364">
+        <Item class="ModuleScript" referent="RBX368">
           <Properties>
             <string name="Name">SettingsMenu</string>
             <ProtectedString name="Source">--!strict
@@ -566118,11 +566532,11 @@ return Menu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX365">
+        <Item class="LocalScript" referent="RBX369">
           <Properties>
             <string name="Name">SettingsSync</string>
             <ProtectedString name="Source">--!strict
--- Settings v2 sync (BD-264): loads the saved per-player settings (attribute SettingsJson, set by the server from
+-- Settings v2 sync (BD-264): loads the saved per-player settings (private value SettingsJson, pushed by the server from
 -- profile.settings), applies every change to its consumers, and sends changes back to the server (debounced).
 -- Consumers: Calm motion -&gt; Theme.MotionEnabled; sound -&gt; AudioMixer; Effects -&gt; CosmeticVisuals; Weather -&gt; WeatherVisuals
 -- (both read SettingsModel directly). jumpSize is stored with a getter only: no consumer yet.
@@ -566133,6 +566547,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Model = require(Shared:WaitForChild("SettingsModel"))
 local Theme = require(Shared:WaitForChild("UITheme"))
 local Mixer = require(Shared:WaitForChild("AudioMixer"))
+local PrivateState = require(script.Parent:WaitForChild("PrivateState")) -- BD-360
 
 local player = Players.LocalPlayer
 local remote = (ReplicatedStorage:WaitForChild("BeDinoRemotes", 60) :: Folder):WaitForChild("SetSettings", 60) :: RemoteEvent -- BD-330: timeouts, no infinite-yield warning
@@ -566160,7 +566575,7 @@ Model.onChange(function(s)
 end)
 
 local function readSaved()
-    local raw = player:GetAttribute("SettingsJson")
+    local raw = PrivateState.get("SettingsJson")
     if typeof(raw) ~= "string" or raw == "" then return end
     local ok, decoded = pcall(function() return HttpService:JSONDecode(raw) end)
     if not ok then return end
@@ -566170,7 +566585,7 @@ local function readSaved()
     loaded = true
 end
 
-player:GetAttributeChangedSignal("SettingsJson"):Connect(function()
+PrivateState.onChanged("SettingsJson", function()
     -- The server echoes our own save: ignore it while a newer local change is waiting to be sent.
     readSaved()
 end)
@@ -566180,7 +566595,7 @@ task.delay(5, function() loaded = true end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX366">
+        <Item class="ModuleScript" referent="RBX370">
           <Properties>
             <string name="Name">ShopCard</string>
             <ProtectedString name="Source">--!strict
@@ -566218,7 +566633,7 @@ return Card
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX367">
+        <Item class="ModuleScript" referent="RBX371">
           <Properties>
             <string name="Name">ShopCards</string>
             <ProtectedString name="Source">--!strict
@@ -566310,7 +566725,7 @@ return Cards
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX368">
+        <Item class="ModuleScript" referent="RBX372">
           <Properties>
             <string name="Name">UiScan</string>
             <ProtectedString name="Source">--!strict
@@ -566389,7 +566804,7 @@ return UiScan
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX369">
+        <Item class="ModuleScript" referent="RBX373">
           <Properties>
             <string name="Name">VolumeSliders</string>
             <ProtectedString name="Source">--!strict
@@ -566470,7 +566885,7 @@ return Sliders
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX370">
+        <Item class="LocalScript" referent="RBX374">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -566537,7 +566952,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX371">
+        <Item class="LocalScript" referent="RBX375">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -567487,7 +567902,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX372">
+        <Item class="LocalScript" referent="RBX376">
           <Properties>
             <string name="Name">WorldCulling</string>
             <ProtectedString name="Source">--!strict
@@ -567614,7 +568029,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX373">
+        <Item class="LocalScript" referent="RBX377">
           <Properties>
             <string name="Name">WorldReady</string>
             <ProtectedString name="Source">--!strict
@@ -567652,7 +568067,7 @@ remote:FireServer()
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX374">
+  <Item class="Workspace" referent="RBX378">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>
