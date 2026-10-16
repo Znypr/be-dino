@@ -874,7 +874,7 @@ function c:GetAttribute(k)return self.attrs[k]end
 function c:SetAttribute(k,v)self.attrs[k]=v end
 function c:FindFirstChild(k)return if k=="HumanoidRootPart" then root else nil end
 function c:FindFirstChildOfClass(k)return if k=="Humanoid" then h else nil end
-local user={Name="Tester",Character=c,attrs={ProfileState="Loaded",MovementSecurityStatus="OK"}}
+local user={Name="Tester",UserId=777,Character=c,attrs={ProfileState="Loaded",MovementSecurityStatus="OK"}}
 function user:GetAttribute(k)return self.attrs[k]end
 function user:SetAttribute(k,v)self.attrs[k]=v end
 -- Pure envelope: a leap that follows the launch numbers is valid; every kind of cheat is named.

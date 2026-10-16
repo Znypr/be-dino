@@ -16,6 +16,7 @@ Leap.LatencyGrace=.35    -- seconds added to the time-based distance limit
 Leap.Slack=8             -- studs of position slack
 Leap.SpeedTolerance=1.35 -- horizontal speed multiplier
 Leap.HeightTolerance=1.3 -- apex multiplier
+local leapReady: {[number]: number} = {} -- BD-363: UserId -> LeapReadyAt, survives leave/rejoin on this server
 Leap.Penalty=30          -- extra cooldown seconds after a rejected leap
 
 local function planar(a,b)
@@ -64,6 +65,7 @@ function Leap.start()
         end
         local readyAt=math.max(player:GetAttribute("LeapReadyAt") or 0,now)+Leap.Penalty
         player:SetAttribute("LeapReadyAt",readyAt)
+        leapReady[player.UserId]=readyAt
         player:SetAttribute("LastLeapStatus","rejected")
         player:SetAttribute("LeapRejectCount",(player:GetAttribute("LeapRejectCount") or 0)+1)
         warn(string.format("[Be Dino leap] rejected for %s (%s)",tostring(player.Name),reason))
@@ -81,7 +83,7 @@ function Leap.start()
             or player:GetAttribute("ProfileState")~="Loaded" or h.FloorMaterial==Enum.Material.Air
             or player:GetAttribute("MovementSecurityStatus")=="REJECTED" then return end
         if active[player] then return end
-        if now<(player:GetAttribute("LeapReadyAt") or 0) then player:SetAttribute("LastLeapStatus","cooldown") return end
+        if now<math.max(player:GetAttribute("LeapReadyAt") or 0,leapReady[player.UserId] or 0) then player:SetAttribute("LastLeapStatus","cooldown") return end
         local look=root.CFrame.LookVector
         local forward=Vector3.new(look.X,0,look.Z)
         if forward.Magnitude<.01 then return end forward=forward.Unit
@@ -90,6 +92,7 @@ function Leap.start()
         end
         -- The client already launched itself; the server keeps ownership with the player and only records the leap.
         player:SetAttribute("LeapReadyAt",now+Config.LeapCooldown)
+        leapReady[player.UserId]=now+Config.LeapCooldown -- BD-363: a rejoin cannot reset the cooldown (UserId keyed, pruned below)
         player:SetAttribute("LastLeapStatus","leaping")
         c:SetAttribute("LeapUntil",now+Config.LeapDuration)
         c:SetAttribute("MovementSpeedLimit",Leap.effective().LeapHorizontalSpeed)
@@ -128,6 +131,10 @@ function Leap.start()
             end
         end
     end)
-    Players.PlayerRemoving:Connect(function(p) requests[p]=nil if active[p] then active[p].endsAt=0 end end)
+    Players.PlayerRemoving:Connect(function(p)
+        requests[p]=nil
+        if active[p] then active[p].endsAt=0 end
+        for id,at in leapReady do if workspace:GetServerTimeNow()>=at then leapReady[id]=nil end end -- only unexpired cooldowns are kept
+    end)
 end
 return Leap
