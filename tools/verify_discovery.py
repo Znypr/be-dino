@@ -85,7 +85,8 @@ def static_checks():
     hatch = (ROOT / 'src/client/HatchSequence.luau').read_text(encoding='utf-8')
     assert 'r.newFind' in hatch and '"NEW!"' in hatch
     boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8')
-    assert 'decoded("DiscoveryJson"' in boot and 'newFind=' in boot
+    hud = (ROOT / 'src/client/GoalHud.luau').read_text(encoding='utf-8')  # goal HUD lives in GoalHud (register limit)
+    assert 'decoded("DiscoveryJson"' in hud and 'newFind=' in boot
 
 
 if __name__ == '__main__':
