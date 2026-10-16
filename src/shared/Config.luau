@@ -44,6 +44,7 @@ return table.freeze({
     FoodSeed = 1404,
     FoodArtMode = "Legacy", -- "Kit": BD-050 Blender food variants (visual only; points unchanged) PROVISIONAL
     WorldArtMode = "Legacy", -- "BiomeKit": BD-049 Blender props + placement grammar PROVISIONAL
+    WorldGeneratedMeshes = true, -- BD-206: Roblox-generated MeshParts for mapped kit props (WorldGeneratedMeshes.luau); a failed load keeps the kit model
     WorldArtSeed = 1404,
     WorldArtDensity = 1, -- the playtest profile sets 0.35 (docs/68 part budget); 1 is ~18k native parts
     -- BD-168 client distance culling of decorative props/food (docs/89). PartBudget = max prop parts a client keeps parented;

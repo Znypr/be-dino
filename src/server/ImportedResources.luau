@@ -4,6 +4,7 @@ local InsertService=game:GetService("InsertService")
 local AssetService=game:GetService("AssetService")
 local Bindings=require(ReplicatedStorage.Shared.ResourceMeshAssets)
 local KitMeshes=require(ReplicatedStorage.Shared.WorldKitMeshAssets)
+local GeneratedMeshes=require(ReplicatedStorage.Shared.WorldGeneratedMeshes)
 local Import={}
 local function overrides(): Folder
     local existing=ReplicatedStorage:FindFirstChild("ResourceOverrides")
@@ -38,6 +39,39 @@ function Import.loadWorldKit(): (number, number)
     while pending>0 and os.clock()<deadline do task.wait() end
     workspace:SetAttribute("WorldKitMeshParts",loaded)
     workspace:SetAttribute("WorldKitMeshFailed",failed+pending)
+    return loaded,failed+pending
+end
+-- BD-206: Roblox-generated world meshes (WorldGeneratedMeshes.Assets) as one MeshPart each in ReplicatedStorage.GeneratedWorld.
+-- A failed load only logs and counts; Arena then keeps the current kit model for that prop (same fallback as loadWorldKit).
+function Import.loadGeneratedWorld(): (number, number)
+    local folder=ReplicatedStorage:FindFirstChild("GeneratedWorld")
+    if not folder then folder=Instance.new("Folder") folder.Name="GeneratedWorld" folder.Parent=ReplicatedStorage end
+    local loaded,failed,pending=0,0,0
+    for key,asset in GeneratedMeshes.Assets do
+        pending+=1
+        task.spawn(function()
+            local ok,result=pcall(function()
+                -- generate_mesh publishes a Model ("Roblox Generated Object") that holds one textured MeshPart.
+                local container=InsertService:LoadAsset(tonumber(asset.assetId))
+                local found: MeshPart? = nil
+                for _,item in container:GetDescendants() do if item:IsA("MeshPart") then found=item break end end
+                assert(found,"generated asset has no MeshPart")
+                local mesh=found:Clone()
+                container:Destroy()
+                for _,child in mesh:GetChildren() do if not child:IsA("SurfaceAppearance") then child:Destroy() end end
+                mesh.Name=key
+                mesh.Anchored,mesh.CanCollide,mesh.CanTouch,mesh.CanQuery,mesh.Massless=true,false,false,false,true
+                mesh:SetAttribute("GeneratedAssetId",asset.assetId)
+                return mesh
+            end)
+            if ok then result.Parent=folder loaded+=1 else failed+=1 warn("[Be Dino] generated mesh "..key.." ("..asset.assetId..") unavailable; keeping the current kit model: "..tostring(result)) end
+            pending-=1
+        end)
+    end
+    local deadline=os.clock()+30
+    while pending>0 and os.clock()<deadline do task.wait() end
+    workspace:SetAttribute("GeneratedMeshLoaded",loaded)
+    workspace:SetAttribute("GeneratedMeshFailed",failed+pending)
     return loaded,failed+pending
 end
 function Import.load()
