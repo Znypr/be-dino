@@ -76,10 +76,10 @@ class WorldGeneratedMeshTests(unittest.TestCase):
     def test_ground_props_are_baked_but_unbound_and_unplaced(self):
         """BD-464 step 1: eight ground props, empty ids (not uploaded), never placed, FBX + registry rows exist, loader skips empty ids."""
         entries = re.findall(r'^\s{4}(\w+) = \{assetId = "(\d*)", placed = (true|false)\}', PROPS_BLOCK, re.M)
-        keys = {k for k, _, _ in entries}
+        keys = {k for k, _, _ in entries if k.startswith("ground_")}
         self.assertEqual(keys, {"ground_rock_small_v3", "ground_rock_medium_v3", "ground_rock_mossy_v3", "ground_log_fallen_v3",
                                 "ground_stump_roots_v3", "ground_mushrooms_v3", "ground_bush_round_v3", "ground_bush_berry_v3"})
-        for key, asset_id, placed in entries:
+        for key, asset_id, placed in [e for e in entries if e[0].startswith("ground_")]:
             self.assertEqual(placed, "false", f"{key} must not be marked placed before BD-464 step 2")
             if asset_id:
                 self.assertRegex(asset_id, r"^[1-9][0-9]{8,17}$")
@@ -91,6 +91,25 @@ class WorldGeneratedMeshTests(unittest.TestCase):
         arena = (ROOT / "src/server/Arena.luau").read_text()
         self.assertNotIn("Generated.Props", arena, "nothing may place the ground props before step 2")
         self.assertNotIn("GeneratedMeshes.Props", (ROOT / "src/shared/BiomePlacement.luau").read_text() if (ROOT / "src/shared/BiomePlacement.luau").exists() else "")
+
+    def test_plants_are_baked_but_unbound_and_unplaced(self):
+        """BD-463 step 1: eight plants (grass tufts, jungle plant, flower clusters, fern), empty ids (not uploaded), never placed,
+        FBX + registry + slot rows exist, loader skips empty ids, nothing reads the keys for placement."""
+        entries = re.findall(r'^\s{4}(plant_\w+) = \{assetId = "(\d*)", placed = (true|false)\}', PROPS_BLOCK, re.M)
+        self.assertEqual({k for k, _, _ in entries}, {"plant_grass_broad_v3", "plant_grass_arch_v3", "plant_grass_low_v3", "plant_jungle_leaf_v3",
+                                                      "plant_flowers_daisy_v3", "plant_flowers_yellow_v3", "plant_flowers_red_v3", "plant_fern_arch_v3"})
+        slots = (ROOT / "tools/asset_slots.json").read_text()
+        for key, asset_id, placed in entries:
+            self.assertEqual(placed, "false", f"{key} must not be marked placed before BD-463 step 2")
+            if asset_id:
+                self.assertRegex(asset_id, r"^[1-9][0-9]{8,17}$")
+                self.assertNotIn(asset_id, self.assets.values(), "plant id duplicates a current generated id")
+            self.assertTrue((ROOT / f"assets/blender/world/fbx_v3/{key}.fbx").exists())
+            self.assertIn(key, REGISTRY)
+            self.assertIn(f'"name": "{key}"', slots)
+        for path in ("src/server/Arena.luau", "src/shared/BiomePlacement.luau"):
+            file = ROOT / path
+            if file.exists(): self.assertNotIn("plant_", file.read_text(), "nothing may place the plants before step 2")
 
     def test_fallback_and_flag_are_wired(self):
         arena = (ROOT / "src/server/Arena.luau").read_text()
