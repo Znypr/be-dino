@@ -10,6 +10,7 @@ local C = Theme.Colors
 
 local Menu = {}
 local currentTab = "sound"
+local labOpen = false -- BD-081: the Sound lab page (every sound, PLAY) replaces the Sound tab body
 
 export type Context = {
     label: (Instance, string, number, number, number, number, number, Color3?) -> TextLabel,
@@ -48,6 +49,7 @@ local function drawSound(body: Instance, ctx: Context)
     end
     local on = Theme.HatchSoundEnabled ~= false
     toggle(body, ctx, 3, "Hatch sound", on, function() Theme.HatchSoundEnabled = Theme.HatchSoundEnabled == false ctx.open("settings") end)
+    ctx.button(body, "SOUND LAB", 0, TOP + 4 * ROW, 250, 48, C.blue, function() labOpen = true ctx.open("settings") end).Name = "Button_SoundLab"
     ctx.button(body, "RESET SOUND", 620, TOP + 3 * ROW, 204, 48, C.card, function()
         Mixer.reset()
         for _, key in Mixer.Order do Model.set(key, Mixer.get(key)) end
@@ -99,7 +101,10 @@ function Menu.build(body: Instance, ctx: Context): string
         end)
         b.Name = "Tab_" .. id
     end
-    if currentTab == "sound" then drawSound(body, ctx)
+    if currentTab == "sound" and labOpen then
+        -- BD-081: Sound lab replaces the Sound tab body (tab bar stays); BACK returns to the sliders.
+        require(script.Parent:WaitForChild("SoundLab")).draw(body, ctx, function() labOpen = false ctx.open("settings") end)
+    elseif currentTab == "sound" then drawSound(body, ctx)
     elseif currentTab == "look" then drawLook(body, ctx)
     elseif currentTab == "controls" then drawControls(body, ctx) end
     return currentTab
