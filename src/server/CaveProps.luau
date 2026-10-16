@@ -91,7 +91,9 @@ local function addSignText(mesh: MeshPart, key: string, text: string)
     gui.Face = (Enum.NormalId :: any)[cfg.face]
     gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
     gui.PixelsPerStud = 40
-    gui.LightInfluence = 0.6
+    -- BD-292: signs are self-lit so the word stays readable in the dim lamp-lit cave (docs/114 s6.1 cave band 0.15-0.35)
+    gui.LightInfluence = Props.SignLightInfluence
+    gui.Brightness = Props.SignBrightness
     gui.AlwaysOnTop = false
     gui.ClipsDescendants = true
     local label = Instance.new("TextLabel")
