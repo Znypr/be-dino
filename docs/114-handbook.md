@@ -115,6 +115,18 @@ Text >= 14 px; targets >= 44 px; contrast >= 4.5:1; kid words per [72](72-ui-cop
 ### 8.3 Any FX
 Calm and soft (no flicker, no full-screen flash); never hides dino, food or controls; particle/part budget stated; phone rate about half; Reduce Motion variant; colours from the palette; at most 8 dinos with FX, nearest first ([93](93-anime-fx-direction.md), [92](92-mutation-fx-brief.md)).
 
+
+#### 8.3.1 Royal Nova aura appearance benchmark (OWNER, 2026-10-16)
+Source: owner review of the Royal Nova image draft in ChatGPT on 2026-10-16: "i would expect slightly more smoke, and more floor rings. but overall pretty good", followed by approval to update this handbook.
+
+- **OWNER TARGET:** colourful, dimensional anime magic with a calm, bubbly feel. Auras need clearly visible volume and layered depth. Calm describes their motion and feel; it does not mean faint, sparse or minimal.
+- Royal Nova's accepted overall draft direction: purple-and-gold flowing energy ribbons passing behind and in front of the dino, rounded lavender smoke curls near the feet/lower body, sparse gold stars, a soft vertical glow and ground swirls. Keep the dino matte and its face, silhouette and body markings readable.
+- **Owner-requested refinement:** slightly more smoke presence and more floor rings than the initial draft. Build a fuller, softly curling smoke base with gaps around the feet; use multiple distinct floor rings with visible spacing and differing radii rather than one thin wire or a solid luminous floor disc.
+- **PROVISIONAL next-draft interpretation:** 2-3 floor rings, with gentle counter-rotation or expanding ripples in an eventual animation. The owner approved the direction, not an exact ring count, particle count, opacity or timing.
+- Soft, curling flame-like energy shapes are allowed. Avoid aggressive jagged spikes, harsh flashes and flicker. This owner clarification supersedes the blanket "no flame shapes" wording in [93](93-anime-fx-direction.md) for aura appearance; retain its calm-motion and readability principles.
+- The draft is an **aura appearance benchmark only**. Its dinosaur model and environment are not approved production assets; a still image does not establish animation quality, implementation, Studio acceptance or phone performance. The revised draft remains subject to owner feedback.
+- Preserve device budgets and Reduce Motion support. Achieve richness through authored shapes, composition and depth; verify readability in daylight, the cave and stacked mutation/aura/trail combinations. This direction does not authorize raising budgets or changing runtime code by itself.
+
 ## 9. Game rules cheat sheet (numbers true today; CODE unless noted)
 | Rule | Value | Source |
 |---|---|---|
