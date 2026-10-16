@@ -13,7 +13,9 @@
 | Checks | `tools/verify_demo_director.py`, `record.py --selftest`, `edit.py selftest` |
 
 ## Safety
-The director does nothing unless `RunService:IsStudio()` **and** `Config.DemoDirectorEnabled = true`. The flag is false in source and pinned off in the default and playtest profiles (`tools/release_profiles.py`), so a build with it on fails `verify_release`. Flip it locally in Studio only; never commit it. Triggers fire only the existing Studio test remotes (`TestGrantChests`, `TestSetMutationCopies`, `TestGrantSpecies`), each still gated by its own flag on the server (`ChestTestGrantEnabled` etc.); no server code was added.
+The director does nothing unless `RunService:IsStudio()` **and** `Config.DemoDirectorEnabled = true`. The flag is false in source and pinned off in the default and playtest profiles (`tools/release_profiles.py`), so a build with it on fails `verify_release`. Flip it locally in Studio only; never commit it. Triggers fire only the **DemoTrigger** RemoteFunction (`src/server/DemoTriggerService.luau`), which exists only when `RunService:IsStudio()` **and** `game.GameId == 0` (unpublished) **and** `Config.DemoDirectorEnabled`; owner-local (first player), validated, rate limited. `DemoDirectorEnabled` is a Studio-local flag: `verify_release` fails if any server script reads it without the unpublished-Studio guard, and `verify_demo_director` asserts the guards.
+
+**DemoTrigger requests** (shot trigger `{"kind":"remote","remote":"DemoTrigger","args":[request]}`): `hatchParty {eggs:[{rarity, shiny?, big?, mutationId?, condition?}], newFind?}` banks exactly those eggs (species cycled by rarity, deterministic colours and patterns, rarity-ascending order) through the real `bankEggs` path of the Studio local profile, so the real hatch sequence, reveal ladder, rare celebration, mutation reveal and NEW! ribbon play (`newFind=true` forgets those traits in the discovery log first); `equipSpecies {speciesId}` (any species, owned or not) and respawns; `setWeather {id|"clear"}`; `giveCrystals {amount}`.
 
 ## Lead: make a demo clip
 1. Locally set `DemoDirectorEnabled = true` (and any test flag the shot needs, e.g. `ChestTestGrantEnabled`). `python tools/build.py`, open in Studio, Play.
@@ -31,4 +33,4 @@ Cameras: `static {pos, look}`, `orbit {center, radius, height, startDeg, endDeg}
 Triggers (`at` seconds into the shot): `remote {remote, repeatCount?, gap?, args?}`, `teleport {spot | pos}` (`spot` is a CaveHubLayout id such as `heart`, `nests`, `fusion`, `index`), `hud {visible}`, `note {text}`.
 
 ## Known limits
-No trigger yet spawns a chosen class or forces a hatch party with chosen rarities, because no Studio remote for that exists; equip the species by hand (`class_feel` prints a reminder) and use `TestGrantChests` for eggs. Adding such a remote is a separate gated server task. Camera and recorder behaviour in Studio is not proven by CI; the lead's first run is the evidence.
+DemoTrigger changes only the memory-only Studio local profile. A Studio playtest of hatchParty and the class respawn is still owed. Camera and recorder behaviour in Studio is not proven by CI; the lead's first run is the evidence.

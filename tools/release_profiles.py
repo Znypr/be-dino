@@ -96,7 +96,7 @@ COMMON_RULES = [
 # Studio-local conveniences that may stay true because the server only honours
 # them in unpublished Studio (RunService:IsStudio() and game.GameId == 0).
 # verify_release checks those guards still exist in source.
-STUDIO_LOCAL_FLAGS = ["StudioLocalProfilesEnabled", "StudioTestWalletEnabled"]
+STUDIO_LOCAL_FLAGS = ["StudioLocalProfilesEnabled", "StudioTestWalletEnabled", "DemoDirectorEnabled"]
 
 PROFILES: dict[str, list[Rule]] = {
     "default": COMMON_RULES + [

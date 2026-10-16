@@ -1,8 +1,8 @@
 --!strict
 -- Trailer clip director (docs/133). DEV ONLY: does nothing unless RunService:IsStudio() AND Config.DemoDirectorEnabled (false in every
 -- committed build, pinned by release_profiles.py). Plays a shot list (tools/demo/shots/*.json) on this client: camera moves, HUD hide,
--- letterbox, title cards and lower-thirds, and Studio test triggers through the EXISTING test-harness remotes (each gated by its own
--- Config flag on the server). It changes no gameplay and adds no server code.
+-- letterbox, title cards and lower-thirds, and Studio demo triggers through the server's DemoTrigger RemoteFunction (src/server/DemoTriggerService.luau, which is itself
+-- unreachable unless unpublished Studio + Config.DemoDirectorEnabled). It changes no shipped gameplay.
 -- Start: set the StringValue Players.LocalPlayer.BeDinoDemoShot.Value to the shot list JSON (tools/demo/run_shot.py prints the snippet).
 local RunService = game:GetService("RunService")
 if not RunService:IsStudio() then return end
@@ -96,13 +96,15 @@ local function fire(trig: any)
     if trig.kind == "remote" then
         local folder = ReplicatedStorage:FindFirstChild("BeDinoRemotes")
         local remote = folder and folder:FindFirstChild(trig.remote)
-        if remote and remote:IsA("RemoteEvent") then
+        if remote and remote:IsA("RemoteFunction") then
             for _ = 1, trig.repeatCount or 1 do
-                if trig.args then (remote :: RemoteEvent):FireServer(table.unpack(trig.args)) else (remote :: RemoteEvent):FireServer() end
+                local args = trig.args or {}
+                local ok, result, status = pcall(function() return (remote :: RemoteFunction):InvokeServer(table.unpack(args)) end)
+                if not ok or result ~= true then warn("[DemoDirector] " .. tostring(trig.remote) .. " refused: " .. tostring(if ok then status else result)) end
                 task.wait(trig.gap or 0.3)
             end
         else
-            warn("[DemoDirector] remote missing or not enabled in this build: " .. tostring(trig.remote))
+            warn("[DemoDirector] remote missing or not enabled (needs unpublished Studio + Config.DemoDirectorEnabled): " .. tostring(trig.remote))
         end
     elseif trig.kind == "teleport" then
         local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")

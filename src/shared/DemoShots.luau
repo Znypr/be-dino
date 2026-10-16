@@ -7,8 +7,8 @@ DemoShots.Version = 1
 DemoShots.CameraKinds = {static = true, orbit = true, dolly = true, pushin = true, track = true}
 DemoShots.Easings = {linear = true, inSine = true, outSine = true, inOutSine = true, inQuad = true, outQuad = true, inOutQuad = true, outCubic = true, inOutCubic = true}
 DemoShots.TriggerKinds = {remote = true, teleport = true, hud = true, note = true, wait = true}
--- Only existing Studio test harness remotes may be fired (each is itself gated by its own Config flag on the server).
-DemoShots.AllowedRemotes = {TestGrantChests = true, TestSetMutationCopies = true, TestGrantSpecies = true}
+-- Only the Studio-only DemoTrigger RemoteFunction may be fired (server: DemoTriggerService, gated by unpublished Studio + Config.DemoDirectorEnabled).
+DemoShots.AllowedRemotes = {DemoTrigger = true}
 DemoShots.Aspects = {["16:9"] = 16 / 9, ["9:16"] = 9 / 16}
 -- Fraction of the screen kept free on each side so titles survive platform crops (9:16 needs more at top/bottom for app UI).
 DemoShots.SafeInsets = {["16:9"] = {x = 0.05, y = 0.06}, ["9:16"] = {x = 0.06, y = 0.12}}

@@ -177,5 +177,6 @@ require(script.Parent.NpcPredatorService).start(require(script.Parent.CombatServ
 require(script.Parent.ClassMovementService).start() -- BD-246: returns at once while ClassMovementEnabled is false
 require(script.Parent.AdminService).start() -- BD-120 owner-only admin panel (docs/79)
 require(script.Parent.QaService).start() -- BD-085 owner phone QA overlay marks (docs/127); inert while Config.QaOverlayEnabled is false
+require(script.Parent.DemoTriggerService).start(ProfileRepository) -- docs/133 demo triggers: returns at once unless unpublished Studio and the demo flag
 
 print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")

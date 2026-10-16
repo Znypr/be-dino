@@ -25,8 +25,8 @@
       }
     },
     {
-      "duration": 6,
-      "lowerThird": "Fly, swim, dash",
+      "duration": 5,
+      "lowerThird": "Runner",
       "camera": {
         "kind": "track",
         "offset": [
@@ -39,26 +39,94 @@
       "triggers": [
         {
           "at": 0,
-          "kind": "note",
-          "text": "NOTE: equip the class species by hand before this shot"
+          "kind": "remote",
+          "remote": "DemoTrigger",
+          "args": [
+            {
+              "kind": "equipSpecies",
+              "speciesId": "compy"
+            }
+          ]
         }
       ]
     },
     {
       "duration": 5,
+      "lowerThird": "Flyer: glide",
       "camera": {
-        "kind": "orbit",
-        "center": [
+        "kind": "track",
+        "offset": [
           0,
-          4,
-          0
+          7,
+          16
         ],
-        "radius": 16,
-        "height": 5,
-        "startDeg": 0,
-        "endDeg": 180,
-        "ease": "inOutSine"
-      }
+        "lookHeight": 2
+      },
+      "triggers": [
+        {
+          "at": 0,
+          "kind": "remote",
+          "remote": "DemoTrigger",
+          "args": [
+            {
+              "kind": "equipSpecies",
+              "speciesId": "pteranodon"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "duration": 5,
+      "lowerThird": "Swimmer: dash",
+      "camera": {
+        "kind": "track",
+        "offset": [
+          0,
+          7,
+          16
+        ],
+        "lookHeight": 2
+      },
+      "triggers": [
+        {
+          "at": 0,
+          "kind": "remote",
+          "remote": "DemoTrigger",
+          "args": [
+            {
+              "kind": "equipSpecies",
+              "speciesId": "mosasaurus"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "duration": 5,
+      "lowerThird": "Armored",
+      "camera": {
+        "kind": "track",
+        "offset": [
+          0,
+          7,
+          16
+        ],
+        "lookHeight": 2
+      },
+      "triggers": [
+        {
+          "at": 0,
+          "kind": "remote",
+          "remote": "DemoTrigger",
+          "args": [
+            {
+              "kind": "equipSpecies",
+              "speciesId": "ankylosaurus"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

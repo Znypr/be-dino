@@ -95,14 +95,57 @@ def static_checks():
     assert "RunService:IsStudio()" in head and "return end" in head, "director must bail out outside Studio before doing anything"
     assert head.index("IsStudio") < head.index("DemoDirectorEnabled"), "Studio check first"
     assert re.search(r"Config\.DemoDirectorEnabled ~= true then return end", head), "director must bail out when the flag is off"
+    # Server side (docs/133): only DemoTriggerService (+ the guarded demo* repository functions) may mention the flag.
+    allowed_server = {"DemoTriggerService.luau", "ProfileRepository.luau", "Bootstrap.server.luau"}
     for path in (ROOT / "src/server").glob("*.luau"):
-        assert "DemoDirector" not in path.read_text(encoding="utf-8"), f"server script {path.name} must not reference the director"
+        if path.name not in allowed_server:
+            assert "DemoDirector" not in path.read_text(encoding="utf-8"), f"server script {path.name} must not reference the director"
+    service = (ROOT / "src/server/DemoTriggerService.luau").read_text(encoding="utf-8")
+    start = service.split("function DemoTriggerService.start", 1)[1]
+    first = start.split("\n", 2)[1].strip()
+    assert first == "if not (RunService:IsStudio() and game.GameId == 0 and Config.DemoDirectorEnabled == true) then return end", \
+        "service start() must bail out first unless unpublished Studio and the flag"
+    assert start.index("then return end") < start.index('Instance.new("RemoteFunction")'), "remote must only be created after the guard"
+    assert service.count('Instance.new("RemoteFunction")') == 1 and "RemoteEvent" not in service, "one RemoteFunction only"
+    assert 'remote.Name = "DemoTrigger"' in service
+    assert "player ~= owner" in service, "owner-local check"
+    repo = (ROOT / "src/server/ProfileRepository.luau").read_text(encoding="utf-8")
+    assert re.search(r"^local demoActive = localPreview and Config\.DemoDirectorEnabled == true", repo, re.M), "demoActive must require localPreview"
+    assert re.search(r"^local localPreview = RunService:IsStudio\(\) and game\.GameId == 0 and Config\.StudioLocalProfilesEnabled", repo, re.M)
+    demo_fns = re.findall(r"^function ProfileRepository\.(demo\w+)\(", repo, re.M)
+    assert set(demo_fns) == {"demoGrantEggs", "demoEquip", "demoAddCrystals"}, demo_fns
+    for name in demo_fns:
+        body = repo.split(f"function ProfileRepository.{name}(", 1)[1].split("\n", 2)[1].strip()
+        assert body == 'if not demoActive then return false, "disabled" end', f"{name} must check demoActive first"
+    assert repo.count("demoActive") == 1 + len(demo_fns), "demoActive used nowhere else"
+    grant = repo.split("function ProfileRepository.demoGrantEggs", 1)[1].split("function ProfileRepository.demoEquip", 1)[0]
+    assert "bankEggs(profileValue, batch, now)" in grant, "party eggs must use the real bankEggs path"
+    # release gate: the flag is a Studio-local flag (guard enforced by verify_release) and a stray unguarded read is caught.
+    assert "DemoDirectorEnabled" in release_profiles.STUDIO_LOCAL_FLAGS
+    import verify_release
+    assert verify_release.studio_guard_errors() == [], verify_release.studio_guard_errors()
+    with tempfile.TemporaryDirectory() as tmp:
+        Path(tmp, "Bad.luau").write_text("if Config.DemoDirectorEnabled then end\n", encoding="utf-8")
+        assert verify_release.studio_guard_errors(Path(tmp)), "unguarded flag read must fail verify_release"
+        Path(tmp, "Bad.luau").write_text("if RunService:IsStudio() and game.GameId == 0 and Config.DemoDirectorEnabled then end\n", encoding="utf-8")
+        assert verify_release.studio_guard_errors(Path(tmp)) == []
+    # shot lists: remote triggers only use DemoTrigger with a known request kind and valid egg specs.
+    rarities = {"Common", "Uncommon", "Rare", "Epic", "Legendary"}
+    for path in (ROOT / "tools/demo/shots").glob("*.json"):
+        for shot in json.loads(path.read_text(encoding="utf-8"))["shots"]:
+            for trig in shot.get("triggers", []):
+                if trig["kind"] != "remote":
+                    continue
+                assert trig["remote"] == "DemoTrigger", f"{path.name}: only DemoTrigger"
+                req = trig["args"][0]
+                assert req["kind"] in {"hatchParty", "equipSpecies", "setWeather", "giveCrystals"}, req
+                if req["kind"] == "hatchParty":
+                    assert 1 <= len(req["eggs"]) <= 60 and all(e["rarity"] in rarities for e in req["eggs"])
     boot = (ROOT / "src/client/Bootstrap.client.luau").read_text(encoding="utf-8")
     assert "DemoDirector" not in boot, "director must not be wired into Bootstrap"
     shots_src = (ROOT / "src/shared/DemoShots.luau").read_text(encoding="utf-8")
-    for remote in re.findall(r"(\w+) = true", re.search(r"AllowedRemotes = \{(.*?)\}", shots_src).group(1)):
-        server = "".join(p.read_text(encoding="utf-8") for p in (ROOT / "src/server").glob("*.luau"))
-        assert f'"{remote}"' in server, f"allow-listed remote {remote} must be an existing server test remote"
+    allow = re.findall(r"(\w+) = true", re.search(r"AllowedRemotes = \{(.*?)\}", shots_src).group(1))
+    assert allow == ["DemoTrigger"], allow
 
 
 def main():
