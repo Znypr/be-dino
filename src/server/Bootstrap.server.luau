@@ -33,6 +33,7 @@ end
 require(script.Parent.ImportedResources).load()
 -- BD-214 3D potion models are dormant (owner 2026-10-16: 2D icons in PotionArt.Images replace them); PotionModels.load() no longer runs
 if Config.WorldArtMode=="BiomeKit" or Config.FoodArtMode=="Kit" then require(script.Parent.ImportedResources).loadWorldKit() end
+task.spawn(function() require(script.Parent.LowPolyDinoLoader).load() end) -- BD-225 spike, no-op while Config.LowPolyDinos is false
 Arena.build()
 Leaderboards.start()
 
