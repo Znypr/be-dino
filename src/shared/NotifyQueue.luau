@@ -18,7 +18,7 @@ Q.MaxBody = 44
 Q.Duration = {info = 2.5, good = 3, warning = 4, major = 4.5} :: {[string]: number}
 
 export type Card = {text: string, body: string?, kind: string, key: string?, icon: string?, tint: string?,
-    amount: number?, format: string?, count: number, seq: number, shownAt: number?, expiresAt: number?}
+    amount: number?, format: string?, live: boolean?, count: number, seq: number, shownAt: number?, expiresAt: number?}
 
 -- Merging into an existing card: counters (`amount` + `format`, e.g. "+%d Crystals") add up,
 -- anything else shows the newest text with an x2, x3 badge.
@@ -65,7 +65,7 @@ end
 function Q.push(q: State, now: number, input: any): string
     if typeof(input) ~= "table" or typeof(input.text) ~= "string" or input.text == "" then return "dropped" end
     input = {text = Q.clip(input.text, Q.MaxText), body = if typeof(input.body) == "string" then Q.clip(input.body, Q.MaxBody) else nil,
-        kind = input.kind, key = input.key, icon = input.icon, tint = input.tint, amount = input.amount, format = input.format}
+        kind = input.kind, key = input.key, icon = input.icon, tint = input.tint, amount = input.amount, format = input.format, live = input.live == true}
     local kind = kindOf(input.kind)
     local key = if typeof(input.key) == "string" then input.key else nil
     local live = findKey(q.visible, key)
@@ -88,7 +88,7 @@ function Q.push(q: State, now: number, input: any): string
     q.seq += 1
     table.insert(q.waiting, {text = input.text, body = input.body, kind = kind, key = key, icon = input.icon,
         tint = input.tint, amount = if typeof(input.amount) == "number" then input.amount else nil,
-        format = if typeof(input.format) == "string" then input.format else nil, count = 1, seq = q.seq})
+        format = if typeof(input.format) == "string" then input.format else nil, live = input.live, count = 1, seq = q.seq})
     if #q.waiting > Q.MaxWaiting then
         local worst = 1
         for i, card in q.waiting do
@@ -105,7 +105,8 @@ end
 local function nextWaiting(q: State, blocked: boolean): number?
     local best = nil
     for i, card in q.waiting do
-        if not (blocked and card.kind == "major") then
+        -- BD-257: a `live` major (caught in the run, e.g. a mutation egg) is never held back by an open menu: it would show late or never.
+        if not (blocked and card.kind == "major" and not card.live) then
             local b = if best then q.waiting[best] else nil
             if b == nil or Q.Priority[card.kind] > Q.Priority[b.kind] then best = i end
         end

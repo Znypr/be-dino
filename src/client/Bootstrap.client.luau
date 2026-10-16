@@ -222,7 +222,7 @@ end
 local function notify(text: string,color: Color3?,opts: any?)
     local o=opts or {}
     local kind=o.kind or (if color==C.red then "warning" elseif color==C.gold or color==C.accent then "good" else "info")
-    NotifyQueue.push(notifyQueue,os.clock(),{text=text,body=o.body,kind=kind,key=o.key,icon=o.icon,tint=o.tint,amount=o.amount,format=o.format})
+    NotifyQueue.push(notifyQueue,os.clock(),{text=text,body=o.body,kind=kind,key=o.key,icon=o.icon,tint=o.tint,amount=o.amount,format=o.format,live=o.live})
     pumpToasts()
 end
 task.spawn(function()
@@ -1350,7 +1350,7 @@ local lastRunState=""
 local lastLevel=num("AccountLevel")
 player:GetAttributeChangedSignal("AccountLevel"):Connect(function()
     local level=num("AccountLevel")
-    if lastLevel>0 and level>lastLevel then Sfx.play("level_up") notify("Level "..level.."!",C.gold,{kind="major",icon="trophy",key="level"}) end
+    if lastLevel>0 and level>lastLevel then Sfx.playCue("level_up") notify("Level "..level.."!",C.gold,{kind="major",icon="trophy",key="level"}) end
     lastLevel=level
 end)
 -- Movement feel: camera height follows growth every frame (not the 0.15 s HUD tick), and the
@@ -1441,7 +1441,7 @@ RunService.Heartbeat:Connect(function(dt)
         player.CameraMinZoomDistance=Config.CameraMinZoom*(character:GetAttribute("VisualScale") or 1)
     end
     if state~=lastRunState then
-        if lastRunState=="Sanctuary" and state=="Active" then Sfx.play("run_start") elseif lastRunState=="Active" and state=="Sanctuary" then Sfx.play("run_end") end
+        if lastRunState=="Sanctuary" and state=="Active" then Sfx.play("run_start") elseif lastRunState=="Active" and state=="Sanctuary" then Sfx.playCue("run_end") end
         lastRunState=state
     end
     local ok,tags=pcall(function() return Http:JSONDecode(if character then character:GetAttribute("RunEggEvents") or "[]" else "[]") end)
@@ -1451,7 +1451,7 @@ RunService.Heartbeat:Connect(function(dt)
             local mutation=nil
             for i=#tags,lastEggCount+1,-1 do mutation=mutation or ProgressionRules.item(ProgressionConfig.EventMutations,tags[i].mutationId or "") end
             -- Plain eggs show on the HUD counter; only special eggs get a card (docs/65).
-            if mutation then notify(mutation.name.." egg caught!",C.gold,{kind="major",icon="egg",body="Hatch it at Home"}) end
+            if mutation then notify(mutation.name.." egg caught!",C.gold,{kind="major",icon="egg",body="Hatch it at Home",key="mutation_egg",live=true}) end
         end
         lastEggCount=#tags
     end
@@ -1530,7 +1530,7 @@ player:GetAttributeChangedSignal("LastExitStatusAt"):Connect(function()
 end)
 player:GetAttributeChangedSignal("LastNestClaimAt"):Connect(function()
     if str("LastNestClaimStatus")~="opened" then return end
-    Sfx.play("level_up")
+    Sfx.playCue("level_up")
     notify("Nest opened!",C.accent,{icon="egg_nest",body="Open your eggs when ready"})
 end)
 player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)

@@ -38,8 +38,10 @@ Weather.Looks={
         amb=rgb(104,116,160),dof=.45,dofFocus=80,exposure=-.3,lamp=1.4,glow=rgb(160,140,255),glowBright=.6,glowRange=60,fogStart=40,vis=200}),
     blizzard=look({tint=rgb(214,232,255),sat=-.4,contrast=-.06,bright=.08,fog=rgb(226,234,246),decay=rgb(200,216,240),density=.8,offset=0,haze=4,bloom=.45,rays=.1,
         rayTint=rgb(220,235,255),amb=rgb(172,184,206),dof=.6,dofFocus=40,lamp=.4,fogStart=25,vis=110}),
-    volcano=look({tint=rgb(255,214,180),sat=.25,contrast=.12,bright=-.03,fog=rgb(150,84,56),decay=rgb(110,50,30),density=.4,offset=0,haze=2.4,glare=.3,bloom=.6,rays=.3,
-        rayTint=rgb(255,150,70),amb=rgb(165,84,44),dof=.4,dofFocus=90,exposure=-.2,lamp=.5,glow=rgb(255,120,40),glowBright=1.4,glowRange=60,fogStart=70,vis=300}),
+    -- BD-256: soft embers, not a lava wash. The old glow light (1.4 at 60 studs), bloom .6 and a saturated amber ambient painted
+    -- the whole ground and about a third of the screen orange; calmer values keep the warm mood and every dino and food readable.
+    volcano=look({tint=rgb(255,228,205),sat=.15,contrast=.1,bright=-.03,fog=rgb(150,84,56),decay=rgb(110,50,30),density=.4,offset=0,haze=2.4,glare=.2,bloom=.25,rays=.15,
+        rayTint=rgb(255,170,100),amb=rgb(150,112,92),dof=.4,dofFocus=90,exposure=-.2,lamp=.5,glow=rgb(255,140,70),glowBright=.4,glowRange=36,fogStart=70,vis=300}),
     -- aurora colours (fog, decay, shifts, ambient, tint, glow) are overwritten every frame from Weather.aurora(); these are the mid values
     aurora=look({tint=rgb(176,255,230),sat=.4,contrast=.1,bright=-.04,fog=rgb(40,200,170),decay=rgb(60,80,180),density=.32,offset=0,haze=1.4,bloom=1.2,rays=.05,
         rayTint=rgb(140,255,220),amb=rgb(70,130,120),dof=.2,dofFocus=120,exposure=-.2,lamp=.5,

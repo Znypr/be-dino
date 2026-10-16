@@ -30,6 +30,27 @@ assert(M.group("sfx") == nil, "no SoundGroups outside Roblox, and no error")
 print("Audio mixer checks passed: defaults, clamp/snap, master x channel, percent, fraction, reset")
 '''
 
+# BD-258: reward cues play one at a time (pure Sfx.cueSlot); run_end stays first and the soft chime is kept.
+CUE_BODY = r'''
+local gap, wait = S.CueGap, S.CueMaxWait
+assert(gap >= .6, "stagger is at least 0.6 s")
+local start, free = S.cueSlot(0, 10, .6)
+assert(start == 10 and free > 10.6, "idle: the cue starts now")
+-- run_end (0.6 s) at t=10, then level_up in the same instant: it waits until the chime is over.
+local s2, free2 = S.cueSlot(free, 10, 1.5)
+assert(s2 ~= nil and s2 >= 10 + gap and s2 >= free, "second cue starts after the first chime")
+-- a third cue (nest opened) queues behind the second, never on top of it
+local s3 = S.cueSlot(free2, 10, 1.5)
+assert(s3 ~= nil and s3 >= free2 and s3 - 10 >= 2 * gap)
+-- a long backlog drops the cue instead of playing it seconds late
+assert(S.cueSlot(10 + wait + 1, 10, 1) == nil, "too late: dropped")
+-- far in the future the slot is free again
+assert(S.cueSlot(free2, 100, 1) == 100)
+-- The cue table: the run end chime is short and soft, level_up stays quiet.
+assert(S.Sounds.run_end.len <= .7 and S.Sounds.run_end.volume <= .25 and S.Sounds.level_up.len >= 1)
+print("Reward cue checks passed: one at a time, 0.6 s stagger, drop when late")
+'''
+
 
 def static_checks():
     errors = []
@@ -48,6 +69,8 @@ def static_checks():
     boot = read('src/client/Bootstrap.client.luau')
     if 'VolumeSliders' not in boot or 'AudioMixer' not in boot:
         errors.append('Settings must show the volume sliders')
+    if boot.count('Sfx.playCue("run_end")') != 1 or boot.count('Sfx.playCue("level_up")') < 2 or 'Sfx.play("run_end")' in boot or 'Sfx.play("level_up")' in boot:
+        errors.append('BD-258: run_end and level_up must go through Sfx.playCue (one reward cue at a time)')
     if re.search(r'^local (VolumeSliders|AudioMixer|Mixer)\b', boot, re.M):
         errors.append('Bootstrap.client is at the 200-local limit: no new top-level locals')
     return errors
@@ -67,5 +90,16 @@ if __name__ == '__main__':
         result = subprocess.run([args.runner, str(path)], capture_output=True, text=True, encoding='utf-8')
         print(result.stdout, end='')
         if result.returncode or 'passed' not in result.stdout or problems:
+            print(result.stderr)
+            raise SystemExit(result.returncode or 1)
+
+    # Pure cue scheduling from src/shared/Sfx.luau (Roblox services are only touched inside Sfx.play, never at require time).
+    with tempfile.TemporaryDirectory() as tmp:
+        sfx = (ROOT / 'src/shared/Sfx.luau').read_text(encoding='utf-8')
+        path = Path(tmp) / 'cue.luau'
+        path.write_text('local S=(function()' + chr(10) + sfx + chr(10) + 'end)()' + chr(10) + CUE_BODY, encoding='utf-8')
+        result = subprocess.run([args.runner, str(path)], capture_output=True, text=True, encoding='utf-8')
+        print(result.stdout, end='')
+        if result.returncode or 'Reward cue checks passed' not in result.stdout:
             print(result.stderr)
             raise SystemExit(result.returncode or 1)

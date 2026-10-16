@@ -26,11 +26,11 @@ Sfx.Sounds = {
     pickup_lo = {id = "rbxassetid://80767583749596", volume = .35, rate = 1, gap = .06},
     run_start = {id = "rbxassetid://87202810278231", volume = .25, rate = 1, gap = .5},
     -- BD-166: run end reuses the short soft run_start chime, lower and slightly slower; the sharp 1.1 s 3-note run_end sound is retired from play.
-    run_end = {id = "rbxassetid://87202810278231", volume = .2, rate = .9, gap = .5},
+    run_end = {id = "rbxassetid://87202810278231", volume = .2, rate = .9, gap = .5, len = .6},
     shop_buy = {id = "rbxassetid://102585210519734", volume = .35, rate = 1, gap = .15},
     shop_refresh = {id = "rbxassetid://91960074825710", volume = .45, rate = 1, gap = .5},
     weather_start = {id = "rbxassetid://120619985059497", volume = .2, rate = 1, gap = 1},
-    level_up = {id = "rbxassetid://135894580270926", volume = .4, rate = .95, gap = .5},
+    level_up = {id = "rbxassetid://135894580270926", volume = .4, rate = .95, gap = .5, len = 1.5},
     fusion_reveal = {id = "rbxassetid://90816090310479", volume = .75, rate = 1, gap = .3},
     ui_click = {id = "rbxassetid://77237659470894", volume = .4, rate = 1, gap = .04},
 }
@@ -38,6 +38,16 @@ Sfx.Master = .5 -- global gain; synthesized placeholder sounds were far too loud
 Sfx.PoolSize = 3
 Sfx.Group = "BeDinoSfx"
 
+-- BD-258: reward cues (run_end, level_up, nest opened ...) play ONE AT A TIME. Pure: given the time the last cue
+-- finishes (+ a pause) and `now`, returns when this cue may start and the new free time. A cue never starts less than
+-- CueGap after the previous one started, and a cue that would wait longer than CueMaxWait is dropped (start = nil).
+Sfx.CueGap = .6
+Sfx.CueMaxWait = 3
+function Sfx.cueSlot(freeAt: number, now: number, len: number?): (number?, number)
+    local start = math.max(now, freeAt)
+    if start - now > Sfx.CueMaxWait then return nil, freeAt end
+    return start, start + math.max(Sfx.CueGap, (len or 0) + .15)
+end
 -- Pure: returns a "rbxassetid://N" string, or nil for empty/invalid ids.
 function Sfx.normalizeId(id: any): string?
     if type(id) == "number" and id > 0 and id % 1 == 0 then return "rbxassetid://" .. string.format("%d", id) end
@@ -114,5 +124,18 @@ function Sfx.play(name: string): boolean
     end)
     if ok then lastPlayed[name] = now end
     return ok
+end
+
+local cueFreeAt = 0
+-- Plays a reward cue in turn (see Sfx.cueSlot). Returns false when it was dropped. Never throws.
+function Sfx.playCue(name: string): boolean
+    local entry = Sfx.Sounds[name]
+    local now = os.clock()
+    local start, freeAt = Sfx.cueSlot(cueFreeAt, now, if entry then (entry :: any).len else nil)
+    if start == nil then return false end
+    cueFreeAt = freeAt
+    if start - now < .01 then return Sfx.play(name) end
+    task.delay(start - now, Sfx.play, name)
+    return true
 end
 return Sfx

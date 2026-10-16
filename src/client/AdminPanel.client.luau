@@ -33,8 +33,9 @@ local function text(parent: Instance, value: string, size: number, height: numbe
 end
 local function button(parent: Instance, value: string, color: Color3, size: UDim2): TextButton
     local b = Instance.new("TextButton")
-    b.Size, b.BackgroundColor3, b.Text, b.TextSize, b.TextColor3 = size, color, value, 22, C.text
-    b.Font = Enum.Font.FredokaOne
+    -- BD-261: one fixed size for every admin button (TextScaled gave each label a different size and clipped long ones).
+    b.Size, b.BackgroundColor3, b.Text, b.TextSize, b.TextColor3 = size, color, value, 20, C.text
+    b.Font, b.TextWrapped = Enum.Font.FredokaOne, true
     b.AutoButtonColor = false
     b.Parent = parent
     Theme.decorate(b, 8)
@@ -46,7 +47,8 @@ toggle.Name, toggle.Position = "AdminToggle", UDim2.fromOffset(14, 8)
 
 local panel = Instance.new("Frame")
 panel.Name, panel.BackgroundColor3, panel.Visible = "AdminPanel", C.panel, false
-panel.Position, panel.Size = UDim2.fromOffset(14, 64), UDim2.new(0, 420, 1, -76)
+-- BD-261: as wide as the screen allows up to 420 px (phone landscape), so no button runs past the edge.
+panel.Position, panel.Size = UDim2.fromOffset(14, 64), UDim2.new(1, -28, 1, -76)
 panel.Parent = gui
 Theme.decorate(panel, 12)
 local sizeLimit = Instance.new("UISizeConstraint") sizeLimit.MaxSize = Vector2.new(420, 760) sizeLimit.Parent = panel
@@ -55,6 +57,8 @@ scroll.BackgroundTransparency, scroll.BorderSizePixel, scroll.ScrollBarThickness
 scroll.Position, scroll.Size = UDim2.fromOffset(10, 8), UDim2.new(1, -20, 1, -16)
 scroll.AutomaticCanvasSize, scroll.CanvasSize = Enum.AutomaticSize.Y, UDim2.new()
 scroll.Parent = panel
+-- BD-261: keep every row clear of the 6 px scroll bar (it used to cover the right-hand buttons).
+local scrollPadding = Instance.new("UIPadding") scrollPadding.PaddingRight = UDim.new(0, 12) scrollPadding.Parent = scroll
 local list = Instance.new("UIListLayout")
 list.Padding, list.SortOrder = UDim.new(0, 8), Enum.SortOrder.LayoutOrder
 list.Parent = scroll
@@ -114,11 +118,11 @@ end
 local grid = place(Instance.new("Frame"))
 grid.BackgroundTransparency, grid.AutomaticSize, grid.Size, grid.Parent = 1, Enum.AutomaticSize.Y, UDim2.new(1, 0, 0, 0), scroll
 local gridLayout = Instance.new("UIGridLayout")
-gridLayout.CellSize, gridLayout.CellPadding = UDim2.new(.5, -4, 0, 48), UDim2.fromOffset(8, 8)
+gridLayout.CellSize, gridLayout.CellPadding = UDim2.new(.5, -4, 0, 44), UDim2.fromOffset(8, 8)
 gridLayout.SortOrder, gridLayout.Parent = Enum.SortOrder.LayoutOrder, grid
 for index, event in ProgressionConfig.Weather do
     local b = button(grid, event.name, C.card, UDim2.new())
-    b.LayoutOrder, b.TextScaled = index, true
+    b.LayoutOrder = index
     eventButtons[b] = event.id
     b.Activated:Connect(function() chosenEvent = event.id refresh() end)
 end

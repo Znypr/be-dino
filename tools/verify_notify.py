@@ -75,6 +75,13 @@ for i = 1, 3 do Q.push(q, 0, {text = "w" .. i, kind = "warning"}) end Q.update(q
 Q.push(q, 0, {text = "M", kind = "major"}) Q.update(q, 0) assert(#q.visible == 3 and #q.waiting == 1)
 Q.update(q, 4) assert(texts(q) == "M", "shows after the warnings expire")
 assert(Q.dismissTop(q) and #q.visible == 0 and not Q.dismissTop(q))
+-- BD-257: a live major (mutation egg caught in the run) shows even while a menu is open, and repeats merge into one x2 card.
+q = Q.new()
+assert(Q.push(q, 0, {text = "Ember egg caught!", kind = "major", key = "mutation_egg", live = true}) == "queued")
+Q.update(q, 0, true) assert(texts(q) == "Ember egg caught!", "live major is not held by a menu")
+assert(Q.push(q, 1, {text = "Ember egg caught!", kind = "major", key = "mutation_egg", live = true}) == "merged" and q.visible[1].count == 2 and #q.visible == 1)
+q = Q.new()
+Q.push(q, 0, {text = "Level 5!", kind = "major"}) Q.update(q, 0, true) assert(#q.visible == 0, "ordinary majors still wait for the menu")
 -- Bad input never shows.
 assert(Q.push(q, 0, nil) == "dropped" and Q.push(q, 0, {text = ""}) == "dropped" and Q.push(q, 0, {text = 5}) == "dropped")
 assert(Q.push(Q.new(), 0, {text = "x", kind = "weird"}) == "queued")

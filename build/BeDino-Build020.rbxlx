@@ -373427,7 +373427,7 @@ Q.MaxBody = 44
 Q.Duration = {info = 2.5, good = 3, warning = 4, major = 4.5} :: {[string]: number}
 
 export type Card = {text: string, body: string?, kind: string, key: string?, icon: string?, tint: string?,
-    amount: number?, format: string?, count: number, seq: number, shownAt: number?, expiresAt: number?}
+    amount: number?, format: string?, live: boolean?, count: number, seq: number, shownAt: number?, expiresAt: number?}
 
 -- Merging into an existing card: counters (`amount` + `format`, e.g. "+%d Crystals") add up,
 -- anything else shows the newest text with an x2, x3 badge.
@@ -373474,7 +373474,7 @@ end
 function Q.push(q: State, now: number, input: any): string
     if typeof(input) ~= "table" or typeof(input.text) ~= "string" or input.text == "" then return "dropped" end
     input = {text = Q.clip(input.text, Q.MaxText), body = if typeof(input.body) == "string" then Q.clip(input.body, Q.MaxBody) else nil,
-        kind = input.kind, key = input.key, icon = input.icon, tint = input.tint, amount = input.amount, format = input.format}
+        kind = input.kind, key = input.key, icon = input.icon, tint = input.tint, amount = input.amount, format = input.format, live = input.live == true}
     local kind = kindOf(input.kind)
     local key = if typeof(input.key) == "string" then input.key else nil
     local live = findKey(q.visible, key)
@@ -373497,7 +373497,7 @@ function Q.push(q: State, now: number, input: any): string
     q.seq += 1
     table.insert(q.waiting, {text = input.text, body = input.body, kind = kind, key = key, icon = input.icon,
         tint = input.tint, amount = if typeof(input.amount) == "number" then input.amount else nil,
-        format = if typeof(input.format) == "string" then input.format else nil, count = 1, seq = q.seq})
+        format = if typeof(input.format) == "string" then input.format else nil, live = input.live, count = 1, seq = q.seq})
     if #q.waiting &gt; Q.MaxWaiting then
         local worst = 1
         for i, card in q.waiting do
@@ -373514,7 +373514,8 @@ end
 local function nextWaiting(q: State, blocked: boolean): number?
     local best = nil
     for i, card in q.waiting do
-        if not (blocked and card.kind == "major") then
+        -- BD-257: a `live` major (caught in the run, e.g. a mutation egg) is never held back by an open menu: it would show late or never.
+        if not (blocked and card.kind == "major" and not card.live) then
             local b = if best then q.waiting[best] else nil
             if b == nil or Q.Priority[card.kind] &gt; Q.Priority[b.kind] then best = i end
         end
@@ -374943,11 +374944,11 @@ Sfx.Sounds = {
     pickup_lo = {id = "rbxassetid://80767583749596", volume = .35, rate = 1, gap = .06},
     run_start = {id = "rbxassetid://87202810278231", volume = .25, rate = 1, gap = .5},
     -- BD-166: run end reuses the short soft run_start chime, lower and slightly slower; the sharp 1.1 s 3-note run_end sound is retired from play.
-    run_end = {id = "rbxassetid://87202810278231", volume = .2, rate = .9, gap = .5},
+    run_end = {id = "rbxassetid://87202810278231", volume = .2, rate = .9, gap = .5, len = .6},
     shop_buy = {id = "rbxassetid://102585210519734", volume = .35, rate = 1, gap = .15},
     shop_refresh = {id = "rbxassetid://91960074825710", volume = .45, rate = 1, gap = .5},
     weather_start = {id = "rbxassetid://120619985059497", volume = .2, rate = 1, gap = 1},
-    level_up = {id = "rbxassetid://135894580270926", volume = .4, rate = .95, gap = .5},
+    level_up = {id = "rbxassetid://135894580270926", volume = .4, rate = .95, gap = .5, len = 1.5},
     fusion_reveal = {id = "rbxassetid://90816090310479", volume = .75, rate = 1, gap = .3},
     ui_click = {id = "rbxassetid://77237659470894", volume = .4, rate = 1, gap = .04},
 }
@@ -374955,6 +374956,16 @@ Sfx.Master = .5 -- global gain; synthesized placeholder sounds were far too loud
 Sfx.PoolSize = 3
 Sfx.Group = "BeDinoSfx"
 
+-- BD-258: reward cues (run_end, level_up, nest opened ...) play ONE AT A TIME. Pure: given the time the last cue
+-- finishes (+ a pause) and `now`, returns when this cue may start and the new free time. A cue never starts less than
+-- CueGap after the previous one started, and a cue that would wait longer than CueMaxWait is dropped (start = nil).
+Sfx.CueGap = .6
+Sfx.CueMaxWait = 3
+function Sfx.cueSlot(freeAt: number, now: number, len: number?): (number?, number)
+    local start = math.max(now, freeAt)
+    if start - now &gt; Sfx.CueMaxWait then return nil, freeAt end
+    return start, start + math.max(Sfx.CueGap, (len or 0) + .15)
+end
 -- Pure: returns a "rbxassetid://N" string, or nil for empty/invalid ids.
 function Sfx.normalizeId(id: any): string?
     if type(id) == "number" and id &gt; 0 and id % 1 == 0 then return "rbxassetid://" .. string.format("%d", id) end
@@ -375031,6 +375042,19 @@ function Sfx.play(name: string): boolean
     end)
     if ok then lastPlayed[name] = now end
     return ok
+end
+
+local cueFreeAt = 0
+-- Plays a reward cue in turn (see Sfx.cueSlot). Returns false when it was dropped. Never throws.
+function Sfx.playCue(name: string): boolean
+    local entry = Sfx.Sounds[name]
+    local now = os.clock()
+    local start, freeAt = Sfx.cueSlot(cueFreeAt, now, if entry then (entry :: any).len else nil)
+    if start == nil then return false end
+    cueFreeAt = freeAt
+    if start - now &lt; .01 then return Sfx.play(name) end
+    task.delay(start - now, Sfx.play, name)
+    return true
 end
 return Sfx
 </ProtectedString>
@@ -375764,8 +375788,10 @@ Weather.Looks={
         amb=rgb(104,116,160),dof=.45,dofFocus=80,exposure=-.3,lamp=1.4,glow=rgb(160,140,255),glowBright=.6,glowRange=60,fogStart=40,vis=200}),
     blizzard=look({tint=rgb(214,232,255),sat=-.4,contrast=-.06,bright=.08,fog=rgb(226,234,246),decay=rgb(200,216,240),density=.8,offset=0,haze=4,bloom=.45,rays=.1,
         rayTint=rgb(220,235,255),amb=rgb(172,184,206),dof=.6,dofFocus=40,lamp=.4,fogStart=25,vis=110}),
-    volcano=look({tint=rgb(255,214,180),sat=.25,contrast=.12,bright=-.03,fog=rgb(150,84,56),decay=rgb(110,50,30),density=.4,offset=0,haze=2.4,glare=.3,bloom=.6,rays=.3,
-        rayTint=rgb(255,150,70),amb=rgb(165,84,44),dof=.4,dofFocus=90,exposure=-.2,lamp=.5,glow=rgb(255,120,40),glowBright=1.4,glowRange=60,fogStart=70,vis=300}),
+    -- BD-256: soft embers, not a lava wash. The old glow light (1.4 at 60 studs), bloom .6 and a saturated amber ambient painted
+    -- the whole ground and about a third of the screen orange; calmer values keep the warm mood and every dino and food readable.
+    volcano=look({tint=rgb(255,228,205),sat=.15,contrast=.1,bright=-.03,fog=rgb(150,84,56),decay=rgb(110,50,30),density=.4,offset=0,haze=2.4,glare=.2,bloom=.25,rays=.15,
+        rayTint=rgb(255,170,100),amb=rgb(150,112,92),dof=.4,dofFocus=90,exposure=-.2,lamp=.5,glow=rgb(255,140,70),glowBright=.4,glowRange=36,fogStart=70,vis=300}),
     -- aurora colours (fog, decay, shifts, ambient, tint, glow) are overwritten every frame from Weather.aurora(); these are the mid values
     aurora=look({tint=rgb(176,255,230),sat=.4,contrast=.1,bright=-.04,fog=rgb(40,200,170),decay=rgb(60,80,180),density=.32,offset=0,haze=1.4,bloom=1.2,rays=.05,
         rayTint=rgb(140,255,220),amb=rgb(70,130,120),dof=.2,dofFocus=120,exposure=-.2,lamp=.5,
@@ -551311,8 +551337,9 @@ local function text(parent: Instance, value: string, size: number, height: numbe
 end
 local function button(parent: Instance, value: string, color: Color3, size: UDim2): TextButton
     local b = Instance.new("TextButton")
-    b.Size, b.BackgroundColor3, b.Text, b.TextSize, b.TextColor3 = size, color, value, 22, C.text
-    b.Font = Enum.Font.FredokaOne
+    -- BD-261: one fixed size for every admin button (TextScaled gave each label a different size and clipped long ones).
+    b.Size, b.BackgroundColor3, b.Text, b.TextSize, b.TextColor3 = size, color, value, 20, C.text
+    b.Font, b.TextWrapped = Enum.Font.FredokaOne, true
     b.AutoButtonColor = false
     b.Parent = parent
     Theme.decorate(b, 8)
@@ -551324,7 +551351,8 @@ toggle.Name, toggle.Position = "AdminToggle", UDim2.fromOffset(14, 8)
 
 local panel = Instance.new("Frame")
 panel.Name, panel.BackgroundColor3, panel.Visible = "AdminPanel", C.panel, false
-panel.Position, panel.Size = UDim2.fromOffset(14, 64), UDim2.new(0, 420, 1, -76)
+-- BD-261: as wide as the screen allows up to 420 px (phone landscape), so no button runs past the edge.
+panel.Position, panel.Size = UDim2.fromOffset(14, 64), UDim2.new(1, -28, 1, -76)
 panel.Parent = gui
 Theme.decorate(panel, 12)
 local sizeLimit = Instance.new("UISizeConstraint") sizeLimit.MaxSize = Vector2.new(420, 760) sizeLimit.Parent = panel
@@ -551333,6 +551361,8 @@ scroll.BackgroundTransparency, scroll.BorderSizePixel, scroll.ScrollBarThickness
 scroll.Position, scroll.Size = UDim2.fromOffset(10, 8), UDim2.new(1, -20, 1, -16)
 scroll.AutomaticCanvasSize, scroll.CanvasSize = Enum.AutomaticSize.Y, UDim2.new()
 scroll.Parent = panel
+-- BD-261: keep every row clear of the 6 px scroll bar (it used to cover the right-hand buttons).
+local scrollPadding = Instance.new("UIPadding") scrollPadding.PaddingRight = UDim.new(0, 12) scrollPadding.Parent = scroll
 local list = Instance.new("UIListLayout")
 list.Padding, list.SortOrder = UDim.new(0, 8), Enum.SortOrder.LayoutOrder
 list.Parent = scroll
@@ -551392,11 +551422,11 @@ end
 local grid = place(Instance.new("Frame"))
 grid.BackgroundTransparency, grid.AutomaticSize, grid.Size, grid.Parent = 1, Enum.AutomaticSize.Y, UDim2.new(1, 0, 0, 0), scroll
 local gridLayout = Instance.new("UIGridLayout")
-gridLayout.CellSize, gridLayout.CellPadding = UDim2.new(.5, -4, 0, 48), UDim2.fromOffset(8, 8)
+gridLayout.CellSize, gridLayout.CellPadding = UDim2.new(.5, -4, 0, 44), UDim2.fromOffset(8, 8)
 gridLayout.SortOrder, gridLayout.Parent = Enum.SortOrder.LayoutOrder, grid
 for index, event in ProgressionConfig.Weather do
     local b = button(grid, event.name, C.card, UDim2.new())
-    b.LayoutOrder, b.TextScaled = index, true
+    b.LayoutOrder = index
     eventButtons[b] = event.id
     b.Activated:Connect(function() chosenEvent = event.id refresh() end)
 end
@@ -551745,7 +551775,7 @@ end
 local function notify(text: string,color: Color3?,opts: any?)
     local o=opts or {}
     local kind=o.kind or (if color==C.red then "warning" elseif color==C.gold or color==C.accent then "good" else "info")
-    NotifyQueue.push(notifyQueue,os.clock(),{text=text,body=o.body,kind=kind,key=o.key,icon=o.icon,tint=o.tint,amount=o.amount,format=o.format})
+    NotifyQueue.push(notifyQueue,os.clock(),{text=text,body=o.body,kind=kind,key=o.key,icon=o.icon,tint=o.tint,amount=o.amount,format=o.format,live=o.live})
     pumpToasts()
 end
 task.spawn(function()
@@ -552873,7 +552903,7 @@ local lastRunState=""
 local lastLevel=num("AccountLevel")
 player:GetAttributeChangedSignal("AccountLevel"):Connect(function()
     local level=num("AccountLevel")
-    if lastLevel&gt;0 and level&gt;lastLevel then Sfx.play("level_up") notify("Level "..level.."!",C.gold,{kind="major",icon="trophy",key="level"}) end
+    if lastLevel&gt;0 and level&gt;lastLevel then Sfx.playCue("level_up") notify("Level "..level.."!",C.gold,{kind="major",icon="trophy",key="level"}) end
     lastLevel=level
 end)
 -- Movement feel: camera height follows growth every frame (not the 0.15 s HUD tick), and the
@@ -552964,7 +552994,7 @@ RunService.Heartbeat:Connect(function(dt)
         player.CameraMinZoomDistance=Config.CameraMinZoom*(character:GetAttribute("VisualScale") or 1)
     end
     if state~=lastRunState then
-        if lastRunState=="Sanctuary" and state=="Active" then Sfx.play("run_start") elseif lastRunState=="Active" and state=="Sanctuary" then Sfx.play("run_end") end
+        if lastRunState=="Sanctuary" and state=="Active" then Sfx.play("run_start") elseif lastRunState=="Active" and state=="Sanctuary" then Sfx.playCue("run_end") end
         lastRunState=state
     end
     local ok,tags=pcall(function() return Http:JSONDecode(if character then character:GetAttribute("RunEggEvents") or "[]" else "[]") end)
@@ -552974,7 +553004,7 @@ RunService.Heartbeat:Connect(function(dt)
             local mutation=nil
             for i=#tags,lastEggCount+1,-1 do mutation=mutation or ProgressionRules.item(ProgressionConfig.EventMutations,tags[i].mutationId or "") end
             -- Plain eggs show on the HUD counter; only special eggs get a card (docs/65).
-            if mutation then notify(mutation.name.." egg caught!",C.gold,{kind="major",icon="egg",body="Hatch it at Home"}) end
+            if mutation then notify(mutation.name.." egg caught!",C.gold,{kind="major",icon="egg",body="Hatch it at Home",key="mutation_egg",live=true}) end
         end
         lastEggCount=#tags
     end
@@ -553053,7 +553083,7 @@ player:GetAttributeChangedSignal("LastExitStatusAt"):Connect(function()
 end)
 player:GetAttributeChangedSignal("LastNestClaimAt"):Connect(function()
     if str("LastNestClaimStatus")~="opened" then return end
-    Sfx.play("level_up")
+    Sfx.playCue("level_up")
     notify("Nest opened!",C.accent,{icon="egg_nest",body="Open your eggs when ready"})
 end)
 player:GetAttributeChangedSignal("LastRewardText"):Connect(function() if active=="results" then body:ClearAllChildren() render(active) end end)
@@ -557040,7 +557070,7 @@ function Seq.play(args: Args): Handle
         view.ImageTransparency = 0
         if a.dino:IsA("ViewportFrame") and overlay.Parent then
             -- Drags on the full-screen catcher turn the dino; a press that moves under 12 px is still a tap.
-            inspect = InspectView.attach(a.dino :: ViewportFrame, {surface = overlay, uiParent = overlay,
+            inspect = InspectView.attach(a.dino :: ViewportFrame, {surface = overlay, uiParent = overlay, baseZoom = 1.4, -- BD-262: the dino filled under half the panel
                 hintPosition = UDim2.fromScale(.5, .37), resetPosition = UDim2.fromScale(.72, .345)})
         end
         if not motion then
@@ -557477,6 +557507,7 @@ export type Options = {
     resetButton: boolean?, -- 44 px reset-view button (default true)
     resetPosition: UDim2?, -- default top-right of uiParent
     hintPosition: UDim2?,  -- default bottom-center of uiParent
+    baseZoom: number?,     -- BD-262: start zoomed in (clamped); the reset button returns to the normal fit
     autoSpin: boolean?,    -- idle turntable until first touch (default true)
     zIndex: number?,
 }
@@ -557502,6 +557533,7 @@ function InspectView.attach(viewport: ViewportFrame, options: Options?): Handle
     local z = o.zIndex or (uiParent.ZIndex + 3)
     local s = Math.new()
     if o.autoSpin == false then s.touched = true end
+    if o.baseZoom then s.zoom = Math.clampZoom(o.baseZoom) viewport:SetAttribute("InspectZoom", s.zoom) end
     local enabled = true
     local alive = true
     local connections: {RBXScriptConnection} = {}
