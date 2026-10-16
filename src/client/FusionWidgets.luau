@@ -53,6 +53,8 @@ function W.button(parent: Instance, text: string, size: UDim2, position: UDim2, 
     b.TextStrokeTransparency, b.TextStrokeColor3 = 0, C.outline
     textConstraint(b, 22)
     Theme.decorate(b, 4)
+    local floor = Instance.new("UISizeConstraint") -- BD-334: never narrower or shorter than a 44 px touch target (Clear was 41 px)
+    floor.MinSize, floor.Parent = Vector2.new(W.Touch, W.Touch), b
     b.Activated:Connect(callback)
     b.Parent = parent
     return b
