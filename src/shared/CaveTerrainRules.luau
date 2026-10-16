@@ -28,7 +28,7 @@ Rules.GateHeight = 20
 Rules.FallRecess = {halfWidth = 20, front = -1, back = 7} -- dz range around Layout.Fall.z carved behind the sheet
 -- Cave-only colours (the island uses none of these three): warm stone floor and warm tan walls, so the hall reads soft and calm
 -- (docs/87) instead of the island's dark teal Rock / Slate / Basalt. Island material colours are untouched.
-Rules.Colors = {Cobblestone = {164, 152, 138}, Limestone = {178, 158, 138}, CrackedLava = {255, 120, 40}}
+Rules.Colors = {Cobblestone = {164, 152, 138}, Limestone = {196, 172, 150}, CrackedLava = {255, 120, 40}}
 Rules.Materials = {"Air", "Rock", "Limestone", "Sandstone", "Slate", "Basalt", "Cobblestone", "Grass", "LeafyGrass", "CrackedLava"}
 
 local SCALE = 95 -- studs per norm unit used for the wall signed distance (a conservative mean of the 105.5 / 125 radii)
