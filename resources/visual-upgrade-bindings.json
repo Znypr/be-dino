@@ -69,10 +69,12 @@
       "name": "BeDino_Meadow",
       "base": "Grass",
       "color": "94202355146046",
-      "normal": "102603392874381",
-      "roughness": "82962110810713",
-      "metal": "94175885618888",
-      "tile": 20
+      "normal": "",
+      "roughness": "",
+      "metal": "",
+      "tile": 12,
+      "note": "BD-460 (docs/138): the island grass keeps only its colour map. The uploaded normal/roughness/metalness maps gave the dark wave and stripe shading in Future lighting; they are unbound (not deleted) and listed in disabledMaps so they can be re-bound.",
+      "disabledMaps": {"normal": "102603392874381", "roughness": "82962110810713", "metal": "94175885618888", "previousTile": 20}
     },
     {
       "name": "BeDino_Stone",

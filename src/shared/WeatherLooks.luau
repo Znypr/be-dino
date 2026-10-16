@@ -32,9 +32,9 @@ end
 -- The near play area (25 studs) stays clear: fogStart >= 25 except in the blizzard whiteout.
 -- BD-213 (owner 2026-10-15: "visibility randomly cuts off, it should fade like fog"): there is no opaque sky box any more; the far
 -- view always dissolves into the classic fog ramp, which is capped inside the prop cull radius (Weather.fog) so props never pop.
--- Clear weather is crisp (owner 2026-10-16): a faint sky-blue fade far out, a slightly positive grade (sat/contrast), no DoF, no bloom.
+-- Clear weather is crisp (owner 2026-10-16): a faint sky-blue fade far out, a barely positive grade (sat +.02, contrast 0 since BD-460), no DoF, no bloom.
 Weather.Looks={
-    clear=look({sat=.08,contrast=.04,fog=rgb(176,205,232),fogStart=220,vis=1100}),
+    clear=look({sat=.02,contrast=0,fog=rgb(176,205,232),fogStart=220,vis=1100}), -- BD-460: grade sat +.08 -> +.02 (-.06) and contrast +.04 -> 0: softer, less saturated greens; still no haze
     rain=look({cloudCover=.9,cloudDensity=.65,cloudColor=rgb(120,132,152),tint=rgb(150,182,232),sat=-.26,contrast=.14,bright=-.06,fog=rgb(120,134,156),decay=rgb(70,84,110),density=.5,offset=0,haze=2.6,bloom=.2,
         amb=rgb(92,106,130),dof=.35,dofFocus=90,exposure=-.35,lamp=.8,fogStart=40,vis=260}),
     thunder=look({cloudCover=1,cloudDensity=.95,cloudColor=rgb(52,48,92),tint=rgb(160,174,222),sat=-.2,contrast=.18,bright=-.08,fog=rgb(88,96,132),decay=rgb(46,50,90),density=.56,offset=0,haze=3,bloom=.5,

@@ -3,7 +3,7 @@
 Luminance = mean of 0.2126 R + 0.7152 G + 0.0722 B on the sRGB values scaled to 0..1 (display luminance, NOT linearised), taken over the
 3D viewport region only (Studio chrome and HUD are excluded: capture with the ScreenGuis hidden, see docs/117 s3).
 Ranges (LEAD, provisional until the owner confirms them; the handbook says "bright daylight" and "DIM, lamp-lit" without numbers):
-  island        0.35 - 0.75   bright daylight (ClockTime 14, Brightness 2)
+  island        0.35 - 0.75   bright daylight (ClockTime 14, Brightness 1.8 since BD-460)
   cave_heart    0.15 - 0.35   DIM warm cave, dino still readable
   cave_station  0.15 - 0.35   same, standing at a station
 Fails (exit 1) when a mean is outside its range. Also reports the 5th/95th percentile so a flat-black or burnt-out frame is visible.

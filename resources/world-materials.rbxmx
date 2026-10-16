@@ -11,18 +11,9 @@
         <string name="Name">BeDino_Meadow</string>
         <token name="BaseMaterial">1280</token>
         <token name="MaterialPattern">1</token>
-        <float name="StudsPerTile">20</float>
+        <float name="StudsPerTile">12</float>
         <Content name="ColorMap">
           <url>rbxassetid://94202355146046</url>
-        </Content>
-        <Content name="NormalMap">
-          <url>rbxassetid://102603392874381</url>
-        </Content>
-        <Content name="RoughnessMap">
-          <url>rbxassetid://82962110810713</url>
-        </Content>
-        <Content name="MetalnessMap">
-          <url>rbxassetid://94175885618888</url>
         </Content>
       </Properties>
     </Item>

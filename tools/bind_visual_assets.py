@@ -58,8 +58,10 @@ def outputs():
         ET.SubElement(p, "token", {"name": "MaterialPattern"}).text = "1"
         ET.SubElement(p, "float", {"name": "StudsPerTile"}).text = str(m["tile"])
         for field, key in (("ColorMap", "color"), ("NormalMap", "normal"), ("RoughnessMap", "roughness"), ("MetalnessMap", "metal")):
+            if not m[key]:
+                continue  # BD-460: an unbound map is simply not written (the property stays unset, the base material's own value is used)
             content = ET.SubElement(p, "Content", {"name": field})
-            ET.SubElement(content, "url").text = "rbxassetid://" + m[key] if m[key] else ""
+            ET.SubElement(content, "url").text = "rbxassetid://" + m[key]
     ET.indent(root, space="  ")
     return {ROOT / "src/shared/ResourceMeshAssets.luau": model_luau,
             ROOT / "src/shared/GeneTextureAssets.luau": genetic_luau,

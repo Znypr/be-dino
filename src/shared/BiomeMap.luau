@@ -47,8 +47,8 @@ BiomeMap.Ground = {
 BiomeMap.Rock = {meadow = "Rock", fern = "Rock", conifer = "Slate", marsh = "Mud", badlands = "Sandstone", volcanic = "Basalt"}
 -- Global colours the terrain painter sets (SetMaterialColor): chosen so each biome reads differently at a glance.
 BiomeMap.Colors = {
-    Grass = {132, 170, 84},
-    LeafyGrass = {62, 124, 78},
+    Grass = {138, 164, 98}, -- BD-460: was {132, 170, 84}: less saturated (S .51 -> .40, V .67 -> .64), a calmer, more matte lawn
+    LeafyGrass = {84, 128, 92}, -- BD-460: was {62, 124, 78}: the dark teal patches on the ground lifted and de-teal'd (V .49 -> .50, S .50 -> .34)
     Mud = {92, 76, 55},
     Ground = {112, 100, 66},
     Sand = {214, 190, 136},
