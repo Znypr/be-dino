@@ -54,6 +54,9 @@ jobs:
           python tools/verify_next_goal.py --runner /tmp/luau/luau
           python tools/verify_goals.py --runner /tmp/luau/luau
           python tools/verify_qa_kit.py --runner /tmp/luau/luau
+          python tools/verify_demo_director.py --runner /tmp/luau/luau
+          python tools/demo/record.py --selftest
+          if command -v ffmpeg >/dev/null; then python tools/demo/edit.py selftest; else echo "ffmpeg not installed: edit.py selftest skipped"; fi
           python tools/verify_discovery.py --runner /tmp/luau/luau
           python tools/verify_admin.py --runner /tmp/luau/luau
           python tools/verify_notify.py --runner /tmp/luau/luau

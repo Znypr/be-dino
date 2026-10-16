@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "name": "weekly_update_template",
+  "aspect": "16:9",
+  "hideHud": true,
+  "letterbox": true,
+  "shots": [
+    {
+      "duration": 3,
+      "title": "THIS WEEK",
+      "camera": {
+        "kind": "static",
+        "pos": [
+          0,
+          10,
+          40
+        ],
+        "look": [
+          0,
+          4,
+          0
+        ]
+      }
+    },
+    {
+      "duration": 6,
+      "lowerThird": "NEW: replace this line",
+      "camera": {
+        "kind": "dolly",
+        "from": [
+          -20,
+          8,
+          30
+        ],
+        "to": [
+          20,
+          8,
+          30
+        ],
+        "look": [
+          0,
+          4,
+          0
+        ],
+        "ease": "inOutSine"
+      }
+    },
+    {
+      "duration": 6,
+      "lowerThird": "NEW: second feature",
+      "camera": {
+        "kind": "orbit",
+        "center": [
+          0,
+          4,
+          0
+        ],
+        "radius": 22,
+        "height": 7,
+        "ease": "inOutSine"
+      }
+    },
+    {
+      "duration": 3,
+      "title": "Be Dino!",
+      "camera": {
+        "kind": "pushin",
+        "from": [
+          0,
+          10,
+          40
+        ],
+        "look": [
+          0,
+          4,
+          0
+        ],
+        "distance": 10,
+        "ease": "outCubic"
+      }
+    }
+  ]
+}

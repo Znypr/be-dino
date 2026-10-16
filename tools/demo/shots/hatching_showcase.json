@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "name": "hatching_showcase",
+  "aspect": "16:9",
+  "hideHud": true,
+  "letterbox": true,
+  "shots": [
+    {
+      "duration": 3,
+      "title": "New eggs!",
+      "camera": {
+        "kind": "track",
+        "offset": [
+          0,
+          5,
+          12
+        ],
+        "ease": "inOutSine"
+      },
+      "triggers": [
+        {
+          "at": 0.0,
+          "kind": "note",
+          "text": "needs unpublished Studio + Config.DemoDirectorEnabled (docs/133)"
+        },
+        {
+          "at": 0.5,
+          "kind": "remote",
+          "remote": "DemoTrigger",
+          "args": [
+            {
+              "kind": "hatchParty",
+              "eggs": [
+                {
+                  "rarity": "Common"
+                },
+                {
+                  "rarity": "Common"
+                },
+                {
+                  "rarity": "Common"
+                },
+                {
+                  "rarity": "Common"
+                },
+                {
+                  "rarity": "Common"
+                },
+                {
+                  "rarity": "Common"
+                },
+                {
+                  "rarity": "Common"
+                },
+                {
+                  "rarity": "Uncommon"
+                },
+                {
+                  "rarity": "Uncommon"
+                },
+                {
+                  "rarity": "Uncommon"
+                },
+                {
+                  "rarity": "Rare"
+                },
+                {
+                  "rarity": "Rare"
+                },
+                {
+                  "rarity": "Epic"
+                },
+                {
+                  "rarity": "Legendary",
+                  "shiny": true,
+                  "condition": "Rainbow"
+                },
+                {
+                  "rarity": "Rare",
+                  "mutationId": "frost"
+                }
+              ],
+              "newFind": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "duration": 55,
+      "lowerThird": "Watch them hatch one by one",
+      "camera": {
+        "kind": "track",
+        "offset": [
+          6,
+          4,
+          9
+        ]
+      },
+      "triggers": [
+        {
+          "at": 0.5,
+          "kind": "startHatch",
+          "repeatCount": 15,
+          "gap": 5.0
+        }
+      ]
+    },
+    {
+      "duration": 28,
+      "lowerThird": "A frost egg, then a Legendary Shiny!",
+      "camera": {
+        "kind": "track",
+        "offset": [
+          6,
+          4,
+          9
+        ]
+      },
+      "triggers": [
+        {
+          "at": 27.0,
+          "kind": "closeModal"
+        }
+      ]
+    }
+  ],
+  "hideChrome": true
+}
