@@ -13,16 +13,16 @@ Updated 2026-10-14. This file is the canonical task tracker.
 
 | Status | P0 | P1 | P2 | P3 | Total |
 |---|---:|---:|---:|---:|---:|
-| Backlog | 6 | 35 | 31 | 8 | 80 |
+| Backlog | 6 | 34 | 31 | 8 | 79 |
 | In progress | 3 | 1 | 0 | 0 | 4 |
 | In review | 2 | 0 | 0 | 0 | 2 |
 | Review / test | 57 | 158 | 62 | 10 | 287 |
 | Blocked | 1 | 0 | 0 | 0 | 1 |
 | Done | 13 | 2 | 1 | 0 | 16 |
 | Superseded | 2 | 2 | 0 | 0 | 4 |
-| Parked | 0 | 0 | 0 | 1 | 1 |
+| Parked | 0 | 0 | 0 | 2 | 2 |
 | Spike | 0 | 2 | 0 | 0 | 2 |
-| **Total** | 84 | 200 | 94 | 19 | 397 |
+| **Total** | 84 | 199 | 94 | 20 | 397 |
 
 <!-- board-summary:end -->
 
@@ -223,7 +223,7 @@ ledger compaction before public release.
 | BD-052 | Review / test | P1 | Single bottom-center Home with confirmation and no three-second exit channel ([51](51-bd053-054-movement-mobile.md)) | BD-009 |
 | BD-053 | Review / test | P0 | Fix sliding and hill-climb movement on mountainous terrain ([51](51-bd053-054-movement-mobile.md)) | BD-006, BD-008 |
 | BD-054 | Review / test | P0 | Responsive phone/tablet touch-zone navigation/control placement and safe insets ([51](51-bd053-054-movement-mobile.md)) | BD-052, BD-046 |
-| BD-055 | Backlog | P1 | Complete sky, atmosphere, cloud, particle and audio effects for all weather events | BD-031, BD-034 | **2026-10-16 QA:** visual pass for 7 events done (see BD-130); sky clouds and audio still open.
+| BD-055 | Backlog | P1 | Complete sky, atmosphere, cloud, particle and audio effects for all weather events | BD-031, BD-034 | **2026-10-16 QA:** visual pass for 7 events done (see BD-130). **2026-10-16 (BD-055 code side):** Terrain.Clouds cover/density/colour per event on the grade ramp (thunder dark violet overcast, blood moon crimson, volcano ash brown, aurora open sky), thunder Reduce Motion soft swell instead of flashes, 6 empty texture slots in docs/120 (cloud puff wired to fog banks, bolt/streak/flakes/ash/moon disc pending). Audio ids still empty (docs/120 weather beds). Studio eyes and real-phone check open.
 | BD-056 | Review / test | P1 | Top-center growth metric and bottom-left egg-icon catches-only HUD | BD-044, BD-054 |
 | BD-057 | Review / test | P0 | [Emerald/Diamond cost options: 57](57-fusion-ladder-options.md). Consume 10 same-species/same-pattern Base dinos to create ONE NEW Gold, then Emerald before Diamond; guaranteed stage, freshly rolled traits (Gold transaction; provisional odds/remote via BD-064; Emerald/Diamond unapproved) **Owner 2026-10-14: ladder fixed at Gold 15 Base / Emerald 4 Gold / Diamond 2 Emerald (was 50/10/3); pacing at 40 eggs per 500 food: [57 sections 11-12](57-fusion-ladder-options.md), [59](59-egg-rate-40.md).** **Board audit 2026-10-16:** Note: the 10-donor / 15/4/2 ladder text is historical; Fusion Menu ladder is 6 Base / 3 Gold / 2 Emerald (docs/115 L2, BD-335). | BD-012, BD-060  |
 | BD-058 | Superseded | P0 | [Recipe pacing options sim: 57](57-fusion-ladder-options.md). Earned fusion stages as main permanent stat progression, fair caps, weekly grind and recipe pacing simulation **Owner 2026-10-14: ladder fixed at Gold 15 Base / Emerald 4 Gold / Diamond 2 Emerald (was 50/10/3); pacing at 40 eggs per 500 food: [57 sections 11-12](57-fusion-ladder-options.md), [59](59-egg-rate-40.md).** | BD-057  | **Sync 2026-10-16 (PR audit):** Covered: the pacing sim exists in tools/simulate_fusion_ladder.py and docs/90; ladder fixed by owner (docs/58). No new work; superseded.
