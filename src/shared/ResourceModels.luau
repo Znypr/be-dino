@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local RuntimeMeshes = require(script.Parent.RuntimeMeshes)
 local ResourceModels = {}
 local Authored = require(script.Parent.AuthoredCreatures)
+local LowPoly = require(script.Parent.LowPolyDinos)
 function ResourceModels.clearTextures(part: BasePart)
     for _,child in part:GetChildren() do
         if child:IsA("SurfaceAppearance") or child:IsA("Decal") or child:IsA("Texture") then child:Destroy() end
@@ -16,6 +17,8 @@ end
 -- box for an authored creature: return nil so the caller shows nothing until a retry succeeds.
 function ResourceModels.clone(id: string,genes: any?,patient: boolean?): Model?
     if RunService:IsClient() then
+        local lowPoly=LowPoly.clone(id,genes) -- BD-225 spike: nil when the flag is off or the model is not loaded
+        if lowPoly then return lowPoly end
         local authored=Authored.clone(id,genes,patient)
         if authored then return authored end
         if patient==true and Authored.has(id) then return nil end

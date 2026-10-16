@@ -366556,6 +366556,8 @@ return table.freeze({
     -- (or after this many seconds in the hub, so a slow client is never locked out); falls are checked every tick.
     WorldReadyTimeoutSeconds = 20,
     FallRecoveryTickSeconds = 0.2,
+    -- BD-225 spike (docs/77): low-poly generated base dinos (Compy, Raptor, Triceratops). OFF by default; shipped look unchanged.
+    LowPolyDinos = false,
     SecurityTestHarnessEnabled = false,
     ArtTestHarnessEnabled = false,
     ArtPreviewRequestCooldownSeconds = 0.25,
@@ -368546,6 +368548,7 @@ return Assets
 local Genetics=require(script.Parent.EggGenetics)
 local Textures=require(script.Parent.GeneTextures)
 local Appearance={}
+local LowPoly=require(script.Parent.LowPolyDinos)
 local Patterns=require(script.Parent.PatternGenes)
 local Overlays=require(script.Parent.ConditionOverlays)
 -- BD-174: the egg condition (Cracked, Dirty, Rainbow, Astra) belongs to EGG visuals only. Dinosaur models get colours and pattern
@@ -368565,6 +368568,7 @@ function Appearance.apply(container: Instance,genes,showCondition: boolean?)
         end
         return
     end
+    if container:GetAttribute("LowPoly")==true then LowPoly.tint(container,genes) return end -- BD-225: flat facet tint, matte
     local shell,shellSize=nil,-1
     for _,part in container:GetDescendants() do
         if part:IsA("BasePart") then
@@ -372122,6 +372126,168 @@ return Gate
       </Item>
       <Item class="ModuleScript" referent="RBX222">
         <Properties>
+          <string name="Name">LowPolyDinoAssets</string>
+          <ProtectedString name="Source">--!strict
+-- BD-225 spike: species -&gt; published low-poly generated Model (Roblox mesh generator, 2026-10-16). Each asset is a Model with
+-- one MeshPart per body part (body, head, tail, arms, legs). Pure data (no Roblox APIs) so tools/verify_lowpoly_dinos.py runs it.
+-- Gated by Config.LowPolyDinos (false by default). Never invent ids: a species not listed keeps its current visual.
+-- scale = studs multiplier applied once at clone time (generated models are about 3 studs long; the old shells are 8 to 10).
+return {
+    compy = {assetId = 94548957808227, version = "v1", scale = 2.2},
+    raptor = {assetId = 83260397513385, version = "v1", scale = 2.1},
+    triceratops = {assetId = 107596736973492, version = "v3", scale = 3.0},
+}
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX223">
+        <Properties>
+          <string name="Name">LowPolyDinos</string>
+          <ProtectedString name="Source">--!strict
+-- BD-225 spike: low-poly generated base dinos (flag Config.LowPolyDinos, OFF by default). The server loader
+-- (src/server/LowPolyDinoLoader.luau) puts the published Models into ReplicatedStorage.LowPolyDinoModels; clients clone from there.
+-- clone() returns nil when the flag is off, the species is unmapped or the model did not load, so callers keep the current visual.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(script.Parent.Config)
+local Assets = require(script.Parent.LowPolyDinoAssets)
+local Genetics = require(script.Parent.EggGenetics)
+local LowPoly = {}
+LowPoly.FolderName = "LowPolyDinoModels"
+
+function LowPoly.enabled(): boolean
+    return (Config :: any).LowPolyDinos == true
+end
+function LowPoly.has(speciesId: string): boolean
+    return LowPoly.enabled() and Assets[speciesId] ~= nil
+end
+-- Generated part names look like `"left arm"_geom`; classify by keywords, tolerant of quotes and brackets.
+function LowPoly.roleOf(name: string): string?
+    local n = string.lower(name)
+    for _, role in {"head", "tail", "arm", "leg", "body"} do
+        if string.find(n, role, 1, true) then return role end
+    end
+    return nil
+end
+local function template(speciesId: string): Model?
+    local folder = ReplicatedStorage:FindFirstChild(LowPoly.FolderName)
+    local item = if folder then folder:FindFirstChild(speciesId) else nil
+    return if item and item:IsA("Model") then item else nil
+end
+-- Colours on the flat facets. Body = the dino's blended gene colour; head/tail/limbs lean to the secondary colour so both
+-- genes show. Matte (docs/173): no gloss, no texture. Spots/stripes (PatternGenes needs per-species UV data) are NOT on low-poly yet.
+function LowPoly.tint(container: Instance, genes: any)
+    if not genes or not Genetics.valid(genes) then return end
+    local base = Genetics.tint(genes)
+    local second = Genetics.color(genes.secondaryColorId).rgb
+    local accent = base:Lerp(Color3.fromRGB(second[1], second[2], second[3]), 0.45)
+    for _, part in container:GetDescendants() do
+        if part:IsA("MeshPart") then
+            part.TextureID = ""
+            part.TextureContent = Content.none
+            part.Color = if part:GetAttribute("LPRole") == "body" then base else accent
+            part.Material, part.Reflectance = Enum.Material.Plastic, 0
+        end
+    end
+end
+function LowPoly.clone(speciesId: string, genes: any?): Model?
+    if not LowPoly.has(speciesId) then return nil end
+    local source = template(speciesId)
+    if not source then return nil end
+    local copy = source:Clone()
+    local info = (Assets :: any)[speciesId]
+    local parts: {MeshPart} = {}
+    for _, item in copy:GetDescendants() do
+        if item:IsA("LuaSourceContainer") then item:Destroy()
+        elseif item:IsA("MeshPart") then table.insert(parts, item) end
+    end
+    if #parts == 0 then copy:Destroy() return nil end
+    local box, size = copy:GetBoundingBox()
+    local origin = box.Position - Vector3.new(0, size.Y / 2, 0)
+    local bodyZ = box.Position.Z
+    local k: number = info.scale
+    for _, part in parts do
+        local role = LowPoly.roleOf(part.Name)
+        part:SetAttribute("LPRole", role or "body")
+        part:SetAttribute("LPSide", if part.Position.X &lt; box.Position.X then -1 else 1)
+        part:SetAttribute("LPLead", part.Position.Z &lt; bodyZ)
+        part.CanCollide, part.CanTouch, part.CanQuery, part.Massless = false, false, false, true
+        part.Size *= k
+        part.CFrame = CFrame.new((part.Position - origin) * k) * part.CFrame.Rotation
+    end
+    copy.WorldPivot = CFrame.new()
+    copy.Name = speciesId
+    copy:SetAttribute("LowPoly", true)
+    copy:SetAttribute("UploadedModelId", info.assetId)
+    copy:SetAttribute("LowPolyVersion", info.version)
+    LowPoly.tint(copy, genes)
+    return copy
+end
+return LowPoly
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX224">
+        <Properties>
+          <string name="Name">LowPolyPose</string>
+          <ProtectedString name="Source">--!strict
+-- BD-234 spike: pure procedural idle/walk pose per body part (no Roblox types, offline-testable).
+-- Angles are radians about the part's own pivot (pitch = X, roll = Z, yaw = Y); dy/dz are fractions of the model height.
+-- Idle: gentle breathing, slow head tilt, tail sway. Walk (chicken/dino mix): quick bob, alternating legs, head peck, tail counter-swing.
+local Pose = {}
+Pose.Roles = {"body", "head", "tail", "arm", "leg"}
+Pose.MaxAngle = 0.9
+Pose.MaxOffset = 0.08
+export type Out = {pitch: number, roll: number, yaw: number, dy: number, dz: number}
+function Pose.new(): Out return {pitch = 0, roll = 0, yaw = 0, dy = 0, dz = 0} end
+-- Walk cycle speed: radians per second grows with speed01 (0..1 of max run speed), quick like a chicken.
+function Pose.stepRate(speed01: number): number
+    return 5 + 7 * math.clamp(speed01, 0, 1)
+end
+local function finite(x: number): number return if x == x and math.abs(x) &lt; 1e6 then x else 0 end
+-- role: body/head/tail/arm/leg; side: -1/1 (x side); lead: true for a quadruped front leg (diagonal pairing); t: idle clock seconds;
+-- phase: walk phase radians; speed01: 0 idle .. 1 full run; amp: 0..1 (Reduce Motion passes 0).
+function Pose.sample(role: string, side: number, lead: boolean, t: number, phase: number, speed01: number, amp: number, out: Out): Out
+    t, phase = finite(t), finite(phase)
+    local w = math.clamp(finite(speed01), 0, 1)
+    local a = math.clamp(finite(amp), 0, 1)
+    local idle = 1 - w
+    local pitch, roll, yaw, dy, dz = 0, 0, 0, 0, 0
+    local s = if side &lt; 0 then -1 else 1
+    local sw = math.sin(phase)
+    if role == "body" then
+        dy = idle * math.sin(t * 1.7) * 0.012 + w * math.abs(sw) * 0.03
+        roll = w * sw * 0.07
+        pitch = idle * math.sin(t * 1.7 + 0.6) * 0.012
+    elseif role == "head" then
+        roll = idle * math.sin(t * 0.55) * 0.14 + w * -sw * 0.05
+        yaw = idle * math.sin(t * 0.38 + 1) * 0.10
+        local peck = math.sin(phase * 2 - 0.8)
+        pitch = idle * math.sin(t * 1.7 + 1.1) * 0.02 + w * peck * 0.16
+        dz = w * math.max(0, peck) * -0.03
+    elseif role == "tail" then
+        yaw = idle * math.sin(t * 0.9) * 0.22 + w * -sw * 0.30
+        pitch = idle * math.sin(t * 0.7 + 2) * 0.04 + w * math.sin(phase * 2) * 0.05
+    elseif role == "leg" then
+        local lift = if lead then 0 else math.pi
+        local swing = math.sin(phase + (if s &lt; 0 then 0 else math.pi) + lift)
+        pitch = w * swing * 0.65
+        dy = w * math.max(0, swing) * 0.015
+    elseif role == "arm" then
+        pitch = idle * math.sin(t * 1.7 + 0.3) * 0.04 + w * math.sin(phase + (if s &lt; 0 then math.pi else 0)) * 0.30
+    end
+    out.pitch = math.clamp(finite(pitch) * a, -Pose.MaxAngle, Pose.MaxAngle)
+    out.roll = math.clamp(finite(roll) * a, -Pose.MaxAngle, Pose.MaxAngle)
+    out.yaw = math.clamp(finite(yaw) * a, -Pose.MaxAngle, Pose.MaxAngle)
+    out.dy = math.clamp(finite(dy) * a, -Pose.MaxOffset, Pose.MaxOffset)
+    out.dz = math.clamp(finite(dz) * a, -Pose.MaxOffset, Pose.MaxOffset)
+    return out
+end
+return Pose
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX225">
+        <Properties>
           <string name="Name">MeshSanity</string>
           <ProtectedString name="Source">--!strict
 -- Pure sanity checks for authored MeshParts. A mesh that did not really load renders as a plain cube/box
@@ -372164,7 +372330,7 @@ return Sanity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX223">
+      <Item class="ModuleScript" referent="RBX226">
         <Properties>
           <string name="Name">ModelPreview</string>
           <ProtectedString name="Source">--!strict
@@ -372225,7 +372391,7 @@ return ModelPreview
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX224">
+      <Item class="ModuleScript" referent="RBX227">
         <Properties>
           <string name="Name">MovementEnvelope</string>
           <ProtectedString name="Source">--!strict
@@ -372278,7 +372444,7 @@ return MovementEnvelope
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX225">
+      <Item class="ModuleScript" referent="RBX228">
         <Properties>
           <string name="Name">MutationEffects</string>
           <ProtectedString name="Source">-- Standalone client adapter. Upload BeDino_Soft_Smoke_256.png first.
@@ -372360,7 +372526,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX226">
+      <Item class="ModuleScript" referent="RBX229">
         <Properties>
           <string name="Name">MutationLook</string>
           <ProtectedString name="Source">--!strict
@@ -372448,7 +372614,7 @@ return Look
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX227">
+      <Item class="ModuleScript" referent="RBX230">
         <Properties>
           <string name="Name">MyDinos</string>
           <ProtectedString name="Source">--!strict
@@ -372627,7 +372793,7 @@ return M
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX228">
+      <Item class="ModuleScript" referent="RBX231">
         <Properties>
           <string name="Name">NavigationArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -372645,7 +372811,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX229">
+      <Item class="ModuleScript" referent="RBX232">
         <Properties>
           <string name="Name">NestQueue</string>
           <ProtectedString name="Source">--!strict
@@ -372706,7 +372872,7 @@ return NestQueue
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX230">
+      <Item class="ModuleScript" referent="RBX233">
         <Properties>
           <string name="Name">NextGoal</string>
           <ProtectedString name="Source">--!strict
@@ -372787,7 +372953,7 @@ return NextGoal
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX231">
+      <Item class="ModuleScript" referent="RBX234">
         <Properties>
           <string name="Name">NotifyQueue</string>
           <ProtectedString name="Source">--!strict
@@ -373000,7 +373166,7 @@ return Q
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX232">
+      <Item class="ModuleScript" referent="RBX235">
         <Properties>
           <string name="Name">PatternAtlasCache</string>
           <ProtectedString name="Source">--!strict
@@ -373086,7 +373252,7 @@ return Cache
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX233">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">PatternGenes</string>
           <ProtectedString name="Source">--!strict
@@ -373306,7 +373472,7 @@ return Pattern
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX234">
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">PotionArt</string>
           <ProtectedString name="Source">--!strict
@@ -373492,7 +373658,7 @@ return PotionArt
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX235">
+      <Item class="ModuleScript" referent="RBX238">
         <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
@@ -373586,7 +373752,7 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -373715,7 +373881,7 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -373952,7 +374118,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">RarityCurve</string>
           <ProtectedString name="Source">--!strict
@@ -374023,7 +374189,7 @@ return table.freeze(Curve)
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -374032,7 +374198,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -374048,7 +374214,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -374058,6 +374224,7 @@ local RunService = game:GetService("RunService")
 local RuntimeMeshes = require(script.Parent.RuntimeMeshes)
 local ResourceModels = {}
 local Authored = require(script.Parent.AuthoredCreatures)
+local LowPoly = require(script.Parent.LowPolyDinos)
 function ResourceModels.clearTextures(part: BasePart)
     for _,child in part:GetChildren() do
         if child:IsA("SurfaceAppearance") or child:IsA("Decal") or child:IsA("Texture") then child:Destroy() end
@@ -374069,6 +374236,8 @@ end
 -- box for an authored creature: return nil so the caller shows nothing until a retry succeeds.
 function ResourceModels.clone(id: string,genes: any?,patient: boolean?): Model?
     if RunService:IsClient() then
+        local lowPoly=LowPoly.clone(id,genes) -- BD-225 spike: nil when the flag is off or the model is not loaded
+        if lowPoly then return lowPoly end
         local authored=Authored.clone(id,genes,patient)
         if authored then return authored end
         if patient==true and Authored.has(id) then return nil end
@@ -374116,7 +374285,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">RevealSkip</string>
           <ProtectedString name="Source">--!strict
@@ -374200,7 +374369,7 @@ return Skip
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -374292,7 +374461,7 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">Sfx</string>
           <ProtectedString name="Source">--!strict
@@ -374416,7 +374585,7 @@ return Sfx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -374464,7 +374633,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -374513,7 +374682,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">SpawnGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -374563,7 +374732,7 @@ return SpawnGeometry
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -374765,7 +374934,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX252">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -374797,7 +374966,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX253">
         <Properties>
           <string name="Name">UIFormat</string>
           <ProtectedString name="Source">--!strict
@@ -374841,7 +375010,7 @@ return UIFormat
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX251">
+      <Item class="ModuleScript" referent="RBX254">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -374872,7 +375041,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX252">
+      <Item class="ModuleScript" referent="RBX255">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -374896,7 +375065,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX253">
+      <Item class="ModuleScript" referent="RBX256">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -375070,7 +375239,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX254">
+      <Item class="ModuleScript" referent="RBX257">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -375101,7 +375270,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX255">
+      <Item class="ModuleScript" referent="RBX258">
         <Properties>
           <string name="Name">WeatherLooks</string>
           <ProtectedString name="Source">--!strict
@@ -375231,7 +375400,7 @@ return Weather
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX256">
+      <Item class="ModuleScript" referent="RBX259">
         <Properties>
           <string name="Name">WeatherSounds</string>
           <ProtectedString name="Source">--!strict
@@ -375306,7 +375475,7 @@ return Sounds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX257">
+      <Item class="ModuleScript" referent="RBX260">
         <Properties>
           <string name="Name">WorldGeneratedMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -375364,7 +375533,7 @@ return Generated
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX258">
+      <Item class="ModuleScript" referent="RBX261">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -375415,7 +375584,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX259">
+      <Item class="ModuleScript" referent="RBX262">
         <Properties>
           <string name="Name">WorldKitMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -375468,7 +375637,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX260">
+    <Item class="Folder" referent="RBX263">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -545023,15 +545192,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX261">
+  <Item class="ServerScriptService" referent="RBX264">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX262">
+    <Item class="Folder" referent="RBX265">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX263">
+      <Item class="ModuleScript" referent="RBX266">
         <Properties>
           <string name="Name">AdminService</string>
           <ProtectedString name="Source">--!strict
@@ -545145,7 +545314,7 @@ return AdminService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX264">
+      <Item class="ModuleScript" referent="RBX267">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -545446,7 +545615,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX265">
+      <Item class="Script" referent="RBX268">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -545484,6 +545653,7 @@ end
 require(script.Parent.ImportedResources).load()
 -- BD-214 3D potion models are dormant (owner 2026-10-16: 2D icons in PotionArt.Images replace them); PotionModels.load() no longer runs
 if Config.WorldArtMode=="BiomeKit" or Config.FoodArtMode=="Kit" then require(script.Parent.ImportedResources).loadWorldKit() end
+task.spawn(function() require(script.Parent.LowPolyDinoLoader).load() end) -- BD-225 spike, no-op while Config.LowPolyDinos is false
 if Config.WorldGeneratedMeshes and Config.WorldArtMode=="BiomeKit" then require(script.Parent.ImportedResources).loadGeneratedWorld() end
 Arena.build()
 Leaderboards.start()
@@ -545615,7 +545785,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX266">
+      <Item class="ModuleScript" referent="RBX269">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -545725,7 +545895,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX267">
+      <Item class="ModuleScript" referent="RBX270">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -545818,7 +545988,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX268">
+      <Item class="ModuleScript" referent="RBX271">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -545954,7 +546124,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX269">
+      <Item class="ModuleScript" referent="RBX272">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -546168,7 +546338,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX270">
+      <Item class="ModuleScript" referent="RBX273">
         <Properties>
           <string name="Name">FallRecovery</string>
           <ProtectedString name="Source">--!strict
@@ -546234,7 +546404,7 @@ return FallRecovery
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX271">
+      <Item class="ModuleScript" referent="RBX274">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -546505,7 +546675,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX272">
+      <Item class="ModuleScript" referent="RBX275">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -546677,7 +546847,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX273">
+      <Item class="ModuleScript" referent="RBX276">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -546863,7 +547033,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX274">
+      <Item class="ModuleScript" referent="RBX277">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -547260,7 +547430,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX275">
+      <Item class="ModuleScript" referent="RBX278">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -547381,7 +547551,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX276">
+      <Item class="ModuleScript" referent="RBX279">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -547459,7 +547629,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX277">
+      <Item class="ModuleScript" referent="RBX280">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -547571,7 +547741,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX278">
+      <Item class="ModuleScript" referent="RBX281">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -547710,7 +547880,60 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX279">
+      <Item class="ModuleScript" referent="RBX282">
+        <Properties>
+          <string name="Name">LowPolyDinoLoader</string>
+          <ProtectedString name="Source">--!strict
+-- BD-225 spike: loads the published low-poly dino Models (InsertService:LoadAsset, server only) into
+-- ReplicatedStorage.LowPolyDinoModels once, when Config.LowPolyDinos is on. A failed load is skipped: that species keeps its current visual.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local InsertService = game:GetService("InsertService")
+local Assets = require(ReplicatedStorage.Shared.LowPolyDinoAssets)
+local LowPoly = require(ReplicatedStorage.Shared.LowPolyDinos)
+local Loader = {}
+function Loader.load(): (number, number)
+    if not LowPoly.enabled() then return 0, 0 end
+    local folder = ReplicatedStorage:FindFirstChild(LowPoly.FolderName) or Instance.new("Folder")
+    folder.Name = LowPoly.FolderName
+    folder.Parent = ReplicatedStorage
+    local loaded, failed = 0, 0
+    for speciesId, info in Assets :: any do
+        if folder:FindFirstChild(speciesId) then continue end
+        local container: Instance? = nil
+        local ok, result = pcall(function()
+            container = InsertService:LoadAsset(info.assetId)
+            local model = Instance.new("Model")
+            model.Name = speciesId
+            -- Geometry only: MeshParts are copied, scripts and anything else never survive.
+            for _, part in (container :: Instance):GetDescendants() do
+                if part:IsA("MeshPart") then
+                    local copy = part:Clone()
+                    for _, child in copy:GetDescendants() do child:Destroy() end
+                    copy.Anchored = true
+                    copy.Parent = model
+                end
+            end
+            assert(#model:GetChildren() &gt; 0, "no mesh parts")
+            return model
+        end)
+        if container then container:Destroy() end
+        if ok then
+            (result :: Instance).Parent = folder
+            loaded += 1
+        else
+            failed += 1
+            warn("[Be Dino] low-poly " .. speciesId .. " unavailable; keeping current visual: " .. tostring(result))
+        end
+    end
+    workspace:SetAttribute("LowPolyDinosLoaded", loaded)
+    workspace:SetAttribute("LowPolyDinosFailed", failed)
+    return loaded, failed
+end
+return Loader
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX283">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -547815,7 +548038,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX280">
+      <Item class="ModuleScript" referent="RBX284">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -547920,7 +548143,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX281">
+      <Item class="ModuleScript" referent="RBX285">
         <Properties>
           <string name="Name">PotionModels</string>
           <ProtectedString name="Source">--!strict
@@ -547972,7 +548195,7 @@ return Models
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX282">
+      <Item class="ModuleScript" referent="RBX286">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -548107,7 +548330,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX283">
+      <Item class="ModuleScript" referent="RBX287">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -549895,7 +550118,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX284">
+      <Item class="ModuleScript" referent="RBX288">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -550113,7 +550336,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX285">
+      <Item class="ModuleScript" referent="RBX289">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -550227,7 +550450,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX286">
+      <Item class="ModuleScript" referent="RBX290">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -550515,7 +550738,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX287">
+      <Item class="ModuleScript" referent="RBX291">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -550587,19 +550810,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX288">
+  <Item class="StarterPlayer" referent="RBX292">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX289">
+    <Item class="StarterPlayerScripts" referent="RBX293">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX290">
+      <Item class="Folder" referent="RBX294">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX291">
+        <Item class="LocalScript" referent="RBX295">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -550844,7 +551067,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX292">
+        <Item class="LocalScript" referent="RBX296">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -552405,7 +552628,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX293">
+        <Item class="LocalScript" referent="RBX297">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!nonstrict
@@ -552496,7 +552719,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX294">
+        <Item class="ModuleScript" referent="RBX298">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -552575,7 +552798,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX295">
+        <Item class="ModuleScript" referent="RBX299">
           <Properties>
             <string name="Name">DinoIndexPanels</string>
             <ProtectedString name="Source">--!strict
@@ -553111,7 +553334,7 @@ return Panels
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX296">
+        <Item class="LocalScript" referent="RBX300">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -553441,7 +553664,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX297">
+        <Item class="ModuleScript" referent="RBX301">
           <Properties>
             <string name="Name">EggPicture</string>
             <ProtectedString name="Source">--!strict
@@ -553518,7 +553741,7 @@ return EggPicture
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX298">
+        <Item class="ModuleScript" referent="RBX302">
           <Properties>
             <string name="Name">EggsScreen</string>
             <ProtectedString name="Source">--!strict
@@ -553714,7 +553937,7 @@ return EggsScreen
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX299">
+        <Item class="LocalScript" referent="RBX303">
           <Properties>
             <string name="Name">FoodGlow</string>
             <ProtectedString name="Source">--!strict
@@ -553940,7 +554163,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX300">
+        <Item class="ModuleScript" referent="RBX304">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -554878,7 +555101,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX301">
+        <Item class="ModuleScript" referent="RBX305">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -554980,7 +555203,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX302">
+        <Item class="ModuleScript" referent="RBX306">
           <Properties>
             <string name="Name">FxRig</string>
             <ProtectedString name="Source">--!nonstrict
@@ -555346,7 +555569,7 @@ return Rig
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX303">
+        <Item class="ModuleScript" referent="RBX307">
           <Properties>
             <string name="Name">HatchFx</string>
             <ProtectedString name="Source">--!nonstrict
@@ -555557,7 +555780,7 @@ return M
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX304">
+        <Item class="ModuleScript" referent="RBX308">
           <Properties>
             <string name="Name">HatchSequence</string>
             <ProtectedString name="Source">--!strict
@@ -556672,7 +556895,7 @@ return Seq
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX305">
+        <Item class="ModuleScript" referent="RBX309">
           <Properties>
             <string name="Name">InspectView</string>
             <ProtectedString name="Source">--!strict
@@ -556862,7 +557085,7 @@ return InspectView
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX306">
+        <Item class="LocalScript" referent="RBX310">
           <Properties>
             <string name="Name">JumpCarry</string>
             <ProtectedString name="Source">--!strict
@@ -556920,7 +557143,106 @@ if player.Character then task.spawn(bind, player.Character) end
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX307">
+        <Item class="LocalScript" referent="RBX311">
+          <Properties>
+            <string name="Name">LowPolyAnimator</string>
+            <ProtectedString name="Source">--!strict
+-- BD-234 spike: procedural idle/walk for the low-poly dinos (Config.LowPolyDinos). Pose math: Shared/LowPolyPose (pure).
+-- Writes Weld.C1 (the animation offset) so DinoMotion's C0 poses (eat, jump squash/stretch, landing) keep working on top.
+-- Respects Reduce Motion (Theme.MotionEnabled). Remote dinos are animated at 20 Hz within 80 studs only.
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Pose = require(Shared.LowPolyPose)
+local LowPoly = require(Shared.LowPolyDinos)
+local Theme = require(Shared.UITheme)
+if not LowPoly.enabled() then return end
+
+local RANGE, REMOTE_STEP, RUN_SPEED = 80, 1 / 20, 24
+local rigs: {[Model]: any} = {}
+local out = Pose.new()
+
+local function pivotFor(role: string, size: Vector3): Vector3
+    if role == "head" then return Vector3.new(0, -size.Y / 2, size.Z / 2) end -- neck, bottom back
+    if role == "tail" then return Vector3.new(0, 0, -size.Z / 2) end -- tail root: the front (-Z) end meets the body
+    if role == "arm" or role == "leg" then return Vector3.new(0, size.Y / 2, 0) end -- hip/shoulder
+    return Vector3.zero
+end
+
+local function collect(visual: Model): {any}
+    local list = {}
+    for _, part in visual:GetDescendants() do
+        local weld = if part:IsA("MeshPart") then part:FindFirstChild("ResourceWeld") else nil
+        if weld and weld:IsA("Weld") then
+            table.insert(list, {part = part, weld = weld, role = part:GetAttribute("LPRole") or "body",
+                side = part:GetAttribute("LPSide") or 1, lead = part:GetAttribute("LPLead") == true})
+        end
+    end
+    return list
+end
+
+local function apply(rig: any, now: number, dt: number, amp: number)
+    local root = rig.root
+    local v = root.AssemblyLinearVelocity
+    local speed01 = math.clamp(math.sqrt(v.X * v.X + v.Z * v.Z) / RUN_SPEED, 0, 1)
+    if speed01 &lt; 0.06 then speed01 = 0 end
+    rig.speed = rig.speed + (speed01 - rig.speed) * math.min(1, dt * 8) -- ease in/out
+    rig.phase = (rig.phase + dt * Pose.stepRate(rig.speed) * (if rig.speed &gt; 0.01 then 1 else 0)) % (2 * math.pi * 8)
+    local height = rig.height
+    for _, item in rig.parts do
+        local part = item.part :: MeshPart
+        if not part.Parent then continue end
+        Pose.sample(item.role, item.side, item.lead, now + rig.seed, rig.phase, rig.speed, amp, out)
+        if amp == 0 then
+            item.weld.C1 = CFrame.identity
+        else
+            local pivot = pivotFor(item.role, part.Size)
+            local anim = CFrame.new(pivot) * CFrame.Angles(out.pitch, out.yaw, out.roll) * CFrame.new(-pivot)
+                * CFrame.new(0, out.dy * height, out.dz * height)
+            item.weld.C1 = anim:Inverse()
+        end
+    end
+end
+
+local function untrack(character: Model)
+    local rig = rigs[character]
+    if not rig then return end
+    for _, item in rig.parts do if item.weld.Parent then item.weld.C1 = CFrame.identity end end
+    rigs[character] = nil
+end
+
+RunService.Heartbeat:Connect(function(dt)
+    local camera = workspace.CurrentCamera
+    local now = os.clock()
+    local amp = if Theme.MotionEnabled then 1 else 0
+    for _, player in Players:GetPlayers() do
+        local character = player.Character
+        local visual = if character then character:FindFirstChild("LocalMeshVisual") else nil
+        local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+        if not character or not visual or not root or not root:IsA("BasePart") or visual:GetAttribute("LowPoly") ~= true then
+            if character then rigs[character] = nil end
+            continue
+        end
+        local rig = rigs[character]
+        if not rig or rig.visual ~= visual then
+            local _, size = visual:GetBoundingBox()
+            rig = {visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0,
+                height = math.max(size.Y, 1), seed = math.random() * 10}
+            rigs[character] = rig
+        end
+        if player == Players.LocalPlayer then
+            apply(rig, now, dt, amp)
+        elseif camera and (camera.CFrame.Position - root.Position).Magnitude &lt;= RANGE then
+            rig.acc += dt
+            if rig.acc &gt;= REMOTE_STEP then apply(rig, now, rig.acc, amp) rig.acc = 0 end
+        end
+    end
+end)
+Players.PlayerRemoving:Connect(function(player) if player.Character then untrack(player.Character) end end)
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="RBX312">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -557011,7 +557333,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX308">
+        <Item class="LocalScript" referent="RBX313">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -557061,7 +557383,7 @@ local function characterVisual(character: Model)
             previous.WorldPivot=groundFrame()
             previous:ScaleTo(scale);previous:PivotTo(groundFrame());previous:SetAttribute("Scale",scale)
             for _,weld in welds do
-                if weld:IsA("Weld") and weld.Part1 then weld.C0=root.CFrame:ToObjectSpace(weld.Part1.CFrame) end
+                if weld:IsA("Weld") and weld.Part1 then weld.C0=root.CFrame:ToObjectSpace(weld.Part1.CFrame*weld.C1) end -- *C1: drop the low-poly animation offset (BD-225)
                 weld.Enabled=true
             end
         end
@@ -557183,6 +557505,21 @@ local function upgradeAll()
     if arena then for _, item in arena:GetChildren() do propVisual(item) end end
 end
 RuntimeMeshes.Ready.Event:Connect(upgradeAll)
+-- BD-225 spike: the low-poly models replicate after spawn; swap any fallback visual of that species for the low-poly one.
+task.spawn(function()
+    local LowPoly = require(ReplicatedStorage.Shared.LowPolyDinos)
+    if not LowPoly.enabled() then return end
+    local folder = ReplicatedStorage:WaitForChild(LowPoly.FolderName, 60)
+    if not folder then return end
+    folder.ChildAdded:Connect(function(child)
+        task.wait(.2)
+        for _, player in Players:GetPlayers() do
+            local visual = if player.Character then player.Character:FindFirstChild("LocalMeshVisual") else nil
+            if visual and visual:GetAttribute("SpeciesId") == child.Name and visual:GetAttribute("LowPoly") ~= true then visual:Destroy() end
+        end
+        upgradeAll()
+    end)
+end)
 workspace.DescendantAdded:Connect(function(item)
     if item:IsA("Model") and item:GetAttribute("ResourceId") then task.defer(propVisual, item) end
 end)
@@ -557223,7 +557560,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX309">
+        <Item class="ModuleScript" referent="RBX314">
           <Properties>
             <string name="Name">VolumeSliders</string>
             <ProtectedString name="Source">--!strict
@@ -557304,7 +557641,7 @@ return Sliders
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX310">
+        <Item class="LocalScript" referent="RBX315">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -557371,7 +557708,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX311">
+        <Item class="LocalScript" referent="RBX316">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -558269,7 +558606,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX312">
+        <Item class="LocalScript" referent="RBX317">
           <Properties>
             <string name="Name">WorldCulling</string>
             <ProtectedString name="Source">--!strict
@@ -558396,7 +558733,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX313">
+        <Item class="LocalScript" referent="RBX318">
           <Properties>
             <string name="Name">WorldReady</string>
             <ProtectedString name="Source">--!strict
@@ -558434,7 +558771,7 @@ remote:FireServer()
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX314">
+  <Item class="Workspace" referent="RBX319">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>
