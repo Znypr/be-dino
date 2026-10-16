@@ -91,7 +91,7 @@ Audio is uploaded by the owner as **Audio** in Asset Manager (never invent ids);
 | Defeat soft sound, Peaceful confirm tick | BD-081 | new `Sfx.Sounds` entries | missing |
 | Cave ambience loop (cosy, no weather) | BD-081 | new ambience entry | missing |
 | 11 weather beds and accents | BD-132 | `WeatherSounds.Sounds` (ids are empty) | missing |
-| 5 distinct hatch reveal stings (common..legendary share assets today) | BD-081 | `Sfx.Sounds` hatch_reveal_* | placeholder |
+| 5 distinct hatch reveal stings (common..legendary share assets today; BD-437 fakes the ladder with pitch, volume and one layered cue, **owner picks real stings by ear**, then clear `SfxRules.RevealLayers`) | BD-081, BD-437 | `Sfx.Sounds` hatch_reveal_* | placeholder |
 | `hatch_burst`, `hatch_rattle`, Cracked failure | BD-081, BD-341 | `Sfx.Sounds` | silent |
 | Shiny sparkle and BIG thump variants (wire BD-340) | BD-340 | `shiny_bang`, `big_thud` | placeholder, no call site |
 | Crystal and nest-opened cues | BD-342 | alias today | reuses existing |

@@ -89,6 +89,7 @@ store it does read.
 | `dinosaurIdentity` sidecar (`instances`, `eggs`, `fusions` ledger with `parentIds`, `parentEggIds`, `nextId`, `ownerKey`, `suspendedReason`) | BD-060/064/057 | Ignored and kept. Build 020 edits grouped counts only, so the sidecar can go stale; CURRENT reconciles on the next load, or suspends identity without deleting it |
 | `collection[species].emerald` | fusion ladder | Ignored and kept (a Build 020 player cannot use Emerald) |
 | `progression.shop` | BD-051 | Ignored and kept |
+| `progression.discovered` (`colours`, `patterns`, `mutations` id sets) | BD-436 | Ignored and kept (asserted: byte-identical after Build 020 load, claim, renew, release; roll-forward keeps every id) |
 | `progression.potions` / `buffs` with ids added after Build 020 (loot, uncommon, epic) | BD-051, docs/68 | **Build 020 rejects unknown potion ids** |
 | `equippedVariantKey` | BD-150 | Ignored and kept |
 | low-poly / culling / world-kit settings | client only, **not persisted** | Nothing to roll back (no attribute or profile field) |

@@ -104,6 +104,7 @@ PROFILES: dict[str, list[Rule]] = {
         _flag_off("PerDinoCosmeticsEnabled", "BD-059 per-dino cosmetics (docs/121); phase 1 is not wired to any shop"),
         _flag_off("RunTelemetryEnabled", "BD-426 session telemetry; only the playtest profile enables it"),
         _flag_off("CombatEnabled", "BD-243 HP combat; unproven on a phone (BD-252), default build keeps instant predation"),
+        _flag_off("ClassMovementEnabled", "BD-423 class movement; only the playtest profile enables it"),
         _flag_off("SpecialFoodsEnabled", "BD-207 rare special foods; PROVISIONAL points, behind an owner playtest"),
         _flag_off("CaveHub", "BD-280 cave Sanctuary; behind the BD-293 device test"),
         _flag_off("LowPolyDinos", "BD-225 low-poly dinos; behind BD-309/BD-097 published-server and phone checks"),
@@ -129,6 +130,7 @@ PROFILES: dict[str, list[Rule]] = {
         # docs/107: legacy dinos are 1,424-2,400 parts each (12 players = 24k-41k parts); low-poly dinos are ~119. The playtest
         # ships the cheap ones; the default profile keeps requiring false. Every species falls back to the legacy visual on a failed load.
         Rule("LowPolyDinos", "set", True, reason="BD-225 low-poly dinos for friends playtests (docs/107 part budget)"),
+        Rule("ClassMovementEnabled", "set", True, reason="BD-423 class feel (glide, dash, speed) for friends playtests, no combat needed"),
         Rule("WorldArtDensity", "set", 1.25, reason="PROVISIONAL: world v2, 1 part per MeshPart prop, total under 8,000 (docs/68)"),
         # Future fusion/menu release keys (BD-064/BD-065) go here, e.g.
         # Rule("<FusionFlagName>", "set", True, missing="warn", reason="BD-064 fusion server"),

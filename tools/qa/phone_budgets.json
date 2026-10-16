@@ -1,0 +1,7 @@
+{
+  "_note": "ONE source of truth for PHONE budgets. Read by tools/fx_budget_report.py (and by tools/qa/phone_report.py once PR #257 lands). All PROVISIONAL until measured on a real phone (BD-085).",
+  "phone": {
+    "lights": {"value": 16, "why": "stricter of 24 (docs/126) and 16 (docs/107 s1): dynamic lights are the likeliest low-end phone frame cliff"},
+    "beams": {"value": 24, "why": "stricter of 48 (docs/126) and 24 (docs/123 T3: 3-4 beams per dino, Lite 6 dinos)"}
+  }
+}
