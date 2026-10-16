@@ -822,7 +822,8 @@ RunService.Heartbeat:Connect(function(dt)
     elseif id=="clear" then shownId="clear" end
 
     local look=WL.Looks[activeId] or WL.Looks.clear
-    local t=WL.strength(k,Theme.MotionEnabled)
+    local outside=1-Cave.amount() -- BD-383: weather grade, bloom, rays, haze, exposure and lamps fade to nothing inside the cave hall
+    local t=WL.strength(k,Theme.MotionEnabled)*outside
     local animT=if Theme.MotionEnabled then now else 0
     flash=math.max(0,flash-dt*2.2) pulse=math.max(0,pulse-dt*.9)
     -- aurora recolours the whole sky from the hue cycle; every other event uses its fixed look
@@ -834,8 +835,8 @@ RunService.Heartbeat:Connect(function(dt)
     end
     grade.TintColor=c3(WL.mix(WHITE,tint,t))
     grade.Saturation=lerpNum(0,look.sat,t) grade.Contrast=lerpNum(0,look.contrast,t)
-    grade.Brightness=lerpNum(0,look.bright,t)+flash*.5+pulse*.12
-    bloom.Intensity=lerpNum(0,look.bloom,t)+flash*1.5
+    grade.Brightness=lerpNum(0,look.bright,t)+(flash*.5+pulse*.12)*outside
+    bloom.Intensity=lerpNum(0,look.bloom,t)+flash*1.5*outside
     bloom.Threshold=lerpNum(.95,.72,t) bloom.Size=lerpNum(24,40,t)
     rays.Intensity=lerpNum(0,look.rays,t) rays.Spread=.7
     dof.FarIntensity=lerpNum(0,look.dof,t) dof.FocusDistance=lerpNum(250,look.dofFocus,t) dof.InFocusRadius=lerpNum(100,35,t)
@@ -851,7 +852,7 @@ RunService.Heartbeat:Connect(function(dt)
     -- sky treatment: colour shift on the sky dome and horizon, darker exposure, more stars
     Lighting.ColorShift_Top=baseShiftTop:Lerp(shiftOf(baseShiftTop,shiftTop),t)
     Lighting.ColorShift_Bottom=baseShiftBottom:Lerp(shiftOf(baseShiftBottom,shiftBottom),t)
-    Lighting.ExposureCompensation=baseExposure+lerpNum(0,look.exposure,t)+flash*.9
+    Lighting.ExposureCompensation=baseExposure+lerpNum(0,look.exposure,t)+flash*.9*outside
     if sky then sky.CelestialBodiesShown=activeId=="clear" or k<=0 end
     if sky and look.stars>=0 then
         local want=math.floor(lerpNum(baseStars,look.stars,t)/100)*100

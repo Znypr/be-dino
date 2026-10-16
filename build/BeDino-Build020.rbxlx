@@ -366264,7 +366264,9 @@ local SCATTER = {
     {"cave_stalagmite_l", 8}, {"cave_stalagmite_s", 18}, {"cave_rock_round", 20}, {"cave_rock_flat", 14},
     {"rock_mossy_boulder", 6}, {"rock_crystal", 4}, {"rock_pebbles", 10}, {"cave_moss_patch", 24},
     {"cave_stalactite", 24}, {"cave_moss_hang", 10},
-    {"cave_stalagmite_cluster", 4}, {"cave_wall_boulder_l", 10}, {"cave_wall_pillar", 6}, {"cave_wall_arch_small", 2},
+    {"cave_stalagmite_cluster", 4}, {"cave_wall_boulder_l", 16}, {"cave_wall_pillar", 10}, {"cave_wall_arch_small", 4},
+    -- BD-384 look pass: more rock forms along the rim (above), stalagmite clusters at the floor edge, moss near the lava glow
+    {"cave_stalagmite_cluster", 8, "edge"}, {"cave_stalagmite_s", 8, "edge"}, {"cave_moss_patch", 8, "lava"},
 }
 local WALLPIECES = {cave_wall_boulder_l = true, cave_wall_pillar = true, cave_wall_arch_small = true} -- put near the wall rim
 local LAVA_PROPS = {rim = 6, steps = 4}
@@ -366491,7 +366493,7 @@ function CaveHubLayout.get(): any
         return true
     end
     for _, e in SCATTER do
-        local key, count = e[1], e[2]
+        local key, count, zone = e[1], e[2], e[3]
         local k = KINDS[key]
         local br = boundRadius(k)
         local hang = k.hang == true
@@ -366508,10 +366510,15 @@ function CaveHubLayout.get(): any
                     if insideFloorLocal(x, z, 1.5) then break end
                     x, z = x * 0.98, z * 0.98
                 end
-            elseif WALLPIECES[key] then
+            elseif zone == "lava" then
+                -- moss around the lava glow (the pool itself stays clear)
+                local a = rand() * 2 * math.pi
+                local r = POOL.r + 9 + rand() * 12
+                x, z = POOL.x + math.cos(a) * r, POOL.z + math.sin(a) * r
+            elseif WALLPIECES[key] or zone == "edge" then
                 local a = rand() * 2 * math.pi
                 local w = wobble(a)
-                local f = 0.8 + rand() * 0.12
+                local f = if zone == "edge" then 0.7 + rand() * 0.14 else 0.8 + rand() * 0.12
                 x, z = math.cos(a) * BASE_X * w * f, math.sin(a) * BASE_Z * w * f
             else
                 x, z = (rand() * 2 - 1) * CaveHubLayout.BoxHalfX, (rand() * 2 - 1) * CaveHubLayout.BoxHalfZ
@@ -366584,7 +366591,7 @@ end
 
 -- ---------------------------------------------------------------- budgets (docs/104 s3.1)
 CaveHubLayout.Budget = {
-    rocks = {parts = 170, tris = 400000}, station = {parts = 120, tris = 300000}, lava = {parts = 12, tris = 20000},
+    rocks = {parts = 190, tris = 400000}, station = {parts = 120, tris = 300000}, lava = {parts = 12, tris = 20000},
     lights = {parts = 48, tris = 10000}, colliders = {parts = 60, tris = 0},
     total = {parts = 410, tris = 730000},
 }
@@ -366703,9 +366710,9 @@ Props.MinScale, Props.MaxScale = 0.25, 6 -- sane bounds of the uniform scale app
 -- Lava waterfall FX numbers (docs/104 s5, BD-285). Textures only from EffectAssets (flameSheet, smokeSheet, sparkSheet, swirl).
 Props.Lava = {
     sheetOffsetDz = 5, -- sheet sits this far behind CaveHubLayout.Fall.z (inside the falls recess)
-    sheetTransparency = 0.5, sheetColor = {255, 110, 30}, -- BD-285 QA: a thin warm glow body; the scrolling flame layers (CaveLavaRules) are drawn on it
+    sheetTransparency = 0.9, sheetColor = {255, 110, 30}, -- BD-285 QA: a thin warm glow body; the scrolling flame layers (CaveLavaRules) are drawn on it
     discTransparency = 0.25, discColor = {255, 110, 35}, discSpinSeconds = 60, discDrop = 0.6,
-    fxPartBudget = 2, -- sheet + disc (they stand in for the cave_lava_fall and lava_pool_disc rows; emitters sit on them)
+    fxPartBudget = 7, -- BD-385: 3 layered sheets + 3 glow discs + the pool disc (the sheet and disc stand in for the cave_lava_fall and lava_pool_disc rows; 5 extra FX parts)
     -- emitter rates, the scrolling layers and the phone / Reduce Motion rules live in CaveLavaRules (25 per second desktop, 10 phone)
 }
 
@@ -366767,11 +366774,30 @@ Rules.FxBudget = {desktop = 25, phone = 10} -- particles per second for the whol
 
 -- Scrolling layers on the sheet, back to front. tileStuds = one tile of the 4 x 4 sheet in studs (a cell is a quarter of it),
 -- speed = studs per second falling (down), offsetU = sideways shift in studs so the layers do not line up, alpha = ImageTransparency.
+-- BD-385: each layer is its OWN translucent sheet (3 sheets, a little apart in depth, a little narrower and shorter the nearer
+-- they are) so the falls read as layered flowing lava instead of one flat flame billboard. dz = studs in FRONT of the back sheet,
+-- widthInset / heightInset = studs the sheet is narrower / shorter than the falls, fade = fraction of the sheet on each side
+-- that fades to nothing (soft alpha edges: no hard rectangle). Speeds are slow and different (calm, docs/87).
 Rules.Layers = {
-    {name = "FlamesBack", key = "flameSheet", tileStuds = 52, speed = 4.5, offsetU = 0, alpha = 0.55, color = {255, 150, 50}},
-    {name = "SwirlMid", key = "swirl", tileStuds = 26, speed = 2.5, offsetU = 5, alpha = 0.7, color = {255, 190, 100}},
-    {name = "FlamesFront", key = "flameSheet", tileStuds = 36, speed = 7.5, offsetU = 9, alpha = 0.55, color = {255, 214, 120}},
+    {name = "FlamesBack", key = "swirl", tileStuds = 40, speed = 2.6, offsetU = 0, alpha = 0.4, color = {255, 120, 40}, dz = 0, widthInset = 0, heightInset = 0, fade = 0.16},
+    {name = "SwirlMid", key = "flameSheet", tileStuds = 30, speed = 1.7, offsetU = 5, alpha = 0.78, color = {255, 180, 90}, dz = 0.5, widthInset = 3, heightInset = 2, fade = 0.2},
+    {name = "FlamesFront", key = "swirl", tileStuds = 24, speed = 4.0, offsetU = 9, alpha = 0.55, color = {255, 206, 110}, dz = 1.0, widthInset = 6, heightInset = 5, fade = 0.24},
 }
+-- Soft alpha gradient (UIGradient Transparency keypoints, 0 = opaque) for one edge fade: 1 at the edge, 0 inside `fade`.
+function Rules.edgeFade(fade: number): {{number}}
+    return {{0, 1}, {fade * 0.45, 0.7}, {fade, 0}, {1 - fade, 0}, {1 - fade * 0.45, 0.7}, {1, 1}}
+end
+-- Sheet size in studs for a layer on a falls of width x height.
+function Rules.sheetSize(layer: any, width: number, height: number): (number, number)
+    return math.max(4, width - layer.widthInset), math.max(4, height - layer.heightInset)
+end
+-- Glowing base pool in front of the falls: stacked flat discs, brighter in the middle (stepped soft edge), no lights added (16-light cap).
+Rules.Glow = {
+    {diameter = 22, transparency = 0.82, color = {255, 120, 40}},
+    {diameter = 15, transparency = 0.7, color = {255, 150, 60}},
+    {diameter = 8, transparency = 0.55, color = {255, 190, 100}},
+}
+Rules.GlowFront = 2.5 -- studs in front of the back sheet
 
 -- Particles per second, desktop. Their sum stays under Rules.FxBudget.desktop; phones scale every rate by phoneScale().
 Rules.Rates = {
@@ -366964,7 +366990,10 @@ Rules.GateHeight = 20
 Rules.FallRecess = {halfWidth = 20, front = -1, back = 7} -- dz range around Layout.Fall.z carved behind the sheet
 -- Cave-only colours (the island uses none of these three): warm stone floor and warm tan walls, so the hall reads soft and calm
 -- (docs/87) instead of the island's dark teal Rock / Slate / Basalt. Island material colours are untouched.
-Rules.Colors = {Cobblestone = {164, 152, 138}, Limestone = {196, 172, 150}, CrackedLava = {255, 120, 40}}
+-- BD-384 look pass: cooler, softer grey-lilac stone (the warm lamps and the cave grade carry the colour) instead of hot orange
+-- cracked sandstone. Only Cobblestone, Limestone and CrackedLava are recoloured (terrain colours are place-wide, and the island uses
+-- Sandstone, Slate, Rock and Basalt), so the walls and floor are built from those two only; the island palette is untouched.
+Rules.Colors = {Cobblestone = {126, 122, 130}, Limestone = {160, 154, 158}, CrackedLava = {255, 120, 40}}
 Rules.Materials = {"Air", "Rock", "Limestone", "Sandstone", "Slate", "Basalt", "Cobblestone", "Grass", "LeafyGrass", "CrackedLava"}
 
 local SCALE = 95 -- studs per norm unit used for the wall signed distance (a conservative mean of the 105.5 / 125 radii)
@@ -367014,6 +367043,12 @@ function Rules.column(x: number, z: number): any
     return col
 end
 
+-- BD-384: the real (rough) ceiling surface height at a world (x, z): what stalactites hang from. Layout.ceilingY is the smooth ideal;
+-- the shell's ceiling differs from it by up to +-CeilingRough studs, which made stalactites float.
+function Rules.ceilingAt(x: number, z: number): number
+    return Layout.ceilingY(x, z) + (relief(x, z, 17, 9.7) - 0.5) * 2 * Rules.CeilingRough
+end
+
 -- Signed distance to the air (&gt; 0 inside air) at height y in a column.
 local function airSd(col: any, y: number): number
     local air = math.min(col.dIn, y - col.floorTop, col.ceil - y)
@@ -367053,8 +367088,9 @@ local function material(col: any, y: number, air: number): string
     end
     -- walls, ceiling, roof and deep rock
     if -air &gt; 10 then return "Rock" end
-    local v = relief(x + y * 0.7, z - y * 0.4, 8, 12.9)
-    if v &gt; 0.78 or v &lt; 0.15 then return "Sandstone" end
+    -- BD-384: big slow patches (scale 22, not 8) of two cave-only stones: no smeared grid, no dark smudges, no island Sandstone
+    local v = relief(x + y * 0.7, z - y * 0.4, 22, 12.9)
+    if v &gt; 0.7 then return "Cobblestone" end
     return "Limestone"
 end
 
@@ -374170,6 +374206,26 @@ function Rules.readAck(ack: any, station: string): (boolean, string?)
     if (ack :: any).ok == true and (ack :: any).station == station then return true, nil end
     local reason = (ack :: any).reason
     return false, if typeof(reason) == "string" then reason else "error"
+end
+
+-- BD-382: a modal scrim (ModalScrim, or Fusion's own ScreenGui scrim) sinks every click, so a rail button or the "Back to the
+-- middle" chip underneath would only dismiss the menu (two taps to travel between open stations). The client therefore routes a
+-- tap that lands on the rail / chip while a scrim is up: it closes the open menu and travels in ONE tap.
+-- targets = list of {kind = "rail" | "chip", destination = string?, x, y, w, h, enabled = bool?} in the same space as (px, py).
+-- Returns nil (the tap belongs to the scrim) or {kind = "rail", destination} | {kind = "chip"}. Later targets win overlaps.
+Rules.SettleSeconds = 0.05 -- wait this long after the tap so the scrim's own close has run first (it must not close the new menu)
+function Rules.routeScrimTap(caveHub: any, scrimUp: any, px: any, py: any, targets: any): any
+    if caveHub ~= true or scrimUp ~= true or typeof(px) ~= "number" or typeof(py) ~= "number" or typeof(targets) ~= "table" then return nil end
+    local hit: any = nil
+    for _, t in targets do
+        if typeof(t) == "table" and t.enabled ~= false and typeof(t.x) == "number" and typeof(t.y) == "number"
+            and typeof(t.w) == "number" and typeof(t.h) == "number"
+            and px &gt;= t.x and px &lt; t.x + t.w and py &gt;= t.y and py &lt; t.y + t.h then
+            if t.kind == "chip" then hit = {kind = "chip"}
+            elseif t.kind == "rail" and typeof(t.destination) == "string" then hit = {kind = "rail", destination = t.destination} end
+        end
+    end
+    return hit
 end
 
 return Rules
@@ -551049,11 +551105,21 @@ local function emitter(parent: Instance, key: string, name: string, rule: string
     return e
 end
 
--- The scrolling layers: one Frame (clipped) per layer holding one tiled ImageLabel one tile taller / wider than the canvas.
--- Layer position at scroll 0 = the static first frame.
-local function buildLayers(sheet: Part, width: number, height: number)
+-- One scrolling layer: a SurfaceGui on its own sheet holds two nested CanvasGroups (each with a UIGradient alpha edge fade, one across,
+-- one down: soft edges, no hard rectangle) around one tiled ImageLabel one tile taller / wider than the canvas. Position at scroll 0 =
+-- the static first frame (Reduce Motion).
+local function fade(group: CanvasGroup, fraction: number, rotation: number)
+    local g = Instance.new("UIGradient")
+    local keys = {}
+    for _, k in Rules.edgeFade(fraction) do table.insert(keys, NumberSequenceKeypoint.new(k[1], k[2])) end
+    g.Transparency = NumberSequence.new(keys)
+    g.Rotation = rotation
+    g.Parent = group
+end
+
+local function buildLayer(sheet: Part, index: number, layer: any, width: number, height: number)
     local gui = Instance.new("SurfaceGui")
-    gui.Name = "LavaLayers"
+    gui.Name = "LavaLayer_" .. layer.name
     gui.Face = Enum.NormalId.Front
     gui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
     gui.CanvasSize = Vector2.new(width * Rules.CanvasPxPerStud, height * Rules.CanvasPxPerStud)
@@ -551061,32 +551127,30 @@ local function buildLayers(sheet: Part, width: number, height: number)
     gui.Brightness = 1.4
     gui.AlwaysOnTop = false
     gui.Parent = sheet
-    for i, layer in Rules.Layers do
-        local tile = Rules.tilePx(layer)
-        local frame = Instance.new("Frame")
-        frame.Name = "Layer_" .. layer.name
-        frame.Size = UDim2.fromScale(1, 1)
-        frame.BackgroundTransparency = 1
-        frame.BorderSizePixel = 0
-        frame.ClipsDescendants = true
-        frame.ZIndex = i
-        frame.Parent = gui
-        local image = Instance.new("ImageLabel")
-        image.Name = "Strip"
-        image.BackgroundTransparency = 1
-        image.BorderSizePixel = 0
-        image.Image = Assets.resolve(layer.key)
-        image.ImageColor3 = c3(layer.color)
-        image.ImageTransparency = layer.alpha
-        image.ScaleType = Enum.ScaleType.Tile
-        image.TileSize = UDim2.fromOffset(tile, tile)
-        image.Size = UDim2.fromOffset(width * Rules.CanvasPxPerStud + tile, height * Rules.CanvasPxPerStud + tile)
-        image.Position = UDim2.fromOffset(-((layer.offsetU * Rules.CanvasPxPerStud) % tile) - 0, Rules.stripY(layer, 0, true))
-        image.ZIndex = i
-        image:SetAttribute("LayerIndex", i)
-        image:SetAttribute("OffsetX", -((layer.offsetU * Rules.CanvasPxPerStud) % tile))
-        image.Parent = frame
-    end
+    local across = Instance.new("CanvasGroup")
+    across.Name, across.Size, across.BackgroundTransparency, across.BorderSizePixel = "FadeAcross", UDim2.fromScale(1, 1), 1, 0
+    fade(across, layer.fade, 0)
+    across.Parent = gui
+    local down = Instance.new("CanvasGroup")
+    down.Name, down.Size, down.BackgroundTransparency, down.BorderSizePixel, down.ClipsDescendants = "FadeDown", UDim2.fromScale(1, 1), 1, 0, true
+    fade(down, layer.fade, 90)
+    down.Parent = across
+    local tile = Rules.tilePx(layer)
+    local image = Instance.new("ImageLabel")
+    image.Name = "Strip"
+    image.BackgroundTransparency = 1
+    image.BorderSizePixel = 0
+    image.Image = Assets.resolve(layer.key)
+    image.ImageColor3 = c3(layer.color)
+    image.ImageTransparency = layer.alpha
+    image.ScaleType = Enum.ScaleType.Tile
+    image.TileSize = UDim2.fromOffset(tile, tile)
+    image.Size = UDim2.fromOffset(width * Rules.CanvasPxPerStud + tile, height * Rules.CanvasPxPerStud + tile)
+    image.Position = UDim2.fromOffset(-((layer.offsetU * Rules.CanvasPxPerStud) % tile) - 0, Rules.stripY(layer, 0, true))
+    image.ZIndex = index
+    image:SetAttribute("LayerIndex", index)
+    image:SetAttribute("OffsetX", -((layer.offsetU * Rules.CanvasPxPerStud) % tile))
+    image.Parent = down
 end
 
 function CaveLavaFx.build(parent: Instance): Folder
@@ -551097,11 +551161,17 @@ function CaveLavaFx.build(parent: Instance): Folder
     folder.Name = "LavaFalls"
     local orange = c3(L.sheetColor)
 
-    -- the falls: a thin warm sheet inside the recess, in front of the lava-painted rock, carrying the scrolling layers
+    -- the falls: three thin layered sheets (BD-385), each a little nearer, narrower and shorter than the one behind, each with its own
+    -- slowly scrolling layer and soft alpha edges. The back sheet also carries a faint warm body so the recess glows.
     local width = F.width - 2
-    local sheet = fxPart(folder, "FX_LavaSheet", Vector3.new(width, F.height, 0.4),
-        CFrame.new(F.x, fy + F.height / 2, cz + F.z + L.sheetOffsetDz), Enum.PartType.Block, orange, L.sheetTransparency)
-    buildLayers(sheet, width, F.height)
+    local sheet: Part
+    for i, layer in Rules.Layers do
+        local w, h = Rules.sheetSize(layer, width, F.height)
+        local part = fxPart(folder, "FX_LavaSheet" .. (if i == 1 then "" else tostring(i)), Vector3.new(w, h, 0.2),
+            CFrame.new(F.x, fy + h / 2, cz + F.z + L.sheetOffsetDz - layer.dz), Enum.PartType.Block, orange, if i == 1 then L.sheetTransparency else 0.97)
+        buildLayer(part, i, layer, w, h)
+        if i == 1 then sheet = part end
+    end
     local flames = emitter(sheet, "flameSheet", "LipFlames", "lipFlames")
     flames.Lifetime = NumberRange.new(2.5, 3.5)
     flames.Speed = NumberRange.new(3, 6)
@@ -551129,6 +551199,14 @@ function CaveLavaFx.build(parent: Instance): Folder
     mist.Shape, mist.ShapeInOut, mist.ShapeStyle = Enum.ParticleEmitterShape.Box, Enum.ParticleEmitterShapeInOut.Outward, Enum.ParticleEmitterShapeStyle.Volume
     mist.EmissionDirection = Enum.NormalId.Front
     mist.SpreadAngle = Vector2.new(20, 20)
+
+    -- glowing base pool in front of the falls: stacked flat discs, brighter in the middle (a stepped soft edge), no extra lights
+    local glowY = Layout.floorHeight(F.x, cz + F.z + 3) + 0.12
+    for i, g in Rules.Glow do
+        fxPart(folder, "FX_LavaGlow" .. i, Vector3.new(0.1, g.diameter, g.diameter),
+            CFrame.new(F.x, glowY + i * 0.02, cz + F.z + L.sheetOffsetDz - Rules.GlowFront) * CFrame.Angles(0, 0, math.pi / 2),
+            Enum.PartType.Cylinder, c3(g.color), g.transparency)
+    end
 
     -- the pool: a flat translucent disc with a slowly turning swirl, just under the rim of the 2 stud basin
     local diameter = Layout.Kinds.lava_pool_disc[1]
@@ -551316,6 +551394,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Layout = require(ReplicatedStorage.Shared.CaveHubLayout)
 local Props = require(ReplicatedStorage.Shared.CaveHubProps)
 local SignCopy = require(ReplicatedStorage.Shared.HubSignCopy)
+local TerrainRules = require(ReplicatedStorage.Shared.CaveTerrainRules)
 local CaveProps = {}
 local signGuis = 0 -- sign texts placed this build (capped by Props.MaxSignGuis)
 
@@ -551348,6 +551427,15 @@ local function floorAt(params: RaycastParams, x: number, z: number): number
     local hit = workspace:Raycast(Vector3.new(x, Layout.FloorY + 30, z), Vector3.new(0, -60, 0), params)
     if hit and math.abs(hit.Position.Y - Layout.FloorY) &lt; 6 then return hit.Position.Y end
     return Layout.floorHeight(x, z)
+end
+
+-- BD-384: terrain ceiling height above (x, z): a raycast UP against Terrain, falling back to the shell rule (the rough ceiling the
+-- voxels are written from). Stalactites hang from this so they touch the rock instead of floating below it.
+local function ceilingAt(params: RaycastParams, x: number, z: number): number
+    local rule = TerrainRules.ceilingAt(x, z)
+    local hit = workspace:Raycast(Vector3.new(x, Layout.FloorY + 4, z), Vector3.new(0, 90, 0), params)
+    if hit and math.abs(hit.Position.Y - rule) &lt; 6 then return hit.Position.Y end
+    return rule
 end
 
 local function colliderHeight(owner: string): number
@@ -551416,7 +551504,7 @@ local function place(folder: Folder, params: RaycastParams, p: any, template: Me
     local h = mesh.Size.Y
     local y: number
     if key == "cave_stalactite" then
-        y = Layout.ceilingY(p.x, p.z + cz) + 1.5 - h / 2 -- top buried in the ceiling
+        y = ceilingAt(params, x, z) + 1.0 - h / 2 -- top buried 1 stud in the real ceiling surface (BD-384: no floating cones)
     elseif key == "cave_moss_hang" then
         y = floorAt(params, x, z) + 7 + h / 2
         yaw = Layout.yawTo(-p.x, -p.z)
@@ -565088,6 +565176,7 @@ return Client
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Rules = require(Shared:WaitForChild("HubTravelClientRules"))
@@ -565213,6 +565302,42 @@ function Client.press(destination: string): boolean
     return false
 end
 
+-- BD-382: one tap on a rail button / the chip while a station menu (ModalScrim or Fusion) is open closes it and travels.
+local function scrimUp(): boolean
+    local scrim = ctx.gui:FindFirstChild("ModalScrim")
+    if scrim and scrim:IsA("GuiObject") and scrim.Visible then return true end
+    local fusion = player:WaitForChild("PlayerGui"):FindFirstChild("BeDinoFusionUI")
+    return fusion ~= nil and fusion:IsA("ScreenGui") and fusion.Enabled
+end
+
+local function routeTap(input: InputObject)
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+    if busy or not scrimUp() then return end
+    local origin = (ctx.gui :: any).AbsolutePosition :: Vector2
+    local px, py = input.Position.X - origin.X, input.Position.Y - origin.Y
+    local targets = {}
+    for _, b in ctx.buttons do
+        local dest = b:GetAttribute("Destination")
+        if b.Visible and b.AbsoluteSize.X &gt; 0 then
+            table.insert(targets, {kind = "rail", destination = dest, x = b.AbsolutePosition.X, y = b.AbsolutePosition.Y, w = b.AbsoluteSize.X, h = b.AbsoluteSize.Y,
+                enabled = not Rules.dimmed(dest, true, runState())})
+        end
+    end
+    local c = chip
+    if c and c.Visible then table.insert(targets, {kind = "chip", x = c.AbsolutePosition.X, y = c.AbsolutePosition.Y, w = c.AbsoluteSize.X, h = c.AbsoluteSize.Y}) end
+    local hit = Rules.routeScrimTap(true, true, px, py, targets)
+    if hit == nil then return end
+    task.delay(Rules.SettleSeconds, function()
+        if busy then return end
+        if ctx.close then ctx.close() end
+        pcall(function() require(script.Parent:WaitForChild("FusionMenu")).close() end)
+        if hit.kind == "chip" then travel(Rules.HeartStation, nil) return end
+        local dest = hit.destination :: string
+        if Client.press(dest) then return end
+        if dest == "fusion" then ctx.openFusion() else ctx.open(dest) end
+    end)
+end
+
 function Client.attach(c: any)
     if Config.CaveHub ~= true or ctx ~= nil then return end
     ctx = c
@@ -565242,6 +565367,7 @@ function Client.attach(c: any)
         applyDimming()
         refreshChip()
     end
+    UserInputService.InputEnded:Connect(routeTap)
     player.CharacterAdded:Connect(watchCharacter)
     if player.Character then watchCharacter(player.Character) else applyDimming() end
 end
@@ -568094,7 +568220,8 @@ RunService.Heartbeat:Connect(function(dt)
     elseif id=="clear" then shownId="clear" end
 
     local look=WL.Looks[activeId] or WL.Looks.clear
-    local t=WL.strength(k,Theme.MotionEnabled)
+    local outside=1-Cave.amount() -- BD-383: weather grade, bloom, rays, haze, exposure and lamps fade to nothing inside the cave hall
+    local t=WL.strength(k,Theme.MotionEnabled)*outside
     local animT=if Theme.MotionEnabled then now else 0
     flash=math.max(0,flash-dt*2.2) pulse=math.max(0,pulse-dt*.9)
     -- aurora recolours the whole sky from the hue cycle; every other event uses its fixed look
@@ -568106,8 +568233,8 @@ RunService.Heartbeat:Connect(function(dt)
     end
     grade.TintColor=c3(WL.mix(WHITE,tint,t))
     grade.Saturation=lerpNum(0,look.sat,t) grade.Contrast=lerpNum(0,look.contrast,t)
-    grade.Brightness=lerpNum(0,look.bright,t)+flash*.5+pulse*.12
-    bloom.Intensity=lerpNum(0,look.bloom,t)+flash*1.5
+    grade.Brightness=lerpNum(0,look.bright,t)+(flash*.5+pulse*.12)*outside
+    bloom.Intensity=lerpNum(0,look.bloom,t)+flash*1.5*outside
     bloom.Threshold=lerpNum(.95,.72,t) bloom.Size=lerpNum(24,40,t)
     rays.Intensity=lerpNum(0,look.rays,t) rays.Spread=.7
     dof.FarIntensity=lerpNum(0,look.dof,t) dof.FocusDistance=lerpNum(250,look.dofFocus,t) dof.InFocusRadius=lerpNum(100,35,t)
@@ -568123,7 +568250,7 @@ RunService.Heartbeat:Connect(function(dt)
     -- sky treatment: colour shift on the sky dome and horizon, darker exposure, more stars
     Lighting.ColorShift_Top=baseShiftTop:Lerp(shiftOf(baseShiftTop,shiftTop),t)
     Lighting.ColorShift_Bottom=baseShiftBottom:Lerp(shiftOf(baseShiftBottom,shiftBottom),t)
-    Lighting.ExposureCompensation=baseExposure+lerpNum(0,look.exposure,t)+flash*.9
+    Lighting.ExposureCompensation=baseExposure+lerpNum(0,look.exposure,t)+flash*.9*outside
     if sky then sky.CelestialBodiesShown=activeId=="clear" or k&lt;=0 end
     if sky and look.stars&gt;=0 then
         local want=math.floor(lerpNum(baseStars,look.stars,t)/100)*100

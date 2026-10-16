@@ -7,6 +7,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Rules = require(Shared:WaitForChild("HubTravelClientRules"))
@@ -132,6 +133,42 @@ function Client.press(destination: string): boolean
     return false
 end
 
+-- BD-382: one tap on a rail button / the chip while a station menu (ModalScrim or Fusion) is open closes it and travels.
+local function scrimUp(): boolean
+    local scrim = ctx.gui:FindFirstChild("ModalScrim")
+    if scrim and scrim:IsA("GuiObject") and scrim.Visible then return true end
+    local fusion = player:WaitForChild("PlayerGui"):FindFirstChild("BeDinoFusionUI")
+    return fusion ~= nil and fusion:IsA("ScreenGui") and fusion.Enabled
+end
+
+local function routeTap(input: InputObject)
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+    if busy or not scrimUp() then return end
+    local origin = (ctx.gui :: any).AbsolutePosition :: Vector2
+    local px, py = input.Position.X - origin.X, input.Position.Y - origin.Y
+    local targets = {}
+    for _, b in ctx.buttons do
+        local dest = b:GetAttribute("Destination")
+        if b.Visible and b.AbsoluteSize.X > 0 then
+            table.insert(targets, {kind = "rail", destination = dest, x = b.AbsolutePosition.X, y = b.AbsolutePosition.Y, w = b.AbsoluteSize.X, h = b.AbsoluteSize.Y,
+                enabled = not Rules.dimmed(dest, true, runState())})
+        end
+    end
+    local c = chip
+    if c and c.Visible then table.insert(targets, {kind = "chip", x = c.AbsolutePosition.X, y = c.AbsolutePosition.Y, w = c.AbsoluteSize.X, h = c.AbsoluteSize.Y}) end
+    local hit = Rules.routeScrimTap(true, true, px, py, targets)
+    if hit == nil then return end
+    task.delay(Rules.SettleSeconds, function()
+        if busy then return end
+        if ctx.close then ctx.close() end
+        pcall(function() require(script.Parent:WaitForChild("FusionMenu")).close() end)
+        if hit.kind == "chip" then travel(Rules.HeartStation, nil) return end
+        local dest = hit.destination :: string
+        if Client.press(dest) then return end
+        if dest == "fusion" then ctx.openFusion() else ctx.open(dest) end
+    end)
+end
+
 function Client.attach(c: any)
     if Config.CaveHub ~= true or ctx ~= nil then return end
     ctx = c
@@ -161,6 +198,7 @@ function Client.attach(c: any)
         applyDimming()
         refreshChip()
     end
+    UserInputService.InputEnded:Connect(routeTap)
     player.CharacterAdded:Connect(watchCharacter)
     if player.Character then watchCharacter(player.Character) else applyDimming() end
 end
