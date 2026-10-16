@@ -10,13 +10,14 @@ export type Settings = {
     effects: string, weather: string, -- "full" | "lite" | "off"
     calm: boolean, -- Calm motion = Reduce Motion
     jumpSize: string, -- "small" | "normal" | "big" (no consumer yet: stored for the phone jump button)
+    peaceful: boolean, -- docs/101 s16: a Peaceful dino cannot bite or be bitten (read by the server at run start; only matters while Config.CombatEnabled)
 }
 
 Model.Tabs = table.freeze({"sound", "look", "controls", "help"})
 Model.TabLabels = table.freeze({sound = "SOUND", look = "LOOK", controls = "CONTROLS", help = "HELP"})
 Model.Levels = table.freeze({"full", "lite", "off"})
 Model.JumpSizes = table.freeze({"small", "normal", "big"})
-Model.Defaults = table.freeze({master = 0.8, sfx = 0.7, ambience = 0.6, effects = "full", weather = "full", calm = false, jumpSize = "normal"})
+Model.Defaults = table.freeze({master = 0.8, sfx = 0.7, ambience = 0.6, effects = "full", weather = "full", calm = false, jumpSize = "normal", peaceful = false})
 -- Particle share per level (consumers multiply their emitter rate by this).
 Model.LevelFactor = table.freeze({full = 1, lite = 0.5, off = 0})
 
@@ -41,6 +42,7 @@ function Model.normalize(raw: any): Settings
         weather = oneOf(Model.Levels, t.weather, d.weather),
         calm = t.calm == true,
         jumpSize = oneOf(Model.JumpSizes, t.jumpSize, d.jumpSize),
+        peaceful = t.peaceful == true,
     }
 end
 
@@ -49,7 +51,7 @@ function Model.toStore(s: Settings): {[string]: any}
     return {
         v = 1,
         sound = {master = s.master, sfx = s.sfx, ambience = s.ambience},
-        effects = s.effects, weather = s.weather, calm = s.calm, jumpSize = s.jumpSize,
+        effects = s.effects, weather = s.weather, calm = s.calm, jumpSize = s.jumpSize, peaceful = s.peaceful,
     }
 end
 function Model.fromStore(raw: any): Settings
@@ -58,7 +60,7 @@ end
 
 function Model.equal(a: Settings, b: Settings): boolean
     return a.master == b.master and a.sfx == b.sfx and a.ambience == b.ambience and a.effects == b.effects
-        and a.weather == b.weather and a.calm == b.calm and a.jumpSize == b.jumpSize
+        and a.weather == b.weather and a.calm == b.calm and a.jumpSize == b.jumpSize and a.peaceful == b.peaceful
 end
 
 -- Fast mode is derived: on exactly when both Effects and Weather are Lite.
@@ -78,6 +80,7 @@ function Model.effects(): string return current.effects end
 function Model.weather(): string return current.weather end
 function Model.calm(): boolean return current.calm end
 function Model.jumpSize(): string return current.jumpSize end
+function Model.peaceful(): boolean return current.peaceful end
 function Model.onChange(fn: (Settings) -> ()) table.insert(listeners, fn) end
 
 -- Replace the current value (e.g. loaded from the server). Returns true when anything changed.
@@ -97,7 +100,8 @@ function Model.set(key: string, value: any): Settings
     elseif key == "master" or key == "sfx" or key == "ambience" then n[key] = volume(value, n[key])
     elseif key == "effects" or key == "weather" then n[key] = oneOf(Model.Levels, value, n[key])
     elseif key == "calm" then n.calm = value == true
-    elseif key == "jumpSize" then n.jumpSize = oneOf(Model.JumpSizes, value, n.jumpSize) end
+    elseif key == "jumpSize" then n.jumpSize = oneOf(Model.JumpSizes, value, n.jumpSize)
+    elseif key == "peaceful" then n.peaceful = value == true end
     Model.load(Model.toStore(n))
     return current
 end

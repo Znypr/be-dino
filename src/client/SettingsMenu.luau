@@ -68,6 +68,11 @@ local function drawControls(body: Instance, ctx: Context)
     ctx.label(body, "Camera", 0, TOP, 250, 48, 28).TextXAlignment = Enum.TextXAlignment.Left
     ctx.button(body, "RESET", 270, TOP, 180, 48, C.blue, function() ctx.cameraReset() ctx.notify("Camera reset", C.blue) end)
     choice(body, ctx, 1, "Jump button", Model.JumpSizes, SIZE_TEXT, Model.get().jumpSize, function(id) Model.set("jumpSize", id) ctx.open("settings") end)
+    -- docs/101 s16 Peaceful: only shown while HP combat is on (Config.CombatEnabled); the server reads it at run start.
+    if require(Shared:WaitForChild("Config")).CombatEnabled then
+        toggle(body, ctx, 2, "Peaceful", Model.peaceful(), function() Model.set("peaceful", not Model.peaceful()) ctx.open("settings") end)
+        ctx.label(body, "Peaceful: no biting, nobody can bite you. Starts next run", 0, TOP + 3 * ROW, 824, 30, 20, C.gold)
+    end
 end
 
 -- Draws the tab bar and the active tab. Returns the active tab id; the Help tab is completed by the caller (guides, auto-open).
