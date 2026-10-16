@@ -65,7 +65,7 @@ Weather.Rigs={
     thunder={streaks=spec(2800,.55,.7),near=spec(520,.35,.5),splash=spec(700,.22,.38),mist=spec(16,3,4.5,true),curtain=spec(14,1.2,1.6,true),bank=spec(14,9,12,true)},
     blizzard={snow=spec(1300,3,4.2),gust=spec(50,1.4,2),drift=spec(16,2.6,3.4,true),bank=spec(16,7,9,true),flurry=spec(120,.9,1.3)},
     volcano={ash=spec(300,4,5.5),embers=spec(200,3,5),plume=spec(18,5,7,true),smoke=spec(12,8,11,true),haze=spec(5,10,12,true),bank=spec(8,9,11,true)},
-    aurora={motes=spec(120,4,6),stars=spec(60,3,5),bank=spec(14,9,12,true)},
+    aurora={motes=spec(120,4,6),stars=spec(60,3,5),bank=spec(14,9,12,true),curtain=spec(3,7,9,true)}, -- BD-131: curtain is only built while EffectAssets auroraCurtain holds an id (counted here so the budget check covers it)
     quake={dust=spec(50,3,4.5),bank=spec(14,8,10,true)},
     bloodmoon={motes=spec(140,4,6),fog=spec(16,5,7,true),bank=spec(14,9,11,true)},
 }

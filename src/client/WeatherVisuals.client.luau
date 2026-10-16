@@ -3,6 +3,8 @@
 -- distance fog banks, particle rigs that follow the player, pooled lightning, lava bombs, shock rings, quake ground cracks,
 -- a full-sky aurora (rays + arcs + hue-cycling sky), blood moon with halos and a title card.
 -- Data and math live in Shared/WeatherLooks (offline-checked by tools/verify_weather.py).
+-- BD-131: each Blender weather texture (EffectAssets slot) is read through Shared/WeatherTextures; an EMPTY slot keeps the built-in sprite and
+-- settings exactly as before, a valid id switches that rig to the texture, its flipbook layout and its own tuning.
 -- Nothing here is authoritative or collides; the server only publishes WeatherId / WeatherName.
 local Lighting=game:GetService("Lighting")
 local Players=game:GetService("Players")
@@ -77,6 +79,34 @@ local function seq(a:number,b:number,c:number?):NumberSequence
     if c then return NumberSequence.new({NumberSequenceKeypoint.new(0,a),NumberSequenceKeypoint.new(.5,b),NumberSequenceKeypoint.new(1,c)}) end
     return NumberSequence.new(a,b)
 end
+-- BD-131 texture reader. tex() returns props untouched while the slot is empty; otherwise it adds the texture, the flipbook layout / mode
+-- and the per-texture tuning (WeatherTextures.Tuning). rateOf() is the matching rate multiplier (1 while empty).
+local Assets=require(Shared.EffectAssets)
+local WT=require(Shared.WeatherTextures)
+local function scaleSeq(s:NumberSequence,k:number):NumberSequence
+    local points:{NumberSequenceKeypoint}={}
+    for i,kp in s.Keypoints do points[i]=NumberSequenceKeypoint.new(kp.Time,kp.Value*k,kp.Envelope*k) end
+    return NumberSequence.new(points)
+end
+local function tex(key:string,rigName:string,props:{[string]:any}):{[string]:any}
+    local plan=WT.plan(Assets,key,rigName)
+    if not plan then return props end
+    local tune=plan.tune
+    props.Texture=plan.texture
+    props.FlipbookLayout=(Enum.ParticleFlipbookLayout::any)[plan.layout]
+    if plan.mode then
+        props.FlipbookMode=(Enum.ParticleFlipbookMode::any)[plan.mode]
+        props.FlipbookStartRandom=plan.startRandom
+        if plan.framerate then props.FlipbookFramerate=NumberRange.new(plan.framerate) end
+    end
+    if tune.sizeScale and props.Size then props.Size=scaleSeq(props.Size,tune.sizeScale) end
+    if tune.size then props.Size=seq(tune.size[1],tune.size[2],tune.size[3]) end
+    if tune.squash then props.Squash=seq(tune.squash[1],tune.squash[2]) end
+    if tune.transparency then props.Transparency=seq(tune.transparency[1],tune.transparency[2],tune.transparency[3]) end
+    if tune.lightEmission then props.LightEmission=tune.lightEmission end
+    return props
+end
+local function rateOf(key:string,rigName:string):number return WT.rate(WT.plan(Assets,key,rigName)) end
 local function volume(size:Vector3):Part
     local part=Instance.new("Part") part.Name="WeatherVolume" part.Size,part.Transparency=size,1
     part.Anchored,part.CanCollide,part.CanTouch,part.CanQuery,part.CastShadow=true,false,false,false,false
@@ -127,20 +157,20 @@ local function colorOf(r:number,g:number,b:number):ColorSequence return ColorSeq
 for _,id in {"rain","thunder"} do
     local heavy=id=="thunder"
     local sky=volume(WIDE)
-    local streaks=emitter(sky,id,"streaks",{
+    local streaks=emitter(sky,id,"streaks",tex("rainStreak","streaks",{
         Texture=TEX_SMOKE,Speed=NumberRange.new(95,115),EmissionDirection=Enum.NormalId.Bottom,
         Acceleration=Vector3.new(if heavy then 34 else 12,-70,0),Orientation=Enum.ParticleOrientation.VelocityParallel,
         Size=seq(if heavy then .7 else .56,.5),Squash=seq(-20,-20),Transparency=seq(.22,.06),LightEmission=.6,
         Color=ColorSequence.new(Color3.fromRGB(190,220,255),Color3.fromRGB(140,185,240)),SpreadAngle=Vector2.new(4,4),
-    })
+    }),rateOf("rainStreak","streaks"))
     -- BD-348: long bright streaks right in front of the camera (a small volume above the dino, no distance fade)
     local nearSky=volume(Vector3.new(26,1,26))
-    local nearStreaks=emitter(nearSky,id,"near",{
+    local nearStreaks=emitter(nearSky,id,"near",tex("rainStreak","near",{
         Texture=TEX_SMOKE,Speed=NumberRange.new(70,90),EmissionDirection=Enum.NormalId.Bottom,
         Acceleration=Vector3.new(if heavy then 30 else 10,-60,0),Orientation=Enum.ParticleOrientation.VelocityParallel,
         Size=seq(.9,.7),Squash=seq(-26,-26),Transparency=seq(.18,.05),LightEmission=.7,
         Color=ColorSequence.new(Color3.fromRGB(215,236,255),Color3.fromRGB(165,205,250)),SpreadAngle=Vector2.new(3,3),
-    },1,true)
+    }),rateOf("rainStreak","near"),true)
     addRig(id,nearSky,Vector3.new(0,16,0),{nearStreaks})
     local ground=volume(Vector3.new(60,.2,60))
     local splash=emitter(ground,id,"splash",{
@@ -169,11 +199,11 @@ end
 -- BLIZZARD
 do
     local sky=volume(WIDE)
-    local snow=emitter(sky,"blizzard","snow",{
+    local snow=emitter(sky,"blizzard","snow",tex("snowFlakeSheet","snow",{
         Texture=TEX_SPARK,Speed=NumberRange.new(10,22),EmissionDirection=Enum.NormalId.Bottom,
         Acceleration=Vector3.new(-46,-6,14),Size=seq(.5,.8),Transparency=seq(.05,.1,.5),LightEmission=.35,Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-90,90),
         Color=ColorSequence.new(Color3.new(1,1,1),Color3.fromRGB(205,230,255)),SpreadAngle=Vector2.new(18,18),
-    })
+    }),rateOf("snowFlakeSheet","snow"))
     local side=volume(Vector3.new(2,40,110))
     local gust=emitter(side,"blizzard","gust",{
         Texture=TEX_SMOKE,Speed=NumberRange.new(60,85),EmissionDirection=Enum.NormalId.Right,
@@ -197,18 +227,18 @@ local COLUMN_OFFSETS={Vector3.new(-190,-10,-280),Vector3.new(260,-10,-240),Vecto
 local columns:{Part}={}
 do
     local sky=volume(WIDE)
-    local ash=emitter(sky,"volcano","ash",{
+    local ash=emitter(sky,"volcano","ash",tex("ashFlake","ash",{
         Texture=TEX_SMOKE,Speed=NumberRange.new(4,9),EmissionDirection=Enum.NormalId.Bottom,
         Acceleration=Vector3.new(7,-4,3),Size=seq(.8,1.4),Transparency=seq(.5,.3,.9),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-60,60),
         Color=ColorSequence.new(Color3.fromRGB(70,64,68),Color3.fromRGB(38,34,36)),
-    })
+    }),rateOf("ashFlake","ash"))
     local low=volume(Vector3.new(70,2,70))
-    local embers=emitter(low,"volcano","embers",{
+    local embers=emitter(low,"volcano","embers",tex("emberSpark","embers",{
         Texture=TEX_SPARK,Speed=NumberRange.new(4,10),EmissionDirection=Enum.NormalId.Top,
         Acceleration=Vector3.new(3,5,0),Size=seq(.55,.4,0),Transparency=seq(0,0,1),LightEmission=1,
         Color=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(255,235,120)),ColorSequenceKeypoint.new(.5,Color3.fromRGB(255,120,30)),ColorSequenceKeypoint.new(1,Color3.fromRGB(180,30,10))}),
         SpreadAngle=Vector2.new(45,45),
-    })
+    }),rateOf("emberSpark","embers"))
     local ceiling=volume(Vector3.new(420,4,420))
     local haze=emitter(ceiling,"volcano","haze",{
         Texture=TEX_SMOKE,Speed=NumberRange.new(2,6),EmissionDirection=Enum.NormalId.Bottom,Size=seq(160,230,300),Transparency=seq(1,.82,1),
@@ -235,6 +265,7 @@ do
     fogBanks("volcano",ColorSequence.new(Color3.fromRGB(130,76,52),Color3.fromRGB(58,46,42)),{Transparency=seq(1,.9,1)})
 end
 -- AURORA (full-sky curtains below) + drifting motes, twinkling sky sparkle, low teal mist
+local curtainEmit:Emitter?=nil -- BD-131: the textured sky curtain, built only while EffectAssets auroraCurtain holds an id
 do
     local air=volume(Vector3.new(70,16,70))
     local motes=emitter(air,"aurora","motes",{
@@ -249,27 +280,36 @@ do
     },1,true)
     addRig("aurora",air,Vector3.new(0,8,0),{motes})
     addRig("aurora",dome,Vector3.new(0,170,0),{stars})
+    if WT.plan(Assets,"auroraCurtain","curtain") then
+        local skyBand=volume(Vector3.new(420,30,420))
+        local curtain=emitter(skyBand,"aurora","curtain",tex("auroraCurtain","curtain",{
+            Speed=NumberRange.new(0,.6),EmissionDirection=Enum.NormalId.Top,Size=seq(120,170,210),Transparency=seq(1,.8,1),LightEmission=1,
+            Color=ColorSequence.new(Color3.fromRGB(110,255,190),Color3.fromRGB(190,150,255)),
+        }),rateOf("auroraCurtain","curtain"),true)
+        curtainEmit=curtain
+        addRig("aurora",skyBand,Vector3.new(0,70,0),{curtain})
+    end
     fogBanks("aurora",ColorSequence.new(Color3.fromRGB(80,230,200),Color3.fromRGB(170,120,255)),{Transparency=seq(1,.72,1),LightEmission=1})
 end
 -- QUAKE (light ground dust + dust haze; cracks, rocks and tremors are world one-shots below)
 do
     local ground=volume(Vector3.new(70,.2,70))
-    local dust=emitter(ground,"quake","dust",{
+    local dust=emitter(ground,"quake","dust",tex("dustSand","dust",{
         Texture=DUST_FX.Texture,FlipbookLayout=DUST_FX.FlipbookLayout,FlipbookMode=DUST_FX.FlipbookMode,Speed=NumberRange.new(3,9),EmissionDirection=Enum.NormalId.Top,
         Size=seq(10,24,34),Transparency=seq(.82,.7,1),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-14,14),
         Color=ColorSequence.new(Color3.fromRGB(196,170,128),Color3.fromRGB(160,138,104)),SpreadAngle=Vector2.new(30,30),
-    })
+    }),rateOf("dustSand","dust"))
     addRig("quake",ground,FEET,{dust})
     fogBanks("quake",ColorSequence.new(Color3.fromRGB(190,158,116),Color3.fromRGB(150,124,92)),{Transparency=seq(1,.88,1)})
 end
 -- BLOOD MOON (red motes, ground fog, red fog walls)
 do
     local air=volume(Vector3.new(80,14,80))
-    local motes=emitter(air,"bloodmoon","motes",{
+    local motes=emitter(air,"bloodmoon","motes",tex("bloodMoonMotes","motes",{
         Texture=TEX_SPARK,Speed=NumberRange.new(.5,2.5),EmissionDirection=Enum.NormalId.Top,
         Acceleration=Vector3.new(0,1.2,0),Size=seq(0,.9,0),Transparency=seq(1,.05,1),LightEmission=1,Rotation=NumberRange.new(0,360),
         Color=ColorSequence.new(Color3.fromRGB(255,60,90),Color3.fromRGB(255,150,170)),
-    })
+    }),rateOf("bloodMoonMotes","motes"))
     local ground=volume(Vector3.new(90,.2,90))
     local fogBank=emitter(ground,"bloodmoon","fog",{
         Texture=TEX_SMOKE,Speed=NumberRange.new(1,3),EmissionDirection=Enum.NormalId.Top,
@@ -295,6 +335,18 @@ for i,size in WL.Moon.halos do
     table.insert(halos,halo)
 end
 local HALO_ALPHA={.84,.93,.97}
+-- BD-131: with a bloodMoonDisc texture the Neon ball is hidden and a billboard disc (craters, crimson tint) takes its place; the halos stay.
+local MOON_DISC=WT.plan(Assets,"bloodMoonDisc","disc")
+local moonBoard:BillboardGui?=nil
+local moonImage:ImageLabel?=nil
+if MOON_DISC then
+    local size=WL.Moon.core*MOON_DISC.tune.scale
+    local board=Instance.new("BillboardGui") board.Name="EventMoonDisc" board.Adornee=moonCore board.AlwaysOnTop=false board.LightInfluence=0
+    board.Size=UDim2.fromScale(size,size) board.Enabled=false board.Parent=moonCore
+    local image=Instance.new("ImageLabel") image.Name="Disc" image.BackgroundTransparency=1 image.Size=UDim2.fromScale(1,1) image.Image=MOON_DISC.texture
+    image.ImageColor3=c3(MOON_DISC.tune.color) image.ImageTransparency=1 image.Parent=board
+    moonBoard,moonImage=board,image
+end
 local MOON_DIR=Vector3.new(-.32,.62,-.8).Unit
 
 -- BD-213: no fog-coloured sky box. A box inside FogEnd read as a flat opaque wall and cut the view short; the far view now
@@ -332,13 +384,22 @@ local function worldAttachment():Attachment
 end
 
 -- lightning bolts: WeatherLooks.Budget.bolts slots, each 10 trunk attachments, 2 glow layers per segment and 2 forks
-type BoltSlot={points:{Attachment},ends:{Attachment},beams:{Beam},forks:{Beam},active:boolean,age:number,flickered:boolean}
+type BoltSlot={points:{Attachment},ends:{Attachment},beams:{Beam},forks:{Beam},trunk:Beam?,active:boolean,age:number,flickered:boolean}
 local bolts:{BoltSlot}={}
+-- BD-131: with a lightningBolt texture each bolt is ONE textured trunk beam (the strip tiles along it) plus the 2 forks, instead of 18 segment beams
+local BOLT_TRUNK=WT.plan(Assets,"lightningBolt","trunk")
+local BOLT_FORK=WT.plan(Assets,"lightningBolt","fork")
+local function textureBeam(beam:Beam,plan:WT.Plan,width0:number,width1:number)
+    local tune=plan.tune
+    beam.Texture,beam.TextureMode,beam.TextureLength,beam.TextureSpeed=plan.texture,Enum.TextureMode.Wrap,tune.width*tune.tile,0
+    beam.Width0,beam.Width1=width0,width1
+    beam.Color=ColorSequence.new(c3(tune.color)) beam.Transparency=NumberSequence.new(tune.transparency) beam.LightEmission=tune.lightEmission
+end
 for _=1,WL.Budget.bolts do
     local points:{Attachment}={} local ends:{Attachment}={} local beams:{Beam}={} local forks:{Beam}={}
     for i=1,10 do points[i]=worldAttachment() end
     for i=1,2 do ends[i]=worldAttachment() end
-    for i=2,10 do
+    for i=2,(if BOLT_TRUNK then 1 else 10) do
         for layer=1,2 do
             local beam=Instance.new("Beam") beam.Attachment0,beam.Attachment1=points[i-1],points[i]
             beam.FaceCamera,beam.LightEmission,beam.LightInfluence,beam.Segments=true,1,0,1
@@ -351,13 +412,22 @@ for _=1,WL.Budget.bolts do
     for i=1,2 do
         local fork=Instance.new("Beam") fork.Attachment0,fork.Attachment1=points[3],ends[i] fork.FaceCamera,fork.LightEmission,fork.LightInfluence=true,1,0
         fork.Width0,fork.Width1=4.5,.8 fork.Color=ColorSequence.new(Color3.fromRGB(225,215,255)) fork.Segments=6 fork.Enabled=false fork.Parent=folder
+        if BOLT_FORK then textureBeam(fork,BOLT_FORK,BOLT_FORK.tune.width,BOLT_FORK.tune.width*.4) end
         table.insert(forks,fork)
     end
-    table.insert(bolts,{points=points,ends=ends,beams=beams,forks=forks,active=false,age=0,flickered=false})
+    local trunk:Beam?=nil
+    if BOLT_TRUNK then
+        local beam=Instance.new("Beam") beam.Attachment0,beam.Attachment1=points[1],points[10]
+        beam.FaceCamera,beam.LightInfluence,beam.Segments=true,0,BOLT_TRUNK.tune.segments
+        textureBeam(beam,BOLT_TRUNK,BOLT_TRUNK.tune.width,BOLT_TRUNK.tune.width*.8)
+        beam.Enabled=false beam.Parent=folder trunk=beam
+    end
+    table.insert(bolts,{points=points,ends=ends,beams=beams,forks=forks,trunk=trunk,active=false,age=0,flickered=false})
 end
 local function setBolt(slot:BoltSlot,on:boolean)
     for _,b in slot.beams do b.Enabled=on end
     for _,b in slot.forks do b.Enabled=on end
+    if slot.trunk then slot.trunk.Enabled=on end
 end
 local function bolt(root:Vector3):boolean
     local slot:BoltSlot?=nil
@@ -376,6 +446,10 @@ local function bolt(root:Vector3):boolean
         fork.Attachment0=from
         slot.ends[i].WorldPosition=from.WorldPosition+Vector3.new(random:NextNumber(-70,70),-random:NextNumber(40,90),random:NextNumber(-70,70))
         fork.CurveSize0=random:NextNumber(-10,10)
+    end
+    if slot.trunk and BOLT_TRUNK then
+        local curve=BOLT_TRUNK.tune.curve
+        slot.trunk.CurveSize0,slot.trunk.CurveSize1=random:NextNumber(-curve,curve),random:NextNumber(-curve,curve)
     end
     slot.active,slot.age,slot.flickered=true,0,false setBolt(slot,true)
     WS.fire("strike")
@@ -428,6 +502,7 @@ end
 -- lava impact bursts (sparks, fire puffs, smoke, flash light, ring)
 type BurstSlot={holder:Part,sparks:Emitter,puffs:Emitter,smoke:Emitter,light:PointLight,active:boolean,age:number}
 local burstSlots:{BurstSlot}={}
+local SPARK_SCALE=rateOf("emberSpark","sparks") -- 1 while the emberSpark slot is empty (same emit counts as before)
 local function burstEmitter(parent:Part,props:{[string]:any}):Emitter
     local e=Instance.new("ParticleEmitter") e.Name="WeatherParticles" e.Rate,e.Enabled,e.LockedToPart,e.LightInfluence=0,false,false,0
     local any:any=e for key,value in props do any[key]=value end e.Parent=parent
@@ -436,9 +511,9 @@ end
 for _=1,WL.Budget.bombs do
     local holder=Instance.new("Part") holder.Name="LavaImpact" holder.Size,holder.Transparency=Vector3.one,1
     holder.Anchored,holder.CanCollide,holder.CanTouch,holder.CanQuery=true,false,false,false holder.Position=PARKED holder.Parent=folder
-    local sparks=burstEmitter(holder,{Texture=TEX_SPARK,Lifetime=NumberRange.new(.8,1.6),Speed=NumberRange.new(30,75),EmissionDirection=Enum.NormalId.Top,
+    local sparks=burstEmitter(holder,tex("emberSpark","sparks",{Texture=TEX_SPARK,Lifetime=NumberRange.new(.8,1.6),Speed=NumberRange.new(30,75),EmissionDirection=Enum.NormalId.Top,
         Acceleration=Vector3.new(0,-70,0),Size=seq(1.5,.9,0),Transparency=seq(0,0,1),LightEmission=1,SpreadAngle=Vector2.new(70,70),
-        Color=ColorSequence.new(Color3.fromRGB(255,225,110),Color3.fromRGB(255,90,20))})
+        Color=ColorSequence.new(Color3.fromRGB(255,225,110),Color3.fromRGB(255,90,20))}))
     local puffs=burstEmitter(holder,{Texture=TEX_FIRE,Lifetime=NumberRange.new(.9,1.5),Speed=NumberRange.new(8,24),EmissionDirection=Enum.NormalId.Top,
         Size=seq(8,18,22),Transparency=seq(.1,.4,1),LightEmission=1,SpreadAngle=Vector2.new(60,60),Rotation=NumberRange.new(0,360),
         Color=ColorSequence.new(Color3.fromRGB(255,190,80),Color3.fromRGB(110,30,16))})
@@ -451,7 +526,7 @@ local function burst(position:Vector3,strong:boolean)
     for _,slot in burstSlots do
         if not slot.active then
             slot.active,slot.age=true,0 slot.holder.Position=position
-            slot.sparks.e:Emit(if strong then 70 else 40) slot.puffs.e:Emit(if strong then 16 else 9) slot.smoke.e:Emit(7)
+            slot.sparks.e:Emit(math.floor((if strong then 70 else 40)*SPARK_SCALE+.5)) slot.puffs.e:Emit(if strong then 16 else 9) slot.smoke.e:Emit(7)
             slot.light.Brightness=8
             ring(position,Color3.fromRGB(255,150,60),if strong then 52 else 32,.7)
             pulse=math.max(pulse,.35)
@@ -545,9 +620,9 @@ for _=1,if phone then WL.Budget.cracksPhone else WL.Budget.cracks do
         table.insert(segs,{wedges=wedges,glow=glowPart,frame=CFrame.new(PARKED),len=1,width=1,appear=0})
     end
     local holder=volume(Vector3.new(4,.4,12)) holder.Name="QuakeDust" holder.Position=PARKED
-    local dust=burstEmitter(holder,{Texture=DUST_FX.Texture,FlipbookLayout=DUST_FX.FlipbookLayout,FlipbookMode=DUST_FX.FlipbookMode,Lifetime=NumberRange.new(1.6,2.4),Speed=NumberRange.new(3,8),EmissionDirection=Enum.NormalId.Top,
+    local dust=burstEmitter(holder,tex("dustSand","crackDust",{Texture=DUST_FX.Texture,FlipbookLayout=DUST_FX.FlipbookLayout,FlipbookMode=DUST_FX.FlipbookMode,Lifetime=NumberRange.new(1.6,2.4),Speed=NumberRange.new(3,8),EmissionDirection=Enum.NormalId.Top,
         SpreadAngle=Vector2.new(35,35),Size=seq(4,9,12),Transparency=seq(.55,.72,1),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-20,20),Drag=1.5,
-        Acceleration=Vector3.new(0,1,0),Color=ColorSequence.new(Color3.fromRGB(196,172,136),Color3.fromRGB(160,138,108))})
+        Acceleration=Vector3.new(0,1,0),Color=ColorSequence.new(Color3.fromRGB(196,172,136),Color3.fromRGB(160,138,108))}))
     table.insert(cracks,{segs=segs,holder=holder,dust=dust,active=false,age=0,life=4,static=false})
     for _=1,WL.Budget.rocksPerCrack do
         local rockPart=Instance.new("Part") rockPart.Shape=Enum.PartType.Ball
@@ -556,9 +631,9 @@ for _=1,if phone then WL.Budget.cracksPhone else WL.Budget.cracks do
 end
 -- BD-348: dust puff at the dino's feet and a flat crack decal a few studs ahead (fx3 "rays" alpha texture, tinted dark brown)
 local feetHolder=volume(Vector3.new(3,.4,3)) feetHolder.Name="QuakeFeetDust" feetHolder.Position=PARKED
-local feetPuff=burstEmitter(feetHolder,{Texture=DUST_FX.Texture,FlipbookLayout=DUST_FX.FlipbookLayout,FlipbookMode=DUST_FX.FlipbookMode,Lifetime=NumberRange.new(1.2,1.8),Speed=NumberRange.new(2,5),
+local feetPuff=burstEmitter(feetHolder,tex("dustSand","feetPuff",{Texture=DUST_FX.Texture,FlipbookLayout=DUST_FX.FlipbookLayout,FlipbookMode=DUST_FX.FlipbookMode,Lifetime=NumberRange.new(1.2,1.8),Speed=NumberRange.new(2,5),
     EmissionDirection=Enum.NormalId.Top,SpreadAngle=Vector2.new(60,60),Size=seq(2,4,5),Transparency=seq(.5,.7,1),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-20,20),Drag=1.5,
-    Acceleration=Vector3.new(0,1,0),Color=ColorSequence.new(Color3.fromRGB(205,180,140),Color3.fromRGB(165,142,110))})
+    Acceleration=Vector3.new(0,1,0),Color=ColorSequence.new(Color3.fromRGB(205,180,140),Color3.fromRGB(165,142,110))}))
 local decalPart=quakePart(Instance.new("Part"),"QuakeDecal",Color3.fromRGB(60,44,34),Enum.Material.SmoothPlastic)
 decalPart.Size=Vector3.new(QK.decalSize,.1,QK.decalSize) decalPart.Transparency=1
 local decal=Instance.new("Decal") decal.Name="QuakeCrackDecal" decal.Face=Enum.NormalId.Top decal.Color3=Color3.fromRGB(30,20,14) decal.Transparency=1
@@ -812,6 +887,7 @@ local function updateAurora(root:Vector3,now:number,on:boolean,recolor:boolean)
         for _,r in curtainRays do r.beam.Enabled=on end
     end
     if not on then return end
+    if curtainEmit and recolor then curtainEmit.e.Color=seqColor(WL.aurora(now,.2),WL.aurora(now+5,.5),WL.aurora(now+10,.8)) end
     for _,r in curtainRays do
         local c,i=r.curtain,r.index
         local center=c*2.1+now*.012*(if c%2==0 then 1 else -1)
@@ -953,13 +1029,19 @@ RunService.Heartbeat:Connect(function(dt)
     local moonOn=live and activeId=="bloodmoon" and k>0
     if moonOn and root then
         local base=root+MOON_DIR*WL.Moon.distance
-        moonCore.Position=base moonCore.Transparency=lerpNum(1,.04,k)
-        local beat=1+math.sin(now*.7)*.05
+        moonCore.Position=base moonCore.Transparency=if moonImage then 1 else lerpNum(1,.04,k)
+        local beat=1+math.sin(now*.7)*(if MOON_DISC then MOON_DISC.tune.beat else .05)
         moonCore.Size=Vector3.one*WL.Moon.core*beat
+        if moonBoard and moonImage and MOON_DISC then
+            local size=WL.Moon.core*MOON_DISC.tune.scale*beat
+            moonBoard.Size=UDim2.fromScale(size,size) moonBoard.Enabled=true
+            moonImage.ImageTransparency=lerpNum(1,MOON_DISC.tune.transparency,k)
+        end
         for i,halo in halos do halo.Position=base halo.Transparency=lerpNum(1,HALO_ALPHA[i],k) end
         if now>=nextPulse then nextPulse=now+random:NextNumber(6,11) pulse=1 end
     else
         moonCore.Transparency=1 for _,halo in halos do halo.Transparency=1 end
+        if moonBoard then moonBoard.Enabled=false end
     end
     -- aurora: full-sky rays and arcs, ground ring (hue colours refreshed 10 times a second)
     colorClock+=dt local recolor=colorClock>=.1 if recolor then colorClock=0 end
