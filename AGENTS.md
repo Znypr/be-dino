@@ -58,3 +58,10 @@ A living dinosaur may **buy several auras/trails and switch between styles it ow
 ## UI rules (2026-10-14)
 Follow [UI copy and UI asset standards](docs/72-ui-copy-and-asset-standards.md): children as audience (short, obvious text, no "5m 0s" or "1.25x"), and no code-generated UI art as final: it needs a drafted, reviewed asset task.
 Every new art asset gets a line in [docs/77-asset-registry.md](docs/77-asset-registry.md) when it is added.
+
+## Current sources of truth (2026-10-16)
+- Combat, HP, classes, animations: [docs/101](docs/101-hp-combat-classes-animations.md). Cave hub and teleport menus: [docs/104](docs/104-cave-hub-design.md) (supersedes the BD-254 sanctuary polish, PR #147). Species look, class and mesh prompts: [docs/100](docs/100-species-visual-reference.md). UI research and settings spec: [docs/103](docs/103-ui-research-popular-games.md). Dated owner decisions: "Owner decisions log 2026-10-16" in [docs/07-kanban.md](docs/07-kanban.md).
+- **Generated meshes only** for final 3D art (no code-built models).
+- **Flag-off-by-default**: combat (`Config.CombatEnabled`), cave hub (`Config.CaveHub`) and low-poly dinos ship disabled; do not flip them without owner-playtest and phone evidence.
+- **QA agents must not touch `Place1.rbxl`.**
+- **Do not rewrite history**: keep superseded docs and rows, mark them superseded, and never mark a task Done without recorded evidence.

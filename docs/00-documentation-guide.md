@@ -77,4 +77,15 @@ Do **not** delete build snapshots or test evidence just to make them look curren
 - [79 Owner admin panel](79-admin-panel.md): owner-only runtime sliders (food worth, growth, run speed) and weather controls for playtests (BD-120).
 - [77 Asset registry](77-asset-registry.md): every runtime art asset with repo file, Roblox ID, user and status; archive location of older revisions.
 - [104 Cave hub design](104-cave-hub-design.md): owner target (2026-10-16) for the Sanctuary as a big cave with physical shops and teleport-to-station menus; layout, build method, lighting, lava FX, teleport rules, asset prompts, migration flag and BD-279 to BD-294 (design only, nothing built).
+- [95 Owner upload guide](95-owner-upload-guide.md): how the owner uploads art and meshes to Roblox. Status: current.
+- [96 Fusion Menu v2](96-fusion-menu-v2.md): big cards, tappable slots, one FUSE button (PR #116). Status: built, Review / test (BD-217/BD-065), Studio/phone pending.
+- [97 Dino skins](97-dino-skins.md): owner decisions for base look plus Plushy/Clay/Bricks skins. Status: decisions recorded, implementation not started (BD-224).
+- [98 No more cubes](98-no-more-cubes.md): live EditableMesh templates, mesh guard, 2D fallbacks (PR #117). Status: built, Review / test.
+- [99 Mutation audit](99-mutation-audit.md): event mutation audit and gaps G1-G5. Status: audit done, follow-ups BD-235..237 Backlog.
+- [100 Species visual reference](100-species-visual-reference.md): look, class and mesh-generator prompts per species. Status: current reference (BD-238).
+- [101 HP, combat, classes, animations](101-hp-combat-classes-animations.md): current source of truth for combat. Status: pure modules, server and placeholder HUD built behind `Config.CombatEnabled=false`; offline tests only, nothing playtested.
+- [102 QA playtest pass 2026-10-16](102-qa-playtest-pass-2026-10-16.md): findings BD-253..262, evidence in `docs/evidence/2026-10-16-qa-pass`, `2026-10-16-qa-p2`. Status: findings; fixes Review / test.
+- [103 UI research](103-ui-research-popular-games.md): settings spec and BD-263..274. Status: partly built (settings v2, shop card, odds button), Review / test.
+- Evidence folders added since 95 (all under `docs/evidence/`, 2026-10-16): `fusion-menu-v2`, `no-more-cubes`, `egg-preview-light`, `lowpoly-spike`, `combat-wiring`, `cave-shell`, `cave-lighting`, `menu-fixes`, `menu-screenshots` (BD-300..304), `qa-pass`, `qa-p2`; plus 2026-10-15 kit renders `food-kit-v2.png`, `landmarks-kit-v2.png`, `trees-kit-v2.png`. Status: evidence snapshots, not acceptance on their own.
+- **Superseded**: the BD-254 "calm, bubbly Sanctuary" polish in `07-kanban.md` (open PR #147, never merged) is superseded by [104](104-cave-hub-design.md). Do not merge or extend it.
 - [105 Low-poly dinos: gene patterns and fused-tier looks](105-lowpoly-patterns-and-tiers.md): 3D procedural pattern bake per part, image budget, Gold/Emerald/Diamond on low-poly (flag off), Studio contact sheet and critique (2026-10-16).
