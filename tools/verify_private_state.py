@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 PLAYER_RECEIVERS = {"player", "claimant"}
 OTHER_RECEIVERS = {
-    "workspace", "anchor", "character", "c", "part", "model", "folder", "container", "viewport", "target", "root", "copy", "pickup",
+    "workspace", "still", "anchor", "character", "c", "part", "model", "folder", "container", "viewport", "target", "root", "copy", "pickup",
     "entry.model", "mesh", "visual", "p", "state.character", "shell", "l", "image", "e", "disc", "attacker.character",
     "winner.character", "t.part", "holder",
 }
