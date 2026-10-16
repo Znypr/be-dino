@@ -1,5 +1,7 @@
 # 120 Pending owner uploads and asset tasks: one checklist (BD-318, 2026-10-16)
 
+> **Fastest path for the owner:** [136 quick prompts](136-owner-art-and-sound-quick-prompts.md) has a ready-to-paste ChatGPT or Blender prompt, exact size and layout, a "good looks like" line and the slot name to send back for every pending item below, in priority batches, plus Creator Store search words for each sound. It supersedes the prompt text of 109 where they differ.
+
 ## How to bind your uploads
 
 1. Save the ids in a text file, one per line, `name=rbxassetid://N` (names are in the "Bind in" column below; `python tools/bind_assets.py --list` shows them all), for example `ids.txt`:
