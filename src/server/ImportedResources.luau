@@ -51,6 +51,8 @@ function Import.loadGeneratedWorld(): (number, number)
     local entries: {{key: string, asset: {assetId: string}}}={}
     for key,asset in GeneratedMeshes.Assets do table.insert(entries,{key=key,asset=asset}) end
     for key,asset in GeneratedMeshes.Replacements do if asset.assetId~="" then table.insert(entries,{key=key,asset=asset}) end end
+    -- BD-464 step 1: ground props load the same way once an id is pasted; empty = skipped silently, and nothing places them yet.
+    for key,asset in GeneratedMeshes.Props do if asset.assetId~="" then table.insert(entries,{key=key,asset=asset}) end end
     for _,entry in entries do
         local key,asset=entry.key,entry.asset
         pending+=1

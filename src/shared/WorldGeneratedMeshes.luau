@@ -32,6 +32,20 @@ Generated.Replacements = {
     tree_pine_v3 = {assetId = "", placed = true, replaces = "tree_pine"}, -- world_tree_pine_v3.fbx, 462 tris
     tree_palm_v3 = {assetId = "", placed = true, replaces = "tree_palm"}, -- world_tree_palm_v3.fbx, 700 tris
 }
+-- BD-464 step 1 (docs/140, docs/120): Blender ground props for tree bases and clearings (assets/blender/world/fbx_v3/ground_*_v3.fbx).
+-- NEW kinds, not replacements: assetId = "" means NOT uploaded yet, nothing is loaded and nothing is placed. Nothing reads these keys for
+-- placement until step 2 (placement grammar plus the net-neutral replacement of small clutter, after the owner uploads and picks).
+-- Pasting an id here only makes ImportedResources load the mesh into ReplicatedStorage.GeneratedWorld; Arena does not place it yet.
+Generated.Props = {
+    ground_rock_small_v3 = {assetId = "", placed = false}, -- ground_rock_small_v3.fbx, 68 tris
+    ground_rock_medium_v3 = {assetId = "", placed = false}, -- ground_rock_medium_v3.fbx, 278 tris
+    ground_rock_mossy_v3 = {assetId = "", placed = false}, -- ground_rock_mossy_v3.fbx, 262 tris
+    ground_log_fallen_v3 = {assetId = "", placed = false}, -- ground_log_fallen_v3.fbx, 199 tris
+    ground_stump_roots_v3 = {assetId = "", placed = false}, -- ground_stump_roots_v3.fbx, 199 tris
+    ground_mushrooms_v3 = {assetId = "", placed = false}, -- ground_mushrooms_v3.fbx, 303 tris
+    ground_bush_round_v3 = {assetId = "", placed = false}, -- ground_bush_round_v3.fbx, 340 tris
+    ground_bush_berry_v3 = {assetId = "", placed = false}, -- ground_bush_berry_v3.fbx, 304 tris
+}
 -- Returns the V3 key to try first for a current key (e.g. "tree_palm" -> "tree_palm_v3"), or nil while that V3 id is still empty.
 function Generated.replacementFor(key: string): string?
     for replacementKey, info in Generated.Replacements do
