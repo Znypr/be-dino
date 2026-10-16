@@ -13,6 +13,12 @@ orders. The body is tools/multiplayer_sim.luau; this file builds the harness, ru
   * outcomes are identical for three different join/leave orderings (deterministic under reordering)
   * CombatRules: defeat and settle fire once per (userId, runId) for 12 players; NestQueue is per user and order independent
   * a join storm of 12 completes inside the DataStore budget
+  * BD-358: one client spamming settings / reveal-skip / nest-claim remotes (3 x 10 Hz) cannot starve the 11 other players'
+    settlements; its own key takes at most burst + 1 write/s; the latest preference is still saved (coalesced); any 60 s window
+    stays under 60 + 10 x players requests; also at 30% store failure; a budget-off contrast run shows what the old code did
+  * BD-359: a 15 s store outage loses nothing (12 settlements inside the retry window); a 60 s outage records SaveFailed
+    pendings that the lease renew tick commits later (players respawn, nothing doubled); 12 players leaving over a 15 s outage
+    settle and release inside the BindToClose bound; 20% and 40% failing stores credit every run exactly once
 
 Limits: mocks prove transaction and ordering behaviour only. Roblox networking, replication, physics, real DataStore
 latency, BindToClose timing and memory are NOT covered; docs/111 lists what the owner must still check in Studio.
@@ -84,6 +90,21 @@ def static_checks() -> list[str]:
         if not re.search(pattern, text):
             problems.append(f"static: {label} ({rel})")
     repo = (ROOT / "src/server/ProfileRepository.luau").read_text(encoding="utf-8")
+    # BD-358: routine remote-triggered writes are admitted through the per-player bucket; priority writes never are.
+    parts = re.split(r"\n(?=function ProfileRepository\.)", repo)
+    bodies = {}
+    for part in parts:
+        found = re.match(r"function ProfileRepository\.(\w+)", part)
+        if found:
+            bodies[found.group(1)] = part
+    for name in ("fuseDinosaurs", "claimNest", "equipSpecies", "claimChest", "mutateSpecies", "progressionAction", "setSettings", "setRevealSkip"):
+        if "admit(player)" not in bodies.get(name, ""):
+            problems.append(f"static: routine write {name} is not admitted through the write budget")
+    for name in ("commitRunSettlement", "renew", "release", "load", "purchase"):
+        if "admit(" in bodies.get(name, ""):
+            problems.append(f"static: priority write {name} must never use the routine write budget")
+    if 'retrySettlement("run settlement"' not in repo:
+        problems.append("static: run settlement does not use the longer retrySettlement policy")
     stale = re.findall(r"if not profiles\[player\] or updated\.revision *>= *profiles\[player\]\.revision then profiles\[player\] *= *updated end", repo)
     if len(stale) != 1:  # exactly one: ProfileRepository.load, which is the only place that may create the entry
         problems.append(f"static: {len(stale)} unguarded 'profiles[player] = updated' sites (expected 1, in load)")

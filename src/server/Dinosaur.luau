@@ -3,6 +3,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PhysicsService = game:GetService("PhysicsService")
 local Dinosaur = {}
+local PrivateState = require(script.Parent.PrivateState)
 local Visual = require(ReplicatedStorage.Shared.DinosaurVisual)
 local Config = require(ReplicatedStorage.Shared.Config)
 local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
@@ -50,7 +51,7 @@ end
 function Dinosaur.refreshForPlayer(character: Model, player: Player)
     local equipped = player:GetAttribute("EquippedSpeciesId")
     local speciesId = if typeof(equipped) == "string" then equipped else "compy"
-    local ok, collection = pcall(function() return game:GetService("HttpService"):JSONDecode(player:GetAttribute("CollectionJson") or "{}") end)
+    local ok, collection = pcall(function() return game:GetService("HttpService"):JSONDecode(PrivateState.get(player, "CollectionJson") or "{}") end)
     local entry = if ok then collection[speciesId] else nil
     local mutation = if entry and (entry.diamond or 0) > 0 then "diamond" elseif entry and (entry.emerald or 0) > 0 then "emerald" elseif entry and (entry.gold or 0) > 0 then "gold" else "base"
     if player:GetAttribute("EquippedGenesJson") and player:GetAttribute("EquippedGenesJson")~="null" then mutation="base" end

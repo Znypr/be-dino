@@ -39,6 +39,7 @@ if Config.WorldGeneratedMeshes and Config.WorldArtMode=="BiomeKit" then require(
 Arena.build()
 Leaderboards.start()
 
+require(script.Parent.PrivateState).start() -- BD-360 owner-only channel, before any profile can load
 ProfileRepository.start()
 -- BD-354: PlayerRemoving and BindToClose share one idempotent, awaitable leave path (settle once, release once).
 local leaving = LeaveCoordinator.new({
@@ -68,6 +69,8 @@ RunLifecycle.configureSettlement(function(player: Player, runId: string, catchSc
     leaving.settlementFinished(player)
     return true
 end)
+-- BD-359: a settlement that outlasted its retry window is committed later by the lease renew tick; then respawn the player.
+ProfileRepository.setSettlementRecoveredHook(function(player: Player) RunLifecycle.recoverAfterSettlement(player) end)
 RunLifecycle.start()
 CollectionService.start(ProfileRepository, Dinosaur)
 ChestService.start(ProfileRepository)
@@ -152,7 +155,7 @@ Players.PlayerRemoving:Connect(leaving.leave)
 
 game:BindToClose(function()
     leaving.leaveAll(Players:GetPlayers()) -- in parallel; BindToClose gets 30 s in total
-    if not leaving.waitIdle(25) then warn("[Be Dino] shutdown: some players were not released in time") end
+    if not leaving.waitIdle(27) then warn("[Be Dino] shutdown: some players were not released in time") end
 end)
 
 local FoodService = require(script.Parent.FoodService)

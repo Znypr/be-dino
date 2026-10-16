@@ -7,6 +7,7 @@ local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 local RunLifecycle = {}
+local PrivateState = require(script.Parent.PrivateState)
 local lastExitRequest: {[Player]: number} = {}
 local requestEndRun: RemoteEvent? = nil
 local settleRun = nil
@@ -47,7 +48,7 @@ function RunLifecycle.begin(player: Player, character: Model)
     if player:GetAttribute("ProfileState") ~= "Loaded" then return end
     -- BD-044: a run starts only when the egg bank and pending-nest list have room for a
     -- maximum run, so settlement never has to drop or refuse earned eggs/nests.
-    local blocked = player:GetAttribute("RunStartBlocked")
+    local blocked = PrivateState.get(player, "RunStartBlocked")
     if typeof(blocked) == "string" and blocked ~= "" then
         player:SetAttribute("LastRunStartStatus", blocked)
         return
@@ -123,6 +124,20 @@ local function respawnAfterSettlement(player: Player, character: Model, snapshot
             if not loaded then
                 warn("[Be Dino] respawn failed: " .. tostring(err))
             end
+        end
+    end)
+end
+
+-- BD-359: the settlement failed its whole retry window and was committed later by the lease renew tick. Finish what
+-- respawnAfterSettlement skipped on failure: mark the run Settled and bring the dinosaur back.
+function RunLifecycle.recoverAfterSettlement(player: Player)
+    local character = player.Character
+    if character and character:GetAttribute("RunState") == "Ending" then character:SetAttribute("RunState", "Settled") end
+    task.spawn(function()
+        task.wait(Config.RespawnDelaySeconds)
+        if player.Parent and player:GetAttribute("ProfileState") == "Loaded" then
+            local loaded, err = pcall(function() player:LoadCharacterAsync() end)
+            if not loaded then warn("[Be Dino] respawn failed: " .. tostring(err)) end
         end
     end)
 end

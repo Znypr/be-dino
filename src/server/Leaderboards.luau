@@ -5,6 +5,7 @@ local RunService=game:GetService("RunService")
 local Config=require(game:GetService("ReplicatedStorage").Shared.Config)
 local Theme=require(game:GetService("ReplicatedStorage").Shared.UITheme)
 local CaveHubLayout=require(game:GetService("ReplicatedStorage").Shared.CaveHubLayout)
+local PrivateState=require(script.Parent.PrivateState)
 local Leaderboards={}
 local preview=RunService:IsStudio() and game.GameId==0
 local rows={}
@@ -21,7 +22,7 @@ function Leaderboards.publish(player: Player, metrics)
     if not metrics and player:GetAttribute("ProfileState")~="Loaded" then return end
     names[player.UserId]=player.Name
     for _,definition in definitions do
-        local value=if metrics then metrics[definition.id] else player:GetAttribute(definition.attribute) or 0
+        local value=if metrics then metrics[definition.id] else PrivateState.get(player,definition.attribute) or 0
         if preview then
             rows[definition.id]=rows[definition.id] or {}
             rows[definition.id][player.UserId]=value
