@@ -3,7 +3,24 @@
 local RunService = game:GetService("RunService")
 local Theme = require(script.Parent.UITheme)
 local Geometry = require(script.Parent.ResourceGeometry)
+local Pose = require(script.Parent.LowPolyPose)
 local PreviewCamera = {}
+-- Owner 2026-10-16: the hatched dino must face the camera (slight 3/4 view), whichever way the model was authored.
+-- Imported models face -Z (ResourceModels). Low-poly and other generated models are not guaranteed to: when a part named
+-- "head" (Pose.roleOf, same naming as the pose code) sits clearly off the body centre in the horizontal plane, the dino faces that way.
+-- Pure: heads / centre are world positions; returns the unit horizontal facing (x, z), default -Z.
+function PreviewCamera.facing(centre: Vector3, heads: { Vector3 }): Vector3
+    local sum = Vector3.zero
+    for _, h in heads do sum += Vector3.new(h.X - centre.X, 0, h.Z - centre.Z) end
+    if sum.Magnitude < 0.05 then return Vector3.new(0, 0, -1) end
+    return sum.Unit
+end
+-- Camera offset in the dino's own frame: in front (-Z) and 30 degrees to its left, a little above; rotated onto its facing.
+PreviewCamera.LocalDirection = Vector3.new(0.5, 0.2, -0.85).Unit
+function PreviewCamera.direction(facing: Vector3, wobble: number): Vector3
+    local rotation = CFrame.lookAt(Vector3.zero, facing)
+    return rotation:VectorToWorldSpace(Vector3.new(PreviewCamera.LocalDirection.X + wobble, PreviewCamera.LocalDirection.Y, PreviewCamera.LocalDirection.Z)).Unit
+end
 function PreviewCamera.bind(viewport: ViewportFrame, model: Model, geometryId: string?)
     local camera=Instance.new("Camera")
     camera.FieldOfView,camera.Parent=32,viewport
@@ -37,10 +54,15 @@ function PreviewCamera.bind(viewport: ViewportFrame, model: Model, geometryId: s
     local low,high=Vector3.new(math.huge,math.huge,math.huge),Vector3.new(-math.huge,-math.huge,-math.huge)
     for _,p in points do low=low:Min(p) high=high:Max(p) end
     local target=(low+high)/2
+    local heads={}
+    for _,part in (if typeof(model)=="Instance" then model:GetDescendants() else {}) do -- mocks in verify_previews are plain tables
+        if part:IsA("BasePart") and Pose.roleOf(part.Name)=="head" then table.insert(heads,part.Position) end
+    end
+    local facing=PreviewCamera.facing(bounds.Position,heads)
     local elapsed=0
     local function frame(dt: number)
         if Theme.MotionEnabled then elapsed+=dt end
-        local direction=Vector3.new(1+math.sin(elapsed*.5)*.035,.2,-.65).Unit
+        local direction=PreviewCamera.direction(facing,math.sin(elapsed*.5)*.035) -- elapsed only advances with motion enabled (Reduce Motion: fixed view)
         -- BD-149 inspect: InspectView turns the dino by orbiting the camera around the vertical axis (and keeps the
         -- light with the camera); InspectZoom pulls it closer. Previews without the attributes are unchanged.
         local yaw=viewport:GetAttribute("InspectYaw")

@@ -9,6 +9,10 @@ ClassInfo.Hints = table.freeze({
     Water = "Swims and dashes",
     Armored = "Tough armor",
 })
+-- Class badge (owner 2026-10-16): the 4 owner-made icons are asset slots (AssetSlots.Images). Until bound, ClassBadge draws a
+-- PLACEHOLDER circle with this 1-letter label (no per-class colour exists in docs/114 5.11, so the circle is neutral).
+ClassInfo.Letters = table.freeze({ Ground = "G", Fly = "F", Water = "W", Armored = "A" })
+ClassInfo.IconSlots = table.freeze({ Ground = "class_ground", Fly = "class_flyer", Water = "class_water", Armored = "class_armored" })
 -- {class, label, hint} for any species id (unknown = Ground, like ClassMovement).
 function ClassInfo.forSpecies(speciesId: any): { class: string, label: string, hint: string }
     local class = ClassMovement.classForSpecies(speciesId)

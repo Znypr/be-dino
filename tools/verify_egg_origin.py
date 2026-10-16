@@ -56,6 +56,7 @@ def static_checks():
     assert 'ViewportFrame' not in screen and 'EggPlaceholder' not in screen, 'no plain ellipse / 3D box on the Eggs page'
     panels = (ROOT / 'src/client/DinoIndexPanels.luau').read_text()
     assert 'EggPopup' in panels and '"egg_green"' in panels
+    assert 'paintEggButton' in panels and 'EggPicture.baked(hit, genes, 40)' in panels, 'dex egg button shows the real original egg'
 
 
 if __name__ == '__main__':

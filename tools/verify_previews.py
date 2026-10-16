@@ -20,7 +20,7 @@ function CFrame.lookAt(position,target)
  local z=(position-target).Unit
  local x=v(0,1,0):Cross(z).Unit
  local y=z:Cross(x)
- return {Position=position,XVector=x,YVector=y,ZVector=z}
+ return {Position=position,XVector=x,YVector=y,ZVector=z,VectorToWorldSpace=function(_,d)return x*d.X+y*d.Y+z*d.Z end}
 end
 local identity={Position=v(0,0,0),PointToWorldSpace=function(_,p)return p end}
 local signal={Connect=function()return {Disconnect=function()end}end}
@@ -54,7 +54,7 @@ for _,id in {"compy","triceratops","tyrannosaurus","raptor","stegosaurus","ankyl
    assert(x<1 and y<1,"preview cropped")
    maxX=math.max(maxX,x) maxY=math.max(maxY,y)
   end
-  assert(math.max(maxX,maxY)>.85,"preview wastes card space")
+  assert(math.max(maxX,maxY)>.80,"preview wastes card space") -- 3/4 facing view (class-badge PR) fills 0.84-0.87; a turned silhouette packs less tightly than the old side view
  end
 end
 print("Preview camera passed: all vertices visible with tight framing for 6 dinos across 4 card aspect ratios")

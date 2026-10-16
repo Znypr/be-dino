@@ -745,13 +745,24 @@ local titleToken=0
 -- BD-328: the big title card never draws over an open menu: it waits (up to 20 s) for the menu to close, then plays.
 local function menuOpen():boolean return player:GetAttribute("MenuOpen")==true end
 player:GetAttributeChangedSignal("MenuOpen"):Connect(function() gui.Enabled=not menuOpen() end) -- a menu opened mid-card hides it
+local titleBig=false -- true while the big card (with the bonus line) is showing
+local function inHall():boolean return Cave.inside() or Cave.amount()>.01 end
+-- BD-403: walking into the cave while the big card is up turns it into the small soft toast at once (no bonus line).
+local function softenTitle()
+    if not titleBig then return end
+    titleBig=false
+    titleScale.Scale=.4
+    title.TextTransparency,stroke.Transparency,sub.TextTransparency,subStroke.Transparency=.35,.5,1,1
+end
 local function showTitle(id:string,name:string,soft:boolean?)
     titleToken+=1 local mine=titleToken
+    soft=soft or inHall() -- re-checked here: the cave may have been entered since the weather changed
+    titleBig=not soft
     if menuOpen() then
         task.spawn(function()
             local waited=0
             while menuOpen() and waited<20 do task.wait(.25) waited+=.25 end
-            if mine==titleToken and not menuOpen() then showTitle(id,name,soft) end
+            if mine==titleToken and not menuOpen() then showTitle(id,name,soft or inHall()) end
         end)
         return
     end
@@ -816,6 +827,7 @@ RunService.Heartbeat:Connect(function(dt)
     local root:Vector3?=if rootPart and rootPart:IsA("BasePart") then (rootPart::BasePart).Position else nil
     -- BD-398: inside the cave hall weather is nearly invisible: no rigs, bolts, bombs, cracks, moon, aurora, shake or title card
     local hall=Cave.inside() or Cave.amount()>.01
+    if hall then softenTitle() end
     local motion=Theme.MotionEnabled and root~=nil and not hall
     -- fade current weather out, then switch; ramp the new one in
     if id==activeId then k=math.min(1,k+dt/2.4) else k=math.max(0,k-dt/1.1) if k<=0 then activeId=id columnAnchors=nil end end
