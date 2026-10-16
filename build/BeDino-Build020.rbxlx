@@ -371534,10 +371534,17 @@ Sel.EggSourceNames = {alpha_chest = "Run reward egg", run = "Run egg", crystal_s
 local function geneLine(g, catalog): string
     if type(g) ~= "table" or not g.primaryColorId then return "Unknown genes" end
     local blend = tonumber(g.blend) or 100
+    -- One colour (same twice, or a 100% blend): say it once, not "Cream 100% / Cream 0%".
+    if blend &gt;= 100 or g.primaryColorId == g.secondaryColorId then return lookup(catalog, "colors", g.primaryColorId) end
     return lookup(catalog, "colors", g.primaryColorId) .. " " .. blend .. "% / "
         .. lookup(catalog, "colors", g.secondaryColorId) .. " " .. (100 - blend) .. "%"
 end
 Sel.geneLine = geneLine
+
+-- "a Gold" / "an Emerald" (child-facing copy must not say "a Emerald").
+function Sel.article(word: string): string
+    return if string.find(string.lower(word), "^[aeiou]") then "an" else "a"
+end
 
 local function eggLine(egg, catalog): string
     if type(egg) ~= "table" then return "Original egg not recorded" end
@@ -371701,7 +371708,7 @@ function Sel.goalText(dinos, targetStage: string, selection, byId, catalog): str
     end
     local who = lookup(catalog, "species", best.speciesId, "dino")
     if best.count &gt;= need then return "Tap " .. need .. " " .. who .. ", or Fill for me." end
-    return "You need " .. need .. " " .. who .. " to make a " .. recipe.name .. " " .. who .. ". You have " .. best.count .. "."
+    return "You need " .. need .. " " .. who .. " to make " .. Sel.article(recipe.name) .. " " .. recipe.name .. " " .. who .. ". You have " .. best.count .. "."
 end
 
 -- Exact server odds as short chips: {{title = "Shiny", chips = {{label = "Shiny 8%", p = .08}}}}.
@@ -561092,7 +561099,7 @@ end
 
 local function renderBrowse()
     local active = Sel.stage(state.targetStage)
-    setTitle(if active then "Make a " .. active.name .. " dino" else "Fusion", W.StageColors[state.targetStage] or C.purple)
+    setTitle(if active then "Make " .. Sel.article(active.name) .. " " .. active.name .. " dino" else "Fusion", W.StageColors[state.targetStage] or C.purple)
     local root = body :: Frame
     local left = Instance.new("Frame")
     left.Name, left.BackgroundTransparency, left.Size, left.Parent = "Browse", 1, UDim2.new(.38, -6, 1, 0), root
@@ -561281,7 +561288,8 @@ local function renderConfirm()
     layout.Parent = chips
     fillChips(chips :: any, quote.odds)
     order += 1
-    line("Odds version " .. tostring(quote.oddsVersion) .. " • recipe " .. tostring(quote.recipeVersion) .. ". The reveal only shows the saved result.", Dim, 44)
+    -- docs/72: no version strings for children (the quote still carries them for the server ledger).
+    line("The wheels only show the result that is already saved.", Dim, 24)
     local needs = loss.needsConfirm
     local y = UDim2.new(0, 0, 1, -(T + 6))
     W.button(root, "Not now", UDim2.new(.3, -6, 0, T + 4), y, C.red, function() state.mode = "browse" render() end)
@@ -561444,7 +561452,6 @@ local function finalCard(root: Frame, result, stage)
     line("Pattern: " .. Sel.name(catalog, "patterns", result.patternId or g.patternId))
     line("Colours: " .. Sel.geneLine(g, catalog))
     line("No effects yet. Buy some for this new dino in the Shop.", Dim, 17)
-    line("Odds version " .. tostring(result.oddsVersion or "?"), Dim, 16)
     if stage.replay then line("Already fused: this is your saved result.", C.blue) end
 end
 
