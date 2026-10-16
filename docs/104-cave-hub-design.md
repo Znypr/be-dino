@@ -242,6 +242,8 @@ Dependencies: 263 -> 264 -> 265; 266 -> 268 <- 267; 268 -> 269/270; 264 -> 271 -
 - Budgets counted from the layout: 287 parts / 402 k triangles (limit 410 / 730 k); 239 prop rows; 15 lights counted for the 16-light cap.
 - One geometry source: `CaveHubLayout.hub(config)` gives centre z, floor y, half extents and the biome rect. `SpawnGeometry` (so `FallRecovery`/`MovementGuard`), `Arena` and `Leaderboards.start` read it. Flag off = z 521, floor 6, half extents 55 x 47.5, biome 473..569, byte-for-byte as before (checked against a snapshot in `verify_cave_hub.py`). `BiomePlacement.Sanctuary` is still the old literal: nothing reads it at runtime and BD-281 must make it follow `hub(config).biome` when the flag is on.
 
+- BD-281 (2026-10-16): terrain shell rules in `CaveTerrainRules` + writer `CaveTerrain` (flag off, no Studio evidence yet). `CaveHubLayout.Biome` is now {-150..150, 450..710} so the 12 stud rough shell fits; `BiomePlacement.useHub` applies it when the flag is on. The lava pool basin is terrain 2 studs deep, the `lava_pool_disc` prop would cover it. Cobblestone and CrackedLava get cave-only terrain colours.
+
 ## 15. Open questions for the owner
 1. **Cave size**: 260 x 220 studs with 48+ studs between stations. Big enough, or bigger (the island is 832 studs across)?
 2. **Rail buttons during a run**: DECISION keeps POTIONS and SETTINGS usable in a run and dims DINOS, EGGS, FUSION and SHOP ("At home"). OK, or should every button simply be hidden in a run?

@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Terrain = require(script.Parent.IslandTerrain)
+local CaveTerrain = require(script.Parent.CaveTerrain)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 local CaveHubLayout = require(ReplicatedStorage.Shared.CaveHubLayout)
@@ -188,7 +189,10 @@ function Arena.build()
     if old then old:Destroy() end
     local world = Instance.new("Folder")
     world.Name, world.Parent = "BeDinoArena", workspace
-    Terrain.build()
+    -- BD-281: with Config.CaveHub on, the cave shell (terrain voxels) is written before IslandTerrainReady; off = nothing new.
+    local caveHub = CaveHubLayout.hub(Config)
+    Terrain.build(if caveHub.enabled then CaveTerrain.build else nil)
+    if caveHub.enabled then Biome.useHub(caveHub.biome) end
     local extent = Config.ArenaHalfWidth
     -- Simple hidden boundary; irregular rock silhouettes dress it instead of a block wall.
     for _, x in {-extent - 2, extent + 2} do
@@ -267,30 +271,39 @@ function Arena.build()
         part(world,"JumpStone",Vector3.new(6,1.2+i*.4,6),Vector3.new(x,Layout.height(x,z)+.6+i*.2,z),Color3.fromRGB(133,147,143),Enum.Material.Slate,true)
     end
     -- Separate safe hub beyond the north boundary, with explicit server-owned entry.
-    local hub = Instance.new("Model")
-    local cz = CaveHubLayout.hub(Config).centerZ -- BD-280: one hub geometry source (the cave shell itself is BD-281)
-    hub.Name, hub.Parent = "Sanctuary", world
-    part(hub,"SanctuaryGround",Vector3.new(110,6,95),Vector3.new(0,3,cz),Color3.fromRGB(111,178,91),Enum.Material.Grass,true)
-    part(hub,"NestPlaza",Vector3.new(34,.5,30),Vector3.new(0,6.25,cz),Color3.fromRGB(223,205,154),Enum.Material.Sandstone,true)
-    for _, x in {-48,48} do
-        part(hub,"HubFence",Vector3.new(2,10,92),Vector3.new(x,11,cz),Color3.fromRGB(83,131,73),Enum.Material.Wood,true)
+    if caveHub.enabled then
+        -- Cave hub (docs/104): the shell is terrain (CaveTerrain). Props, signs and stations are BD-284+; Leaderboards still
+        -- needs a SanctuarySign anchor, so keep an invisible one until the Fame Wall exists.
+        local hub = Instance.new("Model")
+        hub.Name, hub.Parent = "Sanctuary", world
+        local anchor = part(hub, "SanctuarySign", Vector3.new(1, 1, 1), Vector3.new(0, 35, caveHub.centerZ + 37), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, false)
+        anchor.Transparency = 1
+    else
+        local hub = Instance.new("Model")
+        local cz = CaveHubLayout.hub(Config).centerZ -- BD-280: one hub geometry source (the cave shell itself is BD-281)
+        hub.Name, hub.Parent = "Sanctuary", world
+        part(hub,"SanctuaryGround",Vector3.new(110,6,95),Vector3.new(0,3,cz),Color3.fromRGB(111,178,91),Enum.Material.Grass,true)
+        part(hub,"NestPlaza",Vector3.new(34,.5,30),Vector3.new(0,6.25,cz),Color3.fromRGB(223,205,154),Enum.Material.Sandstone,true)
+        for _, x in {-48,48} do
+            part(hub,"HubFence",Vector3.new(2,10,92),Vector3.new(x,11,cz),Color3.fromRGB(83,131,73),Enum.Material.Wood,true)
+        end
+        for _, z in {cz-43,cz+43} do
+            part(hub,"HubFence",Vector3.new(96,10,2),Vector3.new(0,11,z),Color3.fromRGB(83,131,73),Enum.Material.Wood,true)
+        end
+        for _, x in {-32,32} do
+            if kitMode then kitProp(hub, "world_tree_conifer_m", CFrame.new(x, 6, cz + 15) * CFrame.Angles(0, x, 0), 1.2) else tree(hub,Vector3.new(x,6,cz+15),1.2,x) end
+        end
+        for i = 1,5 do
+            local nest = part(hub,"EggNest",Vector3.new(5,1,5),Vector3.new(-18+i*6,6.6,cz+20),Color3.fromRGB(174,129,70),Enum.Material.Wood,false)
+            nest.Shape = Enum.PartType.Cylinder
+        end
+        local sign = part(hub,"SanctuarySign",Vector3.new(30,7,1),Vector3.new(0,15,cz+37),Color3.fromRGB(27,76,51),Enum.Material.Wood,false)
+        local surface = Instance.new("SurfaceGui")
+        surface.Face, surface.CanvasSize, surface.Parent = Enum.NormalId.Front, Vector2.new(600,140), sign
+        local label = Instance.new("TextLabel")
+        label.Size, label.BackgroundTransparency, label.Text = UDim2.fromScale(1,1),1,"SANCTUARY"
+        label.Font, label.TextScaled, label.TextColor3, label.Parent = Enum.Font.FredokaOne,true,Color3.new(1,1,1),surface
     end
-    for _, z in {cz-43,cz+43} do
-        part(hub,"HubFence",Vector3.new(96,10,2),Vector3.new(0,11,z),Color3.fromRGB(83,131,73),Enum.Material.Wood,true)
-    end
-    for _, x in {-32,32} do
-        if kitMode then kitProp(hub, "world_tree_conifer_m", CFrame.new(x, 6, cz + 15) * CFrame.Angles(0, x, 0), 1.2) else tree(hub,Vector3.new(x,6,cz+15),1.2,x) end
-    end
-    for i = 1,5 do
-        local nest = part(hub,"EggNest",Vector3.new(5,1,5),Vector3.new(-18+i*6,6.6,cz+20),Color3.fromRGB(174,129,70),Enum.Material.Wood,false)
-        nest.Shape = Enum.PartType.Cylinder
-    end
-    local sign = part(hub,"SanctuarySign",Vector3.new(30,7,1),Vector3.new(0,15,cz+37),Color3.fromRGB(27,76,51),Enum.Material.Wood,false)
-    local surface = Instance.new("SurfaceGui")
-    surface.Face, surface.CanvasSize, surface.Parent = Enum.NormalId.Front, Vector2.new(600,140), sign
-    local label = Instance.new("TextLabel")
-    label.Size, label.BackgroundTransparency, label.Text = UDim2.fromScale(1,1),1,"SANCTUARY"
-    label.Font, label.TextScaled, label.TextColor3, label.Parent = Enum.Font.FredokaOne,true,Color3.new(1,1,1),surface
     workspace:SetAttribute("ArenaArtMode", if ReplicatedStorage.Resources:FindFirstChild("tree") then "Resource meshes" else "Import resources/models for mesh art")
 end
 return Arena
