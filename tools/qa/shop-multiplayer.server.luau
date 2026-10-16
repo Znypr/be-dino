@@ -12,6 +12,7 @@ end
 task.delay(90,function() finish({passed=false,error="fixture_timeout"}) end)
 local ok,result=xpcall(function()
     local Repo=require(game.ServerScriptService.Server.ProfileRepository)
+    local PS=require(game.ServerScriptService.Server.PrivateState) -- BD-360: owner-only values are no longer Player attributes
     local deadline=os.clock()+60
     repeat task.wait(.1) until #Players:GetPlayers()==2 or os.clock()>deadline
     assert(#Players:GetPlayers()==2,"two clients did not connect")
@@ -52,11 +53,11 @@ local ok,result=xpcall(function()
     assert(outcomes[1].success and outcomes[2].success,"purchase race failed")
     assert(Repo.progression(a).crystals==beforePurchases-8500-20-150,"duplicate debit")
     assert(Repo.progression(b).crystals==0 and not Repo.progression(b).trails.astra,"profile leakage")
-    assert(#Http:JSONDecode(a:GetAttribute("ChestQueueJson"))==1,"duplicate egg")
-    assert(#Http:JSONDecode(b:GetAttribute("ChestQueueJson"))==0,"cross-player queue")
+    assert(#Http:JSONDecode(PS.get(a,"ChestQueueJson"))==1,"duplicate egg")
+    assert(#Http:JSONDecode(PS.get(b,"ChestQueueJson"))==0,"cross-player queue")
     task.wait(1.2)
-    local speedA=a:GetAttribute("SpeedMultiplier")
-    local speedB=b:GetAttribute("SpeedMultiplier")
+    local speedA=PS.get(a,"SpeedMultiplier")
+    local speedB=PS.get(b,"SpeedMultiplier")
     return {passed=true,players={a.UserId,b.UserId},wallets={Repo.progression(a).crystals,0},queues={1,0},
         beforePurchases=beforePurchases,
         actualClients=true,remoteStatuses={statusA,statusB},race=outcomes,

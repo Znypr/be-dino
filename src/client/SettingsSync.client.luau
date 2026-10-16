@@ -1,5 +1,5 @@
 --!strict
--- Settings v2 sync (BD-264): loads the saved per-player settings (attribute SettingsJson, set by the server from
+-- Settings v2 sync (BD-264): loads the saved per-player settings (private value SettingsJson, pushed by the server from
 -- profile.settings), applies every change to its consumers, and sends changes back to the server (debounced).
 -- Consumers: Calm motion -> Theme.MotionEnabled; sound -> AudioMixer; Effects -> CosmeticVisuals; Weather -> WeatherVisuals
 -- (both read SettingsModel directly). jumpSize is stored with a getter only: no consumer yet.
@@ -10,6 +10,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Model = require(Shared:WaitForChild("SettingsModel"))
 local Theme = require(Shared:WaitForChild("UITheme"))
 local Mixer = require(Shared:WaitForChild("AudioMixer"))
+local PrivateState = require(script.Parent:WaitForChild("PrivateState")) -- BD-360
 
 local player = Players.LocalPlayer
 local remote = (ReplicatedStorage:WaitForChild("BeDinoRemotes", 60) :: Folder):WaitForChild("SetSettings", 60) :: RemoteEvent -- BD-330: timeouts, no infinite-yield warning
@@ -37,7 +38,7 @@ Model.onChange(function(s)
 end)
 
 local function readSaved()
-    local raw = player:GetAttribute("SettingsJson")
+    local raw = PrivateState.get("SettingsJson")
     if typeof(raw) ~= "string" or raw == "" then return end
     local ok, decoded = pcall(function() return HttpService:JSONDecode(raw) end)
     if not ok then return end
@@ -47,7 +48,7 @@ local function readSaved()
     loaded = true
 end
 
-player:GetAttributeChangedSignal("SettingsJson"):Connect(function()
+PrivateState.onChanged("SettingsJson", function()
     -- The server echoes our own save: ignore it while a newer local change is waiting to be sent.
     readSaved()
 end)

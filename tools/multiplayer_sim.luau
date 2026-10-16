@@ -66,7 +66,8 @@ local function boot(server)
     local Repo = server.Repository
     local RL = server.require(node("src/server/RunLifecycle"))
     local LC = server.require(node("src/server/LeaveCoordinator"))
-    local env = {server = server, RL = RL, Repo = Repo, settleCalls = {}, runs = {}, committed = {}, released = {}}
+    local PS = server.require(node("src/server/PrivateState")) -- BD-360: owner-only values live here, not in p.attrs
+    local env = {server = server, RL = RL, Repo = Repo, PS = PS, settleCalls = {}, runs = {}, committed = {}, released = {}}
     local leaving = LC.new({endForDisconnect = RL.endForDisconnect,
         release = function(p) env.released[p] = true return Repo.release(p) end, publish = nil})
     env.leaving = leaving
@@ -221,7 +222,7 @@ local function settlementRaces(label, failRate, seed, permute)
                 local catches = 5 + math.floor(prng() * 36) -- 5..40 catches, a fixed function of the user only
                 local hold = 100 + math.floor(prng() * 100) -- fixed per user, so run seconds do not depend on the order
                 local runId = startRun(env, p, catches)
-                if runId == nil then check("run started " .. id, false, tostring(p.attrs.RunStartBlocked)) done += 1 return end
+                if runId == nil then check("run started " .. id, false, tostring(env.PS.get(p, "RunStartBlocked"))) done += 1 return end
                 sleep(hold)
                 local c = p.Character
                 if mode == "manual" then
@@ -242,7 +243,7 @@ local function settlementRaces(label, failRate, seed, permute)
                     local q = connect(env, id)
                     if q.loaded then
                         local second = startRun(env, q, 7 + (id % 5))
-                        if second == nil then check("rejoined player can start a run " .. id, false, tostring(q.attrs.RunStartBlocked)) end
+                        if second == nil then check("rejoined player can start a run " .. id, false, tostring(env.PS.get(q, "RunStartBlocked"))) end
                         sleep(120) disconnect(env, q)
                     end
                 end
@@ -381,7 +382,7 @@ runScenario("egg-claims", 600, function(env, server)
     local runId = startRun(env, p, 40)
     env.RL.tryEnd(p, p.Character, "ManualExit")
     sleep(30)
-    local eggId = p.attrs.NextChestId
+    local eggId = env.PS.get(p, "NextChestId")
     check("a settled run exposes its first egg", type(eggId) == "string" and eggId ~= "", tostring(eggId))
     sleep(10)
     local statuses = {}
@@ -390,7 +391,7 @@ runScenario("egg-claims", 600, function(env, server)
     local claimed = 0
     for _, s in statuses do if s == "claimed" then claimed += 1 end end
     check("three concurrent claims of one egg: exactly one 'claimed'", claimed == 1, table.concat(statuses, ","))
-    task.spawn(function() env.Repo.claimChest(p, p.attrs.NextChestId) end) -- the player leaves mid-claim
+    task.spawn(function() env.Repo.claimChest(p, env.PS.get(p, "NextChestId")) end) -- the player leaves mid-claim
     sleep(0.03)
     disconnect(env, p)
     sleep(40)
@@ -445,11 +446,11 @@ metric("parallel vs sequential seconds", string.format("%.1f vs %.1f", parallelS
 
 -------------------------------------------------------------------- G: replication volume per player (attributes replicate to ALL clients)
 runScenario("attribute-volume", 600, function(env, server)
-    local sizes = {}
+    local Core = server.require(node("src/shared/PrivateStateCore"))
     local p = connect(env, 3301)
-    local function bytes()
+    local function bytes(map)
         local total, big = 0, {}
-        for k, v in p.attrs do
+        for k, v in map do
             local s = jsonSize(v)
             total += s + #k
             if s > 150 then table.insert(big, string.format("%s=%d", k, s)) end
@@ -457,25 +458,37 @@ runScenario("attribute-volume", 600, function(env, server)
         table.sort(big)
         return total, table.concat(big, " ")
     end
-    local fresh, freshBig = bytes()
-    metric("player attribute bytes, fresh profile", fresh)
+    local function publicBytes() return bytes(p.attrs) end
+    local function privateBytes() return bytes(env.PS.snapshot(p)) end
+    local freshPublic = publicBytes()
+    local freshPrivate = privateBytes()
+    metric("PUBLIC player attribute bytes, fresh profile", freshPublic)
+    metric("PRIVATE owner-only bytes, fresh profile", freshPrivate)
     -- a mid-game profile: 10 runs of 40 eggs settled, 40 hatched
     for run = 1, 10 do
         local runId = startRun(env, p, 40)
         env.RL.tryEnd(p, p.Character, "ManualExit")
         sleep(30)
         for _ = 1, 3 do
-            local id = p.attrs.NextChestId
+            local id = env.PS.get(p, "NextChestId")
             if id and id ~= "" then env.Repo.claimChest(p, id) end
             sleep(6)
         end
         p.Character = newChar(p) env.RL.prepareSanctuary(p, p.Character)
     end
-    local after, afterBig = bytes()
-    metric("player attribute bytes, after 10 runs of 40 eggs", after)
-    metric("largest attributes", afterBig)
-    metric("replicated bytes per full resync with 12 players (x11 receivers each)", after * 11 * 12)
-    check("a mid-game player stays under 64 KB of replicated attributes", after < 65536, tostring(after))
+    local afterPublic, publicBig = publicBytes()
+    local afterPrivate, privateBig = privateBytes()
+    metric("PUBLIC player attribute bytes, after 10 runs of 40 eggs", afterPublic)
+    metric("PRIVATE owner-only bytes, after 10 runs of 40 eggs (sent to the owner only)", afterPrivate)
+    metric("largest public attributes", publicBig)
+    metric("largest private values", privateBig)
+    metric("replicated bytes per full resync with 12 players (x11 receivers each), public only", afterPublic * 11 * 12)
+    metric("owner-only bytes per full resync with 12 players (x1 receiver each)", afterPrivate * 12)
+    check("a mid-game player stays under 2 KB of public attributes (BD-360)", afterPublic < 2048, tostring(afterPublic))
+    -- every name still set on the Player is classified public; nothing private leaked back onto it
+    local leaked = {}
+    for k in p.attrs do if Core.isPrivate(k) then table.insert(leaked, k) end end
+    check("no private name is set as a Player attribute", #leaked == 0, table.concat(leaked, ","))
 end)
 
 -------------------------------------------------------------------- F: CombatRules world, 12 players

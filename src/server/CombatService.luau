@@ -16,6 +16,7 @@ local TeamUp = require(ReplicatedStorage.Shared.CombatTeamUp)
 local NpcRules = require(ReplicatedStorage.Shared.NpcPredatorRules)
 
 local CombatService = {}
+local PrivateState = require(script.Parent.PrivateState)
 
 local function numberAttribute(instance: Instance, name: string, fallback: number): number
     local value = instance:GetAttribute(name)
@@ -23,7 +24,7 @@ local function numberAttribute(instance: Instance, name: string, fallback: numbe
 end
 
 local function peacefulFor(player: Player): boolean
-    local raw = player:GetAttribute("SettingsJson")
+    local raw = PrivateState.get(player, "SettingsJson")
     if typeof(raw) ~= "string" or raw == "" then return false end
     local ok, decoded = pcall(function() return HttpService:JSONDecode(raw) end)
     return ok and SettingsModel.fromStore(decoded).peaceful

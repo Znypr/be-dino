@@ -10,6 +10,7 @@ local MovementEnvelope=require(ReplicatedStorage.Shared.MovementEnvelope)
 local GameConfig=require(ReplicatedStorage.Shared.Config)
 local ColourBonus=require(ReplicatedStorage.Shared.ColourBonus)
 local Service={}
+local PrivateState = require(script.Parent.PrivateState)
 -- BD-172: colour growth bonus from the SERVER-held equipped genes (never client data); decoded once per distinct string.
 local colourCache={json="",percent=0,multiplier=1}
 local function colourGrowth(genesJson:any): (number,number)
@@ -157,9 +158,9 @@ local function crystalSpawns(repository)
 end
 function Service.start(repository)
     local function policy(player)
-        player:SetAttribute("PaidRandomEligible",false)
+        PrivateState.set(player, "PaidRandomEligible",false)
         local ok,info=pcall(function() return game:GetService("PolicyService"):GetPolicyInfoForPlayerAsync(player) end)
-        if player.Parent then player:SetAttribute("PaidRandomEligible",ok and typeof(info)=="table" and info.ArePaidRandomItemsRestricted==false) end
+        if player.Parent then PrivateState.set(player, "PaidRandomEligible",ok and typeof(info)=="table" and info.ArePaidRandomItemsRestricted==false) end
     end
     Players.PlayerAdded:Connect(function(player) task.spawn(policy,player) end)
     for _,player in Players:GetPlayers() do task.spawn(policy,player) end
@@ -195,10 +196,10 @@ function Service.start(repository)
                     growth*=adminGrowth speed*=adminSpeed
                     local colourPercent,colourMultiplier=colourGrowth(player:GetAttribute("EquippedGenesJson"))
                     growth*=colourMultiplier -- BD-172: applied after the GrowthCap, so it is always an extra <= +10% on gained growth
-                    c:SetAttribute("ColourGrowthPercent",colourPercent) player:SetAttribute("ColourGrowthPercent",colourPercent)
+                    c:SetAttribute("ColourGrowthPercent",colourPercent) PrivateState.set(player, "ColourGrowthPercent",colourPercent)
                     c:SetAttribute("EventMutationId",if mutation then mutation.id else "")
                     c:SetAttribute("GrowthMultiplier",growth) c:SetAttribute("WeatherLootMultiplier",loot)
-                    player:SetAttribute("GrowthMultiplier",growth) player:SetAttribute("SpeedMultiplier",speed) player:SetAttribute("LootMultiplier",loot)
+                    PrivateState.set(player, "GrowthMultiplier",growth) PrivateState.set(player, "SpeedMultiplier",speed) PrivateState.set(player, "LootMultiplier",loot)
                     local h=c:FindFirstChildOfClass("Humanoid")
                     if h then h.WalkSpeed=GameConfig.WalkSpeed*(if c:GetAttribute("RunState")=="Active" then speed else 1) end
                     c:SetAttribute("EquippedAuraId",p.equippedAura)
