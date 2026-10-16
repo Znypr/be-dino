@@ -554858,7 +554858,9 @@ local function isValidProfile(profile: any): boolean
         if typeof(profile.revealSkip) ~= "table" or #profile.revealSkip &gt; Config.SpeciesRarityScale then return false end
         for _, rarity in profile.revealSkip do if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity &lt; 1 or rarity &gt; Config.SpeciesRarityScale then return false end end
     end
-    if profile.settings ~= nil and typeof(profile.settings) ~= "table" then return false end -- BD-264 (additive; bad values inside fall back to defaults)
+    -- BD-264/BD-320: profile.settings is cosmetic and additive. It is NEVER a validity condition: a non-table or
+    -- corrupted value reads as defaults (SettingsModel.normalize) and stays untouched in the store until the player
+    -- saves settings again. Rejecting it would lock a player out over a volume slider.
     if profile.settledRuns ~= nil then
         if typeof(profile.settledRuns) ~= "table" then return false end
         for _, id in profile.settledRuns do if not validId(id) then return false end end
