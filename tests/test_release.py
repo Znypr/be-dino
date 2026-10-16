@@ -79,7 +79,7 @@ class ReleaseProfileTests(unittest.TestCase):
         self.assertIs(values["IdentityPersistentEnabled"], True)
         self.assertIs(values["IdentityFusionPreviewEnabled"], True)
         changed = [a for a, b in zip(with_ids(CONFIG).splitlines(), rewritten.splitlines()) if a != b]
-        self.assertEqual(len(changed), 8)
+        self.assertEqual(len(changed), 10)  # +1 RunTelemetryEnabled (BD-426), +1 ClassMovementEnabled (BD-423)
         self.assertIs(values["LowPolyDinos"], True)
         self.assertEqual((values["WorldArtMode"], values["FoodArtMode"], values["WorldArtDensity"]), ("BiomeKit", "Kit", 1.25))
         self.assertEqual(profiles.verify_source(CONFIG, "default").errors, [])

@@ -64,7 +64,11 @@ return table.freeze({
     StudioLocalProfilesEnabled = true, -- unpublished Studio only; never a live fallback
     StudioTestWalletEnabled = true, -- only unpublished, nonpersistent local profiles
     StudioTestCrystals = 1000000,
-    FoodCatchRate = 4 / 500, -- PROVISIONAL (owner 2026-10-15, BD-165: 500 food = 4 run eggs; 5,000 food -> 40; was 40/500 on 2026-10-13, 15/500 before); raw food points, growth boosts do not multiply catches
+    FoodCatchRate = 12 / 500, -- PROVISIONAL (owner 2026-10-16, BD-418, docs/119: a normal 5-minute run, about 600-700 food, gives about 15 run eggs; 500 food = 12, 5,000 = 120; HISTORICAL: 4/500 on 2026-10-15, 40/500 on 2026-10-13); raw food points, growth boosts do not multiply catches
+    -- BD-207: rare special foods. All PROVISIONAL, off by default (pinned off in the default profile). Points are RAW food points.
+    SpecialFoodsEnabled = false,
+    SpecialFoodChance = 0.01, -- share of non-starter food slots that become a Golden Drumstick (about 1 in 100)
+    SpecialFoodPoints = 60, -- raw food points per special pickup (egg food is 15, amber 50); FoodCatchRate is unchanged
     ProfileLoadWarningSeconds = 20,
 
     SpawnProtectionSeconds = 5,
@@ -166,13 +170,14 @@ return table.freeze({
     -- 2026-10-15 (BD-165, docs/88 exponential rarity): a full run is now ~4-40 eggs, so the boost is gentle and
     -- caps at 40 eggs (5,000 food). Adjacent tier ratios stay 0.33 / 0.15 / 0.22 / 0.14 (never flatter than 1/3); Rare+ is at most ~10% easier at full boost.
     SpeciesRunBoost = {1, 1, 1.1, 1.1, 1.1},
-    EggRarityBoostMaxEggs = 40,
+    EggRarityBoostMaxEggs = 120,
     BigChance = 0.03, -- BD-184: Rare-tier chance (docs/88)
     ShinyChance = 0.006, -- BD-184: Epic-tier chance, earned eggs in irregular weather only
     BigScaleMultiplier = 1.2,
     IrregularWeather = {volcano = true, aurora = true, quake = true, bloodmoon = true},
     DeveloperProducts = { [3717200374] = 500, [3717200467] = 1500, [3717200523] = 4000, [3717200920] = 10000, [3717200940] = 25000, [3717200979] = 90000 },
     CrystalPacksEnabled = false, -- Enable only after paid-random disclosure/release review.
+    RunTelemetryEnabled = false, -- BD-426: anonymous run/session telemetry (docs/122); off in the default build, on only in the playtest profile
     PaidRandomItemsEnabled = false, -- Release gate: complete combined-outcome disclosure/policy acceptance first.
     ChestQueueCapacity = 5,
     ChestOverflowCapacity = 10,
@@ -181,7 +186,7 @@ return table.freeze({
     -- Run eggs beyond the five-slot reveal queue wait in a server-side ordered bank.
     RunRewardConfigVersion = 3, -- 3: five species rarity tiers + run-size boost (BD-044)
     HatchPageSize = 10, -- PROVISIONAL: queued run eggs committed per claim transaction; at 1 s/egg = 6 claims/min/player (size 5 would be 12/min and bust the 8/12-player budgets)
-    RunEggMaxPerRun = 50, -- PROVISIONAL: catches stop counting at 50 eggs per run (6,250 food); a 5,000-food run (40 eggs) is not truncated
+    RunEggMaxPerRun = 150, -- PROVISIONAL: catches stop counting at 150 eggs per run (6,250 food); a 5,000-food run (120 eggs) is not truncated
     RunEggBankCapacity = 1000, -- PROVISIONAL: banked run eggs behind the queue (~540 B each, ~0.54 MB); a run starts only while banked <= capacity - RunEggMaxPerRun (500)
     SettledRunLedgerSize = 200, -- PROVISIONAL: settled run IDs kept for exactly-once settlement beyond recentOperations
     -- BD-090 Egg Nests v2 (owner 2026-10-14). ALL PROVISIONAL. A nest is a separate loot item
@@ -197,13 +202,15 @@ return table.freeze({
     -- Hidden drop gate (never shown in the UI; measured on the server, never client-reported).
     NestMinRunSeconds = 120, -- PROVISIONAL: server clock from RunLifecycle.begin to settlement
     NestMinCatches = 1, -- PROVISIONAL: validated server CatchScore (run eggs) needed for a nest
-    NestEggsPerExtraNest = 10, -- PROVISIONAL (BD-165: was 100 at 40/500): +1 nest per 10 further catches on top of a qualified run
-    NestMaxPerRun = 3, -- PROVISIONAL cap per run
+    NestEggsPerExtraNest = 30, -- PROVISIONAL (BD-418: was 10 at 4/500; 30 eggs = 1,250 food, same nest frequency per food): +1 nest per 30 further catches on top of a qualified run
+    -- Owner 2026-10-16: nests per run are unlimited (no per-run cap). Only NestStorageCapacity spots exist; each nest beyond
+    -- the free spots turns into crystals at once (NestOverflowCrystals, PROVISIONAL, docs/115).
+    NestOverflowCrystals = 50,
     -- Luck tiers (index = nest.luck). PROVISIONAL, disclosed in the Nests menu. rarityBoostEggs feeds
     -- the run-batch species boost (EggRarityBoostMaxEggs = maximum), conditionLevels adds to the condition-upgrade level
     -- (clamped to the top tier), shinyChance applies even without irregular weather, bigChance replaces BigChance.
     NestLuckTiers = {
-        {rarityBoostEggs = 40, conditionLevels = 2, shinyChance = 0.015, bigChance = 0.06},
+        {rarityBoostEggs = 120, conditionLevels = 2, shinyChance = 0.015, bigChance = 0.06},
     },
     NestClaimRequestCooldownSeconds = 0.5,
     ChestClaimRequestCooldownSeconds = 0.35,

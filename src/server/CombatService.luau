@@ -77,7 +77,7 @@ function CombatService.start(runLifecycle, dinosaur): any?
             userId = player.UserId, runId = runId,
             class = Rules.classForSpecies(player:GetAttribute("EquippedSpeciesId")),
             score = numberAttribute(character, "GrowthScore", 0), now = now,
-            peaceful = peacefulFor(player),
+            peaceful = if typeof(character:GetAttribute("PeacefulRun")) == "boolean" then character:GetAttribute("PeacefulRun") == true else peacefulFor(player), -- BD-421: the run-start snapshot wins
             protectedUntil = numberAttribute(character, "SpawnProtectionEndsAt", 0),
         })
         if not d then return end

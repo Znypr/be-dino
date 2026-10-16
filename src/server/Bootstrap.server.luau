@@ -15,6 +15,7 @@ local RunLifecycle = require(script.Parent.RunLifecycle)
 local VisualTestService = require(script.Parent.VisualTestService)
 local Leaderboards = require(script.Parent.Leaderboards)
 local LeaveCoordinator = require(script.Parent.LeaveCoordinator)
+local Telemetry = require(script.Parent.TelemetryService)
 local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 Players.CharacterAutoLoads = false
@@ -49,7 +50,8 @@ local leaving = LeaveCoordinator.new({
     publish = Leaderboards.publish,
 })
 RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string, eggEvents, runSeconds)
-    local ok = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents, runSeconds, workspace:GetAttribute("WeatherId")) -- BD-156: nests dropped in weather carry it
+    local ok, settledOutcome = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents, runSeconds, workspace:GetAttribute("WeatherId")) -- BD-156: nests dropped in weather carry it
+    if ok then Telemetry.runSettled(player, reason, runSeconds, settledOutcome) end -- BD-426: read-only, flag-gated
     if not ok then
         warn(string.format("[Be Dino] settlement failed for %s (%s)", player.Name, reason))
         leaving.settlementFinished(player) -- a failed settlement of a departed player must still release the lease
@@ -72,6 +74,7 @@ RunLifecycle.configureSettlement(function(player: Player, runId: string, catchSc
 end)
 -- BD-359: a settlement that outlasted its retry window is committed later by the lease renew tick; then respawn the player.
 ProfileRepository.setSettlementRecoveredHook(function(player: Player) RunLifecycle.recoverAfterSettlement(player) end)
+Telemetry.start() -- BD-426: no-op while Config.RunTelemetryEnabled is false
 RunLifecycle.start()
 CollectionService.start(ProfileRepository, Dinosaur)
 ChestService.start(ProfileRepository)
@@ -80,6 +83,7 @@ MovementGuard.start()
 require(script.Parent.FallRecovery).start(MovementGuard.reset) -- BD-210 fall-out-of-world safety net
 VisualTestService.start(Dinosaur)
 require(script.Parent.ProgressionService).start(ProfileRepository)
+require(script.Parent.RareHatchService).start() -- BD-428
 require(script.Parent.FusionService).start(ProfileRepository)
 workspace.Gravity=require(game:GetService("ReplicatedStorage").Shared.Config).Gravity
 require(script.Parent.LeapService).start()

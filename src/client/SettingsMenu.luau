@@ -10,6 +10,7 @@ local C = Theme.Colors
 
 local Menu = {}
 local currentTab = "sound"
+local labOpen = false -- BD-081: the Sound lab page (every sound, PLAY) replaces the Sound tab body
 
 export type Context = {
     label: (Instance, string, number, number, number, number, number, Color3?) -> TextLabel,
@@ -48,6 +49,7 @@ local function drawSound(body: Instance, ctx: Context)
     end
     local on = Theme.HatchSoundEnabled ~= false
     toggle(body, ctx, 3, "Hatch sound", on, function() Theme.HatchSoundEnabled = Theme.HatchSoundEnabled == false ctx.open("settings") end)
+    ctx.button(body, "SOUND LAB", 0, TOP + 4 * ROW, 250, 48, C.blue, function() labOpen = true ctx.open("settings") end).Name = "Button_SoundLab"
     ctx.button(body, "RESET SOUND", 620, TOP + 3 * ROW, 204, 48, C.card, function()
         Mixer.reset()
         for _, key in Mixer.Order do Model.set(key, Mixer.get(key)) end
@@ -72,16 +74,16 @@ local function drawControls(body: Instance, ctx: Context)
     -- BD-391/405 (docs/115 D22): with the perk flag on, the toggle shows only after the player bought Fast travel.
     local cfg = require(Shared:WaitForChild("Config"))
     if cfg.CaveHub and (cfg.FastTravelPerk ~= true or require(script.Parent:WaitForChild("HubTravelClient")).ownsFastTravel()) then
-        toggle(body, ctx, if require(Shared:WaitForChild("Config")).CombatEnabled then 4 else 2, if cfg.FastTravelPerk == true then "Fast travel" else "Teleport to shops", Model.teleportShops(), function() Model.set("teleportShops", not Model.teleportShops()) ctx.open("settings") end)
+        toggle(body, ctx, 4, if cfg.FastTravelPerk == true then "Fast travel" else "Teleport to shops", Model.teleportShops(), function() Model.set("teleportShops", not Model.teleportShops()) ctx.open("settings") end)
     end
-    -- docs/101 s16 Peaceful: only shown while HP combat is on (Config.CombatEnabled); the server reads it at run start.
-    if require(Shared:WaitForChild("Config")).CombatEnabled then
-        toggle(body, ctx, 2, "Peaceful", Model.peaceful(), function() Model.set("peaceful", not Model.peaceful()) ctx.open("settings") end)
-        ctx.label(body, "Peaceful: no biting, nobody can bite you. Starts next run", 0, TOP + 3 * ROW, 824, 30, 20, C.gold)
-    end
+    -- BD-421 (docs/115 2026-10-16): Peaceful is always one tap away (also with CombatEnabled off). The server keeps the value from
+    -- the moment a run starts, so a change here counts from the NEXT run.
+    local peacefulRow = 2
+    toggle(body, ctx, peacefulRow, "Peaceful", Model.peaceful(), function() Model.set("peaceful", not Model.peaceful()) ctx.open("settings") end)
+    ctx.label(body, "Peaceful: no eating or biting between players. Next run", 0, TOP + (peacefulRow + 1) * ROW, 824, 30, 20, C.gold)
     -- BD-374: the keys (or phone controls) in two short lines under the last row; read from the real input code.
     local Config = require(Shared:WaitForChild("Config"))
-    local used = 2 + (if Config.CombatEnabled then 2 else 0) + (if Config.CaveHub then 1 else 0)
+    local used = 4 + (if Config.CaveHub then 1 else 0)
     local lines = require(Shared:WaitForChild("FtueP1")).controlsLines(game:GetService("UserInputService").TouchEnabled, Config.CombatEnabled == true)
     for i, line in lines do
         local row = ctx.label(body, line, 0, TOP + used * ROW + 2 + (i - 1) * 26, 824, 26, 19, C.text)
@@ -99,7 +101,10 @@ function Menu.build(body: Instance, ctx: Context): string
         end)
         b.Name = "Tab_" .. id
     end
-    if currentTab == "sound" then drawSound(body, ctx)
+    if currentTab == "sound" and labOpen then
+        -- BD-081: Sound lab replaces the Sound tab body (tab bar stays); BACK returns to the sliders.
+        require(script.Parent:WaitForChild("SoundLab")).draw(body, ctx, function() labOpen = false ctx.open("settings") end)
+    elseif currentTab == "sound" then drawSound(body, ctx)
     elseif currentTab == "look" then drawLook(body, ctx)
     elseif currentTab == "controls" then drawControls(body, ctx) end
     return currentTab

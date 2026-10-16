@@ -12,6 +12,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Fail on merge conflict markers
+        run: |
+          if git grep -InE '^(<<<<<<< |>>>>>>> |=======$)' -- . ':!*.rbxlx'; then
+            echo "Conflict markers found in tracked files" >&2
+            exit 1
+          fi
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -28,6 +34,7 @@ jobs:
           python tools/bind_ui_icons.py --check
           python tools/bind_visual_assets.py --check
           python tools/bind_products.py --check
+          python tools/verify_robux_line.py --selftest
           python tools/bind_worldkit_meshes.py --check
           python tools/verify_sources.py --compiler /tmp/luau/luau-compile
           python tools/verify_luau.py --runner /tmp/luau/luau
@@ -40,10 +47,13 @@ jobs:
           python tools/simulate_fusion_ladder.py --check
           python tools/verify_fusion_ui.py --runner /tmp/luau/luau
           python tools/verify_next_goal.py --runner /tmp/luau/luau
+          python tools/verify_goals.py --runner /tmp/luau/luau
           python tools/verify_admin.py --runner /tmp/luau/luau
           python tools/verify_notify.py --runner /tmp/luau/luau
           python tools/verify_audio.py --runner /tmp/luau/luau
+          python tools/verify_sound_lab.py
           python tools/verify_hatch_sequence.py --runner /tmp/luau/luau
+          python tools/verify_rare_hatch.py --runner /tmp/luau/luau
           python tools/verify_inspect.py --runner /tmp/luau/luau
           python tools/verify_eggs_screen.py --runner /tmp/luau/luau
           python tools/verify_egg_origin.py --runner /tmp/luau/luau
@@ -81,6 +91,7 @@ jobs:
           python tools/verify_class_movement.py --runner /tmp/luau/luau
           python tools/verify_class_picker.py --runner /tmp/luau/luau
           python tools/verify_server_scaling.py --runner /tmp/luau/luau
+          python tools/verify_telemetry.py --runner /tmp/luau/luau
           python tools/generate_sfx.py --check
       - name: Build place
         run: |
