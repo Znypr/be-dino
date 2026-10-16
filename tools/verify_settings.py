@@ -93,8 +93,31 @@ def static_checks():
         errors.append('WeatherVisuals must read the Weather setting')
     if 'SettingsModel' not in read('src/client/CosmeticVisuals.client.luau'):
         errors.append('CosmeticVisuals must read the Effects setting')
+    if 'EffectsLod' not in read('src/client/CosmeticVisuals.client.luau'):
+        errors.append('CosmeticVisuals must use EffectsLod distance LOD (BD-095)')
     return errors
 
+
+LOD_BODY = r'''
+-- BD-095 distance LOD: Full keeps today's behaviour, Lite shrinks the bands, Off keeps only the mutation cue
+assert(L.detail("full", "aura", 10, false, 1, 3) == "full" and L.detail("full", "aura", 10, false, 4, 3) == "lite")
+assert(L.detail("full", "aura", 100, false, 1, 3) == "lite" and L.detail("full", "aura", 181, false, 1, 3) == "none")
+assert(L.detail("full", "aura", 500, true, 99, 3) == "full", "own dino is never culled and keeps full detail")
+assert(L.detail("lite", "aura", 5, false, 1, 3) == "lite" and L.detail("lite", "aura", 81, false, 1, 3) == "none")
+assert(L.detail("lite", "aura", 5, true, 1, 3) == "lite", "Lite never uses the full layer count")
+assert(L.detail("lite", "aura", 5, false, 7, 3) == "none", "Lite caps the number of dinos with effects")
+assert(L.detail("off", "aura", 1, true, 1, 3) == "none" and L.detail("off", "trail", 1, false, 1, 3) == "none")
+assert(L.detail("off", "mutation", 1, false, 1, 3) == "lite" and L.detail("off", "mutation", 61, false, 1, 3) == "none")
+assert(L.detail("bogus", "aura", 10, false, 1, 3) == "full", "unknown mode reads as Full")
+assert(L.visible("full", 100, false, 1) and not L.visible("full", 200, false, 1) and L.visible("off", 10, false, 1) and not L.visible("off", 70, false, 1))
+-- Lite never costs more than Full at any distance (monotonic)
+local rank = {none = 0, lite = 1, full = 2}
+for d = 0, 220, 5 do for r = 1, 14 do for _, own in {true, false} do
+    assert(rank[L.detail("lite", "aura", d, own, r, 3)] <= rank[L.detail("full", "aura", d, own, r, 3)])
+    assert(rank[L.detail("off", "aura", d, own, r, 3)] <= rank[L.detail("lite", "aura", d, own, r, 3)])
+end end end
+print("Effects LOD checks passed: bands, caps, own dino, Off mutation cue, monotonic")
+'''
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -112,3 +135,11 @@ if __name__ == '__main__':
         if result.returncode or 'passed' not in result.stdout or problems:
             print(result.stderr)
             raise SystemExit(result.returncode or 1)
+        lod = '(function()' + chr(10) + (ROOT / 'src/shared/EffectsLod.luau').read_text(encoding='utf-8') + chr(10) + 'end)()'
+        lpath = Path(tmp) / 'lod.luau'
+        lpath.write_text('local L=' + lod + chr(10) + LOD_BODY, encoding='utf-8')
+        lres = subprocess.run([args.runner, str(lpath)], capture_output=True, text=True, encoding='utf-8')
+        print(lres.stdout, end='')
+        if lres.returncode or 'passed' not in lres.stdout:
+            print(lres.stderr)
+            raise SystemExit(lres.returncode or 1)

@@ -12,6 +12,8 @@ local Shiny=require(Shared.ShinyEffects)
 local Look=require(Shared.MutationLook)
 local Recipes=require(Shared.FxRecipes)
 local Rig=require(script.Parent.FxRig)
+local Lod=require(Shared.EffectsLod) -- BD-095 distance LOD
+local Settings=require(Shared.SettingsModel)
 local function destroy(state)
     for _,rig in state.rigs do rig:destroy() end
     if state.glints then state.glints.Destroy() end
@@ -43,7 +45,8 @@ RunService.Heartbeat:Connect(function(dt)
     for _,player in players do
         local character=player.Character
         local root=if character then character:FindFirstChild("HumanoidRootPart") else nil
-        if root and root:IsA("BasePart") and camera and distance[player]<180 and count<12 then
+        local own=player==Players.LocalPlayer
+        if root and root:IsA("BasePart") and camera and Lod.visible(Settings.effects(),distance[player],own,count+1) then
             count+=1 keep[player]=true
             local auraId=character:GetAttribute("EquippedAuraId") or ""
             local trailId=character:GetAttribute("EquippedTrailId") or ""
@@ -51,8 +54,8 @@ RunService.Heartbeat:Connect(function(dt)
             local shiny=character:GetAttribute("ShinyDinosaur")==true
             local visual=character:FindFirstChild("LocalMeshVisual") or character:FindFirstChild("DinoVisual")
             local scale=character:GetAttribute("VisualScale") or 1
-            local mode=require(Shared.SettingsModel).effects() -- BD-265: Settings Effects Full / Lite / Off
-            local detail=if mode=="full" and (player==Players.LocalPlayer or (distance[player]<=25 and count<=fullDinos)) then "full" else "lite"
+            local mode=Settings.effects() -- BD-265: Settings Effects Full / Lite / Off
+            local detail=Lod.detail(mode,"mutation",distance[player],own,count,fullDinos) -- never "none" here: visible() passed; Off drops aura/trail in add()
             local state=states[player]
             if not state or state.root~=root or state.auraId~=auraId or state.trailId~=trailId or state.mutationId~=mutationId or state.shiny~=shiny or state.visual~=visual or state.motion~=Theme.MotionEnabled or state.detail~=detail or state.mode~=mode then
                 if state then destroy(state) end

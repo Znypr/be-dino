@@ -3,9 +3,14 @@ from pathlib import Path
 import unittest,xml.etree.ElementTree as ET
 from PIL import Image
 ROOT=Path(__file__).resolve().parents[1]
+def _generated_place():
+  """Current place built in memory (the current build file is no longer tracked)."""
+  import importlib.util
+  spec=importlib.util.spec_from_file_location("packager",ROOT/"tools/build.py");mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+  return mod.build()[0]
 class DeliveryTests(unittest.TestCase):
  def test_catalog_native_models_packaged_with_colours_and_noncolliding_geometry(self):
-  root=ET.parse(ROOT/('build/BeDino-Build'+__import__('re').search(r'Build = "redesign-(\d+)"',(ROOT/'src/shared/Config.luau').read_text()).group(1)+'.rbxlx')).getroot()
+  root=ET.fromstring(_generated_place())
   resources=next(i for i in root.iter('Item') if i.find("Properties/string[@name='Name']") is not None and i.find("Properties/string[@name='Name']").text=='Resources')
   models=[m for m in resources.findall('Item') if m.find("Properties/string[@name='Name']").text!='GeneSurfaces'];self.assertEqual(len(models),13)
   for model in models:

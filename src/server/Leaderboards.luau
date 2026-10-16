@@ -6,6 +6,8 @@ local Config=require(game:GetService("ReplicatedStorage").Shared.Config)
 local Theme=require(game:GetService("ReplicatedStorage").Shared.UITheme)
 local CaveHubLayout=require(game:GetService("ReplicatedStorage").Shared.CaveHubLayout)
 local PrivateState=require(script.Parent.PrivateState)
+local Writes=require(game:GetService("ReplicatedStorage").Shared.LeaderboardWrites) -- BD-362: write only what can change a board
+local writeState=Writes.new()
 local Leaderboards={}
 local preview=RunService:IsStudio() and game.GameId==0
 local rows={}
@@ -21,18 +23,31 @@ local stores={}
 function Leaderboards.publish(player: Player, metrics)
     if not metrics and player:GetAttribute("ProfileState")~="Loaded" then return end
     names[player.UserId]=player.Name
+    local userId,now,force=player.UserId,os.clock(),metrics~=nil -- metrics are passed on leave: write play time then even inside its throttle
+    local pending=0
     for _,definition in definitions do
         local value=if metrics then metrics[definition.id] else PrivateState.get(player,definition.attribute) or 0
         if preview then
             rows[definition.id]=rows[definition.id] or {}
-            rows[definition.id][player.UserId]=value
-        else
-            local ok,err=pcall(function()
-                stores[definition.id]:UpdateAsync(tostring(player.UserId),function(old) return math.max(old or 0,value) end)
+            rows[definition.id][userId]=value
+        elseif Writes.shouldWrite(writeState,definition.id,userId,value,now,force) then
+            Writes.begin(writeState,definition.id,userId,now)
+            pending+=1
+            -- the three boards write in parallel (a leave used to wait for three sequential UpdateAsync calls)
+            task.spawn(function()
+                local ok,err=pcall(function()
+                    stores[definition.id]:UpdateAsync(tostring(userId),function(old) return math.max(old or 0,value) end)
+                end)
+                if ok then Writes.succeeded(writeState,definition.id,userId,value)
+                else warn("[Be Dino] leaderboard publish failed: "..tostring(err)) end
+                pending-=1
             end)
-            if not ok then warn("[Be Dino] leaderboard publish failed: "..tostring(err)) end
         end
     end
+    -- Wait for this call's writes so LeaveCoordinator still awaits them (bounded: UpdateAsync itself times out).
+    local waited=0
+    while pending>0 and waited<30 do task.wait(0.1) waited+=0.1 end
+    if force and pending==0 then Writes.forget(writeState,userId) end
 end
 local function displayValue(id: string,value: number): string
     if id=="rarest" then return Config.SpeciesRarityNames[value] or "Not ranked" end
