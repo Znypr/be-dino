@@ -67,7 +67,7 @@ def static_checks():
         if 'Instance.new("Sound")' in text and 'attach(' not in text:
             errors.append('%s creates a Sound without AudioMixer.attach' % path.relative_to(ROOT))
     boot = read('src/client/Bootstrap.client.luau')
-    if 'VolumeSliders' not in boot or 'AudioMixer' not in boot:
+    if 'SettingsMenu' not in boot or 'VolumeSliders' not in read('src/client/SettingsMenu.luau') or 'AudioMixer' not in read('src/client/SettingsMenu.luau'):
         errors.append('Settings must show the volume sliders')
     if boot.count('Sfx.playCue("run_end")') != 1 or boot.count('Sfx.playCue("level_up")') < 2 or 'Sfx.play("run_end")' in boot or 'Sfx.play("level_up")' in boot:
         errors.append('BD-258: run_end and level_up must go through Sfx.playCue (one reward cue at a time)')
