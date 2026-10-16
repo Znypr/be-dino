@@ -75,3 +75,20 @@ Note: the older fx-v2 smoke, spark and flame sheets are superseded by the upload
 4. Polish and P2 rows last.
 
 After each upload: the lead records ids in docs/77, binds, runs the matching verifier, takes a desktop and phone Studio screenshot next to neighbouring UI, then moves the BD rows to Review / test ([109](109-owner-art-prompt-pack.md) section 7).
+
+## 6. Sounds still to pick or upload (BD-081, [124](124-sound-style-guide.md))
+
+Audio is uploaded by the owner as **Audio** in Asset Manager (never invent ids); the lab in Settings > SOUND > SOUND LAB lists every registered sound so you can judge by ear. Missing sounds, per category (details and targets in 122 section 3):
+
+| Sound | BD | Bound in code | Status |
+|---|---|---|---|
+| Rare-hatch fanfare (2-3 s, huge but soft celebration) | BD-428 (no Kanban row yet) | new `Sfx.Sounds` entry | missing |
+| 7 mutation reveal sounds (dewdrop, charged, frost, seismic, ember, aurora, bloodmoon) | BD-162 | new `Sfx.Sounds` entries | missing |
+| Defeat soft sound, Peaceful confirm tick | BD-081 | new `Sfx.Sounds` entries | missing |
+| Cave ambience loop (cosy, no weather) | BD-081 | new ambience entry | missing |
+| 11 weather beds and accents | BD-132 | `WeatherSounds.Sounds` (ids are empty) | missing |
+| 5 distinct hatch reveal stings (common..legendary share assets today) | BD-081 | `Sfx.Sounds` hatch_reveal_* | placeholder |
+| `hatch_burst`, `hatch_rattle`, Cracked failure | BD-081, BD-341 | `Sfx.Sounds` | silent |
+| Shiny sparkle and BIG thump variants (wire BD-340) | BD-340 | `shiny_bang`, `big_thud` | placeholder, no call site |
+| Crystal and nest-opened cues | BD-342 | alias today | reuses existing |
+| Softer pickups and UI clicks (3 variants each) | BD-081 | `pickup*`, `ui_click` | placeholder, above target |
