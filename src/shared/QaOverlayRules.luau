@@ -1,5 +1,5 @@
 --!strict
--- BD-085 / BD-322 phone QA kit (docs/124). Pure rules for the owner-only QA overlay: who may see it, the tour step labels,
+-- BD-085 / BD-322 phone QA kit (docs/127). Pure rules for the owner-only QA overlay: who may see it, the tour step labels,
 -- and the validation of a client snapshot before the server prints it as a [BD-QA] line. No Roblox services here.
 -- The overlay changes no gameplay; it is OFF in every committed build (Config.QaOverlayEnabled, pinned by release_profiles.py).
 local Rules = {}
@@ -8,7 +8,7 @@ Rules.LogTag = "[BD-QA]"
 Rules.MaxLabel = 40
 Rules.MinSecondsBetweenMarks = 0.5
 
--- Tour steps in the order of docs/124 section 3. The overlay's "Step" button cycles through these; "Mark" logs the current one.
+-- Tour steps in the order of docs/127 section 3. The overlay's "Step" button cycles through these; "Mark" logs the current one.
 Rules.Steps = table.freeze({
     "start_hub", "run_start", "food_field", "egg_reveal_15", "rare_hatch", "goals_panel", "peaceful_button",
     "settings", "sound_lab", "class_picker", "shops", "end",

@@ -1,5 +1,5 @@
 --!strict
--- BD-085 / BD-322 phone QA kit (docs/124). Owner-only: the client QA overlay sends a labelled snapshot and the server prints it as
+-- BD-085 / BD-322 phone QA kit (docs/127). Owner-only: the client QA overlay sends a labelled snapshot and the server prints it as
 -- ONE "[BD-QA] {json}" line (tools/qa/phone_report.py turns those lines into a table). Authorization is re-checked here; the
 -- client overlay grants nothing. Does nothing at all (no remote, no attribute) while Config.QaOverlayEnabled is false (the default).
 -- Never touches profiles, rewards or gameplay.

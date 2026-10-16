@@ -1,11 +1,11 @@
-"""BD-085 / BD-322 phone QA report (docs/124).
+"""BD-085 / BD-322 phone QA report (docs/127).
 
 Turns the "[BD-QA] {json}" lines that the owner-only QA overlay (src/client/QaOverlay.client.luau, src/server/QaService.luau) prints
 into a table against the phone budgets of docs/107 section 1 and the FX ceilings of docs/123 / EffectsLod.
 
 Usage:
   python tools/qa/phone_report.py server.log            # a Roblox Studio / server log, or any text containing [BD-QA] lines
-  python tools/qa/phone_report.py server.log --md       # markdown table (paste into docs/124 section 6 or the PR)
+  python tools/qa/phone_report.py server.log --md       # markdown table (paste into docs/127 section 6 or the PR)
   python tools/qa/phone_report.py --selftest            # runs on an embedded sample (CI)
 Exit code is 0 unless --strict is given and a mark is OVER budget. A budget miss is a finding, not a build failure.
 Every budget is a PROVISIONAL planning number (docs/107 s1: "replace them with what BD-085 measures"), not a Roblox limit.
@@ -29,7 +29,7 @@ BUDGETS = [
     ("editableMiB", "EditableImage MiB", 24, "max", "tools/verify_world_budget.py cap (of the 80 MiB engine budget, docs/105)"),
     ("pingMs", "ping ms", 250, "max", "PROVISIONAL assumption, no number in docs/107 (round trip)"),
 ]
-# Marks the tour (docs/124 s3) must produce, in order. Missing ones are listed, never failed.
+# Marks the tour (docs/127 s3) must produce, in order. Missing ones are listed, never failed.
 TOUR = ["start_hub", "run_start", "food_field", "egg_reveal_15", "rare_hatch", "goals_panel", "peaceful_button",
         "settings", "sound_lab", "class_picker", "shops", "end"]
 

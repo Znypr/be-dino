@@ -1,4 +1,4 @@
-"""BD-085 / BD-322 phone QA kit checks (docs/124).
+"""BD-085 / BD-322 phone QA kit checks (docs/127).
 
 Runs src/shared/QaOverlayRules.luau in the pinned Luau runtime (authorization, snapshot validation, rate limit, overlay lines),
 checks the report script selftest, and statically checks the wiring: flag off in Config, no authorization in the client, the server

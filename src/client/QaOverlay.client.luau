@@ -1,5 +1,5 @@
 --!strict
--- BD-085 / BD-322 phone QA overlay (docs/124). Owner-only developer tool: built only when the server marks this player
+-- BD-085 / BD-322 phone QA overlay (docs/127). Owner-only developer tool: built only when the server marks this player
 -- QaOverlay (Config.QaOverlayEnabled plus Studio or an allow-listed UserId; both false/empty in every committed build).
 -- Shows fps, memory, instance/part/particle/light counts, EditableImage budget and ping; "Mark" sends a labelled snapshot that the
 -- server prints as a [BD-QA] json line. Display and logging only: changes no gameplay. Plain Theme styling, not player art (docs/72).

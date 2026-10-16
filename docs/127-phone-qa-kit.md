@@ -1,4 +1,4 @@
-# 124 Phone QA kit (BD-085, BD-322; 2026-10-16)
+# 127 Phone QA kit (BD-085, BD-322; 2026-10-16)
 
 Label: **TOOLING, no measurement yet.** This is the kit that lets the owner measure a real phone in one session; it contains no phone numbers. Budgets are the **PROVISIONAL** planning numbers of [107](107-offline-mobile-budget.md) section 1 and the FX ceilings of [123](123-anime-3d-fx-research-and-plan.md) / `EffectsLod`. It changes no gameplay and touches no profile, reward, nest, cosmetic, combat, hatch, telemetry, cave or goals logic.
 
