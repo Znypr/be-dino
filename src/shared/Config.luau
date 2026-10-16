@@ -255,6 +255,8 @@ return table.freeze({
     -- (or after this many seconds in the hub, so a slow client is never locked out); falls are checked every tick.
     WorldReadyTimeoutSeconds = 20,
     FallRecoveryTickSeconds = 0.2,
+    -- BD-225 spike (docs/77): low-poly generated base dinos (Compy, Raptor, Triceratops). OFF by default; shipped look unchanged.
+    LowPolyDinos = false,
     SecurityTestHarnessEnabled = false,
     ArtTestHarnessEnabled = false,
     ArtPreviewRequestCooldownSeconds = 0.25,

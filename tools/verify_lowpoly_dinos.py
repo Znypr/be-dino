@@ -1,0 +1,84 @@
+"""BD-225/234 spike checks: low-poly dino registry (ids numeric, unique, every flagged species mapped, flag OFF) and the
+pure idle/walk pose function (bounded, deterministic, speed-scaled, Reduce Motion exact rest). Pinned Luau runtime."""
+from pathlib import Path
+import argparse
+import re
+import subprocess
+import tempfile
+ROOT = Path(__file__).resolve().parents[1]
+FLAGGED = ["compy", "raptor", "triceratops"]
+
+
+def registry():
+    text = (ROOT / 'src/shared/LowPolyDinoAssets.luau').read_text(encoding='utf-8')
+    return re.findall(r'(\w+) = \{assetId = (\d+), version = "(v\d+)", scale = ([\d.]+)\}', text)
+
+
+def check_registry():
+    entries = registry()
+    names = [e[0] for e in entries]
+    ids = [e[1] for e in entries]
+    assert sorted(names) == sorted(FLAGGED), f"registry species {names} != {FLAGGED}"
+    assert len(set(ids)) == len(ids), "duplicate asset ids"
+    assert all(i.isdigit() and 10 <= len(i) <= 16 for i in ids), "asset ids must be numeric"
+    assert all(0.5 <= float(e[3]) <= 6 for e in entries), "scale out of range"
+    config = (ROOT / 'src/shared/Config.luau').read_text(encoding='utf-8')
+    assert re.search(r'^\s*LowPolyDinos = false,', config, re.M), "Config.LowPolyDinos must default to false"
+    for name in names:
+        assert re.search(r'\b' + name + r'\b', config), f"{name} is not a game species"
+    return entries
+
+
+BODY = r'''
+local out = P.new()
+local roles = {"body", "head", "tail", "arm", "leg"}
+for _, role in roles do
+    for _, side in {-1, 1} do
+        for _, lead in {true, false} do
+            for step = 0, 600 do
+                local t, phase = step * 0.05, step * 0.13
+                for _, w in {0, 0.3, 1} do
+                    P.sample(role, side, lead, t, phase, w, 1, out)
+                    for k, v in out do assert(v == v and math.abs(v) <= P.MaxAngle, role .. " " .. k) end
+                    assert(math.abs(out.dy) <= P.MaxOffset and math.abs(out.dz) <= P.MaxOffset)
+                    P.sample(role, side, lead, t, phase, w, 0, out)
+                    for k, v in out do assert(v == 0, "reduce motion not rest: " .. role .. " " .. k) end
+                end
+            end
+        end
+    end
+end
+local moved = false
+for i = 0, 200 do P.sample("tail", 1, false, i * 0.1, 0, 0, 1, out) if math.abs(out.yaw) > 0.05 then moved = true end end
+assert(moved, "idle tail sway missing")
+assert(P.stepRate(1) > P.stepRate(0) and P.stepRate(0) > 0 and P.stepRate(2) == P.stepRate(1))
+local l, r = P.new(), P.new()
+P.sample("leg", -1, false, 0, 1.0, 1, 1, l) P.sample("leg", 1, false, 0, 1.0, 1, 1, r)
+assert(math.abs(l.pitch + r.pitch) < 1e-9 and math.abs(l.pitch) > 0.1, "legs must alternate")
+local t1 = P.new()
+P.sample("tail", 1, false, 0, 1.0, 1, 1, t1)
+assert(t1.yaw ~= 0, "tail counter-swings while walking")
+local a, b = P.new(), P.new()
+P.sample("head", 1, true, 3.3, 2.2, 0.7, 1, a) P.sample("head", 1, true, 3.3, 2.2, 0.7, 1, b)
+for k, v in a do assert(v == b[k]) end
+P.sample("head", 1, true, 0/0, 0/0, 0/0, 0/0, a)
+for k, v in a do assert(v == v and v == 0, "nan " .. k) end
+print("lowpoly pose tests passed")
+'''
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--runner', required=True)
+    args = parser.parse_args()
+    entries = check_registry()
+    print(f"low-poly registry ok: {len(entries)} species, flag off")
+    src = 'local P=(function()\n' + (ROOT / 'src/shared/LowPolyPose.luau').read_text(encoding='utf-8') + '\nend)()\n' + BODY
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / 'lowpoly_pose.luau'
+        path.write_text(src, encoding='utf-8')
+        result = subprocess.run([args.runner, str(path)], capture_output=True, text=True, encoding='utf-8')
+        print(result.stdout, end='')
+        if result.returncode or 'passed' not in result.stdout:
+            print(result.stderr)
+            raise SystemExit(result.returncode or 1)
