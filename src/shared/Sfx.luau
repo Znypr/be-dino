@@ -33,6 +33,18 @@ Sfx.Sounds = {
     level_up = {id = "rbxassetid://135894580270926", volume = .4, rate = .95, gap = .5, len = 1.5},
     fusion_reveal = {id = "rbxassetid://90816090310479", volume = .75, rate = 1, gap = .3},
     ui_click = {id = "rbxassetid://77237659470894", volume = .4, rate = 1, gap = .04},
+    rare_hatch_fanfare = {id = "", volume = .6, rate = 1, gap = .3}, -- owner upload slot (docs/120 section 6); silent while empty
+    mutation_dewdrop_reveal = {id = "", volume = .6, rate = 1, gap = .3}, -- owner upload slot (docs/120 section 6); silent while empty
+    mutation_charged_reveal = {id = "", volume = .6, rate = 1, gap = .3}, -- owner upload slot (docs/120 section 6); silent while empty
+    mutation_frost_reveal = {id = "", volume = .6, rate = 1, gap = .3}, -- owner upload slot (docs/120 section 6); silent while empty
+    mutation_seismic_reveal = {id = "", volume = .6, rate = 1, gap = .3}, -- owner upload slot (docs/120 section 6); silent while empty
+    mutation_ember_reveal = {id = "", volume = .6, rate = 1, gap = .3}, -- owner upload slot (docs/120 section 6); silent while empty
+    mutation_aurora_reveal = {id = "", volume = .6, rate = 1, gap = .3}, -- owner upload slot (docs/120 section 6); silent while empty
+    mutation_bloodmoon_reveal = {id = "", volume = .6, rate = 1, gap = .3}, -- owner upload slot (docs/120 section 6); silent while empty
+    defeat_soft = {id = "", volume = .6, rate = 1, gap = .3}, -- owner upload slot (docs/120 section 6); silent while empty
+    cracked_fail = {id = "", volume = .6, rate = 1, gap = .3}, -- owner upload slot (docs/120 section 6); silent while empty
+    crystal_cue = {id = "", volume = .6, rate = 1, gap = .3}, -- owner upload slot (docs/120 section 6); silent while empty
+    nest_open_cue = {id = "", volume = .6, rate = 1, gap = .3}, -- owner upload slot (docs/120 section 6); silent while empty
 }
 Sfx.Master = .5 -- global gain; synthesized placeholder sounds were far too loud (owner, 2026-10-15)
 Sfx.PoolSize = 3

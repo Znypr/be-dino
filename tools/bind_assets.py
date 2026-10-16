@@ -1,0 +1,196 @@
+"""Bind owner uploads: paste 'name=rbxassetid' lines (or a small JSON) and the ids land in the right config keys.
+
+    python tools/bind_assets.py ids.txt          # file with lines  name=rbxassetid://123  or  name: 123
+    python tools/bind_assets.py - < ids.txt       # same, from stdin
+    python tools/bind_assets.py ids.json          # {"ribbonSoft": "rbxassetid://123", "trail_fern": 456}
+    python tools/bind_assets.py --list            # every slot name, kind and whether it is bound
+    python tools/bind_assets.py --dry-run ids.txt # validate and show, write nothing
+
+Slots come from tools/asset_slots.json (checked against docs/120 by tools/verify_asset_slots.py). Unknown names, malformed
+ids and duplicate names are refused and NOTHING is written. Ids are never invented: empty values are refused too.
+Audio ids must be Audio uploads, images must be Image (not Decal) uploads (docs/120 upload flow).
+"""
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+MANIFEST = ROOT / 'tools/asset_slots.json'
+ID_RE = re.compile(r'^(?:rbxassetid://)?([1-9][0-9]{4,18})$')
+
+
+def load_slots():
+    return {s['name']: s for s in json.loads(MANIFEST.read_text(encoding='utf-8'))['slots']}
+
+
+def parse_id(raw):
+    m = ID_RE.match(str(raw).strip())
+    if not m:
+        raise ValueError(f'not a Roblox asset id: {raw!r} (expected rbxassetid://12345 or digits)')
+    return m.group(1)
+
+
+def parse_input(text):
+    text = text.strip()
+    pairs = []
+    if text.startswith('{'):
+        data = json.loads(text)
+        if not isinstance(data, dict):
+            raise ValueError('JSON must be an object of name: id')
+        pairs = [(k, v) for k, v in data.items()]
+    else:
+        for n, line in enumerate(text.splitlines(), 1):
+            line = line.split('#', 1)[0].strip()
+            if not line:
+                continue
+            m = re.match(r'^([A-Za-z0-9_.]+)\s*[=:]\s*(.+)$', line)
+            if not m:
+                raise ValueError(f'line {n}: expected name=rbxassetid://N, got {line!r}')
+            pairs.append((m.group(1), m.group(2)))
+    seen = set()
+    for name, _ in pairs:
+        if name in seen:
+            raise ValueError(f'duplicate name: {name}')
+        seen.add(name)
+    return pairs
+
+
+def rep_one(text, pattern, value, what):
+    new, count = re.subn(pattern, lambda m: m.group(1) + value + m.group(3), text, count=1)
+    if count != 1:
+        raise ValueError(f'slot line not found for {what}')
+    return new
+
+
+def current_value(slot, text):
+    """The id currently written for a slot ('' when empty/unbound)."""
+    key = re.escape(slot['key'])
+    target = slot['target']
+    if target in ('effect', 'sfx'):
+        m = re.search(rf'\n\s+{key} = \{{id = "([^"]*)"', text)
+    elif target == 'weather':
+        m = re.search(rf'\n\s+{key}=\{{id="([^"]*)"', text)
+    elif target == 'slot':
+        m = re.search(rf'\n\s+{key} = "([^"]*)",', text)
+    elif target == 'cavebed':
+        m = re.search(r'Rules\.Bed = \{id = "([^"]*)"', text)
+    elif target == 'hatchbucket':
+        m = re.search(r'bucket = \{assetId = "([^"]*)"', text)
+        return m.group(1) if m and slot_is_bound_bucket(text) else ''
+    elif target == 'table':
+        block = table_block(text, slot['table'])
+        m = re.search(rf'\n\s+{key} = "([^"]*)",', block)
+    else:
+        raise ValueError(f'unknown target {target}')
+    return m.group(1) if m else ''
+
+
+def slot_is_bound_bucket(text):
+    return 'Assets.Placeholder = {bucket = false}' in text
+
+
+def table_block(text, table):
+    m = re.search(rf'-- bind:begin {table}[^\n]*\n(.*?)[ \t]*-- bind:end {table}', text, re.S)
+    if not m:
+        raise ValueError(f'bind markers for {table} not found')
+    return '\n' + m.group(1)
+
+
+def write_slot(slot, text, digits):
+    key = re.escape(slot['key'])
+    target = slot['target']
+    uri = f'rbxassetid://{digits}'
+    if target in ('effect', 'sfx'):
+        return rep_one(text, rf'(\n\s+{key} = \{{id = ")([^"]*)(")', uri, slot['name'])
+    if target == 'weather':
+        return rep_one(text, rf'(\n\s+{key}=\{{id=")([^"]*)(")', uri, slot['name'])
+    if target == 'slot':
+        new, count = re.subn(rf'(\n\s+{key} = ")[^"]*(",)', lambda m: m.group(1) + uri + m.group(2), text, count=1)
+        if count != 1:
+            raise ValueError(f'slot line not found for {slot["name"]}')
+        return new
+    if target == 'cavebed':
+        return rep_one(text, r'(Rules\.Bed = \{id = ")([^"]*)(")', uri, slot['name'])
+    if target == 'hatchbucket':
+        text = rep_one(text, r'(bucket = \{assetId = ")([^"]*)(")', digits, slot['name'])
+        return text.replace('Assets.Placeholder = {bucket = true}', 'Assets.Placeholder = {bucket = false}')
+    if target == 'table':
+        table = slot['table']
+        pat = re.compile(rf'(-- bind:begin {table}[^\n]*\n)(.*?)([ \t]*)(-- bind:end {table})', re.S)
+        m = pat.search(text)
+        if not m:
+            raise ValueError(f'bind markers for {table} not found')
+        indent = m.group(3)
+        lines = [l for l in m.group(2).split('\n') if l.strip()]
+        lines = [l for l in lines if not re.match(rf'\s*{key} = ', l)]
+        lines.append(f'{indent}{slot["key"]} = "{uri}",')
+        lines.sort(key=lambda l: l.strip())
+        return text[:m.start(2)] + '\n'.join(lines) + '\n' + text[m.start(3):]
+    raise ValueError(f'unknown target {target}')
+
+
+def bind(pairs, slots):
+    errors, plan = [], {}
+    for name, raw in pairs:
+        if name not in slots:
+            errors.append(f'unknown name {name!r} (run --list; refusing to guess)')
+            continue
+        try:
+            plan[name] = parse_id(raw)
+        except ValueError as e:
+            errors.append(f'{name}: {e}')
+    if errors:
+        raise ValueError('\n'.join(errors))
+    texts = {}
+    for name, digits in plan.items():
+        slot = slots[name]
+        path = ROOT / slot['file']
+        if path not in texts:
+            texts[path] = path.read_text(encoding='utf-8')
+        texts[path] = write_slot(slot, texts[path], digits)
+    return plan, texts
+
+
+def list_slots(slots):
+    bound = 0
+    for name, slot in slots.items():
+        text = (ROOT / slot['file']).read_text(encoding='utf-8')
+        value = current_value(slot, text)
+        bound += bool(value)
+        print(f'{"BOUND  " if value else "pending"} {name:32s} {slot["kind"]:6s} {slot["file"]}:{slot["group"]}')
+    print(f'{bound}/{len(slots)} bound')
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('input', nargs='?', help="file of name=id lines or JSON, or '-' for stdin")
+    ap.add_argument('--list', action='store_true')
+    ap.add_argument('--dry-run', action='store_true')
+    args = ap.parse_args(argv)
+    slots = load_slots()
+    if args.list:
+        list_slots(slots)
+        return 0
+    if not args.input:
+        ap.error('give an input file (or - for stdin), or --list')
+    raw = sys.stdin.read() if args.input == '-' else Path(args.input).read_text(encoding='utf-8')
+    try:
+        plan, texts = bind(parse_input(raw), slots)
+    except ValueError as e:
+        print('REFUSED, nothing written:\n' + str(e), file=sys.stderr)
+        return 1
+    for name, digits in plan.items():
+        print(f'{name} -> rbxassetid://{digits}  ({slots[name]["file"]}:{slots[name]["group"]})')
+    if args.dry_run:
+        print('dry run: nothing written')
+        return 0
+    for path, text in texts.items():
+        path.write_text(text, encoding='utf-8', newline='')
+    print(f'{len(plan)} id(s) written. Now: add the docs/77 lines, run python tools/verify_asset_slots.py, then the matching verifier and a Studio check.')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

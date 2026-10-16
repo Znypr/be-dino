@@ -31,7 +31,9 @@ Theme.Colors = {panel=Color3.fromRGB(42,40,53),card=Color3.fromRGB(61,58,73),out
 -- rank 1..5 (Config.SpeciesRarityNames); keyed by name too for potion rarity strings.
 Theme.RarityColors = {Color3.fromRGB(128,142,158),Theme.Colors.accent,Theme.Colors.blue,Theme.Colors.purple,Theme.Colors.gold,Theme.Colors.red}
 for index, name in {"Common","Uncommon","Rare","Epic","Legendary","Mythic"} do Theme.RarityColors[name] = Theme.RarityColors[index] end
-Theme.ImageIds = require(script.Parent.UIIconAssets)
+Theme.ImageIds = table.clone(require(script.Parent.UIIconAssets))
+-- Pending owner icons (docs/120): AssetSlots.Images, "" until bound with tools/bind_assets.py. Empty ids are skipped, so every reader keeps its native fallback.
+for name, id in require(script.Parent.AssetSlots).Images do if id ~= "" and Theme.ImageIds[name] == nil then Theme.ImageIds[name] = id end end
 Theme.TextStyle = require(script.Parent.TextStyle) -- BD-390: readable text (light fill + dark stroke 2..3), use Theme.TextStyle.apply(label)
 function Theme.imageContent(_id: string): Content? return nil end
 function Theme.decorate(object: GuiObject, radius: number)
