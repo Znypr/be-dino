@@ -73,6 +73,7 @@ require(script.Parent.ProgressionService).start(ProfileRepository)
 require(script.Parent.FusionService).start(ProfileRepository)
 workspace.Gravity=require(game:GetService("ReplicatedStorage").Shared.Config).Gravity
 require(script.Parent.LeapService).start()
+require(script.Parent.HubTravelService).start() -- BD-287: creates the HubTravel remote only while Config.CaveHub is true
 game:GetService("MarketplaceService").ProcessReceipt=function(receipt)
     local player=Players:GetPlayerByUserId(receipt.PlayerId)
     if player and ProfileRepository.purchase(player,receipt) then
