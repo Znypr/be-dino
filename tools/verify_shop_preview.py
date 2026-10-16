@@ -82,8 +82,8 @@ def static_text_sizes():
     # The ScreenGui has no size when the grid is built, so the card size must come from the camera viewport.
     if 'CurrentCamera' not in menu or 'AbsoluteSize.Y < 520' in menu:
         bad.append('Fusion dino grid sizing must read workspace.CurrentCamera.ViewportSize')
-    if '40 * math.ceil(sectionCount / 3)' not in menu:
-        bad.append('confirm-screen odds chips frame must be 40 px per row (36 px cell + 4 px gap)')
+    if 'Sel.sectionHeight(#section.chips' not in menu:
+        bad.append('confirm-screen odds sections must be sized by Sel.sectionHeight (BD-344: heading + wrapped chip rows)')
     return bad
 
 

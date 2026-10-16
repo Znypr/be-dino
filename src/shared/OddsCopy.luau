@@ -101,6 +101,12 @@ function Copy.upgradeGroups(newLevel: number)
     return {Copy.conditionGroup(newLevel)}
 end
 
+-- BD-347 (paid-random policy, AGENTS.md): fusion is odds-first and costs no real money in this version. These are plain
+-- lines for the Fusion Menu: a calm one-liner beside FUSE and a details line in the odds panel. If Robux-linked donors or a
+-- paid fusion ever ship, the server gate (random_items_unavailable) stays and this wording must be revisited first.
+Copy.fusionCalm = "Odds are shown before you fuse"
+Copy.fusionDetails = "Fusion uses no real money in this version. The chances above are exact and are shown before you fuse."
+
 function Copy.notes(isEgg: boolean): {string}
     local notes = {"Each egg is a fresh roll. Past eggs do not change the next one."}
     if isEgg then table.insert(notes, "Shop eggs never have Shiny or event looks.") end

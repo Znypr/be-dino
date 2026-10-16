@@ -4,6 +4,7 @@ local Theme = require(game:GetService("ReplicatedStorage").Shared.UITheme)
 local Appearance = require(game:GetService("ReplicatedStorage").Shared.EggAppearance)
 local MutationLook = require(game:GetService("ReplicatedStorage").Shared.MutationLook)
 local FxUi = require(game:GetService("ReplicatedStorage").Shared.FxUi)
+local Preview = require(game:GetService("ReplicatedStorage").Shared.DinosaurPreview)
 local PreviewTraits = {}
 -- BD-155: soft mutation cue shared by every preview. A small round badge in the mutation colour (top-left) with a
 -- gentle rim; dinosaur models also get the soft body tint from MutationLook. Eggs get the colour hint only (the shell
@@ -35,7 +36,18 @@ end
 -- isEgg = true only for egg previews (BD-174: the egg condition overlay is never drawn on a dinosaur).
 function PreviewTraits.add(view: ViewportFrame, traits, isEgg: boolean?)
     if traits then view:SetAttribute("TraitsJson",game:GetService("HttpService"):JSONEncode(traits)) end
-    if traits and traits.genes then Appearance.apply(view,traits.genes,isEgg==true) end
+    if traits and traits.genes then
+        -- BD-345: the preview may already hold its model (low-poly species load at once): tint THAT model so the genes bake
+        -- under a fused tier; a legacy fused model keeps a 30% tier colour pull. Eggs and base legacy dinos use the old path.
+        local world = view:FindFirstChildOfClass("WorldModel")
+        local lowPoly = nil
+        if world and isEgg ~= true then
+            for _, child in world:GetChildren() do if child:GetAttribute("LowPoly") == true then lowPoly = child end end
+        end
+        Appearance.apply(lowPoly or view, traits.genes, isEgg == true)
+        local tier = view:GetAttribute("PreviewTier")
+        if not lowPoly and type(tier) == "string" and isEgg ~= true then Preview.tierBlend(view, tier) end
+    end
     if traits and traits.mutationId and traits.mutationId ~= "" then PreviewTraits.mutation(view, traits.mutationId, isEgg == true) end
     if not traits or not (traits.shiny or traits.big) then return end
     local badge = Instance.new("TextLabel")

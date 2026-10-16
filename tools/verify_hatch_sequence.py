@@ -344,7 +344,7 @@ def check_wiring():
     assert 'Theme.ImageIds.egg or shellImage' in pres, 'the plain Blender egg image is the starting egg'
     # BD-174: condition overlay only for eggs.
     assert 'showCondition==true' in appearance and 'Overlays.apply(shell,genes.conditionId)' in appearance
-    assert 'Appearance.apply(view,traits.genes,isEgg==true)' in traits
+    assert 'Appearance.apply(lowPoly or view, traits.genes, isEgg == true)' in traits  # BD-345: a held low-poly model is tinted directly; eggs stay on the view path
     calls = {}
     for path in ('src/client/Bootstrap.client.luau', 'src/client/EggsScreen.luau', 'src/client/PreviewTraits.luau', 'src/client/ResourceVisuals.client.luau',
                  'src/shared/DinosaurPreview.luau', 'src/shared/HatchPresentation.luau'):
@@ -358,7 +358,7 @@ def check_wiring():
             if path in egg_files:
                 assert arg.endswith(',true') or arg.endswith('true'), f'egg call must pass showCondition in {path}: {arg}'
             elif path.endswith('PreviewTraits.luau'):
-                assert 'isEgg==true' in arg
+                assert 'isEgg==true' in arg.replace(' ', '')
             else:
                 assert not arg.endswith('true'), f'dinosaur call must not show the condition in {path}: {arg}'
     assert 'Overlays.describe(genes.conditionId)' in read('src/client/EggPicture.luau'), 'egg cards keep the condition look'
