@@ -1925,6 +1925,118 @@
     "GeneratedMeshes.Props"
    ],
    "pending": "BD-464 step 2 placement"
+  },
+  {
+   "name": "plant_grass_broad_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "plant_grass_broad_v3",
+   "group": "Props.plant_grass_broad_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-463 step 2 placement"
+  },
+  {
+   "name": "plant_grass_arch_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "plant_grass_arch_v3",
+   "group": "Props.plant_grass_arch_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-463 step 2 placement"
+  },
+  {
+   "name": "plant_grass_low_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "plant_grass_low_v3",
+   "group": "Props.plant_grass_low_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-463 step 2 placement"
+  },
+  {
+   "name": "plant_jungle_leaf_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "plant_jungle_leaf_v3",
+   "group": "Props.plant_jungle_leaf_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-463 step 2 placement"
+  },
+  {
+   "name": "plant_flowers_daisy_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "plant_flowers_daisy_v3",
+   "group": "Props.plant_flowers_daisy_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-463 step 2 placement"
+  },
+  {
+   "name": "plant_flowers_yellow_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "plant_flowers_yellow_v3",
+   "group": "Props.plant_flowers_yellow_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-463 step 2 placement"
+  },
+  {
+   "name": "plant_flowers_red_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "plant_flowers_red_v3",
+   "group": "Props.plant_flowers_red_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-463 step 2 placement"
+  },
+  {
+   "name": "plant_fern_arch_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "plant_fern_arch_v3",
+   "group": "Props.plant_fern_arch_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-463 step 2 placement"
   }
  ]
 }

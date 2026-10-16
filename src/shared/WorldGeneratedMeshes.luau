@@ -36,6 +36,8 @@ Generated.Replacements = {
 -- NEW kinds, not replacements: assetId = "" means NOT uploaded yet, nothing is loaded and nothing is placed. Nothing reads these keys for
 -- placement until step 2 (placement grammar plus the net-neutral replacement of small clutter, after the owner uploads and picks).
 -- Pasting an id here only makes ImportedResources load the mesh into ReplicatedStorage.GeneratedWorld; Arena does not place it yet.
+-- BD-463 step 1 (docs/140, docs/120) adds the eight plant_*_v3 kinds (grass tufts, jungle plant, flower clusters, fern) to this table the same way:
+-- empty ids, placed = false, nothing places them until BD-463 step 2 (placement that REPLACES some existing clutter, net-neutral on the phone triangle budget).
 Generated.Props = {
     ground_rock_small_v3 = {assetId = "", placed = false}, -- ground_rock_small_v3.fbx, 68 tris
     ground_rock_medium_v3 = {assetId = "", placed = false}, -- ground_rock_medium_v3.fbx, 278 tris
@@ -45,6 +47,14 @@ Generated.Props = {
     ground_mushrooms_v3 = {assetId = "", placed = false}, -- ground_mushrooms_v3.fbx, 303 tris
     ground_bush_round_v3 = {assetId = "", placed = false}, -- ground_bush_round_v3.fbx, 340 tris
     ground_bush_berry_v3 = {assetId = "", placed = false}, -- ground_bush_berry_v3.fbx, 304 tris
+    plant_grass_broad_v3 = {assetId = "", placed = false}, -- plant_grass_broad_v3.fbx, 120 tris
+    plant_grass_arch_v3 = {assetId = "", placed = false}, -- plant_grass_arch_v3.fbx, 105 tris
+    plant_grass_low_v3 = {assetId = "", placed = false}, -- plant_grass_low_v3.fbx, 90 tris
+    plant_jungle_leaf_v3 = {assetId = "", placed = false}, -- plant_jungle_leaf_v3.fbx, 168 tris
+    plant_flowers_daisy_v3 = {assetId = "", placed = false}, -- plant_flowers_daisy_v3.fbx, 258 tris
+    plant_flowers_yellow_v3 = {assetId = "", placed = false}, -- plant_flowers_yellow_v3.fbx, 201 tris
+    plant_flowers_red_v3 = {assetId = "", placed = false}, -- plant_flowers_red_v3.fbx, 201 tris
+    plant_fern_arch_v3 = {assetId = "", placed = false}, -- plant_fern_arch_v3.fbx, 189 tris
 }
 -- BD-474 (docs/140 "Colossal ancient trees"): colossal ancient trees for the `colossal` placement layer (BiomePlacement.Colossal, 80-140 studs), Blender FBX in
 -- assets/blender/world/fbx_v3/. Today the layer shows the stand-ins (the _l kit models, i.e. the existing generated meshes scaled 3-8x).

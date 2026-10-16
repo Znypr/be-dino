@@ -65,6 +65,44 @@ Props.Existing = {
     landmark_dino_statue = "82545380144820",
 }
 
+-- BD-296 dressing pass (owner 2026-10-16, handbook "ground props connect assets to the terrain" and "a few distinct plant families"): small
+-- plants, rocks and glowing accents that grow out of the cave wall base. Two kinds of layout key, neither a new upload:
+--   Props.Kit = kit meshes already published for the island (WorldKitMeshAssets; real extents in WorldKitData). The server clones the kit
+--     MeshPart (vertex colours, no texture). `tone` multiplies the vertex colours, a little darker so island greens sit in the dim cave.
+--   Props.Slots = a logical prop with an ORDERED source list: the first source that exists wins. A source is a Props.Assets key (published model),
+--     a WorldGeneratedMeshes.Props key that has a non-empty assetId (the BD-464 Blender ground props, upload pending: ids empty today), or a kit
+--     key. The layout row always carries the slot key and the target size, so uploading a BD-464 mesh later only means pasting its id in
+--     WorldGeneratedMeshes.Props: the slot then prefers it and fitFactor scales it to the same box. A slot with no source at all places nothing.
+Props.Kit = {
+    world_fern_a = {tone = {0.84, 0.92, 0.80}}, world_fern_b = {tone = {0.84, 0.92, 0.80}},
+    world_horsetail_a = {tone = {0.86, 0.92, 0.80}}, world_bush_a = {tone = {0.84, 0.90, 0.78}}, world_bush_b = {tone = {0.84, 0.90, 0.78}},
+    world_mushrooms_a = {tone = {1, 1, 1}}, world_boulder_mossy_s = {tone = {0.9, 0.92, 0.88}}, world_boulder_bare_s = {tone = {0.95, 0.9, 0.85}},
+    world_boulder_mossy_m = {tone = {0.9, 0.92, 0.88}},
+}
+Props.Slots = {
+    dress_rock_small = {"ground_rock_small_v3", "world_boulder_bare_s"},
+    dress_rock_mossy = {"ground_rock_mossy_v3", "world_boulder_mossy_s"},
+    dress_rock_medium = {"ground_rock_medium_v3", "world_boulder_mossy_m"},
+    dress_mushrooms = {"ground_mushrooms_v3", "world_mushrooms_a"},
+    dress_bush = {"ground_bush_round_v3", "world_bush_a"},
+    dress_log = {"ground_log_fallen_v3"}, -- no kit stand-in: placed only once the owner uploads it (docs/120)
+    dress_stump = {"ground_stump_roots_v3"}, -- same
+    dress_crystal = {"hub_crystal_s"}, -- the published amber stopgap crystal, used as a small lamp-side glow accent
+}
+-- Glowing accents (no lights: lights are capped at CaveHubLayout.MaxLights): the mesh is shown with this material and a colour multiplier. Neon with
+-- the vertex colours kept (mushrooms) or the flat amber of the shop crystals. To turn a glow off set material = "SmoothPlastic".
+Props.Glow = {
+    dress_mushrooms = {material = "Neon", color = {205, 200, 185}},
+    dress_crystal = {material = "SmoothPlastic", color = {214, 150, 62}}, -- lead Studio check: Neon read as a harsh yellow blob in the dim cave
+}
+-- Ground props sink this fraction of their height into the floor (instead of the flat SINK) so they read as grown into the terrain, not set on it.
+Props.SinkFrac = {
+    dress_rock_small = 0.3, dress_rock_mossy = 0.25, dress_rock_medium = 0.25, dress_log = 0.2, dress_stump = 0.12,
+    dress_mushrooms = 0.12, dress_bush = 0.12, world_fern_a = 0.1, world_fern_b = 0.1, world_horsetail_a = 0.06, dress_crystal = 0.15,
+}
+-- cave_moss_hang placed on a wall jamb (a Rim piece): drapes from this many studs over the floor, facing the wall's own inward direction
+Props.HangBottom = 4.5
+
 -- Layout keys that are deliberately NOT placed as a generated mesh, with the reason (every layout key is either an asset,
 -- an existing mesh, or listed here).
 Props.NotMeshes = {
@@ -105,6 +143,13 @@ Props.Warm = {
     hub_crystal_l = {color = {255, 190, 60}, material = "Plastic"},
 }
 
+-- Lead Studio check 2026-10-17: the generated moss curtains read as pale yellow blocks and the round boulder as a glowing white rock
+-- under the warm lamps. Same flat-recolour mechanism as Warm, but not red-brown: moss green and warm grey (no new ids).
+Props.Tone = {
+    cave_moss_hang = {color = {78, 108, 58}, material = "SmoothPlastic"},
+    cave_rock_round = {color = {112, 100, 88}, material = "Slate"},
+}
+
 -- BD-292: the sign meshes that carry station text (a SurfaceGui built from HubSignCopy, front face only). `face` is the mesh's
 -- front face name; `inset` shrinks the text box (fraction of the face) so words stay on the board.
 Props.SignText = {
@@ -137,6 +182,29 @@ function Props.assetId(key: string): string?
     if a and not (Props.NotMeshes :: any)[key] then return a.id end
     if (Props.NotMeshes :: any)[key] then return nil end
     return (Props.Existing :: any)[key]
+end
+
+-- Pure source resolution for a layout key (the server passes in what it has): {kind = "asset" | "generated" | "kit", key, id?} or nil.
+-- `generatedIds` = WorldGeneratedMeshes.Props (key -> {assetId}); `kitKeys` = set of kit keys that have a mesh binding (WorldKitMeshAssets).
+function Props.sourceFor(key: string, generatedIds: any, kitKeys: any): any
+    local slot = (Props.Slots :: any)[key]
+    if not slot then
+        if (Props.Kit :: any)[key] then
+            if kitKeys[key] then return {kind = "kit", key = key} end
+            return nil
+        end
+        local id = Props.assetId(key)
+        if id then return {kind = "asset", key = key, id = id} end
+        return nil
+    end
+    for _, src in slot do
+        local a = (Props.Assets :: any)[src]
+        if a then return {kind = "asset", key = src, id = a.id} end
+        local g = generatedIds[src]
+        if g and g.assetId ~= "" then return {kind = "generated", key = src, id = g.assetId} end
+        if (Props.Kit :: any)[src] and kitKeys[src] then return {kind = "kit", key = src} end
+    end
+    return nil
 end
 
 return Props

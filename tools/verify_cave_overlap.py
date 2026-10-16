@@ -119,8 +119,23 @@ def check(runner, report=False):
                 errors.append('%s (%.1f,%.1f) overlaps pad %s' % (a['key'], a['x'], a['z'], sid))
         if obb_point_dist(a, px, pz) < pr + 4:
             errors.append('%s (%.1f,%.1f) overlaps the lava basin / fence' % (a['key'], a['x'], a['z']))
+    # BD-296 dressing pass (clear lanes): EVERY dress footprint, clutter included (ferns, mushrooms, moss clumps, crystals), stays off the walking
+    # lanes: off every path, off every pad, away from the lava basin and out of the gate lane. Wall-hung vines are not floor footprints.
+    dress = [p for p in props if p['owner'] == 'dress']
+    gate = stations['gate']
+    for a in dress:
+        for sg in paths:
+            if seg_dist_box(a, sg) < sg['half'] + 0.3:
+                errors.append('dress %s (%.1f,%.1f) on path %s' % (a['key'], a['x'], a['z'], sg['id']))
+        for sid, (sx, sz, sr) in stations.items():
+            if obb_point_dist(a, sx, sz) < sr:
+                errors.append('dress %s (%.1f,%.1f) on pad %s' % (a['key'], a['x'], a['z'], sid))
+        if obb_point_dist(a, px, pz) < pr + 3:
+            errors.append('dress %s (%.1f,%.1f) in the lava basin zone' % (a['key'], a['x'], a['z']))
+        if a['z'] < gate[1] - 16 and abs(a['x']) < 24:
+            errors.append('dress %s (%.1f,%.1f) in the gate lane' % (a['key'], a['x'], a['z']))
     if report:
-        print('solid props %d, clutter %d, paths %d' % (len(solid), len(props) - len(solid), len(paths)))
+        print('solid props %d, clutter %d, paths %d, dress footprints %d' % (len(solid), len(props) - len(solid), len(paths), len(dress)))
     return errors, len(props)
 
 
