@@ -116,7 +116,7 @@ Run in the same Local Server with 2 clients (and a 3rd for assists). Read `LastB
 3. **Defeat settles once.** A defeats B. B's run ends once (`LastRunEndReason = Defeated`, one `LastSettledRunId`), B keeps its eggs; A gets no eggs from B.
 4. **Friend shield.** B respawns and starts again; B is protected for the shield time; A's bites during it return `no_target`.
 5. **Team-up assist.** A, C bite B together; both get the small growth bonus once, capped.
-6. **Peaceful mode.** Turn Peaceful on in B's Settings: A cannot bite B (`no_target`), and B cannot bite.
+6. ~~**Peaceful mode.** Turn Peaceful on in B's Settings: A cannot bite B (`no_target`), and B cannot bite.~~ REMOVED 2026-10-16 (owner correction, docs/115): there is no Peaceful; skip this step.
 7. **Leave mid-fight.** B closes its window while being bitten: one settlement, no error in Output, A's `HpByte`/target logic keeps working.
 8. **Bandwidth.** In A's F9 > Network, note Data Receive KB/s while 4 players fight: write it down (the docs/107 estimate is 2 KB/s).
 

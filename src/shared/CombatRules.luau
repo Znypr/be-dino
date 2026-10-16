@@ -71,7 +71,7 @@ function Rules.recordDefeat(world: any, userId: any, now: any)
     end
 end
 
--- opts = {userId, runId, class, score, now, peaceful, protectedUntil}. Returns the dino (existing one for a repeat join)
+-- opts = {userId, runId, class, score, now, protectedUntil}. Returns the dino (existing one for a repeat join)
 -- or nil while the flag is off.
 function Rules.join(world: any, opts: any): any
     if not world.enabled or typeof(opts) ~= "table" then return nil end
@@ -85,7 +85,6 @@ function Rules.join(world: any, opts: any): any
     local dino = {
         key = key, userId = opts.userId, runId = opts.runId, class = class, score = score, s = s,
         state = State.new(Stats.maxHp(class, s)),
-        peaceful = opts.peaceful == true,
         protectedUntil = num(opts.protectedUntil, 0) + Rules.shieldSeconds(world, opts.userId, now),
         lastBiteAt = -1e9, ledger = TeamUp.newLedger(), defeatedBy = nil,
         hpSentByte = -1, hpSentAt = -1e9,
@@ -140,14 +139,14 @@ local function allowRequest(world: any, key: string, now: number): boolean
 end
 
 -- Assist bonus on a defeat (docs/101 s5-s6): a whole-number pool capped at BonusCapFraction of the victim's score,
--- split by damage share among assisters, then the repeat-pair limiter; Peaceful dinos get nothing. {[key] = growth}.
+-- split by damage share among assisters, then the repeat-pair limiter. {[key] = growth}.
 function Rules.assistBonuses(world: any, victim: any, now: number): any
     local assisters = TeamUp.assisters(victim.ledger, victim.state.maxHp, now)
     local parts = TeamUp.split(TeamUp.bonusPool(victim.score), assisters)
     local factors = {}
     for key in parts do
         local d = world.dinos[key]
-        factors[key] = if d and not d.peaceful then TeamUp.pairFactor(world.limiter, d.userId, victim.userId, now) else 0
+        factors[key] = if d then TeamUp.pairFactor(world.limiter, d.userId, victim.userId, now) else 0
     end
     local out = {}
     for key, amount in TeamUp.applyFactors(parts, factors) do
@@ -173,7 +172,6 @@ function Rules.attack(world: any, attackerKey: any, now: any, apos: any, alook: 
     if not a then return fail("unknown") end
     local n = num(now, 0)
     if a.state.phase ~= "Alive" then return fail("dead") end
-    if a.peaceful then return fail("peaceful") end
     if not allowRequest(world, a.key, n) then return fail("rate") end
     if n - a.lastBiteAt < Cfg.BiteCooldownSeconds then return fail("cooldown") end
     if apos == nil or alook == nil then return fail("facing") end -- Vector3 or any {X,Y,Z} table
@@ -187,7 +185,7 @@ function Rules.attack(world: any, attackerKey: any, now: any, apos: any, alook: 
     local best, bestDistance, bx, bz = nil, math.huge, 0, 0
     for _, c in (if typeof(candidates) == "table" then candidates else {}) do
         local t = if typeof(c) == "table" then world.dinos[c.key] else nil
-        if t and t ~= a and t.state.phase == "Alive" and not t.peaceful and n >= t.protectedUntil and c.pos ~= nil then
+        if t and t ~= a and t.state.phase == "Alive" and n >= t.protectedUntil and c.pos ~= nil then
             local dx, dy, dz = num(c.pos.X, 0) - num(apos.X, 0), num(c.pos.Y, 0) - num(apos.Y, 0), num(c.pos.Z, 0) - num(apos.Z, 0)
             local planar = math.sqrt(dx * dx + dz * dz)
             if planar <= range + Rules.bodyRadius(c.radius, t.s) and math.abs(dy) <= Cfg.BiteVerticalLimit then

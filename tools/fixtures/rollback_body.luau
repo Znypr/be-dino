@@ -103,7 +103,7 @@ end
 local function metricsKeep(a,b) return a.rarest==b.rarest and a.robux==b.robux end
 
 ------------------------------------------------------------------ (1) CURRENT-written profile read by the OLD Build 020 reader
-check(rich.settings.peaceful==true and rich.settings.teleportShops==false,"rich profile carries the new settings")
+check(rich.settings.teleportShops==false,"rich profile carries the new settings")
 check(rich.dinosaurIdentity~=nil and next(rich.dinosaurIdentity.fusions or {})~=nil,"rich profile carries a fusion ledger with parent ids")
 local ledger for _,entry in rich.dinosaurIdentity.fusions do ledger=entry end
 check(ledger and #ledger.parentIds==6 and ledger.parentEggIds~=nil,"fusion lineage: parent ids")
@@ -127,7 +127,7 @@ OldRepo.release(u1)
 local afterOld=copy(data[key(RICH)])
 check(afterOld.session==nil,"old release clears its lease")
 for _,unknown in {"settings","dinosaurIdentity","eggNests","runEggBank","settledRuns","rarityScale"} do check(same(rich[unknown],afterOld[unknown]),"unknown field still preserved after old operations: "..unknown) end
-check(afterOld.settings.peaceful==true,"peaceful survives the old build")
+check(afterOld.settings.teleportShops==false,"settings survive the old build")
 print("old claimChest on a new-format queue: "..tostring(claimedOld).." (queue "..oldEggBefore.." -> "..#afterOld.eggs..")")
 -- ...then roll FORWARD: current code loads what the old build wrote; the sidecar may be stale but is never deleted.
 local sidecarBefore=copy(rich.dinosaurIdentity)
@@ -138,7 +138,7 @@ local keptAll=true
 for id in sidecarBefore.instances do if sidecarAfter.instances[id]==nil then keptAll=false end end
 local reason=sidecarAfter.suspendedReason
 check(keptAll or reason~=nil,"identity instances survive roll-forward (or identity is suspended, never silently emptied)")
-check(data[key(RICH)].settings.peaceful==true,"settings still stored after roll-forward")
+check(data[key(RICH)].settings.teleportShops==false,"settings still stored after roll-forward")
 print("roll-forward after an old claim: identity "..(if reason then "suspended ("..tostring(reason)..")" else "reconciled").." instances kept="..tostring(keptAll))
 NewRepo.release(u2)
 
@@ -197,7 +197,7 @@ oldAccepts("future additive settings keys",function(p) p.settings.futureOption=t
 oldAccepts("nest with weatherId and unknown nest fields",function(p) p.eggNests[1].weatherId="rain" p.eggNests[1].futureField={1,2,3} end)
 print("lock-out classes asserted: rarest>3 and post-Build-020 potions are rejected by Build 020; additive fields are kept")
 
------------------------------------------------------------------- (3) OLD-written profile read by CURRENT code (settings, peaceful, identity absent)
+------------------------------------------------------------------ (3) OLD-written profile read by CURRENT code (settings, identity absent)
 local OLDER=5100
 local oldUser=newUser(OLDER)
 check(OldRepo.load(oldUser),"old build creates a profile")
@@ -212,7 +212,7 @@ local function legacyLoad(label,repo)
  local u=newUser(OLDER)
  check(repo.load(u) and u.attrs.ProfileState=="Loaded","current code loads a Build 020 profile: "..label)
  local settings=u.attrs.SettingsJson
- check(settings.peaceful==false and settings.teleportShops==true and settings.effects=="full" and settings.sound.master==0.8,"absent settings (incl. peaceful, teleportShops) read as defaults: "..label)
+ check(settings.teleportShops==true and settings.effects=="full" and settings.sound.master==0.8,"absent settings (incl. teleportShops) read as defaults: "..label)
  repo.release(u)
  local after=data[key(OLDER)]
  check(after.settings==nil,"load never writes a defaults settings field: "..label)
@@ -274,7 +274,7 @@ for i,junk in {"garbage",12345,true,{1,2,3},{sound="x",effects=99,calm="yes",pea
   check(repo.load(u) and u.attrs.ProfileState=="Loaded",pair[1].." loads a profile whose settings are corrupted ("..typeof(junk)..")")
   if pair[1]=="NEW" then
    local s=u.attrs.SettingsJson
-   check(s.sound.master>=0 and s.sound.master<=1 and s.sound.sfx>=0 and s.sound.sfx<=1 and (s.effects=="full" or s.effects=="lite" or s.effects=="off") and type(s.calm)=="boolean" and type(s.peaceful)=="boolean" and type(s.teleportShops)=="boolean","corrupt settings fall back to valid values/defaults (case "..i..")")
+   check(s.sound.master>=0 and s.sound.master<=1 and s.sound.sfx>=0 and s.sound.sfx<=1 and (s.effects=="full" or s.effects=="lite" or s.effects=="off") and type(s.calm)=="boolean" and type(s.teleportShops)=="boolean","corrupt settings fall back to valid values/defaults (case "..i..")")
   end
   repo.renew(u)
   check(same(junk,data[key(id)].settings),pair[1].." load/renew keep the stored settings value as it was (case "..i..")")

@@ -25,7 +25,7 @@ Extracted from the kanban owner log, AGENTS.md, docs and the lead sessions. "LEA
 | D14 | Base look for all dinos is low-poly faceted (generated mesh, split in parts). Skins: Plushy, Clay, Bricks (Robux later), animated/anime unlockable | [97](97-dino-skins.md) |
 | D15 | Generated meshes only for final 3D art | kanban owner log |
 | D16 | Four classes Ground / Fly / Water / Armored; roster 5 Fly + 5 Water + 5 more Ground | [101](101-hp-combat-classes-animations.md), BD-232 |
-| D17 | HP combat replaces instant bigger-eats-smaller; hearts only, Peaceful option, no revive v1 | BD-230 |
+| D17 | HP combat replaces instant bigger-eats-smaller; hearts only, ~~Peaceful option~~ (SUPERSEDED 2026-10-16: no Peaceful, see OWNER CORRECTION below), no revive v1 | BD-230 |
 | D18 | Cave hub: big cave with physical shops; flag off | [104](104-cave-hub-design.md) |
 | D19 | Growth 5x slower again (GrowthPerFood 0.1); more and better food; low-poly limbs must not shift eyes; lobby dino uses low-poly; text readable (light fill, dark stroke) | BD-386..390 |
 | D20 | Hatching redesign: real bucket and paint-splash reveal, no primitive shapes, assigned to Fable | BD-397 |
@@ -62,7 +62,8 @@ Extracted from the kanban owner log, AGENTS.md, docs and the lead sessions. "LEA
 - OWNER (2026-10-16): the Balloon skin (defeat = pops and flutters away softly) is a **Robux skin**, like Bricks, Clay and Plushy. Answers docs/116 Q5 option (a). Release stays behind the Robux release flags until tested; no art upload is needed (procedural skin). Tracked in [120](120-pending-owner-uploads-checklist.md).
 
 ## 2026-10-16 (owner vision answers)
-- OWNER: PvP is an optional side; the core loop is food, eggs, growing. Hunting players happens, but a Peaceful option must be easy to pick (BD-421).
+- ~~OWNER: PvP is an optional side; the core loop is food, eggs, growing. Hunting players happens, but a Peaceful option must be easy to pick (BD-421).~~ **SUPERSEDED in place by the OWNER CORRECTION below (2026-10-16): this was misread.**
+- **OWNER CORRECTION (2026-10-16):** "PvP is an optional side" did NOT mean a Peaceful opt-out. It means fighting or hunting other players is up to each player, and FOOD ALONE must give enough progression (growth, eggs, crystals) so nobody has to rely on eating others. Hunting stays on for everyone. The Peaceful feature (BD-421, PR #244: Sanctuary "Peaceful: ON/OFF", Settings row, `PeacefulRun` snapshot, peaceful checks in PredationService/CombatService/RunLifecycle, the older combat-only Peaceful toggle and HUD badge) is REMOVED. Old saved `settings.peaceful` values are ignored harmlessly (never rewritten). BD-422 (eggs always kept) stays, test renamed `tools/verify_run_end_eggs.py`. Follow-up: food-only progression audit, [128](128-food-only-progression-audit.md), BD-438.
 - OWNER: session shape is short runs of about 5 minutes, a hatch party after each, several runs per session (BD-426).
 - OWNER: long-term goal is an equal mix of completing the collection, perfecting one favourite dino (fusion to Diamond) and playing as new dinos with a different class feel (BD-427).
 - OWNER: Robux line is looks plus convenience (skins, cosmetics, time-savers like potions or extra nest spots), never exclusive power. Robux flags stay off until policy is tested (BD-425).

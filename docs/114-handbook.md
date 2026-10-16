@@ -19,7 +19,10 @@ The owner's guiding adjectives are **polished, satisfying, calm, bubbly, friendl
 - Keep distinct: food/growth points, catches (= run eggs), hatched dinosaurs, account XP, crystals, bonus nests ([AGENTS.md](../AGENTS.md)).
 
 ### 1.1 Vision answers (OWNER 2026-10-16, see [115](115-decisions-log.md))
-- **PvP is optional.** The core loop is food, eggs, growing. Hunting other players happens, but a Peaceful choice must be easy to find (audit: BD-421).
+- **Hunting is each player's own choice, food alone must be enough.** The core loop is food, eggs, growing. Fighting or hunting other players stays ON for everyone; there is NO Peaceful opt-out (the 2026-10-16 "Peaceful must be easy to find" reading was a misread, ~~BD-421~~ SUPERSEDED, docs/115 OWNER CORRECTION). Instead, a player who only eats food must get enough growth, eggs and crystals, so nobody has to rely on eating others (balance audit and proposal: [128](128-food-only-progression-audit.md), BD-438).
+
+### 1.1 Food-only progression (owner correction 2026-10-16)
+See [128](128-food-only-progression-audit.md): finding today is that eating a player pays +1 run egg plus growth, about 42 food-equivalents of egg value per kill, which is outsized next to food. Proposed fix (not applied): kills give growth only, or a small capped egg fraction (BD-438).
 - **Session shape:** short runs of about 5 minutes, a hatch party after each, several runs per session (BD-426).
 - **Long-term goal:** an equal mix of completing the collection, perfecting one favourite dino to Diamond, and playing new dinos with a different class feel (BD-427).
 - **Robux line:** looks plus convenience (skins, cosmetics, potions, extra nest spots), never exclusive power; flags off until policy is tested (BD-425).
@@ -154,7 +157,7 @@ Source: owner review of the Royal Nova image draft in ChatGPT on 2026-10-16: "i 
 | Colour / pattern | colour tiers Common..Mythic (5.4), colour growth bonus +1% per tier; 8 patterns equally likely | `ProgressionConfig`, BD-172, [88](88-exponential-rarity.md) |
 | Prices | trails 0/100/280/390/780/1100/2200/3100/6100/17000; auras 60/470/3700 | `ProgressionConfig` |
 | Potion shop | rotates every 2 minutes, 1-3 limited stock | BD-051 |
-| Combat | HP, hearts only, 4 classes (Ground, Fly, Water, Armored), `CombatEnabled=false`, Peaceful option | [101](101-hp-combat-classes-animations.md) |
+| Combat | HP, hearts only, 4 classes (Ground, Fly, Water, Armored), `CombatEnabled=false`, no Peaceful opt-out (superseded 2026-10-16) | [101](101-hp-combat-classes-animations.md) |
 | Flags | `CombatEnabled`, `CaveHub` false; `LowPolyDinos` false default, true in playtest profile | [AGENTS.md](../AGENTS.md), [108](108-lowpoly-playtest-profile.md) |
 | Fast travel | Crystal Shop perk bought with crystals; walking is default; additive profile field default off; Settings toggle only after purchase; glow guide stays free; price PROVISIONAL (OWNER 2026-10-16) | [115](115-decisions-log.md), BD-391 |
 

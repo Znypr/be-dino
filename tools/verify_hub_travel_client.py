@@ -174,7 +174,7 @@ def static_checks():
     gate = (ROOT / 'src/client/HubGateClient.luau').read_text()
     assert 'GateBarBottom' in gate, 'gate bar position comes from the rules (above the chip)'
     menu = (ROOT / 'src/client/SettingsMenu.luau').read_text()
-    assert 'CombatEnabled then 4 else 2, if cfg.FastTravelPerk == true then "Fast travel" else "Teleport to shops"' in menu, 'Teleport row closes the gap when Peaceful is hidden'
+    assert 'toggle(body, ctx, 2, if cfg.FastTravelPerk == true then "Fast travel" else "Teleport to shops"' in menu, 'Teleport row sits directly under the jump row'
     assert 'ownsFastTravel()' in menu, 'BD-391: toggle visible only after the perk is bought'
     assert '"Teleport to shops"' in menu and 'CaveHub' in menu, 'Controls tab toggle, shown only with the hub on'
     top = [l for l in boot.splitlines() if re.match(r'^local\s', l)]
