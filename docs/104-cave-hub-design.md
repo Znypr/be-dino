@@ -287,3 +287,7 @@ Dependencies: 263 -> 264 -> 265; 266 -> 268 <- 267; 268 -> 269/270; 264 -> 271 -
 5. **Lava:** scenic only, fenced, no damage.
 6. **Station order:** as in section 3 (Heart in the middle, shops around the ring); adjust after the first walk-through.
 7. **Hatch reveal:** keep the existing 2D/viewport sequence in v1; a physical nest-cracking reveal is a later idea.
+
+## 14. Cosy pass (owner 2026-10-16: warm, safe, lamp-lit home base; flag off)
+
+Code side only, registered assets only: the Heart gets one show-off pedestal (`CaveShowOff`, a "Show off" prompt that steps the player's dino onto it; walking off ends it), 2 stone benches, 3 moss cushions and 2 lamp posts; the Quiet Spot gets a bench; every hub_pedestal now has a collider so it can be stood on. Warm lamps breathe by at most 7 percent (`CaveLightingRules.Lamp`, client, steady with Reduce Motion; lava, forge and the gate light stay as they were). `CaveLightingRules.Bed` is the ambient bed hook: empty id until the owner supplies a loop (docs/110 has none). Luminance band 0.15-0.35 untouched (no ambient or grade change). Art TODOs: docs/77 and docs/120.

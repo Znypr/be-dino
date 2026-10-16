@@ -177,6 +177,7 @@ return table.freeze({
     IrregularWeather = {volcano = true, aurora = true, quake = true, bloodmoon = true},
     DeveloperProducts = { [3717200374] = 500, [3717200467] = 1500, [3717200523] = 4000, [3717200920] = 10000, [3717200940] = 25000, [3717200979] = 90000 },
     CrystalPacksEnabled = false, -- Enable only after paid-random disclosure/release review.
+    RunTelemetryEnabled = false, -- BD-426: anonymous run/session telemetry (docs/122); off in the default build, on only in the playtest profile
     PaidRandomItemsEnabled = false, -- Release gate: complete combined-outcome disclosure/policy acceptance first.
     ChestQueueCapacity = 5,
     ChestOverflowCapacity = 10,

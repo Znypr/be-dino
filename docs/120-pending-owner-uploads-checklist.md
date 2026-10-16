@@ -37,8 +37,14 @@ Note: the older fx-v2 smoke, spark and flame sheets are superseded by the upload
 | Royal Nova aura icon | BD-101 (aura part) | ChatGPT ICON block | `resources/ui/v2/items/aura-royal-v1.png` | 1024 PNG, matches Meadow and Tidal | aura shop card | TABLE/AUTO | 109 D3 |
 | Potion rarity frames (5, P2) | BD-101 | ChatGPT | `resources/ui/v2/components/frame-{common,uncommon,rare,epic,legendary}-v1.png` | 512x512 9-slice, empty centre | potion shop cards | CODE | 109 D3 |
 | Combat HUD art, crystal pack icons, cave sign medallions (P2) | BD-248, BD-331, docs/104 | ChatGPT | see 109 E1-E3 | 1024 PNG | CombatHud, crystal cards, cave sign SurfaceGuis | CODE | 109 E1-E3 |
+| Rare hatch fanfare sound (optional, `shiny_bang` plays meanwhile) | BD-428 | Owner or sound lab (docs/110) | - | 2-3 s, .ogg/.mp3 | `Sfx.Sounds` (new `rare_hatch_fanfare`) | after upload | Bright kid-friendly celebration jingle, no harsh peak |
+| Confetti sheet (optional, fx3 sparkle tinted meanwhile) | BD-428 | Blender render | `resources/effects/fx-v3/confetti.png` | 1024x1024 4x4, white on alpha | `RareHatchClient` | after upload | Squares, ribbons and stars, 16 cells |
 | Golden Drumstick special food mesh and icon (P2) | BD-207 | Blender or Roblox generate_mesh | `food_golden_drumstick` (new, no repo file yet) | MeshPart under 500 triangles, gold tint left to the Highlight | `FoodService` special food, only while `Config.SpecialFoodsEnabled` | CODE | not drafted; the registered drumstick is reused meanwhile |
 | Cave lava crust / flow texture (BD-385, BD-294) | BD-385 | Blender render (no code-drawn art) | `resources/effects/cave-lava-crust-v1.png` | 1024 tileable, warm orange to dark crust, soft alpha edge, calm and friendly | `CaveLavaFx` falls sheet layers (today: existing swirl and flame sheets) | TODO | 104 s5 |
+| Anime FX P0 (docs/123): soft flame-tongue flipbook, star pop flipbook | BD-430 | Blender | `resources/effects/fx-v4/flame-tongue.png`, `star-pop.png` | 4x4 of 256 = 1024, white on alpha, under 400 KB | `EffectAssets.luau` | TABLE | docs/123 s3 |
+| Anime FX P0: shock dome mesh + gradient | BD-430 | Blender, Studio upload | `assets/blender/fx/shock-dome.fbx`, `resources/effects/fx-v4/dome-gradient.png` | about 120 tris; 512 px white on alpha | BD-433 code | CODE | docs/123 s3 |
+| Anime FX P1: light shaft cone, aura shell, speed-line streaks | BD-431 | Blender | `assets/blender/fx/shaft-cone.fbx`, `aura-shell.fbx`; `resources/effects/fx-v4/speed-streaks.png` | cone about 80 tris, shell about 150, streaks 512x512 | BD-432, BD-433 code | CODE | docs/123 s3 |
+| Anime FX P2: rainbow-shift gradient strip, soft vignette rim ring (UI) | BD-435 | Blender | `resources/effects/fx-v4/rainbow-strip.png`, `rim-ring-ui.png` | 1024x64; 1024 ring, white on alpha | `EffectAssets.luau` | TABLE | docs/123 s3 |
 
 ## 3. Hatch v2 (3D and paint flipbooks, docs/118, BD-397; flag `Config.HatchV2 = false`)
 
@@ -69,3 +75,24 @@ Note: the older fx-v2 smoke, spark and flame sheets are superseded by the upload
 4. Polish and P2 rows last.
 
 After each upload: the lead records ids in docs/77, binds, runs the matching verifier, takes a desktop and phone Studio screenshot next to neighbouring UI, then moves the BD rows to Review / test ([109](109-owner-art-prompt-pack.md) section 7).
+
+## Cave cosy pass (2026-10-16)
+
+- [ ] Owner: soft cave ambience loop for `CaveLightingRules.Bed.id` (registry row `TODO_cave_ambient_bed_loop`, docs/77); nothing plays until set.
+- [ ] Owner/Blender: optional cosier den props (`TODO_cave_den_rest_props`) and a dedicated show-off plinth (`TODO_cave_showoff_pedestal_art`).
+## 6. Sounds still to pick or upload (BD-081, [124](124-sound-style-guide.md))
+
+Audio is uploaded by the owner as **Audio** in Asset Manager (never invent ids); the lab in Settings > SOUND > SOUND LAB lists every registered sound so you can judge by ear. Missing sounds, per category (details and targets in 122 section 3):
+
+| Sound | BD | Bound in code | Status |
+|---|---|---|---|
+| Rare-hatch fanfare (2-3 s, huge but soft celebration) | BD-428 (no Kanban row yet) | new `Sfx.Sounds` entry | missing |
+| 7 mutation reveal sounds (dewdrop, charged, frost, seismic, ember, aurora, bloodmoon) | BD-162 | new `Sfx.Sounds` entries | missing |
+| Defeat soft sound, Peaceful confirm tick | BD-081 | new `Sfx.Sounds` entries | missing |
+| Cave ambience loop (cosy, no weather) | BD-081 | new ambience entry | missing |
+| 11 weather beds and accents | BD-132 | `WeatherSounds.Sounds` (ids are empty) | missing |
+| 5 distinct hatch reveal stings (common..legendary share assets today) | BD-081 | `Sfx.Sounds` hatch_reveal_* | placeholder |
+| `hatch_burst`, `hatch_rattle`, Cracked failure | BD-081, BD-341 | `Sfx.Sounds` | silent |
+| Shiny sparkle and BIG thump variants (wire BD-340) | BD-340 | `shiny_bang`, `big_thud` | placeholder, no call site |
+| Crystal and nest-opened cues | BD-342 | alias today | reuses existing |
+| Softer pickups and UI clicks (3 variants each) | BD-081 | `pickup*`, `ui_click` | placeholder, above target |
