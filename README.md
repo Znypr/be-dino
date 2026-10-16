@@ -12,7 +12,7 @@ An original Roblox growth-and-collection game inspired by Be Fish. Start in a sa
 
 > The integrated Build 020 gameplay now lives on **[main](https://github.com/Znypr/be-dino/tree/main)**. See the [maintained integration checklist](docs/44-main-integration-checklist.md) for included updates and open acceptance gates. GitHub integration does not publish the Roblox experience. The owner-supplied logo above is the current main project image; the gallery below shows actual Studio gameplay.
 
-[Download Build 020](build/BeDino-Build020.rbxlx) · [Current documentation guide](docs/00-documentation-guide.md) · [Creature integration and limits](docs/43-creature-runtime-integration.md) · [Live task tracker](docs/07-kanban.md)
+[Get Build 020 (run `python tools/build.py`, or the CI artifact `BeDino-current-build`)](#try-the-prototype) · [Current documentation guide](docs/00-documentation-guide.md) · [Creature integration and limits](docs/43-creature-runtime-integration.md) · [Live task tracker](docs/07-kanban.md)
 
 ## The vision
 
@@ -110,7 +110,7 @@ The larger retention and release roadmap remains open; adding creature variety a
 
 ## Try the prototype
 
-1. Use the current **main** branch and download [BeDino-Build020.rbxlx](build/BeDino-Build020.rbxlx) (or the checked-in `build/BeDino-Latest.rbxlx`).
+1. Use the current **main** branch and generate `build/BeDino-Build020.rbxlx` with `python tools/build.py` (it is no longer committed; the CI run also uploads it as the `BeDino-current-build` artifact), or use the older checked-in `build/BeDino-Latest.rbxlx`.
 2. Open it in Roblox Studio and keep the first test unpublished. No plugin is required.
 3. Press Play and confirm **BUILD redesign-020**. Unpublished preview sessions explicitly say progress is not saved and may use replenishing test currency. Read the [Build 020 API/device limits](docs/43-creature-runtime-integration.md) before publishing.
 4. Explore, gather food, leap, return, hatch and inspect the collection/shops. Read the [latest handoff](docs/34-studio-handoff.md) alongside the [tracker](docs/07-kanban.md); older build instructions may be superseded.
