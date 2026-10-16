@@ -9,6 +9,7 @@ local Genetics = require(script.Parent.EggGenetics)
 local Texture = require(script.Parent.LowPolyTexture)
 local Pose = require(script.Parent.LowPolyPose)
 local Tier = require(script.Parent.LowPolyTier)
+local Lod = require(script.Parent.EffectsLod)
 local Recolor = require(script.Parent.LowPolyRecolor)
 local LowPoly = {}
 LowPoly.FolderName = "LowPolyDinoModels"
@@ -92,21 +93,48 @@ local function sparkle(container: Instance, body: BasePart?, entry: any?)
     emitter.Speed, emitter.SpreadAngle, emitter.Rotation = NumberRange.new(0.2, 0.5), Vector2.new(180, 180), NumberRange.new(0, 360)
     emitter.Parent = body
 end
--- Subtle tier rim: ONLY the local player's own dino and previews (budget); phones never rim remote dinos. Off under Effects Off.
-local function rim(container: Instance, entry: any?)
-    local old = container:FindFirstChild("LPTierRim")
-    if old then old:Destroy() end
+-- Glowing tier rim (2026-10-16 round 7, docs/114): a thin lit outline round the whole silhouette in the tier colour. The local player's dino
+-- and previews always get a real Highlight; other fused dinos get one while under EffectsLod.RimHighlights (far below Roblox's 31), the rest
+-- get the cheap glow (one slightly larger Neon shell on the body part). Effects Off = no rim. Material look (gloss, horns, claws) stays.
+local liveRims: {[Instance]: boolean} = {}
+local function rimCount(): number local n = 0 for _ in liveRims do n += 1 end return n end
+local function rim(container: Instance, entry: any?, body: BasePart?)
+    for _, name in {"LPTierRim", "LPTierGlow"} do
+        local old = container:FindFirstChild(name, true)
+        if old then liveRims[old] = nil old:Destroy() end
+    end
     if not entry or not container:IsA("Model") then return end
-    local own = container:GetAttribute("LPOwn") == true or container:FindFirstAncestorOfClass("ViewportFrame") ~= nil
-    if not own then return end
+    local mode = "full"
     local okS, SettingsModel = pcall(function() return require(script.Parent.SettingsModel) end)
-    if okS and SettingsModel and SettingsModel.effects and SettingsModel.effects() == "off" then return end
-    local h = Instance.new("Highlight")
-    h.Name, h.Adornee = "LPTierRim", container
-    local c = entry.accent
-    h.OutlineColor, h.FillTransparency, h.OutlineTransparency = Color3.fromRGB(c[1], c[2], c[3]), 1, 0.6
-    h.DepthMode = Enum.HighlightDepthMode.Occluded
-    h.Parent = container
+    if okS and SettingsModel and SettingsModel.effects then mode = SettingsModel.effects() end
+    if mode == "off" then return end
+    local own = container:GetAttribute("LPOwn") == true or container:FindFirstAncestorOfClass("ViewportFrame") ~= nil
+    local c = entry.rim
+    local col = Color3.fromRGB(c[1], c[2], c[3])
+    local trans = math.clamp(entry.rimTransparency, Tier.RimTransparency[1], Tier.RimTransparency[2])
+    local cap = math.min((Lod.RimHighlights :: any)[mode] or 0, Lod.RimHighlightHardCap - 1)
+    if own or rimCount() < cap then
+        local h = Instance.new("Highlight")
+        h.Name, h.Adornee = "LPTierRim", container
+        h.OutlineColor, h.FillTransparency, h.OutlineTransparency = col, 1, trans
+        h.DepthMode = Enum.HighlightDepthMode.Occluded
+        h.Parent = container
+        liveRims[h] = true
+        h.Destroying:Once(function() liveRims[h] = nil end)
+    elseif body then
+        local g = body:Clone()
+        for _, ch in g:GetChildren() do ch:Destroy() end
+        g.Name, g.TextureID = "LPTierGlow", ""
+        g:SetAttribute("LPTexture", nil) g:SetAttribute("LPRole", nil)
+        g.Size, g.Color, g.Material = body.Size * Tier.GlowScale, col, Enum.Material.Neon
+        g.Transparency = math.clamp(trans + 0.6, 0.7, 0.9)
+        g.CanCollide, g.CanQuery, g.CanTouch, g.Massless, g.CastShadow = false, false, false, true, false
+        g.CFrame = body.CFrame
+        local w = Instance.new("WeldConstraint")
+        w.Part0, w.Part1 = body, g
+        w.Parent = g
+        g.Parent = body
+    end
 end
 -- Fallback (bake denied / cache full / far away): the model's OWN texture stays (eyes, belly, claws intact, species colour). A plain
 -- MeshPart.Color is ignored on a textured MeshPart in Studio, so no tint is applied (docs/105: option 'keep the original texture').
@@ -168,7 +196,7 @@ function LowPoly.tint(container: Instance, genes: any)
     local body: BasePart? = nil
     local textured: {{part: MeshPart, textureId: string, role: string}} = {}
     for _, part in container:GetDescendants() do
-        if part:IsA("MeshPart") and part.Name ~= "LPTierShell" then
+        if part:IsA("MeshPart") and part.Name ~= "LPTierShell" and part.Name ~= "LPTierGlow" then
             local textureId = part:GetAttribute("LPTexture")
             local role = tostring(part:GetAttribute("LPRole") or "body")
             if role == "body" and not body then body = part end
@@ -178,7 +206,7 @@ function LowPoly.tint(container: Instance, genes: any)
             if entry and Tier.isAccentName(part.Name) and eyeish then -- claws / toes / horns are untextured parts: tint them in the tier metal / gem
                 local c = entry.accent
                 part.Color = Color3.fromRGB(c[1], c[2], c[3])
-                part.Material = (Enum.Material :: any)[entry.shellMaterial] or Enum.Material.SmoothPlastic
+                part.Material = (Enum.Material :: any)[entry.accentMaterial] or Enum.Material.SmoothPlastic
                 part.Reflectance = Tier.MaxReflectance
                 if eyeish then continue end
                 part.TextureID = ""
@@ -190,7 +218,7 @@ function LowPoly.tint(container: Instance, genes: any)
     end
     shells(container, entry)
     sparkle(container, body, entry)
-    rim(container, entry)
+    rim(container, entry, body)
     if not spec or #textured == 0 then return end
     local s = spec :: Texture.Spec
     local anchor = body or textured[1].part

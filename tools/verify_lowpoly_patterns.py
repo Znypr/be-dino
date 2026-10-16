@@ -181,16 +181,18 @@ for _, id in Tier.Order do
     prev = e
 end
 local gold, emerald, diamond = Tier.get("gold"), Tier.get("emerald"), Tier.get("diamond")
-assert(gold.shellMaterial == "Metal" and emerald.shellMaterial == "Glass" and diamond.shellMaterial == "Glass" and diamond.reflectance == Tier.MaxReflectance, "glossy shell materials")
+assert(gold.accentMaterial == "Metal" and emerald.accentMaterial == "Glass" and diamond.accentMaterial == "Glass" and diamond.reflectance == Tier.MaxReflectance, "glossy accent materials")
 -- 2026-10-16 FINAL owner rule: a translucent glossy tier layer exists per tier, in range, tier coloured; Diamond is icy white-blue
 for _, id in Tier.Order do
     local e = Tier.get(id)
-    assert(e.shellTransparency >= Tier.ShellTransparency[1] and e.shellTransparency <= Tier.ShellTransparency[2], id .. " shell transparency in 0.45..0.75")
+    assert(e.shellTransparency >= Tier.ShellTransparency[1] and e.shellTransparency <= Tier.ShellTransparency[2], id .. " shell transparency in 0.8..0.95")
     assert(e.shellReflectance > 0 and e.shellReflectance <= Tier.MaxReflectance and Tier.ShellScale > 1 and Tier.ShellScale <= 1.02, id .. " shell gloss / scale")
     assert(e.shellMaterial ~= "Neon" and e.shellMaterial ~= "ForceField", id .. " shell not neon")
 end
 local gs, es, ds = gold.shell, emerald.shell, diamond.shell
-assert(gs[1] > gs[3] + 100 and es[2] > es[1] + 80 and es[2] > es[3] and ds[3] >= ds[1] and ds[1] >= 200, "shell colours: warm gold, jewel green, icy white-blue")
+assert(gs[1] == 255 and gs[2] == 255 and gs[3] == 255 and es[1] == 255 and ds[3] == 255, "shell is neutral white: no tinted coat")
+local gr, er, dr = gold.rim, emerald.rim, diamond.rim
+assert(gr[1] > gr[3] + 100 and er[2] > er[1] + 80 and er[2] > er[3] and dr[3] >= dr[1] and dr[1] >= 190, "rim colours: warm gold, jewel green, icy white-cyan")
 assert(diamond.shimmer and #diamond.shimmer >= 3 and not gold.shimmer and not emerald.shimmer and diamond.shimmerSpeed > 0, "only Diamond has the rainbow shimmer")
 for _, grey in {0.35, 0.6, 0.85} do -- the same neutral dino under each tier
     local gr, gg, gb = Tier.blend(grey, grey, grey, gold, false)
@@ -294,8 +296,6 @@ assert(Tier.sparkleAlive(diamond, true) * 2 == Tier.sparkleAlive(diamond, false)
 for sp, list in Tier.AccentRegions do assert(#list <= 2, sp .. " only horn / claw boxes") end
 assert(not Tier.isAccentName("frill") and not Tier.isAccentName("crest"), "frill / crest are body")
 -- round 6: Gold / Diamond shells clearly visible (<= 0.55), brow horns (|x| .07-.17, z -.40..-.22, y .18-.35) covered, nose box small
-assert(gold.shellTransparency <= 0.55 and diamond.shellTransparency <= 0.55 and gold.shellReflectance >= 0.3 and diamond.shellReflectance >= 0.3, "gold / diamond shell reads at 20 studs")
-assert(gold.shellTransparency < emerald.shellTransparency and diamond.shellTransparency < emerald.shellTransparency, "emerald stays the subtlest shell")
 for _, pt in {{0.08, 0.30, -0.37}, {0.13, 0.33, -0.37}, {0.16, 0.25, -0.30}, {0.10, 0.20, -0.24}, {-0.15, 0.30, -0.36}} do
     assert(Tier.inAccentRegion("triceratops", pt[1], pt[2], pt[3]), "brow horn texel covered " .. pt[1] .. "," .. pt[2] .. "," .. pt[3])
 end
@@ -320,6 +320,18 @@ def check_key():
         assert banned not in paint, f"2026-10-16: body/pattern texels must stay the dino's own colours (no {banned} in Texture.paint)"
     assert 'Tier.regionColor' in paint, "horn / claw texels are painted in the tier ramp"
     assert 'LPTierShell' in dinos and 'Tier.ShellScale' in dinos and 'Transparency = math.clamp(entry.shellTransparency' in dinos, "translucent glossy shell per textured part"
+    tier = (ROOT / 'src/shared/LowPolyTier.luau').read_text(encoding='utf-8')
+    assert 'Tier.ShellTransparency = {0.8, 0.95}' in tier, "gloss shell is near-clear (no colour tint)"
+    for tid, rimc in (('gold', '255, 190, 40'), ('emerald', '40, 255, 140'), ('diamond', '200, 245, 255')):
+        m = re.search(tid + r' = \{id.*?shell = \{([^}]*)\}', tier, re.S)
+        assert m.group(1).strip() == '255, 255, 255', f"{tid} shell must be neutral white (body colours stay base)"
+        assert 'rim = {' + rimc + '}' in tier, f"{tid} rim colour"
+    assert 'Tier.RimTransparency = {0.1, 0.25}' in tier
+    assert 'Highlight' in dinos and 'FillTransparency, h.OutlineTransparency = col, 1, trans' in dinos and 'DepthMode.Occluded' in dinos, "tier rim Highlight"
+    assert 'LPTierGlow' in dinos and 'Enum.Material.Neon' in dinos, "cheap Neon glow rim beyond the Highlight budget"
+    lod = (ROOT / 'src/shared/EffectsLod.luau').read_text(encoding='utf-8')
+    m = re.search(r'RimHighlights = table.freeze\(\{full = (\d+), lite = (\d+), off = (\d+)\}\)', lod)
+    assert m and int(m.group(1)) < 31 and int(m.group(3)) == 0 and 'RimHighlightHardCap = 31' in lod, "Highlight budget below Roblox's 31"
     for flag in ('CanCollide, shell.CanQuery, shell.CanTouch, shell.Massless', 'WeldConstraint'):
         assert flag in dinos, f"shell must set {flag}"
     assert 'Tier.inAccentRegion' in text and 'src.pos, speciesId' in text, "Texture.paint must paint accent regions from the position map"

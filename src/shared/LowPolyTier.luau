@@ -19,7 +19,7 @@ export type Entry = {
     accent: {number}, accentAmount: number, -- tier metal / gem colour for horns, claws, frill and pattern pixels (body colour untouched)
     sparkleCount: number,  -- concurrent twinkles at normal size (rate = count / lifetime)
     sparkleSize: number,   -- relative size of one spark (grows per tier)
-    shell: {number}, shellTransparency: number, shellMaterial: string, shellReflectance: number, -- 2026-10-16 owner rule: semi-translucent glossy tier layer over the whole body (an inflated shell copy of each textured part)
+    rim: {number}, rimTransparency: number, shell: {number}, shellTransparency: number, shellMaterial: string, accentMaterial: string, shellReflectance: number, -- 2026-10-16 owner rule: semi-translucent glossy tier layer over the whole body (an inflated shell copy of each textured part)
     shimmer: {{number}}?, shimmerSpeed: number?, -- Diamond only: rainbow colours the sparks cycle through (static colours under Reduce Motion)
             -- BD-308: 0..MaxSheen lift of the facets the source texture already lit (reads as gloss in flat light)
 }
@@ -37,20 +37,22 @@ end
 Tier.AccentWords = {"claw", "toe", "horn", "spike", "tooth", "teeth", "nail"}
 Tier.MaxReflectance = 0.3
 Tier.ShellScale = 1.015        -- the shell is the body mesh inflated by this much (one extra MeshPart per textured part, same mesh)
-Tier.ShellTransparency = {0.45, 0.75} -- allowed Transparency range of the glossy layer (the dino's own colours stay readable under it)
+Tier.ShellTransparency = {0.8, 0.95} -- 2026-10-16 round 7: the gloss layer is almost clear (specular only, NO colour tint)
+Tier.RimTransparency = {0.1, 0.25} -- glowing tier rim (Highlight outline / cheap glow shell)
+Tier.GlowScale = 1.06 -- cheap rim: one slightly larger Neon shell on the body part for dinos beyond the Highlight budget
 Tier.MaxSheen = 0.7
 Tier.Entries = {
     -- 2026-10-16 owner decision "Shiny + sparkles" (docs/115): tiers must read Base < Gold < Emerald < Diamond at a glance, in daylight AND the dim cave.
     -- Gold = rich warm gold, Emerald = deep jewel green, Diamond = icy white-blue with a rainbow shimmer. Gloss, sheen, sparkle rate and sparkle size all grow per tier.
     gold = {id = "gold", name = "Gold", tint = {255, 190, 30}, amount = 0.55, trimAmount = 0.8, material = "Metal", reflectance = 0.18,
         sparkle = {255, 232, 140}, sparkleRate = 2.5, sparkleCount = 4, sparkleSize = 1.4, accent = {255, 200, 30}, accentAmount = 0.9, sheen = 0.5, gain = 1.1, satGain = 1.2,
-        shell = {255, 168, 12}, shellTransparency = 0.5, shellMaterial = "Metal", shellReflectance = 0.3},
+        rim = {255, 190, 40}, rimTransparency = 0.15, shell = {255, 255, 255}, shellTransparency = 0.88, shellMaterial = "SmoothPlastic", accentMaterial = "Metal", shellReflectance = 0.3},
     emerald = {id = "emerald", name = "Emerald", tint = {16, 190, 96}, amount = 0.45, trimAmount = 0.8, material = "Glass", reflectance = 0.23,
         sparkle = {150, 255, 195}, sparkleRate = 4.2, sparkleCount = 6, sparkleSize = 1.65, accent = {10, 235, 120}, accentAmount = 0.9, sheen = 0.6, gain = 0.97, satGain = 1.25,
-        shell = {20, 200, 110}, shellTransparency = 0.68, shellMaterial = "Glass", shellReflectance = 0.3},
+        rim = {40, 255, 140}, rimTransparency = 0.15, shell = {255, 255, 255}, shellTransparency = 0.9, shellMaterial = "Glass", accentMaterial = "Glass", shellReflectance = 0.3},
     diamond = {id = "diamond", name = "Diamond", tint = {205, 240, 255}, amount = 0.6, trimAmount = 0.8, material = "Glass", reflectance = 0.3,
         sparkle = {235, 250, 255}, sparkleRate = 5, sparkleCount = 8, sparkleSize = 1.9, accent = {225, 245, 255}, accentAmount = 0.92, sheen = 0.7, gain = 1.14, satGain = 0.9,
-        shell = {205, 232, 255}, shellTransparency = 0.5, shellMaterial = "Glass", shellReflectance = 0.3,
+        rim = {200, 245, 255}, rimTransparency = 0.12, shell = {255, 255, 255}, shellTransparency = 0.9, shellMaterial = "Glass", accentMaterial = "Glass", shellReflectance = 0.3,
         shimmer = {{255, 170, 215}, {170, 220, 255}, {190, 255, 215}, {255, 245, 170}}, shimmerSpeed = 0.5},
 }
 -- BD-308 baked sheen: the generated textures carry flat facet shading (k = pixel luma / species body luma, 0.3..1.6). On a fused

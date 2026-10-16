@@ -18,6 +18,11 @@ function Lod.detail(mode: string, kind: string, distance: number, own: boolean, 
     return "lite"
 end
 
+-- 2026-10-16: tier rim Highlights (Roblox allows 31 at once; keep far below). Own dino and previews always get one; other fused
+-- dinos get one only while under this cap, the rest use the cheap Neon glow shell. Off = none.
+Lod.RimHighlights = table.freeze({full = 8, lite = 4, off = 0})
+Lod.RimHighlightHardCap = 31
+
 -- Does this dino get any effect rig at all? (cheap check before building anything)
 function Lod.visible(mode: string, distance: number, own: boolean, rank: number): boolean
     return Lod.detail(mode, "mutation", distance, own, rank, 0) ~= "none"
