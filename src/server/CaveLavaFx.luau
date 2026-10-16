@@ -1,13 +1,11 @@
 --!strict
 -- BD-285 (docs/104 s5): the Cave hub lava falls and pool as FX from the existing alpha textures only (EffectAssets flameSheet, smokeSheet,
 -- sparkSheet, swirl). Called from Arena's cave branch only (Config.CaveHub on). The generated cave_lava_fall mesh came out as a chunky
--- block, so it is NOT used. The waterfall is a thin warm translucent sheet in the falls recess that carries three scrolling alpha
--- layers (flames, swirl, flames) drawn in a SurfaceGui (a SurfaceGui is not faded by the part's Transparency, a Texture would be); the client
--- (CaveLavaClient) scrolls them and scales the emitters. The basin gets a slowly turning swirl, steam, popping embers and slow bubbles.
+-- block, so it is NOT used. BD-385: the waterfall is soft flameSheet particle strands dropping from an irregular lip (no tiled texture,
+-- no SurfaceGui, no visible rectangle: the earlier scrolling-sheet version read as a tiled billboard); the client (CaveLavaClient) scales the emitters. The basin gets a slowly turning swirl, steam, popping embers and slow bubbles.
 -- Nothing here damages a dino; the rim rocks and the lava_fence colliders keep walkers out of the basin.
--- FX, NOT MODEL ART: the sheet and disc are plain translucent Parts marked IsLightingFx (like the light shafts in CaveLighting).
--- Static first frame: the layers are created at their scroll-0 position, so a client that never animates (Reduce Motion) still sees
--- a finished lava wall. Rates and layers come from the pure CaveLavaRules (25 particles per second desktop, 10 phone).
+-- FX, NOT MODEL ART: the invisible emitter carrier, glow discs and pool disc are plain translucent Parts marked IsLightingFx (like the light shafts in CaveLighting).
+-- Reduce Motion: the client freezes a one-off burst of soft glow puffs (StillGlow) and the floor glow discs: a calm warm wall. Rates and layers come from the pure CaveLavaRules (25 particles per second desktop, 10 phone).
 -- NOT done: the quiet bubbling loop (owner judges by ear, agents cannot).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Layout = require(ReplicatedStorage.Shared.CaveHubLayout)
@@ -47,54 +45,6 @@ local function emitter(parent: Instance, key: string, name: string, rule: string
     return e
 end
 
--- One scrolling layer: a SurfaceGui on its own sheet holds two nested CanvasGroups (each with a UIGradient alpha edge fade, one across,
--- one down: soft edges, no hard rectangle) around one tiled ImageLabel one tile taller / wider than the canvas. Position at scroll 0 =
--- the static first frame (Reduce Motion).
-local function fade(group: CanvasGroup, fraction: number, rotation: number)
-    local g = Instance.new("UIGradient")
-    local keys = {}
-    for _, k in Rules.edgeFade(fraction) do table.insert(keys, NumberSequenceKeypoint.new(k[1], k[2])) end
-    g.Transparency = NumberSequence.new(keys)
-    g.Rotation = rotation
-    g.Parent = group
-end
-
-local function buildLayer(sheet: Part, index: number, layer: any, width: number, height: number)
-    local gui = Instance.new("SurfaceGui")
-    gui.Name = "LavaLayer_" .. layer.name
-    gui.Face = Enum.NormalId.Front
-    gui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
-    gui.CanvasSize = Vector2.new(width * Rules.CanvasPxPerStud, height * Rules.CanvasPxPerStud)
-    gui.LightInfluence = 0
-    gui.Brightness = 1.4
-    gui.AlwaysOnTop = false
-    gui.Parent = sheet
-    local across = Instance.new("CanvasGroup")
-    across.Name, across.Size, across.BackgroundTransparency, across.BorderSizePixel = "FadeAcross", UDim2.fromScale(1, 1), 1, 0
-    fade(across, layer.fade, 0)
-    across.Parent = gui
-    local down = Instance.new("CanvasGroup")
-    down.Name, down.Size, down.BackgroundTransparency, down.BorderSizePixel, down.ClipsDescendants = "FadeDown", UDim2.fromScale(1, 1), 1, 0, true
-    fade(down, layer.fade, 90)
-    down.Parent = across
-    local tile = Rules.tilePx(layer)
-    local image = Instance.new("ImageLabel")
-    image.Name = "Strip"
-    image.BackgroundTransparency = 1
-    image.BorderSizePixel = 0
-    image.Image = Assets.resolve(layer.key)
-    image.ImageColor3 = c3(layer.color)
-    image.ImageTransparency = layer.alpha
-    image.ScaleType = Enum.ScaleType.Tile
-    image.TileSize = UDim2.fromOffset(tile, tile)
-    image.Size = UDim2.fromOffset(width * Rules.CanvasPxPerStud + tile, height * Rules.CanvasPxPerStud + tile)
-    image.Position = UDim2.fromOffset(-((layer.offsetU * Rules.CanvasPxPerStud) % tile) - 0, Rules.stripY(layer, 0, true))
-    image.ZIndex = index
-    image:SetAttribute("LayerIndex", index)
-    image:SetAttribute("OffsetX", -((layer.offsetU * Rules.CanvasPxPerStud) % tile))
-    image.Parent = down
-end
-
 function CaveLavaFx.build(parent: Instance): Folder
     local L = Props.Lava
     local F, P = Layout.Fall, Layout.Pool
@@ -103,28 +53,54 @@ function CaveLavaFx.build(parent: Instance): Folder
     folder.Name = "LavaFalls"
     local orange = c3(L.sheetColor)
 
-    -- the falls: three thin layered sheets (BD-385), each a little nearer, narrower and shorter than the one behind, each with its own
-    -- slowly scrolling layer and soft alpha edges. The back sheet also carries a faint warm body so the recess glows.
+    -- BD-385: no sheet, no tiled texture. ONE invisible carrier part (the emitter box, NOT a visible rectangle) stands in the falls
+    -- recess; soft flameSheet puff strands drop from irregular spots along the lip (CaveLavaRules.Strands) and overlap into a
+    -- ragged, flowing curtain with no hard edge, and big faint puffs fill the wall with a warm glow.
     local width = F.width - 2
-    local sheet: Part
-    for i, layer in Rules.Layers do
-        local w, h = Rules.sheetSize(layer, width, F.height)
-        local part = fxPart(folder, "FX_LavaSheet" .. (if i == 1 then "" else tostring(i)), Vector3.new(w, h, 0.2),
-            CFrame.new(F.x, fy + h / 2, cz + F.z + L.sheetOffsetDz - layer.dz), Enum.PartType.Block, orange, if i == 1 then L.sheetTransparency else 0.97)
-        buildLayer(part, i, layer, w, h)
-        if i == 1 then sheet = part end
+    local sheet = fxPart(folder, "FX_LavaSheet", Vector3.new(width, F.height, 0.2),
+        CFrame.new(F.x, fy + F.height / 2, cz + F.z + L.sheetOffsetDz), Enum.PartType.Block, orange, 1)
+    for i, strand in Rules.Strands do
+        local anchor = Instance.new("Attachment")
+        anchor.Name = "Strand" .. i
+        anchor.Position = Vector3.new(strand.dx, F.height / 2 - 1 - strand.dy, 0.4)
+        anchor.Parent = sheet
+        local e = emitter(anchor, "flameSheet", "Strand" .. i, "strand" .. i)
+        e.Lifetime = NumberRange.new(strand.life * 0.85, strand.life)
+        e.Speed = NumberRange.new(0.5, 1.5)
+        e.Acceleration = Vector3.new(0, -strand.fall, 0)
+        e.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, strand.size * 0.7), NumberSequenceKeypoint.new(0.5, strand.size), NumberSequenceKeypoint.new(1, strand.size * 1.25)})
+        e.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.18, 0.55), NumberSequenceKeypoint.new(0.75, 0.7), NumberSequenceKeypoint.new(1, 1)})
+        e.Color = ColorSequence.new(c3({255, 170, 80}), c3({255, 110, 40}))
+        e.LightEmission = 0.55
+        e.Rotation = NumberRange.new(-25, 25)
+        e.SpreadAngle = Vector2.new(4, 4)
+        e.EmissionDirection = Enum.NormalId.Front
+        e.ZOffset = -(i % 3) * 0.2
     end
-    local flames = emitter(sheet, "flameSheet", "LipFlames", "lipFlames")
-    flames.Lifetime = NumberRange.new(2.5, 3.5)
-    flames.Speed = NumberRange.new(3, 6)
-    flames.Acceleration = Vector3.new(0, -6, 0)
-    flames.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 2.4), NumberSequenceKeypoint.new(1, 1.2)})
-    flames.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.4), NumberSequenceKeypoint.new(1, 1)})
-    flames.Color = ColorSequence.new(c3({255, 150, 60}), c3({255, 90, 30}))
-    flames.LightEmission = 0.8
-    flames.Shape, flames.ShapeInOut, flames.ShapeStyle = Enum.ParticleEmitterShape.Box, Enum.ParticleEmitterShapeInOut.Outward, Enum.ParticleEmitterShapeStyle.Surface
-    flames.EmissionDirection = Enum.NormalId.Bottom
-    flames.SpreadAngle = Vector2.new(8, 8)
+    -- faint warm puffs across the whole wall (box = the carrier volume): the recess glows with a soft cloud edge
+    local wall = emitter(sheet, "smokeSheet", "WallGlow", "wallGlow")
+    wall.Lifetime = NumberRange.new(4.5, 6)
+    wall.Speed = NumberRange.new(0, 0.4)
+    wall.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 12), NumberSequenceKeypoint.new(1, 17)})
+    wall.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.84), NumberSequenceKeypoint.new(0.7, 0.88), NumberSequenceKeypoint.new(1, 1)})
+    wall.Color = ColorSequence.new(c3({255, 130, 50}), c3({255, 170, 90}))
+    wall.LightEmission = 0.6
+    wall.Shape, wall.ShapeInOut, wall.ShapeStyle = Enum.ParticleEmitterShape.Box, Enum.ParticleEmitterShapeInOut.Outward, Enum.ParticleEmitterShapeStyle.Volume
+    wall.EmissionDirection = Enum.NormalId.Front
+    -- Reduce Motion (static variant): the client emits one burst of these constant-alpha puffs across the wall and freezes them
+    -- (TimeScale 0). No Rate, no LavaRule: it never runs in the normal look.
+    local still = Instance.new("ParticleEmitter")
+    still.Name, still.Rate, still.Enabled = "StillGlow", 0, false
+    still.Texture = Assets.Builtin.smoke
+    still.Lifetime = NumberRange.new(30, 30)
+    still.Speed = NumberRange.new(0, 0)
+    still.Size = NumberSequence.new(13)
+    still.Transparency = NumberSequence.new(0.84)
+    still.Color = ColorSequence.new(c3({255, 140, 60}), c3({255, 180, 100}))
+    still.LightEmission = 0.6
+    still.Shape, still.ShapeInOut, still.ShapeStyle = Enum.ParticleEmitterShape.Box, Enum.ParticleEmitterShapeInOut.Outward, Enum.ParticleEmitterShapeStyle.Volume
+    still:SetAttribute("StillBurst", Rules.StillBurst)
+    still.Parent = sheet
 
     -- warm mist where the falls meet the basin
     local baseAnchor = Instance.new("Attachment")

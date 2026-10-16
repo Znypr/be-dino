@@ -96,3 +96,4 @@ Audio is uploaded by the owner as **Audio** in Asset Manager (never invent ids);
 | Shiny sparkle and BIG thump variants (wire BD-340) | BD-340 | `shiny_bang`, `big_thud` | placeholder, no call site |
 | Crystal and nest-opened cues | BD-342 | alias today | reuses existing |
 | Softer pickups and UI clicks (3 variants each) | BD-081 | `pickup*`, `ui_click` | placeholder, above target |
+| Cave lava flow texture (Blender render, soft, no tile grid) | BD-385 | `cave_lava_crust_texture` (docs/77) | the falls are now soft flameSheet particle strands (no tiling); a real lava flow sheet would replace the placeholder puffs |
