@@ -190,7 +190,7 @@ for _, id in Tier.Order do
     assert(e.shellMaterial ~= "Neon" and e.shellMaterial ~= "ForceField", id .. " shell not neon")
 end
 local gs, es, ds = gold.shell, emerald.shell, diamond.shell
-assert(gs[1] == 255 and gs[2] == 255 and gs[3] == 255 and es[1] == 255 and ds[3] == 255, "shell is neutral white: no tinted coat")
+assert(gs[1] == 255 and gs[3] == 30 and es[2] == 255 and ds[3] == 255, "round 9: shell is the tier colour")
 local gr, er, dr = gold.rim, emerald.rim, diamond.rim
 assert(gr[1] > gr[3] + 100 and er[2] > er[1] + 80 and er[2] > er[3] and dr[3] >= dr[1] and dr[1] >= 190, "rim colours: warm gold, jewel green, icy white-cyan")
 assert(diamond.shimmer and #diamond.shimmer >= 3 and not gold.shimmer and not emerald.shimmer and diamond.shimmerSpeed > 0, "only Diamond has the rainbow shimmer")
