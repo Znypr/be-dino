@@ -147,3 +147,11 @@ Dependencies: 239 -> 240 -> 241/242 -> 243 -> 244/245; 246 after 239; 247 after 
 4. On defeat, keep **everything earned so far** (PROPOSAL, safest) or lose a bonus such as the voluntary-exit bonus? Eggs and score are never lost either way.
 5. Is ARMORED a fourth class shown to players, and which extra species join it (Triceratops, Stegosaurus)?
 6. Should attackers get a small food/crystal bonus on a defeat, or nothing?
+
+## 16. Lead decisions on the open questions (2026-10-16, made on the owner's behalf; owner may overrule)
+1. **PvP:** on in the arena, with a Peaceful option at run start for young players (Peaceful dinos cannot hit or be hit; they also cannot earn assist bonuses).
+2. **Damage numbers:** not shown. Hearts and bars only (docs/72, docs/87).
+3. **Revive:** not in v1. Revisit after the 12-player phone test.
+4. **On defeat:** keep everything earned so far (eggs, score, crystals, nests); no punishment bonus loss. Gentle failure beats any penalty for this audience.
+5. **Armored:** a fourth class shown to players. Members for now: Ankylosaurus, Sauropelta, Styracosaurus only. Triceratops and Stegosaurus stay Ground until balance tests justify moving them.
+6. **Attacker reward:** only the capped assist bonus already in section 6; no extra food/crystal bonus per defeat (avoids farming small players).
