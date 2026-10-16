@@ -139,21 +139,25 @@ function T.hint(remaining: number): string
     if remaining > 0 then return "Tap for next egg (" .. tostring(remaining) .. " left)" end
     return "Done"
 end
--- BD-444 (docs/132): "Egg 3 of 15" counter. `batch` is plain module state {left, index, total}. A new batch starts when the
--- eggs left do not follow on from the previous egg (first egg, a new party, or a closed screen), so a stale count never shows.
-function T.newBatch() return {left = nil, index = 0, total = 0} end
-function T.batchStep(batch: any, remaining: number): (number, number)
-    if batch.left == nil or remaining ~= batch.left - 1 then
-        batch.index, batch.total = 1, remaining + 1
-    else
-        batch.index += 1
-    end
-    batch.left = remaining
+-- BD-444 (docs/132): "Egg 3 of 15" counter over the WHOLE reveal session. `T.session` is plain module state {index, total, left, at}.
+-- One session = the eggs of one hatch party (Open ... last egg / Skip the rest). Every claimed egg counts once, shown or skipped
+-- quickly; the copies of one egg never count. The session ends only through T.batchReset (end of party) or after IdleReset seconds.
+T.IdleReset = 90
+function T.newBatch() return {left = nil, index = 0, total = 0, at = nil} end
+T.session = T.newBatch()
+function T.batchReset(batch: any) batch.left, batch.index, batch.total, batch.at = nil, 0, 0, nil end
+-- A claimed egg arrived with `remaining` eggs still to come. `now` (seconds, optional) only drops a forgotten old session.
+function T.batchStep(batch: any, remaining: number, now: number?): (number, number)
+    if now and batch.at and now - batch.at > T.IdleReset then T.batchReset(batch) end
+    batch.index += 1
+    batch.total = math.max(batch.total, batch.index + remaining)
+    batch.left, batch.at = remaining, now
     return batch.index, batch.total
 end
 -- The egg counts arrive a moment after the result (BD-380): re-count the eggs left, keep the egg number.
 function T.batchRefine(batch: any, remaining: number): (number, number)
-    batch.left, batch.total = remaining, batch.index + remaining
+    batch.left = remaining
+    batch.total = math.max(batch.index + remaining, batch.index)
     return batch.index, batch.total
 end
 function T.counterText(index: number, total: number): string

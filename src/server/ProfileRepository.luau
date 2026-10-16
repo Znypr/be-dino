@@ -23,6 +23,7 @@ local SettingsModel = require(ReplicatedStorage.Shared.SettingsModel)
 
 local RunService = game:GetService("RunService")
 local localPreview = RunService:IsStudio() and game.GameId == 0 and Config.StudioLocalProfilesEnabled
+local demoActive = localPreview and Config.DemoDirectorEnabled == true -- docs/133: Studio-only, unpublished, flag-gated demo triggers
 local store: any
 if localPreview then
     -- Unpublished F5 sessions have no DataStore. Deep copies mirror transaction boundaries.
@@ -1508,6 +1509,111 @@ function ProfileRepository.grantCollectionTestSpecies(player: Player): (boolean,
     adopt(player, updated)
     if profiles[player] then syncAttributes(player, profiles[player]) end
     return true, if duplicate then "duplicate" else "granted"
+end
+
+-- docs/133 DEMO TRIGGERS. Unreachable unless unpublished Studio (memory-only local profile) AND the demo flag.
+-- demoGrantEggs banks the given, fully specified eggs through the SAME bankEggs/queue path a real settlement uses.
+function ProfileRepository.demoGrantEggs(player: Player, eggs: {any}, newFind: boolean): (boolean, string)
+    if not demoActive then return false, "disabled" end
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then return false, "profile_not_loaded" end
+    if typeof(eggs) ~= "table" or #eggs < 1 or #eggs > 60 then return false, "bad_eggs" end
+    for _, egg in eggs do
+        if typeof(egg) ~= "table" or typeof(egg.eggId) ~= "string" or not ProgressionRules.validEgg(egg)
+            or typeof(egg.reward) ~= "table" or not knownSpecies(egg.reward.speciesId) then return false, "bad_eggs" end
+    end
+    local leaseLost = false
+    local now = os.time()
+    local ok, updated = retry("demo egg party", function()
+        return store:UpdateAsync(keyFor(player), function(profileValue)
+            leaseLost = false
+            if not isValidProfile(profileValue) then return nil end
+            if not ownSession(profileValue) then leaseLost = true return nil end
+            local batch = table.create(#eggs)
+            for _, egg in eggs do table.insert(batch, DinosaurIdentity.copy(egg)) end
+            local progress = ProgressionRules.upgrade(profileValue)
+            for _, egg in batch do
+                local g = egg.genes or {}
+                if newFind then -- forget these traits so the first hatch of each shows the NEW! ribbon
+                    local log = progress.discovered
+                    if typeof(log) == "table" then
+                        if typeof(log.colours) == "table" then log.colours[g.primaryColorId or ""] = nil end
+                        if typeof(log.patterns) == "table" then log.patterns[g.patternId or ""] = nil end
+                        if typeof(log.mutations) == "table" then log.mutations[egg.mutationId or ""] = nil end
+                    end
+                else
+                    ProgressionRules.discover(profileValue, g, egg.mutationId)
+                end
+            end
+            bankEggs(profileValue, batch, now)
+            profileValue.revision += 1
+            profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            return profileValue
+        end)
+    end)
+    if not ok or updated == nil then
+        if leaseLost then handleLeaseLost(player) return false, "lease_lost" end
+        return false, "save_failed"
+    end
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
+    return true, "granted"
+end
+
+function ProfileRepository.demoEquip(player: Player, speciesId: string): (boolean, string)
+    if not demoActive then return false, "disabled" end
+    if not knownSpecies(speciesId) then return false, "unknown_species" end
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then return false, "profile_not_loaded" end
+    local leaseLost = false
+    local now = os.time()
+    local ok, updated = retry("demo equip", function()
+        return store:UpdateAsync(keyFor(player), function(profileValue)
+            leaseLost = false
+            if not isValidProfile(profileValue) then return nil end
+            if not ownSession(profileValue) then leaseLost = true return nil end
+            profileValue.equippedSpeciesId = speciesId -- owned or not: Studio demo only
+            profileValue.equippedVariantKey = nil
+            profileValue.revision += 1
+            profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            return profileValue
+        end)
+    end)
+    if not ok or updated == nil then
+        if leaseLost then handleLeaseLost(player) return false, "lease_lost" end
+        return false, "save_failed"
+    end
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
+    return true, "equipped"
+end
+
+function ProfileRepository.demoAddCrystals(player: Player, amount: number): (boolean, string)
+    if not demoActive then return false, "disabled" end
+    if typeof(amount) ~= "number" or amount ~= amount or amount % 1 ~= 0 or amount < 1 or amount > 100000 then return false, "bad_amount" end
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then return false, "profile_not_loaded" end
+    local leaseLost = false
+    local now = os.time()
+    local ok, updated = retry("demo crystals", function()
+        return store:UpdateAsync(keyFor(player), function(profileValue)
+            leaseLost = false
+            if not isValidProfile(profileValue) then return nil end
+            if not ownSession(profileValue) then leaseLost = true return nil end
+            local progress = ProgressionRules.upgrade(profileValue)
+            progress.crystals = math.min(ProgressionConfig.MaxCrystals, progress.crystals + amount)
+            profileValue.revision += 1
+            profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            return profileValue
+        end)
+    end)
+    if not ok or updated == nil then
+        if leaseLost then handleLeaseLost(player) return false, "lease_lost" end
+        return false, "save_failed"
+    end
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
+    return true, "granted"
 end
 
 function ProfileRepository.grantChestTest(player: Player): (boolean, string)

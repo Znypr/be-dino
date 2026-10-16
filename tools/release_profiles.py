@@ -85,6 +85,7 @@ COMMON_RULES = [
     _flag_off("SecurityTestHarnessEnabled", "security test harness"),
     _flag_off("ArtTestHarnessEnabled", "art preview harness"),
     _flag_off("QaOverlayEnabled", "BD-085 owner phone QA overlay (docs/127); flipped locally for a measurement build, never committed"),
+    _flag_off("DemoDirectorEnabled", "trailer clip director, Studio-only demo tool (docs/133)"),
     _flag_off("HatchV2", "BD-397 v2 hatch; off in every committed build until the owner assets and docs/118 evidence are approved"),
     _flag_off("HatchV2Preview", "docs/118 s9 Studio-only preview toggle; the owner flips it locally, never committed"),
     _flag_off("DuplicateSettlementProbe", "historical settlement probe"),
@@ -97,7 +98,7 @@ COMMON_RULES = [
 # Studio-local conveniences that may stay true because the server only honours
 # them in unpublished Studio (RunService:IsStudio() and game.GameId == 0).
 # verify_release checks those guards still exist in source.
-STUDIO_LOCAL_FLAGS = ["StudioLocalProfilesEnabled", "StudioTestWalletEnabled"]
+STUDIO_LOCAL_FLAGS = ["StudioLocalProfilesEnabled", "StudioTestWalletEnabled", "DemoDirectorEnabled"]
 
 PROFILES: dict[str, list[Rule]] = {
     "default": COMMON_RULES + [

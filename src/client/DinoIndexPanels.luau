@@ -121,6 +121,27 @@ local function chipButton(parent: GuiObject, text: string, height: number, on: b
 end
 
 
+-- Owner 2026-10-16: the small egg button shows this copy's ACTUAL original egg (same genes as the popup), generic egg otherwise.
+local function paintEggButton(hit: GuiObject, details: any)
+    for _, child in hit:GetChildren() do if child:IsA("GuiObject") then child:Destroy() end end
+    local view = if type(details) == "table" then EggOrigin.view(details, catalog, Sel, function(id) local c = EggGenetics.condition(id) return if c then c.name else nil end) else nil
+    local genes = if view and view.kind == "egg" and view.genes and EggGenetics.valid(view.genes) then view.genes else nil
+    hit:SetAttribute("EggOrigin", genes ~= nil)
+    if genes then
+        local egg = EggPicture.baked(hit, genes, 40)
+        egg.Position, egg.ZIndex = UDim2.fromOffset(4, 4), hit.ZIndex + 1
+        for _, item in egg:GetDescendants() do if item:IsA("GuiObject") then item.Active = false end end
+    else
+        local generic = Theme.icon(hit, "egg_green")
+        if generic then generic.Size, generic.Position, generic.ZIndex = UDim2.fromOffset(40, 40), UDim2.fromOffset(4, 4), hit.ZIndex + 1 end
+        if view and view.kind ~= "egg" and view.kind ~= "loading" then
+            local tip = Instance.new("TextLabel")
+            tip.Name, tip.Text, tip.BackgroundTransparency, tip.TextSize, tip.Font = "EggTip", "No egg", 1, 11, Enum.Font.GothamBold
+            tip.TextColor3, tip.Size, tip.Position, tip.ZIndex, tip.Parent = C.text, UDim2.fromOffset(48, 12), UDim2.fromOffset(0, 36), hit.ZIndex + 2, hit
+        end
+    end
+end
+
 -- BD-175: popup with the ORIGINAL egg of one dino copy. details = server details copy (or nil while loading/unavailable).
 local function eggPopup(host: GuiObject, details: any, loading: boolean)
     local scrim = Instance.new("TextButton")
@@ -199,6 +220,7 @@ function Panels.species(ctx)
     local filterButton: TextButton? = nil
     local equipButton: TextButton? = nil
     local traitsList: ScrollingFrame? = nil
+    local eggHit: TextButton? = nil
     local titleLabel: TextLabel? = nil
     local buildLeft: () -> ()
     local buildRight: () -> ()
@@ -243,6 +265,7 @@ function Panels.species(ctx)
             W.label(list, "Details unavailable. Tap the dino again.", UDim2.new(1, -10, 0, 40), UDim2.new(), 18, C.red, true)
             return
         end
+        if eggHit and eggHit.Parent then paintEggButton(eggHit, response) end
         local view = Sel.details(response, catalog)
         label.Text = view.title
         local order = 0
@@ -289,12 +312,12 @@ function Panels.species(ctx)
             loadDetails(d)
         end
         if d then
-            local eggButton = Theme.icon(stage, "egg_green")
             local hit = Instance.new("TextButton")
             hit.Name, hit.Text, hit.BackgroundColor3, hit.BackgroundTransparency = "EggButton", "", C.card, .25
             hit.Size, hit.Position, hit.ZIndex, hit.Parent = UDim2.fromOffset(48, 48), UDim2.new(1, -54, 1, -54), stage.ZIndex + 6, stage
             local hitCorner = Instance.new("UICorner") hitCorner.CornerRadius = UDim.new(.5, 0) hitCorner.Parent = hit
-            if eggButton then eggButton.Size, eggButton.Position, eggButton.ZIndex, eggButton.Parent = UDim2.fromOffset(40, 40), UDim2.fromOffset(4, 4), hit.ZIndex + 1, hit end
+            eggHit = hit
+            paintEggButton(hit, if type(st.details[d.instanceId]) == "table" then st.details[d.instanceId] else nil)
             hit.Activated:Connect(function()
                 local response = st.details[d.instanceId]
                 eggPopup(root, if type(response) == "table" then response else nil, response == "loading")

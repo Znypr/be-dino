@@ -36,6 +36,8 @@ def main():
         assert token in loop, 'effect must be driven by t: ' + token
     assert 'CelestialBodiesShown=activeId=="clear" or k<=0 or hall' in loop, 'event sun/moon sky state hidden inside'
     assert 'showTitle(id,workspace:GetAttribute("WeatherName") or id,hall)' in loop, 'inside the hall only the soft text toast (no big card)'
+    assert 'if hall then softenTitle() end' in loop, 'a big card already up shrinks to the soft toast when the cave is entered'
+    assert 'soft=soft or inHall()' in src and 'titleBig=not soft' in src, 'showTitle re-checks the cave: no big card or bonus line inside'
     assert 'if hall then shake=0 end' in loop, 'no camera shake inside, not even for a quake'
     assert 'if root and not hall and activeId=="quake"' in loop, 'quake cracks gated by hall'
     assert 'local moonOn=live and' in loop and 'local auroraOn=live and' in loop, 'moon / aurora gated by live'
