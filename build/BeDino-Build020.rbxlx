@@ -368258,6 +368258,7 @@ return table.freeze({
     TerrainTop = 120,
     ArenaHalfWidth = 416, -- world v2: 1.6x the 260 of the 520 map (IslandLayout.Scale)
     SanctuaryCenterZ = 521, -- hub centre: ArenaHalfWidth + 105 (it sits past the north boundary)
+    FastTravelPerk = false, -- BD-391/405 (docs/115 D22): true = fast travel to shops is a Crystal Shop perk (crystals, no Robux); false = unchanged. Needs CaveHub.
     CaveHub = false, -- BD-280 (docs/104): true = big cave Sanctuary at CaveHubLayout.CenterZ; false = the current hub, unchanged
     CameraMinZoom = 12,
     CameraMaxZoom = 110,
@@ -374972,7 +374973,7 @@ function Rules.dimmed(destination: any, caveHub: any, runState: any): boolean
     return caveHub == true and typeof(destination) == "string" and Rules.RunDimmed[destination] == true and Rules.inRun(runState)
 end
 
--- in = {caveHub, destination, runState, teleportShops, remote (HubTravel exists), busy}
+-- in = {caveHub, destination, runState, fastTravelPerk, fastTravelOwned, teleportShops, remote (HubTravel exists), busy}
 -- out = {kind = "open"} | {kind = "travel", station} | {kind = "guide", station} | {kind = "blocked", toast}
 -- "guide" = Teleport to shops is OFF at home: HubGuideClient draws the moss trail (falls back to a plain open on the pad).
 function Rules.decide(i: any): any
@@ -374981,6 +374982,7 @@ function Rules.decide(i: any): any
     if Rules.inRun(i.runState) then return {kind = "open"} end -- POTIONS / SETTINGS in a run: as today
     local station = Rules.stationFor(i.destination)
     if station == nil then return {kind = "open"} end
+    if i.fastTravelPerk == true and i.fastTravelOwned ~= true then return {kind = "guide", station = station} end -- BD-391: not bought: walk with the glow guide
     if i.teleportShops == false then return {kind = "guide", station = station} end -- BD-289: walk there, with the moss trail
     if i.remote ~= true then return {kind = "open"} end
     if i.busy == true then return {kind = "blocked", toast = nil} end -- a trip is already running: ignore the tap quietly
@@ -375046,7 +375048,7 @@ HubTravelRules.RateSeconds = 0.8 -- PROVISIONAL (docs/104 s7): one request per p
 HubTravelRules.OccupiedRadius = 2.5 -- studs: an arrival spot this close to another player counts as taken (spots are &gt;= 3 apart)
 HubTravelRules.MaxKeyLength = 24
 
--- Reasons: flag_off, bad_request, not_loaded, not_home, no_dino, dead, outside, unknown, settings, rate_limited
+-- Reasons: flag_off, not_owned, bad_request, not_loaded, not_home, no_dino, dead, outside, unknown, settings, rate_limited
 local function finite(n: any): boolean return typeof(n) == "number" and n == n and n ~= math.huge and n ~= -math.huge end
 
 -- Station id from a request (`{station = "nests"}` or the bare string); nil when malformed.
@@ -375063,6 +375065,8 @@ function HubTravelRules.validate(request: any, state: any): (boolean, string?)
     local key = HubTravelRules.stationKey(request)
     if key == nil or not finite(state.now) then return false, "bad_request" end
     if state.profileState ~= "Loaded" then return false, "not_loaded" end
+    -- BD-391/405 (docs/115 D22): with the perk flag on, only a player who bought Fast travel may be moved.
+    if state.fastTravelPerk == true and state.fastTravelOwned ~= true then return false, "not_owned" end
     if state.runState ~= "Sanctuary" then return false, "not_home" end
     if state.dinoAttached ~= true then return false, "no_dino" end
     if state.alive ~= true then return false, "dead" end
@@ -379321,6 +379325,9 @@ return table.freeze({
     -- 4 eggs (500 food) -&gt; 30, 40 eggs (5,000 food) -&gt; 220 (owner's illustrative 30/220), 50 eggs -&gt; 273; cap 300 bounds it.
     RunCrystalPerEggHundredths=750, RunCrystalTierEggs=4, RunCrystalPerExtraEggHundredths=530, RunCrystalCap=300,
     RandomEggPrice=150,
+    -- BD-391/405 (docs/115 D22): Fast travel perk. PROVISIONAL price (owner 2026-10-16: a mid goal, about 500; earlier Q10 options were 300 / 600 / 1,200); bought with crystals only.
+    FastTravelPrice=500,
+    Perks={{id="fastTravel",name="Fast travel",price=500}},
     ConditionUpgrades={
         {level=1,price=100,requiredLevel=3},{level=2,price=300,requiredLevel=8},
         {level=3,price=800,requiredLevel=16},{level=4,price=1800,requiredLevel=28},
@@ -379574,6 +379581,10 @@ function Rules.valid(p): boolean
         if typeof(p.equippedTrail)~="string" then return false end
         if p.equippedTrail~="" and (not p.trails or not p.trails[p.equippedTrail]) then return false end
     end
+    if p.perks~=nil then
+        if typeof(p.perks)~="table" then return false end
+        for id,value in p.perks do if typeof(id)~="string" or not Rules.item(Config.Perks,id) or value~=true then return false end end
+    end
     if p.shop~=nil then
         local shop=p.shop
         if typeof(shop)~="table" or not finite(shop.window) or shop.window&lt;0 or shop.window%1~=0 or typeof(shop.bought)~="table" then return false end
@@ -379646,6 +379657,15 @@ function Rules.apply(profile,action,id,now,replace,amount): (boolean,string)
         p.shop.bought[potionId]=(p.shop.bought[potionId] or 0)+1
         p.crystals-=item.price p.potions[potionId]=(p.potions[potionId] or 0)+1
         return true,"purchased"
+    elseif action=="buyPerk" then
+        local item=Rules.item(Config.Perks,id)
+        if not item then return false,"unknown_item" end
+        if Rules.hasPerk(p,id) then return false,"already_owned" end
+        if p.crystals&lt;item.price then return false,"insufficient_crystals" end
+        p.crystals-=item.price
+        p.perks=p.perks or {}
+        p.perks[id]=true
+        return true,"purchased"
     elseif action=="usePotion" then
         local item=Rules.item(Config.Potions,id)
         if not item then return false,"unknown_item" end
@@ -379656,6 +379676,10 @@ function Rules.apply(profile,action,id,now,replace,amount): (boolean,string)
         return true,"activated"
     end
     return false,"invalid_action"
+end
+-- BD-391/405: perks are an additive optional table `perks = {fastTravel = true}`; absent = nothing owned (old profiles unchanged).
+function Rules.hasPerk(p,id: string): boolean
+    return typeof(p)=="table" and typeof(p.perks)=="table" and p.perks[id]==true
 end
 function Rules.level(p)
     return math.min(Config.AccountMaxLevel,1+math.floor(math.sqrt((p.accountXP or 0)/Config.AccountXPPerLevel)))
@@ -554272,6 +554296,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Rules = require(ReplicatedStorage.Shared.HubTravelRules)
+local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 local FallRecovery = require(script.Parent.FallRecovery)
 local HubTravelService = {}
@@ -554291,7 +554316,14 @@ local function gather(player: Player, character: Model?): any
         local r = if other ~= player and c then c:FindFirstChild("HumanoidRootPart") else nil
         if r and r:IsA("BasePart") then occupied[#occupied + 1] = {x = r.Position.X, z = r.Position.Z} end
     end
+    local owned = false
+    if Config.FastTravelPerk == true then
+        local progress = require(script.Parent.ProfileRepository).progression(player)
+        owned = progress ~= nil and ProgressionRules.hasPerk(progress, "fastTravel")
+    end
     return {
+        fastTravelPerk = Config.FastTravelPerk == true,
+        fastTravelOwned = owned,
         caveHub = Config.CaveHub == true,
         profileState = player:GetAttribute("ProfileState"),
         runState = if character then character:GetAttribute("RunState") else nil,
@@ -558027,6 +558059,7 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
     if typeof(token)~="string" or #token&lt;1 or #token&gt;80 then return false,"invalid_token" end
     if (action=="buyEgg" or action=="upgradeCondition") and next(Config.DeveloperProducts)~=nil
         and (not Config.PaidRandomItemsEnabled or PrivateState.get(player, "PaidRandomEligible")~=true) then return false,"random_items_unavailable" end
+    if action=="buyPerk" and (Config.FastTravelPerk~=true or Config.CaveHub~=true) then return false,"perk_unavailable" end -- BD-391/405: flag off = no purchase
     local eggId=nil
     local egg=nil
     local purchaseConditionLevel=ProfileRepository.progression(player).conditionLevel
@@ -558407,7 +558440,7 @@ function Service.start(repository)
     local remote=Instance.new("RemoteEvent") remote.Name="ProgressionAction" remote.Parent=ReplicatedStorage.BeDinoRemotes
     local response=Instance.new("RemoteEvent") response.Name="ProgressionResult" response.Parent=ReplicatedStorage.BeDinoRemotes
     remote.OnServerEvent:Connect(function(player,action,id,token,replace,...)
-        if select("#",...)~=0 or typeof(action)~="string" or not table.find({"buyAura","equipAura","buyTrail","equipTrail","buyPotion","usePotion","buyEgg","upgradeCondition"},action)
+        if select("#",...)~=0 or typeof(action)~="string" or not table.find({"buyAura","equipAura","buyTrail","equipTrail","buyPotion","usePotion","buyEgg","upgradeCondition","buyPerk"},action)
             or typeof(id)~="string" or #id&gt;40 or typeof(token)~="string" or #token&lt;1 or #token&gt;80
             or typeof(replace)~="boolean" then return end
         local now=os.clock() local bucket=buckets[player]
@@ -559719,6 +559752,15 @@ render=function(name: string)
             label(body,ProgressionConfig.RandomEggPrice.." Crystals\nBalance: "..num("Crystals").."  •  Level "..num("AccountLevel"),270,cardsY+45,535,60,22)
             button(body,"ODDS / DETAILS",270,cardsY+119,535,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("oddsSimple") end)
             button(body,"BUY EGG",270,cardsY+targetHeight+130,535,targetHeight,C.accent,function() open("eggPurchase") end)
+            -- BD-391/405 (docs/115 D22): Fast travel perk, bought with crystals. PROVISIONAL price. Walking stays the default.
+            if Config.FastTravelPerk and Config.CaveHub then
+                local owned=type(p.perks)=="table" and p.perks.fastTravel==true
+                local perkPrice=ProgressionConfig.FastTravelPrice
+                label(body,"Fast travel: zip to the shops",0,math.max(cardsY+targetHeight*2+150,336),520,34,22,C.gold)
+                button(body,if owned then "YOURS" else perkPrice.." Crystals",540,math.max(cardsY+targetHeight*2+146,332),284,40,if owned then C.card else C.accent,function()
+                    if not owned then transact("buyPerk","fastTravel") open("auras") end
+                end).Active=not owned
+            end
             return
         elseif cosmeticTab=="conditions" then
             local weights=ShopOdds.conditionPercents(p.conditionLevel or 0) -- BD-045: normalized percents
@@ -566896,6 +566938,15 @@ local guide: any = nil -- {show, cancel} from HubGuideClient once attached
 local chip: TextButton? = nil
 local Cream = Color3.fromRGB(255, 244, 220)
 
+-- BD-391/405: does this player own the Fast travel perk? (ProgressionJson is the server's own copy, read-only here.)
+local function ownsFastTravel(): boolean
+    local raw = require(script.Parent:WaitForChild("PrivateState")).get("ProgressionJson")
+    if typeof(raw) ~= "string" then return false end
+    local ok, data = pcall(function() return game:GetService("HttpService"):JSONDecode(raw) end)
+    return ok and typeof(data) == "table" and typeof(data.perks) == "table" and data.perks.fastTravel == true
+end
+Client.ownsFastTravel = ownsFastTravel
+
 local function runState(): any
     local character = player.Character
     return if character then character:GetAttribute("RunState") else nil
@@ -566979,6 +567030,7 @@ function Client.press(destination: string): boolean
     if guide then guide.cancel() end -- pressing any rail button cancels a trail still showing
     local decision = Rules.decide({
         caveHub = true, destination = destination, runState = runState(),
+        fastTravelPerk = Config.FastTravelPerk == true, fastTravelOwned = ownsFastTravel(),
         teleportShops = Settings.teleportShops(), remote = remote() ~= nil, busy = busy,
     })
     if decision.kind == "blocked" then
@@ -568683,8 +568735,10 @@ local function drawControls(body: Instance, ctx: Context)
     ctx.button(body, "RESET", 270, TOP, 180, 48, C.blue, function() ctx.cameraReset() ctx.notify("Camera reset", C.blue) end)
     choice(body, ctx, 1, "Jump button", Model.JumpSizes, SIZE_TEXT, Model.get().jumpSize, function(id) Model.set("jumpSize", id) ctx.open("settings") end)
     -- BD-288 (docs/104 s7.6): only shown while the Cave hub is on; OFF = the rail just opens the menu, no teleport.
-    if require(Shared:WaitForChild("Config")).CaveHub then
-        toggle(body, ctx, if require(Shared:WaitForChild("Config")).CombatEnabled then 4 else 2, "Teleport to shops", Model.teleportShops(), function() Model.set("teleportShops", not Model.teleportShops()) ctx.open("settings") end)
+    -- BD-391/405 (docs/115 D22): with the perk flag on, the toggle shows only after the player bought Fast travel.
+    local cfg = require(Shared:WaitForChild("Config"))
+    if cfg.CaveHub and (cfg.FastTravelPerk ~= true or require(script.Parent:WaitForChild("HubTravelClient")).ownsFastTravel()) then
+        toggle(body, ctx, if require(Shared:WaitForChild("Config")).CombatEnabled then 4 else 2, if cfg.FastTravelPerk == true then "Fast travel" else "Teleport to shops", Model.teleportShops(), function() Model.set("teleportShops", not Model.teleportShops()) ctx.open("settings") end)
     end
     -- docs/101 s16 Peaceful: only shown while HP combat is on (Config.CombatEnabled); the server reads it at run start.
     if require(Shared:WaitForChild("Config")).CombatEnabled then
