@@ -122,7 +122,7 @@ local function handleAction(player: any, request: any)
         return {ok = true, quote = {speciesId = quote.speciesId, patternId = quote.patternId, targetStage = quote.targetStage,
             donorIds = quote.donorIds, lossManifest = quote.lossManifest, consentRequired = quote.consentRequired,
             consentDigest = quote.consentDigest, quoteDigest = quote.quoteDigest, recipeVersion = quote.recipeVersion,
-            oddsVersion = quote.oddsVersion, odds = exactOdds(quote.odds)}}
+            oddsVersion = quote.oddsVersion, odds = exactOdds(quote.odds), cosmeticNotice = quote.cosmeticNotice}}
     end
     -- fuse: only whitelisted fields reach the repository.
     local ok, result, status = repository.fuseDinosaurs(player, {token = request.token, targetStage = request.targetStage,

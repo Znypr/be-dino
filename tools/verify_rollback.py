@@ -44,6 +44,7 @@ def script():
         ('@@REWARD_MATH@@', 'src/server/RewardMath.luau'),
         ('@@IDENTITY_FUSION_MODULE@@', 'src/server/IdentityFusion.luau'),
         ('@@IDENTITY_MODULE@@', 'src/server/DinosaurIdentity.luau'),
+        ('@@COSMETIC_OWNERSHIP@@', 'src/server/CosmeticOwnership.luau'),
         ('@@REPO_MODULE@@', 'src/server/ProfileRepository.luau'),
     ]:
         s = s.replace(token, module(path))

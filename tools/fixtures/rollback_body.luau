@@ -363,4 +363,41 @@ do
  check(OldRepo.load(newUser(id)),"an expired lease from the other build is taken over (no permanent lock-out)")
 end
 
+-- BD-059 phase 2: a per-dino purchase lives only in the identity sidecar. Build 020 and the flag-off build keep it byte for byte.
+do
+ local id=7600
+ local u=newUser(id)
+ check(NewRepo.load(u),"per-dino: profile loads")
+ for n=1,6 do check(NewRepo.progressionAction(u,"grant","crystal","pd-fund-"..n,false,100),"per-dino: crystals granted") end
+ PlaytestConfig.PerDinoCosmeticsEnabled=true
+ local okBuy,statusBuy=NewRepo.progressionAction(u,"buyAura","tidal","pd-buy",false)
+ check(okBuy and statusBuy=="purchased","per-dino: purchase bound to the equipped dino")
+ local okDup,statusDup=NewRepo.progressionAction(u,"buyAura","tidal","pd-buy",false)
+ check(okDup and statusDup=="duplicate","per-dino: same token is exactly-once")
+ check(not NewRepo.progressionAction(u,"buyAura","tidal","pd-buy-2",false),"per-dino: second purchase of an owned aura refused")
+ check(NewRepo.progressionAction(u,"equipAura","tidal","pd-equip",false) and NewRepo.progression(u).equippedAura=="tidal","per-dino: equip applies to the equipped dino view")
+ NewRepo.release(u)
+ local stored=data[key(id)]
+ local owners=0
+ for _,inst in stored.dinosaurIdentity.instances do if inst.cosmetics.ownedAuraIds.tidal==true then owners+=1 end end
+ check(owners==1,"per-dino: exactly one instance owns the aura")
+ check(stored.progression.auras.tidal==nil and stored.progression.equippedAura=="","per-dino: account-wide purchases and equip are untouched (rollback view)")
+ local sidecar=copy(stored.dinosaurIdentity)
+ local crystalsAfter=stored.progression.crystals
+ local uo=newUser(id)
+ check(OldRepo.load(uo) and OldRepo.progressionAction(uo,"equipAura","tidal","pd-old-equip",false)==false,"per-dino: Build 020 loads it and does not see the dino's aura as account-owned")
+ OldRepo.renew(uo) OldRepo.release(uo)
+ check(same(sidecar,data[key(id)].dinosaurIdentity) and data[key(id)].progression.crystals==crystalsAfter,"per-dino: Build 020 keeps the sidecar purchase and crystals byte for byte")
+ PlaytestConfig.PerDinoCosmeticsEnabled=false
+ local uf=newUser(id)
+ check(NewRepo.load(uf) and NewRepo.progression(uf).auras.tidal==nil and not NewRepo.progressionAction(uf,"equipAura","tidal","pd-off-equip",false),"per-dino: flag back off shows the legacy view only")
+ NewRepo.release(uf)
+ check(same(sidecar,data[key(id)].dinosaurIdentity),"per-dino: flag off keeps the per-dino purchase stored")
+ PlaytestConfig.PerDinoCosmeticsEnabled=true
+ local un=newUser(id)
+ check(NewRepo.load(un) and NewRepo.progression(un).auras.tidal==true,"per-dino: flag on again restores it")
+ NewRepo.release(un)
+ PlaytestConfig.PerDinoCosmeticsEnabled=false
+end
+
 print(string.format("Rollback drill verified (offline Luau, mocked DataStore): %d checks. Studio, real DataStore versioning and a real publish revert are NOT covered (BD-320 stays open for the owner).",checks))

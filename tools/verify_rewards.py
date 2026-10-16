@@ -95,9 +95,11 @@ local script={Parent={Config="Config"}}
 local require=function(id) if id=="Identity" then return Identity end return GameConfig end
 local FusionOdds=@@FUSION_ODDS@@
 local PrivateStateStub={set=function(p,k,v) p.attrs[k]=v end,get=function(p,k) return p.attrs[k] end,forget=function() end} -- BD-360: the real module is tested by verify_private_state; here owner-only values land in attrs
-local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState",RareHatchService="RareHatchService"}}
+local Cosmetic=@@COSMETIC_OWNERSHIP@@
+local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState",RareHatchService="RareHatchService",CosmeticOwnership="Cosmetic"}}
 local require=function(id)
  if id=="PrivateState" then return PrivateStateStub end
+ if id=="Cosmetic" then return Cosmetic end
  if id=="RareHatchService" then return {record=function() end} end -- BD-428: tested by verify_rare_hatch
  if id=="FusionOdds" then return FusionOdds end
  if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics
@@ -596,6 +598,7 @@ def script():
         ('@@REWARD_MATH@@', 'src/server/RewardMath.luau'),
         ('@@IDENTITY_FUSION_MODULE@@', 'src/server/IdentityFusion.luau'),
         ('@@IDENTITY_MODULE@@', 'src/server/DinosaurIdentity.luau'),
+        ('@@COSMETIC_OWNERSHIP@@', 'src/server/CosmeticOwnership.luau'),
         ('@@REPO_MODULE@@', 'src/server/ProfileRepository.luau'),
     ]:
         s = s.replace(token, module(path))
