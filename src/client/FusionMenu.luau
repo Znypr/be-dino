@@ -104,6 +104,13 @@ local function toast(text: string, color: Color3?)
     toastSerial += 1
     local serial = toastSerial
     label.Text, label.TextColor3, label.Visible = text, color or C.text, true
+    -- BD-334: on a short phone canvas the toast sits at the top, so it never covers Fill / Clear / FUSE at the bottom.
+    local camera = if workspace then workspace.CurrentCamera else nil
+    if camera and camera.ViewportSize.Y < 500 then
+        label.Position = UDim2.new(.2, 0, 0, 6)
+    else
+        label.Position = UDim2.new(.15, 0, 1, -40)
+    end
     task.delay(3.2, function() if serial == toastSerial then label.Visible = false end end)
 end
 
@@ -354,7 +361,7 @@ end
 -- QA 2026-10-16: on phone landscape the picture shares the column with the odds chips; give the chips more room.
 local function resultRatio(): number
     local camera = if workspace then workspace.CurrentCamera else nil
-    return if camera and camera.ViewportSize.Y < 520 then .36 else .5
+    return if camera and camera.ViewportSize.Y < 520 then .27 else .5
 end
 
 -- Result preview (right column): big picture of the new dino + name + guarantee line.
@@ -908,6 +915,11 @@ function FusionMenu.open()
     state.open = true
     local screen = gui :: ScreenGui
     screen.Enabled = true
+    -- BD-334: on a short phone canvas stay below the Roblox top bar (menu/chat buttons), which covered the title.
+    local camera = if workspace then workspace.CurrentCamera else nil
+    pcall(function()
+        (screen :: any).ScreenInsets = if camera and camera.ViewportSize.Y < 500 then Enum.ScreenInsets.CoreUISafeInsets else Enum.ScreenInsets.DeviceSafeInsets
+    end)
     if panel and motion() then
         local frame = panel :: Frame
         frame.Position = UDim2.new(0, leftInset + 6, .53, 0)

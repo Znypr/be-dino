@@ -157,6 +157,7 @@ local function close()
 end
 local closeButton=button(header,"X",770,1,80,76,C.red,close)
 closeButton.AnchorPoint,closeButton.Position=Vector2.new(1,0),UDim2.new(1,-2,0,1)
+require(script.Parent.ModalCompact).attach({gui=gui,panel=panel,header=header,heading=heading,body=body,closeButton=closeButton,scale=scale}) -- BD-333: phone landscape layout, no-op on desktop
 shade.Activated:Connect(close)
 -- BD-067 toasts: up to 3 pooled cards stacked from the old toast slot (y=80). NotifyQueue decides
 -- what shows (priority, merge, throttle); this only draws. Tap a card to dismiss the newest one.
@@ -236,9 +237,8 @@ task.spawn(function()
     while gui.Parent do pumpToasts() task.wait(.1) end
 end)
 local function viewportScale(): number
-    local camera=workspace.CurrentCamera
     local size=gui.AbsoluteSize
-    return math.max(.05,math.min(1,(size.X-40)/860,(size.Y-40)/520))
+    return require(Shared.PhoneScale).modal(size.X,size.Y).scale -- BD-333: desktop = old (w-40)/860,(h-40)/520 rule; short canvases use the compact layout
 end
 -- BD-054: prefer the active input style; fall back to TouchEnabled on older clients.
 local function touchMode(): boolean
@@ -313,6 +313,7 @@ local function open(name: string)
     active=name
     updateNavigation()
     body:ClearAllChildren()
+    require(script.Parent.ModalCompact).layout()
     shade.Visible=true
     if not wasVisible then
         scale.Scale=viewportScale()*(if motion then .96 else 1)
@@ -325,8 +326,9 @@ local function open(name: string)
     Theme.animate(blur,.16,{Size=if motion then 8 else 0})
     render(name)
     -- Animate the content as one layer, keeping large collections inexpensive.
-    body.Position=UDim2.fromOffset(18,if motion then 106 else 98)
-    Theme.animate(body,.14,{Position=UDim2.fromOffset(18,98)})
+    body.Position=require(script.Parent.ModalCompact).place(false,motion)
+    Theme.animate(body,.14,{Position=require(script.Parent.ModalCompact).place(true,motion)})
+    require(script.Parent.ModalCompact).reset()
 end
 local fusionProbe: string?=nil -- nil unknown, "ok", "disabled"
 local function fusionRemote(): RemoteFunction?
@@ -336,7 +338,7 @@ local function fusionRemote(): RemoteFunction?
 end
 local function showFusionMenu()
     close()
-    if rail then FusionMenu.setLeftInset(rail.AbsolutePosition.X+rail.AbsoluteSize.X+10-gui.AbsolutePosition.X) end
+    if rail then FusionMenu.setLeftInset(if require(Shared.PhoneScale).isCompact(gui.AbsoluteSize.Y) then 0 else rail.AbsolutePosition.X+rail.AbsoluteSize.X+10-gui.AbsolutePosition.X) end -- BD-334: the phone rail is a top bar, not a left column
     FusionMenu.open()
 end
 -- Nav FUSION + Dino Index footer: the new Pattern Fusion Menu when FusionAction answers.
@@ -572,8 +574,9 @@ render=function(name: string)
         end
         local footerY=402-targetHeight
         if isTrail then
-            button(body,"<",0,footerY,110,targetHeight,C.blue,function() trailPage=math.max(1,trailPage-1) open("auras") end)
-            button(body,">",714,footerY,110,targetHeight,C.blue,function() trailPage=math.min(4,trailPage+1) open("auras") end)
+            -- BD-334: the arrow that cannot go further is dimmed and inert (page 1 "<", page 4 ">").
+            button(body,"<",0,footerY,110,targetHeight,if trailPage<=1 then C.card else C.blue,function() if trailPage<=1 then return end trailPage=math.max(1,trailPage-1) open("auras") end).TextTransparency=if trailPage<=1 then .6 else 0
+            button(body,">",714,footerY,110,targetHeight,if trailPage>=4 then C.card else C.blue,function() if trailPage>=4 then return end trailPage=math.min(4,trailPage+1) open("auras") end).TextTransparency=if trailPage>=4 then .6 else 0
         end
         label(body,"Level "..num("AccountLevel").." • "..num("Crystals").." Crystals"..(if isTrail then " • "..trailPage.." / 4" else ""),115,footerY,590,targetHeight,21,C.gold)
     elseif name=="oddsSimple" then
@@ -1149,6 +1152,7 @@ local function refreshCrystals()
     lastCrystalAmount=amount
     Theme.animate(crystalValue,.28,{Value=amount})
     if crystalInitialized and delta>0 then
+        Sfx.playAlias("crystal_reward")
         notify("+"..math.round(delta).." Crystals",C.gold,{key="crystals",icon="amber",amount=math.round(delta),format="+%d Crystals"})
     end
     crystalInitialized=true
@@ -1167,7 +1171,7 @@ local function refreshGoal()
     local goal=NextGoal.pick({dinos=goalDinos,level=num("AccountLevel"),xp=num("AccountXP"),perLevel=ProgressionConfig.AccountXPPerLevel,
         maxLevel=ProgressionConfig.AccountMaxLevel,stages=FusionSelection.Stages,
         speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName})
-    goalText.Text,goalText.TextColor3="Goal  "..goal.text,if goal.ready then C.accent else C.gold
+    goalText.Text,goalText.TextColor3=(if touchMode() or require(Shared.PhoneScale).isCompact(gui.AbsoluteSize.Y) then "" else "Goal  ")..goal.text,if goal.ready then C.accent else C.gold
 end
 local goalQueued=false
 local function loadGoalDinos()
@@ -1314,6 +1318,7 @@ end
 local function scales()
     scale.Scale=viewportScale()
     closeButton.Size=UDim2.fromOffset(math.max(80,46/viewportScale()),math.max(62,46/viewportScale()))
+    require(script.Parent.ModalCompact).layout()
     local size=gui.AbsoluteSize
     if size.X<=0 or size.Y<=0 then return end
     local touch=touchMode()
@@ -1329,6 +1334,10 @@ local function scales()
     goalHUD.AnchorPoint,goalHUD.Size=Vector2.zero,UDim2.fromOffset(layout.crystal.w,30)
     goalHUD.Position=UDim2.fromOffset(layout.crystal.x,layout.crystal.y+layout.crystal.h*layout.crystal.scale+4)
     goalScale.Scale=layout.crystal.scale
+    local goalFloor=if layout.touch then require(Shared.PhoneScale).floorText(17,layout.crystal.scale) else 17 -- BD-333: goal text renders >= 14 px, truncated instead of shrunk
+    goalLimit.MaxTextSize,goalLimit.MinTextSize=goalFloor,if layout.touch then goalFloor else 1
+    goalText.TextScaled,goalText.TextSize=not layout.touch,goalFloor
+    goalText.TextWrapped,goalText.TextTruncate=not layout.touch,if layout.touch then Enum.TextTruncate.AtEnd else Enum.TextTruncate.None
     place(hud,hudScale,layout.hud)
     place(rail,railScale,layout.rail)
     place(timers,timerScale,layout.timers)
@@ -1340,7 +1349,8 @@ local function scales()
         for _,child in b:GetChildren() do
             if child:IsA("TextLabel") then
                 child.Position,child.Size,child.TextSize=UDim2.fromOffset(cell.labelX,cell.labelY),UDim2.fromOffset(cell.labelW,cell.labelH),cell.textSize
-                child.TextScaled=true
+                child.Visible=not cell.iconOnly -- BD-333: narrow phones show the icon only
+                child.TextScaled=not layout.touch -- BD-333: phones draw the label at its real >= 14 px size instead of shrinking it to fit
                 local limit=child:FindFirstChildOfClass("UITextSizeConstraint") or Instance.new("UITextSizeConstraint")
                 limit.MaxTextSize,limit.Parent=cell.textSize,child
             elseif child:IsA("GuiObject") and child.Name~="ActiveTab" then
@@ -1352,6 +1362,7 @@ local function scales()
     leapButton.Position=UDim2.fromOffset(0,t.leapY)
     weatherTile.Position,weatherTile.Visible=UDim2.fromOffset(0,t.weatherY),t.weatherVisible
     buffsText.Position,buffsText.Size,buffsText.Visible=UDim2.fromOffset(0,t.buffsY),UDim2.fromOffset(286,t.buffsH),t.buffsVisible
+    leapText.TextSize,weatherText.TextSize,buffsText.TextSize=t.leapText,t.weatherText,t.buffsText -- BD-333: design sizes that render >= 14 px
     for _,item in {{buildBadge,layout.badge},{previewNotice,layout.notice}} do
         local labelObject,entry=item[1],item[2]
         labelObject.AnchorPoint,labelObject.Position,labelObject.Size=Vector2.zero,UDim2.fromOffset(entry.x,entry.y),UDim2.fromOffset(entry.w,entry.h)

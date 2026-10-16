@@ -169,7 +169,7 @@ function Hatch.add(parent: GuiObject,genes,rarityColor: Color3?,assets: {shell: 
         root:SetAttribute("Opening",true)
         if Theme.HatchSoundEnabled~=false then
             crunch.Parent=parent crunch:Play() game:GetService("Debris"):AddItem(crunch,2)
-            if success~=false then chime.Parent=parent chime:Play() game:GetService("Debris"):AddItem(chime,3) end
+            if success~=false then chime.Parent=parent task.delay(.3,function() if chime.Parent then chime:Play() end end) game:GetService("Debris"):AddItem(chime,3) end
         end
         if not Theme.MotionEnabled then root:Destroy() return end
         stage.Rotation=0 scale.Scale=1 shell.Visible=false condition.Visible=false
