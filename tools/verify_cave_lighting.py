@@ -40,10 +40,30 @@ for _,l in D.lights do
  assert(C.insideFloor(l.x,l.z,0),"light inside the floor blob: "..l.owner)
  local ceil=C.ceilingY(l.x,l.z)
  assert(l.y>C.floorHeight(l.x,l.z) and l.y<ceil-4,"light between floor and ceiling: "..l.owner)
- assert(l.range>=14 and l.range<=40 and l.brightness>0.25 and (l.arch or l.brightness<=1.0) and l.brightness<=2.0,"calm light values: "..l.owner)
+ assert(l.range>=14 and l.range<=48 and l.brightness>0.25 and (l.arch or l.brightness<=1.0) and l.brightness<=2.4,"calm light values: "..l.owner)
  assert(l.color[1]>=190 and l.color[3]>=70,"no cold or dark light colour: "..l.owner)
  if l.arch then archBrightness=l.brightness else maxFill=math.max(maxFill,l.brightness) end
 end
+local shadowN=0
+for _,l in D.lights do if l.shadows then shadowN+=1 end end
+assert(shadowN==4,"PointLight.Shadows on exactly the 4 strongest lights: "..shadowN)
+local look=R.Look
+assert(look.ambient[1]<=80 and look.ambient[2]<=70 and look.brightness>=1.2 and look.brightness<=1.5,"BD-398 cave ambient warm-dim, Brightness 1.2-1.5")
+assert(look.grade.brightness<=-0.08 and look.grade.brightness>=-0.12 and look.grade.contrast>=0.1,"BD-398 grade darker with contrast")
+-- the blend ramps to exactly 1 inside within blendSeconds (and in half that with Reduce Motion)
+local a=0
+for _=1,math.ceil(look.blendSeconds*60)+1 do a=R.blend(a,1,1/60,false) end
+assert(a==1,"BD-398 cave amount reaches 1 inside: "..a)
+a=0
+for _=1,math.ceil(look.blendSeconds*30)+1 do a=R.blend(a,1,1/60,true) end
+assert(a==1,"BD-398 reduce motion ramps in half the time")
+-- hall boundary: floor points at 90 percent of the floor edge count as inside; high above or far away is outside
+for deg=0,350,10 do
+ local th=math.rad(deg)
+ local x,z=math.cos(th)*C.BaseX*0.9,CZ+math.sin(th)*C.BaseZ*0.9
+ assert(R.insideAt(x,FY+3,z,false),"inside at 90 percent of the floor edge, angle "..deg)
+end
+assert(not R.insideAt(0,FY+120,CZ,false) and not R.insideAt(0,FY+3,CZ+400,false),"outside the hall is not inside")
 assert(archBrightness>maxFill,"the gate arch light is the strongest light so the doorway reads")
 local gate=L.byId.gate
 local arch
@@ -108,7 +128,7 @@ for _,m in {"Sandstone","Slate","Rock","Basalt","Grass","LeafyGrass","Mud","Grou
 local Look=R.Look
 for _,k in {"ambient","outdoorAmbient","colorShiftTop","fogColor"} do for i=1,3 do assert(Look[k][i]>=0 and Look[k][i]<=255) end end
 assert(Look.ambient[1]>Look.ambient[3],"warm ambient (more red than blue)")
-assert(Look.grade.saturation<=0.2 and math.abs(Look.grade.contrast)<=0.12 and math.abs(Look.grade.brightness)<=0.06,"gentle grade")
+assert(Look.grade.saturation<=0.2 and math.abs(Look.grade.contrast)<=0.12 and math.abs(Look.grade.brightness)<=0.12 and Look.grade.saturation>=-0.2,"gentle grade")
 assert(Look.fogEnd>=400 and Look.atmosphere.density<=0.3,"light haze, the hall stays readable")
 assert(R.insideAt(0,FY+5,CZ,false) and R.insideAt(0,FY+5,CZ+95,false),"inside at the Heart and near the lava")
 assert(R.insideAt(gate.x,FY+5,CZ+gate.z-12,true),"inside in the gate mouth")
@@ -160,7 +180,7 @@ def static_checks():
     assert 'ColorCorrectionEffect' in client and 'grade:Destroy()' in client, 'ColorCorrection only while inside, destroyed on leaving'
     assert 'WeatherDof' in client and 'dof.Enabled = false' in client and 's.dof ~= nil' in client, 'weather DepthOfField off in the cave, restored outside'
     weather = (ROOT / 'src/client/WeatherVisuals.client.luau').read_text()
-    assert 'Cave.step(dt)' in weather and 'not Cave.inside()' in weather, 'weather calls the cave look last and keeps its rigs outside'
+    assert 'Cave.step(dt)' in weather and 'local hall=Cave.inside() or Cave.amount()>.01' in weather, 'weather calls the cave look last and keeps its rigs outside'
     # BD-383: every additive weather effect (WeatherGrade / Bloom / Rays / haze / exposure / lamps) scales by the weather strength t,
     # and t is multiplied by (1 - Cave.amount()), so inside the hall the weather writes neutral values (grey Blizzard cave).
     assert 'local t=WL.strength(k,Theme.MotionEnabled)*outside' in weather and 'outside=1-Cave.amount()' in weather, 'BD-383 weather strength fades out in the cave'
@@ -168,6 +188,14 @@ def static_checks():
         assert needle in weather, 'BD-383 effect still driven by the faded t: ' + needle
     assert '*outside' in weather.split('grade.Brightness=', 1)[1].split(chr(10), 1)[0], 'BD-383 flash/pulse scaled too'
     assert 'flash*.9*outside' in weather, 'BD-383 flash exposure scaled'
+    # BD-398: inside the hall no weather rigs, bolts, bombs, cracks, moon, aurora or shake, a soft toast instead of the title card
+    assert 'local motion=Theme.MotionEnabled and root~=nil and not hall' in weather, 'BD-398 rigs/one-shots off inside'
+    assert 'local live=motion and root~=nil and not hall' in weather and 'not hall and activeId=="quake"' in weather, 'BD-398 live effects off inside'
+    assert 'showTitle(id,workspace:GetAttribute("WeatherName") or id,hall)' in weather and 'if soft then name' in weather, 'BD-398 soft toast inside'
+    assert 'if hall then shake=' in weather, 'BD-398 shake only a faint quake rumble inside'
+    assert 'Lighting.Brightness = saved.brightness' in client and 'Lighting.ShadowSoftness' in client, 'BD-398 cave brightness and shadow softness, restored'
+    assert 'spec.shadows == true' in server, 'BD-398 shadows only on flagged lights'
+    assert 'CastShadow = not p.walk' in (ROOT / 'src/server/CaveProps.luau').read_text(), 'BD-398 props cast shadows'
     rules = (ROOT / 'src/shared/CaveLightingRules.luau').read_text()
     for banned in ('Instance.new', 'game:GetService', 'Vector3', 'workspace', 'Config'):
         assert banned not in rules, 'CaveLightingRules stays pure: ' + banned

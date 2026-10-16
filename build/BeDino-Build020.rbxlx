@@ -366254,7 +366254,7 @@ local STATION_PROPS: {[string]: {{any}}} = {
     potions = {{"hub_stall_potion", 1, "back"}, {"potion_model", 4, "arc"}, {"hub_crate", 3, "arc"}, {"hub_barrel", 1, "arc"}, {"hub_cauldron", 1, "arc"}, {"hub_lantern_post", 2, "arc"}, {"hub_table_wood", 1, "arc"}, {"hub_sign_stone", 1, "sign"}},
     fusion = {{"hub_forge_ring", 1, "centre"}, {"hub_forge_altar", 1, "back"}, {"hub_pedestal", 3, "arc"}, {"hub_crate", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
     style = {{"hub_counter_stone", 1, "back"}, {"hub_crystal_l", 2, "arc"}, {"hub_crystal_s", 5, "arc"}, {"hub_pedestal", 1, "arc"}, {"hub_gem_chest", 1, "arc"}, {"hub_lantern_post", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    index = {{"hub_pedestal", 6, "arc"}, {"hub_statue_triceratops", 1, "arc"}, {"hub_statue_trex", 1, "arc"}, {"hub_statue_brachiosaurus", 1, "arc"}, {"hub_banner", 3, "arc"}, {"hub_lectern_book", 1, "back"}, {"hub_bench_stone", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    index = {{"hub_pedestal", 4, "arc"}, {"hub_statue_triceratops", 1, "arc"}, {"hub_statue_trex", 1, "arc"}, {"hub_statue_brachiosaurus", 1, "arc"}, {"hub_banner", 2, "arc"}, {"hub_lectern_book", 1, "back"}, {"hub_bench_stone", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
     settings = {{"hub_lantern_post", 1, "arc"}, {"hub_gong", 1, "arc"}, {"hub_cushion_moss", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
     fame = {{"hub_wall_frame", 3, "arc"}, {"hub_lantern_post", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
     gate = {{"hub_gate_arch", 1, "sign"}, {"rock_mossy_boulder", 2, "arc"}, {"hub_sign_arrow", 2, "arc"}},
@@ -366408,8 +366408,11 @@ function CaveHubLayout.get(): any
             local mine = {}
             local function free(px: number, pz: number, br: number): boolean
                 if dist(px, pz, s.x, s.z) + br * 0.5 &gt; s.r - 1 then return false end
+                for _, pa in built.paths do -- BD-399: keep path mouths clear
+                    if segDist(px, pz, pa.ax, pa.az, pa.bx, pa.bz) &lt; pa.half + br + 1.5 then return false end
+                end
                 for _, q in mine do
-                    if dist(px, pz, q[1], q[2]) &lt; (br + q[3]) * 0.55 then return false end
+                    if dist(px, pz, q[1], q[2]) &lt; (br + q[3]) * 0.95 then return false end -- BD-399: was 0.55 (overlapping station props)
                 end
                 return true
             end
@@ -366426,7 +366429,7 @@ function CaveHubLayout.get(): any
                 elseif mode == "sign" then
                     for _ = 1, count do put(key, s.signX, s.signZ) end
                 elseif mode == "back" then
-                    for _ = 1, count do put(key, s.x + math.cos(s.outward) * s.r * 0.55, s.z + math.sin(s.outward) * s.r * 0.55) end
+                    for _ = 1, count do put(key, s.x + math.cos(s.outward) * s.r * 0.45, s.z + math.sin(s.outward) * s.r * 0.45) end
                 end
             end
             for _, e in list do -- everything else: first free spot in the outward arc, deepest ring first
@@ -366435,20 +366438,15 @@ function CaveHubLayout.get(): any
                     local br = boundRadius(KINDS[key])
                     for _ = 1, count do
                         local spot = nil
-                        for _, rf in {0.7, 0.5, 0.85, 0.3} do
-                            for step = 0, 18 do
+                        for _, rf in {0.7, 0.5, 0.85, 0.3, 0.6, 0.4, 0.2} do
+                            for step = 0, 26 do
                                 local deg = ((step % 2 == 0) and 1 or -1) * math.ceil(step / 2) * 9
                                 local a = s.outward + deg * math.pi / 180
                                 local px, pz = s.x + math.cos(a) * s.r * rf, s.z + math.sin(a) * s.r * rf
                                 if not spot and free(px, pz, br) then spot = {px, pz} end
                             end
                         end
-                        if not spot then
-                            local rf = 0.3 + 0.1 * #mine % 0.5
-                            local a = s.outward + ((#mine * 37) % 140 - 70) * math.pi / 180
-                            spot = {s.x + math.cos(a) * s.r * rf, s.z + math.sin(a) * s.r * rf}
-                        end
-                        put(key, spot[1], spot[2])
+                        if spot then put(key, spot[1], spot[2]) end -- BD-399: no room = the prop is dropped (the old fallback spot overlapped other props)
                     end
                 end
             end
@@ -366488,7 +366486,7 @@ function CaveHubLayout.get(): any
         if dist(x, z, POOL.x, POOL.z) &lt; POOL.r + br + 5 then return false end
         if z &gt; FALL.z - 14 then return false end
         for _, q in placed do
-            if dist(x, z, q[1], q[2]) &lt; (br + q[3]) * 0.8 then return false end
+            if dist(x, z, q[1], q[2]) &lt; (br + q[3]) * 0.9 then return false end -- BD-399: scaled radii, 0.9 (was unscaled 0.8)
         end
         return true
     end
@@ -366500,6 +366498,7 @@ function CaveHubLayout.get(): any
         local n, tries = 0, 0
         while n &lt; count and tries &lt; 4000 do
             tries += 1
+            local scale = 0.85 + rand() * 0.4
             local x, z
             if key == "cave_moss_hang" then
                 -- hang on the wall: on the blob rim, inside it
@@ -366523,10 +366522,10 @@ function CaveHubLayout.get(): any
             else
                 x, z = (rand() * 2 - 1) * CaveHubLayout.BoxHalfX, (rand() * 2 - 1) * CaveHubLayout.BoxHalfZ
             end
-            if clearOfEverything(x, z, br, not hang) then
+            if clearOfEverything(x, z, br * scale, not hang) then
                 n += 1
-                placed[#placed + 1] = {x, z, br}
-                addProp(key, x, z, rand() * 2 * math.pi, 0.85 + rand() * 0.4, "scatter")
+                placed[#placed + 1] = {x, z, br * scale}
+                addProp(key, x, z, rand() * 2 * math.pi, scale, "scatter")
             end
         end
     end
@@ -366867,14 +366866,16 @@ Rules.BeamColor = {255, 236, 190} -- warm cream
 Rules.Beam = {outerFrac = 0.82, coreFrac = 0.5, outerAlpha = 0.95, coreAlpha = 0.9, topAbove = 3, bottomAbove = 0.15, motesPerSecond = 4}
 Rules.GateGlow = {rate = 4, size = {12, 18}, alpha = 0.7, color = {255, 214, 160}, lift = 8, out = 12} -- out = studs from the pad centre into the mouth (the mouth is open from 10 studs past the pad centre)
 Rules.FillColor, Rules.LavaColor, Rules.CrystalColor, Rules.ForgeColor = {255, 214, 170}, {255, 140, 70}, {196, 170, 255}, {255, 190, 90}
-Rules.Forge = {period = 4, amplitude = 0.08, base = 0.35}
+Rules.Forge = {period = 4, amplitude = 0.1, base = 0.6}
+Rules.ShadowLights = 4
 Rules.FxPartBudget = 16 -- shaft beams (2 per hole) + dust volumes (1 per hole) + the gate glow anchor
 -- Cave-only look (applied only while the player is inside the hub, restored on leaving; nothing here touches the island).
 Rules.Look = {
-    ambient = {152, 128, 108}, outdoorAmbient = {138, 116, 98}, colorShiftTop = {255, 228, 190}, exposure = 0.15,
-    fogStart = 160, fogEnd = 520, fogColor = {104, 80, 64},
+    -- BD-398: a lit cave, not a bright hall: low warm-dim ambient, lower Lighting.Brightness and exposure; the lamps and shafts are the main lights
+    ambient = {70, 62, 60}, outdoorAmbient = {66, 58, 56}, colorShiftTop = {255, 222, 180}, exposure = -0.25, brightness = 1.3, shadowSoftness = 0.35,
+    fogStart = 110, fogEnd = 400, fogColor = {72, 56, 46},
     atmosphere = {density = 0.22, offset = 0, haze = 0.25, glare = 0, color = {214, 188, 160}, decay = {150, 104, 72}},
-    grade = {brightness = 0.02, contrast = 0.06, saturation = 0.1, tint = {255, 238, 220}},
+    grade = {brightness = -0.1, contrast = 0.1, saturation = -0.12, tint = {255, 226, 196}}, -- one soft shared warm grade tames the pastel props (MeshPart.Color is ignored on textured meshes)
     blendSeconds = 0.8,
 }
 Rules.EnterNorm, Rules.LeaveNorm = 1.0, 1.12 -- floor-blob norm (hysteresis) for "inside the hub"
@@ -366911,26 +366912,31 @@ function Rules.get(): any
         taken[owner] = (taken[owner] or 0) + 1
         local n = taken[owner]
         if owner == "heart" then
-            if n == 1 then add(owner, heart.x, FY + 18, heart.z, Rules.FillColor, 40, 0.6)
-            else add(owner, heart.x + 10, FY + 5, heart.z + 10, Rules.FillColor, 28, 0.4) end
+            if n == 1 then add(owner, heart.x, FY + 18, heart.z, Rules.FillColor, 48, 0.9)
+            else add(owner, heart.x + 10, FY + 5, heart.z + 10, Rules.FillColor, 34, 0.65) end
         elseif owner == "lava" then
-            if n == 1 then add(owner, P.x, FY + 5, P.z, Rules.LavaColor, 36, 0.45)
-            elseif n == 2 then add(owner, F.x - 12, FY + 12, F.z - 4, Rules.LavaColor, 36, 0.45)
-            else add(owner, F.x + 12, FY + 12, F.z - 4, Rules.LavaColor, 36, 0.45) end
+            if n == 1 then add(owner, P.x, FY + 5, P.z, Rules.LavaColor, 42, 0.7)
+            elseif n == 2 then add(owner, F.x - 12, FY + 12, F.z - 4, Rules.LavaColor, 42, 0.7)
+            else add(owner, F.x + 12, FY + 12, F.z - 4, Rules.LavaColor, 42, 0.7) end
         elseif owner == "crystal" then
             local o = style.outward
-            add(owner, style.x + math.cos(o) * style.r * 0.6 + (if n == 1 then -3 else 3), FY + 3, style.z + math.sin(o) * style.r * 0.6, Rules.CrystalColor, 16, 0.3)
+            add(owner, style.x + math.cos(o) * style.r * 0.6 + (if n == 1 then -3 else 3), FY + 3, style.z + math.sin(o) * style.r * 0.6, Rules.CrystalColor, 20, 0.45)
         elseif owner == "forge" then
-            add(owner, fusion.x, FY + 3, fusion.z, Rules.ForgeColor, 18, Rules.Forge.base, {pulse = true})
+            add(owner, fusion.x, FY + 3, fusion.z, Rules.ForgeColor, 24, Rules.Forge.base, {pulse = true})
         elseif owner == "gate" then
             -- the arch light: stronger and lower so the doorway reads from the Heart
-            add(owner, gate.x, FY + 10, gate.z - 4, Rules.GateGlow.color, 40, 2.0, {arch = true})
+            add(owner, gate.x, FY + 10, gate.z - 4, Rules.GateGlow.color, 46, 2.2, {arch = true})
         else
             local s = station(L, owner)
             local o = s.outward
-            add(owner, s.x + math.cos(o) * s.r * 0.45, FY + 8, s.z + math.sin(o) * s.r * 0.45, Rules.FillColor, 28, 0.5)
+            add(owner, s.x + math.cos(o) * s.r * 0.45, FY + 8, s.z + math.sin(o) * s.r * 0.45, Rules.FillColor, 34, 0.85)
         end
     end
+    -- BD-398: PointLight.Shadows only for the 4 strongest lights (brightness x range), the rest stay shadowless (cheap)
+    local order = {}
+    for i = 1, #lights do order[i] = i end
+    table.sort(order, function(a, b) return lights[a].brightness * lights[a].range &gt; lights[b].brightness * lights[b].range end)
+    for i = 1, math.min(Rules.ShadowLights, #order) do lights[order[i]].shadows = true end
     local g = L.gate
     cache = {shafts = shafts, lights = lights,
         gate = {x = gate.x, z = gate.z + cz - Rules.GateGlow.out, y = FY + Rules.GateGlow.lift, mouthWidth = g.mouthWidth},
@@ -551444,7 +551450,7 @@ local function light(spec: any): PointLight
     holder.Parent = workspace.Terrain
     holder.WorldPosition = Vector3.new(spec.x, spec.y, spec.z)
     local l = Instance.new("PointLight")
-    l.Color, l.Range, l.Brightness, l.Shadows = c3(spec.color), spec.range, spec.brightness, false
+    l.Color, l.Range, l.Brightness, l.Shadows = c3(spec.color), spec.range, spec.brightness, spec.shadows == true
     l:SetAttribute("Owner", spec.owner)
     if spec.pulse then l:SetAttribute("Pulse", true) end
     l.Parent = holder
@@ -551661,6 +551667,7 @@ local function place(folder: Folder, params: RaycastParams, p: any, template: Me
         signGuis += 1
         addSignText(mesh, key, text)
     end
+    mesh.CastShadow = not p.walk -- BD-398: rocks and stalls cast shadows from the lamps and shafts; flat walk-over pieces do not need to
     mesh:SetAttribute("Owner", p.owner)
     mesh.Parent = folder
 end
@@ -560107,7 +560114,7 @@ function Cave.amount(): number return amount end
 local function save()
     local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
     local dof = Lighting:FindFirstChild("WeatherDof")
-    saved = {ambient = Lighting.Ambient, outdoor = Lighting.OutdoorAmbient, shift = Lighting.ColorShift_Top, exposure = Lighting.ExposureCompensation,
+    saved = {ambient = Lighting.Ambient, outdoor = Lighting.OutdoorAmbient, shift = Lighting.ColorShift_Top, exposure = Lighting.ExposureCompensation, brightness = Lighting.Brightness, softness = Lighting.ShadowSoftness,
         fogStart = Lighting.FogStart, fogEnd = Lighting.FogEnd, fogColor = Lighting.FogColor,
         dof = if dof and dof:IsA("DepthOfFieldEffect") then dof.Enabled else nil, emitters = {}, lights = {}}
     if atmosphere then
@@ -560130,6 +560137,7 @@ local function restore()
     local s = saved
     if not s then return end
     Lighting.Ambient, Lighting.OutdoorAmbient, Lighting.ColorShift_Top, Lighting.ExposureCompensation = s.ambient, s.outdoor, s.shift, s.exposure
+    Lighting.Brightness, Lighting.ShadowSoftness = s.brightness, s.softness
     Lighting.FogStart, Lighting.FogEnd, Lighting.FogColor = s.fogStart, s.fogEnd, s.fogColor
     local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
     if atmosphere and s.atmo then
@@ -560185,6 +560193,8 @@ function Cave.step(dt: number)
     Lighting.OutdoorAmbient = Lighting.OutdoorAmbient:Lerp(c3(L.outdoorAmbient), t)
     Lighting.ColorShift_Top = Lighting.ColorShift_Top:Lerp(c3(L.colorShiftTop), t)
     Lighting.ExposureCompensation += L.exposure * t
+    Lighting.Brightness = saved.brightness + (L.brightness - saved.brightness) * t -- BD-398
+    Lighting.ShadowSoftness = saved.softness + (L.shadowSoftness - saved.softness) * t
     Lighting.FogStart = Lighting.FogStart + (L.fogStart - Lighting.FogStart) * t
     Lighting.FogEnd = Lighting.FogEnd + (L.fogEnd - Lighting.FogEnd) * t
     Lighting.FogColor = Lighting.FogColor:Lerp(c3(L.fogColor), t)
@@ -568358,21 +568368,22 @@ local titleToken=0
 -- BD-328: the big title card never draws over an open menu: it waits (up to 20 s) for the menu to close, then plays.
 local function menuOpen():boolean return player:GetAttribute("MenuOpen")==true end
 player:GetAttributeChangedSignal("MenuOpen"):Connect(function() gui.Enabled=not menuOpen() end) -- a menu opened mid-card hides it
-local function showTitle(id:string,name:string)
+local function showTitle(id:string,name:string,soft:boolean?)
     titleToken+=1 local mine=titleToken
     if menuOpen() then
         task.spawn(function()
             local waited=0
             while menuOpen() and waited&lt;20 do task.wait(.25) waited+=.25 end
-            if mine==titleToken and not menuOpen() then showTitle(id,name) end
+            if mine==titleToken and not menuOpen() then showTitle(id,name,soft) end
         end)
         return
     end
-    title.Text=string.upper(name).."!" title.TextColor3=TITLE_COLOR[id] or Color3.new(1,1,1)
-    titleScale.Scale=if Theme.MotionEnabled then 2.2 else 1
-    title.TextTransparency,stroke.Transparency,sub.TextTransparency,subStroke.Transparency=0,0,0,0
-    if Theme.MotionEnabled then TweenService:Create(titleScale,TweenInfo.new(.45,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Scale=1}):Play() end
-    task.delay(3.2,function()
+    title.Text=if soft then name else string.upper(name).."!" title.TextColor3=TITLE_COLOR[id] or Color3.new(1,1,1)
+    titleScale.Scale=if soft then .4 elseif Theme.MotionEnabled then 2.2 else 1
+    title.TextTransparency,stroke.Transparency,sub.TextTransparency,subStroke.Transparency=if soft then .35 else 0,if soft then .5 else 0,1,1
+    if not soft then sub.TextTransparency,subStroke.Transparency=0,0 end
+    if Theme.MotionEnabled and not soft then TweenService:Create(titleScale,TweenInfo.new(.45,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Scale=1}):Play() end
+    task.delay(if soft then 1.8 else 3.2,function()
         if mine~=titleToken then return end
         local info=TweenInfo.new(.8)
         TweenService:Create(title,info,{TextTransparency=1}):Play() TweenService:Create(stroke,info,{Transparency=1}):Play()
@@ -568426,12 +568437,14 @@ RunService.Heartbeat:Connect(function(dt)
     local c=player.Character
     local rootPart=if c then c:FindFirstChild("HumanoidRootPart") else nil
     local root:Vector3?=if rootPart and rootPart:IsA("BasePart") then (rootPart::BasePart).Position else nil
-    local motion=Theme.MotionEnabled and root~=nil
+    -- BD-398: inside the cave hall weather is nearly invisible: no rigs, bolts, bombs, cracks, moon, aurora, shake or title card
+    local hall=Cave.inside() or Cave.amount()&gt;.01
+    local motion=Theme.MotionEnabled and root~=nil and not hall
     -- fade current weather out, then switch; ramp the new one in
     if id==activeId then k=math.min(1,k+dt/2.4) else k=math.max(0,k-dt/1.1) if k&lt;=0 then activeId=id columnAnchors=nil end end
     if activeId~=shownId and id==activeId and id~="clear" then
         shownId=activeId
-        showTitle(id,workspace:GetAttribute("WeatherName") or id)
+        showTitle(id,workspace:GetAttribute("WeatherName") or id,hall)
     elseif id=="clear" then shownId="clear" end
 
     local look=WL.Looks[activeId] or WL.Looks.clear
@@ -568482,13 +568495,13 @@ RunService.Heartbeat:Connect(function(dt)
         lampPart.Position=root+Vector3.new(0,7,0)
         lamp.Brightness=look.lamp*t
         glow.Color=c3(glowRgb) glow.Range=look.glowRange
-        glow.Brightness=(look.glowBright*t+(if activeId=="thunder" then flash*3 else 0))*(if Theme.MotionEnabled then 1 else .4)
+        glow.Brightness=(look.glowBright*t+(if activeId=="thunder" then flash*3*outside else 0))*(if Theme.MotionEnabled then 1 else .4)
     else lamp.Brightness=0 glow.Brightness=0 end
 
     -- particle rigs follow the player; only the active weather emits (BD-265: Settings Weather Full / Lite / Off; haze, light and title stay)
     local weatherFactor=require(Shared.SettingsModel).factor(require(Shared.SettingsModel).weather())
     for weatherId,list in rig do
-        local on=motion and weatherId==activeId and k&gt;0 and not Cave.inside()
+        local on=motion and weatherId==activeId and k&gt;0
         local scaleRate=math.min(zoom*zoom,5)
         for _,item in list do
             item.e.Enabled=on and weatherFactor&gt;0 item.e.Rate=item.rate*k*weatherFactor*(if item.fixed then 1 else scaleRate)
@@ -568498,7 +568511,7 @@ RunService.Heartbeat:Connect(function(dt)
             if parts then for _,p in parts do p.part.Size=Vector3.new(p.base.X*zoom,p.base.Y,p.base.Z*zoom) p.part.Position=root+p.offset end end
         end
     end
-    local live=motion and root~=nil
+    local live=motion and root~=nil and not hall
     if not live then stopOneShots() end
     -- volcano: three far eruption columns + lava bombs
     if live and root and activeId=="volcano" and k&gt;.3 then
@@ -568520,13 +568533,13 @@ RunService.Heartbeat:Connect(function(dt)
         if now&gt;=nextFar then nextFar=now+random:NextNumber(1.2,3) flash=math.max(flash,.3) end
     end
     -- quake: tremor pulses open ground cracks in view, with a gentle rumble synced to each pulse (none with Reduce Motion)
-    if root and activeId=="quake" and k&gt;.3 then
+    if root and not hall and activeId=="quake" and k&gt;.3 then
         if now&gt;=nextQuakeBurst then
             nextQuakeBurst=now+random:NextNumber(WL.Quake.pulseEvery[1],WL.Quake.pulseEvery[2]) quakeUntil=now+WL.Quake.pulseSeconds
             quakePulse(root,Theme.MotionEnabled)
         end
         if motion and now&lt;quakeUntil then shake=math.max(shake,WL.Quake.shake*math.sin(math.pi*(1-(quakeUntil-now)/WL.Quake.pulseSeconds))) end
-    elseif activeId~="quake" or not root then stopQuake() end
+    elseif activeId~="quake" or not root or hall then stopQuake() end
     -- blood moon sky props
     local moonOn=live and activeId=="bloodmoon" and k&gt;0
     if moonOn and root then
@@ -568545,6 +568558,7 @@ RunService.Heartbeat:Connect(function(dt)
     updateAurora(root or Vector3.zero,now,auroraOn,recolor)
     -- pooled one-shot effects
     updateBolts(dt) updateRings(dt) updateBursts(dt) updateBombs(dt,root) updateQuake(dt)
+    if hall then shake=if activeId=="quake" and Theme.MotionEnabled and k&gt;.3 then .03 else 0 end -- BD-398: a faint distant rumble only for a quake
     if shake&gt;.01 and Theme.MotionEnabled then shake=math.max(0,shake-dt*1.1) end
     if not Theme.MotionEnabled then shake=0 end
     Cave.step(dt) -- last: the cave look is written after the weather values above

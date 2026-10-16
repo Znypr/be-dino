@@ -47,7 +47,7 @@ local function light(spec: any): PointLight
     holder.Parent = workspace.Terrain
     holder.WorldPosition = Vector3.new(spec.x, spec.y, spec.z)
     local l = Instance.new("PointLight")
-    l.Color, l.Range, l.Brightness, l.Shadows = c3(spec.color), spec.range, spec.brightness, false
+    l.Color, l.Range, l.Brightness, l.Shadows = c3(spec.color), spec.range, spec.brightness, spec.shadows == true
     l:SetAttribute("Owner", spec.owner)
     if spec.pulse then l:SetAttribute("Pulse", true) end
     l.Parent = holder
