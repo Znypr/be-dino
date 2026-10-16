@@ -19,6 +19,7 @@ local EggPicture = require(script.Parent.EggPicture)
 local FxUi = require(Shared.FxUi)
 local MutationLook = require(Shared.MutationLook)
 local Theme = require(Shared.UITheme)
+local Copy = require(Shared.FtueP1)
 
 local EggsScreen = {}
 
@@ -43,7 +44,7 @@ function EggsScreen.render(ctx: any)
     local function projected() return NestQueue.project(nestList, math.floor(workspace:GetServerTimeNow()), duration) end
     local header = label(body, EggsLogic.nestHeader(nestList, capacity), 0, 0, 220, 28, 24, C.gold)
     header.TextXAlignment = Enum.TextXAlignment.Left
-    local luck = label(body, "Nest eggs are lucky!", 224, 2, 600, 26, 18)
+    local luck = label(body, Copy.NestLine, 224, 2, 600, 26, 18) -- BD-369: says why only one nest opens at a time
     luck.TextXAlignment = Enum.TextXAlignment.Right
 
     -- A rounded colour pill with one short line of text (friendly timers and chips).
@@ -137,19 +138,31 @@ function EggsScreen.render(ctx: any)
 
     local infoX = stageW + 30
     local infoW = 824 - infoX - 14
-    local waitingLabel = label(card, "Eggs waiting: " .. EggsLogic.waitingTotal(ctx.num("ActiveChestCount"), waiting, nextId ~= ""), infoX, 10, infoW, 38, 30, C.gold)
-    waitingLabel.Name = "EggsWaiting"
-    waitingLabel.TextXAlignment = Enum.TextXAlignment.Left
-    local timerChip, timer = pill(card, if entry then statusText else "No eggs yet", if state.canOpen then C.accent else C.blue, infoX, 54, math.min(280, infoW), 38, 22)
+    local waitingText = Copy.waitingText(ctx.num("ActiveChestCount"), waiting) -- BD-369: counts the card egg; hidden at 0
+    if waitingText then
+        local waitingLabel = label(card, waitingText, infoX, 10, infoW, 38, 30, C.gold)
+        waitingLabel.Name = "EggsWaiting"
+        waitingLabel.TextXAlignment = Enum.TextXAlignment.Left
+    end
+    local timerChip, timer = pill(card, statusText, if state.canOpen then C.accent else C.blue, infoX, 54, if entry then math.min(280, infoW) else infoW, 38, 22)
     timerChip.Name = "EggStatusPill"
+    -- BD-369: after the safe first eggs, say once in one short line that an egg can crack.
+    local hintShown = entry ~= nil and Copy.crackedHintShown(ctx.collectionCopies(), true)
+    local hintH = if hintShown then 24 else 0
+    if hintShown then
+        local crackedHint = label(card, Copy.CrackedHint, infoX, 94, infoW, 22, 19, C.gold)
+        crackedHint.Name = "CrackedHint"
+        crackedHint.TextXAlignment = Enum.TextXAlignment.Left
+    end
 
     local gearH = math.max(touchH * .6, 52)
-    local openH = math.clamp(cardH - 106 - 14 - gearH - 14, 64, 96)
-    local openButton = button(card, buttonText, infoX, 106, infoW, openH, if state.canOpen then C.accent else C.outline, function()
+    local openH = math.clamp(cardH - 106 - hintH - 14 - gearH - 14, 64, 96)
+    local openButton = button(card, buttonText, infoX, 106 + hintH, infoW, openH, if state.canOpen or state.kind == "empty" then C.accent else C.outline, function()
         state = EggsLogic.card(entry, nextId, ctx.num("NextChestReadyAt"), workspace:GetServerTimeNow(), waiting)
         if state.canOpen then ctx.openEgg()
         elseif state.kind == "growing" then ctx.notify("This egg is still growing", C.gold)
-        else ctx.notify("Finish a run to catch eggs!", C.gold) end
+        elseif state.kind == "empty" then ctx.explore() -- BD-369: no dead end, a button to the island
+        else ctx.notify("Eggs are on the way!", C.gold) end
     end)
     openButton.Name = "OpenEggButton"
     openButton.TextSize = 36
@@ -176,7 +189,7 @@ function EggsScreen.render(ctx: any)
         state = EggsLogic.card(entry, nextId, ctx.num("NextChestReadyAt"), workspace:GetServerTimeNow(), waiting)
         statusText, buttonText = EggsLogic.cardCopy(state)
         openButton.Text = buttonText
-        openButton.BackgroundColor3 = if state.canOpen then C.accent else C.outline
+        openButton.BackgroundColor3 = if state.canOpen or state.kind == "empty" then C.accent else C.outline
         timerChip.BackgroundColor3 = if state.canOpen then C.accent else C.blue
         if entry then
             local remaining = math.max(0, (if typeof(entry.readyAt) == "number" then entry.readyAt else ctx.num("NextChestReadyAt")) - workspace:GetServerTimeNow())

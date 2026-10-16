@@ -13,6 +13,7 @@ local Theme = require(Shared.UITheme)
 local Sfx = require(Shared.Sfx)
 local SfxRules = require(Shared.SfxRules)
 local Timeline = require(Shared.HatchTimeline)
+local Copy = require(Shared.FtueP1)
 local FxPlan = require(Shared.HatchFxPlan)
 local EggGenetics = require(Shared.EggGenetics)
 local InspectView = require(script.Parent.InspectView)
@@ -316,11 +317,11 @@ export type Args = {
     nameLabel: TextLabel, oddsLabel: TextLabel, detailLabel: TextLabel,
     motion: boolean,
     alive: () -> boolean, flash: (Color3, number) -> (),
-    onNext: () -> (), onSkipAll: () -> (), onReveal: () -> (),
+    onNext: () -> (), onSkipAll: () -> (), onReveal: () -> (), onAgain: (() -> ())?,
     result: Result?, -- nil = Open was just pressed and the server answer has not arrived: the egg already wobbles (BD-170)
     eggCondition: string?, -- BD-223: condition id of the egg being opened (client queue), shown from the first frame
 }
-export type Handle = {cancel: () -> (), supply: (Result) -> (), pending: () -> boolean}
+export type Handle = {cancel: () -> (), supply: (Result) -> (), pending: () -> boolean, setRemaining: (number) -> ()}
 
 -- Returns {cancel, supply, pending}. onNext runs once after the player taps on the revealed egg.
 function Seq.play(args: Args): Handle
@@ -741,7 +742,9 @@ function Seq.play(args: Args): Handle
 
     local function showHint()
         readyShown = true
-        hint.Visible = true
+        local endRow = a.body:FindFirstChild("EndButtons")
+        if endRow and endRow:IsA("GuiObject") then endRow.Visible = true else hint.Visible = true end
+        if endRow then return end
         if motion then
             hint.TextTransparency = 1
             TweenService:Create(hint, TweenInfo.new(.25), {TextTransparency = 0}):Play()
@@ -819,6 +822,33 @@ function Seq.play(args: Args): Handle
         if r.big then addRibbon("BIG", Theme.Colors.purple, 724, 52, 150, 7) end
         if r.mutationName then addRibbon(string.upper(r.mutationName), r.mutationColor or Theme.Colors.gold, 116, if r.shiny then 108 else 52, 210, -4) end
         hint.Text = Timeline.hint(r.remaining)
+        -- BD-371: real, big, friendly buttons at the end (dark text on a bright button, contrast >= 4.5:1); no dead end after a splat.
+        local oldRow = a.body:FindFirstChild("EndButtons")
+        if oldRow then oldRow:Destroy() end
+        local kinds = Copy.hatchButtons(failed, r.remaining)
+        if #kinds > 0 then
+            local row = Instance.new("Frame")
+            row.Name, row.BackgroundTransparency, row.Visible, row.ZIndex = "EndButtons", 1, false, a.body.ZIndex + 8
+            row.AnchorPoint, row.Position, row.Size, row.Parent = Vector2.new(.5, 0), UDim2.new(.5, 0, 0, 342), UDim2.fromOffset(#kinds * 246, 60), a.body
+            for i, kind in kinds do
+                local b = Instance.new("TextButton")
+                b.Name, b.Text, b.AutoButtonColor, b.Font, b.TextSize = "End_" .. kind, Copy.ButtonText[kind], true, Enum.Font.FredokaOne, 30
+                local fill, ink = Copy.ButtonColors[kind], Copy.ButtonTextColor
+                b.BackgroundColor3, b.TextColor3 = Color3.fromRGB(fill[1], fill[2], fill[3]), Color3.fromRGB(ink[1], ink[2], ink[3])
+                b.Position, b.Size, b.ZIndex, b.Parent = UDim2.fromOffset((i - 1) * 246, 0), UDim2.fromOffset(230, 60), row.ZIndex + 1, row
+                local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 16) corner.Parent = b
+                local stroke = Instance.new("UIStroke") stroke.Color, stroke.Thickness, stroke.Parent = Theme.Colors.outline, 3, b
+                b.Activated:Connect(function()
+                    if kind == "again" then
+                        if finished then return end
+                        finish()
+                        if a.onAgain then (a.onAgain :: () -> ())() end
+                    else
+                        advance()
+                    end
+                end)
+            end
+        end
         if r.remaining > 0 and not skipButton then
             local b = Instance.new("TextButton")
             b.Name, b.Text, b.AnchorPoint, b.AutoButtonColor = "SkipAll", "Skip all", Vector2.new(1, 1), true
@@ -1104,6 +1134,8 @@ function Seq.play(args: Args): Handle
             applyResult(r)
         end,
         pending = function() return state.pending end,
+        -- BD-380: the egg counts arrive a moment after the result; keep the hint equal to the eggs really left.
+        setRemaining = function(n: number) if not finished then hint.Text = Timeline.hint(n) end end,
     }
 end
 

@@ -10,10 +10,10 @@ for _,c in cases do assert(F.duration(c[1])==c[2],c[1].." -> "..F.duration(c[1])
 for s=0,20000,7 do local t=F.duration(s) assert(not t:find("%d+m %d") and not t:find(" 0 min") and not t:find(" 0 s") or s==0,t) assert(not t:find(":")) end
 assert(F.readyIn(10800)=="Ready in 3 h")
 assert(F.percent(1.2)=="+20%" and F.percent(1.25)=="+25%" and F.percent(1)=="" and F.percent(1.001)=="" and F.percent(.8)=="-20%")
-assert(F.boost("Speed",1.2)=="Speed +20%" and F.boost("Loot",1)==nil)
+assert(F.boost("Speed",1.2)=="Speed +20%" and F.boost("Eggs",1)==nil)
 local none=F.boostLines(1,1,1) assert(#none==0)
 local one=F.boostLines(1,1.2,1) assert(#one==1 and one[1]=="Speed +20%")
-local all=F.boostLines(1.25,1.2,1.4) assert(table.concat(all," | ")=="Speed +20% | Growth +25% | Loot +40%")
+local all=F.boostLines(1.25,1.2,1.4) assert(table.concat(all," | ")=="Speed +20% | Growth +25% | Eggs +40%")
 assert(F.potion("growth",1.25,300)=="Growth +25% - 5 min")
 for _,line in all do assert(not line:find("x")) end
 local seen={}

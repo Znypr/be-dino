@@ -102,7 +102,7 @@ local function desktop(width: number, height: number, count: number)
             positions = railButtons(count, 1, 172, 54, 7) :: any},
         timers = {x = width - 20 - TouchLayout.TIMERS_W * small, y = height - 22 - 220 * small, scale = small, w = TouchLayout.TIMERS_W, h = 220,
             leapY = 0, weatherY = 72, weatherVisible = true, buffsY = 145, buffsH = 68, buffsVisible = true,
-            leapText = 22, weatherText = 20, buffsText = 16},
+            leapText = PhoneScale.floorText(22, small), weatherText = PhoneScale.floorText(20, small), buffsText = PhoneScale.floorText(16, small)}, -- BD-376: >= 14 px rendered
         action = action,
         badge = {x = width / 2 - 125, y = 36, scale = 1, w = 250, h = 24, textSize = 15},
         notice = {x = width / 2 - noticeW / 2, y = 8, scale = 1, w = noticeW, h = 25, textSize = 14},

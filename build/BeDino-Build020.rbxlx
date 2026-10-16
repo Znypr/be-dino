@@ -370735,6 +370735,7 @@ return Egg
 -- The auto-open choice is a UI preference: the server never trusts it and still credits every egg
 -- through the normal claim path. src/client/EggsScreen.luau only draws; tools/verify_eggs_screen.py tests this.
 local RevealSkip = require(script.Parent.RevealSkip)
+local Copy = require(script.Parent.FtueP1)
 local L = {}
 
 -- Five nest slots (capacity), index = queue order. nests are NestQueue.project() results.
@@ -370760,11 +370761,10 @@ function L.nestHeader(nests: {any}, capacity: number): string
     return string.format("Nests %d/%d", math.min(#nests, capacity), capacity)
 end
 
--- BD-259: the "Eggs waiting" number = every caught egg still to open AFTER the one on the card: the other eggs already in
--- the line (ActiveChestCount minus the card egg) plus the banked ones (QueuedEggsWaiting). Before, only the banked ones were
--- counted, so 31 run eggs read 26 (31 - the 5 in the line).
+-- BD-259 / BD-369: the "Eggs waiting" number = EVERY unopened egg, the one on the card included (a READY card must never sit
+-- beside "0"): the eggs in the line (ActiveChestCount) plus the banked ones (QueuedEggsWaiting). 31 run eggs read 31.
 function L.waitingTotal(active: number, banked: number, hasCard: boolean): number
-    return math.max(0, math.floor(banked)) + math.max(0, math.floor(active) - (if hasCard then 1 else 0))
+    return math.max(0, math.floor(banked)) + math.max(0, math.floor(active))
 end
 
 -- Single next-egg card. entry = ChestQueueJson entry or nil; waiting = QueuedEggsWaiting.
@@ -370782,7 +370782,7 @@ function L.cardCopy(card: any): (string, string)
     if card.kind == "ready" then return "READY!", "OPEN" end
     if card.kind == "growing" then return "Growing...", "GROWING" end
     if card.kind == "banked" then return "Eggs are on the way", "WAIT" end
-    return "No eggs yet. Finish a run to catch some!", "NO EGGS"
+    return Copy.EmptyStatus, Copy.EmptyButton
 end
 
 -- Auto-open per rarity. selection = the stored rarity list (RevealSkip format).
@@ -370948,6 +370948,135 @@ return Copy
       </Item>
       <Item class="ModuleScript" referent="RBX216">
         <Properties>
+          <string name="Name">FtueP1</string>
+          <ProtectedString name="Source">--!strict
+-- First-time-player P1/P2 fixes (docs/112 audit, BD-369..381). Pure: no Instances, services or remotes, so it can be tested
+-- offline (tools/verify_ftue_p1.py). Plain words for 7 to 10 year olds (docs/72): "egg" for the thing, "nest" only for nests.
+local P = {}
+
+-- BD-369 Eggs screen -------------------------------------------------------------------------------------------------------
+P.NestLine = "Nest eggs are lucky! Nests open one at a time."
+P.EmptyStatus = "Go find eggs on the island!"
+P.EmptyButton = "EXPLORE ISLAND"
+P.CrackedHint = "Some eggs can crack!"
+P.CrackedHintSafeEggs = 2 -- the first two eggs are never Cracked (FtueRules.SafeEggs); the hint starts after them
+P.CrackedHintWindow = 5 -- ... and stops once the player has seen it work for this many more eggs
+
+-- "Eggs waiting: N" counts EVERY unopened egg, including the one on the card, so a READY card never sits beside "0".
+-- Returns nil when there is nothing to count (the label is hidden instead of showing 0).
+function P.waitingText(active: number, banked: number): string?
+    local total = math.max(0, math.floor(active)) + math.max(0, math.floor(banked))
+    if total &lt;= 0 then return nil end
+    return "Eggs waiting: " .. tostring(total)
+end
+
+-- Hatched eggs are estimated from the collection copies (one starter Compy is not an egg). The card egg may be Cracked
+-- only after the safe first eggs; show the hint on the cards after them for a short while.
+function P.crackedHintShown(collectionCopies: number, hasCardEgg: boolean): boolean
+    if not hasCardEgg then return false end
+    local hatched = math.max(0, math.floor(collectionCopies) - 1)
+    return hatched &gt;= P.CrackedHintSafeEggs and hatched &lt; P.CrackedHintSafeEggs + P.CrackedHintWindow
+end
+
+-- BD-371 hatch end buttons -------------------------------------------------------------------------------------------------
+-- After an egg is shown: what real buttons are drawn. remaining = eggs still to open after this one.
+-- "next" opens the next egg, "done" goes back to the Eggs screen, "again" starts another run to find more eggs.
+function P.hatchButtons(failed: boolean, remaining: number): {string}
+    if remaining &gt; 0 then
+        return if failed then {"next"} else {}
+    end
+    return if failed then {"done", "again"} else {"done"}
+end
+P.ButtonText = {next = "NEXT EGG", done = "DONE", again = "TRY AGAIN"}
+P.ButtonColors = {next = {93, 237, 31}, done = {93, 237, 31}, again = {255, 210, 43}} -- accent green / gold
+P.ButtonTextColor = {13, 15, 20} -- dark text on a bright button
+
+local function channel(v: number): number
+    local c = v / 255
+    return if c &lt;= 0.03928 then c / 12.92 else ((c + 0.055) / 1.055) ^ 2.4
+end
+local function luminance(rgb: {number}): number
+    return 0.2126 * channel(rgb[1]) + 0.7152 * channel(rgb[2]) + 0.0722 * channel(rgb[3])
+end
+-- WCAG contrast ratio between two {r, g, b} colours (0..255).
+function P.contrast(a: {number}, b: {number}): number
+    local la, lb = luminance(a), luminance(b)
+    if la &lt; lb then la, lb = lb, la end
+    return (la + 0.05) / (lb + 0.05)
+end
+
+-- BD-372 shop day one ------------------------------------------------------------------------------------------------------
+-- The condition upgrade button. enabled=false draws a grey button with the reason; a green action never sits over a lock.
+function P.upgradeButton(upgrade: any, level: number, crystals: number): (string, boolean)
+    if upgrade == nil then return "MAX LEVEL", false end
+    if level &lt; upgrade.requiredLevel then return "Reach level " .. tostring(upgrade.requiredLevel), false end
+    if crystals &lt; upgrade.price then return "Need " .. tostring(upgrade.price) .. " Crystals", false end
+    return "UPGRADE: " .. tostring(upgrade.price) .. " CRYSTALS", true
+end
+-- The line under the button. Never repeats or contradicts the button.
+function P.upgradeHint(upgrade: any, level: number): string
+    if upgrade == nil then return "Top level reached" end
+    if level &lt; upgrade.requiredLevel then return "Keep playing to level up!" end
+    return "Ready to buy!"
+end
+P.ConditionsHeader = "Your first 2 eggs are safe: they are never Cracked."
+
+-- BD-374 Settings &gt; Controls -----------------------------------------------------------------------------------------------
+-- Two short lines of keys (desktop) or touch controls (phone). Read from the real input code in Bootstrap
+-- (E leap, B eggs, C dinos, Esc close) and CombatHud (F bite, only while fighting is on).
+function P.controlsLines(touch: boolean, combat: boolean): {string}
+    if touch then
+        return {"Move: left stick  •  Look: drag the screen", "Jump and LEAP: tap the buttons"}
+    end
+    return {
+        "Move: W A S D  •  Jump: Space  •  Leap: E",
+        if combat then "Look: right-click drag  •  Bite: F  •  Eggs: B" else "Look: right-click drag  •  Eggs: B  •  Dinos: C",
+    }
+end
+
+-- BD-375 go home -----------------------------------------------------------------------------------------------------------
+P.HomeConfirmTitle = "Go home?"
+P.HomeConfirmButton = "GO HOME"
+P.HomeToast = "Going home..."
+
+-- BD-376 plain words for the buff line and Index counts --------------------------------------------------------------------
+P.BuffWord = {growth = "Growth", speed = "Speed", loot = "Eggs"}
+P.MinTextSize = 14
+-- "1 Base • 2 Gold": only the tiers the player has; plain "Not found yet" never shows here (the caller handles unowned).
+function P.indexCount(base: number, gold: number, diamond: number): string
+    local parts = {}
+    for _, pair in {{base, "Base"}, {gold, "Gold"}, {diamond, "Diamond"}} do
+        local n = pair[1] :: number
+        if n &gt; 0 then table.insert(parts, string.format("%d %s", n, pair[2] :: string)) end
+    end
+    return if #parts == 0 then "0 Base" else table.concat(parts, "  •  ")
+end
+
+-- BD-378 egg-found toast ---------------------------------------------------------------------------------------------------
+-- ONE toast for every egg that landed in a tick. Returns text (&lt;= NotifyQueue.MaxText 30) and a body (&lt;= 44).
+function P.foundToast(eggs: number, mutationName: string?): (string, string?)
+    local n = math.max(1, math.floor(eggs))
+    if mutationName and mutationName ~= "" then
+        local text = if n == 1 then "You found a " .. mutationName .. " egg!" else string.format("You found %d eggs!", n)
+        return text, "A weather egg! Hatch it at Home"
+    end
+    return if n == 1 then "You found an egg!" else string.format("You found %d eggs!", n), nil
+end
+-- Toasts ride the top centre, clear of the Crystals / XP plate (top right) and the HUD bars.
+P.ToastTopY = 4
+
+-- BD-379 world text ---------------------------------------------------------------------------------------------------------
+-- Floating "+2.8" style text is hidden while a menu or confirm window is open.
+function P.worldTextAllowed(modalOpen: boolean): boolean
+    return not modalOpen
+end
+
+return P
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX217">
+        <Properties>
           <string name="Name">FtueRules</string>
           <ProtectedString name="Source">--!strict
 -- First-time-player rules (docs/112, BD-365..368). Pure: no Instances, services or remotes. Tested by tools/verify_ftue_*.py.
@@ -371085,7 +371214,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX217">
+      <Item class="ModuleScript" referent="RBX218">
         <Properties>
           <string name="Name">FusionSelection</string>
           <ProtectedString name="Source">--!strict
@@ -371210,7 +371339,7 @@ end
 -- Card words for children (docs/96): short, plain, say what is wrong.
 Sel.ReasonText = {
     wrong_stage = "Not the right stage",
-    missing_pattern = "Older dino: can't fuse",
+    missing_pattern = "No pattern: can't fuse",
     species_mismatch = "Different dino",
     pattern_mismatch = "Different pattern",
     locked = "Locked",
@@ -372064,7 +372193,7 @@ return Sel
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX218">
+      <Item class="ModuleScript" referent="RBX219">
         <Properties>
           <string name="Name">FxRecipes</string>
           <ProtectedString name="Source">--!nonstrict
@@ -372384,7 +372513,7 @@ return R
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX219">
+      <Item class="ModuleScript" referent="RBX220">
         <Properties>
           <string name="Name">FxUi</string>
           <ProtectedString name="Source">--!nonstrict
@@ -372788,7 +372917,7 @@ return Ui
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX220">
+      <Item class="ModuleScript" referent="RBX221">
         <Properties>
           <string name="Name">GeneTextureAssets</string>
           <ProtectedString name="Source">--!strict
@@ -372836,7 +372965,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX221">
+      <Item class="ModuleScript" referent="RBX222">
         <Properties>
           <string name="Name">GeneTextures</string>
           <ProtectedString name="Source">--!strict
@@ -372892,7 +373021,7 @@ return Textures
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX222">
+      <Item class="ModuleScript" referent="RBX223">
         <Properties>
           <string name="Name">HatchFragments</string>
           <ProtectedString name="Source">--!strict
@@ -372925,7 +373054,7 @@ return F
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX223">
+      <Item class="ModuleScript" referent="RBX224">
         <Properties>
           <string name="Name">HatchFxPlan</string>
           <ProtectedString name="Source">--!strict
@@ -373129,7 +373258,7 @@ return P
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX224">
+      <Item class="ModuleScript" referent="RBX225">
         <Properties>
           <string name="Name">HatchPresentation</string>
           <ProtectedString name="Source">--!strict
@@ -373402,7 +373531,7 @@ return Hatch
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX225">
+      <Item class="ModuleScript" referent="RBX226">
         <Properties>
           <string name="Name">HatchTimeline</string>
           <ProtectedString name="Source">--!strict
@@ -373850,7 +373979,7 @@ return T
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX226">
+      <Item class="ModuleScript" referent="RBX227">
         <Properties>
           <string name="Name">HubGuideRules</string>
           <ProtectedString name="Source">--!strict
@@ -374032,7 +374161,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX227">
+      <Item class="ModuleScript" referent="RBX228">
         <Properties>
           <string name="Name">HubSignCopy</string>
           <ProtectedString name="Source">--!strict
@@ -374086,7 +374215,7 @@ return Copy
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX228">
+      <Item class="ModuleScript" referent="RBX229">
         <Properties>
           <string name="Name">HubTravelClientRules</string>
           <ProtectedString name="Source">--!strict
@@ -374176,7 +374305,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX229">
+      <Item class="ModuleScript" referent="RBX230">
         <Properties>
           <string name="Name">HubTravelRules</string>
           <ProtectedString name="Source">--!strict
@@ -374262,7 +374391,7 @@ return HubTravelRules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX230">
+      <Item class="ModuleScript" referent="RBX231">
         <Properties>
           <string name="Name">HubWalkUpRules</string>
           <ProtectedString name="Source">--!strict
@@ -374338,7 +374467,7 @@ return HubWalkUpRules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX231">
+      <Item class="ModuleScript" referent="RBX232">
         <Properties>
           <string name="Name">HudRules</string>
           <ProtectedString name="Source">--!strict
@@ -374406,7 +374535,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX232">
+      <Item class="ModuleScript" referent="RBX233">
         <Properties>
           <string name="Name">IconRaster</string>
           <ProtectedString name="Source">--!strict
@@ -374415,7 +374544,7 @@ return {["amber"]={341,0,1,16777216,1,33554432,20,55923968,1,16777216,40,0,1,167
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX233">
+      <Item class="ModuleScript" referent="RBX234">
         <Properties>
           <string name="Name">IconTiles</string>
           <ProtectedString name="Source">--!strict
@@ -374424,7 +374553,7 @@ return {["dinos"]={["size"]=32,["colors"]={{104,48,36},{110,114,78},{0,29,13},{1
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX234">
+      <Item class="ModuleScript" referent="RBX235">
         <Properties>
           <string name="Name">IconVectors</string>
           <ProtectedString name="Source">--!strict
@@ -374433,7 +374562,7 @@ return {["home"]={{["x"]=21,["y"]=41,["w"]=60,["h"]=47,["color"]="#142035",["rad
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX235">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">IndexProgress</string>
           <ProtectedString name="Source">--!strict
@@ -374484,7 +374613,7 @@ return Progress
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">InspectMath</string>
           <ProtectedString name="Source">--!strict
@@ -374596,7 +374725,7 @@ return M
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX238">
         <Properties>
           <string name="Name">IslandLayout</string>
           <ProtectedString name="Source">--!strict
@@ -374689,7 +374818,7 @@ return IslandLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">LegacyGenePatterns</string>
           <ProtectedString name="Source">--!strict
@@ -374733,7 +374862,7 @@ return Legacy
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">LoadGate</string>
           <ProtectedString name="Source">--!strict
@@ -374770,7 +374899,7 @@ return Gate
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">LowPolyDinoAssets</string>
           <ProtectedString name="Source">--!strict
@@ -374813,7 +374942,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">LowPolyDinos</string>
           <ProtectedString name="Source">--!strict
@@ -375055,7 +375184,7 @@ return LowPoly
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">LowPolyPattern</string>
           <ProtectedString name="Source">--!strict
@@ -375337,7 +375466,7 @@ return Pattern
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">LowPolyPose</string>
           <ProtectedString name="Source">--!strict
@@ -375539,7 +375668,7 @@ return Pose
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">LowPolyRecolor</string>
           <ProtectedString name="Source">--!strict
@@ -375592,7 +375721,7 @@ return Recolor
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">LowPolyTexture</string>
           <ProtectedString name="Source">--!strict
@@ -375863,7 +375992,7 @@ return Texture
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">LowPolyTier</string>
           <ProtectedString name="Source">--!strict
@@ -375932,7 +376061,7 @@ return Tier
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">MeshSanity</string>
           <ProtectedString name="Source">--!strict
@@ -375976,7 +376105,7 @@ return Sanity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">ModelPreview</string>
           <ProtectedString name="Source">--!strict
@@ -376037,7 +376166,7 @@ return ModelPreview
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">MovementEnvelope</string>
           <ProtectedString name="Source">--!strict
@@ -376090,7 +376219,7 @@ return MovementEnvelope
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">MutationEffects</string>
           <ProtectedString name="Source">-- Standalone client adapter. Upload BeDino_Soft_Smoke_256.png first.
@@ -376172,7 +376301,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX251">
+      <Item class="ModuleScript" referent="RBX252">
         <Properties>
           <string name="Name">MutationLook</string>
           <ProtectedString name="Source">--!strict
@@ -376260,7 +376389,7 @@ return Look
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX252">
+      <Item class="ModuleScript" referent="RBX253">
         <Properties>
           <string name="Name">MyDinos</string>
           <ProtectedString name="Source">--!strict
@@ -376439,7 +376568,7 @@ return M
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX253">
+      <Item class="ModuleScript" referent="RBX254">
         <Properties>
           <string name="Name">NavigationArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -376457,7 +376586,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX254">
+      <Item class="ModuleScript" referent="RBX255">
         <Properties>
           <string name="Name">NestQueue</string>
           <ProtectedString name="Source">--!strict
@@ -376529,7 +376658,7 @@ return NestQueue
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX255">
+      <Item class="ModuleScript" referent="RBX256">
         <Properties>
           <string name="Name">NextGoal</string>
           <ProtectedString name="Source">--!strict
@@ -376610,7 +376739,7 @@ return NextGoal
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX256">
+      <Item class="ModuleScript" referent="RBX257">
         <Properties>
           <string name="Name">NotifyQueue</string>
           <ProtectedString name="Source">--!strict
@@ -376824,7 +376953,7 @@ return Q
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX257">
+      <Item class="ModuleScript" referent="RBX258">
         <Properties>
           <string name="Name">NpcLowPoly</string>
           <ProtectedString name="Source">--!strict
@@ -376870,7 +376999,7 @@ return NpcLowPoly
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX258">
+      <Item class="ModuleScript" referent="RBX259">
         <Properties>
           <string name="Name">NpcPredatorRules</string>
           <ProtectedString name="Source">--!strict
@@ -377465,7 +377594,7 @@ return Npc
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX259">
+      <Item class="ModuleScript" referent="RBX260">
         <Properties>
           <string name="Name">OddsCopy</string>
           <ProtectedString name="Source">--!strict
@@ -377588,7 +377717,7 @@ return Copy
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX260">
+      <Item class="ModuleScript" referent="RBX261">
         <Properties>
           <string name="Name">PatternAtlasCache</string>
           <ProtectedString name="Source">--!strict
@@ -377674,7 +377803,7 @@ return Cache
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX261">
+      <Item class="ModuleScript" referent="RBX262">
         <Properties>
           <string name="Name">PatternGenes</string>
           <ProtectedString name="Source">--!strict
@@ -377894,7 +378023,7 @@ return Pattern
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX262">
+      <Item class="ModuleScript" referent="RBX263">
         <Properties>
           <string name="Name">PhoneScale</string>
           <ProtectedString name="Source">--!strict
@@ -377972,7 +378101,7 @@ return PhoneScale
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX263">
+      <Item class="ModuleScript" referent="RBX264">
         <Properties>
           <string name="Name">PotionArt</string>
           <ProtectedString name="Source">--!strict
@@ -378158,7 +378287,7 @@ return PotionArt
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX264">
+      <Item class="ModuleScript" referent="RBX265">
         <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
@@ -378252,7 +378381,7 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX265">
+      <Item class="ModuleScript" referent="RBX266">
         <Properties>
           <string name="Name">PrivateStateCore</string>
           <ProtectedString name="Source">--!strict
@@ -378415,7 +378544,7 @@ return Core
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX266">
+      <Item class="ModuleScript" referent="RBX267">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -378553,7 +378682,7 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX267">
+      <Item class="ModuleScript" referent="RBX268">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -378790,7 +378919,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX268">
+      <Item class="ModuleScript" referent="RBX269">
         <Properties>
           <string name="Name">RarityCurve</string>
           <ProtectedString name="Source">--!strict
@@ -378861,7 +378990,7 @@ return table.freeze(Curve)
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX269">
+      <Item class="ModuleScript" referent="RBX270">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -378870,7 +378999,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX270">
+      <Item class="ModuleScript" referent="RBX271">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -378886,7 +379015,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX271">
+      <Item class="ModuleScript" referent="RBX272">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -378957,7 +379086,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX272">
+      <Item class="ModuleScript" referent="RBX273">
         <Properties>
           <string name="Name">RevealSkip</string>
           <ProtectedString name="Source">--!strict
@@ -379041,7 +379170,7 @@ return Skip
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX273">
+      <Item class="ModuleScript" referent="RBX274">
         <Properties>
           <string name="Name">RunEggTags</string>
           <ProtectedString name="Source">--!strict
@@ -379080,7 +379209,7 @@ return Tags
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX274">
+      <Item class="ModuleScript" referent="RBX275">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -379172,7 +379301,7 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX275">
+      <Item class="ModuleScript" referent="RBX276">
         <Properties>
           <string name="Name">SettingsModel</string>
           <ProtectedString name="Source">--!strict
@@ -379292,7 +379421,7 @@ return Model
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX276">
+      <Item class="ModuleScript" referent="RBX277">
         <Properties>
           <string name="Name">Sfx</string>
           <ProtectedString name="Source">--!strict
@@ -379512,7 +379641,7 @@ return Sfx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX277">
+      <Item class="ModuleScript" referent="RBX278">
         <Properties>
           <string name="Name">SfxRules</string>
           <ProtectedString name="Source">--!strict
@@ -379632,7 +379761,7 @@ return R
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX278">
+      <Item class="ModuleScript" referent="RBX279">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -379680,7 +379809,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX279">
+      <Item class="ModuleScript" referent="RBX280">
         <Properties>
           <string name="Name">ShopCardState</string>
           <ProtectedString name="Source">--!strict
@@ -379718,7 +379847,7 @@ return State
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX280">
+      <Item class="ModuleScript" referent="RBX281">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -379767,7 +379896,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX281">
+      <Item class="ModuleScript" referent="RBX282">
         <Properties>
           <string name="Name">ShopPreview</string>
           <ProtectedString name="Source">--!strict
@@ -379835,7 +379964,7 @@ return P
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX282">
+      <Item class="ModuleScript" referent="RBX283">
         <Properties>
           <string name="Name">SpawnGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -379889,7 +380018,7 @@ return SpawnGeometry
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX283">
+      <Item class="ModuleScript" referent="RBX284">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -379996,7 +380125,7 @@ local function desktop(width: number, height: number, count: number)
             positions = railButtons(count, 1, 172, 54, 7) :: any},
         timers = {x = width - 20 - TouchLayout.TIMERS_W * small, y = height - 22 - 220 * small, scale = small, w = TouchLayout.TIMERS_W, h = 220,
             leapY = 0, weatherY = 72, weatherVisible = true, buffsY = 145, buffsH = 68, buffsVisible = true,
-            leapText = 22, weatherText = 20, buffsText = 16},
+            leapText = PhoneScale.floorText(22, small), weatherText = PhoneScale.floorText(20, small), buffsText = PhoneScale.floorText(16, small)}, -- BD-376: &gt;= 14 px rendered
         action = action,
         badge = {x = width / 2 - 125, y = 36, scale = 1, w = 250, h = 24, textSize = 15},
         notice = {x = width / 2 - noticeW / 2, y = 8, scale = 1, w = noticeW, h = 25, textSize = 14},
@@ -380105,7 +380234,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX284">
+      <Item class="ModuleScript" referent="RBX285">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -380137,7 +380266,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX285">
+      <Item class="ModuleScript" referent="RBX286">
         <Properties>
           <string name="Name">UIFormat</string>
           <ProtectedString name="Source">--!strict
@@ -380166,7 +380295,7 @@ end
 -- Only active boosts, in a fixed order; empty table when nothing is active.
 function UIFormat.boostLines(growth: number,speed: number,loot: number): {string}
     local lines={}
-    for _,pair in {{"Speed",speed},{"Growth",growth},{"Loot",loot}} do
+    for _,pair in {{"Speed",speed},{"Growth",growth},{"Eggs",loot}} do
         local line=UIFormat.boost(pair[1] :: string,pair[2] :: number)
         if line then table.insert(lines,line) end
     end
@@ -380181,7 +380310,7 @@ return UIFormat
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX286">
+      <Item class="ModuleScript" referent="RBX287">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -380212,7 +380341,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX287">
+      <Item class="ModuleScript" referent="RBX288">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -380236,7 +380365,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX288">
+      <Item class="ModuleScript" referent="RBX289">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -380410,7 +380539,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX289">
+      <Item class="ModuleScript" referent="RBX290">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -380441,7 +380570,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX290">
+      <Item class="ModuleScript" referent="RBX291">
         <Properties>
           <string name="Name">WeatherLooks</string>
           <ProtectedString name="Source">--!strict
@@ -380582,7 +380711,7 @@ return Weather
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX291">
+      <Item class="ModuleScript" referent="RBX292">
         <Properties>
           <string name="Name">WeatherSounds</string>
           <ProtectedString name="Source">--!strict
@@ -380657,7 +380786,7 @@ return Sounds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX292">
+      <Item class="ModuleScript" referent="RBX293">
         <Properties>
           <string name="Name">WorldGeneratedMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -380715,7 +380844,7 @@ return Generated
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX293">
+      <Item class="ModuleScript" referent="RBX294">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -380766,7 +380895,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX294">
+      <Item class="ModuleScript" referent="RBX295">
         <Properties>
           <string name="Name">WorldKitMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -380819,7 +380948,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX295">
+    <Item class="Folder" referent="RBX296">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -550374,15 +550503,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX296">
+  <Item class="ServerScriptService" referent="RBX297">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX297">
+    <Item class="Folder" referent="RBX298">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX298">
+      <Item class="ModuleScript" referent="RBX299">
         <Properties>
           <string name="Name">AdminService</string>
           <ProtectedString name="Source">--!strict
@@ -550496,7 +550625,7 @@ return AdminService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX299">
+      <Item class="ModuleScript" referent="RBX300">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -550817,7 +550946,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX300">
+      <Item class="Script" referent="RBX301">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -550997,7 +551126,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX301">
+      <Item class="ModuleScript" referent="RBX302">
         <Properties>
           <string name="Name">CaveLavaFx</string>
           <ProtectedString name="Source">--!strict
@@ -551185,7 +551314,7 @@ return CaveLavaFx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX302">
+      <Item class="ModuleScript" referent="RBX303">
         <Properties>
           <string name="Name">CaveLighting</string>
           <ProtectedString name="Source">--!strict
@@ -551299,7 +551428,7 @@ return CaveLighting
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX303">
+      <Item class="ModuleScript" referent="RBX304">
         <Properties>
           <string name="Name">CaveProps</string>
           <ProtectedString name="Source">--!strict
@@ -551519,7 +551648,7 @@ return CaveProps
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX304">
+      <Item class="ModuleScript" referent="RBX305">
         <Properties>
           <string name="Name">CaveTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -551578,7 +551707,7 @@ return CaveTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX305">
+      <Item class="ModuleScript" referent="RBX306">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -551698,7 +551827,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX306">
+      <Item class="ModuleScript" referent="RBX307">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -551791,7 +551920,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX307">
+      <Item class="ModuleScript" referent="RBX308">
         <Properties>
           <string name="Name">CombatService</string>
           <ProtectedString name="Source">--!strict
@@ -552038,7 +552167,7 @@ return CombatService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX308">
+      <Item class="ModuleScript" referent="RBX309">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -552175,7 +552304,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX309">
+      <Item class="ModuleScript" referent="RBX310">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -552389,7 +552518,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX310">
+      <Item class="ModuleScript" referent="RBX311">
         <Properties>
           <string name="Name">FallRecovery</string>
           <ProtectedString name="Source">--!strict
@@ -552455,7 +552584,7 @@ return FallRecovery
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX311">
+      <Item class="ModuleScript" referent="RBX312">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -552727,7 +552856,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX312">
+      <Item class="ModuleScript" referent="RBX313">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -552899,7 +553028,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX313">
+      <Item class="ModuleScript" referent="RBX314">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -553085,7 +553214,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX314">
+      <Item class="ModuleScript" referent="RBX315">
         <Properties>
           <string name="Name">HubGateService</string>
           <ProtectedString name="Source">--!strict
@@ -553194,7 +553323,7 @@ return HubGateService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX315">
+      <Item class="ModuleScript" referent="RBX316">
         <Properties>
           <string name="Name">HubTravelService</string>
           <ProtectedString name="Source">--!strict
@@ -553278,7 +553407,7 @@ return HubTravelService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX316">
+      <Item class="ModuleScript" referent="RBX317">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -553675,7 +553804,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX317">
+      <Item class="ModuleScript" referent="RBX318">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -553796,7 +553925,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX318">
+      <Item class="ModuleScript" referent="RBX319">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -553876,7 +554005,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX319">
+      <Item class="ModuleScript" referent="RBX320">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -554001,7 +554130,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX320">
+      <Item class="ModuleScript" referent="RBX321">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -554140,7 +554269,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX321">
+      <Item class="ModuleScript" referent="RBX322">
         <Properties>
           <string name="Name">LeaveCoordinator</string>
           <ProtectedString name="Source">--!strict
@@ -554223,7 +554352,7 @@ return LeaveCoordinator
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX322">
+      <Item class="ModuleScript" referent="RBX323">
         <Properties>
           <string name="Name">LowPolyDinoLoader</string>
           <ProtectedString name="Source">--!strict
@@ -554276,7 +554405,7 @@ return Loader
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX323">
+      <Item class="ModuleScript" referent="RBX324">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -554381,7 +554510,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX324">
+      <Item class="ModuleScript" referent="RBX325">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -554486,7 +554615,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX325">
+      <Item class="ModuleScript" referent="RBX326">
         <Properties>
           <string name="Name">NpcPredatorService</string>
           <ProtectedString name="Source">--!strict
@@ -554754,7 +554883,7 @@ return NpcPredatorService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX326">
+      <Item class="ModuleScript" referent="RBX327">
         <Properties>
           <string name="Name">PotionModels</string>
           <ProtectedString name="Source">--!strict
@@ -554806,7 +554935,7 @@ return Models
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX327">
+      <Item class="ModuleScript" referent="RBX328">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -554943,7 +555072,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX328">
+      <Item class="ModuleScript" referent="RBX329">
         <Properties>
           <string name="Name">PrivateState</string>
           <ProtectedString name="Source">--!strict
@@ -555051,7 +555180,7 @@ return PrivateState
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX329">
+      <Item class="ModuleScript" referent="RBX330">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -556040,11 +556169,11 @@ local function runRewardText(outcome): string
     for _, stack in outcome.stacks or {} do -- legacy Build 020 operation replay only
         table.insert(parts, string.format("%dx %s", stack.count, stack.speciesId))
     end
-    table.insert(parts, if eggs == 1 then "1 run egg" elseif eggs &gt; 0 then string.format("%d run eggs", eggs) else "no run eggs")
+    table.insert(parts, if eggs == 1 then "1 egg" elseif eggs &gt; 0 then string.format("%d eggs", eggs) else "no eggs")
     local nests = outcome.nestCount or 0
-    if nests &gt; 0 then table.insert(parts, if nests == 1 then "1 egg nest" else string.format("%d egg nests", nests)) end
+    if nests &gt; 0 then table.insert(parts, if nests == 1 then "1 nest" else string.format("%d nests", nests)) end
     if outcome.nestFull then table.insert(parts, "nest storage full") end
-    return table.concat(parts, " | ")
+    return table.concat(parts, " + ")
 end
 
 -- BD-044 settlement: catches -&gt; exactly that many run eggs (capped per run), plus
@@ -557133,7 +557262,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX330">
+      <Item class="ModuleScript" referent="RBX331">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -557354,7 +557483,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX331">
+      <Item class="ModuleScript" referent="RBX332">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -557468,7 +557597,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX332">
+      <Item class="ModuleScript" referent="RBX333">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -557779,7 +557908,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX333">
+      <Item class="ModuleScript" referent="RBX334">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -557851,19 +557980,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX334">
+  <Item class="StarterPlayer" referent="RBX335">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX335">
+    <Item class="StarterPlayerScripts" referent="RBX336">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX336">
+      <Item class="Folder" referent="RBX337">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX337">
+        <Item class="LocalScript" referent="RBX338">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -558122,7 +558251,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX338">
+        <Item class="LocalScript" referent="RBX339">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -558422,6 +558551,7 @@ local popLabel=label(gui,"",0,0,160,40,28,C.accent)
 popLabel.AnchorPoint,popLabel.Position,popLabel.Visible,popLabel.ZIndex=Vector2.new(.5,.5),UDim2.fromScale(.5,.4),false,43
 local popSerial=0
 local function pickupPop(text: string)
+    if not require(Shared.FtueP1).worldTextAllowed(shade.Visible) then return end -- BD-379: nothing floats over a menu
     popSerial+=1
     local serial=popSerial
     popLabel.Text=text
@@ -558442,6 +558572,7 @@ local function open(name: string)
     body:ClearAllChildren()
     require(script.Parent.ModalCompact).layout()
     shade.Visible=true
+    popSerial+=1 popLabel.Visible=false -- BD-379
     if not wasVisible then
         scale.Scale=viewportScale()*(if motion then .96 else 1)
         shade.BackgroundTransparency=1
@@ -558620,7 +558751,7 @@ render=function(name: string)
             local weights=ShopOdds.conditionPercents(p.conditionLevel or 0) -- BD-045: normalized percents
             local upgrade=ProgressionConfig.ConditionUpgrades[(p.conditionLevel or 0)+1]
             -- docs/73: plain egg per condition on a floor swatch; chance only (no stats text, no odds screen).
-            label(body,"Condition level "..(p.conditionLevel or 0),0,cardsY,824,30,24,C.gold)
+            label(body,require(Shared.FtueP1).ConditionsHeader,0,cardsY,824,30,20,C.gold) -- BD-372: the safe-first-eggs note, no level number
             for i,row in ProgressionConfig.Conditions do
                 local x=(i-1)*165
                 label(body,row.name,x,cardsY+32,155,28,22)
@@ -558630,8 +558761,12 @@ render=function(name: string)
                 EggAppearance.apply(view,EggGenetics.neutral(row.id),true)
                 label(body,string.format("%g%%",weights[i]),x,cardsY+176,155,34,24,C.blue)
             end
-            button(body,if upgrade then "UPGRADE: "..upgrade.price.." CRYSTALS" else "MAX LEVEL",142,cardsY+220,540,targetHeight,C.accent,function() if upgrade then open("conditionConfirm") end end).TextSize=20
-            label(body,require(Shared.OddsCopy).upgradeUnlock(if upgrade then upgrade.requiredLevel else nil,num("AccountLevel")),0,cardsY+220+targetHeight+6,824,30,19,C.gold)
+            local upgradeText,upgradeOk=require(Shared.FtueP1).upgradeButton(upgrade,num("AccountLevel"),num("Crystals")) -- BD-372: grey with the reason, never green over a lock
+            local upgradeButton=button(body,upgradeText,142,cardsY+220,540,targetHeight,if upgradeOk then C.accent else C.card,function() if upgradeOk and upgrade then open("conditionConfirm") end end)
+            upgradeButton.TextSize=20
+            upgradeButton.Name=if upgradeOk then "UpgradeButton" else "UpgradeLocked"
+            if not upgradeOk then upgradeButton.AutoButtonColor=false upgradeButton.TextTransparency=.15 end
+            label(body,require(Shared.FtueP1).upgradeHint(upgrade,num("AccountLevel")),0,cardsY+220+targetHeight+6,824,30,19,C.gold)
             return
         elseif cosmeticTab=="crystals" then
             -- BD-179: one card per pack in a 3-wide grid (same card look as the potion shop). Prices load from the marketplace.
@@ -558891,7 +559026,7 @@ render=function(name: string)
             label(card,look.rarityText or (rarityNames[rarity].." • "..FusionSelection.pct(100*(oddsWeight[id] or 0)/oddsTotal).." of eggs"),4,if lay.compact then 28 else 44,256,if lay.compact then 20 else 25,if lay.compact then 15 else 18)
             if found then
                 hero(card,id,7,lay.heroY,250,lay.heroHeight,bestMutation(id))
-                label(card,if event then "" elseif ownedTraits(id) then (require(Shared.ColourBonus).text(ProgressionConfig.EggColors,(ownedTraits(id) :: any).genes) or "Special variant") else string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond),5,lay.detailY,254,if lay.compact then 22 else 25,if lay.compact then 13 else 15)
+                label(card,if event then "" elseif ownedTraits(id) then (require(Shared.ColourBonus).text(ProgressionConfig.EggColors,(ownedTraits(id) :: any).genes) or "Special variant") else require(Shared.FtueP1).indexCount(base,gold,diamond),5,lay.detailY,254,if lay.compact then 22 else 25,if lay.compact then 14 else 16)
                 if event then require(script.Parent.MutationBadge).chip(card,event.id,UDim2.new(0.5,0,0,lay.detailY),Vector2.new(0.5,0)) end -- BD-352: real badge, not 9 px text
                 if lay.compact then
                     local tap=Instance.new("TextButton") -- the whole card opens the dino (no VIEW DINO bar when short)
@@ -559023,6 +559158,12 @@ render=function(name: string)
             end,
             openSettings=function() open("settings") end,
             autoOpenText=autoOpenText,
+            -- BD-369: the empty card is a way out, not a dead end; the cracked hint needs the dino count.
+            explore=function()
+                local character=player.Character
+                if character and character:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() close() else close() end
+            end,
+            collectionCopies=function() return require(Shared.FtueRules).collectionCopies(decoded("CollectionJson","{}")) end,
         })
         task.spawn(function() -- live countdowns; stops when the screen is left
             while modalVersion==version and active=="eggs" do
@@ -559099,6 +559240,8 @@ render=function(name: string)
                 remaining=remainingAfter,genes=if geneticsOk then genes else nil,colorReveal=colorReveal,patternReveal=patternReveal,paintColors=paintColors,
                 secondReveal=if geneticsOk then HatchTimeline.colorReveal(ProgressionConfig.EggColors,genes,"secondary") else nil, -- BD-220: right bucket
             })
+            -- BD-380: the egg counts are published a moment after the result; re-count so the hint equals the eggs really left.
+            task.delay(.6,function() if modalVersion==version and active=="hatch" and handle then (handle :: any).setRemaining(HatchTimeline.remaining(str("NextChestId")~="",num("ActiveChestCount"),num("QueuedEggsWaiting"))) end end)
         end
         Sfx.play("hatch_crack")
         handle=HatchSequence.play({
@@ -559109,6 +559252,11 @@ render=function(name: string)
             flash=flash,
             onSkipAll=function() autoHatching=true skipAllReveals=true end,
             onReveal=function() if modalVersion==version then heading.Text=if failedEgg then "Oops! Splat!" else "You hatched a dinosaur!" end end,
+            onAgain=function() -- BD-371: after a splat with no eggs left, TRY AGAIN goes straight back to the island
+                autoHatching=false skipAllReveals=false emitHatchSummary() close()
+                local character=player.Character
+                if character and character:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() end
+            end,
             onNext=function()
                 -- BD-170: Next egg stays inside the opening sequence; only the end of the batch returns to the Eggs screen.
                 heading.Text="An egg is hatching..."
@@ -559124,7 +559272,7 @@ render=function(name: string)
         if hatchState.fresh then hatchState.fresh=false supply() end
     elseif name=="exit" then
         -- BD-052: one confirmation, no stay-still channel; the server settles through tryEnd.
-        heading.Text,header.BackgroundColor3="Return to Sanctuary?",C.red
+        heading.Text,header.BackgroundColor3="Go home?",C.red
         art(body,"home",36,28,214)
         label(body,require(Shared.FtueCopy).homeConfirmLine,300,8,500,100,28,C.gold)
         local character=player.Character
@@ -559132,10 +559280,10 @@ render=function(name: string)
         local growth=if character then character:GetAttribute("GrowthScore") or 0 else 0
         label(body,require(Shared.FtueCopy).homeConfirmTotals(catches,growth),300,116,500,60,22)
         local buttonHeight=if touchMode() then math.max(68,46/viewportScale()) else 68
-        button(body,"RETURN",300,396-buttonHeight,244,buttonHeight,C.accent,function()
+        button(body,"GO HOME",300,396-buttonHeight,244,buttonHeight,C.accent,function()
             local current=player.Character
             close()
-            if current and current:GetAttribute("RunState")=="Active" then endRun:FireServer() notify("Returning to Sanctuary...",C.gold) end
+            if current and current:GetAttribute("RunState")=="Active" then endRun:FireServer() notify("Going home...",C.gold) end
         end)
         button(body,"CANCEL",556,396-buttonHeight,244,buttonHeight,C.blue,close)
     elseif name=="crystalReveal" then
@@ -559627,13 +559775,7 @@ RunService.Heartbeat:Connect(function(dt)
     end
     local ok,tags=pcall(function() return Http:JSONDecode(if character then character:GetAttribute("RunEggEvents") or "[]" else "[]") end)
     if ok and typeof(tags)=="table" then
-        if #tags&gt;lastEggCount and state=="Active" then
-            -- BD-154: several eggs can land in one tick (Food worth x10, big pickups): look at every new tag, not only the last.
-            local mutation=nil
-            for i=#tags,lastEggCount+1,-1 do mutation=mutation or ProgressionRules.item(ProgressionConfig.EventMutations,tags[i].mutationId or "") end
-            -- Plain eggs show on the HUD counter; only special eggs get a card (docs/65).
-            if mutation then notify(mutation.name.." egg caught!",C.gold,{kind="major",icon="egg",body="Hatch it at Home",key="mutation_egg",live=true}) end
-        end
+        -- BD-154/BD-378: the found-egg toast (HudV2) names weather eggs; no second card from here.
         lastEggCount=#tags
     end
     refreshProgressionHUD()
@@ -559737,7 +559879,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX339">
+        <Item class="LocalScript" referent="RBX340">
           <Properties>
             <string name="Name">CameraOcclusion</string>
             <ProtectedString name="Source">--!strict
@@ -559842,7 +559984,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX340">
+        <Item class="ModuleScript" referent="RBX341">
           <Properties>
             <string name="Name">CaveAtmosphere</string>
             <ProtectedString name="Source">--!strict
@@ -559976,7 +560118,7 @@ return Cave
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX341">
+        <Item class="ModuleScript" referent="RBX342">
           <Properties>
             <string name="Name">CaveLavaClient</string>
             <ProtectedString name="Source">--!strict
@@ -560092,7 +560234,7 @@ return Lava
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX342">
+        <Item class="ModuleScript" referent="RBX343">
           <Properties>
             <string name="Name">CombatHud</string>
             <ProtectedString name="Source">--!strict
@@ -560426,7 +560568,7 @@ return Hud
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX343">
+        <Item class="LocalScript" referent="RBX344">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!nonstrict
@@ -560520,7 +560662,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX344">
+        <Item class="ModuleScript" referent="RBX345">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -560599,7 +560741,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX345">
+        <Item class="ModuleScript" referent="RBX346">
           <Properties>
             <string name="Name">DinoIndexPanels</string>
             <ProtectedString name="Source">--!strict
@@ -561147,7 +561289,7 @@ return Panels
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX346">
+        <Item class="LocalScript" referent="RBX347">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -561477,7 +561619,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX347">
+        <Item class="ModuleScript" referent="RBX348">
           <Properties>
             <string name="Name">EggPicture</string>
             <ProtectedString name="Source">--!strict
@@ -561554,7 +561696,7 @@ return EggPicture
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX348">
+        <Item class="ModuleScript" referent="RBX349">
           <Properties>
             <string name="Name">EggsScreen</string>
             <ProtectedString name="Source">--!strict
@@ -561578,6 +561720,7 @@ local EggPicture = require(script.Parent.EggPicture)
 local FxUi = require(Shared.FxUi)
 local MutationLook = require(Shared.MutationLook)
 local Theme = require(Shared.UITheme)
+local Copy = require(Shared.FtueP1)
 
 local EggsScreen = {}
 
@@ -561602,7 +561745,7 @@ function EggsScreen.render(ctx: any)
     local function projected() return NestQueue.project(nestList, math.floor(workspace:GetServerTimeNow()), duration) end
     local header = label(body, EggsLogic.nestHeader(nestList, capacity), 0, 0, 220, 28, 24, C.gold)
     header.TextXAlignment = Enum.TextXAlignment.Left
-    local luck = label(body, "Nest eggs are lucky!", 224, 2, 600, 26, 18)
+    local luck = label(body, Copy.NestLine, 224, 2, 600, 26, 18) -- BD-369: says why only one nest opens at a time
     luck.TextXAlignment = Enum.TextXAlignment.Right
 
     -- A rounded colour pill with one short line of text (friendly timers and chips).
@@ -561696,19 +561839,31 @@ function EggsScreen.render(ctx: any)
 
     local infoX = stageW + 30
     local infoW = 824 - infoX - 14
-    local waitingLabel = label(card, "Eggs waiting: " .. EggsLogic.waitingTotal(ctx.num("ActiveChestCount"), waiting, nextId ~= ""), infoX, 10, infoW, 38, 30, C.gold)
-    waitingLabel.Name = "EggsWaiting"
-    waitingLabel.TextXAlignment = Enum.TextXAlignment.Left
-    local timerChip, timer = pill(card, if entry then statusText else "No eggs yet", if state.canOpen then C.accent else C.blue, infoX, 54, math.min(280, infoW), 38, 22)
+    local waitingText = Copy.waitingText(ctx.num("ActiveChestCount"), waiting) -- BD-369: counts the card egg; hidden at 0
+    if waitingText then
+        local waitingLabel = label(card, waitingText, infoX, 10, infoW, 38, 30, C.gold)
+        waitingLabel.Name = "EggsWaiting"
+        waitingLabel.TextXAlignment = Enum.TextXAlignment.Left
+    end
+    local timerChip, timer = pill(card, statusText, if state.canOpen then C.accent else C.blue, infoX, 54, if entry then math.min(280, infoW) else infoW, 38, 22)
     timerChip.Name = "EggStatusPill"
+    -- BD-369: after the safe first eggs, say once in one short line that an egg can crack.
+    local hintShown = entry ~= nil and Copy.crackedHintShown(ctx.collectionCopies(), true)
+    local hintH = if hintShown then 24 else 0
+    if hintShown then
+        local crackedHint = label(card, Copy.CrackedHint, infoX, 94, infoW, 22, 19, C.gold)
+        crackedHint.Name = "CrackedHint"
+        crackedHint.TextXAlignment = Enum.TextXAlignment.Left
+    end
 
     local gearH = math.max(touchH * .6, 52)
-    local openH = math.clamp(cardH - 106 - 14 - gearH - 14, 64, 96)
-    local openButton = button(card, buttonText, infoX, 106, infoW, openH, if state.canOpen then C.accent else C.outline, function()
+    local openH = math.clamp(cardH - 106 - hintH - 14 - gearH - 14, 64, 96)
+    local openButton = button(card, buttonText, infoX, 106 + hintH, infoW, openH, if state.canOpen or state.kind == "empty" then C.accent else C.outline, function()
         state = EggsLogic.card(entry, nextId, ctx.num("NextChestReadyAt"), workspace:GetServerTimeNow(), waiting)
         if state.canOpen then ctx.openEgg()
         elseif state.kind == "growing" then ctx.notify("This egg is still growing", C.gold)
-        else ctx.notify("Finish a run to catch eggs!", C.gold) end
+        elseif state.kind == "empty" then ctx.explore() -- BD-369: no dead end, a button to the island
+        else ctx.notify("Eggs are on the way!", C.gold) end
     end)
     openButton.Name = "OpenEggButton"
     openButton.TextSize = 36
@@ -561735,7 +561890,7 @@ function EggsScreen.render(ctx: any)
         state = EggsLogic.card(entry, nextId, ctx.num("NextChestReadyAt"), workspace:GetServerTimeNow(), waiting)
         statusText, buttonText = EggsLogic.cardCopy(state)
         openButton.Text = buttonText
-        openButton.BackgroundColor3 = if state.canOpen then C.accent else C.outline
+        openButton.BackgroundColor3 = if state.canOpen or state.kind == "empty" then C.accent else C.outline
         timerChip.BackgroundColor3 = if state.canOpen then C.accent else C.blue
         if entry then
             local remaining = math.max(0, (if typeof(entry.readyAt) == "number" then entry.readyAt else ctx.num("NextChestReadyAt")) - workspace:GetServerTimeNow())
@@ -561750,7 +561905,7 @@ return EggsScreen
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX349">
+        <Item class="LocalScript" referent="RBX350">
           <Properties>
             <string name="Name">FoodGlow</string>
             <ProtectedString name="Source">--!strict
@@ -561976,7 +562131,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX350">
+        <Item class="ModuleScript" referent="RBX351">
           <Properties>
             <string name="Name">FtueRail</string>
             <ProtectedString name="Source">--!strict
@@ -562057,7 +562212,7 @@ return Rail
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX351">
+        <Item class="ModuleScript" referent="RBX352">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -563092,7 +563247,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX352">
+        <Item class="ModuleScript" referent="RBX353">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -563202,7 +563357,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX353">
+        <Item class="ModuleScript" referent="RBX354">
           <Properties>
             <string name="Name">FxRig</string>
             <ProtectedString name="Source">--!nonstrict
@@ -563569,7 +563724,7 @@ return Rig
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX354">
+        <Item class="ModuleScript" referent="RBX355">
           <Properties>
             <string name="Name">HatchFx</string>
             <ProtectedString name="Source">--!nonstrict
@@ -563780,7 +563935,7 @@ return M
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX355">
+        <Item class="ModuleScript" referent="RBX356">
           <Properties>
             <string name="Name">HatchSequence</string>
             <ProtectedString name="Source">--!strict
@@ -563798,6 +563953,7 @@ local Theme = require(Shared.UITheme)
 local Sfx = require(Shared.Sfx)
 local SfxRules = require(Shared.SfxRules)
 local Timeline = require(Shared.HatchTimeline)
+local Copy = require(Shared.FtueP1)
 local FxPlan = require(Shared.HatchFxPlan)
 local EggGenetics = require(Shared.EggGenetics)
 local InspectView = require(script.Parent.InspectView)
@@ -564101,11 +564257,11 @@ export type Args = {
     nameLabel: TextLabel, oddsLabel: TextLabel, detailLabel: TextLabel,
     motion: boolean,
     alive: () -&gt; boolean, flash: (Color3, number) -&gt; (),
-    onNext: () -&gt; (), onSkipAll: () -&gt; (), onReveal: () -&gt; (),
+    onNext: () -&gt; (), onSkipAll: () -&gt; (), onReveal: () -&gt; (), onAgain: (() -&gt; ())?,
     result: Result?, -- nil = Open was just pressed and the server answer has not arrived: the egg already wobbles (BD-170)
     eggCondition: string?, -- BD-223: condition id of the egg being opened (client queue), shown from the first frame
 }
-export type Handle = {cancel: () -&gt; (), supply: (Result) -&gt; (), pending: () -&gt; boolean}
+export type Handle = {cancel: () -&gt; (), supply: (Result) -&gt; (), pending: () -&gt; boolean, setRemaining: (number) -&gt; ()}
 
 -- Returns {cancel, supply, pending}. onNext runs once after the player taps on the revealed egg.
 function Seq.play(args: Args): Handle
@@ -564526,7 +564682,9 @@ function Seq.play(args: Args): Handle
 
     local function showHint()
         readyShown = true
-        hint.Visible = true
+        local endRow = a.body:FindFirstChild("EndButtons")
+        if endRow and endRow:IsA("GuiObject") then endRow.Visible = true else hint.Visible = true end
+        if endRow then return end
         if motion then
             hint.TextTransparency = 1
             TweenService:Create(hint, TweenInfo.new(.25), {TextTransparency = 0}):Play()
@@ -564604,6 +564762,33 @@ function Seq.play(args: Args): Handle
         if r.big then addRibbon("BIG", Theme.Colors.purple, 724, 52, 150, 7) end
         if r.mutationName then addRibbon(string.upper(r.mutationName), r.mutationColor or Theme.Colors.gold, 116, if r.shiny then 108 else 52, 210, -4) end
         hint.Text = Timeline.hint(r.remaining)
+        -- BD-371: real, big, friendly buttons at the end (dark text on a bright button, contrast &gt;= 4.5:1); no dead end after a splat.
+        local oldRow = a.body:FindFirstChild("EndButtons")
+        if oldRow then oldRow:Destroy() end
+        local kinds = Copy.hatchButtons(failed, r.remaining)
+        if #kinds &gt; 0 then
+            local row = Instance.new("Frame")
+            row.Name, row.BackgroundTransparency, row.Visible, row.ZIndex = "EndButtons", 1, false, a.body.ZIndex + 8
+            row.AnchorPoint, row.Position, row.Size, row.Parent = Vector2.new(.5, 0), UDim2.new(.5, 0, 0, 342), UDim2.fromOffset(#kinds * 246, 60), a.body
+            for i, kind in kinds do
+                local b = Instance.new("TextButton")
+                b.Name, b.Text, b.AutoButtonColor, b.Font, b.TextSize = "End_" .. kind, Copy.ButtonText[kind], true, Enum.Font.FredokaOne, 30
+                local fill, ink = Copy.ButtonColors[kind], Copy.ButtonTextColor
+                b.BackgroundColor3, b.TextColor3 = Color3.fromRGB(fill[1], fill[2], fill[3]), Color3.fromRGB(ink[1], ink[2], ink[3])
+                b.Position, b.Size, b.ZIndex, b.Parent = UDim2.fromOffset((i - 1) * 246, 0), UDim2.fromOffset(230, 60), row.ZIndex + 1, row
+                local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 16) corner.Parent = b
+                local stroke = Instance.new("UIStroke") stroke.Color, stroke.Thickness, stroke.Parent = Theme.Colors.outline, 3, b
+                b.Activated:Connect(function()
+                    if kind == "again" then
+                        if finished then return end
+                        finish()
+                        if a.onAgain then (a.onAgain :: () -&gt; ())() end
+                    else
+                        advance()
+                    end
+                end)
+            end
+        end
         if r.remaining &gt; 0 and not skipButton then
             local b = Instance.new("TextButton")
             b.Name, b.Text, b.AnchorPoint, b.AutoButtonColor = "SkipAll", "Skip all", Vector2.new(1, 1), true
@@ -564889,6 +565074,8 @@ function Seq.play(args: Args): Handle
             applyResult(r)
         end,
         pending = function() return state.pending end,
+        -- BD-380: the egg counts arrive a moment after the result; keep the hint equal to the eggs really left.
+        setRemaining = function(n: number) if not finished then hint.Text = Timeline.hint(n) end end,
     }
 end
 
@@ -564896,7 +565083,7 @@ return Seq
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX356">
+        <Item class="ModuleScript" referent="RBX357">
           <Properties>
             <string name="Name">HubGateClient</string>
             <ProtectedString name="Source">--!strict
@@ -564963,7 +565150,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX357">
+        <Item class="ModuleScript" referent="RBX358">
           <Properties>
             <string name="Name">HubGuideClient</string>
             <ProtectedString name="Source">--!strict
@@ -565076,7 +565263,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX358">
+        <Item class="ModuleScript" referent="RBX359">
           <Properties>
             <string name="Name">HubTravelClient</string>
             <ProtectedString name="Source">--!strict
@@ -565250,7 +565437,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX359">
+        <Item class="ModuleScript" referent="RBX360">
           <Properties>
             <string name="Name">HubWalkUpClient</string>
             <ProtectedString name="Source">--!strict
@@ -565347,7 +565534,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX360">
+        <Item class="ModuleScript" referent="RBX361">
           <Properties>
             <string name="Name">HudV2</string>
             <ProtectedString name="Source">--!strict
@@ -565364,6 +565551,9 @@ local PrivateState = require(script.Parent.PrivateState)
 local Rules = require(Shared:WaitForChild("HudRules"))
 local Theme = require(Shared:WaitForChild("UITheme"))
 local Ftue = require(Shared:WaitForChild("FtueRules"))
+local Copy = require(Shared:WaitForChild("FtueP1"))
+local ProgressionConfig = require(Shared:WaitForChild("ProgressionConfig"))
+local ProgressionRules = require(Shared:WaitForChild("ProgressionRules"))
 local Assets = require(Shared:WaitForChild("EffectAssets"))
 local Sfx = require(Shared:WaitForChild("Sfx"))
 
@@ -565436,6 +565626,7 @@ function Hud.attach(hud: Frame, gui: ScreenGui, hooks: any?)
     hintLabel = hint
     local sessionCatch, nearFood, lastNear = false, false, -10
     local lastMoment, momentsThisRun, wasRunning = nil :: number?, 0, false
+    local pendingEggs, pendingMutation, tagsSeen = 0, nil :: string?, 0 -- BD-378: eggs found since the last toast (merged into one)
     local function foundBefore(): boolean
         local copies = 0
         local ok, collection = pcall(function() return game:GetService("HttpService"):JSONDecode(PrivateState.get("CollectionJson") :: string) end)
@@ -565477,15 +565668,30 @@ function Hud.attach(hud: Frame, gui: ScreenGui, hooks: any?)
             Theme.animate(pop, Rules.PopSeconds, {Scale = 1}, Enum.EasingStyle.Back)
         end
         -- BD-367: a clear, calm "you found an egg" moment (sparkle, soft cue, toast); one at a time, Reduce Motion: no sparkle.
-        if running and not wasRunning then momentsThisRun = 0 end
+        if running and not wasRunning then momentsThisRun, pendingEggs, pendingMutation, tagsSeen = 0, 0, nil, 0 end
         wasRunning = running
         local nowEggs = if typeof(eggs) == "number" then eggs else 0
-        if running and nowEggs &gt; (previous or nowEggs) then sessionCatch = true end
-        if Ftue.momentAllowed(previous, nowEggs, running, if lastMoment then os.clock() - lastMoment else nil, momentsThisRun) then
+        local special = false
+        if running and nowEggs &gt; (previous or nowEggs) then
+            sessionCatch = true
+            pendingEggs += nowEggs - (previous or nowEggs)
+            -- A weather egg (event mutation) is named in the SAME toast; the second "caught!" card is gone (BD-378).
+            local ok, tags = pcall(function() return game:GetService("HttpService"):JSONDecode((character :: Model):GetAttribute("RunEggEvents") or "[]") end)
+            if ok and typeof(tags) == "table" then
+                for i = #tags, tagsSeen + 1, -1 do
+                    local mutation = ProgressionRules.item(ProgressionConfig.EventMutations, (tags[i] :: any).mutationId or "")
+                    if mutation and not pendingMutation then pendingMutation, special = mutation.name, true end
+                end
+                tagsSeen = #tags
+            end
+        end
+        if Ftue.momentAllowed(previous, nowEggs, running, if lastMoment then os.clock() - lastMoment else nil, momentsThisRun) or special then
             lastMoment, momentsThisRun = os.clock(), momentsThisRun + 1
             if character then sparkle(character) end
             Sfx.playAlias(Ftue.SoundAlias)
-            if hooks and hooks.notify then hooks.notify(Ftue.FoundText, C.gold, {key = "egg_found", icon = "egg"}) end
+            local toastText, toastBody = Copy.foundToast(pendingEggs, pendingMutation)
+            pendingEggs, pendingMutation = 0, nil
+            if hooks and hooks.notify then hooks.notify(toastText, C.gold, {key = "egg_found", icon = "egg", body = toastBody}) end
         end
         previous = nowEggs
         bar.Visible = running
@@ -565536,7 +565742,7 @@ return Hud
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX361">
+        <Item class="ModuleScript" referent="RBX362">
           <Properties>
             <string name="Name">InspectView</string>
             <ProtectedString name="Source">--!strict
@@ -565728,7 +565934,7 @@ return InspectView
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX362">
+        <Item class="LocalScript" referent="RBX363">
           <Properties>
             <string name="Name">JumpCarry</string>
             <ProtectedString name="Source">--!strict
@@ -565786,7 +565992,7 @@ if player.Character then task.spawn(bind, player.Character) end
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX363">
+        <Item class="LocalScript" referent="RBX364">
           <Properties>
             <string name="Name">LowPolyAnimator</string>
             <ProtectedString name="Source">--!strict
@@ -566033,7 +566239,7 @@ Players.PlayerRemoving:Connect(function(player) if player.Character then untrack
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX364">
+        <Item class="ModuleScript" referent="RBX365">
           <Properties>
             <string name="Name">ModalCompact</string>
             <ProtectedString name="Source">--!strict
@@ -566184,7 +566390,7 @@ return M
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX365">
+        <Item class="ModuleScript" referent="RBX366">
           <Properties>
             <string name="Name">MutationBadge</string>
             <ProtectedString name="Source">--!strict
@@ -566235,7 +566441,7 @@ return Badge
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX366">
+        <Item class="ModuleScript" referent="RBX367">
           <Properties>
             <string name="Name">NpcMotion</string>
             <ProtectedString name="Source">--!strict
@@ -566305,7 +566511,7 @@ return Motion
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX367">
+        <Item class="ModuleScript" referent="RBX368">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -566408,7 +566614,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX368">
+        <Item class="ModuleScript" referent="RBX369">
           <Properties>
             <string name="Name">PrivateState</string>
             <ProtectedString name="Source">--!strict
@@ -566512,7 +566718,7 @@ return PrivateState
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX369">
+        <Item class="LocalScript" referent="RBX370">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -566744,7 +566950,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX370">
+        <Item class="ModuleScript" referent="RBX371">
           <Properties>
             <string name="Name">SettingsMenu</string>
             <ProtectedString name="Source">--!strict
@@ -566826,6 +567032,15 @@ local function drawControls(body: Instance, ctx: Context)
         toggle(body, ctx, 2, "Peaceful", Model.peaceful(), function() Model.set("peaceful", not Model.peaceful()) ctx.open("settings") end)
         ctx.label(body, "Peaceful: no biting, nobody can bite you. Starts next run", 0, TOP + 3 * ROW, 824, 30, 20, C.gold)
     end
+    -- BD-374: the keys (or phone controls) in two short lines under the last row; read from the real input code.
+    local Config = require(Shared:WaitForChild("Config"))
+    local used = 2 + (if Config.CombatEnabled then 2 else 0) + (if Config.CaveHub then 1 else 0)
+    local lines = require(Shared:WaitForChild("FtueP1")).controlsLines(game:GetService("UserInputService").TouchEnabled, Config.CombatEnabled == true)
+    for i, line in lines do
+        local row = ctx.label(body, line, 0, TOP + used * ROW + 2 + (i - 1) * 26, 824, 26, 19, C.text)
+        row.Name = "ControlsLine" .. i
+        row.TextXAlignment = Enum.TextXAlignment.Left
+    end
 end
 
 -- Draws the tab bar and the active tab. Returns the active tab id; the Help tab is completed by the caller (guides, auto-open).
@@ -566847,7 +567062,7 @@ return Menu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX371">
+        <Item class="LocalScript" referent="RBX372">
           <Properties>
             <string name="Name">SettingsSync</string>
             <ProtectedString name="Source">--!strict
@@ -566910,7 +567125,7 @@ task.delay(5, function() loaded = true end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX372">
+        <Item class="ModuleScript" referent="RBX373">
           <Properties>
             <string name="Name">ShopCard</string>
             <ProtectedString name="Source">--!strict
@@ -566948,7 +567163,7 @@ return Card
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX373">
+        <Item class="ModuleScript" referent="RBX374">
           <Properties>
             <string name="Name">ShopCards</string>
             <ProtectedString name="Source">--!strict
@@ -567040,7 +567255,7 @@ return Cards
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX374">
+        <Item class="ModuleScript" referent="RBX375">
           <Properties>
             <string name="Name">UiScan</string>
             <ProtectedString name="Source">--!strict
@@ -567119,7 +567334,7 @@ return UiScan
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX375">
+        <Item class="ModuleScript" referent="RBX376">
           <Properties>
             <string name="Name">VolumeSliders</string>
             <ProtectedString name="Source">--!strict
@@ -567200,7 +567415,7 @@ return Sliders
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX376">
+        <Item class="LocalScript" referent="RBX377">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -567267,7 +567482,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX377">
+        <Item class="LocalScript" referent="RBX378">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -568217,7 +568432,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX378">
+        <Item class="LocalScript" referent="RBX379">
           <Properties>
             <string name="Name">WorldCulling</string>
             <ProtectedString name="Source">--!strict
@@ -568344,7 +568559,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX379">
+        <Item class="LocalScript" referent="RBX380">
           <Properties>
             <string name="Name">WorldReady</string>
             <ProtectedString name="Source">--!strict
@@ -568382,7 +568597,7 @@ remote:FireServer()
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX380">
+  <Item class="Workspace" referent="RBX381">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

@@ -24,14 +24,14 @@ assert(slots[3].state == "queued" and slots[3].text == "Queued" and slots[4].sta
 assert(L.nestHeader(nests, 5) == "Nests 3/5" and L.nestHeader({}, 5) == "Nests 0/5")
 assert(L.nestSlots({}, 5, 0)[1].state == "empty" and L.nestSlots(nests, 2, 1000)[3] == nil, "never more slots than capacity")
 
--- BD-259: "Eggs waiting" counts the whole line after the card egg: 31 run eggs = 5 in the line + 26 banked -> 30 waiting.
-assert(L.waitingTotal(5, 26, true) == 30 and L.waitingTotal(1, 0, true) == 0 and L.waitingTotal(0, 3, false) == 3)
+-- BD-259 / BD-369: "Eggs waiting" counts every unopened egg INCLUDING the card egg: 31 run eggs = 5 in the line + 26 banked -> 31.
+assert(L.waitingTotal(5, 26, true) == 31 and L.waitingTotal(1, 0, true) == 1 and L.waitingTotal(0, 3, false) == 3)
 assert(L.waitingTotal(0, 0, false) == 0 and L.waitingTotal(-2, -1, true) == 0)
 
 -- Single next-egg card state machine.
 local c = L.card(nil, "", 0, 100, 0)
 assert(c.kind == "empty" and not c.canOpen)
-local t, b = L.cardCopy(c) assert(t == "No eggs yet. Finish a run to catch some!" and b == "NO EGGS")
+local t, b = L.cardCopy(c) assert(t == "Go find eggs on the island!" and b == "EXPLORE ISLAND")
 c = L.card(nil, "", 0, 100, 3) assert(c.kind == "banked" and not c.canOpen)
 c = L.card({readyAt = 160}, "e1", 160, 100, 4) assert(c.kind == "growing" and c.remaining == 60 and not c.canOpen and c.waiting == 4)
 t, b = L.cardCopy(c) assert(t == "Growing..." and b == "GROWING")
@@ -78,7 +78,8 @@ print("Eggs screen checks passed: nest slots, single egg card, auto-open rules, 
 
 def script():
     return ('local RS=' + module('src/shared/RevealSkip.luau') + '\n'
-            'local script={Parent={RevealSkip=RS}}\nlocal function require(x) return x end\n'
+            'local FP=' + module('src/shared/FtueP1.luau') + '\n'
+            'local script={Parent={RevealSkip=RS,FtueP1=FP}}\nlocal function require(x) return x end\n'
             'local L=' + module('src/shared/EggsLogic.luau') + '\n' + BODY)
 
 

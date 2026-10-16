@@ -71,7 +71,7 @@ def scan():
     # BD-154: every visible/gettable hook is still wired
     wired = {
         'src/server/FoodService.luau': 'RunEggTags.apply(events,weatherId',
-        'src/client/Bootstrap.client.luau': 'for i=#tags,lastEggCount+1,-1',
+        'src/client/HudV2.luau': 'for i = #tags, tagsSeen + 1, -1', # BD-378: the weather egg is named in the ONE found-egg toast
         'src/client/HatchSequence.luau': 'r.mutationName',
         'src/client/EggsScreen.luau': 'MutationLook.get(entry.mutationId)',
         'src/client/CosmeticVisuals.client.luau': 'kind~="mutation" and (#state.rigs>0 or mutationId~="")',  # BD-353: mutation keeps its own detail, aura/trail go lite
