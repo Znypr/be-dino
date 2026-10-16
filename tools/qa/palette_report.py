@@ -9,14 +9,17 @@ from pathlib import Path
 import argparse, subprocess, sys, tempfile
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT = ROOT / 'tools/qa/data/colour_probe_2026-10-16.tsv'
-# (place, key) -> open kanban row. Remove the entry when the prop is regenerated / recoloured.
+# (place, key) -> (open kanban row, flag). Remove the entry when the prop is regenerated / recoloured.
+# Flag column (2nd tuple item): PENDING = the OWNER has not yet decided whether blue-grey stone is acceptable (docs/117 s6 question 2).
+# These are NOT to be recoloured or regenerated until that decision; the flag is only recorded here and printed in the report.
+PENDING = 'OWNER-DECISION-PENDING'
 KNOWN = {
-    ('cave', 'hub_counter_stone'): 'BD-414', ('cave', 'hub_bench_stone'): 'BD-414', ('cave', 'cave_stalagmite_l'): 'BD-414',
-    ('cave', 'cave_stalagmite_s'): 'BD-414', ('cave', 'cave_rock_round'): 'BD-414', ('cave', 'cave_stalactite'): 'BD-414',
-    ('cave', 'cave_stalagmite_cluster'): 'BD-414', ('cave', 'hub_lantern_post'): 'BD-414', ('cave', 'hub_lectern_book'): 'BD-414',
-    ('cave', 'hub_gong'): 'BD-414', ('cave', 'hub_cauldron'): 'BD-414',
-    ('cave', 'rock_mossy_boulder'): 'BD-414', ('cave', 'cave_rock_flat'): 'BD-414',
-    ('island', 'rock_pillar'): 'BD-415',
+    ('cave', 'hub_counter_stone'): ('BD-414', PENDING), ('cave', 'hub_bench_stone'): ('BD-414', PENDING), ('cave', 'cave_stalagmite_l'): ('BD-414', PENDING),
+    ('cave', 'cave_stalagmite_s'): ('BD-414', PENDING), ('cave', 'cave_rock_round'): ('BD-414', PENDING), ('cave', 'cave_stalactite'): ('BD-414', PENDING),
+    ('cave', 'cave_stalagmite_cluster'): ('BD-414', PENDING), ('cave', 'hub_lantern_post'): ('BD-414', PENDING), ('cave', 'hub_lectern_book'): ('BD-414', PENDING),
+    ('cave', 'hub_gong'): ('BD-414', PENDING), ('cave', 'hub_cauldron'): ('BD-414', PENDING),
+    ('cave', 'rock_mossy_boulder'): ('BD-414', PENDING), ('cave', 'cave_rock_flat'): ('BD-414', PENDING),
+    ('island', 'rock_pillar'): ('BD-415', PENDING),
 }
 
 
@@ -52,13 +55,13 @@ def main():
     print('palette: %d props measured, %d offenders (%d known, %d new)' % (len(rows), len(known) + len(new), len(known), len(new)))
     by = {}
     for zone, place, key, reason in known + new:
-        by.setdefault(zone, []).append('%s/%s %s [%s]' % (place, key, reason, KNOWN.get((place, key), 'NEW')))
+        by.setdefault(zone, []).append('%s/%s %s [%s]' % (place, key, reason, ' '.join(KNOWN.get((place, key), ('NEW',)))))
     for zone, items in by.items():
         print(' zone %s: %d' % (zone, len(items)))
         for i in items:
             print('   ' + i)
     for k in fixed:
-        print('FIXED (close %s): %s/%s' % (KNOWN[k], k[0], k[1]))
+        print('FIXED (close %s): %s/%s' % (KNOWN[k][0], k[0], k[1]))
     if new:
         raise SystemExit('palette FAIL: %d new offenders (fix the asset or add a kanban row and a KNOWN entry)' % len(new))
     print('palette gate ok (known offenders are tracked in the kanban)')

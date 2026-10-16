@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "52062f9ce044d6ad503c1a423bb59664bcce719fbed81894ede4f9017276f570",
+  "place_sha256": "5c364ae47c4c400ac840c6799a12b3d7cf48555b35494b26b13ae917e9319391",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -11,7 +11,7 @@
     "src/shared/AudioMixer.luau": "a7664ff0192c3774271f090fc60e4f9ba43807ea84945519aca36478e71973b3",
     "src/shared/AuthoredCreatures.luau": "11dbe63a11afbdb8bc9312274236eb447263078dabb19cbef5613e11bd5fa0cf",
     "src/shared/BiomeMap.luau": "34f7c83a4beb87771dc400137f63808df3138833cfbee579de313fbdb4d5058f",
-    "src/shared/BiomePlacement.luau": "b29e2f39c99d8ccfb256f88684002361834167e9ebce0f39eb6228caac3e0891",
+    "src/shared/BiomePlacement.luau": "59369394713ae902d6d82b06642e026e0324e33991405668b98894097f0c8409",
     "src/shared/CameraOcclusion.luau": "b88afa12979540191a9b819a0901a8d60044bc40e472b99f23543c52988238cf",
     "src/shared/CaveGateRules.luau": "ebb2dfab381a74683ff801e6334a34d0e7a9e85bbd72242622b20c54353339c3",
     "src/shared/CaveHubLayout.luau": "8d043317c188e81f9b405f94653baa6fbc01eea94ff5ba12fdc48757216aa3cf",
@@ -290,7 +290,7 @@
     "src/shared/WorldKitData.luau": "860dd88ae449c3daa82d1372148e02d50d0ccaa08c8fa5a21a003a75bb4abde2",
     "src/shared/WorldKitMeshAssets.luau": "7110648be06c6e602728e21ad96a833e4ad87d65c64fced492ef5bfcd9ce503f",
     "src/server/AdminService.luau": "b017aed5b20be0c7a2226618d128acf8e1415bf18ce260afcae3b9d45ff26ee9",
-    "src/server/Arena.luau": "d4bd3536f9f8f0e338e79dc40869f9ac475cccaf27faf33161deb777151c4d1e",
+    "src/server/Arena.luau": "1915570bd2fd18242e6d434a8d3f61355dfcbfaa1f8805b9184193f43b06f8ce",
     "src/server/Bootstrap.server.luau": "59e52ef69b45150f117a83172f4ec198eb7aad7fb43034a59b88ed47ee108015",
     "src/server/CaveLavaFx.luau": "91718ba93990805babcd8c4aa377917ae8d3607c3b9754b849e9f40c0ade0270",
     "src/server/CaveLighting.luau": "758d42fb8310fea06401ffd4dcc21848381d9e1b32cab13e802864303e336db2",

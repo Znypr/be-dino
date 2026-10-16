@@ -6,7 +6,7 @@ Written 2026-10-16 (branch claude/quality-gates). Purpose: the owner found sunk 
 
 | Gate | Handbook | What | Where it runs | Command / files |
 |---|---|---|---|---|
-| Grounding | 8.1 item 4 | raycast every placed generated prop, report below terrain > 0.3 and floating > 0.5 studs | Studio (own copy) + offline report | `tools/qa/ground_probe.server.luau`, `tools/qa/ground_report.py` |
+| Grounding | 8.1 item 4 | raycast every placed generated prop, report below terrain > 0.3 and floating > 0.3 studs (0.5 before BD-417) | Studio (own copy) + offline report | `tools/qa/ground_probe.server.luau`, `tools/qa/ground_report.py` |
 | Overlap (island) | 8.1 item 5 | solid kit-collider footprints pairwise (pure Luau placement) | offline, CI | `tools/verify_world_overlap.py` |
 | Overlap (cave) | 8.1 item 5 | cave footprints, paths, pads, lava basin | offline, CI | `tools/verify_cave_overlap.py` (existing) |
 | Palette | 5, 5.3, 5.10 | dominant hue buckets of each prop texture vs zone rules | Studio probe + offline report | `src/shared/AssetPalette.luau`, `tools/qa/colour_probe.server.luau`, `tools/qa/palette_report.py` |
@@ -21,14 +21,28 @@ The `.server.luau` probes are run with the Studio MCP `execute_luau` (datamodel 
 - **Root cause found (BD-409):** every generated prop was centred on its pivot. `Arena.generatedProp` set `Model.WorldPivot` but a Model with a `PrimaryPart` pivots on that part's `PivotOffset`, so `PivotTo(ground)` put the mesh CENTRE on the ground. First probe: every tree and bush kind below the terrain (canopy_l 58 of 58, worst 39.9 on slopes; conifer_l 92 of 92, worst 50.7) and all 31 small boulders. Studio's earlier 56-of-985 count missed this because it compared against the layout height.
 - **Second cause (BD-409):** rocks and landmarks were not raycast-corrected; the voxel surface is about 2.3 studs above the analytic layout height, so boulders (pivot 2.3 below the ground, height 1.5-2.7) were completely inside the terrain.
 - **Fix:** `mesh.PivotOffset = CFrame.new(0, -Size.Y/2, 0)` in `Arena.generatedProp`; Terrain raycast with a footprint-wide lowest-sample rule for rocks and a raycast for landmarks.
-- **After the fix:** plants below the terrain 0 (every tree, bush, fern, grass and flower probed); rocks and landmarks 35 of 354 deeper than the RockSink allowance on steep slopes (worst 5.4, four spires; BD-416); landmark stone arch floats 0.71.
+- **After the first fix (#217):** plants below the terrain 0 (every tree, bush, fern, grass and flower probed); rocks and landmarks 35 of 354 deeper than the RockSink allowance on steep slopes (worst 5.4, four spires; BD-416); landmark stone arch floats 0.71.
 - **Still floating 0.5-1.1 studs on slopes: 195 plants** (ferns a/b 40+50, bush_a 35, bush_b 17, conifer_l 17, canopy_l 12, cycad_l 9, standing dead_l 8, others 7): the bottom rests on the highest trunk sample + 0.2 (BD-417). Not visible at a glance, but listed.
+
+
+### 2.1b Slope grounding fix (BD-416, BD-417; branch claude/grounding-slopes, MEASURED 2026-10-16 in a temp Studio copy)
+- **Root causes found:** (a) giant-layer rocks (badlands spires, bare boulders) were never raycast-corrected (Arena only handled the `rock` layer), so they kept the analytic height; (b) the placement footprint came from the kit EXTENT times scale but the generated mesh is fitted INSIDE the extent, so placement and probe sampled different footprints (boulder lowest ray 1.4 studs lower than the probe's); (c) plants rested on the highest sample of a wide trunk footprint + 0.2, above the probe's narrow footprint.
+- **Fix (`BiomePlacement.Ground`, Arena):** the model is built and scaled first, so footprint and embed use the REAL mesh size. Policy table `Ground.Policy`: plants HIGHEST of 5 rays at the stem footprint (min(1, 4% of size)) minus `RootSink` 0.15 (roots meet the ground, nothing floats); rocks, spires, ledges, landmarks LOWEST of 5 rays at the whole base (30% of the mesh, max 6) minus the 12% RockSink embed (a pillar never hangs on its downhill side); giant-layer rocks follow the rock rule; spires and ledges are not placed on slopes steeper than `TallMaxSlope` 25 degrees (one spire became a boulder). Offline tests: `verify_owner_feedback_p1.py` (policy, rule per kind), `tests/test_quality_gates.py` (limits).
+- **Gate tightened:** island sunk allowance beyond RockSink 6.0 -> 0, plant float 1.2 -> 0.3 (probe FLOAT 0.5 -> 0.3).
+- **Result (probe of 3,558 island props, 55 lying logs not graded):**
+
+| | Before | After |
+|---|---|---|
+| island rocks/landmarks deeper than allowance | 35 (worst 5.44) | **0** |
+| island plants floating > 0.3 (before: > 0.5) | 195 listed at > 0.5 (worst 1.13) | **0** |
+| landmark stone arch floating | 0.71 | 0 |
+| cave sunk/floating | rim pieces 0.50 by design | unchanged, 0 else |
 
 ### 2.2 Grounding, cave (215 props probed)
 0 floating, 0 sunk except the rim pieces (cave_wall_pillar 10, wall_arch_small 4, wall_boulder_l 2): 0.50 below the floor, which is the design (`CaveProps.place`: rim pieces at floor - 0.5). Stalactites, hanging moss and stepping stones are placed off the floor on purpose and skipped.
 
 ### 2.3 Overlap
-- Island: 849 solid props (trees, giants, rocks, landmarks), **1 solid/solid overlap before** (ruins altar x a mossy boulder at (-28,-187)); **0 after** (landmarks keep clear by their half DIAGONAL, `BiomePlacement`). Cap 0 in CI.
+- Island: 849 solid props (still 849 and 0 overlaps after BD-416/417) (trees, giants, rocks, landmarks), **1 solid/solid overlap before** (ruins altar x a mossy boulder at (-28,-187)); **0 after** (landmarks keep clear by their half DIAGONAL, `BiomePlacement`). Cap 0 in CI.
 - Cave: `verify_cave_overlap.py` stays green (0).
 - NOT graded: shrub/ground-cover versus solids, canopy-versus-canopy (forest), lying logs.
 
@@ -47,7 +61,10 @@ The `.server.luau` probes are run with the Studio MCP `execute_luau` (datamodel 
 Evidence images: `docs/evidence/2026-10-16-quality-gates/` (viewport crops). **The ranges are not in the handbook as numbers.** The cave band 0.15-0.35 came from the lead brief; the island band 0.35-0.75 is my LEAD choice ("bright daylight"). Confirm both with the owner and then write them into [114](114-handbook.md) section 6 (open question, see section 6 below). The cave Heart sits near the top of its band (0.293), so "too bright" cave reports will show as a FAIL above 0.35. NOT VERIFIED: weather states, other stations, phone brightness.
 
 ### 2.6 Budget (Studio parts, MEASURED)
-Island world kit 4,625 parts (cap 5,550), cave hub 300 parts (cap 410), whole scene at join 8,441 (cap 9,150), enabled scene lights **16 of 16** (at the cap: the next cave light needs a trade), cave particle emitters 10 enabled. Offline estimate (`verify_world_budget.py`): all caps OK; phone parts 3,514 and triangles about 548 k are over the rule of thumb (WARN, docs/107; phone not measured, BD-085).
+Island world kit 4,625 parts (cap 5,550; unchanged by BD-416/417, re-measured), cave hub 300 parts (cap 410), whole scene at join 8,441 (cap 9,150), enabled scene lights **16 of 16** (at the cap: the next cave light needs a trade), cave particle emitters 10 enabled. Offline estimate (`verify_world_budget.py`): all caps OK; phone parts 3,514 and triangles about 548 k are over the rule of thumb (WARN, docs/107; phone not measured, BD-085).
+
+### 2.7 Re-run after BD-416/417 (2026-10-16, temp Studio copy, CaveHub = true)
+Grounding: island and cave green (above). Palette: probe re-run, the 56 props gave the same buckets as the committed file (spot-checked, not diffed line by line), 14 offenders, all KNOWN and now flagged OWNER-DECISION-PENDING. Budget: island 4,625, cave 300, join 8,441, lights 16 of 16 (committed numbers still true; island mesh parts 3,558). Overlap: 0 (island), cave verifier green. **Lighting NOT re-run:** the Studio client viewport reported 1x1 and PrintWindow returned a blank (0.103 flat) image in this session, so no fresh luminance numbers exist; section 2.5 stays the latest measurement and this PR does not touch lighting.
 
 ## 3. How to capture the screenshots (agents)
 1. Open YOUR OWN temp copy of the build (`python tools/build.py --profile playtest`, copy the rbxlx to your temp folder, `sed -i 's/CaveHub = false/CaveHub = true/'` in the copy, start Studio with that path, find your id with `list_roblox_studios`). Never touch `Place1.rbxl` or other windows.
@@ -73,4 +90,4 @@ Looks-real-in-the-lighting (6) and art quality (low-poly, matte, scale ladder BD
 
 ## 6. Open questions for the owner
 1. Confirm the luminance bands (cave 0.15-0.35 mean, island 0.35-0.75 mean) so they can move into the handbook.
-2. Are cool blue-grey cave stones acceptable (decoration like the crystals) or must the cave be warm-grey only? (Decides BD-414: regenerate vs accept.)
+2. (OWNER DECISION PENDING; the 14 offenders are flagged in `palette_report.py` KNOWN, nothing recoloured or regenerated) Are cool blue-grey cave stones acceptable (decoration like the crystals) or must the cave be warm-grey only? (Decides BD-414: regenerate vs accept.)
