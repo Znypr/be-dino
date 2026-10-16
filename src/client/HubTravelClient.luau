@@ -30,6 +30,15 @@ local guide: any = nil -- {show, cancel} from HubGuideClient once attached
 local chip: TextButton? = nil
 local Cream = Color3.fromRGB(255, 244, 220)
 
+-- BD-391/405: does this player own the Fast travel perk? (ProgressionJson is the server's own copy, read-only here.)
+local function ownsFastTravel(): boolean
+    local raw = require(script.Parent:WaitForChild("PrivateState")).get("ProgressionJson")
+    if typeof(raw) ~= "string" then return false end
+    local ok, data = pcall(function() return game:GetService("HttpService"):JSONDecode(raw) end)
+    return ok and typeof(data) == "table" and typeof(data.perks) == "table" and data.perks.fastTravel == true
+end
+Client.ownsFastTravel = ownsFastTravel
+
 local function runState(): any
     local character = player.Character
     return if character then character:GetAttribute("RunState") else nil
@@ -113,6 +122,7 @@ function Client.press(destination: string): boolean
     if guide then guide.cancel() end -- pressing any rail button cancels a trail still showing
     local decision = Rules.decide({
         caveHub = true, destination = destination, runState = runState(),
+        fastTravelPerk = Config.FastTravelPerk == true, fastTravelOwned = ownsFastTravel(),
         teleportShops = Settings.teleportShops(), remote = remote() ~= nil, busy = busy,
     })
     if decision.kind == "blocked" then
