@@ -17,9 +17,9 @@ Multipliers apply to a shared baseline (GROUND = 1.0). `s` is the existing growt
 | Class | Species (roster, BD-232) | HP x | Speed x | Jump | Damage taken x | Damage dealt x | Special |
 |---|---|---:|---:|---|---:|---:|---|
 | GROUND | Compy, Raptor, Triceratops, Stegosaurus, T-Rex, Brachiosaurus, Parasaurolophus, Gallimimus ... | 1.00 | 1.00 | normal | 1.00 | 1.00 | Baseline. Leap = forward lunge bite. |
-| FLY | Pteranodon, Quetzalcoatlus, Dimorphodon, Archaeopteryx, Microraptor | 0.70 | 1.20 | faster, higher; glide on hold | 1.00 | 0.90 | Wings folded when walking. Leap = swoop dive. |
-| WATER | Plesiosaurus, Mosasaurus, Ichthyosaurus, Elasmosaurus, Liopleurodon | 1.40 | 0.85 | **none** | 1.00 | 1.00 | Stays low to the ground. Jump button = forward dash. Leap = aggressive dash. |
-| ARMORED | Ankylosaurus, Sauropelta, Styracosaurus (more later, owner decides) | 1.50 | 0.80 | short hop | **0.70** | 0.90 | Tank. Gentle tail-club/horn bump. |
+| FLY | Pteranodon, Quetzalcoatlus, Dimorphodon, Archaeopteryx, Microraptor | 0.75 | 1.20 | faster, higher; glide on hold | 1.00 | 1.32 | Wings folded when walking. Leap = swoop dive. |
+| WATER | Plesiosaurus, Mosasaurus, Ichthyosaurus, Elasmosaurus, Liopleurodon | 1.25 | 0.85 | **none** | 1.00 | 0.80 | Stays low to the ground. Jump button = forward dash. Leap = aggressive dash. |
+| ARMORED | Ankylosaurus, Sauropelta, Styracosaurus (more later, owner decides) | 1.10 | 0.80 | short hop | **0.80** | 0.73 | Tank. Gentle tail-club/horn bump. |
 
 Speeds stay inside the "small speed differences" rule of docs/03. The class is shown as a small badge on the HUD and species card (BD-231). Class is per species in config (`Species.class`), never per skin (skins are cosmetic only, docs/97).
 
@@ -27,10 +27,10 @@ Speeds stay inside the "small speed differences" rule of docs/03. The class is s
 All values live in `Config.Combat`; the server reads them, the client only displays.
 - `s = clamp((1 + score/100)^0.25, 1, 4)` (existing growth curve).
 - `maxHP = 100 * classHp * s^1.3` (s=1: 100; s=4: about 610 for GROUND).
-- `damage = 8 * classDmg * s^0.75 * (1 + 0.05 * attackTier)` per hit (s=1: 8; s=4: about 23). `attackTier` is 0 for now, an extension hook.
+- `damage = 6 * classDmg * s^0.2 * (1 + 0.05 * attackTier)` per hit (s=1: 6; s=4: about 7.9; tuned in section 17). `attackTier` is 0 for now, an extension hook.
 - Feel check: one small hit is about 1.3% of a big GROUND dino's HP; 6 small dinos at 1 hit per second defeat it in about 13 s; the big dino defeats a lone small one in about 5 hits. Teaming up wins, going alone loses. Confirmed by simulation in BD-241.
 - Armor: `final = max(damage * damageTakenX, 1)` (every hit counts at least 1).
-- Optional size damper: if attacker `s` is under half the target `s`, damage x0.8. Tune in simulation.
+- Optional size damper: if attacker `s` is under half the target `s`, damage x0.9. Tune in simulation.
 - Growth keeps the HP **ratio** (50% HP stays 50%), so eating never fully heals and never kills.
 
 ## 4. Attack input and cooldown (PROPOSAL)
@@ -46,7 +46,7 @@ All values live in `Config.Combat`; the server reads them, the client only displ
 - **Assist credit:** everyone who dealt at least 10% of the victim's max HP in the last 15 s shares a small bonus by damage share (last hit does not matter, so no kill-steal).
 - **No egg theft:** the victim's run eggs are never given to attackers (section 6). The bonus is a separate server-minted food-score amount, capped at `0.25 * victimScore`, split among assisters, settled once.
 - Repeat pair limit: the same attacker/victim pair within 3 min gives 50% bonus, then 0 (anti-farm, docs/03 candidate).
-- Crowd soft cap: if 5 or more enemies hit a target within 2 s, damage taken x0.85 so swarms do not feel cheap. Tune in simulation.
+- Crowd soft cap: if 5 or more enemies hit a target within 2 s, damage taken x0.9 so swarms do not feel cheap. Tune in simulation.
 
 ## 6. Defeat, respawn and what is lost (PROPOSAL; reward safety is mandatory)
 Run eggs and score are earned server-side and settled **exactly once** (AGENTS.md, docs/03). Combat adds no second path to lose or double-grant them.
@@ -155,3 +155,33 @@ Dependencies: 239 -> 240 -> 241/242 -> 243 -> 244/245; 246 after 239; 247 after 
 4. **On defeat:** keep everything earned so far (eggs, score, crystals, nests); no punishment bonus loss. Gentle failure beats any penalty for this audience.
 5. **Armored:** a fourth class shown to players. Members for now: Ankylosaurus, Sauropelta, Styracosaurus only. Triceratops and Stegosaurus stay Ground until balance tests justify moving them.
 6. **Attacker reward:** only the capped assist bonus already in section 6; no extra food/crystal bonus per defeat (avoids farming small players).
+
+## 17. Balance tuning results (2026-10-16, BD-252 offline part; PROVISIONAL, offline simulation only)
+Numbers changed in `CombatConfig` only (flag still OFF, nothing reads it). Sim = `tools/combat_harness.py` `fight()` (0.1 s steps, 0.9 s cooldown, each fighter hits the first living enemy, crowd cap on). Regenerate with `python tools/combat_balance.py --runner <luau>`. Sim assumptions: no regen, no dodge, no knockback, speed ignored, perfect hit rate, so real fights will be longer/messier. Scales: s2 = score 1500, s3 = 8000, s4 = 25500.
+
+**Constants (before -> after):** BaseDamage 8 -> 6, DamageSizeExponent 0.75 -> 0.2 (a big bites only about 1.3x harder than a small; its edge is HP), SizeDamperX 0.8 -> 0.9, CrowdDamageX 0.85 -> 0.9, HpSizeExponent 1.3 (unchanged). Classes (HP x / taken x / dealt x / speed x): Fly 0.70/1.0/0.90/1.20 -> 0.75/1.0/1.32/1.20; Water 1.40/1.0/1.0/0.85 -> 1.25/1.0/0.80/0.85; Armored 1.50/0.70/0.90/0.80 -> 1.10/0.80/0.73/0.80; Ground unchanged.
+
+**Team-up targets (Ground, then other classes):**
+| Scenario | Before | After |
+|---|---|---|
+| 1 small (s1) vs s4 | big wins, 5 hits, 4.1 s | big wins, 13 hits, 12.1 s (>= 3 s, no one-shot) |
+| 3 small vs s2 / s3 | win / lose | win (13 s, 3 left) / win (36 s, 1 left) |
+| 3 small vs s4 | lose | lose (38 s) |
+| 6 small vs s2 / s3 | win / win | win 7.5 s, 6 left / win 14 s, 5 left |
+| 6 small vs s4 | win, 29 s, 1 survivor | win, 22.4 s, **5 survivors** |
+
+Other classes (smalls and big of the same class, 6 vs s4): Fly 12.5 s, 5 left; Water 34.7 s, 5 left; Armored 42.2 s, 5 left (a bit over the 35 s target; armored fights are slow by design). 3 small lose to s4 in every class and a lone small loses in every class (first defeat at 7 s Fly, 12 s Ground, 19 s Water, 23 s Armored). Ground x6 vs a big of each class (s4): Fly 16.6 s, Ground 22.4 s, Water 27.7 s, Armored 30.5 s, always 5 survivors.
+
+**Class matrix (1v1, equal size).** Cell = hits row needs to defeat column / hits column needs. Fewer hits wins; within 1 hit is a draw (first strike decides).
+| s=1 | Ground | Fly | Water | Armored |
+|---|---|---|---|---|
+| Ground | = | D 13/13 | D 21/21 | D 23/23 |
+| Fly | D 13/13 | = | D 16/16 | D 18/18 |
+| Water | D 21/21 | D 16/16 | = | D 29/29 |
+| Armored | D 23/23 | D 18/18 | D 29/29 | = |
+
+At s=2 and s=4 the same ladder holds within 1 hit (for example s=4 Armored beats Ground 105/106 and Fly 79/80, Ground beats Fly 58/59, Water draws); Armored never beats everyone. Effective HP vs a Ground hit: Armored 137, Water 125, Ground 100, Fly 75; damage per hit at s1: Fly 7.9, Ground 6.0, Water 4.8, Armored 4.4; speed Fly 1.2 > Ground 1.0 > Water 0.85 > Armored 0.8.
+
+**Honest note on rock-paper-scissors:** class stats are pure multipliers, so a 1v1 at equal size is a total order of `hpX * dealtX / takenX`; true cycles are impossible without a counter mechanic. We set that product to about 1.00 for every class (Fly 0.99, Ground 1.00, Water 1.00, Armored 1.00), so 1v1 is a near-draw and class identity comes from speed, jump, map access (section 12) and team role. A real counter (for example Fly dodge vs Ground, Water slow vs Fly) is a code change and left as a proposal for the owner. Equal-size duels at high size are long (s4 vs s4 Ground about 57 s in the sim): fine for kids, but real play has regen and dodging, so re-check in the phone test.
+
+**Regression tests:** `tools/verify_combat_stats.py` (class roles, near parity, no strict dominance, no one-shot: a max hit is at most 15% of a small target) and `tools/verify_combat_teamup.py` (all four classes: lone small loses after >= 3 s, 6 small beat s4 with >= 3 survivors in 20-35 s for Ground, 3 small lose to s4 and beat s2/s3).
