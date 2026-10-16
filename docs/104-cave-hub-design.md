@@ -124,7 +124,7 @@ New remote `HubTravel` in `BeDinoRemotes`, payload `{station: string}`; a `HubTr
 
 ## 8. UI at a station
 - **Arriving by teleport**: the station UI opens as the fade clears (the same `open(destination)` / `openFusion()` as today, so every existing screen is reused unchanged). While it is open the dino stands at the arrival spot; the camera does not change.
-- **Arriving on foot**: each pad has a `ProximityPrompt` on the sign (hold 0, action text = the station name, `MaxActivationDistance 10`, touch-friendly 96 px) **and** a dwell rule: standing inside the pad radius for 0.5 s opens the UI once (`HubStation` attribute changes on the client). Leaving the pad resets the dwell so walking past never spams menus.
+- **Arriving on foot**: each pad has a `ProximityPrompt` on the sign (hold 0, action text = the station name, `MaxActivationDistance 10`, touch-friendly 96 px) **and** a dwell rule: (SUPERSEDED 2026-10-16: the dwell auto-open was removed; only the prompt, key G, opens a station, see docs/114 s6.2).
 - **Closing**: closing the UI returns full control at the same spot; nothing teleports back. A small "Back to the middle" chip appears on the HUD while `HubStation` is set (teleports to the Heart, same validation). 
 - **Nests / hatch**: the hatch reveal stays the existing 2D/viewport sequence (5 s per egg, skippable); the nest alcove is the backdrop. Later (BD-294) the nest meshes can wobble in sync with the reveal; not required for v1.
 - **Mirror pedestal (Style Grotto)**: while the SHOP UI is open, the player's own dino preview on the pedestal shows the aura/trail being hovered or equipped (client-only clone, no server state). Optional in v1.

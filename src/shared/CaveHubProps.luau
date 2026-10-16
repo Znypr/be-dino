@@ -108,11 +108,14 @@ Props.Warm = {
 -- BD-292: the sign meshes that carry station text (a SurfaceGui built from HubSignCopy, front face only). `face` is the mesh's
 -- front face name; `inset` shrinks the text box (fraction of the face) so words stay on the board.
 Props.SignText = {
-    hub_sign_stone = {face = "Front", inset = 0.12},
-    hub_sign_arrow = {face = "Front", inset = 0.18},
+    hub_sign_stone = {face = "Front", back = "Back", inset = 0.12},
+    hub_sign_arrow = {face = "Front", back = "Back", inset = 0.18},
 }
 Props.SignLightInfluence = 0 -- self-lit: lamp light does not dim the word (BD-292)
 Props.SignBrightness = 2 -- SurfaceGui brightness boost so cream text stays readable in the dim cave
+-- OWNER 2026-10-16: signs read from every angle: a second SurfaceGui on the Back face plus one small lamp-lit BillboardGui word above
+-- the sign (always faces the player, fades out past MaxDistance, never AlwaysOnTop so walls hide it).
+Props.SignBillboard = {width = 120, height = 36, lift = 1.2, maxDistance = 90, brightness = 2}
 Props.MaxSignGuis = 12 -- SurfaceGuis are not Parts, but they cost render time: never more than this many sign texts
 
 -- Uniform factor that scales a loaded asset of size `mesh` to the target box `target` (both {x, y, z}): the axis with the

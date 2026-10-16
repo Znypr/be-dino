@@ -84,23 +84,12 @@ end
 
 -- BD-292: readable station text on a sign mesh: one SurfaceGui on the front face only, one TextLabel (FredokaOne, TextScaled) with the
 -- HubSignCopy word. Cream text with a dark outline so it reads on the stone and in the warm light.
-local function addSignText(mesh: MeshPart, key: string, text: string)
-    local cfg = (Props.SignText :: any)[key]
-    local gui = Instance.new("SurfaceGui")
-    gui.Name = "SignText"
-    gui.Face = (Enum.NormalId :: any)[cfg.face]
-    gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-    gui.PixelsPerStud = 40
-    -- BD-292: signs are self-lit so the word stays readable in the dim lamp-lit cave (docs/114 s6.1 cave band 0.15-0.35)
-    gui.LightInfluence = Props.SignLightInfluence
-    gui.Brightness = Props.SignBrightness
-    gui.AlwaysOnTop = false
-    gui.ClipsDescendants = true
+local function signLabel(text: string, inset: number): TextLabel
     local label = Instance.new("TextLabel")
     label.Name = "Word"
     label.AnchorPoint = Vector2.new(0.5, 0.5)
     label.Position = UDim2.fromScale(0.5, 0.5)
-    label.Size = UDim2.fromScale(1 - cfg.inset * 2, 0.55)
+    label.Size = UDim2.fromScale(1 - inset * 2, 0.55)
     label.BackgroundTransparency = 1
     label.Font = Enum.Font.FredokaOne
     label.Text = text
@@ -108,8 +97,38 @@ local function addSignText(mesh: MeshPart, key: string, text: string)
     label.TextColor3 = Color3.fromRGB(255, 240, 205)
     label.TextStrokeColor3 = Color3.fromRGB(70, 40, 28)
     label.TextStrokeTransparency = 0.15
-    label.Parent = gui
-    gui.Parent = mesh
+    return label
+end
+
+-- BD-292 + OWNER 2026-10-16: readable station text on a sign mesh from EVERY side: a SurfaceGui on the front face, one on the back
+-- face, and a small BillboardGui word above the sign for the side angles (HubSignCopy word, cream with a dark outline, self-lit).
+local function addSignText(mesh: MeshPart, key: string, text: string)
+    local cfg = (Props.SignText :: any)[key]
+    for _, face in {cfg.face, cfg.back} do
+        local gui = Instance.new("SurfaceGui")
+        gui.Name = if face == cfg.face then "SignText" else "SignTextBack"
+        gui.Face = (Enum.NormalId :: any)[face]
+        gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+        gui.PixelsPerStud = 40
+        -- BD-292: signs are self-lit so the word stays readable in the dim lamp-lit cave (docs/114 s6.1 cave band 0.15-0.35)
+        gui.LightInfluence = Props.SignLightInfluence
+        gui.Brightness = Props.SignBrightness
+        gui.AlwaysOnTop = false
+        gui.ClipsDescendants = true
+        signLabel(text, cfg.inset).Parent = gui
+        gui.Parent = mesh
+    end
+    local b = Props.SignBillboard
+    local board = Instance.new("BillboardGui")
+    board.Name = "SignBillboard"
+    board.Size = UDim2.fromOffset(b.width, b.height)
+    board.StudsOffsetWorldSpace = Vector3.new(0, mesh.Size.Y / 2 + b.lift, 0)
+    board.MaxDistance = b.maxDistance
+    board.AlwaysOnTop = false
+    board.LightInfluence = Props.SignLightInfluence
+    board.Brightness = b.brightness
+    signLabel(text, 0).Parent = board
+    board.Parent = mesh
 end
 
 local function place(folder: Folder, params: RaycastParams, p: any, template: MeshPart)
