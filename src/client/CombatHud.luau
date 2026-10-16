@@ -22,9 +22,13 @@ local NEAR_STUDS = 40 -- a full bar is shown only inside this (or for 3 s after 
 local SHOW_AFTER_HIT = 3
 local BAR_W, BAR_H = 64, 12 -- px at scale 1 (>= 60 px on phones, docs/101 s10)
 local GREEN, YELLOW, ORANGE = Color3.fromRGB(93, 237, 31), Color3.fromRGB(255, 210, 43), Color3.fromRGB(255, 150, 70)
+-- BD-245: wild predators (workspace.BeDinoNpcs, attribute NpcPredator) get a purple "wild" bar so nobody mistakes them for a player.
+local WILD, WILD_LOW, WILD_HEART = Color3.fromRGB(176, 120, 255), Color3.fromRGB(255, 150, 190), Color3.fromRGB(176, 120, 255)
+local HEART = Color3.fromRGB(255, 120, 140)
 
 -- Pure helpers (also used by the verifier through a static read; keep them simple).
-function Hud.fillColor(fraction: number): Color3
+function Hud.fillColor(fraction: number, wild: boolean?): Color3
+    if wild then return if fraction > 0.25 then WILD else WILD_LOW end
     if fraction > 0.5 then return GREEN elseif fraction > 0.25 then return YELLOW end
     return ORANGE
 end
@@ -34,7 +38,7 @@ function Hud.heartText(fraction: number): string
     return "\u{00B7}"
 end
 
-type Bar = {gui: BillboardGui, fill: Frame, heart: TextLabel, wobble: UIScale, character: Model?, lastFraction: number}
+type Bar = {gui: BillboardGui, fill: Frame, heart: TextLabel, wobble: UIScale, character: Model?, lastFraction: number, lastCue: string}
 
 local function makeBar(parent: Instance): Bar
     local gui = Instance.new("BillboardGui")
@@ -54,7 +58,7 @@ local function makeBar(parent: Instance): Bar
     local fillCorner = Instance.new("UICorner") fillCorner.CornerRadius = UDim.new(0.5, 0) fillCorner.Parent = fill
     local wobble = Instance.new("UIScale") wobble.Parent = back
     gui.Parent = parent
-    return {gui = gui, fill = fill, heart = heart, wobble = wobble, character = nil, lastFraction = 1}
+    return {gui = gui, fill = fill, heart = heart, wobble = wobble, character = nil, lastFraction = 1, lastCue = ""}
 end
 
 local function fractionOf(character: Model): number
@@ -63,9 +67,18 @@ local function fractionOf(character: Model): number
     return math.clamp(byte / Cfg.HpByteMax, 0, 1)
 end
 
+local function isWild(character: Model): boolean
+    return character:GetAttribute("NpcPredator") == true
+end
+
 local function paint(bar: Bar, fraction: number, animate: boolean)
-    bar.fill.BackgroundColor3 = Hud.fillColor(fraction)
-    bar.heart.Text = Hud.heartText(fraction)
+    local character = bar.character
+    local wild = character ~= nil and isWild(character)
+    bar.fill.BackgroundColor3 = Hud.fillColor(fraction, wild)
+    bar.heart.TextColor3 = if wild then WILD_HEART else HEART
+    -- A wild predator that noticed you shows "!" (alert and the half-second windup before a bite): time to run or dodge.
+    local cue = if character and wild then character:GetAttribute("NpcCue") else nil
+    bar.heart.Text = if cue == "alert" or cue == "windup" then "!" else Hud.heartText(fraction)
     if animate and Theme.MotionEnabled then
         Theme.animate(bar.fill, 0.3, {Size = UDim2.fromScale(fraction, 1)}, Enum.EasingStyle.Quad)
     else
@@ -125,6 +138,7 @@ function Hud.attach(ctx: any)
     local hitSeqSeen: {[Model]: number} = {}
     local assigned: {[Model]: Bar} = {}
     local playerHitSeq = 0
+    local npcWindupSeen: {[Model]: boolean} = setmetatable({}, {__mode = "k"}) :: any
 
     local function onHit(character: Model, isMine: boolean)
         hitAt[character] = os.clock()
@@ -176,6 +190,31 @@ function Hud.attach(ctx: any)
                 if show then table.insert(wanted, {character = character, distance = if character == me then -1 else distance}) end
             end
         end
+        -- Wild predators (BD-245): server-made models, no RunState; same bar pool and distance rules as players.
+        local npcFolder = workspace:FindFirstChild("BeDinoNpcs")
+        for _, character in if npcFolder then npcFolder:GetChildren() else {} do
+            local root = if character:IsA("Model") then character:FindFirstChild("HumanoidRootPart") else nil
+            if character:IsA("Model") and root and root:IsA("BasePart") and character:GetAttribute("HpByte") ~= nil then
+                local distance = if camera then (camera.CFrame.Position - root.Position).Magnitude else 0
+                local seq = character:GetAttribute("HitSeq")
+                if typeof(seq) == "number" and seq ~= (hitSeqSeen[character] or 0) then
+                    hitSeqSeen[character] = seq
+                    onHit(character, false)
+                end
+                local cue = character:GetAttribute("NpcCue")
+                if cue == "windup" and npcWindupSeen[character] ~= true and distance <= NEAR_STUDS then
+                    npcWindupSeen[character] = true
+                    Sfx.play("pickup_hi") -- soft heads-up (existing quiet cue, PLACEHOLDER until a dedicated sound is made)
+                elseif cue ~= "windup" then
+                    npcWindupSeen[character] = nil
+                end
+                local fraction = fractionOf(character)
+                local recentlyHit = now - (hitAt[character] or -100) < SHOW_AFTER_HIT
+                if distance <= FAR_STUDS and (fraction < 1 or recentlyHit or distance <= NEAR_STUDS or cue == "alert" or cue == "windup") then
+                    table.insert(wanted, {character = character, distance = distance})
+                end
+            end
+        end
         table.sort(wanted, function(a, b) return a.distance < b.distance end)
         local keep: {[Model]: boolean} = {}
         for i = 1, math.min(#wanted, MAX_BARS) do keep[wanted[i].character] = true end
@@ -205,10 +244,16 @@ function Hud.attach(ctx: any)
                 bar.gui.Size = UDim2.fromOffset((BAR_W + 18) * math.min(1.5, 0.9 + 0.15 * s), BAR_H + 6)
                 bar.gui.Enabled = true
                 bar.lastFraction = fractionOf(character)
+                bar.lastCue = if isWild(character) then tostring(character:GetAttribute("NpcCue") or "") else ""
                 paint(bar, bar.lastFraction, false)
             end
             local fraction = fractionOf(character)
-            if fraction ~= bar.lastFraction then
+            local cueNow = if isWild(character) then tostring(character:GetAttribute("NpcCue") or "") else ""
+            if cueNow ~= bar.lastCue then
+                bar.lastCue = cueNow
+                paint(bar, fraction, false)
+                bar.lastFraction = fraction
+            elseif fraction ~= bar.lastFraction then
                 paint(bar, fraction, true)
                 bar.lastFraction = fraction
             end

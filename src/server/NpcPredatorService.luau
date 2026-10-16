@@ -1,0 +1,202 @@
+--!strict
+-- BD-245 (docs/101 s8): thin glue for the calm NPC predators. ALL decisions live in Shared/NpcPredatorRules (pure, tested by
+-- tools/verify_npc_predators.py); this file only builds models, feeds real positions in, drives Humanoids and writes attributes.
+-- With Config.CombatEnabled (or Config.NpcPredatorsEnabled) false, start() returns before creating anything: no folder, no
+-- models, no loop, no connection. NPC bites are CombatRules.attack calls in the SAME world as players, so HP, class, damage,
+-- cooldown, spawn protection, Peaceful and the exactly-once defeat/settlement path are the ones CombatService already enforces.
+-- This file never touches eggs, catches, growth or run settlement.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local PhysicsService = game:GetService("PhysicsService")
+local Config = require(ReplicatedStorage.Shared.Config)
+local Rules = require(ReplicatedStorage.Shared.NpcPredatorRules)
+local CombatRules = require(ReplicatedStorage.Shared.CombatRules)
+local Visual = require(ReplicatedStorage.Shared.DinosaurVisual)
+
+local NpcPredatorService = {}
+
+local ROOT_SIZE = Vector3.new(2.4, 2, 3.2)
+local HIP_HEIGHT = 2
+local GROUND_HEIGHT = ROOT_SIZE.Y / 2 + HIP_HEIGHT -- what DinosaurVisual measures for an R15 Humanoid
+local WILD_TINT = Color3.fromRGB(70, 40, 100) -- darker, a little purple: reads as "not a player" without new art
+local TINT_AMOUNT = 0.45
+
+local function scaleForScore(score: number): number
+    return math.min(4, math.sqrt(1 + math.max(0, score) / 50)) -- the same growth curve players use
+end
+
+function NpcPredatorService.start(combat: any?)
+    if not Config.CombatEnabled or not Config.NpcPredatorsEnabled or not combat then return end
+    local world = Rules.newWorld(true, Config.WorldArtSeed + os.time(), Rules.newTerrain({half = Config.ArenaHalfWidth, seed = Config.WorldArtSeed}))
+    local folder = Instance.new("Folder")
+    folder.Name = "BeDinoNpcs"
+    folder.Parent = workspace
+    local entries: {[number]: {model: Model, humanoid: Humanoid, root: BasePart, lastState: string}} = {}
+    local groundParams = RaycastParams.new()
+    groundParams.FilterType = Enum.RaycastFilterType.Include
+    groundParams.FilterDescendantsInstances = {workspace.Terrain, workspace:FindFirstChild("BeDinoArena") or workspace.Terrain}
+    local collisionGroupReady = PhysicsService:IsCollisionGroupRegistered("DinoControllers")
+
+    local function destroy(slot: number, key: string?)
+        local entry = entries[slot]
+        entries[slot] = nil
+        if key then combat.removeNpc(key) end
+        if entry then entry.model:Destroy() end
+    end
+
+    local function build(npc: any, now: number): boolean
+        local hit = workspace:Raycast(Vector3.new(npc.x, Config.TerrainTop + 200, npc.z), Vector3.new(0, -(Config.TerrainTop + 400), 0), groundParams)
+        if not hit then return false end -- terrain not there (yet): the slot retries after the respawn delay
+        local model = Instance.new("Model")
+        model.Name = "WildPredator" .. npc.slot
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Size = ROOT_SIZE
+        root.Transparency = 1
+        root.CanTouch = false
+        root.CanQuery = false
+        root.CFrame = CFrame.new(npc.x, hit.Position.Y + GROUND_HEIGHT + 1, npc.z)
+        if collisionGroupReady then root.CollisionGroup = "DinoControllers" end -- passes through players, like players pass each other
+        root.Parent = model
+        local humanoid = Instance.new("Humanoid")
+        humanoid.HipHeight = HIP_HEIGHT
+        humanoid.RequiresNeck = false
+        humanoid.BreakJointsOnDeath = false
+        humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+        humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+        humanoid.UseJumpPower = true
+        humanoid.JumpPower = 0
+        humanoid.AutoJumpEnabled = false
+        humanoid.MaxSlopeAngle = Config.MaxSlopeAngle
+        humanoid.WalkSpeed = Rules.Config.PatrolSpeed
+        humanoid.Parent = model
+        model.PrimaryPart = root
+        model:SetAttribute("NpcPredator", true)
+        model:SetAttribute("CombatClass", npc.class)
+        model:SetAttribute("HpByte", 255)
+        model:SetAttribute("NpcCue", "")
+        model.Parent = folder
+        pcall(function() root:SetNetworkOwner(nil) end) -- the server owns the physics: no client can steer or exploit it
+        Visual.render(model, scaleForScore(npc.score), npc.species, "base") -- the same visual path as player dinos
+        for _, item in model:GetDescendants() do
+            if item:IsA("BasePart") and item ~= root then
+                item.CanCollide, item.CanTouch, item.CanQuery, item.Massless = false, false, false, true
+                item.Color = item.Color:Lerp(WILD_TINT, TINT_AMOUNT)
+            end
+        end
+        local joined = Rules.joinCombat(world, combat.world, npc, now)
+        if not joined then model:Destroy() return false end
+        combat.addNpc(npc.key, model)
+        entries[npc.slot] = {model = model, humanoid = humanoid, root = root, lastState = "patrol"}
+        return true
+    end
+
+    local function lose(slot: number, now: number)
+        local npc = Rules.defeated(world, slot, now)
+        if npc then destroy(slot, npc.key) end
+    end
+
+    -- A player defeated this NPC (CombatService already ran the exactly-once settle and the capped assist growth).
+    combat.onNpcDefeated = function(key: string)
+        local now = workspace:GetServerTimeNow()
+        for slot, npc in world.slots do
+            if npc.key == key then lose(slot, now) return end
+        end
+    end
+
+    local function playerSnapshot(now: number): any
+        local list = {}
+        for _, player in Players:GetPlayers() do
+            local character = player.Character
+            local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+            local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+            local runId = if character then character:GetAttribute("RunId") else nil
+            if character and root and root:IsA("BasePart") and humanoid and typeof(runId) == "string" then
+                local key = CombatRules.key(player.UserId, runId)
+                local dino = combat.world.dinos[key] -- only players CombatService tracks can be targeted at all
+                if dino then
+                    table.insert(list, {
+                        key = key, character = character, x = root.Position.X, y = root.Position.Y, z = root.Position.Z,
+                        alive = dino.state.phase == "Alive" and humanoid.Health > 0,
+                        active = character:GetAttribute("RunState") == "Active",
+                        peaceful = dino.peaceful, protectedUntil = dino.protectedUntil,
+                    })
+                end
+            end
+        end
+        return list
+    end
+
+    local accumulator = 0
+    RunService.Heartbeat:Connect(function(dt)
+        accumulator += dt
+        if accumulator < 1 / Rules.Config.TickHz then return end
+        local step = accumulator
+        accumulator = 0
+        local now = workspace:GetServerTimeNow()
+        local players = playerSnapshot(now)
+
+        local changes = Rules.populate(world, now, players)
+        for _, npc in changes.removed do destroy(npc.slot, npc.key) end
+        for _, npc in changes.spawned do
+            if not build(npc, now) then
+                world.slots[npc.slot] = nil
+                world.respawnAt[npc.slot] = now + Rules.Config.RetrySeconds
+            end
+        end
+
+        -- Feed the real physics positions in (a fallen or vanished NPC is simply replaced after the respawn delay).
+        for slot, npc in world.slots do
+            local entry = entries[slot]
+            if not entry or not entry.model.Parent or not entry.root.Parent or entry.root.Position.Y < -50 then
+                lose(slot, now)
+            else
+                local p = entry.root.Position
+                npc.x, npc.y, npc.z = p.X, p.Y, p.Z
+            end
+        end
+
+        for _, event in Rules.step(world, now, step, players) do
+            local result = Rules.performBite(world, combat.world, event, now, players)
+            local entry = entries[event.slot]
+            if entry then entry.model:SetAttribute("BiteSeq", ((entry.model:GetAttribute("BiteSeq") :: number?) or 0) + 1) end
+            if result.ok then
+                for _, p in players do
+                    if p.key == result.targetKey then
+                        local target = p.character :: Model
+                        target:SetAttribute("HitSeq", ((target:GetAttribute("HitSeq") :: number?) or 0) + 1)
+                        target:SetAttribute("HitByUserId", 0)
+                        local byte = CombatRules.pendingHpByte(combat.world, result.targetKey, now)
+                        if byte then target:SetAttribute("HpByte", byte) end
+                    end
+                end
+            end
+        end
+
+        for slot, npc in world.slots do
+            local entry = entries[slot]
+            if entry then
+                local cue = if npc.state == "windup" then "windup" elseif npc.state == "alert" then "alert" else ""
+                if entry.model:GetAttribute("NpcCue") ~= cue then entry.model:SetAttribute("NpcCue", cue) end
+                if npc.state ~= entry.lastState then
+                    if npc.state == "alert" or npc.state == "windup" then -- turn to face (only on entry; the humanoid turns itself while walking)
+                        local position = entry.root.Position
+                        entry.root.CFrame = CFrame.lookAt(position, position + Vector3.new(npc.faceX, 0, npc.faceZ))
+                    end
+                    entry.lastState = npc.state
+                end
+                if npc.moving then
+                    entry.humanoid.WalkSpeed = npc.speed
+                    entry.humanoid:MoveTo(Vector3.new(npc.goalX, npc.y, npc.goalZ))
+                else
+                    entry.humanoid:Move(Vector3.zero)
+                end
+                local byte = CombatRules.pendingHpByte(combat.world, npc.key, now)
+                if byte then entry.model:SetAttribute("HpByte", byte) end
+            end
+        end
+    end)
+end
+
+return NpcPredatorService
