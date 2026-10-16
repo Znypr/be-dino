@@ -1,4 +1,5 @@
 # 135 Pattern research (BD-063) specification
+n> **Status: PARKED (owner 2026-10-16).** Duplicates are already the input of the fusion ladder; no extra sink is planned now. Kept for reference only.
 
 Status: **SPEC ONLY, NOT BUILT, NOT OWNER-APPROVED.** Nothing in this file is in code. [docs/46](46-pattern-fusion-dino-identity-and-cosmetic-progression.md) section "Targeted pattern research" lists three candidate options and says "select one with owner before implementation". [docs/115](115-decisions-log.md) has no decision on it, so the implementation step is blocked until the owner answers section 9. All numbers below are PROVISIONAL.
 
