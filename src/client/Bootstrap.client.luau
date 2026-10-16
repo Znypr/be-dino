@@ -1085,7 +1085,7 @@ end
 local buildBadge=label(gui,"BUILD "..Config.Build,0,0,250,24,15,C.blue)
 buildBadge.Name,buildBadge.AnchorPoint,buildBadge.Position="BuildBadge",Vector2.new(.5,0),UDim2.new(.5,0,0,36)
 local foodDiagnostic=label(gui,"",0,0,450,22,14,C.accent)
-foodDiagnostic.AnchorPoint,foodDiagnostic.Position,foodDiagnostic.Visible=Vector2.new(.5,0),UDim2.new(.5,0,0,62),RunService:IsStudio()
+foodDiagnostic.TextXAlignment,foodDiagnostic.Visible=Enum.TextXAlignment.Left,false
 local function refreshFoodDiagnostic()
     local status=workspace:GetAttribute("FoodSpawnStatus") or "Starting"
     foodDiagnostic.Text="FOOD: "..tostring(workspace:GetAttribute("FoodCount") or 0).."  •  "..tostring(status)
@@ -1126,20 +1126,7 @@ require(script.Parent.HubTravelClient).attach({gui=gui,buttons=navigationButtons
 local hud=box(gui,0,0,390,94,C.panel,2)
 hud.AnchorPoint,hud.Position=Vector2.new(0,1),UDim2.new(0,18,1,-18)
 local hudScale=Instance.new("UIScale") hudScale.Parent=hud
-do -- clean "growth" icon: three rising bars on a green tile (native vector, no asset ids)
-    local tile=box(hud,8,12,64,64,C.accent,hud.ZIndex+1)
-    tile.Name="GrowthIcon"
-    for i=1,3 do
-        local bar=Instance.new("Frame")
-        bar.Name,bar.BorderSizePixel,bar.BackgroundColor3,bar.ZIndex="GrowthBar"..i,0,Color3.fromRGB(255,255,255),tile.ZIndex+1
-        bar.AnchorPoint,bar.Position,bar.Size=Vector2.new(0,1),UDim2.fromOffset(10+(i-1)*17,54),UDim2.fromOffset(12,10+i*11)
-        local corner=Instance.new("UICorner") corner.CornerRadius=UDim.new(0,3) corner.Parent=bar
-        bar.Parent=tile
-    end
-end
-local growthLabel=label(hud,"0 GROWTH",82,3,290,42,30,C.accent)
-art(hud,"catches",40,48,32)
-local catchLabel=label(hud,"0 catches  •  Sanctuary",82,47,290,34,20)
+require(script.Parent.HudV2).attach(hud,gui) -- BD-080: egg plate (bottom-left) + SIZE bar (top-centre); growth tile and catches text removed
 local crystalHUD=box(gui,0,0,260,48,C.panel,2)
 local crystalScale=Instance.new("UIScale") crystalScale.Parent=crystalHUD
 crystalHUD.AnchorPoint,crystalHUD.Position=Vector2.new(1,0),UDim2.new(1,-20,0,8)
@@ -1364,10 +1351,11 @@ local function scales()
     for _,item in {{buildBadge,layout.badge},{previewNotice,layout.notice}} do
         local labelObject,entry=item[1],item[2]
         labelObject.AnchorPoint,labelObject.Position,labelObject.Size=Vector2.zero,UDim2.fromOffset(entry.x,entry.y),UDim2.fromOffset(entry.w,entry.h)
-        labelObject.TextSize,labelObject.TextXAlignment=entry.textSize,if touch then Enum.TextXAlignment.Left else Enum.TextXAlignment.Center
+        labelObject.TextScaled,labelObject.TextSize,labelObject.TextXAlignment=touch,entry.textSize,if touch then Enum.TextXAlignment.Left else Enum.TextXAlignment.Center
     end
     previewNotice.Text=if touch then "STUDIO PREVIEW: UNSAVED" else "STUDIO PREVIEW • progress not saved • test currency"
-    foodDiagnostic.Visible=not touch and RunService:IsStudio()
+    foodDiagnostic.Visible,foodDiagnostic.AnchorPoint,foodDiagnostic.Position=require(Shared.HudRules).showFoodDebug(RunService:IsStudio(),player:GetAttribute("IsAdmin")==true,touch),Vector2.new(0,1),UDim2.fromOffset(layout.hud.x,layout.hud.y-6) -- BD-080: debug line only for Studio/admin, parked above the egg plate (never under the toasts)
+    require(script.Parent.HudV2).layout(layout)
     toastScale.Scale=layout.toastScale
 end
 local function characterAdded(character: Model)
@@ -1422,10 +1410,6 @@ RunService.RenderStepped:Connect(function(dt)
     if character and growth>lastGrowth and character:GetAttribute("RunState")=="Active" then
         Sfx.play("pickup")
         pickupPop(string.format("+%.1f",growth-lastGrowth))
-        if motion then
-            hudScale.Scale=(hud:GetAttribute("UIScaleBase") or 1)*1.06
-            Theme.animate(hudScale,.2,{Scale=hud:GetAttribute("UIScaleBase") or 1},Enum.EasingStyle.Back)
-        end
     end
     lastGrowth=growth
     if not humanoid then return end
@@ -1484,10 +1468,6 @@ RunService.Heartbeat:Connect(function(dt)
     if elapsed<.15 then return end elapsed=0
     local character=player.Character
     local state=if character then character:GetAttribute("RunState") else "Loading"
-    local growth=if character then character:GetAttribute("GrowthScore") or 0 else 0
-    local catches=if character then character:GetAttribute("CatchScore") or 0 else 0
-    growthLabel.Text=string.format("%d GROWTH",growth)
-    catchLabel.Text=string.format("%d catches  •  %s",catches,if state=="Sanctuary" then "Safe sanctuary" else "Island")
     action.Text=if state=="Sanctuary" then "EXPLORE ISLAND" elseif state=="Active" then "HOME" else "SAVING..."
     action.BackgroundColor3=if state=="Active" then C.red else C.accent
     if actionIcon then actionIcon.Visible=state=="Active" end
