@@ -149,7 +149,7 @@ Source: owner review of the Royal Nova image draft in ChatGPT on 2026-10-16: "i 
 | Conditions, tier 0 | Cracked 50 / Dirty 30 / Normal 15 / Rainbow 4.5 / Astra 0.5; Cracked hatch success 20% | `ProgressionConfig`, [09](09-reward-economy.md) |
 | First eggs safe | `SafeEggs = 2`: the first 2 eggs are never Cracked; Cracked 50% from the third egg (OWNER 2026-10-16: keep) | `ProgressionConfig.SafeEggs`, BD-365 |
 | Run crystals | `min(300, floor((250*min(n,12)+176*max(0,n-12))/100))`: 12 eggs -> 30, 120 -> 220 (PROVISIONAL) | [09](09-reward-economy.md) |
-| Nests | 5 slots, 3 h each, 6-12 eggs (avg 9), up to 3 per run (+1 per 30 eggs after the first, [119](119-catch-rate-15-per-run.md)), drop gate 120 s + 1 catch | [90](90-fusion-ladder-v2.md) s5 |
+| Nests | 5 slots, 3 h each, 6-12 eggs (avg 9), unlimited per run (owner 2026-10-16; only 5 spots, each extra nest becomes crystals, PROVISIONAL 50; +1 per 30 eggs after the first, [119](119-catch-rate-15-per-run.md)), drop gate 120 s + 1 catch | [90](90-fusion-ladder-v2.md) s5 |
 | Hatch pace | `HatchRevealSeconds` 1 s per egg, ascending rarity, skippable | [09](09-reward-economy.md), BD-044 |
 | Colour / pattern | colour tiers Common..Mythic (5.4), colour growth bonus +1% per tier; 8 patterns equally likely | `ProgressionConfig`, BD-172, [88](88-exponential-rarity.md) |
 | Prices | trails 0/100/280/390/780/1100/2200/3100/6100/17000; auras 60/470/3700 | `ProgressionConfig` |
@@ -169,6 +169,17 @@ Status lives only in the [kanban](07-kanban.md).
 - Paid random items: check `PolicyService`, disclose all outcomes and numeric odds, enforce on the server, treat failed checks as ineligible; fusing Robux-linked inputs may count as paid random ([46](46-pattern-fusion-dino-identity-and-cosmetic-progression.md)).
 - Sell time, information and looks, never power or randomness ([86](86-monetization-ideas.md)); skins are cosmetic and bought directly ([97](97-dino-skins.md)). Fast travel costs **crystals**, not Robux.
 - Never rewrite persistent profiles or enable Robux packs without evidence.
+
+### 11a. The Robux line (OWNER 2026-10-16, BD-425)
+Robux buys **looks and convenience**, never exclusive power. Enforced in CI by `tools/verify_robux_line.py` (flags off, crystal-only handlers, PolicyService and odds gates). Convenience multiplier cap: **1.25x**, and never beyond the normal in-game limit.
+| Category | Allowed with Robux | Never with Robux |
+|---|---|---|
+| Looks | skins, auras, trails, hatch styles, titles, home themes | any stat, size or speed change |
+| Time-savers | potions or potion bundles (capped, see [86](86-monetization-ideas.md)), Nest Warmer, auto-open | growth multiplier above 1.25x, stacking past the normal limit |
+| Capacity | extra nest spots, storage | more luck or bigger rewards per nest |
+| Currency | crystal packs (crystals only, flag off) | direct dinos, species or rarity |
+| Random items | only behind `Config.PaidRandomItemsEnabled`, a passed `PolicyService` check and shown numeric odds | hidden or changed odds, extra fusion success |
+| Power | nothing | combat or predation advantage, exclusive species |
 
 ## 12. Process rules
 - Art rule: no code or Python-drawn final art; effect textures are Blender renders; icons come from Blender or the owner's ChatGPT; **generated meshes only** for 3D ([AGENTS.md](../AGENTS.md), [87](87-vision-and-feel-guide.md), [72](72-ui-copy-and-asset-standards.md)).

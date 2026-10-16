@@ -37,7 +37,14 @@ Note: the older fx-v2 smoke, spark and flame sheets are superseded by the upload
 | Royal Nova aura icon | BD-101 (aura part) | ChatGPT ICON block | `resources/ui/v2/items/aura-royal-v1.png` | 1024 PNG, matches Meadow and Tidal | aura shop card | TABLE/AUTO | 109 D3 |
 | Potion rarity frames (5, P2) | BD-101 | ChatGPT | `resources/ui/v2/components/frame-{common,uncommon,rare,epic,legendary}-v1.png` | 512x512 9-slice, empty centre | potion shop cards | CODE | 109 D3 |
 | Combat HUD art, crystal pack icons, cave sign medallions (P2) | BD-248, BD-331, docs/104 | ChatGPT | see 109 E1-E3 | 1024 PNG | CombatHud, crystal cards, cave sign SurfaceGuis | CODE | 109 E1-E3 |
+| Rare hatch fanfare sound (optional, `shiny_bang` plays meanwhile) | BD-428 | Owner or sound lab (docs/110) | - | 2-3 s, .ogg/.mp3 | `Sfx.Sounds` (new `rare_hatch_fanfare`) | after upload | Bright kid-friendly celebration jingle, no harsh peak |
+| Confetti sheet (optional, fx3 sparkle tinted meanwhile) | BD-428 | Blender render | `resources/effects/fx-v3/confetti.png` | 1024x1024 4x4, white on alpha | `RareHatchClient` | after upload | Squares, ribbons and stars, 16 cells |
+| Golden Drumstick special food mesh and icon (P2) | BD-207 | Blender or Roblox generate_mesh | `food_golden_drumstick` (new, no repo file yet) | MeshPart under 500 triangles, gold tint left to the Highlight | `FoodService` special food, only while `Config.SpecialFoodsEnabled` | CODE | not drafted; the registered drumstick is reused meanwhile |
 | Cave lava crust / flow texture (BD-385, BD-294) | BD-385 | Blender render (no code-drawn art) | `resources/effects/cave-lava-crust-v1.png` | 1024 tileable, warm orange to dark crust, soft alpha edge, calm and friendly | `CaveLavaFx` falls sheet layers (today: existing swirl and flame sheets) | TODO | 104 s5 |
+| Anime FX P0 (docs/123): soft flame-tongue flipbook, star pop flipbook | BD-430 | Blender | `resources/effects/fx-v4/flame-tongue.png`, `star-pop.png` | 4x4 of 256 = 1024, white on alpha, under 400 KB | `EffectAssets.luau` | TABLE | docs/123 s3 |
+| Anime FX P0: shock dome mesh + gradient | BD-430 | Blender, Studio upload | `assets/blender/fx/shock-dome.fbx`, `resources/effects/fx-v4/dome-gradient.png` | about 120 tris; 512 px white on alpha | BD-433 code | CODE | docs/123 s3 |
+| Anime FX P1: light shaft cone, aura shell, speed-line streaks | BD-431 | Blender | `assets/blender/fx/shaft-cone.fbx`, `aura-shell.fbx`; `resources/effects/fx-v4/speed-streaks.png` | cone about 80 tris, shell about 150, streaks 512x512 | BD-432, BD-433 code | CODE | docs/123 s3 |
+| Anime FX P2: rainbow-shift gradient strip, soft vignette rim ring (UI) | BD-435 | Blender | `resources/effects/fx-v4/rainbow-strip.png`, `rim-ring-ui.png` | 1024x64; 1024 ring, white on alpha | `EffectAssets.luau` | TABLE | docs/123 s3 |
 
 ## 3. Hatch v2 (3D and paint flipbooks, docs/118, BD-397; flag `Config.HatchV2 = false`)
 

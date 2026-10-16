@@ -14,6 +14,7 @@ local ProgressionConfig = require(ReplicatedStorage.Shared.ProgressionConfig)
 
 local ProfileRepository = {}
 local PrivateState = require(script.Parent.PrivateState)
+local RareHatchService = require(script.Parent.RareHatchService) -- BD-428
 local DinosaurIdentity = require(script.Parent.DinosaurIdentity)
 local IdentityFusion = require(script.Parent.IdentityFusion)
 local FusionOdds = require(script.Parent.FusionOdds)
@@ -1014,6 +1015,7 @@ local function runRewardText(outcome): string
     local nests = outcome.nestCount or 0
     if nests > 0 then table.insert(parts, if nests == 1 then "1 nest" else string.format("%d nests", nests)) end
     if outcome.nestFull then table.insert(parts, "nest storage full") end
+    if (outcome.nestCrystals or 0) > 0 then table.insert(parts, string.format("%d crystals for extra nests", outcome.nestCrystals)) end
     return table.concat(parts, " + ")
 end
 
@@ -1119,9 +1121,11 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
             advanceNests(profileValue, now)
             outcome.nestCount = granted
             outcome.nestFull = granted < nestsEarned
+            -- Owner 2026-10-16: every nest without a free spot converts to crystals now (same exactly-once transform).
+            outcome.nestCrystals = (nestsEarned - granted) * Config.NestOverflowCrystals
 
             local progress = ProgressionRules.upgrade(profileValue)
-            progress.crystals = math.min(ProgressionConfig.MaxCrystals, progress.crystals + outcome.crystals)
+            progress.crystals = math.min(ProgressionConfig.MaxCrystals, progress.crystals + outcome.crystals + (outcome.nestCrystals or 0))
             progress.accountXP = math.min(2000000000, progress.accountXP + (outcome.accountXP or eggCount))
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
@@ -1167,6 +1171,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         PrivateState.set(player, "LastRunEggCount", committedOutcome.eggCount or committedOutcome.chestCount or 0)
         PrivateState.set(player, "LastRunNestCount", committedOutcome.nestCount or 0)
         PrivateState.set(player, "LastRunNestFull", committedOutcome.nestFull == true)
+        PrivateState.set(player, "LastRunNestCrystals", committedOutcome.nestCrystals or 0)
     end
     PrivateState.set(player, "LastSettledRunId", runId)
     if priorState == "SaveFailed" and player:GetAttribute("ProfileState") == "SaveFailed" then player:SetAttribute("ProfileState", "Loaded") end
@@ -1615,6 +1620,7 @@ local function publishHatch(player: Player, chestId: string, committedOutcome: a
     PrivateState.set(player, "LastChestGenesJson",HttpService:JSONEncode(committedOutcome.genes))
     PrivateState.set(player, "LastChestFailed",committedOutcome.failed==true)
     PrivateState.set(player, "LastClaimedChestId", chestId)
+    RareHatchService.record(player, committedOutcome) -- BD-428: celebration + one rate-limited announcement, from the settled outcome
 end
 
 function ProfileRepository.claimChest(player: Player, chestId: string)

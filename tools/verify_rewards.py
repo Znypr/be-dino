@@ -95,9 +95,10 @@ local script={Parent={Config="Config"}}
 local require=function(id) if id=="Identity" then return Identity end return GameConfig end
 local FusionOdds=@@FUSION_ODDS@@
 local PrivateStateStub={set=function(p,k,v) p.attrs[k]=v end,get=function(p,k) return p.attrs[k] end,forget=function() end} -- BD-360: the real module is tested by verify_private_state; here owner-only values land in attrs
-local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState"}}
+local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState",RareHatchService="RareHatchService"}}
 local require=function(id)
  if id=="PrivateState" then return PrivateStateStub end
+ if id=="RareHatchService" then return {record=function() end} end -- BD-428: tested by verify_rare_hatch
  if id=="FusionOdds" then return FusionOdds end
  if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics
  elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig
@@ -145,8 +146,8 @@ assert(Rewards.runCrystals(0)==0 and Rewards.runCrystals(12)==30 and Rewards.run
 assert(Rewards.runCrystals(0/0)==0 and Rewards.runCrystals(-1)==0 and Rewards.runCrystals(math.huge)==272)
 assert(Rewards.nestCount(12)==0 and Rewards.nestCount(120)==0,"no run time -> never a nest")
 assert(Rewards.nestCount(0,600)==0 and Rewards.nestCount(1,119)==0 and Rewards.nestCount(1,120)==1)
-assert(Rewards.nestCount(12,200)==1 and Rewards.nestCount(31,200)==2 and Rewards.nestCount(120,200)==GameConfig.NestMaxPerRun)
-assert(Rewards.nestCount(150,200)==GameConfig.NestMaxPerRun and Rewards.nestCount(math.huge,math.huge)==GameConfig.NestMaxPerRun)
+assert(Rewards.nestCount(12,200)==1 and Rewards.nestCount(31,200)==2 and Rewards.nestCount(120,200)==4)
+assert(Rewards.nestCount(150,200)==5 and Rewards.nestCount(math.huge,math.huge)==5,"no nest cap of its own; only the run egg cap (150) bounds nests (owner 2026-10-16)")
 assert(Rewards.nestCount(12,0/0)==0 and Rewards.nestCount(12,"200")==0 and Rewards.nestCount(12,-5)==0)
 local zero=Rewards.computeRunReward(0/0)
 assert(zero.eggCount==0 and zero.crystals==0 and zero.nestCount==0 and zero.accountXP==0)
@@ -197,7 +198,7 @@ assert(Repository.load(b))
 local copiesBefore=totalCopies(data[key(b)])
 assert(Repository.commitRunSettlement(b,"run-400",400,nil,600))
 assert(#data[key(b)].eggs==5 and bankCount(b)==395)
-assert(#data[key(b)].eggNests==GameConfig.NestMaxPerRun and #b.attrs.NestsJson==GameConfig.NestMaxPerRun and data[key(b)].progression.crystals==Rewards.runCrystals(400))
+assert(#data[key(b)].eggNests==5 and b.attrs.LastRunNestCount==5 and b.attrs.LastRunNestCrystals==9*GameConfig.NestOverflowCrystals and #b.attrs.NestsJson==5 and data[key(b)].progression.crystals==Rewards.runCrystals(400)+9*GameConfig.NestOverflowCrystals)
 assert(data[key(b)].eggNests[1].state=="incubating" and data[key(b)].eggNests[2].state=="waiting")
 local line=revealLine(b)
 assert(#line==400)
