@@ -1,4 +1,4 @@
-# 128 Food-only progression audit (owner correction 2026-10-16)
+# 131 Food-only progression audit (owner correction 2026-10-16)
 
 **OWNER CORRECTION:** "PvP is an optional side" means hunting other players is each player's own choice and **food alone must give enough progression** (growth, eggs, crystals). It did NOT mean a Peaceful opt-out; Peaceful (BD-421) is removed, see [115](115-decisions-log.md). Hunting stays on for everyone.
 
@@ -24,7 +24,7 @@ Status: audit of CURRENT BUILD BEHAVIOR, numbers read from `src/shared/Config.lu
 - **Kills are outsized for eggs.** One kill is worth about 42 food, about 20 seconds of a normal 130-food-per-minute pace. 5 kills add about a third more eggs, 15 kills double a run (the cap is 150 eggs, `RunEggMaxPerRun`). Growth from a kill is small next to food (2.5 against about 65 per run) and is not the problem.
 - The eaten player keeps all their eggs (BD-422), so a kill is a pure bonus for the hunter.
 
-## 4. Proposal (provisional, NOT applied, owner to confirm; BD-438)
+## 4. Proposal (provisional, NOT applied, owner to confirm; BD-439)
 Pick one:
 - **A (preferred):** kills give growth only (`PredationGrowthPoints` stays 2.5, no egg). Hunting stays fun for size, food is the one egg source.
 - **B:** kills give a small egg share: `PredationCatchEggs = 0.25` egg per kill (about 10 food) using the same carry idea as `FoodCatchRules`, capped at **3 kill eggs per run** (about 20% of a 15-egg run).
