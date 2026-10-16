@@ -79,7 +79,7 @@ function Pose.sample(role: string, side: number, lead: boolean, t: number, phase
 end
 -- BD-233 spike: jump / leap / land / water-surge actions. Phases: crouch -> push (stretch) -> air (tuck, held until the dino lands) -> land (squash);
 -- Water has no air time: a single "surge" (forward dash). Everything is calm and short (docs/87), absolute offsets from the REST pose, bounded.
-Pose.Phases = {"crouch", "push", "air", "land", "surge"}
+Pose.Phases = {"crouch", "push", "air", "land", "surge", "windup", "bite"}
 Pose.TuckTime = 0.18 -- seconds for the airborne tuck to settle
 local CLASS_SCALE = { -- q = crouch/squash depth, s = push-off stretch, t = airborne tuck, l = landing squash
     Ground = {q = 1, s = 1, t = 1, l = 1}, Armored = {q = 1.3, s = 0.4, t = 0.5, l = 1.5},
@@ -91,6 +91,8 @@ function Pose.duration(phase: string, aggr: number, class: string?): number
     if phase == "push" then return if armored then 0.16 else 0.12 end
     if phase == "land" then return if armored then 0.42 elseif fly then 0.45 else 0.30 end
     if phase == "surge" then return 0.40 + 0.15 * math.clamp(finite(aggr), 0, 1) end
+    if phase == "windup" then return 0.50 end -- BD-324: wild predator telegraph (Rules.Config.WindupSeconds); held until the cue ends
+    if phase == "bite" then return 0.40 end
     return 0
 end
 local function ease(u: number): number u = math.clamp(u, 0, 1) return u * u * (3 - 2 * u) end
@@ -99,7 +101,8 @@ function Pose.actionWeight(phase: string, p: number): number
     p = math.clamp(finite(p), 0, 1)
     if phase == "crouch" then return ease(p) end
     if phase == "land" then return 1 - ease(math.clamp((p - 0.5) / 0.5, 0, 1)) end
-    if phase == "surge" then return ease(p / 0.15) * (1 - ease((p - 0.7) / 0.3)) end
+    if phase == "surge" or phase == "bite" then return ease(p / 0.15) * (1 - ease((p - 0.7) / 0.3)) end
+    if phase == "windup" then return ease(p) end
     return 1
 end
 -- ctx: phase, p (0..1 progress of a timed phase), t (seconds since the phase began), aggr (0 jump .. 1 leap), carry (0..1 tuck amount when landing began).
@@ -120,6 +123,12 @@ function Pose.sampleAction(role: string, side: number, lead: boolean, ctx: Ctx, 
             snap = math.sin(math.pi * math.clamp((p - 0.3) / 0.4, 0, 1)) * aggr
             kick = math.sin(2 * math.pi * p) * math.sin(math.pi * p)
         end
+    elseif ph == "bite" then -- BD-324: lunge + snap for any class (the Water surge shape)
+        lunge = math.sin(math.pi * p)
+        snap = math.sin(math.pi * math.clamp((p - 0.3) / 0.4, 0, 1))
+    elseif ph == "windup" then -- BD-324: rear back and lower, head cocked up (reads as the telegraph)
+        q = ease(p) * 0.9
+        tk = ease(p) * 0.25
     else
         if ph == "crouch" then q = ease(p) * cls.q
         elseif ph == "push" then q = (1 - ease(p)) * cls.q st = ease(p) * cls.s

@@ -349,3 +349,57 @@ for _name in ("DinosaurPreview", "ModelPreview"):
 _dp = (ROOT / "src/shared/DinosaurPreview.luau").read_text(encoding="utf-8")
 assert [l for l in _dp.splitlines() if "Authored.has(speciesId)" in l and 'GetAttribute("LowPoly")' in l], "DinosaurPreview: Authored.has must skip low-poly models"
 print("low-poly preview guards passed")
+
+# BD-324: wild NPC predators use the low-poly look (pure parts run in Luau; wiring checked statically).
+NPC_BODY = r'''
+local P, R, N = M.Pose, M.Recolor, M.Npc
+assert(N.pick(true, true, true) == "lowpoly")
+assert(N.pick(false, true, true) == "legacy" and N.pick(true, false, true) == "legacy" and N.pick(true, true, false) == "legacy", "fallback to legacy")
+for _, sp in {"raptor", "baryonyx", "tyrannosaurus", "spinosaurus", "zzz"} do
+  local r, g, b = N.shellColor(sp)
+  for _, c in {r, g, b} do assert(c >= 0.05 and c <= 0.4 and c == c, sp .. ": a dark muted shell colour") end
+  assert(0.299 * r + 0.587 * g + 0.114 * b < 0.25, sp .. ": dark")
+end
+assert(N.ShellTransparency > 0.2 and N.ShellTransparency < 0.6 and N.ShellGrow > 1 and N.ShellGrow < 1.05, "shell settings")
+assert(N.phase("", true, nil) == "bite" and N.phase("windup", true, "windup") == "bite")
+assert(N.phase("windup", false, nil) == "windup" and N.phase("", false, nil) == nil and N.phase("", false, "windup") == nil)
+assert(N.phase("", false, "bite") == "bite", "a started bite plays out")
+local out, act, ctx = P.new(), P.new(), P.newCtx()
+for _, class in {"Ground", "Armored", "Fly", "Water"} do
+  for _, ph in {"windup", "bite"} do
+    assert(table.find(P.Phases, ph) and P.duration(ph, 0, class) > 0)
+    for _, role in P.Roles do
+      for _, p in {0, 0.25, 0.5, 0.8, 1} do
+        ctx.phase, ctx.p, ctx.t, ctx.aggr, ctx.carry = ph, p, p * 0.5, 0, 0
+        P.sample(role, 1, true, 1, 0, 0.5, 1, out, class)
+        P.blend(out, P.sampleAction(role, 1, true, ctx, 1, act, class), P.actionWeight(ph, p))
+        for _, v in {out.pitch, out.roll, out.yaw, out.dy, out.dz} do assert(v == v and math.abs(v) <= P.MaxFold) end
+      end
+    end
+  end
+end
+assert(P.actionWeight("windup", 1) == 1 and P.actionWeight("bite", 0) == 0 and P.actionWeight("bite", 1) == 0)
+ctx.phase, ctx.p = "bite", 0.5
+assert(P.sampleAction("head", 1, false, ctx, 1, act, "Ground").pitch ~= 0, "bite moves the head")
+print("npc low-poly pure tests passed")
+'''
+with tempfile.TemporaryDirectory() as _tmp:
+    _s = ('local M={}\nM.Pose=(function()\n' + (ROOT / 'src/shared/LowPolyPose.luau').read_text(encoding='utf-8') + '\nend)()\nM.Recolor=(function()\n'
+          + (ROOT / 'src/shared/LowPolyRecolor.luau').read_text(encoding='utf-8') + '\nend)()\nM.Npc=(function()\n'
+          + (ROOT / 'src/shared/NpcLowPoly.luau').read_text(encoding='utf-8') + '\nend)()\n' + NPC_BODY)
+    _p = Path(_tmp) / 'npc_lowpoly.luau'
+    _p.write_text(_s, encoding='utf-8')
+    _r = subprocess.run([args.runner, str(_p)], capture_output=True, text=True, encoding='utf-8')
+    print(_r.stdout, end='')
+    if _r.returncode or 'passed' not in _r.stdout:
+        print(_r.stderr)
+        raise SystemExit(_r.returncode or 1)
+_svc = (ROOT / 'src/server/NpcPredatorService.luau').read_text(encoding='utf-8')
+_anim = (ROOT / 'src/client/LowPolyAnimator.client.luau').read_text(encoding='utf-8')
+_mot = (ROOT / 'src/client/NpcMotion.luau').read_text(encoding='utf-8')
+for _needle in ('NpcLowPoly.pick(LowPoly.enabled()', 'LowPoly.clone(npc.species, nil)', 'NpcLowPoly.shellColor(npc.species)', 'NpcLowPoly.ShellTransparency', '"NpcLowPoly"', 'Visual.render(model, npc.visualScale'):
+    assert _needle in _svc, 'NpcPredatorService missing ' + _needle
+assert 'Texture.' not in _svc and 'EditableImage' not in _svc and 'LowPoly.tint' not in _svc and 'SurfaceAppearance' not in _svc, 'NPCs must never bake (image budget)'
+assert 'NpcCue' in _anim and 'BiteSeq' in _anim and 'BeDinoNpcs' in _anim and 'NpcLowPoly' in _anim, 'LowPolyAnimator must animate NpcLowPoly models'
+assert 'NpcLowPoly") ~= true' in _mot, 'NpcMotion bob must skip low-poly NPCs'
+print("npc low-poly wiring passed")

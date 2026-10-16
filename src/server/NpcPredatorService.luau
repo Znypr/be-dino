@@ -13,6 +13,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Rules = require(ReplicatedStorage.Shared.NpcPredatorRules)
 local CombatRules = require(ReplicatedStorage.Shared.CombatRules)
 local Visual = require(ReplicatedStorage.Shared.DinosaurVisual)
+local LowPoly = require(ReplicatedStorage.Shared.LowPolyDinos)
+local NpcLowPoly = require(ReplicatedStorage.Shared.NpcLowPoly)
 
 local NpcPredatorService = {}
 
@@ -84,11 +86,60 @@ function NpcPredatorService.start(combat: any?)
         model:SetAttribute("NpcCue", "")
         model.Parent = folder
         pcall(function() root:SetNetworkOwner(nil) end) -- the server owns the physics: no client can steer or exploit it
-        Visual.render(model, npc.visualScale, npc.species, "base") -- the same visual path as player dinos
-        for _, item in model:GetDescendants() do
-            if item:IsA("BasePart") and item ~= root then
-                item.CanCollide, item.CanTouch, item.CanQuery, item.Massless = false, false, false, true
-                item.Color = item.Color:Lerp(WILD_TINT, TINT_AMOUNT)
+        -- BD-324: with Config.LowPolyDinos on, the species' low-poly model (the same clone players use), flat dark tint, no bake; any
+        -- failure (flag off, unmapped species, model not loaded, build error) keeps the legacy visual below.
+        local lowPoly: Model? = nil
+        local models = ReplicatedStorage:FindFirstChild(LowPoly.FolderName)
+        local mode = NpcLowPoly.pick(LowPoly.enabled(), LowPoly.has(npc.species), models ~= nil and models:FindFirstChild(npc.species) ~= nil)
+        if mode == "lowpoly" then
+            local ok, result = pcall(function(): Model?
+                local clone = LowPoly.clone(npc.species, nil)
+                if not clone then return nil end
+                clone.Name = "NpcVisual"
+                clone:ScaleTo(npc.visualScale)
+                clone:PivotTo(root.CFrame * CFrame.new(0, -GROUND_HEIGHT, 0))
+                local r, g, b = NpcLowPoly.shellColor(npc.species)
+                for _, part in clone:GetDescendants() do
+                    if part:IsA("MeshPart") then
+                        part.Anchored = false
+                        local textured = part:GetAttribute("LPTexture")
+                        local pieces = {part}
+                        if type(textured) == "string" and textured ~= "" then
+                            -- MeshPart.Color is ignored on a textured mesh and a material colour map is not writable from a game script,
+                            -- so the wild look is a thin dark translucent shell over the same part (texture shows through; no bake).
+                            local shell = part:Clone()
+                            shell.Name = part.Name .. "_wild"
+                            shell.TextureID = ""
+                            shell.Color = Color3.new(r, g, b)
+                            shell.Material = Enum.Material.Plastic
+                            shell.Transparency = NpcLowPoly.ShellTransparency
+                            shell.CastShadow = false
+                            shell.Size = part.Size * NpcLowPoly.ShellGrow
+                            shell.Parent = clone
+                            table.insert(pieces, shell)
+                        end
+                        for _, piece in pieces do
+                            local weld = Instance.new("Weld") -- a Weld (not a WeldConstraint): the client animator writes C1, like the players' rigs
+                            weld.Name = "ResourceWeld"
+                            weld.C0 = root.CFrame:ToObjectSpace(piece.CFrame)
+                            weld.Part0, weld.Part1, weld.Parent = root, piece, piece
+                        end
+                    end
+                end
+                clone.Parent = model
+                return clone
+            end)
+            if ok and result then lowPoly = result else warn("[Be Dino] NPC low-poly visual failed for " .. npc.species .. " (" .. tostring(result) .. "); legacy visual") end
+        end
+        if lowPoly then
+            model:SetAttribute("NpcLowPoly", true)
+        else
+            Visual.render(model, npc.visualScale, npc.species, "base") -- the same visual path as player dinos
+            for _, item in model:GetDescendants() do
+                if item:IsA("BasePart") and item ~= root then
+                    item.CanCollide, item.CanTouch, item.CanQuery, item.Massless = false, false, false, true
+                    item.Color = item.Color:Lerp(WILD_TINT, TINT_AMOUNT)
+                end
             end
         end
         local size = model:GetExtentsSize()
