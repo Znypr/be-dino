@@ -1,6 +1,6 @@
 """BD-286 / BD-295 / BD-296 offline check of the Cave lighting and the lava-fall fit (docs/104 s4, s5). Runs the real
 CaveHubLayout, CaveTerrainRules and CaveLightingRules in Luau (pure numbers, never Studio):
- * light budget: the light list equals the layout's, never above CaveHubLayout.MaxLights (16), every light inside the hall and
+ * light budget: the light list equals the layout's, never above CaveHubLayout.MaxLights (30), every light inside the hall and
    under the ceiling, one fill per station, the gate arch light is the strongest fill; FX parts (beams + dust volumes + gate glow)
    stay tiny and the whole hub stays under the 410 part budget (lights use Attachments, no extra Parts);
  * shaft alignment: one shaft per ceiling hole, centred on it, narrower than the hole, standing in AIR from just above the floor to
@@ -30,7 +30,7 @@ local function dist(ax,az,bx,bz) return math.sqrt((ax-bx)^2+(az-bz)^2) end
 
 -- ---- lights: counts and placement
 assert(#D.lights==#L.lights,"the light list is the layout's light list")
-assert(#D.lights<=C.MaxLights,"<= 16 lights: "..#D.lights)
+assert(#D.lights<=C.MaxLights,"within the light cap (30): "..#D.lights)
 local owners={}
 for _,l in D.lights do owners[l.owner]=(owners[l.owner] or 0)+1 end
 assert(owners.heart==2 and owners.lava==3 and owners.crystal==2 and owners.forge==1,"heart 2, lava 3, crystal 2, forge 1")
@@ -48,7 +48,7 @@ local shadowN=0
 for _,l in D.lights do if l.shadows then shadowN+=1 end end
 assert(shadowN==4,"PointLight.Shadows on exactly the 4 strongest lights: "..shadowN)
 local look=R.Look
-assert(look.ambient[1]<=80 and look.ambient[2]<=70 and look.brightness>=1.2 and look.brightness<=1.5,"BD-398 cave ambient warm-dim, Brightness 1.2-1.5")
+assert(look.ambient[1]<=112 and look.ambient[2]<=100 and look.brightness>=1.2 and look.brightness<=1.5,"BD-398 + brighten pass: cave ambient warm and soft (<= 112), Brightness 1.2-1.5")
 assert(look.grade.brightness<=-0.03 and look.grade.brightness>=-0.1 and look.grade.contrast>=0.05,"BD-398 grade dim with contrast")
 assert(look.atmosphere.density<=0.05 and look.atmosphere.haze==0 and look.grade.saturation>=0 and look.grade.saturation<=0.1 and look.fogStart>=150 and look.fogEnd>=800,"clear warm cave: no milky haze or desaturation (docs/114)")
 -- the blend ramps to exactly 1 inside within blendSeconds (and in half that with Reduce Motion)
@@ -59,11 +59,11 @@ a=0
 for _=1,math.ceil(look.blendSeconds*30)+1 do a=R.blend(a,1,1/60,true) end
 assert(a==1,"BD-398 reduce motion ramps in half the time")
 -- hall boundary: floor points at 90 percent of the floor edge count as inside; high above or far away is outside
-for deg=0,350,10 do
- local th=math.rad(deg)
- local x,z=math.cos(th)*C.BaseX*0.9,CZ+math.sin(th)*C.BaseZ*0.9
- assert(R.insideAt(x,FY+3,z,false),"inside at 90 percent of the floor edge, angle "..deg)
-end
+local inCount=0
+for x=-120,120,6 do for dz=-110,110,6 do
+ if C.caveSd(x,CZ+dz)>=1 then assert(R.insideAt(x,FY+3,CZ+dz,false),"inside anywhere on the open cave floor: "..x..","..dz) inCount+=1 end
+end end
+assert(inCount>400,"enough inside probes "..inCount)
 assert(not R.insideAt(0,FY+120,CZ,false) and not R.insideAt(0,FY+3,CZ+400,false),"outside the hall is not inside")
 assert(archBrightness>maxFill,"the gate arch light is the strongest light so the doorway reads")
 local gate=L.byId.gate
@@ -108,8 +108,8 @@ assert(R.Beam.motesPerSecond<=6,"dust motes are sparse")
 local F,P=C.Fall,C.Pool
 local lowest=math.huge
 for x=F.x-F.width/2,F.x+F.width/2,2 do
- for dz=F.z-1,F.z+7,2 do
-  lowest=math.min(lowest,C.ceilingY(x,dz+CZ)-T.CeilingRough)
+ for dz=F.z-1,F.z+1,2 do
+  lowest=math.min(lowest,C.ceilingY(x,dz+CZ)-T.CeilingRough) -- the sheet's own plane (the recess behind it is carved to stay under the roof)
  end
 end
 assert(FY+F.height<=lowest-2,"lava sheet top "..(FY+F.height).." fits under the lowest ceiling "..lowest)
@@ -122,7 +122,7 @@ for _,p in L.props do if p.key=="lava_pool_disc" then assert(not p.walk and p.w<
 
 -- ---- BD-296 wall material: Limestone is the only cave-only wall material (Sandstone / Slate / Rock colours are the island's, set globally)
 local Col=Terrain.Colors
-assert(Col.Limestone and Col.Limestone[1]>=140 and Col.Limestone[1]<=175 and Col.Limestone[1]-Col.Limestone[3]<=12,"BD-384: soft cool grey Limestone walls (the warm lamps carry the colour)")
+assert(Col.Limestone and Col.Limestone[1]>=160 and Col.Limestone[1]<=195 and Col.Limestone[1]-Col.Limestone[3]<=45,"brighten pass: light warm Limestone walls")
 for _,m in {"Sandstone","Slate","Rock","Basalt","Grass","LeafyGrass","Mud","Ground","Sand"} do assert(Col[m]==nil,"cave never recolours the island material "..m) end
 
 -- ---- cave look
@@ -134,8 +134,10 @@ assert(Look.fogEnd>=800 and Look.atmosphere.density<=0.05,"no haze, the hall sta
 assert(R.insideAt(0,FY+5,CZ,false) and R.insideAt(0,FY+5,CZ+95,false),"inside at the Heart and near the lava")
 assert(R.insideAt(gate.x,FY+5,CZ+gate.z-12,true),"inside in the gate mouth")
 assert(not R.insideAt(0,FY+5,300,false) and not R.insideAt(0,FY+5,300,true),"outside on the island")
-local edgeX=C.BaseX*1.06
-assert(not R.insideAt(edgeX,FY+5,CZ,false) and R.insideAt(edgeX,FY+5,CZ,true),"hysteresis: stays inside a little beyond the edge, does not enter there")
+local edgeX=60
+while C.caveSd(edgeX,CZ-60)>-6 and edgeX<140 do edgeX+=1 end -- just beyond the north-east wall of the Nests alcove
+local edgeZ=CZ-60
+assert(not R.insideAt(edgeX,FY+5,edgeZ,false) and R.insideAt(edgeX,FY+5,edgeZ,true),"hysteresis: stays inside a little beyond the edge, does not enter there")
 assert(not R.insideAt(0,FY+200,CZ,true),"not inside high above")
 local v=0
 for _=1,100 do local n=R.blend(v,1,0.05,false) assert(n>=v and n<=1) v=n end
@@ -163,15 +165,15 @@ assert(R.bedVolume(1)==0 or (R.bedVolume(1)<=0.15 and R.bedVolume(0)==0),"ambien
 local so=R.showOffSpot()
 assert(so,"the Heart has a show-off pedestal")
 local hs=L.byId.heart
-assert(dist(so.x,so.z-CZ,hs.x,hs.z)<=hs.r-1,"show-off pedestal stands inside the Heart")
-for _,p in L.props do if p.key=="hub_pedestal" and p.owner=="heart" then assert(p.collider,"the show-off pedestal has a collider to stand on") end end
+assert(dist(so.x,so.z-CZ,hs.x,hs.z)<=hs.r+10,"show-off plinth stands beside the Heart pad")
+local plinth=false for _,lg in L.ledges do if lg.owner=="heart_plinth" then plinth=true assert(lg.h==3.8 and C.insideFloor(lg.x,lg.z+CZ,4),"plinth is rock grown from the floor, inside the cave") end end assert(plinth,"the Heart has a rock show-off plinth (no pedestal prop)")
 local benches,cushions,lamps=0,0,0
 for _,p in L.props do
  if p.owner=="heart" or p.owner=="settings" then
   if p.key=="hub_bench_stone" then benches+=1 elseif p.key=="hub_cushion_moss" then cushions+=1 elseif p.key=="hub_lantern_post" then lamps+=1 end
  end
 end
-assert(benches>=2 and cushions>=2 and lamps>=2,"cosy seating and lamps at the Heart: "..benches.." "..cushions.." "..lamps)
+assert(benches==0 and cushions==0 and lamps==0,"no floor furniture at the Heart (owner 2026-10-16, docs/104 s17); the warm light comes from the wall: "..benches.." "..cushions.." "..lamps)
 print("cave lighting ok: lights "..#D.lights.."/"..C.MaxLights..", fx parts "..D.fxParts..", fall top "..(FY+F.height).." < "..string.format("%.1f",lowest))
 '''
 

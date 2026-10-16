@@ -109,6 +109,9 @@ Open: per-biome daylight rules beyond the island base are not documented (confli
 - Automatic luminance bands (mean screen luminance 0 = black, 1 = white): **cave 0.15-0.35, island 0.35-0.75**. The quality gates (docs/117, tools/qa/luminance.py) fail outside these bands.
 - Cool blue-grey stone is ACCEPTED as cave decoration (depth and contrast); warmth comes from lamps, shafts, amber crystals and warm props. Currency and shop crystals stay amber/yellow (decision 2026-10-16). BD-414/415 are resolved as "accepted, no recolour".
 
+### 6.1b Cave shape and stone (OWNER 2026-10-16, Studio feedback)
+The cave must read as a natural cave, not a cube: a central chamber plus 3-5 short winding tunnels and side caves (alcoves) where the stations sit; organic irregular walls and ceiling; gently rolling floor with slight hills and a few steps; stations carved into the rock (counters and shelves are rock ledges in the same stone palette); little decor, growing out of the walls. Stone must look like the cave itself (seamless, same style). The s6.1 brightness band, amber crystals and weather rule stay. Design and numbers: docs/104 s17.
+
 ### 6.2 Cave stations: prompt-only opening and every-side signs (OWNER 2026-10-16)
 - A shop or station NEVER opens because the player walked near it. Each menu station has a `ProximityPrompt` (big round "Open" button, >= 96 px tap, keyboard **G**, gamepad L1) that appears within 10 studs and opens it only when pressed. G was chosen because E is LEAP, F is BITE, C and B open Collection and Eggs. The pad dwell rule (0.5 s) was removed from `HubWalkUpRules`; `tools/verify_cave_gate.py` asserts no auto-open API remains.
 - Fast travel (Crystal Shop perk, docs/104 s7) still opens the shop on arrival, because the player chose it by pressing the rail button; `walkUp.note()` debounces a prompt press in the same instant.
