@@ -120,7 +120,7 @@ end
 -- Card words for children (docs/96): short, plain, say what is wrong.
 Sel.ReasonText = {
     wrong_stage = "Not the right stage",
-    missing_pattern = "Older dino: can't fuse",
+    missing_pattern = "No pattern: can't fuse",
     species_mismatch = "Different dino",
     pattern_mismatch = "Different pattern",
     locked = "Locked",

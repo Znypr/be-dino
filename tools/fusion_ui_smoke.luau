@@ -334,7 +334,7 @@ fusionRemote.Parent = Remotes
 assert(Menu.available())
 Menu.open() runFor(8)
 assert(#cards(screen) == 64, "paged list filtered to Base: " .. #cards(screen))
-assert(has(screen, "Older dino: can't fuse") and not has(screen, "Unknown pattern"), "legacy copy with nil genes explained in plain words")
+assert(has(screen, "No pattern: can't fuse") and not has(screen, "Unknown pattern"), "legacy copy with nil genes explained in plain words")
 assert(not has(screen, "Not the right stage"), "wrong-stage copies are hidden, never listed")
 assert(has(screen, "Tap 6 Compy, or Fill for me."), "goal sentence: " .. byName(screen, "Goal").Text)
 assert(byName(screen, "Filters") == nil, "filter chips collapsed behind the Filter button")

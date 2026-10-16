@@ -984,11 +984,11 @@ local function runRewardText(outcome): string
     for _, stack in outcome.stacks or {} do -- legacy Build 020 operation replay only
         table.insert(parts, string.format("%dx %s", stack.count, stack.speciesId))
     end
-    table.insert(parts, if eggs == 1 then "1 run egg" elseif eggs > 0 then string.format("%d run eggs", eggs) else "no run eggs")
+    table.insert(parts, if eggs == 1 then "1 egg" elseif eggs > 0 then string.format("%d eggs", eggs) else "no eggs")
     local nests = outcome.nestCount or 0
-    if nests > 0 then table.insert(parts, if nests == 1 then "1 egg nest" else string.format("%d egg nests", nests)) end
+    if nests > 0 then table.insert(parts, if nests == 1 then "1 nest" else string.format("%d nests", nests)) end
     if outcome.nestFull then table.insert(parts, "nest storage full") end
-    return table.concat(parts, " | ")
+    return table.concat(parts, " + ")
 end
 
 -- BD-044 settlement: catches -> exactly that many run eggs (capped per run), plus

@@ -28,7 +28,10 @@ Rules.GateHeight = 20
 Rules.FallRecess = {halfWidth = 20, front = -1, back = 7} -- dz range around Layout.Fall.z carved behind the sheet
 -- Cave-only colours (the island uses none of these three): warm stone floor and warm tan walls, so the hall reads soft and calm
 -- (docs/87) instead of the island's dark teal Rock / Slate / Basalt. Island material colours are untouched.
-Rules.Colors = {Cobblestone = {164, 152, 138}, Limestone = {196, 172, 150}, CrackedLava = {255, 120, 40}}
+-- BD-384 look pass: cooler, softer grey-lilac stone (the warm lamps and the cave grade carry the colour) instead of hot orange
+-- cracked sandstone. Only Cobblestone, Limestone and CrackedLava are recoloured (terrain colours are place-wide, and the island uses
+-- Sandstone, Slate, Rock and Basalt), so the walls and floor are built from those two only; the island palette is untouched.
+Rules.Colors = {Cobblestone = {126, 122, 130}, Limestone = {160, 154, 158}, CrackedLava = {255, 120, 40}}
 Rules.Materials = {"Air", "Rock", "Limestone", "Sandstone", "Slate", "Basalt", "Cobblestone", "Grass", "LeafyGrass", "CrackedLava"}
 
 local SCALE = 95 -- studs per norm unit used for the wall signed distance (a conservative mean of the 105.5 / 125 radii)
@@ -78,6 +81,12 @@ function Rules.column(x: number, z: number): any
     return col
 end
 
+-- BD-384: the real (rough) ceiling surface height at a world (x, z): what stalactites hang from. Layout.ceilingY is the smooth ideal;
+-- the shell's ceiling differs from it by up to +-CeilingRough studs, which made stalactites float.
+function Rules.ceilingAt(x: number, z: number): number
+    return Layout.ceilingY(x, z) + (relief(x, z, 17, 9.7) - 0.5) * 2 * Rules.CeilingRough
+end
+
 -- Signed distance to the air (> 0 inside air) at height y in a column.
 local function airSd(col: any, y: number): number
     local air = math.min(col.dIn, y - col.floorTop, col.ceil - y)
@@ -117,8 +126,9 @@ local function material(col: any, y: number, air: number): string
     end
     -- walls, ceiling, roof and deep rock
     if -air > 10 then return "Rock" end
-    local v = relief(x + y * 0.7, z - y * 0.4, 8, 12.9)
-    if v > 0.78 or v < 0.15 then return "Sandstone" end
+    -- BD-384: big slow patches (scale 22, not 8) of two cave-only stones: no smeared grid, no dark smudges, no island Sandstone
+    local v = relief(x + y * 0.7, z - y * 0.4, 22, 12.9)
+    if v > 0.7 then return "Cobblestone" end
     return "Limestone"
 end
 

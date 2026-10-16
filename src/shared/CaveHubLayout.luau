@@ -168,7 +168,9 @@ local SCATTER = {
     {"cave_stalagmite_l", 8}, {"cave_stalagmite_s", 18}, {"cave_rock_round", 20}, {"cave_rock_flat", 14},
     {"rock_mossy_boulder", 6}, {"rock_crystal", 4}, {"rock_pebbles", 10}, {"cave_moss_patch", 24},
     {"cave_stalactite", 24}, {"cave_moss_hang", 10},
-    {"cave_stalagmite_cluster", 4}, {"cave_wall_boulder_l", 10}, {"cave_wall_pillar", 6}, {"cave_wall_arch_small", 2},
+    {"cave_stalagmite_cluster", 4}, {"cave_wall_boulder_l", 16}, {"cave_wall_pillar", 10}, {"cave_wall_arch_small", 4},
+    -- BD-384 look pass: more rock forms along the rim (above), stalagmite clusters at the floor edge, moss near the lava glow
+    {"cave_stalagmite_cluster", 8, "edge"}, {"cave_stalagmite_s", 8, "edge"}, {"cave_moss_patch", 8, "lava"},
 }
 local WALLPIECES = {cave_wall_boulder_l = true, cave_wall_pillar = true, cave_wall_arch_small = true} -- put near the wall rim
 local LAVA_PROPS = {rim = 6, steps = 4}
@@ -395,7 +397,7 @@ function CaveHubLayout.get(): any
         return true
     end
     for _, e in SCATTER do
-        local key, count = e[1], e[2]
+        local key, count, zone = e[1], e[2], e[3]
         local k = KINDS[key]
         local br = boundRadius(k)
         local hang = k.hang == true
@@ -412,10 +414,15 @@ function CaveHubLayout.get(): any
                     if insideFloorLocal(x, z, 1.5) then break end
                     x, z = x * 0.98, z * 0.98
                 end
-            elseif WALLPIECES[key] then
+            elseif zone == "lava" then
+                -- moss around the lava glow (the pool itself stays clear)
+                local a = rand() * 2 * math.pi
+                local r = POOL.r + 9 + rand() * 12
+                x, z = POOL.x + math.cos(a) * r, POOL.z + math.sin(a) * r
+            elseif WALLPIECES[key] or zone == "edge" then
                 local a = rand() * 2 * math.pi
                 local w = wobble(a)
-                local f = 0.8 + rand() * 0.12
+                local f = if zone == "edge" then 0.7 + rand() * 0.14 else 0.8 + rand() * 0.12
                 x, z = math.cos(a) * BASE_X * w * f, math.sin(a) * BASE_Z * w * f
             else
                 x, z = (rand() * 2 - 1) * CaveHubLayout.BoxHalfX, (rand() * 2 - 1) * CaveHubLayout.BoxHalfZ
@@ -488,7 +495,7 @@ end
 
 -- ---------------------------------------------------------------- budgets (docs/104 s3.1)
 CaveHubLayout.Budget = {
-    rocks = {parts = 170, tris = 400000}, station = {parts = 120, tris = 300000}, lava = {parts = 12, tris = 20000},
+    rocks = {parts = 190, tris = 400000}, station = {parts = 120, tris = 300000}, lava = {parts = 12, tris = 20000},
     lights = {parts = 48, tris = 10000}, colliders = {parts = 60, tris = 0},
     total = {parts = 410, tris = 730000},
 }

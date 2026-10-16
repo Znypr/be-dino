@@ -12,6 +12,9 @@ local PrivateState = require(script.Parent.PrivateState)
 local Rules = require(Shared:WaitForChild("HudRules"))
 local Theme = require(Shared:WaitForChild("UITheme"))
 local Ftue = require(Shared:WaitForChild("FtueRules"))
+local Copy = require(Shared:WaitForChild("FtueP1"))
+local ProgressionConfig = require(Shared:WaitForChild("ProgressionConfig"))
+local ProgressionRules = require(Shared:WaitForChild("ProgressionRules"))
 local Assets = require(Shared:WaitForChild("EffectAssets"))
 local Sfx = require(Shared:WaitForChild("Sfx"))
 
@@ -86,6 +89,7 @@ function Hud.attach(hud: Frame, gui: ScreenGui, hooks: any?)
     hintLabel = hint
     local sessionCatch, nearFood, lastNear = false, false, -10
     local lastMoment, momentsThisRun, wasRunning = nil :: number?, 0, false
+    local pendingEggs, pendingMutation, tagsSeen = 0, nil :: string?, 0 -- BD-378: eggs found since the last toast (merged into one)
     local function foundBefore(): boolean
         local copies = 0
         local ok, collection = pcall(function() return game:GetService("HttpService"):JSONDecode(PrivateState.get("CollectionJson") :: string) end)
@@ -127,15 +131,30 @@ function Hud.attach(hud: Frame, gui: ScreenGui, hooks: any?)
             Theme.animate(pop, Rules.PopSeconds, {Scale = 1}, Enum.EasingStyle.Back)
         end
         -- BD-367: a clear, calm "you found an egg" moment (sparkle, soft cue, toast); one at a time, Reduce Motion: no sparkle.
-        if running and not wasRunning then momentsThisRun = 0 end
+        if running and not wasRunning then momentsThisRun, pendingEggs, pendingMutation, tagsSeen = 0, 0, nil, 0 end
         wasRunning = running
         local nowEggs = if typeof(eggs) == "number" then eggs else 0
-        if running and nowEggs > (previous or nowEggs) then sessionCatch = true end
-        if Ftue.momentAllowed(previous, nowEggs, running, if lastMoment then os.clock() - lastMoment else nil, momentsThisRun) then
+        local special = false
+        if running and nowEggs > (previous or nowEggs) then
+            sessionCatch = true
+            pendingEggs += nowEggs - (previous or nowEggs)
+            -- A weather egg (event mutation) is named in the SAME toast; the second "caught!" card is gone (BD-378).
+            local ok, tags = pcall(function() return game:GetService("HttpService"):JSONDecode((character :: Model):GetAttribute("RunEggEvents") or "[]") end)
+            if ok and typeof(tags) == "table" then
+                for i = #tags, tagsSeen + 1, -1 do
+                    local mutation = ProgressionRules.item(ProgressionConfig.EventMutations, (tags[i] :: any).mutationId or "")
+                    if mutation and not pendingMutation then pendingMutation, special = mutation.name, true end
+                end
+                tagsSeen = #tags
+            end
+        end
+        if Ftue.momentAllowed(previous, nowEggs, running, if lastMoment then os.clock() - lastMoment else nil, momentsThisRun) or special then
             lastMoment, momentsThisRun = os.clock(), momentsThisRun + 1
             if character then sparkle(character) end
             Sfx.playAlias(Ftue.SoundAlias)
-            if hooks and hooks.notify then hooks.notify(Ftue.FoundText, C.gold, {key = "egg_found", icon = "egg"}) end
+            local toastText, toastBody = Copy.foundToast(pendingEggs, pendingMutation)
+            pendingEggs, pendingMutation = 0, nil
+            if hooks and hooks.notify then hooks.notify(toastText, C.gold, {key = "egg_found", icon = "egg", body = toastBody}) end
         end
         previous = nowEggs
         bar.Visible = running

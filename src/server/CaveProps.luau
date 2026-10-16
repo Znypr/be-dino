@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Layout = require(ReplicatedStorage.Shared.CaveHubLayout)
 local Props = require(ReplicatedStorage.Shared.CaveHubProps)
 local SignCopy = require(ReplicatedStorage.Shared.HubSignCopy)
+local TerrainRules = require(ReplicatedStorage.Shared.CaveTerrainRules)
 local CaveProps = {}
 local signGuis = 0 -- sign texts placed this build (capped by Props.MaxSignGuis)
 
@@ -44,6 +45,15 @@ local function floorAt(params: RaycastParams, x: number, z: number): number
     local hit = workspace:Raycast(Vector3.new(x, Layout.FloorY + 30, z), Vector3.new(0, -60, 0), params)
     if hit and math.abs(hit.Position.Y - Layout.FloorY) < 6 then return hit.Position.Y end
     return Layout.floorHeight(x, z)
+end
+
+-- BD-384: terrain ceiling height above (x, z): a raycast UP against Terrain, falling back to the shell rule (the rough ceiling the
+-- voxels are written from). Stalactites hang from this so they touch the rock instead of floating below it.
+local function ceilingAt(params: RaycastParams, x: number, z: number): number
+    local rule = TerrainRules.ceilingAt(x, z)
+    local hit = workspace:Raycast(Vector3.new(x, Layout.FloorY + 4, z), Vector3.new(0, 90, 0), params)
+    if hit and math.abs(hit.Position.Y - rule) < 6 then return hit.Position.Y end
+    return rule
 end
 
 local function colliderHeight(owner: string): number
@@ -112,7 +122,7 @@ local function place(folder: Folder, params: RaycastParams, p: any, template: Me
     local h = mesh.Size.Y
     local y: number
     if key == "cave_stalactite" then
-        y = Layout.ceilingY(p.x, p.z + cz) + 1.5 - h / 2 -- top buried in the ceiling
+        y = ceilingAt(params, x, z) + 1.0 - h / 2 -- top buried 1 stud in the real ceiling surface (BD-384: no floating cones)
     elseif key == "cave_moss_hang" then
         y = floorAt(params, x, z) + 7 + h / 2
         yaw = Layout.yawTo(-p.x, -p.z)
