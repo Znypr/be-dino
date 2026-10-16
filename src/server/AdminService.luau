@@ -20,6 +20,7 @@ local function publish(key: string, value: number)
     values[key] = value
     workspace:SetAttribute("Admin_" .. key, value)
     if key == "foodMultiplier" then FoodService.setAdminFoodMultiplier(value) end
+    if key == "mutationChanceMultiplier" then FoodService.setAdminMutationMultiplier(value) end
     if key == "gravity" then workspace.Gravity = value end
     if key == "jumpPower" then
         -- Server-validated range (Rules.sanitize); applies to live characters, Dinosaur.attach reads the attribute for new ones.

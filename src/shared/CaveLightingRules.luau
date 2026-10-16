@@ -29,7 +29,7 @@ Rules.FxPartBudget = 16 -- shaft beams (2 per hole) + dust volumes (1 per hole) 
 -- Cave-only look (applied only while the player is inside the hub, restored on leaving; nothing here touches the island).
 Rules.Look = {
     -- BD-398: a lit cave, not a bright hall: low warm-dim ambient, lower Lighting.Brightness and exposure; the lamps and shafts are the main lights
-    ambient = {70, 62, 60}, outdoorAmbient = {66, 58, 56}, colorShiftTop = {255, 222, 180}, exposure = -0.2, brightness = 1.3, shadowSoftness = 0.35,
+    ambient = {104, 92, 82}, outdoorAmbient = {98, 86, 76}, colorShiftTop = {255, 222, 180}, exposure = -0.2, brightness = 1.3, shadowSoftness = 0.35,
     fogStart = 160, fogEnd = 900, fogColor = {72, 56, 46}, -- owner "why so hazy": fog starts far, near props are never milked
     atmosphere = {density = 0.04, offset = 0, haze = 0, glare = 0, color = {214, 188, 160}, decay = {150, 104, 72}},
     grade = {brightness = -0.05, contrast = 0.08, saturation = 0.05, tint = {255, 226, 196}}, -- one soft shared warm grade warms the props, clear not milky (saturation >= 0) (MeshPart.Color is ignored on textured meshes)
@@ -78,6 +78,9 @@ function Rules.get(): any
         elseif owner == "crystal" then
             local o = style.outward
             add(owner, style.x + math.cos(o) * style.r * 0.6 + (if n == 1 then -3 else 3), FY + 3, style.z + math.sin(o) * style.r * 0.6, Rules.CrystalColor, 20, 0.45)
+        elseif owner == "tunnel" or owner == "heartwall" then
+            -- lantern niche in the wall: a warm light at head height beside the path
+            add(owner, entry.x, FY + 7, entry.z, Rules.FillColor, 22, 0.8)
         elseif owner == "forge" then
             add(owner, fusion.x, FY + 3, fusion.z, Rules.ForgeColor, 24, Rules.Forge.base, {pulse = true})
         elseif owner == "gate" then
@@ -124,9 +127,9 @@ end
 
 -- Show-off spot in WORLD x, z, yaw (the Heart pedestal), or nil when the Heart has no pedestal.
 function Rules.showOffSpot(): any
-    for _, p in Layout.get().props do
-        if p.key == "hub_pedestal" and p.owner == "heart" then
-            return {x = p.x, z = p.z + Layout.CenterZ, yaw = p.yaw, standHeight = Rules.ShowOff.standHeight}
+    for _, lg in Layout.get().ledges do
+        if lg.owner == "heart_plinth" then
+            return {x = lg.x, z = lg.z + Layout.CenterZ, yaw = Layout.yawTo(-lg.x, -lg.z), standHeight = Rules.ShowOff.standHeight}
         end
     end
     return nil

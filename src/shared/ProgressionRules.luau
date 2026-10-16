@@ -25,9 +25,15 @@ function Rules.validEvents(events): boolean
     return true
 end
 function Rules.knownEventMutation(id): boolean return Rules.item(Config.EventMutations,id)~=nil end
-function Rules.eventEgg(eventId,roll)
+-- chanceScale (BD-237, playtest admin only) multiplies the weather chance, capped at 100%. nil, non-numbers, NaN and
+-- anything below 1 mean x1, so no caller can ever lower the shipped chance.
+function Rules.scaledChance(chance: number, chanceScale: any): number
+    local scale=if typeof(chanceScale)=="number" and chanceScale==chanceScale and chanceScale>=1 then chanceScale else 1
+    return math.min(1,chance*scale)
+end
+function Rules.eventEgg(eventId,roll,chanceScale)
     local event=Rules.item(Config.Weather,eventId)
-    return {eventId=if event then event.id else "clear",mutationId=if event and roll<event.chance then event.mutation else ""}
+    return {eventId=if event then event.id else "clear",mutationId=if event and roll<Rules.scaledChance(event.chance,chanceScale) then event.mutation else ""}
 end
 function Rules.validEgg(metadata): boolean
     if typeof(metadata)~="table" then return false end

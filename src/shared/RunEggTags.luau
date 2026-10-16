@@ -16,11 +16,12 @@ end
 -- (mutationId is "" unless that egg's roll hit the weather chance; this keeps the legacy FoodService format). `events` is the
 -- already decoded RunEggEvents list (mutated in place and returned). roll() returns a number in [0,1).
 -- Returns the list and how many MUTATED tags were added.
-function Tags.apply(events: {any}, weatherId: string, before: number, after: number, roll: () -> number): ({any}, number)
+-- chanceScale is the playtest-only admin "Mutation chance" multiplier (BD-237); nil means the shipped chance.
+function Tags.apply(events: {any}, weatherId: string, before: number, after: number, roll: () -> number, chanceScale: number?): ({any}, number)
     local added = 0
     if after <= before or weatherId == "clear" then return events, 0 end
     for n = before + 1, after do
-        local tag = Rules.eventEgg(weatherId, roll())
+        local tag = Rules.eventEgg(weatherId, roll(), chanceScale)
         if tag.eventId ~= "clear" then
             tag.n = n
             table.insert(events, tag)
