@@ -60,3 +60,11 @@ All numbers PROVISIONAL. Branch `claude/world-v2`.
 - **Grass:** terrain no longer one Grass colour (material mix + colours by biome, dappled by 2-octave noise); Terrain Decoration on; ground cover is clustered by a patch noise field with 1-2 companions per tuft, flower meadows from a bloom field, random yaw/scale 1.7-2.9x, no grid.
 - **Budget (Studio measured, playtest):** ~7,384 BaseParts client side (4,625 kit + 2,375 food + ~400 other) under the 8,000 ceiling. `verify_world_art.py` asserts world <= 5,000, food <= 2,600, total <= 8,000 with 600 other.
 - **Haze:** server creates a gentle `WorldHaze` Atmosphere (density .22, haze 1.15); WeatherVisuals adopts it as its base.
+
+## World density v3 (BD-167, 2026-10-16, branch claude/world-density-v3)
+All numbers PROVISIONAL; offline estimate only, Studio/phone not re-measured. Uses ONLY the 41 registered kit meshes (no new asset ids).
+- **Variety per biome:** every tree family (canopy, conifer, cycad, dead) now grows in at least 3 sub-biomes and both rock families (mossy, bare) in all 6, e.g. burnt conifers on volcanic slopes, an oasis cycad in the badlands, bare rocks in the fern forest and marsh, mushrooms in the badlands. Cover flowers up in the meadow.
+- **Scale and colour:** scale ranges widened (trees .9-1.6, rocks .85-1.8, shrubs 1.1-2.3, cover 1.6-3.0; giants unchanged 2.4-4). `BiomePlacement.tint` gives each prop a deterministic multiplicative tint (channels 0.72-1.0, warmer in badlands/volcanic, cooler in marsh/conifer) applied to the white MeshPart in `Arena.biomeKit`; landmarks keep their art colours. Needs a Studio look (vertex colours x tint).
+- **Undergrowth:** about half of all trees get 1-2 ferns/bushes/mushrooms (the biome shrub list) 1.6-4.2 studs from the trunk, layer `shrub` so PropGround rules, path/keep-out/water/overlap checks apply; cap 190 at density 1.
+- **Budget:** `PartBudget` 3,700 -> 3,800 (kit 4,625 -> 4,750 at density 1.25; 3,686 placements, 1,259 shrubs). Offline join estimate 8,950 of 9,150 (verify_world_art TOTAL_MAX 9,000); phone worst-spot parts 3,673 of cap 3,980 (WARN vs rule of thumb 3,000 unchanged). Food (3,600 pickups) and FoodService numbers untouched.
+- **Still TODO:** genuinely new meshes (birch, palm, more bushes/mushrooms/flowers/reeds/pebbles/rocks): docs/77 `TODO_world_kit_v3_species`, docs/120.

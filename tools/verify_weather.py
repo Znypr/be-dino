@@ -26,6 +26,9 @@ for _, id in IDS do
     for _, key in REQUIRED do assert(look[key] ~= nil, id .. " lacks " .. key) end
     for _, key in {"tint", "fog", "decay", "rayTint", "shiftTop", "shiftBottom", "glow"} do rgbOk(look[key]) end
     if look.amb then rgbOk(look.amb) end
+    -- BD-055: every event sets Terrain.Clouds; thunder is the heaviest cover, aurora and clear sky stay open
+    assert(look.cloudCover >= 0 and look.cloudCover <= 1 and look.cloudDensity >= 0 and look.cloudDensity <= 1, id .. " cloud range")
+    rgbOk(look.cloudColor)
     assert(look.density > 0 and look.density <= 1, id .. " density")
     assert(look.haze > 0 and look.haze <= 10, id .. " haze")
     assert(look.vis >= 40 and look.vis <= 600 and look.fogStart < look.vis, id .. " fog distances")
@@ -132,7 +135,12 @@ local _, eh = W.fog(W.Looks.blizzard, .5, C, math.huge) assert(eh > 110 and eh <
 -- BD-213 soft visibility: clear weather keeps a gentle far haze; per device class the fog end stays inside the prop cull
 -- radius (props detach/attach only where they are already fully fogged), the fade spans >= 55% of the view, the near
 -- 25 studs stay clear (blizzard whiteout excepted) and FogEnd only ever closes in smoothly over the event ramp.
-assert(C.fogStart >= 100 and C.vis >= 500 and C.vis <= 1500, "clear weather keeps a gentle far haze")
+assert(C.fogStart >= 150 and C.vis >= 900 and C.vis <= 1500, "clear weather: fog starts far, no milky wash")
+assert(W.ClearFog.Desktop.fogStart >= 400 and W.ClearFog.Desktop.fogEnd >= 1400, "desktop clear fog 400..1400")
+assert(W.ClearFog.Tablet.fogStart >= 250 and W.ClearFog.Tablet.fogEnd >= 700, "tablet clear fog 250..700")
+assert(W.capFor("Desktop", 440) >= 1400 and W.capFor("Phone", 190) == W.fogCap(190), "phone stays cull-capped")
+assert(W.clearFor("Phone") == W.Looks.clear and W.clearFor("Desktop").vis == 1400)
+assert(C.sat >= 0 and C.sat <= .15 and C.contrast >= 0 and C.bloom == 0 and C.dof == 0 and C.haze == 0, "clear grade crisp: saturation >= 0, no bloom, no DoF")
 assert(W.CullMargin < 1 and W.SoftRatio <= .5)
 for class, radius in CULL do
     local cap = W.fogCap(radius)
@@ -148,6 +156,8 @@ for class, radius in CULL do
         end
     end
 end
+assert(W.Looks.thunder.cloudCover == 1 and W.Looks.aurora.cloudCover <= .2 and W.Looks.clear.cloudCover < 0, "cloud cover per event")
+assert(W.Swell.peak <= .15 and W.Swell.rate <= 1, "Reduce Motion thunder swell is slow and soft")
 print("WeatherLooks passed")
 
 -- weather audio table: ids stay empty until uploaded, volumes are kids-quiet, every event has a bed, fades are bounded
