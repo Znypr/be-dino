@@ -105,7 +105,9 @@
         },
         {
           "at": 0.5,
-          "kind": "startHatch"
+          "kind": "startHatch",
+          "repeatCount": 14,
+          "gap": 4.2
         }
       ]
     }

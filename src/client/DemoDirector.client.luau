@@ -111,7 +111,10 @@ local function fire(trig: any)
         local pos = if trig.pos then Vector3.new(trig.pos[1], trig.pos[2], trig.pos[3]) else spotPosition(trig.spot)
         if root and pos then (root :: BasePart).CFrame = CFrame.new(pos) end
     elseif trig.kind == "startHatch" then
-        player:SetAttribute("DemoStartHatch", true)
+        for _ = 1, trig.repeatCount or 1 do -- one press opens the first egg; each repeat taps "next egg" like a player would
+            player:SetAttribute("DemoStartHatch", true)
+            task.wait(trig.gap or 5)
+        end
     elseif trig.kind == "hud" then
         setHud(trig.visible)
     elseif trig.kind == "note" then
