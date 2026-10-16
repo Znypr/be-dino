@@ -111,6 +111,8 @@ Props.SignText = {
     hub_sign_stone = {face = "Front", inset = 0.12},
     hub_sign_arrow = {face = "Front", inset = 0.18},
 }
+Props.SignLightInfluence = 0 -- self-lit: lamp light does not dim the word (BD-292)
+Props.SignBrightness = 2 -- SurfaceGui brightness boost so cream text stays readable in the dim cave
 Props.MaxSignGuis = 12 -- SurfaceGuis are not Parts, but they cost render time: never more than this many sign texts
 
 -- Uniform factor that scales a loaded asset of size `mesh` to the target box `target` (both {x, y, z}): the axis with the
