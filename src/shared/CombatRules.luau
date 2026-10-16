@@ -35,7 +35,8 @@ end
 -- Class per species from the low-poly registry (docs/101 s2, s16); unknown species are Ground.
 function Rules.classForSpecies(speciesId: any): string
     local entry = if typeof(speciesId) == "string" then (LowPoly :: any)[speciesId] else nil
-    local class = if entry then entry.class else nil
+    local listed = if typeof(speciesId) == "string" then (Cfg.SpeciesClasses :: any)[speciesId] else nil -- BD-246 config first
+    local class = if listed ~= nil then listed elseif entry then entry.class else nil
     if typeof(class) == "string" and (Cfg.Classes :: any)[class] then return class end
     return Cfg.DefaultClass
 end
