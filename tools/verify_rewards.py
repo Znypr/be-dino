@@ -95,9 +95,10 @@ local script={Parent={Config="Config"}}
 local require=function(id) if id=="Identity" then return Identity end return GameConfig end
 local FusionOdds=@@FUSION_ODDS@@
 local PrivateStateStub={set=function(p,k,v) p.attrs[k]=v end,get=function(p,k) return p.attrs[k] end,forget=function() end} -- BD-360: the real module is tested by verify_private_state; here owner-only values land in attrs
-local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState"}}
+local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState",RareHatchService="RareHatchService"}}
 local require=function(id)
  if id=="PrivateState" then return PrivateStateStub end
+ if id=="RareHatchService" then return {record=function() end} end -- BD-428: tested by verify_rare_hatch
  if id=="FusionOdds" then return FusionOdds end
  if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics
  elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig
