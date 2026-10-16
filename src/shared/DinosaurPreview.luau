@@ -57,9 +57,9 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
     local model=Resources.clone(speciesId,if traits then traits.genes else nil,true)
     if model and not viewport.Parent then model:Destroy();return false end
     -- Species with authored data must show the authored mesh, never any other (box) model.
-    if model and Authored.has(speciesId) and not model:GetAttribute("AuthoredCreature") then model:Destroy() model=nil end
+    if model and model:GetAttribute("LowPoly")~=true and Authored.has(speciesId) and not model:GetAttribute("AuthoredCreature") then model:Destroy() model=nil end
     -- Never show a model whose mesh content is not really loaded (it renders as a textured box).
-    if model and not Authored.verify(model) then model:Destroy() model=nil end
+    if model and model:GetAttribute("LowPoly")~=true and not Authored.verify(model) then model:Destroy() model=nil end
     if model then
         local world=Instance.new("WorldModel") world.Parent=viewport
         local lowPoly=model:GetAttribute("LowPoly")==true
