@@ -1,7 +1,6 @@
 --!strict
--- BD-312 / docs/87: the client side of the wild predators' look. (1) A gentle idle/walk bob on the simple NPC models (they are
--- server-made, not the client-only low-poly rigs, so LowPolyAnimator cannot pose them; reusing it needs a bigger change, see the
--- kanban row). (2) The soft fade-out when the server marks a defeated NPC NpcFading (0.6 s, 0.15 s under Reduce Motion).
+-- BD-312 / docs/87: the client side of the wild predators' look. (1) A gentle idle/walk bob on the LEGACY simple NPC models. Low-poly
+-- NPCs (model attribute NpcLowPoly, BD-324) are animated by LowPolyAnimator instead, with the same LowPolyPose functions as players. (2) The soft fade-out when the server marks a defeated NPC NpcFading (0.6 s, 0.15 s under Reduce Motion).
 -- Pure maths: Shared/NpcPredatorRules (bobOffset, fadeSeconds). Started by CombatHud.attach, so with Config.CombatEnabled false
 -- nothing in this file ever runs.
 local RunService = game:GetService("RunService")
@@ -54,7 +53,8 @@ function Motion.attach()
                 continue
             end
             local root = model:FindFirstChild("HumanoidRootPart")
-            if root and root:IsA("BasePart") and (not camera or (camera.CFrame.Position - root.Position).Magnitude <= RANGE) then
+            -- BD-324: low-poly NPCs are posed by LowPolyAnimator (same pose functions as players); the bob is for the legacy models only
+            if model:GetAttribute("NpcLowPoly") ~= true and root and root:IsA("BasePart") and (not camera or (camera.CFrame.Position - root.Position).Magnitude <= RANGE) then
                 bob(model, root, dt)
             end
         end
