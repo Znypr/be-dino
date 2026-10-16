@@ -493,7 +493,7 @@ render=function(name: string)
             button(body,"ODDS / DETAILS",270,cardsY+119,535,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("oddsSimple") end)
             button(body,"BUY EGG",270,cardsY+targetHeight+130,535,targetHeight,C.accent,function() open("eggPurchase") end)
             -- BD-391/405 (docs/115 D22): Fast travel perk, bought with crystals. PROVISIONAL price. Walking stays the default.
-            if Config.FastTravelPerk and Config.CaveHub then
+            if Config.FastTravelPerk and Config.CaveHub and require(Shared.FtueP1).fastTravelEntryShown(num("AccountLevel"),type(p.perks)=="table" and p.perks.fastTravel==true) then -- BD-447
                 local owned=type(p.perks)=="table" and p.perks.fastTravel==true
                 local perkPrice=ProgressionConfig.FastTravelPrice
                 label(body,"Fast travel: zip to the shops",0,math.max(cardsY+targetHeight*2+150,336),520,34,22,C.gold)

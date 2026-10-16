@@ -68,6 +68,13 @@ function P.noCrystalsHintShown(crystals: number, tab: string): boolean
     return crystals <= 0 and tab ~= "crystals"
 end
 
+-- BD-447 (docs/132): the Fast travel perk entry stays hidden in the first minutes (level 1 = the first run or two); it shows from
+-- account level 2, or at once if the player already owns it. Walking stays the default.
+P.FastTravelLevel = 2
+function P.fastTravelEntryShown(level: number, owned: boolean): boolean
+    return owned or level >= P.FastTravelLevel
+end
+
 -- BD-372 shop day one ------------------------------------------------------------------------------------------------------
 -- The condition upgrade button. enabled=false draws a grey button with the reason; a green action never sits over a lock.
 function P.upgradeButton(upgrade: any, level: number, crystals: number): (string, boolean)

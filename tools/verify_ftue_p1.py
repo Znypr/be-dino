@@ -48,6 +48,7 @@ local function has(list, v) for _, x in list do if x == v then return true end e
 assert(not has(P.shopTabs(1), "conditions") and not has(P.shopTabs(2), "conditions") and has(P.shopTabs(3), "conditions"))
 assert(#P.shopTabs(1) == 4 and #P.shopTabs(3) == 5 and P.shopTabs(1)[4] == "crystals")
 assert(P.noCrystalsHintShown(0, "auras") and not P.noCrystalsHintShown(5, "auras") and not P.noCrystalsHintShown(0, "crystals"))
+assert(not P.fastTravelEntryShown(1, false) and P.fastTravelEntryShown(2, false) and P.fastTravelEntryShown(1, true), "BD-447 perk entry gate")
 assert(P.NoCrystalsHint == "Play a run to earn crystals!" and #P.NoCrystalsHint <= 40)
 
 -- BD-374 controls
