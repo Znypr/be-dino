@@ -34,11 +34,16 @@ Tier.SparkleLife = {1.0, 1.4}
 function Tier.sparkleAlive(entry: Entry, lite: boolean): number
     return entry.sparkleCount / Tier.SparkleBase * Tier.SparkleLife[2] * (if lite then 0.5 else 1)
 end
--- 2026-10-16 round 9: baked crystal-coat maps (Blender bakes, resources/effects/tiers/, docs/77). TODO(owner): upload the PNGs and paste the
--- asset ids here; while an id is empty the shell stays a plain Glass part (Color/Transparency/Reflectance above). ColorMap = tier colour WITH alpha
--- (facet-varying 0.25..0.6, opaque facet edge lines); Normal / Roughness are shared by all tiers. Tileable, so they work on any UVs.
+-- 2026-10-16 round 9: baked crystal-coat maps (Blender bakes in each part's ORIGINAL Roblox UV space, resources/effects/tiers/raptor-<part>-<tier>-color.png,
+-- docs/77). ColorMap = tier colour WITH alpha: ~0.9 at silhouette / thin edges (view-averaged edge value), ~0.1 in the middle so the stripes show,
+-- plus a few large facet highlights. TODO(owner): upload the PNGs and paste the asset ids. While an id is empty the shell stays a plain Glass part.
+-- Maps.color[species][partName][tierId] = rbxassetid string. Normal / Roughness are tileable large-facet maps shared by all tiers.
+-- Only the raptor (T-Rex) has been baked; other species keep the plain Glass shell until their OBJ+UVs are exported.
+local RAPTOR_PARTS = {"body_geom", "head_geom", "tail_geom", "leftarm_geom", "rightarm_geom", "leftleg_geom", "rightleg_geom"}
+local raptorColor = {}
+for _, part in RAPTOR_PARTS do raptorColor[part] = {gold = "", emerald = "", diamond = ""} end
 Tier.Maps = {
-    gold = {color = ""}, emerald = {color = ""}, diamond = {color = ""},
+    color = {raptor = raptorColor},
     normal = "", roughness = "",
 }
 Tier.AccentWords = {"claw", "toe", "horn", "spike", "tooth", "teeth", "nail"}

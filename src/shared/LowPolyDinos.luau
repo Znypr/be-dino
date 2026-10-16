@@ -176,11 +176,12 @@ local function shells(container: Instance, entry: any?)
             shell.Material = (Enum.Material :: any)[entry.shellMaterial] or Enum.Material.SmoothPlastic
             shell.Reflectance = math.min(entry.shellReflectance, Tier.MaxShellReflectance)
             shell.Transparency = math.clamp(entry.shellTransparency, Tier.ShellTransparency[1], Tier.ShellTransparency[2])
-            local maps = (Tier.Maps :: any)[entry.id]
-            if maps and maps.color ~= "" then -- baked crystal coat: alpha lives in the ColorMap, so the part itself is opaque
+            local bySpecies = (Tier.Maps :: any).color[tostring(container:GetAttribute("LPSpecies") or container.Name)]
+            local mapId = if bySpecies and bySpecies[p.Name] then bySpecies[p.Name][entry.id] else nil
+            if mapId and mapId ~= "" then -- baked crystal coat: alpha lives in the ColorMap, so the part itself is opaque
                 local sa = Instance.new("SurfaceAppearance")
                 sa.AlphaMode = Enum.AlphaMode.Transparency
-                sa.ColorMap = maps.color
+                sa.ColorMap = mapId
                 sa.NormalMap, sa.RoughnessMap = (Tier.Maps :: any).normal, (Tier.Maps :: any).roughness
                 sa.Parent = shell
                 shell.Transparency = 0
