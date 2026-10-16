@@ -235,6 +235,13 @@ def luau_check(runner):
         err('Tier.templateName / TemplateFolder differ from tools/tier_coat.py')
 
 
+# Lead Studio tuning 2026-10-17: gold templates carry a warm Color tint (the v2 gold edge reads pale yellow without it)
+if tier_coat.COAT_TINT.get('gold') != (255, 175, 45):
+    err('gold coat tint must be 255,175,45 (lead Studio tuning)')
+if 'tier_coat.COAT_TINT' not in (ROOT / 'tools/build.py').read_text(encoding='utf-8'):
+    err('build.py must write the per-tier coat tint into the templates')
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--runner', required=True)

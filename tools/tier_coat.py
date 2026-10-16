@@ -12,6 +12,9 @@ TIER_SOURCE = "src/shared/LowPolyTier.luau"
 FOLDER = "TierCoatTemplates"
 TIERS = ("gold", "emerald", "diamond")
 ALPHA_MODE_TRANSPARENCY = 1  # Enum.AlphaMode: Overlay 0, Transparency 1, TintMask 2
+# SurfaceAppearance.Color per tier (multiplies the ColorMap). Lead Studio tuning 2026-10-17: the v2 gold edge read pale yellow;
+# a warm tint makes it read as rich gold. Emerald/diamond keep white (their maps already carry the right hue).
+COAT_TINT = {"gold": (255, 175, 45)}
 ID_RE = re.compile(r"rbxassetid://[1-9][0-9]{5,18}")
 _TOKEN = re.compile(r'\s*(?:(--[^\n]*)|("(?:[^"\\]|\\.)*")|([A-Za-z_][A-Za-z0-9_]*)|([{}=,]))')
 

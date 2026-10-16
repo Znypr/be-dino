@@ -137,6 +137,11 @@ def add_tier_coat_templates(root, item, project_root):
                 content = ET.SubElement(props, "Content", {"name": key})
                 ET.SubElement(content, "url").text = t[key]
         ET.SubElement(props, "token", {"name": "AlphaMode"}).text = str(tier_coat.ALPHA_MODE_TRANSPARENCY)
+        tint = tier_coat.COAT_TINT.get(t["name"].rsplit("_", 1)[-1])
+        if tint:
+            color = ET.SubElement(props, "Color3", {"name": "Color"})
+            for channel, value in zip("RGB", tint):
+                ET.SubElement(color, channel).text = repr(value / 255)
 
 
 CONFIG_PATH = "src/shared/Config.luau"
