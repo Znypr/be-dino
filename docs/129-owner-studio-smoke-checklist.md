@@ -6,7 +6,7 @@ Label: **OWNER CHECK LIST**. Everything below passed offline checks only; nobody
 **Vibe check for every line:** does it feel polished, satisfying, calm, bubbly, friendly, vibrant? (Overall feel, not a literal rule: a dim cave can still be colourful.)
 **How to report a problem:** one line in chat: `<BD id> <place> <what you saw>` plus a screenshot if you can, for example `BD-292 cave sign: text blurry at the potion station`. Say "heard" or "unheard" for sounds. If the in-game Feedback button exists in your build (see 12), use it instead.
 
-Cave items only matter if `CaveHub` is on in your Studio copy (it is OFF in both release profiles today; the cave is NICE unless you decide to turn it on for friends). Items marked (open PR) are not in a build from main yet: skip until merged.
+Cave items: the owner put the cave hub in session 1 (2026-10-16), so `CaveHub` is ON in the playtest profile (PR #254, docs/125) and the cave checks below BLOCK session 1. Items marked (open PR) are not on main yet; check them once merged.
 
 ## 1. Sanctuary / hub (first screen)
 | BD | Look at | Good looks like | Level |
@@ -16,14 +16,14 @@ Cave items only matter if `CaveHub` is on in your Studio copy (it is OFF in both
 | BD-390 | Any menu text and pickup numbers (+0.6) | Light fill with dark outline, readable on busy backgrounds | BLOCKS |
 | BD-422 | Get eaten on purpose, check the egg count | You keep your eggs; copy says so | BLOCKS |
 
-## 2. Cave (needs `CaveHub` on)
+## 2. Cave (on in the playtest build; owner 2026-10-16)
 | BD | Look at | Good looks like | Level |
 | --- | --- | --- | --- |
-| #251 cave cosy pass (BD-293 family) | Show-off pedestal height | The dino stands ON the pedestal top, feet touching, not sunk or floating; camera sees the whole dino | NICE |
-| #251 | Lamp flicker | A slow, soft warm breathing glow; never strobing, never a hard on/off; Reduce Motion stops it | NICE |
-| BD-292 | Signs (stations, potions, fusion) | Text readable from 10 studs away in the dim light, self-lit, no blur | NICE |
-| BD-399, BD-383, BD-398 | Overall light, then wait for weather | Dim, lamp-lit, still colourful (amber crystals, warm props); no rain, snow or storm effects inside | NICE |
-| BD-382 | Open one station, tap another rail button | One tap travels; no two-click dead end | NICE |
+| #251 cave cosy pass (BD-293 family) | Show-off pedestal height | The dino stands ON the pedestal top, feet touching, not sunk or floating; camera sees the whole dino | BLOCKS |
+| #251 | Lamp flicker | A slow, soft warm breathing glow; never strobing, never a hard on/off; Reduce Motion stops it | BLOCKS |
+| BD-292 | Signs (stations, potions, fusion) | Text readable from 10 studs away in the dim light, self-lit, no blur | BLOCKS |
+| BD-399, BD-383, BD-398 | Overall light, then wait for weather | Dim, lamp-lit, still colourful (amber crystals, warm props); no rain, snow or storm effects inside | BLOCKS |
+| BD-382 | Open one station, tap another rail button | One tap travels; no two-click dead end | BLOCKS |
 | BD-401, BD-400 | Crystals in shops and HUD | Amber / yellow, never blue-purple in a shop | NICE |
 
 ## 3. Run start
