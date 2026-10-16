@@ -66,6 +66,10 @@ Weather.Rigs={
     quake={dust=spec(50,3,4.5),bank=spec(14,8,10,true)},
     bloodmoon={motes=spec(140,4,6),fog=spec(16,5,7,true),bank=spec(14,9,11,true)},
 }
+-- QA 2026-10-16 (docs/evidence 2026-10-16-weather-qa): the blood moon (core 60, halos up to 200) filled the top third of a phone-size view and the title
+-- card sat on top of the "started" toast. The moon is smaller and higher; the title card sits below the toast and stays a soft, narrower banner.
+Weather.Moon=table.freeze({core=44,halos=table.freeze({80,108,142}),distance=150})
+Weather.Title=table.freeze({y=.31,width=.6,height=.085})
 Weather.Budget=table.freeze({concurrent=6000,bigConcurrent=500,bolts=4,bombs=6,beams=140,cracks=4,cracksPhone=2,rocksPerCrack=3})
 -- Earthquake v2 (owner 2026-10-15): a WORLD event, not an aura. Ground cracks open at random spots in view (never under the dino),
 -- grow over `grow` s, glow faintly amber, puff dust and kick a few rock chunks, then close. Tremor pulses every `pulseEvery` s
