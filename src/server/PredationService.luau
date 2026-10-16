@@ -43,6 +43,7 @@ function PredationService.start(runLifecycle, dinosaur)
         if whole > 0 then
             local catches = numberAttribute(attacker.character, "CatchScore", 0)
             attacker.character:SetAttribute("CatchScore", RunEggTags.nextScore(catches, whole, Config.MaxCatchScore, Config.RunEggMaxPerRun))
+            runLifecycle.noteNestWeather(attacker.character) -- BD-479: a nest newly earned by this kill egg is stamped with the weather now
         end
     end
 

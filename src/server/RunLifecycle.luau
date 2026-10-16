@@ -8,11 +8,30 @@ local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 local RunLifecycle = {}
 local PrivateState = require(script.Parent.PrivateState)
+local RewardMath = require(script.Parent.RewardMath)
 local lastExitRequest: {[Player]: number} = {}
 local requestEndRun: RemoteEvent? = nil
 local settleRun = nil
 -- BD-090: server-side run start times (server clock); never replicated, never client-reported.
 local runStartedAt: {[string]: number} = {}
+-- BD-479: per-run ledger of the weather active when each bonus nest was FOUND (index = nest ordinal). Server-only like runStartedAt:
+-- the nest gate is hidden, so it is never replicated. Filled by noteNestWeather, handed to settlement by the snapshot.
+local runNestWeather: {[string]: {string}} = {}
+
+-- Call after anything that changes a run's CatchScore, and at the minimum-run-time mark: those are the only moments a nest can
+-- newly qualify, so every nest gets the weather of the moment it was found. No-op once the run has ended.
+function RunLifecycle.noteNestWeather(character: Model)
+    local runId = character:GetAttribute("RunId")
+    if typeof(runId) ~= "string" then return end
+    local startedAt = runStartedAt[runId]
+    if not startedAt then return end
+    local ledger = runNestWeather[runId]
+    if not ledger then
+        ledger = {}
+        runNestWeather[runId] = ledger
+    end
+    RewardMath.recordNestWeather(ledger :: {string}, character:GetAttribute("CatchScore"), workspace:GetServerTimeNow() - startedAt, workspace:GetAttribute("WeatherId"))
+end
 
 function RunLifecycle.prepareSanctuary(player: Player, character: Model)
     character:SetAttribute("RunState", "Sanctuary")
@@ -61,8 +80,12 @@ function RunLifecycle.begin(player: Player, character: Model)
     local newRunId = HttpService:GenerateGUID(false)
     character:SetAttribute("RunId", newRunId)
     local startedNow = workspace:GetServerTimeNow()
-    for id, at in runStartedAt do if startedNow - at > 6 * 3600 then runStartedAt[id] = nil end end -- BD-363: a run that never settled cannot pin its entry forever
+    for id, at in runStartedAt do if startedNow - at > 6 * 3600 then runStartedAt[id] = nil runNestWeather[id] = nil end end -- BD-363: a run that never settled cannot pin its entry forever
     runStartedAt[newRunId] = startedNow
+    -- BD-479: a run that has catches but is still short of the minimum time finds its first nest at that mark, in that weather.
+    task.delay(Config.NestMinRunSeconds + 0.25, function()
+        if character:GetAttribute("RunId") == newRunId then RunLifecycle.noteNestWeather(character) end
+    end)
     player:SetAttribute("Location", "Island")
     character:SetAttribute("RunState", "Active")
     character:SetAttribute("GrowthScore", 0)
@@ -101,12 +124,18 @@ local function settlementSnapshot(character: Model)
     local ok,events=pcall(function() return HttpService:JSONDecode(character:GetAttribute("RunEggEvents") or "[]") end)
     local startedAt = runStartedAt[runId]
     runStartedAt[runId] = nil
+    local runSeconds = if startedAt then math.max(0, workspace:GetServerTimeNow() - startedAt) else 0 -- unknown start = 0 s = no nest
+    local clampedCatches = math.clamp(catchScore, 0, Config.RunEggMaxPerRun) -- one run egg per catch
+    -- BD-479: the ledger so far, topped up with the weather now for any nest that was somehow not noted when it qualified
+    local nestWeather = RewardMath.recordNestWeather(runNestWeather[runId] or {}, clampedCatches, runSeconds, workspace:GetAttribute("WeatherId"))
+    runNestWeather[runId] = nil
     local killEggs = character:GetAttribute("PredationEggs")
     return {
         runId = runId,
         killEggs = if typeof(killEggs) == "number" then math.max(0, math.floor(killEggs)) else 0, -- BD-448: hunting bonus shown on Run Complete
-        runSeconds = if startedAt then math.max(0, workspace:GetServerTimeNow() - startedAt) else 0, -- unknown start = 0 s = no nest
-        catchScore = math.clamp(catchScore, 0, Config.RunEggMaxPerRun), -- one run egg per catch
+        runSeconds = runSeconds,
+        catchScore = clampedCatches,
+        nestWeather = nestWeather, -- BD-479: weather id per nest ordinal ("clear" = none)
         eggEvents=if ok and typeof(events)=="table" then events else {},
     }
 end
@@ -115,7 +144,7 @@ local function respawnAfterSettlement(player: Player, character: Model, snapshot
     task.spawn(function()
         local ok = true
         if settleRun then
-            ok = settleRun(player, snapshot.runId, snapshot.catchScore, reason, snapshot.eggEvents, snapshot.runSeconds)
+            ok = settleRun(player, snapshot.runId, snapshot.catchScore, reason, snapshot.eggEvents, snapshot.runSeconds, snapshot.nestWeather)
         end
         if not ok then
             if player.Parent and player:GetAttribute("ProfileState") == "Loaded" then
@@ -199,7 +228,7 @@ function RunLifecycle.endForDisconnect(player: Player): string
     local growthScore = character:GetAttribute("GrowthScore")
     player:SetAttribute("LastRunGrowthScore", if typeof(growthScore) == "number" then growthScore else 0)
     if settleRun then
-        local ok = settleRun(player, snapshot.runId, snapshot.catchScore, "Disconnect", snapshot.eggEvents, snapshot.runSeconds)
+        local ok = settleRun(player, snapshot.runId, snapshot.catchScore, "Disconnect", snapshot.eggEvents, snapshot.runSeconds, snapshot.nestWeather)
         return if ok then "settled" else "failed"
     end
     return "settled"

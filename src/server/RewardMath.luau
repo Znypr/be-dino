@@ -38,6 +38,33 @@ function RewardMath.nestQualifies(eggCount: number, runSeconds: any?): boolean
     return runSeconds >= Config.NestMinRunSeconds and RewardMath.runEggCount(eggCount) >= Config.NestMinCatches
 end
 
+-- BD-479 (owner BD-235, 2026-10-16): a bonus nest carries the weather that was active when it was FOUND during the run,
+-- not the weather at settlement. The run keeps a ledger (one entry per nest ordinal, "clear" or a weather id) that the server
+-- fills the moment each nest qualifies; settlement carries it and stamps every nest with its own entry.
+local function knownWeather(id: any): boolean
+    if typeof(id) ~= "string" or id == "clear" then return false end
+    for _, weather in ProgressionConfig.Weather do if weather.id == id then return true end end
+    return false
+end
+
+-- Appends the weather active now for every nest that has qualified since the ledger was last filled (a nest qualifies only
+-- when a catch or the minimum run time is reached, so calling this after each catch and at the minimum-time mark misses none).
+-- An unknown or forged id is stored as "clear". Returns the same ledger.
+function RewardMath.recordNestWeather(ledger: {string}, eggCount: any, runSeconds: any?, weatherId: any): {string}
+    local id = if knownWeather(weatherId) then weatherId else "clear"
+    for ordinal = #ledger + 1, RewardMath.nestCount(RewardMath.runEggCount(eggCount), runSeconds) do ledger[ordinal] = id end
+    return ledger
+end
+
+-- The weather id to store on nest number `ordinal` (1-based), or nil for none. `weather` is either a per-nest ledger
+-- ({"rain", "clear", ...}) or, for legacy callers, one string that applies to every nest of the run (the old settlement-time
+-- behaviour). Only a known, non-clear weather is returned; a missing, forged or "clear" entry stores nothing.
+function RewardMath.nestWeatherId(weather: any, ordinal: number): string?
+    local id = if typeof(weather) == "table" then weather[ordinal] else weather
+    if knownWeather(id) then return id :: string end
+    return nil
+end
+
 -- Deterministic nest size NestMinSize..NestMaxSize from the nest id (committed at drop).
 function RewardMath.nestSize(nestId: string): number
     local h = 5381
