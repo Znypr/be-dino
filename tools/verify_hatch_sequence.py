@@ -298,7 +298,8 @@ print("Hatch sequence checks passed: ~3.6 s build-up with paint buckets, pending
 
 def script():
     return ('local RS=' + module('src/shared/RevealSkip.luau') + '\n'
-            'local script={Parent={RevealSkip=RS}}\nlocal function require(x) return x end\n'
+            'local V2=' + module('src/shared/HatchV2Plan.luau') + '\n'
+            'local script={Parent={RevealSkip=RS,HatchV2Plan=V2}}\nlocal function require(x) return x end\n'
             'local T=' + module('src/shared/HatchTimeline.luau') + '\n'
             'local Sfx=' + module('src/shared/Sfx.luau') + '\n' + BODY)
 

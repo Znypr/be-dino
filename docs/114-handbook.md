@@ -2,6 +2,16 @@
 
 Written 2026-10-16 (branch claude/handbook). **Purpose:** one place the lead and every subagent check a PR against, so the owner only steers. It does not replace the specs; each line cites its source. Where sources disagree see [116 conflicts](116-handbook-conflicts.md); dated owner decisions are in [115 decisions log](115-decisions-log.md). Labels: **OWNER** (owner said it), **LEAD** (lead decision, owner may overrule), **CODE** (what the source does today), **PROVISIONAL** (number not final). The newest owner decision wins; code that contradicts the handbook is a bug (kanban BD-401..BD-408).
 
+## 0. The vibe words (owner 2026-10-16): how to read them
+The owner's guiding adjectives are **polished, satisfying, calm, bubbly, friendly, vibrant** (calm, bubbly, friendly, a little magical in [87](87-vision-and-feel-guide.md); polished, satisfying and vibrant added 2026-10-16). They describe the OVERALL VIBE of every facet: visual design, sound, animation, looks, feel, transitions, copy. They are NOT literal per-place rules: "bright" or "calm" must never be read as "the cave must be bright" or "weather must be quiet everywhere". Each facet interprets them in its own way, and a decision is judged by whether it would feel at home with these words, not by matching one word literally:
+- **Polished**: nothing looks code-generated or unfinished: no primitive/elliptical placeholder shapes, no clipped text, no overlap, no floating or sunk assets, consistent materials and lighting, tidy edges, nothing flickers or pops.
+- **Satisfying**: every action has clear, quick, juicy feedback and a payoff: soft sounds, squash/stretch, small particle bursts, counters that pop, rewards that land with a moment, smooth easing, no dead ends.
+- **Calm**: no stress, no harsh or sharp sounds, no strobing or violent shake, readable at a glance, gentle failure; calm is about how it feels, not about being dim or empty (a dramatic weather event can still feel calm when it is soft and readable).
+- **Bubbly**: round, chunky, soft shapes, bouncy motion, playful rhythm, cute faces; sparkles and bubbles, never aggressive or edgy.
+- **Friendly**: welcoming copy in kid words, warm colours and light, nothing scary or gory, helpful hints, no pressure timers.
+- **Vibrant**: rich, saturated, harmonious colours that pop within a palette; even a dim lamp-lit cave stays colourful (warm lamps, glowing crystals, coloured props), never grey or muddy.
+**Use:** cross-reference new tasks and decisions vaguely against these words and against the relevant handbook section (palette, lighting, sound, asset bar); read only what the task touches, not the whole stack. The lead uses the handbook for quality and vision assessment of every merge and updates it when the owner adds or changes something; open questions to narrow it down are collected in docs/116 as OWNER QUESTIONs and asked over time.
+
 ## 1. Vision and pillars
 - Roblox dinosaur survival, growth, collection and hatching game: eat, grow, avoid/fight predators, settle the run, then watch the run's eggs hatch one at a time ([AGENTS.md](../AGENTS.md) Game vision; [09](09-reward-economy.md)).
 - Feeling in one line: **calm, bubbly, friendly, a little magical** ([87](87-vision-and-feel-guide.md), owner 2026-10-15).
@@ -145,7 +155,7 @@ Status lives only in the [kanban](07-kanban.md).
 ## 13. Handbook compliance checklist (paste into every PR body)
 ```
 Handbook check (docs/114):
-- [ ] Vision/feel: calm, bubbly, friendly; checked against docs/87 on a screenshot or marked "not verified"
+- [ ] Vision/feel: vibe words (polished, satisfying, calm, bubbly, friendly, vibrant: section 0, read as overall vibe not literal rules) cross-referenced; checked on a screenshot or marked "not verified"
 - [ ] Design language: low-poly facets, no ellipses/primitive code art, matte (gloss only fused tiers), eyes glossy black + white dot
 - [ ] Palette: colours from handbook section 5; currency crystals amber/yellow
 - [ ] Lighting: right for its place (island bright; cave DIM lamp-lit; weather never inside the cave)
