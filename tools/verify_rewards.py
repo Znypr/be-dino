@@ -71,6 +71,7 @@ local store={UpdateAsync=function(_,key,fn)
 end}
 local http={GenerateGUID=function() return "guid-"..tostring(math.random(1,1e9)) end,JSONEncode=function(_,v) return copy(v) end,JSONDecode=function(_,v) return copy(v) end}
 local mutableConfig=table.clone(GameConfig)
+mutableConfig.WriteBudgetEnabled=false -- BD-358: these offline tests run hundreds of claims in zero time; the write budget is proven in verify_multiplayer_sim
 GameConfig=mutableConfig
 local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",EggGenetics="Genetics",NestQueue="NestQueue",ProgressionConfig="ProgressionConfig",SettingsModel="SettingsModel"}}
 local services={DataStoreService={GetDataStore=function() return store end},HttpService=http,ReplicatedStorage=storage,RunService={IsStudio=function() return false end}}

@@ -136,6 +136,21 @@ return table.freeze({
     ProfileLeaseSeconds = 90,
     ProfileRenewSeconds = 30,
     ProfileMaxAttempts = 3,
+    -- BD-358: one DataStore write budget per player for ROUTINE remote-triggered writes (equip, claims, settings, fusion...).
+    -- Settlement, lease renew/release, load and purchases are PRIORITY and never use it. Over budget = a calm "rate_limited"
+    -- answer (settings/reveal preferences are coalesced to the latest value instead). WriteBudgetReserve keeps that share of the
+    -- server's 60 + 10 x players requests/min free for priority writes.
+    WriteBudgetEnabled = true, -- kill switch; offline tests that run hundreds of claims in zero time switch it off
+    WriteBurst = 6,
+    WriteRefillPerSecond = 1,
+    WriteBudgetReserve = 0.4,
+    -- BD-359: run settlement is retried longer than other writes: up to 6 attempts, exponential back-off with jitter
+    -- (0.6, 1.2, 2.4, 4.8, 9.6 s, about 19 s in all plus request time), never past the window. Still failing = SaveFailed + a pending record that
+    -- the lease renew tick retries (2 attempts per tick, exactly once by run id) while the player is present.
+    SettlementMaxAttempts = 6,
+    SettlementBaseDelaySeconds = 0.6,
+    SettlementJitter = 0.1,
+    SettlementRetryWindowSeconds = 26, -- leave: 26 s + the lease release stay inside BindToClose's 30 s
     ProfileMaxRecentOperations = 50,
 
     EquipRequestCooldownSeconds = 0.5,

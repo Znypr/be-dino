@@ -95,6 +95,7 @@ end}
 local guid=0
 local http={GenerateGUID=function()guid+=1 return "test-"..guid end,JSONEncode=function(_,v)return copy(v) end,JSONDecode=function(_,v)return copy(v) end}
 local mutableConfig=table.clone(GameConfig)
+mutableConfig.WriteBudgetEnabled=false -- BD-358: these offline tests run hundreds of claims in zero time; the write budget is proven in verify_multiplayer_sim
 mutableConfig.DeveloperProducts={[456]=20} -- Mock product, never shipped in Config.
 GameConfig=mutableConfig
 local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",EggGenetics="Genetics",NestQueue="NestQueue",ProgressionConfig="ProgressionConfig",SettingsModel="SettingsModel"}}

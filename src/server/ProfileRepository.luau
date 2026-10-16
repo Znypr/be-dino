@@ -94,6 +94,26 @@ elseif identityPersistent() then
         end)
     end}
 end
+-- BD-358: every store request is counted (sliding 60 s window) so routine writes can respect the server's DataStore budget of
+-- 60 + 10 x players requests per minute. Counting is the only thing this wrapper does; behaviour is unchanged.
+local PlayersService = game:GetService("Players")
+local requestLog: {[number]: number} = {}
+local requestHead, requestTail = 1, 0
+local function requestsInWindow(at: number): number
+    while requestHead <= requestTail and requestLog[requestHead] <= at - 60 do
+        requestLog[requestHead] = nil
+        requestHead += 1
+    end
+    return requestTail - requestHead + 1
+end
+do
+    local countedStore = store
+    store = {UpdateAsync = function(_, key, transform)
+        requestTail += 1
+        requestLog[requestTail] = os.clock()
+        return countedStore:UpdateAsync(key, transform)
+    end}
+end
 local leaseId = HttpService:GenerateGUID(false)
 local profiles: {[Player]: any} = {}
 -- BD-044 hatch pages: one claim transaction commits up to Config.HatchPageSize queued run
@@ -105,6 +125,82 @@ local renewing = false
 -- BD-354: userIds whose lease release is still in flight. A rejoin of the same user on this server shares our leaseId, so a late
 -- release would clear the NEW session; load waits for it instead.
 local releasing: {[number]: number} = {}
+
+-- BD-358: one token bucket per player for ROUTINE writes (anything a client remote can trigger repeatedly). PRIORITY writes (run
+-- settlement, lease renew/release, load, purchases) never call admit, so a spamming client cannot starve them. A routine write
+-- that is not admitted is answered "rate_limited" without touching the store; preference writes are coalesced instead.
+local writeBuckets: {[Player]: {tokens: number, at: number}} = setmetatable({}, {__mode = "k"}) :: any
+local coalesced: {[Player]: {[string]: {value: any}}} = setmetatable({}, {__mode = "k"}) :: any
+local flushing: {[Player]: boolean} = setmetatable({}, {__mode = "k"}) :: any
+local coalesceWriters: {[string]: (Player, any) -> any} = {}
+-- A preference write that is still retrying when a NEWER one for the same preference is issued must not commit afterwards (stale
+-- overwrite). Each write takes a number; a transform of an out-of-date write cancels itself and the write counts as superseded.
+local prefSeq: {[Player]: {[string]: number}} = setmetatable({}, {__mode = "k"}) :: any
+local function takePrefSeq(player: Player, kind: string): number
+    local seqs = prefSeq[player]
+    if not seqs then seqs = {}; prefSeq[player] = seqs end
+    seqs[kind] = (seqs[kind] or 0) + 1
+    return seqs[kind]
+end
+local function prefSuperseded(player: Player, kind: string, seq: number): boolean
+    local seqs = prefSeq[player]
+    return seqs ~= nil and (seqs[kind] or 0) ~= seq
+end
+local writeStats = {admitted = 0, rejected = 0, coalesced = 0, flushed = 0}
+local function admit(player: Player): boolean
+    if Config.WriteBudgetEnabled == false then return true end
+    local at = os.clock()
+    local bucket = writeBuckets[player]
+    if not bucket then
+        bucket = {tokens = Config.WriteBurst, at = at}
+        writeBuckets[player] = bucket
+    end
+    bucket.tokens = math.min(Config.WriteBurst, bucket.tokens + (at - bucket.at) * Config.WriteRefillPerSecond)
+    bucket.at = at
+    local players = if PlayersService then #PlayersService:GetPlayers() else 1 -- offline mocks may not model Players
+    local share = (60 + 10 * math.max(1, players)) * (1 - Config.WriteBudgetReserve)
+    if bucket.tokens < 1 or requestsInWindow(at) >= share then
+        writeStats.rejected += 1
+        return false
+    end
+    bucket.tokens -= 1
+    writeStats.admitted += 1
+    return true
+end
+
+-- Latest value wins: a preference write that is over budget is remembered and written when a token is free (or merged into the
+-- lease release), so a slider dragged quickly costs one write, not one per tick.
+local function coalesce(player: Player, kind: string, value: any): (boolean, string)
+    local pending = coalesced[player]
+    if not pending then pending = {}; coalesced[player] = pending end
+    pending[kind] = {value = value}
+    writeStats.coalesced += 1
+    if not flushing[player] then
+        flushing[player] = true
+        task.spawn(function()
+            while profiles[player] and coalesced[player] and next(coalesced[player]) ~= nil do
+                task.wait(1.1)
+                local waiting = coalesced[player]
+                if waiting and profiles[player] and player:GetAttribute("ProfileState") == "Loaded" then
+                    for waitingKind, entry in waiting do
+                        if admit(player) then
+                            waiting[waitingKind] = nil
+                            writeStats.flushed += 1
+                            local saved, status = coalesceWriters[waitingKind](player, entry.value)
+                            -- A failed save is not a lost value: keep it for the next token unless a newer value arrived meanwhile.
+                            local still = coalesced[player]
+                            if not saved and status == "save_failed" and still and still[waitingKind] == nil then
+                                still[waitingKind] = entry
+                            end
+                        end
+                    end
+                end
+            end
+            flushing[player] = nil
+        end)
+    end
+    return true, "queued"
+end
 
 -- BD-354: adopt a transaction result only while the player is still loaded. A player who left (release already ran) must not get
 -- a profile entry back: it would leak the Player instance plus up to megabytes of profile for the rest of the server's life.
@@ -318,6 +414,33 @@ local function isValidProfile(profile: any): boolean
     end
     if profile.rarityScale ~= Config.SpeciesRarityScale or profile.metrics.rarest > Config.SpeciesRarityScale then return false end
     return ProgressionRules.valid(profile.progression)
+end
+
+-- BD-359: a run settlement that failed after its whole retry window. Memory only; the lease renew tick retries it by run id
+-- (exactly once: settledRuns + recentOperations), so a store hiccup longer than the window delays rewards instead of dropping them.
+local pendingSettlements: {[Player]: any} = setmetatable({}, {__mode = "k"}) :: any
+local recoveringSettlement: {[Player]: boolean} = setmetatable({}, {__mode = "k"}) :: any
+local settlementRecovered: ((Player, string, any) -> ())? = nil
+local settlementStats = {attempts = 0, failedWindows = 0, recovered = 0}
+
+local function retrySettlement(label: string, fn, maxAttempts: number?)
+    local started = os.clock()
+    local lastError = nil
+    local attempts = maxAttempts or Config.SettlementMaxAttempts
+    for attempt = 1, attempts do
+        settlementStats.attempts += 1
+        local ok, result = pcall(fn)
+        if ok then return true, result end
+        lastError = result
+        warn(string.format("[Be Dino] %s attempt %d failed: %s", label, attempt, tostring(result)))
+        if attempt < attempts then
+            local jitter = 1 + Config.SettlementJitter * (2 * math.random() - 1)
+            local delay = Config.SettlementBaseDelaySeconds * (2 ^ (attempt - 1)) * jitter
+            if os.clock() - started + delay > Config.SettlementRetryWindowSeconds then break end
+            task.wait(delay)
+        end
+    end
+    return false, lastError
 end
 
 local function retry(label: string, fn)
@@ -693,6 +816,7 @@ function ProfileRepository.fuseDinosaurs(player: Player, request: any)
 
     local now = os.time()
     local committed, failure, duplicate, leaseLost = nil, nil, false, false
+    if not admit(player) then return false, nil, "rate_limited" end
     local ok, updated = retry("identity fusion", function()
         return store:UpdateAsync(ownerKey, function(profileValue)
             committed, failure, duplicate, leaseLost = nil, nil, false, false
@@ -869,7 +993,7 @@ end
 -- BD-044 settlement: catches -> exactly that many run eggs (capped per run), plus
 -- deterministic crystals and separate bonus nests. Every random draw is committed
 -- before UpdateAsync; settledRuns + recentOperations make the run exactly-once.
-function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number, eggEvents, runSeconds: number?, weatherId: string?)
+function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number, eggEvents, runSeconds: number?, weatherId: string?, maxAttempts: number?)
     local cached = profiles[player]
     local priorState = player:GetAttribute("ProfileState")
     -- BD-354: settlement is the one write that must still be tried after an earlier failed write ("SaveFailed"): it is an
@@ -923,7 +1047,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     local duplicateOutcome = nil
     local now = os.time()
 
-    local ok, updated = retry("run settlement", function()
+    local ok, updated = retrySettlement("run settlement", function()
         return store:UpdateAsync(keyFor(player), function(profileValue)
             leaseLost, invalid, duplicate, duplicateOutcome = false, false, false, nil
             if not isValidProfile(profileValue) then invalid = true return nil end
@@ -976,7 +1100,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
             trimOperations(profileValue)
             return profileValue
         end)
-    end)
+    end, maxAttempts)
 
     if not ok or updated == nil then
         if leaseLost then
@@ -985,9 +1109,16 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         end
         if invalid then return false, nil, "invalid_profile" end
         player:SetAttribute("ProfileState", "SaveFailed")
+        -- BD-359: keep what the retry window could not commit; the renew tick tries again (same run id, exactly once).
+        if profiles[player] then
+            settlementStats.failedWindows += 1
+            pendingSettlements[player] = {runId = runId, catchScore = catchScore, eggEvents = eggEvents, runSeconds = runSeconds, weatherId = weatherId}
+        end
         return false, nil, "save_failed"
     end
 
+    local pendingRun = pendingSettlements[player]
+    if pendingRun and pendingRun.runId == runId then pendingSettlements[player] = nil end
     adopt(player, updated)
     if profiles[player] then syncAttributes(player, profiles[player]) end
     local committedOutcome = if duplicate then duplicateOutcome else outcome
@@ -1023,11 +1154,21 @@ function ProfileRepository.setRevealSkip(player: Player, selection: any): (boole
         table.insert(clean, rarity)
     end
     table.sort(clean)
+    if not admit(player) then return coalesce(player, "revealSkip", clean) end
+    if coalesced[player] then coalesced[player].revealSkip = nil end
+    return ProfileRepository.writeRevealSkip(player, clean)
+end
+
+function ProfileRepository.writeRevealSkip(player: Player, clean: any): (boolean, string)
     local leaseLost = false
+    local superseded = false
+    local seq = takePrefSeq(player, "revealSkip")
     local now = os.time()
     local ok, updated = retry("reveal skip", function()
         return store:UpdateAsync(keyFor(player), function(profileValue)
             leaseLost = false
+            superseded = false
+            if prefSuperseded(player, "revealSkip", seq) then superseded = true return nil end
             if not isValidProfile(profileValue) then return nil end
             if not ownSession(profileValue) then leaseLost = true return nil end
             profileValue.revealSkip = table.clone(clean)
@@ -1037,6 +1178,7 @@ function ProfileRepository.setRevealSkip(player: Player, selection: any): (boole
         end)
     end)
     if not ok or updated == nil then
+        if superseded then return true, "saved" end -- a newer write of the same preference owns the stored value
         if leaseLost then player:SetAttribute("ProfileState", "LeaseLost") return false, "lease_lost" end
         player:SetAttribute("ProfileState", "SaveFailed")
         return false, "save_failed"
@@ -1053,11 +1195,21 @@ function ProfileRepository.setSettings(player: Player, raw: any): (boolean, stri
     if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then return false, "profile_not_loaded" end
     if typeof(raw) ~= "table" then return false, "invalid_settings" end
     local clean = SettingsModel.toStore(SettingsModel.fromStore(raw))
+    if not admit(player) then return coalesce(player, "settings", clean) end
+    if coalesced[player] then coalesced[player].settings = nil end
+    return ProfileRepository.writeSettings(player, clean)
+end
+
+function ProfileRepository.writeSettings(player: Player, clean: any): (boolean, string)
     local leaseLost = false
+    local superseded = false
+    local seq = takePrefSeq(player, "settings")
     local now = os.time()
     local ok, updated = retry("settings", function()
         return store:UpdateAsync(keyFor(player), function(profileValue)
             leaseLost = false
+            superseded = false
+            if prefSuperseded(player, "settings", seq) then superseded = true return nil end
             if not isValidProfile(profileValue) then return nil end
             if not ownSession(profileValue) then leaseLost = true return nil end
             profileValue.settings = table.clone(clean)
@@ -1067,6 +1219,7 @@ function ProfileRepository.setSettings(player: Player, raw: any): (boolean, stri
         end)
     end)
     if not ok or updated == nil then
+        if superseded then return true, "saved" end -- a newer write of the same preference owns the stored value
         if leaseLost then player:SetAttribute("ProfileState", "LeaseLost") return false, "lease_lost" end
         player:SetAttribute("ProfileState", "SaveFailed")
         return false, "save_failed"
@@ -1075,6 +1228,9 @@ function ProfileRepository.setSettings(player: Player, raw: any): (boolean, stri
     if profiles[player] then syncAttributes(player, profiles[player]) end
     return true, "saved"
 end
+
+coalesceWriters.settings = function(player, value) return ProfileRepository.writeSettings(player, value) end
+coalesceWriters.revealSkip = function(player, value) return ProfileRepository.writeRevealSkip(player, value) end
 
 -- Opens a READY nest (server time): credits its eggs to the front of the banked-egg pipeline,
 -- rolled with the nest's luck tier (config), atomically with removing the nest. Idempotent via
@@ -1119,6 +1275,7 @@ function ProfileRepository.claimNest(player: Player, nestId: string)
     local leaseLost = false
     local outcome = nil
     local now = os.time()
+    if not admit(player) then return false, nil, "rate_limited" end
     local ok, updated = retry("nest claim", function()
         return store:UpdateAsync(keyFor(player), function(profileValue)
             status, duplicateOutcome, leaseLost, outcome = nil, nil, false, nil
@@ -1195,6 +1352,7 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string, varia
     local leaseLost = false
     local locked = false
     local now = os.time()
+    if not admit(player) then return false, "rate_limited" end
     local ok, updated = retry("equip species", function()
         return store:UpdateAsync(keyFor(player), function(profileValue)
             if not isValidProfile(profileValue) then return nil end
@@ -1474,6 +1632,7 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
     local notReady = false
     local missing = false
 
+    if not admit(player) then return false, nil, "rate_limited" end
     local ok, updated = retry("chest claim", function()
         return store:UpdateAsync(keyFor(player), function(profileValue)
             if not isValidProfile(profileValue) then return nil end
@@ -1591,6 +1750,7 @@ function ProfileRepository.mutateSpecies(player: Player, speciesId: string, targ
     local tokenConflict = false
     local now = os.time()
 
+    if not admit(player) then return false, nil, "rate_limited" end
     local ok, updated = retry("mutation", function()
         return store:UpdateAsync(keyFor(player), function(profileValue)
             if not isValidProfile(profileValue) then return nil end
@@ -1713,6 +1873,7 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
     local duplicate=false
     local outcome=nil
     local leaseLost=false
+    if not admit(player) then return false,"rate_limited" end
     local ok,updated=retry("progression",function()
         return store:UpdateAsync(keyFor(player),function(profile)
             if not isValidProfile(profile) then denied="invalid_profile" return nil end
@@ -1785,7 +1946,48 @@ function ProfileRepository.purchase(player: Player, receipt)
     return true
 end
 
+-- BD-359: retry the settlement that exhausted its window. Called by the renew tick; one at a time per player.
+-- Two attempts per tick keep a long outage from adding more than ~2 requests / 30 s per stuck player. Returns true when nothing
+-- is pending any more.
+local function recoverSettlement(player: Player): boolean
+    local pending = pendingSettlements[player]
+    if not pending then return true end
+    if recoveringSettlement[player] or not profiles[player] then return false end
+    recoveringSettlement[player] = true
+    local ok, outcome, status = ProfileRepository.commitRunSettlement(player, pending.runId, pending.catchScore, pending.eggEvents, pending.runSeconds, pending.weatherId, 2)
+    recoveringSettlement[player] = nil
+    if ok then
+        settlementStats.recovered += 1
+        if settlementRecovered and player.Parent then
+            local hooked, err = pcall(settlementRecovered, player, pending.runId, outcome)
+            if not hooked then warn("[Be Dino] settlement recovery hook failed: " .. tostring(err)) end
+        end
+    elseif status == "lease_lost" or status == "invalid_profile" then
+        pendingSettlements[player] = nil -- not retryable: another server owns the profile / the stored copy is invalid
+    end
+    return ok == true
+end
+
+-- Called once by Bootstrap: what to do (respawn the player) after a delayed settlement finally commits.
+function ProfileRepository.setSettlementRecoveredHook(hook: (Player, string, any) -> ())
+    settlementRecovered = hook
+end
+
+-- Offline-test and diagnostics counters (no profile data).
+function ProfileRepository.budgetStats()
+    return {admitted = writeStats.admitted, rejected = writeStats.rejected, coalesced = writeStats.coalesced, flushed = writeStats.flushed,
+        settlementAttempts = settlementStats.attempts, settlementFailedWindows = settlementStats.failedWindows, settlementRecovered = settlementStats.recovered}
+end
+
+function ProfileRepository.pendingSettlement(player: Player): string?
+    local pending = pendingSettlements[player]
+    return if pending then pending.runId else nil
+end
+
 function ProfileRepository.renew(player: Player): boolean
+    -- BD-359: first commit the settlement that outlasted its retry window. It also renews the lease, so when it fails (store
+    -- still down) skip the renew's own retries instead of adding more requests to an outage.
+    if pendingSettlements[player] and not recoverSettlement(player) then return false end
     local state = player:GetAttribute("ProfileState")
     -- BD-354: "SaveFailed" is recoverable. Every write is one atomic UpdateAsync that is checked against our lease, so a
     -- successful renew proves the store is consistent and hands back the authoritative copy; without this one failed
@@ -1819,6 +2021,9 @@ end
 
 function ProfileRepository.release(player: Player)
     revealBuffer[player] = nil
+    local pendingPrefs = coalesced[player]
+    coalesced[player] = nil
+    pendingSettlements[player] = nil
     local cached = profiles[player]
     profiles[player] = nil
     PrivateState.forget(player) -- BD-360: the owner-only values go with the profile
@@ -1830,6 +2035,9 @@ function ProfileRepository.release(player: Player)
         return store:UpdateAsync(keyFor(player), function(profileValue)
             if not isValidProfile(profileValue) or not ownSession(profileValue) then return nil end
             profileValue.metrics.playSeconds = math.min(2000000000, profileValue.metrics.playSeconds + math.max(0, os.time() - (profileValue.session.metricsAt or os.time())))
+            -- BD-358: coalesced preferences that were still waiting for a token are saved here, never dropped.
+            if pendingPrefs and pendingPrefs.settings then profileValue.settings = table.clone(pendingPrefs.settings.value) end
+            if pendingPrefs and pendingPrefs.revealSkip then profileValue.revealSkip = table.clone(pendingPrefs.revealSkip.value) end
             profileValue.session = nil
             profileValue.revision += 1
             return profileValue

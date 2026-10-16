@@ -128,6 +128,20 @@ local function respawnAfterSettlement(player: Player, character: Model, snapshot
     end)
 end
 
+-- BD-359: the settlement failed its whole retry window and was committed later by the lease renew tick. Finish what
+-- respawnAfterSettlement skipped on failure: mark the run Settled and bring the dinosaur back.
+function RunLifecycle.recoverAfterSettlement(player: Player)
+    local character = player.Character
+    if character and character:GetAttribute("RunState") == "Ending" then character:SetAttribute("RunState", "Settled") end
+    task.spawn(function()
+        task.wait(Config.RespawnDelaySeconds)
+        if player.Parent and player:GetAttribute("ProfileState") == "Loaded" then
+            local loaded, err = pcall(function() player:LoadCharacterAsync() end)
+            if not loaded then warn("[Be Dino] respawn failed: " .. tostring(err)) end
+        end
+    end)
+end
+
 function RunLifecycle.tryEnd(player: Player, character: Model, reason: string, sourceUserId: number?): boolean
     if player.Character ~= character or character:GetAttribute("RunState") ~= "Active" then
         return false
