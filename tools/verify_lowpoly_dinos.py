@@ -2,27 +2,68 @@
 pure idle/walk pose function (bounded, deterministic, speed-scaled, Reduce Motion exact rest). Pinned Luau runtime."""
 from pathlib import Path
 import argparse
+import json
 import re
 import subprocess
 import tempfile
 ROOT = Path(__file__).resolve().parents[1]
-FLAGGED = ["compy", "raptor", "triceratops"]
+# BD-225/BD-232: every shipped species (Config.SpeciesOrder) is mapped; ids are the real published generate_mesh ids.
+EXPECTED_IDS = {
+    "compy": "94548957808227", "raptor": "83260397513385", "triceratops": "107596736973492", "tyrannosaurus": "70893952304488",
+    "stegosaurus": "92335618053209", "brachiosaurus": "104593280278631", "ankylosaurus": "125812700099310",
+    "archaeopteryx": "108659121473793", "baryonyx": "131708938808155", "dimorphodon": "117242533934118",
+    "elasmosaurus": "76344726254379", "gallimimus": "99873366835296", "ichthyosaurus": "133825037148251",
+    "microraptor": "137027841072493", "mosasaurus": "116180724806366", "pachycephalosaurus": "75417530223759",
+    "parasaurolophus": "125203763120290", "plesiosaurus": "107885207120586", "pteranodon": "101283644467729",
+    "quetzalcoatlus": "126028097030256", "spinosaurus": "94005222354362", "therizinosaurus": "94894343028103",
+}
+CLASSES = {"Fly": {"pteranodon", "quetzalcoatlus", "dimorphodon", "archaeopteryx", "microraptor"},
+           "Water": {"plesiosaurus", "mosasaurus", "ichthyosaurus", "elasmosaurus"}, "Armored": {"ankylosaurus"}}
+# Part-name sets by body plan (generation part lists; names vary by species, matcher must classify every one).
+BIPED = ["body", "head", "tail", "left arm", "right arm", "left leg", "right leg"]
+QUAD = ["body", "head", "tail", "front left leg", "front right leg", "back left leg", "back right leg"]
+WINGED = ["body", "head", "tail", "left wing", "right wing", "left leg", "right leg"]
+FLIPPER = ["body", "neck and head", "tail", "front left flipper", "front right flipper", "back left flipper", "back right flipper"]
+NECK = ["body", "neck", "head", "tail", "front left leg", "front right leg", "back left leg", "back right leg"]
+PART_SETS = {"quad": QUAD, "biped": BIPED, "wings": WINGED, "flippers": FLIPPER, "neck": NECK,
+             "quote": ['"left arm"_geom', '"Right Leg"_geom', '"head"_geom', '"tail"_geom', '"body"_geom', 'left wing [1]', 'neck and head']}
+PLAN = {"quad": {"triceratops", "stegosaurus", "ankylosaurus"},
+        "biped": {"compy", "raptor", "tyrannosaurus", "baryonyx", "gallimimus", "pachycephalosaurus", "parasaurolophus", "spinosaurus",
+                  "therizinosaurus"},
+        "wings": CLASSES["Fly"], "flippers": CLASSES["Water"], "neck": {"brachiosaurus"}}
 
 
 def registry():
     text = (ROOT / 'src/shared/LowPolyDinoAssets.luau').read_text(encoding='utf-8')
-    return re.findall(r'(\w+) = \{assetId = (\d+), version = "(v\d+)", scale = ([\d.]+)\}', text)
+    return re.findall(r'(\w+) = \{assetId = (\d+), version = "(v\d+)", scale = ([\d.]+), tier = (\d), class = "(\w+)"\}', text)
 
 
 def check_registry():
     entries = registry()
     names = [e[0] for e in entries]
     ids = [e[1] for e in entries]
-    assert sorted(names) == sorted(FLAGGED), f"registry species {names} != {FLAGGED}"
+    config = (ROOT / 'src/shared/Config.luau').read_text(encoding='utf-8')
+    order = re.search(r'SpeciesOrder = \{([^}]*)\}', config).group(1)
+    order = re.findall(r'"(\w+)"', order)
+    assert len(order) == 22 and sorted(names) == sorted(order), f"registry species {sorted(names)} != Config.SpeciesOrder"
+    assert dict(zip(names, ids)) == EXPECTED_IDS, "asset ids differ from the published generate_mesh ids"
     assert len(set(ids)) == len(ids), "duplicate asset ids"
     assert all(i.isdigit() and 10 <= len(i) <= 16 for i in ids), "asset ids must be numeric"
     assert all(0.5 <= float(e[3]) <= 6 for e in entries), "scale out of range"
-    config = (ROOT / 'src/shared/Config.luau').read_text(encoding='utf-8')
+    tiers = dict(re.findall(r'(\w+) = (\d)(?=[,\s])', re.search(r'SpeciesRarities = \{(.*?)\n    \}', config, re.S).group(1)))
+    for name, _, _, scale, tier, cls in entries:
+        assert tiers[name] == tier, f"{name} tier {tier} != Config.SpeciesRarities {tiers[name]}"
+        expect = next((c for c, group in CLASSES.items() if name in group), "Ground")
+        assert cls == expect, f"{name} class {cls} != {expect}"
+        ladder = 2.0 * 1.1 ** (int(tier) - 1)
+        shape = float(scale) / ladder
+        assert 0.75 <= shape <= 1.65, f"{name} shape factor {shape:.2f} unreasonable"
+    by_tier = {}
+    for name, _, _, scale, tier, _ in entries:
+        by_tier.setdefault(tier, []).append(float(scale))
+    means = [sum(v) / len(v) for _, v in sorted(by_tier.items())]
+    assert all(b > a for a, b in zip(means, means[1:])), f"mean scale must grow every tier: {means}"
+    assert sum(len(v) for v in PLAN.values()) == 22 and set().union(*PLAN.values()) == set(names), "part plan must cover all species"
     assert re.search(r'^\s*LowPolyDinos = false,', config, re.M), "Config.LowPolyDinos must default to false"
     for name in names:
         assert re.search(r'\b' + name + r'\b', config), f"{name} is not a game species"
@@ -31,7 +72,7 @@ def check_registry():
 
 BODY = r'''
 local out = P.new()
-local roles = {"body", "head", "tail", "arm", "leg"}
+local roles = {"body", "head", "neck", "tail", "arm", "leg", "flipper"}
 for _, role in roles do
     for _, side in {-1, 1} do
         for _, lead in {true, false} do
@@ -51,6 +92,41 @@ end
 local moved = false
 for i = 0, 200 do P.sample("tail", 1, false, i * 0.1, 0, 0, 1, out) if math.abs(out.yaw) > 0.05 then moved = true end end
 assert(moved, "idle tail sway missing")
+-- every class and role: finite, bounded (a folded wing may exceed MaxAngle up to MaxFold), Reduce Motion = rest (wing keeps its fold)
+for _, class in {"Ground", "Fly", "Water", "Armored"} do
+    for _, role in {"body", "head", "neck", "tail", "arm", "leg", "flipper", "wing"} do
+        for _, side in {-1, 1} do
+            for step = 0, 300 do
+                for _, w in {0, 0.5, 1} do
+                    P.sample(role, side, step % 2 == 0, step * 0.07, step * 0.11, w, 1, out, class)
+                    for k, v in out do
+                        assert(v == v and math.abs(v) <= (if role == "wing" and k == "roll" then P.MaxFold else P.MaxAngle) + 1e-9, role .. " " .. k) end
+                    P.sample(role, side, true, step * 0.07, step * 0.11, w, 0, out, class)
+                    for k, v in out do
+                        if role == "wing" and k == "roll" then assert(math.abs(v + side * P.FoldAngle) < 1e-9, "wing fold lost")
+                        else assert(v == 0, "reduce motion not rest: " .. role .. " " .. k) end
+                    end
+                end
+            end
+        end
+    end
+end
+-- wings rest folded on both sides (tips down toward the body), mirrored, even while idle and walking
+local fl, fr = P.new(), P.new()
+for _, w in {0, 1} do
+    P.sample("wing", -1, false, 1.3, 0.7, w, 1, fl, "Fly") P.sample("wing", 1, false, 1.3, 0.7, w, 1, fr, "Fly")
+    assert(fr.roll < -0.9 and fl.roll > 0.9, "wings must stay folded")
+end
+-- water stays low: lower body than ground, shorter strokes
+local gb, wb, gl, wl = P.new(), P.new(), P.new(), P.new()
+P.sample("body", 1, false, 0, 1.0, 1, 1, gb, "Ground") P.sample("body", 1, false, 0, 1.0, 1, 1, wb, "Water")
+assert(wb.dy < gb.dy, "water body must sit lower")
+P.sample("leg", 1, false, 0, 1.0, 1, 1, gl, "Ground") P.sample("leg", 1, false, 0, 1.0, 1, 1, wl, "Water")
+assert(math.abs(wl.pitch) < math.abs(gl.pitch), "water strokes shorter")
+-- the default (no class) is Ground and old call shape still works
+local d1, d2 = P.new(), P.new()
+P.sample("leg", 1, false, 0, 1.0, 1, 1, d1) P.sample("leg", 1, false, 0, 1.0, 1, 1, d2, "Ground")
+assert(d1.pitch == d2.pitch)
 assert(P.stepRate(1) > P.stepRate(0) and P.stepRate(0) > 0 and P.stepRate(2) == P.stepRate(1))
 local l, r = P.new(), P.new()
 P.sample("leg", -1, false, 0, 1.0, 1, 1, l) P.sample("leg", 1, false, 0, 1.0, 1, 1, r)
@@ -99,6 +175,33 @@ print("lowpoly recolor tests passed")
 '''
 
 
+def role_body():
+    lines = ["local roles = {}"]
+    for plan, names in PART_SETS.items():
+        lines.append("roles[%s] = {%s}" % (json.dumps(plan), ", ".join(json.dumps(n) for n in names)))
+    lines.append(r'''
+local expect = {body = "body", head = "head", tail = "tail", neck = "neck", wing = "wing", flipper = "flipper", arm = "arm", leg = "leg"}
+local function want(name)
+    local n = string.lower(name)
+    if string.find(n, "head") then return "head" end
+    for _, k in {"tail", "wing", "flipper", "neck", "arm", "leg", "body"} do if string.find(n, k, 1, true) then return k end end
+    return nil
+end
+for plan, names in roles do
+    local seen = {}
+    for _, name in names do
+        local role = P.roleOf(name)
+        assert(role ~= nil and role == want(name), plan .. ": " .. name .. " -> " .. tostring(role))
+        seen[role] = true
+    end
+    assert(seen.body and seen.head or seen.neck, plan .. ": body/head missing")
+end
+assert(P.roleOf("xyz") == nil)
+print("lowpoly role tests passed")
+''')
+    return "\n".join(lines)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--runner', required=True)
@@ -118,6 +221,14 @@ if __name__ == '__main__':
         path2 = Path(tmp) / 'lowpoly_recolor.luau'
         path2.write_text(rsrc, encoding='utf-8')
         result = subprocess.run([args.runner, str(path2)], capture_output=True, text=True, encoding='utf-8')
+        print(result.stdout, end='')
+        if result.returncode or 'passed' not in result.stdout:
+            print(result.stderr)
+            raise SystemExit(result.returncode or 1)
+        rolesrc = 'local P=(function()\n' + (ROOT / 'src/shared/LowPolyPose.luau').read_text(encoding='utf-8') + '\nend)()\n' + role_body()
+        path3 = Path(tmp) / 'lowpoly_roles.luau'
+        path3.write_text(rolesrc, encoding='utf-8')
+        result = subprocess.run([args.runner, str(path3)], capture_output=True, text=True, encoding='utf-8')
         print(result.stdout, end='')
         if result.returncode or 'passed' not in result.stdout:
             print(result.stderr)

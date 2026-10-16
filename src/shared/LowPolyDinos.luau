@@ -7,6 +7,7 @@ local Config = require(script.Parent.Config)
 local Assets = require(script.Parent.LowPolyDinoAssets)
 local Genetics = require(script.Parent.EggGenetics)
 local Texture = require(script.Parent.LowPolyTexture)
+local Pose = require(script.Parent.LowPolyPose)
 local LowPoly = {}
 LowPoly.FolderName = "LowPolyDinoModels"
 
@@ -16,13 +17,9 @@ end
 function LowPoly.has(speciesId: string): boolean
     return LowPoly.enabled() and Assets[speciesId] ~= nil
 end
--- Generated part names look like `"left arm"_geom`; classify by keywords, tolerant of quotes and brackets.
+-- Generated part names look like `"left arm"_geom`; classification lives in the pure LowPolyPose.roleOf (offline-tested per species).
 function LowPoly.roleOf(name: string): string?
-    local n = string.lower(name)
-    for _, role in {"head", "tail", "arm", "leg", "body"} do
-        if string.find(n, role, 1, true) then return role end
-    end
-    return nil
+    return Pose.roleOf(name)
 end
 local function template(speciesId: string): Model?
     local folder = ReplicatedStorage:FindFirstChild(LowPoly.FolderName)
@@ -87,6 +84,7 @@ function LowPoly.clone(speciesId: string, genes: any?): Model?
     copy:SetAttribute("LowPoly", true)
     copy:SetAttribute("UploadedModelId", info.assetId)
     copy:SetAttribute("LowPolyVersion", info.version)
+    copy:SetAttribute("LPClass", info.class)
     LowPoly.tint(copy, genes)
     return copy
 end
