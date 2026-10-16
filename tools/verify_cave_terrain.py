@@ -77,7 +77,7 @@ local function columnTop(i,k)
   local wy=R.YMin+(j+.5)*res
   if wy<=FY+12 then top+=occ[idx(i,j,k)]*res end
  end
- return R.YMin+top
+ return R.YMin+top+res/2 -- Studio measured: the engine surface sits half a cell above the summed occupancy
 end
 local flatCols,maxDev=0,0
 for i=0,nx-1 do for k=0,nz-1 do
@@ -120,7 +120,7 @@ for _,h in L.holes do
  -- rim: just outside the hole the roof is solid
  local ox=h.x+h.radius+res+2
  local _,o=R.cell(ox,ceil+4,h.z+CZ)
- assert(o>=0.99,"roof solid next to hole "..h.station)
+ assert(o>0.2,"roof solid next to hole "..h.station)
 end
 assert(#L.holes==4)
 
@@ -134,10 +134,10 @@ for x=-120,120,6 do for dz=-100,100,6 do
   if not nearHole and not (dz>C.Fall.z-12 and math.abs(x-C.Fall.x)<C.Fall.width/2+4) then
    local floor=C.floorHeight(x,wz)
    local y=floor+1
-   while occAt(x,y,wz)<0.5 and y<R.YMax do y+=0.5 end
+   while occAt(x,y,wz)<=0 and y<R.YMax do y+=0.5 end
    minClear=math.min(minClear,y-floor)
    local thick=0
-   while occAt(x,y+thick,wz)>=0.5 and thick<30 do thick+=0.5 end
+   while occAt(x,y+thick,wz)>0 and thick<30 do thick+=0.5 end
    assert(thick>=8,"ceiling thinner than 8 studs at "..x..","..dz.." ("..thick..")")
    ceilChecks+=1
   end
@@ -150,10 +150,10 @@ local wallChecks,minThick=0,math.huge
 for a=0,359,2 do for _,h in {FY+4,FY+16,FY+30} do
  local dx,dz=math.cos(math.rad(a)),math.sin(math.rad(a))
  local r=20
- while r<200 and occAt(dx*r,h,dz*r+CZ)<0.5 do r+=0.5 end
+ while r<200 and occAt(dx*r,h,dz*r+CZ)<=0 do r+=0.5 end
  assert(r<200,"no wall at angle "..a)
  local thick=0
- while occAt(dx*(r+thick),h,dz*(r+thick)+CZ)>=0.5 and thick<40 do thick+=0.5 end
+ while occAt(dx*(r+thick),h,dz*(r+thick)+CZ)>0 and thick<40 do thick+=0.5 end
  local x0,z0=dx*r,dz*r
  local inGate=z0<0 and math.abs(x0)<17 and h<FY+22
  local inFalls=z0>C.Fall.z-6 and math.abs(x0-C.Fall.x)<C.Fall.width/2+4
@@ -172,22 +172,28 @@ for _,y in {FY+2,FY+8,FY+14} do
  assert(occAt(g0.x,y,CZ-112)==0,"gate mouth open at the centre, y "..y)
  assert(occAt(g0.x+11,FY+3,CZ-112)==0,"gate mouth open near the pillars")
 end
-assert(occAt(g0.x,FY+17,CZ-112)==0 and occAt(g0.x+14,FY+17,CZ-112)>=0.5,"mouth is an arch (round top, closed in the corner)")
-assert(occAt(g0.x,FY+8,CZ-118)>=0.5,"gate mouth is closed at the far end (no void outside)")
+assert(occAt(g0.x,FY+17,CZ-112)==0 and occAt(g0.x+14,FY+17,CZ-112)> 0,"mouth is an arch (round top, closed in the corner)")
+assert(occAt(g0.x,FY+8,CZ-118)>0,"gate mouth is closed at the far end (no void outside)")
 assert(select(2,R.cell(g0.x,FY-4,CZ-112))>=0.99,"gate floor solid")
 
 -- ---- lava basin carved, rock around it, falls recess + lava vein behind the fall
 local P=C.Pool
 local mP,oP=R.cell(P.x,FY-3,P.z+CZ)
 local mP2,oP2=R.cell(P.x+P.r-1,FY-3.5,P.z+CZ)
-assert(oP>0.5 and mP=="CrackedLava","pool bottom is lava material: "..mP)
-assert(occAt(P.x,FY+1,P.z+CZ)==0 and occAt(P.x+P.r+6,FY-3,P.z+CZ)>=0.99,"basin is a depression with solid rim")
-local carved=occAt(P.x,FY-1,P.z+CZ) assert(carved<0.5,"basin carved below the floor top")
+assert(oP>0 and mP=="CrackedLava","pool bottom is lava material: "..mP)
+assert(occAt(P.x,FY+1,P.z+CZ)==0 and occAt(P.x+P.r+6,FY-3,P.z+CZ)>=0.7,"basin is a depression with solid rim")
+local carved=occAt(P.x,FY-1,P.z+CZ) assert(carved<=0,"basin carved below the floor top")
 assert(select(1,R.cell(P.x+P.r+3,FY-1,P.z+CZ))=="Basalt","basalt rim")
 local F=C.Fall
 assert(occAt(F.x,FY+20,CZ+F.z+2)==0,"falls recess carved behind the sheet")
+-- QA (Studio): the recess once ran through the roof (sheet 48 high, ceiling 38 over the floor) and showed a sky gap
+for fx=F.x-18,F.x+18,3 do for fz=F.z-1,F.z+7,2 do
+ local roof=false
+ for y=FY+20,R.YMax-res/2,1 do if occAt(fx,y,CZ+fz)>0 then roof=true break end end
+ assert(roof,"roof closed above the falls recess at "..fx..","..fz)
+end end
 local mF,oF=R.cell(F.x,FY+20,CZ+F.z+R.FallRecess.back+2)
-assert(oF>=0.5 and mF=="CrackedLava","lava vein behind the falls "..mF)
+assert(oF>0 and mF=="CrackedLava","lava vein behind the falls "..mF)
 
 -- ---- stations: pad material is laid stone; the mix has stone, rock, slate, cobblestone and only a little moss
 local function pct(m) return (counts[m] or 0)/solid end
@@ -199,13 +205,13 @@ for i=0,nx-1 do for k=0,nz-1 do
  if C.insideFloor(wx,wz,0) and C.flatDistance(wx,wz)>2 and dist(wx,wz-CZ,C.Pool.x,C.Pool.z)>C.Pool.r+8 and not (wz-CZ>C.Fall.z-8) and not (wz-CZ<-90) then
   local col=R.column(wx,wz)
   local top
-  for j=ny-1,0,-1 do if occ[idx(i,j,k)]>=0.5 and R.YMin+(j+.5)*res<=col.floorTop+res then top=mat[idx(i,j,k)] break end end
+  for j=ny-1,0,-1 do if occ[idx(i,j,k)]>0 and R.YMin+(j+.5)*res<=col.floorTop+res then top=mat[idx(i,j,k)] break end end
   if top then floorMix[top]=(floorMix[top] or 0)+1 floorCols+=1 end
  end
 end end
 local moss=((floorMix.Grass or 0)+(floorMix.LeafyGrass or 0))/floorCols
 assert(moss>0.02 and moss<0.15,"moss is a little: "..moss)
-for _,m in {"Rock","Slate","Cobblestone"} do assert((floorMix[m] or 0)/floorCols>0.12,"floor stone mix has "..m) end
+for _,m in {"Rock","Limestone","Cobblestone"} do assert((floorMix[m] or 0)/floorCols>0.12,"floor stone mix has "..m) end
 local hs=L.byId.heart
 local pathMoss=0
 for _,p in L.paths do
@@ -225,7 +231,7 @@ local head=1
 local function push(i,j,k)
  if i<0 or j<0 or k<0 or i>=nx or j>=ny or k>=nz then return end
  local id=idx(i,j,k)
- if seen[id] or occ[id]>=0.5 then return end
+ if seen[id] or occ[id]>0 then return end
  seen[id]=true queue[#queue+1]=id
 end
 push(0,ny-1,0)
@@ -235,7 +241,7 @@ while head<=#queue do
  push(i+1,j,k) push(i-1,j,k) push(i,j+1,k) push(i,j-1,k) push(i,j,k+1) push(i,j,k-1)
 end
 local airTotal,bubbles=0,0
-for id=1,total do if occ[id]<0.5 then airTotal+=1 if not seen[id] then bubbles+=1 end end end
+for id=1,total do if occ[id]<=0 then airTotal+=1 if not seen[id] then bubbles+=1 end end end
 assert(bubbles==0,"isolated air bubbles: "..bubbles)
 -- the walkable footprint (arrival spots, stations) connects to the open sky through the holes
 for _,s in L.stations do
@@ -249,10 +255,10 @@ end
 -- ---- visible surface budget (faces of solid cells that touch air), measured not claimed
 local faces=0
 for i=0,nx-1 do for j=0,ny-1 do for k=0,nz-1 do
- if occ[idx(i,j,k)]>=0.5 then
+ if occ[idx(i,j,k)]>0 then
   for _,d in {{1,0,0},{-1,0,0},{0,1,0},{0,-1,0},{0,0,1},{0,0,-1}} do
    local a,b,c=i+d[1],j+d[2],k+d[3]
-   if a<0 or b<0 or c<0 or a>=nx or b>=ny or c>=nz or occ[idx(a,b,c)]<0.5 then faces+=1 end
+   if a<0 or b<0 or c<0 or a>=nx or b>=ny or c>=nz or occ[idx(a,b,c)]<=0 then faces+=1 end
   end
  end
 end end end

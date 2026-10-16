@@ -234,6 +234,8 @@ Everything behind `Config.CaveHub = false` until Phase 5 passes. Pure modules in
 Dependencies: 263 -> 264 -> 265; 266 -> 268 <- 267; 268 -> 269/270; 264 -> 271 -> 272 -> 273/274; 271 -> 275; 272 -> 276; everything -> 277; 278 after 277.
 
 ## 14.1 Built so far and layout changes found by the verifier (2026-10-16)
+
+**Studio QA 2026-10-16 (BD-281):** terrain occupancy is now `sd / Res` (Studio put the old floor at 8, not 6); ceiling holes are radius 12 / 8 / 8 / 7; cave-only terrain colours Cobblestone, Limestone (walls and ceiling) so the hall is warm, not dark teal; the lava recess is capped under the 38 stud back-wall ceiling (the 48 high sheet is BD-295); leaderboard boards stand behind the Fame station when the flag is on. Evidence: `docs/evidence/2026-10-16-cave-shell/`.
 `tools/verify_cave_hub.py` (BD-279) found that the section 2.2 offsets broke their own rule, so the real layout in `CaveHubLayout` differs from the table above. The code is the source of truth; offsets are (x, dz) from the cave centre:
 - Heart (0,0) r18; Island Gate (0,-80) r15 (was -92: pad left the floor); Nests (66,-38) r17; Potions (-66,-38) r15; Fusion (0,48) r20 (was 72); Style (84,34) r18; Index (-84,34) r20; Settings (-48,76) r10 (was (-34,66) r8: 34 studs from Fusion); Fame (48,76) r12 (was (40,68): 40 studs from Fusion). Smallest station gap is exactly 48.
 - Lava pool is (-4,86) r11 with the fall sheet on the back wall at (-4,100); it was moved so no pad touches it and it stays inside the floor. Lava props trimmed to 6 rim rocks + 4 stepping stones so the lava group stays within its 12 parts.

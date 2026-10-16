@@ -251,7 +251,7 @@ print(string.format("layout OK: %d stations (min gap %.1f), %d paths, max path/p
 assert(C.insideFloor(spawn.x,spawn.z,18-1) and blocked(0,0,3)==nil,"spawn on a clear Heart")
 assert(L.gate.mouthWidth==30 and L.gate.countdown==1.5 and L.gate.triggerZ<ids.gate.z,"run-exit gate: 30 wide mouth, 1.5 s countdown, trigger past the arch toward the island")
 assert(C.insideFloor(0,L.gate.triggerZ+C.CenterZ,3) and L.gate.triggerHalfWidth==15,"gate trigger inside the floor")
-local want={heart=7,potions=5,nests=5,style=4}
+local want={heart=12,potions=8,nests=8,style=7} -- BD-281 QA: enlarged from 7/5/5/4 (a pin-prick from the floor)
 assert(#L.holes==4,"four ceiling holes")
 for _,h in L.holes do
  assert(h.radius==want[h.station],"hole radius "..h.station)
