@@ -322,7 +322,7 @@ def check_key():
     assert 'LPTierShell' in dinos and 'Tier.ShellScale' in dinos and 'Transparency = math.clamp(entry.shellTransparency' in dinos, "translucent glossy shell per textured part"
     tier = (ROOT / 'src/shared/LowPolyTier.luau').read_text(encoding='utf-8')
     assert 'Tier.ShellTransparency = {0.4, 0.95}' in tier, "round 9: shell is a translucent tier-coloured coat"
-    for tid, rimc in (('gold', '255, 190, 60'),  # lead Studio tuning 2026-10-17 (gold fill) ('emerald', '40, 255, 140'), ('diamond', '200, 245, 255')):
+    for tid, rimc in (('gold', '255, 190, 60'), ('emerald', '40, 255, 140'), ('diamond', '200, 245, 255')):
         m = re.search(tid + r' = \{id.*?shell = \{([^}]*)\}', tier, re.S)
         assert m.group(1).strip() == {'gold': '255, 170, 30', 'emerald': '40, 255, 120', 'diamond': '150, 200, 255'}[tid], f"{tid} shell is the tier colour (round 9 live tuning)"
         assert 'rim = {' + rimc + '}' in tier, f"{tid} rim colour"
