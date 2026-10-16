@@ -322,6 +322,16 @@ assert(Repository.progression(shopper).crystals==341)
 assert(Repository.progressionAction(shopper,"equipTrail","fern","equip-fern",false))
 local growth,speed=Rules.multipliers(Repository.progression(shopper),"compy",nil,0)
 assert(math.abs(growth-1)<1e-8 and math.abs(speed-1.02)<1e-8) -- BD-185: stored egg condition never changes dino stats
+do -- BD-181/185: a legacy dino conditionId (profile, dino or extra argument) is ignored by stat code
+  local base={Rules.multipliers(Repository.progression(shopper),"compy",nil,0)}
+  for _,id in {"cracked","dirty","normal","rainbow","astra"} do
+    local legacy=table.clone(Repository.progression(shopper)) legacy.conditionId=id legacy.equippedCondition=id
+    legacy.dinosaurs={{instanceId="legacy",speciesId="compy",genes={conditionId=id}}}
+    local got={(Rules.multipliers :: any)(legacy,"compy",nil,0,nil,id)}
+    for i=1,#base do assert(math.abs(got[i]-base[i])<1e-12,"legacy dino condition "..id.." changed stat "..i) end
+  end
+  assert(data['u:991'].eggs[1].genes.conditionId~=nil,"egg condition stays on the egg")
+end
 assert(Repository.progressionAction(shopper,"upgradeCondition","1","policy-block",false)==false)
 mutableConfig.DeveloperProducts={} -- No Robux-buyable currency: earned-only path.
 assert(Repository.progressionAction(shopper,"upgradeCondition","1","condition-1",false))
