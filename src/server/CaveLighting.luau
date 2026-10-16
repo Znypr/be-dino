@@ -50,6 +50,12 @@ local function light(spec: any): PointLight
     l.Color, l.Range, l.Brightness, l.Shadows = c3(spec.color), spec.range, spec.brightness, spec.shadows == true
     l:SetAttribute("Owner", spec.owner)
     if spec.pulse then l:SetAttribute("Pulse", true) end
+    if spec.lamp then -- cosy pass: the client breathes these (CaveLightingRules.lampBrightness); the server value stays the steady base
+        l:SetAttribute("Lamp", true)
+        l:SetAttribute("LampBase", spec.brightness)
+        l:SetAttribute("LampPhase", spec.phase)
+        l:SetAttribute("LampPeriod", spec.period)
+    end
     l.Parent = holder
     return l
 end

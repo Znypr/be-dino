@@ -11,7 +11,7 @@ Found while writing [114](114-handbook.md). Each row: the two statements, which 
 | C-4 | **Cave dim vs bright.** docs/104 s4 says "the cave must never be dark" and "no ColorCorrection for the cave"; docs/87 and others say warm light; BD-399 code is warm-dim with a ColorCorrection `CaveGrade`; the owner now says DIM, lamp-lit. | RESOLVED: owner statement is newer: dim, lamp-lit, readable dino. docs/104 s4 is superseded on "never dark" and "no ColorCorrection" (the grade is accepted). Add a floor so the dino stays readable (BD-402 check). |
 | C-5 | **Weather inside the cave.** docs/104 s4 (weather stays outside) vs code that leaked weather (BD-383, BD-398). | RESOLVED: owner: weather never affects the inside; BD-383/398 are the fix; add a permanent automated check (BD-403). |
 | C-6 | **Catch rate.** docs/03, docs/00 and old kanban text still mention 40/400 or 15/150 eggs; `Config.FoodCatchRate` is 4/500 (AGENTS.md was already corrected). | RESOLVED: 4/500 is newest (docs/89, 2026-10-15). AGENTS.md already carries the strike-throughs; docs/00 now points at the handbook. |
-| C-7 | **Fusion ladder.** AGENTS.md was corrected to 6/3/2; docs/46, docs/57, kanban BD-065/BD-057 text say 10, 15/4/2 or 50/10/3; code and docs/90 say 6/3/2. | RESOLVED: 6 Base (any pattern) / 3 Gold / 2 Emerald (owner 2026-10-15, BD-335). AGENTS.md note already says superseded. |
+| C-7 | **Fusion ladder.** AGENTS.md was corrected to 6/3/2; docs/46, docs/57, kanban BD-065/BD-057 text say 10, 15/4/2 or 50/10/3; code and docs/90 say 6/3/2. | RESOLVED: 6 Base (any pattern) / 3 Gold / 2 Emerald (owner 2026-10-15, BD-335). AGENTS.md, docs/03 and docs/46 now mark 10, 15/4/2 and 50/10/3 as HISTORICAL in place. |
 | C-8 | **Species tiers.** AGENTS.md (2026-10-14) says five tiers with provisional weights tuned to the 40/400 examples; docs/00 says "three species categories Common/Rare/Legendary" and docs/82 sample table is 40/400-based. | RESOLVED: five tiers, run boost {1,1,1.1,1.1,1.1} (docs/89). Old table is history. |
 
 ## B. Open conflicts and ambiguities
@@ -48,3 +48,6 @@ Resolved by owner 2026-10-16: fast travel perk (Q-travel), first two eggs safe, 
 
 ## D. Stale statements in AGENTS.md
 Checked: catch-rate examples and the ladder were already corrected by earlier PRs. Fixed here in place: "approximately five seconds each" (reveal is 1 s, C-14) marked SUPERSEDED with a pointer; the handbook is linked first. Left as history: the 'Build 020 config' bullets, the 6-nests-offered example (C-15, Q8) and the 'six trail rarity categories proposed' line.
+
+## E. Vision answers 2026-10-16 (owner)
+Audit against code and docs: eggs kept when eaten = match. Mismatches (kanban): Peaceful hard to find and absent with combat off (BD-421), play-as-any class feel unproven (BD-423), no server rare-hatch announcement or confetti (BD-424), Robux line needs a guard check (BD-425). Audience (Q1) is still open: the answers say play and Robux but not an age band. docs/101 Q "PvP always on or optional" is answered: optional.

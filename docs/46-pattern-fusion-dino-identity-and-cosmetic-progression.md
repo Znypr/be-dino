@@ -12,8 +12,8 @@ Every dinosaur is a **persisted individual**, possibly born from an egg or **cra
 Owner decisions:
 - **Fusion order** begins **Base → Gold → Emerald → Diamond**. More stages may be added only after playable balance/art review. The old **Base 50→Gold, Gold 50→Diamond** is historical current Build 020 behavior to be migrated, **not** the new target.
 - **2026-10-15 UPDATE: ladder is now Gold = 6 Base of one species (any pattern), Emerald = 3 Gold, Diamond = 2 Emerald (same pattern), see [90](90-fusion-ladder-v2.md).**
-- **2026-10-14 owner-approved ladder (superseded by the line above) (supersedes the 10-donor Gold rule below and the 50/10/3 of 2026-10-13; implemented in [58](58-fusion-ladder-50-10-3.md)):** **Gold = 15 Base, Emerald = 4 Gold, Diamond = 2 Emerald**, same species + same pattern at every tier, each fusion consumes ALL donors into ONE NEW individual with freshly rolled traits. Cosmetic-loss and consent rules are unchanged.
-- First playable **Gold recipe costs 10 qualifying dinosaurs**, not 50, and **matches species + saved egg pattern**. Example: **ten Compies with Wavy Stripes → one Gold Wavy-Stripes Compy**. This is the owner-requested prototype threshold, **not** permission to require identical colors, conditions or Shiny to craft Gold.
+- ~~HISTORICAL~~ **2026-10-14 owner-approved ladder (HISTORICAL, superseded by the 2026-10-15 6/3/2 line above) (supersedes the 10-donor Gold rule below and the 50/10/3 of 2026-10-13; implemented in [58](58-fusion-ladder-50-10-3.md)):** **Gold = 15 Base, Emerald = 4 Gold, Diamond = 2 Emerald**, same species + same pattern at every tier, each fusion consumes ALL donors into ONE NEW individual with freshly rolled traits. Cosmetic-loss and consent rules are unchanged.
+- ~~HISTORICAL (2026-10-08, superseded: Gold is now 6 Base of one species, any pattern, see [90](90-fusion-ladder-v2.md))~~ First playable **Gold recipe costs 10 qualifying dinosaurs**, not 50, and **matches species + saved egg pattern**. Example: **ten Compies with Wavy Stripes → one Gold Wavy-Stripes Compy**. This is the owner-requested prototype threshold, **not** permission to require identical colors, conditions or Shiny to craft Gold.
 - Fusion stages are the **main deterministic, earned source of permanent stat upgrades**. Lucky conditions/event traits remain special; buying cosmetics is not the primary way to become strong.
 - Gold/Emerald/Diamond material/Blender effects are **additive overlays over the RESULT'S newly rolled color mix and pattern**. They must preserve legibility of those **new** genes, face and species identity and allow the **new** Shiny/event mutation (if rolled) to coexist with **separately bought new** aura/trail cosmetics. They must NOT copy any particular ingredient's traits. Compare **subtle and medium** surface treatments.
 - Auras/trails can be purchased repeatedly **for separate dinosaur instances**. A living dino can own several looks and freely switch among them. **On fusion, ALL consumed dinos' owned and equipped auras/trails are LOST; none transfers to the new fused dinosaur**, which starts with no paid cosmetics. Show an explicit irreversible-loss warning, particularly for premium/purchased or equipped looks; determine refund/retention policy for legacy paid items before deployment.
@@ -22,7 +22,7 @@ Owner decisions:
 
 ## 1. Tier ladder and recipe decisions — BD-057
 
-**Confirmed order and first recipe:** Base → Gold → Emerald → Diamond; Gold uses 10 same-species, same-pattern dinosaurs in the first prototype.
+**Confirmed order and first recipe:** Base → Gold → Emerald → Diamond; Gold used 10 same-species, same-pattern dinosaurs in the first prototype (HISTORICAL; current ladder 6 Base / 3 Gold / 2 Emerald, [90](90-fusion-ladder-v2.md)).
 
 **Suggested future extension for exploration**, not approved tiers or shipping promise:
 
