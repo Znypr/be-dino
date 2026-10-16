@@ -21,7 +21,7 @@ function Client.attach(gui: Instance)
     local player = Players.LocalPlayer
     local holder = Instance.new("Frame")
     holder.Name, holder.BackgroundColor3, holder.BackgroundTransparency, holder.BorderSizePixel = "IslandGateBar", Color3.fromRGB(40, 28, 70), 0.25, 0
-    holder.AnchorPoint, holder.Position, holder.Size = Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -90), UDim2.fromOffset(300, 44)
+    holder.AnchorPoint, holder.Position, holder.Size = Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -require(Shared:WaitForChild("HubTravelClientRules")).GateBarBottom), UDim2.fromOffset(300, 44)
     holder.Visible, holder.ZIndex, holder.Active = false, 7, false
     local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 12) corner.Parent = holder
     local label = Instance.new("TextLabel")
