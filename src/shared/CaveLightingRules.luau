@@ -15,6 +15,16 @@ Rules.GateGlow = {rate = 4, size = {12, 18}, alpha = 0.7, color = {255, 214, 160
 Rules.FillColor, Rules.LavaColor, Rules.CrystalColor, Rules.ForgeColor = {255, 214, 170}, {255, 140, 70}, {255, 196, 80}, {255, 190, 90}
 Rules.Forge = {period = 4, amplitude = 0.1, base = 0.6}
 Rules.ShadowLights = 4
+-- Cosy pass (docs/104 s14, owner 2026-10-16: a warm, safe, lamp-lit den). All PROVISIONAL, behind the CaveHub flag.
+-- Lamp flicker: the warm fill, Heart and crystal lights breathe by at most `amplitude` (a fraction of their own brightness), slowly and
+-- out of step with each other, like oil lamps. Never the lava, the forge (own pulse) or the gate arch (the doorway must stay steady).
+-- Reduce Motion (calm) = the steady base brightness, no animation at all.
+Rules.Lamp = {amplitude = 0.07, periodMin = 2.6, periodMax = 4.4, steady = {lava = true, forge = true, gate = true}}
+-- Soft ambient bed under the cave: ONE quiet loop. No cave loop is registered in docs/110 yet, so `id` stays "" (nothing plays) until the
+-- owner uploads one (TODO row cave_ambient_bed_loop, docs/77 and docs/120). Plays on the "ambience" group at `volume` x the cave amount.
+Rules.Bed = {id = "", volume = 0.08, group = "ambience", fadeSeconds = 2.5}
+-- Show-off spot: the Heart pedestal (collider top = floor + 3.8, CaveProps.colliderHeight clamps 3.5 to 4 minus 0.2). A prompt there steps the player's dino onto the pedestal so everyone can admire it.
+Rules.ShowOff = {prompt = "Show off", promptDistance = 9, standHeight = 3.8, cooldown = 1.5}
 Rules.FxPartBudget = 16 -- shaft beams (2 per hole) + dust volumes (1 per hole) + the gate glow anchor
 -- Cave-only look (applied only while the player is inside the hub, restored on leaving; nothing here touches the island).
 Rules.Look = {
@@ -79,6 +89,14 @@ function Rules.get(): any
             add(owner, s.x + math.cos(o) * s.r * 0.45, FY + 8, s.z + math.sin(o) * s.r * 0.45, Rules.FillColor, 34, 0.85)
         end
     end
+    -- cosy pass: which lights breathe, each with its own slow period and phase (deterministic by list order)
+    for i, l in lights do
+        if not Rules.Lamp.steady[l.owner] then
+            l.lamp = true
+            l.phase = (i * 2.399963) % (2 * math.pi) -- golden angle: neighbours never flicker together
+            l.period = Rules.Lamp.periodMin + ((i * 0.618034) % 1) * (Rules.Lamp.periodMax - Rules.Lamp.periodMin)
+        end
+    end
     -- BD-398: PointLight.Shadows only for the 4 strongest lights (brightness x range), the rest stay shadowless (cheap)
     local order = {}
     for i = 1, #lights do order[i] = i end
@@ -89,6 +107,29 @@ function Rules.get(): any
         gate = {x = gate.x, z = gate.z + cz - Rules.GateGlow.out, y = FY + Rules.GateGlow.lift, mouthWidth = g.mouthWidth},
         fxParts = #shafts * 3 + 1}
     return cache
+end
+
+-- Lamp brightness at time `t` (seconds): base x (1 +- amplitude), two slow sines so it breathes instead of ticking. calm = base.
+function Rules.lampBrightness(base: number, t: number, phase: number, period: number, calm: boolean): number
+    if calm then return base end
+    local w = 0.65 * math.sin(2 * math.pi * t / period + phase) + 0.35 * math.sin(2 * math.pi * t / (period * 0.37) + phase * 1.7)
+    return base * (1 + Rules.Lamp.amplitude * w)
+end
+
+-- Bed volume for the current cave amount (0..1): 0 while no sound is registered (Bed.id == "").
+function Rules.bedVolume(amount: number): number
+    if Rules.Bed.id == "" then return 0 end
+    return Rules.Bed.volume * math.clamp(amount, 0, 1)
+end
+
+-- Show-off spot in WORLD x, z, yaw (the Heart pedestal), or nil when the Heart has no pedestal.
+function Rules.showOffSpot(): any
+    for _, p in Layout.get().props do
+        if p.key == "hub_pedestal" and p.owner == "heart" then
+            return {x = p.x, z = p.z + Layout.CenterZ, yaw = p.yaw, standHeight = Rules.ShowOff.standHeight}
+        end
+    end
+    return nil
 end
 
 -- Inside the hub? (hysteresis: enter at the floor-blob edge, leave 12 percent beyond). Used by the client look and the weather gate.
