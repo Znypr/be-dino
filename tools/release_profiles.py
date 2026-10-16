@@ -122,6 +122,9 @@ PROFILES: dict[str, list[Rule]] = {
         # one part, so density 1.25 (~1,250 props) is ~4.3k parts incl. food (tools/verify_world_art.py enforces <= 8,000).
         Rule("WorldArtMode", "set", "BiomeKit", reason="BD-049 new trees/rocks/landmarks (docs/68)"),
         Rule("FoodArtMode", "set", "Kit", reason="BD-050 food variants (docs/68)"),
+        # docs/107: legacy dinos are 1,424-2,400 parts each (12 players = 24k-41k parts); low-poly dinos are ~119. The playtest
+        # ships the cheap ones; the default profile keeps requiring false. Every species falls back to the legacy visual on a failed load.
+        Rule("LowPolyDinos", "set", True, reason="BD-225 low-poly dinos for friends playtests (docs/107 part budget)"),
         Rule("WorldArtDensity", "set", 1.25, reason="PROVISIONAL: world v2, 1 part per MeshPart prop, total under 8,000 (docs/68)"),
         # Future fusion/menu release keys (BD-064/BD-065) go here, e.g.
         # Rule("<FusionFlagName>", "set", True, missing="warn", reason="BD-064 fusion server"),

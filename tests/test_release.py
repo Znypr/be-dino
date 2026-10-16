@@ -79,7 +79,8 @@ class ReleaseProfileTests(unittest.TestCase):
         self.assertIs(values["IdentityPersistentEnabled"], True)
         self.assertIs(values["IdentityFusionPreviewEnabled"], True)
         changed = [a for a, b in zip(with_ids(CONFIG).splitlines(), rewritten.splitlines()) if a != b]
-        self.assertEqual(len(changed), 7)
+        self.assertEqual(len(changed), 8)
+        self.assertIs(values["LowPolyDinos"], True)
         self.assertEqual((values["WorldArtMode"], values["FoodArtMode"], values["WorldArtDensity"]), ("BiomeKit", "Kit", 1.25))
         self.assertEqual(profiles.verify_source(CONFIG, "default").errors, [])
 
@@ -154,6 +155,19 @@ class ReleaseProfileTests(unittest.TestCase):
     def test_current_delivery_passes_default_release_check(self):
         errors, _ = verify_release.run("default")
         self.assertEqual(errors, [])
+
+
+class LowPolyProfileTests(unittest.TestCase):
+    """docs/107: playtest ships the cheap low-poly dinos, default keeps them off."""
+
+    def test_default_requires_false_playtest_sets_true(self):
+        rules = {p: {r.key: r for r in profiles.rules_for(p)} for p in ("default", "playtest")}
+        self.assertEqual((rules["default"]["LowPolyDinos"].mode, rules["default"]["LowPolyDinos"].value), ("require", False))
+        self.assertEqual((rules["playtest"]["LowPolyDinos"].mode, rules["playtest"]["LowPolyDinos"].value), ("set", True))
+
+    def test_default_source_with_flag_on_fails(self):
+        report = profiles.verify_source(with_value(CONFIG, "LowPolyDinos", "true"), "default")
+        self.assertTrue(any("LowPolyDinos" in e for e in report.errors))
 
 
 class LoadHarnessTests(unittest.TestCase):
