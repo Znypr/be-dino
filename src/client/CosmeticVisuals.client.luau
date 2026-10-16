@@ -43,7 +43,7 @@ RunService.Heartbeat:Connect(function(dt)
     for _,player in players do
         local character=player.Character
         local root=if character then character:FindFirstChild("HumanoidRootPart") else nil
-        if root and root:IsA("BasePart") and camera and distance[player]<180 and count<8 then
+        if root and root:IsA("BasePart") and camera and distance[player]<180 and count<12 then
             count+=1 keep[player]=true
             local auraId=character:GetAttribute("EquippedAuraId") or ""
             local trailId=character:GetAttribute("EquippedTrailId") or ""
@@ -61,9 +61,9 @@ RunService.Heartbeat:Connect(function(dt)
                 -- A second or third rig on the same dino always uses the lite layer count so the combined look stays inside one budget.
                 local function add(kind: string,item: any)
                     if not item or (mode=="off" and kind~="mutation") then return end -- Off drops aura and trail, keeps the event mutation cue
-                    -- QA fix (mutation-qa): every player owns a trail (default white), so the mutation was always rig #2 = lite and its
-                    -- mist/ring never showed. The mutation now takes the full slot unless an aura already does; the trail stays lite.
-                    local rigDetail=if #state.rigs>0 and not (kind=="mutation" and auraId=="") then "lite" else detail
+                    -- BD-353 stacked budget: the mutation cue always keeps its own detail (glow + ground ring + motes even when lite);
+                    -- an aura and a trail on the same dino drop to the lite layer count instead, so the combined look stays in budget.
+                    local rigDetail=if kind~="mutation" and (#state.rigs>0 or mutationId~="") then "lite" else detail
                     table.insert(state.rigs,Rig.attach(root,kind,item,{reduce=reduce,detail=rigDetail,device=device}))
                 end
                 add("aura",Rules.item(Config.Auras,auraId))

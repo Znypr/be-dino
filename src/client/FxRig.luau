@@ -57,6 +57,7 @@ local function c3(c: {number}): Color3
     return Color3.fromRGB(math.clamp(math.floor(c[1] + 0.5), 0, 255), math.clamp(math.floor(c[2] + 0.5), 0, 255), math.clamp(math.floor(c[3] + 0.5), 0, 255))
 end
 local function colorSeq(colors: {{number}}): ColorSequence
+    if type(colors) ~= "table" or #colors == 0 then return ColorSequence.new(Color3.fromRGB(255, 255, 255)) end -- never throw on a recipe without colours
     if #colors == 1 then return ColorSequence.new(c3(colors[1])) end
     local keys = {}
     for i, c in colors do keys[i] = ColorSequenceKeypoint.new((i - 1) / (#colors - 1), c3(c)) end

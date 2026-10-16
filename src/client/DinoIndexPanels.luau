@@ -18,6 +18,7 @@ local Preview = require(Shared.DinosaurPreview)
 local Sel = require(Shared.FusionSelection)
 local MyDinos = require(Shared.MyDinos)
 local MutationLook = require(Shared.MutationLook)
+local MutationBadge = require(script.Parent.MutationBadge)
 local PreviewTraits = require(script.Parent.PreviewTraits)
 local InspectView = require(script.Parent.InspectView)
 local W = require(script.Parent.FusionWidgets)
@@ -331,14 +332,19 @@ function Panels.species(ctx)
         pill(button, string.upper(Sel.stageTitle(d.stage)), StageColors[d.stage] or StageColors.base, UDim2.fromOffset(62, 16), UDim2.new(1, -68, 0, 7), if d.stage == "base" then C.text else C.outline)
         local y = 7
         for _, text in MyDinos.ribbons(d, catalog) do
-            if y > 45 then break end
-            -- QA 2026-10-16: a mutation chip wears its own badge colour (was one purple for all seven), dark text on the soft colour.
-            local badgeColor: Color3? = nil
+            if y > 62 then break end
+            -- BD-352: a mutation is a real badge (own colour, 14 px word, dot), not a 9 px pill; shiny / big stay small pills.
+            local mutationId: string? = nil
             for _, entry in MutationLook.Entries do
-                if string.upper(entry.name) == text then badgeColor = MutationLook.color(entry.badge) end
+                if string.upper(entry.name) == text then mutationId = entry.id end
             end
-            pill(button, text, if text == "SHINY" then C.gold else (badgeColor or C.purple), UDim2.fromOffset(54, 16), UDim2.fromOffset(7, y), if text == "SHINY" or badgeColor then C.outline else C.text)
-            y += 19
+            if mutationId then
+                MutationBadge.chip(button, mutationId, UDim2.fromOffset(4, math.max(y, 28))) -- below the stage pill, never over it
+                y += MutationBadge.Height + 3
+            else
+                pill(button, text, if text == "SHINY" then C.gold else C.purple, UDim2.fromOffset(54, 16), UDim2.fromOffset(7, y), if text == "SHINY" then C.outline else C.text)
+                y += 19
+            end
         end
         W.label(button, Sel.name(catalog, "patterns", g.patternId, "Plain"), UDim2.new(1, -8, 0, 17), UDim2.fromOffset(4, 82), 14)
         W.swatch(button, g, UDim2.new(1, -16, 0, 9), UDim2.fromOffset(8, 101))

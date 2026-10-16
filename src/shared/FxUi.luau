@@ -10,6 +10,7 @@ local Assets = require(script.Parent.EffectAssets)
 
 local Ui = {}
 local MAX_ACTIVE = 8
+Ui.HeroSmokeSize, Ui.HeroSmokeAlpha, Ui.HeroSmokeRate = 0.4, 0.5, 0.5 -- BD-351 (verify_previews pins them)
 local active = {}
 local connection
 local clock = 0
@@ -90,7 +91,22 @@ local function runner(h, time: number)
     return 0.14 + 0.72 * phase, 0.52 + 0.1 * math.sin(phase * math.pi * 2) - 0.05
 end
 
+-- BD-351: a hero mutation preview lives BEHIND the dinosaur: its frame is a sibling just under the viewport (children of a
+-- ViewportFrame always draw over the model), kept on the same rectangle every step. Visibility follows the viewport.
+local function syncBehind(h)
+    local view, frame = h.root, h.frame
+    if not (h.behind and view:IsA("GuiObject")) then return end
+    local holder = view.Parent
+    if holder and frame.Parent ~= holder then frame.Parent = holder end
+    frame.ZIndex = math.max(view.ZIndex - 1, 0)
+    frame.AnchorPoint, frame.Position, frame.Visible = view.AnchorPoint, view.Position, view.Visible
+    local scale = view:FindFirstChildOfClass("UIScale")
+    local k = if scale then scale.Scale else 1
+    frame.Size = UDim2.new(view.Size.X.Scale * k, view.Size.X.Offset * k, view.Size.Y.Scale * k, view.Size.Y.Offset * k)
+end
+
 local function stepHandle(h, dt: number)
+    syncBehind(h)
     local frame = h.frame
     local size = frame.AbsoluteSize
     local unit = math.max(math.min(size.X, size.Y), 24)
@@ -310,7 +326,8 @@ local function loop(dt: number)
     clock = 0
     for i = #active, 1, -1 do
         local h = active[i]
-        if not h.frame or not h.frame.Parent or not h.frame:IsDescendantOf(game) then
+        if h.frame and h.behind then syncBehind(h) end
+        if not h.frame or not h.frame.Parent or not h.frame:IsDescendantOf(game) or (h.behind and not h.root:IsDescendantOf(game)) then
             kill(h) table.remove(active, i)
         elseif h.frame.Parent and h.frame.Visible and h.frame.AbsoluteSize.X > 0 and not (h.root:IsA("GuiObject") and not h.root.Visible) then
             stepHandle(h, math.min(step, 0.1))
@@ -340,7 +357,13 @@ function Ui.mount(parent: GuiObject, kind: string, item, opts)
     frame.Size, frame.ZIndex = UDim2.fromScale(1, 1), parent.ZIndex + 1
     frame.Active = false
     frame.Parent = parent
-    local h = {frame = frame, root = parent, kind = kind, resolved = resolved, z = parent.ZIndex + 2, time = 0, layers = {}, reduced = opts.reduce == true, hero = opts.hero == true}
+    if opts.hero and kind == "mutation" then
+        -- BD-351 calm hero look: keep the colour glow and sparkles, shrink and thin the smoke so the dino body stays readable.
+        for _, layer in resolved.layers do
+            if layer.tex == "smokeSheet" then layer.size *= Ui.HeroSmokeSize layer.alpha *= Ui.HeroSmokeAlpha layer.rate *= Ui.HeroSmokeRate end
+        end
+    end
+    local h = {frame = frame, root = parent, kind = kind, resolved = resolved, z = parent.ZIndex + 2, behind = opts.hero == true and kind == "mutation" and parent:IsA("ViewportFrame") and parent.BackgroundTransparency >= 0.95, time = 0, layers = {}, reduced = opts.reduce == true, hero = opts.hero == true}
     h.orb = dot(frame, h.z + 1, true)
     h.orb.Size = UDim2.fromScale(if kind == "trail" then 0.22 else 0.16, if kind == "trail" then 0.22 else 0.16)
     h.orb.SizeConstraint = Enum.SizeConstraint.RelativeYY
