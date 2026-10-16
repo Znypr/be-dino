@@ -1,5 +1,5 @@
 --!strict
--- BD-246 (docs/101 s2, s11-12): applies the class movement rules to the player's Humanoid. Runs ONLY while Config.CombatEnabled
+-- BD-246 (docs/101 s2, s11-12): applies the class movement rules to the player's Humanoid. Runs ONLY while Config.ClassMovementEnabled
 -- is true; with the flag off start() returns before touching anything (no remote, no loop), so default behaviour is unchanged.
 --  * JumpPower = Config.JumpPower x class powerX (Water 0 = cannot jump). The WalkSpeed class multiplier lives in ProgressionService.
 --  * FLY hover cap: while airborne the upward speed is cut at the class height cap above the ground (ClassMovement.limitVertical).
@@ -36,7 +36,7 @@ function Service.dashDecision(class: string, state: any): (boolean, string)
 end
 
 function Service.start()
-    if not Config.CombatEnabled then return end
+    if not Config.ClassMovementEnabled then return end
     local remote = Instance.new("RemoteEvent")
     remote.Name = "ClassDash"
     remote.Parent = ReplicatedStorage:WaitForChild("BeDinoRemotes")

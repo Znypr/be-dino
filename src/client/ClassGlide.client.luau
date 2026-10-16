@@ -1,6 +1,6 @@
 --!strict
 -- BD-246: Fly glide. Holding jump in the air tells the server (one boolean); the server caps the fall speed. Does nothing unless
--- the server created the remote (Config.CombatEnabled) and the dino is Fly class.
+-- the server created the remote (Config.ClassMovementEnabled) and the dino is Fly class.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
