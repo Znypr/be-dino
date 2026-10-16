@@ -12,6 +12,8 @@ local Config = require(Shared:WaitForChild("Config"))
 local Rules = require(Shared:WaitForChild("HubTravelClientRules"))
 local Settings = require(Shared:WaitForChild("SettingsModel"))
 local Sfx = require(Shared:WaitForChild("Sfx"))
+local Copy = require(Shared:WaitForChild("HubSignCopy"))
+local Guide = require(script.Parent:WaitForChild("HubGuideClient")) -- BD-289: moss trail for "Teleport to shops" OFF (no-op while the flag is off)
 local WalkUp = require(script.Parent:WaitForChild("HubWalkUpClient")) -- BD-289: sign prompts + pad dwell (no-op while the flag is off)
 local GateBar = require(script.Parent:WaitForChild("HubGateClient")) -- BD-290: "Leaving..." bar at the Island Gate (no-op while the flag is off)
 
@@ -23,6 +25,7 @@ local at: string? = nil -- the station this client last travelled to (cleared wh
 local serial = 0
 local overlay: Frame? = nil
 local walkUp: any = nil -- {note} from HubWalkUpClient once attached
+local guide: any = nil -- {show, cancel} from HubGuideClient once attached
 local chip: TextButton? = nil
 local Cream = Color3.fromRGB(255, 244, 220)
 
@@ -106,6 +109,7 @@ end
 -- true = handled here (travelling or blocked); false = the caller opens the menu as before.
 function Client.press(destination: string): boolean
     if ctx == nil or Config.CaveHub ~= true then return false end
+    if guide then guide.cancel() end -- pressing any rail button cancels a trail still showing
     local decision = Rules.decide({
         caveHub = true, destination = destination, runState = runState(),
         teleportShops = Settings.teleportShops(), remote = remote() ~= nil, busy = busy,
@@ -113,6 +117,12 @@ function Client.press(destination: string): boolean
     if decision.kind == "blocked" then
         if decision.toast then ctx.notify(decision.toast, nil) end
         return true
+    elseif decision.kind == "guide" then
+        if guide and guide.show(decision.station) then
+            ctx.notify(Copy.GuideToast, nil)
+            return true
+        end
+        return false -- already on that pad (or not in the cave): open the menu plainly
     elseif decision.kind == "travel" then
         travel(decision.station, function()
             if destination == "fusion" then ctx.openFusion() else ctx.open(destination) end
@@ -128,6 +138,7 @@ function Client.attach(c: any)
     local gui: Instance = c.gui
     walkUp = WalkUp.attach(c, function() return busy end)
     GateBar.attach(gui)
+    guide = Guide.attach()
     local o = Instance.new("Frame")
     o.Name, o.BackgroundColor3, o.BackgroundTransparency, o.BorderSizePixel = "HubTravelFade", Cream, 1, 0
     o.Size, o.Visible, o.Active, o.ZIndex = UDim2.fromScale(1, 1), false, false, 190

@@ -47,7 +47,8 @@ end
 assert(decide({destination="settings"}).kind=="open","settings never teleports")
 -- teleportShops off or the remote missing: just open the menu
 for dest in R.Stations do
- assert(decide({destination=dest,teleportShops=false}).kind=="open","toggle off opens "..dest)
+ local g=decide({destination=dest,teleportShops=false})
+ assert(g.kind=="guide" and g.station==R.Stations[dest],"toggle off walks there (BD-289) "..dest)
  assert(decide({destination=dest,remote=false}).kind=="open","no remote opens "..dest)
 end
 -- loading (no RunState yet) counts as home, not a run
