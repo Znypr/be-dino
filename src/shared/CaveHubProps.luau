@@ -99,6 +99,10 @@ Props.Lava = {
 Props.Warm = {
     cave_lava_rim_rock = {color = {118, 74, 58}, material = "Slate"},
     cave_stepping_stone = {color = {138, 88, 66}, material = "Slate"},
+    -- BD-411 / BD-400 STOPGAP (handbook 5.3, owner 2026-10-16: currency/shop crystals are AMBER): the blue-purple generated crystals take a
+    -- flat amber Color until the owner regenerates amber meshes (BD-400). Same mechanism as the two rows above; no new asset id.
+    hub_crystal_s = {color = {255, 190, 60}, material = "Plastic"},
+    hub_crystal_l = {color = {255, 190, 60}, material = "Plastic"},
 }
 
 -- BD-292: the sign meshes that carry station text (a SurfaceGui built from HubSignCopy, front face only). `face` is the mesh's
