@@ -100,6 +100,28 @@ try:
     ea = texts[ROOT / 'src/shared/EffectAssets.luau']
     assert 'ribbonSoft = {id = "rbxassetid://123456789"' in ea
     assert 'fern = "rbxassetid://223456789",' in texts[ROOT / 'src/shared/ProgressionConfig.luau']
+    # the bucket binder also drops the PLACEHOLDER note
+    hb = bind_assets.bind(bind_assets.parse_input('hatch_bucket=987654321'), by_name)[1][ROOT / 'src/shared/HatchV2Assets.luau']
+    assert 'assetId = "987654321"' in hb and 'Placeholder = {bucket = false}' in hb
+    assert 'note = "paint bucket mesh (owner upload)"' in hb and 'PLACEHOLDER: hub_barrel' not in hb
+    # registry upsert: adds a row, a second bind replaces it (no duplicates), an unknown format is refused
+    rows = bind_assets.registry_rows({'ribbonSoft': '123456789'}, by_name, '2026-01-02')
+    assert 'BD-' in rows[0][4] and 'BD-?' not in rows[0][4], rows[0][4]
+    reg, why = bind_assets.update_registry(rows)
+    assert why is None and reg.count('| ribbonSoft |') == 1 and 'owner upload' in reg and '123456789' in reg
+    import tempfile
+    real = bind_assets.REG
+    try:
+        with tempfile.TemporaryDirectory() as d:
+            tmp = Path(d) / 'r.md'
+            tmp.write_text(reg, encoding='utf-8')
+            bind_assets.REG = tmp
+            again, why2 = bind_assets.update_registry(bind_assets.registry_rows({'ribbonSoft': '555555555'}, by_name, 'd'))
+            assert why2 is None and again.count('| ribbonSoft |') == 1 and '555555555' in again and '123456789' not in again
+            tmp.write_text('| a | b |\n|---|---|\n', encoding='utf-8')
+            assert bind_assets.update_registry(rows)[0] is None
+    finally:
+        bind_assets.REG = real
     for bad in ('nope=123456', 'ribbonSoft=abc', 'ribbonSoft=', 'ribbonSoft=0', 'ribbonSoft=1\nribbonSoft=2'):
         try:
             bind_assets.bind(bind_assets.parse_input(bad), by_name)

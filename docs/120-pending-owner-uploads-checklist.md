@@ -1,5 +1,15 @@
 # 120 Pending owner uploads and asset tasks: one checklist (BD-318, 2026-10-16)
 
+## How to bind your uploads
+
+1. Save the ids in a text file, one per line, `name=rbxassetid://N` (names are in the "Bind in" column below; `python tools/bind_assets.py --list` shows them all), for example `ids.txt`:
+   ```
+   ribbonSoft=rbxassetid://123456789
+   trail_fern: 223456789
+   ```
+2. Run `python tools/bind_assets.py ids.txt` (add `--dry-run` first to only check). It writes the ids into the config, clears the PLACEHOLDER note for `hatch_bucket`, and adds or updates the matching [77](77-asset-registry.md) line. Unknown names or bad ids stop it with nothing written; if the 77 table format ever changes it prints the lines to add instead.
+3. Then `python tools/build.py`, `python tools/verify_asset_slots.py`, `python tools/verify_release.py`, and a Studio check.
+
 The single list of every asset still missing or not yet uploaded. It does not repeat the ChatGPT prompts: those live in [109](109-owner-art-prompt-pack.md) (section number in the "Prompt" column). Registry ids live only in [77](77-asset-registry.md); task status only in [the Kanban](07-kanban.md). Cross-checked against 77, 83, 109 and 118 on 2026-10-16 (section 4 lists what already exists). Rules: [AGENTS.md](../AGENTS.md) art rule (no Python- or code-drawn final art; effect textures are Blender renders or owner ChatGPT images; icons are Blender or owner ChatGPT), [72](72-ui-copy-and-asset-standards.md) (brief, drafts, pick, export, owner upload, Studio check; never invent ids).
 
 **Upload flow (all rows):** Studio > View > Asset Manager > Bulk Import, owner account, as **Image** (not Decal); paste back `name: rbxassetid://...`; the lead adds the docs/77 line and binds. 3D meshes are generated or uploaded in Studio and bound by the lead.

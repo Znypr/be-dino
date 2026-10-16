@@ -11,6 +11,7 @@ ids and duplicate names are refused and NOTHING is written. Ids are never invent
 Audio ids must be Audio uploads, images must be Image (not Decal) uploads (docs/120 upload flow).
 """
 import argparse
+import datetime
 import json
 import re
 import sys
@@ -115,6 +116,8 @@ def write_slot(slot, text, digits):
         return rep_one(text, r'(Rules\.Bed = \{id = ")([^"]*)(")', uri, slot['name'])
     if target == 'hatchbucket':
         text = rep_one(text, r'(bucket = \{assetId = ")([^"]*)(")', digits, slot['name'])
+        text = re.sub(r'(bucket = \{assetId = "[^"]*"[^\n]*?note = ")[^"]*(")',
+                      lambda m: m.group(1) + 'paint bucket mesh (owner upload)' + m.group(2), text, count=1)
         return text.replace('Assets.Placeholder = {bucket = true}', 'Assets.Placeholder = {bucket = false}')
     if target == 'table':
         table = slot['table']
@@ -153,6 +156,64 @@ def bind(pairs, slots):
     return plan, texts
 
 
+REG = ROOT / 'docs/77-asset-registry.md'
+REG_HEAD = ['Name', 'Type', 'Repo file', 'Roblox asset ID', 'Used by', 'Status']
+
+
+def bd_ids():
+    """slot name -> BD id(s), read from the docs/120 rows whose 'Bind in' cell names the slot's file:group."""
+    out = {}
+    slots = load_slots()
+    bd_col = None
+    for line in (ROOT / 'docs/120-pending-owner-uploads-checklist.md').read_text(encoding='utf-8').split('\n'):
+        if not line.startswith('|'):
+            continue
+        cells = [c.strip() for c in line.strip().strip('|').split('|')]
+        if cells[0] in ('Asset', 'Sound'):
+            bd_col = cells.index('BD') if 'BD' in cells else None
+            continue
+        if bd_col is None or len(cells) <= bd_col:
+            continue
+        for f, g in re.findall(r'`([^`]+):([^`:]+)`', cells[-1]):
+            for s in slots.values():
+                if s['file'] == f and (s['group'] == g or s['key'] == g or s.get('table') == g):
+                    out.setdefault(s['name'], cells[bd_col])
+    return out
+
+
+def registry_rows(plan, slots, today):
+    bds = bd_ids()
+    rows = []
+    for name, digits in plan.items():
+        s = slots[name]
+        rows.append([name, f'{s["kind"]}, owner upload', '-', digits, f'{s["file"]}:{s["group"]} ({bds.get(name, "BD-?")})',
+                     f'uploaded {today}, source owner upload, bound (Studio check pending)'])
+    return rows
+
+
+def update_registry(rows):
+    """Upsert rows into the first table of docs/77. Returns (new_text, None), or (None, reason) if the format is unknown."""
+    raw = REG.read_text(encoding='utf-8')
+    eol = '\r\n' if '\r\n' in raw else '\n'
+    lines = raw.replace('\r\n', '\n').split('\n')
+    head = next((i for i, l in enumerate(lines) if l.startswith('| Name |')), None)
+    if head is None or [c.strip() for c in lines[head].strip().strip('|').split('|')] != REG_HEAD \
+            or not re.fullmatch(r'\|(-+\|){6}', lines[head + 1].replace(' ', '')):
+        return None, 'docs/77 table header is not the 6-column Name|Type|Repo file|Roblox asset ID|Used by|Status'
+    end = head + 2
+    while end < len(lines) and lines[end].startswith('|'):
+        end += 1
+    for r in rows:
+        new = '| ' + ' | '.join(r) + ' |'
+        idx = next((i for i in range(head + 2, end) if lines[i].split('|')[1].strip() == r[0]), None)
+        if idx is None:
+            lines.insert(end, new)
+            end += 1
+        else:
+            lines[idx] = new
+    return eol.join(lines), None
+
+
 def list_slots(slots):
     bound = 0
     for name, slot in slots.items():
@@ -188,7 +249,16 @@ def main(argv=None):
         return 0
     for path, text in texts.items():
         path.write_text(text, encoding='utf-8', newline='')
-    print(f'{len(plan)} id(s) written. Now: add the docs/77 lines, run python tools/verify_asset_slots.py, then the matching verifier and a Studio check.')
+    rows = registry_rows(plan, slots, datetime.date.today().isoformat())
+    reg, why = update_registry(rows)
+    if reg is None:
+        print(f'docs/77 NOT written ({why}). Add these lines by hand:')
+        for r in rows:
+            print('| ' + ' | '.join(r) + ' |')
+    else:
+        REG.write_text(reg, encoding='utf-8', newline='')
+        print(f'docs/77 updated ({len(rows)} line(s)).')
+    print(f'{len(plan)} id(s) written. Now: run python tools/verify_asset_slots.py, then the matching verifier and a Studio check.')
     return 0
 
 
