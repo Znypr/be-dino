@@ -107,7 +107,6 @@ local function rim(container: Instance, entry: any?, body: BasePart?)
     local mode = "full"
     local okS, SettingsModel = pcall(function() return require(script.Parent.SettingsModel) end)
     if okS and SettingsModel and SettingsModel.effects then mode = SettingsModel.effects() end
-    if mode == "off" then return end
     local own = container:GetAttribute("LPOwn") == true or container:FindFirstAncestorOfClass("ViewportFrame") ~= nil
     local c = entry.rim
     local col = Color3.fromRGB(c[1], c[2], c[3])
@@ -121,19 +120,29 @@ local function rim(container: Instance, entry: any?, body: BasePart?)
         h.Parent = container
         liveRims[h] = true
         h.Destroying:Once(function() liveRims[h] = nil end)
-    elseif body then
-        local g = body:Clone()
-        for _, ch in g:GetChildren() do ch:Destroy() end
-        g.Name, g.TextureID = "LPTierGlow", ""
-        g:SetAttribute("LPTexture", nil) g:SetAttribute("LPRole", nil)
-        g.Size, g.Color, g.Material = body.Size * Tier.GlowScale, col, Enum.Material.Neon
-        g.Transparency = math.clamp(trans + 0.6, 0.7, 0.9)
-        g.CanCollide, g.CanQuery, g.CanTouch, g.Massless, g.CastShadow = false, false, false, true, false
-        g.CFrame = body.CFrame
-        local w = Instance.new("WeldConstraint")
-        w.Part0, w.Part1 = body, g
-        w.Parent = g
-        g.Parent = body
+    end
+    if mode == "off" then return end
+    -- soft glow (round 8): inflated Neon shell copies on EVERY textured part (body, head, tail, legs, arms); two layers = gradient falloff
+    -- (Effects Lite: the outer soft layer only). Mostly seen at the silhouette; high transparency keeps the dino's own colours.
+    local layers = if mode == "lite" then {Tier.GlowLayers[2]} else Tier.GlowLayers
+    for _, p in container:GetDescendants() do
+        local texId = if p:IsA("MeshPart") then p:GetAttribute("LPTexture") else nil
+        if p:IsA("MeshPart") and type(texId) == "string" and texId ~= "" and not Tier.isAccentName(p.Name) then
+            for i, layer in layers do
+                local shell = p:Clone()
+                for _, ch in shell:GetChildren() do ch:Destroy() end
+                shell.Name, shell.TextureID = "LPTierGlow", ""
+                shell:SetAttribute("LPTexture", nil) shell:SetAttribute("LPRole", nil)
+                shell.Size, shell.Color, shell.Material, shell.Reflectance = p.Size * layer[1], col, Enum.Material.Neon, 0
+                shell.Transparency = layer[2]
+                shell.CanCollide, shell.CanQuery, shell.CanTouch, shell.Massless, shell.CastShadow = false, false, false, true, false
+                shell.CFrame = p.CFrame
+                local w = Instance.new("WeldConstraint")
+                w.Part0, w.Part1 = p, shell
+                w.Parent = shell
+                shell.Parent = p
+            end
+        end
     end
 end
 -- Fallback (bake denied / cache full / far away): the model's OWN texture stays (eyes, belly, claws intact, species colour). A plain
@@ -202,7 +211,8 @@ function LowPoly.tint(container: Instance, genes: any)
             if role == "body" and not body then body = part end
             local eyeish = type(textureId) ~= "string" or textureId == ""
             -- BD-173: base dinos matte; only a fused tier gets Metal/Glass + reflectance, and only on textured body-colour parts.
-            part.Material, part.Reflectance = Enum.Material.Plastic, 0 -- 2026-10-16: the body keeps its own matte colours; the gloss is the translucent shell
+            part.Material, part.Reflectance = Enum.Material.Plastic, 0
+            if entry and not eyeish then part.Material, part.Reflectance = Enum.Material.SmoothPlastic, Tier.BodyGloss end -- fused: glossy highlights, texture stays
             if entry and Tier.isAccentName(part.Name) and eyeish then -- claws / toes / horns are untextured parts: tint them in the tier metal / gem
                 local c = entry.accent
                 part.Color = Color3.fromRGB(c[1], c[2], c[3])

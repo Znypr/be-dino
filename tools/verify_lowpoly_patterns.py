@@ -328,7 +328,9 @@ def check_key():
         assert 'rim = {' + rimc + '}' in tier, f"{tid} rim colour"
     assert 'Tier.RimTransparency = {0.1, 0.25}' in tier
     assert 'Highlight' in dinos and 'FillTransparency, h.OutlineTransparency = col, 1, trans' in dinos and 'DepthMode.Occluded' in dinos, "tier rim Highlight"
-    assert 'LPTierGlow' in dinos and 'Enum.Material.Neon' in dinos, "cheap Neon glow rim beyond the Highlight budget"
+    assert 'LPTierGlow' in dinos and 'Enum.Material.Neon' in dinos and 'Tier.GlowLayers' in dinos and 'Tier.BodyGloss' in dinos, "Neon glow shells on every textured part + body gloss"
+    assert 'Tier.GlowLayers[2]' in dinos, "Effects Lite: single glow layer"
+    assert 'BodyGloss = 0.2' in tier and 'GlowLayers' in tier, "glow layers / gloss constants"
     lod = (ROOT / 'src/shared/EffectsLod.luau').read_text(encoding='utf-8')
     m = re.search(r'RimHighlights = table.freeze\(\{full = (\d+), lite = (\d+), off = (\d+)\}\)', lod)
     assert m and int(m.group(1)) < 31 and int(m.group(3)) == 0 and 'RimHighlightHardCap = 31' in lod, "Highlight budget below Roblox's 31"
