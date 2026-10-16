@@ -1527,7 +1527,7 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "lightningBolt",
    "group": "Requested.lightningBolt",
-   "pending": "BD-055 weather textures"
+   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
   },
   {
    "name": "rainStreak",
@@ -1536,7 +1536,7 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "rainStreak",
    "group": "Requested.rainStreak",
-   "pending": "BD-055 weather textures"
+   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
   },
   {
    "name": "snowFlakeSheet",
@@ -1545,7 +1545,7 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "snowFlakeSheet",
    "group": "Requested.snowFlakeSheet",
-   "pending": "BD-055 weather textures"
+   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
   },
   {
    "name": "ashFlake",
@@ -1554,7 +1554,7 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "ashFlake",
    "group": "Requested.ashFlake",
-   "pending": "BD-055 weather textures"
+   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
   },
   {
    "name": "bloodMoonDisc",
@@ -1563,7 +1563,43 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "bloodMoonDisc",
    "group": "Requested.bloodMoonDisc",
-   "pending": "BD-055 weather textures"
+   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
+  },
+  {
+   "name": "emberSpark",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "emberSpark",
+   "group": "Requested.emberSpark",
+   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
+  },
+  {
+   "name": "dustSand",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "dustSand",
+   "group": "Requested.dustSand",
+   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
+  },
+  {
+   "name": "auroraCurtain",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "auroraCurtain",
+   "group": "Requested.auroraCurtain",
+   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
+  },
+  {
+   "name": "bloodMoonMotes",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "bloodMoonMotes",
+   "group": "Requested.bloodMoonMotes",
+   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
   },
   {
    "name": "tree_broadleaf_v3",
