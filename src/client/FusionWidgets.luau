@@ -12,11 +12,12 @@ local C = Theme.Colors
 local W = {}
 W.Colors = C
 W.Touch = 44
+W.MinText = 14 -- BD-083 / docs/72: no text under 14 px, even when a label is squeezed
 
 local function textConstraint(t: TextLabel | TextButton, maxSize: number)
     t.TextScaled = true
     local limit = Instance.new("UITextSizeConstraint")
-    limit.MaxTextSize, limit.MinTextSize, limit.Parent = maxSize, 9, t
+    limit.MaxTextSize, limit.MinTextSize, limit.Parent = maxSize, W.MinText, t
 end
 
 function W.label(parent: Instance, text: string, size: UDim2, position: UDim2, maxText: number?, color: Color3?, alignLeft: boolean?): TextLabel

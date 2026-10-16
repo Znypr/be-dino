@@ -558,21 +558,16 @@ render=function(name: string)
         for i,item in (if isTrail then ProgressionConfig.Trails else ProgressionConfig.Auras) do
             if isTrail and (i<(trailPage-1)*3+1 or i>trailPage*3) then continue end
             local slot=if isTrail then (i-1)%3 else i-1
-            local color=Color3.fromRGB(item.color[1],item.color[2],item.color[3])
-            local card=box(body,slot*276,cardsY,264,cardsHeight,color,24)
-            label(card,item.name,6,5,252,34,25)
-            label(card,if isTrail then "Level "..item.level.." • "..(UIFormat.boost("Speed",item.speed) or "Speed") else (UIFormat.boost("Growth",item.growth) or "Growth"),4,42,256,30,19)
-            local iconSize=math.clamp(buyY-30-74,60,128) -- BD-177/BD-215: big aura and trail art fills the card icon area
-            local shown=art(card,(if isTrail then "trail_" else "aura_")..item.id,(264-iconSize)/2,74+(buyY-30-74-iconSize)/2,iconSize)
-            if shown and isTrail then shown.Position,shown.Size=UDim2.fromOffset(8,74+(buyY-30-74-iconSize)/2),UDim2.fromOffset(248,iconSize) end
-            label(card,if owned[item.id] then "Owned" else item.price.." Crystals",4,buyY-30,256,27,21,C.gold)
-            local equipped=equippedId==item.id
-            local locked=isTrail and num("AccountLevel")<item.level and not owned[item.id]
-            button(card,if equipped then "UNEQUIP" elseif owned[item.id] then "EQUIP" elseif locked then "LEVEL "..item.level else "BUY",12,buyY,240,targetHeight,C.card,function()
-                if locked then notify("Requires account level "..item.level,C.gold) return end
-                if owned[item.id] then transact(if isTrail then "equipTrail" else "equipAura",if equipped then "" else item.id)
-                else chosenAura=item.id open("auraConfirm") end
-            end)
+            -- BD-142/BD-143: big live previews, rarity chip, words for speed, shared card states (src/client/ShopCards).
+            local equipped,locked=equippedId==item.id,isTrail and num("AccountLevel")<item.level and not owned[item.id]
+            require(script.Parent.ShopCards).build({label=label,box=box,button=button,art=art},body,{
+                kind=if isTrail then "trail" else "aura",item=item,speciesId=str("EquippedSpeciesId","compy"),owned=owned[item.id]==true,equipped=equipped,level=num("AccountLevel"),
+                x=slot*276,y=cardsY,height=cardsHeight,buyY=buyY,targetHeight=targetHeight,
+                onPress=function()
+                    if locked then notify("Requires account level "..item.level,C.gold) return end
+                    if owned[item.id] then transact(if isTrail then "equipTrail" else "equipAura",if equipped then "" else item.id)
+                    else chosenAura=item.id open("auraConfirm") end
+                end})
         end
         local footerY=402-targetHeight
         if isTrail then
