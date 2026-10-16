@@ -32,9 +32,9 @@ end
 -- The near play area (25 studs) stays clear: fogStart >= 25 except in the blizzard whiteout.
 -- BD-213 (owner 2026-10-15: "visibility randomly cuts off, it should fade like fog"): there is no opaque sky box any more; the far
 -- view always dissolves into the classic fog ramp, which is capped inside the prop cull radius (Weather.fog) so props never pop.
--- Clear weather keeps a gentle soft-blue haze far out.
+-- Clear weather is crisp (owner 2026-10-16): a faint sky-blue fade far out, a slightly positive grade (sat +.04, contrast 0 since BD-460), no DoF, no bloom.
 Weather.Looks={
-    clear=look({fogStart=160,vis=900}),
+    clear=look({sat=.04,contrast=0,fog=rgb(176,205,232),fogStart=220,vis=1100}), -- BD-460: grade sat +.08 -> +.04 (-.04; +.02 made the built-in grass pale) and contrast +.04 -> 0; still no haze
     rain=look({cloudCover=.9,cloudDensity=.65,cloudColor=rgb(120,132,152),tint=rgb(150,182,232),sat=-.26,contrast=.14,bright=-.06,fog=rgb(120,134,156),decay=rgb(70,84,110),density=.5,offset=0,haze=2.6,bloom=.2,
         amb=rgb(92,106,130),dof=.35,dofFocus=90,exposure=-.35,lamp=.8,fogStart=40,vis=260}),
     thunder=look({cloudCover=1,cloudDensity=.95,cloudColor=rgb(52,48,92),tint=rgb(160,174,222),sat=-.2,contrast=.18,bright=-.08,fog=rgb(88,96,132),decay=rgb(46,50,90),density=.56,offset=0,haze=3,bloom=.5,
@@ -128,6 +128,21 @@ Weather.CullMargin=.85
 Weather.SoftRatio=.45
 function Weather.fogCap(cullRadius:number?):number
     return if cullRadius then cullRadius*Weather.CullMargin else math.huge
+end
+-- Clear-weather distance fade per device class (island daylight): far out so the mid-distance stays crisp. Phone has no entry and
+-- keeps the tight cull-radius fog. The fog colour is the sky-horizon blue, so it reads as distance, not haze.
+Weather.ClearFog={Desktop={fogStart=400,fogEnd=1400},Tablet={fogStart=250,fogEnd=700}}
+-- Fog cap for a device class: the cull-radius cap, or that class's clear-weather fog end when that is farther.
+function Weather.capFor(class:string,cullRadius:number?):number
+    local cf=Weather.ClearFog[class]
+    return math.max(Weather.fogCap(cullRadius),if cf then cf.fogEnd else 0)
+end
+-- Clear look for a device class with the far fog distances applied.
+function Weather.clearFor(class:string):Look
+    local cf=Weather.ClearFog[class]
+    if not cf then return Weather.Looks.clear end
+    local l=table.clone(Weather.Looks.clear) l.fogStart,l.vis=cf.fogStart,cf.fogEnd
+    return l
 end
 -- Classic fog blend from the clear-weather haze to the event look: FogEnd is blended in 1/distance so the view closes in
 -- smoothly instead of jumping at the start of the ramp. cap = Weather.fogCap(cull radius).

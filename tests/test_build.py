@@ -58,8 +58,10 @@ class BuildTests(unittest.TestCase):
             self.assertEqual(variant.attrib["class"], "MaterialVariant")
             for key in ("ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap"):
                 self.assertRegex(variant.find(f"Properties/Content[@name='{key}']/url").text, r"^rbxassetid://[0-9]+$")
-        for base in ("Grass", "Rock", "Wood"):
-            self.assertEqual(service.find(f"Properties/string[@name='{base}Name']").text, "BeDino_" + {"Grass":"Meadow", "Rock":"Stone", "Wood":"Bark"}[base])
+        # BD-460 (docs/138): the BeDino_Meadow variant stays packaged with all its IDs but is NOT bound: the island uses the built-in Grass.
+        self.assertIsNone(service.find("Properties/string[@name='GrassName']"))
+        for base in ("Rock", "Wood"):
+            self.assertEqual(service.find(f"Properties/string[@name='{base}Name']").text, "BeDino_" + {"Rock":"Stone", "Wood":"Bark"}[base])
 
     def test_visual_bindings_match_verified_manifest(self):
         spec = importlib.util.spec_from_file_location("visual_bindings", ROOT / "tools/bind_visual_assets.py")

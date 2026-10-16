@@ -76,7 +76,7 @@ Dewdrop #78E2BE / #70F4BF / #55D8B0; Charged #FFE278 / #FFCF48 / #FFDA58; Frost 
 ### 5.7 Auras and trails (`ProgressionConfig`)
 Auras: Meadow #62EC70 (98,236,112), Tidal #50D6FF (80,214,255), Royal #B46AFF (180,106,255). Trails: White #F5F7FF, Fern #62EC70, Tidal #50D6FF, Ember #FF743E, Violet #B46AFF, Electric #50F3FF, Frost #87E9FF, Solar #FFD55E, Nova #B46AFF, Astra #70FFCD. FX shadow colour = primary mixed 45% toward navy (28,36,92) ([93](93-anime-fx-direction.md) s3).
 ### 5.8 Biomes (terrain, `BiomeMap.Colors`)
-Grass #84AA54 (132,170,84); LeafyGrass #3E7C4E (62,124,78); Mud #5C4C37 (92,76,55); Ground #706442 (112,100,66); Sand #D6BE88 (214,190,136); Sandstone #BA7A50 (186,122,80); Slate #5C666C (92,102,108); Basalt #322F37 (50,47,55); Rock #728589 (114,133,137). Biomes: meadow, fern, conifer, marsh, badlands, volcanic (`BiomeMap.Rock`).
+Grass #84A644 (132,166,68; was #84AA54; BD-460 candidate C, owner pick, for the built-in Grass, see 138); LeafyGrass #58843E (88,132,62; was #3E7C4E, BD-460 no dark teal patches); Mud #5C4C37 (92,76,55); Ground #706442 (112,100,66); Sand #D6BE88 (214,190,136); Sandstone #BA7A50 (186,122,80); Slate #5C666C (92,102,108); Basalt #322F37 (50,47,55); Rock #728589 (114,133,137). Biomes: meadow, fern, conifer, marsh, badlands, volcanic (`BiomeMap.Rock`).
 ### 5.9 Weather looks (`WeatherLooks.luau`, tint / fog)
 Rain #96B6E8 / #78869C; Thunder #A0AEDE / #586084 (violet glow #A08CFF); Blizzard #D6E8FF / #E2EAF6; Volcano #FFE4CD / #96543B (glow #FF8C46); Aurora #B0FFE6 / #28C8AA (glow #3CFFAA); Quake #E8C89C / #C6B092; Blood Moon #FF8C96 / #420E18 (glow #FF2846). Far fog is colour, not a wall ([87](87-vision-and-feel-guide.md)).
 ### 5.10 Cave (`CaveLightingRules.luau`)
@@ -98,7 +98,7 @@ The palette sits under the place's lighting; a shared grade tames pastel props b
 ## 6. Lighting rules per place
 | Place | Rule | Source / code |
 |---|---|---|
-| Island (default) | bright daylight: ClockTime 14, Brightness 2, Ambient (130,143,148); soft distance fog, no pop-in | `Bootstrap.server.luau` 22-24, BD-213 |
+| Island (default) | bright daylight: ClockTime 14, Brightness 1.8, Ambient (146,155,158), OutdoorAmbient (140,150,153) (`Config.IslandLight`, BD-460: softer contrast, was Brightness 2 / Ambient 130,143,148); **no haze in clear daylight** (owner 2026-10-16: no screenshot may look milky): Atmosphere density .1, haze .3, glare 0, no far blur, no bloom, saturation +0.04, contrast 0 (BD-460: was +0.08 / +0.04), fog colour = sky-horizon blue; desktop fog 400 to 1400, tablet 250 to 700, phone tight (capped by its cull radius 190); the old 374-stud desktop cap was removed (it milked the mid-distance); UI blur only while a modal is open, reset to 0 otherwise; DepthOfField stays at zero intensity | `Bootstrap.server.luau` 22-24, BD-213 |
 | Cave hub (Sanctuary) | **DIM, lamp-lit**: warm lamps and ceiling light shafts are the main lights; ambient (70,62,60), Brightness 1.3, exposure -0.25; at most 16 lights, shadows on the 4 strongest; **weather never affects the inside**; assets must look real and grounded in this light | OWNER 2026-10-16; `CaveLightingRules.Look`; BD-398, BD-399 |
 | Weather events | per-event grade, haze, soft fog; everything fades to neutral with `1 - Cave.amount()` inside the hall | [84](84-weather-events-v2.md), BD-383, BD-398 |
 | Volcanic biome | orange glare, heavy bloom, ash and embers, but soft visibility (no flat red wall) | [84](84-weather-events-v2.md), BD-213 |
