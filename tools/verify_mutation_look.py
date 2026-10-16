@@ -83,6 +83,10 @@ def scan():
     # BD-351/352: readable badge, calm hero smoke behind the dino, drag pill off the head
     badge = (ROOT / 'src/client/MutationBadge.luau').read_text(encoding='utf-8')
     assert 'Badge.MinTextSize = 14' in badge and 'Look.color(look.badge)' in badge and 'TextSize, text.TextColor3' in badge, 'badge: own colour, text >= 14 px'
+    # BD-190: the icon replaces the dot only when AssetSlots.Images.mutation_<id> is bound; the dot stays the fallback
+    assert 'AssetSlots.image("mutation_" .. look.id)' in badge and 'name = "Dot"' not in badge and '"Dot"' in badge, 'chip: icon when bound, Dot fallback'
+    prev = (ROOT / 'src/client/PreviewTraits.luau').read_text(encoding='utf-8')
+    assert 'MutationBadge.iconImage(look.id)' in prev and 'Instance.new("UIStroke")' in prev, 'preview badge: icon when bound, rimmed dot fallback'
     fxui = (ROOT / 'src/shared/FxUi.luau').read_text(encoding='utf-8')
     assert 'Ui.HeroSmokeSize, Ui.HeroSmokeAlpha, Ui.HeroSmokeRate = 0.4, 0.5, 0.5' in fxui and 'frame.ZIndex = math.max(view.ZIndex - 1, 0)' in fxui, 'hero smoke is thin and behind the viewport'
     hatch = (ROOT / 'src/client/HatchSequence.luau').read_text(encoding='utf-8')

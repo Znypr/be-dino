@@ -71,6 +71,7 @@ jobs:
           python tools/verify_audio.py --runner /tmp/luau/luau
           python tools/verify_sound_lab.py
           python tools/verify_hatch_sequence.py --runner /tmp/luau/luau
+          python tools/verify_egg_toast_count.py --runner /tmp/luau/luau
           python tools/verify_rare_hatch.py --runner /tmp/luau/luau
           python tools/verify_inspect.py --runner /tmp/luau/luau
           python tools/verify_eggs_screen.py --runner /tmp/luau/luau
@@ -99,6 +100,7 @@ jobs:
           python tools/verify_nests.py --runner /tmp/luau/luau
           python tools/verify_mutations.py --runner /tmp/luau/luau
           python tools/verify_mutation_look.py --runner /tmp/luau/luau
+          python tools/verify_mutation_badges.py
           python tools/verify_fx.py --runner /tmp/luau/luau
           python tools/verify_creature_genes.py --runner /tmp/luau/luau
           python tools/verify_visual_growth.py --runner /tmp/luau/luau

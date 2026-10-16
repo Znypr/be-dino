@@ -547,7 +547,10 @@
    "key": "mutation_dewdrop",
    "group": "Images.mutation_dewdrop",
    "table": "Images",
-   "pending": "BD-190 MutationBadge"
+   "reader": [
+    "src/client/MutationBadge.luau",
+    "\"mutation_\" .. look.id"
+   ]
   },
   {
    "name": "mutation_charged",
@@ -557,7 +560,10 @@
    "key": "mutation_charged",
    "group": "Images.mutation_charged",
    "table": "Images",
-   "pending": "BD-190 MutationBadge"
+   "reader": [
+    "src/client/MutationBadge.luau",
+    "\"mutation_\" .. look.id"
+   ]
   },
   {
    "name": "mutation_frost",
@@ -567,7 +573,10 @@
    "key": "mutation_frost",
    "group": "Images.mutation_frost",
    "table": "Images",
-   "pending": "BD-190 MutationBadge"
+   "reader": [
+    "src/client/MutationBadge.luau",
+    "\"mutation_\" .. look.id"
+   ]
   },
   {
    "name": "mutation_seismic",
@@ -577,7 +586,10 @@
    "key": "mutation_seismic",
    "group": "Images.mutation_seismic",
    "table": "Images",
-   "pending": "BD-190 MutationBadge"
+   "reader": [
+    "src/client/MutationBadge.luau",
+    "\"mutation_\" .. look.id"
+   ]
   },
   {
    "name": "mutation_ember",
@@ -587,7 +599,10 @@
    "key": "mutation_ember",
    "group": "Images.mutation_ember",
    "table": "Images",
-   "pending": "BD-190 MutationBadge"
+   "reader": [
+    "src/client/MutationBadge.luau",
+    "\"mutation_\" .. look.id"
+   ]
   },
   {
    "name": "mutation_aurora",
@@ -597,7 +612,10 @@
    "key": "mutation_aurora",
    "group": "Images.mutation_aurora",
    "table": "Images",
-   "pending": "BD-190 MutationBadge"
+   "reader": [
+    "src/client/MutationBadge.luau",
+    "\"mutation_\" .. look.id"
+   ]
   },
   {
    "name": "mutation_bloodmoon",
@@ -607,7 +625,10 @@
    "key": "mutation_bloodmoon",
    "group": "Images.mutation_bloodmoon",
    "table": "Images",
-   "pending": "BD-190 MutationBadge"
+   "reader": [
+    "src/client/MutationBadge.luau",
+    "\"mutation_\" .. look.id"
+   ]
   },
   {
    "name": "paint_bucket",

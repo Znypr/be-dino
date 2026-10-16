@@ -1,5 +1,5 @@
 --!strict
--- BD-281: the Cave shell as pure voxel rules (docs/104 s3). Given a voxel centre (x, y, z) in world studs it returns the
+-- BD-281 / docs/104 s17 (owner 2026-10-16: organic cave, not a cube): the Cave shell as pure voxel rules (docs/104 s3). Given a voxel centre (x, y, z) in world studs it returns the
 -- terrain material and occupancy, built only from CaveHubLayout (floor blob, ceiling, holes, stations, paths, pool, falls,
 -- gate). Pure numbers only (no engine objects, no settings table): src/server/CaveTerrain.luau only writes what this module says, and
 -- tools/verify_cave_terrain.py runs the same functions offline. Everything is PROVISIONAL (docs/104).
@@ -19,11 +19,10 @@ Rules.ZMin, Rules.ZMax = 452, 708
 Rules.ChunkSlices = 8 -- x slices per WriteVoxels call
 Rules.YieldSlices = 2 -- x slices computed between two task.wait() calls
 Rules.RoofThickness = 10
-Rules.OuterNorm = 1.125 -- outer face of the wall in floor-blob norm units (>= 8 studs of rock everywhere)
-Rules.WallRough = 0.028 -- wall relief: the cavity edge sits at norm 1 .. 1.028 (never inside the floor blob)
+Rules.RockThickness = Layout.RockThickness -- plan distance the rock reaches beyond the open cave (>= 8 studs of rock everywhere)
 Rules.CeilingRough = 2.5 -- ceiling relief, +-studs
 Rules.PoolDepth = 2 -- lava basin floor below the hall floor
-Rules.GateWallNorm = 1.06 -- the gate mouth is cut this deep into the wall (closed behind it)
+Rules.GateCut = 6 -- the gate mouth is cut this many studs beyond the cave wall (closed behind it)
 Rules.GateHeight = 20
 Rules.FallRecess = {halfWidth = 20, front = -1, back = 7} -- dz range around Layout.Fall.z carved behind the sheet
 -- Cave-only colours (the island uses none of these three): warm stone floor and warm tan walls, so the hall reads soft and calm
@@ -31,10 +30,9 @@ Rules.FallRecess = {halfWidth = 20, front = -1, back = 7} -- dz range around Lay
 -- BD-384 look pass: cooler, softer grey-lilac stone (the warm lamps and the cave grade carry the colour) instead of hot orange
 -- cracked sandstone. Only Cobblestone, Limestone and CrackedLava are recoloured (terrain colours are place-wide, and the island uses
 -- Sandstone, Slate, Rock and Basalt), so the walls and floor are built from those two only; the island palette is untouched.
-Rules.Colors = {Cobblestone = {126, 122, 130}, Limestone = {160, 154, 158}, CrackedLava = {255, 120, 40}}
+Rules.Colors = {Cobblestone = {158, 142, 126}, Limestone = {186, 170, 150}, CrackedLava = {255, 120, 40}}
 Rules.Materials = {"Air", "Rock", "Limestone", "Sandstone", "Slate", "Basalt", "Cobblestone", "Grass", "LeafyGrass", "CrackedLava"}
 
-local SCALE = 95 -- studs per norm unit used for the wall signed distance (a conservative mean of the 105.5 / 125 radii)
 local FLOOR_BAND = 6 -- studs below the floor top that carry the floor surface mix
 local BOTTOM = Rules.YMin - Rules.Res -- one cell lower so the bottom layer is full (occupancy = sd / Res)
 
@@ -51,18 +49,29 @@ function Rules.column(x: number, z: number): any
     local L = Layout.get()
     local cz = Layout.CenterZ
     local dz = z - cz
-    local n = Layout.floorNorm(x, z)
-    local rough = Rules.WallRough * relief(x, z, 11, 3.1)
+    local sd, dome = Layout.caveField(x, z)
     local floorTop = Layout.floorHeight(x, z)
-    local ceil = Layout.ceilingY(x, z) + (relief(x, z, 17, 9.7) - 0.5) * 2 * Rules.CeilingRough
-    local col: any = {x = x, z = z, dz = dz, n = n, floorTop = floorTop, ceil = ceil,
-        dIn = (1 + rough - n) * SCALE, dOut = (Rules.OuterNorm - n) * SCALE, roofTop = ceil + Rules.RoofThickness}
+    local ceil = Layout.FloorY + Layout.domeHeightAt(sd, dome) + (relief(x, z, 17, 9.7) - 0.5) * 2 * Rules.CeilingRough
+    local col: any = {x = x, z = z, dz = dz, sd = sd, floorTop = floorTop, ceil = ceil,
+        dIn = sd, dOut = Rules.RockThickness + sd, dome = dome,
+        -- closed envelope: rock fills up to the room's full height + 12 over the whole shell, so a steep dome / tunnel mouth never thins to a sky gap
+        roofTop = math.max(ceil + Rules.RoofThickness, Layout.FloorY + dome + Rules.RoofThickness + 2)}
     -- ceiling holes: horizontal inset (> 0 inside the shaft); open from just under the ceiling up through the roof
     local hole = -math.huge
     for _, h in L.holes do
         hole = math.max(hole, h.radius - math.sqrt((x - h.x) ^ 2 + (dz - h.z) ^ 2))
     end
     col.hole = hole
+    -- rock ledges grown from the alcove walls (stone shelves in the stations): horizontal inset into the oriented box, > 0 inside
+    local ledge = -math.huge
+    for _, lg in L.ledges do
+        local dx, dy = x - lg.x, dz - lg.z
+        local c, s = math.cos(lg.yaw), math.sin(lg.yaw)
+        local lx, lz = dx * c - dy * s, dx * s + dy * c
+        ledge = math.max(ledge, math.min(lg.w / 2 - math.abs(lx), lg.d / 2 - math.abs(lz)))
+        if ledge > 0 then col.ledgeTop = floorTop + lg.h end
+    end
+    col.ledge = ledge
     -- lava pool basin (carved below the floor) and the basalt rim around it
     local P = Layout.Pool
     local pd = math.sqrt((x - P.x) ^ 2 + (dz - P.z) ^ 2)
@@ -70,13 +79,13 @@ function Rules.column(x: number, z: number): any
     col.pool = P.r - pd
     -- falls recess behind the lava sheet (horizontal part) and the lava band painted on its rock
     local F, R = Layout.Fall, Rules.FallRecess
-    col.fall = math.min(R.halfWidth - math.abs(x - F.x), dz - (F.z + R.front), (F.z + R.back) - dz)
-    col.fallBand = math.abs(x - F.x) <= F.width / 2 and dz >= F.z + R.front - 1 and dz <= F.z + R.back + 4
-    -- gate mouth: 30 wide, a half-ellipse arch, cut GateWallNorm deep into the wall and closed behind
+    col.fall = math.min(R.halfWidth - math.abs(x - F.x), dz - (F.z + R.front), (F.z + R.back) - dz, sd + 2) -- never more than 2 studs into the rock
+    col.fallBand = math.abs(x - F.x) <= F.width / 2 and dz >= F.z + R.front - 1 and dz <= F.z + R.back + 6
+    -- gate mouth: 30 wide, a half-ellipse arch, cut GateCut studs beyond the cave wall and closed behind
     local g = L.byId.gate
     local gx = math.abs(x - g.x)
     col.gateTop = Layout.FloorY + Rules.GateHeight * math.sqrt(math.max(0, 1 - (gx / (L.gate.mouthWidth / 2)) ^ 2))
-    col.gate = math.min(L.gate.mouthWidth / 2 - gx, (Rules.GateWallNorm - n) * SCALE, -(dz - (g.z - 10)) )
+    col.gate = math.min(L.gate.mouthWidth / 2 - gx, sd + Rules.GateCut, -(dz - (g.z - 10)))
     col.flat = Layout.flatDistance(x, z)
     return col
 end
@@ -101,7 +110,9 @@ local function airSd(col: any, y: number): number
 end
 
 local function solidSd(col: any, y: number): number
-    return math.min(col.dOut, col.roofTop - y, y - BOTTOM, -airSd(col, y))
+    local sd = math.min(col.dOut, col.roofTop - y, y - BOTTOM, -airSd(col, y))
+    if col.ledge > 0 then sd = math.max(sd, math.min(col.ledge, col.ledgeTop - y)) end -- the stone shelf stands in the air
+    return sd
 end
 
 -- Material for a solid cell (occupancy > 0).
@@ -126,9 +137,13 @@ local function material(col: any, y: number, air: number): string
     end
     -- walls, ceiling, roof and deep rock
     if -air > 10 then return "Rock" end
-    -- BD-384: big slow patches (scale 22, not 8) of two cave-only stones: no smeared grid, no dark smudges, no island Sandstone
-    local v = relief(x + y * 0.7, z - y * 0.4, 22, 12.9)
-    if v > 0.7 then return "Cobblestone" end
+    -- walls: soft blotches of three stones, no horizontal strata (owner 2026-10-16: no striped brick look). Cobblestone (tile grid) stays rare.
+    local v = relief(x * 0.8 + y * 0.45, z * 0.8 - y * 0.45, 13, 12.9)
+    -- Brighten pass (owner 2026-10-16): lighter warm stone. Limestone leads; Rock (darker island colour) only breaks up its fine horizontal
+    -- texture lines in blotches, and Slate is gone from the walls.
+    local w = relief(x * 0.6 - y * 0.5, z * 0.6 + y * 0.35, 29, 41.7)
+    if w > 0.84 then return "Cobblestone" end
+    if v < 0.28 then return "Rock" end
     return "Limestone"
 end
 
