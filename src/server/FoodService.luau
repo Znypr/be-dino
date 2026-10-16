@@ -7,6 +7,7 @@ local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local FoodCatchRules = require(ReplicatedStorage.Shared.FoodCatchRules)
 local PointGrid = require(ReplicatedStorage.Shared.PointGrid) -- BD-361: pickups are found per player through a grid, not by scanning every food
+local SpecialFoods = require(ReplicatedStorage.Shared.SpecialFoods) -- BD-207 (flag off by default)
 local RunEggTags = require(ReplicatedStorage.Shared.RunEggTags) -- BD-236: pure catch-time tag glue (tested)
 local Http = game:GetService("HttpService")
 local eventRandom = Random.new()
@@ -108,6 +109,12 @@ function FoodService.start(dinosaur,repository)
                 -- BD-207: better mix (owner "food still low quality"): berry 70 / fruit 20 / egg 7 / amber 3 (was 78/15/5/2); points per kind unchanged
                 if roll > 97 then kind = TYPES[4] elseif roll > 90 then kind = TYPES[3] elseif roll > 70 then kind = TYPES[2] end
                 if starter then kind = if itemIndex % 3 == 0 then TYPES[2] else TYPES[1] end
+                -- BD-207: rare special food. The random stream is only consumed while the flag is on, so off keeps placement identical.
+                local special = false
+                if not starter and SpecialFoods.enabled() and SpecialFoods.rolls(random:NextNumber()) then
+                    special = true
+                    kind = {id = "golden_drumstick", points = SpecialFoods.points(), size = SpecialFoods.GOLDEN_DRUMSTICK.size, color = Color3.fromRGB(table.unpack(SpecialFoods.GOLDEN_DRUMSTICK.rgb))}
+                end
                 local kitMode = Config.FoodArtMode == "Kit"
                 local artId = if kitMode then string.format("food_%s_%s", kind.id, if (sx + sz + itemIndex) % 2 == 0 then "a" else "b") else kind.id
                 -- Kit mode: the uploaded food MeshPart IS the pickup part (one part, replaces the ball), scaled so its
@@ -120,7 +127,7 @@ function FoodService.start(dinosaur,repository)
                     -- BD-387: every second fruit is the generated drumstick (WorldGeneratedMeshes.food_drumstick, same 4 points).
                     -- Missing/failed load keeps the kit fruit; the roll is deterministic so placement never changes.
                     local drum = generated and generated:FindFirstChild("food_drumstick")
-                    if kind.id == "fruit" and drum and drum:IsA("MeshPart") and (sx + sz + itemIndex) % 2 == 1 then
+                    if (special or (kind.id == "fruit" and (sx + sz + itemIndex) % 2 == 1)) and drum and drum:IsA("MeshPart") then
                         if model then model:Destroy() end
                         model, mesh = nil, drum:Clone()
                         mesh:SetAttribute("Drumstick", true)
@@ -150,6 +157,13 @@ function FoodService.start(dinosaur,repository)
                 pickup.CanTouch = false
                 pickup.CanQuery = false
                 pickup:SetAttribute("Points", kind.points)
+                if special then
+                    pickup:SetAttribute("SpecialFood", true)
+                    local glow = Instance.new("Highlight") -- tinted glow from a stock instance, not drawn art
+                    glow.FillTransparency = 0.7
+                    glow.FillColor, glow.OutlineColor = kind.color, kind.color
+                    glow.Parent = pickup
+                end
                 pickup:SetAttribute("StarterFood", starter)
                 pickup:SetAttribute("Sector", string.format("%d:%d", sx, sz))
                 local visual = nil

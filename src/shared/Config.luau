@@ -65,6 +65,10 @@ return table.freeze({
     StudioTestWalletEnabled = true, -- only unpublished, nonpersistent local profiles
     StudioTestCrystals = 1000000,
     FoodCatchRate = 4 / 500, -- PROVISIONAL (owner 2026-10-15, BD-165: 500 food = 4 run eggs; 5,000 food -> 40; was 40/500 on 2026-10-13, 15/500 before); raw food points, growth boosts do not multiply catches
+    -- BD-207: rare special foods. All PROVISIONAL, off by default (pinned off in the default profile). Points are RAW food points.
+    SpecialFoodsEnabled = false,
+    SpecialFoodChance = 0.01, -- share of non-starter food slots that become a Golden Drumstick (about 1 in 100)
+    SpecialFoodPoints = 60, -- raw food points per special pickup (egg food is 15, amber 50); FoodCatchRate is unchanged
     ProfileLoadWarningSeconds = 20,
 
     SpawnProtectionSeconds = 5,
