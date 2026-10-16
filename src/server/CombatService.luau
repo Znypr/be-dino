@@ -12,6 +12,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Cfg = require(ReplicatedStorage.Shared.CombatConfig)
 local Rules = require(ReplicatedStorage.Shared.CombatRules)
 local SettingsModel = require(ReplicatedStorage.Shared.SettingsModel)
+local TeamUp = require(ReplicatedStorage.Shared.CombatTeamUp)
+local NpcRules = require(ReplicatedStorage.Shared.NpcPredatorRules)
 
 local CombatService = {}
 
@@ -27,12 +29,19 @@ local function peacefulFor(player: Player): boolean
     return ok and SettingsModel.fromStore(decoded).peaceful
 end
 
+-- BD-311: planar half-size of a model's bounding box (the server measures it; the client never sends a size).
+local function radiusOf(model: Model): number
+    local ok, size = pcall(function() return model:GetExtentsSize() end)
+    if not ok then return 0 end
+    return math.max(size.X, size.Z) / 2
+end
+
 -- Returns nil while the flag is off. With it on, the returned api lets NpcPredatorService (BD-245) put wild predators into the SAME
 -- rules world: api.world is the CombatRules world, api.npcs = {[combat key] = Model} are bite targets like player dinos.
 function CombatService.start(runLifecycle, dinosaur): any?
     if not Config.CombatEnabled then return end
     local world = Rules.new(true)
-    local api: any = {world = world, npcs = {}, onNpcDefeated = nil}
+    local api: any = {world = world, npcs = {}, onNpcDefeated = nil, npcRewards = NpcRules.newRewardLimiter()}
     local tracked: {[Model]: string} = {}
     local connections: {[Model]: {RBXScriptConnection}} = {}
     local characterOf: {[string]: Model} = {}
@@ -107,11 +116,21 @@ function CombatService.start(runLifecycle, dinosaur): any?
         -- Exactly once per (userId, runId): CombatState fires the defeat once and settle() flips Defeated -> Settled once.
         if not Rules.settle(world, victim.key) then return end
         if api.npcs[victim.key] then
-            -- A wild predator was defeated (BD-245): no run, no eggs, no catches. Only the capped assist growth below, then the
-            -- NPC service removes it and starts the respawn timer.
-            for key, amount in bonuses do
+            -- A wild predator was defeated (BD-245/BD-313): no run, no eggs, no catches, no crystals. Only a SMALL growth bonus
+            -- (5% of each killer's own growth, split by damage share, once per NPC slot per 120 s, a few per 5 minutes).
+            local now = workspace:GetServerTimeNow()
+            local growthOf, userOf, assisters = {}, {}, {}
+            for _, assister in TeamUp.assisters(victim.ledger, victim.state.maxHp, now) do
+                local d = world.dinos[assister.id]
+                local c = characterOf[assister.id]
+                if d and c and not api.npcs[assister.id] and c:GetAttribute("RunState") == "Active" and not d.peaceful then
+                    growthOf[assister.id], userOf[assister.id] = numberAttribute(c, "GrowthScore", 0), d.userId
+                    table.insert(assisters, assister)
+                end
+            end
+            for key, amount in NpcRules.growthRewards(api.npcRewards, victim.userId, assisters, growthOf, userOf, now) do
                 local c = characterOf[key]
-                if c and not api.npcs[key] and c:GetAttribute("RunState") == "Active" and amount > 0 then dinosaur.addGrowth(c, amount) end
+                if c and amount > 0 then dinosaur.addGrowth(c, amount) end
             end
             if api.onNpcDefeated then api.onNpcDefeated(victim.key) end
             return
@@ -146,15 +165,15 @@ function CombatService.start(runLifecycle, dinosaur): any?
         for other, otherKey in tracked do
             local otherRoot = if other ~= character and other.Parent then other:FindFirstChild("HumanoidRootPart") else nil
             if otherRoot and otherRoot:IsA("BasePart") then
-                table.insert(candidates, {key = otherKey, pos = otherRoot.Position})
+                table.insert(candidates, {key = otherKey, pos = otherRoot.Position, radius = radiusOf(other)})
             end
         end
         for npcKey, npcModel in api.npcs do -- wild predators are bite targets too (BD-245)
             local npcRoot = if npcModel.Parent then npcModel:FindFirstChild("HumanoidRootPart") else nil
-            if npcRoot and npcRoot:IsA("BasePart") then table.insert(candidates, {key = npcKey, pos = npcRoot.Position}) end
+            if npcRoot and npcRoot:IsA("BasePart") then table.insert(candidates, {key = npcKey, pos = npcRoot.Position, radius = radiusOf(npcModel)}) end
         end
         local leaping = now < numberAttribute(character, "LeapUntil", 0)
-        local result = Rules.attack(world, key, now, root.Position, root.CFrame.LookVector, candidates, leaping)
+        local result = Rules.attack(world, key, now, root.Position, root.CFrame.LookVector, candidates, leaping, radiusOf(character))
         player:SetAttribute("LastBiteStatus", result.reason)
         if not result.ok then return end
         character:SetAttribute("BiteSeq", numberAttribute(character, "BiteSeq", 0) + 1) -- BD-079 lunge cue (same as predation)

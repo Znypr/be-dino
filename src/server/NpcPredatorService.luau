@@ -22,10 +22,6 @@ local GROUND_HEIGHT = ROOT_SIZE.Y / 2 + HIP_HEIGHT -- what DinosaurVisual measur
 local WILD_TINT = Color3.fromRGB(70, 40, 100) -- darker, a little purple: reads as "not a player" without new art
 local TINT_AMOUNT = 0.45
 
-local function scaleForScore(score: number): number
-    return math.min(4, math.sqrt(1 + math.max(0, score) / 50)) -- the same growth curve players use
-end
-
 function NpcPredatorService.start(combat: any?)
     if not Config.CombatEnabled or not Config.NpcPredatorsEnabled or not combat then return end
     local world = Rules.newWorld(true, Config.WorldArtSeed + os.time(), Rules.newTerrain({half = Config.ArenaHalfWidth, seed = Config.WorldArtSeed}))
@@ -38,11 +34,21 @@ function NpcPredatorService.start(combat: any?)
     groundParams.FilterDescendantsInstances = {workspace.Terrain, workspace:FindFirstChild("BeDinoArena") or workspace.Terrain}
     local collisionGroupReady = PhysicsService:IsCollisionGroupRegistered("DinoControllers")
 
-    local function destroy(slot: number, key: string?)
+    -- fade = true (BD-312, a defeat): the model stays a moment, frozen and marked NpcFading; every client fades it out softly
+    -- (0.6 s, or 0.15 s under Reduce Motion), then the server removes it. Anything else is removed at once.
+    local function destroy(slot: number, key: string?, fade: boolean?)
         local entry = entries[slot]
         entries[slot] = nil
         if key then combat.removeNpc(key) end
-        if entry then entry.model:Destroy() end
+        if not entry then return end
+        if fade then
+            entry.model:SetAttribute("NpcCue", "")
+            entry.model:SetAttribute("NpcFading", true)
+            entry.root.Anchored = true
+            task.delay(Rules.Config.FadeSeconds + Rules.Config.FadeCleanupExtra, function() entry.model:Destroy() end)
+        else
+            entry.model:Destroy()
+        end
     end
 
     local function build(npc: any, now: number): boolean
@@ -78,13 +84,15 @@ function NpcPredatorService.start(combat: any?)
         model:SetAttribute("NpcCue", "")
         model.Parent = folder
         pcall(function() root:SetNetworkOwner(nil) end) -- the server owns the physics: no client can steer or exploit it
-        Visual.render(model, scaleForScore(npc.score), npc.species, "base") -- the same visual path as player dinos
+        Visual.render(model, npc.visualScale, npc.species, "base") -- the same visual path as player dinos
         for _, item in model:GetDescendants() do
             if item:IsA("BasePart") and item ~= root then
                 item.CanCollide, item.CanTouch, item.CanQuery, item.Massless = false, false, false, true
                 item.Color = item.Color:Lerp(WILD_TINT, TINT_AMOUNT)
             end
         end
+        local size = model:GetExtentsSize()
+        npc.radius = math.clamp(math.max(size.X, size.Z) / 2, 1, 14) -- BD-311: the measured body size, used for chase and bite reach
         local joined = Rules.joinCombat(world, combat.world, npc, now)
         if not joined then model:Destroy() return false end
         combat.addNpc(npc.key, model)
@@ -92,16 +100,16 @@ function NpcPredatorService.start(combat: any?)
         return true
     end
 
-    local function lose(slot: number, now: number)
+    local function lose(slot: number, now: number, fade: boolean?)
         local npc = Rules.defeated(world, slot, now)
-        if npc then destroy(slot, npc.key) end
+        if npc then destroy(slot, npc.key, fade) end
     end
 
     -- A player defeated this NPC (CombatService already ran the exactly-once settle and the capped assist growth).
     combat.onNpcDefeated = function(key: string)
         local now = workspace:GetServerTimeNow()
         for slot, npc in world.slots do
-            if npc.key == key then lose(slot, now) return end
+            if npc.key == key then lose(slot, now, true) return end
         end
     end
 
@@ -114,10 +122,11 @@ function NpcPredatorService.start(combat: any?)
             local runId = if character then character:GetAttribute("RunId") else nil
             if character and root and root:IsA("BasePart") and humanoid and typeof(runId) == "string" then
                 local key = CombatRules.key(player.UserId, runId)
+                local size = character:GetExtentsSize()
                 local dino = combat.world.dinos[key] -- only players CombatService tracks can be targeted at all
                 if dino then
                     table.insert(list, {
-                        key = key, character = character, x = root.Position.X, y = root.Position.Y, z = root.Position.Z,
+                        key = key, character = character, x = root.Position.X, y = root.Position.Y, z = root.Position.Z, radius = math.clamp(math.max(size.X, size.Z) / 2, 0, 14),
                         alive = dino.state.phase == "Alive" and humanoid.Health > 0,
                         active = character:GetAttribute("RunState") == "Active",
                         peaceful = dino.peaceful, protectedUntil = dino.protectedUntil,

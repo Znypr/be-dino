@@ -25,8 +25,19 @@ Npc.Config = table.freeze({
     MinNpcs = 2, -- with at least one player in a run
     PlayersPerExtraNpc = 3, -- +1 NPC per this many players: 1-3 players -> 2, 4-6 -> 3, ... 12 -> 5
     Species = {"raptor", "baryonyx", "tyrannosaurus", "spinosaurus"}, -- existing Ground predators, same visual path as players
-    ScoreMin = 60, -- score -> scale/HP/damage through CombatStats exactly like a player (s about 1.1 to 1.3, visual 1.5x to 2.4x)
+    ScoreMin = 60, -- score -> HP/damage through CombatStats exactly like a player (combat scale s about 1.1 to 1.4)
     ScoreMax = 250,
+    VisualScaleMin = 1.0, -- BD-312: the DRAWN size is capped near 1.3x an average player dino (it was 1.5x to 2.4x and filled the camera)
+    VisualScaleMax = 1.3,
+    RadiusPerVisual = 2.9, -- planar body radius (studs) per visual scale; the service replaces it with the measured model size
+    PlayerRadiusFallback = 1.6, -- a player with no measured size
+    FadeSeconds = 0.6, -- BD-312: a defeated NPC fades out softly (client side) before the server removes the model
+    FadeSecondsReduced = 0.15, -- Reduce Motion
+    FadeCleanupExtra = 0.4, -- the server keeps the faded model this much longer so slow clients still see the fade
+    RewardCapFraction = 0.05, -- BD-313: a defeat gives each killer at most this share of THEIR OWN current growth, split by damage share
+    RewardSlotCooldownSeconds = 120, -- the same NPC slot never pays the same player again inside this window
+    RewardMaxPerWindow = 3, -- and one player gets at most this many NPC rewards ...
+    RewardWindowSeconds = 300, -- ... per window, whatever the slots
     TickHz = 5, -- service step rate; positions are replicated by Roblox physics, not by us
     AggroRange = 26, -- studs: an NPC only notices a player this close
     AlertSeconds = 0.8, -- stands still and "!" before it chases
@@ -51,7 +62,7 @@ Npc.Config = table.freeze({
     HomeArrive = 6,
     StuckSeconds = 1.5,
     VerticalLimit = 10, -- ignore players this much higher/lower (cliff tops, leaps)
-    RespawnSeconds = 30, -- docs/101 s8
+    RespawnSeconds = 45, -- docs/101 s8, BD-313 (was 30): at least this long before the slot refills
     RespawnJitter = 6,
     RetrySeconds = 2, -- no valid spawn point right now: try again later
     SpawnMinPlayerDistance = 90,
@@ -230,7 +241,9 @@ local function makeNpc(world: any, slot: number, x: number, z: number, biome: st
     local species = C.Species[1 + math.floor(roll(rng) * #C.Species) % #C.Species]
     local score = math.floor(between(rng, C.ScoreMin, C.ScoreMax))
     local userId, runId = "npc" .. slot, "w" .. world.serial
+    local visual = C.VisualScaleMin + (C.VisualScaleMax - C.VisualScaleMin) * math.clamp((score - C.ScoreMin) / math.max(1, C.ScoreMax - C.ScoreMin), 0, 1)
     return {
+        visualScale = visual, radius = C.RadiusPerVisual * visual,
         slot = slot, serial = world.serial, userId = userId, runId = runId, key = CombatRules.key(userId, runId),
         species = species, class = CombatRules.classForSpecies(species), score = score, s = Stats.scale(score),
         x = x, y = Layout.height(x, z), z = z, homeX = x, homeZ = z, biome = biome, faceX = 0, faceZ = -1,
@@ -276,6 +289,55 @@ function Npc.populate(world: any, now: number, players: any): any
         end
     end
     return out
+end
+
+-- BD-313: NPC defeats are NOT an egg source. A defeat pays a small growth bonus only: each killer gets floor(share * 5% of THEIR
+-- OWN current growth), share = their part of the damage dealt by all killers. Per player and slot the reward repeats only after
+-- RewardSlotCooldownSeconds, and a player gets at most RewardMaxPerWindow rewards per RewardWindowSeconds. No eggs, catches or
+-- crystals are ever produced here. Pure: the caller supplies the damage ledger and growth values.
+function Npc.newRewardLimiter(): any
+    return {bySlot = {}, byPlayer = {}}
+end
+
+-- assisters = {{id = combat key, damage = number}}, growthOf/userOf = {[combat key] = number / userId}. Returns {[key] = growth}.
+function Npc.growthRewards(limiter: any, slotId: any, assisters: any, growthOf: any, userOf: any, now: any): any
+    local out = {}
+    local n = num(now, 0)
+    local total = 0
+    for _, a in assisters do total += math.max(0, num(a.damage, 0)) end
+    if total <= 0 then return out end
+    for _, a in assisters do
+        local user = tostring(userOf[a.id])
+        local slotKey = user .. ">" .. tostring(slotId)
+        local last = limiter.bySlot[slotKey]
+        local fresh = {}
+        for _, t in limiter.byPlayer[user] or {} do
+            if n - t < C.RewardWindowSeconds then table.insert(fresh, t) end
+        end
+        limiter.byPlayer[user] = fresh
+        local amount = math.floor(math.max(0, num(a.damage, 0)) / total * C.RewardCapFraction * math.max(0, num(growthOf[a.id], 0)))
+        local cooling = last ~= nil and n - last < C.RewardSlotCooldownSeconds
+        if amount >= 1 and not cooling and #fresh < C.RewardMaxPerWindow then
+            out[a.id] = amount
+            limiter.bySlot[slotKey] = n
+            table.insert(fresh, n)
+        end
+    end
+    return out
+end
+
+function Npc.fadeSeconds(reduceMotion: boolean): number
+    return if reduceMotion then C.FadeSecondsReduced else C.FadeSeconds
+end
+
+-- Idle/walk bob for the simple NPC models (BD-312): the caller accumulates phase += dt * bobRate(speed01); bobOffset is the
+-- gentle whole-body offset in studs (0 under Reduce Motion). speed01 = 0 (standing) .. 1 (running).
+function Npc.bobRate(speed01: number): number
+    return 2 + 8 * math.clamp(num(speed01, 0), 0, 1)
+end
+function Npc.bobOffset(phase: number, speed01: number, reduceMotion: boolean): number
+    if reduceMotion then return 0 end
+    return math.sin(num(phase, 0)) * (0.04 + 0.16 * math.clamp(num(speed01, 0), 0, 1))
 end
 
 -- Remove an NPC (defeated, or fell out of the world) and schedule its respawn.
@@ -434,7 +496,7 @@ local function stepOne(world: any, npc: any, now: number, dt: number, players: a
             return
         end
         setFace(npc, t.x - npc.x, t.z - npc.z)
-        if d <= reach(npc) then
+        if d <= reach(npc) + npc.radius + math.max(0, num(t.radius, C.PlayerRadiusFallback)) then
             halt(npc)
             if now >= npc.biteReadyAt and Npc.canBite(world, t, now) then
                 enter(npc, "windup", now)
@@ -505,10 +567,10 @@ function Npc.performBite(world: any, combatWorld: any, event: any, now: number, 
     local candidates = {}
     for _, p in players do
         if Npc.canBite(world, p, now) then
-            table.insert(candidates, {key = p.key, pos = {X = p.x, Y = num(p.y, 0), Z = p.z}})
+            table.insert(candidates, {key = p.key, pos = {X = p.x, Y = num(p.y, 0), Z = p.z}, radius = p.radius})
         end
     end
-    local result = CombatRules.attack(combatWorld, npc.key, now, {X = npc.x, Y = npc.y, Z = npc.z}, {X = npc.faceX, Y = 0, Z = npc.faceZ}, candidates, false)
+    local result = CombatRules.attack(combatWorld, npc.key, now, {X = npc.x, Y = npc.y, Z = npc.z}, {X = npc.faceX, Y = 0, Z = npc.faceZ}, candidates, false, npc.radius)
     if result.ok then world.grace[result.targetKey] = now + C.TargetGraceSeconds end
     return result
 end

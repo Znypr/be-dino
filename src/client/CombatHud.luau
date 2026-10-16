@@ -51,6 +51,29 @@ end
 
 type Bar = {gui: BillboardGui, fill: Frame, heart: TextLabel, wobble: UIScale, character: Model?, lastFraction: number, lastCue: string, placedScale: number}
 
+-- BD-314: a big soft "!" bubble over a wild predator that noticed you (alert and windup). One lazy BillboardGui per NPC (at most 6).
+local alertBubbles: {[Model]: BillboardGui} = setmetatable({}, {__mode = "k"}) :: any
+local function setAlertBubble(character: Model, root: BasePart, on: boolean)
+    local gui = alertBubbles[character]
+    if not gui then
+        if not on then return end
+        gui = Instance.new("BillboardGui")
+        gui.Name, gui.Size, gui.AlwaysOnTop, gui.LightInfluence, gui.ResetOnSpawn, gui.MaxDistance = "AlertBubble", UDim2.fromOffset(52, 52), true, 0, false, FAR_STUDS + 5
+        local bubble = Instance.new("TextLabel")
+        bubble.Size, bubble.BackgroundColor3, bubble.Text, bubble.TextColor3 = UDim2.fromScale(1, 1), C.gold, "!", C.outline
+        bubble.Font, bubble.TextSize, bubble.BorderSizePixel = Enum.Font.FredokaOne, 38, 0
+        bubble.Parent = gui
+        local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0.5, 0) corner.Parent = bubble
+        local stroke = Instance.new("UIStroke") stroke.Color, stroke.Thickness, stroke.Parent = C.outline, 3, bubble
+        gui.Parent = root
+        alertBubbles[character] = gui
+    end
+    local scaleNow = character:GetAttribute("VisualScale")
+    gui.StudsOffsetWorldSpace = Vector3.new(0, Hud.barLift(if typeof(scaleNow) == "number" then scaleNow else 1, topAboveRoot(character)) + 2.4, 0)
+    gui.Adornee = root
+    gui.Enabled = on
+end
+
 local function makeBar(parent: Instance): Bar
     local gui = Instance.new("BillboardGui")
     gui.Name, gui.Size, gui.AlwaysOnTop, gui.Enabled, gui.MaxDistance = "HpBar", UDim2.fromOffset(BAR_W + 18, BAR_H + 6), false, false, FAR_STUDS + 5
@@ -123,8 +146,26 @@ function Hud.attach(ctx: any)
         lastBiteAt = os.clock()
         remote:FireServer() -- no target, no damage: the server decides everything
     end
-    local biteButton = ctx.button(ctx.timers, "BITE [F]", 146, 0, 140, 60, C.red, bite) -- PLACEHOLDER text button until BD-248 art
+    -- BD-314: a soft, friendly CHOMP button (calm palette colour, pill shape, 60 px tall >= 44 px target). No key hint on touch
+    -- devices; on desktop a small "F" chip in the corner. PLACEHOLDER text button until BD-248 art.
+    local biteButton = ctx.button(ctx.timers, "CHOMP", 146, 0, 140, 60, C.accent, bite)
     biteButton.Name = "BiteButton"
+    local pill = biteButton:FindFirstChildOfClass("UICorner")
+    if pill then pill.CornerRadius = UDim.new(0, 28) end
+    if Input.KeyboardEnabled and not Input.TouchEnabled then
+        local chip = Instance.new("TextLabel")
+        chip.Name, chip.Text, chip.Size, chip.Position = "KeyHint", "F", UDim2.fromOffset(22, 22), UDim2.fromOffset(112, 4)
+        chip.BackgroundColor3, chip.TextColor3, chip.Font, chip.TextSize = C.panel, C.text, Enum.Font.FredokaOne, 15
+        chip.BorderSizePixel, chip.ZIndex, chip.Parent = 0, biteButton.ZIndex + 2, biteButton
+        local chipCorner = Instance.new("UICorner") chipCorner.CornerRadius = UDim.new(0.5, 0) chipCorner.Parent = chip
+    end
+    -- BD-314: a small leaf badge while Peaceful is on, so a Peaceful player can see it in the run.
+    local peacefulBadge = Instance.new("TextLabel")
+    peacefulBadge.Name, peacefulBadge.Text, peacefulBadge.Visible = "PeacefulBadge", "\u{1F343} Peaceful", false
+    peacefulBadge.Size, peacefulBadge.Position = UDim2.fromOffset(120, 26), UDim2.fromOffset(150, -30)
+    peacefulBadge.BackgroundColor3, peacefulBadge.TextColor3, peacefulBadge.Font, peacefulBadge.TextSize = C.panel, C.accent, Enum.Font.FredokaOne, 16
+    peacefulBadge.BorderSizePixel, peacefulBadge.ZIndex, peacefulBadge.Parent = 0, biteButton.ZIndex, ctx.timers
+    local badgeCorner = Instance.new("UICorner") badgeCorner.CornerRadius = UDim.new(0.5, 0) badgeCorner.Parent = peacefulBadge
     local ownStrip = Instance.new("Frame") -- own HP strip under the Bite label (the bigger bar floats over the own dino)
     ownStrip.Position, ownStrip.Size, ownStrip.BackgroundColor3, ownStrip.BorderSizePixel, ownStrip.ZIndex = UDim2.fromOffset(10, 46), UDim2.fromOffset(120, 8), C.panel, 0, biteButton.ZIndex + 1
     ownStrip.Parent = biteButton
@@ -170,10 +211,11 @@ function Hud.attach(ctx: any)
         -- Bite button state (client prediction only; the server enforces the cooldown).
         local cooling = now - lastBiteAt < Cfg.BiteCooldownSeconds
         local peaceful = me ~= nil and me:GetAttribute("CombatPeaceful") == true
-        biteButton.BackgroundColor3 = if cooling or peaceful then C.card else C.red
+        biteButton.BackgroundColor3 = if cooling or peaceful then C.card else C.accent
         biteButton.Active = not cooling and not peaceful and me ~= nil and me:GetAttribute("RunState") == "Active"
-        biteButton.Text = if peaceful then "PEACEFUL" else "BITE [F]"
         biteButton.Position = UDim2.fromOffset(146, ctx.leapButton.Position.Y.Offset)
+        peacefulBadge.Visible = peaceful and me ~= nil and me:GetAttribute("RunState") == "Active"
+        peacefulBadge.Position = UDim2.fromOffset(150, ctx.leapButton.Position.Y.Offset - 30)
         if me then
             local f = fractionOf(me)
             ownFill.Size, ownFill.BackgroundColor3 = UDim2.fromScale(f, 1), Hud.fillColor(f)
@@ -205,7 +247,7 @@ function Hud.attach(ctx: any)
         local npcFolder = workspace:FindFirstChild("BeDinoNpcs")
         for _, character in if npcFolder then npcFolder:GetChildren() else {} do
             local root = if character:IsA("Model") then character:FindFirstChild("HumanoidRootPart") else nil
-            if character:IsA("Model") and root and root:IsA("BasePart") and character:GetAttribute("HpByte") ~= nil then
+            if character:IsA("Model") and root and root:IsA("BasePart") and character:GetAttribute("HpByte") ~= nil and character:GetAttribute("NpcFading") ~= true then
                 local distance = if camera then (camera.CFrame.Position - root.Position).Magnitude else 0
                 local seq = character:GetAttribute("HitSeq")
                 if typeof(seq) == "number" and seq ~= (hitSeqSeen[character] or 0) then
@@ -213,6 +255,7 @@ function Hud.attach(ctx: any)
                     onHit(character, false)
                 end
                 local cue = character:GetAttribute("NpcCue")
+                setAlertBubble(character, root, (cue == "alert" or cue == "windup") and distance <= FAR_STUDS)
                 if cue == "windup" and npcWindupSeen[character] ~= true and distance <= NEAR_STUDS then
                     npcWindupSeen[character] = true
                     Sfx.play("pickup_hi") -- soft heads-up (existing quiet cue, PLACEHOLDER until a dedicated sound is made)
@@ -276,12 +319,10 @@ function Hud.attach(ctx: any)
         end
     end)
 
-    -- Gentle defeat (docs/101 s6): DinoMotion already plays the soft "death" flop on RunState "Ending"; add the copy.
-    player:GetAttributeChangedSignal("LastRunEndReason"):Connect(function()
-        if player:GetAttribute("LastRunEndReason") == "Defeated" then
-            ctx.notify("Oops! Good try!", C.blue, {key = "defeated", icon = "egg", body = "Your eggs are safe"})
-        end
-    end)
+    -- Gentle defeat (docs/101 s6): DinoMotion already plays the soft "death" flop on RunState "Ending". The "Oops! Good try!" copy
+    -- is the first section of the Run Complete modal (Bootstrap "results", BD-315), so no toast is shown here: a toast was
+    -- covered by that modal.
+    require(script.Parent.NpcMotion).attach()
 end
 
 return Hud

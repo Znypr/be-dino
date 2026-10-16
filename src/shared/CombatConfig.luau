@@ -32,9 +32,11 @@ local CombatConfig = {
 
     -- BD-243 / docs/101 s4, s7, s13 (server rules in CombatRules, glue in CombatService). ALL PROVISIONAL.
     BiteCooldownSeconds = 0.9,
-    BiteRangeBase = 2.5, -- range = BiteRangeBase + BiteRangePerScale * s studs (from the attacker's root)
+    BiteRangeBase = 2.5, -- reach = BiteRangeBase + BiteRangePerScale * s studs, measured from the attacker's BODY SURFACE (BD-311)
     BiteRangePerScale = 1.0,
     BiteRangeSlack = 1.5, -- extra studs for latency: the client aims, the server measures a moment later
+    BodyRadiusPerScale = 1.2, -- BD-311: fallback body radius (studs) per combat scale when the server has no measured size
+    BodyRadiusMax = 14, -- BD-311: any radius is clamped to this (a measured bounding box can never open an infinite range)
     BiteConeDegrees = 70, -- full cone angle in front of the attacker
     BiteVerticalLimit = 7, -- same as PredationVerticalLimit
     BiteRequestsPerSecond = 2, -- rate limit per player (sliding 1 s window)

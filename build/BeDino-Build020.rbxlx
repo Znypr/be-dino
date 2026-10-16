@@ -367249,9 +367249,11 @@ local CombatConfig = {
 
     -- BD-243 / docs/101 s4, s7, s13 (server rules in CombatRules, glue in CombatService). ALL PROVISIONAL.
     BiteCooldownSeconds = 0.9,
-    BiteRangeBase = 2.5, -- range = BiteRangeBase + BiteRangePerScale * s studs (from the attacker's root)
+    BiteRangeBase = 2.5, -- reach = BiteRangeBase + BiteRangePerScale * s studs, measured from the attacker's BODY SURFACE (BD-311)
     BiteRangePerScale = 1.0,
     BiteRangeSlack = 1.5, -- extra studs for latency: the client aims, the server measures a moment later
+    BodyRadiusPerScale = 1.2, -- BD-311: fallback body radius (studs) per combat scale when the server has no measured size
+    BodyRadiusMax = 14, -- BD-311: any radius is clamped to this (a measured bounding box can never open an infinite range)
     BiteConeDegrees = 70, -- full cone angle in front of the attacker
     BiteVerticalLimit = 7, -- same as PredationVerticalLimit
     BiteRequestsPerSecond = 2, -- rate limit per player (sliding 1 s window)
@@ -367433,10 +367435,18 @@ function Rules.assistBonuses(world: any, victim: any, now: number): any
     return out
 end
 
--- One validated bite. apos/alook = attacker root position and look vector; candidates = {{key=, pos=}} for every
--- other tracked dino (the server supplies them; the client sends NOTHING but the request). Returns
+-- BD-311: a body radius in studs. The SERVER measures it from the model's bounding box; junk or missing values fall back to
+-- BodyRadiusPerScale * s, and everything is clamped to [0, BodyRadiusMax].
+function Rules.bodyRadius(measured: any, s: any): number
+    local fallback = Cfg.BodyRadiusPerScale * math.max(1, num(s, 1))
+    return math.clamp(num(measured, fallback), 0, Cfg.BodyRadiusMax)
+end
+
+-- One validated bite. apos/alook = attacker root position and look vector; candidates = {{key=, pos=, radius=?}} for every
+-- other tracked dino (the server supplies them; the client sends NOTHING but the request). Range is measured from BODY
+-- SURFACE to body surface (BD-311): reach + attacker radius + target radius, so big bodies can be bitten at their snout. Returns
 -- {ok, reason, targetKey, damage, defeated, hp, maxHp, knockX, knockZ, bonuses}.
-function Rules.attack(world: any, attackerKey: any, now: any, apos: any, alook: any, candidates: any, leaping: boolean?): any
+function Rules.attack(world: any, attackerKey: any, now: any, apos: any, alook: any, candidates: any, leaping: boolean?, attackerRadius: number?): any
     if not world.enabled then return fail("disabled") end
     local a = world.dinos[attackerKey]
     if not a then return fail("unknown") end
@@ -367451,7 +367461,7 @@ function Rules.attack(world: any, attackerKey: any, now: any, apos: any, alook: 
     -- Spawn protection ends the moment the player attacks (docs/101 s7).
     if n &lt; a.protectedUntil then a.protectedUntil = n end
 
-    local range = Cfg.BiteRangeBase + Cfg.BiteRangePerScale * a.s + Cfg.BiteRangeSlack
+    local range = Cfg.BiteRangeBase + Cfg.BiteRangePerScale * a.s + Cfg.BiteRangeSlack + Rules.bodyRadius(attackerRadius, a.s)
     local cosHalf = math.cos(math.rad(Cfg.BiteConeDegrees / 2))
     local best, bestDistance, bx, bz = nil, math.huge, 0, 0
     for _, c in (if typeof(candidates) == "table" then candidates else {}) do
@@ -367459,7 +367469,7 @@ function Rules.attack(world: any, attackerKey: any, now: any, apos: any, alook: 
         if t and t ~= a and t.state.phase == "Alive" and not t.peaceful and n &gt;= t.protectedUntil and c.pos ~= nil then
             local dx, dy, dz = num(c.pos.X, 0) - num(apos.X, 0), num(c.pos.Y, 0) - num(apos.Y, 0), num(c.pos.Z, 0) - num(apos.Z, 0)
             local planar = math.sqrt(dx * dx + dz * dz)
-            if planar &lt;= range + t.s * 0.5 and math.abs(dy) &lt;= Cfg.BiteVerticalLimit then
+            if planar &lt;= range + Rules.bodyRadius(c.radius, t.s) and math.abs(dy) &lt;= Cfg.BiteVerticalLimit then
                 local dot = if planar &gt; 1e-6 then (dx * lx + dz * lz) / planar else 1
                 if dot &gt;= cosHalf and planar &lt; bestDistance then
                     best, bestDistance = t, planar
@@ -376362,8 +376372,19 @@ Npc.Config = table.freeze({
     MinNpcs = 2, -- with at least one player in a run
     PlayersPerExtraNpc = 3, -- +1 NPC per this many players: 1-3 players -&gt; 2, 4-6 -&gt; 3, ... 12 -&gt; 5
     Species = {"raptor", "baryonyx", "tyrannosaurus", "spinosaurus"}, -- existing Ground predators, same visual path as players
-    ScoreMin = 60, -- score -&gt; scale/HP/damage through CombatStats exactly like a player (s about 1.1 to 1.3, visual 1.5x to 2.4x)
+    ScoreMin = 60, -- score -&gt; HP/damage through CombatStats exactly like a player (combat scale s about 1.1 to 1.4)
     ScoreMax = 250,
+    VisualScaleMin = 1.0, -- BD-312: the DRAWN size is capped near 1.3x an average player dino (it was 1.5x to 2.4x and filled the camera)
+    VisualScaleMax = 1.3,
+    RadiusPerVisual = 2.9, -- planar body radius (studs) per visual scale; the service replaces it with the measured model size
+    PlayerRadiusFallback = 1.6, -- a player with no measured size
+    FadeSeconds = 0.6, -- BD-312: a defeated NPC fades out softly (client side) before the server removes the model
+    FadeSecondsReduced = 0.15, -- Reduce Motion
+    FadeCleanupExtra = 0.4, -- the server keeps the faded model this much longer so slow clients still see the fade
+    RewardCapFraction = 0.05, -- BD-313: a defeat gives each killer at most this share of THEIR OWN current growth, split by damage share
+    RewardSlotCooldownSeconds = 120, -- the same NPC slot never pays the same player again inside this window
+    RewardMaxPerWindow = 3, -- and one player gets at most this many NPC rewards ...
+    RewardWindowSeconds = 300, -- ... per window, whatever the slots
     TickHz = 5, -- service step rate; positions are replicated by Roblox physics, not by us
     AggroRange = 26, -- studs: an NPC only notices a player this close
     AlertSeconds = 0.8, -- stands still and "!" before it chases
@@ -376388,7 +376409,7 @@ Npc.Config = table.freeze({
     HomeArrive = 6,
     StuckSeconds = 1.5,
     VerticalLimit = 10, -- ignore players this much higher/lower (cliff tops, leaps)
-    RespawnSeconds = 30, -- docs/101 s8
+    RespawnSeconds = 45, -- docs/101 s8, BD-313 (was 30): at least this long before the slot refills
     RespawnJitter = 6,
     RetrySeconds = 2, -- no valid spawn point right now: try again later
     SpawnMinPlayerDistance = 90,
@@ -376567,7 +376588,9 @@ local function makeNpc(world: any, slot: number, x: number, z: number, biome: st
     local species = C.Species[1 + math.floor(roll(rng) * #C.Species) % #C.Species]
     local score = math.floor(between(rng, C.ScoreMin, C.ScoreMax))
     local userId, runId = "npc" .. slot, "w" .. world.serial
+    local visual = C.VisualScaleMin + (C.VisualScaleMax - C.VisualScaleMin) * math.clamp((score - C.ScoreMin) / math.max(1, C.ScoreMax - C.ScoreMin), 0, 1)
     return {
+        visualScale = visual, radius = C.RadiusPerVisual * visual,
         slot = slot, serial = world.serial, userId = userId, runId = runId, key = CombatRules.key(userId, runId),
         species = species, class = CombatRules.classForSpecies(species), score = score, s = Stats.scale(score),
         x = x, y = Layout.height(x, z), z = z, homeX = x, homeZ = z, biome = biome, faceX = 0, faceZ = -1,
@@ -376613,6 +376636,55 @@ function Npc.populate(world: any, now: number, players: any): any
         end
     end
     return out
+end
+
+-- BD-313: NPC defeats are NOT an egg source. A defeat pays a small growth bonus only: each killer gets floor(share * 5% of THEIR
+-- OWN current growth), share = their part of the damage dealt by all killers. Per player and slot the reward repeats only after
+-- RewardSlotCooldownSeconds, and a player gets at most RewardMaxPerWindow rewards per RewardWindowSeconds. No eggs, catches or
+-- crystals are ever produced here. Pure: the caller supplies the damage ledger and growth values.
+function Npc.newRewardLimiter(): any
+    return {bySlot = {}, byPlayer = {}}
+end
+
+-- assisters = {{id = combat key, damage = number}}, growthOf/userOf = {[combat key] = number / userId}. Returns {[key] = growth}.
+function Npc.growthRewards(limiter: any, slotId: any, assisters: any, growthOf: any, userOf: any, now: any): any
+    local out = {}
+    local n = num(now, 0)
+    local total = 0
+    for _, a in assisters do total += math.max(0, num(a.damage, 0)) end
+    if total &lt;= 0 then return out end
+    for _, a in assisters do
+        local user = tostring(userOf[a.id])
+        local slotKey = user .. "&gt;" .. tostring(slotId)
+        local last = limiter.bySlot[slotKey]
+        local fresh = {}
+        for _, t in limiter.byPlayer[user] or {} do
+            if n - t &lt; C.RewardWindowSeconds then table.insert(fresh, t) end
+        end
+        limiter.byPlayer[user] = fresh
+        local amount = math.floor(math.max(0, num(a.damage, 0)) / total * C.RewardCapFraction * math.max(0, num(growthOf[a.id], 0)))
+        local cooling = last ~= nil and n - last &lt; C.RewardSlotCooldownSeconds
+        if amount &gt;= 1 and not cooling and #fresh &lt; C.RewardMaxPerWindow then
+            out[a.id] = amount
+            limiter.bySlot[slotKey] = n
+            table.insert(fresh, n)
+        end
+    end
+    return out
+end
+
+function Npc.fadeSeconds(reduceMotion: boolean): number
+    return if reduceMotion then C.FadeSecondsReduced else C.FadeSeconds
+end
+
+-- Idle/walk bob for the simple NPC models (BD-312): the caller accumulates phase += dt * bobRate(speed01); bobOffset is the
+-- gentle whole-body offset in studs (0 under Reduce Motion). speed01 = 0 (standing) .. 1 (running).
+function Npc.bobRate(speed01: number): number
+    return 2 + 8 * math.clamp(num(speed01, 0), 0, 1)
+end
+function Npc.bobOffset(phase: number, speed01: number, reduceMotion: boolean): number
+    if reduceMotion then return 0 end
+    return math.sin(num(phase, 0)) * (0.04 + 0.16 * math.clamp(num(speed01, 0), 0, 1))
 end
 
 -- Remove an NPC (defeated, or fell out of the world) and schedule its respawn.
@@ -376771,7 +376843,7 @@ local function stepOne(world: any, npc: any, now: number, dt: number, players: a
             return
         end
         setFace(npc, t.x - npc.x, t.z - npc.z)
-        if d &lt;= reach(npc) then
+        if d &lt;= reach(npc) + npc.radius + math.max(0, num(t.radius, C.PlayerRadiusFallback)) then
             halt(npc)
             if now &gt;= npc.biteReadyAt and Npc.canBite(world, t, now) then
                 enter(npc, "windup", now)
@@ -376842,10 +376914,10 @@ function Npc.performBite(world: any, combatWorld: any, event: any, now: number, 
     local candidates = {}
     for _, p in players do
         if Npc.canBite(world, p, now) then
-            table.insert(candidates, {key = p.key, pos = {X = p.x, Y = num(p.y, 0), Z = p.z}})
+            table.insert(candidates, {key = p.key, pos = {X = p.x, Y = num(p.y, 0), Z = p.z}, radius = p.radius})
         end
     end
-    local result = CombatRules.attack(combatWorld, npc.key, now, {X = npc.x, Y = npc.y, Z = npc.z}, {X = npc.faceX, Y = 0, Z = npc.faceZ}, candidates, false)
+    local result = CombatRules.attack(combatWorld, npc.key, now, {X = npc.x, Y = npc.y, Z = npc.z}, {X = npc.faceX, Y = 0, Z = npc.faceZ}, candidates, false, npc.radius)
     if result.ok then world.grace[result.targetKey] = now + C.TargetGraceSeconds end
     return result
 end
@@ -550512,6 +550584,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Cfg = require(ReplicatedStorage.Shared.CombatConfig)
 local Rules = require(ReplicatedStorage.Shared.CombatRules)
 local SettingsModel = require(ReplicatedStorage.Shared.SettingsModel)
+local TeamUp = require(ReplicatedStorage.Shared.CombatTeamUp)
+local NpcRules = require(ReplicatedStorage.Shared.NpcPredatorRules)
 
 local CombatService = {}
 
@@ -550527,12 +550601,19 @@ local function peacefulFor(player: Player): boolean
     return ok and SettingsModel.fromStore(decoded).peaceful
 end
 
+-- BD-311: planar half-size of a model's bounding box (the server measures it; the client never sends a size).
+local function radiusOf(model: Model): number
+    local ok, size = pcall(function() return model:GetExtentsSize() end)
+    if not ok then return 0 end
+    return math.max(size.X, size.Z) / 2
+end
+
 -- Returns nil while the flag is off. With it on, the returned api lets NpcPredatorService (BD-245) put wild predators into the SAME
 -- rules world: api.world is the CombatRules world, api.npcs = {[combat key] = Model} are bite targets like player dinos.
 function CombatService.start(runLifecycle, dinosaur): any?
     if not Config.CombatEnabled then return end
     local world = Rules.new(true)
-    local api: any = {world = world, npcs = {}, onNpcDefeated = nil}
+    local api: any = {world = world, npcs = {}, onNpcDefeated = nil, npcRewards = NpcRules.newRewardLimiter()}
     local tracked: {[Model]: string} = {}
     local connections: {[Model]: {RBXScriptConnection}} = {}
     local characterOf: {[string]: Model} = {}
@@ -550607,11 +550688,21 @@ function CombatService.start(runLifecycle, dinosaur): any?
         -- Exactly once per (userId, runId): CombatState fires the defeat once and settle() flips Defeated -&gt; Settled once.
         if not Rules.settle(world, victim.key) then return end
         if api.npcs[victim.key] then
-            -- A wild predator was defeated (BD-245): no run, no eggs, no catches. Only the capped assist growth below, then the
-            -- NPC service removes it and starts the respawn timer.
-            for key, amount in bonuses do
+            -- A wild predator was defeated (BD-245/BD-313): no run, no eggs, no catches, no crystals. Only a SMALL growth bonus
+            -- (5% of each killer's own growth, split by damage share, once per NPC slot per 120 s, a few per 5 minutes).
+            local now = workspace:GetServerTimeNow()
+            local growthOf, userOf, assisters = {}, {}, {}
+            for _, assister in TeamUp.assisters(victim.ledger, victim.state.maxHp, now) do
+                local d = world.dinos[assister.id]
+                local c = characterOf[assister.id]
+                if d and c and not api.npcs[assister.id] and c:GetAttribute("RunState") == "Active" and not d.peaceful then
+                    growthOf[assister.id], userOf[assister.id] = numberAttribute(c, "GrowthScore", 0), d.userId
+                    table.insert(assisters, assister)
+                end
+            end
+            for key, amount in NpcRules.growthRewards(api.npcRewards, victim.userId, assisters, growthOf, userOf, now) do
                 local c = characterOf[key]
-                if c and not api.npcs[key] and c:GetAttribute("RunState") == "Active" and amount &gt; 0 then dinosaur.addGrowth(c, amount) end
+                if c and amount &gt; 0 then dinosaur.addGrowth(c, amount) end
             end
             if api.onNpcDefeated then api.onNpcDefeated(victim.key) end
             return
@@ -550646,15 +550737,15 @@ function CombatService.start(runLifecycle, dinosaur): any?
         for other, otherKey in tracked do
             local otherRoot = if other ~= character and other.Parent then other:FindFirstChild("HumanoidRootPart") else nil
             if otherRoot and otherRoot:IsA("BasePart") then
-                table.insert(candidates, {key = otherKey, pos = otherRoot.Position})
+                table.insert(candidates, {key = otherKey, pos = otherRoot.Position, radius = radiusOf(other)})
             end
         end
         for npcKey, npcModel in api.npcs do -- wild predators are bite targets too (BD-245)
             local npcRoot = if npcModel.Parent then npcModel:FindFirstChild("HumanoidRootPart") else nil
-            if npcRoot and npcRoot:IsA("BasePart") then table.insert(candidates, {key = npcKey, pos = npcRoot.Position}) end
+            if npcRoot and npcRoot:IsA("BasePart") then table.insert(candidates, {key = npcKey, pos = npcRoot.Position, radius = radiusOf(npcModel)}) end
         end
         local leaping = now &lt; numberAttribute(character, "LeapUntil", 0)
-        local result = Rules.attack(world, key, now, root.Position, root.CFrame.LookVector, candidates, leaping)
+        local result = Rules.attack(world, key, now, root.Position, root.CFrame.LookVector, candidates, leaping, radiusOf(character))
         player:SetAttribute("LastBiteStatus", result.reason)
         if not result.ok then return end
         character:SetAttribute("BiteSeq", numberAttribute(character, "BiteSeq", 0) + 1) -- BD-079 lunge cue (same as predation)
@@ -553103,10 +553194,6 @@ local GROUND_HEIGHT = ROOT_SIZE.Y / 2 + HIP_HEIGHT -- what DinosaurVisual measur
 local WILD_TINT = Color3.fromRGB(70, 40, 100) -- darker, a little purple: reads as "not a player" without new art
 local TINT_AMOUNT = 0.45
 
-local function scaleForScore(score: number): number
-    return math.min(4, math.sqrt(1 + math.max(0, score) / 50)) -- the same growth curve players use
-end
-
 function NpcPredatorService.start(combat: any?)
     if not Config.CombatEnabled or not Config.NpcPredatorsEnabled or not combat then return end
     local world = Rules.newWorld(true, Config.WorldArtSeed + os.time(), Rules.newTerrain({half = Config.ArenaHalfWidth, seed = Config.WorldArtSeed}))
@@ -553119,11 +553206,21 @@ function NpcPredatorService.start(combat: any?)
     groundParams.FilterDescendantsInstances = {workspace.Terrain, workspace:FindFirstChild("BeDinoArena") or workspace.Terrain}
     local collisionGroupReady = PhysicsService:IsCollisionGroupRegistered("DinoControllers")
 
-    local function destroy(slot: number, key: string?)
+    -- fade = true (BD-312, a defeat): the model stays a moment, frozen and marked NpcFading; every client fades it out softly
+    -- (0.6 s, or 0.15 s under Reduce Motion), then the server removes it. Anything else is removed at once.
+    local function destroy(slot: number, key: string?, fade: boolean?)
         local entry = entries[slot]
         entries[slot] = nil
         if key then combat.removeNpc(key) end
-        if entry then entry.model:Destroy() end
+        if not entry then return end
+        if fade then
+            entry.model:SetAttribute("NpcCue", "")
+            entry.model:SetAttribute("NpcFading", true)
+            entry.root.Anchored = true
+            task.delay(Rules.Config.FadeSeconds + Rules.Config.FadeCleanupExtra, function() entry.model:Destroy() end)
+        else
+            entry.model:Destroy()
+        end
     end
 
     local function build(npc: any, now: number): boolean
@@ -553159,13 +553256,15 @@ function NpcPredatorService.start(combat: any?)
         model:SetAttribute("NpcCue", "")
         model.Parent = folder
         pcall(function() root:SetNetworkOwner(nil) end) -- the server owns the physics: no client can steer or exploit it
-        Visual.render(model, scaleForScore(npc.score), npc.species, "base") -- the same visual path as player dinos
+        Visual.render(model, npc.visualScale, npc.species, "base") -- the same visual path as player dinos
         for _, item in model:GetDescendants() do
             if item:IsA("BasePart") and item ~= root then
                 item.CanCollide, item.CanTouch, item.CanQuery, item.Massless = false, false, false, true
                 item.Color = item.Color:Lerp(WILD_TINT, TINT_AMOUNT)
             end
         end
+        local size = model:GetExtentsSize()
+        npc.radius = math.clamp(math.max(size.X, size.Z) / 2, 1, 14) -- BD-311: the measured body size, used for chase and bite reach
         local joined = Rules.joinCombat(world, combat.world, npc, now)
         if not joined then model:Destroy() return false end
         combat.addNpc(npc.key, model)
@@ -553173,16 +553272,16 @@ function NpcPredatorService.start(combat: any?)
         return true
     end
 
-    local function lose(slot: number, now: number)
+    local function lose(slot: number, now: number, fade: boolean?)
         local npc = Rules.defeated(world, slot, now)
-        if npc then destroy(slot, npc.key) end
+        if npc then destroy(slot, npc.key, fade) end
     end
 
     -- A player defeated this NPC (CombatService already ran the exactly-once settle and the capped assist growth).
     combat.onNpcDefeated = function(key: string)
         local now = workspace:GetServerTimeNow()
         for slot, npc in world.slots do
-            if npc.key == key then lose(slot, now) return end
+            if npc.key == key then lose(slot, now, true) return end
         end
     end
 
@@ -553195,10 +553294,11 @@ function NpcPredatorService.start(combat: any?)
             local runId = if character then character:GetAttribute("RunId") else nil
             if character and root and root:IsA("BasePart") and humanoid and typeof(runId) == "string" then
                 local key = CombatRules.key(player.UserId, runId)
+                local size = character:GetExtentsSize()
                 local dino = combat.world.dinos[key] -- only players CombatService tracks can be targeted at all
                 if dino then
                     table.insert(list, {
-                        key = key, character = character, x = root.Position.X, y = root.Position.Y, z = root.Position.Z,
+                        key = key, character = character, x = root.Position.X, y = root.Position.Y, z = root.Position.Z, radius = math.clamp(math.max(size.X, size.Z) / 2, 0, 14),
                         alive = dino.state.phase == "Alive" and humanoid.Health &gt; 0,
                         active = character:GetAttribute("RunState") == "Active",
                         peaceful = dino.peaceful, protectedUntil = dino.protectedUntil,
@@ -557292,11 +557392,14 @@ render=function(name: string)
         end)
         label(body,"Run total: +"..num("LastRunCrystals").." Crystals • already banked",70,353,684,40,22)
     elseif name=="results" then
-        heading.Text,header.BackgroundColor3="Run Complete!",C.gold
-        art(body,"trophy",24,42,240)
-        label(body,"Growth  "..math.floor(num("LastRunGrowthScore")),300,18,500,60,34,C.accent)
-        label(body,"Catches  "..num("LastRunCatchScore"),300,93,500,60,34,C.blue)
-        label(body,str("LastRewardText","Saving rewards..."),290,168,510,100,24,C.gold)
+        -- BD-315: a defeat is a gentle first section of THIS modal (a toast was covered by it); eggs, crystals and nests stay banked.
+        local oops=if str("LastRunEndReason")=="Defeated" then 26 else 0
+        heading.Text,header.BackgroundColor3=if oops&gt;0 then "Oops! Good try!" else "Run Complete!",if oops&gt;0 then C.blue else C.gold
+        if oops&gt;0 then label(body,"Your eggs are safe!",30,0,760,30,24,C.blue) end
+        art(body,"trophy",24,42+oops,240)
+        label(body,"Growth  "..math.floor(num("LastRunGrowthScore")),300,18+oops,500,60,34,C.accent)
+        label(body,"Catches  "..num("LastRunCatchScore"),300,93+oops,500,60,34,C.blue)
+        label(body,str("LastRewardText","Saving rewards..."),290,168+oops,510,100,24,C.gold)
         label(body,"+"..num("LastRunCrystals").." Crystals • Level "..num("AccountLevel"),30,302,760,40,21)
         local hasEggs=str("NextChestId")~="" or num("QueuedEggsWaiting")&gt;0 or #decoded("NestsJson","[]")&gt;0
         button(body,"BACK TO SANCTUARY",if hasEggs then 30 else 212,348,if hasEggs then 370 else 400,48,C.accent,function() open("home") end)
@@ -558157,6 +558260,29 @@ end
 
 type Bar = {gui: BillboardGui, fill: Frame, heart: TextLabel, wobble: UIScale, character: Model?, lastFraction: number, lastCue: string, placedScale: number}
 
+-- BD-314: a big soft "!" bubble over a wild predator that noticed you (alert and windup). One lazy BillboardGui per NPC (at most 6).
+local alertBubbles: {[Model]: BillboardGui} = setmetatable({}, {__mode = "k"}) :: any
+local function setAlertBubble(character: Model, root: BasePart, on: boolean)
+    local gui = alertBubbles[character]
+    if not gui then
+        if not on then return end
+        gui = Instance.new("BillboardGui")
+        gui.Name, gui.Size, gui.AlwaysOnTop, gui.LightInfluence, gui.ResetOnSpawn, gui.MaxDistance = "AlertBubble", UDim2.fromOffset(52, 52), true, 0, false, FAR_STUDS + 5
+        local bubble = Instance.new("TextLabel")
+        bubble.Size, bubble.BackgroundColor3, bubble.Text, bubble.TextColor3 = UDim2.fromScale(1, 1), C.gold, "!", C.outline
+        bubble.Font, bubble.TextSize, bubble.BorderSizePixel = Enum.Font.FredokaOne, 38, 0
+        bubble.Parent = gui
+        local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0.5, 0) corner.Parent = bubble
+        local stroke = Instance.new("UIStroke") stroke.Color, stroke.Thickness, stroke.Parent = C.outline, 3, bubble
+        gui.Parent = root
+        alertBubbles[character] = gui
+    end
+    local scaleNow = character:GetAttribute("VisualScale")
+    gui.StudsOffsetWorldSpace = Vector3.new(0, Hud.barLift(if typeof(scaleNow) == "number" then scaleNow else 1, topAboveRoot(character)) + 2.4, 0)
+    gui.Adornee = root
+    gui.Enabled = on
+end
+
 local function makeBar(parent: Instance): Bar
     local gui = Instance.new("BillboardGui")
     gui.Name, gui.Size, gui.AlwaysOnTop, gui.Enabled, gui.MaxDistance = "HpBar", UDim2.fromOffset(BAR_W + 18, BAR_H + 6), false, false, FAR_STUDS + 5
@@ -558229,8 +558355,26 @@ function Hud.attach(ctx: any)
         lastBiteAt = os.clock()
         remote:FireServer() -- no target, no damage: the server decides everything
     end
-    local biteButton = ctx.button(ctx.timers, "BITE [F]", 146, 0, 140, 60, C.red, bite) -- PLACEHOLDER text button until BD-248 art
+    -- BD-314: a soft, friendly CHOMP button (calm palette colour, pill shape, 60 px tall &gt;= 44 px target). No key hint on touch
+    -- devices; on desktop a small "F" chip in the corner. PLACEHOLDER text button until BD-248 art.
+    local biteButton = ctx.button(ctx.timers, "CHOMP", 146, 0, 140, 60, C.accent, bite)
     biteButton.Name = "BiteButton"
+    local pill = biteButton:FindFirstChildOfClass("UICorner")
+    if pill then pill.CornerRadius = UDim.new(0, 28) end
+    if Input.KeyboardEnabled and not Input.TouchEnabled then
+        local chip = Instance.new("TextLabel")
+        chip.Name, chip.Text, chip.Size, chip.Position = "KeyHint", "F", UDim2.fromOffset(22, 22), UDim2.fromOffset(112, 4)
+        chip.BackgroundColor3, chip.TextColor3, chip.Font, chip.TextSize = C.panel, C.text, Enum.Font.FredokaOne, 15
+        chip.BorderSizePixel, chip.ZIndex, chip.Parent = 0, biteButton.ZIndex + 2, biteButton
+        local chipCorner = Instance.new("UICorner") chipCorner.CornerRadius = UDim.new(0.5, 0) chipCorner.Parent = chip
+    end
+    -- BD-314: a small leaf badge while Peaceful is on, so a Peaceful player can see it in the run.
+    local peacefulBadge = Instance.new("TextLabel")
+    peacefulBadge.Name, peacefulBadge.Text, peacefulBadge.Visible = "PeacefulBadge", "\u{1F343} Peaceful", false
+    peacefulBadge.Size, peacefulBadge.Position = UDim2.fromOffset(120, 26), UDim2.fromOffset(150, -30)
+    peacefulBadge.BackgroundColor3, peacefulBadge.TextColor3, peacefulBadge.Font, peacefulBadge.TextSize = C.panel, C.accent, Enum.Font.FredokaOne, 16
+    peacefulBadge.BorderSizePixel, peacefulBadge.ZIndex, peacefulBadge.Parent = 0, biteButton.ZIndex, ctx.timers
+    local badgeCorner = Instance.new("UICorner") badgeCorner.CornerRadius = UDim.new(0.5, 0) badgeCorner.Parent = peacefulBadge
     local ownStrip = Instance.new("Frame") -- own HP strip under the Bite label (the bigger bar floats over the own dino)
     ownStrip.Position, ownStrip.Size, ownStrip.BackgroundColor3, ownStrip.BorderSizePixel, ownStrip.ZIndex = UDim2.fromOffset(10, 46), UDim2.fromOffset(120, 8), C.panel, 0, biteButton.ZIndex + 1
     ownStrip.Parent = biteButton
@@ -558276,10 +558420,11 @@ function Hud.attach(ctx: any)
         -- Bite button state (client prediction only; the server enforces the cooldown).
         local cooling = now - lastBiteAt &lt; Cfg.BiteCooldownSeconds
         local peaceful = me ~= nil and me:GetAttribute("CombatPeaceful") == true
-        biteButton.BackgroundColor3 = if cooling or peaceful then C.card else C.red
+        biteButton.BackgroundColor3 = if cooling or peaceful then C.card else C.accent
         biteButton.Active = not cooling and not peaceful and me ~= nil and me:GetAttribute("RunState") == "Active"
-        biteButton.Text = if peaceful then "PEACEFUL" else "BITE [F]"
         biteButton.Position = UDim2.fromOffset(146, ctx.leapButton.Position.Y.Offset)
+        peacefulBadge.Visible = peaceful and me ~= nil and me:GetAttribute("RunState") == "Active"
+        peacefulBadge.Position = UDim2.fromOffset(150, ctx.leapButton.Position.Y.Offset - 30)
         if me then
             local f = fractionOf(me)
             ownFill.Size, ownFill.BackgroundColor3 = UDim2.fromScale(f, 1), Hud.fillColor(f)
@@ -558311,7 +558456,7 @@ function Hud.attach(ctx: any)
         local npcFolder = workspace:FindFirstChild("BeDinoNpcs")
         for _, character in if npcFolder then npcFolder:GetChildren() else {} do
             local root = if character:IsA("Model") then character:FindFirstChild("HumanoidRootPart") else nil
-            if character:IsA("Model") and root and root:IsA("BasePart") and character:GetAttribute("HpByte") ~= nil then
+            if character:IsA("Model") and root and root:IsA("BasePart") and character:GetAttribute("HpByte") ~= nil and character:GetAttribute("NpcFading") ~= true then
                 local distance = if camera then (camera.CFrame.Position - root.Position).Magnitude else 0
                 local seq = character:GetAttribute("HitSeq")
                 if typeof(seq) == "number" and seq ~= (hitSeqSeen[character] or 0) then
@@ -558319,6 +558464,7 @@ function Hud.attach(ctx: any)
                     onHit(character, false)
                 end
                 local cue = character:GetAttribute("NpcCue")
+                setAlertBubble(character, root, (cue == "alert" or cue == "windup") and distance &lt;= FAR_STUDS)
                 if cue == "windup" and npcWindupSeen[character] ~= true and distance &lt;= NEAR_STUDS then
                     npcWindupSeen[character] = true
                     Sfx.play("pickup_hi") -- soft heads-up (existing quiet cue, PLACEHOLDER until a dedicated sound is made)
@@ -558382,12 +558528,10 @@ function Hud.attach(ctx: any)
         end
     end)
 
-    -- Gentle defeat (docs/101 s6): DinoMotion already plays the soft "death" flop on RunState "Ending"; add the copy.
-    player:GetAttributeChangedSignal("LastRunEndReason"):Connect(function()
-        if player:GetAttribute("LastRunEndReason") == "Defeated" then
-            ctx.notify("Oops! Good try!", C.blue, {key = "defeated", icon = "egg", body = "Your eggs are safe"})
-        end
-    end)
+    -- Gentle defeat (docs/101 s6): DinoMotion already plays the soft "death" flop on RunState "Ending". The "Oops! Good try!" copy
+    -- is the first section of the Run Complete modal (Bootstrap "results", BD-315), so no toast is shown here: a toast was
+    -- covered by that modal.
+    require(script.Parent.NpcMotion).attach()
 end
 
 return Hud
@@ -563694,6 +563838,76 @@ Players.PlayerRemoving:Connect(function(player) if player.Character then untrack
         </Item>
         <Item class="ModuleScript" referent="RBX351">
           <Properties>
+            <string name="Name">NpcMotion</string>
+            <ProtectedString name="Source">--!strict
+-- BD-312 / docs/87: the client side of the wild predators' look. (1) A gentle idle/walk bob on the simple NPC models (they are
+-- server-made, not the client-only low-poly rigs, so LowPolyAnimator cannot pose them; reusing it needs a bigger change, see the
+-- kanban row). (2) The soft fade-out when the server marks a defeated NPC NpcFading (0.6 s, 0.15 s under Reduce Motion).
+-- Pure maths: Shared/NpcPredatorRules (bobOffset, fadeSeconds). Started by CombatHud.attach, so with Config.CombatEnabled false
+-- nothing in this file ever runs.
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Rules = require(Shared:WaitForChild("NpcPredatorRules"))
+local Theme = require(Shared:WaitForChild("UITheme"))
+
+local Motion = {}
+local RANGE = 120
+local baseC0: {[Weld]: CFrame} = setmetatable({}, {__mode = "k"}) :: any
+local fading: {[Model]: boolean} = setmetatable({}, {__mode = "k"}) :: any
+local phase: {[Model]: number} = setmetatable({}, {__mode = "k"}) :: any
+
+local function fade(model: Model)
+    fading[model] = true
+    local info = TweenInfo.new(Rules.fadeSeconds(not Theme.MotionEnabled), Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    for _, item in model:GetDescendants() do
+        if item:IsA("BasePart") and item.Transparency &lt; 1 then
+            TweenService:Create(item, info, {Transparency = 1}):Play()
+        end
+    end
+end
+
+local function bob(model: Model, root: BasePart, dt: number)
+    local v = root.AssemblyLinearVelocity
+    local speed01 = math.clamp(math.sqrt(v.X * v.X + v.Z * v.Z) / 11, 0, 1)
+    local t = (phase[model] or math.random() * 10) + dt * Rules.bobRate(speed01)
+    phase[model] = t
+    local offset = Rules.bobOffset(t, speed01, not Theme.MotionEnabled)
+    for _, item in model:GetDescendants() do
+        if item:IsA("Weld") and (item.Name == "ResourceWeld" or item.Name == "VisualWeld") and item.Part0 == root then
+            local base = baseC0[item]
+            if not base then base = item.C0 baseC0[item] = base end
+            item.C0 = CFrame.new(0, offset, 0) * base
+        end
+    end
+end
+
+function Motion.attach()
+    RunService.Heartbeat:Connect(function(dt)
+        local folder = workspace:FindFirstChild("BeDinoNpcs")
+        if not folder then return end
+        local camera = workspace.CurrentCamera
+        for _, model in folder:GetChildren() do
+            if not model:IsA("Model") then continue end
+            if model:GetAttribute("NpcFading") == true then
+                if not fading[model] then fade(model) end
+                continue
+            end
+            local root = model:FindFirstChild("HumanoidRootPart")
+            if root and root:IsA("BasePart") and (not camera or (camera.CFrame.Position - root.Position).Magnitude &lt;= RANGE) then
+                bob(model, root, dt)
+            end
+        end
+    end)
+end
+
+return Motion
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="RBX352">
+          <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
 local RunService = game:GetService("RunService")
@@ -563783,7 +563997,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX352">
+        <Item class="LocalScript" referent="RBX353">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -564015,7 +564229,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX353">
+        <Item class="ModuleScript" referent="RBX354">
           <Properties>
             <string name="Name">SettingsMenu</string>
             <ProtectedString name="Source">--!strict
@@ -564118,7 +564332,7 @@ return Menu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX354">
+        <Item class="LocalScript" referent="RBX355">
           <Properties>
             <string name="Name">SettingsSync</string>
             <ProtectedString name="Source">--!strict
@@ -564180,7 +564394,7 @@ task.delay(5, function() loaded = true end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX355">
+        <Item class="ModuleScript" referent="RBX356">
           <Properties>
             <string name="Name">ShopCard</string>
             <ProtectedString name="Source">--!strict
@@ -564218,7 +564432,7 @@ return Card
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX356">
+        <Item class="ModuleScript" referent="RBX357">
           <Properties>
             <string name="Name">VolumeSliders</string>
             <ProtectedString name="Source">--!strict
@@ -564299,7 +564513,7 @@ return Sliders
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX357">
+        <Item class="LocalScript" referent="RBX358">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -564366,7 +564580,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX358">
+        <Item class="LocalScript" referent="RBX359">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -565267,7 +565481,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX359">
+        <Item class="LocalScript" referent="RBX360">
           <Properties>
             <string name="Name">WorldCulling</string>
             <ProtectedString name="Source">--!strict
@@ -565394,7 +565608,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX360">
+        <Item class="LocalScript" referent="RBX361">
           <Properties>
             <string name="Name">WorldReady</string>
             <ProtectedString name="Source">--!strict
@@ -565432,7 +565646,7 @@ remote:FireServer()
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX361">
+  <Item class="Workspace" referent="RBX362">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

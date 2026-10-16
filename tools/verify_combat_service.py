@@ -160,6 +160,35 @@ for step=1,4000 do
 end
 assert(wf.defeatCount==settled,"every defeat settled exactly once")
 assert(settled>=1,"fuzz produced defeats")
+-- BD-311: bite range is measured from BODY SURFACE (reach + attacker radius + target radius), not root to root
+do
+  local w3=world(); local at=R.join(w3,{userId=1,runId="a",class="Ground",score=0,now=0}); local bg=R.join(w3,{userId=2,runId="b",class="Ground",score=0,now=0})
+  local reachA=Cfg.BiteRangeBase+Cfg.BiteRangePerScale*at.s+Cfg.BiteRangeSlack
+  -- a wild-predator sized body (radius 6.5) 11 studs away root to root: the OLD rule said no_target, snouts are touching
+  local far={{key=bg.key,pos=P(0,0,-11),radius=6.5}}
+  assert(R.attack(w3,at.key,1,P(0,0,0),FWD,far,false,1.6).ok,"bite lands at the snout of a big body (root distance 11)")
+  -- the same root distance against a SMALL body is out of reach
+  local w4=world(); local a4=R.join(w4,{userId=1,runId="a",class="Ground",score=0,now=0}); local b4=R.join(w4,{userId=2,runId="b",class="Ground",score=0,now=0})
+  assert(R.attack(w4,a4.key,1,P(0,0,0),FWD,{{key=b4.key,pos=P(0,0,-11),radius=1.0}},false,1.6).reason=="no_target","small body at 11 studs is out of reach")
+  -- exact boundary: reach + rA + rT hits, a hair beyond misses
+  local rA,rT=1.6,6.5
+  local edge=reachA+rA+rT
+  local w5=world(); local a5=R.join(w5,{userId=1,runId="a",class="Ground",score=0,now=0}); local b5=R.join(w5,{userId=2,runId="b",class="Ground",score=0,now=0})
+  assert(R.attack(w5,a5.key,1,P(0,0,0),FWD,{{key=b5.key,pos=P(0,0,-edge+0.01),radius=rT}},false,rA).ok,"inside the surface range")
+  assert(R.attack(w5,a5.key,5,P(0,0,0),FWD,{{key=b5.key,pos=P(0,0,-edge-0.05),radius=rT}},false,rA).reason=="no_target","a hair beyond the surface range")
+  -- cone and vertical limit still apply to big targets
+  assert(R.attack(w5,a5.key,9,P(0,0,0),FWD,{{key=b5.key,pos=P(edge-1,0,-1),radius=rT}},false,rA).reason=="no_target","outside the 70 degree cone")
+  assert(R.attack(w5,a5.key,12,P(0,0,0),FWD,{{key=b5.key,pos=P(0,Cfg.BiteVerticalLimit+1,-6),radius=rT}},false,rA).reason=="no_target","too high")
+  -- radius is server data, but junk or huge values cannot open an infinite range
+  assert(R.bodyRadius(1e9,1)==Cfg.BodyRadiusMax and R.bodyRadius(-5,1)==0 and R.bodyRadius(0/0,2)==Cfg.BodyRadiusPerScale*2 and R.bodyRadius(nil,1)==Cfg.BodyRadiusPerScale)
+  local w6=world(); local a6=R.join(w6,{userId=1,runId="a",class="Ground",score=0,now=0}); local b6=R.join(w6,{userId=2,runId="b",class="Ground",score=0,now=0})
+  assert(R.attack(w6,a6.key,1,P(0,0,0),FWD,{{key=b6.key,pos=P(0,0,-60),radius=1e9}},false,1e9).reason=="no_target","huge radii are clamped")
+  -- big attacker vs small target: the attacker's own radius counts too
+  assert(R.attack(w6,a6.key,2,P(0,0,0),FWD,{{key=b6.key,pos=P(0,0,-(reachA+Cfg.BodyRadiusPerScale*b6.s+10)),radius=nil}},false,10).ok,"attacker radius extends reach")
+  -- legacy callers (no radius) still work with the scale-based fallback
+  local w7=world(); local a7=R.join(w7,{userId=1,runId="a",class="Ground",score=0,now=0}); local b7=R.join(w7,{userId=2,runId="b",class="Ground",score=0,now=0})
+  assert(R.attack(w7,a7.key,1,P(0,0,0),FWD,{{key=b7.key,pos=P(0,0,-4)}}).ok)
+end
 print(string.format("Combat service rules passed: flag-off identity, validation reasons, rate limit, exactly-once defeat/settle, 6 small beat s=4 in %.1f s, pair 1/0.5/0, ratio growth, food heal, regen, hp byte budget, friend shield, fuzz %d defeats", t, settled))
 '''
 
@@ -194,7 +223,7 @@ def static_checks():
         errors.append('CombatHud.attach must be a no-op while the flag is off')
     if re.search(r'Text\s*=.*(damage|%d|HpByte)', hud) or re.search(r'string\.format\([^\n]*HpByte', hud):
         errors.append('no damage numbers or HP numbers in the HUD (docs/101 s10)')
-    for needle in ('"Oops! Good try!"', 'PLACEHOLDER', 'MAX_BARS = 12', 'Theme.MotionEnabled'):
+    for needle in ('PLACEHOLDER', 'MAX_BARS = 12', 'Theme.MotionEnabled'):
         if needle not in hud:
             errors.append('CombatHud is missing ' + needle)
     if 'peaceful' not in read('src/shared/SettingsModel.luau') or '"Peaceful"' not in read('src/client/SettingsMenu.luau'):
