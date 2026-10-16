@@ -24,7 +24,7 @@ local V2Assets = require(Shared.HatchV2Assets) -- docs/118 s9: flag or Studio-on
 local EggV2 = require(script.Parent.HatchEggV2) -- BD-397 (docs/118): 3D egg + paint coats behind Config.HatchV2; nil handle = v1 look
 
 local Seq = {}
-local batch = Timeline.newBatch() -- BD-444: where we are in the hatch party ("Egg 3 of 15")
+local batch = Timeline.session -- BD-444: where we are in the hatch party ("Egg 3 of 15")
 local CENTER_EGG = Vector2.new(412, 130) -- body coordinates (824 x 402 virtual px)
 local CENTER_DINO = Vector2.new(412, 118)
 local BODY_HOME = Vector2.new(18, 98)
@@ -854,7 +854,7 @@ function Seq.play(args: Args): Handle
         if r.mutationName then addRibbon(string.upper(r.mutationName), r.mutationColor or Theme.Colors.gold, 116, if r.shiny then 108 else 52, 210, -4) end
         hint.Text = Timeline.hint(r.remaining)
         do
-            local i, n = Timeline.batchStep(batch, r.remaining)
+            local i, n = Timeline.batchStep(batch, r.remaining, os.clock())
             counter.Text = Timeline.counterText(i, n)
             counter.Visible = counter.Text ~= ""
         end
