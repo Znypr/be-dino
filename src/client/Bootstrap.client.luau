@@ -1213,7 +1213,7 @@ local function refreshGoal()
         maxLevel=ProgressionConfig.AccountMaxLevel,stages=FusionSelection.Stages,
         speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName})
     require(script.Parent.GoalsPanel).setDinos(goalDinos) -- BD-427: hub Goals panel reuses this list and the Index counts
-    require(script.Parent.GoalsPanel).setSpecies(require(Shared.GoalsRules).speciesCounts(decoded("CollectionJson","{}"),Config.SpeciesOrder,function(id) return eventMutation(id)~=nil or ownedTraits(id)~=nil end))
+    require(script.Parent.GoalsPanel).setSpecies(require(Shared.GoalsRules).indexCounts(decoded("CollectionJson","{}"),Config.SpeciesOrder,function(id) return eventMutation(id)~=nil or ownedTraits(id)~=nil end,goalDinos,{colours=#ProgressionConfig.EggColors,patterns=#require(Shared.EggGenetics).Patterns,mutations=#ProgressionConfig.EventMutations}))
     goalText.Text,goalText.TextColor3=(if touchMode() or require(Shared.PhoneScale).isCompact(gui.AbsoluteSize.Y) then "" else "Goal  ")..goal.text,if goal.ready then C.accent else C.gold
 end
 local goalQueued=false
