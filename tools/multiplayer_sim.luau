@@ -4,6 +4,7 @@
 -- It proves ordering/transaction/invariant behaviour. It does NOT prove Roblox networking, physics, replication or real
 -- DataStore behaviour (see docs/111 section 6 for what only a real server can show).
 
+math.randomseed(20261016) -- the retry back-off jitter uses math.random; a fixed seed keeps the sim reproducible
 local CHECKS = {}
 local currentScenario = "?"
 local function check(name, cond, detail)
@@ -77,6 +78,13 @@ local function boot(server)
         leaving.settlementFinished(player)
         return ok
     end)
+    -- BD-359 (mirrors Bootstrap): a settlement the renew tick commits after its retry window ended.
+    Repo.setSettlementRecoveredHook(function(player, runId, outcome)
+        local info = env.runs[runId]
+        env.committed[runId] = {userId = player.UserId, catch = info and info.catch or 0, outcome = outcome, status = "recovered"}
+        env.recovered = (env.recovered or 0) + 1
+        env.RL.recoverAfterSettlement(player)
+    end)
     RL.start()
     server.PlayersService.PlayerRemoving:Connect(leaving.leave)
     return env
@@ -146,6 +154,7 @@ local function seededConnect(env, userId)
     return connect(env, userId)
 end
 
+local SCENARIO_OVERRIDES = nil -- Config overrides for the next runScenario (BD-358 contrast run)
 local function runScenario(name, limit, fn)
     currentScenario = name
     now = 0
@@ -154,7 +163,8 @@ local function runScenario(name, limit, fn)
     M = newMetrics()
     SCENARIO_FAIL_RATE = 0
     crashes = {}
-    local server = newServer("A", "job-A")
+    local server = newServer("A", "job-A", SCENARIO_OVERRIDES)
+    SCENARIO_OVERRIDES = nil
     local env = boot(server)
     local finished = false
     task.spawn(function() fn(env, server) finished = true end)
@@ -572,6 +582,235 @@ do
         check("a nest list shares no state with another user, user " .. i, lists[i][1].nestId == "u" .. i .. "-1", lists[i][1].nestId)
     end
     check("advancing in several steps equals one direct advance (offline catch-up)", drift == 0, drift .. " nests differ")
+end
+
+
+-------------------------------------------------------------------- I: write budget and settlement retry (BD-358 / BD-359)
+-- Largest number of store requests inside any 60 s window, against the 60 + 10 x players budget of that moment.
+local function peakWindow()
+    local reqs, lo, worst, worstBudget = M.requests, 1, 0, 60
+    for hi = 1, #reqs do
+        while reqs[hi].t - reqs[lo].t >= 60 do lo += 1 end
+        local n = hi - lo + 1
+        if n > worst then worst, worstBudget = n, 60 + 10 * math.max(1, reqs[hi].players) end
+    end
+    return worst, worstBudget
+end
+
+-- Every started run committed exactly once: eggs of the profile == eggs of the committed runs, no duplicate egg id,
+-- one operation per run id, nothing lost. `released` also expects the leases to be gone (players left).
+local function verifyRewards(env, server, runIds, released)
+    local rewards = server.require(node("src/server/RewardMath"))
+    local expected, lost, dupOps = {}, 0, 0
+    for _, runId in runIds do
+        local info = env.committed[runId]
+        if not info then lost += 1 else
+            expected[info.userId] = (expected[info.userId] or 0) + rewards.computeRunReward(info.catch, 0).eggCount
+        end
+    end
+    check("no run lost: every started run was credited (" .. #runIds .. " runs)", lost == 0, lost .. " runs never committed")
+    local wrong, dupEggs, leased = 0, 0, 0
+    for _, id in userIds(12) do
+        local profile = profileOf(id)
+        if profile then
+            local ids, n = eggIdsOf(profile)
+            for _, c in ids do if c > 1 then dupEggs += 1 end end
+            if n ~= (expected[id] or 0) then wrong += 1 end
+            local seen = {}
+            for _, op in profile.recentOperations do
+                if seen[op.id] then dupOps += 1 end
+                seen[op.id] = true
+            end
+            if released and profile.session then leased += 1 end
+        end
+    end
+    check("no duplicate credit: no duplicated egg id and no repeated operation", dupEggs == 0 and dupOps == 0, dupEggs .. " egg ids, " .. dupOps .. " operations")
+    check("eggs in every profile == eggs of its committed runs (nothing lost, nothing doubled)", wrong == 0, wrong .. " profiles differ")
+    if released then check("every lease released", leased == 0, leased .. " leases left") end
+    local twice = 0
+    for _, runId in runIds do if (env.settleCalls[runId] or 0) > 1 then twice += 1 end end
+    check("every run entered the settlement callback at most once", twice == 0, twice .. " runs")
+end
+
+local function boundedRate(label)
+    local worst, budget = peakWindow()
+    metric("peak requests in 60 s / budget", worst .. " / " .. budget)
+    check("request rate stays under 60 + 10 x players (" .. label .. ")", worst <= budget, worst .. " > " .. budget)
+    check("no DataStore throttle-queue drop (" .. label .. ")", M.queueDrops == 0, "drops " .. M.queueDrops)
+end
+
+local function allPlayers(env, n)
+    local players = {}
+    for i, id in userIds(n) do task.spawn(function() players[i] = connect(env, id) end) end
+    sleep(25)
+    return players
+end
+
+local function spammer(label, failRate, unbudgeted)
+    local result = {}
+    if unbudgeted then SCENARIO_OVERRIDES = {WriteBurst = 1e9, WriteRefillPerSecond = 1e9, WriteBudgetReserve = 0} end
+    local env, server = runScenario(label, 600, function(env, server)
+        local players = allPlayers(env, 12)
+        env.Repo.start()
+        SCENARIO_FAIL_RATE = failRate
+        local runIds = {}
+        for i = 2, 12 do runIds[#runIds + 1] = startRun(env, players[i], 10 + i) end
+        local bad = players[1]
+        local sent = 0
+        local spamStart = now
+        task.spawn(function() -- 10 Hz x 3 remotes for 60 s: settings, reveal skip, nest claim
+            for k = 1, 600 do
+                sent += 3
+                local _, answer = env.Repo.setSettings(bad, {sound = {master = (k % 11) / 10}})
+                result.lastAnswer = answer
+                env.Repo.setRevealSkip(bad, {1 + (k % 3)})
+                env.Repo.claimNest(bad, "nest-" .. k)
+                sleep(0.1)
+            end
+            result.spamSeconds = now - spamStart
+        end)
+        sleep(20)
+        for i = 2, 12 do env.RL.tryEnd(players[i], players[i].Character, "ManualExit") end
+        sleep(100) -- spam is over after 60 s; coalesced values flush
+        result.committedBy = 0
+        for _, runId in runIds do if env.committed[runId] then result.committedBy += 1 end end
+        SCENARIO_FAIL_RATE = 0
+        sleep(40)
+        result.sent = sent
+        result.spamWrites = #(M.keyWrites["u:3001"] or {})
+        result.final = profileOf(3001)
+        result.runIds = runIds
+        result.stats = env.Repo.budgetStats()
+        result.maxThrottleWait = M.maxThrottleWait
+        result.drops = M.queueDrops
+    end)
+    return env, server, result
+end
+
+local function spamChecks(label, env, server, r, unbudgeted, failRate)
+    metric("spammer remotes sent / store writes on its key", r.sent .. " / " .. r.spamWrites)
+    metric("routine writes admitted / rejected / coalesced / flushed",
+        r.stats.admitted .. " / " .. r.stats.rejected .. " / " .. r.stats.coalesced .. " / " .. r.stats.flushed)
+    metric("max throttle wait s / queue drops", string.format("%.2f", r.maxThrottleWait) .. " / " .. r.drops)
+    if unbudgeted then return end
+    check("11 other players' settlements all committed while one client spams (" .. label .. ")", r.committedBy == 11, r.committedBy .. "/11")
+    check("the spammer's store writes are bounded by its bucket (<= burst + refill over the spam window)", r.spamWrites <= 6 + (r.spamSeconds or 0) + 12, r.spamWrites .. " vs " .. 6 + (r.spamSeconds or 0) + 12)
+    local model = server.require(node("src/shared/SettingsModel"))
+    local wanted = model.toStore(model.fromStore({sound = {master = (600 % 11) / 10}}))
+    -- Never lost SILENTLY: the stored value is the latest one, or (only when the store itself failed and the player was in
+    -- SaveFailed) the client was told so by a refused answer instead of "queued"/"saved".
+    local saved = r.final.settings ~= nil and r.final.settings.sound.master == wanted.sound.master
+    local told = r.lastAnswer ~= "queued" and r.lastAnswer ~= "saved"
+    check("the spammer's LATEST settings were saved (coalesced) or the client was told it was refused",
+        saved or (told and failRate > 0), tostring(r.final.settings and r.final.settings.sound.master) .. " vs " .. wanted.sound.master .. ", last answer " .. tostring(r.lastAnswer))
+    if failRate == 0 then check("with a healthy store the latest settings are always saved", saved, "stale") end
+    check("the spammer's remotes were answered rate_limited / queued, store not hit per call", r.stats.rejected > 0 and r.stats.coalesced > 0, "rejected " .. r.stats.rejected)
+    check("no throttle queue drop while a client spams", r.drops == 0, tostring(r.drops))
+    verifyRewards(env, server, r.runIds, false)
+    boundedRate(label)
+end
+
+do
+    local env, server, r = spammer("budget-spammer-12", 0, false)
+    spamChecks("budget-spammer-12", env, server, r, false, 0)
+    local env2, server2, r2 = spammer("budget-spammer-12-flaky-30pct", 0.3, false)
+    spamChecks("budget-spammer-12-flaky-30pct", env2, server2, r2, false, 0.3)
+    -- Contrast: the same spam with the budget switched off (the old behaviour). Metrics only, plus one comparison.
+    local env3, server3, r3 = spammer("unbudgeted-contrast-spammer-12", 0, true)
+    spamChecks("unbudgeted-contrast", env3, server3, r3, true)
+    currentScenario = "unbudgeted-contrast-spammer-12"
+    check("contrast: without the budget the spammer's key takes more writes than with it", r3.spamWrites > r.spamWrites, r3.spamWrites .. " vs " .. r.spamWrites)
+end
+
+-- Runs end at the same moment on 12 players while the store fails completely for `hiccup` virtual seconds.
+local function hiccupScenario(label, hiccup, leave)
+    local info = {}
+    local env, server = runScenario(label, 900, function(env, server)
+        local players = allPlayers(env, 12)
+        env.Repo.start()
+        local runIds = {}
+        for i = 1, 12 do runIds[#runIds + 1] = startRun(env, players[i], 10 + i) end
+        sleep(130)
+        SCENARIO_FAIL_RATE = 1
+        task.delay(hiccup, function() SCENARIO_FAIL_RATE = 0 end)
+        local startedAt = now
+        if leave then
+            env.leaving.leaveAll(table.clone(server.players))
+            env.leaving.waitIdle(27)
+            info.seconds = now - startedAt
+            sleep(30)
+        else
+            for i = 1, 12 do env.RL.tryEnd(players[i], players[i].Character, "ManualExit") end
+            local firstAt
+            while now - startedAt < hiccup + 40 do
+                sleep(0.5)
+                local n = 0
+                for _, runId in runIds do if env.committed[runId] then n += 1 end end
+                if n == 12 and not firstAt then firstAt = now - startedAt end
+            end
+            info.allCommittedAfter = firstAt
+            info.failedWindows = env.Repo.budgetStats().settlementFailedWindows
+            sleep(120) -- renew ticks recover anything that outlasted the window
+            info.players = players
+        end
+        SCENARIO_FAIL_RATE = 0
+        info.runIds = runIds
+        info.stats = env.Repo.budgetStats()
+    end)
+    return env, server, info
+end
+
+do
+    local env, server, i = hiccupScenario("hiccup-15s-present-12", 15, false)
+    metric("all 12 settlements committed after virtual s", tostring(i.allCommittedAfter))
+    metric("settlement attempts / windows that failed", i.stats.settlementAttempts .. " / " .. i.stats.settlementFailedWindows)
+    check("a 15 s store hiccup loses nothing: every settlement committed", i.allCommittedAfter ~= nil and i.allCommittedAfter < 15 + 25, tostring(i.allCommittedAfter))
+    check("a 15 s hiccup needs no recovery tick (the retry window was enough)", i.failedWindows == 0, tostring(i.failedWindows))
+    verifyRewards(env, server, i.runIds, false)
+    boundedRate("hiccup-15s")
+
+    local env2, server2, j = hiccupScenario("hiccup-60s-present-12", 60, false)
+    metric("windows that failed / recovered by the renew tick", j.stats.settlementFailedWindows .. " / " .. j.stats.settlementRecovered)
+    check("a hiccup longer than the window records SaveFailed pendings", j.failedWindows > 0, tostring(j.failedWindows))
+    check("pending settlements are recovered by the lease renew tick", j.stats.settlementRecovered > 0, tostring(j.stats.settlementRecovered))
+    local stuck = 0
+    for _, p in j.players do if env2.Repo.pendingSettlement(p) ~= nil or p.attrs.ProfileState ~= "Loaded" or p.respawns < 1 then stuck += 1 end end
+    check("after recovery every player is Loaded again, nothing pending, character brought back", stuck == 0, stuck .. " players")
+    verifyRewards(env2, server2, j.runIds, false)
+    boundedRate("hiccup-60s")
+
+    local env3, server3, k = hiccupScenario("hiccup-15s-leaving-12", 15, true)
+    metric("virtual seconds for 12 players to settle and release over a 15 s hiccup", string.format("%.1f", k.seconds or -1))
+    check("BindToClose-style leave of 12 players over a 15 s hiccup finishes within 27 s", (k.seconds or 99) <= 27, tostring(k.seconds))
+    verifyRewards(env3, server3, k.runIds, true)
+    boundedRate("hiccup-15s-leaving")
+end
+
+do
+    local function flaky(label, rate)
+        local saved = {}
+        local env, server = runScenario(label, 900, function(env, server)
+            local players = allPlayers(env, 12)
+            env.Repo.start()
+            local runIds = {}
+            for i = 1, 12 do runIds[#runIds + 1] = startRun(env, players[i], 10 + i) end
+            sleep(130)
+            SCENARIO_FAIL_RATE = rate
+            for i = 1, 12 do env.RL.tryEnd(players[i], players[i].Character, "ManualExit") end
+            sleep(150)
+            for i = 1, 12 do if i % 2 == 0 then disconnect(env, players[i]) end end -- half the players leave under the same failures
+            sleep(60)
+            SCENARIO_FAIL_RATE = 0
+            sleep(100)
+            saved.runIds = runIds
+        end)
+        local stats = env.Repo.budgetStats()
+        metric("settlement attempts / failed windows / recovered", stats.settlementAttempts .. " / " .. stats.settlementFailedWindows .. " / " .. stats.settlementRecovered)
+        verifyRewards(env, server, saved.runIds, false)
+        boundedRate(label)
+    end
+    flaky("flaky-store-20pct-12", 0.2)
+    flaky("flaky-store-40pct-12", 0.4)
 end
 
 -------------------------------------------------------------------- report
