@@ -20,6 +20,16 @@ local function destroy(state)
     if state.visual and state.visual.Parent and state.mutationId~="" then Look.apply(state.visual,nil) end -- restore the body colour
 end
 local states={}
+-- BD-432 global live-FX budget: what every OTHER dino's rigs already use (beams, trails, lights, shells).
+local function liveUsed(except)
+    local used={}
+    for player,st in states do
+        if player~=except then
+            for _,rig in st.rigs do for _,k in Lod.CostKeys do used[k]=(used[k] or 0)+(rig.budgetCost[k] or 0) end end
+        end
+    end
+    return used
+end
 local elapsed=0
 RunService.Heartbeat:Connect(function(dt)
     elapsed+=dt
@@ -67,7 +77,15 @@ RunService.Heartbeat:Connect(function(dt)
                     -- BD-353 stacked budget: the mutation cue always keeps its own detail (glow + ground ring + motes even when lite);
                     -- an aura and a trail on the same dino drop to the lite layer count instead, so the combined look stays in budget.
                     local rigDetail=if kind~="mutation" and (#state.rigs>0 or mutationId~="") then "lite" else detail
-                    table.insert(state.rigs,Rig.attach(root,kind,item,{reduce=reduce,detail=rigDetail,device=device}))
+                    -- BD-432: the scene-wide ceiling steps this look down to lite, or drops it. The local dino and the mutation cue
+                    -- never vanish (lite floor); the local dino is not counted against others' use.
+                    local used=if own then {} else liveUsed(player)
+                    for _,r in state.rigs do for _,k in Lod.CostKeys do used[k]=(used[k] or 0)+(r.budgetCost[k] or 0) end end
+                    rigDetail=Lod.fit(device,rigDetail,used,function(d) return Rig.cost(kind,item,{reduce=reduce,detail=d,device=device}) end,own or kind=="mutation")
+                    if rigDetail=="none" then return end
+                    local rig=Rig.attach(root,kind,item,{reduce=reduce,detail=rigDetail,device=device})
+                    rig.budgetCost=Rig.cost(kind,item,{reduce=reduce,detail=rigDetail,device=device})
+                    table.insert(state.rigs,rig)
                 end
                 add("aura",Rules.item(Config.Auras,auraId))
                 add("mutation",Look.get(mutationId))

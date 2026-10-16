@@ -26,6 +26,9 @@ The first numbers are set just above today's worst case (a ratchet): they stop g
 
 Nothing visual was changed: no moment is over its budget at the CURRENT code.
 
+## Global live-FX budget (BD-432, CURRENT code, PROVISIONAL numbers)
+`EffectsLod.Live` caps the enabled beams, trails, lights and aura shells of the WHOLE scene (phone 24 / 14 / 16 / 1, tablet 72 / 20 / 24 / 2, desktop 160 / 40 / 24 / 3; phone beams and lights equal `tools/qa/phone_budgets.json`, `verify_fx` checks it). `CosmeticVisuals` asks `Lod.fit` before each rig: a look that does not fit steps down from full to lite, then is dropped. The local dino and the event-mutation cue never vanish (lite floor); the local dino is not counted against others' use. The aura shell (Epic+, full look, no Reduce Motion) is built only when `AssetSlots.Meshes.aura_shell_mesh` holds a real upload; the slot is empty today, so nothing is drawn. One `ribbonTexture()` helper gives every trail ribbon and orbit beam the shared `ribbonSoft` render (empty slot: plain coloured ribbon). The smoke layers already play the fx3 `smokeSheet` flipbook.
+
 ## Studio measurement (the truth)
 `tools/qa/fx_probe.client.luau` follows the probe conventions of [117](117-asset-quality-audit.md), but it is a CLIENT script (cosmetic, weather and mutation FX are built client-side).
 
