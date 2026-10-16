@@ -5,7 +5,7 @@ __pycache__/
 build/*-playtest.rbxlx
 build/*-playtest.manifest.json
 
-# Current generated build (BD-418): produced by tools/build.py and the CI artifact, never committed.
+# Current generated build (BD-419): produced by tools/build.py and the CI artifact, never committed.
 # Older Build016-019 files stay tracked as history; new ones are ignored.
 build/BeDino-Build[0-9][0-9][0-9].rbxlx
 build/BeDino-Build[0-9][0-9][0-9].manifest.json

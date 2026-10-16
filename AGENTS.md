@@ -4,7 +4,7 @@
 
 Read this file before interpreting reward requests, editing game-design documents, or changing game economy code. Source of truth for **owner's intended target**: [docs/09-reward-economy.md](docs/09-reward-economy.md), **2026-10-08 Owner-approved target**, and [docs/03-game-design.md](docs/03-game-design.md). [docs/07-kanban.md](docs/07-kanban.md) is the sole task/acceptance tracker.
 
-## Generated build files (BD-418)
+## Generated build files (BD-419)
 `build/BeDino-Build<current>.rbxlx` and its `.manifest.json` are **not committed**; never force-add them or include them in PRs. Run `python tools/build.py` locally when you need them (tests build in memory; `verify_release.py` needs the file, so build first). CI builds, verifies and uploads them as the `BeDino-current-build` artifact. Older Build016-019 files stay tracked as history.
 
 ## Game vision
