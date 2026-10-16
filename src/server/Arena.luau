@@ -10,6 +10,7 @@ local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
 local KitMeshes = require(ReplicatedStorage.Shared.WorldKitMeshAssets)
 local Generated = require(ReplicatedStorage.Shared.WorldGeneratedMeshes)
+local Decor = require(ReplicatedStorage.Shared.SanctuaryDecor)
 local Arena = {}
 local function part(parent: Instance, name: string, size: Vector3, position: Vector3, color: Color3, material: Enum.Material, solid: boolean): Part
     local p = Instance.new("Part")
@@ -182,6 +183,56 @@ local function pools(parent: Instance)
     end
 end
 
+-- BD-254: one decorative generated mesh (statue / nest / egg), fitted so its longest horizontal side is `width` studs, resting
+-- on `base`. Anchored, no collision, no touch/query. nil (flag off or the mesh did not load) means the caller keeps its fallback.
+local function decorMesh(parent: Instance, key: string, base: Vector3, width: number, yaw: number): MeshPart?
+    local folder = ReplicatedStorage:FindFirstChild("GeneratedWorld")
+    local template = if folder then folder:FindFirstChild(key) else nil
+    if not Config.WorldGeneratedMeshes or not template or not template:IsA("MeshPart") then return nil end
+    local mesh = template:Clone()
+    mesh.Size = template.Size * (width / math.max(template.Size.X, template.Size.Z))
+    mesh.Anchored, mesh.CanCollide, mesh.CanTouch, mesh.CanQuery, mesh.Massless = true, false, false, false, true
+    mesh.CFrame = CFrame.new(base + Vector3.new(0, mesh.Size.Y / 2, 0)) * CFrame.Angles(0, yaw, 0)
+    mesh.Name = "Decor_" .. key
+    mesh.Parent = parent
+    return mesh
+end
+-- BD-254: calm bubbly Sanctuary dressing from the pure SanctuaryDecor table (no gameplay geometry changes).
+local function sanctuaryDecor(hub: Model, cz: number, kitMode: boolean)
+    local floorY = SpawnGeometry.HubFloorY
+    local dressing = Instance.new("Folder")
+    dressing.Name, dressing.Parent = "Decor", hub
+    local nests: {[number]: MeshPart} = {}
+    for _, row in Decor.layout() do
+        local base = Vector3.new(row.x, floorY, cz + row.dz)
+        if row.kind == "statue" then
+            decorMesh(dressing, Decor.Keys.statue, base, row.width, row.yaw)
+        elseif row.kind == "nest" then
+            local mesh = decorMesh(dressing, Decor.Keys.nest, Vector3.new(row.x, 6.5, cz + row.dz), row.width, row.yaw)
+            if mesh then
+                nests[table.find(Decor.NestXs, row.x) :: number] = mesh
+                local glow = Instance.new("PointLight")
+                glow.Color, glow.Brightness, glow.Range, glow.Shadows = Color3.fromRGB(255, 226, 170), .6, 9, false
+                glow.Parent = mesh
+            else
+                local fallback = part(dressing, "EggNest", Vector3.new(5, 1, 5), Vector3.new(row.x, 6.6, cz + row.dz), Color3.fromRGB(174, 129, 70), Enum.Material.Wood, false)
+                fallback.Shape = Enum.PartType.Cylinder
+            end
+        elseif row.kind == "egg" then
+            local nest = nests[row.nest :: number]
+            if nest then decorMesh(dressing, Decor.Keys.egg, Vector3.new(row.x, nest.Position.Y + nest.Size.Y * .15, cz + row.dz), row.width, row.yaw) end
+        elseif kitMode then
+            local id = if row.kind == "bush" then Decor.KitBush else Decor.KitFlower
+            kitProp(dressing, id, CFrame.new(base) * CFrame.Angles(0, row.yaw, 0), row.width / KitData[id].extent[1], "meadow", .5)
+        end
+    end
+    for _, s in Decor.stones() do
+        local stone = part(dressing, "StepStone", Vector3.new(.3, 2.2, 2.2), Vector3.new(s.x, 6.6, cz + s.dz), Color3.fromRGB(236, 222, 184), Enum.Material.Sandstone, false)
+        stone.Shape = Enum.PartType.Cylinder
+        stone.CFrame = CFrame.new(stone.Position) * CFrame.Angles(0, 0, math.pi / 2)
+    end
+end
+
 function Arena.build()
     local old = workspace:FindFirstChild("BeDinoArena")
     if old then old:Destroy() end
@@ -269,21 +320,29 @@ function Arena.build()
     local hub = Instance.new("Model")
     local cz = Config.SanctuaryCenterZ
     hub.Name, hub.Parent = "Sanctuary", world
-    part(hub,"SanctuaryGround",Vector3.new(110,6,95),Vector3.new(0,3,cz),Color3.fromRGB(111,178,91),Enum.Material.Grass,true)
+    local grass, rim = Color3.fromRGB(111,178,91), Color3.fromRGB(128,192,102)
+    part(hub,"SanctuaryGround",Vector3.new(110,6,95),Vector3.new(0,3,cz),grass,Enum.Material.Grass,true)
+    -- BD-254: one wide grass apron around the hub (same height) and four tilted soft-rim slabs, so the hub is a gentle plateau
+    -- sloping into the surroundings instead of a slab in a pit. Fences stay as invisible collision (the hedge ring is visual).
+    part(hub,"SanctuaryApron",Vector3.new(150,5.9,135),Vector3.new(0,3,cz),grass,Enum.Material.Grass,true)
+    for _, side in {{0,1},{0,-1},{1,0},{-1,0}} do
+        local alongX = side[1] == 0
+        local tilt = math.rad(18)
+        local slab = part(hub,"SanctuaryRim",if alongX then Vector3.new(158,1,18) else Vector3.new(18,1,142),
+            Vector3.new(side[1]*(75+8.6),2.65,cz+side[2]*(67.5+8.6)),rim,Enum.Material.Grass,false)
+        slab.CFrame = CFrame.new(slab.Position) * CFrame.Angles(side[2]*tilt, 0, -side[1]*tilt)
+    end
     part(hub,"NestPlaza",Vector3.new(34,.5,30),Vector3.new(0,6.25,cz),Color3.fromRGB(223,205,154),Enum.Material.Sandstone,true)
     for _, x in {-48,48} do
-        part(hub,"HubFence",Vector3.new(2,10,92),Vector3.new(x,11,cz),Color3.fromRGB(83,131,73),Enum.Material.Wood,true)
+        part(hub,"HubFence",Vector3.new(2,10,92),Vector3.new(x,11,cz),Color3.fromRGB(83,131,73),Enum.Material.Wood,true).Transparency = 1
     end
     for _, z in {cz-43,cz+43} do
-        part(hub,"HubFence",Vector3.new(96,10,2),Vector3.new(0,11,z),Color3.fromRGB(83,131,73),Enum.Material.Wood,true)
+        part(hub,"HubFence",Vector3.new(96,10,2),Vector3.new(0,11,z),Color3.fromRGB(83,131,73),Enum.Material.Wood,true).Transparency = 1
     end
     for _, x in {-32,32} do
         if kitMode then kitProp(hub, "world_tree_conifer_m", CFrame.new(x, 6, cz + 15) * CFrame.Angles(0, x, 0), 1.2) else tree(hub,Vector3.new(x,6,cz+15),1.2,x) end
     end
-    for i = 1,5 do
-        local nest = part(hub,"EggNest",Vector3.new(5,1,5),Vector3.new(-18+i*6,6.6,cz+20),Color3.fromRGB(174,129,70),Enum.Material.Wood,false)
-        nest.Shape = Enum.PartType.Cylinder
-    end
+    sanctuaryDecor(hub, cz, kitMode)
     local sign = part(hub,"SanctuarySign",Vector3.new(30,7,1),Vector3.new(0,15,cz+37),Color3.fromRGB(27,76,51),Enum.Material.Wood,false)
     local surface = Instance.new("SurfaceGui")
     surface.Face, surface.CanvasSize, surface.Parent = Enum.NormalId.Front, Vector2.new(600,140), sign

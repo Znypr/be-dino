@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "b6b73c643df89f5d2785c8c8b2c130336488add3fdc31020e4fc494c96233145",
+  "place_sha256": "cd2c8ecf172e07d9af3632d061b605a15ffd508d7c73001748ad0102a0bc36e6",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -235,6 +235,7 @@
     "src/shared/ResourceModels.luau": "e09eb7bd98c36635fca74cd58a10d7c24ecd97a5c83d3c9647fc8daa3c2c4241",
     "src/shared/RevealSkip.luau": "3d35f316aa74ef7a143582e0f0dd48c640347918074a3f3edbf9e1c1aee6baf0",
     "src/shared/RuntimeMeshes.luau": "5e6848a4a93bc7b0e477a94637fcdfb75bde15b6ed4d687a9cc01d9da63509e0",
+    "src/shared/SanctuaryDecor.luau": "a484899d4da4430c11f6ff506e0a010fbdc34b561d81692986312bad061dcb55",
     "src/shared/Sfx.luau": "54a8ce73ddbcc72a1a9f871db1c7a96f9bee413854a0c14e34546d2eb6573dfe",
     "src/shared/ShinyEffects.luau": "f5059433f066966709b9cc9e0a7aea6ac80e7f03a51ebd4edc134ab04da1d127",
     "src/shared/ShopOdds.luau": "a55520b8b005e1048ab078b797749e93f3bcff90d649e23e3c44113648ab748c",
@@ -252,7 +253,7 @@
     "src/shared/WorldKitData.luau": "860dd88ae449c3daa82d1372148e02d50d0ccaa08c8fa5a21a003a75bb4abde2",
     "src/shared/WorldKitMeshAssets.luau": "7110648be06c6e602728e21ad96a833e4ad87d65c64fced492ef5bfcd9ce503f",
     "src/server/AdminService.luau": "b017aed5b20be0c7a2226618d128acf8e1415bf18ce260afcae3b9d45ff26ee9",
-    "src/server/Arena.luau": "5f720f0cfb32f466d1bf912eb389eb3b93dc02a29fbbd25a14ab1260538b8997",
+    "src/server/Arena.luau": "ed6da49d601f07f7259493c647e298257bb26e89f3c8d248fc2ad74c1e5295b7",
     "src/server/Bootstrap.server.luau": "4d49345b49bc8d45cc33f3d1d6a1cde0ea284e24ec7d97a902942d47139529a3",
     "src/server/ChestService.luau": "0a1d74c440564a766188dadae4fe46d8fcd7e36d85837b566def3cf80ed9f67c",
     "src/server/CollectionService.luau": "9f50dc992e286fc0d3df30c86c37f71d46c584ca01a77f48c42fde9b8fa17d1a",
