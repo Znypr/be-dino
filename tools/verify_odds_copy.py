@@ -34,6 +34,20 @@ for level=0,#Progression.ConditionWeights-1 do
  assert(math.abs(groups[1].rows[2].percent-100*Outcomes.failure(level))<=0.0101)
  assert(#Copy.upgradeGroups(level)==1 and near(sumOf(Copy.upgradeGroups(level)[1].rows),100))
 end
+-- BD-301: the Buy Egg confirm sentence and the Egg Odds panel come from the same numbers
+for level=0,#Progression.ConditionWeights-1 do
+ local hatch=Copy.hatchGroup(level).rows[1]
+ local sentence=Copy.hatchSentence(level)
+ assert(sentence:find(string.format("%g",hatch.percent).." of every 100 eggs hatch",1,true),"sentence "..sentence)
+ assert(#sentence<=80 and not sentence:find("success"))
+end
+-- BD-303: plain unlock words
+assert(Copy.upgradeUnlock(3,1)=="Reach level 3 to buy this." and Copy.upgradeUnlock(3,3)=="Ready to buy!" and Copy.upgradeUnlock(nil,9)=="Top level reached")
+for lv=1,#Progression.ConditionUpgrades do
+ local id=Copy.biggestGain(lv-1,lv) local ok=false
+ for _,c in Progression.Conditions do if c.id==id then ok=true end end
+ assert(ok,"biggestGain "..lv)
+end
 for _,isEgg in {true,false} do for _,n in Copy.notes(isEgg) do assert(#n<=70 and not n:find("%d+x")) end end
 -- shop card state
 assert(State.kind({})=="normal" and State.kind({owned=true})=="owned" and State.kind({left=0})=="soldOut")
