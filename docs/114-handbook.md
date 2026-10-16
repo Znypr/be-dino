@@ -82,7 +82,16 @@ Rain #96B6E8 / #78869C; Thunder #A0AEDE / #586084 (violet glow #A08CFF); Blizzar
 ### 5.10 Cave (`CaveLightingRules.luau`)
 Warm cream shafts #FFECBE (255,236,190); fill lamp #FFD6AA (255,214,170); lava #FF8C46 (255,140,70) (sheet layers #FF7828, #FFB45A, #FFCE6E); crystal light #FFC450 (255,196,80) amber (BD-401; was lavender #C4AAFF); forge #FFBE5A (255,190,90); gate glow #FFD6A0; look: ambient (70,62,60), fog colour (72,56,46), grade tint (255,226,196). Walls: Limestone (196,172,150) and a cool grey-lilac cave-only Cobblestone/Limestone (BD-384); the floor must not be hot orange (BD-384).
 ### 5.11 Classes and HP bar
-HP bar fill green above 50%, yellow 25-50%, soft orange below 25%, plus a heart icon (full/half/small) so colour is never the only signal ([101](101-hp-combat-classes-animations.md) line 85). **No per-class colour table exists in code or docs** (classes Ground, Fly, Water, Armored): conflict C-18, BD-406.
+HP bar fill green above 50%, yellow 25-50%, soft orange below 25%, plus a heart icon (full/half/small) so colour is never the only signal ([101](101-hp-combat-classes-animations.md) line 85). Per-class colours are decided (owner 2026-10-16, 'Nature set'; C-18 / Q2 resolved). One source: `ClassInfo.Colors` (`src/shared/ClassInfo.luau`), used by `ClassBadge` and the class picker line. Hex values are the darkened, white-text-safe versions of the C-18 proposal (white label/icon contrast about 3.7:1 or better, fine for the big bold 1-letter badge; colour is never the only signal, the label and letter always show).
+
+| Class | Name | Hex | RGB |
+| --- | --- | --- | --- |
+| Ground | green | #2F9E44 | 47,158,68 |
+| Fly | sky blue | #1E88E5 | 30,136,229 |
+| Water | teal | #0F8F80 | 15,143,128 |
+| Armored | amber-brown | #A8643A | 168,100,58 |
+
+Class icon art (docs/120) is drawn on these colours.
 ### 5.12 Lighting-colour rule
 The palette sits under the place's lighting; a shared grade tames pastel props because `MeshPart.Color` is ignored on textured meshes (BD-399). Dino and food stay readable in every place and weather.
 
