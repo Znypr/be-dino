@@ -1550,6 +1550,15 @@ PrivateState.onChanged("LastClaimedChestId", function()
         task.defer(function() open("hatch") end)
     end
 end)
+-- docs/133 demo hook (client attribute, set only by the dev-only trailer director sets DemoStartHatch to open the first waiting egg exactly like OPEN on the Eggs screen.
+do -- same effect as pressing OPEN: nothing is granted here, so no flag is needed
+    player:GetAttributeChangedSignal("DemoStartHatch"):Connect(function()
+        if player:GetAttribute("DemoStartHatch")~=true or hatchPending then return end
+        player:SetAttribute("DemoStartHatch",nil)
+        autoHatching=true
+        if (hatchState.next :: any)() then open("hatch") end
+    end)
+end
 player:GetAttributeChangedSignal("LastRunEndAt"):Connect(function() if not autoHatching then open("results") end end)
 PrivateState.onChanged("LastSettledRunId", function()
     local serial=hatchCancelSerial

@@ -6,7 +6,7 @@ local DemoShots = {}
 DemoShots.Version = 1
 DemoShots.CameraKinds = {static = true, orbit = true, dolly = true, pushin = true, track = true}
 DemoShots.Easings = {linear = true, inSine = true, outSine = true, inOutSine = true, inQuad = true, outQuad = true, inOutQuad = true, outCubic = true, inOutCubic = true}
-DemoShots.TriggerKinds = {remote = true, teleport = true, hud = true, note = true, wait = true}
+DemoShots.TriggerKinds = {remote = true, teleport = true, hud = true, note = true, wait = true, startHatch = true}
 -- Only the Studio-only DemoTrigger RemoteFunction may be fired (server: DemoTriggerService, gated by unpublished Studio + Config.DemoDirectorEnabled).
 DemoShots.AllowedRemotes = {DemoTrigger = true}
 DemoShots.Aspects = {["16:9"] = 16 / 9, ["9:16"] = 9 / 16}

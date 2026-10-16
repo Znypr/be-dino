@@ -6,7 +6,7 @@
   "letterbox": true,
   "shots": [
     {
-      "duration": 4,
+      "duration": 3,
       "title": "New eggs!",
       "camera": {
         "kind": "track",
@@ -87,7 +87,7 @@
       ]
     },
     {
-      "duration": 6,
+      "duration": 60,
       "lowerThird": "Watch them hatch one by one",
       "camera": {
         "kind": "track",
@@ -102,25 +102,10 @@
           "at": 0,
           "kind": "hud",
           "visible": true
-        }
-      ]
-    },
-    {
-      "duration": 5,
-      "camera": {
-        "kind": "track",
-        "offset": [
-          -6,
-          3,
-          8
-        ],
-        "lookHeight": 3
-      },
-      "triggers": [
+        },
         {
-          "at": 0,
-          "kind": "hud",
-          "visible": false
+          "at": 0.5,
+          "kind": "startHatch"
         }
       ]
     }

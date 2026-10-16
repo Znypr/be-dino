@@ -62,7 +62,7 @@ local function setHud(visible: boolean)
         pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, true) end)
     else
         for _, g in player.PlayerGui:GetChildren() do
-            if g:IsA("ScreenGui") and g ~= gui and g.Enabled then
+            if g:IsA("ScreenGui") and g ~= gui and g.Enabled and g.Name ~= "BeDinoUI" then
                 g.Enabled = false
                 table.insert(hiddenGuis, g)
             end
@@ -110,6 +110,8 @@ local function fire(trig: any)
         local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         local pos = if trig.pos then Vector3.new(trig.pos[1], trig.pos[2], trig.pos[3]) else spotPosition(trig.spot)
         if root and pos then (root :: BasePart).CFrame = CFrame.new(pos) end
+    elseif trig.kind == "startHatch" then
+        player:SetAttribute("DemoStartHatch", true)
     elseif trig.kind == "hud" then
         setHud(trig.visible)
     elseif trig.kind == "note" then
