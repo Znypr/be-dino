@@ -80,7 +80,7 @@ In the playtest profile add: BiomeKit world, food kit, persistent fusion and ide
 15. (Optional, owner Android) repeat 4, 5 and 8 on a phone and record fps and any crash.
 
 ## 5. Explicitly NOT ready
-- HP combat, NPC predators, Bite, Peaceful mode (BD-243..252, BD-316).
+- HP combat, NPC predators, Bite (BD-243..252, BD-316; Peaceful mode removed 2026-10-16, docs/115).
 - Cave Sanctuary and hub travel (BD-280..293).
 - Low-poly generated dinos and their EditableImage patterns on a published server (BD-225, BD-306..309).
 - Robux crystal packs, paid random items, any monetization (BD-140, docs/43).

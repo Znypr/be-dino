@@ -63,7 +63,7 @@ Run eggs and score are earned server-side and settled **exactly once** (AGENTS.m
 - Repeat-pair bonus limit (section 5) plus a short "friend shield" after the same victim was defeated 3 times in 3 min, so nobody is chased repeatedly.
 - Bonus split by damage share, so there is no kill-steal incentive.
 - Server validation: per-player attack rate limit, range and angle check, reject teleport or distance spikes, rate-limited remote like existing remotes.
-- If the owner picks optional PvP: a "Peaceful" choice at run start disables hits to and from that player (it also cannot attack). Open question 1.
+- ~~If the owner picks optional PvP: a "Peaceful" choice at run start disables hits to and from that player (it also cannot attack). Open question 1.~~ SUPERSEDED 2026-10-16 (owner correction, docs/115 and docs/128): there is NO Peaceful opt-out; hunting stays on for everyone.
 - Reporting/blocking is Roblox's own tooling and out of scope.
 
 ## 8. AI predators use the same HP (PROPOSAL)
@@ -86,7 +86,7 @@ A soft pill-shaped bar floats above each dino, and a bigger one sits on the play
 - World bar: scales slightly with size, at least 60 px wide on phones. Own HUD: heart on the left, bar under the food/score line. Enemy bars show only within 40 studs or after being hit.
 - Feedback: the bar drains with a 0.3 s ease and a bubble wobble; the dino squashes a little. Heal: soft sparkle. No screen shake, no red vignette. Reduce Motion: bar just updates.
 - Damage numbers: **off by default** (open question 2).
-- Copy: "Bite" button, "Peaceful" toggle, "Oops! Good try!". No "HP", no percent text; heart and bar are the whole message.
+- Copy: "Bite" button, ~~"Peaceful" toggle~~ (removed 2026-10-16), "Oops! Good try!". No "HP", no percent text; heart and bar are the whole message.
 - Class badge (leaf, wing, wave, shield) sits beside the bar. Art (heart, badges, bite button, bubble) is a Blender/ChatGPT task with a docs/77 line; no code-drawn final art (BD-248).
 
 ## 11. Movement animations (OWNER TARGET; detail for BD-233 and BD-234)
@@ -141,7 +141,7 @@ Phase 6: BD-252 12-player phone test and balancing pass; owner playtest; `Combat
 Dependencies: 239 -> 240 -> 241/242 -> 243 -> 244/245; 246 after 239; 247 after 243 (art 248 in parallel) -> 249; 250/251 after BD-225 rigs; 252 last.
 
 ## 15. Open questions for the owner
-1. **PvP always on, or optional?** (Peaceful toggle or Peaceful servers.) PROPOSAL: always on in the arena, Peaceful option for young players.
+1. **PvP always on, or optional?** ANSWERED 2026-10-16: always on for everyone, each player chooses whether to hunt; no Peaceful toggle or servers; food alone must be enough progression (docs/115, 128). ~~PROPOSAL: Peaceful option for young players.~~
 2. **Damage numbers shown or not?** PROPOSAL: not shown, hearts and bars only.
 3. **Revive?** (A teammate helps a defeated dino up within a few seconds.) Not in v1; wanted later?
 4. On defeat, keep **everything earned so far** (PROPOSAL, safest) or lose a bonus such as the voluntary-exit bonus? Eggs and score are never lost either way.
@@ -149,7 +149,7 @@ Dependencies: 239 -> 240 -> 241/242 -> 243 -> 244/245; 246 after 239; 247 after 
 6. Should attackers get a small food/crystal bonus on a defeat, or nothing?
 
 ## 16. Lead decisions on the open questions (2026-10-16, made on the owner's behalf; owner may overrule)
-1. **PvP:** on in the arena, with a Peaceful option at run start for young players (Peaceful dinos cannot hit or be hit; they also cannot earn assist bonuses).
+1. **PvP:** on in the arena, ~~with a Peaceful option at run start for young players~~ (SUPERSEDED 2026-10-16: no Peaceful; hunting stays on for everyone, docs/115).
 2. **Damage numbers:** not shown. Hearts and bars only (docs/72, docs/87).
 3. **Revive:** not in v1. Revisit after the 12-player phone test.
 4. **On defeat:** keep everything earned so far (eggs, score, crystals, nests); no punishment bonus loss. Gentle failure beats any penalty for this audience.
@@ -190,7 +190,7 @@ At s=2 and s=4 the same ladder holds within 1 hit (for example s=4 Armored beats
 Flag: `Config.CombatEnabled` (false) and `Config.NpcPredatorsEnabled`. Pure rules: `src/shared/NpcPredatorRules.luau`; glue: `src/server/NpcPredatorService.luau`; test: `tools/verify_npc_predators.py`.
 - **Same rules as players.** Each NPC joins the shared `CombatRules` world (class from the species registry, HP/damage from `CombatStats`, score 60 to 250 so s is about 1.1 to 1.3). Its bite is a normal `CombatRules.attack`, so range, cone, spawn protection and Peaceful are checked twice. Never one-shot: one bite takes at most 20% of any player's max HP (tested over all classes and sizes).
 - **Calm behaviour.** Patrol slowly near home (5 studs/s). A player inside 26 studs gets an alert pause (0.8 s, "!" over its bar), then a chase at 11 studs/s (players walk 22), a 0.5 s windup without re-aiming (moving away dodges), then a bite. At most 2 bites per aggro, 2.5 s soft cooldown, 4 s grace on a bitten player (no NPC may target them), then it gives up and ignores that player for 15 s. It also gives up beyond 42 studs, after 7 s, or past a 70-stud leash.
-- **Never targets:** Peaceful, spawn-protected, dead, not in a run, anyone inside the start meadow (80 studs around 0,30), a just-bitten player.
+- **Never targets:** spawn-protected, dead, not in a run, anyone inside the start meadow (80 studs around 0,30), a just-bitten player.
 - **Defeat.** A defeated player goes through the existing exactly-once `tryEnd` path and keeps eggs, score, crystals and nests. Teams can defeat an NPC: capped assist growth only (25% of the NPC score, repeat-pair limiter applies), no eggs. It respawns after 30 s (+ up to 6 s) at a point at least 90 studs from every player.
 - **Budget.** Hard cap 6 NPCs (2 for 1 to 3 players, +1 per 3 players, 5 at 12); an NPC with no player within 160 studs does nothing; movement is server Humanoid physics replicated by Roblox, not custom remotes; HP uses the existing 1-byte attribute at 5 Hz; at most 30 NPC steps per second.
 - **Visuals.** Existing species model through `DinosaurVisual.render` (raptor, baryonyx, tyrannosaurus, spinosaurus), tinted darker; purple "wild" bar in `CombatHud`. No new art.

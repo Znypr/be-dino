@@ -167,12 +167,11 @@ function Npc.desiredCount(playerCount: any): number
     return math.min(C.MaxNpcs, C.MinNpcs + (n - 1) // C.PlayersPerExtraNpc)
 end
 
--- Players are plain tables {key,x,y,z,alive,active,peaceful,protectedUntil}. Default-deny: anything not clearly eligible
+-- Players are plain tables {key,x,y,z,alive,active,protectedUntil}. Default-deny: anything not clearly eligible
 -- is ignored. `valid` = may be an NPC's target at all; `canBite` additionally respects the post-bite grace.
 function Npc.valid(world: any, p: any, now: number): boolean
     if typeof(p) ~= "table" or typeof(p.key) ~= "string" then return false end
     if p.alive ~= true or p.active ~= true then return false end -- dead, settling or not in a run
-    if p.peaceful == true then return false end
     if now < num(p.protectedUntil, 0) then return false end -- spawn protection
     local x, z = num(p.x, math.huge), num(p.z, math.huge)
     if x == math.huge or z == math.huge then return false end
@@ -539,7 +538,7 @@ local function stepOne(world: any, npc: any, now: number, dt: number, players: a
     end
 end
 
--- One tick for every NPC (slot order = deterministic). players = {key,x,y,z,alive,active,peaceful,protectedUntil} for every
+-- One tick for every NPC (slot order = deterministic). players = {key,x,y,z,alive,active,protectedUntil} for every
 -- tracked player. Returns bite events {kind="bite", slot, npcKey, targetKey}; resolve each with Npc.performBite.
 function Npc.step(world: any, now: any, dt: any, players: any): any
     local events = {}
@@ -559,7 +558,7 @@ function Npc.joinCombat(world: any, combatWorld: any, npc: any, now: number): an
     return CombatRules.join(combatWorld, {userId = npc.userId, runId = npc.runId, class = npc.class, score = npc.score, now = now})
 end
 
--- Resolve one bite event through CombatRules.attack (range, cone, cooldown, spawn protection, peaceful all re-checked there).
+-- Resolve one bite event through CombatRules.attack (range, cone, cooldown, spawn protection all re-checked there).
 -- Candidates are ONLY the players that are valid targets right now. On a hit the victim gets the post-bite grace.
 function Npc.performBite(world: any, combatWorld: any, event: any, now: number, players: any): any
     local npc = world.slots[event.slot]

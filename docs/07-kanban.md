@@ -5,37 +5,6 @@ Updated 2026-10-14. This file is the canonical task tracker.
 
 **Historical milestone summary:** Builds 005â€“013 established PvP, storage, collection, old direct-copy reward tests, earned chests, Gold and original procedural visuals. Those older checks are *not* proof the latest reward vision is implemented. For actual per-build acceptance consult the dated sections and historical evidence below. Physical-phone/mobile acceptance remains open, though earlier phone-emulator checks passed.
 
-## Board summary (2026-10-16)
-
-Audit of this file after the 2026-10-16 merge wave (docs only: statuses and notes changed, no row deleted or reworded). Every PR merged today that names a BD id now has its PR number in that row (look for "Merged: #N" or "Board audit 2026-10-16" in the task cell). Superseded rows are kept with a pointer (BD-165 by BD-418, BD-421 by the Peaceful removal decision). Near-duplicates are cross-linked, not merged: BD-424/BD-428, BD-081/BD-343, BD-391/BD-405, BD-085/BD-317/BD-322, BD-319/BD-364/BD-316, BD-148/BD-153. Counts are from the Task index and later tables below (the older "Board" table further down is a 2026-10-08 snapshot and is NOT kept in sync). Review / test means code merged, no Studio, phone or owner evidence yet (never Done).
-
-| Status | P0 | P1 | P2 | P3 | Total |
-|---|---:|---:|---:|---:|---:|
-| Done | 13 | 2 | 1 | 0 | 16 |
-| Review / test | 59 | 150 | 59 | 10 | 278 |
-| In progress | 3 | 1 | 0 | 0 | 4 |
-| Backlog | 5 | 37 | 28 | 7 | 77 |
-| Blocked | 1 | 0 | 0 | 0 | 1 |
-| Spike | 0 | 2 | 0 | 0 | 2 |
-| Parked | 0 | 0 | 0 | 1 | 1 |
-| Superseded | 2 | 2 | 0 | 0 | 4 |
-| **All rows** | 83 | 194 | 88 | 18 | 383 |
-
-**Next 10 P0/P1 Backlog items, in order** (owner vision [114](114-handbook.md) s1.1: short runs, hatch party, collect / perfect one / new dinos, Peaceful removed; session-1 readiness docs/125 (PR #254, not yet on main) and [129](129-owner-studio-smoke-checklist.md)). Items 1 to 4 block inviting friends; the rest can follow.
-
-1. **BD-317** (P0) Friends playtest gate: owner publishes the playtest place and runs the 14-step smoke script (use docs/129 as the checklist).
-2. **BD-085** (P0) Phone measurement pass with the world kit (needs the owner Android device; BD-322 is the same pass, BD-097 the 12-player part).
-3. **BD-293** (P0) Cave acceptance on a real phone: the cave hub is ON in the playtest profile, so this blocks session 1.
-4. **BD-319** (P1) Real multi-client run (2/4/8 players; with BD-364 and BD-316): nothing multiplayer has been checked beyond offline sims.
-5. **BD-141** (P1) Condition shop eggs show plain cream boxes: a visible bug on a core shop screen.
-6. **BD-296** (P1) Cave look pass: wall relief and gate arch frame (cosy home base, docs/114 s1.1).
-7. **BD-144** (P1) Potion button icon still code-drawn and broken at menu size (owner upload; with BD-094 and BD-101 placeholders).
-8. **BD-282** (P1) Cave mesh batch A (owner generates meshes; BD-283 batch B follows).
-9. **BD-305** (P1) Owner eye check of low-poly patterns and Gold/Emerald/Diamond tiers: serves the "perfect one favourite to Diamond" goal.
-10. **BD-021** (P0) Observe the community test and triage: starts after session 1, listed last because it cannot begin before it.
-
-Later and not in the top 10: FX renders BD-430 to BD-435, roster BD-232, notifications and objectives BD-066 to BD-078, UI research BD-268 to BD-274.
-
 ## Owner decisions log 2026-10-16
 
 Dated decisions from this session (sources in brackets). "Lead decision" means made on the owner's behalf; the owner may overrule. Everything below is OFF by default behind flags and is **Review / test or Backlog, never Done**: no phone, 12-player or owner-playtest evidence exists yet.
@@ -44,7 +13,7 @@ Dated decisions from this session (sources in brackets). "Lead decision" means m
 - **Generated meshes only**: no code-built 3D models as final art; 2D art from Blender or the owner ([87](87-vision-and-feel-guide.md), [72](72-ui-copy-and-asset-standards.md)).
 - **Classes** Ground / Fly / Water plus a fourth, Armored (Ankylosaurus, Sauropelta, Styracosaurus; Triceratops/Stegosaurus stay Ground) (BD-231, BD-232; [101](101-hp-combat-classes-animations.md) s16). Roster target 5 Fly + 5 Water + 5 more Ground.
 - **Secret silly bird dinos** (Chickosaurus, Pigeon, Dodo, Duck, Penguin) stay hidden secrets (BD-228); more silly ones are paused. Compy stays the first dino.
-- **HP combat** replaces instant "bigger eats smaller" (BD-230): hearts/bars only, no damage numbers, PvP on in the arena with a **Peaceful** option at run start, no revive in v1, defeat keeps everything earned, assist bonus only (docs/101 s16). `Config.CombatEnabled=false`.
+- **HP combat** replaces instant "bigger eats smaller" (BD-230): hearts/bars only, no damage numbers, PvP on in the arena for everyone (~~Peaceful option~~ SUPERSEDED 2026-10-16, docs/115), no revive in v1, defeat keeps everything earned, assist bonus only (docs/101 s16). `Config.CombatEnabled=false`.
 - **Cave hub**: Sanctuary becomes a big cave (260 x 220) with physical shops, teleport-to-station menus (default ON, Settings toggle to walk), in-run rail dims DINOS/EGGS/FUSION/SHOP, POTIONS/SETTINGS stay usable, lava scenic only, existing 2D hatch reveal kept ([104](104-cave-hub-design.md) s15.1/16). `Config.CaveHub=false`. BD-254 / PR #147 (never merged, still open) is superseded by docs/104.
 - **UI research** ([103](103-ui-research-popular-games.md)): settings menu v2, shared shop card, odds buttons, Index progress (BD-263..274).
 - **Process**: keep 3-4 agents running; QA agents must not touch Place1.rbxl; flag-off-by-default for combat, cave and low-poly.
@@ -1096,4 +1065,5 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-434 | Backlog | P2 | World FX: cave lava crust scroll (BD-385 asset), aurora dome, amber emissive crystals, weather flipbooks; weather never inside the cave. Roles: VFX lead | BD-431, BD-385 |
 | BD-437 | Review / test | P1 | Egg reveal rarity ladder (docs/124 section 6): five reveal stings step up in pitch and volume, Epic and Legendary stack a second existing cue, rarer eggs hold a slightly longer rattle before the burst, camera punch and dino pop grow per tier. Existing sounds only; real per-tier stings TODO owner (docs/120). Offline checks only, nobody has listened. Roles: sound, UI **Board audit 2026-10-16:** Merged: #260. | BD-081, BD-428 |
 | BD-435 | Backlog | P2 | FX polish audit: calm (no strobing, readability radius), photosensitivity, doc 93 / 114 cross-links, owner review. Roles: art director | BD-432..BD-434 |
+| BD-439 | Backlog | P1 | Food-only progression balance (owner correction 2026-10-16, docs/131): a food-only player must get enough growth, eggs and crystals. AUDIT: eating a player gives +1 run egg (about 42 food-equivalents) plus 2.5 growth (about 25 food of growth), limited only by a 60 s repeat-victim cooldown; a kill chain can double a 15-egg run. PROPOSAL (not applied, owner to confirm): kills give growth only, or at most 0.25 egg per kill with a per-run cap of 3 kill eggs. Needs owner decision and a Studio food-per-minute measurement. Roles: designer, economy | BD-418, docs/131 |
 | BD-438 | Review / test | P1 | Phone FX budget fit (docs/130): remote players on a phone drop aura glow lights/beams and use a single-beam mutation ring so the PROVISIONAL phone worst case (16 lights, 24 beams) passes; own dino and mutation glow unchanged; desktop/tablet unchanged. Needs a real phone probe (BD-085). Roles: VFX lead | BD-429 |

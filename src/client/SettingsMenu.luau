@@ -74,16 +74,11 @@ local function drawControls(body: Instance, ctx: Context)
     -- BD-391/405 (docs/115 D22): with the perk flag on, the toggle shows only after the player bought Fast travel.
     local cfg = require(Shared:WaitForChild("Config"))
     if cfg.CaveHub and (cfg.FastTravelPerk ~= true or require(script.Parent:WaitForChild("HubTravelClient")).ownsFastTravel()) then
-        toggle(body, ctx, 4, if cfg.FastTravelPerk == true then "Fast travel" else "Teleport to shops", Model.teleportShops(), function() Model.set("teleportShops", not Model.teleportShops()) ctx.open("settings") end)
+        toggle(body, ctx, 2, if cfg.FastTravelPerk == true then "Fast travel" else "Teleport to shops", Model.teleportShops(), function() Model.set("teleportShops", not Model.teleportShops()) ctx.open("settings") end)
     end
-    -- BD-421 (docs/115 2026-10-16): Peaceful is always one tap away (also with CombatEnabled off). The server keeps the value from
-    -- the moment a run starts, so a change here counts from the NEXT run.
-    local peacefulRow = 2
-    toggle(body, ctx, peacefulRow, "Peaceful", Model.peaceful(), function() Model.set("peaceful", not Model.peaceful()) ctx.open("settings") end)
-    ctx.label(body, "Peaceful: no eating or biting between players. Next run", 0, TOP + (peacefulRow + 1) * ROW, 824, 30, 20, C.gold)
     -- BD-374: the keys (or phone controls) in two short lines under the last row; read from the real input code.
     local Config = require(Shared:WaitForChild("Config"))
-    local used = 4 + (if Config.CaveHub then 1 else 0)
+    local used = 2 + (if Config.CaveHub then 1 else 0)
     local lines = require(Shared:WaitForChild("FtueP1")).controlsLines(game:GetService("UserInputService").TouchEnabled, Config.CombatEnabled == true)
     for i, line in lines do
         local row = ctx.label(body, line, 0, TOP + used * ROW + 2 + (i - 1) * 26, 824, 26, 19, C.text)
