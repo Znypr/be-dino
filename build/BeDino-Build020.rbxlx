@@ -373135,6 +373135,113 @@ function Pose.sample(role: string, side: number, lead: boolean, t: number, phase
     out.dz = math.clamp(finite(dz) * a, -Pose.MaxOffset, Pose.MaxOffset)
     return out
 end
+-- BD-233 spike: jump / leap / land / water-surge actions. Phases: crouch -&gt; push (stretch) -&gt; air (tuck, held until the dino lands) -&gt; land (squash);
+-- Water has no air time: a single "surge" (forward dash). Everything is calm and short (docs/87), absolute offsets from the REST pose, bounded.
+Pose.Phases = {"crouch", "push", "air", "land", "surge"}
+Pose.TuckTime = 0.18 -- seconds for the airborne tuck to settle
+local CLASS_SCALE = { -- q = crouch/squash depth, s = push-off stretch, t = airborne tuck, l = landing squash
+    Ground = {q = 1, s = 1, t = 1, l = 1}, Armored = {q = 1.3, s = 0.4, t = 0.5, l = 1.5},
+    Fly = {q = 0.5, s = 0.7, t = 0.8, l = 0.6}, Water = {q = 0, s = 0, t = 0, l = 0}}
+-- Seconds each timed phase lasts (air has no length: it lasts until landing). aggr: 0 jump, 1 leap.
+function Pose.duration(phase: string, aggr: number, class: string?): number
+    local armored, fly = class == "Armored", class == "Fly"
+    if phase == "crouch" then return if armored then 0.12 else 0.08 end
+    if phase == "push" then return if armored then 0.16 else 0.12 end
+    if phase == "land" then return if armored then 0.42 elseif fly then 0.45 else 0.30 end
+    if phase == "surge" then return 0.40 + 0.15 * math.clamp(finite(aggr), 0, 1) end
+    return 0
+end
+local function ease(u: number): number u = math.clamp(u, 0, 1) return u * u * (3 - 2 * u) end
+-- How strongly the action replaces the idle/walk pose: 0 at the start and at the very end so the hand-over is seamless.
+function Pose.actionWeight(phase: string, p: number): number
+    p = math.clamp(finite(p), 0, 1)
+    if phase == "crouch" then return ease(p) end
+    if phase == "land" then return 1 - ease(math.clamp((p - 0.5) / 0.5, 0, 1)) end
+    if phase == "surge" then return ease(p / 0.15) * (1 - ease((p - 0.7) / 0.3)) end
+    return 1
+end
+-- ctx: phase, p (0..1 progress of a timed phase), t (seconds since the phase began), aggr (0 jump .. 1 leap), carry (0..1 tuck amount when landing began).
+export type Ctx = {phase: string, p: number, t: number, aggr: number, carry: number}
+function Pose.newCtx(): Ctx return {phase = "crouch", p = 0, t = 0, aggr = 0, carry = 0} end
+function Pose.sampleAction(role: string, side: number, lead: boolean, ctx: Ctx, amp: number, out: Out, class: string?): Out
+    local a = math.clamp(finite(amp), 0, 1)
+    local s = if side &lt; 0 then -1 else 1
+    local ph = ctx.phase
+    local p, t = math.clamp(finite(ctx.p), 0, 1), math.max(0, finite(ctx.t))
+    local aggr = math.clamp(finite(ctx.aggr), 0, 1)
+    local cls = CLASS_SCALE[class or "Ground"] or CLASS_SCALE.Ground
+    local q, st, tk, W, flap = 0, 0, 0, 0, 0 -- squash, stretch, tuck, wings open (0..1), wing flap
+    local lunge, snap, kick = 0, 0, 0
+    if class == "Water" then
+        if ph == "surge" then
+            lunge = math.sin(math.pi * p)
+            snap = math.sin(math.pi * math.clamp((p - 0.3) / 0.4, 0, 1)) * aggr
+            kick = math.sin(2 * math.pi * p) * math.sin(math.pi * p)
+        end
+    else
+        if ph == "crouch" then q = ease(p) * cls.q
+        elseif ph == "push" then q = (1 - ease(p)) * cls.q st = ease(p) * cls.s
+        elseif ph == "air" then
+            local e = ease(t / Pose.TuckTime)
+            st, tk = (1 - e) * cls.s, e * cls.t
+        elseif ph == "land" then
+            local c = math.clamp(finite(ctx.carry), 0, 1)
+            local d = ease(p / 0.25)
+            tk = c * (1 - d) * cls.t
+            q = d * (1 - ease((p - 0.25) / 0.75)) * cls.l
+        end
+        if class == "Fly" then
+            if ph == "push" then W = ease(p) elseif ph == "air" then W = 1 elseif ph == "land" then W = 1 - ease(p) end
+            if ph == "air" then flap = (1 - 0.8 * aggr) * math.sin(t * 11) * 0.35 -- a leap glides on nearly still wings
+            elseif ph == "land" then flap = math.sin(t * 16) * 0.3 * (1 - p) end -- soft flutter landing
+        end
+    end
+    local L = 1 + aggr
+    local pitch, roll, yaw, dy, dz = 0, 0, 0, 0, 0
+    if role == "body" then
+        dy = -0.05 * q + 0.03 * st - 0.01 * lunge
+        pitch = -0.05 * q + (0.10 + 0.06 * aggr) * st + 0.02 * tk - 0.06 * lunge
+        dz = -0.02 * st * L - 0.045 * lunge * (1 + 0.6 * aggr)
+    elseif role == "head" or role == "neck" then
+        dy = -0.02 * q
+        pitch = 0.18 * st * (1 + 0.5 * aggr) - 0.08 * tk + 0.10 * lunge - 0.35 * snap
+        dz = -0.03 * st * L - 0.03 * lunge * L
+    elseif role == "tail" then
+        pitch = 0.15 * q - 0.20 * st + 0.12 * tk + 0.20 * lunge
+        yaw = 0.45 * (1 + 0.5 * aggr) * kick
+    elseif role == "leg" then
+        pitch = 0.55 * q - 0.45 * st + 0.70 * tk
+        dy = 0.01 * q
+    elseif role == "arm" then
+        pitch = 0.20 * q - 0.50 * st + 0.50 * tk
+    elseif role == "flipper" then
+        pitch = 0.5 * lunge
+        roll = s * 0.3 * lunge
+    end
+    local fold = 0
+    if role == "wing" then
+        fold = -s * Pose.FoldAngle
+        local open = fold * (1 - W) + W * (s * 0.15 + s * flap) -- from the folded rest to open; flaps while open
+        roll = open - fold -- the fold itself is posture and stays under Reduce Motion
+        pitch = -0.1 * W
+    end
+    out.pitch = math.clamp(finite(pitch) * a, -Pose.MaxAngle, Pose.MaxAngle)
+    out.roll = math.clamp(finite(roll) * a + fold, -Pose.MaxFold, Pose.MaxFold)
+    out.yaw = math.clamp(finite(yaw) * a, -Pose.MaxAngle, Pose.MaxAngle)
+    out.dy = math.clamp(finite(dy) * a, -Pose.MaxOffset, Pose.MaxOffset)
+    out.dz = math.clamp(finite(dz) * a, -Pose.MaxOffset, Pose.MaxOffset)
+    return out
+end
+-- out = base + (action - base) * k, written into base (idle/walk pose -&gt; action pose).
+function Pose.blend(base: Out, action: Out, k: number): Out
+    k = math.clamp(finite(k), 0, 1)
+    base.pitch += (action.pitch - base.pitch) * k
+    base.roll += (action.roll - base.roll) * k
+    base.yaw += (action.yaw - base.yaw) * k
+    base.dy += (action.dy - base.dy) * k
+    base.dz += (action.dz - base.dz) * k
+    return base
+end
 return Pose
 </ProtectedString>
         </Properties>
@@ -375448,6 +375555,118 @@ return RuntimeMeshes
       </Item>
       <Item class="ModuleScript" referent="RBX252">
         <Properties>
+          <string name="Name">SettingsModel</string>
+          <ProtectedString name="Source">--!strict
+-- Settings v2 model (BD-263..266, docs/103). Pure data rules plus a tiny in-memory current value with change listeners.
+-- Saved PER PLAYER as the additive profile field `settings` (no schema bump, like revealSkip): old profiles have no field
+-- and read as defaults; any bad value falls back to its default. Instances are never touched here: SettingsSync.client
+-- applies changes (Theme.MotionEnabled, AudioMixer) and sends them to the server.
+local Model = {}
+
+export type Settings = {
+    master: number, sfx: number, ambience: number, -- 0..1 in tenths (AudioMixer scale)
+    effects: string, weather: string, -- "full" | "lite" | "off"
+    calm: boolean, -- Calm motion = Reduce Motion
+    jumpSize: string, -- "small" | "normal" | "big" (no consumer yet: stored for the phone jump button)
+}
+
+Model.Tabs = table.freeze({"sound", "look", "controls", "help"})
+Model.TabLabels = table.freeze({sound = "SOUND", look = "LOOK", controls = "CONTROLS", help = "HELP"})
+Model.Levels = table.freeze({"full", "lite", "off"})
+Model.JumpSizes = table.freeze({"small", "normal", "big"})
+Model.Defaults = table.freeze({master = 0.8, sfx = 0.7, ambience = 0.6, effects = "full", weather = "full", calm = false, jumpSize = "normal"})
+-- Particle share per level (consumers multiply their emitter rate by this).
+Model.LevelFactor = table.freeze({full = 1, lite = 0.5, off = 0})
+
+local function oneOf(list: {string}, value: any, fallback: string): string
+    if typeof(value) == "string" and table.find(list, value) then return value end
+    return fallback
+end
+-- 0..1 snapped to tenths; non-numbers and NaN give the fallback.
+local function volume(value: any, fallback: number): number
+    if typeof(value) ~= "number" or value ~= value then return fallback end
+    return math.clamp(math.floor(math.clamp(value, 0, 1) * 10 + 0.5) / 10, 0, 1)
+end
+
+-- Any value (nil, junk, old profile without the field) to a complete valid settings table.
+function Model.normalize(raw: any): Settings
+    local d = Model.Defaults
+    local t: any = if typeof(raw) == "table" then raw else {}
+    local sound: any = if typeof(t.sound) == "table" then t.sound else {}
+    return {
+        master = volume(sound.master, d.master), sfx = volume(sound.sfx, d.sfx), ambience = volume(sound.ambience, d.ambience),
+        effects = oneOf(Model.Levels, t.effects, d.effects),
+        weather = oneOf(Model.Levels, t.weather, d.weather),
+        calm = t.calm == true,
+        jumpSize = oneOf(Model.JumpSizes, t.jumpSize, d.jumpSize),
+    }
+end
+
+-- The plain primitive table written to profile.settings (and what the client sends).
+function Model.toStore(s: Settings): {[string]: any}
+    return {
+        v = 1,
+        sound = {master = s.master, sfx = s.sfx, ambience = s.ambience},
+        effects = s.effects, weather = s.weather, calm = s.calm, jumpSize = s.jumpSize,
+    }
+end
+function Model.fromStore(raw: any): Settings
+    return Model.normalize(raw)
+end
+
+function Model.equal(a: Settings, b: Settings): boolean
+    return a.master == b.master and a.sfx == b.sfx and a.ambience == b.ambience and a.effects == b.effects
+        and a.weather == b.weather and a.calm == b.calm and a.jumpSize == b.jumpSize
+end
+
+-- Fast mode is derived: on exactly when both Effects and Weather are Lite.
+function Model.isFast(s: Settings): boolean
+    return s.effects == "lite" and s.weather == "lite"
+end
+
+function Model.factor(level: any): number
+    return Model.LevelFactor[if typeof(level) == "string" then level else "full"] or 1
+end
+
+-- In-memory current value, readable from any client module (pure getters; no Roblox services).
+local current: Settings = Model.normalize(nil)
+local listeners: {(Settings) -&gt; ()} = {}
+function Model.get(): Settings return current end
+function Model.effects(): string return current.effects end
+function Model.weather(): string return current.weather end
+function Model.calm(): boolean return current.calm end
+function Model.jumpSize(): string return current.jumpSize end
+function Model.onChange(fn: (Settings) -&gt; ()) table.insert(listeners, fn) end
+
+-- Replace the current value (e.g. loaded from the server). Returns true when anything changed.
+function Model.load(raw: any): boolean
+    local n = Model.normalize(raw)
+    if Model.equal(n, current) then return false end
+    current = n
+    for _, fn in listeners do pcall(fn, current) end
+    return true
+end
+-- Change one option by key; bad values are ignored. "fast" is the Fast mode switch (Lite/Lite on, Full/Full off).
+function Model.set(key: string, value: any): Settings
+    local n: any = table.clone(current)
+    if key == "fast" then
+        n.effects = if value == true then "lite" else "full"
+        n.weather = n.effects
+    elseif key == "master" or key == "sfx" or key == "ambience" then n[key] = volume(value, n[key])
+    elseif key == "effects" or key == "weather" then n[key] = oneOf(Model.Levels, value, n[key])
+    elseif key == "calm" then n.calm = value == true
+    elseif key == "jumpSize" then n.jumpSize = oneOf(Model.JumpSizes, value, n.jumpSize) end
+    Model.load(Model.toStore(n))
+    return current
+end
+function Model.reset() Model.load(nil) end
+
+return Model
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX253">
+        <Properties>
           <string name="Name">Sfx</string>
           <ProtectedString name="Source">--!strict
 -- Polish pass: one table of named UI/gameplay sounds. The 17-sound pack was uploaded by the owner on 2026-10-15
@@ -375593,7 +375812,7 @@ return Sfx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX253">
+      <Item class="ModuleScript" referent="RBX254">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -375641,7 +375860,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX254">
+      <Item class="ModuleScript" referent="RBX255">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -375690,7 +375909,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX255">
+      <Item class="ModuleScript" referent="RBX256">
         <Properties>
           <string name="Name">SpawnGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -375744,7 +375963,7 @@ return SpawnGeometry
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX256">
+      <Item class="ModuleScript" referent="RBX257">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -375946,7 +376165,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX257">
+      <Item class="ModuleScript" referent="RBX258">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -375978,7 +376197,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX258">
+      <Item class="ModuleScript" referent="RBX259">
         <Properties>
           <string name="Name">UIFormat</string>
           <ProtectedString name="Source">--!strict
@@ -376022,7 +376241,7 @@ return UIFormat
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX259">
+      <Item class="ModuleScript" referent="RBX260">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -376053,7 +376272,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX260">
+      <Item class="ModuleScript" referent="RBX261">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -376077,7 +376296,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX261">
+      <Item class="ModuleScript" referent="RBX262">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -376251,7 +376470,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX262">
+      <Item class="ModuleScript" referent="RBX263">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -376282,7 +376501,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX263">
+      <Item class="ModuleScript" referent="RBX264">
         <Properties>
           <string name="Name">WeatherLooks</string>
           <ProtectedString name="Source">--!strict
@@ -376414,7 +376633,7 @@ return Weather
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX264">
+      <Item class="ModuleScript" referent="RBX265">
         <Properties>
           <string name="Name">WeatherSounds</string>
           <ProtectedString name="Source">--!strict
@@ -376489,7 +376708,7 @@ return Sounds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX265">
+      <Item class="ModuleScript" referent="RBX266">
         <Properties>
           <string name="Name">WorldGeneratedMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -376547,7 +376766,7 @@ return Generated
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX266">
+      <Item class="ModuleScript" referent="RBX267">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -376598,7 +376817,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX267">
+      <Item class="ModuleScript" referent="RBX268">
         <Properties>
           <string name="Name">WorldKitMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -376651,7 +376870,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX268">
+    <Item class="Folder" referent="RBX269">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -546206,15 +546425,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX269">
+  <Item class="ServerScriptService" referent="RBX270">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX270">
+    <Item class="Folder" referent="RBX271">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX271">
+      <Item class="ModuleScript" referent="RBX272">
         <Properties>
           <string name="Name">AdminService</string>
           <ProtectedString name="Source">--!strict
@@ -546328,7 +546547,7 @@ return AdminService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX272">
+      <Item class="ModuleScript" referent="RBX273">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -546630,7 +546849,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX273">
+      <Item class="Script" referent="RBX274">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -546800,7 +547019,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX274">
+      <Item class="ModuleScript" referent="RBX275">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -546814,6 +547033,7 @@ local lastClaim: {[Player]: number} = {}
 local lastGrant: {[Player]: number} = {}
 local lastNest: {[Player]: number} = {}
 local lastSkip: {[Player]: number} = {}
+local lastSettings: {[Player]: number} = {}
 
 local function getRemote(folder: Folder, name: string): RemoteEvent
     local existing = folder:FindFirstChild(name)
@@ -546887,6 +547107,14 @@ function ChestService.start(profileRepository)
         profileRepository.setRevealSkip(player, selection)
     end)
 
+    -- BD-264 settings v2 (UI preferences only; never affects rewards). Normalized server-side.
+    local setSettings = getRemote(folder, "SetSettings")
+    setSettings.OnServerEvent:Connect(function(player: Player, selection, ...)
+        if select("#", ...) ~= 0 then return end
+        if not allowed(lastSettings, player, 0.5) then return end
+        profileRepository.setSettings(player, selection)
+    end)
+
     testGrant.OnServerEvent:Connect(function(player: Player, ...)
         if select("#", ...) ~= 0 then return end
         if not Config.ChestTestGrantEnabled then return end
@@ -546903,6 +547131,7 @@ function ChestService.start(profileRepository)
         lastGrant[player] = nil
         lastNest[player] = nil
         lastSkip[player] = nil
+        lastSettings[player] = nil
     end)
 end
 
@@ -546910,7 +547139,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX275">
+      <Item class="ModuleScript" referent="RBX276">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -547003,7 +547232,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX276">
+      <Item class="ModuleScript" referent="RBX277">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -547139,7 +547368,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX277">
+      <Item class="ModuleScript" referent="RBX278">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -547353,7 +547582,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX278">
+      <Item class="ModuleScript" referent="RBX279">
         <Properties>
           <string name="Name">FallRecovery</string>
           <ProtectedString name="Source">--!strict
@@ -547419,7 +547648,7 @@ return FallRecovery
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX279">
+      <Item class="ModuleScript" referent="RBX280">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -547690,7 +547919,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX280">
+      <Item class="ModuleScript" referent="RBX281">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -547862,7 +548091,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX281">
+      <Item class="ModuleScript" referent="RBX282">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -548048,7 +548277,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX282">
+      <Item class="ModuleScript" referent="RBX283">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -548445,7 +548674,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX283">
+      <Item class="ModuleScript" referent="RBX284">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -548566,7 +548795,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX284">
+      <Item class="ModuleScript" referent="RBX285">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -548644,7 +548873,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX285">
+      <Item class="ModuleScript" referent="RBX286">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -548757,7 +548986,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX286">
+      <Item class="ModuleScript" referent="RBX287">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -548896,7 +549125,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX287">
+      <Item class="ModuleScript" referent="RBX288">
         <Properties>
           <string name="Name">LowPolyDinoLoader</string>
           <ProtectedString name="Source">--!strict
@@ -548949,7 +549178,7 @@ return Loader
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX288">
+      <Item class="ModuleScript" referent="RBX289">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -549054,7 +549283,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX289">
+      <Item class="ModuleScript" referent="RBX290">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -549159,7 +549388,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX290">
+      <Item class="ModuleScript" referent="RBX291">
         <Properties>
           <string name="Name">PotionModels</string>
           <ProtectedString name="Source">--!strict
@@ -549211,7 +549440,7 @@ return Models
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX291">
+      <Item class="ModuleScript" referent="RBX292">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -549346,7 +549575,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX292">
+      <Item class="ModuleScript" referent="RBX293">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -549366,6 +549595,7 @@ local ProfileRepository = {}
 local DinosaurIdentity = require(script.Parent.DinosaurIdentity)
 local IdentityFusion = require(script.Parent.IdentityFusion)
 local FusionOdds = require(script.Parent.FusionOdds)
+local SettingsModel = require(ReplicatedStorage.Shared.SettingsModel)
 
 local RunService = game:GetService("RunService")
 local localPreview = RunService:IsStudio() and game.GameId == 0 and Config.StudioLocalProfilesEnabled
@@ -549618,6 +549848,7 @@ local function isValidProfile(profile: any): boolean
         if typeof(profile.revealSkip) ~= "table" or #profile.revealSkip &gt; Config.SpeciesRarityScale then return false end
         for _, rarity in profile.revealSkip do if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity &lt; 1 or rarity &gt; Config.SpeciesRarityScale then return false end end
     end
+    if profile.settings ~= nil and typeof(profile.settings) ~= "table" then return false end -- BD-264 (additive; bad values inside fall back to defaults)
     if profile.settledRuns ~= nil then
         if typeof(profile.settledRuns) ~= "table" then return false end
         for _, id in profile.settledRuns do if not validId(id) then return false end end
@@ -549726,6 +549957,8 @@ local function syncAttributes(player: Player, profile: any)
     end
     player:SetAttribute("NestsJson", HttpService:JSONEncode(nestSummary))
     player:SetAttribute("RevealSkipJson", HttpService:JSONEncode(profile.revealSkip or {}))
+    -- BD-264: per-player settings; profiles saved before settings v2 have no field and read as defaults.
+    player:SetAttribute("SettingsJson", HttpService:JSONEncode(SettingsModel.toStore(SettingsModel.fromStore(profile.settings))))
     player:SetAttribute("RunStartBlocked", ProfileRepository.runStartBlockReason(profile))
     local nextChest = profile.eggs[1]
     local buffered = revealBuffer[player]
@@ -550348,6 +550581,36 @@ function ProfileRepository.setRevealSkip(player: Player, selection: any): (boole
             if not isValidProfile(profileValue) then return nil end
             if not ownSession(profileValue) then leaseLost = true return nil end
             profileValue.revealSkip = table.clone(clean)
+            profileValue.revision += 1
+            profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            return profileValue
+        end)
+    end)
+    if not ok or updated == nil then
+        if leaseLost then player:SetAttribute("ProfileState", "LeaseLost") return false, "lease_lost" end
+        player:SetAttribute("ProfileState", "SaveFailed")
+        return false, "save_failed"
+    end
+    if not profiles[player] or updated.revision &gt;= profiles[player].revision then profiles[player] = updated end
+    syncAttributes(player, profiles[player])
+    return true, "saved"
+end
+
+-- BD-264 settings v2: UI preferences only (sound levels, effects, weather, calm motion, jump size). Additive profile
+-- field `settings`; the server normalizes whatever the client sends, so bad values become defaults.
+function ProfileRepository.setSettings(player: Player, raw: any): (boolean, string)
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then return false, "profile_not_loaded" end
+    if typeof(raw) ~= "table" then return false, "invalid_settings" end
+    local clean = SettingsModel.toStore(SettingsModel.fromStore(raw))
+    local leaseLost = false
+    local now = os.time()
+    local ok, updated = retry("settings", function()
+        return store:UpdateAsync(keyFor(player), function(profileValue)
+            leaseLost = false
+            if not isValidProfile(profileValue) then return nil end
+            if not ownSession(profileValue) then leaseLost = true return nil end
+            profileValue.settings = table.clone(clean)
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             return profileValue
@@ -551134,7 +551397,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX293">
+      <Item class="ModuleScript" referent="RBX294">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -551352,7 +551615,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX294">
+      <Item class="ModuleScript" referent="RBX295">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -551466,7 +551729,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX295">
+      <Item class="ModuleScript" referent="RBX296">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -551754,7 +552017,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX296">
+      <Item class="ModuleScript" referent="RBX297">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -551826,19 +552089,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX297">
+  <Item class="StarterPlayer" referent="RBX298">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX298">
+    <Item class="StarterPlayerScripts" referent="RBX299">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX299">
+      <Item class="Folder" referent="RBX300">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX300">
+        <Item class="LocalScript" referent="RBX301">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -552087,7 +552350,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX301">
+        <Item class="LocalScript" referent="RBX302">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -552149,6 +552412,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 local blur = Instance.new("BlurEffect")
 blur.Name,blur.Size,blur.Parent = "BeDinoModalBlur",0,Lighting
 local motion = true
+require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SettingsModel")).onChange(function(s) motion=not s.calm end) -- BD-266 Calm motion also quiets this file's shake and slides
 local active = ""
 local selected = "compy"
 local seenTutorial = false
@@ -553075,18 +553339,12 @@ render=function(name: string)
         button(body,"DONE",424,300,370,64,C.accent,function() skippedEntries={} open("eggs") end)
     elseif name=="settings" then
         heading.Text,header.BackgroundColor3="Settings",C.purple
-        -- Two columns of buttons, then three volume bars (AudioMixer, session-only), then auto-open. Body is 824 x 402.
-        label(body,"Visual effects",0,0,250,48,28)
-        button(body,if motion then "ON" else "OFF",270,0,140,48,if motion then C.accent else C.card,function() motion=not motion Theme.MotionEnabled=motion open("settings") end)
-        label(body,"Camera",0,56,250,48,28)
-        button(body,"RESET",270,56,140,48,C.blue,function() player.CameraMaxZoomDistance=Config.CameraMaxZoom notify("Camera reset",C.blue) end)
-        label(body,"Sound",0,112,250,48,28)
-        button(body,if Theme.HatchSoundEnabled~=false then "ON" else "OFF",270,112,140,48,if Theme.HatchSoundEnabled~=false then C.accent else C.card,function() Theme.HatchSoundEnabled=Theme.HatchSoundEnabled==false open("settings") end)
-        button(body,"HOW TO PLAY",440,0,384,52,C.gold,function() open("tutorial") end)
-        button(body,"FOOD GUIDE",440,60,384,52,C.accent,function() open("food") end)
-        local Volume=require(script.Parent.VolumeSliders)
-        for i,key in require(Shared.AudioMixer).Order do Volume.row(body,key,0,168+(i-1)*46,824,25) end
-        button(body,"RESET SOUND",440,120,384,44,C.card,function() require(Shared.AudioMixer).reset() open("settings") end).TextSize=20
+        -- BD-263 Settings v2: tabs Sound / Look / Controls / Help are drawn by SettingsMenu; Help (guides, auto-open) stays here. Body is 824 x 402.
+        local tab=require(script.Parent.SettingsMenu).build(body,{label=label,button=button,open=open,notify=notify,cameraReset=function() player.CameraMaxZoomDistance=Config.CameraMaxZoom end})
+        if tab=="help" then
+        button(body,"HOW TO PLAY",0,64,400,52,C.gold,function() open("tutorial") end)
+        button(body,"FOOD GUIDE",424,64,400,52,C.accent,function() open("food") end)
+        label(body,"Auto-open",0,312,170,52,24).TextXAlignment=Enum.TextXAlignment.Left
         local locked=EggsLogic.locked(Config.AutoOpenRequiresPass,ownsAutoOpen())
         local chosen=RevealSkip.set(autoOpenSelection())
         for i,rarityName in RevealSkip.Names do
@@ -553097,6 +553355,7 @@ render=function(name: string)
             end).TextSize=16
         end
         label(body,"Shiny, BIG and special eggs always show. Auto-opened eggs are still saved!",0,370,824,30,18)
+        end
     elseif name=="food" then
         heading.Text,header.BackgroundColor3="Food &amp; Growth",C.accent
         local types={{"Berries","leaf",1,C.accent},{"Fruit","leaf",4,C.gold},{"Eggs","egg",15,C.blue},{"Crystals","amber",50,C.purple}}
@@ -553648,7 +553907,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX302">
+        <Item class="LocalScript" referent="RBX303">
           <Properties>
             <string name="Name">CameraOcclusion</string>
             <ProtectedString name="Source">--!strict
@@ -553753,7 +554012,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX303">
+        <Item class="LocalScript" referent="RBX304">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!nonstrict
@@ -553809,15 +554068,16 @@ RunService.Heartbeat:Connect(function(dt)
             local shiny=character:GetAttribute("ShinyDinosaur")==true
             local visual=character:FindFirstChild("LocalMeshVisual") or character:FindFirstChild("DinoVisual")
             local scale=character:GetAttribute("VisualScale") or 1
-            local detail=if player==Players.LocalPlayer or (distance[player]&lt;=25 and count&lt;=fullDinos) then "full" else "lite"
+            local mode=require(Shared.SettingsModel).effects() -- BD-265: Settings Effects Full / Lite / Off
+            local detail=if mode=="full" and (player==Players.LocalPlayer or (distance[player]&lt;=25 and count&lt;=fullDinos)) then "full" else "lite"
             local state=states[player]
-            if not state or state.root~=root or state.auraId~=auraId or state.trailId~=trailId or state.mutationId~=mutationId or state.shiny~=shiny or state.visual~=visual or state.motion~=Theme.MotionEnabled or state.detail~=detail then
+            if not state or state.root~=root or state.auraId~=auraId or state.trailId~=trailId or state.mutationId~=mutationId or state.shiny~=shiny or state.visual~=visual or state.motion~=Theme.MotionEnabled or state.detail~=detail or state.mode~=mode then
                 if state then destroy(state) end
-                state={root=root,auraId=auraId,trailId=trailId,mutationId=mutationId,shiny=shiny,visual=visual,scale=scale,motion=Theme.MotionEnabled,detail=detail,rigs={}}
+                state={root=root,auraId=auraId,trailId=trailId,mutationId=mutationId,shiny=shiny,visual=visual,scale=scale,motion=Theme.MotionEnabled,detail=detail,mode=mode,rigs={}}
                 local reduce=not Theme.MotionEnabled
                 -- A second or third rig on the same dino always uses the lite layer count so the combined look stays inside one budget.
                 local function add(kind: string,item: any)
-                    if not item then return end
+                    if not item or (mode=="off" and kind~="mutation") then return end -- Off drops aura and trail, keeps the event mutation cue
                     local rigDetail=if #state.rigs&gt;0 then "lite" else detail
                     table.insert(state.rigs,Rig.attach(root,kind,item,{reduce=reduce,detail=rigDetail,device=device}))
                 end
@@ -553844,7 +554104,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX304">
+        <Item class="ModuleScript" referent="RBX305">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -553923,7 +554183,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX305">
+        <Item class="ModuleScript" referent="RBX306">
           <Properties>
             <string name="Name">DinoIndexPanels</string>
             <ProtectedString name="Source">--!strict
@@ -554459,7 +554719,7 @@ return Panels
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX306">
+        <Item class="LocalScript" referent="RBX307">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -554789,7 +555049,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX307">
+        <Item class="ModuleScript" referent="RBX308">
           <Properties>
             <string name="Name">EggPicture</string>
             <ProtectedString name="Source">--!strict
@@ -554866,7 +555126,7 @@ return EggPicture
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX308">
+        <Item class="ModuleScript" referent="RBX309">
           <Properties>
             <string name="Name">EggsScreen</string>
             <ProtectedString name="Source">--!strict
@@ -555062,7 +555322,7 @@ return EggsScreen
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX309">
+        <Item class="LocalScript" referent="RBX310">
           <Properties>
             <string name="Name">FoodGlow</string>
             <ProtectedString name="Source">--!strict
@@ -555288,7 +555548,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX310">
+        <Item class="ModuleScript" referent="RBX311">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -556226,7 +556486,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX311">
+        <Item class="ModuleScript" referent="RBX312">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -556328,7 +556588,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX312">
+        <Item class="ModuleScript" referent="RBX313">
           <Properties>
             <string name="Name">FxRig</string>
             <ProtectedString name="Source">--!nonstrict
@@ -556694,7 +556954,7 @@ return Rig
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX313">
+        <Item class="ModuleScript" referent="RBX314">
           <Properties>
             <string name="Name">HatchFx</string>
             <ProtectedString name="Source">--!nonstrict
@@ -556905,7 +557165,7 @@ return M
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX314">
+        <Item class="ModuleScript" referent="RBX315">
           <Properties>
             <string name="Name">HatchSequence</string>
             <ProtectedString name="Source">--!strict
@@ -558020,7 +558280,7 @@ return Seq
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX315">
+        <Item class="ModuleScript" referent="RBX316">
           <Properties>
             <string name="Name">InspectView</string>
             <ProtectedString name="Source">--!strict
@@ -558212,7 +558472,7 @@ return InspectView
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX316">
+        <Item class="LocalScript" referent="RBX317">
           <Properties>
             <string name="Name">JumpCarry</string>
             <ProtectedString name="Source">--!strict
@@ -558270,12 +558530,13 @@ if player.Character then task.spawn(bind, player.Character) end
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX317">
+        <Item class="LocalScript" referent="RBX318">
           <Properties>
             <string name="Name">LowPolyAnimator</string>
             <ProtectedString name="Source">--!strict
--- BD-234 spike: procedural idle/walk for the low-poly dinos (Config.LowPolyDinos). Pose math: Shared/LowPolyPose (pure).
+-- BD-234/BD-233 spike: procedural idle/walk + jump/leap/land/water-surge for the low-poly dinos (Config.LowPolyDinos). Pose math: Shared/LowPolyPose (pure).
 -- Writes Weld.C1 (the animation offset) so DinoMotion's C0 poses (eat, jump squash/stretch, landing) keep working on top.
+-- Jump/leap state is derived client-side (humanoid state/velocity, LeapPredictAt/LeapUntil attributes); the server rules are untouched.
 -- Respects Reduce Motion (Theme.MotionEnabled). Remote dinos are animated at 20 Hz within 80 studs only.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -558283,11 +558544,104 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Pose = require(Shared.LowPolyPose)
 local LowPoly = require(Shared.LowPolyDinos)
 local Theme = require(Shared.UITheme)
+local EffectAssets = require(Shared.EffectAssets)
 if not LowPoly.enabled() then return end
 
 local RANGE, REMOTE_STEP, RUN_SPEED = 80, 1 / 20, 24
 local rigs: {[Model]: any} = {}
-local out = Pose.new()
+local out, actOut, ctx = Pose.new(), Pose.new(), Pose.newCtx()
+
+-- Small splash puff for the Water surge: the existing smoke sheet (alpha), 3 pooled emitters, none under Reduce Motion.
+local splash: {ParticleEmitter} = {}
+local splashAt: {Attachment} = {}
+local nextSplash = 0
+local function splashPuff(position: Vector3, count: number, scale: number)
+    if #splash == 0 then
+        local sheet = EffectAssets.isSheet("smokeSheet") and not EffectAssets.isAdditive("smokeSheet")
+        for i = 1, 3 do
+            local at = Instance.new("Attachment")
+            at.Name = "LowPolySplash"
+            at.Parent = workspace.Terrain
+            local e = Instance.new("ParticleEmitter")
+            e.Enabled = false
+            e.Rate = 0
+            e.Texture = if sheet then EffectAssets.resolve("smokeSheet") else EffectAssets.Builtin.smoke
+            e.FlipbookLayout = if sheet then Enum.ParticleFlipbookLayout.Grid4x4 else Enum.ParticleFlipbookLayout.None
+            if sheet then e.FlipbookMode = Enum.ParticleFlipbookMode.OneShot end
+            e.Lifetime = NumberRange.new(0.4, 0.7)
+            e.Speed = NumberRange.new(3, 6)
+            e.SpreadAngle = Vector2.new(60, 60)
+            e.EmissionDirection = Enum.NormalId.Top
+            e.Color = ColorSequence.new(Color3.fromRGB(205, 235, 255))
+            e.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 1)})
+            e.Parent = at
+            table.insert(splash, e)
+            table.insert(splashAt, at)
+        end
+    end
+    nextSplash = nextSplash % 3 + 1
+    local e = splash[nextSplash]
+    e.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.5 * scale), NumberSequenceKeypoint.new(1, 1.4 * scale)})
+    splashAt[nextSplash].WorldPosition = position
+    e:Emit(count)
+end
+
+local function num(instance: Instance, name: string): number
+    local v = instance:GetAttribute(name)
+    return if typeof(v) == "number" then v else 0
+end
+
+local function startPhase(rig: any, phase: string, now: number)
+    rig.act, rig.actAt = phase, now
+end
+
+-- Derives the action state from humanoid state/velocity and the leap attributes. Returns nothing; writes rig.act/rig.aggr.
+local function updateAction(rig: any, now: number)
+    local character, root = rig.character, rig.root
+    local hum = rig.humanoid
+    if not hum or not hum.Parent then hum = character:FindFirstChildOfClass("Humanoid") rig.humanoid = hum end
+    if not hum or hum.Health &lt;= 0 then rig.act = nil return end
+    -- leap signal: the local prediction stamp, or the server's LeapUntil changing (replicated to remote players)
+    local predict, untilAt = num(character, "LeapPredictAt"), num(character, "LeapUntil")
+    if (predict ~= rig.lastPredict and predict &gt; 0) or (untilAt ~= rig.lastUntil and untilAt &gt; 0) then rig.leapAt = now end
+    rig.lastPredict, rig.lastUntil = predict, untilAt
+    local state = hum:GetState()
+    local jumpKey = hum.Jump or state == Enum.HumanoidStateType.Jumping
+    local jumpEdge = jumpKey and not rig.jumpHeld
+    rig.jumpHeld = jumpKey
+    local leaping = now - rig.leapAt &lt; 0.7
+    if rig.class == "Water" then -- no air time: the jump / leap button is a forward surge
+        if rig.act == "surge" and now - rig.actAt &gt;= Pose.duration("surge", rig.aggr, "Water") then rig.act = nil end
+        if rig.act == nil and (jumpEdge or (leaping and rig.leapAt ~= rig.surgeLeap)) then
+            rig.aggr = if leaping then 1 else 0
+            rig.surgeLeap = rig.leapAt
+            startPhase(rig, "surge", now)
+            if rig.amp &gt; 0 then
+                local scale = (if leaping then 1.6 else 1) * math.clamp(rig.height / 4, 0.6, 2)
+                splashPuff(root.Position - Vector3.new(0, rig.height * 0.3, 0), if leaping then 9 else 5, scale)
+            end
+        end
+        return
+    end
+    local airborne = state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall
+        or (hum.FloorMaterial == Enum.Material.Air and math.abs(root.AssemblyLinearVelocity.Y) &gt; 3)
+    local ph = rig.act
+    if airborne then
+        if ph == nil or ph == "land" then
+            rig.aggr = if leaping then 1 else 0
+            if state == Enum.HumanoidStateType.Freefall and not jumpKey and not leaping then startPhase(rig, "air", now) -- stepped off a ledge: no crouch
+            else startPhase(rig, "crouch", now) end
+        elseif ph ~= "air" and now - rig.actAt &gt;= Pose.duration(ph, rig.aggr, rig.class) then
+            startPhase(rig, if ph == "crouch" then "push" else "air", now)
+        end
+        if leaping then rig.aggr = 1 end
+    elseif ph ~= nil and ph ~= "land" then
+        rig.carry = if ph == "air" then math.clamp((now - rig.actAt) / Pose.TuckTime, 0, 1) else 0
+        startPhase(rig, "land", now)
+    elseif ph == "land" and now - rig.actAt &gt;= Pose.duration("land", rig.aggr, rig.class) then
+        rig.act = nil
+    end
+end
 
 local function pivotFor(role: string, size: Vector3, side: number): Vector3
     if role == "wing" or role == "flipper" then return Vector3.new(-side * size.X / 2, 0, 0) end -- inner edge, at the body
@@ -558318,10 +558672,22 @@ local function apply(rig: any, now: number, dt: number, amp: number)
     rig.speed = rig.speed + (speed01 - rig.speed) * math.min(1, dt * 8) -- ease in/out
     rig.phase = (rig.phase + dt * Pose.stepRate(rig.speed) * (if rig.speed &gt; 0.01 then 1 else 0)) % (2 * math.pi * 8)
     local height = rig.height
+    rig.amp = amp
+    if amp &gt; 0 then updateAction(rig, now) else rig.act = nil end
+    local phase = rig.act
+    local k = 0
+    if phase then
+        local elapsed = now - rig.actAt
+        local dur = Pose.duration(phase, rig.aggr, rig.class)
+        ctx.phase, ctx.t, ctx.aggr, ctx.carry = phase, elapsed, rig.aggr, rig.carry
+        ctx.p = if dur &gt; 0 then math.clamp(elapsed / dur, 0, 1) else 0
+        k = Pose.actionWeight(phase, ctx.p)
+    end
     for _, item in rig.parts do
         local part = item.part :: MeshPart
         if not part.Parent then continue end
         Pose.sample(item.role, item.side, item.lead, now + rig.seed, rig.phase, rig.speed, amp, out, rig.class)
+        if phase then Pose.blend(out, Pose.sampleAction(item.role, item.side, item.lead, ctx, amp, actOut, rig.class), k) end
         if amp == 0 and item.role ~= "wing" then
             item.weld.C1 = CFrame.identity
         else
@@ -558356,7 +558722,7 @@ RunService.Heartbeat:Connect(function(dt)
         if not rig or rig.visual ~= visual then
             local _, size = visual:GetBoundingBox()
             rig = {visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0,
-                height = math.max(size.Y, 1), class = visual:GetAttribute("LPClass"), seed = math.random() * 10}
+                height = math.max(size.Y, 1), aggr = 0, carry = 0, leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), seed = math.random() * 10}
             rigs[character] = rig
         end
         if player == Players.LocalPlayer then
@@ -558371,7 +558737,7 @@ Players.PlayerRemoving:Connect(function(player) if player.Character then untrack
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX318">
+        <Item class="ModuleScript" referent="RBX319">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -558462,7 +558828,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX319">
+        <Item class="LocalScript" referent="RBX320">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -558689,7 +559055,163 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX320">
+        <Item class="ModuleScript" referent="RBX321">
+          <Properties>
+            <string name="Name">SettingsMenu</string>
+            <ProtectedString name="Source">--!strict
+-- Settings menu v2 (BD-263, docs/103): four tabs Sound / Look / Controls / Help. Lives in its own module because
+-- Bootstrap.client is at the 200-local limit; it only draws into the body (824 x 402) it is given, using the same
+-- label/button helpers as every other menu. Changes go through SettingsModel (saved per player by SettingsSync.client).
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Theme = require(Shared:WaitForChild("UITheme"))
+local Model = require(Shared:WaitForChild("SettingsModel"))
+local Mixer = require(Shared:WaitForChild("AudioMixer"))
+local C = Theme.Colors
+
+local Menu = {}
+local currentTab = "sound"
+
+export type Context = {
+    label: (Instance, string, number, number, number, number, number, Color3?) -&gt; TextLabel,
+    button: (Instance, string, number, number, number, number, Color3, () -&gt; ()) -&gt; TextButton,
+    open: (string) -&gt; (),
+    notify: (string, Color3?) -&gt; (),
+    cameraReset: () -&gt; (),
+}
+
+local ROW = 56 -- row pitch; every control is 48 px high (above the 44 px touch minimum)
+local TOP = 64 -- first row under the tab bar
+local LEVEL_TEXT = {full = "FULL", lite = "LITE", off = "OFF"}
+local SIZE_TEXT = {small = "SMALL", normal = "NORMAL", big = "BIG"}
+
+function Menu.tab(): string return currentTab end
+function Menu.setTab(id: string) if table.find(Model.Tabs, id) then currentTab = id end end
+
+local function toggle(body: Instance, ctx: Context, row: number, text: string, on: boolean, change: () -&gt; ())
+    ctx.label(body, text, 0, TOP + row * ROW, 400, 48, 28).TextXAlignment = Enum.TextXAlignment.Left
+    local b = ctx.button(body, if on then "ON" else "OFF", 420, TOP + row * ROW, 160, 48, if on then C.accent else C.card, change)
+    b.Name = "Toggle_" .. text
+end
+
+local function choice(body: Instance, ctx: Context, row: number, text: string, options: {string}, names: {[string]: string}, selected: string, pick: (string) -&gt; ())
+    ctx.label(body, text, 0, TOP + row * ROW, 250, 48, 28).TextXAlignment = Enum.TextXAlignment.Left
+    for i, id in options do
+        local b = ctx.button(body, names[id], 270 + (i - 1) * 180, TOP + row * ROW, 168, 48, if id == selected then C.accent else C.card, function() pick(id) end)
+        b.Name = "Choice_" .. text .. "_" .. id
+    end
+end
+
+local function drawSound(body: Instance, ctx: Context)
+    local Volume = require(script.Parent.VolumeSliders)
+    for i, key in Mixer.Order do
+        Volume.row(body, key, 0, TOP + (i - 1) * ROW, 824, 25, function() Model.set(key, Mixer.get(key)) end)
+    end
+    local on = Theme.HatchSoundEnabled ~= false
+    toggle(body, ctx, 3, "Hatch sound", on, function() Theme.HatchSoundEnabled = Theme.HatchSoundEnabled == false ctx.open("settings") end)
+    ctx.button(body, "RESET SOUND", 620, TOP + 3 * ROW, 204, 48, C.card, function()
+        Mixer.reset()
+        for _, key in Mixer.Order do Model.set(key, Mixer.get(key)) end
+        ctx.open("settings")
+    end)
+end
+
+local function drawLook(body: Instance, ctx: Context)
+    local s = Model.get()
+    choice(body, ctx, 0, "Effects", Model.Levels, LEVEL_TEXT, s.effects, function(id) Model.set("effects", id) ctx.open("settings") end)
+    choice(body, ctx, 1, "Weather", Model.Levels, LEVEL_TEXT, s.weather, function(id) Model.set("weather", id) ctx.open("settings") end)
+    toggle(body, ctx, 2, "Calm motion", s.calm, function() Model.set("calm", not Model.calm()) ctx.open("settings") end)
+    toggle(body, ctx, 3, "Fast mode", Model.isFast(s), function() Model.set("fast", not Model.isFast(Model.get())) ctx.open("settings") end)
+    ctx.label(body, "Fast mode: less sparkle for slow phones", 0, TOP + 4 * ROW, 824, 30, 20, C.gold)
+end
+
+local function drawControls(body: Instance, ctx: Context)
+    ctx.label(body, "Camera", 0, TOP, 250, 48, 28).TextXAlignment = Enum.TextXAlignment.Left
+    ctx.button(body, "RESET", 270, TOP, 180, 48, C.blue, function() ctx.cameraReset() ctx.notify("Camera reset", C.blue) end)
+    choice(body, ctx, 1, "Jump button", Model.JumpSizes, SIZE_TEXT, Model.get().jumpSize, function(id) Model.set("jumpSize", id) ctx.open("settings") end)
+end
+
+-- Draws the tab bar and the active tab. Returns the active tab id; the Help tab is completed by the caller (guides, auto-open).
+function Menu.build(body: Instance, ctx: Context): string
+    for i, id in Model.Tabs do
+        local b = ctx.button(body, Model.TabLabels[id], (i - 1) * 209, 0, 197, 48, if id == currentTab then C.purple else C.card, function()
+            currentTab = id
+            ctx.open("settings")
+        end)
+        b.Name = "Tab_" .. id
+    end
+    if currentTab == "sound" then drawSound(body, ctx)
+    elseif currentTab == "look" then drawLook(body, ctx)
+    elseif currentTab == "controls" then drawControls(body, ctx) end
+    return currentTab
+end
+
+return Menu
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="LocalScript" referent="RBX322">
+          <Properties>
+            <string name="Name">SettingsSync</string>
+            <ProtectedString name="Source">--!strict
+-- Settings v2 sync (BD-264): loads the saved per-player settings (attribute SettingsJson, set by the server from
+-- profile.settings), applies every change to its consumers, and sends changes back to the server (debounced).
+-- Consumers: Calm motion -&gt; Theme.MotionEnabled; sound -&gt; AudioMixer; Effects -&gt; CosmeticVisuals; Weather -&gt; WeatherVisuals
+-- (both read SettingsModel directly). jumpSize is stored with a getter only: no consumer yet.
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Model = require(Shared:WaitForChild("SettingsModel"))
+local Theme = require(Shared:WaitForChild("UITheme"))
+local Mixer = require(Shared:WaitForChild("AudioMixer"))
+
+local player = Players.LocalPlayer
+local remote = ReplicatedStorage:WaitForChild("BeDinoRemotes"):WaitForChild("SetSettings") :: RemoteEvent
+
+local applying = false
+local saveSerial = 0
+local loaded = false
+
+local function apply(s: Model.Settings)
+    Theme.MotionEnabled = not s.calm
+    Mixer.set("master", s.master)
+    Mixer.set("sfx", s.sfx)
+    Mixer.set("ambience", s.ambience)
+end
+
+Model.onChange(function(s)
+    apply(s)
+    if applying or not loaded then return end
+    saveSerial += 1
+    local mine = saveSerial
+    task.delay(0.8, function()
+        if mine ~= saveSerial then return end -- a newer change is coming: send only the last one
+        remote:FireServer(Model.toStore(Model.get()))
+    end)
+end)
+
+local function readSaved()
+    local raw = player:GetAttribute("SettingsJson")
+    if typeof(raw) ~= "string" or raw == "" then return end
+    local ok, decoded = pcall(function() return HttpService:JSONDecode(raw) end)
+    if not ok then return end
+    applying = true
+    Model.load(decoded)
+    applying = false
+    loaded = true
+end
+
+player:GetAttributeChangedSignal("SettingsJson"):Connect(function()
+    -- The server echoes our own save: ignore it while a newer local change is waiting to be sent.
+    readSaved()
+end)
+readSaved()
+-- Old profiles (or a slow load) may have no value yet: edits still save once the first server value arrived or after 5 s.
+task.delay(5, function() loaded = true end)
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="RBX323">
           <Properties>
             <string name="Name">VolumeSliders</string>
             <ProtectedString name="Source">--!strict
@@ -558770,7 +559292,7 @@ return Sliders
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX321">
+        <Item class="LocalScript" referent="RBX324">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -558837,7 +559359,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX322">
+        <Item class="LocalScript" referent="RBX325">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -559663,12 +560185,13 @@ RunService.Heartbeat:Connect(function(dt)
         glow.Brightness=(look.glowBright*t+(if activeId=="thunder" then flash*3 else 0))*(if Theme.MotionEnabled then 1 else .4)
     else lamp.Brightness=0 glow.Brightness=0 end
 
-    -- particle rigs follow the player; only the active weather emits
+    -- particle rigs follow the player; only the active weather emits (BD-265: Settings Weather Full / Lite / Off; haze, light and title stay)
+    local weatherFactor=require(Shared.SettingsModel).factor(require(Shared.SettingsModel).weather())
     for weatherId,list in rig do
         local on=motion and weatherId==activeId and k&gt;0
         local scaleRate=math.min(zoom*zoom,5)
         for _,item in list do
-            item.e.Enabled=on item.e.Rate=item.rate*k*(if item.fixed then 1 else scaleRate)
+            item.e.Enabled=on and weatherFactor&gt;0 item.e.Rate=item.rate*k*weatherFactor*(if item.fixed then 1 else scaleRate)
         end
         if on and root then
             local parts=rigParts[weatherId]
@@ -559735,7 +560258,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX323">
+        <Item class="LocalScript" referent="RBX326">
           <Properties>
             <string name="Name">WorldCulling</string>
             <ProtectedString name="Source">--!strict
@@ -559862,7 +560385,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX324">
+        <Item class="LocalScript" referent="RBX327">
           <Properties>
             <string name="Name">WorldReady</string>
             <ProtectedString name="Source">--!strict
@@ -559900,7 +560423,7 @@ remote:FireServer()
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX325">
+  <Item class="Workspace" referent="RBX328">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

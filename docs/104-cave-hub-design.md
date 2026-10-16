@@ -267,3 +267,12 @@ Dependencies: 263 -> 264 -> 265; 266 -> 268 <- 267; 268 -> 269/270; 264 -> 271 -
 - Teleport default ON, with a walk-there toggle and walk-up prompts/dwell so no child needs the buttons.
 - Lava is scenic, fenced, gentle; four warm light shafts; at most 16 lights; hub budget 410 parts / 730 k triangles; FX 25 particles/s desktop, 10/s phone.
 - BD-254 / PR #147 superseded; its pure-table pattern and generated nest/statue/egg placements are reused.
+
+## 16. Lead decisions on the open questions (2026-10-16, made on the owner's behalf; owner may overrule)
+1. **Cave size:** 260 x 220 studs is good; revisit only after the 12-player phone test.
+2. **During a run:** the rail dims DINOS, EGGS, FUSION and SHOP with "At home"; POTIONS and SETTINGS stay usable.
+3. **Settings:** stays a plain HUD menu button for quick access (not a teleport place). The Lantern Nook is decoration only.
+4. **Teleport:** shop teleport is ON by default, with a Settings toggle to walk there instead (moss-trail guide).
+5. **Lava:** scenic only, fenced, no damage.
+6. **Station order:** as in section 3 (Heart in the middle, shops around the ring); adjust after the first walk-through.
+7. **Hatch reveal:** keep the existing 2D/viewport sequence in v1; a physical nest-cracking reveal is a later idea.

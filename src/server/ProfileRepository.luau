@@ -15,6 +15,7 @@ local ProfileRepository = {}
 local DinosaurIdentity = require(script.Parent.DinosaurIdentity)
 local IdentityFusion = require(script.Parent.IdentityFusion)
 local FusionOdds = require(script.Parent.FusionOdds)
+local SettingsModel = require(ReplicatedStorage.Shared.SettingsModel)
 
 local RunService = game:GetService("RunService")
 local localPreview = RunService:IsStudio() and game.GameId == 0 and Config.StudioLocalProfilesEnabled
@@ -267,6 +268,7 @@ local function isValidProfile(profile: any): boolean
         if typeof(profile.revealSkip) ~= "table" or #profile.revealSkip > Config.SpeciesRarityScale then return false end
         for _, rarity in profile.revealSkip do if typeof(rarity) ~= "number" or rarity % 1 ~= 0 or rarity < 1 or rarity > Config.SpeciesRarityScale then return false end end
     end
+    if profile.settings ~= nil and typeof(profile.settings) ~= "table" then return false end -- BD-264 (additive; bad values inside fall back to defaults)
     if profile.settledRuns ~= nil then
         if typeof(profile.settledRuns) ~= "table" then return false end
         for _, id in profile.settledRuns do if not validId(id) then return false end end
@@ -375,6 +377,8 @@ local function syncAttributes(player: Player, profile: any)
     end
     player:SetAttribute("NestsJson", HttpService:JSONEncode(nestSummary))
     player:SetAttribute("RevealSkipJson", HttpService:JSONEncode(profile.revealSkip or {}))
+    -- BD-264: per-player settings; profiles saved before settings v2 have no field and read as defaults.
+    player:SetAttribute("SettingsJson", HttpService:JSONEncode(SettingsModel.toStore(SettingsModel.fromStore(profile.settings))))
     player:SetAttribute("RunStartBlocked", ProfileRepository.runStartBlockReason(profile))
     local nextChest = profile.eggs[1]
     local buffered = revealBuffer[player]
@@ -997,6 +1001,36 @@ function ProfileRepository.setRevealSkip(player: Player, selection: any): (boole
             if not isValidProfile(profileValue) then return nil end
             if not ownSession(profileValue) then leaseLost = true return nil end
             profileValue.revealSkip = table.clone(clean)
+            profileValue.revision += 1
+            profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
+            return profileValue
+        end)
+    end)
+    if not ok or updated == nil then
+        if leaseLost then player:SetAttribute("ProfileState", "LeaseLost") return false, "lease_lost" end
+        player:SetAttribute("ProfileState", "SaveFailed")
+        return false, "save_failed"
+    end
+    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
+    syncAttributes(player, profiles[player])
+    return true, "saved"
+end
+
+-- BD-264 settings v2: UI preferences only (sound levels, effects, weather, calm motion, jump size). Additive profile
+-- field `settings`; the server normalizes whatever the client sends, so bad values become defaults.
+function ProfileRepository.setSettings(player: Player, raw: any): (boolean, string)
+    local cached = profiles[player]
+    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then return false, "profile_not_loaded" end
+    if typeof(raw) ~= "table" then return false, "invalid_settings" end
+    local clean = SettingsModel.toStore(SettingsModel.fromStore(raw))
+    local leaseLost = false
+    local now = os.time()
+    local ok, updated = retry("settings", function()
+        return store:UpdateAsync(keyFor(player), function(profileValue)
+            leaseLost = false
+            if not isValidProfile(profileValue) then return nil end
+            if not ownSession(profileValue) then leaseLost = true return nil end
+            profileValue.settings = table.clone(clean)
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             return profileValue

@@ -9,6 +9,7 @@ local lastClaim: {[Player]: number} = {}
 local lastGrant: {[Player]: number} = {}
 local lastNest: {[Player]: number} = {}
 local lastSkip: {[Player]: number} = {}
+local lastSettings: {[Player]: number} = {}
 
 local function getRemote(folder: Folder, name: string): RemoteEvent
     local existing = folder:FindFirstChild(name)
@@ -82,6 +83,14 @@ function ChestService.start(profileRepository)
         profileRepository.setRevealSkip(player, selection)
     end)
 
+    -- BD-264 settings v2 (UI preferences only; never affects rewards). Normalized server-side.
+    local setSettings = getRemote(folder, "SetSettings")
+    setSettings.OnServerEvent:Connect(function(player: Player, selection, ...)
+        if select("#", ...) ~= 0 then return end
+        if not allowed(lastSettings, player, 0.5) then return end
+        profileRepository.setSettings(player, selection)
+    end)
+
     testGrant.OnServerEvent:Connect(function(player: Player, ...)
         if select("#", ...) ~= 0 then return end
         if not Config.ChestTestGrantEnabled then return end
@@ -98,6 +107,7 @@ function ChestService.start(profileRepository)
         lastGrant[player] = nil
         lastNest[player] = nil
         lastSkip[player] = nil
+        lastSettings[player] = nil
     end)
 end
 

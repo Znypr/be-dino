@@ -821,12 +821,13 @@ RunService.Heartbeat:Connect(function(dt)
         glow.Brightness=(look.glowBright*t+(if activeId=="thunder" then flash*3 else 0))*(if Theme.MotionEnabled then 1 else .4)
     else lamp.Brightness=0 glow.Brightness=0 end
 
-    -- particle rigs follow the player; only the active weather emits
+    -- particle rigs follow the player; only the active weather emits (BD-265: Settings Weather Full / Lite / Off; haze, light and title stay)
+    local weatherFactor=require(Shared.SettingsModel).factor(require(Shared.SettingsModel).weather())
     for weatherId,list in rig do
         local on=motion and weatherId==activeId and k>0
         local scaleRate=math.min(zoom*zoom,5)
         for _,item in list do
-            item.e.Enabled=on item.e.Rate=item.rate*k*(if item.fixed then 1 else scaleRate)
+            item.e.Enabled=on and weatherFactor>0 item.e.Rate=item.rate*k*weatherFactor*(if item.fixed then 1 else scaleRate)
         end
         if on and root then
             local parts=rigParts[weatherId]
