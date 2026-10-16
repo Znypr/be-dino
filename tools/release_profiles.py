@@ -102,7 +102,7 @@ PROFILES: dict[str, list[Rule]] = {
         Rule("ReleaseProfile", "require", "development", reason="default build is a development build"),
         _flag_off("IdentityPersistentEnabled", "BD-064 persistent identities; only the playtest profile enables it"),
         _flag_off("IdentityFusionPreviewEnabled", "BD-057/BD-064 fusion; only the playtest profile enables it"),
-        _flag_off("PerDinoCosmeticsEnabled", "BD-059 per-dino cosmetics (docs/121); phase 1 is not wired to any shop"),
+        _flag_off("PerDinoCosmeticsEnabled", "BD-059 per-dino cosmetics (docs/121); phase 2 shop wiring stays off until owner Studio check"),
         _flag_off("RunTelemetryEnabled", "BD-426 session telemetry; only the playtest profile enables it"),
         _flag_off("CombatEnabled", "BD-243 HP combat; unproven on a phone (BD-252), default build keeps instant predation"),
         _flag_off("ClassMovementEnabled", "BD-423 class movement; only the playtest profile enables it"),

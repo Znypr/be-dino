@@ -1,7 +1,8 @@
 --!strict
--- BD-059 phase 1 (docs/121): per-dino aura/trail ownership, legacy account purchases grandfathered.
--- Pure module: no DataStore, RNG, remotes, currencies, Robux or PolicyService. Nothing here writes a profile by itself;
--- callers decide when (not wired to any shop or remote in phase 1). Flag off = exactly the old account-wide behaviour.
+-- BD-059 (docs/121): per-dino aura/trail ownership, legacy account purchases grandfathered.
+-- Pure module: no DataStore, RNG, remotes or Robux. Phase 2: apply() runs INSIDE ProfileRepository.progressionAction's
+-- UpdateAsync callback (one atomic, token-idempotent write) and view() feeds reads. Flag off = exactly the old account-wide
+-- behaviour (ProfileRepository never calls apply/view).
 local Own = {}
 
 local function sorted(set: any): {string}
@@ -68,7 +69,104 @@ function Own.grant(state: any, instanceId: string, kind: string, id: string, ena
     return out, "granted"
 end
 
--- Warning data for the (future) Fusion Menu. Itemises what the donors' OWN cosmetics lose (the existing quote lossManifest
+
+local StageKeys = {"/base", "/gold", "/emerald", "/diamond"}
+
+-- The "equipped dino" is a collection stack (species + variantKey); purchases bind to ONE instance of that stack: the lowest
+-- instance sequence (deterministic across retries and reconnects). nil when the sidecar has no matching instance.
+function Own.equippedInstanceId(state: any, speciesId: any, variantKey: any): string?
+    if type(state) ~= "table" or type(state.instances) ~= "table" or type(speciesId) ~= "string" then return nil end
+    local keys = {}
+    if type(variantKey) == "string" then table.insert(keys, speciesId .. "/variant/" .. variantKey)
+    else for _, stage in StageKeys do table.insert(keys, speciesId .. stage) end end
+    for _, bucketKey in keys do
+        local best, bestSeq = nil, math.huge
+        for id, inst in state.instances do
+            if type(inst) == "table" and inst.bucketKey == bucketKey and type(id) == "string" then
+                local seq = tonumber(string.match(id, "/d:(%d+)$")) or math.huge
+                if best == nil or seq < bestSeq or (seq == bestSeq and id < best) then best, bestSeq = id, seq end
+            end
+        end
+        if best then return best end
+    end
+    return nil
+end
+
+local function withEquipped(state: any, instanceId: string, field: string, id: string)
+    local out = table.clone(state)
+    out.instances = table.clone(state.instances)
+    local inst = table.clone(state.instances[instanceId])
+    inst.cosmetics = table.clone(inst.cosmetics)
+    inst.cosmetics[field] = id
+    out.instances[instanceId] = inst
+    return out
+end
+
+-- Per-dino shop action on the LIVE profile (called inside the progressionAction UpdateAsync callback, which owns a private
+-- copy). ctx = {rules = ProgressionRules, config = ProgressionConfig, identityOk = boolean}. Returns applied, status, instanceId.
+-- Buy: price/level exactly as ProgressionRules.apply, ownership bound to the equipped dino, progression.auras/trails never edited.
+-- Equip: only own + legacy items; a legacy item sets the account equip (as today) and clears this dino's own choice; "" clears both.
+function Own.apply(profile: any, action: string, id: string, ctx: any): (boolean, string, string?)
+    local kind = if action == "buyAura" or action == "equipAura" then "aura" else "trail"
+    local buying = action == "buyAura" or action == "buyTrail"
+    local state = profile.dinosaurIdentity
+    if ctx.identityOk ~= true or type(state) ~= "table" then return false, "no_dino_instance" end
+    local instanceId = Own.equippedInstanceId(state, profile.equippedSpeciesId, profile.equippedVariantKey)
+    if not instanceId then return false, "no_dino_instance" end
+    local rules = ctx.rules
+    local p = rules.upgrade(profile)
+    local instance = state.instances[instanceId]
+    local usable = Own.usable(p, instance, true)
+    local list = if kind == "aura" then usable.auraIds else usable.trailIds
+    if buying then
+        local item = rules.item(if kind == "aura" then ctx.config.Auras else ctx.config.Trails, id)
+        if not item then return false, "unknown_item" end
+        if has(list, id) then return false, "already_owned" end
+        if kind == "trail" and rules.level(p) < item.level then return false, "level_locked" end
+        if p.crystals < item.price then return false, "insufficient_crystals" end
+        local nextState, why = Own.grant(state, instanceId, kind, id, true)
+        if not nextState then return false, why :: string end
+        p.crystals -= item.price
+        profile.dinosaurIdentity = nextState
+        return true, "purchased", instanceId
+    end
+    local field = if kind == "aura" then "equippedAuraId" else "equippedTrailId"
+    local legacyField = if kind == "aura" then "equippedAura" else "equippedTrail"
+    if id == "" then
+        profile.dinosaurIdentity = withEquipped(state, instanceId, field, "")
+        p[legacyField] = ""
+        return true, "equipped", instanceId
+    end
+    if not has(list, id) then return false, "not_owned" end
+    if has(if kind == "aura" then usable.legacy.auraIds else usable.legacy.trailIds, id) then
+        p[legacyField] = id
+        profile.dinosaurIdentity = withEquipped(state, instanceId, field, "")
+    else
+        profile.dinosaurIdentity = withEquipped(state, instanceId, field, id)
+    end
+    return true, "equipped", instanceId
+end
+
+-- Read view of progression for the equipped dino: auras/trails = own + legacy, equipped = this dino's choice else the account
+-- (legacy) equip. Never stored; the real progression stays the rollback-safe legacy view. Returns the input when no instance.
+function Own.view(progression: any, state: any, speciesId: any, variantKey: any)
+    local instanceId = Own.equippedInstanceId(state, speciesId, variantKey)
+    if not instanceId then return progression end
+    local instance = state.instances[instanceId]
+    local u = Own.usable(progression, instance, true)
+    local out = table.clone(progression)
+    out.auras, out.trails = {}, {}
+    for _, id in u.auraIds do out.auras[id] = true end
+    for _, id in u.trailIds do out.trails[id] = true end
+    local c = instance.cosmetics
+    local ea = if type(c) == "table" and type(c.equippedAuraId) == "string" then c.equippedAuraId else ""
+    local et = if type(c) == "table" and type(c.equippedTrailId) == "string" then c.equippedTrailId else ""
+    out.equippedAura = if ea ~= "" and out.auras[ea] then ea else progression.equippedAura
+    out.equippedTrail = if et ~= "" and out.trails[et] then et else progression.equippedTrail
+    return out
+end
+
+-- Warning data for the Fusion Menu (quote.cosmeticNotice when the flag is on). Itemises what the donors' OWN cosmetics lose (the existing quote lossManifest
 -- already lists them per donor) and states that legacy account-wide purchases are NOT consumed.
 function Own.fusionNotice(quote: any, progression: any, enabled: boolean)
     local lostA, lostT, seenA, seenT = {}, {}, {}, {}

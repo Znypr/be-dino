@@ -1,6 +1,6 @@
 # 121 Per-dino auras and trails: migration design and phase 1 (BD-059)
 
-Label: **OWNER DECISION 2026-10-16 (lead, owner's delegation) implemented as an OFFLINE, flag-off phase 1.** Nothing here is wired to a shop, remote or UI, and no real profile was read or written. Sources: [46](46-pattern-fusion-dino-identity-and-cosmetic-progression.md), [49](49-identity-fusion-phase1.md), [53](53-bd064-fusion-server.md), [111 rollback drill](111-rollback-drill.md), [114](114-handbook.md), [115](115-decisions-log.md), [116](116-handbook-conflicts.md).
+Label: **OWNER DECISION 2026-10-16 (lead, owner's delegation) implemented as OFFLINE, flag-off phases 1-2 (phase 2 wires the shops, section 5).** No real profile was read or written. Sources: [46](46-pattern-fusion-dino-identity-and-cosmetic-progression.md), [49](49-identity-fusion-phase1.md), [53](53-bd064-fusion-server.md), [111 rollback drill](111-rollback-drill.md), [114](114-handbook.md), [115](115-decisions-log.md), [116](116-handbook-conflicts.md).
 
 ## 1. Decision
 Auras and trails belong to ONE dino instance and are lost when that dino is fused (docs/46). Today purchases are account-wide in `profile.progression.auras` / `.trails` (+ `equippedAura` / `equippedTrail`); shops already say "For: <dino>" (BD-393). The identity sidecar (`dinosaurIdentity.instances[id].cosmetics = {ownedAuraIds, ownedTrailIds, equippedAuraId, equippedTrailId}`, docs/47) already has the per-instance field, so phase 1 adds **no new persisted field and no schema change**.
@@ -26,9 +26,16 @@ Consequence to confirm with the owner: legacy items remain usable by all dinos a
 | No rewrite | Copy-on-write; tested that the input profile is byte-identical after `grant`. |
 | Fusion | Consent still required when a donor owns cosmetics; output has none; account legacy sets unchanged (asserted). |
 
-## 5. Next phases (not done)
-1. Shop purchase writes `grant` inside the existing purchase `UpdateAsync` (needs owner review of price/Robux path; keeps PolicyService gating).
-2. Equip validates with `canEquip` per instance; client reads per-dino state.
-3. Fusion Menu shows `fusionNotice` (itemised irreversible-loss warning, docs/72 copy).
-4. Optional voluntary legacy-to-dino move.
+## 5. Phase 2 (BD-059): shop wiring behind the same flag
+Label: CURRENT CODE BEHAVIOUR with `PerDinoCosmeticsEnabled = true`; default build and playtest profile keep it **false**. Offline tests only, no Studio or phone evidence.
+- **Purchase**: `ProfileRepository.progressionAction` (same remote, same token) routes `buyAura/buyTrail/equipAura/equipTrail` to `CosmeticOwnership.apply` inside the existing `UpdateAsync`. The crystal charge and the sidecar grant are ONE write with the token's `recentOperations` record (exactly-once; a repeated token returns `duplicate`). Price and trail level rules are the same as `ProgressionRules.apply`. The outcome also stores `instanceId`.
+- **Which dino**: the equipped stack (species + variant key) maps to ONE instance, the lowest instance sequence of that stack (`equippedInstanceId`). No instance or identity unavailable: refused with `no_dino_instance`; a purchase never silently becomes account-wide.
+- **Equip**: only that dino's own plus legacy items (`not_owned` otherwise). A legacy item sets the account equip as today and clears this dino's own choice; equipping "" clears both so the account fallback does not reappear.
+- **Reads**: `progressionView` (used by `ProfileRepository.progression` and the synced `ProgressionJson`/`EquippedAura`) shows own + legacy items and this dino's equipped choice, so the shops, "For: <dino>" cards and growth/speed multipliers need no client change. Nothing in `progression.auras/trails/equippedAura/equippedTrail` is written by a per-dino purchase (rollback view, Build 020 keeps the sidecar byte for byte, tested in `verify_rollback`).
+- **Fusion confirm data**: with the flag on, `quoteFusion` and the `FusionAction` quote response carry `cosmeticNotice` (from `CosmeticOwnership.fusionNotice`: `irreversible`, `lostAuraIds`, `lostTrailIds`, legacy IDs kept). The Fusion Menu already lists each donor's cosmetics from `lossManifest` and requires consent; no new UI text.
+- Open: when several identical dinos are stacked, the bound instance is the lowest sequence, which may not be the one the player thinks they hold (identical dinos are interchangeable until fused). Owner Studio check needed before flipping the flag.
+
+## 6. Still not done
+1. Optional voluntary legacy-to-dino move.
+2. Studio and phone verification; owner decision to enable the flag.
 Status lives only in [Kanban](07-kanban.md) BD-059.
