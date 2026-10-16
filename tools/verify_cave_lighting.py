@@ -8,7 +8,7 @@ CaveHubLayout, CaveTerrainRules and CaveLightingRules in Luau (pure numbers, nev
  * lava falls: the sheet top is under the lowest ceiling along its width, the lava_pool_disc prop is smaller than the basin and is
    not walkable (BD-295);
  * cave look: inside/outside hysteresis, blend maths, ranges;
- * flag-off identity (static): Config.CaveHub stays false, CaveLighting.build is only called in Arena's cave branch, the client look
+ * flag-off identity (static): Config.CaveHub is false in source (on only in the playtest build), CaveLighting.build is only called in Arena's cave branch, the client look
    returns before touching anything when the flag is off, CaveLightingRules is pure.
 Not Studio evidence: see docs/evidence/2026-10-16-cave-lighting/ and the BD-286 kanban row.
 """
@@ -25,7 +25,7 @@ local R=Rules
 local T=Terrain
 local FY,CZ=C.FloorY,C.CenterZ
 local D=R.get()
-assert(Config.CaveHub==false,"CaveHub ships off")
+assert(Config.CaveHub==(Config.ReleaseProfile=="playtest"),"CaveHub ships OFF in the default build and ON in the playtest build (owner 2026-10-16, docs/125)")
 local function dist(ax,az,bx,bz) return math.sqrt((ax-bx)^2+(az-bz)^2) end
 
 -- ---- lights: counts and placement
