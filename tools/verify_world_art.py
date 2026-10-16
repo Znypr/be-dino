@@ -15,7 +15,7 @@ local PLAYTEST=@PLAYTEST@
 -- World v2 floors (a prop is one MeshPart; the owner asked for far more vegetation on a 1.6x wider island).
 local TREE_LO,GIANT_LO,LOG_LO,ROCK_LO,SHRUB_LO,COVER_LO,PROPS_LO=300,20,25,70,350,600,1500
 -- Whole scene at the playtest density: kit props + food pickups + everything else (hub, boundary, arch, spring, rigs).
-local WORLD_MAX,RESIDUAL_PARTS,TOTAL_MAX=5000,600,8000
+local WORLD_MAX,RESIDUAL_PARTS,TOTAL_MAX=5000,600,9000 -- BD-387: 8000 + 800 more food pickups (+10 percent headroom); phone scene is culled, see verify_world_budget
 assert(Config.ArenaHalfWidth==260*Layout.Scale and Layout.Scale==1.6,"map is 1.6x the 520 map")
 assert(Config.SanctuaryCenterZ==Config.ArenaHalfWidth+105,"hub sits 105 studs past the boundary")
 assert(Biome.Sanctuary.minZ>Config.ArenaHalfWidth,"hub footprint is outside the arena")
@@ -118,7 +118,7 @@ if PLAYTEST then
  for _,id in BiomeMap.Order do assert(byBiome[id].tree+byBiome[id].giant+byBiome[id].rock>=8,"biome has no structure props: "..id) end
  assert(nativeProps==0,"every kit prop must be a MeshPart now (all 41 uploaded): "..nativeProps)
  assert(worldParts<=WORLD_MAX,"world kit parts "..worldParts)
- assert(foodParts<=2600,"food pickup parts "..foodParts)
+ assert(foodParts<=3300,"food pickup parts "..foodParts) -- BD-387: 400 clusters x 8 = 3,200 (cap was 2,600 for 6 per cluster); the phone side is covered by verify_world_budget
  assert(worldParts+foodParts+RESIDUAL_PARTS<=TOTAL_MAX,"total world parts "..(worldParts+foodParts+RESIDUAL_PARTS))
  for _,family in {"berry","fruit","egg","amber"} do
   for _,v in {"a","b"} do assert(Kit["food_"..family.."_"..v],"missing food variant "..family..v) end

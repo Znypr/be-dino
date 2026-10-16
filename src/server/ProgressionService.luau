@@ -99,7 +99,7 @@ local function crystalSpawns(repository)
         if model then model.Parent=part end
         local hint=Instance.new("BillboardGui") hint.Size=UDim2.fromOffset(100,28) hint.StudsOffset=Vector3.new(0,1.5,0) hint.MaxDistance=45 hint.Parent=part
         local text=Instance.new("TextLabel") text.Size=UDim2.fromScale(1,1) text.BackgroundTransparency=1
-        text.Text="+3 Crystals" text.TextColor3=part.Color text.TextSize=18 text.Font=Enum.Font.FredokaOne text.TextStrokeTransparency=0 text.Parent=hint
+        text.Text="+3 Crystals" text.TextColor3=Color3.new(1,1,1) text.TextSize=18 text.Font=Enum.Font.FredokaOne text.Parent=hint require(game:GetService("ReplicatedStorage").Shared.TextStyle).apply(text) -- BD-390
         local entry={part=part,model=model,hint=hint,readyAt=0,busy=false,available=true,token=Http:GenerateGUID(false)}
         if place(entry) then part.Parent=folder visible(entry,true) table.insert(entries,entry) else part:Destroy() end
     end

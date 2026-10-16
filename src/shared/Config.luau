@@ -39,8 +39,8 @@ return table.freeze({
     FoodRespawnSeconds = 8,
     FoodPickupRadius = 2.25,
     FoodTickSeconds = 0.08, -- PROVISIONAL: was 0.15; shorter pickup latency
-    FoodSectorCount = 20, -- world v2: 400 clusters of 6 over a 2.56x larger island (was 256)
-    FoodClusterItems = 6,
+    FoodSectorCount = 20, -- world v2: 400 clusters of 8 over a 2.56x larger island (was 256)
+    FoodClusterItems = 8, -- BD-387: was 6 (+33% food, owner 2026-10-16); 3,200 pickups, phone culling keeps the visible part budget (docs/107)
     FoodClusterRadius = 7,
     FoodSeed = 1404,
     FoodArtMode = "Legacy", -- "Kit": BD-050 Blender food variants (visual only; points unchanged) PROVISIONAL
@@ -72,8 +72,8 @@ return table.freeze({
     PredationBaseRadius = 5.5,
     PredationMaxRadius = 9,
     PredationVerticalLimit = 7,
-    GrowthPerFood = 0.5, -- owner 2026-10-15: growth gained per food point halved (typical 4-min run ~300 growth, was ~700); catches/eggs still use RAW food, scale curve unchanged
-    PredationGrowthPoints = 12.5, -- was 25; halved with GrowthPerFood
+    GrowthPerFood = 0.1, -- owner 2026-10-16 (BD-386): 5x slower again (was 0.5 on 2026-10-15, 1.0 before); catches/eggs still use RAW food points, never growth
+    PredationGrowthPoints = 2.5, -- BD-386: 5x slower with GrowthPerFood (was 12.5, 25)
     RepeatVictimCatchCooldownSeconds = 60,
 
     -- BD-052: Home is a confirmed, immediate return; the 3-second stay-still channel is removed.
