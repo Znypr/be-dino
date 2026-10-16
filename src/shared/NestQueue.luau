@@ -52,4 +52,15 @@ function NestQueue.secondsUntilAllReady(list: {any}, now: number, duration: numb
     return last - now
 end
 
+-- BD-259: seconds until the FIRST nest is ready, i.e. what the nest slot countdown shows (0 when one is ready already, or
+-- when nothing is incubating). secondsUntilAllReady is the whole-queue total and must not be shown as "Ready in".
+function NestQueue.secondsUntilNextReady(list: {any}, now: number, duration: number): number
+    local soonest: number? = nil
+    for _, nest in NestQueue.project(list, now, duration) do
+        if nest.state == "ready" then return 0 end
+        if nest.state == "incubating" and (soonest == nil or nest.readyAt < soonest) then soonest = nest.readyAt end
+    end
+    return if soonest then math.max(0, soonest - now) else 0
+end
+
 return NestQueue

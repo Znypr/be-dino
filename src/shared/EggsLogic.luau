@@ -29,6 +29,13 @@ function L.nestHeader(nests: {any}, capacity: number): string
     return string.format("Nests %d/%d", math.min(#nests, capacity), capacity)
 end
 
+-- BD-259: the "Eggs waiting" number = every caught egg still to open AFTER the one on the card: the other eggs already in
+-- the line (ActiveChestCount minus the card egg) plus the banked ones (QueuedEggsWaiting). Before, only the banked ones were
+-- counted, so 31 run eggs read 26 (31 - the 5 in the line).
+function L.waitingTotal(active: number, banked: number, hasCard: boolean): number
+    return math.max(0, math.floor(banked)) + math.max(0, math.floor(active) - (if hasCard then 1 else 0))
+end
+
 -- Single next-egg card. entry = ChestQueueJson entry or nil; waiting = QueuedEggsWaiting.
 -- kind: "empty" (nothing waiting), "banked" (eggs not yet in the line), "growing", "ready".
 function L.card(entry: any, nextId: string?, readyAt: number, now: number, waiting: number)

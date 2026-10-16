@@ -49,6 +49,7 @@ return table.freeze({
     WorldArtDensity = 1, -- the playtest profile sets 0.35 (docs/68 part budget); 1 is ~18k native parts
     -- BD-168 client distance culling of decorative props/food (docs/89). PartBudget = max prop parts a client keeps parented;
     -- radius = studs kept (hysteresis = +15%). Collision proxies, crystals, hub and server food logic are never culled.
+    CameraOcclusion = {Enabled = true}, -- BD-253: props between camera and dino fade (Shared/CameraOcclusion.luau); false = off
     WorldCulling = {
         Enabled = true,
         Hysteresis = 1.15,

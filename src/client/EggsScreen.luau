@@ -137,7 +137,7 @@ function EggsScreen.render(ctx: any)
 
     local infoX = stageW + 30
     local infoW = 824 - infoX - 14
-    local waitingLabel = label(card, "Eggs waiting: " .. waiting, infoX, 10, infoW, 38, 30, C.gold)
+    local waitingLabel = label(card, "Eggs waiting: " .. EggsLogic.waitingTotal(ctx.num("ActiveChestCount"), waiting, nextId ~= ""), infoX, 10, infoW, 38, 30, C.gold)
     waitingLabel.Name = "EggsWaiting"
     waitingLabel.TextXAlignment = Enum.TextXAlignment.Left
     local timerChip, timer = pill(card, if entry then statusText else "No eggs yet", if state.canOpen then C.accent else C.blue, infoX, 54, math.min(280, infoW), 38, 22)
