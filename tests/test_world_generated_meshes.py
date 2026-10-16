@@ -7,6 +7,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = (ROOT / "src/shared/WorldGeneratedMeshes.luau").read_text()
 KIT = (ROOT / "src/shared/WorldKitData.luau").read_text()
 REGISTRY = (ROOT / "docs/77-asset-registry.md").read_text()
+END = chr(10) + "}" + chr(10)
+ASSETS_BLOCK = SRC.split("Generated.Assets = {")[1].split(END)[0]
+REPLACEMENTS_BLOCK = SRC.split("Generated.Replacements = {")[1].split(END)[0]
 EXPECTED = {
     "137262237243889", "123860208068220", "115520379209668", "132703556702568", "100306166052872", "71416776916365",
     "135107793396569", "101039067942415", "122546672856917", "84690157197711", "118262268018795", "125187345067740",
@@ -27,7 +30,7 @@ class WorldGeneratedMeshTests(unittest.TestCase):
         self.assertEqual(len(self.assets), 17)
         self.assertEqual(len(set(self.assets.values())), 17, "duplicated asset id")
         self.assertEqual(set(self.assets.values()), EXPECTED)
-        self.assertEqual(len(re.findall(r'assetId = "', SRC)), 17)
+        self.assertEqual(len(re.findall(r'assetId = "', ASSETS_BLOCK)), 17)
         for value in self.assets.values():
             self.assertRegex(value, r"^[1-9][0-9]{8,17}$")
 
@@ -48,6 +51,26 @@ class WorldGeneratedMeshTests(unittest.TestCase):
     def test_every_id_has_an_asset_registry_line(self):
         for key, asset_id in self.assets.items():
             self.assertIn(asset_id, REGISTRY, f"{key} missing in docs/77")
+
+    def test_v3_tree_replacements_are_wired_with_a_safe_fallback(self):
+        """BD-462: three owner-approved V3 trees; empty ids (not uploaded) must change nothing; a filled id must be numeric."""
+        entries = re.findall(r'^\s{4}(\w+) = \{assetId = "(\d*)", placed = true, replaces = "(\w+)"\}', REPLACEMENTS_BLOCK, re.M)
+        self.assertEqual({k: r for k, _, r in entries}, {"tree_broadleaf_v3": "tree_broadleaf", "tree_pine_v3": "tree_pine", "tree_palm_v3": "tree_palm"})
+        for key, asset_id, replaces in entries:
+            self.assertIn(replaces, self.assets, f"{key} replaces an unknown key")
+            self.assertIn(replaces, self.placed)
+            if asset_id:
+                self.assertRegex(asset_id, r"^[1-9][0-9]{8,17}$")
+                self.assertNotIn(asset_id, self.assets.values(), "V3 id duplicates a current generated id")
+        self.assertIn("info.assetId ~= \"\"", SRC, "replacementFor must ignore empty ids")
+        arena = (ROOT / "src/server/Arena.luau").read_text()
+        self.assertIn("Generated.replacementFor(key)", arena)
+        self.assertIn("if not template and key and folder then template = folder:FindFirstChild(key) end", arena)
+        loader = (ROOT / "src/server/ImportedResources.luau").read_text()
+        self.assertIn('if asset.assetId~="" then table.insert(entries', loader, "loader must skip empty replacement ids")
+        for fbx in ("world_tree_broad_v3", "world_tree_pine_v3", "world_tree_palm_v3"):
+            self.assertTrue((ROOT / f"assets/blender/world/fbx_v3/{fbx}.fbx").exists())
+            self.assertIn(fbx, REGISTRY)
 
     def test_fallback_and_flag_are_wired(self):
         arena = (ROOT / "src/server/Arena.luau").read_text()
