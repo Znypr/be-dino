@@ -19,6 +19,11 @@ BUDGETS = {
     'tablet':  {'live3d': 5600, 'big': 220, 'beams': 72, 'trails': 20, 'lights': 24, 'ui': 160},
     'desktop': {'live3d': 7600, 'big': 520, 'beams': 160, 'trails': 40, 'lights': 24, 'ui': 220},
 }
+# Phone lights/beams come from the shared file tools/qa/phone_budgets.json (single source of truth, docs/126, docs/127).
+import json
+_PB = json.loads((ROOT / 'tools' / 'qa' / 'phone_budgets.json').read_text(encoding='utf-8'))['phone']
+BUDGETS['phone']['lights'] = _PB['lights']['value']
+BUDGETS['phone']['beams'] = _PB['beams']['value']
 PLAYERS = 12  # EffectsLod.MaxDinos.full: effect dinos in one view
 
 CLIENT_FILES = ['HatchSequence', 'MutationReveal', 'RareHatchClient', 'CosmeticVisuals.client', 'WeatherVisuals.client',
