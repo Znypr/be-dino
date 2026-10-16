@@ -11,6 +11,7 @@ END = chr(10) + "}" + chr(10)
 ASSETS_BLOCK = SRC.split("Generated.Assets = {")[1].split(END)[0]
 REPLACEMENTS_BLOCK = SRC.split("Generated.Replacements = {")[1].split(END)[0]
 PROPS_BLOCK = SRC.split("Generated.Props = {")[1].split(END)[0]
+COLOSSAL_BLOCK = SRC.split("Generated.Colossal = {")[1].split(END)[0]
 EXPECTED = {
     "137262237243889", "123860208068220", "115520379209668", "132703556702568", "100306166052872", "71416776916365",
     "135107793396569", "101039067942415", "122546672856917", "84690157197711", "118262268018795", "125187345067740",
@@ -91,6 +92,40 @@ class WorldGeneratedMeshTests(unittest.TestCase):
         arena = (ROOT / "src/server/Arena.luau").read_text()
         self.assertNotIn("Generated.Props", arena, "nothing may place the ground props before step 2")
         self.assertNotIn("GeneratedMeshes.Props", (ROOT / "src/shared/BiomePlacement.luau").read_text() if (ROOT / "src/shared/BiomePlacement.luau").exists() else "")
+
+    def test_colossal_ancient_trees_are_baked_but_unbound_and_gated_to_the_colossal_layer(self):
+        """BD-474: three colossal trees x LOD0/LOD1, empty ids (not uploaded), a safe stand-in fallback, used by the colossal layer only."""
+        entries = re.findall(r'^\s{4}(\w+) = \{assetId = "(\d*)", placed = (true|false), lod = (0|1), kit = "(\w+)", standIn = "(\w+)", tris = (\d+)', COLOSSAL_BLOCK, re.M)
+        keys = {k for k, *_ in entries}
+        self.assertEqual(keys, {"tree_colossal_broadleaf_v3", "tree_colossal_pine_v3", "tree_colossal_palm_v3",
+                                "tree_colossal_broadleaf_v3_lod1", "tree_colossal_pine_v3_lod1", "tree_colossal_palm_v3_lod1"})
+        fbx_name = {"broadleaf": "broad", "pine": "pine", "palm": "palm"}
+        for key, asset_id, placed, lod, kit, stand_in, tris in entries:
+            self.assertEqual(placed, "true" if lod == "0" else "false", f"{key}: only LOD0 is placed; LOD1 waits for BD-475")
+            self.assertEqual(key.endswith("_lod1"), lod == "1")
+            self.assertIn(f"{kit}=", KIT, f"{key}: unknown kit id {kit}")
+            self.assertTrue(kit.endswith("_l"), "colossal meshes stand in for the size-l kit trees")
+            self.assertIn(stand_in, self.assets, f"{key}: stand-in {stand_in} is not a current generated mesh")
+            if asset_id:
+                self.assertRegex(asset_id, r"^[1-9][0-9]{8,17}$")
+                self.assertNotIn(asset_id, self.assets.values(), "colossal id duplicates a current generated id")
+            fam = key.split("_")[2]
+            fbx = f"world_tree_colossal_{fbx_name[fam]}_v3" + ("_lod1" if lod == "1" else "")
+            self.assertTrue((ROOT / f"assets/blender/world/fbx_v3/{fbx}.fbx").exists(), fbx)
+            self.assertIn(fbx, REGISTRY)
+            # docs/139 s9: LOD0 about 4,000 tris (at most 4,200), LOD1 about 1,000 (800 to 1,100)
+            if lod == "0":
+                self.assertTrue(3500 <= int(tris) <= 4200, f"{key} LOD0 tris {tris}")
+            else:
+                self.assertTrue(800 <= int(tris) <= 1100, f"{key} LOD1 tris {tris}")
+        self.assertEqual({e[4] for e in entries}, {"world_tree_canopy_l", "world_tree_conifer_l", "world_tree_cycad_l"})
+        self.assertIn('info.lod == 0 and info.kit == kitId and info.assetId ~= ""', SRC, "colossalFor must ignore empty ids and LOD1")
+        arena = (ROOT / "src/server/Arena.luau").read_text()
+        self.assertIn('local colossalKey = if layer == "colossal" then Generated.colossalFor(id) else nil', arena, "ordinary size-l trees must keep their meshes")
+        self.assertIn("p.layer) or Resources.clone(p.id)", arena, "the placement layer must reach generatedProp")
+        self.assertIn("if not template and key and folder then template = folder:FindFirstChild(key) end", arena, "stand-in fallback")
+        loader = (ROOT / "src/server/ImportedResources.luau").read_text()
+        self.assertIn('for key,asset in GeneratedMeshes.Colossal do if asset.assetId~="" then', loader, "loader must skip empty colossal ids")
 
     def test_plants_are_baked_but_unbound_and_unplaced(self):
         """BD-463 step 1: eight plants (grass tufts, jungle plant, flower clusters, fern), empty ids (not uploaded), never placed,

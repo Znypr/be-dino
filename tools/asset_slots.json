@@ -1737,6 +1737,75 @@
    ]
   },
   {
+   "name": "tree_colossal_broadleaf_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "tree_colossal_broadleaf_v3",
+   "group": "Colossal.tree_colossal_broadleaf_v3",
+   "table": "Colossal",
+   "reader": [
+    "src/server/Arena.luau",
+    "colossalFor"
+   ]
+  },
+  {
+   "name": "tree_colossal_pine_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "tree_colossal_pine_v3",
+   "group": "Colossal.tree_colossal_pine_v3",
+   "table": "Colossal",
+   "reader": [
+    "src/server/Arena.luau",
+    "colossalFor"
+   ]
+  },
+  {
+   "name": "tree_colossal_palm_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "tree_colossal_palm_v3",
+   "group": "Colossal.tree_colossal_palm_v3",
+   "table": "Colossal",
+   "reader": [
+    "src/server/Arena.luau",
+    "colossalFor"
+   ]
+  },
+  {
+   "name": "tree_colossal_broadleaf_v3_lod1",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "tree_colossal_broadleaf_v3_lod1",
+   "group": "Colossal.tree_colossal_broadleaf_v3_lod1",
+   "table": "Colossal",
+   "pending": "BD-475 LOD swap"
+  },
+  {
+   "name": "tree_colossal_pine_v3_lod1",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "tree_colossal_pine_v3_lod1",
+   "group": "Colossal.tree_colossal_pine_v3_lod1",
+   "table": "Colossal",
+   "pending": "BD-475 LOD swap"
+  },
+  {
+   "name": "tree_colossal_palm_v3_lod1",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "tree_colossal_palm_v3_lod1",
+   "group": "Colossal.tree_colossal_palm_v3_lod1",
+   "table": "Colossal",
+   "pending": "BD-475 LOD swap"
+  },
+  {
    "name": "meadow_grass_v2_color",
    "kind": "image",
    "target": "matvar",
