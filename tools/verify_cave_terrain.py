@@ -3,7 +3,7 @@ tests the pure voxel rules (material + occupancy per cell), never Studio: paths 
 clear above, the 4 ceiling holes open to the sky, walls and ceiling closed and >= 8 studs thick, the gate mouth open and closed
 behind, the lava basin carved, no isolated air bubbles anywhere in the grid (6-neighbour flood fill), deterministic, material
 mix (stone, rock, slate, cobblestone, a little moss) and budgets (cells, solid voxels, WriteVoxels chunks, work between yields).
-Also static checks: Config.CaveHub stays false, the server writer is only called from the Arena cave branch and follows
+Also static checks: Config.CaveHub is false in source (on only in the playtest build), the server writer is only called from the Arena cave branch and follows
 IslandTerrain's chunked yielding pattern, BiomePlacement.Sanctuary follows hub(config).biome when the flag is on.
 Not Studio evidence: see the BD-281 kanban row for what was and was not verified in Studio.
 """
@@ -25,7 +25,7 @@ local function dist(ax,az,bx,bz) return math.sqrt((ax-bx)^2+(az-bz)^2) end
 local function occAt(x,y,z) local _,o=R.cell(x,y,z) return o end
 
 assert(res==Config.TerrainResolution,"voxel size = Config.TerrainResolution")
-assert(Config.CaveHub==(Config.ReleaseProfile=="playtest"),"CaveHub is on only in the playtest profile")
+assert(Config.CaveHub==(Config.ReleaseProfile=="playtest"),"CaveHub ships OFF in the default build and ON in the playtest build (owner 2026-10-16, docs/125)")
 assert(R.XMin%res==0 and R.XMax%res==0 and R.YMin%res==0 and R.YMax%res==0 and R.ZMin%res==0 and R.ZMax%res==0,"region aligned to the voxel grid")
 assert(R.ZMin>Config.ArenaHalfWidth+8,"cave region never overlaps the island terrain (writes cannot clobber it)")
 local hub=C.hub(setmetatable({CaveHub=true},{__index=Config}))
