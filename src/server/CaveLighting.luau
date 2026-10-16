@@ -48,17 +48,17 @@ local function shaftTexture(): string
     return if Assets.isValid(id) then id else Assets.Builtin.smoke
 end
 local function shaftBeam(parent: Instance, a0: Attachment, a1: Attachment, name: string, width: number, alpha: number): Beam
-    local b = Instance.new("Beam")
-    b.Name, b.Attachment0, b.Attachment1 = name, a0, a1
-    b.FaceCamera, b.Segments, b.CurveSize0, b.CurveSize1 = true, 1, 0, 0
-    b.Width0, b.Width1 = width, width
-    b.Texture, b.TextureMode, b.TextureSpeed, b.LightEmission = shaftTexture(), Enum.TextureMode.Stretch, 0, 0.5
-    b.Color = ColorSequence.new(c3(Rules.BeamColor))
-    b.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.12, alpha), NumberSequenceKeypoint.new(0.85, alpha), NumberSequenceKeypoint.new(1, 1)})
-    b:SetAttribute("IsLightingFx", true)
-    b:SetAttribute("SoftEdged", true)
-    b.Parent = parent
-    return b
+    local beam = Instance.new("Beam")
+    beam.Name, beam.Attachment0, beam.Attachment1 = name, a0, a1
+    beam.FaceCamera, beam.Segments, beam.CurveSize0, beam.CurveSize1 = true, 1, 0, 0
+    beam.Width0, beam.Width1 = width, width
+    beam.Texture, beam.TextureMode, beam.TextureSpeed, beam.LightEmission = shaftTexture(), Enum.TextureMode.Stretch, 0, 0.5
+    beam.Color = ColorSequence.new(c3(Rules.BeamColor))
+    beam.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.12, alpha), NumberSequenceKeypoint.new(0.85, alpha), NumberSequenceKeypoint.new(1, 1)})
+    beam:SetAttribute("IsLightingFx", true)
+    beam:SetAttribute("SoftEdged", true)
+    beam.Parent = parent
+    return beam
 end
 
 -- Lights sit on an Attachment under Terrain (no extra Part per light).

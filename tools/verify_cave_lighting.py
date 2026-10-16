@@ -208,7 +208,7 @@ def static_checks():
     assert 'SpecialMesh' not in server and 'MeshPart' not in server, 'no mesh (code-built model art) in the lighting FX'
     # BD-296: the shafts are camera-facing, soft-textured Beams (no cylinder Part, whose flat edges showed as vertical seams in the tunnel views)
     assert 'Enum.PartType.Cylinder' not in server, 'BD-296 no hard-edged cylinder shafts'
-    assert 'b.FaceCamera, b.Segments' in server and 'FaceCamera, b.Segments, b.CurveSize0, b.CurveSize1 = true' in server, 'BD-296 shaft beams face the camera (never edge-on)'
+    assert 'beam.FaceCamera, beam.Segments' in server and 'FaceCamera, beam.Segments, beam.CurveSize0, beam.CurveSize1 = true' in server, 'BD-296 shaft beams face the camera (never edge-on)'
     assert 'Assets.Uploaded.softMist' in server and 'Enum.TextureMode.Stretch' in server, 'BD-296 shaft beams use the soft mist sprite stretched over the ribbon (soft sides)'
     assert 'NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.12, alpha)' in server, 'BD-296 shaft ends fade to fully transparent'
     assert server.count('shaftBeam(volume') == 2, 'one haze and one core beam per hole'
