@@ -54,7 +54,8 @@ for _, id in Pattern.Ids do
         end
         if id == "01_blank" then assert(painted == 0, "blank must not paint")
         else
-            local want = (1 - share) * body
+            -- BD-307: coverage follows the per-pattern curve (area patterns = blend exactly, spot-like patterns capped)
+            local want = (1 - Pattern.coverage(id, share)) * body
             assert(math.abs(painted - want) <= body * 0.06, string.format("%s share %.1f: painted %d of %d (want %.0f)", id, share, painted, body, want))
             if share == 0.5 then
                 assert(signatures[sig] == nil, id .. " looks like another pattern")
@@ -70,7 +71,8 @@ local a = Pattern.compute("03_round_spots", seed, weights, 1, true)
 local b = Pattern.compute("03_round_spots", Pattern.seed("raptor|tail"), weights, 1, true)
 local ca, cb, diff = 0, 0, 0
 for i = 1, SIZE * SIZE do if a[i] >= 0.5 then ca += 1 end if b[i] >= 0.5 then cb += 1 end if math.abs(a[i] - b[i]) > 0.5 then diff += 1 end end
-assert(math.abs(ca - body * 0.5) <= body * 0.06 and math.abs(cb - body * 0.5) <= body * 0.06, "same-family split")
+local half = (1 - Pattern.coverage("03_round_spots", 0.5)) * body -- same-family genes use the half-and-half rule through the curve
+assert(math.abs(ca - half) <= body * 0.06 and math.abs(cb - half) <= body * 0.06, "same-family split")
 assert(diff > body * 0.1, "seed has no effect")
 -- unknown pattern id -> no paint (plain colours), onRow is called once per row
 local rows = 0
@@ -87,6 +89,50 @@ for x = 0, 199 do
     if v >= 0.5 then run += 1 else if run > 0 then longest = math.max(longest, run) shortest = math.min(shortest, run) end run = 0 end
 end
 assert(longest <= 64 and shortest >= 4, "spot run lengths " .. shortest .. ".." .. longest)
+-- BD-307 coverage curve: monotonic, area patterns follow the blend exactly, spots/freckles/scales capped so a low blend never
+-- turns spots into blobs (blend 35 = 65 % secondary asked -> at most 28 % painted for spots)
+for _, id in Pattern.Ids do
+    local last = -1
+    for s = 0, 100, 5 do local c = Pattern.coverage(id, s / 100) assert(c >= last and c >= 0 and c <= 1, id .. " coverage not monotonic") last = c end
+end
+assert(Pattern.coverage("04_bold_patches", 0.3) == 0.3 and Pattern.coverage("05_horizontal_bands", 0.8) == 0.8, "area patterns follow blend")
+assert(1 - Pattern.coverage("03_round_spots", 0.35) <= 0.28 and 1 - Pattern.coverage("03_round_spots", 0.95) >= 0.05, "spot cap")
+assert(1 - Pattern.coverage("08_freckles", 0.2) <= 0.2, "freckle cap")
+local blobs = Pattern.compute("03_round_spots", seed, weights, 0.35, false)
+local nb = 0 for i = 1, SIZE * SIZE do if blobs[i] >= 0.5 then nb += 1 end end
+assert(nb <= body * 0.30, "spots at blend 35 cover " .. nb / body)
+-- BD-307 scales: staggered rows (a row's rim positions differ from the next row's) and plump centres (a run of primary >= 6 px
+-- inside a scale on the flank), checked on the 3D mask in the (y, z) side plane
+do
+    local rimA, rimB = {}, {}
+    local p = 0.11 local h = p * 0.72
+    local y0 = (math.floor(64 * p / h) + 0.5) * h - 64 * p -- centre line of one scale row
+    for k = 0, 39 do
+        local z = k * p / 20
+        rimA[k] = Pattern.mask3("07_diamond_scales", 0.3, y0, z, seed)
+        rimB[k] = Pattern.mask3("07_diamond_scales", 0.3, y0 + h, z, seed) -- next row
+    end
+    local shifted = 0
+    for k = 0, 39 do if math.abs(rimA[k] - rimB[k]) > 0.2 then shifted += 1 end end
+    assert(shifted >= 10, "scale rows are not staggered: " .. shifted)
+    local run, best = 0, 0
+    for k = 0, 199 do local v = Pattern.mask3("07_diamond_scales", 0.3, y0, k * p / 100, seed) if v < 0.35 then run += 1 best = math.max(best, run) else run = 0 end end
+    assert(best >= 20 and best <= 100, "scale centre run " .. best)
+    for k = 0, 99 do local v = Pattern.mask3("07_diamond_scales", 0.3, k * 0.013, 0.02, seed) assert(v >= 0 and v <= 1) end
+end
+-- BD-306 size parameter: a 128 px limb bake shows the same coverage as the 256 px body bake (UV masks scaled, 3D masks unchanged)
+do
+    local S = 128
+    local w = table.create(S * S, 1)
+    local m = Pattern.compute("06_wavy_stripes", seed, w, 0.6, false, nil, nil, S)
+    local painted = 0 for i = 1, S * S do assert(m[i] >= 0 and m[i] <= 1) if m[i] >= 0.5 then painted += 1 end end
+    assert(math.abs(painted / (S * S) - 0.4) <= 0.06, "small cell coverage " .. painted / (S * S))
+    local rows = 0
+    Pattern.compute("03_round_spots", seed, w, 0.5, false, function() rows += 1 end, nil, S)
+    assert(rows == S, "onRow per row at size " .. S)
+    local map = Pattern.rasterize({{0, 0, -1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0}}, S)
+    assert(buffer.len(map) == S * S * 4 and buffer.readu8(map, 3) == 255, "rasterize at size")
+end
 -- 2. tier look: gentle, bounded, base matte, every tier distinct
 for _, id in Tier.Order do
     local e = Tier.get(id) assert(e and e.id == id, id)
@@ -102,7 +148,15 @@ for _, id in Tier.Order do
     local r2, g2, b2 = Tier.blend(0.84, 0.28, 0.58, e, true)
     local mx, mn = math.max(r2, g2, b2), math.min(r2, g2, b2)
     assert(mx <= 1 and mn >= 0 and (mx - mn) / mx > 0.45, id .. " trim turned muddy")
+    -- BD-308 baked sheen: bounded, only lifts facets the source lit (k > 1), never darkens, never pushes past white
+    assert(e.sheen > 0 and e.sheen <= Tier.MaxSheen, id .. " sheen bounded")
+    local lr, lg, lb = Tier.lift(0.5, 0.3, 0.2, 1.4, e)
+    assert(lr > 0.5 and lg > 0.3 and lb > 0.2 and lr <= 1 and lg <= 1 and lb <= 1 and lr - 0.5 <= 0.35, id .. " lift")
+    local dr, dg, db = Tier.lift(0.5, 0.3, 0.2, 0.8, e)
+    assert(dr == 0.5 and dg == 0.3 and db == 0.2, id .. " shadow facets untouched")
+    assert(select(1, Tier.lift(1, 1, 1, 1.6, e)) <= 1, "white stays white")
 end
+assert(Recolor.shade(0.9, 0.9, 0.9, base) == 1.6 and Recolor.shade(0.01, 0.01, 0.01, base) == 0.3, "shade clamp")
 assert(Tier.get("base") == nil and Tier.get(nil) == nil and Tier.get(false) == nil and Tier.get(true) == Tier.get("gold"), "stage mapping")
 -- 3. the cheap fallback tint keeps black black and reproduces the gene colour on the base colour
 local fr, fg, fb = Recolor.flatTint(base, 0.9, 0.2, 0.2)
@@ -118,8 +172,7 @@ def check_key():
     key = re.search(r'function Texture\.key\(textureId: string, spec: Spec\): string\n(.*?)\nend', text, re.S).group(1)
     for field in ("textureId", "spec.patternId", "spec.primary", "spec.secondary", "spec.same", "spec.primaryShare", "spec.tier"):
         assert field in key, f"cache key ignores {field}"
-    assert re.search(r'Texture\.Cap = (\d+)', text) and int(re.search(r'Texture\.Cap = (\d+)', text).group(1)) <= 30, "bake cap over the EditableImage budget"
-    assert 'Cache.new(Texture.Cap' in text and 'Destroying:Once' in text, "bakes must be ref counted and released"
+    assert 'Cache.new(Texture.BigCap' in text and 'Destroying:Once' in text, "bakes must be ref counted and released (byte caps: verify_lowpoly_budget.py)"
     dinos = (ROOT / 'src/shared/LowPolyDinos.luau').read_text(encoding='utf-8')
     assert 'Enum.Material.Plastic, 0' in dinos and 'Tier.MaxReflectance' in dinos, "base matte / tier gloss bounded (BD-173)"
     assert 'function LowPoly.applyTier' in dinos

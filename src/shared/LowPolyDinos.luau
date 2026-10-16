@@ -52,11 +52,21 @@ end
 -- "emerald" / "diamond") adds the tier tint, Metal/Glass + reflectance on body-colour parts and one soft sparkle; base stays matte.
 local genesOf = setmetatable({} :: {[Instance]: any}, {__mode = "k"})
 LowPoly.Far = 160 -- studs: beyond this a world dino keeps the cheap tint (BD-203 LOD rule)
+local function motionEnabled(): boolean
+    if not game:GetService("RunService"):IsClient() then return true end
+    local ok, theme = pcall(function() return require(script.Parent.UITheme) end)
+    return not ok or theme.MotionEnabled ~= false
+end
+-- BD-308: sparkle sized and rated with the dino (a T-Rex gets bigger, more frequent sparks than a Compy), none under Reduce Motion
+-- (Calm motion): the tier then reads by its tint, baked sheen and material alone (nothing moves).
 local function sparkle(container: Instance, body: BasePart?, entry: any?)
     local old = container:FindFirstChild("LPTierSparkle", true)
     if old then old:Destroy() end
-    if not entry or not body or entry.sparkleRate <= 0 then return end
+    if not entry or not body or entry.sparkleRate <= 0 or not motionEnabled() then return end
     local Effects = require(script.Parent.EffectAssets)
+    local longest = 6 -- a Compy is about 6 studs long after LowPolyDinoAssets.scale, a T-Rex about 12
+    if container:IsA("Model") then local _, size = container:GetBoundingBox() longest = math.max(size.X, size.Y, size.Z, 1) end
+    local k = math.clamp(longest / 6, 0.7, 2)
     local emitter = Instance.new("ParticleEmitter")
     emitter.Name = "LPTierSparkle"
     emitter.Texture = Effects.resolve("sparkSheet")
@@ -65,11 +75,24 @@ local function sparkle(container: Instance, body: BasePart?, entry: any?)
     end
     emitter.Color = ColorSequence.new(Color3.fromRGB(entry.sparkle[1], entry.sparkle[2], entry.sparkle[3]))
     emitter.LightEmission, emitter.LightInfluence = 0.6, 0.3
-    emitter.Rate, emitter.Lifetime = entry.sparkleRate, NumberRange.new(0.8, 1.2)
-    emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.4, 0.55), NumberSequenceKeypoint.new(1, 0)})
+    emitter.Rate, emitter.Lifetime = entry.sparkleRate * k, NumberRange.new(0.8, 1.2)
+    emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.4, 0.55 * k), NumberSequenceKeypoint.new(1, 0)})
     emitter.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.2), NumberSequenceKeypoint.new(1, 1)})
     emitter.Speed, emitter.SpreadAngle, emitter.Rotation = NumberRange.new(0.2, 0.5), Vector2.new(180, 180), NumberRange.new(0, 360)
     emitter.Parent = body
+end
+local function tintColor(species: string, textureId: string, spec: Texture.Spec): Color3
+    local base = Texture.baseOf(textureId) or Recolor.baseOf(species)
+    return Color3.new(Recolor.flatTint(base, spec.primary.R, spec.primary.G, spec.primary.B))
+end
+-- One part's bake (body/head 256 px, other parts 128 px; BD-306): texture on success, the cheap tint when denied / full / failed.
+local function partBake(container: Instance, species: string, part: MeshPart, textureId: string, role: string, spec: Texture.Spec, key: string)
+    part:SetAttribute("LPLod", "baking")
+    local geom = LowPoly.geometry(species, part.Name)
+    local content = Texture.acquire(part, textureId, species, spec, geom, Texture.sizeFor(role))
+    if not part.Parent or container:GetAttribute("LPLookKey") ~= key then return end
+    if content then part.TextureContent, part.Color = content, Color3.new(1, 1, 1) part:SetAttribute("LPLod", "texture")
+    else part.TextureID = textureId part.Color = tintColor(species, textureId, spec) part:SetAttribute("LPLod", "tint") end
 end
 function LowPoly.tint(container: Instance, genes: any)
     if genes then genesOf[container] = genes else genes = genesOf[container] end
@@ -86,6 +109,7 @@ function LowPoly.tint(container: Instance, genes: any)
     elseif not entry then return end
     local camera = workspace.CurrentCamera
     local body: BasePart? = nil
+    local textured: {{part: MeshPart, textureId: string, role: string}} = {}
     for _, part in container:GetDescendants() do
         if part:IsA("MeshPart") then
             local textureId = part:GetAttribute("LPTexture")
@@ -98,42 +122,52 @@ function LowPoly.tint(container: Instance, genes: any)
                 part.Reflectance = math.min(entry.reflectance, Tier.MaxReflectance)
             else part.Material, part.Reflectance = Enum.Material.Plastic, 0 end
             if eyeish or not spec then part.Color = Color3.new(1, 1, 1) continue end
-            local s = table.clone(spec :: Texture.Spec)
-            s.seedName = species .. "|" .. role
-            local base = Texture.baseOf(textureId) or Recolor.baseOf(species)
-            local fr, fg, fb = Recolor.flatTint(base, s.primary.R, s.primary.G, s.primary.B)
-            local key = Texture.key(textureId, s)
-            if part:GetAttribute("LPTintKey") == key and part:GetAttribute("LPLod") == "texture" then continue end
-            part:SetAttribute("LPTintKey", key)
-            local far = camera ~= nil and part:IsDescendantOf(workspace) and (camera.CFrame.Position - part.Position).Magnitude > LowPoly.Far
-            if far then Texture.release(part) part.TextureID = textureId part.Color = Color3.new(fr, fg, fb) part:SetAttribute("LPLod", "tint") continue end
-            local geom = LowPoly.geometry(species, part.Name)
-            part:SetAttribute("LPLod", "baking")
-            task.spawn(function()
-                local content = Texture.acquire(part, textureId, species, s, geom)
-                if not part.Parent or part:GetAttribute("LPTintKey") ~= key then return end
-                if content then part.TextureContent, part.Color = content, Color3.new(1, 1, 1) part:SetAttribute("LPLod", "texture")
-                else
-                    local b = Texture.baseOf(textureId) or base
-                    part.TextureID = textureId part.Color = Color3.new(Recolor.flatTint(b, s.primary.R, s.primary.G, s.primary.B)) part:SetAttribute("LPLod", "tint")
-                end
-            end)
-            -- cheap tint shows at once while the bake runs (or stays when the cache is full)
-            if part:GetAttribute("LPLod") ~= "texture" then part.Color = Color3.new(fr, fg, fb) end
+            table.insert(textured, {part = part, textureId = textureId, role = role})
         end
     end
     sparkle(container, body, entry)
+    if not spec or #textured == 0 then return end
+    local s = spec :: Texture.Spec
+    local anchor = body or textured[1].part
+    local far = camera ~= nil and anchor:IsDescendantOf(workspace) and (camera.CFrame.Position - anchor.Position).Magnitude > LowPoly.Far
+    local key = Texture.key(species, s) .. (if far then "|far" else "|near")
+    if container:GetAttribute("LPLookKey") == key and container:GetAttribute("LPLod") ~= "baking" then return end
+    container:SetAttribute("LPLookKey", key)
+    -- cheap tint at once (shows while the bakes run, or stays when far / denied / full); the model's own texture is never cleared
+    for _, t in textured do
+        Texture.release(t.part)
+        t.part.TextureID = t.textureId
+        t.part.Color = tintColor(species, t.textureId, s)
+        t.part:SetAttribute("LPLod", "tint")
+    end
+    if far then container:SetAttribute("LPLod", "tint") return end
+    container:SetAttribute("LPLod", "baking")
+    task.spawn(function()
+        local left = #textured
+        local textures = 0
+        for _, t in textured do
+            local ps = table.clone(s)
+            ps.seedName = species .. "|" .. t.role
+            task.spawn(function()
+                partBake(container, species, t.part, t.textureId, t.role, ps, key)
+                if t.part:GetAttribute("LPLod") == "texture" then textures += 1 end
+                left -= 1
+            end)
+        end
+        while left > 0 do task.wait(0.1) end
+        if container:GetAttribute("LPLookKey") ~= key then return end
+        -- "texture" = every part baked, "parts" = some on the tint (cache full / budget), "tint" = none
+        container:SetAttribute("LPLod", if textures == #textured then "texture" elseif textures > 0 then "parts" else "tint")
+    end)
 end
 -- Fused tier look on a low-poly model (nil / "base" / false restores matte). Reads the same stage strings as the rest of the game.
 function LowPoly.applyTier(container: Instance, stage: any)
     local entry = Tier.get(stage)
     container:SetAttribute("LPTier", if entry then entry.id else nil)
-    for _, part in container:GetDescendants() do
-        if part:IsA("MeshPart") then part:SetAttribute("LPTintKey", nil) end
-    end
+    container:SetAttribute("LPLookKey", nil)
     LowPoly.tint(container, nil)
 end
--- Maintenance (client only): far world dinos drop to the cheap tint, near ones get their bake back as slots free up.
+-- Maintenance (client only): far world dinos drop to the cheap tint (bakes released), near ones get their bakes back as slots free up.
 if game:GetService("RunService"):IsClient() then
     task.spawn(function()
         while true do
@@ -142,16 +176,18 @@ if game:GetService("RunService"):IsClient() then
             pcall(function()
                 local camera = workspace.CurrentCamera
                 for container, _ in genesOf do
-                    if camera and container.Parent and container:IsDescendantOf(workspace) then
-                        local dirty = false
-                        for _, part in container:GetDescendants() do
-                            if part:IsA("MeshPart") and part:GetAttribute("LPTexture") then
-                                local far = (camera.CFrame.Position - part.Position).Magnitude > LowPoly.Far
-                                local lod = part:GetAttribute("LPLod")
-                                if (far and lod == "texture") or (not far and lod == "tint") then part:SetAttribute("LPTintKey", nil) dirty = true end
-                            end
+                    if camera and container.Parent and container:IsDescendantOf(workspace) and container:IsA("Model") then
+                        local far = (camera.CFrame.Position - container:GetPivot().Position).Magnitude > LowPoly.Far
+                        local key = tostring(container:GetAttribute("LPLookKey") or "")
+                        local wasFar = string.sub(key, -4) == "|far"
+                        local lod = container:GetAttribute("LPLod")
+                        -- a near dino left on the tint (cache full / budget) retries every 10 s as slots free up
+                        local stale = not far and (lod == "tint" or lod == "parts") and os.clock() >= (tonumber(container:GetAttribute("LPRetryAt")) or 0)
+                        if key ~= "" and (far ~= wasFar or stale) then
+                            container:SetAttribute("LPRetryAt", os.clock() + 10)
+                            container:SetAttribute("LPLookKey", nil)
+                            LowPoly.tint(container, nil)
                         end
-                        if dirty then LowPoly.tint(container, nil) end
                     end
                 end
             end)
