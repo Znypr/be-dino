@@ -1,6 +1,6 @@
 --!strict
 -- BD-246: Water dinos cannot jump; the jump input asks the server for a dash (ClassDash remote) and applies the velocity it
--- answers with. Does nothing unless the server created the remote (Config.CombatEnabled) and the dino is Water class.
+-- answers with. Does nothing unless the server created the remote (Config.ClassMovementEnabled) and the dino is Water class.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")

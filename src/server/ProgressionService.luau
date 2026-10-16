@@ -203,7 +203,7 @@ function Service.start(repository)
                     PrivateState.set(player, "GrowthMultiplier",growth) PrivateState.set(player, "SpeedMultiplier",speed) PrivateState.set(player, "LootMultiplier",loot)
                     local h=c:FindFirstChildOfClass("Humanoid")
                     if h then
-                        local classX=if GameConfig.CombatEnabled then ClassMovement.walkSpeed(ClassMovement.classForSpecies(player:GetAttribute("EquippedSpeciesId")))/GameConfig.WalkSpeed else 1 -- BD-246, flag off = 1
+                        local classX=if GameConfig.ClassMovementEnabled then ClassMovement.walkSpeed(ClassMovement.classForSpecies(player:GetAttribute("EquippedSpeciesId")))/GameConfig.WalkSpeed else 1 -- BD-246, flag off = 1
                         h.WalkSpeed=GameConfig.WalkSpeed*classX*(if c:GetAttribute("RunState")=="Active" then speed else 1)
                     end
                     c:SetAttribute("EquippedAuraId",p.equippedAura)

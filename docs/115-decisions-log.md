@@ -56,3 +56,5 @@ Extracted from the kanban owner log, AGENTS.md, docs and the lead sessions. "LEA
 - OWNER (2026-10-16, via coordinator): the fast-travel perk (D22, BD-391/405) is priced as a mid goal, about 500 crystals. Still PROVISIONAL (`ProgressionConfig.FastTravelPrice = 500`); supersedes the 300 / 600 / 1,200 options in docs/116 Q10.
 
 - OWNER (2026-10-16): the Balloon skin (defeat = pops and flutters away softly) is a **Robux skin**, like Bricks, Clay and Plushy. Answers docs/116 Q5 option (a). Release stays behind the Robux release flags until tested; no art upload is needed (procedural skin). Tracked in [120](120-pending-owner-uploads-checklist.md).
+
+- BD-423 (2026-10-16): class movement (glide, dash, class walk speed) has its own flag `ClassMovementEnabled` (default off, on in playtest) and no longer needs `CombatEnabled`. The Index card and dino page show the class and a one-line feel hint (src/shared/ClassInfo.luau). Text only: no class icon art exists yet.

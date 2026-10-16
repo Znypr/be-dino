@@ -78,6 +78,8 @@ jobs:
           python tools/verify_load.py --runner /tmp/luau/luau
           python tools/verify_multiplayer_sim.py --runner /tmp/luau/luau
           python tools/verify_private_state.py --runner /tmp/luau/luau
+          python tools/verify_class_movement.py --runner /tmp/luau/luau
+          python tools/verify_class_picker.py --runner /tmp/luau/luau
           python tools/verify_server_scaling.py --runner /tmp/luau/luau
           python tools/generate_sfx.py --check
       - name: Build place
