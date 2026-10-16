@@ -12,14 +12,40 @@ def wrapped(path): return '(function()\n' + (ROOT / path).read_text() + '\nend)(
 
 LUAU = r'''
 local G=SpawnGeometry
--- Hub: SanctuaryGround 110x6x95 centred (0,3,cz); fences at x=+-48 and z=cz+-43 (Arena.build).
+local expectCave=EXPECT_CAVE
+assert((Config.CaveHub==true)==expectCave,"Config.CaveHub == (profile is playtest)")
 local hub=G.hubPoint(Config)
-assert(hub.X==0 and hub.Z==Config.SanctuaryCenterZ,"hub point at the sanctuary centre")
-assert(G.inHub(Config,hub.X,hub.Z),"hub point over SanctuaryGround")
-assert(math.abs(hub.X)<48-4 and math.abs(hub.Z-Config.SanctuaryCenterZ)<43-4,"hub point inside the fences")
-assert(hub.Y>G.HubFloorY+2 and hub.Y<G.HubFloorY+8,"hub point just above the floor "..hub.Y)
-assert(Config.SanctuaryCenterZ-G.HubHalfZ>Config.ArenaHalfWidth+8,"hub ground does not overlap the terrain")
-assert(G.HubHalfX==55 and G.HubHalfZ==47.5 and G.HubFloorY==6,"hub numbers mirror Arena.build")
+if Config.CaveHub==true then
+ -- Cave hub (BD-280/BD-285): the spawn is CaveHubLayout.spawn() on the organic floor, inside the open cave.
+ local C=CaveHubLayout
+ local sp=C.spawn()
+ assert(hub.X==sp.x and hub.Y==sp.y and hub.Z==sp.z,"hubPoint is CaveHubLayout.spawn()")
+ assert(hub.Z==C.CenterZ and C.hub(Config).floorY==C.FloorY,"hub point at the cave centre")
+ assert(G.inHub(Config,hub.X,hub.Z),"spawn inside the hub box")
+ assert(C.insideFloor(hub.X,hub.Z,6),"spawn at least 6 studs inside the open cave (not in rock)")
+ local fl=C.floorHeight(hub.X,hub.Z)
+ assert(hub.Y-fl>=G.DropClearance-1 and hub.Y-fl<=G.DropClearance+8,"spawn just above the cave floor "..(hub.Y-fl))
+ assert(C.ceilingY(hub.X,hub.Z)-hub.Y>8,"headroom at the spawn")
+ for dx=-6,6,3 do for dz=-6,6,3 do
+  assert(C.insideFloor(hub.X+dx,hub.Z+dz,2),"spawn surroundings are open floor")
+  local f=C.floorHeight(hub.X+dx,hub.Z+dz)
+  assert(not G.fallen(Config,Layout,Vector3.new(hub.X+dx,f+3,hub.Z+dz)),"standing near spawn must not count as fallen")
+  assert(G.fallen(Config,Layout,Vector3.new(hub.X+dx,C.FloorY-G.FallDepth-1,hub.Z+dz)),"under the cave not detected")
+ end end
+ assert(C.hub(Config).centerZ-C.hub(Config).halfZ>Config.ArenaHalfWidth+8,"cave box does not overlap the terrain")
+ assert(G.recoveryPoint(Config,Layout,false)==hub,"recovery returns to the cave spawn outside a run")
+ -- flag-off identity on a clone: the legacy hub is untouched
+ local off=table.clone(Config) off.CaveHub=false
+ assert(G.hubPoint(off).Z==Config.SanctuaryCenterZ and G.hubPoint(off).Y==G.HubFloorY+G.DropClearance,"flag-off clone keeps the legacy hub")
+else
+ -- Legacy hub: SanctuaryGround 110x6x95 centred (0,3,cz); fences at x=+-48 and z=cz+-43 (Arena.build).
+ assert(hub.X==0 and hub.Z==Config.SanctuaryCenterZ,"hub point at the sanctuary centre")
+ assert(G.inHub(Config,hub.X,hub.Z),"hub point over SanctuaryGround")
+ assert(math.abs(hub.X)<48-4 and math.abs(hub.Z-Config.SanctuaryCenterZ)<43-4,"hub point inside the fences")
+ assert(hub.Y>G.HubFloorY+2 and hub.Y<G.HubFloorY+8,"hub point just above the floor "..hub.Y)
+ assert(Config.SanctuaryCenterZ-G.HubHalfZ>Config.ArenaHalfWidth+8,"hub ground does not overlap the terrain")
+ assert(G.HubHalfX==55 and G.HubHalfZ==47.5 and G.HubFloorY==6,"hub numbers mirror Arena.build")
+end
 -- Island run start.
 local isl=G.islandPoint(Layout)
 local ground=Layout.height(isl.X,isl.Z)
@@ -45,10 +71,12 @@ for x=-E,E,16 do for z=-E,E,16 do
  assert(not G.fallen(Config,Layout,Vector3.new(x,h+3,z)),"walkable ground flagged as fallen")
  assert(G.fallen(Config,Layout,Vector3.new(x,h-G.FallDepth-1,z)),"under-map not detected")
 end end
+if Config.CaveHub~=true then
 for x=-55,55,5 do for z=Config.SanctuaryCenterZ-47,Config.SanctuaryCenterZ+47,5 do
  assert(not G.fallen(Config,Layout,Vector3.new(x,G.HubFloorY+3,z)),"hub floor flagged as fallen")
  assert(G.fallen(Config,Layout,Vector3.new(x,G.HubFloorY-G.FallDepth-1,z)),"under the hub not detected")
 end end
+end
 assert(G.fallen(Config,Layout,Vector3.new(0,-60,Config.ArenaHalfWidth+30)),"void between arena and hub")
 local r1,r2=G.recoveryPoint(Config,Layout,true),G.recoveryPoint(Config,Layout,false)
 assert(r1==isl and r2==hub,"recovery returns to island spawn in a run, hub otherwise")
@@ -60,16 +88,16 @@ function Vector3.new(x,y,z) return setmetatable({X=x,Y=y,Z=z},Vector3) end
 Vector3.__eq=function(a,b) return a.X==b.X and a.Y==b.Y and a.Z==b.Z end
 '''
 
-def script(config):
+def script(config, cave):
     return (VECTOR + 'local Config=' + ('(function()\n' + config + '\nend)()')
             + '\nlocal CaveHubLayout=' + wrapped('src/shared/CaveHubLayout.luau')
             + '\nlocal script={Parent={CaveHubLayout="CaveHubLayout"}}\nlocal require=function() return CaveHubLayout end'
             + '\nlocal Layout=' + wrapped('src/shared/IslandLayout.luau')
-            + '\nlocal SpawnGeometry=' + wrapped('src/shared/SpawnGeometry.luau') + '\n' + LUAU)
+            + '\nlocal SpawnGeometry=' + wrapped('src/shared/SpawnGeometry.luau') + '\n' + LUAU.replace('EXPECT_CAVE', 'true' if cave else 'false'))
 
-def run(runner, config):
+def run(runner, config, cave):
     with tempfile.TemporaryDirectory() as temp:
-        path = Path(temp) / 'verify_spawn.luau'; path.write_text(script(config))
+        path = Path(temp) / 'verify_spawn.luau'; path.write_text(script(config, cave))
         out = subprocess.run([runner, str(path)], capture_output=True, text=True)
         if out.returncode: raise SystemExit(out.stdout[-2000:] + out.stderr)
         return out.stdout.strip()
@@ -95,6 +123,6 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser(); p.add_argument('--runner', required=True); args = p.parse_args()
     static_checks()
     source = (ROOT / 'src/shared/Config.luau').read_text()
-    print('Default: ' + run(args.runner, source))
+    print('Default: ' + run(args.runner, source, False))
     rewritten, _ = release_profiles.apply_profile(source, 'playtest')
-    print('Playtest: ' + run(args.runner, rewritten))
+    print('Playtest: ' + run(args.runner, rewritten, True))
