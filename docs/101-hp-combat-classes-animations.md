@@ -18,7 +18,7 @@ Multipliers apply to a shared baseline (GROUND = 1.0). `s` is the existing growt
 |---|---|---:|---:|---|---:|---:|---|
 | GROUND | Compy, Raptor, Triceratops, Stegosaurus, T-Rex, Brachiosaurus, Parasaurolophus, Gallimimus ... | 1.00 | 1.00 | normal | 1.00 | 1.00 | Baseline. Leap = forward lunge bite. |
 | FLY | Pteranodon, Quetzalcoatlus, Dimorphodon, Archaeopteryx, Microraptor | 0.75 | 1.20 | faster, higher; glide on hold | 1.00 | 1.32 | Wings folded when walking. Leap = swoop dive. |
-| WATER | Plesiosaurus, Mosasaurus, Ichthyosaurus, Elasmosaurus, Liopleurodon | 1.25 | 0.85 | **none** | 1.00 | 0.80 | Stays low to the ground. Jump button = forward dash. Leap = aggressive dash. |
+| WATER | Plesiosaurus, Mosasaurus, Ichthyosaurus, Liopleurodon (Elasmosaurus is a normal Ground dino, owner 2026-10-16) | 1.25 | 0.85 | **none** | 1.00 | 0.80 | Stays low to the ground. Jump button = forward dash. Leap = aggressive dash. |
 | ARMORED | Ankylosaurus, Sauropelta, Styracosaurus (more later, owner decides) | 1.10 | 0.80 | short hop | **0.80** | 0.73 | Tank. Gentle tail-club/horn bump. |
 
 Speeds stay inside the "small speed differences" rule of docs/03. The class is shown as a small badge on the HUD and species card (BD-231). Class is per species in config (`Species.class`), never per skin (skins are cosmetic only, docs/97).

@@ -367551,6 +367551,22 @@ local CombatConfig = {
     },
     DefaultClass = "Ground",
 
+    -- BD-246 / docs/101 s2, s12 / docs/115: class per species (one source; the low-poly registry class must agree, verify_classes.py).
+    -- Owner: Armored = Ankylosaurus, Sauropelta, Styracosaurus; Kentrosaurus is Ground; Elasmosaurus counts as a normal Ground dino.
+    -- Entries without a model yet (liopleurodon, sauropelta, styracosaurus, kentrosaurus, the secret birds) are planned roster data.
+    SpeciesClasses = {
+        compy = "Ground", raptor = "Ground", triceratops = "Ground", tyrannosaurus = "Ground", stegosaurus = "Ground",
+        baryonyx = "Ground", brachiosaurus = "Ground", gallimimus = "Ground", pachycephalosaurus = "Ground",
+        parasaurolophus = "Ground", spinosaurus = "Ground", therizinosaurus = "Ground", elasmosaurus = "Ground",
+        kentrosaurus = "Ground",
+        archaeopteryx = "Fly", dimorphodon = "Fly", microraptor = "Fly", pteranodon = "Fly", quetzalcoatlus = "Fly",
+        ichthyosaurus = "Water", mosasaurus = "Water", plesiosaurus = "Water", liopleurodon = "Water",
+        ankylosaurus = "Armored", sauropelta = "Armored", styracosaurus = "Armored",
+        chickosaurus = "Ground", pigeon = "Ground", duck = "Ground", dodo = "Ground", penguin = "Ground",
+    },
+    -- Silly birds are secret finds: never listed in a roster/index until found (owner, docs/115).
+    SecretSpecies = { "chickosaurus", "pigeon", "duck", "dodo", "penguin" },
+
     BaseHp = 100,
     HpSizeExponent = 1.3,
     BaseDamage = 6,
@@ -367644,7 +367660,8 @@ end
 -- Class per species from the low-poly registry (docs/101 s2, s16); unknown species are Ground.
 function Rules.classForSpecies(speciesId: any): string
     local entry = if typeof(speciesId) == "string" then (LowPoly :: any)[speciesId] else nil
-    local class = if entry then entry.class else nil
+    local listed = if typeof(speciesId) == "string" then (Cfg.SpeciesClasses :: any)[speciesId] else nil -- BD-246 config first
+    local class = if listed ~= nil then listed elseif entry then entry.class else nil
     if typeof(class) == "string" and (Cfg.Classes :: any)[class] then return class end
     return Cfg.DefaultClass
 end
@@ -375660,7 +375677,7 @@ return {
     baryonyx = {assetId = 131708938808155, version = "v1", scale = 2.42, tier = 3, class = "Ground"},
     brachiosaurus = {assetId = 104593280278631, version = "v1", scale = 3.87, tier = 3, class = "Ground"},
     dimorphodon = {assetId = 117242533934118, version = "v1", scale = 1.9, tier = 1, class = "Fly"},
-    elasmosaurus = {assetId = 76344726254379, version = "v1", scale = 2.66, tier = 4, class = "Water"},
+    elasmosaurus = {assetId = 76344726254379, version = "v1", scale = 2.66, tier = 4, class = "Ground"},
     gallimimus = {assetId = 99873366835296, version = "v1", scale = 2.9, tier = 1, class = "Ground"},
     ichthyosaurus = {assetId = 133825037148251, version = "v1", scale = 2.3, tier = 3, class = "Water"},
     microraptor = {assetId = 137027841072493, version = "v1", scale = 1.7, tier = 1, class = "Fly"},
@@ -376310,7 +376327,9 @@ function Pose.sample(role: string, side: number, lead: boolean, t: number, phase
 end
 -- BD-233 spike: jump / leap / land / water-surge actions. Phases: crouch -&gt; push (stretch) -&gt; air (tuck, held until the dino lands) -&gt; land (squash);
 -- Water has no air time: a single "surge" (forward dash). Everything is calm and short (docs/87), absolute offsets from the REST pose, bounded.
-Pose.Phases = {"crouch", "push", "air", "land", "surge", "windup", "bite"}
+Pose.Phases = {"crouch", "push", "air", "land", "surge", "windup", "bite", "defeat"}
+Pose.DefeatSeconds = 1.5 -- docs/97: a skin defeat is about 1.5 s, soft and funny
+Pose.Skins = {"Base", "Plush", "Clay", "Bricks"}
 Pose.TuckTime = 0.18 -- seconds for the airborne tuck to settle
 local CLASS_SCALE = { -- q = crouch/squash depth, s = push-off stretch, t = airborne tuck, l = landing squash
     Ground = {q = 1, s = 1, t = 1, l = 1}, Armored = {q = 1.3, s = 0.4, t = 0.5, l = 1.5},
@@ -376324,6 +376343,7 @@ function Pose.duration(phase: string, aggr: number, class: string?): number
     if phase == "surge" then return 0.40 + 0.15 * math.clamp(finite(aggr), 0, 1) end
     if phase == "windup" then return 0.50 end -- BD-324: wild predator telegraph (Rules.Config.WindupSeconds); held until the cue ends
     if phase == "bite" then return 0.40 end
+    if phase == "defeat" then return Pose.DefeatSeconds end
     return 0
 end
 local function ease(u: number): number u = math.clamp(u, 0, 1) return u * u * (3 - 2 * u) end
@@ -376333,7 +376353,7 @@ function Pose.actionWeight(phase: string, p: number): number
     if phase == "crouch" then return ease(p) end
     if phase == "land" then return 1 - ease(math.clamp((p - 0.5) / 0.5, 0, 1)) end
     if phase == "surge" or phase == "bite" then return ease(p / 0.15) * (1 - ease((p - 0.7) / 0.3)) end
-    if phase == "windup" then return ease(p) end
+    if phase == "windup" or phase == "defeat" then return ease(p / 0.35) end -- defeat: eases in, then HOLDS (the dino is leaving the world)
     return 1
 end
 -- ctx: phase, p (0..1 progress of a timed phase), t (seconds since the phase began), aggr (0 jump .. 1 leap), carry (0..1 tuck amount when landing began).
@@ -376407,6 +376427,62 @@ function Pose.sampleAction(role: string, side: number, lead: boolean, ctx: Ctx, 
         roll = open - fold -- the fold itself is posture and stays under Reduce Motion
         pitch = -0.1 * W
     end
+    out.pitch = math.clamp(finite(pitch) * a, -Pose.MaxAngle, Pose.MaxAngle)
+    out.roll = math.clamp(finite(roll) * a + fold, -Pose.MaxFold, Pose.MaxFold)
+    out.yaw = math.clamp(finite(yaw) * a, -Pose.MaxAngle, Pose.MaxAngle)
+    out.dy = math.clamp(finite(dy) * a, -Pose.MaxOffset, Pose.MaxOffset)
+    out.dz = math.clamp(finite(dz) * a, -Pose.MaxOffset, Pose.MaxOffset)
+    out.fwd = 0
+    return out
+end
+-- BD-249: gentle per-skin defeat hook (docs/97). Same shape as sampleAction (absolute offsets from the rest pose, bounded, Reduce Motion = rest).
+-- Base: tips over sideways with a little dizzy wobble. Plush: slowly deflates (slumps down) with a soft wobble. Clay: pressed down flat
+-- (sinks, limbs spread). Bricks: the parts drift apart a few percent, like a toy coming loose (never gore; the shards/sounds are art tasks).
+-- Unknown skin names fall back to Base. ctx.p = 0..1 over DefeatSeconds, ctx.t = seconds.
+function Pose.skinOf(name: any): string
+    for _, k in Pose.Skins do if k == name then return k end end
+    return "Base"
+end
+function Pose.sampleDefeat(role: string, side: number, lead: boolean, ctx: Ctx, amp: number, out: Out, class: string?, skin: string?): Out
+    local a = math.clamp(finite(amp), 0, 1)
+    local s = if side &lt; 0 then -1 else 1
+    local p, t = math.clamp(finite(ctx.p), 0, 1), math.max(0, finite(ctx.t))
+    local e = ease(p)
+    local kind = Pose.skinOf(skin)
+    local pitch, roll, yaw, dy, dz = 0, 0, 0, 0, 0
+    local fold = 0
+    if kind == "Base" then
+        local wob = math.sin(t * 9) * (1 - e) * 0.05
+        if role == "body" then roll, dy = 0.45 * e + wob, -0.03 * e
+        elseif role == "head" or role == "neck" then roll, pitch, yaw = 0.25 * e + wob, 0.15 * e, math.sin(t * 7) * 0.10 * (1 - e)
+        elseif role == "tail" then roll, yaw = 0.2 * e, 0.2 * math.sin(t * 5) * (1 - e)
+        elseif role == "leg" or role == "arm" then pitch, roll = -0.25 * e * s, 0.2 * e
+        elseif role == "flipper" then roll = s * 0.3 * e end
+    elseif kind == "Plush" then
+        local pff = math.sin(t * 6) * (1 - e) * 0.03
+        if role == "body" then dy, pitch = -0.06 * e, 0.10 * e + pff
+        elseif role == "head" or role == "neck" then dy, pitch = -0.05 * e, 0.30 * e
+        elseif role == "tail" then pitch = 0.25 * e
+        elseif role == "leg" or role == "arm" then pitch = 0.3 * e * (if lead then 1 else -1) elseif role == "flipper" then roll = s * 0.25 * e end
+    elseif kind == "Clay" then
+        local press = ease(math.clamp(p / 0.4, 0, 1))
+        local back = ease(math.clamp((p - 0.7) / 0.3, 0, 1)) * 0.3 -- starts to reshape at the end
+        local k = press * (1 - back)
+        if role == "body" then dy = -0.07 * k
+        elseif role == "head" or role == "neck" then dy, pitch = -0.06 * k, 0.10 * k
+        elseif role == "tail" then dy, pitch = -0.04 * k, 0.12 * k
+        elseif role == "leg" or role == "arm" then roll, dy = s * 0.35 * k, -0.02 * k
+        elseif role == "flipper" then roll = s * 0.35 * k end
+    else -- Bricks
+        local drift = ease(math.clamp(p / 0.6, 0, 1))
+        local rattle = math.sin(t * 22) * (1 - e) * 0.004
+        if role == "body" then dy = -0.04 * drift + rattle
+        elseif role == "head" or role == "neck" then dy, dz, pitch = 0.02 * drift, 0.03 * drift, 0.35 * drift
+        elseif role == "tail" then dz, dy, yaw = -0.04 * drift, -0.02 * drift, 0.30 * drift
+        elseif role == "leg" or role == "arm" then dy, roll = -0.03 * drift + rattle, s * 0.30 * drift
+        elseif role == "flipper" then roll = s * 0.4 * drift end
+    end
+    if role == "wing" then fold = -s * Pose.FoldAngle roll = s * 0.1 * e end
     out.pitch = math.clamp(finite(pitch) * a, -Pose.MaxAngle, Pose.MaxAngle)
     out.roll = math.clamp(finite(roll) * a + fold, -Pose.MaxFold, Pose.MaxFold)
     out.yaw = math.clamp(finite(yaw) * a, -Pose.MaxAngle, Pose.MaxAngle)
@@ -567752,6 +567828,11 @@ end
 local function updateAction(rig: any, now: number)
     local character, root = rig.character, rig.root
     if not character or not root then rig.act = nil return end -- local character not spawned yet or already gone
+    -- BD-249: the run ended in a defeat (DinoMotion also plays its own "death" flop on RunState Ending, on C0, so the two stack).
+    if character:GetAttribute("RunState") == "Ending" then
+        if rig.act ~= "defeat" then rig.aggr = 0 startPhase(rig, "defeat", now) end
+        return
+    elseif rig.act == "defeat" then rig.act = nil end
     local hum = rig.humanoid
     if not hum or not hum.Parent then hum = character:FindFirstChildOfClass("Humanoid") rig.humanoid = hum end
     if not hum or hum.Health &lt;= 0 then rig.act = nil return end
@@ -567855,7 +567936,8 @@ local function apply(rig: any, now: number, dt: number, amp: number, npc: Model?
         local part = item.part :: MeshPart
         if not part.Parent then continue end
         Pose.sample(item.role, item.side, item.lead, now + rig.seed, rig.phase, rig.speed, amp, out, rig.class)
-        if phase then Pose.blend(out, Pose.sampleAction(item.role, item.side, item.lead, ctx, amp, actOut, rig.class), k) end
+        if phase == "defeat" then Pose.blend(out, Pose.sampleDefeat(item.role, item.side, item.lead, ctx, amp, actOut, rig.class, rig.skin), k)
+        elseif phase then Pose.blend(out, Pose.sampleAction(item.role, item.side, item.lead, ctx, amp, actOut, rig.class), k) end
         if amp == 0 and item.role ~= "wing" then
             item.weld.C1 = CFrame.identity
         else
@@ -567893,7 +567975,7 @@ RunService.Heartbeat:Connect(function(dt)
         if not rig or rig.visual ~= visual then
             local _, size = visual:GetBoundingBox()
             rig = {visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0,
-                height = math.max(size.Y, 1), aggr = 0, carry = 0, leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), seed = math.random() * 10}
+                height = math.max(size.Y, 1), aggr = 0, carry = 0, leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), skin = Pose.skinOf(visual:GetAttribute("LPSkin")), seed = math.random() * 10}
             rigs[character] = rig
         end
         if player == Players.LocalPlayer then
@@ -567920,7 +568002,7 @@ RunService.Heartbeat:Connect(function(dt)
         if not rig or rig.visual ~= visual then
             local _, size = visual:GetBoundingBox()
             rig = {visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0, height = math.max(size.Y, 1), aggr = 0, carry = 0,
-                leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), seed = math.random() * 10}
+                leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), skin = Pose.skinOf(visual:GetAttribute("LPSkin")), seed = math.random() * 10}
             npcRigs[model] = rig
         end
         if camera and (camera.CFrame.Position - root.Position).Magnitude &lt;= RANGE then
