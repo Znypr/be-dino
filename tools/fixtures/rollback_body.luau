@@ -128,6 +128,10 @@ local afterOld=copy(data[key(RICH)])
 check(afterOld.session==nil,"old release clears its lease")
 for _,unknown in {"settings","dinosaurIdentity","eggNests","runEggBank","settledRuns","rarityScale"} do check(same(rich[unknown],afterOld[unknown]),"unknown field still preserved after old operations: "..unknown) end
 check(afterOld.settings.teleportShops==false,"settings survive the old build")
+-- BD-436: the discovery log is an additive progression field; Build 020 never reads or rewrites it.
+local richLog=rich.progression.discovered
+check(type(richLog)=="table" and next(richLog.colours)~=nil and next(richLog.patterns)~=nil,"current code wrote a discovery log for the rich profile")
+check(same(richLog,afterOld.progression.discovered),"discovery log preserved byte-for-byte after Build 020 load, claim, renew and release")
 print("old claimChest on a new-format queue: "..tostring(claimedOld).." (queue "..oldEggBefore.." -> "..#afterOld.eggs..")")
 -- ...then roll FORWARD: current code loads what the old build wrote; the sidecar may be stale but is never deleted.
 local sidecarBefore=copy(rich.dinosaurIdentity)
@@ -139,6 +143,10 @@ for id in sidecarBefore.instances do if sidecarAfter.instances[id]==nil then kep
 local reason=sidecarAfter.suspendedReason
 check(keptAll or reason~=nil,"identity instances survive roll-forward (or identity is suspended, never silently emptied)")
 check(data[key(RICH)].settings.teleportShops==false,"settings still stored after roll-forward")
+local logAfter=data[key(RICH)].progression.discovered
+local logKept=true
+for _,kind in {"colours","patterns","mutations"} do for id in richLog[kind] do if logAfter[kind][id]~=true then logKept=false end end end
+check(logKept,"roll-forward keeps every discovered id (add-only)")
 print("roll-forward after an old claim: identity "..(if reason then "suspended ("..tostring(reason)..")" else "reconciled").." instances kept="..tostring(keptAll))
 NewRepo.release(u2)
 
@@ -192,10 +200,42 @@ oldAccepts("emerald counters and rotating potion-shop state",function(p)
  p.collection.compy.emerald=3
  p.progression.shop={window=12345,bought={speed_rare=1}}
 end)
+oldAccepts("progression.discovered (BD-436 discovery log)",function(p) p.progression.discovered={colours={green=true},patterns={},mutations={}} end)
 oldAccepts("revealSkip on the five-tier scale (Build 020 has no such field)",function(p) p.revealSkip={1,5} end)
 oldAccepts("future additive settings keys",function(p) p.settings.futureOption=true p.settings.v=2 end)
 oldAccepts("nest with weatherId and unknown nest fields",function(p) p.eggNests[1].weatherId="rain" p.eggNests[1].futureField={1,2,3} end)
 print("lock-out classes asserted: rarest>3 and post-Build-020 potions are rejected by Build 020; additive fields are kept")
+
+------------------------------------------------------------------ (2b) BD-436: lazy backfill of the discovery log from owned dinos
+do
+ local p=copy(rich)
+ p.progression.discovered=nil -- a profile saved before the log existed
+ local id=6900
+ local u=fresh(p,id)
+ check(NewRepo.load(u) and u.attrs.ProfileState=="Loaded","current code loads a profile without a discovery log")
+ local log=data[key(id)].progression.discovered
+ check(type(log)=="table" and next(log.colours)~=nil and next(log.patterns)~=nil,"discovery log backfilled from owned dinos on load")
+ local firstColour for c in log.colours do firstColour=c break end
+ local counts=u.attrs.DiscoveryJson -- the mocked JSONEncode returns the table
+ check(counts.colours>=1 and counts.patterns>=1,"owner-only DiscoveryJson carries counts")
+ NewRepo.release(u)
+ -- idempotent and add-only: a second load keeps the same log; extra ids already stored are never removed
+ local stored=copy(data[key(id)])
+ stored.session=nil
+ stored.progression.discovered.colours["legacy_removed_colour"]=true
+ put(id,stored)
+ local u2=newUser(id)
+ check(NewRepo.load(u2),"reload")
+ local log2=data[key(id)].progression.discovered
+ check(log2.colours.legacy_removed_colour==true and log2.colours[firstColour]==true,"backfill never removes a stored discovery (fused-away colour stays)")
+ NewRepo.release(u2)
+ -- junk in the optional field never locks the player out
+ local junk=copy(rich) junk.progression.discovered="junk"
+ local u3=fresh(junk,id+1)
+ check(NewRepo.load(u3) and u3.attrs.ProfileState=="Loaded","a corrupt discovery field loads (replaced by a fresh log)")
+ NewRepo.release(u3)
+end
+print("discovery log: backfill, add-only, corrupt-field tolerance asserted")
 
 ------------------------------------------------------------------ (3) OLD-written profile read by CURRENT code (settings, identity absent)
 local OLDER=5100

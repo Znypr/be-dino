@@ -23,6 +23,8 @@ jobs:
           python-version: "3.12"
       - name: Install test dependencies
         run: python -m pip install Pillow numpy
+      - name: Verify doc numbers and BD ids are unique
+        run: python tools/verify_doc_ids.py
       - name: Verify image bindings
         run: python tools/bind_artwork.py --check
       - name: Install pinned Luau tools
@@ -48,6 +50,7 @@ jobs:
           python tools/verify_fusion_ui.py --runner /tmp/luau/luau
           python tools/verify_next_goal.py --runner /tmp/luau/luau
           python tools/verify_goals.py --runner /tmp/luau/luau
+          python tools/verify_discovery.py --runner /tmp/luau/luau
           python tools/verify_admin.py --runner /tmp/luau/luau
           python tools/verify_notify.py --runner /tmp/luau/luau
           python tools/verify_audio.py --runner /tmp/luau/luau
@@ -90,6 +93,8 @@ jobs:
           python tools/verify_multiplayer_sim.py --runner /tmp/luau/luau
           python tools/verify_private_state.py --runner /tmp/luau/luau
           python tools/verify_run_end_eggs.py --runner /tmp/luau/luau
+          python tools/verify_class_movement.py --runner /tmp/luau/luau
+          python tools/verify_class_picker.py --runner /tmp/luau/luau
           python tools/verify_server_scaling.py --runner /tmp/luau/luau
           python tools/verify_telemetry.py --runner /tmp/luau/luau
           python tools/generate_sfx.py --check
