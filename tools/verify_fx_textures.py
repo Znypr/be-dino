@@ -7,7 +7,7 @@ Flipbook sheets (smoke puffs BD-187, motif sheets BD-189): 512 x 512 RGBA PNG, 4
 cell: the cell's outer ring is fully transparent (nothing bleeds into the neighbour cell when sampled with filtering), the
 cell is not empty (only frame 1 and frame 16 may be an empty fade in / out), and the colour is safe to tint by kind:
   * white   RGB white (>= 250) wherever alpha > 0, so MutationLook multiplies cleanly (droplets, sparks, crystals, embers, crimson);
-  * shaded  neutral grey/white (channels within 4 of each other, all >= 120) wherever alpha >= 24: soft self-shadowing
+  * shaded  neutral grey/white (channels within 4 of each other, all >= 96) wherever alpha >= 24: soft self-shadowing
             in the smoke and pebbles, never a dark fringe;
   * colour  the aurora ribbons (the only coloured sheet): no dark fringe, i.e. the brightest channel is >= 190 wherever
             alpha >= 24.
@@ -93,7 +93,7 @@ for name, kind in SHEETS.items():
                     bad = bad or f'{name}: cell {ci} border pixel {x},{y} has alpha {a} (bleeds into the next cell)'
                 if kind == 'white' and a > 0 and min(r, g, b) < 250:
                     bad = bad or f'{name}: cell {ci} dark fringe at {x},{y} rgb=({r},{g},{b}) alpha={a}'
-                elif kind == 'shaded' and a >= 24 and (max(r, g, b) - min(r, g, b) > 4 or min(r, g, b) < 120):
+                elif kind == 'shaded' and a >= 24 and (max(r, g, b) - min(r, g, b) > 4 or min(r, g, b) < 96):
                     bad = bad or f'{name}: cell {ci} not neutral/light at {x},{y} rgb=({r},{g},{b}) alpha={a}'
                 elif kind == 'colour' and a >= 24 and max(r, g, b) < 190:
                     bad = bad or f'{name}: cell {ci} dark fringe at {x},{y} rgb=({r},{g},{b}) alpha={a}'

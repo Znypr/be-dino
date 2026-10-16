@@ -1639,6 +1639,45 @@
     "src/server/Arena.luau",
     "replacementFor"
    ]
+  },
+  {
+   "name": "meadow_grass_v2_color",
+   "kind": "image",
+   "target": "matvar",
+   "file": "resources/visual-upgrade-bindings.json",
+   "key": "color",
+   "material": "BeDino_MeadowV2",
+   "group": "worldMaterials.BeDino_MeadowV2.color",
+   "reader": [
+    "tools/bind_visual_assets.py",
+    "worldMaterials"
+   ]
+  },
+  {
+   "name": "meadow_grass_v2_normal",
+   "kind": "image",
+   "target": "matvar",
+   "file": "resources/visual-upgrade-bindings.json",
+   "key": "normal",
+   "material": "BeDino_MeadowV2",
+   "group": "worldMaterials.BeDino_MeadowV2.normal",
+   "reader": [
+    "tools/bind_visual_assets.py",
+    "worldMaterials"
+   ]
+  },
+  {
+   "name": "meadow_grass_v2_roughness",
+   "kind": "image",
+   "target": "matvar",
+   "file": "resources/visual-upgrade-bindings.json",
+   "key": "roughness",
+   "material": "BeDino_MeadowV2",
+   "group": "worldMaterials.BeDino_MeadowV2.roughness",
+   "reader": [
+    "tools/bind_visual_assets.py",
+    "worldMaterials"
+   ]
   }
  ]
 }

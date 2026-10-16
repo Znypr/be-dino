@@ -12,8 +12,8 @@ or just this part by hand:
 Seven Blender scenes, one per mutation (docs/92). Each is a 16-frame animation, 128 px per frame (4 x 4 = 512 px sheet).
 The motif shapes are real modelled or particle objects (script-placed primitives are fine for particles: they are not
 world models): a lathe-turned teardrop and spheres with a bubble shader (droplets), beveled curves (soft zigzag sparks,
-snow crystals), noise-displaced pebbles plus a small volume dust puff (pebbles), emissive spheres and a curled flame
-curve (embers), flowing ribbon meshes (aurora), soft spheres plus a Boolean crescent (crimson motes). Frames come from
+snow crystals), faceted low-poly stones plus a small volume dust puff (pebbles), emissive spheres and a curled flame
+curve (embers), tall waving curtain meshes (aurora), soft spheres plus a Boolean crescent (crimson motes). Frames come from
 keyframed transforms or keyed visibility of per-frame shapes, never from drawing pixels. Glow comes from the Blender
 compositor (a wide Gaussian halo under a tight one, same recipe as BD-186). Everything is white on alpha so MutationLook
 tints it at runtime, except the aurora ribbons which are coloured (green, blue, violet, magenta).
@@ -228,14 +228,13 @@ def teardrop(name, a=0.5, b=0.8, m=1.0, seg=40, ring=48):
 
 
 def pebble_mesh(name, rng, r=1.0, squash=(1.0, 0.8, 0.7)):
-    """Rounded pebble: icosphere, noise-displaced a little, squashed. Smooth shaded."""
+    """Small angular stone: a 20-face icosahedron with every corner pulled in or out at random, then squashed. Flat shaded, so
+    each facet catches the light separately (low-poly, faceted, not a smooth ball)."""
     me = bpy.data.meshes.new(name)
     bm = bmesh.new()
-    bmesh.ops.create_icosphere(bm, subdivisions=3, radius=r)
-    seed = rng.uniform(0, 100)
+    bmesh.ops.create_icosphere(bm, subdivisions=1, radius=r)
     for v in bm.verts:
-        n = mathutils.noise.noise(v.co * 1.7 + mathutils.Vector((seed, seed, seed)))
-        v.co *= 1.0 + 0.16 * n
+        v.co *= rng.uniform(0.72, 1.18)
         v.co.x *= squash[0]
         v.co.y *= squash[1]
         v.co.z *= squash[2]
@@ -410,22 +409,24 @@ def scene_crystals():
 
 def scene_pebbles():
     sc = new_scene("motifPebbles", CELL, FRAMES, samples=384, bounces_volume=4)
-    world_light(sc, 0.40)
-    area_light(sc, "key", (-3.6, 3.4, 2.2), 420, 2.6)
-    mat = shaded_material("pebble_mat")
-    rng = random.Random(5)
-    pebbles = []
-    spec = [  # x0, apex y, size, delay, squash, tumble speed
-        (-0.34, 0.34, 0.30, 0.00, (1.0, 0.82, 0.72), 3.2),
-        (0.30, 0.50, 0.24, 0.10, (1.0, 0.90, 0.80), -2.6),
-        (0.02, 0.14, 0.17, 0.20, (1.0, 0.75, 0.70), 4.0),
-        (0.52, -0.18, 0.12, 0.30, (1.0, 0.85, 0.75), -3.4),
-        (-0.56, -0.20, 0.11, 0.34, (1.0, 0.80, 0.70), 3.0),
+    world_light(sc, 0.50)
+    area_light(sc, "key", (-3.6, 3.4, 2.2), 520, 2.6)
+    mat = shaded_material("stone_mat", 0.50)   # mid grey: the Seismic tint (#E2BE82) turns it grey-brown at runtime
+    rng = random.Random(9)
+    ground = -0.50
+    # 6 small stones that hop up from the ground and land again; they pop in one after another, so 3 to 6 are on screen
+    spec = [  # x, radius, hop height, delay, hop phase, spin speed, squash
+        (-0.40, 0.17, 0.46, 0.00, 0.00, 3.0, (1.0, 0.82, 0.74)),
+        (0.30, 0.15, 0.55, 0.00, 0.30, -2.6, (1.0, 0.90, 0.80)),
+        (-0.08, 0.20, 0.36, 0.00, 0.62, 2.2, (1.0, 0.78, 0.70)),
+        (0.52, 0.11, 0.62, 0.12, 0.15, -3.4, (1.0, 0.85, 0.75)),
+        (-0.58, 0.10, 0.52, 0.22, 0.45, 3.6, (1.0, 0.80, 0.70)),
+        (0.12, 0.09, 0.66, 0.32, 0.80, -3.0, (1.0, 0.88, 0.76)),
     ]
-    for i, (x0, apex, size, delay, sq, tum) in enumerate(spec):
-        ob = mesh_obj(sc, f"pebble_{i}", pebble_mesh(f"pebble_{i}", rng, 1.0, sq), mat)
-        pebbles.append(ob)
-    # dust puff: a small sphere used as a volume domain (soft noisy density)
+    stones = []
+    for i, (x0, rad, hop, delay, ph, spin, sq) in enumerate(spec):
+        stones.append(mesh_obj(sc, f"stone_{i}", pebble_mesh(f"stone_{i}", rng, 1.0, sq), mat, smooth=False))
+    # dust puff: a small sphere used as a volume domain (soft noisy density), puffed up again at every landing
     dust_mat = bpy.data.materials.new("dust_vol")
     N = Nodes(dust_mat)
     tc = N.n("ShaderNodeTexCoord")
@@ -434,10 +435,10 @@ def scene_pebbles():
     nz.inputs["Detail"].default_value = 4.0
     N.link(tc, nz, "Object", "Vector")
     ln = N.length(tc, "Object")
-    rad = N.mapr(ln, 1.0, 0.1)
+    rad_m = N.mapr(ln, 1.0, 0.1)
     shaped = N.mapr(nz, 0.30, 0.70)
-    env = N.math("MULTIPLY", N.math("MULTIPLY", rad, shaped), 1.0)
-    dens = N.math("MULTIPLY", env, 5.0)
+    env = N.math("MULTIPLY", N.math("MULTIPLY", rad_m, shaped), 1.0)
+    dens = N.math("MULTIPLY", env, 8.0)
     pv = N.n("ShaderNodeVolumePrincipled")
     pv.inputs["Color"].default_value = (1, 1, 1, 1)
     N.link(dens, pv, 0, "Density")
@@ -447,17 +448,18 @@ def scene_pebbles():
     dust.data.materials.append(dust_mat)
     for f in range(1, FRAMES + 1):
         u = U(f)
-        for ob, (x0, apex, size, delay, sq, tum) in zip(pebbles, spec):
+        for ob, (x0, rad, hop, delay, ph, spin, sq) in zip(stones, spec):
             lu = max(0.0, min(1.0, (u - delay) / (1 - delay)))
-            # thrown up from the ground at the bottom and settling back: parabola, appears and vanishes softly
-            y = -0.50 + (apex + 0.50) * 4 * lu * (1 - lu)
-            x = x0 * (0.55 + 0.45 * lu)
-            e = ease(lu / 0.12) * (1 - ease((lu - 0.86) / 0.14))
-            key_xform(ob, f, loc=(x, y, 0.0), rot=(lu * tum, lu * tum * 0.6, lu * tum * 0.8), scale=size * (0.25 + 0.75 * e) * e ** 0.2)
-        de = ease(u / 0.35) * (1 - ease((u - 0.55) / 0.45))
-        key_xform(dust, f, loc=(0.0, -0.46, 0.0), scale=(0.34 + 0.46 * u, 0.20 + 0.24 * u, 0.3))
-        key_value(N.t.nodes[dens.name].inputs[1], f, 5.0 * de)
-    finish_anim(pebbles + [dust])
+            cyc = 2.0 * lu + ph                              # two hops over the animation
+            hop_t = cyc % 1.0
+            y = ground + rad * 0.5 + hop * 4 * hop_t * (1 - hop_t) * (0.75 + 0.25 * lu)
+            e = ease(lu / 0.10) * (1 - ease((lu - 0.88) / 0.12))
+            key_xform(ob, f, loc=(x0 * (0.8 + 0.2 * lu), y, 0.0), rot=(lu * spin, lu * spin * 0.7, lu * spin * 1.1),
+                      scale=rad * (0.2 + 0.8 * e) * e ** 0.2)
+        de = ease(u / 0.20) * (1 - ease((u - 0.60) / 0.40)) * (0.55 + 0.45 * abs(math.cos(math.pi * 2 * u + 0.6)))
+        key_xform(dust, f, loc=(0.0, ground + 0.02, 0.0), scale=(0.50 + 0.34 * u, 0.20 + 0.14 * u, 0.3))
+        key_value(N.t.nodes[dens.name].inputs[1], f, 8.0 * de)
+    finish_anim(stones + [dust])
     set_interpolation(dust_mat.node_tree, "LINEAR")
     soft_compositor(sc, 0.5)
     return sc
@@ -533,24 +535,19 @@ def scene_embers():
     return sc
 
 
-def ribbon_mesh(name, phase, amp, freq, length, width, nu=72, nv=7, tilt=0.0, second=0.0):
+def curtain_mesh(name, phase, x0, amp, freq, height, width, nu=64, nv=9, second=0.0):
+    """Tall aurora curtain: a vertical strip whose centre line sways gently left and right (one or two soft waves up its
+    height). UV x runs bottom to top (colour fade and the faint top and bottom), UV y runs across the width (soft sides)."""
     me = bpy.data.meshes.new(name)
     verts, faces = [], []
     for i in range(nu):
         t = i / (nu - 1)
-        cx = (t - 0.5) * length
-        cy = amp * math.sin(math.tau * (freq * t + phase)) + second * math.sin(math.tau * (2 * freq * t + 2 * phase + 0.3))
-        cy += tilt * (t - 0.5)
-        # tangent for a width direction normal to the path
-        dt = 1e-3
-        cy2 = amp * math.sin(math.tau * (freq * (t + dt) + phase)) + second * math.sin(math.tau * (2 * freq * (t + dt) + 2 * phase + 0.3)) + tilt * (t + dt - 0.5)
-        dx, dy = length * dt, cy2 - cy
-        nrm = math.hypot(dx, dy)
-        nx, ny = -dy / nrm, dx / nrm
-        w = width * math.sin(math.pi * t) ** 0.7
+        cy = (t - 0.5) * height
+        cx = x0 + amp * math.sin(math.tau * (freq * t + phase)) + second * math.sin(math.tau * (2 * freq * t + 2 * phase + 0.3))
+        w = width * (0.85 + 0.15 * math.sin(math.tau * (t * 1.5 + phase)))     # the curtain breathes a little
         for j in range(nv):
             v = j / (nv - 1) - 0.5
-            verts.append((cx + nx * w * v, cy + ny * w * v, 0.0))
+            verts.append((cx + w * v, cy, 0.0))
     for i in range(nu - 1):
         for j in range(nv - 1):
             a = i * nv + j
@@ -561,13 +558,14 @@ def ribbon_mesh(name, phase, amp, freq, length, width, nu=72, nv=7, tilt=0.0, se
         for li in poly.loop_indices:
             vi = me.loops[li].vertex_index
             uv.data[li].uv = ((vi // nv) / (nu - 1), (vi % nv) / (nv - 1))
-    for p in me.polygons:
-        p.use_smooth = True
+    for p_ in me.polygons:
+        p_.use_smooth = True
     return me
 
 
 def aurora_material(name, stops):
-    """Ribbon colour: a ramp along the length through `stops` (RGB), soft alpha across the width and at both ends."""
+    """Curtain colour: a vertical ramp (bottom to top) through `stops` (RGB), soft sides, and an alpha that is faint at the
+    bottom and fades out slowly towards the top."""
     mat = bpy.data.materials.new(name)
     N = Nodes(mat)
     uv = N.n("ShaderNodeTexCoord")
@@ -582,16 +580,19 @@ def aurora_material(name, stops):
         el.position = i / (len(stops) - 1)
         el.color = (*c, 1.0)
     N.t.links.new(sep.outputs[0], ramp.inputs["Fac"])
-    # alpha across the width: 1 at the middle line, falling to 0 at the ribbon edges
+    # alpha across the width: 1 at the middle line, falling softly to 0 at both sides
     sub = N.n("ShaderNodeMath", operation="SUBTRACT")
     N.t.links.new(sep.outputs[1], sub.inputs[0])
     sub.inputs[1].default_value = 0.5
     ab = N.n("ShaderNodeMath", operation="ABSOLUTE")
     N.t.links.new(sub.outputs[0], ab.inputs[0])
     prof = N.mapr(ab, 0.5, 0.0)
-    ends = N.math("MINIMUM", N.mapr(sep, 0.0, 0.18, "SMOOTHSTEP"), N.mapr(sep, 1.0, 0.82, "SMOOTHSTEP"))
-    alpha = N.math("MULTIPLY", N.math("POWER", prof, 0.9), ends)
-    clamp = N.math("MINIMUM", N.math("MULTIPLY", alpha, 0.92), 1.0)
+    # along the height: faint at the bottom edge, brightest low in the curtain, long soft fade towards the top
+    bottom = N.mapr(sep, 0.0, 0.26, "SMOOTHSTEP")
+    top = N.mapr(sep, 1.0, 0.45, "SMOOTHSTEP", 0.0, 1.0)
+    ends = N.math("MULTIPLY", bottom, top)
+    alpha = N.math("MULTIPLY", N.math("POWER", prof, 0.85), ends)
+    clamp = N.math("MINIMUM", N.math("MULTIPLY", alpha, 0.95), 1.0)
     emis = N.n("ShaderNodeEmission")
     N.link(ramp, emis, 0, "Color")
     clear = N.n("ShaderNodeBsdfTransparent")
@@ -607,22 +608,22 @@ def aurora_material(name, stops):
 def scene_aurora():
     sc = new_scene("motifAurora", CELL, FRAMES, samples=256)
     world_light(sc, 0.0)
-    green, blue, violet, magenta = (0.28, 1.0, 0.68), (0.26, 0.58, 1.0), (0.62, 0.40, 1.0), (1.0, 0.36, 0.78)
-    mats = [aurora_material("aur_a", [green, blue, violet]),
-            aurora_material("aur_b", [blue, violet, magenta]),
-            aurora_material("aur_c", [violet, magenta, green])]
-    layout = [  # amp, freq, length, width, y offset, phase offset, second harmonic
-        (0.22, 1.0, 1.70, 0.50, 0.08, 0.00, 0.05),
-        (0.18, 1.0, 1.55, 0.40, -0.22, 0.31, 0.04),
-        (0.13, 2.0, 1.40, 0.28, 0.46, 0.62, 0.03),
+    mint, aqua, lilac, violet = (0.42, 1.0, 0.76), (0.40, 0.86, 1.0), (0.70, 0.62, 1.0), (0.62, 0.40, 1.0)
+    mats = [aurora_material("aur_a", [mint, aqua, violet]),
+            aurora_material("aur_b", [mint, lilac]),
+            aurora_material("aur_c", [aqua, mint, violet])]
+    layout = [  # x centre, sway amp, waves up the height, height, width, phase offset, second harmonic
+        (-0.46, 0.07, 1.0, 1.36, 0.50, 0.00, 0.02),
+        (0.02, 0.10, 1.0, 1.62, 0.64, 0.35, 0.03),
+        (0.48, 0.07, 1.0, 1.40, 0.52, 0.68, 0.02),
     ]
     variants = [[] for _ in range(FRAMES)]
     allobs = []
-    for r, (amp, freq, length, width, yoff, ph0, second) in enumerate(layout):
+    for r, (x0, amp, freq, height, width, ph0, second) in enumerate(layout):
         for k in range(FRAMES):
-            me = ribbon_mesh(f"aur{r}_{k}", ph0 + k / FRAMES, amp, freq, length, width, second=second)
-            ob = mesh_obj(sc, f"aurora{r}_{k}", me, mats[r], smooth=True)
-            ob.location = (0.0, yoff, 0.0 + 0.01 * r)
+            me = curtain_mesh(f"aur{r}_{k}", ph0 + k / FRAMES, x0, amp, freq, height, width, second=second)
+            ob = mesh_obj(sc, f"curtain{r}_{k}", me, mats[r], smooth=True)
+            ob.location = (0.0, 0.0, 0.01 * r)
             variants[k].append(ob)
             allobs.append(ob)
     for f in range(1, FRAMES + 1):

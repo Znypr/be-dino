@@ -50,7 +50,7 @@ STYLES = {
     "smokeWispy": dict(
         seed=37, lobes=8, satellites=1, scale=1.2, spread=0.64, size=(0.30, 0.42), start=0.35, rise=0.18, swirl=0.30,
         lobe_core=0.15, noise_scale=2.6, detail=6.0, rough=0.62, warp=0.55, th=(0.28, 0.80), erosion=0.80,
-        sigma=4.2, fade_in=(0.0, 0.20), fade_out=(0.45, 1.0), anis=0.45, stretch=(0.7, 1.3, 1), stream=0.95,
+        sigma=8.5, fade_in=(0.0, 0.20), fade_out=(0.45, 1.0), anis=0.45, stretch=(0.7, 1.3, 1), stream=0.95,
         light=0.75, key=800, noise_w=0.16),
 }
 

@@ -77,6 +77,17 @@
       "note": "BD-460 (docs/138), owner decision 2026-10-16: the island uses Roblox's built-in Grass. This variant stays in MaterialService (all four IDs and the original 20-stud tile kept) but MaterialService.GrassName is NOT set, so it is unbound. Its colour map carries large dark baked blotches that cause the repeating dark waves (Studio control: waves gone with the override cleared). To use it again set bound to true or SetBaseMaterialOverride(Grass, 'BeDino_Meadow'); a new matte colour map is BD-461."
     },
     {
+      "name": "BeDino_MeadowV2",
+      "base": "Grass",
+      "color": "",
+      "normal": "",
+      "roughness": "",
+      "metal": "",
+      "tile": 12,
+      "bound": false,
+      "note": "BD-461 (docs/138 s5): the new matte Blender meadow grass set (resources/materials/meadow-grass-v2/, made by tools/blender/build_meadow_grass_v2.py, 12 studs per tile, NO metalness map). Not uploaded yet, so every ID is empty and bind_visual_assets.py writes no MaterialVariant for it. After the owner upload: python tools/bind_assets.py ids.txt (names meadow_grass_v2_color, meadow_grass_v2_normal, meadow_grass_v2_roughness), then python tools/bind_visual_assets.py to emit the variant into resources/world-materials.rbxmx. It stays bound:false (built-in Grass stays) until the lead's Studio A/B beats built-in Grass; only then set bound true and update tools/verify_env_polish.py."
+    },
+    {
       "name": "BeDino_Stone",
       "base": "Rock",
       "color": "128007023677783",
