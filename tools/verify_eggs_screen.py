@@ -24,6 +24,10 @@ assert(slots[3].state == "queued" and slots[3].text == "Queued" and slots[4].sta
 assert(L.nestHeader(nests, 5) == "Nests 3/5" and L.nestHeader({}, 5) == "Nests 0/5")
 assert(L.nestSlots({}, 5, 0)[1].state == "empty" and L.nestSlots(nests, 2, 1000)[3] == nil, "never more slots than capacity")
 
+-- BD-259: "Eggs waiting" counts the whole line after the card egg: 31 run eggs = 5 in the line + 26 banked -> 30 waiting.
+assert(L.waitingTotal(5, 26, true) == 30 and L.waitingTotal(1, 0, true) == 0 and L.waitingTotal(0, 3, false) == 3)
+assert(L.waitingTotal(0, 0, false) == 0 and L.waitingTotal(-2, -1, true) == 0)
+
 -- Single next-egg card state machine.
 local c = L.card(nil, "", 0, 100, 0)
 assert(c.kind == "empty" and not c.canOpen)
