@@ -469,6 +469,23 @@ function CaveHubLayout.arrivalSpots(id: string): {any}
     return out
 end
 
+-- ---------------------------------------------------------------- leaderboards (BD-285 QA)
+-- The three Fame boards stand in a little arc on the far (east) side of the Fame pad, facing it, so they never stand between a
+-- player and the lava falls (QA: the old row beside the falls hid the basin). Local coords; `yaw` faces the pad centre (yaw 0
+-- faces -Z, like a Part's front face). Pure: tools/verify_cave_lava.py checks line of sight, floor and pad clearance.
+CaveHubLayout.Boards = {radius = 24, anglesDeg = {-65, 0, 65}, width = 22, height = 18.7, y = 17}
+function CaveHubLayout.boardSpots(): {any}
+    local fame = CaveHubLayout.get().byId.fame
+    local B = CaveHubLayout.Boards
+    local out = {}
+    for i, deg in B.anglesDeg do
+        local a = math.rad(deg)
+        local x, z = fame.x + math.cos(a) * B.radius, fame.z + math.sin(a) * B.radius
+        out[i] = {x = x, z = z, yaw = CaveHubLayout.yawTo(fame.x - x, fame.z - z)}
+    end
+    return out
+end
+
 -- ---------------------------------------------------------------- budgets (docs/104 s3.1)
 CaveHubLayout.Budget = {
     rocks = {parts = 170, tris = 400000}, station = {parts = 120, tris = 300000}, lava = {parts = 12, tris = 20000},

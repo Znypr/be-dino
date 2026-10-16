@@ -71,14 +71,18 @@ function Leaderboards.start()
     -- BD-281 QA: with the cave on the boards stand behind the Fame station (the old hard-coded z=399 would be outside the cave).
     local hub=CaveHubLayout.hub(Config)
     local boardX,boardZ,boardGap=0,399,30
-    if hub.enabled then
-        local fame=CaveHubLayout.get().byId.fame
-        boardX,boardZ,boardGap=fame.x+10,hub.centerZ+fame.z+10,27 -- right of the lava sheet, in front of the Fame pad back edge; BD-291 tunes it
-    end
+    local spots=if hub.enabled then CaveHubLayout.boardSpots() else nil -- BD-285 QA: an arc east of the Fame pad, away from the lava line
     for i,definition in definitions do
         if not preview then stores[definition.id]=DataStoreService:GetOrderedDataStore(Config.ProfileDataStoreName.."_"..definition.id..(definition.store or "_v1")) end
         local part=Instance.new("Part")
-        part.Name,part.Size,part.Position=definition.title,Vector3.new(27,23,1),Vector3.new(boardX+(i-2)*boardGap,19,boardZ)
+        part.Name,part.Size=definition.title,Vector3.new(27,23,1)
+        if spots then
+            local s=spots[i]
+            part.Size=Vector3.new(CaveHubLayout.Boards.width,CaveHubLayout.Boards.height,1) -- same 540 x 460 canvas, a little smaller so three fit east of the Fame pad
+            part.CFrame=CFrame.new(s.x,CaveHubLayout.Boards.y,hub.centerZ+s.z)*CFrame.Angles(0,s.yaw,0)
+        else
+            part.Position=Vector3.new(boardX+(i-2)*boardGap,19,boardZ)
+        end
         part.Anchored,part.CanCollide,part.Color,part.Material,part.Parent=true,false,Theme.Colors.panel,Enum.Material.SmoothPlastic,folder
         local surface=Instance.new("SurfaceGui")
         surface.Face,surface.CanvasSize,surface.Parent=Enum.NormalId.Front,Vector2.new(540,460),part
