@@ -11,8 +11,8 @@ return table.freeze({
     -- Re-tuned 2026-10-15 (BD-165) for 4 eggs per 500 food, same example outputs as before:
     -- crystals = min(RunCrystalCap, (RunCrystalPerEggHundredths*min(eggs,RunCrystalTierEggs)
     --            + RunCrystalPerExtraEggHundredths*max(0,eggs-RunCrystalTierEggs)) // 100).
-    -- 4 eggs (500 food) -> 30, 40 eggs (5,000 food) -> 220 (owner's illustrative 30/220), 50 eggs -> 273; cap 300 bounds it.
-    RunCrystalPerEggHundredths=750, RunCrystalTierEggs=4, RunCrystalPerExtraEggHundredths=530, RunCrystalCap=300,
+    -- BD-418 (12 eggs per 500 food): 12 eggs (500 food) -> 30, 120 eggs (5,000 food) -> 220 (owner's illustrative 30/220), 150 eggs -> 272; cap 300 bounds it.
+    RunCrystalPerEggHundredths=250, RunCrystalTierEggs=12, RunCrystalPerExtraEggHundredths=176, RunCrystalCap=300,
     RandomEggPrice=150,
     ConditionUpgrades={
         {level=1,price=100,requiredLevel=3},{level=2,price=300,requiredLevel=8},

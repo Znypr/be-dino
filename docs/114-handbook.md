@@ -119,15 +119,15 @@ Calm and soft (no flicker, no full-screen flash); never hides dino, food or cont
 | Rule | Value | Source |
 |---|---|---|
 | Eggs per catch | one run egg per catch, one dinosaur per successful egg | [09](09-reward-economy.md), [AGENTS.md](../AGENTS.md) |
-| Catch rate | `FoodCatchRate = 4/500` (500 food = 4 eggs, 5,000 = 40); per-run cap 50 (PROVISIONAL) | [89](89-catch-rate-4.md) (owner 2026-10-15) |
+| Catch rate | `FoodCatchRate = 12/500` (500 food = 12 eggs, 5,000 = 120; a normal 5-minute run is about 15 eggs); per-run cap 150 (PROVISIONAL, needs Studio measurement); 4/500 and 40/500 are HISTORICAL | [119](119-catch-rate-15-per-run.md) (owner 2026-10-16) |
 | Growth | `GrowthPerFood = 0.1`, predation 2.5; scale = min(4, sqrt(1+growth/50)); eggs use raw food | [90](90-fusion-ladder-v2.md) s6, BD-386 |
 | Fusion ladder | Gold = 6 Base (same species, any pattern, plurality pattern kept), Emerald = 3 Gold, Diamond = 2 Emerald (same species + pattern); donors consumed, new instance, guaranteed stage, fresh traits | [90](90-fusion-ladder-v2.md), BD-335 |
-| Species tiers | base Common 72 / Uncommon 24 / Rare 3.2 / Epic 0.7 / Legendary 0.1; run boost {1,1,1.1,1.1,1.1}, full at 40 eggs | [82](82-species-rarity-tiers.md), [89](89-catch-rate-4.md) |
+| Species tiers | base Common 72 / Uncommon 24 / Rare 3.2 / Epic 0.7 / Legendary 0.1; run boost {1,1,1.1,1.1,1.1}, full at 120 eggs | [82](82-species-rarity-tiers.md), [89](89-catch-rate-4.md) |
 | Rarity curve | r = 1/5, six-tier ladder 80/16/3.2/0.64/0.128/0.0256; price factor x2.8 | [88](88-exponential-rarity.md) |
 | Conditions, tier 0 | Cracked 50 / Dirty 30 / Normal 15 / Rainbow 4.5 / Astra 0.5; Cracked hatch success 20% | `ProgressionConfig`, [09](09-reward-economy.md) |
 | First eggs safe | `SafeEggs = 2`: the first 2 eggs are never Cracked; Cracked 50% from the third egg (OWNER 2026-10-16: keep) | `ProgressionConfig.SafeEggs`, BD-365 |
-| Run crystals | `min(300, floor((750*min(n,4)+530*max(0,n-4))/100))`: 4 eggs -> 30, 40 -> 220 (PROVISIONAL) | [09](09-reward-economy.md) |
-| Nests | 5 slots, 3 h each, 6-12 eggs (avg 9), up to 3 per run, drop gate 120 s + 1 catch | [90](90-fusion-ladder-v2.md) s5 |
+| Run crystals | `min(300, floor((250*min(n,12)+176*max(0,n-12))/100))`: 12 eggs -> 30, 120 -> 220 (PROVISIONAL) | [09](09-reward-economy.md) |
+| Nests | 5 slots, 3 h each, 6-12 eggs (avg 9), up to 3 per run (+1 per 30 eggs after the first, [119](119-catch-rate-15-per-run.md)), drop gate 120 s + 1 catch | [90](90-fusion-ladder-v2.md) s5 |
 | Hatch pace | `HatchRevealSeconds` 1 s per egg, ascending rarity, skippable | [09](09-reward-economy.md), BD-044 |
 | Colour / pattern | colour tiers Common..Mythic (5.4), colour growth bonus +1% per tier; 8 patterns equally likely | `ProgressionConfig`, BD-172, [88](88-exponential-rarity.md) |
 | Prices | trails 0/100/280/390/780/1100/2200/3100/6100/17000; auras 60/470/3700 | `ProgressionConfig` |

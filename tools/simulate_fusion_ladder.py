@@ -304,7 +304,7 @@ def check():
     old = v2_table(trials=6, cap=1500, targets=("compy",), recipe=(6, 3, 2), rule="same")[0]
     assert med(old[("compy", "d")]) > med(res[("compy", "d")]), "same-pattern-everywhere must be slower than the chosen ladder"
     cfg = (ROOT / "src/shared/Config.luau").read_text(encoding="utf-8")
-    assert re.search(r"FoodCatchRate = 4 / 500", cfg), "owner decision 2026-10-15: 4 catches per 500 food"
+    assert re.search(r"FoodCatchRate = 12 / 500", cfg), "owner decision 2026-10-16: 12 catches per 500 food (BD-418)"
     assert targeted([10], q, 200, 3) == targeted([10], q, 200, 3), "not deterministic"
     assert ladder_v2(species, seed=3, cap=200) == ladder_v2(species, seed=3, cap=200), "v2 not deterministic"
     dt = time.time() - t0
