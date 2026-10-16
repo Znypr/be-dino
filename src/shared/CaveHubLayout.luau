@@ -9,7 +9,7 @@ local CaveHubLayout = {}
 CaveHubLayout.Version = 1
 CaveHubLayout.CenterZ = 580 -- only used when Config.CaveHub is true (the old hub stays at Config.SanctuaryCenterZ)
 CaveHubLayout.FloorY = 6 -- same as the old hub floor, so SpawnGeometry / fall recovery keep working
-CaveHubLayout.BoxHalfX, CaveHubLayout.BoxHalfZ = 130, 116 -- bounding box of the organic cave (rooms + tunnels), not a room: the floor only fills part of it (docs/104 s16, owner 2026-10-16)
+CaveHubLayout.BoxHalfX, CaveHubLayout.BoxHalfZ = 130, 116 -- bounding box of the organic cave (rooms + tunnels), not a room: the floor only fills part of it (docs/104 s17, owner 2026-10-16)
 CaveHubLayout.Biome = {minX = -150, maxX = 150, minZ = 450, maxZ = 710} -- island kit never intersects this when on (BD-281: widened from 140/460/700 so the rough 12 stud shell fits)
 CaveHubLayout.WallThickness = 8
 CaveHubLayout.DropClearance = 5 -- spawn root height above the floor (matches SpawnGeometry.DropClearance)
@@ -17,7 +17,7 @@ CaveHubLayout.MaxPathSlopeDeg = 8
 CaveHubLayout.MinStationGap = 48
 CaveHubLayout.ArrivalSpotsPerStation = 6
 CaveHubLayout.Baked = false -- true once the owner smooths the shell by hand (BD-281 skips the server fill)
-CaveHubLayout.CeilingEdge = 10 -- studs above the floor at the rock wall; the ceiling domes up to each room / tunnel height (docs/104 s16)
+CaveHubLayout.CeilingEdge = 10 -- studs above the floor at the rock wall; the ceiling domes up to each room / tunnel height (docs/104 s17)
 CaveHubLayout.CeilingDomeDepth = 14 -- studs from the wall over which the ceiling rises to its full height
 CaveHubLayout.WallNoise = 3.2 -- +- studs of wall relief (two noise octaves): no straight wall faces, no box corners
 CaveHubLayout.RockThickness = 12 -- plan distance the rock shell reaches beyond the open cave
@@ -40,7 +40,7 @@ end
 
 local built: any = nil
 -- ---------------------------------------------------------------- cave field (local coords)
--- docs/104 s16 (owner 2026-10-16): the cave is NOT a room. It is a union of ROOMS (a central chamber and one alcove per station)
+-- docs/104 s17 (owner 2026-10-16): the cave is NOT a room. It is a union of ROOMS (a central chamber and one alcove per station)
 -- joined by short winding TUNNELS (capsules along the walkable paths), with noisy walls. caveSd(x, dz) = signed distance in studs to the
 -- cave wall (> 0 inside the open cave). Each room / tunnel also carries a ceiling `height` (studs over the floor at full dome).
 -- {id, x, z, rx, rz, height}. Pad radius + 10..13 so every pad has >= 4 studs of clear floor around it after the wall noise.
@@ -54,7 +54,7 @@ local ROOMS = {
     {"index", -84, 34, 30, 30, 40},
     {"settings", -48, 76, 24, 24, 34},
     {"fame", 52, 76, 32, 32, 38},
-    {"cavern", -4, 86, 34, 21, 54}, -- lava pool + falls
+    {"cavern", -4, 88, 42, 24, 62}, -- lava pool + falls
     -- small side caves (nooks) that break up the silhouette; each overlaps a room so none is an isolated bubble
     {"nook_nw", -30, -62, 13, 13, 28}, {"nook_ne", 34, -68, 12, 12, 30}, {"nook_e", 104, 10, 13, 13, 30},
     {"nook_w", -106, 12, 12, 12, 30}, {"nook_sw", -78, 84, 12, 12, 28}, {"nook_se", 78, 98, 11, 11, 28},
@@ -241,7 +241,7 @@ local STATION_PROPS: {[string]: {{any}}} = {
 }
 -- Scatter props (rocks, stalagmites, moss ...): {key, count}. Lava props are placed around the pool, light cones in the holes.
 local SCATTER = {
-    -- docs/104 s16 (owner 2026-10-16): decor is reduced and grows out of the rock. Wall pieces, clusters and moss hug the cave wall
+    -- docs/104 s17 (owner 2026-10-16): decor is reduced and grows out of the rock. Wall pieces, clusters and moss hug the cave wall
     -- (zone "wall"/"edge"); only a few free-standing floor rocks remain, and nothing reads as furniture dropped on the floor.
     {"cave_stalagmite_l", 4, "edge"}, {"cave_stalagmite_s", 6}, {"cave_rock_round", 6, "edge"}, {"cave_rock_flat", 3, "edge"},
     {"rock_mossy_boulder", 3, "edge"}, {"rock_crystal", 4, "edge"}, {"rock_pebbles", 6}, {"cave_moss_patch", 10, "edge"},
@@ -359,7 +359,7 @@ function CaveHubLayout.flatDistance(x: number, z: number): number
     return flatDistanceLocal(x, z - CaveHubLayout.CenterZ)
 end
 -- Floor top height: exactly FloorY on pads and the laid-stone paths; elsewhere gentle rolling hills and a few low terraces (0..HillMax studs
--- over FloorY, slopes < 20 degrees) that fade in over HillRamp studs from the nearest flat zone (docs/104 s16).
+-- over FloorY, slopes < 20 degrees) that fade in over HillRamp studs from the nearest flat zone (docs/104 s17).
 CaveHubLayout.HillMax, CaveHubLayout.HillRamp = 3.0, 18
 local function floorHeightLocal(x: number, dz: number): number
     local d = flatDistanceLocal(x, dz)
@@ -475,7 +475,7 @@ function CaveHubLayout.get(): any
     built.holes = holes
     built.rooms = {}
     for _, r in ROOMS do built.rooms[#built.rooms + 1] = {id = r[1], x = r[2], z = r[3], rx = r[4], rz = r[5], height = r[6]} end
-    -- rock ledges (docs/104 s16): at the back of a station alcove the wall grows a low stone shelf in the same palette, where the old
+    -- rock ledges (docs/104 s17): at the back of a station alcove the wall grows a low stone shelf in the same palette, where the old
     -- counters / stalls stood on the floor. Terrain-only (CaveTerrainRules adds them to the shell). Skipped where one would crowd the lava
     -- pool or a path mouth. {owner, x, z, yaw, w, d, h}: oriented box (Roblox yaw), top `h` studs over the floor.
     local ledges = {}
@@ -530,6 +530,32 @@ function CaveHubLayout.get(): any
         end
     end
     built.clusters = clusters
+    -- BD-296 (carried from PR 270): rock frame for the gate arch: a tall pillar and a boulder each side of the 30 wide mouth, outside the
+    -- walk-through lane, tucked toward the wall. Existing registered meshes only; skipped when they do not fit.
+    do
+        local g = station("gate")
+        for _, f in {{"cave_wall_pillar", 19, -3}, {"cave_wall_boulder_l", 24, 4}} do
+            for _, side in {-1, 1} do
+                local key = f[1]
+                local br = boundRadius(KINDS[key])
+                local x, z = g.x + side * f[2], g.z + f[3]
+                local ok = insideFloorLocal(x, z, br + 1)
+                for _, p in built.paths do
+                    if segDist(x, z, p.ax, p.az, p.bx, p.bz) < p.half + br + 1 then ok = false end
+                end
+                for _, q in placed do
+                    if dist(x, z, q[1], q[2]) < (br + q[3]) * 0.9 then ok = false end
+                end
+                for _, q in props do
+                    if q.group ~= "lights" and dist(x, z, q.x, q.z) < br + 3 then ok = false end
+                end
+                if ok then
+                    placed[#placed + 1] = {x, z, br}
+                    addProp(key, x, z, yawTo(g.x - x, g.z - z), 1, "gate")
+                end
+            end
+        end
+    end
     for _, e in SCATTER do
         local key, count, zone = e[1], e[2], e[3]
         local k = KINDS[key]

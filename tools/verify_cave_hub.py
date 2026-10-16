@@ -97,7 +97,7 @@ for x=-C.BoxHalfX-10,C.BoxHalfX+10,2 do for dz=-C.BoxHalfZ-10,C.BoxHalfZ+10,2 do
 end end
 assert(minX>=-130 and maxX<=130 and minZ>=-116 and maxZ<=116,"cave inside the 260 x 232 box "..minX..","..maxX..","..minZ..","..maxZ)
 assert(maxX-minX>=200 and maxZ-minZ>=200,"cave really is big (not a small hub)")
--- docs/104 s16: not a cube. Only a minority of the bounding box is open floor, and the bounding rectangle's four corners are solid rock.
+-- docs/104 s17: not a cube. Only a minority of the bounding box is open floor, and the bounding rectangle's four corners are solid rock.
 local open,probes=0,0
 for x=-C.BoxHalfX,C.BoxHalfX,4 do for dz=-C.BoxHalfZ,C.BoxHalfZ,4 do probes+=1 if C.insideFloor(x,dz+C.CenterZ,0) then open+=1 end end end
 assert(open/probes>0.30 and open/probes<0.62,"the open floor fills 30..62 percent of its bounding box, so it is rooms and tunnels, not a cut-out cube: "..open/probes)
@@ -276,7 +276,7 @@ for _,s in S do
  for i,a in s.spots do assert(reached(a.x,a.z),"arrival spot reachable on flat ground: "..s.id.." #"..i) end
 end
 assert(reached(L.gate.x,L.gate.triggerZ+4),"run-exit gate reachable on flat ground")
--- ---- docs/104 s16: the whole open cave is one connected network a child can walk (no sealed side caves, no dead-end bubbles), over
+-- ---- docs/104 s17: the whole open cave is one connected network a child can walk (no sealed side caves, no dead-end bubbles), over
 -- ground that is walkable (slope <= 28 degrees between 2 stud neighbours), 3+ studs from the wall; every room and every tunnel waypoint is in it.
 do
  local W=2
@@ -311,7 +311,7 @@ do
    assert(degree>=2,"station has two tunnels (a loop, not a dead end): "..s.id.." "..degree)
   end
  end
- -- sightlines (docs/104 s16): from every arrival spot the straight line to the station's sign stays in open cave
+ -- sightlines (docs/104 s17): from every arrival spot the straight line to the station's sign stays in open cave
  local sightMin=math.huge
  for _,s in S do
   if s.sign~="" then

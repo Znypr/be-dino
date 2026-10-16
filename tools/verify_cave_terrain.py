@@ -216,7 +216,9 @@ for fx=F.x-18,F.x+18,3 do for fz=F.z-1,F.z+7,2 do
  for y=FY+8,R.YMax-res/2,1 do if occAt(fx,y,CZ+fz)>0 then roof=true break end end
  assert(roof,"roof closed above the falls recess at "..fx..","..fz)
 end end
-local mF,oF=R.cell(F.x,FY+20,CZ+F.z+R.FallRecess.back+2)
+local fz=F.z+2
+while occAt(F.x,FY+7,CZ+fz)<=0 and fz<F.z+30 do fz+=0.5 end
+local mF,oF=R.cell(F.x,FY+7,CZ+fz)
 assert(oF>0 and mF=="CrackedLava","lava vein behind the falls "..mF)
 
 -- ---- stations: pad material is laid stone; the mix has stone, rock, slate, cobblestone and only a little moss

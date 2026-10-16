@@ -1,5 +1,5 @@
 --!strict
--- BD-281 / docs/104 s16 (owner 2026-10-16: organic cave, not a cube): the Cave shell as pure voxel rules (docs/104 s3). Given a voxel centre (x, y, z) in world studs it returns the
+-- BD-281 / docs/104 s17 (owner 2026-10-16: organic cave, not a cube): the Cave shell as pure voxel rules (docs/104 s3). Given a voxel centre (x, y, z) in world studs it returns the
 -- terrain material and occupancy, built only from CaveHubLayout (floor blob, ceiling, holes, stations, paths, pool, falls,
 -- gate). Pure numbers only (no engine objects, no settings table): src/server/CaveTerrain.luau only writes what this module says, and
 -- tools/verify_cave_terrain.py runs the same functions offline. Everything is PROVISIONAL (docs/104).
@@ -30,7 +30,7 @@ Rules.FallRecess = {halfWidth = 20, front = -1, back = 7} -- dz range around Lay
 -- BD-384 look pass: cooler, softer grey-lilac stone (the warm lamps and the cave grade carry the colour) instead of hot orange
 -- cracked sandstone. Only Cobblestone, Limestone and CrackedLava are recoloured (terrain colours are place-wide, and the island uses
 -- Sandstone, Slate, Rock and Basalt), so the walls and floor are built from those two only; the island palette is untouched.
-Rules.Colors = {Cobblestone = {126, 122, 130}, Limestone = {160, 154, 158}, CrackedLava = {255, 120, 40}}
+Rules.Colors = {Cobblestone = {138, 132, 138}, Limestone = {160, 154, 158}, CrackedLava = {255, 120, 40}}
 Rules.Materials = {"Air", "Rock", "Limestone", "Sandstone", "Slate", "Basalt", "Cobblestone", "Grass", "LeafyGrass", "CrackedLava"}
 
 local FLOOR_BAND = 6 -- studs below the floor top that carry the floor surface mix
@@ -137,7 +137,10 @@ local function material(col: any, y: number, air: number): string
     if -air > 10 then return "Rock" end
     -- BD-384: big slow patches (scale 22, not 8) of two cave-only stones: no smeared grid, no dark smudges, no island Sandstone
     local v = relief(x + y * 0.7, z - y * 0.4, 22, 12.9)
-    if v > 0.7 then return "Cobblestone" end
+    -- BD-296 (carried from PR 270): Cobblestone carries the fine tile grid, so on walls it is rare: a low foot band and a few slow bands, the rest smooth Limestone
+    local band = 0.5 + 0.5 * math.sin(y / 7 + math.noise(x / 40, z / 40, 5.5) * 5)
+    if y < col.floorTop + 5 and v > 0.45 then return "Cobblestone" end
+    if v > 0.82 and band > 0.7 then return "Cobblestone" end
     return "Limestone"
 end
 

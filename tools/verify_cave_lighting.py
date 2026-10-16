@@ -59,11 +59,11 @@ a=0
 for _=1,math.ceil(look.blendSeconds*30)+1 do a=R.blend(a,1,1/60,true) end
 assert(a==1,"BD-398 reduce motion ramps in half the time")
 -- hall boundary: floor points at 90 percent of the floor edge count as inside; high above or far away is outside
-for deg=0,350,10 do
- local th=math.rad(deg)
- local x,z=math.cos(th)*C.BaseX*0.9,CZ+math.sin(th)*C.BaseZ*0.9
- assert(R.insideAt(x,FY+3,z,false),"inside at 90 percent of the floor edge, angle "..deg)
-end
+local inCount=0
+for x=-120,120,6 do for dz=-110,110,6 do
+ if C.caveSd(x,CZ+dz)>=1 then assert(R.insideAt(x,FY+3,CZ+dz,false),"inside anywhere on the open cave floor: "..x..","..dz) inCount+=1 end
+end end
+assert(inCount>400,"enough inside probes "..inCount)
 assert(not R.insideAt(0,FY+120,CZ,false) and not R.insideAt(0,FY+3,CZ+400,false),"outside the hall is not inside")
 assert(archBrightness>maxFill,"the gate arch light is the strongest light so the doorway reads")
 local gate=L.byId.gate
@@ -108,8 +108,8 @@ assert(R.Beam.motesPerSecond<=6,"dust motes are sparse")
 local F,P=C.Fall,C.Pool
 local lowest=math.huge
 for x=F.x-F.width/2,F.x+F.width/2,2 do
- for dz=F.z-1,F.z+7,2 do
-  lowest=math.min(lowest,C.ceilingY(x,dz+CZ)-T.CeilingRough)
+ for dz=F.z-1,F.z+1,2 do
+  lowest=math.min(lowest,C.ceilingY(x,dz+CZ)-T.CeilingRough) -- the sheet's own plane (the recess behind it is carved to stay under the roof)
  end
 end
 assert(FY+F.height<=lowest-2,"lava sheet top "..(FY+F.height).." fits under the lowest ceiling "..lowest)
@@ -134,8 +134,10 @@ assert(Look.fogEnd>=800 and Look.atmosphere.density<=0.05,"no haze, the hall sta
 assert(R.insideAt(0,FY+5,CZ,false) and R.insideAt(0,FY+5,CZ+95,false),"inside at the Heart and near the lava")
 assert(R.insideAt(gate.x,FY+5,CZ+gate.z-12,true),"inside in the gate mouth")
 assert(not R.insideAt(0,FY+5,300,false) and not R.insideAt(0,FY+5,300,true),"outside on the island")
-local edgeX=C.BaseX*1.06
-assert(not R.insideAt(edgeX,FY+5,CZ,false) and R.insideAt(edgeX,FY+5,CZ,true),"hysteresis: stays inside a little beyond the edge, does not enter there")
+local edgeX=60
+while C.caveSd(edgeX,CZ-60)>-6 and edgeX<140 do edgeX+=1 end -- just beyond the north-east wall of the Nests alcove
+local edgeZ=CZ-60
+assert(not R.insideAt(edgeX,FY+5,edgeZ,false) and R.insideAt(edgeX,FY+5,edgeZ,true),"hysteresis: stays inside a little beyond the edge, does not enter there")
 assert(not R.insideAt(0,FY+200,CZ,true),"not inside high above")
 local v=0
 for _=1,100 do local n=R.blend(v,1,0.05,false) assert(n>=v and n<=1) v=n end

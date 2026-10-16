@@ -26,7 +26,7 @@ local function hitsCircle(ax: number, az: number, bx: number, bz: number, cx: nu
 end
 Rules.hitsCircle = hitsCircle
 
--- The walkable graph from the layout: nodes = station centres (flat pads) plus the tunnel waypoints (docs/104 s16: tunnels wind), edges =
+-- The walkable graph from the layout: nodes = station centres (flat pads) plus the tunnel waypoints (docs/104 s17: tunnels wind), edges =
 -- the straight pieces of path between two nodes (L.paths with `a`/`b`; the gate mouth stub is not an edge).
 local function graph(layout: any): ({[string]: any}, {any})
     local nodes: {[string]: any} = {}
