@@ -94,7 +94,14 @@ local function generatedProp(id: string, biome: string, roll: number): Model?
     if not Config.WorldGeneratedMeshes then return nil end
     local key = Generated.visualFor(id, biome, roll)
     local folder = ReplicatedStorage:FindFirstChild("GeneratedWorld")
-    local template = if key and folder then folder:FindFirstChild(key) else nil
+    local template = nil
+    -- BD-462: owner-approved V3 tree first (only once its asset id is filled in AND it loaded); otherwise the current generated mesh.
+    local v3Key = if key then Generated.replacementFor(key) else nil
+    if v3Key and folder then
+        template = folder:FindFirstChild(v3Key)
+        if template then key = v3Key end
+    end
+    if not template and key and folder then template = folder:FindFirstChild(key) end
     if not template or not template:IsA("MeshPart") then return nil end
     local cacheKey = key .. "|" .. id
     if not generatedCache[cacheKey] then
