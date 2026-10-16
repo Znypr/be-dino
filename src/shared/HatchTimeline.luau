@@ -167,10 +167,11 @@ end
 -- "Skip all" button copy (kid words, docs/72).
 T.SkipText = "Skip the rest"
 
--- Remaining eggs after this one; `more` is whether another egg can be claimed right now.
-function T.remaining(more: boolean, active: number, waiting: number): number
+-- Remaining eggs after this one; `more` is whether another egg can be claimed right now. `buffered` (BD-380) = eggs of the
+-- current hatch page: already credited and out of the queue, so active and waiting do not count them but they are still to open.
+function T.remaining(more: boolean, active: number, waiting: number, buffered: number?): number
     if not more then return 0 end
-    return math.max(1, math.floor(active + waiting))
+    return math.max(1, math.floor(active + waiting + (buffered or 0)))
 end
 
 -- Curves (p = 0..1 progress of the build-up).

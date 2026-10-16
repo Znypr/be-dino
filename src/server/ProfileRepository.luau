@@ -521,6 +521,10 @@ local function syncAttributes(player: Player, profile: any)
     local banked = if typeof(profile.runEggBank) == "table" then #profile.runEggBank else 0
     PrivateState.set(player, "BankedRunEggCount", banked)
     PrivateState.set(player, "QueuedEggsWaiting", banked + (profile.pendingChestGrants or 0))
+    -- BD-380: eggs of the current hatch page are already credited and out of profile.eggs, so neither count above includes
+    -- them; the hatch hint ("N left", "Egg 2 of 4") adds this number so it equals the eggs really left to open.
+    local pendingPage = revealBuffer[player]
+    PrivateState.set(player, "BufferedRevealCount", if pendingPage then #pendingPage else 0)
     local nestSummary = {}
     for _, nest in profile.eggNests or {} do
         table.insert(nestSummary, {id = nest.nestId, size = nest.size, luck = nest.luck, state = nest.state, readyAt = nest.readyAt})

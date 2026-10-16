@@ -15,7 +15,7 @@ local PRIVATE = {
     "Crystals", "AccountXP", "PlaySeconds", "RarestCaught", "RobuxSpent", "ProfileRevision",
     "CompyCopies", "CompyGold", "TriceratopsCopies", "TriceratopsGold", "TyrannosaurusCopies", "TyrannosaurusGold",
     -- egg and nest queues
-    "ChestQueueJson", "NestsJson", "PendingChestGrants", "ActiveChestCount", "BankedRunEggCount", "QueuedEggsWaiting",
+    "ChestQueueJson", "NestsJson", "PendingChestGrants", "ActiveChestCount", "BankedRunEggCount", "QueuedEggsWaiting", "BufferedRevealCount",
     "NextChestId", "NextChestReadyAt", "RunStartBlocked",
     -- run and hatch summaries
     "LastChestBig", "LastChestShiny", "LastChestFailed", "LastChestNewJson", "LastChestGenesJson", "LastChestRewardText", "LastChestEventMutation",
