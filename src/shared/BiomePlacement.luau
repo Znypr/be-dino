@@ -22,7 +22,39 @@ PropGround.Raised = {tree = true, giant = true, shrub = true, groundcover = true
 -- Rocks embed by a fraction of their height instead (BiomePlacement sink .12).
 PropGround.BottomOffset = {tree = 0, shrub = 0, groundcover = 0, rock = 0, landmark = 0}
 PropGround.RockSink = 0.12
-PropGround.MaxRaycastCorrection = 6 -- studs; a raycast answer further than this from the layout height is ignored
+-- BD-416/417 (raycast placement, Arena): per-kind sampling policy. ONE footprint rule is shared with tools/qa/ground_probe so the gate
+-- grades what the placement used. Rationale per kind:
+--   plants (tree, giant, shrub, groundcover): the HIGHEST of the 5 rays at the stem footprint, minus RootSink, so the roots meet the
+--     ground on the uphill side and nothing floats (a plant buried 0.15 stud is invisible; a floating one is not).
+--   rocks, spires, ledges, landmarks: the LOWEST of the 5 rays at the WHOLE base (footprint 30% of the mesh, max 6 studs), minus the
+--     RockSink embed for rocks, so a tall pillar never hangs on its downhill side; the embed hides the uphill side.
+--   tall props (spires, ledges) are not placed on slopes steeper than TallMaxSlope degrees (BiomePlacement rock choice).
+PropGround.RootSink = 0.15
+PropGround.TallMaxSlope = 25
+PropGround.Policy = {plant = "highest", rock = "lowest", landmark = "lowest"}
+PropGround.MaxRaycastCorrection = 6
+
+-- Layer used for the raycast rule: giants that are rocks (spires, bare boulders in badlands) follow the rock policy.
+function PropGround.rayLayer(layer: string, kind: string?): string
+    if kind == "rock" and layer == "giant" then return "rock" end
+    return layer
+end
+
+-- Footprint radius of the 5 sample rays from the REAL mesh size (studs, already scaled), the same rule the probe uses.
+function PropGround.footprintRadius(layer: string, sizeX: number, sizeZ: number): number
+    local m = math.max(sizeX, sizeZ)
+    if layer == "rock" or layer == "landmark" then return math.min(6, .3 * m) end
+    return math.min(1, .04 * m)
+end
+
+-- Pivot y from RAY heights (Terrain raycast): plants highest - RootSink, rocks lowest - embed, landmarks lowest.
+function PropGround.restYRay(layer: string, heights: {number}, height: number, scale: number): number
+    local hi, lo = -math.huge, math.huge
+    for _, h in heights do hi, lo = math.max(hi, h), math.min(lo, h) end
+    if layer == "rock" then return lo - PropGround.RockSink * height * scale end
+    if layer == "landmark" then return lo end
+    return hi - PropGround.RootSink
+end -- studs; a raycast answer further than this from the layout height is ignored
 
 -- Radius (studs) of the trunk footprint to sample: the first collider box of the kit id (the trunk), else a fraction of the prop.
 function PropGround.trunkRadius(data: any, scale: number, fallback: number): number
@@ -60,7 +92,7 @@ function PropGround.corrected(layoutY: number, hits: {number?}, layer: string, h
     local found: {number} = {}
     for _, h in hits do if h ~= nil and h == h then table.insert(found, h) end end
     if #found < 3 then return layoutY end -- not enough rays hit the terrain
-    local y = PropGround.restY(layer, found, height, scale)
+    local y = PropGround.restYRay(layer, found, height, scale)
     if math.abs(y - layoutY) > PropGround.MaxRaycastCorrection then return layoutY end
     return y
 end
@@ -377,7 +409,7 @@ function BiomePlacement.generate(options): {Placement}
                     local family = pick(def.rocks, n)
                     local size = if roll < .4 then "s" elseif roll < .82 then "m" else "l"
                     id = "world_boulder_" .. family .. "_" .. size
-                    if (biome == "badlands" or biome == "volcanic" or h > 36) and s > 14 and n < .22 then
+                    if (biome == "badlands" or biome == "volcanic" or h > 36) and s > 14 and s <= PropGround.TallMaxSlope and n < .22 then
                         id = if n < .11 then "world_rocks_spires" else "world_rocks_ledge"
                     end
                 elseif lay == "shrub" then

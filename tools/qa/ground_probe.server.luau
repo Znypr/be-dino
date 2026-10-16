@@ -3,8 +3,8 @@
 -- Cave: set Config.CaveHub = true in the copy first (the folder is found automatically). Output is parsed by
 -- tools/qa/ground_report.py (save the returned text to a file). Terrain raycast from above at the centre and four points
 -- around the footprint; SUNK = highest terrain under the footprint minus the prop's lowest corner; FLOAT = lowest corner minus
--- the highest terrain hit.
-local SUNK, FLOAT = 0.3, 0.5
+-- the highest terrain hit. FLOAT 0.3 (BD-417, was 0.5). Plants use the same footprint as the placement (PropGround.footprintRadius).
+local SUNK, FLOAT = 0.3, 0.3
 -- Props that are placed off the floor on purpose (ceiling / wall / basin pieces): not a floor-grounding question.
 local SKIP = {cave_stalactite = true, cave_moss_hang = true, cave_stepping_stone = true}
 local rp = RaycastParams.new()

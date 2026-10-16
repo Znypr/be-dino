@@ -1,26 +1,37 @@
-PLACE	island	3555	55
-KIND	island	world_mushrooms_a	137	0	3	0.00	0.68
-KIND	island	world_bush_a	126	0	35	0.00	0.91
-KIND	island	world_tree_canopy_l	58	0	12	0.00	0.98
-KIND	island	world_bush_b	141	0	17	0.00	0.62
-KIND	island	world_tree_conifer_m	128	0	1	0.00	0.53
-KIND	island	world_boulder_mossy_l	2	1	0	1.39	0.00
-KIND	island	world_rocks_ledge	5	5	0	1.92	0.00
-KIND	island	world_rocks_spires	9	4	0	5.44	0.00
-KIND	island	world_horsetail_a	211	0	1	0.00	0.52
-KIND	island	world_tree_conifer_l	92	0	17	0.00	1.08
-KIND	island	world_tree_dead_l	19	0	8	0.00	1.13
-KIND	island	world_boulder_bare_m	53	13	0	1.68	0.00
-KIND	island	world_tree_canopy_s	63	0	1	0.00	0.57
-KIND	island	world_fern_a	264	0	40	0.00	0.96
-KIND	island	world_tree_cycad_l	30	0	9	0.00	0.94
-KIND	island	world_fern_b	246	0	50	0.00	0.96
-KIND	island	world_landmark_stone_arch	1	0	1	0.00	0.71
-KIND	island	world_boulder_bare_l	18	12	0	2.35	0.00
-WORST	island	world_rocks_spires	5.44	304.0	-228.8
-WORST	island	world_rocks_spires	5.00	271.1	137.8
-WORST	island	world_rocks_spires	3.39	121.9	-236.7
-WORST	island	world_boulder_bare_l	2.35	285.6	-163.3
+PLACE	island	3558	55
+KIND	island	world_grass_a	522	0	0	0.00	0.00
+KIND	island	world_mushrooms_a	137	0	0	0.00	0.00
+KIND	island	world_boulder_mossy_s	31	0	0	0.00	0.00
+KIND	island	world_bush_a	126	0	0	0.00	0.00
+KIND	island	world_tree_canopy_l	58	0	0	0.00	0.00
+KIND	island	world_bush_b	142	0	0	0.00	0.00
+KIND	island	world_tree_cycad_s	25	0	0	0.00	0.00
+KIND	island	world_tree_conifer_m	128	0	0	0.00	0.00
+KIND	island	world_tree_cycad_m	51	0	0	0.00	0.00
+KIND	island	world_boulder_mossy_l	2	0	0	0.00	0.00
+KIND	island	world_tree_dead_s	14	0	0	0.00	0.00
+KIND	island	world_rocks_ledge	5	0	0	0.00	0.00
+KIND	island	world_flowers_a	334	0	0	0.00	0.00
+KIND	island	world_tree_canopy_m	79	0	0	0.00	0.00
+KIND	island	world_rocks_spires	8	0	0	0.00	0.00
+KIND	island	world_horsetail_a	211	0	0	0.00	0.00
+KIND	island	world_tree_conifer_l	92	0	0	0.00	0.00
+KIND	island	world_landmark_ruins_altar	1	0	0	0.00	0.00
+KIND	island	world_tree_conifer_s	80	0	0	0.00	0.00
+KIND	island	world_tree_dead_l	19	0	0	0.00	0.00
+KIND	island	world_boulder_bare_m	52	0	0	0.00	0.00
+KIND	island	world_landmark_fossil_display	1	0	0	0.00	0.00
+KIND	island	world_tree_canopy_s	63	0	0	0.00	0.00
+KIND	island	world_grass_b	673	0	0	0.00	0.00
+KIND	island	world_boulder_bare_s	51	0	0	0.00	0.00
+KIND	island	world_fern_a	263	0	0	0.00	0.00
+KIND	island	world_tree_cycad_l	30	0	0	0.00	0.00
+KIND	island	world_fern_b	246	0	0	0.00	0.00
+KIND	island	world_landmark_dino_statue	1	0	0	0.00	0.00
+KIND	island	world_landmark_stone_arch	1	0	0	0.00	0.00
+KIND	island	world_boulder_mossy_m	22	0	0	0.00	0.00
+KIND	island	world_tree_dead_m	17	0	0	0.00	0.00
+KIND	island	world_boulder_bare_l	18	0	0	0.00	0.00
 PLACE	cave	215	0
 KIND	cave	cave_wall_arch_small	4	4	0	0.50	0.00
 KIND	cave	cave_wall_pillar	10	10	0	0.50	0.00

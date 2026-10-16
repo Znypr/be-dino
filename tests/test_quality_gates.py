@@ -23,6 +23,18 @@ class GroundReport(unittest.TestCase):
         text = 'PLACE\tisland\t10\t0\nKIND\tisland\tworld_bush_a\t10\t0\t2\t0.00\t2.00\n'
         self.assertEqual(len(ground_report.evaluate(text)[3]), 1)
 
+    def test_slope_rock_over_allowance_fails(self):
+        # BD-416: the old 6-stud slope allowance is gone: a spire deeper than its embed fails
+        text = 'PLACE\tisland\t9\t0\nKIND\tisland\tworld_rocks_spires\t9\t4\t0\t5.44\t0.00\n'
+        self.assertEqual(len(ground_report.evaluate(text)[3]), 1)
+
+    def test_float_limit_is_03(self):
+        # BD-417: 0.4 floating (inside the old 1.2 allowance) now fails
+        bad = 'PLACE\tisland\t10\t0\nKIND\tisland\tworld_fern_a\t10\t0\t2\t0.00\t0.40\n'
+        ok = 'PLACE\tisland\t10\t0\nKIND\tisland\tworld_fern_a\t10\t0\t0\t0.00\t0.00\n'
+        self.assertEqual(len(ground_report.evaluate(bad)[3]), 1)
+        self.assertEqual(ground_report.evaluate(ok)[3], [])
+
     def test_rim_piece_design_allowance(self):
         text = 'PLACE\tcave\t4\t0\nKIND\tcave\tcave_wall_pillar\t4\t4\t0\t0.50\t0.00\n'
         self.assertEqual(ground_report.evaluate(text)[3], [])
@@ -68,7 +80,7 @@ class SourceRules(unittest.TestCase):
     def test_generated_prop_pivot_is_at_the_bottom(self):
         arena = (ROOT / 'src/server/Arena.luau').read_text()
         self.assertIn('mesh.PivotOffset = CFrame.new(0, -mesh.Size.Y / 2, 0)', arena)
-        self.assertIn('p.layer == "rock" or p.layer == "landmark"', arena)
+        self.assertIn('rayLayer == "rock" or p.layer == "landmark"', arena)
 
     def test_shop_crystals_are_amber(self):
         props = (ROOT / 'src/shared/CaveHubProps.luau').read_text()

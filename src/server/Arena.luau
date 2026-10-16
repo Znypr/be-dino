@@ -119,10 +119,10 @@ local function generatedProp(id: string, biome: string, roll: number): Model?
     return generatedCache[cacheKey]:Clone()
 end
 -- One kit prop = the uploaded MeshPart model (1 part) plus simplified invisible box colliders scaled with it.
-local function kitProp(folder: Instance, id: string, pivot: CFrame, scale: number, biome: string?, roll: number?): boolean
-    local model = generatedProp(id, biome or "meadow", roll or .5) or Resources.clone(id)
+local function kitProp(folder: Instance, id: string, pivot: CFrame, scale: number, biome: string?, roll: number?, made: Model?): boolean
+    local model = made or generatedProp(id, biome or "meadow", roll or .5) or Resources.clone(id)
     if model then
-        model:ScaleTo(scale)
+        if not made then model:ScaleTo(scale) end
         model:PivotTo(pivot)
         model.Parent = folder
     end
@@ -159,15 +159,23 @@ local function biomeKit(parent: Instance)
         local data = KitData[p.id]
         -- BD-409: rocks and landmarks too (measured in Studio: every boulder sat ~2.3 studs INSIDE the voxel terrain, the analytic layout height
         -- is lower than the real surface). Rocks keep their RockSink embed; landmarks rest on the lowest sample.
-        if (Ground.Raised[p.layer] and data.kind ~= "rock") or p.layer == "rock" or p.layer == "landmark" then
+        -- BD-416/417: build + scale the model first so the ray footprint and the embed come from the REAL mesh size (the generated mesh is
+        -- fitted inside the kit extent, so extent * scale over-estimates it), with the per-kind policy of BiomePlacement.Ground.
+        local made: Model? = nil
+        if p.layer ~= "log" then
+            made = generatedProp(p.id, p.biome or "meadow", Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77)) or Resources.clone(p.id)
+            if made then made:ScaleTo(p.scale) end
+        end
+        local rayLayer = Ground.rayLayer(p.layer, data.kind)
+        if (Ground.Raised[p.layer] and data.kind ~= "rock") or rayLayer == "rock" or p.layer == "landmark" then
             local hits = {}
-            local footprint = if p.layer == "rock" then math.min(6, .3 * math.max(data.extent[1], data.extent[3]) * p.scale) -- rocks: the whole base, lowest sample wins
-                else Ground.trunkRadius(data, p.scale, p.radius * .5)
+            local size = if made and made.PrimaryPart then made.PrimaryPart.Size else Vector3.new(data.extent[1], data.extent[2], data.extent[3]) * p.scale
+            local footprint = Ground.footprintRadius(rayLayer, size.X, size.Z)
             for _, pt in Ground.samplePoints(p.x, p.z, footprint) do
                 local result = workspace:Raycast(Vector3.new(pt[1], p.y + 40, pt[2]), Vector3.new(0, -90, 0), rayParams)
                 table.insert(hits, if result then result.Position.Y else nil)
             end
-            local y = Ground.corrected(p.y, hits, p.layer, data.extent[2], p.scale)
+            local y = Ground.corrected(p.y, hits, rayLayer, size.Y, 1)
             if math.abs(y - p.y) > .05 then rayMoved += 1 end
             p.y = y
         end
@@ -182,7 +190,7 @@ local function biomeKit(parent: Instance)
                 Color3.fromRGB(113, 133, 139), Enum.Material.Slate, true)
             collider.CFrame = pivot * CFrame.new(0, data.extent[2] * .45 * p.scale, 0)
             collider.Transparency = 1
-        elseif not kitProp(folder, p.id, pivot, p.scale, p.biome, Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77)) then
+        elseif not kitProp(folder, p.id, pivot, p.scale, p.biome, Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77), made) then
             missing += 1
         end
         if i % 40 == 0 then task.wait() end

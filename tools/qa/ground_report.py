@@ -3,17 +3,16 @@
 1. In your own temp Studio copy (Play mode, CaveHub = true) run ground_probe.server.luau with execute_luau (Server); save the text.
 2. python tools/qa/ground_report.py [--input saved.tsv]   (default: the committed probe of the current main build)
 Rules (studs): nothing may be BELOW the terrain (probe SUNK threshold 0.3 for plants and cave props; island rocks and landmarks get the
-RockSink embed of 12% of their height) or FLOAT above it by more than 0.5. Documented exceptions: cave rim pieces are placed 0.5 stud in
-the wall on purpose (design allowance 0.6); plants resting on a slope float up to 1.2 because the bottom rests on the HIGHEST trunk sample
-+ 0.2 (BD-417). Anything else fails, with the per-kind counts and the worst offenders. Lying logs are not graded (listed as LYING).
+RockSink embed of 12% of their height) or FLOAT above it by more than 0.3 (BD-417). Documented exception: cave rim pieces are placed 0.5 stud in
+the wall on purpose (design allowance 0.6). Anything else fails, with the per-kind counts and the worst offenders. Lying logs are not graded (listed as LYING).
 """
 from pathlib import Path
 import argparse
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT = ROOT / 'tools/qa/data/ground_probe_2026-10-16.tsv'
 RIM = {'cave_wall_pillar', 'cave_wall_arch_small', 'cave_wall_boulder_l'}
-SUNK_ROCK_MAX = 6.0   # slope embedding of an island rock/landmark, beyond its RockSink allowance (BD-416)
-FLOAT_PLANT_MAX = 1.2
+SUNK_ROCK_MAX = 0.0   # BD-416: nothing on the island may be deeper than its RockSink allowance (the probe already adds it); was 6.0
+FLOAT_PLANT_MAX = 0.3  # BD-417: roots meet the ground within 0.3 stud; was 1.2 (probe FLOAT is 0.3 as well)
 
 
 def evaluate(text):
@@ -45,7 +44,7 @@ if __name__ == '__main__':
     for p, (n, lying) in places.items():
         s = sum(k['sunk'] for k in kinds if k['place'] == p or k['place'].startswith(p))
         fl = sum(k['float'] for k in kinds if k['place'] == p or k['place'].startswith(p))
-        print('%s: %d props probed (%d lying logs not graded), %d below the terrain (> threshold), %d floating (> 0.5)' % (p, n, lying, s, fl))
+        print('%s: %d props probed (%d lying logs not graded), %d below the terrain (> threshold), %d floating (> 0.3)' % (p, n, lying, s, fl))
     for k in sorted(kinds, key=lambda k: -(k['sunk'] + k['float']))[:12]:
         print('  %-34s %s n=%d sunk=%d (worst %.2f) float=%d (worst %.2f)' % (k['kind'], k['place'], k['n'], k['sunk'], k['worst_sunk'], k['float'], k['worst_float']))
     for w in worst[:6]:
