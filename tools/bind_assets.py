@@ -85,9 +85,16 @@ def current_value(slot, text):
     elif target == 'table':
         block = table_block(text, slot['table'])
         m = re.search(rf'\n\s+{key} = "([^"]*)",', block)
+    elif target == 'matvar':  # a worldMaterials entry of resources/visual-upgrade-bindings.json (bare digits; `bound` is never touched)
+        m = re.search(matvar_pattern(slot), text, re.S)
+        return m.group(2) if m else ''
     else:
         raise ValueError(f'unknown target {target}')
     return m.group(1) if m else ''
+
+
+def matvar_pattern(slot):
+    return rf'("name": "{re.escape(slot["material"])}",(?:(?!\n    \}}).)*?"{re.escape(slot["key"])}": ")([^"]*)(")'
 
 
 def slot_is_bound_bucket(text):
@@ -123,6 +130,11 @@ def write_slot(slot, text, digits):
         text = re.sub(r'(bucket = \{assetId = "[^"]*"[^\n]*?note = ")[^"]*(")',
                       lambda m: m.group(1) + 'paint bucket mesh (owner upload)' + m.group(2), text, count=1)
         return text.replace('Assets.Placeholder = {bucket = true}', 'Assets.Placeholder = {bucket = false}')
+    if target == 'matvar':  # bare digits; the entry stays "bound": false until a Studio A/B passes
+        new, count = re.subn(matvar_pattern(slot), lambda m: m.group(1) + digits + m.group(3), text, count=1, flags=re.S)
+        if count != 1:
+            raise ValueError(f'slot line not found for {slot["name"]}')
+        return new
     if target == 'table':
         table = slot['table']
         pat = re.compile(rf'(-- bind:begin {table}[^\n]*\n)(.*?)([ \t]*)(-- bind:end {table})', re.S)

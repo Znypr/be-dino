@@ -1,0 +1,88 @@
+{
+ "size": [
+  1024,
+  1024
+ ],
+ "tile_studs": 12.0,
+ "mean_rgb": [
+  133.4,
+  168.7,
+  70.9
+ ],
+ "mean_luma": 154.17,
+ "luma_std_total": 23.96,
+ "luma_std_total_pct_of_mean": 15.54,
+ "low_frequency": {
+  "lowfreq_gt_1.5_studs": {
+   "gaussian_sigma_studs": 0.75,
+   "std_levels_of_255": 0.306,
+   "std_pct_of_mean": 0.199,
+   "peak_to_peak_levels": 1.659,
+   "peak_to_peak_pct_of_mean": 1.076
+  },
+  "lowfreq_gt_3_studs": {
+   "gaussian_sigma_studs": 1.5,
+   "std_levels_of_255": 0.122,
+   "std_pct_of_mean": 0.079,
+   "peak_to_peak_levels": 0.543,
+   "peak_to_peak_pct_of_mean": 0.352
+  },
+  "lowfreq_gt_6_studs": {
+   "gaussian_sigma_studs": 3.0,
+   "std_levels_of_255": 0.035,
+   "std_pct_of_mean": 0.023,
+   "peak_to_peak_levels": 0.131,
+   "peak_to_peak_pct_of_mean": 0.085
+  }
+ },
+ "block_means_8x8": {
+  "std_pct_of_mean": 0.41,
+  "peak_to_peak_pct_of_mean": 1.886
+ },
+ "block_means_4x4": {
+  "std_pct_of_mean": 0.186,
+  "peak_to_peak_pct_of_mean": 0.742
+ },
+ "variance_share_gt_1.5_studs_pct": 0.016,
+ "seam": {
+  "ordinary_step_x": 9.979,
+  "wrap_step_x": 9.046,
+  "ratio_x": 0.907,
+  "ordinary_step_y": 9.983,
+  "wrap_step_y": 9.884,
+  "ratio_y": 0.99
+ },
+ "normal": {
+  "mean_rgb": [
+   127.7,
+   127.6,
+   251.7
+  ],
+  "min_rgb": [
+   57.0,
+   56.0,
+   232.0
+  ],
+  "max_rgb": [
+   198.0,
+   197.0,
+   255.0
+  ],
+  "mean_tilt_deg": 9.38,
+  "p95_tilt_deg": 23.54
+ },
+ "roughness": {
+  "mean": 0.912,
+  "min": 0.8,
+  "max": 0.949
+ },
+ "seed": 461,
+ "samples": 160,
+ "normal_strength": 0.4,
+ "reference_flat_rgb": [
+  132,
+  166,
+  68
+ ],
+ "reference_flat_luma": 151.7
+}
