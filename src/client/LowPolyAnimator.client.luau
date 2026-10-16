@@ -63,6 +63,7 @@ end
 -- Derives the action state from humanoid state/velocity and the leap attributes. Returns nothing; writes rig.act/rig.aggr.
 local function updateAction(rig: any, now: number)
     local character, root = rig.character, rig.root
+    if not character or not root then rig.act = nil return end -- local character not spawned yet or already gone
     local hum = rig.humanoid
     if not hum or not hum.Parent then hum = character:FindFirstChildOfClass("Humanoid") rig.humanoid = hum end
     if not hum or hum.Health <= 0 then rig.act = nil return end

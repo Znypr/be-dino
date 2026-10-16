@@ -24,11 +24,15 @@ function Recolor.bodyWeight(r: number, g: number, b: number): number
     if mx <= 0 then return 0 end
     return smooth(mx, 0.2, 0.3) * smooth((mx - mn) / mx, 0.34, 0.44)
 end
+-- Shade of a texture pixel relative to the species body colour (0.3..1.6): the baked facet lighting the recolour keeps.
+function Recolor.shade(r: number, g: number, b: number, base: {number}?): number
+    local bs = base or DEFAULT_BASE
+    return math.clamp(luma(r, g, b) / math.max(luma(bs[1], bs[2], bs[3]), 0.05), 0.3, 1.6)
+end
 function Recolor.pixel(r: number, g: number, b: number, tr: number, tg: number, tb: number, base: {number}?): (number, number, number)
     local w = Recolor.bodyWeight(r, g, b)
     if w <= 0 then return r, g, b end
-    local bs = base or DEFAULT_BASE
-    local k = math.clamp(luma(r, g, b) / math.max(luma(bs[1], bs[2], bs[3]), 0.05), 0.3, 1.6)
+    local k = Recolor.shade(r, g, b, base)
     return r + (math.clamp(tr * k, 0, 1) - r) * w, g + (math.clamp(tg * k, 0, 1) - g) * w, b + (math.clamp(tb * k, 0, 1) - b) * w
 end
 function Recolor.baseOf(speciesId: string): {number}

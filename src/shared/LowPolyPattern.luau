@@ -129,11 +129,26 @@ function Pattern.mask3(id: string, x: number, y: number, z: number, seed: number
         local wave = math.sin(y * math.pi * 7) * 0.03
         return smooth(tri((z + wave + x * 0.15) / 0.12))
     elseif id == "07_diamond_scales" then
-        -- diamonds in the side view (y, z): the flanks show a scale lattice, the back and belly thin stripes
-        local p = 0.1
-        local sy, sz = (y + 64 * p) % p, (z + 64 * p) % p
-        local d = math.abs(sy - p / 2) + math.abs(sz - p / 2)
-        return math.min(1, d / p)
+        -- BD-307: STAGGERED plump scales in the side view (y, z), like fish/reptile scales: every other row is shifted by half a
+        -- scale and each scale is a rounded diamond (exponent 1.6), so the flanks read as overlapping scales with the secondary
+        -- colour as the rim between them (the blend sets the rim thickness). The old version was a square lattice (zigzag look).
+        -- Each texel belongs to the NEAREST scale centre among its own row and the two staggered neighbour rows (a scale lattice
+        -- with no gaps), so the mask rises evenly toward every scale boundary: the quantile then paints a continuous outline of
+        -- the chosen thickness instead of corner blobs.
+        local p = 0.11               -- scale length along the body
+        local h = p * 0.72           -- row height (rows overlap like scales)
+        local yy, zz = y + 64 * p, z + 64 * p
+        local row = math.floor(yy / h)
+        local best = 2
+        for dr = -1, 1 do
+            local r = row + dr
+            local off = if r % 2 == 1 then p / 2 else 0
+            local cy = yy - (r + 0.5) * h
+            local cz = (zz + off) % p - p / 2
+            local d = (math.abs(cz) / (p / 2)) ^ 1.6 + (math.abs(cy) / (h * 0.62)) ^ 1.6
+            if d < best then best = d end
+        end
+        return math.clamp(best, 0, 1)
     elseif id == "08_freckles" then
         return dots3(x, y, z, 0.07, seed + 21) * (0.55 + 0.45 * noise3(x, y, z, 0.2, seed + 23))
     end
@@ -142,8 +157,8 @@ end
 -- Position map: 4 bytes per texel (x, y, z quantised 0..255 over -1..1, covered 0/255) at Pattern.Size. tris = flat array of
 -- {u1,v1,x1,y1,z1, u2,v2,x2,y2,z2, u3,v3,x3,y3,z3} with u,v in 0..1 (v = 0 at the TOP row) and positions normalised.
 -- Pure rasteriser (barycentric), then one dilation pass so facet edges have no uncovered seam texels.
-function Pattern.rasterize(tris: {{number}}): buffer
-    local size = Pattern.Size
+function Pattern.rasterize(tris: {{number}}, size: number?): buffer
+    local size = size or Pattern.Size
     local map = buffer.create(size * size * 4)
     local function put(x: number, y: number, px: number, py: number, pz: number)
         local o = (y * size + x) * 4
@@ -201,19 +216,37 @@ function Pattern.threshold(hist: {number}, count: number, primaryShare: number):
     end
     return 1
 end
+-- BD-307 coverage curve: the share of the body the SECONDARY colour may cover, per pattern, from genes.blend (primaryShare =
+-- blend / 100). Spot-like patterns are capped so a low blend never turns spots into big blobs (the dot masks are continuous,
+-- so the quantile would otherwise just grow every spot); area patterns (islands, patches, bands, stripes) follow the blend
+-- directly, as PatternGenes does. Returns the effective PRIMARY share handed to the quantile. Pure, monotonic in primaryShare.
+Pattern.Coverage = {
+    ["03_round_spots"] = {scale = 0.55, min = 0.05, max = 0.28},
+    ["08_freckles"] = {scale = 0.40, min = 0.04, max = 0.20},
+    ["07_diamond_scales"] = {scale = 0.50, min = 0.10, max = 0.30},
+}
+function Pattern.coverage(id: string, primaryShare: number): number
+    local s = math.clamp(primaryShare, 0, 1)
+    local rule = (Pattern.Coverage :: any)[id]
+    if not rule then return s end
+    return 1 - math.clamp((1 - s) * rule.scale, rule.min, rule.max)
+end
 -- Full mask for one part: array of secondary-colour weights (0 primary .. 1 secondary, fractional only in a soft edge
 -- Pattern.Soft wide around the cut so facets do not show pixel stairs), computed only for pixels whose bodyWeight > 0.
--- weights: array (1-based, SIZE*SIZE) of body weights 0..1. Pure so the verifier can run it on a synthetic texture.
+-- weights: array (1-based, size*size) of body weights 0..1. Pure so the verifier can run it on a synthetic texture.
 -- onRow (optional) is called after every row so the runtime bake can yield (task.wait) and never stall a frame; pure tests pass nil.
--- posmap (optional, from Pattern.rasterize): texels it covers use the 3D mask; others (and no map at all) use the UV mask.
-function Pattern.compute(id: string, seed: number, weights: {number}, primaryShare: number, same: boolean, onRow: ((number) -> ())?, posmap: buffer?): {number}
-    local size = Pattern.Size
+-- posmap (optional, from Pattern.rasterize at the same size): texels it covers use the 3D mask; others (and no map) use the UV mask.
+-- size (optional, default Pattern.Size): the texture side; the UV-space masks are scaled so a 128 px limb bake shows the same
+-- features as a 256 px body bake (BD-306).
+function Pattern.compute(id: string, seed: number, weights: {number}, primaryShare: number, same: boolean, onRow: ((number) -> ())?, posmap: buffer?, size: number?): {number}
+    local size = size or Pattern.Size
     local n = size * size
     local out = table.create(n, 0)
     if id == "01_blank" or table.find(Pattern.Ids, id) == nil then return out end
     local raw = table.create(n, 0)
     local hist = table.create(255, 0)
     local count = 0
+    local uvScale = Pattern.Size / size
     for y = 0, size - 1 do
         if onRow then onRow(y) end
         for x = 0, size - 1 do
@@ -223,7 +256,7 @@ function Pattern.compute(id: string, seed: number, weights: {number}, primarySha
                 local o = (i - 1) * 4
                 if posmap and buffer.readu8(posmap, o + 3) == 255 then
                     m = Pattern.mask3(id, buffer.readu8(posmap, o) / 127.5 - 1, buffer.readu8(posmap, o + 1) / 127.5 - 1, buffer.readu8(posmap, o + 2) / 127.5 - 1, seed)
-                else m = Pattern.mask(id, x, y, seed) end
+                else m = Pattern.mask(id, x * uvScale, y * uvScale, seed) end
                 m = math.clamp(m, 0, 1)
                 raw[i] = m
                 hist[math.floor(m * 254 + 0.5) + 1] += 1
@@ -232,7 +265,7 @@ function Pattern.compute(id: string, seed: number, weights: {number}, primarySha
         end
     end
     if count == 0 then return out end
-    local share = if same then 0.5 else primaryShare
+    local share = Pattern.coverage(id, if same then 0.5 else primaryShare)
     local cut = Pattern.threshold(hist, count, share)
     local soft = Pattern.Soft
     for i = 1, n do

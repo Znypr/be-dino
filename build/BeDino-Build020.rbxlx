@@ -374021,11 +374021,21 @@ end
 -- "emerald" / "diamond") adds the tier tint, Metal/Glass + reflectance on body-colour parts and one soft sparkle; base stays matte.
 local genesOf = setmetatable({} :: {[Instance]: any}, {__mode = "k"})
 LowPoly.Far = 160 -- studs: beyond this a world dino keeps the cheap tint (BD-203 LOD rule)
+local function motionEnabled(): boolean
+    if not game:GetService("RunService"):IsClient() then return true end
+    local ok, theme = pcall(function() return require(script.Parent.UITheme) end)
+    return not ok or theme.MotionEnabled ~= false
+end
+-- BD-308: sparkle sized and rated with the dino (a T-Rex gets bigger, more frequent sparks than a Compy), none under Reduce Motion
+-- (Calm motion): the tier then reads by its tint, baked sheen and material alone (nothing moves).
 local function sparkle(container: Instance, body: BasePart?, entry: any?)
     local old = container:FindFirstChild("LPTierSparkle", true)
     if old then old:Destroy() end
-    if not entry or not body or entry.sparkleRate &lt;= 0 then return end
+    if not entry or not body or entry.sparkleRate &lt;= 0 or not motionEnabled() then return end
     local Effects = require(script.Parent.EffectAssets)
+    local longest = 6 -- a Compy is about 6 studs long after LowPolyDinoAssets.scale, a T-Rex about 12
+    if container:IsA("Model") then local _, size = container:GetBoundingBox() longest = math.max(size.X, size.Y, size.Z, 1) end
+    local k = math.clamp(longest / 6, 0.7, 2)
     local emitter = Instance.new("ParticleEmitter")
     emitter.Name = "LPTierSparkle"
     emitter.Texture = Effects.resolve("sparkSheet")
@@ -374034,11 +374044,24 @@ local function sparkle(container: Instance, body: BasePart?, entry: any?)
     end
     emitter.Color = ColorSequence.new(Color3.fromRGB(entry.sparkle[1], entry.sparkle[2], entry.sparkle[3]))
     emitter.LightEmission, emitter.LightInfluence = 0.6, 0.3
-    emitter.Rate, emitter.Lifetime = entry.sparkleRate, NumberRange.new(0.8, 1.2)
-    emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.4, 0.55), NumberSequenceKeypoint.new(1, 0)})
+    emitter.Rate, emitter.Lifetime = entry.sparkleRate * k, NumberRange.new(0.8, 1.2)
+    emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.4, 0.55 * k), NumberSequenceKeypoint.new(1, 0)})
     emitter.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.2), NumberSequenceKeypoint.new(1, 1)})
     emitter.Speed, emitter.SpreadAngle, emitter.Rotation = NumberRange.new(0.2, 0.5), Vector2.new(180, 180), NumberRange.new(0, 360)
     emitter.Parent = body
+end
+local function tintColor(species: string, textureId: string, spec: Texture.Spec): Color3
+    local base = Texture.baseOf(textureId) or Recolor.baseOf(species)
+    return Color3.new(Recolor.flatTint(base, spec.primary.R, spec.primary.G, spec.primary.B))
+end
+-- One part's bake (body/head 256 px, other parts 128 px; BD-306): texture on success, the cheap tint when denied / full / failed.
+local function partBake(container: Instance, species: string, part: MeshPart, textureId: string, role: string, spec: Texture.Spec, key: string)
+    part:SetAttribute("LPLod", "baking")
+    local geom = LowPoly.geometry(species, part.Name)
+    local content = Texture.acquire(part, textureId, species, spec, geom, Texture.sizeFor(role))
+    if not part.Parent or container:GetAttribute("LPLookKey") ~= key then return end
+    if content then part.TextureContent, part.Color = content, Color3.new(1, 1, 1) part:SetAttribute("LPLod", "texture")
+    else part.TextureID = textureId part.Color = tintColor(species, textureId, spec) part:SetAttribute("LPLod", "tint") end
 end
 function LowPoly.tint(container: Instance, genes: any)
     if genes then genesOf[container] = genes else genes = genesOf[container] end
@@ -374055,6 +374078,7 @@ function LowPoly.tint(container: Instance, genes: any)
     elseif not entry then return end
     local camera = workspace.CurrentCamera
     local body: BasePart? = nil
+    local textured: {{part: MeshPart, textureId: string, role: string}} = {}
     for _, part in container:GetDescendants() do
         if part:IsA("MeshPart") then
             local textureId = part:GetAttribute("LPTexture")
@@ -374067,42 +374091,52 @@ function LowPoly.tint(container: Instance, genes: any)
                 part.Reflectance = math.min(entry.reflectance, Tier.MaxReflectance)
             else part.Material, part.Reflectance = Enum.Material.Plastic, 0 end
             if eyeish or not spec then part.Color = Color3.new(1, 1, 1) continue end
-            local s = table.clone(spec :: Texture.Spec)
-            s.seedName = species .. "|" .. role
-            local base = Texture.baseOf(textureId) or Recolor.baseOf(species)
-            local fr, fg, fb = Recolor.flatTint(base, s.primary.R, s.primary.G, s.primary.B)
-            local key = Texture.key(textureId, s)
-            if part:GetAttribute("LPTintKey") == key and part:GetAttribute("LPLod") == "texture" then continue end
-            part:SetAttribute("LPTintKey", key)
-            local far = camera ~= nil and part:IsDescendantOf(workspace) and (camera.CFrame.Position - part.Position).Magnitude &gt; LowPoly.Far
-            if far then Texture.release(part) part.TextureID = textureId part.Color = Color3.new(fr, fg, fb) part:SetAttribute("LPLod", "tint") continue end
-            local geom = LowPoly.geometry(species, part.Name)
-            part:SetAttribute("LPLod", "baking")
-            task.spawn(function()
-                local content = Texture.acquire(part, textureId, species, s, geom)
-                if not part.Parent or part:GetAttribute("LPTintKey") ~= key then return end
-                if content then part.TextureContent, part.Color = content, Color3.new(1, 1, 1) part:SetAttribute("LPLod", "texture")
-                else
-                    local b = Texture.baseOf(textureId) or base
-                    part.TextureID = textureId part.Color = Color3.new(Recolor.flatTint(b, s.primary.R, s.primary.G, s.primary.B)) part:SetAttribute("LPLod", "tint")
-                end
-            end)
-            -- cheap tint shows at once while the bake runs (or stays when the cache is full)
-            if part:GetAttribute("LPLod") ~= "texture" then part.Color = Color3.new(fr, fg, fb) end
+            table.insert(textured, {part = part, textureId = textureId, role = role})
         end
     end
     sparkle(container, body, entry)
+    if not spec or #textured == 0 then return end
+    local s = spec :: Texture.Spec
+    local anchor = body or textured[1].part
+    local far = camera ~= nil and anchor:IsDescendantOf(workspace) and (camera.CFrame.Position - anchor.Position).Magnitude &gt; LowPoly.Far
+    local key = Texture.key(species, s) .. (if far then "|far" else "|near")
+    if container:GetAttribute("LPLookKey") == key and container:GetAttribute("LPLod") ~= "baking" then return end
+    container:SetAttribute("LPLookKey", key)
+    -- cheap tint at once (shows while the bakes run, or stays when far / denied / full); the model's own texture is never cleared
+    for _, t in textured do
+        Texture.release(t.part)
+        t.part.TextureID = t.textureId
+        t.part.Color = tintColor(species, t.textureId, s)
+        t.part:SetAttribute("LPLod", "tint")
+    end
+    if far then container:SetAttribute("LPLod", "tint") return end
+    container:SetAttribute("LPLod", "baking")
+    task.spawn(function()
+        local left = #textured
+        local textures = 0
+        for _, t in textured do
+            local ps = table.clone(s)
+            ps.seedName = species .. "|" .. t.role
+            task.spawn(function()
+                partBake(container, species, t.part, t.textureId, t.role, ps, key)
+                if t.part:GetAttribute("LPLod") == "texture" then textures += 1 end
+                left -= 1
+            end)
+        end
+        while left &gt; 0 do task.wait(0.1) end
+        if container:GetAttribute("LPLookKey") ~= key then return end
+        -- "texture" = every part baked, "parts" = some on the tint (cache full / budget), "tint" = none
+        container:SetAttribute("LPLod", if textures == #textured then "texture" elseif textures &gt; 0 then "parts" else "tint")
+    end)
 end
 -- Fused tier look on a low-poly model (nil / "base" / false restores matte). Reads the same stage strings as the rest of the game.
 function LowPoly.applyTier(container: Instance, stage: any)
     local entry = Tier.get(stage)
     container:SetAttribute("LPTier", if entry then entry.id else nil)
-    for _, part in container:GetDescendants() do
-        if part:IsA("MeshPart") then part:SetAttribute("LPTintKey", nil) end
-    end
+    container:SetAttribute("LPLookKey", nil)
     LowPoly.tint(container, nil)
 end
--- Maintenance (client only): far world dinos drop to the cheap tint, near ones get their bake back as slots free up.
+-- Maintenance (client only): far world dinos drop to the cheap tint (bakes released), near ones get their bakes back as slots free up.
 if game:GetService("RunService"):IsClient() then
     task.spawn(function()
         while true do
@@ -374111,16 +374145,18 @@ if game:GetService("RunService"):IsClient() then
             pcall(function()
                 local camera = workspace.CurrentCamera
                 for container, _ in genesOf do
-                    if camera and container.Parent and container:IsDescendantOf(workspace) then
-                        local dirty = false
-                        for _, part in container:GetDescendants() do
-                            if part:IsA("MeshPart") and part:GetAttribute("LPTexture") then
-                                local far = (camera.CFrame.Position - part.Position).Magnitude &gt; LowPoly.Far
-                                local lod = part:GetAttribute("LPLod")
-                                if (far and lod == "texture") or (not far and lod == "tint") then part:SetAttribute("LPTintKey", nil) dirty = true end
-                            end
+                    if camera and container.Parent and container:IsDescendantOf(workspace) and container:IsA("Model") then
+                        local far = (camera.CFrame.Position - container:GetPivot().Position).Magnitude &gt; LowPoly.Far
+                        local key = tostring(container:GetAttribute("LPLookKey") or "")
+                        local wasFar = string.sub(key, -4) == "|far"
+                        local lod = container:GetAttribute("LPLod")
+                        -- a near dino left on the tint (cache full / budget) retries every 10 s as slots free up
+                        local stale = not far and (lod == "tint" or lod == "parts") and os.clock() &gt;= (tonumber(container:GetAttribute("LPRetryAt")) or 0)
+                        if key ~= "" and (far ~= wasFar or stale) then
+                            container:SetAttribute("LPRetryAt", os.clock() + 10)
+                            container:SetAttribute("LPLookKey", nil)
+                            LowPoly.tint(container, nil)
                         end
-                        if dirty then LowPoly.tint(container, nil) end
                     end
                 end
             end)
@@ -374302,11 +374338,26 @@ function Pattern.mask3(id: string, x: number, y: number, z: number, seed: number
         local wave = math.sin(y * math.pi * 7) * 0.03
         return smooth(tri((z + wave + x * 0.15) / 0.12))
     elseif id == "07_diamond_scales" then
-        -- diamonds in the side view (y, z): the flanks show a scale lattice, the back and belly thin stripes
-        local p = 0.1
-        local sy, sz = (y + 64 * p) % p, (z + 64 * p) % p
-        local d = math.abs(sy - p / 2) + math.abs(sz - p / 2)
-        return math.min(1, d / p)
+        -- BD-307: STAGGERED plump scales in the side view (y, z), like fish/reptile scales: every other row is shifted by half a
+        -- scale and each scale is a rounded diamond (exponent 1.6), so the flanks read as overlapping scales with the secondary
+        -- colour as the rim between them (the blend sets the rim thickness). The old version was a square lattice (zigzag look).
+        -- Each texel belongs to the NEAREST scale centre among its own row and the two staggered neighbour rows (a scale lattice
+        -- with no gaps), so the mask rises evenly toward every scale boundary: the quantile then paints a continuous outline of
+        -- the chosen thickness instead of corner blobs.
+        local p = 0.11               -- scale length along the body
+        local h = p * 0.72           -- row height (rows overlap like scales)
+        local yy, zz = y + 64 * p, z + 64 * p
+        local row = math.floor(yy / h)
+        local best = 2
+        for dr = -1, 1 do
+            local r = row + dr
+            local off = if r % 2 == 1 then p / 2 else 0
+            local cy = yy - (r + 0.5) * h
+            local cz = (zz + off) % p - p / 2
+            local d = (math.abs(cz) / (p / 2)) ^ 1.6 + (math.abs(cy) / (h * 0.62)) ^ 1.6
+            if d &lt; best then best = d end
+        end
+        return math.clamp(best, 0, 1)
     elseif id == "08_freckles" then
         return dots3(x, y, z, 0.07, seed + 21) * (0.55 + 0.45 * noise3(x, y, z, 0.2, seed + 23))
     end
@@ -374315,8 +374366,8 @@ end
 -- Position map: 4 bytes per texel (x, y, z quantised 0..255 over -1..1, covered 0/255) at Pattern.Size. tris = flat array of
 -- {u1,v1,x1,y1,z1, u2,v2,x2,y2,z2, u3,v3,x3,y3,z3} with u,v in 0..1 (v = 0 at the TOP row) and positions normalised.
 -- Pure rasteriser (barycentric), then one dilation pass so facet edges have no uncovered seam texels.
-function Pattern.rasterize(tris: {{number}}): buffer
-    local size = Pattern.Size
+function Pattern.rasterize(tris: {{number}}, size: number?): buffer
+    local size = size or Pattern.Size
     local map = buffer.create(size * size * 4)
     local function put(x: number, y: number, px: number, py: number, pz: number)
         local o = (y * size + x) * 4
@@ -374374,19 +374425,37 @@ function Pattern.threshold(hist: {number}, count: number, primaryShare: number):
     end
     return 1
 end
+-- BD-307 coverage curve: the share of the body the SECONDARY colour may cover, per pattern, from genes.blend (primaryShare =
+-- blend / 100). Spot-like patterns are capped so a low blend never turns spots into big blobs (the dot masks are continuous,
+-- so the quantile would otherwise just grow every spot); area patterns (islands, patches, bands, stripes) follow the blend
+-- directly, as PatternGenes does. Returns the effective PRIMARY share handed to the quantile. Pure, monotonic in primaryShare.
+Pattern.Coverage = {
+    ["03_round_spots"] = {scale = 0.55, min = 0.05, max = 0.28},
+    ["08_freckles"] = {scale = 0.40, min = 0.04, max = 0.20},
+    ["07_diamond_scales"] = {scale = 0.50, min = 0.10, max = 0.30},
+}
+function Pattern.coverage(id: string, primaryShare: number): number
+    local s = math.clamp(primaryShare, 0, 1)
+    local rule = (Pattern.Coverage :: any)[id]
+    if not rule then return s end
+    return 1 - math.clamp((1 - s) * rule.scale, rule.min, rule.max)
+end
 -- Full mask for one part: array of secondary-colour weights (0 primary .. 1 secondary, fractional only in a soft edge
 -- Pattern.Soft wide around the cut so facets do not show pixel stairs), computed only for pixels whose bodyWeight &gt; 0.
--- weights: array (1-based, SIZE*SIZE) of body weights 0..1. Pure so the verifier can run it on a synthetic texture.
+-- weights: array (1-based, size*size) of body weights 0..1. Pure so the verifier can run it on a synthetic texture.
 -- onRow (optional) is called after every row so the runtime bake can yield (task.wait) and never stall a frame; pure tests pass nil.
--- posmap (optional, from Pattern.rasterize): texels it covers use the 3D mask; others (and no map at all) use the UV mask.
-function Pattern.compute(id: string, seed: number, weights: {number}, primaryShare: number, same: boolean, onRow: ((number) -&gt; ())?, posmap: buffer?): {number}
-    local size = Pattern.Size
+-- posmap (optional, from Pattern.rasterize at the same size): texels it covers use the 3D mask; others (and no map) use the UV mask.
+-- size (optional, default Pattern.Size): the texture side; the UV-space masks are scaled so a 128 px limb bake shows the same
+-- features as a 256 px body bake (BD-306).
+function Pattern.compute(id: string, seed: number, weights: {number}, primaryShare: number, same: boolean, onRow: ((number) -&gt; ())?, posmap: buffer?, size: number?): {number}
+    local size = size or Pattern.Size
     local n = size * size
     local out = table.create(n, 0)
     if id == "01_blank" or table.find(Pattern.Ids, id) == nil then return out end
     local raw = table.create(n, 0)
     local hist = table.create(255, 0)
     local count = 0
+    local uvScale = Pattern.Size / size
     for y = 0, size - 1 do
         if onRow then onRow(y) end
         for x = 0, size - 1 do
@@ -374396,7 +374465,7 @@ function Pattern.compute(id: string, seed: number, weights: {number}, primarySha
                 local o = (i - 1) * 4
                 if posmap and buffer.readu8(posmap, o + 3) == 255 then
                     m = Pattern.mask3(id, buffer.readu8(posmap, o) / 127.5 - 1, buffer.readu8(posmap, o + 1) / 127.5 - 1, buffer.readu8(posmap, o + 2) / 127.5 - 1, seed)
-                else m = Pattern.mask(id, x, y, seed) end
+                else m = Pattern.mask(id, x * uvScale, y * uvScale, seed) end
                 m = math.clamp(m, 0, 1)
                 raw[i] = m
                 hist[math.floor(m * 254 + 0.5) + 1] += 1
@@ -374405,7 +374474,7 @@ function Pattern.compute(id: string, seed: number, weights: {number}, primarySha
         end
     end
     if count == 0 then return out end
-    local share = if same then 0.5 else primaryShare
+    local share = Pattern.coverage(id, if same then 0.5 else primaryShare)
     local cut = Pattern.threshold(hist, count, share)
     local soft = Pattern.Soft
     for i = 1, n do
@@ -374639,11 +374708,15 @@ function Recolor.bodyWeight(r: number, g: number, b: number): number
     if mx &lt;= 0 then return 0 end
     return smooth(mx, 0.2, 0.3) * smooth((mx - mn) / mx, 0.34, 0.44)
 end
+-- Shade of a texture pixel relative to the species body colour (0.3..1.6): the baked facet lighting the recolour keeps.
+function Recolor.shade(r: number, g: number, b: number, base: {number}?): number
+    local bs = base or DEFAULT_BASE
+    return math.clamp(luma(r, g, b) / math.max(luma(bs[1], bs[2], bs[3]), 0.05), 0.3, 1.6)
+end
 function Recolor.pixel(r: number, g: number, b: number, tr: number, tg: number, tb: number, base: {number}?): (number, number, number)
     local w = Recolor.bodyWeight(r, g, b)
     if w &lt;= 0 then return r, g, b end
-    local bs = base or DEFAULT_BASE
-    local k = math.clamp(luma(r, g, b) / math.max(luma(bs[1], bs[2], bs[3]), 0.05), 0.3, 1.6)
+    local k = Recolor.shade(r, g, b, base)
     return r + (math.clamp(tr * k, 0, 1) - r) * w, g + (math.clamp(tg * k, 0, 1) - g) * w, b + (math.clamp(tb * k, 0, 1) - b) * w
 end
 function Recolor.baseOf(speciesId: string): {number}
@@ -374663,13 +374736,19 @@ return Recolor
         <Properties>
           <string name="Name">LowPolyTexture</string>
           <ProtectedString name="Source">--!strict
--- BD-225 / BD-061: bakes a gene-coloured, gene-patterned (and fused-tier tinted) copy of a generated low-poly part texture
--- as a 256x256 EditableImage. Pixel maths is pure (LowPolyRecolor, LowPolyPattern, LowPolyTier; tested offline); this module only
--- owns the Roblox side: reading the source texture once, yielding bakes, and the image budget.
--- Budget (BD-203): bakes live in a PatternAtlasCache (shared per key = texture + colours + pattern + blend + tier, reference counted,
--- warm LRU, hard cap LowPolyTexture.Cap). A dino costs one image per part (7); identical genes share every image. When the cache is
--- full, acquire returns nil and the caller uses the cheap fallback (original species texture tinted by MeshPart.Color).
--- Any failure (no permission, load error) also returns nil: eyes/belly are always on screen because the original texture stays.
+-- BD-225 / BD-061 / BD-306: bakes a gene-coloured, gene-patterned (and fused-tier tinted) copy of each generated low-poly part
+-- texture as an EditableImage. Pixel maths is pure (LowPolyRecolor, LowPolyPattern, LowPolyTier; tested offline); this module only
+-- owns the Roblox side: reading the source textures once, yielding bakes, and the image budget.
+-- Budget (BD-306, measured in a Play client of the owner's Studio, docs/105 s3): EditableImage AND EditableMesh share ONE budget of
+-- 80 MiB per client. The image count never mattered (5,119 x 64 px and 320 x 256 px both stop at 80 MiB); an EditableMesh costs
+-- about 1 KiB per face (a Compy body = 3 MiB), which is why a per-species mesh atlas was measured and rejected. So a dino bakes
+-- its body and head at 256 px (256 KiB each) and every other part at 128 px (64 KiB): about 0.8 MiB per distinct dino, no mesh
+-- kept alive. Bakes live in two PatternAtlasCaches (reference counted, warm LRU): Texture.BigCap x 256 KiB + Texture.SmallCap x
+-- 64 KiB, plus at most Texture.MaxReads source reads in flight (a 1024 px source image 4 MiB + its transient position-map mesh up
+-- to 5.5 MiB each): worst case stays under half the budget (tools/verify_lowpoly_budget.py), leaving room for PatternGenes' egg
+-- textures and anything else. When a cache is full acquire returns nil and the caller uses the cheap fallback (original species
+-- texture tinted by MeshPart.Color). Any failure (no permission, nil image = budget, load error) also returns nil: eyes/belly are
+-- always on screen because the original texture stays. Failed reads are retried after Texture.RetryAfter seconds.
 -- Yields: call acquire from task.spawn, never inline.
 local AssetService = game:GetService("AssetService")
 local Recolor = require(script.Parent.LowPolyRecolor)
@@ -374677,19 +374756,56 @@ local Pattern = require(script.Parent.LowPolyPattern)
 local Tier = require(script.Parent.LowPolyTier)
 local Cache = require(script.Parent.PatternAtlasCache)
 local Texture = {}
-local SIZE = Pattern.Size
-Texture.Cap = 24 -- low-poly bakes; PatternGenes keeps its own 30 for eggs/legacy (low-poly dinos replace legacy dinos on screen)
-local atlas = Cache.new(Texture.Cap, function(image) pcall(function() image:Destroy() end) end)
-local sources: {[string]: any} = {}   -- textureId -&gt; {buf = buffer, weights = {number}, pos = buffer?} | "loading" | "failed"
+Texture.BigSize = Pattern.Size -- body and head: 256 px (eyes, facets)
+Texture.SmallSize = 128        -- tail, legs, arms, wings, flippers, neck
+Texture.BigCap = 48            -- 24 dinos' bodies + heads = 12 MiB
+Texture.SmallCap = 120         -- 24 dinos' five small parts = 7.5 MiB
+Texture.BudgetMiB = 80         -- measured engine budget per client, shared by every EditableImage and EditableMesh in the game
+Texture.MaxReads = 2           -- source reads (image + mesh) in flight at once; 12 parallel reads starved the budget in testing
+Texture.RetryAfter = 20        -- s before a failed source read (budget, transient load error, permission) is tried again
+local function destroyImage(image) pcall(function() image:Destroy() end) end
+local big = Cache.new(Texture.BigCap, destroyImage)
+local small = Cache.new(Texture.SmallCap, destroyImage)
+local sources: {[string]: any} = {}   -- textureId@size -&gt; {buf, weights, pos, base, size} | "loading" | {failedAt = t}
 local pending: {[string]: boolean} = {} -- bake keys in flight (a second part with the same key waits instead of baking twice)
+local reading = 0
 -- Geometry of the TEMPLATE part (unscaled, unposed) so the 3D pattern reads its model-space position: meshId, cframe relative to the
 -- model centre, scale = part.Size / part.MeshSize, norm = 1 / longest model side.
 export type Geom = {meshId: string, cframe: CFrame, scale: Vector3, norm: number}
--- Rasterise the part's triangles into its UV space (EditableMesh, once per texture). nil on any failure: the UV-space pattern is used.
-local function positionMap(geom: Geom?): buffer?
-    if not geom or geom.meshId == "" then return nil end
-    local ok, map = pcall(function()
+export type Spec = {primary: Color3, secondary: Color3, same: boolean, primaryShare: number, patternId: string, tier: string?, seedName: string}
+-- Test hook (Studio only, BD-309): workspace attribute LowPolyDenyEditable = "mesh" | "image" | "all" simulates a server that may
+-- not open the owner's assets (CreateEditableMeshAsync / CreateEditableImageAsync return nil), so the fallbacks can be exercised
+-- without a second account: "mesh" -&gt; UV-space (jigsaw) patterns, "image" / "all" -&gt; plain tint.
+local function denied(what: string): boolean
+    local ok, v = pcall(function() return workspace:GetAttribute("LowPolyDenyEditable") end)
+    return ok and (v == what or v == "all")
+end
+-- Bake size per part role: body and head keep the full 256 px (eyes, most facets), everything else 128 px.
+function Texture.sizeFor(role: string): number
+    return if role == "body" or role == "head" then Texture.BigSize else Texture.SmallSize
+end
+local function cacheFor(size: number) return if size &gt;= Texture.BigSize then big else small end
+local function publish()
+    pcall(function()
+        local b, s = big:stats(), small:stats()
+        workspace:SetAttribute("LowPolyImagesLive", b.live + s.live) workspace:SetAttribute("LowPolyImagesPinned", b.pinned + s.pinned)
+        workspace:SetAttribute("LowPolyImagesMiB", math.floor(Texture.stats().mib * 100 + 0.5) / 100)
+        workspace:SetAttribute("LowPolyCacheHits", b.hits + s.hits) workspace:SetAttribute("LowPolyCacheMisses", b.misses + s.misses)
+        workspace:SetAttribute("LowPolyCacheDenied", b.denied + s.denied)
+    end)
+end
+function Texture.stats()
+    local b, s = big:stats(), small:stats()
+    return {big = b, small = s, live = b.live + s.live, pinned = b.pinned + s.pinned, denied = b.denied + s.denied,
+        mib = (b.live * Texture.BigSize ^ 2 + s.live * Texture.SmallSize ^ 2) * 4 / 1048576}
+end
+-- Triangles {u1,v1,x1,y1,z1, ...} of one part in its own UV space with normalised model positions. The EditableMesh is transient
+-- (destroyed right after: nothing references it, so the PR #117 cube bug cannot apply). nil on any failure: UV-space pattern.
+local function triangles(geom: Geom?): {{number}}?
+    if not geom or geom.meshId == "" or denied("mesh") then return nil end
+    local ok, tris = pcall(function()
         local mesh = AssetService:CreateEditableMeshAsync(Content.fromUri(geom.meshId))
+        if not mesh then error("no mesh (budget or permission)") end
         local tris = {}
         for _, face in mesh:GetFaces() do
             local verts, uvs = mesh:GetFaceVertices(face), mesh:GetFaceUVs(face)
@@ -374704,58 +374820,74 @@ local function positionMap(geom: Geom?): buffer?
             table.insert(tris, t)
         end
         mesh:Destroy()
-        return Pattern.rasterize(tris)
+        return tris
     end)
-    return if ok then map else nil
+    if not ok then warn("[Be Dino] low-poly mesh " .. geom.meshId .. " unreadable (UV-space pattern): " .. tostring(tris)) end
+    return if ok then tris else nil
 end
-local partEntry = setmetatable({} :: {[Instance]: any}, {__mode = "k"})
-export type Spec = {primary: Color3, secondary: Color3, same: boolean, primaryShare: number, patternId: string, tier: string?, seedName: string}
-local function publish()
-    pcall(function()
-        local s = atlas:stats()
-        workspace:SetAttribute("LowPolyImagesLive", s.live) workspace:SetAttribute("LowPolyImagesPinned", s.pinned)
-        workspace:SetAttribute("LowPolyCacheHits", s.hits) workspace:SetAttribute("LowPolyCacheMisses", s.misses)
-        workspace:SetAttribute("LowPolyCacheDenied", s.denied)
-    end)
-end
-function Texture.stats() return atlas:stats() end
-local function source(textureId: string, geom: Geom?): any?
-    local state = sources[textureId]
-    while state == "loading" do task.wait(0.05) state = sources[textureId] end
-    if state == "failed" then return nil end
+-- Source texture at `size` px (downsampled once from the 1024 px asset), body weights, measured species body colour and the
+-- position map. The read (image + mesh) is throttled to MaxReads at once. nil when the texture cannot be read (retried later).
+local function source(textureId: string, size: number, geom: Geom?): any?
+    local key = textureId .. "@" .. size
+    local state = sources[key]
+    while state == "loading" do task.wait(0.05) state = sources[key] end
+    if type(state) == "table" and state.failedAt then
+        if os.clock() - state.failedAt &lt; Texture.RetryAfter then return nil end
+        state = nil
+    end
     if state then return state end
-    sources[textureId] = "loading"
-    local ok, result = pcall(function()
+    if denied("image") then sources[key] = {failedAt = os.clock()} return nil end
+    sources[key] = "loading"
+    while reading &gt;= Texture.MaxReads do task.wait(0.05) end
+    reading += 1
+    local okRead, read = pcall(function()
         local img = AssetService:CreateEditableImageAsync(Content.fromUri(textureId))
+        if not img then error("no image (budget or permission)") end
         local full = img.Size
         local raw = img:ReadPixelsBuffer(Vector2.zero, full)
-        local small = buffer.create(SIZE * SIZE * 4)
-        local weights = table.create(SIZE * SIZE, 0)
-        for y = 0, SIZE - 1 do
-            local sy = math.min(full.Y - 1, math.floor((y + 0.5) * full.Y / SIZE))
-            for x = 0, SIZE - 1 do
-                local sx = math.min(full.X - 1, math.floor((x + 0.5) * full.X / SIZE))
-                local o = (y * SIZE + x) * 4
-                buffer.writeu32(small, o, buffer.readu32(raw, (sy * full.X + sx) * 4))
-                weights[y * SIZE + x + 1] = Recolor.bodyWeight(buffer.readu8(small, o) / 255, buffer.readu8(small, o + 1) / 255, buffer.readu8(small, o + 2) / 255)
+        img:Destroy()
+        return {full = full, raw = raw, tris = triangles(geom)}
+    end)
+    reading -= 1
+    if not okRead then
+        sources[key] = {failedAt = os.clock()}
+        warn("[Be Dino] low-poly texture " .. textureId .. " unreadable (tint fallback, retry in " .. Texture.RetryAfter .. " s): " .. tostring(read))
+        return nil
+    end
+    local ok, result = pcall(function()
+        local full, raw = read.full, read.raw
+        local buf = buffer.create(size * size * 4)
+        local weights = table.create(size * size, 0)
+        for y = 0, size - 1 do
+            local sy = math.min(full.Y - 1, math.floor((y + 0.5) * full.Y / size))
+            for x = 0, size - 1 do
+                local sx = math.min(full.X - 1, math.floor((x + 0.5) * full.X / size))
+                local o = (y * size + x) * 4
+                buffer.writeu32(buf, o, buffer.readu32(raw, (sy * full.X + sx) * 4))
+                weights[y * size + x + 1] = Recolor.bodyWeight(buffer.readu8(buf, o) / 255, buffer.readu8(buf, o + 1) / 255, buffer.readu8(buf, o + 2) / 255)
             end
             if y % 32 == 31 then task.wait() end
         end
-        img:Destroy()
         -- the species' own body colour, measured from this texture (replaces a hand table: every generated species recolours)
         local sr, sg, sb, sw = 0, 0, 0, 0
-        for i = 1, SIZE * SIZE do
+        for i = 1, size * size do
             local w = weights[i]
             if w &gt; 0.5 then
                 local o = (i - 1) * 4
-                sr += buffer.readu8(small, o) / 255 * w sg += buffer.readu8(small, o + 1) / 255 * w sb += buffer.readu8(small, o + 2) / 255 * w sw += w
+                sr += buffer.readu8(buf, o) / 255 * w sg += buffer.readu8(buf, o + 1) / 255 * w sb += buffer.readu8(buf, o + 2) / 255 * w sw += w
             end
         end
-        local base = if sw &gt; 50 then {sr / sw, sg / sw, sb / sw} else nil
-        return {buf = small, weights = weights, pos = positionMap(geom), base = base}
+        local base = if sw &gt; 50 * (size / Pattern.Size) ^ 2 then {sr / sw, sg / sw, sb / sw} else nil
+        local pos = if read.tris and #read.tris &gt; 0 then Pattern.rasterize(read.tris, size) else nil
+        return {buf = buf, weights = weights, pos = pos, base = base, size = size}
     end)
-    sources[textureId] = if ok then result else "failed"
-    return if ok then result else nil
+    if not ok then
+        sources[key] = {failedAt = os.clock()}
+        warn("[Be Dino] low-poly texture " .. textureId .. " bake prep failed (tint fallback): " .. tostring(result))
+        return nil
+    end
+    sources[key] = result
+    return result
 end
 local function q(c: Color3): string
     return string.format("%d,%d,%d", math.floor(c.R * 31 + 0.5), math.floor(c.G * 31 + 0.5), math.floor(c.B * 31 + 0.5))
@@ -374766,7 +374898,9 @@ function Texture.key(textureId: string, spec: Spec): string
         math.floor(math.clamp(spec.primaryShare, 0, 1) * 20 + 0.5), spec.tier or "base")
 end
 -- Pure pixel pass (shared with the verifier through LowPolyRecolor/LowPolyPattern/LowPolyTier): writes the baked RGBA into out.
-function Texture.paint(src: buffer, weights: {number}, mask: {number}, spec: Spec, base: {number}, out: buffer, onRow: ((number) -&gt; ())?)
+-- size defaults to Pattern.Size.
+function Texture.paint(src: buffer, weights: {number}, mask: {number}, spec: Spec, base: {number}, out: buffer, onRow: ((number) -&gt; ())?, size: number?)
+    local size = size or Pattern.Size
     local a, b = spec.primary, spec.secondary
     local ar, ag, ab, br, bg, bb = a.R, a.G, a.B, b.R, b.G, b.B
     if spec.same then -- same-family genes: pattern regions read as a lighter / darker version of the one colour (PatternGenes rule)
@@ -374774,17 +374908,19 @@ function Texture.paint(src: buffer, weights: {number}, mask: {number}, spec: Spe
         br, bg, bb = math.min(1, br * 1.08 + 0.05), math.min(1, bg * 1.08 + 0.05), math.min(1, bb * 1.08 + 0.05)
     end
     local tier = Tier.get(spec.tier)
-    for y = 0, SIZE - 1 do
+    for y = 0, size - 1 do
         if onRow then onRow(y) end
-        for x = 0, SIZE - 1 do
-            local i = y * SIZE + x
+        for x = 0, size - 1 do
+            local i = y * size + x
             local o = i * 4
             local r, g, bl = buffer.readu8(src, o) / 255, buffer.readu8(src, o + 1) / 255, buffer.readu8(src, o + 2) / 255
             if weights[i + 1] &gt; 0 then
                 local m = mask[i + 1]
                 local tr, tg, tb = ar + (br - ar) * m, ag + (bg - ag) * m, ab + (bb - ab) * m
                 if tier then tr, tg, tb = Tier.blend(tr, tg, tb, tier, m &gt;= 0.5) end
+                local k = Recolor.shade(r, g, bl, base)
                 r, g, bl = Recolor.pixel(r, g, bl, tr, tg, tb, base)
+                if tier then r, g, bl = Tier.lift(r, g, bl, k, tier) end -- BD-308: lit facets shine a little more on fused tiers
             end
             buffer.writeu8(out, o, math.floor(r * 255 + 0.5))
             buffer.writeu8(out, o + 1, math.floor(g * 255 + 0.5))
@@ -374796,14 +374932,17 @@ end
 local function yielder(): (number) -&gt; ()
     return function(y) if y % 24 == 23 then task.wait() end end
 end
+local partEntry = setmetatable({} :: {[Instance]: any}, {__mode = "k"})
+local cacheOf = setmetatable({} :: {[any]: any}, {__mode = "k"}) -- entry -&gt; the cache it lives in
+local hooked = setmetatable({} :: {[Instance]: boolean}, {__mode = "k"})
 function Texture.release(part: Instance)
     local entry = partEntry[part]
     if not entry then return end
     partEntry[part] = nil
-    atlas:release(entry)
+    local cache = cacheOf[entry] or big
+    cache:release(entry)
     publish()
 end
-local hooked = setmetatable({} :: {[Instance]: boolean}, {__mode = "k"})
 local function pin(part: Instance, entry): Content
     Texture.release(part)
     partEntry[part] = entry
@@ -374812,40 +374951,52 @@ local function pin(part: Instance, entry): Content
     return Content.fromObject(entry.image)
 end
 -- Content for `part` (pinned to it until release/Destroying) or nil (cache full / failed / no permission): caller keeps a fallback.
-function Texture.acquire(part: Instance, textureId: string, speciesId: string, spec: Spec, geom: Geom?): Content?
-    local key = Texture.key(textureId, spec)
+-- size: Texture.sizeFor(role) (default 256).
+function Texture.acquire(part: Instance, textureId: string, speciesId: string, spec: Spec, geom: Geom?, size: number?): Content?
+    local size = size or Texture.BigSize
+    local cache = cacheFor(size)
+    local key = Texture.key(textureId, spec) .. "@" .. size
     local current = partEntry[part]
     if current and current.key == key then return Content.fromObject(current.image) end
     while pending[key] do task.wait(0.1) end
-    local entry = atlas:acquire(key)
+    local entry = cache:acquire(key)
     if entry then return pin(part, entry) end
-    if atlas:free() &lt;= 0 then atlas.denied += 1 publish() return nil end
+    if cache:free() &lt;= 0 then cache.denied += 1 publish() return nil end
     pending[key] = true
-    local src = source(textureId, geom)
-    if not src then pending[key] = nil return nil end
-    local okMask, mask = pcall(Pattern.compute, spec.patternId, Pattern.seed(spec.seedName), src.weights, spec.primaryShare, spec.same, yielder(), src.pos)
-    if not okMask then mask = table.create(SIZE * SIZE, 0) end -- pattern failure: plain colours, never nothing
     local ok, image = pcall(function()
-        local out = buffer.create(SIZE * SIZE * 4)
-        Texture.paint(src.buf, src.weights, mask, spec, src.base or Recolor.baseOf(speciesId), out, yielder())
-        if not atlas:reserve() then return nil end
-        local img = AssetService:CreateEditableImage({Size = Vector2.new(SIZE, SIZE)})
-        img:WritePixelsBuffer(Vector2.zero, Vector2.new(SIZE, SIZE), out)
+        local src = source(textureId, size, geom)
+        if not src then return nil end
+        local okMask, mask = pcall(Pattern.compute, spec.patternId, Pattern.seed(spec.seedName), src.weights, spec.primaryShare, spec.same, yielder(), src.pos, size)
+        if not okMask then mask = table.create(size * size, 0) end -- pattern failure: plain colours, never nothing
+        local out = buffer.create(size * size * 4)
+        Texture.paint(src.buf, src.weights, mask, spec, src.base or Recolor.baseOf(speciesId), out, yielder(), size)
+        if not cache:reserve() then return nil end
+        local img = AssetService:CreateEditableImage({Size = Vector2.new(size, size)})
+        if not img then return nil end -- budget (shared with every EditableImage/EditableMesh in the game): tint fallback
+        img:WritePixelsBuffer(Vector2.zero, Vector2.new(size, size), out)
         return img
     end)
     pending[key] = nil
+    if not ok then warn("[Be Dino] low-poly bake failed for " .. speciesId .. " (tint fallback): " .. tostring(image)) end
     if not ok or not image then publish() return nil end
-    entry = atlas:insert(key, image)
+    entry = cache:insert(key, image)
+    cacheOf[entry] = cache
     return pin(part, entry)
 end
 -- Measured body colour of a loaded texture (nil until loaded): the cheap tint fallback divides by it.
 function Texture.baseOf(textureId: string): {number}?
-    local s = sources[textureId]
-    return if type(s) == "table" then s.base else nil
+    for _, size in {Texture.BigSize, Texture.SmallSize} do
+        local s = sources[textureId .. "@" .. size]
+        if type(s) == "table" and s.buf then return s.base end
+    end
+    return nil
 end
 function Texture.hasPositions(textureId: string): boolean?
-    local s = sources[textureId]
-    return if type(s) == "table" then s.pos ~= nil else nil
+    for _, size in {Texture.BigSize, Texture.SmallSize} do
+        local s = sources[textureId .. "@" .. size]
+        if type(s) == "table" and s.buf then return s.pos ~= nil end
+    end
+    return nil
 end
 return Texture
 </ProtectedString>
@@ -374869,19 +375020,29 @@ export type Entry = {
     material: string,      -- Enum.Material name for body-colour parts
     reflectance: number,   -- 0..0.3
     sparkle: {number},     -- sparkle colour
-    sparkleRate: number,   -- particles per second on the body part (0 = none)
+    sparkleRate: number,   -- particles per second on the body part (0 = none) at dino size 3 studs; Reduce Motion -&gt; 0
+    sheen: number,         -- BD-308: 0..MaxSheen lift of the facets the source texture already lit (reads as gloss in flat light)
 }
 Tier.Order = {"gold", "emerald", "diamond"}
 Tier.MaxAmount = 0.8
 Tier.MaxReflectance = 0.3
+Tier.MaxSheen = 0.7
 Tier.Entries = {
     gold = {id = "gold", name = "Gold", tint = {255, 206, 92}, amount = 0.22, trimAmount = 0.75, material = "Metal", reflectance = 0.14,
-        sparkle = {255, 230, 150}, sparkleRate = 1.5},
+        sparkle = {255, 230, 150}, sparkleRate = 1.5, sheen = 0.45},
     emerald = {id = "emerald", name = "Emerald", tint = {60, 220, 140}, amount = 0.20, trimAmount = 0.75, material = "Glass", reflectance = 0.10,
-        sparkle = {170, 255, 205}, sparkleRate = 2},
+        sparkle = {170, 255, 205}, sparkleRate = 2, sheen = 0.35},
     diamond = {id = "diamond", name = "Diamond", tint = {215, 244, 255}, amount = 0.26, trimAmount = 0.70, material = "Glass", reflectance = 0.22,
-        sparkle = {235, 250, 255}, sparkleRate = 3},
+        sparkle = {235, 250, 255}, sparkleRate = 3, sheen = 0.6},
 }
+-- BD-308 baked sheen: the generated textures carry flat facet shading (k = pixel luma / species body luma, 0.3..1.6). On a fused
+-- tier the facets that the source already lit (k &gt; 1) are lifted toward white by (k - 1) * sheen, so the gem/metal look reads
+-- even under flat Edit-mode or viewport lighting where Metal/Glass reflectance barely shows. Base dinos never get it (matte).
+function Tier.lift(r: number, g: number, b: number, k: number, entry: Entry): (number, number, number)
+    local a = math.clamp((k - 1) * math.clamp(entry.sheen, 0, Tier.MaxSheen), 0, 0.35)
+    if a &lt;= 0 then return r, g, b end
+    return r + (1 - r) * a, g + (1 - g) * a, b + (1 - b) * a
+end
 -- Accepts the stage strings used around the codebase ("gold", "emerald", "diamond", true = gold). "base"/nil/false -&gt; nil.
 function Tier.get(stage: any): Entry?
     if stage == true then stage = "gold" end
@@ -562597,6 +562758,7 @@ end
 -- Derives the action state from humanoid state/velocity and the leap attributes. Returns nothing; writes rig.act/rig.aggr.
 local function updateAction(rig: any, now: number)
     local character, root = rig.character, rig.root
+    if not character or not root then rig.act = nil return end -- local character not spawned yet or already gone
     local hum = rig.humanoid
     if not hum or not hum.Parent then hum = character:FindFirstChildOfClass("Humanoid") rig.humanoid = hum end
     if not hum or hum.Health &lt;= 0 then rig.act = nil return end
