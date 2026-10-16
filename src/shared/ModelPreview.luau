@@ -40,7 +40,7 @@ function ModelPreview.add(parent: GuiObject,id: string,empty: boolean?): Viewpor
     local model=if id=="egg" then Egg.create(empty) else Resources.clone(id,nil,true)
     if model and not viewport.Parent then model:Destroy();return viewport end
     -- Never show a model whose mesh content is not really loaded (renders as a box): drop it and use the 2D picture.
-    if model and not Authored.verify(model) then model:Destroy() model=nil end
+    if model and model:GetAttribute("LowPoly")~=true and not Authored.verify(model) then model:Destroy() model=nil end
     -- A real (non-empty) egg must be the authored 3D egg; the primitive ball cannot carry pattern or condition.
     if model and id=="egg" and not empty and not model:GetAttribute("AuthoredCreature") then model:Destroy() model=nil end
     if model then

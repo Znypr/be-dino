@@ -337,3 +337,12 @@ if __name__ == '__main__':
         if result.returncode or 'passed' not in result.stdout:
             print(result.stderr)
             raise SystemExit(result.returncode or 1)
+
+# Regression (docs/108): the preview must not run the legacy "authored creature" checks on a low-poly model, or 16 species fall back to the flat picture.
+for _name in ("DinosaurPreview", "ModelPreview"):
+    _src = (ROOT / f"src/shared/{_name}.luau").read_text(encoding="utf-8")
+    _line = [l for l in _src.splitlines() if "Authored.verify(model)" in l][0]
+    assert 'GetAttribute("LowPoly")' in _line, f"{_name}: Authored.verify must skip low-poly models"
+_dp = (ROOT / "src/shared/DinosaurPreview.luau").read_text(encoding="utf-8")
+assert [l for l in _dp.splitlines() if "Authored.has(speciesId)" in l and 'GetAttribute("LowPoly")' in l], "DinosaurPreview: Authored.has must skip low-poly models"
+print("low-poly preview guards passed")
