@@ -45,7 +45,7 @@ local function characterVisual(character: Model)
             previous.WorldPivot=groundFrame()
             previous:ScaleTo(scale);previous:PivotTo(groundFrame());previous:SetAttribute("Scale",scale)
             for _,weld in welds do
-                if weld:IsA("Weld") and weld.Part1 then weld.C0=root.CFrame:ToObjectSpace(weld.Part1.CFrame) end
+                if weld:IsA("Weld") and weld.Part1 then weld.C0=root.CFrame:ToObjectSpace(weld.Part1.CFrame*weld.C1) end -- *C1: drop the low-poly animation offset (BD-225)
                 weld.Enabled=true
             end
         end
@@ -167,6 +167,21 @@ local function upgradeAll()
     if arena then for _, item in arena:GetChildren() do propVisual(item) end end
 end
 RuntimeMeshes.Ready.Event:Connect(upgradeAll)
+-- BD-225 spike: the low-poly models replicate after spawn; swap any fallback visual of that species for the low-poly one.
+task.spawn(function()
+    local LowPoly = require(ReplicatedStorage.Shared.LowPolyDinos)
+    if not LowPoly.enabled() then return end
+    local folder = ReplicatedStorage:WaitForChild(LowPoly.FolderName, 60)
+    if not folder then return end
+    folder.ChildAdded:Connect(function(child)
+        task.wait(.2)
+        for _, player in Players:GetPlayers() do
+            local visual = if player.Character then player.Character:FindFirstChild("LocalMeshVisual") else nil
+            if visual and visual:GetAttribute("SpeciesId") == child.Name and visual:GetAttribute("LowPoly") ~= true then visual:Destroy() end
+        end
+        upgradeAll()
+    end)
+end)
 workspace.DescendantAdded:Connect(function(item)
     if item:IsA("Model") and item:GetAttribute("ResourceId") then task.defer(propVisual, item) end
 end)

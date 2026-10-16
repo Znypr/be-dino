@@ -2,6 +2,7 @@
 local Genetics=require(script.Parent.EggGenetics)
 local Textures=require(script.Parent.GeneTextures)
 local Appearance={}
+local LowPoly=require(script.Parent.LowPolyDinos)
 local Patterns=require(script.Parent.PatternGenes)
 local Overlays=require(script.Parent.ConditionOverlays)
 -- BD-174: the egg condition (Cracked, Dirty, Rainbow, Astra) belongs to EGG visuals only. Dinosaur models get colours and pattern
@@ -21,6 +22,7 @@ function Appearance.apply(container: Instance,genes,showCondition: boolean?)
         end
         return
     end
+    if container:GetAttribute("LowPoly")==true then LowPoly.tint(container,genes) return end -- BD-225: flat facet tint, matte
     local shell,shellSize=nil,-1
     for _,part in container:GetDescendants() do
         if part:IsA("BasePart") then
