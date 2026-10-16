@@ -566,7 +566,7 @@ render=function(name: string)
                     label(card,tostring(product.amount),92,6,166,44,32,C.gold)
                     label(card,"Crystals",92,48,166,26,19)
                     local tag=label(card,"",92,74,166,20,15,C.accent) tag.Visible=false
-                    local b=button(card,if Config.CrystalPacksEnabled then "..." else "Coming soon",8,100,248,38,C.gold:Lerp(C.panel,.35),function() end)
+                    local b=button(card,"...",8,100,248,38,C.gold:Lerp(C.panel,.35),function() end)
                     b.TextSize=19 b.Active=false
                     cards[i]={button=b,tag=tag}
                 end
@@ -584,7 +584,7 @@ render=function(name: string)
                         if price and Config.CrystalPacksEnabled==true then
                             c.button.Text="R$ "..price c.button.Active=true c.button.BackgroundColor3=C.gold:Lerp(C.panel,.1)
                             c.button.Activated:Connect(function() Marketplace:PromptProductPurchase(player,product.id) end)
-                        else c.button.Text=if price and not Config.CrystalPacksEnabled then "R$ "..price.."  Coming soon" else "Coming soon" end
+                        else c.button.Text=require(Shared.ShopCardState).packButton(price) end
                         if price and baseRate and i>1 then
                             local bonus=math.floor((product.amount/price/baseRate-1)*100+.5)
                             if bonus>=1 then c.tag.Text="+"..bonus.."% extra" c.tag.Visible=true end
@@ -1219,49 +1219,7 @@ local function refreshCrystals()
 end
 PrivateState.onChanged("Crystals", refreshCrystals)
 refreshCrystals()
--- Polish: persistent "next goal" line under the crystal HUD (top-right, clear of the thumbstick/jump area).
-local goalHUD=box(gui,0,0,260,30,C.panel,2)
-local goalScale=Instance.new("UIScale") goalScale.Parent=goalHUD
-goalHUD.Name,goalHUD.BackgroundTransparency="NextGoal",.15
-local goalText=label(goalHUD,"",8,0,244,30,17,C.gold)
-goalText.TextScaled=true
-local goalLimit=Instance.new("UITextSizeConstraint") goalLimit.MaxTextSize=17 goalLimit.Parent=goalText
-local goalDinos=nil -- latest FusionAction list; nil = unavailable (falls back to level XP)
-local function refreshGoal()
-    local goal=NextGoal.pick({dinos=goalDinos,level=num("AccountLevel"),xp=num("AccountXP"),perLevel=ProgressionConfig.AccountXPPerLevel,
-        maxLevel=ProgressionConfig.AccountMaxLevel,stages=FusionSelection.Stages,
-        speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName})
-    require(script.Parent.GoalsPanel).setDinos(goalDinos) -- BD-427: hub Goals panel reuses this list and the Index counts
-    require(script.Parent.GoalsPanel).setSpecies(require(Shared.GoalsRules).speciesCounts(decoded("CollectionJson","{}"),Config.SpeciesOrder,function(id) return eventMutation(id)~=nil or ownedTraits(id)~=nil end))
-    goalText.Text,goalText.TextColor3=(if touchMode() or require(Shared.PhoneScale).isCompact(gui.AbsoluteSize.Y) then "" else "Goal  ")..goal.text,if goal.ready then C.accent else C.gold
-end
-local goalQueued=false
-local function loadGoalDinos()
-    if goalQueued then return end
-    goalQueued=true
-    task.delay(2,function() -- debounce bursts of hatches; one request, up to 5 pages, never blocks the UI
-        goalQueued=false
-        local folder=ReplicatedStorage:FindFirstChild("BeDinoRemotes")
-        local fn=folder and folder:FindFirstChild("FusionAction")
-        if not fn or not fn:IsA("RemoteFunction") then goalDinos=nil refreshGoal() return end
-        local all,cursor,pages={},nil,0
-        repeat
-            local ok,response=pcall(function() return (fn :: RemoteFunction):InvokeServer({action="list",cursor=cursor,limit=200}) end)
-            if not ok or typeof(response)~="table" or response.ok~=true or typeof(response.dinosaurs)~="table" then goalDinos=nil refreshGoal() return end
-            for _,d in response.dinosaurs do table.insert(all,d) end
-            cursor=response.nextCursor
-            pages+=1
-        until cursor==nil or pages>=5
-        goalDinos=all
-        refreshGoal()
-    end)
-end
-for _,attribute in {"CollectionJson","AccountLevel","AccountXP"} do
-    PrivateState.onChanged(attribute, function() refreshGoal() if attribute=="CollectionJson" then loadGoalDinos() end end)
-end
-require(script.Parent.GoalsPanel).attach(gui,goalHUD,{stages=FusionSelection.Stages,speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName}) -- BD-427
-refreshGoal()
-loadGoalDinos()
+local goalHUD,goalScale,goalText,goalLimit=require(script.Parent.GoalHud).build({gui=gui,box=box,label=label,C=C,num=num,touchMode=touchMode,decoded=decoded,eventMutation=eventMutation,ownedTraits=ownedTraits}) -- next-goal HUD line + Goals panel
 local timers=Instance.new("Frame")
 timers.BackgroundTransparency,timers.Size,timers.AnchorPoint,timers.Position,timers.Parent=1,UDim2.fromOffset(286,220),Vector2.new(1,1),UDim2.new(1,-20,1,-100),gui
 local timerScale=Instance.new("UIScale") timerScale.Parent=timers
