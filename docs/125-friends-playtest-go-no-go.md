@@ -118,3 +118,9 @@ Done requires recorded evidence for: the real rollback drill (BD-020), one clean
 - Open items for the owner: confirm the 4-player cap for session 1, whether to merge #243/#247/#250 before session 1 or after, and whether the cave hub should enter session 2 (needs BD-293 first).
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+## Owner decisions (2026-10-16, after this doc was written)
+
+- **Session 1 cap: 4 players** (owner plus up to 3 friends). Confirmed.
+- **Everything in session 1:** rare-hatch celebration (#243), playtest telemetry (#247) and class feel (#250, `ClassMovementEnabled`) are in the first session. #243 and #247 are merged; #250 must merge before the build.
+- **Cave hub is in session 1:** `CaveHub` is now set to true in the playtest profile (`tools/release_profiles.py`). This overrides the "no-go: cave hub" line above. The BD-293 device test becomes part of session 1: the owner walks the cave first (docs/104, docs/111 s7.1) before inviting friends. Default (development) profile keeps `CaveHub = false`.
