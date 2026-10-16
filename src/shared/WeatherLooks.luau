@@ -12,6 +12,7 @@ export type Look={
     bloom:number,rays:number,rayTint:Rgb,amb:Rgb?,shiftTop:Rgb,shiftBottom:Rgb,
     dof:number,dofFocus:number,exposure:number,lamp:number,glow:Rgb,glowBright:number,glowRange:number,
     vis:number,fogStart:number,stars:number,
+    cloudCover:number,cloudDensity:number,cloudColor:Rgb,
 }
 local NONE=rgb(0,0,0) local WHITE=rgb(255,255,255)
 local function look(t:{[string]:any}):Look
@@ -21,6 +22,8 @@ local function look(t:{[string]:any}):Look
         bloom=t.bloom or 0,rays=t.rays or 0,rayTint=t.rayTint or WHITE,amb=t.amb,shiftTop=t.shiftTop or NONE,shiftBottom=t.shiftBottom or NONE,
         dof=t.dof or 0,dofFocus=t.dofFocus or 80,exposure=t.exposure or 0,lamp=t.lamp or 0,glow=t.glow or WHITE,glowBright=t.glowBright or 0,glowRange=t.glowRange or 40,
         vis=t.vis or 1000,fogStart=t.fogStart or 0,stars=t.stars or -1,
+        -- BD-055: Terrain.Clouds cover/density 0..1 (cloudCover -1 = leave the place's own clouds alone) and the cloud colour
+        cloudCover=t.cloudCover or -1,cloudDensity=t.cloudDensity or 0,cloudColor=t.cloudColor or WHITE,
     }
 end
 
@@ -29,26 +32,26 @@ end
 -- The near play area (25 studs) stays clear: fogStart >= 25 except in the blizzard whiteout.
 -- BD-213 (owner 2026-10-15: "visibility randomly cuts off, it should fade like fog"): there is no opaque sky box any more; the far
 -- view always dissolves into the classic fog ramp, which is capped inside the prop cull radius (Weather.fog) so props never pop.
--- Clear weather keeps a gentle soft-blue haze far out.
+-- Clear weather is crisp (owner 2026-10-16): a faint sky-blue fade far out, a slightly positive grade (sat +.04, contrast 0 since BD-460), no DoF, no bloom.
 Weather.Looks={
-    clear=look({fogStart=160,vis=900}),
-    rain=look({tint=rgb(150,182,232),sat=-.26,contrast=.14,bright=-.06,fog=rgb(120,134,156),decay=rgb(70,84,110),density=.5,offset=0,haze=2.6,bloom=.2,
+    clear=look({sat=.04,contrast=0,fog=rgb(176,205,232),fogStart=220,vis=1100}), -- BD-460: grade sat +.08 -> +.04 (-.04; +.02 made the built-in grass pale) and contrast +.04 -> 0; still no haze
+    rain=look({cloudCover=.9,cloudDensity=.65,cloudColor=rgb(120,132,152),tint=rgb(150,182,232),sat=-.26,contrast=.14,bright=-.06,fog=rgb(120,134,156),decay=rgb(70,84,110),density=.5,offset=0,haze=2.6,bloom=.2,
         amb=rgb(92,106,130),dof=.35,dofFocus=90,exposure=-.35,lamp=.8,fogStart=40,vis=260}),
-    thunder=look({tint=rgb(160,174,222),sat=-.2,contrast=.18,bright=-.08,fog=rgb(88,96,132),decay=rgb(46,50,90),density=.56,offset=0,haze=3,bloom=.5,
+    thunder=look({cloudCover=1,cloudDensity=.95,cloudColor=rgb(52,48,92),tint=rgb(160,174,222),sat=-.2,contrast=.18,bright=-.08,fog=rgb(88,96,132),decay=rgb(46,50,90),density=.56,offset=0,haze=3,bloom=.5,
         amb=rgb(104,116,160),dof=.45,dofFocus=80,exposure=-.3,lamp=1.4,glow=rgb(160,140,255),glowBright=.6,glowRange=60,fogStart=40,vis=200}),
-    blizzard=look({tint=rgb(214,232,255),sat=-.4,contrast=-.06,bright=.08,fog=rgb(226,234,246),decay=rgb(200,216,240),density=.8,offset=0,haze=4,bloom=.45,rays=.1,
+    blizzard=look({cloudCover=1,cloudDensity=.85,cloudColor=rgb(226,236,250),tint=rgb(214,232,255),sat=-.4,contrast=-.06,bright=.08,fog=rgb(226,234,246),decay=rgb(200,216,240),density=.8,offset=0,haze=4,bloom=.45,rays=.1,
         rayTint=rgb(220,235,255),amb=rgb(172,184,206),dof=.6,dofFocus=40,lamp=.4,fogStart=25,vis=110}),
     -- BD-256: soft embers, not a lava wash. The old glow light (1.4 at 60 studs), bloom .6 and a saturated amber ambient painted
     -- the whole ground and about a third of the screen orange; calmer values keep the warm mood and every dino and food readable.
-    volcano=look({tint=rgb(255,228,205),sat=.15,contrast=.1,bright=-.03,fog=rgb(150,84,56),decay=rgb(110,50,30),density=.4,offset=0,haze=2.4,glare=.2,bloom=.25,rays=.15,
+    volcano=look({cloudCover=.85,cloudDensity=.85,cloudColor=rgb(92,58,48),tint=rgb(255,228,205),sat=.15,contrast=.1,bright=-.03,fog=rgb(150,84,56),decay=rgb(110,50,30),density=.4,offset=0,haze=2.4,glare=.2,bloom=.25,rays=.15,
         rayTint=rgb(255,170,100),amb=rgb(150,112,92),dof=.4,dofFocus=90,exposure=-.2,lamp=.5,glow=rgb(255,140,70),glowBright=.4,glowRange=36,fogStart=70,vis=300}),
     -- aurora colours (fog, decay, shifts, ambient, tint, glow) are overwritten every frame from Weather.aurora(); these are the mid values
-    aurora=look({tint=rgb(176,255,230),sat=.4,contrast=.1,bright=-.04,fog=rgb(40,200,170),decay=rgb(60,80,180),density=.32,offset=0,haze=1.4,bloom=1.2,rays=.05,
+    aurora=look({cloudCover=.12,cloudDensity=.2,cloudColor=rgb(150,220,210),tint=rgb(176,255,230),sat=.4,contrast=.1,bright=-.04,fog=rgb(40,200,170),decay=rgb(60,80,180),density=.32,offset=0,haze=1.4,bloom=1.2,rays=.05,
         rayTint=rgb(140,255,220),amb=rgb(70,130,120),dof=.2,dofFocus=120,exposure=-.2,lamp=.5,
         glow=rgb(60,255,170),glowBright=1.3,glowRange=60,fogStart=170,vis=400,stars=5000}),
-    quake=look({tint=rgb(232,200,156),sat=-.14,contrast=.16,bright=-.06,fog=rgb(198,176,146),decay=rgb(130,100,70),density=.45,offset=0,haze=3,bloom=.15,
+    quake=look({cloudCover=.65,cloudDensity=.55,cloudColor=rgb(196,168,130),tint=rgb(232,200,156),sat=-.14,contrast=.16,bright=-.06,fog=rgb(198,176,146),decay=rgb(130,100,70),density=.45,offset=0,haze=3,bloom=.15,
         amb=rgb(150,126,96),dof=.35,dofFocus=70,lamp=.6,fogStart=40,vis=220}),
-    bloodmoon=look({tint=rgb(255,140,150),sat=.45,contrast=.18,bright=0,fog=rgb(66,14,24),decay=rgb(100,10,30),density=.4,offset=0,haze=2.8,glare=.5,bloom=.5,rays=.12,
+    bloodmoon=look({cloudCover=.8,cloudDensity=.8,cloudColor=rgb(120,24,40),tint=rgb(255,140,150),sat=.45,contrast=.18,bright=0,fog=rgb(66,14,24),decay=rgb(100,10,30),density=.4,offset=0,haze=2.8,glare=.5,bloom=.5,rays=.12,
         rayTint=rgb(255,60,80),amb=rgb(165,38,56),dof=.3,dofFocus=80,exposure=-.15,lamp=1.2,glow=rgb(255,40,70),glowBright=.5,glowRange=60,fogStart=100,vis=360}),
 }
 Weather.Ids=table.freeze({"rain","thunder","blizzard","volcano","aurora","quake","bloodmoon"})
@@ -71,6 +74,8 @@ Weather.Rigs={
 Weather.Moon=table.freeze({core=44,halos=table.freeze({80,108,142}),distance=150})
 -- BD-348 aurora: the ribbons start at the horizon (visible without looking up) and the horizon glows; BD-349 counts per level
 Weather.Aurora=table.freeze({baseY=-6,step=16,alpha=.6,horizonGlow=.75})
+-- BD-055 Reduce Motion fallback for thunder: no flashes or bolts, only a slow soft brightness swell (peak = share of a full flash).
+Weather.Swell=table.freeze({rate=.7,peak=.1})
 Weather.Title=table.freeze({y=.31,width=.6,height=.085})
 Weather.Budget=table.freeze({concurrent=6000,bigConcurrent=500,bolts=4,bombs=6,beams=140,cracks=4,cracksPhone=2,rocksPerCrack=3})
 -- Earthquake v2 (owner 2026-10-15): a WORLD event, not an aura. Ground cracks open at random spots in view (never under the dino),
@@ -123,6 +128,21 @@ Weather.CullMargin=.85
 Weather.SoftRatio=.45
 function Weather.fogCap(cullRadius:number?):number
     return if cullRadius then cullRadius*Weather.CullMargin else math.huge
+end
+-- Clear-weather distance fade per device class (island daylight): far out so the mid-distance stays crisp. Phone has no entry and
+-- keeps the tight cull-radius fog. The fog colour is the sky-horizon blue, so it reads as distance, not haze.
+Weather.ClearFog={Desktop={fogStart=400,fogEnd=1400},Tablet={fogStart=250,fogEnd=700}}
+-- Fog cap for a device class: the cull-radius cap, or that class's clear-weather fog end when that is farther.
+function Weather.capFor(class:string,cullRadius:number?):number
+    local cf=Weather.ClearFog[class]
+    return math.max(Weather.fogCap(cullRadius),if cf then cf.fogEnd else 0)
+end
+-- Clear look for a device class with the far fog distances applied.
+function Weather.clearFor(class:string):Look
+    local cf=Weather.ClearFog[class]
+    if not cf then return Weather.Looks.clear end
+    local l=table.clone(Weather.Looks.clear) l.fogStart,l.vis=cf.fogStart,cf.fogEnd
+    return l
 end
 -- Classic fog blend from the clear-weather haze to the event look: FogEnd is blended in 1/distance so the view closes in
 -- smoothly instead of jumping at the start of the ramp. cap = Weather.fogCap(cull radius).

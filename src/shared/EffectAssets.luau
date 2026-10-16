@@ -56,6 +56,12 @@ Assets.Requested = {
     paintCrown = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
     paintDrips = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
     paintDroplet = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    weatherCloud = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): soft sky cloud puff, single image 512 px, white on alpha (fog banks / storm cover)
+    lightningBolt = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): branching lightning strip, white on alpha, 512x128 (thunder bolts)
+    rainStreak = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): thin rain streak, white on alpha, 64x256
+    snowFlakeSheet = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): snow flakes and crystals 4x4, white on alpha
+    ashFlake = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): ash flakes and embers 4x4, white on alpha
+    bloodMoonDisc = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): blood moon disc with soft craters, 512 px, on alpha
     paintGloss = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
 }
 

@@ -48,6 +48,10 @@ return table.freeze({
     WorldArtMode = "Legacy", -- "BiomeKit": BD-049 Blender props + placement grammar PROVISIONAL
     WorldGeneratedMeshes = true, -- BD-206: Roblox-generated MeshParts for mapped kit props (WorldGeneratedMeshes.luau); a failed load keeps the kit model
     WorldArtSeed = 1404,
+    -- BD-460 (docs/138): clear-daylight island light, softer contrast. Sun Brightness 2 -> 1.8 (less blown-out treetops), a higher ambient floor
+    -- (Ambient 130,143,148 -> 146,155,158; OutdoorAmbient now set: it was the place default) so shaded ground is not near black. Weather events and the
+    -- cave override these temporarily and restore them (ProgressionService, WeatherVisuals, CaveAtmosphere all read the base values).
+    IslandLight = {Brightness = 1.8, Ambient = {146, 155, 158}, OutdoorAmbient = {140, 150, 153}},
     WorldArtDensity = 1, -- the playtest profile sets 1.25 (tools/release_profiles.py, docs/68); 1 is the default density
     -- BD-168 client distance culling of decorative props/food (docs/89). PartBudget = max prop parts a client keeps parented;
     -- radius = studs kept (hysteresis = +15%). Collision proxies, crystals, hub and server food logic are never culled.

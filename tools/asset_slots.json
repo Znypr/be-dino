@@ -1468,6 +1468,63 @@
    "group": "Images.class_armored",
    "table": "Images",
    "pending": "class badge (reveal card, picker)"
+  },
+  {
+   "name": "weatherCloud",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "weatherCloud",
+   "group": "Requested.weatherCloud",
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "weatherCloud"
+   ]
+  },
+  {
+   "name": "lightningBolt",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "lightningBolt",
+   "group": "Requested.lightningBolt",
+   "pending": "BD-055 weather textures"
+  },
+  {
+   "name": "rainStreak",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "rainStreak",
+   "group": "Requested.rainStreak",
+   "pending": "BD-055 weather textures"
+  },
+  {
+   "name": "snowFlakeSheet",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "snowFlakeSheet",
+   "group": "Requested.snowFlakeSheet",
+   "pending": "BD-055 weather textures"
+  },
+  {
+   "name": "ashFlake",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "ashFlake",
+   "group": "Requested.ashFlake",
+   "pending": "BD-055 weather textures"
+  },
+  {
+   "name": "bloodMoonDisc",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "bloodMoonDisc",
+   "group": "Requested.bloodMoonDisc",
+   "pending": "BD-055 weather textures"
   }
  ]
 }

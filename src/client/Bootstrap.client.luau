@@ -153,6 +153,13 @@ local function close()
     task.delay(if motion then .13 else 0,function() if modalVersion==version then shade.Visible=false end end)
     Theme.animate(blur,.12,{Size=0})
 end
+-- The modal blur belongs to an open modal only: if the panel is hidden (even programmatically) the blur is forced back to 0.
+task.spawn(function()
+    while true do
+        task.wait(.5)
+        if (active=="" or not shade.Visible) and blur.Size>0 then blur.Size=0 end
+    end
+end)
 local closeButton=button(header,"X",770,1,80,76,C.red,close)
 closeButton.AnchorPoint,closeButton.Position=Vector2.new(1,0),UDim2.new(1,-2,0,1)
 require(script.Parent.ModalCompact).attach({gui=gui,panel=panel,header=header,heading=heading,body=body,closeButton=closeButton,scale=scale}) -- BD-333: phone landscape layout, no-op on desktop
@@ -878,7 +885,7 @@ render=function(name: string)
         label(body,"YOUR COLLECTION",414,0,400,42,28)
         label(body,string.format("Base: %d • Gold: %d\nDiamond: %d",base,gold,diamond),414,62,400,92,25)
         label(body,if event then event.name.." • "..table.concat(UIFormat.boostLines(event.growth,event.speed,1)," • ") else "Cosmetic fusion: 6 Base → Gold; 3 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,66,22,C.gold)
-        do local line=label(body,require(Shared.ClassInfo).line(selected),414,241,400,28,22,C.accent) -- BD-423: class + one-line feel hint
+        do local line=label(body,require(Shared.ClassInfo).line(selected),414,241,400,28,22,require(Shared.ClassInfo).Colors[require(Shared.ClassInfo).forSpecies(selected).class]) -- BD-423: class + one-line feel hint
             line.TextScaled,line.TextWrapped=true,false -- BD-443: shrink to fit one line on a phone, never clip
             local fit=Instance.new("UITextSizeConstraint") fit.MinTextSize,fit.MaxTextSize,fit.Parent=14,22,line end
         local equipped=str("EquippedSpeciesId","compy")==selected

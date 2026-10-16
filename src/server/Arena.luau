@@ -69,7 +69,7 @@ local function tree(parent: Instance, position: Vector3, scale: number, yaw: num
         trunk.CFrame = CFrame.new(trunk.Position) * CFrame.Angles(0, yaw, math.pi / 2)
         for _, offset in {Vector3.new(0, 9, 0), Vector3.new(2.7, 8.5, 0.4), Vector3.new(-2.3, 8.9, -0.8)} do
             local crown = part(parent, "Canopy", Vector3.new(5.5, 3.5, 5.5) * scale,
-                position + offset * scale, Color3.fromRGB(64, 144, 112), Enum.Material.SmoothPlastic, false)
+                position + offset * scale, Color3.fromRGB(76, 138, 100), Enum.Material.SmoothPlastic, false) -- BD-460: was 64,144,112 (mint)
             crown.Shape = Enum.PartType.Ball
         end
     end
@@ -81,7 +81,7 @@ local function fern(parent: Instance, position: Vector3, scale: number, yaw: num
         local angle = yaw + i * math.pi * 2 / 7
         local leaf = part(parent, "FernLeaf", Vector3.new(0.45, 0.16, 2.0) * scale,
             position + Vector3.new(math.sin(angle) * .6, .6, math.cos(angle) * .6) * scale,
-            Color3.fromRGB(106, 180, 125), Enum.Material.SmoothPlastic, false)
+            Color3.fromRGB(112, 164, 116), Enum.Material.SmoothPlastic, false) -- BD-460: was 106,180,125
         leaf.Shape = Enum.PartType.Ball
         leaf.CFrame = CFrame.new(leaf.Position) * CFrame.Angles(-0.28, angle, 0)
     end
@@ -166,6 +166,11 @@ local function biomeKit(parent: Instance)
         if p.layer ~= "log" then
             made = generatedProp(p.id, p.biome or "meadow", Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77)) or Resources.clone(p.id)
             if made then made:ScaleTo(p.scale) end
+            -- BD-167: per-prop colour variation (a tint of the white MeshPart; landmarks keep their art colours).
+            if made and made.PrimaryPart and p.layer ~= "landmark" then
+                local tr, tg, tb = Biome.tint(p.biome or "meadow", Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 91), Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 92))
+                made.PrimaryPart.Color = Color3.new(tr, tg, tb)
+            end
         end
         local rayLayer = Ground.rayLayer(p.layer, data.kind)
         if (Ground.Raised[p.layer] and data.kind ~= "rock") or rayLayer == "rock" or p.layer == "landmark" then
