@@ -11,7 +11,9 @@ local InsertService = game:GetService("InsertService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Layout = require(ReplicatedStorage.Shared.CaveHubLayout)
 local Props = require(ReplicatedStorage.Shared.CaveHubProps)
+local SignCopy = require(ReplicatedStorage.Shared.HubSignCopy)
 local CaveProps = {}
+local signGuis = 0 -- sign texts placed this build (capped by Props.MaxSignGuis)
 
 local LOAD_WORKERS = 6 -- parallel LoadAsset calls
 local PLACE_BATCH = 16 -- props placed per frame
@@ -70,6 +72,34 @@ local function buildColliders(parent: Instance, params: RaycastParams)
     folder.Parent = parent
 end
 
+-- BD-292: readable station text on a sign mesh: one SurfaceGui on the front face only, one TextLabel (FredokaOne, TextScaled) with the
+-- HubSignCopy word. Cream text with a dark outline so it reads on the stone and in the warm light.
+local function addSignText(mesh: MeshPart, key: string, text: string)
+    local cfg = (Props.SignText :: any)[key]
+    local gui = Instance.new("SurfaceGui")
+    gui.Name = "SignText"
+    gui.Face = (Enum.NormalId :: any)[cfg.face]
+    gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+    gui.PixelsPerStud = 40
+    gui.LightInfluence = 0.6
+    gui.AlwaysOnTop = false
+    gui.ClipsDescendants = true
+    local label = Instance.new("TextLabel")
+    label.Name = "Word"
+    label.AnchorPoint = Vector2.new(0.5, 0.5)
+    label.Position = UDim2.fromScale(0.5, 0.5)
+    label.Size = UDim2.fromScale(1 - cfg.inset * 2, 0.4)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.FredokaOne
+    label.Text = text
+    label.TextScaled = true
+    label.TextColor3 = Color3.fromRGB(255, 240, 205)
+    label.TextStrokeColor3 = Color3.fromRGB(70, 40, 28)
+    label.TextStrokeTransparency = 0.15
+    label.Parent = gui
+    gui.Parent = mesh
+end
+
 local function place(folder: Folder, params: RaycastParams, p: any, template: MeshPart)
     local key = p.key
     local target = {p.w, p.h, p.d}
@@ -96,6 +126,19 @@ local function place(folder: Folder, params: RaycastParams, p: any, template: Me
     end
     mesh.CFrame = CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0)
     if Props.Solid[key] then mesh.CanCollide, mesh.CanQuery = true, true end
+    local warm = (Props.Warm :: any)[key]
+    if warm then -- BD-285 QA: blue / pink generated rocks -> flat warm basalt
+        for _, child in mesh:GetChildren() do
+            if child:IsA("SurfaceAppearance") then child:Destroy() end
+        end
+        mesh.Color = Color3.fromRGB(warm.color[1], warm.color[2], warm.color[3])
+        mesh.Material = (Enum.Material :: any)[warm.material]
+    end
+    local text = SignCopy.forRow(key, p.owner)
+    if text and signGuis < Props.MaxSignGuis then
+        signGuis += 1
+        addSignText(mesh, key, text)
+    end
     mesh:SetAttribute("Owner", p.owner)
     mesh.Parent = folder
 end
@@ -103,6 +146,7 @@ end
 function CaveProps.build(parent: Instance): Folder
     local folder = Instance.new("Folder")
     folder.Name = "CaveProps"
+    signGuis = 0
     folder:SetAttribute("PropsPlaced", 0)
     folder:SetAttribute("PropsSkipped", 0)
     folder:SetAttribute("AssetsFailed", 0)
@@ -160,6 +204,7 @@ function CaveProps.build(parent: Instance): Folder
         end
         folder:SetAttribute("PropsPlaced", placed)
         folder:SetAttribute("PropsSkipped", skipped)
+        folder:SetAttribute("SignTexts", signGuis)
         folder:SetAttribute("Done", true)
     end)
     return folder

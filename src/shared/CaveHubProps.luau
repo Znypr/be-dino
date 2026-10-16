@@ -87,11 +87,27 @@ Props.MinScale, Props.MaxScale = 0.25, 6 -- sane bounds of the uniform scale app
 -- Lava waterfall FX numbers (docs/104 s5, BD-285). Textures only from EffectAssets (flameSheet, smokeSheet, sparkSheet, swirl).
 Props.Lava = {
     sheetOffsetDz = 5, -- sheet sits this far behind CaveHubLayout.Fall.z (inside the falls recess)
-    sheetTransparency = 0.6, sheetColor = {255, 120, 40},
+    sheetTransparency = 0.72, sheetColor = {255, 96, 28}, -- BD-285 QA: a thin warm glow body; the scrolling flame layers (CaveLavaRules) are drawn on it
     discTransparency = 0.25, discColor = {255, 110, 35}, discSpinSeconds = 60, discDrop = 0.6,
     fxPartBudget = 2, -- sheet + disc (they stand in for the cave_lava_fall and lava_pool_disc rows; emitters sit on them)
-    emitterRates = {flames = 5, embers = 6, steam = 8}, -- per second, desktop; phones halve them on the client later
+    -- emitter rates, the scrolling layers and the phone / Reduce Motion rules live in CaveLavaRules (25 per second desktop, 10 phone)
 }
+
+-- BD-285 QA: the generated lava rim rocks and stepping stones came out blue / pink and clash with the warm cave. They keep their
+-- mesh but lose the SurfaceAppearance and take a flat warm basalt Color and a matte material (decided from the Studio screenshots,
+-- docs/evidence/2026-10-16-cave-lava). Nothing is re-baked and no new asset id is involved.
+Props.Warm = {
+    cave_lava_rim_rock = {color = {118, 74, 58}, material = "Slate"},
+    cave_stepping_stone = {color = {138, 88, 66}, material = "Slate"},
+}
+
+-- BD-292: the sign meshes that carry station text (a SurfaceGui built from HubSignCopy, front face only). `face` is the mesh's
+-- front face name; `inset` shrinks the text box (fraction of the face) so words stay on the board.
+Props.SignText = {
+    hub_sign_stone = {face = "Front", inset = 0.12},
+    hub_sign_arrow = {face = "Front", inset = 0.18},
+}
+Props.MaxSignGuis = 12 -- SurfaceGuis are not Parts, but they cost render time: never more than this many sign texts
 
 -- Uniform factor that scales a loaded asset of size `mesh` to the target box `target` (both {x, y, z}): the axis with the
 -- largest target dimension decides, so a proportion mismatch stays inside the box on the other axes only if the asset was

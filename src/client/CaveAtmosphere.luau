@@ -13,6 +13,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Rules = require(Shared:WaitForChild("CaveLightingRules"))
 local Settings = require(Shared:WaitForChild("SettingsModel"))
+local Lava = require(script.Parent:WaitForChild("CaveLavaClient"))
 
 local Cave = {}
 local player = Players.LocalPlayer
@@ -121,6 +122,7 @@ function Cave.step(dt: number)
         atmosphere.Decay = atmosphere.Decay:Lerp(c3(A.decay), t)
     end
     motes(calm)
+    if isInside then Lava.step(dt, calm) end -- BD-285: scrolling lava falls, phone / Reduce Motion rates
 end
 
 return Cave
