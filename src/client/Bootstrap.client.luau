@@ -478,7 +478,7 @@ render=function(name: string)
             art(body,"egg",20,cardsY+12,220)
             label(body,"Random Egg",270,cardsY,535,40,30,C.gold)
             label(body,ProgressionConfig.RandomEggPrice.." Crystals\nBalance: "..num("Crystals").."  •  Level "..num("AccountLevel"),270,cardsY+45,535,60,22)
-            button(body,"VIEW ODDS",270,cardsY+119,535,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("eggOdds") end)
+            button(body,"ODDS / DETAILS",270,cardsY+119,535,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("oddsSimple") end)
             button(body,"BUY EGG",270,cardsY+targetHeight+130,535,targetHeight,C.accent,function() open("eggPurchase") end)
             return
         elseif cosmeticTab=="conditions" then
@@ -575,6 +575,28 @@ render=function(name: string)
             button(body,">",714,footerY,110,targetHeight,C.blue,function() trailPage=math.min(4,trailPage+1) open("auras") end)
         end
         label(body,"Level "..num("AccountLevel").." • "..num("Crystals").." Crystals"..(if isTrail then " • "..trailPage.." / 4" else ""),115,footerY,590,targetHeight,21,C.gold)
+    elseif name=="oddsSimple" then
+        -- BD-270: short, kid-readable odds (src/shared/OddsCopy). Every group adds up to 100%.
+        local OddsCopy=require(Shared.OddsCopy)
+        local upgradeOdds=oddsLevelOverride~=nil
+        heading.Text,header.BackgroundColor3=if upgradeOdds then "Upgrade Odds" else "Egg Odds",C.blue
+        local groups=if upgradeOdds then OddsCopy.upgradeGroups(oddsLevelOverride :: number) else OddsCopy.eggGroups(progression().conditionLevel or 0)
+        local list=Instance.new("ScrollingFrame") list.Name,list.BackgroundTransparency,list.BorderSizePixel,list.Size,list.ScrollBarThickness,list.ZIndex,list.Parent="OddsSimple",1,0,UDim2.fromOffset(824,308),8,24,body
+        local lineY=0
+        for _,group in groups do
+            label(list,group.title,10,lineY,790,34,26,C.gold) lineY+=36
+            for _,row in group.rows do
+                label(list,row.name,30,lineY,520,30,22).TextXAlignment=Enum.TextXAlignment.Left
+                label(list,row.text,560,lineY,220,30,22,C.blue).TextXAlignment=Enum.TextXAlignment.Right
+                lineY+=32
+            end
+            if group.note then label(list,group.note,10,lineY,790,28,18) lineY+=30 end
+            label(list,"Total: 100%",10,lineY,790,26,17,C.gold) lineY+=36
+        end
+        for _,note in OddsCopy.notes(not upgradeOdds) do label(list,note,10,lineY,790,28,19) lineY+=32 end
+        list.CanvasSize=UDim2.fromOffset(0,lineY)
+        button(body,"MORE DETAILS",0,322,402,math.max(64,45/viewportScale()),C.blue,function() open("eggOdds") end).TextSize=20
+        button(body,"BACK",422,322,402,math.max(64,45/viewportScale()),C.blue,function() open(if upgradeOdds then "conditionConfirm" else "eggPurchase") end)
     elseif name=="eggOdds" then
         heading.Text,header.BackgroundColor3="Egg Odds",C.blue
         local level=oddsLevelOverride or progression().conditionLevel or 0
@@ -603,15 +625,14 @@ render=function(name: string)
         label(body,price.." Crystals\nBalance after: "..(num("Crystals")-price),260,10,550,80,27,C.gold)
         label(body,if isEgg then "Cracked: 20% hatch success. A failed hatch gives no dinosaur or refund. Queue-full purchases are not charged." else "Unlocks at level "..(if upgrade then upgrade.requiredLevel else 60)..". New eggs only.",260,105,550,95,23)
         if not isEgg and upgrade then
-            local parts={} for i,row in ProgressionConfig.Conditions do table.insert(parts,row.name.." "..ShopOdds.conditionPercents(upgrade.level)[i].."%") end
+            local parts={} local newOdds=ShopOdds.conditionPercents(upgrade.level) for i,row in ProgressionConfig.Conditions do table.insert(parts,row.name.." "..string.format("%g",newOdds[i]).."%") end
             label(body,table.concat(parts," • "),0,213,824,60,21,C.blue)
         end
-        if isEgg then -- docs/73: condition odds screen stays out of the UI (egg odds remain)
-            button(body,"VIEW ODDS",0,300,250,math.max(64,45/viewportScale()),C.blue,function()
-                oddsLevelOverride=nil
-                outcomeState={page=1,filters={}} open("eggOdds")
-            end)
-        end
+        -- BD-270: the odds button sits before every random, crystal-costing action (egg purchase and condition upgrade).
+        button(body,"ODDS / DETAILS",0,300,250,math.max(64,45/viewportScale()),C.blue,function()
+            oddsLevelOverride=if isEgg then nil else (if upgrade then upgrade.level else nil)
+            outcomeState={page=1,filters={}} open("oddsSimple")
+        end).TextSize=20
         button(body,"CONFIRM",270,300,270,math.max(64,45/viewportScale()),C.accent,function()
             transact(if isEgg then "buyEgg" else "upgradeCondition",if isEgg then "random" elseif upgrade then tostring(upgrade.level) else "") open("auras")
         end)
@@ -661,14 +682,18 @@ render=function(name: string)
             local left=ProgressionRules.shopRemaining(p,window,offer.id)
             local x=((i-1)%3)*276 local y=math.floor((i-1)/3)*140
             local color=rarityColor[item.rarity] or C.accent
-            local card=box(scroller,x,y,264,132,C.card:Lerp(color,if left>0 then .28 else .08),24)
+            -- BD-267: shared card states (Normal / Sold out): src/shared/ShopCardState + src/client/ShopCard.
+            local ShopCardState,ShopCard=require(Shared.ShopCardState),require(script.Parent.ShopCard)
+            local look=ShopCardState.look({left=left,buyButton=item.price.." Crystals"},item.price.." Crystals")
+            local card=box(scroller,x,y,264,132,ShopCard.cardColor(C.card:Lerp(color,.28),look),24)
             art(card,bottle(item),6,8,64)
             label(card,item.name,74,3,186,26,19,color)
             label(card,UIFormat.potion(item.kind,item.multiplier,item.duration),74,28,186,44,15)
-            label(card,if left>0 then left.." left" else "Sold Out - back later",74,74,186,20,15,if left>0 then C.gold else C.red)
-            local buy=button(card,if left>0 then item.price.." Crystals" else "SOLD OUT",8,96,248,30,if left>0 then color:Lerp(C.panel,.45) else C.card,function()
+            label(card,if left>0 then left.." left" else look.caption,74,74,186,20,15,ShopCard.captionColor(look))
+            local buy=button(card,look.buttonText,8,96,248,30,color:Lerp(C.panel,.45),function()
                 if left>0 then chosenPotion=item.id open("potionConfirm") end
             end)
+            ShopCard.styleButton(buy,look,color:Lerp(C.panel,.45))
             buy.TextSize=16
         end
         label(scroller,"Rarer potions appear less often. Six of twelve are offered each restock.",0,284,824,22,15,C.gold)
@@ -703,13 +728,17 @@ render=function(name: string)
     elseif name=="collection" then
         heading.Text,header.BackgroundColor3="Dino Index",C.blue
         local unlocked=0
+        -- BD-269: at most 24 cards are built per page, so a long Index stays light on phones (pager shows only if >1 page).
+        local IndexProgress=require(Shared.IndexProgress)
+        local pg=IndexProgress.page(#Config.SpeciesOrder,24,IndexProgress.state.page)
+        IndexProgress.state.page=pg.page
         local list=Instance.new("ScrollingFrame")
         list.Name,list.Size,list.Position="DinoCards",UDim2.fromOffset(824,326),UDim2.fromOffset(0,0)
         list.BackgroundTransparency,list.BorderSizePixel,list.ScrollBarThickness=1,0,6
         local cardButtonHeight=math.max(45,45/viewportScale())
         local cardHeight=242+cardButtonHeight
         local rowHeight=cardHeight+12
-        list.CanvasSize=UDim2.fromOffset(0,math.ceil(#Config.SpeciesOrder/3)*rowHeight)
+        list.CanvasSize=UDim2.fromOffset(0,math.ceil((pg.last-pg.first+1)/3)*rowHeight)
         list.ZIndex,list.Parent=24,body
         for i,id in Config.SpeciesOrder do
             local base,gold,diamond=copies(id)
@@ -717,8 +746,9 @@ render=function(name: string)
             local rarity=speciesIndex(id)
             local found=base+gold+diamond>0 or event~=nil or ownedTraits(id)~=nil
             if found then unlocked+=1 end
+            if i<pg.first or i>pg.last then continue end
             local look=FusionSelection.indexCard(found)
-            local card=box(list,((i-1)%3)*276,math.floor((i-1)/3)*rowHeight,264,cardHeight,if found then rarityColors[rarity] else Color3.fromRGB(62,64,74),24)
+            local card=box(list,((i-pg.first)%3)*276,math.floor((i-pg.first)/3)*rowHeight,264,cardHeight,if found then rarityColors[rarity] else Color3.fromRGB(62,64,74),24)
             Theme.texture(card,264,cardHeight)
             label(card,look.nameText or Config.SpeciesDisplayNames[id],4,8,256,35,25)
             label(card,look.rarityText or (rarityNames[rarity].." • "..FusionSelection.pct(100*(oddsWeight[id] or 0)/oddsTotal).." of eggs"),4,44,256,25,18)
@@ -740,7 +770,23 @@ render=function(name: string)
                 label(card,look.status,5,blockY+134,254,25,15)
             end
         end
-        meter(body,0,356,600,unlocked,#Config.SpeciesOrder,C.accent,string.format("Discovered: %d / %d",unlocked,#Config.SpeciesOrder))
+        -- BD-269: "Collected X of Y (P%)" bar with milestone ticks (src/shared/IndexProgress).
+        local progress=IndexProgress.summary(unlocked,#Config.SpeciesOrder)
+        local meterWidth=if pg.pages>1 then 420 else 600
+        meter(body,0,356,meterWidth,unlocked,#Config.SpeciesOrder,C.accent,progress.text)
+        if pg.pages>1 then
+            button(body,"<",430,350,50,44,C.blue,function() IndexProgress.state.page=pg.page-1 open("collection") end)
+            label(body,pg.page.." / "..pg.pages,482,350,60,44,20)
+            button(body,">",546,350,50,44,C.blue,function() IndexProgress.state.page=pg.page+1 open("collection") end)
+        end
+        for _,tick in progress.ticks do
+            if tick.fraction<1 then
+                local mark=Instance.new("Frame") mark.Name,mark.BorderSizePixel,mark.ZIndex,mark.Parent="IndexMilestone",0,body.ZIndex+8,body
+                mark.Size,mark.Position=UDim2.fromOffset(4,34),UDim2.fromOffset(math.floor(meterWidth*tick.fraction)-2,356)
+                mark.BackgroundColor3=if tick.reached then C.gold else C.text
+                mark.BackgroundTransparency=if tick.reached then 0 else .35
+            end
+        end
         button(body,"FUSION",624,350,200,44,C.gold,function() openFusion() end)
     elseif name=="detail" and DinoIndexPanels.supported() then
         -- BD-149/150/151: drag-to-turn hero, My dinos grid, per-copy EQUIP, Sort and filter (src/client/DinoIndexPanels).
