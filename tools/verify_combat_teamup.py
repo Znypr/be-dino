@@ -53,58 +53,23 @@ TeamUp.record(C,"p5",5,11)
 assert(TeamUp.crowdMultiplier(C,11)==T.CrowdDamageX)
 assert(TeamUp.crowdMultiplier(C,14)==1,"crowd fades after 2 s")
 
--- Fight simulation (docs/101 s3 feel check). Fixed 0.1 s steps, 0.9 s cooldown, big dino hits one small target at a time.
-local function sim(nSmall,smallScore,bigScore,smallClass,bigClass,crowd)
-  local ss,bs=Stats.scale(smallScore),Stats.scale(bigScore)
-  local big=State.new(Stats.maxHp(bigClass,bs))
-  local smalls={}
-  for i=1,nSmall do smalls[i]={st=State.new(Stats.maxHp(smallClass,ss)),cd=0} end
-  local ledger=TeamUp.newLedger(); local bigCd=0
-  local t=0
-  while t<300 do
-    t+=0.1
-    for i,sm in smalls do
-      sm.cd-=0.1
-      if sm.st.phase=="Alive" and sm.cd<=0 then
-        sm.cd=0.9
-        local x=if crowd then TeamUp.crowdMultiplier(ledger,t) else 1
-        local h=Stats.hit(smallClass,ss,bigClass,bs,0,x)
-        local ap=State.damage(big,h,t); TeamUp.record(ledger,"s"..i,ap,t)
-        if big.phase~="Alive" then local alive=0; for _,q in smalls do if q.st.phase=="Alive" then alive+=1 end end; return "smalls",t,alive end
-      end
-    end
-    bigCd-=0.1
-    if bigCd<=0 then
-      for _,sm in smalls do
-        if sm.st.phase=="Alive" then State.damage(sm.st,Stats.hit(bigClass,bs,smallClass,ss,0,1),t); bigCd=0.9; break end
-      end
-    end
-    local alive=0; for _,q in smalls do if q.st.phase=="Alive" then alive+=1 end end
-    if alive==0 then return "big",t,0 end
-  end
-  return "none",t,0
+-- Fight simulation (docs/101 s17 balance targets; fight() comes from combat_harness SIM; offline simulation only).
+local W,T1,A1=fight(team(1,"Ground",S1),team(1,"Ground",S4),true)
+assert(W=="B","one small loses to s=4")
+local hits=math.ceil(Stats.maxHp("Ground",S1)/Stats.hit("Ground",S4,"Ground",S1,0,1))
+assert(hits>=5,"big needs 5+ hits to defeat a small, got "..hits)
+for _,c in {"Ground","Fly","Water","Armored"} do
+  local w,t,al,fd=fight(team(1,c,S1),team(1,c,S4),true)
+  assert(w=="B" and fd>=3,c.." lone small loses, and defeat takes >= 3 s")
+  local w6,t6,al6=fight(team(6,c,S1),team(1,c,S4),true)
+  assert(w6=="A" and al6>=3,c..": six small beat s=4 with >= 3 survivors")
+  assert(fight(team(3,c,S1),team(1,c,S4),true)=="B",c..": three small do not beat s=4")
+  assert(fight(team(3,c,S1),team(1,c,S2),true)=="A" and fight(team(3,c,S1),team(1,c,S3),true)=="A",c..": three small beat s=2 and s=3")
 end
--- the big dino defeats one lone small one in about 5 hits (docs/101)
-do
-  local bs=Stats.scale(25500); local ss=1
-  local hits=math.ceil(Stats.maxHp("Ground",ss)/Stats.hit("Ground",bs,"Ground",ss,0,1))
-  assert(hits>=4 and hits<=6,"big kills small in about 5 hits, got "..hits)
-end
--- 1 small loses to 1 big (also with crowd off/on)
-for _,c in {false,true} do local w=sim(1,0,25500,"Ground","Ground",c); assert(w=="big","one small loses") end
--- 6 small beat one big: use a big at the documented s=4 and a milder s~3 big; report survivors
-local w4,t4,al4=sim(6,0,25500,"Ground","Ground",true)
-local w3,t3,al3=sim(6,0,8000,"Ground","Ground",true)
-print(string.format("sim: 6 small vs s=4 big -> %s at %.1fs, survivors %d; vs s~3 big -> %s at %.1fs, survivors %d",w4,t4,al4,w3,t3,al3))
-assert(w4=="smalls" and w3=="smalls","six small beat one big")
-assert(al3>=1)
--- team-up pays off: 6 together beat it, while the same 6 one at a time (each alone) all lose
-local aloneWins=0
-for i=1,6 do if sim(1,0,25500,"Ground","Ground",true)=="smalls" then aloneWins+=1 end end
-assert(aloneWins==0,"going alone loses")
--- 3 small do not beat s=4 big (it still takes a crowd)
-assert(sim(3,0,25500,"Ground","Ground",true)=="big","three small are not enough")
+local w6,t6,al6=fight(team(6,"Ground",S1),team(1,"Ground",S4),true)
+assert(t6>=20 and t6<=35,"6 small vs s=4 takes 20-35 s, got "..t6)
+print(string.format("sim: 6 small vs s=4 big -> %s at %.1fs, survivors %d; 3 small lose; lone small loses after %d hits (%.1fs)",w6,t6,al6,hits,T1))
 -- no reward leakage: this module only returns integer bonus amounts and never touches eggs or score
-print("Combat team-up passed: assister threshold, split sums exactly (3000 fuzz), pair 1/0.5/0 then reset, crowd cap x0.85, 6 small beat 1 big, 1 small loses")
+print("Combat team-up passed: assister threshold, split sums exactly (3000 fuzz), pair 1/0.5/0 then reset, crowd cap x0.9, 6 small beat 1 big, 1 small loses")
 '''
 run(BODY, 'teamup')

@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "2fffb4e077aeacba5c1f6270a470b70b4151c669fd703f639ae2494cfcf70828",
+  "place_sha256": "a2cae11117ce534a3fc5e190939efa9da4493d2cc3a2f71273516308c17cb063",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -12,7 +12,7 @@
     "src/shared/BiomeMap.luau": "34f7c83a4beb87771dc400137f63808df3138833cfbee579de313fbdb4d5058f",
     "src/shared/BiomePlacement.luau": "bd035baeb2ce80acc008fe8fd9535d1edcd20b0dba6dd118253d2f1ee363578d",
     "src/shared/ColourBonus.luau": "da7cc4479d5c2633081cfe528221ad31e5646704b17626f6d379a3f2d62612de",
-    "src/shared/CombatConfig.luau": "f118d9a02fb53b6b9a642ababb152be1a3949838d418c184f52772fbdebee5a8",
+    "src/shared/CombatConfig.luau": "52a50958a0102a2a71cdd5f48480a48dd80903ffba4fb2d6ea478080d3a006b6",
     "src/shared/CombatState.luau": "73017a590a5d9717cfe78b5c26e59377dad37a05855a71108e672c319f68054d",
     "src/shared/CombatStats.luau": "e3659484accc73edc41e24d228bdcd43f7ca12c6f19048dee3dc92cc43a821ff",
     "src/shared/CombatTeamUp.luau": "ff4cccf612d0af21c2c691e4ee1a1c14a48ef384648669307e0e3e94956037bd",
