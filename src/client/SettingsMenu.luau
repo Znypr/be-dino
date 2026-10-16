@@ -68,6 +68,10 @@ local function drawControls(body: Instance, ctx: Context)
     ctx.label(body, "Camera", 0, TOP, 250, 48, 28).TextXAlignment = Enum.TextXAlignment.Left
     ctx.button(body, "RESET", 270, TOP, 180, 48, C.blue, function() ctx.cameraReset() ctx.notify("Camera reset", C.blue) end)
     choice(body, ctx, 1, "Jump button", Model.JumpSizes, SIZE_TEXT, Model.get().jumpSize, function(id) Model.set("jumpSize", id) ctx.open("settings") end)
+    -- BD-288 (docs/104 s7.6): only shown while the Cave hub is on; OFF = the rail just opens the menu, no teleport.
+    if require(Shared:WaitForChild("Config")).CaveHub then
+        toggle(body, ctx, 4, "Teleport to shops", Model.teleportShops(), function() Model.set("teleportShops", not Model.teleportShops()) ctx.open("settings") end)
+    end
     -- docs/101 s16 Peaceful: only shown while HP combat is on (Config.CombatEnabled); the server reads it at run start.
     if require(Shared:WaitForChild("Config")).CombatEnabled then
         toggle(body, ctx, 2, "Peaceful", Model.peaceful(), function() Model.set("peaceful", not Model.peaceful()) ctx.open("settings") end)

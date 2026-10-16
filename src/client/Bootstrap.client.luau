@@ -1017,7 +1017,7 @@ render=function(name: string)
         label(body,"+"..num("LastRunCrystals").." Crystals • Level "..num("AccountLevel"),30,302,760,40,21)
         local hasEggs=str("NextChestId")~="" or num("QueuedEggsWaiting")>0 or #decoded("NestsJson","[]")>0
         button(body,"BACK TO SANCTUARY",if hasEggs then 30 else 212,348,if hasEggs then 370 else 400,48,C.accent,function() open("home") end)
-        if hasEggs then button(body,"OPEN EGGS",424,348,370,48,C.gold,function() open("eggs") end) end
+        if hasEggs then button(body,"OPEN EGGS",424,348,370,48,C.gold,function() if not require(script.Parent.HubTravelClient).press("eggs") then open("eggs") end end) end
     elseif name=="batchSummary" then
         heading.Text,header.BackgroundColor3="Auto-opened eggs",C.gold
         local summary=RevealSkip.summarize(skippedEntries)
@@ -1091,7 +1091,7 @@ rail.AnchorPoint,rail.Position=Vector2.new(0,.5),UDim2.new(0,14,.5,0)
 local railScale=Instance.new("UIScale") railScale.Parent=rail
 local navigationButtons = {}
 for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"SHOP","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
-    local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() if entry[3]=="fusion" then openFusion() else open(entry[3]) end end)
+    local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() if require(script.Parent.HubTravelClient).press(entry[3]) then return end if entry[3]=="fusion" then openFusion() else open(entry[3]) end end)
     b.TextSize=20
     art(b,NavigationArtwork[entry[3]] or entry[2],5,6,40)
     b.Text=""
@@ -1110,6 +1110,7 @@ updateNavigation=function()
     end
 end
 updateNavigation()
+require(script.Parent.HubTravelClient).attach({gui=gui,buttons=navigationButtons,open=open,openFusion=openFusion,notify=notify,close=close}) -- BD-288: no-op while Config.CaveHub is false
 local hud=box(gui,0,0,390,94,C.panel,2)
 hud.AnchorPoint,hud.Position=Vector2.new(0,1),UDim2.new(0,18,1,-18)
 local hudScale=Instance.new("UIScale") hudScale.Parent=hud
