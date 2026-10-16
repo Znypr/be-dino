@@ -11,15 +11,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import estimate_world_budget as est
 
 PT = lambda r: r['profiles']['playtest']
-# name -> (cap, getter). Measured value in the comment (2026-10-16, main 60699c8 + this branch).
+# name -> (cap, getter). Measured value in the comment (2026-10-16, main 60699c8 + this branch; BD-473 grammar v3 measured values in [brackets], docs/107).
 CAPS = {
-    'playtest MeshPart props': (4300, lambda r: PT(r)['mesh_parts']),  # 3,551
-    'playtest kit parts incl. colliders': (5550, lambda r: PT(r)['kit_parts_total']),  # 4,625
-    'playtest parts loaded at join': (9150, lambda r: PT(r)['join_parts']),  # 7,625
-    'phone props kept at spawn': (820, lambda r: PT(r)['cull']['Phone']['spawn'][1]),  # 683
-    'phone props kept, worst spot': (1090, lambda r: PT(r)['cull']['Phone']['worst'][1]),  # 905
-    'phone scene parts, worst spot': (3980, lambda r: PT(r)['phone_scene']['world_parts_lowpoly']),  # 3,312
-    'phone scene tris (est), worst spot': (660_000, lambda r: PT(r)['phone_scene']['world_tris_mid']),  # 551,290
+    'playtest MeshPart props': (4300, lambda r: PT(r)['mesh_parts']),  # 3,551 [3,569]
+    'playtest kit parts incl. colliders': (5550, lambda r: PT(r)['kit_parts_total']),  # 4,625 [4,440]
+    'playtest parts loaded at join': (9150, lambda r: PT(r)['join_parts']),  # 7,625 [8,640]
+    'phone props kept at spawn': (820, lambda r: PT(r)['cull']['Phone']['spawn'][1]),  # 683 [726]
+    'phone props kept, worst spot': (1090, lambda r: PT(r)['cull']['Phone']['worst'][1]),  # 905 [922]
+    'phone scene parts, worst spot': (3980, lambda r: PT(r)['phone_scene']['world_parts_lowpoly']),  # 3,312 [3,434]
+    'phone scene tris (est), worst spot': (660_000, lambda r: PT(r)['phone_scene']['world_tris_mid']),  # 551,290 [452,134]
     'low-poly dino parts, 12 players + NPCs': (145, lambda r: r['dinos']['low_parts_peak']),  # 119
     'low-poly dino images MiB at cap': (24, lambda r: r['dinos']['img_mib_cap']),  # 19.2 of the 80 MiB budget
     'combat HP replication KB/s, worst': (2.5, lambda r: r['combat']['worst_kbs']),  # 2.04
