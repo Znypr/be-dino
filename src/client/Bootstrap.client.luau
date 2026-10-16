@@ -566,7 +566,7 @@ render=function(name: string)
                     label(card,tostring(product.amount),92,6,166,44,32,C.gold)
                     label(card,"Crystals",92,48,166,26,19)
                     local tag=label(card,"",92,74,166,20,15,C.accent) tag.Visible=false
-                    local b=button(card,if Config.CrystalPacksEnabled then "..." else "Coming soon",8,100,248,38,C.gold:Lerp(C.panel,.35),function() end)
+                    local b=button(card,"...",8,100,248,38,C.gold:Lerp(C.panel,.35),function() end)
                     b.TextSize=19 b.Active=false
                     cards[i]={button=b,tag=tag}
                 end
@@ -584,7 +584,7 @@ render=function(name: string)
                         if price and Config.CrystalPacksEnabled==true then
                             c.button.Text="R$ "..price c.button.Active=true c.button.BackgroundColor3=C.gold:Lerp(C.panel,.1)
                             c.button.Activated:Connect(function() Marketplace:PromptProductPurchase(player,product.id) end)
-                        else c.button.Text=if price and not Config.CrystalPacksEnabled then "R$ "..price.."  Coming soon" else "Coming soon" end
+                        else c.button.Text=require(Shared.ShopCardState).packButton(price) end
                         if price and baseRate and i>1 then
                             local bonus=math.floor((product.amount/price/baseRate-1)*100+.5)
                             if bonus>=1 then c.tag.Text="+"..bonus.."% extra" c.tag.Visible=true end
