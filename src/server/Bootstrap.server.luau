@@ -39,6 +39,7 @@ if Config.WorldGeneratedMeshes and Config.WorldArtMode=="BiomeKit" then require(
 Arena.build()
 Leaderboards.start()
 
+require(script.Parent.PrivateState).start() -- BD-360 owner-only channel, before any profile can load
 ProfileRepository.start()
 -- BD-354: PlayerRemoving and BindToClose share one idempotent, awaitable leave path (settle once, release once).
 local leaving = LeaveCoordinator.new({
