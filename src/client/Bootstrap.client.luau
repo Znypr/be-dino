@@ -481,7 +481,9 @@ render=function(name: string)
         local cardsY=tabsHeight+12
         local cardsHeight=if touch then 402-cardsY-targetHeight-12 else 270
         local buyY=cardsHeight-targetHeight-10
-        for i,tab in {"auras","trails","eggs","conditions","crystals"} do
+        if cosmeticTab=="conditions" and num("AccountLevel")<require(Shared.FtueP1).ConditionsTabLevel then cosmeticTab="auras" isTrail=false end -- BD-445: tab hidden until level 3
+        if require(Shared.FtueP1).noCrystalsHintShown(num("Crystals"),cosmeticTab) then label(body,require(Shared.FtueP1).NoCrystalsHint,0,362,824,34,22,C.gold) end -- BD-445
+        for i,tab in require(Shared.FtueP1).shopTabs(num("AccountLevel")) do
             button(body,string.upper(tab),(i-1)*165,0,155,tabsHeight,if cosmeticTab==tab then C.blue else C.card,function() cosmeticTab=tab open("auras") end).TextSize=20
         end
         if cosmeticTab=="eggs" then
@@ -491,7 +493,7 @@ render=function(name: string)
             button(body,"ODDS / DETAILS",270,cardsY+119,535,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("oddsSimple") end)
             button(body,"BUY EGG",270,cardsY+targetHeight+130,535,targetHeight,C.accent,function() open("eggPurchase") end)
             -- BD-391/405 (docs/115 D22): Fast travel perk, bought with crystals. PROVISIONAL price. Walking stays the default.
-            if Config.FastTravelPerk and Config.CaveHub then
+            if Config.FastTravelPerk and Config.CaveHub and require(Shared.FtueP1).fastTravelEntryShown(num("AccountLevel"),type(p.perks)=="table" and p.perks.fastTravel==true) then -- BD-447
                 local owned=type(p.perks)=="table" and p.perks.fastTravel==true
                 local perkPrice=ProgressionConfig.FastTravelPrice
                 label(body,"Fast travel: zip to the shops",0,math.max(cardsY+targetHeight*2+150,336),520,34,22,C.gold)
@@ -865,7 +867,9 @@ render=function(name: string)
         label(body,"YOUR COLLECTION",414,0,400,42,28)
         label(body,string.format("Base: %d • Gold: %d\nDiamond: %d",base,gold,diamond),414,62,400,92,25)
         label(body,if event then event.name.." • "..table.concat(UIFormat.boostLines(event.growth,event.speed,1)," • ") else "Cosmetic fusion: 6 Base → Gold; 3 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,66,22,C.gold)
-        label(body,require(Shared.ClassInfo).line(selected),414,241,400,28,22,C.accent) -- BD-423: class + one-line feel hint
+        do local line=label(body,require(Shared.ClassInfo).line(selected),414,241,400,28,22,C.accent) -- BD-423: class + one-line feel hint
+            line.TextScaled,line.TextWrapped=true,false -- BD-443: shrink to fit one line on a phone, never clip
+            local fit=Instance.new("UITextSizeConstraint") fit.MinTextSize,fit.MaxTextSize,fit.Parent=14,22,line end
         local equipped=str("EquippedSpeciesId","compy")==selected
         button(body,if equipped then "EQUIPPED" elseif not owned then "LOCKED" else "EQUIP",426,273,372,52,if owned then C.accent else C.card,function()
             if not owned then notify("Hatch eggs to find this dino") return end
@@ -1072,14 +1076,10 @@ render=function(name: string)
         local oops=if str("LastRunEndReason")=="Defeated" then 26 else 0
         heading.Text,header.BackgroundColor3=if oops>0 then "Oops! Good try!" else "Run Complete!",if oops>0 then C.blue else C.gold
         if oops>0 then label(body,"Your eggs are safe!",30,0,760,30,24,C.blue) end
-        art(body,"trophy",24,42+oops,240)
-        label(body,"Growth  "..math.floor(num("LastRunGrowthScore")),300,18+oops,500,60,34,C.accent)
-        label(body,require(Shared.FtueCopy).runCompleteEggsLabel.."  "..num("LastRunCatchScore"),300,93+oops,500,60,34,C.blue)
-        label(body,str("LastRewardText","Saving rewards..."),290,168+oops,510,100,24,C.gold)
-        label(body,"+"..num("LastRunCrystals").." Crystals • Level "..num("AccountLevel"),30,302,760,40,21)
         local hasEggs=str("NextChestId")~="" or num("QueuedEggsWaiting")>0 or #decoded("NestsJson","[]")>0
-        button(body,"BACK TO SANCTUARY",if hasEggs then 30 else 212,348,if hasEggs then 370 else 400,48,C.accent,function() open("home") end)
-        if hasEggs then button(body,"OPEN EGGS",424,348,370,48,C.gold,function() if not require(script.Parent.HubTravelClient).press("eggs") then open("eggs") end end) end
+        require(script.Parent.RunComplete).build({body=body,C=C,label=label,box=box,art=art,button=button,num=num,oops=oops,hasEggs=hasEggs,
+            back=function() open("home") end,
+            openEggs=function() if not require(script.Parent.HubTravelClient).press("eggs") then open("eggs") end end})
     elseif name=="batchSummary" then
         heading.Text,header.BackgroundColor3="Auto-opened eggs",C.gold
         local summary=RevealSkip.summarize(skippedEntries)
@@ -1311,6 +1311,7 @@ local actionIcon=Theme.icon(action,"home")
 -- UIPadding (52 px while the icon shows) also shifts children, so -44 lands the icon at x=8.
 if actionIcon then actionIcon.Position,actionIcon.Size,actionIcon.Visible=UDim2.fromOffset(-44,8),UDim2.fromOffset(44,44),false end
 local actionScale=action:FindFirstChildOfClass("UIScale") :: UIScale
+require(script.Parent.GoCue).attach(action,require(script.Parent.FtueRail).hasFoundEgg,function() return shade.Visible end) -- BD-442: one gentle go cue until the first run
 -- BD-054: measured Roblox touch controls, in this ScreenGui's pixel space.
 local function coreTouchRect(name: string)
     local playerGui=player:FindFirstChildOfClass("PlayerGui")
@@ -1588,6 +1589,7 @@ player:GetAttributeChangedSignal("LastNestClaimAt"):Connect(function()
     notify("Nest opened!",C.accent,{icon="egg_nest",body="Open your eggs when ready"})
 end)
 PrivateState.onChanged("LastRewardText", function() if active=="results" then body:ClearAllChildren() render(active) end end)
+PrivateState.onChanged("LastRunNestCrystals", function() if active=="results" then body:ClearAllChildren() render(active) end end) -- BD-448: last private value set at settlement, so the rows show final numbers
 for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus","LastNestClaimStatus","LastRunStartStatus"} do
     PrivateState.onChanged(attribute, function()
         local status=str(attribute)

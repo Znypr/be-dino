@@ -1,11 +1,11 @@
 --!strict
--- BD-285 (docs/104 s5): the client half of the Cave lava falls. The server (CaveLavaFx) builds the sheet, its scrolling layers and
--- the emitters at their static first frame; this module, called from CaveAtmosphere.step while the player is inside the hall:
+-- BD-285 / BD-385 (docs/104 s5): the client half of the Cave lava falls. The server (CaveLavaFx) builds the particle strands and the
+-- emitters; this module, called from CaveAtmosphere.step while the player is inside the hall:
 --   * preloads the lava textures with ContentProvider:PreloadAsync before use and swaps a texture that fails to load for the
 --     built-in sprite (Studio showed the flame / swirl uploads as "still being generated" for a while),
---   * scrolls the flame layers down the sheet and turns the pool disc (CaveLavaRules.scroll / stripY),
---   * sets every emitter Rate from CaveLavaRules.rate: phones get the 10 per second budget, Reduce Motion (Calm motion) stops
---     the scrolling, the turning and the particles, leaving the static first frame.
+--   * turns the pool disc slowly,
+--   * sets every emitter Rate from CaveLavaRules.rate: phones get the 10 per second budget; Reduce Motion (Calm motion) stops the
+--     turning and the particles and instead emits one burst of soft glow puffs (StillGlow) frozen with TimeScale 0 (static variant).
 -- Local property writes only (nothing replicates). With Config.CaveHub false CaveAtmosphere never calls step.
 local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -16,7 +16,7 @@ local Assets = require(Shared:WaitForChild("EffectAssets"))
 
 local Lava = {}
 local folder: Instance? = nil
-local strips: {ImageLabel} = {}
+local still: ParticleEmitter? = nil
 local emitters: {ParticleEmitter} = {}
 local disc: BasePart? = nil
 local seconds = 0 -- animation clock; stops while Calm motion is on
@@ -32,11 +32,10 @@ local function find()
     local found = workspace:FindFirstChild("LavaFalls", true)
     if not found then return end
     folder = found
-    table.clear(strips)
     table.clear(emitters)
     for _, d in found:GetDescendants() do
-        if d:IsA("ImageLabel") and d.Name == "Strip" then table.insert(strips, d)
-        elseif d:IsA("ParticleEmitter") and d:GetAttribute("LavaRule") then table.insert(emitters, d) end
+        if d:IsA("ParticleEmitter") and d:GetAttribute("LavaRule") then table.insert(emitters, d)
+        elseif d:IsA("ParticleEmitter") and d.Name == "StillGlow" then still = d end
     end
     local pool = found:FindFirstChild("FX_LavaPool")
     disc = if pool and pool:IsA("BasePart") then pool else nil
@@ -47,7 +46,6 @@ local function preload()
     if preloadStarted then return end
     preloadStarted = true
     local items: {Instance} = {}
-    for _, s in strips do table.insert(items, s) end
     for _, e in emitters do table.insert(items, e) end
     if disc then
         for _, c in (disc :: BasePart):GetChildren() do
@@ -59,9 +57,6 @@ local function preload()
             ContentProvider:PreloadAsync(items, function(contentId: string, status: Enum.AssetFetchStatus)
                 if status == Enum.AssetFetchStatus.Success then return end
                 warn("[Be Dino] lava texture " .. contentId .. " not loaded (" .. tostring(status) .. "); using the built-in sprite")
-                for _, s in strips do
-                    if s.Image == contentId then s.Image = Assets.Builtin.fire end
-                end
                 for _, e in emitters do
                     if e.Texture == contentId then e.Texture = Assets.Builtin.spark e.FlipbookLayout = Enum.ParticleFlipbookLayout.None end
                 end
@@ -82,10 +77,6 @@ function Lava.step(dt: number, calm: boolean)
     end
     preload()
     if not calm then seconds += dt end
-    for _, s in strips do
-        local layer = Rules.Layers[s:GetAttribute("LayerIndex") :: number]
-        if layer then s.Position = UDim2.fromOffset(s:GetAttribute("OffsetX") :: number, Rules.stripY(layer, seconds, calm)) end
-    end
     local pool = disc
     if pool and pool.Parent then
         local spin = (pool:GetAttribute("SpinSeconds") :: number?) or 60
@@ -103,6 +94,20 @@ function Lava.step(dt: number, calm: boolean)
             local rate = Rules.rate(rule, phone, calm)
             e.Rate = rate
             e.Enabled = rate > 0
+            if not calm then e.TimeScale = 1 end
+        end
+        local glow = still
+        if glow and glow.Parent then
+            if calm then
+                -- static variant: one burst of constant-alpha soft puffs across the wall, then frozen
+                glow.TimeScale = 1
+                glow:Clear()
+                glow:Emit((glow:GetAttribute("StillBurst") :: number?) or Rules.StillBurst)
+                task.defer(function() glow.TimeScale = 0 end)
+            else
+                glow.TimeScale = 1
+                glow:Clear()
+            end
         end
     end
 end

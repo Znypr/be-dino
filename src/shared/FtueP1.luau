@@ -54,6 +54,27 @@ function P.contrast(a: {number}, b: {number}): number
     return (la + 0.05) / (lb + 0.05)
 end
 
+-- BD-445 (docs/132) shop day one: the CONDITIONS tab stays hidden until account level 3 (it is a late-game odds upgrade); a
+-- player with 0 crystals gets a one-line hint on the other tabs. No prices or odds change.
+P.ConditionsTabLevel = 3
+P.NoCrystalsHint = "Play a run to earn crystals!"
+function P.shopTabs(level: number): {string}
+    local tabs = {"auras", "trails", "eggs"}
+    if level >= P.ConditionsTabLevel then table.insert(tabs, "conditions") end
+    table.insert(tabs, "crystals")
+    return tabs
+end
+function P.noCrystalsHintShown(crystals: number, tab: string): boolean
+    return crystals <= 0 and tab ~= "crystals"
+end
+
+-- BD-447 (docs/132): the Fast travel perk entry stays hidden in the first minutes (level 1 = the first run or two); it shows from
+-- account level 2, or at once if the player already owns it. Walking stays the default.
+P.FastTravelLevel = 2
+function P.fastTravelEntryShown(level: number, owned: boolean): boolean
+    return owned or level >= P.FastTravelLevel
+end
+
 -- BD-372 shop day one ------------------------------------------------------------------------------------------------------
 -- The condition upgrade button. enabled=false draws a grey button with the reason; a green action never sits over a lock.
 function P.upgradeButton(upgrade: any, level: number, crystals: number): (string, boolean)

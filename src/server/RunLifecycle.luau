@@ -101,8 +101,10 @@ local function settlementSnapshot(character: Model)
     local ok,events=pcall(function() return HttpService:JSONDecode(character:GetAttribute("RunEggEvents") or "[]") end)
     local startedAt = runStartedAt[runId]
     runStartedAt[runId] = nil
+    local killEggs = character:GetAttribute("PredationEggs")
     return {
         runId = runId,
+        killEggs = if typeof(killEggs) == "number" then math.max(0, math.floor(killEggs)) else 0, -- BD-448: hunting bonus shown on Run Complete
         runSeconds = if startedAt then math.max(0, workspace:GetServerTimeNow() - startedAt) else 0, -- unknown start = 0 s = no nest
         catchScore = math.clamp(catchScore, 0, Config.RunEggMaxPerRun), -- one run egg per catch
         eggEvents=if ok and typeof(events)=="table" then events else {},
@@ -162,6 +164,7 @@ function RunLifecycle.tryEnd(player: Player, character: Model, reason: string, s
     character:SetAttribute("RunState", "Ending")
     player:SetAttribute("LastRunEndReason", reason)
     player:SetAttribute("LastRunCatchScore", snapshot.catchScore)
+    player:SetAttribute("LastRunKillEggs", snapshot.killEggs)
     local growthScore = character:GetAttribute("GrowthScore")
     player:SetAttribute("LastRunGrowthScore", if typeof(growthScore) == "number" then growthScore else 0)
     player:SetAttribute("LastRunId", snapshot.runId)
@@ -192,6 +195,7 @@ function RunLifecycle.endForDisconnect(player: Player): string
     character:SetAttribute("RunState", "Ending")
     player:SetAttribute("LastRunEndReason", "Disconnect")
     player:SetAttribute("LastRunCatchScore", snapshot.catchScore)
+    player:SetAttribute("LastRunKillEggs", snapshot.killEggs)
     local growthScore = character:GetAttribute("GrowthScore")
     player:SetAttribute("LastRunGrowthScore", if typeof(growthScore) == "number" then growthScore else 0)
     if settleRun then

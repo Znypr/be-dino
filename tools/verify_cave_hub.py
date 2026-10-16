@@ -390,7 +390,7 @@ for key,a in P.Assets do
  end
 end
 assert(P.fitFactor({2,2,2},{4,1,1})==2 and P.fitFactor({1,1,1},{1000,1,1})==P.MaxScale and P.fitFactor({0,1,1},{1,1,1})==1,"fitFactor rules")
-assert(P.Lava.fxPartBudget<=counts.cave_lava_fall+counts.lava_pool_disc+5,"lava FX parts: the fall and disc rows plus at most 5 extra (BD-385: 2 more sheets + 3 glow discs)")
+assert(P.Lava.fxPartBudget<=counts.cave_lava_fall+counts.lava_pool_disc+5,"lava FX parts: the fall and disc rows plus at most 5 extra (BD-385: 3 glow discs)")
 assert(P.Assets.cave_lava_fall and P.NotMeshes.cave_lava_fall,"the chunky generated lava block is registered but not placed")
 assert(C.Kinds.hub_gate_arch[1]<=L.gate.mouthWidth,"gate arch fits inside the 30 stud mouth")
 assert(counts.hub_gate_arch==1,"one gate arch")

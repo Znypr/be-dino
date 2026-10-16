@@ -87,10 +87,10 @@ Props.MinScale, Props.MaxScale = 0.25, 6 -- sane bounds of the uniform scale app
 -- Lava waterfall FX numbers (docs/104 s5, BD-285). Textures only from EffectAssets (flameSheet, smokeSheet, sparkSheet, swirl).
 Props.Lava = {
     sheetOffsetDz = 5, -- sheet sits this far behind CaveHubLayout.Fall.z (inside the falls recess)
-    sheetTransparency = 0.9, sheetColor = {255, 110, 30}, -- BD-285 QA: a thin warm glow body; the scrolling flame layers (CaveLavaRules) are drawn on it
+    sheetTransparency = 1, sheetColor = {255, 110, 30}, -- BD-385: the carrier part is INVISIBLE (emitter box only); the falls are soft particle strands (CaveLavaRules.Strands)
     discTransparency = 0.25, discColor = {255, 110, 35}, discSpinSeconds = 60, discDrop = 0.6,
-    fxPartBudget = 7, -- BD-385: 3 layered sheets + 3 glow discs + the pool disc (the sheet and disc stand in for the cave_lava_fall and lava_pool_disc rows; 5 extra FX parts)
-    -- emitter rates, the scrolling layers and the phone / Reduce Motion rules live in CaveLavaRules (25 per second desktop, 10 phone)
+    fxPartBudget = 5, -- BD-385: 1 invisible emitter carrier + 3 glow discs + the pool disc (the carrier and disc stand in for the cave_lava_fall and lava_pool_disc rows)
+    -- emitter rates, the strands and the phone / Reduce Motion rules live in CaveLavaRules (25 per second desktop, 10 phone)
 }
 
 -- BD-285 QA: the generated lava rim rocks and stepping stones came out blue / pink and clash with the warm cave. They keep their
@@ -108,11 +108,14 @@ Props.Warm = {
 -- BD-292: the sign meshes that carry station text (a SurfaceGui built from HubSignCopy, front face only). `face` is the mesh's
 -- front face name; `inset` shrinks the text box (fraction of the face) so words stay on the board.
 Props.SignText = {
-    hub_sign_stone = {face = "Front", inset = 0.12},
-    hub_sign_arrow = {face = "Front", inset = 0.18},
+    hub_sign_stone = {face = "Front", back = "Back", inset = 0.12},
+    hub_sign_arrow = {face = "Front", back = "Back", inset = 0.18},
 }
 Props.SignLightInfluence = 0 -- self-lit: lamp light does not dim the word (BD-292)
 Props.SignBrightness = 2 -- SurfaceGui brightness boost so cream text stays readable in the dim cave
+-- OWNER 2026-10-16: signs read from every angle: a second SurfaceGui on the Back face plus one small lamp-lit BillboardGui word above
+-- the sign (always faces the player, fades out past MaxDistance, never AlwaysOnTop so walls hide it).
+Props.SignBillboard = {width = 120, height = 36, lift = 1.2, maxDistance = 90, brightness = 2}
 Props.MaxSignGuis = 12 -- SurfaceGuis are not Parts, but they cost render time: never more than this many sign texts
 
 -- Uniform factor that scales a loaded asset of size `mesh` to the target box `target` (both {x, y, z}): the axis with the
