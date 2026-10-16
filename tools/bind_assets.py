@@ -75,6 +75,8 @@ def current_value(slot, text):
         m = re.search(rf'\n\s+{key}=\{{id="([^"]*)"', text)
     elif target == 'slot':
         m = re.search(rf'\n\s+{key} = "([^"]*)",', text)
+    elif target == 'worldmesh':
+        m = re.search(rf'\n\s+{key} = \{{assetId = "([^"]*)"', text)
     elif target == 'cavebed':
         m = re.search(r'Rules\.Bed = \{id = "([^"]*)"', text)
     elif target == 'hatchbucket':
@@ -112,6 +114,8 @@ def write_slot(slot, text, digits):
         if count != 1:
             raise ValueError(f'slot line not found for {slot["name"]}')
         return new
+    if target == 'worldmesh':  # WorldGeneratedMeshes stores bare digits (no rbxassetid:// prefix)
+        return rep_one(text, rf'(\n\s+{key} = \{{assetId = ")([^"]*)(")', digits, slot['name'])
     if target == 'cavebed':
         return rep_one(text, r'(Rules\.Bed = \{id = ")([^"]*)(")', uri, slot['name'])
     if target == 'hatchbucket':
