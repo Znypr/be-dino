@@ -1,4 +1,4 @@
-# 123 Friends playtest go / no-go (BD-317, written 2026-10-16 on main 73442de)
+# 125 Friends playtest go / no-go (BD-317, written 2026-10-16 on main 73442de)
 
 Label: **CURRENT BUILD BEHAVIOR** readiness audit, read from code, tools and docs. Nothing here was run on a published server or a phone. It **refreshes [106](106-friends-playtest-readiness.md)** (written at main 3e3e932): 106 stays as history for the flag table and the 15-step smoke script; this doc is the current go / no-go. Sources: [AGENTS.md](../AGENTS.md), [114](114-handbook.md) (section 1.1 is in open PR #242), [115](115-decisions-log.md), [55](55-playtest-release-runbook.md), [107](107-offline-mobile-budget.md), [111 audit](111-multiplayer-audit.md) and [111 rollback](111-rollback-drill.md), `tools/release_profiles.py`.
 
