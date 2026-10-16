@@ -9,6 +9,7 @@ local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
 local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
 local KitMeshes = require(ReplicatedStorage.Shared.WorldKitMeshAssets)
+local Generated = require(ReplicatedStorage.Shared.WorldGeneratedMeshes)
 local Arena = {}
 local function part(parent: Instance, name: string, size: Vector3, position: Vector3, color: Color3, material: Enum.Material, solid: boolean): Part
     local p = Instance.new("Part")
@@ -79,9 +80,39 @@ local function fern(parent: Instance, position: Vector3, scale: number, yaw: num
         leaf.CFrame = CFrame.new(leaf.Position) * CFrame.Angles(-0.28, angle, 0)
     end
 end
+-- BD-206: Roblox-generated MeshPart for a kit id (one part). Scaled uniformly to fit inside the kit id's extent box so the
+-- invisible kit colliders still match, pivot = bottom centre. nil (flag off, id not mapped, mesh failed to load) means the
+-- caller keeps the current kit model, so a failed asset never leaves a hole.
+local generatedCache: {[string]: Model} = {}
+local function generatedProp(id: string, biome: string, roll: number): Model?
+    if not Config.WorldGeneratedMeshes then return nil end
+    local key = Generated.visualFor(id, biome, roll)
+    local folder = ReplicatedStorage:FindFirstChild("GeneratedWorld")
+    local template = if key and folder then folder:FindFirstChild(key) else nil
+    if not template or not template:IsA("MeshPart") then return nil end
+    local cacheKey = key .. "|" .. id
+    if not generatedCache[cacheKey] then
+        local extent, size = KitData[id].extent, template.Size
+        local fit = math.min(extent[1] / size.X, extent[2] / size.Y, extent[3] / size.Z)
+        if KitData[id].kind == "tree" then fit = math.min(extent[2] / size.Y, math.max(extent[1], extent[3]) * 1.15 / math.max(size.X, size.Z)) end
+        local mesh = template:Clone()
+        mesh.Size = size * fit
+        mesh.Anchored, mesh.CanCollide, mesh.CanTouch, mesh.CanQuery, mesh.Massless = true, false, false, false, true
+        mesh.CFrame = CFrame.new(0, mesh.Size.Y / 2, 0)
+        local model = Instance.new("Model")
+        mesh.Parent = model
+        model.PrimaryPart = mesh
+        model.WorldPivot = CFrame.new()
+        model.Name = id
+        model:SetAttribute("GeneratedMesh", key)
+        generatedCache[cacheKey] = model
+    end
+    workspace:SetAttribute("WorldGeneratedProps", (workspace:GetAttribute("WorldGeneratedProps") or 0) + 1)
+    return generatedCache[cacheKey]:Clone()
+end
 -- One kit prop = the uploaded MeshPart model (1 part) plus simplified invisible box colliders scaled with it.
-local function kitProp(folder: Instance, id: string, pivot: CFrame, scale: number): boolean
-    local model = Resources.clone(id)
+local function kitProp(folder: Instance, id: string, pivot: CFrame, scale: number, biome: string?, roll: number?): boolean
+    local model = generatedProp(id, biome or "meadow", roll or .5) or Resources.clone(id)
     if model then
         model:ScaleTo(scale)
         model:PivotTo(pivot)
@@ -116,14 +147,14 @@ local function biomeKit(parent: Instance)
         if p.layer == "log" then
             -- A dead tree on its side: one box along the whole trunk replaces the (upright) kit collider.
             local data = KitData[p.id]
-            local model = Resources.clone(p.id)
+            local model = generatedProp(p.id, p.biome, 0) or Resources.clone(p.id)
             if model then model:ScaleTo(p.scale) model:PivotTo(pivot) model.Parent = folder else missing += 1 end
             local c = data.colliders[1]
             local collider = part(folder, p.id .. "Collider", Vector3.new(c[4], data.extent[2] * .9, c[6]) * p.scale, Vector3.zero,
                 Color3.fromRGB(113, 133, 139), Enum.Material.Slate, true)
             collider.CFrame = pivot * CFrame.new(0, data.extent[2] * .45 * p.scale, 0)
             collider.Transparency = 1
-        elseif not kitProp(folder, p.id, pivot, p.scale) then
+        elseif not kitProp(folder, p.id, pivot, p.scale, p.biome, Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77)) then
             missing += 1
         end
         if i % 40 == 0 then task.wait() end
