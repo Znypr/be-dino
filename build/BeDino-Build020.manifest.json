@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "5ab1b0fdfce024d5c311d3671825aa307219c39edccb7b09f4a95d376e2b46ce",
+  "place_sha256": "92c8ed4f4a099f17df474c8dda449d7b19ea1e9cdf856a9f40f3e53cdd68abeb",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -305,7 +305,7 @@
     "src/client/Bootstrap.client.luau": "6ffd552a5e04dfce1937e353631e8f9048377d8e50a929251496daccefc24e28",
     "src/client/CameraOcclusion.client.luau": "5e0b79f8433683ac09771383077e3692815335055723739355a82f468e0635d5",
     "src/client/CaveAtmosphere.luau": "1330f8c43abbec254d162a9e2e0cd9d5ffa916e0b6cff356d00cc88c1a761eb7",
-    "src/client/CombatHud.luau": "97e951d3e551b4791b69f128b52520c7c2f42962066e23d96a7dd9d3a3e61496",
+    "src/client/CombatHud.luau": "1ad57c5c25c4683a60c467c3412ea95008b83cc0c028a19d7efa5b31541e79c3",
     "src/client/CosmeticVisuals.client.luau": "14472f893118c993f1257be98d661dd73bf1213e61d851c5747b028abfa8b8a2",
     "src/client/DinoDetails.luau": "7f3a9fa573921e2956787f274eff35a00fda47ed562ee75ec6bf67e65554047c",
     "src/client/DinoIndexPanels.luau": "b572fd636d2fd5ce0e6dfdacdb99a57961c86e50020b4b72b42057a896728a3b",

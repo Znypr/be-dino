@@ -421,6 +421,11 @@ def static_checks():
         errors.append('CombatHud must draw the wild bar for NPC predators')
     if 'if not Config.CombatEnabled then return end' not in hud:
         errors.append('CombatHud.attach must stay a no-op while the flag is off')
+    # BD-310: a big dino's bar (player or wild) must sit above the model top (extents), not at the small-dino scale rule.
+    if 'function Hud.barLift' not in hud or 'topAboveRoot + 0.8' not in hud or 'Hud.barLift(s, topAboveRoot(character))' not in hud:
+        errors.append('CombatHud must lift every bar above the model top (Hud.barLift with the model top)')
+    if 'bar.placedScale' not in hud or 's ~= bar.placedScale' not in hud:
+        errors.append('CombatHud must re-place a bar when the dino grows (placedScale)')
     rules = re.sub(r'--[^\n]*', '', read('src/shared/NpcPredatorRules.luau'))  # code only; comments may name services
     for bad in ('game:', 'workspace', 'Instance.new', 'Players', 'RunLifecycle', 'CatchScore', 'math.random'):
         if re.search(r'(?<![A-Za-z])' + re.escape(bad) + r'(?![A-Za-z])', rules):

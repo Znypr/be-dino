@@ -557313,7 +557313,18 @@ function Hud.heartText(fraction: number): string
     return "\u{00B7}"
 end
 
-type Bar = {gui: BillboardGui, fill: Frame, heart: TextLabel, wobble: UIScale, character: Model?, lastFraction: number, lastCue: string}
+-- Bar height over a dino: the scale rule, but never lower than just above the top of the model (topAboveRoot + 0.8).
+function Hud.barLift(scale: number, topAboveRoot: number): number
+    return math.max(1.4 + 1.9 * scale, topAboveRoot + 0.8)
+end
+local function topAboveRoot(character: Model): number
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root or not root:IsA("BasePart") then return 0 end
+    local cf, size = character:GetBoundingBox()
+    return cf.Position.Y + size.Y / 2 - root.Position.Y
+end
+
+type Bar = {gui: BillboardGui, fill: Frame, heart: TextLabel, wobble: UIScale, character: Model?, lastFraction: number, lastCue: string, placedScale: number}
 
 local function makeBar(parent: Instance): Bar
     local gui = Instance.new("BillboardGui")
@@ -557333,7 +557344,7 @@ local function makeBar(parent: Instance): Bar
     local fillCorner = Instance.new("UICorner") fillCorner.CornerRadius = UDim.new(0.5, 0) fillCorner.Parent = fill
     local wobble = Instance.new("UIScale") wobble.Parent = back
     gui.Parent = parent
-    return {gui = gui, fill = fill, heart = heart, wobble = wobble, character = nil, lastFraction = 1, lastCue = ""}
+    return {gui = gui, fill = fill, heart = heart, wobble = wobble, character = nil, lastFraction = 1, lastCue = "", placedScale = -1}
 end
 
 local function fractionOf(character: Model): number
@@ -557511,19 +557522,24 @@ function Hud.attach(ctx: any)
                 bar = pool[free]
                 bar.character = character
                 assigned[character] = bar
-                local root = character:FindFirstChild("HumanoidRootPart")
-                local scale = character:GetAttribute("VisualScale")
-                local s = if typeof(scale) == "number" then scale else 1
-                bar.gui.Adornee = root
-                bar.gui.StudsOffsetWorldSpace = Vector3.new(0, 1.4 + 1.9 * s, 0) -- Studio check: 2.2 + 2.4 s floated too high over the head
-                bar.gui.Size = UDim2.fromOffset((BAR_W + 18) * math.min(1.5, 0.9 + 0.15 * s), BAR_H + 6)
+                bar.gui.Adornee = character:FindFirstChild("HumanoidRootPart")
+                bar.placedScale = -1
                 bar.gui.Enabled = true
                 bar.lastFraction = fractionOf(character)
                 bar.lastCue = if isWild(character) then tostring(character:GetAttribute("NpcCue") or "") else ""
                 paint(bar, bar.lastFraction, false)
             end
+            -- BD-310: place (and re-place when the dino grows). 1.4 + 1.9 s (Studio check: 2.2 + 2.4 s floated too high) put the bar INSIDE
+            -- the head above s ~ 1.6, for a big player and for the big wild predators alike, and it was never updated after growth.
+            local scaleNow = character:GetAttribute("VisualScale")
+            local s = if typeof(scaleNow) == "number" then scaleNow else 1
+            if s ~= bar.placedScale then
+                bar.placedScale = s
+                bar.gui.StudsOffsetWorldSpace = Vector3.new(0, Hud.barLift(s, topAboveRoot(character)), 0)
+                bar.gui.Size = UDim2.fromOffset((BAR_W + 18) * math.min(1.5, 0.9 + 0.15 * s), BAR_H + 6)
+            end
             local fraction = fractionOf(character)
-            local cueNow = if isWild(character) then tostring(character:GetAttribute("NpcCue") or "") else ""
+            local cueNow =if isWild(character) then tostring(character:GetAttribute("NpcCue") or "") else ""
             if cueNow ~= bar.lastCue then
                 bar.lastCue = cueNow
                 paint(bar, fraction, false)
