@@ -83,10 +83,12 @@ local function sparkle(container: Instance, body: BasePart?, entry: any?)
     else emitter.Color = ColorSequence.new(Color3.fromRGB(entry.sparkle[1], entry.sparkle[2], entry.sparkle[3])) end
     emitter.LightEmission, emitter.LightInfluence = 1, 0
     -- few but crisp: sparkleCount concurrent twinkles (Gold 3 / Emerald 5 / Diamond 7), each ~1.2 s, big enough to read at ~20 studs
-    emitter.Rate, emitter.Lifetime = entry.sparkleCount / 1.2 * (if fx == "lite" then 0.5 else 1), NumberRange.new(1.0, 1.4)
+    emitter.Rate, emitter.Lifetime = entry.sparkleCount / Tier.SparkleBase * (if fx == "lite" then 0.5 else 1), NumberRange.new(Tier.SparkleLife[1], Tier.SparkleLife[2])
     local sz = entry.sparkleSize * math.clamp(k, 0.9, 1.6)
-    emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.4, sz), NumberSequenceKeypoint.new(1, 0)})
-    emitter.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0), NumberSequenceKeypoint.new(1, 1)})
+    -- short glint flash: the spark pops to 1.5x in the first 12 % of its life, settles to full size, then fades (bright at once, not a slow fade-in)
+    emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.12, sz * 1.5), NumberSequenceKeypoint.new(0.4, sz), NumberSequenceKeypoint.new(1, 0)})
+    emitter.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(0.12, 0), NumberSequenceKeypoint.new(0.7, 0.1), NumberSequenceKeypoint.new(1, 1)})
+    emitter.ZOffset = 1
     emitter.Speed, emitter.SpreadAngle, emitter.Rotation = NumberRange.new(0.2, 0.5), Vector2.new(180, 180), NumberRange.new(0, 360)
     emitter.Parent = body
 end

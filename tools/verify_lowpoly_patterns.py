@@ -193,7 +193,7 @@ for _, grey in {0.35, 0.6, 0.85} do -- the same neutral dino under each tier
     assert(luma(Tier.lift(dr, dg, db, 1.5, diamond)) >= luma(Tier.lift(gr, gg, gb, 1.5, gold)), "diamond highlights at least as bright as gold's")
 end
 -- accents: pattern / horn / claw pixels become the tier metal or gem, body colour keeps its hue, tiers differ clearly
-assert(gold.sparkleCount == 3 and emerald.sparkleCount == 5 and diamond.sparkleCount == 7 and gold.sparkleSize >= 1, "3 / 5 / 7 big twinkles")
+assert(gold.sparkleCount == 4 and emerald.sparkleCount == 6 and diamond.sparkleCount == 8 and gold.sparkleSize >= 1.4, "4 / 6 / 8 big twinkles")
 local blueBody = {0.15, 0.35, 0.9}
 for _, id in Tier.Order do
     local e = Tier.get(id)
@@ -234,6 +234,30 @@ local fr, fg, fb = Recolor.flatTint(base, 0.9, 0.2, 0.2)
 assert(fr >= 0 and fr <= 1 and fg >= 0 and fg <= 1 and fb >= 0 and fb <= 1)
 assert(fr == 1 and math.abs(base[2] * fg - 0.2) < 0.02 and math.abs(base[3] * fb - 0.2) < 0.02, "fallback tint off") -- a multiply can only darken: red stays the texture red, green/blue drop to the gene value
 assert(0 * fr == 0, "eyes stay black")
+-- 2026-10-16 round 3: accent regions (horns / frill / crest / spikes / claws baked into the textures)
+for _, sp in {"compy", "raptor", "triceratops", "tyrannosaurus", "stegosaurus", "ankylosaurus", "pteranodon"} do
+    local list = Tier.AccentRegions[sp]
+    assert(list and #list >= 2, sp .. " has accent regions")
+    for _, bx in list do
+        assert(#bx == 6 and bx[1] >= 0 and bx[1] < bx[2] and bx[3] < bx[4] and bx[5] < bx[6], sp .. " box well formed")
+        assert(bx[2] <= 0.6 and bx[4] <= 0.6 and bx[3] >= -0.6 and bx[5] >= -0.6 and bx[6] <= 0.6, sp .. " box inside the normalised model")
+        local cx, cy, cz = (bx[1] + bx[2]) / 2, (bx[3] + bx[4]) / 2, (bx[5] + bx[6]) / 2
+        assert(Tier.inAccentRegion(sp, cx, cy, cz) and Tier.inAccentRegion(sp, -cx, cy, cz), sp .. " accent texels exist (and mirror)")
+        assert(not Tier.inAccentRegion(sp, cx, cy + 5, cz), sp .. " outside is not accent")
+        -- accent texels take the tier colour, body texels (blue triceratops) keep their hue
+        for _, id in Tier.Order do
+            local e = Tier.get(id)
+            local ar, ag, ab = Tier.regionColor(0.35, 0.45, 0.8, e, 1.0, 0.3, cy)
+            local want = hueOf(e.accent[1] / 255, e.accent[2] / 255, e.accent[3] / 255)
+            if id ~= "diamond" then assert(Tier.hueDistance(hueOf(ar, ag, ab), want) <= 0.05, sp .. " " .. id .. " region is tier coloured") end
+            assert(ar >= 0 and ar <= 1 and ag >= 0 and ag <= 1 and ab >= 0 and ab <= 1)
+            local br, bg, bb = Tier.blend(0.35, 0.45, 0.8, e, false)
+            assert(Tier.hueDistance(hueOf(0.35, 0.45, 0.8), hueOf(br, bg, bb)) <= Tier.HueDelta + 1e-6, sp .. " body hue unchanged")
+        end
+    end
+end
+assert(not Tier.inAccentRegion("nope", 0, 0, 0) and not Tier.inAccentRegion(nil, 0, 0, 0), "unknown species: no accent")
+assert(Tier.sparkleAlive(diamond, true) * 2 == Tier.sparkleAlive(diamond, false) and Tier.sparkleAlive(diamond, false) <= 12, "sparkle count bounded")
 print("lowpoly pattern tests passed")
 '''
 
@@ -247,6 +271,8 @@ def check_key():
     dinos = (ROOT / 'src/shared/LowPolyDinos.luau').read_text(encoding='utf-8')
     assert 'Enum.Material.Plastic, 0' in dinos and 'Tier.MaxReflectance' in dinos, "base matte / tier gloss bounded (BD-173)"
     assert 'function LowPoly.applyTier' in dinos
+    assert 'Tier.inAccentRegion' in text and 'src.pos, speciesId' in text, "Texture.paint must paint accent regions from the position map"
+    assert 'NumberSequenceKeypoint.new(0.12, sz * 1.5)' in dinos, "sparkle glint flash"
     for path in ('src/client/ResourceVisuals.client.luau', 'src/shared/DinosaurPreview.luau'):
         assert 'LowPoly.applyTier' in (ROOT / path).read_text(encoding='utf-8'), f"{path} must use the shared tier path"
     config = (ROOT / 'src/shared/Config.luau').read_text(encoding='utf-8')
