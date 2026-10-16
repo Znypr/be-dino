@@ -9,6 +9,7 @@ local Appearance=require(script.Parent.EggAppearance)
 local MutationLook=require(script.Parent.MutationLook)
 local Authored=require(script.Parent.AuthoredCreatures)
 local Theme=require(script.Parent.UITheme)
+local LowPoly=require(script.Parent.LowPolyDinos)
 local function visible(view)
     local low,high=view.AbsolutePosition,view.AbsolutePosition+view.AbsoluteSize
     if view.AbsoluteSize.X<=0 or view.AbsoluteSize.Y<=0 then return false end
@@ -48,7 +49,8 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
     local function load(): boolean
     local encoded=viewport:GetAttribute("TraitsJson")
     local traits=nil
-    if encoded and gold~="silhouette" and gold~=true and gold~="gold" and gold~="diamond" and gold~="emerald" then
+    local fused=gold==true or gold=="gold" or gold=="diamond" or gold=="emerald"
+    if encoded and gold~="silhouette" and (not fused or LowPoly.enabled()) then -- BD-061: a low-poly fused dino shows its genes under the tier
         local ok,decoded=pcall(function() return Http:JSONDecode(encoded) end)
         if ok and typeof(decoded)=="table" then traits=decoded end
     end
@@ -60,9 +62,12 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
     if model and not Authored.verify(model) then model:Destroy() model=nil end
     if model then
         local world=Instance.new("WorldModel") world.Parent=viewport
+        local lowPoly=model:GetAttribute("LowPoly")==true
+        if lowPoly and fused then model:SetAttribute("LPTier",if gold==true then "gold" else gold) end
         for _,item in model:GetDescendants() do
             if item:IsA("BasePart") then
                 item.Anchored=true
+                if lowPoly and gold~="silhouette" then continue end -- BD-061: LowPoly.tint / applyTier own the material and tier look
                 if gold=="silhouette" then
                     Resources.clearTextures(item)
                     item.Color,item.Material,item.Reflectance=Color3.new(0,0,0),Enum.Material.SmoothPlastic,0
@@ -83,8 +88,9 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         if fallback then fallback:Destroy() viewport:SetAttribute("PreviewFallback",nil) end
         if gold=="silhouette" then
             viewport.Ambient,viewport.LightColor=Color3.new(0,0,0),Color3.new(0,0,0)
-        elseif traits and traits.genes then Appearance.apply(model,traits.genes) end
-        if traits and gold~="silhouette" then MutationLook.apply(model,traits.mutationId) end -- BD-155 (traits only decoded for base stage)
+        elseif traits and traits.genes then Appearance.apply(model,traits.genes)
+        elseif lowPoly and fused then LowPoly.applyTier(model,gold) end
+        if traits and gold~="silhouette" and not fused then MutationLook.apply(model,traits.mutationId) end -- BD-155 (fused tiers never get a mutation tint)
         Camera.bind(viewport,model,speciesId)
         task.spawn(function()
             local assets={}

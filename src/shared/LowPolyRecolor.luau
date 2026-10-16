@@ -34,4 +34,10 @@ end
 function Recolor.baseOf(speciesId: string): {number}
     return (Recolor.Base :: any)[speciesId] or DEFAULT_BASE
 end
+-- Cheap fallback (no EditableImage): a MeshPart.Color that multiplies the ORIGINAL species texture so its body reads as the
+-- gene colour. Eyes/claws (black) stay black; the cream belly takes a light tint. Used when the bake cache is full or far away.
+function Recolor.flatTint(base: {number}, tr: number, tg: number, tb: number): (number, number, number)
+    local function ch(t: number, b: number): number return math.clamp(t / math.max(b, 0.15), 0, 1) end
+    return ch(tr, base[1]), ch(tg, base[2]), ch(tb, base[3])
+end
 return Recolor

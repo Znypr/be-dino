@@ -7,6 +7,7 @@ local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Appearance = require(ReplicatedStorage.Shared.EggAppearance)
 local MutationLook = require(ReplicatedStorage.Shared.MutationLook)
 local Http = game:GetService("HttpService")
+local LowPoly = require(ReplicatedStorage.Shared.LowPolyDinos) -- BD-225/BD-061: genes + fused tier on the low-poly model
 local watched = setmetatable({}, {__mode = "k"})
 -- The server shell (DinoVisual) shares geometry with the local mesh; keep it invisible on this client or its
 -- original texture z-fights through the genes-painted pattern. Client-local Transparency survives the camera script.
@@ -52,14 +53,14 @@ local function characterVisual(character: Model)
         hideShell(character)
         if previous:GetAttribute("GenesJson")~=genesJson then
             local ok,genes=pcall(function() return Http:JSONDecode(genesJson) end)
-            if ok and typeof(genes)=="table" and mutation=="base" then Appearance.apply(previous,genes) MutationLook.apply(previous,character:GetAttribute("EventMutationId")) end
+            if ok and typeof(genes)=="table" and (mutation=="base" or previous:GetAttribute("LowPoly")==true) then Appearance.apply(previous,genes) if mutation=="base" then MutationLook.apply(previous,character:GetAttribute("EventMutationId")) end end
             previous:SetAttribute("GenesJson",genesJson)
         end
         return
     end
     local overrides=ReplicatedStorage:FindFirstChild("ResourceOverrides")
     local okGenes,genes=pcall(function() return Http:JSONDecode(genesJson) end)
-    local realGenes=if okGenes and typeof(genes)=="table" and mutation=="base" then genes else nil
+    local realGenes=if okGenes and typeof(genes)=="table" and (mutation=="base" or LowPoly.enabled()) then genes else nil -- a low-poly fused dino keeps its genes under the tier
     local model = Resources.clone(id,realGenes)
     if not model then
         -- BD-146: the new species has no local mesh (yet). Never keep the OLD species on top: drop it and let the
@@ -91,11 +92,14 @@ local function characterVisual(character: Model)
     model:SetAttribute("GenesJson",genesJson)
     model:ScaleTo(scale)
     model:PivotTo(root.CFrame * CFrame.new(0, -groundHeight, 0))
+    local lowPoly = model:GetAttribute("LowPoly") == true
     for _, item in model:GetDescendants() do
         if item:IsA("BasePart") then
             item.Anchored = false
-            if mutation=="gold" or mutation=="diamond" then Resources.clearTextures(item) end
-            if mutation == "gold" then item.Color = Color3.fromRGB(242,199,63) item.Material = Enum.Material.Metal
+            if not lowPoly and (mutation=="gold" or mutation=="emerald" or mutation=="diamond") then Resources.clearTextures(item) end
+            if lowPoly then -- BD-061: LowPoly.applyTier below (additive tint + gloss over the genes, eyes/belly kept)
+            elseif mutation == "gold" then item.Color = Color3.fromRGB(242,199,63) item.Material = Enum.Material.Metal
+            elseif mutation == "emerald" then item.Color = Color3.fromRGB(46,196,120) item.Material = Enum.Material.Metal item.Reflectance=.1
             elseif mutation == "diamond" then item.Color = Color3.fromRGB(85,213,245) item.Material = Enum.Material.Glass item.Reflectance=.2 end
             -- BD-211: a Weld (not a WeldConstraint) so DinoMotion poses edit C0. Writing part.CFrame on a
             -- WeldConstraint-attached part drags the whole assembly, which made the root rattle every frame.
@@ -106,7 +110,8 @@ local function characterVisual(character: Model)
         end
     end
     model.Parent = character
-    if realGenes then Appearance.apply(model,realGenes) end
+    if lowPoly then model:SetAttribute("LPTier", if mutation ~= "base" then mutation else nil) end
+    if realGenes then Appearance.apply(model,realGenes) elseif lowPoly then LowPoly.applyTier(model, mutation) end
     hideShell(character)
 
 end

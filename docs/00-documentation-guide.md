@@ -77,3 +77,4 @@ Do **not** delete build snapshots or test evidence just to make them look curren
 - [79 Owner admin panel](79-admin-panel.md): owner-only runtime sliders (food worth, growth, run speed) and weather controls for playtests (BD-120).
 - [77 Asset registry](77-asset-registry.md): every runtime art asset with repo file, Roblox ID, user and status; archive location of older revisions.
 - [104 Cave hub design](104-cave-hub-design.md): owner target (2026-10-16) for the Sanctuary as a big cave with physical shops and teleport-to-station menus; layout, build method, lighting, lava FX, teleport rules, asset prompts, migration flag and BD-279 to BD-294 (design only, nothing built).
+- [105 Low-poly dinos: gene patterns and fused-tier looks](105-lowpoly-patterns-and-tiers.md): 3D procedural pattern bake per part, image budget, Gold/Emerald/Diamond on low-poly (flag off), Studio contact sheet and critique (2026-10-16).
