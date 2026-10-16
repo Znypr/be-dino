@@ -67,6 +67,30 @@ function Copy.hatchGroup(level: number)
         "A cracked egg gives no dino and no crystals back.")
 end
 
+-- BD-301: ONE sentence for the Buy Egg confirm, built from the same numbers as the "Does it hatch?" group above.
+function Copy.hatchSentence(level: number): string
+    local percent = Copy.hatchGroup(level).rows[1].percent
+    return string.format("%s of every 100 eggs hatch a dino. A cracked egg gives nothing back.", string.format("%g", percent))
+end
+
+-- BD-303: plain words for the condition upgrade. requiredLevel is the player level the server demands (ProgressionRules).
+function Copy.upgradeUnlock(requiredLevel: number?, playerLevel: number): string
+    if requiredLevel == nil then return "Top level reached" end
+    if playerLevel >= requiredLevel then return "Ready to buy!" end
+    return "Reach level " .. requiredLevel .. " to buy this."
+end
+
+-- BD-303: the condition whose chance grows the most when going from oldLevel to newLevel (its egg is shown on the confirm).
+function Copy.biggestGain(oldLevel: number, newLevel: number): string
+    local old, new = ShopOdds.conditionPercents(oldLevel), ShopOdds.conditionPercents(newLevel)
+    local bestId, best = Progression.Conditions[1].id, -math.huge
+    for i, row in Progression.Conditions do
+        local gain = new[i] - old[i]
+        if gain > best then bestId, best = row.id, gain end
+    end
+    return bestId
+end
+
 -- Egg shop: groups in reading order.
 function Copy.eggGroups(level: number)
     return {Copy.hatchGroup(level), Copy.speciesGroup(), Copy.conditionGroup(level)}

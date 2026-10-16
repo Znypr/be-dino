@@ -369486,6 +369486,7 @@ local Appearance=require(script.Parent.EggAppearance)
 local MutationLook=require(script.Parent.MutationLook)
 local Authored=require(script.Parent.AuthoredCreatures)
 local Theme=require(script.Parent.UITheme)
+local LowPoly=require(script.Parent.LowPolyDinos)
 local function visible(view)
     local low,high=view.AbsolutePosition,view.AbsolutePosition+view.AbsoluteSize
     if view.AbsoluteSize.X&lt;=0 or view.AbsoluteSize.Y&lt;=0 then return false end
@@ -369525,7 +369526,8 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
     local function load(): boolean
     local encoded=viewport:GetAttribute("TraitsJson")
     local traits=nil
-    if encoded and gold~="silhouette" and gold~=true and gold~="gold" and gold~="diamond" and gold~="emerald" then
+    local fused=gold==true or gold=="gold" or gold=="diamond" or gold=="emerald"
+    if encoded and gold~="silhouette" and (not fused or LowPoly.enabled()) then -- BD-061: a low-poly fused dino shows its genes under the tier
         local ok,decoded=pcall(function() return Http:JSONDecode(encoded) end)
         if ok and typeof(decoded)=="table" then traits=decoded end
     end
@@ -369537,9 +369539,12 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
     if model and not Authored.verify(model) then model:Destroy() model=nil end
     if model then
         local world=Instance.new("WorldModel") world.Parent=viewport
+        local lowPoly=model:GetAttribute("LowPoly")==true
+        if lowPoly and fused then model:SetAttribute("LPTier",if gold==true then "gold" else gold) end
         for _,item in model:GetDescendants() do
             if item:IsA("BasePart") then
                 item.Anchored=true
+                if lowPoly and gold~="silhouette" then continue end -- BD-061: LowPoly.tint / applyTier own the material and tier look
                 if gold=="silhouette" then
                     Resources.clearTextures(item)
                     item.Color,item.Material,item.Reflectance=Color3.new(0,0,0),Enum.Material.SmoothPlastic,0
@@ -369560,8 +369565,9 @@ function Preview.add(parent: GuiObject,speciesId: string,gold: (boolean | string
         if fallback then fallback:Destroy() viewport:SetAttribute("PreviewFallback",nil) end
         if gold=="silhouette" then
             viewport.Ambient,viewport.LightColor=Color3.new(0,0,0),Color3.new(0,0,0)
-        elseif traits and traits.genes then Appearance.apply(model,traits.genes) end
-        if traits and gold~="silhouette" then MutationLook.apply(model,traits.mutationId) end -- BD-155 (traits only decoded for base stage)
+        elseif traits and traits.genes then Appearance.apply(model,traits.genes)
+        elseif lowPoly and fused then LowPoly.applyTier(model,gold) end
+        if traits and gold~="silhouette" and not fused then MutationLook.apply(model,traits.mutationId) end -- BD-155 (fused tiers never get a mutation tint)
         Camera.bind(viewport,model,speciesId)
         task.spawn(function()
             local assets={}
@@ -373969,6 +373975,8 @@ local Assets = require(script.Parent.LowPolyDinoAssets)
 local Genetics = require(script.Parent.EggGenetics)
 local Texture = require(script.Parent.LowPolyTexture)
 local Pose = require(script.Parent.LowPolyPose)
+local Tier = require(script.Parent.LowPolyTier)
+local Recolor = require(script.Parent.LowPolyRecolor)
 local LowPoly = {}
 LowPoly.FolderName = "LowPolyDinoModels"
 
@@ -373987,31 +373995,135 @@ local function template(speciesId: string): Model?
     local item = if folder then folder:FindFirstChild(speciesId) else nil
     return if item and item:IsA("Model") then item else nil
 end
--- Gene colours (docs/87 low-poly language: matte, solid black eyes, cream belly). The model's own texture is KEPT, so eyes/belly never
--- disappear: it is shown immediately, then each part's texture is swapped for a gene-coloured bake (LowPolyTexture/LowPolyRecolor) that
--- only recolours body-colour pixels. If the bake is unavailable the original species-coloured texture simply stays. Body = blended gene
--- colour; head/tail/limbs lean to the secondary colour. Spots/stripes (PatternGenes needs per-species UV data) are NOT on low-poly yet.
+-- Template geometry of one part (unscaled, unposed) for the 3D pattern bake: mesh id, CFrame relative to the model centre,
+-- mesh-&gt;part scale and 1 / the longest model side. nil when the template is gone (the bake then uses the UV-space pattern).
+local geomCache: {[string]: any} = {}
+function LowPoly.geometry(speciesId: string, partName: string): any?
+    local key = speciesId .. "/" .. partName
+    if geomCache[key] ~= nil then return geomCache[key] or nil end
+    local source = template(speciesId)
+    local part = if source then source:FindFirstChild(partName) else nil
+    if not source or not part or not part:IsA("MeshPart") then return nil end
+    local box, size = source:GetBoundingBox()
+    local ms = part.MeshSize
+    local scale = Vector3.new(part.Size.X / math.max(ms.X, 1e-6), part.Size.Y / math.max(ms.Y, 1e-6), part.Size.Z / math.max(ms.Z, 1e-6))
+    local geom = {meshId = part.MeshId, cframe = box:ToObjectSpace(part.CFrame), scale = scale, norm = 1 / math.max(size.X, size.Y, size.Z, 1e-6)}
+    geomCache[key] = geom
+    return geom
+end
+-- Gene colours AND patterns (docs/87 low-poly language: matte, solid black eyes, cream belly). The model's own texture is KEPT, so
+-- eyes/belly never disappear: it is shown immediately (tinted by MeshPart.Color as the cheap fallback), then each part's texture is
+-- swapped for a bake (LowPolyTexture: LowPolyRecolor colours + LowPolyPattern procedural mask in the part's own UV space + LowPolyTier
+-- additive tint) that only touches body-colour pixels. Blank pattern = the blended gene colour; any other pattern = primary colour
+-- with the secondary colour in the pattern regions, the share following genes.blend. Fused tier (LPTier attribute, "gold" /
+-- "emerald" / "diamond") adds the tier tint, Metal/Glass + reflectance on body-colour parts and one soft sparkle; base stays matte.
+local genesOf = setmetatable({} :: {[Instance]: any}, {__mode = "k"})
+LowPoly.Far = 160 -- studs: beyond this a world dino keeps the cheap tint (BD-203 LOD rule)
+local function sparkle(container: Instance, body: BasePart?, entry: any?)
+    local old = container:FindFirstChild("LPTierSparkle", true)
+    if old then old:Destroy() end
+    if not entry or not body or entry.sparkleRate &lt;= 0 then return end
+    local Effects = require(script.Parent.EffectAssets)
+    local emitter = Instance.new("ParticleEmitter")
+    emitter.Name = "LPTierSparkle"
+    emitter.Texture = Effects.resolve("sparkSheet")
+    if Effects.isSheet("sparkSheet") then
+        emitter.FlipbookLayout, emitter.FlipbookMode = Enum.ParticleFlipbookLayout.Grid4x4, Enum.ParticleFlipbookMode.OneShot
+    end
+    emitter.Color = ColorSequence.new(Color3.fromRGB(entry.sparkle[1], entry.sparkle[2], entry.sparkle[3]))
+    emitter.LightEmission, emitter.LightInfluence = 0.6, 0.3
+    emitter.Rate, emitter.Lifetime = entry.sparkleRate, NumberRange.new(0.8, 1.2)
+    emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.4, 0.55), NumberSequenceKeypoint.new(1, 0)})
+    emitter.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.2), NumberSequenceKeypoint.new(1, 1)})
+    emitter.Speed, emitter.SpreadAngle, emitter.Rotation = NumberRange.new(0.2, 0.5), Vector2.new(180, 180), NumberRange.new(0, 360)
+    emitter.Parent = body
+end
 function LowPoly.tint(container: Instance, genes: any)
-    if not genes or not Genetics.valid(genes) then return end
-    local base = Genetics.tint(genes)
-    local second = Genetics.color(genes.secondaryColorId).rgb
-    local accent = base:Lerp(Color3.fromRGB(second[1], second[2], second[3]), 0.45)
+    if genes then genesOf[container] = genes else genes = genesOf[container] end
+    local entry = Tier.get(container:GetAttribute("LPTier"))
     local species = tostring(container:GetAttribute("LPSpecies") or container.Name)
+    local valid = genes ~= nil and Genetics.valid(genes)
+    local spec: Texture.Spec? = nil
+    if valid then
+        local a, b = Genetics.color(genes.primaryColorId).rgb, Genetics.color(genes.secondaryColorId).rgb
+        local patternId = if genes.patternId and table.find(Genetics.Patterns, genes.patternId) then genes.patternId else "01_blank"
+        local primary = if patternId == "01_blank" then Genetics.tint(genes) else Color3.fromRGB(a[1], a[2], a[3])
+        spec = {primary = primary, secondary = Color3.fromRGB(b[1], b[2], b[3]), same = genes.primaryColorId == genes.secondaryColorId,
+            primaryShare = math.clamp((genes.blend or 50) / 100, 0, 1), patternId = patternId, tier = if entry then entry.id else nil, seedName = ""}
+    elseif not entry then return end
+    local camera = workspace.CurrentCamera
+    local body: BasePart? = nil
     for _, part in container:GetDescendants() do
         if part:IsA("MeshPart") then
-            part.Color = Color3.new(1, 1, 1)
-            part.Material, part.Reflectance = Enum.Material.Plastic, 0
             local textureId = part:GetAttribute("LPTexture")
-            if type(textureId) ~= "string" or textureId == "" then continue end
-            local color = if part:GetAttribute("LPRole") == "body" then base else accent
-            local key = Texture.key(textureId, color)
+            local role = tostring(part:GetAttribute("LPRole") or "body")
+            if role == "body" and not body then body = part end
+            local eyeish = type(textureId) ~= "string" or textureId == ""
+            -- BD-173: base dinos matte; only a fused tier gets Metal/Glass + reflectance, and only on textured body-colour parts.
+            if entry and not eyeish then
+                part.Material = (Enum.Material :: any)[entry.material] or Enum.Material.Metal
+                part.Reflectance = math.min(entry.reflectance, Tier.MaxReflectance)
+            else part.Material, part.Reflectance = Enum.Material.Plastic, 0 end
+            if eyeish or not spec then part.Color = Color3.new(1, 1, 1) continue end
+            local s = table.clone(spec :: Texture.Spec)
+            s.seedName = species .. "|" .. role
+            local base = Texture.baseOf(textureId) or Recolor.baseOf(species)
+            local fr, fg, fb = Recolor.flatTint(base, s.primary.R, s.primary.G, s.primary.B)
+            local key = Texture.key(textureId, s)
+            if part:GetAttribute("LPTintKey") == key and part:GetAttribute("LPLod") == "texture" then continue end
             part:SetAttribute("LPTintKey", key)
+            local far = camera ~= nil and part:IsDescendantOf(workspace) and (camera.CFrame.Position - part.Position).Magnitude &gt; LowPoly.Far
+            if far then Texture.release(part) part.TextureID = textureId part.Color = Color3.new(fr, fg, fb) part:SetAttribute("LPLod", "tint") continue end
+            local geom = LowPoly.geometry(species, part.Name)
+            part:SetAttribute("LPLod", "baking")
             task.spawn(function()
-                local content = Texture.bake(textureId, species, color)
-                if content and part.Parent and part:GetAttribute("LPTintKey") == key then part.TextureContent = content end
+                local content = Texture.acquire(part, textureId, species, s, geom)
+                if not part.Parent or part:GetAttribute("LPTintKey") ~= key then return end
+                if content then part.TextureContent, part.Color = content, Color3.new(1, 1, 1) part:SetAttribute("LPLod", "texture")
+                else
+                    local b = Texture.baseOf(textureId) or base
+                    part.TextureID = textureId part.Color = Color3.new(Recolor.flatTint(b, s.primary.R, s.primary.G, s.primary.B)) part:SetAttribute("LPLod", "tint")
+                end
             end)
+            -- cheap tint shows at once while the bake runs (or stays when the cache is full)
+            if part:GetAttribute("LPLod") ~= "texture" then part.Color = Color3.new(fr, fg, fb) end
         end
     end
+    sparkle(container, body, entry)
+end
+-- Fused tier look on a low-poly model (nil / "base" / false restores matte). Reads the same stage strings as the rest of the game.
+function LowPoly.applyTier(container: Instance, stage: any)
+    local entry = Tier.get(stage)
+    container:SetAttribute("LPTier", if entry then entry.id else nil)
+    for _, part in container:GetDescendants() do
+        if part:IsA("MeshPart") then part:SetAttribute("LPTintKey", nil) end
+    end
+    LowPoly.tint(container, nil)
+end
+-- Maintenance (client only): far world dinos drop to the cheap tint, near ones get their bake back as slots free up.
+if game:GetService("RunService"):IsClient() then
+    task.spawn(function()
+        while true do
+            task.wait(1.5)
+            if not LowPoly.enabled() then continue end
+            pcall(function()
+                local camera = workspace.CurrentCamera
+                for container, _ in genesOf do
+                    if camera and container.Parent and container:IsDescendantOf(workspace) then
+                        local dirty = false
+                        for _, part in container:GetDescendants() do
+                            if part:IsA("MeshPart") and part:GetAttribute("LPTexture") then
+                                local far = (camera.CFrame.Position - part.Position).Magnitude &gt; LowPoly.Far
+                                local lod = part:GetAttribute("LPLod")
+                                if (far and lod == "texture") or (not far and lod == "tint") then part:SetAttribute("LPTintKey", nil) dirty = true end
+                            end
+                        end
+                        if dirty then LowPoly.tint(container, nil) end
+                    end
+                end
+            end)
+        end
+    end)
 end
 function LowPoly.clone(speciesId: string, genes: any?): Model?
     if not LowPoly.has(speciesId) then return nil end
@@ -374046,7 +374158,8 @@ function LowPoly.clone(speciesId: string, genes: any?): Model?
     copy:SetAttribute("UploadedModelId", info.assetId)
     copy:SetAttribute("LowPolyVersion", info.version)
     copy:SetAttribute("LPClass", info.class)
-    LowPoly.tint(copy, genes)
+    -- the first bake waits one frame so the caller can still set LPTier (ResourceVisuals, DinosaurPreview) before any image is baked
+    if genes then genesOf[copy] = genes task.defer(function() if copy.Parent then LowPoly.tint(copy, nil) end end) end
     return copy
 end
 return LowPoly
@@ -374054,6 +374167,255 @@ return LowPoly
         </Properties>
       </Item>
       <Item class="ModuleScript" referent="RBX236">
+        <Properties>
+          <string name="Name">LowPolyPattern</string>
+          <ProtectedString name="Source">--!strict
+-- BD-225 / BD-061: pure pattern masks for the low-poly dino bakes. No Roblox APIs (tools/verify_lowpoly_patterns.py).
+-- The generated low-poly parts have one UV island PER FACET and no hand-authored pattern data, so a pattern computed in UV space
+-- is chopped into a jigsaw at every facet edge. The mask is therefore PROCEDURAL IN 3D: the runtime rasterises each part's mesh
+-- triangles into UV space once (EditableMesh, LowPolyTexture), giving every texel its model-space position (Pattern.rasterize,
+-- a u8 position map), and the pattern is a 3D function of that position (spots are spheres, stripes are planes), so it flows
+-- across facets and across parts. When the position map is unavailable the same ids fall back to the UV-space masks (Pattern.mask).
+-- Same gene pattern ids as PatternGenes (EggGenetics.Patterns), two gene colours, deterministic from (species, part, pattern id).
+-- The mask is only ever applied where LowPolyRecolor.bodyWeight &gt; 0,
+-- so eyes, claws and the cream belly are never painted; and the share of secondary colour follows genes.blend exactly like
+-- PatternGenes (quantile threshold over the body pixels), so same-family genes still show lighter/darker regions.
+-- Look (docs/87): calm, bubbly, readable at preview size: medium features (spots about 20 px of 256), soft 2 px edges,
+-- no high-frequency noise, so flat low-poly facets still read as facets.
+local Pattern = {}
+Pattern.Size = 256
+Pattern.Soft = 0.04 -- width (in mask units) of the soft edge between primary and secondary colour
+Pattern.Ids = {"01_blank", "02_emerald_islands", "03_round_spots", "04_bold_patches", "05_horizontal_bands", "06_wavy_stripes",
+    "07_diamond_scales", "08_freckles"}
+-- deterministic 32-bit string hash (FNV-1a) so a species/part gets its own offsets; same inputs -&gt; same mask forever.
+function Pattern.seed(text: string): number
+    local h = 2166136261
+    for i = 1, #text do
+        h = bit32.bxor(h, string.byte(text, i))
+        h = bit32.band(h * 16777619, 0xFFFFFFFF)
+    end
+    return h
+end
+local function hash2(ix: number, iy: number, seed: number): number
+    local h = bit32.band(ix * 374761393 + iy * 668265263 + seed * 1274126177, 0xFFFFFFFF)
+    h = bit32.band(bit32.bxor(h, bit32.rshift(h, 13)) * 1274126177, 0xFFFFFFFF)
+    h = bit32.bxor(h, bit32.rshift(h, 16))
+    return (h % 65536) / 65535
+end
+local function smooth(t: number): number return t * t * (3 - 2 * t) end
+-- value noise on a lattice of `cell` px, tiling at 256 so UV island edges wrap without a hard seam
+local function noise(x: number, y: number, cell: number, seed: number): number
+    local n = Pattern.Size / cell
+    local fx, fy = x / cell, y / cell
+    local ix, iy = math.floor(fx), math.floor(fy)
+    local tx, ty = smooth(fx - ix), smooth(fy - iy)
+    local function at(dx: number, dy: number) return hash2((ix + dx) % n, (iy + dy) % n, seed) end
+    local a = at(0, 0) + (at(1, 0) - at(0, 0)) * tx
+    local b = at(0, 1) + (at(1, 1) - at(0, 1)) * tx
+    return a + (b - a) * ty
+end
+-- jittered dot grid: 1 at a dot centre, falling off continuously to the cell edge, so the blend quantile sets the dot SIZE
+-- (a small share of secondary colour = small dots, a large share = big blobs) instead of hitting a hard 0 floor
+local function dots(x: number, y: number, cell: number, reach: number, seed: number): number
+    local best = 0
+    local cx, cy = math.floor(x / cell), math.floor(y / cell)
+    local n = Pattern.Size / cell
+    for dy = -1, 1 do
+        for dx = -1, 1 do
+            local gx, gy = cx + dx, cy + dy
+            local jx, jy = hash2(gx % n, gy % n, seed), hash2(gx % n, gy % n, seed + 77)
+            local px, py = (gx + 0.3 + 0.4 * jx) * cell, (gy + 0.3 + 0.4 * jy) * cell
+            local d = math.sqrt((x + 0.5 - px) ^ 2 + (y + 0.5 - py) ^ 2)
+            local v = (1 - math.min(1, d / reach)) ^ 1.5
+            if v &gt; best then best = v end
+        end
+    end
+    return best
+end
+local function tri(v: number): number local f = v - math.floor(v) return 1 - math.abs(f * 2 - 1) end
+-- mask value 0..1 ("how much secondary colour") at texel (x, y) for a pattern id and seed. Unknown id / blank -&gt; 0.
+function Pattern.mask(id: string, x: number, y: number, seed: number): number
+    if id == "02_emerald_islands" then
+        return noise(x + seed % 64, y, 64, seed) * 0.7 + noise(x, y + seed % 32, 32, seed + 3) * 0.3
+    elseif id == "03_round_spots" then
+        return dots(x, y, 32, 26, seed)
+    elseif id == "04_bold_patches" then
+        return noise(x, y, 32, seed + 9) * 0.6 + noise(x, y, 16, seed + 11) * 0.4
+    elseif id == "05_horizontal_bands" then
+        local wobble = noise(x, y, 64, seed + 5) * 6
+        return smooth(tri((y + wobble + seed % 36) / 36))
+    elseif id == "06_wavy_stripes" then
+        local wave = math.sin((y + seed % 256) / 256 * math.pi * 6) * 8
+        return smooth(tri((x + wave + seed % 28) / 28))
+    elseif id == "07_diamond_scales" then
+        local p = 32
+        local sx, sy = (x + seed % p) % p, (y + seed % p) % p
+        local d = math.abs(sx - p / 2) + math.abs(sy - p / 2)
+        return d / p -- diamond scales: centres primary, the outline toward the edges takes the secondary colour
+    elseif id == "08_freckles" then
+        return dots(x, y, 16, 12, seed + 21) * (0.55 + 0.45 * hash2(math.floor(x / 16), math.floor(y / 16), seed + 23))
+    end
+    return 0
+end
+-- 3D value noise on a lattice of `cell` model units (positions are normalised: the model's longest side is 1.0)
+local function noise3(x: number, y: number, z: number, cell: number, seed: number): number
+    local fx, fy, fz = x / cell + 64, y / cell + 64, z / cell + 64
+    local ix, iy, iz = math.floor(fx), math.floor(fy), math.floor(fz)
+    local tx, ty, tz = smooth(fx - ix), smooth(fy - iy), smooth(fz - iz)
+    local function at(dx: number, dy: number, dz: number) return hash2(ix + dx + (iz + dz) * 131, iy + dy, seed) end
+    local function lerp(a: number, b: number, t: number) return a + (b - a) * t end
+    local c00 = lerp(at(0, 0, 0), at(1, 0, 0), tx)
+    local c10 = lerp(at(0, 1, 0), at(1, 1, 0), tx)
+    local c01 = lerp(at(0, 0, 1), at(1, 0, 1), tx)
+    local c11 = lerp(at(0, 1, 1), at(1, 1, 1), tx)
+    return lerp(lerp(c00, c10, ty), lerp(c01, c11, ty), tz)
+end
+-- 3D jittered sphere grid: 1 at a centre, falling off to the cell edge (so the blend quantile sets the spot size)
+local function dots3(x: number, y: number, z: number, cell: number, seed: number): number
+    local best = 0
+    local cx, cy, cz = math.floor(x / cell + 64), math.floor(y / cell + 64), math.floor(z / cell + 64)
+    for dz = -1, 1 do for dy = -1, 1 do for dx = -1, 1 do
+        local gx, gy, gz = cx + dx, cy + dy, cz + dz
+        local jx, jy, jz = hash2(gx + gz * 131, gy, seed), hash2(gx + gz * 131, gy, seed + 77), hash2(gx + gz * 131, gy, seed + 151)
+        local px, py, pz = (gx - 64 + 0.25 + 0.5 * jx) * cell, (gy - 64 + 0.25 + 0.5 * jy) * cell, (gz - 64 + 0.25 + 0.5 * jz) * cell
+        local d = math.sqrt((x - px) ^ 2 + (y - py) ^ 2 + (z - pz) ^ 2)
+        local v = (1 - math.min(1, d / (cell * 0.8))) ^ 1.5
+        if v &gt; best then best = v end
+    end end end
+    return best
+end
+-- mask value 0..1 at a model-space position (normalised, longest side = 1, y up, -z forward). Feature sizes are fractions of
+-- the dino's length so a Compy and a T-Rex carry the same number of spots.
+function Pattern.mask3(id: string, x: number, y: number, z: number, seed: number): number
+    if id == "02_emerald_islands" then
+        return noise3(x, y, z, 0.26, seed) * 0.7 + noise3(x, y, z, 0.13, seed + 3) * 0.3
+    elseif id == "03_round_spots" then
+        return dots3(x, y, z, 0.17, seed)
+    elseif id == "04_bold_patches" then
+        return noise3(x, y, z, 0.16, seed + 9) * 0.6 + noise3(x, y, z, 0.08, seed + 11) * 0.4
+    elseif id == "05_horizontal_bands" then
+        local wobble = (noise3(x, y, z, 0.3, seed + 5) - 0.5) * 0.04
+        return smooth(tri((y + wobble) / 0.14))
+    elseif id == "06_wavy_stripes" then
+        local wave = math.sin(y * math.pi * 7) * 0.03
+        return smooth(tri((z + wave + x * 0.15) / 0.12))
+    elseif id == "07_diamond_scales" then
+        -- diamonds in the side view (y, z): the flanks show a scale lattice, the back and belly thin stripes
+        local p = 0.1
+        local sy, sz = (y + 64 * p) % p, (z + 64 * p) % p
+        local d = math.abs(sy - p / 2) + math.abs(sz - p / 2)
+        return math.min(1, d / p)
+    elseif id == "08_freckles" then
+        return dots3(x, y, z, 0.07, seed + 21) * (0.55 + 0.45 * noise3(x, y, z, 0.2, seed + 23))
+    end
+    return 0
+end
+-- Position map: 4 bytes per texel (x, y, z quantised 0..255 over -1..1, covered 0/255) at Pattern.Size. tris = flat array of
+-- {u1,v1,x1,y1,z1, u2,v2,x2,y2,z2, u3,v3,x3,y3,z3} with u,v in 0..1 (v = 0 at the TOP row) and positions normalised.
+-- Pure rasteriser (barycentric), then one dilation pass so facet edges have no uncovered seam texels.
+function Pattern.rasterize(tris: {{number}}): buffer
+    local size = Pattern.Size
+    local map = buffer.create(size * size * 4)
+    local function put(x: number, y: number, px: number, py: number, pz: number)
+        local o = (y * size + x) * 4
+        buffer.writeu8(map, o, math.clamp(math.floor((px + 1) * 127.5 + 0.5), 0, 255))
+        buffer.writeu8(map, o + 1, math.clamp(math.floor((py + 1) * 127.5 + 0.5), 0, 255))
+        buffer.writeu8(map, o + 2, math.clamp(math.floor((pz + 1) * 127.5 + 0.5), 0, 255))
+        buffer.writeu8(map, o + 3, 255)
+    end
+    for _, t in tris do
+        local x1, y1, x2, y2, x3, y3 = t[1] * size, t[2] * size, t[6] * size, t[7] * size, t[11] * size, t[12] * size
+        local det = (x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1)
+        if math.abs(det) &lt; 1e-9 then continue end
+        local minX, maxX = math.max(0, math.floor(math.min(x1, x2, x3))), math.min(size - 1, math.ceil(math.max(x1, x2, x3)))
+        local minY, maxY = math.max(0, math.floor(math.min(y1, y2, y3))), math.min(size - 1, math.ceil(math.max(y1, y2, y3)))
+        for y = minY, maxY do
+            local cy = y + 0.5
+            for x = minX, maxX do
+                local cx = x + 0.5
+                local l2 = ((cx - x1) * (y3 - y1) - (x3 - x1) * (cy - y1)) / det
+                local l3 = ((x2 - x1) * (cy - y1) - (cx - x1) * (y2 - y1)) / det
+                local l1 = 1 - l2 - l3
+                if l1 &gt;= -0.002 and l2 &gt;= -0.002 and l3 &gt;= -0.002 then
+                    put(x, y, l1 * t[3] + l2 * t[8] + l3 * t[13], l1 * t[4] + l2 * t[9] + l3 * t[14], l1 * t[5] + l2 * t[10] + l3 * t[15])
+                end
+            end
+        end
+    end
+    local copy = buffer.create(size * size * 4)
+    buffer.copy(copy, 0, map)
+    local around = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
+    for y = 0, size - 1 do
+        for x = 0, size - 1 do
+            local o = (y * size + x) * 4
+            if buffer.readu8(copy, o + 3) == 0 then
+                for _, d in around do
+                    local nx, ny = x + d[1], y + d[2]
+                    if nx &gt;= 0 and nx &lt; size and ny &gt;= 0 and ny &lt; size then
+                        local no = (ny * size + nx) * 4
+                        if buffer.readu8(copy, no + 3) == 255 then buffer.copy(map, o, copy, no, 4) break end
+                    end
+                end
+            end
+        end
+    end
+    return map
+end
+-- Quantile threshold (PatternGenes' rule): primaryShare (0..1, genes.blend/100) of the body pixels stay primary. hist[i+1] counts
+-- body pixels with mask quantised to i (0..254). Returns the mask level (0..1) above which a pixel takes the secondary colour.
+function Pattern.threshold(hist: {number}, count: number, primaryShare: number): number
+    local target = math.floor(count * math.clamp(primaryShare, 0, 1))
+    local cumulative = 0
+    for rank = 0, 254 do
+        cumulative += hist[rank + 1]
+        if cumulative &gt;= target then return (rank + 0.5) / 255 end
+    end
+    return 1
+end
+-- Full mask for one part: array of secondary-colour weights (0 primary .. 1 secondary, fractional only in a soft edge
+-- Pattern.Soft wide around the cut so facets do not show pixel stairs), computed only for pixels whose bodyWeight &gt; 0.
+-- weights: array (1-based, SIZE*SIZE) of body weights 0..1. Pure so the verifier can run it on a synthetic texture.
+-- onRow (optional) is called after every row so the runtime bake can yield (task.wait) and never stall a frame; pure tests pass nil.
+-- posmap (optional, from Pattern.rasterize): texels it covers use the 3D mask; others (and no map at all) use the UV mask.
+function Pattern.compute(id: string, seed: number, weights: {number}, primaryShare: number, same: boolean, onRow: ((number) -&gt; ())?, posmap: buffer?): {number}
+    local size = Pattern.Size
+    local n = size * size
+    local out = table.create(n, 0)
+    if id == "01_blank" or table.find(Pattern.Ids, id) == nil then return out end
+    local raw = table.create(n, 0)
+    local hist = table.create(255, 0)
+    local count = 0
+    for y = 0, size - 1 do
+        if onRow then onRow(y) end
+        for x = 0, size - 1 do
+            local i = y * size + x + 1
+            if weights[i] &gt; 0 then
+                local m
+                local o = (i - 1) * 4
+                if posmap and buffer.readu8(posmap, o + 3) == 255 then
+                    m = Pattern.mask3(id, buffer.readu8(posmap, o) / 127.5 - 1, buffer.readu8(posmap, o + 1) / 127.5 - 1, buffer.readu8(posmap, o + 2) / 127.5 - 1, seed)
+                else m = Pattern.mask(id, x, y, seed) end
+                m = math.clamp(m, 0, 1)
+                raw[i] = m
+                hist[math.floor(m * 254 + 0.5) + 1] += 1
+                count += 1
+            end
+        end
+    end
+    if count == 0 then return out end
+    local share = if same then 0.5 else primaryShare
+    local cut = Pattern.threshold(hist, count, share)
+    local soft = Pattern.Soft
+    for i = 1, n do
+        if weights[i] &gt; 0 then out[i] = math.clamp((raw[i] - cut) / soft + 0.5, 0, 1) end
+    end
+    return out
+end
+return Pattern
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">LowPolyPose</string>
           <ProtectedString name="Source">--!strict
@@ -374246,7 +374608,7 @@ return Pose
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX238">
         <Properties>
           <string name="Name">LowPolyRecolor</string>
           <ProtectedString name="Source">--!strict
@@ -374285,26 +374647,77 @@ end
 function Recolor.baseOf(speciesId: string): {number}
     return (Recolor.Base :: any)[speciesId] or DEFAULT_BASE
 end
+-- Cheap fallback (no EditableImage): a MeshPart.Color that multiplies the ORIGINAL species texture so its body reads as the
+-- gene colour. Eyes/claws (black) stay black; the cream belly takes a light tint. Used when the bake cache is full or far away.
+function Recolor.flatTint(base: {number}, tr: number, tg: number, tb: number): (number, number, number)
+    local function ch(t: number, b: number): number return math.clamp(t / math.max(b, 0.15), 0, 1) end
+    return ch(tr, base[1]), ch(tg, base[2]), ch(tb, base[3])
+end
 return Recolor
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">LowPolyTexture</string>
           <ProtectedString name="Source">--!strict
--- BD-225: builds a gene-coloured copy of a generated low-poly part texture (EditableImage, 256x256, cached per texture + colour).
--- Eyes (black) and belly (cream) pass through LowPolyRecolor untouched. Any failure (no permission, load error) returns nil and the
--- caller keeps the model's original texture, which still has its eyes and belly. Yields: call from task.spawn, never inline.
+-- BD-225 / BD-061: bakes a gene-coloured, gene-patterned (and fused-tier tinted) copy of a generated low-poly part texture
+-- as a 256x256 EditableImage. Pixel maths is pure (LowPolyRecolor, LowPolyPattern, LowPolyTier; tested offline); this module only
+-- owns the Roblox side: reading the source texture once, yielding bakes, and the image budget.
+-- Budget (BD-203): bakes live in a PatternAtlasCache (shared per key = texture + colours + pattern + blend + tier, reference counted,
+-- warm LRU, hard cap LowPolyTexture.Cap). A dino costs one image per part (7); identical genes share every image. When the cache is
+-- full, acquire returns nil and the caller uses the cheap fallback (original species texture tinted by MeshPart.Color).
+-- Any failure (no permission, load error) also returns nil: eyes/belly are always on screen because the original texture stays.
+-- Yields: call acquire from task.spawn, never inline.
 local AssetService = game:GetService("AssetService")
 local Recolor = require(script.Parent.LowPolyRecolor)
+local Pattern = require(script.Parent.LowPolyPattern)
+local Tier = require(script.Parent.LowPolyTier)
+local Cache = require(script.Parent.PatternAtlasCache)
 local Texture = {}
-local SIZE = 256
-local MAX_BAKED = 160
-local sources: {[string]: any} = {}   -- textureId -&gt; {buf = buffer} | "loading" | "failed"
-local baked: {[string]: any} = {}
-local bakedCount = 0
-local function source(textureId: string): any?
+local SIZE = Pattern.Size
+Texture.Cap = 24 -- low-poly bakes; PatternGenes keeps its own 30 for eggs/legacy (low-poly dinos replace legacy dinos on screen)
+local atlas = Cache.new(Texture.Cap, function(image) pcall(function() image:Destroy() end) end)
+local sources: {[string]: any} = {}   -- textureId -&gt; {buf = buffer, weights = {number}, pos = buffer?} | "loading" | "failed"
+local pending: {[string]: boolean} = {} -- bake keys in flight (a second part with the same key waits instead of baking twice)
+-- Geometry of the TEMPLATE part (unscaled, unposed) so the 3D pattern reads its model-space position: meshId, cframe relative to the
+-- model centre, scale = part.Size / part.MeshSize, norm = 1 / longest model side.
+export type Geom = {meshId: string, cframe: CFrame, scale: Vector3, norm: number}
+-- Rasterise the part's triangles into its UV space (EditableMesh, once per texture). nil on any failure: the UV-space pattern is used.
+local function positionMap(geom: Geom?): buffer?
+    if not geom or geom.meshId == "" then return nil end
+    local ok, map = pcall(function()
+        local mesh = AssetService:CreateEditableMeshAsync(Content.fromUri(geom.meshId))
+        local tris = {}
+        for _, face in mesh:GetFaces() do
+            local verts, uvs = mesh:GetFaceVertices(face), mesh:GetFaceUVs(face)
+            if #verts ~= 3 or #uvs ~= 3 then continue end
+            local t = {}
+            for i = 1, 3 do
+                local uv = mesh:GetUV(uvs[i])
+                local p = geom.cframe:PointToWorldSpace(mesh:GetPosition(verts[i]) * geom.scale) * geom.norm
+                table.insert(t, uv.X) table.insert(t, uv.Y)
+                table.insert(t, p.X) table.insert(t, p.Y) table.insert(t, p.Z)
+            end
+            table.insert(tris, t)
+        end
+        mesh:Destroy()
+        return Pattern.rasterize(tris)
+    end)
+    return if ok then map else nil
+end
+local partEntry = setmetatable({} :: {[Instance]: any}, {__mode = "k"})
+export type Spec = {primary: Color3, secondary: Color3, same: boolean, primaryShare: number, patternId: string, tier: string?, seedName: string}
+local function publish()
+    pcall(function()
+        local s = atlas:stats()
+        workspace:SetAttribute("LowPolyImagesLive", s.live) workspace:SetAttribute("LowPolyImagesPinned", s.pinned)
+        workspace:SetAttribute("LowPolyCacheHits", s.hits) workspace:SetAttribute("LowPolyCacheMisses", s.misses)
+        workspace:SetAttribute("LowPolyCacheDenied", s.denied)
+    end)
+end
+function Texture.stats() return atlas:stats() end
+local function source(textureId: string, geom: Geom?): any?
     local state = sources[textureId]
     while state == "loading" do task.wait(0.05) state = sources[textureId] end
     if state == "failed" then return nil end
@@ -374315,58 +374728,187 @@ local function source(textureId: string): any?
         local full = img.Size
         local raw = img:ReadPixelsBuffer(Vector2.zero, full)
         local small = buffer.create(SIZE * SIZE * 4)
+        local weights = table.create(SIZE * SIZE, 0)
         for y = 0, SIZE - 1 do
             local sy = math.min(full.Y - 1, math.floor((y + 0.5) * full.Y / SIZE))
             for x = 0, SIZE - 1 do
                 local sx = math.min(full.X - 1, math.floor((x + 0.5) * full.X / SIZE))
-                buffer.writeu32(small, (y * SIZE + x) * 4, buffer.readu32(raw, (sy * full.X + sx) * 4))
+                local o = (y * SIZE + x) * 4
+                buffer.writeu32(small, o, buffer.readu32(raw, (sy * full.X + sx) * 4))
+                weights[y * SIZE + x + 1] = Recolor.bodyWeight(buffer.readu8(small, o) / 255, buffer.readu8(small, o + 1) / 255, buffer.readu8(small, o + 2) / 255)
             end
+            if y % 32 == 31 then task.wait() end
         end
         img:Destroy()
-        return {buf = small}
+        -- the species' own body colour, measured from this texture (replaces a hand table: every generated species recolours)
+        local sr, sg, sb, sw = 0, 0, 0, 0
+        for i = 1, SIZE * SIZE do
+            local w = weights[i]
+            if w &gt; 0.5 then
+                local o = (i - 1) * 4
+                sr += buffer.readu8(small, o) / 255 * w sg += buffer.readu8(small, o + 1) / 255 * w sb += buffer.readu8(small, o + 2) / 255 * w sw += w
+            end
+        end
+        local base = if sw &gt; 50 then {sr / sw, sg / sw, sb / sw} else nil
+        return {buf = small, weights = weights, pos = positionMap(geom), base = base}
     end)
     sources[textureId] = if ok then result else "failed"
     return if ok then result else nil
 end
-function Texture.key(textureId: string, c: Color3): string
-    return string.format("%s|%d,%d,%d", textureId, math.floor(c.R * 15 + 0.5), math.floor(c.G * 15 + 0.5), math.floor(c.B * 15 + 0.5))
+local function q(c: Color3): string
+    return string.format("%d,%d,%d", math.floor(c.R * 31 + 0.5), math.floor(c.G * 31 + 0.5), math.floor(c.B * 31 + 0.5))
 end
-function Texture.bake(textureId: string, speciesId: string, color: Color3): Content?
-    local key = Texture.key(textureId, color)
-    local hit = baked[key]
-    if hit then return Content.fromObject(hit) end
-    if bakedCount &gt;= MAX_BAKED then return nil end
-    local src = source(textureId)
-    if not src then return nil end
-    hit = baked[key]
-    if hit then return Content.fromObject(hit) end
-    local ok, image = pcall(function()
-        local out = buffer.create(SIZE * SIZE * 4)
-        local base = Recolor.baseOf(speciesId)
-        local tr, tg, tb = color.R, color.G, color.B
-        for i = 0, SIZE * SIZE - 1 do
+-- Stable cache key: everything that changes the pixels. Pure (tested): same spec -&gt; same key, any change -&gt; a different key.
+function Texture.key(textureId: string, spec: Spec): string
+    return string.format("%s|%s|%s|%s|%s|%d|%s", textureId, spec.patternId, q(spec.primary), q(spec.secondary), if spec.same then "s" else "d",
+        math.floor(math.clamp(spec.primaryShare, 0, 1) * 20 + 0.5), spec.tier or "base")
+end
+-- Pure pixel pass (shared with the verifier through LowPolyRecolor/LowPolyPattern/LowPolyTier): writes the baked RGBA into out.
+function Texture.paint(src: buffer, weights: {number}, mask: {number}, spec: Spec, base: {number}, out: buffer, onRow: ((number) -&gt; ())?)
+    local a, b = spec.primary, spec.secondary
+    local ar, ag, ab, br, bg, bb = a.R, a.G, a.B, b.R, b.G, b.B
+    if spec.same then -- same-family genes: pattern regions read as a lighter / darker version of the one colour (PatternGenes rule)
+        ar, ag, ab = ar * 0.86, ag * 0.86, ab * 0.86
+        br, bg, bb = math.min(1, br * 1.08 + 0.05), math.min(1, bg * 1.08 + 0.05), math.min(1, bb * 1.08 + 0.05)
+    end
+    local tier = Tier.get(spec.tier)
+    for y = 0, SIZE - 1 do
+        if onRow then onRow(y) end
+        for x = 0, SIZE - 1 do
+            local i = y * SIZE + x
             local o = i * 4
-            local r, g, b = buffer.readu8(src.buf, o) / 255, buffer.readu8(src.buf, o + 1) / 255, buffer.readu8(src.buf, o + 2) / 255
-            r, g, b = Recolor.pixel(r, g, b, tr, tg, tb, base)
+            local r, g, bl = buffer.readu8(src, o) / 255, buffer.readu8(src, o + 1) / 255, buffer.readu8(src, o + 2) / 255
+            if weights[i + 1] &gt; 0 then
+                local m = mask[i + 1]
+                local tr, tg, tb = ar + (br - ar) * m, ag + (bg - ag) * m, ab + (bb - ab) * m
+                if tier then tr, tg, tb = Tier.blend(tr, tg, tb, tier, m &gt;= 0.5) end
+                r, g, bl = Recolor.pixel(r, g, bl, tr, tg, tb, base)
+            end
             buffer.writeu8(out, o, math.floor(r * 255 + 0.5))
             buffer.writeu8(out, o + 1, math.floor(g * 255 + 0.5))
-            buffer.writeu8(out, o + 2, math.floor(b * 255 + 0.5))
+            buffer.writeu8(out, o + 2, math.floor(bl * 255 + 0.5))
             buffer.writeu8(out, o + 3, 255)
         end
+    end
+end
+local function yielder(): (number) -&gt; ()
+    return function(y) if y % 24 == 23 then task.wait() end end
+end
+function Texture.release(part: Instance)
+    local entry = partEntry[part]
+    if not entry then return end
+    partEntry[part] = nil
+    atlas:release(entry)
+    publish()
+end
+local hooked = setmetatable({} :: {[Instance]: boolean}, {__mode = "k"})
+local function pin(part: Instance, entry): Content
+    Texture.release(part)
+    partEntry[part] = entry
+    if not hooked[part] then hooked[part] = true part.Destroying:Once(function() Texture.release(part) end) end
+    publish()
+    return Content.fromObject(entry.image)
+end
+-- Content for `part` (pinned to it until release/Destroying) or nil (cache full / failed / no permission): caller keeps a fallback.
+function Texture.acquire(part: Instance, textureId: string, speciesId: string, spec: Spec, geom: Geom?): Content?
+    local key = Texture.key(textureId, spec)
+    local current = partEntry[part]
+    if current and current.key == key then return Content.fromObject(current.image) end
+    while pending[key] do task.wait(0.1) end
+    local entry = atlas:acquire(key)
+    if entry then return pin(part, entry) end
+    if atlas:free() &lt;= 0 then atlas.denied += 1 publish() return nil end
+    pending[key] = true
+    local src = source(textureId, geom)
+    if not src then pending[key] = nil return nil end
+    local okMask, mask = pcall(Pattern.compute, spec.patternId, Pattern.seed(spec.seedName), src.weights, spec.primaryShare, spec.same, yielder(), src.pos)
+    if not okMask then mask = table.create(SIZE * SIZE, 0) end -- pattern failure: plain colours, never nothing
+    local ok, image = pcall(function()
+        local out = buffer.create(SIZE * SIZE * 4)
+        Texture.paint(src.buf, src.weights, mask, spec, src.base or Recolor.baseOf(speciesId), out, yielder())
+        if not atlas:reserve() then return nil end
         local img = AssetService:CreateEditableImage({Size = Vector2.new(SIZE, SIZE)})
         img:WritePixelsBuffer(Vector2.zero, Vector2.new(SIZE, SIZE), out)
         return img
     end)
-    if not ok then return nil end
-    baked[key] = image
-    bakedCount += 1
-    return Content.fromObject(image)
+    pending[key] = nil
+    if not ok or not image then publish() return nil end
+    entry = atlas:insert(key, image)
+    return pin(part, entry)
+end
+-- Measured body colour of a loaded texture (nil until loaded): the cheap tint fallback divides by it.
+function Texture.baseOf(textureId: string): {number}?
+    local s = sources[textureId]
+    return if type(s) == "table" then s.base else nil
+end
+function Texture.hasPositions(textureId: string): boolean?
+    local s = sources[textureId]
+    return if type(s) == "table" then s.pos ~= nil else nil
 end
 return Texture
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX240">
+        <Properties>
+          <string name="Name">LowPolyTier</string>
+          <ProtectedString name="Source">--!strict
+-- BD-061 / BD-173: the ONE look table for fused tiers (Gold, Emerald, Diamond) on the low-poly dinos. Pure data + maths
+-- (no Roblox types; tools/verify_lowpoly_patterns.py) plus one small applier. docs/46: a tier is an ADDITIVE material
+-- mask over the NEW output's own genes: the gene colours and pattern stay dominant (tint pull capped like MutationLook),
+-- eyes/claws/belly are untouched, and only fused tiers get gloss/metal (base dinos stay matte Plastic, docs/87).
+-- Kid-friendly, not garish: one soft sparkle emitter on the body (existing fx3 sparkle sheet WITH alpha), low rate, no Neon.
+local Tier = {}
+export type Entry = {
+    id: string, name: string,
+    tint: {number},        -- 0..255 colour the BODY pixels are pulled toward (belly/eyes never)
+    amount: number,        -- 0..1 pull on primary-colour pixels
+    trimAmount: number,    -- 0..1 pull on the pattern (secondary-colour) pixels: the "selective trim" of docs/46
+    material: string,      -- Enum.Material name for body-colour parts
+    reflectance: number,   -- 0..0.3
+    sparkle: {number},     -- sparkle colour
+    sparkleRate: number,   -- particles per second on the body part (0 = none)
+}
+Tier.Order = {"gold", "emerald", "diamond"}
+Tier.MaxAmount = 0.8
+Tier.MaxReflectance = 0.3
+Tier.Entries = {
+    gold = {id = "gold", name = "Gold", tint = {255, 206, 92}, amount = 0.22, trimAmount = 0.75, material = "Metal", reflectance = 0.14,
+        sparkle = {255, 230, 150}, sparkleRate = 1.5},
+    emerald = {id = "emerald", name = "Emerald", tint = {60, 220, 140}, amount = 0.20, trimAmount = 0.75, material = "Glass", reflectance = 0.10,
+        sparkle = {170, 255, 205}, sparkleRate = 2},
+    diamond = {id = "diamond", name = "Diamond", tint = {215, 244, 255}, amount = 0.26, trimAmount = 0.70, material = "Glass", reflectance = 0.22,
+        sparkle = {235, 250, 255}, sparkleRate = 3},
+}
+-- Accepts the stage strings used around the codebase ("gold", "emerald", "diamond", true = gold). "base"/nil/false -&gt; nil.
+function Tier.get(stage: any): Entry?
+    if stage == true then stage = "gold" end
+    if type(stage) ~= "string" then return nil end
+    return (Tier.Entries :: any)[stage]
+end
+-- Pure: pull a 0..1 colour toward the tier tint. secondary=true is the pattern trim (strong pull: the pattern becomes the gem /
+-- metal). The result keeps at least the colour's own saturation, so complementary mixes (pink toward emerald) never turn grey.
+function Tier.blend(r: number, g: number, b: number, entry: Entry, secondary: boolean): (number, number, number)
+    local a = math.clamp(if secondary then entry.trimAmount else entry.amount, 0, Tier.MaxAmount)
+    local t = entry.tint
+    local nr, ng, nb = r + (t[1] / 255 - r) * a, g + (t[2] / 255 - g) * a, b + (t[3] / 255 - b) * a
+    local mx, mn = math.max(r, g, b), math.min(r, g, b)
+    local sat = if mx &gt; 0 then (mx - mn) / mx else 0
+    local nmx, nmn = math.max(nr, ng, nb), math.min(nr, ng, nb)
+    local nsat = if nmx &gt; 0 then (nmx - nmn) / nmx else 0
+    local want = math.min(sat, 0.85)
+    if nsat &lt; want and nmx &gt; 0 then -- re-saturate around the new max channel
+        local k = (1 - want) * nmx
+        local scale = (nmx - k) / math.max(nmx - nmn, 1e-6)
+        nr, ng, nb = k + (nr - nmn) * scale, k + (ng - nmn) * scale, k + (nb - nmn) * scale
+    end
+    return math.clamp(nr, 0, 1), math.clamp(ng, 0, 1), math.clamp(nb, 0, 1)
+end
+return Tier
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">MeshSanity</string>
           <ProtectedString name="Source">--!strict
@@ -374410,7 +374952,7 @@ return Sanity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">ModelPreview</string>
           <ProtectedString name="Source">--!strict
@@ -374471,7 +375013,7 @@ return ModelPreview
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">MovementEnvelope</string>
           <ProtectedString name="Source">--!strict
@@ -374524,7 +375066,7 @@ return MovementEnvelope
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">MutationEffects</string>
           <ProtectedString name="Source">-- Standalone client adapter. Upload BeDino_Soft_Smoke_256.png first.
@@ -374606,7 +375148,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">MutationLook</string>
           <ProtectedString name="Source">--!strict
@@ -374694,7 +375236,7 @@ return Look
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">MyDinos</string>
           <ProtectedString name="Source">--!strict
@@ -374873,7 +375415,7 @@ return M
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">NavigationArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -374891,7 +375433,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">NestQueue</string>
           <ProtectedString name="Source">--!strict
@@ -374963,7 +375505,7 @@ return NestQueue
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">NextGoal</string>
           <ProtectedString name="Source">--!strict
@@ -375044,7 +375586,7 @@ return NextGoal
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">NotifyQueue</string>
           <ProtectedString name="Source">--!strict
@@ -375258,7 +375800,7 @@ return Q
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">OddsCopy</string>
           <ProtectedString name="Source">--!strict
@@ -375330,6 +375872,30 @@ function Copy.hatchGroup(level: number)
         "A cracked egg gives no dino and no crystals back.")
 end
 
+-- BD-301: ONE sentence for the Buy Egg confirm, built from the same numbers as the "Does it hatch?" group above.
+function Copy.hatchSentence(level: number): string
+    local percent = Copy.hatchGroup(level).rows[1].percent
+    return string.format("%s of every 100 eggs hatch a dino. A cracked egg gives nothing back.", string.format("%g", percent))
+end
+
+-- BD-303: plain words for the condition upgrade. requiredLevel is the player level the server demands (ProgressionRules).
+function Copy.upgradeUnlock(requiredLevel: number?, playerLevel: number): string
+    if requiredLevel == nil then return "Top level reached" end
+    if playerLevel &gt;= requiredLevel then return "Ready to buy!" end
+    return "Reach level " .. requiredLevel .. " to buy this."
+end
+
+-- BD-303: the condition whose chance grows the most when going from oldLevel to newLevel (its egg is shown on the confirm).
+function Copy.biggestGain(oldLevel: number, newLevel: number): string
+    local old, new = ShopOdds.conditionPercents(oldLevel), ShopOdds.conditionPercents(newLevel)
+    local bestId, best = Progression.Conditions[1].id, -math.huge
+    for i, row in Progression.Conditions do
+        local gain = new[i] - old[i]
+        if gain &gt; best then bestId, best = row.id, gain end
+    end
+    return bestId
+end
+
 -- Egg shop: groups in reading order.
 function Copy.eggGroups(level: number)
     return {Copy.hatchGroup(level), Copy.speciesGroup(), Copy.conditionGroup(level)}
@@ -375351,7 +375917,7 @@ return Copy
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX252">
         <Properties>
           <string name="Name">PatternAtlasCache</string>
           <ProtectedString name="Source">--!strict
@@ -375437,7 +376003,7 @@ return Cache
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX251">
+      <Item class="ModuleScript" referent="RBX253">
         <Properties>
           <string name="Name">PatternGenes</string>
           <ProtectedString name="Source">--!strict
@@ -375657,7 +376223,7 @@ return Pattern
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX252">
+      <Item class="ModuleScript" referent="RBX254">
         <Properties>
           <string name="Name">PotionArt</string>
           <ProtectedString name="Source">--!strict
@@ -375843,7 +376409,7 @@ return PotionArt
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX253">
+      <Item class="ModuleScript" referent="RBX255">
         <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
@@ -375937,7 +376503,7 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX254">
+      <Item class="ModuleScript" referent="RBX256">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -376066,7 +376632,7 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX255">
+      <Item class="ModuleScript" referent="RBX257">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -376303,7 +376869,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX256">
+      <Item class="ModuleScript" referent="RBX258">
         <Properties>
           <string name="Name">RarityCurve</string>
           <ProtectedString name="Source">--!strict
@@ -376374,7 +376940,7 @@ return table.freeze(Curve)
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX257">
+      <Item class="ModuleScript" referent="RBX259">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -376383,7 +376949,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX258">
+      <Item class="ModuleScript" referent="RBX260">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -376399,7 +376965,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX259">
+      <Item class="ModuleScript" referent="RBX261">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -376470,7 +377036,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX260">
+      <Item class="ModuleScript" referent="RBX262">
         <Properties>
           <string name="Name">RevealSkip</string>
           <ProtectedString name="Source">--!strict
@@ -376554,7 +377120,7 @@ return Skip
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX261">
+      <Item class="ModuleScript" referent="RBX263">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -376646,7 +377212,7 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX262">
+      <Item class="ModuleScript" referent="RBX264">
         <Properties>
           <string name="Name">SettingsModel</string>
           <ProtectedString name="Source">--!strict
@@ -376766,7 +377332,7 @@ return Model
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX263">
+      <Item class="ModuleScript" referent="RBX265">
         <Properties>
           <string name="Name">Sfx</string>
           <ProtectedString name="Source">--!strict
@@ -376913,7 +377479,7 @@ return Sfx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX264">
+      <Item class="ModuleScript" referent="RBX266">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -376961,7 +377527,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX265">
+      <Item class="ModuleScript" referent="RBX267">
         <Properties>
           <string name="Name">ShopCardState</string>
           <ProtectedString name="Source">--!strict
@@ -376999,7 +377565,7 @@ return State
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX266">
+      <Item class="ModuleScript" referent="RBX268">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -377048,7 +377614,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX267">
+      <Item class="ModuleScript" referent="RBX269">
         <Properties>
           <string name="Name">SpawnGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -377102,7 +377668,7 @@ return SpawnGeometry
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX268">
+      <Item class="ModuleScript" referent="RBX270">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -377304,7 +377870,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX269">
+      <Item class="ModuleScript" referent="RBX271">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -377336,7 +377902,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX270">
+      <Item class="ModuleScript" referent="RBX272">
         <Properties>
           <string name="Name">UIFormat</string>
           <ProtectedString name="Source">--!strict
@@ -377380,7 +377946,7 @@ return UIFormat
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX271">
+      <Item class="ModuleScript" referent="RBX273">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -377411,7 +377977,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX272">
+      <Item class="ModuleScript" referent="RBX274">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -377435,7 +378001,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX273">
+      <Item class="ModuleScript" referent="RBX275">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -377609,7 +378175,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX274">
+      <Item class="ModuleScript" referent="RBX276">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -377640,7 +378206,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX275">
+      <Item class="ModuleScript" referent="RBX277">
         <Properties>
           <string name="Name">WeatherLooks</string>
           <ProtectedString name="Source">--!strict
@@ -377772,7 +378338,7 @@ return Weather
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX276">
+      <Item class="ModuleScript" referent="RBX278">
         <Properties>
           <string name="Name">WeatherSounds</string>
           <ProtectedString name="Source">--!strict
@@ -377847,7 +378413,7 @@ return Sounds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX277">
+      <Item class="ModuleScript" referent="RBX279">
         <Properties>
           <string name="Name">WorldGeneratedMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -377905,7 +378471,7 @@ return Generated
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX278">
+      <Item class="ModuleScript" referent="RBX280">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -377956,7 +378522,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX279">
+      <Item class="ModuleScript" referent="RBX281">
         <Properties>
           <string name="Name">WorldKitMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -378009,7 +378575,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX280">
+    <Item class="Folder" referent="RBX282">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -547564,15 +548130,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX281">
+  <Item class="ServerScriptService" referent="RBX283">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX282">
+    <Item class="Folder" referent="RBX284">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX283">
+      <Item class="ModuleScript" referent="RBX285">
         <Properties>
           <string name="Name">AdminService</string>
           <ProtectedString name="Source">--!strict
@@ -547686,7 +548252,7 @@ return AdminService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX284">
+      <Item class="ModuleScript" referent="RBX286">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -548003,7 +548569,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX285">
+      <Item class="Script" referent="RBX287">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -548176,7 +548742,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX286">
+      <Item class="ModuleScript" referent="RBX288">
         <Properties>
           <string name="Name">CaveLighting</string>
           <ProtectedString name="Source">--!strict
@@ -548290,7 +548856,7 @@ return CaveLighting
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX287">
+      <Item class="ModuleScript" referent="RBX289">
         <Properties>
           <string name="Name">CaveTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -548349,7 +548915,7 @@ return CaveTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX288">
+      <Item class="ModuleScript" referent="RBX290">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -548469,7 +549035,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX289">
+      <Item class="ModuleScript" referent="RBX291">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -548562,7 +549128,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX290">
+      <Item class="ModuleScript" referent="RBX292">
         <Properties>
           <string name="Name">CombatService</string>
           <ProtectedString name="Source">--!strict
@@ -548757,7 +549323,7 @@ return CombatService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX291">
+      <Item class="ModuleScript" referent="RBX293">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -548814,7 +549380,7 @@ function Dinosaur.refreshForPlayer(character: Model, player: Player)
     local speciesId = if typeof(equipped) == "string" then equipped else "compy"
     local ok, collection = pcall(function() return game:GetService("HttpService"):JSONDecode(player:GetAttribute("CollectionJson") or "{}") end)
     local entry = if ok then collection[speciesId] else nil
-    local mutation = if entry and (entry.diamond or 0) &gt; 0 then "diamond" elseif entry and (entry.gold or 0) &gt; 0 then "gold" else "base"
+    local mutation = if entry and (entry.diamond or 0) &gt; 0 then "diamond" elseif entry and (entry.emerald or 0) &gt; 0 then "emerald" elseif entry and (entry.gold or 0) &gt; 0 then "gold" else "base"
     if player:GetAttribute("EquippedGenesJson") and player:GetAttribute("EquippedGenesJson")~="null" then mutation="base" end
     -- Genes first so the client repaint triggered by SpeciesId/MutationVisual already sees the new equip.
     character:SetAttribute("GenesJson", player:GetAttribute("EquippedGenesJson") or "null")
@@ -548893,7 +549459,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX292">
+      <Item class="ModuleScript" referent="RBX294">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -549107,7 +549673,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX293">
+      <Item class="ModuleScript" referent="RBX295">
         <Properties>
           <string name="Name">FallRecovery</string>
           <ProtectedString name="Source">--!strict
@@ -549173,7 +549739,7 @@ return FallRecovery
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX294">
+      <Item class="ModuleScript" referent="RBX296">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -549444,7 +550010,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX295">
+      <Item class="ModuleScript" referent="RBX297">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -549616,7 +550182,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX296">
+      <Item class="ModuleScript" referent="RBX298">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -549802,7 +550368,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX297">
+      <Item class="ModuleScript" referent="RBX299">
         <Properties>
           <string name="Name">HubGateService</string>
           <ProtectedString name="Source">--!strict
@@ -549911,7 +550477,7 @@ return HubGateService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX298">
+      <Item class="ModuleScript" referent="RBX300">
         <Properties>
           <string name="Name">HubTravelService</string>
           <ProtectedString name="Source">--!strict
@@ -549995,7 +550561,7 @@ return HubTravelService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX299">
+      <Item class="ModuleScript" referent="RBX301">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -550392,7 +550958,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX300">
+      <Item class="ModuleScript" referent="RBX302">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -550513,7 +551079,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX301">
+      <Item class="ModuleScript" referent="RBX303">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -550593,7 +551159,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX302">
+      <Item class="ModuleScript" referent="RBX304">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -550713,7 +551279,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX303">
+      <Item class="ModuleScript" referent="RBX305">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -550852,7 +551418,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX304">
+      <Item class="ModuleScript" referent="RBX306">
         <Properties>
           <string name="Name">LowPolyDinoLoader</string>
           <ProtectedString name="Source">--!strict
@@ -550905,7 +551471,7 @@ return Loader
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX305">
+      <Item class="ModuleScript" referent="RBX307">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -551010,7 +551576,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX306">
+      <Item class="ModuleScript" referent="RBX308">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -551115,7 +551681,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX307">
+      <Item class="ModuleScript" referent="RBX309">
         <Properties>
           <string name="Name">PotionModels</string>
           <ProtectedString name="Source">--!strict
@@ -551167,7 +551733,7 @@ return Models
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX308">
+      <Item class="ModuleScript" referent="RBX310">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -551304,7 +551870,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX309">
+      <Item class="ModuleScript" referent="RBX311">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -553126,7 +553692,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX310">
+      <Item class="ModuleScript" referent="RBX312">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -553344,7 +553910,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX311">
+      <Item class="ModuleScript" referent="RBX313">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -553458,7 +554024,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX312">
+      <Item class="ModuleScript" referent="RBX314">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -553754,7 +554320,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX313">
+      <Item class="ModuleScript" referent="RBX315">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -553826,19 +554392,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX314">
+  <Item class="StarterPlayer" referent="RBX316">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX315">
+    <Item class="StarterPlayerScripts" referent="RBX317">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX316">
+      <Item class="Folder" referent="RBX318">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX317">
+        <Item class="LocalScript" referent="RBX319">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -554078,6 +554644,16 @@ local function setOpen(open: boolean)
     toggle.BackgroundColor3 = if open then C.gold else C.purple
 end
 toggle.Activated:Connect(function() setOpen(not panel.Visible) end)
+-- BD-304: the Admin button sat on top of every menu's corner. Hide it while a game menu is open (unless the panel itself is open).
+task.spawn(function()
+    local main = player:WaitForChild("PlayerGui"):WaitForChild("BeDinoUI", 30)
+    local scrim = main and main:WaitForChild("ModalScrim", 30)
+    if not scrim or not scrim:IsA("GuiObject") then return end
+    local function sync() toggle.Visible = panel.Visible or not scrim.Visible end
+    scrim:GetPropertyChangedSignal("Visible"):Connect(sync)
+    panel:GetPropertyChangedSignal("Visible"):Connect(sync)
+    sync()
+end)
 UserInputService.InputBegan:Connect(function(input, processed)
     if not processed and input.KeyCode == Enum.KeyCode.F2 then setOpen(not panel.Visible) end
 end)
@@ -554087,7 +554663,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX318">
+        <Item class="LocalScript" referent="RBX320">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -554283,7 +554859,11 @@ drawToasts=function()
             local color=(entry.tint and Theme.RarityColors[entry.tint]) or toastKindColor[entry.kind] or C.blue
             slot.bar.BackgroundColor3,slot.plate.BackgroundColor3=color,C.panel:Lerp(color,.35)
             slot.title.Text,slot.detail.Text=entry.text,entry.body or ""
-            slot.title.Size=UDim2.fromOffset(330,if entry.body then 30 else 50)
+            slot.plate.Visible=entry.icon~=nil -- BD-304: no empty icon box
+            local textX=if entry.icon then 68 else 22
+            slot.title.Position,slot.detail.Position=UDim2.fromOffset(textX,if entry.body then 3 else 3),UDim2.fromOffset(textX,30)
+            slot.title.Size=UDim2.fromOffset(398-textX,if entry.body then 30 else 50)
+            slot.detail.Size=UDim2.fromOffset(398-textX,22)
             slot.count.Text=if entry.count&gt;1 and not entry.amount then "x"..entry.count else ""
             local target=UDim2.fromOffset(0,(i-1)*62)
             if slot.seq~=entry.seq then
@@ -554308,7 +554888,8 @@ local function pumpToasts()
     local panelRight=player:GetAttribute("AdminPanelRight") or 0
     local half,halfCard=gui.AbsoluteSize.X/2,220*toastScale.Scale
     local shift=if panelRight&gt;0 then math.clamp(panelRight+12+halfCard-half,0,math.max(0,half-halfCard)) else 0
-    if toastLayer.Position.X.Offset~=shift then toastLayer.Position=UDim2.new(.5,shift,0,80) end
+    local topY=if shade.Visible then 4 else 80 -- BD-304: with a menu open the toast rides the very top, clear of the menu title
+    if toastLayer.Position.X.Offset~=shift or toastLayer.Position.Y.Offset~=topY then toastLayer.Position=UDim2.new(.5,shift,0,topY) end
     if NotifyQueue.update(notifyQueue,os.clock(),shade.Visible) then drawToasts() end
 end
 -- Existing call sites keep notify(text,color); opts adds {kind,key,icon,body,tint,amount,format}.
@@ -554588,7 +555169,7 @@ render=function(name: string)
                 label(body,string.format("%g%%",weights[i]),x,cardsY+176,155,34,24,C.blue)
             end
             button(body,if upgrade then "UPGRADE: "..upgrade.price.." CRYSTALS" else "MAX LEVEL",142,cardsY+220,540,targetHeight,C.accent,function() if upgrade then open("conditionConfirm") end end).TextSize=20
-            label(body,if upgrade then "Unlocks at level "..upgrade.requiredLevel else "Top level reached",0,cardsY+220+targetHeight+6,824,30,19,C.gold)
+            label(body,require(Shared.OddsCopy).upgradeUnlock(if upgrade then upgrade.requiredLevel else nil,num("AccountLevel")),0,cardsY+220+targetHeight+6,824,30,19,C.gold)
             return
         elseif cosmeticTab=="crystals" then
             -- BD-179: one card per pack in a 3-wide grid (same card look as the potion shop). Prices load from the marketplace.
@@ -554612,7 +555193,7 @@ render=function(name: string)
                     label(card,tostring(product.amount),92,6,166,44,32,C.gold)
                     label(card,"Crystals",92,48,166,26,19)
                     local tag=label(card,"",92,74,166,20,15,C.accent) tag.Visible=false
-                    local b=button(card,"...",8,100,248,38,C.gold:Lerp(C.panel,.35),function() end)
+                    local b=button(card,if Config.CrystalPacksEnabled then "..." else "Coming soon",8,100,248,38,C.gold:Lerp(C.panel,.35),function() end)
                     b.TextSize=19 b.Active=false
                     cards[i]={button=b,tag=tag}
                 end
@@ -554630,7 +555211,7 @@ render=function(name: string)
                         if price and Config.CrystalPacksEnabled==true then
                             c.button.Text="R$ "..price c.button.Active=true c.button.BackgroundColor3=C.gold:Lerp(C.panel,.1)
                             c.button.Activated:Connect(function() Marketplace:PromptProductPurchase(player,product.id) end)
-                        else c.button.Text=if price then "Soon" else "Not ready" end
+                        else c.button.Text=if price and not Config.CrystalPacksEnabled then "R$ "..price.."  Coming soon" else "Coming soon" end
                         if price and baseRate and i&gt;1 then
                             local bonus=math.floor((product.amount/price/baseRate-1)*100+.5)
                             if bonus&gt;=1 then c.tag.Text="+"..bonus.."% extra" c.tag.Visible=true end
@@ -554713,9 +555294,16 @@ render=function(name: string)
         local isEgg=name=="eggPurchase"
         heading.Text,header.BackgroundColor3=if isEgg then "Buy Random Egg?" else "Upgrade Conditions?",C.gold
         local price=if isEgg then ProgressionConfig.RandomEggPrice elseif upgrade then upgrade.price else 0
-        art(body,"egg",20,15,200)
+        local OddsCopy=require(Shared.OddsCopy)
+        if isEgg or not upgrade then art(body,"egg",20,15,200)
+        else -- BD-303: show the egg whose chance grows most, not a plain egg
+            local tile=box(body,20,15,200,175,Color3.fromRGB(122,148,112):Lerp(C.panel,.25),24)
+            local view=ModelPreview.add(tile,"egg")
+            view:SetAttribute("InspectZoom",1.6)
+            EggAppearance.apply(view,EggGenetics.neutral(OddsCopy.biggestGain(upgrade.level-1,upgrade.level)),true)
+        end
         label(body,price.." Crystals\nBalance after: "..(num("Crystals")-price),260,10,550,80,27,C.gold)
-        label(body,if isEgg then "Cracked: 20% hatch success. A failed hatch gives no dinosaur or refund. Queue-full purchases are not charged." else "Unlocks at level "..(if upgrade then upgrade.requiredLevel else 60)..". New eggs only.",260,105,550,95,23)
+        label(body,if isEgg then OddsCopy.hatchSentence(p.conditionLevel or 0) else OddsCopy.upgradeUnlock(if upgrade then upgrade.requiredLevel else nil,num("AccountLevel"))..(if upgrade then " Only new eggs get better chances." else ""),260,105,550,95,23)
         if not isEgg and upgrade then
             local parts={} local newOdds=ShopOdds.conditionPercents(upgrade.level) for i,row in ProgressionConfig.Conditions do table.insert(parts,row.name.." "..string.format("%g",newOdds[i]).."%") end
             label(body,table.concat(parts," • "),0,213,824,60,21,C.blue)
@@ -554874,7 +555462,7 @@ render=function(name: string)
         for _,tick in progress.ticks do
             if tick.fraction&lt;1 then
                 local mark=Instance.new("Frame") mark.Name,mark.BorderSizePixel,mark.ZIndex,mark.Parent="IndexMilestone",0,body.ZIndex+8,body
-                mark.Size,mark.Position=UDim2.fromOffset(4,34),UDim2.fromOffset(math.floor(meterWidth*tick.fraction)-2,356)
+                mark.Size,mark.Position=UDim2.fromOffset(4,8),UDim2.fromOffset(math.floor(meterWidth*tick.fraction)-2,388) -- BD-300: below the bar, never over its text
                 mark.BackgroundColor3=if tick.reached then C.gold else C.text
                 mark.BackgroundTransparency=if tick.reached then 0 else .35
             end
@@ -555125,19 +555713,19 @@ render=function(name: string)
         -- BD-263 Settings v2: tabs Sound / Look / Controls / Help are drawn by SettingsMenu; Help (guides, auto-open) stays here. Body is 824 x 402.
         local tab=require(script.Parent.SettingsMenu).build(body,{label=label,button=button,open=open,notify=notify,cameraReset=function() player.CameraMaxZoomDistance=Config.CameraMaxZoom end})
         if tab=="help" then
-        button(body,"HOW TO PLAY",0,64,400,52,C.gold,function() open("tutorial") end)
-        button(body,"FOOD GUIDE",424,64,400,52,C.accent,function() open("food") end)
-        label(body,"Auto-open",0,312,170,52,24).TextXAlignment=Enum.TextXAlignment.Left
+        button(body,"HOW TO PLAY",0,70,400,76,C.gold,function() open("tutorial") end).TextSize=26
+        button(body,"FOOD GUIDE",424,70,400,76,C.accent,function() open("food") end).TextSize=26
+        label(body,"Auto-open eggs",0,172,824,40,28).TextXAlignment=Enum.TextXAlignment.Left
         local locked=EggsLogic.locked(Config.AutoOpenRequiresPass,ownsAutoOpen())
         local chosen=RevealSkip.set(autoOpenSelection())
         for i,rarityName in RevealSkip.Names do
-            -- Five rarities: name on top, state below; rarity colour while shown, dark while skipped.
-            button(body,rarityName.."\n"..(if locked then "LOCKED" elseif chosen[i] then "AUTO" else "SHOW"),176+(i-1)*130,312,124,52,if chosen[i] then C.card else rarityColors[i],function()
+            -- BD-304: five big buttons, 22 px text (about 16 px on a small screen): name on top, state below.
+            button(body,rarityName.."\n"..(if locked then "LOCKED" elseif chosen[i] then "AUTO" else "SHOW"),(i-1)*168,222,158,math.max(76,45/viewportScale()),if chosen[i] then C.card else rarityColors[i],function()
                 if locked then notify("Auto-open needs a pass",C.gold) return end
                 setSkipRemote:FireServer(RevealSkip.toggle(decoded("RevealSkipJson","[]"),i))
-            end).TextSize=16
+            end).TextSize=22
         end
-        label(body,"Shiny, BIG and special eggs always show. Auto-opened eggs are still saved!",0,370,824,30,18)
+        label(body,"Shiny, BIG and special eggs always show. Auto-opened eggs are still saved!",0,324,824,60,20)
         end
     elseif name=="food" then
         heading.Text,header.BackgroundColor3="Food &amp; Growth",C.accent
@@ -555673,7 +556261,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX319">
+        <Item class="LocalScript" referent="RBX321">
           <Properties>
             <string name="Name">CameraOcclusion</string>
             <ProtectedString name="Source">--!strict
@@ -555778,7 +556366,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX320">
+        <Item class="ModuleScript" referent="RBX322">
           <Properties>
             <string name="Name">CaveAtmosphere</string>
             <ProtectedString name="Source">--!strict
@@ -555910,7 +556498,7 @@ return Cave
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX321">
+        <Item class="ModuleScript" referent="RBX323">
           <Properties>
             <string name="Name">CombatHud</string>
             <ProtectedString name="Source">--!strict
@@ -556142,7 +556730,7 @@ return Hud
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX322">
+        <Item class="LocalScript" referent="RBX324">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!nonstrict
@@ -556234,7 +556822,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX323">
+        <Item class="ModuleScript" referent="RBX325">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -556313,7 +556901,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX324">
+        <Item class="ModuleScript" referent="RBX326">
           <Properties>
             <string name="Name">DinoIndexPanels</string>
             <ProtectedString name="Source">--!strict
@@ -556849,7 +557437,7 @@ return Panels
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX325">
+        <Item class="LocalScript" referent="RBX327">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -557179,7 +557767,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX326">
+        <Item class="ModuleScript" referent="RBX328">
           <Properties>
             <string name="Name">EggPicture</string>
             <ProtectedString name="Source">--!strict
@@ -557256,7 +557844,7 @@ return EggPicture
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX327">
+        <Item class="ModuleScript" referent="RBX329">
           <Properties>
             <string name="Name">EggsScreen</string>
             <ProtectedString name="Source">--!strict
@@ -557452,7 +558040,7 @@ return EggsScreen
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX328">
+        <Item class="LocalScript" referent="RBX330">
           <Properties>
             <string name="Name">FoodGlow</string>
             <ProtectedString name="Source">--!strict
@@ -557678,7 +558266,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX329">
+        <Item class="ModuleScript" referent="RBX331">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -558616,7 +559204,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX330">
+        <Item class="ModuleScript" referent="RBX332">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -558718,7 +559306,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX331">
+        <Item class="ModuleScript" referent="RBX333">
           <Properties>
             <string name="Name">FxRig</string>
             <ProtectedString name="Source">--!nonstrict
@@ -559084,7 +559672,7 @@ return Rig
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX332">
+        <Item class="ModuleScript" referent="RBX334">
           <Properties>
             <string name="Name">HatchFx</string>
             <ProtectedString name="Source">--!nonstrict
@@ -559295,7 +559883,7 @@ return M
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX333">
+        <Item class="ModuleScript" referent="RBX335">
           <Properties>
             <string name="Name">HatchSequence</string>
             <ProtectedString name="Source">--!strict
@@ -560410,7 +560998,7 @@ return Seq
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX334">
+        <Item class="ModuleScript" referent="RBX336">
           <Properties>
             <string name="Name">HubGateClient</string>
             <ProtectedString name="Source">--!strict
@@ -560477,7 +561065,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX335">
+        <Item class="ModuleScript" referent="RBX337">
           <Properties>
             <string name="Name">HubTravelClient</string>
             <ProtectedString name="Source">--!strict
@@ -560640,7 +561228,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX336">
+        <Item class="ModuleScript" referent="RBX338">
           <Properties>
             <string name="Name">HubWalkUpClient</string>
             <ProtectedString name="Source">--!strict
@@ -560737,7 +561325,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX337">
+        <Item class="ModuleScript" referent="RBX339">
           <Properties>
             <string name="Name">HudV2</string>
             <ProtectedString name="Source">--!strict
@@ -560858,7 +561446,7 @@ return Hud
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX338">
+        <Item class="ModuleScript" referent="RBX340">
           <Properties>
             <string name="Name">InspectView</string>
             <ProtectedString name="Source">--!strict
@@ -561050,7 +561638,7 @@ return InspectView
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX339">
+        <Item class="LocalScript" referent="RBX341">
           <Properties>
             <string name="Name">JumpCarry</string>
             <ProtectedString name="Source">--!strict
@@ -561108,7 +561696,7 @@ if player.Character then task.spawn(bind, player.Character) end
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX340">
+        <Item class="LocalScript" referent="RBX342">
           <Properties>
             <string name="Name">LowPolyAnimator</string>
             <ProtectedString name="Source">--!strict
@@ -561315,7 +561903,7 @@ Players.PlayerRemoving:Connect(function(player) if player.Character then untrack
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX341">
+        <Item class="ModuleScript" referent="RBX343">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -561406,7 +561994,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX342">
+        <Item class="LocalScript" referent="RBX344">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -561418,6 +562006,7 @@ local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Appearance = require(ReplicatedStorage.Shared.EggAppearance)
 local MutationLook = require(ReplicatedStorage.Shared.MutationLook)
 local Http = game:GetService("HttpService")
+local LowPoly = require(ReplicatedStorage.Shared.LowPolyDinos) -- BD-225/BD-061: genes + fused tier on the low-poly model
 local watched = setmetatable({}, {__mode = "k"})
 -- The server shell (DinoVisual) shares geometry with the local mesh; keep it invisible on this client or its
 -- original texture z-fights through the genes-painted pattern. Client-local Transparency survives the camera script.
@@ -561463,14 +562052,14 @@ local function characterVisual(character: Model)
         hideShell(character)
         if previous:GetAttribute("GenesJson")~=genesJson then
             local ok,genes=pcall(function() return Http:JSONDecode(genesJson) end)
-            if ok and typeof(genes)=="table" and mutation=="base" then Appearance.apply(previous,genes) MutationLook.apply(previous,character:GetAttribute("EventMutationId")) end
+            if ok and typeof(genes)=="table" and (mutation=="base" or previous:GetAttribute("LowPoly")==true) then Appearance.apply(previous,genes) if mutation=="base" then MutationLook.apply(previous,character:GetAttribute("EventMutationId")) end end
             previous:SetAttribute("GenesJson",genesJson)
         end
         return
     end
     local overrides=ReplicatedStorage:FindFirstChild("ResourceOverrides")
     local okGenes,genes=pcall(function() return Http:JSONDecode(genesJson) end)
-    local realGenes=if okGenes and typeof(genes)=="table" and mutation=="base" then genes else nil
+    local realGenes=if okGenes and typeof(genes)=="table" and (mutation=="base" or LowPoly.enabled()) then genes else nil -- a low-poly fused dino keeps its genes under the tier
     local model = Resources.clone(id,realGenes)
     if not model then
         -- BD-146: the new species has no local mesh (yet). Never keep the OLD species on top: drop it and let the
@@ -561502,11 +562091,14 @@ local function characterVisual(character: Model)
     model:SetAttribute("GenesJson",genesJson)
     model:ScaleTo(scale)
     model:PivotTo(root.CFrame * CFrame.new(0, -groundHeight, 0))
+    local lowPoly = model:GetAttribute("LowPoly") == true
     for _, item in model:GetDescendants() do
         if item:IsA("BasePart") then
             item.Anchored = false
-            if mutation=="gold" or mutation=="diamond" then Resources.clearTextures(item) end
-            if mutation == "gold" then item.Color = Color3.fromRGB(242,199,63) item.Material = Enum.Material.Metal
+            if not lowPoly and (mutation=="gold" or mutation=="emerald" or mutation=="diamond") then Resources.clearTextures(item) end
+            if lowPoly then -- BD-061: LowPoly.applyTier below (additive tint + gloss over the genes, eyes/belly kept)
+            elseif mutation == "gold" then item.Color = Color3.fromRGB(242,199,63) item.Material = Enum.Material.Metal
+            elseif mutation == "emerald" then item.Color = Color3.fromRGB(46,196,120) item.Material = Enum.Material.Metal item.Reflectance=.1
             elseif mutation == "diamond" then item.Color = Color3.fromRGB(85,213,245) item.Material = Enum.Material.Glass item.Reflectance=.2 end
             -- BD-211: a Weld (not a WeldConstraint) so DinoMotion poses edit C0. Writing part.CFrame on a
             -- WeldConstraint-attached part drags the whole assembly, which made the root rattle every frame.
@@ -561517,7 +562109,8 @@ local function characterVisual(character: Model)
         end
     end
     model.Parent = character
-    if realGenes then Appearance.apply(model,realGenes) end
+    if lowPoly then model:SetAttribute("LPTier", if mutation ~= "base" then mutation else nil) end
+    if realGenes then Appearance.apply(model,realGenes) elseif lowPoly then LowPoly.applyTier(model, mutation) end
     hideShell(character)
 
 end
@@ -561633,7 +562226,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX343">
+        <Item class="ModuleScript" referent="RBX345">
           <Properties>
             <string name="Name">SettingsMenu</string>
             <ProtectedString name="Source">--!strict
@@ -561736,7 +562329,7 @@ return Menu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX344">
+        <Item class="LocalScript" referent="RBX346">
           <Properties>
             <string name="Name">SettingsSync</string>
             <ProtectedString name="Source">--!strict
@@ -561798,7 +562391,7 @@ task.delay(5, function() loaded = true end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX345">
+        <Item class="ModuleScript" referent="RBX347">
           <Properties>
             <string name="Name">ShopCard</string>
             <ProtectedString name="Source">--!strict
@@ -561836,7 +562429,7 @@ return Card
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX346">
+        <Item class="ModuleScript" referent="RBX348">
           <Properties>
             <string name="Name">VolumeSliders</string>
             <ProtectedString name="Source">--!strict
@@ -561917,7 +562510,7 @@ return Sliders
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX347">
+        <Item class="LocalScript" referent="RBX349">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -561984,7 +562577,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX348">
+        <Item class="LocalScript" referent="RBX350">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -562885,7 +563478,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX349">
+        <Item class="LocalScript" referent="RBX351">
           <Properties>
             <string name="Name">WorldCulling</string>
             <ProtectedString name="Source">--!strict
@@ -563012,7 +563605,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX350">
+        <Item class="LocalScript" referent="RBX352">
           <Properties>
             <string name="Name">WorldReady</string>
             <ProtectedString name="Source">--!strict
@@ -563050,7 +563643,7 @@ remote:FireServer()
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX351">
+  <Item class="Workspace" referent="RBX353">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>
