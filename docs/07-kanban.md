@@ -5,6 +5,19 @@ Updated 2026-10-14. This file is the canonical task tracker.
 
 **Historical milestone summary:** Builds 005â€“013 established PvP, storage, collection, old direct-copy reward tests, earned chests, Gold and original procedural visuals. Those older checks are *not* proof the latest reward vision is implemented. For actual per-build acceptance consult the dated sections and historical evidence below. Physical-phone/mobile acceptance remains open, though earlier phone-emulator checks passed.
 
+## Owner decisions log 2026-10-16
+
+Dated decisions from this session (sources in brackets). "Lead decision" means made on the owner's behalf; the owner may overrule. Everything below is OFF by default behind flags and is **Review / test or Backlog, never Done**: no phone, 12-player or owner-playtest evidence exists yet.
+
+- **Low-poly base dinos** (BD-224, BD-225, BD-232): one faceted low-poly base look per species from Roblox's mesh generator, split into parts; first spike Compy/Raptor/Triceratops, registry now covers all 22 species. Flag off. Skins (Plushy, Clay, Bricks) are a later paid cosmetic layer with gentle defeat animations ([97](97-dino-skins.md)).
+- **Generated meshes only**: no code-built 3D models as final art; 2D art from Blender or the owner ([87](87-vision-and-feel-guide.md), [72](72-ui-copy-and-asset-standards.md)).
+- **Classes** Ground / Fly / Water plus a fourth, Armored (Ankylosaurus, Sauropelta, Styracosaurus; Triceratops/Stegosaurus stay Ground) (BD-231, BD-232; [101](101-hp-combat-classes-animations.md) s16). Roster target 5 Fly + 5 Water + 5 more Ground.
+- **Secret silly bird dinos** (Chickosaurus, Pigeon, Dodo, Duck, Penguin) stay hidden secrets (BD-228); more silly ones are paused. Compy stays the first dino.
+- **HP combat** replaces instant "bigger eats smaller" (BD-230): hearts/bars only, no damage numbers, PvP on in the arena with a **Peaceful** option at run start, no revive in v1, defeat keeps everything earned, assist bonus only (docs/101 s16). `Config.CombatEnabled=false`.
+- **Cave hub**: Sanctuary becomes a big cave (260 x 220) with physical shops, teleport-to-station menus (default ON, Settings toggle to walk), in-run rail dims DINOS/EGGS/FUSION/SHOP, POTIONS/SETTINGS stay usable, lava scenic only, existing 2D hatch reveal kept ([104](104-cave-hub-design.md) s15.1/16). `Config.CaveHub=false`. BD-254 / PR #147 (never merged, still open) is superseded by docs/104.
+- **UI research** ([103](103-ui-research-popular-games.md)): settings menu v2, shared shop card, odds buttons, Index progress (BD-263..274).
+- **Process**: keep 3-4 agents running; QA agents must not touch Place1.rbxl; flag-off-by-default for combat, cave and low-poly.
+
 ## Board
 
 2026-10-08 multiplayer retry: disposable Build 019 Studio tests with 2 and 5
@@ -183,9 +196,8 @@ ledger compaction before public release.
 | BD-061 | Backlog | P1 | Blender Gold/Emerald/Diamond additive surfaces, subtle/medium overlay A/B, stack every trait/effect | BD-057, BD-035 |
 | BD-062 | Review / test | P1 | Dino picker/details hatch egg or fused parent lineage, trait/cosmetic badges, hatch rarity vs conditional fusion odds/prestige. Client Dino Details built ([54](54-bd065-fusion-menu.md)); natural hatch odds math, Studio/Android verification pending | BD-059, BD-060, BD-057 |
 | BD-063 | Backlog | P1 | Pattern research/duplicate sink: deterministic earned-only progress toward species-pattern fusion donors | BD-057 |
-| BD-065 | Review / test | P1 | Dedicated Fusion Menu: species/trait filters, manual 15/4/2-donor selection, odds preview, loss warnings and staged wheel reveals. Client built against the `FusionAction` contract ([54](54-bd065-fusion-menu.md)); offline logic + mock UI smoke pass, Studio/Android verification pending | BD-057, BD-060, BD-064 **2026-10-14 owner ladder: 15/4/2 (was 50/10/3), see [58](58-fusion-ladder-50-10-3.md); Studio pending.** |
+| BD-065 | Review / test | P1 | (Merged 2026-10-16: the former duplicate Backlog row was removed; Fusion Menu v2, PR #116 / docs/96, is also covered here.) Dedicated Fusion Menu: species/trait filters, manual 15/4/2-donor selection, odds preview, loss warnings and staged wheel reveals. Client built against the `FusionAction` contract ([54](54-bd065-fusion-menu.md)); offline logic + mock UI smoke pass, Studio/Android verification pending | BD-057, BD-060, BD-064 **2026-10-14 owner ladder: 15/4/2 (was 50/10/3), see [58](58-fusion-ladder-50-10-3.md); Studio pending.** |
 | BD-064 | Review / test | P0 | Ingredient-influenced fusion trait RNG (2/10 Shiny â†’ proposed 10%), versioned true odds, paid-random gate and atomic NEW result â€” PROVISIONAL `fusion-odds-provisional-v1` + `FusionAction` remote ([53](53-bd064-fusion-server.md)) | BD-057, BD-060 **2026-10-14 owner ladder: 15/4/2 (was 50/10/3), see [58](58-fusion-ladder-50-10-3.md); Studio pending.** |
-| BD-065 | Backlog | P1 | Dedicated Fusion Menu: species/trait filters, manual 15/4/2-donor selection, odds preview, loss warnings and staged wheel reveals | BD-057, BD-060, BD-064 **2026-10-14 owner ladder: 15/4/2 (was 50/10/3), see [58](58-fusion-ladder-50-10-3.md); Studio pending.** |
 
 ### BD-044: Owner-approved reward-loop correction (2026-10-08)
 
