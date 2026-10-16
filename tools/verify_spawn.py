@@ -62,6 +62,8 @@ Vector3.__eq=function(a,b) return a.X==b.X and a.Y==b.Y and a.Z==b.Z end
 
 def script(config):
     return (VECTOR + 'local Config=' + ('(function()\n' + config + '\nend)()')
+            + '\nlocal CaveHubLayout=' + wrapped('src/shared/CaveHubLayout.luau')
+            + '\nlocal script={Parent={CaveHubLayout="CaveHubLayout"}}\nlocal require=function() return CaveHubLayout end'
             + '\nlocal Layout=' + wrapped('src/shared/IslandLayout.luau')
             + '\nlocal SpawnGeometry=' + wrapped('src/shared/SpawnGeometry.luau') + '\n' + LUAU)
 
@@ -87,7 +89,7 @@ def static_checks():
     assert 'SpawnGeometry.fallen' in guard, 'MovementGuard leaves fallen characters to FallRecovery'
     fall = (ROOT / 'src/server/FallRecovery.luau').read_text()
     assert 'SetNetworkOwner(nil)' in fall and 'FallRecovery).teleport(' in run_lc, 'run-start teleport takes physics ownership first'
-    assert 'SpawnGeometry.hubPoint(Config)' in arena, 'SpawnLocation sits in the hub'
+    assert 'SpawnGeometry.hubPoint(Config)' in arena and 'CaveHubLayout.hub(Config)' in arena, 'SpawnLocation sits in the hub'
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(); p.add_argument('--runner', required=True); args = p.parse_args()
