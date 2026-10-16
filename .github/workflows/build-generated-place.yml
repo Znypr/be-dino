@@ -64,6 +64,7 @@ jobs:
           python tools/verify_creature_genes.py --runner /tmp/luau/luau
           python tools/verify_visual_growth.py --runner /tmp/luau/luau
           python tools/verify_outcomes.py --runner /tmp/luau/luau
+          python tools/verify_odds_copy.py --runner /tmp/luau/luau
           python tools/verify_previews.py --runner /tmp/luau/luau
           python tools/verify_artwork.py --runner /tmp/luau/luau
           python tools/verify_load.py --runner /tmp/luau/luau
