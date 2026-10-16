@@ -60,13 +60,37 @@ assert(R.plan("full", false, "shiny").confetti > R.plan("lite", false, "shiny").
 assert(R.plan("off", false, "shiny").confetti == 0 and R.plan("full", true, "shiny").confetti == 0, "Off and Calm: no confetti")
 assert(R.plan("full", true, "shiny").banner and R.plan("off", true, "legendary").sound == "shiny_bang", "banner + sound stay")
 assert(R.plan("bogus", false, "shiny").confetti == R.Confetti.full)
+-- 7. BD-439 runtime: the REAL CooldownMemory + Rare.offer/flush wired as RareHatchService.record does (UserId-keyed cooldown,
+-- Rare.forget on leave). Hatch rare, leave, rejoin inside 45 s, hatch another rare: personal celebration yes, 2nd server announcement no.
+local announced = CM.new(math.max(120, R.Cooldown * 2))
+local sim = R.newState()
+local clock, me, all = 1000, 0, 0
+local function record(userId, eggId)
+    me += 1 -- the hatcher's own celebration fires before any cooldown check
+    local flushAt = nil
+    if clock - announced.last(userId, "announce") >= R.Cooldown then flushAt = R.offer(sim, userId, eggId, sh, "txt", clock)
+    else sim.seen[eggId] = true end
+    if flushAt then
+        clock = flushAt
+        if R.flush(sim, userId, clock) then announced.mark(userId, "announce", clock) all += 1 end
+    end
+end
+record(42, "r1") assert(me == 1 and all == 1, "first rare: celebration and one announcement")
+clock += 10 R.forget(sim, 42) -- leaves
+clock += 10 -- rejoins about 22 s after the announcement, same UserId
+record(42, "r2")
+assert(me == 2 and all == 1, "rejoin inside 45 s: own celebration, no second announcement: me=" .. me .. " all=" .. all)
+clock += R.Cooldown + 1 record(42, "r3")
+assert(me == 3 and all == 2, "after the cooldown a new announcement is allowed: all=" .. all)
+record(43, "o1") assert(all == 3, "another player is not limited by 42's cooldown")
 print("rare hatch rules passed")
 '''
 
 
 def script():
     text = (ROOT / 'src/shared/RareHatch.luau').read_text(encoding='utf-8')
-    return 'local R = (function()\n' + text + '\nend)()\n' + BODY
+    cm = (ROOT / 'src/server/CooldownMemory.luau').read_text(encoding='utf-8')
+    return 'local R = (function()\n' + text + '\nend)()\nlocal CM = (function()\n' + cm + '\nend)()\n' + BODY
 
 
 def scan():
@@ -79,6 +103,8 @@ def scan():
     assert 'DisplayName' in svc, 'announcements carry display names only'
     assert 'FireAllClients' not in svc, 'announcements go through the rate limiter, one per window'
     assert 'Rare.offer' in svc and 'Rare.flush' in svc
+    assert 'CooldownMemory' in svc and 'announced.mark(' in svc and 'announced.last(' in svc, 'BD-439: UserId-keyed announcement cooldown'
+    assert 'quietUntil' not in svc, 'the cooldown must not live in the per-leave state'
     for needle in ['s.calm', 's.effects', 'Rare.plan', 'shiny_bang']:
         assert needle in cli, 'client must honour Effects / Reduce Motion and play the special sound: ' + needle
     for p in ['src/shared/RareHatch.luau', 'src/server/RareHatchService.luau', 'src/client/RareHatchClient.client.luau']:

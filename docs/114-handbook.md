@@ -22,7 +22,7 @@ The owner's guiding adjectives are **polished, satisfying, calm, bubbly, friendl
 - **Hunting is each player's own choice, food alone must be enough.** The core loop is food, eggs, growing. Fighting or hunting other players stays ON for everyone; there is NO Peaceful opt-out (the 2026-10-16 "Peaceful must be easy to find" reading was a misread, ~~BD-421~~ SUPERSEDED, docs/115 OWNER CORRECTION). Instead, a player who only eats food must get enough growth, eggs and crystals, so nobody has to rely on eating others (balance audit and proposal: [131](131-food-only-progression-audit.md), BD-439).
 
 ### 1.1 Food-only progression (owner correction 2026-10-16)
-See [131](131-food-only-progression-audit.md): finding today is that eating a player pays +1 run egg plus growth, about 42 food-equivalents of egg value per kill, which is outsized next to food. Proposed fix (not applied): kills give growth only, or a small capped egg fraction (BD-439).
+See [131](131-food-only-progression-audit.md): finding today is that eating a player pays +1 run egg plus growth, about 42 food-equivalents of egg value per kill, which is outsized next to food. OWNER decision 2026-10-16 (option B): a player kill now gives 0.25 run egg, at most 3 per run; growth and NPC kills unchanged (BD-439, in Review / test).
 - **Session shape:** short runs of about 5 minutes, a hatch party after each, several runs per session (BD-426).
 - **Long-term goal:** an equal mix of completing the collection, perfecting one favourite dino to Diamond, and playing new dinos with a different class feel (BD-427).
 - **Robux line:** looks plus convenience (skins, cosmetics, potions, extra nest spots), never exclusive power; flags off until policy is tested (BD-425).
