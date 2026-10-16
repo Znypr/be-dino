@@ -143,6 +143,7 @@ for _,p in L.props do
 end
 assert(rows>=8 and rows<=Props.MaxSignGuis,"sign rows "..rows.." within the sign gui cap "..Props.MaxSignGuis)
 assert(sc.forRow("cave_rock_round","nests")==nil and sc.forRow("hub_sign_stone","nowhere")==nil and sc.forRow("hub_sign_stone","heart")==nil and sc.forRow("hub_sign_stone",5)==nil,"no text for other keys / stations")
+assert(Props.SignLightInfluence==0 and Props.SignBrightness>=1.5,"signs self-lit and boosted for the dim cave")
 for key,cfg in Props.SignText do
  assert(Props.Assets[key] and cfg.face=="Front" and cfg.inset>=0 and cfg.inset<0.4,"sign text config "..key)
 end
@@ -225,6 +226,7 @@ def static_checks():
     props = (ROOT / 'src/server/CaveProps.luau').read_text()
     assert 'FredokaOne' in props and 'TextScaled = true' in props and 'SignCopy.forRow' in props and 'signGuis < Props.MaxSignGuis' in props, \
         'sign text: copy table word, FredokaOne, TextScaled, capped'
+    assert 'gui.LightInfluence = Props.SignLightInfluence' in props and 'gui.Brightness = Props.SignBrightness' in props, 'sign text is self-lit (readable in the dim cave)'
     assert props.count('Instance.new("SurfaceGui")') == 1 and 'gui.Face = ' in props, 'one SurfaceGui, one face (front only)'
     assert 'Props.Warm' in props and 'SurfaceAppearance' in props, 'warm recolour strips the SurfaceAppearance'
     lead = (ROOT / 'src/server/Leaderboards.luau').read_text()

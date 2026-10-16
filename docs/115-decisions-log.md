@@ -54,3 +54,5 @@ Extracted from the kanban owner log, AGENTS.md, docs and the lead sessions. "LEA
 - OWNER (2026-10-16): luminance bands cave 0.15-0.35 and island 0.35-0.75 confirmed; cool grey stone is fine as cave decoration (BD-414/415 closed as accepted); audience, class colours, aura ownership, eyes, weather tone, nest cap, balloon skin and perk price remain open questions in docs/116.
 
 - OWNER (2026-10-16, via coordinator): the fast-travel perk (D22, BD-391/405) is priced as a mid goal, about 500 crystals. Still PROVISIONAL (`ProgressionConfig.FastTravelPrice = 500`); supersedes the 300 / 600 / 1,200 options in docs/116 Q10.
+
+- OWNER (2026-10-16): the Balloon skin (defeat = pops and flutters away softly) is a **Robux skin**, like Bricks, Clay and Plushy. Answers docs/116 Q5 option (a). Release stays behind the Robux release flags until tested; no art upload is needed (procedural skin). Tracked in [120](120-pending-owner-uploads-checklist.md).
