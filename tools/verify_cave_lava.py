@@ -22,7 +22,7 @@ import release_profiles
 ROOT = Path(__file__).resolve().parents[1]
 
 LUAU = r'''
-assert(Config.CaveHub==false,"CaveHub ships off")
+assert(Config.CaveHub==(Config.ReleaseProfile=="playtest"),"CaveHub is on only in the playtest profile")
 local C=CaveHubLayout
 local L=C.get()
 local R=LavaRules
