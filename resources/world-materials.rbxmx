@@ -2,7 +2,6 @@
   <Item class="MaterialService" referent="MATERIALS">
     <Properties>
       <string name="Name">MaterialService</string>
-      <string name="GrassName">BeDino_Meadow</string>
       <string name="RockName">BeDino_Stone</string>
       <string name="WoodName">BeDino_Bark</string>
     </Properties>

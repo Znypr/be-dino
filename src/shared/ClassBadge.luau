@@ -1,19 +1,18 @@
 --!strict
 -- Small circular class badge (Ground / Flyer / Water / Armored), owner 2026-10-16. One component for the hatch reveal card and,
 -- later, the dino picker and index. The final art is 4 owner-made icons in AssetSlots.Images (class_ground, class_flyer,
--- class_water, class_armored). Until a slot is bound, a clean PLACEHOLDER draws instead: a neutral circle (docs/114 5.11 defines no
--- per-class colour) with a 1-letter label. PLACEHOLDER: remove the fallback branch only when all 4 icons are bound.
+-- class_water, class_armored). Until a slot is bound, a clean PLACEHOLDER draws instead: a circle in the class colour (ClassInfo.Colors,
+-- docs/114 5.11) with a 1-letter label. PLACEHOLDER: remove the fallback branch only when all 4 icons are bound.
 local ClassInfo = require(script.Parent.ClassInfo)
 local AssetSlots = require(script.Parent.AssetSlots)
 local ClassBadge = {}
-ClassBadge.PlaceholderFill = Color3.fromRGB(70, 76, 92) -- neutral on purpose
 ClassBadge.PlaceholderRing = Color3.fromRGB(235, 238, 245)
 
 -- Pure: what to draw for a species. image = "rbxassetid://N" when the owner icon is bound, else nil (placeholder + letter).
-function ClassBadge.spec(speciesId: any): { class: string, label: string, letter: string, image: string?, placeholder: boolean }
+function ClassBadge.spec(speciesId: any): { class: string, label: string, letter: string, color: Color3, image: string?, placeholder: boolean }
     local info = ClassInfo.forSpecies(speciesId)
     local image = AssetSlots.image(ClassInfo.IconSlots[info.class])
-    return { class = info.class, label = info.label, letter = ClassInfo.Letters[info.class], image = image, placeholder = image == nil }
+    return { class = info.class, label = info.label, letter = ClassInfo.Letters[info.class], color = ClassInfo.Colors[info.class], image = image, placeholder = image == nil }
 end
 
 -- Builds a circle `size` px wide inside `parent`; the caller positions it. Returns the root Frame (Name "ClassBadge").
@@ -34,7 +33,7 @@ function ClassBadge.create(parent: Instance, speciesId: any, size: number): Fram
         icon.ScaleType = Enum.ScaleType.Fit
         icon.Parent = root
     else
-        root.BackgroundColor3 = ClassBadge.PlaceholderFill
+        root.BackgroundColor3 = ClassInfo.Colors[spec.class]
         local ring = Instance.new("UIStroke")
         ring.Color, ring.Thickness, ring.Parent = ClassBadge.PlaceholderRing, 2, root
         local letter = Instance.new("TextLabel")
