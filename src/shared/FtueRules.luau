@@ -98,6 +98,11 @@ function Rules.hasFoundEgg(info: any): boolean
     return type(info.copies) == "number" and info.copies > 1
 end
 
+-- BD-440 (docs/130): the goal line and the Goals panel stay hidden until the first egg is found (one less thing on minute zero).
+function Rules.showGoals(info: any): boolean
+    return Rules.hasFoundEgg(info)
+end
+
 -- BD-367: the egg moment. One at a time: a minimum gap, and only the first few eggs of a run get the toast and sparkle
 -- (a long run must not stack spam; the HUD counter still pops for every egg).
 Rules.FoundText = "You found an egg!"

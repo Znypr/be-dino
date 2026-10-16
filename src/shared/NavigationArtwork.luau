@@ -7,6 +7,6 @@ return {
     fusion = "fusion",
     home = "home",
     auras = "aura_meadow",
-    potions = "potion_speed_Common", -- owner 2026-10-16: Swift Sip 2D icon (PotionArt.Images); bare "potion_speed" would layer a second symbol
+    potions = "potion_menu", -- BD-144: plain Swift Sip image (PotionArt.Images.speed_common, docs/77), no rarity pips/glow at menu size
     settings = "shield",
 }
