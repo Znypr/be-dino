@@ -90,11 +90,18 @@ end
 -- invisible kit colliders still match, pivot = bottom centre. nil (flag off, id not mapped, mesh failed to load) means the
 -- caller keeps the current kit model, so a failed asset never leaves a hole.
 local generatedCache: {[string]: Model} = {}
-local function generatedProp(id: string, biome: string, roll: number): Model?
+local function generatedProp(id: string, biome: string, roll: number, layer: string?): Model?
     if not Config.WorldGeneratedMeshes then return nil end
     local key = Generated.visualFor(id, biome, roll)
     local folder = ReplicatedStorage:FindFirstChild("GeneratedWorld")
     local template = nil
+    -- BD-474: the `colossal` layer gets the ancient-tree mesh (only once its asset id is filled in AND it loaded). Ordinary size-l trees share
+    -- the same kit id, so the layer decides; no id or a failed load keeps the stand-in below (the current generated mesh scaled up).
+    local colossalKey = if layer == "colossal" then Generated.colossalFor(id) else nil
+    if colossalKey and folder then
+        template = folder:FindFirstChild(colossalKey)
+        if template then key = colossalKey end
+    end
     -- BD-462: owner-approved V3 tree first (only once its asset id is filled in AND it loaded); otherwise the current generated mesh.
     local v3Key = if key then Generated.replacementFor(key) else nil
     if v3Key and folder then
@@ -171,7 +178,7 @@ local function biomeKit(parent: Instance)
         -- fitted inside the kit extent, so extent * scale over-estimates it), with the per-kind policy of BiomePlacement.Ground.
         local made: Model? = nil
         if p.layer ~= "log" then
-            made = generatedProp(p.id, p.biome or "meadow", Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77)) or Resources.clone(p.id)
+            made = generatedProp(p.id, p.biome or "meadow", Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77), p.layer) or Resources.clone(p.id)
             if made then made:ScaleTo(p.scale) end
             -- BD-167: per-prop colour variation (a tint of the white MeshPart; landmarks keep their art colours).
             if made and made.PrimaryPart and p.layer ~= "landmark" then
