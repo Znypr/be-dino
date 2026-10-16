@@ -4,6 +4,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
 
+local CooldownMemory = require(script.Parent.CooldownMemory)
+
 local PredationService = {}
 
 local function numberAttribute(instance: Instance, name: string, fallback: number): number
@@ -19,30 +21,19 @@ function PredationService.start(runLifecycle, dinosaur)
     -- BD-244: with HP combat on, the instant "bigger eats smaller" rule is replaced by CombatService bites. Flag off = unchanged.
     if Config.CombatEnabled then return end
     local previous = {}
-    local recentPairs: {[number]: {[number]: number}} = {}
+    local victimMemory = CooldownMemory.new(math.max(120, Config.RepeatVictimCatchCooldownSeconds * 2)) -- BD-363: UserId keys, survives a rejoin
     local arenaParams = RaycastParams.new()
     arenaParams.FilterType = Enum.RaycastFilterType.Include
     arenaParams.FilterDescendantsInstances = {workspace.BeDinoArena, workspace.Terrain}
 
     Players.PlayerRemoving:Connect(function(player)
         previous[player] = nil
-        recentPairs[player.UserId] = nil
-        for _, victims in recentPairs do
-            victims[player.UserId] = nil
-        end
     end)
 
     local function awardCatch(attacker, victimUserId: number, now: number)
-        local victims = recentPairs[attacker.player.UserId]
-        if not victims then
-            victims = {}
-            recentPairs[attacker.player.UserId] = victims
-        end
-        local last = victims[victimUserId] or -math.huge
-        if now - last < Config.RepeatVictimCatchCooldownSeconds then
+        if not victimMemory.allow(attacker.player.UserId, "victim" .. victimUserId, now, Config.RepeatVictimCatchCooldownSeconds) then
             return
         end
-        victims[victimUserId] = now
         local catches = numberAttribute(attacker.character, "CatchScore", 0)
         local cap = math.min(Config.MaxCatchScore, Config.RunEggMaxPerRun) -- BD-044: one run egg per catch
         if catches < cap then

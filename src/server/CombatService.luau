@@ -17,6 +17,8 @@ local NpcRules = require(ReplicatedStorage.Shared.NpcPredatorRules)
 
 local CombatService = {}
 local PrivateState = require(script.Parent.PrivateState)
+local CooldownMemory = require(script.Parent.CooldownMemory)
+local biteMemory = CooldownMemory.new(120) -- BD-363: bite cooldown keyed by UserId, a rejoin does not reset it
 
 local function numberAttribute(instance: Instance, name: string, fallback: number): number
     local value = instance:GetAttribute(name)
@@ -79,6 +81,8 @@ function CombatService.start(runLifecycle, dinosaur): any?
             protectedUntil = numberAttribute(character, "SpawnProtectionEndsAt", 0),
         })
         if not d then return end
+        local lastBite = biteMemory.last(player.UserId, "bite")
+        if lastBite > d.lastBiteAt then d.lastBiteAt = lastBite end
         tracked[character] = d.key
         characterOf[d.key] = character
         -- A friend shield extends the spawn protection; write it back so RunLifecycle and Home agree.
@@ -181,6 +185,7 @@ function CombatService.start(runLifecycle, dinosaur): any?
         local result = Rules.attack(world, key, now, root.Position, root.CFrame.LookVector, candidates, leaping, radiusOf(character))
         player:SetAttribute("LastBiteStatus", result.reason)
         if not result.ok then return end
+        biteMemory.mark(player.UserId, "bite", now)
         character:SetAttribute("BiteSeq", numberAttribute(character, "BiteSeq", 0) + 1) -- BD-079 lunge cue (same as predation)
         local target = characterOf[result.targetKey]
         if not target then return end
