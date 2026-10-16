@@ -18,6 +18,16 @@ The owner's guiding adjectives are **polished, satisfying, calm, bubbly, friendl
 - Five pillars ([87](87-vision-and-feel-guide.md)): cozy before flashy; bubbly and playful; readable at a glance; rewarding never harsh; handmade and consistent.
 - Keep distinct: food/growth points, catches (= run eggs), hatched dinosaurs, account XP, crystals, bonus nests ([AGENTS.md](../AGENTS.md)).
 
+### 1.1 Vision answers (OWNER 2026-10-16, see [115](115-decisions-log.md))
+- **PvP is optional.** The core loop is food, eggs, growing. Hunting other players happens, but a Peaceful choice must be easy to find (audit: BD-421).
+- **Session shape:** short runs of about 5 minutes, a hatch party after each, several runs per session (BD-426).
+- **Long-term goal:** an equal mix of completing the collection, perfecting one favourite dino to Diamond, and playing new dinos with a different class feel (BD-427).
+- **Robux line:** looks plus convenience (skins, cosmetics, potions, extra nest spots), never exclusive power; flags off until policy is tested (BD-425).
+- **Run end:** eggs caught are ALWAYS kept, also when eaten; being eaten only ends the run early (code already matches, BD-422).
+- **Cave hub mood:** cosy home base: warm, safe, lamp-lit den to relax, shop and show off dinos (matches section 3 and 6).
+- **Play as ANY owned dino**, each with its own class feel (BD-423).
+- **Rare hatch** (Legendary, Shiny, event mutation): huge celebration with screen-wide fanfare, confetti, special sound and a server announcement (BD-424; none of the announcement exists today).
+
 ## 2. Audience and tone
 - Audience: **children (target ages 7-10, LEAD reading of "children are the audience, parents nearby")** ([87](87-vision-and-feel-guide.md) UI and copy; [72](72-ui-copy-and-asset-standards.md); [86](86-monetization-ideas.md)). The exact age band 7-10 is not written in any doc (conflict C-20).
 - Tone: short warm plain words, one fact per line, no jargon, no fear copy, no countdown panic, errors say what to do next ([72](72-ui-copy-and-asset-standards.md), [87](87-vision-and-feel-guide.md)).
