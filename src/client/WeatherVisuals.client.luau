@@ -60,13 +60,15 @@ local baseCloud={cover=clouds.Cover,density=clouds.Density,color=clouds.Color}
 local baseStars=if sky then sky.StarCount else 0
 -- BD-213 soft visibility: clear weather keeps a gentle haze, and FogEnd stays inside this device's prop cull radius
 -- (same device classes as WorldCulling.client.luau), so culled props are already lost in the haze and never pop.
-local CLEAR=WL.Looks.clear
+local deviceClass=(function():string
+    local size=workspace.CurrentCamera.ViewportSize
+    return if not UserInputService.TouchEnabled then "Desktop" elseif math.min(size.X,size.Y)>=600 then "Tablet" else "Phone"
+end)()
+local CLEAR=WL.clearFor(deviceClass) -- desktop/tablet: far clear fog, no 374-stud milky wall
 local fogCap=(function():number
     local culling=require(Shared.Config).WorldCulling
     if not culling or not culling.Enabled then return WL.fogCap(nil) end
-    local size=workspace.CurrentCamera.ViewportSize
-    local class=if not UserInputService.TouchEnabled then "Desktop" elseif math.min(size.X,size.Y)>=600 then "Tablet" else "Phone"
-    return WL.fogCap(culling[class].radius)
+    return WL.capFor(deviceClass,culling[deviceClass].radius)
 end)()
 local baseAtmo={density=atmosphere.Density,offset=atmosphere.Offset,haze=atmosphere.Haze,glare=atmosphere.Glare,color=atmosphere.Color,decay=atmosphere.Decay}
 

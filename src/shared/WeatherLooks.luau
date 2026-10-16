@@ -129,6 +129,21 @@ Weather.SoftRatio=.45
 function Weather.fogCap(cullRadius:number?):number
     return if cullRadius then cullRadius*Weather.CullMargin else math.huge
 end
+-- Clear-weather distance fade per device class (island daylight): far out so the mid-distance stays crisp. Phone has no entry and
+-- keeps the tight cull-radius fog. The fog colour is the sky-horizon blue, so it reads as distance, not haze.
+Weather.ClearFog={Desktop={fogStart=400,fogEnd=1400},Tablet={fogStart=250,fogEnd=700}}
+-- Fog cap for a device class: the cull-radius cap, or that class's clear-weather fog end when that is farther.
+function Weather.capFor(class:string,cullRadius:number?):number
+    local cf=Weather.ClearFog[class]
+    return math.max(Weather.fogCap(cullRadius),if cf then cf.fogEnd else 0)
+end
+-- Clear look for a device class with the far fog distances applied.
+function Weather.clearFor(class:string):Look
+    local cf=Weather.ClearFog[class]
+    if not cf then return Weather.Looks.clear end
+    local l=table.clone(Weather.Looks.clear) l.fogStart,l.vis=cf.fogStart,cf.fogEnd
+    return l
+end
 -- Classic fog blend from the clear-weather haze to the event look: FogEnd is blended in 1/distance so the view closes in
 -- smoothly instead of jumping at the start of the ramp. cap = Weather.fogCap(cull radius).
 function Weather.fog(look:Look,t:number,base:Look,cap:number):(number,number)

@@ -136,6 +136,10 @@ local _, eh = W.fog(W.Looks.blizzard, .5, C, math.huge) assert(eh > 110 and eh <
 -- radius (props detach/attach only where they are already fully fogged), the fade spans >= 55% of the view, the near
 -- 25 studs stay clear (blizzard whiteout excepted) and FogEnd only ever closes in smoothly over the event ramp.
 assert(C.fogStart >= 150 and C.vis >= 900 and C.vis <= 1500, "clear weather: fog starts far, no milky wash")
+assert(W.ClearFog.Desktop.fogStart >= 400 and W.ClearFog.Desktop.fogEnd >= 1400, "desktop clear fog 400..1400")
+assert(W.ClearFog.Tablet.fogStart >= 250 and W.ClearFog.Tablet.fogEnd >= 700, "tablet clear fog 250..700")
+assert(W.capFor("Desktop", 440) >= 1400 and W.capFor("Phone", 190) == W.fogCap(190), "phone stays cull-capped")
+assert(W.clearFor("Phone") == W.Looks.clear and W.clearFor("Desktop").vis == 1400)
 assert(C.sat >= 0 and C.sat <= .15 and C.contrast >= 0 and C.bloom == 0 and C.dof == 0 and C.haze == 0, "clear grade crisp: saturation >= 0, no bloom, no DoF")
 assert(W.CullMargin < 1 and W.SoftRatio <= .5)
 for class, radius in CULL do

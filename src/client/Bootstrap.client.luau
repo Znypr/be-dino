@@ -153,6 +153,13 @@ local function close()
     task.delay(if motion then .13 else 0,function() if modalVersion==version then shade.Visible=false end end)
     Theme.animate(blur,.12,{Size=0})
 end
+-- The modal blur belongs to an open modal only: if the panel is hidden (even programmatically) the blur is forced back to 0.
+task.spawn(function()
+    while true do
+        task.wait(.5)
+        if (active=="" or not shade.Visible) and blur.Size>0 then blur.Size=0 end
+    end
+end)
 local closeButton=button(header,"X",770,1,80,76,C.red,close)
 closeButton.AnchorPoint,closeButton.Position=Vector2.new(1,0),UDim2.new(1,-2,0,1)
 require(script.Parent.ModalCompact).attach({gui=gui,panel=panel,header=header,heading=heading,body=body,closeButton=closeButton,scale=scale}) -- BD-333: phone landscape layout, no-op on desktop
