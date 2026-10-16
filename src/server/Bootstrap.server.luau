@@ -80,6 +80,7 @@ MovementGuard.start()
 require(script.Parent.FallRecovery).start(MovementGuard.reset) -- BD-210 fall-out-of-world safety net
 VisualTestService.start(Dinosaur)
 require(script.Parent.ProgressionService).start(ProfileRepository)
+require(script.Parent.RareHatchService).start() -- BD-428
 require(script.Parent.FusionService).start(ProfileRepository)
 workspace.Gravity=require(game:GetService("ReplicatedStorage").Shared.Config).Gravity
 require(script.Parent.LeapService).start()
