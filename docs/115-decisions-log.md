@@ -53,5 +53,7 @@ Extracted from the kanban owner log, AGENTS.md, docs and the lead sessions. "LEA
 
 - OWNER (2026-10-16): luminance bands cave 0.15-0.35 and island 0.35-0.75 confirmed; cool grey stone is fine as cave decoration (BD-414/415 closed as accepted); audience, class colours, aura ownership, eyes, weather tone, nest cap, balloon skin and perk price remain open questions in docs/116.
 
+- OWNER (2026-10-16, via coordinator): the fast-travel perk (D22, BD-391/405) is priced as a mid goal, about 500 crystals. Still PROVISIONAL (`ProgressionConfig.FastTravelPrice = 500`); supersedes the 300 / 600 / 1,200 options in docs/116 Q10.
+
 ## 2026-10-16 (night): eggs per run
 - OWNER: a normal 5-minute run should give about 15 run eggs. `FoodCatchRate` is now 12/500 (PROVISIONAL, BD-418, [119](119-catch-rate-15-per-run.md)); 4/500 and 40/500 are HISTORICAL. Per-run crystals, XP and nest frequency are kept the same per food. Growth (`GrowthPerFood`, size only) is untouched. Needs a Studio food-per-minute measurement.

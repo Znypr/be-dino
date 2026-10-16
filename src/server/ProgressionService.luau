@@ -167,7 +167,7 @@ function Service.start(repository)
     local remote=Instance.new("RemoteEvent") remote.Name="ProgressionAction" remote.Parent=ReplicatedStorage.BeDinoRemotes
     local response=Instance.new("RemoteEvent") response.Name="ProgressionResult" response.Parent=ReplicatedStorage.BeDinoRemotes
     remote.OnServerEvent:Connect(function(player,action,id,token,replace,...)
-        if select("#",...)~=0 or typeof(action)~="string" or not table.find({"buyAura","equipAura","buyTrail","equipTrail","buyPotion","usePotion","buyEgg","upgradeCondition"},action)
+        if select("#",...)~=0 or typeof(action)~="string" or not table.find({"buyAura","equipAura","buyTrail","equipTrail","buyPotion","usePotion","buyEgg","upgradeCondition","buyPerk"},action)
             or typeof(id)~="string" or #id>40 or typeof(token)~="string" or #token<1 or #token>80
             or typeof(replace)~="boolean" then return end
         local now=os.clock() local bucket=buckets[player]

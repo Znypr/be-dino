@@ -105,7 +105,9 @@ function Pose.sample(role: string, side: number, lead: boolean, t: number, phase
 end
 -- BD-233 spike: jump / leap / land / water-surge actions. Phases: crouch -> push (stretch) -> air (tuck, held until the dino lands) -> land (squash);
 -- Water has no air time: a single "surge" (forward dash). Everything is calm and short (docs/87), absolute offsets from the REST pose, bounded.
-Pose.Phases = {"crouch", "push", "air", "land", "surge", "windup", "bite"}
+Pose.Phases = {"crouch", "push", "air", "land", "surge", "windup", "bite", "defeat"}
+Pose.DefeatSeconds = 1.5 -- docs/97: a skin defeat is about 1.5 s, soft and funny
+Pose.Skins = {"Base", "Plush", "Clay", "Bricks"}
 Pose.TuckTime = 0.18 -- seconds for the airborne tuck to settle
 local CLASS_SCALE = { -- q = crouch/squash depth, s = push-off stretch, t = airborne tuck, l = landing squash
     Ground = {q = 1, s = 1, t = 1, l = 1}, Armored = {q = 1.3, s = 0.4, t = 0.5, l = 1.5},
@@ -119,6 +121,7 @@ function Pose.duration(phase: string, aggr: number, class: string?): number
     if phase == "surge" then return 0.40 + 0.15 * math.clamp(finite(aggr), 0, 1) end
     if phase == "windup" then return 0.50 end -- BD-324: wild predator telegraph (Rules.Config.WindupSeconds); held until the cue ends
     if phase == "bite" then return 0.40 end
+    if phase == "defeat" then return Pose.DefeatSeconds end
     return 0
 end
 local function ease(u: number): number u = math.clamp(u, 0, 1) return u * u * (3 - 2 * u) end
@@ -128,7 +131,7 @@ function Pose.actionWeight(phase: string, p: number): number
     if phase == "crouch" then return ease(p) end
     if phase == "land" then return 1 - ease(math.clamp((p - 0.5) / 0.5, 0, 1)) end
     if phase == "surge" or phase == "bite" then return ease(p / 0.15) * (1 - ease((p - 0.7) / 0.3)) end
-    if phase == "windup" then return ease(p) end
+    if phase == "windup" or phase == "defeat" then return ease(p / 0.35) end -- defeat: eases in, then HOLDS (the dino is leaving the world)
     return 1
 end
 -- ctx: phase, p (0..1 progress of a timed phase), t (seconds since the phase began), aggr (0 jump .. 1 leap), carry (0..1 tuck amount when landing began).
@@ -202,6 +205,62 @@ function Pose.sampleAction(role: string, side: number, lead: boolean, ctx: Ctx, 
         roll = open - fold -- the fold itself is posture and stays under Reduce Motion
         pitch = -0.1 * W
     end
+    out.pitch = math.clamp(finite(pitch) * a, -Pose.MaxAngle, Pose.MaxAngle)
+    out.roll = math.clamp(finite(roll) * a + fold, -Pose.MaxFold, Pose.MaxFold)
+    out.yaw = math.clamp(finite(yaw) * a, -Pose.MaxAngle, Pose.MaxAngle)
+    out.dy = math.clamp(finite(dy) * a, -Pose.MaxOffset, Pose.MaxOffset)
+    out.dz = math.clamp(finite(dz) * a, -Pose.MaxOffset, Pose.MaxOffset)
+    out.fwd = 0
+    return out
+end
+-- BD-249: gentle per-skin defeat hook (docs/97). Same shape as sampleAction (absolute offsets from the rest pose, bounded, Reduce Motion = rest).
+-- Base: tips over sideways with a little dizzy wobble. Plush: slowly deflates (slumps down) with a soft wobble. Clay: pressed down flat
+-- (sinks, limbs spread). Bricks: the parts drift apart a few percent, like a toy coming loose (never gore; the shards/sounds are art tasks).
+-- Unknown skin names fall back to Base. ctx.p = 0..1 over DefeatSeconds, ctx.t = seconds.
+function Pose.skinOf(name: any): string
+    for _, k in Pose.Skins do if k == name then return k end end
+    return "Base"
+end
+function Pose.sampleDefeat(role: string, side: number, lead: boolean, ctx: Ctx, amp: number, out: Out, class: string?, skin: string?): Out
+    local a = math.clamp(finite(amp), 0, 1)
+    local s = if side < 0 then -1 else 1
+    local p, t = math.clamp(finite(ctx.p), 0, 1), math.max(0, finite(ctx.t))
+    local e = ease(p)
+    local kind = Pose.skinOf(skin)
+    local pitch, roll, yaw, dy, dz = 0, 0, 0, 0, 0
+    local fold = 0
+    if kind == "Base" then
+        local wob = math.sin(t * 9) * (1 - e) * 0.05
+        if role == "body" then roll, dy = 0.45 * e + wob, -0.03 * e
+        elseif role == "head" or role == "neck" then roll, pitch, yaw = 0.25 * e + wob, 0.15 * e, math.sin(t * 7) * 0.10 * (1 - e)
+        elseif role == "tail" then roll, yaw = 0.2 * e, 0.2 * math.sin(t * 5) * (1 - e)
+        elseif role == "leg" or role == "arm" then pitch, roll = -0.25 * e * s, 0.2 * e
+        elseif role == "flipper" then roll = s * 0.3 * e end
+    elseif kind == "Plush" then
+        local pff = math.sin(t * 6) * (1 - e) * 0.03
+        if role == "body" then dy, pitch = -0.06 * e, 0.10 * e + pff
+        elseif role == "head" or role == "neck" then dy, pitch = -0.05 * e, 0.30 * e
+        elseif role == "tail" then pitch = 0.25 * e
+        elseif role == "leg" or role == "arm" then pitch = 0.3 * e * (if lead then 1 else -1) elseif role == "flipper" then roll = s * 0.25 * e end
+    elseif kind == "Clay" then
+        local press = ease(math.clamp(p / 0.4, 0, 1))
+        local back = ease(math.clamp((p - 0.7) / 0.3, 0, 1)) * 0.3 -- starts to reshape at the end
+        local k = press * (1 - back)
+        if role == "body" then dy = -0.07 * k
+        elseif role == "head" or role == "neck" then dy, pitch = -0.06 * k, 0.10 * k
+        elseif role == "tail" then dy, pitch = -0.04 * k, 0.12 * k
+        elseif role == "leg" or role == "arm" then roll, dy = s * 0.35 * k, -0.02 * k
+        elseif role == "flipper" then roll = s * 0.35 * k end
+    else -- Bricks
+        local drift = ease(math.clamp(p / 0.6, 0, 1))
+        local rattle = math.sin(t * 22) * (1 - e) * 0.004
+        if role == "body" then dy = -0.04 * drift + rattle
+        elseif role == "head" or role == "neck" then dy, dz, pitch = 0.02 * drift, 0.03 * drift, 0.35 * drift
+        elseif role == "tail" then dz, dy, yaw = -0.04 * drift, -0.02 * drift, 0.30 * drift
+        elseif role == "leg" or role == "arm" then dy, roll = -0.03 * drift + rattle, s * 0.30 * drift
+        elseif role == "flipper" then roll = s * 0.4 * drift end
+    end
+    if role == "wing" then fold = -s * Pose.FoldAngle roll = s * 0.1 * e end
     out.pitch = math.clamp(finite(pitch) * a, -Pose.MaxAngle, Pose.MaxAngle)
     out.roll = math.clamp(finite(roll) * a + fold, -Pose.MaxFold, Pose.MaxFold)
     out.yaw = math.clamp(finite(yaw) * a, -Pose.MaxAngle, Pose.MaxAngle)

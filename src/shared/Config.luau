@@ -27,6 +27,7 @@ return table.freeze({
     TerrainTop = 120,
     ArenaHalfWidth = 416, -- world v2: 1.6x the 260 of the 520 map (IslandLayout.Scale)
     SanctuaryCenterZ = 521, -- hub centre: ArenaHalfWidth + 105 (it sits past the north boundary)
+    FastTravelPerk = false, -- BD-391/405 (docs/115 D22): true = fast travel to shops is a Crystal Shop perk (crystals, no Robux); false = unchanged. Needs CaveHub.
     CaveHub = false, -- BD-280 (docs/104): true = big cave Sanctuary at CaveHubLayout.CenterZ; false = the current hub, unchanged
     CameraMinZoom = 12,
     CameraMaxZoom = 110,

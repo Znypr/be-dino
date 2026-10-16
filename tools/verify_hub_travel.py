@@ -157,6 +157,14 @@ for _,id in {"heart","nests","potions","fusion","style","index","fame","gate","s
  local ack,spot=R.process({},{station=id},state({caveHub=false}))
  assert(ack.ok==false and ack.reason=="flag_off" and spot==nil,"flag off refuses "..id)
 end
+-- BD-391/405: perk flag on = only owners travel; flag off = unchanged
+expect(req,{fastTravelPerk=true,fastTravelOwned=false},"not_owned","perk flag on, not bought")
+expect(req,{fastTravelPerk=true},"not_owned","perk flag on, owned field missing")
+expect(req,{fastTravelPerk=true,fastTravelOwned=true},nil,"perk bought")
+expect(req,{fastTravelPerk=false,fastTravelOwned=false},nil,"perk flag off: legacy behaviour")
+expect(req,{fastTravelPerk=true,fastTravelOwned="yes"},"not_owned","junk owned value")
+local pa,ps=R.process({},req,state({fastTravelPerk=true,fastTravelOwned=false}))
+assert(pa.ok==false and pa.reason=="not_owned" and ps==nil,"no move without the perk")
 print("hub travel: validate, rate limit, spots, junk, exploits ok")
 '''
 
@@ -176,6 +184,7 @@ def run(runner, config):
 def static_checks():
     cfg = (ROOT / 'src/shared/Config.luau').read_text()
     assert 'CaveHub = false' in cfg, 'Config.CaveHub ships false'
+    assert 'FastTravelPerk = false' in cfg, 'Config.FastTravelPerk ships false'
     rules = (ROOT / 'src/shared/HubTravelRules.luau').read_text()
     for banned in ('Instance.new', 'game:GetService', 'Vector3', 'CFrame', 'workspace', 'os.clock', 'task.'):
         assert banned not in rules, 'HubTravelRules stays pure: ' + banned
