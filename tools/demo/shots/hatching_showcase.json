@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "name": "hatching_showcase",
+  "aspect": "16:9",
+  "hideHud": true,
+  "letterbox": true,
+  "shots": [
+    {
+      "duration": 4,
+      "title": "New eggs!",
+      "camera": {
+        "kind": "track",
+        "offset": [
+          0,
+          5,
+          12
+        ],
+        "ease": "inOutSine"
+      },
+      "triggers": [
+        {
+          "at": 0.5,
+          "kind": "remote",
+          "remote": "TestGrantChests"
+        }
+      ]
+    },
+    {
+      "duration": 6,
+      "lowerThird": "Watch them hatch one by one",
+      "camera": {
+        "kind": "track",
+        "offset": [
+          6,
+          4,
+          9
+        ]
+      },
+      "triggers": [
+        {
+          "at": 0,
+          "kind": "hud",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "duration": 5,
+      "camera": {
+        "kind": "track",
+        "offset": [
+          -6,
+          3,
+          8
+        ],
+        "lookHeight": 3
+      },
+      "triggers": [
+        {
+          "at": 0,
+          "kind": "hud",
+          "visible": false
+        }
+      ]
+    }
+  ]
+}

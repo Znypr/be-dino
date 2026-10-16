@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "name": "class_feel",
+  "aspect": "16:9",
+  "hideHud": true,
+  "letterbox": true,
+  "shots": [
+    {
+      "duration": 4,
+      "title": "Pick your dino",
+      "camera": {
+        "kind": "pushin",
+        "from": [
+          0,
+          12,
+          40
+        ],
+        "look": [
+          0,
+          4,
+          0
+        ],
+        "distance": 14,
+        "ease": "outCubic"
+      }
+    },
+    {
+      "duration": 6,
+      "lowerThird": "Fly, swim, dash",
+      "camera": {
+        "kind": "track",
+        "offset": [
+          0,
+          7,
+          16
+        ],
+        "lookHeight": 2
+      },
+      "triggers": [
+        {
+          "at": 0,
+          "kind": "note",
+          "text": "NOTE: equip the class species by hand before this shot"
+        }
+      ]
+    },
+    {
+      "duration": 5,
+      "camera": {
+        "kind": "orbit",
+        "center": [
+          0,
+          4,
+          0
+        ],
+        "radius": 16,
+        "height": 5,
+        "startDeg": 0,
+        "endDeg": 180,
+        "ease": "inOutSine"
+      }
+    }
+  ]
+}

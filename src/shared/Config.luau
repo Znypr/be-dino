@@ -302,6 +302,9 @@ return table.freeze({
     -- BD-085/BD-322 (docs/127): owner-only phone QA overlay + [BD-QA] log marks. OFF in every committed build (pinned by
     -- release_profiles.py). To measure on a phone: set true and add your UserId locally, build, publish privately, never commit.
     QaOverlayEnabled = false,
+    -- Trailer clip director (docs/133): dev-only camera/title/HUD shot player for demo recordings. Needs Studio (RunService:IsStudio()) AND this flag;
+    -- OFF in every committed build (pinned by release_profiles.py). Never publish a place with it on.
+    DemoDirectorEnabled = false,
     QaOverlayUserIds = {}, -- Roblox UserIds (numbers) allowed to see the overlay; Studio (unpublished) is always allowed while the flag is on
     ArtPreviewRequestCooldownSeconds = 0.25,
 
