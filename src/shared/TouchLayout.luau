@@ -9,6 +9,7 @@
 -- AnchorPoint (0, 0), (w, h) is the design size before UIScale, so the rendered
 -- rectangle is (x, y, w * scale, h * scale).
 local Config = require(script.Parent.Config)
+local PhoneScale = require(script.Parent.PhoneScale)
 local TouchLayout = {}
 
 export type Rect = {x: number, y: number, w: number, h: number}
@@ -68,12 +69,18 @@ local function buttonContent(bw: number, bh: number)
         -- Wide tablets: icon left, label right (desktop style).
         local icon = math.min(bh - 12, 40)
         return {iconX = 4, iconY = (bh - icon) / 2, icon = icon, labelX = icon + 8, labelY = 0,
-            labelW = bw - icon - 10, labelH = bh, textSize = clamp(math.floor((bw - icon - 10) / 4.8), 12, 17)}
+            labelW = bw - icon - 10, labelH = bh, textSize = clamp(math.floor((bw - icon - 10) / 4.8), PhoneScale.MinText, 17)}
+    end
+    if bw < PhoneScale.RailLabelW then
+        -- BD-333: too narrow for a 14 px label (SETTINGS needs ~64 px): icon-only button, the label is hidden by Bootstrap.
+        local icon = math.min(bw - 8, bh - 8)
+        return {iconX = (bw - icon) / 2, iconY = (bh - icon) / 2, icon = icon, labelX = 0, labelY = 0, labelW = 0, labelH = 0,
+            textSize = PhoneScale.MinText, iconOnly = true}
     end
     -- Phones: icon above a short label.
     local icon = math.min(math.floor(bh * 0.5), bw - 12)
     return {iconX = (bw - icon) / 2, iconY = 3, icon = icon, labelX = 0, labelY = icon + 3,
-        labelW = bw, labelH = bh - icon - 5, textSize = clamp(math.floor((bw - 4) / 4.7), 10, 14)}
+        labelW = bw, labelH = bh - icon - 5, textSize = clamp(math.floor((bw - 4) / 4.7), PhoneScale.MinText, 14)}
 end
 
 local function desktop(width: number, height: number, count: number)
@@ -94,7 +101,8 @@ local function desktop(width: number, height: number, count: number)
             button = {w = 172, h = 54, iconX = 5, iconY = 6, icon = 40, labelX = 52, labelY = 0, labelW = 114, labelH = 54, textSize = 19},
             positions = railButtons(count, 1, 172, 54, 7) :: any},
         timers = {x = width - 20 - TouchLayout.TIMERS_W * small, y = height - 22 - 220 * small, scale = small, w = TouchLayout.TIMERS_W, h = 220,
-            leapY = 0, weatherY = 72, weatherVisible = true, buffsY = 145, buffsH = 68, buffsVisible = true},
+            leapY = 0, weatherY = 72, weatherVisible = true, buffsY = 145, buffsH = 68, buffsVisible = true,
+            leapText = 22, weatherText = 20, buffsText = 16},
         action = action,
         badge = {x = width / 2 - 125, y = 36, scale = 1, w = 250, h = 24, textSize = 15},
         notice = {x = width / 2 - noticeW / 2, y = 8, scale = 1, w = noticeW, h = 25, textSize = 14},
@@ -104,7 +112,8 @@ end
 
 function TouchLayout.compute(params: {width: number, height: number, touch: boolean, navCount: number, thumb: Rect?, jump: Rect?})
     local width, height, count = params.width, params.height, params.navCount
-    if not params.touch then return desktop(width, height, count) end
+    -- BD-333: a short canvas (phone landscape) always gets the phone layout, even when Studio/PC reports a mouse.
+    if not (params.touch or PhoneScale.isCompact(height)) then return desktop(width, height, count) end
     local target, m = Config.TouchMinTargetPx, Config.TouchSafeMargin
     local s = clamp(math.min(width / 1000, height / 560), 0.55, 1)
     local thumb, corner = TouchLayout.reservedZones(width, height, params.thumb, params.jump)
@@ -117,7 +126,7 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
         if attempt == 2 then
             -- Narrow phones: compact status widgets to their floor before shrinking buttons.
             hudScale = math.min(hudScale, 0.55)
-            crystalScale = 0.55
+            crystalScale = 0.6 -- BD-333: 24 px design text stays >= 14 px (was 0.55 = 13 px)
         end
         hud = {x = m, y = m, scale = hudScale, w = TouchLayout.HUD.w, h = TouchLayout.HUD.h}
         crystal = {x = width - m - TouchLayout.CRYSTAL.w * crystalScale, y = m, scale = crystalScale, w = TouchLayout.CRYSTAL.w, h = TouchLayout.CRYSTAL.h}
@@ -160,9 +169,14 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
     local weatherVisible = leapY >= TouchLayout.WEATHER_H + 6
     local buffsY = TouchLayout.WEATHER_H + 6
     local buffsH = math.min(TouchLayout.BUFFS_H, leapY - 6 - buffsY)
+    -- BD-333: design text sizes that render >= 14 px under timersScale (secondary buffs text hides when two rows do not fit).
+    local leapText = PhoneScale.floorText(22, timersScale)
+    local weatherText = PhoneScale.floorText(20, timersScale)
+    local buffsText = PhoneScale.floorText(16, timersScale)
     local timers = {x = columnX, y = bottom - designH * timersScale, scale = timersScale, w = TouchLayout.TIMERS_W, h = designH,
         leapY = leapY, weatherY = 0, weatherVisible = weatherVisible, buffsY = leapY - 6 - math.max(buffsH, 0),
-        buffsH = math.max(buffsH, 0), buffsVisible = weatherVisible and buffsH >= 30}
+        buffsH = math.max(buffsH, 0), buffsVisible = weatherVisible and buffsH >= buffsText * 2,
+        leapText = leapText, weatherText = weatherText, buffsText = buffsText}
 
     -- Bottom-centre Home/Explore between the thumbstick zone and the jump corner.
     local actionScale = math.max(target / TouchLayout.ACTION.h, s)
@@ -173,9 +187,9 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
 
     local badgeY = hud.y + hud.h * hud.scale + 2
     -- Studio-only preview notice: beside the build badge, or below it when the rail is in the way.
-    local notice = {x = m + 154, y = badgeY, scale = 1, w = 230, h = 16, textSize = 12}
+    local notice = {x = m + 154, y = badgeY, scale = 1, w = 230, h = 20, textSize = PhoneScale.MinText}
     if TouchLayout.overlaps(TouchLayout.rendered(notice), {x = rail.x, y = rail.y, w = rail.w, h = rail.h}) then
-        notice.x, notice.y = m, badgeY + 18
+        notice.x, notice.y = m, badgeY + 22
         -- Seven nav buttons give a wider rail: keep the (short, touch) notice left of it.
         notice.w = math.max(60, math.min(notice.w, rail.x - m - notice.x - 1)) -- BD-080: floor 60, Bootstrap scales the text to fit
     end
@@ -187,7 +201,7 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
         rail = rail,
         timers = timers,
         action = action,
-        badge = {x = m, y = badgeY, scale = 1, w = math.max(60, math.min(150, rail.x - m - 2)), h = 16, textSize = 12}, -- BD-080: the compact egg plate leaves less room before the rail
+        badge = {x = m, y = badgeY, scale = 1, w = math.max(60, math.min(150, rail.x - m - 2)), h = 20, textSize = PhoneScale.MinText}, -- BD-080: the compact egg plate leaves less room before the rail
         notice = notice,
         toastScale = math.min(1, (width - 20) / 440),
     }

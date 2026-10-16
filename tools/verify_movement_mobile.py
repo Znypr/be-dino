@@ -19,9 +19,9 @@ def wrapped(path):
 
 
 def script():
-    return 'local Config = ' + wrapped('src/shared/Config.luau') + '\n' + '''
-local script = {Parent = {Config = true}}
-local require = function(_) return Config end
+    return 'local Config = ' + wrapped('src/shared/Config.luau') + '\nlocal PhoneScale = ' + wrapped('src/shared/PhoneScale.luau') + '\n' + '''
+local script = {Parent = {Config = "Config", PhoneScale = "PhoneScale"}}
+local require = function(name) if name == "PhoneScale" then return PhoneScale end return Config end
 local workspace = {Gravity = 196.2}
 local Vector2 = {new = function(x, y) return {Magnitude = math.sqrt(x * x + y * y)} end}
 ''' + 'local Layout = ' + wrapped('src/shared/IslandLayout.luau') + '\n' \
