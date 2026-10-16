@@ -88,7 +88,7 @@ for _,item in created do
   assert((vector(item.Position.X,0,item.Position.Z)-vector(0,0,30)).Magnitude<25,"starter food too far from entry")
  end
 end
-assert(starter>=12 and starter<=2*Config.FoodClusterItems,"two entrance clusters must survive placement (BD-387: up to 8 items each, at least the old 6)")
+assert(starter>=12 and starter<=2*Config.FoodClusterItems,"two entrance clusters must survive placement (BD-387: up to 9 items each, at least the old 6)")
 missingTerrain=true
 Food.start({})
 assert(Workspace.attrs.FoodCount>1400 and Workspace.attrs.FoodPlacementFallbacks>0,"heightfield fallback produced an empty map")

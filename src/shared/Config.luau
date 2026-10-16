@@ -40,7 +40,7 @@ return table.freeze({
     FoodPickupRadius = 2.25,
     FoodTickSeconds = 0.08, -- PROVISIONAL: was 0.15; shorter pickup latency
     FoodSectorCount = 20, -- world v2: 400 clusters of 8 over a 2.56x larger island (was 256)
-    FoodClusterItems = 8, -- BD-387: was 6 (+33% food, owner 2026-10-16); 3,200 pickups, phone culling keeps the visible part budget (docs/107)
+    FoodClusterItems = 9, -- BD-207/BD-167 density v3 (owner 2026-10-16 "more food"): 9 per cluster = 3,600 pickups (was 8 = 3,200, 6 before BD-387); fits the 9,150 join cap, phone culling keeps the visible part budget (docs/107)
     FoodClusterRadius = 7,
     FoodSeed = 1404,
     FoodArtMode = "Legacy", -- "Kit": BD-050 Blender food variants (visual only; points unchanged) PROVISIONAL
