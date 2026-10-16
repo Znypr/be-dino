@@ -327,6 +327,10 @@ def check_key():
         assert m.group(1).strip() == {'gold': '255, 170, 30', 'emerald': '40, 255, 120', 'diamond': '150, 200, 255'}[tid], f"{tid} shell is the tier colour (round 9 live tuning)"
         assert 'rim = {' + rimc + '}' in tier, f"{tid} rim colour"
     assert 'Tier.RimTransparency = {0.1, 0.25}' in tier
+    for tid in ('gold', 'emerald', 'diamond'):  # 2026-10-17: the v2 coat maps carry the colour, so the Highlight fill starts faint (0.85) for every tier
+        blk = re.search(tid + r' = \{id = "' + tid + r'".*?\n(?=    \w+ = \{id|\})', tier, re.S).group(0)
+        assert 'outline = {' in blk and 'rimFill = 0.85' in blk, f"{tid} Highlight outline + rimFill 0.85"
+    assert re.search(r'roughness = \{gold = "rbxassetid://96432641754187", emerald = "rbxassetid://134658233071230", diamond = "rbxassetid://134658233071230"\}', tier), "per-tier roughness: gold shared, emerald / diamond gem"
     assert 'Highlight' in dinos and 'Tier.HighlightFill, 0' in dinos and 'DepthMode.Occluded' in dinos, "tier rim Highlight"
     assert 'LPTierGlow' in dinos and 'Enum.Material.Neon' in dinos and 'Tier.GlowLayers' in dinos and 'Tier.BodyGloss' in dinos, "Neon glow shells on every textured part + body gloss"
     assert 'Tier.GlowLayers[2]' in dinos and 'Tier.UseGlowShells = false' in tier, "glow shells kept but OFF (round 9), Lite: single layer"
