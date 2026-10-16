@@ -841,6 +841,7 @@ function Seq.play(args: Args): Handle
         pill.BackgroundColor3, pillStroke.Color = glow:Lerp(Color3.new(0, 0, 0), .4), glow:Lerp(WHITE, .25)
         if r.shiny then addRibbon("SHINY", Theme.Colors.gold, 100, 52, 170, -7) end
         if r.big then addRibbon("BIG", Theme.Colors.purple, 724, 52, 150, 7) end
+        if r.newFind and not failed then addRibbon("NEW!", Theme.Colors.gold, 724, if r.big then 108 else 52, 130, 5) end -- BD-436: a first-time colour, pattern or mutation
         if r.mutationName and r.mutationId and not failed then mr = MutationReveal.begin(fx.front, r.mutationId, motion) end
         if r.mutationName then addRibbon(string.upper(r.mutationName), r.mutationColor or Theme.Colors.gold, 116, if r.shiny then 108 else 52, 210, -4) end
         hint.Text = Timeline.hint(r.remaining)

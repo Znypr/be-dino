@@ -98,8 +98,10 @@ end
 
 -- speciesCounts plus parts: colours / patterns seen on dinos the player owns now (list rows: genes.primaryColorId,
 -- genes.patternId, mutationId) and mutations from the collection events/variants. Derived only; nothing is saved or
--- rewritten. A dino fused away stops counting its colour here (no discovery log exists yet). totals = {colours, patterns, mutations}.
-function Goals.indexCounts(collection: any, order: any, extraFound: any, dinos: any, totals: any)
+-- rewritten. BD-436: `discovered` (optional, owner-only DiscoveryJson counts {colours, patterns, mutations}) is the permanent log; when it
+-- is present each part uses max(log, derived) so a dino fused away never un-discovers its colour; absent = derived only (older saves).
+-- totals = {colours, patterns, mutations}.
+function Goals.indexCounts(collection: any, order: any, extraFound: any, dinos: any, totals: any, discovered: any)
     local out = Goals.speciesCounts(collection, order, extraFound)
     local t = if type(totals) == "table" then totals else {}
     local colours, patterns, mutations = {}, {}, {}
@@ -125,12 +127,15 @@ function Goals.indexCounts(collection: any, order: any, extraFound: any, dinos: 
             end
         end
     end
-    local function count(set: any, total: any)
+    local log = if type(discovered) == "table" then discovered else nil
+    local function count(set: any, total: any, logged: any)
         local n = 0
         for _ in set do n += 1 end
+        if log ~= nil then n = math.max(n, whole(logged)) end
         return {found = math.min(n, whole(total)), total = whole(total)}
     end
-    out.parts = {colours = count(colours, t.colours), patterns = count(patterns, t.patterns), mutations = count(mutations, t.mutations)}
+    local l = log or {}
+    out.parts = {colours = count(colours, t.colours, l.colours), patterns = count(patterns, t.patterns, l.patterns), mutations = count(mutations, t.mutations, l.mutations)}
     return out
 end
 
