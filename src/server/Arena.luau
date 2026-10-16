@@ -5,6 +5,8 @@ local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Terrain = require(script.Parent.IslandTerrain)
 local CaveTerrain = require(script.Parent.CaveTerrain)
 local CaveLighting = require(script.Parent.CaveLighting)
+local CaveProps = require(script.Parent.CaveProps)
+local CaveLavaFx = require(script.Parent.CaveLavaFx)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 local CaveHubLayout = require(ReplicatedStorage.Shared.CaveHubLayout)
@@ -273,13 +275,15 @@ function Arena.build()
     end
     -- Separate safe hub beyond the north boundary, with explicit server-owned entry.
     if caveHub.enabled then
-        -- Cave hub (docs/104): the shell is terrain (CaveTerrain). Props, signs and stations are BD-284+; Leaderboards still
+        -- Cave hub (docs/104): the shell is terrain (CaveTerrain). Props are CaveProps (BD-284); signs/text are BD-292; Leaderboards still
         -- needs a SanctuarySign anchor, so keep an invisible one until the Fame Wall exists.
         local hub = Instance.new("Model")
         hub.Name, hub.Parent = "Sanctuary", world
         local anchor = part(hub, "SanctuarySign", Vector3.new(1, 1, 1), Vector3.new(0, 35, caveHub.centerZ + 37), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, false)
         anchor.Transparency = 1
         CaveLighting.build(hub) -- BD-286: light shafts, warm fill, lava glow, gate arch light (flag on only)
+        CaveLavaFx.build(hub) -- BD-285: lava falls + pool FX from the existing alpha textures (flag on only)
+        CaveProps.build(hub) -- BD-284: colliders now, generated meshes load in the background and are skipped if a load fails (flag on only)
     else
         local hub = Instance.new("Model")
         local cz = CaveHubLayout.hub(Config).centerZ -- BD-280: one hub geometry source (the cave shell itself is BD-281)

@@ -207,7 +207,8 @@ for _,s in S do
  for x=-s.r,s.r,3.5 do for z=-s.r,s.r,3.5 do
   if x*x+z*z<=(s.r-2.5)^2 and not blocked(s.x+x,s.z+z,1.75) then n+=1 end
  end end
- assert(n>=12,"12 players fit on "..s.id.." (room for "..n..")")
+ local dbg={} for _,b in blockers do if b.owner==s.id then dbg[#dbg+1]=b.key..string.format("@%.1f,%.1f %.1fx%.1f",b.x-s.x,b.z-s.z,b.w,b.d) end end
+ assert(n>=12,"12 players fit on "..s.id.." (room for "..n..") blockers "..table.concat(dbg,"; "))
 end
 
 -- ---- flat-path reachability from the spawn: BFS over flat network cells (pads + paths), 2 stud cells, no props
@@ -264,6 +265,56 @@ assert(C.Fall.width==40 and C.Fall.height==32 and C.Pool.r>=10,"lava falls 40 x 
 assert(counts.cave_lava_fall==1 and counts.lava_pool_disc==1 and counts.cave_lava_rim_rock==6 and counts.cave_stepping_stone==4,"lava props present")
 assert(#L.lights<=C.MaxLights,"<= 16 lights: "..#L.lights)
 
+-- ---- BD-284: every layout prop key is a registered published mesh, an existing mesh, or an explicit non-mesh (FX)
+local P=CaveHubProps
+local ids,idCount={},0
+for key,a in P.Assets do
+ assert(type(a.id)=="string" and string.match(a.id,"^%d+$")~=nil and #a.id>=10,"numeric published id: "..key)
+ assert(ids[a.id]==nil,"unique id: "..key.." duplicates "..tostring(ids[a.id]))
+ ids[a.id]=key idCount+=1
+end
+local existingCount=0
+for key,id in P.Existing do
+ assert(string.match(id,"^%d+$")~=nil,"numeric existing id: "..key)
+ assert(ids[id]==nil,"existing id not duplicated as a new upload: "..key)
+ ids[id]=key existingCount+=1
+end
+local mapped,fx=0,0
+for key in C.Kinds do assert(P.assetId(key)~=nil or P.NotMeshes[key]~=nil,"layout kind has no published id and is not a listed non-mesh: "..key) end
+local used={}
+for _,p in L.props do
+ if not used[p.key] then
+  used[p.key]=true
+  if P.assetId(p.key) then mapped+=1 else fx+=1 end
+ end
+end
+for key,why in P.NotMeshes do assert(type(why)=="string" and #why>10,"non-mesh reason: "..key) end
+for key in P.Solid do assert(C.Kinds[key],"solid piece is a layout kind: "..key) end
+for key in P.Rim do assert(C.Kinds[key],"rim piece is a layout kind: "..key) end
+-- scale targets: the uniform factor from the loaded size to the layout size is sane, and the proportions agree (<= 2.6 x off on any axis)
+local worst,worstKey,checked=1,"",0
+for key,a in P.Assets do
+ local k=C.Kinds[key]
+ if a.native and k and P.assetId(key) then
+  local target={k[1],k[2],k[3]}
+  local f=P.fitFactor(a.native,target)
+  assert(f>=P.MinScale and f<=P.MaxScale,"scale factor in bounds: "..key.." "..f)
+  for i=1,3 do
+   local want=target[i]/(a.native[i]*f)
+   local off=math.max(want,1/want)
+   if off>worst then worst,worstKey=off,key.." axis "..i end
+   assert(off<=2.6,"generated proportions fit the layout size: "..key.." axis "..i.." off by "..off)
+  end
+  checked+=1
+ end
+end
+assert(P.fitFactor({2,2,2},{4,1,1})==2 and P.fitFactor({1,1,1},{1000,1,1})==P.MaxScale and P.fitFactor({0,1,1},{1,1,1})==1,"fitFactor rules")
+assert(P.Lava.fxPartBudget<=counts.cave_lava_fall+counts.lava_pool_disc,"lava FX parts stand in for the fall and disc rows: no extra lava parts")
+assert(P.Assets.cave_lava_fall and P.NotMeshes.cave_lava_fall,"the chunky generated lava block is registered but not placed")
+assert(C.Kinds.hub_gate_arch[1]<=L.gate.mouthWidth,"gate arch fits inside the 30 stud mouth")
+assert(counts.hub_gate_arch==1,"one gate arch")
+print(string.format("props OK: %d layout keys mapped to published ids (%d new uploads + %d existing registered), %d FX/non-mesh keys, %d proportion checks (worst %.2fx on %s)",mapped,idCount,existingCount,fx,checked,worst,worstKey))
+
 -- ---- budgets (docs/104 s3.1)
 local B=C.budgetTable()
 local lines={}
@@ -297,6 +348,7 @@ Vector3.__eq=function(a,b) return a.X==b.X and a.Y==b.Y and a.Z==b.Z end
 def script(config):
     return (VECTOR + 'local Config=' + ('(function()\n' + config + '\nend)()')
             + '\nlocal CaveHubLayout=' + wrapped('src/shared/CaveHubLayout.luau')
+            + '\nlocal CaveHubProps=' + wrapped('src/shared/CaveHubProps.luau')
             + '\nlocal script={Parent={CaveHubLayout="CaveHubLayout"}}\nlocal require=function() return CaveHubLayout end'
             + '\nlocal Layout=' + wrapped('src/shared/IslandLayout.luau')
             + '\nlocal SpawnGeometry=' + wrapped('src/shared/SpawnGeometry.luau') + '\n'
@@ -321,6 +373,29 @@ def static_checks():
     src = (ROOT / 'src/shared/CaveHubLayout.luau').read_text()
     for banned in ('Instance.new', 'game:GetService', 'Vector3.new', 'workspace'):
         assert banned not in src, 'CaveHubLayout stays pure: ' + banned
+    # BD-284: props
+    import re
+    props = (ROOT / 'src/shared/CaveHubProps.luau').read_text()
+    for banned in ('Instance.new', 'game:GetService', 'Vector3.new', 'workspace', 'require('):
+        assert banned not in props, 'CaveHubProps stays pure: ' + banned
+    ids = re.findall(r'(?:id = |= )"(\d{10,})"', props)
+    assert len(ids) == len(set(ids)) and len(ids) >= 40, 'ids unique, ' + str(len(ids))
+    registry = (ROOT / 'docs/77-asset-registry.md').read_text()
+    for i in ids:
+        assert i in registry, 'docs/77 has a line for ' + i
+    generated = (ROOT / 'src/shared/WorldGeneratedMeshes.luau').read_text()
+    for key, i in re.findall(r'(\w+) = "(\d{10,})",', props.split('Props.Existing')[1].split('}')[0]):
+        assert i in generated, 'existing id is a real WorldGeneratedMeshes id: ' + key
+    server = (ROOT / 'src/server/CaveProps.luau').read_text()
+    assert server.count('InsertService:LoadAsset') == 1 and 'pcall(loadTemplate' in server, 'one guarded load path'
+    assert 'task.wait' in server and 'task.spawn' in server, 'props load in the background in batches'
+    assert 'IslandTerrainReady' not in server and 'IslandTerrainReady' not in (ROOT / 'src/server/CaveLavaFx.luau').read_text()
+    assert 'Props.Solid' in server and server.count('CanCollide = true') <= 1, 'only Props.Solid pieces collide (plus the invisible colliders)'
+    assert arena.count('CaveProps.build(') == 1 and arena.count('CaveLavaFx.build(') == 1, 'props and lava FX built once'
+    start = arena.index('if caveHub.enabled then\n        -- Cave hub')
+    legacy = arena.index('local cz = CaveHubLayout.hub(Config).centerZ')
+    assert start < arena.index('CaveProps.build(hub)') < legacy and start < arena.index('CaveLavaFx.build(hub)') < legacy, 'props and lava FX only in the flag-on cave branch'
+    assert 'cave_lava_fall' not in server.replace('NotMeshes', ''), 'the chunky lava block is never placed as the waterfall'
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(); p.add_argument('--runner', required=True); args = p.parse_args()
