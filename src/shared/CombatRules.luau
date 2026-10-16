@@ -60,6 +60,14 @@ function Rules.recordDefeat(world: any, userId: any, now: any)
     end
     table.insert(fresh, n)
     world.defeats[id] = fresh
+    -- BD-363: drop other users whose every defeat is outside the window (they can no longer earn a shield), so the table cannot grow forever.
+    for other, list in world.defeats do
+        if other ~= id then
+            local live = false
+            for _, t in list do if n - t <= Cfg.FriendShieldWindowSeconds then live = true break end end
+            if not live then world.defeats[other] = nil end
+        end
+    end
 end
 
 -- opts = {userId, runId, class, score, now, peaceful, protectedUntil}. Returns the dino (existing one for a repeat join)
