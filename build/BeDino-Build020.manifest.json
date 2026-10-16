@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "d000a09db920c9e216bab2a5288201ef69219ae60d933451503875550fc53015",
+  "place_sha256": "d512c6112935a2ca9e11ce0eb5c05a34ac69176e1d84f7b6c8631204dda19839",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -208,7 +208,9 @@
     "src/shared/HatchFxPlan.luau": "26ade9d00824fa111dba067d51b904a7ddf4de3d20c017c42824fcc3cc7858fe",
     "src/shared/HatchPresentation.luau": "22ec69b7c1e1f12e2e1cf8eae0dc9cdb073018bbc3aa63f525cf7138e124a716",
     "src/shared/HatchTimeline.luau": "b0988cc2ab0ff6d0c7e8f6ec2d7bf4458e483b78a3a4789f0d09646361b34d54",
-    "src/shared/HubTravelClientRules.luau": "d3307e63993322ce6cf900e423575f4054df2674f03159cbda9f64b22b601d13",
+    "src/shared/HubGuideRules.luau": "68b5655512950fc4f9342af0f271dccb91839dfa5dfb5da5f93ce6ea2c29aadb",
+    "src/shared/HubSignCopy.luau": "5a250186e188d609a37c7120c3d949b9c85914281a1500a192a14e819fe43809",
+    "src/shared/HubTravelClientRules.luau": "b52ad8f55d71722708ebae0891fa7a024015fbacc44db588174191c8eb6fcdb0",
     "src/shared/HubTravelRules.luau": "f6bdce26693eb38a2d48c654bf07cf6f723240e4a94d174e11c85dbd74243b41",
     "src/shared/HubWalkUpRules.luau": "f37aded8181355d0273f1ccf0ef32340fd69b83cab3b4883cf2c0ca128e062e7",
     "src/shared/HudRules.luau": "9cfc1c45c736ad0c248056580584d120239689d29513704015b732aaedb66fb3",
@@ -319,7 +321,8 @@
     "src/client/HatchFx.luau": "589090489ea188b7a0c330c8b865f239c970c106daaeb702b01d214e38fc24f9",
     "src/client/HatchSequence.luau": "23a61b6d5da96f223b4e9b4bfd9323848307ce95b44db202e1111e32d791c26e",
     "src/client/HubGateClient.luau": "e5041262d06a37de68588f29f36b95c0604bebef90716b66d350431273096afa",
-    "src/client/HubTravelClient.luau": "d3c51a0322c7c97b22200ef36463269ebf0434137fdcbf96a233d95a19458b0d",
+    "src/client/HubGuideClient.luau": "bc556dca961cd865e95fbddfbbdffc5eeef85bc3d7b9e8371f0f685047982609",
+    "src/client/HubTravelClient.luau": "7cb9901f543030fb51ec5d342d43f8b3744bcad84af1fd7a5d4f71187484e632",
     "src/client/HubWalkUpClient.luau": "025cb0d98314898c604c3b09e691cbeac13c4bd33393ce052f97cff1f7bc5614",
     "src/client/HudV2.luau": "245d9bf4e10a3fd58d2e08218f8778e6c9208782017a749e048bcca1be7f6624",
     "src/client/InspectView.luau": "734aefd9c3ca8907cc4161e20b94e0dba4f372904c3950a1f17aaae7b47e9cf9",
