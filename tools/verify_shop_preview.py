@@ -75,6 +75,15 @@ def static_text_sizes():
     widgets = (ROOT / 'src/client/FusionWidgets.luau').read_text(encoding='utf-8')
     if 'W.MinText = 14' not in widgets or 'maxSize, W.MinText' not in widgets:
         bad.append('FusionWidgets min text size is not 14')
+    # QA 2026-10-16: dark text must not get a dark outline (GOLD / NEW GOLD / slot numbers became blobs).
+    if 'if color == C.outline then' not in widgets or 'TextStrokeTransparency = 1' not in widgets:
+        bad.append('FusionWidgets.label must drop the stroke for C.outline-coloured text')
+    menu = (ROOT / 'src/client/FusionMenu.luau').read_text(encoding='utf-8')
+    # The ScreenGui has no size when the grid is built, so the card size must come from the camera viewport.
+    if 'CurrentCamera' not in menu or 'AbsoluteSize.Y < 520' in menu:
+        bad.append('Fusion dino grid sizing must read workspace.CurrentCamera.ViewportSize')
+    if '40 * math.ceil(sectionCount / 3)' not in menu:
+        bad.append('confirm-screen odds chips frame must be 40 px per row (36 px cell + 4 px gap)')
     return bad
 
 

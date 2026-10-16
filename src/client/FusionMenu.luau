@@ -351,10 +351,16 @@ local function buildGrid(grid: ScrollingFrame)
     end
 end
 
+-- QA 2026-10-16: on phone landscape the picture shares the column with the odds chips; give the chips more room.
+local function resultRatio(): number
+    local camera = if workspace then workspace.CurrentCamera else nil
+    return if camera and camera.ViewportSize.Y < 520 then .36 else .5
+end
+
 -- Result preview (right column): big picture of the new dino + name + guarantee line.
 local function resultBox(parent: Frame, speciesId: string?, stageId: string, traits, big: boolean)
     local recipe = Sel.stage(stageId)
-    local box = W.box(parent, UDim2.new(1, 0, if big then .62 else .5, 0), UDim2.new(), W.StageColors[stageId] or C.gold, 10)
+    local box = W.box(parent, UDim2.new(1, 0, if big then .62 else resultRatio(), 0), UDim2.new(), W.StageColors[stageId] or C.gold, 10)
     box.Name = "Result"
     local badge = W.label(box, "NEW " .. string.upper(if recipe then recipe.name else stageId), UDim2.new(.6, 0, 0, 26), UDim2.fromOffset(6, 4), 20, C.outline)
     badge.Name, badge.BackgroundTransparency, badge.BackgroundColor3, badge.ZIndex = "Badge", 0, C.text, box.ZIndex + 2
@@ -422,11 +428,11 @@ updateColumn = function()
     local ready = state.quoteStatus == "ready" and state.quote ~= nil and state.quoteKey == currentKey()
     local speciesId = if state.quote then state.quote.speciesId else (if first then first.speciesId else nil)
     resultBox(right, speciesId, state.targetStage, nil, false)
-    local guarantee = W.label(right, if recipe and recipe.approved then "Guaranteed: " .. recipe.name .. "!" else Sel.LockedStageText, UDim2.new(1, 0, 0, 28), UDim2.new(0, 0, .5, 4), 22, C.accent)
+    local guarantee = W.label(right, if recipe and recipe.approved then "Guaranteed: " .. recipe.name .. "!" else Sel.LockedStageText, UDim2.new(1, 0, 0, 28), UDim2.new(0, 0, resultRatio(), 4), 22, C.accent)
     guarantee.Name = "Guarantee"
     local chips = Instance.new("ScrollingFrame")
     chips.Name, chips.BackgroundTransparency, chips.BorderSizePixel = "Odds", 1, 0
-    chips.Size, chips.Position = UDim2.new(1, 0, .5, -(T + 44)), UDim2.new(0, 0, .5, 34)
+    chips.Size, chips.Position = UDim2.new(1, 0, 1 - resultRatio(), -(T + 44)), UDim2.new(0, 0, resultRatio(), 34)
     chips.ScrollBarThickness, chips.AutomaticCanvasSize, chips.CanvasSize = 4, Enum.AutomaticSize.Y, UDim2.new()
     chips.Parent = right
     local layout = Instance.new("UIGridLayout")
@@ -516,8 +522,13 @@ local function renderBrowse()
     local grid = W.scroll(left, UDim2.new(1, 0, 1, -y), UDim2.fromOffset(0, y))
     grid.Name = "DinoGrid"
     local layout = Instance.new("UIGridLayout")
-    local small = gui ~= nil and (gui :: ScreenGui).AbsoluteSize.Y < 520
-    layout.CellSize = if small then UDim2.fromOffset(150, 216) else UDim2.fromOffset(176, 232)
+    -- QA 2026-10-16: the ScreenGui is not laid out yet when this runs, so read the camera viewport. 1080x720 gets two
+    -- columns that fill the lane (was one 176 px card and a wasted gap); phone landscape gets one wide, shorter card.
+    local camera = if workspace then workspace.CurrentCamera else nil -- the offline smoke mock has no workspace
+    local view = if camera then camera.ViewportSize else Vector2.new(1280, 720)
+    if view.Y < 520 then layout.CellSize = UDim2.new(1, -10, 0, 200)
+    elseif view.X < 1300 then layout.CellSize = UDim2.new(.5, -8, 0, 224)
+    else layout.CellSize = UDim2.fromOffset(176, 232) end
     layout.CellPadding, layout.SortOrder = UDim2.fromOffset(6, 6), Enum.SortOrder.LayoutOrder
     layout.Parent = grid
     if state.listError and state.mode == "browse" then
@@ -622,7 +633,7 @@ local function renderConfirm()
     chips.Name, chips.BackgroundTransparency, chips.LayoutOrder = "Odds", 1, order + 1
     local sectionCount = 0
     for _, s in Sel.oddsChips(quote.odds, catalog).sections do sectionCount += #s.chips end
-    chips.Size = UDim2.new(1, -14, 0, 32 * math.ceil(sectionCount / 3))
+    chips.Size = UDim2.new(1, -14, 0, 40 * math.ceil(sectionCount / 3)) -- QA: rows are 36 px + 4 px gap (was 32, so the third row overlapped the odds-version line)
     chips.Parent = list
     local layout = Instance.new("UIGridLayout")
     layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.new(1 / 3, -4, 0, 36), UDim2.fromOffset(4, 4), Enum.SortOrder.LayoutOrder

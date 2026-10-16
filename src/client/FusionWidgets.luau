@@ -27,8 +27,13 @@ function W.label(parent: Instance, text: string, size: UDim2, position: UDim2, m
     t.TextStrokeTransparency, t.TextStrokeColor3, t.TextWrapped = 0, C.outline, true
     if alignLeft then t.TextXAlignment = Enum.TextXAlignment.Left end
     textConstraint(t, maxText or 22)
-    local outline = Instance.new("UIStroke")
-    outline.ApplyStrokeMode, outline.Color, outline.Thickness, outline.Parent = Enum.ApplyStrokeMode.Contextual, C.outline, 1.5, t
+    if color == C.outline then
+        -- QA 2026-10-16: dark text on a light badge/tab (GOLD, NEW GOLD, slot numbers) turned into a blob with a dark outline.
+        t.TextStrokeTransparency = 1
+    else
+        local outline = Instance.new("UIStroke")
+        outline.ApplyStrokeMode, outline.Color, outline.Thickness, outline.Parent = Enum.ApplyStrokeMode.Contextual, C.outline, 1.5, t
+    end
     t.Parent = parent
     return t
 end
