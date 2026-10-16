@@ -314,27 +314,27 @@ assert(wallet.trails.white and shopper.attrs.AccountLevel==1)
 assert(Repository.progressionAction(shopper,"grant","crystal","shop-fund",false,100))
 assert(not Repository.progressionAction(shopper,"buyTrail","fern","locked-trail",false))
 assert(wallet.accountXP==0)
--- BD-044/165: 600 catches clamp to the 50-egg run cap; XP = 10 per run egg; deterministic PROVISIONAL crystals.
+-- BD-044/165: 600 catches clamp to the 150-egg run cap (BD-418); XP = 10/3 per run egg; deterministic PROVISIONAL crystals.
 local bankCapacity=mutableConfig.RunEggBankCapacity mutableConfig.RunEggBankCapacity=100 -- small bank so the full-bank gate is reachable
 assert(Repository.commitRunSettlement(shopper,"xp-run",600))
-assert(Repository.progression(shopper).crystals==373 and shopper.attrs.AccountLevel>=2) -- 100 + 273
+assert(Repository.progression(shopper).crystals==372 and shopper.attrs.AccountLevel>=2) -- 100 + 272
 assert(Repository.commitRunSettlement(shopper,"xp-run-2",10))
 local balance=Repository.progression(shopper).crystals
-assert(balance==434 and shopper.attrs.AccountLevel>=3) -- + 61
+assert(balance==397 and shopper.attrs.AccountLevel>=3) -- + 25
 assert(Repository.commitRunSettlement(shopper,"xp-run",600))
-assert(Repository.progression(shopper).crystals==balance and Repository.progression(shopper).accountXP==600)
-assert(#data['u:991'].eggs==5 and #data['u:991'].runEggBank==55 and #(data['u:991'].eggNests or {})==0,"no run time given -> no nest")
-assert(shopper.attrs.RunStartBlocked=="egg_bank_full" and shopper.attrs.BankedRunEggCount==55)
+assert(Repository.progression(shopper).crystals==balance and Repository.progression(shopper).accountXP==533)
+assert(#data['u:991'].eggs==5 and #data['u:991'].runEggBank==155 and #(data['u:991'].eggNests or {})==0,"no run time given -> no nest")
+assert(shopper.attrs.RunStartBlocked=="egg_bank_full" and shopper.attrs.BankedRunEggCount==155)
 -- Fixture reset so the purchase checks below start from an empty queue.
 mutableConfig.RunEggBankCapacity=bankCapacity
 Repository.release(shopper)
 data['u:991'].eggs={} data['u:991'].runEggBank={} data['u:991'].eggNests={}
 assert(Repository.load(shopper) and shopper.attrs.RunStartBlocked=="")
-assert(Repository.commitRunSettlement(shopper,"genes-run",1)) -- one queued egg (7 crystals at 7.5/egg)
+assert(Repository.commitRunSettlement(shopper,"genes-run",1)) -- one queued egg (2 crystals at 2.5/egg)
 assert(#data['u:991'].eggs==1 and data['u:991'].eggs[1].traitRollVersion=="bd045-genes-v2")
 assert(Repository.progressionAction(shopper,"buyTrail","fern","buy-fern",false))
 assert(Repository.progressionAction(shopper,"buyTrail","fern","buy-fern",false))
-assert(Repository.progression(shopper).crystals==341)
+assert(Repository.progression(shopper).crystals==299)
 assert(Repository.progressionAction(shopper,"equipTrail","fern","equip-fern",false))
 local growth,speed=Rules.multipliers(Repository.progression(shopper),"compy",nil,0)
 assert(math.abs(growth-1)<1e-8 and math.abs(speed-1.02)<1e-8) -- BD-185: stored egg condition never changes dino stats
@@ -352,14 +352,14 @@ assert(Repository.progressionAction(shopper,"upgradeCondition","1","policy-block
 mutableConfig.DeveloperProducts={} -- No Robux-buyable currency: earned-only path.
 assert(Repository.progressionAction(shopper,"upgradeCondition","1","condition-1",false))
 assert(Repository.progressionAction(shopper,"upgradeCondition","1","condition-1",false))
-assert(Repository.progression(shopper).conditionLevel==1 and Repository.progression(shopper).crystals==241)
+assert(Repository.progression(shopper).conditionLevel==1 and Repository.progression(shopper).crystals==199)
 local oldGenes=copy(data['u:991'].eggs[1].genes)
 assert(oldGenes.conditionId==data['u:991'].eggs[1].genes.conditionId)
 assert(Repository.progressionAction(shopper,"buyEgg","random","egg-buy-1",false))
 local boughtId=data['u:991'].eggs[#data['u:991'].eggs].eggId
 local queueCount=#data['u:991'].eggs
 assert(Repository.progressionAction(shopper,"buyEgg","random","egg-buy-1",false))
-assert(#data['u:991'].eggs==queueCount and Repository.progression(shopper).crystals==91)
+assert(#data['u:991'].eggs==queueCount and Repository.progression(shopper).crystals==49)
 assert(data['u:991'].eggs[1].genes.conditionId==oldGenes.conditionId)
 Repository.release(shopper)
 assert(Repository.load(shopper) and data['u:991'].eggs[#data['u:991'].eggs].eggId==boughtId)

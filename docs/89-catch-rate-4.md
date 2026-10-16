@@ -1,6 +1,6 @@
 # 89 Catch rate 4 per 500 food (BD-165, owner 2026-10-15)
 
-Status: **Review / test** (offline verifiers pass; Studio and phone checks pending). Supersedes [docs/59](59-egg-rate-40.md).
+Status: **HISTORICAL, superseded 2026-10-16 by [docs/119](119-catch-rate-15-per-run.md) (12/500)**. Was: **Review / test** (offline verifiers pass; Studio and phone checks pending). Supersedes [docs/59](59-egg-rate-40.md).
 
 **Owner:** after 3-4 minutes and about 700 growth the owner got 52 catches and expected about 5. The conversion is now `FoodCatchRate = 4/500` (PROVISIONAL): **500 food -> 4 run eggs, 5,000 food -> 40**. Still one egg per catch and one dinosaur per hatched egg. Base species odds are unchanged.
 
