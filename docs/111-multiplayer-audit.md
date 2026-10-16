@@ -36,8 +36,8 @@ Severity: H = loses rewards, strands a player, or lets one player hurt the other
 | M4 | M | **Leaderboards.** `publish` is 3 sequential OrderedDataStore UpdateAsync per leave and per player per 60 s; `refresh` does 3 `GetSortedAsync` and a `GetNameFromUserIdAsync` per unseen name. At 12 players that is 36 writes per minute plus the leave writes, on a budget that is not modelled here. | `Leaderboards.luau` 18 to 36 and 105 to 115 | BD-362 |
 | L1 | L | `runStartedAt[runId]` is only cleared by a settlement snapshot, so a run that never settles (character swapped while Active) leaves one entry | `RunLifecycle.luau` 14, 49 | BD-363 |
 | L2 | L | `world.defeats` (friend shield) is keyed by userId and never pruned | `CombatRules.luau` 45 to 62 | BD-363 |
-| L3 | L | Every per-player cooldown table is keyed by the Player object and cleaned on PlayerRemoving (checked in all 14 services), so a rejoin resets the cooldowns; `ProfileRepository` bounds the damage | all services | BD-363 |
-| L4 | L | `LeaseLost` (renew failed, another server took over) is silent: the player keeps running and the settlement is refused | `ProfileRepository.renew` | BD-363 |
+| L3 | L | Every per-player cooldown table is keyed by the Player object and cleaned on PlayerRemoving (checked in all 14 services), so a rejoin resets the cooldowns; `ProfileRepository` bounds the damage | all services | BD-363 (2026-10-16: Chest, Collection, Mutation and Leap cooldowns now keyed by UserId via `CooldownMemory`; other services and cross-server hops still open) |
+| L4 | L | `LeaseLost` (renew failed, another server took over) is silent: the player keeps running and the settlement is refused | `ProfileRepository.renew` | BD-363 (2026-10-16: `handleLeaseLost` logs, sets `LeaseLost`, kicks after 6 s; sim-tested) |
 
 ### Server loops that scale with players (the O(n squared) list you asked for)
 | Loop | Rate | Cost with 12 players | Note |

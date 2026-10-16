@@ -85,7 +85,7 @@ STATIC = [
     ("src/server/HubTravelService.luau", r"select\(\"#\", \.\.\.\) ~= 1", "HubTravel refuses extra arguments"),
     ("src/server/HubTravelService.luau", r"hasPerk\(progress, \"fastTravel\"\)", "HubTravel reads the perk from the caller's own profile"),
     ("src/server/ChestService.luau", r"lastSettings, player, 0\.5[\s\S]{0,80}setSettings\(player, selection\)", "SetSettings is throttled per player and writes only the caller's profile"),
-    ("src/server/ChestService.luau", r"lastSettings\[player\] = nil", "SetSettings throttle entry is freed on leave"),
+    ("src/server/ChestService.luau", r"CooldownMemory\.new\(120\)", "SetSettings throttle lives in UserId-keyed CooldownMemory that prunes itself (BD-363)"),
     ("src/server/ProfileRepository.luau", r"action==\"buyPerk\" and \(Config\.FastTravelPerk~=true or Config\.CaveHub~=true\)", "buyPerk is refused while the perk or cave flag is off"),
     ("src/server/RunLifecycle.luau", r"SetAttribute\(\"HubStation\", nil\)", "the public HubStation marker is cleared on respawn and run start"),
     ("src/server/Leaderboards.luau", r"Writes\.shouldWrite\(writeState,definition\.id,userId", "leaderboard writes go through the per-user write gate"),

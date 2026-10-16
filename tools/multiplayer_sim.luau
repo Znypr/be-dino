@@ -57,6 +57,7 @@ local function mockPlayer(server, userId)
     local p = {UserId = userId, Name = "P" .. userId, Parent = true, attrs = {}, respawns = 0}
     function p:SetAttribute(k, v) self.attrs[k] = v end
     function p:GetAttribute(k) return self.attrs[k] end
+    function p:Kick(message) self.kicked = message or true self.Parent = nil end
     function p:LoadCharacterAsync() self.respawns += 1 self.Character = newChar(self) self.Character:SetAttribute("RunState", "Sanctuary") end
     return p
 end
@@ -826,7 +827,53 @@ do
     flaky("flaky-store-40pct-12", 0.4)
 end
 
--------------------------------------------------------------------- J: features added after BD-358 (BD-319): perk, hub travel, settings, odds, LOD, origin, leaderboard writes
+-------------------------------------------------------------------- J: lease lost and rejoin cooldowns (BD-363)
+do
+    -- A player whose lease another server took over is no longer silent: logged, ProfileState "LeaseLost", then kicked to rejoin.
+    -- A run settled before the loss stays committed exactly once; nothing is rewritten.
+    local info = {}
+    runScenario("lease-lost-kick", 400, function(env, server)
+        local p = connect(env, 3901)
+        env.Repo.start()
+        local runId = startRun(env, p, 12)
+        sleep(5)
+        env.RL.tryEnd(p, p.Character, "ManualExit")
+        sleep(20)
+        info.settledBefore = env.committed[runId] ~= nil
+        local profile = profileOf(3901)
+        profile.session.leaseId = "another-server" -- the other server took the profile over
+        info.eggsBefore = #eggIdsOf(profile)
+        sleep(server.Config.ProfileRenewSeconds + 10)
+        info.state = p.attrs.ProfileState
+        sleep(10)
+        info.kicked = p.kicked
+        info.stats = env.Repo.leaseLostStats()
+        info.eggsAfter = #eggIdsOf(profileOf(3901))
+        info.runId = runId
+    end)
+    metric("lease lost handled / kicked", info.stats.handled .. " / " .. info.stats.kicked)
+    check("a run settled before the lease loss is committed", info.settledBefore == true)
+    check("the lost lease is surfaced as ProfileState LeaseLost", info.state == "LeaseLost", tostring(info.state))
+    check("the player is sent back to rejoin (kicked once)", info.kicked ~= nil and info.stats.handled == 1 and info.stats.kicked == 1, tostring(info.kicked))
+    check("the settled run stays committed and the store copy is untouched by the lease loss", info.settledBefore == true and info.eggsAfter == info.eggsBefore, info.eggsBefore .. " vs " .. info.eggsAfter)
+end
+
+do
+    local _, cmServer = runScenario("rejoin-cooldowns", 5, function() end)
+    local CM = cmServer.require(node("src/server/CooldownMemory"))
+    local cm = CM.new(120)
+    check("cooldown: first use allowed, repeat inside the cooldown refused", cm.allow(7, "claim", 100, 1) and not cm.allow(7, "claim", 100.5, 1))
+    -- the same UserId "rejoins" (new Player object): memory is keyed by UserId, so the cooldown still holds
+    check("cooldown: a rejoin (same UserId) does not reset it", not cm.allow(7, "claim", 100.9, 1))
+    check("cooldown: allowed again after it passed; other users and keys are independent", cm.allow(7, "claim", 101.1, 1) and cm.allow(8, "claim", 100.5, 1) and cm.allow(7, "skip", 100.5, 1))
+    for i = 1, 500 do cm.mark(1000 + i, "k", 200) end
+    cm.mark(1, "k", 400)
+    cm.prune(400)
+    check("cooldown: expired entries are pruned (bounded memory)", cm.size() == 1, tostring(cm.size()))
+
+end
+
+-------------------------------------------------------------------- K: features added after BD-358 (BD-319): perk, hub travel, settings, odds, LOD, origin, leaderboard writes
 local function deepEqual(a, b)
     if type(a) ~= type(b) then return false end
     if type(a) ~= "table" then return a == b end

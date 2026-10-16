@@ -18,6 +18,7 @@ local FxPlan = require(Shared.HatchFxPlan)
 local EggGenetics = require(Shared.EggGenetics)
 local InspectView = require(script.Parent.InspectView)
 local HatchFx = require(script.Parent.HatchFx)
+local MutationReveal = require(script.Parent.MutationReveal) -- BD-162
 local Config = require(Shared.Config)
 local EggV2 = require(script.Parent.HatchEggV2) -- BD-397 (docs/118): 3D egg + paint coats behind Config.HatchV2; nil handle = v1 look
 
@@ -310,7 +311,7 @@ end
 -- What the server committed for this egg (never changed here). Supplied at start for a known egg, or later through handle.supply().
 export type Result = {
     dino: GuiObject, rarity: number, color: Color3, failed: boolean, shiny: boolean, big: boolean,
-    mutationName: string?, mutationColor: Color3?, remaining: number,
+    mutationName: string?, mutationColor: Color3?, mutationId: string?, remaining: number,
     genes: any?, colorReveal: any?, secondReveal: any?, patternReveal: any?, paintColors: {Color3}?,
 }
 export type Args = {
@@ -337,6 +338,7 @@ function Seq.play(args: Args): Handle
     local v2 = if Config.HatchV2 == true then EggV2.create(fx.back, fx.front, motion) else nil
     if v2 then Timeline.useV2(state, true) end
     local durs = state.durs
+    local mr: any = nil -- BD-162: mutation reveal burst, created when the result names an event mutation
     local hx = HatchFx.begin(HatchFx.ensure(fx.back, fx.front), motion) -- layered 2D polish (bloom, rim sparks, puffs, motes, droplets)
     -- Result-dependent values. Neutral until applyResult() runs (Open pressed, server answer on its way).
     local rarity, failed = 1, false
@@ -476,6 +478,7 @@ function Seq.play(args: Args): Handle
         if inspect then inspect.destroy() inspect = nil end
         restoreBody()
         HatchFx.hide(hx)
+        MutationReveal.hide(mr)
         if v2 then EggV2.stop(v2) end
         if overlay.Parent then overlay:Destroy() end
         if fx.back.Parent then
@@ -700,6 +703,7 @@ function Seq.play(args: Args): Handle
         revealStarted = true
         a.onReveal()
         if not motion then HatchFx.update(hx, 0, 1, 0, not failed) end -- Reduce Motion: one static soft glow behind the dino
+        MutationReveal.update(mr, 0) -- BD-162 (Reduce Motion: one still mutation-coloured glow; motion: the burst starts)
         if failed then
             local rise = if motion then 10 else 0
             fadeLabel(a.nameLabel, if motion then .25 else 0, .3, rise)
@@ -837,6 +841,7 @@ function Seq.play(args: Args): Handle
         pill.BackgroundColor3, pillStroke.Color = glow:Lerp(Color3.new(0, 0, 0), .4), glow:Lerp(WHITE, .25)
         if r.shiny then addRibbon("SHINY", Theme.Colors.gold, 100, 52, 170, -7) end
         if r.big then addRibbon("BIG", Theme.Colors.purple, 724, 52, 150, 7) end
+        if r.mutationName and r.mutationId and not failed then mr = MutationReveal.begin(fx.front, r.mutationId, motion) end
         if r.mutationName then addRibbon(string.upper(r.mutationName), r.mutationColor or Theme.Colors.gold, 116, if r.shiny then 108 else 52, 210, -4) end
         hint.Text = Timeline.hint(r.remaining)
         -- BD-371: real, big, friendly buttons at the end (dark text on a bright button, contrast >= 4.5:1); no dead end after a splat.
@@ -1004,6 +1009,7 @@ function Seq.play(args: Args): Handle
                     restoreBody()
                 end
                 HatchFx.update(hx, vt, 1, since, revealStarted)
+                MutationReveal.update(mr, if revealStarted then math.max(0, since - revealT) else nil)
                 if not failed then
                     if revealStarted and dinoScale then dinoScale.Scale = Timeline.revealScale((since - revealT) / .8) * (if a.big then Timeline.stamp(since - impactAt - revealT) else 1) end
                     if a.big and since >= impactAt + revealT and since < impactAt + revealT + .25 then

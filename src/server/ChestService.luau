@@ -5,11 +5,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 
 local ChestService = {}
-local lastClaim: {[Player]: number} = {}
-local lastGrant: {[Player]: number} = {}
-local lastNest: {[Player]: number} = {}
-local lastSkip: {[Player]: number} = {}
-local lastSettings: {[Player]: number} = {}
+local CooldownMemory = require(script.Parent.CooldownMemory)
+local cooldowns = CooldownMemory.new(120) -- BD-363: keyed by UserId, survives a rejoin
+local lastClaim = "lastClaim"
+local lastGrant = "lastGrant"
+local lastNest = "lastNest"
+local lastSkip = "lastSkip"
+local lastSettings = "lastSettings"
 
 local function getRemote(folder: Folder, name: string): RemoteEvent
     local existing = folder:FindFirstChild(name)
@@ -21,12 +23,8 @@ local function getRemote(folder: Folder, name: string): RemoteEvent
     return remote
 end
 
-local function allowed(bucket: {[Player]: number}, player: Player, cooldown: number?): boolean
-    local now = os.clock()
-    local last = bucket[player] or -math.huge
-    if now - last < (cooldown or Config.ChestClaimRequestCooldownSeconds) then return false end
-    bucket[player] = now
-    return true
+local function allowed(bucket: string, player: Player, cooldown: number?): boolean
+    return cooldowns.allow(player.UserId, bucket, os.clock(), cooldown or Config.ChestClaimRequestCooldownSeconds)
 end
 
 function ChestService.start(profileRepository)
@@ -100,14 +98,6 @@ function ChestService.start(profileRepository)
         end
         local _, status = profileRepository.grantChestTest(player)
         player:SetAttribute("LastChestTestGrantStatus", status)
-    end)
-
-    Players.PlayerRemoving:Connect(function(player)
-        lastClaim[player] = nil
-        lastGrant[player] = nil
-        lastNest[player] = nil
-        lastSkip[player] = nil
-        lastSettings[player] = nil
     end)
 end
 
