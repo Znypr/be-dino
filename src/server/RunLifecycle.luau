@@ -104,7 +104,7 @@ local function settlementSnapshot(character: Model)
     local killEggs = character:GetAttribute("PredationEggs")
     return {
         runId = runId,
-        killEggs = if typeof(killEggs) == "number" then math.max(0, math.floor(killEggs)) else 0, -- BD-440: hunting bonus shown on Run Complete
+        killEggs = if typeof(killEggs) == "number" then math.max(0, math.floor(killEggs)) else 0, -- BD-448: hunting bonus shown on Run Complete
         runSeconds = if startedAt then math.max(0, workspace:GetServerTimeNow() - startedAt) else 0, -- unknown start = 0 s = no nest
         catchScore = math.clamp(catchScore, 0, Config.RunEggMaxPerRun), -- one run egg per catch
         eggEvents=if ok and typeof(events)=="table" then events else {},

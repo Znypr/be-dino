@@ -1,5 +1,5 @@
 --!strict
--- BD-440: Run Complete body (was inline in Bootstrap). Reserved trophy slot so nothing jumps while the image loads;
+-- BD-448: Run Complete body (was inline in Bootstrap). Reserved trophy slot so nothing jumps while the image loads;
 -- one row per fact with an icon (eggs, crystals, nests); no duplicate egg line; Growth hidden at 0 (docs/72, docs/114).
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Copy = require(Shared.FtueCopy)

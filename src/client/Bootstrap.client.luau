@@ -1584,7 +1584,7 @@ player:GetAttributeChangedSignal("LastNestClaimAt"):Connect(function()
     notify("Nest opened!",C.accent,{icon="egg_nest",body="Open your eggs when ready"})
 end)
 PrivateState.onChanged("LastRewardText", function() if active=="results" then body:ClearAllChildren() render(active) end end)
-PrivateState.onChanged("LastRunNestCrystals", function() if active=="results" then body:ClearAllChildren() render(active) end end) -- BD-440: last private value set at settlement, so the rows show final numbers
+PrivateState.onChanged("LastRunNestCrystals", function() if active=="results" then body:ClearAllChildren() render(active) end end) -- BD-448: last private value set at settlement, so the rows show final numbers
 for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus","LastNestClaimStatus","LastRunStartStatus"} do
     PrivateState.onChanged(attribute, function()
         local status=str(attribute)

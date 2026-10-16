@@ -48,7 +48,7 @@ def check_wiring():
     for needle in ('FtueCopy).tutorialSteps', 'FtueCopy).homeConfirmLine', 'FtueCopy).homeConfirmTotals'):
         assert needle in boot, 'Bootstrap does not use ' + needle
     rc = (ROOT / 'src/client/RunComplete.luau').read_text(encoding='utf-8')
-    assert 'FtueCopy' in rc and 'runCompleteRows' in rc and '"OPEN EGGS"' in rc and 'trophy' in rc and '"amber"' in rc, 'BD-440 Run Complete module'
+    assert 'FtueCopy' in rc and 'runCompleteRows' in rc and '"OPEN EGGS"' in rc and 'trophy' in rc and '"amber"' in rc, 'BD-448 Run Complete module'
     assert 'RunComplete).build' in boot and 'LastRewardText","Saving' not in boot, 'Bootstrap must use the RunComplete module'
     for old in ('Banking %d catches', 'will be banked', '"Catches  "', 'BANK & HATCH', 'Eat small food clusters', 'Bank catches and reward'):
         assert old not in boot, 'old jargon is back: ' + old

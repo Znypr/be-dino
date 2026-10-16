@@ -22,7 +22,7 @@ end
 
 Copy.runCompleteEggsLabel = "Eggs found"
 
--- BD-440: Run Complete rows from LastRun* state, one fact per row, no duplicates. Pure: {{kind, text}}.
+-- BD-448: Run Complete rows from LastRun* state, one fact per row, no duplicates. Pure: {{kind, text}}.
 -- kinds: eggs, hunting (only when > 0), crystals, nests, nestCrystals, growth (growth is hidden at 0).
 function Copy.runCompleteRows(s: {eggs: number?, crystals: number?, nests: number?, nestCrystals: number?, growth: number?, killEggs: number?}): {{string}}
     local rows = {{"eggs", string.format("%s  %d", Copy.runCompleteEggsLabel, s.eggs or 0)}}
