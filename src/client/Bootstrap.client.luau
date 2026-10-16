@@ -1602,6 +1602,9 @@ PrivateState.onChanged("LastSettledRunId", function()
                 end
                 notify("New Egg Nest!",C.gold,{icon="egg_nest",key="nest",body="Ready in "..UIFormat.duration(math.max(3600,waitSeconds))}) -- no extra sound: it stacked with run_end (BD-166)
             end
+            if num("LastRunNestCrystals")>0 then
+                notify("Nests full!",C.gold,{icon="egg_nest",key="nestcrystals",body="Extra nests became "..num("LastRunNestCrystals").." crystals"}) -- docs/72: short, kid-friendly
+            end
             if num("LastRunCrystalBox")>0 then
                 open("crystalReveal")
                 local version=modalVersion
