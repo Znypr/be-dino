@@ -1,6 +1,6 @@
 # 109 Owner art prompt pack (one current checklist, 2026-10-16)
 
-The ONE deduplicated list of every art item the owner still has to make or upload, with a ready-to-paste ChatGPT prompt where ChatGPT is the maker. It consolidates docs/77 (registry), 83 (asset list), 87 (feel), 92 (mutation brief), 93 (FX direction), 95 (upload guide) and the Kanban rows BD-048, 094, 101, 113, 178, 186-190, 208, 248, 318 (the old "BD-218" label has no row; BD-318 replaces it). Status lives only in [the Kanban](07-kanban.md) (this pack is tracked by BD-333). Rules: [docs/72](72-ui-copy-and-asset-standards.md) (no code-drawn final art), [AGENTS.md](../AGENTS.md). Never invent asset IDs; every uploaded asset gets a [docs/77](77-asset-registry.md) line.
+The ONE deduplicated list of every art item the owner still has to make or upload, with a ready-to-paste ChatGPT prompt where ChatGPT is the maker. It consolidates docs/77 (registry), 83 (asset list), 87 (feel), 92 (mutation brief), 93 (FX direction), 95 (upload guide) and the Kanban rows BD-048, 094, 101, 113, 178, 186-190, 208, 248, 318 (the old "BD-218" label has no row; BD-318 replaces it). Status lives only in [the Kanban](07-kanban.md) (this pack is tracked by BD-336). Rules: [docs/72](72-ui-copy-and-asset-standards.md) (no code-drawn final art), [AGENTS.md](../AGENTS.md). Never invent asset IDs; every uploaded asset gets a [docs/77](77-asset-registry.md) line.
 
 ## 0. Shared style block (paste at the start of EVERY prompt)
 
