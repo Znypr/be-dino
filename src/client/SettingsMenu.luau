@@ -89,15 +89,18 @@ end
 
 -- Draws the tab bar and the active tab. Returns the active tab id; the Help tab is completed by the caller (guides, auto-open).
 function Menu.build(body: Instance, ctx: Context): string
+    local lab = currentTab == "sound" and labOpen
+    -- The Sound lab is a page of its own: no tab bar under its BACK button (a purple tab sliver and a cut word showed through).
     for i, id in Model.Tabs do
+        if lab then break end
         local b = ctx.button(body, Model.TabLabels[id], (i - 1) * 209, 0, 197, 48, if id == currentTab then C.purple else C.card, function()
             currentTab = id
             ctx.open("settings")
         end)
         b.Name = "Tab_" .. id
     end
-    if currentTab == "sound" and labOpen then
-        -- BD-081: Sound lab replaces the Sound tab body (tab bar stays); BACK returns to the sliders.
+    if lab then
+        -- BD-081: Sound lab replaces the Sound tab body (the lab page has no tab bar); BACK returns to the sliders.
         require(script.Parent:WaitForChild("SoundLab")).draw(body, ctx, function() labOpen = false ctx.open("settings") end)
     elseif currentTab == "sound" then drawSound(body, ctx)
     elseif currentTab == "look" then drawLook(body, ctx)

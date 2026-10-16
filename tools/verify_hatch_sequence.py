@@ -43,13 +43,31 @@ s = T.new(false) assert(T.tap(s) == "ignore")
 T.step(s, r.readyAt + .01) assert(T.tap(s) == "advance")
 -- BD-444: "Egg N of M" counter and the skip button copy.
 do
+    -- 12 eggs waiting: every card advances, total stays 12, the last egg reads "Egg 12 of 12".
     local b = T.newBatch()
-    local i, n = T.batchStep(b, 14) assert(i == 1 and n == 15 and T.counterText(i, n) == "Egg 1 of 15")
-    i, n = T.batchStep(b, 13) assert(i == 2 and n == 15)
-    i, n = T.batchRefine(b, 12) assert(i == 2 and n == 14, "refine keeps the egg number")
-    i, n = T.batchStep(b, 11) assert(i == 3 and n == 14)
-    i, n = T.batchStep(b, 3) assert(i == 1 and n == 4, "a gap starts a new party")
-    i, n = T.batchStep(b, 0) assert(i == 1 and n == 1 and T.counterText(i, n) == "", "single egg shows no counter")
+    local i, n
+    for k = 1, 12 do
+        i, n = T.batchStep(b, 12 - k)
+        assert(i == k and n == 12 and T.counterText(i, n) == "Egg " .. k .. " of 12", "egg " .. k)
+    end
+    -- A multi-copy egg is still one egg: remaining only drops by one per egg whatever the copies.
+    b = T.newBatch()
+    i, n = T.batchStep(b, 2) assert(i == 1 and n == 3)
+    i, n = T.batchStep(b, 1) assert(i == 2 and n == 3, "copies do not count as eggs")
+    i, n = T.batchStep(b, 0) assert(i == 3 and n == 3)
+    -- Stale counts do not reset the session (the 4-cards-stuck-on-1 bug): remaining 1,1,1 keeps advancing.
+    b = T.newBatch()
+    i, n = T.batchStep(b, 1) assert(i == 1 and n == 2)
+    i, n = T.batchStep(b, 1) assert(i == 2 and n == 3)
+    i, n = T.batchRefine(b, 9) assert(i == 2 and n == 11, "refine keeps the egg number")
+    i, n = T.batchStep(b, 8) assert(i == 3 and n == 11)
+    -- Skip the rest: quickly opened eggs count too, the next shown card is numbered over the whole party.
+    for _ = 1, 5 do T.batchStep(b, 3) end
+    i, n = T.batchStep(b, 2) assert(i == 9 and n == 11)
+    -- End of the party resets; a forgotten old session resets after IdleReset.
+    T.batchReset(b) i, n = T.batchStep(b, 4) assert(i == 1 and n == 5)
+    i, n = T.batchStep(b, 3, 1000) i, n = T.batchStep(b, 2, 1000 + T.IdleReset + 1) assert(i == 1 and n == 3, "idle session restarts")
+    b = T.newBatch() i, n = T.batchStep(b, 0) assert(i == 1 and n == 1 and T.counterText(i, n) == "", "single egg shows no counter")
     assert(T.SkipText == "Skip the rest" and #T.SkipText <= 16)
 end
 -- Skip all.
@@ -353,7 +371,7 @@ def check_wiring():
     assert 'if (hatchState.next :: any)() then open("hatch") end' in boot, 'Open / Next egg open the hatch screen immediately'
     assert boot.count('if (hatchState.next :: any)() then open("hatch") end') >= 2, 'both Open and Next egg use the immediate path'
     assert 'task.defer(waiting.supply)' in boot and 'hatchState.pending' in boot, 'the server answer is handed to the waiting screen'
-    assert 'EggCounter' in seq and 'Timeline.batchStep' in seq and 'Timeline.SkipText' in seq and 'UDim2.fromOffset(176, 48)' in seq, 'BD-444 counter + skip button (>= 44 px)'
+    assert 'EggCounter' in seq and 'Timeline.batchStep' in seq and 'Timeline.session' in seq and 'Timeline.SkipText' in seq and 'UDim2.fromOffset(176, 48)' in seq, 'BD-444 counter + skip button (>= 44 px)'
     assert 'finishBatch()' in boot and 'EggsLogic.afterReveal(skipAllReveals,remainingAfter)=="continue"' in boot, 'only the end of the batch leaves'
     assert 'open("eggs") end -- never leave an egg wobbling forever' in boot, 'a lost answer never strands the player'
     hatch_block = boot[boot.index('elseif name=="hatch" then'):boot.index('elseif name=="exit" then')]

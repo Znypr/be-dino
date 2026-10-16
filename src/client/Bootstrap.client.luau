@@ -402,6 +402,7 @@ local function emitHatchSummary()
     if summary then notify(summary.text,nil,summary) end
 end
 local function finishBatch()
+    HatchTimeline.batchReset(HatchTimeline.session) -- BD-444: the party is over; the next one counts from Egg 1
     autoHatching=false
     skipAllReveals=false
     emitHatchSummary()
@@ -420,7 +421,7 @@ hatchState.next = function(): boolean
     hatch:FireServer(id,Http:GenerateGUID(false))
     task.delay(8,function()
         if hatchPending then
-            hatchPending=false autoHatching=false skipAllReveals=false
+            hatchPending=false autoHatching=false skipAllReveals=false HatchTimeline.batchReset(HatchTimeline.session)
             notify("Hatching stopped",C.red,{key="hatch_error",icon="egg",body="Tap an egg to try again"})
             local waiting=hatchState.pending
             if waiting and waiting.version==modalVersion and active=="hatch" and waiting.handle.pending() then open("eggs") end -- never leave an egg wobbling forever
@@ -551,31 +552,41 @@ render=function(name: string)
                     label(card,tostring(product.amount),92,6,166,44,32,C.gold)
                     label(card,"Crystals",92,48,166,26,19)
                     local tag=label(card,"",92,74,166,20,15,C.accent) tag.Visible=false
-                    local b=button(card,"...",8,100,248,38,C.gold:Lerp(C.panel,.35),function() end)
-                    b.TextSize=19 b.Active=false
+                    local b=button(card,require(Shared.ShopCardState).packButton(nil),8,100,248,38,C.gold:Lerp(C.panel,.35),function() end)
+                    b.TextScaled=true b.TextWrapped=false b.Active=false -- BD-430: the price always fits the button, never "..."
+                    local fit=Instance.new("UITextSizeConstraint") fit.MaxTextSize,fit.MinTextSize,fit.Parent=22,12,b
                     cards[i]={button=b,tag=tag}
                 end
-                task.spawn(function()
-                    local prices={}
-                    for i,product in products do
-                        local ok,info=pcall(function() return Marketplace:GetProductInfo(product.id,Enum.InfoType.Product) end)
-                        if ok and info.IsForSale~=false and typeof(info.PriceInRobux)=="number" then prices[i]=info.PriceInRobux end
+                -- Each card shows its price as soon as it is known; a price that never arrives stays "Price soon".
+                local ShopCardState=require(Shared.ShopCardState)
+                local prices={}
+                local function paint(i,product)
+                    local c=cards[i]
+                    if not c or not c.button.Parent then return end
+                    local price=prices[i]
+                    c.button.Text=ShopCardState.packButton(price)
+                    if price and Config.CrystalPacksEnabled==true then
+                        c.button.Active=true c.button.BackgroundColor3=C.gold:Lerp(C.panel,.1)
+                        if not c.wired then c.wired=true c.button.Activated:Connect(function() Marketplace:PromptProductPurchase(player,product.id) end) end
                     end
-                    if not grid.Parent then return end
+                end
+                local function tags()
                     local baseRate=if prices[1] then products[1].amount/prices[1] else nil
                     for i,product in products do
-                        local c=cards[i]
                         local price=prices[i]
-                        if price and Config.CrystalPacksEnabled==true then
-                            c.button.Text="R$ "..price c.button.Active=true c.button.BackgroundColor3=C.gold:Lerp(C.panel,.1)
-                            c.button.Activated:Connect(function() Marketplace:PromptProductPurchase(player,product.id) end)
-                        else c.button.Text=require(Shared.ShopCardState).packButton(price) end
-                        if price and baseRate and i>1 then
+                        if price and baseRate and i>1 and cards[i] then
                             local bonus=math.floor((product.amount/price/baseRate-1)*100+.5)
-                            if bonus>=1 then c.tag.Text="+"..bonus.."% extra" c.tag.Visible=true end
+                            if bonus>=1 then cards[i].tag.Text="+"..bonus.."% extra" cards[i].tag.Visible=true end
                         end
                     end
-                end)
+                end
+                for i,product in products do
+                    task.spawn(function()
+                        local ok,info=pcall(function() return Marketplace:GetProductInfo(product.id,Enum.InfoType.Product) end)
+                        if ok and info.IsForSale~=false and typeof(info.PriceInRobux)=="number" then prices[i]=info.PriceInRobux end
+                        if grid.Parent then paint(i,product) tags() end
+                    end)
+                end
             end
             return
         end
@@ -1024,7 +1035,7 @@ render=function(name: string)
             onSkipAll=function() autoHatching=true skipAllReveals=true end,
             onReveal=function() if modalVersion==version then heading.Text=if failedEgg then "Oops! Splat!" else "You hatched a dinosaur!" end end,
             onAgain=function() -- BD-371: after a splat with no eggs left, TRY AGAIN goes straight back to the island
-                autoHatching=false skipAllReveals=false emitHatchSummary() close()
+                autoHatching=false skipAllReveals=false HatchTimeline.batchReset(HatchTimeline.session) emitHatchSummary() close()
                 local character=player.Character
                 if character and character:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() end
             end,
@@ -1489,7 +1500,7 @@ RunService.Heartbeat:Connect(function(dt)
     if elapsed<.15 then return end elapsed=0
     local character=player.Character
     local state=if character then character:GetAttribute("RunState") else "Loading"
-    action.Text=if state=="Sanctuary" then "EXPLORE ISLAND" elseif state=="Active" then "HOME" else "SAVING..."
+    action.Text=if state=="Sanctuary" then (if action:GetAttribute("GoCue")==true then require(Shared.FtueRules).GoCueText else "EXPLORE ISLAND") elseif state=="Active" then "HOME" else "SAVING..."
     action.BackgroundColor3=if state=="Active" then C.red else C.accent
     if actionIcon then actionIcon.Visible=state=="Active" end
     actionPadding.PaddingLeft=UDim.new(0,if actionIcon and state=="Active" then 52 else 6)
@@ -1539,6 +1550,7 @@ PrivateState.onChanged("LastClaimedChestId", function()
     table.insert(batchEntries,{rarity=rarity,name=Config.SpeciesDisplayNames[species] or species,failed=outcome.failed,shiny=outcome.shiny==true,big=outcome.big==true})
     if autoHatching and EggsLogic.shouldAutoOpen(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen(),rarity,outcome,skipAllReveals) then
         table.insert(skippedEntries,{rarity=rarity,speciesId=species,outcome=outcome})
+        HatchTimeline.batchStep(HatchTimeline.session,HatchTimeline.remaining(str("NextChestId")~="",num("ActiveChestCount"),num("QueuedEggsWaiting")),os.clock()) -- BD-444: a quickly opened egg still counts
         task.delay(Config.ChestClaimRequestCooldownSeconds+.15,function() (hatchState.next :: any)() end) -- stay under the server claim cooldown
         return
     end

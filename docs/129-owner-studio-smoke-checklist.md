@@ -60,7 +60,7 @@ Cave items: the owner put the cave hub in session 1 (2026-10-16), so `CaveHub` i
 | BD | Look at | Good looks like | Level |
 | --- | --- | --- | --- |
 | BD-430 (PR #259 label) | Egg odds wording in Buy Egg and Conditions shop | Says "Cracked is X%" separately from "hatches Y%"; no jargon; numbers match the config | BLOCKS |
-| BD-430 | Crystals tab packs | Cards say "Price soon" (packs are off); no broken or empty price | BLOCKS |
+| BD-430 | Crystals tab packs | Each pack button shows its price ("R$ 45") when Roblox knows it, "Price soon" when it does not (packs off: "Coming soon!" above); never "..." or a cut-off label | BLOCKS |
 | BD-393 | Aura and Trail shop headers | "For: <your dino>" shown | NICE |
 | BD-394 | Conditions shop eggs | Large, readable condition eggs | NICE |
 | BD-405, BD-391 | Fast travel perk in Crystal Shop (flag off) | Skip unless you turn `FastTravelPerk` on | NICE |
