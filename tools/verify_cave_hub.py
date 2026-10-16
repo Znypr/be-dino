@@ -31,8 +31,8 @@ local function segDist(px,pz,ax,az,bx,bz)
 end
 
 -- ---- flag off: every existing value identical; flag on: the cave
-for _,cfg in {Config} do
- assert(cfg.CaveHub==false,"CaveHub flag ships OFF")
+for _,cfg in {(function() local off=table.clone(Config) off.CaveHub=false return off end)()} do
+ assert(Config.CaveHub==(Config.ReleaseProfile=="playtest"),"CaveHub ships OFF in the default build and ON in the playtest build (owner 2026-10-16, docs/125)")
  local hub=C.hub(cfg)
  assert(hub.enabled==false and hub.centerZ==cfg.SanctuaryCenterZ and hub.floorY==6 and hub.halfX==55 and hub.halfZ==47.5,"hub(config) with the flag off = old hub numbers")
  assert(hub.biome.minX==-55 and hub.biome.maxX==55 and hub.biome.minZ==473 and hub.biome.maxZ==569,"biome rect with the flag off = the old BiomePlacement.Sanctuary")
