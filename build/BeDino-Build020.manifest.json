@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "ca6c3c708b9e31d46f99f457003bf147400ce6cc7b2db62c56cc3d65704ebe5f",
+  "place_sha256": "394b6065655452a624f2e7ca3b5d3b9ac9e64fcf337536c2e8697cc2222bfaaf",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -251,7 +251,7 @@
     "src/shared/WorldKitMeshAssets.luau": "7110648be06c6e602728e21ad96a833e4ad87d65c64fced492ef5bfcd9ce503f",
     "src/server/AdminService.luau": "b017aed5b20be0c7a2226618d128acf8e1415bf18ce260afcae3b9d45ff26ee9",
     "src/server/Arena.luau": "5f720f0cfb32f466d1bf912eb389eb3b93dc02a29fbbd25a14ab1260538b8997",
-    "src/server/Bootstrap.server.luau": "97e053d33cf13157dae3db9a0b0bf389f99505bf3ec450704d0648d8623f4406",
+    "src/server/Bootstrap.server.luau": "4d49345b49bc8d45cc33f3d1d6a1cde0ea284e24ec7d97a902942d47139529a3",
     "src/server/ChestService.luau": "0a1d74c440564a766188dadae4fe46d8fcd7e36d85837b566def3cf80ed9f67c",
     "src/server/CollectionService.luau": "9f50dc992e286fc0d3df30c86c37f71d46c584ca01a77f48c42fde9b8fa17d1a",
     "src/server/Dinosaur.luau": "8692fbd52568c8f5ca938d4c875b1fbb665a1aacd577c805f7f68680f7bacc0f",
