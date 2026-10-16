@@ -176,4 +176,4 @@ None of this is done; it is the list the owner signs off at BD-453 time. All fla
 Robux line s11a kept (no power, no random); no trading; flags off; no art made; Place1.rbxl untouched; economy numbers unchanged. Audience rule ([114](114-handbook.md) s2: children, parents nearby) is why strangers get a wordless, mutable, one-way gift only. Nothing here was built or verified in Studio, and every Roblox API named above that is not already used in the repo is marked for Studio verification.
 
 
-**Owner answer 2026-10-17:** default stays Everyone (a gift is not contact; preset messages only). Refuse / mute sender / turn gifts off stay. Recorded as docs/115 GF1c.
+**Owner answer 2026-10-17:** default stays Everyone (a gift is not contact; preset messages only). Recipient controls are **Mute <name>** and **Turn gifts off** only. **No per-gift refuse or decline button** (owner correction 2026-10-17: gifts are not refused one by one); the popup's only other button is **Thanks!**. Server-side refusals before purchase (self, unknown name, recipient set to Nobody/Friends, blocked, limits) are unchanged. Recorded as docs/115 GF1c.
