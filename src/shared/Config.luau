@@ -255,6 +255,8 @@ return table.freeze({
     -- or in persistent profiles when IdentityPersistentEnabled is also true, using the
     -- PROVISIONAL FusionOdds roller. Keep false in committed builds.
     IdentityFusionPreviewEnabled = false,
+    -- BD-059 phase 1 (docs/121): per-dino aura/trail ownership. Pure CosmeticOwnership module only; no shop/remote uses it yet.
+    PerDinoCosmeticsEnabled = false,
     -- Milestone 1 private playtest (fresh, empty DataStore): identity sidecar, hatch
     -- credit and reconciliation for persistent profiles. Keep false in committed builds.
     IdentityPersistentEnabled = false,
