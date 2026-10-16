@@ -14,7 +14,12 @@ local Rules = require(Shared:WaitForChild("QaOverlayRules"))
 local player = Players.LocalPlayer
 local C = Theme.Colors
 
-while player:GetAttribute("QaOverlay") ~= true do player:GetAttributeChangedSignal("QaOverlay"):Wait() end
+local PrivateState = require(script.Parent:WaitForChild("PrivateState")) -- owner-only channel (docs/112), never a replicated attribute
+while PrivateState.get("QaOverlay") ~= true do
+    local changed = Instance.new("BindableEvent")
+    local conn = PrivateState.onChanged("QaOverlay", function() changed:Fire() end)
+    changed.Event:Wait() conn:Disconnect() changed:Destroy()
+end
 local remote = ReplicatedStorage:WaitForChild("BeDinoRemotes"):WaitForChild("QaMark", 30) :: RemoteEvent?
 if not remote then return end
 local markRemote = remote :: RemoteEvent

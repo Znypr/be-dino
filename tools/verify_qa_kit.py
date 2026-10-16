@@ -65,7 +65,7 @@ def static_checks():
                    'Telemetry', 'GoalsRules', 'ProgressionService', 'Cave'):
         assert banned not in server, 'QaService must stay out of gameplay: ' + banned
     client = (ROOT / 'src/client/QaOverlay.client.luau').read_text(encoding='utf-8')
-    assert 'GetAttribute("QaOverlay")' in client and 'QaMark' in client
+    assert 'PrivateState.get("QaOverlay")' in client and 'SetAttribute("QaOverlay"' not in server and 'QaMark' in client
     assert 'rbxassetid' not in client and 'ImageLabel' not in client, 'no art in the developer overlay'
     for banned in ('InvokeServer', 'ProfileRepository', 'FoodService', 'HatchSequence', 'GoalsPanel', 'CombatHud'):
         assert banned not in client, 'overlay is display + mark only: ' + banned

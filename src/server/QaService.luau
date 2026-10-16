@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Rules = require(ReplicatedStorage.Shared.QaOverlayRules)
+local PrivateState = require(script.Parent.PrivateState)
 
 local QaService = {}
 local allowed: {[Player]: boolean} = {}
@@ -34,7 +35,7 @@ function QaService.start()
         })
         if not player.Parent then return end
         allowed[player] = ok
-        player:SetAttribute("QaOverlay", ok) -- display hint only; marks are checked against `allowed`
+        PrivateState.set(player, "QaOverlay", ok) -- display hint only; marks are checked against `allowed`
     end
     Players.PlayerAdded:Connect(authorize)
     for _, player in Players:GetPlayers() do authorize(player) end
