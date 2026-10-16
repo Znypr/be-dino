@@ -160,6 +160,17 @@ Status lives only in the [kanban](07-kanban.md).
 - Sell time, information and looks, never power or randomness ([86](86-monetization-ideas.md)); skins are cosmetic and bought directly ([97](97-dino-skins.md)). Fast travel costs **crystals**, not Robux.
 - Never rewrite persistent profiles or enable Robux packs without evidence.
 
+### 11a. The Robux line (OWNER 2026-10-16, BD-425)
+Robux buys **looks and convenience**, never exclusive power. Enforced in CI by `tools/verify_robux_line.py` (flags off, crystal-only handlers, PolicyService and odds gates). Convenience multiplier cap: **1.25x**, and never beyond the normal in-game limit.
+| Category | Allowed with Robux | Never with Robux |
+|---|---|---|
+| Looks | skins, auras, trails, hatch styles, titles, home themes | any stat, size or speed change |
+| Time-savers | potions or potion bundles (capped, see [86](86-monetization-ideas.md)), Nest Warmer, auto-open | growth multiplier above 1.25x, stacking past the normal limit |
+| Capacity | extra nest spots, storage | more luck or bigger rewards per nest |
+| Currency | crystal packs (crystals only, flag off) | direct dinos, species or rarity |
+| Random items | only behind `Config.PaidRandomItemsEnabled`, a passed `PolicyService` check and shown numeric odds | hidden or changed odds, extra fusion success |
+| Power | nothing | combat or predation advantage, exclusive species |
+
 ## 12. Process rules
 - Art rule: no code or Python-drawn final art; effect textures are Blender renders; icons come from Blender or the owner's ChatGPT; **generated meshes only** for 3D ([AGENTS.md](../AGENTS.md), [87](87-vision-and-feel-guide.md), [72](72-ui-copy-and-asset-standards.md)).
 - New features ship flag-off-by-default; do not flip combat, cave or low-poly without owner playtest and phone evidence.
