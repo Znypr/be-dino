@@ -18,7 +18,7 @@ EXPECTED_IDS = {
     "quetzalcoatlus": "126028097030256", "spinosaurus": "94005222354362", "therizinosaurus": "94894343028103",
 }
 CLASSES = {"Fly": {"pteranodon", "quetzalcoatlus", "dimorphodon", "archaeopteryx", "microraptor"},
-           "Water": {"plesiosaurus", "mosasaurus", "ichthyosaurus", "elasmosaurus"}, "Armored": {"ankylosaurus"}}
+           "Water": {"plesiosaurus", "mosasaurus", "ichthyosaurus"}, "Armored": {"ankylosaurus"}}
 # Part-name sets by body plan (generation part lists; names vary by species, matcher must classify every one).
 BIPED = ["body", "head", "tail", "left arm", "right arm", "left leg", "right leg"]
 QUAD = ["body", "head", "tail", "front left leg", "front right leg", "back left leg", "back right leg"]
@@ -30,7 +30,7 @@ PART_SETS = {"quad": QUAD, "biped": BIPED, "wings": WINGED, "flippers": FLIPPER,
 PLAN = {"quad": {"triceratops", "stegosaurus", "ankylosaurus"},
         "biped": {"compy", "raptor", "tyrannosaurus", "baryonyx", "gallimimus", "pachycephalosaurus", "parasaurolophus", "spinosaurus",
                   "therizinosaurus"},
-        "wings": CLASSES["Fly"], "flippers": CLASSES["Water"], "neck": {"brachiosaurus"}}
+        "wings": CLASSES["Fly"], "flippers": CLASSES["Water"] | {"elasmosaurus"}, "neck": {"brachiosaurus"}}
 
 
 def registry():
