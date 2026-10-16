@@ -35,6 +35,7 @@ Assets.Requested = {
     -- Pending owner uploads (docs/120): bind with tools/bind_assets.py. A key nothing reads yet simply resolves to its built-in sprite.
     glowPlateDroplet = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
     glowPlateCrescent = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    glowPlateRound = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
     ringSeismic = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
     smokeDense = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
     smokeWispy = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite

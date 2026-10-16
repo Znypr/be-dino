@@ -89,6 +89,15 @@
    "pending": "BD-186 mutation glow variants"
   },
   {
+   "name": "glowPlateRound",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "glowPlateRound",
+   "group": "Requested.glowPlateRound",
+   "pending": "BD-186 mutation glow variants"
+  },
+  {
    "name": "ringSeismic",
    "kind": "image",
    "target": "effect",
@@ -538,7 +547,10 @@
    "key": "mutation_dewdrop",
    "group": "Images.mutation_dewdrop",
    "table": "Images",
-   "pending": "BD-190 MutationBadge"
+   "reader": [
+    "src/client/MutationBadge.luau",
+    "\"mutation_\" .. look.id"
+   ]
   },
   {
    "name": "mutation_charged",
@@ -548,7 +560,10 @@
    "key": "mutation_charged",
    "group": "Images.mutation_charged",
    "table": "Images",
-   "pending": "BD-190 MutationBadge"
+   "reader": [
+    "src/client/MutationBadge.luau",
+    "\"mutation_\" .. look.id"
+   ]
   },
   {
    "name": "mutation_frost",
@@ -558,7 +573,10 @@
    "key": "mutation_frost",
    "group": "Images.mutation_frost",
    "table": "Images",
-   "pending": "BD-190 MutationBadge"
+   "reader": [
+    "src/client/MutationBadge.luau",
+    "\"mutation_\" .. look.id"
+   ]
   },
   {
    "name": "mutation_seismic",
@@ -568,7 +586,10 @@
    "key": "mutation_seismic",
    "group": "Images.mutation_seismic",
    "table": "Images",
-   "pending": "BD-190 MutationBadge"
+   "reader": [
+    "src/client/MutationBadge.luau",
+    "\"mutation_\" .. look.id"
+   ]
   },
   {
    "name": "mutation_ember",
@@ -578,7 +599,10 @@
    "key": "mutation_ember",
    "group": "Images.mutation_ember",
    "table": "Images",
-   "pending": "BD-190 MutationBadge"
+   "reader": [
+    "src/client/MutationBadge.luau",
+    "\"mutation_\" .. look.id"
+   ]
   },
   {
    "name": "mutation_aurora",
@@ -588,7 +612,10 @@
    "key": "mutation_aurora",
    "group": "Images.mutation_aurora",
    "table": "Images",
-   "pending": "BD-190 MutationBadge"
+   "reader": [
+    "src/client/MutationBadge.luau",
+    "\"mutation_\" .. look.id"
+   ]
   },
   {
    "name": "mutation_bloodmoon",
@@ -598,7 +625,10 @@
    "key": "mutation_bloodmoon",
    "group": "Images.mutation_bloodmoon",
    "table": "Images",
-   "pending": "BD-190 MutationBadge"
+   "reader": [
+    "src/client/MutationBadge.luau",
+    "\"mutation_\" .. look.id"
+   ]
   },
   {
    "name": "paint_bucket",
@@ -1525,6 +1555,45 @@
    "key": "bloodMoonDisc",
    "group": "Requested.bloodMoonDisc",
    "pending": "BD-055 weather textures"
+  },
+  {
+   "name": "tree_broadleaf_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "tree_broadleaf_v3",
+   "group": "Replacements.tree_broadleaf_v3",
+   "table": "Replacements",
+   "reader": [
+    "src/server/Arena.luau",
+    "replacementFor"
+   ]
+  },
+  {
+   "name": "tree_pine_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "tree_pine_v3",
+   "group": "Replacements.tree_pine_v3",
+   "table": "Replacements",
+   "reader": [
+    "src/server/Arena.luau",
+    "replacementFor"
+   ]
+  },
+  {
+   "name": "tree_palm_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "tree_palm_v3",
+   "group": "Replacements.tree_palm_v3",
+   "table": "Replacements",
+   "reader": [
+    "src/server/Arena.luau",
+    "replacementFor"
+   ]
   }
  ]
 }

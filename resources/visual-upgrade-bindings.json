@@ -72,7 +72,9 @@
       "normal": "102603392874381",
       "roughness": "82962110810713",
       "metal": "94175885618888",
-      "tile": 20
+      "tile": 20,
+      "bound": false,
+      "note": "BD-460 (docs/138), owner decision 2026-10-16: the island uses Roblox's built-in Grass. This variant stays in MaterialService (all four IDs and the original 20-stud tile kept) but MaterialService.GrassName is NOT set, so it is unbound. Its colour map carries large dark baked blotches that cause the repeating dark waves (Studio control: waves gone with the override cleared). To use it again set bound to true or SetBaseMaterialOverride(Grass, 'BeDino_Meadow'); a new matte colour map is BD-461."
     },
     {
       "name": "BeDino_Stone",

@@ -69,7 +69,7 @@ local function tree(parent: Instance, position: Vector3, scale: number, yaw: num
         trunk.CFrame = CFrame.new(trunk.Position) * CFrame.Angles(0, yaw, math.pi / 2)
         for _, offset in {Vector3.new(0, 9, 0), Vector3.new(2.7, 8.5, 0.4), Vector3.new(-2.3, 8.9, -0.8)} do
             local crown = part(parent, "Canopy", Vector3.new(5.5, 3.5, 5.5) * scale,
-                position + offset * scale, Color3.fromRGB(64, 144, 112), Enum.Material.SmoothPlastic, false)
+                position + offset * scale, Color3.fromRGB(76, 138, 100), Enum.Material.SmoothPlastic, false) -- BD-460: was 64,144,112 (mint)
             crown.Shape = Enum.PartType.Ball
         end
     end
@@ -81,7 +81,7 @@ local function fern(parent: Instance, position: Vector3, scale: number, yaw: num
         local angle = yaw + i * math.pi * 2 / 7
         local leaf = part(parent, "FernLeaf", Vector3.new(0.45, 0.16, 2.0) * scale,
             position + Vector3.new(math.sin(angle) * .6, .6, math.cos(angle) * .6) * scale,
-            Color3.fromRGB(106, 180, 125), Enum.Material.SmoothPlastic, false)
+            Color3.fromRGB(112, 164, 116), Enum.Material.SmoothPlastic, false) -- BD-460: was 106,180,125
         leaf.Shape = Enum.PartType.Ball
         leaf.CFrame = CFrame.new(leaf.Position) * CFrame.Angles(-0.28, angle, 0)
     end
@@ -94,7 +94,14 @@ local function generatedProp(id: string, biome: string, roll: number): Model?
     if not Config.WorldGeneratedMeshes then return nil end
     local key = Generated.visualFor(id, biome, roll)
     local folder = ReplicatedStorage:FindFirstChild("GeneratedWorld")
-    local template = if key and folder then folder:FindFirstChild(key) else nil
+    local template = nil
+    -- BD-462: owner-approved V3 tree first (only once its asset id is filled in AND it loaded); otherwise the current generated mesh.
+    local v3Key = if key then Generated.replacementFor(key) else nil
+    if v3Key and folder then
+        template = folder:FindFirstChild(v3Key)
+        if template then key = v3Key end
+    end
+    if not template and key and folder then template = folder:FindFirstChild(key) end
     if not template or not template:IsA("MeshPart") then return nil end
     local cacheKey = key .. "|" .. id
     if not generatedCache[cacheKey] then

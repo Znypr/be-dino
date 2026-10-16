@@ -23,6 +23,22 @@ Generated.Assets = {
     food_egg = {assetId = "80664439797104", placed = false},
     nest = {assetId = "102765517629578", placed = false},
 }
+-- BD-462 (docs/140): owner-approved V3 tree meshes (Blender, assets/blender/world/fbx_v3/*.fbx) that replace the Roblox-generated
+-- broadleaf, pine and palm once uploaded. assetId = "" means NOT uploaded yet: nothing is loaded, replacementFor() returns nil and the
+-- current generated mesh above keeps being used (same visual as before this table existed). Paste the numeric MeshPart-model id here
+-- after the owner uploads the FBX (docs/140 and the BD-462 row have the click-by-click steps). Only these three tree kinds are covered.
+Generated.Replacements = {
+    tree_broadleaf_v3 = {assetId = "", placed = true, replaces = "tree_broadleaf"}, -- world_tree_broad_v3.fbx, 726 tris
+    tree_pine_v3 = {assetId = "", placed = true, replaces = "tree_pine"}, -- world_tree_pine_v3.fbx, 462 tris
+    tree_palm_v3 = {assetId = "", placed = true, replaces = "tree_palm"}, -- world_tree_palm_v3.fbx, 700 tris
+}
+-- Returns the V3 key to try first for a current key (e.g. "tree_palm" -> "tree_palm_v3"), or nil while that V3 id is still empty.
+function Generated.replacementFor(key: string): string?
+    for replacementKey, info in Generated.Replacements do
+        if info.replaces == key and info.assetId ~= "" then return replacementKey end
+    end
+    return nil
+end
 -- Kit ids this module may replace (the rest keep their current models). Returns a key of Generated.Assets or nil.
 -- biome: BiomeMap id ("meadow", "badlands", "volcanic", ...); roll in [0,1) is a deterministic per-prop value.
 local TREES = {
@@ -36,6 +52,13 @@ local TREES = {
     world_landmark_dino_statue = "landmark_dino_statue",
 }
 Generated.KitMap = TREES
+-- BD-460 (docs/138): per-asset foliage tone. Multiplies the mesh's own texture (SurfaceAppearance.Color, applied once per key on the template, so
+-- no per-prop or per-frame cost). Less blue and a little less green/red: the minty crowns turn leaf green and the sunlit treetops stop clipping.
+-- Only foliage keys; rocks, the burnt tree and the landmark keep their art colours. Every channel in [0.75, 1] (checked by verify_world_art).
+Generated.Tone = {
+    tree_broadleaf = {.94, .92, .80}, tree_birch = {.94, .92, .80}, tree_jungle_giant = {.94, .92, .80},
+    tree_palm = {.95, .93, .84}, tree_pine = {.95, .94, .86}, bush = {.94, .92, .82},
+}
 local BARE = {world_boulder_bare_s = true, world_boulder_bare_m = true, world_boulder_bare_l = true}
 Generated.BareIds = BARE
 function Generated.visualFor(id: string, biome: string, roll: number): string?

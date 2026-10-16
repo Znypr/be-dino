@@ -47,7 +47,12 @@ function Import.loadGeneratedWorld(): (number, number)
     local folder=ReplicatedStorage:FindFirstChild("GeneratedWorld")
     if not folder then folder=Instance.new("Folder") folder.Name="GeneratedWorld" folder.Parent=ReplicatedStorage end
     local loaded,failed,pending=0,0,0
-    for key,asset in GeneratedMeshes.Assets do
+    -- BD-462: V3 tree replacements load like the others, but an empty assetId (not uploaded yet) is skipped silently, not a failure.
+    local entries: {{key: string, asset: {assetId: string}}}={}
+    for key,asset in GeneratedMeshes.Assets do table.insert(entries,{key=key,asset=asset}) end
+    for key,asset in GeneratedMeshes.Replacements do if asset.assetId~="" then table.insert(entries,{key=key,asset=asset}) end end
+    for _,entry in entries do
+        local key,asset=entry.key,entry.asset
         pending+=1
         task.spawn(function()
             local ok,result=pcall(function()
@@ -59,6 +64,10 @@ function Import.loadGeneratedWorld(): (number, number)
                 local mesh=found:Clone()
                 container:Destroy()
                 for _,child in mesh:GetChildren() do if not child:IsA("SurfaceAppearance") then child:Destroy() end end
+                -- BD-460: per-asset foliage tone (data in WorldGeneratedMeshes.Tone); a missing property only skips the tint.
+                local tone=GeneratedMeshes.Tone[key]
+                local surface=mesh:FindFirstChildOfClass("SurfaceAppearance")
+                if tone and surface then pcall(function() surface.Color=Color3.new(tone[1],tone[2],tone[3]) end) end
                 mesh.Name=key
                 mesh.Anchored,mesh.CanCollide,mesh.CanTouch,mesh.CanQuery,mesh.Massless=true,false,false,false,true
                 mesh:SetAttribute("GeneratedAssetId",asset.assetId)

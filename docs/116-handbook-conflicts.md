@@ -51,3 +51,30 @@ Checked: catch-rate examples and the ladder were already corrected by earlier PR
 
 ## E. Vision answers 2026-10-16 (owner)
 Audit against code and docs: eggs kept when eaten = match. Mismatches (kanban): ~~Peaceful hard to find and absent with combat off (BD-421)~~ (SUPERSEDED 2026-10-16: owner correction, there is no Peaceful, docs/115), play-as-any class feel unproven (BD-423), no server rare-hatch announcement or confetti (BD-424), Robux line needs a guard check (BD-425). Audience (Q1) is still open: the answers say play and Robux but not an age band. docs/101 Q "PvP always on or optional" is answered: optional.
+
+## F. Giant dinos vs the jungle (spec [139](139-giant-dino-vegetation-scale.md), 2026-10-16; C-24, C-25 (part) and C-26 resolved by owner answers 2026-10-16; C-23 and C-27 OPEN; questions are Q1-Q12 in docs/139 s14)
+| ID | Statement A | Statement B | Question |
+| --- | --- | --- | --- |
+| C-23 | docs/87 and handbook 8.1 item 3: a grown dino still feels small next to big trees | owner 2026-10-16: the dino should be gigantic at the end; only colossal ancient trees stay taller | docs/139 Q3 |
+| C-24 | D19 / BD-386: growth 5x slower; a 5-minute run reaches only about 1.5x size | owner wants "gigantic at the end" | docs/139 Q1: **RESOLVED 2026-10-16 (OWNER): keep current pacing; gigantic is a rare long-run reward** |
+| C-25 | handbook 0 and 3: friendly, calm, readable at a glance; BD-312 / BD-253: big bodies and foliage that fill the camera were a defect | owner wants small players "intimidated"; a max dino fills up to 55% of the screen | docs/139 Q2: **RESOLVED 2026-10-16 (OWNER): awe only, no fear mechanics**; Q8 (screen share) stays OPEN |
+| C-26 | D8 / D15: generated meshes only; Blender models wait for owner uploads | colossal tree art requested "in Blender"; the running tree-quality-test uses scripted Blender trees | docs/139 Q5: **RESOLVED 2026-10-16 (OWNER): Blender allowed for colossal and redesigned tree art; V3 trees approved as a scoped exception** |
+| C-27 | handbook 3 weather: about 25-30 studs readable around the dino; fog starts 25-100 studs from the camera | the camera sits 40-60 studs from a big dino | docs/139 Q9 |
+
+## G. Visual handbook PR #306 (docs/114 s8.4-8.6, fact-checked 2026-10-16)
+Statements in PR #306 checked against the owner decisions of 2026-10-16 ([115](115-decisions-log.md)). The decisions win; the PR text was corrected in place in docs/114.
+| ID | PR statement | Decision / newer fact | Resolution |
+| --- | --- | --- | --- |
+| C-28 | s8.4.1 item 3 and s8.4.2: "dimensional shading on body and neck", "minor refinement at neck/hip/mouth/limb intersections" of the dino | No decision covers either; the dino base look is the faceted low-poly dino (D14) | **OPEN, PROPOSAL / not owner-approved.** Labelled in docs/114. OWNER QUESTION Q11 |
+| C-29 | s8.5: playtest growth targets "about 2.5-3x after a good five-minute run and a 6x long-run maximum" | OWNER Q1 2026-10-16: keep the current pacing (size about 1.5 after a normal run, cap 4, BIG 4.8) | **RESOLVED**: targets struck through as NOT ADOPTED in docs/114 s8.5 |
+| C-30 | s8.6: "Emerald/Diamond need material-specific art, not just recoloured Gold" | The decision is one rule for all tiers: same colours and pattern under a tinted crystal / metal coat with an outline; Gold is in progress and not final | **OPEN, PROPOSAL / not owner-approved.** Decide when the owner accepts the Gold Studio screenshot. OWNER QUESTION Q12 |
+| C-31 | s8.4.1 item 4: restrained Atmosphere, lower distant contrast, slightly lighter distant hills and trees | OWNER 2026-10-16: no haze, base Atmosphere density .1 / haze .3 / glare 0 (docs/138 s4) | **RESOLVED**: item rewritten as "no haze"; depth by scale, layering and silhouette only |
+| C-32 | s8.6: "evaluate single-mesh texture/pattern + authored PBR maps before resorting to extra shells"; a transparent shell looked plasticky | Findings 2026-10-16: stripes are runtime-baked textures, so PBR goes on a separate alpha-mapped shell; a runtime-created SurfaceAppearance does not render, one authored in Edit mode and cloned does; reflections are off at graphics quality 1 | **RESOLVED**: s8.6 rewritten around the shell and the quality-1 fallback |
+| C-33 | docs/114 s4.3 (Gold Metal 0.14, Emerald Glass 0.10, Diamond Glass 0.22) | The 2026-10-16 coat-plus-outline rule and the open tier work in PR #291 (`tier-shiny`) rework these values | **OPEN, no owner question**: s4.3 is the code on main; the lead updates it when #291 lands |
+| C-34 | s8.4.2 / s8.1 item 1: "approved generated mesh pipeline for final 3D art; code-built stacks are placeholders" | Scoped exception for the three V3 trees and Blender allowed for world and colossal-tree art (D8/D15, docs/115, docs/140, PR #305) | **RESOLVED** in s8.4.2 and s8.1 item 1; the exception covers only those three meshes |
+| C-35 | s8.4.1 item 1: "diagnose whether terrain material, normals or shadows cause the striping" | Diagnosed: the BeDino_Meadow colour map; built-in Grass 132,166,68 (BD-460, docs/138) | **RESOLVED**: item rewritten as decided |
+| C-36 | s8.5: dinosaurs "ultimately surpass ordinary trees" and a 60-70 / 20-30 / 5-10 density mix | docs/139 Q3 (are ordinary trees outgrown) and Q4 (mix denominator) are still open; handbook s8.1 item 3 says the opposite (C-23) | **OPEN, PROPOSAL.** s8.5 now links docs/139 and labels it; no numbers are copied. Owner questions are docs/139 Q3 and Q4 |
+
+New OWNER QUESTIONS (numbering continues section C; docs/139 has its own Q1-Q12):
+- **Q11 Dino shading and refinement.** Approve (a) extra dimensional shading on the dino body and neck, and (b) a minor mesh refinement at neck, hip, mouth and limb intersections? Options: (a) both; (b) shading only; (c) neither, keep the low-poly dino as is.
+- **Q12 Tier art.** When Gold is accepted, do Emerald and Diamond get their own material art (own alpha mask and normal/roughness) or the same coat recipe with only the tint and outline changed? Options: (a) own art per tier; (b) same recipe, different tint and outline.
