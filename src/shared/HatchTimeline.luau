@@ -313,7 +313,7 @@ end
 -- BIG "stamp": starts 35% oversize and slams to 1 in .25 s.
 function T.stamp(s: number): number
     if s < 0 or s >= .25 then return 1 end
-    return 1 + .35 * (1 - s / .25) ^ 2
+    return 1 + .12 * (1 - s / .25) ^ 2 -- BD-327b: was .35, a BIG dino crossed the top edge of the panel at the stamp (seen in Studio)
 end
 function T.burstStrength(rarity: number): number return .18 + .08 * math.clamp(rarity, 1, 5) end -- screen flash alpha
 
