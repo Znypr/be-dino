@@ -60,13 +60,15 @@ local baseCloud={cover=clouds.Cover,density=clouds.Density,color=clouds.Color}
 local baseStars=if sky then sky.StarCount else 0
 -- BD-213 soft visibility: clear weather keeps a gentle haze, and FogEnd stays inside this device's prop cull radius
 -- (same device classes as WorldCulling.client.luau), so culled props are already lost in the haze and never pop.
-local CLEAR=WL.Looks.clear
+local deviceClass=(function():string
+    local size=workspace.CurrentCamera.ViewportSize
+    return if not UserInputService.TouchEnabled then "Desktop" elseif math.min(size.X,size.Y)>=600 then "Tablet" else "Phone"
+end)()
+local CLEAR=WL.clearFor(deviceClass) -- desktop/tablet: far clear fog, no 374-stud milky wall
 local fogCap=(function():number
     local culling=require(Shared.Config).WorldCulling
     if not culling or not culling.Enabled then return WL.fogCap(nil) end
-    local size=workspace.CurrentCamera.ViewportSize
-    local class=if not UserInputService.TouchEnabled then "Desktop" elseif math.min(size.X,size.Y)>=600 then "Tablet" else "Phone"
-    return WL.fogCap(culling[class].radius)
+    return WL.capFor(deviceClass,culling[deviceClass].radius)
 end)()
 local baseAtmo={density=atmosphere.Density,offset=atmosphere.Offset,haze=atmosphere.Haze,glare=atmosphere.Glare,color=atmosphere.Color,decay=atmosphere.Decay}
 
@@ -859,7 +861,7 @@ RunService.Heartbeat:Connect(function(dt)
         amb=WL.scale(WL.aurora(animT,.1),.55) tint=WL.mix(WHITE,WL.aurora(animT,.35),.5) glowRgb=WL.aurora(animT,.7)
     end
     grade.TintColor=c3(WL.mix(WHITE,tint,t))
-    grade.Saturation=lerpNum(0,look.sat,t) grade.Contrast=lerpNum(0,look.contrast,t)
+    grade.Saturation=lerpNum(0,look.sat,t)+CLEAR.sat*outside*(1-t) grade.Contrast=lerpNum(0,look.contrast,t)+CLEAR.contrast*outside*(1-t)
     grade.Brightness=lerpNum(0,look.bright,t)+(flash*.5+pulse*.12)*outside
     bloom.Intensity=lerpNum(0,look.bloom,t)+flash*1.5*outside
     bloom.Threshold=lerpNum(.95,.72,t) bloom.Size=lerpNum(24,40,t)

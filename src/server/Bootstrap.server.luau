@@ -23,13 +23,13 @@ Players.CharacterAutoLoads = false
 Lighting.ClockTime = 14
 Lighting.Brightness = 2
 Lighting.Ambient = Color3.fromRGB(130, 143, 148)
--- World v2 distance haze: a gentle default Atmosphere so the 832-stud island fades into depth. The client weather script
--- adopts an existing Atmosphere as its base (it only ever raises density/haze above these values), so they cooperate.
+-- Owner 2026-10-16 (docs/114): no haze in clear daylight. Only a whisper of depth (density .1, haze .3, no glare); trees and hills keep
+-- their colour. The client weather script adopts this as its base and only raises it during weather events, then returns to it on clear.
 if not Lighting:FindFirstChildOfClass("Atmosphere") then
     local atmosphere = Instance.new("Atmosphere")
     atmosphere.Name = "WorldHaze"
-    atmosphere.Density, atmosphere.Offset, atmosphere.Glare, atmosphere.Haze = .22, .12, 0, 1.15
-    atmosphere.Color, atmosphere.Decay = Color3.fromRGB(190, 208, 214), Color3.fromRGB(148, 176, 190)
+    atmosphere.Density, atmosphere.Offset, atmosphere.Glare, atmosphere.Haze = .1, .1, 0, .3
+    atmosphere.Color, atmosphere.Decay = Color3.fromRGB(176, 205, 232), Color3.fromRGB(140, 176, 210)
     atmosphere.Parent = Lighting
 end
 require(script.Parent.ImportedResources).load()
