@@ -142,6 +142,11 @@ local function eggPopup(host: GuiObject, details: any, loading: boolean)
             if item:IsA("ViewportFrame") then item.ImageTransparency = .6 end
         end
     end
+    -- BD-352: the dino's mutation next to its original egg (own colour, 14 px word; no new art).
+    if view.mutationId then
+        local chip = MutationBadge.chip(card, view.mutationId, UDim2.fromOffset(14, 332))
+        if chip then chip.ZIndex = 43 end
+    end
     local list = Instance.new("Frame")
     list.Name, list.BackgroundTransparency, list.Size, list.Position, list.ZIndex, list.Parent = "EggFacts", 1, UDim2.fromOffset(268, 250), UDim2.fromOffset(300, 56), 42, card
     local layout = Instance.new("UIListLayout") layout.Padding, layout.Parent = UDim.new(0, 6), list

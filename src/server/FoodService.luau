@@ -6,6 +6,7 @@ local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local FoodCatchRules = require(ReplicatedStorage.Shared.FoodCatchRules)
+local PointGrid = require(ReplicatedStorage.Shared.PointGrid) -- BD-361: pickups are found per player through a grid, not by scanning every food
 local RunEggTags = require(ReplicatedStorage.Shared.RunEggTags) -- BD-236: pure catch-time tag glue (tested)
 local Http = game:GetService("HttpService")
 local eventRandom = Random.new()
@@ -198,6 +199,9 @@ function FoodService.start(dinosaur,repository)
     workspace:SetAttribute("FoodSpawnStatus", if #foods > 0 then "Ready" else "No valid ground")
     if #foods == 0 then warn("[Be Dino] Food placement failed: no valid terrain hits") end
     local previous = {}
+    local grid = PointGrid.new(8)
+    local hiddenFoods = {} -- foods waiting to respawn (small set), so the tick never walks all 2,400 just to look at readyAt
+    for _, food in foods do local p = food.part.Position PointGrid.insert(grid, food, p.X, p.Z) end
     Players.PlayerRemoving:Connect(function(player) previous[player] = nil end)
     task.spawn(function()
         while true do
@@ -222,31 +226,40 @@ function FoodService.start(dinosaur,repository)
                     end
                 else previous[player] = nil end
             end
-            for _, food in foods do
-                if now < food.readyAt then continue end
-                if food.hidden then
+            for food in hiddenFoods do
+                if now >= food.readyAt then
                     relocate(food) -- original valid location remains if no replacement succeeds
+                    local p = food.part.Position
+                    PointGrid.move(grid, food, p.X, p.Z)
                     show(food, true)
                     food.hidden = false
+                    hiddenFoods[food] = nil
                 end
-                local winner, nearest = nil, math.huge
-                local foodPosition = food.part.Position
-                for _, candidate in candidates do
-                    local dx, dz = foodPosition.X - candidate.position.X, foodPosition.Z - candidate.position.Z
-                    if dx * dx + dz * dz <= candidate.radiusSq and math.abs(foodPosition.Y - candidate.position.Y) < 6 then
+            end
+            -- BD-361: each player looks only at foods in nearby grid cells (about 4 cells of 8 studs), then picks the nearest claimant per food.
+            local claims = {}
+            for _, candidate in candidates do
+                local position = candidate.position
+                PointGrid.query(grid, position.X, position.Z, candidate.radius, function(food)
+                    if food.hidden then return end
+                    local foodPosition = food.part.Position
+                    local dx, dz = foodPosition.X - position.X, foodPosition.Z - position.Z
+                    if dx * dx + dz * dz <= candidate.radiusSq and math.abs(foodPosition.Y - position.Y) < 6 then
                         local horizontal = math.sqrt(dx * dx + dz * dz)
-                        local blocked = workspace:Raycast(candidate.position, foodPosition - candidate.position, pickupParams)
-                        if not blocked and (horizontal < nearest or (horizontal == nearest and winner and candidate.player.UserId < winner.player.UserId)) then
-                            nearest, winner = horizontal, candidate
+                        local blocked = workspace:Raycast(position, foodPosition - position, pickupParams)
+                        local held = claims[food]
+                        if not blocked and (not held or horizontal < held.distance or (horizontal == held.distance and candidate.player.UserId < held.candidate.player.UserId)) then
+                            claims[food] = {distance = horizontal, candidate = candidate}
                         end
                     end
-                end
-                if winner then
-                    food.readyAt = now + Config.FoodRespawnSeconds
-                    food.hidden = true
-                    show(food, false)
-                    winner.gained += food.kind.points * adminFoodMultiplier
-                end
+                end)
+            end
+            for food, claim in claims do
+                food.readyAt = now + Config.FoodRespawnSeconds
+                food.hidden = true
+                hiddenFoods[food] = true
+                show(food, false)
+                claim.candidate.gained += food.kind.points * adminFoodMultiplier
             end
             for _, candidate in candidates do
                 if candidate.gained > 0 then
