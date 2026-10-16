@@ -74,7 +74,7 @@ function Import.loadGeneratedWorld(): (number, number)
     workspace:SetAttribute("GeneratedMeshFailed",failed+pending)
     return loaded,failed+pending
 end
--- BD-397 (docs/114): the v2 hatch meshes (generated egg, PLACEHOLDER barrel as the bucket) as one MeshPart each in
+-- BD-397 (docs/118): the v2 hatch meshes (generated egg, PLACEHOLDER barrel as the bucket) as one MeshPart each in
 -- ReplicatedStorage.HatchV2Models. Only called while Config.HatchV2 is true. A failed egg load leaves the folder without "egg":
 -- the client then runs the shipped v1 sequence; a failed bucket load only hides the bucket.
 function Import.loadHatchV2(): (number, number)

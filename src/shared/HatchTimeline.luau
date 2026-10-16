@@ -3,7 +3,7 @@
 -- The client module HatchSequence.luau only draws; everything testable lives here
 -- (tools/verify_hatch_sequence.py). Presentation only: the server-committed outcome is never read or changed.
 local RevealSkip = require(script.Parent.RevealSkip)
-local V2 = require(script.Parent.HatchV2Plan) -- BD-397 (docs/114): the v2 beat sheet; only used when a state is created with v2 = true
+local V2 = require(script.Parent.HatchV2Plan) -- BD-397 (docs/118): the v2 beat sheet; only used when a state is created with v2 = true
 local T = {}
 
 -- Seconds. Full motion: ~3.6 s build-up (two paint-bucket splashes, then rattle/crack), burst, dino reveal, then wait for a tap.
@@ -38,7 +38,7 @@ function T.paintPlan(motion: boolean)
         rightStart = p.rightStart, rightImpact = p.rightStart + p.window * p.impact, rightEnd = rightEnd,
         patternAt = patternAt, patternEnd = patternAt + p.patternWash, endsAt = patternAt + p.patternWash}
 end
--- v2 (BD-397, docs/114): the longer paint beat sheet of HatchV2Plan replaces the build-up and the paint plan; burst, settle,
+-- v2 (BD-397, docs/118): the longer paint beat sheet of HatchV2Plan replaces the build-up and the paint plan; burst, settle,
 -- tap gate, skip rules, Reduced Motion and the failed-egg splat are unchanged.
 function T.durations(motion: boolean, rarity: number?, failed: boolean?, v2: boolean?)
     local d = if not motion then T.Reduced elseif failed then T.Splat else T.Motion

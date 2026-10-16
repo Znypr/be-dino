@@ -1,5 +1,5 @@
 --!strict
--- BD-397 (docs/114): PURE pixel maths of the two-coat paint reveal on the hatch egg. No Roblox APIs (tools/verify_hatch_v2.py).
+-- BD-397 (docs/118): PURE pixel maths of the two-coat paint reveal on the hatch egg. No Roblox APIs (tools/verify_hatch_v2.py).
 -- The egg texture is ONE EditableImage (size x size, under the docs/105 byte budget) that client/HatchEggV2 rewrites a few times
 -- per second while a coat runs: every texel knows (from the egg's position map, LowPolyPattern.rasterize, or its UV as a
 -- fallback) the second at which the base coat and the accent coat reach it (Bake.revealMap, from HatchV2Plan splats and

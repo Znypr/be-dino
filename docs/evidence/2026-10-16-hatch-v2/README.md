@@ -17,7 +17,7 @@ Absolute folder: `C:\Users\znypr\Documents\be-dino\docs\evidence\2026-10-16-hatc
 | 10, 12 | bucket 2 | barrel on the right tipping; the liquid arc reads as a thin dotted line (fixed in pass 2) |
 | 13 | impact 2 | cream splash, "Cream - COMMON" chip; 2D drip streaks under the splash |
 | 14 | coat 2 | cream bands painted onto the green egg; "Horizontal Bands" chip |
-| 16, 19 | rattle | glow rings grow, the egg rattles (no crack lines: needs the crack decal, docs/114 s4 D) |
+| 16, 19 | rattle | glow rings grow, the egg rattles (no crack lines: needs the crack decal, docs/118 s4 D) |
 | 21 | burst | the egg leaves, v1 shell fragments and sparkles |
 | 22, 24 | reveal | Gallimimus, name, odds, detail line, tap hint: unchanged v1 |
 
@@ -62,10 +62,10 @@ Numbers (passes 2-4, Play Solo client, this PC with two or three Studios open): 
 
 ## Honest rating against docs/87 (agent's eye, out of 10)
 
-**6 / 10 as built, with the placeholder barrel and smoke-cell paint.** What already works and fits "calm, bubbly, a little magical": a real 3D egg that squashes on impact, a bucket that flies in with a soft overshoot and tips, a visible liquid arc, paint that spreads over the egg's own texture from the impact with a wet edge and drips, the pattern visibly painted by the second coat, chips in the game style, calm timing (6.7 s build-up, skippable), the unchanged warm v1 reveal. What holds the rating down: (1) the bucket is a barrel (reads as a barrel, not a paint bucket) until the generated bucket mesh exists; (2) the arc, crown and puddle are the fx3 smoke cells tinted, so the "thick glossy paint" reads as soft blobs rather than liquid (needs the paint FX sheets, docs/114 s4 C); (3) the 2D drips are plain gradient streaks; (4) no crack lines on the 3D egg during the rattle (needs the crack decal); (5) the wet gloss (reflectance 0.28) is barely visible in the viewport light; (6) the Rainbow/Astra overlay is faint on the painted egg. With the owner's bucket mesh and paint sheets bound (table edits only, no new code) I expect 8 / 10; the remaining gap is a crack decal and a proper paint-sheen decal.
+**6 / 10 as built, with the placeholder barrel and smoke-cell paint.** What already works and fits "calm, bubbly, a little magical": a real 3D egg that squashes on impact, a bucket that flies in with a soft overshoot and tips, a visible liquid arc, paint that spreads over the egg's own texture from the impact with a wet edge and drips, the pattern visibly painted by the second coat, chips in the game style, calm timing (6.7 s build-up, skippable), the unchanged warm v1 reveal. What holds the rating down: (1) the bucket is a barrel (reads as a barrel, not a paint bucket) until the generated bucket mesh exists; (2) the arc, crown and puddle are the fx3 smoke cells tinted, so the "thick glossy paint" reads as soft blobs rather than liquid (needs the paint FX sheets, docs/118 s4 C); (3) the 2D drips are plain gradient streaks; (4) no crack lines on the 3D egg during the rattle (needs the crack decal); (5) the wet gloss (reflectance 0.28) is barely visible in the viewport light; (6) the Rainbow/Astra overlay is faint on the painted egg. With the owner's bucket mesh and paint sheets bound (table edits only, no new code) I expect 8 / 10; the remaining gap is a crack decal and a proper paint-sheen decal.
 
 ## What still needs owner-made assets
-1. Paint bucket mesh (generate_mesh prompt in docs/114 s4 B) -> `HatchV2Assets.bucket`.
-2. Paint splash crown, drips and droplet flipbooks + wet-sheen decal (ChatGPT prompts in docs/114 s4 C) -> `EffectAssets.Requested`.
-3. Crack lines decal, three stages (docs/114 s4 D).
+1. Paint bucket mesh (generate_mesh prompt in docs/118 s4 B) -> `HatchV2Assets.bucket`.
+2. Paint splash crown, drips and droplet flipbooks + wet-sheen decal (ChatGPT prompts in docs/118 s4 C) -> `EffectAssets.Requested`.
+3. Crack lines decal, three stages (docs/118 s4 D).
 4. Optional: a cuter egg mesh (s4 A; the reused generated egg is acceptable).

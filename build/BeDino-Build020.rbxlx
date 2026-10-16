@@ -368290,9 +368290,9 @@ return table.freeze({
     FallRecoveryTickSeconds = 0.2,
     -- BD-225 spike (docs/77): low-poly generated base dinos (Compy, Raptor, Triceratops). OFF by default; shipped look unchanged.
     LowPolyDinos = false,
-    -- BD-397 (docs/114): v2 hatch (3D egg viewport, two paint buckets that coat the egg texture, condition, cracks). OFF by
+    -- BD-397 (docs/118): v2 hatch (3D egg viewport, two paint buckets that coat the egg texture, condition, cracks). OFF by
     -- default: the shipped v1 sequence is unchanged. ON = the server loads HatchV2Assets; the client falls back to v1 for any
-    -- egg whose meshes or images are unavailable. Playtest profile may turn it on once docs/114 evidence is owner-approved.
+    -- egg whose meshes or images are unavailable. Playtest profile may turn it on once docs/118 evidence is owner-approved.
     HatchV2 = false,
     -- BD-243/244/247 (docs/101): HP combat behind ONE flag. OFF = no CombatService, no Bite remote, no health bars, the
     -- instant "bigger eats smaller" predation stays exactly as shipped. ON (Studio tests only) = PredationService's
@@ -373302,7 +373302,7 @@ return P
         <Properties>
           <string name="Name">HatchPaintBake</string>
           <ProtectedString name="Source">--!strict
--- BD-397 (docs/114): PURE pixel maths of the two-coat paint reveal on the hatch egg. No Roblox APIs (tools/verify_hatch_v2.py).
+-- BD-397 (docs/118): PURE pixel maths of the two-coat paint reveal on the hatch egg. No Roblox APIs (tools/verify_hatch_v2.py).
 -- The egg texture is ONE EditableImage (size x size, under the docs/105 byte budget) that client/HatchEggV2 rewrites a few times
 -- per second while a coat runs: every texel knows (from the egg's position map, LowPolyPattern.rasterize, or its UV as a
 -- fallback) the second at which the base coat and the accent coat reach it (Bake.revealMap, from HatchV2Plan splats and
@@ -373694,7 +373694,7 @@ return Hatch
 -- The client module HatchSequence.luau only draws; everything testable lives here
 -- (tools/verify_hatch_sequence.py). Presentation only: the server-committed outcome is never read or changed.
 local RevealSkip = require(script.Parent.RevealSkip)
-local V2 = require(script.Parent.HatchV2Plan) -- BD-397 (docs/114): the v2 beat sheet; only used when a state is created with v2 = true
+local V2 = require(script.Parent.HatchV2Plan) -- BD-397 (docs/118): the v2 beat sheet; only used when a state is created with v2 = true
 local T = {}
 
 -- Seconds. Full motion: ~3.6 s build-up (two paint-bucket splashes, then rattle/crack), burst, dino reveal, then wait for a tap.
@@ -373729,7 +373729,7 @@ function T.paintPlan(motion: boolean)
         rightStart = p.rightStart, rightImpact = p.rightStart + p.window * p.impact, rightEnd = rightEnd,
         patternAt = patternAt, patternEnd = patternAt + p.patternWash, endsAt = patternAt + p.patternWash}
 end
--- v2 (BD-397, docs/114): the longer paint beat sheet of HatchV2Plan replaces the build-up and the paint plan; burst, settle,
+-- v2 (BD-397, docs/118): the longer paint beat sheet of HatchV2Plan replaces the build-up and the paint plan; burst, settle,
 -- tap gate, skip rules, Reduced Motion and the failed-egg splat are unchanged.
 function T.durations(motion: boolean, rarity: number?, failed: boolean?, v2: boolean?)
     local d = if not motion then T.Reduced elseif failed then T.Splat else T.Motion
@@ -374149,7 +374149,7 @@ return T
         <Properties>
           <string name="Name">HatchV2Assets</string>
           <ProtectedString name="Source">--!strict
--- BD-397 (docs/114): the 3D meshes of the v2 hatch, published Roblox generate_mesh assets on the owner's account (docs/77).
+-- BD-397 (docs/118): the 3D meshes of the v2 hatch, published Roblox generate_mesh assets on the owner's account (docs/77).
 -- Loaded ONCE by the server (ImportedResources.loadHatchV2, InsertService) into ReplicatedStorage.HatchV2Models only while
 -- Config.HatchV2 is true; the client clones them into the hatch viewport. A failed load of the egg makes HatchEggV2 return nil
 -- and the shipped v1 sequence runs; a failed bucket load hides the bucket (the paint arc and splash still play). Never invent ids.
@@ -374158,7 +374158,7 @@ Assets.FolderName = "HatchV2Models"
 Assets.Models = {
     -- Reused: the generated egg already registered as world_gen_food_egg (WorldGeneratedMeshes.food_egg, never placed).
     egg = {assetId = "80664439797104", height = 2.4, note = "generated low-poly egg (docs/77 world_gen_food_egg)"},
-    -- PLACEHOLDER stand-in until the paint bucket mesh is generated (docs/114 asset B): the cave hub barrel (CaveHubProps.hub_barrel).
+    -- PLACEHOLDER stand-in until the paint bucket mesh is generated (docs/118 asset B): the cave hub barrel (CaveHubProps.hub_barrel).
     bucket = {assetId = "81905342774801", height = 1.35, note = "PLACEHOLDER: hub_barrel stands in for the paint bucket"},
 }
 Assets.Placeholder = {bucket = true}
@@ -374170,7 +374170,7 @@ return Assets
         <Properties>
           <string name="Name">HatchV2Plan</string>
           <ProtectedString name="Source">--!strict
--- BD-397 hatch redesign (docs/114): the PURE beat sheet, bucket / paint / drip physics and the paint-reveal maths of the v2
+-- BD-397 hatch redesign (docs/118): the PURE beat sheet, bucket / paint / drip physics and the paint-reveal maths of the v2
 -- hatch. No Roblox APIs, no time source (tools/verify_hatch_v2.py). Behind Config.HatchV2 (false): nothing here runs for the
 -- shipped sequence. HatchTimeline reads Plan.Build / Plan.paintPlan() for the v2 state machine; client/HatchEggV2 draws it.
 -- Units: seconds; "studs" are the viewport scene (egg height = Plan.EggHeight); "px" are hatch-panel pixels (824 x 402);
@@ -551461,7 +551461,7 @@ require(script.Parent.ImportedResources).load()
 if Config.WorldArtMode=="BiomeKit" or Config.FoodArtMode=="Kit" then require(script.Parent.ImportedResources).loadWorldKit() end
 task.spawn(function() require(script.Parent.LowPolyDinoLoader).load() end) -- BD-225 spike, no-op while Config.LowPolyDinos is false
 if Config.WorldGeneratedMeshes and Config.WorldArtMode=="BiomeKit" then require(script.Parent.ImportedResources).loadGeneratedWorld() end
-if Config.HatchV2 then task.spawn(function() require(script.Parent.ImportedResources).loadHatchV2() end) end -- BD-397 (docs/114), no-op while false
+if Config.HatchV2 then task.spawn(function() require(script.Parent.ImportedResources).loadHatchV2() end) end -- BD-397 (docs/118), no-op while false
 Arena.build()
 Leaderboards.start()
 
@@ -554390,7 +554390,7 @@ function Import.loadGeneratedWorld(): (number, number)
     workspace:SetAttribute("GeneratedMeshFailed",failed+pending)
     return loaded,failed+pending
 end
--- BD-397 (docs/114): the v2 hatch meshes (generated egg, PLACEHOLDER barrel as the bucket) as one MeshPart each in
+-- BD-397 (docs/118): the v2 hatch meshes (generated egg, PLACEHOLDER barrel as the bucket) as one MeshPart each in
 -- ReplicatedStorage.HatchV2Models. Only called while Config.HatchV2 is true. A failed egg load leaves the folder without "egg":
 -- the client then runs the shipped v1 sequence; a failed bucket load only hides the bucket.
 function Import.loadHatchV2(): (number, number)
@@ -564272,7 +564272,7 @@ return Rig
           <Properties>
             <string name="Name">HatchEggV2</string>
             <ProtectedString name="Source">--!nonstrict
--- BD-397 (docs/114): the v2 hatch egg, behind Config.HatchV2. ONE ViewportFrame over the hatch panel (824 x 402 virtual px)
+-- BD-397 (docs/118): the v2 hatch egg, behind Config.HatchV2. ONE ViewportFrame over the hatch panel (824 x 402 virtual px)
 -- holds the generated 3D egg (HatchV2Assets.egg, loaded by the server into ReplicatedStorage.HatchV2Models) and the two paint
 -- buckets (PLACEHOLDER barrel mesh until the bucket mesh exists). The paint lands on the egg's own texture: ONE EditableImage
 -- (HatchV2Plan.Budget bake size, 256 KiB on desktop) rewritten a few times per second from the pure HatchPaintBake composite
@@ -564954,7 +564954,7 @@ local EggGenetics = require(Shared.EggGenetics)
 local InspectView = require(script.Parent.InspectView)
 local HatchFx = require(script.Parent.HatchFx)
 local Config = require(Shared.Config)
-local EggV2 = require(script.Parent.HatchEggV2) -- BD-397 (docs/114): 3D egg + paint coats behind Config.HatchV2; nil handle = v1 look
+local EggV2 = require(script.Parent.HatchEggV2) -- BD-397 (docs/118): 3D egg + paint coats behind Config.HatchV2; nil handle = v1 look
 
 local Seq = {}
 local CENTER_EGG = Vector2.new(412, 130) -- body coordinates (824 x 402 virtual px)

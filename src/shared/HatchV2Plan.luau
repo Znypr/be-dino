@@ -1,5 +1,5 @@
 --!strict
--- BD-397 hatch redesign (docs/114): the PURE beat sheet, bucket / paint / drip physics and the paint-reveal maths of the v2
+-- BD-397 hatch redesign (docs/118): the PURE beat sheet, bucket / paint / drip physics and the paint-reveal maths of the v2
 -- hatch. No Roblox APIs, no time source (tools/verify_hatch_v2.py). Behind Config.HatchV2 (false): nothing here runs for the
 -- shipped sequence. HatchTimeline reads Plan.Build / Plan.paintPlan() for the v2 state machine; client/HatchEggV2 draws it.
 -- Units: seconds; "studs" are the viewport scene (egg height = Plan.EggHeight); "px" are hatch-panel pixels (824 x 402);

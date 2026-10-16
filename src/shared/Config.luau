@@ -274,9 +274,9 @@ return table.freeze({
     FallRecoveryTickSeconds = 0.2,
     -- BD-225 spike (docs/77): low-poly generated base dinos (Compy, Raptor, Triceratops). OFF by default; shipped look unchanged.
     LowPolyDinos = false,
-    -- BD-397 (docs/114): v2 hatch (3D egg viewport, two paint buckets that coat the egg texture, condition, cracks). OFF by
+    -- BD-397 (docs/118): v2 hatch (3D egg viewport, two paint buckets that coat the egg texture, condition, cracks). OFF by
     -- default: the shipped v1 sequence is unchanged. ON = the server loads HatchV2Assets; the client falls back to v1 for any
-    -- egg whose meshes or images are unavailable. Playtest profile may turn it on once docs/114 evidence is owner-approved.
+    -- egg whose meshes or images are unavailable. Playtest profile may turn it on once docs/118 evidence is owner-approved.
     HatchV2 = false,
     -- BD-243/244/247 (docs/101): HP combat behind ONE flag. OFF = no CombatService, no Bite remote, no health bars, the
     -- instant "bigger eats smaller" predation stays exactly as shipped. ON (Studio tests only) = PredationService's

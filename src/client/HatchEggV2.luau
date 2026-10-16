@@ -1,5 +1,5 @@
 --!nonstrict
--- BD-397 (docs/114): the v2 hatch egg, behind Config.HatchV2. ONE ViewportFrame over the hatch panel (824 x 402 virtual px)
+-- BD-397 (docs/118): the v2 hatch egg, behind Config.HatchV2. ONE ViewportFrame over the hatch panel (824 x 402 virtual px)
 -- holds the generated 3D egg (HatchV2Assets.egg, loaded by the server into ReplicatedStorage.HatchV2Models) and the two paint
 -- buckets (PLACEHOLDER barrel mesh until the bucket mesh exists). The paint lands on the egg's own texture: ONE EditableImage
 -- (HatchV2Plan.Budget bake size, 256 KiB on desktop) rewritten a few times per second from the pure HatchPaintBake composite

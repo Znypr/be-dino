@@ -19,7 +19,7 @@ local EggGenetics = require(Shared.EggGenetics)
 local InspectView = require(script.Parent.InspectView)
 local HatchFx = require(script.Parent.HatchFx)
 local Config = require(Shared.Config)
-local EggV2 = require(script.Parent.HatchEggV2) -- BD-397 (docs/114): 3D egg + paint coats behind Config.HatchV2; nil handle = v1 look
+local EggV2 = require(script.Parent.HatchEggV2) -- BD-397 (docs/118): 3D egg + paint coats behind Config.HatchV2; nil handle = v1 look
 
 local Seq = {}
 local CENTER_EGG = Vector2.new(412, 130) -- body coordinates (824 x 402 virtual px)

@@ -1,10 +1,10 @@
-"""BD-397 (docs/114): execute the pure v2 hatch logic with the pinned Luau runtime: the beat sheet (timings sum, each bucket
+"""BD-397 (docs/118): execute the pure v2 hatch logic with the pinned Luau runtime: the beat sheet (timings sum, each bucket
 window, cracks keep their time), bucket / stream / crown / drip / squash / gloss curves (bounded, calm, settle), deterministic
 splats from the egg seed, the paint-reveal time field (coat 1 coverage monotonic to 100 % inside its span, drips ahead of the
 flood), the composite (accent paint only on pattern texels, base coat everywhere, cream before any impact, bytes deterministic),
 the per-device budget (bake size, image bytes, sprite caps), the v2 HatchTimeline state (pending hold, fast-forward, Reduced
 Motion unchanged) and the source wiring (flag off, loader guarded, fallback to v1, Bootstrap locals untouched).
-Drawing (ViewportFrame, EditableImage writes) is Studio-only: docs/114 and docs/evidence/2026-10-16-hatch-v2/.
+Drawing (ViewportFrame, EditableImage writes) is Studio-only: docs/118 and docs/evidence/2026-10-16-hatch-v2/.
 """
 from pathlib import Path
 import argparse
@@ -272,11 +272,11 @@ def check_wiring():
     assert 'HatchEggV2' not in boot and 'require(Shared.HatchV2' not in boot, 'Bootstrap never requires the v2 modules; HatchSequence owns the v2 egg'
     tl = read('src/shared/HatchTimeline.luau')
     assert 'require(script.Parent.HatchV2Plan)' in tl and 'function T.useV2' in tl and 'p.window or T.Paint.window' in tl
-    doc = read('docs/114-hatch-redesign.md')
+    doc = read('docs/118-hatch-redesign.md')
     for word in ('Beat sheet', 'generate_mesh', 'Reduce Motion', 'Fallback chain', 'docs/105', 'PLACEHOLDER', 'evidence/2026-10-16-hatch-v2'):
         assert word in doc, word
     kanban = read('docs/07-kanban.md')
-    assert '| BD-397 | Review / test |' in kanban and 'docs/114' in kanban.split('| BD-397 |')[1].split('\n')[0]
+    assert '| BD-397 | Review / test |' in kanban and 'docs/118' in kanban.split('| BD-397 |')[1].split('\n')[0]
     print('Wiring checks passed: flag off, guarded loader, placeholder bucket registered, v1 fallback, no Bootstrap growth, doc and Kanban row')
 
 
