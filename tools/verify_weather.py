@@ -78,6 +78,22 @@ assert(Q.shake > 0 and Q.shake <= .5, "gentle camera rumble")
 assert(Q.clearOfDino >= 8 and Q.minDist > Q.clearOfDino and Q.maxDist <= 90 and Q.viewCone <= 70, "cracks open in view, never under the dino")
 assert(Q.width[1] >= 1 and Q.wobbleDegrees <= 4 and Q.wobbleMax <= 12 and Q.propMaxSize <= 10, "readable cracks, slight wobble of small props only")
 
+-- BD-348 (QA 2026-10-16): rain is denser with long streaks near the camera, aurora ribbons start at the horizon, quake has a cue at the dino
+assert(W.Rigs.rain.near and W.Rigs.thunder.near and W.Rigs.rain.streaks.rate >= 2000 and W.Rigs.rain.splash.rate >= 500, "rain is clearly visible at phone size")
+assert(W.Looks.rain.tint[3] > W.Looks.rain.tint[1] + 60 and W.Looks.rain.sat <= -.2, "rain grade is slightly cooler")
+assert(W.Aurora.baseY <= 0 and W.Aurora.alpha <= .65 and W.Aurora.horizonGlow >= .7, "aurora ribbons reach the horizon and the horizon glows")
+assert(W.Rigs.aurora.bank.rate >= 12, "aurora horizon band")
+assert(W.Quake.feetPuff >= 4 and W.Quake.feetPuffPhone >= 2 and W.Quake.decalAhead[1] >= 6 and W.Quake.decalAhead[2] < W.Quake.minDist, "quake puff at the feet, decal close and in front")
+assert(W.Quake.shake <= .3, "tiny camera shake")
+-- BD-349: emitted rate and steady-state concurrent particles per Weather level (Full 1, Lite .5, Off 0) and device (phone .5 of desktop)
+local LEVEL = {full = 1, lite = .5, off = 0}
+for _, id in IDS do
+    local c = W.concurrent(id)
+    for level, f in LEVEL do
+        assert(c * f <= W.Budget.concurrent and c * f * .5 <= W.Budget.concurrent / 2, id .. " " .. level .. " within budget")
+    end
+    print(("weather particles %-9s desktop full %5d lite %5d off 0 | phone full %5d lite %5d"):format(id, c, c * .5, c * .5, c * .25))
+end
 -- aurora: palette loops, stays bright, passes through green, teal, violet and magenta, and cycles in 20..30 s
 assert(W.AuroraPeriod >= 20 and W.AuroraPeriod <= 30)
 local a, b = W.palette(0), W.palette(1)
@@ -192,12 +208,16 @@ def scan():
     assert 'stopQuake()' not in stop[:stop.index('\nend\n')],'Reduce Motion must not hide the (static) quake cracks'
     assert 'WS.fire("quake")' in src, 'quake sound hook kept'
     # FX v3: quake dust puffs (ambient + crack bursts) use the anime smoke flipbook through EffectAssets, never a raw id here
-    assert src.count('Texture=DUST_FX.Texture,FlipbookLayout=DUST_FX.FlipbookLayout,FlipbookMode=DUST_FX.FlipbookMode') == 2, 'quake dust uses smoke-anime'
+    assert src.count('Texture=DUST_FX.Texture,FlipbookLayout=DUST_FX.FlipbookLayout,FlipbookMode=DUST_FX.FlipbookMode') == 3, 'quake dust uses smoke-anime'
     assert 'Assets.resolve("smokeSheet")' in src and 'Assets.isAdditive("smokeSheet")' in src and not re.search(r'rbxassetid://\d+', src), 'dust texture comes from EffectAssets'
     assert 'auroraRing' not in src and 'SurfaceGui' not in src, 'no ground ring or square sky shell around the dino (owner 2026-10-15)'
     # BD-213: no opaque geometry inside FogEnd: no fog-coloured sky box, nothing sized from the fog distance
     assert 'WeatherSkyBox' not in src and 'updateDome' not in src, 'no opaque sky box inside FogEnd (reads as a wall)'
     assert not re.search(r'Size\s*=[^\n]*fog(End|Cap)', src, re.I), 'no part sized from the fog distance'
+    # BD-348/349: rain near-streaks, aurora horizon, quake feet puff + decal; Calm motion = no particles, no shake; Off = rate 0
+    assert 'emitter(nearSky,id,"near"' in src and 'WL.Aurora.baseY' in src and 'QuakeCrackDecal' in src and 'QuakeFeetDust' in src
+    assert 'weatherFactor' in src and 'on=motion and weatherId==activeId' in src and 'item.e.Enabled=on and weatherFactor>0' in src, 'Weather Off / Calm turn the particles off'
+    assert 'if motion then feetHolder.CFrame' in src, 'no feet puff with Reduce Motion'
     assert 'WL.fog(look,t,CLEAR,fogCap)' in src and 'WorldCulling' in src, 'fog end must be capped by the device cull radius'
     assert 'CelestialBodiesShown' in src, 'default sun and moon hidden during events (one moon only)'
     audio = (ROOT / 'src/client/WeatherAudio.client.luau').read_text(encoding='utf-8')

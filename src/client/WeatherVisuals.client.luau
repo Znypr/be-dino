@@ -118,13 +118,22 @@ for _,id in {"rain","thunder"} do
     local streaks=emitter(sky,id,"streaks",{
         Texture=TEX_SMOKE,Speed=NumberRange.new(95,115),EmissionDirection=Enum.NormalId.Bottom,
         Acceleration=Vector3.new(if heavy then 34 else 12,-70,0),Orientation=Enum.ParticleOrientation.VelocityParallel,
-        Size=seq(if heavy then .55 else .42,.4),Squash=seq(-14,-14),Transparency=seq(.3,.12),LightEmission=.6,
+        Size=seq(if heavy then .7 else .56,.5),Squash=seq(-20,-20),Transparency=seq(.22,.06),LightEmission=.6,
         Color=ColorSequence.new(Color3.fromRGB(190,220,255),Color3.fromRGB(140,185,240)),SpreadAngle=Vector2.new(4,4),
     })
+    -- BD-348: long bright streaks right in front of the camera (a small volume above the dino, no distance fade)
+    local nearSky=volume(Vector3.new(26,1,26))
+    local nearStreaks=emitter(nearSky,id,"near",{
+        Texture=TEX_SMOKE,Speed=NumberRange.new(70,90),EmissionDirection=Enum.NormalId.Bottom,
+        Acceleration=Vector3.new(if heavy then 30 else 10,-60,0),Orientation=Enum.ParticleOrientation.VelocityParallel,
+        Size=seq(.9,.7),Squash=seq(-26,-26),Transparency=seq(.18,.05),LightEmission=.7,
+        Color=ColorSequence.new(Color3.fromRGB(215,236,255),Color3.fromRGB(165,205,250)),SpreadAngle=Vector2.new(3,3),
+    },1,true)
+    addRig(id,nearSky,Vector3.new(0,16,0),{nearStreaks})
     local ground=volume(Vector3.new(60,.2,60))
     local splash=emitter(ground,id,"splash",{
         Texture=TEX_SPARK,Speed=NumberRange.new(3,8),EmissionDirection=Enum.NormalId.Top,
-        Acceleration=Vector3.new(0,-24,0),Size=seq(.1,1,0),Transparency=seq(.2,.5,1),LightEmission=.4,
+        Acceleration=Vector3.new(0,-24,0),Size=seq(.3,1.6,0),Transparency=seq(.1,.4,1),LightEmission=.4,
         Color=ColorSequence.new(Color3.fromRGB(215,236,255)),SpreadAngle=Vector2.new(40,40),
     })
     local mist=emitter(ground,id,"mist",{
@@ -228,7 +237,7 @@ do
     },1,true)
     addRig("aurora",air,Vector3.new(0,8,0),{motes})
     addRig("aurora",dome,Vector3.new(0,170,0),{stars})
-    fogBanks("aurora",ColorSequence.new(Color3.fromRGB(80,230,200),Color3.fromRGB(170,120,255)),{Transparency=seq(1,.9,1),LightEmission=.6})
+    fogBanks("aurora",ColorSequence.new(Color3.fromRGB(80,230,200),Color3.fromRGB(170,120,255)),{Transparency=seq(1,.72,1),LightEmission=1})
 end
 -- QUAKE (light ground dust + dust haze; cracks, rocks and tremors are world one-shots below)
 do
@@ -533,6 +542,16 @@ for _=1,if phone then WL.Budget.cracksPhone else WL.Budget.cracks do
         table.insert(rocks,{part=quakePart(rockPart,"QuakeRock",Color3.fromRGB(104,88,74),Enum.Material.Slate),active=false,age=0,v=Vector3.zero,floor=0,bounces=0})
     end
 end
+-- BD-348: dust puff at the dino's feet and a flat crack decal a few studs ahead (fx3 "rays" alpha texture, tinted dark brown)
+local feetHolder=volume(Vector3.new(3,.4,3)) feetHolder.Name="QuakeFeetDust" feetHolder.Position=PARKED
+local feetPuff=burstEmitter(feetHolder,{Texture=DUST_FX.Texture,FlipbookLayout=DUST_FX.FlipbookLayout,FlipbookMode=DUST_FX.FlipbookMode,Lifetime=NumberRange.new(1.2,1.8),Speed=NumberRange.new(2,5),
+    EmissionDirection=Enum.NormalId.Top,SpreadAngle=Vector2.new(60,60),Size=seq(2,4,5),Transparency=seq(.5,.7,1),Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-20,20),Drag=1.5,
+    Acceleration=Vector3.new(0,1,0),Color=ColorSequence.new(Color3.fromRGB(205,180,140),Color3.fromRGB(165,142,110))})
+local decalPart=quakePart(Instance.new("Part"),"QuakeDecal",Color3.fromRGB(60,44,34),Enum.Material.SmoothPlastic)
+decalPart.Size=Vector3.new(QK.decalSize,.1,QK.decalSize) decalPart.Transparency=1
+local decal=Instance.new("Decal") decal.Name="QuakeCrackDecal" decal.Face=Enum.NormalId.Top decal.Color3=Color3.fromRGB(30,20,14) decal.Transparency=1
+decal.Texture=require(Shared.EffectAssets).resolve("rays") decal.Parent=decalPart
+local decalAge=-1
 local function quakeGround(position:Vector3):(Vector3?,Vector3)
     rayParams.FilterDescendantsInstances={folder,player.Character or folder}
     local hit=workspace:Raycast(position+Vector3.new(0,120,0),Vector3.new(0,-300,0),rayParams)
@@ -631,6 +650,18 @@ local function wobbleProps(root:Vector3)
     end
 end
 local function quakePulse(root:Vector3,motion:boolean)
+    local ground,up=quakeGround(root)
+    if ground then
+        if motion then feetHolder.CFrame=CFrame.new(ground+up*.3) feetPuff.e:Emit(if phone then QK.feetPuffPhone else QK.feetPuff) end
+        local cam=workspace.CurrentCamera
+        local look=if cam then cam.CFrame.LookVector*Vector3.new(1,0,1) else Vector3.zAxis
+        local ahead=if look.Magnitude>.01 then look.Unit else Vector3.zAxis
+        local spot,n2=quakeGround(root+ahead*random:NextNumber(QK.decalAhead[1],QK.decalAhead[2]))
+        if spot then
+            decalPart.CFrame=CFrame.fromMatrix(spot+n2*.08,ahead:Cross(n2).Unit,n2)*CFrame.Angles(0,random:NextNumber(0,math.pi*2),0)
+            decalAge=0
+        end
+    end
     openCrack(root,not motion)
     if random:NextNumber()<.4 then openCrack(root,not motion) end
     if motion then
@@ -640,6 +671,12 @@ local function quakePulse(root:Vector3,motion:boolean)
     WS.fire("quake")
 end
 local function updateQuake(dt:number)
+    if decalAge>=0 then
+        decalAge+=dt
+        local a=if decalAge<.25 then decalAge/.25 elseif decalAge>QK.decalLife-.8 then math.max(0,(QK.decalLife-decalAge)/.8) else 1
+        decal.Transparency=1-.95*a
+        if decalAge>=QK.decalLife then decalAge=-1 decal.Transparency=1 decalPart.Position=PARKED end
+    end
     for _,crack in cracks do
         if crack.active then
             crack.age+=dt
@@ -683,6 +720,7 @@ local function updateQuake(dt:number)
     end
 end
 local function stopQuake()
+    decalAge=-1 decal.Transparency=1 decalPart.Position=PARKED
     for _,crack in cracks do if crack.active then parkCrack(crack) end end
     for _,rock in rocks do if rock.active then rock.active=false rock.part.Position=PARKED rock.part.Transparency=1 end end
     for _,w in wobbles do if w.part.Parent and w.part.CFrame==w.last then w.part.CFrame=w.base end end
@@ -755,7 +793,7 @@ local function updateAurora(root:Vector3,now:number,on:boolean,recolor:boolean)
         local center=c*2.1+now*.012*(if c%2==0 then 1 else -1)
         local a=center+(i-(CURTAIN_RAYS+1)/2)/CURTAIN_RAYS*2.3+math.sin(now*.2+i*.5)*.035
         local radius=150+c*22+math.sin(i*.9+now*.3+c)*12
-        local baseY=root.Y+70+c*26
+        local baseY=root.Y+WL.Aurora.baseY+c*WL.Aurora.step
         local x,z=root.X+math.cos(a)*radius,root.Z+math.sin(a)*radius
         r.bottom.WorldPosition=Vector3.new(x,baseY,z)
         r.top.WorldPosition=Vector3.new(x+math.sin(now*.3+i)*8,baseY+170+math.sin(now*.4+i*.6+c)*45,z)
@@ -763,7 +801,7 @@ local function updateAurora(root:Vector3,now:number,on:boolean,recolor:boolean)
             local hue=i/CURTAIN_RAYS*.55+c*.21
             local c0=WL.aurora(now,hue) local c1=WL.aurora(now+5,hue+.12) local c2=WL.aurora(now+10,hue+.3)
             r.beam.Color=seqColor(c0,c1,WL.scale(c2,.7))
-            local a1=lerpNum(1,.8+.08*math.sin(now*1.3+i*1.9),k)
+            local a1=lerpNum(1,WL.Aurora.alpha+.08*math.sin(now*1.3+i*1.9),k)
             r.beam.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(.12,math.min(1,a1+.1)),NumberSequenceKeypoint.new(.5,a1),NumberSequenceKeypoint.new(.8,math.min(1,a1+.2)),NumberSequenceKeypoint.new(1,1)})
         end
     end
@@ -791,7 +829,7 @@ RunService.Heartbeat:Connect(function(dt)
     local tint,fog,decay,shiftTop,shiftBottom,amb,glowRgb=look.tint,look.fog,look.decay,look.shiftTop,look.shiftBottom,look.amb,look.glow
     if activeId=="aurora" then
         fog=WL.scale(WL.aurora(animT,0),.3) decay=WL.scale(WL.aurora(animT,.45),.85)
-        shiftTop=WL.scale(WL.aurora(animT,.25),.7) shiftBottom=WL.scale(WL.aurora(animT,.6),.5)
+        shiftTop=WL.scale(WL.aurora(animT,.25),.7) shiftBottom=WL.scale(WL.aurora(animT,.6),WL.Aurora.horizonGlow)
         amb=WL.scale(WL.aurora(animT,.1),.55) tint=WL.mix(WHITE,WL.aurora(animT,.35),.5) glowRgb=WL.aurora(animT,.7)
     end
     grade.TintColor=c3(WL.mix(WHITE,tint,t))

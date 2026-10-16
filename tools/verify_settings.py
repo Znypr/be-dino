@@ -51,6 +51,10 @@ M.set("effects", "full") assert(not M.isFast(M.get()), "changing one by hand end
 M.set("fast", false) assert(M.effects() == "full" and M.weather() == "full")
 -- particle factors: Lite is half, Off is none, unknown is full
 assert(M.factor("full") == 1 and M.factor("lite") == 0.5 and M.factor("off") == 0 and M.factor(nil) == 1 and M.factor("x") == 1)
+-- BD-349: Weather level -> emitter share used by WeatherVisuals; Calm is independent of the level and applies via Theme.MotionEnabled
+M.reset() M.set("weather", "lite") assert(M.factor(M.weather()) == 0.5 and not M.calm())
+M.set("weather", "off") assert(M.factor(M.weather()) == 0)
+M.set("weather", "full") M.set("calm", true) assert(M.factor(M.weather()) == 1 and M.calm() == true)
 M.reset() assert(M.equal(M.get(), d), "reset restores defaults")
 print("Settings checks passed: tabs, defaults, clamps, old-profile migration, roundtrip, fast mode, factors")
 '''
