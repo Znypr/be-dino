@@ -14,6 +14,7 @@ local ProfileRepository = require(script.Parent.ProfileRepository)
 local RunLifecycle = require(script.Parent.RunLifecycle)
 local VisualTestService = require(script.Parent.VisualTestService)
 local Leaderboards = require(script.Parent.Leaderboards)
+local LeaveCoordinator = require(script.Parent.LeaveCoordinator)
 local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 Players.CharacterAutoLoads = false
@@ -39,10 +40,17 @@ Arena.build()
 Leaderboards.start()
 
 ProfileRepository.start()
+-- BD-354: PlayerRemoving and BindToClose share one idempotent, awaitable leave path (settle once, release once).
+local leaving = LeaveCoordinator.new({
+    endForDisconnect = RunLifecycle.endForDisconnect,
+    release = ProfileRepository.release,
+    publish = Leaderboards.publish,
+})
 RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string, eggEvents, runSeconds)
     local ok = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents, runSeconds, workspace:GetAttribute("WeatherId")) -- BD-156: nests dropped in weather carry it
     if not ok then
         warn(string.format("[Be Dino] settlement failed for %s (%s)", player.Name, reason))
+        leaving.settlementFinished(player) -- a failed settlement of a departed player must still release the lease
         return false
     end
 
@@ -51,15 +59,13 @@ RunLifecycle.configureSettlement(function(player: Player, runId: string, catchSc
         if not retryOk or retryStatus ~= "duplicate" then
             player:SetAttribute("ProfileState", "SaveFailed")
             warn("[Be Dino] duplicate settlement probe failed for " .. player.Name)
+            leaving.settlementFinished(player)
             return false
         end
         player:SetAttribute("LastSettlementProbe", "duplicate-ok")
     end
 
-    if not player.Parent then
-        local metrics=ProfileRepository.release(player)
-        if metrics then Leaderboards.publish(player,metrics) end
-    end
+    leaving.settlementFinished(player)
     return true
 end)
 RunLifecycle.start()
@@ -92,6 +98,14 @@ local function spawnLoadedPlayer(player: Player)
         task.wait(.2)
     end
     local loaded = ProfileRepository.load(player)
+    -- BD-354: another server (or our own previous session) can still hold the lease for up to ProfileLeaseSeconds after a
+    -- quick rejoin or teleport, and a DataStore outage fails the load; wait it out instead of leaving the player without a character.
+    local retries = math.ceil((Config.ProfileLeaseSeconds + 10) / 5)
+    while not loaded and player.Parent and retries > 0 and (player:GetAttribute("ProfileState") == "SessionBusy" or player:GetAttribute("ProfileState") == "LoadFailed") do
+        retries -= 1
+        task.wait(5)
+        loaded = ProfileRepository.load(player)
+    end
     if not loaded or not player.Parent then
         warn("[Be Dino] profile load blocked character spawn for " .. player.Name)
         return
@@ -134,22 +148,11 @@ end
 Players.PlayerAdded:Connect(setup)
 for _, player in Players:GetPlayers() do setup(player) end
 
-Players.PlayerRemoving:Connect(function(player)
-    local status = RunLifecycle.endForDisconnect(player)
-    if status ~= "busy" then
-        local metrics=ProfileRepository.release(player)
-        if metrics then Leaderboards.publish(player,metrics) end
-    end
-end)
+Players.PlayerRemoving:Connect(leaving.leave)
 
 game:BindToClose(function()
-    for _, player in Players:GetPlayers() do
-        local status = RunLifecycle.endForDisconnect(player)
-        if status ~= "busy" then
-            local metrics=ProfileRepository.release(player)
-            if metrics then Leaderboards.publish(player,metrics) end
-        end
-    end
+    leaving.leaveAll(Players:GetPlayers()) -- in parallel; BindToClose gets 30 s in total
+    if not leaving.waitIdle(25) then warn("[Be Dino] shutdown: some players were not released in time") end
 end)
 
 local FoodService = require(script.Parent.FoodService)

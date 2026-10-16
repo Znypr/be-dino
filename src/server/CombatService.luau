@@ -161,6 +161,10 @@ function CombatService.start(runLifecycle, dinosaur): any?
         if not character or not key or not humanoid or humanoid.Health <= 0 or not root or not root:IsA("BasePart")
             or not runLifecycle.isActive(character) then return end
         local now = workspace:GetServerTimeNow()
+        -- BD-354: refuse a bite that is still on cooldown BEFORE the O(players) candidate scan (GetExtentsSize per model);
+        -- otherwise one client spamming the remote makes the server do that scan on every request.
+        local biter = Rules.get(world, key)
+        if biter and now - biter.lastBiteAt < Cfg.BiteCooldownSeconds then player:SetAttribute("LastBiteStatus", "cooldown") return end
         local candidates = {}
         for other, otherKey in tracked do
             local otherRoot = if other ~= character and other.Parent then other:FindFirstChild("HumanoidRootPart") else nil

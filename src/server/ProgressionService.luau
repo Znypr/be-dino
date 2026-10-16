@@ -172,7 +172,9 @@ function Service.start(repository)
         local now=os.clock() local bucket=buckets[player]
         if bucket and (bucket.busy or now-bucket.last<.4) then response:FireClient(player,token,false,"busy") return end
         buckets[player]={last=now,busy=true}
-        local ok,status=repository.progressionAction(player,action,id,token,replace)
+        -- BD-354: a throw inside the action must not leave busy=true forever (every later request would be refused).
+        local ran,ok,status=pcall(repository.progressionAction,player,action,id,token,replace)
+        if not ran then warn("[Be Dino] ProgressionAction failed: "..tostring(ok)) ok,status=false,"save_failed" end
         if buckets[player] then buckets[player].busy=false end
         if player.Parent then response:FireClient(player,token,ok,status) end
     end)
