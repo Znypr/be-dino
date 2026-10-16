@@ -1428,6 +1428,46 @@
     "src/client/CaveAtmosphere.luau",
     "Rules.Bed"
    ]
+  },
+  {
+   "name": "class_ground",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "class_ground",
+   "group": "Images.class_ground",
+   "table": "Images",
+   "pending": "class badge (reveal card, picker)"
+  },
+  {
+   "name": "class_flyer",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "class_flyer",
+   "group": "Images.class_flyer",
+   "table": "Images",
+   "pending": "class badge (reveal card, picker)"
+  },
+  {
+   "name": "class_water",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "class_water",
+   "group": "Images.class_water",
+   "table": "Images",
+   "pending": "class badge (reveal card, picker)"
+  },
+  {
+   "name": "class_armored",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "class_armored",
+   "group": "Images.class_armored",
+   "table": "Images",
+   "pending": "class badge (reveal card, picker)"
   }
  ]
 }

@@ -16,6 +16,7 @@ local Timeline = require(Shared.HatchTimeline)
 local Copy = require(Shared.FtueP1)
 local FxPlan = require(Shared.HatchFxPlan)
 local EggGenetics = require(Shared.EggGenetics)
+local ClassBadge = require(Shared.ClassBadge) -- owner 2026-10-16: class badge next to the dino name (icon slots, PLACEHOLDER until bound)
 local InspectView = require(script.Parent.InspectView)
 local HatchFx = require(script.Parent.HatchFx)
 local MutationReveal = require(script.Parent.MutationReveal) -- BD-162
@@ -313,7 +314,7 @@ end
 -- What the server committed for this egg (never changed here). Supplied at start for a known egg, or later through handle.supply().
 export type Result = {
     dino: GuiObject, rarity: number, color: Color3, failed: boolean, shiny: boolean, big: boolean,
-    mutationName: string?, mutationColor: Color3?, mutationId: string?, remaining: number,
+    speciesId: string?, mutationName: string?, mutationColor: Color3?, mutationId: string?, remaining: number,
     genes: any?, colorReveal: any?, secondReveal: any?, patternReveal: any?, paintColors: {Color3}?,
 }
 export type Args = {
@@ -369,6 +370,7 @@ function Seq.play(args: Args): Handle
     end
 
     local nameStroke = a.nameLabel:FindFirstChildOfClass("UIStroke")
+    local classBadge: Frame? = nil -- built in applyResult, shown with the name
     for _, l in {a.nameLabel, a.oddsLabel, a.detailLabel} do hideLabel(l) end
     local pill = Instance.new("Frame")
     pill.Name, pill.BackgroundColor3, pill.AnchorPoint, pill.Visible = "RarityPill", glow:Lerp(Color3.new(0, 0, 0), .4), Vector2.new(.5, .5), false
@@ -488,6 +490,7 @@ function Seq.play(args: Args): Handle
         HatchFx.hide(hx)
         MutationReveal.hide(mr)
         if v2 then EggV2.stop(v2) end
+        if classBadge then classBadge:Destroy() classBadge = nil end
         if overlay.Parent then overlay:Destroy() end
         if fx.back.Parent then
             fx.backdrop.BackgroundTransparency = 1
@@ -742,6 +745,7 @@ function Seq.play(args: Args): Handle
         end
         local rise = if motion then 14 else 0
         fadeLabel(a.nameLabel, if motion then .25 else 0, .3, rise)
+        if classBadge then classBadge.Visible = true end -- appears with the name (no extra motion, so Reduce Motion needs nothing)
         fadeLabel(a.oddsLabel, if motion then .4 else .1, .3, rise)
         fadeLabel(a.detailLabel, if motion then .55 else .2, .3, rise)
         task.delay(if motion then .35 else .1, function()
@@ -845,6 +849,18 @@ function Seq.play(args: Args): Handle
             a.nameLabel.TextColor3, a.nameLabel.TextStrokeColor3 = Color3.fromRGB(255, 236, 150), Color3.fromRGB(110, 70, 15)
             if nameStroke then nameStroke.Color, nameStroke.Thickness = Color3.fromRGB(110, 70, 15), 5 end
             a.oddsLabel.TextColor3, a.detailLabel.TextColor3 = WHITE, Color3.fromRGB(255, 226, 140)
+        end
+        if classBadge then classBadge:Destroy() classBadge = nil end
+        if not failed and type(r.speciesId) == "string" then
+            -- Left of the centred name text (label box 80..740 x 236..290 inside the body), vertically centred on it.
+            local badgeSize = 40
+            local textWidth = math.min(a.nameLabel.TextBounds.X, a.nameLabel.AbsoluteSize.X)
+            local badge = ClassBadge.create(a.body, r.speciesId, badgeSize)
+            badge.AnchorPoint = Vector2.new(1, .5)
+            badge.Position = UDim2.fromOffset(a.nameLabel.Position.X.Offset + a.nameLabel.Size.X.Offset / 2 - textWidth / 2 - 8, a.nameLabel.Position.Y.Offset + a.nameLabel.Size.Y.Offset / 2)
+            badge.ZIndex, badge.Visible = a.nameLabel.ZIndex + 1, false
+            for _, d in badge:GetDescendants() do if d:IsA("GuiObject") then d.ZIndex = badge.ZIndex end end
+            classBadge = badge
         end
         pill.BackgroundColor3, pillStroke.Color = glow:Lerp(Color3.new(0, 0, 0), .4), glow:Lerp(WHITE, .25)
         if r.shiny then addRibbon("SHINY", Theme.Colors.gold, 100, 52, 170, -7) end

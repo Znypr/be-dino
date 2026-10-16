@@ -1014,7 +1014,7 @@ render=function(name: string)
             remainingAfter=HatchTimeline.remaining(str("NextChestId")~="" and workspace:GetServerTimeNow()>=num("NextChestReadyAt"),num("ActiveChestCount"),num("QueuedEggsWaiting"))
             paint.setRarityColor(rarityColors[rarity])
             handle.supply({
-                dino=view,rarity=rarity,color=rarityColors[rarity],failed=failed,
+                dino=view,speciesId=id,rarity=rarity,color=rarityColors[rarity],failed=failed,
                 shiny=not failed and PrivateState.get("LastChestShiny")==true,big=not failed and PrivateState.get("LastChestBig")==true,
                 mutationName=if mutation and not failed then mutation.name else nil,mutationColor=mutationColor,mutationId=if mutation and not failed then mutation.id else nil,
                 newFind=not failed and next(decoded("LastChestNewJson","{}"))~=nil, -- BD-436: first colour/pattern/mutation
