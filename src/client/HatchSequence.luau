@@ -699,7 +699,7 @@ function Seq.play(args: Args): Handle
         view.ImageTransparency = 0
         if a.dino:IsA("ViewportFrame") and overlay.Parent then
             -- Drags on the full-screen catcher turn the dino; a press that moves under 12 px is still a tap.
-            inspect = InspectView.attach(a.dino :: ViewportFrame, {surface = overlay, uiParent = overlay,
+            inspect = InspectView.attach(a.dino :: ViewportFrame, {surface = overlay, uiParent = overlay, baseZoom = 1.4, -- BD-262: the dino filled under half the panel
                 hintPosition = UDim2.fromScale(.5, .37), resetPosition = UDim2.fromScale(.72, .345)})
         end
         if not motion then

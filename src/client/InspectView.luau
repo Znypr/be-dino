@@ -21,6 +21,7 @@ export type Options = {
     resetButton: boolean?, -- 44 px reset-view button (default true)
     resetPosition: UDim2?, -- default top-right of uiParent
     hintPosition: UDim2?,  -- default bottom-center of uiParent
+    baseZoom: number?,     -- BD-262: start zoomed in (clamped); the reset button returns to the normal fit
     autoSpin: boolean?,    -- idle turntable until first touch (default true)
     zIndex: number?,
 }
@@ -46,6 +47,7 @@ function InspectView.attach(viewport: ViewportFrame, options: Options?): Handle
     local z = o.zIndex or (uiParent.ZIndex + 3)
     local s = Math.new()
     if o.autoSpin == false then s.touched = true end
+    if o.baseZoom then s.zoom = Math.clampZoom(o.baseZoom) viewport:SetAttribute("InspectZoom", s.zoom) end
     local enabled = true
     local alive = true
     local connections: {RBXScriptConnection} = {}
