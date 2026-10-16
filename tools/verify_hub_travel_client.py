@@ -30,6 +30,11 @@ local function decide(over)
  for k,v in over or {} do i[k]=v end
  return R.decide(i)
 end
+-- BD-391/405: perk flag on and not bought = glow guide (walk); bought = travel as before
+assert(decide({fastTravelPerk=true,fastTravelOwned=false}).kind=="guide","not bought walks")
+assert(decide({fastTravelPerk=true,fastTravelOwned=true}).kind=="travel","bought travels")
+assert(decide({fastTravelPerk=true,fastTravelOwned=true,teleportShops=false}).kind=="guide","bought but toggled off walks")
+assert(decide({fastTravelPerk=false}).kind=="travel","perk flag off unchanged")
 -- ---- flag off: whatever the input, plain open (behaviour unchanged), nothing dimmed, no chip
 for _,d in dests do for _,rs in {"Sanctuary","Active","Ending","Settled","",5} do for _,ts in {true,false} do for _,rem in {true,false} do
  local r=decide({caveHub=false,destination=d,runState=rs,teleportShops=ts,remote=rem,busy=true})
@@ -169,7 +174,8 @@ def static_checks():
     gate = (ROOT / 'src/client/HubGateClient.luau').read_text()
     assert 'GateBarBottom' in gate, 'gate bar position comes from the rules (above the chip)'
     menu = (ROOT / 'src/client/SettingsMenu.luau').read_text()
-    assert 'CombatEnabled then 4 else 2, "Teleport to shops"' in menu, 'Teleport row closes the gap when Peaceful is hidden'
+    assert 'CombatEnabled then 4 else 2, if cfg.FastTravelPerk == true then "Fast travel" else "Teleport to shops"' in menu, 'Teleport row closes the gap when Peaceful is hidden'
+    assert 'ownsFastTravel()' in menu, 'BD-391: toggle visible only after the perk is bought'
     assert '"Teleport to shops"' in menu and 'CaveHub' in menu, 'Controls tab toggle, shown only with the hub on'
     top = [l for l in boot.splitlines() if re.match(r'^local\s', l)]
     assert len(top) <= 195, 'client Bootstrap top-level locals stay at or below 195 (limit 200): %d' % len(top)

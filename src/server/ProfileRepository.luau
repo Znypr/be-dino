@@ -1869,6 +1869,7 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
     if typeof(token)~="string" or #token<1 or #token>80 then return false,"invalid_token" end
     if (action=="buyEgg" or action=="upgradeCondition") and next(Config.DeveloperProducts)~=nil
         and (not Config.PaidRandomItemsEnabled or PrivateState.get(player, "PaidRandomEligible")~=true) then return false,"random_items_unavailable" end
+    if action=="buyPerk" and (Config.FastTravelPerk~=true or Config.CaveHub~=true) then return false,"perk_unavailable" end -- BD-391/405: flag off = no purchase
     local eggId=nil
     local egg=nil
     local purchaseConditionLevel=ProfileRepository.progression(player).conditionLevel

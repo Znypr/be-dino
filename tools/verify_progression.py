@@ -20,6 +20,17 @@ assert(Rules.apply(p,"buyAura","meadow",100,false))
 assert(progress.crystals==2940)
 assert(not Rules.apply(p,"buyAura","meadow",100,false))
 assert(Rules.apply(p,"equipAura","meadow",100,false))
+-- BD-391/405 Fast travel perk
+do
+ local q={} local qp=Rules.upgrade(q)
+ assert(not Rules.hasPerk(qp,"fastTravel") and Rules.valid(qp) and qp.perks==nil,"old profile: nothing owned, no new field")
+ assert(not Rules.apply(q,"buyPerk","fastTravel",100,false) and qp.crystals==0,"too poor")
+ assert(not Rules.apply(q,"buyPerk","nope",100,false),"unknown perk")
+ qp.crystals=ProgressionConfig.FastTravelPrice
+ assert(Rules.apply(q,"buyPerk","fastTravel",100,false) and qp.crystals==0 and Rules.hasPerk(qp,"fastTravel") and Rules.valid(qp))
+ assert(not Rules.apply(q,"buyPerk","fastTravel",100,false),"already owned")
+ qp.perks.bogus=true assert(not Rules.valid(qp),"unknown perk key invalid")
+end
 assert(not Rules.apply(p,"equipAura","royal",100,false))
 progress.potions.growth_common=2 -- purchases are covered by tools/verify_potion_shop.py
 assert(Rules.apply(p,"usePotion","growth_common",100,false))

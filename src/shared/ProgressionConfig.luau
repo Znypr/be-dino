@@ -14,6 +14,9 @@ return table.freeze({
     -- 4 eggs (500 food) -> 30, 40 eggs (5,000 food) -> 220 (owner's illustrative 30/220), 50 eggs -> 273; cap 300 bounds it.
     RunCrystalPerEggHundredths=750, RunCrystalTierEggs=4, RunCrystalPerExtraEggHundredths=530, RunCrystalCap=300,
     RandomEggPrice=150,
+    -- BD-391/405 (docs/115 D22): Fast travel perk. PROVISIONAL price (owner 2026-10-16: a mid goal, about 500; earlier Q10 options were 300 / 600 / 1,200); bought with crystals only.
+    FastTravelPrice=500,
+    Perks={{id="fastTravel",name="Fast travel",price=500}},
     ConditionUpgrades={
         {level=1,price=100,requiredLevel=3},{level=2,price=300,requiredLevel=8},
         {level=3,price=800,requiredLevel=16},{level=4,price=1800,requiredLevel=28},

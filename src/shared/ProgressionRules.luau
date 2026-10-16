@@ -122,6 +122,10 @@ function Rules.valid(p): boolean
         if typeof(p.equippedTrail)~="string" then return false end
         if p.equippedTrail~="" and (not p.trails or not p.trails[p.equippedTrail]) then return false end
     end
+    if p.perks~=nil then
+        if typeof(p.perks)~="table" then return false end
+        for id,value in p.perks do if typeof(id)~="string" or not Rules.item(Config.Perks,id) or value~=true then return false end end
+    end
     if p.shop~=nil then
         local shop=p.shop
         if typeof(shop)~="table" or not finite(shop.window) or shop.window<0 or shop.window%1~=0 or typeof(shop.bought)~="table" then return false end
@@ -194,6 +198,15 @@ function Rules.apply(profile,action,id,now,replace,amount): (boolean,string)
         p.shop.bought[potionId]=(p.shop.bought[potionId] or 0)+1
         p.crystals-=item.price p.potions[potionId]=(p.potions[potionId] or 0)+1
         return true,"purchased"
+    elseif action=="buyPerk" then
+        local item=Rules.item(Config.Perks,id)
+        if not item then return false,"unknown_item" end
+        if Rules.hasPerk(p,id) then return false,"already_owned" end
+        if p.crystals<item.price then return false,"insufficient_crystals" end
+        p.crystals-=item.price
+        p.perks=p.perks or {}
+        p.perks[id]=true
+        return true,"purchased"
     elseif action=="usePotion" then
         local item=Rules.item(Config.Potions,id)
         if not item then return false,"unknown_item" end
@@ -204,6 +217,10 @@ function Rules.apply(profile,action,id,now,replace,amount): (boolean,string)
         return true,"activated"
     end
     return false,"invalid_action"
+end
+-- BD-391/405: perks are an additive optional table `perks = {fastTravel = true}`; absent = nothing owned (old profiles unchanged).
+function Rules.hasPerk(p,id: string): boolean
+    return typeof(p)=="table" and typeof(p.perks)=="table" and p.perks[id]==true
 end
 function Rules.level(p)
     return math.min(Config.AccountMaxLevel,1+math.floor(math.sqrt((p.accountXP or 0)/Config.AccountXPPerLevel)))

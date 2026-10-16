@@ -9,7 +9,7 @@ HubTravelRules.RateSeconds = 0.8 -- PROVISIONAL (docs/104 s7): one request per p
 HubTravelRules.OccupiedRadius = 2.5 -- studs: an arrival spot this close to another player counts as taken (spots are >= 3 apart)
 HubTravelRules.MaxKeyLength = 24
 
--- Reasons: flag_off, bad_request, not_loaded, not_home, no_dino, dead, outside, unknown, settings, rate_limited
+-- Reasons: flag_off, not_owned, bad_request, not_loaded, not_home, no_dino, dead, outside, unknown, settings, rate_limited
 local function finite(n: any): boolean return typeof(n) == "number" and n == n and n ~= math.huge and n ~= -math.huge end
 
 -- Station id from a request (`{station = "nests"}` or the bare string); nil when malformed.
@@ -26,6 +26,8 @@ function HubTravelRules.validate(request: any, state: any): (boolean, string?)
     local key = HubTravelRules.stationKey(request)
     if key == nil or not finite(state.now) then return false, "bad_request" end
     if state.profileState ~= "Loaded" then return false, "not_loaded" end
+    -- BD-391/405 (docs/115 D22): with the perk flag on, only a player who bought Fast travel may be moved.
+    if state.fastTravelPerk == true and state.fastTravelOwned ~= true then return false, "not_owned" end
     if state.runState ~= "Sanctuary" then return false, "not_home" end
     if state.dinoAttached ~= true then return false, "no_dino" end
     if state.alive ~= true then return false, "dead" end
