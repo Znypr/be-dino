@@ -55,7 +55,7 @@ function PreviewCamera.bind(viewport: ViewportFrame, model: Model, geometryId: s
     for _,p in points do low=low:Min(p) high=high:Max(p) end
     local target=(low+high)/2
     local heads={}
-    for _,part in model:GetDescendants() do
+    for _,part in (if typeof(model)=="Instance" then model:GetDescendants() else {}) do -- mocks in verify_previews are plain tables
         if part:IsA("BasePart") and Pose.roleOf(part.Name)=="head" then table.insert(heads,part.Position) end
     end
     local facing=PreviewCamera.facing(bounds.Position,heads)
