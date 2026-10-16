@@ -74,6 +74,7 @@ RunLifecycle.configureSettlement(function(player: Player, runId: string, catchSc
 end)
 -- BD-359: a settlement that outlasted its retry window is committed later by the lease renew tick; then respawn the player.
 ProfileRepository.setSettlementRecoveredHook(function(player: Player) RunLifecycle.recoverAfterSettlement(player) end)
+require(script.Parent.FeedbackService).start() -- docs/126: no-op while Config.PlaytestFeedbackEnabled is false
 Telemetry.start() -- BD-426: no-op while Config.RunTelemetryEnabled is false
 RunLifecycle.start()
 CollectionService.start(ProfileRepository, Dinosaur)
