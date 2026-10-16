@@ -128,3 +128,32 @@ Repeat 5.2 steps 1 to 6 with friends or alts (2, then 4, then 8 players), as in 
 
 ## 6. Honest status
 Offline only. Nothing here was run on a real server, so BD-019, BD-097, BD-316 and BD-319 stay open; they now have a script (section 5) and BD-364 to record the result.
+
+## 7. BD-319 results: features added after the first audit (2026-10-16)
+Label: **OFFLINE SIMULATION plus static checks, not a multiplayer test.** `tools/multiplayer_sim.luau` section J and the STATIC list of `tools/verify_multiplayer_sim.py` now also cover: settings remote path (12 players write at once), the Fast travel perk (`buyPerk`, 12 players at once, one cannot afford it, flags off), HubTravel rules (per-player rate limit, shared station spots), effects LOD, odds panel data (`EggOutcomeOdds`, `OddsCopy`), egg origin popup data (`EggOrigin`) and the leaderboard write gate. 374 checks pass. Nest overflow crystals is not merged on main at this time, so it is not covered (add it when it lands).
+
+| Area | Result |
+| --- | --- |
+| Settings | Each player's value lands on their own profile and only on their own private channel; `SettingsJson` is never a Player attribute. Remote spam was already bounded (BD-358). No bug. |
+| Fast travel perk | Purchase is per profile: 11 buyers pay 500 once each, the poor player is refused and keeps 100, a repeated token is idempotent, a second token is `already_owned`, an unknown id is refused, flags off gives `perk_unavailable` and charges nothing. No bug. |
+| HubTravel | The perk is read from the caller's own profile. Rate limit sessions are per player: a spammer gets `rate_limited` while another player's request goes through. Six simultaneous arrivals at one station get six different spots (the server gathers other players' positions). No bug. |
+| Effects LOD, odds, egg origin | All pure: other viewers' modes or condition levels cannot change the result, inputs are not mutated. No bug. |
+| Leaderboard gate | State is keyed by user id: one player's write never suppresses or forgets another's; leave forces a play-time write. No bug. |
+| **Bug fixed: stale public `HubStation`** | `HubTravelService` sets the PUBLIC Player attribute `HubStation` on arrival and nothing cleared it (its own comment said a later tick would). After a respawn or a run the player still advertised the old station to all clients. `RunLifecycle.prepareSanctuary` and `RunLifecycle.begin` now clear it. Test: `hub station marker` checks in the sim. |
+
+Remaining low risks, not fixed here: the Leaderboards 60 s loop publishes players one after another and each publish waits for its own store writes (up to 30 s per player when the store is slow), so a slow store delays the other players' board updates but never their saves; the `names` cache in Leaderboards grows with every ranked user. Both are cosmetic.
+
+### 7.1 Two-player Studio checklist for the owner (about 15 minutes)
+Test tab > Clients and Servers > Players = 2 > Start. For the perk and hub steps set `CaveHub = true` and `FastTravelPerk = true` in `Config.luau` in your own copy first. Client A and client B each open F9 > Log; keep the server Output visible.
+1. **Settings are private.** A sets Master volume to 0 and turns Effects to Off. B's sound and effects do not change. Explorer > Players: neither Player has a `SettingsJson` attribute.
+2. **Settings survive.** A leaves and rejoins: the same settings come back. B's are untouched.
+3. **Perk purchase is per player.** Give A 600 crystals (admin tool or Studio wallet), B 0. A buys Fast travel in the Crystal Shop: A pays 500 and the button changes to owned; B's shop still shows it for sale and B's crystals did not move. B tries to buy: "not enough crystals".
+4. **Fast travel works only for the owner.** A taps a station and arrives at a spot; B's tap does nothing or says the perk is missing. A taps 10 times quickly: only about one move per second; B can still travel after buying. Both travel to the same station: they land on different spots.
+5. **Station marker.** After A travels, Explorer > Players > A shows `HubStation`. A starts a run: the attribute disappears. B never shows A's station after A runs.
+6. **Odds panel.** A opens the Odds panel while B hatches an egg: B's hatch is unaffected and A's numbers do not change when B opens a different condition level.
+7. **Dino details.** A opens the egg-origin popup of one dino: it shows A's dino only (the mutation badge, egg look, date). B opens its own and sees B's.
+8. **Effects LOD.** Put both dinos with auras or trails near each other. A sets Effects to Lite, B to Full: each client draws effects according to its OWN setting. Walk A away 100+ studs: B's view of A's aura goes away (Lite culls at 80, Full at 180); A's own dino never loses its aura.
+9. **Leaderboard.** Both play 2 minutes and press Home. After at most 60 s the boards show both names. Output must not show a burst of `leaderboard publish failed`.
+10. **Nest overflow crystals** (once merged): fill A's five nest slots, finish a run with 6 nests and check that only A gets the overflow crystals.
+Paste the pass or fail line per step and any `[Be Dino]` or `Warning` line from the server into BD-364.
+
