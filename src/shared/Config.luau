@@ -65,6 +65,10 @@ return table.freeze({
     StudioTestWalletEnabled = true, -- only unpublished, nonpersistent local profiles
     StudioTestCrystals = 1000000,
     FoodCatchRate = 12 / 500, -- PROVISIONAL (owner 2026-10-16, BD-418, docs/119: a normal 5-minute run, about 600-700 food, gives about 15 run eggs; 500 food = 12, 5,000 = 120; HISTORICAL: 4/500 on 2026-10-15, 40/500 on 2026-10-13); raw food points, growth boosts do not multiply catches
+    -- BD-207: rare special foods. All PROVISIONAL, off by default (pinned off in the default profile). Points are RAW food points.
+    SpecialFoodsEnabled = false,
+    SpecialFoodChance = 0.01, -- share of non-starter food slots that become a Golden Drumstick (about 1 in 100)
+    SpecialFoodPoints = 60, -- raw food points per special pickup (egg food is 15, amber 50); FoodCatchRate is unchanged
     ProfileLoadWarningSeconds = 20,
 
     SpawnProtectionSeconds = 5,
@@ -173,6 +177,7 @@ return table.freeze({
     IrregularWeather = {volcano = true, aurora = true, quake = true, bloodmoon = true},
     DeveloperProducts = { [3717200374] = 500, [3717200467] = 1500, [3717200523] = 4000, [3717200920] = 10000, [3717200940] = 25000, [3717200979] = 90000 },
     CrystalPacksEnabled = false, -- Enable only after paid-random disclosure/release review.
+    RunTelemetryEnabled = false, -- BD-426: anonymous run/session telemetry (docs/122); off in the default build, on only in the playtest profile
     PaidRandomItemsEnabled = false, -- Release gate: complete combined-outcome disclosure/policy acceptance first.
     ChestQueueCapacity = 5,
     ChestOverflowCapacity = 10,
@@ -198,7 +203,9 @@ return table.freeze({
     NestMinRunSeconds = 120, -- PROVISIONAL: server clock from RunLifecycle.begin to settlement
     NestMinCatches = 1, -- PROVISIONAL: validated server CatchScore (run eggs) needed for a nest
     NestEggsPerExtraNest = 30, -- PROVISIONAL (BD-418: was 10 at 4/500; 30 eggs = 1,250 food, same nest frequency per food): +1 nest per 30 further catches on top of a qualified run
-    NestMaxPerRun = 3, -- PROVISIONAL cap per run
+    -- Owner 2026-10-16: nests per run are unlimited (no per-run cap). Only NestStorageCapacity spots exist; each nest beyond
+    -- the free spots turns into crystals at once (NestOverflowCrystals, PROVISIONAL, docs/115).
+    NestOverflowCrystals = 50,
     -- Luck tiers (index = nest.luck). PROVISIONAL, disclosed in the Nests menu. rarityBoostEggs feeds
     -- the run-batch species boost (EggRarityBoostMaxEggs = maximum), conditionLevels adds to the condition-upgrade level
     -- (clamped to the top tier), shinyChance applies even without irregular weather, bigChance replaces BigChance.

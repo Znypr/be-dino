@@ -870,6 +870,210 @@ do
     cm.mark(1, "k", 400)
     cm.prune(400)
     check("cooldown: expired entries are pruned (bounded memory)", cm.size() == 1, tostring(cm.size()))
+
+end
+
+-------------------------------------------------------------------- K: features added after BD-358 (BD-319): perk, hub travel, settings, odds, LOD, origin, leaderboard writes
+local function deepEqual(a, b)
+    if type(a) ~= type(b) then return false end
+    if type(a) ~= "table" then return a == b end
+    for k, v in a do if not deepEqual(v, b[k]) then return false end end
+    for k in b do if a[k] == nil then return false end end
+    return true
+end
+local function deepCopy(v)
+    if type(v) ~= "table" then return v end
+    local t = {}
+    for k, x in v do t[k] = deepCopy(x) end
+    return t
+end
+
+-- Joins `userId`, writes crystals into the stored fixture, leaves and joins again so the cache holds them.
+local function fundedConnect(env, userId, crystals)
+    local first = connect(env, userId)
+    local fixture = profileOf(userId)
+    fixture.progression.crystals = crystals
+    DATA["u:" .. userId] = fixture
+    env.leaving.leave(first) first.Parent = nil
+    local i = table.find(env.server.players, first)
+    if i then table.remove(env.server.players, i) end
+    sleep(3)
+    return connect(env, userId)
+end
+local function fundAll(env, n, crystalsOf)
+    local players = {}
+    for i, id in userIds(n) do task.spawn(function() players[i] = fundedConnect(env, id, crystalsOf(i)) end) end
+    sleep(40)
+    return players
+end
+
+do
+    SCENARIO_OVERRIDES = {FastTravelPerk = true, CaveHub = true}
+    local result = {}
+    local env, server = runScenario("feature-remotes-12", 900, function(env, server)
+        local players = fundAll(env, 12, function(i) return if i == 12 then 100 else 1000 end)
+        env.Repo.start()
+        local Rules = server.require(node("src/shared/HubTravelRules"))
+        local Layout = server.require(node("src/shared/CaveHubLayout"))
+        local ProgressionRules = server.require(node("src/shared/ProgressionRules"))
+        -- perk purchase: all 12 at the same moment; player 12 cannot afford it
+        local answers = {}
+        for i, p in players do
+            task.spawn(function() answers[i] = {env.Repo.progressionAction(p, "buyPerk", "fastTravel", "tok-" .. i, false)} end)
+        end
+        sleep(10)
+        result.answers = answers
+        sleep(1)
+        result.again = {env.Repo.progressionAction(players[2], "buyPerk", "fastTravel", "tok-2", false)}
+        sleep(1)
+        result.second = {env.Repo.progressionAction(players[2], "buyPerk", "fastTravel", "tok-2b", false)}
+        sleep(1)
+        result.unknown = {env.Repo.progressionAction(players[1], "buyPerk", "nope", "tok-unknown", false)}
+        result.perks, result.crystals = {}, {}
+        for i, id in userIds(12) do
+            local prog = profileOf(id).progression
+            result.perks[i] = ProgressionRules.hasPerk(prog, "fastTravel")
+            result.crystals[i] = prog.crystals
+        end
+        -- hub travel: each player has its own rate-limit session; 12 players ask for the same station at the same time
+        local stationId
+        for id, st in Layout.get().byId do if st.rail ~= "settings" then stationId = id break end end
+        local function state(owned, now, occupied)
+            return {fastTravelPerk = true, fastTravelOwned = owned, caveHub = true, profileState = "Loaded", runState = "Sanctuary",
+                dinoAttached = true, alive = true, inHub = true, now = now, occupied = occupied}
+        end
+        local sessions, acks, taken = {}, {}, {}
+        for i, p in players do
+            sessions[i] = {lastAt = nil}
+            local owned = ProgressionRules.hasPerk(env.Repo.progression(p), "fastTravel")
+            local ack, spot = Rules.process(sessions[i], {station = stationId}, state(owned, 100, taken))
+            acks[i] = ack
+            if spot then taken[#taken + 1] = {x = spot.x, z = spot.z} ack.index = spot.index end
+        end
+        result.acks = acks
+        -- player 2 spams: refused by ITS OWN session; player 4 is unaffected
+        local last
+        for k = 1, 10 do last = Rules.process(sessions[2], {station = stationId}, state(true, 100 + k * 0.05, {})) end
+        result.spamReason = last.reason
+        -- a player who travelled to a station (public HubStation attribute) and then starts a run no longer shows it; others keep theirs
+        players[1]:SetAttribute("HubStation", "nests") players[2]:SetAttribute("HubStation", "nests")
+        startRun(env, players[1], 5)
+        result.stationCleared = players[1].attrs.HubStation == nil and players[2].attrs.HubStation == "nests"
+        env.RL.prepareSanctuary(players[2], players[2].Character)
+        result.respawnCleared = players[2].attrs.HubStation == nil
+        result.laterOther = Rules.process(sessions[4], {station = stationId}, state(true, 101, {}))
+        -- settings: 12 distinct values written at the same moment; each stays on its own account and private channel
+        local model = server.require(node("src/shared/SettingsModel"))
+        for i, p in players do
+            task.spawn(function() env.Repo.setSettings(p, {sound = {master = (i % 10) / 10}}) end)
+        end
+        sleep(20)
+        result.settingsOk, result.private, result.leaked = 0, 0, 0
+        for i, id in userIds(12) do
+            local want = model.toStore(model.fromStore({sound = {master = (i % 10) / 10}}))
+            local stored = profileOf(id).settings
+            if stored and stored.sound and stored.sound.master == want.sound.master then result.settingsOk += 1 end
+            local json = env.PS.get(players[i], "SettingsJson") -- the mock HttpService returns the table itself
+            if type(json) == "table" and json.sound and json.sound.master == want.sound.master then result.private += 1 end
+            if players[i].attrs.SettingsJson ~= nil then result.leaked += 1 end
+        end
+    end)
+    local a = result.answers
+    check("perk: the 11 players with enough crystals bought it, the poor one was refused", a ~= nil and a[1][1] == true and a[11][1] == true and a[12][1] == false and a[12][2] == "insufficient_crystals", a and tostring(a[12][2]))
+    check("perk: everyone paid exactly 500 for their OWN perk, the poor player lost nothing", result.crystals ~= nil and result.crystals[1] == 500 and result.crystals[7] == 500 and result.crystals[12] == 100, result.crystals and (result.crystals[1] .. "/" .. result.crystals[12]))
+    local owners = 0
+    for _, v in result.perks or {} do if v then owners += 1 end end
+    check("perk: exactly the 11 buyers own it, not the poor player", owners == 11 and result.perks[12] == false, tostring(owners))
+    check("perk: re-sending the same token is idempotent (no second charge)", result.again ~= nil and result.again[1] == true and result.crystals[2] == 500, tostring(result.again and result.again[2]))
+    check("perk: a second token for an owned perk is refused already_owned", result.second ~= nil and result.second[1] == false and result.second[2] == "already_owned", tostring(result.second and result.second[2]))
+    check("perk: an unknown perk id is refused", result.unknown ~= nil and result.unknown[1] == false, tostring(result.unknown and result.unknown[2]))
+    local okCount, notOwned, firstSix = 0, 0, {}
+    for _, ack in result.acks or {} do
+        if ack.ok then
+            okCount += 1
+            if okCount <= 6 then firstSix[ack.index] = true end
+        end
+        if ack.reason == "not_owned" then notOwned += 1 end
+    end
+    local distinctFirst = 0
+    for _ in firstSix do distinctFirst += 1 end
+    check("hub travel: only the 11 owners travel; the player without the perk gets not_owned", okCount == 11 and notOwned == 1, okCount .. " ok, " .. notOwned .. " not_owned")
+    check("hub travel: the first 6 simultaneous arrivals at one station get 6 different spots (no stacking while free)", distinctFirst == 6, distinctFirst .. " distinct")
+    check("hub travel: one player's spam is rate-limited on ITS session only; another player's request still goes through", result.spamReason == "rate_limited" and result.laterOther ~= nil and result.laterOther.ok == true, tostring(result.spamReason))
+    check("hub station marker: starting a run clears only that player's public HubStation", result.stationCleared == true, "")
+    check("hub station marker: a respawn into the Sanctuary clears it too", result.respawnCleared == true, "")
+    check("settings: every player's own value is stored on their own account", result.settingsOk == 12, result.settingsOk .. "/12")
+    check("settings: each player's private channel holds their own value", result.private == 12, result.private .. "/12")
+    check("settings: SettingsJson is never a replicated Player attribute", result.leaked == 0, result.leaked .. " players")
+
+    -- flag off: the same purchase is refused for everybody and nothing is charged
+    local off = {}
+    runScenario("feature-remotes-flags-off", 300, function(env, server)
+        local players = fundAll(env, 4, function() return 1000 end)
+        env.Repo.start()
+        for i, p in players do off[i] = {env.Repo.progressionAction(p, "buyPerk", "fastTravel", "tok-off" .. i, false)} end
+        off.crystals = profileOf(3001).progression.crystals
+    end)
+    check("perk flags off: buyPerk is refused perk_unavailable and charges nothing", off[1] ~= nil and off[1][1] == false and off[1][2] == "perk_unavailable" and off[4][2] == "perk_unavailable" and off.crystals == 1000, off[1] and tostring(off[1][2]))
+end
+
+do
+    currentScenario = "feature-pure-rules"
+    local pure = newServer("D", "job-D")
+    -- leaderboard write gate: per user, never shared
+    local Writes = pure.require(node("src/shared/LeaderboardWrites"))
+    local st = Writes.new()
+    local allowed = 0
+    for id = 1, 12 do
+        if Writes.shouldWrite(st, "rarest", id, 3, 0, false) then Writes.begin(st, "rarest", id, 0) Writes.succeeded(st, "rarest", id, 3) allowed += 1 end
+    end
+    check("leaderboard gate: 12 players with the same first value each get their own write", allowed == 12, tostring(allowed))
+    check("leaderboard gate: a repeat or lower value is skipped for every player", not Writes.shouldWrite(st, "rarest", 5, 3, 1, false) and not Writes.shouldWrite(st, "rarest", 7, 2, 1, false), "")
+    Writes.forget(st, 5)
+    check("leaderboard gate: forgetting one leaver does not forget the others", Writes.shouldWrite(st, "rarest", 5, 3, 2, false) and not Writes.shouldWrite(st, "rarest", 6, 3, 2, false), "")
+    Writes.begin(st, "playSeconds", 1, 100)
+    check("leaderboard gate: play time is throttled per player, a forced leave write is always allowed", not Writes.shouldWrite(st, "playSeconds", 1, 500, 150, false) and Writes.shouldWrite(st, "playSeconds", 1, 500, 150, true) and Writes.shouldWrite(st, "playSeconds", 2, 500, 150, false), "")
+    check("leaderboard gate: NaN, zero and infinite values never write", not Writes.shouldWrite(st, "rarest", 9, 0 / 0, 0, true) and not Writes.shouldWrite(st, "rarest", 9, 0, 0, true) and not Writes.shouldWrite(st, "rarest", 9, math.huge, 0, true), "")
+
+    -- effects LOD: a pure function of (mode, kind, distance, own, rank): another viewer's mode can never change it
+    local Lod = pure.require(node("src/shared/EffectsLod"))
+    local culled, ownBad, offBad = 0, 0, 0
+    for _, mode in {"full", "lite", "off"} do
+        if Lod.detail(mode, "aura", 5000, true, 99, 3) == "none" and mode ~= "off" then ownBad += 1 end
+        if Lod.detail(mode, "aura", 5000, false, 1, 3) ~= "none" then culled += 1 end
+    end
+    if Lod.detail("off", "aura", 5, false, 1, 3) ~= "none" then offBad += 1 end
+    if Lod.detail("off", "mutation", 5, false, 1, 3) == "none" then offBad += 1 end
+    check("effects LOD: own dino is never culled, far dinos always are", ownBad == 0 and culled == 0, ownBad .. "/" .. culled)
+    check("effects LOD: Off hides auras and trails but keeps the mutation cue", offBad == 0, tostring(offBad))
+    local capped = 0
+    for _, mode in {"full", "lite", "off"} do
+        local drawn = 0
+        for rank = 1, 12 do if Lod.detail(mode, "mutation", 10, false, rank, 3) ~= "none" then drawn += 1 end end -- 11 other players around you
+        if drawn == Lod.MaxDinos[mode] then capped += 1 end
+    end
+    check("effects LOD: with 11 other players only MaxDinos dinos per mode draw effects", capped == 3, tostring(capped))
+    check("effects LOD: an unknown mode string falls back to Full instead of erroring", Lod.detail("bogus", "aura", 5, false, 1, 3) ~= nil, "")
+
+    -- odds panel and egg origin: pure views of one player's data, they must not mutate shared state or inputs
+    local Odds = pure.require(node("src/shared/EggOutcomeOdds"))
+    local Copy = pure.require(node("src/shared/OddsCopy"))
+    local function sample(c) return {c.count, c.level, c.failure, c.at(1), c.at(2), c.at(c.count), c.at(math.floor(c.count / 2))} end
+    local first = deepCopy(sample(Odds.catalog(0, nil)))
+    for level = 0, 11 do Odds.catalog(level % 6, nil) end
+    check("odds panel: viewing other players' condition levels does not change level 0 odds (no shared mutable state)", deepEqual(first, sample(Odds.catalog(0, nil))), "")
+    local copyA = deepCopy(Copy.eggGroups(0))
+    for level = 0, 11 do Copy.eggGroups(level % 6) Copy.upgradeGroups(level % 6) end
+    check("odds copy: other levels do not change level 0 egg groups", deepEqual(copyA, Copy.eggGroups(0)), "")
+    local Origin = pure.require(node("src/shared/EggOrigin"))
+    local details = {origin = {kind = "hatch"}, mutationId = "rainbow", originalEgg = {kind = "run_egg", source = {kind = "run"}, conditionId = "rainbow", hatchedAt = 1.7e9, genes = {}}}
+    local before = deepCopy(details)
+    local v1 = Origin.view(details, nil, nil, function(id) return id end)
+    local v2 = Origin.view({origin = {kind = "fusion"}}, nil, nil, nil)
+    local v3 = Origin.view({}, nil, nil, nil)
+    check("egg origin: view never mutates the details table it was given", deepEqual(before, details), "")
+    check("egg origin: hatch, fusion and missing data give three clean kinds without errors", v1.kind == "egg" and v2.kind == "fusion" and v3.kind == "unknown", tostring(v1.kind) .. "/" .. tostring(v2.kind) .. "/" .. tostring(v3.kind))
+    check("egg origin: the badge shows only that dino's own mutation", v1.mutationId == "rainbow" and v3.mutationId == nil, tostring(v1.mutationId))
 end
 
 -------------------------------------------------------------------- report

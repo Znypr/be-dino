@@ -29,7 +29,7 @@ end
 function RewardMath.nestCount(eggCount: number, runSeconds: any?): number
     local n = RewardMath.runEggCount(eggCount)
     if not RewardMath.nestQualifies(n, runSeconds) then return 0 end
-    return math.min(Config.NestMaxPerRun, 1 + (n - Config.NestMinCatches) // Config.NestEggsPerExtraNest)
+    return 1 + (n - Config.NestMinCatches) // Config.NestEggsPerExtraNest
 end
 
 -- Hidden gate: server-measured run length AND validated server catch score.

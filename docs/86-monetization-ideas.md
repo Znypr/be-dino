@@ -32,7 +32,7 @@ The playtest keeps all Robux features off (`Config.PaidRandomItemsEnabled = fals
 | **Mythic auras and trails** | The Mythic Glow set (the owner-picked style) as shop items | Cosmetic only | Direct use of the Mythic Glow art | art in progress | P2 |
 | **Sanctuary skins** | Home and sanctuary themes (Volcano Camp, Aurora Meadow) | None | Looks | medium art | P3 |
 | **Crystal packs** | Crystals (already planned, "Coming soon") spent on cosmetics, potions, upgrades | Crystals never buy dinos or odds | Standard soft currency | exists | P2 |
-| **Potion bundle** | A small stack of speed, growth or loot potions | Capped (no stacking beyond the normal limit); a free potion arrives daily | Mild power, so keep it small | small | P3 |
+| **Potion bundle** | A small stack of speed, growth or loot potions | Capped (no stacking beyond the normal limit, convenience multiplier at most 1.25x, see [114](114-handbook.md) section 11a); a free potion arrives daily | Convenience with a cap, so keep it small | small | P3 |
 | **Collector titles and name tags** | Titles shown near the name ("Fossil Finder") | None | Looks and pride | small | P3 |
 
 ## Do not sell

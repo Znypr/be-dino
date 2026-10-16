@@ -102,7 +102,9 @@ PROFILES: dict[str, list[Rule]] = {
         _flag_off("IdentityPersistentEnabled", "BD-064 persistent identities; only the playtest profile enables it"),
         _flag_off("IdentityFusionPreviewEnabled", "BD-057/BD-064 fusion; only the playtest profile enables it"),
         _flag_off("PerDinoCosmeticsEnabled", "BD-059 per-dino cosmetics (docs/121); phase 1 is not wired to any shop"),
+        _flag_off("RunTelemetryEnabled", "BD-426 session telemetry; only the playtest profile enables it"),
         _flag_off("CombatEnabled", "BD-243 HP combat; unproven on a phone (BD-252), default build keeps instant predation"),
+        _flag_off("SpecialFoodsEnabled", "BD-207 rare special foods; PROVISIONAL points, behind an owner playtest"),
         _flag_off("CaveHub", "BD-280 cave Sanctuary; behind the BD-293 device test"),
         _flag_off("LowPolyDinos", "BD-225 low-poly dinos; behind BD-309/BD-097 published-server and phone checks"),
         Rule("WorldArtMode", "require", "Legacy", reason="BD-049 world kit; only the playtest profile enables it"),
@@ -121,6 +123,7 @@ PROFILES: dict[str, list[Rule]] = {
         Rule("IdentityFusionPreviewEnabled", "set", True, reason="BD-064 fusion on persistent profiles (Milestone 1)"),
         # docs/68: owner wants the new world kit and food art in the playtest. With uploaded MeshParts one prop is
         # one part, so density 1.25 (~1,250 props) is ~4.3k parts incl. food (tools/verify_world_art.py enforces <= 8,000).
+        Rule("RunTelemetryEnabled", "set", True, reason="BD-426 anonymous run/session telemetry for the playtest (docs/122)"),
         Rule("WorldArtMode", "set", "BiomeKit", reason="BD-049 new trees/rocks/landmarks (docs/68)"),
         Rule("FoodArtMode", "set", "Kit", reason="BD-050 food variants (docs/68)"),
         # docs/107: legacy dinos are 1,424-2,400 parts each (12 players = 24k-41k parts); low-poly dinos are ~119. The playtest

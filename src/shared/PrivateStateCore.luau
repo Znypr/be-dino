@@ -18,7 +18,7 @@ local PRIVATE = {
     "NextChestId", "NextChestReadyAt", "RunStartBlocked",
     -- run and hatch summaries
     "LastChestBig", "LastChestShiny", "LastChestFailed", "LastChestGenesJson", "LastChestRewardText", "LastChestEventMutation",
-    "LastClaimedChestId", "LastSettledRunId", "LastRewardText", "LastRunCrystals", "LastRunCrystalBox", "LastRunEggCount", "LastRunNestCount", "LastRunNestFull",
+    "LastClaimedChestId", "LastSettledRunId", "LastRewardText", "LastRunCrystals", "LastRunCrystalBox", "LastRunEggCount", "LastRunNestCount", "LastRunNestFull", "LastRunNestCrystals",
     -- owner-only multipliers and policy flags
     "GrowthMultiplier", "SpeedMultiplier", "LootMultiplier", "ColourGrowthPercent", "StudioTestWallet", "PaidRandomEligible",
 }
