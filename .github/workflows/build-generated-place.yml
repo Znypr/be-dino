@@ -79,12 +79,15 @@ jobs:
           python tools/verify_load_gate.py --runner /tmp/luau/luau
           python tools/verify_mesh_sanity.py --runner /tmp/luau/luau
           python tools/verify_dino_motion.py --runner /tmp/luau/luau
+          python tools/verify_hub_scale.py --runner /tmp/luau/luau
           python tools/verify_lowpoly_dinos.py --runner /tmp/luau/luau
           python tools/verify_world_budget.py --runner /tmp/luau/luau
           python tools/verify_world_overlap.py --runner /tmp/luau/luau
+          python tools/verify_vegetation_layers.py --runner /tmp/luau/luau
           python tools/verify_cave_overlap.py --runner /tmp/luau/luau
           python tools/verify_cave_terrain.py --runner /tmp/luau/luau
           python tools/verify_cave_lighting.py --runner /tmp/luau/luau
+          python tools/verify_hub_travel_client.py --runner /tmp/luau/luau
           python tools/verify_modal_blur.py --runner /tmp/luau/luau
           python tools/qa/palette_report.py --runner /tmp/luau/luau
           python tools/qa/ground_report.py

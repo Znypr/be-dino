@@ -17,7 +17,7 @@ for id,d in Kit do
  print(string.format("E\t%s\t%s\t%.3f\t%.3f\t%.3f", id, d.kind, d.extent[1], d.extent[2], d.extent[3]))
 end
 '''
-SOLID_LAYERS = {'tree', 'giant', 'rock', 'landmark'}
+SOLID_LAYERS = {'tree', 'colossal', 'rock', 'landmark'}
 MAX_PAIRS = 0  # recorded cap of solid/solid footprint intersections (island, playtest profile)
 
 

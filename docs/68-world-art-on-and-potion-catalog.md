@@ -68,3 +68,5 @@ All numbers PROVISIONAL; offline estimate only, Studio/phone not re-measured. Us
 - **Undergrowth:** about half of all trees get 1-2 ferns/bushes/mushrooms (the biome shrub list) 1.6-4.2 studs from the trunk, layer `shrub` so PropGround rules, path/keep-out/water/overlap checks apply; cap 190 at density 1.
 - **Budget:** `PartBudget` 3,700 -> 3,800 (kit 4,625 -> 4,750 at density 1.25; 3,686 placements, 1,259 shrubs). Offline join estimate 8,950 of 9,150 (verify_world_art TOTAL_MAX 9,000); phone worst-spot parts 3,673 of cap 3,980 (WARN vs rule of thumb 3,000 unchanged). Food (3,600 pickups) and FoodService numbers untouched.
 - **Still TODO:** genuinely new meshes (birch, palm, more bushes/mushrooms/flowers/reeds/pebbles/rocks): docs/77 `TODO_world_kit_v3_species`, docs/120.
+
+**BD-473 (2026-10-16, grammar v3, [139](139-giant-dino-vegetation-scale.md) s17):** the `giant` layer is now `colossal` (80-140 studs, trees only, 31 at the playtest density), shrubs are sized to a 4-12 stud Small band, and about 25% of the forest area is clearings (no trees or logs). Older lines above describe v2.
