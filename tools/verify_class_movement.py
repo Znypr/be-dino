@@ -119,5 +119,10 @@ if result.returncode == 0:
     assert 'if GameConfig.CombatEnabled then ClassMovement.walkSpeed' in prog, 'class speed must be flag gated'
     assert 'CombatEnabled = false' in (ROOT / 'src/shared/Config.luau').read_text(encoding='utf-8')
     assert 'select("#", ...) ~= 0' in svc and 'MinRequestGap' in svc, 'dash remote validates args and rate limits'
+    assert 'ClassGlide' in svc and 'glideDecision' in svc and 'typeof((...)) ~= "boolean"' in svc, 'glide remote validates a single boolean'
+    assert 'CM.limitVertical("Fly", "jump", v.Y, root.Position.Y - hit.Position.Y, gliding)' in svc, 'glide goes through the hover-capped limiter'
+    assert (ROOT / 'src/client/ClassGlide.client.luau').exists()
+    for f in ('CombatService', 'PredationService', 'MovementGuard'):
+        assert 'CooldownMemory' in (ROOT / f'src/server/{f}.luau').read_text(encoding='utf-8'), f + ' clocks keyed by UserId (BD-363)'
     print('class movement wiring ok')
 raise SystemExit(result.returncode)
