@@ -107,6 +107,15 @@
    "pending": "BD-188 seismic ring"
   },
   {
+   "name": "smokeSoft",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "smokeSoft",
+   "group": "Requested.smokeSoft",
+   "pending": "BD-187 smoke variants"
+  },
+  {
    "name": "smokeDense",
    "kind": "image",
    "target": "effect",

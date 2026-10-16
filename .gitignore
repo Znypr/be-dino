@@ -9,3 +9,7 @@ build/*-playtest.manifest.json
 # Older Build016-019 files stay tracked as history; new ones are ignored.
 build/BeDino-Build[0-9][0-9][0-9].rbxlx
 build/BeDino-Build[0-9][0-9][0-9].manifest.json
+
+# BD-187/BD-189 intermediate Blender frames (tools/render_fx_sheets.py); the assembled sheets live in resources/effects/fx-v2/
+build/fx-frames/
+build/fx-preview/

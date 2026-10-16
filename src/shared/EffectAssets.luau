@@ -37,6 +37,7 @@ Assets.Requested = {
     glowPlateCrescent = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
     glowPlateRound = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
     ringSeismic = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    smokeSoft = {id = "", fallback = "smoke"}, -- owner upload slot (docs/120): BD-187 layered soft smoke flipbook; empty = built-in sprite
     smokeDense = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
     smokeWispy = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
     motifDroplets = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
