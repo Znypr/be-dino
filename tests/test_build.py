@@ -70,6 +70,18 @@ class BuildTests(unittest.TestCase):
         for path, content in bindings.outputs().items():
             self.assertEqual(path.read_text(encoding="utf-8"), content)
 
+    def test_lighting_technology_is_explicit_and_not_compatibility(self):
+        # Unset/Compatibility makes Studio show the "Lighting Technology Migration" dialog on every open.
+        root = ET.fromstring(packager.build()[0])
+        lights = [n for n in root.iter("Item") if n.attrib["class"] == "Lighting"]
+        self.assertEqual(len(lights), 1)
+        tech = lights[0].find("Properties/token[@name='Technology']")
+        self.assertIsNotNone(tech, "Lighting.Technology must be written explicitly")
+        self.assertNotIn(tech.text, ("0", "Compatibility", "Legacy"))
+        self.assertEqual(tech.text, "1", "Voxel")
+        for path in ROOT.glob("src/**/*.luau"):
+            self.assertNotRegex(path.read_text(encoding="utf-8"), r"Technology\s*=\s*Enum\.Technology\.(Compatibility|Legacy)", str(path))
+
     def test_unsupported_property_fails(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "default.project.json"

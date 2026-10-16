@@ -12,6 +12,10 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# Roblox Technology enum: Compatibility/Legacy=0, Voxel=1, Future=2, ShadowMap=3. Compatibility is sunset, so an unset
+# value triggers Studio's "Lighting Technology Migration" dialog on every open. Write Voxel (what Studio migrates to).
+LIGHTING_TECHNOLOGY = 1
+
 
 def build(project_path=ROOT / "default.project.json", transform=None):
     """Package the project. `transform(relative_path, source) -> source` lets a
@@ -79,6 +83,8 @@ def build(project_path=ROOT / "default.project.json", transform=None):
         if unknown:
             raise ValueError(f"Unsupported project properties: {unknown}")
         node = item(parent, name, spec.get("$className", "Folder"))
+        if spec.get("$className") == "Lighting":
+            ET.SubElement(node.find("Properties"), "token", {"name": "Technology"}).text = str(LIGHTING_TECHNOLOGY)
         if "$path" in spec:
             if any(not k.startswith("$") for k in spec):
                 raise ValueError("Mixed path and child mapping is unsupported")
