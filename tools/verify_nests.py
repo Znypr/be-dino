@@ -47,6 +47,11 @@ do
  assert(p[1].state=="incubating" and p[1].readyAt==5+D)
  assert(NestQueue.secondsUntilAllReady({{nestId="x",state="waiting"},{nestId="y",state="waiting"}},0,D)==2*D)
  assert(NestQueue.secondsUntilAllReady({},0,D)==0)
+ -- BD-259: the toast shows the FIRST nest's time (what the slot shows), not the whole-queue total (3 nests: 3 h, not 9 h).
+ local three={{nestId="a",state="incubating",readyAt=D},{nestId="b",state="waiting"},{nestId="c",state="waiting"}}
+ assert(NestQueue.secondsUntilNextReady(three,0,D)==D and NestQueue.secondsUntilAllReady(three,0,D)==3*D)
+ assert(NestQueue.secondsUntilNextReady(three,D-60,D)==60 and NestQueue.secondsUntilNextReady({},0,D)==0)
+ assert(NestQueue.secondsUntilNextReady({{nestId="a",state="ready"},{nestId="b",state="incubating",readyAt=2*D}},0,D)==0)
 end
 print("NestQueue passed: one at a time, next starts when the previous becomes ready, offline chain, projection copy")
 

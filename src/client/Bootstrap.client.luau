@@ -1511,7 +1511,7 @@ player:GetAttributeChangedSignal("LastSettledRunId"):Connect(function()
                 local nestOk,nestList=pcall(function() return Http:JSONDecode(str("NestsJson","[]")) end)
                 local waitSeconds=Config.NestIncubationSeconds
                 if nestOk and typeof(nestList)=="table" then
-                    waitSeconds=NestQueue.secondsUntilAllReady(nestList,math.floor(workspace:GetServerTimeNow()),Config.NestIncubationSeconds)
+                    waitSeconds=NestQueue.secondsUntilNextReady(nestList,math.floor(workspace:GetServerTimeNow()),Config.NestIncubationSeconds)
                 end
                 notify("New Egg Nest!",C.gold,{icon="egg_nest",key="nest",body="Ready in "..UIFormat.duration(math.max(3600,waitSeconds))}) -- no extra sound: it stacked with run_end (BD-166)
             end
