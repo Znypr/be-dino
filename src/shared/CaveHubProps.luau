@@ -93,7 +93,7 @@ Props.Slots = {
 -- the vertex colours kept (mushrooms) or the flat amber of the shop crystals. To turn a glow off set material = "SmoothPlastic".
 Props.Glow = {
     dress_mushrooms = {material = "Neon", color = {205, 200, 185}},
-    dress_crystal = {material = "Neon", color = {235, 170, 60}},
+    dress_crystal = {material = "SmoothPlastic", color = {214, 150, 62}}, -- lead Studio check: Neon read as a harsh yellow blob in the dim cave
 }
 -- Ground props sink this fraction of their height into the floor (instead of the flat SINK) so they read as grown into the terrain, not set on it.
 Props.SinkFrac = {
@@ -141,6 +141,10 @@ Props.Warm = {
     -- flat amber Color until the owner regenerates amber meshes (BD-400). Same mechanism as the two rows above; no new asset id.
     hub_crystal_s = {color = {255, 190, 60}, material = "Plastic"},
     hub_crystal_l = {color = {255, 190, 60}, material = "Plastic"},
+    -- Lead Studio check 2026-10-17: the generated moss curtains read as pale yellow blocks and the round boulder as a glowing white
+    -- rock under the warm lamps; flat moss green and warm grey instead (same mechanism, no new ids).
+    cave_moss_hang = {color = {78, 108, 58}, material = "SmoothPlastic"},
+    cave_rock_round = {color = {112, 100, 88}, material = "Slate"},
 }
 
 -- BD-292: the sign meshes that carry station text (a SurfaceGui built from HubSignCopy, front face only). `face` is the mesh's
