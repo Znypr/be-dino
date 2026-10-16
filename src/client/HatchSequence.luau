@@ -11,6 +11,7 @@ local Input = game:GetService("UserInputService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Theme = require(Shared.UITheme)
 local Sfx = require(Shared.Sfx)
+local SfxRules = require(Shared.SfxRules)
 local Timeline = require(Shared.HatchTimeline)
 local FxPlan = require(Shared.HatchFxPlan)
 local EggGenetics = require(Shared.EggGenetics)
@@ -790,7 +791,7 @@ function Seq.play(args: Args): Handle
         count = if failed then Timeline.crumbCount(motion) else Timeline.particleCount(rarity, r.shiny, r.big, motion, failed)
         orbit = Timeline.orbitCount(rarity, motion, failed)
         palette = if failed then {CREAM, WHITE, YOLK_GOLD, Color3.fromRGB(225, 190, 130)} else {glow, WHITE, Theme.Colors.gold, glow:Lerp(WHITE, .5), Theme.RarityColors[math.min(5, rarity + 1)]}
-        cues = Timeline.cues(durs, rarity, failed, Sfx.revealName(rarity))
+        cues = SfxRules.hatchCues(Timeline.cues(durs, rarity, failed, Sfx.revealName(rarity)), rarity) -- BD-341: staggered, no redundant cues
         cueIndex = 1
         a.dino.AnchorPoint = Vector2.new(.5, .5)
         a.dino.Position = UDim2.fromOffset(CENTER_DINO.X, CENTER_DINO.Y)

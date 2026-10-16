@@ -59,6 +59,63 @@ print("Reward cue checks passed: one at a time, 0.6 s stagger, drop when late")
 '''
 
 
+# BD-339/341/342: pure rules from src/shared/SfxRules.luau (offline: nobody has listened to the result).
+RULES_BODY = r'''
+local function v(n, e, s, vol) return {name = n, endsAt = e, startedAt = s, volume = vol} end
+assert(R.MaxVoices == 2)
+assert(R.limit({}, "pickup", 10) == "play")
+assert(R.limit({v("pickup", 11, 10, .2)}, "ui_click", 10) == "play")
+assert(R.limit({v("pickup", 11, 10, .2), v("shop_buy", 11, 10, .3)}, "ui_click", 10) == "drop", "third normal cue dropped")
+assert(R.limit({v("pickup", 10.4, 10, .2), v("shop_buy", 11, 10, .3)}, "ui_click", 10.5) == "play", "finished cues free a voice")
+local action, idx = R.limit({v("shop_buy", 12, 10, .3), v("pickup", 12, 10, .2)}, "hatch_reveal_epic", 10.5)
+assert(action == "replace" and idx == 2, "important cue replaces the lowest priority")
+action, idx = R.limit({v("level_up", 12, 10, .4), v("run_end", 12, 10, .2)}, "hatch_reveal_rare", 10.5)
+assert(action == "replace" and idx == 2, "replaces run_end")
+assert(R.limit({v("hatch_reveal_rare", 12, 10, .7), v("fusion_reveal", 12, 10, .7)}, "run_end", 10.5) == "drop", "lower than both: dropped")
+action, idx = R.limit({v("level_up", 12, 10, .4), v("level_up", 12, 11, .4)}, "level_up", 11.5)
+assert(action == "replace" and idx == 1, "equal priority: oldest replaced")
+local order = {"hatch_reveal_rare", "fusion_reveal", "level_up", "run_end", "shop_buy", "weather_start", "pickup", "ui_click"}
+for i = 1, #order - 1 do assert(R.priority(order[i]) > R.priority(order[i + 1]), order[i]) end
+for name in S.Sounds do assert(R.Priority[name], "every cue has a priority: " .. name) end
+assert(R.duck("hatch_reveal_epic", "pickup") == .6 and R.duck("level_up", "ui_click") == .6, "40% duck")
+assert(R.duck("pickup", "ui_click") == 1 and R.duck("shop_buy", "pickup") == 1, "unimportant cues do not duck")
+assert(R.duck("run_end", "hatch_reveal_epic") == 1, "never ducks a higher priority cue")
+assert(R.deduped("level_up", 10, 10.5) and not R.deduped("level_up", 10, 10.9) and not R.deduped("level_up", nil, 10))
+assert(not R.deduped("run_end", 10, 10.1))
+for _, n in {"pickup", "ui_click", "hatch_crack", "level_up"} do
+    local seen = {}
+    for i = 1, 200 do
+        local j = R.jitter(n, i)
+        assert(j >= .96 - 1e-9 and j <= 1.04 + 1e-9, "jitter range")
+        assert(j == R.jitter(n, i), "deterministic")
+        seen[string.format("%.4f", j)] = true
+    end
+    local count = 0 for _ in seen do count += 1 end
+    assert(count > 20, "jitter varies: " .. n)
+end
+assert(R.jitter("hatch_reveal_epic", 3) == 1 and R.jitter("fusion_reveal", 3) == 1)
+local alias = R.Aliases.crystal_reward
+assert(alias and S.Sounds[alias.cue] and alias.volume < 1 and alias.cooldown >= 1)
+local function names(c) local t = {} for _, x in c do table.insert(t, x.name) end return t end
+local raw = {{t = 1, name = "hatch_rattle"}, {t = 1.5, name = "hatch_crack_stage"}, {t = 1.6, name = "hatch_crack_stage"}, {t = 2, name = "hatch_crack_stage"}, {t = 3, name = "hatch_burst"}, {t = 3.12, name = "hatch_reveal_common"}, {t = 0.5, name = "pickup"}}
+local common = R.hatchCues(raw, 1)
+local stages, last = 0, -1e9
+for _, c in common do
+    if c.name == "hatch_crack_stage" then stages += 1 end
+    if string.sub(c.name, 1, 6) == "hatch_" then assert(c.t - last >= R.HatchStagger - 1e-9, "stagger " .. c.name) last = c.t end
+end
+assert(stages == 1, "Common keeps one stage crack")
+assert(not table.find(names(common), "hatch_rattle") and table.find(names(common), "hatch_reveal_common") and table.find(names(common), "pickup"))
+local rs = 0 for _, c in R.hatchCues(raw, 3) do if c.name == "hatch_crack_stage" then rs += 1 end end
+assert(rs == 3 and R.hatchStack(1).chime == false and R.hatchStack(3).chime and R.hatchStack(5).chime, "rarity escalates")
+assert(R.hatchStack(1).stages <= R.hatchStack(2).stages and R.hatchStack(2).stages <= R.hatchStack(5).stages)
+local revealT, burstT
+for _, c in R.hatchCues({{t = 3, name = "hatch_burst"}, {t = 3.12, name = "hatch_reveal_rare"}}, 3) do if c.name == "hatch_reveal_rare" then revealT = c.t end if c.name == "hatch_burst" then burstT = c.t end end
+assert(revealT - burstT >= .3 - 1e-9, "reveal does not start with the burst")
+print("Sfx rules checks passed: limiter, priority, duck, dedupe, jitter, hatch stack")
+'''
+
+
 def static_checks():
     errors = []
     read = lambda p: (ROOT / p).read_text(encoding='utf-8')
@@ -74,6 +131,14 @@ def static_checks():
         if 'Instance.new("Sound")' in text and 'attach(' not in text:
             errors.append('%s creates a Sound without AudioMixer.attach' % path.relative_to(ROOT))
     boot = read('src/client/Bootstrap.client.luau')
+    sfx_src = read('src/shared/Sfx.luau')
+    for needle in ('R.limit(active', 'R.duck(', 'R.jitter(', 'R.deduped(', 'Sfx.playAlias'):
+        if needle not in sfx_src:
+            errors.append('BD-339/342: Sfx must apply SfxRules (%s)' % needle)
+    if 'SfxRules.hatchCues' not in read('src/client/HatchSequence.luau'):
+        errors.append('BD-341: HatchSequence must stagger cues through SfxRules.hatchCues')
+    if 'Sfx.playAlias("crystal_reward")' not in boot:
+        errors.append('BD-342: crystal reward cue missing')
     if 'SettingsMenu' not in boot or 'VolumeSliders' not in read('src/client/SettingsMenu.luau') or 'AudioMixer' not in read('src/client/SettingsMenu.luau'):
         errors.append('Settings must show the volume sliders')
     if boot.count('Sfx.playCue("run_end")') != 1 or boot.count('Sfx.playCue("level_up")') < 2 or 'Sfx.play("run_end")' in boot or 'Sfx.play("level_up")' in boot:
@@ -108,5 +173,17 @@ if __name__ == '__main__':
         result = subprocess.run([args.runner, str(path)], capture_output=True, text=True, encoding='utf-8')
         print(result.stdout, end='')
         if result.returncode or 'Reward cue checks passed' not in result.stdout:
+            print(result.stderr)
+            raise SystemExit(result.returncode or 1)
+
+    # BD-339/341/342 pure rules.
+    with tempfile.TemporaryDirectory() as tmp:
+        sfx = (ROOT / 'src/shared/Sfx.luau').read_text(encoding='utf-8')
+        rules = (ROOT / 'src/shared/SfxRules.luau').read_text(encoding='utf-8')
+        path = Path(tmp) / 'rules.luau'
+        path.write_text('local S=(function()' + chr(10) + sfx + chr(10) + 'end)()' + chr(10) + 'local R=(function()' + chr(10) + rules + chr(10) + 'end)()' + chr(10) + RULES_BODY, encoding='utf-8')
+        result = subprocess.run([args.runner, str(path)], capture_output=True, text=True, encoding='utf-8')
+        print(result.stdout, end='')
+        if result.returncode or 'Sfx rules checks passed' not in result.stdout:
             print(result.stderr)
             raise SystemExit(result.returncode or 1)
