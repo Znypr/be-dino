@@ -1,6 +1,6 @@
 # 97 Dino skins (owner idea, 2026-10-15)
 
-**Status: owner decisions 2026-10-16 recorded below; implementation not started.**
+**Status: owner decisions 2026-10-16 recorded below; implementation not started. Full spec: [136](136-dino-skins-spec.md).**
 
 ## Owner decisions (2026-10-16)
 - **Base look for all dinos: LOW-POLY** (faceted, flat-shaded, made with Roblox's mesh generator, split into body parts for animation). First 3 species in development: Compy, Raptor, Triceratops.
