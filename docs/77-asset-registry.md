@@ -85,6 +85,8 @@ Notes
 
 All older revisions and Blender sources live OUTSIDE git in Google Drive: `My Drive/Be Dino/Art Archive/2026-10-08_Premium_Egg_all_revisions.zip` (full Premium_Egg folder as of 2026-10-13).
 
+3. TODO (BD-207): dedicated Golden Drumstick art. Until the owner uploads it, the special food reuses the registered `food_drumstick` mesh (BD-387) with a stock Highlight glow; no new asset ID exists or is invented. Behind `Config.SpecialFoodsEnabled` (false).
+
 Rule: every new asset adds a registry line when it is added.
 
 ## Sound effects (uploaded 2026-10-15)
