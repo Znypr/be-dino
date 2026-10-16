@@ -1,6 +1,7 @@
 --!strict
 -- BD-239..241 / docs/101: combat tunables. Every number is PROVISIONAL, not final balance.
--- Enabled is a flag that NOTHING reads yet (no server/client wiring exists). Keep it false.
+-- The runtime flag is Config.CombatEnabled (read by CombatService, PredationService and CombatHud). `Enabled` here is a
+-- second guard for the pure modules' offline tests and stays false too.
 local CombatConfig = {
     Enabled = false,
 
@@ -28,6 +29,24 @@ local CombatConfig = {
     RegenDelaySeconds = 6,
     RegenFractionPerSecond = 0.04,
     FoodHealFraction = 0.05,
+
+    -- BD-243 / docs/101 s4, s7, s13 (server rules in CombatRules, glue in CombatService). ALL PROVISIONAL.
+    BiteCooldownSeconds = 0.9,
+    BiteRangeBase = 2.5, -- range = BiteRangeBase + BiteRangePerScale * s studs (from the attacker's root)
+    BiteRangePerScale = 1.0,
+    BiteRangeSlack = 1.5, -- extra studs for latency: the client aims, the server measures a moment later
+    BiteConeDegrees = 70, -- full cone angle in front of the attacker
+    BiteVerticalLimit = 7, -- same as PredationVerticalLimit
+    BiteRequestsPerSecond = 2, -- rate limit per player (sliding 1 s window)
+    LeapBiteX = 1.6, -- a bite landed inside the leap window hits this much harder
+    KnockbackStuds = 4, -- soft push away from the attacker; halved for Armored, scaled down for big targets
+    KnockbackBigScaleDivisor = 2, -- push / max(1, targetS / divisor)
+    HpByteMax = 255, -- replicated HP is one byte (0..255 of max)
+    HpSendHz = 5,
+    TickHz = 10,
+    FriendShieldDefeats = 3, -- defeated this often ...
+    FriendShieldWindowSeconds = 180, -- ... inside this window ...
+    FriendShieldSeconds = 30, -- ... gives the next run this much extra spawn protection
 
     TeamUp = {
         AssistWindowSeconds = 15,

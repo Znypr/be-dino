@@ -1,6 +1,6 @@
 # 101 HP, combat, dino classes and movement animations (design, 2026-10-16)
 
-**Status: DESIGN ONLY. No code changed. All numbers are PROVISIONAL, not final balance.** Owner direction 2026-10-16 (kanban BD-230, BD-231, BD-233, BD-234). Feel rules: [docs/87](87-vision-and-feel-guide.md). Copy rules: [docs/72](72-ui-copy-and-asset-standards.md). Defeat animations per skin: [docs/97](97-dino-skins.md). Reward loop: [AGENTS.md](../AGENTS.md) and [docs/09](09-reward-economy.md). Tasks live only in [the Kanban](07-kanban.md) (BD-239 to BD-252 added by this doc).
+**Status: Phase 1 (pure rules), Phase 2 server (BD-243/244) and the Phase 4 placeholder UI (BD-247) are implemented behind `Config.CombatEnabled=false` (2026-10-16, see the Kanban rows for what is tested and what is not). All numbers are PROVISIONAL, not final balance.** Owner direction 2026-10-16 (kanban BD-230, BD-231, BD-233, BD-234). Feel rules: [docs/87](87-vision-and-feel-guide.md). Copy rules: [docs/72](72-ui-copy-and-asset-standards.md). Defeat animations per skin: [docs/97](97-dino-skins.md). Reward loop: [AGENTS.md](../AGENTS.md) and [docs/09](09-reward-economy.md). Tasks live only in [the Kanban](07-kanban.md) (BD-239 to BD-252 added by this doc).
 
 Labels: **OWNER TARGET** = from the owner. **PROPOSAL** = this doc, needs owner review. **CURRENT BUILD** = what ships now (instant "bigger eats smaller", [docs/03](03-game-design.md): the attacker needs about 10% more score and the victim is eaten).
 

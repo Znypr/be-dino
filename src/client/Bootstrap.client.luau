@@ -1195,6 +1195,8 @@ end)
 leapButton.Text=""
 art(leapButton,"leap",4,5,48)
 local leapText=label(leapButton,"LEAP [E]",56,0,225,60,22)
+-- BD-247 HP combat HUD (health bars, Bite button in this row): no-op while Config.CombatEnabled is false. No new locals here (200-local limit).
+require(script.Parent.CombatHud).attach({timers=timers,leapButton=leapButton,leapText=leapText,button=button,label=label,notify=notify,shade=shade})
 local weatherTile=box(timers,0,72,286,62,C.panel,2)
 local weatherArt=Theme.icon(weatherTile,"weather")
 if weatherArt then weatherArt.Position,weatherArt.Size=UDim2.fromOffset(4,7),UDim2.fromOffset(48,48) end
