@@ -97,45 +97,54 @@ local HOLE_DEFS = {{"heart", 12}, {"potions", 8}, {"nests", 8}, {"style", 7}} --
 -- walk = flat/walk-over (never blocks arrival or paths), hang = hangs from the ceiling/wall (not a floor prop),
 -- collider = needs one invisible collider.
 local KINDS: {[string]: any} = {
-    cave_stalagmite_s = {3, 6, 3, 1500, "rocks"},
-    cave_stalagmite_l = {7, 12, 7, 3500, "rocks", collider = true},
-    cave_stalactite = {3, 9, 3, 1500, "rocks", hang = true},
-    cave_rock_round = {6, 4, 5, 2000, "rocks"},
-    cave_rock_flat = {8, 1.5, 6, 1500, "rocks"},
-    cave_moss_patch = {5, 0.8, 4, 800, "rocks", walk = true},
-    cave_moss_hang = {4, 5, 1, 800, "rocks", hang = true},
+    cave_stalagmite_s = {4.5, 5.6, 4.4, 1500, "rocks"},
+    cave_stalagmite_l = {7, 10, 7, 3500, "rocks", collider = true},
+    cave_stalactite = {3, 8.4, 3, 1500, "rocks", hang = true},
+    cave_rock_round = {5.1, 2.5, 5, 2000, "rocks"},
+    cave_rock_flat = {6, 1.5, 6, 1500, "rocks"},
+    cave_moss_patch = {4.8, 1.4, 4.8, 800, "rocks", walk = true},
+    cave_moss_hang = {4, 4.3, 0.8, 800, "rocks", hang = true},
+    -- BD-284: wall/rim pieces and a cluster (generated 2026-10-16): Props.Rim pieces go on the wall rim, Props.Solid ones collide
+    cave_wall_boulder_l = {14, 11, 13.7, 3000, "rocks"},
+    cave_wall_pillar = {6, 16.6, 6, 2500, "rocks"},
+    cave_wall_arch_small = {10, 5.6, 3.5, 2000, "rocks"},
+    cave_stalagmite_cluster = {8, 8.8, 6.3, 3500, "rocks"},
     rock_mossy_boulder = {6, 4, 5, 3000, "rocks"},
     rock_crystal = {3, 4, 3, 2500, "rocks"},
     rock_pebbles = {3, 0.5, 3, 600, "rocks", walk = true},
     cave_light_cone = {14, 40, 14, 400, "lights", hang = true},
     cave_lava_fall = {40, 32, 6, 5000, "lava", hang = true}, -- BD-295: was 40 x 48
-    cave_lava_rim_rock = {5, 3, 4, 1500, "lava"},
-    cave_stepping_stone = {4, 0.8, 4, 400, "lava", walk = true},
+    cave_lava_rim_rock = {6, 2.3, 4.3, 1500, "lava"},
+    cave_stepping_stone = {6, 1.4, 6, 400, "lava", walk = true},
     lava_pool_disc = {18, 0.3, 18, 200, "lava"}, -- BD-295: 18 wide inside the 22 wide basin, not walkable (was 26 wide, walk = true)
     hub_stall_potion = {14, 10, 7, 5000, "station", collider = true},
     hub_cauldron = {3, 3, 3, 1800, "station"},
     hub_crate = {2.5, 2.5, 2.5, 600, "station"},
-    hub_barrel = {2.5, 3, 2.5, 800, "station"},
+    hub_barrel = {2.6, 3.5, 2.6, 800, "station"},
     hub_lantern_hang = {1.5, 2.5, 1.5, 700, "station", hang = true},
-    hub_lantern_post = {1.5, 6, 1.5, 900, "station"},
-    hub_sign_stone = {8, 4, 1, 900, "station"},
+    hub_lantern_post = {1.6, 5.8, 1.6, 900, "station"},
+    hub_sign_stone = {5.5, 5.5, 2, 900, "station"},
     hub_sign_arrow = {5, 5, 0.8, 700, "station"},
-    hub_banner = {3, 7, 0.3, 400, "station", hang = true},
+    hub_banner = {5.4, 5.5, 0.8, 400, "station"},
     hub_forge_altar = {8, 5, 5, 3500, "station", collider = true},
     hub_forge_ring = {12, 0.5, 12, 900, "station", walk = true},
     hub_pedestal = {3, 3.5, 3, 1000, "station"},
-    hub_counter_stone = {14, 3.5, 4, 3500, "station", collider = true},
+    hub_counter_stone = {8.8, 7, 4.5, 3500, "station", collider = true},
     hub_crystal_l = {8, 12, 8, 4000, "station"},
     hub_crystal_s = {3, 4, 3, 1500, "station"},
     hub_gem_chest = {4, 3, 3, 2500, "station"},
     hub_lectern_book = {3, 4, 3, 2500, "station", collider = true},
     hub_bench_stone = {6, 2, 2, 1500, "station"},
-    hub_gong = {3, 4, 1, 2000, "station"},
-    hub_cushion_moss = {2.5, 0.8, 2.5, 500, "station", walk = true},
-    hub_wall_frame = {8, 10, 1, 1500, "station", hang = true},
-    hub_gate_arch = {30, 20, 6, 8000, "station", walk = true, colliders = 2}, -- walk-through arch, two pillar colliders
-    hub_straw_mat = {6, 0.5, 6, 600, "station", walk = true},
-    hub_nest_ledge = {32, 3, 10, 6000, "station", collider = true},
+    hub_gong = {3.2, 3.2, 1.2, 2000, "station"},
+    hub_cushion_moss = {2.6, 2.6, 2.6, 500, "station", walk = true},
+    hub_wall_frame = {3.8, 4.5, 0.7, 1500, "station"},
+    hub_gate_arch = {24, 24, 8.7, 8000, "station", walk = true, colliders = 2}, -- walk-through arch, two pillar colliders
+    hub_straw_mat = {2.3, 0.8, 4, 600, "station", walk = true},
+    hub_nest_ledge = {12, 12, 6.4, 6000, "station", collider = true},
+    hub_table_wood = {5, 2.8, 3, 1500, "station"},
+    hub_statue_triceratops = {5.1, 6.9, 7.5, 3500, "station"},
+    hub_statue_trex = {6.8, 7.7, 7.6, 3500, "station"},
+    hub_statue_brachiosaurus = {6.5, 9.2, 10, 3500, "station"},
     nest = {5, 1, 5, 2500, "station", walk = true}, -- existing mesh 102765517629578
     landmark_dino_statue = {4, 5, 4, 8000, "station"}, -- existing, scaled 0.4
     potion_model = {1, 2, 1, 2500, "station", walk = true}, -- existing; stands on the counter
@@ -145,12 +154,12 @@ CaveHubLayout.Kinds = KINDS
 -- Station props: {key, count, mode}. mode: "centre" = on the pad centre, "sign" = at the sign, "back" = the big piece
 -- behind the station, "arc" = spread in the outward arc (behind the station, away from the walking approach). Counts follow docs/104 s13 (trimmed where noted).
 local STATION_PROPS: {[string]: {{any}}} = {
-    nests = {{"hub_nest_ledge", 1, "back"}, {"nest", 5, "arc"}, {"hub_straw_mat", 5, "arc"}, {"hub_lantern_hang", 3, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    potions = {{"hub_stall_potion", 1, "back"}, {"potion_model", 4, "arc"}, {"hub_crate", 3, "arc"}, {"hub_barrel", 1, "arc"}, {"hub_cauldron", 1, "arc"}, {"hub_lantern_hang", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    nests = {{"hub_nest_ledge", 1, "back"}, {"nest", 5, "arc"}, {"hub_straw_mat", 5, "arc"}, {"hub_lantern_post", 3, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    potions = {{"hub_stall_potion", 1, "back"}, {"potion_model", 4, "arc"}, {"hub_crate", 3, "arc"}, {"hub_barrel", 1, "arc"}, {"hub_cauldron", 1, "arc"}, {"hub_lantern_post", 2, "arc"}, {"hub_table_wood", 1, "arc"}, {"hub_sign_stone", 1, "sign"}},
     fusion = {{"hub_forge_ring", 1, "centre"}, {"hub_forge_altar", 1, "back"}, {"hub_pedestal", 3, "arc"}, {"hub_crate", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    style = {{"hub_counter_stone", 1, "back"}, {"hub_crystal_l", 2, "arc"}, {"hub_crystal_s", 5, "arc"}, {"hub_pedestal", 1, "arc"}, {"hub_gem_chest", 1, "arc"}, {"hub_lantern_hang", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    index = {{"hub_pedestal", 6, "arc"}, {"landmark_dino_statue", 6, "arc"}, {"hub_banner", 3, "arc"}, {"hub_lectern_book", 1, "back"}, {"hub_bench_stone", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    settings = {{"hub_bench_stone", 1, "arc"}, {"hub_lantern_post", 1, "arc"}, {"hub_gong", 1, "arc"}, {"hub_cushion_moss", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    style = {{"hub_counter_stone", 1, "back"}, {"hub_crystal_l", 2, "arc"}, {"hub_crystal_s", 5, "arc"}, {"hub_pedestal", 1, "arc"}, {"hub_gem_chest", 1, "arc"}, {"hub_lantern_post", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    index = {{"hub_pedestal", 6, "arc"}, {"hub_statue_triceratops", 1, "arc"}, {"hub_statue_trex", 1, "arc"}, {"hub_statue_brachiosaurus", 1, "arc"}, {"hub_banner", 3, "arc"}, {"hub_lectern_book", 1, "back"}, {"hub_bench_stone", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    settings = {{"hub_lantern_post", 1, "arc"}, {"hub_gong", 1, "arc"}, {"hub_cushion_moss", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
     fame = {{"hub_wall_frame", 3, "arc"}, {"hub_lantern_post", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
     gate = {{"hub_gate_arch", 1, "sign"}, {"rock_mossy_boulder", 2, "arc"}, {"hub_sign_arrow", 2, "arc"}},
 }
@@ -159,7 +168,9 @@ local SCATTER = {
     {"cave_stalagmite_l", 8}, {"cave_stalagmite_s", 18}, {"cave_rock_round", 20}, {"cave_rock_flat", 14},
     {"rock_mossy_boulder", 6}, {"rock_crystal", 4}, {"rock_pebbles", 10}, {"cave_moss_patch", 24},
     {"cave_stalactite", 24}, {"cave_moss_hang", 10},
+    {"cave_stalagmite_cluster", 4}, {"cave_wall_boulder_l", 10}, {"cave_wall_pillar", 6}, {"cave_wall_arch_small", 2},
 }
+local WALLPIECES = {cave_wall_boulder_l = true, cave_wall_pillar = true, cave_wall_arch_small = true} -- put near the wall rim
 local LAVA_PROPS = {rim = 6, steps = 4}
 
 -- ---------------------------------------------------------------- small math helpers
@@ -401,6 +412,11 @@ function CaveHubLayout.get(): any
                     if insideFloorLocal(x, z, 1.5) then break end
                     x, z = x * 0.98, z * 0.98
                 end
+            elseif WALLPIECES[key] then
+                local a = rand() * 2 * math.pi
+                local w = wobble(a)
+                local f = 0.8 + rand() * 0.12
+                x, z = math.cos(a) * BASE_X * w * f, math.sin(a) * BASE_Z * w * f
             else
                 x, z = (rand() * 2 - 1) * CaveHubLayout.BoxHalfX, (rand() * 2 - 1) * CaveHubLayout.BoxHalfZ
             end
