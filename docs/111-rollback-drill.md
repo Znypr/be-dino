@@ -80,7 +80,7 @@ store it does read.
 
 | Field (profile) | Written by | Build 020 behaviour |
 | --- | --- | --- |
-| `settings` (`v`, `sound`, `effects`, `weather`, `calm`, `jumpSize`, `peaceful`, `teleportShops`) | BD-264/288, docs/101 | Ignored and kept. CURRENT reads missing or corrupt as defaults |
+| `settings` (`v`, `sound`, `effects`, `weather`, `calm`, `jumpSize`, `peaceful` (removed from the game 2026-10-16, old values only ignored), `teleportShops`) | BD-264/288, docs/101 | Ignored and kept. CURRENT reads missing or corrupt as defaults |
 | `rarityScale` = 5 | BD-044/rarity tiers | Ignored and kept |
 | `metrics.rarest` 4-5 | species tiers Epic/Legendary | **Build 020 rejects (> 3)** |
 | `revealSkip` (tiers 1-5) | BD-044 | Ignored and kept |
