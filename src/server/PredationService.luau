@@ -65,7 +65,8 @@ function PredationService.start(runLifecycle, dinosaur)
                 local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
                 local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
                 if character and root and root:IsA("BasePart") and humanoid and humanoid.Health > 0
-                    and character:GetAttribute("DinoAttached") and runLifecycle.isActive(character) then
+                    and character:GetAttribute("DinoAttached") and runLifecycle.isActive(character)
+                    and character:GetAttribute("PeacefulRun") ~= true then -- BD-421: Peaceful players cannot eat or be eaten by players
                     local last = previous[player]
                     local position = root.Position
                     local plausible = last and last.character == character
