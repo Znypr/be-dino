@@ -223,7 +223,82 @@ local function stepHandle(h, dt: number)
     end
 end
 
+-- BD-229: shop aura cards. The recipe layers alone read as a faint ring on the coloured card, so an aura icon also gets a
+-- HALO drawn BEHIND the coin (sibling of the icon, one ZIndex lower): slowly turning fx3 rays, a looping fx3 swirl about
+-- 1.6x the coin, and a few fx3 sparkles drifting up. Tint is the aura colour lifted toward white so it shows on green,
+-- blue and purple cards. Strength grows with rarity. Reduce Motion: one still frame (no turning, no sparkles).
+local HaloTier = {
+    Common = {scale = 1.6, rays = 0.4, swirl = 0.5, swirl2 = 0, sparks = 2, lift = 0.5},
+    Rare = {scale = 1.8, rays = 0.55, swirl = 0.68, swirl2 = 0, sparks = 4, lift = 0.45},
+    Legendary = {scale = 2.0, rays = 0.72, swirl = 0.8, swirl2 = 0.45, sparks = 6, lift = 0.4},
+}
+local function buildHalo(h, icon: GuiObject, item)
+    local holder = icon.Parent
+    if not (holder and holder:IsA("GuiObject")) then return end
+    local tier = HaloTier[item.rarity] or HaloTier.Common
+    local color = item.color or {255, 255, 255}
+    local tint = Recipes.mix(color, {255, 255, 255}, tier.lift)
+    local halo = Instance.new("Frame")
+    halo.Name, halo.BackgroundTransparency, halo.BorderSizePixel, halo.Active = "FxUi_halo_" .. tostring(item.id), 1, 0, false
+    halo.AnchorPoint = Vector2.new(0.5, 0.5)
+    halo.ZIndex = math.max(icon.ZIndex - 1, 1)
+    halo.Parent = holder
+    local z = halo.ZIndex
+    local function img(key: string, size: number)
+        if not Assets.isRealUi(key) then return nil end -- BD-226: never a built-in sprite (dark boxes) in 2D UI
+        local i = sprite(halo, z, Assets.resolveUi(key))
+        i.Size, i.Position, i.ImageColor3, i.Visible = UDim2.fromScale(size, size), UDim2.fromScale(0.5, 0.5), c3(tint), true
+        Assets.setCell(i, key, 1)
+        return i
+    end
+    local H = {icon = icon, frame = halo, tier = tier, tint = tint, rays = img("rays", 1), swirl = img("swirl", 0.92), sparks = {}}
+    if tier.swirl2 > 0 then H.swirl2 = img("swirl", 0.7) end
+    if not h.reduced and Assets.isRealUi("sparkSheet") then
+        for i = 1, tier.sparks do
+            local sp = sprite(halo, z, Assets.resolveUi("sparkSheet"))
+            sp.ImageColor3 = c3(Recipes.mix(color, {255, 255, 255}, 0.75))
+            H.sparks[i] = {obj = sp, phase = (i - 1) / tier.sparks, x = 0.22 + 0.56 * ((i * 0.618) % 1)}
+        end
+    end
+    h.halo = H
+end
+local function stepHalo(h)
+    local H = h.halo
+    if not H or not H.frame.Parent then return end
+    local t, tier = if h.reduced then 0 else h.time, H.tier
+    local icon, sz, ap = H.icon, H.icon.Size, H.icon.AnchorPoint -- follow the coin if the card lays it out later
+    H.frame.Position = icon.Position + UDim2.new(sz.X.Scale * (0.5 - ap.X), sz.X.Offset * (0.5 - ap.X), sz.Y.Scale * (0.5 - ap.Y), sz.Y.Offset * (0.5 - ap.Y))
+    H.frame.Size = UDim2.new(sz.X.Scale * tier.scale, sz.X.Offset * tier.scale, sz.Y.Scale * tier.scale, sz.Y.Offset * tier.scale)
+    H.frame.Visible = icon.Visible
+    local fade = if h.reduced then 1 else Recipes.easeOutCubic(t / Recipes.Timing.fadeIn)
+    local breathe = if h.reduced then 0.5 else 0.5 + 0.5 * math.sin(t * 1.6)
+    if H.rays then
+        H.rays.Rotation = t * 10
+        H.rays.ImageTransparency = 1 - tier.rays * (0.8 + 0.2 * breathe) * fade
+    end
+    if H.swirl then
+        H.swirl.Rotation = -t * 14
+        Assets.setCell(H.swirl, "swirl", Assets.frameAt("swirl", 0, t, 1))
+        H.swirl.ImageTransparency = 1 - tier.swirl * (0.85 + 0.15 * breathe) * fade
+        H.swirl.Size = UDim2.fromScale(0.9 + 0.04 * breathe, 0.9 + 0.04 * breathe)
+    end
+    if H.swirl2 then
+        H.swirl2.Rotation = t * 20 + 90
+        Assets.setCell(H.swirl2, "swirl", Assets.frameAt("swirl", 0, t, 9))
+        H.swirl2.ImageTransparency = 1 - tier.swirl2 * fade
+    end
+    for _, p in H.sparks do
+        local u = (t * 0.45 + p.phase) % 1 -- one gentle rise every ~2 s
+        Assets.setCell(p.obj, "sparkSheet", Assets.frameAt("sparkSheet", u, 0, 1))
+        p.obj.Position = UDim2.fromScale(p.x + 0.04 * math.sin(u * 6 + p.phase * 6), 0.78 - 0.6 * u)
+        p.obj.Size = UDim2.fromScale(0.2, 0.2)
+        p.obj.ImageTransparency = 1 - 0.9 * math.sin(u * math.pi) * fade
+        p.obj.Visible = true
+    end
+end
+
 local function kill(h)
+    if h.halo then h.halo.frame:Destroy() h.halo = nil end
     if h.frame then h.frame:Destroy() end
     h.frame = nil
 end
@@ -239,6 +314,7 @@ local function loop(dt: number)
             kill(h) table.remove(active, i)
         elseif h.frame.Parent and h.frame.Visible and h.frame.AbsoluteSize.X > 0 and not (h.root:IsA("GuiObject") and not h.root.Visible) then
             stepHandle(h, math.min(step, 0.1))
+            stepHalo(h)
         end
     end
     if #active == 0 and connection then connection:Disconnect() connection = nil end
@@ -270,7 +346,8 @@ function Ui.mount(parent: GuiObject, kind: string, item, opts)
     h.orb.SizeConstraint = Enum.SizeConstraint.RelativeYY
     h.orb.BackgroundColor3, h.orb.BackgroundTransparency, h.orb.Visible = Color3.fromRGB(20, 32, 53), 0, kind == "trail"
     for _, layer in resolved.layers do table.insert(h.layers, buildLayer(h, layer)) end
-    if opts.reduce then stepHandle(h, 0.5) return {destroy = function() kill(h) end, frame = frame} end
+    if opts.halo then buildHalo(h, parent, item) end
+    if opts.reduce then stepHandle(h, 0.5) stepHalo(h) return {destroy = function() kill(h) end, frame = frame} end
     table.insert(active, h)
     if not connection then connection = RunService.Heartbeat:Connect(loop) end
     return {destroy = function() kill(h) end, resolved = resolved, frame = frame}
@@ -288,7 +365,7 @@ function Ui.decorateIcon(icon: GuiObject, id: string, reduce: boolean)
         if handle then for _, child in icon:GetChildren() do if child:IsA("GuiObject") and not string.match(child.Name, "^FxUi_") then child.Visible = false end end end
         return handle
     elseif auraId then
-        return Ui.mount(icon, "aura", Rules.item(Config.Auras, auraId), {reduce = reduce})
+        return Ui.mount(icon, "aura", Rules.item(Config.Auras, auraId), {reduce = reduce, halo = true})
     end
     return nil
 end
