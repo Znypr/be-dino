@@ -32,6 +32,31 @@ Assets.Requested = {
     speedLine = {id = "", fallback = "spark"},     -- thin speed streak strip, 512x32
     starFour = {id = "rbxassetid://71657118485647", fallback = "spark"},    -- four-point twinkle: the fx3 sparkle sheet
     crystalSheet = {id = "", fallback = "spark"},  -- frost crystals, droplets, pebbles, embers 4x4
+    -- Pending owner uploads (docs/120): bind with tools/bind_assets.py. A key nothing reads yet simply resolves to its built-in sprite.
+    glowPlateDroplet = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    glowPlateCrescent = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    ringSeismic = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    smokeDense = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    smokeWispy = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    motifDroplets = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    motifSoftSparks = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    motifSnowCrystals = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    motifPebbles = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    motifEmbers = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    motifAurora = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    motifCrimson = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    confetti = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    lavaCrust = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    flameTongue = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    starPop = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    domeGradient = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    speedStreaks = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    rainbowStrip = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    rimRingUi = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    paintCrown = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    paintDrips = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    paintDroplet = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    paintGloss = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
 }
 
 local function valid(id: any): boolean

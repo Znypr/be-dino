@@ -97,7 +97,9 @@ def static_checks():
     cards = read('src/client/ShopCards.luau')
     assert 'function Cards.forHeader' in cards and '"silhouette"' in cards and 'ForDinoNote' in cards, 'BD-393 silhouette + note'
     assert 'ConditionStage).background(' in boot and 'ConditionStage).egg(' in boot, 'BD-394 stage slot wired'
-    assert 'ConditionOverlays).ShopZoom' in boot and 'cardsY+62,155,144' in boot, 'BD-394 larger egg tiles'
+    ep = (ROOT / 'src/client/EggPicture.luau').read_text(encoding='utf-8')
+    assert 'EggConditionBoost' in ep and 'look :: any).stack' in ep, 'BD-141 faint overlays stacked in the flat egg'
+    assert 'EggPicture).add(tile,EggGenetics.neutral(row.id),150)' in boot and 'cardsY+62,155,144' in boot, 'BD-141 flat condition egg tiles (BD-394 size)'
     arena = read('src/server/Arena.luau')
     assert 'Ground.corrected(' in arena and 'RaycastParams.new()' in arena and 'workspace.Terrain' in arena, 'BD-395 raycast ground correction'
     assert 'WorldKitRayMoved' in arena, 'BD-395 counter for the Studio measurement'
