@@ -34,12 +34,23 @@ Tier.SparkleLife = {1.0, 1.4}
 function Tier.sparkleAlive(entry: Entry, lite: boolean): number
     return entry.sparkleCount / Tier.SparkleBase * Tier.SparkleLife[2] * (if lite then 0.5 else 1)
 end
+-- 2026-10-16 round 9: baked crystal-coat maps (Blender bakes, resources/effects/tiers/, docs/77). TODO(owner): upload the PNGs and paste the
+-- asset ids here; while an id is empty the shell stays a plain Glass part (Color/Transparency/Reflectance above). ColorMap = tier colour WITH alpha
+-- (facet-varying 0.25..0.6, opaque facet edge lines); Normal / Roughness are shared by all tiers. Tileable, so they work on any UVs.
+Tier.Maps = {
+    gold = {color = ""}, emerald = {color = ""}, diamond = {color = ""},
+    normal = "", roughness = "",
+}
 Tier.AccentWords = {"claw", "toe", "horn", "spike", "tooth", "teeth", "nail"}
 Tier.MaxReflectance = 0.3
 Tier.ShellScale = 1.015        -- the shell is the body mesh inflated by this much (one extra MeshPart per textured part, same mesh)
-Tier.ShellTransparency = {0.8, 0.95} -- 2026-10-16 round 7: the gloss layer is almost clear (specular only, NO colour tint)
+Tier.ShellTransparency = {0.4, 0.95} -- 2026-10-16 round 9 (live Studio tuning): the shell is a translucent tier-COLOURED crystal coat (0.5), not a clear gloss layer
+Tier.MaxShellReflectance = 0.5
 Tier.RimTransparency = {0.1, 0.25} -- glowing tier rim (Highlight outline / cheap glow shell)
 Tier.BodyGloss = 0.2 -- Reflectance on the textured body parts of fused tiers (0.15-0.25)
+Tier.UseGlowShells = false -- round 9: neon glow shells wash out the stripes; the rim is the Highlight only
+Tier.HighlightFill = 0.8 -- Highlight FillTransparency (fill = tier colour)
+Tier.HighlightWhiten = 0.45 -- Highlight outline = tier colour lerped this far to white
 Tier.GlowLayers = table.freeze({table.freeze({1.03, 0.62}), table.freeze({1.07, 0.8})}) -- {scale, transparency}: bright inner + soft outer glow shell
 Tier.GlowScale = 1.06 -- cheap rim: one slightly larger Neon shell on the body part for dinos beyond the Highlight budget
 Tier.MaxSheen = 0.7
@@ -48,13 +59,13 @@ Tier.Entries = {
     -- Gold = rich warm gold, Emerald = deep jewel green, Diamond = icy white-blue with a rainbow shimmer. Gloss, sheen, sparkle rate and sparkle size all grow per tier.
     gold = {id = "gold", name = "Gold", tint = {255, 190, 30}, amount = 0.55, trimAmount = 0.8, material = "Metal", reflectance = 0.18,
         sparkle = {255, 232, 140}, sparkleRate = 2.5, sparkleCount = 4, sparkleSize = 1.4, accent = {255, 200, 30}, accentAmount = 0.9, sheen = 0.5, gain = 1.1, satGain = 1.2,
-        rim = {255, 190, 40}, rimTransparency = 0.15, shell = {255, 255, 255}, shellTransparency = 0.88, shellMaterial = "SmoothPlastic", accentMaterial = "Metal", shellReflectance = 0.3},
+        rim = {255, 190, 40}, rimTransparency = 0.15, shell = {255, 170, 30}, shellTransparency = 0.5, shellMaterial = "Glass", accentMaterial = "Metal", shellReflectance = 0.5},
     emerald = {id = "emerald", name = "Emerald", tint = {16, 190, 96}, amount = 0.45, trimAmount = 0.8, material = "Glass", reflectance = 0.23,
         sparkle = {150, 255, 195}, sparkleRate = 4.2, sparkleCount = 6, sparkleSize = 1.65, accent = {10, 235, 120}, accentAmount = 0.9, sheen = 0.6, gain = 0.97, satGain = 1.25,
-        rim = {40, 255, 140}, rimTransparency = 0.15, shell = {255, 255, 255}, shellTransparency = 0.9, shellMaterial = "Glass", accentMaterial = "Glass", shellReflectance = 0.3},
+        rim = {40, 255, 140}, rimTransparency = 0.15, shell = {40, 255, 120}, shellTransparency = 0.5, shellMaterial = "Glass", accentMaterial = "Glass", shellReflectance = 0.5},
     diamond = {id = "diamond", name = "Diamond", tint = {205, 240, 255}, amount = 0.6, trimAmount = 0.8, material = "Glass", reflectance = 0.3,
         sparkle = {235, 250, 255}, sparkleRate = 5, sparkleCount = 8, sparkleSize = 1.9, accent = {225, 245, 255}, accentAmount = 0.92, sheen = 0.7, gain = 1.14, satGain = 0.9,
-        rim = {200, 245, 255}, rimTransparency = 0.12, shell = {255, 255, 255}, shellTransparency = 0.9, shellMaterial = "Glass", accentMaterial = "Glass", shellReflectance = 0.3,
+        rim = {200, 245, 255}, rimTransparency = 0.12, shell = {150, 200, 255}, shellTransparency = 0.5, shellMaterial = "Glass", accentMaterial = "Glass", shellReflectance = 0.5,
         shimmer = {{255, 170, 215}, {170, 220, 255}, {190, 255, 215}, {255, 245, 170}}, shimmerSpeed = 0.5},
 }
 -- BD-308 baked sheen: the generated textures carry flat facet shading (k = pixel luma / species body luma, 0.3..1.6). On a fused

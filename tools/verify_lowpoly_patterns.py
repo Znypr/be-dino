@@ -186,7 +186,7 @@ assert(gold.accentMaterial == "Metal" and emerald.accentMaterial == "Glass" and 
 for _, id in Tier.Order do
     local e = Tier.get(id)
     assert(e.shellTransparency >= Tier.ShellTransparency[1] and e.shellTransparency <= Tier.ShellTransparency[2], id .. " shell transparency in 0.8..0.95")
-    assert(e.shellReflectance > 0 and e.shellReflectance <= Tier.MaxReflectance and Tier.ShellScale > 1 and Tier.ShellScale <= 1.02, id .. " shell gloss / scale")
+    assert(e.shellReflectance > 0 and e.shellReflectance <= Tier.MaxShellReflectance and Tier.ShellScale > 1 and Tier.ShellScale <= 1.02, id .. " shell gloss / scale")
     assert(e.shellMaterial ~= "Neon" and e.shellMaterial ~= "ForceField", id .. " shell not neon")
 end
 local gs, es, ds = gold.shell, emerald.shell, diamond.shell
@@ -321,15 +321,15 @@ def check_key():
     assert 'Tier.regionColor' in paint, "horn / claw texels are painted in the tier ramp"
     assert 'LPTierShell' in dinos and 'Tier.ShellScale' in dinos and 'Transparency = math.clamp(entry.shellTransparency' in dinos, "translucent glossy shell per textured part"
     tier = (ROOT / 'src/shared/LowPolyTier.luau').read_text(encoding='utf-8')
-    assert 'Tier.ShellTransparency = {0.8, 0.95}' in tier, "gloss shell is near-clear (no colour tint)"
+    assert 'Tier.ShellTransparency = {0.4, 0.95}' in tier, "round 9: shell is a translucent tier-coloured coat"
     for tid, rimc in (('gold', '255, 190, 40'), ('emerald', '40, 255, 140'), ('diamond', '200, 245, 255')):
         m = re.search(tid + r' = \{id.*?shell = \{([^}]*)\}', tier, re.S)
-        assert m.group(1).strip() == '255, 255, 255', f"{tid} shell must be neutral white (body colours stay base)"
+        assert m.group(1).strip() == {'gold': '255, 170, 30', 'emerald': '40, 255, 120', 'diamond': '150, 200, 255'}[tid], f"{tid} shell is the tier colour (round 9 live tuning)"
         assert 'rim = {' + rimc + '}' in tier, f"{tid} rim colour"
     assert 'Tier.RimTransparency = {0.1, 0.25}' in tier
-    assert 'Highlight' in dinos and 'FillTransparency, h.OutlineTransparency = col, 1, trans' in dinos and 'DepthMode.Occluded' in dinos, "tier rim Highlight"
+    assert 'Highlight' in dinos and 'Tier.HighlightFill, 0' in dinos and 'DepthMode.Occluded' in dinos, "tier rim Highlight"
     assert 'LPTierGlow' in dinos and 'Enum.Material.Neon' in dinos and 'Tier.GlowLayers' in dinos and 'Tier.BodyGloss' in dinos, "Neon glow shells on every textured part + body gloss"
-    assert 'Tier.GlowLayers[2]' in dinos, "Effects Lite: single glow layer"
+    assert 'Tier.GlowLayers[2]' in dinos and 'Tier.UseGlowShells = false' in tier, "glow shells kept but OFF (round 9), Lite: single layer"
     assert 'BodyGloss = 0.2' in tier and 'GlowLayers' in tier, "glow layers / gloss constants"
     lod = (ROOT / 'src/shared/EffectsLod.luau').read_text(encoding='utf-8')
     m = re.search(r'RimHighlights = table.freeze\(\{full = (\d+), lite = (\d+), off = (\d+)\}\)', lod)

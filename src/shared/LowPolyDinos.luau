@@ -115,7 +115,7 @@ local function rim(container: Instance, entry: any?, body: BasePart?)
     if own or rimCount() < cap then
         local h = Instance.new("Highlight")
         h.Name, h.Adornee = "LPTierRim", container
-        h.OutlineColor, h.FillTransparency, h.OutlineTransparency = col, 1, trans
+        h.FillColor, h.OutlineColor, h.FillTransparency, h.OutlineTransparency = col, col:Lerp(Color3.new(1, 1, 1), Tier.HighlightWhiten), Tier.HighlightFill, 0
         h.DepthMode = Enum.HighlightDepthMode.Occluded
         h.Parent = container
         liveRims[h] = true
@@ -124,6 +124,7 @@ local function rim(container: Instance, entry: any?, body: BasePart?)
     if mode == "off" then return end
     -- soft glow (round 8): inflated Neon shell copies on EVERY textured part (body, head, tail, legs, arms); two layers = gradient falloff
     -- (Effects Lite: the outer soft layer only). Mostly seen at the silhouette; high transparency keeps the dino's own colours.
+    if not Tier.UseGlowShells then return end
     local layers = if mode == "lite" then {Tier.GlowLayers[2]} else Tier.GlowLayers
     for _, p in container:GetDescendants() do
         local texId = if p:IsA("MeshPart") then p:GetAttribute("LPTexture") else nil
@@ -173,8 +174,17 @@ local function shells(container: Instance, entry: any?)
             shell.Size = p.Size * Tier.ShellScale
             shell.Color = Color3.fromRGB(entry.shell[1], entry.shell[2], entry.shell[3])
             shell.Material = (Enum.Material :: any)[entry.shellMaterial] or Enum.Material.SmoothPlastic
-            shell.Reflectance = math.min(entry.shellReflectance, Tier.MaxReflectance)
+            shell.Reflectance = math.min(entry.shellReflectance, Tier.MaxShellReflectance)
             shell.Transparency = math.clamp(entry.shellTransparency, Tier.ShellTransparency[1], Tier.ShellTransparency[2])
+            local maps = (Tier.Maps :: any)[entry.id]
+            if maps and maps.color ~= "" then -- baked crystal coat: alpha lives in the ColorMap, so the part itself is opaque
+                local sa = Instance.new("SurfaceAppearance")
+                sa.AlphaMode = Enum.AlphaMode.Transparency
+                sa.ColorMap = maps.color
+                sa.NormalMap, sa.RoughnessMap = (Tier.Maps :: any).normal, (Tier.Maps :: any).roughness
+                sa.Parent = shell
+                shell.Transparency = 0
+            end
             shell.CanCollide, shell.CanQuery, shell.CanTouch, shell.Massless, shell.CastShadow = false, false, false, true, false
             shell.CFrame = p.CFrame
             local w = Instance.new("WeldConstraint")

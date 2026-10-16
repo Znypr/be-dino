@@ -75,6 +75,12 @@ Every art asset the game uses at runtime. Add a line here when an asset is added
 | sfx ui_click | sound | assets/audio/sfx/ui_click.wav | - | src/shared/Sfx.luau | planned |
 | sfx weather_start | sound | assets/audio/sfx/weather_start.wav | - | src/shared/Sfx.luau | planned |
 
+| tier_gold_crystal_color | texture 512 px RGBA tileable (Blender Cycles bake, 4D torus Voronoi facets, alpha 0.25-0.6 + opaque edge lines) | resources/effects/tiers/tier-gold-color.png | - (owner uploads) | src/shared/LowPolyTier.luau Tier.Maps.gold.color -> LowPolyDinos shells SurfaceAppearance (AlphaMode Transparency) | baked 2026-10-16, NOT uploaded, unbound (shell stays plain Glass); edge-bleed from silhouette NOT achievable with UV-independent maps |
+| tier_emerald_crystal_color | texture 512 px RGBA tileable (Blender Cycles bake, 4D torus Voronoi facets, alpha 0.25-0.6 + opaque edge lines) | resources/effects/tiers/tier-emerald-color.png | - (owner uploads) | src/shared/LowPolyTier.luau Tier.Maps.emerald.color -> LowPolyDinos shells SurfaceAppearance (AlphaMode Transparency) | baked 2026-10-16, NOT uploaded, unbound (shell stays plain Glass); edge-bleed from silhouette NOT achievable with UV-independent maps |
+| tier_diamond_crystal_color | texture 512 px RGBA tileable (Blender Cycles bake, 4D torus Voronoi facets, alpha 0.25-0.6 + opaque edge lines) | resources/effects/tiers/tier-diamond-color.png | - (owner uploads) | src/shared/LowPolyTier.luau Tier.Maps.diamond.color -> LowPolyDinos shells SurfaceAppearance (AlphaMode Transparency) | baked 2026-10-16, NOT uploaded, unbound (shell stays plain Glass); edge-bleed from silhouette NOT achievable with UV-independent maps |
+| tier_crystal_normal | texture 512 px tileable normal map (Blender bake, flat crystal facets) | resources/effects/tiers/tier-crystal-normal.png | - (owner uploads) | Tier.Maps.normal | baked 2026-10-16, NOT uploaded |
+| tier_crystal_roughness | texture 512 px tileable roughness (Blender bake) | resources/effects/tiers/tier-crystal-roughness.png | - (owner uploads) | Tier.Maps.roughness | baked 2026-10-16, NOT uploaded |
+
 Notes
 
 1. Sound pack: files exist in git, IDs are not uploaded yet, so `Sfx.Sounds` ids are empty (silent) until bound.
