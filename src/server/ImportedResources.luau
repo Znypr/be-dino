@@ -59,6 +59,10 @@ function Import.loadGeneratedWorld(): (number, number)
                 local mesh=found:Clone()
                 container:Destroy()
                 for _,child in mesh:GetChildren() do if not child:IsA("SurfaceAppearance") then child:Destroy() end end
+                -- BD-460: per-asset foliage tone (data in WorldGeneratedMeshes.Tone); a missing property only skips the tint.
+                local tone=GeneratedMeshes.Tone[key]
+                local surface=mesh:FindFirstChildOfClass("SurfaceAppearance")
+                if tone and surface then pcall(function() surface.Color=Color3.new(tone[1],tone[2],tone[3]) end) end
                 mesh.Name=key
                 mesh.Anchored,mesh.CanCollide,mesh.CanTouch,mesh.CanQuery,mesh.Massless=true,false,false,false,true
                 mesh:SetAttribute("GeneratedAssetId",asset.assetId)
