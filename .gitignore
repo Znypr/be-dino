@@ -17,3 +17,6 @@ build/fx-preview/
 
 # BD-131 intermediate Blender frames (tools/render_weather_textures.py); the assembled sheets live in resources/effects/fx-v2/
 build/fx-weather-frames/
+
+# BD-430/431 intermediate Blender frames (tools/render_fx_anime.py); the assembled sheets live in resources/effects/fx-v2/
+build/fx-anime-frames/
