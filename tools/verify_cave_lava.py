@@ -144,8 +144,9 @@ end
 assert(rows>=8 and rows<=Props.MaxSignGuis,"sign rows "..rows.." within the sign gui cap "..Props.MaxSignGuis)
 assert(sc.forRow("cave_rock_round","nests")==nil and sc.forRow("hub_sign_stone","nowhere")==nil and sc.forRow("hub_sign_stone","heart")==nil and sc.forRow("hub_sign_stone",5)==nil,"no text for other keys / stations")
 assert(Props.SignLightInfluence==0 and Props.SignBrightness>=1.5,"signs self-lit and boosted for the dim cave")
+local sb=Props.SignBillboard assert(sb.maxDistance>=60 and sb.width>=100 and sb.height>=30,"billboard word is big and visible from afar")
 for key,cfg in Props.SignText do
- assert(Props.Assets[key] and cfg.face=="Front" and cfg.inset>=0 and cfg.inset<0.4,"sign text config "..key)
+ assert(Props.Assets[key] and cfg.face=="Front" and cfg.back=="Back" and cfg.inset>=0 and cfg.inset<0.4,"sign text config "..key)
 end
 
 -- ---- warm recolour
@@ -227,7 +228,8 @@ def static_checks():
     assert 'FredokaOne' in props and 'TextScaled = true' in props and 'SignCopy.forRow' in props and 'signGuis < Props.MaxSignGuis' in props, \
         'sign text: copy table word, FredokaOne, TextScaled, capped'
     assert 'gui.LightInfluence = Props.SignLightInfluence' in props and 'gui.Brightness = Props.SignBrightness' in props, 'sign text is self-lit (readable in the dim cave)'
-    assert props.count('Instance.new("SurfaceGui")') == 1 and 'gui.Face = ' in props, 'one SurfaceGui, one face (front only)'
+    assert props.count('Instance.new("SurfaceGui")') == 1 and 'gui.Face = ' in props and 'cfg.back' in props, 'SurfaceGui built per face in a loop: front and back (every side)'
+    assert 'Instance.new("BillboardGui")' in props and 'board.MaxDistance' in props and 'board.AlwaysOnTop = false' in props and 'board.LightInfluence = Props.SignLightInfluence' in props, 'billboard word above the sign: max distance, occluded by walls, self-lit'
     assert 'Props.Warm' in props and 'SurfaceAppearance' in props, 'warm recolour strips the SurfaceAppearance'
     lead = (ROOT / 'src/server/Leaderboards.luau').read_text()
     assert 'CaveHubLayout.boardSpots()' in lead and 'fame.x+10' not in lead, 'Fame boards use the pure board spots'

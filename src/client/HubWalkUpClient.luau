@@ -1,11 +1,11 @@
 --!strict
--- BD-289 first part (docs/104 s8): walking up to a station sign. Each menu station gets an invisible anchor at its sign with
--- a ProximityPrompt (hold 0, 10 studs, a 96 px tap target on phones) and a pad dwell (0.5 s on the pad opens the station
--- once). Both end in the same ctx.open / ctx.openFusion the rail uses. Leaving a pad closes nothing. Decisions live in the
--- pure HubWalkUpRules (tools/verify_cave_gate.py). The moss-trail guide beam is NOT built here (BD-289 stays open for it).
+-- BD-289 (docs/104 s8, OWNER 2026-10-16): each menu station gets an invisible anchor at its sign with a ProximityPrompt
+-- (hold 0, 10 studs, key G, a 96 px tap target on phones). The shop opens ONLY when the player presses it, never by walking up.
+-- Fast travel (HubTravelClient) opens the menu itself because the player chose it. Rules: pure HubWalkUpRules.
 -- attach() returns nil at once while Config.CaveHub is false.
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local ContextActionService = game:GetService("ContextActionService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -42,7 +42,8 @@ function Client.attach(ctx: any, isBusy: () -> boolean): any?
         anchor.Size = Vector3.new(1, 1, 1)
         anchor.Position = Vector3.new(s.signX, Layout.FloorY + Rules.PromptHeight, s.signZ + Layout.CenterZ)
         local prompt = Instance.new("ProximityPrompt")
-        prompt.Name, prompt.ActionText, prompt.ObjectText = "Walk up", s.sign, ""
+        prompt.Name, prompt.ActionText, prompt.ObjectText = "Open", "Open " .. s.sign, ""
+        prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode[Rules.PromptKey], Enum.KeyCode.ButtonL1
         prompt.HoldDuration, prompt.MaxActivationDistance, prompt.RequiresLineOfSight = 0, Rules.PromptDistance, false
         prompt.Style = Enum.ProximityPromptStyle.Custom
         prompt:SetAttribute("HubWalkUp", true)
@@ -61,7 +62,7 @@ function Client.attach(ctx: any, isBusy: () -> boolean): any?
         board.Name, board.Adornee, board.Size, board.AlwaysOnTop = "HubWalkUpFace", prompt.Parent :: Instance, UDim2.fromOffset(TAP, TAP), true
         board.StudsOffset = Vector3.new(0, 2, 0)
         local button = Instance.new("TextButton")
-        button.Size, button.BackgroundColor3, button.Text, button.Font, button.TextSize = UDim2.fromScale(1, 1), Color3.fromRGB(255, 200, 70), prompt.ActionText, Enum.Font.FredokaOne, 22
+        button.Size, button.BackgroundColor3, button.Text, button.Font, button.TextSize = UDim2.fromScale(1, 1), Color3.fromRGB(255, 200, 70), Rules.PromptButtonText, Enum.Font.FredokaOne, 22
         button.TextColor3, button.TextWrapped = Color3.fromRGB(40, 28, 70), true
         local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(1, 0) corner.Parent = button
         local stroke = Instance.new("UIStroke") stroke.Thickness, stroke.Color = 3, Color3.fromRGB(40, 28, 70) stroke.Parent = button
@@ -70,19 +71,22 @@ function Client.attach(ctx: any, isBusy: () -> boolean): any?
             prompt:InputHoldBegin()
             prompt:InputHoldEnd()
         end)
+        local hint = Instance.new("TextLabel")
+        hint.Size, hint.Position, hint.BackgroundTransparency = UDim2.fromOffset(TAP, 22), UDim2.fromOffset(0, TAP + 2), 1
+        hint.Font, hint.TextSize, hint.Text, hint.TextColor3 = Enum.Font.FredokaOne, 18, "[" .. Rules.PromptKey .. "]", Color3.fromRGB(255, 240, 205)
+        hint.TextStrokeTransparency = 0.3
+        hint.Visible = UserInputService.KeyboardEnabled
+        hint.Parent = board
         board.Parent = player:WaitForChild("PlayerGui")
-        prompt.PromptHidden:Once(function() board:Destroy() end)
-    end)
-
-    RunService.Heartbeat:Connect(function()
-        local character = player.Character
-        local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
-        local pad: string? = nil
-        if root and root:IsA("BasePart") and character:GetAttribute("RunState") == "Sanctuary" then
-            pad = Rules.padAt(root.Position.X, root.Position.Z)
-        end
-        local station = Rules.step(state, pad, canOpen(), os.clock())
-        if station then openStation(station) end
+        local actionName = "HubOpen_" .. prompt.Parent.Name
+        ContextActionService:BindAction(actionName, function(_, state)
+            if state == Enum.UserInputState.Begin then prompt:InputHoldBegin() prompt:InputHoldEnd() end
+            return Enum.ContextActionResult.Sink
+        end, false, prompt.KeyboardKeyCode, prompt.GamepadKeyCode)
+        prompt.PromptHidden:Once(function()
+            ContextActionService:UnbindAction(actionName)
+            board:Destroy()
+        end)
     end)
 
     return {note = function(station: string) Rules.note(state, station, os.clock()) end}

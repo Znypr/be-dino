@@ -100,6 +100,11 @@ Open: per-biome daylight rules beyond the island base are not documented (confli
 - Automatic luminance bands (mean screen luminance 0 = black, 1 = white): **cave 0.15-0.35, island 0.35-0.75**. The quality gates (docs/117, tools/qa/luminance.py) fail outside these bands.
 - Cool blue-grey stone is ACCEPTED as cave decoration (depth and contrast); warmth comes from lamps, shafts, amber crystals and warm props. Currency and shop crystals stay amber/yellow (decision 2026-10-16). BD-414/415 are resolved as "accepted, no recolour".
 
+### 6.2 Cave stations: prompt-only opening and every-side signs (OWNER 2026-10-16)
+- A shop or station NEVER opens because the player walked near it. Each menu station has a `ProximityPrompt` (big round "Open" button, >= 96 px tap, keyboard **G**, gamepad L1) that appears within 10 studs and opens it only when pressed. G was chosen because E is LEAP, F is BITE, C and B open Collection and Eggs. The pad dwell rule (0.5 s) was removed from `HubWalkUpRules`; `tools/verify_cave_gate.py` asserts no auto-open API remains.
+- Fast travel (Crystal Shop perk, docs/104 s7) still opens the shop on arrival, because the player chose it by pressing the rail button; `walkUp.note()` debounces a prompt press in the same instant.
+- Station signs read from every side: SurfaceGui on the Front and Back faces plus a small lamp-lit BillboardGui word above the sign (max distance 90 studs, not always on top, self-lit). Positions come from `CaveHubLayout`, copy from `HubSignCopy`.
+
 ## 7. Sound rules
 Source: [87](87-vision-and-feel-guide.md), [110](110-sound-audit.md), [62](62-polish-sfx-goal-juice.md), [63](63-sfx-pack.md). Agents cannot hear: never call a sound "fine"; say "unheard".
 - Soft, round, bubbly (marimba, kalimba, glass bubbles, soft pops); no saw/square buzz, clipping, harsh highs (above about 8 kHz), noise bursts, sirens.

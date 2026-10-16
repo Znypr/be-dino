@@ -119,23 +119,13 @@ assert(W.padAt(0/0,1)==nil and W.padAt(nil,nil)==nil)
 -- pads never overlap (so at most one station per position)
 for _,a in W.stations() do for _,b in W.stations() do if a~=b then assert(math.sqrt((a.x-b.x)^2+(a.z-b.z)^2)>a.r+b.r,"pads apart") end end end
 
+-- OWNER 2026-10-16: a station never opens by walking up: no step / dwell exists, only trigger() (a prompt press)
+assert(W.step==nil and W.DwellSeconds==nil,"no dwell auto-open API remains")
+assert(W.PromptKey=="G" and W.PromptKey~="E","prompt key is not LEAP [E]")
 local ws=W.newState()
-assert(W.step(ws,"nests",true,0)==nil,"arriving starts the dwell")
-assert(W.step(ws,"nests",true,0.49)==nil,"not before 0.5 s")
-assert(W.step(ws,"nests",true,0.5)=="nests","opens at 0.5 s")
-for i=1,40 do assert(W.step(ws,"nests",true,0.5+i*0.1)==nil,"never again while standing there") end
-assert(W.step(ws,nil,true,5)==nil,"leaving closes nothing and resets")
-assert(W.step(ws,"nests",true,5.1)==nil,"walking back in starts a fresh dwell")
-assert(W.step(ws,"nests",true,5.6)=="nests","opens again after a fresh 0.5 s")
--- walking past (0.3 s on a pad) never opens
-ws=W.newState() W.step(ws,"potions",true,0) W.step(ws,"potions",true,0.3) W.step(ws,nil,true,0.4)
-assert(W.step(ws,"index",true,0.5)==nil and W.step(ws,"index",true,0.9)==nil,"walking past opens nothing")
--- a menu already open / trip running: the dwell waits until it could open
-ws=W.newState() W.step(ws,"fusion",false,0) assert(W.step(ws,"fusion",false,3)==nil,"blocked while a menu is open")
-assert(W.step(ws,"fusion",true,3.1)==nil and W.step(ws,"fusion",true,3.6)=="fusion","dwell restarts once it can open")
--- arriving by teleport: note() stops the pad dwell reopening the menu that the trip opened
-ws=W.newState() W.note(ws,"style",0) W.step(ws,"style",true,0.1)
-assert(W.step(ws,"style",true,1)==nil and W.step(ws,"style",true,5)==nil,"teleport arrival does not double open")
+-- arriving by teleport: note() debounces a prompt press in the same instant
+ws=W.newState() W.note(ws,"style",0)
+assert(W.trigger(ws,"style",true,0.1)==false,"a press right after a teleport arrival does not double open")
 -- ProximityPrompt: once, debounced, only menu stations, only when it can open
 ws=W.newState()
 assert(W.trigger(ws,"nests",true,10)==true,"first prompt opens")
@@ -144,10 +134,7 @@ assert(W.trigger(ws,"potions",true,10.2)==false,"debounce between any two opens"
 assert(W.trigger(ws,"potions",true,10.6)==true,"another station after the gap")
 assert(W.trigger(ws,"settings",true,20)==false and W.trigger(ws,"gate",true,20)==false and W.trigger(ws,5,true,20)==false,"non-menu signs never open")
 assert(W.trigger(ws,"nests",false,30)==false,"cannot open while blocked")
-W.step(ws,"nests",true,31) W.step(ws,nil,true,31.1)
-assert(W.trigger(ws,"nests",true,40)==true,"after leaving, the prompt works again")
--- opened by prompt: the pad dwell does not open a second time
-ws=W.newState() W.step(ws,"index",true,0) assert(W.trigger(ws,"index",true,0.2)) assert(W.step(ws,"index",true,2)==nil,"prompt then dwell: one open")
+assert(W.trigger(ws,"nests",true,40)==true,"the prompt keeps working on later visits")
 
 -- ---- six arrival spots under load (docs/104 s9): HubTravelRules.pickSpot is the only spacing logic
 local P=HubTravelRules
@@ -232,6 +219,10 @@ def static_checks():
     assert 'FireServer' not in (ROOT / 'src/client/HubGateClient.luau').read_text(), 'the gate bar is feedback only'
     travel = (ROOT / 'src/client/HubTravelClient.luau').read_text()
     assert 'WalkUp.attach(' in travel and 'GateBar.attach(' in travel and 'walkUp.note(station)' in travel
+    walk = (ROOT / 'src/client/HubWalkUpClient.luau').read_text()
+    assert 'Heartbeat' not in walk and 'padAt' not in walk, 'no pad dwell: nothing opens without a prompt press'
+    assert 'KeyboardKeyCode' in walk and 'Rules.PromptKey' in walk and 'GamepadKeyCode' in walk, 'prompt has its own key and gamepad key'
+    assert walk.count('openStation(') == 2, 'openStation is only called from the prompt Triggered handler (one def, one call)'
     boot_c = (ROOT / 'src/client/Bootstrap.client.luau').read_text()
     assert 'HubGateClient' not in boot_c and 'HubWalkUpClient' not in boot_c, 'client Bootstrap is untouched (no new locals)'
     top = [l for l in boot_c.splitlines() if re.match(r'^local\s', l)]
