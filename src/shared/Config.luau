@@ -299,6 +299,10 @@ return table.freeze({
     NpcPredatorsEnabled = true,
     SecurityTestHarnessEnabled = false,
     ArtTestHarnessEnabled = false,
+    -- BD-085/BD-322 (docs/127): owner-only phone QA overlay + [BD-QA] log marks. OFF in every committed build (pinned by
+    -- release_profiles.py). To measure on a phone: set true and add your UserId locally, build, publish privately, never commit.
+    QaOverlayEnabled = false,
+    QaOverlayUserIds = {}, -- Roblox UserIds (numbers) allowed to see the overlay; Studio (unpublished) is always allowed while the flag is on
     ArtPreviewRequestCooldownSeconds = 0.25,
 
     -- Build 006/007 probes passed and are disabled again.

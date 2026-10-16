@@ -10,6 +10,7 @@ Core.CoalesceSeconds = 0.2 -- changes made inside one window leave as one messag
 -- PRIVATE: only the owner needs it. Never set as a Player attribute (tools/verify_private_state.py enforces this).
 local PRIVATE = {
     -- inventory and progression
+    "QaOverlay", -- BD-085 owner phone QA overlay gate
     "CollectionJson", "ProgressionJson", "DiscoveryJson", "SettingsJson", "RevealSkipJson",
     "Crystals", "AccountXP", "PlaySeconds", "RarestCaught", "RobuxSpent", "ProfileRevision",
     "CompyCopies", "CompyGold", "TriceratopsCopies", "TriceratopsGold", "TyrannosaurusCopies", "TyrannosaurusGold",
