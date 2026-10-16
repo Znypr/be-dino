@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "a2cae11117ce534a3fc5e190939efa9da4493d2cc3a2f71273516308c17cb063",
+  "place_sha256": "ae89d2479e1aaf4593768c367b6be190ffa2c09049e908ce8c8c32dcc001fec9",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -11,6 +11,7 @@
     "src/shared/AuthoredCreatures.luau": "11dbe63a11afbdb8bc9312274236eb447263078dabb19cbef5613e11bd5fa0cf",
     "src/shared/BiomeMap.luau": "34f7c83a4beb87771dc400137f63808df3138833cfbee579de313fbdb4d5058f",
     "src/shared/BiomePlacement.luau": "bd035baeb2ce80acc008fe8fd9535d1edcd20b0dba6dd118253d2f1ee363578d",
+    "src/shared/ClassMovement.luau": "e5fd1d83e6edb2695ae4acbc54e65828c8879a7578dea77d70a44fe209e67f59",
     "src/shared/ColourBonus.luau": "da7cc4479d5c2633081cfe528221ad31e5646704b17626f6d379a3f2d62612de",
     "src/shared/CombatConfig.luau": "52a50958a0102a2a71cdd5f48480a48dd80903ffba4fb2d6ea478080d3a006b6",
     "src/shared/CombatState.luau": "73017a590a5d9717cfe78b5c26e59377dad37a05855a71108e672c319f68054d",
