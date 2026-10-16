@@ -21,7 +21,7 @@ Lab.CategoryOf = table.freeze({
     hatch_reveal_common = "hatch", hatch_reveal_uncommon = "hatch", hatch_reveal_rare = "hatch",
     hatch_reveal_epic = "hatch", hatch_reveal_legendary = "hatch",
     hatch_crunch_raw = "hatch", hatch_chime_raw = "hatch",
-    shiny_bang = "rare", big_thud = "rare", fusion_reveal = "rare",
+    shiny_bang = "rare", big_thud = "rare", fusion_reveal = "rare", rare_hatch_fanfare = "rare", mutation_dewdrop_reveal = "mutation", mutation_charged_reveal = "mutation", mutation_frost_reveal = "mutation", mutation_seismic_reveal = "mutation", mutation_ember_reveal = "mutation", mutation_aurora_reveal = "mutation", mutation_bloodmoon_reveal = "mutation", defeat_soft = "reward", cracked_fail = "hatch", crystal_cue = "reward", nest_open_cue = "reward",
     run_start = "reward", run_end = "reward", level_up = "reward", shop_buy = "reward", shop_refresh = "reward",
     weather_start = "weather",
     rain_bed = "weather", thunder_bed = "weather", thunder_roll = "weather", thunder_strike = "weather",

@@ -117,6 +117,9 @@ assert(Ftue.isSpecialFood("egg") and Ftue.isSpecialFood("amber") and not Ftue.is
 assert(not Ftue.hasFoundEgg({}) and not Ftue.hasFoundEgg(nil))
 assert(Ftue.hasFoundEgg({sessionCatch = true}) and Ftue.hasFoundEgg({activeEggs = 1}) and Ftue.hasFoundEgg({lastRunEggs = 3}))
 assert(Ftue.hasFoundEgg({waitingEggs = 5}) and Ftue.hasFoundEgg({copies = 2}) and not Ftue.hasFoundEgg({copies = 1, activeEggs = 0}))
+-- BD-440: goal line and Goals panel hidden on a brand-new profile, shown after the first egg
+assert(not Ftue.showGoals({copies = 1, activeEggs = 0, waitingEggs = 0, lastRunEggs = 0}) and not Ftue.showGoals(nil))
+assert(Ftue.showGoals({lastRunEggs = 1}) and Ftue.showGoals({copies = 3}))
 
 -- BD-367 moment
 assert(Ftue.momentAllowed(0, 1, true, nil, 0), "first egg: moment")

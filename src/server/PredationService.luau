@@ -3,6 +3,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
+local FoodCatchRules = require(ReplicatedStorage.Shared.FoodCatchRules)
+local RunEggTags = require(ReplicatedStorage.Shared.RunEggTags)
 
 local CooldownMemory = require(script.Parent.CooldownMemory)
 
@@ -34,13 +36,13 @@ function PredationService.start(runLifecycle, dinosaur)
         if not victimMemory.allow(attacker.player.UserId, "victim" .. victimUserId, now, Config.RepeatVictimCatchCooldownSeconds) then
             return
         end
-        local catches = numberAttribute(attacker.character, "CatchScore", 0)
-        local cap = math.min(Config.MaxCatchScore, Config.RunEggMaxPerRun) -- BD-044: one run egg per catch
-        if catches < cap then
-            local bonus=(attacker.character:GetAttribute("WeatherLootCarry") or 0)+(attacker.character:GetAttribute("WeatherLootMultiplier") or 1)
-            local whole=math.floor(bonus)
-            attacker.character:SetAttribute("WeatherLootCarry",bonus-whole)
-            attacker.character:SetAttribute("CatchScore", math.min(cap,catches+whole))
+        -- BD-439 (owner 2026-10-16): a player kill is a SMALL capped egg bonus (0.25 egg, max 3 per run), not +1. Growth is separate.
+        local whole, carry, total = FoodCatchRules.awardKill(numberAttribute(attacker.character, "PredationEggs", 0), numberAttribute(attacker.character, "PredationEggCarry", 0))
+        attacker.character:SetAttribute("PredationEggCarry", carry)
+        attacker.character:SetAttribute("PredationEggs", total)
+        if whole > 0 then
+            local catches = numberAttribute(attacker.character, "CatchScore", 0)
+            attacker.character:SetAttribute("CatchScore", RunEggTags.nextScore(catches, whole, Config.MaxCatchScore, Config.RunEggMaxPerRun))
         end
     end
 
