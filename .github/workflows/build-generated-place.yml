@@ -86,6 +86,7 @@ jobs:
           python tools/verify_cave_overlap.py --runner /tmp/luau/luau
           python tools/verify_cave_terrain.py --runner /tmp/luau/luau
           python tools/verify_cave_lighting.py --runner /tmp/luau/luau
+          python tools/verify_hub_travel_client.py --runner /tmp/luau/luau
           python tools/verify_modal_blur.py --runner /tmp/luau/luau
           python tools/qa/palette_report.py --runner /tmp/luau/luau
           python tools/qa/ground_report.py
