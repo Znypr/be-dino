@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "b8e9d28827b10e964259c01f88e0b116be93c782e0bd6c7355adbae86cdfe674",
+  "place_sha256": "757cebc96b675cc1174b9503fc45d4b1abde06dbef1575f925784ec22c5a20ae",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -13,8 +13,8 @@
     "src/shared/BiomePlacement.luau": "1ce66de5fd202174cc573bcaa648e81c227efeb571d81f8328af5082b3bc6969",
     "src/shared/CameraOcclusion.luau": "b88afa12979540191a9b819a0901a8d60044bc40e472b99f23543c52988238cf",
     "src/shared/CaveGateRules.luau": "ebb2dfab381a74683ff801e6334a34d0e7a9e85bbd72242622b20c54353339c3",
-    "src/shared/CaveHubLayout.luau": "a262202e49c2312277dedd141df131047c58bcf72b4e2e0fc343167dd7b6e236",
-    "src/shared/CaveTerrainRules.luau": "ff4c05efbb51d8ff89c9f794f317d76f42fd75837be730f9bf87530aa809c889",
+    "src/shared/CaveHubLayout.luau": "dcfdfb065e0444de590e48b823fcbe957d77d3f495f17fd7b73536730efd171c",
+    "src/shared/CaveTerrainRules.luau": "5a93a5066fa9cb8ec6b52d0fdab95d20e1e3cb7bdfdb0eda5d7c64c8c60a7cac",
     "src/shared/ClassMovement.luau": "e5fd1d83e6edb2695ae4acbc54e65828c8879a7578dea77d70a44fe209e67f59",
     "src/shared/ColourBonus.luau": "da7cc4479d5c2633081cfe528221ad31e5646704b17626f6d379a3f2d62612de",
     "src/shared/CombatConfig.luau": "d0f263beff655b036c4031668c496befa493bbdbb246c76f4b4ac7474038b0e7",
@@ -282,7 +282,7 @@
     "src/server/IdentityFusion.luau": "1964cf89c63630ba0c68df704b5f19505fb16d197165a3274cb3aabb33fdc97a",
     "src/server/ImportedResources.luau": "925c62b53f54d2fddea1915198727f942c62c0c226c0cc6b587c613168a0f002",
     "src/server/IslandTerrain.luau": "fe9b06e93f736f23921532bdc20ac7417dac5091550de35f378695169a0f383a",
-    "src/server/Leaderboards.luau": "73cf5fa01078bc3c551cbfff1c3de517aab0f35e1406953f88cb548fe98d79e0",
+    "src/server/Leaderboards.luau": "0ca477d551cd3aabb3c9f3c6d56ea59d419e77646a98b42d0594aa9330b27ddf",
     "src/server/LeapService.luau": "c027361c4e3a45b123659be65d9c8491eaf41410f8c405e3bb6cda1b5aa878fc",
     "src/server/LowPolyDinoLoader.luau": "2333ed48ce7545914e8c870ae1caa6bd92094fc2919f0266da90fe89457d12a5",
     "src/server/MovementGuard.luau": "61af7752572c8a95afed8d094dbb04560d7cd2725f2f23c0db4180fbdafed488",
