@@ -33,20 +33,20 @@ Assets.Requested = {
     starFour = {id = "rbxassetid://71657118485647", fallback = "spark"},    -- four-point twinkle: the fx3 sparkle sheet
     crystalSheet = {id = "", fallback = "spark"},  -- frost crystals, droplets, pebbles, embers 4x4
     -- Pending owner uploads (docs/120): bind with tools/bind_assets.py. A key nothing reads yet simply resolves to its built-in sprite.
-    glowPlateDroplet = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
-    glowPlateCrescent = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
-    glowPlateRound = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
-    ringSeismic = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    glowPlateDroplet = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); read by FxRecipes.MutationTex (docs/92); empty = today's look
+    glowPlateCrescent = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); read by FxRecipes.MutationTex (docs/92); empty = today's look
+    glowPlateRound = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); read by FxRecipes.MutationTex (docs/92); empty = today's look
+    ringSeismic = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); read by FxRecipes.MutationTex (docs/92); empty = today's look
     smokeSoft = {id = "", fallback = "smoke"}, -- owner upload slot (docs/120): BD-187 layered soft smoke flipbook; empty = built-in sprite
-    smokeDense = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
-    smokeWispy = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
-    motifDroplets = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
-    motifSoftSparks = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
-    motifSnowCrystals = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
-    motifPebbles = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
-    motifEmbers = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
-    motifAurora = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
-    motifCrimson = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    smokeDense = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); read by FxRecipes.MutationTex (docs/92); empty = today's look
+    smokeWispy = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); read by FxRecipes.MutationTex (docs/92); empty = today's look
+    motifDroplets = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); read by FxRecipes.MutationTex (docs/92); empty = today's look
+    motifSoftSparks = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); read by FxRecipes.MutationTex (docs/92); empty = today's look
+    motifSnowCrystals = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); read by FxRecipes.MutationTex (docs/92); empty = today's look
+    motifPebbles = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); read by FxRecipes.MutationTex (docs/92); empty = today's look
+    motifEmbers = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); read by FxRecipes.MutationTex (docs/92); empty = today's look
+    motifAurora = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); read by FxRecipes.MutationTex (docs/92); empty = today's look
+    motifCrimson = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); read by FxRecipes.MutationTex (docs/92); empty = today's look
     confetti = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
     lavaCrust = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
     flameTongue = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
@@ -94,10 +94,20 @@ end
 Assets.Sheets = {smokeSheet = {size = 1024, grid = 4}, sparkSheet = {size = 1024, grid = 4}, flameSheet = {size = 1024, grid = 4},
     starFour = {size = 1024, grid = 4}, swirl = {size = 1024, grid = 4}, crystalSheet = {size = 512, grid = 4},
     paintCrown = {size = 1024, grid = 4}, paintDrips = {size = 1024, grid = 4}, paintDroplet = {size = 1024, grid = 4}}
+-- BD-186..189 mutation textures (Blender renders, docs/92): smoke and motif sheets are 512 px, 4 x 4 cells of 128 px, 16 frames in order.
+-- Glow plates and ringSeismic are single 256 px images (no sheet). Which mutation reads which key: FxRecipes.MutationTex.
+for _, key in {"smokeSoft", "smokeDense", "smokeWispy", "motifDroplets", "motifSoftSparks", "motifSnowCrystals", "motifPebbles", "motifEmbers", "motifAurora", "motifCrimson"} do
+    Assets.Sheets[key] = {size = 512, grid = 4}
+end
 -- How the 16 cells play (ParticleEmitter.FlipbookMode name): OneShot = in order over the particle life, Random = one random shape,
 -- Loop = cycles at LoopFps. Keys not listed play Random.
 Assets.FlipbookMode = {smokeSheet = "OneShot", sparkSheet = "OneShot", starFour = "OneShot", flameSheet = "Random", swirl = "Loop", crystalSheet = "Random",
     paintCrown = "OneShot", paintDrips = "OneShot", paintDroplet = "Random"}
+-- The smoke puffs and motif sheets grow, rest and shrink over one particle life (OneShot). The Aurora ribbons are a seamless loop (Loop).
+for _, key in {"smokeSoft", "smokeDense", "smokeWispy", "motifDroplets", "motifSoftSparks", "motifSnowCrystals", "motifPebbles", "motifEmbers", "motifCrimson"} do
+    Assets.FlipbookMode[key] = "OneShot"
+end
+Assets.FlipbookMode.motifAurora = "Loop"
 Assets.LoopFps = 10
 -- BD-131 weather flipbooks: 512 px sheets of 16 cells of 128 px (not 1024 / 256), shapes picked at random per particle, the aurora curtain loops.
 -- Inert until an id is bound: cellRect / isSheet return nil / false while the key resolves to a built-in sprite.

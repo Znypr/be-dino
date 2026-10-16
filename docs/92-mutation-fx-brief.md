@@ -1,6 +1,6 @@
 # 92 Mutation FX brief and Blender sub-task list (BD-161 / BD-162 prep)
 
-Status: PREP. The brief for the lead to render the mutation effect art later. **2026-10-16: batch 1 (BD-186), batch 2 (BD-187 smoke flipbooks), batch 3 (BD-188) and batch 4 (BD-189 motif sheets) are rendered** (`resources/effects/fx-v2/`, [docs/77](77-asset-registry.md) `fx_glowPlate*`, `fx_ring*`; source `tools/blender/fx_glow_rings_v3.blend`, script `tools/blender/build_fx_glow_rings.py`; flipbooks `smokeSoft/Dense/Wispy` and `motif*` via `python tools/render_fx_sheets.py`, sources `tools/blender/fx_smoke_v1.blend` and `fx_motifs_v1.blend`); upload and binding pending ([docs/120](120-pending-owner-uploads-checklist.md)). BD-190 (badge icons) is not rendered and no asset IDs exist yet.
+Status: PREP. The brief for the lead to render the mutation effect art later. **2026-10-16: batch 1 (BD-186), batch 2 (BD-187 smoke flipbooks), batch 3 (BD-188) and batch 4 (BD-189 motif sheets) are rendered** (`resources/effects/fx-v2/`, [docs/77](77-asset-registry.md) `fx_glowPlate*`, `fx_ring*`; source `tools/blender/fx_glow_rings_v3.blend`, script `tools/blender/build_fx_glow_rings.py`; flipbooks `smokeSoft/Dense/Wispy` and `motif*` via `python tools/render_fx_sheets.py`, sources `tools/blender/fx_smoke_v1.blend` and `fx_motifs_v1.blend`); upload and binding pending ([docs/120](120-pending-owner-uploads-checklist.md)). **2026-10-16: the reader code is in** (section "Which texture each mutation reads" below): a slot is used only once it holds a valid upload, until then every mutation looks exactly as before. BD-190 (badge icons) is not rendered and no asset IDs exist yet.
 Feel rules come from [docs/87](87-vision-and-feel-guide.md): **anime-inspired but gentle** (layered smoke, rim light, soft rings and sparkles with real depth and bright colour, soft edges, slow rhythm, "magical sparkle" not "explosion"), always readable, budgeted, with a Reduce Motion version. Task status lives only in [the Kanban](07-kanban.md) (BD-186 to BD-190). Art rule ([docs/83](83-playtest-asset-list.md)): textures are **Blender renders**, never code-drawn.
 
 ## What exists today (BD-155 / BD-156, this branch)
@@ -30,6 +30,25 @@ Weather (not the mutation art) keeps its own look in [docs/84](84-weather-events
 | Dino Index hero, My dinos cards, dino details | tint (done), badge dot (done), later a looping glow plate behind the dino | one animated plate per viewport, off-screen viewports unload |
 | Eggs screen cards, hatch egg | colour hint (done) now; later a soft surrounding smoke ring around the egg (docs/39: never paint the shell) | shell keeps gene colours and condition look separate |
 | Hatch reveal (BD-162) | one-time burst: ring + sparkle sheet + smoke puffs, then a calm loop | skippable, soft sound only |
+
+## Which texture each mutation reads (reader code, 2026-10-16)
+One table, `FxRecipes.MutationTex` (semantic `EffectAssets` keys, pure data). A mapped key is used **only while its slot holds a valid `rbxassetid://` upload**; an empty slot keeps exactly the old key and look (verified by `tools/verify_fx.py` and `tools/verify_mutation_reveal.py`). Smoke and motif sheets are 512 px, 4 x 4 cells of 128 px, played as a flipbook (OneShot over a particle's life; Aurora is a Loop). White and neutral art is tinted from `MutationLook` as before; the coloured `motifAurora` is drawn white (no tint).
+
+| Mutation | Glow plate (hatch) | Ring | Smoke (mist / puffs) | Motif sheet (world + hatch) |
+|---|---|---|---|---|
+| Dewdrop | `glowPlateDroplet` | - | - | `motifDroplets` |
+| Charged | `glowPlateRound` | - | - | `motifSoftSparks` |
+| Frost | `glowPlateRound` | - | `smokeWispy` | `motifSnowCrystals` |
+| Seismic | `glowPlateRound` | `ringSeismic` | `smokeDense` | `motifPebbles` |
+| Ember | `glowPlateRound` | - | `smokeDense` | `motifEmbers` |
+| Aurora | `glowPlateRound` | - | - | `motifAurora` (coloured, untinted, Loop) |
+| Blood Moon | `glowPlateCrescent` | - | - | `motifCrimson` |
+
+"-" keeps today's key (`ringShock`, `smokeSheet`). Where each slot is read:
+- **Hatch reveal** (`client/MutationReveal.luau`, BD-162): glow plate, thin ring (Seismic), 3 smoke puffs, motif sprites. The pooled sprite counts and the Effects Full / Lite / Off and Reduce Motion rules are unchanged (`MutationRevealPlan.counts`); Reduce Motion shows one still plate.
+- **World dino** (`client/FxRig.luau` through `FxRecipes.resolve("mutation", ...)`): the motif emitter and the mist emitter swap their texture. Seismic gets one extra **ground ripple** layer (a Disc emitter with `ringSeismic`, one more emitter) in the FULL look only; the lite look and Reduce Motion stop before it, so they are unchanged. The world glow is a PointLight, it has no texture, so the glow plates are hatch-only.
+- Not wired (left): menu previews (`FxUi`), the Eggs card, and `smokeSoft` (still pending the "replace the fx3 `smokeSheet`?" decision).
+- Phone cost with every slot uploaded: Seismic on a phone is 7.4 alive particles and 3 of 3 emitters (the worst stack with an aura and a trail on lite is 16.2 of 18); the beam budget is untouched.
 
 ## Budgets (apply to every asset below)
 - Textures: 256 x 256 for single glows, rings and icons, 512 x 512 for flipbooks (4 x 4 or 8 x 8 cells), PNG with alpha, no pre-multiplied fringes, under 400 KB each. One shared sheet per effect type, tinted at runtime, rather than 7 coloured copies (Aurora is the exception).
