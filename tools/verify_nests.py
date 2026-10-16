@@ -214,6 +214,107 @@ do
  print(string.format("Weather nests passed: tag stored only for known weather, forged tag invalid, %d/%d (%.2f%%) weather-nest eggs mutated vs run-egg chance %.1f%%, clear nests 0",mutated,total,100*mutated/total,100*p))
 end
 
+------------------------------------------------------------------ BD-479 a nest carries the weather it was FOUND in
+do
+ -- unit: the run ledger fills one entry per newly qualified nest, with the weather of that moment (RewardMath, pure)
+ local ledger={}
+ Rewards.recordNestWeather(ledger,0,500,"rain") assert(#ledger==0,"no catches, no nest")
+ Rewards.recordNestWeather(ledger,5,GameConfig.NestMinRunSeconds-1,"rain") assert(#ledger==0,"too short, no nest")
+ Rewards.recordNestWeather(ledger,5,GameConfig.NestMinRunSeconds,"rain") assert(#ledger==1 and ledger[1]=="rain","nest A found in rain")
+ Rewards.recordNestWeather(ledger,12,200,"clear") assert(#ledger==1 and ledger[1]=="rain","no new nest, nothing appended, nest A keeps rain")
+ Rewards.recordNestWeather(ledger,31,300,"clear") assert(#ledger==2 and ledger[1]=="rain" and ledger[2]=="clear","nest B found in clear")
+ Rewards.recordNestWeather(ledger,35,400,"blizzard") assert(#ledger==2 and ledger[1]=="rain" and ledger[2]=="clear","a later blizzard changes nothing")
+ assert(Rewards.recordNestWeather({},1,300,"not-a-weather")[1]=="clear","a forged id is recorded as clear")
+ assert(Rewards.recordNestWeather({},1,300,nil)[1]=="clear" and Rewards.recordNestWeather({},1,300,7)[1]=="clear")
+ assert(Rewards.nestWeatherId({"rain","clear"},1)=="rain" and Rewards.nestWeatherId({"rain","clear"},2)==nil and Rewards.nestWeatherId({"rain"},2)==nil)
+ assert(Rewards.nestWeatherId("thunder",1)=="thunder" and Rewards.nestWeatherId("thunder",9)=="thunder","legacy string = every nest")
+ assert(Rewards.nestWeatherId("clear",1)==nil and Rewards.nestWeatherId(nil,1)==nil and Rewards.nestWeatherId(false,1)==nil and Rewards.nestWeatherId("bogus",1)==nil)
+ assert(Rewards.nestWeatherId({"bogus",5,"clear"},1)==nil and Rewards.nestWeatherId({"bogus",5,"clear"},2)==nil and Rewards.nestWeatherId({"bogus",5,"clear"},3)==nil)
+
+ local function tagsOf(u,runId) -- nest ordinal -> stored weatherId (or "none"), and how many nests the run left
+  local t,n={},0
+  for _,nest in nests(u) do
+   if nest.droppedFromRun==runId then t[tonumber(string.match(nest.nestId,":(%d+)$"))]=nest.weatherId or "none" n+=1 end
+  end
+  return t,n
+ end
+ local function settle(u,id,catches,ledger) return Repository.commitRunSettlement(u,id,catches,nil,300,ledger) end
+
+ -- weather change mid-run: nest A found in rain, nest B in clear, the run settles during snow (blizzard): the ledger decides, not the settlement weather
+ local u=fresh(330)
+ local ok,outcome,status=settle(u,"mid-run",31,{"rain","clear"})
+ assert(ok and status=="committed" and outcome.nestCount==2)
+ local t,n=tagsOf(u,"mid-run")
+ assert(n==2 and t[1]=="rain" and t[2]=="none","nest A keeps rain, nest B (found in clear) carries nothing: "..tostring(t[1])..","..tostring(t[2]))
+ -- and the reverse: clear first, then a storm
+ local r=fresh(331)
+ assert(settle(r,"mid-run-2",31,{"clear","thunder"}))
+ t=tagsOf(r,"mid-run-2") assert(t[1]=="none" and t[2]=="thunder")
+ -- every nest of a run has its own id
+ local m=fresh(332)
+ assert(settle(m,"three",61,{"rain","blizzard","volcano"}))
+ t,n=tagsOf(m,"three") assert(n==3 and t[1]=="rain" and t[2]=="blizzard" and t[3]=="volcano")
+ -- forged / short / longer ledgers: only known weather ids are stored, extra entries are ignored, missing ones store nothing
+ local f=fresh(333)
+ assert(settle(f,"forged",61,{"bogus",5,"aurora","thunder"}))
+ t,n=tagsOf(f,"forged") assert(n==3 and t[1]=="none" and t[2]=="none" and t[3]=="aurora")
+ local short=fresh(334)
+ assert(settle(short,"short",61,{"rain"}))
+ t,n=tagsOf(short,"short") assert(n==3 and t[1]=="rain" and t[2]=="none" and t[3]=="none","a ledger shorter than the nests tags only what it recorded")
+ -- saved profile with per-nest tags reloads (additive field, no schema bump)
+ local schema=data[key(u)].schemaVersion
+ Repository.release(u) assert(Repository.load(u)) t=tagsOf(u,"mid-run") assert(t[1]=="rain" and t[2]=="none" and data[key(u)].schemaVersion==schema)
+
+ -- exactly once: a duplicate settlement (the probe, a client retry, the pending retry) never adds or re-stamps nests, whatever weather it carries
+ local before=#nests(u)
+ for _,again in {{"blizzard"},"thunder",{"blizzard","blizzard"}} do
+  local dupOk,_,dupStatus=Repository.commitRunSettlement(u,"mid-run",31,nil,300,again)
+  assert(dupOk and dupStatus=="duplicate" and #nests(u)==before)
+ end
+ assert(select(3,Repository.commitRunSettlement(u,"mid-run",31))=="duplicate") -- the old argument-less probe call
+ t=tagsOf(u,"mid-run") assert(t[1]=="rain" and t[2]=="none","a duplicate never re-stamps a nest")
+
+ -- retry path 1: the write commits but the acknowledgement is lost; the repository's own retry finds the run and reports duplicate
+ local a=fresh(335)
+ failMode="ack_lost"
+ local aOk,_,aStatus=settle(a,"ack-wx",31,{"rain","clear"})
+ assert(aOk and aStatus=="duplicate")
+ t,n=tagsOf(a,"ack-wx") assert(n==2 and t[1]=="rain" and t[2]=="none","a lost acknowledgement keeps the per-nest tags, once")
+ -- retry path 2: a transient outage inside the call; the transform re-runs and stamps the same ledger
+ local b=fresh(336)
+ failMode="once"
+ local bOk,_,bStatus=settle(b,"once-wx",31,{"thunder","rain"})
+ assert(bOk and bStatus=="committed")
+ t,n=tagsOf(b,"once-wx") assert(n==2 and t[1]=="thunder" and t[2]=="rain")
+ -- retry path 3: the whole retry window fails, the run is parked in pendingSettlements, and the lease renew tick commits it with the SAME ledger
+ local p=fresh(337)
+ failMode="all"
+ local pOk,_,pStatus=settle(p,"parked-wx",31,{"rain","clear"})
+ failMode=nil
+ assert(not pOk and pStatus=="save_failed" and Repository.pendingSettlement(p)=="parked-wx" and select(2,tagsOf(p,"parked-wx"))==0,"nothing written while parked")
+ assert(Repository.renew(p) and Repository.pendingSettlement(p)==nil,"the renew tick settles the parked run")
+ t,n=tagsOf(p,"parked-wx") assert(n==2 and t[1]=="rain" and t[2]=="none","the parked run keeps its per-nest weather")
+ assert(Repository.renew(p)) t,n=tagsOf(p,"parked-wx") assert(n==2,"recovery settled exactly once")
+ assert(select(3,settle(p,"parked-wx",31,{"blizzard","blizzard"}))=="duplicate" and select(2,tagsOf(p,"parked-wx"))==2)
+
+ -- legacy: a settlement that carries ONE weather id (older callers, or a snapshot without per-nest weather) behaves as before
+ local l=fresh(338)
+ assert(Repository.commitRunSettlement(l,"legacy-wx",31,nil,300,"thunder"))
+ t,n=tagsOf(l,"legacy-wx") assert(n==2 and t[1]=="thunder" and t[2]=="thunder","legacy string: every nest of the run takes it, as before BD-479")
+ assert(Repository.commitRunSettlement(l,"legacy-clear",1,nil,300,"clear") and Repository.commitRunSettlement(l,"legacy-none",1,nil,300))
+ t,n=tagsOf(l,"legacy-clear") assert(n==1 and t[1]=="none")
+ t,n=tagsOf(l,"legacy-none") assert(n==1 and t[1]=="none")
+ Repository.release(l) assert(Repository.load(l),"profile with legacy run-wide and per-nest tags reloads")
+
+ -- overflow: 2 spots already taken, 5 nests earned (the per-run egg cap): the first three keep their own weather, the last two are capacity-blocked and become crystals
+ local o=fresh(339)
+ assert(settle(o,"pre",31,nil))
+ local oOk,oOutcome=settle(o,"five",GameConfig.RunEggMaxPerRun,{"rain","clear","thunder","volcano","aurora"})
+ assert(oOk and oOutcome.nestFull and oOutcome.nestCount==3 and oOutcome.nestCrystals==2*GameConfig.NestOverflowCrystals)
+ t,n=tagsOf(o,"five") assert(n==3 and t[1]=="rain" and t[2]=="none" and t[3]=="thunder","capacity-blocked nests lose their ledger entries with the nest, the kept ones keep their own")
+ print("Nest weather passed: ledger records the weather when each nest is found; rain/clear nests settled later keep their own; ack-lost, transient, parked (renew tick), duplicate and probe paths are exactly-once; legacy single id, forged, short and capacity-blocked ledgers are safe; reload stable")
+end
+
 ------------------------------------------------------------------ Luck is applied and bounded
 do
  local L=fresh(306)

@@ -1041,7 +1041,7 @@ end
 -- BD-044 settlement: catches -> exactly that many run eggs (capped per run), plus
 -- deterministic crystals and separate bonus nests. Every random draw is committed
 -- before UpdateAsync; settledRuns + recentOperations make the run exactly-once.
-function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number, eggEvents, runSeconds: number?, weatherId: string?, maxAttempts: number?)
+function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number, eggEvents, runSeconds: number?, nestWeather: any?, maxAttempts: number?)
     local cached = profiles[player]
     local priorState = player:GetAttribute("ProfileState")
     -- BD-354: settlement is the one write that must still be tried after an earlier failed write ("SaveFailed"): it is an
@@ -1069,9 +1069,9 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         return true, if cachedOperation then cachedOperation.outcome else nil, "duplicate"
     end
 
-    -- Only a known, non-clear weather is stored; anything else (nil, forged, "clear") means no tag.
-    local nestWeatherId: string? = nil
-    if typeof(weatherId) == "string" and weatherId ~= "clear" and ProgressionRules.item(ProgressionConfig.Weather, weatherId) then nestWeatherId = weatherId end
+    -- BD-479: `nestWeather` is the run's per-nest ledger ({"rain", "clear", ...}, index = nest ordinal, recorded when each nest was
+    -- found) or, from legacy callers, one weather id for every nest. Each nest below takes its own entry through
+    -- RewardMath.nestWeatherId, which stores only a known, non-clear weather; anything else (nil, forged, "clear") means no tag.
     local rng = Random.new()
     local tags = placeEggTags(eggEvents, eggCount)
     local runEggs = table.create(eggCount)
@@ -1132,10 +1132,10 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
             local granted = math.min(nestsEarned, math.max(0, Config.NestStorageCapacity - #profileValue.eggNests))
             for j = 1, granted do
                 local nestId = RewardMath.nestId(runId, j)
-                -- BD-156: a nest dropped during weather carries that weather's tag; its eggs roll the same event
-                -- mutation chance as run eggs when it is claimed. Clear weather stores nothing (additive field).
+                -- BD-156 / BD-479: a nest found during weather carries THAT weather's tag (the weather when it was found, not at
+                -- settlement); its eggs roll the same event mutation chance as run eggs when it is claimed. Clear stores nothing.
                 table.insert(profileValue.eggNests, {nestId = nestId, droppedFromRun = runId,
-                    size = RewardMath.nestSize(nestId), luck = 1, state = "waiting", weatherId = nestWeatherId})
+                    size = RewardMath.nestSize(nestId), luck = 1, state = "waiting", weatherId = RewardMath.nestWeatherId(nestWeather, j)})
             end
             advanceNests(profileValue, now)
             outcome.nestCount = granted
@@ -1173,7 +1173,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         -- BD-359: keep what the retry window could not commit; the renew tick tries again (same run id, exactly once).
         if profiles[player] then
             settlementStats.failedWindows += 1
-            pendingSettlements[player] = {runId = runId, catchScore = catchScore, eggEvents = eggEvents, runSeconds = runSeconds, weatherId = weatherId}
+            pendingSettlements[player] = {runId = runId, catchScore = catchScore, eggEvents = eggEvents, runSeconds = runSeconds, nestWeather = nestWeather}
         end
         return false, nil, "save_failed"
     end
@@ -2132,7 +2132,7 @@ local function recoverSettlement(player: Player): boolean
     if not pending then return true end
     if recoveringSettlement[player] or not profiles[player] then return false end
     recoveringSettlement[player] = true
-    local ok, outcome, status = ProfileRepository.commitRunSettlement(player, pending.runId, pending.catchScore, pending.eggEvents, pending.runSeconds, pending.weatherId, 2)
+    local ok, outcome, status = ProfileRepository.commitRunSettlement(player, pending.runId, pending.catchScore, pending.eggEvents, pending.runSeconds, pending.nestWeather, 2)
     recoveringSettlement[player] = nil
     if ok then
         settlementStats.recovered += 1

@@ -85,7 +85,18 @@ def scans():
    assert word not in tags,'RunEggTags must not know the egg condition: '+word
   h=repo.index('local function applyHatch');body=repo[h:h+2500]
   assert body.index('outcome.failed=')<body.index('outcome.count=0')<body.index('species.events'),'Cracked failure (count 0) must come before any credit'
-  print('Source scans passed: FoodService uses RunEggTags; tag is condition-blind; a failed Cracked egg credits nothing (docs/99 G2)')
+  # BD-479 (owner BD-235): a nest carries the weather when it was FOUND; the settlement-time workspace weather must not reach it
+  run=(ROOT/'src/server/RunLifecycle.luau').read_text();boot=(ROOT/'src/server/Bootstrap.server.luau').read_text();pred=(ROOT/'src/server/PredationService.luau').read_text()
+  assert food.index('c:SetAttribute("CatchScore",after)')<food.index('RunLifecycle.noteNestWeather(c)')<food.index('local weatherId=workspace'),'FoodService must note the nest weather right after CatchScore changes, before and independent of the weather-tag branch (clear nests too)'
+  assert pred.index('attacker.character:SetAttribute("CatchScore"')<pred.index('runLifecycle.noteNestWeather(attacker.character)'),'PredationService kill eggs can qualify a nest too'
+  assert run.count('snapshot.eggEvents, snapshot.runSeconds, snapshot.nestWeather)')==2 and 'nestWeather = nestWeather' in run,'both settle calls (tryEnd, disconnect) must carry the per-nest weather'
+  assert 'NestMinRunSeconds' in run and 'task.delay' in run,'the minimum-run-time mark must note the weather too'
+  commits=[l for l in boot.splitlines() if 'commitRunSettlement(' in l]
+  assert len(commits)==2 and all('nestWeather' in l for l in commits),'normal settlement and the duplicate probe must both pass the per-nest weather'
+  assert 'WeatherId' not in boot.split('RunLifecycle.configureSettlement')[1].split('ProfileRepository.setSettlementRecoveredHook')[0],'Bootstrap settlement must not read the settlement-time weather'
+  assert 'pending.nestWeather' in repo and 'nestWeather = nestWeather}' in repo and 'weatherId = weatherId' not in repo,'the pendingSettlements retry must carry the per-nest weather'
+  assert 'RewardMath.nestWeatherId(nestWeather, j)' in repo,'each nest takes its own ledger entry'
+  print('Source scans passed: FoodService uses RunEggTags; tag is condition-blind; a failed Cracked egg credits nothing (docs/99 G2); nest weather is noted when found and carried by every settlement path (BD-479)')
 if __name__=='__main__':
  parser=argparse.ArgumentParser();parser.add_argument('--runner',required=True);args=parser.parse_args()
  with tempfile.TemporaryDirectory() as d:

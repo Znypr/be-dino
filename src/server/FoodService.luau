@@ -9,6 +9,7 @@ local FoodCatchRules = require(ReplicatedStorage.Shared.FoodCatchRules)
 local PointGrid = require(ReplicatedStorage.Shared.PointGrid) -- BD-361: pickups are found per player through a grid, not by scanning every food
 local SpecialFoods = require(ReplicatedStorage.Shared.SpecialFoods) -- BD-207 (flag off by default)
 local RunEggTags = require(ReplicatedStorage.Shared.RunEggTags) -- BD-236: pure catch-time tag glue (tested)
+local RunLifecycle = require(script.Parent.RunLifecycle) -- BD-479
 local Http = game:GetService("HttpService")
 local eventRandom = Random.new()
 local FoodService = {}
@@ -288,6 +289,7 @@ function FoodService.start(dinosaur,repository)
                     local before=c:GetAttribute("CatchScore") or 0
                     local after=RunEggTags.nextScore(before,whole,Config.MaxCatchScore,Config.RunEggMaxPerRun)
                     c:SetAttribute("CatchScore",after)
+                    if after>before then RunLifecycle.noteNestWeather(c) end -- BD-479: a nest newly earned by this catch is stamped with the weather NOW (clear too)
                     -- BD-044: every catch is one run egg. Only eggs caught during weather carry a
                     -- compact catch-time tag {eventId, mutationId, n=catch ordinal}; clear-weather
                     -- eggs need none. Genes/traits are committed once at settlement.
