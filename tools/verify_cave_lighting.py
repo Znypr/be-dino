@@ -122,7 +122,7 @@ for _,p in L.props do if p.key=="lava_pool_disc" then assert(not p.walk and p.w<
 
 -- ---- BD-296 wall material: Concrete is the only cave-only wall material (Sandstone / Slate / Rock colours are the island's, set globally)
 local Col=Terrain.Colors
-assert(Terrain.WallStone=="Concrete" and Col.Concrete and Col.Concrete[1]>=160 and Col.Concrete[1]<=195 and Col.Concrete[1]-Col.Concrete[3]<=45,"brighten pass: light warm matte Concrete walls (no striped Limestone)")
+assert(Terrain.WallStone=="Concrete" and Col.Concrete and Col.Concrete[1]>=110 and Col.Concrete[1]<=140 and Col.Concrete[1]-Col.Concrete[3]<=45,"dim pass: warm mid-tone matte Concrete walls (no striped Limestone), 0.30 measured luminance")
 for _,m in {"Sandstone","Slate","Rock","Basalt","Grass","LeafyGrass","Mud","Ground","Sand"} do assert(Col[m]==nil,"cave never recolours the island material "..m) end
 
 -- ---- cave look

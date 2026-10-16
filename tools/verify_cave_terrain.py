@@ -359,7 +359,8 @@ local names={} for m,c in counts do names[#names+1]=string.format("%s %.0f%%",m,
 -- ---- BD-384 look: cooler cave-only colours, no island Sandstone in the hall, stalactite ceiling rule
 for name,c in R.Colors do
  if name~="CrackedLava" then
-  assert(c[1]-c[3]<=45 and c[1]<=195 and c[2]<=180 and c[3]>=110,"light warm stone, not orange-hot: "..name)
+  -- BD-296 dim pass 2026-10-16 (owner "pretty bright"; measured 0.57 -> 0.30 luminance): warm mid-tone stone, not orange-hot, not near-black
+  assert(c[1]-c[3]<=45 and c[1]<=150 and c[2]<=130 and c[3]>=60 and c[1]>=90,"warm mid-tone stone, not orange-hot: "..name)
  end
 end
 for _,iso in {"Sandstone","Slate","Rock","Basalt","Grass","LeafyGrass"} do assert(R.Colors[iso]==nil,"island material never recoloured: "..iso) end

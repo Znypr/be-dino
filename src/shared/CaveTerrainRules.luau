@@ -35,7 +35,9 @@ Rules.FallRecess = {halfWidth = 20, front = -1, back = 7} -- dz range around Lay
 -- map read as dirty smudge patches. Concrete is a flat, matte, non-directional stone, so the walls are one material with no stripes and no
 -- patches (the lamps and the shafts give the form). To try another matte stone change WallStone and its Colors entry only.
 Rules.WallStone = "Concrete"
-Rules.Colors = {Cobblestone = {158, 142, 126}, Concrete = {186, 170, 150}, CrackedLava = {255, 120, 40}}
+-- Lead Studio check 2026-10-16 (owner: "pretty bright"): the pale stone measured 0.57 mean luminance, far above the 0.15-0.35 cave
+-- range; these darker warm tones plus the dimmer ambient in CaveLightingRules measure 0.30 (docs/evidence/2026-10-16-cave-organic 9, 10).
+Rules.Colors = {Cobblestone = {110, 92, 76}, Concrete = {124, 104, 86}, CrackedLava = {255, 120, 40}}
 Rules.Materials = {"Air", "Rock", "Concrete", "Sandstone", "Slate", "Basalt", "Cobblestone", "Grass", "LeafyGrass", "CrackedLava"}
 
 local FLOOR_BAND = 6 -- studs below the floor top that carry the floor surface mix
