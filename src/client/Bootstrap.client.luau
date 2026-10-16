@@ -1152,6 +1152,7 @@ local function refreshCrystals()
     lastCrystalAmount=amount
     Theme.animate(crystalValue,.28,{Value=amount})
     if crystalInitialized and delta>0 then
+        Sfx.playAlias("crystal_reward")
         notify("+"..math.round(delta).." Crystals",C.gold,{key="crystals",icon="amber",amount=math.round(delta),format="+%d Crystals"})
     end
     crystalInitialized=true

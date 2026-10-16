@@ -91,6 +91,13 @@ function Sfx.revealName(rarity: number?): string
 end
 
 local pools: {[string]: {sounds: {Sound}, slot: number}} = {}
+-- BD-339/341/342: voice limiter, ducking, dedupe and jitter (pure rules in SfxRules; loaded lazily so a missing module is a no-op).
+local active: {any} = {}
+local playCount: {[string]: number} = {}
+local function rules(): any?
+    local ok, mod = pcall(function() return require((script :: any).Parent.SfxRules) end)
+    return if ok then mod else nil
+end
 local lastPlayed: {[string]: number} = {}
 local lastRapid: number? = nil
 local folder: Instance? = nil
@@ -110,7 +117,16 @@ function Sfx.play(name: string): boolean
     if not assetId or not enabled() then return false end
     local now = os.clock()
     if Sfx.throttled(entry, lastPlayed[name], now) or Sfx.rapidThrottled(name, lastRapid, now) then return false end
+    local R = rules()
+    local replaceSound: Sound? = nil
+    if R then
+        if R.deduped(name, lastPlayed[name], now) then return false end
+        local action, index = R.limit(active, name, now)
+        if action == "drop" then return false end
+        if action == "replace" and index then replaceSound = active[index].sound table.remove(active, index) end
+    end
     local ok = pcall(function()
+        if replaceSound then replaceSound:Stop() end
         if not folder or not folder.Parent then
             local created = Instance.new("Folder")
             created.Name = Sfx.Group
@@ -128,7 +144,25 @@ function Sfx.play(name: string): boolean
             sound.Parent = folder
             pool.sounds[pool.slot] = sound
         end
-        sound.SoundId, sound.Volume, sound.PlaybackSpeed = assetId, Sfx.clampVolume(entry.volume) * Sfx.Master, entry.rate
+        local count = (playCount[name] or 0) + 1
+        playCount[name] = count
+        local volume = Sfx.clampVolume(entry.volume) * Sfx.Master
+        sound.SoundId, sound.Volume, sound.PlaybackSpeed = assetId, volume, entry.rate * (if R then R.jitter(name, count) else 1)
+        if R then
+            local len = (entry :: any).len or R.DefaultLen
+            for i = #active, 1, -1 do
+                local other = active[i]
+                if other.endsAt <= now or not other.sound.Parent then table.remove(active, i)
+                else
+                    local mult = R.duck(name, other.name)
+                    if mult < 1 then
+                        other.sound.Volume = other.volume * mult
+                        task.delay(len, function() if other.sound.Parent then other.sound.Volume = other.volume end end)
+                    end
+                end
+            end
+            table.insert(active, {name = name, sound = sound, volume = volume, startedAt = now, endsAt = now + len})
+        end
         -- Mixer: master x Sounds sliders (AudioMixer.luau). Outside Roblox/tests the require fails and the sound plays ungrouped.
         local okMixer, mixer = pcall(function() return require((script :: any).Parent.AudioMixer) :: any end)
         if okMixer then mixer.attach(sound, "sfx") end
@@ -142,11 +176,34 @@ function Sfx.play(name: string): boolean
     return ok
 end
 
+-- BD-342: soft reward cue that REUSES a registered cue (see SfxRules.Aliases), behind a cooldown.
+local aliasLast: {[string]: number} = {}
+function Sfx.playAlias(alias: string): boolean
+    local R = rules()
+    local def = if R then R.Aliases[alias] else nil
+    if not def then return false end
+    local now = os.clock()
+    if aliasLast[alias] and now - aliasLast[alias] < def.cooldown then return false end
+    local base = Sfx.Sounds[def.cue]
+    if not base then return false end
+    local saved = base.volume
+    base.volume = saved * def.volume
+    local ok = Sfx.play(def.cue)
+    base.volume = saved
+    if ok then aliasLast[alias] = now end
+    return ok
+end
+
 local cueFreeAt = 0
+local cueRequested: {[string]: number} = {}
 -- Plays a reward cue in turn (see Sfx.cueSlot). Returns false when it was dropped. Never throws.
 function Sfx.playCue(name: string): boolean
     local entry = Sfx.Sounds[name]
     local now = os.clock()
+    -- BD-342: the same reward cue requested twice within its window (level up + nest open) is one cue.
+    local R = rules()
+    if R and R.deduped(name, cueRequested[name], now) then return false end
+    cueRequested[name] = now
     local start, freeAt = Sfx.cueSlot(cueFreeAt, now, if entry then (entry :: any).len else nil)
     if start == nil then return false end
     cueFreeAt = freeAt
