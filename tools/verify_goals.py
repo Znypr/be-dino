@@ -101,7 +101,8 @@ def static_checks():
     panel = (ROOT / 'src/client/GoalsPanel.luau').read_text(encoding='utf-8')
     assert 'rbxassetid' not in panel and 'ImageLabel' not in panel, 'no new art ids in the Goals panel'
     boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8')
-    assert 'GoalsPanel).attach(gui,goalHUD' in boot and 'GoalsPanel).setDinos' in boot and 'GoalsPanel).setSpecies' in boot and 'indexCounts' in boot
+    hud = (ROOT / 'src/client/GoalHud.luau').read_text(encoding='utf-8')  # goal HUD block moved out of Bootstrap (register limit)
+    assert 'GoalsPanel.attach(gui,goalHUD' in hud and 'GoalsPanel.setDinos' in hud and 'GoalsPanel.setSpecies' in hud and 'indexCounts' in hud and 'GoalHud).build' in boot
     assert not re.search(r'^local Goals', boot, re.M), 'no new top-level local in Bootstrap'
     assert len(re.findall(r'^local ', boot, re.M)) <= 195, 'Bootstrap top-level locals'
 

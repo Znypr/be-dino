@@ -46,7 +46,9 @@ jobs:
           python tools/verify_admin.py --runner /tmp/luau/luau
           python tools/verify_notify.py --runner /tmp/luau/luau
           python tools/verify_audio.py --runner /tmp/luau/luau
+          python tools/verify_sound_lab.py
           python tools/verify_hatch_sequence.py --runner /tmp/luau/luau
+          python tools/verify_rare_hatch.py --runner /tmp/luau/luau
           python tools/verify_inspect.py --runner /tmp/luau/luau
           python tools/verify_eggs_screen.py --runner /tmp/luau/luau
           python tools/verify_egg_origin.py --runner /tmp/luau/luau
@@ -82,6 +84,7 @@ jobs:
           python tools/verify_multiplayer_sim.py --runner /tmp/luau/luau
           python tools/verify_private_state.py --runner /tmp/luau/luau
           python tools/verify_server_scaling.py --runner /tmp/luau/luau
+          python tools/verify_telemetry.py --runner /tmp/luau/luau
           python tools/generate_sfx.py --check
       - name: Build place
         run: |

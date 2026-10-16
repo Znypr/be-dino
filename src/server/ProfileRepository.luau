@@ -14,6 +14,7 @@ local ProgressionConfig = require(ReplicatedStorage.Shared.ProgressionConfig)
 
 local ProfileRepository = {}
 local PrivateState = require(script.Parent.PrivateState)
+local RareHatchService = require(script.Parent.RareHatchService) -- BD-428
 local DinosaurIdentity = require(script.Parent.DinosaurIdentity)
 local IdentityFusion = require(script.Parent.IdentityFusion)
 local FusionOdds = require(script.Parent.FusionOdds)
@@ -1629,6 +1630,7 @@ local function publishHatch(player: Player, chestId: string, committedOutcome: a
     PrivateState.set(player, "LastChestFailed",committedOutcome.failed==true)
     PrivateState.set(player, "LastChestNewJson",HttpService:JSONEncode(committedOutcome.discovered or {}))
     PrivateState.set(player, "LastClaimedChestId", chestId)
+    RareHatchService.record(player, committedOutcome) -- BD-428: celebration + one rate-limited announcement, from the settled outcome
 end
 
 function ProfileRepository.claimChest(player: Player, chestId: string)
