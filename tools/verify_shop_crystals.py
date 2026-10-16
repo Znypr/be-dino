@@ -63,6 +63,13 @@ def main():
     for line in layout.splitlines():
         if line.strip().startswith(('style =', 'potion =', 'shop =', 'crystals =')):
             assert 'rock_crystal' not in line, 'a shop station must not use the decoration crystal: ' + line.strip()[:60]
+    boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8')
+    assert 'b.TextScaled=true' in boot and 'UITextSizeConstraint' in boot and 'packButton(nil)' in boot, 'BD-430: pack button text scales to fit, never "..."'
+    assert 'button(card,"...",' not in boot, 'no "..." placeholder on a pack button'
+    cue = (ROOT / 'src/client/GoCue.luau').read_text(encoding='utf-8')
+    assert 'GoCueLabel' not in cue and 'SetAttribute("GoCue"' in cue and 'GoCueText' in boot, 'TAP TO GO! sits on the button face, no floating label'
+    sm = (ROOT / 'src/client/SettingsMenu.luau').read_text(encoding='utf-8')
+    assert 'if lab then break end' in sm, 'Sound lab page has no tab bar behind its BACK button'
     print('verify_shop_crystals passed')
 
 
