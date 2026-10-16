@@ -1,0 +1,1427 @@
+{
+ "version": 1,
+ "slots": [
+  {
+   "name": "glowPlate",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "glowPlate",
+   "group": "Requested.glowPlate",
+   "reader": [
+    "src/client/HatchFx.luau",
+    "glowPlate"
+   ]
+  },
+  {
+   "name": "ringSoft",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "ringSoft",
+   "group": "Requested.ringSoft",
+   "reader": [
+    "src/client/FoodGlow.client.luau",
+    "ringSoft"
+   ]
+  },
+  {
+   "name": "ringShock",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "ringShock",
+   "group": "Requested.ringShock",
+   "reader": [
+    "src/client/HatchFx.luau",
+    "ringShock"
+   ]
+  },
+  {
+   "name": "crystalSheet",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "crystalSheet",
+   "group": "Requested.crystalSheet",
+   "reader": [
+    "src/shared/FxRecipes.luau",
+    "crystalSheet"
+   ]
+  },
+  {
+   "name": "ribbonSoft",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "ribbonSoft",
+   "group": "Requested.ribbonSoft",
+   "reader": [
+    "src/client/FxRig.luau",
+    "ribbonSoft"
+   ]
+  },
+  {
+   "name": "speedLine",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "speedLine",
+   "group": "Requested.speedLine",
+   "pending": "BD-186 speed-line reader"
+  },
+  {
+   "name": "glowPlateDroplet",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "glowPlateDroplet",
+   "group": "Requested.glowPlateDroplet",
+   "pending": "BD-186 mutation glow variants"
+  },
+  {
+   "name": "glowPlateCrescent",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "glowPlateCrescent",
+   "group": "Requested.glowPlateCrescent",
+   "pending": "BD-186 mutation glow variants"
+  },
+  {
+   "name": "ringSeismic",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "ringSeismic",
+   "group": "Requested.ringSeismic",
+   "pending": "BD-188 seismic ring"
+  },
+  {
+   "name": "smokeDense",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "smokeDense",
+   "group": "Requested.smokeDense",
+   "pending": "BD-187 smoke variants"
+  },
+  {
+   "name": "smokeWispy",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "smokeWispy",
+   "group": "Requested.smokeWispy",
+   "pending": "BD-187 smoke variants"
+  },
+  {
+   "name": "motifDroplets",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "motifDroplets",
+   "group": "Requested.motifDroplets",
+   "pending": "BD-189 / BD-162 motif sheets"
+  },
+  {
+   "name": "motifSoftSparks",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "motifSoftSparks",
+   "group": "Requested.motifSoftSparks",
+   "pending": "BD-189 / BD-162 motif sheets"
+  },
+  {
+   "name": "motifSnowCrystals",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "motifSnowCrystals",
+   "group": "Requested.motifSnowCrystals",
+   "pending": "BD-189 / BD-162 motif sheets"
+  },
+  {
+   "name": "motifPebbles",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "motifPebbles",
+   "group": "Requested.motifPebbles",
+   "pending": "BD-189 / BD-162 motif sheets"
+  },
+  {
+   "name": "motifEmbers",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "motifEmbers",
+   "group": "Requested.motifEmbers",
+   "pending": "BD-189 / BD-162 motif sheets"
+  },
+  {
+   "name": "motifAurora",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "motifAurora",
+   "group": "Requested.motifAurora",
+   "pending": "BD-189 / BD-162 motif sheets"
+  },
+  {
+   "name": "motifCrimson",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "motifCrimson",
+   "group": "Requested.motifCrimson",
+   "pending": "BD-189 / BD-162 motif sheets"
+  },
+  {
+   "name": "confetti",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "confetti",
+   "group": "Requested.confetti",
+   "pending": "BD-428 RareHatchClient confetti"
+  },
+  {
+   "name": "lavaCrust",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "lavaCrust",
+   "group": "Requested.lavaCrust",
+   "pending": "BD-385 CaveLavaFx crust layer"
+  },
+  {
+   "name": "flameTongue",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "flameTongue",
+   "group": "Requested.flameTongue",
+   "pending": "BD-430 anime FX code"
+  },
+  {
+   "name": "starPop",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "starPop",
+   "group": "Requested.starPop",
+   "pending": "BD-430 anime FX code"
+  },
+  {
+   "name": "domeGradient",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "domeGradient",
+   "group": "Requested.domeGradient",
+   "pending": "BD-433 anime FX code"
+  },
+  {
+   "name": "speedStreaks",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "speedStreaks",
+   "group": "Requested.speedStreaks",
+   "pending": "BD-432 anime FX code"
+  },
+  {
+   "name": "rainbowStrip",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "rainbowStrip",
+   "group": "Requested.rainbowStrip",
+   "pending": "BD-435 anime FX code"
+  },
+  {
+   "name": "rimRingUi",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "rimRingUi",
+   "group": "Requested.rimRingUi",
+   "pending": "BD-435 anime FX code"
+  },
+  {
+   "name": "paintCrown",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "paintCrown",
+   "group": "Requested.paintCrown",
+   "pending": "BD-397 HatchEggV2 paint flipbooks"
+  },
+  {
+   "name": "paintDrips",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "paintDrips",
+   "group": "Requested.paintDrips",
+   "pending": "BD-397 HatchEggV2 paint flipbooks"
+  },
+  {
+   "name": "paintDroplet",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "paintDroplet",
+   "group": "Requested.paintDroplet",
+   "pending": "BD-397 HatchEggV2 paint flipbooks"
+  },
+  {
+   "name": "paintGloss",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "paintGloss",
+   "group": "Requested.paintGloss",
+   "pending": "BD-397 HatchEggV2 paint flipbooks"
+  },
+  {
+   "name": "egg_stage",
+   "kind": "image",
+   "target": "table",
+   "file": "src/shared/ProgressionConfig.luau",
+   "key": "stage",
+   "group": "ConditionStageAssetIds",
+   "table": "ConditionStageAssetIds",
+   "reader": [
+    "src/client/ConditionStage.luau",
+    "ConditionStageAssetIds"
+   ]
+  },
+  {
+   "name": "egg_cond_cracked",
+   "kind": "image",
+   "target": "table",
+   "file": "src/shared/ProgressionConfig.luau",
+   "key": "cracked",
+   "group": "ConditionStageAssetIds",
+   "table": "ConditionStageAssetIds",
+   "reader": [
+    "src/client/ConditionStage.luau",
+    "ConditionStageAssetIds"
+   ]
+  },
+  {
+   "name": "egg_cond_dirty",
+   "kind": "image",
+   "target": "table",
+   "file": "src/shared/ProgressionConfig.luau",
+   "key": "dirty",
+   "group": "ConditionStageAssetIds",
+   "table": "ConditionStageAssetIds",
+   "reader": [
+    "src/client/ConditionStage.luau",
+    "ConditionStageAssetIds"
+   ]
+  },
+  {
+   "name": "egg_cond_normal",
+   "kind": "image",
+   "target": "table",
+   "file": "src/shared/ProgressionConfig.luau",
+   "key": "normal",
+   "group": "ConditionStageAssetIds",
+   "table": "ConditionStageAssetIds",
+   "reader": [
+    "src/client/ConditionStage.luau",
+    "ConditionStageAssetIds"
+   ]
+  },
+  {
+   "name": "egg_cond_rainbow",
+   "kind": "image",
+   "target": "table",
+   "file": "src/shared/ProgressionConfig.luau",
+   "key": "rainbow",
+   "group": "ConditionStageAssetIds",
+   "table": "ConditionStageAssetIds",
+   "reader": [
+    "src/client/ConditionStage.luau",
+    "ConditionStageAssetIds"
+   ]
+  },
+  {
+   "name": "egg_cond_astra",
+   "kind": "image",
+   "target": "table",
+   "file": "src/shared/ProgressionConfig.luau",
+   "key": "astra",
+   "group": "ConditionStageAssetIds",
+   "table": "ConditionStageAssetIds",
+   "reader": [
+    "src/client/ConditionStage.luau",
+    "ConditionStageAssetIds"
+   ]
+  },
+  {
+   "name": "trail_white",
+   "kind": "image",
+   "target": "table",
+   "file": "src/shared/ProgressionConfig.luau",
+   "key": "white",
+   "group": "TrailIconAssetIds",
+   "table": "TrailIconAssetIds",
+   "reader": [
+    "src/client/ShopCards.luau",
+    "TrailIconAssetIds"
+   ]
+  },
+  {
+   "name": "trail_fern",
+   "kind": "image",
+   "target": "table",
+   "file": "src/shared/ProgressionConfig.luau",
+   "key": "fern",
+   "group": "TrailIconAssetIds",
+   "table": "TrailIconAssetIds",
+   "reader": [
+    "src/client/ShopCards.luau",
+    "TrailIconAssetIds"
+   ]
+  },
+  {
+   "name": "trail_tidal",
+   "kind": "image",
+   "target": "table",
+   "file": "src/shared/ProgressionConfig.luau",
+   "key": "tidal",
+   "group": "TrailIconAssetIds",
+   "table": "TrailIconAssetIds",
+   "reader": [
+    "src/client/ShopCards.luau",
+    "TrailIconAssetIds"
+   ]
+  },
+  {
+   "name": "trail_ember",
+   "kind": "image",
+   "target": "table",
+   "file": "src/shared/ProgressionConfig.luau",
+   "key": "ember",
+   "group": "TrailIconAssetIds",
+   "table": "TrailIconAssetIds",
+   "reader": [
+    "src/client/ShopCards.luau",
+    "TrailIconAssetIds"
+   ]
+  },
+  {
+   "name": "trail_violet",
+   "kind": "image",
+   "target": "table",
+   "file": "src/shared/ProgressionConfig.luau",
+   "key": "violet",
+   "group": "TrailIconAssetIds",
+   "table": "TrailIconAssetIds",
+   "reader": [
+    "src/client/ShopCards.luau",
+    "TrailIconAssetIds"
+   ]
+  },
+  {
+   "name": "trail_electric",
+   "kind": "image",
+   "target": "table",
+   "file": "src/shared/ProgressionConfig.luau",
+   "key": "electric",
+   "group": "TrailIconAssetIds",
+   "table": "TrailIconAssetIds",
+   "reader": [
+    "src/client/ShopCards.luau",
+    "TrailIconAssetIds"
+   ]
+  },
+  {
+   "name": "trail_frost",
+   "kind": "image",
+   "target": "table",
+   "file": "src/shared/ProgressionConfig.luau",
+   "key": "frost",
+   "group": "TrailIconAssetIds",
+   "table": "TrailIconAssetIds",
+   "reader": [
+    "src/client/ShopCards.luau",
+    "TrailIconAssetIds"
+   ]
+  },
+  {
+   "name": "trail_solar",
+   "kind": "image",
+   "target": "table",
+   "file": "src/shared/ProgressionConfig.luau",
+   "key": "solar",
+   "group": "TrailIconAssetIds",
+   "table": "TrailIconAssetIds",
+   "reader": [
+    "src/client/ShopCards.luau",
+    "TrailIconAssetIds"
+   ]
+  },
+  {
+   "name": "trail_nova",
+   "kind": "image",
+   "target": "table",
+   "file": "src/shared/ProgressionConfig.luau",
+   "key": "nova",
+   "group": "TrailIconAssetIds",
+   "table": "TrailIconAssetIds",
+   "reader": [
+    "src/client/ShopCards.luau",
+    "TrailIconAssetIds"
+   ]
+  },
+  {
+   "name": "trail_astra",
+   "kind": "image",
+   "target": "table",
+   "file": "src/shared/ProgressionConfig.luau",
+   "key": "astra",
+   "group": "TrailIconAssetIds",
+   "table": "TrailIconAssetIds",
+   "reader": [
+    "src/client/ShopCards.luau",
+    "TrailIconAssetIds"
+   ]
+  },
+  {
+   "name": "aura_meadow",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "aura_meadow",
+   "group": "Images.aura_meadow",
+   "table": "Images",
+   "pending": "BD-101 aura shop card"
+  },
+  {
+   "name": "aura_tidal",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "aura_tidal",
+   "group": "Images.aura_tidal",
+   "table": "Images",
+   "pending": "BD-101 aura shop card"
+  },
+  {
+   "name": "aura_royal",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "aura_royal",
+   "group": "Images.aura_royal",
+   "table": "Images",
+   "pending": "BD-101 aura shop card"
+  },
+  {
+   "name": "mutation_dewdrop",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "mutation_dewdrop",
+   "group": "Images.mutation_dewdrop",
+   "table": "Images",
+   "pending": "BD-190 MutationBadge"
+  },
+  {
+   "name": "mutation_charged",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "mutation_charged",
+   "group": "Images.mutation_charged",
+   "table": "Images",
+   "pending": "BD-190 MutationBadge"
+  },
+  {
+   "name": "mutation_frost",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "mutation_frost",
+   "group": "Images.mutation_frost",
+   "table": "Images",
+   "pending": "BD-190 MutationBadge"
+  },
+  {
+   "name": "mutation_seismic",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "mutation_seismic",
+   "group": "Images.mutation_seismic",
+   "table": "Images",
+   "pending": "BD-190 MutationBadge"
+  },
+  {
+   "name": "mutation_ember",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "mutation_ember",
+   "group": "Images.mutation_ember",
+   "table": "Images",
+   "pending": "BD-190 MutationBadge"
+  },
+  {
+   "name": "mutation_aurora",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "mutation_aurora",
+   "group": "Images.mutation_aurora",
+   "table": "Images",
+   "pending": "BD-190 MutationBadge"
+  },
+  {
+   "name": "mutation_bloodmoon",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "mutation_bloodmoon",
+   "group": "Images.mutation_bloodmoon",
+   "table": "Images",
+   "pending": "BD-190 MutationBadge"
+  },
+  {
+   "name": "paint_bucket",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "paint_bucket",
+   "group": "Images.paint_bucket",
+   "table": "Images",
+   "reader": [
+    "src/client/HatchSequence.luau",
+    "paint_bucket"
+   ]
+  },
+  {
+   "name": "rarity_common",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "rarity_common",
+   "group": "Images.rarity_common",
+   "table": "Images",
+   "pending": "BD-113 rarity badges"
+  },
+  {
+   "name": "rarity_uncommon",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "rarity_uncommon",
+   "group": "Images.rarity_uncommon",
+   "table": "Images",
+   "pending": "BD-113 rarity badges"
+  },
+  {
+   "name": "rarity_rare",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "rarity_rare",
+   "group": "Images.rarity_rare",
+   "table": "Images",
+   "pending": "BD-113 rarity badges"
+  },
+  {
+   "name": "rarity_epic",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "rarity_epic",
+   "group": "Images.rarity_epic",
+   "table": "Images",
+   "pending": "BD-113 rarity badges"
+  },
+  {
+   "name": "rarity_legendary",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "rarity_legendary",
+   "group": "Images.rarity_legendary",
+   "table": "Images",
+   "pending": "BD-113 rarity badges"
+  },
+  {
+   "name": "rarity_mythic",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "rarity_mythic",
+   "group": "Images.rarity_mythic",
+   "table": "Images",
+   "pending": "BD-113 rarity badges"
+  },
+  {
+   "name": "tier_gold",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "tier_gold",
+   "group": "Images.tier_gold",
+   "table": "Images",
+   "pending": "BD-113 tier badges"
+  },
+  {
+   "name": "tier_emerald",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "tier_emerald",
+   "group": "Images.tier_emerald",
+   "table": "Images",
+   "pending": "BD-113 tier badges"
+  },
+  {
+   "name": "tier_diamond",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "tier_diamond",
+   "group": "Images.tier_diamond",
+   "table": "Images",
+   "pending": "BD-113 tier badges"
+  },
+  {
+   "name": "notify_crystal",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "notify_crystal",
+   "group": "Images.notify_crystal",
+   "table": "Images",
+   "pending": "BD-304 notification icons"
+  },
+  {
+   "name": "notify_level",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "notify_level",
+   "group": "Images.notify_level",
+   "table": "Images",
+   "pending": "BD-304 notification icons"
+  },
+  {
+   "name": "notify_star",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "notify_star",
+   "group": "Images.notify_star",
+   "table": "Images",
+   "pending": "BD-304 notification icons"
+  },
+  {
+   "name": "notify_mutation_egg",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "notify_mutation_egg",
+   "group": "Images.notify_mutation_egg",
+   "table": "Images",
+   "pending": "BD-304 notification icons"
+  },
+  {
+   "name": "notify_warning",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "notify_warning",
+   "group": "Images.notify_warning",
+   "table": "Images",
+   "pending": "BD-304 notification icons"
+  },
+  {
+   "name": "toast_body",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "toast_body",
+   "group": "Images.toast_body",
+   "table": "Images",
+   "pending": "BD-304 toast plate"
+  },
+  {
+   "name": "frame_common",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "frame_common",
+   "group": "Images.frame_common",
+   "table": "Images",
+   "pending": "BD-101 potion frames"
+  },
+  {
+   "name": "frame_uncommon",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "frame_uncommon",
+   "group": "Images.frame_uncommon",
+   "table": "Images",
+   "pending": "BD-101 potion frames"
+  },
+  {
+   "name": "frame_rare",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "frame_rare",
+   "group": "Images.frame_rare",
+   "table": "Images",
+   "pending": "BD-101 potion frames"
+  },
+  {
+   "name": "frame_epic",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "frame_epic",
+   "group": "Images.frame_epic",
+   "table": "Images",
+   "pending": "BD-101 potion frames"
+  },
+  {
+   "name": "frame_legendary",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "frame_legendary",
+   "group": "Images.frame_legendary",
+   "table": "Images",
+   "pending": "BD-101 potion frames"
+  },
+  {
+   "name": "hud_heart",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "hud_heart",
+   "group": "Images.hud_heart",
+   "table": "Images",
+   "pending": "BD-248 CombatHud"
+  },
+  {
+   "name": "hud_class_1",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "hud_class_1",
+   "group": "Images.hud_class_1",
+   "table": "Images",
+   "pending": "BD-248 CombatHud"
+  },
+  {
+   "name": "hud_class_2",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "hud_class_2",
+   "group": "Images.hud_class_2",
+   "table": "Images",
+   "pending": "BD-248 CombatHud"
+  },
+  {
+   "name": "hud_class_3",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "hud_class_3",
+   "group": "Images.hud_class_3",
+   "table": "Images",
+   "pending": "BD-248 CombatHud"
+  },
+  {
+   "name": "hud_bite",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "hud_bite",
+   "group": "Images.hud_bite",
+   "table": "Images",
+   "pending": "BD-248 CombatHud"
+  },
+  {
+   "name": "hud_hit_bubble",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "hud_hit_bubble",
+   "group": "Images.hud_hit_bubble",
+   "table": "Images",
+   "pending": "BD-248 CombatHud"
+  },
+  {
+   "name": "crystals_s",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "crystals_s",
+   "group": "Images.crystals_s",
+   "table": "Images",
+   "pending": "BD-331 crystal pack cards"
+  },
+  {
+   "name": "crystals_m",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "crystals_m",
+   "group": "Images.crystals_m",
+   "table": "Images",
+   "pending": "BD-331 crystal pack cards"
+  },
+  {
+   "name": "crystals_l",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "crystals_l",
+   "group": "Images.crystals_l",
+   "table": "Images",
+   "pending": "BD-331 crystal pack cards"
+  },
+  {
+   "name": "crystals_xl",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "crystals_xl",
+   "group": "Images.crystals_xl",
+   "table": "Images",
+   "pending": "BD-331 crystal pack cards"
+  },
+  {
+   "name": "station_nests",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "station_nests",
+   "group": "Images.station_nests",
+   "table": "Images",
+   "pending": "docs/104 cave sign SurfaceGuis"
+  },
+  {
+   "name": "station_potions",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "station_potions",
+   "group": "Images.station_potions",
+   "table": "Images",
+   "pending": "docs/104 cave sign SurfaceGuis"
+  },
+  {
+   "name": "station_fusion",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "station_fusion",
+   "group": "Images.station_fusion",
+   "table": "Images",
+   "pending": "docs/104 cave sign SurfaceGuis"
+  },
+  {
+   "name": "station_style",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "station_style",
+   "group": "Images.station_style",
+   "table": "Images",
+   "pending": "docs/104 cave sign SurfaceGuis"
+  },
+  {
+   "name": "station_index",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "station_index",
+   "group": "Images.station_index",
+   "table": "Images",
+   "pending": "docs/104 cave sign SurfaceGuis"
+  },
+  {
+   "name": "station_settings",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "station_settings",
+   "group": "Images.station_settings",
+   "table": "Images",
+   "pending": "docs/104 cave sign SurfaceGuis"
+  },
+  {
+   "name": "fame_plaque",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "fame_plaque",
+   "group": "Images.fame_plaque",
+   "table": "Images",
+   "pending": "docs/104 cave sign SurfaceGuis"
+  },
+  {
+   "name": "golden_drumstick_icon",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "golden_drumstick_icon",
+   "group": "Images.golden_drumstick_icon",
+   "table": "Images",
+   "pending": "BD-207 special food icon"
+  },
+  {
+   "name": "hatch_bucket",
+   "kind": "mesh",
+   "target": "hatchbucket",
+   "file": "src/shared/HatchV2Assets.luau",
+   "key": "bucket",
+   "group": "Models.bucket",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "HatchV2Assets"
+   ]
+  },
+  {
+   "name": "golden_drumstick_mesh",
+   "kind": "mesh",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "golden_drumstick_mesh",
+   "group": "Meshes.golden_drumstick_mesh",
+   "table": "Meshes",
+   "pending": "BD-207 FoodService special food mesh"
+  },
+  {
+   "name": "shock_dome_mesh",
+   "kind": "mesh",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shock_dome_mesh",
+   "group": "Meshes.shock_dome_mesh",
+   "table": "Meshes",
+   "pending": "BD-433 mesh"
+  },
+  {
+   "name": "shaft_cone_mesh",
+   "kind": "mesh",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "shaft_cone_mesh",
+   "group": "Meshes.shaft_cone_mesh",
+   "table": "Meshes",
+   "pending": "BD-432 mesh"
+  },
+  {
+   "name": "aura_shell_mesh",
+   "kind": "mesh",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "aura_shell_mesh",
+   "group": "Meshes.aura_shell_mesh",
+   "table": "Meshes",
+   "pending": "BD-433 mesh"
+  },
+  {
+   "name": "sfx_rare_hatch_fanfare",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "rare_hatch_fanfare",
+   "group": "Sounds.rare_hatch_fanfare",
+   "pending": "BD-428 / BD-162 / BD-081 / BD-341 / BD-342 call site"
+  },
+  {
+   "name": "sfx_mutation_dewdrop_reveal",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "mutation_dewdrop_reveal",
+   "group": "Sounds.mutation_dewdrop_reveal",
+   "pending": "BD-428 / BD-162 / BD-081 / BD-341 / BD-342 call site"
+  },
+  {
+   "name": "sfx_mutation_charged_reveal",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "mutation_charged_reveal",
+   "group": "Sounds.mutation_charged_reveal",
+   "pending": "BD-428 / BD-162 / BD-081 / BD-341 / BD-342 call site"
+  },
+  {
+   "name": "sfx_mutation_frost_reveal",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "mutation_frost_reveal",
+   "group": "Sounds.mutation_frost_reveal",
+   "pending": "BD-428 / BD-162 / BD-081 / BD-341 / BD-342 call site"
+  },
+  {
+   "name": "sfx_mutation_seismic_reveal",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "mutation_seismic_reveal",
+   "group": "Sounds.mutation_seismic_reveal",
+   "pending": "BD-428 / BD-162 / BD-081 / BD-341 / BD-342 call site"
+  },
+  {
+   "name": "sfx_mutation_ember_reveal",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "mutation_ember_reveal",
+   "group": "Sounds.mutation_ember_reveal",
+   "pending": "BD-428 / BD-162 / BD-081 / BD-341 / BD-342 call site"
+  },
+  {
+   "name": "sfx_mutation_aurora_reveal",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "mutation_aurora_reveal",
+   "group": "Sounds.mutation_aurora_reveal",
+   "pending": "BD-428 / BD-162 / BD-081 / BD-341 / BD-342 call site"
+  },
+  {
+   "name": "sfx_mutation_bloodmoon_reveal",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "mutation_bloodmoon_reveal",
+   "group": "Sounds.mutation_bloodmoon_reveal",
+   "pending": "BD-428 / BD-162 / BD-081 / BD-341 / BD-342 call site"
+  },
+  {
+   "name": "sfx_defeat_soft",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "defeat_soft",
+   "group": "Sounds.defeat_soft",
+   "pending": "BD-428 / BD-162 / BD-081 / BD-341 / BD-342 call site"
+  },
+  {
+   "name": "sfx_cracked_fail",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "cracked_fail",
+   "group": "Sounds.cracked_fail",
+   "pending": "BD-428 / BD-162 / BD-081 / BD-341 / BD-342 call site"
+  },
+  {
+   "name": "sfx_crystal_cue",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "crystal_cue",
+   "group": "Sounds.crystal_cue",
+   "pending": "BD-428 / BD-162 / BD-081 / BD-341 / BD-342 call site"
+  },
+  {
+   "name": "sfx_nest_open_cue",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "nest_open_cue",
+   "group": "Sounds.nest_open_cue",
+   "pending": "BD-428 / BD-162 / BD-081 / BD-341 / BD-342 call site"
+  },
+  {
+   "name": "sfx_hatch_rattle",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "hatch_rattle",
+   "group": "Sounds.hatch_rattle",
+   "reader": [
+    "src/shared/Sfx.luau",
+    "Sfx.Sounds[name]"
+   ]
+  },
+  {
+   "name": "sfx_hatch_burst",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "hatch_burst",
+   "group": "Sounds.hatch_burst",
+   "reader": [
+    "src/shared/Sfx.luau",
+    "Sfx.Sounds[name]"
+   ]
+  },
+  {
+   "name": "sfx_hatch_reveal_common",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "hatch_reveal_common",
+   "group": "Sounds.hatch_reveal_common",
+   "reader": [
+    "src/shared/Sfx.luau",
+    "Sfx.Sounds[name]"
+   ]
+  },
+  {
+   "name": "sfx_hatch_reveal_uncommon",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "hatch_reveal_uncommon",
+   "group": "Sounds.hatch_reveal_uncommon",
+   "reader": [
+    "src/shared/Sfx.luau",
+    "Sfx.Sounds[name]"
+   ]
+  },
+  {
+   "name": "sfx_hatch_reveal_rare",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "hatch_reveal_rare",
+   "group": "Sounds.hatch_reveal_rare",
+   "reader": [
+    "src/shared/Sfx.luau",
+    "Sfx.Sounds[name]"
+   ]
+  },
+  {
+   "name": "sfx_hatch_reveal_epic",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "hatch_reveal_epic",
+   "group": "Sounds.hatch_reveal_epic",
+   "reader": [
+    "src/shared/Sfx.luau",
+    "Sfx.Sounds[name]"
+   ]
+  },
+  {
+   "name": "sfx_hatch_reveal_legendary",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "hatch_reveal_legendary",
+   "group": "Sounds.hatch_reveal_legendary",
+   "reader": [
+    "src/shared/Sfx.luau",
+    "Sfx.Sounds[name]"
+   ]
+  },
+  {
+   "name": "sfx_shiny_bang",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "shiny_bang",
+   "group": "Sounds.shiny_bang",
+   "reader": [
+    "src/shared/Sfx.luau",
+    "Sfx.Sounds[name]"
+   ]
+  },
+  {
+   "name": "sfx_big_thud",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "big_thud",
+   "group": "Sounds.big_thud",
+   "reader": [
+    "src/shared/Sfx.luau",
+    "Sfx.Sounds[name]"
+   ]
+  },
+  {
+   "name": "sfx_pickup",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "pickup",
+   "group": "Sounds.pickup",
+   "reader": [
+    "src/shared/Sfx.luau",
+    "Sfx.Sounds[name]"
+   ]
+  },
+  {
+   "name": "sfx_ui_click",
+   "kind": "audio",
+   "target": "sfx",
+   "file": "src/shared/Sfx.luau",
+   "key": "ui_click",
+   "group": "Sounds.ui_click",
+   "reader": [
+    "src/shared/Sfx.luau",
+    "Sfx.Sounds[name]"
+   ]
+  },
+  {
+   "name": "weather_rain_bed",
+   "kind": "audio",
+   "target": "weather",
+   "file": "src/shared/WeatherSounds.luau",
+   "key": "rain_bed",
+   "group": "Sounds.rain_bed",
+   "reader": [
+    "src/client/WeatherAudio.client.luau",
+    "WeatherSounds"
+   ]
+  },
+  {
+   "name": "weather_thunder_bed",
+   "kind": "audio",
+   "target": "weather",
+   "file": "src/shared/WeatherSounds.luau",
+   "key": "thunder_bed",
+   "group": "Sounds.thunder_bed",
+   "reader": [
+    "src/client/WeatherAudio.client.luau",
+    "WeatherSounds"
+   ]
+  },
+  {
+   "name": "weather_thunder_roll",
+   "kind": "audio",
+   "target": "weather",
+   "file": "src/shared/WeatherSounds.luau",
+   "key": "thunder_roll",
+   "group": "Sounds.thunder_roll",
+   "reader": [
+    "src/client/WeatherAudio.client.luau",
+    "WeatherSounds"
+   ]
+  },
+  {
+   "name": "weather_thunder_strike",
+   "kind": "audio",
+   "target": "weather",
+   "file": "src/shared/WeatherSounds.luau",
+   "key": "thunder_strike",
+   "group": "Sounds.thunder_strike",
+   "reader": [
+    "src/client/WeatherAudio.client.luau",
+    "WeatherSounds"
+   ]
+  },
+  {
+   "name": "weather_blizzard_bed",
+   "kind": "audio",
+   "target": "weather",
+   "file": "src/shared/WeatherSounds.luau",
+   "key": "blizzard_bed",
+   "group": "Sounds.blizzard_bed",
+   "reader": [
+    "src/client/WeatherAudio.client.luau",
+    "WeatherSounds"
+   ]
+  },
+  {
+   "name": "weather_volcano_bed",
+   "kind": "audio",
+   "target": "weather",
+   "file": "src/shared/WeatherSounds.luau",
+   "key": "volcano_bed",
+   "group": "Sounds.volcano_bed",
+   "reader": [
+    "src/client/WeatherAudio.client.luau",
+    "WeatherSounds"
+   ]
+  },
+  {
+   "name": "weather_volcano_boom",
+   "kind": "audio",
+   "target": "weather",
+   "file": "src/shared/WeatherSounds.luau",
+   "key": "volcano_boom",
+   "group": "Sounds.volcano_boom",
+   "reader": [
+    "src/client/WeatherAudio.client.luau",
+    "WeatherSounds"
+   ]
+  },
+  {
+   "name": "weather_quake_bed",
+   "kind": "audio",
+   "target": "weather",
+   "file": "src/shared/WeatherSounds.luau",
+   "key": "quake_bed",
+   "group": "Sounds.quake_bed",
+   "reader": [
+    "src/client/WeatherAudio.client.luau",
+    "WeatherSounds"
+   ]
+  },
+  {
+   "name": "weather_quake_burst",
+   "kind": "audio",
+   "target": "weather",
+   "file": "src/shared/WeatherSounds.luau",
+   "key": "quake_burst",
+   "group": "Sounds.quake_burst",
+   "reader": [
+    "src/client/WeatherAudio.client.luau",
+    "WeatherSounds"
+   ]
+  },
+  {
+   "name": "weather_bloodmoon_bed",
+   "kind": "audio",
+   "target": "weather",
+   "file": "src/shared/WeatherSounds.luau",
+   "key": "bloodmoon_bed",
+   "group": "Sounds.bloodmoon_bed",
+   "reader": [
+    "src/client/WeatherAudio.client.luau",
+    "WeatherSounds"
+   ]
+  },
+  {
+   "name": "weather_aurora_bed",
+   "kind": "audio",
+   "target": "weather",
+   "file": "src/shared/WeatherSounds.luau",
+   "key": "aurora_bed",
+   "group": "Sounds.aurora_bed",
+   "reader": [
+    "src/client/WeatherAudio.client.luau",
+    "WeatherSounds"
+   ]
+  },
+  {
+   "name": "cave_bed",
+   "kind": "audio",
+   "target": "cavebed",
+   "file": "src/shared/CaveLightingRules.luau",
+   "key": "Bed",
+   "group": "Bed",
+   "reader": [
+    "src/client/CaveAtmosphere.luau",
+    "Rules.Bed"
+   ]
+  }
+ ]
+}
