@@ -13,16 +13,16 @@ Updated 2026-10-14. This file is the canonical task tracker.
 
 | Status | P0 | P1 | P2 | P3 | Total |
 |---|---:|---:|---:|---:|---:|
-| Backlog | 6 | 35 | 31 | 8 | 80 |
+| Backlog | 5 | 34 | 31 | 8 | 78 |
 | In progress | 3 | 1 | 0 | 0 | 4 |
 | In review | 2 | 0 | 0 | 0 | 2 |
-| Review / test | 57 | 158 | 62 | 10 | 287 |
+| Review / test | 58 | 158 | 62 | 10 | 288 |
 | Blocked | 1 | 0 | 0 | 0 | 1 |
 | Done | 13 | 2 | 1 | 0 | 16 |
 | Superseded | 2 | 2 | 0 | 0 | 4 |
-| Parked | 0 | 0 | 0 | 1 | 1 |
+| Parked | 0 | 0 | 0 | 2 | 2 |
 | Spike | 0 | 2 | 0 | 0 | 2 |
-| **Total** | 84 | 200 | 94 | 19 | 397 |
+| **Total** | 84 | 199 | 94 | 20 | 397 |
 
 <!-- board-summary:end -->
 
@@ -1109,7 +1109,7 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-439 | Review / test | P1 | Food-only progression balance (owner correction 2026-10-16, docs/131): a food-only player must get enough growth, eggs and crystals. AUDIT: eating a player gives +1 run egg (about 42 food-equivalents) plus 2.5 growth (about 25 food of growth), limited only by a 60 s repeat-victim cooldown; a kill chain can double a 15-egg run. OWNER DECISION 2026-10-16 (option B) IMPLEMENTED: a player kill gives 0.25 run egg (carry), max 3 per run (PROVISIONAL `PredationEggPerKill`/`PredationEggMaxPerRun`), growth and NPC kills unchanged, 60 s cooldown kept; also RareHatchService 45 s cooldown now UserId-keyed (CooldownMemory). Offline tests pass; still needs a Studio food-per-minute measurement. Roles: designer, economy | BD-418, docs/131 |
 | BD-438 | Review / test | P1 | Phone FX budget fit (docs/130): remote players on a phone drop aura glow lights/beams and use a single-beam mutation ring so the PROVISIONAL phone worst case (16 lights, 24 beams) passes; own dino and mutation glow unchanged; desktop/tablet unchanged. Needs a real phone probe (BD-085). Roles: VFX lead | BD-429 |
 | BD-440 | Review / test | P1 | First screen clutter (docs/132): the NextGoal line and Goals panel are hidden until the first egg is found (`FtueRules.showGoals`, `GoalHud`). Offline test only; Studio check pending. | BD-427, BD-368 |
-| BD-441 | Backlog | P0 | Playtest feedback button (PR #261) hidden until the first run ends, then small in a corner (docs/132). | BD-440 |
+| BD-441 | Review / test | P0 | Playtest feedback button (PR #261) hidden until the first run ends, then small in a corner (docs/132). **2026-10-16 audit:** already in code on main since #261: `FeedbackClient.client.luau` starts hidden and shows only via `PlaytestFeedback.showButton` (run ended or an egg found, never mid-run); no Bootstrap local; offline test `tools/verify_feedback.py`. The row was stale. Studio/phone screenshot of the corner button still pending. | BD-440 |
 | BD-442 | Review / test | P1 | Cave hub spawn: one obvious go affordance (gate walk-up vs EXPLORE ISLAND vs 6-button rail); arrow to it; Studio check (docs/132). Code: GoCue pulsing ring + TAP TO GO! on the EXPLORE ISLAND button until the first run (FtueRules.goCueShown); Reduce Motion = still ring; Studio check still open. | BD-368, BD-293 |
 | BD-443 | Review / test | P1 | Class picker line (BD-423): fit and length on a phone for the longest class text (docs/132). Code: picker line is TextScaled, one line, 14..22 px; Studio phone check still open. | BD-423 |
 | BD-444 | Review / test | P1 | 15-egg hatch party (~76 s): visible 'egg 3 of 15' counter, clearer Skip all after egg 3; keep the reveal (docs/132). | BD-437. Done in code: "Egg N of M" counter + "Skip the rest" (176x48), timing unchanged; Studio/phone check open. |
