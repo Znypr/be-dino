@@ -74,4 +74,9 @@ Extracted from the kanban owner log, AGENTS.md, docs and the lead sessions. "LEA
 - OWNER: cave hub mood is a cosy home base: warm, safe, lamp-lit den to relax, shop and show off dinos.
 - OWNER: players can play as ANY dino they own, each with its own class feel (BD-423).
 - OWNER: a rare hatch (Legendary, Shiny, event mutation) gets a huge celebration: screen-wide fanfare, confetti, special sound, server announcement (BD-424).
+
+## 2026-10-16 (cave boards and props)
+- LEAD (for owner review): the cave no longer shows the **Robux Spent** leaderboard board (kid audience, and the Robux line is looks plus convenience, never status). The data is still measured and written (`RobuxSpent`, ordered store); only the cave board is hidden (`hiddenInCave` in `Leaderboards`). With the flag off nothing changes. The owner may overrule; to bring it back remove `hiddenInCave`.
+- LEAD: the two remaining cave boards (Rarest Dinos, Most Play Time) use the warm cave palette (wood frame, warm dark-brown panel, amber title, cream text, lamp-lit, never pure black; docs/114 s6.1 luminance band). The old third board was the black empty one (Robux), now gone.
+- LEAD: floor scatter props (stalagmites, rocks, crystals, pebbles, moss) are grouped into 9 clusters on free ground (`CLUSTER_*` in `CaveHubLayout`, PROVISIONAL) instead of spread randomly; separation between scatter props is 1.15 of the bound radii, so some props are dropped (276 of 410 parts). Paths, pads and the lava basin stay clear. Needs an owner look in Studio.
 - OWNER 2026-10-16: eating another player gives a SMALL capped egg bonus: 0.25 run egg per player kill (fractional carry), at most 3 per run (PROVISIONAL `PredationEggPerKill`, `PredationEggMaxPerRun`); kill growth unchanged, NPC kills unchanged, 60 s repeat-victim cooldown stays (BD-439, option B in docs/131). Same change: the rare-hatch announcement cooldown is now UserId-keyed so a rejoin does not reset it.
