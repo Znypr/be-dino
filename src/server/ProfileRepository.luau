@@ -101,6 +101,16 @@ local profiles: {[Player]: any} = {}
 -- mid-page loses just the animation, never a credit (see docs/50).
 local revealBuffer: {[Player]: {any}} = {}
 local renewing = false
+-- BD-354: userIds whose lease release is still in flight. A rejoin of the same user on this server shares our leaseId, so a late
+-- release would clear the NEW session; load waits for it instead.
+local releasing: {[number]: number} = {}
+
+-- BD-354: adopt a transaction result only while the player is still loaded. A player who left (release already ran) must not get
+-- a profile entry back: it would leak the Player instance plus up to megabytes of profile for the rest of the server's life.
+local function adopt(player: Player, updated: any)
+    local live = profiles[player]
+    if live ~= nil and updated.revision >= live.revision then profiles[player] = updated end
+end
 
 local function keyFor(player: Player): string
     return "u:" .. tostring(player.UserId)
@@ -716,8 +726,8 @@ function ProfileRepository.fuseDinosaurs(player: Player, request: any)
         player:SetAttribute("ProfileState", "SaveFailed")
         return false, nil, "save_failed"
     end
-    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true, committed, if duplicate then "duplicate" else "fused"
 end
 
@@ -741,6 +751,12 @@ end
 
 function ProfileRepository.load(player: Player): boolean
     if profiles[player] then return true end
+    local releaseWait = 0
+    while (releasing[player.UserId] or 0) > 0 and releaseWait < 150 do -- <= 15 s (release retries are bounded)
+        task.wait(0.1)
+        releaseWait += 1
+    end
+    if not player.Parent then return false end
     player:SetAttribute("ProfileMode", if localPreview then "Studio preview (not saved)" else "Persistent")
     player:SetAttribute("ProfileState", "Loading")
 
@@ -794,9 +810,16 @@ function ProfileRepository.load(player: Player): boolean
         return false
     end
 
+    if not player.Parent then
+        -- BD-354: the player left while the load was in flight. Take the lease we just wrote back instead of holding it for
+        -- ProfileLeaseSeconds (a rejoin would see SessionBusy) and never cache a profile for a departed Player.
+        profiles[player] = updated
+        ProfileRepository.release(player)
+        return false
+    end
     if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
     player:SetAttribute("ProfileState", "Loaded")
-    syncAttributes(player, profiles[player])
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true
 end
 
@@ -847,7 +870,10 @@ end
 -- before UpdateAsync; settledRuns + recentOperations make the run exactly-once.
 function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number, eggEvents, runSeconds: number?, weatherId: string?)
     local cached = profiles[player]
-    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
+    local priorState = player:GetAttribute("ProfileState")
+    -- BD-354: settlement is the one write that must still be tried after an earlier failed write ("SaveFailed"): it is an
+    -- atomic, lease-checked, exactly-once (run id) transaction, and refusing it forfeited the whole run's eggs.
+    if not cached or (priorState ~= "Loaded" and priorState ~= "SaveFailed") then
         return false, nil, "profile_not_loaded"
     end
     if typeof(runId) ~= "string" or #runId < 1 or #runId > 64 then
@@ -961,8 +987,8 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         return false, nil, "save_failed"
     end
 
-    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     local committedOutcome = if duplicate then duplicateOutcome else outcome
     if committedOutcome then
         player:SetAttribute("LastRewardText", runRewardText(committedOutcome))
@@ -973,6 +999,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         player:SetAttribute("LastRunNestFull", committedOutcome.nestFull == true)
     end
     player:SetAttribute("LastSettledRunId", runId)
+    if priorState == "SaveFailed" and player:GetAttribute("ProfileState") == "SaveFailed" then player:SetAttribute("ProfileState", "Loaded") end
     return true, committedOutcome, if duplicate then "duplicate" else "committed"
 end
 
@@ -1013,8 +1040,8 @@ function ProfileRepository.setRevealSkip(player: Player, selection: any): (boole
         player:SetAttribute("ProfileState", "SaveFailed")
         return false, "save_failed"
     end
-    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true, "saved"
 end
 
@@ -1043,8 +1070,8 @@ function ProfileRepository.setSettings(player: Player, raw: any): (boolean, stri
         player:SetAttribute("ProfileState", "SaveFailed")
         return false, "save_failed"
     end
-    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true, "saved"
 end
 
@@ -1129,8 +1156,8 @@ function ProfileRepository.claimNest(player: Player, nestId: string)
         player:SetAttribute("ProfileState", "SaveFailed")
         return false, nil, "save_failed"
     end
-    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     if duplicateOutcome then return true, duplicateOutcome, "duplicate" end
     return true, outcome, "opened"
 end
@@ -1204,8 +1231,8 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string, varia
         return false, "save_failed"
     end
 
-    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true, "equipped"
 end
 
@@ -1258,8 +1285,8 @@ function ProfileRepository.grantCollectionTestSpecies(player: Player): (boolean,
         return false, "save_failed"
     end
 
-    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true, if duplicate then "duplicate" else "granted"
 end
 
@@ -1319,8 +1346,8 @@ function ProfileRepository.grantChestTest(player: Player): (boolean, string)
         return false, "save_failed"
     end
 
-    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true, if duplicate then "duplicate" else "granted"
 end
 
@@ -1511,14 +1538,14 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
         return false, nil, "save_failed"
     end
 
-    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     local committedOutcome = duplicateOutcome or outcome
     if not duplicateOutcome and #pageOutcomes > 0 then
         local pageBuffer = {}
         for _, pageOutcome in pageOutcomes do table.insert(pageBuffer, {eggId = pageOutcome.eggId, outcome = pageOutcome}) end
         revealBuffer[player] = pageBuffer
-        syncAttributes(player, profiles[player])
+        if profiles[player] then syncAttributes(player, profiles[player]) end
     end
     publishHatch(player, chestId, committedOutcome)
     return true, committedOutcome, if duplicateOutcome then "duplicate" else "claimed"
@@ -1609,8 +1636,8 @@ function ProfileRepository.mutateSpecies(player: Player, speciesId: string, targ
         return false, nil, "save_failed"
     end
 
-    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     local committedOutcome = duplicateOutcome or outcome
     return true, committedOutcome, if duplicateOutcome then "duplicate" else "mutated"
 end
@@ -1655,8 +1682,8 @@ function ProfileRepository.setMutationTestCopies(player: Player, speciesId: stri
         return false, "save_failed"
     end
 
-    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true, "set_" .. tostring(baseCount)
 end
 
@@ -1720,8 +1747,8 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
     if leaseLost then player:SetAttribute("ProfileState","LeaseLost") return false,"lease_lost" end
     if not updated then return false,denied end
     if not player.Parent then return true,if duplicate then "duplicate" else outcome.status end
-    if not profiles[player] or updated.revision>=profiles[player].revision then profiles[player]=updated end
-    if player.Parent then syncAttributes(player,profiles[player]) end
+    adopt(player, updated)
+    if player.Parent and profiles[player] then syncAttributes(player,profiles[player]) end
     return true,if duplicate then "duplicate" else outcome.status
 end
 
@@ -1752,13 +1779,17 @@ function ProfileRepository.purchase(player: Player, receipt)
     end)
     if not ok or not updated then return false end
     if not profiles[player] then return true end
-    if updated.revision>=profiles[player].revision then profiles[player]=updated end
+    adopt(player, updated)
     syncAttributes(player,profiles[player])
     return true
 end
 
 function ProfileRepository.renew(player: Player): boolean
-    if not profiles[player] or player:GetAttribute("ProfileState") ~= "Loaded" then return false end
+    local state = player:GetAttribute("ProfileState")
+    -- BD-354: "SaveFailed" is recoverable. Every write is one atomic UpdateAsync that is checked against our lease, so a
+    -- successful renew proves the store is consistent and hands back the authoritative copy; without this one failed
+    -- equip/potion write bricked the player (no runs, no claims, settlement refused) until they rejoined.
+    if not profiles[player] or (state ~= "Loaded" and state ~= "SaveFailed") then return false end
     local leaseLost = false
     local now = os.time()
     local ok, updated = retry("lease renew", function()
@@ -1779,8 +1810,9 @@ function ProfileRepository.renew(player: Player): boolean
         player:SetAttribute("ProfileState", if leaseLost then "LeaseLost" else "SaveFailed")
         return false
     end
-    if not profiles[player] or updated.revision >= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated) -- the store copy is authoritative after a recovery (its revision is never older)
+    if state == "SaveFailed" then player:SetAttribute("ProfileState", "Loaded") end
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true
 end
 
@@ -1790,6 +1822,8 @@ function ProfileRepository.release(player: Player)
     profiles[player] = nil
     if not cached then return end
 
+    local userId = player.UserId
+    releasing[userId] = (releasing[userId] or 0) + 1
     local ok, updated = retry("lease release", function()
         return store:UpdateAsync(keyFor(player), function(profileValue)
             if not isValidProfile(profileValue) or not ownSession(profileValue) then return nil end
@@ -1799,6 +1833,8 @@ function ProfileRepository.release(player: Player)
             return profileValue
         end)
     end)
+    releasing[userId] = (releasing[userId] or 1) - 1
+    if releasing[userId] <= 0 then releasing[userId] = nil end
     return if ok and updated then updated.metrics else nil
 end
 

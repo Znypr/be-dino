@@ -205,7 +205,12 @@ function FoodService.start(dinosaur,repository)
                     local plausible = last and last.character == character
                         and MovementEnvelope.plausible(position - last.position, now - last.time, 2, 2, root.AssemblyLinearVelocity.Y, character:GetAttribute("MovementSpeedLimit") or humanoid.WalkSpeed)
                     previous[player] = {character = character, position = position, time = now}
-                    if plausible then table.insert(candidates, {player = player, character = character, root = root, gained = 0}) end
+                    if plausible then
+                        -- BD-354: per-candidate values hoisted out of the food loop (was 2,400 foods x players GetAttribute calls per tick).
+                        local scale = character:GetAttribute("VisualScale") or 1
+                        local radius = math.min(5, Config.FoodPickupRadius + (scale - 1) * 0.75)
+                        table.insert(candidates, {player = player, character = character, root = root, gained = 0, position = position, radius = radius, radiusSq = radius * radius})
+                    end
                 else previous[player] = nil end
             end
             for _, food in foods do
@@ -216,13 +221,12 @@ function FoodService.start(dinosaur,repository)
                     food.hidden = false
                 end
                 local winner, nearest = nil, math.huge
+                local foodPosition = food.part.Position
                 for _, candidate in candidates do
-                    local delta = food.part.Position - candidate.root.Position
-                    local horizontal = Vector3.new(delta.X, 0, delta.Z).Magnitude
-                    local scale = candidate.character:GetAttribute("VisualScale") or 1
-                    local radius = math.min(5, Config.FoodPickupRadius + (scale - 1) * 0.75)
-                    if horizontal <= radius and math.abs(delta.Y) < 6 then
-                        local blocked = workspace:Raycast(candidate.root.Position, delta, pickupParams)
+                    local dx, dz = foodPosition.X - candidate.position.X, foodPosition.Z - candidate.position.Z
+                    if dx * dx + dz * dz <= candidate.radiusSq and math.abs(foodPosition.Y - candidate.position.Y) < 6 then
+                        local horizontal = math.sqrt(dx * dx + dz * dz)
+                        local blocked = workspace:Raycast(candidate.position, foodPosition - candidate.position, pickupParams)
                         if not blocked and (horizontal < nearest or (horizontal == nearest and winner and candidate.player.UserId < winner.player.UserId)) then
                             nearest, winner = horizontal, candidate
                         end

@@ -550474,6 +550474,7 @@ local ProfileRepository = require(script.Parent.ProfileRepository)
 local RunLifecycle = require(script.Parent.RunLifecycle)
 local VisualTestService = require(script.Parent.VisualTestService)
 local Leaderboards = require(script.Parent.Leaderboards)
+local LeaveCoordinator = require(script.Parent.LeaveCoordinator)
 local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
 Players.CharacterAutoLoads = false
@@ -550499,10 +550500,17 @@ Arena.build()
 Leaderboards.start()
 
 ProfileRepository.start()
+-- BD-354: PlayerRemoving and BindToClose share one idempotent, awaitable leave path (settle once, release once).
+local leaving = LeaveCoordinator.new({
+    endForDisconnect = RunLifecycle.endForDisconnect,
+    release = ProfileRepository.release,
+    publish = Leaderboards.publish,
+})
 RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string, eggEvents, runSeconds)
     local ok = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents, runSeconds, workspace:GetAttribute("WeatherId")) -- BD-156: nests dropped in weather carry it
     if not ok then
         warn(string.format("[Be Dino] settlement failed for %s (%s)", player.Name, reason))
+        leaving.settlementFinished(player) -- a failed settlement of a departed player must still release the lease
         return false
     end
 
@@ -550511,15 +550519,13 @@ RunLifecycle.configureSettlement(function(player: Player, runId: string, catchSc
         if not retryOk or retryStatus ~= "duplicate" then
             player:SetAttribute("ProfileState", "SaveFailed")
             warn("[Be Dino] duplicate settlement probe failed for " .. player.Name)
+            leaving.settlementFinished(player)
             return false
         end
         player:SetAttribute("LastSettlementProbe", "duplicate-ok")
     end
 
-    if not player.Parent then
-        local metrics=ProfileRepository.release(player)
-        if metrics then Leaderboards.publish(player,metrics) end
-    end
+    leaving.settlementFinished(player)
     return true
 end)
 RunLifecycle.start()
@@ -550552,6 +550558,14 @@ local function spawnLoadedPlayer(player: Player)
         task.wait(.2)
     end
     local loaded = ProfileRepository.load(player)
+    -- BD-354: another server (or our own previous session) can still hold the lease for up to ProfileLeaseSeconds after a
+    -- quick rejoin or teleport, and a DataStore outage fails the load; wait it out instead of leaving the player without a character.
+    local retries = math.ceil((Config.ProfileLeaseSeconds + 10) / 5)
+    while not loaded and player.Parent and retries &gt; 0 and (player:GetAttribute("ProfileState") == "SessionBusy" or player:GetAttribute("ProfileState") == "LoadFailed") do
+        retries -= 1
+        task.wait(5)
+        loaded = ProfileRepository.load(player)
+    end
     if not loaded or not player.Parent then
         warn("[Be Dino] profile load blocked character spawn for " .. player.Name)
         return
@@ -550594,22 +550608,11 @@ end
 Players.PlayerAdded:Connect(setup)
 for _, player in Players:GetPlayers() do setup(player) end
 
-Players.PlayerRemoving:Connect(function(player)
-    local status = RunLifecycle.endForDisconnect(player)
-    if status ~= "busy" then
-        local metrics=ProfileRepository.release(player)
-        if metrics then Leaderboards.publish(player,metrics) end
-    end
-end)
+Players.PlayerRemoving:Connect(leaving.leave)
 
 game:BindToClose(function()
-    for _, player in Players:GetPlayers() do
-        local status = RunLifecycle.endForDisconnect(player)
-        if status ~= "busy" then
-            local metrics=ProfileRepository.release(player)
-            if metrics then Leaderboards.publish(player,metrics) end
-        end
-    end
+    leaving.leaveAll(Players:GetPlayers()) -- in parallel; BindToClose gets 30 s in total
+    if not leaving.waitIdle(25) then warn("[Be Dino] shutdown: some players were not released in time") end
 end)
 
 local FoodService = require(script.Parent.FoodService)
@@ -551589,6 +551592,10 @@ function CombatService.start(runLifecycle, dinosaur): any?
         if not character or not key or not humanoid or humanoid.Health &lt;= 0 or not root or not root:IsA("BasePart")
             or not runLifecycle.isActive(character) then return end
         local now = workspace:GetServerTimeNow()
+        -- BD-354: refuse a bite that is still on cooldown BEFORE the O(players) candidate scan (GetExtentsSize per model);
+        -- otherwise one client spamming the remote makes the server do that scan on every request.
+        local biter = Rules.get(world, key)
+        if biter and now - biter.lastBiteAt &lt; Cfg.BiteCooldownSeconds then player:SetAttribute("LastBiteStatus", "cooldown") return end
         local candidates = {}
         for other, otherKey in tracked do
             local otherRoot = if other ~= character and other.Parent then other:FindFirstChild("HumanoidRootPart") else nil
@@ -552291,7 +552298,12 @@ function FoodService.start(dinosaur,repository)
                     local plausible = last and last.character == character
                         and MovementEnvelope.plausible(position - last.position, now - last.time, 2, 2, root.AssemblyLinearVelocity.Y, character:GetAttribute("MovementSpeedLimit") or humanoid.WalkSpeed)
                     previous[player] = {character = character, position = position, time = now}
-                    if plausible then table.insert(candidates, {player = player, character = character, root = root, gained = 0}) end
+                    if plausible then
+                        -- BD-354: per-candidate values hoisted out of the food loop (was 2,400 foods x players GetAttribute calls per tick).
+                        local scale = character:GetAttribute("VisualScale") or 1
+                        local radius = math.min(5, Config.FoodPickupRadius + (scale - 1) * 0.75)
+                        table.insert(candidates, {player = player, character = character, root = root, gained = 0, position = position, radius = radius, radiusSq = radius * radius})
+                    end
                 else previous[player] = nil end
             end
             for _, food in foods do
@@ -552302,13 +552314,12 @@ function FoodService.start(dinosaur,repository)
                     food.hidden = false
                 end
                 local winner, nearest = nil, math.huge
+                local foodPosition = food.part.Position
                 for _, candidate in candidates do
-                    local delta = food.part.Position - candidate.root.Position
-                    local horizontal = Vector3.new(delta.X, 0, delta.Z).Magnitude
-                    local scale = candidate.character:GetAttribute("VisualScale") or 1
-                    local radius = math.min(5, Config.FoodPickupRadius + (scale - 1) * 0.75)
-                    if horizontal &lt;= radius and math.abs(delta.Y) &lt; 6 then
-                        local blocked = workspace:Raycast(candidate.root.Position, delta, pickupParams)
+                    local dx, dz = foodPosition.X - candidate.position.X, foodPosition.Z - candidate.position.Z
+                    if dx * dx + dz * dz &lt;= candidate.radiusSq and math.abs(foodPosition.Y - candidate.position.Y) &lt; 6 then
+                        local horizontal = math.sqrt(dx * dx + dz * dz)
+                        local blocked = workspace:Raycast(candidate.position, foodPosition - candidate.position, pickupParams)
                         if not blocked and (horizontal &lt; nearest or (horizontal == nearest and winner and candidate.player.UserId &lt; winner.player.UserId)) then
                             nearest, winner = horizontal, candidate
                         end
@@ -553763,6 +553774,89 @@ return Leap
       </Item>
       <Item class="ModuleScript" referent="RBX318">
         <Properties>
+          <string name="Name">LeaveCoordinator</string>
+          <ProtectedString name="Source">--!strict
+-- BD-354 (docs/111): one place for "a player is leaving", used by PlayerRemoving AND BindToClose.
+-- Guarantees: a leaving player's run settles at most once (RunLifecycle owns that), the profile lease is released exactly once
+-- per leave even when the settlement was already running ("busy") or failed, and BindToClose can WAIT for all of it in
+-- parallel instead of walking the players one after another (12 sequential DataStore round trips can pass the 30 s limit).
+-- No Roblox globals except `task`, so tools/verify_multiplayer_sim.py runs this exact file.
+local LeaveCoordinator = {}
+
+export type Deps = {
+    endForDisconnect: (any) -&gt; string,
+    release: (any) -&gt; any,
+    publish: ((any, any) -&gt; ())?,
+}
+
+function LeaveCoordinator.new(deps: Deps)
+    local self = {pending = 0, leaving = {} :: {[any]: boolean}, released = 0}
+
+    -- Idempotent per leave: the first call does the work, repeats (PlayerRemoving then BindToClose) are no-ops.
+    function self.releaseNow(player: any)
+        if not self.leaving[player] then return end
+        self.leaving[player] = nil
+        self.pending -= 1
+        local ok, metrics = pcall(deps.release, player)
+        if not ok then warn("[Be Dino] release failed: " .. tostring(metrics)) return end
+        self.released += 1
+        if metrics and deps.publish then
+            local published, err = pcall(deps.publish, player, metrics)
+            if not published then warn("[Be Dino] leaderboard publish failed: " .. tostring(err)) end
+        end
+    end
+
+    -- Called from the run-settlement callback (success OR failure). A no-op for players still in the game; for a player whose
+    -- leave started while the settlement ran ("busy") it releases the lease. PlayerRemoving fires before Parent becomes nil,
+    -- so the leaving flag, not Parent, is the truth.
+    function self.settlementFinished(player: any)
+        self.releaseNow(player)
+    end
+
+    local function run(player: any)
+        local ok, status = pcall(deps.endForDisconnect, player)
+        if not ok then warn("[Be Dino] endForDisconnect failed: " .. tostring(status)) status = "failed" end
+        if status ~= "busy" then self.releaseNow(player) end
+        -- "busy": settlement already runs (death/eaten raced the disconnect); its callback ends in settlementFinished.
+    end
+
+    -- The leave is registered (pending) BEFORE any yield, so waitIdle can never see a started-but-unregistered leave.
+    local function register(player: any): boolean
+        if self.leaving[player] then return false end
+        self.leaving[player] = true
+        self.pending += 1
+        return true
+    end
+
+    function self.leave(player: any)
+        if register(player) then run(player) end
+    end
+
+    function self.leaveAll(players: {any})
+        for _, player in players do
+            if register(player) then task.spawn(run, player) end
+        end
+    end
+
+    -- BindToClose: returns when every leave finished, or after timeoutSeconds. Returns true when idle.
+    function self.waitIdle(timeoutSeconds: number): boolean
+        local waited = 0
+        while self.pending &gt; 0 and waited &lt; timeoutSeconds do
+            task.wait(0.1)
+            waited += 0.1
+        end
+        return self.pending == 0
+    end
+
+    return self
+end
+
+return LeaveCoordinator
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX319">
+        <Properties>
           <string name="Name">LowPolyDinoLoader</string>
           <ProtectedString name="Source">--!strict
 -- BD-225 spike: loads the published low-poly dino Models (InsertService:LoadAsset, server only) into
@@ -553814,7 +553908,7 @@ return Loader
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX319">
+      <Item class="ModuleScript" referent="RBX320">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -553919,7 +554013,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX320">
+      <Item class="ModuleScript" referent="RBX321">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -554024,7 +554118,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX321">
+      <Item class="ModuleScript" referent="RBX322">
         <Properties>
           <string name="Name">NpcPredatorService</string>
           <ProtectedString name="Source">--!strict
@@ -554292,7 +554386,7 @@ return NpcPredatorService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX322">
+      <Item class="ModuleScript" referent="RBX323">
         <Properties>
           <string name="Name">PotionModels</string>
           <ProtectedString name="Source">--!strict
@@ -554344,7 +554438,7 @@ return Models
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX323">
+      <Item class="ModuleScript" referent="RBX324">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -554481,7 +554575,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX324">
+      <Item class="ModuleScript" referent="RBX325">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -554587,6 +554681,16 @@ local profiles: {[Player]: any} = {}
 -- mid-page loses just the animation, never a credit (see docs/50).
 local revealBuffer: {[Player]: {any}} = {}
 local renewing = false
+-- BD-354: userIds whose lease release is still in flight. A rejoin of the same user on this server shares our leaseId, so a late
+-- release would clear the NEW session; load waits for it instead.
+local releasing: {[number]: number} = {}
+
+-- BD-354: adopt a transaction result only while the player is still loaded. A player who left (release already ran) must not get
+-- a profile entry back: it would leak the Player instance plus up to megabytes of profile for the rest of the server's life.
+local function adopt(player: Player, updated: any)
+    local live = profiles[player]
+    if live ~= nil and updated.revision &gt;= live.revision then profiles[player] = updated end
+end
 
 local function keyFor(player: Player): string
     return "u:" .. tostring(player.UserId)
@@ -555202,8 +555306,8 @@ function ProfileRepository.fuseDinosaurs(player: Player, request: any)
         player:SetAttribute("ProfileState", "SaveFailed")
         return false, nil, "save_failed"
     end
-    if not profiles[player] or updated.revision &gt;= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true, committed, if duplicate then "duplicate" else "fused"
 end
 
@@ -555227,6 +555331,12 @@ end
 
 function ProfileRepository.load(player: Player): boolean
     if profiles[player] then return true end
+    local releaseWait = 0
+    while (releasing[player.UserId] or 0) &gt; 0 and releaseWait &lt; 150 do -- &lt;= 15 s (release retries are bounded)
+        task.wait(0.1)
+        releaseWait += 1
+    end
+    if not player.Parent then return false end
     player:SetAttribute("ProfileMode", if localPreview then "Studio preview (not saved)" else "Persistent")
     player:SetAttribute("ProfileState", "Loading")
 
@@ -555280,9 +555390,16 @@ function ProfileRepository.load(player: Player): boolean
         return false
     end
 
+    if not player.Parent then
+        -- BD-354: the player left while the load was in flight. Take the lease we just wrote back instead of holding it for
+        -- ProfileLeaseSeconds (a rejoin would see SessionBusy) and never cache a profile for a departed Player.
+        profiles[player] = updated
+        ProfileRepository.release(player)
+        return false
+    end
     if not profiles[player] or updated.revision &gt;= profiles[player].revision then profiles[player] = updated end
     player:SetAttribute("ProfileState", "Loaded")
-    syncAttributes(player, profiles[player])
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true
 end
 
@@ -555333,7 +555450,10 @@ end
 -- before UpdateAsync; settledRuns + recentOperations make the run exactly-once.
 function ProfileRepository.commitRunSettlement(player: Player, runId: string, catchScore: number, eggEvents, runSeconds: number?, weatherId: string?)
     local cached = profiles[player]
-    if not cached or player:GetAttribute("ProfileState") ~= "Loaded" then
+    local priorState = player:GetAttribute("ProfileState")
+    -- BD-354: settlement is the one write that must still be tried after an earlier failed write ("SaveFailed"): it is an
+    -- atomic, lease-checked, exactly-once (run id) transaction, and refusing it forfeited the whole run's eggs.
+    if not cached or (priorState ~= "Loaded" and priorState ~= "SaveFailed") then
         return false, nil, "profile_not_loaded"
     end
     if typeof(runId) ~= "string" or #runId &lt; 1 or #runId &gt; 64 then
@@ -555447,8 +555567,8 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         return false, nil, "save_failed"
     end
 
-    if not profiles[player] or updated.revision &gt;= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     local committedOutcome = if duplicate then duplicateOutcome else outcome
     if committedOutcome then
         player:SetAttribute("LastRewardText", runRewardText(committedOutcome))
@@ -555459,6 +555579,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         player:SetAttribute("LastRunNestFull", committedOutcome.nestFull == true)
     end
     player:SetAttribute("LastSettledRunId", runId)
+    if priorState == "SaveFailed" and player:GetAttribute("ProfileState") == "SaveFailed" then player:SetAttribute("ProfileState", "Loaded") end
     return true, committedOutcome, if duplicate then "duplicate" else "committed"
 end
 
@@ -555499,8 +555620,8 @@ function ProfileRepository.setRevealSkip(player: Player, selection: any): (boole
         player:SetAttribute("ProfileState", "SaveFailed")
         return false, "save_failed"
     end
-    if not profiles[player] or updated.revision &gt;= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true, "saved"
 end
 
@@ -555529,8 +555650,8 @@ function ProfileRepository.setSettings(player: Player, raw: any): (boolean, stri
         player:SetAttribute("ProfileState", "SaveFailed")
         return false, "save_failed"
     end
-    if not profiles[player] or updated.revision &gt;= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true, "saved"
 end
 
@@ -555615,8 +555736,8 @@ function ProfileRepository.claimNest(player: Player, nestId: string)
         player:SetAttribute("ProfileState", "SaveFailed")
         return false, nil, "save_failed"
     end
-    if not profiles[player] or updated.revision &gt;= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     if duplicateOutcome then return true, duplicateOutcome, "duplicate" end
     return true, outcome, "opened"
 end
@@ -555690,8 +555811,8 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string, varia
         return false, "save_failed"
     end
 
-    if not profiles[player] or updated.revision &gt;= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true, "equipped"
 end
 
@@ -555744,8 +555865,8 @@ function ProfileRepository.grantCollectionTestSpecies(player: Player): (boolean,
         return false, "save_failed"
     end
 
-    if not profiles[player] or updated.revision &gt;= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true, if duplicate then "duplicate" else "granted"
 end
 
@@ -555805,8 +555926,8 @@ function ProfileRepository.grantChestTest(player: Player): (boolean, string)
         return false, "save_failed"
     end
 
-    if not profiles[player] or updated.revision &gt;= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true, if duplicate then "duplicate" else "granted"
 end
 
@@ -555997,14 +556118,14 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
         return false, nil, "save_failed"
     end
 
-    if not profiles[player] or updated.revision &gt;= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     local committedOutcome = duplicateOutcome or outcome
     if not duplicateOutcome and #pageOutcomes &gt; 0 then
         local pageBuffer = {}
         for _, pageOutcome in pageOutcomes do table.insert(pageBuffer, {eggId = pageOutcome.eggId, outcome = pageOutcome}) end
         revealBuffer[player] = pageBuffer
-        syncAttributes(player, profiles[player])
+        if profiles[player] then syncAttributes(player, profiles[player]) end
     end
     publishHatch(player, chestId, committedOutcome)
     return true, committedOutcome, if duplicateOutcome then "duplicate" else "claimed"
@@ -556095,8 +556216,8 @@ function ProfileRepository.mutateSpecies(player: Player, speciesId: string, targ
         return false, nil, "save_failed"
     end
 
-    if not profiles[player] or updated.revision &gt;= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     local committedOutcome = duplicateOutcome or outcome
     return true, committedOutcome, if duplicateOutcome then "duplicate" else "mutated"
 end
@@ -556141,8 +556262,8 @@ function ProfileRepository.setMutationTestCopies(player: Player, speciesId: stri
         return false, "save_failed"
     end
 
-    if not profiles[player] or updated.revision &gt;= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated)
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true, "set_" .. tostring(baseCount)
 end
 
@@ -556206,8 +556327,8 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
     if leaseLost then player:SetAttribute("ProfileState","LeaseLost") return false,"lease_lost" end
     if not updated then return false,denied end
     if not player.Parent then return true,if duplicate then "duplicate" else outcome.status end
-    if not profiles[player] or updated.revision&gt;=profiles[player].revision then profiles[player]=updated end
-    if player.Parent then syncAttributes(player,profiles[player]) end
+    adopt(player, updated)
+    if player.Parent and profiles[player] then syncAttributes(player,profiles[player]) end
     return true,if duplicate then "duplicate" else outcome.status
 end
 
@@ -556238,13 +556359,17 @@ function ProfileRepository.purchase(player: Player, receipt)
     end)
     if not ok or not updated then return false end
     if not profiles[player] then return true end
-    if updated.revision&gt;=profiles[player].revision then profiles[player]=updated end
+    adopt(player, updated)
     syncAttributes(player,profiles[player])
     return true
 end
 
 function ProfileRepository.renew(player: Player): boolean
-    if not profiles[player] or player:GetAttribute("ProfileState") ~= "Loaded" then return false end
+    local state = player:GetAttribute("ProfileState")
+    -- BD-354: "SaveFailed" is recoverable. Every write is one atomic UpdateAsync that is checked against our lease, so a
+    -- successful renew proves the store is consistent and hands back the authoritative copy; without this one failed
+    -- equip/potion write bricked the player (no runs, no claims, settlement refused) until they rejoined.
+    if not profiles[player] or (state ~= "Loaded" and state ~= "SaveFailed") then return false end
     local leaseLost = false
     local now = os.time()
     local ok, updated = retry("lease renew", function()
@@ -556265,8 +556390,9 @@ function ProfileRepository.renew(player: Player): boolean
         player:SetAttribute("ProfileState", if leaseLost then "LeaseLost" else "SaveFailed")
         return false
     end
-    if not profiles[player] or updated.revision &gt;= profiles[player].revision then profiles[player] = updated end
-    syncAttributes(player, profiles[player])
+    adopt(player, updated) -- the store copy is authoritative after a recovery (its revision is never older)
+    if state == "SaveFailed" then player:SetAttribute("ProfileState", "Loaded") end
+    if profiles[player] then syncAttributes(player, profiles[player]) end
     return true
 end
 
@@ -556276,6 +556402,8 @@ function ProfileRepository.release(player: Player)
     profiles[player] = nil
     if not cached then return end
 
+    local userId = player.UserId
+    releasing[userId] = (releasing[userId] or 0) + 1
     local ok, updated = retry("lease release", function()
         return store:UpdateAsync(keyFor(player), function(profileValue)
             if not isValidProfile(profileValue) or not ownSession(profileValue) then return nil end
@@ -556285,6 +556413,8 @@ function ProfileRepository.release(player: Player)
             return profileValue
         end)
     end)
+    releasing[userId] = (releasing[userId] or 1) - 1
+    if releasing[userId] &lt;= 0 then releasing[userId] = nil end
     return if ok and updated then updated.metrics else nil
 end
 
@@ -556305,7 +556435,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX325">
+      <Item class="ModuleScript" referent="RBX326">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -556482,7 +556612,9 @@ function Service.start(repository)
         local now=os.clock() local bucket=buckets[player]
         if bucket and (bucket.busy or now-bucket.last&lt;.4) then response:FireClient(player,token,false,"busy") return end
         buckets[player]={last=now,busy=true}
-        local ok,status=repository.progressionAction(player,action,id,token,replace)
+        -- BD-354: a throw inside the action must not leave busy=true forever (every later request would be refused).
+        local ran,ok,status=pcall(repository.progressionAction,player,action,id,token,replace)
+        if not ran then warn("[Be Dino] ProgressionAction failed: "..tostring(ok)) ok,status=false,"save_failed" end
         if buckets[player] then buckets[player].busy=false end
         if player.Parent then response:FireClient(player,token,ok,status) end
     end)
@@ -556523,7 +556655,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX326">
+      <Item class="ModuleScript" referent="RBX327">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -556637,7 +556769,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX327">
+      <Item class="ModuleScript" referent="RBX328">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -556933,7 +557065,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX328">
+      <Item class="ModuleScript" referent="RBX329">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -557005,19 +557137,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX329">
+  <Item class="StarterPlayer" referent="RBX330">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX330">
+    <Item class="StarterPlayerScripts" referent="RBX331">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX331">
+      <Item class="Folder" referent="RBX332">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX332">
+        <Item class="LocalScript" referent="RBX333">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -557276,7 +557408,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX333">
+        <Item class="LocalScript" referent="RBX334">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -558890,7 +559022,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX334">
+        <Item class="LocalScript" referent="RBX335">
           <Properties>
             <string name="Name">CameraOcclusion</string>
             <ProtectedString name="Source">--!strict
@@ -558995,7 +559127,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX335">
+        <Item class="ModuleScript" referent="RBX336">
           <Properties>
             <string name="Name">CaveAtmosphere</string>
             <ProtectedString name="Source">--!strict
@@ -559129,7 +559261,7 @@ return Cave
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX336">
+        <Item class="ModuleScript" referent="RBX337">
           <Properties>
             <string name="Name">CaveLavaClient</string>
             <ProtectedString name="Source">--!strict
@@ -559245,7 +559377,7 @@ return Lava
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX337">
+        <Item class="ModuleScript" referent="RBX338">
           <Properties>
             <string name="Name">CombatHud</string>
             <ProtectedString name="Source">--!strict
@@ -559579,7 +559711,7 @@ return Hud
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX338">
+        <Item class="LocalScript" referent="RBX339">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!nonstrict
@@ -559673,7 +559805,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX339">
+        <Item class="ModuleScript" referent="RBX340">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -559752,7 +559884,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX340">
+        <Item class="ModuleScript" referent="RBX341">
           <Properties>
             <string name="Name">DinoIndexPanels</string>
             <ProtectedString name="Source">--!strict
@@ -560300,7 +560432,7 @@ return Panels
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX341">
+        <Item class="LocalScript" referent="RBX342">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -560630,7 +560762,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX342">
+        <Item class="ModuleScript" referent="RBX343">
           <Properties>
             <string name="Name">EggPicture</string>
             <ProtectedString name="Source">--!strict
@@ -560707,7 +560839,7 @@ return EggPicture
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX343">
+        <Item class="ModuleScript" referent="RBX344">
           <Properties>
             <string name="Name">EggsScreen</string>
             <ProtectedString name="Source">--!strict
@@ -560903,7 +561035,7 @@ return EggsScreen
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX344">
+        <Item class="LocalScript" referent="RBX345">
           <Properties>
             <string name="Name">FoodGlow</string>
             <ProtectedString name="Source">--!strict
@@ -561129,7 +561261,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX345">
+        <Item class="ModuleScript" referent="RBX346">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -562164,7 +562296,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX346">
+        <Item class="ModuleScript" referent="RBX347">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -562274,7 +562406,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX347">
+        <Item class="ModuleScript" referent="RBX348">
           <Properties>
             <string name="Name">FxRig</string>
             <ProtectedString name="Source">--!nonstrict
@@ -562641,7 +562773,7 @@ return Rig
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX348">
+        <Item class="ModuleScript" referent="RBX349">
           <Properties>
             <string name="Name">HatchFx</string>
             <ProtectedString name="Source">--!nonstrict
@@ -562852,7 +562984,7 @@ return M
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX349">
+        <Item class="ModuleScript" referent="RBX350">
           <Properties>
             <string name="Name">HatchSequence</string>
             <ProtectedString name="Source">--!strict
@@ -563968,7 +564100,7 @@ return Seq
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX350">
+        <Item class="ModuleScript" referent="RBX351">
           <Properties>
             <string name="Name">HubGateClient</string>
             <ProtectedString name="Source">--!strict
@@ -564035,7 +564167,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX351">
+        <Item class="ModuleScript" referent="RBX352">
           <Properties>
             <string name="Name">HubGuideClient</string>
             <ProtectedString name="Source">--!strict
@@ -564148,7 +564280,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX352">
+        <Item class="ModuleScript" referent="RBX353">
           <Properties>
             <string name="Name">HubTravelClient</string>
             <ProtectedString name="Source">--!strict
@@ -564322,7 +564454,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX353">
+        <Item class="ModuleScript" referent="RBX354">
           <Properties>
             <string name="Name">HubWalkUpClient</string>
             <ProtectedString name="Source">--!strict
@@ -564419,7 +564551,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX354">
+        <Item class="ModuleScript" referent="RBX355">
           <Properties>
             <string name="Name">HudV2</string>
             <ProtectedString name="Source">--!strict
@@ -564540,7 +564672,7 @@ return Hud
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX355">
+        <Item class="ModuleScript" referent="RBX356">
           <Properties>
             <string name="Name">InspectView</string>
             <ProtectedString name="Source">--!strict
@@ -564732,7 +564864,7 @@ return InspectView
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX356">
+        <Item class="LocalScript" referent="RBX357">
           <Properties>
             <string name="Name">JumpCarry</string>
             <ProtectedString name="Source">--!strict
@@ -564790,7 +564922,7 @@ if player.Character then task.spawn(bind, player.Character) end
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX357">
+        <Item class="LocalScript" referent="RBX358">
           <Properties>
             <string name="Name">LowPolyAnimator</string>
             <ProtectedString name="Source">--!strict
@@ -565037,7 +565169,7 @@ Players.PlayerRemoving:Connect(function(player) if player.Character then untrack
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX358">
+        <Item class="ModuleScript" referent="RBX359">
           <Properties>
             <string name="Name">ModalCompact</string>
             <ProtectedString name="Source">--!strict
@@ -565188,7 +565320,7 @@ return M
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX359">
+        <Item class="ModuleScript" referent="RBX360">
           <Properties>
             <string name="Name">MutationBadge</string>
             <ProtectedString name="Source">--!strict
@@ -565239,7 +565371,7 @@ return Badge
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX360">
+        <Item class="ModuleScript" referent="RBX361">
           <Properties>
             <string name="Name">NpcMotion</string>
             <ProtectedString name="Source">--!strict
@@ -565309,7 +565441,7 @@ return Motion
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX361">
+        <Item class="ModuleScript" referent="RBX362">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -565412,7 +565544,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX362">
+        <Item class="LocalScript" referent="RBX363">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -565644,7 +565776,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX363">
+        <Item class="ModuleScript" referent="RBX364">
           <Properties>
             <string name="Name">SettingsMenu</string>
             <ProtectedString name="Source">--!strict
@@ -565747,7 +565879,7 @@ return Menu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX364">
+        <Item class="LocalScript" referent="RBX365">
           <Properties>
             <string name="Name">SettingsSync</string>
             <ProtectedString name="Source">--!strict
@@ -565809,7 +565941,7 @@ task.delay(5, function() loaded = true end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX365">
+        <Item class="ModuleScript" referent="RBX366">
           <Properties>
             <string name="Name">ShopCard</string>
             <ProtectedString name="Source">--!strict
@@ -565847,7 +565979,7 @@ return Card
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX366">
+        <Item class="ModuleScript" referent="RBX367">
           <Properties>
             <string name="Name">ShopCards</string>
             <ProtectedString name="Source">--!strict
@@ -565939,7 +566071,7 @@ return Cards
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX367">
+        <Item class="ModuleScript" referent="RBX368">
           <Properties>
             <string name="Name">UiScan</string>
             <ProtectedString name="Source">--!strict
@@ -566018,7 +566150,7 @@ return UiScan
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX368">
+        <Item class="ModuleScript" referent="RBX369">
           <Properties>
             <string name="Name">VolumeSliders</string>
             <ProtectedString name="Source">--!strict
@@ -566099,7 +566231,7 @@ return Sliders
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX369">
+        <Item class="LocalScript" referent="RBX370">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -566166,7 +566298,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX370">
+        <Item class="LocalScript" referent="RBX371">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -567116,7 +567248,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX371">
+        <Item class="LocalScript" referent="RBX372">
           <Properties>
             <string name="Name">WorldCulling</string>
             <ProtectedString name="Source">--!strict
@@ -567243,7 +567375,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX372">
+        <Item class="LocalScript" referent="RBX373">
           <Properties>
             <string name="Name">WorldReady</string>
             <ProtectedString name="Source">--!strict
@@ -567281,7 +567413,7 @@ remote:FireServer()
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX373">
+  <Item class="Workspace" referent="RBX374">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>
