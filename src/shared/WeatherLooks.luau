@@ -32,7 +32,7 @@ end
 -- Clear weather keeps a gentle soft-blue haze far out.
 Weather.Looks={
     clear=look({fogStart=160,vis=900}),
-    rain=look({tint=rgb(168,190,226),sat=-.22,contrast=.14,bright=-.06,fog=rgb(120,134,156),decay=rgb(70,84,110),density=.5,offset=0,haze=2.6,bloom=.2,
+    rain=look({tint=rgb(150,182,232),sat=-.26,contrast=.14,bright=-.06,fog=rgb(120,134,156),decay=rgb(70,84,110),density=.5,offset=0,haze=2.6,bloom=.2,
         amb=rgb(92,106,130),dof=.35,dofFocus=90,exposure=-.35,lamp=.8,fogStart=40,vis=260}),
     thunder=look({tint=rgb(160,174,222),sat=-.2,contrast=.18,bright=-.08,fog=rgb(88,96,132),decay=rgb(46,50,90),density=.56,offset=0,haze=3,bloom=.5,
         amb=rgb(104,116,160),dof=.45,dofFocus=80,exposure=-.3,lamp=1.4,glow=rgb(160,140,255),glowBright=.6,glowRange=60,fogStart=40,vis=200}),
@@ -58,25 +58,30 @@ Weather.Ids=table.freeze({"rain","thunder","blizzard","volcano","aurora","quake"
 export type Spec={rate:number,life:{number},big:boolean?}
 local function spec(rate:number,a:number,b:number,big:boolean?):Spec return {rate=rate,life={a,b},big=big} end
 Weather.Rigs={
-    rain={streaks=spec(1400,.55,.7),splash=spec(320,.22,.38),mist=spec(14,3,4.5,true),curtain=spec(10,1.2,1.6,true),bank=spec(12,9,12,true)},
-    thunder={streaks=spec(2000,.55,.7),splash=spec(420,.22,.38),mist=spec(16,3,4.5,true),curtain=spec(14,1.2,1.6,true),bank=spec(14,9,12,true)},
+    rain={streaks=spec(2100,.55,.7),near=spec(420,.35,.5),splash=spec(560,.22,.38),mist=spec(14,3,4.5,true),curtain=spec(10,1.2,1.6,true),bank=spec(12,9,12,true)},
+    thunder={streaks=spec(2800,.55,.7),near=spec(520,.35,.5),splash=spec(700,.22,.38),mist=spec(16,3,4.5,true),curtain=spec(14,1.2,1.6,true),bank=spec(14,9,12,true)},
     blizzard={snow=spec(1300,3,4.2),gust=spec(50,1.4,2),drift=spec(16,2.6,3.4,true),bank=spec(16,7,9,true),flurry=spec(120,.9,1.3)},
     volcano={ash=spec(300,4,5.5),embers=spec(200,3,5),plume=spec(18,5,7,true),smoke=spec(12,8,11,true),haze=spec(5,10,12,true),bank=spec(8,9,11,true)},
-    aurora={motes=spec(120,4,6),stars=spec(60,3,5),bank=spec(6,9,12,true)},
+    aurora={motes=spec(120,4,6),stars=spec(60,3,5),bank=spec(14,9,12,true)},
     quake={dust=spec(50,3,4.5),bank=spec(14,8,10,true)},
     bloodmoon={motes=spec(140,4,6),fog=spec(16,5,7,true),bank=spec(14,9,11,true)},
 }
 -- QA 2026-10-16 (docs/evidence 2026-10-16-weather-qa): the blood moon (core 60, halos up to 200) filled the top third of a phone-size view and the title
 -- card sat on top of the "started" toast. The moon is smaller and higher; the title card sits below the toast and stays a soft, narrower banner.
 Weather.Moon=table.freeze({core=44,halos=table.freeze({80,108,142}),distance=150})
+-- BD-348 aurora: the ribbons start at the horizon (visible without looking up) and the horizon glows; BD-349 counts per level
+Weather.Aurora=table.freeze({baseY=-6,step=16,alpha=.6,horizonGlow=.75})
 Weather.Title=table.freeze({y=.31,width=.6,height=.085})
 Weather.Budget=table.freeze({concurrent=6000,bigConcurrent=500,bolts=4,bombs=6,beams=140,cracks=4,cracksPhone=2,rocksPerCrack=3})
 -- Earthquake v2 (owner 2026-10-15): a WORLD event, not an aura. Ground cracks open at random spots in view (never under the dino),
 -- grow over `grow` s, glow faintly amber, puff dust and kick a few rock chunks, then close. Tremor pulses every `pulseEvery` s
 -- give a gentle camera rumble (`shake`, 0 with Reduce Motion) and a slight wobble of nearby small props.
 Weather.Quake=table.freeze({
-    grow=.5,life={3,4.5},close=.8,pulseEvery={3,5},pulseSeconds=.9,shake=.4,
+    grow=.5,life={3,4.5},close=.8,pulseEvery={3,5},pulseSeconds=.9,shake=.3,
     minDist=18,maxDist=70,viewCone=55,clearOfDino=12,segments=4,length={10,18},width={1.4,2.4},
+    -- BD-348: a readable cue right at the dino: a dust puff at the feet and a flat crack decal a few studs ahead on every pulse
+    -- (decal = the fx3 "rays" alpha texture tinted dark, flat on the ground); camera shake stays tiny and is 0 with Reduce Motion.
+    feetPuff=6,feetPuffPhone=3,decalAhead={8,12},decalSize=14,decalLife=3.2,
     wobbleRadius=40,wobbleMax=10,wobbleDegrees=2.5,propMaxSize=9,
 })
 function Weather.concurrent(id:string):(number,number)

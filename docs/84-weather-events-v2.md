@@ -89,3 +89,9 @@ blizzard 1300 flakes/s; volcano a lava bomb every 0.45-1.1 s and three eruption 
 Caps (desktop, phone halves every rate): at most 6000 concurrent particles and 500 concurrent big (30+ stud) sprites per event, 4 bolt slots,
 6 lava bomb slots, 6 impact bursts, 6 shock rings, 140 beams. Lightning, bombs, bursts, rings and aurora parts are created once at start and reused
 (no per-frame Instance creation, no Debris). Reduce Motion: grade at half strength, no particles, no shake, no bolts or bombs.
+
+## Live checks and visibility pass (BD-348/349, 2026-10-16)
+Evidence: docs/evidence/2026-10-16-weather-live (Studio, phone-size capture, temp copy of the playtest build; settings driven by writing the player's SettingsJson attribute, because a require from the tool gets its own SettingsModel instance).
+- Particle counts per second (Rain, sum of emitter rates): Weather Full 3116, Lite 1558, Off 0, Calm motion 0. Offline steady-state totals per level are printed by tools/verify_weather.py (rain 1851 desktop full, 925 lite; phone half).
+- Event end (aurora, rain): fog, exposure and rate move in small steps over about 1.1 s; beams and emitters switch off only at zero.
+- Not verified: cave DOF, frame time, real phone. Ratings out of 10 (my judgement from screenshots): rain 8, aurora 7, quake 6 (decal subtle, dust strong), thunder 7, blizzard 7, volcano 7, blood moon 7.
