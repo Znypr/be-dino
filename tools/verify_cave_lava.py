@@ -1,16 +1,15 @@
 """BD-285 / BD-292 offline check of the Cave lava falls polish (docs/104 s5, s6). Runs the real CaveHubLayout, CaveHubProps,
 CaveLavaRules, HubSignCopy and EffectAssets in Luau (pure numbers, never Studio):
- * scroll function: every layer's scroll stays in [0, tile) for any time, is the static first frame (0) under Reduce Motion, ignores
-   NaN / negative time, moves at the layer's speed between wraps, and stripY keeps the strip one tile above the canvas (no edge shows);
+ * BD-385 no tiled rectangle: the falls are particle strands (irregular lip, flameSheet puffs), no Layers / scroll / tile API in the rules;
  * emitter budget: total rate <= 25 per second on desktop, <= 10 on phones, 0 under Reduce Motion; every rate has an emitter rule;
- * layers use only existing alpha sheets (flameSheet, swirl): real uploads with HasAlpha;
+ * strands use only the existing flameSheet alpha upload;
  * Fame boards: an arc east of the Fame pad, inside the floor, clear of every pad, nowhere near the lava line of sight (no nearby station
    centre sees the falls or the basin through a board) and on the far side of the pad from the lava; the old row beside the falls
    is kept as a negative control;
  * sign text: HubSignCopy.forRow gives the station word for sign_stone / sign_arrow rows only, never for the Heart, within the
    14 character cap, child-safe, and the sign rows never exceed Props.MaxSignGuis;
  * warm recolour table only names real placed keys and warm colours.
- Static checks: the lava FX draws the layers in a SurfaceGui (not Textures, which fade with the part), the client preloads with
+ Static checks: the lava FX has NO Texture / SurfaceGui / ImageLabel / TileSize / StudsPerTile / ScaleType.Tile and an invisible carrier, the client preloads with
  ContentProvider:PreloadAsync and honours Calm motion, CaveProps puts text on the front face with FredokaOne / TextScaled, the Fame boards
  use CaveHubLayout.boardSpots, no new locals in Bootstrap.client.
 Not Studio evidence: see docs/evidence/2026-10-16-cave-lava/ and the BD-285 kanban row.
@@ -45,30 +44,29 @@ assert(calmTotal==0,"Reduce Motion: no particles")
 assert(R.rate("nope",false,false)==0,"unknown emitter rule = 0")
 assert(R.phoneScale()<=1 and R.phoneScale()>0)
 
--- ---- scroll function
-assert(#R.Layers>=3,"at least three layers")
-for _,layer in R.Layers do
- local tile=R.tilePx(layer)
- assert(tile>0 and layer.speed>0 and layer.alpha>=0 and layer.alpha<=1,"layer sane: "..layer.name)
- assert(Assets.isReal(layer.key) and Assets.HasAlpha[layer.key],"layer uses an existing alpha upload: "..layer.key)
- assert(layer.key=="flameSheet" or layer.key=="swirl","layers use only the flame / swirl sheets")
- assert(R.scroll(layer,0,false)==0,"scroll starts at 0")
- for _,t in {0.01,0.5,1,7.77,59.9,60,3600,86400,1e6,1e9} do
-  local v=R.scroll(layer,t,false)
-  assert(v>=0 and v<tile,"scroll bounded "..layer.name.." t="..t.." v="..v)
-  assert(R.scroll(layer,t,true)==0,"Reduce Motion = static first frame")
-  local y=R.stripY(layer,t,false)
-  assert(y>=-tile and y<0,"strip never shows an edge: "..y)
-  assert(R.stripY(layer,t,true)==-tile,"static strip position")
+-- ---- BD-385: strands, not a tiled sheet
+assert(R.Layers==nil and R.scroll==nil and R.stripY==nil and R.tilePx==nil and R.CanvasPxPerStud==nil and R.edgeFade==nil,"no scrolling tile API left")
+assert(#R.Strands>=6 and #R.Strands<=9,"6-9 strands")
+local dxs,dys,sizes={}, {}, {}
+local lastDx=-1e9
+for i,s in R.Strands do
+ assert(s.dx>lastDx and math.abs(s.dx)<=(F.width-2)/2,"strand inside the falls width, ordered: "..i)
+ assert(s.size>=5 and s.size<=10 and s.life>=3 and s.life<=5 and s.fall>0 and s.rate>0 and s.dy>=0 and s.dy<=5,"strand sane "..i)
+ assert(0.5*s.fall*s.life*s.life>=F.height*0.4,"strand falls far enough "..i)
+ if i>1 then
+  local gap=s.dx-lastDx
+  assert(gap<=s.size+2,"neighbouring strands overlap so no gap or grid shows: "..i)
+  dxs[string.format("%.2f",gap)]=true
  end
- assert(R.scroll(layer,0/0,false)==0 and R.scroll(layer,-5,false)==0,"NaN / negative time = static")
- local a,b=R.scroll(layer,2,false),R.scroll(layer,2.1,false)
- assert(math.abs((b-a)-layer.speed*R.CanvasPxPerStud*0.1)<1e-6 or b<a,"moves at the layer speed (or wraps)")
- -- one full cycle returns to the start (seamless loop)
- local cycle=tile/(layer.speed*R.CanvasPxPerStud)
- assert(R.scroll(layer,cycle-1e-6,false)>tile-1,"just before the wrap it is at the end of the tile")
+ dys[s.dy]=true sizes[s.size]=true
+ lastDx=s.dx
+ assert(R.Rates["strand"..i]==s.rate,"every strand has an emitter rule")
 end
-assert(R.Layers[1].speed<R.Layers[3].speed,"front layer falls faster than the back one (parallax)")
+local function count(t) local n=0 for _ in t do n+=1 end return n end
+assert(count(dxs)>=4,"strand spacing is irregular (no regular grid)")
+assert(count(dys)>=4 and count(sizes)>=4,"lip height and puff size vary (ragged silhouette)")
+assert(R.StillBurst>=10 and R.StillBurst<=30,"Reduce Motion static burst")
+assert(Assets.isReal("flameSheet") and Assets.HasAlpha.flameSheet,"strands use the existing flameSheet alpha upload")
 
 -- ---- Fame boards away from the lava line
 local B=C.Boards
@@ -159,26 +157,12 @@ assert(Props.Warm.cave_lava_rim_rock and Props.Warm.cave_stepping_stone,"rim roc
 -- ---- budgets unchanged (300 / 410 parts)
 local budget=C.budgetTable()
 assert(budget.total.parts<=C.Budget.total.parts,"hub parts "..budget.total.parts.." <= "..C.Budget.total.parts)
-assert(Props.Lava.fxPartBudget==#R.Layers+#R.Glow+1 and Props.Lava.fxPartBudget<=7,"lava FX parts: 3 sheets + 3 glow discs + pool disc")
--- BD-385: layered sheets with soft edges
-assert(#R.Layers==3 and #R.Glow>=3,"3 layered sheets and a stepped glow")
-local lastDz,lastW=-1,1e9
-for i,layer in R.Layers do
- local w,h=R.sheetSize(layer,F.width-2,F.height)
- assert(layer.dz>lastDz and w<lastW and w>=4 and h>=4 and h<=F.height,"sheets step forward in depth and get narrower: "..i)
- assert(layer.dz<=1.5,"sheets stay close together (no gap)") 
- assert(layer.fade>=0.1 and layer.fade<=0.3,"soft vertical / sideways edge fade "..layer.name)
- local e=R.edgeFade(layer.fade)
- assert(e[1][2]==1 and e[#e][2]==1 and e[3][2]==0 and e[4][2]==0,"edge is fully clear at the rim and fully solid inside: "..layer.name)
- for k=2,#e do assert(e[k][1]>e[k-1][1],"keypoints strictly increase") end
- lastDz,lastW=layer.dz,w
-end
-local speeds={} for _,l in R.Layers do speeds[l.speed]=true assert(l.speed<=4.5,"slow scroll") end
-local nspeed=0 for _ in speeds do nspeed+=1 end
-assert(nspeed==3,"each layer has its own speed")
+assert(Props.Lava.fxPartBudget==1+#R.Glow+1 and Props.Lava.fxPartBudget<=7,"lava FX parts: 1 invisible carrier + glow discs + pool disc")
+assert(Props.Lava.sheetTransparency==1,"the carrier part is invisible")
+assert(#R.Glow>=3,"a stepped glow")
 for i=2,#R.Glow do assert(R.Glow[i].diameter<R.Glow[i-1].diameter and R.Glow[i].transparency<R.Glow[i-1].transparency,"glow brighter toward the middle") end
 assert(R.Glow[1].transparency>=0.75,"outer glow ring is faint (no hard rim)")
-print(string.format("cave lava ok: emitters %d/s desktop, %.1f/s phone, %d layers, boards min x %.0f vs falls edge %.0f, %d sign rows, parts %d/%d",total,phoneTotal,#R.Layers,math.min(endpoints(spots[1])),fallRight,rows,budget.total.parts,C.Budget.total.parts))
+print(string.format("cave lava ok: emitters %d/s desktop, %.1f/s phone, %d strands, boards min x %.0f vs falls edge %.0f, %d sign rows, parts %d/%d",total,phoneTotal,#R.Strands,math.min(endpoints(spots[1])),fallRight,rows,budget.total.parts,C.Budget.total.parts))
 '''
 
 def module(name, parent=''):
@@ -205,20 +189,21 @@ def static_checks():
     cfg = (ROOT / 'src/shared/Config.luau').read_text()
     assert 'CaveHub = false' in cfg, 'Config.CaveHub ships false'
     fx = (ROOT / 'src/server/CaveLavaFx.luau').read_text()
-    assert 'Instance.new("CanvasGroup")' in fx and 'Instance.new("UIGradient")' in fx and 'Rules.edgeFade' in fx and 'Rules.Glow' in fx, 'BD-385 soft-edged layered sheets and a glow pool'
-    assert fx.count('buildLayer(') == 2 and 'for i, layer in Rules.Layers do' in fx, 'one sheet (SurfaceGui) per layer'
-    assert 'Instance.new("SurfaceGui")' in fx and 'Instance.new("ImageLabel")' in fx and 'Instance.new("Texture")' not in fx, \
-        'layers are a SurfaceGui of ImageLabels (a Texture would fade with the part Transparency)'
-    assert 'CaveLavaRules' in fx and 'Rules.Layers' in fx and 'Rules.stripY(layer, 0, true)' in fx, 'layers start at the static first frame from the rules'
+    assert 'for i, strand in Rules.Strands do' in fx and 'Rules.Glow' in fx and '"flameSheet"' in fx, 'BD-385 particle strands from the flame sheet and a glow pool'
+    for banned in ('Instance.new("Texture")', 'Instance.new("SurfaceGui")', 'Instance.new("ImageLabel")', 'Instance.new("CanvasGroup")', 'Instance.new("Beam")',
+                   'TileSize', 'StudsPerTile', 'ScaleType', 'buildLayer', 'Rules.Layers', 'stripY'):
+        assert banned not in fx, 'no tiled rectangle / grid on the lava (BD-385): ' + banned
+    assert 'Enum.PartType.Block, orange, 1)' in fx, 'the carrier part is fully transparent'
+    assert 'StillGlow' in fx, 'static Reduce Motion variant exists (frozen by the client)'
     assert 'TweenService' not in fx and 'task.spawn' not in fx, 'no server-side animation loop (Reduce Motion lives on the client)'
     assert 'LoadAsset' not in fx and 'MeshPart' not in fx, 'the chunky generated block is still not used (no mesh in the lava FX)'
     rules = (ROOT / 'src/shared/CaveLavaRules.luau').read_text()
     for banned in ('Instance.new', 'game:GetService', 'Vector3', 'workspace', 'Config', 'require('):
         assert banned not in rules, 'CaveLavaRules stays pure: ' + banned
     client = (ROOT / 'src/client/CaveLavaClient.luau').read_text()
-    assert 'ContentProvider:PreloadAsync' in client and 'AssetFetchStatus.Success' in client and 'Assets.Builtin.fire' in client, \
+    assert 'ContentProvider:PreloadAsync' in client and 'AssetFetchStatus.Success' in client and 'Assets.Builtin.spark' in client, \
         'client preloads the lava textures and falls back to the built-in sprite'
-    assert 'Rules.rate(' in client and 'calm' in client and 'Rules.stripY(layer, seconds, calm)' in client, 'client honours Reduce Motion and phone rates'
+    assert 'Rules.rate(' in client and 'calm' in client and 'TimeScale = 0' in client and 'Rules.stripY' not in client, 'client honours Reduce Motion and phone rates'
     assert 'if not calm then seconds += dt end' in client, 'the animation clock stops under Reduce Motion'
     atmo = (ROOT / 'src/client/CaveAtmosphere.luau').read_text()
     assert 'Lava.step(dt, calm)' in atmo and atmo.index('if not Config.CaveHub then return end') < atmo.index('Lava.step(dt, calm)'), \

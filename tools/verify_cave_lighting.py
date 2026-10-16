@@ -49,7 +49,8 @@ for _,l in D.lights do if l.shadows then shadowN+=1 end end
 assert(shadowN==4,"PointLight.Shadows on exactly the 4 strongest lights: "..shadowN)
 local look=R.Look
 assert(look.ambient[1]<=80 and look.ambient[2]<=70 and look.brightness>=1.2 and look.brightness<=1.5,"BD-398 cave ambient warm-dim, Brightness 1.2-1.5")
-assert(look.grade.brightness<=-0.08 and look.grade.brightness>=-0.12 and look.grade.contrast>=0.1,"BD-398 grade darker with contrast")
+assert(look.grade.brightness<=-0.03 and look.grade.brightness>=-0.1 and look.grade.contrast>=0.05,"BD-398 grade dim with contrast")
+assert(look.atmosphere.density<=0.05 and look.atmosphere.haze==0 and look.grade.saturation>=0 and look.grade.saturation<=0.1 and look.fogStart>=150 and look.fogEnd>=800,"clear warm cave: no milky haze or desaturation (docs/114)")
 -- the blend ramps to exactly 1 inside within blendSeconds (and in half that with Reduce Motion)
 local a=0
 for _=1,math.ceil(look.blendSeconds*60)+1 do a=R.blend(a,1,1/60,false) end
@@ -128,8 +129,8 @@ for _,m in {"Sandstone","Slate","Rock","Basalt","Grass","LeafyGrass","Mud","Grou
 local Look=R.Look
 for _,k in {"ambient","outdoorAmbient","colorShiftTop","fogColor"} do for i=1,3 do assert(Look[k][i]>=0 and Look[k][i]<=255) end end
 assert(Look.ambient[1]>Look.ambient[3],"warm ambient (more red than blue)")
-assert(Look.grade.saturation<=0.2 and math.abs(Look.grade.contrast)<=0.12 and math.abs(Look.grade.brightness)<=0.12 and Look.grade.saturation>=-0.2,"gentle grade")
-assert(Look.fogEnd>=400 and Look.atmosphere.density<=0.3,"light haze, the hall stays readable")
+assert(Look.grade.saturation<=0.2 and math.abs(Look.grade.contrast)<=0.12 and math.abs(Look.grade.brightness)<=0.12 and Look.grade.saturation>=0,"gentle grade, never desaturated")
+assert(Look.fogEnd>=800 and Look.atmosphere.density<=0.05,"no haze, the hall stays readable")
 assert(R.insideAt(0,FY+5,CZ,false) and R.insideAt(0,FY+5,CZ+95,false),"inside at the Heart and near the lava")
 assert(R.insideAt(gate.x,FY+5,CZ+gate.z-12,true),"inside in the gate mouth")
 assert(not R.insideAt(0,FY+5,300,false) and not R.insideAt(0,FY+5,300,true),"outside on the island")
