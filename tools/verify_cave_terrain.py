@@ -25,7 +25,7 @@ local function dist(ax,az,bx,bz) return math.sqrt((ax-bx)^2+(az-bz)^2) end
 local function occAt(x,y,z) local _,o=R.cell(x,y,z) return o end
 
 assert(res==Config.TerrainResolution,"voxel size = Config.TerrainResolution")
-assert(Config.CaveHub==false,"CaveHub ships off")
+assert(Config.CaveHub==(Config.ReleaseProfile=="playtest"),"CaveHub is on only in the playtest profile")
 assert(R.XMin%res==0 and R.XMax%res==0 and R.YMin%res==0 and R.YMax%res==0 and R.ZMin%res==0 and R.ZMax%res==0,"region aligned to the voxel grid")
 assert(R.ZMin>Config.ArenaHalfWidth+8,"cave region never overlaps the island terrain (writes cannot clobber it)")
 local hub=C.hub(setmetatable({CaveHub=true},{__index=Config}))

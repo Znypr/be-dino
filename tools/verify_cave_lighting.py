@@ -25,7 +25,7 @@ local R=Rules
 local T=Terrain
 local FY,CZ=C.FloorY,C.CenterZ
 local D=R.get()
-assert(Config.CaveHub==false,"CaveHub ships off")
+assert(Config.CaveHub==(Config.ReleaseProfile=="playtest"),"CaveHub is on only in the playtest profile")
 local function dist(ax,az,bx,bz) return math.sqrt((ax-bx)^2+(az-bz)^2) end
 
 -- ---- lights: counts and placement

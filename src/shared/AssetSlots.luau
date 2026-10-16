@@ -1,0 +1,73 @@
+--!strict
+-- Owner-upload slots that had no config home (docs/120). Every id is "" until tools/bind_assets.py writes a real
+-- "rbxassetid://N" (never invent ids). Images are merged into Theme.ImageIds (UITheme.luau); an empty id means the reader
+-- keeps its native fallback. Meshes are read with AssetSlots.mesh(name) by the feature that owns them (nil while empty).
+local Slots = {}
+Slots.Images = {
+    -- bind:begin Images (one line per name; tools/bind_assets.py edits the value only)
+    aura_meadow = "",
+    aura_tidal = "",
+    aura_royal = "",
+    mutation_dewdrop = "",
+    mutation_charged = "",
+    mutation_frost = "",
+    mutation_seismic = "",
+    mutation_ember = "",
+    mutation_aurora = "",
+    mutation_bloodmoon = "",
+    paint_bucket = "",
+    rarity_common = "",
+    rarity_uncommon = "",
+    rarity_rare = "",
+    rarity_epic = "",
+    rarity_legendary = "",
+    rarity_mythic = "",
+    tier_gold = "",
+    tier_emerald = "",
+    tier_diamond = "",
+    notify_crystal = "",
+    notify_level = "",
+    notify_star = "",
+    notify_mutation_egg = "",
+    notify_warning = "",
+    toast_body = "",
+    frame_common = "",
+    frame_uncommon = "",
+    frame_rare = "",
+    frame_epic = "",
+    frame_legendary = "",
+    hud_heart = "",
+    hud_class_1 = "",
+    hud_class_2 = "",
+    hud_class_3 = "",
+    hud_bite = "",
+    hud_hit_bubble = "",
+    crystals_s = "",
+    crystals_m = "",
+    crystals_l = "",
+    crystals_xl = "",
+    station_nests = "",
+    station_potions = "",
+    station_fusion = "",
+    station_style = "",
+    station_index = "",
+    station_settings = "",
+    fame_plaque = "",
+    golden_drumstick_icon = "",
+    -- bind:end Images
+}
+Slots.Meshes = {
+    -- bind:begin Meshes
+    hatch_bucket_mesh = "",
+    golden_drumstick_mesh = "",
+    shock_dome_mesh = "",
+    shaft_cone_mesh = "",
+    aura_shell_mesh = "",
+    -- bind:end Meshes
+}
+local function valid(id: any): boolean return type(id) == "string" and string.match(id, "^rbxassetid://%d+$") ~= nil end
+Slots.isValid = valid
+-- "rbxassetid://N" or nil while unbound or malformed.
+function Slots.image(name: string): string? local id = Slots.Images[name] return if valid(id) then id else nil end
+function Slots.mesh(name: string): string? local id = Slots.Meshes[name] return if valid(id) then id else nil end
+return Slots
