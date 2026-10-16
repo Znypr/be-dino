@@ -153,7 +153,7 @@ if PLAYTEST then
  for _,id in BiomeMap.Order do assert(byBiome[id].tree+byBiome[id].giant+byBiome[id].rock>=8,"biome has no structure props: "..id) end
  assert(nativeProps==0,"every kit prop must be a MeshPart now (all 41 uploaded): "..nativeProps)
  assert(worldParts<=WORLD_MAX,"world kit parts "..worldParts)
- assert(foodParts<=3300,"food pickup parts "..foodParts) -- BD-387: 400 clusters x 8 = 3,200 (cap was 2,600 for 6 per cluster); the phone side is covered by verify_world_budget
+ assert(foodParts<=3700,"food pickup parts "..foodParts) -- BD-387: 400 clusters x 9 = 3,600 (cap 3,700; was 3,300 for 8 per cluster); the phone side is covered by verify_world_budget
  assert(worldParts+foodParts+RESIDUAL_PARTS<=TOTAL_MAX,"total world parts "..(worldParts+foodParts+RESIDUAL_PARTS))
  for _,family in {"berry","fruit","egg","amber"} do
   for _,v in {"a","b"} do assert(Kit["food_"..family.."_"..v],"missing food variant "..family..v) end

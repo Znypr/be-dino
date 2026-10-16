@@ -15,10 +15,10 @@ local FoodService = {}
 local adminFoodMultiplier = 1
 function FoodService.setAdminFoodMultiplier(value: number) adminFoodMultiplier = value end
 local TYPES = {
-    {id = "berry", weight = 78, points = 1, size = 0.7, color = Color3.fromRGB(224, 99, 118)},
-    {id = "fruit", weight = 15, points = 4, size = 1.0, color = Color3.fromRGB(244, 186, 83)},
-    {id = "egg", weight = 5, points = 15, size = 1.3, color = Color3.fromRGB(245, 230, 187)},
-    {id = "amber", weight = 2, points = 50, size = 1.5, color = Color3.fromRGB(255, 219, 139)},
+    {id = "berry", weight = 70, points = 1, size = 0.7, color = Color3.fromRGB(224, 99, 118)},
+    {id = "fruit", weight = 20, points = 4, size = 1.0, color = Color3.fromRGB(244, 186, 83)},
+    {id = "egg", weight = 7, points = 15, size = 1.3, color = Color3.fromRGB(245, 230, 187)},
+    {id = "amber", weight = 3, points = 50, size = 1.5, color = Color3.fromRGB(255, 219, 139)},
 }
 function FoodService.start(dinosaur,repository)
     workspace:SetAttribute("FoodSpawnStatus", "Building")
@@ -105,7 +105,8 @@ function FoodService.start(dinosaur,repository)
             if starter then center = Vector2.new(if sx == 7 then -15 else 15, 24) end
             for itemIndex = 1, Config.FoodClusterItems do
                 local roll, kind = random:NextInteger(1, 100), TYPES[1]
-                if roll > 98 then kind = TYPES[4] elseif roll > 93 then kind = TYPES[3] elseif roll > 78 then kind = TYPES[2] end
+                -- BD-207: better mix (owner "food still low quality"): berry 70 / fruit 20 / egg 7 / amber 3 (was 78/15/5/2); points per kind unchanged
+                if roll > 97 then kind = TYPES[4] elseif roll > 90 then kind = TYPES[3] elseif roll > 70 then kind = TYPES[2] end
                 if starter then kind = if itemIndex % 3 == 0 then TYPES[2] else TYPES[1] end
                 local kitMode = Config.FoodArtMode == "Kit"
                 local artId = if kitMode then string.format("food_%s_%s", kind.id, if (sx + sz + itemIndex) % 2 == 0 then "a" else "b") else kind.id

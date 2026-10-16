@@ -26,13 +26,17 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(len(refs), len(set(refs)))
 
     def test_current_delivery_matches_source_and_manifest(self):
+        # The current build/BeDino-Build<N>.rbxlx and manifest are generated (ignored, CI artifact).
+        # If a local copy exists it must be fresh; otherwise only check the in-memory build is consistent.
         version = re.search(r'Build = "redesign-(\d+)"', (ROOT / "src/shared/Config.luau").read_text()).group(1)
         place = ROOT / f"build/BeDino-Build{version}.rbxlx"
-        manifest = json.loads(place.with_suffix(".manifest.json").read_text())
         data, sources = packager.build()
-        self.assertEqual(place.read_bytes(), data, "Rebuild the current delivery after source changes")
-        self.assertEqual(manifest["place_sha256"], hashlib.sha256(data).hexdigest())
-        self.assertEqual(manifest["sources"], sources)
+        self.assertEqual(len(sources), len(list(ROOT.glob("src/**/*.luau"))))
+        if place.exists():
+            self.assertEqual(place.read_bytes(), data, "Local generated build is stale: run python tools/build.py")
+            manifest = json.loads(place.with_suffix(".manifest.json").read_text())
+            self.assertEqual(manifest["place_sha256"], hashlib.sha256(data).hexdigest())
+            self.assertEqual(manifest["sources"], sources)
 
     def test_script_execution_locations(self):
         root = ET.fromstring(packager.build()[0])
