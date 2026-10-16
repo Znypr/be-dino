@@ -104,6 +104,9 @@ local function generatedProp(id: string, biome: string, roll: number): Model?
         mesh.Size = size * fit
         mesh.Anchored, mesh.CanCollide, mesh.CanTouch, mesh.CanQuery, mesh.Massless = true, false, false, false, true
         mesh.CFrame = CFrame.new(0, mesh.Size.Y / 2, 0)
+        -- BD-409: a Model with a PrimaryPart pivots on THAT part's PivotOffset (WorldPivot is ignored), which defaults to the mesh
+        -- centre: every generated prop stood half-buried. Put the pivot at the bottom centre (ScaleTo scales the offset with it).
+        mesh.PivotOffset = CFrame.new(0, -mesh.Size.Y / 2, 0)
         local model = Instance.new("Model")
         mesh.Parent = model
         model.PrimaryPart = mesh
@@ -154,9 +157,13 @@ local function biomeKit(parent: Instance)
     for i, p in placed do
         counts[p.layer] += 1
         local data = KitData[p.id]
-        if Ground.Raised[p.layer] and data.kind ~= "rock" then
+        -- BD-409: rocks and landmarks too (measured in Studio: every boulder sat ~2.3 studs INSIDE the voxel terrain, the analytic layout height
+        -- is lower than the real surface). Rocks keep their RockSink embed; landmarks rest on the lowest sample.
+        if (Ground.Raised[p.layer] and data.kind ~= "rock") or p.layer == "rock" or p.layer == "landmark" then
             local hits = {}
-            for _, pt in Ground.samplePoints(p.x, p.z, Ground.trunkRadius(data, p.scale, p.radius * .5)) do
+            local footprint = if p.layer == "rock" then math.min(6, .3 * math.max(data.extent[1], data.extent[3]) * p.scale) -- rocks: the whole base, lowest sample wins
+                else Ground.trunkRadius(data, p.scale, p.radius * .5)
+            for _, pt in Ground.samplePoints(p.x, p.z, footprint) do
                 local result = workspace:Raycast(Vector3.new(pt[1], p.y + 40, pt[2]), Vector3.new(0, -90, 0), rayParams)
                 table.insert(hits, if result then result.Position.Y else nil)
             end

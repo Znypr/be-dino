@@ -316,7 +316,7 @@ function BiomePlacement.generate(options): {Placement}
             local score = hi - lo
             if score < best and BiomePlacement.pathClearance(x, z) > r * .6 and BiomePlacement.keepOutClearance(x, z, true) > r and not inWater(x, z, r) then best, bx, bz = score, x, z end
         end
-        add(site.id, bx, bz, BiomePlacement.hash(seed, 99, i) * math.pi * 2, sc, "landmark", .04, "meadow")
+        add(site.id, bx, bz, BiomePlacement.hash(seed, 99, i) * math.pi * 2, sc, "landmark", .04, "meadow", nil, nil, math.sqrt(data.extent[1] ^ 2 + data.extent[3] ^ 2) * .5 * sc) -- BD-410: keep-clear radius = half the footprint DIAGONAL (a yawed box reaches that far)
     end
     for li, layer in BiomePlacement.Layers do
         local count, cap = 0, math.floor(layer.cap * density)

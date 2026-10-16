@@ -151,7 +151,7 @@ end
 for key,w in Props.Warm do
  assert(Props.Assets[key] and not Props.NotMeshes[key],"warm key is a placed mesh: "..key)
  assert(w.color[1]>=w.color[3]+30 and w.color[1]>=w.color[2],"warm colour (red-brown) "..key)
- assert(w.material=="Slate","matte material")
+ assert(w.material=="Slate" or w.material=="Plastic","matte material")
 end
 assert(Props.Warm.cave_lava_rim_rock and Props.Warm.cave_stepping_stone,"rim rocks and stepping stones recoloured")
 

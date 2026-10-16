@@ -51,6 +51,11 @@ jobs:
           python tools/verify_dino_motion.py --runner /tmp/luau/luau
           python tools/verify_lowpoly_dinos.py --runner /tmp/luau/luau
           python tools/verify_world_budget.py --runner /tmp/luau/luau
+          python tools/verify_world_overlap.py --runner /tmp/luau/luau
+          python tools/verify_cave_overlap.py --runner /tmp/luau/luau
+          python tools/qa/palette_report.py --runner /tmp/luau/luau
+          python tools/qa/ground_report.py
+          python tools/qa/budget_report.py
           python tools/measure_identity_storage.py --check
           python tools/verify_progression.py --runner /tmp/luau/luau
           python tools/verify_potion_shop.py --runner /tmp/luau/luau
@@ -79,6 +84,8 @@ jobs:
           python tools/verify_release.py --profile default
           python -c 'import os,re,pathlib; v=re.search(r"Build = \"redesign-(\d+)\"",pathlib.Path("src/shared/Config.luau").read_text()).group(1); open(os.environ["GITHUB_ENV"],"a").write("BE_DINO_BUILD=BeDino-Build"+v+"\n")'
       - name: Run packaging and artwork tests
+        env:
+          LUAU_RUNNER: /tmp/luau/luau
         run: python -m unittest discover -s tests -v
       - name: Upload current Roblox build
         uses: actions/upload-artifact@v4
