@@ -1071,7 +1071,7 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-441 | Backlog | P0 | Playtest feedback button (PR #261) hidden until the first run ends, then small in a corner (docs/132). | BD-440 |
 | BD-442 | Backlog | P1 | Cave hub spawn: one obvious go affordance (gate walk-up vs EXPLORE ISLAND vs 6-button rail); arrow to it; Studio check (docs/132). | BD-368, BD-293 |
 | BD-443 | Backlog | P1 | Class picker line (BD-423): fit and length on a phone for the longest class text (docs/132). | BD-423 |
-| BD-444 | Backlog | P1 | 15-egg hatch party (~76 s): visible 'egg 3 of 15' counter, clearer Skip all after egg 3; keep the reveal (docs/132). | BD-437 |
-| BD-445 | Backlog | P1 | First shop visit with 0 crystals: one-line 'Earn crystals on runs', hide CONDITIONS until level 3 (docs/132, docs/112 BD-372). | BD-372 |
+| BD-444 | Review / test | P1 | 15-egg hatch party (~76 s): visible 'egg 3 of 15' counter, clearer Skip all after egg 3; keep the reveal (docs/132). | BD-437. Done in code: "Egg N of M" counter + "Skip the rest" (176x48), timing unchanged; Studio/phone check open. |
+| BD-445 | Review / test | P1 | First shop visit with 0 crystals: one-line 'Earn crystals on runs', hide CONDITIONS until level 3 (docs/132, docs/112 BD-372). | BD-372. Done in code: hint "Play a run to earn crystals!" at 0 crystals, CONDITIONS from level 3; Studio check open. |
 | BD-446 | Backlog | P2 | Re-check text length of Discovery NEW! and kill egg bonus lines against docs/72 after #267 merges (docs/132). | BD-436 |
 | BD-447 | Backlog | P2 | Fast-travel perk entry must not show in the first 10 minutes when FastTravelPerk is on (docs/132). | BD-391 |

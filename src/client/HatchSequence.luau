@@ -23,6 +23,7 @@ local Config = require(Shared.Config)
 local EggV2 = require(script.Parent.HatchEggV2) -- BD-397 (docs/118): 3D egg + paint coats behind Config.HatchV2; nil handle = v1 look
 
 local Seq = {}
+local batch = Timeline.newBatch() -- BD-444: where we are in the hatch party ("Egg 3 of 15")
 local CENTER_EGG = Vector2.new(412, 130) -- body coordinates (824 x 402 virtual px)
 local CENTER_DINO = Vector2.new(412, 118)
 local BODY_HOME = Vector2.new(18, 98)
@@ -405,6 +406,12 @@ function Seq.play(args: Args): Handle
     overlay.Name, overlay.Text, overlay.BackgroundTransparency, overlay.AutoButtonColor = "HatchTapCatcher", "", 1, false
     overlay.Size, overlay.ZIndex, overlay.Parent = UDim2.fromScale(1, 1), 46, a.gui
     local skipButton: TextButton? = nil
+    -- BD-444: "Egg N of M" counter, top centre of the body, hidden for a single egg.
+    local counter = Instance.new("TextLabel")
+    counter.Name, counter.BackgroundTransparency, counter.AnchorPoint, counter.Visible = "EggCounter", 1, Vector2.new(.5, 0), false
+    counter.Position, counter.Size, counter.ZIndex, counter.Parent = UDim2.fromOffset(412, 8), UDim2.fromOffset(260, 40), a.body.ZIndex + 6, a.body
+    counter.Font, counter.TextSize, counter.TextColor3, counter.Text = Enum.Font.FredokaOne, 28, WHITE, ""
+    counter.TextStrokeTransparency, counter.TextStrokeColor3 = 0, Theme.Colors.outline
 
     -- Pooled effects start neutral; applyResult() tints them for the egg.
     for i, ring in fx.rings do
@@ -845,6 +852,11 @@ function Seq.play(args: Args): Handle
         if r.mutationName and r.mutationId and not failed then mr = MutationReveal.begin(fx.front, r.mutationId, motion) end
         if r.mutationName then addRibbon(string.upper(r.mutationName), r.mutationColor or Theme.Colors.gold, 116, if r.shiny then 108 else 52, 210, -4) end
         hint.Text = Timeline.hint(r.remaining)
+        do
+            local i, n = Timeline.batchStep(batch, r.remaining)
+            counter.Text = Timeline.counterText(i, n)
+            counter.Visible = counter.Text ~= ""
+        end
         -- BD-371: real, big, friendly buttons at the end (dark text on a bright button, contrast >= 4.5:1); no dead end after a splat.
         local oldRow = a.body:FindFirstChild("EndButtons")
         if oldRow then oldRow:Destroy() end
@@ -874,8 +886,8 @@ function Seq.play(args: Args): Handle
         end
         if r.remaining > 0 and not skipButton then
             local b = Instance.new("TextButton")
-            b.Name, b.Text, b.AnchorPoint, b.AutoButtonColor = "SkipAll", "Skip all", Vector2.new(1, 1), true
-            b.Position, b.Size, b.BackgroundColor3 = UDim2.new(1, -12, 1, -12), UDim2.fromOffset(132, 46), Theme.Colors.card
+            b.Name, b.Text, b.AnchorPoint, b.AutoButtonColor = "SkipAll", Timeline.SkipText, Vector2.new(1, 1), true
+            b.Position, b.Size, b.BackgroundColor3 = UDim2.new(1, -12, 1, -12), UDim2.fromOffset(176, 48), Theme.Colors.card
             b.Font, b.TextSize, b.TextColor3, b.ZIndex, b.Parent = Enum.Font.FredokaOne, 22, Theme.Colors.text, 47, overlay
             local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 12) c.Parent = b
             local s = Instance.new("UIStroke") s.Color, s.Thickness, s.Parent = Theme.Colors.outline, 2, b
@@ -1177,7 +1189,13 @@ function Seq.play(args: Args): Handle
         end,
         pending = function() return state.pending end,
         -- BD-380: the egg counts arrive a moment after the result; keep the hint equal to the eggs really left.
-        setRemaining = function(n: number) if not finished then hint.Text = Timeline.hint(n) end end,
+        setRemaining = function(n: number)
+            if finished then return end
+            hint.Text = Timeline.hint(n)
+            local i, total = Timeline.batchRefine(batch, n)
+            counter.Text = Timeline.counterText(i, total)
+            counter.Visible = counter.Text ~= ""
+        end,
     }
 end
 
