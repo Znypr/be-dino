@@ -466,6 +466,7 @@ local function syncAttributes(player: Player, profile: any)
     PrivateState.set(player, "CollectionJson", HttpService:JSONEncode(profile.collection))
     PrivateState.set(player, "Crystals",progress.crystals)
     PrivateState.set(player, "ProgressionJson",HttpService:JSONEncode(progress))
+    PrivateState.set(player, "DiscoveryJson",HttpService:JSONEncode(ProgressionRules.discoveryCounts(profile))) -- BD-436 counts only
     player:SetAttribute("EquippedAura",progress.equippedAura)
     local collection = profile.collection
     PrivateState.set(player, "CompyCopies", collection.compy.base)
@@ -856,6 +857,9 @@ function ProfileRepository.fuseDinosaurs(player: Player, request: any)
             if not nextProfile then failure = status return nil end
             committed = result
             if status == "duplicate" then duplicate = true return profileValue end
+            if type(result) == "table" and type(result.traits) == "table" then -- BD-436: the fused result is a discovery too
+                ProgressionRules.discover(nextProfile, result.traits.genes, result.traits.mutationId)
+            end
             nextProfile.revision += 1
             nextProfile.session.expiresAt = now + Config.ProfileLeaseSeconds
             table.insert(nextProfile.recentOperations, {id = operationId, kind = "identity_fusion",
@@ -930,6 +934,7 @@ function ProfileRepository.load(player: Player): boolean
             advanceNests(profileValue, now)
 
             local progress = ProgressionRules.upgrade(profileValue)
+            ProgressionRules.backfillDiscovered(profileValue) -- BD-436: add-only, idempotent
             if localPreview and Config.StudioTestWalletEnabled then progress.crystals = Config.StudioTestCrystals end
             local session = profileValue.session
             if typeof(session) == "table"
@@ -1580,6 +1585,10 @@ local function applyHatch(profileValue: any, chest: any, index: number, outcome:
         outcome.instanceIds = DinosaurIdentity.hatch(profileValue.dinosaurIdentity, chest,
             outcome.speciesId, outcome.count, bucketKey)
     end
+    if not outcome.failed then -- BD-436: permanent discovery log; first-time finds feed the hatch "NEW!" tag
+        local fresh=ProgressionRules.discover(profileValue,chest.genes,mutationId)
+        if next(fresh) then outcome.discovered=fresh end
+    end
     outcome.eventMutationId=mutationId
     outcome.eventId=chest.eventId or "clear"
     outcome.big=chest.big == true
@@ -1618,6 +1627,7 @@ local function publishHatch(player: Player, chestId: string, committedOutcome: a
     PrivateState.set(player, "LastChestShiny",committedOutcome.shiny == true)
     PrivateState.set(player, "LastChestGenesJson",HttpService:JSONEncode(committedOutcome.genes))
     PrivateState.set(player, "LastChestFailed",committedOutcome.failed==true)
+    PrivateState.set(player, "LastChestNewJson",HttpService:JSONEncode(committedOutcome.discovered or {}))
     PrivateState.set(player, "LastClaimedChestId", chestId)
 end
 

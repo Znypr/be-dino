@@ -1018,6 +1018,7 @@ render=function(name: string)
                 dino=view,rarity=rarity,color=rarityColors[rarity],failed=failed,
                 shiny=not failed and PrivateState.get("LastChestShiny")==true,big=not failed and PrivateState.get("LastChestBig")==true,
                 mutationName=if mutation and not failed then mutation.name else nil,mutationColor=mutationColor,mutationId=if mutation and not failed then mutation.id else nil,
+                newFind=not failed and next(decoded("LastChestNewJson","{}"))~=nil, -- BD-436: first colour/pattern/mutation
                 remaining=remainingAfter,genes=if geneticsOk then genes else nil,colorReveal=colorReveal,patternReveal=patternReveal,paintColors=paintColors,
                 secondReveal=if geneticsOk then HatchTimeline.colorReveal(ProgressionConfig.EggColors,genes,"secondary") else nil, -- BD-220: right bucket
             })
@@ -1231,7 +1232,7 @@ local function refreshGoal()
         maxLevel=ProgressionConfig.AccountMaxLevel,stages=FusionSelection.Stages,
         speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName})
     require(script.Parent.GoalsPanel).setDinos(goalDinos) -- BD-427: hub Goals panel reuses this list and the Index counts
-    require(script.Parent.GoalsPanel).setSpecies(require(Shared.GoalsRules).indexCounts(decoded("CollectionJson","{}"),Config.SpeciesOrder,function(id) return eventMutation(id)~=nil or ownedTraits(id)~=nil end,goalDinos,{colours=#ProgressionConfig.EggColors,patterns=#require(Shared.EggGenetics).Patterns,mutations=#ProgressionConfig.EventMutations}))
+    require(script.Parent.GoalsPanel).setSpecies(require(Shared.GoalsRules).indexCounts(decoded("CollectionJson","{}"),Config.SpeciesOrder,function(id) return eventMutation(id)~=nil or ownedTraits(id)~=nil end,goalDinos,{colours=#ProgressionConfig.EggColors,patterns=#require(Shared.EggGenetics).Patterns,mutations=#ProgressionConfig.EventMutations},decoded("DiscoveryJson","")))
     goalText.Text,goalText.TextColor3=(if touchMode() or require(Shared.PhoneScale).isCompact(gui.AbsoluteSize.Y) then "" else "Goal  ")..goal.text,if goal.ready then C.accent else C.gold
 end
 local goalQueued=false
@@ -1255,7 +1256,7 @@ local function loadGoalDinos()
         refreshGoal()
     end)
 end
-for _,attribute in {"CollectionJson","AccountLevel","AccountXP"} do
+for _,attribute in {"CollectionJson","AccountLevel","AccountXP","DiscoveryJson"} do
     PrivateState.onChanged(attribute, function() refreshGoal() if attribute=="CollectionJson" then loadGoalDinos() end end)
 end
 require(script.Parent.GoalsPanel).attach(gui,goalHUD,{stages=FusionSelection.Stages,speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName}) -- BD-427

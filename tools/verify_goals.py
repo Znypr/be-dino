@@ -44,6 +44,13 @@ assert(Goals.collect(full).done and Goals.collect(full).progress == "Everything 
 assert(Goals.indexCounts(nil, nil, nil, nil, nil).parts.colours.total == 0, "junk input never errors")
 assert(Goals.collect(Goals.indexCounts(nil, nil, nil, nil, nil)).fraction == 0)
 
+-- BD-436: the permanent discovery log wins over derived counts (a fused-away colour stays found); absent log = derived only
+local logged = Goals.indexCounts(col, {"compy", "rex"}, nil, {}, tot, {colours = 5, patterns = 3, mutations = 0})
+assert(logged.parts.colours.found == 5 and logged.parts.patterns.found == 3 and logged.parts.mutations.found == 2, "max(log, derived)")
+assert(Goals.indexCounts(col, {"compy"}, nil, dl, tot, {colours = 99}).parts.colours.found == 9, "log clamps to the total")
+assert(Goals.indexCounts(col, {"compy"}, nil, dl, tot, "junk").parts.colours.found == 2, "junk log falls back to derived")
+assert(Goals.indexCounts(col, {"compy"}, nil, dl, tot, nil).parts.colours.found == 2, "no log = derived")
+
 local function dino(species, stage) return {speciesId = species, stage = stage, genes = {patternId = "p"}} end
 local list = {} for i = 1, 4 do table.insert(list, dino("compy", "base")) end
 local o = {dinos = list, stages = Goals_stages, speciesName = function(id) return "Compy" end, patternName = function(id) return id end}
