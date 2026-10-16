@@ -68,6 +68,16 @@ def scan():
         assert needle in (ROOT / path).read_text(encoding='utf-8'), path + ' must use the shared MutationLook'
     # no private mutation colour table may remain in MutationEffects
     assert 'dewdrop = {Color3' not in (ROOT / 'src/shared/MutationEffects.luau').read_text(encoding='utf-8')
+    # BD-154: every visible/gettable hook is still wired
+    wired = {
+        'src/server/FoodService.luau': 'ProgressionRules.eventEgg(weatherId',
+        'src/client/Bootstrap.client.luau': 'for i=#tags,lastEggCount+1,-1',
+        'src/client/HatchSequence.luau': 'r.mutationName',
+        'src/client/EggsScreen.luau': 'MutationLook.get(entry.mutationId)',
+        'src/client/DinoIndexPanels.luau': 'mutationId = if d.stage == "base"',
+    }
+    for path, needle in wired.items():
+        assert needle in (ROOT / path).read_text(encoding='utf-8'), path + ' lost its mutation hook: ' + needle
     print('Source scan passed: world dino, previews and mist all read MutationLook')
 
 

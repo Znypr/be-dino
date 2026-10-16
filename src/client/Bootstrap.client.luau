@@ -1447,8 +1447,9 @@ RunService.Heartbeat:Connect(function(dt)
     local ok,tags=pcall(function() return Http:JSONDecode(if character then character:GetAttribute("RunEggEvents") or "[]" else "[]") end)
     if ok and typeof(tags)=="table" then
         if #tags>lastEggCount and state=="Active" then
-            local newest=tags[#tags]
-            local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,newest.mutationId or "")
+            -- BD-154: several eggs can land in one tick (Food worth x10, big pickups): look at every new tag, not only the last.
+            local mutation=nil
+            for i=#tags,lastEggCount+1,-1 do mutation=mutation or ProgressionRules.item(ProgressionConfig.EventMutations,tags[i].mutationId or "") end
             -- Plain eggs show on the HUD counter; only special eggs get a card (docs/65).
             if mutation then notify(mutation.name.." egg caught!",C.gold,{kind="major",icon="egg",body="Hatch it at Home"}) end
         end
