@@ -27,9 +27,12 @@ local function peacefulFor(player: Player): boolean
     return ok and SettingsModel.fromStore(decoded).peaceful
 end
 
-function CombatService.start(runLifecycle, dinosaur)
+-- Returns nil while the flag is off. With it on, the returned api lets NpcPredatorService (BD-245) put wild predators into the SAME
+-- rules world: api.world is the CombatRules world, api.npcs = {[combat key] = Model} are bite targets like player dinos.
+function CombatService.start(runLifecycle, dinosaur): any?
     if not Config.CombatEnabled then return end
     local world = Rules.new(true)
+    local api: any = {world = world, npcs = {}, onNpcDefeated = nil}
     local tracked: {[Model]: string} = {}
     local connections: {[Model]: {RBXScriptConnection}} = {}
     local characterOf: {[string]: Model} = {}
@@ -90,20 +93,40 @@ function CombatService.start(runLifecycle, dinosaur)
         end))
     end
 
+    function api.addNpc(key: string, model: Model)
+        api.npcs[key] = model
+        characterOf[key] = model
+    end
+    function api.removeNpc(key: string)
+        api.npcs[key] = nil
+        characterOf[key] = nil
+        Rules.leave(world, key)
+    end
+
     world.onDefeat = function(victim, attacker, bonuses)
         -- Exactly once per (userId, runId): CombatState fires the defeat once and settle() flips Defeated -> Settled once.
         if not Rules.settle(world, victim.key) then return end
+        if api.npcs[victim.key] then
+            -- A wild predator was defeated (BD-245): no run, no eggs, no catches. Only the capped assist growth below, then the
+            -- NPC service removes it and starts the respawn timer.
+            for key, amount in bonuses do
+                local c = characterOf[key]
+                if c and not api.npcs[key] and c:GetAttribute("RunState") == "Active" and amount > 0 then dinosaur.addGrowth(c, amount) end
+            end
+            if api.onNpcDefeated then api.onNpcDefeated(victim.key) end
+            return
+        end
         local character = characterOf[victim.key]
         local player = Players:GetPlayerByUserId(victim.userId)
         if character and player and player.Character == character and character:GetAttribute("RunId") == victim.runId then
             character:SetAttribute("HpByte", 0)
             -- Same idempotent path as "Eaten"/"ManualExit"/"Death": Active -> Ending once, settlement keyed by runId.
             -- The victim keeps every run egg, crystal and nest earned so far; nothing moves to the attackers.
-            runLifecycle.tryEnd(player, character, "Defeated", attacker.userId)
+            runLifecycle.tryEnd(player, character, "Defeated", if typeof(attacker.userId) == "number" then attacker.userId else nil) -- a wild predator has no user id
         end
         for key, amount in bonuses do
             local c = characterOf[key]
-            if c and c:GetAttribute("RunState") == "Active" and amount > 0 then
+            if c and not api.npcs[key] and c:GetAttribute("RunState") == "Active" and amount > 0 then
                 dinosaur.addGrowth(c, amount) -- server-minted assist growth, capped by CombatTeamUp (no eggs, no catches)
             end
         end
@@ -126,6 +149,10 @@ function CombatService.start(runLifecycle, dinosaur)
                 table.insert(candidates, {key = otherKey, pos = otherRoot.Position})
             end
         end
+        for npcKey, npcModel in api.npcs do -- wild predators are bite targets too (BD-245)
+            local npcRoot = if npcModel.Parent then npcModel:FindFirstChild("HumanoidRootPart") else nil
+            if npcRoot and npcRoot:IsA("BasePart") then table.insert(candidates, {key = npcKey, pos = npcRoot.Position}) end
+        end
         local leaping = now < numberAttribute(character, "LeapUntil", 0)
         local result = Rules.attack(world, key, now, root.Position, root.CFrame.LookVector, candidates, leaping)
         player:SetAttribute("LastBiteStatus", result.reason)
@@ -139,7 +166,7 @@ function CombatService.start(runLifecycle, dinosaur)
         if byte then target:SetAttribute("HpByte", byte) end
         -- Soft knockback: a short planar nudge (<= KnockbackStuds, inside MovementGuardBurstStuds), only onto clear
         -- ground inside the arena; a server CFrame write, never a physics impulse (docs/101 s4, s13).
-        local targetRoot = if not result.defeated then target:FindFirstChild("HumanoidRootPart") else nil
+        local targetRoot = if not result.defeated and not api.npcs[result.targetKey] then target:FindFirstChild("HumanoidRootPart") else nil
         if targetRoot and targetRoot:IsA("BasePart") then
             local push = Vector3.new(result.knockX, 0, result.knockZ)
             local half = Config.ArenaHalfWidth
@@ -184,6 +211,7 @@ function CombatService.start(runLifecycle, dinosaur)
     Players.PlayerRemoving:Connect(function(player)
         if player.Character then leave(player.Character) end
     end)
+    return api
 end
 
 return CombatService

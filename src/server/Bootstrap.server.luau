@@ -161,7 +161,8 @@ if not foodReady then
 end
 local PredationService = require(script.Parent.PredationService)
 PredationService.start(RunLifecycle, Dinosaur)
-require(script.Parent.CombatService).start(RunLifecycle, Dinosaur) -- BD-243/244 HP combat; returns at once while Config.CombatEnabled is false
+-- BD-243/244 HP combat returns nil at once while Config.CombatEnabled is false; BD-245 wild predators then also do nothing.
+require(script.Parent.NpcPredatorService).start(require(script.Parent.CombatService).start(RunLifecycle, Dinosaur))
 require(script.Parent.AdminService).start() -- BD-120 owner-only admin panel (docs/79)
 
 print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
