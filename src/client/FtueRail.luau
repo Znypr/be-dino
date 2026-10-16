@@ -7,6 +7,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local PrivateState = require(script.Parent.PrivateState)
 local Rules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("FtueRules"))
 local Theme = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("UITheme"))
 
@@ -15,10 +16,10 @@ local player = Players.LocalPlayer
 
 local function hasFoundEgg(): boolean
     local copies = 0
-    local ok, collection = pcall(function() return game:GetService("HttpService"):JSONDecode(player:GetAttribute("CollectionJson") :: string) end)
+    local ok, collection = pcall(function() return game:GetService("HttpService"):JSONDecode(PrivateState.get("CollectionJson") :: string) end)
     if ok then copies = Rules.collectionCopies(collection) end
-    return Rules.hasFoundEgg({activeEggs = player:GetAttribute("ActiveChestCount"), waitingEggs = player:GetAttribute("QueuedEggsWaiting"),
-        lastRunEggs = player:GetAttribute("LastRunEggCount"), copies = copies})
+    return Rules.hasFoundEgg({activeEggs = PrivateState.get("ActiveChestCount"), waitingEggs = PrivateState.get("QueuedEggsWaiting"),
+        lastRunEggs = PrivateState.get("LastRunEggCount"), copies = copies})
 end
 
 -- rail = the left menu frame; buttons = the six nav buttons in order (each has a "Destination" attribute).

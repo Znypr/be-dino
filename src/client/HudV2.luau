@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local PrivateState = require(script.Parent.PrivateState)
 local Rules = require(Shared:WaitForChild("HudRules"))
 local Theme = require(Shared:WaitForChild("UITheme"))
 local Ftue = require(Shared:WaitForChild("FtueRules"))
@@ -85,10 +86,10 @@ function Hud.attach(hud: Frame, gui: ScreenGui, hooks: any?)
     local lastMoment, momentsThisRun, wasRunning = nil :: number?, 0, false
     local function foundBefore(): boolean
         local copies = 0
-        local ok, collection = pcall(function() return game:GetService("HttpService"):JSONDecode(player:GetAttribute("CollectionJson") :: string) end)
+        local ok, collection = pcall(function() return game:GetService("HttpService"):JSONDecode(PrivateState.get("CollectionJson") :: string) end)
         if ok then copies = Ftue.collectionCopies(collection) end
-        return Ftue.hasFoundEgg({sessionCatch = sessionCatch, activeEggs = player:GetAttribute("ActiveChestCount"),
-            waitingEggs = player:GetAttribute("QueuedEggsWaiting"), lastRunEggs = player:GetAttribute("LastRunEggCount"), copies = copies})
+        return Ftue.hasFoundEgg({sessionCatch = sessionCatch, activeEggs = PrivateState.get("ActiveChestCount"),
+            waitingEggs = PrivateState.get("QueuedEggsWaiting"), lastRunEggs = PrivateState.get("LastRunEggCount"), copies = copies})
     end
     local function sparkle(character: Model)
         local count = Ftue.sparkle(Theme.MotionEnabled)

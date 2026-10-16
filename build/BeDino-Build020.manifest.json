@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "d4161aeeec66e2ed08753206bc9705ea7e7ecb0877cd839deee65ea488d5f45b",
+  "place_sha256": "f91c394c3c6e80a7fe9031bae6a45b0e992c20e3f0f9aaadd7599262d00ff3ca",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -330,7 +330,7 @@
     "src/client/EggPicture.luau": "66ff407ca10ea1297356217e40eb01e70370096eb48ec4d5635381ac627a7657",
     "src/client/EggsScreen.luau": "de3a8a6b90c8eb81ec18b4009f8d3f6c70d286fad0c6245ac9073bdc77dcfa87",
     "src/client/FoodGlow.client.luau": "192e340c747a1ee97f34063f318c419a1107c2cd71cb1dc6e5000334ac83690e",
-    "src/client/FtueRail.luau": "dd470385a05c7f5c9773b01d566107260cdbaf11ed601d4e536e473de29d5ff3",
+    "src/client/FtueRail.luau": "07a96ef8b324c783401b00b653da010d52573258b3537e20205ac77acf0bb419",
     "src/client/FusionMenu.luau": "99d0c3a0df6db245ac39c433394af8393722b946b62af21df7ed3d68f865b188",
     "src/client/FusionWidgets.luau": "d9784151248850efedddcba20f4540bd0bbafc6fbeb3d198a7203c78814ac0c4",
     "src/client/FxRig.luau": "d46f51ef0cc971086c00fc438f82d38eb2f2116fb2eafa92d4a54427c38765bd",
@@ -340,7 +340,7 @@
     "src/client/HubGuideClient.luau": "bc556dca961cd865e95fbddfbbdffc5eeef85bc3d7b9e8371f0f685047982609",
     "src/client/HubTravelClient.luau": "7cb9901f543030fb51ec5d342d43f8b3744bcad84af1fd7a5d4f71187484e632",
     "src/client/HubWalkUpClient.luau": "025cb0d98314898c604c3b09e691cbeac13c4bd33393ce052f97cff1f7bc5614",
-    "src/client/HudV2.luau": "13894fec2c97b1a1ad5852d2b996bbf8629fc30bae576b04909f9a0dd46772f3",
+    "src/client/HudV2.luau": "d22c33536de170feef86522de2e782241a8f234cda93f87fa040b550acee1be4",
     "src/client/InspectView.luau": "734aefd9c3ca8907cc4161e20b94e0dba4f372904c3950a1f17aaae7b47e9cf9",
     "src/client/JumpCarry.client.luau": "00398d26593b2042edd83228148424288e54f8501ba7e114bb64d073176e699a",
     "src/client/LowPolyAnimator.client.luau": "53050ebf36020430e202b4c6c0925e25119be343a4187c4880d7d3cc2f706e8f",
