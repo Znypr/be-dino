@@ -375804,6 +375804,30 @@ function Copy.hatchGroup(level: number)
         "A cracked egg gives no dino and no crystals back.")
 end
 
+-- BD-301: ONE sentence for the Buy Egg confirm, built from the same numbers as the "Does it hatch?" group above.
+function Copy.hatchSentence(level: number): string
+    local percent = Copy.hatchGroup(level).rows[1].percent
+    return string.format("%s of every 100 eggs hatch a dino. A cracked egg gives nothing back.", string.format("%g", percent))
+end
+
+-- BD-303: plain words for the condition upgrade. requiredLevel is the player level the server demands (ProgressionRules).
+function Copy.upgradeUnlock(requiredLevel: number?, playerLevel: number): string
+    if requiredLevel == nil then return "Top level reached" end
+    if playerLevel &gt;= requiredLevel then return "Ready to buy!" end
+    return "Reach level " .. requiredLevel .. " to buy this."
+end
+
+-- BD-303: the condition whose chance grows the most when going from oldLevel to newLevel (its egg is shown on the confirm).
+function Copy.biggestGain(oldLevel: number, newLevel: number): string
+    local old, new = ShopOdds.conditionPercents(oldLevel), ShopOdds.conditionPercents(newLevel)
+    local bestId, best = Progression.Conditions[1].id, -math.huge
+    for i, row in Progression.Conditions do
+        local gain = new[i] - old[i]
+        if gain &gt; best then bestId, best = row.id, gain end
+    end
+    return bestId
+end
+
 -- Egg shop: groups in reading order.
 function Copy.eggGroups(level: number)
     return {Copy.hatchGroup(level), Copy.speciesGroup(), Copy.conditionGroup(level)}
@@ -554552,6 +554576,16 @@ local function setOpen(open: boolean)
     toggle.BackgroundColor3 = if open then C.gold else C.purple
 end
 toggle.Activated:Connect(function() setOpen(not panel.Visible) end)
+-- BD-304: the Admin button sat on top of every menu's corner. Hide it while a game menu is open (unless the panel itself is open).
+task.spawn(function()
+    local main = player:WaitForChild("PlayerGui"):WaitForChild("BeDinoUI", 30)
+    local scrim = main and main:WaitForChild("ModalScrim", 30)
+    if not scrim or not scrim:IsA("GuiObject") then return end
+    local function sync() toggle.Visible = panel.Visible or not scrim.Visible end
+    scrim:GetPropertyChangedSignal("Visible"):Connect(sync)
+    panel:GetPropertyChangedSignal("Visible"):Connect(sync)
+    sync()
+end)
 UserInputService.InputBegan:Connect(function(input, processed)
     if not processed and input.KeyCode == Enum.KeyCode.F2 then setOpen(not panel.Visible) end
 end)
@@ -554757,7 +554791,11 @@ drawToasts=function()
             local color=(entry.tint and Theme.RarityColors[entry.tint]) or toastKindColor[entry.kind] or C.blue
             slot.bar.BackgroundColor3,slot.plate.BackgroundColor3=color,C.panel:Lerp(color,.35)
             slot.title.Text,slot.detail.Text=entry.text,entry.body or ""
-            slot.title.Size=UDim2.fromOffset(330,if entry.body then 30 else 50)
+            slot.plate.Visible=entry.icon~=nil -- BD-304: no empty icon box
+            local textX=if entry.icon then 68 else 22
+            slot.title.Position,slot.detail.Position=UDim2.fromOffset(textX,if entry.body then 3 else 3),UDim2.fromOffset(textX,30)
+            slot.title.Size=UDim2.fromOffset(398-textX,if entry.body then 30 else 50)
+            slot.detail.Size=UDim2.fromOffset(398-textX,22)
             slot.count.Text=if entry.count&gt;1 and not entry.amount then "x"..entry.count else ""
             local target=UDim2.fromOffset(0,(i-1)*62)
             if slot.seq~=entry.seq then
@@ -554782,7 +554820,8 @@ local function pumpToasts()
     local panelRight=player:GetAttribute("AdminPanelRight") or 0
     local half,halfCard=gui.AbsoluteSize.X/2,220*toastScale.Scale
     local shift=if panelRight&gt;0 then math.clamp(panelRight+12+halfCard-half,0,math.max(0,half-halfCard)) else 0
-    if toastLayer.Position.X.Offset~=shift then toastLayer.Position=UDim2.new(.5,shift,0,80) end
+    local topY=if shade.Visible then 4 else 80 -- BD-304: with a menu open the toast rides the very top, clear of the menu title
+    if toastLayer.Position.X.Offset~=shift or toastLayer.Position.Y.Offset~=topY then toastLayer.Position=UDim2.new(.5,shift,0,topY) end
     if NotifyQueue.update(notifyQueue,os.clock(),shade.Visible) then drawToasts() end
 end
 -- Existing call sites keep notify(text,color); opts adds {kind,key,icon,body,tint,amount,format}.
@@ -555062,7 +555101,7 @@ render=function(name: string)
                 label(body,string.format("%g%%",weights[i]),x,cardsY+176,155,34,24,C.blue)
             end
             button(body,if upgrade then "UPGRADE: "..upgrade.price.." CRYSTALS" else "MAX LEVEL",142,cardsY+220,540,targetHeight,C.accent,function() if upgrade then open("conditionConfirm") end end).TextSize=20
-            label(body,if upgrade then "Unlocks at level "..upgrade.requiredLevel else "Top level reached",0,cardsY+220+targetHeight+6,824,30,19,C.gold)
+            label(body,require(Shared.OddsCopy).upgradeUnlock(if upgrade then upgrade.requiredLevel else nil,num("AccountLevel")),0,cardsY+220+targetHeight+6,824,30,19,C.gold)
             return
         elseif cosmeticTab=="crystals" then
             -- BD-179: one card per pack in a 3-wide grid (same card look as the potion shop). Prices load from the marketplace.
@@ -555086,7 +555125,7 @@ render=function(name: string)
                     label(card,tostring(product.amount),92,6,166,44,32,C.gold)
                     label(card,"Crystals",92,48,166,26,19)
                     local tag=label(card,"",92,74,166,20,15,C.accent) tag.Visible=false
-                    local b=button(card,"...",8,100,248,38,C.gold:Lerp(C.panel,.35),function() end)
+                    local b=button(card,if Config.CrystalPacksEnabled then "..." else "Coming soon",8,100,248,38,C.gold:Lerp(C.panel,.35),function() end)
                     b.TextSize=19 b.Active=false
                     cards[i]={button=b,tag=tag}
                 end
@@ -555104,7 +555143,7 @@ render=function(name: string)
                         if price and Config.CrystalPacksEnabled==true then
                             c.button.Text="R$ "..price c.button.Active=true c.button.BackgroundColor3=C.gold:Lerp(C.panel,.1)
                             c.button.Activated:Connect(function() Marketplace:PromptProductPurchase(player,product.id) end)
-                        else c.button.Text=if price then "Soon" else "Not ready" end
+                        else c.button.Text=if price and not Config.CrystalPacksEnabled then "R$ "..price.."  Coming soon" else "Coming soon" end
                         if price and baseRate and i&gt;1 then
                             local bonus=math.floor((product.amount/price/baseRate-1)*100+.5)
                             if bonus&gt;=1 then c.tag.Text="+"..bonus.."% extra" c.tag.Visible=true end
@@ -555187,9 +555226,16 @@ render=function(name: string)
         local isEgg=name=="eggPurchase"
         heading.Text,header.BackgroundColor3=if isEgg then "Buy Random Egg?" else "Upgrade Conditions?",C.gold
         local price=if isEgg then ProgressionConfig.RandomEggPrice elseif upgrade then upgrade.price else 0
-        art(body,"egg",20,15,200)
+        local OddsCopy=require(Shared.OddsCopy)
+        if isEgg or not upgrade then art(body,"egg",20,15,200)
+        else -- BD-303: show the egg whose chance grows most, not a plain egg
+            local tile=box(body,20,15,200,175,Color3.fromRGB(122,148,112):Lerp(C.panel,.25),24)
+            local view=ModelPreview.add(tile,"egg")
+            view:SetAttribute("InspectZoom",1.6)
+            EggAppearance.apply(view,EggGenetics.neutral(OddsCopy.biggestGain(upgrade.level-1,upgrade.level)),true)
+        end
         label(body,price.." Crystals\nBalance after: "..(num("Crystals")-price),260,10,550,80,27,C.gold)
-        label(body,if isEgg then "Cracked: 20% hatch success. A failed hatch gives no dinosaur or refund. Queue-full purchases are not charged." else "Unlocks at level "..(if upgrade then upgrade.requiredLevel else 60)..". New eggs only.",260,105,550,95,23)
+        label(body,if isEgg then OddsCopy.hatchSentence(p.conditionLevel or 0) else OddsCopy.upgradeUnlock(if upgrade then upgrade.requiredLevel else nil,num("AccountLevel"))..(if upgrade then " Only new eggs get better chances." else ""),260,105,550,95,23)
         if not isEgg and upgrade then
             local parts={} local newOdds=ShopOdds.conditionPercents(upgrade.level) for i,row in ProgressionConfig.Conditions do table.insert(parts,row.name.." "..string.format("%g",newOdds[i]).."%") end
             label(body,table.concat(parts," • "),0,213,824,60,21,C.blue)
@@ -555348,7 +555394,7 @@ render=function(name: string)
         for _,tick in progress.ticks do
             if tick.fraction&lt;1 then
                 local mark=Instance.new("Frame") mark.Name,mark.BorderSizePixel,mark.ZIndex,mark.Parent="IndexMilestone",0,body.ZIndex+8,body
-                mark.Size,mark.Position=UDim2.fromOffset(4,34),UDim2.fromOffset(math.floor(meterWidth*tick.fraction)-2,356)
+                mark.Size,mark.Position=UDim2.fromOffset(4,8),UDim2.fromOffset(math.floor(meterWidth*tick.fraction)-2,388) -- BD-300: below the bar, never over its text
                 mark.BackgroundColor3=if tick.reached then C.gold else C.text
                 mark.BackgroundTransparency=if tick.reached then 0 else .35
             end
@@ -555599,19 +555645,19 @@ render=function(name: string)
         -- BD-263 Settings v2: tabs Sound / Look / Controls / Help are drawn by SettingsMenu; Help (guides, auto-open) stays here. Body is 824 x 402.
         local tab=require(script.Parent.SettingsMenu).build(body,{label=label,button=button,open=open,notify=notify,cameraReset=function() player.CameraMaxZoomDistance=Config.CameraMaxZoom end})
         if tab=="help" then
-        button(body,"HOW TO PLAY",0,64,400,52,C.gold,function() open("tutorial") end)
-        button(body,"FOOD GUIDE",424,64,400,52,C.accent,function() open("food") end)
-        label(body,"Auto-open",0,312,170,52,24).TextXAlignment=Enum.TextXAlignment.Left
+        button(body,"HOW TO PLAY",0,70,400,76,C.gold,function() open("tutorial") end).TextSize=26
+        button(body,"FOOD GUIDE",424,70,400,76,C.accent,function() open("food") end).TextSize=26
+        label(body,"Auto-open eggs",0,172,824,40,28).TextXAlignment=Enum.TextXAlignment.Left
         local locked=EggsLogic.locked(Config.AutoOpenRequiresPass,ownsAutoOpen())
         local chosen=RevealSkip.set(autoOpenSelection())
         for i,rarityName in RevealSkip.Names do
-            -- Five rarities: name on top, state below; rarity colour while shown, dark while skipped.
-            button(body,rarityName.."\n"..(if locked then "LOCKED" elseif chosen[i] then "AUTO" else "SHOW"),176+(i-1)*130,312,124,52,if chosen[i] then C.card else rarityColors[i],function()
+            -- BD-304: five big buttons, 22 px text (about 16 px on a small screen): name on top, state below.
+            button(body,rarityName.."\n"..(if locked then "LOCKED" elseif chosen[i] then "AUTO" else "SHOW"),(i-1)*168,222,158,math.max(76,45/viewportScale()),if chosen[i] then C.card else rarityColors[i],function()
                 if locked then notify("Auto-open needs a pass",C.gold) return end
                 setSkipRemote:FireServer(RevealSkip.toggle(decoded("RevealSkipJson","[]"),i))
-            end).TextSize=16
+            end).TextSize=22
         end
-        label(body,"Shiny, BIG and special eggs always show. Auto-opened eggs are still saved!",0,370,824,30,18)
+        label(body,"Shiny, BIG and special eggs always show. Auto-opened eggs are still saved!",0,324,824,60,20)
         end
     elseif name=="food" then
         heading.Text,header.BackgroundColor3="Food &amp; Growth",C.accent

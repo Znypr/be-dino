@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "f3fd7fc926e0a5da201644e5784b6e15f405fec18f9b474ebec5d6a59240becf",
+  "place_sha256": "87b56f5e2675ba6bba4683fe93f774b486ef3343945ef5d5f46db283cdf203a1",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -236,7 +236,7 @@
     "src/shared/NestQueue.luau": "4834d47c21545f4ac5107e1cb6337bee84ef9f6885eb33ab9276616034d9a929",
     "src/shared/NextGoal.luau": "bce6344693ae9e10dfc49adf7ae0ec85ba3226012ab7b361506825fb35e172a7",
     "src/shared/NotifyQueue.luau": "6700be97b6461309f212f6b4d2a92cbb9ba12f1ced7de5946556a5df5fd54d58",
-    "src/shared/OddsCopy.luau": "e15fc274379a3b9abb284b1575195032682cdc347a3b8a90f44c3f6f5c910449",
+    "src/shared/OddsCopy.luau": "5f6ef548ebf52c76e18622ff1beac0a3b06aad3571b0f496d83a5dd6310897df",
     "src/shared/PatternAtlasCache.luau": "9a853f613a0a60da14c103641fc1f901620884a1b7752200f3d303dc9e6b4ec4",
     "src/shared/PatternGenes.luau": "d30cd1d26757f764ebc65d225d2f79eb3cbd8302b19d18c1b50b65e300b3ae4f",
     "src/shared/PotionArt.luau": "2cb54880e812967602c7a86f4a0171e8ed928056fed7cb9a2614170134d34f6f",
@@ -298,8 +298,8 @@
     "src/server/RewardMath.luau": "97ebf64fabbc2e63771da9df910a3244a078094581be8d71dad4effd07975c98",
     "src/server/RunLifecycle.luau": "2564f8c5ded4f3492883929c784e9da83de99b8366612578a63d0ef1cae5959f",
     "src/server/VisualTestService.luau": "ee48ddc907c11e5d1390483d570d9ab96fd01b3ee02493b5724a2ebcf1ef0773",
-    "src/client/AdminPanel.client.luau": "4834c3ac9855f3dd986de7bd27a9e9de3123fe43e1d5dff3bfaf7e041ea661cc",
-    "src/client/Bootstrap.client.luau": "1949ce4697c017d5e0b6dee51b094ce3f37cc9590018235c5e6a5afd80f2edad",
+    "src/client/AdminPanel.client.luau": "1cc79245ab753341398f406ada00f92483c702d299a62c6ba859d220b3376217",
+    "src/client/Bootstrap.client.luau": "b6518267e4a73bf3806dd723b0393c6c77df624fb1285c917640f521fd126548",
     "src/client/CameraOcclusion.client.luau": "5e0b79f8433683ac09771383077e3692815335055723739355a82f468e0635d5",
     "src/client/CaveAtmosphere.luau": "1330f8c43abbec254d162a9e2e0cd9d5ffa916e0b6cff356d00cc88c1a761eb7",
     "src/client/CombatHud.luau": "78b006d926a2cd8e6165f7f85c2869cae4a6dd8d5cf8ab6c0138e067c6d3236a",
