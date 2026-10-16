@@ -66,10 +66,6 @@ local c3={{key=b3.key,pos=P(0,0,-3)}}
 assert(R.attack(w3,a3.key,1,P(0,0,0),FWD,c3).reason=="no_target","protected target")
 assert(a3.protectedUntil<=1,"attacking ends the attacker's protection early")
 assert(R.attack(w3,a3.key,6,P(0,0,0),FWD,c3).ok,"protection over")
--- peaceful: cannot bite, cannot be bitten
-local w4=world(); local p=R.join(w4,{userId=1,runId="x",class="Ground",score=0,now=0,peaceful=true}); local q=R.join(w4,{userId=2,runId="y",class="Ground",score=0,now=0})
-assert(R.attack(w4,p.key,1,P(0,0,0),FWD,{{key=q.key,pos=P(0,0,-3)}}).reason=="peaceful")
-assert(R.attack(w4,q.key,1,P(0,0,0),FWD,{{key=p.key,pos=P(0,0,-3)}}).reason=="no_target","peaceful target untouchable")
 -- 4. exactly-once defeat and settlement; hp never negative; later bites ignored
 local w5=world(); local big=R.join(w5,{userId=99,runId="big",class="Ground",score=BIG,now=0})
 local smalls={}
@@ -111,7 +107,6 @@ end
 local b1,t1=duel(1,0); local b2b,t2=duel(2,t1+1); local b3b,t3=duel(3,t2+1)
 assert(b1>0 and b2b==math.floor(b1*0.5) and b3b==0,"pair factors 1, 0.5, 0: "..b1..","..b2b..","..b3b)
 assert(w6.defeatCount==3)
--- peaceful assister gets 0 even after dealing damage (defensive: peaceful cannot attack at all)
 -- 5. growth keeps the ratio and food heals 5%; 6. regen after 6 s
 local w7=world(); local g=R.join(w7,{userId=1,runId="g",class="Ground",score=0,now=0}); local h=R.join(w7,{userId=2,runId="h",class="Ground",score=BIG,now=0})
 for k=1,5 do assert(R.attack(w7,h.key,k,P(0,0,0),FWD,{{key=g.key,pos=P(0,0,-3)}}).ok) end
@@ -237,8 +232,10 @@ def static_checks():
     for needle in ('PLACEHOLDER', 'MAX_BARS = 12', 'Theme.MotionEnabled'):
         if needle not in hud:
             errors.append('CombatHud is missing ' + needle)
-    if 'peaceful' not in read('src/shared/SettingsModel.luau') or '"Peaceful"' not in read('src/client/SettingsMenu.luau'):
-        errors.append('Peaceful setting must exist in SettingsModel and the Controls tab')
+    # OWNER CORRECTION 2026-10-16 (docs/115): there is no Peaceful opt-out; hunting stays on for everyone.
+    for path in ('src/shared/SettingsModel.luau', 'src/client/SettingsMenu.luau', 'src/server/CombatService.luau', 'src/server/PredationService.luau', 'src/server/RunLifecycle.luau'):
+        if 'peaceful' in read(path).lower():
+            errors.append('Peaceful was removed (docs/115 owner correction 2026-10-16); still in ' + path)
     return errors
 
 

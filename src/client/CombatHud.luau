@@ -141,7 +141,7 @@ function Hud.attach(ctx: any)
     local function bite()
         if ctx.shade.Visible then return end
         local c = player.Character
-        if not c or c:GetAttribute("RunState") ~= "Active" or c:GetAttribute("CombatPeaceful") == true then return end
+        if not c or c:GetAttribute("RunState") ~= "Active" then return end
         if os.clock() - lastBiteAt < Cfg.BiteCooldownSeconds then return end
         lastBiteAt = os.clock()
         remote:FireServer() -- no target, no damage: the server decides everything
@@ -159,13 +159,6 @@ function Hud.attach(ctx: any)
         chip.BorderSizePixel, chip.ZIndex, chip.Parent = 0, biteButton.ZIndex + 2, biteButton
         local chipCorner = Instance.new("UICorner") chipCorner.CornerRadius = UDim.new(0.5, 0) chipCorner.Parent = chip
     end
-    -- BD-314: a small leaf badge while Peaceful is on, so a Peaceful player can see it in the run.
-    local peacefulBadge = Instance.new("TextLabel")
-    peacefulBadge.Name, peacefulBadge.Text, peacefulBadge.Visible = "PeacefulBadge", "\u{1F343} Peaceful", false
-    peacefulBadge.Size, peacefulBadge.Position = UDim2.fromOffset(120, 26), UDim2.fromOffset(150, -30)
-    peacefulBadge.BackgroundColor3, peacefulBadge.TextColor3, peacefulBadge.Font, peacefulBadge.TextSize = C.panel, C.accent, Enum.Font.FredokaOne, 16
-    peacefulBadge.BorderSizePixel, peacefulBadge.ZIndex, peacefulBadge.Parent = 0, biteButton.ZIndex, ctx.timers
-    local badgeCorner = Instance.new("UICorner") badgeCorner.CornerRadius = UDim.new(0.5, 0) badgeCorner.Parent = peacefulBadge
     local ownStrip = Instance.new("Frame") -- own HP strip under the Bite label (the bigger bar floats over the own dino)
     ownStrip.Position, ownStrip.Size, ownStrip.BackgroundColor3, ownStrip.BorderSizePixel, ownStrip.ZIndex = UDim2.fromOffset(10, 46), UDim2.fromOffset(120, 8), C.panel, 0, biteButton.ZIndex + 1
     ownStrip.Parent = biteButton
@@ -210,12 +203,9 @@ function Hud.attach(ctx: any)
         local me = player.Character
         -- Bite button state (client prediction only; the server enforces the cooldown).
         local cooling = now - lastBiteAt < Cfg.BiteCooldownSeconds
-        local peaceful = me ~= nil and me:GetAttribute("CombatPeaceful") == true
-        biteButton.BackgroundColor3 = if cooling or peaceful then C.card else C.accent
-        biteButton.Active = not cooling and not peaceful and me ~= nil and me:GetAttribute("RunState") == "Active"
+        biteButton.BackgroundColor3 = if cooling then C.card else C.accent
+        biteButton.Active = not cooling and me ~= nil and me:GetAttribute("RunState") == "Active"
         biteButton.Position = UDim2.fromOffset(146, ctx.leapButton.Position.Y.Offset)
-        peacefulBadge.Visible = peaceful and me ~= nil and me:GetAttribute("RunState") == "Active"
-        peacefulBadge.Position = UDim2.fromOffset(150, ctx.leapButton.Position.Y.Offset - 30)
         if me then
             local f = fractionOf(me)
             ownFill.Size, ownFill.BackgroundColor3 = UDim2.fromScale(f, 1), Hud.fillColor(f)
