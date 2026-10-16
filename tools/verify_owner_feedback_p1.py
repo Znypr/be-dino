@@ -40,11 +40,11 @@ assert(ConditionOverlays.ShopZoom >= 1.6 * 1.15, "shop eggs are zoomed well past
 
 -- ---- BD-395 PropGround (the pure rule; verify_world_art runs it over the whole generated island)
 local G = BiomePlacement.Ground
-assert(G.Clearance == 0.2 and G.Raised.tree and G.Raised.giant and G.Raised.shrub and not G.Raised.rock)
+assert(G.Clearance == 0.2 and G.Raised.tree and G.Raised.colossal and G.Raised.shrub and not G.Raised.rock)
 local flat = {10, 10, 10, 10, 10}
 assert(math.abs(G.restY("tree", flat, 20, 1) - 10.2) < 1e-9, "flat: bottom 0.2 above the ground")
 local slope = {10, 11.5, 8.5, 10, 10} -- trunk straddles a slope: highest sample wins (the uphill side is not buried)
-assert(math.abs(G.restY("giant", slope, 78, 4) - 11.7) < 1e-9, "slope: highest point + 0.2")
+assert(math.abs(G.restY("colossal", slope, 78, 4) - 11.7) < 1e-9, "slope: highest point + 0.2")
 assert(not G.submerged(G.restY("tree", slope, 20, 1), slope, 0), "never submerged by the rule")
 assert(G.submerged(10 - 0.03 * 20, slope, 0.5), "the OLD rule (lowest - 3% of height) buried the uphill side")
 assert(G.restY("rock", slope, 10, 2) < 8.5, "rocks still embed a little")
@@ -57,7 +57,7 @@ local ray = {10, 12, 8, 11, 9}
 assert(math.abs(G.restYRay("tree", ray, 20, 1) - 11.85) < 1e-9 and math.abs(G.restYRay("shrub", ray, 1, 1) - 11.85) < 1e-9)
 assert(math.abs(G.restYRay("rock", ray, 30, 1) - (8 - 0.12 * 30)) < 1e-9, "spire: lowest ray minus embed")
 assert(G.restYRay("landmark", ray, 9, 1.4) == 8)
-assert(G.rayLayer("giant", "rock") == "rock" and G.rayLayer("giant", "tree") == "giant" and G.rayLayer("rock", "rock") == "rock")
+assert(G.rayLayer("colossal", "rock") == "rock" and G.rayLayer("colossal", "tree") == "colossal" and G.rayLayer("rock", "rock") == "rock")
 assert(G.footprintRadius("tree", 10, 12) == 0.48 and G.footprintRadius("shrub", 60, 5) == 1 and G.footprintRadius("rock", 10, 8) == 3 and G.footprintRadius("rock", 60, 5) == 6)
 assert(math.abs(G.corrected(10, {10.4, 10.1, 10.0, nil, 10.2}, "tree", 20, 1) - 10.25) < 1e-9, "raycast answer used: highest - RootSink (BD-417)")
 assert(G.corrected(10, {nil, nil, 10.4}, "tree", 20, 1) == 10, "too few rays hit: keep the layout height")

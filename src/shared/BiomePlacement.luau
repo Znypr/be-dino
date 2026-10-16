@@ -3,28 +3,30 @@
 -- colliders and offline tests derive the same layout from one seed. Only used when Config.WorldArtMode == "BiomeKit";
 -- the default "Legacy" keeps the old look.
 -- v2: the island is 1.6x wider (IslandLayout.Scale); sub-biomes (BiomeMap) pick which kit ids grow where, with
--- six layers: tree, giant (the same meshes at 2.4x-4x so late-game dinos still feel small), fallen log (a dead tree on its
--- side), rock, shrub (understory) and groundcover (clustered tufts and flower meadows, never a grid).
+-- six layers: tree, colossal (BD-473: the old "giant" layer renamed; the same meshes at 80-140 studs so late-game dinos still feel
+-- small), fallen log (a dead tree on its side), rock, shrub (understory) and groundcover (clustered tufts and flower meadows, never a grid).
+-- v3 (BD-473, docs/139 s5-s6 scope cut): a real Small band of 4-12 studs (shrubs sized by target height), about 25 percent clearings
+-- (no trees, colossal trees or logs; kept off the routes and the spawn keep-out) and no 42-80 stud placement gap.
 local BiomePlacement = {}
-BiomePlacement.Version = 2
+BiomePlacement.Version = 3
 -- BD-395 PropGround (bottom-on-terrain rule) lives in this file so every offline tool that wraps BiomePlacement gets it.
 -- where a world prop's BOTTOM sits on the terrain. Pure math (no Instances): BiomePlacement uses it for the analytic
 -- layout height, Arena uses the same rule with Terrain raycast samples, and tools/verify_world_art.py checks both.
 -- Every generated prop mesh (Arena.generatedProp) has its pivot at the BOTTOM CENTRE of the mesh bounding box (the clone is
 -- CFrame(0, Size.Y / 2, 0)), so a prop rests on the ground when its pivot y = the highest terrain point under the trunk
 -- footprint + Clearance. The old rule used the LOWEST footprint point minus 3% of the prop height, which buried the uphill
--- side of trees and the base of giants (scale 2.4x-4x, so up to ~2.3 studs) in the slope.
+-- side of trees and the base of the old giants (scale 2.4x-4x, so up to ~2.3 studs) in the slope.
 local PropGround = {}
 PropGround.Clearance = 0.2 -- studs the bottom sits above the highest terrain sample under the trunk
 -- Layers that must never be buried (the rest embed on purpose: rocks sink a little, logs lie on the ground).
-PropGround.Raised = {tree = true, giant = true, shrub = true, groundcover = true}
+PropGround.Raised = {tree = true, colossal = true, shrub = true, groundcover = true}
 -- Bottom offset of the pivot from the mesh bounding-box bottom, per prop kind (studs, before scale). 0 = pivot is the bottom.
 -- Rocks embed by a fraction of their height instead (BiomePlacement sink .12).
 PropGround.BottomOffset = {tree = 0, shrub = 0, groundcover = 0, rock = 0, landmark = 0}
 PropGround.RockSink = 0.12
 -- BD-416/417 (raycast placement, Arena): per-kind sampling policy. ONE footprint rule is shared with tools/qa/ground_probe so the gate
 -- grades what the placement used. Rationale per kind:
---   plants (tree, giant, shrub, groundcover): the HIGHEST of the 5 rays at the stem footprint, minus RootSink, so the roots meet the
+--   plants (tree, colossal, shrub, groundcover): the HIGHEST of the 5 rays at the stem footprint, minus RootSink, so the roots meet the
 --     ground on the uphill side and nothing floats (a plant buried 0.15 stud is invisible; a floating one is not).
 --   rocks, spires, ledges, landmarks: the LOWEST of the 5 rays at the WHOLE base (footprint 30% of the mesh, max 6 studs), minus the
 --     RockSink embed for rocks, so a tall pillar never hangs on its downhill side; the embed hides the uphill side.
@@ -34,9 +36,9 @@ PropGround.TallMaxSlope = 25
 PropGround.Policy = {plant = "highest", rock = "lowest", landmark = "lowest"}
 PropGround.MaxRaycastCorrection = 6
 
--- Layer used for the raycast rule: giants that are rocks (spires, bare boulders in badlands) follow the rock policy.
+-- Layer used for the raycast rule: a colossal prop that is a rock follows the rock policy (none are placed since v3; kept for old data).
 function PropGround.rayLayer(layer: string, kind: string?): string
-    if kind == "rock" and layer == "giant" then return "rock" end
+    if kind == "rock" and layer == "colossal" then return "rock" end
     return layer
 end
 
@@ -145,7 +147,7 @@ BiomePlacement.LandmarkScale = 1.4
 -- Layers: grid cell size, base acceptance chance (times biome weight, forest field and density), slope limit, cap, blocking.
 BiomePlacement.Layers = {
     {name = "tree", cell = 10, chance = .105, maxSlope = 32, cap = 560, blocking = true},
-    {name = "giant", cell = 40, chance = .42, maxSlope = 22, cap = 46, blocking = true},
+    {name = "colossal", cell = 28, chance = 1.0, maxSlope = 22, cap = 40, blocking = true}, -- BD-473: was "giant" (cap 46); 40 at density 1 per docs/139 s6
     {name = "log", cell = 20, chance = .06, maxSlope = 20, cap = 62, blocking = true},
     {name = "rock", cell = 14, chance = .075, maxSlope = 46, cap = 150, blocking = true},
     {name = "shrub", cell = 6.4, chance = .12, maxSlope = 36, cap = 900, blocking = false},
@@ -158,69 +160,101 @@ BiomePlacement.UndergrowthChance = .5 -- per placed tree
 BiomePlacement.UndergrowthCap = 190 -- companion plants at density 1
 BiomePlacement.PartBudget = 3800 -- BD-167: +100 at density 1 (+125 parts at the playtest 1.25) pays for tree undergrowth; see docs/68 'World density v3'
 
--- Per-biome density multiplier for each layer and the weighted kit picks. A pick is {id, weight}; tree/giant picks use
+-- Per-biome density multiplier for each layer and the weighted kit picks. A pick is {id, weight}; tree/colossal picks use
 -- family names ("canopy", ...) that get a size appended, log picks always lie a dead tree on its side.
 BiomePlacement.Biomes = {
     meadow = {
-        tree = .55, giant = .15, log = .6, rock = .45, shrub = .75, groundcover = 1.3,
+        tree = .55, colossal = 0, log = .6, rock = .45, shrub = .75, groundcover = 1.3,
         trees = {{"canopy", .5}, {"conifer", .22}, {"cycad", .2}, {"dead", .04}},
-        giants = {{"canopy", 1}},
+        colossals = {{"canopy", 1}},
         rocks = {{"mossy", .6}, {"bare", .4}},
         shrubs = {{"world_bush_a", .22}, {"world_bush_b", .2}, {"world_fern_b", .14}, {"world_fern_a", .1}, {"world_mushrooms_a", .08}, {"world_horsetail_a", .05}, {"world_bush_b", .21}},
         cover = {{"world_grass_a", .3}, {"world_grass_b", .28}, {"world_flowers_a", .42}},
         bloom = .85,
     },
     fern = {
-        tree = 1.35, giant = 1.0, log = 1.4, rock = .5, shrub = 1.7, groundcover = .9,
+        tree = 1.35, colossal = 1.0, log = 1.4, rock = .5, shrub = 1.7, groundcover = .9,
         trees = {{"canopy", .46}, {"cycad", .28}, {"conifer", .19}, {"dead", .07}},
-        giants = {{"canopy", .6}, {"cycad", .4}},
+        colossals = {{"canopy", .6}, {"cycad", .4}},
         rocks = {{"mossy", .82}, {"bare", .18}},
         shrubs = {{"world_fern_a", .3}, {"world_fern_b", .3}, {"world_bush_a", .08}, {"world_bush_b", .08}, {"world_mushrooms_a", .12}, {"world_horsetail_a", .12}},
         cover = {{"world_grass_a", .4}, {"world_grass_b", .4}, {"world_flowers_a", .2}},
         bloom = .35,
     },
     conifer = {
-        tree = 1.5, giant = 1.4, log = 1.0, rock = 1.25, shrub = 1.0, groundcover = .6,
+        tree = 1.5, colossal = 1.4, log = 1.0, rock = 1.25, shrub = 1.0, groundcover = .6,
         trees = {{"conifer", .76}, {"dead", .1}, {"canopy", .08}, {"cycad", .06}},
-        giants = {{"conifer", 1}},
+        colossals = {{"conifer", 1}},
         rocks = {{"bare", .5}, {"mossy", .5}},
         shrubs = {{"world_fern_a", .22}, {"world_fern_b", .2}, {"world_mushrooms_a", .2}, {"world_bush_a", .14}, {"world_bush_b", .14}, {"world_horsetail_a", .1}},
         cover = {{"world_grass_b", .6}, {"world_grass_a", .3}, {"world_flowers_a", .1}},
         bloom = .1,
     },
     marsh = {
-        tree = .75, giant = .6, log = 1.7, rock = .35, shrub = 1.7, groundcover = 1.0,
+        tree = .75, colossal = .6, log = 1.7, rock = .35, shrub = 1.7, groundcover = 1.0,
         trees = {{"cycad", .46}, {"canopy", .25}, {"dead", .25}, {"conifer", .04}},
-        giants = {{"cycad", .55}, {"canopy", .45}},
+        colossals = {{"cycad", .55}, {"canopy", .45}},
         rocks = {{"mossy", .85}, {"bare", .15}},
         shrubs = {{"world_horsetail_a", .5}, {"world_fern_a", .12}, {"world_fern_b", .1}, {"world_bush_a", .08}, {"world_bush_b", .08}, {"world_mushrooms_a", .12}},
         cover = {{"world_grass_a", .48}, {"world_grass_b", .37}, {"world_flowers_a", .15}},
         bloom = .3,
     },
     badlands = {
-        tree = .2, giant = .2, log = .6, rock = 2.3, shrub = .32, groundcover = .26,
+        tree = .2, colossal = 0, log = .6, rock = 2.3, shrub = .32, groundcover = .26,
         trees = {{"dead", .55}, {"conifer", .35}, {"cycad", .1}},
-        giants = {{"dead", 1}},
+        colossals = {{"dead", 1}},
         rocks = {{"bare", .88}, {"mossy", .12}},
         shrubs = {{"world_bush_b", .6}, {"world_fern_a", .1}, {"world_horsetail_a", .1}, {"world_bush_a", .1}, {"world_mushrooms_a", .1}},
         cover = {{"world_grass_b", .85}, {"world_flowers_a", .15}},
         bloom = .05,
     },
     volcanic = {
-        tree = .13, giant = .35, log = .5, rock = 2.0, shrub = .1, groundcover = .06,
+        tree = .13, colossal = .35, log = .5, rock = 2.0, shrub = .1, groundcover = .06,
         trees = {{"dead", .88}, {"conifer", .12}},
-        giants = {{"dead", 1}},
+        colossals = {{"dead", 1}},
         rocks = {{"bare", .92}, {"mossy", .08}},
         shrubs = {{"world_bush_b", .7}, {"world_mushrooms_a", .2}, {"world_fern_a", .1}},
         cover = {{"world_grass_b", 1}},
         bloom = 0,
     },
 }
--- Scale ranges per layer (min, max): trees are mature (sizes s/m/l are already different), giants are 2.4x-4x.
+-- Scale ranges per layer (min, max): trees are mature (sizes s/m/l are already different). Shrubs (the Small band) and colossal
+-- trees are NOT a fixed scale range: they are sized from a target height, see SmallBand and Colossal below.
 BiomePlacement.Scales = {
-    tree = {.9, 1.6}, giant = {2.4, 4}, log = {.9, 1.5}, rock = {.85, 1.8},
-    shrub = {1.1, 2.3}, groundcover = {1.6, 3.0}, landmark = {1.4, 1.4},
+    tree = {.9, 1.6}, log = {.9, 1.5}, rock = {.85, 1.8},
+    groundcover = {1.6, 3.0}, landmark = {1.4, 1.4},
 }
+-- BD-473 Small band (docs/139 s5): bushes, ferns, mushrooms and horsetail grow to 4-12 studs (a spawn Compy is 4.4-6.6) using the
+-- EXISTING kit meshes at larger scales. height = min + (max - min) * u^skew (u uniform, skew 1.5 puts the median near 7 studs);
+-- the scale is capped so a plant is never wider than maxWidth studs (a fern is 3.3 wide at x1). Heights are kit extent x scale, i.e.
+-- upper bounds (generated meshes are fitted inside the extent box). spawnClear: no Small-band plant within this many studs of the
+-- spawn point, so the meadow route and the first seconds stay readable; routes keep the same clearance as before plus half the plant.
+BiomePlacement.SmallBand = {minHeight = 4.2, maxHeight = 12, skew = 1.5, maxWidth = 18, spawnClear = 34, pathShare = .55, spacingShare = .6}
+-- BD-473 colossal trees (docs/139 s5, stand-in meshes until BD-474): the old giant meshes sized to 80-140 studs, crown no wider than
+-- maxCrown. Nothing vegetated is placed between 42 and 80 studs (trees stop at 26.2 x 1.6 = 41.9).
+BiomePlacement.Colossal = {minHeight = 80, maxHeight = 140, skew = 1.5, maxCrown = 100, clearingMargin = 12}
+-- BD-473 clearings: round-ish glades where no tree, colossal tree or fallen log grows (docs/139 s6 rule 3). One candidate per 96-stud
+-- cell, centred in a forest sub-biome, away from every route, keep-out (spawn meadow included), pool and grove core.
+BiomePlacement.Clearing = {cell = 48, chance = 1, rMin = 32, rMax = 54, routeMargin = 8, groveGap = 36, shrubKeep = .35, wobble = .14, spacing = .9, forest = {fern = true, conifer = true, marsh = true}}
+
+-- Scale that gives a kit mesh `height` studs, never wider than `maxWidth`.
+function BiomePlacement.scaleFor(data: any, height: number, maxWidth: number): number
+    return math.min(height / data.extent[2], maxWidth / math.max(data.extent[1], data.extent[3]))
+end
+function BiomePlacement.smallScale(data: any, u: number): number
+    local b = BiomePlacement.SmallBand
+    return BiomePlacement.scaleFor(data, b.minHeight + (b.maxHeight - b.minHeight) * u ^ b.skew, b.maxWidth)
+end
+-- Farthest reach (studs) of a kit prop's collider boxes from its pivot at `scale`: box centre offset plus half the box diagonal.
+function BiomePlacement.colliderReach(data: any, scale: number): number
+    local reach = 0
+    for _, c in data.colliders do reach = math.max(reach, math.sqrt(c[1] ^ 2 + c[3] ^ 2) + .5 * math.sqrt(c[4] ^ 2 + c[6] ^ 2)) end
+    return reach * scale
+end
+function BiomePlacement.colossalScale(data: any, u: number): number
+    local c = BiomePlacement.Colossal
+    return BiomePlacement.scaleFor(data, c.minHeight + (c.maxHeight - c.minHeight) * u ^ c.skew, c.maxCrown)
+end
 
 local function mul32(a: number, b: number): number
     local lo, hi = a % 65536, math.floor(a / 65536)
@@ -263,6 +297,54 @@ function BiomePlacement.slope(height: (number, number) -> number, x: number, z: 
     local gx = (height(x + 2, z) - height(x - 2, z)) / 4
     local gz = (height(x, z + 2) - height(x, z - 2)) / 4
     return math.deg(math.atan(math.sqrt(gx * gx + gz * gz)))
+end
+-- BD-473: deterministic clearings. options = the same table BiomePlacement.generate takes (seed, extent, height, map, layout).
+export type Clearing = {x: number, z: number, r: number, phase: number}
+function BiomePlacement.clearings(options): {Clearing}
+    local C = BiomePlacement.Clearing
+    local seed, extent, height, map, layout = options.seed, options.extent - 12, options.height, options.map, options.layout
+    local out: {Clearing} = {}
+    local candidates: {{x: number, z: number, r: number, phase: number, order: number}} = {}
+    local cells = math.floor(2 * extent / C.cell)
+    for ix = 0, cells - 1 do
+        for iz = 0, cells - 1 do
+            local x = -extent + (ix + BiomePlacement.hash(seed, 501, ix, iz, 1)) * C.cell
+            local z = -extent + (iz + BiomePlacement.hash(seed, 501, ix, iz, 2)) * C.cell
+            if BiomePlacement.hash(seed, 501, ix, iz, 3) >= C.chance then continue end
+            local r = C.rMin + (C.rMax - C.rMin) * BiomePlacement.hash(seed, 501, ix, iz, 4)
+            if math.max(math.abs(x), math.abs(z)) + r * 1.2 > extent then continue end
+            if BiomePlacement.pathClearance(x, z) < r * (1 + C.wobble) + C.routeMargin then continue end
+            if BiomePlacement.keepOutClearance(x, z, true) < r * (1 + C.wobble) + C.routeMargin then continue end
+            if layout ~= nil and layout.inPool(x, z, r + 4) then continue end
+            local grove = math.huge
+            for _, g in BiomePlacement.Groves do grove = math.min(grove, math.sqrt((x - g[1]) ^ 2 + (z - g[2]) ^ 2)) end
+            if grove < C.groveGap then continue end
+            local _, dominant = map.weights(x, z, height(x, z), seed)
+            if not C.forest[dominant] then continue end
+            table.insert(candidates, {x = x, z = z, r = r, phase = BiomePlacement.hash(seed, 501, ix, iz, 5) * math.pi * 2, order = BiomePlacement.hash(seed, 501, ix, iz, 6)})
+        end
+    end
+    -- Greedy in a seeded random order: a glade may not swallow a neighbour (spacing x the sum of the radii), so they spread out.
+    table.sort(candidates, function(p, q) return p.order < q.order end)
+    for _, c in candidates do
+        local free = true
+        for _, o in out do
+            if (o.x - c.x) ^ 2 + (o.z - c.z) ^ 2 < (C.spacing * (o.r + c.r)) ^ 2 then free = false break end
+        end
+        if free then table.insert(out, {x = c.x, z = c.z, r = c.r, phase = c.phase}) end
+    end
+    return out
+end
+-- true when (x, z) is inside a clearing grown by `margin` studs (a lobed circle: radius x (1 + wobble sin(3 angle + phase))).
+function BiomePlacement.inClearing(list: {Clearing}, x: number, z: number, margin: number): boolean
+    local wobble = BiomePlacement.Clearing.wobble
+    for _, c in list do
+        local dx, dz = x - c.x, z - c.z
+        if dx * dx + dz * dz < (c.r * (1 + wobble) + margin) ^ 2 then
+            if math.sqrt(dx * dx + dz * dz) < c.r * (1 + wobble * math.sin(3 * math.atan2(dz, dx) + c.phase)) + margin then return true end
+        end
+    end
+    return false
 end
 local function footprintRange(height: (number, number) -> number, x: number, z: number, r: number): (number, number)
     local lo, hi = height(x, z), height(x, z)
@@ -315,13 +397,14 @@ function BiomePlacement.generate(options): {Placement}
     local seed, density, extent, height, kit = options.seed, math.clamp(options.density or 1, .25, 2), options.extent - 12, options.height, options.kit
     local map, layout = options.map, options.layout
     local placed: {Placement} = {}
+    local clearings = BiomePlacement.clearings(options) -- BD-473: no tree, colossal tree or log inside these
     local meshes = options.meshes or {}
     local parts = 0
     local budget = BiomePlacement.PartBudget * density
     local grid: {[number]: {Placement}} = {}
     local CELL = 40
     local function key(x: number, z: number): number return math.floor(x / CELL) * 4096 + math.floor(z / CELL) end
-    local blockingLayer = {tree = true, giant = true, log = true, rock = true, landmark = true}
+    local blockingLayer = {tree = true, colossal = true, log = true, rock = true, landmark = true}
     local function clear(x: number, z: number, r: number, blocking: boolean): boolean
         local gx, gz = math.floor(x / CELL), math.floor(z / CELL)
         for ix = gx - 1, gx + 1 do
@@ -339,7 +422,8 @@ function BiomePlacement.generate(options): {Placement}
     end
     local function add(id: string, x: number, z: number, yaw: number, scale: number, layer: string, sink: number, biome: string, roll: number?, y: number?, radius: number?)
         local data = kit[id]
-        local r = radius or math.max(data.extent[1], data.extent[3]) * .5 * scale * (if layer == "tree" or layer == "giant" then .42 else .8)
+        local r = radius or math.max(data.extent[1], data.extent[3]) * .5 * scale * (if layer == "tree" or layer == "colossal" then .42 else .8)
+        if layer == "colossal" and radius == nil then r = math.max(r, BiomePlacement.colliderReach(data, scale)) end -- BD-473: at x5-8 the offset trunk box can reach past 0.42 x the crown
         local lo = footprintRange(height, x, z, r * .5)
         if y == nil and PropGround.Raised[layer] and data.kind ~= "rock" then
             -- BD-395: the bottom rests ON the highest terrain point under the trunk (+0.2), never buried in the slope
@@ -394,14 +478,15 @@ function BiomePlacement.generate(options): {Placement}
                 if layer.name == "tree" then
                     chance *= (.18 + 2.1 * forest ^ 1.7) * (1 + 1.4 * math.exp(-(grove / 30) ^ 2))
                     if h > 52 and biome ~= "conifer" then chance *= .25 end
-                elseif layer.name == "giant" then
+                elseif layer.name == "colossal" then
                     local fromSpawn = math.sqrt(x ^ 2 + (z - 30) ^ 2)
-                    -- Giants are outer-zone landmarks: none near the spawn meadow, full strength 260 studs out.
+                    -- Colossal trees are outer-zone landmarks: none near the spawn meadow, full strength 260 studs out.
                     chance *= math.clamp((fromSpawn - 150) / 120, 0, 1) * (.4 + 1.2 * forest) * (1 + 1.6 * math.exp(-(grove / 40) ^ 2))
                 elseif layer.name == "log" then
                     chance *= (.3 + 1.4 * forest)
                 elseif layer.name == "shrub" then
                     chance *= (.3 + 1.5 * forest ^ 1.3) * (1 + .9 * math.exp(-(grove / 40) ^ 2))
+                    if BiomePlacement.inClearing(clearings, x, z, 0) then chance *= BiomePlacement.Clearing.shrubKeep end
                     if layout then chance *= 1 + 1.6 * layout.poolProximity(x, z) * (if biome == "marsh" then 1 else .3) end
                 elseif layer.name == "groundcover" then
                     -- Clustered tufts: dense in patches, sparse between them, patches drift with the terrain noise.
@@ -409,6 +494,9 @@ function BiomePlacement.generate(options): {Placement}
                     chance *= .1 + 2.6 * patch ^ 2.2
                 end
                 if BiomePlacement.hash(seed, li, ix, iz, 3) > chance then continue end
+                -- BD-473 clearings: canopy-class props (trees, colossal trees, fallen logs) stay out; colossal trunks keep a margin.
+                if (layer.name == "tree" or layer.name == "log" or layer.name == "colossal")
+                    and BiomePlacement.inClearing(clearings, x, z, if layer.name == "colossal" then BiomePlacement.Colossal.clearingMargin else 0) then continue end
                 local s = BiomePlacement.slope(height, x, z)
                 if s > layer.maxSlope then continue end
                 local n = BiomePlacement.hash(seed, li, ix, iz, 4)
@@ -416,11 +504,11 @@ function BiomePlacement.generate(options): {Placement}
                 local id: string
                 local lay = layer.name
                 local sinkRoll = BiomePlacement.hash(seed, li, ix, iz, 10)
-                if lay == "tree" or lay == "giant" then
-                    local family = pick(if lay == "tree" then def.trees else def.giants, n)
-                    local sizeRoll = if lay == "giant" then .95 else math.clamp(roll + (if grove < 40 then .2 else 0) + (if h > 40 then -.15 else 0), 0, 1)
+                if lay == "tree" or lay == "colossal" then
+                    local family = pick(if lay == "tree" then def.trees else def.colossals, n)
+                    local sizeRoll = if lay == "colossal" then .95 else math.clamp(roll + (if grove < 40 then .2 else 0) + (if h > 40 then -.15 else 0), 0, 1)
                     local size = if sizeRoll < .28 then "s" elseif sizeRoll < .72 then "m" else "l"
-                    if lay == "giant" then size = "l" end
+                    if lay == "colossal" then size = "l" end
                     id = "world_tree_" .. family .. "_" .. size
                 elseif lay == "log" then
                     id = "world_tree_dead_" .. (if roll < .35 then "s" elseif roll < .8 then "m" else "l")
@@ -439,23 +527,27 @@ function BiomePlacement.generate(options): {Placement}
                     -- Flower meadows: where the bloom field is high the tufts turn into flowers.
                     if def.bloom > 0 and field(seed, 4, x, z, 40) > 1 - def.bloom * .55 and n > .15 then id = "world_flowers_a" end
                 end
-                if lay == "giant" and (biome == "badlands" or biome == "volcanic") and roll > .5 then
-                    id = if n < .5 then "world_rocks_spires" else "world_boulder_bare_l"
-                end
                 id = BiomePlacement.substitute(id, kit, meshes)
                 local data = kit[id]
                 if not data or parts + BiomePlacement.partCost(id, kit, meshes) > budget then continue end
-                local range = BiomePlacement.Scales[lay]
-                local scale = range[1] + (range[2] - range[1]) * BiomePlacement.hash(seed, li, ix, iz, 6)
-                if lay == "giant" and kit[id].kind == "rock" then scale *= (if id == "world_rocks_spires" then .75 else .85) end
+                local scale: number
+                if lay == "shrub" then
+                    scale = BiomePlacement.smallScale(data, BiomePlacement.hash(seed, li, ix, iz, 6)) -- BD-473: sized by target height (4-12 studs)
+                    if math.sqrt(x ^ 2 + (z - 30) ^ 2) < BiomePlacement.SmallBand.spawnClear then continue end
+                elseif lay == "colossal" then
+                    scale = BiomePlacement.colossalScale(data, BiomePlacement.hash(seed, li, ix, iz, 6)) -- BD-473: 80-140 studs
+                else
+                    local range = BiomePlacement.Scales[lay]
+                    scale = range[1] + (range[2] - range[1]) * BiomePlacement.hash(seed, li, ix, iz, 6)
+                end
                 local r = math.max(data.extent[1], data.extent[3]) * .5 * scale
-                local blockingR = if lay == "tree" or lay == "giant" then r * .42 else r
-                local needed = if layer.blocking then blockingR * .7 else 1
+                local blockingR = if lay == "tree" or lay == "colossal" then r * .42 else r
+                local needed = if layer.blocking then blockingR * .7 elseif lay == "shrub" then math.max(1, r * BiomePlacement.SmallBand.pathShare) else 1
                 if lay == "log" then r = data.extent[2] * .5 * scale * .85 end
                 if BiomePlacement.pathClearance(x, z) < (if lay == "log" then r else needed) or BiomePlacement.keepOutClearance(x, z, layer.blocking) < r * .5 then continue end
                 if math.max(math.abs(x), math.abs(z)) + r > extent then continue end
                 if inWater(x, z, if layer.blocking then r * .5 else 1) then continue end
-                if not clear(x, z, if lay == "log" then r * .8 else if lay == "tree" or lay == "giant" then blockingR else r, layer.blocking) then continue end
+                if not clear(x, z, if lay == "log" then r * .8 elseif lay == "tree" or lay == "colossal" then blockingR elseif lay == "shrub" then r * BiomePlacement.SmallBand.spacingShare else r, layer.blocking) then continue end
                 local yaw = BiomePlacement.hash(seed, li, ix, iz, 7) * math.pi * 2
                 if lay == "log" then
                     -- Dead tree lying on its side: needs flat ground along the trunk and dry ends.
@@ -468,7 +560,7 @@ function BiomePlacement.generate(options): {Placement}
                     count += 1
                     continue
                 end
-                local sink = if lay == "rock" or lay == "giant" and kit[id].kind == "rock" then .12 elseif lay == "tree" or lay == "giant" then .03 else .02 + .03 * sinkRoll
+                local sink = if lay == "rock" then .12 elseif lay == "tree" or lay == "colossal" then .03 else .02 + .03 * sinkRoll
                 add(id, x, z, yaw, scale, lay, sink, biome)
                 count += 1
                 -- BD-167 undergrowth: ferns, bushes and mushrooms gather around a tree foot (small, never on the trunk, never on a
@@ -484,7 +576,7 @@ function BiomePlacement.generate(options): {Placement}
                             and BiomePlacement.pathClearance(ux, uz) >= 1.5 and BiomePlacement.keepOutClearance(ux, uz, false) >= 0
                             and math.max(math.abs(ux), math.abs(uz)) + 3 < extent and not inWater(ux, uz, 1.5)
                             and BiomePlacement.slope(height, ux, uz) <= 30 and clear(ux, uz, 1.6, false) then
-                            local us = BiomePlacement.Scales.shrub[1] * (.8 + .5 * BiomePlacement.hash(seed, li, ix, iz, 78 + c))
+                            local us = BiomePlacement.smallScale(kit[uid], BiomePlacement.hash(seed, li, ix, iz, 78 + c))
                             add(uid, ux, uz, BiomePlacement.hash(seed, li, ix, iz, 80 + c) * math.pi * 2, us, "shrub", .02 + .03 * sinkRoll, biome)
                             undergrowth += 1
                         end

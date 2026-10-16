@@ -142,7 +142,7 @@ local function kitProp(folder: Instance, id: string, pivot: CFrame, scale: numbe
     end
     return model ~= nil
 end
--- BD-049 BiomeKit dressing (world v2): sub-biome driven kit props, giants, fallen logs, understory and ground cover.
+-- BD-049 BiomeKit dressing (world v2): sub-biome driven kit props, colossal trees (BD-473, was giants), fallen logs, a 4-12 stud Small band, clearings and ground cover.
 local function biomeKit(parent: Instance)
     local folder = Instance.new("Folder")
     folder.Name, folder.Parent = "WorldKit", parent
@@ -156,8 +156,8 @@ local function biomeKit(parent: Instance)
     local placed = Biome.generate({seed = Config.WorldArtSeed, density = Config.WorldArtDensity,
         extent = Config.ArenaHalfWidth, height = Layout.height, kit = KitData, meshes = meshes, map = BiomeMap, layout = Layout})
     local missing = 0
-    local counts = {tree = 0, giant = 0, log = 0, rock = 0, shrub = 0, groundcover = 0, landmark = 0}
-    -- BD-395: trees, giants and shrubs rest ON the real voxel terrain: five rays (centre + around the trunk) from above, the
+    local counts = {tree = 0, colossal = 0, log = 0, rock = 0, shrub = 0, groundcover = 0, landmark = 0}
+    -- BD-395: trees, colossal trees and shrubs rest ON the real voxel terrain: five rays (centre + around the trunk) from above, the
     -- bottom (pivot) goes to the highest hit + 0.2 (BiomePlacement.Ground). A missed ray keeps the analytic layout height.
     local rayParams = RaycastParams.new()
     rayParams.FilterType, rayParams.FilterDescendantsInstances = Enum.RaycastFilterType.Include, {workspace.Terrain}
