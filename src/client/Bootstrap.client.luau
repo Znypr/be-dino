@@ -1561,6 +1561,18 @@ do -- same effect as pressing OPEN: nothing is granted here, so no flag is neede
         if (hatchState.next :: any)() then open("hatch") end
     end)
 end
+do -- docs/133 demo hooks (dev-only trailer director): skip the welcome (How to play) modal, and close whatever modal is open
+    player:GetAttributeChangedSignal("DemoSkipTutorial"):Connect(function()
+        if player:GetAttribute("DemoSkipTutorial")~=true then return end
+        seenTutorial=true
+        if active=="tutorial" then close() end
+    end)
+    player:GetAttributeChangedSignal("DemoCloseModal"):Connect(function()
+        if player:GetAttribute("DemoCloseModal")~=true then return end
+        player:SetAttribute("DemoCloseModal",nil)
+        close()
+    end)
+end
 player:GetAttributeChangedSignal("LastRunEndAt"):Connect(function() if not autoHatching then open("results") end end)
 PrivateState.onChanged("LastSettledRunId", function()
     local serial=hatchCancelSerial

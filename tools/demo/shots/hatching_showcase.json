@@ -87,7 +87,7 @@
       ]
     },
     {
-      "duration": 60,
+      "duration": 49,
       "lowerThird": "Watch them hatch one by one",
       "camera": {
         "kind": "track",
@@ -99,17 +99,31 @@
       },
       "triggers": [
         {
-          "at": 0,
-          "kind": "hud",
-          "visible": true
-        },
-        {
           "at": 0.5,
           "kind": "startHatch",
-          "repeatCount": 16,
+          "repeatCount": 15,
           "gap": 4.2
         }
       ]
+    },
+    {
+      "duration": 17,
+      "lowerThird": "A frost egg, then a Legendary Shiny!",
+      "camera": {
+        "kind": "track",
+        "offset": [
+          6,
+          4,
+          9
+        ]
+      },
+      "triggers": [
+        {
+          "at": 16.0,
+          "kind": "closeModal"
+        }
+      ]
     }
-  ]
+  ],
+  "hideChrome": true
 }

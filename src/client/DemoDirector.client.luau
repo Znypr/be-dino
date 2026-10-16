@@ -54,6 +54,28 @@ lower.Name, lower.AnchorPoint, lower.Visible, lower.TextXAlignment = "LowerThird
 styled(lower, 36)
 lower.Parent = gui
 
+-- Full-screen black cover (shot.blackout): hides respawns and teleports between ability shots.
+local cover = Instance.new("Frame")
+cover.Name, cover.BackgroundColor3, cover.BorderSizePixel, cover.Size, cover.Visible, cover.ZIndex = "BlackCover", Color3.new(0, 0, 0), 0, UDim2.fromScale(1, 1), false, 0
+cover.Parent = gui
+title.ZIndex, lower.ZIndex = 5, 5
+topBar.ZIndex, bottomBar.ZIndex = 3, 3
+
+-- Chrome hiding (list.hideChrome): everything in the main game UI except the modal layer (the hatch screen lives in ModalScrim) and
+-- toasts, so a clip shows the world or the hatch modal only: no menu buttons, goals, build badge, "Skip all". Enforced every frame
+-- because the game's own scripts flip those frames back on.
+local chromeKeep = {ModalScrim = true, Toasts = true, RevealFlash = true}
+local chromeOn = false
+local function enforceChrome()
+    local main = player.PlayerGui:FindFirstChild("BeDinoUI")
+    if not main then return end
+    for _, child in main:GetChildren() do
+        if child:IsA("GuiObject") and not chromeKeep[child.Name] then child.Visible = false end
+    end
+    local skip = main:FindFirstDescendant("SkipAll")
+    if skip and skip:IsA("GuiObject") then skip.Visible = false end
+end
+
 local hiddenGuis: {ScreenGui} = {}
 local function setHud(visible: boolean)
     if visible then
@@ -92,6 +114,32 @@ local function spotPosition(id: string): Vector3?
     return Vector3.new(item.x, (layoutModule :: any).FloorY + 3, item.z + (layoutModule :: any).CenterZ)
 end
 
+-- Scripted input (move / jump): applied after the default control script each frame so it wins over the (idle) real controls.
+local scripted = {moveX = 0, moveZ = 0, moveUntil = 0, jumpUntil = 0}
+RunService:BindToRenderStep("BeDinoDemoInput", Enum.RenderPriority.Input.Value + 1, function()
+    local c = player.Character
+    local hum = if c then c:FindFirstChildOfClass("Humanoid") else nil
+    if not hum then return end
+    local now = os.clock()
+    if now < scripted.moveUntil then hum:Move(Vector3.new(scripted.moveX, 0, scripted.moveZ), false) end
+    if now < scripted.jumpUntil then hum.Jump = true end
+end)
+
+local function groundPoint(x: number, z: number): Vector3?
+    local params = RaycastParams.new()
+    params.IgnoreWater = true
+    local hit = workspace:Raycast(Vector3.new(x, 400, z), Vector3.new(0, -800, 0), params)
+    return if hit then hit.Position + Vector3.new(0, 4, 0) else nil
+end
+
+local function remoteEvent(name: string): RemoteEvent?
+    local folder = ReplicatedStorage:FindFirstChild("BeDinoRemotes")
+    local found = folder and folder:FindFirstChild(name)
+    if found and found:IsA("RemoteEvent") then return found end
+    warn("[DemoDirector] remote event missing (is Config.ClassMovementEnabled on in this build?): " .. name)
+    return nil
+end
+
 local function fire(trig: any)
     if trig.kind == "remote" then
         local folder = ReplicatedStorage:FindFirstChild("BeDinoRemotes")
@@ -108,8 +156,29 @@ local function fire(trig: any)
         end
     elseif trig.kind == "teleport" then
         local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        local pos = if trig.pos then Vector3.new(trig.pos[1], trig.pos[2], trig.pos[3]) else spotPosition(trig.spot)
-        if root and pos then (root :: BasePart).CFrame = CFrame.new(pos) end
+        local pos = if trig.ground and trig.pos then groundPoint(trig.pos[1], trig.pos[3]) elseif trig.pos then Vector3.new(trig.pos[1], trig.pos[2], trig.pos[3]) else spotPosition(trig.spot)
+        if root and pos then
+            local face = if trig.face then Vector3.new(trig.face[1], 0, trig.face[2]) else nil
+            local part = root :: BasePart
+            part.CFrame = if face then CFrame.lookAt(pos, pos + face) else CFrame.new(pos)
+            part.AssemblyLinearVelocity = Vector3.zero
+        end
+    elseif trig.kind == "move" then
+        scripted.moveX, scripted.moveZ, scripted.moveUntil = trig.dir[1], trig.dir[2], os.clock() + trig.seconds
+    elseif trig.kind == "jump" then
+        scripted.jumpUntil = os.clock() + 0.15
+    elseif trig.kind == "glide" then -- the real client behaviour of holding jump in the air: one boolean to the server, released afterwards
+        local glide = remoteEvent("ClassGlide")
+        if glide then
+            glide:FireServer(true)
+            task.wait(trig.seconds)
+            glide:FireServer(false)
+        end
+    elseif trig.kind == "dash" then -- same request the jump input sends for a Water dino; the real client script applies the answer
+        local dash = remoteEvent("ClassDash")
+        if dash then dash:FireServer() end
+    elseif trig.kind == "closeModal" then
+        player:SetAttribute("DemoCloseModal", true)
     elseif trig.kind == "startHatch" then
         for _ = 1, trig.repeatCount or 1 do -- one press opens the first egg; each repeat taps "next egg" like a player would
             player:SetAttribute("DemoStartHatch", true)
@@ -125,7 +194,10 @@ end
 local running = false
 local function play(list: any)
     running = true
+    player:SetAttribute("DemoSkipTutorial", true) -- no welcome modal over the clip
+    chromeOn = list.hideChrome == true
     local cam = workspace.CurrentCamera
+    local lastSubject: {number}? = nil
     local prevType, prevSubject = cam.CameraType, cam.CameraSubject
     layout(list.aspect)
     if list.hideHud ~= false then setHud(false) end
@@ -134,6 +206,9 @@ local function play(list: any)
     for _, shot in list.shots do
         if shot.title then title.Text, title.Visible = shot.title, true else title.Visible = false end
         if shot.lowerThird then lower.Text, lower.Visible = shot.lowerThird, true else lower.Visible = false end
+        local blackout = shot.blackout or 0
+        cover.BackgroundTransparency, cover.Visible = 0, blackout > 0
+        local coverLifted = blackout <= 0
         local started = os.clock()
         local fired: {[number]: boolean} = {}
         while true do
@@ -145,14 +220,22 @@ local function play(list: any)
                     task.spawn(fire, trig)
                 end
             end
+            if not coverLifted and elapsed >= blackout then
+                coverLifted = true
+                title.Visible = false -- a title card belongs to the black part only
+                TweenService:Create(cover, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+                task.delay(0.55, function() cover.Visible = false end)
+            end
+            if chromeOn then enforceChrome() end
             local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-            local subject = if root then {(root :: BasePart).Position.X, (root :: BasePart).Position.Y, (root :: BasePart).Position.Z} else nil
-            local p, l = Shots.cameraPose(shot.camera, elapsed / shot.duration, subject)
+            if root then lastSubject = {(root :: BasePart).Position.X, (root :: BasePart).Position.Y, (root :: BasePart).Position.Z} end
+            local p, l = Shots.cameraPose(shot.camera, elapsed / shot.duration, lastSubject)
             cam.CFrame = CFrame.lookAt(Vector3.new(p[1], p[2], p[3]), Vector3.new(l[1], l[2], l[3]))
             RunService.RenderStepped:Wait()
         end
     end
-    title.Visible, lower.Visible = false, false
+    title.Visible, lower.Visible, cover.Visible, chromeOn = false, false, false, false
+    scripted.moveUntil, scripted.jumpUntil = 0, 0
     fadeBars(false, 0.6)
     task.wait(0.6)
     setHud(true)

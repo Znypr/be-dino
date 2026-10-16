@@ -63,6 +63,17 @@ bad(function(l) l.shots[1].title = string.rep("a", 41) end, "long title")
 bad(function(l) l.shots[1].triggers = {{kind = "remote", at = 0, remote = "AdminGrantEverything"}} end, "remote not on allow-list")
 bad(function(l) l.shots[1].triggers = {{kind = "teleport", at = 9}} end, "trigger time and target")
 bad(function(l) l.shots = {{duration = 60, camera = good().shots[1].camera}, {duration = 60, camera = good().shots[1].camera}, {duration = 60, camera = good().shots[1].camera}, {duration = 1, camera = good().shots[1].camera}} end, "too long")
+bad(function(l) l.shots[1].triggers = {{kind = "move", at = 0, seconds = 2}} end, "move needs dir")
+bad(function(l) l.shots[1].triggers = {{kind = "glide", at = 0, seconds = 60}} end, "glide too long")
+bad(function(l) l.shots[1].blackout = 3 end, "blackout not shorter than shot")
+bad(function(l) l.hideChrome = "yes" end, "hideChrome type")
+do
+    local l = good()
+    l.hideChrome = true
+    l.shots[1].blackout = 1
+    l.shots[1].triggers = {{kind = "move", at = 0, dir = {0, -1}, seconds = 2}, {kind = "jump", at = 1}, {kind = "glide", at = 1, seconds = 1}, {kind = "dash", at = 2}, {kind = "closeModal", at = 2}, {kind = "teleport", at = 0, pos = {0, 0, 0}, ground = true, face = {0, -1}}}
+    assert(S.validate(l) == nil, tostring(S.validate(l)))
+end
 assert(S.SafeInsets["9:16"].y > S.SafeInsets["16:9"].y, "9:16 keeps more top/bottom room")
 print("demo director luau OK")
 '''
@@ -138,7 +149,7 @@ def static_checks():
                     continue
                 assert trig["remote"] == "DemoTrigger", f"{path.name}: only DemoTrigger"
                 req = trig["args"][0]
-                assert req["kind"] in {"hatchParty", "equipSpecies", "setWeather", "giveCrystals"}, req
+                assert req["kind"] in {"hatchParty", "equipSpecies", "setWeather", "giveCrystals", "startRun"}, req
                 if req["kind"] == "hatchParty":
                     assert 1 <= len(req["eggs"]) <= 60 and all(e["rarity"] in rarities for e in req["eggs"])
     boot = (ROOT / "src/client/Bootstrap.client.luau").read_text(encoding="utf-8")

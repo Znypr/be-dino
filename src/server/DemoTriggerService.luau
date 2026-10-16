@@ -88,6 +88,18 @@ function DemoTriggerService.buildEggs(specs: any, runId: string): ({any}?, strin
     return built, "ok"
 end
 
+-- Waits (up to `seconds`) for the freshly spawned dinosaur, then starts a run through the one real start path (RunLifecycle.requestStart:
+-- the same call the Explore Island button uses), so the character is Active on the island with class movement rules live.
+local function startRunWhenReady(player: Player, seconds: number): boolean
+    local RunLifecycle = require(script.Parent.RunLifecycle)
+    local deadline = os.clock() + seconds
+    while os.clock() < deadline and player.Parent do
+        if RunLifecycle.requestStart(player) then return true end
+        task.wait(0.4)
+    end
+    return false
+end
+
 function DemoTriggerService.start(profileRepository)
     if not (RunService:IsStudio() and game.GameId == 0 and Config.DemoDirectorEnabled == true) then return end
     local ProgressionService = require(script.Parent.ProgressionService)
@@ -117,12 +129,16 @@ function DemoTriggerService.start(profileRepository)
         elseif kind == "equipSpecies" then
             local ok, status = profileRepository.demoEquip(player, request.speciesId)
             if ok then
+                local runAfter = request.startRun == true
                 task.spawn(function()
                     local loaded, err = pcall(function() player:LoadCharacterAsync() end)
-                    if not loaded then warn("[DemoTrigger] respawn failed: " .. tostring(err)) end
+                    if not loaded then warn("[DemoTrigger] respawn failed: " .. tostring(err)) return end
+                    if runAfter and not startRunWhenReady(player, 15) then warn("[DemoTrigger] run did not start") end
                 end)
             end
             return ok, status
+        elseif kind == "startRun" then
+            return startRunWhenReady(player, 10), "run"
         elseif kind == "setWeather" then
             if request.id == "clear" then ProgressionService.adminStopWeather() return true, "cleared" end
             if typeof(request.id) ~= "string" then return false, "bad_weather" end

@@ -6,7 +6,7 @@ local DemoShots = {}
 DemoShots.Version = 1
 DemoShots.CameraKinds = {static = true, orbit = true, dolly = true, pushin = true, track = true}
 DemoShots.Easings = {linear = true, inSine = true, outSine = true, inOutSine = true, inQuad = true, outQuad = true, inOutQuad = true, outCubic = true, inOutCubic = true}
-DemoShots.TriggerKinds = {remote = true, teleport = true, hud = true, note = true, wait = true, startHatch = true}
+DemoShots.TriggerKinds = {remote = true, teleport = true, hud = true, note = true, wait = true, startHatch = true, closeModal = true, move = true, jump = true, glide = true, dash = true}
 -- Only the Studio-only DemoTrigger RemoteFunction may be fired (server: DemoTriggerService, gated by unpublished Studio + Config.DemoDirectorEnabled).
 DemoShots.AllowedRemotes = {DemoTrigger = true}
 DemoShots.Aspects = {["16:9"] = 16 / 9, ["9:16"] = 9 / 16}
@@ -87,6 +87,11 @@ local function validateTrigger(trig: any, duration: number, where: string): stri
         if trig.repeatCount ~= nil and (type(trig.repeatCount) ~= "number" or trig.repeatCount < 1 or trig.repeatCount > 60) then return where .. ": repeatCount 1..60" end
     elseif trig.kind == "teleport" then
         if not (isVec(trig.pos) or type(trig.spot) == "string") then return where .. ": teleport needs pos or spot" end
+    elseif trig.kind == "move" then
+        if not (type(trig.dir) == "table" and #trig.dir == 2 and type(trig.dir[1]) == "number" and type(trig.dir[2]) == "number") then return where .. ": move needs dir {x, z}" end
+        if type(trig.seconds) ~= "number" or trig.seconds <= 0 or trig.seconds > 30 then return where .. ": move seconds 0..30" end
+    elseif trig.kind == "glide" then
+        if type(trig.seconds) ~= "number" or trig.seconds <= 0 or trig.seconds > 5 then return where .. ": glide seconds 0..5" end
     elseif trig.kind == "hud" then
         if type(trig.visible) ~= "boolean" then return where .. ": hud needs visible boolean" end
     end
@@ -99,6 +104,7 @@ function DemoShots.validate(list: any): string?
     if type(list.name) ~= "string" or list.name == "" then return "name required" end
     if list.version ~= DemoShots.Version then return "version must be " .. DemoShots.Version end
     if DemoShots.Aspects[list.aspect] == nil then return "aspect must be 16:9 or 9:16" end
+    if list.hideChrome ~= nil and type(list.hideChrome) ~= "boolean" then return "hideChrome must be a boolean" end
     if type(list.shots) ~= "table" or #list.shots == 0 then return "shots must be a non-empty array" end
     local total = 0
     for i, shot in list.shots do
@@ -108,6 +114,7 @@ function DemoShots.validate(list: any): string?
         total += shot.duration
         local err = validateCamera(shot.camera, where)
         if err then return err end
+        if shot.blackout ~= nil and (type(shot.blackout) ~= "number" or shot.blackout < 0 or shot.blackout >= shot.duration) then return where .. ": blackout is seconds, shorter than the shot" end
         if shot.title ~= nil and (type(shot.title) ~= "string" or #shot.title > 40) then return where .. ": title is a string of at most 40 characters" end
         if shot.lowerThird ~= nil and (type(shot.lowerThird) ~= "string" or #shot.lowerThird > 60) then return where .. ": lowerThird is a string of at most 60 characters" end
         if shot.triggers ~= nil then

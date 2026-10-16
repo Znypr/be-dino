@@ -3,10 +3,11 @@
   "name": "class_feel",
   "aspect": "16:9",
   "hideHud": true,
+  "hideChrome": true,
   "letterbox": true,
   "shots": [
     {
-      "duration": 4,
+      "duration": 3,
       "title": "Pick your dino",
       "camera": {
         "kind": "pushin",
@@ -25,16 +26,18 @@
       }
     },
     {
-      "duration": 5,
-      "lowerThird": "Runner",
+      "duration": 11,
+      "title": "Runner: fast on the ground",
+      "blackout": 5,
+      "lowerThird": "Runner: fast on the ground",
       "camera": {
         "kind": "track",
         "offset": [
-          0,
-          7,
-          16
+          11,
+          4,
+          3
         ],
-        "lookHeight": 2
+        "lookHeight": 1.5
       },
       "triggers": [
         {
@@ -44,23 +47,57 @@
           "args": [
             {
               "kind": "equipSpecies",
-              "speciesId": "compy"
+              "speciesId": "compy",
+              "startRun": true
             }
           ]
+        },
+        {
+          "at": 4.2,
+          "kind": "teleport",
+          "pos": [
+            0,
+            0,
+            40
+          ],
+          "ground": true,
+          "face": [
+            0,
+            -1
+          ]
+        },
+        {
+          "at": 4.8,
+          "kind": "move",
+          "dir": [
+            0,
+            -1
+          ],
+          "seconds": 5.5
+        },
+        {
+          "at": 7.0,
+          "kind": "jump"
+        },
+        {
+          "at": 9.0,
+          "kind": "jump"
         }
       ]
     },
     {
-      "duration": 5,
-      "lowerThird": "Flyer: glide",
+      "duration": 11,
+      "title": "Flyer: hold jump to glide",
+      "blackout": 5,
+      "lowerThird": "Flyer: hold jump to glide",
       "camera": {
         "kind": "track",
         "offset": [
-          0,
-          7,
-          16
+          11,
+          4,
+          3
         ],
-        "lookHeight": 2
+        "lookHeight": 1.5
       },
       "triggers": [
         {
@@ -70,23 +107,67 @@
           "args": [
             {
               "kind": "equipSpecies",
-              "speciesId": "pteranodon"
+              "speciesId": "pteranodon",
+              "startRun": true
             }
           ]
+        },
+        {
+          "at": 4.2,
+          "kind": "teleport",
+          "pos": [
+            0,
+            0,
+            40
+          ],
+          "ground": true,
+          "face": [
+            0,
+            -1
+          ]
+        },
+        {
+          "at": 4.8,
+          "kind": "move",
+          "dir": [
+            0,
+            -1
+          ],
+          "seconds": 6
+        },
+        {
+          "at": 6.0,
+          "kind": "jump"
+        },
+        {
+          "at": 6.45,
+          "kind": "glide",
+          "seconds": 1.2
+        },
+        {
+          "at": 9.0,
+          "kind": "jump"
+        },
+        {
+          "at": 9.45,
+          "kind": "glide",
+          "seconds": 1.2
         }
       ]
     },
     {
-      "duration": 5,
-      "lowerThird": "Swimmer: dash",
+      "duration": 11,
+      "title": "Swimmer: dash in the water",
+      "blackout": 5,
+      "lowerThird": "Swimmer: dash in the water",
       "camera": {
         "kind": "track",
         "offset": [
-          0,
-          7,
-          16
+          11,
+          4,
+          3
         ],
-        "lookHeight": 2
+        "lookHeight": 1.5
       },
       "triggers": [
         {
@@ -96,23 +177,66 @@
           "args": [
             {
               "kind": "equipSpecies",
-              "speciesId": "mosasaurus"
+              "speciesId": "mosasaurus",
+              "startRun": true
             }
           ]
+        },
+        {
+          "at": 4.2,
+          "kind": "teleport",
+          "pos": [
+            -45,
+            0,
+            300
+          ],
+          "ground": true,
+          "face": [
+            0,
+            -1
+          ]
+        },
+        {
+          "at": 4.8,
+          "kind": "move",
+          "dir": [
+            0,
+            -1
+          ],
+          "seconds": 1.5
+        },
+        {
+          "at": 6.4,
+          "kind": "dash"
+        },
+        {
+          "at": 8.0,
+          "kind": "move",
+          "dir": [
+            0,
+            -1
+          ],
+          "seconds": 0.8
+        },
+        {
+          "at": 9.6,
+          "kind": "dash"
         }
       ]
     },
     {
-      "duration": 5,
-      "lowerThird": "Armored",
+      "duration": 11,
+      "title": "Armored: slow and tough",
+      "blackout": 5,
+      "lowerThird": "Armored: slow and tough",
       "camera": {
         "kind": "track",
         "offset": [
-          0,
-          7,
-          16
+          11,
+          4,
+          3
         ],
-        "lookHeight": 2
+        "lookHeight": 1.5
       },
       "triggers": [
         {
@@ -122,9 +246,37 @@
           "args": [
             {
               "kind": "equipSpecies",
-              "speciesId": "ankylosaurus"
+              "speciesId": "ankylosaurus",
+              "startRun": true
             }
           ]
+        },
+        {
+          "at": 4.2,
+          "kind": "teleport",
+          "pos": [
+            0,
+            0,
+            40
+          ],
+          "ground": true,
+          "face": [
+            0,
+            -1
+          ]
+        },
+        {
+          "at": 4.8,
+          "kind": "move",
+          "dir": [
+            0,
+            -1
+          ],
+          "seconds": 5.5
+        },
+        {
+          "at": 7.0,
+          "kind": "jump"
         }
       ]
     }
