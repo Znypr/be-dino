@@ -22,6 +22,20 @@ end
 
 Copy.runCompleteEggsLabel = "Eggs found"
 
+-- BD-448: Run Complete rows from LastRun* state, one fact per row, no duplicates. Pure: {{kind, text}}.
+-- kinds: eggs, hunting (only when > 0), crystals, nests, nestCrystals, growth (growth is hidden at 0).
+function Copy.runCompleteRows(s: {eggs: number?, crystals: number?, nests: number?, nestCrystals: number?, growth: number?, killEggs: number?}): {{string}}
+    local rows = {{"eggs", string.format("%s  %d", Copy.runCompleteEggsLabel, s.eggs or 0)}}
+    table.insert(rows, {"crystals", string.format("+%d Crystals", s.crystals or 0)})
+    local kills = s.killEggs or 0
+    if kills > 0 then table.insert(rows, {"hunting", string.format("Hunting bonus: +%s", plural(kills, "egg", "eggs"))}) end
+    local nests = s.nests or 0
+    if nests > 0 then table.insert(rows, {"nests", string.format("+%s", plural(nests, "nest", "nests"))}) end
+    if (s.nestCrystals or 0) > 0 then table.insert(rows, {"nestCrystals", string.format("Extra nests: +%d Crystals", s.nestCrystals)}) end
+    if math.floor(s.growth or 0) > 0 then table.insert(rows, {"growth", string.format("Growth  %d", math.floor(s.growth))}) end
+    return rows
+end
+
 -- Sanctuary card (smoke test 2026-10-16: it still said "clusters" and "Bank catches")
 Copy.sanctuaryTip1 = "Eat food to grow. Jump over hills. Stay away from bigger dinos!"
 Copy.sanctuaryTip2 = "Tap HOME to save your eggs, then open them."
