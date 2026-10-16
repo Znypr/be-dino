@@ -1069,8 +1069,8 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-438 | Review / test | P1 | Phone FX budget fit (docs/130): remote players on a phone drop aura glow lights/beams and use a single-beam mutation ring so the PROVISIONAL phone worst case (16 lights, 24 beams) passes; own dino and mutation glow unchanged; desktop/tablet unchanged. Needs a real phone probe (BD-085). Roles: VFX lead | BD-429 |
 | BD-440 | Review / test | P1 | First screen clutter (docs/132): the NextGoal line and Goals panel are hidden until the first egg is found (`FtueRules.showGoals`, `GoalHud`). Offline test only; Studio check pending. | BD-427, BD-368 |
 | BD-441 | Backlog | P0 | Playtest feedback button (PR #261) hidden until the first run ends, then small in a corner (docs/132). | BD-440 |
-| BD-442 | Backlog | P1 | Cave hub spawn: one obvious go affordance (gate walk-up vs EXPLORE ISLAND vs 6-button rail); arrow to it; Studio check (docs/132). | BD-368, BD-293 |
-| BD-443 | Backlog | P1 | Class picker line (BD-423): fit and length on a phone for the longest class text (docs/132). | BD-423 |
+| BD-442 | Review / test | P1 | Cave hub spawn: one obvious go affordance (gate walk-up vs EXPLORE ISLAND vs 6-button rail); arrow to it; Studio check (docs/132). Code: GoCue pulsing ring + TAP TO GO! on the EXPLORE ISLAND button until the first run (FtueRules.goCueShown); Reduce Motion = still ring; Studio check still open. | BD-368, BD-293 |
+| BD-443 | Review / test | P1 | Class picker line (BD-423): fit and length on a phone for the longest class text (docs/132). Code: picker line is TextScaled, one line, 14..22 px; Studio phone check still open. | BD-423 |
 | BD-444 | Backlog | P1 | 15-egg hatch party (~76 s): visible 'egg 3 of 15' counter, clearer Skip all after egg 3; keep the reveal (docs/132). | BD-437 |
 | BD-445 | Backlog | P1 | First shop visit with 0 crystals: one-line 'Earn crystals on runs', hide CONDITIONS until level 3 (docs/132, docs/112 BD-372). | BD-372 |
 | BD-446 | Backlog | P2 | Re-check text length of Discovery NEW! and kill egg bonus lines against docs/72 after #267 merges (docs/132). | BD-436 |

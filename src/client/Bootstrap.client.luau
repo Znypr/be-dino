@@ -865,7 +865,9 @@ render=function(name: string)
         label(body,"YOUR COLLECTION",414,0,400,42,28)
         label(body,string.format("Base: %d • Gold: %d\nDiamond: %d",base,gold,diamond),414,62,400,92,25)
         label(body,if event then event.name.." • "..table.concat(UIFormat.boostLines(event.growth,event.speed,1)," • ") else "Cosmetic fusion: 6 Base → Gold; 3 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,66,22,C.gold)
-        label(body,require(Shared.ClassInfo).line(selected),414,241,400,28,22,C.accent) -- BD-423: class + one-line feel hint
+        do local line=label(body,require(Shared.ClassInfo).line(selected),414,241,400,28,22,C.accent) -- BD-423: class + one-line feel hint
+            line.TextScaled,line.TextWrapped=true,false -- BD-443: shrink to fit one line on a phone, never clip
+            local fit=Instance.new("UITextSizeConstraint") fit.MinTextSize,fit.MaxTextSize,fit.Parent=14,22,line end
         local equipped=str("EquippedSpeciesId","compy")==selected
         button(body,if equipped then "EQUIPPED" elseif not owned then "LOCKED" else "EQUIP",426,273,372,52,if owned then C.accent else C.card,function()
             if not owned then notify("Hatch eggs to find this dino") return end
@@ -1311,6 +1313,7 @@ local actionIcon=Theme.icon(action,"home")
 -- UIPadding (52 px while the icon shows) also shifts children, so -44 lands the icon at x=8.
 if actionIcon then actionIcon.Position,actionIcon.Size,actionIcon.Visible=UDim2.fromOffset(-44,8),UDim2.fromOffset(44,44),false end
 local actionScale=action:FindFirstChildOfClass("UIScale") :: UIScale
+require(script.Parent.GoCue).attach(action,require(script.Parent.FtueRail).hasFoundEgg,function() return shade.Visible end) -- BD-442: one gentle go cue until the first run
 -- BD-054: measured Roblox touch controls, in this ScreenGui's pixel space.
 local function coreTouchRect(name: string)
     local playerGui=player:FindFirstChildOfClass("PlayerGui")

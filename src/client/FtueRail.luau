@@ -72,4 +72,6 @@ function Rail.attach(rail: Frame, buttons: {TextButton})
     end)
 end
 
+Rail.hasFoundEgg = hasFoundEgg -- BD-442: the go cue reads the same answer
+
 return Rail
