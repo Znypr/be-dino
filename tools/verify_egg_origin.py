@@ -32,6 +32,9 @@ assert(O.view(nil, catalog, Sel, cond).kind == "unknown")
 assert(O.view({origin = {kind = "fusion"}}, catalog, Sel, cond).kind == "fusion")
 assert(O.dateText(nil) == nil and O.dateText("x") == nil and O.dateText(5) == nil and O.dateText(0 / 0) == nil)
 assert(O.dateText(1792000000) == "Oct 14, 2026", O.dateText(1792000000))
+assert(O.view({origin = {kind = "hatch"}, originalEgg = egg, mutationId = "dewdrop"}, catalog, Sel, cond).mutationId == "dewdrop", "BD-352 mutation on view")
+assert(O.view({origin = {kind = "hatch"}, originalEgg = egg, mutationId = ""}, catalog, Sel, cond).mutationId == nil)
+assert(O.view({origin = {kind = "fusion"}, mutationId = "dewdrop"}, catalog, Sel, cond).mutationId == "dewdrop")
 print("Egg origin checks passed")
 '''
 
