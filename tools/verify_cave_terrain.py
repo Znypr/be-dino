@@ -270,6 +270,7 @@ local mF,oF=R.cell(F.x,FY+7,CZ+fz)
 assert(oF>0 and mF=="CrackedLava","lava vein behind the falls "..mF)
 
 -- ---- stations: pad material is laid stone; the mix has stone, rock, slate, cobblestone and only a little moss
+local mossReport=''
 local function pct(m) return (counts[m] or 0)/solid end
 for _,m in {"Concrete","Slate","Cobblestone","Basalt","Grass","LeafyGrass","CrackedLava"} do assert((counts[m] or 0)>0,"material used: "..m) end
 assert((counts.Rock or 0)==0,"BD-296: no Rock anywhere in the cave (deep fill surfaced as dark blotches)")
@@ -285,7 +286,8 @@ for i=0,nx-1 do for k=0,nz-1 do
  end
 end end
 local moss=((floorMix.Grass or 0)+(floorMix.LeafyGrass or 0))/floorCols
-assert(moss>0.02 and moss<0.15,"moss is a little: "..moss)
+-- BD-296 dressing (owner "no moss, looks bland"): soft moss rim along the floor edges, around lamp niches and station ledges; still not a carpet
+assert(moss>0.08 and moss<0.40,"floor moss is a soft rim, not a carpet: "..moss)
 for _,m in {"Concrete","Cobblestone"} do assert((floorMix[m] or 0)/floorCols>0.12,"floor stone mix has "..m) end
 assert((floorMix.Rock or 0)+(floorMix.Limestone or 0)==0,"BD-296: no dark Rock patches and no striped Limestone on the floor")
 local hs=L.byId.heart
@@ -374,36 +376,75 @@ for _,p in {{-60,16},{70,30},{0,40},{-40,26},{20,10},{-90,20}} do
  end
 end
 assert(not wallMats.Sandstone,"walls and roof use no Sandstone (island colour)")
--- BD-296 (lead Studio look): the visible wall / ceiling surface is ONE matte stone. No Limestone (horizontal strata stripes), no Rock (dark
--- island teal, BeDino_Stone art variant: smudge patches), no Cobblestone (tile grid) on any cave-shell cell that touches air above the floor,
--- except the lava vein behind the falls, the basin rim and the laid-stone pads / path edges near the floor.
+-- BD-296 (lead Studio look): the visible wall / ceiling surface is matte Concrete: no Limestone (horizontal strata stripes), no Rock (dark
+-- island teal, BeDino_Stone art variant: smudge patches), no Sandstone (island hot orange, strata texture). BD-296 dressing pass (owner
+-- "no moss, looks bland"): the BOTTOM of the wall now carries soft LeafyGrass moss (<= Moss.bandMax studs over the floor, surface layers only,
+-- most around the 13 lantern niches) and a few large Cobblestone strata patches (<= Strata.dyMax studs over the floor); everything higher
+-- (the ceiling and upper wall) stays one Concrete. Cells that touch air, inside the cave, not the outer skin of the rock shell.
 do
+ local lamps={}
+ for _,l in L.lights do if l.owner=="tunnel" or l.owner=="heartwall" then lamps[#lamps+1]=l end end
+ assert(#lamps==13,"13 wall lantern niches: "..#lamps)
  local wallCells,bad,badName=0,0,nil
+ local low,lowMoss,nearN,nearMoss,farN,farMoss,cobN,upperN,upperOff,mossHigh,cobHigh=0,0,0,0,0,0,0,0,0,0,0
  for i=1,nx-2 do for k=1,nz-2 do
   local wx,wz=R.XMin+(i+.5)*res,R.ZMin+(k+.5)*res
   local col=R.column(wx,wz)
+  local dzl=wz-CZ
+  local nearLamp=false
+  for _,l in lamps do if dist(wx,dzl,l.x,l.z)<16 then nearLamp=true end end
   for j=1,ny-2 do
    if occ[idx(i,j,k)]>0 and (occ[idx(i+1,j,k)]==0 or occ[idx(i-1,j,k)]==0 or occ[idx(i,j+1,k)]==0 or occ[idx(i,j-1,k)]==0 or occ[idx(i,j,k+1)]==0 or occ[idx(i,j,k-1)]==0) then
     local wy=R.YMin+(j+.5)*res
     local m=mat[idx(i,j,k)]
     if wy>col.floorTop+res+1 and col.sd>-8 and wy<col.ceil+6 and m~="CrackedLava" and m~="Basalt" then -- inside the cave, not the outer skin of the rock shell (never seen)
      wallCells+=1
-     if m~=R.WallStone then bad+=1 badName=badName or (m.." at "..wx..","..wy..","..wz) end
+     local dy=wy-col.floorTop
+     if m~=R.WallStone and m~="LeafyGrass" and m~="Cobblestone" then bad+=1 badName=badName or (m.." at "..wx..","..wy..","..wz) end
+     if m=="LeafyGrass" and dy>R.Moss.bandMax+res then mossHigh+=1 end
+     if m=="Cobblestone" and dy>R.Strata.dyMax+res then cobHigh+=1 end
+     if m=="Cobblestone" then cobN+=1 end
+     if dy>R.Strata.dyMax+res then upperN+=1 if m~=R.WallStone then upperOff+=1 end end
+    end
+    -- the low wall band (the moss zone): measured on every wall surface cell from the floor edge up to 7 studs
+    if wy>col.floorTop+res+1-res and wy<=col.floorTop+7 and col.sd>-8 and col.flat>0.5 and m~="CrackedLava" and m~="Basalt" then
+     low+=1 if m=="LeafyGrass" then lowMoss+=1 end
+     if nearLamp then nearN+=1 if m=="LeafyGrass" then nearMoss+=1 end else farN+=1 if m=="LeafyGrass" then farMoss+=1 end end
     end
    end
   end
  end end
  assert(wallCells>2000,"wall surface cells scanned: "..wallCells)
- assert(bad/wallCells<0.03,"BD-296 wall surface is one matte stone, "..bad.." of "..wallCells.." differ, first "..tostring(badName))
+ assert(bad==0,"BD-296 wall surface is Concrete + moss + a few Cobblestone strata only, "..bad.." other cells, first "..tostring(badName))
+ assert(mossHigh==0 and cobHigh==0,"moss and strata stay low on the wall: moss above band "..mossHigh..", cobble above band "..cobHigh)
+ assert(upperOff==0 and upperN>1000,"the upper wall and the ceiling are one Concrete: "..upperOff.." of "..upperN.." differ")
+ assert(cobN/wallCells<0.12,"Cobblestone strata is sparing: "..(cobN/wallCells))
+ assert(low>200 and lowMoss/low>0.18 and lowMoss/low<0.60,"soft moss on the low wall: "..lowMoss.."/"..low)
+ assert(nearN>20 and nearMoss/nearN>lowMoss/low and nearMoss/nearN>0.35,"moss gathers around the lantern niches: "..nearMoss.."/"..nearN.." vs "..farMoss.."/"..farN.." elsewhere")
  assert(R.WallStone=="Concrete" and R.Colors.Concrete and R.Colors.Limestone==nil,"walls are Concrete, Limestone is not used")
+ assert(R.Colors.LeafyGrass==nil and R.Colors.Grass==nil and R.Colors.Mud==nil,"moss keeps the island's own terrain colour (terrain colours are place-wide)")
+ -- lanes stay clear of moss: pads, paths and the Heart plinth keep their stone; no moss inside the lava rim
+ local laneMoss=0
+ for i=0,nx-1 do for k=0,nz-1 do
+  local wx,wz=R.XMin+(i+.5)*res,R.ZMin+(k+.5)*res
+  local col=R.column(wx,wz)
+  if col.flat<=0.5 or col.plinth then
+   for j=0,ny-1 do
+    local wy=R.YMin+(j+.5)*res
+    if occ[idx(i,j,k)]>0 and wy>=col.floorTop-res and wy<=col.floorTop+res and mat[idx(i,j,k)]=="LeafyGrass" then laneMoss+=1 end
+   end
+  end
+ end end
+ assert(laneMoss==0,"no moss on pads, laid-stone paths or the Heart plinth: "..laneMoss)
+ mossReport=string.format("moss %d%% of the low wall (%d%% near the niches, %d%% elsewhere), cobble strata %.1f%% of wall",math.floor(100*lowMoss/low+0.5),math.floor(100*nearMoss/nearN+0.5),math.floor(100*farMoss/math.max(farN,1)+0.5),100*cobN/wallCells)
 end
 for _,xz in {{0,0},{30,10},{-40,60},{60,-30},{-70,20}} do
  local x,z=xz[1],C.CenterZ+xz[2]
  assert(math.abs(R.ceilingAt(x,z)-R.column(x,z).ceil)<1e-9,"ceilingAt is the shell ceiling")
  assert(math.abs(R.ceilingAt(x,z)-C.ceilingY(x,z))<=R.CeilingRough+1e-6,"within the relief of the smooth ceiling")
 end
-print(string.format("Cave terrain OK: grid %dx%dx%d = %d cells, %d solid, %d chunks of <= %d cells, %d cells between yields, %d visible faces, %d flat path/pad columns (max dev %.3f), 0 air bubbles of %d air cells, eval %.2f s; mix: %s",
- nx,ny,nz,total,solid,#plan.chunks,plan.cellsPerChunk,plan.cellsBetweenYields,faces,flatCols,maxDev,airTotal,evalSeconds,table.concat(names,", ")))
+print(string.format("Cave terrain OK: grid %dx%dx%d = %d cells, %d solid, %d chunks of <= %d cells, %d cells between yields, %d visible faces, %d flat path/pad columns (max dev %.3f), 0 air bubbles of %d air cells, eval %.2f s; mix: %s; %s",
+ nx,ny,nz,total,solid,#plan.chunks,plan.cellsPerChunk,plan.cellsBetweenYields,faces,flatCols,maxDev,airTotal,evalSeconds,table.concat(names,", "),mossReport))
 '''
 
 def script(config):
