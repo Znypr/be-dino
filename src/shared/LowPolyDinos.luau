@@ -62,7 +62,10 @@ end
 local function sparkle(container: Instance, body: BasePart?, entry: any?)
     local old = container:FindFirstChild("LPTierSparkle", true)
     if old then old:Destroy() end
-    if not entry or not body or entry.sparkleRate <= 0 or not motionEnabled() then return end
+    -- Effects Off: no particles at all (the material, gloss and baked sheen still carry the tier); Lite: half the sparks.
+    local okS, SettingsModel = pcall(function() return require(script.Parent.SettingsModel) end)
+    local fx = if okS and SettingsModel and SettingsModel.effects then SettingsModel.effects() else "full"
+    if not entry or not body or entry.sparkleRate <= 0 or not motionEnabled() or fx == "off" then return end
     local Effects = require(script.Parent.EffectAssets)
     local longest = 6 -- a Compy is about 6 studs long after LowPolyDinoAssets.scale, a T-Rex about 12
     if container:IsA("Model") then local _, size = container:GetBoundingBox() longest = math.max(size.X, size.Y, size.Z, 1) end
@@ -73,10 +76,15 @@ local function sparkle(container: Instance, body: BasePart?, entry: any?)
     if Effects.isSheet("sparkSheet") then
         emitter.FlipbookLayout, emitter.FlipbookMode = Enum.ParticleFlipbookLayout.Grid4x4, Enum.ParticleFlipbookMode.OneShot
     end
-    emitter.Color = ColorSequence.new(Color3.fromRGB(entry.sparkle[1], entry.sparkle[2], entry.sparkle[3]))
-    emitter.LightEmission, emitter.LightInfluence = 0.6, 0.3
-    emitter.Rate, emitter.Lifetime = entry.sparkleRate * k, NumberRange.new(0.8, 1.2)
-    emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.4, 0.55 * k), NumberSequenceKeypoint.new(1, 0)})
+    if entry.shimmer then -- Diamond: slow icy rainbow shimmer (the spark colour drifts through the list over its life)
+        local pts = {}
+        for i, c in entry.shimmer do pts[i] = ColorSequenceKeypoint.new((i - 1) / (#entry.shimmer - 1), Color3.fromRGB(c[1], c[2], c[3])) end
+        emitter.Color = ColorSequence.new(pts)
+    else emitter.Color = ColorSequence.new(Color3.fromRGB(entry.sparkle[1], entry.sparkle[2], entry.sparkle[3])) end
+    emitter.LightEmission, emitter.LightInfluence = 0.7, 0.2
+    emitter.Rate, emitter.Lifetime = entry.sparkleRate * k * (if fx == "lite" then 0.5 else 1), NumberRange.new(0.9, if entry.shimmer then 1.8 else 1.3)
+    local sz = entry.sparkleSize * k
+    emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.4, sz), NumberSequenceKeypoint.new(1, 0)})
     emitter.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.2), NumberSequenceKeypoint.new(1, 1)})
     emitter.Speed, emitter.SpreadAngle, emitter.Rotation = NumberRange.new(0.2, 0.5), Vector2.new(180, 180), NumberRange.new(0, 360)
     emitter.Parent = body

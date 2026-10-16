@@ -138,9 +138,9 @@ for _, id in Tier.Order do
     local e = Tier.get(id) assert(e and e.id == id, id)
     assert(e.amount > 0 and e.amount <= Tier.MaxAmount and e.trimAmount <= Tier.MaxAmount, id .. " tint pull bounded")
     assert(e.reflectance >= 0 and e.reflectance <= Tier.MaxReflectance, id .. " gloss bounded")
-    assert(e.amount >= 0.35 and e.amount <= 0.5 and e.trimAmount > e.amount, id .. " BD-326: readable at preview size, trim stronger, still calm")
+    assert(e.amount >= 0.45 and e.amount <= 0.65 and e.trimAmount > e.amount, id .. " 2026-10-16: strong enough to read at a glance, trim stronger")
     assert(e.material ~= "Neon" and e.material ~= "ForceField", id .. " no neon")
-    assert(e.sparkleRate >= 0 and e.sparkleRate <= 4, id .. " sparkle stays soft")
+    assert(e.sparkleRate > 0 and e.sparkleRate <= Tier.MaxSparkleRate and e.sparkleSize > 0 and e.sparkleSize <= 1, id .. " sparkle bounded")
     for i = 1, 3 do assert(e.tint[i] >= 0 and e.tint[i] <= 255 and e.sparkle[i] >= 0 and e.sparkle[i] <= 255) end
     -- the gene colour must still dominate: a red dino stays mostly red under every tier
     local r, g, b = Tier.blend(0.9, 0.15, 0.15, e, false)
@@ -152,8 +152,7 @@ for _, id in Tier.Order do
     -- Studio look check 2026-10-16: Diamond reads as a pale frosted version of the gene colour (satKeep) on warm species, never grey
     local dr0, dg0, db0 = Tier.blend(0.80, 0.50, 0.36, Tier.get("diamond"), false)
     local dmx, dmn = math.max(dr0, dg0, db0), math.min(dr0, dg0, db0)
-    assert((dmx - dmn) / dmx < 0.55 * 0.8 and (dmx - dmn) / dmx > 0.1, "diamond is pale but not grey")
-    assert(dmx - dmn < 0.8 - 0.36, "diamond is paler than the base colour")
+    assert((dmx - dmn) / dmx > 0.1 and dmx >= 0.7, "diamond keeps the warm colour, brighter, never grey")
     -- BD-308 baked sheen: bounded, only lifts facets the source lit (k > 1), never darkens, never pushes past white
     assert(e.sheen > 0 and e.sheen <= Tier.MaxSheen, id .. " sheen bounded")
     local lr, lg, lb = Tier.lift(0.5, 0.3, 0.2, 1.4, e)
@@ -162,6 +161,48 @@ for _, id in Tier.Order do
     assert(dr == 0.5 and dg == 0.3 and db == 0.2, id .. " shadow facets untouched")
     assert(select(1, Tier.lift(1, 1, 1, 1.6, e)) <= 1, "white stays white")
 end
+-- 2026-10-16 "Shiny + sparkles": strictly growing presence per tier, and Diamond never looks weaker than Gold
+local function hueOf(r, g, b)
+    local mx, mn = math.max(r, g, b), math.min(r, g, b)
+    local d = mx - mn
+    if d < 1e-4 or d / math.max(mx, 1e-6) < 0.12 then return -1 end
+    local h = if mx == r then ((g - b) / d) % 6 elseif mx == g then (b - r) / d + 2 else (r - g) / d + 4
+    return h / 6
+end
+local function luma(r, g, b) return 0.2126 * r + 0.7152 * g + 0.0722 * b end
+local function sat(r, g, b) local mx, mn = math.max(r, g, b), math.min(r, g, b) return if mx > 0 then (mx - mn) / mx else 0 end
+local prev = nil
+for _, id in Tier.Order do
+    local e = Tier.get(id)
+    if prev then
+        assert(e.reflectance > prev.reflectance and e.sheen > prev.sheen and e.sparkleRate > prev.sparkleRate and e.sparkleSize > prev.sparkleSize, id .. " gloss/sheen/sparkle grow per tier")
+    end
+    prev = e
+end
+local gold, emerald, diamond = Tier.get("gold"), Tier.get("emerald"), Tier.get("diamond")
+assert(gold.material == "Metal" and emerald.material == "Glass" and diamond.material == "Glass" and diamond.reflectance == Tier.MaxReflectance, "metal / gem materials")
+assert(diamond.shimmer and #diamond.shimmer >= 3 and not gold.shimmer and not emerald.shimmer and diamond.shimmerSpeed > 0, "only Diamond has the rainbow shimmer")
+for _, grey in {0.35, 0.6, 0.85} do -- the same neutral dino under each tier
+    local gr, gg, gb = Tier.blend(grey, grey, grey, gold, false)
+    local er, eg, eb = Tier.blend(grey, grey, grey, emerald, false)
+    local dr, dg, db = Tier.blend(grey, grey, grey, diamond, false)
+    assert(luma(dr, dg, db) >= luma(gr, gg, gb), "diamond is not darker than gold at grey " .. grey)
+    assert(sat(gr, gg, gb) >= 0.2 and sat(er, eg, eb) >= 0.2 and sat(dr, dg, db) >= 0.04, "every tier stays coloured at grey " .. grey)
+    assert(sat(gr, gg, gb) > sat(dr, dg, db) and sat(er, eg, eb) > sat(dr, dg, db), "diamond is the iciest, with the rainbow shimmer on top")
+    assert(luma(Tier.lift(dr, dg, db, 1.5, diamond)) >= luma(Tier.lift(gr, gg, gb, 1.5, gold)), "diamond highlights at least as bright as gold's")
+end
+-- hue rule (coordinator, Studio evidence): blue / red / green / purple dinos keep their hue under every tier, body and pattern pixels alike
+for _, id in Tier.Order do
+    local e = Tier.get(id)
+    for _, c in {{0.15, 0.35, 0.9}, {0.9, 0.15, 0.15}, {0.2, 0.75, 0.3}, {0.6, 0.25, 0.8}, {0.9, 0.9, 0.95}, {0.1, 0.1, 0.1}, {0.84, 0.28, 0.58}} do
+        for _, sec in {false, true} do
+            local nr, ng, nb = Tier.blend(c[1], c[2], c[3], e, sec)
+            local d = Tier.hueDistance(hueOf(c[1], c[2], c[3]), hueOf(nr, ng, nb))
+            assert(d <= Tier.HueDelta + 1e-6, id .. " hue moved " .. d .. " for " .. c[1] .. "," .. c[2] .. "," .. c[3])
+        end
+    end
+end
+assert(luma(diamond.tint[1] / 255, diamond.tint[2] / 255, diamond.tint[3] / 255) > luma(gold.tint[1] / 255, gold.tint[2] / 255, gold.tint[3] / 255), "diamond tint brighter than gold tint")
 assert(Recolor.shade(0.9, 0.9, 0.9, base) == 1.6 and Recolor.shade(0.01, 0.01, 0.01, base) == 0.3, "shade clamp")
 assert(Tier.get("base") == nil and Tier.get(nil) == nil and Tier.get(false) == nil and Tier.get(true) == Tier.get("gold"), "stage mapping")
 -- 3. the cheap fallback tint keeps black black and reproduces the gene colour on the base colour

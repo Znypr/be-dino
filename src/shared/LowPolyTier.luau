@@ -14,19 +14,27 @@ export type Entry = {
     reflectance: number,   -- 0..0.3
     sparkle: {number},     -- sparkle colour
     sparkleRate: number,   -- particles per second on the body part (0 = none) at dino size 3 studs; Reduce Motion -> 0
-    satKeep: number?, sheen: number,         -- BD-308: 0..MaxSheen lift of the facets the source texture already lit (reads as gloss in flat light)
+    satKeep: number?, gain: number?, satGain: number?, -- hue-safe brightness / saturation gain after the tint (docs/114)
+    sheen: number,
+    sparkleSize: number,   -- relative size of one spark (grows per tier)
+    shimmer: {{number}}?, shimmerSpeed: number?, -- Diamond only: rainbow colours the sparks cycle through (static colours under Reduce Motion)
+            -- BD-308: 0..MaxSheen lift of the facets the source texture already lit (reads as gloss in flat light)
 }
 Tier.Order = {"gold", "emerald", "diamond"}
 Tier.MaxAmount = 0.8
+Tier.MaxSparkleRate = 10
 Tier.MaxReflectance = 0.3
 Tier.MaxSheen = 0.7
 Tier.Entries = {
-    gold = {id = "gold", name = "Gold", tint = {255, 206, 92}, amount = 0.45, trimAmount = 0.75, material = "Metal", reflectance = 0.14,
-        sparkle = {255, 230, 150}, sparkleRate = 1.5, sheen = 0.45},
-    emerald = {id = "emerald", name = "Emerald", tint = {60, 220, 140}, amount = 0.40, trimAmount = 0.75, material = "Glass", reflectance = 0.10,
-        sparkle = {170, 255, 205}, sparkleRate = 2, sheen = 0.35},
-    diamond = {id = "diamond", name = "Diamond", tint = {170, 232, 255}, amount = 0.50, satKeep = 0.5, trimAmount = 0.75, material = "Glass", reflectance = 0.22,
-        sparkle = {235, 250, 255}, sparkleRate = 3, sheen = 0.6},
+    -- 2026-10-16 owner decision "Shiny + sparkles" (docs/115): tiers must read Base < Gold < Emerald < Diamond at a glance, in daylight AND the dim cave.
+    -- Gold = rich warm gold, Emerald = deep jewel green, Diamond = icy white-blue with a rainbow shimmer. Gloss, sheen, sparkle rate and sparkle size all grow per tier.
+    gold = {id = "gold", name = "Gold", tint = {255, 190, 30}, amount = 0.55, trimAmount = 0.8, material = "Metal", reflectance = 0.18,
+        sparkle = {255, 232, 140}, sparkleRate = 3, sparkleSize = 0.5, sheen = 0.5, gain = 1.1, satGain = 1.2},
+    emerald = {id = "emerald", name = "Emerald", tint = {16, 190, 96}, amount = 0.45, trimAmount = 0.8, material = "Glass", reflectance = 0.23,
+        sparkle = {150, 255, 195}, sparkleRate = 5, sparkleSize = 0.62, sheen = 0.6, gain = 0.97, satGain = 1.25},
+    diamond = {id = "diamond", name = "Diamond", tint = {205, 240, 255}, amount = 0.6, trimAmount = 0.8, material = "Glass", reflectance = 0.3,
+        sparkle = {235, 250, 255}, sparkleRate = 8, sparkleSize = 0.75, sheen = 0.7, gain = 1.14, satGain = 0.9,
+        shimmer = {{255, 170, 215}, {170, 220, 255}, {190, 255, 215}, {255, 245, 170}}, shimmerSpeed = 0.5},
 }
 -- BD-308 baked sheen: the generated textures carry flat facet shading (k = pixel luma / species body luma, 0.3..1.6). On a fused
 -- tier the facets that the source already lit (k > 1) are lifted toward white by (k - 1) * sheen, so the gem/metal look reads
@@ -44,20 +52,44 @@ function Tier.get(stage: any): Entry?
 end
 -- Pure: pull a 0..1 colour toward the tier tint. secondary=true is the pattern trim (strong pull: the pattern becomes the gem /
 -- metal). The result keeps at least the colour's own saturation, so complementary mixes (pink toward emerald) never turn grey.
-function Tier.blend(r: number, g: number, b: number, entry: Entry, secondary: boolean): (number, number, number)
-    local a = math.clamp(if secondary then entry.trimAmount else entry.amount, 0, Tier.MaxAmount)
-    local t = entry.tint
-    local nr, ng, nb = r + (t[1] / 255 - r) * a, g + (t[2] / 255 - g) * a, b + (t[3] / 255 - b) * a
+local function hueOf(r: number, g: number, b: number): number -- 0..1, -1 for greys
     local mx, mn = math.max(r, g, b), math.min(r, g, b)
-    local sat = if mx > 0 then (mx - mn) / mx else 0
-    local nmx, nmn = math.max(nr, ng, nb), math.min(nr, ng, nb)
-    local nsat = if nmx > 0 then (nmx - nmn) / nmx else 0
-    local want = math.min(sat, 0.85) * (if secondary then 1 else (entry.satKeep or 1))
-    if nsat < want and nmx > 0 then -- re-saturate around the new max channel
-        local k = (1 - want) * nmx
-        local scale = (nmx - k) / math.max(nmx - nmn, 1e-6)
-        nr, ng, nb = k + (nr - nmn) * scale, k + (ng - nmn) * scale, k + (nb - nmn) * scale
+    local d = mx - mn
+    if d < 1e-4 or d / math.max(mx, 1e-6) < 0.12 then return -1 end
+    local h = if mx == r then ((g - b) / d) % 6 elseif mx == g then (b - r) / d + 2 else (r - g) / d + 4
+    return h / 6
+end
+Tier.HueDelta = 0.04 -- 2026-10-16: a coloured pixel's hue moves by at most ~14 degrees under any tier (blue stays blue, red stays red)
+function Tier.hueDistance(h1: number, h2: number): number
+    if h1 < 0 or h2 < 0 then return 0 end
+    local d = math.abs(h1 - h2) % 1
+    return math.min(d, 1 - d)
+end
+-- Pure: the tier identity on a 0..1 colour. 2026-10-16 owner rule: the dino keeps its OWN colours and pattern; the tier adds metal/gem
+-- lustre. So the pull toward the tier tint is limited until the hue has moved no more than Tier.HueDelta (grey / near-neutral pixels
+-- take the full tint, so neutral belly-less greys still read gold / green / icy), then a brightness and saturation "gain" makes the facets glow.
+function Tier.blend(r: number, g: number, b: number, entry: Entry, secondary: boolean): (number, number, number)
+    local full = math.clamp(if secondary then entry.trimAmount else entry.amount, 0, Tier.MaxAmount)
+    local t = entry.tint
+    local h0 = hueOf(r, g, b)
+    local sat0 = if math.max(r, g, b) > 0 then (math.max(r, g, b) - math.min(r, g, b)) / math.max(r, g, b) else 0
+    local nr, ng, nb = r, g, b
+    for _, f in {1, 0.75, 0.5, 0.35, 0.25, 0.15, 0.08, 0} do
+        local a = full * f
+        nr, ng, nb = r + (t[1] / 255 - r) * a, g + (t[2] / 255 - g) * a, b + (t[3] / 255 - b) * a
+        local nmx, nmn = math.max(nr, ng, nb), math.min(nr, ng, nb)
+        local keepsColour = h0 < 0 or (nmx > 0 and (nmx - nmn) / nmx >= 0.75 * sat0) -- never wash a coloured pixel out to white / grey
+        if keepsColour and Tier.hueDistance(h0, hueOf(nr, ng, nb)) <= Tier.HueDelta then break end
     end
-    return math.clamp(nr, 0, 1), math.clamp(ng, 0, 1), math.clamp(nb, 0, 1)
+    -- gain: lift the lustre without changing hue (scale about the max channel for sat, then multiply for brightness)
+    local gain, satGain = entry.gain or 1, entry.satGain or 1
+    local mx, mn = math.max(nr, ng, nb), math.min(nr, ng, nb)
+    if mx > 0 then
+        local sat = math.clamp(((mx - mn) / mx) * satGain, 0, 1)
+        local k = (1 - sat) * mx
+        local scale = if mx - mn > 1e-6 then (mx - k) / (mx - mn) else 1
+        nr, ng, nb = k + (nr - mn) * scale, k + (ng - mn) * scale, k + (nb - mn) * scale
+    end
+    return math.clamp(nr * gain, 0, 1), math.clamp(ng * gain, 0, 1), math.clamp(nb * gain, 0, 1)
 end
 return Tier
