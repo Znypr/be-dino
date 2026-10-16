@@ -68,7 +68,7 @@ def static_checks():
     assert 'growthLabel' not in boot and 'catchLabel' not in boot, 'old growth/catch labels removed'
     assert 'Safe sanctuary' not in boot and '"Island")' not in boot and ' GROWTH"' not in boot, 'Island/Sanctuary/GROWTH HUD text removed'
     assert 'GrowthIcon' not in boot and 'GrowthBar' not in boot, 'three-bar growth tile removed'
-    assert 'require(script.Parent.HudV2).attach(hud,gui)' in boot and 'require(script.Parent.HudV2).layout(layout)' in boot
+    assert 'require(script.Parent.HudV2).attach(hud,gui,{notify=notify})' in boot and 'require(script.Parent.HudV2).layout(layout)' in boot
     assert 'showFoodDebug(' in boot, 'FOOD debug line gated by HudRules'
     assert not re.search(r'^local HudV2', boot, re.M), 'no new top-level local for HudV2'
     touch = (ROOT / 'src/shared/TouchLayout.luau').read_text()

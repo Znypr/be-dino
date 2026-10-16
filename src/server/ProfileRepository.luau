@@ -8,6 +8,7 @@ local RewardMath = require(script.Parent.RewardMath)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local EggTraits = require(ReplicatedStorage.Shared.EggTraits)
 local EggGenetics = require(ReplicatedStorage.Shared.EggGenetics)
+local FtueRules = require(ReplicatedStorage.Shared.FtueRules)
 local NestQueue = require(ReplicatedStorage.Shared.NestQueue)
 local ProgressionConfig = require(ReplicatedStorage.Shared.ProgressionConfig)
 
@@ -916,6 +917,17 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         })
     end
     sortByRarity(runEggs)
+    -- BD-365: a new profile's first eggs are safe (never Cracked). Applied after the rarity sort so the FIRST eggs hatched
+    -- are the safe ones; derived from the cached profile (hatched + already waiting eggs), no new persistent field.
+    local safeLeft = FtueRules.safeEggsLeft(cached)
+    for i = 1, math.min(safeLeft, #runEggs) do
+        local egg = runEggs[i]
+        if egg.genes and egg.genes.conditionId == "cracked" then
+            local progress = ProfileRepository.progression(player)
+            egg.genes = EggGenetics.roll(if progress then progress.conditionLevel else 0, rng, true)
+            egg.traitRollVersion = "bd045-genes-v2"
+        end
+    end
     local leaseLost = false
     local invalid = false
     local duplicate = false

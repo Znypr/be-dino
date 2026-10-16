@@ -93,3 +93,6 @@ Cracked eggs are 50% of eggs at Condition level 0 and hatch only 1 in 5. P(first
 
 ## 6. What I changed
 `src/shared/FtueCopy.luau` (new, pure strings), `src/client/Bootstrap.client.luau` (4 lines swapped to use it, no new top-level locals), `tools/verify_ftue_copy.py` (new). Rows BD-365 to BD-376 in the [kanban](07-kanban.md). Nothing else is changed; Build 020 behaviour and flags are untouched. Not re-screenshotted after the copy change (the screenshots show the old text on purpose); the new text needs one Studio look.
+
+## 7. P0 fixes (branch claude/ftue-p0-fixes, 2026-10-16)
+Lead decisions (owner delegated the calls): the first 2 eggs of a new profile are never Cracked ("safe"), normal odds afterwards (BD-365); a first-run hint, an egg moment and a collapsed menu (BD-366 to BD-368). Code: `src/shared/FtueRules.luau` (pure rules), `src/client/FtueRail.luau`, `src/client/HudV2.luau`, `EggGenetics.roll(level, rng, safe)`, `ProfileRepository` run settlement. Tests: `tools/verify_ftue_rules.py`. Evidence (Studio, fresh profile, playtest build): [evidence/2026-10-16-ftue-fixes/](evidence/2026-10-16-ftue-fixes/) (before = 09 of the audit). Not done: egg progress bar, faster first egg, locking SHOP/FUSION, arrow on EXPLORE ISLAND, phone check, a live first hatch in Studio.

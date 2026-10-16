@@ -15,8 +15,13 @@ local function pick(weights,roll)
     for i,weight in weights do value-=weight if value<0 then return i end end
     return #weights
 end
-function Genetics.roll(level,rng)
+-- safe=true (BD-365, a new profile's first eggs): Cracked is excluded and the others keep their proportions. Same RNG
+-- draws in the same order either way, so a seeded roll stays deterministic.
+function Genetics.roll(level,rng,safe)
     local weights=Config.ConditionWeights[math.clamp(level or 0,0,#Config.ConditionWeights-1)+1]
+    if safe==true then
+        for i,row in Config.Conditions do if row.id=="cracked" then weights=table.clone(weights) weights[i]=0 end end
+    end
     local condition=Config.Conditions[pick(weights,rng:NextNumber())]
     local colors={} for _,color in Config.EggColors do table.insert(colors,color.weight) end
     local hatchRoll=rng:NextNumber()
