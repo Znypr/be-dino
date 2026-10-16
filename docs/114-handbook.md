@@ -154,6 +154,59 @@ Source: owner review of the Royal Nova image draft in ChatGPT on 2026-10-16: "i 
 - The draft is an **aura appearance benchmark only**. Its dinosaur model and environment are not approved production assets; a still image does not establish animation quality, implementation, Studio acceptance or phone performance. The revised draft remains subject to owner feedback.
 - Preserve device budgets and Reduce Motion support. Achieve richness through authored shapes, composition and depth; verify readability in daylight, the cave and stacked mutation/aura/trail combinations. This direction does not authorize raising budgets or changing runtime code by itself.
 
+## 8.4 Visual environment polish (owner discussion 2026-10-16; DESIGN TARGET, not shipped)
+
+The owner requested these visual guidelines and four illustrated reference pages be recorded in the handbook. **The illustrations are generated concept art, not screenshots of verified Roblox output.** The 4-page PDF and original illustrations are saved in the owner's ChatGPT Library folder `/be dino/handbook visual references/`: `01 Environment Polish.png`, `02 Asset Quality.png`, `03 Growth and Vegetation.png`, `04 Special Skin Finishes.png`, and `Be Dino Visual Handbook Illustrated Supplement.pdf`. These are not yet GitHub-hosted image assets; do not fabricate accessible image URLs.
+
+### 8.4.1 Six high-value visual fixes
+1. **Grass first:** tone down the dark repetitive wavy pattern/strong apparent normals dominating the entire foreground. Make grass softer, less noisy and more matte with restrained local variation; diagnose whether terrain material, normals or shadows cause the striping before editing.
+2. **Green saturation:** balance intense mint treetops, grassy terrain and green player so objects have hierarchy. Preserve the game's vibrant, cheerful colour; avoid a blanket desaturation that makes pickups/dinos dull.
+3. **Player grounding:** improve soft contact shadows at feet and dimensional shading on body and neck; make the dinosaur readable against grass without turning it into a glowing object.
+4. **Distance depth:** restrained Atmosphere, lower distant contrast and slightly lighter distant hills/trees, while respecting clear player visibility during weather.
+5. **Reduce clutter:** clear traversal paths and small-dino lines of sight; group plants/flowers in intentional clusters and remove some tiny props rather than endlessly adding detail.
+6. **Lighting:** prevent overexposed tree crowns and overly dark patches on grass; preserve bright pleasant daytime illumination with stronger visual priority for dino and food.
+
+### 8.4.2 Procedural placement does not excuse poor asset shapes
+- **Round trees and conifers: first priority.** Their repeated sphere-clusters and identical stacked pine layers read as automatic primitives. Author asymmetric but chunky low-poly leaf groups, tapered trunks, genuine branch/root structure, several clear family silhouettes and controlled proportions.
+- **Grass/ferns:** broader slightly bent leaf blades, layered plant clusters and a few recognisable families; avoid thin crossed triangles.
+- **Palms:** curved/tapered trunks with overlapping, drooping, non-identical fronds.
+- **Ground props:** sculpted stones, short logs, roots, stumps, bushes and mushrooms around major tree bases; replace other clutter so overall part count and visibility do not regress.
+- **Player dinosaur:** preserve the recognisable chunky silhouette and face; only minor refinement at neck/hip/mouth/limb intersections.
+- Use the approved **generated mesh -> cleanup/optimisation -> Roblox import** pipeline for final 3D art; code-built stacks are at most placeholders. Compare old/new variants at normal gameplay camera distance, with mobile performance evidence. Follow section 8.1, docs/87 and AGENTS.md.
+
+## 8.5 Scaling: jungle at tiny, medium and colossal sizes (DESIGN TARGET; balance TBD)
+
+**Intended emotional curve:** newly spawned dinosaurs feel tiny in dense, towering vegetation; growing dinosaurs physically outgrow small plants and ordinary trees; giant dinosaurs visibly dominate small players and most trees without the *whole* jungle looking miniature.
+
+| Vertical layer | Examples | Function |
+| --- | --- | --- |
+| Small ground layer | Bushes, ferns, grass, flowers, mushrooms, young palms | Visually huge for fresh hatchlings; beneath large dinos |
+| Medium canopy | Most ordinary broadleaf trees, palms and pines | Dinosaurs grow to and ultimately surpass these trees; strong scale progress |
+| Rare ancient canopy | Extremely tall ancient trees, giant trunks and cliffside treetops | Colossal vertical references above even endgame dinos; important landmarks |
+
+A starting **illustrative**, non-approved density mix discussed was about 60-70% small/medium foliage, 20-30% larger trees, 5-10% colossal ancient trees. Use grouped placement, not an evenly scattered forest of giants. The strongest result is that a maximum-size dino can still seem too big for ordinary trees while a few colossal landmarks dwarf it. Test biome-by-biome, not as uniform global percentages.
+
+**Camera:** don't linearly zoom the camera farther up and out with every size increase: excessive bird's-eye framing makes the map look like miniatures. Maintain useful trunk and horizon visibility, avoid extreme top-down angles, ensure small players are visible beside giants, and test obstruction/occlusion, collision and control at each size. Judge the exact same spot with small, medium and giant dinos, plus one small player alongside a giant.
+
+**Gameplay risks:** max-size dinos must be able to traverse terrain, avoid tree/cave geometry and reach food/eggs without broken animation or physics; audit combat, predation, NPC encounters and camera clipping. Record mobile performance and network behavior.
+
+**Growth numbers are NOT decided here.** At present a normal 5-minute run reportedly reaches ~1.5x spawn size while the existing 4x maximum may take around an hour. The owner's desired experience implies more conspicuous early growth *and* potential for true giants; possible playtest targets discussed were ~2.5-3x after a good five-minute run and a 6x long-run maximum, but these require explicit owner approval and gameplay balancing before touching code. Do not describe them as approved or shipped.
+
+## 8.6 Fused-tier surface finish benchmark (DESIGN TARGET, not implementation proof)
+
+Four identical poses are compared in concept art: **top left Original, top right Gold, bottom left Emerald, bottom right Diamond.** The same red-and-purple stripe pattern, base dinosaur proportions, cream belly, black eye and claws remain in all panels. Distinguish finishes primarily through the surface itself, not particle emitters:
+
+| Variant | Target surface | Outline |
+| --- | --- | --- |
+| Original | Original matte base; clear saturated red-purple pattern | No premium glow required |
+| Gold | Bright polished golden metal sheen, rich reflections, original stripes legible; not matte orange | Clean strong golden edge |
+| Emerald | Glossy, translucent-looking emerald gem treatment with original stripes perceptible | Mint/emerald edge |
+| Diamond | Icy pale blue-white, highly polished/faceted crystalline finish with underlying stripes perceptible | Crisp blue-white edge |
+
+**Important Roblox feasibility note:** concepts are aspirational image renders. Roblox may not support that degree of metallic, simultaneously transparent and patterned surface appearance in real time. In test screenshots a duplicated transparent/tinted shell looked plasticky, whereas the material treatment integrated into the main mesh looked more coherent, although the result still appeared orange rather than shiny gold. Evaluate **single-mesh texture/pattern + authored PBR maps** for Gold before resorting to extra shells. Do not assume Glass or Metal setting alone produces concept-art reflections. Emerald/Diamond need material-specific art, not just recoloured Gold. Respect eye/claw exceptions, current caps in 4.3, and phone fallback.
+
+**Review standard:** show four same-pose Studio screenshots in bright daytime, another lighting/weather check, side-by-side original vs variant, actual game-camera distance, no particles/trails, and note engine limitations and mobile cost. Use a sharp coloured silhouette outline if helpful but do not let a bright rim conceal an unconvincing core material. The generated illustration is a **visual reference**, never an engine performance claim.
+
 ## 9. Game rules cheat sheet (numbers true today; CODE unless noted)
 | Rule | Value | Source |
 |---|---|---|
