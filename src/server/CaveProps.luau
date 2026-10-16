@@ -88,7 +88,7 @@ local function addSignText(mesh: MeshPart, key: string, text: string)
     label.Name = "Word"
     label.AnchorPoint = Vector2.new(0.5, 0.5)
     label.Position = UDim2.fromScale(0.5, 0.5)
-    label.Size = UDim2.fromScale(1 - cfg.inset * 2, 0.4)
+    label.Size = UDim2.fromScale(1 - cfg.inset * 2, 0.55)
     label.BackgroundTransparency = 1
     label.Font = Enum.Font.FredokaOne
     label.Text = text
@@ -131,6 +131,7 @@ local function place(folder: Folder, params: RaycastParams, p: any, template: Me
         for _, child in mesh:GetChildren() do
             if child:IsA("SurfaceAppearance") then child:Destroy() end
         end
+        mesh.TextureID = "" -- the generated meshes carry their colours in MeshPart.TextureID (found in Studio), not in a SurfaceAppearance
         mesh.Color = Color3.fromRGB(warm.color[1], warm.color[2], warm.color[3])
         mesh.Material = (Enum.Material :: any)[warm.material]
     end

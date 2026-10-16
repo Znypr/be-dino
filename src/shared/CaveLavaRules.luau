@@ -13,9 +13,9 @@ Rules.FxBudget = {desktop = 25, phone = 10} -- particles per second for the whol
 -- Scrolling layers on the sheet, back to front. tileStuds = one tile of the 4 x 4 sheet in studs (a cell is a quarter of it),
 -- speed = studs per second falling (down), offsetU = sideways shift in studs so the layers do not line up, alpha = ImageTransparency.
 Rules.Layers = {
-    {name = "FlamesBack", key = "flameSheet", tileStuds = 38, speed = 4.5, offsetU = 0, alpha = 0.45, color = {255, 120, 40}},
-    {name = "SwirlMid", key = "swirl", tileStuds = 22, speed = 2.5, offsetU = 5, alpha = 0.6, color = {255, 190, 100}},
-    {name = "FlamesFront", key = "flameSheet", tileStuds = 26, speed = 7.5, offsetU = 9, alpha = 0.4, color = {255, 176, 70}},
+    {name = "FlamesBack", key = "flameSheet", tileStuds = 52, speed = 4.5, offsetU = 0, alpha = 0.55, color = {255, 150, 50}},
+    {name = "SwirlMid", key = "swirl", tileStuds = 26, speed = 2.5, offsetU = 5, alpha = 0.7, color = {255, 190, 100}},
+    {name = "FlamesFront", key = "flameSheet", tileStuds = 36, speed = 7.5, offsetU = 9, alpha = 0.55, color = {255, 214, 120}},
 }
 
 -- Particles per second, desktop. Their sum stays under Rules.FxBudget.desktop; phones scale every rate by phoneScale().
