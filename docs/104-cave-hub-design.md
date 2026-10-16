@@ -291,3 +291,29 @@ Dependencies: 263 -> 264 -> 265; 266 -> 268 <- 267; 268 -> 269/270; 264 -> 271 -
 ## 14. Cosy pass (owner 2026-10-16: warm, safe, lamp-lit home base; flag off)
 
 Code side only, registered assets only: the Heart gets one show-off pedestal (`CaveShowOff`, a "Show off" prompt that steps the player's dino onto it; walking off ends it), 2 stone benches, 3 moss cushions and 2 lamp posts; the Quiet Spot gets a bench; every hub_pedestal now has a collider so it can be stood on. Warm lamps breathe by at most 7 percent (`CaveLightingRules.Lamp`, client, steady with Reduce Motion; lava, forge and the gate light stay as they were). `CaveLightingRules.Bed` is the ambient bed hook: empty id until the owner supplies a loop (docs/110 has none). Luminance band 0.15-0.35 untouched (no ambient or grade change). Art TODOs: docs/77 and docs/120.
+
+## Gate frame mesh brief
+
+Status: BRIEF ONLY (written 2026-10-16). Nothing has been generated or published. Closes the "gate rock-frame arch mesh" TODO in docs/77 and docs/120 once run. Run in the owner's Studio (generate_mesh), one prompt at a time, pick the best of the 3.
+
+Facts from code: gate station `{id="gate", x=0, z=-80, w=30, d=30}`; run-exit gate built with `mouthWidth = 30`, `archDepth = 6`; prop kind `hub_gate_arch = {24, 24, 8.7, 8000, "station", walk = true, colliders = 2}` (w, h, d studs, triangle cost 8000); the two pillar colliders sit at `+-(w/2 - 1.5)` = +-10.5 studs, 3 wide, so the walk-through lane is about 18 studs. The currently published arch (id 90142774443313, native 11 x 11 x 4, shown at 16 x 15.9 x 5.8 in `CaveHubProps`, scaled to 24 x 24 x 8.7 by the layout) is near-square and plain. The new mesh replaces it.
+
+**Target size: 24 wide x 24 tall x 8.7 deep studs** (final size, so the existing colliders and the sign still line up). Opening about 17 wide x 17 tall, centred, flat open floor (no threshold step, nothing in the lane). Ask for native roughly 12 x 12 x 4.35 so the layout's x2 scale is clean, or 24 x 24 x 8.7 directly if the tool allows.
+
+Shared style rules for every prompt: low-poly, chunky, rounded friendly stone arch for a children's game, warm lamp-lit cave, sandy limestone and warm brown rock (docs/114 section 5.4 stone, not grey-lilac), small amber/gold crystal clusters (#F1A024 / #FFD22B) set into the stone as accents, a few moss tufts, NO blue, NO purple, NO teal, no skulls, no spikes, no text, flat grounded base wider than the top (stable, cannot tip), symmetrical, single mesh, no floor plate inside the opening.
+
+1. "Low-poly rounded friendly stone archway for a kids' cave game, chunky sandy limestone blocks, thick pillars wider at the base, smooth round arch top with a prominent keystone, 3 small glowing amber crystal clusters set into the keystone and pillar bases, warm brown rock tones, a little moss, flat grounded base, open walk-through opening about 17 studs wide and 17 tall, overall 24 wide 24 tall 8.7 deep, symmetrical, no blue or purple, no text."
+2. "Low-poly cave gate frame made of stacked rounded boulders forming an arch, soft cartoon proportions, warm tan and brown stone, amber gold crystals growing from the top and both sides, slightly irregular but friendly, wide stable base, open centre 17 studs wide, overall 24 x 24 x 8.7 studs, no blue, no purple, no sharp spikes."
+3. "Low-poly carved stone doorway for a cosy cave village, rounded arch with a chunky stone rim and two short lantern-height amber crystal lumps on top corners, warm sandstone colour, tiny moss tufts at the base, wide flat footing, tunnel-like depth 8.7, overall 24 x 24 x 8.7, symmetrical, open walk-through, no blue or purple, no text."
+
+**Triangle budget:** 8,000 triangles per the `hub_gate_arch` Kinds row (the hub budget is 410 parts / 730k triangles total; the gate is one prop, about 1.1 percent of it). Accept up to 8,000; if the generator returns more, ask for a lower-detail pass rather than raising the budget. The old arch was cheaper, so check the 730k total only if the result exceeds 8,000.
+
+**Segmentation (segment_mesh partNames), optional:** `Arch_Stone`, `Arch_Keystone`, `Crystals_Amber`, `Moss`. Only needed if the amber crystals should glow (Neon/PointLight on `Crystals_Amber`); if skipped, use the single mesh. Keep part count to the 4 names above (hub part budget).
+
+**Acceptance (screen_capture in Studio, flag Config.CaveHub on):** no blue/purple tint after the cave grade; amber reads warm, not orange-hot floor; walk-through lane clear with the two pillar colliders matching the visible pillars; rock frame props (`cave_wall_pillar`, `cave_wall_boulder_l`) still sit outside the arch and do not clip it; sign still reads; phone view readable at 64 px wide.
+
+**Exact code change to bind (one-line id edit once published):**
+- `src/shared/CaveHubProps.luau`, the `hub_gate_arch` row (about line 47): replace `id = "90142774443313"` with the new asset id; set `native = {..}` to the reported bounds and `final = {24, 24, 8.7}` if native differs. No new key needed.
+- Placement is already automatic: `CaveHubLayout` places `hub_gate_arch` via `gate = {{"hub_gate_arch", 1, "sign"}, ...}` at the gate station (x 0, z -80) with yaw facing the cave, and `CaveProps.luau` loads it by key. `Props.Existing`/`Kinds` size (24, 24, 8.7) stays, so no layout edit.
+- If the owner prefers to keep the old arch as a fallback, add the mesh as a new key `hub_gate_frame` (same fields) and change the gate row `{"hub_gate_arch", 1, "sign"}` to `{"hub_gate_frame", 1, "sign"}` plus a matching `hub_gate_frame` line in `Kinds` (copy of the `hub_gate_arch` row). Then update docs/77 (add `cave_hub_hub_gate_frame` row with the id) and delete the TODO row in docs/120.
+- `WorldGeneratedMeshes` is NOT involved (the cave props use `CaveHubProps`).
