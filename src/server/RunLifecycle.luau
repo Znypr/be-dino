@@ -202,6 +202,25 @@ local function predatorNearby(player: Player, character: Model): boolean
     return false
 end
 
+-- The one run-start path: the RequestStartRun remote and the cave Island Gate (BD-290) both call this, so every check and
+-- the exactly-once begin() live in one place. Returns true when the run began.
+function RunLifecycle.requestStart(player: Player): boolean
+    if player:GetAttribute("ProfileState") ~= "Loaded" then return false end
+    local character = player.Character
+    if not character or character:GetAttribute("RunState") ~= "Sanctuary" or not character:GetAttribute("DinoAttached") then return false end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return false end
+    -- BD-210: never drop a dinosaur onto the island before the terrain exists on the server and, unless the
+    -- client is unusually slow, before this client reports the terrain under the spawn as loaded.
+    if not RunLifecycle.worldReady(player) then
+        player:SetAttribute("LastRunStartStatus", "WorldLoading")
+        return false
+    end
+    require(script.Parent.FallRecovery).teleport(player, character, CFrame.new(SpawnGeometry.islandPoint(Layout)))
+    RunLifecycle.begin(player, character)
+    return true
+end
+
 function RunLifecycle.start()
     local folder = ReplicatedStorage:FindFirstChild("BeDinoRemotes")
     if not folder then
@@ -214,19 +233,8 @@ function RunLifecycle.start()
     startRemote.Name = "RequestStartRun"
     startRemote.Parent = folder
     startRemote.OnServerEvent:Connect(function(player: Player, ...)
-        if select("#", ...) ~= 0 or player:GetAttribute("ProfileState") ~= "Loaded" then return end
-        local character = player.Character
-        if not character or character:GetAttribute("RunState") ~= "Sanctuary" or not character:GetAttribute("DinoAttached") then return end
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if not humanoid or humanoid.Health <= 0 then return end
-        -- BD-210: never drop a dinosaur onto the island before the terrain exists on the server and, unless the
-        -- client is unusually slow, before this client reports the terrain under the spawn as loaded.
-        if not RunLifecycle.worldReady(player) then
-            player:SetAttribute("LastRunStartStatus", "WorldLoading")
-            return
-        end
-        require(script.Parent.FallRecovery).teleport(player, character, CFrame.new(SpawnGeometry.islandPoint(Layout)))
-        RunLifecycle.begin(player, character)
+        if select("#", ...) ~= 0 then return end
+        RunLifecycle.requestStart(player)
     end)
 
     local readyRemote = Instance.new("RemoteEvent")
