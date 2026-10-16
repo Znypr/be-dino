@@ -93,7 +93,7 @@ local function stepBed(dt: number)
     if not bed then
         local sound = Instance.new("Sound")
         sound.Name, sound.SoundId, sound.Looped, sound.Volume, sound.RollOffMaxDistance = "CaveBed", B.id, true, 0, 0
-        pcall(function() sound.SoundGroup = require(Shared:WaitForChild("AudioMixer")).group(B.group) end)
+        pcall(function() require(Shared:WaitForChild("AudioMixer")).attach(sound, "ambience") end) -- follows the ambience slider (verify_audio)
         sound.Parent = workspace.CurrentCamera or workspace
         bed = sound
     end
