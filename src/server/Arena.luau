@@ -5,6 +5,7 @@ local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Terrain = require(script.Parent.IslandTerrain)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
+local CaveHubLayout = require(ReplicatedStorage.Shared.CaveHubLayout)
 local Biome = require(ReplicatedStorage.Shared.BiomePlacement)
 local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
@@ -267,7 +268,7 @@ function Arena.build()
     end
     -- Separate safe hub beyond the north boundary, with explicit server-owned entry.
     local hub = Instance.new("Model")
-    local cz = Config.SanctuaryCenterZ
+    local cz = CaveHubLayout.hub(Config).centerZ -- BD-280: one hub geometry source (the cave shell itself is BD-281)
     hub.Name, hub.Parent = "Sanctuary", world
     part(hub,"SanctuaryGround",Vector3.new(110,6,95),Vector3.new(0,3,cz),Color3.fromRGB(111,178,91),Enum.Material.Grass,true)
     part(hub,"NestPlaza",Vector3.new(34,.5,30),Vector3.new(0,6.25,cz),Color3.fromRGB(223,205,154),Enum.Material.Sandstone,true)

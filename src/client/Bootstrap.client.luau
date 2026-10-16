@@ -57,6 +57,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 local blur = Instance.new("BlurEffect")
 blur.Name,blur.Size,blur.Parent = "BeDinoModalBlur",0,Lighting
 local motion = true
+require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SettingsModel")).onChange(function(s) motion=not s.calm end) -- BD-266 Calm motion also quiets this file's shake and slides
 local active = ""
 local selected = "compy"
 local seenTutorial = false
@@ -1029,18 +1030,12 @@ render=function(name: string)
         button(body,"DONE",424,300,370,64,C.accent,function() skippedEntries={} open("eggs") end)
     elseif name=="settings" then
         heading.Text,header.BackgroundColor3="Settings",C.purple
-        -- Two columns of buttons, then three volume bars (AudioMixer, session-only), then auto-open. Body is 824 x 402.
-        label(body,"Visual effects",0,0,250,48,28)
-        button(body,if motion then "ON" else "OFF",270,0,140,48,if motion then C.accent else C.card,function() motion=not motion Theme.MotionEnabled=motion open("settings") end)
-        label(body,"Camera",0,56,250,48,28)
-        button(body,"RESET",270,56,140,48,C.blue,function() player.CameraMaxZoomDistance=Config.CameraMaxZoom notify("Camera reset",C.blue) end)
-        label(body,"Sound",0,112,250,48,28)
-        button(body,if Theme.HatchSoundEnabled~=false then "ON" else "OFF",270,112,140,48,if Theme.HatchSoundEnabled~=false then C.accent else C.card,function() Theme.HatchSoundEnabled=Theme.HatchSoundEnabled==false open("settings") end)
-        button(body,"HOW TO PLAY",440,0,384,52,C.gold,function() open("tutorial") end)
-        button(body,"FOOD GUIDE",440,60,384,52,C.accent,function() open("food") end)
-        local Volume=require(script.Parent.VolumeSliders)
-        for i,key in require(Shared.AudioMixer).Order do Volume.row(body,key,0,168+(i-1)*46,824,25) end
-        button(body,"RESET SOUND",440,120,384,44,C.card,function() require(Shared.AudioMixer).reset() open("settings") end).TextSize=20
+        -- BD-263 Settings v2: tabs Sound / Look / Controls / Help are drawn by SettingsMenu; Help (guides, auto-open) stays here. Body is 824 x 402.
+        local tab=require(script.Parent.SettingsMenu).build(body,{label=label,button=button,open=open,notify=notify,cameraReset=function() player.CameraMaxZoomDistance=Config.CameraMaxZoom end})
+        if tab=="help" then
+        button(body,"HOW TO PLAY",0,64,400,52,C.gold,function() open("tutorial") end)
+        button(body,"FOOD GUIDE",424,64,400,52,C.accent,function() open("food") end)
+        label(body,"Auto-open",0,312,170,52,24).TextXAlignment=Enum.TextXAlignment.Left
         local locked=EggsLogic.locked(Config.AutoOpenRequiresPass,ownsAutoOpen())
         local chosen=RevealSkip.set(autoOpenSelection())
         for i,rarityName in RevealSkip.Names do
@@ -1051,6 +1046,7 @@ render=function(name: string)
             end).TextSize=16
         end
         label(body,"Shiny, BIG and special eggs always show. Auto-opened eggs are still saved!",0,370,824,30,18)
+        end
     elseif name=="food" then
         heading.Text,header.BackgroundColor3="Food & Growth",C.accent
         local types={{"Berries","leaf",1,C.accent},{"Fruit","leaf",4,C.gold},{"Eggs","egg",15,C.blue},{"Crystals","amber",50,C.purple}}

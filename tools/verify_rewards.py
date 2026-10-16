@@ -72,7 +72,7 @@ end}
 local http={GenerateGUID=function() return "guid-"..tostring(math.random(1,1e9)) end,JSONEncode=function(_,v) return copy(v) end,JSONDecode=function(_,v) return copy(v) end}
 local mutableConfig=table.clone(GameConfig)
 GameConfig=mutableConfig
-local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",EggGenetics="Genetics",NestQueue="NestQueue",ProgressionConfig="ProgressionConfig"}}
+local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",EggGenetics="Genetics",NestQueue="NestQueue",ProgressionConfig="ProgressionConfig",SettingsModel="SettingsModel"}}
 local services={DataStoreService={GetDataStore=function() return store end},HttpService=http,ReplicatedStorage=storage,RunService={IsStudio=function() return false end}}
 local game={GameId=1,JobId="test",GetService=function(_,id) return services[id] end}
 local task={wait=function() end,spawn=function() end}
@@ -83,6 +83,7 @@ local require=function(id)
  error("unexpected module "..tostring(id))
 end
 local NestQueue=@@NEST_QUEUE@@
+local SettingsModel=@@SETTINGS_MODEL@@
 local Rewards=@@REWARD_MATH@@
 local Identity=@@IDENTITY_MODULE@@
 local script={Parent={DinosaurIdentity="Identity"}}
@@ -96,7 +97,7 @@ local require=function(id)
  if id=="FusionOdds" then return FusionOdds end
  if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics
  elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig
- elseif id=="Rules" then return Rules elseif id=="Rewards" then return Rewards elseif id=="NestQueue" then return NestQueue end
+ elseif id=="Rules" then return Rules elseif id=="Rewards" then return Rewards elseif id=="NestQueue" then return NestQueue elseif id=="SettingsModel" then return SettingsModel end
  error("unexpected module "..tostring(id))
 end
 local Repository=@@REPO_MODULE@@
@@ -458,6 +459,14 @@ for _,bad in {{6},{0},{1,1},{1.5},{1,2,3,4,5,5},"x",{{}},{"1"}} do
 end
 Repository.release(sk) assert(Repository.load(sk) and sk.attrs.RevealSkipJson[1]==1)
 assert(Repository.setRevealSkip(sk,{}) and #data[key(sk)].revealSkip==0)
+-- BD-264 settings v2: profile without the field reads as defaults; save, bad values normalize, survive rejoin, eggs untouched.
+assert(data[key(sk)].settings==nil and sk.attrs.SettingsJson.effects=="full" and sk.attrs.SettingsJson.calm==false and sk.attrs.SettingsJson.sound.master==0.8,"old profile: defaults")
+assert(Repository.setSettings(sk,{sound={master=0.3,sfx=9,ambience="x"},effects="lite",weather="off",calm=true,jumpSize="huge"}))
+local saved=data[key(sk)].settings
+assert(saved.sound.master==0.3 and saved.sound.sfx==1 and saved.sound.ambience==0.6 and saved.effects=="lite" and saved.weather=="off" and saved.calm==true and saved.jumpSize=="normal","server normalizes")
+assert(totalCopies(data[key(sk)])==before and same(data[key(sk)].eggs,queueBefore),"settings never change eggs or collection")
+local okS,reasonS=Repository.setSettings(sk,"x") assert(not okS and reasonS=="invalid_settings")
+Repository.release(sk) assert(Repository.load(sk) and sk.attrs.SettingsJson.weather=="off" and sk.attrs.SettingsJson.sound.master==0.3,"survives rejoin")
 -- Skipped eggs are still credited exactly once: claim the whole run without any animation.
 local hatchedSkipped=0
 while sk.attrs.NextChestId~="" do
@@ -577,6 +586,7 @@ def script():
         ('@@FUSION_ODDS@@', 'src/server/FusionOdds.luau'),
         ('@@REVEAL_SKIP@@', 'src/shared/RevealSkip.luau'),
         ('@@NEST_QUEUE@@', 'src/shared/NestQueue.luau'),
+        ('@@SETTINGS_MODEL@@', 'src/shared/SettingsModel.luau'),
         ('@@REWARD_MATH@@', 'src/server/RewardMath.luau'),
         ('@@IDENTITY_FUSION_MODULE@@', 'src/server/IdentityFusion.luau'),
         ('@@IDENTITY_MODULE@@', 'src/server/DinosaurIdentity.luau'),

@@ -51,15 +51,16 @@ RunService.Heartbeat:Connect(function(dt)
             local shiny=character:GetAttribute("ShinyDinosaur")==true
             local visual=character:FindFirstChild("LocalMeshVisual") or character:FindFirstChild("DinoVisual")
             local scale=character:GetAttribute("VisualScale") or 1
-            local detail=if player==Players.LocalPlayer or (distance[player]<=25 and count<=fullDinos) then "full" else "lite"
+            local mode=require(Shared.SettingsModel).effects() -- BD-265: Settings Effects Full / Lite / Off
+            local detail=if mode=="full" and (player==Players.LocalPlayer or (distance[player]<=25 and count<=fullDinos)) then "full" else "lite"
             local state=states[player]
-            if not state or state.root~=root or state.auraId~=auraId or state.trailId~=trailId or state.mutationId~=mutationId or state.shiny~=shiny or state.visual~=visual or state.motion~=Theme.MotionEnabled or state.detail~=detail then
+            if not state or state.root~=root or state.auraId~=auraId or state.trailId~=trailId or state.mutationId~=mutationId or state.shiny~=shiny or state.visual~=visual or state.motion~=Theme.MotionEnabled or state.detail~=detail or state.mode~=mode then
                 if state then destroy(state) end
-                state={root=root,auraId=auraId,trailId=trailId,mutationId=mutationId,shiny=shiny,visual=visual,scale=scale,motion=Theme.MotionEnabled,detail=detail,rigs={}}
+                state={root=root,auraId=auraId,trailId=trailId,mutationId=mutationId,shiny=shiny,visual=visual,scale=scale,motion=Theme.MotionEnabled,detail=detail,mode=mode,rigs={}}
                 local reduce=not Theme.MotionEnabled
                 -- A second or third rig on the same dino always uses the lite layer count so the combined look stays inside one budget.
                 local function add(kind: string,item: any)
-                    if not item then return end
+                    if not item or (mode=="off" and kind~="mutation") then return end -- Off drops aura and trail, keeps the event mutation cue
                     local rigDetail=if #state.rigs>0 then "lite" else detail
                     table.insert(state.rigs,Rig.attach(root,kind,item,{reduce=reduce,detail=rigDetail,device=device}))
                 end

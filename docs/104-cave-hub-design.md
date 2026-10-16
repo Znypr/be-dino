@@ -1,6 +1,6 @@
 # 103 The Cave: a big Sanctuary hub with real shops (design, 2026-10-16)
 
-**Status: DESIGN ONLY. No code changed. Every size, count and number here is PROVISIONAL.** Owner direction 2026-10-16 (verbatim intent below). Feel rules: [docs/87](87-vision-and-feel-guide.md). Copy and art rules: [docs/72](72-ui-copy-and-asset-standards.md). 3D model rule and art rule: [AGENTS.md](../AGENTS.md). Part budget and culling: [docs/91](91-world-performance-culling.md) (BD-168). Effect textures: `src/shared/EffectAssets.luau`. Tasks live only in [the Kanban](07-kanban.md) (BD-279 to BD-294 added by this doc; BD-254 is superseded by this plan).
+**Status 2026-10-16: Phase 1 first half built (BD-279 `src/shared/CaveHubLayout.luau` + `tools/verify_cave_hub.py`, BD-280 `Config.CaveHub=false` + one geometry source, both with the flag OFF so shipped behaviour is unchanged). The terrain shell (BD-281), props, travel and UI are NOT built. Every size, count and number here is PROVISIONAL.** Owner direction 2026-10-16 (verbatim intent below). Feel rules: [docs/87](87-vision-and-feel-guide.md). Copy and art rules: [docs/72](72-ui-copy-and-asset-standards.md). 3D model rule and art rule: [AGENTS.md](../AGENTS.md). Part budget and culling: [docs/91](91-world-performance-culling.md) (BD-168). Effect textures: `src/shared/EffectAssets.luau`. Tasks live only in [the Kanban](07-kanban.md) (BD-279 to BD-294 added by this doc; BD-254 is superseded by this plan).
 
 Labels: **OWNER TARGET** = from the owner. **DECISION** = made by the lead on the owner's behalf, the owner may overrule. **CURRENT BUILD** = what ships now.
 
@@ -233,6 +233,15 @@ Everything behind `Config.CaveHub = false` until Phase 5 passes. Pure modules in
 
 Dependencies: 263 -> 264 -> 265; 266 -> 268 <- 267; 268 -> 269/270; 264 -> 271 -> 272 -> 273/274; 271 -> 275; 272 -> 276; everything -> 277; 278 after 277.
 
+## 14.1 Built so far and layout changes found by the verifier (2026-10-16)
+`tools/verify_cave_hub.py` (BD-279) found that the section 2.2 offsets broke their own rule, so the real layout in `CaveHubLayout` differs from the table above. The code is the source of truth; offsets are (x, dz) from the cave centre:
+- Heart (0,0) r18; Island Gate (0,-80) r15 (was -92: pad left the floor); Nests (66,-38) r17; Potions (-66,-38) r15; Fusion (0,48) r20 (was 72); Style (84,34) r18; Index (-84,34) r20; Settings (-48,76) r10 (was (-34,66) r8: 34 studs from Fusion); Fame (48,76) r12 (was (40,68): 40 studs from Fusion). Smallest station gap is exactly 48.
+- Lava pool is (-4,86) r11 with the fall sheet on the back wall at (-4,100); it was moved so no pad touches it and it stays inside the floor. Lava props trimmed to 6 rim rocks + 4 stepping stones so the lava group stays within its 12 parts.
+- Floor blob: a gently wobbling squarish ellipse (125 x 105.5 base) inside the 260 x 220 box; pads and paths are exactly flat (max measured slope 1.8 degrees), the rest undulates 0..1.5 studs (max 14.6 degrees).
+- Paths: 8 star paths (12 wide) plus an 8-segment ring (10 wide), ending at the pad edges. 6 arrival spots per station on the rim of the side facing the Heart, all facing the sign; props live on the far side.
+- Budgets counted from the layout: 287 parts / 402 k triangles (limit 410 / 730 k); 239 prop rows; 15 lights counted for the 16-light cap.
+- One geometry source: `CaveHubLayout.hub(config)` gives centre z, floor y, half extents and the biome rect. `SpawnGeometry` (so `FallRecovery`/`MovementGuard`), `Arena` and `Leaderboards.start` read it. Flag off = z 521, floor 6, half extents 55 x 47.5, biome 473..569, byte-for-byte as before (checked against a snapshot in `verify_cave_hub.py`). `BiomePlacement.Sanctuary` is still the old literal: nothing reads it at runtime and BD-281 must make it follow `hub(config).biome` when the flag is on.
+
 ## 15. Open questions for the owner
 1. **Cave size**: 260 x 220 studs with 48+ studs between stations. Big enough, or bigger (the island is 832 studs across)?
 2. **Rail buttons during a run**: DECISION keeps POTIONS and SETTINGS usable in a run and dims DINOS, EGGS, FUSION and SHOP ("At home"). OK, or should every button simply be hidden in a run?
@@ -241,6 +250,15 @@ Dependencies: 263 -> 264 -> 265; 266 -> 268 <- 267; 268 -> 269/270; 264 -> 271 -
 5. **Lava**: purely scenic (no damage, fenced by rocks). Confirm no "hot floor" gameplay.
 6. **Station order around the plaza**: nests and potions near the entrance (most used), fusion by the lava, style shop in the crystal grotto, index opposite. Swap anything?
 7. **Hatch reveal place**: keep the 2D/viewport reveal with the nest alcove as backdrop (v1), or should the physical nest crack open in the world (bigger task, BD-294)?
+
+## 15.1 Answers (lead decisions, 2026-10-16; the owner may overrule)
+1. Cave size: 260 x 220 is good.
+2. In a run the rail dims DINOS / EGGS / FUSION / SHOP with "At home"; POTIONS and SETTINGS stay usable.
+3. Settings stays a plain HUD menu button (not a teleport place) for quick access. The Lantern Nook station stays as a scenic spot; its `rail` is still "settings" in the layout but BD-288 must not teleport for it.
+4. Teleport to shops defaults ON, with a Settings toggle.
+5. Lava is scenic only (no hot floor, no damage).
+6. Station order stays as built above.
+7. Keep the existing 2D hatch reveal.
 
 ## 16. Lead decisions made on the owner's behalf (summary)
 - Shell = terrain voxels from a pure layout (testable, phone-cheap), dressing = generated meshes only; nothing code-built is visible.

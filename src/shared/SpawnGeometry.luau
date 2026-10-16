@@ -2,16 +2,19 @@
 -- BD-210: one place for every point a character is put into the world, and for "has it fallen out of the world".
 -- Pure functions of Config + IslandLayout so the offline verifier (tools/verify_spawn.py) checks the same numbers the
 -- server uses. The hub floor numbers mirror Arena.build (SanctuaryGround 110x6x95 at y=3, NestPlaza top at 6.5).
+local CaveHubLayout = require(script.Parent.CaveHubLayout)
 local SpawnGeometry = {}
-SpawnGeometry.HubFloorY = 6 -- top of SanctuaryGround
-SpawnGeometry.HubHalfX, SpawnGeometry.HubHalfZ = 55, 47.5 -- SanctuaryGround footprint
+-- BD-280: the hub centre/floor/extents come from CaveHubLayout.hub(config) (the old values while Config.CaveHub is false).
+SpawnGeometry.HubFloorY = 6 -- legacy top of SanctuaryGround (hub(config).floorY with the flag off)
+SpawnGeometry.HubHalfX, SpawnGeometry.HubHalfZ = 55, 47.5 -- legacy SanctuaryGround footprint (hub(config).halfX/halfZ)
 SpawnGeometry.DropClearance = 5 -- studs above the floor a character root is placed (it settles onto the floor)
 SpawnGeometry.VoxelMargin = 3 -- the voxel surface reads up to ~2 studs above IslandLayout.height (4-stud voxels)
 SpawnGeometry.TerrainBottom = -16 -- IslandTerrain fills voxels from y=-16 up to the surface
 SpawnGeometry.FallDepth = 20 -- a root this far below the floor under it has fallen out of the world
 
 function SpawnGeometry.inHub(config: any, x: number, z: number): boolean
-    return math.abs(x) <= SpawnGeometry.HubHalfX and math.abs(z - config.SanctuaryCenterZ) <= SpawnGeometry.HubHalfZ
+    local hub = CaveHubLayout.hub(config)
+    return math.abs(x - hub.centerX) <= hub.halfX and math.abs(z - hub.centerZ) <= hub.halfZ
 end
 function SpawnGeometry.inTerrain(config: any, x: number, z: number): boolean
     local extent = config.ArenaHalfWidth + 8 -- IslandTerrain writes ArenaHalfWidth + 8
@@ -19,7 +22,7 @@ function SpawnGeometry.inTerrain(config: any, x: number, z: number): boolean
 end
 -- Expected solid floor height under (x, z); nil when nothing solid was ever built there.
 function SpawnGeometry.floorY(config: any, layout: any, x: number, z: number): number?
-    if SpawnGeometry.inHub(config, x, z) then return SpawnGeometry.HubFloorY end
+    if SpawnGeometry.inHub(config, x, z) then return CaveHubLayout.hub(config).floorY end
     if SpawnGeometry.inTerrain(config, x, z) then return layout.height(x, z) end
     return nil
 end
@@ -31,7 +34,8 @@ function SpawnGeometry.fallen(config: any, layout: any, position: Vector3): bool
 end
 -- Hub arrival point (sanctuary centre, on the NestPlaza).
 function SpawnGeometry.hubPoint(config: any): Vector3
-    return Vector3.new(0, SpawnGeometry.HubFloorY + SpawnGeometry.DropClearance, config.SanctuaryCenterZ)
+    local hub = CaveHubLayout.hub(config)
+    return Vector3.new(hub.centerX, hub.floorY + SpawnGeometry.DropClearance, hub.centerZ)
 end
 -- Island run-start point: on the meadow at SpawnZ, a few studs above the terrain surface.
 function SpawnGeometry.islandPoint(layout: any): Vector3
