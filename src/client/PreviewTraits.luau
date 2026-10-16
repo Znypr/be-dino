@@ -4,6 +4,7 @@ local Theme = require(game:GetService("ReplicatedStorage").Shared.UITheme)
 local Appearance = require(game:GetService("ReplicatedStorage").Shared.EggAppearance)
 local MutationLook = require(game:GetService("ReplicatedStorage").Shared.MutationLook)
 local FxUi = require(game:GetService("ReplicatedStorage").Shared.FxUi)
+local MutationBadge = require(script.Parent.MutationBadge)
 local Preview = require(game:GetService("ReplicatedStorage").Shared.DinosaurPreview)
 local PreviewTraits = {}
 -- BD-155: soft mutation cue shared by every preview. A small round badge in the mutation colour (top-left) with a
@@ -15,15 +16,27 @@ function PreviewTraits.mutation(view: ViewportFrame, mutationId: any, isEgg: boo
     if old then old:Destroy() end
     if not isEgg then MutationLook.apply(view, if look then look.id else nil) end
     if not look then return end
-    local dot = Instance.new("Frame")
-    dot.Name, dot.BackgroundColor3, dot.BorderSizePixel = "MutationBadge", MutationLook.color(look.badge), 0
-    dot.AnchorPoint, dot.Position, dot.Size = Vector2.new(0, 0), UDim2.new(0, 6, 0, 6), UDim2.new(0, 22, 0, 22)
-    dot.ZIndex, dot.Parent = view.ZIndex + 2, view
-    local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(.5, 0) corner.Parent = dot
-    local rim = Instance.new("UIStroke")
-    rim.Color, rim.Thickness, rim.Transparency = MutationLook.color(look.rim), 2 + 2 * look.glow, .35
-    rim.Parent = dot
-    dot:SetAttribute("MutationId", look.id)
+    -- BD-190: once the mutation icon is uploaded and bound (AssetSlots.Images.mutation_<id>) it replaces the plain colour dot (the icon
+    -- carries its own light rim, so no stroke); 30 px so it stays readable at phone size. Empty slot = the dot below, unchanged.
+    local image = MutationBadge.iconImage(look.id)
+    if image then
+        local icon = Instance.new("ImageLabel")
+        icon.Name, icon.BackgroundTransparency, icon.BorderSizePixel, icon.Image = "MutationBadge", 1, 0, image
+        icon.ScaleType = Enum.ScaleType.Fit
+        icon.AnchorPoint, icon.Position, icon.Size = Vector2.new(0, 0), UDim2.new(0, 4, 0, 4), UDim2.new(0, 30, 0, 30)
+        icon.ZIndex, icon.Parent = view.ZIndex + 2, view
+        icon:SetAttribute("MutationId", look.id)
+    else
+        local dot = Instance.new("Frame")
+        dot.Name, dot.BackgroundColor3, dot.BorderSizePixel = "MutationBadge", MutationLook.color(look.badge), 0
+        dot.AnchorPoint, dot.Position, dot.Size = Vector2.new(0, 0), UDim2.new(0, 6, 0, 6), UDim2.new(0, 22, 0, 22)
+        dot.ZIndex, dot.Parent = view.ZIndex + 2, view
+        local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(.5, 0) corner.Parent = dot
+        local rim = Instance.new("UIStroke")
+        rim.Color, rim.Thickness, rim.Transparency = MutationLook.color(look.rim), 2 + 2 * look.glow, .35
+        rim.Parent = dot
+        dot:SetAttribute("MutationId", look.id)
+    end
     -- BD-162: heroes (hatch dino, Index / details hero; view height unknown or >= 120 px) get the layered live mutation preview. Thumbnails
     -- (grid cards) keep the static badge. Reduce Motion: one still glow. FxUi caps the live previews at 8 (heroes win a slot).
     for _, child in view:GetChildren() do if string.sub(child.Name, 1, 14) == "FxUi_mutation_" then child:Destroy() end end
