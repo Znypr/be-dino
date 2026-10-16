@@ -267,14 +267,14 @@ local glow=Instance.new("PointLight") glow.Name="WeatherGlow" glow.Range,glow.Br
 -- ---------------------------------------------------------------- sky props: blood moon, aurora curtains, fog-coloured sky box
 local moonCore=Instance.new("Part") moonCore.Name="EventMoon" moonCore.Shape=Enum.PartType.Ball
 moonCore.Anchored,moonCore.CanCollide,moonCore.CanTouch,moonCore.CanQuery,moonCore.CastShadow=true,false,false,false,false
-moonCore.Size,moonCore.Material,moonCore.Color,moonCore.Transparency,moonCore.Parent=Vector3.one*60,Enum.Material.Neon,Color3.fromRGB(255,96,64),1,folder
+moonCore.Size,moonCore.Material,moonCore.Color,moonCore.Transparency,moonCore.Parent=Vector3.one*WL.Moon.core,Enum.Material.Neon,Color3.fromRGB(255,96,64),1,folder
 local halos:{Part}={}
-for i,spec in {{110,.74},{150,.88},{200,.94}} do
-    local halo=moonCore:Clone() halo.Name="EventMoonHalo"..i halo.Size=Vector3.one*spec[1] halo.Transparency=1 halo.Color=Color3.fromRGB(255,70,50) halo.Parent=folder
+for i,size in WL.Moon.halos do
+    local halo=moonCore:Clone() halo.Name="EventMoonHalo"..i halo.Size=Vector3.one*size halo.Transparency=1 halo.Color=Color3.fromRGB(255,70,50) halo.Parent=folder
     table.insert(halos,halo)
 end
 local HALO_ALPHA={.84,.93,.97}
-local MOON_DIR=Vector3.new(-.32,.5,-.8).Unit
+local MOON_DIR=Vector3.new(-.32,.62,-.8).Unit
 
 -- BD-213: no fog-coloured sky box. A box inside FogEnd read as a flat opaque wall and cut the view short; the far view now
 -- dissolves through the classic fog ramp and the Atmosphere haze tints the sky (event sun and moon are hidden below).
@@ -696,7 +696,7 @@ end
 -- ---------------------------------------------------------------- title card
 local gui=Instance.new("ScreenGui") gui.Name="WeatherTitle" gui.ResetOnSpawn=false gui.IgnoreGuiInset=true gui.DisplayOrder=40
 gui.Parent=player:WaitForChild("PlayerGui")
-local title=Instance.new("TextLabel") title.Name="Title" title.AnchorPoint=Vector2.new(.5,.5) title.Position=UDim2.fromScale(.5,.26) title.Size=UDim2.fromScale(.7,.12)
+local title=Instance.new("TextLabel") title.Name="Title" title.AnchorPoint=Vector2.new(.5,.5) title.Position=UDim2.fromScale(.5,WL.Title.y) title.Size=UDim2.fromScale(WL.Title.width,WL.Title.height)
 title.BackgroundTransparency=1 title.Font=Enum.Font.FredokaOne title.TextScaled=true title.TextTransparency=1 title.Text="" title.ZIndex=5 title.Parent=gui
 local stroke=Instance.new("UIStroke") stroke.Thickness=5 stroke.Color=Color3.fromRGB(14,20,34) stroke.Transparency=1 stroke.Parent=title
 local titleScale=Instance.new("UIScale") titleScale.Parent=title
@@ -878,10 +878,10 @@ RunService.Heartbeat:Connect(function(dt)
     -- blood moon sky props
     local moonOn=live and activeId=="bloodmoon" and k>0
     if moonOn and root then
-        local base=root+MOON_DIR*150
+        local base=root+MOON_DIR*WL.Moon.distance
         moonCore.Position=base moonCore.Transparency=lerpNum(1,.04,k)
         local beat=1+math.sin(now*.7)*.05
-        moonCore.Size=Vector3.one*60*beat
+        moonCore.Size=Vector3.one*WL.Moon.core*beat
         for i,halo in halos do halo.Position=base halo.Transparency=lerpNum(1,HALO_ALPHA[i],k) end
         if now>=nextPulse then nextPulse=now+random:NextNumber(6,11) pulse=1 end
     else
