@@ -58,6 +58,7 @@ jobs:
           python tools/verify_weather.py --runner /tmp/luau/luau
           python tools/verify_eggs.py --runner /tmp/luau/luau
           python tools/verify_rewards.py --runner /tmp/luau/luau
+          python tools/verify_rollback.py --runner /tmp/luau/luau
           python tools/verify_nests.py --runner /tmp/luau/luau
           python tools/verify_mutations.py --runner /tmp/luau/luau
           python tools/verify_mutation_look.py --runner /tmp/luau/luau
