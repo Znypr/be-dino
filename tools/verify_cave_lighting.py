@@ -173,7 +173,7 @@ for _,p in L.props do
   if p.key=="hub_bench_stone" then benches+=1 elseif p.key=="hub_cushion_moss" then cushions+=1 elseif p.key=="hub_lantern_post" then lamps+=1 end
  end
 end
-assert(benches>=2 and cushions>=2 and lamps>=2,"cosy seating and lamps at the Heart: "..benches.." "..cushions.." "..lamps)
+assert(benches==0 and cushions==0 and lamps==0,"no floor furniture at the Heart (owner 2026-10-16, docs/104 s17); the warm light comes from the wall: "..benches.." "..cushions.." "..lamps)
 print("cave lighting ok: lights "..#D.lights.."/"..C.MaxLights..", fx parts "..D.fxParts..", fall top "..(FY+F.height).." < "..string.format("%.1f",lowest))
 '''
 

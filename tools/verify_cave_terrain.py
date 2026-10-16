@@ -189,6 +189,54 @@ for x=-124,124,3 do for dz=-116,116,3 do
 end end
 assert(wallChecks>600,"enough wall probes: "..wallChecks)
 
+-- ---- no sky through the shell (Studio 2026-10-16 showed square gaps in domes and tunnel mouths): rays from many interior points, straight
+-- up, 45 degrees up and horizontally in 12 directions, must all hit rock before leaving the region (only the 4 ceiling holes are open upward)
+local rayChecks,gaps=0,{}
+local function nearHole(x,dz) for _,h in L.holes do if dist(x,dz,h.x,h.z)<h.radius+16 then return true end end return false end
+for x=-124,124,5 do for dz=-116,116,5 do
+ if C.caveSd(x,dz+CZ)>=1.5 then
+  local fl=C.floorHeight(x,dz+CZ)
+  local y0=fl+2
+  if occAt(x,y0,dz+CZ)<=0 then
+   local skip=nearHole(x,dz)
+   if not skip then
+    local hit=false
+    for y=y0,R.YMax,1 do if occAt(x,y,dz+CZ)>0 then hit=true break end end
+    rayChecks+=1
+    if not hit then gaps[#gaps+1]=string.format("up %d,%d",x,dz) end
+    for k=0,7 do
+     local a=k*math.pi/4
+     local ux,uz=math.cos(a)*0.7071,math.sin(a)*0.7071
+     local hit2=false
+     for t=1,90 do
+      local px,py,pz=x+ux*t,y0+t*0.7071,dz+CZ+uz*t
+      if nearHole(px,pz-CZ) and py>FY+30 then hit2=true break end -- a ray may leave through one of the 4 sky holes
+      if py>R.YMax or px<R.XMin or px>R.XMax or pz<R.ZMin or pz>R.ZMax then break end
+      if occAt(px,py,pz)>0 then hit2=true break end
+     end
+     rayChecks+=1
+     if not hit2 and not nearHole(x,dz) then gaps[#gaps+1]=string.format("diag %d,%d dir %d",x,dz,k) end
+    end
+   end
+   for k=0,11 do
+    local a=k*math.pi/6
+    local hit3=false
+    for t=1,320 do
+     local px,pz=x+math.cos(a)*t,dz+CZ+math.sin(a)*t
+     if px<R.XMin or px>R.XMax or pz<R.ZMin or pz>R.ZMax then break end
+     if C.caveSd(px,pz)<-0.5 then -- left the open cave: rock must be right there
+      for u=0,14,1 do if occAt(px+math.cos(a)*u,fl+5,pz+math.sin(a)*u)>0 then hit3=true break end end
+      break
+     end
+    end
+    rayChecks+=1
+    if not hit3 then gaps[#gaps+1]=string.format("side %d,%d dir %d",x,dz,k) end
+   end
+  end
+ end
+end end
+assert(rayChecks>5000 and #gaps==0,"the rock shell is closed (no sky): "..rayChecks.." rays, "..#gaps.." gaps, first "..tostring(gaps[1]).." "..tostring(gaps[2]))
+
 -- ---- gate opening: the arch mouth toward the island is real air above the flat floor
 local g0=L.byId.gate
 for _,y in {FY+2,FY+8,FY+14} do

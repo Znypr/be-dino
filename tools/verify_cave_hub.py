@@ -393,7 +393,8 @@ assert(P.fitFactor({2,2,2},{4,1,1})==2 and P.fitFactor({1,1,1},{1000,1,1})==P.Ma
 assert(P.Lava.fxPartBudget<=counts.cave_lava_fall+counts.lava_pool_disc+5,"lava FX parts: the fall and disc rows plus at most 5 extra (BD-385: 3 glow discs)")
 assert(P.Assets.cave_lava_fall and P.NotMeshes.cave_lava_fall,"the chunky generated lava block is registered but not placed")
 assert(C.Kinds.hub_gate_arch[1]<=L.gate.mouthWidth,"gate arch fits inside the 30 stud mouth")
-assert(counts.hub_gate_arch==1,"one gate arch")
+assert(counts.hub_gate_arch==nil,"no gate arch prop on the floor (owner 2026-10-16: the gate is a mouth in the rock)")
+for _,bad in {"hub_lantern_post","hub_bench_stone","hub_cushion_moss","hub_crate","hub_barrel","hub_table_wood","hub_banner","hub_gong","cave_wall_pillar"} do assert(counts[bad]==nil,"no floor furniture: "..bad) end
 print(string.format("props OK: %d layout keys mapped to published ids (%d new uploads + %d existing registered), %d FX/non-mesh keys, %d proportion checks (worst %.2fx on %s)",mapped,idCount,existingCount,fx,checked,worst,worstKey))
 
 -- ---- budgets (docs/104 s3.1)

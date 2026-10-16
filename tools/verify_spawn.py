@@ -13,12 +13,13 @@ def wrapped(path): return '(function()\n' + (ROOT / path).read_text() + '\nend)(
 LUAU = r'''
 local G=SpawnGeometry
 -- Hub: SanctuaryGround 110x6x95 centred (0,3,cz); fences at x=+-48 and z=cz+-43 (Arena.build).
-local hub=G.hubPoint(Config)
-assert(hub.X==0 and hub.Z==Config.SanctuaryCenterZ,"hub point at the sanctuary centre")
-assert(G.inHub(Config,hub.X,hub.Z),"hub point over SanctuaryGround")
-assert(math.abs(hub.X)<48-4 and math.abs(hub.Z-Config.SanctuaryCenterZ)<43-4,"hub point inside the fences")
+local HC=table.clone(Config) HC.CaveHub=false -- these are the legacy hub numbers; the cave hub is checked by verify_cave_hub.py
+local hub=G.hubPoint(HC)
+assert(hub.X==0 and hub.Z==HC.SanctuaryCenterZ,"hub point at the sanctuary centre")
+assert(G.inHub(HC,hub.X,hub.Z),"hub point over SanctuaryGround")
+assert(math.abs(hub.X)<48-4 and math.abs(hub.Z-HC.SanctuaryCenterZ)<43-4,"hub point inside the fences")
 assert(hub.Y>G.HubFloorY+2 and hub.Y<G.HubFloorY+8,"hub point just above the floor "..hub.Y)
-assert(Config.SanctuaryCenterZ-G.HubHalfZ>Config.ArenaHalfWidth+8,"hub ground does not overlap the terrain")
+assert(HC.SanctuaryCenterZ-G.HubHalfZ>HC.ArenaHalfWidth+8,"hub ground does not overlap the terrain")
 assert(G.HubHalfX==55 and G.HubHalfZ==47.5 and G.HubFloorY==6,"hub numbers mirror Arena.build")
 -- Island run start.
 local isl=G.islandPoint(Layout)
@@ -50,7 +51,7 @@ for x=-55,55,5 do for z=Config.SanctuaryCenterZ-47,Config.SanctuaryCenterZ+47,5 
  assert(G.fallen(Config,Layout,Vector3.new(x,G.HubFloorY-G.FallDepth-1,z)),"under the hub not detected")
 end end
 assert(G.fallen(Config,Layout,Vector3.new(0,-60,Config.ArenaHalfWidth+30)),"void between arena and hub")
-local r1,r2=G.recoveryPoint(Config,Layout,true),G.recoveryPoint(Config,Layout,false)
+local r1,r2=G.recoveryPoint(Config,Layout,true),G.recoveryPoint(HC,Layout,false)
 assert(r1==isl and r2==hub,"recovery returns to island spawn in a run, hub otherwise")
 print(string.format("Spawn geometry OK: hub (%.0f, %.1f, %.0f) over floor %.0f; island (%.0f, %.1f, %.0f) over ground %.2f, max slope %.2f",hub.X,hub.Y,hub.Z,G.HubFloorY,isl.X,isl.Y,isl.Z,ground,maxSlope))
 '''

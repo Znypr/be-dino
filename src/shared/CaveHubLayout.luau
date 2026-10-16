@@ -227,17 +227,18 @@ CaveHubLayout.Kinds = KINDS
 -- Station props: {key, count, mode}. mode: "centre" = on the pad centre, "sign" = at the sign, "back" = the big piece
 -- behind the station, "arc" = spread in the outward arc (behind the station, away from the walking approach). Counts follow docs/104 s13 (trimmed where noted).
 local STATION_PROPS: {[string]: {{any}}} = {
-    nests = {{"hub_nest_ledge", 1, "back"}, {"nest", 5, "arc"}, {"hub_straw_mat", 5, "arc"}, {"hub_lantern_post", 1, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    potions = {{"hub_stall_potion", 1, "back"}, {"potion_model", 4, "arc"}, {"hub_lantern_post", 1, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    fusion = {{"hub_forge_ring", 1, "centre"}, {"hub_forge_altar", 1, "back"}, {"hub_pedestal", 3, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    style = {{"hub_counter_stone", 1, "back"}, {"hub_crystal_l", 2, "arc"}, {"hub_crystal_s", 5, "arc"}, {"hub_pedestal", 1, "arc"}, {"hub_gem_chest", 1, "arc"}, {"hub_lantern_post", 1, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    index = {{"hub_pedestal", 4, "arc"}, {"hub_statue_triceratops", 1, "arc"}, {"hub_statue_trex", 1, "arc"}, {"hub_statue_brachiosaurus", 1, "arc"}, {"hub_banner", 2, "arc"}, {"hub_lectern_book", 1, "back"}, {"hub_bench_stone", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    settings = {{"hub_lantern_post", 1, "arc"}, {"hub_gong", 1, "arc"}, {"hub_cushion_moss", 2, "arc"}, {"hub_bench_stone", 1, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    -- Cosy pass (docs/104 s14, owner 2026-10-16): the Heart gets the show-off pedestal (the FIRST hub_pedestal of the Heart is the spot,
-    -- CaveLightingRules.ShowOff), stone benches and moss cushions to rest on, and two lamp posts. Registered assets only.
-    heart = {{"hub_pedestal", 1, "arc"}, {"hub_bench_stone", 2, "arc"}, {"hub_cushion_moss", 2, "arc"}, {"hub_lantern_post", 1, "arc"}},
-    fame = {{"hub_wall_frame", 3, "arc"}, {"hub_lantern_post", 1, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    gate = {{"hub_gate_arch", 1, "sign"}, {"rock_mossy_boulder", 2, "arc"}, {"hub_sign_arrow", 2, "arc"}},
+    -- docs/104 s17 (owner 2026-10-16): no furniture on the floor. Only pieces that ARE the shop (stalls, ledges, altars, statues) stay;
+    -- benches, cushions, lamp posts, banners, crates, gong and the orange gate arch are gone (each station keeps its warm light, now from the
+    -- wall: CaveLightingRules puts one lantern light per alcove). The Heart keeps its show-off pedestal.
+    nests = {{"hub_nest_ledge", 1, "back"}, {"nest", 5, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    potions = {{"hub_stall_potion", 1, "back"}, {"potion_model", 4, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    fusion = {{"hub_forge_ring", 1, "centre"}, {"hub_forge_altar", 1, "back"}, {"hub_pedestal", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    style = {{"hub_counter_stone", 1, "back"}, {"hub_crystal_l", 2, "arc"}, {"hub_crystal_s", 5, "arc"}, {"hub_gem_chest", 1, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    index = {{"hub_statue_triceratops", 1, "arc"}, {"hub_statue_trex", 1, "arc"}, {"hub_statue_brachiosaurus", 1, "arc"}, {"hub_lectern_book", 1, "back"}, {"hub_sign_stone", 1, "sign"}},
+    settings = {{"hub_sign_stone", 1, "sign"}},
+    heart = {{"hub_pedestal", 1, "arc"}},
+    fame = {{"hub_wall_frame", 3, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    gate = {{"rock_mossy_boulder", 2, "arc"}, {"hub_sign_arrow", 2, "arc"}},
 }
 -- Scatter props (rocks, stalagmites, moss ...): {key, count}. Lava props are placed around the pool, light cones in the holes.
 local SCATTER = {
@@ -246,7 +247,7 @@ local SCATTER = {
     {"cave_stalagmite_l", 4, "edge"}, {"cave_stalagmite_s", 6}, {"cave_rock_round", 6, "edge"}, {"cave_rock_flat", 3, "edge"},
     {"rock_mossy_boulder", 3, "edge"}, {"rock_crystal", 4, "edge"}, {"rock_pebbles", 6}, {"cave_moss_patch", 10, "edge"},
     {"cave_stalactite", 24}, {"cave_moss_hang", 10},
-    {"cave_stalagmite_cluster", 4, "wall"}, {"cave_wall_boulder_l", 16, "wall"}, {"cave_wall_pillar", 10, "wall"}, {"cave_wall_arch_small", 4, "wall"},
+    {"cave_stalagmite_cluster", 4, "wall"}, {"cave_wall_boulder_l", 16, "wall"}, {"cave_wall_arch_small", 4, "wall"},
     {"cave_stalagmite_cluster", 4, "edge"}, {"cave_stalagmite_s", 4, "edge"}, {"cave_moss_patch", 8, "lava"},
 }
 local WALLPIECES = {cave_wall_boulder_l = true, cave_wall_pillar = true, cave_wall_arch_small = true} -- put against the cave wall
@@ -534,7 +535,7 @@ function CaveHubLayout.get(): any
     -- walk-through lane, tucked toward the wall. Existing registered meshes only; skipped when they do not fit.
     do
         local g = station("gate")
-        for _, f in {{"cave_wall_pillar", 19, -3}, {"cave_wall_boulder_l", 24, 4}} do
+        for _, f in {{"cave_wall_boulder_l", 19, -3}, {"cave_stalagmite_cluster", 24, 4}} do
             for _, side in {-1, 1} do
                 local key = f[1]
                 local br = boundRadius(KINDS[key])

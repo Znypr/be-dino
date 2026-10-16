@@ -53,7 +53,9 @@ function Rules.column(x: number, z: number): any
     local floorTop = Layout.floorHeight(x, z)
     local ceil = Layout.FloorY + Layout.domeHeightAt(sd, dome) + (relief(x, z, 17, 9.7) - 0.5) * 2 * Rules.CeilingRough
     local col: any = {x = x, z = z, dz = dz, sd = sd, floorTop = floorTop, ceil = ceil,
-        dIn = sd, dOut = Rules.RockThickness + sd, roofTop = ceil + Rules.RoofThickness}
+        dIn = sd, dOut = Rules.RockThickness + sd, dome = dome,
+        -- closed envelope: rock fills up to the room's full height + 12 over the whole shell, so a steep dome / tunnel mouth never thins to a sky gap
+        roofTop = math.max(ceil + Rules.RoofThickness, Layout.FloorY + dome + Rules.RoofThickness + 2)}
     -- ceiling holes: horizontal inset (> 0 inside the shaft); open from just under the ceiling up through the roof
     local hole = -math.huge
     for _, h in L.holes do
@@ -135,12 +137,11 @@ local function material(col: any, y: number, air: number): string
     end
     -- walls, ceiling, roof and deep rock
     if -air > 10 then return "Rock" end
-    -- BD-384: big slow patches (scale 22, not 8) of two cave-only stones: no smeared grid, no dark smudges, no island Sandstone
-    local v = relief(x + y * 0.7, z - y * 0.4, 22, 12.9)
-    -- BD-296 (carried from PR 270): Cobblestone carries the fine tile grid, so on walls it is rare: a low foot band and a few slow bands, the rest smooth Limestone
-    local band = 0.5 + 0.5 * math.sin(y / 7 + math.noise(x / 40, z / 40, 5.5) * 5)
-    if y < col.floorTop + 5 and v > 0.45 then return "Cobblestone" end
-    if v > 0.82 and band > 0.7 then return "Cobblestone" end
+    -- walls: soft blotches of three stones, no horizontal strata (owner 2026-10-16: no striped brick look). Cobblestone (tile grid) stays rare.
+    local v = relief(x * 0.8 + y * 0.45, z * 0.8 - y * 0.45, 13, 12.9)
+    local w = relief(x * 0.6 - y * 0.5, z * 0.6 + y * 0.35, 29, 41.7)
+    if w > 0.8 then return "Cobblestone" end
+    if v < 0.3 then return "Rock" end
     return "Limestone"
 end
 
