@@ -21,8 +21,12 @@ local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 Players.CharacterAutoLoads = false
 
 Lighting.ClockTime = 14
-Lighting.Brightness = 2
-Lighting.Ambient = Color3.fromRGB(130, 143, 148)
+do -- BD-460 (docs/138): softer clear daylight, values in Config.IslandLight (was Brightness 2, Ambient 130,143,148, OutdoorAmbient = place default)
+    local light = Config.IslandLight
+    Lighting.Brightness = light.Brightness
+    Lighting.Ambient = Color3.fromRGB(light.Ambient[1], light.Ambient[2], light.Ambient[3])
+    Lighting.OutdoorAmbient = Color3.fromRGB(light.OutdoorAmbient[1], light.OutdoorAmbient[2], light.OutdoorAmbient[3])
+end
 -- Owner 2026-10-16 (docs/114): no haze in clear daylight. Only a whisper of depth (density .1, haze .3, no glare); trees and hills keep
 -- their colour. The client weather script adopts this as its base and only raises it during weather events, then returns to it on clear.
 if not Lighting:FindFirstChildOfClass("Atmosphere") then
