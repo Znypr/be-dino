@@ -68,3 +68,6 @@ Every new art asset gets a line in [docs/77-asset-registry.md](docs/77-asset-reg
 - **Flag-off-by-default**: combat (`Config.CombatEnabled`), cave hub (`Config.CaveHub`) and low-poly dinos ship disabled; do not flip them without owner-playtest and phone evidence.
 - **QA agents must not touch `Place1.rbxl`.**
 - **Do not rewrite history**: keep superseded docs and rows, mark them superseded, and never mark a task Done without recorded evidence.
+
+## Picking numbers (parallel agents)
+Before choosing a new `docs/NN-*.md` number or a `BD-NNN` id, check `origin/main` AND every open PR branch: `gh pr list --repo Znypr/be-dino --json headRefName`, then `git ls-tree origin/<branch> docs/` (and grep that branch's `docs/07-kanban.md`). Take a number nobody has. CI (`tools/verify_doc_ids.py`) blocks new duplicates; historical ones are allow-listed. Phone FX budgets live only in `tools/qa/phone_budgets.json`.

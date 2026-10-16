@@ -38,12 +38,19 @@ function T.paintPlan(motion: boolean)
         rightStart = p.rightStart, rightImpact = p.rightStart + p.window * p.impact, rightEnd = rightEnd,
         patternAt = patternAt, patternEnd = patternAt + p.patternWash, endsAt = patternAt + p.patternWash}
 end
+-- BD-437: a slightly longer rattle before the burst of rarer eggs (anticipation). Seconds added to the build-up; none for a failed egg,
+-- an unknown rarity or Reduce Motion. A 15-egg party adds well under 2 s in total (tools/verify_hatch_sequence.py).
+T.Anticipation = {0, 0, .15, .3, .5}
+function T.anticipation(rarity: number?): number
+    if rarity == nil then return 0 end
+    return T.Anticipation[math.clamp(math.floor(rarity), 1, #T.Anticipation)]
+end
 -- v2 (BD-397, docs/118): the longer paint beat sheet of HatchV2Plan replaces the build-up and the paint plan; burst, settle,
 -- tap gate, skip rules, Reduced Motion and the failed-egg splat are unchanged.
 function T.durations(motion: boolean, rarity: number?, failed: boolean?, v2: boolean?)
     local d = if not motion then T.Reduced elseif failed then T.Splat else T.Motion
     local settle = d.settle + (if motion and not failed and (rarity or 1) >= 5 then .5 else 0)
-    local build = if v2 and motion then V2.Build else d.build
+    local build = (if v2 and motion then V2.Build else d.build) + (if motion and not failed then T.anticipation(rarity) else 0)
     return {build = build, burst = d.burst, settle = settle, revealAt = build, readyAt = build + d.burst + settle,
         tapGate = d.tapGate, paint = if v2 and motion then V2.paintPlan() else T.paintPlan(motion)}
 end
@@ -156,10 +163,10 @@ function T.shakeOffset(t: number, intensity: number): (number, number)
     return math.sin(t * 71 + .4) * 2.4 * intensity, math.cos(t * 83) * 1.8 * intensity
 end
 -- Ease-out with overshoot for the dinosaur: from .25 to 1 with ~7% overshoot, settles at exactly 1.
-function T.revealScale(p: number): number
+function T.revealScale(p: number, rarity: number?): number
     local x = clamp01(p)
     if x >= 1 then return 1 end
-    local c1 = 1.0 -- BD-327: peak about 1.03 (was 1.1): the dino no longer crosses the panel edge at the pop
+    local c1 = 1.0 + .1 * (math.clamp(rarity or 1, 1, 5) - 1) -- BD-437: rarer dinos pop a little further past 1 (peak below 1.07). BD-327: peak about 1.03 (was 1.1): the dino no longer crosses the panel edge at the pop
     local c3 = c1 + 1
     local back = 1 + c3 * (x - 1) ^ 3 + c1 * (x - 1) ^ 2
     return .25 + .75 * back
@@ -315,11 +322,12 @@ function T.orbitCount(rarity: number, motion: boolean, failed: boolean): number
     if not motion or failed then return 0 end
     return math.min(T.OrbitMax, 4 + 2 * math.clamp(rarity, 1, 5))
 end
+T.Punch = {.035, .05, .065, .085, .11} -- BD-437: camera push-in released at the burst, one step per rarity (was .045 / .06 / .09)
 -- Rarity escalation flags (all false without motion): shockwave Rare+, energy arcs and stronger shake Epic+, fireworks Legendary.
 function T.escalation(rarity: number, motion: boolean)
     local r = math.clamp(rarity, 1, 5)
     return {shock = motion and r >= 3, arcs = motion and r >= 4, fireworks = motion and r >= 5,
-        shakeScale = if motion and r >= 4 then 1 + .35 * (r - 3) else 1, punch = if r >= 5 then .09 elseif r >= 3 then .06 else .045}
+        shakeScale = if motion and r >= 4 then 1 + .35 * (r - 3) else 1, punch = T.Punch[r]}
 end
 -- BIG "stamp": starts 35% oversize and slams to 1 in .25 s.
 function T.stamp(s: number): number

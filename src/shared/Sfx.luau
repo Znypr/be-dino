@@ -10,15 +10,17 @@ Sfx.Sounds = {
     hatch_common = {id = "rbxassetid://123602379376075", volume = .6, rate = 1, gap = .2},
     hatch_rare = {id = "rbxassetid://100769608611671", volume = .7, rate = 1, gap = .2},
     hatch_legendary = {id = "rbxassetid://109331854464968", volume = .85, rate = 1, gap = .2},
-    -- Hatch sequence hooks (HatchTimeline cues): silent until ids are bound.
+    -- Hatch sequence hooks (HatchTimeline cues): silent until ids are bound. BD-437 ladder: the five reveal stings step up in pitch
+    -- (rate .92 .. 1.12) and volume (.5 .. .9); Common/Uncommon and Epic/Legendary share an asset, so pitch + volume + layers
+    -- (SfxRules.RevealLayers) carry the ladder until real stings exist (docs/120).
     hatch_rattle = {id = "", volume = .5, rate = 1, gap = .12},
     hatch_crack_stage = {id = "rbxassetid://135613869332284", volume = .6, rate = 1, gap = .2},
     hatch_burst = {id = "", volume = .8, rate = 1, gap = .3},
-    hatch_reveal_common = {id = "rbxassetid://123602379376075", volume = .6, rate = 1, gap = .2},
-    hatch_reveal_uncommon = {id = "rbxassetid://123602379376075", volume = .65, rate = 1, gap = .2},
-    hatch_reveal_rare = {id = "rbxassetid://100769608611671", volume = .75, rate = 1, gap = .2},
-    hatch_reveal_epic = {id = "rbxassetid://109331854464968", volume = .85, rate = 1, gap = .2},
-    hatch_reveal_legendary = {id = "rbxassetid://109331854464968", volume = .95, rate = 1, gap = .2},
+    hatch_reveal_common = {id = "rbxassetid://123602379376075", volume = .5, rate = .92, gap = .2},
+    hatch_reveal_uncommon = {id = "rbxassetid://123602379376075", volume = .62, rate = 1, gap = .2},
+    hatch_reveal_rare = {id = "rbxassetid://100769608611671", volume = .72, rate = 1.04, gap = .2},
+    hatch_reveal_epic = {id = "rbxassetid://109331854464968", volume = .82, rate = 1.06, gap = .2},
+    hatch_reveal_legendary = {id = "rbxassetid://109331854464968", volume = .9, rate = 1.12, gap = .2},
     shiny_bang = {id = "rbxassetid://124365194004947", volume = .8, rate = 1, gap = .3},
     big_thud = {id = "rbxassetid://88666885925372", volume = .8, rate = 1, gap = .3},
     pickup = {id = "rbxassetid://97315544055472", volume = .35, rate = 1, gap = .06},
@@ -122,7 +124,8 @@ local function enabled(): boolean
 end
 
 -- Returns true when a sound was actually started. Never throws.
-function Sfx.play(name: string): boolean
+-- override (BD-437 layers): {volume = cue volume, rate = playback speed} replace the registered numbers for this one play.
+function Sfx.play(name: string, override: {volume: number?, rate: number?}?): boolean
     local entry = Sfx.Sounds[name]
     if not entry then return false end
     local assetId = Sfx.normalizeId(entry.id)
@@ -158,8 +161,8 @@ function Sfx.play(name: string): boolean
         end
         local count = (playCount[name] or 0) + 1
         playCount[name] = count
-        local volume = Sfx.clampVolume(entry.volume) * Sfx.Master
-        sound.SoundId, sound.Volume, sound.PlaybackSpeed = assetId, volume, entry.rate * (if R then R.jitter(name, count) else 1)
+        local volume = Sfx.clampVolume((override and override.volume) or entry.volume) * Sfx.Master
+        sound.SoundId, sound.Volume, sound.PlaybackSpeed = assetId, volume, ((override and override.rate) or entry.rate) * (if R then R.jitter(name, count) else 1)
         if R then
             local len = (entry :: any).len or R.DefaultLen
             for i = #active, 1, -1 do
@@ -186,6 +189,17 @@ function Sfx.play(name: string): boolean
         if Sfx.RapidNames[name] then lastRapid = now end
     end
     return ok
+end
+
+-- BD-437: second existing cue under an Epic/Legendary reveal sting (SfxRules.RevealLayers), delayed so it never starts with the
+-- main sting. Goes through Sfx.play, so the limiter (max 2 voices), ducking, SOUND toggle and sliders all apply; may be dropped.
+function Sfx.playLayers(revealName: string)
+    local R = rules()
+    local layers = if R then R.layers(revealName) else {}
+    for _, l in layers do
+        local base = Sfx.Sounds[l.cue]
+        if base then task.delay(l.delay, Sfx.play, l.cue, {volume = base.volume * l.volume, rate = base.rate * l.rate}) end
+    end
 end
 
 -- BD-342: soft reward cue that REUSES a registered cue (see SfxRules.Aliases), behind a cooldown.
