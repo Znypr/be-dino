@@ -177,6 +177,7 @@ local SCATTER = {
 }
 local WALLPIECES = {cave_wall_boulder_l = true, cave_wall_pillar = true, cave_wall_arch_small = true} -- put near the wall rim
 local LAVA_PROPS = {rim = 6, steps = 4}
+local CLUSTER_COUNT, CLUSTER_R, CLUSTER_APART = 9, 11, 34 -- floor scatter groups (studs; PROVISIONAL)
 
 -- ---------------------------------------------------------------- small math helpers
 local function dist(ax: number, az: number, bx: number, bz: number): number
@@ -393,10 +394,26 @@ function CaveHubLayout.get(): any
         if dist(x, z, POOL.x, POOL.z) < POOL.r + br + 5 then return false end
         if z > FALL.z - 14 then return false end
         for _, q in placed do
-            if dist(x, z, q[1], q[2]) < (br + q[3]) * 0.9 then return false end -- BD-399: scaled radii, 0.9 (was unscaled 0.8)
+            if dist(x, z, q[1], q[2]) < (br + q[3]) * 1.15 then return false end -- BD-399: scaled radii; 1.15 for the denser clusters (elongated rocks)
         end
         return true
     end
+    -- Floor scatter is grouped, not sprinkled: a few cluster centres on free ground (kept apart, off paths and pads), and every
+    -- plain floor prop lands within CLUSTER_R of one of them. Walkways stay clear because clearOfEverything still applies.
+    local clusters = {}
+    do
+        local ctries = 0
+        while #clusters < CLUSTER_COUNT and ctries < 6000 do
+            ctries += 1
+            local cx, cz = (rand() * 2 - 1) * CaveHubLayout.BoxHalfX, (rand() * 2 - 1) * CaveHubLayout.BoxHalfZ
+            local apart = true
+            for _, c in clusters do
+                if dist(cx, cz, c[1], c[2]) < CLUSTER_APART then apart = false break end
+            end
+            if apart and clearOfEverything(cx, cz, CLUSTER_R, true) then clusters[#clusters + 1] = {cx, cz} end
+        end
+    end
+    built.clusters = clusters
     for _, e in SCATTER do
         local key, count, zone = e[1], e[2], e[3]
         local k = KINDS[key]
@@ -426,6 +443,10 @@ function CaveHubLayout.get(): any
                 local w = wobble(a)
                 local f = if zone == "edge" then 0.7 + rand() * 0.14 else 0.8 + rand() * 0.12
                 x, z = math.cos(a) * BASE_X * w * f, math.sin(a) * BASE_Z * w * f
+            elseif #clusters > 0 then
+                local c = clusters[1 + math.floor(rand() * #clusters)]
+                local ca, cr = rand() * 2 * math.pi, 2 + rand() * (CLUSTER_R - 2)
+                x, z = c[1] + math.cos(ca) * cr, c[2] + math.sin(ca) * cr
             else
                 x, z = (rand() * 2 - 1) * CaveHubLayout.BoxHalfX, (rand() * 2 - 1) * CaveHubLayout.BoxHalfZ
             end
