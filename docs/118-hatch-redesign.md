@@ -115,3 +115,25 @@ See [evidence/2026-10-16-hatch-v2/README.md](evidence/2026-10-16-hatch-v2/README
 3. Crack lines decal (s4 D): no crack lines on the 3D egg during the rattle beat.
 4. Optional cuter egg (s4 A) and the wet-sheen decal (s4 C4).
 5. Owner eye check of the timings (6.7 s build-up) and of the bright wet edge strength; both are single constants.
+
+## 9. Owner guide: bind the assets and see the new hatch (one page)
+
+**Preview now, with placeholders (Studio only).** Open `src/shared/Config.luau`, set `HatchV2Preview = true`, run the playtest in Studio, open an egg. The new sequence plays with the stand-ins: the egg mesh is real, the bucket is the barrel, the splash and droplets use the soft smoke sheet, no crack lines. It only works in an unpublished Studio place (`HatchV2Assets.enabled`); a published server ignores it. Set it back to `false` before committing: `HatchV2` and `HatchV2Preview` are pinned off in the default AND playtest profiles (`verify_release`).
+
+**What each asset should look like.** Style block of [109](109-owner-art-prompt-pack.md) s0; friendly, vibrant, chunky ([114](114-handbook.md): kids' words, saturated colours, no grey or muddy tones). Blender or the owner's ChatGPT, never code-drawn (art rule). Ready prompts are in section 4.
+
+| Slot name (paste this) | What | Size / frames | Colours | Plays as |
+| --- | --- | --- | --- | --- |
+| `hatch_bucket` | chunky cartoon paint bucket, rim, wire handle, open top with flat white paint | mesh, about 1.35 studs tall, one MeshPart | warm neutral metal with one wood band; paint surface pure white (tinted by code) | tips over each egg side |
+| `paintCrown` | thick glossy paint splash: drop, crown, flying droplets, settled puddle | PNG 1024 x 1024, 4 x 4 cells of 256 px, 16 frames in reading order, 15 % cell margin, under 400 KB | white on transparent (code tints it with the egg colours, 114 s5.4) | OneShot, last cell is the puddle |
+| `paintDroplet` | single round droplets of different sizes with a small highlight | same sheet format | white on transparent | Random cell per drop |
+| `paintDrips` | three drips that grow longer | same sheet format | white on transparent | not read yet (drips are code-built gradient streaks); slot is ready |
+| `paintGloss` | wet sheen: diagonal highlight band + two dots | single 1024 x 1024 | white on transparent | not read yet; optional |
+
+Crack lines (section 4 D) have no slot yet: ask the lead to add one when you have the art.
+
+**How to send them.** Upload as in [120](120-pending-owner-uploads-checklist.md) (images as Image not Decal, mesh from `generate_mesh`), then just paste lines like `paintCrown=rbxassetid://123456789` into chat to the lead. The lead runs `python tools/bind_assets.py ids.txt`; nothing is invented, bad ids are refused. After a bucket bind also flip `hatch_v2_bucket_placeholder` in docs/77.
+
+**What to check after (Studio, preview on).** (1) The bucket looks like a paint bucket, not a barrel. (2) The splash reads as thick paint, not smoke, with no square edges (margin too small). (3) Droplets look like round drops. (4) Nothing is blank or a grey square (a wrong or Decal id shows as one: tell the lead to clear the slot and the stand-in returns). (5) Reduce Motion still shows a finished egg at once. (6) Then ask the lead to move the flag to the playtest profile.
+
+Checks: `tools/verify_hatch_v2.py` (slot reads, fallbacks, toggle guard), `tools/verify_asset_slots.py`, `tools/verify_release.py` (flags pinned off).

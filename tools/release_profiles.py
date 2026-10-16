@@ -85,6 +85,8 @@ COMMON_RULES = [
     _flag_off("SecurityTestHarnessEnabled", "security test harness"),
     _flag_off("ArtTestHarnessEnabled", "art preview harness"),
     _flag_off("QaOverlayEnabled", "BD-085 owner phone QA overlay (docs/127); flipped locally for a measurement build, never committed"),
+    _flag_off("HatchV2", "BD-397 v2 hatch; off in every committed build until the owner assets and docs/118 evidence are approved"),
+    _flag_off("HatchV2Preview", "docs/118 s9 Studio-only preview toggle; the owner flips it locally, never committed"),
     _flag_off("DuplicateSettlementProbe", "historical settlement probe"),
     Rule("ProfileDataStoreName", "check", predicate=_store_name, reason="DataStore name limits"),
     Rule("PlaytestUniverseId", "check", predicate=_id_or_zero, reason="BD-004 record"),

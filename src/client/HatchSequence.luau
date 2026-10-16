@@ -20,6 +20,7 @@ local InspectView = require(script.Parent.InspectView)
 local HatchFx = require(script.Parent.HatchFx)
 local MutationReveal = require(script.Parent.MutationReveal) -- BD-162
 local Config = require(Shared.Config)
+local V2Assets = require(Shared.HatchV2Assets) -- docs/118 s9: flag or Studio-only preview toggle
 local EggV2 = require(script.Parent.HatchEggV2) -- BD-397 (docs/118): 3D egg + paint coats behind Config.HatchV2; nil handle = v1 look
 
 local Seq = {}
@@ -335,7 +336,7 @@ function Seq.play(args: Args): Handle
     local fx = ensureLayers(a.panel)
     local kit = fx.paint
     -- BD-397: the v2 3D egg (flag on AND its mesh loaded); otherwise everything below is the shipped v1 look.
-    local v2 = if Config.HatchV2 == true then EggV2.create(fx.back, fx.front, motion) else nil
+    local v2 = if V2Assets.enabled(Config, RunService:IsStudio() and game.GameId == 0) then EggV2.create(fx.back, fx.front, motion) else nil
     if v2 then Timeline.useV2(state, true) end
     local durs = state.durs
     local mr: any = nil -- BD-162: mutation reveal burst, created when the result names an event mutation
