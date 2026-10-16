@@ -5,6 +5,10 @@ import unittest
 from collections import Counter
 from math import sqrt
 ROOT=Path(__file__).resolve().parents[1]
+def _generated_place():
+    import importlib.util
+    spec=importlib.util.spec_from_file_location("packager",ROOT/"tools/build.py");mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+    return mod.build()[0]
 class ResourceTests(unittest.TestCase):
     def setUp(self):self.manifest=json.loads((ROOT/'resources/manifest.json').read_text())
     def test_sources_exist_and_logical_names_are_unique(self):
@@ -42,7 +46,7 @@ class ResourceTests(unittest.TestCase):
         self.assertTrue(all(a['robloxAssetId'] is None for a in self.manifest['assets']))
     def test_generated_place_runs_loading_before_character(self):
         import xml.etree.ElementTree as ET
-        root=ET.parse(ROOT/('build/BeDino-Build'+__import__('re').search(r'Build = "redesign-(\d+)"',(ROOT/'src/shared/Config.luau').read_text()).group(1)+'.rbxlx')).getroot()
+        root=ET.fromstring(_generated_place())
         first=next(i for i in root.findall('Item') if i.attrib['class']=='ReplicatedFirst')
         scripts=list(first.iter('Item'))
         self.assertTrue(any(i.attrib['class']=='LocalScript' for i in scripts))
