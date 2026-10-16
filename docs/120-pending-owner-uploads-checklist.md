@@ -68,3 +68,8 @@ Note: the older fx-v2 smoke, spark and flame sheets are superseded by the upload
 4. Polish and P2 rows last.
 
 After each upload: the lead records ids in docs/77, binds, runs the matching verifier, takes a desktop and phone Studio screenshot next to neighbouring UI, then moves the BD rows to Review / test ([109](109-owner-art-prompt-pack.md) section 7).
+
+## Cave cosy pass (2026-10-16)
+
+- [ ] Owner: soft cave ambience loop for `CaveLightingRules.Bed.id` (registry row `TODO_cave_ambient_bed_loop`, docs/77); nothing plays until set.
+- [ ] Owner/Blender: optional cosier den props (`TODO_cave_den_rest_props`) and a dedicated show-off plinth (`TODO_cave_showoff_pedestal_art`).

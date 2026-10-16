@@ -128,7 +128,7 @@ local KINDS: {[string]: any} = {
     hub_banner = {5.4, 5.5, 0.8, 400, "station"},
     hub_forge_altar = {8, 5, 5, 3500, "station", collider = true},
     hub_forge_ring = {12, 0.5, 12, 900, "station", walk = true},
-    hub_pedestal = {3, 3.5, 3, 1000, "station"},
+    hub_pedestal = {3, 3.5, 3, 1000, "station", collider = true},
     hub_counter_stone = {8.8, 7, 4.5, 3500, "station", collider = true},
     hub_crystal_l = {8, 12, 8, 4000, "station"},
     hub_crystal_s = {3, 4, 3, 1500, "station"},
@@ -159,7 +159,10 @@ local STATION_PROPS: {[string]: {{any}}} = {
     fusion = {{"hub_forge_ring", 1, "centre"}, {"hub_forge_altar", 1, "back"}, {"hub_pedestal", 3, "arc"}, {"hub_crate", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
     style = {{"hub_counter_stone", 1, "back"}, {"hub_crystal_l", 2, "arc"}, {"hub_crystal_s", 5, "arc"}, {"hub_pedestal", 1, "arc"}, {"hub_gem_chest", 1, "arc"}, {"hub_lantern_post", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
     index = {{"hub_pedestal", 4, "arc"}, {"hub_statue_triceratops", 1, "arc"}, {"hub_statue_trex", 1, "arc"}, {"hub_statue_brachiosaurus", 1, "arc"}, {"hub_banner", 2, "arc"}, {"hub_lectern_book", 1, "back"}, {"hub_bench_stone", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    settings = {{"hub_lantern_post", 1, "arc"}, {"hub_gong", 1, "arc"}, {"hub_cushion_moss", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    settings = {{"hub_lantern_post", 1, "arc"}, {"hub_gong", 1, "arc"}, {"hub_cushion_moss", 2, "arc"}, {"hub_bench_stone", 1, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    -- Cosy pass (docs/104 s14, owner 2026-10-16): the Heart gets the show-off pedestal (the FIRST hub_pedestal of the Heart is the spot,
+    -- CaveLightingRules.ShowOff), stone benches and moss cushions to rest on, and two lamp posts. Registered assets only.
+    heart = {{"hub_pedestal", 1, "arc"}, {"hub_bench_stone", 2, "arc"}, {"hub_cushion_moss", 3, "arc"}, {"hub_lantern_post", 2, "arc"}},
     fame = {{"hub_wall_frame", 3, "arc"}, {"hub_lantern_post", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
     gate = {{"hub_gate_arch", 1, "sign"}, {"rock_mossy_boulder", 2, "arc"}, {"hub_sign_arrow", 2, "arc"}},
 }
