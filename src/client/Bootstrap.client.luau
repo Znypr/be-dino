@@ -56,6 +56,7 @@ gui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
 gui.Parent = player:WaitForChild("PlayerGui")
 local blur = Instance.new("BlurEffect")
 blur.Name,blur.Size,blur.Parent = "BeDinoModalBlur",0,Lighting
+local ModalBlurGuard = require(Shared.ModalBlurGuard) -- BD-296: the blur only shows while a modal is really visible
 local motion = true
 require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SettingsModel")).onChange(function(s) motion=not s.calm end) -- BD-266 Calm motion also quiets this file's shake and slides
 local active = ""
@@ -153,11 +154,23 @@ local function close()
     task.delay(if motion then .13 else 0,function() if modalVersion==version then shade.Visible=false end end)
     Theme.animate(blur,.12,{Size=0})
 end
--- The modal blur belongs to an open modal only: if the panel is hidden (even programmatically) the blur is forced back to 0.
-task.spawn(function()
+-- The modal blur belongs to a visible modal only (BD-296). Visible means: a menu is open, the scrim is shown, AND the BeDinoUI ScreenGui is
+-- enabled and still in the PlayerGui. Disabling or destroying the ScreenGui while a menu was open used to leave the blur at 8 with nothing on screen.
+local function modalState(): ModalBlurGuard.State
+    return {active=active, shadeVisible=shade.Visible, guiEnabled=gui.Enabled, guiAttached=gui:IsDescendantOf(player) and shade:IsDescendantOf(gui)}
+end
+local function blurTarget(): number return ModalBlurGuard.target(modalState(),motion) end
+local function clearStrayBlur()
+    if ModalBlurGuard.mustClear(modalState(),blur.Size) then Theme.animate(blur,.08,{Size=0}) blur.Size=0 end -- cancels any running open tween, then snaps
+end
+for _,signal in {gui:GetPropertyChangedSignal("Enabled"),gui.AncestryChanged,shade:GetPropertyChangedSignal("Visible"),shade.AncestryChanged} do
+    signal:Connect(clearStrayBlur)
+end
+gui.Destroying:Connect(function() blur.Size=0 end) -- a destroyed UI can never have a modal open
+task.spawn(function() -- slow backstop for anything that slips past the change signals
     while true do
         task.wait(.5)
-        if (active=="" or not shade.Visible) and blur.Size>0 then blur.Size=0 end
+        clearStrayBlur()
     end
 end)
 local closeButton=button(header,"X",770,1,80,76,C.red,close)
@@ -332,7 +345,7 @@ local function open(name: string)
     Theme.animate(scale,.16,{Scale=viewportScale()})
     Theme.animate(panel,.16,{Position=UDim2.fromScale(.5,.5)})
     Theme.animate(shade,.14,{BackgroundTransparency=.42})
-    Theme.animate(blur,.16,{Size=if motion then 8 else 0})
+    Theme.animate(blur,.16,{Size=blurTarget()})
     render(name)
     -- Animate the content as one layer, keeping large collections inexpensive.
     body.Position=require(script.Parent.ModalCompact).place(false,motion)
