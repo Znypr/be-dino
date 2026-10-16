@@ -31,3 +31,7 @@ Later candidates: low-poly crystal, golden statue (fusion reward), glow/neon (My
 1. Skin bought per species or per individual dino copy?
 2. Price: crystals, Robux, or both (Robux stays off until the release flags allow it).
 3. Confirm 'cartoon' as the base look after a 2-3 species pilot.
+
+## Defeat hook and sound brief (BD-249, 2026-10-16)
+- Code: `LowPolyPose.sampleDefeat(role, side, lead, ctx, amp, out, class, skin)`; the animator reads the visual attribute `LPSkin` (Base, Plush, Clay, Bricks; anything else is Base). Behind `Config.LowPolyDinos` (off). Reduce Motion: no motion (the fade stays the fallback).
+- Sound brief (the owner judges by ear; nothing is made yet): one quiet, short sound per skin, never sharp or loud: Base a soft "poof", Plush a gentle "pfff" air leak, Clay a soft squish "pomp", Bricks two or three tiny brick clicks. Under 1 s, low volume, SFX pack rules (docs/87).
