@@ -180,7 +180,7 @@ local function place(folder: Folder, params: RaycastParams, p: any, template: Me
     end
     mesh.CFrame = CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0)
     if Props.Solid[key] then mesh.CanCollide, mesh.CanQuery = true, true end
-    local warm = (Props.Warm :: any)[src.key] or (Props.Warm :: any)[key]
+    local warm = (Props.Warm :: any)[src.key] or (Props.Warm :: any)[key] or (Props.Tone :: any)[src.key] or (Props.Tone :: any)[key]
     if warm then -- BD-285 QA: blue / pink generated rocks -> flat warm basalt
         for _, child in mesh:GetChildren() do
             if child:IsA("SurfaceAppearance") then child:Destroy() end

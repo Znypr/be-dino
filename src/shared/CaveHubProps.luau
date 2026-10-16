@@ -141,8 +141,11 @@ Props.Warm = {
     -- flat amber Color until the owner regenerates amber meshes (BD-400). Same mechanism as the two rows above; no new asset id.
     hub_crystal_s = {color = {255, 190, 60}, material = "Plastic"},
     hub_crystal_l = {color = {255, 190, 60}, material = "Plastic"},
-    -- Lead Studio check 2026-10-17: the generated moss curtains read as pale yellow blocks and the round boulder as a glowing white
-    -- rock under the warm lamps; flat moss green and warm grey instead (same mechanism, no new ids).
+}
+
+-- Lead Studio check 2026-10-17: the generated moss curtains read as pale yellow blocks and the round boulder as a glowing white rock
+-- under the warm lamps. Same flat-recolour mechanism as Warm, but not red-brown: moss green and warm grey (no new ids).
+Props.Tone = {
     cave_moss_hang = {color = {78, 108, 58}, material = "SmoothPlastic"},
     cave_rock_round = {color = {112, 100, 88}, material = "Slate"},
 }
