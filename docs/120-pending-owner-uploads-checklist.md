@@ -38,6 +38,10 @@ Note: the older fx-v2 smoke, spark and flame sheets are superseded by the upload
 | Potion rarity frames (5, P2) | BD-101 | ChatGPT | `resources/ui/v2/components/frame-{common,uncommon,rare,epic,legendary}-v1.png` | 512x512 9-slice, empty centre | potion shop cards | CODE | 109 D3 |
 | Combat HUD art, crystal pack icons, cave sign medallions (P2) | BD-248, BD-331, docs/104 | ChatGPT | see 109 E1-E3 | 1024 PNG | CombatHud, crystal cards, cave sign SurfaceGuis | CODE | 109 E1-E3 |
 | Cave lava crust / flow texture (BD-385, BD-294) | BD-385 | Blender render (no code-drawn art) | `resources/effects/cave-lava-crust-v1.png` | 1024 tileable, warm orange to dark crust, soft alpha edge, calm and friendly | `CaveLavaFx` falls sheet layers (today: existing swirl and flame sheets) | TODO | 104 s5 |
+| Anime FX P0 (docs/123): soft flame-tongue flipbook, star pop flipbook | BD-430 | Blender | `resources/effects/fx-v4/flame-tongue.png`, `star-pop.png` | 4x4 of 256 = 1024, white on alpha, under 400 KB | `EffectAssets.luau` | TABLE | docs/123 s3 |
+| Anime FX P0: shock dome mesh + gradient | BD-430 | Blender, Studio upload | `assets/blender/fx/shock-dome.fbx`, `resources/effects/fx-v4/dome-gradient.png` | about 120 tris; 512 px white on alpha | BD-433 code | CODE | docs/123 s3 |
+| Anime FX P1: light shaft cone, aura shell, speed-line streaks | BD-431 | Blender | `assets/blender/fx/shaft-cone.fbx`, `aura-shell.fbx`; `resources/effects/fx-v4/speed-streaks.png` | cone about 80 tris, shell about 150, streaks 512x512 | BD-432, BD-433 code | CODE | docs/123 s3 |
+| Anime FX P2: rainbow-shift gradient strip, soft vignette rim ring (UI) | BD-435 | Blender | `resources/effects/fx-v4/rainbow-strip.png`, `rim-ring-ui.png` | 1024x64; 1024 ring, white on alpha | `EffectAssets.luau` | TABLE | docs/123 s3 |
 
 ## 3. Hatch v2 (3D and paint flipbooks, docs/118, BD-397; flag `Config.HatchV2 = false`)
 
