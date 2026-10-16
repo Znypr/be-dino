@@ -13,7 +13,7 @@ local TouchLayout = {}
 
 export type Rect = {x: number, y: number, w: number, h: number}
 
-TouchLayout.HUD = {w = 390, h = 94}
+TouchLayout.HUD = {w = 210, h = 64} -- BD-080: egg plate (was the 390 x 94 growth tile)
 TouchLayout.CRYSTAL = {w = 260, h = 48}
 TouchLayout.TIMERS_W = 286
 TouchLayout.LEAP_H, TouchLayout.WEATHER_H, TouchLayout.BUFFS_H = 60, 62, 68
@@ -177,7 +177,7 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
     if TouchLayout.overlaps(TouchLayout.rendered(notice), {x = rail.x, y = rail.y, w = rail.w, h = rail.h}) then
         notice.x, notice.y = m, badgeY + 18
         -- Seven nav buttons give a wider rail: keep the (short, touch) notice left of it.
-        notice.w = math.max(150, math.min(notice.w, rail.x - m - notice.x - 1))
+        notice.w = math.max(60, math.min(notice.w, rail.x - m - notice.x - 1)) -- BD-080: floor 60, Bootstrap scales the text to fit
     end
     return {
         touch = true,
@@ -187,7 +187,7 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
         rail = rail,
         timers = timers,
         action = action,
-        badge = {x = m, y = badgeY, scale = 1, w = 150, h = 16, textSize = 12},
+        badge = {x = m, y = badgeY, scale = 1, w = math.max(60, math.min(150, rail.x - m - 2)), h = 16, textSize = 12}, -- BD-080: the compact egg plate leaves less room before the rail
         notice = notice,
         toastScale = math.min(1, (width - 20) / 440),
     }

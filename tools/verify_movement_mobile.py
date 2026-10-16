@@ -172,7 +172,7 @@ local function check(width, height, touch, measured)
  end
  if touch then
   assert(layout.rail.button.textSize >= 10, label .. ": nav label too small")
-  assert(20 * layout.hud.scale >= 11, label .. ": HUD catches text below 11 px")
+  assert(30 * layout.hud.scale >= 11, label .. ": HUD eggs text below 11 px")
   assert(layout.action.w * layout.action.scale >= 2 * Config.TouchMinTargetPx, label .. ": Home too narrow")
   assert(layout.timers.weatherVisible, label .. ": weather hidden")
   local centre = layout.action.x + layout.action.w * layout.action.scale / 2
@@ -181,7 +181,7 @@ local function check(width, height, touch, measured)
   -- Desktop keeps the Build 020 rail/HUD/wallet geometry.
   local small = math.max(0.3, math.min(1, width / 1000, height / 800))
   assert(layout.rail.x == 14 and math.abs(layout.rail.y + layout.rail.h * small / 2 - height / 2) < 1e-6 and layout.rail.button.w == 172)
-  assert(layout.hud.x == 18 and math.abs(layout.hud.y + 94 * small - (height - 18)) < 1e-6)
+  assert(layout.hud.x == 18 and math.abs(layout.hud.y + TouchLayout.HUD.h * small - (height - 18)) < 1e-6)
   assert(math.abs(layout.crystal.x + 260 * layout.crystal.scale - (width - 20)) < 1e-6)
  end
  return layout
