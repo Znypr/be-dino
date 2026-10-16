@@ -82,6 +82,14 @@ local function escape(s: string): string
     return out
 end
 
+-- BD-441 (docs/132): "Tell us!" stays hidden on minute zero. Shown only once a run has ended (sawRunEnd), or for a returning
+-- player who already has eggs/dinos from before (foundEgg) and is not in a run right now.
+function PlaytestFeedback.showButton(info: any): boolean
+    if type(info) ~= "table" then return false end
+    if info.sawRunEnd == true then return true end
+    return info.foundEgg == true and info.runActive ~= true
+end
+
 local ORDER = {"event", "fun", "level", "looks", "runs", "location", "species", "text"}
 function PlaytestFeedback.line(event: {[string]: any}): string
     local parts = {}

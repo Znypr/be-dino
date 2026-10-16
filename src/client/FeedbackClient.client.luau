@@ -39,6 +39,7 @@ local PANEL, CARD, ACCENT = Color3.fromRGB(42, 40, 53), Color3.fromRGB(61, 58, 7
 
 local open = make("TextButton", gui, "TellUsButton", UDim2.fromOffset(120, 48), UDim2.new(0, 12, 1, -68))
 style(open, "Tell us!", Color3.fromRGB(194, 86, 255), 24)
+open.Visible = false -- BD-441: hidden until the first run has ended (Rules.showButton)
 
 local panel = make("Frame", gui, "FeedbackPanel", UDim2.fromOffset(420, 330), UDim2.new(0.5, -210, 0.5, -165))
 panel.BackgroundColor3, panel.Visible = PANEL, false
@@ -83,6 +84,31 @@ style(send, "SEND", ACCENT, 24)
 send.TextColor3 = Color3.fromRGB(13, 15, 20)
 local close = make("TextButton", panel, "FeedbackClose", UDim2.fromOffset(190, 48), UDim2.fromOffset(218, 276))
 style(close, "CLOSE", CARD, 24)
+
+-- BD-441: watch the character's RunState. Active then anything else = a run ended. Own state, no Bootstrap locals.
+do
+    local Ftue = require(Shared:WaitForChild("FtueRules"))
+    local PrivateState = require(script.Parent:WaitForChild("PrivateState"))
+    local sawActive, sawRunEnd = false, false
+    local function refresh()
+        local c = player.Character
+        local active = c ~= nil and c:GetAttribute("RunState") == "Active"
+        if active then sawActive = true elseif sawActive then sawRunEnd = true end
+        local okJson, decoded = pcall(function() return game:GetService("HttpService"):JSONDecode(PrivateState.str("CollectionJson", "{}")) end)
+        local found = Ftue.hasFoundEgg({activeEggs = PrivateState.get("ActiveChestCount"), waitingEggs = PrivateState.get("QueuedEggsWaiting"),
+            lastRunEggs = PrivateState.get("LastRunEggCount"), copies = Ftue.collectionCopies(if okJson then decoded else {})})
+        open.Visible = Rules.showButton({sawRunEnd = sawRunEnd, foundEgg = found, runActive = active})
+        if not open.Visible then panel.Visible = false end
+    end
+    local function watch(c: Model)
+        c:GetAttributeChangedSignal("RunState"):Connect(refresh)
+        refresh()
+    end
+    player.CharacterAdded:Connect(watch)
+    if player.Character then watch(player.Character) end
+    for _, name in {"CollectionJson", "ActiveChestCount", "QueuedEggsWaiting", "LastRunEggCount"} do PrivateState.onChanged(name, refresh) end
+    refresh()
+end
 
 open.Activated:Connect(function() status.Text = "" panel.Visible = not panel.Visible end)
 close.Activated:Connect(function() panel.Visible = false end)

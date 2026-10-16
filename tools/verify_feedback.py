@@ -23,6 +23,10 @@ assert(F.allow(s,120))
 local n=2 for i=1,30 do if F.allow(s,120+i*121) then n+=1 end end
 assert(n==10,"session cap "..n)
 local ok2,why2=F.allow(s,1e6) assert(not ok2 and why2=="limit")
+-- BD-441: button hidden on minute zero, shown after a run ended or for a returning player outside a run
+assert(not F.showButton(nil) and not F.showButton({}) and not F.showButton({runActive=true,foundEgg=true}))
+assert(not F.showButton({foundEgg=false,runActive=false,sawRunEnd=false}))
+assert(F.showButton({sawRunEnd=true,runActive=false}) and F.showButton({foundEgg=true,runActive=false}))
 -- event and line: whitelisted keys, escaping, no ids
 local e=F.event({fun=3,level=2,looks=1,filteredText='say "hi" \\ ###\nnew',runs=3,location="Run",species="trex",extra="x"})
 assert(e.location=="Run" and e.runs==3 and e.species=="trex" and e.extra==nil)
@@ -54,6 +58,7 @@ def static():
     assert 'PlaytestFeedbackEnabled' in cl and 'UDim2.fromOffset(120, 48)' in cl, 'button >= 44 px and gated'
     for _, h in re.findall(r'fromOffset\((\d+), (\d+)\), UDim2\.fromOffset\(\d+, y\)', cl):
         assert int(h) >= 44
+    assert 'open.Visible = false' in cl and 'Rules.showButton' in cl, 'BD-441 button hidden until first run ends'
     assert 'FeedbackService' in (ROOT / 'src/server/Bootstrap.server.luau').read_text(encoding='utf-8')
     prof = (ROOT / 'tools/release_profiles.py').read_text(encoding='utf-8')
     assert '_flag_off("PlaytestFeedbackEnabled"' in prof and 'Rule("PlaytestFeedbackEnabled", "set", True' in prof
