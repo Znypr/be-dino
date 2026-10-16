@@ -45,7 +45,7 @@ function Rules.dimmed(destination: any, caveHub: any, runState: any): boolean
     return caveHub == true and typeof(destination) == "string" and Rules.RunDimmed[destination] == true and Rules.inRun(runState)
 end
 
--- in = {caveHub, destination, runState, teleportShops, remote (HubTravel exists), busy}
+-- in = {caveHub, destination, runState, fastTravelPerk, fastTravelOwned, teleportShops, remote (HubTravel exists), busy}
 -- out = {kind = "open"} | {kind = "travel", station} | {kind = "guide", station} | {kind = "blocked", toast}
 -- "guide" = Teleport to shops is OFF at home: HubGuideClient draws the moss trail (falls back to a plain open on the pad).
 function Rules.decide(i: any): any
@@ -54,6 +54,7 @@ function Rules.decide(i: any): any
     if Rules.inRun(i.runState) then return {kind = "open"} end -- POTIONS / SETTINGS in a run: as today
     local station = Rules.stationFor(i.destination)
     if station == nil then return {kind = "open"} end
+    if i.fastTravelPerk == true and i.fastTravelOwned ~= true then return {kind = "guide", station = station} end -- BD-391: not bought: walk with the glow guide
     if i.teleportShops == false then return {kind = "guide", station = station} end -- BD-289: walk there, with the moss trail
     if i.remote ~= true then return {kind = "open"} end
     if i.busy == true then return {kind = "blocked", toast = nil} end -- a trip is already running: ignore the tap quietly

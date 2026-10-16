@@ -368266,6 +368266,7 @@ return table.freeze({
     TerrainTop = 120,
     ArenaHalfWidth = 416, -- world v2: 1.6x the 260 of the 520 map (IslandLayout.Scale)
     SanctuaryCenterZ = 521, -- hub centre: ArenaHalfWidth + 105 (it sits past the north boundary)
+    FastTravelPerk = false, -- BD-391/405 (docs/115 D22): true = fast travel to shops is a Crystal Shop perk (crystals, no Robux); false = unchanged. Needs CaveHub.
     CaveHub = false, -- BD-280 (docs/104): true = big cave Sanctuary at CaveHubLayout.CenterZ; false = the current hub, unchanged
     CameraMinZoom = 12,
     CameraMaxZoom = 110,
@@ -374980,7 +374981,7 @@ function Rules.dimmed(destination: any, caveHub: any, runState: any): boolean
     return caveHub == true and typeof(destination) == "string" and Rules.RunDimmed[destination] == true and Rules.inRun(runState)
 end
 
--- in = {caveHub, destination, runState, teleportShops, remote (HubTravel exists), busy}
+-- in = {caveHub, destination, runState, fastTravelPerk, fastTravelOwned, teleportShops, remote (HubTravel exists), busy}
 -- out = {kind = "open"} | {kind = "travel", station} | {kind = "guide", station} | {kind = "blocked", toast}
 -- "guide" = Teleport to shops is OFF at home: HubGuideClient draws the moss trail (falls back to a plain open on the pad).
 function Rules.decide(i: any): any
@@ -374989,6 +374990,7 @@ function Rules.decide(i: any): any
     if Rules.inRun(i.runState) then return {kind = "open"} end -- POTIONS / SETTINGS in a run: as today
     local station = Rules.stationFor(i.destination)
     if station == nil then return {kind = "open"} end
+    if i.fastTravelPerk == true and i.fastTravelOwned ~= true then return {kind = "guide", station = station} end -- BD-391: not bought: walk with the glow guide
     if i.teleportShops == false then return {kind = "guide", station = station} end -- BD-289: walk there, with the moss trail
     if i.remote ~= true then return {kind = "open"} end
     if i.busy == true then return {kind = "blocked", toast = nil} end -- a trip is already running: ignore the tap quietly
@@ -375054,7 +375056,7 @@ HubTravelRules.RateSeconds = 0.8 -- PROVISIONAL (docs/104 s7): one request per p
 HubTravelRules.OccupiedRadius = 2.5 -- studs: an arrival spot this close to another player counts as taken (spots are &gt;= 3 apart)
 HubTravelRules.MaxKeyLength = 24
 
--- Reasons: flag_off, bad_request, not_loaded, not_home, no_dino, dead, outside, unknown, settings, rate_limited
+-- Reasons: flag_off, not_owned, bad_request, not_loaded, not_home, no_dino, dead, outside, unknown, settings, rate_limited
 local function finite(n: any): boolean return typeof(n) == "number" and n == n and n ~= math.huge and n ~= -math.huge end
 
 -- Station id from a request (`{station = "nests"}` or the bare string); nil when malformed.
@@ -375071,6 +375073,8 @@ function HubTravelRules.validate(request: any, state: any): (boolean, string?)
     local key = HubTravelRules.stationKey(request)
     if key == nil or not finite(state.now) then return false, "bad_request" end
     if state.profileState ~= "Loaded" then return false, "not_loaded" end
+    -- BD-391/405 (docs/115 D22): with the perk flag on, only a player who bought Fast travel may be moved.
+    if state.fastTravelPerk == true and state.fastTravelOwned ~= true then return false, "not_owned" end
     if state.runState ~= "Sanctuary" then return false, "not_home" end
     if state.dinoAttached ~= true then return false, "no_dino" end
     if state.alive ~= true then return false, "dead" end
@@ -376353,7 +376357,9 @@ function Pose.sample(role: string, side: number, lead: boolean, t: number, phase
 end
 -- BD-233 spike: jump / leap / land / water-surge actions. Phases: crouch -&gt; push (stretch) -&gt; air (tuck, held until the dino lands) -&gt; land (squash);
 -- Water has no air time: a single "surge" (forward dash). Everything is calm and short (docs/87), absolute offsets from the REST pose, bounded.
-Pose.Phases = {"crouch", "push", "air", "land", "surge", "windup", "bite"}
+Pose.Phases = {"crouch", "push", "air", "land", "surge", "windup", "bite", "defeat"}
+Pose.DefeatSeconds = 1.5 -- docs/97: a skin defeat is about 1.5 s, soft and funny
+Pose.Skins = {"Base", "Plush", "Clay", "Bricks"}
 Pose.TuckTime = 0.18 -- seconds for the airborne tuck to settle
 local CLASS_SCALE = { -- q = crouch/squash depth, s = push-off stretch, t = airborne tuck, l = landing squash
     Ground = {q = 1, s = 1, t = 1, l = 1}, Armored = {q = 1.3, s = 0.4, t = 0.5, l = 1.5},
@@ -376367,6 +376373,7 @@ function Pose.duration(phase: string, aggr: number, class: string?): number
     if phase == "surge" then return 0.40 + 0.15 * math.clamp(finite(aggr), 0, 1) end
     if phase == "windup" then return 0.50 end -- BD-324: wild predator telegraph (Rules.Config.WindupSeconds); held until the cue ends
     if phase == "bite" then return 0.40 end
+    if phase == "defeat" then return Pose.DefeatSeconds end
     return 0
 end
 local function ease(u: number): number u = math.clamp(u, 0, 1) return u * u * (3 - 2 * u) end
@@ -376376,7 +376383,7 @@ function Pose.actionWeight(phase: string, p: number): number
     if phase == "crouch" then return ease(p) end
     if phase == "land" then return 1 - ease(math.clamp((p - 0.5) / 0.5, 0, 1)) end
     if phase == "surge" or phase == "bite" then return ease(p / 0.15) * (1 - ease((p - 0.7) / 0.3)) end
-    if phase == "windup" then return ease(p) end
+    if phase == "windup" or phase == "defeat" then return ease(p / 0.35) end -- defeat: eases in, then HOLDS (the dino is leaving the world)
     return 1
 end
 -- ctx: phase, p (0..1 progress of a timed phase), t (seconds since the phase began), aggr (0 jump .. 1 leap), carry (0..1 tuck amount when landing began).
@@ -376450,6 +376457,62 @@ function Pose.sampleAction(role: string, side: number, lead: boolean, ctx: Ctx, 
         roll = open - fold -- the fold itself is posture and stays under Reduce Motion
         pitch = -0.1 * W
     end
+    out.pitch = math.clamp(finite(pitch) * a, -Pose.MaxAngle, Pose.MaxAngle)
+    out.roll = math.clamp(finite(roll) * a + fold, -Pose.MaxFold, Pose.MaxFold)
+    out.yaw = math.clamp(finite(yaw) * a, -Pose.MaxAngle, Pose.MaxAngle)
+    out.dy = math.clamp(finite(dy) * a, -Pose.MaxOffset, Pose.MaxOffset)
+    out.dz = math.clamp(finite(dz) * a, -Pose.MaxOffset, Pose.MaxOffset)
+    out.fwd = 0
+    return out
+end
+-- BD-249: gentle per-skin defeat hook (docs/97). Same shape as sampleAction (absolute offsets from the rest pose, bounded, Reduce Motion = rest).
+-- Base: tips over sideways with a little dizzy wobble. Plush: slowly deflates (slumps down) with a soft wobble. Clay: pressed down flat
+-- (sinks, limbs spread). Bricks: the parts drift apart a few percent, like a toy coming loose (never gore; the shards/sounds are art tasks).
+-- Unknown skin names fall back to Base. ctx.p = 0..1 over DefeatSeconds, ctx.t = seconds.
+function Pose.skinOf(name: any): string
+    for _, k in Pose.Skins do if k == name then return k end end
+    return "Base"
+end
+function Pose.sampleDefeat(role: string, side: number, lead: boolean, ctx: Ctx, amp: number, out: Out, class: string?, skin: string?): Out
+    local a = math.clamp(finite(amp), 0, 1)
+    local s = if side &lt; 0 then -1 else 1
+    local p, t = math.clamp(finite(ctx.p), 0, 1), math.max(0, finite(ctx.t))
+    local e = ease(p)
+    local kind = Pose.skinOf(skin)
+    local pitch, roll, yaw, dy, dz = 0, 0, 0, 0, 0
+    local fold = 0
+    if kind == "Base" then
+        local wob = math.sin(t * 9) * (1 - e) * 0.05
+        if role == "body" then roll, dy = 0.45 * e + wob, -0.03 * e
+        elseif role == "head" or role == "neck" then roll, pitch, yaw = 0.25 * e + wob, 0.15 * e, math.sin(t * 7) * 0.10 * (1 - e)
+        elseif role == "tail" then roll, yaw = 0.2 * e, 0.2 * math.sin(t * 5) * (1 - e)
+        elseif role == "leg" or role == "arm" then pitch, roll = -0.25 * e * s, 0.2 * e
+        elseif role == "flipper" then roll = s * 0.3 * e end
+    elseif kind == "Plush" then
+        local pff = math.sin(t * 6) * (1 - e) * 0.03
+        if role == "body" then dy, pitch = -0.06 * e, 0.10 * e + pff
+        elseif role == "head" or role == "neck" then dy, pitch = -0.05 * e, 0.30 * e
+        elseif role == "tail" then pitch = 0.25 * e
+        elseif role == "leg" or role == "arm" then pitch = 0.3 * e * (if lead then 1 else -1) elseif role == "flipper" then roll = s * 0.25 * e end
+    elseif kind == "Clay" then
+        local press = ease(math.clamp(p / 0.4, 0, 1))
+        local back = ease(math.clamp((p - 0.7) / 0.3, 0, 1)) * 0.3 -- starts to reshape at the end
+        local k = press * (1 - back)
+        if role == "body" then dy = -0.07 * k
+        elseif role == "head" or role == "neck" then dy, pitch = -0.06 * k, 0.10 * k
+        elseif role == "tail" then dy, pitch = -0.04 * k, 0.12 * k
+        elseif role == "leg" or role == "arm" then roll, dy = s * 0.35 * k, -0.02 * k
+        elseif role == "flipper" then roll = s * 0.35 * k end
+    else -- Bricks
+        local drift = ease(math.clamp(p / 0.6, 0, 1))
+        local rattle = math.sin(t * 22) * (1 - e) * 0.004
+        if role == "body" then dy = -0.04 * drift + rattle
+        elseif role == "head" or role == "neck" then dy, dz, pitch = 0.02 * drift, 0.03 * drift, 0.35 * drift
+        elseif role == "tail" then dz, dy, yaw = -0.04 * drift, -0.02 * drift, 0.30 * drift
+        elseif role == "leg" or role == "arm" then dy, roll = -0.03 * drift + rattle, s * 0.30 * drift
+        elseif role == "flipper" then roll = s * 0.4 * drift end
+    end
+    if role == "wing" then fold = -s * Pose.FoldAngle roll = s * 0.1 * e end
     out.pitch = math.clamp(finite(pitch) * a, -Pose.MaxAngle, Pose.MaxAngle)
     out.roll = math.clamp(finite(roll) * a + fold, -Pose.MaxFold, Pose.MaxFold)
     out.yaw = math.clamp(finite(yaw) * a, -Pose.MaxAngle, Pose.MaxAngle)
@@ -379411,6 +379474,9 @@ return table.freeze({
     -- 4 eggs (500 food) -&gt; 30, 40 eggs (5,000 food) -&gt; 220 (owner's illustrative 30/220), 50 eggs -&gt; 273; cap 300 bounds it.
     RunCrystalPerEggHundredths=750, RunCrystalTierEggs=4, RunCrystalPerExtraEggHundredths=530, RunCrystalCap=300,
     RandomEggPrice=150,
+    -- BD-391/405 (docs/115 D22): Fast travel perk. PROVISIONAL price (owner 2026-10-16: a mid goal, about 500; earlier Q10 options were 300 / 600 / 1,200); bought with crystals only.
+    FastTravelPrice=500,
+    Perks={{id="fastTravel",name="Fast travel",price=500}},
     ConditionUpgrades={
         {level=1,price=100,requiredLevel=3},{level=2,price=300,requiredLevel=8},
         {level=3,price=800,requiredLevel=16},{level=4,price=1800,requiredLevel=28},
@@ -379664,6 +379730,10 @@ function Rules.valid(p): boolean
         if typeof(p.equippedTrail)~="string" then return false end
         if p.equippedTrail~="" and (not p.trails or not p.trails[p.equippedTrail]) then return false end
     end
+    if p.perks~=nil then
+        if typeof(p.perks)~="table" then return false end
+        for id,value in p.perks do if typeof(id)~="string" or not Rules.item(Config.Perks,id) or value~=true then return false end end
+    end
     if p.shop~=nil then
         local shop=p.shop
         if typeof(shop)~="table" or not finite(shop.window) or shop.window&lt;0 or shop.window%1~=0 or typeof(shop.bought)~="table" then return false end
@@ -379736,6 +379806,15 @@ function Rules.apply(profile,action,id,now,replace,amount): (boolean,string)
         p.shop.bought[potionId]=(p.shop.bought[potionId] or 0)+1
         p.crystals-=item.price p.potions[potionId]=(p.potions[potionId] or 0)+1
         return true,"purchased"
+    elseif action=="buyPerk" then
+        local item=Rules.item(Config.Perks,id)
+        if not item then return false,"unknown_item" end
+        if Rules.hasPerk(p,id) then return false,"already_owned" end
+        if p.crystals&lt;item.price then return false,"insufficient_crystals" end
+        p.crystals-=item.price
+        p.perks=p.perks or {}
+        p.perks[id]=true
+        return true,"purchased"
     elseif action=="usePotion" then
         local item=Rules.item(Config.Potions,id)
         if not item then return false,"unknown_item" end
@@ -379746,6 +379825,10 @@ function Rules.apply(profile,action,id,now,replace,amount): (boolean,string)
         return true,"activated"
     end
     return false,"invalid_action"
+end
+-- BD-391/405: perks are an additive optional table `perks = {fastTravel = true}`; absent = nothing owned (old profiles unchanged).
+function Rules.hasPerk(p,id: string): boolean
+    return typeof(p)=="table" and typeof(p.perks)=="table" and p.perks[id]==true
 end
 function Rules.level(p)
     return math.min(Config.AccountMaxLevel,1+math.floor(math.sqrt((p.accountXP or 0)/Config.AccountXPPerLevel)))
@@ -554375,6 +554458,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Rules = require(ReplicatedStorage.Shared.HubTravelRules)
+local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 local FallRecovery = require(script.Parent.FallRecovery)
 local HubTravelService = {}
@@ -554394,7 +554478,14 @@ local function gather(player: Player, character: Model?): any
         local r = if other ~= player and c then c:FindFirstChild("HumanoidRootPart") else nil
         if r and r:IsA("BasePart") then occupied[#occupied + 1] = {x = r.Position.X, z = r.Position.Z} end
     end
+    local owned = false
+    if Config.FastTravelPerk == true then
+        local progress = require(script.Parent.ProfileRepository).progression(player)
+        owned = progress ~= nil and ProgressionRules.hasPerk(progress, "fastTravel")
+    end
     return {
+        fastTravelPerk = Config.FastTravelPerk == true,
+        fastTravelOwned = owned,
         caveHub = Config.CaveHub == true,
         profileState = player:GetAttribute("ProfileState"),
         runState = if character then character:GetAttribute("RunState") else nil,
@@ -558145,6 +558236,7 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
     if typeof(token)~="string" or #token&lt;1 or #token&gt;80 then return false,"invalid_token" end
     if (action=="buyEgg" or action=="upgradeCondition") and next(Config.DeveloperProducts)~=nil
         and (not Config.PaidRandomItemsEnabled or PrivateState.get(player, "PaidRandomEligible")~=true) then return false,"random_items_unavailable" end
+    if action=="buyPerk" and (Config.FastTravelPerk~=true or Config.CaveHub~=true) then return false,"perk_unavailable" end -- BD-391/405: flag off = no purchase
     local eggId=nil
     local egg=nil
     local purchaseConditionLevel=ProfileRepository.progression(player).conditionLevel
@@ -558525,7 +558617,7 @@ function Service.start(repository)
     local remote=Instance.new("RemoteEvent") remote.Name="ProgressionAction" remote.Parent=ReplicatedStorage.BeDinoRemotes
     local response=Instance.new("RemoteEvent") response.Name="ProgressionResult" response.Parent=ReplicatedStorage.BeDinoRemotes
     remote.OnServerEvent:Connect(function(player,action,id,token,replace,...)
-        if select("#",...)~=0 or typeof(action)~="string" or not table.find({"buyAura","equipAura","buyTrail","equipTrail","buyPotion","usePotion","buyEgg","upgradeCondition"},action)
+        if select("#",...)~=0 or typeof(action)~="string" or not table.find({"buyAura","equipAura","buyTrail","equipTrail","buyPotion","usePotion","buyEgg","upgradeCondition","buyPerk"},action)
             or typeof(id)~="string" or #id&gt;40 or typeof(token)~="string" or #token&lt;1 or #token&gt;80
             or typeof(replace)~="boolean" then return end
         local now=os.clock() local bucket=buckets[player]
@@ -559839,6 +559931,15 @@ render=function(name: string)
             label(body,ProgressionConfig.RandomEggPrice.." Crystals\nBalance: "..num("Crystals").."  •  Level "..num("AccountLevel"),270,cardsY+45,535,60,22)
             button(body,"ODDS / DETAILS",270,cardsY+119,535,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("oddsSimple") end)
             button(body,"BUY EGG",270,cardsY+targetHeight+130,535,targetHeight,C.accent,function() open("eggPurchase") end)
+            -- BD-391/405 (docs/115 D22): Fast travel perk, bought with crystals. PROVISIONAL price. Walking stays the default.
+            if Config.FastTravelPerk and Config.CaveHub then
+                local owned=type(p.perks)=="table" and p.perks.fastTravel==true
+                local perkPrice=ProgressionConfig.FastTravelPrice
+                label(body,"Fast travel: zip to the shops",0,math.max(cardsY+targetHeight*2+150,336),520,34,22,C.gold)
+                button(body,if owned then "YOURS" else perkPrice.." Crystals",540,math.max(cardsY+targetHeight*2+146,332),284,40,if owned then C.card else C.accent,function()
+                    if not owned then transact("buyPerk","fastTravel") open("auras") end
+                end).Active=not owned
+            end
             return
         elseif cosmeticTab=="conditions" then
             local weights=ShopOdds.conditionPercents(p.conditionLevel or 0) -- BD-045: normalized percents
@@ -567016,6 +567117,15 @@ local guide: any = nil -- {show, cancel} from HubGuideClient once attached
 local chip: TextButton? = nil
 local Cream = Color3.fromRGB(255, 244, 220)
 
+-- BD-391/405: does this player own the Fast travel perk? (ProgressionJson is the server's own copy, read-only here.)
+local function ownsFastTravel(): boolean
+    local raw = require(script.Parent:WaitForChild("PrivateState")).get("ProgressionJson")
+    if typeof(raw) ~= "string" then return false end
+    local ok, data = pcall(function() return game:GetService("HttpService"):JSONDecode(raw) end)
+    return ok and typeof(data) == "table" and typeof(data.perks) == "table" and data.perks.fastTravel == true
+end
+Client.ownsFastTravel = ownsFastTravel
+
 local function runState(): any
     local character = player.Character
     return if character then character:GetAttribute("RunState") else nil
@@ -567099,6 +567209,7 @@ function Client.press(destination: string): boolean
     if guide then guide.cancel() end -- pressing any rail button cancels a trail still showing
     local decision = Rules.decide({
         caveHub = true, destination = destination, runState = runState(),
+        fastTravelPerk = Config.FastTravelPerk == true, fastTravelOwned = ownsFastTravel(),
         teleportShops = Settings.teleportShops(), remote = remote() ~= nil, busy = busy,
     })
     if decision.kind == "blocked" then
@@ -567820,6 +567931,11 @@ end
 local function updateAction(rig: any, now: number)
     local character, root = rig.character, rig.root
     if not character or not root then rig.act = nil return end -- local character not spawned yet or already gone
+    -- BD-249: the run ended in a defeat (DinoMotion also plays its own "death" flop on RunState Ending, on C0, so the two stack).
+    if character:GetAttribute("RunState") == "Ending" then
+        if rig.act ~= "defeat" then rig.aggr = 0 startPhase(rig, "defeat", now) end
+        return
+    elseif rig.act == "defeat" then rig.act = nil end
     local hum = rig.humanoid
     if not hum or not hum.Parent then hum = character:FindFirstChildOfClass("Humanoid") rig.humanoid = hum end
     if not hum or hum.Health &lt;= 0 then rig.act = nil return end
@@ -567923,7 +568039,8 @@ local function apply(rig: any, now: number, dt: number, amp: number, npc: Model?
         local part = item.part :: MeshPart
         if not part.Parent then continue end
         Pose.sample(item.role, item.side, item.lead, now + rig.seed, rig.phase, rig.speed, amp, out, rig.class)
-        if phase then Pose.blend(out, Pose.sampleAction(item.role, item.side, item.lead, ctx, amp, actOut, rig.class), k) end
+        if phase == "defeat" then Pose.blend(out, Pose.sampleDefeat(item.role, item.side, item.lead, ctx, amp, actOut, rig.class, rig.skin), k)
+        elseif phase then Pose.blend(out, Pose.sampleAction(item.role, item.side, item.lead, ctx, amp, actOut, rig.class), k) end
         if amp == 0 and item.role ~= "wing" then
             item.weld.C1 = CFrame.identity
         else
@@ -567961,7 +568078,7 @@ RunService.Heartbeat:Connect(function(dt)
         if not rig or rig.visual ~= visual then
             local _, size = visual:GetBoundingBox()
             rig = {visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0,
-                height = math.max(size.Y, 1), aggr = 0, carry = 0, leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), seed = math.random() * 10}
+                height = math.max(size.Y, 1), aggr = 0, carry = 0, leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), skin = Pose.skinOf(visual:GetAttribute("LPSkin")), seed = math.random() * 10}
             rigs[character] = rig
         end
         if player == Players.LocalPlayer then
@@ -567988,7 +568105,7 @@ RunService.Heartbeat:Connect(function(dt)
         if not rig or rig.visual ~= visual then
             local _, size = visual:GetBoundingBox()
             rig = {visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0, height = math.max(size.Y, 1), aggr = 0, carry = 0,
-                leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), seed = math.random() * 10}
+                leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), skin = Pose.skinOf(visual:GetAttribute("LPSkin")), seed = math.random() * 10}
             npcRigs[model] = rig
         end
         if camera and (camera.CFrame.Position - root.Position).Magnitude &lt;= RANGE then
@@ -568803,8 +568920,10 @@ local function drawControls(body: Instance, ctx: Context)
     ctx.button(body, "RESET", 270, TOP, 180, 48, C.blue, function() ctx.cameraReset() ctx.notify("Camera reset", C.blue) end)
     choice(body, ctx, 1, "Jump button", Model.JumpSizes, SIZE_TEXT, Model.get().jumpSize, function(id) Model.set("jumpSize", id) ctx.open("settings") end)
     -- BD-288 (docs/104 s7.6): only shown while the Cave hub is on; OFF = the rail just opens the menu, no teleport.
-    if require(Shared:WaitForChild("Config")).CaveHub then
-        toggle(body, ctx, if require(Shared:WaitForChild("Config")).CombatEnabled then 4 else 2, "Teleport to shops", Model.teleportShops(), function() Model.set("teleportShops", not Model.teleportShops()) ctx.open("settings") end)
+    -- BD-391/405 (docs/115 D22): with the perk flag on, the toggle shows only after the player bought Fast travel.
+    local cfg = require(Shared:WaitForChild("Config"))
+    if cfg.CaveHub and (cfg.FastTravelPerk ~= true or require(script.Parent:WaitForChild("HubTravelClient")).ownsFastTravel()) then
+        toggle(body, ctx, if require(Shared:WaitForChild("Config")).CombatEnabled then 4 else 2, if cfg.FastTravelPerk == true then "Fast travel" else "Teleport to shops", Model.teleportShops(), function() Model.set("teleportShops", not Model.teleportShops()) ctx.open("settings") end)
     end
     -- docs/101 s16 Peaceful: only shown while HP combat is on (Config.CombatEnabled); the server reads it at run start.
     if require(Shared:WaitForChild("Config")).CombatEnabled then

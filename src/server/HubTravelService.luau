@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Rules = require(ReplicatedStorage.Shared.HubTravelRules)
+local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 local FallRecovery = require(script.Parent.FallRecovery)
 local HubTravelService = {}
@@ -26,7 +27,14 @@ local function gather(player: Player, character: Model?): any
         local r = if other ~= player and c then c:FindFirstChild("HumanoidRootPart") else nil
         if r and r:IsA("BasePart") then occupied[#occupied + 1] = {x = r.Position.X, z = r.Position.Z} end
     end
+    local owned = false
+    if Config.FastTravelPerk == true then
+        local progress = require(script.Parent.ProfileRepository).progression(player)
+        owned = progress ~= nil and ProgressionRules.hasPerk(progress, "fastTravel")
+    end
     return {
+        fastTravelPerk = Config.FastTravelPerk == true,
+        fastTravelOwned = owned,
         caveHub = Config.CaveHub == true,
         profileState = player:GetAttribute("ProfileState"),
         runState = if character then character:GetAttribute("RunState") else nil,
