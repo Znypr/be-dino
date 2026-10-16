@@ -27,6 +27,7 @@ return table.freeze({
     TerrainTop = 120,
     ArenaHalfWidth = 416, -- world v2: 1.6x the 260 of the 520 map (IslandLayout.Scale)
     SanctuaryCenterZ = 521, -- hub centre: ArenaHalfWidth + 105 (it sits past the north boundary)
+    CaveHub = false, -- BD-280 (docs/104): true = big cave Sanctuary at CaveHubLayout.CenterZ; false = the current hub, unchanged
     CameraMinZoom = 12,
     CameraMaxZoom = 110,
     -- BD-054 touch HUD layout (shared/TouchLayout). PROVISIONAL until physical Android review.

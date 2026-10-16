@@ -34,6 +34,10 @@ BiomePlacement.KeepOuts = {
 }
 -- Sanctuary hub footprint (outside the arena, Config.ArenaHalfWidth + 105 +/- 48); nothing may intersect it.
 BiomePlacement.Sanctuary = {minX = -55, maxX = 55, minZ = 473, maxZ = 569}
+-- BD-281: with Config.CaveHub on, Arena calls this with CaveHubLayout.hub(config).biome so the rect follows the cave.
+function BiomePlacement.useHub(rect: {minX: number, maxX: number, minZ: number, maxZ: number})
+    BiomePlacement.Sanctuary = {minX = rect.minX, maxX = rect.maxX, minZ = rect.minZ, maxZ = rect.maxZ}
+end
 -- Dense lush groves (the lush groveBoost of v1) now supplement the noise forest field.
 BiomePlacement.Groves = {
     {-168, 128}, {168, -128}, {-200, -160}, {205, 163}, {-304, 24}, {291, 32}, {0, -288}, {24, 304},

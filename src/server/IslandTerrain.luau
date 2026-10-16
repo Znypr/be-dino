@@ -12,7 +12,8 @@ local STRIP = 32 -- voxel columns written per WriteVoxels call (bounds the Lua t
 local function smooth(x: number, z: number, scale: number, offset: number): number
     return math.noise(x / scale, z / scale, offset)
 end
-function IslandTerrain.build()
+-- beforeReady (BD-281): optional extra terrain work (the cave shell, flag on only) that must finish before IslandTerrainReady.
+function IslandTerrain.build(beforeReady: (() -> ())?)
     local terrain = workspace.Terrain
     for name, c in BiomeMap.Colors do
         terrain:SetMaterialColor((Enum.Material :: any)[name], Color3.fromRGB(c[1], c[2], c[3]))
@@ -67,6 +68,7 @@ function IslandTerrain.build()
         task.wait()
     end
     workspace:SetAttribute("IslandTerrainBuildSeconds", math.floor((os.clock() - startedAt) * 10) / 10)
+    if beforeReady then beforeReady() end
     workspace:SetAttribute("IslandTerrainReady", true)
 end
 return IslandTerrain
