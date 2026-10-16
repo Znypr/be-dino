@@ -453,6 +453,7 @@ shopResult.OnClientEvent:Connect(function(token,ok,status)
     if active=="auras" or active=="potions" then body:ClearAllChildren() render(active) end
 end)
 local refreshEggs
+local peacefulSavedAt=-10
 render=function(name: string)
     if name=="home" then
         heading.Text,header.BackgroundColor3="Sanctuary",C.accent
@@ -462,11 +463,28 @@ render=function(name: string)
         label(heroCard,Config.SpeciesDisplayNames[id],0,244,290,42,30)
         label(heroCard,"Equipped dinosaur",0,296,290,26,18,C.accent)
         label(body,"Ready for an adventure?",320,0,495,58,32)
-        label(body,require(Shared.FtueCopy).sanctuaryTip1,330,74,474,85,22)
-        label(body,require(Shared.FtueCopy).sanctuaryTip2,330,170,474,75,22,C.gold)
-        button(body,"EXPLORE ISLAND",340,280,460,68,C.accent,function()
+        label(body,require(Shared.FtueCopy).sanctuaryTip1,330,64,474,70,22)
+        label(body,require(Shared.FtueCopy).sanctuaryTip2,330,134,474,60,22,C.gold)
+        -- BD-421: one obvious Peaceful choice before every run (also in Settings). The server snapshots it at run start.
+        local SettingsModel=require(Shared.SettingsModel)
+        local peacefulBtn
+        peacefulBtn=button(body,if SettingsModel.peaceful() then "Peaceful: ON" else "Peaceful: OFF",340,204,460,56,if SettingsModel.peaceful() then C.accent else C.card,function()
+            SettingsModel.set("peaceful",not SettingsModel.peaceful())
+            peacefulSavedAt=os.clock()
+            render("home")
+        end)
+        peacefulBtn.Name="PeacefulToggle"
+        label(body,"Peaceful: nobody eats or bites you",340,260,460,22,17,C.gold)
+        button(body,"EXPLORE ISLAND",340,290,460,60,C.accent,function()
             local character=player.Character
-            if character and character:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() close()
+            if character and character:GetAttribute("RunState")=="Sanctuary" then
+                -- the settings save is debounced ~0.8 s; wait for it so the server reads the choice just made
+                local wait=math.max(0,peacefulSavedAt+1.4-os.clock())
+                task.delay(wait,function()
+                    local c=player.Character
+                    if c and c:GetAttribute("RunState")=="Sanctuary" then startRun:FireServer() end
+                end)
+                close()
             else close() notify("You are already exploring",C.blue) end
         end)
 
@@ -999,7 +1017,7 @@ render=function(name: string)
             handle.supply({
                 dino=view,rarity=rarity,color=rarityColors[rarity],failed=failed,
                 shiny=not failed and PrivateState.get("LastChestShiny")==true,big=not failed and PrivateState.get("LastChestBig")==true,
-                mutationName=if mutation and not failed then mutation.name else nil,mutationColor=mutationColor,
+                mutationName=if mutation and not failed then mutation.name else nil,mutationColor=mutationColor,mutationId=if mutation and not failed then mutation.id else nil,
                 remaining=remainingAfter,genes=if geneticsOk then genes else nil,colorReveal=colorReveal,patternReveal=patternReveal,paintColors=paintColors,
                 secondReveal=if geneticsOk then HatchTimeline.colorReveal(ProgressionConfig.EggColors,genes,"secondary") else nil, -- BD-220: right bucket
             })
@@ -1604,6 +1622,9 @@ PrivateState.onChanged("LastSettledRunId", function()
                     waitSeconds=NestQueue.secondsUntilNextReady(nestList,math.floor(workspace:GetServerTimeNow()),Config.NestIncubationSeconds)
                 end
                 notify("New Egg Nest!",C.gold,{icon="egg_nest",key="nest",body="Ready in "..UIFormat.duration(math.max(3600,waitSeconds))}) -- no extra sound: it stacked with run_end (BD-166)
+            end
+            if num("LastRunNestCrystals")>0 then
+                notify("Nests full!",C.gold,{icon="egg_nest",key="nestcrystals",body="Extra nests became "..num("LastRunNestCrystals").." crystals"}) -- docs/72: short, kid-friendly
             end
             if num("LastRunCrystalBox")>0 then
                 open("crystalReveal")

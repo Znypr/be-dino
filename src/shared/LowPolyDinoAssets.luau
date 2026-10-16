@@ -22,7 +22,7 @@ return {
     baryonyx = {assetId = 131708938808155, version = "v1", scale = 2.42, tier = 3, class = "Ground"},
     brachiosaurus = {assetId = 104593280278631, version = "v1", scale = 3.87, tier = 3, class = "Ground"},
     dimorphodon = {assetId = 117242533934118, version = "v1", scale = 1.9, tier = 1, class = "Fly"},
-    elasmosaurus = {assetId = 76344726254379, version = "v1", scale = 2.66, tier = 4, class = "Water"},
+    elasmosaurus = {assetId = 76344726254379, version = "v1", scale = 2.66, tier = 4, class = "Ground"},
     gallimimus = {assetId = 99873366835296, version = "v1", scale = 2.9, tier = 1, class = "Ground"},
     ichthyosaurus = {assetId = 133825037148251, version = "v1", scale = 2.3, tier = 3, class = "Water"},
     microraptor = {assetId = 137027841072493, version = "v1", scale = 1.7, tier = 1, class = "Fly"},

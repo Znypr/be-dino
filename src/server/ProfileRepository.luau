@@ -531,6 +531,32 @@ local function syncAttributes(player: Player, profile: any)
     end
 end
 
+-- BD-363 (docs/111 L4): the lease is gone (another server took the profile over). It used to be silent: the player kept running
+-- while every settlement was refused. Now it is logged once, the client gets a message through ProfileState, and after a short
+-- grace the player is sent back to rejoin and load the authoritative profile. Nothing is rewritten here: every settled run is
+-- already committed in the store by run id, and an unsettled one is logged with its run id (this server cannot write it anymore).
+local LEASE_LOST_KICK_SECONDS = 6
+local leaseLostHandled: {[Player]: boolean} = setmetatable({}, {__mode = "k"}) :: any
+local leaseLostStats = {handled = 0, kicked = 0}
+local function handleLeaseLost(player: Player)
+    player:SetAttribute("ProfileState", "LeaseLost")
+    if leaseLostHandled[player] then return end
+    leaseLostHandled[player] = true
+    leaseLostStats.handled += 1
+    local pending = pendingSettlements[player]
+    warn(string.format("[Be Dino] LeaseLost for user %d%s; sending the player back to rejoin", player.UserId,
+        if pending then " with an unsettled run " .. tostring(pending.runId) else ""))
+    task.spawn(function()
+        task.wait(LEASE_LOST_KICK_SECONDS)
+        if player.Parent and player:GetAttribute("ProfileState") == "LeaseLost" then
+            leaseLostStats.kicked += 1
+            player:Kick("Your save session changed. Please rejoin.")
+        end
+    end)
+end
+
+function ProfileRepository.leaseLostStats() return leaseLostStats end
+
 local function ownSession(profile: any): boolean
     local session = profile.session
     return typeof(session) == "table" and session.leaseId == leaseId
@@ -845,7 +871,7 @@ function ProfileRepository.fuseDinosaurs(player: Player, request: any)
     end)
     if not ok or updated == nil then
         if leaseLost then
-            player:SetAttribute("ProfileState", "LeaseLost")
+            handleLeaseLost(player)
             return false, nil, "lease_lost"
         end
         if failure then return false, nil, failure end
@@ -988,6 +1014,7 @@ local function runRewardText(outcome): string
     local nests = outcome.nestCount or 0
     if nests > 0 then table.insert(parts, if nests == 1 then "1 nest" else string.format("%d nests", nests)) end
     if outcome.nestFull then table.insert(parts, "nest storage full") end
+    if (outcome.nestCrystals or 0) > 0 then table.insert(parts, string.format("%d crystals for extra nests", outcome.nestCrystals)) end
     return table.concat(parts, " + ")
 end
 
@@ -1093,9 +1120,11 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
             advanceNests(profileValue, now)
             outcome.nestCount = granted
             outcome.nestFull = granted < nestsEarned
+            -- Owner 2026-10-16: every nest without a free spot converts to crystals now (same exactly-once transform).
+            outcome.nestCrystals = (nestsEarned - granted) * Config.NestOverflowCrystals
 
             local progress = ProgressionRules.upgrade(profileValue)
-            progress.crystals = math.min(ProgressionConfig.MaxCrystals, progress.crystals + outcome.crystals)
+            progress.crystals = math.min(ProgressionConfig.MaxCrystals, progress.crystals + outcome.crystals + (outcome.nestCrystals or 0))
             progress.accountXP = math.min(2000000000, progress.accountXP + (outcome.accountXP or eggCount))
             profileValue.revision += 1
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
@@ -1116,7 +1145,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
 
     if not ok or updated == nil then
         if leaseLost then
-            player:SetAttribute("ProfileState", "LeaseLost")
+            handleLeaseLost(player)
             return false, nil, "lease_lost"
         end
         if invalid then return false, nil, "invalid_profile" end
@@ -1141,6 +1170,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         PrivateState.set(player, "LastRunEggCount", committedOutcome.eggCount or committedOutcome.chestCount or 0)
         PrivateState.set(player, "LastRunNestCount", committedOutcome.nestCount or 0)
         PrivateState.set(player, "LastRunNestFull", committedOutcome.nestFull == true)
+        PrivateState.set(player, "LastRunNestCrystals", committedOutcome.nestCrystals or 0)
     end
     PrivateState.set(player, "LastSettledRunId", runId)
     if priorState == "SaveFailed" and player:GetAttribute("ProfileState") == "SaveFailed" then player:SetAttribute("ProfileState", "Loaded") end
@@ -1191,7 +1221,7 @@ function ProfileRepository.writeRevealSkip(player: Player, clean: any): (boolean
     end)
     if not ok or updated == nil then
         if superseded then return true, "saved" end -- a newer write of the same preference owns the stored value
-        if leaseLost then player:SetAttribute("ProfileState", "LeaseLost") return false, "lease_lost" end
+        if leaseLost then handleLeaseLost(player) return false, "lease_lost" end
         player:SetAttribute("ProfileState", "SaveFailed")
         return false, "save_failed"
     end
@@ -1232,7 +1262,7 @@ function ProfileRepository.writeSettings(player: Player, clean: any): (boolean, 
     end)
     if not ok or updated == nil then
         if superseded then return true, "saved" end -- a newer write of the same preference owns the stored value
-        if leaseLost then player:SetAttribute("ProfileState", "LeaseLost") return false, "lease_lost" end
+        if leaseLost then handleLeaseLost(player) return false, "lease_lost" end
         player:SetAttribute("ProfileState", "SaveFailed")
         return false, "save_failed"
     end
@@ -1319,7 +1349,7 @@ function ProfileRepository.claimNest(player: Player, nestId: string)
     end)
     if not ok or updated == nil then
         if leaseLost then
-            player:SetAttribute("ProfileState", "LeaseLost")
+            handleLeaseLost(player)
             return false, nil, "lease_lost"
         end
         if status then return false, nil, status end
@@ -1394,7 +1424,7 @@ function ProfileRepository.equipSpecies(player: Player, speciesId: string, varia
 
     if not ok or updated == nil then
         if leaseLost then
-            player:SetAttribute("ProfileState", "LeaseLost")
+            handleLeaseLost(player)
             return false, "lease_lost"
         end
         if locked then return false, "locked" end
@@ -1449,7 +1479,7 @@ function ProfileRepository.grantCollectionTestSpecies(player: Player): (boolean,
 
     if not ok or updated == nil then
         if leaseLost then
-            player:SetAttribute("ProfileState", "LeaseLost")
+            handleLeaseLost(player)
             return false, "lease_lost"
         end
         player:SetAttribute("ProfileState", "SaveFailed")
@@ -1509,7 +1539,7 @@ function ProfileRepository.grantChestTest(player: Player): (boolean, string)
 
     if not ok or updated == nil then
         if leaseLost then
-            player:SetAttribute("ProfileState", "LeaseLost")
+            handleLeaseLost(player)
             return false, "lease_lost"
         end
         if queueFull then return false, "queue_full" end
@@ -1701,7 +1731,7 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
 
     if not ok or updated == nil then
         if leaseLost then
-            player:SetAttribute("ProfileState", "LeaseLost")
+            handleLeaseLost(player)
             return false, nil, "lease_lost"
         end
         if notReady then return false, nil, "not_ready" end
@@ -1800,7 +1830,7 @@ function ProfileRepository.mutateSpecies(player: Player, speciesId: string, targ
 
     if not ok or updated == nil then
         if leaseLost then
-            player:SetAttribute("ProfileState", "LeaseLost")
+            handleLeaseLost(player)
             return false, nil, "lease_lost"
         end
         if tokenConflict then return false, nil, "token_conflict" end
@@ -1848,7 +1878,7 @@ function ProfileRepository.setMutationTestCopies(player: Player, speciesId: stri
 
     if not ok or updated == nil then
         if leaseLost then
-            player:SetAttribute("ProfileState", "LeaseLost")
+            handleLeaseLost(player)
             return false, "lease_lost"
         end
         player:SetAttribute("ProfileState", "SaveFailed")
@@ -2023,7 +2053,7 @@ function ProfileRepository.renew(player: Player): boolean
         end)
     end)
     if not ok or updated == nil then
-        player:SetAttribute("ProfileState", if leaseLost then "LeaseLost" else "SaveFailed")
+        if leaseLost then handleLeaseLost(player) else player:SetAttribute("ProfileState", "SaveFailed") end
         return false
     end
     adopt(player, updated) -- the store copy is authoritative after a recovery (its revision is never older)
