@@ -84,6 +84,13 @@ return table.freeze({
     TrailIconAssetIds={
         -- white=nil, fern=nil, tidal=nil, ember=nil, violet=nil, electric=nil, frost=nil, solar=nil, nova=nil, astra=nil
     },
+    -- BD-394: slots for the owner's Blender "egg stage" render (resources/ui/v2/stage: egg-stage-jungle-v1.jpg + five condition
+    -- egg PNGs, upload pending). NOT uploaded yet, so the table is empty (a Luau table cannot store nil; absent key = nil). After
+    -- upload add stage="rbxassetid://...", normal=..., cracked=..., dirty=..., rainbow=..., astra=... here and in docs/77: the
+    -- Conditions shop then draws the stage and the egg pictures (src/client/ConditionStage). Never invent an id.
+    ConditionStageAssetIds={
+        -- stage=nil, normal=nil, cracked=nil, dirty=nil, rainbow=nil, astra=nil
+    },
     -- BD-051 + docs/68 PROVISIONAL rotating Potion Shop (one block; owner-approved 2026-10-14: restock every 2 minutes).
     -- Offers derive from the window number (floor(unixSeconds/PeriodSeconds)), so every server agrees and rejoining never rerolls.
     -- Each of the OfferCount slots rolls a rarity from RarityWeights (only rarities that still have unoffered potions), then a

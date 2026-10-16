@@ -130,6 +130,36 @@ for k = 0, 200 do local p = G.pulse(5, 24, k * 0.05, false) lo = math.min(lo, p)
 assert(lo >= 0.79 and hi <= 1.21 and hi - lo > 0.3, "gentle ripple otherwise")
 assert(G.LifeSeconds == 25 and G.MaxDots == 24)
 
+-- ---- BD-396 "Follow the glow": bigger, brighter, softer; travelling pulse (1.2 s loop); edge arrow; calm = static
+local K = G.Look
+assert(K.dotSize >= 1.4 and K.dotSize <= 2, "dots 1.4-2 studs")
+assert(G.MinSpacing == 4 and G.MaxDots == 24, "spacing 4 studs, cap 24 parts")
+assert(K.haloScale > 2 and K.haloTransparency > 0.5 and K.haloTransparency < 0.85, "soft halo, not a hard disc")
+assert(K.coreScale > 0.2 and K.coreScale < 0.6 and K.lightEmission == 0.6 and K.brightness > 1, "white core, daylight brightness")
+assert(G.PulseSeconds == 1.2, "pulse loops every 1.2 s")
+for i = 1, 24 do
+ local a, b = G.glow(i, 24, 3.3, false), G.glow(i, 24, 3.3 + G.PulseSeconds, false)
+ assert(math.abs(a - b) < 1e-9, "glow loops every 1.2 s")
+ assert(a >= 0.55 - 1e-9 and a <= 1 + 1e-9, "glow never fades out in daylight")
+ assert(G.glow(i, 24, 7.7, true) == 0.8 and G.pulse(i, 24, 7.7, true) == 1, "calm: static")
+end
+local c0, c1 = G.glow(1, 24, 0, false), G.glow(2, 24, 0, false)
+assert(math.abs(c0 - c1) > 1e-3, "neighbouring dots are out of phase (the pulse travels)")
+-- the crest moves toward the station: the dot at the crest now is not the crest later
+local function crest(t) local best, bi = -1, 0 for i = 1, 24 do local g = G.glow(i, 24, t, false) if g > best then best, bi = g, i end end return bi end
+assert(crest(0) ~= crest(0.3), "crest travels along the path")
+local on = G.edgeArrow(400, 300, 5, 800, 600, 40) assert(not on.visible, "station on screen: no arrow")
+local right = G.edgeArrow(1500, 300, 5, 800, 600, 40) assert(right.visible and math.abs(right.x - 760) < 1e-6 and math.abs(right.y - 300) < 1e-6 and math.abs(right.angle - 90) < 1e-6, "off to the right")
+local left = G.edgeArrow(-900, 300, 5, 800, 600, 40) assert(left.visible and math.abs(left.x - 40) < 1e-6 and math.abs(left.angle + 90) < 1e-6, "off to the left")
+local up = G.edgeArrow(400, -900, 5, 800, 600, 40) assert(up.visible and math.abs(up.y - 40) < 1e-6 and math.abs(up.angle) < 1e-6, "above")
+local down = G.edgeArrow(400, 1500, 5, 800, 600, 40) assert(down.visible and math.abs(down.y - 560) < 1e-6 and math.abs(math.abs(down.angle) - 180) < 1e-6, "below")
+local behind = G.edgeArrow(400, 300, -3, 800, 600, 40) assert(behind.visible, "behind the camera still gets an arrow")
+for _, bad in {{0/0, 1, 1}, {1, math.huge, 1}, {1, 1, nil}} do assert(not G.edgeArrow(bad[1], bad[2], bad[3], 800, 600, 40).visible, "junk: no arrow") end
+for _, pt in {{1500, 1200}, {-300, -200}, {2000, 10}, {10, 2000}} do
+ local r = G.edgeArrow(pt[1], pt[2], 5, 800, 600, 40)
+ assert(r.visible and r.x >= 40 - 1e-6 and r.x <= 760 + 1e-6 and r.y >= 40 - 1e-6 and r.y <= 560 + 1e-6, "arrow stays inside the margin")
+end
+
 -- ---- decision: toggle OFF at home -> guide; ON -> travel; flag off or in a run -> as before
 local function decide(over)
  local i = {caveHub=true, destination="eggs", runState="Sanctuary", teleportShops=false, remote=true, busy=false}
@@ -193,6 +223,9 @@ def static_checks():
     assert 'Config.CaveHub ~= true then return nil end' in attach.splitlines()[1], 'attach is a no-op with the flag off'
     assert 'for i = 1, Rules.MaxDots do' in client and client.count('Instance.new("Part")') == 1, 'one pooled loop of at most MaxDots parts'
     assert 'ensurePool()' in client and 'Rules.update(' in client and 'Settings.calm()' in client, 'rules drive the fade, Reduce Motion honoured'
+    assert 'Rules.glow(' in client and 'Rules.edgeArrow(' in client and 'Rules.Look' in client, 'BD-396: halo glow, edge arrow and look come from the rules'
+    assert 'Name, label.Text' in client or 'label.Text' in client, 'edge arrow label exists'
+    assert 'board.Brightness' in client, 'daylight brightness set on the billboard'
     assert 'FireServer' not in client and 'InvokeServer' not in client, 'the trail is client-only feedback'
     assert 'starFour' in client and 'Assets.setCell' in client, 'uses the existing alpha FX sheet'
     travel = (ROOT / 'src/client/HubTravelClient.luau').read_text()

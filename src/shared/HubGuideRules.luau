@@ -167,10 +167,48 @@ function Rules.update(state: any, now: number, pad: string?, calm: boolean): (nu
     return math.clamp(alpha, 0, 1), false
 end
 
+-- BD-396: one pulse loops every PulseSeconds (1.2 s) and travels along the trail toward the station (dot 1 = nearest the player),
+-- twice per trail so a long path shows more than one. Exactly 1 (static) when calm (Reduce Motion).
+Rules.PulseSeconds = 1.2
+local function wave(index: number, count: number, now: number): number
+    return 0.5 + 0.5 * math.sin(2 * math.pi * (now / Rules.PulseSeconds - 2 * index / math.max(count, 1)))
+end
 -- Gentle size ripple that travels along the trail; exactly 1 (static) when calm.
 function Rules.pulse(index: number, count: number, now: number, calm: boolean): number
     if calm or count <= 0 then return 1 end
-    return 1 + 0.2 * math.sin(2 * math.pi * (now * 0.7 - index / count))
+    return 1 + 0.2 * (2 * wave(index, count, now) - 1)
+end
+-- Glow strength 0..1 for the soft halo behind a dot: always visible (0.55 floor, daylight), brightest on the pulse crest.
+-- Calm: a steady 0.8.
+function Rules.glow(index: number, count: number, now: number, calm: boolean): number
+    if calm or count <= 0 then return 0.8 end
+    return 0.55 + 0.45 * wave(index, count, now)
+end
+
+-- BD-396: look of one dot, in studs and 0..1 factors (the client draws it; tests pin it). Moss-green ring with a white core
+-- and a soft halo; bigger than BD-289 so it reads in daylight.
+Rules.Look = {dotSize = 1.8, haloScale = 2.6, coreScale = 0.42, brightness = 1.6, haloTransparency = 0.72, lightEmission = 0.6}
+
+-- Edge-of-screen arrow for an off-screen station. sx, sy = WorldToViewportPoint result (pixels), depth = its z (negative
+-- means behind the camera), vw, vh = viewport size, margin = distance kept from the edge. Returns
+-- {visible, x, y, angle} (x, y = arrow centre in pixels, angle = degrees clockwise from "up"). Visible only when the station
+-- is NOT on screen.
+function Rules.edgeArrow(sx: any, sy: any, depth: any, vw: any, vh: any, margin: any): any
+    if not (finite(sx) and finite(sy) and finite(depth) and finite(vw) and finite(vh)) or (vw :: number) <= 0 or (vh :: number) <= 0 then
+        return {visible = false, x = 0, y = 0, angle = 0}
+    end
+    local m = if finite(margin) then margin :: number else 40
+    local w, h = vw :: number, vh :: number
+    local x, y = sx :: number, sy :: number
+    if (depth :: number) < 0 then x, y = w - x, h - y end -- behind the camera: the projection is mirrored
+    if (depth :: number) >= 0 and x >= 0 and x <= w and y >= 0 and y <= h then return {visible = false, x = x, y = y, angle = 0} end
+    local cx, cy = w / 2, h / 2
+    local dx, dy = x - cx, y - cy
+    if math.abs(dx) < 1e-6 and math.abs(dy) < 1e-6 then dy = 1 end
+    local tx = if dx ~= 0 then ((w / 2 - m) / math.abs(dx)) else math.huge
+    local ty = if dy ~= 0 then ((h / 2 - m) / math.abs(dy)) else math.huge
+    local t = math.min(tx, ty)
+    return {visible = true, x = cx + dx * t, y = cy + dy * t, angle = math.deg(math.atan2(dx, -dy))}
 end
 
 return Rules
