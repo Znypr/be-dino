@@ -21,7 +21,7 @@ local function d(ax, az, bx, bz) return math.sqrt((ax-bx)^2+(az-bz)^2) end
 
 -- ---- every layout path is an edge; none crosses the lava keep-out
 local nodes, edges = G.graph(L)
-assert(#edges == #lay.paths and #edges == 16, "every layout path is an edge: "..#edges.." vs "..#lay.paths)
+assert(#edges == #lay.paths - 1 and #edges >= 20, "every layout path piece except the gate mouth stub is an edge: "..#edges.." vs "..#lay.paths)
 for _, e in edges do
  local A, B = nodes[e.a], nodes[e.b]
  assert(not G.hitsCircle(A.x, A.z, B.x, B.z, pool.x, pool.z, pool.r + G.LavaMargin), "edge avoids lava: "..e.a.."-"..e.b)
@@ -88,7 +88,7 @@ for _, p in r1.points do if math.abs(p.x) < 0.01 and math.abs(p.z - cz) < 0.01 t
 assert(viaHeart, "nests -> potions goes through the heart plaza")
 local r2 = G.route(L, -48, 76 + cz, "fusion") -- from the Settings pad (next to the lava) to Fusion
 assert(r2 and r2.length < 120, "settings -> fusion is short and dry")
-local r3 = G.route(L, 0, cz, "fusion") assert(r3 and #r3.points == 2 and math.abs(r3.length - 48) < 1e-6, "heart -> fusion straight")
+local r3 = G.route(L, 0, cz, "fusion") assert(r3 and #r3.points == 3 and r3.length >= 48 and r3.length < 56, "heart -> fusion bends once through the short south tunnel: "..tostring(r3 and r3.length))
 local nr, why = G.route(L, 66, -38 + cz, "nests") assert(nr == nil and why == "here")
 for _, bad in {{nil, 0, "nests"}, {0, nil, "nests"}, {0/0, 0, "nests"}, {math.huge, 0, "nests"}, {0, 0, 5}} do
  local x, why2 = G.route(L, bad[1], bad[2], bad[3]) assert(x == nil and why2 == "bad_input", "junk refused")

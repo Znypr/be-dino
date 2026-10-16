@@ -26,20 +26,14 @@ local function hitsCircle(ax: number, az: number, bx: number, bz: number, cx: nu
 end
 Rules.hitsCircle = hitsCircle
 
--- The walkable graph from the layout: nodes = station centres (flat pads), edges = star and ring paths between them.
+-- The walkable graph from the layout: nodes = station centres (flat pads) plus the tunnel waypoints (docs/104 s16: tunnels wind), edges =
+-- the straight pieces of path between two nodes (L.paths with `a`/`b`; the gate mouth stub is not an edge).
 local function graph(layout: any): ({[string]: any}, {any})
     local nodes: {[string]: any} = {}
-    for _, s in layout.get().stations do nodes[s.id] = {x = s.x, z = s.z, r = s.r} end
+    for id, n in layout.get().nodes do nodes[id] = {x = n.x, z = n.z, r = n.r} end
     local edges = {}
     for _, p in layout.get().paths do
-        local a: string?, b: string? = nil, nil
-        local starId = string.match(p.id, "^star_(.+)$") -- star_<id> joins the heart to <id>
-        if starId then
-            a, b = "heart", starId
-        else
-            a, b = string.match(p.id, "^ring_([^_]+)_(.+)$")
-        end
-        if a and b and nodes[a] and nodes[b] then edges[#edges + 1] = {a = a, b = b, width = p.width} end
+        if p.a and p.b and nodes[p.a] and nodes[p.b] then edges[#edges + 1] = {a = p.a, b = p.b, width = p.width} end
     end
     return nodes, edges
 end

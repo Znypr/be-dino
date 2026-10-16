@@ -9,7 +9,7 @@ local CaveHubLayout = {}
 CaveHubLayout.Version = 1
 CaveHubLayout.CenterZ = 580 -- only used when Config.CaveHub is true (the old hub stays at Config.SanctuaryCenterZ)
 CaveHubLayout.FloorY = 6 -- same as the old hub floor, so SpawnGeometry / fall recovery keep working
-CaveHubLayout.BoxHalfX, CaveHubLayout.BoxHalfZ = 130, 110 -- 260 x 220 footprint box (lead decision, docs/104 s15)
+CaveHubLayout.BoxHalfX, CaveHubLayout.BoxHalfZ = 130, 116 -- bounding box of the organic cave (rooms + tunnels), not a room: the floor only fills part of it (docs/104 s16, owner 2026-10-16)
 CaveHubLayout.Biome = {minX = -150, maxX = 150, minZ = 450, maxZ = 710} -- island kit never intersects this when on (BD-281: widened from 140/460/700 so the rough 12 stud shell fits)
 CaveHubLayout.WallThickness = 8
 CaveHubLayout.DropClearance = 5 -- spawn root height above the floor (matches SpawnGeometry.DropClearance)
@@ -17,7 +17,12 @@ CaveHubLayout.MaxPathSlopeDeg = 8
 CaveHubLayout.MinStationGap = 48
 CaveHubLayout.ArrivalSpotsPerStation = 6
 CaveHubLayout.Baked = false -- true once the owner smooths the shell by hand (BD-281 skips the server fill)
-CaveHubLayout.CeilingWall, CaveHubLayout.CeilingCentre = 38, 62 -- studs above the floor
+CaveHubLayout.CeilingEdge = 10 -- studs above the floor at the rock wall; the ceiling domes up to each room / tunnel height (docs/104 s16)
+CaveHubLayout.CeilingDomeDepth = 14 -- studs from the wall over which the ceiling rises to its full height
+CaveHubLayout.WallNoise = 3.2 -- +- studs of wall relief (two noise octaves): no straight wall faces, no box corners
+CaveHubLayout.RockThickness = 12 -- plan distance the rock shell reaches beyond the open cave
+CaveHubLayout.TunnelRadius = 11 -- tunnel half width (22 wide); the flat laid-stone path in it is 8 wide
+CaveHubLayout.PathHalf = 4
 CaveHubLayout.MaxLights = 16
 
 local LEGACY = {halfX = 55, halfZ = 47.5, floorY = 6, biomeHalf = 48}
@@ -33,39 +38,107 @@ function CaveHubLayout.hub(config: any): any
         biome = {minX = -LEGACY.halfX, maxX = LEGACY.halfX, minZ = cz - LEGACY.biomeHalf, maxZ = cz + LEGACY.biomeHalf}}
 end
 
--- ---------------------------------------------------------------- floor blob (local coords)
-local BASE_X, BASE_Z = 125, 105.5
-local function wobble(theta: number): number
-    return 1 + 0.025 * math.sin(3 * theta + 0.7) + 0.015 * math.sin(5 * theta + 2.1)
+local built: any = nil
+-- ---------------------------------------------------------------- cave field (local coords)
+-- docs/104 s16 (owner 2026-10-16): the cave is NOT a room. It is a union of ROOMS (a central chamber and one alcove per station)
+-- joined by short winding TUNNELS (capsules along the walkable paths), with noisy walls. caveSd(x, dz) = signed distance in studs to the
+-- cave wall (> 0 inside the open cave). Each room / tunnel also carries a ceiling `height` (studs over the floor at full dome).
+-- {id, x, z, rx, rz, height}. Pad radius + 10..13 so every pad has >= 4 studs of clear floor around it after the wall noise.
+local ROOMS = {
+    {"heart", 0, 0, 31, 31, 58},
+    {"gate", 0, -82, 30, 30, 40},
+    {"nests", 66, -38, 27, 27, 50},
+    {"potions", -66, -38, 25, 25, 50},
+    {"fusion", 0, 48, 30, 30, 42},
+    {"style", 84, 34, 28, 28, 50},
+    {"index", -84, 34, 30, 30, 40},
+    {"settings", -48, 76, 24, 24, 34},
+    {"fame", 52, 76, 32, 32, 38},
+    {"cavern", -4, 86, 34, 21, 54}, -- lava pool + falls
+    -- small side caves (nooks) that break up the silhouette; each overlaps a room so none is an isolated bubble
+    {"nook_nw", -30, -62, 13, 13, 28}, {"nook_ne", 34, -68, 12, 12, 30}, {"nook_e", 104, 10, 13, 13, 30},
+    {"nook_w", -106, 12, 12, 12, 30}, {"nook_sw", -78, 84, 12, 12, 28}, {"nook_se", 78, 98, 11, 11, 28},
+    {"nook_s", 26, 98, 10, 10, 28},
+}
+-- Tunnels: {from, to, waypoints}. Winding on purpose (+-8..15 studs off the straight line) but short; every station is on a loop except the
+-- Island gate, so the way back to the Heart is never a dead end.
+local LINKS = {
+    {"heart", "gate", {{9, -40}, {-8, -60}}},
+    {"heart", "nests", {{30, -6}, {50, -22}}},
+    {"nests", "style", {{88, -10}}},
+    {"style", "fame", {{70, 52}}},
+    {"fame", "fusion", {{28, 62}}},
+    {"heart", "potions", {{-28, -4}, {-46, -18}}},
+    {"potions", "index", {{-60, -2}}},
+    {"index", "settings", {{-82, 64}}},
+    {"settings", "fusion", {{-28, 68}}},
+    {"heart", "fusion", {{-6, 26}}},
+}
+local function ellipseSd(x: number, dz: number, r: any): number
+    local dx, dy = (x - r[2]) / r[4], (dz - r[3]) / r[5]
+    return (1 - math.sqrt(dx * dx + dy * dy)) * math.min(r[4], r[5])
 end
--- <= 1 inside the irregular floor blob (a squarish ellipse with a gentle wobble).
-local function blobNorm(x: number, dz: number): number
-    local w = wobble(math.atan2(dz, x))
-    local nx, nz = math.abs(x) / (BASE_X * w), math.abs(dz) / (BASE_Z * w)
-    return (nx ^ 3 + nz ^ 3) ^ (1 / 3)
+local function clampN(v: number): number return if v < -1 then -1 elseif v > 1 then 1 else v end
+-- relief of the wall, in studs: broad swells plus a finer crumple
+local function wallRelief(x: number, dz: number): number
+    local n = 0.7 * math.noise(x / 19, dz / 19, 2.3) + 0.3 * math.noise(x / 6.5, dz / 6.5, 7.9)
+    return clampN(n * 1.35) * CaveHubLayout.WallNoise
 end
--- True when a disc of `margin` studs around (x, dz) is inside the floor blob.
-local function insideFloorLocal(x: number, dz: number, margin: number): boolean
-    if blobNorm(x, dz) > 1 then return false end
-    if margin <= 0 then return true end
-    for i = 0, 11 do
-        local a = i * math.pi / 6
-        if blobNorm(x + margin * math.cos(a), dz + margin * math.sin(a)) > 1 then return false end
+-- (sd, ceilingHeightOverFloor) at a local point. Smooth: the height is a weighted blend of the nearby rooms / tunnels.
+local function caveField(x: number, dz: number): (number, number)
+    CaveHubLayout.get()
+    local best, wsum, hsum = -math.huge, 0, 0
+    local function take(sd: number, h: number)
+        if best == -math.huge then best = sd
+        else -- smooth union (k = 8): rooms and tunnels melt into each other, no knife-edge rock slivers between them
+            local d = math.max(8 - math.abs(best - sd), 0) / 8
+            best = math.max(best, sd) + d * d * 2
+        end
+        local w = math.exp(math.clamp(sd, -30, 40) / 3.5) -- the deepest room / tunnel dominates; neighbours blend over a few studs
+        wsum += w
+        hsum += w * h
     end
-    return true
+    for _, r in ROOMS do take(ellipseSd(x, dz, r), r[6]) end
+    for _, t in built.tunnels do
+        local px, pz = x - t.ax, dz - t.az
+        local vx, vz = t.bx - t.ax, t.bz - t.az
+        local l2 = vx * vx + vz * vz
+        local u = if l2 > 0 then math.clamp((px * vx + pz * vz) / l2, 0, 1) else 0
+        local ex, ez = px - vx * u, pz - vz * u
+        take(t.r - math.sqrt(ex * ex + ez * ez), t.h)
+    end
+    local h = if wsum > 0 then hsum / wsum else 30
+    return best + wallRelief(x, dz), h
 end
--- BD-281: floor-blob norm in WORLD coordinates (<= 1 inside the floor blob), and the blob's base radii, for the terrain rules.
+-- ceiling height over the floor for a point `sd` studs inside the wall at full height `h`
+local function domeHeight(sd: number, h: number): number
+    local e = CaveHubLayout.CeilingEdge
+    return e + (h - e) * math.sqrt(math.clamp(sd / CaveHubLayout.CeilingDomeDepth, 0, 1))
+end
+CaveHubLayout.domeHeightAt = domeHeight
+-- signed distance to the cave wall in WORLD coordinates (> 0 inside the open cave), and the dome height there
+function CaveHubLayout.caveSd(x: number, z: number): number
+    return (caveField(x, z - CaveHubLayout.CenterZ))
+end
+function CaveHubLayout.caveField(x: number, z: number): (number, number)
+    return caveField(x, z - CaveHubLayout.CenterZ)
+end
+local SD_SCALE = 95 -- legacy "norm" unit: floorNorm = 1 - sd / SD_SCALE keeps CaveLightingRules.insideAt (<= 1 inside) unchanged
+CaveHubLayout.SdScale = SD_SCALE
 function CaveHubLayout.floorNorm(x: number, z: number): number
-    return blobNorm(x, z - CaveHubLayout.CenterZ)
+    return 1 - (caveField(x, z - CaveHubLayout.CenterZ)) / SD_SCALE
 end
-CaveHubLayout.BaseX, CaveHubLayout.BaseZ = BASE_X, BASE_Z
+-- True when a disc of `margin` studs around (x, dz) is inside the open cave (sd is a distance, so sd >= margin).
+local function insideFloorLocal(x: number, dz: number, margin: number): boolean
+    return (caveField(x, dz)) >= math.max(margin, 0)
+end
 function CaveHubLayout.insideFloor(x: number, z: number, margin: number?): boolean
     return insideFloorLocal(x, z - CaveHubLayout.CenterZ, margin or 0)
 end
--- Ceiling height above the floor at a local point (38 at the walls, 62 over the centre).
+-- Ceiling height above the floor at a local point (domes from CeilingEdge at the wall up to the room / tunnel height).
 local function ceilingAbove(x: number, dz: number): number
-    local n = math.min(blobNorm(x, dz), 1)
-    return CaveHubLayout.CeilingWall + (CaveHubLayout.CeilingCentre - CaveHubLayout.CeilingWall) * (1 - n) ^ 0.5
+    local sd, h = caveField(x, dz)
+    return domeHeight(sd, h)
 end
 function CaveHubLayout.ceilingY(x: number, z: number): number
     return CaveHubLayout.FloorY + ceilingAbove(x, z - CaveHubLayout.CenterZ)
@@ -154,28 +227,29 @@ CaveHubLayout.Kinds = KINDS
 -- Station props: {key, count, mode}. mode: "centre" = on the pad centre, "sign" = at the sign, "back" = the big piece
 -- behind the station, "arc" = spread in the outward arc (behind the station, away from the walking approach). Counts follow docs/104 s13 (trimmed where noted).
 local STATION_PROPS: {[string]: {{any}}} = {
-    nests = {{"hub_nest_ledge", 1, "back"}, {"nest", 5, "arc"}, {"hub_straw_mat", 5, "arc"}, {"hub_lantern_post", 3, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    potions = {{"hub_stall_potion", 1, "back"}, {"potion_model", 4, "arc"}, {"hub_crate", 3, "arc"}, {"hub_barrel", 1, "arc"}, {"hub_cauldron", 1, "arc"}, {"hub_lantern_post", 2, "arc"}, {"hub_table_wood", 1, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    fusion = {{"hub_forge_ring", 1, "centre"}, {"hub_forge_altar", 1, "back"}, {"hub_pedestal", 3, "arc"}, {"hub_crate", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    style = {{"hub_counter_stone", 1, "back"}, {"hub_crystal_l", 2, "arc"}, {"hub_crystal_s", 5, "arc"}, {"hub_pedestal", 1, "arc"}, {"hub_gem_chest", 1, "arc"}, {"hub_lantern_post", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    nests = {{"hub_nest_ledge", 1, "back"}, {"nest", 5, "arc"}, {"hub_straw_mat", 5, "arc"}, {"hub_lantern_post", 1, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    potions = {{"hub_stall_potion", 1, "back"}, {"potion_model", 4, "arc"}, {"hub_lantern_post", 1, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    fusion = {{"hub_forge_ring", 1, "centre"}, {"hub_forge_altar", 1, "back"}, {"hub_pedestal", 3, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    style = {{"hub_counter_stone", 1, "back"}, {"hub_crystal_l", 2, "arc"}, {"hub_crystal_s", 5, "arc"}, {"hub_pedestal", 1, "arc"}, {"hub_gem_chest", 1, "arc"}, {"hub_lantern_post", 1, "arc"}, {"hub_sign_stone", 1, "sign"}},
     index = {{"hub_pedestal", 4, "arc"}, {"hub_statue_triceratops", 1, "arc"}, {"hub_statue_trex", 1, "arc"}, {"hub_statue_brachiosaurus", 1, "arc"}, {"hub_banner", 2, "arc"}, {"hub_lectern_book", 1, "back"}, {"hub_bench_stone", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
     settings = {{"hub_lantern_post", 1, "arc"}, {"hub_gong", 1, "arc"}, {"hub_cushion_moss", 2, "arc"}, {"hub_bench_stone", 1, "arc"}, {"hub_sign_stone", 1, "sign"}},
     -- Cosy pass (docs/104 s14, owner 2026-10-16): the Heart gets the show-off pedestal (the FIRST hub_pedestal of the Heart is the spot,
     -- CaveLightingRules.ShowOff), stone benches and moss cushions to rest on, and two lamp posts. Registered assets only.
-    heart = {{"hub_pedestal", 1, "arc"}, {"hub_bench_stone", 2, "arc"}, {"hub_cushion_moss", 3, "arc"}, {"hub_lantern_post", 2, "arc"}},
-    fame = {{"hub_wall_frame", 3, "arc"}, {"hub_lantern_post", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    heart = {{"hub_pedestal", 1, "arc"}, {"hub_bench_stone", 2, "arc"}, {"hub_cushion_moss", 2, "arc"}, {"hub_lantern_post", 1, "arc"}},
+    fame = {{"hub_wall_frame", 3, "arc"}, {"hub_lantern_post", 1, "arc"}, {"hub_sign_stone", 1, "sign"}},
     gate = {{"hub_gate_arch", 1, "sign"}, {"rock_mossy_boulder", 2, "arc"}, {"hub_sign_arrow", 2, "arc"}},
 }
 -- Scatter props (rocks, stalagmites, moss ...): {key, count}. Lava props are placed around the pool, light cones in the holes.
 local SCATTER = {
-    {"cave_stalagmite_l", 8}, {"cave_stalagmite_s", 18}, {"cave_rock_round", 20}, {"cave_rock_flat", 14},
-    {"rock_mossy_boulder", 6}, {"rock_crystal", 4}, {"rock_pebbles", 10}, {"cave_moss_patch", 24},
+    -- docs/104 s16 (owner 2026-10-16): decor is reduced and grows out of the rock. Wall pieces, clusters and moss hug the cave wall
+    -- (zone "wall"/"edge"); only a few free-standing floor rocks remain, and nothing reads as furniture dropped on the floor.
+    {"cave_stalagmite_l", 4, "edge"}, {"cave_stalagmite_s", 6}, {"cave_rock_round", 6, "edge"}, {"cave_rock_flat", 3, "edge"},
+    {"rock_mossy_boulder", 3, "edge"}, {"rock_crystal", 4, "edge"}, {"rock_pebbles", 6}, {"cave_moss_patch", 10, "edge"},
     {"cave_stalactite", 24}, {"cave_moss_hang", 10},
-    {"cave_stalagmite_cluster", 4}, {"cave_wall_boulder_l", 16}, {"cave_wall_pillar", 10}, {"cave_wall_arch_small", 4},
-    -- BD-384 look pass: more rock forms along the rim (above), stalagmite clusters at the floor edge, moss near the lava glow
-    {"cave_stalagmite_cluster", 8, "edge"}, {"cave_stalagmite_s", 8, "edge"}, {"cave_moss_patch", 8, "lava"},
+    {"cave_stalagmite_cluster", 4, "wall"}, {"cave_wall_boulder_l", 16, "wall"}, {"cave_wall_pillar", 10, "wall"}, {"cave_wall_arch_small", 4, "wall"},
+    {"cave_stalagmite_cluster", 4, "edge"}, {"cave_stalagmite_s", 4, "edge"}, {"cave_moss_patch", 8, "lava"},
 }
-local WALLPIECES = {cave_wall_boulder_l = true, cave_wall_pillar = true, cave_wall_arch_small = true} -- put near the wall rim
+local WALLPIECES = {cave_wall_boulder_l = true, cave_wall_pillar = true, cave_wall_arch_small = true} -- put against the cave wall
 local LAVA_PROPS = {rim = 6, steps = 4}
 
 -- ---------------------------------------------------------------- small math helpers
@@ -204,7 +278,6 @@ end
 CaveHubLayout.boxDist = boxDist
 
 -- ---------------------------------------------------------------- build (cached, deterministic)
-local built: any = nil
 local STATION_INDEX: {[string]: any} = {}
 
 local function station(id: string): any return STATION_INDEX[id] end
@@ -237,26 +310,36 @@ local function buildStations(): {any}
     return list
 end
 
-local function buildPaths(stations: {any}): {any}
-    local paths = {}
-    local function add(id: string, a: any, b: any, width: number, kind: string)
-        local dx, dz = b.x - a.x, b.z - a.z
-        local len = math.sqrt(dx * dx + dz * dz)
-        local ux, uz = dx / len, dz / len
-        paths[#paths + 1] = {id = id, kind = kind, width = width, half = width / 2,
-            ax = a.x + ux * a.r, az = a.z + uz * a.r, bx = b.x - ux * b.r, bz = b.z - uz * b.r}
+-- Paths = the flat laid-stone way along every tunnel, one record per straight piece (so a winding tunnel is several paths). Each piece
+-- joins two graph NODES (station centres or tunnel waypoints, L.nodes): `a`/`b`. ax..bz are the flat segment (clipped at the pad edge of a
+-- station end). built.tunnels are the centre-to-centre capsules that carve the tunnel (radius TunnelRadius).
+local function buildPaths(stations: {any}): ({any}, {any}, {[string]: any})
+    local paths, tunnels = {}, {}
+    local nodes: {[string]: any} = {}
+    for _, s in stations do nodes[s.id] = {x = s.x, z = s.z, r = s.r} end
+    for _, link in LINKS do
+        local chain = {link[1]}
+        for i, wp in link[3] do
+            local id = string.format("w_%s_%s_%d", link[1], link[2], i)
+            nodes[id] = {x = wp[1], z = wp[2], r = 0}
+            chain[#chain + 1] = id
+        end
+        chain[#chain + 1] = link[2]
+        for i = 1, #chain - 1 do
+            local ia, ib = chain[i], chain[i + 1]
+            local a, b = nodes[ia], nodes[ib]
+            local dx, dz = b.x - a.x, b.z - a.z
+            local len = math.sqrt(dx * dx + dz * dz)
+            local ux, uz = dx / len, dz / len
+            paths[#paths + 1] = {id = string.format("%s_%s_%d", link[1], link[2], i), kind = "tunnel", width = CaveHubLayout.PathHalf * 2, half = CaveHubLayout.PathHalf,
+                a = ia, b = ib, ax = a.x + ux * a.r, az = a.z + uz * a.r, bx = b.x - ux * b.r, bz = b.z - uz * b.r}
+            tunnels[#tunnels + 1] = {ax = a.x, az = a.z, bx = b.x, bz = b.z, r = CaveHubLayout.TunnelRadius, h = 30}
+        end
     end
-    local heart = station("heart")
-    for _, s in stations do
-        if s.id ~= "heart" then add("star_" .. s.id, heart, s, 12, "star") end
-    end
-    -- ring path linking neighbours in angular order around the Heart
-    local ring = {"gate", "nests", "style", "fame", "fusion", "settings", "index", "potions"}
-    for i, id in ring do
-        local nextId = ring[i % #ring + 1]
-        add("ring_" .. id .. "_" .. nextId, station(id), station(nextId), 10, "ring")
-    end
-    return paths
+    -- the stub from the gate pad to the mouth in the north wall (flat floor under the arch); not a graph edge
+    local g = nodes.gate
+    paths[#paths + 1] = {id = "gate_mouth", kind = "mouth", width = 8, half = 4, ax = g.x, az = g.z - g.r, bx = g.x, bz = g.z - 22}
+    return paths, tunnels, nodes
 end
 
 -- distance beyond the nearest flat zone (pad or path); <= 0 means flat ground
@@ -274,13 +357,20 @@ function CaveHubLayout.flatDistance(x: number, z: number): number
     CaveHubLayout.get()
     return flatDistanceLocal(x, z - CaveHubLayout.CenterZ)
 end
--- Floor top height: exactly FloorY on pads and paths, gentle 0-1.5 stud undulation elsewhere (docs/104 s2.1).
+-- Floor top height: exactly FloorY on pads and the laid-stone paths; elsewhere gentle rolling hills and a few low terraces (0..HillMax studs
+-- over FloorY, slopes < 20 degrees) that fade in over HillRamp studs from the nearest flat zone (docs/104 s16).
+CaveHubLayout.HillMax, CaveHubLayout.HillRamp = 3.0, 18
 local function floorHeightLocal(x: number, dz: number): number
     local d = flatDistanceLocal(x, dz)
-    local t = math.clamp(d / 8, 0, 1)
+    d = math.min(d, dist(x, dz, POOL.x, POOL.z) - (POOL.r + 6), dist(x, dz, FALL.x, FALL.z - 6) - 24) -- the lava pool and the falls sit on flat ground
+    local gx, gz = math.max(math.abs(x) - 20, 0), math.max(dz + 92, 0) -- the ground under the gate arch (|x| < 20 north of dz -92) stays flat
+    d = math.min(d, math.sqrt(gx * gx + gz * gz))
+    local t = math.clamp(d / CaveHubLayout.HillRamp, 0, 1)
     local mask = t * t * (3 - 2 * t)
-    local u = 0.75 + 0.75 * math.sin(x * 0.045 + 1.3) * math.cos(dz * 0.05 + 0.4)
-    return CaveHubLayout.FloorY + u * mask
+    if mask <= 0 then return CaveHubLayout.FloorY end
+    local u = math.clamp(0.5 + 0.9 * (0.75 * math.noise(x / 41, dz / 41, 5.5) + 0.25 * math.noise(x / 15, dz / 15, 1.7)), 0, 1)
+    u = u - 0.5 * math.sin(2 * math.pi * 3 * u) / (2 * math.pi * 3) -- terraces: shallow shelves between the swells
+    return CaveHubLayout.FloorY + CaveHubLayout.HillMax * u * mask
 end
 function CaveHubLayout.floorHeight(x: number, z: number): number
     CaveHubLayout.get()
@@ -294,8 +384,9 @@ end
 function CaveHubLayout.get(): any
     if built then return built end
     local stations = buildStations()
-    built = {stations = stations, byId = STATION_INDEX, paths = {}}
-    built.paths = buildPaths(stations)
+    built = {stations = stations, byId = STATION_INDEX, paths = {}, tunnels = {}, nodes = {}}
+    built.paths, built.tunnels, built.nodes = buildPaths(stations)
+    built.rooms = {}
     local props = {}
     local seed = 1404
     local function rand(): number
@@ -317,6 +408,9 @@ function CaveHubLayout.get(): any
                 if dist(px, pz, s.x, s.z) + br * 0.5 > s.r - 1 then return false end
                 for _, pa in built.paths do -- BD-399: keep path mouths clear
                     if segDist(px, pz, pa.ax, pa.az, pa.bx, pa.bz) < pa.half + br + 1.5 then return false end
+                end
+                for _, sp in s.spots do -- arrival spots stay free (docs/104 s9): nothing stands within 2 studs of a spot
+                    if dist(px, pz, sp.x, sp.z) < br + 2.5 then return false end
                 end
                 for _, q in mine do
                     if dist(px, pz, q[1], q[2]) < (br + q[3]) * 0.95 then return false end -- BD-399: was 0.55 (overlapping station props)
@@ -378,6 +472,24 @@ function CaveHubLayout.get(): any
         addProp("cave_light_cone", s.x, s.z, 0, 1, h[1])
     end
     built.holes = holes
+    built.rooms = {}
+    for _, r in ROOMS do built.rooms[#built.rooms + 1] = {id = r[1], x = r[2], z = r[3], rx = r[4], rz = r[5], height = r[6]} end
+    -- rock ledges (docs/104 s16): at the back of a station alcove the wall grows a low stone shelf in the same palette, where the old
+    -- counters / stalls stood on the floor. Terrain-only (CaveTerrainRules adds them to the shell). Skipped where one would crowd the lava
+    -- pool or a path mouth. {owner, x, z, yaw, w, d, h}: oriented box (Roblox yaw), top `h` studs over the floor.
+    local ledges = {}
+    for _, s in stations do
+        if s.id ~= "heart" and s.id ~= "gate" then
+            local lx, lz = s.x + math.cos(s.outward) * (s.r + 5), s.z + math.sin(s.outward) * (s.r + 5)
+            local lg = {owner = s.id, x = lx, z = lz, yaw = yawTo(math.cos(s.outward), math.sin(s.outward)), w = math.min(2 * s.r - 4, 22), d = 8, h = 3}
+            local ok = dist(lx, lz, POOL.x, POOL.z) > POOL.r + 16 and (caveField(lx, lz)) > 0
+            for _, p in built.paths do
+                if segDist(lx, lz, p.ax, p.az, p.bx, p.bz) < p.half + 14 then ok = false end
+            end
+            if ok then ledges[#ledges + 1] = lg end
+        end
+    end
+    built.ledges = ledges
     built.props = props
     -- scatter (rejection sampling, deterministic)
     local placed = {}
@@ -390,8 +502,12 @@ function CaveHubLayout.get(): any
         for _, p in built.paths do
             if segDist(x, z, p.ax, p.az, p.bx, p.bz) < p.half + br + 1.5 then return false end
         end
+        for _, lg in built.ledges do
+            if boxDist(x, z, lg) < br + 1.5 then return false end
+        end
         if dist(x, z, POOL.x, POOL.z) < POOL.r + br + 5 then return false end
         if z > FALL.z - 14 then return false end
+        if z < station("gate").z - 16 and math.abs(x) < 24 then return false end -- gate mouth stays clear
         for _, q in placed do
             if dist(x, z, q[1], q[2]) < (br + q[3]) * 0.9 then return false end -- BD-399: scaled radii, 0.9 (was unscaled 0.8)
         end
@@ -407,27 +523,20 @@ function CaveHubLayout.get(): any
             tries += 1
             local scale = 0.85 + rand() * 0.4
             local x, z
-            if key == "cave_moss_hang" then
-                -- hang on the wall: on the blob rim, inside it
-                local a = rand() * 2 * math.pi
-                local w = wobble(a)
-                x, z = math.cos(a) * BASE_X * w * 0.97, math.sin(a) * BASE_Z * w * 0.97
-                for _ = 1, 8 do
-                    if insideFloorLocal(x, z, 1.5) then break end
-                    x, z = x * 0.98, z * 0.98
-                end
-            elseif zone == "lava" then
+            x, z = (rand() * 2 - 1) * CaveHubLayout.BoxHalfX, (rand() * 2 - 1) * CaveHubLayout.BoxHalfZ
+            if zone == "lava" then
                 -- moss around the lava glow (the pool itself stays clear)
                 local a = rand() * 2 * math.pi
                 local r = POOL.r + 9 + rand() * 12
                 x, z = POOL.x + math.cos(a) * r, POOL.z + math.sin(a) * r
-            elseif WALLPIECES[key] or zone == "edge" then
-                local a = rand() * 2 * math.pi
-                local w = wobble(a)
-                local f = if zone == "edge" then 0.7 + rand() * 0.14 else 0.8 + rand() * 0.12
-                x, z = math.cos(a) * BASE_X * w * f, math.sin(a) * BASE_Z * w * f
-            else
-                x, z = (rand() * 2 - 1) * CaveHubLayout.BoxHalfX, (rand() * 2 - 1) * CaveHubLayout.BoxHalfZ
+            end
+            local sd = (caveField(x, z))
+            if key == "cave_moss_hang" then
+                if sd < 1.5 or sd > 3.5 then continue end -- hangs on the wall itself
+            elseif WALLPIECES[key] or zone == "wall" then
+                if sd < br * scale + 2 or sd > br * scale + 8 then continue end -- grows out of the wall
+            elseif zone == "edge" then
+                if sd < br * scale + 2 or sd > br * scale + 16 then continue end
             end
             if clearOfEverything(x, z, br * scale, not hang) then
                 n += 1

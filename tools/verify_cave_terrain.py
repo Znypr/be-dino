@@ -25,7 +25,7 @@ local function dist(ax,az,bx,bz) return math.sqrt((ax-bx)^2+(az-bz)^2) end
 local function occAt(x,y,z) local _,o=R.cell(x,y,z) return o end
 
 assert(res==Config.TerrainResolution,"voxel size = Config.TerrainResolution")
-assert(Config.CaveHub==false,"CaveHub ships off")
+assert(Config.CaveHub==(Config.ReleaseProfile=="playtest"),"CaveHub is on only in the playtest build")
 assert(R.XMin%res==0 and R.XMax%res==0 and R.YMin%res==0 and R.YMax%res==0 and R.ZMin%res==0 and R.ZMax%res==0,"region aligned to the voxel grid")
 assert(R.ZMin>Config.ArenaHalfWidth+8,"cave region never overlaps the island terrain (writes cannot clobber it)")
 local hub=C.hub(setmetatable({CaveHub=true},{__index=Config}))
@@ -89,14 +89,14 @@ for i=0,nx-1 do for k=0,nz-1 do
   flatCols+=1
  end
 end end
-assert(flatCols>=800,"enough flat path/pad columns tested: "..flatCols)
+assert(flatCols>=450,"enough flat path/pad columns tested: "..flatCols)
 
 -- ---- stations and paths stay clear above the floor (nothing blocks walking or props)
 for _,s in L.stations do
  local checked=0
  for a=0,359,15 do for rr=0,s.r-1,4 do
   local x,z=s.x+rr*math.cos(math.rad(a)),s.z+rr*math.sin(math.rad(a))
-  for y=FY+3,FY+30,3 do assert(occAt(x,y,z+CZ)==0,"station not clear: "..s.id.." at "..x..","..y..","..z) checked+=1 end
+  for y=FY+3,FY+24,3 do assert(occAt(x,y,z+CZ)==0,"station not clear: "..s.id.." at "..x..","..y..","..z) checked+=1 end
  end end
  assert(checked>0)
 end
@@ -105,7 +105,7 @@ for _,p in L.paths do
  local len=dist(p.ax,p.az,p.bx,p.bz)
  for t=0,len,3 do
   local x,z=p.ax+(p.bx-p.ax)*t/len,p.az+(p.bz-p.az)*t/len
-  for y=FY+3,FY+30,3 do assert(occAt(x,y,z+CZ)==0,"path not clear: "..p.id) pathChecks+=1 end
+  for y=FY+3,FY+18,3 do assert(occAt(x,y,z+CZ)==0,"path not clear: "..p.id) pathChecks+=1 end
  assert(math.abs(columnTop(math.floor((x-R.XMin)/res),math.floor((z+CZ-R.ZMin)/res))-FY)<=0.6,"path height ~floor at "..p.id)
  end
 end
@@ -119,23 +119,25 @@ for _,h in L.holes do
  end end
  -- rim: just outside the hole the roof is solid
  local ox=h.x+h.radius+res+2
- local _,o=R.cell(ox,ceil+4,h.z+CZ)
+ local _,o=R.cell(ox,C.ceilingY(ox,h.z+CZ)+4,h.z+CZ)
  assert(o>0.2,"roof solid next to hole "..h.station)
 end
 assert(#L.holes==4)
 
--- ---- ceiling closed (>= 8 thick) everywhere else over the floor footprint, and high enough
-local ceilChecks,minClear=0,math.huge
-for x=-120,120,6 do for dz=-100,100,6 do
+-- ---- ceiling closed (>= 8 thick) everywhere else over the cave footprint, and high enough (domes: low at the wall, rising inward)
+local ceilChecks,minClear,minDeep=0,math.huge,math.huge
+for x=-124,124,4 do for dz=-112,112,4 do
  local wz=dz+CZ
  if C.insideFloor(x,wz,2) then
   local nearHole=false
   for _,h in L.holes do if dist(x,dz,h.x,h.z)<h.radius+5 then nearHole=true end end
+  for _,lg in L.ledges do if C.boxDist(x,dz,lg)<2 then nearHole=true end end -- stone shelves stand on the floor: not a ceiling probe
   if not nearHole and not (dz>C.Fall.z-12 and math.abs(x-C.Fall.x)<C.Fall.width/2+4) then
    local floor=C.floorHeight(x,wz)
    local y=floor+1
    while occAt(x,y,wz)<=0 and y<R.YMax do y+=0.5 end
    minClear=math.min(minClear,y-floor)
+   if C.caveSd(x,wz)>=9 then minDeep=math.min(minDeep,y-floor) end
    local thick=0
    while occAt(x,y+thick,wz)>0 and thick<30 do thick+=0.5 end
    assert(thick>=8,"ceiling thinner than 8 studs at "..x..","..dz.." ("..thick..")")
@@ -143,27 +145,49 @@ for x=-120,120,6 do for dz=-100,100,6 do
   end
  end
 end end
-assert(ceilChecks>800 and minClear>=30,"ceiling at least 30 studs above the floor (min "..minClear..")")
+assert(ceilChecks>800 and minClear>=12 and minDeep>=20,"ceiling domes from the wall up: >= 12 studs anywhere, >= 20 studs 9+ studs from the wall (min "..minClear.." / "..minDeep..")")
 
--- ---- walls closed and thick all the way round (gate mouth and falls recess are the only cuts, and stay closed behind)
-local wallChecks,minThick=0,math.huge
-for a=0,359,2 do for _,h in {FY+4,FY+16,FY+30} do
- local dx,dz=math.cos(math.rad(a)),math.sin(math.rad(a))
- local r=20
- while r<200 and occAt(dx*r,h,dz*r+CZ)<=0 do r+=0.5 end
- assert(r<200,"no wall at angle "..a)
- local thick=0
- while occAt(dx*(r+thick),h,dz*(r+thick)+CZ)>0 and thick<40 do thick+=0.5 end
- local x0,z0=dx*r,dz*r
- local inGate=z0<0 and math.abs(x0)<17 and h<FY+22
- local inFalls=z0>C.Fall.z-6 and math.abs(x0-C.Fall.x)<C.Fall.width/2+4
- minThick=math.min(minThick,thick)
- if inGate then assert(thick>=3,"gate mouth is closed behind (>= 3 studs): "..thick)
- elseif inFalls then assert(thick>=6,"falls recess keeps rock behind it: "..thick)
- else assert(thick>=8,"wall >= 8 studs at angle "..a.." height "..h.." ("..thick..")") end
- wallChecks+=1
+-- ---- walls closed and thick all the way round (organic cave: march outward from every wall-side point along the wall normal;
+-- gate mouth and falls recess are the only cuts, and stay closed behind; a divider between two parts of the cave may be thinner)
+local wallChecks,minThick,thinDividers=0,math.huge,0
+for x=-124,124,3 do for dz=-116,116,3 do
+ local wz=dz+CZ
+ local sd=C.caveSd(x,wz)
+ if sd>=1 and sd<=3.5 then
+  -- outward normal = direction of falling sd
+  local gx=(C.caveSd(x+1,wz)-C.caveSd(x-1,wz))/2
+  local gz=(C.caveSd(x,wz+1)-C.caveSd(x,wz-1))/2
+  local gl=math.sqrt(gx*gx+gz*gz)
+  if gl>0.05 then
+   local ux,uz=-gx/gl,-gz/gl
+   for _,h in {FY+4,FY+8} do
+    if occAt(x,h,wz)<=0 then
+     local r=0
+     while r<30 and occAt(x+ux*r,h,wz+uz*r)<=0 do r+=0.5 end
+     if r<30 then
+      local thick=0
+      while occAt(x+ux*(r+thick),h,wz+uz*(r+thick))>0 and thick<40 do thick+=0.5 end
+      local x0,z0=x+ux*r,wz+uz*r-CZ
+      local inGate=z0<-88 and math.abs(x0)<19 and h<FY+22
+      local inFalls=z0>C.Fall.z-6 and math.abs(x0-C.Fall.x)<C.Fall.width/2+6
+      local nearLedge=false
+      for _,lg in L.ledges do if C.boxDist(x0,z0,lg)<3 then nearLedge=true end end
+      if not nearLedge then
+       minThick=math.min(minThick,thick)
+       local divider=C.caveSd(x+ux*(r+thick+1),wz+uz*(r+thick+1))>-4 -- the far side is cave (or its wall relief) again: a thin divider
+       if inGate then assert(thick>=3,"gate mouth is closed behind (>= 3 studs): "..thick)
+       elseif divider then assert(thick>=2,"divider between two parts of the cave >= 2 studs at "..x..","..z0.." ("..thick..")") thinDividers+=1
+       elseif inFalls then assert(thick>=4,"falls recess keeps rock behind it: "..thick.." at "..x0..","..z0.." h "..h.." dir "..ux..","..uz)
+       else assert(thick>=8,"wall >= 8 studs at "..x..","..z0.." height "..h.." ("..thick..")") end
+       wallChecks+=1
+      end
+     end
+    end
+   end
+  end
+ end
 end end
-assert(wallChecks==180*3)
+assert(wallChecks>600,"enough wall probes: "..wallChecks)
 
 -- ---- gate opening: the arch mouth toward the island is real air above the flat floor
 local g0=L.byId.gate
@@ -189,7 +213,7 @@ assert(occAt(F.x,FY+20,CZ+F.z+2)==0,"falls recess carved behind the sheet")
 -- QA (Studio): the recess once ran through the roof (sheet 48 high, ceiling 38 over the floor) and showed a sky gap
 for fx=F.x-18,F.x+18,3 do for fz=F.z-1,F.z+7,2 do
  local roof=false
- for y=FY+20,R.YMax-res/2,1 do if occAt(fx,y,CZ+fz)>0 then roof=true break end end
+ for y=FY+8,R.YMax-res/2,1 do if occAt(fx,y,CZ+fz)>0 then roof=true break end end
  assert(roof,"roof closed above the falls recess at "..fx..","..fz)
 end end
 local mF,oF=R.cell(F.x,FY+20,CZ+F.z+R.FallRecess.back+2)

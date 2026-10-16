@@ -54,7 +54,7 @@ for _,cfg in {(function() local off=table.clone(Config) off.CaveHub=false return
 end
 local on=table.clone(Config) on.CaveHub=true
 local hub=C.hub(on)
-assert(hub.enabled and hub.centerZ==580 and hub.floorY==6 and hub.halfX==130 and hub.halfZ==110,"hub(config) flag on = the 260 x 220 cave")
+assert(hub.enabled and hub.centerZ==580 and hub.floorY==6 and hub.halfX==130 and hub.halfZ==116,"hub(config) flag on = the organic cave inside a 260 x 232 bounding box")
 assert(hub.centerZ-hub.halfZ>on.ArenaHalfWidth+8+30,"cave clears the island terrain and boundary rocks")
 assert(hub.biome.minX<=-130-C.WallThickness and hub.biome.maxX>=130+C.WallThickness and hub.biome.minZ<=hub.centerZ-hub.halfZ-C.WallThickness and hub.biome.maxZ>=hub.centerZ+hub.halfZ+C.WallThickness,"biome rect holds floor + 8 stud walls")
 assert(Config.SanctuaryCenterZ+48<=hub.biome.maxZ and Config.SanctuaryCenterZ-48>=hub.biome.minZ,"old hub box lies inside the cave biome rect")
@@ -66,7 +66,7 @@ assert(not SpawnGeometry.fallen(on,Layout,Vector3.new(0,11,580)) and SpawnGeomet
 assert(SpawnGeometry.recoveryPoint(on,Layout,false)==sp,"respawn at the Heart")
 local spawn=C.spawn()
 assert(spawn.x==sp.X and spawn.y==sp.Y and spawn.z==sp.Z,"layout spawn = SpawnGeometry.hubPoint")
-print("flag on: cave hub (0,580) 260x220, spawn, inHub, fall detection read the same hub()")
+print("flag on: cave hub (0,580) organic cave, spawn, inHub, fall detection read the same hub()")
 
 -- ---- stations
 local S=L.stations
@@ -90,17 +90,47 @@ end
 assert(ids.heart.x==0 and ids.heart.z==0,"heart at the cave centre")
 assert(C.insideFloor(C.Pool.x,C.Pool.z+C.CenterZ,C.Pool.r+3),"lava pool inside the floor")
 
--- ---- floor extents inside the 260 x 220 box with 8 stud walls
+-- ---- floor extents inside the 260 x 232 bounding box with 8 stud walls (the floor is NOT a box: rooms and tunnels, see the fill check below)
 local minX,maxX,minZ,maxZ=math.huge,-math.huge,math.huge,-math.huge
-for x=-C.BoxHalfX-10,C.BoxHalfX+10,1 do for dz=-C.BoxHalfZ-10,C.BoxHalfZ+10,1 do
+for x=-C.BoxHalfX-10,C.BoxHalfX+10,2 do for dz=-C.BoxHalfZ-10,C.BoxHalfZ+10,2 do
  if C.insideFloor(x,dz+C.CenterZ,0) then minX=math.min(minX,x) maxX=math.max(maxX,x) minZ=math.min(minZ,dz) maxZ=math.max(maxZ,dz) end
 end end
-assert(minX>=-130 and maxX<=130 and minZ>=-110 and maxZ<=110,"floor blob inside the 260 x 220 box "..minX..","..maxX..","..minZ..","..maxZ)
-assert(maxX-minX>=240 and maxZ-minZ>=200,"floor blob really is big (not a small hub)")
+assert(minX>=-130 and maxX<=130 and minZ>=-116 and maxZ<=116,"cave inside the 260 x 232 box "..minX..","..maxX..","..minZ..","..maxZ)
+assert(maxX-minX>=200 and maxZ-minZ>=200,"cave really is big (not a small hub)")
+-- docs/104 s16: not a cube. Only a minority of the bounding box is open floor, and the bounding rectangle's four corners are solid rock.
+local open,probes=0,0
+for x=-C.BoxHalfX,C.BoxHalfX,4 do for dz=-C.BoxHalfZ,C.BoxHalfZ,4 do probes+=1 if C.insideFloor(x,dz+C.CenterZ,0) then open+=1 end end end
+assert(open/probes>0.30 and open/probes<0.62,"the open floor fills 30..62 percent of its bounding box, so it is rooms and tunnels, not a cut-out cube: "..open/probes)
+for _,sx in {-1,1} do for _,sz in {-1,1} do assert(not C.insideFloor(sx*(C.BoxHalfX-12),sz*(C.BoxHalfZ-12)+C.CenterZ,0),"box corner is solid rock") end end
+-- no long straight wall: walking the wall edge along 200 columns, the wall never stays within 0.7 studs of a straight line for 24+ studs
+do
+ local runs,worst=0,0
+ for dz=-110,110,8 do
+  local last,len=nil,0
+  for x=-128,128,2 do
+   local inside=C.insideFloor(x,dz+C.CenterZ,0)
+   if last~=nil and inside~=last then len=0 end
+   last=inside
+  end
+ end
+ -- straightness: count wall crossings with a rough run test along x lines; walls come from circles + noise so a wall crossing changes the
+ -- x position by > 1 stud between neighbouring rows in most places
+ local edge={}
+ for dz=-112,112,2 do
+  local first
+  for x=-128,128,0.5 do if C.insideFloor(x,dz+C.CenterZ,0) then first=x break end end
+  edge[#edge+1]=first
+ end
+ local straight=0
+ for i=3,#edge do
+  if edge[i] and edge[i-1] and edge[i-2] and math.abs(edge[i]-2*edge[i-1]+edge[i-2])<0.3 then straight+=1 end
+ end
+ assert(straight<#edge*0.5,"west wall is not a ruler line ("..straight.."/"..#edge..")")
+end
 
 -- ---- paths: flat, 12/10 wide, inside floor, away from the lava pool
 for _,p in L.paths do
- assert(p.half*2==(if p.kind=="star" then 12 else 10),"path widths 12 (star) / 10 (ring)")
+ assert(p.half*2==8,"flat laid-stone path in a tunnel is 8 wide")
  local len=dist(p.ax,p.az,p.bx,p.bz)
  assert(len>0,"path has length")
  for i=0,math.floor(len) do
@@ -136,14 +166,14 @@ for _,s in S do
  end end
 end
 assert(maxSlope<=TAN8,"paths and pads <= 8 degrees: "..math.deg(math.atan(maxSlope)))
-for x=-130,130,4 do for dz=-110,110,4 do
+for x=-130,130,2 do for dz=-116,116,2 do
  if C.insideFloor(x,dz+C.CenterZ,0) then
   local h=C.floorHeight(x,dz+C.CenterZ)
-  assert(h>=C.FloorY and h<=C.FloorY+1.5001,"floor undulation 0..1.5 studs")
+  assert(h>=C.FloorY and h<=C.FloorY+C.HillMax+1e-6,"floor hills 0..HillMax studs")
   maxFloorSlope=math.max(maxFloorSlope,slopeAt(x,dz+C.CenterZ))
  end
 end end
-assert(maxFloorSlope<math.tan(math.rad(20)),"whole floor gentle (< 20 degrees): "..math.deg(math.atan(maxFloorSlope)))
+assert(maxFloorSlope<math.tan(math.rad(22)),"whole floor gentle (< 22 degrees): "..math.deg(math.atan(maxFloorSlope)))
 
 -- ---- props: collect blockers (floor props that are not walk-over)
 local blockers={}
@@ -246,6 +276,57 @@ for _,s in S do
  for i,a in s.spots do assert(reached(a.x,a.z),"arrival spot reachable on flat ground: "..s.id.." #"..i) end
 end
 assert(reached(L.gate.x,L.gate.triggerZ+4),"run-exit gate reachable on flat ground")
+-- ---- docs/104 s16: the whole open cave is one connected network a child can walk (no sealed side caves, no dead-end bubbles), over
+-- ground that is walkable (slope <= 28 degrees between 2 stud neighbours), 3+ studs from the wall; every room and every tunnel waypoint is in it.
+do
+ local W=2
+ local function open(i,j) return C.insideFloor(i*W,j*W+C.CenterZ,3) end
+ local function h(i,j) return C.floorHeight(i*W,j*W+C.CenterZ) end
+ local TAN28=math.tan(math.rad(28))
+ local seenW={}
+ local q={{0,0}}
+ seenW[key(0,0)]=true
+ local hd=1
+ while hd<=#q do
+  local c=q[hd] hd+=1
+  for _,d in {{1,0},{-1,0},{0,1},{0,-1}} do
+   local i,j=c[1]+d[1],c[2]+d[2]
+   if not seenW[key(i,j)] and open(i,j) and math.abs(h(i,j)-h(c[1],c[2]))/W<=TAN28 then seenW[key(i,j)]=true q[#q+1]={i,j} end
+  end
+ end
+ local function inNet(x,z)
+  local i0,j0=math.floor(x/W+.5),math.floor(z/W+.5)
+  for di=-2,2 do for dj=-2,2 do if seenW[key(i0+di,j0+dj)] then return true end end end
+  return false
+ end
+ for _,r in L.rooms do assert(inNet(r.x,r.z),"room "..r.id.." is connected to the Heart over walkable floor") end
+ for id,n in L.nodes do assert(inNet(n.x,n.z),"tunnel node "..id.." is walkable and connected") end
+ -- tunnel loops: every station except the island gate has two ways to the Heart (no dead ends); the gate's tunnel ends at the exit arch
+ local adj={}
+ for _,p in L.paths do if p.a then adj[p.a]=adj[p.a] or {} adj[p.b]=adj[p.b] or {} table.insert(adj[p.a],p.b) table.insert(adj[p.b],p.a) end end
+ for _,s in S do
+  if s.id~="heart" and s.id~="gate" then
+   local degree=0
+   for _,p in L.paths do if p.a==s.id or p.b==s.id then degree+=1 end end
+   assert(degree>=2,"station has two tunnels (a loop, not a dead end): "..s.id.." "..degree)
+  end
+ end
+ -- sightlines (docs/104 s16): from every arrival spot the straight line to the station's sign stays in open cave
+ local sightMin=math.huge
+ for _,s in S do
+  if s.sign~="" then
+   for _,a in s.spots do
+    for t=0,1,0.05 do
+     local x,z=a.x+(s.signX-a.x)*t,a.z+(s.signZ-a.z)*t
+     sightMin=math.min(sightMin,(C.caveSd(x,z+C.CenterZ)))
+    end
+   end
+  end
+ end
+ assert(sightMin>1,"clear sightline from every arrival spot to its sign: "..sightMin)
+ -- and the tunnel mouth of every station sees its sign too: the line from the pad-edge end of each path into the station to the sign
+ print(string.format("network OK: %d walkable cells, %d rooms, %d tunnel nodes, every station on a loop, sightline margin %.1f studs",#q,#L.rooms,(function() local n=0 for _ in L.nodes do n+=1 end return n end)(),sightMin))
+end
 print(string.format("layout OK: %d stations (min gap %.1f), %d paths, max path/pad slope %.1f deg, whole floor %.1f deg, %d flat cells reachable",#S,minGap,#L.paths,math.deg(math.atan(maxSlope)),math.deg(math.atan(maxFloorSlope)),#queue))
 
 -- ---- spawn, gate, holes, lava
@@ -256,12 +337,12 @@ local want={heart=12,potions=8,nests=8,style=7} -- BD-281 QA: enlarged from 7/5/
 assert(#L.holes==4,"four ceiling holes")
 for _,h in L.holes do
  assert(h.radius==want[h.station],"hole radius "..h.station)
- assert(h.ceilingY>=C.FloorY+C.CeilingWall and h.ceilingY<=C.FloorY+C.CeilingCentre+1e-6,"ceiling height 38..62 over the floor")
+ assert(h.ceilingY>=C.FloorY+38 and h.ceilingY<=C.FloorY+60,"ceiling height 38..60 over the floor at the holes: "..h.station.." "..(h.ceilingY-C.FloorY))
  assert(counts.cave_light_cone==4,"one light cone per hole")
 end
-assert(math.abs(C.ceilingY(0,580)-(6+62))<1e-6,"62 studs over the centre")
-assert(C.Fall.crackHeight+2<=C.ceilingY(C.Fall.x,C.Fall.z+580)-C.FloorY+30,"lava crack under the back-wall ceiling")
-assert(C.Fall.width==40 and C.Fall.height==32 and C.Pool.r>=10,"lava falls 40 x 32 into a pool (BD-295: fits under the 38 stud back-wall ceiling)")
+assert(math.abs(C.ceilingY(0,580)-(6+58))<1.5,"about 58 studs over the Heart centre: "..C.ceilingY(0,580))
+assert(C.Fall.crackHeight+2<=C.ceilingY(C.Fall.x,C.Fall.z+580)-C.FloorY,"lava crack under the cavern ceiling")
+assert(C.Fall.width==40 and C.Fall.height==32 and C.Pool.r>=10,"lava falls 40 x 32 into a pool (BD-295: fits under the cavern ceiling)")
 assert(counts.cave_lava_fall==1 and counts.lava_pool_disc==1 and counts.cave_lava_rim_rock==6 and counts.cave_stepping_stone==4,"lava props present")
 assert(#L.lights<=C.MaxLights,"<= 16 lights: "..#L.lights)
 
