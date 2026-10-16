@@ -1071,14 +1071,10 @@ render=function(name: string)
         local oops=if str("LastRunEndReason")=="Defeated" then 26 else 0
         heading.Text,header.BackgroundColor3=if oops>0 then "Oops! Good try!" else "Run Complete!",if oops>0 then C.blue else C.gold
         if oops>0 then label(body,"Your eggs are safe!",30,0,760,30,24,C.blue) end
-        art(body,"trophy",24,42+oops,240)
-        label(body,"Growth  "..math.floor(num("LastRunGrowthScore")),300,18+oops,500,60,34,C.accent)
-        label(body,require(Shared.FtueCopy).runCompleteEggsLabel.."  "..num("LastRunCatchScore"),300,93+oops,500,60,34,C.blue)
-        label(body,str("LastRewardText","Saving rewards..."),290,168+oops,510,100,24,C.gold)
-        label(body,"+"..num("LastRunCrystals").." Crystals • Level "..num("AccountLevel"),30,302,760,40,21)
         local hasEggs=str("NextChestId")~="" or num("QueuedEggsWaiting")>0 or #decoded("NestsJson","[]")>0
-        button(body,"BACK TO SANCTUARY",if hasEggs then 30 else 212,348,if hasEggs then 370 else 400,48,C.accent,function() open("home") end)
-        if hasEggs then button(body,"OPEN EGGS",424,348,370,48,C.gold,function() if not require(script.Parent.HubTravelClient).press("eggs") then open("eggs") end end) end
+        require(script.Parent.RunComplete).build({body=body,C=C,label=label,box=box,art=art,button=button,num=num,oops=oops,hasEggs=hasEggs,
+            back=function() open("home") end,
+            openEggs=function() if not require(script.Parent.HubTravelClient).press("eggs") then open("eggs") end end})
     elseif name=="batchSummary" then
         heading.Text,header.BackgroundColor3="Auto-opened eggs",C.gold
         local summary=RevealSkip.summarize(skippedEntries)
@@ -1587,6 +1583,7 @@ player:GetAttributeChangedSignal("LastNestClaimAt"):Connect(function()
     notify("Nest opened!",C.accent,{icon="egg_nest",body="Open your eggs when ready"})
 end)
 PrivateState.onChanged("LastRewardText", function() if active=="results" then body:ClearAllChildren() render(active) end end)
+PrivateState.onChanged("LastRunNestCrystals", function() if active=="results" then body:ClearAllChildren() render(active) end end) -- BD-440: last private value set at settlement, so the rows show final numbers
 for _,attribute in {"LastEquipStatus","LastMutationStatus","LastChestClaimStatus","LastNestClaimStatus","LastRunStartStatus"} do
     PrivateState.onChanged(attribute, function()
         local status=str(attribute)
