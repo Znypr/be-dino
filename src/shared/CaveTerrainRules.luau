@@ -28,10 +28,15 @@ Rules.FallRecess = {halfWidth = 20, front = -1, back = 7} -- dz range around Lay
 -- Cave-only colours (the island uses none of these three): warm stone floor and warm tan walls, so the hall reads soft and calm
 -- (docs/87) instead of the island's dark teal Rock / Slate / Basalt. Island material colours are untouched.
 -- BD-384 look pass: cooler, softer grey-lilac stone (the warm lamps and the cave grade carry the colour) instead of hot orange
--- cracked sandstone. Only Cobblestone, Limestone and CrackedLava are recoloured (terrain colours are place-wide, and the island uses
--- Sandstone, Slate, Rock and Basalt), so the walls and floor are built from those two only; the island palette is untouched.
-Rules.Colors = {Cobblestone = {158, 142, 126}, Limestone = {186, 170, 150}, CrackedLava = {255, 120, 40}}
-Rules.Materials = {"Air", "Rock", "Limestone", "Sandstone", "Slate", "Basalt", "Cobblestone", "Grass", "LeafyGrass", "CrackedLava"}
+-- cracked sandstone. Only Cobblestone, Concrete and CrackedLava are recoloured (terrain colours are place-wide, and the island uses
+-- Sandstone, Slate, Rock and Basalt), so the walls and floor are built from those only; the island palette is untouched.
+-- BD-296 (lead Studio look, 2026-10-16): WallStone is plain Concrete. Limestone showed strong horizontal strata banding every few studs
+-- (its built-in texture is layered sediment) and Rock is the island's dark cold teal, bound to the BeDino_Stone art variant, whose blotchy
+-- map read as dirty smudge patches. Concrete is a flat, matte, non-directional stone, so the walls are one material with no stripes and no
+-- patches (the lamps and the shafts give the form). To try another matte stone change WallStone and its Colors entry only.
+Rules.WallStone = "Concrete"
+Rules.Colors = {Cobblestone = {158, 142, 126}, Concrete = {186, 170, 150}, CrackedLava = {255, 120, 40}}
+Rules.Materials = {"Air", "Rock", "Concrete", "Sandstone", "Slate", "Basalt", "Cobblestone", "Grass", "LeafyGrass", "CrackedLava"}
 
 local FLOOR_BAND = 6 -- studs below the floor top that carry the floor surface mix
 local BOTTOM = Rules.YMin - Rules.Res -- one cell lower so the bottom layer is full (occupancy = sd / Res)
@@ -132,19 +137,16 @@ local function material(col: any, y: number, air: number): string
         end
         local moss = relief(x, z, 14, 33.9)
         if col.flat > 2 and moss > 0.8 then return if moss > 0.9 then "LeafyGrass" else "Grass" end
-        if v < 0.3 then return "Rock" elseif v < 0.58 then return "Limestone" end
+        -- BD-296: matte Concrete and a little Cobblestone; no Rock (dark teal island colour) and no Limestone (strata stripes)
+        if v < 0.58 then return Rules.WallStone end
         return "Cobblestone"
     end
     -- walls, ceiling, roof and deep rock
-    if -air > 10 then return "Rock" end
-    -- walls: soft blotches of three stones, no horizontal strata (owner 2026-10-16: no striped brick look). Cobblestone (tile grid) stays rare.
-    local v = relief(x * 0.8 + y * 0.45, z * 0.8 - y * 0.45, 13, 12.9)
-    -- Brighten pass (owner 2026-10-16): lighter warm stone. Limestone leads; Rock (darker island colour) only breaks up its fine horizontal
-    -- texture lines in blotches, and Slate is gone from the walls.
-    local w = relief(x * 0.6 - y * 0.5, z * 0.6 + y * 0.35, 29, 41.7)
-    if w > 0.84 then return "Cobblestone" end
-    if v < 0.28 then return "Rock" end
-    return "Limestone"
+    -- BD-296 (lead Studio check 2026-10-16): deep fill is the wall stone too. "Rock" deep fill still surfaced as dark teal
+    -- blotches where the shell is thin (Heart far wall, arches), so the cave writes no Rock at all.
+    -- BD-296: one matte stone over the whole visible shell. Earlier passes mixed Limestone (horizontal strata stripes), Rock (dark smudge
+    -- patches) and Cobblestone (tile grid); the lead's Studio view (docs/evidence/2026-10-16-cave-organic 6, 7) showed all three read badly.
+    return Rules.WallStone
 end
 
 -- (material name, occupancy 0..1) for a cell given its column constants and the height of its centre.
