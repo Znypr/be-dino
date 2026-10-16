@@ -147,10 +147,18 @@ function Rules.assistBonuses(world: any, victim: any, now: number): any
     return out
 end
 
--- One validated bite. apos/alook = attacker root position and look vector; candidates = {{key=, pos=}} for every
--- other tracked dino (the server supplies them; the client sends NOTHING but the request). Returns
+-- BD-311: a body radius in studs. The SERVER measures it from the model's bounding box; junk or missing values fall back to
+-- BodyRadiusPerScale * s, and everything is clamped to [0, BodyRadiusMax].
+function Rules.bodyRadius(measured: any, s: any): number
+    local fallback = Cfg.BodyRadiusPerScale * math.max(1, num(s, 1))
+    return math.clamp(num(measured, fallback), 0, Cfg.BodyRadiusMax)
+end
+
+-- One validated bite. apos/alook = attacker root position and look vector; candidates = {{key=, pos=, radius=?}} for every
+-- other tracked dino (the server supplies them; the client sends NOTHING but the request). Range is measured from BODY
+-- SURFACE to body surface (BD-311): reach + attacker radius + target radius, so big bodies can be bitten at their snout. Returns
 -- {ok, reason, targetKey, damage, defeated, hp, maxHp, knockX, knockZ, bonuses}.
-function Rules.attack(world: any, attackerKey: any, now: any, apos: any, alook: any, candidates: any, leaping: boolean?): any
+function Rules.attack(world: any, attackerKey: any, now: any, apos: any, alook: any, candidates: any, leaping: boolean?, attackerRadius: number?): any
     if not world.enabled then return fail("disabled") end
     local a = world.dinos[attackerKey]
     if not a then return fail("unknown") end
@@ -165,7 +173,7 @@ function Rules.attack(world: any, attackerKey: any, now: any, apos: any, alook: 
     -- Spawn protection ends the moment the player attacks (docs/101 s7).
     if n < a.protectedUntil then a.protectedUntil = n end
 
-    local range = Cfg.BiteRangeBase + Cfg.BiteRangePerScale * a.s + Cfg.BiteRangeSlack
+    local range = Cfg.BiteRangeBase + Cfg.BiteRangePerScale * a.s + Cfg.BiteRangeSlack + Rules.bodyRadius(attackerRadius, a.s)
     local cosHalf = math.cos(math.rad(Cfg.BiteConeDegrees / 2))
     local best, bestDistance, bx, bz = nil, math.huge, 0, 0
     for _, c in (if typeof(candidates) == "table" then candidates else {}) do
@@ -173,7 +181,7 @@ function Rules.attack(world: any, attackerKey: any, now: any, apos: any, alook: 
         if t and t ~= a and t.state.phase == "Alive" and not t.peaceful and n >= t.protectedUntil and c.pos ~= nil then
             local dx, dy, dz = num(c.pos.X, 0) - num(apos.X, 0), num(c.pos.Y, 0) - num(apos.Y, 0), num(c.pos.Z, 0) - num(apos.Z, 0)
             local planar = math.sqrt(dx * dx + dz * dz)
-            if planar <= range + t.s * 0.5 and math.abs(dy) <= Cfg.BiteVerticalLimit then
+            if planar <= range + Rules.bodyRadius(c.radius, t.s) and math.abs(dy) <= Cfg.BiteVerticalLimit then
                 local dot = if planar > 1e-6 then (dx * lx + dz * lz) / planar else 1
                 if dot >= cosHalf and planar < bestDistance then
                     best, bestDistance = t, planar

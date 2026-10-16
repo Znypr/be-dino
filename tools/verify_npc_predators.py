@@ -42,7 +42,7 @@ assert(Npc.desiredCount(12)==5 and Npc.desiredCount(500)==NC.MaxNpcs,"hard cap")
 for n=0,60 do assert(Npc.desiredCount(n)<=NC.MaxNpcs and Npc.desiredCount(n)>=Npc.desiredCount(math.max(0,n-1)),"monotone and capped") end
 -- every speed is far below a player's walk speed (22, Armored x0.8) so a child can always run away
 for _,sp in {NC.PatrolSpeed,NC.ChaseSpeed,NC.RetreatSpeed} do assert(sp<=12) end
-assert(NC.WindupSeconds>=0.5 and NC.RespawnSeconds>=30 and NC.MaxBitesPerAggro<=2 and NC.BiteCooldownSeconds>=2)
+assert(NC.WindupSeconds>=0.5 and NC.RespawnSeconds>=45 and NC.MaxBitesPerAggro<=2 and NC.BiteCooldownSeconds>=2)
 assert(NC.AggroRange<=30 and NC.ChaseMaxSeconds<=8 and NC.GiveUpRange>NC.AggroRange and NC.LeashRadius>NC.PatrolRadius)
 local b=Npc.budget(); assert(b.maxMovesPerSecond<=30 and b.maxNpcs==6)
 
@@ -385,6 +385,70 @@ for seed=1,3 do
   end
 end
 assert(hitsTotal>=1,"fuzz produced NPC bites")
+-- 12. BD-312: the DRAWN NPC is at most about 1.3x an average player dino; defeat fade and bob are tiny and Reduce-Motion aware
+for seed=1,40 do
+  local w=Npc.newWorld(true,seed,terrain()); Npc.populate(w,0,{P("p",150,-100)})
+  for _,n in w.slots do
+    assert(n.visualScale>=NC.VisualScaleMin-1e-9 and n.visualScale<=1.3+1e-9,"NPC visual scale <= 1.3x: "..n.visualScale)
+    assert(math.abs(n.radius-NC.RadiusPerVisual*n.visualScale)<1e-9 and n.radius>0)
+  end
+end
+assert(NC.VisualScaleMax<=1.3 and NC.FadeSeconds==0.6 and NC.FadeSecondsReduced==0.15)
+assert(Npc.fadeSeconds(false)==0.6 and Npc.fadeSeconds(true)==0.15)
+assert(Npc.bobOffset(1.3,1,true)==0 and Npc.bobOffset(1.3,0,false)~=0 and math.abs(Npc.bobOffset(1.57,1,false))<=0.2+1e-9)
+assert(math.abs(Npc.bobOffset(1.57,0/0,false))<=0.04+1e-9,"junk speed is safe")
+
+-- 13. BD-311 + NPC reach: a chasing NPC bites a player at body-surface distance (radius-aware), still dodgeable
+do
+  local w,cw,n=setup(3)
+  local pd=joinP(cw,1,"r"); local pl=P(pd.key,OX,OZ-(NC.AggroRange-6)); pl.radius=1.6
+  local players={pl}
+  local bites=0
+  local t=0
+  while t<40 do
+    t+=DT
+    for _,ev in Npc.step(w,t,DT,players) do
+      local r=Npc.performBite(w,cw,ev,t,players)
+      if r.ok then bites+=1 end
+    end
+    if bites>0 then break end
+  end
+  assert(bites>=1,"the NPC lands a bite on a player using radius-aware reach")
+end
+
+-- 14. BD-313: NPC defeat growth is small, capped, once per slot per 120 s per player, and few per 5 minutes
+do
+  assert(NC.RewardCapFraction==0.05 and NC.RewardSlotCooldownSeconds==120 and NC.RespawnSeconds>=45)
+  local lim=Npc.newRewardLimiter()
+  local function hit(id,dmg) return {id=id,damage=dmg} end
+  local users={a=1,b=2,c=3}
+  -- one killer: exactly 5% of their own growth, floored
+  local r=Npc.growthRewards(lim,"npc1",{hit("a",100)},{a=500},users,0); assert(r.a==25,"5% of 500 = 25, got "..tostring(r.a))
+  -- the same slot cannot pay the same player again for 120 s
+  assert(next(Npc.growthRewards(lim,"npc1",{hit("a",100)},{a=500},users,119.9))==nil,"slot cooldown")
+  assert(Npc.growthRewards(lim,"npc1",{hit("a",100)},{a=500},users,120.1).a==25,"pays again after 120 s")
+  -- another slot is a different cooldown but the per-window cap (3 per 300 s) still applies: 2 paid so far
+  assert(Npc.growthRewards(lim,"npc2",{hit("a",100)},{a=500},users,121).a==25)
+  assert(next(Npc.growthRewards(lim,"npc3",{hit("a",100)},{a=500},users,122))==nil,"4th reward inside 300 s refused")
+  assert(Npc.growthRewards(lim,"npc3",{hit("a",100)},{a=500},users,121+NC.RewardWindowSeconds).a==25,"window slides")
+  -- damage share split; each killer capped by THEIR growth; never more than 5% of anyone's growth
+  local lim2=Npc.newRewardLimiter()
+  local r2=Npc.growthRewards(lim2,"npc1",{hit("a",75),hit("b",25)},{a=1000,b=200},users,0)
+  assert(r2.a==37 and r2.b==2,"share x 5% of own growth: "..tostring(r2.a).."/"..tostring(r2.b))
+  for k,v in r2 do assert(v<=math.floor(({a=1000,b=200})[k]*NC.RewardCapFraction)) end
+  -- tiny growth or no damage pays nothing; junk is safe
+  assert(next(Npc.growthRewards(Npc.newRewardLimiter(),"npc1",{hit("a",50)},{a=10},users,0))==nil)
+  assert(next(Npc.growthRewards(Npc.newRewardLimiter(),"npc1",{},{},users,0))==nil)
+  assert(next(Npc.growthRewards(Npc.newRewardLimiter(),"npc1",{hit("a",0/0)},{a=1e9},users,0))==nil)
+  -- a farmer killing slot after slot for 30 minutes (one kill every 50 s) gets few rewards, far below the old loop
+  local lim3=Npc.newRewardLimiter(); local paid,total=0,0
+  for k=0,35 do
+    local got=Npc.growthRewards(lim3,"npc"..(k%2+1),{hit("a",100)},{a=500},users,k*50)
+    if got.a then paid+=1 total+=got.a end
+  end
+  assert(paid<=3*(1800/NC.RewardWindowSeconds)+3 and total<=25*paid,"farming loop is limited: "..paid.." rewards")
+  for _,v in r2 do assert(type(v)=="number" and v==math.floor(v)) end
+end
 print(string.format("NPC predator rules passed: flag-off identity, cap %d (12 players -> %d), spawn rules over 40 seeds in %d biomes, state machine + dodge + flee + leash, grace/cooldown/bite cap, never-target matrix, exactly-once defeat, capped assist, respawn %ds, never-one-shot, sleeping, determinism, fuzz %d NPC hits %d npc defeats", NC.MaxNpcs, Npc.desiredCount(12), nb, NC.RespawnSeconds, hitsTotal, npcDefeats))
 '''
 
@@ -430,12 +494,28 @@ def static_checks():
     for bad in ('game:', 'workspace', 'Instance.new', 'Players', 'RunLifecycle', 'CatchScore', 'math.random'):
         if re.search(r'(?<![A-Za-z])' + re.escape(bad) + r'(?![A-Za-z])', rules):
             errors.append('NpcPredatorRules must stay pure: found ' + bad)
-    try:
-        diff = subprocess.run(['git', 'diff', '--quiet', 'origin/main', '--', 'src/client/Bootstrap.client.luau'], cwd=ROOT)
-        if diff.returncode == 1:
-            errors.append('src/client/Bootstrap.client.luau must not be touched by BD-245')
-    except OSError:
-        pass
+    # BD-312..315: Bootstrap.client may only change the Run Complete modal (no new top-level locals; verify_combat_service counts them).
+    boot = read('src/client/Bootstrap.client.luau')
+    if 'Oops! Good try!' not in boot or 'Your eggs are safe!' not in boot or 'LastRunEndReason' not in boot:
+        errors.append('the Run Complete modal must start with the gentle defeat copy (BD-315)')
+    if 'Oops! Good try!' in re.sub(r'--[^\n]*', '', hud):
+        errors.append('CombatHud must not show the defeat toast any more: it was covered by the Run Complete modal (BD-315)')
+    for needle in ('CHOMP', 'PeacefulBadge', 'KeyHint', 'AlertBubble', 'NpcMotion'):
+        if needle not in hud:
+            errors.append('CombatHud is missing ' + needle + ' (BD-314/BD-312)')
+    if 'BITE [F]' in hud:
+        errors.append('the red BITE [F] button copy must be gone (BD-314)')
+    if 'NpcFading' not in svc or 'task.delay(Rules.Config.FadeSeconds' not in svc:
+        errors.append('NpcPredatorService must fade a defeated NPC out before removing it (BD-312)')
+    motion = read('src/client/NpcMotion.luau')
+    if 'NpcFading' not in motion or 'Rules.fadeSeconds(not Theme.MotionEnabled)' not in motion:
+        errors.append('NpcMotion must fade NpcFading models and honour Reduce Motion')
+    if 'growthRewards' not in combat or 'api.npcRewards' not in combat:
+        errors.append('CombatService must pay NPC defeats only through NpcRules.growthRewards (BD-313)')
+    npc_branch = re.sub(r'--[^\n]*', '', combat.split('if api.npcs[victim.key] then', 1)[1].split('if api.onNpcDefeated', 1)[0])
+    for bad in ('bonuses', 'CatchScore', 'rystal', 'RunEgg'):
+        if bad in npc_branch:
+            errors.append('the NPC defeat branch must not use ' + bad + ' (BD-313)')
     return errors
 
 
