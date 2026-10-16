@@ -64,6 +64,11 @@ Assets.Requested = {
     snowFlakeSheet = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): snow flakes and crystals 4x4, white on alpha
     ashFlake = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): ash flakes and embers 4x4, white on alpha
     bloodMoonDisc = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): blood moon disc with soft craters, 512 px, on alpha
+    -- BD-131 weather textures (Blender renders in resources/effects/fx-v2, docs/120): white on alpha, tinted by the weather code; none is read by the weather rigs yet
+    emberSpark = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): ember and lava sparks 4x4 of 128 px, glowing beads and streaks (volcano embers, lava bombs)
+    dustSand = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): dust and sand grain sprays over a faint haze 4x4 (earthquake)
+    auroraCurtain = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): northern lights curtain, 16-frame loop 4x4, white on alpha (sky curtain particles)
+    bloodMoonMotes = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): soft crimson motes, bubble rings and wisps 4x4 (blood moon)
     paintGloss = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
 }
 
@@ -104,6 +109,12 @@ for _, key in {"smokeSoft", "smokeDense", "smokeWispy", "motifDroplets", "motifS
 end
 Assets.FlipbookMode.motifAurora = "Loop"
 Assets.LoopFps = 10
+-- BD-131 weather flipbooks: 512 px sheets of 16 cells of 128 px (not 1024 / 256), shapes picked at random per particle, the aurora curtain loops.
+-- Inert until an id is bound: cellRect / isSheet return nil / false while the key resolves to a built-in sprite.
+for _, key in {"snowFlakeSheet", "ashFlake", "emberSpark", "dustSand", "bloodMoonMotes"} do
+    Assets.Sheets[key], Assets.FlipbookMode[key] = {size = 512, grid = 4}, "Random"
+end
+Assets.Sheets.auroraCurtain, Assets.FlipbookMode.auroraCurtain = {size = 512, grid = 4}, "Loop"
 -- Studio check 2026-10-16 (AssetService EditableImage): the five fx3 uploads are OPAQUE on black (no alpha), unlike the
 -- white-on-alpha PNGs in resources/effects/fx-v3. Until they are re-uploaded with alpha:
 --   * world ParticleEmitters draw them additively (LightEmission 1), so black adds nothing and only the white shape shows;

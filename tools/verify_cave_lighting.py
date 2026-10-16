@@ -75,7 +75,7 @@ assert(R.GateGlow.alpha>=0.65,"gate glow is soft (very transparent)")
 for _,l in D.lights do if l.owner=="lava" then assert(l.color[1]>=240 and l.color[3]<=90,"lava glow is orange") end end
 
 -- ---- FX parts and budgets
-assert(#D.shafts*3+1==D.fxParts and D.fxParts<=R.FxPartBudget,"FX parts tiny: "..D.fxParts)
+assert(#D.shafts+1==D.fxParts and D.fxParts<=R.FxPartBudget and D.fxBeams==#D.shafts*2,"FX parts tiny (BD-296: 1 dust Part per hole + gate anchor, 2 Beams per hole): "..D.fxParts)
 local B=C.budgetTable()
 assert(B.total.parts+D.fxParts<=C.Budget.total.parts,"hub parts incl. FX under the 410 budget: "..(B.total.parts+D.fxParts))
 assert(B.lights.parts+D.fxParts<=C.Budget.lights.parts+16,"lights group stays near its 48 parts")
@@ -100,7 +100,7 @@ for i,h in L.holes do
  local _,topOcc=T.cell(s.x,s.top+4,s.z)
  assert(topOcc==0,"hole open to the sky above the shaft: "..h.station)
 end
-assert(R.Beam.outerAlpha>=0.9 and R.Beam.coreAlpha>=0.88 and R.Beam.coreAlpha<R.Beam.outerAlpha,"beams ~0.9 transparent, core a little brighter")
+assert(R.Beam.outerAlpha>=0.9 and R.Beam.coreAlpha>=0.88 and R.Beam.coreAlpha<R.Beam.outerAlpha,"beams ~0.9 transparent at mid-beam, core a little brighter")
 assert(R.BeamColor[1]>=240 and R.BeamColor[3]>=150 and R.BeamColor[3]<=230,"warm cream beam, neutral")
 assert(R.Beam.motesPerSecond<=6,"dust motes are sparse")
 
@@ -120,9 +120,9 @@ assert(disc[1]<=P.r*2-2 and disc[3]<=P.r*2-2,"lava disc "..disc[1].." smaller th
 assert(disc.walk~=true,"lava disc is not walkable")
 for _,p in L.props do if p.key=="lava_pool_disc" then assert(not p.walk and p.w<P.r*2 and p.d<P.r*2,"placed disc smaller than the basin and blocked") end end
 
--- ---- BD-296 wall material: Limestone is the only cave-only wall material (Sandstone / Slate / Rock colours are the island's, set globally)
+-- ---- BD-296 wall material: Concrete is the only cave-only wall material (Sandstone / Slate / Rock colours are the island's, set globally)
 local Col=Terrain.Colors
-assert(Col.Limestone and Col.Limestone[1]>=160 and Col.Limestone[1]<=195 and Col.Limestone[1]-Col.Limestone[3]<=45,"brighten pass: light warm Limestone walls")
+assert(Terrain.WallStone=="Concrete" and Col.Concrete and Col.Concrete[1]>=160 and Col.Concrete[1]<=195 and Col.Concrete[1]-Col.Concrete[3]<=45,"brighten pass: light warm matte Concrete walls (no striped Limestone)")
 for _,m in {"Sandstone","Slate","Rock","Basalt","Grass","LeafyGrass","Mud","Ground","Sand"} do assert(Col[m]==nil,"cave never recolours the island material "..m) end
 
 -- ---- cave look
@@ -206,6 +206,12 @@ def static_checks():
     assert 'Enum.Material.Neon' not in server, 'beams never use Neon'
     assert 'CastShadow' in server and 'IsLightingFx' in server, 'beams are marked lighting FX, no shadows'
     assert 'SpecialMesh' not in server and 'MeshPart' not in server, 'no mesh (code-built model art) in the lighting FX'
+    # BD-296: the shafts are camera-facing, soft-textured Beams (no cylinder Part, whose flat edges showed as vertical seams in the tunnel views)
+    assert 'Enum.PartType.Cylinder' not in server, 'BD-296 no hard-edged cylinder shafts'
+    assert 'beam.FaceCamera, beam.Segments' in server and 'FaceCamera, beam.Segments, beam.CurveSize0, beam.CurveSize1 = true' in server, 'BD-296 shaft beams face the camera (never edge-on)'
+    assert 'Assets.Uploaded.softMist' in server and 'Enum.TextureMode.Stretch' in server, 'BD-296 shaft beams use the soft mist sprite stretched over the ribbon (soft sides)'
+    assert 'NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.12, alpha)' in server, 'BD-296 shaft ends fade to fully transparent'
+    assert server.count('shaftBeam(volume') == 2, 'one haze and one core beam per hole'
     client = (ROOT / 'src/client/CaveAtmosphere.luau').read_text()
     step = client.split('function Cave.step(dt: number)', 1)[1]
     assert step.lstrip().startswith('if not Config.CaveHub then return end'), 'flag off: the client look returns before touching anything'

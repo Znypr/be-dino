@@ -381,3 +381,41 @@ Result: no P1 rows remain. After the LEAD decisions of 2026-10-16 (owner delegat
 - [x] FX bar: none added; FX sizing check under section 10.
 - [x] Economy numbers match handbook s9 (growth 0.1, cap 4, BIG 1.2; nothing changed).
 - [x] Art rule: no code-drawn final art, flags default off, `Place1.rbxl` untouched, docs only.
+
+## 17. BD-473 first slice: implemented offline (2026-10-16, Review / test)
+
+Status: **CODE and offline verifiers only. No Studio look, no phone** (the lead takes the spawn screenshots from the gameplay camera, BD-473 acceptance). Branch `claude/bd-473-small-band`. Not changed: tree mesh ids (BD-462 V3 swap), tier files, `WorldCulling`, `EffectsLod`, camera, growth.
+
+| Item | What the code does now | Where |
+| --- | --- | --- |
+| Small band | Every shrub (ferns, bushes, mushrooms, horsetail; the existing kit meshes) is sized from a TARGET HEIGHT of 4.2-12 studs (`u^1.5` skew, median 6.5), width capped at 18 studs. No Small-band plant within 34 studs of the spawn point and each keeps 0.55 of its half-width off the route edge. Tree-foot undergrowth uses the same sizing. The small trees and palms of the tree layer (about 4.7-12 studs) are unchanged | `BiomePlacement.SmallBand`, `smallScale` |
+| Clearings | 20 glades, radius 32-51, 25.6% of the eligible forest-biome area (fern, conifer, marsh), greedy random order with a 0.9 spacing so they spread. No tree, colossal tree or fallen log inside; shrubs thinned to 35%. Each is clear of every route, keep-out (the BD-460 spawn meadow included), pool and grove core | `BiomePlacement.Clearing`, `clearings`, `inClearing` |
+| No gap | Trees top out at 41.9 studs (26.2 x 1.6); colossal is 80-130; nothing vegetated between 42 and 80 | verifier |
+| `colossal` | The old `giant` layer renamed (`WorldKit_colossal` attribute too), sized from a target height of 80-140 with a 100-stud crown cap, trees only (the spire and boulder giants are gone), none in meadow or badlands, none within 150 studs of the spawn. 31 placed (47 giants before), 8.5% of the canopy-class. `colliderReach` widens its keep-clear radius to the offset trunk box (a 1-pair overlap with a boulder showed up at x8) | `BiomePlacement.Colossal`, `colossalScale` |
+| Version | `BiomePlacement.Version` 2 -> 3. The layout changes for everyone (same seed 1404, different placements) | |
+
+Height histogram of the offline run (seed 1404, playtest density 1.25, vegetation only: tree, colossal, shrub; height = kit extent x scale, an upper bound):
+
+```
+studs      count
+<4             0
+4-6.6        642 ################################   (a spawn Compy is 4.4-6.6)
+6.6-8        358 #################
+8-12         359 #################
+12-20        198 #########
+20-26         64 ###
+26-42         70 ###
+42-80          0                                        (the gap)
+80-100        20 #
+100-140       11
+shrub   n=1224 min 4.2 p10 4.4 p50 6.5 p90 9.5 max 12.0
+tree    n= 467 min 5.0 p10 8.8 p50 15.6 p90 28.4 max 41.9
+colossal n= 31 min 80.0 p10 84.5 p50 96.2 p90 117.2 max 129.6
+```
+
+Small band plants 1,359 against 363 canopy-class trees = 3.7 per tree (spec: at least 2); 53% of the band is taller than a spawn Compy. `tools/verify_vegetation_layers.py` asserts all of this (in CI).
+
+Budget (offline estimator, before = main `d874050`): phone worst-spot scene **3,643 -> 3,434 parts, 557,976 -> 452,134 triangles**; details in [107](107-offline-mobile-budget.md). Net better because the clearings drop about 140 trees; the Small band itself is count-neutral.
+
+Left for the lead and later rows: Studio screenshots at spawn from the gameplay camera (do the plants read as a jungle, not as clutter or a wall of green; do they hide food), a phone check (BD-085), a look at the facets of the x4.5-8 colossal stand-ins (expected to look toy-like until BD-474), the M-high lift (26-42 share) and colossal art (BD-474), the 65/27/8 mix check (the canopy-class is now 12-26: 72%, 26-42: 19%, colossal 8.5%), colossal LOD/culling radius (BD-475: beyond 190 studs a colossal tree still pops on a phone), collision (BD-476). Colossal grounding on the trunk radius with a root-flare embed (spec s6 rule 6) is NOT done: the existing 5-ray rule still places them.
+

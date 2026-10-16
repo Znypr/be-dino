@@ -1566,7 +1566,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "lightningBolt",
    "group": "Requested.lightningBolt",
-   "pending": "BD-055 weather textures"
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "lightningBolt"
+   ]
   },
   {
    "name": "rainStreak",
@@ -1575,7 +1578,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "rainStreak",
    "group": "Requested.rainStreak",
-   "pending": "BD-055 weather textures"
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "rainStreak"
+   ]
   },
   {
    "name": "snowFlakeSheet",
@@ -1584,7 +1590,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "snowFlakeSheet",
    "group": "Requested.snowFlakeSheet",
-   "pending": "BD-055 weather textures"
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "snowFlakeSheet"
+   ]
   },
   {
    "name": "ashFlake",
@@ -1593,7 +1602,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "ashFlake",
    "group": "Requested.ashFlake",
-   "pending": "BD-055 weather textures"
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "ashFlake"
+   ]
   },
   {
    "name": "bloodMoonDisc",
@@ -1602,7 +1614,58 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "bloodMoonDisc",
    "group": "Requested.bloodMoonDisc",
-   "pending": "BD-055 weather textures"
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "bloodMoonDisc"
+   ]
+  },
+  {
+   "name": "emberSpark",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "emberSpark",
+   "group": "Requested.emberSpark",
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "emberSpark"
+   ]
+  },
+  {
+   "name": "dustSand",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "dustSand",
+   "group": "Requested.dustSand",
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "dustSand"
+   ]
+  },
+  {
+   "name": "auroraCurtain",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "auroraCurtain",
+   "group": "Requested.auroraCurtain",
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "auroraCurtain"
+   ]
+  },
+  {
+   "name": "bloodMoonMotes",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "bloodMoonMotes",
+   "group": "Requested.bloodMoonMotes",
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "bloodMoonMotes"
+   ]
   },
   {
    "name": "tree_broadleaf_v3",
@@ -1681,6 +1744,118 @@
     "tools/bind_visual_assets.py",
     "worldMaterials"
    ]
+  },
+  {
+   "name": "ground_rock_small_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "ground_rock_small_v3",
+   "group": "Props.ground_rock_small_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-464 step 2 placement"
+  },
+  {
+   "name": "ground_rock_medium_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "ground_rock_medium_v3",
+   "group": "Props.ground_rock_medium_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-464 step 2 placement"
+  },
+  {
+   "name": "ground_rock_mossy_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "ground_rock_mossy_v3",
+   "group": "Props.ground_rock_mossy_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-464 step 2 placement"
+  },
+  {
+   "name": "ground_log_fallen_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "ground_log_fallen_v3",
+   "group": "Props.ground_log_fallen_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-464 step 2 placement"
+  },
+  {
+   "name": "ground_stump_roots_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "ground_stump_roots_v3",
+   "group": "Props.ground_stump_roots_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-464 step 2 placement"
+  },
+  {
+   "name": "ground_mushrooms_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "ground_mushrooms_v3",
+   "group": "Props.ground_mushrooms_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-464 step 2 placement"
+  },
+  {
+   "name": "ground_bush_round_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "ground_bush_round_v3",
+   "group": "Props.ground_bush_round_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-464 step 2 placement"
+  },
+  {
+   "name": "ground_bush_berry_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "ground_bush_berry_v3",
+   "group": "Props.ground_bush_berry_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-464 step 2 placement"
   }
  ]
 }

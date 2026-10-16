@@ -2,9 +2,11 @@
 -- BD-286 (docs/104 s4): builds the Cave hub lighting from the pure CaveLightingRules: soft light-shaft beams under the 4 ceiling
 -- holes with dust motes, warm fill / lava / crystal / forge point lights, and the gate arch light with a soft glow. Only called
 -- from Arena's cave branch (Config.CaveHub on): flag off = this module is never run and nothing is created.
--- FX, NOT MODEL ART: the beams are plain translucent cylinder Parts (Transparency ~0.9, SmoothPlastic, no Neon, no shadows, no
--- collision) used as lighting. They are named FX_* and carry the attribute IsLightingFx. The tapered cone mesh (BD-282) replaces them.
--- Textures come only from EffectAssets (sparkSheet / smokeSheet, both uploaded with alpha).
+-- FX, NOT MODEL ART: each shaft is two camera-facing Beams (a wide haze and a narrow core) between two Attachments on the invisible dust
+-- volume Part, textured with the soft mist sprite (soft on every side). BD-296: the first version used translucent cylinder Parts, whose
+-- flat silhouette edges showed as faint vertical seams in the tunnel views; a camera-facing soft-edged Beam has no edge to see edge-on.
+-- They are named FX_* and carry the attribute IsLightingFx. The tapered cone mesh (BD-282) replaces them.
+-- Textures come only from EffectAssets (softMist, sparkSheet / smokeSheet, all uploaded with alpha).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Rules = require(ReplicatedStorage.Shared.CaveLightingRules)
 local Layout = require(ReplicatedStorage.Shared.CaveHubLayout)
@@ -39,6 +41,26 @@ local function emitter(parent: Instance, key: string): ParticleEmitter
     return e
 end
 
+-- BD-296: one soft shaft ribbon. FaceCamera keeps it flat to the viewer from every angle (never edge-on), the soft mist texture fades its
+-- sides, and the transparency ramp fades its ends, so no hard silhouette shows. `alpha` is the mid-beam transparency (0.9 = 10 percent).
+local function shaftTexture(): string
+    local id = Assets.Uploaded.softMist
+    return if Assets.isValid(id) then id else Assets.Builtin.smoke
+end
+local function shaftBeam(parent: Instance, a0: Attachment, a1: Attachment, name: string, width: number, alpha: number): Beam
+    local beam = Instance.new("Beam")
+    beam.Name, beam.Attachment0, beam.Attachment1 = name, a0, a1
+    beam.FaceCamera, beam.Segments, beam.CurveSize0, beam.CurveSize1 = true, 1, 0, 0
+    beam.Width0, beam.Width1 = width, width
+    beam.Texture, beam.TextureMode, beam.TextureSpeed, beam.LightEmission = shaftTexture(), Enum.TextureMode.Stretch, 0, 0.5
+    beam.Color = ColorSequence.new(c3(Rules.BeamColor))
+    beam.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.12, alpha), NumberSequenceKeypoint.new(0.85, alpha), NumberSequenceKeypoint.new(1, 1)})
+    beam:SetAttribute("IsLightingFx", true)
+    beam:SetAttribute("SoftEdged", true)
+    beam.Parent = parent
+    return beam
+end
+
 -- Lights sit on an Attachment under Terrain (no extra Part per light).
 local function light(spec: any): PointLight
     local holder = Instance.new("Attachment")
@@ -66,12 +88,15 @@ function CaveLighting.build(parent: Instance): Folder
     folder.Name = "CaveLighting"
     local B = Rules.Beam
     for _, s in data.shafts do
-        -- a cylinder Part's long axis is X, so roll it 90 degrees to stand it upright
-        local mid = CFrame.new(s.x, s.bottom + s.height / 2, s.z) * CFrame.Angles(0, 0, math.pi / 2)
-        fxPart(folder, "FX_LightShaftHaze_" .. s.station, Vector3.new(s.height, s.outerRadius * 2, s.outerRadius * 2), mid, Enum.PartType.Cylinder, B.outerAlpha)
-        fxPart(folder, "FX_LightShaftCore_" .. s.station, Vector3.new(s.height, s.coreRadius * 2, s.coreRadius * 2), mid, Enum.PartType.Cylinder, B.coreAlpha)
-        -- dust motes drift slowly inside the beam (an invisible volume with one small emitter; Reduce Motion turns them off on the client)
+        -- dust volume: an invisible Part that carries the beam Attachments and the motes emitter (Reduce Motion turns the motes off on the client)
         local volume = fxPart(folder, "FX_LightShaftDust_" .. s.station, Vector3.new(s.outerRadius * 1.6, s.height, s.outerRadius * 1.6), CFrame.new(s.x, s.bottom + s.height / 2, s.z), nil, 1)
+        local top, bottom = Instance.new("Attachment"), Instance.new("Attachment")
+        top.Name, bottom.Name = "ShaftTop", "ShaftBottom"
+        top.Position, bottom.Position = Vector3.new(0, s.height / 2, 0), Vector3.new(0, -s.height / 2, 0)
+        top.Parent, bottom.Parent = volume, volume
+        shaftBeam(volume, top, bottom, "FX_LightShaftHaze_" .. s.station, s.outerRadius * 2, B.outerAlpha)
+        shaftBeam(volume, top, bottom, "FX_LightShaftCore_" .. s.station, s.coreRadius * 2, B.coreAlpha)
+        -- dust motes drift slowly inside the beam (an invisible volume with one small emitter; Reduce Motion turns them off on the client)
         local e = emitter(volume, "sparkSheet")
         e.Name = "Motes"
         e:SetAttribute("Dust", true)

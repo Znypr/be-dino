@@ -4,6 +4,7 @@ plus a source scan that WeatherVisuals builds every Instance up front (no Instan
 """
 from pathlib import Path
 import argparse
+import json
 import re
 import subprocess
 import tempfile
@@ -178,6 +179,103 @@ local lvl = WS.step(0, .2, 1) assert(lvl > 0 and lvl < .2 and WS.step(.2, 0, 100
 assert(#WS.cue("thunder", "strike") == 2 and #WS.cue("rain", "strike") == 0 and #WS.cue("volcano", "eruption") == 1)
 local fired = {} WS.connect(function(n) table.insert(fired, n) end) WS.fire("quake") assert(fired[1] == "quake")
 print("WeatherSounds passed")
+
+-- BD-131 reader (WeatherTextures + the real EffectAssets): an EMPTY slot gives the built-in look unchanged, a valid id gives the texture plus
+-- the flipbook layout / mode, and the Weather level (Full / Lite / Off), Reduce Motion, phone density and the phone beam budget are respected.
+local FAKE = "rbxassetid://123456789"
+local function withIds(ids, fn)
+    local saved = {}
+    for key, id in ids do saved[key] = Assets.Requested[key].id Assets.Requested[key].id = id end
+    local ok, err = pcall(fn)
+    for key, id in saved do Assets.Requested[key].id = id end
+    assert(ok, err)
+end
+local function allSlots(id) local t = {} for _, key in WT.Keys do t[key] = id end return t end
+assert(#WT.Keys == 9)
+for _, key in WT.Keys do assert(Assets.Requested[key], key .. " is an EffectAssets slot") assert(WT.Tuning[key], key .. " has a tuning table") end
+-- rigs a tuning entry may name: a WeatherLooks rig, or one of the pooled one-shots built by WeatherVisuals
+local POOLED = {sparks = true, crackDust = true, feetPuff = true, trunk = true, fork = true, disc = true}
+for _, key in WT.Keys do
+    for rig, tune in WT.Tuning[key] do
+        local inRigs = false
+        for _, id in IDS do if W.Rigs[id][rig] then inRigs = true end end
+        assert(inRigs or POOLED[rig], key .. "." .. rig .. " names no weather rig")
+        assert((tune.rate or 1) <= 1, key .. "." .. rig .. " never emits more than the built-in rig (budget)")
+        if tune.sizeScale then assert(tune.sizeScale >= .5 and tune.sizeScale <= 3, key .. "." .. rig .. " size scale") end
+        if tune.squash then assert(#tune.squash == 2 and tune.squash[1] <= 0 and tune.squash[1] >= -30, key .. "." .. rig .. " squash") end
+        if tune.transparency and type(tune.transparency) == "table" then for _, v in tune.transparency do assert(v >= 0 and v <= 1, key .. "." .. rig .. " transparency") end end
+        if tune.lightEmission then assert(tune.lightEmission >= 0 and tune.lightEmission <= 1) end
+    end
+end
+-- 1. empty id (also malformed ids): no plan, rate 1, nothing changes
+for _, bad in {"", "rbxassetid://", "abc", "12345"} do
+    withIds(allSlots(bad), function()
+        for _, key in WT.Keys do
+            for rig in WT.Tuning[key] do
+                assert(WT.plan(Assets, key, rig) == nil, key .. "." .. rig .. " with id '" .. bad .. "' must keep the built-in sprite")
+                assert(WT.rate(WT.plan(Assets, key, rig)) == 1)
+            end
+            assert(not Assets.isReal(key))
+        end
+        assert(WT.emitRate(100, nil, 1, 1, true) == 100 and WT.emitRate(100, nil, 1, .5, true) == 50, "no plan: built-in rate")
+    end)
+end
+-- 2. valid id: the texture, the right flipbook layout and mode, tuning attached; 3. Weather level and motion
+withIds(allSlots(FAKE), function()
+    for _, key in WT.Keys do
+        local sheet = Assets.Sheets[key] ~= nil
+        for rig, tune in WT.Tuning[key] do
+            local plan = WT.plan(Assets, key, rig)
+            assert(plan and plan.texture == FAKE and plan.key == key and plan.rig == rig, key .. "." .. rig .. " uses the texture")
+            assert(plan.tune == tune)
+            if sheet then
+                assert(plan.layout == "Grid4x4" and Assets.Sheets[key].grid == 4 and Assets.Sheets[key].size == 512, key .. " is a 4x4 sheet of 128 px cells")
+                assert(plan.mode == Assets.FlipbookMode[key], key .. " flipbook mode")
+                assert(plan.startRandom == (plan.mode ~= "OneShot"))
+                assert((plan.framerate ~= nil) == (plan.mode == "Loop"), key .. " framerate only for Loop")
+            else
+                assert(plan.layout == "None" and plan.mode == nil and plan.framerate == nil and plan.startRandom == nil, key .. " is a single image")
+            end
+        end
+    end
+    for _, key in {"snowFlakeSheet", "ashFlake", "emberSpark", "dustSand", "bloodMoonMotes"} do assert(WT.plan(Assets, key, next(WT.Tuning[key])).mode == "Random") end
+    local curtain = WT.plan(Assets, "auroraCurtain", "curtain")
+    assert(curtain and curtain.layout == "Grid4x4" and curtain.mode == "Loop" and curtain.framerate == Assets.LoopFps, "aurora curtain loops its 16 frames")
+    for _, key in {"rainStreak", "lightningBolt", "bloodMoonDisc"} do assert(not Assets.Sheets[key] and WT.plan(Assets, key, next(WT.Tuning[key])).layout == "None") end
+    -- a rig without a tuning entry still gets the texture with empty tuning (never an error)
+    local plain = WT.plan(Assets, "rainStreak", "nothing") assert(plain and next(plain.tune) == nil and WT.rate(plain) == 1)
+    -- Weather level: Full 1, Lite .5, Off 0; Calm / Reduce Motion emits nothing; phone density halves; never above the built-in rate
+    local checked = 0
+    for _, id in IDS do
+        for rig, spec in W.Rigs[id] do
+            for _, key in WT.Keys do
+                local plan = WT.plan(Assets, key, rig)
+                if plan and WT.Tuning[key][rig] then
+                    checked += 1
+                    local full, lite = WT.emitRate(spec.rate, plan, 1, 1, true), WT.emitRate(spec.rate, plan, .5, 1, true)
+                    assert(full <= spec.rate + 1e-9, id .. "." .. rig .. " textured rate stays within the built-in rate")
+                    assert(math.abs(lite - full * .5) < 1e-9, id .. "." .. rig .. " Lite is half of Full")
+                    assert(WT.emitRate(spec.rate, plan, 0, 1, true) == 0, id .. "." .. rig .. " Weather Off emits nothing")
+                    assert(WT.emitRate(spec.rate, plan, 1, 1, false) == 0, id .. "." .. rig .. " Reduce Motion emits nothing")
+                    assert(math.abs(WT.emitRate(spec.rate, plan, 1, .5, true) - full * .5) < 1e-9, id .. "." .. rig .. " phone density halves")
+                end
+            end
+        end
+    end
+    assert(checked >= 8, "level checks ran for the textured rigs: " .. checked)
+end)
+-- 4. one slot filled, the rest empty: only that texture is in use
+withIds({rainStreak = FAKE}, function()
+    assert(WT.plan(Assets, "rainStreak", "streaks") and not WT.plan(Assets, "snowFlakeSheet", "snow") and not WT.plan(Assets, "lightningBolt", "trunk"))
+end)
+-- 5. phone beam budget: a textured bolt is 1 trunk + 2 forks (the built-in bolt is 18 + 2); all bolts together fit the phone budget
+assert(WT.BoltBeams.trunk == 1 and WT.BoltBeams.forks == 2)
+assert(W.Budget.bolts * (WT.BoltBeams.trunk + WT.BoltBeams.forks) <= PHONE_BEAMS, "textured bolts fit the phone beam budget")
+assert(WT.BoltBeams.trunk + WT.BoltBeams.forks < 2 * 9 + 2, "a textured bolt uses fewer beams than the built-in one")
+assert(WT.Tuning.lightningBolt.trunk.tile >= 2 and WT.Tuning.lightningBolt.trunk.width <= 40, "bolt strip tiles undistorted and stays a calm width")
+assert(WT.Tuning.bloodMoonDisc.disc.scale * W.Moon.core <= 80, "moon disc stays a moderate sky prop")
+assert(W.Rigs.aurora.curtain and W.Rigs.aurora.curtain.big, "the aurora curtain is in the particle budget")
+print("WeatherTextures passed")
 '''
 
 
@@ -188,8 +286,13 @@ def cull_radii():
     return 'local CULL={' + ','.join(f'{k}={v}' for k, v in radii.items()) + '}\n'
 
 
+def phone_beams():
+    return int(json.loads((ROOT / 'tools/qa/phone_budgets.json').read_text(encoding='utf-8'))['phone']['beams']['value'])
+
+
 def script():
-    return cull_radii() + 'local W=' + module('src/shared/WeatherLooks.luau') + '\nlocal WS=' + module('src/shared/WeatherSounds.luau') + '\n' + BODY
+    return (cull_radii() + f'local PHONE_BEAMS={phone_beams()}\n' + 'local W=' + module('src/shared/WeatherLooks.luau') + '\nlocal WS=' + module('src/shared/WeatherSounds.luau')
+            + '\nlocal Assets=' + module('src/shared/EffectAssets.luau') + '\nlocal WT=' + module('src/shared/WeatherTextures.luau') + '\n' + BODY)
 
 
 def scan():
@@ -230,6 +333,20 @@ def scan():
     assert 'if motion then feetHolder.CFrame' in src, 'no feet puff with Reduce Motion'
     assert 'WL.fog(look,t,CLEAR,fogCap)' in src and 'WorldCulling' in src, 'fog end must be capped by the device cull radius'
     assert 'CelestialBodiesShown' in src, 'default sun and moon hidden during events (one moon only)'
+    # BD-131 reader: every texture is read through WeatherTextures; an empty slot changes nothing (no plan = props returned untouched, no extra Instance)
+    wt = (ROOT / 'src/shared/WeatherTextures.luau').read_text(encoding='utf-8')
+    keys = re.findall(r'"(\w+)"', wt[wt.index('WT.Keys'):wt.index('WT.Tuning')])
+    assert len(keys) == 9
+    for key in keys:
+        assert f'"{key}"' in src, key + ' slot has no reader in WeatherVisuals'
+    assert 'if not plan then return props end' in src and 'rateOf' in src, 'tex() leaves the built-in props alone while the slot is empty'
+    assert 'if WT.plan(Assets,"auroraCurtain","curtain") then' in src, 'curtain emitter exists only with a texture'
+    assert 'if MOON_DISC then' in src and 'if BOLT_TRUNK then' in src, 'moon disc and bolt trunk exist only with a texture'
+    assert 'for i=2,(if BOLT_TRUNK then 1 else 10) do' in src, 'built-in segment beams are skipped only for a textured bolt'
+    assert 'SPARK_SCALE' in src and 'rbxassetid' not in src
+    assert 'moonCore.Transparency=if moonImage then 1 else lerpNum(1,.04,k)' in src, 'built-in moon ball unchanged without a disc'
+    assert 'Enum.TextureMode.Wrap' in src and 'tune.width*tune.tile' in src, 'bolt strip tiles along the beam'
+    assert '(Enum.ParticleFlipbookLayout::any)[plan.layout]' in src and 'FlipbookFramerate' in src, 'flipbook layout, mode and loop rate come from the plan'
     audio = (ROOT / 'src/client/WeatherAudio.client.luau').read_text(encoding='utf-8')
     assert 'WeatherSounds' in audio and 'normalizeId' in audio
     sfx = (ROOT / 'src/shared/Sfx.luau').read_text(encoding='utf-8')

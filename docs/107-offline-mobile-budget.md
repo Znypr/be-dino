@@ -54,6 +54,8 @@ The phone budget (1,400) is never reached with radius 190; the radius does the w
 
 Phone scene at the worst spot with low-poly dinos on: 905 props + 1,074 colliders + 614 food + 600 other + 119 dino parts = **about 3,312 parts**, **about 551 k triangles (est)** plus dinos.
 
+**BD-473 update (2026-10-16, placement grammar v3: Small band, clearings, `colossal`; offline, same estimator, NOT a phone measurement).** Measured with `tools/estimate_world_budget.py` on main `d874050` before and with the change after: playtest MeshPart props 3,692 -> 3,569, colliders 1,058 -> 871, parts loaded at join 8,950 -> 8,640. Phone scene at the worst spot (now (-224, 160) instead of (-160,-160)): **3,643 -> 3,434 parts and 557,976 -> 452,134 triangles (est)**; phone at spawn: 698 -> 726 props kept but 325,762 -> 315,764 triangles and 187 fewer colliders. The clearings remove about 140 trees, 15 logs and the heavier colossal layer (47 giants -> 31 colossal); the Small band is the same number of shrub placements at bigger scales (1,256 -> 1,224). Still above the 250 k rule of thumb; BD-085 decides.
+
 ## 4. Dinos, particles, network
 Peak 12 players + 5 NPCs (`NpcPredatorRules`: 2 + (12 - 1) // 3) = **17 dinos in one server**.
 
