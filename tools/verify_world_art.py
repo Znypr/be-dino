@@ -202,7 +202,7 @@ def static_checks():
     cfg = (ROOT / 'src/shared/Config.luau').read_text()
     assert 'FoodArtMode = "Legacy"' in cfg and 'WorldArtMode = "Legacy"' in cfg, 'source default must stay Legacy'
     arena = (ROOT / 'src/server/Arena.luau').read_text()
-    assert 'Config.SanctuaryCenterZ' in arena and 'Layout.Pools' in arena, 'arena derives the hub and water from Config/IslandLayout'
+    assert 'CaveHubLayout.hub(Config)' in arena and 'Layout.Pools' in arena, 'arena derives the hub and water from Config/IslandLayout'
 
 def run(runner, source, dump=False, playtest=False):
     with tempfile.TemporaryDirectory() as temp:

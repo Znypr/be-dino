@@ -7,7 +7,7 @@ import argparse,subprocess,tempfile
 ROOT=Path(__file__).resolve().parents[1]
 def wrapped(path):return '(function()\n'+(ROOT/path).read_text()+'\nend)()'
 def script():
- return 'local Config='+wrapped('src/shared/Config.luau')+'\nlocal script={Parent={Config="Config",FallRecovery="FallRecovery"}}\nlocal require=function()return Config end\nlocal FoodCatchRules='+wrapped('src/shared/FoodCatchRules.luau')+'\nlocal Layout='+wrapped('src/shared/IslandLayout.luau')+'\n'+'''
+ return 'local Config='+wrapped('src/shared/Config.luau')+'\nlocal CaveHubLayout='+wrapped('src/shared/CaveHubLayout.luau')+'\nlocal script={Parent={Config="Config",FallRecovery="FallRecovery",CaveHubLayout="CaveHubLayout"}}\nlocal require=function(id)if id=="CaveHubLayout" then return CaveHubLayout end return Config end\nlocal FoodCatchRules='+wrapped('src/shared/FoodCatchRules.luau')+'\nlocal Layout='+wrapped('src/shared/IslandLayout.luau')+'\n'+'''
 local whole,carry=FoodCatchRules.award(500,0,1)
 assert(whole==4 and carry<1e-8)
 local accumulated,total=0,0
