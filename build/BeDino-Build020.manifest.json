@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "e4b4f8c619648b69c04cfaf12e70466bb1efca30a6da685e15bfe38816f39f56",
+  "place_sha256": "a23731c2e4f051c40135e8bf3ef3736d8d93f4c7bcd59415b14e09c9b7557024",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -324,7 +324,7 @@
     "src/client/HudV2.luau": "245d9bf4e10a3fd58d2e08218f8778e6c9208782017a749e048bcca1be7f6624",
     "src/client/InspectView.luau": "734aefd9c3ca8907cc4161e20b94e0dba4f372904c3950a1f17aaae7b47e9cf9",
     "src/client/JumpCarry.client.luau": "00398d26593b2042edd83228148424288e54f8501ba7e114bb64d073176e699a",
-    "src/client/LowPolyAnimator.client.luau": "fa7f9258d4f92929c677133a00bcd7ddeeb9a4a7163911d9a736769acb994722",
+    "src/client/LowPolyAnimator.client.luau": "772571e985944980700840c301ab7568ca842a2f2aa67bd475039e4c55c368c5",
     "src/client/PreviewTraits.luau": "c7154bd43e83dd787248878d1ec7d144aeebc914d679f3a2892f11fd3ba1677f",
     "src/client/ResourceVisuals.client.luau": "e7b09d60a65fad5b1ab29e51113d30c5a0d3fb1cfbc026f7a6cb2e23296acc3a",
     "src/client/SettingsMenu.luau": "3ed49f25720910959e8b2ff1ebedb90bd2b68f3cf4f1075529a13a0dfbf02793",
