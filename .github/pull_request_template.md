@@ -3,7 +3,7 @@
 ## Evidence (tests run, Studio/phone checks, or "not verified")
 
 ## Handbook check (docs/114)
-- [ ] Vision/feel: calm, bubbly, friendly; checked against docs/87 on a screenshot or marked "not verified"
+- [ ] Vision/feel: polished, satisfying, calm, bubbly, friendly, vibrant (overall vibe, not literal per-place rules: docs/114 section 0); checked against docs/87 on a screenshot or marked "not verified"
 - [ ] Design language: low-poly facets, no ellipses/primitive code art, matte (gloss only fused tiers), eyes glossy black + white dot
 - [ ] Palette: colours from handbook section 5; currency crystals amber/yellow
 - [ ] Lighting: right for its place (island bright; cave DIM lamp-lit; weather never inside the cave)
