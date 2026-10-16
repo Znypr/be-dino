@@ -39,6 +39,25 @@ Rules.WallStone = "Concrete"
 -- range; these darker warm tones plus the dimmer ambient in CaveLightingRules measure 0.30 (docs/evidence/2026-10-16-cave-organic 9, 10).
 Rules.Colors = {Cobblestone = {110, 92, 76}, Concrete = {124, 104, 86}, CrackedLava = {255, 120, 40}}
 Rules.Materials = {"Air", "Rock", "Concrete", "Sandstone", "Slate", "Basalt", "Cobblestone", "Grass", "LeafyGrass", "CrackedLava"}
+-- BD-296 dressing pass (owner 2026-10-16: "no moss like before, looks quite bland"; handbook 2026-10-16: intentional shapes, not bland surfaces).
+-- MOSS = terrain LeafyGrass, the island's own LeafyGrass colour (88,132,62: a soft mid green, S .53 V .52). Terrain colours are place-wide and
+-- the island paints fern / conifer / marsh ground with LeafyGrass, so it is NOT recoloured here (no darker cave-only moss tone is possible).
+-- It sits close to the wall stone in luminance, so the cave stays in the docs/114 s6.1 band. Moss collects where moisture would: on the bottom
+-- 3-6 studs of the wall, along floor edges, around the 13 wall-lantern niches, on station ledges and around the gate mouth. Grass (the pale
+-- sunny island green) and Mud (dark brown) are not used: Grass is too bright and Mud would read as dirt. It only changes the MATERIAL of
+-- cells that already exist, so the shell geometry, the flat lanes and every other check stay exactly as before.
+-- SECOND STONE = Cobblestone (the cave-only recolour), in a few large irregular patches low on the wall (strata-like plinth bands) so the wall is
+-- not one flat colour. Sandstone is NOT used: it is the island's hot orange (186,122,80) and, like Limestone, has a layered strata texture
+-- (the stripes the owner disliked, BD-296).
+Rules.Moss = {
+    depth = 5.5, -- only cells this close to the air carry moss (the visible surface layers; deeper rock stays wall stone)
+    bandMin = 3, bandMax = 6, -- studs above the local floor the moss reaches (wetter spots reach higher)
+    noiseScale = 9, thr = 0.5, -- patchiness: about a third of the open wall base without any boost
+    lampRadius = 24, lampBoost = 0.45, -- moisture and glow around each wall-lantern niche
+    ledgeBoost = 0.22, gateRadius = 36, gateBoost = 0.28, -- station ledges and the sunlit island gate
+    floorEdge = 7, floorThr = 0.66, -- floor cells within this many studs of the wall also take moss (never on pads, paths or the Heart plinth)
+}
+Rules.Strata = {noiseScale = 21, thr = 0.69, dyMin = 1, dyMax = 11} -- Cobblestone patches: studs above the floor, large slow blobs
 
 local FLOOR_BAND = 6 -- studs below the floor top that carry the floor surface mix
 local BOTTOM = Rules.YMin - Rules.Res -- one cell lower so the bottom layer is full (occupancy = sd / Res)
@@ -49,6 +68,32 @@ local function noise01(x: number, z: number, scale: number, offset: number): num
 end
 local function relief(x: number, z: number, scale: number, offset: number): number
     return clamp(0.5 + 0.85 * (math.noise(x / scale, z / scale, offset) * 0.65 + math.noise(x / (scale * 0.37), z / (scale * 0.37), offset + 4.1) * 0.35), 0, 1)
+end
+
+-- Wall-lantern niche positions (local x, dz): the layout's tunnel and heartwall lights. Moss gathers around them.
+local lampSpots: {any}? = nil
+local function lamps(): {any}
+    if lampSpots then return lampSpots end
+    local out = {}
+    for _, l in Layout.get().lights do
+        if l.owner == "tunnel" or l.owner == "heartwall" then out[#out + 1] = l end
+    end
+    lampSpots = out
+    return out
+end
+
+-- Moss "wetness" 0..1+ of a column: slow patchy noise plus boosts near lamp niches, station ledges and the sunlit gate. Pure and deterministic.
+function Rules.mossValue(x: number, z: number, dz: number, ledge: number, plinth: boolean): number
+    local M = Rules.Moss
+    local v = relief(x, z, M.noiseScale, 41.7)
+    local nearest = math.huge
+    for _, l in lamps() do nearest = math.min(nearest, math.sqrt((x - l.x) ^ 2 + (dz - l.z) ^ 2)) end
+    if nearest < M.lampRadius then v += M.lampBoost * (1 - nearest / M.lampRadius) end
+    if ledge > -4 and not plinth then v += M.ledgeBoost end
+    local g = Layout.get().byId.gate
+    local gd = math.sqrt((x - g.x) ^ 2 + (dz - g.z) ^ 2)
+    if gd < M.gateRadius then v += M.gateBoost * (1 - gd / M.gateRadius) end
+    return v
 end
 
 -- Per-column constants (everything that does not depend on y).
@@ -75,10 +120,13 @@ function Rules.column(x: number, z: number): any
         local dx, dy = x - lg.x, dz - lg.z
         local c, s = math.cos(lg.yaw), math.sin(lg.yaw)
         local lx, lz = dx * c - dy * s, dx * s + dy * c
-        ledge = math.max(ledge, math.min(lg.w / 2 - math.abs(lx), lg.d / 2 - math.abs(lz)))
+        local inset = math.min(lg.w / 2 - math.abs(lx), lg.d / 2 - math.abs(lz))
+        ledge = math.max(ledge, inset)
         if ledge > 0 then col.ledgeTop = floorTop + lg.h end
+        if inset > -3 and lg.owner == "heart_plinth" then col.plinth = true end -- the show-off block stays clean stone
     end
     col.ledge = ledge
+    col.mossV, col.strata = Rules.mossValue(x, z, dz, ledge, col.plinth == true), relief(x, z, Rules.Strata.noiseScale, 57.3)
     -- lava pool basin (carved below the floor) and the basalt rim around it
     local P = Layout.Pool
     local pd = math.sqrt((x - P.x) ^ 2 + (dz - P.z) ^ 2)
@@ -139,6 +187,8 @@ local function material(col: any, y: number, air: number): string
         end
         local moss = relief(x, z, 14, 33.9)
         if col.flat > 2 and moss > 0.8 then return if moss > 0.9 then "LeafyGrass" else "Grass" end
+        -- BD-296 dressing: moss along the floor edge (near the wall, beside station ledges), never on pads, lanes or the plinth
+        if col.flat > 1.5 and not col.plinth and (col.dIn < Rules.Moss.floorEdge or col.ledge > -3) and col.mossV > Rules.Moss.floorThr then return "LeafyGrass" end
         -- BD-296: matte Concrete and a little Cobblestone; no Rock (dark teal island colour) and no Limestone (strata stripes)
         if v < 0.58 then return Rules.WallStone end
         return "Cobblestone"
@@ -148,6 +198,14 @@ local function material(col: any, y: number, air: number): string
     -- blotches where the shell is thin (Heart far wall, arches), so the cave writes no Rock at all.
     -- BD-296: one matte stone over the whole visible shell. Earlier passes mixed Limestone (horizontal strata stripes), Rock (dark smudge
     -- patches) and Cobblestone (tile grid); the lead's Studio view (docs/evidence/2026-10-16-cave-organic 6, 7) showed all three read badly.
+    -- BD-296 dressing: moss on the wet bottom of the wall (surface layers only), a few Cobblestone strata patches just above it
+    local dy = y - col.floorTop
+    if -air <= Rules.Moss.depth and col.flat > 0.5 then
+        local M = Rules.Moss
+        if col.mossV > M.thr and dy >= -1 and dy <= M.bandMin + (M.bandMax - M.bandMin) * clamp((col.mossV - M.thr) * 4, 0, 1) then return "LeafyGrass" end
+        local S = Rules.Strata
+        if col.strata > S.thr and dy >= S.dyMin and dy <= S.dyMax then return "Cobblestone" end
+    end
     return Rules.WallStone
 end
 

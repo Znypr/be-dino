@@ -154,6 +154,12 @@ for key,w in Props.Warm do
  assert(w.material=="Slate" or w.material=="Plastic","matte material")
 end
 assert(Props.Warm.cave_lava_rim_rock and Props.Warm.cave_stepping_stone,"rim rocks and stepping stones recoloured")
+-- BD-490 lead Studio check: moss curtains / round boulder take a flat matte tone (not red-brown, so not in Warm)
+for key,w in (Props.Tone or {}) do
+ assert(Props.Assets[key] and not Props.NotMeshes[key],"tone key is a placed mesh: "..key)
+ assert(w.material=="Slate" or w.material=="SmoothPlastic" or w.material=="Plastic","matte tone material: "..key)
+ assert(math.max(w.color[1],w.color[2],w.color[3])<=160,"tone is not a near-white glow: "..key)
+end
 
 -- ---- budgets unchanged (300 / 410 parts)
 local budget=C.budgetTable()
