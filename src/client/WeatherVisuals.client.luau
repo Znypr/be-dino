@@ -704,8 +704,19 @@ local sub=Instance.new("TextLabel") sub.Name="Sub" sub.AnchorPoint=Vector2.new(.
 sub.BackgroundTransparency=1 sub.Font=Enum.Font.FredokaOne sub.TextScaled=true sub.TextTransparency=1 sub.TextColor3=Color3.new(1,1,1) sub.Text="Special eggs can drop!" sub.ZIndex=5 sub.Parent=title
 local subStroke=Instance.new("UIStroke") subStroke.Thickness=3 subStroke.Color=Color3.fromRGB(14,20,34) subStroke.Transparency=1 subStroke.Parent=sub
 local titleToken=0
+-- BD-328: the big title card never draws over an open menu: it waits (up to 20 s) for the menu to close, then plays.
+local function menuOpen():boolean return player:GetAttribute("MenuOpen")==true end
+player:GetAttributeChangedSignal("MenuOpen"):Connect(function() gui.Enabled=not menuOpen() end) -- a menu opened mid-card hides it
 local function showTitle(id:string,name:string)
     titleToken+=1 local mine=titleToken
+    if menuOpen() then
+        task.spawn(function()
+            local waited=0
+            while menuOpen() and waited<20 do task.wait(.25) waited+=.25 end
+            if mine==titleToken and not menuOpen() then showTitle(id,name) end
+        end)
+        return
+    end
     title.Text=string.upper(name).."!" title.TextColor3=TITLE_COLOR[id] or Color3.new(1,1,1)
     titleScale.Scale=if Theme.MotionEnabled then 2.2 else 1
     title.TextTransparency,stroke.Transparency,sub.TextTransparency,subStroke.Transparency=0,0,0,0

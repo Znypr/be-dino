@@ -138,6 +138,7 @@ for _, id in Tier.Order do
     local e = Tier.get(id) assert(e and e.id == id, id)
     assert(e.amount > 0 and e.amount <= Tier.MaxAmount and e.trimAmount <= Tier.MaxAmount, id .. " tint pull bounded")
     assert(e.reflectance >= 0 and e.reflectance <= Tier.MaxReflectance, id .. " gloss bounded")
+    assert(e.amount >= 0.35 and e.amount <= 0.5 and e.trimAmount > e.amount, id .. " BD-326: readable at preview size, trim stronger, still calm")
     assert(e.material ~= "Neon" and e.material ~= "ForceField", id .. " no neon")
     assert(e.sparkleRate >= 0 and e.sparkleRate <= 4, id .. " sparkle stays soft")
     for i = 1, 3 do assert(e.tint[i] >= 0 and e.tint[i] <= 255 and e.sparkle[i] >= 0 and e.sparkle[i] <= 255) end

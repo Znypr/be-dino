@@ -149,7 +149,7 @@ end
 function T.revealScale(p: number): number
     local x = clamp01(p)
     if x >= 1 then return 1 end
-    local c1 = 1.4
+    local c1 = 1.0 -- BD-327: peak about 1.03 (was 1.1): the dino no longer crosses the panel edge at the pop
     local c3 = c1 + 1
     local back = 1 + c3 * (x - 1) ^ 3 + c1 * (x - 1) ^ 2
     return .25 + .75 * back

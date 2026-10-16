@@ -12,7 +12,7 @@ local Theme = require(Shared:WaitForChild("UITheme"))
 local Mixer = require(Shared:WaitForChild("AudioMixer"))
 
 local player = Players.LocalPlayer
-local remote = ReplicatedStorage:WaitForChild("BeDinoRemotes"):WaitForChild("SetSettings") :: RemoteEvent
+local remote = (ReplicatedStorage:WaitForChild("BeDinoRemotes", 60) :: Folder):WaitForChild("SetSettings", 60) :: RemoteEvent -- BD-330: timeouts, no infinite-yield warning
 
 local applying = false
 local saveSerial = 0
