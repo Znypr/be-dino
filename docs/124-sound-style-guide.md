@@ -1,4 +1,4 @@
-# 122 Sound style guide and Sound Lab (BD-081, BD-343)
+# 124 Sound style guide and Sound Lab (BD-081, BD-343)
 
 Written 2026-10-16. Extends the checkable rules in [110](110-sound-audit.md) section 2 and the soft-sound rule in [87](87-vision-and-feel-guide.md); the vibe words are in [114](114-handbook.md) section 0 (polished, satisfying, calm, bubbly, friendly, vibrant) and are read **per category here, not literally** (a rare hatch is loud in joy yet soft in timbre). Audience: children, parents nearby ([114](114-handbook.md) section 2). Labels: **OWNER**, **LEAD** (proposal, owner may overrule), **CODE** (what the source does), **TODO owner**. **Nobody has listened to any of these sounds** (agents cannot hear): every target below is a design target, and every loudness figure is arithmetic on cue volumes, not measured LUFS. Registry ids: [77](77-asset-registry.md) only; never invent ids.
 

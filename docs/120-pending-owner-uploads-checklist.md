@@ -69,7 +69,7 @@ Note: the older fx-v2 smoke, spark and flame sheets are superseded by the upload
 
 After each upload: the lead records ids in docs/77, binds, runs the matching verifier, takes a desktop and phone Studio screenshot next to neighbouring UI, then moves the BD rows to Review / test ([109](109-owner-art-prompt-pack.md) section 7).
 
-## 6. Sounds still to pick or upload (BD-081, [122](122-sound-style-guide.md))
+## 6. Sounds still to pick or upload (BD-081, [124](124-sound-style-guide.md))
 
 Audio is uploaded by the owner as **Audio** in Asset Manager (never invent ids); the lab in Settings > SOUND > SOUND LAB lists every registered sound so you can judge by ear. Missing sounds, per category (details and targets in 122 section 3):
 
