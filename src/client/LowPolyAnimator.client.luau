@@ -10,6 +10,7 @@ local Pose = require(Shared.LowPolyPose)
 local LowPoly = require(Shared.LowPolyDinos)
 local Theme = require(Shared.UITheme)
 local EffectAssets = require(Shared.EffectAssets)
+local NpcLowPoly = require(Shared.NpcLowPoly)
 if not LowPoly.enabled() then return end
 
 local RANGE, REMOTE_STEP, RUN_SPEED = 80, 1 / 20, 24
@@ -109,6 +110,19 @@ local function updateAction(rig: any, now: number)
     end
 end
 
+-- BD-324: wild NPC predators (server-made models flagged NpcLowPoly, visual child "NpcVisual") use the SAME pose functions. Their action
+-- comes from the replicated NpcCue ("windup") and BiteSeq attributes, not from a Humanoid: windup lean, bite lunge.
+local function updateNpcAction(rig: any, model: Model, now: number)
+    local seq = num(model, "BiteSeq")
+    local biteChanged = rig.biteSeq ~= nil and seq ~= rig.biteSeq
+    rig.biteSeq = seq
+    local cue = tostring(model:GetAttribute("NpcCue") or "")
+    if rig.act == "bite" and now - rig.actAt >= Pose.duration("bite", 0, rig.class) then rig.act = nil end
+    if rig.act == "windup" and cue ~= "windup" then rig.act = nil end
+    local want = NpcLowPoly.phase(cue, biteChanged, rig.act)
+    if want and want ~= rig.act then rig.aggr = 0 startPhase(rig, want, now) end
+end
+
 local function pivotFor(role: string, size: Vector3, side: number): Vector3
     if role == "wing" or role == "flipper" then return Vector3.new(-side * size.X / 2, 0, 0) end -- inner edge, at the body
     if role == "head" then return Vector3.new(0, -size.Y / 2, size.Z / 2) end -- neck, bottom back
@@ -130,7 +144,7 @@ local function collect(visual: Model): {any}
     return list
 end
 
-local function apply(rig: any, now: number, dt: number, amp: number)
+local function apply(rig: any, now: number, dt: number, amp: number, npc: Model?)
     local root = rig.root
     local v = root.AssemblyLinearVelocity
     local speed01 = math.clamp(math.sqrt(v.X * v.X + v.Z * v.Z) / RUN_SPEED, 0, 1)
@@ -139,7 +153,7 @@ local function apply(rig: any, now: number, dt: number, amp: number)
     rig.phase = (rig.phase + dt * Pose.stepRate(rig.speed) * (if rig.speed > 0.01 then 1 else 0)) % (2 * math.pi * 8)
     local height = rig.height
     rig.amp = amp
-    if amp > 0 then updateAction(rig, now) else rig.act = nil end
+    if amp == 0 then rig.act = nil elseif npc then updateNpcAction(rig, npc, now) else updateAction(rig, now) end
     local phase = rig.act
     local k = 0
     if phase then
@@ -196,6 +210,31 @@ RunService.Heartbeat:Connect(function(dt)
         elseif camera and (camera.CFrame.Position - root.Position).Magnitude <= RANGE then
             rig.acc += dt
             if rig.acc >= REMOTE_STEP then apply(rig, now, rig.acc, amp) rig.acc = 0 end
+        end
+    end
+end)
+-- Wild NPC rigs, 20 Hz within RANGE (like remote players). Nothing runs while the folder is absent (CombatEnabled false).
+local npcRigs: {[Model]: any} = setmetatable({}, {__mode = "k"}) :: any
+RunService.Heartbeat:Connect(function(dt)
+    local folder = workspace:FindFirstChild("BeDinoNpcs")
+    if not folder then return end
+    local camera = workspace.CurrentCamera
+    local now = os.clock()
+    local amp = if Theme.MotionEnabled then 1 else 0
+    for _, model in folder:GetChildren() do
+        local visual = if model:IsA("Model") and model:GetAttribute("NpcLowPoly") == true then model:FindFirstChild("NpcVisual") else nil
+        local root = model:FindFirstChild("HumanoidRootPart")
+        if not visual or not visual:IsA("Model") or not root or not root:IsA("BasePart") or model:GetAttribute("NpcFading") == true then continue end
+        local rig = npcRigs[model]
+        if not rig or rig.visual ~= visual then
+            local _, size = visual:GetBoundingBox()
+            rig = {visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0, height = math.max(size.Y, 1), aggr = 0, carry = 0,
+                leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), seed = math.random() * 10}
+            npcRigs[model] = rig
+        end
+        if camera and (camera.CFrame.Position - root.Position).Magnitude <= RANGE then
+            rig.acc += dt
+            if rig.acc >= REMOTE_STEP then apply(rig, now, rig.acc, amp, model) rig.acc = 0 end
         end
     end
 end)
