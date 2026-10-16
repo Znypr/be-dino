@@ -3,6 +3,7 @@
 -- The client module HatchSequence.luau only draws; everything testable lives here
 -- (tools/verify_hatch_sequence.py). Presentation only: the server-committed outcome is never read or changed.
 local RevealSkip = require(script.Parent.RevealSkip)
+local V2 = require(script.Parent.HatchV2Plan) -- BD-397 (docs/118): the v2 beat sheet; only used when a state is created with v2 = true
 local T = {}
 
 -- Seconds. Full motion: ~3.6 s build-up (two paint-bucket splashes, then rattle/crack), burst, dino reveal, then wait for a tap.
@@ -37,11 +38,14 @@ function T.paintPlan(motion: boolean)
         rightStart = p.rightStart, rightImpact = p.rightStart + p.window * p.impact, rightEnd = rightEnd,
         patternAt = patternAt, patternEnd = patternAt + p.patternWash, endsAt = patternAt + p.patternWash}
 end
-function T.durations(motion: boolean, rarity: number?, failed: boolean?)
+-- v2 (BD-397, docs/118): the longer paint beat sheet of HatchV2Plan replaces the build-up and the paint plan; burst, settle,
+-- tap gate, skip rules, Reduced Motion and the failed-egg splat are unchanged.
+function T.durations(motion: boolean, rarity: number?, failed: boolean?, v2: boolean?)
     local d = if not motion then T.Reduced elseif failed then T.Splat else T.Motion
     local settle = d.settle + (if motion and not failed and (rarity or 1) >= 5 then .5 else 0)
-    return {build = d.build, burst = d.burst, settle = settle, revealAt = d.build, readyAt = d.build + d.burst + settle,
-        tapGate = d.tapGate, paint = T.paintPlan(motion)}
+    local build = if v2 and motion then V2.Build else d.build
+    return {build = build, burst = d.burst, settle = settle, revealAt = build, readyAt = build + d.burst + settle,
+        tapGate = d.tapGate, paint = if v2 and motion then V2.paintPlan() else T.paintPlan(motion)}
 end
 
 function T.phase(durs, t: number): string
@@ -55,11 +59,17 @@ end
 -- pending = the server result (species, colours, pattern) has not arrived yet: the egg keeps wobbling (idle grows, t holds
 -- at the first bucket) so Open starts the animation at once without waiting for the network (BD-170).
 function T.new(motion: boolean, rarity: number?, failed: boolean?, pending: boolean?)
-    return {t = 0, idle = 0, pending = pending == true, durs = T.durations(motion, rarity, failed), fastForwarded = false, done = false, motion = motion}
+    return {t = 0, idle = 0, pending = pending == true, durs = T.durations(motion, rarity, failed), fastForwarded = false, done = false, motion = motion, v2 = false}
+end
+-- BD-397: switch a fresh state to the v2 beat sheet (before any step). Keeps the pending hold and every rule.
+function T.useV2(state, on: boolean)
+    state.v2 = on == true
+    state.durs = T.durations(state.motion, nil, nil, state.v2)
+    return state
 end
 -- The result arrived: use the real timing (the build-up length never depends on rarity or failure).
 function T.supply(state, rarity: number?, failed: boolean?)
-    state.durs = T.durations(state.motion, rarity, failed)
+    state.durs = T.durations(state.motion, rarity, failed, state.v2)
     state.pending = false
     return state
 end
@@ -194,13 +204,14 @@ end
 -- Where each bucket is in its window at time t, and how far its colour has washed over the egg (0..1).
 function T.paintState(durs, t: number)
     local p = durs.paint
-    local window = if p.endsAt > 0 then T.Paint.window else 0
+    local window = if p.endsAt > 0 then (p.window or T.Paint.window) else 0 -- v2 plans carry their own window / wash lengths
+    local wash, patternWash = p.wash or T.Paint.wash, p.patternWash or T.Paint.patternWash
     local function bucket(start: number, impactAt: number)
-        if window <= 0 then return {k = 1, impacted = true, wash = 1, sinceImpact = 99} end
+        if window <= 0 then return {k = 1, impacted = true, wash = 1, sinceImpact = 99, since = 99} end
         local since = t - impactAt
-        return {k = clamp01((t - start) / window), impacted = since >= 0, wash = if since <= 0 then 0 else T.easeOut(since / T.Paint.wash), sinceImpact = since}
+        return {k = clamp01((t - start) / window), impacted = since >= 0, wash = if since <= 0 then 0 else T.easeOut(since / wash), sinceImpact = since, since = t - start}
     end
-    local pattern = if window <= 0 then 1 elseif t <= p.patternAt then 0 else T.easeOut((t - p.patternAt) / T.Paint.patternWash)
+    local pattern = if window <= 0 then 1 elseif t <= p.patternAt then 0 else T.easeOut((t - p.patternAt) / patternWash)
     return {left = bucket(p.leftStart, p.leftImpact), right = bucket(p.rightStart, p.rightImpact), pattern = pattern,
         patternShown = window <= 0 or t >= p.patternAt}
 end

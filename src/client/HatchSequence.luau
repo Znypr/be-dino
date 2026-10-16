@@ -18,6 +18,8 @@ local FxPlan = require(Shared.HatchFxPlan)
 local EggGenetics = require(Shared.EggGenetics)
 local InspectView = require(script.Parent.InspectView)
 local HatchFx = require(script.Parent.HatchFx)
+local Config = require(Shared.Config)
+local EggV2 = require(script.Parent.HatchEggV2) -- BD-397 (docs/118): 3D egg + paint coats behind Config.HatchV2; nil handle = v1 look
 
 local Seq = {}
 local CENTER_EGG = Vector2.new(412, 130) -- body coordinates (824 x 402 virtual px)
@@ -320,6 +322,7 @@ export type Args = {
     onNext: () -> (), onSkipAll: () -> (), onReveal: () -> (), onAgain: (() -> ())?,
     result: Result?, -- nil = Open was just pressed and the server answer has not arrived: the egg already wobbles (BD-170)
     eggCondition: string?, -- BD-223: condition id of the egg being opened (client queue), shown from the first frame
+    eggId: string?, -- BD-397: seeds the v2 paint splats (same egg -> same splashes)
 }
 export type Handle = {cancel: () -> (), supply: (Result) -> (), pending: () -> boolean, setRemaining: (number) -> ()}
 
@@ -328,9 +331,12 @@ function Seq.play(args: Args): Handle
     local a: any = args -- result fields are merged in by applyResult
     local motion = a.motion
     local state = Timeline.new(motion, 1, false, a.result == nil)
-    local durs = state.durs
     local fx = ensureLayers(a.panel)
     local kit = fx.paint
+    -- BD-397: the v2 3D egg (flag on AND its mesh loaded); otherwise everything below is the shipped v1 look.
+    local v2 = if Config.HatchV2 == true then EggV2.create(fx.back, fx.front, motion) else nil
+    if v2 then Timeline.useV2(state, true) end
+    local durs = state.durs
     local hx = HatchFx.begin(HatchFx.ensure(fx.back, fx.front), motion) -- layered 2D polish (bloom, rim sparks, puffs, motes, droplets)
     -- Result-dependent values. Neutral until applyResult() runs (Open pressed, server answer on its way).
     local rarity, failed = 1, false
@@ -350,6 +356,7 @@ function Seq.play(args: Args): Handle
 
     a.eggView.AnchorPoint = Vector2.new(.5, .5)
     a.eggView.Position = UDim2.fromOffset(CENTER_EGG.X, CENTER_EGG.Y)
+    if v2 then a.eggView.Visible = false end -- the 2D egg only comes back for its shell fragments at the burst
     local eggZoom = Instance.new("UIScale") eggZoom.Parent = a.eggView
     local dinoScale: UIScale? = nil
     local bodyScale = Instance.new("UIScale") bodyScale.Parent = a.body
@@ -469,6 +476,7 @@ function Seq.play(args: Args): Handle
         if inspect then inspect.destroy() inspect = nil end
         restoreBody()
         HatchFx.hide(hx)
+        if v2 then EggV2.stop(v2) end
         if overlay.Parent then overlay:Destroy() end
         if fx.back.Parent then
             fx.backdrop.BackgroundTransparency = 1
@@ -538,6 +546,7 @@ function Seq.play(args: Args): Handle
         if id == conditionId or burstDone then return end
         conditionId = id
         a.paint.setCondition(id)
+        if v2 then EggV2.setCondition(v2, id) end -- v2: the overlay fades in at the condition beat, the chip is shown at once
         local text = Timeline.conditionChip(if id then EggGenetics.condition(id) else nil)
         kit.conditionChip.Visible = text ~= nil
         if text then
@@ -568,6 +577,11 @@ function Seq.play(args: Args): Handle
             local side = if i == 1 then -1 else 1
             local b = if i == 1 then ps.left else ps.right
             local bucket, stream = kit.buckets[i], kit.streams[i]
+            if v2 then
+                -- BD-397: the 3D buckets, liquid arc, crown and drips are drawn by HatchEggV2; only the chips remain here.
+                if b.impacted and not chipShown[i] then chipShown[i] = true showChip(i) end
+                continue
+            end
             local x, y, rot, alpha = Timeline.bucketPose(b.k, side)
             local show = b.k > 0 and b.k < 1
             bucket.Visible = show
@@ -615,9 +629,11 @@ function Seq.play(args: Args): Handle
                 showChip(i)
             end
         end
-        if ps.left.wash ~= lastWash[1] then lastWash[1] = ps.left.wash a.paint.color(ps.left.wash) end
-        if ps.right.wash ~= lastWash[2] then lastWash[2] = ps.right.wash a.paint.second(ps.right.wash) end
-        if ps.pattern ~= lastWash[3] then lastWash[3] = ps.pattern a.paint.pattern(ps.pattern) end
+        if not v2 then -- v2 paints the 3D egg's texture itself (the hidden 2D egg only tints for its burst fragments)
+            if ps.left.wash ~= lastWash[1] then lastWash[1] = ps.left.wash a.paint.color(ps.left.wash) end
+            if ps.right.wash ~= lastWash[2] then lastWash[2] = ps.right.wash a.paint.second(ps.right.wash) end
+            if ps.pattern ~= lastWash[3] then lastWash[3] = ps.pattern a.paint.pattern(ps.pattern) end
+        end
         local pattern = a.patternReveal
         if ps.patternShown and not chipShown[3] and pattern then
             chipShown[3] = true
@@ -634,6 +650,7 @@ function Seq.play(args: Args): Handle
         eggZoom.Scale = 1
         hidePaint()
         a.paint.finish() -- fast-forwarded or Reduced Motion: the egg shows its final colour and pattern before it opens
+        if v2 then EggV2.burst(v2) a.eggView.Visible = true end -- the 3D egg leaves; the 2D shell fragments fly from the same spot
         if motion then a.body.Position = UDim2.fromOffset(BODY_CENTER.X, BODY_CENTER.Y) end
         if motion then a.animateEgg(Timeline.EggClock) end
         a.splitEgg(not failed)
@@ -875,6 +892,21 @@ function Seq.play(args: Args): Handle
         if r.genes and typeof(r.genes.conditionId) == "string" then setCondition(r.genes.conditionId) end
         local colors = r.paintColors
         paintColors = {if colors then colors[1] else WHITE, if colors then colors[2] else WHITE}
+        if v2 then
+            -- BD-397: left bucket = the PRIMARY colour, right bucket = the secondary colour on the pattern (a plain egg gets a
+            -- clear varnish); same-family genes paint the pattern a darker shade (PatternGenes rule).
+            local g = r.genes
+            local base, accent = paintColors[1], paintColors[2]
+            local plain = g == nil or g.patternId == nil or g.patternId == "01_blank"
+            if g then
+                local pc, sc = EggGenetics.color(g.primaryColorId), EggGenetics.color(g.secondaryColorId)
+                if pc then base = Color3.fromRGB(pc.rgb[1], pc.rgb[2], pc.rgb[3]) end
+                accent = if sc and g.secondaryColorId ~= g.primaryColorId then Color3.fromRGB(sc.rgb[1], sc.rgb[2], sc.rgb[3]) else base:Lerp(Color3.new(0, 0, 0), .22)
+            end
+            paintColors = {base, if plain then base:Lerp(WHITE, .6) else accent}
+            EggV2.setGenes(v2, g, a.eggId, base, accent, plain)
+            if not motion then EggV2.finish(v2) end
+        end
         for i = 1, 2 do
             kit.bucketPaint[i].BackgroundColor3 = paintColors[i]
             kit.splashStrokes[i].Color = paintColors[i]
@@ -920,6 +952,8 @@ function Seq.play(args: Args): Handle
                 bodyScale.Scale = Timeline.cameraZoom(bp)
                 a.body.Position = UDim2.fromOffset(BODY_CENTER.X + sx, BODY_CENTER.Y + sy)
                 a.animateEgg(Timeline.eggClock(durs, t))
+                if v2 then EggV2.update(v2, t, vt, if state.pending then nil else Timeline.paintState(durs, t), durs,
+                    {rot = rot * esc.shakeScale, dx = dx * esc.shakeScale, dy = dy * esc.shakeScale, zoom = Timeline.zoom(bp)}) end
                 if not state.pending then updatePaint(t) end
                 local g = Timeline.glow(bp)
                 HatchFx.update(hx, vt, bp, nil, false)

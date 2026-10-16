@@ -368398,6 +368398,10 @@ return table.freeze({
     FallRecoveryTickSeconds = 0.2,
     -- BD-225 spike (docs/77): low-poly generated base dinos (Compy, Raptor, Triceratops). OFF by default; shipped look unchanged.
     LowPolyDinos = false,
+    -- BD-397 (docs/118): v2 hatch (3D egg viewport, two paint buckets that coat the egg texture, condition, cracks). OFF by
+    -- default: the shipped v1 sequence is unchanged. ON = the server loads HatchV2Assets; the client falls back to v1 for any
+    -- egg whose meshes or images are unavailable. Playtest profile may turn it on once docs/118 evidence is owner-approved.
+    HatchV2 = false,
     -- BD-243/244/247 (docs/101): HP combat behind ONE flag. OFF = no CombatService, no Bite remote, no health bars, the
     -- instant "bigger eats smaller" predation stays exactly as shipped. ON (Studio tests only) = PredationService's
     -- instant eat stops and CombatService runs. Keep false until the BD-252 phone test passes.
@@ -373404,6 +373408,121 @@ return P
       </Item>
       <Item class="ModuleScript" referent="RBX226">
         <Properties>
+          <string name="Name">HatchPaintBake</string>
+          <ProtectedString name="Source">--!strict
+-- BD-397 (docs/118): PURE pixel maths of the two-coat paint reveal on the hatch egg. No Roblox APIs (tools/verify_hatch_v2.py).
+-- The egg texture is ONE EditableImage (size x size, under the docs/105 byte budget) that client/HatchEggV2 rewrites a few times
+-- per second while a coat runs: every texel knows (from the egg's position map, LowPolyPattern.rasterize, or its UV as a
+-- fallback) the second at which the base coat and the accent coat reach it (Bake.revealMap, from HatchV2Plan splats and
+-- drips), so compositing at a coat time t is a per-texel lerp: cream shell -&gt; base colour (coat 1) -&gt; accent colour where the
+-- gene pattern mask says so (coat 2). Facet shading of the source texture is kept (Bake.shade), the fresh paint front gets a
+-- thin bright wet edge. Deterministic: same inputs -&gt; same bytes.
+local Plan = require(script.Parent.HatchV2Plan)
+local Bake = {}
+
+-- Per-texel shading factor from the egg's own texture (luminance over the mean body luminance, clamped so paint stays readable).
+-- src = RGBA buffer (size x size). nil src -&gt; flat shading (every factor 1).
+function Bake.shade(src: buffer?, size: number): {number}
+    local n = size * size
+    local out = table.create(n, 1)
+    if not src then return out end
+    local sum, count = 0, 0
+    local lum = table.create(n, 1)
+    for i = 0, n - 1 do
+        local o = i * 4
+        local l = (.299 * buffer.readu8(src, o) + .587 * buffer.readu8(src, o + 1) + .114 * buffer.readu8(src, o + 2)) / 255
+        lum[i + 1] = l
+        if buffer.readu8(src, o + 3) &gt; 0 then sum += l count += 1 end
+    end
+    local mean = if count &gt; 0 then math.max(.05, sum / count) else 1
+    for i = 1, n do out[i] = math.clamp(lum[i] / mean, .55, 1.25) end
+    return out
+end
+
+-- Model-space position of texel i (1-based) from the position map (alpha 255 = covered) or, without a map, from its UV: u -&gt; x,
+-- v -&gt; y (top row = top of the egg), z = 0. Returns x, y, z.
+local function position(posmap: buffer?, i: number, size: number): (number, number, number)
+    if posmap then
+        local o = (i - 1) * 4
+        if buffer.readu8(posmap, o + 3) == 255 then
+            return buffer.readu8(posmap, o) / 127.5 - 1, buffer.readu8(posmap, o + 1) / 127.5 - 1, buffer.readu8(posmap, o + 2) / 127.5 - 1
+        end
+    end
+    local x, y = (i - 1) % size, (i - 1) // size
+    return (x + .5) / size * 2 - 1, 1 - (y + .5) / size * 2, 0
+end
+Bake.position = position
+
+-- Reveal time (seconds after the coat's impact) per texel for one coat. side -1 left / +1 right, coat 1 / 2.
+function Bake.revealMap(size: number, posmap: buffer?, seed: number, side: number, coat: number, onRow: ((number) -&gt; ())?): {number}
+    local splats = Plan.splats(seed, side, coat)
+    local drips = Plan.drips3(seed, splats, coat)
+    local span = Plan.Coat.span
+    local n = size * size
+    local out = table.create(n, span)
+    for i = 1, n do
+        if onRow and (i - 1) % size == 0 then onRow((i - 1) // size) end
+        local x, y, z = position(posmap, i, size)
+        out[i] = Plan.revealTime(x, y, z, splats, drips, span)
+    end
+    return out
+end
+
+-- Composite at coat times t1 (base) and t2 (accent), seconds after each impact (negative = not started, large = finished).
+-- shade: Bake.shade; mask: pattern weights 0..1 (LowPolyPattern.compute) or nil (plain egg: the accent paints nothing);
+-- cream / base / accent are {r, g, b} 0..1. Writes RGBA into `out` (alpha 255). onRow lets the runtime yield.
+function Bake.composite(size: number, shade: {number}, mask: {number}?, map1: {number}, map2: {number}, t1: number, t2: number,
+    cream: {number}, base: {number}, accent: {number}, out: buffer, onRow: ((number) -&gt; ())?)
+    local cr, cg, cb = cream[1], cream[2], cream[3]
+    local br, bg, bb = base[1], base[2], base[3]
+    local ar, ag, ab = accent[1], accent[2], accent[3]
+    for y = 0, size - 1 do
+        if onRow then onRow(y) end
+        for x = 0, size - 1 do
+            local i = y * size + x + 1
+            local k = shade[i]
+            local a1 = Plan.coatAlpha(map1[i], t1)
+            local a2 = if mask then Plan.coatAlpha(map2[i], t2) * mask[i] else 0
+            local r, g, b = cr, cg, cb
+            r, g, b = r + (br - r) * a1, g + (bg - g) * a1, b + (bb - b) * a1
+            r, g, b = r + (ar - r) * a2, g + (ag - g) * a2, b + (ab - b) * a2
+            local edge = .2 * Plan.wetEdge(a1) + .2 * Plan.wetEdge(if mask and mask[i] &gt; .5 then Plan.coatAlpha(map2[i], t2) else 0)
+            r, g, b = r * k + edge, g * k + edge, b * k + edge
+            local o = (i - 1) * 4
+            buffer.writeu8(out, o, math.clamp(math.floor(r * 255 + .5), 0, 255))
+            buffer.writeu8(out, o + 1, math.clamp(math.floor(g * 255 + .5), 0, 255))
+            buffer.writeu8(out, o + 2, math.clamp(math.floor(b * 255 + .5), 0, 255))
+            buffer.writeu8(out, o + 3, 255)
+        end
+    end
+end
+
+-- Share of texels fully painted (alpha &gt;= .999) at coat time t: the verifier's coverage curve.
+function Bake.coverage(map: {number}, t: number): number
+    local n, hit = #map, 0
+    for i = 1, n do if Plan.coatAlpha(map[i], t) &gt;= .999 then hit += 1 end end
+    return if n &gt; 0 then hit / n else 0
+end
+
+-- Accent paint share at a texel: what the accent coat may ever reach (the pattern mask), used by tests and the pattern chip.
+function Bake.accentShare(mask: {number}?): number
+    if not mask then return 0 end
+    local s = 0
+    for _, m in mask do s += m end
+    return s / math.max(1, #mask)
+end
+
+-- Cache key of a bake: everything that changes the bytes.
+function Bake.key(seed: number, size: number, patternId: string?, blend: number, primary: string, secondary: string, hasPos: boolean): string
+    return string.format("%d|%d|%s|%d|%s|%s|%s", seed, size, patternId or "01_blank", math.floor(blend + .5), primary, secondary, if hasPos then "3d" else "uv")
+end
+
+return Bake
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX227">
+        <Properties>
           <string name="Name">HatchPresentation</string>
           <ProtectedString name="Source">--!strict
 local Theme=require(script.Parent.UITheme)
@@ -373675,7 +373794,7 @@ return Hatch
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX227">
+      <Item class="ModuleScript" referent="RBX228">
         <Properties>
           <string name="Name">HatchTimeline</string>
           <ProtectedString name="Source">--!strict
@@ -373683,6 +373802,7 @@ return Hatch
 -- The client module HatchSequence.luau only draws; everything testable lives here
 -- (tools/verify_hatch_sequence.py). Presentation only: the server-committed outcome is never read or changed.
 local RevealSkip = require(script.Parent.RevealSkip)
+local V2 = require(script.Parent.HatchV2Plan) -- BD-397 (docs/118): the v2 beat sheet; only used when a state is created with v2 = true
 local T = {}
 
 -- Seconds. Full motion: ~3.6 s build-up (two paint-bucket splashes, then rattle/crack), burst, dino reveal, then wait for a tap.
@@ -373717,11 +373837,14 @@ function T.paintPlan(motion: boolean)
         rightStart = p.rightStart, rightImpact = p.rightStart + p.window * p.impact, rightEnd = rightEnd,
         patternAt = patternAt, patternEnd = patternAt + p.patternWash, endsAt = patternAt + p.patternWash}
 end
-function T.durations(motion: boolean, rarity: number?, failed: boolean?)
+-- v2 (BD-397, docs/118): the longer paint beat sheet of HatchV2Plan replaces the build-up and the paint plan; burst, settle,
+-- tap gate, skip rules, Reduced Motion and the failed-egg splat are unchanged.
+function T.durations(motion: boolean, rarity: number?, failed: boolean?, v2: boolean?)
     local d = if not motion then T.Reduced elseif failed then T.Splat else T.Motion
     local settle = d.settle + (if motion and not failed and (rarity or 1) &gt;= 5 then .5 else 0)
-    return {build = d.build, burst = d.burst, settle = settle, revealAt = d.build, readyAt = d.build + d.burst + settle,
-        tapGate = d.tapGate, paint = T.paintPlan(motion)}
+    local build = if v2 and motion then V2.Build else d.build
+    return {build = build, burst = d.burst, settle = settle, revealAt = build, readyAt = build + d.burst + settle,
+        tapGate = d.tapGate, paint = if v2 and motion then V2.paintPlan() else T.paintPlan(motion)}
 end
 
 function T.phase(durs, t: number): string
@@ -373735,11 +373858,17 @@ end
 -- pending = the server result (species, colours, pattern) has not arrived yet: the egg keeps wobbling (idle grows, t holds
 -- at the first bucket) so Open starts the animation at once without waiting for the network (BD-170).
 function T.new(motion: boolean, rarity: number?, failed: boolean?, pending: boolean?)
-    return {t = 0, idle = 0, pending = pending == true, durs = T.durations(motion, rarity, failed), fastForwarded = false, done = false, motion = motion}
+    return {t = 0, idle = 0, pending = pending == true, durs = T.durations(motion, rarity, failed), fastForwarded = false, done = false, motion = motion, v2 = false}
+end
+-- BD-397: switch a fresh state to the v2 beat sheet (before any step). Keeps the pending hold and every rule.
+function T.useV2(state, on: boolean)
+    state.v2 = on == true
+    state.durs = T.durations(state.motion, nil, nil, state.v2)
+    return state
 end
 -- The result arrived: use the real timing (the build-up length never depends on rarity or failure).
 function T.supply(state, rarity: number?, failed: boolean?)
-    state.durs = T.durations(state.motion, rarity, failed)
+    state.durs = T.durations(state.motion, rarity, failed, state.v2)
     state.pending = false
     return state
 end
@@ -373874,13 +374003,14 @@ end
 -- Where each bucket is in its window at time t, and how far its colour has washed over the egg (0..1).
 function T.paintState(durs, t: number)
     local p = durs.paint
-    local window = if p.endsAt &gt; 0 then T.Paint.window else 0
+    local window = if p.endsAt &gt; 0 then (p.window or T.Paint.window) else 0 -- v2 plans carry their own window / wash lengths
+    local wash, patternWash = p.wash or T.Paint.wash, p.patternWash or T.Paint.patternWash
     local function bucket(start: number, impactAt: number)
-        if window &lt;= 0 then return {k = 1, impacted = true, wash = 1, sinceImpact = 99} end
+        if window &lt;= 0 then return {k = 1, impacted = true, wash = 1, sinceImpact = 99, since = 99} end
         local since = t - impactAt
-        return {k = clamp01((t - start) / window), impacted = since &gt;= 0, wash = if since &lt;= 0 then 0 else T.easeOut(since / T.Paint.wash), sinceImpact = since}
+        return {k = clamp01((t - start) / window), impacted = since &gt;= 0, wash = if since &lt;= 0 then 0 else T.easeOut(since / wash), sinceImpact = since, since = t - start}
     end
-    local pattern = if window &lt;= 0 then 1 elseif t &lt;= p.patternAt then 0 else T.easeOut((t - p.patternAt) / T.Paint.patternWash)
+    local pattern = if window &lt;= 0 then 1 elseif t &lt;= p.patternAt then 0 else T.easeOut((t - p.patternAt) / patternWash)
     return {left = bucket(p.leftStart, p.leftImpact), right = bucket(p.rightStart, p.rightImpact), pattern = pattern,
         patternShown = window &lt;= 0 or t &gt;= p.patternAt}
 end
@@ -374123,7 +374253,295 @@ return T
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX228">
+      <Item class="ModuleScript" referent="RBX229">
+        <Properties>
+          <string name="Name">HatchV2Assets</string>
+          <ProtectedString name="Source">--!strict
+-- BD-397 (docs/118): the 3D meshes of the v2 hatch, published Roblox generate_mesh assets on the owner's account (docs/77).
+-- Loaded ONCE by the server (ImportedResources.loadHatchV2, InsertService) into ReplicatedStorage.HatchV2Models only while
+-- Config.HatchV2 is true; the client clones them into the hatch viewport. A failed load of the egg makes HatchEggV2 return nil
+-- and the shipped v1 sequence runs; a failed bucket load hides the bucket (the paint arc and splash still play). Never invent ids.
+local Assets = {}
+Assets.FolderName = "HatchV2Models"
+Assets.Models = {
+    -- Reused: the generated egg already registered as world_gen_food_egg (WorldGeneratedMeshes.food_egg, never placed).
+    egg = {assetId = "80664439797104", height = 2.4, note = "generated low-poly egg (docs/77 world_gen_food_egg)"},
+    -- PLACEHOLDER stand-in until the paint bucket mesh is generated (docs/118 asset B): the cave hub barrel (CaveHubProps.hub_barrel).
+    bucket = {assetId = "81905342774801", height = 1.35, note = "PLACEHOLDER: hub_barrel stands in for the paint bucket"},
+}
+Assets.Placeholder = {bucket = true}
+return Assets
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX230">
+        <Properties>
+          <string name="Name">HatchV2Plan</string>
+          <ProtectedString name="Source">--!strict
+-- BD-397 hatch redesign (docs/118): the PURE beat sheet, bucket / paint / drip physics and the paint-reveal maths of the v2
+-- hatch. No Roblox APIs, no time source (tools/verify_hatch_v2.py). Behind Config.HatchV2 (false): nothing here runs for the
+-- shipped sequence. HatchTimeline reads Plan.Build / Plan.paintPlan() for the v2 state machine; client/HatchEggV2 draws it.
+-- Units: seconds; "studs" are the viewport scene (egg height = Plan.EggHeight); "px" are hatch-panel pixels (824 x 402);
+-- model space is the egg normalised to its longest side = 1 (y up), the same space LowPolyPattern.mask3 uses.
+local Plan = {}
+
+-- ---------------------------------------------------------------- beat sheet (full motion). Calm (docs/87): nothing snaps.
+Plan.Build = 6.7 -- seconds from Open to the burst (v1: 3.6). Tap once after the first 0.5 s fast-forwards to the burst.
+-- One bucket window (seconds since the bucket's start): arrives from its side, hovers, tips, pours, tips back, leaves.
+Plan.Bucket = {arrive = 0, hover = .45, tip = .5, pour = .65, impact = .8, pourEnd = 1.15, untilt = 1.35, leave = 1.7}
+Plan.Left, Plan.Right = .4, 2.5       -- bucket window starts (left = base colour, right = accent colour on the pattern)
+Plan.Coat = {span = 1.0, soft = .14}  -- one coat floods the whole egg in `span` s after its impact; `soft` s fade per texel
+Plan.Drips = {delay = .3, span = 1.1} -- 2D drip streaks after an impact
+Plan.PatternWash = .4                 -- the pattern chip pops while the accent coat dries
+Plan.Condition = {delay = .4, span = .4} -- condition overlay (cracks, dirt, stars) fades in after the pattern chip
+Plan.CracksMin = 1.2                  -- rattle + cracks get at least this long before the burst
+Plan.Gloss = {peak = .28, rise = .15, dry = 1.6} -- wet paint shines, then dries matte (docs/87: matte final look)
+
+function Plan.paintPlan()
+    local b = Plan.Bucket
+    local leftImpact, rightImpact = Plan.Left + b.impact, Plan.Right + b.impact
+    local patternAt = Plan.Right + b.leave + .1
+    local patternEnd = patternAt + Plan.PatternWash
+    local endsAt = patternEnd + Plan.Condition.delay + Plan.Condition.span
+    return {leftStart = Plan.Left, leftImpact = leftImpact, leftEnd = Plan.Left + b.leave,
+        rightStart = Plan.Right, rightImpact = rightImpact, rightEnd = Plan.Right + b.leave,
+        patternAt = patternAt, patternEnd = patternEnd, endsAt = endsAt,
+        window = b.leave, wash = Plan.Coat.span, patternWash = Plan.PatternWash, v2 = true}
+end
+-- Reduce Motion: no buckets, no drips, no squash; the finished egg is shown at once (same as v1 Reduced), chips in order.
+Plan.Reduced = {build = 0, chipGap = .3}
+
+-- ---------------------------------------------------------------- scene (viewport)
+Plan.EggHeight = 2.4      -- studs
+Plan.BucketHeight = 1.35  -- studs (PLACEHOLDER barrel until the bucket mesh exists)
+Plan.BucketX = 2.75       -- studs from the egg centre (= HatchTimeline.BucketX 265 px at the camera below)
+Plan.BucketY = .45        -- hover height above the egg centre (Studio pass 1: .8 swung the tipping bucket above the panel edge)
+Plan.Camera = {fov = 30, distance = 7.8, dir = {.32, .22, 1}, eggPx = {412, 130}} -- egg centre lands on HatchFxPlan.Center.egg
+Plan.ScreenHeightPx = 402
+Plan.ScreenWidthPx = 824
+
+local function clamp01(x: number): number return math.clamp(x, 0, 1) end
+local function easeOut(x: number): number local u = 1 - clamp01(x) return 1 - u * u * u end
+local function easeInOut(x: number): number x = clamp01(x) return x * x * (3 - 2 * x) end
+local function backOut(x: number): number
+    x = clamp01(x)
+    local c1, c3 = 1.2, 2.2
+    return 1 + c3 * (x - 1) ^ 3 + c1 * (x - 1) ^ 2
+end
+Plan.easeOut, Plan.easeInOut, Plan.backOut = easeOut, easeInOut, backOut
+
+-- Deterministic hashing (same egg id -&gt; same splats forever).
+function Plan.seed(text: string): number
+    local h = 2166136261
+    for i = 1, #text do
+        h = bit32.bxor(h, string.byte(text, i))
+        h = bit32.band(h * 16777619, 0xFFFFFFFF)
+    end
+    return h
+end
+function Plan.hash(i: number, seed: number): number
+    local h = bit32.band(i * 374761393 + seed * 668265263, 0xFFFFFFFF)
+    h = bit32.band(bit32.bxor(h, bit32.rshift(h, 13)) * 1274126177, 0xFFFFFFFF)
+    h = bit32.bxor(h, bit32.rshift(h, 16))
+    return (h % 65536) / 65535
+end
+
+-- ---------------------------------------------------------------- bucket pose. s = seconds since the bucket window start,
+-- side -1 left / +1 right. Returns x (studs, signed), y (studs above the egg centre), tilt (deg toward the egg, signed),
+-- alpha 0..1, squash (bucket y scale: a little bounce as it arrives and as it tips back).
+function Plan.bucketPose(s: number, side: number): (number, number, number, number, number)
+    local b = Plan.Bucket
+    if s &lt; 0 then return side * (Plan.BucketX + 1.6), Plan.BucketY, 0, 0, 1 end
+    local arrive = backOut(s / b.hover)
+    local x = Plan.BucketX + 1.6 * (1 - arrive)
+    local tilt = 0
+    if s &gt;= b.tip and s &lt; b.pourEnd then tilt = easeInOut((s - b.tip) / (b.impact - b.tip))
+    elseif s &gt;= b.pourEnd then tilt = 1 - easeInOut((s - b.pourEnd) / (b.untilt - b.pourEnd)) end
+    tilt = clamp01(tilt)
+    local leave = clamp01((s - b.untilt) / (b.leave - b.untilt))
+    x += 1.8 * leave * leave
+    local y = Plan.BucketY + .06 * math.sin(s * 2.4) - .12 * tilt
+    local alpha = if s &lt;= 0 then 0 else 1 - clamp01((leave - .6) / .4)
+    local squash = 1 + .06 * math.sin(math.pi * clamp01(s / b.hover)) * (1 - clamp01(s / b.hover)) - .05 * tilt
+    return side * x, y, -side * 72 * tilt, alpha, squash
+end
+-- Pour stream strength 0..1 (thick liquid leaving the lip) over the window.
+function Plan.stream(s: number): number
+    local b = Plan.Bucket
+    if s &lt; b.pour then return 0 end
+    local grow = easeOut((s - b.pour) / (b.impact - b.pour))
+    local thin = 1 - clamp01((s - b.pourEnd) / .2)
+    return grow * thin
+end
+-- Thick liquid arc from the lip (lx, ly px) to the impact point (ix, iy px): `n` blob centres along a quadratic curve whose
+-- control point sags with gravity; `grow` 0..1 is how far the stream has reached. Returns {x, y, r} per blob (r = radius px).
+function Plan.streamBlobs(lx: number, ly: number, ix: number, iy: number, grow: number, n: number): {{number}}
+    local out = {}
+    local cx, cy = (lx + ix) / 2, math.min(ly, iy) - 18 + (iy - ly) * .15
+    local reach = clamp01(grow)
+    for i = 1, n do
+        local u = (i - 1) / math.max(1, n - 1)
+        local x = (1 - u) ^ 2 * lx + 2 * (1 - u) * u * cx + u * u * ix
+        local y = (1 - u) ^ 2 * ly + 2 * (1 - u) * u * cy + u * u * iy
+        local r = 15 - 4 * u + 3 * math.sin(i * 1.7) * u -- wobbly, a little thinner toward the egg
+        if u &lt;= reach then table.insert(out, {x, y, math.max(8, r)}) end
+    end
+    return out
+end
+-- Splash crown: droplet j of n, `since` seconds after the impact, thrown up and out (leaning away from the bucket side).
+-- Returns dx, dy (px from the impact), size px, opacity 0..1. Bounded; nothing falls below the chips (HatchFxPlan.Limits.maxFall).
+Plan.CrownLife = .6
+function Plan.crown(j: number, n: number, since: number, side: number, seed: number): (number, number, number, number)
+    if since &lt; 0 or since &gt;= Plan.CrownLife then return 0, 0, 0, 0 end
+    local k = since / Plan.CrownLife
+    local h1, h2 = Plan.hash(j * 3, seed), Plan.hash(j * 3 + 1, seed)
+    local a = (-.08 - .84 * ((j - .5) / math.max(n, 1))) * math.pi
+    local speed = 120 + 110 * h1
+    local dx = math.cos(a) * speed * since - side * 36 * since
+    local dy = math.sin(a) * speed * since + 420 * since * since
+    dy = math.min(dy, 140)
+    local size = (12 + 8 * h2) * (1 - .5 * k)
+    return dx, dy, math.max(3, size), clamp01(1 - k ^ 1.6)
+end
+-- 2D drip streak i, `since` seconds after the impact, hanging under the splash. Returns x offset (px), top y offset (px),
+-- length px, width px, opacity. nil before it starts / after it dried.
+function Plan.dripStreak(i: number, since: number, seed: number): (number?, number?, number?, number?, number?)
+    local d = Plan.Drips
+    local start = d.delay + .12 * Plan.hash(i * 5, seed)
+    local k = (since - start) / d.span
+    if k &lt; 0 or k &gt;= 1 then return nil, nil, nil, nil, nil end
+    local x = (Plan.hash(i * 5 + 1, seed) - .5) * 120
+    local length = (34 + 40 * Plan.hash(i * 5 + 2, seed)) * easeOut(k / .75)
+    local width = 7 - 3 * k
+    return x, 10 + 6 * Plan.hash(i * 5 + 3, seed), length, width, clamp01(1 - (k - .55) / .45)
+end
+-- Egg squash and stretch at an impact: x scale, y scale (decaying wobble, 1 at rest). A soft bubble, never a snap.
+function Plan.squash(sinceImpact: number): (number, number)
+    if sinceImpact &lt; 0 then return 1, 1 end
+    local w = .11 * math.exp(-6 * sinceImpact) * math.cos(14 * sinceImpact)
+    return 1 + w, 1 - w
+end
+-- Wet gloss (MeshPart reflectance) after an impact: rises to `peak`, then dries to 0 (matte).
+function Plan.gloss(sinceImpact: number): number
+    if sinceImpact &lt; 0 then return 0 end
+    local g = Plan.Gloss
+    if sinceImpact &lt; g.rise then return g.peak * easeOut(sinceImpact / g.rise) end
+    return g.peak * (1 - easeInOut((sinceImpact - g.rise) / g.dry))
+end
+-- Idle sway (degrees, px) while the server answer is on its way or between beats: gentle, slow.
+function Plan.sway(vt: number): (number, number)
+    return math.sin(vt * 2.1) * 2.2, math.sin(vt * 1.6) * 2.5
+end
+
+-- ---------------------------------------------------------------- splats and the paint-reveal time field (model space)
+-- Impact points of one coat on the egg (model space, egg longest side = 1, y up, camera roughly along +z): a main splat on the
+-- camera-facing upper flank of the bucket's side plus two smaller ones, jittered by the egg's seed. t0 = seconds after impact.
+Plan.SplatsPerCoat = 3
+function Plan.splats(seed: number, side: number, coat: number): {{x: number, y: number, z: number, t0: number, r: number}}
+    local out = {}
+    local base = {{.28, .2, .22, 0, 1}, {.14, .36, .3, .08, .7}, {.33, -.02, .24, .16, .75}}
+    for i, b in base do
+        local j = (coat - 1) * 10 + i
+        local jx, jy, jz = (Plan.hash(j, seed) - .5) * .08, (Plan.hash(j + 100, seed) - .5) * .08, (Plan.hash(j + 200, seed) - .5) * .06
+        table.insert(out, {x = side * b[1] + jx, y = b[2] + jy, z = b[3] + jz, t0 = b[4], r = b[5]})
+    end
+    return out
+end
+-- Drip streaks of a coat in model space: two per splat, hanging down (-y) from near the splat centre.
+Plan.DripWidth, Plan.DripLength = .055, .5
+function Plan.drips3(seed: number, splats: {any}, coat: number): {{x: number, y: number, z: number, t0: number, w: number, len: number}}
+    local out = {}
+    for i, s in splats do
+        for d = 1, 2 do
+            local j = (coat - 1) * 50 + i * 4 + d
+            local off = (if d == 1 then -.07 else .06) * (.7 + .6 * Plan.hash(j, seed))
+            table.insert(out, {x = s.x + off, y = s.y + .02, z = s.z, t0 = s.t0 + .05,
+                w = Plan.DripWidth * (.8 + .5 * Plan.hash(j + 7, seed)), len = Plan.DripLength * (.7 + .6 * Plan.hash(j + 9, seed))})
+        end
+    end
+    return out
+end
+-- Flood speed (model units / s): the farthest texel of a unit-height egg is &lt; 1.3 model units from any splat, so every texel
+-- is wet before `span` ends (verified: coverage reaches 100%).
+function Plan.floodSpeed(span: number): number return 1.3 / (.8 * span) end
+-- Seconds after the impact at which the texel at model position (x, y, z) gets its paint: the first splat whose growing circle
+-- reaches it, or a drip streak running down from a splat (drips run faster than the flood, so they read as streaks ahead of it).
+function Plan.revealTime(x: number, y: number, z: number, splats: {any}, drips: {any}, span: number): number
+    local speed = Plan.floodSpeed(span)
+    local best = span
+    for _, s in splats do
+        local d = math.sqrt((x - s.x) ^ 2 + (y - s.y) ^ 2 + (z - s.z) ^ 2)
+        local t = s.t0 + math.max(0, d - .04 * s.r) / (speed * s.r)
+        if t &lt; best then best = t end
+    end
+    for _, d in drips do
+        local dy = y - d.y
+        if dy &lt; 0 and -dy &lt;= d.len then
+            local lateral = math.sqrt((x - d.x) ^ 2 + (z - d.z) ^ 2)
+            local w = d.w * (1 - .35 * (-dy / d.len)) -- streaks taper
+            if lateral &lt;= w then
+                local t = d.t0 + (-dy) / (speed * 2.6) + lateral / (speed * 2)
+                if t &lt; best then best = t end
+            end
+        end
+    end
+    return math.clamp(best, 0, span - Plan.Coat.soft) -- every texel is fully wet by the end of the span
+end
+-- Texel alpha 0..1 at coat time t (seconds after the impact) for a texel with reveal time `at`.
+function Plan.coatAlpha(at: number, t: number): number
+    return clamp01((t - at) / Plan.Coat.soft)
+end
+-- Wet-edge brightness 0..1: the advancing front shines (a thin bright rim on the fresh edge).
+function Plan.wetEdge(alpha: number): number
+    if alpha &lt;= 0 or alpha &gt;= 1 then return 0 end
+    return 1 - math.abs(alpha * 2 - 1)
+end
+
+-- ---------------------------------------------------------------- projection (pure): camera-space point (z negative = in front)
+-- to panel px; nil when behind the camera.
+function Plan.project(x: number, y: number, z: number, fovDeg: number, w: number, h: number): (number?, number?)
+    if z &gt;= -1e-4 then return nil, nil end
+    local tanHalf = math.tan(math.rad(fovDeg / 2))
+    local aspect = w / h
+    local nx, ny = (x / -z) / (tanHalf * aspect), (y / -z) / tanHalf
+    return w / 2 + nx * w / 2, h / 2 - ny * h / 2
+end
+-- Camera-space position of the egg centre so that it projects to Plan.Camera.eggPx (used by the client to place the camera).
+function Plan.eggCameraSpace(): (number, number, number)
+    local c = Plan.Camera
+    local tanHalf = math.tan(math.rad(c.fov / 2))
+    local nx = (c.eggPx[1] / Plan.ScreenWidthPx) * 2 - 1
+    local ny = 1 - (c.eggPx[2] / Plan.ScreenHeightPx) * 2
+    return nx * tanHalf * (Plan.ScreenWidthPx / Plan.ScreenHeightPx) * c.distance, ny * tanHalf * c.distance, -c.distance
+end
+function Plan.pxPerStud(): number
+    local c = Plan.Camera
+    return Plan.ScreenHeightPx / (2 * c.distance * math.tan(math.rad(c.fov / 2)))
+end
+
+-- ---------------------------------------------------------------- budget per device (docs/105: EditableImage bytes; docs/87: phone rate)
+-- bake = texture side (px): one EditableImage of bake^2 x 4 bytes per hatch panel (256 px = 256 KiB) plus transient source reads.
+-- writes = max composite writes per second during a coat; sprite counts are pooled 2D ImageLabels / Frames over the viewport.
+Plan.Budget = {
+    desktop = {bake = 256, writes = 15, streamBlobs = 12, crown = 14, drips = 6},
+    tablet = {bake = 256, writes = 12, streamBlobs = 10, crown = 10, drips = 5},
+    phone = {bake = 128, writes = 8, streamBlobs = 8, crown = 8, drips = 4},
+}
+Plan.MaxImageKiB = 256
+function Plan.budget(device: string)
+    return Plan.Budget[device] or Plan.Budget.desktop
+end
+function Plan.imageKiB(bake: number): number return bake * bake * 4 / 1024 end
+function Plan.sprites(b): number return b.streamBlobs + 2 * b.crown + 2 * b.drips end
+
+-- ---------------------------------------------------------------- chips and cue names (reused from v1: no new copy, no new sounds)
+Plan.Cues = {swoosh = "pickup_lo", splashLeft = "pickup", splashRight = "pickup_hi"}
+
+return Plan
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX231">
         <Properties>
           <string name="Name">HubGuideRules</string>
           <ProtectedString name="Source">--!strict
@@ -374343,7 +374761,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX229">
+      <Item class="ModuleScript" referent="RBX232">
         <Properties>
           <string name="Name">HubSignCopy</string>
           <ProtectedString name="Source">--!strict
@@ -374397,7 +374815,7 @@ return Copy
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX230">
+      <Item class="ModuleScript" referent="RBX233">
         <Properties>
           <string name="Name">HubTravelClientRules</string>
           <ProtectedString name="Source">--!strict
@@ -374507,7 +374925,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX231">
+      <Item class="ModuleScript" referent="RBX234">
         <Properties>
           <string name="Name">HubTravelRules</string>
           <ProtectedString name="Source">--!strict
@@ -374593,7 +375011,7 @@ return HubTravelRules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX232">
+      <Item class="ModuleScript" referent="RBX235">
         <Properties>
           <string name="Name">HubWalkUpRules</string>
           <ProtectedString name="Source">--!strict
@@ -374669,7 +375087,7 @@ return HubWalkUpRules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX233">
+      <Item class="ModuleScript" referent="RBX236">
         <Properties>
           <string name="Name">HudRules</string>
           <ProtectedString name="Source">--!strict
@@ -374740,7 +375158,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX234">
+      <Item class="ModuleScript" referent="RBX237">
         <Properties>
           <string name="Name">IconRaster</string>
           <ProtectedString name="Source">--!strict
@@ -374749,7 +375167,7 @@ return {["amber"]={341,0,1,16777216,1,33554432,20,55923968,1,16777216,40,0,1,167
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX235">
+      <Item class="ModuleScript" referent="RBX238">
         <Properties>
           <string name="Name">IconTiles</string>
           <ProtectedString name="Source">--!strict
@@ -374758,7 +375176,7 @@ return {["dinos"]={["size"]=32,["colors"]={{104,48,36},{110,114,78},{0,29,13},{1
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX236">
+      <Item class="ModuleScript" referent="RBX239">
         <Properties>
           <string name="Name">IconVectors</string>
           <ProtectedString name="Source">--!strict
@@ -374767,7 +375185,7 @@ return {["home"]={{["x"]=21,["y"]=41,["w"]=60,["h"]=47,["color"]="#142035",["rad
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX237">
+      <Item class="ModuleScript" referent="RBX240">
         <Properties>
           <string name="Name">IndexProgress</string>
           <ProtectedString name="Source">--!strict
@@ -374818,7 +375236,7 @@ return Progress
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX238">
+      <Item class="ModuleScript" referent="RBX241">
         <Properties>
           <string name="Name">InspectMath</string>
           <ProtectedString name="Source">--!strict
@@ -374930,7 +375348,7 @@ return M
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX239">
+      <Item class="ModuleScript" referent="RBX242">
         <Properties>
           <string name="Name">IslandLayout</string>
           <ProtectedString name="Source">--!strict
@@ -375023,7 +375441,7 @@ return IslandLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX240">
+      <Item class="ModuleScript" referent="RBX243">
         <Properties>
           <string name="Name">LegacyGenePatterns</string>
           <ProtectedString name="Source">--!strict
@@ -375067,7 +375485,7 @@ return Legacy
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX241">
+      <Item class="ModuleScript" referent="RBX244">
         <Properties>
           <string name="Name">LoadGate</string>
           <ProtectedString name="Source">--!strict
@@ -375104,7 +375522,7 @@ return Gate
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX242">
+      <Item class="ModuleScript" referent="RBX245">
         <Properties>
           <string name="Name">LowPolyDinoAssets</string>
           <ProtectedString name="Source">--!strict
@@ -375147,7 +375565,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX243">
+      <Item class="ModuleScript" referent="RBX246">
         <Properties>
           <string name="Name">LowPolyDinos</string>
           <ProtectedString name="Source">--!strict
@@ -375389,7 +375807,7 @@ return LowPoly
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX244">
+      <Item class="ModuleScript" referent="RBX247">
         <Properties>
           <string name="Name">LowPolyPattern</string>
           <ProtectedString name="Source">--!strict
@@ -375671,7 +376089,7 @@ return Pattern
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX245">
+      <Item class="ModuleScript" referent="RBX248">
         <Properties>
           <string name="Name">LowPolyPose</string>
           <ProtectedString name="Source">--!strict
@@ -375901,7 +376319,7 @@ return Pose
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX246">
+      <Item class="ModuleScript" referent="RBX249">
         <Properties>
           <string name="Name">LowPolyRecolor</string>
           <ProtectedString name="Source">--!strict
@@ -375954,7 +376372,7 @@ return Recolor
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX247">
+      <Item class="ModuleScript" referent="RBX250">
         <Properties>
           <string name="Name">LowPolyTexture</string>
           <ProtectedString name="Source">--!strict
@@ -376225,7 +376643,7 @@ return Texture
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX248">
+      <Item class="ModuleScript" referent="RBX251">
         <Properties>
           <string name="Name">LowPolyTier</string>
           <ProtectedString name="Source">--!strict
@@ -376294,7 +376712,7 @@ return Tier
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX249">
+      <Item class="ModuleScript" referent="RBX252">
         <Properties>
           <string name="Name">MeshSanity</string>
           <ProtectedString name="Source">--!strict
@@ -376338,7 +376756,7 @@ return Sanity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX250">
+      <Item class="ModuleScript" referent="RBX253">
         <Properties>
           <string name="Name">ModelPreview</string>
           <ProtectedString name="Source">--!strict
@@ -376399,7 +376817,7 @@ return ModelPreview
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX251">
+      <Item class="ModuleScript" referent="RBX254">
         <Properties>
           <string name="Name">MovementEnvelope</string>
           <ProtectedString name="Source">--!strict
@@ -376452,7 +376870,7 @@ return MovementEnvelope
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX252">
+      <Item class="ModuleScript" referent="RBX255">
         <Properties>
           <string name="Name">MutationEffects</string>
           <ProtectedString name="Source">-- Standalone client adapter. Upload BeDino_Soft_Smoke_256.png first.
@@ -376534,7 +376952,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX253">
+      <Item class="ModuleScript" referent="RBX256">
         <Properties>
           <string name="Name">MutationLook</string>
           <ProtectedString name="Source">--!strict
@@ -376622,7 +377040,7 @@ return Look
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX254">
+      <Item class="ModuleScript" referent="RBX257">
         <Properties>
           <string name="Name">MyDinos</string>
           <ProtectedString name="Source">--!strict
@@ -376801,7 +377219,7 @@ return M
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX255">
+      <Item class="ModuleScript" referent="RBX258">
         <Properties>
           <string name="Name">NavigationArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -376819,7 +377237,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX256">
+      <Item class="ModuleScript" referent="RBX259">
         <Properties>
           <string name="Name">NestQueue</string>
           <ProtectedString name="Source">--!strict
@@ -376891,7 +377309,7 @@ return NestQueue
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX257">
+      <Item class="ModuleScript" referent="RBX260">
         <Properties>
           <string name="Name">NextGoal</string>
           <ProtectedString name="Source">--!strict
@@ -376972,7 +377390,7 @@ return NextGoal
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX258">
+      <Item class="ModuleScript" referent="RBX261">
         <Properties>
           <string name="Name">NotifyQueue</string>
           <ProtectedString name="Source">--!strict
@@ -377186,7 +377604,7 @@ return Q
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX259">
+      <Item class="ModuleScript" referent="RBX262">
         <Properties>
           <string name="Name">NpcLowPoly</string>
           <ProtectedString name="Source">--!strict
@@ -377232,7 +377650,7 @@ return NpcLowPoly
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX260">
+      <Item class="ModuleScript" referent="RBX263">
         <Properties>
           <string name="Name">NpcPredatorRules</string>
           <ProtectedString name="Source">--!strict
@@ -377827,7 +378245,7 @@ return Npc
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX261">
+      <Item class="ModuleScript" referent="RBX264">
         <Properties>
           <string name="Name">OddsCopy</string>
           <ProtectedString name="Source">--!strict
@@ -377950,7 +378368,7 @@ return Copy
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX262">
+      <Item class="ModuleScript" referent="RBX265">
         <Properties>
           <string name="Name">PatternAtlasCache</string>
           <ProtectedString name="Source">--!strict
@@ -378036,7 +378454,7 @@ return Cache
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX263">
+      <Item class="ModuleScript" referent="RBX266">
         <Properties>
           <string name="Name">PatternGenes</string>
           <ProtectedString name="Source">--!strict
@@ -378256,7 +378674,7 @@ return Pattern
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX264">
+      <Item class="ModuleScript" referent="RBX267">
         <Properties>
           <string name="Name">PhoneScale</string>
           <ProtectedString name="Source">--!strict
@@ -378334,7 +378752,7 @@ return PhoneScale
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX265">
+      <Item class="ModuleScript" referent="RBX268">
         <Properties>
           <string name="Name">PotionArt</string>
           <ProtectedString name="Source">--!strict
@@ -378520,7 +378938,7 @@ return PotionArt
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX266">
+      <Item class="ModuleScript" referent="RBX269">
         <Properties>
           <string name="Name">PreviewCamera</string>
           <ProtectedString name="Source">--!strict
@@ -378614,7 +379032,7 @@ return PreviewCamera
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX267">
+      <Item class="ModuleScript" referent="RBX270">
         <Properties>
           <string name="Name">PrivateStateCore</string>
           <ProtectedString name="Source">--!strict
@@ -378777,7 +379195,7 @@ return Core
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX268">
+      <Item class="ModuleScript" referent="RBX271">
         <Properties>
           <string name="Name">ProgressionConfig</string>
           <ProtectedString name="Source">--!strict
@@ -378922,7 +379340,7 @@ return table.freeze({
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX269">
+      <Item class="ModuleScript" referent="RBX272">
         <Properties>
           <string name="Name">ProgressionRules</string>
           <ProtectedString name="Source">--!strict
@@ -379159,7 +379577,7 @@ return Rules
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX270">
+      <Item class="ModuleScript" referent="RBX273">
         <Properties>
           <string name="Name">RarityCurve</string>
           <ProtectedString name="Source">--!strict
@@ -379230,7 +379648,7 @@ return table.freeze(Curve)
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX271">
+      <Item class="ModuleScript" referent="RBX274">
         <Properties>
           <string name="Name">ResourceGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -379239,7 +379657,7 @@ return {["amber"]={["vertices"]={{0.0,1.3,0.0},{0.5,0.65,0.0},{0.15451,0.65,0.47
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX272">
+      <Item class="ModuleScript" referent="RBX275">
         <Properties>
           <string name="Name">ResourceMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -379255,7 +379673,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX273">
+      <Item class="ModuleScript" referent="RBX276">
         <Properties>
           <string name="Name">ResourceModels</string>
           <ProtectedString name="Source">--!strict
@@ -379326,7 +379744,7 @@ return ResourceModels
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX274">
+      <Item class="ModuleScript" referent="RBX277">
         <Properties>
           <string name="Name">RevealSkip</string>
           <ProtectedString name="Source">--!strict
@@ -379410,7 +379828,7 @@ return Skip
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX275">
+      <Item class="ModuleScript" referent="RBX278">
         <Properties>
           <string name="Name">RunEggTags</string>
           <ProtectedString name="Source">--!strict
@@ -379449,7 +379867,7 @@ return Tags
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX276">
+      <Item class="ModuleScript" referent="RBX279">
         <Properties>
           <string name="Name">RuntimeMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -379541,7 +379959,7 @@ return RuntimeMeshes
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX277">
+      <Item class="ModuleScript" referent="RBX280">
         <Properties>
           <string name="Name">SettingsModel</string>
           <ProtectedString name="Source">--!strict
@@ -379661,7 +380079,7 @@ return Model
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX278">
+      <Item class="ModuleScript" referent="RBX281">
         <Properties>
           <string name="Name">Sfx</string>
           <ProtectedString name="Source">--!strict
@@ -379881,7 +380299,7 @@ return Sfx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX279">
+      <Item class="ModuleScript" referent="RBX282">
         <Properties>
           <string name="Name">SfxRules</string>
           <ProtectedString name="Source">--!strict
@@ -380001,7 +380419,7 @@ return R
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX280">
+      <Item class="ModuleScript" referent="RBX283">
         <Properties>
           <string name="Name">ShinyEffects</string>
           <ProtectedString name="Source">-- Cosmetic-only Shiny adapter. BIG scaling remains owned by Dinosaur/Config.
@@ -380049,7 +380467,7 @@ return Effects
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX281">
+      <Item class="ModuleScript" referent="RBX284">
         <Properties>
           <string name="Name">ShopCardState</string>
           <ProtectedString name="Source">--!strict
@@ -380087,7 +380505,7 @@ return State
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX282">
+      <Item class="ModuleScript" referent="RBX285">
         <Properties>
           <string name="Name">ShopForDino</string>
           <ProtectedString name="Source">--!strict
@@ -380108,7 +380526,7 @@ return Copy
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX283">
+      <Item class="ModuleScript" referent="RBX286">
         <Properties>
           <string name="Name">ShopOdds</string>
           <ProtectedString name="Source">--!strict
@@ -380157,7 +380575,7 @@ return Odds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX284">
+      <Item class="ModuleScript" referent="RBX287">
         <Properties>
           <string name="Name">ShopPreview</string>
           <ProtectedString name="Source">--!strict
@@ -380225,7 +380643,7 @@ return P
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX285">
+      <Item class="ModuleScript" referent="RBX288">
         <Properties>
           <string name="Name">SpawnGeometry</string>
           <ProtectedString name="Source">--!strict
@@ -380279,7 +380697,7 @@ return SpawnGeometry
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX286">
+      <Item class="ModuleScript" referent="RBX289">
         <Properties>
           <string name="Name">TextStyle</string>
           <ProtectedString name="Source">--!strict
@@ -380354,7 +380772,7 @@ return TextStyle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX287">
+      <Item class="ModuleScript" referent="RBX290">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -380570,7 +380988,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX288">
+      <Item class="ModuleScript" referent="RBX291">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -380602,7 +381020,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX289">
+      <Item class="ModuleScript" referent="RBX292">
         <Properties>
           <string name="Name">UIFormat</string>
           <ProtectedString name="Source">--!strict
@@ -380646,7 +381064,7 @@ return UIFormat
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX290">
+      <Item class="ModuleScript" referent="RBX293">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -380677,7 +381095,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX291">
+      <Item class="ModuleScript" referent="RBX294">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -380701,7 +381119,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX292">
+      <Item class="ModuleScript" referent="RBX295">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -380876,7 +381294,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX293">
+      <Item class="ModuleScript" referent="RBX296">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -380907,7 +381325,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX294">
+      <Item class="ModuleScript" referent="RBX297">
         <Properties>
           <string name="Name">WeatherLooks</string>
           <ProtectedString name="Source">--!strict
@@ -381048,7 +381466,7 @@ return Weather
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX295">
+      <Item class="ModuleScript" referent="RBX298">
         <Properties>
           <string name="Name">WeatherSounds</string>
           <ProtectedString name="Source">--!strict
@@ -381123,7 +381541,7 @@ return Sounds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX296">
+      <Item class="ModuleScript" referent="RBX299">
         <Properties>
           <string name="Name">WorldGeneratedMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -381181,7 +381599,7 @@ return Generated
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX297">
+      <Item class="ModuleScript" referent="RBX300">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -381232,7 +381650,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX298">
+      <Item class="ModuleScript" referent="RBX301">
         <Properties>
           <string name="Name">WorldKitMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -381285,7 +381703,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX299">
+    <Item class="Folder" referent="RBX302">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -550840,15 +551258,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX300">
+  <Item class="ServerScriptService" referent="RBX303">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX301">
+    <Item class="Folder" referent="RBX304">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX302">
+      <Item class="ModuleScript" referent="RBX305">
         <Properties>
           <string name="Name">AdminService</string>
           <ProtectedString name="Source">--!strict
@@ -550962,7 +551380,7 @@ return AdminService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX303">
+      <Item class="ModuleScript" referent="RBX306">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -551300,7 +551718,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX304">
+      <Item class="Script" referent="RBX307">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -551341,6 +551759,7 @@ require(script.Parent.ImportedResources).load()
 if Config.WorldArtMode=="BiomeKit" or Config.FoodArtMode=="Kit" then require(script.Parent.ImportedResources).loadWorldKit() end
 task.spawn(function() require(script.Parent.LowPolyDinoLoader).load() end) -- BD-225 spike, no-op while Config.LowPolyDinos is false
 if Config.WorldGeneratedMeshes and Config.WorldArtMode=="BiomeKit" then require(script.Parent.ImportedResources).loadGeneratedWorld() end
+if Config.HatchV2 then task.spawn(function() require(script.Parent.ImportedResources).loadHatchV2() end) end -- BD-397 (docs/118), no-op while false
 Arena.build()
 Leaderboards.start()
 
@@ -551480,7 +551899,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX305">
+      <Item class="ModuleScript" referent="RBX308">
         <Properties>
           <string name="Name">CaveLavaFx</string>
           <ProtectedString name="Source">--!strict
@@ -551690,7 +552109,7 @@ return CaveLavaFx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX306">
+      <Item class="ModuleScript" referent="RBX309">
         <Properties>
           <string name="Name">CaveLighting</string>
           <ProtectedString name="Source">--!strict
@@ -551804,7 +552223,7 @@ return CaveLighting
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX307">
+      <Item class="ModuleScript" referent="RBX310">
         <Properties>
           <string name="Name">CaveProps</string>
           <ProtectedString name="Source">--!strict
@@ -552035,7 +552454,7 @@ return CaveProps
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX308">
+      <Item class="ModuleScript" referent="RBX311">
         <Properties>
           <string name="Name">CaveTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -552094,7 +552513,7 @@ return CaveTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX309">
+      <Item class="ModuleScript" referent="RBX312">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -552214,7 +552633,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX310">
+      <Item class="ModuleScript" referent="RBX313">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -552307,7 +552726,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX311">
+      <Item class="ModuleScript" referent="RBX314">
         <Properties>
           <string name="Name">CombatService</string>
           <ProtectedString name="Source">--!strict
@@ -552554,7 +552973,7 @@ return CombatService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX312">
+      <Item class="ModuleScript" referent="RBX315">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -552691,7 +553110,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX313">
+      <Item class="ModuleScript" referent="RBX316">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -552905,7 +553324,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX314">
+      <Item class="ModuleScript" referent="RBX317">
         <Properties>
           <string name="Name">FallRecovery</string>
           <ProtectedString name="Source">--!strict
@@ -552971,7 +553390,7 @@ return FallRecovery
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX315">
+      <Item class="ModuleScript" referent="RBX318">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -553252,7 +553671,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX316">
+      <Item class="ModuleScript" referent="RBX319">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -553424,7 +553843,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX317">
+      <Item class="ModuleScript" referent="RBX320">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -553610,7 +554029,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX318">
+      <Item class="ModuleScript" referent="RBX321">
         <Properties>
           <string name="Name">HubGateService</string>
           <ProtectedString name="Source">--!strict
@@ -553719,7 +554138,7 @@ return HubGateService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX319">
+      <Item class="ModuleScript" referent="RBX322">
         <Properties>
           <string name="Name">HubTravelService</string>
           <ProtectedString name="Source">--!strict
@@ -553803,7 +554222,7 @@ return HubTravelService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX320">
+      <Item class="ModuleScript" referent="RBX323">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -554200,7 +554619,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX321">
+      <Item class="ModuleScript" referent="RBX324">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -554279,6 +554698,42 @@ function Import.loadGeneratedWorld(): (number, number)
     workspace:SetAttribute("GeneratedMeshFailed",failed+pending)
     return loaded,failed+pending
 end
+-- BD-397 (docs/118): the v2 hatch meshes (generated egg, PLACEHOLDER barrel as the bucket) as one MeshPart each in
+-- ReplicatedStorage.HatchV2Models. Only called while Config.HatchV2 is true. A failed egg load leaves the folder without "egg":
+-- the client then runs the shipped v1 sequence; a failed bucket load only hides the bucket.
+function Import.loadHatchV2(): (number, number)
+    local Assets=require(ReplicatedStorage.Shared.HatchV2Assets)
+    local folder=ReplicatedStorage:FindFirstChild(Assets.FolderName)
+    if not folder then folder=Instance.new("Folder") folder.Name=Assets.FolderName folder.Parent=ReplicatedStorage end
+    local loaded,failed,pending=0,0,0
+    for key,asset in Assets.Models do
+        if folder:FindFirstChild(key) then continue end
+        pending+=1
+        task.spawn(function()
+            local ok,result=pcall(function()
+                local container=InsertService:LoadAsset(tonumber(asset.assetId))
+                local found: MeshPart? = nil
+                for _,item in container:GetDescendants() do if item:IsA("MeshPart") then found=item break end end
+                assert(found,"generated asset has no MeshPart")
+                local mesh=found:Clone()
+                container:Destroy()
+                for _,child in mesh:GetChildren() do if not child:IsA("SurfaceAppearance") then child:Destroy() end end
+                mesh.Name=key
+                mesh.Anchored,mesh.CanCollide,mesh.CanTouch,mesh.CanQuery,mesh.Massless=true,false,false,false,true
+                mesh:SetAttribute("GeneratedAssetId",asset.assetId)
+                mesh:SetAttribute("Placeholder",Assets.Placeholder[key]==true)
+                return mesh
+            end)
+            if ok then result.Parent=folder loaded+=1 else failed+=1 warn("[Be Dino] hatch v2 mesh "..key.." ("..asset.assetId..") unavailable: "..tostring(result)) end
+            pending-=1
+        end)
+    end
+    local deadline=os.clock()+30
+    while pending&gt;0 and os.clock()&lt;deadline do task.wait() end
+    workspace:SetAttribute("HatchV2MeshLoaded",loaded)
+    workspace:SetAttribute("HatchV2MeshFailed",failed+pending)
+    return loaded,failed+pending
+end
 function Import.load()
     local folder=overrides()
     for id,assetId in Bindings do
@@ -554321,7 +554776,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX322">
+      <Item class="ModuleScript" referent="RBX325">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -554401,7 +554856,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX323">
+      <Item class="ModuleScript" referent="RBX326">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -554526,7 +554981,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX324">
+      <Item class="ModuleScript" referent="RBX327">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -554665,7 +555120,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX325">
+      <Item class="ModuleScript" referent="RBX328">
         <Properties>
           <string name="Name">LeaveCoordinator</string>
           <ProtectedString name="Source">--!strict
@@ -554748,7 +555203,7 @@ return LeaveCoordinator
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX326">
+      <Item class="ModuleScript" referent="RBX329">
         <Properties>
           <string name="Name">LowPolyDinoLoader</string>
           <ProtectedString name="Source">--!strict
@@ -554801,7 +555256,7 @@ return Loader
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX327">
+      <Item class="ModuleScript" referent="RBX330">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -554906,7 +555361,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX328">
+      <Item class="ModuleScript" referent="RBX331">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -555011,7 +555466,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX329">
+      <Item class="ModuleScript" referent="RBX332">
         <Properties>
           <string name="Name">NpcPredatorService</string>
           <ProtectedString name="Source">--!strict
@@ -555279,7 +555734,7 @@ return NpcPredatorService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX330">
+      <Item class="ModuleScript" referent="RBX333">
         <Properties>
           <string name="Name">PotionModels</string>
           <ProtectedString name="Source">--!strict
@@ -555331,7 +555786,7 @@ return Models
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX331">
+      <Item class="ModuleScript" referent="RBX334">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -555468,7 +555923,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX332">
+      <Item class="ModuleScript" referent="RBX335">
         <Properties>
           <string name="Name">PrivateState</string>
           <ProtectedString name="Source">--!strict
@@ -555576,7 +556031,7 @@ return PrivateState
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX333">
+      <Item class="ModuleScript" referent="RBX336">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -557658,7 +558113,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX334">
+      <Item class="ModuleScript" referent="RBX337">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -557879,7 +558334,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX335">
+      <Item class="ModuleScript" referent="RBX338">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -557993,7 +558448,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX336">
+      <Item class="ModuleScript" referent="RBX339">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -558304,7 +558759,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX337">
+      <Item class="ModuleScript" referent="RBX340">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -558376,19 +558831,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX338">
+  <Item class="StarterPlayer" referent="RBX341">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX339">
+    <Item class="StarterPlayerScripts" referent="RBX342">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX340">
+      <Item class="Folder" referent="RBX343">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX341">
+        <Item class="LocalScript" referent="RBX344">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -558647,7 +559102,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX342">
+        <Item class="LocalScript" referent="RBX345">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -559654,6 +560109,7 @@ render=function(name: string)
             gui=gui,panel=panel,body=body,eggView=eggView,animateEgg=animateEgg,splitEgg=splitEgg,paint=paint,
             nameLabel=rewardLabel,oddsLabel=oddsLabel,detailLabel=detailLabel,motion=motion,
             eggCondition=HatchTimeline.queueCondition(queue(),str("NextChestId")), -- BD-223: the egg's condition look from the first frame
+            eggId=str("NextChestId"), -- BD-397: seeds the v2 paint splats (no-op while Config.HatchV2 is false)
             alive=function() return modalVersion==version and active=="hatch" end,
             flash=flash,
             onSkipAll=function() autoHatching=true skipAllReveals=true end,
@@ -560285,7 +560741,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX343">
+        <Item class="LocalScript" referent="RBX346">
           <Properties>
             <string name="Name">CameraOcclusion</string>
             <ProtectedString name="Source">--!strict
@@ -560390,7 +560846,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX344">
+        <Item class="ModuleScript" referent="RBX347">
           <Properties>
             <string name="Name">CaveAtmosphere</string>
             <ProtectedString name="Source">--!strict
@@ -560527,7 +560983,7 @@ return Cave
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX345">
+        <Item class="ModuleScript" referent="RBX348">
           <Properties>
             <string name="Name">CaveLavaClient</string>
             <ProtectedString name="Source">--!strict
@@ -560643,7 +561099,7 @@ return Lava
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX346">
+        <Item class="ModuleScript" referent="RBX349">
           <Properties>
             <string name="Name">CombatHud</string>
             <ProtectedString name="Source">--!strict
@@ -560977,7 +561433,7 @@ return Hud
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX347">
+        <Item class="ModuleScript" referent="RBX350">
           <Properties>
             <string name="Name">ConditionStage</string>
             <ProtectedString name="Source">--!strict
@@ -561023,7 +561479,7 @@ return Stage
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX348">
+        <Item class="LocalScript" referent="RBX351">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!nonstrict
@@ -561117,7 +561573,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX349">
+        <Item class="ModuleScript" referent="RBX352">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -561196,7 +561652,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX350">
+        <Item class="ModuleScript" referent="RBX353">
           <Properties>
             <string name="Name">DinoIndexPanels</string>
             <ProtectedString name="Source">--!strict
@@ -561750,7 +562206,7 @@ return Panels
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX351">
+        <Item class="LocalScript" referent="RBX354">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -562080,7 +562536,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX352">
+        <Item class="ModuleScript" referent="RBX355">
           <Properties>
             <string name="Name">EggPicture</string>
             <ProtectedString name="Source">--!strict
@@ -562180,7 +562636,7 @@ return EggPicture
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX353">
+        <Item class="ModuleScript" referent="RBX356">
           <Properties>
             <string name="Name">EggsScreen</string>
             <ProtectedString name="Source">--!strict
@@ -562389,7 +562845,7 @@ return EggsScreen
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX354">
+        <Item class="LocalScript" referent="RBX357">
           <Properties>
             <string name="Name">FoodGlow</string>
             <ProtectedString name="Source">--!strict
@@ -562615,7 +563071,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX355">
+        <Item class="ModuleScript" referent="RBX358">
           <Properties>
             <string name="Name">FtueRail</string>
             <ProtectedString name="Source">--!strict
@@ -562696,7 +563152,7 @@ return Rail
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX356">
+        <Item class="ModuleScript" referent="RBX359">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -563731,7 +564187,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX357">
+        <Item class="ModuleScript" referent="RBX360">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -563840,7 +564296,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX358">
+        <Item class="ModuleScript" referent="RBX361">
           <Properties>
             <string name="Name">FxRig</string>
             <ProtectedString name="Source">--!nonstrict
@@ -564207,7 +564663,458 @@ return Rig
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX359">
+        <Item class="ModuleScript" referent="RBX362">
+          <Properties>
+            <string name="Name">HatchEggV2</string>
+            <ProtectedString name="Source">--!nonstrict
+-- BD-397 (docs/118): the v2 hatch egg, behind Config.HatchV2. ONE ViewportFrame over the hatch panel (824 x 402 virtual px)
+-- holds the generated 3D egg (HatchV2Assets.egg, loaded by the server into ReplicatedStorage.HatchV2Models) and the two paint
+-- buckets (PLACEHOLDER barrel mesh until the bucket mesh exists). The paint lands on the egg's own texture: ONE EditableImage
+-- (HatchV2Plan.Budget bake size, 256 KiB on desktop) rewritten a few times per second from the pure HatchPaintBake composite
+-- (base coat flood + drips from the left bucket's splats, accent coat only where the gene pattern mask is, pattern mask from
+-- LowPolyPattern.mask3 over the egg's position map, same approach as docs/105). The liquid arc, splash crown, 2D drip streaks
+-- and the wet gloss are pooled 2D sprites over the viewport (existing fx3 alpha sheets tinted with the paint colour) and the
+-- MeshPart's reflectance; ViewportFrames do not draw ParticleEmitters or Beams, which is why the splash is 2D.
+-- Fallback chain (never blank, never a cube): no egg mesh -&gt; create() returns nil and HatchSequence runs the shipped v1 look;
+-- no texture read -&gt; flat shading bake; no position map -&gt; UV-space pattern; no EditableImage (budget, permission) -&gt; the mesh
+-- is tinted by MeshPart.Color with the same timing; no bucket mesh -&gt; the arc and splash play without a bucket.
+-- Presentation only: never reads or changes genes, odds or saved data. Reduce Motion: the finished egg is shown at once.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local AssetService = game:GetService("AssetService")
+local UserInputService = game:GetService("UserInputService")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Plan = require(Shared.HatchV2Plan)
+local Bake = require(Shared.HatchPaintBake)
+local Assets = require(Shared.HatchV2Assets)
+local Pattern = require(Shared.LowPolyPattern)
+local Overlays = require(Shared.ConditionOverlays)
+local Fx = require(Shared.EffectAssets)
+local Recipes = require(Shared.FxRecipes)
+
+local M = {}
+local WHITE = Color3.new(1, 1, 1)
+local CREAM = {.9, .9, .93} -- bare shell: a neutral pale grey-white, so even a Cream gene reads when it lands (Studio pass 2)
+local W, H = Plan.ScreenWidthPx, Plan.ScreenHeightPx
+local cache = setmetatable({}, {__mode = "k"}) -- back frame -&gt; scene (viewport, parts, pools, image), reused for every egg
+local sources = {} -- asset key -&gt; {buf, posmap, size} | "loading" | false (one read per session)
+
+local function deviceClass(): string
+    local cam = workspace.CurrentCamera
+    local short = if cam then math.min(cam.ViewportSize.X, cam.ViewportSize.Y) else 1080
+    return Recipes.deviceClass(UserInputService.TouchEnabled, UserInputService.MouseEnabled, short)
+end
+local function triple(c: Color3) return {c.R, c.G, c.B} end
+local function yielder(every: number) return function(y) if y % every == every - 1 then task.wait() end end end
+
+function M.available(): boolean
+    local folder = ReplicatedStorage:FindFirstChild(Assets.FolderName)
+    local egg = folder and folder:FindFirstChild("egg")
+    return egg ~= nil and egg:IsA("MeshPart")
+end
+
+-- 2D sprite helpers (pooled, created once per panel).
+local function sprite(parent, z: number, key: string): ImageLabel
+    local i = Instance.new("ImageLabel")
+    i.BackgroundTransparency, i.BorderSizePixel, i.AnchorPoint, i.ZIndex, i.Visible = 1, 0, Vector2.new(.5, .5), z, false
+    i.Image = Fx.resolveUi(key)
+    i.ScaleType = Enum.ScaleType.Stretch
+    i.Parent = parent
+    return i
+end
+local function streak(parent, z: number): Frame
+    local f = Instance.new("Frame")
+    f.BackgroundColor3, f.BorderSizePixel, f.AnchorPoint, f.ZIndex, f.Visible = WHITE, 0, Vector2.new(.5, 0), z, false
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(1, 0) c.Parent = f
+    local g = Instance.new("UIGradient")
+    g.Rotation = 90
+    g.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(.7, .15), NumberSequenceKeypoint.new(1, 1)})
+    g.Parent = f
+    f.Parent = parent
+    return f
+end
+local function show(i: GuiObject, x: number, y: number, w: number, h: number, color: Color3, opacity: number)
+    i.Position, i.Size = UDim2.fromOffset(x, y), UDim2.fromOffset(w, h)
+    if i:IsA("ImageLabel") then i.ImageColor3, i.ImageTransparency = color, 1 - opacity else i.BackgroundColor3, i.BackgroundTransparency = color, 1 - opacity end
+    i.Visible = opacity &gt; .02
+end
+
+-- The persistent scene for one hatch panel: viewport (between the back and front FX layers), camera, egg, buckets, pools.
+local function scene(back: Frame, front: Frame)
+    local s = cache[back]
+    if s and s.front == front and s.viewport.Parent == back then return s end
+    local folder = ReplicatedStorage:FindFirstChild(Assets.FolderName)
+    local eggSource = folder and folder:FindFirstChild("egg")
+    if not eggSource or not eggSource:IsA("MeshPart") then return nil end
+    local device = deviceClass()
+    local budget = Plan.budget(device)
+    local viewport = Instance.new("ViewportFrame")
+    viewport.Name, viewport.BackgroundTransparency, viewport.Size, viewport.ZIndex = "HatchEggV2", 1, UDim2.fromOffset(W, H), 23
+    viewport.Ambient, viewport.LightColor, viewport.LightDirection = Color3.fromRGB(196, 196, 206), Color3.fromRGB(255, 244, 222), Vector3.new(-.4, -.8, -.6)
+    viewport.Parent = back
+    local world = Instance.new("WorldModel") world.Parent = viewport
+    local camera = Instance.new("Camera")
+    camera.FieldOfView, camera.Parent = Plan.Camera.fov, viewport
+    viewport.CurrentCamera = camera
+    -- camera: looks along -dir at the egg centre, offset so the egg projects onto HatchFxPlan.Center.egg
+    local dir = Vector3.new(Plan.Camera.dir[1], Plan.Camera.dir[2], Plan.Camera.dir[3]).Unit
+    local rot = CFrame.lookAt(dir * Plan.Camera.distance, Vector3.zero).Rotation
+    local ex, ey, ez = Plan.eggCameraSpace()
+    camera.CFrame = rot + rot:VectorToWorldSpace(-Vector3.new(ex, ey, ez))
+    -- egg: scaled to Plan.EggHeight, yawed so its decal (Front = -Z) side faces the camera (+Z)
+    local egg = eggSource:Clone()
+    egg.Name = "Egg"
+    local longest = math.max(egg.Size.X, egg.Size.Y, egg.Size.Z)
+    local scale = Plan.EggHeight / math.max(1e-3, egg.Size.Y)
+    egg.Size = egg.Size * scale
+    egg.CFrame = CFrame.Angles(0, math.pi, 0)
+    egg.Material, egg.Reflectance = Enum.Material.SmoothPlastic, 0
+    egg.Parent = world
+    local buckets = {}
+    local bucketSource = folder:FindFirstChild("bucket")
+    for i = 1, 2 do
+        if bucketSource and bucketSource:IsA("MeshPart") then
+            local b = bucketSource:Clone()
+            b.Name = "Bucket" .. i
+            local bs = Plan.BucketHeight / math.max(1e-3, b.Size.Y)
+            b.Size = b.Size * bs
+            b.Transparency = 1
+            b.Parent = world
+            buckets[i] = b
+        end
+    end
+    local pools = {blobs = {}, crown = {{}, {}}, drips = {{}, {}}, puddle = {}}
+    for i = 1, budget.streamBlobs do pools.blobs[i] = sprite(front, 25, "smokeSheet") Fx.setCell(pools.blobs[i], "smokeSheet", 1 + (i * 5) % 16) end
+    for side = 1, 2 do
+        for i = 1, budget.crown do pools.crown[side][i] = sprite(front, 26, "smokeSheet") Fx.setCell(pools.crown[side][i], "smokeSheet", 1 + (i * 3 + side) % 16) end
+        for i = 1, budget.drips do pools.drips[side][i] = streak(front, 25) end
+        pools.puddle[side] = sprite(front, 25, "smokeSheet") Fx.setCell(pools.puddle[side], "smokeSheet", 6)
+    end
+    s = {back = back, front = front, viewport = viewport, camera = camera, world = world, egg = egg, eggSize = egg.Size, buckets = buckets,
+        pools = pools, budget = budget, device = device, image = nil, imageTried = false, longest = longest * scale}
+    cache[back] = s
+    return s
+end
+
+-- The egg's texture (downsampled to `size`) and position map, read once per session. nil parts are the documented fallbacks.
+local function readSource(egg: MeshPart, size: number)
+    local sa = egg:FindFirstChildOfClass("SurfaceAppearance")
+    local textureId = if sa then sa.ColorMap else egg.TextureID
+    local key = tostring(textureId) .. "|" .. tostring(egg.MeshId) .. "@" .. size
+    while sources[key] == "loading" do task.wait(.05) end
+    if sources[key] ~= nil then return sources[key] or nil end
+    sources[key] = "loading"
+    local buf = nil
+    if textureId and textureId ~= "" then
+        local ok, err = pcall(function()
+            local img = AssetService:CreateEditableImageAsync(Content.fromUri(textureId))
+            if not img then error("no image (budget or permission)") end
+            local full = img.Size
+            local raw = img:ReadPixelsBuffer(Vector2.zero, full)
+            img:Destroy()
+            buf = buffer.create(size * size * 4)
+            for y = 0, size - 1 do
+                local sy = math.min(full.Y - 1, math.floor((y + .5) * full.Y / size))
+                for x = 0, size - 1 do
+                    local sx = math.min(full.X - 1, math.floor((x + .5) * full.X / size))
+                    buffer.writeu32(buf, (y * size + x) * 4, buffer.readu32(raw, (sy * full.X + sx) * 4))
+                end
+                if y % 32 == 31 then task.wait() end
+            end
+        end)
+        if not ok then warn("[Be Dino] hatch v2 egg texture unreadable (flat shading): " .. tostring(err)) buf = nil end
+    end
+    local posmap = nil
+    local okMesh, errMesh = pcall(function()
+        if egg.MeshId == "" then return end
+        local mesh = AssetService:CreateEditableMeshAsync(Content.fromUri(egg.MeshId))
+        if not mesh then error("no mesh (budget or permission)") end
+        local tris = {}
+        local sc = egg.Size / egg.MeshSize
+        local norm = 1 / math.max(egg.Size.X, egg.Size.Y, egg.Size.Z)
+        for _, face in mesh:GetFaces() do
+            local verts, uvs = mesh:GetFaceVertices(face), mesh:GetFaceUVs(face)
+            if #verts ~= 3 or #uvs ~= 3 then continue end
+            local t = {}
+            for i = 1, 3 do
+                local uv = mesh:GetUV(uvs[i])
+                local p = mesh:GetPosition(verts[i]) * sc * norm
+                table.insert(t, uv.X) table.insert(t, uv.Y) table.insert(t, p.X) table.insert(t, p.Y) table.insert(t, p.Z)
+            end
+            table.insert(tris, t)
+        end
+        mesh:Destroy()
+        if #tris &gt; 0 then posmap = Pattern.rasterize(tris, size) end
+    end)
+    if not okMesh then warn("[Be Dino] hatch v2 egg mesh unreadable (UV-space pattern): " .. tostring(errMesh)) end
+    local result = {buf = buf, posmap = posmap, size = size, shade = Bake.shade(buf, size)}
+    sources[key] = result
+    return result
+end
+
+-- One hatch egg. back / front: the HatchSequence FX layers. Returns nil when the egg mesh is not loaded (v1 runs instead).
+function M.create(back: Frame, front: Frame, motion: boolean)
+    local s = scene(back, front)
+    if not s then return nil end
+    local h = {s = s, motion = motion, ready = false, mode = "pending", t1 = -1, t2 = -1, lastWrite = 0, writing = false,
+        cream = CREAM, base = CREAM, accent = CREAM, plain = true, seed = 1, condition = nil, conditionShown = false, finished = false,
+        conditionDecals = {}, colors = {WHITE, WHITE}, impactPx = {{412 - 40, 100}, {412 + 40, 100}}, lipPx = {{0, 0}, {0, 0}},
+        impactWorld = {Vector3.zero, Vector3.zero}, splashShown = {false, false}, gen = 0}
+    local egg = s.egg
+    egg.Size, egg.CFrame, egg.Reflectance, egg.Transparency = s.eggSize, CFrame.Angles(0, math.pi, 0), 0, 0
+    for _, d in egg:GetChildren() do if d:IsA("Decal") then d:Destroy() end end
+    s.viewport.Visible = true
+    for _, b in s.buckets do b.Transparency = 1 end
+    M.hideFx(h)
+    -- image: one per panel, created once; nil = tint fallback for this and every later egg of the session
+    if not s.imageTried then
+        s.imageTried = true
+        local ok, img = pcall(function() return AssetService:CreateEditableImage({Size = Vector2.new(s.budget.bake, s.budget.bake)}) end)
+        s.image = if ok and img then img else nil
+        if not s.image then warn("[Be Dino] hatch v2: no EditableImage (budget or permission), tint fallback") end
+    end
+    if s.image then
+        for _, c in egg:GetChildren() do if c:IsA("SurfaceAppearance") then c:Destroy() end end
+        egg.TextureContent = Content.fromObject(s.image)
+        egg.Color = WHITE
+        h.mode = "bake"
+        h.out = buffer.create(s.budget.bake * s.budget.bake * 4)
+    else
+        for _, c in egg:GetChildren() do if c:IsA("SurfaceAppearance") then c:Destroy() end end
+        egg.TextureContent = Content.none
+        egg.TextureID = ""
+        egg.Color = Color3.new(CREAM[1], CREAM[2], CREAM[3])
+        h.mode = "tint"
+    end
+    -- the plain bare egg from the first frame: a flat write at once (the image is black until its first write, Studio pass 2),
+    -- then its own facet shading once the source is read
+    if h.mode == "bake" then M.write(h, -1, -1, true) end
+    task.spawn(function()
+        local src = readSource(egg, s.budget.bake)
+        if h.finished then return end
+        h.src = src
+        if h.mode == "bake" and not h.ready then M.write(h, -1, -1, true) end
+    end)
+    return h
+end
+
+function M.hideFx(h)
+    local p = h.s.pools
+    for _, b in p.blobs do b.Visible = false end
+    for side = 1, 2 do
+        for _, c in p.crown[side] do c.Visible = false end
+        for _, d in p.drips[side] do d.Visible = false end
+        p.puddle[side].Visible = false
+    end
+end
+
+-- Project a world point of the viewport scene to panel px.
+local function toPx(h, world: Vector3): (number, number)
+    local p = h.s.camera.CFrame:PointToObjectSpace(world)
+    local x, y = Plan.project(p.X, p.Y, p.Z, Plan.Camera.fov, W, H)
+    return x or 0, y or 0
+end
+
+-- Result known: colours and pattern. genes may be nil (no genetics): the two colours are still painted, no pattern.
+-- base / accent = Color3 of the left / right bucket; patternId / blend / same from the genes; eggId seeds the splats.
+function M.setGenes(h, genes, eggId: string?, base: Color3, accent: Color3, plain: boolean)
+    h.gen += 1
+    local gen = h.gen
+    h.base, h.accent, h.plain = triple(base), triple(accent), plain
+    h.colors = {base, if plain then base:Lerp(WHITE, .6) else accent}
+    h.seed = Plan.seed(tostring(eggId or "") .. "|" .. tostring(genes and genes.primaryColorId) .. "|" .. tostring(genes and genes.patternId))
+    local s = h.s
+    local egg = s.egg
+    -- world impact points (splat 1 of each coat) for the 2D splash; model side is mirrored by the egg's 180 deg yaw
+    for i, side in {-1, 1} do
+        local sp = Plan.splats(h.seed, -side, i)[1]
+        h.impactWorld[i] = egg.CFrame:PointToWorldSpace(Vector3.new(sp.x, sp.y, sp.z) * s.longest)
+        h.impactPx[i] = {toPx(h, h.impactWorld[i])}
+    end
+    if h.mode ~= "bake" then h.ready = true return end
+    task.spawn(function()
+        local size = s.budget.bake
+        local src = h.src or readSource(egg, size)
+        if h.finished or gen ~= h.gen then return end
+        h.src = src
+        local posmap = src and src.posmap
+        local mask = nil
+        if not plain and genes and genes.patternId and genes.patternId ~= "01_blank" then
+            local weights = table.create(size * size, 1)
+            local okMask, m = pcall(Pattern.compute, genes.patternId, Pattern.seed("egg|" .. tostring(genes.patternId)), weights,
+                math.clamp((genes.blend or 50) / 100, 0, 1), genes.primaryColorId == genes.secondaryColorId, yielder(16), posmap, size)
+            if okMask then mask = m else warn("[Be Dino] hatch v2 pattern failed (plain accent): " .. tostring(m)) end
+        end
+        if h.finished or gen ~= h.gen then return end
+        h.mask = mask
+        h.map1 = Bake.revealMap(size, posmap, h.seed, 1, 1, yielder(32))
+        h.map2 = Bake.revealMap(size, posmap, h.seed, -1, 2, yielder(32))
+        if h.finished or gen ~= h.gen then return end
+        h.ready = true
+        if h.wantFinal then M.write(h, 99, 99, true) end
+    end)
+end
+function M.setCondition(h, conditionId: string?) h.condition = conditionId end
+
+-- Composite the texture at coat times t1 / t2 and push it to the image (yields; one in flight at a time).
+function M.write(h, t1: number, t2: number, force: boolean?)
+    local s = h.s
+    if h.mode ~= "bake" or not s.image or h.finished then return end
+    if h.writing and not force then return end
+    local size = s.budget.bake
+    local shade = if h.src then h.src.shade else nil
+    if not shade then shade = table.create(size * size, 1) end
+    local map1 = h.map1 or table.create(size * size, 99)
+    local map2 = h.map2 or table.create(size * size, 99)
+    h.writing = true
+    h.t1, h.t2 = t1, t2
+    task.spawn(function()
+        local gen = h.gen
+        local ok, err = pcall(function()
+            Bake.composite(size, shade, h.mask, map1, map2, t1, t2, h.cream, h.base, h.accent, h.out, yielder(if s.device == "phone" then 16 else 48))
+            if h.finished or gen ~= h.gen then return end
+            s.image:WritePixelsBuffer(Vector2.zero, Vector2.new(size, size), h.out)
+        end)
+        if not ok then warn("[Be Dino] hatch v2 paint write failed: " .. tostring(err)) end
+        h.writing = false
+        h.lastWrite = os.clock()
+    end)
+end
+
+-- Per frame while the build-up runs. t = sequence time, vt = visual clock, ps = HatchTimeline.paintState (nil while the result
+-- is pending), durs = timeline durations, shake = {rot, dx, dy, zoom} from the sequence's rattle curves.
+function M.update(h, t: number, vt: number, ps, durs, shake)
+    local s = h.s
+    if h.finished then return end
+    local egg = s.egg
+    if not h.motion then return end
+    local p = durs.paint
+    local swayRot, swayDy = Plan.sway(vt)
+    local pxPerStud = Plan.pxPerStud()
+    -- egg: sway while painting, rattle + push-in later; squash on each impact; wet gloss dries
+    local sx, sy, gloss = 1, 1, 0
+    local since1, since2 = if ps then ps.left.sinceImpact else -1, if ps then ps.right.sinceImpact else -1
+    if ps then
+        local a, b = Plan.squash(since1), Plan.squash(since2)
+        sx, sy = a * b, (2 - a) * (2 - b)
+        gloss = math.max(Plan.gloss(since1), Plan.gloss(since2))
+    end
+    local rot = (shake and shake.rot or 0) + swayRot * (if ps and ps.pattern &gt;= 1 then 0 else 1)
+    local dx, dy = (shake and shake.dx or 0), (shake and shake.dy or 0) + swayDy * (if ps and ps.pattern &gt;= 1 then 0 else 1)
+    local zoom = shake and shake.zoom or 1
+    egg.Size = s.eggSize * Vector3.new(sx * zoom, sy * zoom, sx * zoom)
+    egg.CFrame = CFrame.new(dx / pxPerStud, -dy / pxPerStud, 0) * CFrame.Angles(0, 0, math.rad(-rot)) * CFrame.Angles(0, math.pi, 0)
+    egg.Reflectance = gloss
+    if not ps then
+        for _, b in s.buckets do b.Transparency = 1 end
+        return
+    end
+    -- texture writes while a coat runs
+    if h.mode == "bake" and h.ready and not h.writing then
+        local active1 = since1 &gt; -.1 and since1 &lt; Plan.Coat.span + .3
+        local active2 = since2 &gt; -.1 and since2 &lt; Plan.Coat.span + .3
+        if (active1 or active2) and os.clock() - h.lastWrite &gt;= 1 / s.budget.writes then M.write(h, since1, since2) end
+    elseif h.mode == "tint" then
+        local c = Color3.new(CREAM[1], CREAM[2], CREAM[3]):Lerp(Color3.new(h.base[1], h.base[2], h.base[3]), ps.left.wash)
+        if not h.plain then c = c:Lerp(Color3.new(h.accent[1], h.accent[2], h.accent[3]), ps.right.wash * .5) end
+        egg.Color = c
+    end
+    -- buckets, liquid arc, splash crown, 2D drips
+    local pools = s.pools
+    for i, side in {-1, 1} do
+        local b = if i == 1 then ps.left else ps.right
+        local sinceStart = b.since
+        local x, y, tilt, alpha, squash = Plan.bucketPose(sinceStart, side)
+        local bucket = s.buckets[i]
+        local lipWorld = Vector3.new(x - side * .32, y + Plan.BucketHeight * .5, 0)
+        if bucket then
+            local pos = Vector3.new(x, y, 0)
+            local half = bucket.Size / 2
+            local lip = Vector3.new(-side * half.X * .85, half.Y * .95, 0)
+            bucket.CFrame = CFrame.new(pos + lip) * CFrame.Angles(0, 0, math.rad(-tilt)) * CFrame.new(-lip)
+            bucket.Transparency = 1 - alpha
+            lipWorld = bucket.CFrame:PointToWorldSpace(lip)
+        end
+        local lx, ly = toPx(h, lipWorld)
+        local ix, iy = h.impactPx[i][1], h.impactPx[i][2]
+        local color = h.colors[i]
+        -- liquid arc
+        local strength = Plan.stream(sinceStart)
+        local blobs = if strength &gt; 0 and alpha &gt; 0 then Plan.streamBlobs(lx, ly, ix, iy, strength, #pools.blobs) else {}
+        for j, blob in pools.blobs do
+            local d = blobs[j]
+            if d then show(blob, d[1], d[2], d[3] * 3.4, d[3] * 3.4, color, math.min(1, strength * 2)) else blob.Visible = false end -- Studio pass 1: 2.4 x read as a dotted line
+        end
+        -- splash crown and puddle on impact
+        local sinceImpact = b.sinceImpact
+        for j, drop in pools.crown[i] do
+            local ddx, ddy, size, op = Plan.crown(j, #pools.crown[i], sinceImpact, side, h.seed + i)
+            if op &gt; 0 then show(drop, ix + ddx, iy + ddy, size * 2.6, size * 2.6, color, op) else drop.Visible = false end
+        end
+        local puddle = pools.puddle[i]
+        if sinceImpact &gt;= 0 and sinceImpact &lt; .7 then
+            local k = sinceImpact / .7
+            local grow = 40 + 150 * Plan.easeOut(k)
+            show(puddle, ix, iy + 6, grow * 1.3, grow, color, .85 * (1 - k * k))
+        else puddle.Visible = false end
+        -- drips under the splash
+        for j, d in pools.drips[i] do
+            local ox, oy, len, width, op = Plan.dripStreak(j, sinceImpact, h.seed + i * 7)
+            if ox then
+                d.Position, d.Size = UDim2.fromOffset(ix + ox, iy + oy), UDim2.fromOffset(width, len)
+                d.BackgroundColor3, d.BackgroundTransparency, d.Visible = color, 1 - op, op &gt; .02
+            else d.Visible = false end
+        end
+    end
+    -- condition overlay (cracks, dirt, stars) fades in after the pattern chip
+    if h.condition and not h.conditionShown and t &gt;= p.patternEnd + Plan.Condition.delay then
+        h.conditionShown = true
+        Overlays.apply(egg, h.condition)
+        for _, d in egg:GetChildren() do if d:IsA("Decal") then d.Transparency = 1 table.insert(h.conditionDecals, d) end end
+    end
+    if h.conditionShown then
+        local k = math.clamp((t - (p.patternEnd + Plan.Condition.delay)) / Plan.Condition.span, 0, 1)
+        for _, d in h.conditionDecals do d.Transparency = 1 - Plan.easeOut(k) end
+        egg.Reflectance = math.max(gloss, (Overlays.describe(h.condition).reflectance or 0) * Plan.easeOut(k))
+    end
+end
+
+-- Fast-forward / Reduce Motion: the finished egg (both coats, pattern, condition) at once.
+function M.finish(h)
+    if h.finished then return end
+    local s = h.s
+    M.hideFx(h)
+    for _, b in s.buckets do b.Transparency = 1 end
+    local egg = s.egg
+    egg.Size, egg.CFrame, egg.Reflectance = s.eggSize, CFrame.Angles(0, math.pi, 0), 0
+    if h.mode == "bake" then
+        if h.ready then M.write(h, 99, 99, true) else h.wantFinal = true end
+    elseif h.mode == "tint" then
+        local c = Color3.new(h.base[1], h.base[2], h.base[3])
+        if not h.plain then c = c:Lerp(Color3.new(h.accent[1], h.accent[2], h.accent[3]), .5) end
+        egg.Color = c
+    end
+    if h.condition and not h.conditionShown then
+        h.conditionShown = true
+        Overlays.apply(egg, h.condition)
+    end
+    for _, d in h.conditionDecals do d.Transparency = 0 end
+end
+-- The burst: the egg leaves the viewport (the v1 shell fragments fly over the panel). The pools are reused by the next egg.
+function M.burst(h)
+    h.finished = true
+    h.gen += 1
+    M.hideFx(h)
+    local s = h.s
+    s.viewport.Visible = false
+    for _, b in s.buckets do b.Transparency = 1 end
+end
+function M.stop(h) M.burst(h) end
+
+return M
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="RBX363">
           <Properties>
             <string name="Name">HatchFx</string>
             <ProtectedString name="Source">--!nonstrict
@@ -564418,7 +565325,7 @@ return M
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX360">
+        <Item class="ModuleScript" referent="RBX364">
           <Properties>
             <string name="Name">HatchSequence</string>
             <ProtectedString name="Source">--!strict
@@ -564441,6 +565348,8 @@ local FxPlan = require(Shared.HatchFxPlan)
 local EggGenetics = require(Shared.EggGenetics)
 local InspectView = require(script.Parent.InspectView)
 local HatchFx = require(script.Parent.HatchFx)
+local Config = require(Shared.Config)
+local EggV2 = require(script.Parent.HatchEggV2) -- BD-397 (docs/118): 3D egg + paint coats behind Config.HatchV2; nil handle = v1 look
 
 local Seq = {}
 local CENTER_EGG = Vector2.new(412, 130) -- body coordinates (824 x 402 virtual px)
@@ -564743,6 +565652,7 @@ export type Args = {
     onNext: () -&gt; (), onSkipAll: () -&gt; (), onReveal: () -&gt; (), onAgain: (() -&gt; ())?,
     result: Result?, -- nil = Open was just pressed and the server answer has not arrived: the egg already wobbles (BD-170)
     eggCondition: string?, -- BD-223: condition id of the egg being opened (client queue), shown from the first frame
+    eggId: string?, -- BD-397: seeds the v2 paint splats (same egg -&gt; same splashes)
 }
 export type Handle = {cancel: () -&gt; (), supply: (Result) -&gt; (), pending: () -&gt; boolean, setRemaining: (number) -&gt; ()}
 
@@ -564751,9 +565661,12 @@ function Seq.play(args: Args): Handle
     local a: any = args -- result fields are merged in by applyResult
     local motion = a.motion
     local state = Timeline.new(motion, 1, false, a.result == nil)
-    local durs = state.durs
     local fx = ensureLayers(a.panel)
     local kit = fx.paint
+    -- BD-397: the v2 3D egg (flag on AND its mesh loaded); otherwise everything below is the shipped v1 look.
+    local v2 = if Config.HatchV2 == true then EggV2.create(fx.back, fx.front, motion) else nil
+    if v2 then Timeline.useV2(state, true) end
+    local durs = state.durs
     local hx = HatchFx.begin(HatchFx.ensure(fx.back, fx.front), motion) -- layered 2D polish (bloom, rim sparks, puffs, motes, droplets)
     -- Result-dependent values. Neutral until applyResult() runs (Open pressed, server answer on its way).
     local rarity, failed = 1, false
@@ -564773,6 +565686,7 @@ function Seq.play(args: Args): Handle
 
     a.eggView.AnchorPoint = Vector2.new(.5, .5)
     a.eggView.Position = UDim2.fromOffset(CENTER_EGG.X, CENTER_EGG.Y)
+    if v2 then a.eggView.Visible = false end -- the 2D egg only comes back for its shell fragments at the burst
     local eggZoom = Instance.new("UIScale") eggZoom.Parent = a.eggView
     local dinoScale: UIScale? = nil
     local bodyScale = Instance.new("UIScale") bodyScale.Parent = a.body
@@ -564892,6 +565806,7 @@ function Seq.play(args: Args): Handle
         if inspect then inspect.destroy() inspect = nil end
         restoreBody()
         HatchFx.hide(hx)
+        if v2 then EggV2.stop(v2) end
         if overlay.Parent then overlay:Destroy() end
         if fx.back.Parent then
             fx.backdrop.BackgroundTransparency = 1
@@ -564961,6 +565876,7 @@ function Seq.play(args: Args): Handle
         if id == conditionId or burstDone then return end
         conditionId = id
         a.paint.setCondition(id)
+        if v2 then EggV2.setCondition(v2, id) end -- v2: the overlay fades in at the condition beat, the chip is shown at once
         local text = Timeline.conditionChip(if id then EggGenetics.condition(id) else nil)
         kit.conditionChip.Visible = text ~= nil
         if text then
@@ -564991,6 +565907,11 @@ function Seq.play(args: Args): Handle
             local side = if i == 1 then -1 else 1
             local b = if i == 1 then ps.left else ps.right
             local bucket, stream = kit.buckets[i], kit.streams[i]
+            if v2 then
+                -- BD-397: the 3D buckets, liquid arc, crown and drips are drawn by HatchEggV2; only the chips remain here.
+                if b.impacted and not chipShown[i] then chipShown[i] = true showChip(i) end
+                continue
+            end
             local x, y, rot, alpha = Timeline.bucketPose(b.k, side)
             local show = b.k &gt; 0 and b.k &lt; 1
             bucket.Visible = show
@@ -565038,9 +565959,11 @@ function Seq.play(args: Args): Handle
                 showChip(i)
             end
         end
-        if ps.left.wash ~= lastWash[1] then lastWash[1] = ps.left.wash a.paint.color(ps.left.wash) end
-        if ps.right.wash ~= lastWash[2] then lastWash[2] = ps.right.wash a.paint.second(ps.right.wash) end
-        if ps.pattern ~= lastWash[3] then lastWash[3] = ps.pattern a.paint.pattern(ps.pattern) end
+        if not v2 then -- v2 paints the 3D egg's texture itself (the hidden 2D egg only tints for its burst fragments)
+            if ps.left.wash ~= lastWash[1] then lastWash[1] = ps.left.wash a.paint.color(ps.left.wash) end
+            if ps.right.wash ~= lastWash[2] then lastWash[2] = ps.right.wash a.paint.second(ps.right.wash) end
+            if ps.pattern ~= lastWash[3] then lastWash[3] = ps.pattern a.paint.pattern(ps.pattern) end
+        end
         local pattern = a.patternReveal
         if ps.patternShown and not chipShown[3] and pattern then
             chipShown[3] = true
@@ -565057,6 +565980,7 @@ function Seq.play(args: Args): Handle
         eggZoom.Scale = 1
         hidePaint()
         a.paint.finish() -- fast-forwarded or Reduced Motion: the egg shows its final colour and pattern before it opens
+        if v2 then EggV2.burst(v2) a.eggView.Visible = true end -- the 3D egg leaves; the 2D shell fragments fly from the same spot
         if motion then a.body.Position = UDim2.fromOffset(BODY_CENTER.X, BODY_CENTER.Y) end
         if motion then a.animateEgg(Timeline.EggClock) end
         a.splitEgg(not failed)
@@ -565298,6 +566222,21 @@ function Seq.play(args: Args): Handle
         if r.genes and typeof(r.genes.conditionId) == "string" then setCondition(r.genes.conditionId) end
         local colors = r.paintColors
         paintColors = {if colors then colors[1] else WHITE, if colors then colors[2] else WHITE}
+        if v2 then
+            -- BD-397: left bucket = the PRIMARY colour, right bucket = the secondary colour on the pattern (a plain egg gets a
+            -- clear varnish); same-family genes paint the pattern a darker shade (PatternGenes rule).
+            local g = r.genes
+            local base, accent = paintColors[1], paintColors[2]
+            local plain = g == nil or g.patternId == nil or g.patternId == "01_blank"
+            if g then
+                local pc, sc = EggGenetics.color(g.primaryColorId), EggGenetics.color(g.secondaryColorId)
+                if pc then base = Color3.fromRGB(pc.rgb[1], pc.rgb[2], pc.rgb[3]) end
+                accent = if sc and g.secondaryColorId ~= g.primaryColorId then Color3.fromRGB(sc.rgb[1], sc.rgb[2], sc.rgb[3]) else base:Lerp(Color3.new(0, 0, 0), .22)
+            end
+            paintColors = {base, if plain then base:Lerp(WHITE, .6) else accent}
+            EggV2.setGenes(v2, g, a.eggId, base, accent, plain)
+            if not motion then EggV2.finish(v2) end
+        end
         for i = 1, 2 do
             kit.bucketPaint[i].BackgroundColor3 = paintColors[i]
             kit.splashStrokes[i].Color = paintColors[i]
@@ -565343,6 +566282,8 @@ function Seq.play(args: Args): Handle
                 bodyScale.Scale = Timeline.cameraZoom(bp)
                 a.body.Position = UDim2.fromOffset(BODY_CENTER.X + sx, BODY_CENTER.Y + sy)
                 a.animateEgg(Timeline.eggClock(durs, t))
+                if v2 then EggV2.update(v2, t, vt, if state.pending then nil else Timeline.paintState(durs, t), durs,
+                    {rot = rot * esc.shakeScale, dx = dx * esc.shakeScale, dy = dy * esc.shakeScale, zoom = Timeline.zoom(bp)}) end
                 if not state.pending then updatePaint(t) end
                 local g = Timeline.glow(bp)
                 HatchFx.update(hx, vt, bp, nil, false)
@@ -565566,7 +566507,7 @@ return Seq
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX361">
+        <Item class="ModuleScript" referent="RBX365">
           <Properties>
             <string name="Name">HubGateClient</string>
             <ProtectedString name="Source">--!strict
@@ -565633,7 +566574,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX362">
+        <Item class="ModuleScript" referent="RBX366">
           <Properties>
             <string name="Name">HubGuideClient</string>
             <ProtectedString name="Source">--!strict
@@ -565798,7 +566739,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX363">
+        <Item class="ModuleScript" referent="RBX367">
           <Properties>
             <string name="Name">HubTravelClient</string>
             <ProtectedString name="Source">--!strict
@@ -566010,7 +566951,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX364">
+        <Item class="ModuleScript" referent="RBX368">
           <Properties>
             <string name="Name">HubWalkUpClient</string>
             <ProtectedString name="Source">--!strict
@@ -566107,7 +567048,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX365">
+        <Item class="ModuleScript" referent="RBX369">
           <Properties>
             <string name="Name">HudV2</string>
             <ProtectedString name="Source">--!strict
@@ -566317,7 +567258,7 @@ return Hud
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX366">
+        <Item class="ModuleScript" referent="RBX370">
           <Properties>
             <string name="Name">InspectView</string>
             <ProtectedString name="Source">--!strict
@@ -566509,7 +567450,7 @@ return InspectView
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX367">
+        <Item class="LocalScript" referent="RBX371">
           <Properties>
             <string name="Name">JumpCarry</string>
             <ProtectedString name="Source">--!strict
@@ -566567,7 +567508,7 @@ if player.Character then task.spawn(bind, player.Character) end
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX368">
+        <Item class="LocalScript" referent="RBX372">
           <Properties>
             <string name="Name">LowPolyAnimator</string>
             <ProtectedString name="Source">--!strict
@@ -566818,7 +567759,7 @@ Players.PlayerRemoving:Connect(function(player) if player.Character then untrack
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX369">
+        <Item class="ModuleScript" referent="RBX373">
           <Properties>
             <string name="Name">ModalCompact</string>
             <ProtectedString name="Source">--!strict
@@ -566969,7 +567910,7 @@ return M
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX370">
+        <Item class="ModuleScript" referent="RBX374">
           <Properties>
             <string name="Name">MutationBadge</string>
             <ProtectedString name="Source">--!strict
@@ -567020,7 +567961,7 @@ return Badge
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX371">
+        <Item class="ModuleScript" referent="RBX375">
           <Properties>
             <string name="Name">NpcMotion</string>
             <ProtectedString name="Source">--!strict
@@ -567090,7 +568031,7 @@ return Motion
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX372">
+        <Item class="ModuleScript" referent="RBX376">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -567193,7 +568134,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX373">
+        <Item class="ModuleScript" referent="RBX377">
           <Properties>
             <string name="Name">PrivateState</string>
             <ProtectedString name="Source">--!strict
@@ -567297,7 +568238,7 @@ return PrivateState
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX374">
+        <Item class="LocalScript" referent="RBX378">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -567546,7 +568487,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX375">
+        <Item class="ModuleScript" referent="RBX379">
           <Properties>
             <string name="Name">SettingsMenu</string>
             <ProtectedString name="Source">--!strict
@@ -567658,7 +568599,7 @@ return Menu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX376">
+        <Item class="LocalScript" referent="RBX380">
           <Properties>
             <string name="Name">SettingsSync</string>
             <ProtectedString name="Source">--!strict
@@ -567721,7 +568662,7 @@ task.delay(5, function() loaded = true end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX377">
+        <Item class="ModuleScript" referent="RBX381">
           <Properties>
             <string name="Name">ShopCard</string>
             <ProtectedString name="Source">--!strict
@@ -567759,7 +568700,7 @@ return Card
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX378">
+        <Item class="ModuleScript" referent="RBX382">
           <Properties>
             <string name="Name">ShopCards</string>
             <ProtectedString name="Source">--!strict
@@ -567869,7 +568810,7 @@ return Cards
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX379">
+        <Item class="ModuleScript" referent="RBX383">
           <Properties>
             <string name="Name">UiScan</string>
             <ProtectedString name="Source">--!strict
@@ -567948,7 +568889,7 @@ return UiScan
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX380">
+        <Item class="ModuleScript" referent="RBX384">
           <Properties>
             <string name="Name">VolumeSliders</string>
             <ProtectedString name="Source">--!strict
@@ -568029,7 +568970,7 @@ return Sliders
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX381">
+        <Item class="LocalScript" referent="RBX385">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -568096,7 +569037,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX382">
+        <Item class="LocalScript" referent="RBX386">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -569051,7 +569992,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX383">
+        <Item class="LocalScript" referent="RBX387">
           <Properties>
             <string name="Name">WorldCulling</string>
             <ProtectedString name="Source">--!strict
@@ -569178,7 +570119,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX384">
+        <Item class="LocalScript" referent="RBX388">
           <Properties>
             <string name="Name">WorldReady</string>
             <ProtectedString name="Source">--!strict
@@ -569216,7 +570157,7 @@ remote:FireServer()
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX385">
+  <Item class="Workspace" referent="RBX389">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

@@ -74,6 +74,42 @@ function Import.loadGeneratedWorld(): (number, number)
     workspace:SetAttribute("GeneratedMeshFailed",failed+pending)
     return loaded,failed+pending
 end
+-- BD-397 (docs/118): the v2 hatch meshes (generated egg, PLACEHOLDER barrel as the bucket) as one MeshPart each in
+-- ReplicatedStorage.HatchV2Models. Only called while Config.HatchV2 is true. A failed egg load leaves the folder without "egg":
+-- the client then runs the shipped v1 sequence; a failed bucket load only hides the bucket.
+function Import.loadHatchV2(): (number, number)
+    local Assets=require(ReplicatedStorage.Shared.HatchV2Assets)
+    local folder=ReplicatedStorage:FindFirstChild(Assets.FolderName)
+    if not folder then folder=Instance.new("Folder") folder.Name=Assets.FolderName folder.Parent=ReplicatedStorage end
+    local loaded,failed,pending=0,0,0
+    for key,asset in Assets.Models do
+        if folder:FindFirstChild(key) then continue end
+        pending+=1
+        task.spawn(function()
+            local ok,result=pcall(function()
+                local container=InsertService:LoadAsset(tonumber(asset.assetId))
+                local found: MeshPart? = nil
+                for _,item in container:GetDescendants() do if item:IsA("MeshPart") then found=item break end end
+                assert(found,"generated asset has no MeshPart")
+                local mesh=found:Clone()
+                container:Destroy()
+                for _,child in mesh:GetChildren() do if not child:IsA("SurfaceAppearance") then child:Destroy() end end
+                mesh.Name=key
+                mesh.Anchored,mesh.CanCollide,mesh.CanTouch,mesh.CanQuery,mesh.Massless=true,false,false,false,true
+                mesh:SetAttribute("GeneratedAssetId",asset.assetId)
+                mesh:SetAttribute("Placeholder",Assets.Placeholder[key]==true)
+                return mesh
+            end)
+            if ok then result.Parent=folder loaded+=1 else failed+=1 warn("[Be Dino] hatch v2 mesh "..key.." ("..asset.assetId..") unavailable: "..tostring(result)) end
+            pending-=1
+        end)
+    end
+    local deadline=os.clock()+30
+    while pending>0 and os.clock()<deadline do task.wait() end
+    workspace:SetAttribute("HatchV2MeshLoaded",loaded)
+    workspace:SetAttribute("HatchV2MeshFailed",failed+pending)
+    return loaded,failed+pending
+end
 function Import.load()
     local folder=overrides()
     for id,assetId in Bindings do
