@@ -90,7 +90,7 @@ local FALL = {x = -4, z = 100, width = 40, height = 48, crackHeight = 40} -- lav
 CaveHubLayout.Pool, CaveHubLayout.Fall = POOL, FALL
 
 -- Ceiling holes: radius over Heart, Potion Stall, Egg Nests, Style Grotto (docs/104 s4).
-local HOLE_DEFS = {{"heart", 7}, {"potions", 5}, {"nests", 5}, {"style", 4}}
+local HOLE_DEFS = {{"heart", 12}, {"potions", 8}, {"nests", 8}, {"style", 7}} -- BD-281 QA: 7/5/5/4 read as a pin-prick from the floor
 
 -- ---------------------------------------------------------------- prop kinds
 -- w, h, d = size in studs (docs/104 s13), tris = PROVISIONAL generated-mesh triangle estimate, group = budget group,

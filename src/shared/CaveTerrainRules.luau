@@ -5,7 +5,9 @@
 -- tools/verify_cave_terrain.py runs the same functions offline. Everything is PROVISIONAL (docs/104).
 -- Shell = solid minus air. Air = the cavity (floor blob between floor top and ceiling) + the 4 ceiling holes (open to the
 -- sky) + the lava basin + the falls recess + the gate mouth. Occupancy comes from a signed distance (studs, > 0 inside rock)
--- as clamp(0.5 + sd / Res): exact for flat horizontal surfaces on the 4 stud grid, so paths and pads are flat to the stud.
+-- as clamp(sd / Res). Measured in Studio (BD-281 QA): the engine puts a flat top at (centre of the partial cell) + Res * occupancy, i.e. half
+-- a cell ABOVE the naive 0.5 + sd / Res surface, so the old formula made the floor 2 studs too high (8 instead of 6) and every
+-- wall, ceiling and hole 2 studs fatter. clamp(sd / Res) puts the floor exactly on the layout height.
 local Layout = require(script.Parent.CaveHubLayout)
 local Rules = {}
 Rules.Version = 1
@@ -24,12 +26,14 @@ Rules.PoolDepth = 2 -- lava basin floor below the hall floor
 Rules.GateWallNorm = 1.06 -- the gate mouth is cut this deep into the wall (closed behind it)
 Rules.GateHeight = 20
 Rules.FallRecess = {halfWidth = 20, front = -1, back = 7} -- dz range around Layout.Fall.z carved behind the sheet
-Rules.Colors = {Cobblestone = {104, 108, 112}, CrackedLava = {255, 120, 40}} -- only these two are new (island colours untouched)
-Rules.Materials = {"Air", "Rock", "Slate", "Basalt", "Cobblestone", "Grass", "LeafyGrass", "CrackedLava"}
+-- Cave-only colours (the island uses none of these three): warm stone floor and warm tan walls, so the hall reads soft and calm
+-- (docs/87) instead of the island's dark teal Rock / Slate / Basalt. Island material colours are untouched.
+Rules.Colors = {Cobblestone = {164, 152, 138}, Limestone = {178, 158, 138}, CrackedLava = {255, 120, 40}}
+Rules.Materials = {"Air", "Rock", "Limestone", "Sandstone", "Slate", "Basalt", "Cobblestone", "Grass", "LeafyGrass", "CrackedLava"}
 
 local SCALE = 95 -- studs per norm unit used for the wall signed distance (a conservative mean of the 105.5 / 125 radii)
 local FLOOR_BAND = 6 -- studs below the floor top that carry the floor surface mix
-local BOTTOM = Rules.YMin
+local BOTTOM = Rules.YMin - Rules.Res -- one cell lower so the bottom layer is full (occupancy = sd / Res)
 
 local function clamp(v: number, lo: number, hi: number): number return if v < lo then lo elseif v > hi then hi else v end
 local function noise01(x: number, z: number, scale: number, offset: number): number
@@ -81,7 +85,8 @@ local function airSd(col: any, y: number): number
     local FY = Layout.FloorY
     air = math.max(air, math.min(col.pool, y - (FY - Rules.PoolDepth), FY + 3 - y))
     local F = Layout.Fall
-    air = math.max(air, math.min(col.fall, FY + F.height - 2 - y, y - FY))
+    -- the recess never reaches the roof: at the back wall the ceiling is only 38 over the floor, below the 48 high sheet (QA: it opened a sky gap)
+    air = math.max(air, math.min(col.fall, FY + F.height - 2 - y, col.ceil - 4 - y, y - FY))
     air = math.max(air, math.min(col.gate, col.gateTop - y, y - FY))
     return air
 end
@@ -96,7 +101,7 @@ local function material(col: any, y: number, air: number): string
     local FY = Layout.FloorY
     -- lava: basin bottom and the vein behind the falls
     if col.poolDist <= Layout.Pool.r + 1.5 and y <= FY - 0.5 and y > FY - 6 then return "CrackedLava" end
-    if col.fallBand and y >= FY and y <= FY + Layout.Fall.crackHeight and -air < 4 then return "CrackedLava" end
+    if col.fallBand and y >= FY and y <= math.min(FY + Layout.Fall.crackHeight, col.ceil - 3) and -air < 4 then return "CrackedLava" end
     local onFloor = col.dIn >= 0 and y < col.floorTop + 1 and y > col.floorTop - FLOOR_BAND
     if onFloor then
         if col.poolDist <= Layout.Pool.r + 4.5 then return "Basalt" end -- rim of the lava pool
@@ -107,20 +112,20 @@ local function material(col: any, y: number, air: number): string
         end
         local moss = relief(x, z, 14, 33.9)
         if col.flat > 2 and moss > 0.8 then return if moss > 0.9 then "LeafyGrass" else "Grass" end
-        if v < 0.28 then return "Rock" elseif v < 0.58 then return "Slate" elseif v < 0.78 then return "Cobblestone" end
-        return if relief(x, z, 9, 7.7) > 0.7 then "Basalt" else "Rock"
+        if v < 0.3 then return "Rock" elseif v < 0.58 then return "Limestone" end
+        return "Cobblestone"
     end
     -- walls, ceiling, roof and deep rock
     if -air > 10 then return "Rock" end
     local v = relief(x + y * 0.7, z - y * 0.4, 8, 12.9)
-    if v > 0.82 then return "Basalt" elseif v < 0.2 then return "Slate" end
-    return "Rock"
+    if v > 0.78 or v < 0.15 then return "Sandstone" end
+    return "Limestone"
 end
 
 -- (material name, occupancy 0..1) for a cell given its column constants and the height of its centre.
 function Rules.cellAt(col: any, y: number): (string, number)
     local sd = solidSd(col, y)
-    local occ = clamp(0.5 + sd / Rules.Res, 0, 1)
+    local occ = clamp(sd / Rules.Res, 0, 1)
     if occ <= 0 then return "Air", 0 end
     return material(col, y, airSd(col, y)), occ
 end
