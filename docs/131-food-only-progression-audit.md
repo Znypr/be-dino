@@ -24,7 +24,10 @@ Status: audit of CURRENT BUILD BEHAVIOR, numbers read from `src/shared/Config.lu
 - **Kills are outsized for eggs.** One kill is worth about 42 food, about 20 seconds of a normal 130-food-per-minute pace. 5 kills add about a third more eggs, 15 kills double a run (the cap is 150 eggs, `RunEggMaxPerRun`). Growth from a kill is small next to food (2.5 against about 65 per run) and is not the problem.
 - The eaten player keeps all their eggs (BD-422), so a kill is a pure bonus for the hunter.
 
-## 4. Proposal (provisional, NOT applied, owner to confirm; BD-439)
+## 4. Decision taken 2026-10-16: option B (OWNER), implemented in BD-439
+The owner chose **B**: eating a PLAYER gives 0.25 run egg (fractional carry), at most 3 bonus eggs per run (`Config.PredationEggPerKill`, `PredationEggMaxPerRun`, PROVISIONAL). Growth from kills is unchanged (2.5), NPC kills stay growth only, the weather loot multiplier does not apply to kills, the 60 s repeat-victim cooldown stays. Code: `FoodCatchRules.awardKill` used by `PredationService.awardCatch`, written into the same `CatchScore` that settles exactly once; the per-run counters are the character attributes `PredationEggs` / `PredationEggCarry`, reset at run start. The legacy instant-eat path is the only kill egg source; `CombatService` (flag off) awards no eggs. Studio food-per-minute measurement is still open. The text below is the original proposal, kept for history.
+
+## 4a. Original proposal (historical)
 Pick one:
 - **A (preferred):** kills give growth only (`PredationGrowthPoints` stays 2.5, no egg). Hunting stays fun for size, food is the one egg source.
 - **B:** kills give a small egg share: `PredationCatchEggs = 0.25` egg per kill (about 10 food) using the same carry idea as `FoodCatchRules`, capped at **3 kill eggs per run** (about 20% of a 15-egg run).
