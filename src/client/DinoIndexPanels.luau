@@ -126,21 +126,27 @@ local function eggPopup(host: GuiObject, details: any, loading: boolean)
     local scrim = Instance.new("TextButton")
     scrim.Name, scrim.Text, scrim.AutoButtonColor, scrim.Size = "EggPopup", "", false, UDim2.fromScale(1, 1)
     scrim.BackgroundColor3, scrim.BackgroundTransparency, scrim.ZIndex, scrim.Parent = Color3.new(0, 0, 0), .45, 40, host
-    local card = W.box(scrim, UDim2.fromOffset(440, 300), UDim2.new(), C.panel, 24)
-    card.AnchorPoint, card.Position, card.ZIndex = Vector2.new(.5, .5), UDim2.fromScale(.5, .5), 41
+    local card = W.box(scrim, UDim2.fromOffset(580, 390), UDim2.new(), C.panel, 24)
+    card.Name, card.AnchorPoint, card.Position, card.ZIndex = "EggPopupCard", Vector2.new(.5, .5), UDim2.fromScale(.5, .5), 41
     local view = if loading then {kind = "loading", title = "Looking...", lines = {}} else EggOrigin.view(details, catalog, Sel, function(id) local c = EggGenetics.condition(id) return if c then c.name else nil end)
-    W.label(card, view.title, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 6), 28, C.gold, true).ZIndex = 42
-    local stage = EggPicture.stage(card, 170, 170, C.blue)
-    stage.Position, stage.ZIndex = UDim2.fromOffset(12, 54), 42
+    W.label(card, view.title, UDim2.new(1, -24, 0, 38), UDim2.fromOffset(12, 6), 30, C.gold, true).ZIndex = 42
+    -- BD-392: the egg is big and shows THIS dino's colours, pattern and egg look (same baked egg as the hatch).
+    local stage = EggPicture.stage(card, 270, 270, C.blue)
+    stage.Name, stage.Position, stage.ZIndex = "EggStage", UDim2.fromOffset(14, 52), 42
     local genes = if view.kind == "egg" and view.genes and EggGenetics.valid(view.genes) then view.genes else nil
-    local egg = EggPicture.add(stage, genes, 150)
-    egg.Position = UDim2.fromOffset(10, 10)
-    if view.kind ~= "egg" then for _, item in egg:GetDescendants() do if item:IsA("ImageLabel") then item.ImageTransparency = .6 end end end
+    local egg = EggPicture.baked(stage, genes, 262)
+    egg.Position = UDim2.fromOffset(4, 4)
+    if view.kind ~= "egg" then
+        for _, item in egg:GetDescendants() do
+            if item:IsA("ImageLabel") then item.ImageTransparency = .6 end
+            if item:IsA("ViewportFrame") then item.ImageTransparency = .6 end
+        end
+    end
     local list = Instance.new("Frame")
-    list.Name, list.BackgroundTransparency, list.Size, list.Position, list.ZIndex, list.Parent = "EggFacts", 1, UDim2.fromOffset(232, 190), UDim2.fromOffset(196, 54), 42, card
-    local layout = Instance.new("UIListLayout") layout.Padding, layout.Parent = UDim.new(0, 4), list
+    list.Name, list.BackgroundTransparency, list.Size, list.Position, list.ZIndex, list.Parent = "EggFacts", 1, UDim2.fromOffset(268, 250), UDim2.fromOffset(300, 56), 42, card
+    local layout = Instance.new("UIListLayout") layout.Padding, layout.Parent = UDim.new(0, 6), list
     for i, text in view.lines do
-        local l = W.label(list, text, UDim2.new(1, 0, 0, if #text > 24 then 44 else 24), UDim2.new(), 17, if i == 1 and view.kind == "egg" then C.purple else nil, true)
+        local l = W.label(list, text, UDim2.new(1, 0, 0, if #text > 22 then 50 else 30), UDim2.new(), 21, if i == 1 and view.kind == "egg" then C.purple else nil, true)
         l.LayoutOrder, l.ZIndex = i, 43
     end
     local close = W.button(card, "OK", UDim2.fromOffset(140, math.max(48, W.Touch)), UDim2.new(.5, -70, 1, -(math.max(48, W.Touch) + 10)), C.accent, function() scrim:Destroy() end)

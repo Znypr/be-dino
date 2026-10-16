@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Theme = require(Shared.UITheme)
 local Config = require(Shared.ProgressionConfig)
+local MainConfig = require(Shared.Config)
 local P = require(Shared.ShopPreview)
 local UIFormat = require(Shared.UIFormat)
 local Preview = require(Shared.DinosaurPreview)
@@ -81,6 +82,23 @@ function Cards.build(ui, parent: GuiObject, spec)
     act.Name = "Action"
     if data.equipped then equippedRing(card) end
     return card, data
+end
+
+-- BD-393: header strip above the Aura and Trail cards: the equipped dino's dark silhouette (existing DinosaurPreview, no new art),
+-- "For: <dino>" and the one-line note. ui = {label, box}; y = top of the strip in the shop body (824 wide).
+function Cards.forHeader(ui, parent: GuiObject, y: number, speciesId: string)
+    local Copy = require(Shared.ShopForDino)
+    local strip = ui.box(parent, 0, y, 824, Copy.HeaderHeight - 4, Color3.fromRGB(40, 46, 66):Lerp(C.blue, .25), 24)
+    strip.Name = "ForDinoHeader"
+    local well = ui.box(strip, 4, 2, 44, Copy.HeaderHeight - 8, Color3.fromRGB(190, 205, 230), strip.ZIndex + 1)
+    well.Name, well.ClipsDescendants = "DinoIcon", true
+    local view = Preview.add(well, speciesId, "silhouette") -- the silhouette is black: a light well so it reads
+    view.Name, view.ZIndex, view.Size = "DinoSilhouette", well.ZIndex + 1, UDim2.fromScale(1, 1)
+    local title = ui.label(strip, Copy.title(MainConfig.SpeciesDisplayNames[speciesId]), 54, 2, 270, Copy.HeaderHeight - 8, 26, C.gold)
+    title.Name, title.TextXAlignment = "ForDinoName", Enum.TextXAlignment.Left
+    local note = ui.label(strip, Copy.Note, 320, 2, 496, Copy.HeaderHeight - 8, 19, ShopCard.CalmText)
+    note.Name, note.TextXAlignment = "ForDinoNote", Enum.TextXAlignment.Right
+    return strip
 end
 
 return Cards

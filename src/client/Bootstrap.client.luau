@@ -496,21 +496,26 @@ render=function(name: string)
             local upgrade=ProgressionConfig.ConditionUpgrades[(p.conditionLevel or 0)+1]
             -- docs/73: plain egg per condition on a floor swatch; chance only (no stats text, no odds screen).
             label(body,require(Shared.FtueP1).ConditionsHeader,0,cardsY,824,30,20,C.gold) -- BD-372: the safe-first-eggs note, no level number
+            -- BD-394: the owner's Blender stage (jungle backdrop + condition eggs) when uploaded (ConditionStageAssetIds); else the live egg tiles, bigger.
+            local staged=require(script.Parent.ConditionStage).background(body,0,cardsY+62,824,144)
             for i,row in ProgressionConfig.Conditions do
                 local x=(i-1)*165
                 label(body,row.name,x,cardsY+32,155,28,22)
-                local tile=box(body,x,cardsY+62,155,110,Color3.fromRGB(122,148,112):Lerp(C.panel,.25),24)
-                local view=ModelPreview.add(tile,"egg")
-                view:SetAttribute("InspectZoom",1.6) -- BD-226: bigger egg so cracks/dirt/stars read at card size
-                EggAppearance.apply(view,EggGenetics.neutral(row.id),true)
-                label(body,string.format("%g%%",weights[i]),x,cardsY+176,155,34,24,C.blue)
+                local tile=box(body,x,cardsY+62,155,144,Color3.fromRGB(122,148,112):Lerp(C.panel,.25),24)
+                if staged then tile.BackgroundTransparency=1 end
+                if not (staged and require(script.Parent.ConditionStage).egg(tile,row.id)) then
+                    local view=ModelPreview.add(tile,"egg")
+                    view:SetAttribute("InspectZoom",require(Shared.ConditionOverlays).ShopZoom) -- BD-394: large egg so cracks, smudges, streaks and stars read at card size
+                    EggAppearance.apply(view,EggGenetics.neutral(row.id),true)
+                end
+                label(body,string.format("%g%%",weights[i]),x,cardsY+210,155,34,24,C.blue)
             end
             local upgradeText,upgradeOk=require(Shared.FtueP1).upgradeButton(upgrade,num("AccountLevel"),num("Crystals")) -- BD-372: grey with the reason, never green over a lock
-            local upgradeButton=button(body,upgradeText,142,cardsY+220,540,targetHeight,if upgradeOk then C.accent else C.card,function() if upgradeOk and upgrade then open("conditionConfirm") end end)
+            local upgradeButton=button(body,upgradeText,142,cardsY+254,540,targetHeight,if upgradeOk then C.accent else C.card,function() if upgradeOk and upgrade then open("conditionConfirm") end end)
             upgradeButton.TextSize=20
             upgradeButton.Name=if upgradeOk then "UpgradeButton" else "UpgradeLocked"
             if not upgradeOk then upgradeButton.AutoButtonColor=false upgradeButton.TextTransparency=.15 end
-            label(body,require(Shared.FtueP1).upgradeHint(upgrade,num("AccountLevel")),0,cardsY+220+targetHeight+6,824,30,19,C.gold)
+            label(body,require(Shared.FtueP1).upgradeHint(upgrade,num("AccountLevel")),0,cardsY+254+targetHeight+4,824,30,19,C.gold)
             return
         elseif cosmeticTab=="crystals" then
             -- BD-179: one card per pack in a 3-wide grid (same card look as the potion shop). Prices load from the marketplace.
@@ -562,6 +567,11 @@ render=function(name: string)
             end
             return
         end
+        -- BD-393: say whose style this is (the one equipped dino) and where to change it; the cards move down a little.
+        require(script.Parent.ShopCards).forHeader({label=label,box=box},body,cardsY-2,str("EquippedSpeciesId","compy"))
+        cardsY+=require(Shared.ShopForDino).HeaderHeight
+        cardsHeight=if touch then 402-cardsY-targetHeight-12 else require(Shared.ShopForDino).CardsHeightDesktop
+        buyY=cardsHeight-targetHeight-10
         local owned=if isTrail then p.trails else p.auras
         local equippedId=if isTrail then p.equippedTrail or "" else p.equippedAura
         for i,item in (if isTrail then ProgressionConfig.Trails else ProgressionConfig.Auras) do

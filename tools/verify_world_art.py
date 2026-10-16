@@ -32,6 +32,28 @@ local a=gen(Config.WorldArtSeed,DENSITY)
 local elapsed=os.clock()-t0
 local b=gen(Config.WorldArtSeed,DENSITY)
 assert(#a==#b,"nondeterministic count")
+-- BD-395 before/after (analytic layout): how many trees/giants/shrubs have their bottom more than 0.5 stud below the highest
+-- terrain point under the trunk with the OLD rule (lowest footprint point - 3% of height) and with the new PropGround rule.
+do
+ local G=Biome.Ground
+ local oldBad,newBad,total,worstOld=0,0,0,0
+ for _,p in a do
+  local data=Kit[p.id]
+  if G.Raised[p.layer] and data.kind~="rock" then
+   total+=1
+   local hs={}
+   for _,pt in G.samplePoints(p.x,p.z,G.trunkRadius(data,p.scale,p.radius*.5)) do table.insert(hs,Layout.height(pt[1],pt[2])) end
+   local lo=math.huge for _,h in hs do lo=math.min(lo,h) end
+   local sink=if p.layer=="tree" or p.layer=="giant" then .03 else .035 -- the old per-layer sink (shrub .02-.05)
+   local oldY=lo-sink*data.extent[2]*p.scale
+   local hi=-math.huge for _,h in hs do hi=math.max(hi,h) end
+   if G.submerged(oldY,hs,.5) then oldBad+=1 worstOld=math.max(worstOld,hi-oldY) end
+   if G.submerged(p.y,hs,.5) then newBad+=1 end
+  end
+ end
+ assert(newBad==0,"props still below the terrain: "..newBad)
+ print(string.format("BD-395 analytic: %d raised props, bottom >0.5 stud below the terrain: old rule %d (worst %.1f studs), PropGround rule %d",total,oldBad,worstOld,newBad))
+end
 for i,p in a do local q=b[i] assert(p.id==q.id and p.x==q.x and p.z==q.z and p.yaw==q.yaw and p.scale==q.scale and p.roll==q.roll,"nondeterministic placement") end
 local c=gen(Config.WorldArtSeed+1,DENSITY)
 local differs=#c~=#a
@@ -62,8 +84,21 @@ for _,p in a do
  end
  local ground=Layout.height(p.x,p.z)
  if p.layer~="log" then
-  assert(p.y<=ground+1e-6,"floating base "..p.id)
-  assert(ground-p.y<=math.max(2.5,data.extent[2]*p.scale*(if data.kind=="rock" then .42 else .3)),"buried too deep "..p.id)
+  local G=Biome.Ground
+  if G.Raised[p.layer] and data.kind~="rock" then
+   -- BD-395: trees, giants and shrubs rest ON the highest terrain point under the trunk (+0.2): never buried, never floating
+   local hs={}
+   for _,pt in G.samplePoints(p.x,p.z,G.trunkRadius(data,p.scale,p.radius*.5)) do table.insert(hs,Layout.height(pt[1],pt[2])) end
+   assert(not G.submerged(p.y,hs,1e-6),"prop bottom below the terrain under its trunk "..p.id)
+   assert(math.abs(p.y-G.restY(p.layer,hs,data.extent[2],p.scale))<1e-6,"prop does not use the PropGround rule "..p.id)
+   assert(p.y>=ground-1e-6,"prop below the ground at its pivot "..p.id)
+   local hi=-math.huge for _,h in hs do hi=math.max(hi,h) end
+   assert(p.y-hi<=G.Clearance+1e-6,"prop floats above the terrain "..p.id)
+   assert(p.y-ground<=3.5+data.extent[2]*p.scale*.1,"prop lifted too far "..p.id)
+  else
+   assert(p.y<=ground+1e-6,"floating base "..p.id)
+   assert(ground-p.y<=math.max(2.5,data.extent[2]*p.scale*(if data.kind=="rock" then .42 else .3)),"buried too deep "..p.id)
+  end
  else
   assert(math.abs(p.roll-math.pi/2)<1e-9 and string.find(p.id,"world_tree_dead"),"logs are dead trees on their side")
   assert(p.y<=ground+.3*p.scale+2.4 and p.y>=ground-2.4,"log not resting on ground "..p.id)
