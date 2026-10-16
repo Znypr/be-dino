@@ -107,6 +107,9 @@ assert(S.toStore(off).teleportShops==false and S.fromStore(S.toStore(off)).telep
 assert(not S.equal(off,S.normalize(nil)),"teleportShops takes part in equality")
 assert(S.teleportShops()==true) S.set("teleportShops",false) assert(S.teleportShops()==false) S.set("teleportShops",true) assert(S.teleportShops()==true)
 S.set("teleportShops","junk") assert(S.teleportShops()==false,"junk is not true") S.reset() assert(S.teleportShops()==true)
+-- ---- acceptance walk 2026-10-16: the chip sat on top of EXPLORE ISLAND (60 px button, 24 px margin) and the gate bar sat on the chip
+assert(R.ChipBottom>=60+24+8,"chip clears the EXPLORE ISLAND button")
+assert(R.GateBarBottom>=R.ChipBottom+48,"gate bar clears the chip (chip is 48 px high)")
 print("hub travel client: mapping, flag-off identity, dimming, toggle, copy, fade, chip, setting ok")
 '''
 
@@ -142,7 +145,11 @@ def static_checks():
     assert len(hook) == 1, 'one statement-level attach hook in client Bootstrap'
     assert 'local HubTravel' not in boot, 'no new top-level local in client Bootstrap'
     assert boot.count('HubTravelClient).press(') == 2, 'rail loop and results OPEN EGGS call press'
+    assert 'UDim2.new(0.5, 0, 1, -Rules.ChipBottom)' in client, 'chip position comes from the rules (above EXPLORE ISLAND)'
+    gate = (ROOT / 'src/client/HubGateClient.luau').read_text()
+    assert 'GateBarBottom' in gate, 'gate bar position comes from the rules (above the chip)'
     menu = (ROOT / 'src/client/SettingsMenu.luau').read_text()
+    assert 'CombatEnabled then 4 else 2, "Teleport to shops"' in menu, 'Teleport row closes the gap when Peaceful is hidden'
     assert '"Teleport to shops"' in menu and 'CaveHub' in menu, 'Controls tab toggle, shown only with the hub on'
     top = [l for l in boot.splitlines() if re.match(r'^local\s', l)]
     assert len(top) <= 195, 'client Bootstrap top-level locals stay at or below 195 (limit 200): %d' % len(top)

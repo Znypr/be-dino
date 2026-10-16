@@ -13,6 +13,8 @@ Rules.HomeHint = "At home"
 Rules.MinTarget = 44 -- px: smallest touch target (rail buttons are 54 px high)
 Rules.HeartStation = "heart"
 Rules.ChipText = "Back to the middle"
+Rules.ChipBottom = 96 -- px above the screen bottom: the chip sits ABOVE the 60 px EXPLORE ISLAND button (acceptance walk: it used to cover it)
+Rules.GateBarBottom = 150 -- px: the Island Gate "Leaving..." bar sits above the chip so the two never overlap
 Rules.TimeoutSeconds = 5 -- a travel that has not answered by then lets go of the screen
 
 -- Refused-trip words (docs/72: short, calm, say what to do next). Unknown reasons get the generic line.

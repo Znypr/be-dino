@@ -146,7 +146,7 @@ function Client.attach(c: any)
     overlay = o
     local b = Instance.new("TextButton")
     b.Name, b.Text, b.Font, b.TextSize, b.TextColor3 = "BackToMiddle", Rules.ChipText, Enum.Font.FredokaOne, 22, Color3.fromRGB(255, 255, 255)
-    b.BackgroundColor3, b.AnchorPoint, b.Position = Color3.fromRGB(120, 90, 200), Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -24)
+    b.BackgroundColor3, b.AnchorPoint, b.Position = Color3.fromRGB(120, 90, 200), Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -Rules.ChipBottom)
     b.Size, b.Visible, b.ZIndex, b.AutoButtonColor = UDim2.fromOffset(240, 48), false, 8, true
     local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 12) corner.Parent = b
     local stroke = Instance.new("UIStroke") stroke.Thickness, stroke.Color = 3, Color3.fromRGB(40, 28, 70) stroke.Parent = b

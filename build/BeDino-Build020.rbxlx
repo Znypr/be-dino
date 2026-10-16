@@ -374104,6 +374104,8 @@ Rules.HomeHint = "At home"
 Rules.MinTarget = 44 -- px: smallest touch target (rail buttons are 54 px high)
 Rules.HeartStation = "heart"
 Rules.ChipText = "Back to the middle"
+Rules.ChipBottom = 96 -- px above the screen bottom: the chip sits ABOVE the 60 px EXPLORE ISLAND button (acceptance walk: it used to cover it)
+Rules.GateBarBottom = 150 -- px: the Island Gate "Leaving..." bar sits above the chip so the two never overlap
 Rules.TimeoutSeconds = 5 -- a travel that has not answered by then lets go of the screen
 
 -- Refused-trip words (docs/72: short, calm, say what to do next). Unknown reasons get the generic line.
@@ -564920,7 +564922,7 @@ function Client.attach(gui: Instance)
     local player = Players.LocalPlayer
     local holder = Instance.new("Frame")
     holder.Name, holder.BackgroundColor3, holder.BackgroundTransparency, holder.BorderSizePixel = "IslandGateBar", Color3.fromRGB(40, 28, 70), 0.25, 0
-    holder.AnchorPoint, holder.Position, holder.Size = Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -90), UDim2.fromOffset(300, 44)
+    holder.AnchorPoint, holder.Position, holder.Size = Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -require(Shared:WaitForChild("HubTravelClientRules")).GateBarBottom), UDim2.fromOffset(300, 44)
     holder.Visible, holder.ZIndex, holder.Active = false, 7, false
     local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 12) corner.Parent = holder
     local label = Instance.new("TextLabel")
@@ -565225,7 +565227,7 @@ function Client.attach(c: any)
     overlay = o
     local b = Instance.new("TextButton")
     b.Name, b.Text, b.Font, b.TextSize, b.TextColor3 = "BackToMiddle", Rules.ChipText, Enum.Font.FredokaOne, 22, Color3.fromRGB(255, 255, 255)
-    b.BackgroundColor3, b.AnchorPoint, b.Position = Color3.fromRGB(120, 90, 200), Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -24)
+    b.BackgroundColor3, b.AnchorPoint, b.Position = Color3.fromRGB(120, 90, 200), Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -Rules.ChipBottom)
     b.Size, b.Visible, b.ZIndex, b.AutoButtonColor = UDim2.fromOffset(240, 48), false, 8, true
     local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 12) corner.Parent = b
     local stroke = Instance.new("UIStroke") stroke.Thickness, stroke.Color = 3, Color3.fromRGB(40, 28, 70) stroke.Parent = b
@@ -566817,7 +566819,7 @@ local function drawControls(body: Instance, ctx: Context)
     choice(body, ctx, 1, "Jump button", Model.JumpSizes, SIZE_TEXT, Model.get().jumpSize, function(id) Model.set("jumpSize", id) ctx.open("settings") end)
     -- BD-288 (docs/104 s7.6): only shown while the Cave hub is on; OFF = the rail just opens the menu, no teleport.
     if require(Shared:WaitForChild("Config")).CaveHub then
-        toggle(body, ctx, 4, "Teleport to shops", Model.teleportShops(), function() Model.set("teleportShops", not Model.teleportShops()) ctx.open("settings") end)
+        toggle(body, ctx, if require(Shared:WaitForChild("Config")).CombatEnabled then 4 else 2, "Teleport to shops", Model.teleportShops(), function() Model.set("teleportShops", not Model.teleportShops()) ctx.open("settings") end)
     end
     -- docs/101 s16 Peaceful: only shown while HP combat is on (Config.CombatEnabled); the server reads it at run start.
     if require(Shared:WaitForChild("Config")).CombatEnabled then
