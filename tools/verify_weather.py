@@ -67,6 +67,9 @@ assert(W.Budget.bolts >= 3 and W.Budget.bombs >= 5 and W.Budget.beams <= 160)
 -- earthquake v2 (owner 2026-10-15): a world event, not an aura. No falling rubble streaks; capped, pooled cracks away from the dino
 assert(W.Rigs.quake.rubble == nil, "no falling rubble sticks in the air")
 assert(W.Budget.cracks <= 4 and W.Budget.cracksPhone <= 2 and W.Budget.cracksPhone >= 1 and W.Budget.rocksPerCrack <= 4, "crack and rock caps")
+-- QA 2026-10-16: the blood moon stays a soft sky prop (not a third of a phone screen) and the title card sits below the toast
+assert(W.Moon.core <= 48 and W.Moon.halos[3] <= 150 and W.Moon.distance >= 140, "blood moon is a moderate sky prop")
+assert(W.Title.y - W.Title.height / 2 >= .26 and W.Title.width <= .62 and W.Title.height <= .1, "title card below the toast, soft and narrow")
 local Q = W.Quake
 assert(Q.grow >= .3 and Q.grow <= .8, "cracks grow over about half a second")
 assert(Q.life[1] >= 2 and Q.life[2] <= 6 and Q.close > 0, "cracks close after a few seconds")

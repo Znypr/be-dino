@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "a3e535cbfc3f86543515638c16df48ea74f8e72ffac4a5de6a580b4235683d9c",
+  "place_sha256": "090999ae088b1a82836af983ab6834af5208eeb5d4a06ff8a300d5c2c35950ad",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -272,7 +272,7 @@
     "src/shared/UIIconLayout.luau": "e80c2761e540f253fd585ba5a639cb3e31d4b97d7122f6fc9c6c1632e6e05c2c",
     "src/shared/UITheme.luau": "a1f8fb3d433feda5e3f47650b4c29a077294e9f1af34de03f0336f3692a83c33",
     "src/shared/WeatherClock.luau": "ae9d42007a3bb54610b478c906d9042859b735467af69ad9d1e8782ee6b33730",
-    "src/shared/WeatherLooks.luau": "386462b507f920b3a5718cf7b699e504269f6d727d2bfa3bc2ff9155045448d8",
+    "src/shared/WeatherLooks.luau": "3c07cb1e45a929e0af95f7790b83bacc85e2945eb8d90a85ab04ff33587fe1c5",
     "src/shared/WeatherSounds.luau": "f17e56d29d0b2cf4456453e470cb7ef7a6ddf23386b90322fbf39fc82de5e881",
     "src/shared/WorldGeneratedMeshes.luau": "bd755f2a54bd05e53a46f18d27bae620b9b8648c1ea0a7ec71b43d94e2783886",
     "src/shared/WorldKitData.luau": "860dd88ae449c3daa82d1372148e02d50d0ccaa08c8fa5a21a003a75bb4abde2",
@@ -348,7 +348,7 @@
     "src/client/UiScan.luau": "866a92d0f804c0cfad6acf49246f3d04fe573c0fa514613a5a5c4c8d1d1c5972",
     "src/client/VolumeSliders.luau": "c1c8fcc997d9f2a1e2be40950f2b58d6de30bf3236dc142878b7ceaa2804f4e2",
     "src/client/WeatherAudio.client.luau": "a2656eef91d2859682a8c0168a71622b27470b775ab7f2b766b8380907286ec0",
-    "src/client/WeatherVisuals.client.luau": "4ab4baddd7c9c51f82b252c44561fde687f6644a92eebcc49e567cfae5bf9879",
+    "src/client/WeatherVisuals.client.luau": "6e39616251f69764ba6ba0d249c683508d8daa30cf09a1ec9b8b11ac91ff6ac7",
     "src/client/WorldCulling.client.luau": "47eae7e3f25d6717d1f63438ffd8489bf399e9e4511faa0a7e5298f467a73682",
     "src/client/WorldReady.client.luau": "7f8c9c76e89ec872e933216e46b2174b6e9aae22ff60a75a15dde67b5f0d4a9f"
   }
