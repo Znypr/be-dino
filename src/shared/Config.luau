@@ -261,7 +261,7 @@ return table.freeze({
     -- or in persistent profiles when IdentityPersistentEnabled is also true, using the
     -- PROVISIONAL FusionOdds roller. Keep false in committed builds.
     IdentityFusionPreviewEnabled = false,
-    -- BD-059 phase 1 (docs/121): per-dino aura/trail ownership. Pure CosmeticOwnership module only; no shop/remote uses it yet.
+    -- BD-059 phases 1-2 (docs/121): per-dino aura/trail ownership. On: buy/equip via ProgressionAction bind to the equipped dino; off: Build 020 account-wide behaviour.
     PerDinoCosmeticsEnabled = false,
     -- Milestone 1 private playtest (fresh, empty DataStore): identity sidecar, hatch
     -- credit and reconciliation for persistent profiles. Keep false in committed builds.
@@ -291,6 +291,9 @@ return table.freeze({
     -- default: the shipped v1 sequence is unchanged. ON = the server loads HatchV2Assets; the client falls back to v1 for any
     -- egg whose meshes or images are unavailable. Playtest profile may turn it on once docs/118 evidence is owner-approved.
     HatchV2 = false,
+    -- docs/118 s9: Studio-only preview of the v2 hatch with placeholders. The owner sets this to true LOCALLY in Studio; it only
+    -- counts in an unpublished place (RunService:IsStudio() and game.GameId == 0, see HatchV2Assets.enabled). Never commit true.
+    HatchV2Preview = false,
     -- BD-243/244/247 (docs/101): HP combat behind ONE flag. OFF = no CombatService, no Bite remote, no health bars, the
     -- instant "bigger eats smaller" predation stays exactly as shipped. ON (Studio tests only) = PredationService's
     -- instant eat stops and CombatService runs. Keep false until the BD-252 phone test passes.

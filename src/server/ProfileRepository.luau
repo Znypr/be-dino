@@ -18,6 +18,7 @@ local RareHatchService = require(script.Parent.RareHatchService) -- BD-428
 local DinosaurIdentity = require(script.Parent.DinosaurIdentity)
 local IdentityFusion = require(script.Parent.IdentityFusion)
 local FusionOdds = require(script.Parent.FusionOdds)
+local CosmeticOwnership = require(script.Parent.CosmeticOwnership) -- BD-059 phase 2, only used when Config.PerDinoCosmeticsEnabled
 local SettingsModel = require(ReplicatedStorage.Shared.SettingsModel)
 
 local RunService = game:GetService("RunService")
@@ -462,8 +463,17 @@ local function retry(label: string, fn)
     return false, lastError
 end
 
-local function syncAttributes(player: Player, profile: any)
+-- BD-059 phase 2: with the flag on, reads see the equipped dino's own + legacy cosmetics (stored data is unchanged).
+local function progressionView(profile: any)
     local progress=ProgressionRules.upgrade(profile)
+    if Config.PerDinoCosmeticsEnabled==true and identityAvailable(profile.dinosaurIdentity) then
+        return CosmeticOwnership.view(progress,profile.dinosaurIdentity,profile.equippedSpeciesId,profile.equippedVariantKey)
+    end
+    return progress
+end
+
+local function syncAttributes(player: Player, profile: any)
+    local progress=progressionView(profile)
     PrivateState.set(player, "StudioTestWallet", localPreview and Config.StudioTestWalletEnabled)
     PrivateState.set(player, "CollectionJson", HttpService:JSONEncode(profile.collection))
     PrivateState.set(player, "Crystals",progress.crystals)
@@ -817,6 +827,9 @@ function ProfileRepository.quoteFusion(player: Player, targetStage: any, donorId
         local ok, odds = pcall(roller.distribution, DinosaurIdentity.copy(quote.summary))
         result.oddsVersion = roller.version
         result.odds = if ok then odds else nil
+    end
+    if Config.PerDinoCosmeticsEnabled == true then -- BD-059: itemized loss list for the confirm screen; absent when the flag is off
+        result.cosmeticNotice = CosmeticOwnership.fusionNotice(quote, ProgressionRules.upgrade(cached), true)
     end
     return result
 end
@@ -2010,7 +2023,7 @@ end
 
 function ProfileRepository.progression(player: Player)
     if not ProfileRepository.isLoaded(player) then return nil end
-    return ProgressionRules.upgrade(profiles[player])
+    return progressionView(profiles[player])
 end
 function ProfileRepository.progressionAction(player: Player, action: string, id: string, token: string, replace: boolean?, amount: number?)
     if not ProfileRepository.isLoaded(player) then return false,"profile_not_loaded" end
@@ -2047,6 +2060,7 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
             local progress = ProgressionRules.upgrade(profile)
             if localPreview and Config.StudioTestWalletEnabled then progress.crystals = Config.StudioTestCrystals end
             local applied,status
+            local boundInstance=nil
             if action=="buyEgg" then
                 if availableChestCapacity(profile)<1 then denied="queue_full" return nil end
                 if progress.crystals<ProgressionConfig.RandomEggPrice then denied="insufficient_crystals" return nil end
@@ -2055,10 +2069,13 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
                 progress.crystals-=ProgressionConfig.RandomEggPrice
                 enqueueChestIds(profile,{eggId},now,{egg})
                 applied,status=true,"egg_purchased"
+            elseif Config.PerDinoCosmeticsEnabled==true and (action=="buyAura" or action=="equipAura" or action=="buyTrail" or action=="equipTrail") then
+                -- BD-059 phase 2: bound to the equipped dino instance, same atomic token write as every other purchase.
+                applied,status,boundInstance=CosmeticOwnership.apply(profile,action,id,{rules=ProgressionRules,config=ProgressionConfig,identityOk=identityAvailable(profile.dinosaurIdentity)})
             else applied,status=ProgressionRules.apply(profile,action,id,now,replace,amount) end
             if localPreview and Config.StudioTestWalletEnabled then progress.crystals = Config.StudioTestCrystals end
             if not applied then denied=status return nil end
-            outcome={action=action,item=id,status=status}
+            outcome={action=action,item=id,status=status,instanceId=boundInstance}
             profile.revision+=1
             profile.session.expiresAt=now+Config.ProfileLeaseSeconds
             table.insert(profile.recentOperations,{id=operationId,kind="progression",outcome=outcome})

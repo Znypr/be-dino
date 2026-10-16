@@ -12,4 +12,9 @@ Assets.Models = {
     bucket = {assetId = "81905342774801", height = 1.35, note = "PLACEHOLDER: hub_barrel stands in for the paint bucket"},
 }
 Assets.Placeholder = {bucket = true}
+-- docs/118 s9: is the v2 hatch on? The shipped flag, or the Studio preview toggle in an UNPUBLISHED Studio place only
+-- (isUnpublishedStudio = RunService:IsStudio() and game.GameId == 0). A published or live server can never see the preview.
+function Assets.enabled(config: any, isUnpublishedStudio: boolean): boolean
+    return config.HatchV2 == true or (config.HatchV2Preview == true and isUnpublishedStudio == true)
+end
 return Assets

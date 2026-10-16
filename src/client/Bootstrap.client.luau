@@ -481,7 +481,9 @@ render=function(name: string)
         local cardsY=tabsHeight+12
         local cardsHeight=if touch then 402-cardsY-targetHeight-12 else 270
         local buyY=cardsHeight-targetHeight-10
-        for i,tab in {"auras","trails","eggs","conditions","crystals"} do
+        if cosmeticTab=="conditions" and num("AccountLevel")<require(Shared.FtueP1).ConditionsTabLevel then cosmeticTab="auras" isTrail=false end -- BD-445: tab hidden until level 3
+        if require(Shared.FtueP1).noCrystalsHintShown(num("Crystals"),cosmeticTab) then label(body,require(Shared.FtueP1).NoCrystalsHint,0,362,824,34,22,C.gold) end -- BD-445
+        for i,tab in require(Shared.FtueP1).shopTabs(num("AccountLevel")) do
             button(body,string.upper(tab),(i-1)*165,0,155,tabsHeight,if cosmeticTab==tab then C.blue else C.card,function() cosmeticTab=tab open("auras") end).TextSize=20
         end
         if cosmeticTab=="eggs" then
