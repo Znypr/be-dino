@@ -150,8 +150,30 @@ for rarity = 1, 5 do
 end
 assert(T.particleCount(9, true, true, true, false) == T.MaxParticles and T.MaxParticles <= 32)
 
+-- BD-437 reveal ladder: anticipation, camera punch and dino pop step up with rarity; Reduce Motion / failed eggs unchanged.
+do
+    local prevA, prevP, prevPeak = -1, 0, 0
+    for rr = 1, 5 do
+        local a = T.anticipation(rr)
+        assert(a >= prevA and a <= .5, "anticipation grows, at most .5 s") prevA = a
+        assert(T.durations(true, rr).build == m.build + a and T.durations(true, rr, true).build == m.build, "failed egg: no anticipation")
+        assert(T.durations(false, rr).build == 0, "Reduce Motion: no anticipation")
+        local pu = T.escalation(rr, true).punch assert(pu > prevP) prevP = pu
+        local peak = 0 for i = 0, 200 do peak = math.max(peak, T.revealScale(i / 200, rr)) end
+        assert(peak > prevPeak and peak < 1.07 and T.revealScale(1, rr) == 1 and near(T.revealScale(0, rr), .25), "pop grows, bounded, settles at 1: " .. peak)
+        prevPeak = peak
+    end
+    assert(T.anticipation(nil) == 0 and T.anticipation(1) == 0 and T.anticipation(5) > T.anticipation(3))
+    -- A 15-egg hatch party in increasing rarity (illustrative mix: 7 Common, 4 Uncommon, 2 Rare, 1 Epic, 1 Legendary), natural flow, no taps.
+    local mix, total, plain = {1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 4, 5}, 0, 0
+    assert(#mix == 15)
+    for _, rr in mix do total += T.durations(true, rr).readyAt plain += T.durations(true, 1).readyAt end
+    assert(total - plain < 3 and total < 85, "party stays reasonable: " .. total .. " s (anticipation adds " .. (total - plain) .. " s)")
+    print("BD-437 ladder: 15-egg party " .. string.format("%.2f", total) .. " s, +" .. string.format("%.2f", total - plain) .. " s vs all-Common")
+end
+
 -- Rarity escalation, extra pools and the BIG stamp.
-assert(T.durations(true, 5).readyAt > T.durations(true, 1).readyAt and T.durations(true, 5).build == m.build, "Legendary holds longer, same build-up")
+assert(T.durations(true, 5).readyAt > T.durations(true, 1).readyAt and T.durations(true, 5).build == m.build + T.anticipation(5), "Legendary holds longer (BD-437: build-up plus anticipation)")
 assert(T.durations(false, 5).readyAt == r.readyAt)
 local e1, e3, e4, e5 = T.escalation(1, true), T.escalation(3, true), T.escalation(4, true), T.escalation(5, true)
 assert(not e1.shock and e3.shock and not e3.arcs and e4.arcs and e4.shakeScale > 1 and not e4.fireworks and e5.fireworks and e5.punch > e1.punch)
@@ -182,7 +204,7 @@ assert(near(ps.t, P.leftStart, 1e-6) and ps.idle > 9 and T.phase(ps.durs, ps.t) 
 assert(T.tap(ps) == "ignore" and T.skipAll(ps) == "ignore" and not ps.done and not ps.fastForwarded, "taps cannot skip an egg that has no result yet")
 assert(T.visualT(ps) > 9, "egg keeps wobbling while waiting")
 T.supply(ps, 5, false)
-assert(not ps.pending and ps.durs.readyAt == T.durations(true, 5, false).readyAt and ps.durs.build == m.build, "supply swaps in the real timing, build length unchanged")
+assert(not ps.pending and ps.durs.readyAt == T.durations(true, 5, false).readyAt and ps.durs.build == m.build + T.anticipation(5), "supply swaps in the real timing, build length unchanged")
 T.step(ps, .5) assert(ps.t > P.leftStart, "runs on after supply")
 local pr = T.new(false, nil, nil, true) T.step(pr, 1) assert(pr.t == 0 and pr.idle == 1, "Reduced Motion also waits for the result")
 local ns = T.new(true) T.step(ns, 1) assert(near(ns.t, 1) and ns.idle == 0, "a normal egg never idles")

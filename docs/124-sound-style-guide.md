@@ -32,5 +32,20 @@ Ids below are the registered names in `Sfx.Sounds` (asset ids are in [110](110-s
 ## 4. Making and replacing sounds (unchanged rule)
 Roblox audio is uploaded by the owner through Creator Hub or Asset Manager (moderated, may have an upload allowance and delay), from the owner's own recordings or synthesis (`tools/generate_sfx.py`, regenerated softer), Creator Store audio with a checked licence, or a royalty-free or AI pack whose licence allows games ([110](110-sound-audit.md) section 3). After each upload the lead adds the [77](77-asset-registry.md) line, binds the id in `Sfx.luau` or `WeatherSounds.luau` (the lab shows it at once), runs `tools/verify_audio.py` and `tools/verify_sound_lab.py`, and the owner listens at the in-game level.
 
+## 4b. Reveal ladder (BD-437, CODE, existing sounds only, nobody has listened)
+Each hatched egg's reveal now escalates across the five tiers. All numbers are PROVISIONAL, set by arithmetic, not by ear.
+
+| Tier | Sting (asset) | Pitch (`rate`) | Cue volume | Layer under it | Extra rattle before burst | Camera punch | Dino pop peak |
+|---|---|---|---|---|---|---|---|
+| Common | `hatch_reveal_common` (A) | .92 | .50 | none | 0 | 3.5% | 1.02 |
+| Uncommon | `hatch_reveal_uncommon` (A) | 1.00 | .62 | none | 0 | 5% | 1.03 |
+| Rare | `hatch_reveal_rare` (B) | 1.04 | .72 | none | +.15 s | 6.5% | 1.04 |
+| Epic | `hatch_reveal_epic` (C) | 1.06 | .82 | `hatch_reveal_rare` at 55% volume, +.16 s | +.30 s | 8.5% | 1.05 |
+| Legendary | `hatch_reveal_legendary` (C) | 1.12 | .90 (clamp) | `fusion_reveal` at 60% volume, +.20 s | +.50 s (plus the old +.5 s settle) | 11% | 1.06 |
+
+- Code: volumes and pitch are the `Sfx.Sounds` entries; layers are `SfxRules.RevealLayers` played by `Sfx.playLayers` through `Sfx.play`, so the 2-voice limiter, priority (layer never ducks its own sting), 40% ducking, SOUND toggle and sliders all apply; a layer may be dropped when voices are busy. Reveal stings still get no pitch jitter. Anticipation is `HatchTimeline.Anticipation` added to the build-up (rattle ramps longer, cracks and burst cue shift with it); none for Cracked eggs or Reduce Motion. Punch and pop are scales on existing panel objects (no new instances), so Effects Full/Lite/Off do not change them; Reduce Motion skips them as before. Sound is never muted by Effects or Reduce Motion (section 2).
+- **Timing (computed):** a natural 15-egg party in increasing rarity (7 Common, 4 Uncommon, 2 Rare, 1 Epic, 1 Legendary), no taps, is 76.6 s to the last "tap to continue" readiness (5.0 s per Common egg, Legendary 5.8 s incl. +.5 s settle); the ladder adds 1.6 s over an all-Common party. Still skippable: the tap fast-forward after .5 s and Skip all are unchanged, and each egg still waits for its tap.
+- TODO owner: replace with real per-tier stings by ear ([120](120-pending-owner-uploads-checklist.md) section 6), then clear the layers and reset pitch to 1.
+
 ## 5. TODO for the owner (also in [120](120-pending-owner-uploads-checklist.md) section 6)
 Pick or upload sounds for: the rare-hatch fanfare (BD-428), 7 mutation sounds (BD-162), defeat and Peaceful soft sounds, the cave ambience loop, 11 weather sounds (BD-132), a real ladder of 5 reveal stings, hatch burst and rattle, Cracked failure, Shiny and BIG variants, crystal and nest cues, softer pickups and UI clicks. Then judge the existing ducking, limiter and volume clamps by ear. Open design questions: should each category get its own volume slider and mute (today: Everything, Sounds, Weather, plus Hatch sound ON/OFF)? Is there background music at all (the Music slider is not built, BD-263)?
