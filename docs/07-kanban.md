@@ -13,16 +13,16 @@ Updated 2026-10-14. This file is the canonical task tracker.
 
 | Status | P0 | P1 | P2 | P3 | Total |
 |---|---:|---:|---:|---:|---:|
-| Backlog | 6 | 35 | 31 | 8 | 80 |
+| Backlog | 6 | 34 | 31 | 8 | 79 |
 | In progress | 3 | 1 | 0 | 0 | 4 |
 | In review | 2 | 0 | 0 | 0 | 2 |
 | Review / test | 57 | 158 | 62 | 10 | 287 |
 | Blocked | 1 | 0 | 0 | 0 | 1 |
 | Done | 13 | 2 | 1 | 0 | 16 |
 | Superseded | 2 | 2 | 0 | 0 | 4 |
-| Parked | 0 | 0 | 0 | 1 | 1 |
+| Parked | 0 | 0 | 0 | 2 | 2 |
 | Spike | 0 | 2 | 0 | 0 | 2 |
-| **Total** | 84 | 200 | 94 | 19 | 397 |
+| **Total** | 84 | 199 | 94 | 20 | 397 |
 
 <!-- board-summary:end -->
 

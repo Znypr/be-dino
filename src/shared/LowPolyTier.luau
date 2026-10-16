@@ -149,11 +149,45 @@ function Tier.inAccentRegion(species: string?, x: number, y: number, z: number):
     end
     return false
 end
--- Pure: accent colour for a region texel: metal / gem lit by the source facet shade k plus a highlight ramp along height (tips glint).
-function Tier.regionColor(r: number, g: number, b: number, entry: Entry, k: number, u: number, y: number): (number, number, number)
-    local ar, ag, ab = Tier.accent(r, g, b, entry, k + 0.15, u)
-    local hl = math.clamp((y + 0.4) * 0.35, 0, 0.3)
-    return ar + (1 - ar) * hl, ag + (1 - ag) * hl, ab + (1 - ab) * hl
+-- Round 4 "shiny accents": dark -> mid -> bright ramps per tier (0..255), so region texels read as metal / gem, not flat paint.
+Tier.Ramps = {
+    gold = {{120, 62, 6}, {245, 176, 20}, {255, 247, 190}},
+    emerald = {{6, 70, 38}, {18, 200, 105}, {190, 255, 220}},
+    diamond = {{150, 185, 225}, {222, 242, 255}, {255, 255, 255}},
+}
+-- Pure: 0..1 specular band strength. Two crisp streaks follow the surface (height y blended with depth z and sideways x).
+function Tier.highlight(x: number, y: number, z: number): number
+    local f = (y * 9 + z * 4 + math.abs(x) * 5) % 1
+    local band = math.max(0, 1 - math.abs(f - 0.5) * 9) -- ~22% wide, peak 1 in the middle
+    return band * band * (3 - 2 * band) -- smoothstep: crisp edge
+end
+-- Pure: accent colour for a region texel: dark -> mid -> bright ramp by facet shade k and height y, facet jitter (gems), a specular streak,
+-- and for Diamond a rainbow fringe on the streak edges. Hue stays the tier's.
+function Tier.regionColor(r: number, g: number, b: number, entry: Entry, k: number, u: number, y: number, x: number?, z: number?): (number, number, number)
+    local ramp = (Tier.Ramps :: any)[entry.id]
+    if not ramp then
+        local ar, ag, ab = Tier.accent(r, g, b, entry, k + 0.15, u)
+        return ar, ag, ab
+    end
+    local px, pz = x or 0, z or 0
+    local t = math.clamp((k - 0.6) * 0.8 + (y + 0.4) * 0.5, 0, 1)
+    if entry.id == "emerald" then -- faceted gem: quantised cells shift the lit step
+        local cell = math.floor(math.abs(px) * 14) * 7 + math.floor((y + 1) * 14) * 3 + math.floor((pz + 1) * 14)
+        t = math.clamp(t + ((cell % 5) - 2) * 0.09, 0, 1)
+    end
+    local lo, hi, f = ramp[1], ramp[2], t * 2
+    if t > 0.5 then lo, hi, f = ramp[2], ramp[3], t * 2 - 1 end
+    local cr, cg, cb = (lo[1] + (hi[1] - lo[1]) * f) / 255, (lo[2] + (hi[2] - lo[2]) * f) / 255, (lo[3] + (hi[3] - lo[3]) * f) / 255
+    local h = Tier.highlight(px, y, pz)
+    local pk = ramp[3]
+    cr, cg, cb = cr + (pk[1] / 255 - cr) * h, cg + (pk[2] / 255 - cg) * h, cb + (pk[3] / 255 - cb) * h
+    local sh = entry.shimmer
+    if sh then -- prismatic fringe where the streak fades
+        local edge = h * (1 - h) * 4
+        local c = sh[math.floor(((px + y + pz) * 3) % #sh) + 1]
+        cr, cg, cb = cr + (c[1] / 255 - cr) * edge * 0.45, cg + (c[2] / 255 - cg) * edge * 0.45, cb + (c[3] / 255 - cb) * edge * 0.45
+    end
+    return math.clamp(cr, 0, 1), math.clamp(cg, 0, 1), math.clamp(cb, 0, 1)
 end
 function Tier.isAccentName(name: string): boolean
     local n = string.lower(name)

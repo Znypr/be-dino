@@ -247,7 +247,7 @@ for _, sp in {"compy", "raptor", "triceratops", "tyrannosaurus", "stegosaurus", 
         -- accent texels take the tier colour, body texels (blue triceratops) keep their hue
         for _, id in Tier.Order do
             local e = Tier.get(id)
-            local ar, ag, ab = Tier.regionColor(0.35, 0.45, 0.8, e, 1.0, 0.3, cy)
+            local ar, ag, ab = Tier.regionColor(0.35, 0.45, 0.8, e, 1.0, 0.3, cy, cx, cz)
             local want = hueOf(e.accent[1] / 255, e.accent[2] / 255, e.accent[3] / 255)
             if id ~= "diamond" then assert(Tier.hueDistance(hueOf(ar, ag, ab), want) <= 0.05, sp .. " " .. id .. " region is tier coloured") end
             assert(ar >= 0 and ar <= 1 and ag >= 0 and ag <= 1 and ab >= 0 and ab <= 1)
@@ -256,6 +256,29 @@ for _, sp in {"compy", "raptor", "triceratops", "tyrannosaurus", "stegosaurus", 
         end
     end
 end
+-- round 4: shiny accents have a dark -> bright ramp and a crisp highlight band, not flat paint
+for _, id in Tier.Order do
+    local e = Tier.get(id)
+    local lo, hi, bandMax, bandMin = 2, -1, 0, 1
+    for i = 0, 40 do
+        local y = -0.4 + i * 0.02
+        local rr, gg, bb = Tier.regionColor(0.35, 0.45, 0.8, e, 1.0, 0.3, y, 0.1, 0.05)
+        local l = luma(rr, gg, bb)
+        lo, hi = math.min(lo, l), math.max(hi, l)
+        local h = Tier.highlight(0.1, y, 0.05)
+        bandMax, bandMin = math.max(bandMax, h), math.min(bandMin, h)
+    end
+    assert(hi - lo >= 0.12, id .. " accent has a brightness ramp")
+    assert(bandMax >= 0.95 and bandMin <= 0.05, id .. " accent has a crisp specular band")
+    local dr, dg, db = Tier.regionColor(0.5, 0.5, 0.5, e, 0.6, 0.3, -0.4, 0.1, 0.05)
+    local br2, bg2, bb2 = Tier.regionColor(0.5, 0.5, 0.5, e, 1.6, 0.3, 0.4, 0.1, 0.05)
+    assert(luma(br2, bg2, bb2) > luma(dr, dg, db) + 0.1, id .. " dark -> bright")
+end
+local g1 = {Tier.regionColor(0.5, 0.5, 0.5, Tier.get("gold"), 1, 0.3, 0.1, 0.1, 0.05)}
+assert(g1[1] > g1[3] + 0.2, "gold ramp is warm")
+local e1 = {Tier.regionColor(0.5, 0.5, 0.5, Tier.get("emerald"), 1, 0.3, 0.1, 0.1, 0.05)}
+assert(e1[2] > e1[1] + 0.1 and e1[2] > e1[3], "emerald ramp is green")
+assert(Tier.isAccentName("Triceratops horn") and Tier.Ramps.diamond, "horn parts are tinted per tier")
 assert(not Tier.inAccentRegion("nope", 0, 0, 0) and not Tier.inAccentRegion(nil, 0, 0, 0), "unknown species: no accent")
 assert(Tier.sparkleAlive(diamond, true) * 2 == Tier.sparkleAlive(diamond, false) and Tier.sparkleAlive(diamond, false) <= 12, "sparkle count bounded")
 print("lowpoly pattern tests passed")

@@ -183,7 +183,7 @@ function Texture.paint(src: buffer, weights: {number}, mask: {number}, spec: Spe
                 local px, py, pz = buffer.readu8(pos, o) / 127.5 - 1, buffer.readu8(pos, o + 1) / 127.5 - 1, buffer.readu8(pos, o + 2) / 127.5 - 1
                 if Tier.inAccentRegion(species, px, py, pz) then
                     accent = true
-                    r, g, bl = Tier.regionColor(r, g, bl, tier, Recolor.shade(r, g, bl, base), (x + y) / (2 * size), py)
+                    r, g, bl = Tier.regionColor(r, g, bl, tier, Recolor.shade(r, g, bl, base), (x + y) / (2 * size), py, px, pz)
                 end
             end
             if accent then -- horns / frill / claws / spikes painted in the tier metal or gem (base tier never gets here)

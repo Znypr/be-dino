@@ -150,9 +150,13 @@ function LowPoly.tint(container: Instance, genes: any)
                 part.Material = (Enum.Material :: any)[entry.material] or Enum.Material.Metal
                 part.Reflectance = math.min(entry.reflectance, Tier.MaxReflectance)
             else part.Material, part.Reflectance = Enum.Material.Plastic, 0 end
-            if eyeish and entry and Tier.isAccentName(part.Name) then -- claws / toes / horns are untextured parts: tint them in the tier metal / gem
+            if entry and Tier.isAccentName(part.Name) and (eyeish or not (string.find(string.lower(part.Name), "frill", 1, true) or string.find(string.lower(part.Name), "crest", 1, true))) then -- claws / toes / horns are untextured parts: tint them in the tier metal / gem
                 local c = entry.accent
                 part.Color = Color3.fromRGB(c[1], c[2], c[3])
+                part.Material = (Enum.Material :: any)[entry.material] or Enum.Material.Metal
+                part.Reflectance = Tier.MaxReflectance
+                if eyeish then continue end
+                part.TextureID = ""
                 continue
             end
             if eyeish or not spec then part.Color = Color3.new(1, 1, 1) continue end
