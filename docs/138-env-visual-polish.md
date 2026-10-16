@@ -14,9 +14,11 @@ The terrain colour (`BiomeMap.Colors`, `SetMaterialColor`) multiplies the base a
 
 | Candidate | RGB | S / V | Why |
 |---|---|---|---|
-| **A (default in code)** | 118,164,72 | .56 / .64 | Lush warm yellow-green: blue pulled to 72, green clearly leads, brightness a little below the old 170 because the built-in albedo is lighter than the dark Meadow map. |
+| A | 118,164,72 | .56 / .64 | Lush warm yellow-green: blue pulled to 72, green clearly leads, brightness a little below the old 170 because the built-in albedo is lighter than the dark Meadow map. |
 | B | 102,150,60 | .60 / .59 | Deeper and richer; best if A still looks bright or minty next to the trees, and best for dino contrast. |
-| C | 132,166,68 | .59 / .65 | Sunnier, closest to the old look (132,170,84) but with the grey taken out; best if A reads too cool. |
+| **C (owner pick 2026-10-16, in code)** | 132,166,68 | .59 / .65 | Sunnier, closest to the old look (132,170,84) but with the grey taken out. |
+
+Studio A/B (lead, 2026-10-16, Future lighting, quality 21, clear weather, same camera): built-in Grass removes the dark waves in all three candidates. Evidence: docs/evidence/2026-10-16-env/ (1-before, 2-after-pr303 round 1, 3-builtin-grass-control, 4/5/6 = A/B/C).
 
 LeafyGrass (used in patches near the spawn meadow; it showed as dark teal): default 88,132,62 (S .53, V .52), alternatives 76,124,60 (deeper) and 100,138,66 (lighter). Quick A/B in Studio: `workspace.Terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(...))`. Once chosen, change only `BiomeMap.Colors` (and the asserts in `tools/verify_env_polish.py`).
 
@@ -26,7 +28,7 @@ Because the ground now needs to read lush, part of the round 1 desaturation was 
 | Area | Property | Old | New |
 |---|---|---|---|
 | Grass material | MaterialService GrassName | BeDino_Meadow | unset (built-in Grass); variant kept, unbound |
-| Terrain colour | `BiomeMap.Colors.Grass` | 132,170,84 | 118,164,72 (candidate A) |
+| Terrain colour | `BiomeMap.Colors.Grass` | 132,170,84 | 132,166,68 (candidate C, owner pick) |
 | Terrain colour | `BiomeMap.Colors.LeafyGrass` | 62,124,78 | 88,132,62 |
 | Foliage | `WorldGeneratedMeshes.Tone` (SurfaceAppearance.Color, once per mesh template) | none (white) | broadleaf, birch, jungle giant 0.94/0.92/0.80; palm 0.95/0.93/0.84; pine 0.95/0.94/0.86; bush 0.94/0.92/0.82 |
 | Foliage (kit meshes) | `BiomePlacement.BiomeWarmth` meadow / fern | 1,1,.95 / .95,1,.95 | 1,.97,.93 / .96,.98,.93 |
