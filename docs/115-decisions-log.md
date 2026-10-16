@@ -57,3 +57,4 @@ Extracted from the kanban owner log, AGENTS.md, docs and the lead sessions. "LEA
 
 ## 2026-10-16 (night): eggs per run
 - OWNER: a normal 5-minute run should give about 15 run eggs. `FoodCatchRate` is now 12/500 (PROVISIONAL, BD-418, [119](119-catch-rate-15-per-run.md)); 4/500 and 40/500 are HISTORICAL. Per-run crystals, XP and nest frequency are kept the same per food. Growth (`GrowthPerFood`, size only) is untouched. Needs a Studio food-per-minute measurement.
+- OWNER (2026-10-16): the Balloon skin (defeat = pops and flutters away softly) is a **Robux skin**, like Bricks, Clay and Plushy. Answers docs/116 Q5 option (a). Release stays behind the Robux release flags until tested; no art upload is needed (procedural skin). Tracked in [120](120-pending-owner-uploads-checklist.md).

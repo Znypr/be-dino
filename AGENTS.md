@@ -4,6 +4,9 @@
 
 Read this file before interpreting reward requests, editing game-design documents, or changing game economy code. Source of truth for **owner's intended target**: [docs/09-reward-economy.md](docs/09-reward-economy.md), **2026-10-08 Owner-approved target**, and [docs/03-game-design.md](docs/03-game-design.md). [docs/07-kanban.md](docs/07-kanban.md) is the sole task/acceptance tracker.
 
+## Generated build files (BD-419)
+`build/BeDino-Build<current>.rbxlx` and its `.manifest.json` are **not committed**; never force-add them or include them in PRs. Run `python tools/build.py` locally when you need them (tests build in memory; `verify_release.py` needs the file, so build first). CI builds, verifies and uploads them as the `BeDino-current-build` artifact. Older Build016-019 files stay tracked as history.
+
 ## Game vision
 Be Dino! is a Roblox dinosaur survival, growth, collection, and hatching game. In a run, a player collects food, grows, hunts/avoids predators, and eventually settles the run. The exciting payoff is watching **the eggs actually caught during that run** hatch **one at a time**, progressing from ordinary to exceptional discoveries. Runs also earn crystals and *separate bonus egg nests*. Duplicates, genetics, condition, event mutations, Shiny/BIG, collection, fusion, shops, and new playable dinosaurs give long-term progression.
 

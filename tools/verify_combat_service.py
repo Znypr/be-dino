@@ -135,6 +135,17 @@ local tt=2
 while u.state.phase=="Alive" do tt+=1; R.attack(w8,v.key,tt,P(0,0,0),FWD,{{key=u.key,pos=P(0,0,-3)}}) end
 assert(R.pendingHpByte(w8,u.key,tt)==0,"defeat byte sent at once")
 assert(w8.defeatCount==1)
+-- 7b. BD-363: expired defeat lists of other users are pruned (table cannot grow forever), live ones and the shield stay
+do
+ local wp=R.new(true)
+ for u=1,50 do R.recordDefeat(wp,u,0) end
+ R.recordDefeat(wp,1000,Cfg.FriendShieldWindowSeconds+5)
+ local n=0 for _ in wp.defeats do n+=1 end
+ assert(n==1,"stale users pruned, got "..n)
+ R.recordDefeat(wp,1001,Cfg.FriendShieldWindowSeconds+6)
+ R.recordDefeat(wp,1000,Cfg.FriendShieldWindowSeconds+7)
+ assert(wp.defeats["1000"] and wp.defeats["1001"] and #wp.defeats["1000"]==2,"live lists kept")
+end
 -- 8. friend shield: three defeats inside 3 min -> next run joins with extra protection; a fresh player gets none
 local w9=world()
 for i=1,3 do R.recordDefeat(w9,7,i*10) end

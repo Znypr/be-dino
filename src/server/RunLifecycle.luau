@@ -56,7 +56,9 @@ function RunLifecycle.begin(player: Player, character: Model)
     if character:GetAttribute("RunId") ~= nil then return end
     local newRunId = HttpService:GenerateGUID(false)
     character:SetAttribute("RunId", newRunId)
-    runStartedAt[newRunId] = workspace:GetServerTimeNow()
+    local startedNow = workspace:GetServerTimeNow()
+    for id, at in runStartedAt do if startedNow - at > 6 * 3600 then runStartedAt[id] = nil end end -- BD-363: a run that never settled cannot pin its entry forever
+    runStartedAt[newRunId] = startedNow
     player:SetAttribute("Location", "Island")
     character:SetAttribute("RunState", "Active")
     character:SetAttribute("GrowthScore", 0)
