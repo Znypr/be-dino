@@ -999,11 +999,11 @@ render=function(name: string)
         -- BD-052: one confirmation, no stay-still channel; the server settles through tryEnd.
         heading.Text,header.BackgroundColor3="Return to Sanctuary?",C.red
         art(body,"home",36,28,214)
-        label(body,"Your current run will end and rewards will be banked.",300,8,500,100,28,C.gold)
+        label(body,require(Shared.FtueCopy).homeConfirmLine,300,8,500,100,28,C.gold)
         local character=player.Character
         local catches=if character then character:GetAttribute("CatchScore") or 0 else 0
         local growth=if character then character:GetAttribute("GrowthScore") or 0 else 0
-        label(body,string.format("Banking %d catches  •  %d growth",catches,math.floor(growth)),300,116,500,60,22)
+        label(body,require(Shared.FtueCopy).homeConfirmTotals(catches,growth),300,116,500,60,22)
         local buttonHeight=if touchMode() then math.max(68,46/viewportScale()) else 68
         button(body,"RETURN",300,396-buttonHeight,244,buttonHeight,C.accent,function()
             local current=player.Character
@@ -1032,7 +1032,7 @@ render=function(name: string)
         if oops>0 then label(body,"Your eggs are safe!",30,0,760,30,24,C.blue) end
         art(body,"trophy",24,42+oops,240)
         label(body,"Growth  "..math.floor(num("LastRunGrowthScore")),300,18+oops,500,60,34,C.accent)
-        label(body,"Catches  "..num("LastRunCatchScore"),300,93+oops,500,60,34,C.blue)
+        label(body,require(Shared.FtueCopy).runCompleteEggsLabel.."  "..num("LastRunCatchScore"),300,93+oops,500,60,34,C.blue)
         label(body,str("LastRewardText","Saving rewards..."),290,168+oops,510,100,24,C.gold)
         label(body,"+"..num("LastRunCrystals").." Crystals • Level "..num("AccountLevel"),30,302,760,40,21)
         local hasEggs=str("NextChestId")~="" or num("QueuedEggsWaiting")>0 or #decoded("NestsJson","[]")>0
@@ -1079,7 +1079,7 @@ render=function(name: string)
         label(body,string.format("Eat 500 food to earn %d eggs. Some weather gives more!",math.floor(500*Config.FoodCatchRate+.5)),18,316,788,72,23)
     elseif name=="tutorial" then
         heading.Text,header.BackgroundColor3="Welcome to Be Dino!",C.blue
-        local steps={{"1","EAT & GROW","Find small food clusters across the island."},{"2","JUMP & EXPLORE","Space to jump, E to leap. Buttons on mobile."},{"3","BANK & HATCH","Return to sanctuary to bank catches and eggs."}}
+        local steps=require(Shared.FtueCopy).tutorialSteps
         for i,step in steps do
             local card=box(body,(i-1)*276,0,264,278,C.card,24)
             local stepColor=({C.accent,C.blue,C.gold})[i]
