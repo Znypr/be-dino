@@ -372652,6 +372652,113 @@ function Pose.sample(role: string, side: number, lead: boolean, t: number, phase
     out.dz = math.clamp(finite(dz) * a, -Pose.MaxOffset, Pose.MaxOffset)
     return out
 end
+-- BD-233 spike: jump / leap / land / water-surge actions. Phases: crouch -&gt; push (stretch) -&gt; air (tuck, held until the dino lands) -&gt; land (squash);
+-- Water has no air time: a single "surge" (forward dash). Everything is calm and short (docs/87), absolute offsets from the REST pose, bounded.
+Pose.Phases = {"crouch", "push", "air", "land", "surge"}
+Pose.TuckTime = 0.18 -- seconds for the airborne tuck to settle
+local CLASS_SCALE = { -- q = crouch/squash depth, s = push-off stretch, t = airborne tuck, l = landing squash
+    Ground = {q = 1, s = 1, t = 1, l = 1}, Armored = {q = 1.3, s = 0.4, t = 0.5, l = 1.5},
+    Fly = {q = 0.5, s = 0.7, t = 0.8, l = 0.6}, Water = {q = 0, s = 0, t = 0, l = 0}}
+-- Seconds each timed phase lasts (air has no length: it lasts until landing). aggr: 0 jump, 1 leap.
+function Pose.duration(phase: string, aggr: number, class: string?): number
+    local armored, fly = class == "Armored", class == "Fly"
+    if phase == "crouch" then return if armored then 0.12 else 0.08 end
+    if phase == "push" then return if armored then 0.16 else 0.12 end
+    if phase == "land" then return if armored then 0.42 elseif fly then 0.45 else 0.30 end
+    if phase == "surge" then return 0.40 + 0.15 * math.clamp(finite(aggr), 0, 1) end
+    return 0
+end
+local function ease(u: number): number u = math.clamp(u, 0, 1) return u * u * (3 - 2 * u) end
+-- How strongly the action replaces the idle/walk pose: 0 at the start and at the very end so the hand-over is seamless.
+function Pose.actionWeight(phase: string, p: number): number
+    p = math.clamp(finite(p), 0, 1)
+    if phase == "crouch" then return ease(p) end
+    if phase == "land" then return 1 - ease(math.clamp((p - 0.5) / 0.5, 0, 1)) end
+    if phase == "surge" then return ease(p / 0.15) * (1 - ease((p - 0.7) / 0.3)) end
+    return 1
+end
+-- ctx: phase, p (0..1 progress of a timed phase), t (seconds since the phase began), aggr (0 jump .. 1 leap), carry (0..1 tuck amount when landing began).
+export type Ctx = {phase: string, p: number, t: number, aggr: number, carry: number}
+function Pose.newCtx(): Ctx return {phase = "crouch", p = 0, t = 0, aggr = 0, carry = 0} end
+function Pose.sampleAction(role: string, side: number, lead: boolean, ctx: Ctx, amp: number, out: Out, class: string?): Out
+    local a = math.clamp(finite(amp), 0, 1)
+    local s = if side &lt; 0 then -1 else 1
+    local ph = ctx.phase
+    local p, t = math.clamp(finite(ctx.p), 0, 1), math.max(0, finite(ctx.t))
+    local aggr = math.clamp(finite(ctx.aggr), 0, 1)
+    local cls = CLASS_SCALE[class or "Ground"] or CLASS_SCALE.Ground
+    local q, st, tk, W, flap = 0, 0, 0, 0, 0 -- squash, stretch, tuck, wings open (0..1), wing flap
+    local lunge, snap, kick = 0, 0, 0
+    if class == "Water" then
+        if ph == "surge" then
+            lunge = math.sin(math.pi * p)
+            snap = math.sin(math.pi * math.clamp((p - 0.3) / 0.4, 0, 1)) * aggr
+            kick = math.sin(2 * math.pi * p) * math.sin(math.pi * p)
+        end
+    else
+        if ph == "crouch" then q = ease(p) * cls.q
+        elseif ph == "push" then q = (1 - ease(p)) * cls.q st = ease(p) * cls.s
+        elseif ph == "air" then
+            local e = ease(t / Pose.TuckTime)
+            st, tk = (1 - e) * cls.s, e * cls.t
+        elseif ph == "land" then
+            local c = math.clamp(finite(ctx.carry), 0, 1)
+            local d = ease(p / 0.25)
+            tk = c * (1 - d) * cls.t
+            q = d * (1 - ease((p - 0.25) / 0.75)) * cls.l
+        end
+        if class == "Fly" then
+            if ph == "push" then W = ease(p) elseif ph == "air" then W = 1 elseif ph == "land" then W = 1 - ease(p) end
+            if ph == "air" then flap = (1 - 0.8 * aggr) * math.sin(t * 11) * 0.35 -- a leap glides on nearly still wings
+            elseif ph == "land" then flap = math.sin(t * 16) * 0.3 * (1 - p) end -- soft flutter landing
+        end
+    end
+    local L = 1 + aggr
+    local pitch, roll, yaw, dy, dz = 0, 0, 0, 0, 0
+    if role == "body" then
+        dy = -0.05 * q + 0.03 * st - 0.01 * lunge
+        pitch = -0.05 * q + (0.10 + 0.06 * aggr) * st + 0.02 * tk - 0.06 * lunge
+        dz = -0.02 * st * L - 0.045 * lunge * (1 + 0.6 * aggr)
+    elseif role == "head" or role == "neck" then
+        dy = -0.02 * q
+        pitch = 0.18 * st * (1 + 0.5 * aggr) - 0.08 * tk + 0.10 * lunge - 0.35 * snap
+        dz = -0.03 * st * L - 0.03 * lunge * L
+    elseif role == "tail" then
+        pitch = 0.15 * q - 0.20 * st + 0.12 * tk + 0.20 * lunge
+        yaw = 0.45 * (1 + 0.5 * aggr) * kick
+    elseif role == "leg" then
+        pitch = 0.55 * q - 0.45 * st + 0.70 * tk
+        dy = 0.01 * q
+    elseif role == "arm" then
+        pitch = 0.20 * q - 0.50 * st + 0.50 * tk
+    elseif role == "flipper" then
+        pitch = 0.5 * lunge
+        roll = s * 0.3 * lunge
+    end
+    local fold = 0
+    if role == "wing" then
+        fold = -s * Pose.FoldAngle
+        local open = fold * (1 - W) + W * (s * 0.15 + s * flap) -- from the folded rest to open; flaps while open
+        roll = open - fold -- the fold itself is posture and stays under Reduce Motion
+        pitch = -0.1 * W
+    end
+    out.pitch = math.clamp(finite(pitch) * a, -Pose.MaxAngle, Pose.MaxAngle)
+    out.roll = math.clamp(finite(roll) * a + fold, -Pose.MaxFold, Pose.MaxFold)
+    out.yaw = math.clamp(finite(yaw) * a, -Pose.MaxAngle, Pose.MaxAngle)
+    out.dy = math.clamp(finite(dy) * a, -Pose.MaxOffset, Pose.MaxOffset)
+    out.dz = math.clamp(finite(dz) * a, -Pose.MaxOffset, Pose.MaxOffset)
+    return out
+end
+-- out = base + (action - base) * k, written into base (idle/walk pose -&gt; action pose).
+function Pose.blend(base: Out, action: Out, k: number): Out
+    k = math.clamp(finite(k), 0, 1)
+    base.pitch += (action.pitch - base.pitch) * k
+    base.roll += (action.roll - base.roll) * k
+    base.yaw += (action.yaw - base.yaw) * k
+    base.dy += (action.dy - base.dy) * k
+    base.dz += (action.dz - base.dz) * k
+    return base
+end
 return Pose
 </ProtectedString>
         </Properties>
@@ -557785,8 +557892,9 @@ if player.Character then task.spawn(bind, player.Character) end
           <Properties>
             <string name="Name">LowPolyAnimator</string>
             <ProtectedString name="Source">--!strict
--- BD-234 spike: procedural idle/walk for the low-poly dinos (Config.LowPolyDinos). Pose math: Shared/LowPolyPose (pure).
+-- BD-234/BD-233 spike: procedural idle/walk + jump/leap/land/water-surge for the low-poly dinos (Config.LowPolyDinos). Pose math: Shared/LowPolyPose (pure).
 -- Writes Weld.C1 (the animation offset) so DinoMotion's C0 poses (eat, jump squash/stretch, landing) keep working on top.
+-- Jump/leap state is derived client-side (humanoid state/velocity, LeapPredictAt/LeapUntil attributes); the server rules are untouched.
 -- Respects Reduce Motion (Theme.MotionEnabled). Remote dinos are animated at 20 Hz within 80 studs only.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -557794,11 +557902,104 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Pose = require(Shared.LowPolyPose)
 local LowPoly = require(Shared.LowPolyDinos)
 local Theme = require(Shared.UITheme)
+local EffectAssets = require(Shared.EffectAssets)
 if not LowPoly.enabled() then return end
 
 local RANGE, REMOTE_STEP, RUN_SPEED = 80, 1 / 20, 24
 local rigs: {[Model]: any} = {}
-local out = Pose.new()
+local out, actOut, ctx = Pose.new(), Pose.new(), Pose.newCtx()
+
+-- Small splash puff for the Water surge: the existing smoke sheet (alpha), 3 pooled emitters, none under Reduce Motion.
+local splash: {ParticleEmitter} = {}
+local splashAt: {Attachment} = {}
+local nextSplash = 0
+local function splashPuff(position: Vector3, count: number, scale: number)
+    if #splash == 0 then
+        local sheet = EffectAssets.isSheet("smokeSheet") and not EffectAssets.isAdditive("smokeSheet")
+        for i = 1, 3 do
+            local at = Instance.new("Attachment")
+            at.Name = "LowPolySplash"
+            at.Parent = workspace.Terrain
+            local e = Instance.new("ParticleEmitter")
+            e.Enabled = false
+            e.Rate = 0
+            e.Texture = if sheet then EffectAssets.resolve("smokeSheet") else EffectAssets.Builtin.smoke
+            e.FlipbookLayout = if sheet then Enum.ParticleFlipbookLayout.Grid4x4 else Enum.ParticleFlipbookLayout.None
+            if sheet then e.FlipbookMode = Enum.ParticleFlipbookMode.OneShot end
+            e.Lifetime = NumberRange.new(0.4, 0.7)
+            e.Speed = NumberRange.new(3, 6)
+            e.SpreadAngle = Vector2.new(60, 60)
+            e.EmissionDirection = Enum.NormalId.Top
+            e.Color = ColorSequence.new(Color3.fromRGB(205, 235, 255))
+            e.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 1)})
+            e.Parent = at
+            table.insert(splash, e)
+            table.insert(splashAt, at)
+        end
+    end
+    nextSplash = nextSplash % 3 + 1
+    local e = splash[nextSplash]
+    e.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.5 * scale), NumberSequenceKeypoint.new(1, 1.4 * scale)})
+    splashAt[nextSplash].WorldPosition = position
+    e:Emit(count)
+end
+
+local function num(instance: Instance, name: string): number
+    local v = instance:GetAttribute(name)
+    return if typeof(v) == "number" then v else 0
+end
+
+local function startPhase(rig: any, phase: string, now: number)
+    rig.act, rig.actAt = phase, now
+end
+
+-- Derives the action state from humanoid state/velocity and the leap attributes. Returns nothing; writes rig.act/rig.aggr.
+local function updateAction(rig: any, now: number)
+    local character, root = rig.character, rig.root
+    local hum = rig.humanoid
+    if not hum or not hum.Parent then hum = character:FindFirstChildOfClass("Humanoid") rig.humanoid = hum end
+    if not hum or hum.Health &lt;= 0 then rig.act = nil return end
+    -- leap signal: the local prediction stamp, or the server's LeapUntil changing (replicated to remote players)
+    local predict, untilAt = num(character, "LeapPredictAt"), num(character, "LeapUntil")
+    if (predict ~= rig.lastPredict and predict &gt; 0) or (untilAt ~= rig.lastUntil and untilAt &gt; 0) then rig.leapAt = now end
+    rig.lastPredict, rig.lastUntil = predict, untilAt
+    local state = hum:GetState()
+    local jumpKey = hum.Jump or state == Enum.HumanoidStateType.Jumping
+    local jumpEdge = jumpKey and not rig.jumpHeld
+    rig.jumpHeld = jumpKey
+    local leaping = now - rig.leapAt &lt; 0.7
+    if rig.class == "Water" then -- no air time: the jump / leap button is a forward surge
+        if rig.act == "surge" and now - rig.actAt &gt;= Pose.duration("surge", rig.aggr, "Water") then rig.act = nil end
+        if rig.act == nil and (jumpEdge or (leaping and rig.leapAt ~= rig.surgeLeap)) then
+            rig.aggr = if leaping then 1 else 0
+            rig.surgeLeap = rig.leapAt
+            startPhase(rig, "surge", now)
+            if rig.amp &gt; 0 then
+                local scale = (if leaping then 1.6 else 1) * math.clamp(rig.height / 4, 0.6, 2)
+                splashPuff(root.Position - Vector3.new(0, rig.height * 0.3, 0), if leaping then 9 else 5, scale)
+            end
+        end
+        return
+    end
+    local airborne = state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall
+        or (hum.FloorMaterial == Enum.Material.Air and math.abs(root.AssemblyLinearVelocity.Y) &gt; 3)
+    local ph = rig.act
+    if airborne then
+        if ph == nil or ph == "land" then
+            rig.aggr = if leaping then 1 else 0
+            if state == Enum.HumanoidStateType.Freefall and not jumpKey and not leaping then startPhase(rig, "air", now) -- stepped off a ledge: no crouch
+            else startPhase(rig, "crouch", now) end
+        elseif ph ~= "air" and now - rig.actAt &gt;= Pose.duration(ph, rig.aggr, rig.class) then
+            startPhase(rig, if ph == "crouch" then "push" else "air", now)
+        end
+        if leaping then rig.aggr = 1 end
+    elseif ph ~= nil and ph ~= "land" then
+        rig.carry = if ph == "air" then math.clamp((now - rig.actAt) / Pose.TuckTime, 0, 1) else 0
+        startPhase(rig, "land", now)
+    elseif ph == "land" and now - rig.actAt &gt;= Pose.duration("land", rig.aggr, rig.class) then
+        rig.act = nil
+    end
+end
 
 local function pivotFor(role: string, size: Vector3, side: number): Vector3
     if role == "wing" or role == "flipper" then return Vector3.new(-side * size.X / 2, 0, 0) end -- inner edge, at the body
@@ -557829,10 +558030,22 @@ local function apply(rig: any, now: number, dt: number, amp: number)
     rig.speed = rig.speed + (speed01 - rig.speed) * math.min(1, dt * 8) -- ease in/out
     rig.phase = (rig.phase + dt * Pose.stepRate(rig.speed) * (if rig.speed &gt; 0.01 then 1 else 0)) % (2 * math.pi * 8)
     local height = rig.height
+    rig.amp = amp
+    if amp &gt; 0 then updateAction(rig, now) else rig.act = nil end
+    local phase = rig.act
+    local k = 0
+    if phase then
+        local elapsed = now - rig.actAt
+        local dur = Pose.duration(phase, rig.aggr, rig.class)
+        ctx.phase, ctx.t, ctx.aggr, ctx.carry = phase, elapsed, rig.aggr, rig.carry
+        ctx.p = if dur &gt; 0 then math.clamp(elapsed / dur, 0, 1) else 0
+        k = Pose.actionWeight(phase, ctx.p)
+    end
     for _, item in rig.parts do
         local part = item.part :: MeshPart
         if not part.Parent then continue end
         Pose.sample(item.role, item.side, item.lead, now + rig.seed, rig.phase, rig.speed, amp, out, rig.class)
+        if phase then Pose.blend(out, Pose.sampleAction(item.role, item.side, item.lead, ctx, amp, actOut, rig.class), k) end
         if amp == 0 and item.role ~= "wing" then
             item.weld.C1 = CFrame.identity
         else
@@ -557867,7 +558080,7 @@ RunService.Heartbeat:Connect(function(dt)
         if not rig or rig.visual ~= visual then
             local _, size = visual:GetBoundingBox()
             rig = {visual = visual, root = root, parts = collect(visual), phase = 0, speed = 0, acc = 0,
-                height = math.max(size.Y, 1), class = visual:GetAttribute("LPClass"), seed = math.random() * 10}
+                height = math.max(size.Y, 1), aggr = 0, carry = 0, leapAt = -10, lastPredict = 0, lastUntil = 0, jumpHeld = false, surgeLeap = -1, amp = 1, class = visual:GetAttribute("LPClass"), seed = math.random() * 10}
             rigs[character] = rig
         end
         if player == Players.LocalPlayer then

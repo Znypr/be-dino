@@ -77,4 +77,111 @@ function Pose.sample(role: string, side: number, lead: boolean, t: number, phase
     out.dz = math.clamp(finite(dz) * a, -Pose.MaxOffset, Pose.MaxOffset)
     return out
 end
+-- BD-233 spike: jump / leap / land / water-surge actions. Phases: crouch -> push (stretch) -> air (tuck, held until the dino lands) -> land (squash);
+-- Water has no air time: a single "surge" (forward dash). Everything is calm and short (docs/87), absolute offsets from the REST pose, bounded.
+Pose.Phases = {"crouch", "push", "air", "land", "surge"}
+Pose.TuckTime = 0.18 -- seconds for the airborne tuck to settle
+local CLASS_SCALE = { -- q = crouch/squash depth, s = push-off stretch, t = airborne tuck, l = landing squash
+    Ground = {q = 1, s = 1, t = 1, l = 1}, Armored = {q = 1.3, s = 0.4, t = 0.5, l = 1.5},
+    Fly = {q = 0.5, s = 0.7, t = 0.8, l = 0.6}, Water = {q = 0, s = 0, t = 0, l = 0}}
+-- Seconds each timed phase lasts (air has no length: it lasts until landing). aggr: 0 jump, 1 leap.
+function Pose.duration(phase: string, aggr: number, class: string?): number
+    local armored, fly = class == "Armored", class == "Fly"
+    if phase == "crouch" then return if armored then 0.12 else 0.08 end
+    if phase == "push" then return if armored then 0.16 else 0.12 end
+    if phase == "land" then return if armored then 0.42 elseif fly then 0.45 else 0.30 end
+    if phase == "surge" then return 0.40 + 0.15 * math.clamp(finite(aggr), 0, 1) end
+    return 0
+end
+local function ease(u: number): number u = math.clamp(u, 0, 1) return u * u * (3 - 2 * u) end
+-- How strongly the action replaces the idle/walk pose: 0 at the start and at the very end so the hand-over is seamless.
+function Pose.actionWeight(phase: string, p: number): number
+    p = math.clamp(finite(p), 0, 1)
+    if phase == "crouch" then return ease(p) end
+    if phase == "land" then return 1 - ease(math.clamp((p - 0.5) / 0.5, 0, 1)) end
+    if phase == "surge" then return ease(p / 0.15) * (1 - ease((p - 0.7) / 0.3)) end
+    return 1
+end
+-- ctx: phase, p (0..1 progress of a timed phase), t (seconds since the phase began), aggr (0 jump .. 1 leap), carry (0..1 tuck amount when landing began).
+export type Ctx = {phase: string, p: number, t: number, aggr: number, carry: number}
+function Pose.newCtx(): Ctx return {phase = "crouch", p = 0, t = 0, aggr = 0, carry = 0} end
+function Pose.sampleAction(role: string, side: number, lead: boolean, ctx: Ctx, amp: number, out: Out, class: string?): Out
+    local a = math.clamp(finite(amp), 0, 1)
+    local s = if side < 0 then -1 else 1
+    local ph = ctx.phase
+    local p, t = math.clamp(finite(ctx.p), 0, 1), math.max(0, finite(ctx.t))
+    local aggr = math.clamp(finite(ctx.aggr), 0, 1)
+    local cls = CLASS_SCALE[class or "Ground"] or CLASS_SCALE.Ground
+    local q, st, tk, W, flap = 0, 0, 0, 0, 0 -- squash, stretch, tuck, wings open (0..1), wing flap
+    local lunge, snap, kick = 0, 0, 0
+    if class == "Water" then
+        if ph == "surge" then
+            lunge = math.sin(math.pi * p)
+            snap = math.sin(math.pi * math.clamp((p - 0.3) / 0.4, 0, 1)) * aggr
+            kick = math.sin(2 * math.pi * p) * math.sin(math.pi * p)
+        end
+    else
+        if ph == "crouch" then q = ease(p) * cls.q
+        elseif ph == "push" then q = (1 - ease(p)) * cls.q st = ease(p) * cls.s
+        elseif ph == "air" then
+            local e = ease(t / Pose.TuckTime)
+            st, tk = (1 - e) * cls.s, e * cls.t
+        elseif ph == "land" then
+            local c = math.clamp(finite(ctx.carry), 0, 1)
+            local d = ease(p / 0.25)
+            tk = c * (1 - d) * cls.t
+            q = d * (1 - ease((p - 0.25) / 0.75)) * cls.l
+        end
+        if class == "Fly" then
+            if ph == "push" then W = ease(p) elseif ph == "air" then W = 1 elseif ph == "land" then W = 1 - ease(p) end
+            if ph == "air" then flap = (1 - 0.8 * aggr) * math.sin(t * 11) * 0.35 -- a leap glides on nearly still wings
+            elseif ph == "land" then flap = math.sin(t * 16) * 0.3 * (1 - p) end -- soft flutter landing
+        end
+    end
+    local L = 1 + aggr
+    local pitch, roll, yaw, dy, dz = 0, 0, 0, 0, 0
+    if role == "body" then
+        dy = -0.05 * q + 0.03 * st - 0.01 * lunge
+        pitch = -0.05 * q + (0.10 + 0.06 * aggr) * st + 0.02 * tk - 0.06 * lunge
+        dz = -0.02 * st * L - 0.045 * lunge * (1 + 0.6 * aggr)
+    elseif role == "head" or role == "neck" then
+        dy = -0.02 * q
+        pitch = 0.18 * st * (1 + 0.5 * aggr) - 0.08 * tk + 0.10 * lunge - 0.35 * snap
+        dz = -0.03 * st * L - 0.03 * lunge * L
+    elseif role == "tail" then
+        pitch = 0.15 * q - 0.20 * st + 0.12 * tk + 0.20 * lunge
+        yaw = 0.45 * (1 + 0.5 * aggr) * kick
+    elseif role == "leg" then
+        pitch = 0.55 * q - 0.45 * st + 0.70 * tk
+        dy = 0.01 * q
+    elseif role == "arm" then
+        pitch = 0.20 * q - 0.50 * st + 0.50 * tk
+    elseif role == "flipper" then
+        pitch = 0.5 * lunge
+        roll = s * 0.3 * lunge
+    end
+    local fold = 0
+    if role == "wing" then
+        fold = -s * Pose.FoldAngle
+        local open = fold * (1 - W) + W * (s * 0.15 + s * flap) -- from the folded rest to open; flaps while open
+        roll = open - fold -- the fold itself is posture and stays under Reduce Motion
+        pitch = -0.1 * W
+    end
+    out.pitch = math.clamp(finite(pitch) * a, -Pose.MaxAngle, Pose.MaxAngle)
+    out.roll = math.clamp(finite(roll) * a + fold, -Pose.MaxFold, Pose.MaxFold)
+    out.yaw = math.clamp(finite(yaw) * a, -Pose.MaxAngle, Pose.MaxAngle)
+    out.dy = math.clamp(finite(dy) * a, -Pose.MaxOffset, Pose.MaxOffset)
+    out.dz = math.clamp(finite(dz) * a, -Pose.MaxOffset, Pose.MaxOffset)
+    return out
+end
+-- out = base + (action - base) * k, written into base (idle/walk pose -> action pose).
+function Pose.blend(base: Out, action: Out, k: number): Out
+    k = math.clamp(finite(k), 0, 1)
+    base.pitch += (action.pitch - base.pitch) * k
+    base.roll += (action.roll - base.roll) * k
+    base.yaw += (action.yaw - base.yaw) * k
+    base.dy += (action.dy - base.dy) * k
+    base.dz += (action.dz - base.dz) * k
+    return base
+end
 return Pose
