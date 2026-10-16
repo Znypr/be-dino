@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(script.Parent.Config)
 local Assets = require(script.Parent.LowPolyDinoAssets)
 local Genetics = require(script.Parent.EggGenetics)
+local Texture = require(script.Parent.LowPolyTexture)
 local LowPoly = {}
 LowPoly.FolderName = "LowPolyDinoModels"
 
@@ -28,19 +29,29 @@ local function template(speciesId: string): Model?
     local item = if folder then folder:FindFirstChild(speciesId) else nil
     return if item and item:IsA("Model") then item else nil
 end
--- Colours on the flat facets. Body = the dino's blended gene colour; head/tail/limbs lean to the secondary colour so both
--- genes show. Matte (docs/173): no gloss, no texture. Spots/stripes (PatternGenes needs per-species UV data) are NOT on low-poly yet.
+-- Gene colours (docs/87 low-poly language: matte, solid black eyes, cream belly). The model's own texture is KEPT, so eyes/belly never
+-- disappear: it is shown immediately, then each part's texture is swapped for a gene-coloured bake (LowPolyTexture/LowPolyRecolor) that
+-- only recolours body-colour pixels. If the bake is unavailable the original species-coloured texture simply stays. Body = blended gene
+-- colour; head/tail/limbs lean to the secondary colour. Spots/stripes (PatternGenes needs per-species UV data) are NOT on low-poly yet.
 function LowPoly.tint(container: Instance, genes: any)
     if not genes or not Genetics.valid(genes) then return end
     local base = Genetics.tint(genes)
     local second = Genetics.color(genes.secondaryColorId).rgb
     local accent = base:Lerp(Color3.fromRGB(second[1], second[2], second[3]), 0.45)
+    local species = tostring(container:GetAttribute("LPSpecies") or container.Name)
     for _, part in container:GetDescendants() do
         if part:IsA("MeshPart") then
-            part.TextureID = ""
-            part.TextureContent = Content.none
-            part.Color = if part:GetAttribute("LPRole") == "body" then base else accent
+            part.Color = Color3.new(1, 1, 1)
             part.Material, part.Reflectance = Enum.Material.Plastic, 0
+            local textureId = part:GetAttribute("LPTexture")
+            if type(textureId) ~= "string" or textureId == "" then continue end
+            local color = if part:GetAttribute("LPRole") == "body" then base else accent
+            local key = Texture.key(textureId, color)
+            part:SetAttribute("LPTintKey", key)
+            task.spawn(function()
+                local content = Texture.bake(textureId, species, color)
+                if content and part.Parent and part:GetAttribute("LPTintKey") == key then part.TextureContent = content end
+            end)
         end
     end
 end
@@ -63,6 +74,7 @@ function LowPoly.clone(speciesId: string, genes: any?): Model?
     for _, part in parts do
         local role = LowPoly.roleOf(part.Name)
         part:SetAttribute("LPRole", role or "body")
+        part:SetAttribute("LPTexture", part.TextureID) -- the model's own texture (eyes, belly), kept as the fallback
         part:SetAttribute("LPSide", if part.Position.X < box.Position.X then -1 else 1)
         part:SetAttribute("LPLead", part.Position.Z < bodyZ)
         part.CanCollide, part.CanTouch, part.CanQuery, part.Massless = false, false, false, true
@@ -71,6 +83,7 @@ function LowPoly.clone(speciesId: string, genes: any?): Model?
     end
     copy.WorldPivot = CFrame.new()
     copy.Name = speciesId
+    copy:SetAttribute("LPSpecies", speciesId)
     copy:SetAttribute("LowPoly", true)
     copy:SetAttribute("UploadedModelId", info.assetId)
     copy:SetAttribute("LowPolyVersion", info.version)

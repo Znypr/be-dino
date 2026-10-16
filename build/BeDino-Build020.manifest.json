@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "3b90ccde9a2d6091a13b8a8d95d2df664e31dee4002f5f723c8cdf9d1f601e29",
+  "place_sha256": "95c598e49723e05b4e84ab400839dcbe7768bfc8701081aa549694be59085e6e",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -210,8 +210,10 @@
     "src/shared/LegacyGenePatterns.luau": "dd4cc5d04f65ad4f662ede187b6d0f0c08063a8243cff074b97cbd1ad5fc7d7b",
     "src/shared/LoadGate.luau": "c1acd3fd4a3251568e3b57cb65e1c868cdaa798dfdd9b921c438cecd4d2c4f1b",
     "src/shared/LowPolyDinoAssets.luau": "d012c52dc823fc6559b494d54779f7dc878c895ef82f032fe050bae69320f090",
-    "src/shared/LowPolyDinos.luau": "1b91c4550f212f26d3d2499493643993aa9c9bdc17badbcb404d302dbf51b263",
+    "src/shared/LowPolyDinos.luau": "9db4b98eb6647941ed001f04849dcf1ff419fbd2bdf01d1944f72088c6a8bda7",
     "src/shared/LowPolyPose.luau": "eaf06de98298aa19ab51746f71533718b2d4de18e1e72b32cd7caf779aedc425",
+    "src/shared/LowPolyRecolor.luau": "0d3830bb2607ff01b59ce97444a6e140983dbf13f583d8c01417c7dfa560c188",
+    "src/shared/LowPolyTexture.luau": "75a6da8ce34ebabb1bad60f0a5ea254367106f13a261b2e049c6023b347c96c0",
     "src/shared/MeshSanity.luau": "e084704b59ae3a4d9cbfc27084d5ac5049881b38d5d468fd75cc36309c24c73c",
     "src/shared/ModelPreview.luau": "23bd8888e881158e539225bed514c4d1e62e8ddc50a0b0e1506a0d71958e1c5e",
     "src/shared/MovementEnvelope.luau": "0c6bd59b2ba2f2b7117cea4e1b714b052e63bae7954013995affd08eddeb2377",
