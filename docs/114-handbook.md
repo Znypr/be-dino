@@ -98,7 +98,7 @@ The palette sits under the place's lighting; a shared grade tames pastel props b
 ## 6. Lighting rules per place
 | Place | Rule | Source / code |
 |---|---|---|
-| Island (default) | bright daylight: ClockTime 14, Brightness 2, Ambient (130,143,148); soft distance fog, no pop-in | `Bootstrap.server.luau` 22-24, BD-213 |
+| Island (default) | bright daylight: ClockTime 14, Brightness 2, Ambient (130,143,148); **no haze in clear daylight** (owner 2026-10-16: no screenshot may look milky): Atmosphere density .1, haze .3, glare 0, no far blur, no bloom, saturation +0.08, contrast +0.04, fog starts at 220 and ends at 1100 (capped by the device cull radius), no pop-in | `Bootstrap.server.luau` 22-24, BD-213 |
 | Cave hub (Sanctuary) | **DIM, lamp-lit**: warm lamps and ceiling light shafts are the main lights; ambient (70,62,60), Brightness 1.3, exposure -0.25; at most 16 lights, shadows on the 4 strongest; **weather never affects the inside**; assets must look real and grounded in this light | OWNER 2026-10-16; `CaveLightingRules.Look`; BD-398, BD-399 |
 | Weather events | per-event grade, haze, soft fog; everything fades to neutral with `1 - Cave.amount()` inside the hall | [84](84-weather-events-v2.md), BD-383, BD-398 |
 | Volcanic biome | orange glare, heavy bloom, ash and embers, but soft visibility (no flat red wall) | [84](84-weather-events-v2.md), BD-213 |

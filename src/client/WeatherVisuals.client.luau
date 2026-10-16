@@ -859,7 +859,7 @@ RunService.Heartbeat:Connect(function(dt)
         amb=WL.scale(WL.aurora(animT,.1),.55) tint=WL.mix(WHITE,WL.aurora(animT,.35),.5) glowRgb=WL.aurora(animT,.7)
     end
     grade.TintColor=c3(WL.mix(WHITE,tint,t))
-    grade.Saturation=lerpNum(0,look.sat,t) grade.Contrast=lerpNum(0,look.contrast,t)
+    grade.Saturation=lerpNum(0,look.sat,t)+CLEAR.sat*outside*(1-t) grade.Contrast=lerpNum(0,look.contrast,t)+CLEAR.contrast*outside*(1-t)
     grade.Brightness=lerpNum(0,look.bright,t)+(flash*.5+pulse*.12)*outside
     bloom.Intensity=lerpNum(0,look.bloom,t)+flash*1.5*outside
     bloom.Threshold=lerpNum(.95,.72,t) bloom.Size=lerpNum(24,40,t)
