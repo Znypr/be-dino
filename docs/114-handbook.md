@@ -83,6 +83,10 @@ The palette sits under the place's lighting; a shared grade tames pastel props b
 | Eggs and dinos in UI | lit warmly on a stage/tile floor, never cubes | [87](87-vision-and-feel-guide.md) |
 Open: per-biome daylight rules beyond the island base are not documented (conflict C-9).
 
+### 6.1 Brightness bands and cave stone palette (owner 2026-10-16, confirmed)
+- Automatic luminance bands (mean screen luminance 0 = black, 1 = white): **cave 0.15-0.35, island 0.35-0.75**. The quality gates (docs/117, tools/qa/luminance.py) fail outside these bands.
+- Cool blue-grey stone is ACCEPTED as cave decoration (depth and contrast); warmth comes from lamps, shafts, amber crystals and warm props. Currency and shop crystals stay amber/yellow (decision 2026-10-16). BD-414/415 are resolved as "accepted, no recolour".
+
 ## 7. Sound rules
 Source: [87](87-vision-and-feel-guide.md), [110](110-sound-audit.md), [62](62-polish-sfx-goal-juice.md), [63](63-sfx-pack.md). Agents cannot hear: never call a sound "fine"; say "unheard".
 - Soft, round, bubbly (marimba, kalimba, glass bubbles, soft pops); no saw/square buzz, clipping, harsh highs (above about 8 kHz), noise bursts, sirens.

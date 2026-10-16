@@ -50,3 +50,5 @@ Extracted from the kanban owner log, AGENTS.md, docs and the lead sessions. "LEA
 
 ## 2026-10-16 (late): vibe words
 - OWNER: the guiding adjectives are polished, satisfying, calm, bubbly, friendly, vibrant. They describe the overall vibe of every facet (visuals, sound, animation, feel, transitions) and are NOT literal per-place rules (e.g. "calm and bubbly" never meant "the cave must be bright"). New tasks and decisions are vaguely cross-referenced against them and against the relevant handbook sections; the handbook is used more by the lead for quality and vision assessment and is updated as the owner adds or changes things; the owner will be asked more questions over time to narrow it down. Recorded in docs/114 section 0.
+
+- OWNER (2026-10-16): luminance bands cave 0.15-0.35 and island 0.35-0.75 confirmed; cool grey stone is fine as cave decoration (BD-414/415 closed as accepted); audience, class colours, aura ownership, eyes, weather tone, nest cap, balloon skin and perk price remain open questions in docs/116.
