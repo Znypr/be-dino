@@ -259,6 +259,10 @@ return table.freeze({
     FallRecoveryTickSeconds = 0.2,
     -- BD-225 spike (docs/77): low-poly generated base dinos (Compy, Raptor, Triceratops). OFF by default; shipped look unchanged.
     LowPolyDinos = false,
+    -- BD-243/244/247 (docs/101): HP combat behind ONE flag. OFF = no CombatService, no Bite remote, no health bars, the
+    -- instant "bigger eats smaller" predation stays exactly as shipped. ON (Studio tests only) = PredationService's
+    -- instant eat stops and CombatService runs. Keep false until the BD-252 phone test passes.
+    CombatEnabled = false,
     SecurityTestHarnessEnabled = false,
     ArtTestHarnessEnabled = false,
     ArtPreviewRequestCooldownSeconds = 0.25,

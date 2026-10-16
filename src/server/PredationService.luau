@@ -16,6 +16,8 @@ local function canEat(attackerScore: number, targetScore: number): boolean
 end
 
 function PredationService.start(runLifecycle, dinosaur)
+    -- BD-244: with HP combat on, the instant "bigger eats smaller" rule is replaced by CombatService bites. Flag off = unchanged.
+    if Config.CombatEnabled then return end
     local previous = {}
     local recentPairs: {[number]: {[number]: number}} = {}
     local arenaParams = RaycastParams.new()
