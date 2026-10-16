@@ -13,6 +13,22 @@ local CombatConfig = {
     },
     DefaultClass = "Ground",
 
+    -- BD-246 / docs/101 s2, s12 / docs/115: class per species (one source; the low-poly registry class must agree, verify_classes.py).
+    -- Owner: Armored = Ankylosaurus, Sauropelta, Styracosaurus; Kentrosaurus is Ground; Elasmosaurus counts as a normal Ground dino.
+    -- Entries without a model yet (liopleurodon, sauropelta, styracosaurus, kentrosaurus, the secret birds) are planned roster data.
+    SpeciesClasses = {
+        compy = "Ground", raptor = "Ground", triceratops = "Ground", tyrannosaurus = "Ground", stegosaurus = "Ground",
+        baryonyx = "Ground", brachiosaurus = "Ground", gallimimus = "Ground", pachycephalosaurus = "Ground",
+        parasaurolophus = "Ground", spinosaurus = "Ground", therizinosaurus = "Ground", elasmosaurus = "Ground",
+        kentrosaurus = "Ground",
+        archaeopteryx = "Fly", dimorphodon = "Fly", microraptor = "Fly", pteranodon = "Fly", quetzalcoatlus = "Fly",
+        ichthyosaurus = "Water", mosasaurus = "Water", plesiosaurus = "Water", liopleurodon = "Water",
+        ankylosaurus = "Armored", sauropelta = "Armored", styracosaurus = "Armored",
+        chickosaurus = "Ground", pigeon = "Ground", duck = "Ground", dodo = "Ground", penguin = "Ground",
+    },
+    -- Silly birds are secret finds: never listed in a roster/index until found (owner, docs/115).
+    SecretSpecies = { "chickosaurus", "pigeon", "duck", "dodo", "penguin" },
+
     BaseHp = 100,
     HpSizeExponent = 1.3,
     BaseDamage = 6,

@@ -37,6 +37,7 @@ Note: the older fx-v2 smoke, spark and flame sheets are superseded by the upload
 | Royal Nova aura icon | BD-101 (aura part) | ChatGPT ICON block | `resources/ui/v2/items/aura-royal-v1.png` | 1024 PNG, matches Meadow and Tidal | aura shop card | TABLE/AUTO | 109 D3 |
 | Potion rarity frames (5, P2) | BD-101 | ChatGPT | `resources/ui/v2/components/frame-{common,uncommon,rare,epic,legendary}-v1.png` | 512x512 9-slice, empty centre | potion shop cards | CODE | 109 D3 |
 | Combat HUD art, crystal pack icons, cave sign medallions (P2) | BD-248, BD-331, docs/104 | ChatGPT | see 109 E1-E3 | 1024 PNG | CombatHud, crystal cards, cave sign SurfaceGuis | CODE | 109 E1-E3 |
+| Cave lava crust / flow texture (BD-385, BD-294) | BD-385 | Blender render (no code-drawn art) | `resources/effects/cave-lava-crust-v1.png` | 1024 tileable, warm orange to dark crust, soft alpha edge, calm and friendly | `CaveLavaFx` falls sheet layers (today: existing swirl and flame sheets) | TODO | 104 s5 |
 
 ## 3. Hatch v2 (3D and paint flipbooks, docs/118, BD-397; flag `Config.HatchV2 = false`)
 

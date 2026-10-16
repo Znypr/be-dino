@@ -36,6 +36,7 @@ jobs:
           python tools/verify_movement_mobile.py --runner /tmp/luau/luau
           python tools/verify_identity.py --runner /tmp/luau/luau
           python tools/verify_fusion.py --runner /tmp/luau/luau
+          python tools/verify_cosmetic_ownership.py --runner /tmp/luau/luau
           python tools/simulate_fusion_ladder.py --check
           python tools/verify_fusion_ui.py --runner /tmp/luau/luau
           python tools/verify_next_goal.py --runner /tmp/luau/luau
