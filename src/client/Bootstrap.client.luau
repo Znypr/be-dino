@@ -1212,6 +1212,8 @@ local function refreshGoal()
     local goal=NextGoal.pick({dinos=goalDinos,level=num("AccountLevel"),xp=num("AccountXP"),perLevel=ProgressionConfig.AccountXPPerLevel,
         maxLevel=ProgressionConfig.AccountMaxLevel,stages=FusionSelection.Stages,
         speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName})
+    require(script.Parent.GoalsPanel).setDinos(goalDinos) -- BD-427: hub Goals panel reuses this list and the Index counts
+    require(script.Parent.GoalsPanel).setSpecies(require(Shared.GoalsRules).speciesCounts(decoded("CollectionJson","{}"),Config.SpeciesOrder,function(id) return eventMutation(id)~=nil or ownedTraits(id)~=nil end))
     goalText.Text,goalText.TextColor3=(if touchMode() or require(Shared.PhoneScale).isCompact(gui.AbsoluteSize.Y) then "" else "Goal  ")..goal.text,if goal.ready then C.accent else C.gold
 end
 local goalQueued=false
@@ -1238,6 +1240,7 @@ end
 for _,attribute in {"CollectionJson","AccountLevel","AccountXP"} do
     PrivateState.onChanged(attribute, function() refreshGoal() if attribute=="CollectionJson" then loadGoalDinos() end end)
 end
+require(script.Parent.GoalsPanel).attach(gui,goalHUD,{stages=FusionSelection.Stages,speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName}) -- BD-427
 refreshGoal()
 loadGoalDinos()
 local timers=Instance.new("Frame")
