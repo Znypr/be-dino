@@ -8,9 +8,12 @@
 -- task.wait, so this never blocks Arena.build or the terrain-ready signal; a mesh that fails to load is skipped (warn + counter) and
 -- its station keeps pad, sign and prompt. The lava waterfall and pool are CaveLavaFx, not meshes.
 local InsertService = game:GetService("InsertService")
+local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Layout = require(ReplicatedStorage.Shared.CaveHubLayout)
 local Props = require(ReplicatedStorage.Shared.CaveHubProps)
+local KitMeshes = require(ReplicatedStorage.Shared.WorldKitMeshAssets)
+local GeneratedMeshes = require(ReplicatedStorage.Shared.WorldGeneratedMeshes)
 local SignCopy = require(ReplicatedStorage.Shared.HubSignCopy)
 local TerrainRules = require(ReplicatedStorage.Shared.CaveTerrainRules)
 local CaveProps = {}
@@ -38,6 +41,25 @@ local function loadTemplate(key: string, assetId: string): MeshPart
     mesh.Anchored, mesh.CanCollide, mesh.CanTouch, mesh.CanQuery, mesh.Massless = true, false, false, false, true
     mesh:SetAttribute("GeneratedAssetId", assetId)
     return mesh
+end
+
+-- BD-296 dressing: a kit mesh (the island's own low-poly plants and rocks, WorldKitMeshAssets: vertex colours, no texture) as one MeshPart, sized in studs
+-- from the binding like ImportedResources.loadWorldKit does.
+local function loadKit(key: string, binding: any): MeshPart
+    local mesh = AssetService:CreateMeshPartAsync(Content.fromUri(binding.meshId), {CollisionFidelity = Enum.CollisionFidelity.Box, RenderFidelity = Enum.RenderFidelity.Automatic})
+    mesh.Name = key
+    mesh.Size = Vector3.new(binding.size[1], binding.size[2], binding.size[3])
+    mesh.Color = Color3.new(1, 1, 1)
+    mesh.Material = Enum.Material.SmoothPlastic
+    mesh.Anchored, mesh.CanCollide, mesh.CanTouch, mesh.CanQuery, mesh.Massless = true, false, false, false, true
+    mesh:SetAttribute("KitMeshId", binding.meshId)
+    return mesh
+end
+
+local function kitKeySet(): {[string]: boolean}
+    local set: {[string]: boolean} = {}
+    for key in KitMeshes do set[key] = true end
+    return set
 end
 
 -- Terrain surface height below (x, z): a raycast against Terrain only, falling back to the layout's floor height.
@@ -131,7 +153,7 @@ local function addSignText(mesh: MeshPart, key: string, text: string)
     board.Parent = mesh
 end
 
-local function place(folder: Folder, params: RaycastParams, p: any, template: MeshPart)
+local function place(folder: Folder, params: RaycastParams, p: any, template: MeshPart, src: any)
     local key = p.key
     local target = {p.w, p.h, p.d}
     local mesh = template:Clone()
@@ -145,19 +167,20 @@ local function place(folder: Folder, params: RaycastParams, p: any, template: Me
     if key == "cave_stalactite" then
         y = ceilingAt(params, x, z) + 1.0 - h / 2 -- top buried 1 stud in the real ceiling surface (BD-384: no floating cones)
     elseif key == "cave_moss_hang" then
-        y = floorAt(params, x, z) + 7 + h / 2
-        yaw = Layout.yawTo(-p.x, -p.z)
+        -- BD-296 dressing: a vine curtain drapes on its jamb facing the wall's own inward direction (row.face, yaw from the layout)
+        y = floorAt(params, x, z) + Props.HangBottom + h / 2
     elseif key == "cave_stepping_stone" then
         y = Layout.FloorY - 1.0 + h / 2 -- sits in the 2 stud deep basin, top just above the lava surface
     elseif Props.Rim[key] then
         y = floorAt(params, x, z) - 0.5 + h / 2
         yaw = Layout.yawTo(-p.x, -p.z) -- face the Heart
     else
-        y = floorAt(params, x, z) - SINK + h / 2
+        local sinkFrac = (Props.SinkFrac :: any)[key]
+        y = floorAt(params, x, z) - (if sinkFrac then h * sinkFrac else SINK) + h / 2
     end
     mesh.CFrame = CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0)
     if Props.Solid[key] then mesh.CanCollide, mesh.CanQuery = true, true end
-    local warm = (Props.Warm :: any)[key]
+    local warm = (Props.Warm :: any)[src.key] or (Props.Warm :: any)[key] or (Props.Tone :: any)[src.key] or (Props.Tone :: any)[key]
     if warm then -- BD-285 QA: blue / pink generated rocks -> flat warm basalt
         for _, child in mesh:GetChildren() do
             if child:IsA("SurfaceAppearance") then child:Destroy() end
@@ -166,12 +189,27 @@ local function place(folder: Folder, params: RaycastParams, p: any, template: Me
         mesh.Color = Color3.fromRGB(warm.color[1], warm.color[2], warm.color[3])
         mesh.Material = (Enum.Material :: any)[warm.material]
     end
+    -- BD-296 dressing: kit foliage / rocks keep their vertex colours (a little darker so island greens sit in the dim cave); glow accents are Neon.
+    local kit = if src.kind == "kit" then (Props.Kit :: any)[src.key] else nil
+    if kit then mesh.Color = Color3.new(kit.tone[1], kit.tone[2], kit.tone[3]) end
+    local glow = if p.glow then (Props.Glow :: any)[key] else nil
+    if glow then
+        mesh.Material = (Enum.Material :: any)[glow.material]
+        if src.kind ~= "kit" then -- textured generated mesh (the amber crystal): flat colour like the shop crystals
+            for _, child in mesh:GetChildren() do
+                if child:IsA("SurfaceAppearance") then child:Destroy() end
+            end
+            mesh.TextureID = ""
+        end
+        mesh.Color = Color3.fromRGB(glow.color[1], glow.color[2], glow.color[3])
+        mesh:SetAttribute("Glow", true)
+    end
     local text = SignCopy.forRow(key, p.owner)
     if text and signGuis < Props.MaxSignGuis then
         signGuis += 1
         addSignText(mesh, key, text)
     end
-    mesh.CastShadow = not p.walk -- BD-398: rocks and stalls cast shadows from the lamps and shafts; flat walk-over pieces do not need to
+    mesh.CastShadow = not p.walk and p.owner ~= "dress" -- BD-398: rocks and stalls cast shadows from the lamps and shafts; flat walk-over pieces and the tiny dressing do not need to
     mesh:SetAttribute("Owner", p.owner)
     mesh.Parent = folder
 end
@@ -192,26 +230,41 @@ function CaveProps.build(parent: Instance): Folder
 
     task.spawn(function()
         local L = Layout.get()
-        -- one load per distinct asset id
+        -- one load per distinct source (a published model, a Blender ground prop once uploaded, or a kit mesh): a layout key resolves to its first
+        -- available source (CaveHubProps.sourceFor); a key with none (the log / stump before the owner uploads them) places nothing
+        local kitKeys = kitKeySet()
+        local sources: {[string]: any} = {}
         local keys: {string} = {}
-        local seen: {[string]: boolean} = {}
+        local rowSource: {[string]: any} = {}
         for _, p in L.props do
-            if not seen[p.key] then
-                seen[p.key] = true
-                if Props.assetId(p.key) then keys[#keys + 1] = p.key end
+            if rowSource[p.key] == nil then
+                local src = Props.sourceFor(p.key, GeneratedMeshes.Props, kitKeys)
+                rowSource[p.key] = src or false
+                if src then
+                    local id = src.kind .. ":" .. src.key
+                    if not sources[id] then
+                        sources[id] = src
+                        keys[#keys + 1] = id
+                    end
+                end
             end
         end
         local templates: {[string]: MeshPart} = {}
         local nextKey, active, failed = 1, 0, 0
         local function worker()
             while nextKey <= #keys do
-                local key = keys[nextKey]
+                local id = keys[nextKey]
                 nextKey += 1
-                local id = Props.assetId(key) :: string
-                local ok, result = pcall(loadTemplate, key, id)
-                if ok then templates[key] = result else
+                local src = sources[id]
+                local ok, result
+                if src.kind == "kit" then
+                    ok, result = pcall(loadKit, src.key, (KitMeshes :: any)[src.key])
+                else
+                    ok, result = pcall(loadTemplate, src.key, src.id)
+                end
+                if ok then templates[id] = result else
                     failed += 1
-                    warn("[Be Dino] cave prop " .. key .. " (" .. id .. ") unavailable; skipping it: " .. tostring(result))
+                    warn("[Be Dino] cave prop " .. src.key .. " (" .. (src.id or (KitMeshes :: any)[src.key].meshId) .. ") unavailable; skipping it: " .. tostring(result))
                 end
             end
             active -= 1
@@ -226,9 +279,10 @@ function CaveProps.build(parent: Instance): Folder
 
         local placed, skipped = 0, 0
         for i, p in L.props do
-            local template = templates[p.key]
-            if template then
-                local ok, err = pcall(place, folder, params, p, template)
+            local src = rowSource[p.key]
+            local template = if src then templates[src.kind .. ":" .. src.key] else nil
+            if template and src then
+                local ok, err = pcall(place, folder, params, p, template, src)
                 if ok then placed += 1 else skipped += 1 warn("[Be Dino] cave prop " .. p.key .. " not placed: " .. tostring(err)) end
             else
                 skipped += 1

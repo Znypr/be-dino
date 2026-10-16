@@ -361,12 +361,12 @@ for key,id in P.Existing do
  ids[id]=key existingCount+=1
 end
 local mapped,fx=0,0
-for key in C.Kinds do assert(P.assetId(key)~=nil or P.NotMeshes[key]~=nil,"layout kind has no published id and is not a listed non-mesh: "..key) end
+for key in C.Kinds do assert(P.assetId(key)~=nil or P.NotMeshes[key]~=nil or P.Kit[key]~=nil or P.Slots[key]~=nil,"layout kind has no published id, kit mesh or slot and is not a listed non-mesh: "..key) end
 local used={}
 for _,p in L.props do
  if not used[p.key] then
   used[p.key]=true
-  if P.assetId(p.key) then mapped+=1 else fx+=1 end
+  if P.assetId(p.key) or P.Kit[p.key] or P.Slots[p.key] then mapped+=1 else fx+=1 end
  end
 end
 for key,why in P.NotMeshes do assert(type(why)=="string" and #why>10,"non-mesh reason: "..key) end
@@ -396,6 +396,51 @@ assert(C.Kinds.hub_gate_arch[1]<=L.gate.mouthWidth,"gate arch fits inside the 30
 assert(counts.hub_gate_arch==nil,"no gate arch prop on the floor (owner 2026-10-16: the gate is a mouth in the rock)")
 for _,bad in {"hub_lantern_post","hub_bench_stone","hub_cushion_moss","hub_crate","hub_barrel","hub_table_wood","hub_banner","hub_gong","cave_wall_pillar"} do assert(counts[bad]==nil,"no floor furniture: "..bad) end
 print(string.format("props OK: %d layout keys mapped to published ids (%d new uploads + %d existing registered), %d FX/non-mesh keys, %d proportion checks (worst %.2fx on %s)",mapped,idCount,existingCount,fx,checked,worst,worstKey))
+
+
+-- ---- BD-296 dressing pass (owner 2026-10-16: cosy, mossy, slightly magical; handbook: a few plant families, ground props, clear lanes)
+local dress,byKey={},{}
+for _,p in L.props do if p.owner=="dress" then dress[#dress+1]=p byKey[p.key]=(byKey[p.key] or 0)+1 end end
+assert(#dress>=45 and #dress<=80,"dressing rows stay a few dozen: "..#dress)
+for key in byKey do assert(P.Kit[key] or P.Slots[key] or key=="cave_moss_patch" or key=="cave_moss_hang","dress key is a kit mesh, a slot or an existing moss mesh: "..key) end
+assert((byKey.cave_moss_hang or 0)>=8,"vines on the tunnel and gate jambs: "..tostring(byKey.cave_moss_hang))
+assert((byKey.world_fern_a or 0)+(byKey.world_fern_b or 0)>=10 and (byKey.world_horsetail_a or 0)>=3 and (byKey.dress_mushrooms or 0)>=6 and (byKey.dress_crystal or 0)>=3 and (byKey.dress_rock_small or 0)>=5 and (byKey.cave_moss_patch or 0)>=4,"ferns, horsetails, mushrooms, crystals, small rocks and moss clumps are all present")
+local lampSites={}
+for _,l in L.lights do if l.owner=="tunnel" or l.owner=="heartwall" then lampSites[#lampSites+1]=l end end
+local glows,dressParts,dressTris=0,0,0
+for _,p in dress do
+ dressParts+=1 dressTris+=p.tris
+ if p.hang then
+  local sd=C.caveSd(p.x,p.z+C.CenterZ)
+  assert(p.face==true and sd>=1.2 and sd<=3.2,"a vine hangs on the wall itself: "..p.x..","..p.z.." sd "..sd)
+ else
+  assert(C.insideFloor(p.x,p.z+C.CenterZ,0.8),"dressing stands on the floor: "..p.key)
+  assert(C.flatDistance(p.x,p.z+C.CenterZ)>=0.3,"dressing is off every pad and path: "..p.key)
+ end
+ if p.glow then
+  glows+=1
+  assert(P.Glow[p.key] and P.Glow[p.key].material,"glow row has a style: "..p.key)
+  local near=math.huge
+  for _,l in lampSites do near=math.min(near,dist(p.x,p.z,l.x,l.z)) end
+  assert(near<=16,"glow accents stand beside a wall lantern niche: "..p.key.." "..near.." studs")
+ end
+end
+assert(glows>=8 and glows<=20,"a handful of glow accents (no lights): "..glows)
+-- ground prop slots: every source exists; kit stand-ins carry the same slot when the Blender mesh is not uploaded yet (log and stump have none)
+local kitSet={} for k in P.Kit do kitSet[k]=true end
+local noGen={}
+local fallbackOf=P.sourceFor("dress_rock_small",noGen,kitSet)
+assert(fallbackOf and fallbackOf.kind=="kit" and fallbackOf.key=="world_boulder_bare_s","slot falls back to the kit rock while ground_rock_small_v3 has no id")
+assert(P.sourceFor("dress_log",noGen,kitSet)==nil and P.sourceFor("dress_stump",noGen,kitSet)==nil,"log and stump place nothing until uploaded (no stand-in)")
+local gotGen=P.sourceFor("dress_rock_small",{ground_rock_small_v3={assetId="123456789012"}},kitSet)
+assert(gotGen.kind=="generated" and gotGen.id=="123456789012","an uploaded BD-464 mesh wins over the kit stand-in")
+local crystal=P.sourceFor("dress_crystal",noGen,kitSet)
+assert(crystal and crystal.kind=="asset" and crystal.key=="hub_crystal_s","the lamp crystal is the published amber stopgap crystal")
+assert(P.sourceFor("world_fern_a",noGen,kitSet).kind=="kit" and P.sourceFor("world_fern_a",noGen,{})==nil,"kit rows need their kit binding")
+assert(P.sourceFor("cave_moss_hang",noGen,kitSet).kind=="asset","vines are the published moss curtain")
+local mossHangScatter=0 for _,p in L.props do if p.key=="cave_moss_hang" and p.owner~="dress" then mossHangScatter+=1 end end
+assert(mossHangScatter==0,"no random wall curtains: vines only on the jambs")
+print(string.format("dressing OK: %d rows (%d parts, %d est. triangles): %d ferns, %d horsetails, %d mushrooms (%d glow), %d amber crystals, %d moss clumps, %d vines, %d small rocks, %d bushes, %d log, %d stump",#dress,dressParts,dressTris,(byKey.world_fern_a or 0)+(byKey.world_fern_b or 0),byKey.world_horsetail_a or 0,byKey.dress_mushrooms or 0,glows,byKey.dress_crystal or 0,byKey.cave_moss_patch or 0,byKey.cave_moss_hang or 0,byKey.dress_rock_small or 0,byKey.dress_bush or 0,byKey.dress_log or 0,byKey.dress_stump or 0))
 
 -- ---- budgets (docs/104 s3.1)
 local B=C.budgetTable()
@@ -468,6 +513,56 @@ def static_checks():
     generated = (ROOT / 'src/shared/WorldGeneratedMeshes.luau').read_text()
     for key, i in re.findall(r'(\w+) = "(\d{10,})",', props.split('Props.Existing')[1].split('}')[0]):
         assert i in generated, 'existing id is a real WorldGeneratedMeshes id: ' + key
+    # BD-296 dressing pass: kit keys and slot sources are real, proportions sane, no invented ids
+    kit_data = (ROOT / 'src/shared/WorldKitData.luau').read_text()
+    kit_mesh = (ROOT / 'src/shared/WorldKitMeshAssets.luau').read_text()
+    gen = (ROOT / 'src/shared/WorldGeneratedMeshes.luau').read_text()
+    kinds_src = src.split('local KINDS')[1].split('CaveHubLayout.Kinds = KINDS')[0]
+    def kind_box(key):
+        m = re.search(r'\b' + key + r' = \{([\d.]+), ([\d.]+), ([\d.]+),', kinds_src)
+        assert m, 'layout kind ' + key
+        return [float(m.group(i)) for i in (1, 2, 3)]
+    kit_keys = re.findall(r'(world_\w+) = \{tone', props)
+    assert len(kit_keys) >= 8, 'Props.Kit lists the kit meshes'
+    natives = {}
+    for k in kit_keys:
+        m = re.search(k + r'=\{kind="[a-z]+",family="[a-z_]+",size="[a-z]",triangles=(\d+),extent=\{([\d.]+),([\d.]+),([\d.]+)\}', kit_data)
+        assert m, 'kit mesh in WorldKitData: ' + k
+        assert int(m.group(1)) <= 80, 'kit dressing mesh stays tiny (<= 80 triangles): ' + k
+        assert (k + ' = {meshId = "rbxassetid://') in kit_mesh, 'kit mesh is bound to a published meshId: ' + k
+        natives[k] = [float(m.group(i)) for i in (2, 3, 4)]
+    # BD-464 Blender ground props (docs/77): not uploaded, ids stay empty strings in WorldGeneratedMeshes.Props; sizes from the registry rows
+    natives.update({'ground_rock_small_v3': [2.8, 2.4, 1.2], 'ground_rock_medium_v3': [4.9, 4.0, 2.3], 'ground_rock_mossy_v3': [5.6, 4.5, 3.2],
+                    'ground_log_fallen_v3': [7.9, 2.8, 3.0], 'ground_stump_roots_v3': [7.1, 5.9, 3.0], 'ground_mushrooms_v3': [5.3, 4.1, 2.9],
+                    'ground_bush_round_v3': [6.0, 4.2, 2.7], 'ground_bush_berry_v3': [6.3, 4.1, 2.1]})
+    slots = re.findall(r'(dress_\w+) = \{([^}]*)\}', props.split('Props.Slots = {')[1].split('Props.Glow')[0])
+    assert len(slots) >= 8, 'Props.Slots lists the dressing slots'
+    def fit(native, target):
+        axis = max(range(3), key=lambda i: target[i])
+        return max(0.25, min(6, target[axis] / native[axis]))
+    for slot, body in slots:
+        sources = re.findall(r'"(\w+)"', body)
+        assert sources, 'slot has a source: ' + slot
+        target = kind_box(slot)
+        for srcname in sources:
+            if srcname in natives:
+                if srcname.startswith('ground_'):
+                    assert re.search(srcname + r' = \{assetId = ""', gen), 'BD-464 ground prop is registered with an empty id (never an invented one): ' + srcname
+                f = fit(natives[srcname], target)
+                for i in range(3):
+                    off = max(target[i] / (natives[srcname][i] * f), (natives[srcname][i] * f) / target[i])
+                    assert off <= 3.2, 'slot %s source %s proportions fit its box (%.2fx on axis %d)' % (slot, srcname, off, i)
+            else:
+                assert (srcname + ' = {id = "') in props, 'slot source is a published CaveHubProps asset, kit mesh or BD-464 prop: ' + srcname
+    for k in kit_keys:
+        if (k + ' = {') in kinds_src:
+            target = kind_box(k)
+            f = fit(natives[k], target)
+            for i in range(3):
+                off = max(target[i] / (natives[k][i] * f), (natives[k][i] * f) / target[i])
+                assert off <= 1.15, 'kit row %s keeps its own proportions (%.2fx)' % (k, off)
+    server_src = (ROOT / 'src/server/CaveProps.luau').read_text()
+    assert 'CreateMeshPartAsync' in server_src and 'Props.sourceFor' in server_src and 'pcall(loadKit' in server_src, 'the server loads kit meshes through one guarded path and resolves slots'
     server = (ROOT / 'src/server/CaveProps.luau').read_text()
     assert server.count('InsertService:LoadAsset') == 1 and 'pcall(loadTemplate' in server, 'one guarded load path'
     assert 'task.wait' in server and 'task.spawn' in server, 'props load in the background in batches'
