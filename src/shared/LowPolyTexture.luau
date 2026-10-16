@@ -186,16 +186,13 @@ function Texture.paint(src: buffer, weights: {number}, mask: {number}, spec: Spe
                     r, g, bl = Tier.regionColor(r, g, bl, tier, Recolor.shade(r, g, bl, base), (x + y) / (2 * size), py, px, pz)
                 end
             end
-            if accent then -- horns / frill / claws / spikes painted in the tier metal or gem (base tier never gets here)
+            -- 2026-10-16 FINAL owner rule: body and pattern texels are the dino's own colours at EVERY tier (identical to base);
+            -- the tier is the translucent glossy shell (LowPolyDinos) plus these solid horn / claw texels.
+            if accent then -- horns / claws painted in the tier metal or gem (base tier never gets here)
             elseif weights[i + 1] > 0 then
                 local m = mask[i + 1]
                 local tr, tg, tb = ar + (br - ar) * m, ag + (bg - ag) * m, ab + (bb - ab) * m
-                if tier then tr, tg, tb = Tier.blend(tr, tg, tb, tier, m >= 0.5) end
-                local k = Recolor.shade(r, g, bl, base)
                 r, g, bl = Recolor.pixel(r, g, bl, tr, tg, tb, base)
-                if tier then r, g, bl = Tier.lift(r, g, bl, k, tier) end -- BD-308: lit facets shine a little more on fused tiers
-                -- 2026-10-16: pattern (secondary-colour) pixels become the tier's metal / gem accent, the body keeps its own colour
-                if tier and m >= 0.5 then r, g, bl = Tier.accent(r, g, bl, tier, k, (x + y) / (2 * size)) end
             end
             buffer.writeu8(out, o, math.floor(r * 255 + 0.5))
             buffer.writeu8(out, o + 1, math.floor(g * 255 + 0.5))

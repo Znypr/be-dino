@@ -181,7 +181,16 @@ for _, id in Tier.Order do
     prev = e
 end
 local gold, emerald, diamond = Tier.get("gold"), Tier.get("emerald"), Tier.get("diamond")
-assert(gold.material == "Metal" and emerald.material == "Glass" and diamond.material == "Glass" and diamond.reflectance == Tier.MaxReflectance, "metal / gem materials")
+assert(gold.shellMaterial == "SmoothPlastic" and emerald.shellMaterial == "Glass" and diamond.shellMaterial == "Glass" and diamond.reflectance == Tier.MaxReflectance, "glossy shell materials")
+-- 2026-10-16 FINAL owner rule: a translucent glossy tier layer exists per tier, in range, tier coloured; Diamond is icy white-blue
+for _, id in Tier.Order do
+    local e = Tier.get(id)
+    assert(e.shellTransparency >= Tier.ShellTransparency[1] and e.shellTransparency <= Tier.ShellTransparency[2], id .. " shell transparency in 0.6..0.75")
+    assert(e.shellReflectance > 0 and e.shellReflectance <= Tier.MaxReflectance and Tier.ShellScale > 1 and Tier.ShellScale <= 1.02, id .. " shell gloss / scale")
+    assert(e.shellMaterial ~= "Neon" and e.shellMaterial ~= "ForceField", id .. " shell not neon")
+end
+local gs, es, ds = gold.shell, emerald.shell, diamond.shell
+assert(gs[1] > gs[3] + 100 and es[2] > es[1] + 80 and es[2] > es[3] and ds[3] >= ds[1] and ds[1] >= 200, "shell colours: warm gold, jewel green, icy white-blue")
 assert(diamond.shimmer and #diamond.shimmer >= 3 and not gold.shimmer and not emerald.shimmer and diamond.shimmerSpeed > 0, "only Diamond has the rainbow shimmer")
 for _, grey in {0.35, 0.6, 0.85} do -- the same neutral dino under each tier
     local gr, gg, gb = Tier.blend(grey, grey, grey, gold, false)
@@ -237,7 +246,7 @@ assert(0 * fr == 0, "eyes stay black")
 -- 2026-10-16 round 3: accent regions (horns / frill / crest / spikes / claws baked into the textures)
 for _, sp in {"compy", "raptor", "triceratops", "tyrannosaurus", "stegosaurus", "ankylosaurus", "pteranodon"} do
     local list = Tier.AccentRegions[sp]
-    assert(list and #list >= 2, sp .. " has accent regions")
+    assert(list and #list >= 1, sp .. " has horn / claw regions")
     for _, bx in list do
         assert(#bx == 6 and bx[1] >= 0 and bx[1] < bx[2] and bx[3] < bx[4] and bx[5] < bx[6], sp .. " box well formed")
         assert(bx[2] <= 0.6 and bx[4] <= 0.6 and bx[3] >= -0.6 and bx[5] >= -0.6 and bx[6] <= 0.6, sp .. " box inside the normalised model")
@@ -281,6 +290,9 @@ assert(e1[2] > e1[1] + 0.1 and e1[2] > e1[3], "emerald ramp is green")
 assert(Tier.isAccentName("Triceratops horn") and Tier.Ramps.diamond, "horn parts are tinted per tier")
 assert(not Tier.inAccentRegion("nope", 0, 0, 0) and not Tier.inAccentRegion(nil, 0, 0, 0), "unknown species: no accent")
 assert(Tier.sparkleAlive(diamond, true) * 2 == Tier.sparkleAlive(diamond, false) and Tier.sparkleAlive(diamond, false) <= 12, "sparkle count bounded")
+-- final rule: only horns and claws / toes are accent regions (every box is small; frill / nose / feet / plates are not listed)
+for sp, list in Tier.AccentRegions do assert(#list <= 2, sp .. " only horn / claw boxes") end
+assert(not Tier.isAccentName("frill") and not Tier.isAccentName("crest"), "frill / crest are body")
 print("lowpoly pattern tests passed")
 '''
 
@@ -294,6 +306,13 @@ def check_key():
     dinos = (ROOT / 'src/shared/LowPolyDinos.luau').read_text(encoding='utf-8')
     assert 'Enum.Material.Plastic, 0' in dinos and 'Tier.MaxReflectance' in dinos, "base matte / tier gloss bounded (BD-173)"
     assert 'function LowPoly.applyTier' in dinos
+    paint = text[text.index('function Texture.paint'):text.index('local function yielder')]
+    for banned in ('Tier.blend', 'Tier.lift', 'Tier.accent('):
+        assert banned not in paint, f"2026-10-16: body/pattern texels must stay the dino's own colours (no {banned} in Texture.paint)"
+    assert 'Tier.regionColor' in paint, "horn / claw texels are painted in the tier ramp"
+    assert 'LPTierShell' in dinos and 'Tier.ShellScale' in dinos and 'Transparency = math.clamp(entry.shellTransparency' in dinos, "translucent glossy shell per textured part"
+    for flag in ('CanCollide, sh.CanQuery, sh.CanTouch, sh.Massless', 'WeldConstraint'):
+        assert flag in dinos, f"shell must set {flag}"
     assert 'Tier.inAccentRegion' in text and 'src.pos, speciesId' in text, "Texture.paint must paint accent regions from the position map"
     assert 'NumberSequenceKeypoint.new(0.12, sz * 1.5)' in dinos, "sparkle glint flash"
     for path in ('src/client/ResourceVisuals.client.luau', 'src/shared/DinosaurPreview.luau'):

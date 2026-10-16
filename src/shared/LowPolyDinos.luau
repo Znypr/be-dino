@@ -119,6 +119,34 @@ local function partBake(container: Instance, species: string, part: MeshPart, te
     if content then part.TextureContent, part.Color = content, Color3.new(1, 1, 1) part:SetAttribute("LPLod", "texture")
     else part.TextureID = textureId part.Color = Color3.new(1, 1, 1) part:SetAttribute("LPLod", "tint") end
 end
+-- 2026-10-16 FINAL owner rule: "same exact colours and pattern, plus a semi-translucent glossy tier layer over it". The layer is a second,
+-- slightly inflated copy of each textured body MeshPart (same mesh, welded, no collision / query / touch, Massless): +1 part per textured part
+-- (a 7-part dino stays well inside the low-poly part budget; tris double only on those parts, no extra textures). Previews/ViewportFrames get it too.
+local function shells(container: Instance, entry: any?)
+    for _, old in container:GetDescendants() do if old.Name == "LPTierShell" then old:Destroy() end end
+    if not entry then return end
+    for _, p in container:GetDescendants() do
+        local texId = if p:IsA("MeshPart") then p:GetAttribute("LPTexture") else nil
+        if p:IsA("MeshPart") and type(texId) == "string" and texId ~= "" and not Tier.isAccentName(p.Name) then
+            local sh = p:Clone()
+            for _, ch in sh:GetChildren() do ch:Destroy() end
+            sh.Name = "LPTierShell"
+            sh.TextureID = ""
+            sh:SetAttribute("LPTexture", nil) sh:SetAttribute("LPRole", nil)
+            sh.Size = p.Size * Tier.ShellScale
+            sh.Color = Color3.fromRGB(entry.shell[1], entry.shell[2], entry.shell[3])
+            sh.Material = (Enum.Material :: any)[entry.shellMaterial] or Enum.Material.SmoothPlastic
+            sh.Reflectance = math.min(entry.shellReflectance, Tier.MaxReflectance)
+            sh.Transparency = math.clamp(entry.shellTransparency, Tier.ShellTransparency[1], Tier.ShellTransparency[2])
+            sh.CanCollide, sh.CanQuery, sh.CanTouch, sh.Massless, sh.CastShadow = false, false, false, true, false
+            sh.CFrame = p.CFrame
+            local w = Instance.new("WeldConstraint")
+            w.Part0, w.Part1 = p, sh
+            w.Parent = sh
+            sh.Parent = p
+        end
+    end
+end
 function LowPoly.tint(container: Instance, genes: any)
     if genes then genesOf[container] = genes else genes = genesOf[container] end
     local entry = Tier.get(container:GetAttribute("LPTier"))
@@ -131,7 +159,7 @@ function LowPoly.tint(container: Instance, genes: any)
         local primary = if patternId == "01_blank" then Genetics.tint(genes) else Color3.fromRGB(a[1], a[2], a[3])
         spec = {primary = primary, secondary = Color3.fromRGB(b[1], b[2], b[3]), same = genes.primaryColorId == genes.secondaryColorId,
             primaryShare = math.clamp((genes.blend or 50) / 100, 0, 1), patternId = patternId, tier = if entry then entry.id else nil, seedName = ""}
-    elseif not entry then return end
+    elseif not entry then shells(container, nil) return end
     if not spec then -- no genes (Index stage tiles, fusion previews): a fused tier still bakes over the species' own colour, so the tier reads (BD-326)
         local own = Color3.new(1, 1, 1)
         spec = {primary = own, secondary = own, same = false, primaryShare = 1, patternId = "01_blank", tier = (entry :: any).id, seedName = "", own = true}
@@ -140,20 +168,17 @@ function LowPoly.tint(container: Instance, genes: any)
     local body: BasePart? = nil
     local textured: {{part: MeshPart, textureId: string, role: string}} = {}
     for _, part in container:GetDescendants() do
-        if part:IsA("MeshPart") then
+        if part:IsA("MeshPart") and part.Name ~= "LPTierShell" then
             local textureId = part:GetAttribute("LPTexture")
             local role = tostring(part:GetAttribute("LPRole") or "body")
             if role == "body" and not body then body = part end
             local eyeish = type(textureId) ~= "string" or textureId == ""
             -- BD-173: base dinos matte; only a fused tier gets Metal/Glass + reflectance, and only on textured body-colour parts.
-            if entry and not eyeish then
-                part.Material = (Enum.Material :: any)[entry.material] or Enum.Material.Metal
-                part.Reflectance = math.min(entry.reflectance, Tier.MaxReflectance)
-            else part.Material, part.Reflectance = Enum.Material.Plastic, 0 end
-            if entry and Tier.isAccentName(part.Name) and (eyeish or not (string.find(string.lower(part.Name), "frill", 1, true) or string.find(string.lower(part.Name), "crest", 1, true))) then -- claws / toes / horns are untextured parts: tint them in the tier metal / gem
+            part.Material, part.Reflectance = Enum.Material.Plastic, 0 -- 2026-10-16: the body keeps its own matte colours; the gloss is the translucent shell
+            if entry and Tier.isAccentName(part.Name) and eyeish then -- claws / toes / horns are untextured parts: tint them in the tier metal / gem
                 local c = entry.accent
                 part.Color = Color3.fromRGB(c[1], c[2], c[3])
-                part.Material = (Enum.Material :: any)[entry.material] or Enum.Material.Metal
+                part.Material = (Enum.Material :: any)[entry.shellMaterial] or Enum.Material.SmoothPlastic
                 part.Reflectance = Tier.MaxReflectance
                 if eyeish then continue end
                 part.TextureID = ""
@@ -163,6 +188,7 @@ function LowPoly.tint(container: Instance, genes: any)
             table.insert(textured, {part = part, textureId = textureId, role = role})
         end
     end
+    shells(container, entry)
     sparkle(container, body, entry)
     rim(container, entry)
     if not spec or #textured == 0 then return end
