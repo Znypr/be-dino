@@ -112,7 +112,23 @@ assert(R.hatchStack(1).stages <= R.hatchStack(2).stages and R.hatchStack(2).stag
 local revealT, burstT
 for _, c in R.hatchCues({{t = 3, name = "hatch_burst"}, {t = 3.12, name = "hatch_reveal_rare"}}, 3) do if c.name == "hatch_reveal_rare" then revealT = c.t end if c.name == "hatch_burst" then burstT = c.t end end
 assert(revealT - burstT >= .3 - 1e-9, "reveal does not start with the burst")
-print("Sfx rules checks passed: limiter, priority, duck, dedupe, jitter, hatch stack")
+-- BD-437 reveal ladder: strictly rising pitch and volume across the five stings, Epic/Legendary layers use REGISTERED cues.
+local prevRate, prevVol = 0, 0
+for i, n in S.RevealNames do
+    local e = S.Sounds[n]
+    assert(e.rate > prevRate and e.volume > prevVol, "reveal ladder steps up at tier " .. i)
+    assert(e.rate >= .9 and e.rate <= 1.15 and e.volume <= S.MaxCueVolume, "bounded pitch and volume")
+    prevRate, prevVol = e.rate, e.volume
+    assert(R.priority(n) == 100, "every reveal sting keeps top priority")
+end
+assert(#R.layers("hatch_reveal_common") == 0 and #R.layers("hatch_reveal_uncommon") == 0 and #R.layers("hatch_reveal_rare") == 0, "no layers below Epic")
+for _, n in {"hatch_reveal_epic", "hatch_reveal_legendary"} do
+    local ls = R.layers(n)
+    assert(#ls == 1, "exactly one layer keeps within the 2-voice limit")
+    for _, l in ls do assert(S.Sounds[l.cue] and S.Sounds[l.cue].id ~= "" and l.delay >= .1 and l.delay <= .4 and l.volume <= 1, "layer is an existing cue, delayed") end
+    assert(R.duck(ls[1].cue, n) == 1, "a layer never ducks its own main sting")
+end
+print("Sfx rules checks passed: limiter, priority, duck, dedupe, jitter, hatch stack, reveal ladder")
 '''
 
 

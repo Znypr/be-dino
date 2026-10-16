@@ -201,21 +201,21 @@ assert(sv.durs.build == Plan.Build and sv.durs.paint.v2 == true and near(sv.durs
 for _ = 1, 600 do T.step(sv, 1 / 60) end
 assert(near(sv.t, P.leftStart) and sv.idle > 9, "holds at the first bucket while pending")
 T.supply(sv, 3, false)
-assert(not sv.pending and sv.durs.build == Plan.Build and sv.v2, "supply keeps the v2 beat sheet")
-T.step(sv, 1) assert(T.tap(sv) == "fastforward" and near(sv.t, Plan.Build))
+assert(not sv.pending and sv.durs.build == Plan.Build + T.anticipation(3) and sv.v2, "supply keeps the v2 beat sheet (plus BD-437 anticipation)")
+T.step(sv, 1) assert(T.tap(sv) == "fastforward" and near(sv.t, sv.durs.build))
 local ps = T.paintState(sv.durs, P.leftImpact + .2)
 assert(ps.left.impacted and ps.left.wash > 0 and ps.left.wash < 1 and not ps.right.impacted and near(ps.left.since, b.impact + .2) and ps.left.k > 0 and ps.left.k < 1)
 assert(T.paintState(sv.durs, P.endsAt).left.wash == 1 and T.paintState(sv.durs, P.endsAt).pattern == 1)
 assert(T.paintState(sv.durs, P.patternAt - .01).pattern == 0 and T.paintState(sv.durs, P.patternAt + .01).patternShown)
 local cues = T.cues(sv.durs, 3, false, "hatch_reveal_rare")
 assert(cues[1].name == "pickup_lo" and near(cues[1].t, P.leftStart) and cues[2].name == "pickup" and near(cues[2].t, P.leftImpact) and cues[4].name == "pickup_hi" and near(cues[4].t, P.rightImpact))
-local nr = 0 for _, c in cues do assert(Sfx.Sounds[c.name], c.name) if c.name == "hatch_rattle" then nr += 1 assert(c.t >= P.endsAt and c.t <= Plan.Build) end end
+local nr = 0 for _, c in cues do assert(Sfx.Sounds[c.name], c.name) if c.name == "hatch_rattle" then nr += 1 assert(c.t >= P.endsAt and c.t <= sv.durs.build) end end
 assert(nr >= 4)
-assert(T.eggClock(sv.durs, P.endsAt - .01) < .62 and near(T.eggClock(sv.durs, Plan.Build), T.EggClock), "cracks only after the condition beat")
+assert(T.eggClock(sv.durs, P.endsAt - .01) < .62 and near(T.eggClock(sv.durs, sv.durs.build), T.EggClock), "cracks only after the condition beat")
 local rv = T.useV2(T.new(false), true)
 assert(rv.durs.build == 0 and rv.durs.paint.endsAt == 0 and T.paintState(rv.durs, 0).left.wash == 1, "Reduce Motion: finished egg at once")
 local v1 = T.new(true) assert(v1.durs.build == T.Motion.build and not v1.v2 and v1.durs.paint.v2 == nil, "v1 untouched")
-assert(T.durations(true, 5, false, true).readyAt == Plan.Build + T.Motion.burst + T.Motion.settle + .5 and T.durations(true, 1, true, true).build == Plan.Build)
+assert(T.durations(true, 5, false, true).readyAt == Plan.Build + T.anticipation(5) + T.Motion.burst + T.Motion.settle + .5 and T.durations(true, 1, true, true).build == Plan.Build)
 print("Hatch v2 checks passed: beat sheet, bucket/stream/crown/drip/squash/gloss curves, deterministic splats, reveal field to 100%, composite coats, budget, timeline state")
 '''
 

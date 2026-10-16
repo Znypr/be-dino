@@ -59,7 +59,7 @@ How to measure on a phone: screenshot, the screenshot is at device pixels; Roblo
 
 ## 5. Budgets used by the report
 
-fps at least 30; memory at most 1,200 MB; parts at most 3,000 (whole workspace, a strict reading of the 107 rule); emitters at most 40 (PROVISIONAL); particles per second at most 300 (107 live particles about 300); beams at most 24 (123 T3, 3-4 per dino, Lite 6 dinos, PROVISIONAL); lights at most 16 (107, 104); EditableImage at most 24 MiB (`verify_world_budget.py`; the engine budget is 80 MiB, 105); ping at most 250 ms round trip (an assumption, 107 has no ping number). These live in `BUDGETS` in `tools/qa/phone_report.py`. When BD-085 returns real numbers, change them there and in 107 together. Not captured (use Developer Console / MicroProfiler): triangles, draw calls, network KB/s, Highlight count (engine cap 31, 123 T6).
+fps at least 30; memory at most 1,200 MB; parts at most 3,000 (whole workspace, a strict reading of the 107 rule); emitters at most 40 (PROVISIONAL); particles per second at most 300 (107 live particles about 300); beams at most 24 (123 T3, 3-4 per dino, Lite 6 dinos, PROVISIONAL); lights at most 16 (107, 104); EditableImage at most 24 MiB (`verify_world_budget.py`; the engine budget is 80 MiB, 105); ping at most 250 ms round trip (an assumption, 107 has no ping number). These live in `BUDGETS` in `tools/qa/phone_report.py`; the limits present in `tools/qa/phone_budgets.json` (the single phone-budget file, currently lights and beams) override them at load time, so change those there. When BD-085 returns real numbers, change them there and in 107 together. Not captured (use Developer Console / MicroProfiler): triangles, draw calls, network KB/s, Highlight count (engine cap 31, 123 T6).
 
 ## 6. Results
 

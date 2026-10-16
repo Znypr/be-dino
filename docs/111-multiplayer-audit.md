@@ -129,6 +129,8 @@ Repeat 5.2 steps 1 to 6 with friends or alts (2, then 4, then 8 players), as in 
 ## 6. Honest status
 Offline only. Nothing here was run on a real server, so BD-019, BD-097, BD-316 and BD-319 stay open; they now have a script (section 5) and BD-364 to record the result.
 
+**BD-363 remainder (bite, predation repeat-victim, MovementGuard reject clock):** now keyed by UserId through `CooldownMemory` (memory only, never the profile), so a rejoin on the same server no longer resets them. `PredationService.previous` and `MovementGuard.states` stay per Player on purpose: they are character-bound position baselines, not cooldowns.
+
 ## 7. BD-319 results: features added after the first audit (2026-10-16)
 Label: **OFFLINE SIMULATION plus static checks, not a multiplayer test.** `tools/multiplayer_sim.luau` section J and the STATIC list of `tools/verify_multiplayer_sim.py` now also cover: settings remote path (12 players write at once), the Fast travel perk (`buyPerk`, 12 players at once, one cannot afford it, flags off), HubTravel rules (per-player rate limit, shared station spots), effects LOD, odds panel data (`EggOutcomeOdds`, `OddsCopy`), egg origin popup data (`EggOrigin`) and the leaderboard write gate. 374 checks pass. Nest overflow crystals is not merged on main at this time, so it is not covered (add it when it lands).
 

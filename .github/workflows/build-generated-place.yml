@@ -12,11 +12,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Fail on merge conflict markers
+        run: |
+          if git grep -InE '^(<<<<<<< |>>>>>>> |=======$)' -- . ':!*.rbxlx'; then
+            echo "Conflict markers found in tracked files" >&2
+            exit 1
+          fi
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Install test dependencies
         run: python -m pip install Pillow numpy
+      - name: Verify doc numbers and BD ids are unique
+        run: python tools/verify_doc_ids.py
       - name: Verify image bindings
         run: python tools/bind_artwork.py --check
       - name: Install pinned Luau tools
@@ -43,6 +51,7 @@ jobs:
           python tools/verify_next_goal.py --runner /tmp/luau/luau
           python tools/verify_goals.py --runner /tmp/luau/luau
           python tools/verify_qa_kit.py --runner /tmp/luau/luau
+          python tools/verify_discovery.py --runner /tmp/luau/luau
           python tools/verify_admin.py --runner /tmp/luau/luau
           python tools/verify_notify.py --runner /tmp/luau/luau
           python tools/verify_audio.py --runner /tmp/luau/luau
@@ -84,6 +93,8 @@ jobs:
           python tools/verify_load.py --runner /tmp/luau/luau
           python tools/verify_multiplayer_sim.py --runner /tmp/luau/luau
           python tools/verify_private_state.py --runner /tmp/luau/luau
+          python tools/verify_class_movement.py --runner /tmp/luau/luau
+          python tools/verify_class_picker.py --runner /tmp/luau/luau
           python tools/verify_server_scaling.py --runner /tmp/luau/luau
           python tools/verify_telemetry.py --runner /tmp/luau/luau
           python tools/generate_sfx.py --check

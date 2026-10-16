@@ -14,6 +14,8 @@ Status: CURRENT BUILD BEHAVIOR (branch claude/private-data-replication). Verifie
 ## Classification
 PRIVATE (47 names): see `PrivateStateCore.PrivateNames`. PUBLIC: render fields (`Equipped*`, `AccountLevel`), state (`ProfileState`, `Location`, `WorldReady`, `IsAdmin`...), run ids and scores, and tiny status strings used by tests and admin hooks (docs/79). `LastSettledRunId` is private so the client sees it together with the queues the settlement just wrote.
 
+BD-436 adds `DiscoveryJson` (counts only: colours, patterns, mutations found; never the id lists) and `LastChestNewJson` (first-time finds of the last hatched egg, drives the `NEW!` ribbon), both PRIVATE.
+
 ## Sizes (12-player sim, mid-game after 10 runs of 40 eggs)
 | | before | after |
 | --- | ---: | ---: |

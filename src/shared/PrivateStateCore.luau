@@ -11,14 +11,14 @@ Core.CoalesceSeconds = 0.2 -- changes made inside one window leave as one messag
 local PRIVATE = {
     -- inventory and progression
     "QaOverlay", -- BD-085 owner phone QA overlay gate
-    "CollectionJson", "ProgressionJson", "SettingsJson", "RevealSkipJson",
+    "CollectionJson", "ProgressionJson", "DiscoveryJson", "SettingsJson", "RevealSkipJson",
     "Crystals", "AccountXP", "PlaySeconds", "RarestCaught", "RobuxSpent", "ProfileRevision",
     "CompyCopies", "CompyGold", "TriceratopsCopies", "TriceratopsGold", "TyrannosaurusCopies", "TyrannosaurusGold",
     -- egg and nest queues
     "ChestQueueJson", "NestsJson", "PendingChestGrants", "ActiveChestCount", "BankedRunEggCount", "QueuedEggsWaiting",
     "NextChestId", "NextChestReadyAt", "RunStartBlocked",
     -- run and hatch summaries
-    "LastChestBig", "LastChestShiny", "LastChestFailed", "LastChestGenesJson", "LastChestRewardText", "LastChestEventMutation",
+    "LastChestBig", "LastChestShiny", "LastChestFailed", "LastChestNewJson", "LastChestGenesJson", "LastChestRewardText", "LastChestEventMutation",
     "LastClaimedChestId", "LastSettledRunId", "LastRewardText", "LastRunCrystals", "LastRunCrystalBox", "LastRunEggCount", "LastRunNestCount", "LastRunNestFull", "LastRunNestCrystals",
     -- owner-only multipliers and policy flags
     "GrowthMultiplier", "SpeedMultiplier", "LootMultiplier", "ColourGrowthPercent", "StudioTestWallet", "PaidRandomEligible",

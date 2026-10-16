@@ -29,6 +29,22 @@ BUDGETS = [
     ("editableMiB", "EditableImage MiB", 24, "max", "tools/verify_world_budget.py cap (of the 80 MiB engine budget, docs/105)"),
     ("pingMs", "ping ms", 250, "max", "PROVISIONAL assumption, no number in docs/107 (round trip)"),
 ]
+
+
+def _load_shared_budgets():
+    """Limits in tools/qa/phone_budgets.json (the single phone-budget file) override the local rows above."""
+    path = Path(__file__).with_name("phone_budgets.json")
+    try:
+        shared = json.loads(path.read_text(encoding="utf-8")).get("phone", {})
+    except (OSError, ValueError):
+        return
+    for i, row in enumerate(BUDGETS):
+        entry = shared.get(row[0])
+        if isinstance(entry, dict) and isinstance(entry.get("value"), (int, float)):
+            BUDGETS[i] = (row[0], row[1], entry["value"], row[3], "tools/qa/phone_budgets.json: " + str(entry.get("why", row[4])))
+
+
+_load_shared_budgets()
 # Marks the tour (docs/127 s3) must produce, in order. Missing ones are listed, never failed.
 TOUR = ["start_hub", "run_start", "food_field", "egg_reveal_15", "rare_hatch", "goals_panel", "peaceful_button",
         "settings", "sound_lab", "class_picker", "shops", "end"]

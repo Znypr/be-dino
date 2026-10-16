@@ -1,7 +1,7 @@
 --!strict
 -- BD-231 / BD-233 / BD-234 / docs/101 s11-12: per-class movement rules. PURE and NOT WIRED into gameplay yet.
 -- Speed multipliers come from CombatConfig (one source). Every number here is PROVISIONAL, not final balance.
--- BD-246: wired by server/ClassMovementService.luau ONLY while Config.CombatEnabled is true (flag off = shipped movement).
+-- BD-246: wired by server/ClassMovementService.luau ONLY while Config.ClassMovementEnabled is true (flag off = shipped movement).
 -- Enabled below stays false: it is the pure-module offline guard, not the runtime flag.
 -- Velocities are returned as (x, y, z) numbers so the module runs without Roblox types in offline tests.
 local Combat = require(script.Parent.CombatConfig)
