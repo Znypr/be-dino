@@ -561032,8 +561032,13 @@ local function renderBrowse()
     local grid = W.scroll(left, UDim2.new(1, 0, 1, -y), UDim2.fromOffset(0, y))
     grid.Name = "DinoGrid"
     local layout = Instance.new("UIGridLayout")
-    local small = gui ~= nil and (gui :: ScreenGui).AbsoluteSize.Y &lt; 520
-    layout.CellSize = if small then UDim2.fromOffset(150, 216) else UDim2.fromOffset(176, 232)
+    -- QA 2026-10-16: the ScreenGui is not laid out yet when this runs, so read the camera viewport. 1080x720 gets two
+    -- columns that fill the lane (was one 176 px card and a wasted gap); phone landscape gets one wide, shorter card.
+    local camera = workspace.CurrentCamera
+    local view = if camera then camera.ViewportSize else Vector2.new(1280, 720)
+    if view.Y &lt; 520 then layout.CellSize = UDim2.new(1, -10, 0, 200)
+    elseif view.X &lt; 1300 then layout.CellSize = UDim2.new(.5, -8, 0, 224)
+    else layout.CellSize = UDim2.fromOffset(176, 232) end
     layout.CellPadding, layout.SortOrder = UDim2.fromOffset(6, 6), Enum.SortOrder.LayoutOrder
     layout.Parent = grid
     if state.listError and state.mode == "browse" then
@@ -561482,8 +561487,13 @@ function W.label(parent: Instance, text: string, size: UDim2, position: UDim2, m
     t.TextStrokeTransparency, t.TextStrokeColor3, t.TextWrapped = 0, C.outline, true
     if alignLeft then t.TextXAlignment = Enum.TextXAlignment.Left end
     textConstraint(t, maxText or 22)
-    local outline = Instance.new("UIStroke")
-    outline.ApplyStrokeMode, outline.Color, outline.Thickness, outline.Parent = Enum.ApplyStrokeMode.Contextual, C.outline, 1.5, t
+    if color == C.outline then
+        -- QA 2026-10-16: dark text on a light badge/tab (GOLD, NEW GOLD, slot numbers) turned into a blob with a dark outline.
+        t.TextStrokeTransparency = 1
+    else
+        local outline = Instance.new("UIStroke")
+        outline.ApplyStrokeMode, outline.Color, outline.Thickness, outline.Parent = Enum.ApplyStrokeMode.Contextual, C.outline, 1.5, t
+    end
     t.Parent = parent
     return t
 end
