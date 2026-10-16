@@ -29,7 +29,7 @@ Path: weather (`ProgressionService` sets `workspace.WeatherId`) -> `FoodService`
 | G2 | A Cracked egg that fails to hatch also loses its weather mutation with no hint to the player (the egg was earned in weather for nothing) | design | owner decision, BD-235 |
 | G3 | The tagging step in `FoodService` (ordinal loop, carry, cap) lives inside a server script and has no unit test; offline tests start from `eventEgg` and from `commitRunSettlement`, not the glue | medium | BD-236 (extract a pure `RunEggTags` module + test) |
 | G4 | Weather nests take the weather active **at settlement**, not the weather during the run, so a run in clear weather settled during a storm gives mutation chances and the reverse loses them | design, deliberate in BD-156 | owner decision, BD-235 |
-| G5 | No in-game way for a tester to see the odds or confirm a mutation without playing long (admin panel starts weather and Food x10 but cannot force a mutation roll) | small | BD-237 (admin "mutation chance x10" for playtest builds only) |
+| G5 | No in-game way for a tester to see the odds or confirm a mutation without playing long (admin panel starts weather and Food x10 but cannot force a mutation roll) | small | BD-237 (admin "mutation chance x10", built: `mutationChanceMultiplier`, docs/79; lead Studio check still open) |
 
 ## Not verified
 Studio play check (start weather in the admin panel, Food x10, hatch, look at the dino) was not run by this agent. It remains the lead's check on a fresh `--profile playtest` build: expect a gold mutation toast per mutated catch, a badge on the egg card, a ribbon plus tinted dino at hatch, and the tint/glow on the equipped dino in the world.
