@@ -235,6 +235,16 @@ local function setOpen(open: boolean)
     toggle.BackgroundColor3 = if open then C.gold else C.purple
 end
 toggle.Activated:Connect(function() setOpen(not panel.Visible) end)
+-- BD-304: the Admin button sat on top of every menu's corner. Hide it while a game menu is open (unless the panel itself is open).
+task.spawn(function()
+    local main = player:WaitForChild("PlayerGui"):WaitForChild("BeDinoUI", 30)
+    local scrim = main and main:WaitForChild("ModalScrim", 30)
+    if not scrim or not scrim:IsA("GuiObject") then return end
+    local function sync() toggle.Visible = panel.Visible or not scrim.Visible end
+    scrim:GetPropertyChangedSignal("Visible"):Connect(sync)
+    panel:GetPropertyChangedSignal("Visible"):Connect(sync)
+    sync()
+end)
 UserInputService.InputBegan:Connect(function(input, processed)
     if not processed and input.KeyCode == Enum.KeyCode.F2 then setOpen(not panel.Visible) end
 end)
