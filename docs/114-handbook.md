@@ -127,7 +127,7 @@ Known violations: [110](110-sound-audit.md) flags legendary .43, fusion .375, ha
 
 ## 8. World and asset quality bar (acceptance checklists)
 ### 8.1 Any 3D asset or prop
-1. Generated mesh (Roblox generate_mesh or the approved pipeline), never code-built ([AGENTS.md](../AGENTS.md); BD-206).
+1. Generated mesh (Roblox generate_mesh or the approved pipeline), never code-built ([AGENTS.md](../AGENTS.md); BD-206). The only exception is the scoped owner-approved V3 trees; Blender is also allowed for world and colossal-tree art (8.4.2).
 2. Low-poly flat facets, chunky/rounded, matte; shared eye style (4.2).
 3. **Scale ladder**: a grown dino still feels small next to big trees ([87](87-vision-and-feel-guide.md)). No numeric scale table exists yet (BD-407).
 4. **Grounded**: the bottom touches the floor at all slopes (raycast per prop); nothing sunk or floating (OWNER 2026-10-16: trees were sunk, BD-395).
@@ -153,6 +153,61 @@ Source: owner review of the Royal Nova image draft in ChatGPT on 2026-10-16: "i 
 - Soft, curling flame-like energy shapes are allowed. Avoid aggressive jagged spikes, harsh flashes and flicker. This owner clarification supersedes the blanket "no flame shapes" wording in [93](93-anime-fx-direction.md) for aura appearance; retain its calm-motion and readability principles.
 - The draft is an **aura appearance benchmark only**. Its dinosaur model and environment are not approved production assets; a still image does not establish animation quality, implementation, Studio acceptance or phone performance. The revised draft remains subject to owner feedback.
 - Preserve device budgets and Reduce Motion support. Achieve richness through authored shapes, composition and depth; verify readability in daylight, the cave and stacked mutation/aura/trail combinations. This direction does not authorize raising budgets or changing runtime code by itself.
+
+## 8.4 Visual environment polish (owner discussion 2026-10-16; DESIGN TARGET, fact-checked 2026-10-16)
+
+The owner requested these visual guidelines and four illustrated reference pages be recorded in the handbook. **The illustrations are generated concept art, not screenshots of verified Roblox output.** The 4-page PDF and original illustrations are saved in the owner's ChatGPT Library folder `/be dino/handbook visual references/`: `01 Environment Polish.png`, `02 Asset Quality.png`, `03 Growth and Vegetation.png`, `04 Special Skin Finishes.png`, and `Be Dino Visual Handbook Illustrated Supplement.pdf`. These are not GitHub-hosted image assets and were not available to the fact-check; do not fabricate accessible image URLs. Where this section and a dated owner decision disagree, the decision wins ([115](115-decisions-log.md)). The concrete numbers and the Studio evidence live in [138](138-env-visual-polish.md), [139](139-giant-dino-vegetation-scale.md) and [140](140-tree-quality-test.md), not here. Items marked **PROPOSAL / not owner-approved** are listed in [116](116-handbook-conflicts.md) section G.
+
+### 8.4.1 Six high-value visual fixes
+Status of each fix against the code (BD-460, [138](138-env-visual-polish.md)); the Studio check is still pending, so none of these is accepted yet:
+1. **Grass first: DIAGNOSED AND DECIDED.** The dark repeating waves came from the `BeDino_Meadow` colour map itself (Studio control, 138 s1), not from normals or shadows. **OWNER 2026-10-16: use Roblox's built-in Grass now**, terrain colour 132,166,68 (candidate C, BD-460); `BeDino_Meadow` stays packaged but unbound. A new matte Blender grass texture is the follow-up BD-461 and is bound only if it beats the built-in grass side by side at gameplay distance.
+2. **Green saturation:** keep the hierarchy goal (mint treetops, terrain and the green player must not blend) and keep the cheerful colour. CODE (BD-460): per-asset foliage tone, clear-weather grade saturation +0.04 and contrast 0; no blanket desaturation. Collectibles stay vivid.
+3. **Player grounding:** CODE (BD-460): a soft contact shadow under each dino (3 stacked flat discs, grows with the dino). Extra dimensional shading on the body and neck is the PR author's **PROPOSAL / not owner-approved** (docs/116 C-28). Do not make the dino glow.
+4. **Distance depth: NO HAZE (OWNER 2026-10-16, "no screenshots should have this hazy effect").** The PR's "lower distant contrast and slightly lighter distant hills/trees" is withdrawn because it is a milky-haze look. Clear island daylight keeps Atmosphere density .1 / haze .3 / glare 0, no far blur, no bloom (section 6); weather events add their own soft atmosphere and ramp back to clear. Depth must come from scale, layering and silhouette, never from lightening or fogging the distance.
+5. **Reduce clutter:** clear traversal paths and small-dino lines of sight; group plants and flowers in intentional clusters; replace rather than add. CODE (BD-460): wider main routes and a larger spawn keep-out. Clearings and band-based planting are the PROPOSAL in [139](139-giant-dino-vegetation-scale.md) s6 (BD-473, P2).
+6. **Lighting:** CODE (BD-460): island Brightness 1.8 with a higher ambient floor so crowns do not clip and the ground is not near black. Keep the dino and food the visual priority. Re-measure with the luminance gate (section 6.1) after the grass colour change.
+
+### 8.4.2 Procedural placement does not excuse poor asset shapes
+- **Round trees, conifers and palms: DECIDED.** Repeated sphere-clusters, identical stacked pine layers and straight palm poles read as automatic primitives. **OWNER 2026-10-16: use the Blender V3 trees (broadleaf, conifer, palm)**, with asymmetric clumps, tapered trunks, roots and branches, drooping skirts and curved palm trunks ([140](140-tree-quality-test.md), BD-462, Review / test). This is a **scoped exception** to the no-code-built-models rule (D8/D15 in [115](115-decisions-log.md)): it covers ONLY `world_tree_broad_v3`, `world_tree_pine_v3` and `world_tree_palm_v3`. The meshes are not uploaded yet, so the game still shows the current generated trees.
+- **Blender is allowed for world and colossal-tree art** (OWNER 2026-10-16, docs/139 Q5). Every other model (dinos, props, plants) still needs a generation or hand-modelling pipeline: generated mesh, then cleanup and optimisation, then Roblox import. Code-built stacks stay placeholders.
+- **Grass, ferns and small plants:** broader, slightly bent leaf blades, layered clusters, a few recognisable families, no thin crossed triangles. Spec only, not built (BD-463, P2).
+- **Ground props:** sculpted stones, short logs, roots, stumps, bushes and mushrooms around major tree bases, replacing other clutter so part count and visibility do not regress. Spec only, not built (BD-464, P2). Grounding and overlap follow section 8.1.
+- **Player dinosaur:** preserve the recognisable chunky silhouette and face; only minor refinement at neck, hip, mouth and limb intersections. The base look is the faceted low-poly dino (D14); this refinement is the PR author's **PROPOSAL / not owner-approved** (docs/116 C-28).
+- Compare old and new variants at normal gameplay camera distance, with mobile performance evidence ([107](107-offline-mobile-budget.md)). Follow section 8.1, docs/87 and AGENTS.md.
+
+## 8.5 Scaling: jungle at tiny, medium and colossal sizes (DESIGN TARGET; the numbers are in docs/139)
+
+**Intended emotional curve:** newly spawned dinosaurs feel tiny in dense, towering vegetation; growing dinosaurs outgrow small plants; giant dinosaurs visibly dominate small players without the *whole* jungle looking miniature. The height hierarchy (Small / Medium / Colossal bands, the 42-80 stud gap, placement rules, camera curve, collision and budgets) is specified once, in [139](139-giant-dino-vegetation-scale.md) s5-s9, and is not repeated here. **All of it is a PROPOSAL.** Still open (docs/139 s14): Q3 whether ordinary trees may be outgrown (this PR's "dinosaurs ultimately surpass ordinary trees" assumes yes, while section 8.1 item 3 says a grown dino still feels small next to big trees: docs/116 C-23), Q4 the mix, Q6-Q12. Most of the build rows (BD-472, 474-478) are P3 after the pacing answer; only BD-470, BD-471 and BD-473 are P2.
+
+- **Vegetation mix:** the "60-70% small/medium, 20-30% larger, 5-10% colossal" split came from an outside design review and is **not approved**. [139](139-giant-dino-vegetation-scale.md) s5 reads it as 65 / 27 / 8 of the tree-plus-giant placements of 12 studs and up (Q4). Use grouped placement and clearings, not an evenly scattered forest of giants; test biome by biome.
+- **Camera:** the principle is not to zoom linearly up and out with size, because top-down framing makes the map look like miniatures: keep trunks and the horizon visible, small players visible beside giants, and test occlusion and control at each size. Today the camera IS exactly proportional (minimum zoom 12 x size). The sub-linear camera curve is the PROPOSAL in [139](139-giant-dino-vegetation-scale.md) s7 (BD-472, P3, flag off, Q7/Q8 open).
+- **Gameplay risks:** max-size dinos must traverse terrain, avoid tree and cave geometry and reach food and eggs without broken animation, physics or camera clipping; audit combat, predation and NPC encounters; record mobile performance. Tracked as BD-476 / BD-477 (P3).
+- **Intimidation is awe only (OWNER Q2 2026-10-16):** size, footsteps, shadow and camera framing. No fear mechanics and no small-dino reactions (BD-478). Read "dominate small players" in that way.
+
+**Growth pacing is DECIDED and unchanged (OWNER Q1 2026-10-16).** `GrowthPerFood` stays 0.1 and the cap stays 4 (BIG x1.2 reaches 4.8). A normal 5-minute run ends at about size 1.5, the cap takes about an hour, and gigantic is a rare long-run reward ([139](139-giant-dino-vegetation-scale.md) s1.1 and s3.1, [115](115-decisions-log.md)). ~~Possible playtest targets of about 2.5-3x after a good five-minute run and a 6x long-run maximum~~ (NOT ADOPTED: the owner kept the pacing; history kept, do not implement). What every run still sees is the START: a new dino should feel small in a tall world (Small band, skyline, clearings). That is BD-473 work, not a growth change.
+
+## 8.6 Fused-tier surface finish benchmark (DESIGN TARGET, not implementation proof; Gold is in progress and not final)
+
+Four identical poses are compared in concept art: **top left Original, top right Gold, bottom left Emerald, bottom right Diamond.** The same red-and-purple stripe pattern, base dinosaur proportions, cream belly, black eye and claws remain in all panels.
+
+**OWNER 2026-10-16 (the rule this benchmark is judged by):** a fused tier keeps the dino's **same colours and pattern**, seen **under a tinted crystal / metal coat with an outline**. The tier is told apart through that coat and outline, primarily through the surface itself rather than particle emitters.
+
+| Variant | Target surface (coat over the unchanged colours and pattern) | Outline |
+| --- | --- | --- |
+| Original | Original matte base; clear saturated red-purple pattern | none |
+| Gold | Bright polished golden metal coat, original stripes legible; not matte orange | Clean strong golden edge |
+| Emerald | Glossy translucent emerald gem coat, original stripes perceptible | Mint/emerald edge |
+| Diamond | Icy pale blue-white, polished crystalline coat, underlying stripes perceptible | Crisp blue-white edge |
+
+**Roblox findings (Studio, 2026-10-16) that shape the build:**
+- A `SurfaceAppearance` created at runtime does **not render**. One **authored in Edit mode and cloned at runtime** does. Keep the template in the place and clone it per dino.
+- The stripes are **runtime-baked textures**, so the PBR maps go on a **separate alpha-mapped shell over them**, not into the pattern texture. The PR's remark that a duplicated transparent shell looked plasticky is a finding about that test shell, not a reason to drop the shell; its "single-mesh texture plus PBR maps instead of extra shells" suggestion is withdrawn.
+- At **graphics quality 1 reflections are off**. The tier must still read with reflections off through the tint and the outline; a phone fallback is required (phone budget, section 8.1 item 8).
+- **Gold is in progress and not final.** The look and numbers for Gold, and so Emerald and Diamond, are open until the owner accepts a Studio screenshot. The open tier work is PR #291 (`tier-shiny`); the numbers in section 4.3 describe the code on main today and may be reworked by it.
+- Do not assume the Glass or Metal material setting alone produces concept-art reflections. Eye and claw parts stay exceptions as in section 4.3; keep the current caps there.
+- **PROPOSAL / not owner-approved:** the PR author's view that Emerald and Diamond need material-specific art, not just a recoloured Gold (docs/116 C-30).
+
+**Review standard:** four same-pose Studio screenshots in bright daytime, another lighting or weather check, original beside variant, at the actual game-camera distance, with no particles or trails; repeat at graphics quality 1 (reflections off) and at a normal quality; note engine limits and mobile cost. Do not let a bright outline hide an unconvincing coat. The generated illustration is a **visual reference**, never an engine performance claim.
 
 ## 9. Game rules cheat sheet (numbers true today; CODE unless noted)
 | Rule | Value | Source |
