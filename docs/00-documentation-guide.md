@@ -89,3 +89,16 @@ Do **not** delete build snapshots or test evidence just to make them look curren
 - Evidence folders added since 95 (all under `docs/evidence/`, 2026-10-16): `fusion-menu-v2`, `no-more-cubes`, `egg-preview-light`, `lowpoly-spike`, `combat-wiring`, `cave-shell`, `cave-lighting`, `menu-fixes`, `menu-screenshots` (BD-300..304), `qa-pass`, `qa-p2`; plus 2026-10-15 kit renders `food-kit-v2.png`, `landmarks-kit-v2.png`, `trees-kit-v2.png`. Status: evidence snapshots, not acceptance on their own.
 - **Superseded**: the BD-254 "calm, bubbly Sanctuary" polish in `07-kanban.md` (open PR #147, never merged) is superseded by [104](104-cave-hub-design.md). Do not merge or extend it.
 - [105 Low-poly dinos: gene patterns and fused-tier looks](105-lowpoly-patterns-and-tiers.md): 3D procedural pattern bake per part, image budget, Gold/Emerald/Diamond on low-poly (flag off), Studio contact sheet and critique (2026-10-16).
+
+## Session log 2026-10-16
+
+PRs #123..#174 by theme (all flag-off or docs; none is playtest acceptance):
+- FX and textures: #118, #119, #120, #122 (FX v3 flipbooks and binds); #124, #125, #128 (shop card FX, condition eggs, aura cards); #123 (potion icons).
+- No more cubes and fusion UI: #117 (live mesh templates), #116 (Fusion Menu v2), #121, #115 (dino skins docs).
+- World meshes: #139 (generated meshes in biome placement).
+- Combat and classes: #129..#131, #135 (design), #138, #140, #143, #157, #168, #170 (pure modules, server, HUD, NPCs, QA).
+- Low-poly dinos: #134, #142, #145, #149, #152, #165, #169, #171.
+- QA and menus: #141, #144, #146, #153, #155, #162, #164, #166, #167.
+- Reward and mutation audits: #126, #127, #132, #133, #136, #137.
+- Research and cave design: #148, #150, #151, #173 (friends playtest audit).
+- Cave hub build (Config.CaveHub off): #154, #156, #158, #159, #160, #161, #163, #172, #174.
