@@ -25,6 +25,15 @@ function Copy.sign(station: any): string?
     return if typeof(station) == "string" then Copy.Signs[station] else nil
 end
 
+-- BD-292: the text a sign PROP row shows, or nil. `key` is the prop key (hub_sign_stone / hub_sign_arrow), `owner` the station id.
+-- The Heart has no sign; an unknown station has none.
+function Copy.forRow(key: any, owner: any): string?
+    if key ~= "hub_sign_stone" and key ~= "hub_sign_arrow" then return nil end
+    local text = Copy.sign(owner)
+    if text == nil or text == "" then return nil end
+    return text
+end
+
 -- true when `text` is acceptable child-facing copy: no digits and no forbidden whole word (any case). Length is checked
 -- separately (signs: MaxLength).
 function Copy.acceptable(text: any): boolean
