@@ -142,6 +142,35 @@ assert(v==1,"blend reaches 1")
 for _=1,100 do local n=R.blend(v,0,0.05,true) assert(n<=v and n>=0) v=n end
 assert(v==0,"blend returns to 0")
 assert(R.blend(0,1,0.1,true)>R.blend(0,1,0.1,false),"Reduce Motion blends faster (no slow fade)")
+-- ---- cosy pass (docs/104 s14): lamp flicker, ambient bed, show-off spot
+local lampN=0
+for _,l in D.lights do
+ if l.owner=="lava" or l.owner=="forge" or l.owner=="gate" then assert(not l.lamp,"steady light never flickers: "..l.owner)
+ else assert(l.lamp and l.phase and l.period>=R.Lamp.periodMin and l.period<=R.Lamp.periodMax,"warm light breathes: "..l.owner) lampN+=1 end
+end
+assert(lampN>=9,"the warm lamps breathe: "..lampN)
+for _,l in D.lights do
+ if l.lamp then
+  local lo,hi=math.huge,-math.huge
+  for i=0,2000 do local b=R.lampBrightness(1,i*0.05,l.phase,l.period,false) lo=math.min(lo,b) hi=math.max(hi,b) assert(R.lampBrightness(1,i*0.05,l.phase,l.period,true)==1,"Reduce Motion = steady base") end
+  assert(lo>=1-R.Lamp.amplitude-1e-9 and hi<=1+R.Lamp.amplitude+1e-9 and R.Lamp.amplitude<=0.1,"flicker stays subtle (<= 10 percent)")
+  assert(hi-lo>0.04,"flicker is visible but gentle")
+ end
+end
+assert(R.Bed.id=="" or R.Bed.id:match("^rbxassetid://%d+$") or R.Bed.id:match("^%d+$"),"ambient bed is empty (TODO art) or a registered id")
+assert(R.bedVolume(1)==0 or (R.bedVolume(1)<=0.15 and R.bedVolume(0)==0),"ambient bed is quiet")
+local so=R.showOffSpot()
+assert(so,"the Heart has a show-off pedestal")
+local hs=L.byId.heart
+assert(dist(so.x,so.z-CZ,hs.x,hs.z)<=hs.r-1,"show-off pedestal stands inside the Heart")
+for _,p in L.props do if p.key=="hub_pedestal" and p.owner=="heart" then assert(p.collider,"the show-off pedestal has a collider to stand on") end end
+local benches,cushions,lamps=0,0,0
+for _,p in L.props do
+ if p.owner=="heart" or p.owner=="settings" then
+  if p.key=="hub_bench_stone" then benches+=1 elseif p.key=="hub_cushion_moss" then cushions+=1 elseif p.key=="hub_lantern_post" then lamps+=1 end
+ end
+end
+assert(benches>=2 and cushions>=2 and lamps>=2,"cosy seating and lamps at the Heart: "..benches.." "..cushions.." "..lamps)
 print("cave lighting ok: lights "..#D.lights.."/"..C.MaxLights..", fx parts "..D.fxParts..", fall top "..(FY+F.height).." < "..string.format("%.1f",lowest))
 '''
 
@@ -196,6 +225,9 @@ def static_checks():
     assert 'Lighting.Brightness = saved.brightness' in client and 'Lighting.ShadowSoftness' in client, 'BD-398 cave brightness and shadow softness, restored'
     assert 'spec.shadows == true' in server, 'BD-398 shadows only on flagged lights'
     assert 'CastShadow = not p.walk' in (ROOT / 'src/server/CaveProps.luau').read_text(), 'BD-398 props cast shadows'
+    assert 'CaveShowOff.build(hub)' in on and 'CaveShowOff' not in off.replace('local CaveShowOff', ''), 'cosy pass: show-off prompt only in the flag-on cave branch'
+    assert 'lampBrightness(base' in client and 'calm)' in client, 'cosy pass: lamp flicker is Reduce Motion aware'
+    assert 'if B.id == "" then return end' in client, 'cosy pass: no ambient bed Sound is made until a loop is registered'
     rules = (ROOT / 'src/shared/CaveLightingRules.luau').read_text()
     for banned in ('Instance.new', 'game:GetService', 'Vector3', 'workspace', 'Config'):
         assert banned not in rules, 'CaveLightingRules stays pure: ' + banned

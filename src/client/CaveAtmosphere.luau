@@ -44,8 +44,10 @@ local function save()
             if d:IsA("ParticleEmitter") and d:GetAttribute("Dust") then table.insert(saved.emitters, d) end
         end
     end
+    saved.lamps = {}
     for _, d in workspace.Terrain:GetDescendants() do
         if d:IsA("PointLight") and d:GetAttribute("Pulse") then table.insert(saved.lights, d) end
+        if d:IsA("PointLight") and d:GetAttribute("Lamp") then table.insert(saved.lamps, d) end
     end
 end
 
@@ -73,6 +75,32 @@ local function motes(calm: boolean)
         local base = Rules.Forge.base
         l.Brightness = if calm then base else base + math.sin(os.clock() * 2 * math.pi / Rules.Forge.period) * Rules.Forge.amplitude
     end
+    -- cosy pass: warm lamps breathe a little (steady base with Reduce Motion)
+    local now = os.clock()
+    for _, l in s.lamps do
+        local base = l:GetAttribute("LampBase")
+        if typeof(base) == "number" then
+            l.Brightness = Rules.lampBrightness(base, now, l:GetAttribute("LampPhase") or 0, l:GetAttribute("LampPeriod") or 3, calm)
+        end
+    end
+end
+
+-- Cosy pass: the soft ambient bed. One looped Sound made on first use, only when CaveLightingRules.Bed.id is registered ("" = never made).
+local bed: Sound? = nil
+local function stepBed(dt: number)
+    local B = Rules.Bed
+    if B.id == "" then return end
+    if not bed then
+        local sound = Instance.new("Sound")
+        sound.Name, sound.SoundId, sound.Looped, sound.Volume, sound.RollOffMaxDistance = "CaveBed", B.id, true, 0, 0
+        pcall(function() require(Shared:WaitForChild("AudioMixer")).attach(sound, "ambience") end) -- follows the ambience slider (verify_audio)
+        sound.Parent = workspace.CurrentCamera or workspace
+        bed = sound
+    end
+    local sound = bed :: Sound
+    local target = Rules.bedVolume(amount)
+    sound.Volume += math.clamp(target - sound.Volume, -dt * B.volume / B.fadeSeconds, dt * B.volume / B.fadeSeconds)
+    if sound.Volume > 0.002 then if not sound.IsPlaying then sound:Play() end elseif sound.IsPlaying then sound:Stop() end
 end
 
 function Cave.step(dt: number)
@@ -83,6 +111,7 @@ function Cave.step(dt: number)
     isInside = p ~= nil and Rules.insideAt(p.X, p.Y, p.Z, isInside)
     local calm = Settings.calm()
     amount = Rules.blend(amount, if isInside then 1 else 0, dt, calm)
+    stepBed(dt)
     if amount <= 0 then
         if grade then
             grade:Destroy()

@@ -61,3 +61,13 @@ Extracted from the kanban owner log, AGENTS.md, docs and the lead sessions. "LEA
 - OWNER (2026-10-16): auras and trails belong to ONE specific dino instance (not species, not account) and are lost on fusion (docs/46, BD-059). Decision only recorded; the per-account to per-dino migration is not implemented (BD-059). Resolves C-12, Q3.
 - OWNER (2026-10-16): the Balloon skin (defeat = pops and flutters away softly) is a **Robux skin**, like Bricks, Clay and Plushy. Answers docs/116 Q5 option (a). Release stays behind the Robux release flags until tested; no art upload is needed (procedural skin). Tracked in [120](120-pending-owner-uploads-checklist.md).
 - OWNER (2026-10-16): first friends playtest: cap 4 players; everything ready ships in session 1 (rare-hatch celebration, telemetry, class feel); the cave hub is in session 1 (playtest profile sets `CaveHub = true`, default stays false). See [125](125-friends-playtest-go-no-go.md).
+
+## 2026-10-16 (owner vision answers)
+- OWNER: PvP is an optional side; the core loop is food, eggs, growing. Hunting players happens, but a Peaceful option must be easy to pick (BD-421).
+- OWNER: session shape is short runs of about 5 minutes, a hatch party after each, several runs per session (BD-426).
+- OWNER: long-term goal is an equal mix of completing the collection, perfecting one favourite dino (fusion to Diamond) and playing as new dinos with a different class feel (BD-427).
+- OWNER: Robux line is looks plus convenience (skins, cosmetics, time-savers like potions or extra nest spots), never exclusive power. Robux flags stay off until policy is tested (BD-425).
+- OWNER: eggs caught in a run are ALWAYS kept, also when eaten; being eaten just ends the run early (BD-422).
+- OWNER: cave hub mood is a cosy home base: warm, safe, lamp-lit den to relax, shop and show off dinos.
+- OWNER: players can play as ANY dino they own, each with its own class feel (BD-423).
+- OWNER: a rare hatch (Legendary, Shiny, event mutation) gets a huge celebration: screen-wide fanfare, confetti, special sound, server announcement (BD-424).

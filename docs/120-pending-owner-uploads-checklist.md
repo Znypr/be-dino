@@ -76,6 +76,10 @@ Note: the older fx-v2 smoke, spark and flame sheets are superseded by the upload
 
 After each upload: the lead records ids in docs/77, binds, runs the matching verifier, takes a desktop and phone Studio screenshot next to neighbouring UI, then moves the BD rows to Review / test ([109](109-owner-art-prompt-pack.md) section 7).
 
+## Cave cosy pass (2026-10-16)
+
+- [ ] Owner: soft cave ambience loop for `CaveLightingRules.Bed.id` (registry row `TODO_cave_ambient_bed_loop`, docs/77); nothing plays until set.
+- [ ] Owner/Blender: optional cosier den props (`TODO_cave_den_rest_props`) and a dedicated show-off plinth (`TODO_cave_showoff_pedestal_art`).
 ## 6. Sounds still to pick or upload (BD-081, [124](124-sound-style-guide.md))
 
 Audio is uploaded by the owner as **Audio** in Asset Manager (never invent ids); the lab in Settings > SOUND > SOUND LAB lists every registered sound so you can judge by ear. Missing sounds, per category (details and targets in 122 section 3):
