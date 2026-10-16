@@ -22,4 +22,8 @@ end
 
 Copy.runCompleteEggsLabel = "Eggs found"
 
+-- Sanctuary card (smoke test 2026-10-16: it still said "clusters" and "Bank catches")
+Copy.sanctuaryTip1 = "Eat food to grow. Jump over hills. Stay away from bigger dinos!"
+Copy.sanctuaryTip2 = "Tap HOME to save your eggs, then open them."
+
 return Copy

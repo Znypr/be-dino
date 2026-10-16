@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "f91c394c3c6e80a7fe9031bae6a45b0e992c20e3f0f9aaadd7599262d00ff3ca",
+  "place_sha256": "fd5eb07b65dd0e40dbf5f673dc3d5b9298090def455f2d856c2f55166632680d",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -201,7 +201,7 @@
     "src/shared/EggTraits.luau": "0ffc59f30ffdcd04b6be336d87dc9fb8f73c9334b12bfa73a09c23171a01ebc3",
     "src/shared/EventIconVectors.luau": "4a5bf43178f8adfaedcc64300ba7991b3a61f025cd741bf60c539415a15609b0",
     "src/shared/FoodCatchRules.luau": "c2c6cfa816271218494ca4116f70a1fc0b4b1e82ca2b6592d2d3280b43c4ecd4",
-    "src/shared/FtueCopy.luau": "91e92fa039e5704c3c3e163bee8db1ee67e84b17c3da3590eebae3cedbdb13d7",
+    "src/shared/FtueCopy.luau": "18d96e6748d095ed2815101e097729ad13c1b4f0c368eca55baa842ca2fe01b9",
     "src/shared/FtueRules.luau": "3e9411b54a4555d7b76214bda434823493a9753ddc7645007803af6ae47bc365",
     "src/shared/FusionSelection.luau": "0d222954a5a3fa762de77fe9d07434b2001eac75af2fe3ef58c9a7027acd41c1",
     "src/shared/FxRecipes.luau": "34d0d7cd88a8da0760e2a5361034af22ff3a6f98d982fb8c40830a5b1b786e2f",
@@ -318,7 +318,7 @@
     "src/server/RunLifecycle.luau": "ba7079929c0ac161c3b4b978fb9d84e8ece742a4d0a6f63f5551d1d7fedac1f4",
     "src/server/VisualTestService.luau": "ee48ddc907c11e5d1390483d570d9ab96fd01b3ee02493b5724a2ebcf1ef0773",
     "src/client/AdminPanel.client.luau": "1cc79245ab753341398f406ada00f92483c702d299a62c6ba859d220b3376217",
-    "src/client/Bootstrap.client.luau": "eeee0a5d317289c6ae8c763aabf3c64bc7fab38a158450256d101b7371c8daca",
+    "src/client/Bootstrap.client.luau": "7baa16ec9b03e9c0567ebe692dbad594495a990cc60bb2d72087fa8cfd20f963",
     "src/client/CameraOcclusion.client.luau": "5e0b79f8433683ac09771383077e3692815335055723739355a82f468e0635d5",
     "src/client/CaveAtmosphere.luau": "31321733539061b22831af20c7f781881bd40d4c0d6e5d68f1020641e0da5fa2",
     "src/client/CaveLavaClient.luau": "c2716b84148ffaf4860c529ee884faf0753ffc12d50929404799dd6f01fbeaf6",
