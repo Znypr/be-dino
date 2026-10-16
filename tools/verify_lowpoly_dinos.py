@@ -285,6 +285,42 @@ for _, class in {"Ground", "Armored", "Fly", "Water"} do
     P.sampleAction("body", 1, false, ctx, 0/0, o, class)
     for key, v in o do assert(v == v and v == 0, "nan " .. key) end
 end
+-- BD-249 defeat hook: every skin x class x role: finite, bounded, rest at p=0, Reduce Motion = rest (wing keeps its fold), unknown skin = Base
+do
+    local dctx, d2 = P.newCtx(), P.new()
+    dctx.phase = "defeat"
+    assert(P.duration("defeat", 0) == 1.5 and P.actionWeight("defeat", 0) == 0 and P.actionWeight("defeat", 1) == 1, "defeat timing")
+    assert(P.skinOf(nil) == "Base" and P.skinOf("Nope") == "Base" and P.skinOf("Clay") == "Clay")
+    for _, skin in {"Base", "Plush", "Clay", "Bricks", "Nope"} do
+        for _, class in {"Ground", "Fly", "Water", "Armored"} do
+            for _, role in {"body", "head", "neck", "tail", "arm", "leg", "flipper", "wing"} do
+                for _, side in {-1, 1} do
+                    dctx.p, dctx.t = 0, 0
+                    P.sampleDefeat(role, side, true, dctx, 1, d2, class, skin)
+                    assert(math.abs(d2.pitch) < 1e-9 and math.abs(d2.yaw) < 1e-9 and math.abs(d2.dy) < 1e-9 and math.abs(d2.dz) < 1e-9, "defeat starts at rest " .. skin .. role)
+                    for step = 0, 30 do
+                        dctx.p, dctx.t = step / 30, step / 30 * 1.5
+                        P.sampleDefeat(role, side, step % 2 == 0, dctx, 1, d2, class, skin)
+                        for k, v in d2 do assert(v == v and math.abs(v) <= P.MaxFold, "finite " .. k) end
+                        assert(math.abs(d2.dy) <= P.MaxOffset and math.abs(d2.dz) <= P.MaxOffset and d2.fwd == 0)
+                        P.sampleDefeat(role, side, true, dctx, 0, d2, class, skin)
+                        assert(d2.pitch == 0 and d2.yaw == 0 and d2.dy == 0 and d2.dz == 0, "reduce motion rest")
+                        if role ~= "wing" then assert(d2.roll == 0, "reduce motion rest roll") end
+                    end
+                end
+            end
+        end
+    end
+    dctx.p, dctx.t = 1, 1.5
+    local a, b = P.new(), P.new()
+    P.sampleDefeat("body", 1, true, dctx, 1, a, "Ground", "Clay")
+    P.sampleDefeat("body", 1, true, dctx, 1, b, "Ground", "Plush")
+    assert(a.dy < -0.01 and b.dy < -0.01, "clay and plush sink")
+    P.sampleDefeat("body", 1, true, dctx, 1, a, "Ground", "Base")
+    P.sampleDefeat("body", 1, true, dctx, 1, b, "Ground", "Nope")
+    assert(a.roll == b.roll and a.roll > 0.2, "base tips over; unknown = base")
+end
+print("lowpoly defeat tests passed")
 print("lowpoly action tests passed", checked)
 print("lowpoly pose tests passed")
 '''
@@ -359,6 +395,7 @@ if __name__ == '__main__':
     rv = (ROOT / 'src/client/ResourceVisuals.client.luau').read_text(encoding='utf-8')
     assert 'BD-389' in rv and 'for _, wait in {0.3, 0.7, 1.5, 3, 6, 10}' in rv, 'BD-389: respawn retry ladder for the local mesh'
     print("BD-388 animator source ok: joint-pivot rotation, shared bob, peck in studs")
+    assert 'sampleDefeat' in anim and 'RunState") == "Ending"' in anim and 'LPSkin' in anim, 'BD-249: defeat hook in the animator'
     entries = check_registry()
     print(f"low-poly registry ok: {len(entries)} species, flag off")
     src = 'local P=(function()\n' + (ROOT / 'src/shared/LowPolyPose.luau').read_text(encoding='utf-8') + '\nend)()\n' + BODY

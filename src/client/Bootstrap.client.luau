@@ -490,6 +490,15 @@ render=function(name: string)
             label(body,ProgressionConfig.RandomEggPrice.." Crystals\nBalance: "..num("Crystals").."  •  Level "..num("AccountLevel"),270,cardsY+45,535,60,22)
             button(body,"ODDS / DETAILS",270,cardsY+119,535,targetHeight,C.blue,function() oddsLevelOverride=nil outcomeState={page=1,filters={}} open("oddsSimple") end)
             button(body,"BUY EGG",270,cardsY+targetHeight+130,535,targetHeight,C.accent,function() open("eggPurchase") end)
+            -- BD-391/405 (docs/115 D22): Fast travel perk, bought with crystals. PROVISIONAL price. Walking stays the default.
+            if Config.FastTravelPerk and Config.CaveHub then
+                local owned=type(p.perks)=="table" and p.perks.fastTravel==true
+                local perkPrice=ProgressionConfig.FastTravelPrice
+                label(body,"Fast travel: zip to the shops",0,math.max(cardsY+targetHeight*2+150,336),520,34,22,C.gold)
+                button(body,if owned then "YOURS" else perkPrice.." Crystals",540,math.max(cardsY+targetHeight*2+146,332),284,40,if owned then C.card else C.accent,function()
+                    if not owned then transact("buyPerk","fastTravel") open("auras") end
+                end).Active=not owned
+            end
             return
         elseif cosmeticTab=="conditions" then
             local weights=ShopOdds.conditionPercents(p.conditionLevel or 0) -- BD-045: normalized percents
