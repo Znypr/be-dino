@@ -11,6 +11,7 @@ local UserInputService = game:GetService("UserInputService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Recipes = require(Shared.FxRecipes)
 local Assets = require(Shared.EffectAssets)
+local Slots = require(Shared.AssetSlots)
 
 local Rig = {}
 Rig.__index = Rig
@@ -80,6 +81,28 @@ end
 local function orient(position: Vector3, angle: number): CFrame -- attachment X axis = orbit tangent (beam curves follow it)
     local tangent = Vector3.new(-math.sin(angle), 0, math.cos(angle))
     return CFrame.fromMatrix(position, tangent, Vector3.yAxis, tangent:Cross(Vector3.yAxis))
+end
+
+-- ---------------------------------------------------------------- shared ribbon + optional shell (BD-432)
+-- ONE soft ribbon texture serves every trail ribbon and orbit beam. While the slot is empty (docs/77 fx_ribbonSoft) the plain
+-- coloured ribbon is used: nothing is drawn in code.
+local function ribbonTexture(): string
+    return if Assets.isReal("ribbonSoft") then Assets.resolve("ribbonSoft") else ""
+end
+-- The aura shell is a slightly inflated Blender mesh (slot aura_shell_mesh). It exists only when that slot holds a real upload,
+-- on Epic+ auras at the full look, never with Reduce Motion. Empty slot = no shell, no fallback shape.
+local SHELL_MIN_TIER = 4
+local function wantsShell(kind: string, resolved, opts): boolean
+    return kind == "aura" and not resolved.reduced and opts.detail ~= "lite" and (resolved.tier or 0) >= SHELL_MIN_TIER and Slots.mesh("aura_shell_mesh") ~= nil
+end
+-- Cost of a look as the global budget sees it (FxRecipes cost plus shells), without building anything.
+function Rig.cost(kind: string, item, opts)
+    opts = opts or {}
+    local resolved = Recipes.resolve(kind, item, {device = opts.device or Rig.device(), reduce = opts.reduce, detail = opts.detail})
+    local out = {}
+    for k, v in resolved.cost do out[k] = v end
+    out.shells = if wantsShell(kind, resolved, opts) then 1 else 0
+    return out
 end
 
 -- ---------------------------------------------------------------- build
@@ -218,7 +241,7 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
             for i = 1, n do
                 local beam = acquire("Beam") :: Beam
                 beam.Name = "Fx_" .. layer.id
-                beam.Texture = if Assets.isReal("ribbonSoft") then Assets.resolve("ribbonSoft") else ""
+                beam.Texture = ribbonTexture()
                 beam.Color = colorSeq(layer.color)
                 beam.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.92), NumberSequenceKeypoint.new(0.2, 1 - layer.alpha),
                     NumberSequenceKeypoint.new(0.8, 1 - layer.alpha), NumberSequenceKeypoint.new(1, 0.92)})
@@ -245,13 +268,28 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
                 ribbon.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1 - layer.alpha), NumberSequenceKeypoint.new(0.5, 1 - layer.alpha * 0.5), NumberSequenceKeypoint.new(1, 1)})
                 ribbon.WidthScale = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0)})
                 ribbon.Lifetime, ribbon.MinLength, ribbon.FaceCamera, ribbon.LightEmission = layer.life, 0.12, true, layer.light or 0.8
-                ribbon.Texture = if Assets.isReal("ribbonSoft") then Assets.resolve("ribbonSoft") else ""
+                ribbon.Texture = ribbonTexture()
                 ribbon.Enabled = false
                 ribbon.Parent = root
                 own(ribbon)
                 table.insert(self.trails, {ribbon = ribbon, a = a, b = b, side = side, layer = layer, lines = layer.id == "lines"})
             end
         end
+    end
+    if wantsShell(kind, resolved, opts) then
+        local mesh = Slots.mesh("aura_shell_mesh")
+        local shell = Instance.new("Part")
+        shell.Name = "FxShell"
+        shell.Size = Vector3.new(4, 4, 4)
+        shell.Transparency, shell.Anchored, shell.CanCollide, shell.CanTouch, shell.CanQuery, shell.CastShadow = 0.88, true, false, false, false, false
+        shell.Material, shell.Color = Enum.Material.Neon, c3(resolved.layers[1].color[#resolved.layers[1].color])
+        local special = Instance.new("SpecialMesh")
+        special.MeshType, special.MeshId, special.Scale = Enum.MeshType.FileMesh, mesh, Vector3.new(1, 1, 1)
+        special.Parent = shell
+        local folder = workspace:FindFirstChild("LocalDinoFX")
+        if not folder then folder = Instance.new("Folder") folder.Name = "LocalDinoFX" folder.Parent = workspace end
+        shell.Parent = folder
+        self.shell = shell
     end
     self._anchorPart = anchor
     self.fade = 0
@@ -281,6 +319,12 @@ function Rig:update(scale: number, time: number, moving: boolean)
         if rebuild then anchor.Size = Vector3.new(2.6 * scale, 0.2, 2.6 * scale) end
     end
     local pulse = if reduced then 0.5 else Recipes.pulse(time)
+    if self.shell then -- slow breathing, always soft and see-through (calm rule)
+        self.shell.CFrame = root.CFrame
+        local size = (4.2 + 0.25 * pulse) * scale
+        self.shell.Size = Vector3.new(size, size, size)
+        self.shell.Transparency = 1 - 0.14 * fade
+    end
     for _, entry in self.lights do
         entry.light.Brightness = entry.layer.brightness * (0.75 + 0.25 * pulse) * fade
         if rebuild then entry.light.Range = entry.layer.range * scale end
@@ -356,6 +400,7 @@ function Rig:destroy()
     for _, inst in self.objects do release(inst) end
     self.objects = {}
     if self._anchorPart then self._anchorPart:Destroy() end
+    if self.shell then self.shell:Destroy() self.shell = nil end
 end
 
 return Rig
