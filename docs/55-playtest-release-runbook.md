@@ -14,7 +14,7 @@ paid-random features stay off.** Target devices are **desktop and one Android ph
 ## 1. Release configuration (`--profile playtest`)
 
 `python tools/build.py` is unchanged. It still produces the development build
-`build/BeDino-BuildNNN.rbxlx`, which CI checks and uploads.
+`build/BeDino-BuildNNN.rbxlx`, which CI checks and uploads. This file and its manifest are **generated and not committed** (ignored since BD-418, so merges no longer conflict on them); regenerate locally with `python tools/build.py` or download the CI artifact `BeDino-current-build`.
 
 `python tools/build.py --profile playtest` packages the same sources and rewrites a few
 values in the **generated** Config only. `src/` is never modified. The output goes to
