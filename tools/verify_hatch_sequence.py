@@ -138,7 +138,7 @@ assert(maxRot > 5 and maxRot <= 8 and maxDx <= 5 and maxDy <= 3 and maxSx <= 2.4
 local r0, d0, y0 = T.rattle(1.234, 0) assert(r0 == 0 and d0 == 0 and y0 == 0, "no jitter at zero intensity")
 assert(near(T.revealScale(0), .25) and T.revealScale(1) == 1 and T.revealScale(2) == 1)
 local peak = 0 for i = 0, 100 do peak = math.max(peak, T.revealScale(i / 100)) end
-assert(peak > 1.02 and peak < 1.12, "slight overshoot, then settle at 1: " .. peak)
+assert(peak > 1.02 and peak < 1.05, "slight overshoot, then settle at 1: " .. peak)
 assert(T.easeOut(0) == 0 and T.easeOut(1) == 1)
 
 -- Particles: scale with rarity, hard cap, none without motion or on a cracked egg.

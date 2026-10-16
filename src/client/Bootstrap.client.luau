@@ -38,7 +38,7 @@ local FusionSelection=require(Shared.FusionSelection)
 local fusionMenuOk,FusionMenu=pcall(require,script.Parent.FusionMenu)
 local Marketplace=game:GetService("MarketplaceService")
 local C = Theme.Colors
-local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
+local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes", 60) :: Folder -- BD-330: a timeout (no infinite-yield warning); the server makes this folder after the world
 local startRun = remotes:WaitForChild("RequestStartRun") :: RemoteEvent
 local endRun = remotes:WaitForChild("RequestEndRun") :: RemoteEvent
 local equip = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
@@ -220,6 +220,7 @@ local function pumpToasts()
     local panelRight=player:GetAttribute("AdminPanelRight") or 0
     local half,halfCard=gui.AbsoluteSize.X/2,220*toastScale.Scale
     local shift=if panelRight>0 then math.clamp(panelRight+12+halfCard-half,0,math.max(0,half-halfCard)) else 0
+    player:SetAttribute("MenuOpen",shade.Visible) -- BD-328: WeatherVisuals holds its big title card while a menu is open
     local topY=if shade.Visible then 4 else 80 -- BD-304: with a menu open the toast rides the very top, clear of the menu title
     if toastLayer.Position.X.Offset~=shift or toastLayer.Position.Y.Offset~=topY then toastLayer.Position=UDim2.new(.5,shift,0,topY) end
     if NotifyQueue.update(notifyQueue,os.clock(),shade.Visible) then drawToasts() end
@@ -742,9 +743,8 @@ render=function(name: string)
         local list=Instance.new("ScrollingFrame")
         list.Name,list.Size,list.Position="DinoCards",UDim2.fromOffset(824,326),UDim2.fromOffset(0,0)
         list.BackgroundTransparency,list.BorderSizePixel,list.ScrollBarThickness=1,0,6
-        local cardButtonHeight=math.max(45,45/viewportScale())
-        local cardHeight=242+cardButtonHeight
-        local rowHeight=cardHeight+12
+        local lay=IndexProgress.cardLayout(viewportScale(),326) -- BD-332: two rows always visible (compact cards when short)
+        local cardButtonHeight,cardHeight,rowHeight=lay.buttonHeight,lay.cardHeight,lay.rowHeight
         list.CanvasSize=UDim2.fromOffset(0,math.ceil((pg.last-pg.first+1)/3)*rowHeight)
         list.ZIndex,list.Parent=24,body
         for i,id in Config.SpeciesOrder do
@@ -757,24 +757,30 @@ render=function(name: string)
             local look=FusionSelection.indexCard(found)
             local card=box(list,((i-pg.first)%3)*276,math.floor((i-pg.first)/3)*rowHeight,264,cardHeight,if found then rarityColors[rarity] else Color3.fromRGB(62,64,74),24)
             Theme.texture(card,264,cardHeight)
-            label(card,look.nameText or Config.SpeciesDisplayNames[id],4,8,256,35,25)
-            label(card,look.rarityText or (rarityNames[rarity].." • "..FusionSelection.pct(100*(oddsWeight[id] or 0)/oddsTotal).." of eggs"),4,44,256,25,18)
+            label(card,look.nameText or Config.SpeciesDisplayNames[id],4,if lay.compact then 3 else 8,256,if lay.compact then 26 else 35,if lay.compact then 21 else 25)
+            label(card,look.rarityText or (rarityNames[rarity].." • "..FusionSelection.pct(100*(oddsWeight[id] or 0)/oddsTotal).." of eggs"),4,if lay.compact then 28 else 44,256,if lay.compact then 20 else 25,if lay.compact then 15 else 18)
             if found then
-                hero(card,id,7,70,250,128,bestMutation(id))
-                label(card,if event then event.name.." mutation" elseif ownedTraits(id) then (require(Shared.ColourBonus).text(ProgressionConfig.EggColors,(ownedTraits(id) :: any).genes) or "Special variant") else string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond),5,201,254,25,15)
-                button(card,"VIEW DINO",12,233,240,cardButtonHeight,C.card,function() selected=id open("detail") end)
+                hero(card,id,7,lay.heroY,250,lay.heroHeight,bestMutation(id))
+                label(card,if event then event.name.." mutation" elseif ownedTraits(id) then (require(Shared.ColourBonus).text(ProgressionConfig.EggColors,(ownedTraits(id) :: any).genes) or "Special variant") else string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond),5,lay.detailY,254,if lay.compact then 22 else 25,if lay.compact then 13 else 15)
+                if lay.compact then
+                    local tap=Instance.new("TextButton") -- the whole card opens the dino (no VIEW DINO bar when short)
+                    tap.Name,tap.Text,tap.BackgroundTransparency,tap.Size,tap.ZIndex,tap.Parent="ViewDino","",1,UDim2.fromScale(1,1),card.ZIndex+8,card
+                    tap.Activated:Connect(function() selected=id open("detail") end)
+                else
+                    button(card,"VIEW DINO",12,233,240,cardButtonHeight,C.card,function() selected=id open("detail") end)
+                end
             else
                 -- No button: silhouette block re-centered in the freed space. Soft edge = a faint, slightly larger
                 -- copy underneath (2 viewports max, no per-frame work); skipped when motion/effects are reduced.
-                local blockY=70+math.floor((cardButtonHeight+12)/2)
+                local blockY=if lay.compact then lay.heroY else 70+math.floor((cardButtonHeight+12)/2)
                 if motion then
                     local halo=Preview.add(card,id,"silhouette")
                     halo.Name,halo.ImageTransparency=("SilhouetteSoftEdge"),.82
-                    halo.Position,halo.Size=UDim2.fromOffset(-2,blockY-9),UDim2.fromOffset(268,146)
+                    halo.Position,halo.Size=UDim2.fromOffset(-2,blockY-9),UDim2.fromOffset(268,if lay.compact then lay.heroHeight+18 else 146)
                 end
                 local view=Preview.add(card,id,"silhouette")
-                view.Position,view.Size=UDim2.fromOffset(7,blockY),UDim2.fromOffset(250,128)
-                label(card,look.status,5,blockY+134,254,25,15)
+                view.Position,view.Size=UDim2.fromOffset(7,blockY),UDim2.fromOffset(250,if lay.compact then lay.heroHeight else 128)
+                label(card,look.status,5,if lay.compact then lay.detailY else blockY+134,254,if lay.compact then 22 else 25,if lay.compact then 13 else 15)
             end
         end
         -- BD-269: "Collected X of Y (P%)" bar with milestone ticks (src/shared/IndexProgress).

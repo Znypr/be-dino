@@ -21,11 +21,11 @@ Tier.MaxAmount = 0.8
 Tier.MaxReflectance = 0.3
 Tier.MaxSheen = 0.7
 Tier.Entries = {
-    gold = {id = "gold", name = "Gold", tint = {255, 206, 92}, amount = 0.22, trimAmount = 0.75, material = "Metal", reflectance = 0.14,
+    gold = {id = "gold", name = "Gold", tint = {255, 206, 92}, amount = 0.45, trimAmount = 0.75, material = "Metal", reflectance = 0.14,
         sparkle = {255, 230, 150}, sparkleRate = 1.5, sheen = 0.45},
-    emerald = {id = "emerald", name = "Emerald", tint = {60, 220, 140}, amount = 0.20, trimAmount = 0.75, material = "Glass", reflectance = 0.10,
+    emerald = {id = "emerald", name = "Emerald", tint = {60, 220, 140}, amount = 0.40, trimAmount = 0.75, material = "Glass", reflectance = 0.10,
         sparkle = {170, 255, 205}, sparkleRate = 2, sheen = 0.35},
-    diamond = {id = "diamond", name = "Diamond", tint = {215, 244, 255}, amount = 0.26, trimAmount = 0.70, material = "Glass", reflectance = 0.22,
+    diamond = {id = "diamond", name = "Diamond", tint = {215, 244, 255}, amount = 0.35, trimAmount = 0.70, material = "Glass", reflectance = 0.22,
         sparkle = {235, 250, 255}, sparkleRate = 3, sheen = 0.6},
 }
 -- BD-308 baked sheen: the generated textures carry flat facet shading (k = pixel luma / species body luma, 0.3..1.6). On a fused
