@@ -1,0 +1,9 @@
+broadleaf_cur 278
+broadleaf_v2 478
+broadleaf_v3 726
+conifer_cur 158
+conifer_v2 356
+conifer_v3 462
+palm_cur 60
+palm_v2 288
+palm_v3 700
