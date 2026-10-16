@@ -10,6 +10,7 @@ REGISTRY = (ROOT / "docs/77-asset-registry.md").read_text()
 END = chr(10) + "}" + chr(10)
 ASSETS_BLOCK = SRC.split("Generated.Assets = {")[1].split(END)[0]
 REPLACEMENTS_BLOCK = SRC.split("Generated.Replacements = {")[1].split(END)[0]
+PROPS_BLOCK = SRC.split("Generated.Props = {")[1].split(END)[0]
 EXPECTED = {
     "137262237243889", "123860208068220", "115520379209668", "132703556702568", "100306166052872", "71416776916365",
     "135107793396569", "101039067942415", "122546672856917", "84690157197711", "118262268018795", "125187345067740",
@@ -71,6 +72,25 @@ class WorldGeneratedMeshTests(unittest.TestCase):
         for fbx in ("world_tree_broad_v3", "world_tree_pine_v3", "world_tree_palm_v3"):
             self.assertTrue((ROOT / f"assets/blender/world/fbx_v3/{fbx}.fbx").exists())
             self.assertIn(fbx, REGISTRY)
+
+    def test_ground_props_are_baked_but_unbound_and_unplaced(self):
+        """BD-464 step 1: eight ground props, empty ids (not uploaded), never placed, FBX + registry rows exist, loader skips empty ids."""
+        entries = re.findall(r'^\s{4}(\w+) = \{assetId = "(\d*)", placed = (true|false)\}', PROPS_BLOCK, re.M)
+        keys = {k for k, _, _ in entries}
+        self.assertEqual(keys, {"ground_rock_small_v3", "ground_rock_medium_v3", "ground_rock_mossy_v3", "ground_log_fallen_v3",
+                                "ground_stump_roots_v3", "ground_mushrooms_v3", "ground_bush_round_v3", "ground_bush_berry_v3"})
+        for key, asset_id, placed in entries:
+            self.assertEqual(placed, "false", f"{key} must not be marked placed before BD-464 step 2")
+            if asset_id:
+                self.assertRegex(asset_id, r"^[1-9][0-9]{8,17}$")
+                self.assertNotIn(asset_id, self.assets.values(), "prop id duplicates a current generated id")
+            self.assertTrue((ROOT / f"assets/blender/world/fbx_v3/{key}.fbx").exists())
+            self.assertIn(key, REGISTRY)
+        loader = (ROOT / "src/server/ImportedResources.luau").read_text()
+        self.assertIn('for key,asset in GeneratedMeshes.Props do if asset.assetId~="" then', loader, "loader must skip empty prop ids")
+        arena = (ROOT / "src/server/Arena.luau").read_text()
+        self.assertNotIn("Generated.Props", arena, "nothing may place the ground props before step 2")
+        self.assertNotIn("GeneratedMeshes.Props", (ROOT / "src/shared/BiomePlacement.luau").read_text() if (ROOT / "src/shared/BiomePlacement.luau").exists() else "")
 
     def test_fallback_and_flag_are_wired(self):
         arena = (ROOT / "src/server/Arena.luau").read_text()

@@ -7,7 +7,7 @@ import argparse,subprocess,tempfile
 ROOT=Path(__file__).resolve().parents[1]
 def wrapped(path):return '(function()\n'+(ROOT/path).read_text()+'\nend)()'
 def script():
- return 'local Config='+wrapped('src/shared/Config.luau')+'\nlocal CaveHubLayout='+wrapped('src/shared/CaveHubLayout.luau')+'\nlocal script={Parent={Config="Config",FallRecovery="FallRecovery",CaveHubLayout="CaveHubLayout",PrivateState="PrivateState"}}\nlocal require=function(id)if id=="CaveHubLayout" then return CaveHubLayout end return Config end\nlocal FoodCatchRules='+wrapped('src/shared/FoodCatchRules.luau')+'\nlocal Layout='+wrapped('src/shared/IslandLayout.luau')+'\nlocal PointGrid='+wrapped('src/shared/PointGrid.luau')+'\nlocal SpecialFoods=(function() local script={Parent={Config="Config"}} local require=function()return Config end return '+wrapped('src/shared/SpecialFoods.luau')+' end)()'+'\n'+'''
+ return 'local Config='+wrapped('src/shared/Config.luau')+'\nlocal CaveHubLayout='+wrapped('src/shared/CaveHubLayout.luau')+'\nlocal script={Parent={Config="Config",FallRecovery="FallRecovery",CaveHubLayout="CaveHubLayout",PrivateState="PrivateState",RewardMath="RewardMath"}}\nlocal require=function(id)if id=="CaveHubLayout" then return CaveHubLayout end return Config end\nlocal FoodCatchRules='+wrapped('src/shared/FoodCatchRules.luau')+'\nlocal Layout='+wrapped('src/shared/IslandLayout.luau')+'\nlocal PointGrid='+wrapped('src/shared/PointGrid.luau')+'\nlocal SpecialFoods=(function() local script={Parent={Config="Config"}} local require=function()return Config end return '+wrapped('src/shared/SpecialFoods.luau')+' end)()'+'\n'+'''
 local whole,carry=FoodCatchRules.award(500,0,1)
 assert(whole==12 and carry<1e-8)
 local accumulated,total=0,0
@@ -21,6 +21,7 @@ local function vector(x,y,z)
  local v={X=x,Y=y,Z=z or 0}
  return setmetatable(v,{__unm=function(a)return vector(-a.X,-a.Y,-a.Z)end,__add=function(a,b)return vector(a.X+b.X,a.Y+b.Y,a.Z+b.Z)end,__sub=function(a,b)return vector(a.X-b.X,a.Y-b.Y,a.Z-b.Z)end,__mul=function(a,b)if type(a)=="number" then a,b=b,a end return vector(a.X*b,a.Y*b,a.Z*b)end,__index=function(t,k)if k=="Magnitude" then return math.sqrt(t.X*t.X+t.Y*t.Y+t.Z*t.Z)end end})
 end
+local RewardMath,ProgressionConfig -- BD-479: the real RewardMath is wired in before RunLifecycle loads
 local Vector3={new=vector,one=vector(1,1,1),xAxis=vector(1,0,0),zAxis=vector(0,0,1)}
 local Vector2={new=vector}
 local CFrame={new=function(x,y,z)if type(x)=='table' then return x end return vector(x,y,z)end}
@@ -39,7 +40,8 @@ local Remotes={children={}}
 function Remotes:FindFirstChild(name)return self.children[name]end
 local Workspace={BeDinoArena={},Terrain={},attrs={}}
 function Workspace:SetAttribute(k,v)self.attrs[k]=v end
-function Workspace:GetServerTimeNow()return 100 end
+local nowSeconds=100 -- BD-479: the nest-weather test moves the server clock
+function Workspace:GetServerTimeNow()return nowSeconds end
 function Workspace:GetAttribute(k)return self.attrs[k]end
 local rays=0
 local missingTerrain=false
@@ -55,12 +57,12 @@ function Workspace:Raycast(origin,direction,params)
  return nil
 end
 local workspace=Workspace
-local Storage={Shared={Config="Config",FoodCatchRules="FoodCatchRules",MovementEnvelope="Envelope",ResourceModels="Resources",IslandLayout="Layout",SpawnGeometry="SpawnGeometry",PointGrid="PointGrid",SpecialFoods="SpecialFoods"}}
+local Storage={Shared={Config="Config",FoodCatchRules="FoodCatchRules",MovementEnvelope="Envelope",ResourceModels="Resources",IslandLayout="Layout",SpawnGeometry="SpawnGeometry",PointGrid="PointGrid",SpecialFoods="SpecialFoods",ProgressionConfig="ProgressionConfig"}}
 function Storage:FindFirstChild(name)return if name=="BeDinoRemotes" then Remotes else nil end
 local guid=0
 local Http={GenerateGUID=function()guid+=1 return tostring(guid)end}
 local game={GetService=function(self,name)return ({Players=Players,ReplicatedStorage=Storage,HttpService=Http})[name]end}
-local require=function(id)if id=="PrivateState" then return {get=function(p,k)return p.attrs[k] end,set=function(p,k,v)p.attrs[k]=v end} elseif id=="Config" then return Config elseif id=="FoodCatchRules" then return FoodCatchRules elseif id=="Layout" then return Layout elseif id=="SpawnGeometry" then return SpawnGeometry elseif id=="PointGrid" then return PointGrid elseif id=="SpecialFoods" then return SpecialFoods elseif id=="FallRecovery" then return {teleport=function(_,c,cf)c:PivotTo(cf)end} elseif id=="Resources" then return {clone=function()if artFailure then error("art failure") end return nil end} else return {plausible=function()return true end} end end
+local require=function(id)if id=="PrivateState" then return {get=function(p,k)return p.attrs[k] end,set=function(p,k,v)p.attrs[k]=v end} elseif id=="Config" then return Config elseif id=="FoodCatchRules" then return FoodCatchRules elseif id=="Layout" then return Layout elseif id=="SpawnGeometry" then return SpawnGeometry elseif id=="PointGrid" then return PointGrid elseif id=="SpecialFoods" then return SpecialFoods elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="RewardMath" then return RewardMath elseif id=="FallRecovery" then return {teleport=function(_,c,cf)c:PivotTo(cf)end} elseif id=="Resources" then return {clone=function()if artFailure then error("art failure") end return nil end} else return {plausible=function()return true end} end end
 local created={}
 local Instance={new=function(kind)
  local o={attrs={},Name="",kind=kind,OnServerEvent={Connect=function(self,fn)self.callback=fn end}}
@@ -73,7 +75,8 @@ local Instance={new=function(kind)
  return o
 end}
 local scheduled={}
-local task={spawn=function(fn)table.insert(scheduled,fn)end,wait=function()end}
+local delayed={}
+local task={spawn=function(fn)table.insert(scheduled,fn)end,wait=function()end,delay=function(seconds,fn)table.insert(delayed,{seconds=seconds,fn=fn})end}
 local warnings={}
 local warn=function(s)table.insert(warnings,s)end
 '''+ 'local Food='+wrapped('src/server/FoodService.luau')+'\n'+'''
@@ -97,7 +100,7 @@ Food.start({})
 assert(Workspace.attrs.FoodCount>1400,"broken art must not remove food")
 print("Food startup passed: terrain-only placement, 12 nearby starter pickups, missing-ray fallback and broken-art survival")
 task.spawn=function(fn)fn()end
-'''+ 'local Lifecycle='+wrapped('src/server/RunLifecycle.luau')+'\n'+'''
+ProgressionConfig='''+wrapped('src/shared/ProgressionConfig.luau')+'\nRewardMath='+wrapped('src/server/RewardMath.luau')+'\n'+ 'local Lifecycle='+wrapped('src/server/RunLifecycle.luau')+'\n'+'''
 local function character()
  local c={attrs={},humanoid={Health=100,Died={Connect=function()end}},root={kind="BasePart",Position=vector(0,5,0)}}
  function c:SetAttribute(k,v)self.attrs[k]=v end
@@ -203,6 +206,67 @@ do
  local w2,c2,t2=FoodCatchRules.awardKill(2,0.75) assert(w2==1 and c2==0 and t2==3,"the last egg lands exactly on the cap")
 end
 print("Predation egg bonus passed: 0.25 per player kill with carry, capped at 3 per run")
+-- BD-479 (owner BD-235, 2026-10-16): a nest carries the weather when it was FOUND, not at settlement.
+do
+ assert(Config.NestMinRunSeconds==120 and Config.NestMinCatches==1 and Config.NestEggsPerExtraNest==30,"nest gate changed: update this test")
+ local captured
+ local settled=0
+ Lifecycle.configureSettlement(function(_,runId,catchScore,_,eggEvents,runSeconds,nestWeather)
+  settled+=1 captured={runId=runId,catches=catchScore,events=eggEvents,seconds=runSeconds,weather=nestWeather} return true
+ end)
+ local function flush(character) -- the minimum-run-time timer(s) of this character's run (task.delay is captured, not slept)
+  for _,job in delayed do if job.character==character then job.fn() end end
+ end
+ local function startRun(weatherId)
+  Workspace.attrs.WeatherId=weatherId
+  local before=#delayed
+  local p=newPlayer()
+  assert(#delayed==before+1 and delayed[#delayed].seconds>=Config.NestMinRunSeconds,"begin must schedule the minimum-time mark")
+  delayed[#delayed].character=p.Character
+  return p,p.Character
+ end
+ local function catch(character,total) character:SetAttribute("CatchScore",total) Lifecycle.noteNestWeather(character) end
+
+ -- nest A found in rain (the minimum time passes while it rains, 1 catch already made), nest B found in clear, settled in blizzard
+ nowSeconds=1000
+ local p,c=startRun("clear")
+ nowSeconds=1010 Workspace.attrs.WeatherId="rain"
+ catch(c,1) -- before the minimum time: no nest yet, nothing recorded
+ nowSeconds=1121 flush(c) -- 121 s in, still raining: nest A is found now
+ nowSeconds=1200 Workspace.attrs.WeatherId="clear"
+ catch(c,12) -- no new nest (needs 31 catches)
+ nowSeconds=1300
+ catch(c,31) -- nest B: 1 + (31-1)//30 = 2 nests, found in clear weather
+ nowSeconds=1400 Workspace.attrs.WeatherId="blizzard"
+ catch(c,35) -- more catches, no new nest, now snowing
+ assert(Lifecycle.tryEnd(p,c,"ManualExit") and settled==1)
+ assert(captured.catches==35 and RewardMath.nestCount(captured.catches,captured.seconds)==2 and captured.seconds==400)
+ assert(#captured.weather==2 and captured.weather[1]=="rain" and captured.weather[2]=="clear","each nest keeps the weather it was found in, never the settlement weather: "..table.concat(captured.weather,","))
+ assert(RewardMath.nestWeatherId(captured.weather,1)=="rain" and RewardMath.nestWeatherId(captured.weather,2)==nil and RewardMath.nestWeatherId(captured.weather,3)==nil)
+ flush(c) -- the timer firing after the run ended must do nothing (and not error)
+
+ -- no nest noted while running (e.g. a missed hook): the snapshot falls back to the weather at settlement, exactly the old behaviour
+ nowSeconds=2000
+ local p2,c2=startRun("rain")
+ c2:SetAttribute("CatchScore",31)
+ nowSeconds=2200 Workspace.attrs.WeatherId="thunder"
+ assert(Lifecycle.tryEnd(p2,c2,"Death") and settled==2)
+ assert(#captured.weather==2 and captured.weather[1]=="thunder" and captured.weather[2]=="thunder","unrecorded nests fall back to the settlement weather")
+
+ -- too short or too few catches: no nest, empty ledger; a second run does not inherit the first run's ledger
+ nowSeconds=3000
+ local p3,c3=startRun("rain")
+ catch(c3,5) nowSeconds=3050
+ assert(Lifecycle.tryEnd(p3,c3,"ManualExit") and #captured.weather==0,"a 50 s run earns no nest")
+ nowSeconds=4000
+ local p4,c4=startRun("quake")
+ nowSeconds=4130 catch(c4,3) -- time already passed, first catch finds nest 1 in the quake
+ nowSeconds=4140 Workspace.attrs.WeatherId="clear"
+ assert(Lifecycle.endForDisconnect(p4)=="settled" and settled==4)
+ assert(#captured.weather==1 and captured.weather[1]=="quake","disconnect settles with the weather the nest was found in")
+ Workspace.attrs.WeatherId=nil
+end
+print("Nest weather passed: nests keep the weather active when each was found (rain, clear) while settling in blizzard; unrecorded nests fall back to settlement weather; short runs and disconnects covered")
 '''
 if __name__=='__main__':
  src=(ROOT/'src/server/FoodService.luau').read_text(encoding='utf-8')

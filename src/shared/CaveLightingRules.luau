@@ -4,13 +4,14 @@
 -- the cave-only Lighting / Atmosphere / ColorCorrection look. Pure numbers only (no Instances): src/server/CaveLighting.luau builds
 -- the FX parts and lights from this, src/client/CaveAtmosphere.luau applies the look while the player is inside,
 -- and tools/verify_cave_lighting.py runs the same functions offline. Everything is PROVISIONAL (docs/104 s4, owner judges by eye).
--- FX NOTE: the light-shaft beams are lighting FX built from neutral, 90 percent transparent Parts (no mesh, no Neon). They are NOT
--- model art; the tapered cone mesh (`cave_light_cone`, BD-282) replaces them later.
+-- FX NOTE: the light-shaft beams are lighting FX: two camera-facing, soft-edged Beams per hole (BD-296; they were translucent cylinder Parts
+-- whose flat edges showed as vertical seams) on one invisible dust-volume Part. No mesh, no Neon. They are NOT model art; the tapered
+-- cone mesh (`cave_light_cone`, BD-282) replaces them later.
 local Layout = require(script.Parent.CaveHubLayout)
 local Rules = {}
 Rules.Version = 1
 Rules.BeamColor = {255, 236, 190} -- warm cream
-Rules.Beam = {outerFrac = 0.82, coreFrac = 0.5, outerAlpha = 0.95, coreAlpha = 0.9, topAbove = 3, bottomAbove = 0.15, motesPerSecond = 4}
+Rules.Beam = {outerFrac = 0.82, coreFrac = 0.5, outerAlpha = 0.92, coreAlpha = 0.89, beamsPerShaft = 2, topAbove = 3, bottomAbove = 0.15, motesPerSecond = 4}
 Rules.GateGlow = {rate = 4, size = {12, 18}, alpha = 0.7, color = {255, 214, 160}, lift = 8, out = 12} -- out = studs from the pad centre into the mouth (the mouth is open from 10 studs past the pad centre)
 Rules.FillColor, Rules.LavaColor, Rules.CrystalColor, Rules.ForgeColor = {255, 214, 170}, {255, 140, 70}, {255, 196, 80}, {255, 190, 90}
 Rules.Forge = {period = 4, amplitude = 0.1, base = 0.6}
@@ -25,11 +26,12 @@ Rules.Lamp = {amplitude = 0.07, periodMin = 2.6, periodMax = 4.4, steady = {lava
 Rules.Bed = {id = "", volume = 0.08, group = "ambience", fadeSeconds = 2.5}
 -- Show-off spot: the Heart pedestal (collider top = floor + 3.8, CaveProps.colliderHeight clamps 3.5 to 4 minus 0.2). A prompt there steps the player's dino onto the pedestal so everyone can admire it.
 Rules.ShowOff = {prompt = "Show off", promptDistance = 9, standHeight = 3.8, cooldown = 1.5}
-Rules.FxPartBudget = 16 -- shaft beams (2 per hole) + dust volumes (1 per hole) + the gate glow anchor
+Rules.FxPartBudget = 6 -- dust volumes (1 Part per hole, carrying that hole's 2 Beams) + the gate glow anchor (BD-296: the 8 cylinder Parts are gone)
 -- Cave-only look (applied only while the player is inside the hub, restored on leaving; nothing here touches the island).
 Rules.Look = {
     -- BD-398: a lit cave, not a bright hall: low warm-dim ambient, lower Lighting.Brightness and exposure; the lamps and shafts are the main lights
-    ambient = {104, 92, 82}, outdoorAmbient = {98, 86, 76}, colorShiftTop = {255, 222, 180}, exposure = -0.2, brightness = 1.3, shadowSoftness = 0.35,
+    ambient = {62, 52, 44}, outdoorAmbient = {56, 47, 40}, colorShiftTop = {255, 222, 180}, exposure = -0.6, -- BD-296 lead dim pass: 0.57 -> 0.30 luminance
+    brightness = 1.3, shadowSoftness = 0.35,
     fogStart = 160, fogEnd = 900, fogColor = {72, 56, 46}, -- owner "why so hazy": fog starts far, near props are never milked
     atmosphere = {density = 0.04, offset = 0, haze = 0, glare = 0, color = {214, 188, 160}, decay = {150, 104, 72}},
     grade = {brightness = -0.05, contrast = 0.08, saturation = 0.05, tint = {255, 226, 196}}, -- one soft shared warm grade warms the props, clear not milky (saturation >= 0) (MeshPart.Color is ignored on textured meshes)
@@ -108,7 +110,7 @@ function Rules.get(): any
     local g = L.gate
     cache = {shafts = shafts, lights = lights,
         gate = {x = gate.x, z = gate.z + cz - Rules.GateGlow.out, y = FY + Rules.GateGlow.lift, mouthWidth = g.mouthWidth},
-        fxParts = #shafts * 3 + 1}
+        fxParts = #shafts + 1, fxBeams = #shafts * Rules.Beam.beamsPerShaft}
     return cache
 end
 

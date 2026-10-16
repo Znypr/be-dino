@@ -13,7 +13,7 @@ def wrapped(path): return '(function()\n' + (ROOT / path).read_text() + '\nend)(
 LUAU = r'''
 local PLAYTEST=@PLAYTEST@
 -- World v2 floors (a prop is one MeshPart; the owner asked for far more vegetation on a 1.6x wider island).
-local TREE_LO,GIANT_LO,LOG_LO,ROCK_LO,SHRUB_LO,COVER_LO,PROPS_LO=300,20,25,70,350,600,1500
+local TREE_LO,COLOSSAL_LO,LOG_LO,ROCK_LO,SHRUB_LO,COVER_LO,PROPS_LO=300,20,25,70,350,600,1500 -- BD-473: giant layer renamed colossal (80-140 studs, 40 at density 1; trees fewer because of the clearings)
 -- Whole scene at the playtest density: kit props + food pickups + everything else (hub, boundary, arch, spring, rigs).
 local WORLD_MAX,RESIDUAL_PARTS,TOTAL_MAX=5000,600,9000 -- BD-387: 8000 + 800 more food pickups (+10 percent headroom); phone scene is culled, see verify_world_budget
 assert(Config.ArenaHalfWidth==260*Layout.Scale and Layout.Scale==1.6,"map is 1.6x the 520 map")
@@ -44,7 +44,7 @@ do
    local hs={}
    for _,pt in G.samplePoints(p.x,p.z,G.trunkRadius(data,p.scale,p.radius*.5)) do table.insert(hs,Layout.height(pt[1],pt[2])) end
    local lo=math.huge for _,h in hs do lo=math.min(lo,h) end
-   local sink=if p.layer=="tree" or p.layer=="giant" then .03 else .035 -- the old per-layer sink (shrub .02-.05)
+   local sink=if p.layer=="tree" or p.layer=="colossal" then .03 else .035 -- the old per-layer sink (shrub .02-.05)
    local oldY=lo-sink*data.extent[2]*p.scale
    local hi=-math.huge for _,h in hs do hi=math.max(hi,h) end
    if G.submerged(oldY,hs,.5) then oldBad+=1 worstOld=math.max(worstOld,hi-oldY) end
@@ -59,11 +59,11 @@ local c=gen(Config.WorldArtSeed+1,DENSITY)
 local differs=#c~=#a
 for i=1,math.min(#a,#c) do if a[i].id~=c[i].id or a[i].x~=c[i].x then differs=true end end
 assert(differs,"seed has no effect")
-local counts={tree=0,giant=0,log=0,rock=0,shrub=0,groundcover=0,landmark=0}
+local counts={tree=0,colossal=0,log=0,rock=0,shrub=0,groundcover=0,landmark=0}
 local byBiome={}
-for _,id in BiomeMap.Order do byBiome[id]={tree=0,giant=0,log=0,rock=0,shrub=0,groundcover=0,landmark=0} end
+for _,id in BiomeMap.Order do byBiome[id]={tree=0,colossal=0,log=0,rock=0,shrub=0,groundcover=0,landmark=0} end
 local S=Biome.Sanctuary
-local tallest,giantMin,giantMax=0,math.huge,0
+local tallest,colossalMin,colossalMax=0,math.huge,0
 for _,p in a do
  counts[p.layer]+=1
  byBiome[p.biome][p.layer]+=1
@@ -76,7 +76,7 @@ for _,p in a do
  assert(not Layout.inPool(p.x,p.z,0),"prop standing in water: "..p.id)
  local blocking=p.layer~="shrub" and p.layer~="groundcover"
  if blocking then
-  local trunk=if p.layer=="tree" or p.layer=="giant" then half*.28 elseif p.layer=="log" then half*.6 else half*.5
+  local trunk=if p.layer=="tree" or p.layer=="colossal" then half*.28 elseif p.layer=="log" then half*.6 else half*.5
   assert(Biome.pathClearance(p.x,p.z)>=trunk,"blocking prop in path: "..p.id)
   assert(Biome.keepOutClearance(p.x,p.z,true)>=0,"blocking prop in keep-out: "..p.id)
  else
@@ -103,10 +103,12 @@ for _,p in a do
   assert(math.abs(p.roll-math.pi/2)<1e-9 and string.find(p.id,"world_tree_dead"),"logs are dead trees on their side")
   assert(p.y<=ground+.3*p.scale+2.4 and p.y>=ground-2.4,"log not resting on ground "..p.id)
  end
- if p.layer=="giant" then
-  tallest=math.max(tallest,data.extent[2]*p.scale)
-  if data.kind=="tree" then giantMin=math.min(giantMin,p.scale) giantMax=math.max(giantMax,p.scale) end
-  assert(math.sqrt(p.x^2+(p.z-30)^2)>=150,"giants belong to the outer zones")
+ if p.layer=="colossal" then
+  local height=data.extent[2]*p.scale
+  tallest=math.max(tallest,height)
+  assert(data.kind=="tree","colossal trees only (BD-473): "..p.id)
+  colossalMin=math.min(colossalMin,height) colossalMax=math.max(colossalMax,height)
+  assert(math.sqrt(p.x^2+(p.z-30)^2)>=150,"colossal trees belong to the outer zones")
  end
 end
 assert(counts.landmark==4,"four landmarks")
@@ -145,12 +147,13 @@ end
 assert(jump<.35,"biome weights must change smoothly: "..jump)
 for _,id in BiomeMap.Order do assert(BiomeMap.Ground[id] and BiomeMap.Rock[id] and BiomeMap.Names[id] and BiomePlacementBiomes[id],"biome data complete: "..id) end
 if PLAYTEST then
- assert(counts.giant>=GIANT_LO and tallest>=75,"giant classes: "..counts.giant.." tallest "..tallest)
- assert(giantMin>=2.4 and giantMax<=4.0001,"giant trees are 2.4x-4x")
+ assert(counts.colossal>=COLOSSAL_LO and tallest>=100,"colossal classes: "..counts.colossal.." tallest "..tallest)
+ assert(colossalMin>=80-1e-6 and colossalMax<=140+1e-6,"colossal trees are 80-140 studs: "..colossalMin.." to "..colossalMax) -- BD-473 (the 42-80 gap and the Small band are asserted by verify_vegetation_layers.py)
+ assert(Biome.Version==3 and not Biome.Ground.Raised.giant and Biome.Ground.Raised.colossal,"placement grammar v3 uses the colossal layer")
  assert(Config.WorldArtDensity>=.5 and Config.WorldArtDensity<=2 and Config.WorldArtDensity>1,"playtest density")
  assert(#a>=PROPS_LO,"the kit must dress the map richly: "..#a.." props")
  assert(counts.tree>=TREE_LO and counts.log>=LOG_LO and counts.rock>=ROCK_LO and counts.shrub>=SHRUB_LO and counts.groundcover>=COVER_LO,"kit must clearly dress the map")
- for _,id in BiomeMap.Order do assert(byBiome[id].tree+byBiome[id].giant+byBiome[id].rock>=8,"biome has no structure props: "..id) end
+ for _,id in BiomeMap.Order do assert(byBiome[id].tree+byBiome[id].colossal+byBiome[id].rock>=8,"biome has no structure props: "..id) end
  assert(nativeProps==0,"every kit prop must be a MeshPart now (all 41 uploaded): "..nativeProps)
  assert(worldParts<=WORLD_MAX,"world kit parts "..worldParts)
  assert(foodParts<=3700,"food pickup parts "..foodParts) -- BD-387: 400 clusters x 9 = 3,600 (cap 3,700; was 3,300 for 8 per cluster); the phone side is covered by verify_world_budget
@@ -175,10 +178,10 @@ for _,p in a do byId[p.id]=(byId[p.id] or 0)+1 end
 for id in byId do table.insert(ids,id) end
 table.sort(ids)
 for _,id in ids do table.insert(list,id.."="..byId[id]) end
-print(string.format("%s world art: %d kit parts + %d food pickup parts + ~%d other = %d; %d placements (%d trees, %d giants, %d logs, %d rocks, %d shrubs, %d cover, 4 landmarks; %d MeshPart props), %d triangles, tallest giant %.0f studs, %.3fs",if PLAYTEST then "Playtest" else "Default",worldParts,foodParts,RESIDUAL_PARTS,worldParts+foodParts+RESIDUAL_PARTS,#a,counts.tree,counts.giant,counts.log,counts.rock,counts.shrub,counts.groundcover,meshProps,tris,tallest,elapsed))
+print(string.format("%s world art: %d kit parts + %d food pickup parts + ~%d other = %d; %d placements (%d trees, %d colossal, %d logs, %d rocks, %d shrubs, %d cover, 4 landmarks; %d MeshPart props), %d triangles, tallest colossal %.0f studs, %.3fs",if PLAYTEST then "Playtest" else "Default",worldParts,foodParts,RESIDUAL_PARTS,worldParts+foodParts+RESIDUAL_PARTS,#a,counts.tree,counts.colossal,counts.log,counts.rock,counts.shrub,counts.groundcover,meshProps,tris,tallest,elapsed))
 for _,id in BiomeMap.Order do
  local t=byBiome[id]
- print(string.format("  %-9s area %2d%%  trees %3d giants %2d logs %2d rocks %3d shrubs %3d cover %3d",id,math.floor(area[id]/samples*100+.5),t.tree,t.giant,t.log,t.rock,t.shrub,t.groundcover))
+ print(string.format("  %-9s area %2d%%  trees %3d colossal %2d logs %2d rocks %3d shrubs %3d cover %3d",id,math.floor(area[id]/samples*100+.5),t.tree,t.colossal,t.log,t.rock,t.shrub,t.groundcover))
 end
 print("by id: "..table.concat(list," "))
 '''
@@ -208,7 +211,7 @@ def draw(lines, path):
     for z, row in enumerate(rows):
         for x, v in enumerate(row):
             d.rectangle((x * cell, z * cell, (x + 1) * cell, (z + 1) * cell), fill=tuple(int(c * .8 + 40) for c in BIOME_COLOURS[order[int(v) - 1]]))
-    colours = {'tree': (20, 70, 40), 'giant': (10, 30, 20), 'log': (110, 70, 40), 'rock': (120, 125, 128), 'shrub': (90, 160, 80), 'groundcover': (200, 210, 110), 'landmark': (220, 40, 40)}
+    colours = {'tree': (20, 70, 40), 'colossal': (10, 30, 20), 'log': (110, 70, 40), 'rock': (120, 125, 128), 'shrub': (90, 160, 80), 'groundcover': (200, 210, 110), 'landmark': (220, 40, 40)}
     paths = {}
     for l in lines:
         if l.startswith('L '):
@@ -223,7 +226,7 @@ def draw(lines, path):
             _, layer, pid, x, z, r, biome = l.split(); x, z, r = float(x), float(z), max(1.0, float(r))
             cx, cy = f(x, z); rr = r * S / 2
             d.ellipse((cx - rr, cy - rr, cx + rr, cy + rr), fill=colours[layer])
-    d.text((10, 10), 'World v2 placement plan (seed 1404) - biomes tinted, giants dark, logs brown, landmarks red, water blue', fill=(0, 0, 0))
+    d.text((10, 10), 'World v2 placement plan (seed 1404) - biomes tinted, colossal dark, logs brown, landmarks red, water blue', fill=(0, 0, 0))
     im.save(path)
 
 def legacy_parts():

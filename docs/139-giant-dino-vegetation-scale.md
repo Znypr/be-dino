@@ -8,7 +8,7 @@ Written 2026-10-16 (branch `claude/giant-dino-vegetation-scale`). **Status: SPEC
 2. **A colossal tier mostly exists already, but it is too short.** The `giant` layer (the same tree meshes at x2.4 to x4) gives 48 trees between 33 and 99 studs. 75% of them (36) are under 80 studs, and the tallest max-size dino is about 49 studs (T-Rex BIG) to about 53 studs (ESTIMATE, Brachiosaurus BIG): 6 giants are shorter than a BIG-max T-Rex and 11 shorter than the 53-stud planning value. They are also the same low-poly meshes scaled up, so the facets get huge, which is exactly the "miniature" look the owner wants to avoid.
 3. **The camera is exactly proportional and blind to species.** Minimum zoom is `12 x s`, no cap except the player's 110-stud maximum, default FOV 70, default Roblox pitch. A Compy fills 39% of the screen height at every size, a T-Rex 61% at every size.
 4. **Proposal:** three vegetation bands (Small 4-12, Medium 12-42, Colossal 80-140 studs) with a dedicated colossal mesh family, a species-aware sub-linear camera (formula in section 7: distance from the dino's real height, 0.38 to 0.55 of the screen, hard cap 60 studs, aim at 40% of the body, FOV 70 to 80, optional pitch cap 20 degrees), "trample" collision for giants, and a phone budget that is net-neutral in triangles (colossal REPLACE the 48 giants).
-5. **Nine questions are still open (section 14: Q3, Q4, Q6-Q12).** Answered 2026-10-16: Q1 (keep pacing), Q2 (awe only), Q5 (Blender allowed). Because of Q1 the build rows were re-prioritised (section 15): only the Small-band and early-game feel work stays P2; the camera curve, colossal art, LOD, giant collision and the test pass drop to P3.
+5. **Nine questions were still open here; all are now decided by the LEAD under the owner's delegation (2026-10-16, section 14: Q3, Q4, Q6-Q12; the owner may overrule).** Answered 2026-10-16: Q1 (keep pacing), Q2 (awe only), Q5 (Blender allowed). Because of Q1 the build rows were re-prioritised (section 15): only the Small-band and early-game feel work stays P2; the camera curve, colossal art, LOD, giant collision and the test pass drop to P3.
 
 ## 1. The owner problem and the proposal
 
@@ -27,7 +27,7 @@ Written 2026-10-16 (branch `claude/giant-dino-vegetation-scale`). **Status: SPEC
 | Q2 intimidation | **AWE ONLY**: size, footsteps, shadow and camera framing. No fear mechanics, no small-dino reactions | Option (b) of Q2 is dropped. Awe cues are listed in section 10.1; nothing makes other dinos flee, wobble or hide, and the optional trample rustle (section 8) is a footstep-class sound, not a threat cue. Matches handbook 0 (calm, friendly) |
 | Q5 art pipeline | **Blender is ALLOWED** for colossal and redesigned tree art. Separately the owner approved the script-built V3 trees (broadleaf, conifer, palm) as a scoped exception; the tree test PR (docs/140-tree-quality-test.md) records that | Section 11 is unblocked: generate-then-Blender-cleanup or Blender-authored are both fine for colossal. The "generated meshes only" rule (D8/D15) is therefore NOT in conflict for tree art. Colossal still must be judged by the owner on a screenshot and must not be a scaled-up kit tree |
 
-Q3, Q4 and Q6-Q12 stay open; recommendations below are still only recommendations.
+Q3, Q4 and Q6-Q12 were decided by the LEAD on 2026-10-16 under the owner's delegation ("take full autonomy, do decisions for me"); see section 14 and [115](115-decisions-log.md) "LEAD decisions 2026-10-16 (owner delegated)".
 
 ## 2. Goals and non-goals
 
@@ -319,35 +319,35 @@ Not verified by this PR: everything. No Studio run, no phone, no sound; every nu
 
 | # | Existing statement | This proposal | Question |
 | --- | --- | --- | --- |
-| X1 | [87](87-vision-and-feel-guide.md) world line and handbook 8.1 item 3: "a grown dino still feels small next to big trees" | Medium trees are outgrown at `s` 3-4; only colossal stay taller | Q3 |
+| X1 | [87](87-vision-and-feel-guide.md) world line and handbook 8.1 item 3: "a grown dino still feels small next to big trees" | Medium trees are outgrown at `s` 3-4; only colossal stay taller | Q3 - **RESOLVED by LEAD decision 2026-10-16 (owner delegated): (a).** |
 | X2 | D19 / BD-386 (docs/115): growth made 5x slower; HUD size bar full at about 500 food | "Gigantic at the end" needs a large `s` in a short run; a 5-minute run is only `s` 1.5 | Q1 - **RESOLVED by OWNER Q1 2026-10-16: pacing kept.** |
-| X3 | BD-312 (NPC capped at x1.3 because big bodies "filled the camera") and BD-253 (foliage fills the screen and hides the dino); handbook 3 "in control, readable at a glance" | Huge dino fills up to 0.55 of the screen, trunks close to the camera | Q8 |
+| X3 | BD-312 (NPC capped at x1.3 because big bodies "filled the camera") and BD-253 (foliage fills the screen and hides the dino); handbook 3 "in control, readable at a glance" | Huge dino fills up to 0.55 of the screen, trunks close to the camera | Q8 - **RESOLVED by LEAD decision 2026-10-16 (owner delegated): accept, with a phone guard.** |
 | X4 | Handbook 0 "friendly: nothing scary; calm" | Owner wants small players "intimidated" | Q2 - **RESOLVED by OWNER Q2 2026-10-16: awe only.** |
 | X5 | D8 / D15 (docs/115): generated meshes only; AGENTS art rule: Blender models are TODO until owner uploads | The row asks for colossal tree art "in Blender"; the tree-quality-test builds Blender-scripted trees that the owner earlier called "3D Microsoft Paint" | Q5 - **RESOLVED by OWNER Q5 2026-10-16: Blender allowed.** |
-| X6 | BD-049 (Review / test, P1): Blender world kit, grammar with a `giant` layer x2.4-4; BD-167 (Backlog, P1): even more vegetation, more kit pieces | `giant` is replaced by `colossal`; S plants become bigger, so counts may need to drop to keep parts | Q4 |
-| X7 | BD-407 (Backlog, P2): numeric scale ladder table and verifier | This spec contains a first measured table; a shared Lua table and verifier are BD-471 | Q10 |
-| X8 | Handbook 3 weather: "about 25-30 studs readable around the dino"; docs/84: fog starts 25-100 studs from the camera; D10 soft visibility | Camera sits 40-60 studs from a big dino | Q9 |
+| X6 | BD-049 (Review / test, P1): Blender world kit, grammar with a `giant` layer x2.4-4; BD-167 (Backlog, P1): even more vegetation, more kit pieces | `giant` is replaced by `colossal`; S plants become bigger, so counts may need to drop to keep parts | Q4 - **RESOLVED by LEAD decision 2026-10-16 (owner delegated): 68 / 27 / 5 start.** |
+| X7 | BD-407 (Backlog, P2): numeric scale ladder table and verifier | This spec contains a first measured table; a shared Lua table and verifier are BD-471 | Q10 - **RESOLVED by LEAD decision 2026-10-16 (owner delegated): folded into BD-471.** |
+| X8 | Handbook 3 weather: "about 25-30 studs readable around the dino"; docs/84: fog starts 25-100 studs from the camera; D10 soft visibility | Camera sits 40-60 studs from a big dino | Q9 - **RESOLVED by LEAD decision 2026-10-16 (owner delegated): fog measured from the dino when the camera is pulled out.** |
 | X9 | docs/104 s2.1: "a grown dino (s = 4) is about 12 studs long" | measured 26-45 studs long | note only; fix when 104 is next edited |
-| X10 | docs/91 and docs/107 phone budgets (culling radius 190, triangles already over the rule of thumb) | Colossal trees need a larger visible radius | Q12 |
+| X10 | docs/91 and docs/107 phone budgets (culling radius 190, triangles already over the rule of thumb) | Colossal trees need a larger visible radius | Q12 - **RESOLVED by LEAD decision 2026-10-16 (owner delegated): larger radius, ceiling 420, only if BD-085 passes.** |
 | X11 | BD-164 (camera rattle; vertical low-pass 0.18 s) and BD-054/touch layout | Camera aim, FOV and possibly pitch change; must not bring rattle back | none; covered by T7 |
 | X12 | docs/104 hub camera framing per station | T-Rex-class dinos get D 17 instead of 12 in the cave | none; one check in BD-472 |
 
-## 14. Owner questions (Q1, Q2, Q5 answered; Q3, Q4, Q6-Q12 OPEN)
+## 14. Owner questions (Q1, Q2, Q5 answered by the owner; Q3, Q4, Q6-Q12 decided by the LEAD, owner delegated 2026-10-16)
 
-Each has the lead's recommendation; the owner decides. Asked via the dashboard "Needs you" or AskUserQuestion, not in updates (memory rule).
+Each had the lead's recommendation; Q3, Q4 and Q6-Q12 now carry a **LEAD decision (owner delegated 2026-10-16)**, which the owner may overrule. Asked via the dashboard "Needs you" or AskUserQuestion, not in updates (memory rule).
 
 - **Q1. ANSWERED 2026-10-16 (OWNER): keep the current pacing.** A normal 5-minute run stays at about `s` 1.5; gigantic is a rare long-run reward. (Original question: today `s` is about 1.5, `s = 4` takes about an hour; options were keep, steeper early growth, or a higher cap. The lead recommendation (b) was NOT taken.)
 - **Q2. ANSWERED 2026-10-16 (OWNER): awe only.** Size, footsteps, shadow and camera framing; no fear mechanics and no small-dino reactions (original options (b) and (c) dropped). See section 10.1.
-- **Q3. Is the rule "a grown dino feels small next to big trees" still true?** (a) only for colossal trees (regular trees are outgrown), recommended; (b) keep it for all big trees, which means almost every tree must be 50+ studs and the spawn views change.
-- **Q4. The mix.** Do 60-70 / 20-30 / 5-10 count canopy-class placements only (this doc: 65 / 27 / 8) or all vegetation? Start colossal at 5% and test 8% and 10%? Fewer, bigger groves or more, smaller ones?
+- **Q3. Is the rule "a grown dino feels small next to big trees" still true?** (a) only for colossal trees (regular trees are outgrown), recommended; (b) keep it for all big trees, which means almost every tree must be 50+ studs and the spawn views change. **LEAD decision (owner delegated 2026-10-16): (a).** A normal-run dino (size up to about 2) still feels small next to the trees; only a long-run giant (size 3 or more) outgrows ordinary trees, and only colossal ancient trees stay taller. Handbook 8.1 item 3 is reworded to match. Reason: it is the owner's own wording ("gigantic at the end", Q1 rare long-run reward) and (b) would force every tree to 50+ studs, which blows the phone budget. Resolves docs/116 C-23.
+- **Q4. The mix.** Do 60-70 / 20-30 / 5-10 count canopy-class placements only (this doc: 65 / 27 / 8) or all vegetation? Start colossal at 5% and test 8% and 10%? Fewer, bigger groves or more, smaller ones? **LEAD decision (owner delegated 2026-10-16):** the denominator is canopy-class placements only (trees plus giants of 12 studs and up); small plants follow the 2-per-tree ratio. Start at 68 / 27 / 5 (M-low / M-high / colossal), test up to 65 / 27 / 8 on screenshots; 10% is not allowed unless the BD-475 phone numbers pass. Groves of 2 to 4 colossal trees (about 8 to 10 groves), not an even scatter. Reason: smaller steps are cheaper to undo and keep phone triangles flat; groves read as landmarks.
 - **Q5. ANSWERED 2026-10-16 (OWNER): Blender is allowed** for colossal and redesigned tree art; the V3 broadleaf, conifer and palm are a scoped owner-approved exception (docs/140-tree-quality-test.md). Which Blender route (generate then clean up, or hand-authored) stays a per-asset call judged on a screenshot.
-- **Q6. Giant collision.** (a) trample medium trunks at `s >= 3`, colossal solid; (b) all trunks solid; (c) trample plus leaf puff and rustle. Recommendation: (c), with the T4 stuck-point data.
-- **Q7. Camera risk.** Accept distance, aim and FOV 70 to 80 first; add the pitch cap only if the spike passes on a phone? Or ship distance and aim only? Recommendation: distance, aim and FOV first.
-- **Q8. How much of the screen should a max dino fill?** Today Compy 39%, T-Rex 61%. Proposed 38% at spawn growing to 55% at max for every species. (a) accept; (b) fill less (closer to 45%) so the world shows more; (c) fill more.
-- **Q9. Weather fog and the big camera.** Should the fog start be measured from the dino (camera distance plus the body length) so a giant is never inside the fog start? Recommendation: yes, a small change in `WeatherLooks`, but it changes the owner-tuned D10 look, so ask.
-- **Q10. Scale ladder beyond dinos.** Fold BD-407 into BD-471 (shared table and verifier)? Should food, crystals and their glow grow with the dino (visual only) so a 40-stud T-Rex does not eat 1-stud berries? Recommendation: table yes, food scale decided after T2.
-- **Q11. Hills and peaks.** A maxed dino is taller than the hills (9-13) and as tall as the lowest peak (46). Intended ("too big for the surroundings")? (a) yes; (b) raise terrain relief.
-- **Q12. Colossal visibility radius on phones.** Larger cull radius for colossal only (420 on phones) at an unmeasured cost, or keep 190 and let them fade into haze (they would pop)? Recommendation: larger radius for colossal only, decided on BD-085 numbers.
+- **Q6. Giant collision.** (a) trample medium trunks at `s >= 3`, colossal solid; (b) all trunks solid; (c) trample plus leaf puff and rustle. Recommendation: (c), with the T4 stuck-point data. **LEAD decision (owner delegated 2026-10-16): (c), but only built if the T4 walk-through shows a wedge** (BD-476, P3). Colossal trunks stay solid, small plants never collide, the leaf puff and rustle are tiny, off under Reduce Motion, and the sound counts as unheard until the owner listens. Reason: a giant stuck between trunks is a worse feeling than a soft rustle, and the cost is small.
+- **Q7. Camera risk.** Accept distance, aim and FOV 70 to 80 first; add the pitch cap only if the spike passes on a phone? Or ship distance and aim only? Recommendation: distance, aim and FOV first. **LEAD decision (owner delegated 2026-10-16): distance, aim and FOV 70 to 80 first;** the pitch cap is a separate spike and ships only if it passes a phone drag test with no jitter. Reason: the stock camera has no pitch property, so the cap risks fighting touch drag and bringing the BD-164 rattle back.
+- **Q8. How much of the screen should a max dino fill?** Today Compy 39%, T-Rex 61%. Proposed 38% at spawn growing to 55% at max for every species. (a) accept; (b) fill less (closer to 45%) so the world shows more; (c) fill more. **LEAD decision (owner delegated 2026-10-16): (a) accept 38% growing to 55%, never above today's 61%,** with a phone guard: BD-472 must show 844 x 390 screenshots, and if food or the controls are hidden the maximum drops to 50%. Reason: it never makes the biggest species fill more than it does today, it gives the awe the owner asked for (Q2), and the T8 side-by-side lets the owner pick. Resolves the screen-share half of docs/116 C-25.
+- **Q9. Weather fog and the big camera.** Should the fog start be measured from the dino (camera distance plus the body length) so a giant is never inside the fog start? Recommendation: yes, a small change in `WeatherLooks`, but it changes the owner-tuned D10 look, so ask. **LEAD decision (owner delegated 2026-10-16): yes, measure the fog start from the dino,** but only when the camera is pulled out for size (the start becomes the larger of the configured start and camera distance plus body length). Normal-size runs keep the owner-tuned D10 look unchanged. Reason: a giant should never sit inside its own fog, and the guard keeps the tuned look for 95% of runs. Resolves docs/116 C-27 (the "25 to 30 studs readable around the dino" rule is read from the dino, not the camera).
+- **Q10. Scale ladder beyond dinos.** Fold BD-407 into BD-471 (shared table and verifier)? Should food, crystals and their glow grow with the dino (visual only) so a 40-stud T-Rex does not eat 1-stud berries? Recommendation: table yes, food scale decided after T2. **LEAD decision (owner delegated 2026-10-16): yes, BD-407 is folded into BD-471.** Food and crystals do NOT grow now (pickup reach, value and hitboxes stay server-side and unchanged); a visual-only enlargement of at most x1.5 is allowed later if the T2 screenshots show berries unreadable next to a giant. Reason: scaling pickups changes feel and balance risk for a rare long-run moment.
+- **Q11. Hills and peaks.** A maxed dino is taller than the hills (9-13) and as tall as the lowest peak (46). Intended ("too big for the surroundings")? (a) yes; (b) raise terrain relief. **LEAD decision (owner delegated 2026-10-16): (a) intended, no terrain change.** Reason: it is the "giants sometimes feel too big for their surroundings" fantasy from the owner's own brief, and raising relief costs terrain budget and risks the climbing rules.
+- **Q12. Colossal visibility radius on phones.** Larger cull radius for colossal only (420 on phones) at an unmeasured cost, or keep 190 and let them fade into haze (they would pop)? Recommendation: larger radius for colossal only, decided on BD-085 numbers. **LEAD decision (owner delegated 2026-10-16): a larger radius for colossal only, with a hard ceiling of 420 on phones, and it ships only if the BD-085 phone numbers pass.** If they do not, keep 190 and fade colossal trees by distance instead of popping them. Reason: phone performance is the gate; the recommended option is kept but made conditional.
 
 ## 15. Kanban rows and priority reasoning (revised after OWNER Q1, Q2, Q5, 2026-10-16)
 
@@ -357,7 +357,7 @@ Board position: P0 Backlog is the friends-playtest gate and the phone pass (BD-3
 
 | Row | Before | Now | Why |
 | --- | --- | --- | --- |
-| BD-470 Spec acceptance (Q3, Q4, Q6-Q12 remain) | P1 | **P2** | Q1, Q2 and Q5, the questions that gated the most expensive work, are answered. The rest are polish decisions for rare moments |
+| BD-470 Spec acceptance (Q3, Q4, Q6-Q12 remain) | P1 | **P2**; **Done 2026-10-16** (all decided by the LEAD, docs/115) | Q1, Q2 and Q5, the questions that gated the most expensive work, are answered. The rest are polish decisions for rare moments |
 | BD-471 Measure heights and write the scale ladder (absorbs BD-407) | P1 | **P2** | Still useful (the early-game height numbers, BD-407 was already P2), but nothing blocks on it any more and the phone pass (BD-085) measures budgets, not dino heights |
 | BD-472 Camera curve (flag `GrowthCameraCurve`) | P2 | **P3** | At `s` 1.5 the curve changes the Compy camera by about 8% (D 16.6 vs 18). It matters most for large species at spawn (T-Rex fills 61% of the screen today, 43-46% proposed) and for the rare long run. Touches camera feel and BD-164 rattle for a small audience; do it only if the owner wants the T-Rex framing fixed |
 | BD-473 Vegetation layers | P2 | **P2, scope reduced** | First slice is what EVERY run sees: raise the Small band (4-12, plants taller than a spawn Compy), clearings, remove the 42-80 stud gap, the band verifier, the `colossal` layer replacing `giant` using existing meshes. Colossal art and the M-high lift wait for BD-474 |
@@ -367,7 +367,7 @@ Board position: P0 Backlog is the friends-playtest gate and the phone pass (BD-3
 | BD-477 Test pass | P2 | **P3** | Mostly closes P3 rows; the Small-band screenshots are part of BD-473's own acceptance |
 | BD-478 (new) Awe cues for big dinos: size-scaled soft footsteps, shadow scaling check (OWNER Q2) | - | **P3** | Small and cheap, polish only; unheard sound needs the owner's ears |
 
-Result: no P1 rows remain, 3 P2 rows (BD-470, BD-471, BD-473) and 6 P3 rows. Build rows stay Backlog until the matching questions are answered. None may displace P0 work, and none is Done without the T-steps evidence.
+Result: no P1 rows remain. After the LEAD decisions of 2026-10-16 (owner delegated) BD-470 is Done (the decisions are its deliverable); 2 P2 rows remain (BD-471, BD-473) and 6 P3 rows. All questions are answered, so the build rows are no longer blocked by a question; priorities are unchanged on purpose, because the reasons above (rare long-run moment, phone pass first) still hold. None may displace P0 work, and none is Done without the T-steps evidence. Decision effects on the rows: BD-473 uses the 68 / 27 / 5 start (Q4); BD-472 keeps the 38% to 55% fill with the 844 x 390 phone guard (Q8), distance/aim/FOV first (Q7); BD-475 only ships a larger colossal radius (ceiling 420) if BD-085 passes (Q12); BD-476 is built only if the T4 walk-through shows a wedge (Q6); BD-471 absorbs BD-407 (Q10); the fog start change (Q9) rides with BD-472.
 
 ## 16. Handbook check (docs/114 s13)
 
@@ -381,3 +381,41 @@ Result: no P1 rows remain, 3 P2 rows (BD-470, BD-471, BD-473) and 6 P3 rows. Bui
 - [x] FX bar: none added; FX sizing check under section 10.
 - [x] Economy numbers match handbook s9 (growth 0.1, cap 4, BIG 1.2; nothing changed).
 - [x] Art rule: no code-drawn final art, flags default off, `Place1.rbxl` untouched, docs only.
+
+## 17. BD-473 first slice: implemented offline (2026-10-16, Review / test)
+
+Status: **CODE and offline verifiers only. No Studio look, no phone** (the lead takes the spawn screenshots from the gameplay camera, BD-473 acceptance). Branch `claude/bd-473-small-band`. Not changed: tree mesh ids (BD-462 V3 swap), tier files, `WorldCulling`, `EffectsLod`, camera, growth.
+
+| Item | What the code does now | Where |
+| --- | --- | --- |
+| Small band | Every shrub (ferns, bushes, mushrooms, horsetail; the existing kit meshes) is sized from a TARGET HEIGHT of 4.2-12 studs (`u^1.5` skew, median 6.5), width capped at 18 studs. No Small-band plant within 34 studs of the spawn point and each keeps 0.55 of its half-width off the route edge. Tree-foot undergrowth uses the same sizing. The small trees and palms of the tree layer (about 4.7-12 studs) are unchanged | `BiomePlacement.SmallBand`, `smallScale` |
+| Clearings | 20 glades, radius 32-51, 25.6% of the eligible forest-biome area (fern, conifer, marsh), greedy random order with a 0.9 spacing so they spread. No tree, colossal tree or fallen log inside; shrubs thinned to 35%. Each is clear of every route, keep-out (the BD-460 spawn meadow included), pool and grove core | `BiomePlacement.Clearing`, `clearings`, `inClearing` |
+| No gap | Trees top out at 41.9 studs (26.2 x 1.6); colossal is 80-130; nothing vegetated between 42 and 80 | verifier |
+| `colossal` | The old `giant` layer renamed (`WorldKit_colossal` attribute too), sized from a target height of 80-140 with a 100-stud crown cap, trees only (the spire and boulder giants are gone), none in meadow or badlands, none within 150 studs of the spawn. 31 placed (47 giants before), 8.5% of the canopy-class. `colliderReach` widens its keep-clear radius to the offset trunk box (a 1-pair overlap with a boulder showed up at x8) | `BiomePlacement.Colossal`, `colossalScale` |
+| Version | `BiomePlacement.Version` 2 -> 3. The layout changes for everyone (same seed 1404, different placements) | |
+
+Height histogram of the offline run (seed 1404, playtest density 1.25, vegetation only: tree, colossal, shrub; height = kit extent x scale, an upper bound):
+
+```
+studs      count
+<4             0
+4-6.6        642 ################################   (a spawn Compy is 4.4-6.6)
+6.6-8        358 #################
+8-12         359 #################
+12-20        198 #########
+20-26         64 ###
+26-42         70 ###
+42-80          0                                        (the gap)
+80-100        20 #
+100-140       11
+shrub   n=1224 min 4.2 p10 4.4 p50 6.5 p90 9.5 max 12.0
+tree    n= 467 min 5.0 p10 8.8 p50 15.6 p90 28.4 max 41.9
+colossal n= 31 min 80.0 p10 84.5 p50 96.2 p90 117.2 max 129.6
+```
+
+Small band plants 1,359 against 363 canopy-class trees = 3.7 per tree (spec: at least 2); 53% of the band is taller than a spawn Compy. `tools/verify_vegetation_layers.py` asserts all of this (in CI).
+
+Budget (offline estimator, before = main `d874050`): phone worst-spot scene **3,643 -> 3,434 parts, 557,976 -> 452,134 triangles**; details in [107](107-offline-mobile-budget.md). Net better because the clearings drop about 140 trees; the Small band itself is count-neutral.
+
+Left for the lead and later rows: Studio screenshots at spawn from the gameplay camera (do the plants read as a jungle, not as clutter or a wall of green; do they hide food), a phone check (BD-085), a look at the facets of the x4.5-8 colossal stand-ins (expected to look toy-like until BD-474), the M-high lift (26-42 share) and colossal art (BD-474), the 65/27/8 mix check (the canopy-class is now 12-26: 72%, 26-42: 19%, colossal 8.5%), colossal LOD/culling radius (BD-475: beyond 190 studs a colossal tree still pops on a phone), collision (BD-476). Colossal grounding on the trunk radius with a root-flare embed (spec s6 rule 6) is NOT done: the existing 5-ray rule still places them.
+

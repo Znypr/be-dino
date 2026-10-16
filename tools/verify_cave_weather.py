@@ -43,6 +43,13 @@ def main():
     assert 'local moonOn=live and' in loop and 'local auroraOn=live and' in loop, 'moon / aurora gated by live'
     for name in ('on=motion and weatherId==activeId', 'live and root and activeId=="volcano"', 'live and root and activeId=="thunder"'):
         assert name in loop, 'gate missing: ' + name
+    # BD-131: the textured weather rigs ride the same gates (nothing new can show inside the hall)
+    assert 'addRig("aurora",skyBand,Vector3.new(0,70,0),{curtain})' in src, 'textured aurora curtain is a normal rig (gated by motion / not hall)'
+    moon = loop[loop.index('local moonOn=live and'):loop.index('-- aurora: full-sky rays')]
+    assert moon.count('moonBoard.Enabled=true') == 1 and 'if moonBoard then moonBoard.Enabled=false end' in moon, 'textured moon disc only while moonOn, hidden otherwise'
+    assert moon.index('moonBoard.Enabled=true') < moon.index('\n    else\n'), 'disc is shown inside the moonOn branch only'
+    assert 'if slot.trunk then slot.trunk.Enabled=on end' in src and 'for _,slot in bolts do slot.active=false setBolt(slot,false) end' in src, 'textured bolt trunk is switched by setBolt, which stopOneShots clears'
+    assert 'if not live then stopOneShots() end' in loop, 'bolts (textured or not) stop outside the live gate'
     # no Lighting / effect property written outside the main loop after setup other than the loop itself and the one-shot helpers
     body = loop.split('end)\n', 1)[0] if 'end)\n' in loop else loop
     assert body.rstrip().endswith('Cave.step(dt) -- last: the cave look is written after the weather values above'), 'Cave.step must be last'

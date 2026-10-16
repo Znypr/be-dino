@@ -56,6 +56,7 @@ gui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
 gui.Parent = player:WaitForChild("PlayerGui")
 local blur = Instance.new("BlurEffect")
 blur.Name,blur.Size,blur.Parent = "BeDinoModalBlur",0,Lighting
+local ModalBlurGuard = require(Shared.ModalBlurGuard) -- BD-296: the blur only shows while a modal is really visible
 local motion = true
 require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SettingsModel")).onChange(function(s) motion=not s.calm end) -- BD-266 Calm motion also quiets this file's shake and slides
 local active = ""
@@ -153,11 +154,23 @@ local function close()
     task.delay(if motion then .13 else 0,function() if modalVersion==version then shade.Visible=false end end)
     Theme.animate(blur,.12,{Size=0})
 end
--- The modal blur belongs to an open modal only: if the panel is hidden (even programmatically) the blur is forced back to 0.
-task.spawn(function()
+-- The modal blur belongs to a visible modal only (BD-296). Visible means: a menu is open, the scrim is shown, AND the BeDinoUI ScreenGui is
+-- enabled and still in the PlayerGui. Disabling or destroying the ScreenGui while a menu was open used to leave the blur at 8 with nothing on screen.
+local function modalState(): ModalBlurGuard.State
+    return {active=active, shadeVisible=shade.Visible, guiEnabled=gui.Enabled, guiAttached=gui:IsDescendantOf(player) and shade:IsDescendantOf(gui)}
+end
+local function blurTarget(): number return ModalBlurGuard.target(modalState(),motion) end
+local function clearStrayBlur()
+    if ModalBlurGuard.mustClear(modalState(),blur.Size) then Theme.animate(blur,.08,{Size=0}) blur.Size=0 end -- cancels any running open tween, then snaps
+end
+for _,signal in {gui:GetPropertyChangedSignal("Enabled"),gui.AncestryChanged,shade:GetPropertyChangedSignal("Visible"),shade.AncestryChanged} do
+    signal:Connect(clearStrayBlur)
+end
+gui.Destroying:Connect(function() blur.Size=0 end) -- a destroyed UI can never have a modal open
+task.spawn(function() -- slow backstop for anything that slips past the change signals
     while true do
         task.wait(.5)
-        if (active=="" or not shade.Visible) and blur.Size>0 then blur.Size=0 end
+        clearStrayBlur()
     end
 end)
 local closeButton=button(header,"X",770,1,80,76,C.red,close)
@@ -227,8 +240,11 @@ local function pumpToasts()
     local half,halfCard=gui.AbsoluteSize.X/2,220*toastScale.Scale
     local shift=if panelRight>0 then math.clamp(panelRight+12+halfCard-half,0,math.max(0,half-halfCard)) else 0
     player:SetAttribute("MenuOpen",shade.Visible) -- BD-328: WeatherVisuals holds its big title card while a menu is open
-    local topY=if shade.Visible then 4 else 80 -- BD-304: with a menu open the toast rides the very top, clear of the menu title
-    if toastLayer.Position.X.Offset~=shift or toastLayer.Position.Y.Offset~=topY then toastLayer.Position=UDim2.new(.5,shift,0,topY) end
+    -- BD-304: with a menu open the toast rides the very top, clear of the menu title. BD-378: and clear of the Crystals / XP plates (WalletRect, set by scales()).
+    local wallet=toastLayer:GetAttribute("WalletRect") :: Rect?
+    local plates=if wallet then {x=wallet.Min.X,y=wallet.Min.Y,w=wallet.Width,h=wallet.Height} else nil
+    local slide,topY=TouchLayout.toastPlacement(gui.AbsoluteSize.X,toastScale.Scale,plates,shade.Visible,shift)
+    if toastLayer.Position.X.Offset~=slide or toastLayer.Position.Y.Offset~=topY then toastLayer.Position=UDim2.new(.5,slide,0,topY) end
     if NotifyQueue.update(notifyQueue,os.clock(),shade.Visible) then drawToasts() end
 end
 -- Existing call sites keep notify(text,color); opts adds {kind,key,icon,body,tint,amount,format}.
@@ -332,7 +348,7 @@ local function open(name: string)
     Theme.animate(scale,.16,{Scale=viewportScale()})
     Theme.animate(panel,.16,{Position=UDim2.fromScale(.5,.5)})
     Theme.animate(shade,.14,{BackgroundTransparency=.42})
-    Theme.animate(blur,.16,{Size=if motion then 8 else 0})
+    Theme.animate(blur,.16,{Size=blurTarget()})
     render(name)
     -- Animate the content as one layer, keeping large collections inexpensive.
     body.Position=require(script.Parent.ModalCompact).place(false,motion)
@@ -1018,7 +1034,7 @@ render=function(name: string)
                 detailText=HatchTimeline.detailLine(colorReveal,patternReveal,colorReveal.bonusText) -- BD-220: colour bonus shown once, here
             end
             detailLabel.Text,detailLabel.TextColor3=detailText,detailColor
-            remainingAfter=HatchTimeline.remaining(str("NextChestId")~="" and workspace:GetServerTimeNow()>=num("NextChestReadyAt"),num("ActiveChestCount"),num("QueuedEggsWaiting"))
+            remainingAfter=HatchTimeline.remaining(str("NextChestId")~="" and workspace:GetServerTimeNow()>=num("NextChestReadyAt"),num("ActiveChestCount"),num("QueuedEggsWaiting"),num("BufferedRevealCount"))
             paint.setRarityColor(rarityColors[rarity])
             handle.supply({
                 dino=view,speciesId=id,rarity=rarity,color=rarityColors[rarity],failed=failed,
@@ -1029,7 +1045,7 @@ render=function(name: string)
                 secondReveal=if geneticsOk then HatchTimeline.colorReveal(ProgressionConfig.EggColors,genes,"secondary") else nil, -- BD-220: right bucket
             })
             -- BD-380: the egg counts are published a moment after the result; re-count so the hint equals the eggs really left.
-            task.delay(.6,function() if modalVersion==version and active=="hatch" and handle then (handle :: any).setRemaining(HatchTimeline.remaining(str("NextChestId")~="",num("ActiveChestCount"),num("QueuedEggsWaiting"))) end end)
+            task.delay(.6,function() if modalVersion==version and active=="hatch" and handle then (handle :: any).setRemaining(HatchTimeline.remaining(str("NextChestId")~="",num("ActiveChestCount"),num("QueuedEggsWaiting"),num("BufferedRevealCount"))) end end)
         end
         Sfx.play("hatch_crack")
         handle=HatchSequence.play({
@@ -1399,6 +1415,8 @@ local function scales()
     foodDiagnostic.Visible,foodDiagnostic.AnchorPoint,foodDiagnostic.Position=require(Shared.HudRules).showFoodDebug(RunService:IsStudio(),player:GetAttribute("IsAdmin")==true,touch),Vector2.new(0,1),UDim2.fromOffset(layout.hud.x,layout.hud.y-6) -- BD-080: debug line only for Studio/admin, parked above the egg plate (never under the toasts)
     require(script.Parent.HudV2).layout(layout)
     toastScale.Scale=layout.toastScale
+    local wallet=TouchLayout.walletPlates(layout) -- BD-378: the toast stack keeps clear of the Crystals plate and the goal line under it
+    toastLayer:SetAttribute("WalletRect",Rect.new(wallet.x,wallet.y,wallet.x+wallet.w,wallet.y+wallet.h))
 end
 local function characterAdded(character: Model)
     local humanoid=character:WaitForChild("Humanoid",10) :: Humanoid?
@@ -1560,7 +1578,7 @@ PrivateState.onChanged("LastClaimedChestId", function()
     table.insert(batchEntries,{rarity=rarity,name=Config.SpeciesDisplayNames[species] or species,failed=outcome.failed,shiny=outcome.shiny==true,big=outcome.big==true})
     if autoHatching and EggsLogic.shouldAutoOpen(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen(),rarity,outcome,skipAllReveals) then
         table.insert(skippedEntries,{rarity=rarity,speciesId=species,outcome=outcome})
-        HatchTimeline.batchStep(HatchTimeline.session,HatchTimeline.remaining(str("NextChestId")~="",num("ActiveChestCount"),num("QueuedEggsWaiting")),os.clock()) -- BD-444: a quickly opened egg still counts
+        HatchTimeline.batchStep(HatchTimeline.session,HatchTimeline.remaining(str("NextChestId")~="",num("ActiveChestCount"),num("QueuedEggsWaiting"),num("BufferedRevealCount")),os.clock()) -- BD-444: a quickly opened egg still counts
         task.delay(Config.ChestClaimRequestCooldownSeconds+.15,function() (hatchState.next :: any)() end) -- stay under the server claim cooldown
         return
     end

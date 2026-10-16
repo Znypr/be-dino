@@ -53,8 +53,9 @@ local leaving = LeaveCoordinator.new({
     release = ProfileRepository.release,
     publish = Leaderboards.publish,
 })
-RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string, eggEvents, runSeconds)
-    local ok, settledOutcome = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents, runSeconds, workspace:GetAttribute("WeatherId")) -- BD-156: nests dropped in weather carry it
+RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string, eggEvents, runSeconds, nestWeather)
+    -- BD-156 / BD-479: each nest carries the weather active when it was FOUND in the run (the snapshot's per-nest ledger), not the settlement weather
+    local ok, settledOutcome = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents, runSeconds, nestWeather)
     if ok then Telemetry.runSettled(player, reason, runSeconds, settledOutcome) end -- BD-426: read-only, flag-gated
     if not ok then
         warn(string.format("[Be Dino] settlement failed for %s (%s)", player.Name, reason))
@@ -63,7 +64,7 @@ RunLifecycle.configureSettlement(function(player: Player, runId: string, catchSc
     end
 
     if Config.DuplicateSettlementProbe then
-        local retryOk, _, retryStatus = ProfileRepository.commitRunSettlement(player, runId, catchScore)
+        local retryOk, _, retryStatus = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents, runSeconds, nestWeather) -- BD-479: same arguments as a true retry, so a probe that is not a duplicate could never stamp a different weather
         if not retryOk or retryStatus ~= "duplicate" then
             player:SetAttribute("ProfileState", "SaveFailed")
             warn("[Be Dino] duplicate settlement probe failed for " .. player.Name)

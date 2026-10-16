@@ -271,7 +271,8 @@ assert(oF>0 and mF=="CrackedLava","lava vein behind the falls "..mF)
 
 -- ---- stations: pad material is laid stone; the mix has stone, rock, slate, cobblestone and only a little moss
 local function pct(m) return (counts[m] or 0)/solid end
-for _,m in {"Rock","Slate","Cobblestone","Basalt","Grass","LeafyGrass","CrackedLava"} do assert((counts[m] or 0)>0,"material used: "..m) end
+for _,m in {"Concrete","Slate","Cobblestone","Basalt","Grass","LeafyGrass","CrackedLava"} do assert((counts[m] or 0)>0,"material used: "..m) end
+assert((counts.Rock or 0)==0,"BD-296: no Rock anywhere in the cave (deep fill surfaced as dark blotches)")
 local floorMix={}
 local floorCols=0
 for i=0,nx-1 do for k=0,nz-1 do
@@ -285,7 +286,8 @@ for i=0,nx-1 do for k=0,nz-1 do
 end end
 local moss=((floorMix.Grass or 0)+(floorMix.LeafyGrass or 0))/floorCols
 assert(moss>0.02 and moss<0.15,"moss is a little: "..moss)
-for _,m in {"Rock","Limestone","Cobblestone"} do assert((floorMix[m] or 0)/floorCols>0.12,"floor stone mix has "..m) end
+for _,m in {"Concrete","Cobblestone"} do assert((floorMix[m] or 0)/floorCols>0.12,"floor stone mix has "..m) end
+assert((floorMix.Rock or 0)+(floorMix.Limestone or 0)==0,"BD-296: no dark Rock patches and no striped Limestone on the floor")
 local hs=L.byId.heart
 local pathMoss=0
 for _,p in L.paths do
@@ -357,7 +359,8 @@ local names={} for m,c in counts do names[#names+1]=string.format("%s %.0f%%",m,
 -- ---- BD-384 look: cooler cave-only colours, no island Sandstone in the hall, stalactite ceiling rule
 for name,c in R.Colors do
  if name~="CrackedLava" then
-  assert(c[1]-c[3]<=45 and c[1]<=195 and c[2]<=180 and c[3]>=110,"light warm stone, not orange-hot: "..name)
+  -- BD-296 dim pass 2026-10-16 (owner "pretty bright"; measured 0.57 -> 0.30 luminance): warm mid-tone stone, not orange-hot, not near-black
+  assert(c[1]-c[3]<=45 and c[1]<=150 and c[2]<=130 and c[3]>=60 and c[1]>=90,"warm mid-tone stone, not orange-hot: "..name)
  end
 end
 for _,iso in {"Sandstone","Slate","Rock","Basalt","Grass","LeafyGrass"} do assert(R.Colors[iso]==nil,"island material never recoloured: "..iso) end
@@ -371,6 +374,29 @@ for _,p in {{-60,16},{70,30},{0,40},{-40,26},{20,10},{-90,20}} do
  end
 end
 assert(not wallMats.Sandstone,"walls and roof use no Sandstone (island colour)")
+-- BD-296 (lead Studio look): the visible wall / ceiling surface is ONE matte stone. No Limestone (horizontal strata stripes), no Rock (dark
+-- island teal, BeDino_Stone art variant: smudge patches), no Cobblestone (tile grid) on any cave-shell cell that touches air above the floor,
+-- except the lava vein behind the falls, the basin rim and the laid-stone pads / path edges near the floor.
+do
+ local wallCells,bad,badName=0,0,nil
+ for i=1,nx-2 do for k=1,nz-2 do
+  local wx,wz=R.XMin+(i+.5)*res,R.ZMin+(k+.5)*res
+  local col=R.column(wx,wz)
+  for j=1,ny-2 do
+   if occ[idx(i,j,k)]>0 and (occ[idx(i+1,j,k)]==0 or occ[idx(i-1,j,k)]==0 or occ[idx(i,j+1,k)]==0 or occ[idx(i,j-1,k)]==0 or occ[idx(i,j,k+1)]==0 or occ[idx(i,j,k-1)]==0) then
+    local wy=R.YMin+(j+.5)*res
+    local m=mat[idx(i,j,k)]
+    if wy>col.floorTop+res+1 and col.sd>-8 and wy<col.ceil+6 and m~="CrackedLava" and m~="Basalt" then -- inside the cave, not the outer skin of the rock shell (never seen)
+     wallCells+=1
+     if m~=R.WallStone then bad+=1 badName=badName or (m.." at "..wx..","..wy..","..wz) end
+    end
+   end
+  end
+ end end
+ assert(wallCells>2000,"wall surface cells scanned: "..wallCells)
+ assert(bad/wallCells<0.03,"BD-296 wall surface is one matte stone, "..bad.." of "..wallCells.." differ, first "..tostring(badName))
+ assert(R.WallStone=="Concrete" and R.Colors.Concrete and R.Colors.Limestone==nil,"walls are Concrete, Limestone is not used")
+end
 for _,xz in {{0,0},{30,10},{-40,60},{60,-30},{-70,20}} do
  local x,z=xz[1],C.CenterZ+xz[2]
  assert(math.abs(R.ceilingAt(x,z)-R.column(x,z).ceil)<1e-9,"ceilingAt is the shell ceiling")

@@ -71,6 +71,7 @@ jobs:
           python tools/verify_audio.py --runner /tmp/luau/luau
           python tools/verify_sound_lab.py
           python tools/verify_hatch_sequence.py --runner /tmp/luau/luau
+          python tools/verify_egg_toast_count.py --runner /tmp/luau/luau
           python tools/verify_rare_hatch.py --runner /tmp/luau/luau
           python tools/verify_inspect.py --runner /tmp/luau/luau
           python tools/verify_eggs_screen.py --runner /tmp/luau/luau
@@ -78,10 +79,58 @@ jobs:
           python tools/verify_load_gate.py --runner /tmp/luau/luau
           python tools/verify_mesh_sanity.py --runner /tmp/luau/luau
           python tools/verify_dino_motion.py --runner /tmp/luau/luau
+          python tools/verify_hub_scale.py --runner /tmp/luau/luau
           python tools/verify_lowpoly_dinos.py --runner /tmp/luau/luau
           python tools/verify_world_budget.py --runner /tmp/luau/luau
           python tools/verify_world_overlap.py --runner /tmp/luau/luau
+          python tools/verify_vegetation_layers.py --runner /tmp/luau/luau
           python tools/verify_cave_overlap.py --runner /tmp/luau/luau
+          python tools/verify_cave_terrain.py --runner /tmp/luau/luau
+          python tools/verify_cave_lighting.py --runner /tmp/luau/luau
+          python tools/verify_hub_travel_client.py --runner /tmp/luau/luau
+          # cave and hub
+          python tools/verify_cave_gate.py --runner /tmp/luau/luau
+          python tools/verify_cave_hub.py --runner /tmp/luau/luau
+          python tools/verify_cave_lava.py --runner /tmp/luau/luau
+          python tools/verify_cave_weather.py
+          python tools/verify_hub_travel.py --runner /tmp/luau/luau
+          python tools/verify_hub_walk_there.py --runner /tmp/luau/luau
+          python tools/verify_spawn.py --runner /tmp/luau/luau
+          # combat
+          python tools/verify_combat_service.py --runner /tmp/luau/luau
+          python tools/verify_combat_state.py --runner /tmp/luau/luau
+          python tools/verify_combat_stats.py --runner /tmp/luau/luau
+          python tools/verify_combat_teamup.py --runner /tmp/luau/luau
+          python tools/verify_npc_predators.py --runner /tmp/luau/luau
+          # first-time player
+          python tools/verify_ftue_copy.py --runner /tmp/luau/luau
+          python tools/verify_ftue_p1.py --runner /tmp/luau/luau
+          python tools/verify_ftue_rules.py --runner /tmp/luau/luau
+          # hatch and mutation reveal
+          python tools/verify_hatch.py --runner /tmp/luau/luau
+          python tools/verify_hatch_fx.py --runner /tmp/luau/luau
+          python tools/verify_hatch_v2.py --runner /tmp/luau/luau
+          python tools/verify_mutation_reveal.py --runner /tmp/luau/luau
+          # HUD, settings, shop and text
+          python tools/verify_hud.py --runner /tmp/luau/luau
+          python tools/verify_settings.py --runner /tmp/luau/luau
+          python tools/verify_shop_crystals.py --runner /tmp/luau/luau
+          python tools/verify_shop_preview.py --runner /tmp/luau/luau
+          python tools/verify_text_style.py --runner /tmp/luau/luau
+          python tools/verify_phone_scale.py --runner /tmp/luau/luau
+          python tools/verify_owner_feedback_p1.py --runner /tmp/luau/luau
+          # world and art
+          python tools/verify_camera_occlusion.py --runner /tmp/luau/luau
+          python tools/verify_lowpoly_budget.py --runner /tmp/luau/luau
+          python tools/verify_lowpoly_patterns.py --runner /tmp/luau/luau
+          python tools/verify_pattern_atlas.py --runner /tmp/luau/luau
+          python tools/verify_fx_textures.py
+          python tools/verify_equip_visual.py
+          # other rules
+          python tools/verify_classes.py --runner /tmp/luau/luau
+          python tools/verify_colour_bonus.py --runner /tmp/luau/luau
+          python tools/verify_rarity.py --runner /tmp/luau/luau
+          python tools/verify_modal_blur.py --runner /tmp/luau/luau
           python tools/qa/palette_report.py --runner /tmp/luau/luau
           python tools/qa/ground_report.py
           python tools/qa/budget_report.py

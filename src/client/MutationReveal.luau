@@ -3,6 +3,9 @@
 -- on the FRONT layer frame, centred on the dinosaur: a soft glow, thin rings, mist puffs and a few motif sprites in the mutation's own
 -- MutationLook colours. Textures only come from EffectAssets keys (real fx3 sheets when uploaded, otherwise native rounded shapes).
 -- Effects Full / Lite / Off and Reduce Motion are applied by Plan.counts. Never touches the server outcome or the HatchV2 egg.
+-- BD-186..189: each mutation's Blender textures (FxRecipes.MutationTex: glow plate, ring, smoke sheet, motif sheet) replace the default
+-- key ONLY while their slot holds a valid upload. Smoke and motif sheets then play their 4 x 4 flipbook (EffectAssets.frameAt, driven by
+-- the plan's phase); coloured art (Aurora) is drawn white. With an empty slot every sprite is exactly what it was before.
 local UserInputService = game:GetService("UserInputService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Plan = require(Shared.MutationRevealPlan)
@@ -15,8 +18,9 @@ local M = {}
 local cache = setmetatable({}, {__mode = "k"})
 local WHITE = Color3.new(1, 1, 1)
 
-local function node(parent, key: string, shape: string, seed: number)
-    local n = {key = key, shape = shape, seed = seed}
+-- anim = play the flipbook (only the new mutation sheets; the older fx3 keys keep their one fixed cell).
+local function node(parent, key: string, shape: string, seed: number, anim: boolean?)
+    local n = {key = key, shape = shape, seed = seed, anim = anim == true and Assets.isSheet(key), coloured = Recipes.MutationTexColoured[key] == true, cell = 0}
     if Assets.isRealUi(key) then
         local i = Instance.new("ImageLabel")
         i.BackgroundTransparency, i.BorderSizePixel, i.Image = 1, 0, Assets.resolveUi(key)
@@ -56,23 +60,56 @@ local function deviceClass(): string
     return Recipes.deviceClass(UserInputService.TouchEnabled, UserInputService.MouseEnabled, short)
 end
 
--- Built once per front layer. Motif sprites are rebuilt only when the next egg's mutation uses a different texture or shape.
+-- Texture keys for one mutation: the mapped Blender key while its slot holds a valid upload, else today's key (the ImageLabel needs
+-- an alpha upload, so the UI check is isRealUi).
+local function keysFor(id: string, entry)
+    local function pick(slot: string, default: string)
+        local mapped = Recipes.mutationTex(id, slot, Assets.isRealUi)
+        return mapped or default, mapped ~= nil
+    end
+    local glow = pick("glow", "glowPlate")
+    local ring = pick("ring", "ringShock")
+    local smoke, smokeAnim = pick("smoke", "smokeSheet")
+    local motif, motifAnim = pick("motif", entry.key)
+    return {glow = glow, ring = ring, smoke = smoke, motif = motif, smokeAnim = smokeAnim, motifAnim = motifAnim}
+end
+
+-- Built once per front layer, and rebuilt (in draw order: glow, rings, puffs, motifs) only when the next egg's mutation uses different
+-- textures or shapes. Motif sprites are built only when the plan asks for them (not with Reduce Motion).
 local function pool(front: Frame)
     local p = cache[front]
     if p then return p end
-    p = {front = front, glow = node(front, "glowPlate", "disc", 1), rings = {}, puffs = {}, motifs = {}, motifKey = "", device = deviceClass()}
-    for i = 1, 2 do p.rings[i] = node(front, "ringShock", "ring", 1) end
-    for i = 1, 3 do p.puffs[i] = node(front, "smokeSheet", "disc", i) end
+    p = {front = front, rings = {}, puffs = {}, motifs = {}, baseTag = "", motifKey = "", device = deviceClass()}
     cache[front] = p
     return p
 end
-local function motifs(p, entry)
-    local tag = entry.key .. "/" .. entry.shape
-    if p.motifKey == tag then return end
-    for _, n in p.motifs do n.obj:Destroy() end
-    table.clear(p.motifs)
-    for i = 1, Plan.Caps[p.device] or Plan.Caps.desktop do p.motifs[i] = node(p.front, entry.key, entry.shape, i) end
-    p.motifKey = tag
+local function sync(p, keys, entry, wantMotifs: boolean)
+    local baseTag = keys.glow .. "|" .. keys.ring .. "|" .. keys.smoke
+    local motifTag = keys.motif .. "/" .. entry.shape
+    if p.baseTag ~= baseTag then
+        if p.glow then p.glow.obj:Destroy() end
+        for _, list in {p.rings, p.puffs, p.motifs} do
+            for _, n in list do n.obj:Destroy() end
+            table.clear(list)
+        end
+        p.motifKey = ""
+        p.glow = node(p.front, keys.glow, "disc", 1)
+        for i = 1, 2 do p.rings[i] = node(p.front, keys.ring, "ring", 1) end
+        for i = 1, 3 do p.puffs[i] = node(p.front, keys.smoke, "disc", i, keys.smokeAnim) end
+        p.baseTag = baseTag
+    end
+    if wantMotifs and p.motifKey ~= motifTag then
+        for _, n in p.motifs do n.obj:Destroy() end
+        table.clear(p.motifs)
+        for i = 1, Plan.Caps[p.device] or Plan.Caps.desktop do p.motifs[i] = node(p.front, keys.motif, entry.shape, i, keys.motifAnim) end
+        p.motifKey = motifTag
+    end
+end
+-- Flipbook frame for a sheet sprite: k = 0..1 of its life, age = seconds. Only changes the cell when it differs.
+local function frame(n, k: number, age: number)
+    if not n.anim then return end
+    local cell = Assets.frameAt(n.key, k, age, n.seed)
+    if cell ~= n.cell then n.cell = cell Assets.setCell(n.obj, n.key, cell) end
 end
 
 -- Start a run for one hatched dino. Returns nil when the egg has no (known) mutation.
@@ -82,7 +119,7 @@ function M.begin(front: Frame, mutationId: any, motion: boolean)
     local p = pool(front)
     local entry = Plan.Motifs[look.id]
     local counts = Plan.counts(look.id, p.device, Settings.effects(), not motion)
-    if counts.motifs > 0 then motifs(p, entry) end
+    sync(p, keysFor(look.id, entry), entry, counts.motifs > 0)
     return {
         pool = p, id = look.id, counts = counts, loop = Plan.loopCount(counts), still = not motion,
         rim = c3(look.rim), spark = c3(look.spark), mist = c3(look.mist):Lerp(WHITE, 0.35),
@@ -114,6 +151,7 @@ function M.update(h, since: number?)
     for i, puff in p.puffs do
         if i <= c.puffs then
             local dx, dy, ps, pa = Plan.puff(i, c.puffs, since)
+            frame(puff, Plan.puffPhase(since))
             put(puff, cx + dx, cy + dy, ps, h.mist, pa)
         else puff.obj.Visible = false end
     end
@@ -122,7 +160,9 @@ function M.update(h, since: number?)
         if i <= live then
             local dx, dy, ms, ma, rot = Plan.motif(id, i, c.motifs, since)
             local col
-            if id == "aurora" then col = c3(Plan.AuroraCycle[Plan.colorIndex(id, i)]) else col = if Plan.colorIndex(id, i) == 1 then h.rim else h.spark end
+            frame(m, Plan.motifPhase(i, c.motifs, since))
+            if m.coloured then col = WHITE -- coloured art (Aurora ribbons) is not tinted
+            elseif id == "aurora" then col = c3(Plan.AuroraCycle[Plan.colorIndex(id, i)]) else col = if Plan.colorIndex(id, i) == 1 then h.rim else h.spark end
             put(m, cx + dx, cy + dy, ms, col, ma, rot)
         else m.obj.Visible = false end
     end

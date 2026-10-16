@@ -16,7 +16,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 
 HARNESS = r'''
-local CFG = {RespawnDelaySeconds = 0, RunEggMaxPerRun = 400, WorldReadyTimeoutSeconds = 20, SpawnProtectionSeconds = 5}
+local CFG = {RespawnDelaySeconds = 0, RunEggMaxPerRun = 400, WorldReadyTimeoutSeconds = 20, SpawnProtectionSeconds = 5, NestMinRunSeconds = 120} -- BD-479: begin() schedules the minimum-time nest mark
 local settingsJson = ""
 local PS = {get = function(_, name) if name == "SettingsJson" then return settingsJson end return nil end}
 local ReplicatedStorage = {Shared = {Config = CFG, IslandLayout = {}, SpawnGeometry = {}}}
@@ -26,9 +26,10 @@ local Http = {GenerateGUID = function() return "run-" .. tostring(clock) end,
     JSONDecode = function(_, s) if s == EVENTS then return {{rarity = "common"}, {rarity = "rare"}} end if s == "[]" then return {} end return {} end}
 local services = {Players = {GetPlayers = function() return {} end}, ReplicatedStorage = ReplicatedStorage, HttpService = Http}
 local game = {GetService = function(_, n) return services[n] end}
-local workspace = {GetServerTimeNow = function() return clock end}
+local workspace = {GetServerTimeNow = function() return clock end, GetAttribute = function() return nil end}
 local task = {spawn = function(f, ...) f(...) end, wait = function() end, delay = function() end}
-local script = {Parent = {PrivateState = PS}}
+local RewardMath = {recordNestWeather = function(ledger) return ledger end} -- BD-479: the real ledger logic is tested in verify_gameplay and verify_nests
+local script = {Parent = {PrivateState = PS, RewardMath = RewardMath}}
 local require = function(x) return x end
 local typeof = function(v) return type(v) end
 

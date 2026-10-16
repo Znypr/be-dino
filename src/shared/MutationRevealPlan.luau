@@ -104,15 +104,25 @@ function P.puff(i: number, n: number, since: number): (number, number, number, n
     return math.cos(ang) * dist, math.sin(ang) * dist * 0.8 - 8 * k, 70 + 60 * easeOut(k), math.min(opacity, P.Limits.puffAlpha)
 end
 
+-- Where motif sprite i of n is in its own loop: k = 0..1 of its life, age = seconds into it. Each sprite loops on its own offset.
+-- The same phase drives the flipbook frame of a Blender motif sheet (EffectAssets.frameAt), so art and motion stay in step.
+function P.motifPhase(i: number, n: number, since: number): (number, number)
+    local life = P.Limits.motifLife
+    local age = (since + (i - 1) / math.max(n, 1) * life) % life
+    return age / life, age
+end
+-- Smoke puff phase: k = 0..1 of its life (clamped), age = seconds since the reveal.
+function P.puffPhase(since: number): (number, number)
+    return clamp01(since / P.Limits.puffLife), math.max(since, 0)
+end
+
 -- Motif sprite i of n at `since` seconds after the reveal: dx, dy (px from the dino centre), size, opacity, rotation (deg).
 -- The burst spreads them wider, then they settle; each loops on its own offset.
 function P.motif(id: string, i: number, n: number, since: number): (number, number, number, number, number)
     local entry = P.Motifs[id]
     if not entry or since < 0 then return 0, 0, 0, 0, 0 end
     local L = P.Limits
-    local life = L.motifLife
-    local age = (since + (i - 1) / math.max(n, 1) * life) % life
-    local k = age / life
+    local k = P.motifPhase(i, n, since)
     local fade = math.sin(math.pi * k) ^ 0.7
     local arrive = clamp01(since / 0.5)
     local burst = 1 + 0.5 * (1 - clamp01(since / L.burstLife))
