@@ -118,7 +118,7 @@ New remote `HubTravel` in `BeDinoRemotes`, payload `{station: string}`; a `HubTr
 3. The move uses `FallRecovery.teleport` (ownership handoff) to a **free arrival spot** of the station (section 9), facing the station's sign. The player's `HubStation` attribute is set to the id (cleared when they walk more than the pad radius + 4 studs away, checked in the existing fall-recovery tick, no extra loop).
 4. Camera: the client keeps `CameraType.Custom`; after the move it rotates the camera to the station's `cameraYaw` over 0.35 s so the stall is in view (Reduce Motion: instant). No cinematic camera, no zoom.
 5. **Fade**: the client shows a short cream-coloured fade (0.18 s out, 0.18 s in) with a soft "pop" cue (through `Sfx`, quiet). **Reduce Motion: a single 0.08 s cross-dissolve, no cue.** The fade never blocks input for more than 0.5 s and never covers a modal.
-6. **Walk there option** (DECISION): a Settings toggle "Teleport to shops: ON / OFF" (default ON). With it OFF, a rail button does not teleport: it draws a soft dotted **moss trail** on the floor from the dino to the station (a `Beam` with the `ribbonSoft` key fallback sprite, fading over 12 s) and shows a small "Walk to the Nests" toast; the station opens on arrival like any walk-up (section 8). Children who like to walk, and anyone who finds teleports confusing, still get there.
+6. **Walk there option** (DECISION, amended 2026-10-16: teleport is now a bought perk, default OFF; the toggle is visible only after purchase): a Settings toggle "Teleport to shops: ON / OFF" (was default ON). With it OFF, a rail button does not teleport: it draws a soft dotted **moss trail** on the floor from the dino to the station (a `Beam` with the `ribbonSoft` key fallback sprite, fading over 12 s) and shows a small "Walk to the Nests" toast; the station opens on arrival like any walk-up (section 8). Children who like to walk, and anyone who finds teleports confusing, still get there.
 7. **Menu buttons during a run** (DECISION): no teleport is possible (rule 1). POTIONS still opens the potion menu during a run (drinking a bought potion mid-run is an existing feature) and SETTINGS still opens settings. DINOS, EGGS, FUSION and SHOP are shown **dimmed** in a run with a one-line hint "At home" when tapped; they do nothing else. This keeps runs free of shop modals (docs/87: one idea per screen) and makes "the menu belongs to the place" true. Open question 2 asks the owner to confirm.
 8. Server log line per teleport (station, player, result) for the playtest; no DataStore writes.
 
@@ -250,6 +250,9 @@ Dependencies: 263 -> 264 -> 265; 266 -> 268 <- 267; 268 -> 269/270; 264 -> 271 -
 
 - BD-284 / BD-285 (2026-10-16, flag off): props are placed by `CaveProps` from `CaveHubProps` ids; layout kinds now use the generated proportions (statues replace `landmark_dino_statue`, standing lanterns replace hanging ones, `hub_table_wood` added, wall boulders/pillars/small arches on the rim, stalagmite cluster; settings lost its bench so 12 players still fit). Gate arch is 24 x 24 x 8.7 (the generated arch is near-square). The generated lava block is not used; `CaveLavaFx` builds the falls and pool as FX. Evidence: `docs/evidence/2026-10-16-cave-props/`.
 
+- BD-398 / BD-399 / BD-400 (2026-10-16 cave polish 3, flag off): weather is nearly invisible in the hall (see kanban BD-398), the hall is a warm-dim lit cave with shadowed lamps (BD-399), `tools/verify_cave_overlap.py` fails on overlapping solid props, paths, pads and the lava basin (layout fixed), and the shop crystals are blue-purple against the amber currency art (BD-400).
+  **BD-400 swap steps (needs Place1.rbxl open in Studio):** (1) `generate_mesh` prompt for both sizes: `cluster of chunky amber-yellow crystals, glowing warm honey colour, faceted, clean low-poly, few large flat facets, matte pastel, kids game prop`; name them `hub_crystal_amber_s` (about 3 x 4 x 3 studs final) and `hub_crystal_amber_l` (about 8 x 12 x 8). (2) Publish, copy the Model asset ids. (3) In `CaveHubProps.Assets` replace the `id` of `hub_crystal_s` / `hub_crystal_l` (keep the layout keys, so `CaveHubLayout.Kinds` and the tests stay the same) and note the old ids in the `note` field. (4) Add the two rows to docs/77. (5) Re-run `verify_cave_hub.py` and `verify_cave_overlap.py` (native sizes can change the footprint), then a Studio screenshot of the Style Grotto.
+
 ## 15. Open questions for the owner
 1. **Cave size**: 260 x 220 studs with 48+ studs between stations. Big enough, or bigger (the island is 832 studs across)?
 2. **Rail buttons during a run**: DECISION keeps POTIONS and SETTINGS usable in a run and dims DINOS, EGGS, FUSION and SHOP ("At home"). OK, or should every button simply be hidden in a run?
@@ -263,7 +266,7 @@ Dependencies: 263 -> 264 -> 265; 266 -> 268 <- 267; 268 -> 269/270; 264 -> 271 -
 1. Cave size: 260 x 220 is good.
 2. In a run the rail dims DINOS / EGGS / FUSION / SHOP with "At home"; POTIONS and SETTINGS stay usable.
 3. Settings stays a plain HUD menu button (not a teleport place) for quick access. The Lantern Nook station stays as a scenic spot; its `rail` is still "settings" in the layout but BD-288 must not teleport for it.
-4. Teleport to shops defaults ON, with a Settings toggle.
+4. ~~Teleport to shops defaults ON, with a Settings toggle.~~ **SUPERSEDED 2026-10-16 by OWNER ANSWER (docs/115 and docs/116): fast travel is a Crystal Shop PERK bought with crystals (not Robux). Walking is the default; the glow guide (moss trail) is the free alternative. Perk = saved as an additive profile field, default off, the Settings toggle appears only after purchase, price PROVISIONAL (BD-391).**
 5. Lava is scenic only (no hot floor, no damage).
 6. Station order stays as built above.
 7. Keep the existing 2D hatch reveal.
@@ -272,7 +275,7 @@ Dependencies: 263 -> 264 -> 265; 266 -> 268 <- 267; 268 -> 269/270; 264 -> 271 -
 - Shell = terrain voxels from a pure layout (testable, phone-cheap), dressing = generated meshes only; nothing code-built is visible.
 - One flag `Config.CaveHub`, old hub is the fallback, no save changes, teleports only inside `RunState == Sanctuary` and only via `FallRecovery.teleport`.
 - Every rail button is a place; POTIONS/SETTINGS stay usable in a run; shop-type buttons dim in a run.
-- Teleport default ON, with a walk-there toggle and walk-up prompts/dwell so no child needs the buttons.
+- ~~Teleport default ON~~ (SUPERSEDED 2026-10-16: owner decided walking is default; fast travel is a Crystal Shop perk, see 15.1 item 4) with a walk-there toggle and walk-up prompts/dwell so no child needs the buttons.
 - Lava is scenic, fenced, gentle; four warm light shafts; at most 16 lights; hub budget 410 parts / 730 k triangles; FX 25 particles/s desktop, 10/s phone.
 - BD-254 / PR #147 superseded; its pure-table pattern and generated nest/statue/egg placements are reused.
 
@@ -280,7 +283,7 @@ Dependencies: 263 -> 264 -> 265; 266 -> 268 <- 267; 268 -> 269/270; 264 -> 271 -
 1. **Cave size:** 260 x 220 studs is good; revisit only after the 12-player phone test.
 2. **During a run:** the rail dims DINOS, EGGS, FUSION and SHOP with "At home"; POTIONS and SETTINGS stay usable.
 3. **Settings:** stays a plain HUD menu button for quick access (not a teleport place). The Lantern Nook is decoration only.
-4. **Teleport:** shop teleport is ON by default, with a Settings toggle to walk there instead (moss-trail guide).
+4. ~~**Teleport:** shop teleport is ON by default, with a Settings toggle to walk there instead (moss-trail guide).~~ **SUPERSEDED 2026-10-16 (owner): walking by default; teleport is a purchasable Crystal Shop perk (default off, Settings toggle visible only after purchase; glow guide stays free). Price PROVISIONAL.**
 5. **Lava:** scenic only, fenced, no damage.
 6. **Station order:** as in section 3 (Heart in the middle, shops around the ring); adjust after the first walk-through.
 7. **Hatch reveal:** keep the existing 2D/viewport sequence in v1; a physical nest-cracking reveal is a later idea.

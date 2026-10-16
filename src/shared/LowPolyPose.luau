@@ -18,13 +18,40 @@ function Pose.roleOf(name: string): string?
     return nil
 end
 Pose.MaxOffset = 0.08
-export type Out = {pitch: number, roll: number, yaw: number, dy: number, dz: number}
-function Pose.new(): Out return {pitch = 0, roll = 0, yaw = 0, dy = 0, dz = 0} end
+local function finite(x: number): number return if x == x and math.abs(x) < 1e6 then x else 0 end
+-- BD-388: fwd is a forward shove in STUDS (the head peck), not a height fraction. PeckStuds / PeckPitch are the chicken-like head thrust per step.
+Pose.PeckStuds = 0.4
+Pose.PeckPitch = math.rad(6)
+Pose.MaxBob = 0.04 -- whole-body bob, fraction of the model height (every part moves by the SAME amount: nothing slides against the body)
+export type Out = {pitch: number, roll: number, yaw: number, dy: number, dz: number, fwd: number}
+function Pose.new(): Out return {pitch = 0, roll = 0, yaw = 0, dy = 0, dz = 0, fwd = 0} end
+-- BD-388: rotation of a point about a pivot, same order as CFrame.Angles(pitch, yaw, roll) (R = Rx * Ry * Rz). The animator builds each part's
+-- offset as CFrame(pivot) * Angles * CFrame(-pivot), so the joint anchor never moves and the part is only rotated (no stretching): tested offline.
+function Pose.rotatePoint(p: {number}, pivot: {number}, pitch: number, yaw: number, roll: number): {number}
+    local x, y, z = p[1] - pivot[1], p[2] - pivot[2], p[3] - pivot[3]
+    local c, s = math.cos(roll), math.sin(roll)
+    x, y = c * x - s * y, s * x + c * y -- Rz
+    c, s = math.cos(yaw), math.sin(yaw)
+    x, z = c * x + s * z, -s * x + c * z -- Ry
+    c, s = math.cos(pitch), math.sin(pitch)
+    y, z = c * y - s * z, s * y + c * z -- Rx
+    return {x + pivot[1], y + pivot[2], z + pivot[3]}
+end
+-- Whole-body bob (fraction of height), applied identically to EVERY part by the animator. The body part itself no longer rolls/pitches/bobs
+-- on its own (that moved it against legs, head and tail: the owner's "limbs, eyes and nostrils shift", BD-388).
+function Pose.bob(t: number, phase: number, speed01: number, amp: number, class: string?): number
+    t, phase = finite(t), finite(phase)
+    local w = math.clamp(finite(speed01), 0, 1)
+    local a = math.clamp(finite(amp), 0, 1)
+    local water = class == "Water"
+    local dy = (1 - w) * math.sin(t * 1.7) * 0.008 + w * math.abs(math.sin(phase)) * (if water then 0.008 else 0.02)
+    if water then dy -= 0.015 end
+    return math.clamp(finite(dy) * a, -Pose.MaxBob, Pose.MaxBob)
+end
 -- Walk cycle speed: radians per second grows with speed01 (0..1 of max run speed), quick like a chicken.
 function Pose.stepRate(speed01: number): number
     return 5 + 7 * math.clamp(speed01, 0, 1)
 end
-local function finite(x: number): number return if x == x and math.abs(x) < 1e6 then x else 0 end
 -- class (optional, default Ground): Fly folds wings; Water stays low (smaller bob, shorter strokes); Armored takes shorter steps.
 -- role: body/head/neck/tail/arm/leg/wing/flipper; side: -1/1 (x side); lead: true for a quadruped front leg (diagonal pairing); t: idle clock seconds;
 -- phase: walk phase radians; speed01: 0 idle .. 1 full run; amp: 0..1 (Reduce Motion passes 0).
@@ -33,31 +60,29 @@ function Pose.sample(role: string, side: number, lead: boolean, t: number, phase
     local w = math.clamp(finite(speed01), 0, 1)
     local a = math.clamp(finite(amp), 0, 1)
     local idle = 1 - w
-    local pitch, roll, yaw, dy, dz = 0, 0, 0, 0, 0
+    local pitch, roll, yaw, dy, dz, fwd = 0, 0, 0, 0, 0, 0
     local s = if side < 0 then -1 else 1
     local sw = math.sin(phase)
     local water, armored = class == "Water", class == "Armored"
     local stride = if water then 0.5 elseif armored then 0.8 else 1
     local fold = 0
     if role == "body" then
-        dy = idle * math.sin(t * 1.7) * 0.012 + w * math.abs(sw) * (if water then 0.012 else 0.03)
-        if water then dy -= 0.02 end -- stays low to the ground
-        roll = w * sw * 0.07
-        pitch = idle * math.sin(t * 1.7 + 0.6) * 0.012
+        -- BD-388: no motion of its own; Pose.bob moves the whole rig, so the body never shifts against its limbs.
     elseif role == "head" or role == "neck" then
-        roll = idle * math.sin(t * 0.55) * 0.14 + w * -sw * 0.05
-        yaw = idle * math.sin(t * 0.38 + 1) * 0.10
-        local peck = math.sin(phase * 2 - 0.8)
-        pitch = idle * math.sin(t * 1.7 + 1.1) * 0.02 + w * peck * 0.16
-        dz = w * math.max(0, peck) * -0.03
+        -- BD-388: the head mesh carries the eyes and nostrils, so it only turns a little; the walk adds a chicken peck:
+        -- once per step the head thrusts about PeckStuds forward while tilting PeckPitch nose-down, then draws back.
+        roll = idle * math.sin(t * 0.55) * 0.05 + w * -sw * 0.02
+        yaw = idle * math.sin(t * 0.38 + 1) * 0.04
+        local u = (math.sin(phase * 2 - 0.8) + 1) / 2
+        pitch = idle * math.sin(t * 1.7 + 1.1) * 0.02 - w * u * Pose.PeckPitch
+        fwd = w * u * Pose.PeckStuds
     elseif role == "tail" then
-        yaw = idle * math.sin(t * 0.9) * 0.22 + w * -sw * 0.30
+        yaw = idle * math.sin(t * 0.9) * 0.14 + w * -sw * 0.18
         pitch = idle * math.sin(t * 0.7 + 2) * 0.04 + w * math.sin(phase * 2) * 0.05
     elseif role == "leg" then
         local lift = if lead then 0 else math.pi
         local swing = math.sin(phase + (if s < 0 then 0 else math.pi) + lift)
-        pitch = w * swing * 0.65 * stride
-        dy = w * math.max(0, swing) * 0.015
+        pitch = w * swing * 0.55 * stride -- swings about the hip pivot only (no slide: no per-leg translation; the foot lifts by the swing)
     elseif role == "arm" then
         pitch = idle * math.sin(t * 1.7 + 0.3) * 0.04 + w * math.sin(phase + (if s < 0 then math.pi else 0)) * 0.30
     elseif role == "flipper" then
@@ -75,6 +100,7 @@ function Pose.sample(role: string, side: number, lead: boolean, t: number, phase
     out.yaw = math.clamp(finite(yaw) * a, -Pose.MaxAngle, Pose.MaxAngle)
     out.dy = math.clamp(finite(dy) * a, -Pose.MaxOffset, Pose.MaxOffset)
     out.dz = math.clamp(finite(dz) * a, -Pose.MaxOffset, Pose.MaxOffset)
+    out.fwd = math.clamp(finite(fwd) * a, 0, Pose.PeckStuds)
     return out
 end
 -- BD-233 spike: jump / leap / land / water-surge actions. Phases: crouch -> push (stretch) -> air (tuck, held until the dino lands) -> land (squash);
@@ -181,6 +207,7 @@ function Pose.sampleAction(role: string, side: number, lead: boolean, ctx: Ctx, 
     out.yaw = math.clamp(finite(yaw) * a, -Pose.MaxAngle, Pose.MaxAngle)
     out.dy = math.clamp(finite(dy) * a, -Pose.MaxOffset, Pose.MaxOffset)
     out.dz = math.clamp(finite(dz) * a, -Pose.MaxOffset, Pose.MaxOffset)
+    out.fwd = 0
     return out
 end
 -- out = base + (action - base) * k, written into base (idle/walk pose -> action pose).
@@ -191,6 +218,7 @@ function Pose.blend(base: Out, action: Out, k: number): Out
     base.yaw += (action.yaw - base.yaw) * k
     base.dy += (action.dy - base.dy) * k
     base.dz += (action.dz - base.dz) * k
+    base.fwd += (action.fwd - base.fwd) * k
     return base
 end
 return Pose

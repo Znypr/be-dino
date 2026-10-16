@@ -146,8 +146,24 @@ local function biomeKit(parent: Instance)
         extent = Config.ArenaHalfWidth, height = Layout.height, kit = KitData, meshes = meshes, map = BiomeMap, layout = Layout})
     local missing = 0
     local counts = {tree = 0, giant = 0, log = 0, rock = 0, shrub = 0, groundcover = 0, landmark = 0}
+    -- BD-395: trees, giants and shrubs rest ON the real voxel terrain: five rays (centre + around the trunk) from above, the
+    -- bottom (pivot) goes to the highest hit + 0.2 (BiomePlacement.Ground). A missed ray keeps the analytic layout height.
+    local rayParams = RaycastParams.new()
+    rayParams.FilterType, rayParams.FilterDescendantsInstances = Enum.RaycastFilterType.Include, {workspace.Terrain}
+    local Ground, rayMoved = Biome.Ground, 0
     for i, p in placed do
         counts[p.layer] += 1
+        local data = KitData[p.id]
+        if Ground.Raised[p.layer] and data.kind ~= "rock" then
+            local hits = {}
+            for _, pt in Ground.samplePoints(p.x, p.z, Ground.trunkRadius(data, p.scale, p.radius * .5)) do
+                local result = workspace:Raycast(Vector3.new(pt[1], p.y + 40, pt[2]), Vector3.new(0, -90, 0), rayParams)
+                table.insert(hits, if result then result.Position.Y else nil)
+            end
+            local y = Ground.corrected(p.y, hits, p.layer, data.extent[2], p.scale)
+            if math.abs(y - p.y) > .05 then rayMoved += 1 end
+            p.y = y
+        end
         local pivot = CFrame.new(p.x, p.y, p.z) * CFrame.Angles(0, p.yaw, 0) * CFrame.Angles(0, 0, p.roll)
         if p.layer == "log" then
             -- A dead tree on its side: one box along the whole trunk replaces the (upright) kit collider.
@@ -164,6 +180,7 @@ local function biomeKit(parent: Instance)
         end
         if i % 40 == 0 then task.wait() end
     end
+    workspace:SetAttribute("WorldKitRayMoved", rayMoved) -- props the Terrain raycast moved (> 0.05 stud) from the analytic height
     workspace:SetAttribute("WorldKitPlacements", #placed)
     workspace:SetAttribute("WorldKitTriangles", Biome.triangles(placed, KitData))
     workspace:SetAttribute("WorldKitParts", Biome.parts(placed, KitData, meshes))

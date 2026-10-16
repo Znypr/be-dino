@@ -92,6 +92,46 @@ for _, role in roles do
         end
     end
 end
+-- BD-388 walk bounds and joint invariants
+do
+    local maxFwd, minPitch, maxBodyOwn, maxLegDy, maxHeadRoll = 0, 0, 0, 0, 0
+    for step = 0, 2000 do
+        local phase = step * 0.01
+        P.sample("head", 1, true, step * 0.05, phase, 1, 1, out)
+        maxFwd, minPitch = math.max(maxFwd, out.fwd), math.min(minPitch, out.pitch)
+        maxHeadRoll = math.max(maxHeadRoll, math.abs(out.roll))
+        P.sample("body", 1, true, step * 0.05, phase, 1, 1, out)
+        maxBodyOwn = math.max(maxBodyOwn, math.abs(out.pitch) + math.abs(out.roll) + math.abs(out.yaw) + math.abs(out.dy) + math.abs(out.dz) + math.abs(out.fwd))
+        P.sample("leg", 1, true, step * 0.05, phase, 1, 1, out)
+        maxLegDy = math.max(maxLegDy, math.abs(out.dy) + math.abs(out.dz) + math.abs(out.fwd))
+        assert(math.abs(P.bob(step * 0.05, phase, 1, 1)) <= P.MaxBob and math.abs(P.bob(step * 0.05, phase, 0.4, 1, "Water")) <= P.MaxBob)
+        assert(P.bob(step * 0.05, phase, 1, 0) == 0, "Reduce Motion: no bob")
+    end
+    assert(math.abs(maxFwd - 0.4) < 0.01, "head peck about 0.4 stud forward: " .. maxFwd)
+    assert(math.abs(minPitch + math.rad(6)) < 0.005, "head peck about 6 degrees nose-down: " .. minPitch)
+    assert(maxHeadRoll <= 0.03, "head (eyes, nostrils) barely rolls while walking: " .. maxHeadRoll)
+    assert(maxBodyOwn == 0, "body part has no motion of its own (whole-rig bob instead)")
+    assert(maxLegDy == 0, "legs only rotate about the hip, never slide")
+    for _, role in {"head", "neck", "tail", "arm", "leg", "wing", "flipper"} do
+        for step = 0, 400 do
+            for _, w in {0, 0.5, 1} do
+                P.sample(role, 1, step % 2 == 0, step * 0.07, step * 0.11, w, 1, out)
+                assert(math.abs(out.pitch) <= 0.66 and math.abs(out.yaw) <= 0.2 and (role == "wing" or math.abs(out.roll) <= 0.2), "calm amplitudes " .. role)
+            end
+        end
+    end
+    -- joint anchors: rotating about a pivot never moves the pivot and never changes a point's distance to it (no stretching)
+    local function dist(a, b) return math.sqrt((a[1]-b[1])^2 + (a[2]-b[2])^2 + (a[3]-b[3])^2) end
+    for _, pivot in {{0, -1, 1}, {0, 0, -2}, {0, 0.7, 0}} do
+        for step = 0, 200 do
+            local pi, yw, rl = math.sin(step) * 0.65, math.sin(step * 1.3) * 0.2, math.cos(step * 0.7) * 0.2
+            local moved = P.rotatePoint(pivot, pivot, pi, yw, rl)
+            assert(dist(moved, pivot) < 1e-9, "joint anchor stays put")
+            local tip = {pivot[1] + 0.3, pivot[2] - 1.4, pivot[3] + 0.5}
+            assert(math.abs(dist(P.rotatePoint(tip, pivot, pi, yw, rl), pivot) - dist(tip, pivot)) < 1e-9, "limb length constant")
+        end
+    end
+end
 local moved = false
 for i = 0, 200 do P.sample("tail", 1, false, i * 0.1, 0, 0, 1, out) if math.abs(out.yaw) > 0.05 then moved = true end end
 assert(moved, "idle tail sway missing")
@@ -122,7 +162,7 @@ for _, w in {0, 1} do
 end
 -- water stays low: lower body than ground, shorter strokes
 local gb, wb, gl, wl = P.new(), P.new(), P.new(), P.new()
-P.sample("body", 1, false, 0, 1.0, 1, 1, gb, "Ground") P.sample("body", 1, false, 0, 1.0, 1, 1, wb, "Water")
+gb.dy, wb.dy = P.bob(0, 1.0, 1, 1, "Ground"), P.bob(0, 1.0, 1, 1, "Water") -- BD-388: the bob moves the whole rig
 assert(wb.dy < gb.dy, "water body must sit lower")
 P.sample("leg", 1, false, 0, 1.0, 1, 1, gl, "Ground") P.sample("leg", 1, false, 0, 1.0, 1, 1, wl, "Water")
 assert(math.abs(wl.pitch) < math.abs(gl.pitch), "water strokes shorter")
@@ -313,6 +353,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--runner', required=True)
     args = parser.parse_args()
+    anim = (ROOT / 'src/client/LowPolyAnimator.client.luau').read_text(encoding='utf-8')
+    assert 'Pose.bob(' in anim and 'CFrame.new(pivot) * CFrame.Angles(out.pitch, out.yaw, out.roll) * CFrame.new(-pivot)' in anim, 'BD-388: pivot rotation + shared whole-body bob'
+    assert 'weld.C0.Rotation:Inverse() * Vector3.new(0, bob, -out.fwd)' in anim, 'BD-388: same bob for every part, peck in studs'
+    rv = (ROOT / 'src/client/ResourceVisuals.client.luau').read_text(encoding='utf-8')
+    assert 'BD-389' in rv and 'for _, wait in {0.3, 0.7, 1.5, 3, 6, 10}' in rv, 'BD-389: respawn retry ladder for the local mesh'
+    print("BD-388 animator source ok: joint-pivot rotation, shared bob, peck in studs")
     entries = check_registry()
     print(f"low-poly registry ok: {len(entries)} species, flag off")
     src = 'local P=(function()\n' + (ROOT / 'src/shared/LowPolyPose.luau').read_text(encoding='utf-8') + '\nend)()\n' + BODY

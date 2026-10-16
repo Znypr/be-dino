@@ -5,13 +5,15 @@
 local Overlays={}
 Overlays.Layers={
     normal={layer="clean",assetId="",material=Enum.Material.SmoothPlastic,reflectance=0},
-    cracked={layer="cracked_fractures",assetId="126956807167774",material=Enum.Material.Plastic,reflectance=0},
-    dirty={layer="dirty_smudges",assetId="105931497056313",material=Enum.Material.Plastic,reflectance=0},
+    cracked={layer="cracked_fractures",assetId="126956807167774",material=Enum.Material.Plastic,reflectance=0,stack=2},
+    dirty={layer="dirty_smudges",assetId="105931497056313",material=Enum.Material.Plastic,reflectance=0,stack=2},
     -- BD-226: the Rainbow/Astra art is faint at card size, so its decal is stacked (`stack` copies, same bound asset) and an
     -- Astra egg preview gets a soft cosmic tint (`previewTint`, applied to the ViewportFrame by EggAppearance). No new art.
-    rainbow={layer="rainbow_flank_stars",assetId="117352915695915",material=Enum.Material.SmoothPlastic,reflectance=0.08,stack=3},
-    astra={layer="astra_opal_streaks",assetId="102255733208943",material=Enum.Material.SmoothPlastic,reflectance=0.15,stack=3,previewTint=Color3.fromRGB(185,170,255)},
+    rainbow={layer="rainbow_flank_stars",assetId="117352915695915",material=Enum.Material.SmoothPlastic,reflectance=0.08,stack=4},
+    astra={layer="astra_opal_streaks",assetId="102255733208943",material=Enum.Material.SmoothPlastic,reflectance=0.15,stack=4,previewTint=Color3.fromRGB(185,170,255)},
 }
+-- BD-394: zoom of the Conditions shop egg tiles (was 1.6): the marks fill the larger tile, so cracks, smudges, streaks and stars read at card size.
+Overlays.ShopZoom=1.85
 function Overlays.describe(conditionId: string?)
     local layer=Overlays.Layers[conditionId or "normal"] or Overlays.Layers.normal
     return layer

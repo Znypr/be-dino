@@ -158,7 +158,7 @@ local STATION_PROPS: {[string]: {{any}}} = {
     potions = {{"hub_stall_potion", 1, "back"}, {"potion_model", 4, "arc"}, {"hub_crate", 3, "arc"}, {"hub_barrel", 1, "arc"}, {"hub_cauldron", 1, "arc"}, {"hub_lantern_post", 2, "arc"}, {"hub_table_wood", 1, "arc"}, {"hub_sign_stone", 1, "sign"}},
     fusion = {{"hub_forge_ring", 1, "centre"}, {"hub_forge_altar", 1, "back"}, {"hub_pedestal", 3, "arc"}, {"hub_crate", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
     style = {{"hub_counter_stone", 1, "back"}, {"hub_crystal_l", 2, "arc"}, {"hub_crystal_s", 5, "arc"}, {"hub_pedestal", 1, "arc"}, {"hub_gem_chest", 1, "arc"}, {"hub_lantern_post", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    index = {{"hub_pedestal", 6, "arc"}, {"hub_statue_triceratops", 1, "arc"}, {"hub_statue_trex", 1, "arc"}, {"hub_statue_brachiosaurus", 1, "arc"}, {"hub_banner", 3, "arc"}, {"hub_lectern_book", 1, "back"}, {"hub_bench_stone", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    index = {{"hub_pedestal", 4, "arc"}, {"hub_statue_triceratops", 1, "arc"}, {"hub_statue_trex", 1, "arc"}, {"hub_statue_brachiosaurus", 1, "arc"}, {"hub_banner", 2, "arc"}, {"hub_lectern_book", 1, "back"}, {"hub_bench_stone", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
     settings = {{"hub_lantern_post", 1, "arc"}, {"hub_gong", 1, "arc"}, {"hub_cushion_moss", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
     fame = {{"hub_wall_frame", 3, "arc"}, {"hub_lantern_post", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
     gate = {{"hub_gate_arch", 1, "sign"}, {"rock_mossy_boulder", 2, "arc"}, {"hub_sign_arrow", 2, "arc"}},
@@ -312,8 +312,11 @@ function CaveHubLayout.get(): any
             local mine = {}
             local function free(px: number, pz: number, br: number): boolean
                 if dist(px, pz, s.x, s.z) + br * 0.5 > s.r - 1 then return false end
+                for _, pa in built.paths do -- BD-399: keep path mouths clear
+                    if segDist(px, pz, pa.ax, pa.az, pa.bx, pa.bz) < pa.half + br + 1.5 then return false end
+                end
                 for _, q in mine do
-                    if dist(px, pz, q[1], q[2]) < (br + q[3]) * 0.55 then return false end
+                    if dist(px, pz, q[1], q[2]) < (br + q[3]) * 0.95 then return false end -- BD-399: was 0.55 (overlapping station props)
                 end
                 return true
             end
@@ -330,7 +333,7 @@ function CaveHubLayout.get(): any
                 elseif mode == "sign" then
                     for _ = 1, count do put(key, s.signX, s.signZ) end
                 elseif mode == "back" then
-                    for _ = 1, count do put(key, s.x + math.cos(s.outward) * s.r * 0.55, s.z + math.sin(s.outward) * s.r * 0.55) end
+                    for _ = 1, count do put(key, s.x + math.cos(s.outward) * s.r * 0.45, s.z + math.sin(s.outward) * s.r * 0.45) end
                 end
             end
             for _, e in list do -- everything else: first free spot in the outward arc, deepest ring first
@@ -339,20 +342,15 @@ function CaveHubLayout.get(): any
                     local br = boundRadius(KINDS[key])
                     for _ = 1, count do
                         local spot = nil
-                        for _, rf in {0.7, 0.5, 0.85, 0.3} do
-                            for step = 0, 18 do
+                        for _, rf in {0.7, 0.5, 0.85, 0.3, 0.6, 0.4, 0.2} do
+                            for step = 0, 26 do
                                 local deg = ((step % 2 == 0) and 1 or -1) * math.ceil(step / 2) * 9
                                 local a = s.outward + deg * math.pi / 180
                                 local px, pz = s.x + math.cos(a) * s.r * rf, s.z + math.sin(a) * s.r * rf
                                 if not spot and free(px, pz, br) then spot = {px, pz} end
                             end
                         end
-                        if not spot then
-                            local rf = 0.3 + 0.1 * #mine % 0.5
-                            local a = s.outward + ((#mine * 37) % 140 - 70) * math.pi / 180
-                            spot = {s.x + math.cos(a) * s.r * rf, s.z + math.sin(a) * s.r * rf}
-                        end
-                        put(key, spot[1], spot[2])
+                        if spot then put(key, spot[1], spot[2]) end -- BD-399: no room = the prop is dropped (the old fallback spot overlapped other props)
                     end
                 end
             end
@@ -392,7 +390,7 @@ function CaveHubLayout.get(): any
         if dist(x, z, POOL.x, POOL.z) < POOL.r + br + 5 then return false end
         if z > FALL.z - 14 then return false end
         for _, q in placed do
-            if dist(x, z, q[1], q[2]) < (br + q[3]) * 0.8 then return false end
+            if dist(x, z, q[1], q[2]) < (br + q[3]) * 0.9 then return false end -- BD-399: scaled radii, 0.9 (was unscaled 0.8)
         end
         return true
     end
@@ -404,6 +402,7 @@ function CaveHubLayout.get(): any
         local n, tries = 0, 0
         while n < count and tries < 4000 do
             tries += 1
+            local scale = 0.85 + rand() * 0.4
             local x, z
             if key == "cave_moss_hang" then
                 -- hang on the wall: on the blob rim, inside it
@@ -427,10 +426,10 @@ function CaveHubLayout.get(): any
             else
                 x, z = (rand() * 2 - 1) * CaveHubLayout.BoxHalfX, (rand() * 2 - 1) * CaveHubLayout.BoxHalfZ
             end
-            if clearOfEverything(x, z, br, not hang) then
+            if clearOfEverything(x, z, br * scale, not hang) then
                 n += 1
-                placed[#placed + 1] = {x, z, br}
-                addProp(key, x, z, rand() * 2 * math.pi, 0.85 + rand() * 0.4, "scatter")
+                placed[#placed + 1] = {x, z, br * scale}
+                addProp(key, x, z, rand() * 2 * math.pi, scale, "scatter")
             end
         end
     end

@@ -745,21 +745,22 @@ local titleToken=0
 -- BD-328: the big title card never draws over an open menu: it waits (up to 20 s) for the menu to close, then plays.
 local function menuOpen():boolean return player:GetAttribute("MenuOpen")==true end
 player:GetAttributeChangedSignal("MenuOpen"):Connect(function() gui.Enabled=not menuOpen() end) -- a menu opened mid-card hides it
-local function showTitle(id:string,name:string)
+local function showTitle(id:string,name:string,soft:boolean?)
     titleToken+=1 local mine=titleToken
     if menuOpen() then
         task.spawn(function()
             local waited=0
             while menuOpen() and waited<20 do task.wait(.25) waited+=.25 end
-            if mine==titleToken and not menuOpen() then showTitle(id,name) end
+            if mine==titleToken and not menuOpen() then showTitle(id,name,soft) end
         end)
         return
     end
-    title.Text=string.upper(name).."!" title.TextColor3=TITLE_COLOR[id] or Color3.new(1,1,1)
-    titleScale.Scale=if Theme.MotionEnabled then 2.2 else 1
-    title.TextTransparency,stroke.Transparency,sub.TextTransparency,subStroke.Transparency=0,0,0,0
-    if Theme.MotionEnabled then TweenService:Create(titleScale,TweenInfo.new(.45,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Scale=1}):Play() end
-    task.delay(3.2,function()
+    title.Text=if soft then name else string.upper(name).."!" title.TextColor3=TITLE_COLOR[id] or Color3.new(1,1,1)
+    titleScale.Scale=if soft then .4 elseif Theme.MotionEnabled then 2.2 else 1
+    title.TextTransparency,stroke.Transparency,sub.TextTransparency,subStroke.Transparency=if soft then .35 else 0,if soft then .5 else 0,1,1
+    if not soft then sub.TextTransparency,subStroke.Transparency=0,0 end
+    if Theme.MotionEnabled and not soft then TweenService:Create(titleScale,TweenInfo.new(.45,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Scale=1}):Play() end
+    task.delay(if soft then 1.8 else 3.2,function()
         if mine~=titleToken then return end
         local info=TweenInfo.new(.8)
         TweenService:Create(title,info,{TextTransparency=1}):Play() TweenService:Create(stroke,info,{Transparency=1}):Play()
@@ -813,12 +814,14 @@ RunService.Heartbeat:Connect(function(dt)
     local c=player.Character
     local rootPart=if c then c:FindFirstChild("HumanoidRootPart") else nil
     local root:Vector3?=if rootPart and rootPart:IsA("BasePart") then (rootPart::BasePart).Position else nil
-    local motion=Theme.MotionEnabled and root~=nil
+    -- BD-398: inside the cave hall weather is nearly invisible: no rigs, bolts, bombs, cracks, moon, aurora, shake or title card
+    local hall=Cave.inside() or Cave.amount()>.01
+    local motion=Theme.MotionEnabled and root~=nil and not hall
     -- fade current weather out, then switch; ramp the new one in
     if id==activeId then k=math.min(1,k+dt/2.4) else k=math.max(0,k-dt/1.1) if k<=0 then activeId=id columnAnchors=nil end end
     if activeId~=shownId and id==activeId and id~="clear" then
         shownId=activeId
-        showTitle(id,workspace:GetAttribute("WeatherName") or id)
+        showTitle(id,workspace:GetAttribute("WeatherName") or id,hall)
     elseif id=="clear" then shownId="clear" end
 
     local look=WL.Looks[activeId] or WL.Looks.clear
@@ -869,13 +872,13 @@ RunService.Heartbeat:Connect(function(dt)
         lampPart.Position=root+Vector3.new(0,7,0)
         lamp.Brightness=look.lamp*t
         glow.Color=c3(glowRgb) glow.Range=look.glowRange
-        glow.Brightness=(look.glowBright*t+(if activeId=="thunder" then flash*3 else 0))*(if Theme.MotionEnabled then 1 else .4)
+        glow.Brightness=(look.glowBright*t+(if activeId=="thunder" then flash*3*outside else 0))*(if Theme.MotionEnabled then 1 else .4)
     else lamp.Brightness=0 glow.Brightness=0 end
 
     -- particle rigs follow the player; only the active weather emits (BD-265: Settings Weather Full / Lite / Off; haze, light and title stay)
     local weatherFactor=require(Shared.SettingsModel).factor(require(Shared.SettingsModel).weather())
     for weatherId,list in rig do
-        local on=motion and weatherId==activeId and k>0 and not Cave.inside()
+        local on=motion and weatherId==activeId and k>0
         local scaleRate=math.min(zoom*zoom,5)
         for _,item in list do
             item.e.Enabled=on and weatherFactor>0 item.e.Rate=item.rate*k*weatherFactor*(if item.fixed then 1 else scaleRate)
@@ -885,7 +888,7 @@ RunService.Heartbeat:Connect(function(dt)
             if parts then for _,p in parts do p.part.Size=Vector3.new(p.base.X*zoom,p.base.Y,p.base.Z*zoom) p.part.Position=root+p.offset end end
         end
     end
-    local live=motion and root~=nil
+    local live=motion and root~=nil and not hall
     if not live then stopOneShots() end
     -- volcano: three far eruption columns + lava bombs
     if live and root and activeId=="volcano" and k>.3 then
@@ -907,13 +910,13 @@ RunService.Heartbeat:Connect(function(dt)
         if now>=nextFar then nextFar=now+random:NextNumber(1.2,3) flash=math.max(flash,.3) end
     end
     -- quake: tremor pulses open ground cracks in view, with a gentle rumble synced to each pulse (none with Reduce Motion)
-    if root and activeId=="quake" and k>.3 then
+    if root and not hall and activeId=="quake" and k>.3 then
         if now>=nextQuakeBurst then
             nextQuakeBurst=now+random:NextNumber(WL.Quake.pulseEvery[1],WL.Quake.pulseEvery[2]) quakeUntil=now+WL.Quake.pulseSeconds
             quakePulse(root,Theme.MotionEnabled)
         end
         if motion and now<quakeUntil then shake=math.max(shake,WL.Quake.shake*math.sin(math.pi*(1-(quakeUntil-now)/WL.Quake.pulseSeconds))) end
-    elseif activeId~="quake" or not root then stopQuake() end
+    elseif activeId~="quake" or not root or hall then stopQuake() end
     -- blood moon sky props
     local moonOn=live and activeId=="bloodmoon" and k>0
     if moonOn and root then
@@ -932,6 +935,7 @@ RunService.Heartbeat:Connect(function(dt)
     updateAurora(root or Vector3.zero,now,auroraOn,recolor)
     -- pooled one-shot effects
     updateBolts(dt) updateRings(dt) updateBursts(dt) updateBombs(dt,root) updateQuake(dt)
+    if hall then shake=if activeId=="quake" and Theme.MotionEnabled and k>.3 then .03 else 0 end -- BD-398: a faint distant rumble only for a quake
     if shake>.01 and Theme.MotionEnabled then shake=math.max(0,shake-dt*1.1) end
     if not Theme.MotionEnabled then shake=0 end
     Cave.step(dt) -- last: the cave look is written after the weather values above

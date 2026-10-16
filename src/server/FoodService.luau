@@ -36,6 +36,7 @@ function FoodService.start(dinosaur,repository)
     pickupParams.FilterDescendantsInstances = {workspace.BeDinoArena, workspace.Terrain}
     local fallbackCount = 0
     local kitVisuals = 0
+    local generated = game:GetService("ReplicatedStorage"):FindFirstChild("GeneratedWorld") -- BD-387 drumstick mesh, nil while WorldGeneratedMeshes is off
     local obstacleParams = RaycastParams.new()
     obstacleParams.FilterType = Enum.RaycastFilterType.Include
     obstacleParams.FilterDescendantsInstances = {workspace.BeDinoArena}
@@ -114,13 +115,21 @@ function FoodService.start(dinosaur,repository)
                 if kitMode then
                     local ok, model = pcall(Resources.clone, artId)
                     local mesh = if ok and model then model:FindFirstChildWhichIsA("MeshPart") else nil
+                    -- BD-387: every second fruit is the generated drumstick (WorldGeneratedMeshes.food_drumstick, same 4 points).
+                    -- Missing/failed load keeps the kit fruit; the roll is deterministic so placement never changes.
+                    local drum = generated and generated:FindFirstChild("food_drumstick")
+                    if kind.id == "fruit" and drum and drum:IsA("MeshPart") and (sx + sz + itemIndex) % 2 == 1 then
+                        if model then model:Destroy() end
+                        model, mesh = nil, drum:Clone()
+                        mesh:SetAttribute("Drumstick", true)
+                    end
                     if mesh then
                         mesh.Parent = nil
-                        mesh.Size *= kind.size * random:NextNumber(.86, 1.16) / math.max(mesh.Size.X, mesh.Size.Y, mesh.Size.Z) -- natural size variety
+                        mesh.Size *= kind.size * (if mesh:GetAttribute("Drumstick") then 1.45 else 1) * random:NextNumber(.86, 1.16) / math.max(mesh.Size.X, mesh.Size.Y, mesh.Size.Z) -- natural size variety
                         mesh.CFrame = CFrame.Angles(0, random:NextNumber(0, math.pi * 2), 0)
                         mesh.Name = kind.id
                         mesh.Color = Color3.new(1, 1, 1)
-                        mesh.Material = Enum.Material.SmoothPlastic
+                        if not mesh:GetAttribute("Drumstick") then mesh.Material = Enum.Material.SmoothPlastic end
                         pickup, meshPickup = mesh, true
                     end
                     if model then model:Destroy() end

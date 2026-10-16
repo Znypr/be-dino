@@ -7,6 +7,66 @@
 -- side), rock, shrub (understory) and groundcover (clustered tufts and flower meadows, never a grid).
 local BiomePlacement = {}
 BiomePlacement.Version = 2
+-- BD-395 PropGround (bottom-on-terrain rule) lives in this file so every offline tool that wraps BiomePlacement gets it.
+-- where a world prop's BOTTOM sits on the terrain. Pure math (no Instances): BiomePlacement uses it for the analytic
+-- layout height, Arena uses the same rule with Terrain raycast samples, and tools/verify_world_art.py checks both.
+-- Every generated prop mesh (Arena.generatedProp) has its pivot at the BOTTOM CENTRE of the mesh bounding box (the clone is
+-- CFrame(0, Size.Y / 2, 0)), so a prop rests on the ground when its pivot y = the highest terrain point under the trunk
+-- footprint + Clearance. The old rule used the LOWEST footprint point minus 3% of the prop height, which buried the uphill
+-- side of trees and the base of giants (scale 2.4x-4x, so up to ~2.3 studs) in the slope.
+local PropGround = {}
+PropGround.Clearance = 0.2 -- studs the bottom sits above the highest terrain sample under the trunk
+-- Layers that must never be buried (the rest embed on purpose: rocks sink a little, logs lie on the ground).
+PropGround.Raised = {tree = true, giant = true, shrub = true, groundcover = true}
+-- Bottom offset of the pivot from the mesh bounding-box bottom, per prop kind (studs, before scale). 0 = pivot is the bottom.
+-- Rocks embed by a fraction of their height instead (BiomePlacement sink .12).
+PropGround.BottomOffset = {tree = 0, shrub = 0, groundcover = 0, rock = 0, landmark = 0}
+PropGround.RockSink = 0.12
+PropGround.MaxRaycastCorrection = 6 -- studs; a raycast answer further than this from the layout height is ignored
+
+-- Radius (studs) of the trunk footprint to sample: the first collider box of the kit id (the trunk), else a fraction of the prop.
+function PropGround.trunkRadius(data: any, scale: number, fallback: number): number
+    local c = if type(data) == "table" and type(data.colliders) == "table" then data.colliders[1] else nil
+    if c then return math.max(c[4], c[6]) * .5 * scale end
+    return math.max(fallback, 0)
+end
+
+-- The five sample points (centre + 4 around the trunk) as {x, z} pairs.
+function PropGround.samplePoints(x: number, z: number, r: number): {{number}}
+    return {{x, z}, {x + r, z}, {x - r, z}, {x, z + r}, {x, z - r}}
+end
+
+-- Pivot y of a prop whose bottom must rest on the terrain. heights = terrain heights at the sample points.
+-- raised layers: highest sample + Clearance. Others (rock, log, landmark) are handled by their own rules; this returns the
+-- highest sample minus the embed depth (rockSink * height) for rocks.
+function PropGround.restY(layer: string, heights: {number}, height: number, scale: number): number
+    local hi, lo = -math.huge, math.huge
+    for _, h in heights do hi, lo = math.max(hi, h), math.min(lo, h) end
+    if PropGround.Raised[layer] then return hi + PropGround.Clearance end
+    if layer == "rock" then return lo - PropGround.RockSink * height * scale end
+    return lo
+end
+
+-- true when the prop's bottom is below the highest terrain sample under the trunk by more than `tolerance` studs.
+function PropGround.submerged(bottomY: number, heights: {number}, tolerance: number): boolean
+    local hi = -math.huge
+    for _, h in heights do hi = math.max(hi, h) end
+    return bottomY < hi - tolerance
+end
+
+-- Combine a raycast answer with the layout height: use the ray result when it exists and is within MaxRaycastCorrection of the
+-- layout y, else keep the layout y (a wrong ray must never throw a prop into the sky or the ground).
+function PropGround.corrected(layoutY: number, hits: {number?}, layer: string, height: number, scale: number): number
+    local found: {number} = {}
+    for _, h in hits do if h ~= nil and h == h then table.insert(found, h) end end
+    if #found < 3 then return layoutY end -- not enough rays hit the terrain
+    local y = PropGround.restY(layer, found, height, scale)
+    if math.abs(y - layoutY) > PropGround.MaxRaycastCorrection then return layoutY end
+    return y
+end
+
+BiomePlacement.Ground = PropGround
+
 local S = 1.6 -- IslandLayout.Scale; verify_world_art asserts they agree
 
 local function scaled(points: {{number}}): {{number}}
@@ -231,6 +291,12 @@ function BiomePlacement.generate(options): {Placement}
         local data = kit[id]
         local r = radius or math.max(data.extent[1], data.extent[3]) * .5 * scale * (if layer == "tree" or layer == "giant" then .42 else .8)
         local lo = footprintRange(height, x, z, r * .5)
+        if y == nil and PropGround.Raised[layer] and data.kind ~= "rock" then
+            -- BD-395: the bottom rests ON the highest terrain point under the trunk (+0.2), never buried in the slope
+            local heights = {}
+            for _, pt in PropGround.samplePoints(x, z, PropGround.trunkRadius(data, scale, r * .5)) do table.insert(heights, height(pt[1], pt[2])) end
+            y = PropGround.restY(layer, heights, data.extent[2], scale)
+        end
         local p = {id = id, x = x, y = y or (lo - sink * data.extent[2] * scale), z = z, yaw = yaw, roll = roll or 0, scale = scale, radius = r, layer = layer, biome = biome}
         table.insert(placed, p)
         parts += BiomePlacement.partCost(id, kit, meshes)

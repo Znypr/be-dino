@@ -10,6 +10,8 @@ local Theme = require(Shared.UITheme)
 local Overlays = require(Shared.ConditionOverlays)
 local EggGenetics = require(Shared.EggGenetics)
 local IconLayout = require(Shared.UIIconLayout)
+local ModelPreview = require(Shared.ModelPreview)
+local EggAppearance = require(Shared.EggAppearance)
 
 local EggPicture = {}
 
@@ -43,6 +45,27 @@ function EggPicture.add(parent: GuiObject, genes: any, size: number): Frame
         end
     end
     return root
+end
+
+-- BD-392: the big "same as the hatch" egg: the authored 3D egg with this dino's colours, PATTERN and condition baked through
+-- EggAppearance.apply (the very call the hatch uses; patterns go through PatternAtlasCache, so the shared image budget holds).
+-- If the 3D egg is not available the 2D picture fallback (tint + condition layer) is used, and the flat EggPicture when even that
+-- cannot be built. genes = egg genes or nil (plain egg). size in pixels. Returns the frame holding the egg.
+function EggPicture.baked(parent: GuiObject, genes: any, size: number): Frame
+    local root = Instance.new("Frame")
+    root.Name, root.BackgroundTransparency, root.Size, root.ZIndex, root.Parent = "BakedEgg", 1, UDim2.fromOffset(size, size), parent.ZIndex + 1, parent
+    local ok, view = pcall(ModelPreview.add, root, "egg", genes == nil)
+    if ok and view then
+        view.Name = "BakedEggView"
+        if genes ~= nil and EggGenetics.valid(genes) then EggAppearance.apply(view, genes, true) end
+        root:SetAttribute("EggKind", if view:GetAttribute("EggImageFallback") == true then "Image" else "Model3D")
+        view:SetAttribute("InspectZoom", 1.45)
+        return root
+    end
+    root:Destroy()
+    local flat = EggPicture.add(parent, genes, size)
+    flat:SetAttribute("EggKind", "Flat")
+    return flat
 end
 
 -- Soft tile-floor look the egg stands on (PLACEHOLDER until the Blender tile-floor render is uploaded; docs/77 "egg_stage").

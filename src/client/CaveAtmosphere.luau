@@ -30,7 +30,7 @@ function Cave.amount(): number return amount end
 local function save()
     local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
     local dof = Lighting:FindFirstChild("WeatherDof")
-    saved = {ambient = Lighting.Ambient, outdoor = Lighting.OutdoorAmbient, shift = Lighting.ColorShift_Top, exposure = Lighting.ExposureCompensation,
+    saved = {ambient = Lighting.Ambient, outdoor = Lighting.OutdoorAmbient, shift = Lighting.ColorShift_Top, exposure = Lighting.ExposureCompensation, brightness = Lighting.Brightness, softness = Lighting.ShadowSoftness,
         fogStart = Lighting.FogStart, fogEnd = Lighting.FogEnd, fogColor = Lighting.FogColor,
         dof = if dof and dof:IsA("DepthOfFieldEffect") then dof.Enabled else nil, emitters = {}, lights = {}}
     if atmosphere then
@@ -53,6 +53,7 @@ local function restore()
     local s = saved
     if not s then return end
     Lighting.Ambient, Lighting.OutdoorAmbient, Lighting.ColorShift_Top, Lighting.ExposureCompensation = s.ambient, s.outdoor, s.shift, s.exposure
+    Lighting.Brightness, Lighting.ShadowSoftness = s.brightness, s.softness
     Lighting.FogStart, Lighting.FogEnd, Lighting.FogColor = s.fogStart, s.fogEnd, s.fogColor
     local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
     if atmosphere and s.atmo then
@@ -108,6 +109,8 @@ function Cave.step(dt: number)
     Lighting.OutdoorAmbient = Lighting.OutdoorAmbient:Lerp(c3(L.outdoorAmbient), t)
     Lighting.ColorShift_Top = Lighting.ColorShift_Top:Lerp(c3(L.colorShiftTop), t)
     Lighting.ExposureCompensation += L.exposure * t
+    Lighting.Brightness = saved.brightness + (L.brightness - saved.brightness) * t -- BD-398
+    Lighting.ShadowSoftness = saved.softness + (L.shadowSoftness - saved.softness) * t
     Lighting.FogStart = Lighting.FogStart + (L.fogStart - Lighting.FogStart) * t
     Lighting.FogEnd = Lighting.FogEnd + (L.fogEnd - Lighting.FogEnd) * t
     Lighting.FogColor = Lighting.FogColor:Lerp(c3(L.fogColor), t)
