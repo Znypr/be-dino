@@ -52,11 +52,11 @@ Checked: catch-rate examples and the ladder were already corrected by earlier PR
 ## E. Vision answers 2026-10-16 (owner)
 Audit against code and docs: eggs kept when eaten = match. Mismatches (kanban): ~~Peaceful hard to find and absent with combat off (BD-421)~~ (SUPERSEDED 2026-10-16: owner correction, there is no Peaceful, docs/115), play-as-any class feel unproven (BD-423), no server rare-hatch announcement or confetti (BD-424), Robux line needs a guard check (BD-425). Audience (Q1) is still open: the answers say play and Robux but not an age band. docs/101 Q "PvP always on or optional" is answered: optional.
 
-## F. Giant dinos vs the jungle (spec [139](139-giant-dino-vegetation-scale.md), 2026-10-16; all OPEN, questions are Q1-Q12 in docs/139 s14)
+## F. Giant dinos vs the jungle (spec [139](139-giant-dino-vegetation-scale.md), 2026-10-16; C-24, C-25 (part) and C-26 resolved by owner answers 2026-10-16; C-23 and C-27 OPEN; questions are Q1-Q12 in docs/139 s14)
 | ID | Statement A | Statement B | Question |
 | --- | --- | --- | --- |
 | C-23 | docs/87 and handbook 8.1 item 3: a grown dino still feels small next to big trees | owner 2026-10-16: the dino should be gigantic at the end; only colossal ancient trees stay taller | docs/139 Q3 |
-| C-24 | D19 / BD-386: growth 5x slower; a 5-minute run reaches only about 1.5x size | owner wants "gigantic at the end" | docs/139 Q1 |
-| C-25 | handbook 0 and 3: friendly, calm, readable at a glance; BD-312 / BD-253: big bodies and foliage that fill the camera were a defect | owner wants small players "intimidated"; a max dino fills up to 55% of the screen | docs/139 Q2, Q8 |
-| C-26 | D8 / D15: generated meshes only; Blender models wait for owner uploads | colossal tree art requested "in Blender"; the running tree-quality-test uses scripted Blender trees | docs/139 Q5 |
+| C-24 | D19 / BD-386: growth 5x slower; a 5-minute run reaches only about 1.5x size | owner wants "gigantic at the end" | docs/139 Q1: **RESOLVED 2026-10-16 (OWNER): keep current pacing; gigantic is a rare long-run reward** |
+| C-25 | handbook 0 and 3: friendly, calm, readable at a glance; BD-312 / BD-253: big bodies and foliage that fill the camera were a defect | owner wants small players "intimidated"; a max dino fills up to 55% of the screen | docs/139 Q2: **RESOLVED 2026-10-16 (OWNER): awe only, no fear mechanics**; Q8 (screen share) stays OPEN |
+| C-26 | D8 / D15: generated meshes only; Blender models wait for owner uploads | colossal tree art requested "in Blender"; the running tree-quality-test uses scripted Blender trees | docs/139 Q5: **RESOLVED 2026-10-16 (OWNER): Blender allowed for colossal and redesigned tree art; V3 trees approved as a scoped exception** |
 | C-27 | handbook 3 weather: about 25-30 studs readable around the dino; fog starts 25-100 studs from the camera | the camera sits 40-60 studs from a big dino | docs/139 Q9 |
