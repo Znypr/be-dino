@@ -1,4 +1,4 @@
-# 115 Owner decisions log, 2026-10-15 and 2026-10-16
+# 115 Owner decisions log, 2026-10-15 to 2026-10-17
 
 Extracted from the kanban owner log, AGENTS.md, docs and the lead sessions. "LEAD DECISION (owner may overrule)" = made on the owner's behalf. Handbook: [114](114-handbook.md). Open conflicts: [116](116-handbook-conflicts.md). History is kept; superseded items are struck through in their own docs.
 
@@ -142,14 +142,14 @@ The owner delegated these on 2026-10-16: "just merge, take full autonomy, do dec
 ### Gifting ([134](134-gifting-spec.md) s10)
 | # | Decision | Reason | Enable needs owner go-ahead? |
 |---|---|---|---|
-| GF1 | Friends only; recipient Settings "From friends" (default) or "Nobody", no "Anyone"; preference mirrored into the Gifts store for offline checks | children's game, no stranger contact | yes |
+| ~~GF1~~ | ~~Friends only; recipient Settings "From friends" (default) or "Nobody", no "Anyone"; preference mirrored into the Gifts store for offline checks~~ **OVERTURNED 2026-10-17 by the owner: gifting is to ANYONE, see "OWNER decision 2026-10-17: gifting to anyone" below (GF1b)** | ~~children's game, no stranger contact~~ | yes |
 | GF2 | Giftable at launch: skins only; crystal packs after they are playtested; a bundle is a fixed set of skins; admin gifts may send skins and crystals | skins are the only item with an owner record; nothing random | yes |
 | GF3 | Skins are per account style (same as SK1) | one owner record | yes |
 | GF4 | Gift price = own-use price, no markup | no trap, parent-friendly | yes |
-| GF5 | Show the sender's display name, no anonymous gifts, never logged | friends-only makes the name known; anonymity helps abuse | no |
-| GF6 | Preset messages only, no free text yet | no filter dependency, no free text between kids | no |
+| GF5 | Show the sender's display name, no anonymous gifts, never logged. **Restated 2026-10-17 (GF13): same decision, new reason, the sender may be a stranger** | ~~friends-only makes the name known;~~ anonymity helps abuse and the name makes Mute/report usable | no |
+| GF6 | Preset messages only, no free text yet. **Restated 2026-10-17 (GF14): no free text planned for gifts to anyone** | no filter dependency, no free text between strangers and kids | no |
 | GF7 | Admin gifts read "A gift from the Be Dino team!" | clear, no personal data | no |
-| GF8 | Creator Hub gift products are created only when BD-453 starts, after the skin products (BD-459); flags stay off | policy and playtest order | yes |
+| GF8 | Creator Hub gift products are created only when BD-453 starts, after the skin products (BD-459); flags stay off. **Restated 2026-10-17: also only after the docs/134 s12 go-live review** | policy and playtest order | yes |
 
 ### Giant dinos vs the jungle ([139](139-giant-dino-vegetation-scale.md) s14; Q1, Q2, Q5 were owner answers)
 | # | Decision | Reason | Enable needs owner go-ahead? |
@@ -168,3 +168,24 @@ The owner delegated these on 2026-10-16: "just merge, take full autonomy, do dec
 - Done with "evidence: decisions recorded in docs/115 LEAD decisions 2026-10-16": BD-450 (gifting), BD-454 (skins), BD-470 (giant dinos).
 - Priorities: BD-224 and BD-455 P1 -> P2 (no skin can be sold in session 1, the P1 backlog is already 30 rows; BD-455 still goes first when a generator slot is free). BD-453 now also depends on BD-459. BD-471, BD-473 stay P2; BD-472, BD-474 to BD-478 stay P3 (reasons in docs/139 s15). BD-451, BD-452 stay P2, BD-456 to BD-458 P2, BD-459 P3.
 - Not decided here: docs/116 Q1, Q4, Q6, Q7, Q9, Q10 (price already 500), Q11, Q12 and the PROVISIONAL numbers (prices, Robux amounts) stay open.
+
+## OWNER decision 2026-10-17: gifting to anyone (overturns GF1)
+**Owner (2026-10-17):** gifting must NOT be friends-only. A player can gift ANY Roblox user, whether they are in the same server or lobby, online elsewhere, offline (by typing the username), or have never played Be Dino. This overturns the LEAD decision GF1 above (struck through, kept as history). The other 2026-10-16 gifting decisions that rested on friends-only were rechecked; the full rework is [134](134-gifting-spec.md) (s2.1 safety recheck, s3-s8 flows, s10 questions, s12 go-live list). **All Robux flags stay off; enabling any of it needs the owner's explicit go-ahead.** The rows below marked LEAD were chosen by the LEAD under the standing 2026-10-16 delegation; the owner may overrule them.
+
+| # | Decision | Reason | Enable needs owner go-ahead? |
+|---|---|---|---|
+| GF1b | **OWNER:** anyone can receive a gift. Recipient picker = players in the server plus a username search (`Players:GetUserIdFromNameAsync`, then display name + @username + avatar confirm before any payment prompt) | owner intent | yes |
+| GF9 | **OWNER-implied, LEAD detail:** offline and never-played recipients are served by a server-side Gifts inbox keyed by UserId (DataStore), claimed at next join through the lease-checked profile transaction, exactly once and idempotent | works without the recipient online; no profile written from another server | yes |
+| GF10 | **LEAD:** a gift to someone who has never played waits in the inbox with NO expiry (25 pending per inbox, 3 per sender); alternative is a 90-day expiry, not recommended | the buyer's Robux must not be silently lost and Roblox gives no refund event | yes |
+| GF11 | **LEAD:** recipient setting "Gifts from: Everyone / Friends / Nobody", DEFAULT Everyone (owner intent), missing record = Everyone; easy off = Settings row, "Turn gifts off" on every popup, "Mute sender" | strangers can now send, so refusing must take one tap | yes |
+| GF12 | **LEAD:** a user the recipient has Roblox-blocked cannot gift them; checked before the prompt (recipient reports its blocked ids) AND at claim (held if blocked); all recipient-side refusals show one identical copy | protects never-played recipients too, no block side-channel | yes |
+| GF13 | **LEAD:** sender shown by Roblox display name, no anonymity, name never stored or logged; the buyer sees what will show; admin gifts stay "from the Be Dino team" (GF5, GF7) | accountability, Mute and report need a name | no |
+| GF14 | **LEAD:** presets only, no free text for gifts to anyone (GF6); no reply, chat, friend-request or link in any gift UI | strangers plus text is the contact path to avoid | no |
+| GF15 | **LEAD:** rate limits (PROVISIONAL): per buyer 3 prompts/min, 10 gifts/day, 3 per recipient/day; lookups 10/min and 60/day per player, 30/min server-wide; durable daily counters | anti-spam and shared Roblox web limit | no |
+| GF16 | **LEAD:** Robux purchase = one gift developer product per item, same price, receipt-idempotent (`R` + PurchaseId); refund/chargeback = admin Revoke (pending removed, claimed skin removed on next load, id tombstoned); a race-duplicate skin converts to PROVISIONAL thank-you crystals | no refund event exists; a no-op must not eat Robux | yes |
+| GF17 | **LEAD:** audit log by UserId only (daily lists plus a per-user index, 12 months), never names or text; no age signal is used, `PolicyService` stays the buyer gate | traceability without PII | no |
+
+### Task effects (2026-10-17)
+- BD-450 stays Done (spec accepted); the 2026-10-17 owner decision is recorded in docs/134, here and in the kanban owner decisions log.
+- BD-451 grows (recipient setting, block/mute, never-played inbox, audit, revoke), stays P2. BD-452 stays P2 and gains offline-by-username. BD-453 stays P3, now also gated by the docs/134 s12 go-live review. Dependencies unchanged.
+- Open for the owner (3): see the PR description; none blocks BD-451 or BD-452.
