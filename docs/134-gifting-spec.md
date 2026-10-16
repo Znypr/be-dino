@@ -174,3 +174,6 @@ None of this is done; it is the list the owner signs off at BD-453 time. All fla
 
 ## Handbook check
 Robux line s11a kept (no power, no random); no trading; flags off; no art made; Place1.rbxl untouched; economy numbers unchanged. Audience rule ([114](114-handbook.md) s2: children, parents nearby) is why strangers get a wordless, mutable, one-way gift only. Nothing here was built or verified in Studio, and every Roblox API named above that is not already used in the repo is marked for Studio verification.
+
+
+**Owner answer 2026-10-17:** default stays Everyone (a gift is not contact; preset messages only). Refuse / mute sender / turn gifts off stay. Recorded as docs/115 GF1c.
