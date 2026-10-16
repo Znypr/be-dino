@@ -7,7 +7,7 @@ diamond) bakes resources/effects/tiers/raptor-<part>-<tier>-v2-color.png, 512 x 
 
 LEAD / OWNER 2026-10-17 (Studio): the v1 maps (random facet patches, ~18% alpha) read as yellow blotches and washed the stripes. So v2 is a
 SMOOTH GRADIENT ONLY, no per-facet colour at all (the crystal facets live in the normal map, tier-crystal-normal.png, never in colour):
-  alpha  ~0.80-0.90 at silhouette edges and thin parts, fading smoothly to ~0.05 in the middle of a part (stripes keep their true colours),
+  alpha  ~0.88 at silhouette edges and thin parts, a soft band about 2-3x wider than round 1 (round 2, owner: 'bleed more in'), fading smoothly to ~0.05 in the middle of a part (stripes keep their true colours),
   colour a smooth ramp: the tier core colour in the middle, the tier edge colour (gold warm light, emerald mint, diamond white) at the edge.
 The edge field is view independent and computed per texel in 3D: the distance to the nearest sharp crease or open mesh edge (the places a
 low-poly dino's silhouette runs along), scaled by the crease sharpness, with an ABSOLUTE reach so thin parts (arms, toes, tail) get more
@@ -33,8 +33,8 @@ PARTS = ("body", "head", "tail", "leftarm", "rightarm", "leftleg", "rightleg")
 
 ALPHA_MIN = 0.05      # the middle of a part: the stripes keep their true colours
 ALPHA_MAX = 0.88      # silhouette edges and thin parts
-REACH = 0.20          # world units: how far a full-sharpness crease's coat reaches (tuned below to a ~0.30 mean over the UV islands)
-TARGET_MEAN = 0.30    # mean alpha over the UV-covered texels (lead 2026-10-17: ~0.3 is fine when the edges are strong)
+TARGET_MEAN = 0.42    # mean alpha over the UV-covered texels of EACH part (lead 2026-10-17 round 2: wide soft band, ~0.40-0.45)
+MIN_REACH = 0.14      # world units
 CREASE_FROM, CREASE_FULL = 6.0, 45.0  # dihedral angle (degrees) where a crease starts to count / counts fully
 
 # straight-alpha sRGB colours: (core in the middle, edge at the silhouette)
@@ -182,29 +182,27 @@ def main():
         deff = effective_distance(cov, pos, crease_edges(me))
         data[part] = (cov, deff)
         print("%-9s uv coverage %.2f, creases %d" % (part, cov.mean(), len(crease_edges(me))))
-    # one global reach, tuned so the mean alpha over every part's UV-covered texels lands on TARGET_MEAN
-    def covered_mean(reach):
-        tot = n = 0.0
-        for cov, deff in data.values():
-            f = blur(field_for(reach, cov, deff), cov)
-            a = ALPHA_MIN + (ALPHA_MAX - ALPHA_MIN) * np.clip(f, 0, 1)
-            tot += a[cov].sum()
-            n += cov.sum()
-        return tot / n
-    lo, hi = 0.03, 3.0
-    for _ in range(18):
-        mid = (lo + hi) / 2
-        if covered_mean(mid) < TARGET_MEAN:
-            lo = mid
-        else:
-            hi = mid
-    reach = (lo + hi) / 2
-    print("REACH %.3f -> covered mean alpha %.3f" % (reach, covered_mean(reach)))
+    # one reach PER PART, tuned so every part's mean alpha over its UV-covered texels lands on TARGET_MEAN: the band then scales with the
+    # part (a soft gradient covering roughly the outer 25-35% of its silhouette width, strongest at the crease, fading out smoothly)
+    def part_mean(reach, cov, deff):
+        f = blur(field_for(reach, cov, deff), cov)
+        return (ALPHA_MIN + (ALPHA_MAX - ALPHA_MIN) * np.clip(f, 0, 1))[cov].mean()
+    reaches = {}
+    for part, (cov, deff) in data.items():
+        lo, hi = 0.03, 6.0
+        for _ in range(20):
+            mid = (lo + hi) / 2
+            if part_mean(mid, cov, deff) < TARGET_MEAN:
+                lo = mid
+            else:
+                hi = mid
+        reaches[part] = max((lo + hi) / 2, MIN_REACH)   # thin parts (arms) get a band of at least MIN_REACH, so they are strong, never a net of fine lines
+        print("REACH %-9s %.3f -> covered mean alpha %.3f" % (part, reaches[part], part_mean(reaches[part], cov, deff)))
 
     report = {}
     for part in PARTS:
         cov, deff = data[part]
-        f = blur(field_for(reach, cov, deff), cov)
+        f = blur(field_for(reaches[part], cov, deff), cov)
         f, _ = bleed(f[..., None], cov)
         f = np.clip(f[..., 0], 0.0, 1.0)
         f[~np.isfinite(f)] = 0.0
@@ -216,13 +214,13 @@ def main():
             rgb = core * (1.0 - t) + edge * t        # smooth ramp, no per-facet colour
             rgba = np.concatenate([rgb, alpha[..., None]], axis=2)
             save_png(os.path.join(OUT, "raptor-%s-%s-v2-color.png" % (part, tier)), rgba)
-            report[(part, tier)] = (alpha.mean(), alpha[cov].mean())
+            report[(part, tier)] = (alpha.mean(), alpha[cov].mean(), (alpha[cov] <= 0.10).mean())
     for tier in TIERS:
         full = np.mean([report[(p, tier)][0] for p in PARTS])
         covd = np.mean([report[(p, tier)][1] for p in PARTS])
         print("TIER %-8s mean alpha: whole image %.3f, UV-covered %.3f" % (tier, full, covd))
         for p in PARTS:
-            print("   %-9s whole %.3f covered %.3f" % (p, *report[(p, tier)]))
+            print("   %-9s whole %.3f covered %.3f, share of covered texels with alpha <= 0.10: %.2f" % (p, *report[(p, tier)]))
 
     # lower roughness for the non-metallic gems: the shared Blender-baked roughness map, scaled down (gold keeps the original)
     src = bpy.data.images.load(os.path.join(OUT, "tier-crystal-roughness.png"))
