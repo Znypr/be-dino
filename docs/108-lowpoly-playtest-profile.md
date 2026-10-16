@@ -10,3 +10,6 @@ Lead decision 2026-10-16: friends playtests use the cheap low-poly dinos (docs/1
 
 ## Honest limits
 Not done in this pass: clicking through the hatch, shop and fusion menus, a real egg hatch, keyboard walking (injected keys did not move the character), a 12-dino lineup screenshot (the game camera overrides a scripted one), phone and published-server checks. These are BD-323, BD-325 and BD-322. NPC predators keep their own visual (BD-324).
+
+## Click-through update (BD-323 / BD-325, 2026-10-16)
+The menus, a real egg hatch and a 12-dino lineup were then clicked through in Play: see [evidence/2026-10-16-lowpoly-clickthrough/](evidence/2026-10-16-lowpoly-clickthrough/) and the BD-323 / BD-325 rows (ratings, new problems BD-326 to BD-332). Shop and Fusion screens were captured before PR #181 and need a retest. Still not done: phone, published server, paint buckets, event mutation egg.
