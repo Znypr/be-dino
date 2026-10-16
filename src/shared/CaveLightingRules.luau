@@ -13,14 +13,16 @@ Rules.BeamColor = {255, 236, 190} -- warm cream
 Rules.Beam = {outerFrac = 0.82, coreFrac = 0.5, outerAlpha = 0.95, coreAlpha = 0.9, topAbove = 3, bottomAbove = 0.15, motesPerSecond = 4}
 Rules.GateGlow = {rate = 4, size = {12, 18}, alpha = 0.7, color = {255, 214, 160}, lift = 8, out = 12} -- out = studs from the pad centre into the mouth (the mouth is open from 10 studs past the pad centre)
 Rules.FillColor, Rules.LavaColor, Rules.CrystalColor, Rules.ForgeColor = {255, 214, 170}, {255, 140, 70}, {196, 170, 255}, {255, 190, 90}
-Rules.Forge = {period = 4, amplitude = 0.08, base = 0.35}
+Rules.Forge = {period = 4, amplitude = 0.1, base = 0.6}
+Rules.ShadowLights = 4
 Rules.FxPartBudget = 16 -- shaft beams (2 per hole) + dust volumes (1 per hole) + the gate glow anchor
 -- Cave-only look (applied only while the player is inside the hub, restored on leaving; nothing here touches the island).
 Rules.Look = {
-    ambient = {152, 128, 108}, outdoorAmbient = {138, 116, 98}, colorShiftTop = {255, 228, 190}, exposure = 0.15,
-    fogStart = 160, fogEnd = 520, fogColor = {104, 80, 64},
+    -- BD-398: a lit cave, not a bright hall: low warm-dim ambient, lower Lighting.Brightness and exposure; the lamps and shafts are the main lights
+    ambient = {70, 62, 60}, outdoorAmbient = {66, 58, 56}, colorShiftTop = {255, 222, 180}, exposure = -0.25, brightness = 1.3, shadowSoftness = 0.35,
+    fogStart = 110, fogEnd = 400, fogColor = {72, 56, 46},
     atmosphere = {density = 0.22, offset = 0, haze = 0.25, glare = 0, color = {214, 188, 160}, decay = {150, 104, 72}},
-    grade = {brightness = 0.02, contrast = 0.06, saturation = 0.1, tint = {255, 238, 220}},
+    grade = {brightness = -0.1, contrast = 0.1, saturation = -0.12, tint = {255, 226, 196}}, -- one soft shared warm grade tames the pastel props (MeshPart.Color is ignored on textured meshes)
     blendSeconds = 0.8,
 }
 Rules.EnterNorm, Rules.LeaveNorm = 1.0, 1.12 -- floor-blob norm (hysteresis) for "inside the hub"
@@ -57,26 +59,31 @@ function Rules.get(): any
         taken[owner] = (taken[owner] or 0) + 1
         local n = taken[owner]
         if owner == "heart" then
-            if n == 1 then add(owner, heart.x, FY + 18, heart.z, Rules.FillColor, 40, 0.6)
-            else add(owner, heart.x + 10, FY + 5, heart.z + 10, Rules.FillColor, 28, 0.4) end
+            if n == 1 then add(owner, heart.x, FY + 18, heart.z, Rules.FillColor, 48, 0.9)
+            else add(owner, heart.x + 10, FY + 5, heart.z + 10, Rules.FillColor, 34, 0.65) end
         elseif owner == "lava" then
-            if n == 1 then add(owner, P.x, FY + 5, P.z, Rules.LavaColor, 36, 0.45)
-            elseif n == 2 then add(owner, F.x - 12, FY + 12, F.z - 4, Rules.LavaColor, 36, 0.45)
-            else add(owner, F.x + 12, FY + 12, F.z - 4, Rules.LavaColor, 36, 0.45) end
+            if n == 1 then add(owner, P.x, FY + 5, P.z, Rules.LavaColor, 42, 0.7)
+            elseif n == 2 then add(owner, F.x - 12, FY + 12, F.z - 4, Rules.LavaColor, 42, 0.7)
+            else add(owner, F.x + 12, FY + 12, F.z - 4, Rules.LavaColor, 42, 0.7) end
         elseif owner == "crystal" then
             local o = style.outward
-            add(owner, style.x + math.cos(o) * style.r * 0.6 + (if n == 1 then -3 else 3), FY + 3, style.z + math.sin(o) * style.r * 0.6, Rules.CrystalColor, 16, 0.3)
+            add(owner, style.x + math.cos(o) * style.r * 0.6 + (if n == 1 then -3 else 3), FY + 3, style.z + math.sin(o) * style.r * 0.6, Rules.CrystalColor, 20, 0.45)
         elseif owner == "forge" then
-            add(owner, fusion.x, FY + 3, fusion.z, Rules.ForgeColor, 18, Rules.Forge.base, {pulse = true})
+            add(owner, fusion.x, FY + 3, fusion.z, Rules.ForgeColor, 24, Rules.Forge.base, {pulse = true})
         elseif owner == "gate" then
             -- the arch light: stronger and lower so the doorway reads from the Heart
-            add(owner, gate.x, FY + 10, gate.z - 4, Rules.GateGlow.color, 40, 2.0, {arch = true})
+            add(owner, gate.x, FY + 10, gate.z - 4, Rules.GateGlow.color, 46, 2.2, {arch = true})
         else
             local s = station(L, owner)
             local o = s.outward
-            add(owner, s.x + math.cos(o) * s.r * 0.45, FY + 8, s.z + math.sin(o) * s.r * 0.45, Rules.FillColor, 28, 0.5)
+            add(owner, s.x + math.cos(o) * s.r * 0.45, FY + 8, s.z + math.sin(o) * s.r * 0.45, Rules.FillColor, 34, 0.85)
         end
     end
+    -- BD-398: PointLight.Shadows only for the 4 strongest lights (brightness x range), the rest stay shadowless (cheap)
+    local order = {}
+    for i = 1, #lights do order[i] = i end
+    table.sort(order, function(a, b) return lights[a].brightness * lights[a].range > lights[b].brightness * lights[b].range end)
+    for i = 1, math.min(Rules.ShadowLights, #order) do lights[order[i]].shadows = true end
     local g = L.gate
     cache = {shafts = shafts, lights = lights,
         gate = {x = gate.x, z = gate.z + cz - Rules.GateGlow.out, y = FY + Rules.GateGlow.lift, mouthWidth = g.mouthWidth},

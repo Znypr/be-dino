@@ -150,6 +150,7 @@ local function place(folder: Folder, params: RaycastParams, p: any, template: Me
         signGuis += 1
         addSignText(mesh, key, text)
     end
+    mesh.CastShadow = not p.walk -- BD-398: rocks and stalls cast shadows from the lamps and shafts; flat walk-over pieces do not need to
     mesh:SetAttribute("Owner", p.owner)
     mesh.Parent = folder
 end
