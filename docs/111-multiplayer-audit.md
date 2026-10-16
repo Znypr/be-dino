@@ -1,15 +1,15 @@
-# 111 Multiplayer audit and offline 12-player simulation (2026-10-16, BD-354 to BD-361; prepares BD-019, BD-097, BD-316, BD-319)
+# 111 Multiplayer audit and offline 12-player simulation (2026-10-16, BD-360 to BD-364; prepares BD-019, BD-097, BD-316, BD-319)
 
 Label: **CODE-LEVEL AUDIT plus OFFLINE SIMULATION, NOT a multiplayer test.** No Roblox server, Studio multi-client session or phone was used. The simulation runs the real Luau modules against mocks (virtual clock, mocked DataStore with latency, transient failures and the per-server request budget). It proves ordering, transaction and invariant behaviour. It cannot prove replication, networking, physics, real DataStore latency, BindToClose timing or memory. Section 5 is the owner's step list for the real test. Sources read: AGENTS.md, docs/00, 87, 106, 107, `src/server/*`, `tools/verify_load.py`.
 
 ## 1. Result in one paragraph
-The repository layer (ProfileRepository, RunLifecycle) is sound for the main flow: every settlement and egg claim is an atomic, lease-checked, idempotent UpdateAsync keyed by run or egg id, so a run settles at most once even when death, Home, being eaten and a disconnect race. The bugs were at the edges: leaving, rejoining, failing and shutting down. Ten are fixed here (seven of them session bugs), the ones in the repository layer with a test that fails on the old code (BD-354). Four real design risks are left as kanban rows (BD-355 to BD-360).
+The repository layer (ProfileRepository, RunLifecycle) is sound for the main flow: every settlement and egg claim is an atomic, lease-checked, idempotent UpdateAsync keyed by run or egg id, so a run settles at most once even when death, Home, being eaten and a disconnect race. The bugs were at the edges: leaving, rejoining, failing and shutting down. Ten are fixed here (seven of them session bugs), the ones in the repository layer with a test that fails on the old code (BD-360). Four real design risks are left as kanban rows (BD-361 to BD-363).
 
 ## 2. Findings, ranked (file:line are on this branch after the fixes)
 
 Severity: H = loses rewards, strands a player, or lets one player hurt the others. M = cost or exposure that grows with players. L = small.
 
-### Fixed in this PR (BD-354), all with offline tests
+### Fixed in this PR (BD-360), all with offline tests
 | # | Sev | Finding | Where | Evidence |
 | --- | --- | --- | --- | --- |
 | F1 | H | **Same-user rejoin lost its lease.** All players of one server share one `leaseId`. A player who left and came back at once (new Player object, same UserId) loaded while the old release was still in flight; the old release then ran `session = nil` on the NEW session, so the next write or renew said `LeaseLost` and the run's rewards were refused. | `ProfileRepository.release` (1817) and `load` (750); fix: `releasing[userId]`, load waits for it | Old code: 3 of 12 rejoined players lost the lease, 9/12 held it |
@@ -26,21 +26,21 @@ Severity: H = loses rewards, strands a player, or lets one player hurt the other
 ### Open (kanban rows)
 | # | Sev | Finding | Where | Row |
 | --- | --- | --- | --- | --- |
-| H8 | H | **No shared per-player write budget.** Each remote has its own cooldown (`ChestService` claim 0.35 s, nest 0.5 s, settings 0.5 s, `CollectionService` equip 0.5 s, `MutationService` 0.4 s, `ProgressionService` 0.4 s, `FusionService` window) but all of them end in an UpdateAsync on the same key. A client firing every remote at its limit can issue about 10 writes/s. A server gets 60 + 10 x players requests per minute (about 3/s at 12 players) and a 30-request queue; beyond that `UpdateAsync` errors and the victim's settlement fails. The per-key rule (writes to one key within 6 s are throttled) is also not enforced anywhere. | `ChestService.luau` 26 to 110, `CollectionService.luau` 22 to 83, `MutationService.luau`, `ProgressionService.luau` 170 to 178 | BD-355 |
-| M1 | M | **Settlement has 3 attempts.** `retry` waits 0.5 s then 1 s. A longer hiccup or a throttle wait forfeits the run's eggs; nothing keeps the snapshot. | `ProfileRepository.retry` (320), `RunLifecycle.respawnAfterSettlement` (101 to 112) | BD-356 |
-| M2 | M | **Private data replicates to everyone.** `syncAttributes` sets about 35 Player attributes (`CollectionJson`, `ProgressionJson`, `ChestQueueJson`, `NestsJson`, `SettingsJson`, `EquippedGenesJson`). Attributes go to every client. Sim: 2.5 KB fresh, 9.8 KB after 10 runs of 40 eggs (`CollectionJson` 6.9 KB, `ChestQueueJson` 1.2 KB); a full resync of 12 such players is about 1.3 MB across clients, and every change to a big string resends it to all 11 others. Any player can read any other player's inventory. | `ProfileRepository.syncAttributes` (336 to 395) | BD-357 |
-| M3 | M | **Loops that grow with players x things** (table below). | see below | BD-358 |
-| M4 | M | **Leaderboards.** `publish` is 3 sequential OrderedDataStore UpdateAsync per leave and per player per 60 s; `refresh` does 3 `GetSortedAsync` and a `GetNameFromUserIdAsync` per unseen name. At 12 players that is 36 writes per minute plus the leave writes, on a budget that is not modelled here. | `Leaderboards.luau` 18 to 36 and 105 to 115 | BD-359 |
-| L1 | L | `runStartedAt[runId]` is only cleared by a settlement snapshot, so a run that never settles (character swapped while Active) leaves one entry | `RunLifecycle.luau` 14, 49 | BD-360 |
-| L2 | L | `world.defeats` (friend shield) is keyed by userId and never pruned | `CombatRules.luau` 45 to 62 | BD-360 |
-| L3 | L | Every per-player cooldown table is keyed by the Player object and cleaned on PlayerRemoving (checked in all 14 services), so a rejoin resets the cooldowns; `ProfileRepository` bounds the damage | all services | BD-360 |
-| L4 | L | `LeaseLost` (renew failed, another server took over) is silent: the player keeps running and the settlement is refused | `ProfileRepository.renew` | BD-360 |
+| H8 | H | **No shared per-player write budget.** Each remote has its own cooldown (`ChestService` claim 0.35 s, nest 0.5 s, settings 0.5 s, `CollectionService` equip 0.5 s, `MutationService` 0.4 s, `ProgressionService` 0.4 s, `FusionService` window) but all of them end in an UpdateAsync on the same key. A client firing every remote at its limit can issue about 10 writes/s. A server gets 60 + 10 x players requests per minute (about 3/s at 12 players) and a 30-request queue; beyond that `UpdateAsync` errors and the victim's settlement fails. The per-key rule (writes to one key within 6 s are throttled) is also not enforced anywhere. | `ChestService.luau` 26 to 110, `CollectionService.luau` 22 to 83, `MutationService.luau`, `ProgressionService.luau` 170 to 178 | BD-361 |
+| M1 | M | **Settlement has 3 attempts.** `retry` waits 0.5 s then 1 s. A longer hiccup or a throttle wait forfeits the run's eggs; nothing keeps the snapshot. | `ProfileRepository.retry` (320), `RunLifecycle.respawnAfterSettlement` (101 to 112) | BD-362 |
+| M2 | M | **Private data replicates to everyone.** `syncAttributes` sets about 35 Player attributes (`CollectionJson`, `ProgressionJson`, `ChestQueueJson`, `NestsJson`, `SettingsJson`, `EquippedGenesJson`). Attributes go to every client. Sim: 2.5 KB fresh, 9.8 KB after 10 runs of 40 eggs (`CollectionJson` 6.9 KB, `ChestQueueJson` 1.2 KB); a full resync of 12 such players is about 1.3 MB across clients, and every change to a big string resends it to all 11 others. Any player can read any other player's inventory. | `ProfileRepository.syncAttributes` (336 to 395) | BD-363 |
+| M3 | M | **Loops that grow with players x things** (table below). | see below | BD-364 |
+| M4 | M | **Leaderboards.** `publish` is 3 sequential OrderedDataStore UpdateAsync per leave and per player per 60 s; `refresh` does 3 `GetSortedAsync` and a `GetNameFromUserIdAsync` per unseen name. At 12 players that is 36 writes per minute plus the leave writes, on a budget that is not modelled here. | `Leaderboards.luau` 18 to 36 and 105 to 115 | BD-362 |
+| L1 | L | `runStartedAt[runId]` is only cleared by a settlement snapshot, so a run that never settles (character swapped while Active) leaves one entry | `RunLifecycle.luau` 14, 49 | BD-363 |
+| L2 | L | `world.defeats` (friend shield) is keyed by userId and never pruned | `CombatRules.luau` 45 to 62 | BD-363 |
+| L3 | L | Every per-player cooldown table is keyed by the Player object and cleaned on PlayerRemoving (checked in all 14 services), so a rejoin resets the cooldowns; `ProfileRepository` bounds the damage | all services | BD-363 |
+| L4 | L | `LeaseLost` (renew failed, another server took over) is silent: the player keeps running and the settlement is refused | `ProfileRepository.renew` | BD-363 |
 
 ### Server loops that scale with players (the O(n squared) list you asked for)
 | Loop | Rate | Cost with 12 players | Note |
 | --- | --- | --- | --- |
-| `FoodService` pickup, `FoodService.luau` 216 to 232 | every 0.08 s | foods x players = 2,400 x 12 = 28,800 checks per tick, 360k/s (F10 made each check cheap) | the only loop that is clearly hot; spatial grid per sector is the fix (BD-358) |
-| `ProgressionService` crystals, 128 to 150 | every 0.25 s | crystals x players, plus `Players:GetPlayers()` allocated per crystal and `FindFirstChild` x2 per pair | hoist the eligible list (BD-358) |
+| `FoodService` pickup, `FoodService.luau` 216 to 232 | every 0.08 s | foods x players = 2,400 x 12 = 28,800 checks per tick, 360k/s (F10 made each check cheap) | the only loop that is clearly hot; spatial grid per sector is the fix (BD-364) |
+| `ProgressionService` crystals, 128 to 150 | every 0.25 s | crystals x players, plus `Players:GetPlayers()` allocated per crystal and `FindFirstChild` x2 per pair | hoist the eligible list (BD-364) |
 | `PredationService`, 92 to 99 | every 0.1 s | players squared = 132 pair checks, a raycast only for in-range pairs | runs only while `CombatEnabled` is false; cheap |
 | `CombatService` bite, 160 to 190 | per bite request | players + NPCs, a `GetExtentsSize` each | gated by F9; flag off |
 | `CombatService` Heartbeat, 205 to 215 | 10 Hz | O(players), HP byte attribute only on change at 5 Hz | trivial |
@@ -112,10 +112,10 @@ Run in the same Local Server with 2 clients (and a 3rd for assists). Read `LastB
 8. **Bandwidth.** In A's F9 > Network, note Data Receive KB/s while 4 players fight: write it down (the docs/107 estimate is 2 KB/s).
 
 ### 5.4 What to paste back
-Copy these into BD-361 / BD-319: the Output lines containing `[Be Dino]` and any `Warning` from the server for the whole run; the time to controllable for each client (step 1); `CollectionJson` length (step 6); the F9 Network KB/s (5.3 step 8); one line per step: pass or fail. For performance (BD-097): in the server window Stats (Shift+F3) Heartbeat and "Instances" with 4 players, and the MicroProfiler (Ctrl+F6) top 3 server scopes with 4 clients.
+Copy these into BD-364 / BD-319: the Output lines containing `[Be Dino]` and any `Warning` from the server for the whole run; the time to controllable for each client (step 1); `CollectionJson` length (step 6); the F9 Network KB/s (5.3 step 8); one line per step: pass or fail. For performance (BD-097): in the server window Stats (Shift+F3) Heartbeat and "Instances" with 4 players, and the MicroProfiler (Ctrl+F6) top 3 server scopes with 4 clients.
 
 ### 5.5 Then the published private place
 Repeat 5.2 steps 1 to 6 with friends or alts (2, then 4, then 8 players), as in docs/55 section 5 and docs/106 section 4. Watch for `SessionBusy` when someone leaves and rejoins fast, and for any `save_failed` on a player who did not do anything unusual (that would be H8).
 
 ## 6. Honest status
-Offline only. Nothing here was run on a real server, so BD-019, BD-097, BD-316 and BD-319 stay open; they now have a script (section 5) and BD-361 to record the result.
+Offline only. Nothing here was run on a real server, so BD-019, BD-097, BD-316 and BD-319 stay open; they now have a script (section 5) and BD-364 to record the result.
