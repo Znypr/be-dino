@@ -149,6 +149,11 @@ for _, id in Tier.Order do
     local r2, g2, b2 = Tier.blend(0.84, 0.28, 0.58, e, true)
     local mx, mn = math.max(r2, g2, b2), math.min(r2, g2, b2)
     assert(mx <= 1 and mn >= 0 and (mx - mn) / mx > 0.45, id .. " trim turned muddy")
+    -- Studio look check 2026-10-16: Diamond reads as a pale frosted version of the gene colour (satKeep) on warm species, never grey
+    local dr0, dg0, db0 = Tier.blend(0.80, 0.50, 0.36, Tier.get("diamond"), false)
+    local dmx, dmn = math.max(dr0, dg0, db0), math.min(dr0, dg0, db0)
+    assert((dmx - dmn) / dmx < 0.55 * 0.8 and (dmx - dmn) / dmx > 0.1, "diamond is pale but not grey")
+    assert(dmx - dmn < 0.8 - 0.36, "diamond is paler than the base colour")
     -- BD-308 baked sheen: bounded, only lifts facets the source lit (k > 1), never darkens, never pushes past white
     assert(e.sheen > 0 and e.sheen <= Tier.MaxSheen, id .. " sheen bounded")
     local lr, lg, lb = Tier.lift(0.5, 0.3, 0.2, 1.4, e)

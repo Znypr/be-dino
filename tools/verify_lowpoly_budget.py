@@ -50,8 +50,9 @@ def static_checks():
     assert 'Texture.key(textureId, spec) .. "@" .. size' in tex, "bakes of different sizes never share an image"
     dinos = (ROOT / 'src/shared/LowPolyDinos.luau').read_text(encoding='utf-8')
     assert 'Texture.sizeFor(role)' in dinos, "parts baked at their role size"
-    assert 't.part.TextureID = t.textureId' in dinos and 'tintColor(' in dinos, "tint fallback keeps the model's own texture"
+    assert 't.part.TextureID = t.textureId' in dinos and 'tintColor(' not in dinos, "tint fallback keeps the model's own texture (MeshPart.Color is ignored on textured parts)"
     assert 'not motionEnabled()' in dinos, "BD-308 Reduce Motion: no sparkle"
+    assert 'own = true' in dinos and 'if spec.own then' in tex and '"|own"' in tex, "a fused tier without genes still bakes over the species' own colour (Index / fusion tiles, BD-326)"
     assert 'Enum.Material.Plastic, 0' in dinos and 'Tier.MaxReflectance' in dinos
     for name in ('LowPolyAtlasMesh', 'LowPolyAtlasLayout'):
         assert not (ROOT / f'src/shared/{name}.luau').exists(), f"{name} was measured and rejected (docs/105 s3)"

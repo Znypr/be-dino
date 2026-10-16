@@ -944,7 +944,7 @@ function Seq.play(args: Args): Handle
                     if a.big and since >= impactAt + revealT and since < impactAt + revealT + .25 then
                         local k = 1 - (since - impactAt - revealT) / .25
                         a.body.AnchorPoint = Vector2.new(.5, .5)
-                        a.body.Position = UDim2.fromOffset(BODY_CENTER.X + math.sin(since * 120) * 4 * k, BODY_CENTER.Y + math.cos(since * 100) * 3 * k)
+                        a.body.Position = UDim2.fromOffset(BODY_CENTER.X + math.sin(since * 120) * 2 * k, BODY_CENTER.Y + math.cos(since * 100) * 1.5 * k)
                     elseif a.big and since >= impactAt + .25 and bodyRestored then
                         a.body.AnchorPoint, a.body.Position = bodyHomeAnchor, bodyHomePos
                     end

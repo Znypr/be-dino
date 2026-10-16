@@ -81,10 +81,8 @@ local function sparkle(container: Instance, body: BasePart?, entry: any?)
     emitter.Speed, emitter.SpreadAngle, emitter.Rotation = NumberRange.new(0.2, 0.5), Vector2.new(180, 180), NumberRange.new(0, 360)
     emitter.Parent = body
 end
-local function tintColor(species: string, textureId: string, spec: Texture.Spec): Color3
-    local base = Texture.baseOf(textureId) or Recolor.baseOf(species)
-    return Color3.new(Recolor.flatTint(base, spec.primary.R, spec.primary.G, spec.primary.B))
-end
+-- Fallback (bake denied / cache full / far away): the model's OWN texture stays (eyes, belly, claws intact, species colour). A plain
+-- MeshPart.Color is ignored on a textured MeshPart in Studio, so no tint is applied (docs/105: option 'keep the original texture').
 -- One part's bake (body/head 256 px, other parts 128 px; BD-306): texture on success, the cheap tint when denied / full / failed.
 local function partBake(container: Instance, species: string, part: MeshPart, textureId: string, role: string, spec: Texture.Spec, key: string)
     part:SetAttribute("LPLod", "baking")
@@ -92,7 +90,7 @@ local function partBake(container: Instance, species: string, part: MeshPart, te
     local content = Texture.acquire(part, textureId, species, spec, geom, Texture.sizeFor(role))
     if not part.Parent or container:GetAttribute("LPLookKey") ~= key then return end
     if content then part.TextureContent, part.Color = content, Color3.new(1, 1, 1) part:SetAttribute("LPLod", "texture")
-    else part.TextureID = textureId part.Color = tintColor(species, textureId, spec) part:SetAttribute("LPLod", "tint") end
+    else part.TextureID = textureId part.Color = Color3.new(1, 1, 1) part:SetAttribute("LPLod", "tint") end
 end
 function LowPoly.tint(container: Instance, genes: any)
     if genes then genesOf[container] = genes else genes = genesOf[container] end
@@ -107,6 +105,10 @@ function LowPoly.tint(container: Instance, genes: any)
         spec = {primary = primary, secondary = Color3.fromRGB(b[1], b[2], b[3]), same = genes.primaryColorId == genes.secondaryColorId,
             primaryShare = math.clamp((genes.blend or 50) / 100, 0, 1), patternId = patternId, tier = if entry then entry.id else nil, seedName = ""}
     elseif not entry then return end
+    if not spec then -- no genes (Index stage tiles, fusion previews): a fused tier still bakes over the species' own colour, so the tier reads (BD-326)
+        local own = Color3.new(1, 1, 1)
+        spec = {primary = own, secondary = own, same = false, primaryShare = 1, patternId = "01_blank", tier = (entry :: any).id, seedName = "", own = true}
+    end
     local camera = workspace.CurrentCamera
     local body: BasePart? = nil
     local textured: {{part: MeshPart, textureId: string, role: string}} = {}
@@ -137,7 +139,7 @@ function LowPoly.tint(container: Instance, genes: any)
     for _, t in textured do
         Texture.release(t.part)
         t.part.TextureID = t.textureId
-        t.part.Color = tintColor(species, t.textureId, s)
+        t.part.Color = Color3.new(1, 1, 1)
         t.part:SetAttribute("LPLod", "tint")
     end
     if far then container:SetAttribute("LPLod", "tint") return end
