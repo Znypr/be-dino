@@ -61,12 +61,14 @@ RunService.Heartbeat:Connect(function(dt)
                 -- A second or third rig on the same dino always uses the lite layer count so the combined look stays inside one budget.
                 local function add(kind: string,item: any)
                     if not item or (mode=="off" and kind~="mutation") then return end -- Off drops aura and trail, keeps the event mutation cue
-                    local rigDetail=if #state.rigs>0 then "lite" else detail
+                    -- QA fix (mutation-qa): every player owns a trail (default white), so the mutation was always rig #2 = lite and its
+                    -- mist/ring never showed. The mutation now takes the full slot unless an aura already does; the trail stays lite.
+                    local rigDetail=if #state.rigs>0 and not (kind=="mutation" and auraId=="") then "lite" else detail
                     table.insert(state.rigs,Rig.attach(root,kind,item,{reduce=reduce,detail=rigDetail,device=device}))
                 end
                 add("aura",Rules.item(Config.Auras,auraId))
-                add("trail",Rules.item(Config.Trails,trailId))
                 add("mutation",Look.get(mutationId))
+                add("trail",Rules.item(Config.Trails,trailId))
                 if visual and visual:IsA("Model") then
                     if (visual:GetAttribute("Mutation") or "base")=="base" then Look.apply(visual,mutationId) end -- BD-155: soft body tint, always (also with Reduce Motion)
                     if shiny then state.glints=Shiny.Create(visual,"rbxassetid://70885382548001",reduce) end

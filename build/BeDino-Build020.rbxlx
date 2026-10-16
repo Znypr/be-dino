@@ -380066,6 +380066,10 @@ Weather.Rigs={
     quake={dust=spec(50,3,4.5),bank=spec(14,8,10,true)},
     bloodmoon={motes=spec(140,4,6),fog=spec(16,5,7,true),bank=spec(14,9,11,true)},
 }
+-- QA 2026-10-16 (docs/evidence 2026-10-16-weather-qa): the blood moon (core 60, halos up to 200) filled the top third of a phone-size view and the title
+-- card sat on top of the "started" toast. The moon is smaller and higher; the title card sits below the toast and stays a soft, narrower banner.
+Weather.Moon=table.freeze({core=44,halos=table.freeze({80,108,142}),distance=150})
+Weather.Title=table.freeze({y=.31,width=.6,height=.085})
 Weather.Budget=table.freeze({concurrent=6000,bigConcurrent=500,bolts=4,bombs=6,beams=140,cracks=4,cracksPhone=2,rocksPerCrack=3})
 -- Earthquake v2 (owner 2026-10-15): a WORLD event, not an aura. Ground cracks open at random spots in view (never under the dino),
 -- grow over `grow` s, glow faintly amber, puff dust and kick a few rock chunks, then close. Tremor pulses every `pulseEvery` s
@@ -559552,12 +559556,14 @@ RunService.Heartbeat:Connect(function(dt)
                 -- A second or third rig on the same dino always uses the lite layer count so the combined look stays inside one budget.
                 local function add(kind: string,item: any)
                     if not item or (mode=="off" and kind~="mutation") then return end -- Off drops aura and trail, keeps the event mutation cue
-                    local rigDetail=if #state.rigs&gt;0 then "lite" else detail
+                    -- QA fix (mutation-qa): every player owns a trail (default white), so the mutation was always rig #2 = lite and its
+                    -- mist/ring never showed. The mutation now takes the full slot unless an aura already does; the trail stays lite.
+                    local rigDetail=if #state.rigs&gt;0 and not (kind=="mutation" and auraId=="") then "lite" else detail
                     table.insert(state.rigs,Rig.attach(root,kind,item,{reduce=reduce,detail=rigDetail,device=device}))
                 end
                 add("aura",Rules.item(Config.Auras,auraId))
-                add("trail",Rules.item(Config.Trails,trailId))
                 add("mutation",Look.get(mutationId))
+                add("trail",Rules.item(Config.Trails,trailId))
                 if visual and visual:IsA("Model") then
                     if (visual:GetAttribute("Mutation") or "base")=="base" then Look.apply(visual,mutationId) end -- BD-155: soft body tint, always (also with Reduce Motion)
                     if shiny then state.glints=Shiny.Create(visual,"rbxassetid://70885382548001",reduce) end
@@ -559679,6 +559685,7 @@ local Theme = require(Shared.UITheme)
 local Preview = require(Shared.DinosaurPreview)
 local Sel = require(Shared.FusionSelection)
 local MyDinos = require(Shared.MyDinos)
+local MutationLook = require(Shared.MutationLook)
 local PreviewTraits = require(script.Parent.PreviewTraits)
 local InspectView = require(script.Parent.InspectView)
 local W = require(script.Parent.FusionWidgets)
@@ -559993,7 +560000,12 @@ function Panels.species(ctx)
         local y = 7
         for _, text in MyDinos.ribbons(d, catalog) do
             if y &gt; 45 then break end
-            pill(button, text, if text == "SHINY" then C.gold else C.purple, UDim2.fromOffset(54, 16), UDim2.fromOffset(7, y), if text == "SHINY" then C.outline else C.text)
+            -- QA 2026-10-16: a mutation chip wears its own badge colour (was one purple for all seven), dark text on the soft colour.
+            local badgeColor: Color3? = nil
+            for _, entry in MutationLook.Entries do
+                if string.upper(entry.name) == text then badgeColor = MutationLook.color(entry.badge) end
+            end
+            pill(button, text, if text == "SHINY" then C.gold else (badgeColor or C.purple), UDim2.fromOffset(54, 16), UDim2.fromOffset(7, y), if text == "SHINY" or badgeColor then C.outline else C.text)
             y += 19
         end
         W.label(button, Sel.name(catalog, "patterns", g.patternId, "Plain"), UDim2.new(1, -8, 0, 17), UDim2.fromOffset(4, 82), 14)
@@ -566279,14 +566291,14 @@ local glow=Instance.new("PointLight") glow.Name="WeatherGlow" glow.Range,glow.Br
 -- ---------------------------------------------------------------- sky props: blood moon, aurora curtains, fog-coloured sky box
 local moonCore=Instance.new("Part") moonCore.Name="EventMoon" moonCore.Shape=Enum.PartType.Ball
 moonCore.Anchored,moonCore.CanCollide,moonCore.CanTouch,moonCore.CanQuery,moonCore.CastShadow=true,false,false,false,false
-moonCore.Size,moonCore.Material,moonCore.Color,moonCore.Transparency,moonCore.Parent=Vector3.one*60,Enum.Material.Neon,Color3.fromRGB(255,96,64),1,folder
+moonCore.Size,moonCore.Material,moonCore.Color,moonCore.Transparency,moonCore.Parent=Vector3.one*WL.Moon.core,Enum.Material.Neon,Color3.fromRGB(255,96,64),1,folder
 local halos:{Part}={}
-for i,spec in {{110,.74},{150,.88},{200,.94}} do
-    local halo=moonCore:Clone() halo.Name="EventMoonHalo"..i halo.Size=Vector3.one*spec[1] halo.Transparency=1 halo.Color=Color3.fromRGB(255,70,50) halo.Parent=folder
+for i,size in WL.Moon.halos do
+    local halo=moonCore:Clone() halo.Name="EventMoonHalo"..i halo.Size=Vector3.one*size halo.Transparency=1 halo.Color=Color3.fromRGB(255,70,50) halo.Parent=folder
     table.insert(halos,halo)
 end
 local HALO_ALPHA={.84,.93,.97}
-local MOON_DIR=Vector3.new(-.32,.5,-.8).Unit
+local MOON_DIR=Vector3.new(-.32,.62,-.8).Unit
 
 -- BD-213: no fog-coloured sky box. A box inside FogEnd read as a flat opaque wall and cut the view short; the far view now
 -- dissolves through the classic fog ramp and the Atmosphere haze tints the sky (event sun and moon are hidden below).
@@ -566708,7 +566720,7 @@ end
 -- ---------------------------------------------------------------- title card
 local gui=Instance.new("ScreenGui") gui.Name="WeatherTitle" gui.ResetOnSpawn=false gui.IgnoreGuiInset=true gui.DisplayOrder=40
 gui.Parent=player:WaitForChild("PlayerGui")
-local title=Instance.new("TextLabel") title.Name="Title" title.AnchorPoint=Vector2.new(.5,.5) title.Position=UDim2.fromScale(.5,.26) title.Size=UDim2.fromScale(.7,.12)
+local title=Instance.new("TextLabel") title.Name="Title" title.AnchorPoint=Vector2.new(.5,.5) title.Position=UDim2.fromScale(.5,WL.Title.y) title.Size=UDim2.fromScale(WL.Title.width,WL.Title.height)
 title.BackgroundTransparency=1 title.Font=Enum.Font.FredokaOne title.TextScaled=true title.TextTransparency=1 title.Text="" title.ZIndex=5 title.Parent=gui
 local stroke=Instance.new("UIStroke") stroke.Thickness=5 stroke.Color=Color3.fromRGB(14,20,34) stroke.Transparency=1 stroke.Parent=title
 local titleScale=Instance.new("UIScale") titleScale.Parent=title
@@ -566890,10 +566902,10 @@ RunService.Heartbeat:Connect(function(dt)
     -- blood moon sky props
     local moonOn=live and activeId=="bloodmoon" and k&gt;0
     if moonOn and root then
-        local base=root+MOON_DIR*150
+        local base=root+MOON_DIR*WL.Moon.distance
         moonCore.Position=base moonCore.Transparency=lerpNum(1,.04,k)
         local beat=1+math.sin(now*.7)*.05
-        moonCore.Size=Vector3.one*60*beat
+        moonCore.Size=Vector3.one*WL.Moon.core*beat
         for i,halo in halos do halo.Position=base halo.Transparency=lerpNum(1,HALO_ALPHA[i],k) end
         if now&gt;=nextPulse then nextPulse=now+random:NextNumber(6,11) pulse=1 end
     else
