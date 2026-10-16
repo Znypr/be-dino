@@ -15,6 +15,10 @@ local FoodService = {}
 -- BD-120 owner admin panel: runtime-only food worth multiplier (AdminService validates and clamps it).
 local adminFoodMultiplier = 1
 function FoodService.setAdminFoodMultiplier(value: number) adminFoodMultiplier = value end
+-- BD-237: playtest-only admin multiplier on the per-egg weather mutation chance. Server memory only (never saved),
+-- 1 until AdminService (which authorizes the caller) sets it, back to 1 on every server start.
+local adminMutationMultiplier = 1
+function FoodService.setAdminMutationMultiplier(value: number) adminMutationMultiplier = math.clamp(value, 1, 10) end
 local TYPES = {
     {id = "berry", weight = 70, points = 1, size = 0.7, color = Color3.fromRGB(224, 99, 118)},
     {id = "fruit", weight = 20, points = 4, size = 1.0, color = Color3.fromRGB(244, 186, 83)},
@@ -291,7 +295,7 @@ function FoodService.start(dinosaur,repository)
                     if after>before and weatherId~="clear" then
                         local ok,events=pcall(function() return Http:JSONDecode(c:GetAttribute("RunEggEvents") or "[]") end)
                         if not ok or typeof(events)~="table" then events={} end
-                        RunEggTags.apply(events,weatherId,before,after,function() return eventRandom:NextNumber() end)
+                        RunEggTags.apply(events,weatherId,before,after,function() return eventRandom:NextNumber() end,adminMutationMultiplier)
                         c:SetAttribute("RunEggEvents",Http:JSONEncode(events))
                     end
                     dinosaur.addGrowth(c, candidate.gained * Config.GrowthPerFood)

@@ -9,6 +9,8 @@ local settings: {[string]: Setting} = {
     foodMultiplier = {label = "Food worth", min = 0.5, max = 10, step = 0.5, default = 1},
     growthMultiplier = {label = "Growth speed", min = 0.5, max = 5, step = 0.5, default = 1},
     speedMultiplier = {label = "Run speed", min = 0.5, max = 3, step = 0.25, default = 1},
+    -- BD-237 playtest only: multiplies the per-egg weather mutation chance (the server caps the result at 100%).
+    mutationChanceMultiplier = {label = "Mutation chance", min = 1, max = 10, step = 1, default = 1},
     -- "Feel" tuning (runtime only). Defaults mirror Config so Reset restores the shipped feel.
     gravity = {label = "Gravity", min = 150, max = 400, step = 10, default = 250, group = "feel", unit = ""},
     jumpPower = {label = "Jump power", min = 40, max = 90, step = 2, default = 50, group = "feel", unit = ""},
@@ -17,7 +19,7 @@ local settings: {[string]: Setting} = {
     leapSpeed = {label = "Leap speed", min = 0.5, max = 1.5, step = 0.1, default = 1, group = "feel"},
 }
 Rules.Settings = table.freeze(settings)
-Rules.SettingOrder = table.freeze({"foodMultiplier", "growthMultiplier", "speedMultiplier", "gravity", "jumpPower", "moveResponsiveness", "turnLean", "leapSpeed"})
+Rules.SettingOrder = table.freeze({"foodMultiplier", "growthMultiplier", "speedMultiplier", "mutationChanceMultiplier", "gravity", "jumpPower", "moveResponsiveness", "turnLean", "leapSpeed"})
 Rules.WeatherMinSeconds = 15
 Rules.WeatherMaxSeconds = 1800
 Rules.Actions = table.freeze({"set", "startWeather", "stopWeather", "reset"})

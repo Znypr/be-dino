@@ -7,6 +7,7 @@ Owner request 2026-10-14: an admin panel only for the owner, for private playtes
 - **Sliders** (sent when you let go):
   - Food worth x0.5 to x10. Multiplies the points of every food pickup, so it speeds up both growth and run eggs (eggs still follow 40 per 500 food and the existing per-run caps).
   - Growth speed x0.5 to x5. Stacks on top of potions, weather and mutations (still inside the existing x8 growth clamp).
+  - Mutation chance x1 to x10 (BD-237, playtest only). Multiplies the per-egg weather mutation chance for run eggs caught while the slider is up (rain 2% becomes 20%; capped at 100%). x1 is the shipped chance. It makes the Studio mutation check (docs/141 script B) about 2 minutes. Server memory only: never saved, back to x1 on every server start, and it does not change any odds shown to players or the chance for bonus nests.
   - Run speed x0.5 to x3. Multiplies walk speed during a run; the movement guard reads the same speed, so fast players are not flagged.
 - **Weather**: pick 1 min, 3 min or 10 min, then tap any of the 7 events to start it now for everyone. **Stop weather** clears it; the next random event then comes a full interval later. Forced events give the same loot, growth and event-mutation eggs as natural ones.
 - **Reset sliders** puts all three back to x1.

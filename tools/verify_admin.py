@@ -87,6 +87,51 @@ Clock.force(state, 100, blood, 600)
 Clock.clear(state, 120)
 assert(state.current == nil and state.endsAt == 0 and state.nextAt == 720, "stop clears and delays the next random event")
 assert(Clock.step(state, 720, function() return rain end) and state.current == rain, "random cycle continues")
+-- BD-237 Mutation chance (playtest only): validation, default off, the 100% cap, and no effect without it.
+local spec = Admin.Settings.mutationChanceMultiplier
+assert(spec and spec.default == 1 and spec.min == 1 and spec.max == 10 and spec.step == 1, "default is off (x1)")
+assert(table.find(Admin.SettingOrder, "mutationChanceMultiplier"), "panel lists it next to the other multipliers")
+assert(spec.group == nil, "listed in the Run section, not under Feel")
+assert(Admin.sanitize("mutationChanceMultiplier", 10) == 10 and Admin.sanitize("mutationChanceMultiplier", 5.4) == 5)
+assert(Admin.sanitize("mutationChanceMultiplier", 1e9) == 10, "never above x10")
+assert(Admin.sanitize("mutationChanceMultiplier", 0) == 1 and Admin.sanitize("mutationChanceMultiplier", -5) == 1, "never below x1")
+assert(Admin.sanitize("mutationChanceMultiplier", 0/0) == nil and Admin.sanitize("mutationChanceMultiplier", math.huge) == nil)
+assert(Admin.sanitize("mutationChanceMultiplier", "10") == nil and Admin.sanitize("mutationChanceMultiplier", {}) == nil)
+assert(Admin.format(10, "mutationChanceMultiplier") == "x10")
+-- Chance maths: the shipped chance is untouched unless a valid multiplier is passed; the result is capped at 100%.
+for _, w in Config.Weather do
+ assert(Rules.scaledChance(w.chance, nil) == w.chance, w.id .. " default is the shipped chance")
+ assert(Rules.scaledChance(w.chance, 1) == w.chance)
+ assert(math.abs(Rules.scaledChance(w.chance, 10) - w.chance * 10) < 1e-9 and Rules.scaledChance(w.chance, 10) <= 1, w.id .. " x10")
+ assert(Rules.scaledChance(w.chance, 0.1) == w.chance and Rules.scaledChance(w.chance, -3) == w.chance, "a scale below 1 never lowers the chance")
+ assert(Rules.scaledChance(w.chance, 0/0) == w.chance and Rules.scaledChance(w.chance, "10") == w.chance and Rules.scaledChance(w.chance, {}) == w.chance)
+ assert(Rules.scaledChance(w.chance, math.huge) == 1, "capped at 100%")
+ local roll = w.chance * 10 - 1e-6 -- just under the x10 chance
+ assert(Rules.eventEgg(w.id, roll, 10).mutationId == w.mutation, w.id .. " mutates at x10")
+ assert(Rules.eventEgg(w.id, roll).mutationId == "" and Rules.eventEgg(w.id, roll, 1).mutationId == "", w.id .. " does not mutate without it")
+ assert(Rules.eventEgg(w.id, w.chance * 10 + 1e-6, 10).mutationId == "", w.id .. " x10 is not 100%")
+end
+assert(Rules.scaledChance(0.3, 10) == 1 and Rules.scaledChance(0.1, 10) == 1, "cap at 100%")
+local certain = Rules.eventEgg("rain", 0.999999, 1e9)
+assert(certain.eventId == "rain" and certain.mutationId == "dewdrop", "a huge scale is certain but still capped at 1")
+assert(Rules.eventEgg("rain", 1, 1e9).mutationId == "", "the roll is [0,1): a cap of 100% never exceeds 'always'")
+assert(Rules.eventEgg("clear", 0, 10).mutationId == "" and Rules.eventEgg("clear", 0, 10).eventId == "clear", "clear weather never mutates, even at x10")
+assert(Rules.validEgg(Rules.eventEgg("volcano", 0, 10)), "a boosted egg is still a normal valid egg")
+-- Run-egg tagging: one roll per earned egg; the multiplier changes only the chance, never the count or the tag format.
+local function tagRun(scale)
+ local calls = 0
+ local events, hits = Tags.apply({}, "rain", 0, 20, function() calls += 1 return 0.15 end, scale)
+ return events, hits, calls
+end
+local _, hitsOff, callsOff = tagRun(nil)
+local eventsOn, hitsOn, callsOn = tagRun(10)
+assert(hitsOff == 0 and callsOff == 20, "default (rain 2%): a 0.15 roll misses")
+assert(hitsOn == 20 and callsOn == 20 and #eventsOn == 20, "x10 (rain 20%): a 0.15 roll hits, still one roll per egg")
+assert(eventsOn[1].mutationId == "dewdrop" and eventsOn[1].eventId == "rain" and eventsOn[1].n == 1 and eventsOn[20].n == 20)
+local clearEvents, clearHits, clearCalls = Tags.apply({}, "clear", 0, 20, function() return 0 end, 10)
+assert(#clearEvents == 0 and clearHits == 0 and clearCalls == nil, "clear weather tags nothing at x10")
+local _, noEggHits = Tags.apply({}, "rain", 5, 5, function() return 0 end, 10)
+assert(noEggHits == 0, "a catch that adds no egg rolls nothing at x10")
 print("Admin panel checks passed")
 '''
 
@@ -102,6 +147,20 @@ def static_checks():
         errors.append('AdminService must stay runtime-only (no profile/DataStore access)')
     if 'OnClientInvoke' in service or 'InvokeClient' in service:
         errors.append('AdminService must never invoke clients')
+    # BD-237: the mutation multiplier is applied only from the admin-gated publish(), never read from profiles or remotes of players.
+    if 'FoodService.setAdminMutationMultiplier(value)' not in service:
+        errors.append('AdminService.publish must forward mutationChanceMultiplier to FoodService')
+    food = (ROOT / 'src/server/FoodService.luau').read_text(encoding='utf-8')
+    if 'adminMutationMultiplier = 1' not in food or 'adminMutationMultiplier)' not in food:
+        errors.append('FoodService must default the mutation multiplier to 1 and pass it to RunEggTags.apply')
+    for name in ('src/client/EggsScreen.luau', 'src/client/Bootstrap.client.luau', 'src/client/IndexScreen.luau'):
+        path = ROOT / name
+        if path.exists() and re.search(r'mutationChanceMultiplier|Admin_mutation|scaledChance', path.read_text(encoding='utf-8')):
+            errors.append(name + ' must not use the admin mutation multiplier (odds shown to players stay the shipped ones)')
+    for name in ('src/server/ProfileRepository.luau', 'src/server/PlayerDataService.luau'):
+        path = ROOT / name
+        if path.exists() and re.search(r'mutationChanceMultiplier|adminMutationMultiplier|scaledChance', path.read_text(encoding='utf-8')):
+            errors.append(name + ' must not know the admin mutation multiplier (never saved)')
     boot = (ROOT / 'src/server/Bootstrap.server.luau').read_text(encoding='utf-8')
     if 'AdminService' not in boot:
         errors.append('Bootstrap must start AdminService')
@@ -122,7 +181,16 @@ def static_checks():
 
 
 def script():
-    return ('local Admin=' + module('src/shared/AdminRules.luau') + '\n'
+    return ('local Config=' + module('src/shared/ProgressionConfig.luau') + '\n'
+            + 'local Rules, Tags\n'
+            + 'do\n'
+            + ' local ProgressionConfig, Genetics = Config, {valid = function() return true end}\n'
+            + ' local script = {Parent = {ProgressionConfig = "ProgressionConfig", EggGenetics = "Genetics", ProgressionRules = "Rules"}}\n'
+            + ' local require = function(id) return if id == "Genetics" then Genetics elseif id == "Rules" then Rules else ProgressionConfig end\n'
+            + ' Rules = ' + module('src/shared/ProgressionRules.luau') + '\n'
+            + ' Tags = ' + module('src/shared/RunEggTags.luau') + '\n'
+            + 'end\n'
+            + 'local Admin=' + module('src/shared/AdminRules.luau') + '\n'
             + 'local Clock=' + module('src/shared/WeatherClock.luau',
                                       {'require(script.Parent.ProgressionConfig)': '{WeatherInterval=600,WeatherDuration=180}'})
             + '\n' + BODY)
