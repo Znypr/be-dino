@@ -165,8 +165,8 @@ assert(R.bedVolume(1)==0 or (R.bedVolume(1)<=0.15 and R.bedVolume(0)==0),"ambien
 local so=R.showOffSpot()
 assert(so,"the Heart has a show-off pedestal")
 local hs=L.byId.heart
-assert(dist(so.x,so.z-CZ,hs.x,hs.z)<=hs.r-1,"show-off pedestal stands inside the Heart")
-for _,p in L.props do if p.key=="hub_pedestal" and p.owner=="heart" then assert(p.collider,"the show-off pedestal has a collider to stand on") end end
+assert(dist(so.x,so.z-CZ,hs.x,hs.z)<=hs.r+10,"show-off plinth stands beside the Heart pad")
+local plinth=false for _,lg in L.ledges do if lg.owner=="heart_plinth" then plinth=true assert(lg.h==3.8 and C.insideFloor(lg.x,lg.z+CZ,4),"plinth is rock grown from the floor, inside the cave") end end assert(plinth,"the Heart has a rock show-off plinth (no pedestal prop)")
 local benches,cushions,lamps=0,0,0
 for _,p in L.props do
  if p.owner=="heart" or p.owner=="settings" then

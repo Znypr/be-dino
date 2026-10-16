@@ -232,11 +232,11 @@ local STATION_PROPS: {[string]: {{any}}} = {
     -- wall: CaveLightingRules puts one lantern light per alcove). The Heart keeps its show-off pedestal.
     nests = {{"hub_nest_ledge", 1, "back"}, {"nest", 5, "arc"}, {"hub_sign_stone", 1, "sign"}},
     potions = {{"hub_stall_potion", 1, "back"}, {"potion_model", 4, "arc"}, {"hub_sign_stone", 1, "sign"}},
-    fusion = {{"hub_forge_ring", 1, "centre"}, {"hub_forge_altar", 1, "back"}, {"hub_pedestal", 2, "arc"}, {"hub_sign_stone", 1, "sign"}},
+    fusion = {{"hub_forge_ring", 1, "centre"}, {"hub_forge_altar", 1, "back"}, {"hub_sign_stone", 1, "sign"}},
     style = {{"hub_counter_stone", 1, "back"}, {"hub_crystal_l", 2, "arc"}, {"hub_crystal_s", 5, "arc"}, {"hub_gem_chest", 1, "arc"}, {"hub_sign_stone", 1, "sign"}},
     index = {{"hub_statue_triceratops", 1, "arc"}, {"hub_statue_trex", 1, "arc"}, {"hub_statue_brachiosaurus", 1, "arc"}, {"hub_lectern_book", 1, "back"}, {"hub_sign_stone", 1, "sign"}},
     settings = {{"hub_sign_stone", 1, "sign"}},
-    heart = {{"hub_pedestal", 1, "arc"}},
+    heart = {},
     fame = {{"hub_wall_frame", 3, "arc"}, {"hub_sign_stone", 1, "sign"}},
     gate = {{"rock_mossy_boulder", 2, "arc"}, {"hub_sign_arrow", 2, "arc"}},
 }
@@ -247,7 +247,7 @@ local SCATTER = {
     {"cave_stalagmite_l", 4, "edge"}, {"cave_stalagmite_s", 6}, {"cave_rock_round", 6, "edge"}, {"cave_rock_flat", 3, "edge"},
     {"rock_mossy_boulder", 3, "edge"}, {"rock_crystal", 4, "edge"}, {"rock_pebbles", 6}, {"cave_moss_patch", 10, "edge"},
     {"cave_stalactite", 24}, {"cave_moss_hang", 10},
-    {"cave_stalagmite_cluster", 4, "wall"}, {"cave_wall_boulder_l", 16, "wall"}, {"cave_wall_arch_small", 4, "wall"},
+    {"cave_stalagmite_cluster", 4, "wall"}, {"cave_wall_boulder_l", 16, "wall"},
     {"cave_stalagmite_cluster", 4, "edge"}, {"cave_stalagmite_s", 4, "edge"}, {"cave_moss_patch", 8, "lava"},
 }
 local WALLPIECES = {cave_wall_boulder_l = true, cave_wall_pillar = true, cave_wall_arch_small = true} -- put against the cave wall
@@ -491,6 +491,8 @@ function CaveHubLayout.get(): any
             if ok then ledges[#ledges + 1] = lg end
         end
     end
+    -- the Heart show-off plinth: a square block of rock grown from the floor (replaces the stone pedestal prop), 3.8 studs high
+    ledges[#ledges + 1] = {owner = "heart_plinth", x = 14, z = 15, yaw = 0, w = 7, d = 7, h = 3.8}
     built.ledges = ledges
     built.props = props
     -- scatter (rejection sampling, deterministic)

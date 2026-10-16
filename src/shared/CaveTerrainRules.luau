@@ -139,10 +139,12 @@ local function material(col: any, y: number, air: number): string
     if -air > 10 then return "Rock" end
     -- walls: soft blotches of three stones, no horizontal strata (owner 2026-10-16: no striped brick look). Cobblestone (tile grid) stays rare.
     local v = relief(x * 0.8 + y * 0.45, z * 0.8 - y * 0.45, 13, 12.9)
+    -- BD: Limestone's texture shows fine horizontal lines on tall walls, so it is only blotches; the bulk is Rock and Slate, mixed by 3D noise
     local w = relief(x * 0.6 - y * 0.5, z * 0.6 + y * 0.35, 29, 41.7)
-    if w > 0.8 then return "Cobblestone" end
-    if v < 0.3 then return "Rock" end
-    return "Limestone"
+    if w > 0.86 then return "Cobblestone" end
+    if v < 0.22 then return "Limestone" end
+    if v < 0.6 then return "Rock" end
+    return "Slate"
 end
 
 -- (material name, occupancy 0..1) for a cell given its column constants and the height of its centre.

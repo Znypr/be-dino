@@ -124,9 +124,9 @@ end
 
 -- Show-off spot in WORLD x, z, yaw (the Heart pedestal), or nil when the Heart has no pedestal.
 function Rules.showOffSpot(): any
-    for _, p in Layout.get().props do
-        if p.key == "hub_pedestal" and p.owner == "heart" then
-            return {x = p.x, z = p.z + Layout.CenterZ, yaw = p.yaw, standHeight = Rules.ShowOff.standHeight}
+    for _, lg in Layout.get().ledges do
+        if lg.owner == "heart_plinth" then
+            return {x = lg.x, z = lg.z + Layout.CenterZ, yaw = Layout.yawTo(-lg.x, -lg.z), standHeight = Rules.ShowOff.standHeight}
         end
     end
     return nil
