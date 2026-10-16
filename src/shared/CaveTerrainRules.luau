@@ -31,7 +31,7 @@ Rules.FallRecess = {halfWidth = 20, front = -1, back = 7} -- dz range around Lay
 -- BD-384 look pass: cooler, softer grey-lilac stone (the warm lamps and the cave grade carry the colour) instead of hot orange
 -- cracked sandstone. Only Cobblestone, Limestone and CrackedLava are recoloured (terrain colours are place-wide, and the island uses
 -- Sandstone, Slate, Rock and Basalt), so the walls and floor are built from those two only; the island palette is untouched.
-Rules.Colors = {Cobblestone = {126, 122, 130}, Limestone = {160, 154, 158}, CrackedLava = {255, 120, 40}}
+Rules.Colors = {Cobblestone = {138, 132, 138}, Limestone = {160, 154, 158}, CrackedLava = {255, 120, 40}}
 Rules.Materials = {"Air", "Rock", "Limestone", "Sandstone", "Slate", "Basalt", "Cobblestone", "Grass", "LeafyGrass", "CrackedLava"}
 
 local SCALE = 95 -- studs per norm unit used for the wall signed distance (a conservative mean of the 105.5 / 125 radii)
@@ -127,8 +127,12 @@ local function material(col: any, y: number, air: number): string
     -- walls, ceiling, roof and deep rock
     if -air > 10 then return "Rock" end
     -- BD-384: big slow patches (scale 22, not 8) of two cave-only stones: no smeared grid, no dark smudges, no island Sandstone
-    local v = relief(x + y * 0.7, z - y * 0.4, 22, 12.9)
-    if v > 0.7 then return "Cobblestone" end
+    -- BD-296: rarer and bigger Cobblestone (it carries the fine tile grid and the dark smudges): a low foot band for grounding and a few
+    -- slow rock-coloured bands up the wall, the rest smooth Limestone.
+    local v = relief(x + y * 0.7, z - y * 0.4, 30, 12.9)
+    local band = 0.5 + 0.5 * math.sin(y / 7 + math.noise(x / 40, z / 40, 5.5) * 5)
+    if y < col.floorTop + 5 and v > 0.45 then return "Cobblestone" end
+    if v > 0.82 and band > 0.7 then return "Cobblestone" end
     return "Limestone"
 end
 

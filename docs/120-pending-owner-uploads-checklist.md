@@ -96,3 +96,4 @@ Audio is uploaded by the owner as **Audio** in Asset Manager (never invent ids);
 | Shiny sparkle and BIG thump variants (wire BD-340) | BD-340 | `shiny_bang`, `big_thud` | placeholder, no call site |
 | Crystal and nest-opened cues | BD-342 | alias today | reuses existing |
 | Softer pickups and UI clicks (3 variants each) | BD-081 | `pickup*`, `ui_click` | placeholder, above target |
+| Cave gate rock-frame arch mesh and a wall rock-face relief mesh (BD-296) | BD-296 | `CaveHubLayout` gate frame, `CaveTerrainRules` wall material | stopgap: existing pillar/boulder meshes, Limestone walls |

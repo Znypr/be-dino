@@ -397,6 +397,33 @@ function CaveHubLayout.get(): any
         end
         return true
     end
+    -- BD-296: rock frame for the gate arch: a tall pillar and a boulder on each side of the 30 wide mouth (outside the walk-through
+    -- lane, beside the arch's own pillar colliders), tucked toward the wall. Existing registered meshes only; skipped when they do not fit.
+    do
+        local g = station("gate")
+        local frame = {{"cave_wall_pillar", 19, -3}, {"cave_wall_boulder_l", 24, 4}}
+        for _, f in frame do
+            for _, side in {-1, 1} do
+                local key = f[1]
+                local br = boundRadius(KINDS[key])
+                local x, z = g.x + side * f[2], g.z + f[3]
+                local ok = insideFloorLocal(x, z, br + 1)
+                for _, p in built.paths do
+                    if segDist(x, z, p.ax, p.az, p.bx, p.bz) < p.half + br + 1 then ok = false end
+                end
+                for _, q in placed do
+                    if dist(x, z, q[1], q[2]) < (br + q[3]) * 0.9 then ok = false end
+                end
+                for _, q in props do
+                    if q.group ~= "lights" and dist(x, z, q.x, q.z) < br + 3 then ok = false end
+                end
+                if ok then
+                    placed[#placed + 1] = {x, z, br}
+                    addProp(key, x, z, yawTo(g.x - x, g.z - z), 1, "gate")
+                end
+            end
+        end
+    end
     for _, e in SCATTER do
         local key, count, zone = e[1], e[2], e[3]
         local k = KINDS[key]
