@@ -128,22 +128,22 @@ local function shells(container: Instance, entry: any?)
     for _, p in container:GetDescendants() do
         local texId = if p:IsA("MeshPart") then p:GetAttribute("LPTexture") else nil
         if p:IsA("MeshPart") and type(texId) == "string" and texId ~= "" and not Tier.isAccentName(p.Name) then
-            local sh = p:Clone()
-            for _, ch in sh:GetChildren() do ch:Destroy() end
-            sh.Name = "LPTierShell"
-            sh.TextureID = ""
-            sh:SetAttribute("LPTexture", nil) sh:SetAttribute("LPRole", nil)
-            sh.Size = p.Size * Tier.ShellScale
-            sh.Color = Color3.fromRGB(entry.shell[1], entry.shell[2], entry.shell[3])
-            sh.Material = (Enum.Material :: any)[entry.shellMaterial] or Enum.Material.SmoothPlastic
-            sh.Reflectance = math.min(entry.shellReflectance, Tier.MaxReflectance)
-            sh.Transparency = math.clamp(entry.shellTransparency, Tier.ShellTransparency[1], Tier.ShellTransparency[2])
-            sh.CanCollide, sh.CanQuery, sh.CanTouch, sh.Massless, sh.CastShadow = false, false, false, true, false
-            sh.CFrame = p.CFrame
+            local shell = p:Clone()
+            for _, ch in shell:GetChildren() do ch:Destroy() end
+            shell.Name = "LPTierShell"
+            shell.TextureID = ""
+            shell:SetAttribute("LPTexture", nil) shell:SetAttribute("LPRole", nil)
+            shell.Size = p.Size * Tier.ShellScale
+            shell.Color = Color3.fromRGB(entry.shell[1], entry.shell[2], entry.shell[3])
+            shell.Material = (Enum.Material :: any)[entry.shellMaterial] or Enum.Material.SmoothPlastic
+            shell.Reflectance = math.min(entry.shellReflectance, Tier.MaxReflectance)
+            shell.Transparency = math.clamp(entry.shellTransparency, Tier.ShellTransparency[1], Tier.ShellTransparency[2])
+            shell.CanCollide, shell.CanQuery, shell.CanTouch, shell.Massless, shell.CastShadow = false, false, false, true, false
+            shell.CFrame = p.CFrame
             local w = Instance.new("WeldConstraint")
-            w.Part0, w.Part1 = p, sh
-            w.Parent = sh
-            sh.Parent = p
+            w.Part0, w.Part1 = p, shell
+            w.Parent = shell
+            shell.Parent = p
         end
     end
 end

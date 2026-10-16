@@ -37,20 +37,20 @@ end
 Tier.AccentWords = {"claw", "toe", "horn", "spike", "tooth", "teeth", "nail"}
 Tier.MaxReflectance = 0.3
 Tier.ShellScale = 1.015        -- the shell is the body mesh inflated by this much (one extra MeshPart per textured part, same mesh)
-Tier.ShellTransparency = {0.6, 0.75} -- allowed Transparency range of the glossy layer (the dino's own colours stay readable under it)
+Tier.ShellTransparency = {0.45, 0.75} -- allowed Transparency range of the glossy layer (the dino's own colours stay readable under it)
 Tier.MaxSheen = 0.7
 Tier.Entries = {
     -- 2026-10-16 owner decision "Shiny + sparkles" (docs/115): tiers must read Base < Gold < Emerald < Diamond at a glance, in daylight AND the dim cave.
     -- Gold = rich warm gold, Emerald = deep jewel green, Diamond = icy white-blue with a rainbow shimmer. Gloss, sheen, sparkle rate and sparkle size all grow per tier.
     gold = {id = "gold", name = "Gold", tint = {255, 190, 30}, amount = 0.55, trimAmount = 0.8, material = "Metal", reflectance = 0.18,
         sparkle = {255, 232, 140}, sparkleRate = 2.5, sparkleCount = 4, sparkleSize = 1.4, accent = {255, 200, 30}, accentAmount = 0.9, sheen = 0.5, gain = 1.1, satGain = 1.2,
-        shell = {255, 196, 40}, shellTransparency = 0.7, shellMaterial = "SmoothPlastic", shellReflectance = 0.25},
+        shell = {255, 168, 12}, shellTransparency = 0.5, shellMaterial = "Metal", shellReflectance = 0.3},
     emerald = {id = "emerald", name = "Emerald", tint = {16, 190, 96}, amount = 0.45, trimAmount = 0.8, material = "Glass", reflectance = 0.23,
         sparkle = {150, 255, 195}, sparkleRate = 4.2, sparkleCount = 6, sparkleSize = 1.65, accent = {10, 235, 120}, accentAmount = 0.9, sheen = 0.6, gain = 0.97, satGain = 1.25,
         shell = {20, 200, 110}, shellTransparency = 0.68, shellMaterial = "Glass", shellReflectance = 0.3},
     diamond = {id = "diamond", name = "Diamond", tint = {205, 240, 255}, amount = 0.6, trimAmount = 0.8, material = "Glass", reflectance = 0.3,
         sparkle = {235, 250, 255}, sparkleRate = 5, sparkleCount = 8, sparkleSize = 1.9, accent = {225, 245, 255}, accentAmount = 0.92, sheen = 0.7, gain = 1.14, satGain = 0.9,
-        shell = {215, 238, 255}, shellTransparency = 0.64, shellMaterial = "Glass", shellReflectance = 0.3,
+        shell = {205, 232, 255}, shellTransparency = 0.5, shellMaterial = "Glass", shellReflectance = 0.3,
         shimmer = {{255, 170, 215}, {170, 220, 255}, {190, 255, 215}, {255, 245, 170}}, shimmerSpeed = 0.5},
 }
 -- BD-308 baked sheen: the generated textures carry flat facet shading (k = pixel luma / species body luma, 0.3..1.6). On a fused
@@ -137,13 +137,13 @@ end
 -- crest / spikes / claw tips, add them here, and make sure tools/verify_lowpoly_patterns.py lists the species. Keep boxes small
 -- (about 5..25% of the head, a few percent of a leg): the body colour must stay the dino's own.
 Tier.AccentRegions = { -- 2026-10-16 FINAL owner rule: ONLY horns and claws / toes (no frill, nose, feet, plates, club, crest); everything else keeps the dino's own colours
-    compy = {{0, 0.16, -0.46, -0.38, -0.12, 0.14}, {0, 0.16, -0.18, -0.10, -0.30, -0.15}}, -- toe claws, hand claws
-    raptor = {{0, 0.25, -0.45, -0.37, -0.15, 0.08}, {0, 0.18, -0.13, -0.05, -0.31, -0.15}}, -- toe claws, hand claws
-    triceratops = {{0.12, 0.34, 0.18, 0.47, -0.45, -0.12}, {0, 0.08, -0.06, 0.22, -0.50, -0.38}}, -- brow horns, nose horn
-    tyrannosaurus = {{0, 0.26, -0.48, -0.40, -0.18, 0.12}, {0, 0.22, -0.15, -0.08, -0.31, -0.12}}, -- toe claws, hand claws
-    stegosaurus = {{0, 0.12, -0.10, 0.04, 0.28, 0.45}}, -- tail spikes
+    compy = {{0.07, 0.24, -0.44, -0.36, -0.10, -0.02}, {0.09, 0.17, -0.17, -0.10, -0.29, -0.23}}, -- toe claws, hand claws (round 6: front of foot / hand, measured from leg+arm vertices)
+    raptor = {{0.08, 0.23, -0.44, -0.36, -0.15, -0.07}, {0.09, 0.19, -0.12, -0.05, -0.29, -0.23}}, -- toe claws, hand claws
+    triceratops = {{0.06, 0.18, 0.16, 0.37, -0.41, -0.20}, {0, 0.05, 0.11, 0.22, -0.34, -0.19}}, -- brow horns (measured from head_geom vertices: |x| .07-.17, tips at z -.39 y .35), nose horn bump only
+    tyrannosaurus = {{0.07, 0.26, -0.47, -0.39, -0.17, -0.08}, {0.12, 0.23, -0.15, -0.08, -0.31, -0.24}}, -- toe claws, hand claws
+    stegosaurus = {{0, 0.04, -0.06, 0.04, 0.28, 0.45}}, -- tail spikes (the small tail_geom)
     ankylosaurus = {{0.19, 0.30, -0.12, 0.10, -0.32, 0.45}, {0.20, 0.30, -0.15, 0.30, -0.50, -0.14}}, -- side spikes, head horns
-    pteranodon = {{0, 0.18, -0.34, -0.26, -0.06, 0.12}}, -- talons
+    pteranodon = {{0.04, 0.17, -0.34, -0.26, -0.05, 0.03}}, -- talons
 }
 -- Pure: is the model-space point (x, y, z) inside one of this species' accent boxes?
 function Tier.inAccentRegion(species: string?, x: number, y: number, z: number): boolean
