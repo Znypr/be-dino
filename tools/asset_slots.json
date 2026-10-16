@@ -89,6 +89,15 @@
    "pending": "BD-186 mutation glow variants"
   },
   {
+   "name": "glowPlateRound",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "glowPlateRound",
+   "group": "Requested.glowPlateRound",
+   "pending": "BD-186 mutation glow variants"
+  },
+  {
    "name": "ringSeismic",
    "kind": "image",
    "target": "effect",
