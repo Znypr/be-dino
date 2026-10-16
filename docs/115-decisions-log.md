@@ -71,3 +71,4 @@ Extracted from the kanban owner log, AGENTS.md, docs and the lead sessions. "LEA
 - OWNER: cave hub mood is a cosy home base: warm, safe, lamp-lit den to relax, shop and show off dinos.
 - OWNER: players can play as ANY dino they own, each with its own class feel (BD-423).
 - OWNER: a rare hatch (Legendary, Shiny, event mutation) gets a huge celebration: screen-wide fanfare, confetti, special sound, server announcement (BD-424).
+- OWNER 2026-10-16: eating another player gives a SMALL capped egg bonus: 0.25 run egg per player kill (fractional carry), at most 3 per run (PROVISIONAL `PredationEggPerKill`, `PredationEggMaxPerRun`); kill growth unchanged, NPC kills unchanged, 60 s repeat-victim cooldown stays (BD-439, option B in docs/131). Same change: the rare-hatch announcement cooldown is now UserId-keyed so a rejoin does not reset it.

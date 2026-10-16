@@ -79,6 +79,8 @@ def scan():
     assert 'DisplayName' in svc, 'announcements carry display names only'
     assert 'FireAllClients' not in svc, 'announcements go through the rate limiter, one per window'
     assert 'Rare.offer' in svc and 'Rare.flush' in svc
+    assert 'CooldownMemory' in svc and 'announced.mark(' in svc and 'announced.last(' in svc, 'BD-439: UserId-keyed announcement cooldown'
+    assert 'quietUntil' not in svc, 'the cooldown must not live in the per-leave state'
     for needle in ['s.calm', 's.effects', 'Rare.plan', 'shiny_bang']:
         assert needle in cli, 'client must honour Effects / Reduce Motion and play the special sound: ' + needle
     for p in ['src/shared/RareHatch.luau', 'src/server/RareHatchService.luau', 'src/client/RareHatchClient.client.luau']:

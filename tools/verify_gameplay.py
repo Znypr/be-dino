@@ -189,9 +189,25 @@ print("Growth pace passed: GrowthPerFood 0.1 (500 food -> 50 growth, was 250; BD
 assert(Config.SpecialFoodsEnabled==false and not SpecialFoods.rolls(0) and Config.FoodCatchRate==12/500,"special foods off")
 assert(SpecialFoods.points()==Config.SpecialFoodPoints and Config.SpecialFoodChance>0 and Config.SpecialFoodChance<=0.05,"special food provisional numbers")
 print("Special foods passed: flag false by default, no roll while off, PROVISIONAL points explicit, FoodCatchRate untouched")
+-- BD-439 (owner 2026-10-16): a player kill = 0.25 run egg with carry, at most 3 per run.
+assert(Config.PredationEggPerKill==0.25 and Config.PredationEggMaxPerRun==3,"kill egg config")
+do
+ local fromKills,carry,eggs=0,0,0
+ local seq={}
+ for k=1,4 do local w,c,t=FoodCatchRules.awardKill(fromKills,carry) carry,fromKills=c,t eggs+=w seq[k]=w end
+ assert(eggs==1 and seq[4]==1 and seq[1]==0 and seq[3]==0,"four kills carry into exactly one egg")
+ fromKills,carry,eggs=0,0,0
+ for _=1,100 do local w,c,t=FoodCatchRules.awardKill(fromKills,carry) carry,fromKills=c,t eggs+=w end
+ assert(eggs==3 and fromKills==3 and carry==0,"100 kills still stop at 3 bonus eggs")
+ local w,c,t=FoodCatchRules.awardKill(3,0.75) assert(w==0 and c==0 and t==3,"at the cap nothing is paid or carried")
+ local w2,c2,t2=FoodCatchRules.awardKill(2,0.75) assert(w2==1 and c2==0 and t2==3,"the last egg lands exactly on the cap")
+end
+print("Predation egg bonus passed: 0.25 per player kill with carry, capped at 3 per run")
 '''
 if __name__=='__main__':
  src=(ROOT/'src/server/FoodService.luau').read_text(encoding='utf-8')
+ psrc=(ROOT/'src/server/PredationService.luau').read_text(encoding='utf-8')
+ assert 'FoodCatchRules.awardKill(' in psrc and 'Config.PredationGrowthPoints' in psrc, 'kill egg bonus, growth unchanged'
  assert 'dinosaur.addGrowth(c, candidate.gained * Config.GrowthPerFood)' in src and 'FoodCatchRules.award(candidate.gained,' in src, 'growth halved but catches use raw food'
  p=argparse.ArgumentParser();p.add_argument('--runner',required=True);args=p.parse_args()
  with tempfile.TemporaryDirectory() as temp:
