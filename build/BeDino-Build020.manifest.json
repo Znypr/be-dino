@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "e64c9ceb3bbfd73b88481b79cc0929f970b74f995c0d1518ddc6a3988bb0afe6",
+  "place_sha256": "23b3ab6fcf2f2124e88d82deb10d10848e8f3d3a61d76f8c906d7d04b1e77838",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -322,8 +322,8 @@
     "src/client/EggPicture.luau": "66ff407ca10ea1297356217e40eb01e70370096eb48ec4d5635381ac627a7657",
     "src/client/EggsScreen.luau": "de3a8a6b90c8eb81ec18b4009f8d3f6c70d286fad0c6245ac9073bdc77dcfa87",
     "src/client/FoodGlow.client.luau": "192e340c747a1ee97f34063f318c419a1107c2cd71cb1dc6e5000334ac83690e",
-    "src/client/FusionMenu.luau": "d0f6fa92c2a7f7f66998e15586bff4e2220304e4eb3b9cb70486ecccd06b7e29",
-    "src/client/FusionWidgets.luau": "2bc28f3442516b687982b07962034205365df220f6c72b43ae42440424360f66",
+    "src/client/FusionMenu.luau": "198055c6f7d533fc4a3086ecc964822cd1ea673450462788ee56e8de6b747e98",
+    "src/client/FusionWidgets.luau": "1030d116d69f363db2d9de1f017b136e9304384fc305cbac9528a756e90f6563",
     "src/client/FxRig.luau": "7d5611ab246b36032d5ee3fb3bfb97321d04a2808495f1c06aa5f5577ad37aed",
     "src/client/HatchFx.luau": "589090489ea188b7a0c330c8b865f239c970c106daaeb702b01d214e38fc24f9",
     "src/client/HatchSequence.luau": "23a61b6d5da96f223b4e9b4bfd9323848307ce95b44db202e1111e32d791c26e",
