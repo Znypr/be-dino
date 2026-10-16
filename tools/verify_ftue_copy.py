@@ -22,6 +22,10 @@ assert(Copy.homeConfirmTotals(12, 900) == "You found 12 eggs  \u{2022}  Growth 9
 for _, line in { Copy.homeConfirmLine, Copy.runCompleteEggsLabel, Copy.homeConfirmTotals(2, 1) } do
     assert(not line:lower():find("catch") and not line:lower():find("bank"), line)
 end
+for _, line in { Copy.sanctuaryTip1, Copy.sanctuaryTip2 } do
+    assert(#line <= 70, line)
+    for _, word in { "catch", "bank", "cluster", "sanctuary" } do assert(not line:lower():find(word), word .. " in " .. line) end
+end
 print("BD-370 first-time-player copy verified")
 '''
 
@@ -35,7 +39,7 @@ def check_wiring():
     boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8')
     for needle in ('FtueCopy).tutorialSteps', 'FtueCopy).homeConfirmLine', 'FtueCopy).homeConfirmTotals', 'FtueCopy).runCompleteEggsLabel'):
         assert needle in boot, 'Bootstrap does not use ' + needle
-    for old in ('Banking %d catches', 'will be banked', '"Catches  "', 'BANK & HATCH'):
+    for old in ('Banking %d catches', 'will be banked', '"Catches  "', 'BANK & HATCH', 'Eat small food clusters', 'Bank catches and reward'):
         assert old not in boot, 'old jargon is back: ' + old
 
 
