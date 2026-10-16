@@ -1021,11 +1021,14 @@ render=function(name: string)
         end)
         label(body,"Run total: +"..num("LastRunCrystals").." Crystals • already banked",70,353,684,40,22)
     elseif name=="results" then
-        heading.Text,header.BackgroundColor3="Run Complete!",C.gold
-        art(body,"trophy",24,42,240)
-        label(body,"Growth  "..math.floor(num("LastRunGrowthScore")),300,18,500,60,34,C.accent)
-        label(body,"Catches  "..num("LastRunCatchScore"),300,93,500,60,34,C.blue)
-        label(body,str("LastRewardText","Saving rewards..."),290,168,510,100,24,C.gold)
+        -- BD-315: a defeat is a gentle first section of THIS modal (a toast was covered by it); eggs, crystals and nests stay banked.
+        local oops=if str("LastRunEndReason")=="Defeated" then 26 else 0
+        heading.Text,header.BackgroundColor3=if oops>0 then "Oops! Good try!" else "Run Complete!",if oops>0 then C.blue else C.gold
+        if oops>0 then label(body,"Your eggs are safe!",30,0,760,30,24,C.blue) end
+        art(body,"trophy",24,42+oops,240)
+        label(body,"Growth  "..math.floor(num("LastRunGrowthScore")),300,18+oops,500,60,34,C.accent)
+        label(body,"Catches  "..num("LastRunCatchScore"),300,93+oops,500,60,34,C.blue)
+        label(body,str("LastRewardText","Saving rewards..."),290,168+oops,510,100,24,C.gold)
         label(body,"+"..num("LastRunCrystals").." Crystals • Level "..num("AccountLevel"),30,302,760,40,21)
         local hasEggs=str("NextChestId")~="" or num("QueuedEggsWaiting")>0 or #decoded("NestsJson","[]")>0
         button(body,"BACK TO SANCTUARY",if hasEggs then 30 else 212,348,if hasEggs then 370 else 400,48,C.accent,function() open("home") end)
