@@ -142,7 +142,8 @@ local function material(col: any, y: number, air: number): string
         return "Cobblestone"
     end
     -- walls, ceiling, roof and deep rock
-    if -air > 10 then return "Rock" end -- more than 10 studs inside the rock: never visible
+    -- BD-296 (lead Studio check 2026-10-16): deep fill is the wall stone too. "Rock" deep fill still surfaced as dark teal
+    -- blotches where the shell is thin (Heart far wall, arches), so the cave writes no Rock at all.
     -- BD-296: one matte stone over the whole visible shell. Earlier passes mixed Limestone (horizontal strata stripes), Rock (dark smudge
     -- patches) and Cobblestone (tile grid); the lead's Studio view (docs/evidence/2026-10-16-cave-organic 6, 7) showed all three read badly.
     return Rules.WallStone

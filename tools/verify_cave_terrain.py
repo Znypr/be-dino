@@ -271,7 +271,8 @@ assert(oF>0 and mF=="CrackedLava","lava vein behind the falls "..mF)
 
 -- ---- stations: pad material is laid stone; the mix has stone, rock, slate, cobblestone and only a little moss
 local function pct(m) return (counts[m] or 0)/solid end
-for _,m in {"Rock","Concrete","Slate","Cobblestone","Basalt","Grass","LeafyGrass","CrackedLava"} do assert((counts[m] or 0)>0,"material used: "..m) end
+for _,m in {"Concrete","Slate","Cobblestone","Basalt","Grass","LeafyGrass","CrackedLava"} do assert((counts[m] or 0)>0,"material used: "..m) end
+assert((counts.Rock or 0)==0,"BD-296: no Rock anywhere in the cave (deep fill surfaced as dark blotches)")
 local floorMix={}
 local floorCols=0
 for i=0,nx-1 do for k=0,nz-1 do
