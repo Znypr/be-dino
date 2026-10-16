@@ -301,7 +301,8 @@ fusion/identity bug that mutates profiles.
 
    Editing single keys in the Data Stores Manager is a last resort for a single tester
    and must be noted.
-5. **Rollback drill (BD-020 acceptance)**: before inviting testers, publish r1, then
+5. **Offline compatibility evidence and the owner steps for a real rollback:** [docs/111](111-rollback-drill.md) (`tools/verify_rollback.py`).
+6. **Rollback drill (BD-020 acceptance)**: before inviting testers, publish r1, then
    republish r0 (or restore the previous version), confirm the version label changed,
    and roll forward again. Record both version numbers.
 
