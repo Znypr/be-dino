@@ -25,7 +25,8 @@ Sfx.Sounds = {
     pickup_hi = {id = "rbxassetid://86225160041514", volume = .35, rate = 1, gap = .06},
     pickup_lo = {id = "rbxassetid://80767583749596", volume = .35, rate = 1, gap = .06},
     run_start = {id = "rbxassetid://87202810278231", volume = .25, rate = 1, gap = .5},
-    run_end = {id = "rbxassetid://127962506254484", volume = .3, rate = .92, gap = .5},
+    -- BD-166: run end reuses the short soft run_start chime, lower and slightly slower; the sharp 1.1 s 3-note run_end sound is retired from play.
+    run_end = {id = "rbxassetid://87202810278231", volume = .2, rate = .9, gap = .5},
     shop_buy = {id = "rbxassetid://102585210519734", volume = .35, rate = 1, gap = .15},
     shop_refresh = {id = "rbxassetid://91960074825710", volume = .45, rate = 1, gap = .5},
     weather_start = {id = "rbxassetid://120619985059497", volume = .2, rate = 1, gap = 1},
