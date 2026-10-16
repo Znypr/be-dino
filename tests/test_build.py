@@ -58,8 +58,10 @@ class BuildTests(unittest.TestCase):
             self.assertEqual(variant.attrib["class"], "MaterialVariant")
             for key in ("ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap"):
                 self.assertRegex(variant.find(f"Properties/Content[@name='{key}']/url").text, r"^rbxassetid://[0-9]+$")
-        for base in ("Grass", "Rock", "Wood"):
-            self.assertEqual(service.find(f"Properties/string[@name='{base}Name']").text, "BeDino_" + {"Grass":"Meadow", "Rock":"Stone", "Wood":"Bark"}[base])
+        # BD-460 (docs/138): the BeDino_Meadow variant stays packaged with all its IDs but is NOT bound: the island uses the built-in Grass.
+        self.assertIsNone(service.find("Properties/string[@name='GrassName']"))
+        for base in ("Rock", "Wood"):
+            self.assertEqual(service.find(f"Properties/string[@name='{base}Name']").text, "BeDino_" + {"Rock":"Stone", "Wood":"Bark"}[base])
 
     def test_visual_bindings_match_verified_manifest(self):
         spec = importlib.util.spec_from_file_location("visual_bindings", ROOT / "tools/bind_visual_assets.py")
@@ -67,6 +69,18 @@ class BuildTests(unittest.TestCase):
         spec.loader.exec_module(bindings)
         for path, content in bindings.outputs().items():
             self.assertEqual(path.read_text(encoding="utf-8"), content)
+
+    def test_lighting_technology_is_explicit_and_not_compatibility(self):
+        # Unset/Compatibility makes Studio show the "Lighting Technology Migration" dialog on every open.
+        root = ET.fromstring(packager.build()[0])
+        lights = [n for n in root.iter("Item") if n.attrib["class"] == "Lighting"]
+        self.assertEqual(len(lights), 1)
+        tech = lights[0].find("Properties/token[@name='Technology']")
+        self.assertIsNotNone(tech, "Lighting.Technology must be written explicitly")
+        self.assertNotIn(tech.text, ("0", "Compatibility", "Legacy"))
+        self.assertEqual(tech.text, "1", "Voxel")
+        for path in ROOT.glob("src/**/*.luau"):
+            self.assertNotRegex(path.read_text(encoding="utf-8"), r"Technology\s*=\s*Enum\.Technology\.(Compatibility|Legacy)", str(path))
 
     def test_unsupported_property_fails(self):
         with tempfile.TemporaryDirectory() as temp:

@@ -48,7 +48,8 @@ def outputs():
     props = ET.SubElement(service, "Properties")
     ET.SubElement(props, "string", {"name": "Name"}).text = "MaterialService"
     for m in materials:
-        ET.SubElement(props, "string", {"name": m["base"] + "Name"}).text = m["name"] if m["color"] else m["base"]
+        if m.get("bound", True):  # BD-460: bound false keeps the variant in MaterialService but leaves the base-material override unset (built-in look)
+            ET.SubElement(props, "string", {"name": m["base"] + "Name"}).text = m["name"] if m["color"] else m["base"]
         if not m["color"]:
             continue
         node = ET.SubElement(service, "Item", {"class": "MaterialVariant", "referent": m["name"]})
@@ -58,8 +59,10 @@ def outputs():
         ET.SubElement(p, "token", {"name": "MaterialPattern"}).text = "1"
         ET.SubElement(p, "float", {"name": "StudsPerTile"}).text = str(m["tile"])
         for field, key in (("ColorMap", "color"), ("NormalMap", "normal"), ("RoughnessMap", "roughness"), ("MetalnessMap", "metal")):
+            if not m[key]:
+                continue  # an empty map is simply not written (the property stays unset, the base material's own value is used)
             content = ET.SubElement(p, "Content", {"name": field})
-            ET.SubElement(content, "url").text = "rbxassetid://" + m[key] if m[key] else ""
+            ET.SubElement(content, "url").text = "rbxassetid://" + m[key]
     ET.indent(root, space="  ")
     return {ROOT / "src/shared/ResourceMeshAssets.luau": model_luau,
             ROOT / "src/shared/GeneTextureAssets.luau": genetic_luau,

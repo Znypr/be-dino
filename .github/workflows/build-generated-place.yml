@@ -25,8 +25,16 @@ jobs:
         run: python -m pip install Pillow numpy
       - name: Verify doc numbers and BD ids are unique
         run: python tools/verify_doc_ids.py
-      - name: Verify kanban board summary counts are current
-        run: python tools/board_summary.py --check
+      - name: Check kanban board summary counts (warning only)
+        # Never blocks: parallel PRs make counts stale. The board-summary-refresh
+        # workflow regenerates them on main after merge.
+        run: |
+          if ! python tools/board_summary.py --check; then
+            python tools/board_summary.py
+            git diff -- docs/07-kanban.md || true
+            git checkout -- docs/07-kanban.md
+            echo "::warning::Board summary counts are stale; main will refresh them automatically after merge. No action needed."
+          fi
       - name: Verify image bindings
         run: python tools/bind_artwork.py --check
       - name: Install pinned Luau tools
@@ -83,6 +91,7 @@ jobs:
           python tools/verify_potion_shop.py --runner /tmp/luau/luau
           python tools/verify_ui_format.py --runner /tmp/luau/luau
           python tools/verify_weather.py --runner /tmp/luau/luau
+          python tools/verify_env_polish.py --runner /tmp/luau/luau
           python tools/verify_eggs.py --runner /tmp/luau/luau
           python tools/verify_rewards.py --runner /tmp/luau/luau
           python tools/verify_rollback.py --runner /tmp/luau/luau
