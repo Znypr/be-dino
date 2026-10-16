@@ -15,10 +15,12 @@ It exits non-zero when any moment exceeds a budget, so a new effect that pushes 
 |---|---:|---:|---:|---|
 | live3d | 3300 | 5600 | 7600 | particles alive at once, all emitters |
 | big | 120 | 220 | 520 | alive sprites with peak size >= 6 studs (overdraw) |
-| beams | 48 | 72 | 160 | enabled Beams |
+| beams | 24 | 72 | 160 | enabled Beams |
 | trails | 14 | 20 | 40 | enabled Trails |
-| lights | 24 | 24 | 24 | enabled lights (2 per dino: aura glow + mutation glow) |
+| lights | 16 | 24 | 24 | enabled lights (2 per dino: aura glow + mutation glow) |
 | ui | 130 | 160 | 220 | visible UI FX frames (hatch + mutation panel) |
+
+**Phone beams and lights are read from [tools/qa/phone_budgets.json](../tools/qa/phone_budgets.json), the single source of truth shared with the BD-085 QA kit (docs/127, PR #257); the stricter value was chosen (beams 24, lights 16), with a one-line rationale per metric in the file. All PROVISIONAL until measured.** Today's phone worst case (39 beams, 24 lights) is therefore over these two budgets: a finding, not a build failure.
 
 The first numbers are set just above today's worst case (a ratchet): they stop growth, they do not claim today's rig is comfortable. Today: phone worst moment is about 2700 live3d (blizzard dominates, 2/3 of it weather), 39 beams, 13 trails, 24 lights, 108 UI frames. OWNER QUESTION / open risk: 24 `PointLight`s on a low-end phone (no shadows, range 6-10) is unmeasured; if the probe shows a frame-time cliff, lower the lights budget and drop the lite glow light first.
 

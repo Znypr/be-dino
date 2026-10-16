@@ -28,7 +28,7 @@ function GoalHud.build(ctx: any): (Frame, UIScale, TextLabel, UITextSizeConstrai
             maxLevel=ProgressionConfig.AccountMaxLevel,stages=FusionSelection.Stages,
             speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName})
         GoalsPanel.setDinos(goalDinos) -- BD-427: hub Goals panel reuses this list and the Index counts
-        GoalsPanel.setSpecies(GoalsRules.indexCounts(ctx.decoded("CollectionJson","{}"),Config.SpeciesOrder,function(id) return ctx.eventMutation(id)~=nil or ctx.ownedTraits(id)~=nil end,goalDinos,{colours=#ProgressionConfig.EggColors,patterns=#EggGenetics.Patterns,mutations=#ProgressionConfig.EventMutations}))
+        GoalsPanel.setSpecies(GoalsRules.indexCounts(ctx.decoded("CollectionJson","{}"),Config.SpeciesOrder,function(id) return ctx.eventMutation(id)~=nil or ctx.ownedTraits(id)~=nil end,goalDinos,{colours=#ProgressionConfig.EggColors,patterns=#EggGenetics.Patterns,mutations=#ProgressionConfig.EventMutations},ctx.decoded("DiscoveryJson","")))
         goalText.Text,goalText.TextColor3=(if ctx.touchMode() or PhoneScale.isCompact(gui.AbsoluteSize.Y) then "" else "Goal  ")..goal.text,if goal.ready then C.accent else C.gold
     end
     local goalQueued=false
@@ -52,7 +52,7 @@ function GoalHud.build(ctx: any): (Frame, UIScale, TextLabel, UITextSizeConstrai
             refreshGoal()
         end)
     end
-    for _,attribute in {"CollectionJson","AccountLevel","AccountXP"} do
+    for _,attribute in {"CollectionJson","AccountLevel","AccountXP","DiscoveryJson"} do
         PrivateState.onChanged(attribute, function() refreshGoal() if attribute=="CollectionJson" then loadGoalDinos() end end)
     end
     GoalsPanel.attach(gui,goalHUD,{stages=FusionSelection.Stages,speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName}) -- BD-427

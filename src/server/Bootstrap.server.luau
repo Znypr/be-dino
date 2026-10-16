@@ -175,7 +175,7 @@ local PredationService = require(script.Parent.PredationService)
 PredationService.start(RunLifecycle, Dinosaur)
 -- BD-243/244 HP combat returns nil at once while Config.CombatEnabled is false; BD-245 wild predators then also do nothing.
 require(script.Parent.NpcPredatorService).start(require(script.Parent.CombatService).start(RunLifecycle, Dinosaur))
-require(script.Parent.ClassMovementService).start() -- BD-246: returns at once while CombatEnabled is false
+require(script.Parent.ClassMovementService).start() -- BD-246: returns at once while ClassMovementEnabled is false
 require(script.Parent.AdminService).start() -- BD-120 owner-only admin panel (docs/79)
 
 print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")

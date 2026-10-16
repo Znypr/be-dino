@@ -57,20 +57,30 @@ function Copy.conditionGroup(level: number)
     local percents = ShopOdds.conditionPercents(level)
     local names = {}
     for _, row in Progression.Conditions do table.insert(names, row.name) end
-    return group("Egg condition", names, percents, Progression.SafeEggsLine)
+    return group("Is the egg Cracked?", names, percents, Progression.SafeEggsLine)
 end
 
--- Cracked eggs can fail; everything else always hatches.
+-- Two different numbers, never mixed up: "chance an egg IS Cracked" is the Cracked weight in the Egg condition group;
+-- "chance a Cracked egg HATCHES" is Conditions[cracked].hatchChance (a separate 20%). Both come from ProgressionConfig.
+local function crackedHatchChance(): number
+    for _, c in Progression.Conditions do if c.id == "cracked" then return c.hatchChance end end
+    return 1
+end
+
 function Copy.hatchGroup(level: number)
-    local failed = Outcomes.failure(level)
-    return group("Does it hatch?", {"Hatches a dino", "Cracked: no dino"}, {1 - failed, failed},
-        "A cracked egg gives no dino and no crystals back.")
+    local ok = crackedHatchChance()
+    return group("Does a Cracked egg hatch?", {"Cracked egg hatches", "Cracked egg stays shut"}, {ok, 1 - ok},
+        "Only Cracked eggs can stay shut. A shut egg gives no dino and no crystals back.")
 end
 
--- BD-301: ONE sentence for the Buy Egg confirm, built from the same numbers as the "Does it hatch?" group above.
+-- All eggs together: how many of every 100 eggs give a dino (derived from the two numbers above).
+function Copy.overallHatchPercent(level: number): number
+    return Copy.round({1 - Outcomes.failure(level), Outcomes.failure(level)}, 2)[1]
+end
+
+-- BD-301: ONE sentence for the Buy Egg confirm; same config numbers as the odds panel.
 function Copy.hatchSentence(level: number): string
-    local percent = Copy.hatchGroup(level).rows[1].percent
-    return string.format("%s of every 100 eggs hatch a dino. A cracked egg gives nothing back.", string.format("%g", percent))
+    return string.format("%s of every 100 eggs hatch a dino. A cracked egg gives nothing back.", string.format("%g", Copy.overallHatchPercent(level)))
 end
 
 -- BD-303: plain words for the condition upgrade. requiredLevel is the player level the server demands (ProgressionRules).

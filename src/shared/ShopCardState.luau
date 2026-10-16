@@ -29,4 +29,11 @@ function State.look(info, priceText: string)
     return {kind = kind, dim = false, caption = caption, buttonText = info.buyButton or "BUY", active = true, tone = "price"}
 end
 
+-- BD-430: the Crystals tab button always says something useful. A known price is always shown ("R$ 99"), also while
+-- packs are off (the Coming soon line sits above the cards); an unknown price says "Price soon" instead of nothing.
+function State.packButton(price: number?): string
+    if type(price) == "number" and price > 0 then return "R$ " .. tostring(price) end
+    return "Price soon"
+end
+
 return State

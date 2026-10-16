@@ -293,6 +293,9 @@ return table.freeze({
     -- instant "bigger eats smaller" predation stays exactly as shipped. ON (Studio tests only) = PredationService's
     -- instant eat stops and CombatService runs. Keep false until the BD-252 phone test passes.
     CombatEnabled = false,
+    -- BD-423 (docs/101 s2, docs/115): class feel (Fly glide, Water dash, class walk speed) in its OWN flag so it can ship
+    -- without combat. OFF = every dino moves as shipped. Pinned off in the default profile, on in the playtest profile.
+    ClassMovementEnabled = false,
     -- BD-245 (docs/101 s8): calm wild predators. Only effective while CombatEnabled is true; false here removes just the NPCs.
     NpcPredatorsEnabled = true,
     SecurityTestHarnessEnabled = false,

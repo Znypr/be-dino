@@ -14,7 +14,7 @@ R.MutationTier = "Rare"             -- weather mutations read as Rare-level look
 
 -- Per-device budgets, PER DINO (docs/93 section 6). `alive` = particles alive at once (rate * lifetime, after rateScale).
 R.Devices = {
-    phone   = {sprites = 1, emitters = 3, beams = 3, trails = 2, parts = 1, lights = 1, alive = 18, rateScale = 0.5,  burst = 6,  fullDinos = 1},
+    phone   = {sprites = 1, emitters = 3, beams = 3, trails = 2, parts = 1, lights = 1, alive = 18, rateScale = 0.5,  burst = 6,  fullDinos = 1, liteLights = false, liteRingBeams = 1},
     tablet  = {sprites = 1, emitters = 5, beams = 5, trails = 3, parts = 1, lights = 1, alive = 30, rateScale = 0.75, burst = 10, fullDinos = 2},
     desktop = {sprites = 1, emitters = 6, beams = 8, trails = 4, parts = 1, lights = 1, alive = 45, rateScale = 1.0,  burst = 14, fullDinos = 3},
 }
@@ -264,13 +264,19 @@ function R.resolve(kind: string, item, opts)
 
     local lite = opts.detail == "lite"
     local limit = if lite then (if kind == "mutation" then R.MutationLiteLayers else R.LiteLayers) else (R.LayerCountByKind[kind] or R.LayerCount)[tier]
+    -- docs/130: on a phone the OTHER players' lite effects (the local dino is always full) keep no aura glow light or aura beams and
+    -- a single-beam mutation ring, so 12 players stay inside the phone light/beam budget. Mutation keeps its glow (it must stay readable).
+    local phoneLite = lite and device.liteLights == false
+    local skipped = 0 -- dropped layers still use up a lite slot, so a phone never shows MORE than before
     local rateF = (1 + 0.1 * (tier - 1)) * (if lite then 0.6 else 1) * device.rateScale
     local sizeF = 1 + 0.05 * (tier - 1)
     local motif = if kind == "mutation" then R.Motifs[item.id] else nil
     for _, tpl in templates do
-        if #out.layers >= limit then break end
+        if #out.layers + skipped >= limit then break end
         if tpl.minTier and tier < tpl.minTier then continue end
+        if phoneLite and kind == "aura" and (tpl.kind == "glow" or tpl.kind == "ring" or tpl.kind == "spiral") then skipped += 1 continue end
         local layer = copy(tpl)
+        if phoneLite and layer.kind == "ring" then layer.beams = math.min(layer.beams, device.liteRingBeams or layer.beams) layer.width *= 1.5 end
         if layer.rate then layer.rate *= rateF end
         if layer.size then layer.size *= sizeF end
         if layer.id == "shed" then layer.rate = math.max(2, (item.particles or 2) * 1.2) * rateF end

@@ -77,6 +77,16 @@ function R.jitter(name: string, n: number): number
     return 1 + ((h % 2001) / 1000 - 1) * R.Jitter
 end
 
+-- BD-437 reveal ladder: Epic and Legendary stack a second REGISTERED cue under the main sting (no new asset). volume and rate are
+-- multipliers on that cue's registered numbers; delay is seconds after the main sting. Common..Rare stay a single sting.
+R.RevealLayers = {
+    hatch_reveal_epic = {{cue = "hatch_reveal_rare", volume = .55, rate = 1, delay = .16}},
+    hatch_reveal_legendary = {{cue = "fusion_reveal", volume = .6, rate = 1, delay = .2}},
+}
+function R.layers(revealName: string): {any}
+    return R.RevealLayers[revealName] or {}
+end
+
 -- BD-341 hatch stack per species rarity 1..5: stage cracks kept, chime on the opening. Escalates with rarity.
 R.HatchStack = {
     {stages = 1, chime = false}, {stages = 2, chime = false}, {stages = 3, chime = true}, {stages = 3, chime = true}, {stages = 3, chime = true},
