@@ -47,7 +47,12 @@ function Import.loadGeneratedWorld(): (number, number)
     local folder=ReplicatedStorage:FindFirstChild("GeneratedWorld")
     if not folder then folder=Instance.new("Folder") folder.Name="GeneratedWorld" folder.Parent=ReplicatedStorage end
     local loaded,failed,pending=0,0,0
-    for key,asset in GeneratedMeshes.Assets do
+    -- BD-462: V3 tree replacements load like the others, but an empty assetId (not uploaded yet) is skipped silently, not a failure.
+    local entries: {{key: string, asset: {assetId: string}}}={}
+    for key,asset in GeneratedMeshes.Assets do table.insert(entries,{key=key,asset=asset}) end
+    for key,asset in GeneratedMeshes.Replacements do if asset.assetId~="" then table.insert(entries,{key=key,asset=asset}) end end
+    for _,entry in entries do
+        local key,asset=entry.key,entry.asset
         pending+=1
         task.spawn(function()
             local ok,result=pcall(function()

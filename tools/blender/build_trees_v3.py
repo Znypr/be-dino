@@ -249,7 +249,7 @@ def build_palm():
     """Palm: curved tapered trunk with ring bands, flared base and roots, crown of 11 arched, overlapping, drooping
     two-sided fronds of unequal length, a few young upright fronds and a coconut cluster."""
     M = Mesh(); R = random.Random(9)
-    path = spline([Vector(p) for p in [(0, 0, -.2), (.4, .1, 2.8), (1.2, .3, 5.4), (2.7, .6, 7.6), (3.6, .8, 9.4)]], 3)  # 9 pts
+    path = spline([Vector(p) for p in [(0, 0, -.2), (.3, .05, 2.8), (.8, .2, 5.4), (1.1, .3, 7.6), (1.1, .4, 9.4)]], 3)  # 9 pts
     n = len(path)
     radii = []
     for i in range(n):
@@ -270,10 +270,11 @@ def build_palm():
         pth = [d * .4 + Vector((0, 0, .9)), d * 1.0 + Vector((0, 0, .35)), d * ln + Vector((0, 0, -.12))]
         v, f, ref = tube(pth, [th, th * .65, th * .3], 4, tip=True, seed=ang, wob=.1); M.add(v, f, ref, pbark, seed=ang)
     # fronds: (yaw deg, length, lift deg, droop, width, twist)
+    # fronds on the side away from the lean are longer so the bbox centre (the game pivot) stays close to the trunk base
     fronds = [
-        (10, 6.6, 20, 4.4, 1.5, .2), (45, 5.8, 30, 3.4, 1.35, -.15), (85, 6.4, 14, 4.8, 1.5, .1), (125, 5.4, 32, 3.0, 1.3, .25),
-        (165, 6.6, 12, 5.0, 1.5, -.2), (205, 5.6, 26, 3.6, 1.35, .15), (245, 6.4, 16, 4.6, 1.5, -.1), (285, 5.7, 30, 3.2, 1.35, .2),
-        (325, 6.6, 10, 5.0, 1.5, .1), (65, 3.6, 62, 1.3, 1.0, .0), (225, 3.4, 70, 1.0, .95, .0), (140, 3.8, 55, 1.5, 1.0, .0),
+        (10, 5.6, 20, 4.2, 1.5, .2), (45, 5.4, 30, 3.4, 1.35, -.15), (85, 6.2, 14, 4.8, 1.5, .1), (125, 6.0, 32, 3.4, 1.35, .25),
+        (165, 7.6, 12, 5.4, 1.5, -.2), (205, 6.8, 26, 4.2, 1.35, .15), (245, 6.4, 16, 4.6, 1.5, -.1), (285, 5.4, 30, 3.2, 1.35, .2),
+        (325, 5.6, 10, 4.6, 1.5, .1), (65, 3.6, 62, 1.3, 1.0, .0), (225, 3.4, 70, 1.0, .95, .0), (140, 3.8, 55, 1.5, 1.0, .0),
     ]
     for fi, (yaw, L, lift, droop, W, tw) in enumerate(fronds):
         y = math.radians(yaw); dirh = Vector((math.cos(y), math.sin(y), 0))
@@ -452,7 +453,7 @@ def get_variant(fam, variant):
     if variant == 'cur': ob = make(d['cur'], f"{fam}_cur")
     elif variant == 'v2': ob = import_v2(d['v2'])
     else: ob = make(d['v3'], f"{fam}_v3")
-    if variant != 'v2': centre_xy(ob)
+    if variant != 'v2': ox, oy, oz = centre_xy(ob); ob['trunk_base_offset'] = (-ox, -oy)
     return ob
 
 def stage_export(out_dir):
@@ -467,6 +468,7 @@ def stage_export(out_dir):
         dims = ob.dimensions
         rep.append((names[fam], tri_count(ob), len(ob.data.vertices), [round(dims.x, 2), round(dims.y, 2), round(dims.z, 2)], len(ob.data.materials)))
     for fam, (n, t, v, d, m) in zip(FAMS, rep): print("REPORT", n, "tris", t, "verts", v, "size", d, "materials", m)
+    for fam in FAMS: print("TRUNKOFFSET", fam, [round(x, 2) for x in bpy.data.objects[names[fam]]["trunk_base_offset"]])
     for fam in FAMS:
         ob = bpy.data.objects[names[fam]]
         for o in bpy.context.selected_objects: o.select_set(False)
