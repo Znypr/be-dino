@@ -291,6 +291,9 @@ return table.freeze({
     -- default: the shipped v1 sequence is unchanged. ON = the server loads HatchV2Assets; the client falls back to v1 for any
     -- egg whose meshes or images are unavailable. Playtest profile may turn it on once docs/118 evidence is owner-approved.
     HatchV2 = false,
+    -- docs/118 s9: Studio-only preview of the v2 hatch with placeholders. The owner sets this to true LOCALLY in Studio; it only
+    -- counts in an unpublished place (RunService:IsStudio() and game.GameId == 0, see HatchV2Assets.enabled). Never commit true.
+    HatchV2Preview = false,
     -- BD-243/244/247 (docs/101): HP combat behind ONE flag. OFF = no CombatService, no Bite remote, no health bars, the
     -- instant "bigger eats smaller" predation stays exactly as shipped. ON (Studio tests only) = PredationService's
     -- instant eat stops and CombatService runs. Keep false until the BD-252 phone test passes.
