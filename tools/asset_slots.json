@@ -1705,6 +1705,118 @@
     "tools/bind_visual_assets.py",
     "worldMaterials"
    ]
+  },
+  {
+   "name": "ground_rock_small_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "ground_rock_small_v3",
+   "group": "Props.ground_rock_small_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-464 step 2 placement"
+  },
+  {
+   "name": "ground_rock_medium_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "ground_rock_medium_v3",
+   "group": "Props.ground_rock_medium_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-464 step 2 placement"
+  },
+  {
+   "name": "ground_rock_mossy_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "ground_rock_mossy_v3",
+   "group": "Props.ground_rock_mossy_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-464 step 2 placement"
+  },
+  {
+   "name": "ground_log_fallen_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "ground_log_fallen_v3",
+   "group": "Props.ground_log_fallen_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-464 step 2 placement"
+  },
+  {
+   "name": "ground_stump_roots_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "ground_stump_roots_v3",
+   "group": "Props.ground_stump_roots_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-464 step 2 placement"
+  },
+  {
+   "name": "ground_mushrooms_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "ground_mushrooms_v3",
+   "group": "Props.ground_mushrooms_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-464 step 2 placement"
+  },
+  {
+   "name": "ground_bush_round_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "ground_bush_round_v3",
+   "group": "Props.ground_bush_round_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-464 step 2 placement"
+  },
+  {
+   "name": "ground_bush_berry_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "ground_bush_berry_v3",
+   "group": "Props.ground_bush_berry_v3",
+   "table": "Props",
+   "reader": [
+    "src/server/ImportedResources.luau",
+    "GeneratedMeshes.Props"
+   ],
+   "pending": "BD-464 step 2 placement"
   }
  ]
 }

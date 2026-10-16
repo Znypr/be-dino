@@ -43,3 +43,31 @@ The sheets are crops of 1600x900 renders (the uncropped frames are not committed
 
 ## Next
 Owner uploads the three FBX files (click-by-click steps are in the BD-462 row of docs/07 and docs/120), pastes the ids, then a Studio + phone check. BD-463 (grass and plant families) and BD-464 (ground props) are spec-only follow-ups. The small/medium/colossal layering waits for its spec.
+
+## Ground props (BD-464 step 1, art only, baked 2026-10-16, NOT uploaded)
+
+**LEAD decision 2026-10-16 (owner delegated):** BD-464 moved from spec to build; this is step 1, the art. Placement (step 2) waits for the owner upload and pick. Eight hand-shaped Blender props in the V3 style (chunky cartoon low-poly, warm matte vertex colours, V3 foliage greens, ONE material each, `Col` attribute, pivot bbox bottom centre with the lowest point at z=0, same FBX settings as `fbx_v3`; reimport check: every file has min z 0.0, centre 0.0, 1 material). Same scoped Blender exception as the trees (world art; hand-placed shapes, no scatter, no generators).
+
+| File (`assets/blender/world/fbx_v3/`) | Tris | Size X x Y x Z (studs) | How it is shaped |
+| --- | ---: | --- | --- |
+| `ground_rock_small_v3.fbx` | 68 | 2.8 x 2.4 x 1.2 | lumped low icosphere, three chisel planes, leaning top |
+| `ground_rock_medium_v3.fbx` | 278 | 4.9 x 4.0 x 2.3 | seven chisel planes (flat facets), sloped top, a small second stone leaning on it |
+| `ground_rock_mossy_v3.fbx` | 262 | 5.6 x 4.5 x 3.2 | seven chisel planes, noise-driven moss colour on up-facing faces, a moss cap and a moss skirt |
+| `ground_log_fallen_v3.fbx` | 199 | 7.9 x 2.8 x 3.0 | six uneven rings with a bend, flat sit, carved-in cut end with growth rings, jagged broken end, snapped branch stub, two moss patches |
+| `ground_stump_roots_v3.fbx` | 199 | 7.1 x 5.9 x 3.0 | flared bark trunk, tilted dished top with growth rings, four arching roots of different length and thickness diving into the ground, moss tuft |
+| `ground_mushrooms_v3.fbx` | 303 | 5.3 x 4.1 x 2.9 | five stalks (curved, tapered) with hand-lathed caps of different size and lean, red with cream spots and honey, darker gill side, moss mound |
+| `ground_bush_round_v3.fbx` | 340 | 6.0 x 4.2 x 2.7 | four unequal lumpy clumps (tall back, two sides, low front), flat undersides, one twig |
+| `ground_bush_berry_v3.fbx` | 304 | 6.3 x 4.1 x 2.1 | three flat wide clumps in a warmer green, eight faceted berries |
+
+Palette: stones warm grey (not the cool Rock slate of the terrain), moss `#4E7E3A` to `#88B050`, wood `#A67A46` to `#E6C894`, bark from the V3 trees, caps `#C24E34` to `#F2905A` and `#C98B2E` to `#F6CF74`, berries `#D9505E`, bushes the V3 leaf family and a warmer green `#3F8F4E` to `#92CB6C`. Source: `assets/blender/world/WorldKitV3_GroundProps.blend`; scripts `tools/blender/build_ground_props_v3.py` (headless `-- export` / `-- render <absolute out dir> [shots]`) and `tools/blender/compose_ground_props_v3.py` (Pillow sheets).
+
+**Evidence (`docs/evidence/2026-10-16-props/`):** `props-play25-spawn.png`, `props-play25-big.png`, `props-play40-spawn.png`, `props-play40-big.png` (left version 1, right version 2; V3 broadleaf tree at the origin, flat green 132,166,68 ground, bright daytime sun, 70 degree FOV camera at 25 or 40 studs, spawn-size dino 4.4 tall or a 1.5x one as an orange silhouette), `props-lineup.png` (close lineup), `tris.txt` (total prop tris of each grouping). Version 1 is an APPROXIMATION of the props around a tree today (round cool grey-green boulders, smooth mint puff bushes, the 60-tri kit mushroom clump `world_mushrooms_a.fbx`); the generated meshes have no repo file, so the real ones can differ. Version 1 has no logs and no stumps because the game has none. Honest note on the numbers: version 1 shows 6 props (600 tris), version 2 shows 10 (2,324 tris), so the new look is richer AND heavier; step 2 must replace small clutter so the real count and triangle budget stay flat, it is not a free upgrade.
+
+**Verdict (honest, at 25-40 studs, flat lighting only, nothing seen in Roblox yet):**
+- **Stump, log and mushrooms are a clear win.** They add silhouette types the island does not have at all; the stump with roots, the log with a branch stub and the orange mushroom cluster read at 40 studs with either dino size.
+- **Rocks: a real but moderate win.** Warm grey, irregular and chiselled, they read as stones instead of pale low-poly gems; the medium and mossy ones hold up at 40 studs. The small rock is only 68 tris (under the 80 target) and is a pebble-sized accent. Moss reads as neon green patches up close.
+- **Bushes: modest.** Chunky and tree-base sized, but the round bush is the same mint family as the V3 crown, so in shade it blends into the tree; the berry bush is the better one, yet its berries are tiny at 40 studs.
+- **Weak spots:** stump roots are a little peg-like; the mushroom cluster is the heaviest per stud of size (303 tris for about 5 studs); the grouping layout in the render is hand-set, not the placement grammar, which is step 2.
+- **Not checked:** Roblox lighting and tone, camera occlusion, slope grounding, colliders, phone triangle budget. All of that belongs to step 2.
+
+**Wiring (prepared, empty):** `WorldGeneratedMeshes.Props` has eight entries with `assetId = ""` and `placed = false` (new kinds, not replacements), `ImportedResources.loadGeneratedWorld` loads a non-empty id into `ReplicatedStorage.GeneratedWorld` like the others, slots `ground_*_v3` are in `tools/asset_slots.json` (`python tools/bind_assets.py ground_rock_small_v3=<id> ...`). `Arena` and `BiomePlacement` are untouched: nothing is placed.
