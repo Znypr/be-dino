@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "5c364ae47c4c400ac840c6799a12b3d7cf48555b35494b26b13ae917e9319391",
+  "place_sha256": "7a1351038dfaca87f7ff052c7ed3c55259035ccd2246d019e825f8ff30daad92",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -17,7 +17,7 @@
     "src/shared/CaveHubLayout.luau": "8d043317c188e81f9b405f94653baa6fbc01eea94ff5ba12fdc48757216aa3cf",
     "src/shared/CaveHubProps.luau": "caff8864e1bba080189d2e9ac49f98489c1c56d2c97db21e3706793d18ec22c3",
     "src/shared/CaveLavaRules.luau": "194bb99e13a3ee1e23dedc791a8b0a21c1194b3753f9bc2a2fbc12351f36be6c",
-    "src/shared/CaveLightingRules.luau": "11931fd772f91d82ffb2c229e76a56d7109cc3775ca136d0e7d77537e7ffe680",
+    "src/shared/CaveLightingRules.luau": "8a2172bd599eed96e5b89a9ada708aafb9e1d1140c918a4b99df38e29e544b59",
     "src/shared/CaveTerrainRules.luau": "18c55860424ad6d812406d73c8c06c06441a837e0c324116f7867188921a3160",
     "src/shared/ClassMovement.luau": "e5fd1d83e6edb2695ae4acbc54e65828c8879a7578dea77d70a44fe209e67f59",
     "src/shared/ColourBonus.luau": "da7cc4479d5c2633081cfe528221ad31e5646704b17626f6d379a3f2d62612de",
@@ -367,7 +367,7 @@
     "src/client/UiScan.luau": "866a92d0f804c0cfad6acf49246f3d04fe573c0fa514613a5a5c4c8d1d1c5972",
     "src/client/VolumeSliders.luau": "c1c8fcc997d9f2a1e2be40950f2b58d6de30bf3236dc142878b7ceaa2804f4e2",
     "src/client/WeatherAudio.client.luau": "a2656eef91d2859682a8c0168a71622b27470b775ab7f2b766b8380907286ec0",
-    "src/client/WeatherVisuals.client.luau": "edd8782b1266b9ef9ed24e3aa3f82bb9bcb296afe0b95b6eae62319db7342200",
+    "src/client/WeatherVisuals.client.luau": "7e5f99ea36ab563130559d9fd8f721702f94ffda52f75e5a71b31fb76ce16283",
     "src/client/WorldCulling.client.luau": "47eae7e3f25d6717d1f63438ffd8489bf399e9e4511faa0a7e5298f467a73682",
     "src/client/WorldReady.client.luau": "7f8c9c76e89ec872e933216e46b2174b6e9aae22ff60a75a15dde67b5f0d4a9f"
   }

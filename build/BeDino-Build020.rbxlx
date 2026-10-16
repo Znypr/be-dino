@@ -367038,7 +367038,7 @@ Rules.Version = 1
 Rules.BeamColor = {255, 236, 190} -- warm cream
 Rules.Beam = {outerFrac = 0.82, coreFrac = 0.5, outerAlpha = 0.95, coreAlpha = 0.9, topAbove = 3, bottomAbove = 0.15, motesPerSecond = 4}
 Rules.GateGlow = {rate = 4, size = {12, 18}, alpha = 0.7, color = {255, 214, 160}, lift = 8, out = 12} -- out = studs from the pad centre into the mouth (the mouth is open from 10 studs past the pad centre)
-Rules.FillColor, Rules.LavaColor, Rules.CrystalColor, Rules.ForgeColor = {255, 214, 170}, {255, 140, 70}, {196, 170, 255}, {255, 190, 90}
+Rules.FillColor, Rules.LavaColor, Rules.CrystalColor, Rules.ForgeColor = {255, 214, 170}, {255, 140, 70}, {255, 196, 80}, {255, 190, 90}
 Rules.Forge = {period = 4, amplitude = 0.1, base = 0.6}
 Rules.ShadowLights = 4
 Rules.FxPartBudget = 16 -- shaft beams (2 per hole) + dust volumes (1 per hole) + the gate glow anchor
@@ -569985,7 +569985,7 @@ RunService.Heartbeat:Connect(function(dt)
     if id==activeId then k=math.min(1,k+dt/2.4) else k=math.max(0,k-dt/1.1) if k&lt;=0 then activeId=id columnAnchors=nil end end
     if activeId~=shownId and id==activeId and id~="clear" then
         shownId=activeId
-        showTitle(id,workspace:GetAttribute("WeatherName") or id,hall)
+        showTitle(id,workspace:GetAttribute("WeatherName") or id,hall) -- inside the cave only the small soft toast (text, not an effect; BD-398)
     elseif id=="clear" then shownId="clear" end
 
     local look=WL.Looks[activeId] or WL.Looks.clear
@@ -570020,7 +570020,7 @@ RunService.Heartbeat:Connect(function(dt)
     Lighting.ColorShift_Top=baseShiftTop:Lerp(shiftOf(baseShiftTop,shiftTop),t)
     Lighting.ColorShift_Bottom=baseShiftBottom:Lerp(shiftOf(baseShiftBottom,shiftBottom),t)
     Lighting.ExposureCompensation=baseExposure+lerpNum(0,look.exposure,t)+flash*.9*outside
-    if sky then sky.CelestialBodiesShown=activeId=="clear" or k&lt;=0 end
+    if sky then sky.CelestialBodiesShown=activeId=="clear" or k&lt;=0 or hall end
     if sky and look.stars&gt;=0 then
         local want=math.floor(lerpNum(baseStars,look.stars,t)/100)*100
         if want~=starsSet then starsSet=want sky.StarCount=want end
@@ -570099,7 +570099,7 @@ RunService.Heartbeat:Connect(function(dt)
     updateAurora(root or Vector3.zero,now,auroraOn,recolor)
     -- pooled one-shot effects
     updateBolts(dt) updateRings(dt) updateBursts(dt) updateBombs(dt,root) updateQuake(dt)
-    if hall then shake=if activeId=="quake" and Theme.MotionEnabled and k&gt;.3 then .03 else 0 end -- BD-398: a faint distant rumble only for a quake
+    if hall then shake=0 end -- BD-403: weather never touches the cave interior, not even a faint quake rumble
     if shake&gt;.01 and Theme.MotionEnabled then shake=math.max(0,shake-dt*1.1) end
     if not Theme.MotionEnabled then shake=0 end
     Cave.step(dt) -- last: the cave look is written after the weather values above

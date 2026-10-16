@@ -12,7 +12,7 @@ Rules.Version = 1
 Rules.BeamColor = {255, 236, 190} -- warm cream
 Rules.Beam = {outerFrac = 0.82, coreFrac = 0.5, outerAlpha = 0.95, coreAlpha = 0.9, topAbove = 3, bottomAbove = 0.15, motesPerSecond = 4}
 Rules.GateGlow = {rate = 4, size = {12, 18}, alpha = 0.7, color = {255, 214, 160}, lift = 8, out = 12} -- out = studs from the pad centre into the mouth (the mouth is open from 10 studs past the pad centre)
-Rules.FillColor, Rules.LavaColor, Rules.CrystalColor, Rules.ForgeColor = {255, 214, 170}, {255, 140, 70}, {196, 170, 255}, {255, 190, 90}
+Rules.FillColor, Rules.LavaColor, Rules.CrystalColor, Rules.ForgeColor = {255, 214, 170}, {255, 140, 70}, {255, 196, 80}, {255, 190, 90}
 Rules.Forge = {period = 4, amplitude = 0.1, base = 0.6}
 Rules.ShadowLights = 4
 Rules.FxPartBudget = 16 -- shaft beams (2 per hole) + dust volumes (1 per hole) + the gate glow anchor
