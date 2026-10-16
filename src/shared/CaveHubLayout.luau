@@ -10,7 +10,7 @@ CaveHubLayout.Version = 1
 CaveHubLayout.CenterZ = 580 -- only used when Config.CaveHub is true (the old hub stays at Config.SanctuaryCenterZ)
 CaveHubLayout.FloorY = 6 -- same as the old hub floor, so SpawnGeometry / fall recovery keep working
 CaveHubLayout.BoxHalfX, CaveHubLayout.BoxHalfZ = 130, 110 -- 260 x 220 footprint box (lead decision, docs/104 s15)
-CaveHubLayout.Biome = {minX = -140, maxX = 140, minZ = 460, maxZ = 700} -- island kit never intersects this when on
+CaveHubLayout.Biome = {minX = -150, maxX = 150, minZ = 450, maxZ = 710} -- island kit never intersects this when on (BD-281: widened from 140/460/700 so the rough 12 stud shell fits)
 CaveHubLayout.WallThickness = 8
 CaveHubLayout.DropClearance = 5 -- spawn root height above the floor (matches SpawnGeometry.DropClearance)
 CaveHubLayout.MaxPathSlopeDeg = 8
@@ -54,6 +54,11 @@ local function insideFloorLocal(x: number, dz: number, margin: number): boolean
     end
     return true
 end
+-- BD-281: floor-blob norm in WORLD coordinates (<= 1 inside the floor blob), and the blob's base radii, for the terrain rules.
+function CaveHubLayout.floorNorm(x: number, z: number): number
+    return blobNorm(x, z - CaveHubLayout.CenterZ)
+end
+CaveHubLayout.BaseX, CaveHubLayout.BaseZ = BASE_X, BASE_Z
 function CaveHubLayout.insideFloor(x: number, z: number, margin: number?): boolean
     return insideFloorLocal(x, z - CaveHubLayout.CenterZ, margin or 0)
 end
