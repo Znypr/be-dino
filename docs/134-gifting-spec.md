@@ -1,114 +1,179 @@
-# 134 Gifting (spec only, 2026-10-16)
+# 134 Gifting (spec only, reworked 2026-10-17)
 
-**Status: SPEC. Nothing is built.** Owner request (2026-10-16): "there should be a gifting feature where you can gift people in the lobby or people offline (by typing their username) bundles or skins; I could also gift people things for free using the admin panel." Per the owner correction, a new feature is elaborated here and queued on the board first (BD-450..BD-453, all Backlog). Everything below is a proposal; **the section 10 questions were decided by the LEAD on 2026-10-16 under the owner's delegation ("take full autonomy, do decisions for me")**, recorded in [115](115-decisions-log.md) "LEAD decisions 2026-10-16 (owner delegated)". The owner may overrule any of them. Every Robux part is decided in principle only; enabling it needs the owner's go-ahead.
+**Status: SPEC. Nothing is built.** Owner request (2026-10-16): "there should be a gifting feature where you can gift people in the lobby or people offline (by typing their username) bundles or skins; I could also gift people things for free using the admin panel." Per the owner correction, a new feature is elaborated here and queued on the board first (BD-450..BD-453; BD-450 is Done, the rest Backlog). The section 10 questions were first decided by the LEAD on 2026-10-16 under the owner's delegation ("take full autonomy, do decisions for me"), recorded in [115](115-decisions-log.md) "LEAD decisions 2026-10-16 (owner delegated)".
+
+**OWNER DECISION 2026-10-17 (overturns the LEAD's Q1 "friends only"):** gifting is **NOT friends-only**. A player can gift **any Roblox user**, whether that user is in the same server, online in another server, offline, or has never played Be Dino, by picking them from the lobby or by typing their username. Recorded in [115](115-decisions-log.md) "OWNER decision 2026-10-17: gifting to anyone" and in the owner decisions log of [07-kanban](07-kanban.md). This file is reworked for it; sections 2.1 and 12 hold the child-safety and policy recheck that strangers receiving gifts requires. Every Robux part is still decided in principle only: **all flags stay off, and enabling any of it needs the owner's explicit go-ahead.**
 
 ## 1. Goals
-- A player can buy a skin, bundle or crystal pack **for someone else**: a player in the same server, or any player by typing a username (online elsewhere or offline).
-- The recipient sees a friendly "You got a gift from <name>!" popup; delivery happens exactly once.
+- A player can buy a skin or a skin bundle (later: a crystal pack) **for any Roblox user**: someone in the same server, or anyone found by typing a username (online elsewhere, offline, or never seen in Be Dino).
+- The recipient sees a friendly "You got a gift from <name>!" popup; delivery happens exactly once, also if they were offline when it was bought.
 - The owner can grant the same items (and crystals) **for free** from the admin panel to an online or offline user.
-- Safe for a children's audience and Roblox rules. Off by default, behind flags, until the owner tests.
+- Safe for a children's audience and Roblox rules: strangers can give but can never talk (no free text, no reply), and a recipient can switch gifts off in one tap. Off by default, behind flags, until the owner tests.
 
 ## 2. Constraints (handbook and policy)
-- **Robux line ([114 s11a](114-handbook.md)):** Robux buys looks and convenience only. Giftable with Robux: skins ([97](97-dino-skins.md): Plushy, Clay, Bricks), cosmetic bundles, crystal packs (crystals only). Never giftable: dinos, species, eggs, rarity, luck, stat or fusion advantages.
+- **Robux line ([114 s11a](114-handbook.md)):** Robux buys looks and convenience only. Giftable with Robux: skins ([97](97-dino-skins.md): Plushy, Clay, Bricks), cosmetic bundles of skins, later crystal packs (crystals only). Never giftable: dinos, species, eggs, rarity, luck, stat or fusion advantages.
 - **No random gifts.** Every gift is a fixed, named item shown before purchase. No gift egg, no "mystery" bundle. This keeps gifts out of `PaidRandomItemsEnabled` / `PolicyService` territory ([43](43-player-access-and-paid-random-policy.md)); `PolicyService` is still checked before any Robux prompt (a restricted player cannot buy gifts).
-- **No trading, no transfers.** Only a NEW purchase or an admin grant creates a gift. Items a player already owns can never be sent. No gift-back, no re-gift.
-- **Text filter:** any gift message goes through `TextService:FilterStringAsync` (non-chat broadcast filter, because the reader may be offline) with a 40 character cap; a failed filter sends no message, not the raw text. Short preset messages are the default.
-- **Children audience ([72](72-ui-copy-and-asset-standards.md)):** short plain words, no stranger-DM feel. A recipient can turn "Accept gifts from other players" off in Settings (default is an open question, section 10). No chat, no reply box.
-- **No PII in logs:** log UserIds only, never names, messages or avatar data. Display names are shown only inside the popup.
-- **Server authority:** the client only asks. The server validates recipient, item, price and flags. Rate limits on requests (3 per minute per player) and on admin grants.
+- **No trading, no transfers.** Only a NEW purchase or an admin grant creates a gift. Items a player already owns can never be sent. No gift-back, no re-gift, no "return to sender".
+- **Preset messages only.** No typed text anywhere in the gift flow (decision GF6, unchanged and now stricter, see 2.1). The preset is a fixed id, so there is no `TextService` filter dependency.
+- **Children audience ([72](72-ui-copy-and-asset-standards.md)):** short plain words, no stranger-DM feel, no chat, no reply box, no friend-request or contact button in any gift UI.
+- **No PII in logs or in the Gifts store:** UserIds only. Names, messages and avatar data are never stored; the sender's display name is looked up fresh when the popup is shown.
+- **Server authority:** the client only asks. The server validates recipient, item, price, recipient setting and flags.
 - **Flags, all default false and pinned off in the default AND playtest profiles** (`tools/release_profiles.py`): `GiftingEnabled` (Robux gifting), `AdminGiftsEnabled` (free admin gifts, also needs `AdminPanelEnabled`), `GiftClaimEnabled` (the claim path; required by either of the two).
 - Session 1 has **no products or passes** ([125](125-friends-playtest-go-no-go.md) Creator Hub setup), so Robux gifting cannot be tested then.
 
-## 3. Player flow: gift to someone in the server
-1. Player opens the Shop and taps **Gift** on an item (skin, bundle, crystal pack).
-2. A list of other players in the server appears (avatar head + display name). Tap one; the item and the person are shown big: "Gift Plushy to Sam?".
-3. Optional: pick a preset message or type up to 40 characters.
-4. **Send gift** opens the normal Roblox purchase prompt for the gift product. Buyer pays; recipient never pays.
-5. After the receipt: buyer toast "Gift sent!"; recipient popup "You got a gift from <name>!" with a **Thanks!** button (popup system: [80](80-notifications.md)).
+### 2.1 Child-safety and policy recheck for strangers (2026-10-17)
+Friends-only removed the biggest control (the sender was already someone the child knew). Each point below was rechecked; the replacement control is what makes "anyone" acceptable. The real risk to name for the owner is **gift-grooming**: a stranger buying gifts to win a child's trust. The controls make a gift a one-way, wordless, cosmetic event and make it easy to refuse, but they do not make it risk-free; that is why section 12 lists a go-live review.
 
-## 4. Player flow: gift by username (online elsewhere or offline)
-1. **Gift** > "Type a username". Server resolves with `Players:GetUserIdFromNameAsync` (pcall, cached 60 s, rate limited).
-2. The client shows the avatar and display name returned by the server for confirmation: "Is this Sam?" Yes / No.
-3. Refuse: self (`UserId == buyer`), unknown names, non-positive ids. Copy: "We could not find that player."
+| Point | Rule for "anyone" |
+|---|---|
+| Messages | **Preset list only** (about 6 short kid phrases chosen from a fixed list, e.g. "Have fun!"). No text box, no emoji input, no link. Free text is NOT planned for gifts to anyone; it could be reconsidered only for the "Friends" setting, and only after real-account `TextService` tests. |
+| Recipient setting | Settings row **"Gifts from: Everyone / Friends / Nobody"**. **Default: Everyone** (owner intent: anyone can gift anyone). Easy off, three ways: the Settings row, a **Turn gifts off** button on every gift popup, and **Mute <name>** on the popup (this sender only). Missing record = Everyone, also for a user who never played. "Friends" uses `Player:IsFriendsWith` from the buyer's side. |
+| Blocked users | A user the recipient has Roblox-blocked must not be able to gift them. The recipient's client reports its own blocked ids once per join through the owner-only `PrivateState` channel (capped list, stored in `pref_<userId>`; the data only ever restricts the reporter's own inbox, so trusting it is safe). The buyer's server refuses before the prompt when it finds the buyer in the recipient's list; **the claim step checks again**, so a recipient who never played (no list yet) is protected at first join: a gift from a blocked sender is **held**, never applied, never shown. The client call is Roblox's `StarterGui:GetCore("GetBlockedUserIds")`; **not testable offline, verify in Studio**, and if it is unavailable the fallbacks are Mute and "Nobody". |
+| One refusal copy | Recipient-side refusals (setting is Nobody or Friends, buyer is blocked or muted, inbox full) all show the SAME kid copy: "<name> can't get gifts right now." The buyer never learns which rule fired (no block side-channel). |
+| Rate limits (PROVISIONAL numbers) | Per buyer: 3 purchase requests per minute, 10 gifts per day, at most 3 gifts per recipient per day, at most 3 pending gifts from one sender in one inbox. Username lookups: 10 per minute and 60 per day per player, plus a server-wide bucket of 30 lookups per minute (the Roblox web limit is shared). Recipient inbox: 25 pending. Daily counters live in the durable `intent_<buyerUserId>` record so hopping servers does not reset them. Admin grants: 10 per minute per admin. |
+| Sender anonymity | **No anonymous gifts.** The popup shows the sender's Roblox **display name** (Roblox moderates display names; the @username is not shown to the recipient). The buy-confirm screen tells the buyer exactly what will show: "Sam will see: a gift from <your name>". Reason: anonymous gifts from strangers are the worst case for a child, and the name is what makes Mute and Roblox's own report/block usable. Admin gifts read "A gift from the Be Dino team!" and never show the admin's name. |
+| Age rules and `PolicyService` | We do not collect or infer age. Behaviour does not branch on age: the controls above apply to every account equally. `PolicyService:GetPolicyInfoForPlayerAsync` stays the **buyer** gate (a restricted buyer, including a player subject to China policies or paid-random restrictions, never sees the Gift button). Receiving a fixed cosmetic is not a paid-random event, so no recipient-side `PolicyService` gate is needed. Whether Roblox adds any rule for stranger-to-minor gifts is on the section 12 go-live list, not assumed. |
+| Robux purchase | One **gift developer product** per catalog item, separate from the own-use product, same price (GF4). Receipt processing is idempotent (section 7). The buy-confirm screen shows item, recipient name and avatar, price in Robux and the sender-name line before the Roblox prompt opens. |
+| Refunds and revoke | Roblox gives no refund event for developer products, so revoke is an admin action with an audit trail (section 7.4); it reuses the skin revoke path (SK10). |
+| Audit log | Every request, refusal, purchase, queue, claim, hold and revoke is logged by **UserId only** (section 6), enough to answer "who gifted whom, when, which receipt". |
+| Nothing leaks | The lookup shows only public Roblox data (display name, @username, avatar). It never reveals whether the person plays Be Dino, owns the skin, has gifts off or has blocked anyone. |
+
+## 3. Player flow: gift from the Shop
+1. Player opens the Shop and taps **Gift** on an item (skin or skin bundle).
+2. **Who is it for?** One screen, two tabs:
+   - **In this server:** the other players in the server (avatar head + display name). Tap one.
+   - **Find a player:** type a Roblox username (section 4).
+3. The item and the person are shown big with the avatar: "Gift Plushy to Sam?" and the line "Sam will see: a gift from <your name>".
+4. Pick one of the preset messages (or none).
+5. **Send gift** opens the normal Roblox purchase prompt for the gift product. Buyer pays; recipient never pays.
+6. After the receipt: buyer toast "Gift sent!" (offline or elsewhere: "Sam will get it next time they play Be Dino!"); recipient popup "You got a gift from <name>!" with **Thanks!**, **Mute <name>** and **Turn gifts off** (popup system: [80](80-notifications.md)). The popup shows only in the cave hub, never during a run.
+
+## 4. Player flow: gift by username (online elsewhere, offline, or never played)
+1. **Find a player**: the buyer types a username. The server resolves it with `Players:GetUserIdFromNameAsync` (pcall, cached 60 s, rate limited per section 2.1).
+2. The server fetches the public profile (`UserService:GetUserInfosByUserIdsAsync`: display name, username) and returns it with the UserId. The client loads the avatar itself with `Players:GetUserThumbnailAsync(userId)`. The screen shows **avatar, display name and @username** and asks "Is this Sam (@sam123)?" Yes / No. **No payment prompt can open before the buyer taps Yes**; the server records the confirmed UserId in the buyer's `intent` and ignores any other id from the client at receipt time.
+3. Refuse with kid copy: self (`UserId == buyer`), unknown names ("We could not find that player."), non-positive ids, the recipient's setting or block (the one refusal copy, section 2.1), inbox full.
 4. Same item, message and purchase steps as section 3.
-5. If the recipient is online in another server or offline, the gift waits in their inbox (section 6) and shows the popup at their next join (or within a minute if they are online).
+5. If the recipient is in another server, offline, or has never played Be Dino, the gift waits in their inbox (section 6). An online recipient gets the popup within a minute; an offline one at their next join. A recipient who never played gets it after their first hub arrival, after the first-time welcome, never mid-tutorial.
 
 ## 5. Admin flow (free)
 - Owner-only: reuse the admin panel authorization (`AdminRules.isAdmin`: creator, group rank 255, `Config.AdminUserIds`, unpublished Studio). The check is the first line of the handler, like every admin action.
-- New **Gift** page: pick an online player or type a username (same confirm-by-avatar step), pick a catalog item or a crystal amount (1 to 50,000 per grant, clamped), optional preset message, **Send free gift**.
+- New **Gift** page: pick an online player or type a username (same confirm-by-avatar step as section 4, display name plus avatar), pick a catalog item or a crystal amount (1 to 50,000 per grant, clamped), optional preset message, **Send free gift**. Offline and never-played users work through the same inbox.
+- Admin gifts bypass the recipient setting (Everyone / Friends / Nobody) and mute, because they are the team's own rewards; they do NOT bypass the Roblox block check (a user who blocked the admin account is still protected) and always carry the "from the Be Dino team" label.
 - Rate limit: 10 grants per minute per admin.
-- Logs: `[BD-GIFT] admin=<userId> to=<userId> item=<id> id=<giftId>` plus an audit record in the Gifts store (`audit_<yyyymm>` key, capped list). No names, no message text.
+- Logs: `[BD-GIFT] admin=<userId> to=<userId> item=<id> id=<giftId>` plus an audit record (section 6). No names, no message text.
 - Admin gifts use source "admin"; they never touch `metrics.robux`. Today `AdminService` is runtime-only by design (`tools/verify_admin.py` forbids profile/DataStore access there), so the gift path lives in a separate `GiftService` and that check is extended, not weakened.
+- Admin **revoke** (section 7.4) lives on the same page.
 
 ## 6. Data model
 New DataStore **Gifts**, name derived from the profile store (`<ProfileDataStoreName truncated to 43>_Gifts`) so the playtest store stays isolated. Profiles are never written from another server.
-- `inbox_<recipientUserId>` = `{gifts = {[giftId] = Gift}}`, at most 25 pending. Written only with `UpdateAsync` that adds a gift if its id is absent (idempotent).
-- `Gift` = `{id, source = "robux"|"admin", from = userId, fromName, item = catalogId, crystals? (admin custom), msg?, at}`.
-- `intent_<buyerUserId>` = `{pending = {recipient, item, msg, productId}, done = {[purchaseId] = Gift}}` (last 20 done). Needed because `ProcessReceipt` only carries ProductId and PlayerId, not the recipient.
+- `inbox_<recipientUserId>` = `{gifts = {[giftId] = Gift}}`, at most 25 pending. Written only with `UpdateAsync` that adds a gift if its id is absent (idempotent). **Works for any valid UserId, including one that has never played Be Dino: the key is simply created.** **No expiry** (decision, section 10 Q9): a purchased gift is never deleted by time, so no paid Robux is ever stranded; the 25 cap and the per-sender cap bound the storage.
+- `Gift` = `{id, source = "robux"|"admin", from = userId, item = catalogId, crystals? (admin custom), msg? = presetId, at}`. **No names and no free text** are stored; the display name is resolved at popup time and falls back to "A Be Dino player" if the lookup fails.
+- `pref_<userId>` = `{from = "everyone"|"friends"|"nobody", blocked = {userId...} (capped at 200), muted = {userId...} (capped at 50)}`. Written by the recipient's own server on join and on change. **A missing record means "everyone" with no blocks** (users who never played). Read by the buyer's server before the prompt (cache 30 s).
+- `intent_<buyerUserId>` = `{pending = {recipient, item, msg, productId, at}, done = {[purchaseId] = Gift}, day = yyyymmdd, dayCount, perRecipient = {[userId]=n}}`. Needed because `ProcessReceipt` only carries ProductId and PlayerId, not the recipient. One pending intent per buyer at a time.
+- `audit_<yyyymmdd>` = capped list (5,000) of `{at, ev, from, to, item, giftId, purchaseId?, code?}` and `audituser_<userId>` = the last 50 events where that user was sender or recipient, so a lookup by UserId is one read. `ev` is one of requested, refused (with a reason code, never the player's typed text), bought, queued, claimed, held, revoked, admin. Retention 12 months; a Roblox data-deletion request is served by deleting that user's `inbox_`, `pref_`, `intent_` and `audituser_` keys and scrubbing the id from the day lists.
 - Gift ids: Robux = `R` + PurchaseId (so a re-delivered receipt yields the same id); admin = `A` + GUID.
 - **Giftable catalog** (shared pure module `GiftRules`): `{id, kind = "crystals"|"skin"|"bundle", label, crystals?, skins?, productId}`. Product ids are owner-supplied (`Config.GiftProducts`, empty by default).
-- **Profile additions (add-only, optional, ignored by the Build 020 reader per [111](111-rollback-drill.md)):** `ownedSkins = {[skinId] = true}`, `claimedGifts = {[giftId] = timestamp}` (cap 5,000, fail closed like `purchaseReceipts`).
-- Private state ([112](112-private-state.md)): the pending-gift count and popup payload go through the owner-only `PrivateState` channel, never Player attributes.
+- **Profile additions (add-only, optional, ignored by the Build 020 reader per [111](111-rollback-drill.md)):** `ownedSkins = {[skinId] = true}`, `claimedGifts = {[giftId] = timestamp | "revoked"}` (cap 5,000, fail closed like `purchaseReceipts`).
+- Private state ([112](112-private-state.md)): the pending-gift count, the popup payload and the recipient's blocked-id report go through the owner-only `PrivateState` channel, never Player attributes.
 
 ## 7. Exactly-once delivery
-1. **Buy:** server stores `intent`, prompts the product. In `ProcessReceipt`: if `done[purchaseId]` exists, re-deliver the same Gift (idempotent) and return Granted. Else read the intent, build the Gift, **add it to the recipient inbox**, mark `done` on the buyer record, return `PurchaseGranted`. Any store failure returns `NotProcessedYet` (Roblox retries).
-2. **Claim (the recipient's own server):** on join after the profile loads, and every 60 s while online: read the inbox; run one `ProfileRepository` transaction (`UpdateAsync` on the profile, lease-checked) that, for each gift not in `claimedGifts`, applies it (crystals under `MaxCrystals`, skins into `ownedSkins`) and records `claimedGifts[id]`. Crystals that would exceed the cap leave the gift pending rather than losing it.
+1. **Buy:** server checks flags, `PolicyService`, rate limits, recipient `pref`, inbox space and "already owned or already pending" (a best-effort read-only check of the recipient's profile; a skin already pending from anyone is refused with the one refusal copy), stores the `intent`, prompts the product. In `ProcessReceipt`: if `done[purchaseId]` exists, re-deliver the same Gift (idempotent) and return Granted. Else read the intent, build the Gift, **add it to the recipient inbox**, mark `done` on the buyer record, write the audit event, return `PurchaseGranted`. Any store failure returns `NotProcessedYet` (Roblox retries).
+2. **Claim (the recipient's own server):** on join after the profile loads, and every 60 s while online: read the inbox; for each gift decide **apply or hold**. Hold when the recipient's setting now forbids the sender (Nobody, or Friends and not a friend), the sender is blocked or muted, or crystals would exceed `MaxCrystals`. Then run one `ProfileRepository` transaction (`UpdateAsync` on the profile, lease-checked) that, for each gift to apply and not in `claimedGifts`, applies it (crystals under `MaxCrystals`, skins into `ownedSkins`) and records `claimedGifts[id]`. A held gift stays in the inbox, undelivered and unannounced, until the situation changes; it is never lost and never returned.
 3. **Cleanup:** after the profile commit, remove those ids from the inbox. A crash between 2 and 3 only causes a harmless no-op re-claim (already in `claimedGifts`).
-4. A receipt redelivered after the gift was claimed and removed re-adds it, and `claimedGifts` blocks a second grant.
+4. **Refund or revoke (admin):** Roblox sends no developer-product refund event, so an admin looks the gift up by UserId in the audit log and runs **Revoke**: if still pending it is removed from the inbox; if claimed, the recipient's server removes the skin from `ownedSkins` (and unequips it from their dinos) on the next load, through the same lease-checked path as SK10, and sets `claimedGifts[id] = "revoked"`. A revoked id is never granted again, even if the receipt is re-delivered. Revoke is idempotent and audited. Crystals already spent are not clawed back.
+5. A receipt redelivered after the gift was claimed and removed re-adds it, and `claimedGifts` blocks a second grant.
+6. **Race duplicate:** if the recipient already owns the skin when a gift is applied (a purchase raced the pre-check), the gift is **converted to a fixed "thank you" crystal amount** (PROVISIONAL, amount set by the owner, never power or random) and the popup says so. The sender's Robux are never lost to a no-op.
 - `ProcessReceipt` stays the single Marketplace entry point; the gift branch is delegated to `GiftService`. `tools/verify_robux_line.py` must be extended (allowed purchase files, "gift credits only catalog items, no power words").
 
 ## 8. Failure cases
 | Case | Behaviour |
 |---|---|
 | Username unknown / self / invalid | Kid-friendly message, no prompt |
-| `GetUserIdFromNameAsync` fails (HTTP, throttled) | "Try again in a minute", no prompt |
-| Recipient inbox full (25) | Blocked before the prompt: "Their gift box is full" |
+| `GetUserIdFromNameAsync` or the profile lookup fails (HTTP, throttled) | "Try again in a minute", no prompt |
+| Lookup rate limit hit | "Slow down a little", no prompt |
+| Recipient has gifts set to Nobody, or Friends and the buyer is not a friend | Refused before the prompt with the one copy "<name> can't get gifts right now." |
+| Buyer is blocked by, or muted by, the recipient | Same one copy; the buyer cannot tell why |
+| Recipient inbox full (25), or 3 pending from this sender | Same one copy |
+| Buyer over the daily gift or per-recipient limit | "That's enough gifts for today", no prompt |
 | `PolicyService` restricts buyer | Gift button hidden |
-| Prompt closed / not paid | Nothing happens; intent expires after 10 min |
+| Prompt closed / not paid | Nothing happens; the pending intent expires after 10 min |
 | Store write fails during `ProcessReceipt` | `NotProcessedYet`; retried by Roblox |
-| Intent missing at receipt (server hop) | Gift goes to the BUYER's own inbox with a note (never lost, never to a wrong person) |
+| Intent missing at receipt (server hop, or receipt after the 10 min intent) | Item goes to the BUYER's own inbox with a note (never lost, never to a wrong person) |
+| Recipient never played Be Dino | Gift waits in the inbox with no expiry; delivered after their first hub arrival; the setting default is Everyone |
+| Recipient turns gifts off or blocks the sender after purchase | Gift is held in the inbox (not applied, not announced), delivered if they change their mind; never returned (no transfers) |
+| Recipient already owns the skin | Pre-check refuses; if raced, converted to thank-you crystals (7.6) |
 | Recipient at crystal cap | Gift stays pending: "Make room, then open your gift" |
-| Recipient has "no gifts" setting | Prompt refused before purchase; admin gifts bypass it |
-| Recipient banned/deleted account | Gift stays in the inbox (25 cap); admin can clear |
+| Banned, deleted or never-returning account | Gift stays in the inbox (25 cap); admin can clear; the confirm-by-avatar step is the buyer's protection against typos |
+| Admin gift to someone with gifts off | Delivered (admin bypass, s5) unless the recipient blocked the admin account |
 | Lease lost / profile busy during claim | Retry next tick, no partial apply |
-| Message fails the text filter | Sent without the message |
+| Refund or chargeback | Admin revoke (7.4), idempotent, audited |
+| Recipient-client block report unavailable | Fall back to Mute and Nobody; log once; section 12 item |
 
 ## 9. Test plan
 Offline Luau (`tools/verify_gifts.py`, added to the CI workflow together with the flag-gating checks):
 1. Receipt idempotency: same PurchaseId twice gives one inbox entry; redelivery after claim does not re-grant.
 2. Exactly-once claim: two servers claim concurrently (mock store), one grant.
-3. Offline claim: gift written while the recipient has no session; granted on load.
-4. Admin allow-list: non-admin, negative id outside Studio, flag off all refused; rate limit; amount clamp; no profile write from the admin handler.
+3. Offline claim: gift written while the recipient has no session; granted on load. **Never-played recipient:** gift written for a UserId with no profile and no `pref`; granted exactly once after the first profile creation; no expiry (a gift dated far in the past still delivers).
+4. Admin allow-list: non-admin, negative id outside Studio, flag off all refused; rate limit; amount clamp; no profile write from the admin handler; admin bypasses Nobody but not the block list.
 5. Flag gating: all flags false in `Config`; handlers return "unavailable"; release profiles pin the flags off.
-6. Rules: self, invalid ids, forbidden item kinds (egg, dino, species) rejected; every catalog entry free of power words.
+6. Rules: self, invalid ids, forbidden item kinds (egg, dino, species) rejected; every catalog entry free of power words; messages must be a preset id (a free-text string is rejected).
 7. Crystal cap defers, never loses; `claimedGifts` cap fails closed.
-8. Re-run `verify_robux_line`, `verify_private_state`, `verify_rollback` (the Build 020 reader still loads profiles with the new optional fields), `verify_multiplayer_sim`, `verify_release`.
-Not testable offline, owner/Studio later: real product prompts, `GetUserIdFromNameAsync`, `TextService` filtering, popup layout on a phone.
+8. **Recipient setting:** Everyone / Friends / Nobody each accepted or refused at purchase AND at claim; a missing `pref` behaves as Everyone; changing to Nobody after purchase holds, then delivers after switching back.
+9. **Blocked and muted:** a blocked buyer is refused before the prompt; a gift from a blocked or muted sender is held at claim, also for a recipient with no earlier `pref`; the refusal text is byte-identical for every recipient-side refusal reason.
+10. **Anti-abuse:** the per-minute, per-day, per-recipient, pending-per-sender and inbox caps; daily counters survive a simulated server hop; lookup budgets.
+11. **Revoke:** pending and claimed revokes, idempotent, a re-delivered receipt does not re-grant a revoked id, skin unequipped.
+12. **Race duplicate** converts to crystals once.
+13. **Audit and privacy:** every event writes its record by UserId; no stored value contains a display name, @username or message text.
+14. Re-run `verify_robux_line`, `verify_private_state`, `verify_rollback` (the Build 020 reader still loads profiles with the new optional fields), `verify_multiplayer_sim`, `verify_release`.
+Not testable offline, owner/Studio later: real product prompts, `GetUserIdFromNameAsync`, `UserService` lookups, `GetUserThumbnailAsync`, `GetCore("GetBlockedUserIds")`, `Player:IsFriendsWith` for a user not in the server, popup layout on a phone.
 
-## 10. Questions for the owner (all decided by the LEAD, owner delegated 2026-10-16)
-Marker used below: **LEAD decision (owner delegated 2026-10-16)**. The owner may overrule. Robux gifting stays flag-off: "decided in principle, enable needs owner go-ahead".
+## 10. Questions for the owner
+Marker used below: **LEAD decision (owner delegated 2026-10-16)**. The owner may overrule. **OWNER decision 2026-10-17** overrides where stated. Robux gifting stays flag-off: "decided in principle, enable needs owner go-ahead".
 
-1. Who may receive: anyone, friends only, or recipient opt-in? (Recommended: friends only by default for a children's game, plus the Settings switch.) **LEAD decision (owner delegated 2026-10-16): friends only.** The recipient's Settings row "Gifts" has two values, "From friends" (default) and "Nobody"; there is no "Anyone" at launch. The buyer's server checks the friendship (`Player:IsFriendsWith` for players in the server, `Players:GetFriendsAsync` paging for a typed username) before the purchase prompt. The recipient's choice is mirrored into the Gifts store (`pref_<userId>`, written on join and on change) so an offline check works; a missing record means "From friends". Admin gifts bypass it. Reason: children's game, no stranger contact, simplest to explain, and the spec's own recommendation.
-2. Which items are giftable at launch: skins only, or also crystal packs and bundles? What goes in a bundle? **LEAD decision (owner delegated 2026-10-16): skins first.** Robux gifting launches with skins only (fixed, named, account-wide entitlements, [137](137-dino-skins-spec.md)). Crystal packs become giftable only after `CrystalPacksEnabled` has been playtested. A "bundle" is a fixed, named set of skins shown before buying; no eggs, dinos, species, luck or anything random in any bundle. Admin free gifts can send skins and crystals from day one (no Robux). Reason: skins are the only item with an owner record to receive, and crystal packs are themselves still untested.
-3. Skins per species or per account ([97](97-dino-skins.md) open decision 1)? A gifted skin needs an owner record for it. **LEAD decision (owner delegated 2026-10-16): per ACCOUNT, per style** (`ownedSkins[styleId]`), the same answer as [137](137-dino-skins-spec.md) Q1. Reason: one purchase fits every species, no 88-product trap for children, survives fusion, and gives gifts exactly one owner record.
-4. Gift prices: same as buying for yourself, or a small markup? **LEAD decision (owner delegated 2026-10-16): the same price, no markup.** Each gift product mirrors its own-use product. Reason: a markup would feel like a trap for kids and invites questions from parents; the Robux amounts themselves are the owner's to set in Creator Hub.
-5. Show the sender's name or just "a friend" (privacy)? **LEAD decision (owner delegated 2026-10-16): show the sender's display name, no anonymous gifts.** Because only friends can send, the name is already known; it appears only inside the popup and is never logged (UserIds only). Reason: anonymity helps abuse and is not needed in a friends-only flow.
-6. Is a typed message wanted at all, or presets only (safer, no filter dependency)? **LEAD decision (owner delegated 2026-10-16): presets only at launch** (about 6 short kid phrases such as "Have fun!", chosen from a fixed list). Free text is deferred until the owner has tested `TextService` filtering on real accounts. Reason: no filter dependency, no free text between children.
-7. Should admin gifts show a "from the Be Dino team" label? **LEAD decision (owner delegated 2026-10-16): yes**, admin gifts always read "A gift from the Be Dino team!", the admin's own name is never shown. Reason: clear, warm, and no personal data.
-8. Owner tasks (Creator Hub): create one gift developer product per catalog item, record ids in `Config.GiftProducts`, set prices. Add these to [120](120-pending-owner-uploads-checklist.md) when the build task starts. **LEAD decision (owner delegated 2026-10-16): acknowledged, unchanged.** The products are created only when BD-453 starts and after the skins products exist (BD-459); `GiftingEnabled` stays false and pinned off. Enabling any Robux gifting needs the owner's explicit go-ahead.
+1. Who may receive: anyone, friends only, or recipient opt-in? (Recommended: friends only by default for a children's game, plus the Settings switch.) ~~**LEAD decision (owner delegated 2026-10-16): friends only.** The recipient's Settings row "Gifts" has two values, "From friends" (default) and "Nobody"; there is no "Anyone" at launch. The buyer's server checks the friendship (`Player:IsFriendsWith` for players in the server, `Players:GetFriendsAsync` paging for a typed username) before the purchase prompt. The recipient's choice is mirrored into the Gifts store (`pref_<userId>`, written on join and on change) so an offline check works; a missing record means "From friends". Admin gifts bypass it.~~ **OVERTURNED 2026-10-17 by the owner (old text kept struck through as history).** **OWNER decision 2026-10-17: anyone.** Any Roblox user can receive a gift: lobby players and a username search, online, offline or never played. The recipient's Settings row is **"Gifts from: Everyone / Friends / Nobody"**, **default Everyone**, easy off (Settings row, **Turn gifts off** on every popup, **Mute sender**). The preference is still mirrored into the Gifts store (`pref_<userId>`) so offline checks work; a missing record means Everyone. Admin gifts bypass the setting. Compensating controls for strangers: section 2.1.
+2. Which items are giftable at launch: skins only, or also crystal packs and bundles? What goes in a bundle? **LEAD decision (owner delegated 2026-10-16): skins first.** Robux gifting launches with skins only (fixed, named, account-wide entitlements, [137](137-dino-skins-spec.md)). Crystal packs become giftable only after `CrystalPacksEnabled` has been playtested. A "bundle" is a fixed, named set of skins shown before buying; no eggs, dinos, species, luck or anything random in any bundle. Admin free gifts can send skins and crystals from day one (no Robux). *Unchanged by 2026-10-17; with strangers receiving, "skins first" matters more because a skin is cosmetic and never touches a child's economy.*
+3. Skins per species or per account ([97](97-dino-skins.md) open decision 1)? A gifted skin needs an owner record for it. **LEAD decision (owner delegated 2026-10-16): per ACCOUNT, per style** (`ownedSkins[styleId]`), the same answer as [137](137-dino-skins-spec.md) Q1. *Unchanged.*
+4. Gift prices: same as buying for yourself, or a small markup? **LEAD decision (owner delegated 2026-10-16): the same price, no markup.** *Unchanged.*
+5. Show the sender's name or just "a friend" (privacy)? ~~**LEAD decision (owner delegated 2026-10-16): show the sender's display name, no anonymous gifts.** Because only friends can send, the name is already known; it appears only inside the popup and is never logged (UserIds only). Reason: anonymity helps abuse and is not needed in a friends-only flow.~~ **RESTATED 2026-10-17 (the friends-only reason no longer holds, the decision does):** show the sender's **display name** (not the @username), no anonymous gifts, even though the sender may now be a stranger. The name is resolved fresh at popup time, never stored and never logged (UserIds only). The buyer is told on the confirm screen exactly what the recipient will see. Reason: the name is what lets a child recognise, mute or report a sender; an anonymous gift from a stranger is worse. Section 2.1 covers `PolicyService` and age.
+6. Is a typed message wanted at all, or presets only (safer, no filter dependency)? **LEAD decision (owner delegated 2026-10-16): presets only at launch** (about 6 short kid phrases such as "Have fun!", chosen from a fixed list). **Restated 2026-10-17: presets only, and free text is NOT planned for gifts to anyone**; at most the "Friends" setting could get free text later, after `TextService` tests on real accounts. Reason: strangers plus free text between children is the exact contact path to avoid.
+7. Should admin gifts show a "from the Be Dino team" label? **LEAD decision (owner delegated 2026-10-16): yes**, admin gifts always read "A gift from the Be Dino team!", the admin's own name is never shown. *Unchanged.*
+8. Owner tasks (Creator Hub): create one gift developer product per catalog item, record ids in `Config.GiftProducts`, set prices. Add these to [120](120-pending-owner-uploads-checklist.md) when the build task starts. **LEAD decision (owner delegated 2026-10-16): acknowledged, unchanged.** The products are created only when BD-453 starts and after the skins products exist (BD-459); `GiftingEnabled` stays false and pinned off. **Restated 2026-10-17:** the product descriptions say "Gift" and name the item; the products are created only after the section 12 go-live review; enabling any Robux gifting needs the owner's explicit go-ahead.
+9. **New 2026-10-17 (LEAD decision under the standing delegation, owner may overrule): a gift to someone who has never played Be Dino waits in the inbox with NO expiry** (recommended). Reason: the buyer paid Robux and Roblox gives no automatic refund event, so any expiry would silently eat paid Robux; storage is bounded by the 25-per-inbox and 3-per-sender caps. Alternative if the owner prefers: expire after 90 days and warn the buyer on the confirm screen, which still has no refund path and is therefore not recommended.
+10. **New 2026-10-17 (LEAD decision, owner may overrule): recipient-side defaults.** Default Everyone (owner intent), no extra friction before the first gift, the first-gift popup explains and shows **Turn gifts off**. A gift held by a later Nobody, Friends, block or mute is never returned or deleted.
 
-### 10.1 What the decisions change in sections 2 to 8
-- Player flow (s3, s4): the player list shows only the buyer's friends who are in the server; a typed username must resolve to a friend, else "We could only send gifts to friends." Self and unknown names stay refused.
-- Message step: a preset picker, no text box, so the `TextService` row in s8 ("Message fails the text filter") does not apply at launch.
-- Failure table: add "Recipient is not a friend or has Gifts set to Nobody" (refused before the prompt, kid copy "Gifts are only for friends").
-- Catalog (`GiftRules`): kind `crystals` is added only after crystal packs are playtested; `bundle` means a fixed list of skin ids.
-- Build order: BD-451 core and BD-452 admin gifts do not depend on any Robux product; BD-453 (Robux gifting) now also waits for BD-459 (skins Robux purchase).
+### 10.1 What the 2026-10-16 decisions changed (SUPERSEDED where it says friends)
+- ~~Player flow (s3, s4): the player list shows only the buyer's friends who are in the server; a typed username must resolve to a friend, else "We could only send gifts to friends." Self and unknown names stay refused.~~ Superseded 2026-10-17: lobby players plus a username search for anyone (10.2).
+- Message step: a preset picker, no text box, so the `TextService` row in s8 does not apply at launch. **Still true.**
+- ~~Failure table: add "Recipient is not a friend or has Gifts set to Nobody" (refused before the prompt, kid copy "Gifts are only for friends").~~ Superseded: the setting is now Everyone / Friends / Nobody and the refusal copy is the one non-revealing line in 2.1.
+- Catalog (`GiftRules`): kind `crystals` is added only after crystal packs are playtested; `bundle` means a fixed list of skin ids. **Still true.**
+- Build order: BD-451 core and BD-452 admin gifts do not depend on any Robux product; BD-453 (Robux gifting) also waits for BD-459 (skins Robux purchase). **Still true.**
+
+### 10.2 What the 2026-10-17 owner decision changes in sections 2 to 8
+- Recipient picker: the Shop Gift button opens one screen with "In this server" and "Find a player" (s3, s4). Any valid Roblox UserId is a legal recipient except self.
+- Username resolution: `Players:GetUserIdFromNameAsync`, then public profile via `UserService:GetUserInfosByUserIdsAsync`, avatar via `Players:GetUserThumbnailAsync`, display name plus @username plus avatar, **Yes before any payment prompt**.
+- Offline and never-played delivery: server-side inbox keyed by recipient UserId, claimed on next join, exactly once, idempotent, no expiry (s6, s7, Q9).
+- Recipient controls: Everyone / Friends / Nobody (default Everyone), Mute sender, block list honoured at purchase and at claim (2.1).
+- Anti-abuse, audit-by-UserId, revoke and the duplicate-skin conversion are new (2.1, 6, 7.4, 7.6).
+- Data: `fromName` removed from `Gift`; `pref_<userId>` gained `blocked` and `muted`; `intent_<buyer>` gained daily counters; `audituser_<userId>` index added.
+- Build tasks: BD-451 grows (pref, block/mute, inbox for never-played users, audit, revoke); BD-452 gains offline-by-username as the first user of the inbox; BD-453 gains the section 12 go-live review. Priorities unchanged (BD-451 P2, BD-452 P2, BD-453 P3).
 
 ## 11. Recommended priority
 - **Not for session 1.** Session 1 is 4 players with no products or passes ([125](125-friends-playtest-go-no-go.md)); the board's open P0/P1 work is the reward loop, fusion, cave hub and phone checks. Gifting also depends on skins existing ([97](97-dino-skins.md) says implementation not started) and on the Robux line being playtested.
-- **Admin free gifts: P2**, the first piece after session 1. No Robux and no policy risk, and it is immediately useful to reward playtesters.
-- **Player gifting with Robux: P3**, after skins exist, `CrystalPacksEnabled` has been playtested and the owner has created products. It has the highest policy surface (usernames, text, children), so it ships last.
-- Order: BD-450 (spec accepted) > BD-451 (core) > BD-452 (admin page) > BD-453 (Robux gifting).
+- **Admin free gifts: P2**, the first piece after session 1. No Robux and no policy risk, and it is immediately useful to reward playtesters. It also proves the inbox, including offline and never-played users, before any Robux is involved.
+- **Player gifting with Robux: P3**, after skins exist, `CrystalPacksEnabled` has been playtested, the safety controls of BD-451 are in and the owner has created products. With strangers able to receive, it has the highest policy surface (usernames, children, money), so it ships last.
+- Order: BD-450 (spec accepted, Done) > BD-451 (core and safety controls) > BD-452 (admin page) > BD-453 (Robux gifting).
+
+## 12. Go-live checklist before any Robux gifting flag flips (owner go-ahead needed)
+None of this is done; it is the list the owner signs off at BD-453 time. All flags stay false until then.
+1. The recipient-side controls (Settings row, popup Turn off, Mute, block honouring) work on a phone and in a 2-account Studio test.
+2. `GetCore("GetBlockedUserIds")` and `Player:IsFriendsWith(userId)` for an out-of-server user are verified in Studio; if either fails, the documented fallback is accepted.
+3. The owner reads Roblox's current Community Standards and Creator Hub rules for developer products given to other users and for gifts to minors, and records the result in [43](43-player-access-and-paid-random-policy.md). Nothing in the repo today says whether any extra rule applies; this spec does not assume it.
+4. The preset list and all gift copy pass the [72](72-ui-copy-and-asset-standards.md) child-copy check.
+5. The audit log is checked for one full test purchase by UserId, including a revoke.
+6. Owner confirms the PROVISIONAL numbers (rate limits, duplicate-skin crystal amount) and Q9 (no expiry).
 
 ## Handbook check
-Robux line s11a kept (no power, no random); no trading; flags off; no art made; Place1.rbxl untouched; economy numbers unchanged. Nothing here was built or verified in Studio.
+Robux line s11a kept (no power, no random); no trading; flags off; no art made; Place1.rbxl untouched; economy numbers unchanged. Audience rule ([114](114-handbook.md) s2: children, parents nearby) is why strangers get a wordless, mutable, one-way gift only. Nothing here was built or verified in Studio, and every Roblox API named above that is not already used in the repo is marked for Studio verification.
+
+
+**Owner answer 2026-10-17:** default stays Everyone (a gift is not contact; preset messages only). Recipient controls are **Mute <name>** and **Turn gifts off** only. **No per-gift refuse or decline button** (owner correction 2026-10-17: gifts are not refused one by one); the popup's only other button is **Thanks!**. Server-side refusals before purchase (self, unknown name, recipient set to Nobody/Friends, blocked, limits) are unchanged. Recorded as docs/115 GF1c.
