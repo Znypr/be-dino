@@ -1527,7 +1527,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "lightningBolt",
    "group": "Requested.lightningBolt",
-   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "lightningBolt"
+   ]
   },
   {
    "name": "rainStreak",
@@ -1536,7 +1539,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "rainStreak",
    "group": "Requested.rainStreak",
-   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "rainStreak"
+   ]
   },
   {
    "name": "snowFlakeSheet",
@@ -1545,7 +1551,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "snowFlakeSheet",
    "group": "Requested.snowFlakeSheet",
-   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "snowFlakeSheet"
+   ]
   },
   {
    "name": "ashFlake",
@@ -1554,7 +1563,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "ashFlake",
    "group": "Requested.ashFlake",
-   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "ashFlake"
+   ]
   },
   {
    "name": "bloodMoonDisc",
@@ -1563,7 +1575,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "bloodMoonDisc",
    "group": "Requested.bloodMoonDisc",
-   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "bloodMoonDisc"
+   ]
   },
   {
    "name": "emberSpark",
@@ -1572,7 +1587,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "emberSpark",
    "group": "Requested.emberSpark",
-   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "emberSpark"
+   ]
   },
   {
    "name": "dustSand",
@@ -1581,7 +1599,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "dustSand",
    "group": "Requested.dustSand",
-   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "dustSand"
+   ]
   },
   {
    "name": "auroraCurtain",
@@ -1590,7 +1611,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "auroraCurtain",
    "group": "Requested.auroraCurtain",
-   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "auroraCurtain"
+   ]
   },
   {
    "name": "bloodMoonMotes",
@@ -1599,7 +1623,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "bloodMoonMotes",
    "group": "Requested.bloodMoonMotes",
-   "pending": "BD-131 weather rigs (WeatherVisuals) read this texture"
+   "reader": [
+    "src/client/WeatherVisuals.client.luau",
+    "bloodMoonMotes"
+   ]
   },
   {
    "name": "tree_broadleaf_v3",
