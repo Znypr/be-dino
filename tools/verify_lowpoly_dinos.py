@@ -139,6 +139,110 @@ P.sample("head", 1, true, 3.3, 2.2, 0.7, 1, a) P.sample("head", 1, true, 3.3, 2.
 for k, v in a do assert(v == b[k]) end
 P.sample("head", 1, true, 0/0, 0/0, 0/0, 0/0, a)
 for k, v in a do assert(v == v and v == 0, "nan " .. k) end
+-- BD-233: jump / leap / land / water-surge actions. Every class x phase x role x side x aggr: finite, bounded, Reduce Motion = rest, continuity.
+local ctx = P.newCtx()
+local ROLES = {"body", "head", "neck", "tail", "arm", "leg", "flipper", "wing"}
+local function run(class, phase, aggr, p, t, amp, role, side, lead, o)
+    ctx.phase, ctx.p, ctx.t, ctx.aggr, ctx.carry = phase, p, t, aggr, 0.7
+    return P.sampleAction(role, side, lead, ctx, amp, o, class)
+end
+local phasesFor = {Ground = {"crouch", "push", "air", "land"}, Armored = {"crouch", "push", "air", "land"},
+    Fly = {"crouch", "push", "air", "land"}, Water = {"surge"}}
+local checked = 0
+for class, phases in phasesFor do
+    for _, phase in phases do
+        for _, aggr in {0, 0.5, 1} do
+            for step = 0, 20 do
+                local p, t = step / 20, step * 0.06
+                local dur = P.duration(phase, aggr, class)
+                assert(dur >= 0 and dur < 1, class .. " duration " .. phase)
+                local k = P.actionWeight(phase, p)
+                assert(k >= 0 and k <= 1, "weight")
+                for _, role in ROLES do
+                    for _, side in {-1, 1} do
+                        local o, rest = P.new(), P.new()
+                        run(class, phase, aggr, p, t, 1, role, side, true, o)
+                        for key, v in o do
+                            local cap = if role == "wing" and key == "roll" then P.MaxFold else P.MaxAngle
+                            assert(v == v and math.abs(v) <= cap + 1e-9, class .. " " .. phase .. " " .. role .. " " .. key)
+                        end
+                        assert(math.abs(o.dy) <= P.MaxOffset and math.abs(o.dz) <= P.MaxOffset)
+                        -- calm: nothing violent (no angle above ~0.9 rad, offsets inside 8 percent of the height)
+                        run(class, phase, aggr, p, t, 0, role, side, true, rest)
+                        for key, v in rest do
+                            if role == "wing" and key == "roll" then assert(math.abs(v + side * P.FoldAngle) < 1e-9, "wing fold lost")
+                            else assert(v == 0, "reduce motion not rest: " .. class .. " " .. phase .. " " .. role .. " " .. key) end
+                        end
+                        checked += 1
+                    end
+                end
+            end
+        end
+    end
+end
+-- smooth: a small time step never jumps the pose (calm, no shaking) in any timed phase
+for class, phases in phasesFor do
+    for _, phase in phases do
+        for _, role in ROLES do
+            local a, b = P.new(), P.new()
+            local dur = math.max(P.duration(phase, 1, class), 0.5)
+            for step = 0, 99 do
+                local t0 = step / 100 * dur
+                run(class, phase, 1, math.clamp(t0 / dur, 0, 1), t0, 1, role, 1, true, a)
+                run(class, phase, 1, math.clamp((t0 + 0.005) / dur, 0, 1), t0 + 0.005, 1, role, 1, true, b)
+                for key, v in a do assert(math.abs(v - b[key]) < 0.06, "jerky " .. class .. " " .. phase .. " " .. role .. " " .. key) end
+            end
+        end
+    end
+end
+-- continuity: the action starts and ends at the exact rest pose, hands over to idle with zero weight
+for class, phases in phasesFor do
+    local first, last = phases[1], phases[#phases]
+    assert(P.actionWeight(first, 0) == 0 or class == "Water" and P.actionWeight("surge", 0) == 0 or first == "crouch" and P.actionWeight("crouch", 0) == 0)
+    for _, role in ROLES do
+        for _, side in {-1, 1} do
+            local o, idle = P.new(), P.new()
+            run(class, first, 1, 0, 0, 1, role, side, true, o)
+            local f = if role == "wing" then -side * P.FoldAngle else 0
+            assert(math.abs(o.pitch) < 1e-9 and math.abs(o.yaw) < 1e-9 and math.abs(o.dy) < 1e-9 and math.abs(o.dz) < 1e-9 and math.abs(o.roll - f) < 1e-9, class .. " start not rest " .. role)
+            run(class, last, 1, 1, P.duration(last, 1, class), 1, role, side, true, o)
+            assert(math.abs(o.pitch) < 1e-9 and math.abs(o.yaw) < 1e-9 and math.abs(o.dy) < 1e-9 and math.abs(o.dz) < 1e-9 and math.abs(o.roll - f) < 1e-9, class .. " end not rest " .. role)
+            -- the final handed-over pose is exactly the idle/walk pose, and rest itself is within tolerance of idle at t=0
+            P.sample(role, side, true, 0, 0, 0, 1, idle, class)
+            assert(math.abs(idle.pitch) < 0.05 and math.abs(idle.dy) < 0.03 and math.abs(idle.roll - f) < 0.05, "idle not near rest " .. role)
+            local blended = P.sample(role, side, true, 1.7, 0.4, 0.6, 1, P.new(), class)
+            local walk = P.sample(role, side, true, 1.7, 0.4, 0.6, 1, P.new(), class)
+            P.blend(blended, o, P.actionWeight(last, 1))
+            for key, v in blended do assert(math.abs(v - walk[key]) < 1e-12, "land end must be the base pose") end
+        end
+    end
+    assert(P.actionWeight(last, 1) == 0, class .. " last weight")
+end
+-- class character: Armored crouches deeper and lands heavier, Fly opens its wings in the air and folds again, Water surges forward
+local g, ar = P.new(), P.new()
+run("Ground", "crouch", 0, 1, 0.1, 1, "body", 1, false, g) run("Armored", "crouch", 0, 1, 0.1, 1, "body", 1, false, ar)
+assert(ar.dy < g.dy, "armored crouches lower")
+run("Ground", "land", 0, 0.25, 0.1, 1, "body", 1, false, g) run("Armored", "land", 0, 0.25, 0.1, 1, "body", 1, false, ar)
+assert(ar.dy < g.dy, "armored lands heavier")
+local wr, wl = P.new(), P.new()
+run("Fly", "air", 0, 0, 0.5, 1, "wing", 1, false, wr) run("Fly", "air", 0, 0, 0.5, 1, "wing", -1, false, wl)
+assert(math.abs(wr.roll) < 0.6 and math.abs(wl.roll) < 0.6 and wr.roll * wl.roll <= 0, "fly wings open (mirrored) in the air")
+run("Fly", "crouch", 0, 0, 0, 1, "wing", 1, false, wr)
+assert(wr.roll < -P.FoldAngle + 1e-9, "fly wings folded before takeoff")
+local jb, lb, jh, lh = P.new(), P.new(), P.new(), P.new()
+run("Water", "surge", 0, 0.5, 0.2, 1, "body", 1, false, jb) run("Water", "surge", 1, 0.5, 0.275, 1, "body", 1, false, lb)
+assert(jb.dz < -0.02 and lb.dz < jb.dz, "water surge forward, leap bigger")
+for _, p in {0.4, 0.5, 0.6} do
+    run("Water", "surge", 1, p, 0.2, 1, "head", 1, false, lh) if lh.pitch < -0.2 then jh.pitch = 1 end
+end
+assert(jh.pitch == 1, "water leap head snap")
+for _, class in {"Ground", "Armored", "Fly", "Water"} do
+    local o = P.new()
+    ctx.phase, ctx.p, ctx.t, ctx.aggr, ctx.carry = "air", 0/0, 0/0, 0/0, 0/0
+    P.sampleAction("body", 1, false, ctx, 0/0, o, class)
+    for key, v in o do assert(v == v and v == 0, "nan " .. key) end
+end
+print("lowpoly action tests passed", checked)
 print("lowpoly pose tests passed")
 '''
 
