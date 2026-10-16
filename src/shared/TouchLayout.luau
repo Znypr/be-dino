@@ -20,6 +20,31 @@ TouchLayout.TIMERS_W = 286
 TouchLayout.LEAP_H, TouchLayout.WEATHER_H, TouchLayout.BUFFS_H = 60, 62, 68
 TouchLayout.ACTION = {w = 244, h = 60}
 
+-- BD-378: where the toast stack goes. The Crystals plate (top right) has the goal line ("Level 1: 0/100 XP") right under it;
+-- the stack is TOAST.w wide, centred, and used to sit at y = 80 (y = 4 with a menu open), which covers both on any canvas
+-- narrower than about 1000 px. walletPlates gives that rect from the layout; toastPlacement keeps the stack clear of it:
+-- unchanged when it already is, else slid left of the plates (if it still fits on screen), else dropped below them.
+TouchLayout.TOAST = {w = 440, h = 186, runY = 80, menuY = 4, gap = 8}
+TouchLayout.GOAL_H, TouchLayout.GOAL_GAP = 30, 4 -- Bootstrap places the goal line at crystal.y + crystal.h * scale + GOAL_GAP, GOAL_H * scale tall
+function TouchLayout.walletPlates(layout): Rect
+    local c = layout.crystal
+    return {x = c.x, y = c.y, w = c.w * c.scale, h = c.h * c.scale + TouchLayout.GOAL_GAP + TouchLayout.GOAL_H * c.scale}
+end
+-- Returns (x shift from the screen centre, top y). `shift` is the caller's own slide (the admin panel); `plates` may be nil.
+function TouchLayout.toastPlacement(width: number, toastScale: number, plates: Rect?, menuOpen: boolean, shift: number): (number, number)
+    local T = TouchLayout.TOAST
+    local top = if menuOpen then T.menuY else T.runY
+    if not plates then return shift, top end
+    local w, h = T.w * toastScale, T.h * toastScale
+    local function hits(centre: number, y: number): boolean
+        return TouchLayout.overlaps({x = centre - w / 2, y = y, w = w, h = h}, plates)
+    end
+    if not hits(width / 2 + shift, top) then return shift, top end
+    local centre = plates.x - T.gap - w / 2
+    if shift == 0 and centre - w / 2 >= T.gap then return centre - width / 2, top end
+    return shift, math.max(top, plates.y + plates.h + T.gap)
+end
+
 local function clamp(value: number, low: number, high: number): number
     return math.max(low, math.min(high, value))
 end
