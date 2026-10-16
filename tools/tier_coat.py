@@ -53,7 +53,7 @@ def _table(it):
 
 
 def parse_maps(source):
-    """Tier.Maps from the LowPolyTier.luau source: {"color": {species: {part: {tier: id}}}, "normal": id, "roughness": id, "metalness": id}."""
+    """Tier.Maps from the LowPolyTier.luau source: {"color": {species: {part: {tier: id}}}, "normal": id, "roughness": {tier: id}, "metalness": id}."""
     m = re.search(r"^Tier\.Maps = \{", source, re.M)
     if not m:
         raise ValueError("Tier.Maps table not found")
@@ -64,13 +64,19 @@ def template_name(species, part, tier):
     return f"{species}_{part}_{tier}"  # same as Tier.templateName in LowPolyTier.luau
 
 
+def roughness_for(maps, tier):
+    """RoughnessMap id for a tier: Tier.Maps.roughness is {gold, emerald, diamond} (a plain string is accepted as one id for every tier)."""
+    r = maps.get("roughness", "")
+    return r if isinstance(r, str) else r.get(tier, "")
+
+
 def valid_id(value):
     return bool(ID_RE.fullmatch(value))
 
 
 def templates(maps):
     """One dict per (species, part, tier) with a ColorMap id: name, ColorMap, NormalMap, RoughnessMap, MetalnessMap (None unless valid)."""
-    shared = {k: maps.get(k, "") for k in ("normal", "roughness", "metalness")}
+    shared = {k: maps.get(k, "") for k in ("normal", "metalness")}
     out = []
     for species, parts in sorted(maps.get("color", {}).items()):
         for part, tiers in sorted(parts.items()):
@@ -80,13 +86,14 @@ def templates(maps):
                     continue
                 if not valid_id(color):
                     raise ValueError(f"Tier.Maps.color.{species}.{part}.{tier}: malformed asset id {color!r}")
-                for key, value in shared.items():
+                rough = roughness_for(maps, tier)
+                for key, value in (*shared.items(), (f"roughness.{tier}", rough)):
                     if value and not valid_id(value):
                         raise ValueError(f"Tier.Maps.{key}: malformed asset id {value!r}")
                 out.append({
                     "name": template_name(species, part, tier), "species": species, "part": part, "tier": tier,
                     "ColorMap": color, "NormalMap": shared["normal"] or None,
-                    "RoughnessMap": shared["roughness"] or None, "MetalnessMap": shared["metalness"] or None,
+                    "RoughnessMap": rough or None, "MetalnessMap": shared["metalness"] or None,
                 })
     return out
 

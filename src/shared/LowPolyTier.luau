@@ -20,7 +20,7 @@ export type Entry = {
     sparkleCount: number,  -- concurrent twinkles at normal size (rate = count / lifetime)
     sparkleSize: number,   -- relative size of one spark (grows per tier)
     rim: {number}, rimTransparency: number, shell: {number}, shellTransparency: number, shellMaterial: string, accentMaterial: string, shellReflectance: number, -- 2026-10-16 owner rule: semi-translucent glossy tier layer over the whole body (an inflated shell copy of each textured part)
-    outline: {number}?, rimFill: number?, -- optional Highlight overrides (Gold, 2026-10-16: outline exactly this colour, FillTransparency 1 = no fill); nil = rim lerped to white + Tier.HighlightFill
+    outline: {number}?, rimFill: number?, -- optional Highlight overrides (all three tiers, 2026-10-17: outline exactly this colour, FillTransparency 0.85 = faint fill); nil = rim lerped to white + Tier.HighlightFill
     shimmer: {{number}}?, shimmerSpeed: number?, -- Diamond only: rainbow colours the sparks cycle through (static colours under Reduce Motion)
             -- BD-308: 0..MaxSheen lift of the facets the source texture already lit (reads as gloss in flat light)
 }
@@ -37,13 +37,13 @@ function Tier.sparkleAlive(entry: Entry, lite: boolean): number
 end
 -- 2026-10-16 tier coat maps (docs/114 s8.6, docs/115 "fused tier look", "approach C"). Baked crystal-coat ColorMaps (Blender bakes in each part's
 -- ORIGINAL Roblox UV space, resources/effects/tiers/<species>-<part>-<tier>-color.png, docs/77): tier colour WITH alpha, ~0.9 at silhouette / thin
--- edges and ~0.1 in the middle so the runtime-baked stripes show through. Normal / Roughness are shared by all tiers; Metalness is OPTIONAL.
+-- edges and ~0.1 in the middle so the runtime-baked stripes show through. Normal is shared by all tiers; Roughness is per tier (Maps.roughness[tier]); Metalness is OPTIONAL.
 -- STUDIO FACT (lead, control-tested): a SurfaceAppearance made by a script at runtime does NOT render, one authored in the place (edit time) and
 -- cloned does. So these ids are NEVER used by runtime code: tools/build.py reads this table (tools/tier_coat.py) and writes one SurfaceAppearance per
 -- (species, part, tier) with a ColorMap id into ReplicatedStorage.TierCoatTemplates (name = Tier.templateName), and LowPolyDinos CLONES it onto the
 -- LPTierShell. No template (empty id) = today's plain translucent shell. Keep this table plain literals ("rbxassetid://<id>" or ""): the build parses it.
--- Maps.color[species][partName][tierId]. Only the raptor Gold is uploaded (owner account, owner-approved test assets); every other cell is "" until
--- baked and uploaded (docs/120). Metalness: the first test map (98581639691267) FAILED to fetch, so it is empty; a metal id is added to the template
+-- Maps.color[species][partName][tierId]. The raptor Gold / Emerald / Diamond v2 maps are uploaded (owner account, owner-approved; the v1 gold ids are kept in docs/77 history); every other
+-- cell is "" until baked and uploaded (docs/120). Metalness: the first test map (98581639691267) FAILED to fetch, so it is empty; a metal id is added to the template
 -- only when it is a valid id.
 Tier.TemplateFolder = "TierCoatTemplates"
 Tier.Maps = {
@@ -52,13 +52,13 @@ Tier.Maps = {
         triceratops = {},
         tyrannosaurus = {},
         raptor = {
-            body_geom = {gold = "rbxassetid://90178136236675", emerald = "", diamond = ""},
-            head_geom = {gold = "rbxassetid://109694992867474", emerald = "", diamond = ""},
-            tail_geom = {gold = "rbxassetid://72434414127601", emerald = "", diamond = ""},
-            leftarm_geom = {gold = "rbxassetid://136130436024752", emerald = "", diamond = ""},
-            rightarm_geom = {gold = "rbxassetid://127842664163981", emerald = "", diamond = ""},
-            leftleg_geom = {gold = "rbxassetid://110600068291712", emerald = "", diamond = ""},
-            rightleg_geom = {gold = "rbxassetid://86375362214763", emerald = "", diamond = ""},
+            body_geom = {gold = "rbxassetid://113868438061791", emerald = "rbxassetid://91887976444107", diamond = "rbxassetid://103471745823320"},
+            head_geom = {gold = "rbxassetid://119196351264262", emerald = "rbxassetid://139205170920711", diamond = "rbxassetid://103077245223921"},
+            tail_geom = {gold = "rbxassetid://114805933076242", emerald = "rbxassetid://115308340243991", diamond = "rbxassetid://84005504864942"},
+            leftarm_geom = {gold = "rbxassetid://108502097691899", emerald = "rbxassetid://115793210560706", diamond = "rbxassetid://84855073802443"},
+            rightarm_geom = {gold = "rbxassetid://74562471589272", emerald = "rbxassetid://135422632753928", diamond = "rbxassetid://71207892076730"},
+            leftleg_geom = {gold = "rbxassetid://86776571809563", emerald = "rbxassetid://86333670904727", diamond = "rbxassetid://121179877021536"},
+            rightleg_geom = {gold = "rbxassetid://132503186986022", emerald = "rbxassetid://122532010612751", diamond = "rbxassetid://110505346745303"},
         },
         stegosaurus = {},
         ankylosaurus = {},
@@ -80,7 +80,7 @@ Tier.Maps = {
         therizinosaurus = {},
     },
     normal = "rbxassetid://80731894232842",
-    roughness = "rbxassetid://96432641754187",
+    roughness = {gold = "rbxassetid://96432641754187", emerald = "rbxassetid://134658233071230", diamond = "rbxassetid://134658233071230"}, -- per tier: Gold keeps the shared crystal roughness, the non-metallic Emerald / Diamond use the glossier gem roughness
     metalness = "",
 }
 -- Template name in ReplicatedStorage.TierCoatTemplates (one SurfaceAppearance per species / part / tier that has a ColorMap id).
@@ -107,14 +107,14 @@ Tier.Entries = {
     -- Gold = rich warm gold, Emerald = deep jewel green, Diamond = icy white-blue with a rainbow shimmer. Gloss, sheen, sparkle rate and sparkle size all grow per tier.
     gold = {id = "gold", name = "Gold", tint = {255, 190, 30}, amount = 0.55, trimAmount = 0.8, material = "Metal", reflectance = 0.18,
         sparkle = {255, 232, 140}, sparkleRate = 2.5, sparkleCount = 4, sparkleSize = 1.4, accent = {255, 200, 30}, accentAmount = 0.9, sheen = 0.5, gain = 1.1, satGain = 1.2,
-        rim = {255, 190, 60}, outline = {255, 225, 130}, rimFill = 0.62, -- lead Studio 2026-10-17: the edge-bleed coat is only ~18% opaque, so a 0.62 gold Highlight fill carries the gold at every quality level while the stripes stay visible
+        rim = {255, 190, 60}, outline = {255, 225, 130}, rimFill = 0.85, -- 2026-10-17: the v2 coat maps carry the colour now, so the Highlight fill is a faint 0.85 (the old 0.62 washed colours out); the lead tunes it live
         rimTransparency = 0.15, shell = {255, 170, 30}, shellTransparency = 0.5, shellMaterial = "Glass", accentMaterial = "Metal", shellReflectance = 0.5},
     emerald = {id = "emerald", name = "Emerald", tint = {16, 190, 96}, amount = 0.45, trimAmount = 0.8, material = "Glass", reflectance = 0.23,
         sparkle = {150, 255, 195}, sparkleRate = 4.2, sparkleCount = 6, sparkleSize = 1.65, accent = {10, 235, 120}, accentAmount = 0.9, sheen = 0.6, gain = 0.97, satGain = 1.25,
-        rim = {40, 255, 140}, rimTransparency = 0.15, shell = {40, 255, 120}, shellTransparency = 0.5, shellMaterial = "Glass", accentMaterial = "Glass", shellReflectance = 0.5},
+        rim = {40, 255, 140}, outline = {137, 255, 192}, rimFill = 0.85, rimTransparency = 0.15, shell = {40, 255, 120}, shellTransparency = 0.5, shellMaterial = "Glass", accentMaterial = "Glass", shellReflectance = 0.5},
     diamond = {id = "diamond", name = "Diamond", tint = {205, 240, 255}, amount = 0.6, trimAmount = 0.8, material = "Glass", reflectance = 0.3,
         sparkle = {235, 250, 255}, sparkleRate = 5, sparkleCount = 8, sparkleSize = 1.9, accent = {225, 245, 255}, accentAmount = 0.92, sheen = 0.7, gain = 1.14, satGain = 0.9,
-        rim = {200, 245, 255}, rimTransparency = 0.12, shell = {150, 200, 255}, shellTransparency = 0.5, shellMaterial = "Glass", accentMaterial = "Glass", shellReflectance = 0.5,
+        rim = {200, 245, 255}, outline = {227, 250, 255}, rimFill = 0.85, rimTransparency = 0.12, shell = {150, 200, 255}, shellTransparency = 0.5, shellMaterial = "Glass", accentMaterial = "Glass", shellReflectance = 0.5,
         shimmer = {{255, 170, 215}, {170, 220, 255}, {190, 255, 215}, {255, 245, 170}}, shimmerSpeed = 0.5},
 }
 -- BD-308 baked sheen: the generated textures carry flat facet shading (k = pixel luma / species body luma, 0.3..1.6). On a fused
