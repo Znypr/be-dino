@@ -60,7 +60,7 @@ function R.deduped(name: string, last: number?, now: number): boolean
 end
 
 -- Aliases reuse REGISTERED cues (no new asset): a soft crystal reward tick behind a cooldown.
-R.Aliases = {crystal_reward = {cue = "pickup_hi", volume = .6, cooldown = 1.5}}
+R.Aliases = {crystal_reward = {cue = "pickup_hi", volume = .6, cooldown = 1.5}, egg_found = {cue = "pickup_hi", volume = .45, cooldown = 2}} -- egg_found: BD-367 soft "you found an egg" tick
 
 -- Pitch jitter +-4%, deterministic per cue name and repeat count; reveal stings keep their pitch (rarity escalation).
 R.Jitter = .04

@@ -39,6 +39,7 @@ def script():
         ('@@FUSION_ODDS@@', 'src/server/FusionOdds.luau'),
         ('@@REVEAL_SKIP@@', 'src/shared/RevealSkip.luau'),
         ('@@NEST_QUEUE@@', 'src/shared/NestQueue.luau'),
+        ('@@FTUE_RULES@@', 'src/shared/FtueRules.luau'),
         ('@@SETTINGS_MODEL@@', 'src/shared/SettingsModel.luau'),
         ('@@REWARD_MATH@@', 'src/server/RewardMath.luau'),
         ('@@IDENTITY_FUSION_MODULE@@', 'src/server/IdentityFusion.luau'),

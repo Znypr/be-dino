@@ -1131,10 +1131,11 @@ updateNavigation=function()
 end
 updateNavigation()
 require(script.Parent.HubTravelClient).attach({gui=gui,buttons=navigationButtons,open=open,openFusion=openFusion,notify=notify,close=close}) -- BD-288: no-op while Config.CaveHub is false
+require(script.Parent.FtueRail).attach(rail,navigationButtons) -- BD-368: first run: only POTIONS, SETTINGS and a MENU chip until the first egg
 local hud=box(gui,0,0,390,94,C.panel,2)
 hud.AnchorPoint,hud.Position=Vector2.new(0,1),UDim2.new(0,18,1,-18)
 local hudScale=Instance.new("UIScale") hudScale.Parent=hud
-require(script.Parent.HudV2).attach(hud,gui) -- BD-080: egg plate (bottom-left) + SIZE bar (top-centre); growth tile and catches text removed
+require(script.Parent.HudV2).attach(hud,gui,{notify=notify}) -- BD-080: egg plate (bottom-left) + SIZE bar (top-centre); growth tile and catches text removed
 local crystalHUD=box(gui,0,0,260,48,C.panel,2)
 local crystalScale=Instance.new("UIScale") crystalScale.Parent=crystalHUD
 crystalHUD.AnchorPoint,crystalHUD.Position=Vector2.new(1,0),UDim2.new(1,-20,0,8)

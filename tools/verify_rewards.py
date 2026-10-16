@@ -73,7 +73,7 @@ local http={GenerateGUID=function() return "guid-"..tostring(math.random(1,1e9))
 local mutableConfig=table.clone(GameConfig)
 mutableConfig.WriteBudgetEnabled=false -- BD-358: these offline tests run hundreds of claims in zero time; the write budget is proven in verify_multiplayer_sim
 GameConfig=mutableConfig
-local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",EggGenetics="Genetics",NestQueue="NestQueue",ProgressionConfig="ProgressionConfig",SettingsModel="SettingsModel"}}
+local storage={Shared={Config="Config",ProgressionRules="Rules",EggTraits="EggTraits",EggGenetics="Genetics",NestQueue="NestQueue",FtueRules="FtueRules",ProgressionConfig="ProgressionConfig",SettingsModel="SettingsModel"}}
 local services={DataStoreService={GetDataStore=function() return store end},HttpService=http,ReplicatedStorage=storage,RunService={IsStudio=function() return false end}}
 local game={GameId=1,JobId="test",GetService=function(_,id) return services[id] end}
 local task={wait=function() end,spawn=function() end}
@@ -84,6 +84,7 @@ local require=function(id)
  error("unexpected module "..tostring(id))
 end
 local NestQueue=@@NEST_QUEUE@@
+local FtueRules=@@FTUE_RULES@@
 local SettingsModel=@@SETTINGS_MODEL@@
 local Rewards=@@REWARD_MATH@@
 local Identity=@@IDENTITY_MODULE@@
@@ -100,7 +101,7 @@ local require=function(id)
  if id=="FusionOdds" then return FusionOdds end
  if id=="IdentityFusion" then return IdentityFusion elseif id=="Identity" then return Identity elseif id=="Genetics" then return Genetics
  elseif id=="EggTraits" then return EggTraits elseif id=="ProgressionConfig" then return ProgressionConfig elseif id=="Config" then return GameConfig
- elseif id=="Rules" then return Rules elseif id=="Rewards" then return Rewards elseif id=="NestQueue" then return NestQueue elseif id=="SettingsModel" then return SettingsModel end
+ elseif id=="Rules" then return Rules elseif id=="Rewards" then return Rewards elseif id=="NestQueue" then return NestQueue elseif id=="FtueRules" then return FtueRules elseif id=="SettingsModel" then return SettingsModel end
  error("unexpected module "..tostring(id))
 end
 local Repository=@@REPO_MODULE@@
@@ -589,6 +590,7 @@ def script():
         ('@@FUSION_ODDS@@', 'src/server/FusionOdds.luau'),
         ('@@REVEAL_SKIP@@', 'src/shared/RevealSkip.luau'),
         ('@@NEST_QUEUE@@', 'src/shared/NestQueue.luau'),
+        ('@@FTUE_RULES@@', 'src/shared/FtueRules.luau'),
         ('@@SETTINGS_MODEL@@', 'src/shared/SettingsModel.luau'),
         ('@@REWARD_MATH@@', 'src/server/RewardMath.luau'),
         ('@@IDENTITY_FUSION_MODULE@@', 'src/server/IdentityFusion.luau'),

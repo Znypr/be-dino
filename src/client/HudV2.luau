@@ -10,11 +10,15 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Rules = require(Shared:WaitForChild("HudRules"))
 local Theme = require(Shared:WaitForChild("UITheme"))
+local Ftue = require(Shared:WaitForChild("FtueRules"))
+local Assets = require(Shared:WaitForChild("EffectAssets"))
+local Sfx = require(Shared:WaitForChild("Sfx"))
 
 local Hud = {}
 local C = Theme.Colors
 local player = Players.LocalPlayer
 local barPlate: Frame? = nil
+local hintLabel: TextLabel? = nil
 local BAR_W, BAR_H = 250, 34
 
 local function text(parent: Instance, name: string, size: number, color: Color3, x: number): TextLabel
@@ -35,7 +39,7 @@ local function plate(parent: Instance, name: string, w: number, h: number): Fram
 end
 
 -- hud = Bootstrap's bottom-left (phone: top-left) layout slot; gui = the BeDinoUI ScreenGui.
-function Hud.attach(hud: Frame, gui: ScreenGui)
+function Hud.attach(hud: Frame, gui: ScreenGui, hooks: any?)
     for _, child in hud:GetChildren() do
         if child:IsA("GuiObject") or child:IsA("UICorner") or child:IsA("UIStroke") or child:IsA("UIGradient") then child:Destroy() end
     end
@@ -71,6 +75,35 @@ function Hud.attach(hud: Frame, gui: ScreenGui)
     local fillCorner = Instance.new("UICorner")
     fillCorner.CornerRadius, fillCorner.Parent = UDim.new(0.5, 0), fill
 
+    -- BD-366: calm one-line goal hint under the SIZE bar until the profile has found its first egg.
+    local hint = Instance.new("TextLabel")
+    hint.Name, hint.BackgroundTransparency, hint.Font, hint.TextSize, hint.TextColor3 = "GoalHint", 1, Enum.Font.FredokaOne, 20, C.text
+    hint.TextStrokeTransparency, hint.TextStrokeColor3, hint.TextWrapped, hint.Visible, hint.ZIndex = 0.2, C.outline, true, false, 6
+    hint.AnchorPoint, hint.Position, hint.Size, hint.Parent = Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 102), UDim2.fromOffset(360, 28), gui
+    hintLabel = hint
+    local sessionCatch, nearFood, lastNear = false, false, -10
+    local lastMoment, momentsThisRun, wasRunning = nil :: number?, 0, false
+    local function foundBefore(): boolean
+        local copies = 0
+        local ok, collection = pcall(function() return game:GetService("HttpService"):JSONDecode(player:GetAttribute("CollectionJson") :: string) end)
+        if ok then copies = Ftue.collectionCopies(collection) end
+        return Ftue.hasFoundEgg({sessionCatch = sessionCatch, activeEggs = player:GetAttribute("ActiveChestCount"),
+            waitingEggs = player:GetAttribute("QueuedEggsWaiting"), lastRunEggs = player:GetAttribute("LastRunEggCount"), copies = copies})
+    end
+    local function sparkle(character: Model)
+        local count = Ftue.sparkle(Theme.MotionEnabled)
+        local root = character:FindFirstChild("HumanoidRootPart")
+        if count <= 0 or not root or not root:IsA("BasePart") then return end
+        local at = Instance.new("Attachment")
+        at.Name, at.Position, at.Parent = "EggFoundSparkle", Vector3.new(0, 1.5, 0), root
+        local e = Instance.new("ParticleEmitter")
+        e.Texture, e.Rate, e.Lifetime, e.Speed = Assets.resolve("starFour"), 0, NumberRange.new(0.7, 1.1), NumberRange.new(4, 8)
+        e.SpreadAngle, e.Size, e.LightEmission = Vector2.new(180, 180), NumberSequence.new({NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(1, 0)}), 0.6
+        e.Transparency, e.Color = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1)}), ColorSequence.new(Color3.fromRGB(255, 240, 180))
+        e.Parent = at
+        e:Emit(count)
+        task.delay(1.5, function() at:Destroy() end)
+    end
     local previous: number? = nil
     local lastPop = -10
     local lastFill = -1
@@ -90,8 +123,37 @@ function Hud.attach(hud: Frame, gui: ScreenGui)
             pop.Scale = Rules.PopScale
             Theme.animate(pop, Rules.PopSeconds, {Scale = 1}, Enum.EasingStyle.Back)
         end
-        previous = if typeof(eggs) == "number" then eggs else 0
+        -- BD-367: a clear, calm "you found an egg" moment (sparkle, soft cue, toast); one at a time, Reduce Motion: no sparkle.
+        if running and not wasRunning then momentsThisRun = 0 end
+        wasRunning = running
+        local nowEggs = if typeof(eggs) == "number" then eggs else 0
+        if running and nowEggs > (previous or nowEggs) then sessionCatch = true end
+        if Ftue.momentAllowed(previous, nowEggs, running, if lastMoment then os.clock() - lastMoment else nil, momentsThisRun) then
+            lastMoment, momentsThisRun = os.clock(), momentsThisRun + 1
+            if character then sparkle(character) end
+            Sfx.playAlias(Ftue.SoundAlias)
+            if hooks and hooks.notify then hooks.notify(Ftue.FoundText, C.gold, {key = "egg_found", icon = "egg"}) end
+        end
+        previous = nowEggs
         bar.Visible = running
+        -- BD-366: the hint (computed from replicated data only; the food check runs twice a second and only while it shows).
+        local hasFound = sessionCatch or foundBefore()
+        if running and not hasFound and os.clock() - lastNear > 0.5 then
+            lastNear = os.clock()
+            nearFood = false
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            local food = workspace:FindFirstChild("Food")
+            if root and food then
+                local params = OverlapParams.new()
+                params.FilterType, params.FilterDescendantsInstances = Enum.RaycastFilterType.Include, {food}
+                for _, part in workspace:GetPartBoundsInRadius((root :: BasePart).Position, Ftue.NearDistance, params) do
+                    if Ftue.isSpecialFood(part.Name) and part.Transparency < 1 then nearFood = true break end
+                end
+            end
+        end
+        local shownHint = Ftue.hint({running = running, hasFoundEgg = hasFound, nearSpecialFood = nearFood})
+        hint.Visible = shownHint ~= nil
+        if shownHint and hint.Text ~= shownHint then hint.Text = shownHint end
         local amount = Rules.barFill(growth)
         if math.abs(amount - lastFill) > 0.002 then
             lastFill = amount
@@ -110,6 +172,11 @@ function Hud.layout(layout: any)
     bar.AnchorPoint, bar.Position = Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, top)
     local uiScale = bar:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
     uiScale.Scale, uiScale.Parent = scale, bar
+    if hintLabel then
+        hintLabel.Position = UDim2.new(0.5, 0, 0, top + (BAR_H + 4) * scale)
+        local hintScale = hintLabel:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+        hintScale.Scale, hintScale.Parent = scale, hintLabel
+    end
 end
 
 return Hud

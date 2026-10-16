@@ -57,7 +57,7 @@ function Copy.conditionGroup(level: number)
     local percents = ShopOdds.conditionPercents(level)
     local names = {}
     for _, row in Progression.Conditions do table.insert(names, row.name) end
-    return group("Egg condition", names, percents)
+    return group("Egg condition", names, percents, Progression.SafeEggsLine)
 end
 
 -- Cracked eggs can fail; everything else always hatches.
