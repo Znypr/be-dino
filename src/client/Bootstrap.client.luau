@@ -1166,7 +1166,7 @@ local navigationButtons = {}
 for i,entry in {{"DINOS","dinos","collection",C.blue},{"EGGS","egg","eggs",C.gold},{"FUSION","fusion","fusion",C.purple},{"SHOP","aura","auras",C.purple},{"POTIONS","potion","potions",C.accent},{"SETTINGS","shield","settings",C.card}} do
     local b=button(rail,entry[1],7,7+(i-1)*62,172,54,entry[4],function() if require(script.Parent.HubTravelClient).press(entry[3]) then return end if entry[3]=="fusion" then openFusion() else open(entry[3]) end end)
     b.TextSize=20
-    art(b,NavigationArtwork[entry[3]] or entry[2],5,6,40)
+    art(b,if entry[3]=="auras" then "amber" else (NavigationArtwork[entry[3]] or entry[2]),5,6,40) -- BD-046: SHOP wears the crystal icon
     b.Text=""
     label(b,entry[1],52,0,114,54,19)
     table.insert(navigationButtons,b)
@@ -1194,6 +1194,9 @@ local crystalScale=Instance.new("UIScale") crystalScale.Parent=crystalHUD
 crystalHUD.AnchorPoint,crystalHUD.Position=Vector2.new(1,0),UDim2.new(1,-20,0,8)
 art(crystalHUD,"amber",6,4,40)
 local crystalText=label(crystalHUD,"0 Crystals",50,0,203,48,24,C.gold)
+do local crystalOpen=Instance.new("TextButton") -- BD-046: tapping the crystal count opens the same Shop as the SHOP button
+    crystalOpen.Name,crystalOpen.Text,crystalOpen.BackgroundTransparency,crystalOpen.Size,crystalOpen.ZIndex,crystalOpen.Parent="OpenShop","",1,UDim2.fromScale(1,1),crystalHUD.ZIndex+5,crystalHUD
+    crystalOpen.Activated:Connect(function() Sfx.play("ui_click") if require(script.Parent.HubTravelClient).press("auras") then return end open("auras") end) end
 local crystalValue=Instance.new("NumberValue")
 crystalValue.Value=num("Crystals")
 crystalText.Text=math.round(crystalValue.Value).." Crystals"
