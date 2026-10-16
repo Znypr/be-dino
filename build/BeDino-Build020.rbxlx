@@ -561798,9 +561798,9 @@ local function chanceBar(parent: Instance, stage, animate: boolean, name: string
     yes.Name = "YesPart"
     local no = W.box(frame, UDim2.fromScale(math.max(1 - bar.yesShare, .02), 1), UDim2.fromScale(math.max(bar.yesShare, .02), 0), C.outline, 8)
     no.Name = "NoPart"
-    local yesWords = W.label(parent, "Yes " .. Sel.pct(bar.yesShare), UDim2.new(.5, -24, 0, 24), UDim2.new(0, 20, .34, 70), 20, C.purple, true)
+    local yesWords = W.label(parent, "Yes " .. Sel.pct(math.floor(bar.yesShare * 1000 + .5) / 10), UDim2.new(.5, -24, 0, 24), UDim2.new(0, 20, .34, 70), 20, C.purple, true)
     yesWords.Name = "YesWords"
-    local noWords = W.label(parent, "No " .. Sel.pct(1 - bar.yesShare), UDim2.new(.5, -24, 0, 24), UDim2.new(.5, 4, .34, 70), 20, Dim)
+    local noWords = W.label(parent, "No " .. Sel.pct(math.floor((1 - bar.yesShare) * 1000 + .5) / 10), UDim2.new(.5, -24, 0, 24), UDim2.new(.5, 4, .34, 70), 20, Dim)
     noWords.TextXAlignment, noWords.Name = Enum.TextXAlignment.Right, "NoWords"
     local marker = Instance.new("Frame")
     marker.Name, marker.BorderSizePixel, marker.BackgroundColor3 = "Marker", 0, C.gold

@@ -7,6 +7,10 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 BODY = r'''
+-- BD-347: calm fusion lines. Plain words, no Robux wording, no version strings.
+assert(Copy.fusionCalm=="Odds are shown before you fuse" and #Copy.fusionCalm<=40)
+assert(Copy.fusionDetails:find("no real money in this version") and Copy.fusionDetails:find("before you fuse"))
+for _,line in {Copy.fusionCalm,Copy.fusionDetails} do assert(not line:find("[Rr]obux") and not line:find("%d+%.%d") and not line:find("v%d")) end
 local function sumOf(rows) local n=0 for _,r in rows do n+=r.percent end return n end
 local function near(a,b) return math.abs(a-b)<1e-6 end
 -- rounding helper: always exactly 100, for awkward weights too
