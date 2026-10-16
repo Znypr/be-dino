@@ -10,9 +10,9 @@ import argparse, subprocess, sys, tempfile
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT = ROOT / 'tools/qa/data/colour_probe_2026-10-16.tsv'
 # (place, key) -> (open kanban row, flag). Remove the entry when the prop is regenerated / recoloured.
-# Flag column (2nd tuple item): PENDING = the OWNER has not yet decided whether blue-grey stone is acceptable (docs/117 s6 question 2).
-# These are NOT to be recoloured or regenerated until that decision; the flag is only recorded here and printed in the report.
-PENDING = 'OWNER-DECISION-PENDING'
+# Flag column (2nd tuple item): ACCEPTED-HANDBOOK-6.1 = the owner confirmed (2026-10-16, docs/114 s6.1) that cool blue-grey cave stone is accepted
+# decoration; no recolour, the entries stay only so the report keeps listing them (BD-414/415 resolved as accepted).
+PENDING = 'ACCEPTED-HANDBOOK-6.1'
 KNOWN = {
     ('cave', 'hub_counter_stone'): ('BD-414', PENDING), ('cave', 'hub_bench_stone'): ('BD-414', PENDING), ('cave', 'cave_stalagmite_l'): ('BD-414', PENDING),
     ('cave', 'cave_stalagmite_s'): ('BD-414', PENDING), ('cave', 'cave_rock_round'): ('BD-414', PENDING), ('cave', 'cave_stalactite'): ('BD-414', PENDING),
