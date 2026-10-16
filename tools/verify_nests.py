@@ -126,7 +126,7 @@ local ok,outcome,status=run(full,"cap-6",50,300)
 assert(ok and status=="committed" and outcome.nestCount==0 and outcome.nestFull==true and #nests(full)==5)
 assert(string.find(full.attrs.LastRewardText,"nest storage full") and full.attrs.LastRunNestFull==true and full.attrs.LastRunNestCount==0)
 assert(data[key(full)].progression.crystals>0,"settlement still pays eggs and crystals")
-assert(full.attrs.LastRunNestCrystals==outcome.nestCrystals and outcome.nestCrystals==5*GameConfig.NestOverflowCrystals,"nests without a spot become crystals")
+assert(full.attrs.LastRunNestCrystals==outcome.nestCrystals and outcome.nestCrystals==2*GameConfig.NestOverflowCrystals,"nests without a spot become crystals")
 -- A qualified run that earns 3 nests with 4 owned: only one fits.
 local part=fresh(304)
 for i=1,4 do assert(run(part,"part-"..i,10,300)) end
@@ -275,13 +275,13 @@ end
 do
  local b=fresh(308)
  local t1=transforms
- local ok,out=run(b,"big-15",15,300)
+ local ok,out=run(b,"big-31",31,300)
  local used=transforms-t1
- assert(ok and out.eggCount==15 and out.nestCount==2 and bankCount(b)+#data[key(b)].eggs==15 and #nests(b)==2)
+ assert(ok and out.eggCount==31 and out.nestCount==2 and bankCount(b)+#data[key(b)].eggs==31 and #nests(b)==2)
  local c=fresh(309)
  local t2=transforms
- local ok2,out2=run(c,"big-40",40,900)
- assert(ok2 and out2.eggCount==40 and out2.nestCount==4 and out2.nestCrystals==0 and bankCount(c)+#data[key(c)].eggs==40)
+ local ok2,out2=run(c,"big-120",120,900)
+ assert(ok2 and out2.eggCount==120 and out2.nestCount==4 and out2.nestCrystals==0 and bankCount(c)+#data[key(c)].eggs==120)
  assert(transforms-t2==used,"a run with nests costs the same DataStore writes as one without")
  local d=fresh(310)
  local t3=transforms

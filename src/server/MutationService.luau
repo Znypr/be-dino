@@ -5,8 +5,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 
 local MutationService = {}
-local lastMutation: {[Player]: number} = {}
-local lastSetup: {[Player]: number} = {}
+local CooldownMemory = require(script.Parent.CooldownMemory)
+local cooldowns = CooldownMemory.new(120) -- BD-363: keyed by UserId, survives a rejoin
+local lastMutation = "lastMutation"
+local lastSetup = "lastSetup"
 
 local function getRemote(folder: Folder, name: string): RemoteEvent
     local existing = folder:FindFirstChild(name)
@@ -18,12 +20,8 @@ local function getRemote(folder: Folder, name: string): RemoteEvent
     return remote
 end
 
-local function allowed(bucket: {[Player]: number}, player: Player): boolean
-    local now = os.clock()
-    local last = bucket[player] or -math.huge
-    if now - last < Config.MutationRequestCooldownSeconds then return false end
-    bucket[player] = now
-    return true
+local function allowed(bucket: string, player: Player): boolean
+    return cooldowns.allow(player.UserId, bucket, os.clock(), Config.MutationRequestCooldownSeconds)
 end
 
 function MutationService.start(profileRepository, dinosaur)
@@ -88,11 +86,6 @@ function MutationService.start(profileRepository, dinosaur)
                 dinosaur.refreshForPlayer(character, player)
             end
         end
-    end)
-
-    Players.PlayerRemoving:Connect(function(player)
-        lastMutation[player] = nil
-        lastSetup[player] = nil
     end)
 end
 

@@ -67,7 +67,7 @@ Grass #84AA54 (132,170,84); LeafyGrass #3E7C4E (62,124,78); Mud #5C4C37 (92,76,5
 ### 5.9 Weather looks (`WeatherLooks.luau`, tint / fog)
 Rain #96B6E8 / #78869C; Thunder #A0AEDE / #586084 (violet glow #A08CFF); Blizzard #D6E8FF / #E2EAF6; Volcano #FFE4CD / #96543B (glow #FF8C46); Aurora #B0FFE6 / #28C8AA (glow #3CFFAA); Quake #E8C89C / #C6B092; Blood Moon #FF8C96 / #420E18 (glow #FF2846). Far fog is colour, not a wall ([87](87-vision-and-feel-guide.md)).
 ### 5.10 Cave (`CaveLightingRules.luau`)
-Warm cream shafts #FFECBE (255,236,190); fill lamp #FFD6AA (255,214,170); lava #FF8C46 (255,140,70) (sheet layers #FF7828, #FFB45A, #FFCE6E); crystal light #C4AAFF (decoration only); forge #FFBE5A (255,190,90); gate glow #FFD6A0; look: ambient (70,62,60), fog colour (72,56,46), grade tint (255,226,196). Walls: Limestone (196,172,150) and a cool grey-lilac cave-only Cobblestone/Limestone (BD-384); the floor must not be hot orange (BD-384).
+Warm cream shafts #FFECBE (255,236,190); fill lamp #FFD6AA (255,214,170); lava #FF8C46 (255,140,70) (sheet layers #FF7828, #FFB45A, #FFCE6E); crystal light #FFC450 (255,196,80) amber (BD-401; was lavender #C4AAFF); forge #FFBE5A (255,190,90); gate glow #FFD6A0; look: ambient (70,62,60), fog colour (72,56,46), grade tint (255,226,196). Walls: Limestone (196,172,150) and a cool grey-lilac cave-only Cobblestone/Limestone (BD-384); the floor must not be hot orange (BD-384).
 ### 5.11 Classes and HP bar
 HP bar fill green above 50%, yellow 25-50%, soft orange below 25%, plus a heart icon (full/half/small) so colour is never the only signal ([101](101-hp-combat-classes-animations.md) line 85). **No per-class colour table exists in code or docs** (classes Ground, Fly, Water, Armored): conflict C-18, BD-406.
 ### 5.12 Lighting-colour rule
@@ -131,15 +131,15 @@ Source: owner review of the Royal Nova image draft in ChatGPT on 2026-10-16: "i 
 | Rule | Value | Source |
 |---|---|---|
 | Eggs per catch | one run egg per catch, one dinosaur per successful egg | [09](09-reward-economy.md), [AGENTS.md](../AGENTS.md) |
-| Catch rate | `FoodCatchRate = 4/500` (500 food = 4 eggs, 5,000 = 40); per-run cap 50 (PROVISIONAL) | [89](89-catch-rate-4.md) (owner 2026-10-15) |
+| Catch rate | `FoodCatchRate = 12/500` (500 food = 12 eggs, 5,000 = 120; a normal 5-minute run is about 15 eggs); per-run cap 150 (PROVISIONAL, needs Studio measurement); 4/500 and 40/500 are HISTORICAL | [119](119-catch-rate-15-per-run.md) (owner 2026-10-16) |
 | Growth | `GrowthPerFood = 0.1`, predation 2.5; scale = min(4, sqrt(1+growth/50)); eggs use raw food | [90](90-fusion-ladder-v2.md) s6, BD-386 |
 | Fusion ladder | Gold = 6 Base (same species, any pattern, plurality pattern kept), Emerald = 3 Gold, Diamond = 2 Emerald (same species + pattern); donors consumed, new instance, guaranteed stage, fresh traits | [90](90-fusion-ladder-v2.md), BD-335 |
-| Species tiers | base Common 72 / Uncommon 24 / Rare 3.2 / Epic 0.7 / Legendary 0.1; run boost {1,1,1.1,1.1,1.1}, full at 40 eggs | [82](82-species-rarity-tiers.md), [89](89-catch-rate-4.md) |
+| Species tiers | base Common 72 / Uncommon 24 / Rare 3.2 / Epic 0.7 / Legendary 0.1; run boost {1,1,1.1,1.1,1.1}, full at 120 eggs | [82](82-species-rarity-tiers.md), [89](89-catch-rate-4.md) |
 | Rarity curve | r = 1/5, six-tier ladder 80/16/3.2/0.64/0.128/0.0256; price factor x2.8 | [88](88-exponential-rarity.md) |
 | Conditions, tier 0 | Cracked 50 / Dirty 30 / Normal 15 / Rainbow 4.5 / Astra 0.5; Cracked hatch success 20% | `ProgressionConfig`, [09](09-reward-economy.md) |
 | First eggs safe | `SafeEggs = 2`: the first 2 eggs are never Cracked; Cracked 50% from the third egg (OWNER 2026-10-16: keep) | `ProgressionConfig.SafeEggs`, BD-365 |
-| Run crystals | `min(300, floor((750*min(n,4)+530*max(0,n-4))/100))`: 4 eggs -> 30, 40 -> 220 (PROVISIONAL) | [09](09-reward-economy.md) |
-| Nests | 5 slots, 3 h each, 6-12 eggs (avg 9), unlimited per run (owner 2026-10-16; only 5 spots, each extra nest becomes crystals, PROVISIONAL 50), drop gate 120 s + 1 catch | [90](90-fusion-ladder-v2.md) s5 |
+| Run crystals | `min(300, floor((250*min(n,12)+176*max(0,n-12))/100))`: 12 eggs -> 30, 120 -> 220 (PROVISIONAL) | [09](09-reward-economy.md) |
+| Nests | 5 slots, 3 h each, 6-12 eggs (avg 9), unlimited per run (owner 2026-10-16; only 5 spots, each extra nest becomes crystals, PROVISIONAL 50; +1 per 30 eggs after the first, [119](119-catch-rate-15-per-run.md)), drop gate 120 s + 1 catch | [90](90-fusion-ladder-v2.md) s5 |
 | Hatch pace | `HatchRevealSeconds` 1 s per egg, ascending rarity, skippable | [09](09-reward-economy.md), BD-044 |
 | Colour / pattern | colour tiers Common..Mythic (5.4), colour growth bonus +1% per tier; 8 patterns equally likely | `ProgressionConfig`, BD-172, [88](88-exponential-rarity.md) |
 | Prices | trails 0/100/280/390/780/1100/2200/3100/6100/17000; auras 60/470/3700 | `ProgressionConfig` |

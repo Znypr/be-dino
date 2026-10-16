@@ -5,8 +5,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 
 local CollectionService = {}
-local lastEquipRequest: {[Player]: number} = {}
-local lastGrantRequest: {[Player]: number} = {}
+local CooldownMemory = require(script.Parent.CooldownMemory)
+local cooldowns = CooldownMemory.new(120) -- BD-363: keyed by UserId, survives a rejoin
+local lastEquipRequest = "lastEquipRequest"
+local lastGrantRequest = "lastGrantRequest"
 
 local function getRemote(folder: Folder, name: string): RemoteEvent
     local existing = folder:FindFirstChild(name)
@@ -18,12 +20,8 @@ local function getRemote(folder: Folder, name: string): RemoteEvent
     return remote
 end
 
-local function rateAllowed(bucket: {[Player]: number}, player: Player): boolean
-    local now = os.clock()
-    local last = bucket[player] or -math.huge
-    if now - last < Config.EquipRequestCooldownSeconds then return false end
-    bucket[player] = now
-    return true
+local function rateAllowed(bucket: string, player: Player): boolean
+    return cooldowns.allow(player.UserId, bucket, os.clock(), Config.EquipRequestCooldownSeconds)
 end
 
 function CollectionService.start(profileRepository, dinosaur)
@@ -76,11 +74,6 @@ function CollectionService.start(profileRepository, dinosaur)
         end
         local _, status = profileRepository.grantCollectionTestSpecies(player)
         player:SetAttribute("LastCollectionGrantStatus", status)
-    end)
-
-    Players.PlayerRemoving:Connect(function(player)
-        lastEquipRequest[player] = nil
-        lastGrantRequest[player] = nil
     end)
 end
 

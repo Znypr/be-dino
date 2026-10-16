@@ -192,7 +192,7 @@ def static_checks():
     assert 'local motion=Theme.MotionEnabled and root~=nil and not hall' in weather, 'BD-398 rigs/one-shots off inside'
     assert 'local live=motion and root~=nil and not hall' in weather and 'not hall and activeId=="quake"' in weather, 'BD-398 live effects off inside'
     assert 'showTitle(id,workspace:GetAttribute("WeatherName") or id,hall)' in weather and 'if soft then name' in weather, 'BD-398 soft toast inside'
-    assert 'if hall then shake=' in weather, 'BD-398 shake only a faint quake rumble inside'
+    assert 'if hall then shake=0 end' in weather, 'BD-403 no camera shake inside the hall'
     assert 'Lighting.Brightness = saved.brightness' in client and 'Lighting.ShadowSoftness' in client, 'BD-398 cave brightness and shadow softness, restored'
     assert 'spec.shadows == true' in server, 'BD-398 shadows only on flagged lights'
     assert 'CastShadow = not p.walk' in (ROOT / 'src/server/CaveProps.luau').read_text(), 'BD-398 props cast shadows'

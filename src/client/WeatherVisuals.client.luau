@@ -821,7 +821,7 @@ RunService.Heartbeat:Connect(function(dt)
     if id==activeId then k=math.min(1,k+dt/2.4) else k=math.max(0,k-dt/1.1) if k<=0 then activeId=id columnAnchors=nil end end
     if activeId~=shownId and id==activeId and id~="clear" then
         shownId=activeId
-        showTitle(id,workspace:GetAttribute("WeatherName") or id,hall)
+        showTitle(id,workspace:GetAttribute("WeatherName") or id,hall) -- inside the cave only the small soft toast (text, not an effect; BD-398)
     elseif id=="clear" then shownId="clear" end
 
     local look=WL.Looks[activeId] or WL.Looks.clear
@@ -856,7 +856,7 @@ RunService.Heartbeat:Connect(function(dt)
     Lighting.ColorShift_Top=baseShiftTop:Lerp(shiftOf(baseShiftTop,shiftTop),t)
     Lighting.ColorShift_Bottom=baseShiftBottom:Lerp(shiftOf(baseShiftBottom,shiftBottom),t)
     Lighting.ExposureCompensation=baseExposure+lerpNum(0,look.exposure,t)+flash*.9*outside
-    if sky then sky.CelestialBodiesShown=activeId=="clear" or k<=0 end
+    if sky then sky.CelestialBodiesShown=activeId=="clear" or k<=0 or hall end
     if sky and look.stars>=0 then
         local want=math.floor(lerpNum(baseStars,look.stars,t)/100)*100
         if want~=starsSet then starsSet=want sky.StarCount=want end
@@ -935,7 +935,7 @@ RunService.Heartbeat:Connect(function(dt)
     updateAurora(root or Vector3.zero,now,auroraOn,recolor)
     -- pooled one-shot effects
     updateBolts(dt) updateRings(dt) updateBursts(dt) updateBombs(dt,root) updateQuake(dt)
-    if hall then shake=if activeId=="quake" and Theme.MotionEnabled and k>.3 then .03 else 0 end -- BD-398: a faint distant rumble only for a quake
+    if hall then shake=0 end -- BD-403: weather never touches the cave interior, not even a faint quake rumble
     if shake>.01 and Theme.MotionEnabled then shake=math.max(0,shake-dt*1.1) end
     if not Theme.MotionEnabled then shake=0 end
     Cave.step(dt) -- last: the cave look is written after the weather values above
