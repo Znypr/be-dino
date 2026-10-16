@@ -127,7 +127,7 @@ Known violations: [110](110-sound-audit.md) flags legendary .43, fusion .375, ha
 
 ## 8. World and asset quality bar (acceptance checklists)
 ### 8.1 Any 3D asset or prop
-1. Generated mesh (Roblox generate_mesh or the approved pipeline), never code-built ([AGENTS.md](../AGENTS.md); BD-206); the only exception is the scoped owner-approved V3 trees, and Blender is allowed for world and colossal-tree art, see 8.4.2).
+1. Generated mesh (Roblox generate_mesh or the approved pipeline), never code-built ([AGENTS.md](../AGENTS.md); BD-206). The only exception is the scoped owner-approved V3 trees; Blender is also allowed for world and colossal-tree art (8.4.2).
 2. Low-poly flat facets, chunky/rounded, matte; shared eye style (4.2).
 3. **Scale ladder**: a grown dino still feels small next to big trees ([87](87-vision-and-feel-guide.md)). No numeric scale table exists yet (BD-407).
 4. **Grounded**: the bottom touches the floor at all slopes (raycast per prop); nothing sunk or floating (OWNER 2026-10-16: trees were sunk, BD-395).
