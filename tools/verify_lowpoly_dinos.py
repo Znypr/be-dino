@@ -67,6 +67,38 @@ print("lowpoly pose tests passed")
 '''
 
 
+RECOLOR_BODY = r'''
+local function near(a, b) return math.abs(a - b) < 1e-6 end
+-- eyes stay black, cream belly stays cream, for every gene colour
+local eyes = {{0.06, 0.06, 0.06}, {0.0, 0.0, 0.0}, {0.19, 0.19, 0.19}}
+local belly = {{0.82, 0.82, 0.56}, {0.82, 0.69, 0.56}, {0.95, 0.93, 0.85}, {1, 1, 1}}
+local targets = {{1, 0.2, 0.2}, {0.2, 0.3, 1}, {0.7, 0.2, 0.9}, {0.9, 0.9, 0.2}, {0, 0, 0}}
+for _, t in targets do
+    for _, p in eyes do
+        local r, g, b = R.pixel(p[1], p[2], p[3], t[1], t[2], t[3], R.baseOf("compy"))
+        assert(near(r, p[1]) and near(g, p[2]) and near(b, p[3]), "eye pixel changed")
+    end
+    for _, p in belly do
+        local r, g, b = R.pixel(p[1], p[2], p[3], t[1], t[2], t[3], R.baseOf("raptor"))
+        assert(near(r, p[1]) and near(g, p[2]) and near(b, p[3]), "belly pixel changed")
+    end
+end
+-- body colour becomes the gene colour (at base brightness), keeps shading, stays in range
+for species, base in R.Base do
+    local r, g, b = R.pixel(base[1], base[2], base[3], 1, 0.2, 0.2, base)
+    assert(near(r, 1) and near(g, 0.2) and near(b, 0.2), species .. " body not recoloured")
+    local dr, dg, db = R.pixel(base[1] * 0.5, base[2] * 0.5, base[3] * 0.5, 1, 0.2, 0.2, base)
+    assert(dr < r and dr > 0, species .. " shading lost")
+    for _, k in {0.3, 0.8, 1.2, 2} do
+        local x, y, z = R.pixel(math.min(1, base[1] * k), math.min(1, base[2] * k), math.min(1, base[3] * k), 0.9, 0.9, 0.9, base)
+        assert(x >= 0 and x <= 1 and y >= 0 and y <= 1 and z >= 0 and z <= 1)
+    end
+end
+assert(R.bodyWeight(0.5, 0.5, 0.5) == 0 and R.bodyWeight(0, 0, 0) == 0 and R.bodyWeight(0.1, 0.5, 0.1) > 0.9)
+print("lowpoly recolor tests passed")
+'''
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--runner', required=True)
@@ -78,6 +110,14 @@ if __name__ == '__main__':
         path = Path(tmp) / 'lowpoly_pose.luau'
         path.write_text(src, encoding='utf-8')
         result = subprocess.run([args.runner, str(path)], capture_output=True, text=True, encoding='utf-8')
+        print(result.stdout, end='')
+        if result.returncode or 'passed' not in result.stdout:
+            print(result.stderr)
+            raise SystemExit(result.returncode or 1)
+        rsrc = 'local R=(function()\n' + (ROOT / 'src/shared/LowPolyRecolor.luau').read_text(encoding='utf-8') + '\nend)()\n' + RECOLOR_BODY
+        path2 = Path(tmp) / 'lowpoly_recolor.luau'
+        path2.write_text(rsrc, encoding='utf-8')
+        result = subprocess.run([args.runner, str(path2)], capture_output=True, text=True, encoding='utf-8')
         print(result.stdout, end='')
         if result.returncode or 'passed' not in result.stdout:
             print(result.stderr)
