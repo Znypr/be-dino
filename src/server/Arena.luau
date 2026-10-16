@@ -166,6 +166,11 @@ local function biomeKit(parent: Instance)
         if p.layer ~= "log" then
             made = generatedProp(p.id, p.biome or "meadow", Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77)) or Resources.clone(p.id)
             if made then made:ScaleTo(p.scale) end
+            -- BD-167: per-prop colour variation (a tint of the white MeshPart; landmarks keep their art colours).
+            if made and made.PrimaryPart and p.layer ~= "landmark" then
+                local tr, tg, tb = Biome.tint(p.biome or "meadow", Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 91), Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 92))
+                made.PrimaryPart.Color = Color3.new(tr, tg, tb)
+            end
         end
         local rayLayer = Ground.rayLayer(p.layer, data.kind)
         if (Ground.Raised[p.layer] and data.kind ~= "rock") or rayLayer == "rock" or p.layer == "landmark" then

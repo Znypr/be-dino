@@ -26,6 +26,9 @@ for _, id in IDS do
     for _, key in REQUIRED do assert(look[key] ~= nil, id .. " lacks " .. key) end
     for _, key in {"tint", "fog", "decay", "rayTint", "shiftTop", "shiftBottom", "glow"} do rgbOk(look[key]) end
     if look.amb then rgbOk(look.amb) end
+    -- BD-055: every event sets Terrain.Clouds; thunder is the heaviest cover, aurora and clear sky stay open
+    assert(look.cloudCover >= 0 and look.cloudCover <= 1 and look.cloudDensity >= 0 and look.cloudDensity <= 1, id .. " cloud range")
+    rgbOk(look.cloudColor)
     assert(look.density > 0 and look.density <= 1, id .. " density")
     assert(look.haze > 0 and look.haze <= 10, id .. " haze")
     assert(look.vis >= 40 and look.vis <= 600 and look.fogStart < look.vis, id .. " fog distances")
@@ -148,6 +151,8 @@ for class, radius in CULL do
         end
     end
 end
+assert(W.Looks.thunder.cloudCover == 1 and W.Looks.aurora.cloudCover <= .2 and W.Looks.clear.cloudCover < 0, "cloud cover per event")
+assert(W.Swell.peak <= .15 and W.Swell.rate <= 1, "Reduce Motion thunder swell is slow and soft")
 print("WeatherLooks passed")
 
 -- weather audio table: ids stay empty until uploaded, volumes are kids-quiet, every event has a bed, fades are bounded

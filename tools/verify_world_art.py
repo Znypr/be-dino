@@ -155,6 +155,11 @@ if PLAYTEST then
  assert(worldParts<=WORLD_MAX,"world kit parts "..worldParts)
  assert(foodParts<=3700,"food pickup parts "..foodParts) -- BD-387: 400 clusters x 9 = 3,600 (cap 3,700; was 3,300 for 8 per cluster); the phone side is covered by verify_world_budget
  assert(worldParts+foodParts+RESIDUAL_PARTS<=TOTAL_MAX,"total world parts "..(worldParts+foodParts+RESIDUAL_PARTS))
+ -- BD-167: colour variation stays a mild tint; undergrowth is capped and every kit id is used by at least two biomes
+ for _,bid in BiomeMap.Order do for k=0,8 do local r,g,b=Biome.tint(bid,k/8,(k*3%9)/8) assert(r>=.72 and g>=.72 and b>=.72 and r<=1 and g<=1 and b<=1,"tint out of range "..bid) end end
+ local usedIn={} for _,bid in BiomeMap.Order do local d=BiomePlacementBiomes[bid] for _,list in {d.trees,d.rocks,d.shrubs,d.cover} do for _,e in list do usedIn[e[1]]=(usedIn[e[1]] or 0)+1 end end end
+ for _,fam in {"canopy","conifer","cycad","dead"} do assert((usedIn[fam] or 0)>=3,"tree family used in too few biomes: "..fam) end
+ for _,fam in {"mossy","bare"} do assert((usedIn[fam] or 0)>=4,"rock family used in too few biomes: "..fam) end
  for _,family in {"berry","fruit","egg","amber"} do
   for _,v in {"a","b"} do assert(Kit["food_"..family.."_"..v],"missing food variant "..family..v) end
  end
