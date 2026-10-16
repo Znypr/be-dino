@@ -1,6 +1,6 @@
 # 103 The Cave: a big Sanctuary hub with real shops (design, 2026-10-16)
 
-**Status: DESIGN ONLY. No code changed. Every size, count and number here is PROVISIONAL.** Owner direction 2026-10-16 (verbatim intent below). Feel rules: [docs/87](87-vision-and-feel-guide.md). Copy and art rules: [docs/72](72-ui-copy-and-asset-standards.md). 3D model rule and art rule: [AGENTS.md](../AGENTS.md). Part budget and culling: [docs/91](91-world-performance-culling.md) (BD-168). Effect textures: `src/shared/EffectAssets.luau`. Tasks live only in [the Kanban](07-kanban.md) (BD-263 to BD-278 added by this doc; BD-254 is superseded by this plan).
+**Status: DESIGN ONLY. No code changed. Every size, count and number here is PROVISIONAL.** Owner direction 2026-10-16 (verbatim intent below). Feel rules: [docs/87](87-vision-and-feel-guide.md). Copy and art rules: [docs/72](72-ui-copy-and-asset-standards.md). 3D model rule and art rule: [AGENTS.md](../AGENTS.md). Part budget and culling: [docs/91](91-world-performance-culling.md) (BD-168). Effect textures: `src/shared/EffectAssets.luau`. Tasks live only in [the Kanban](07-kanban.md) (BD-279 to BD-294 added by this doc; BD-254 is superseded by this plan).
 
 Labels: **OWNER TARGET** = from the owner. **DECISION** = made by the lead on the owner's behalf, the owner may overrule. **CURRENT BUILD** = what ships now.
 
@@ -77,7 +77,7 @@ Compared with the island's 7,400 parts (docs/91) this is small; what matters on 
 - **Fill**: the cave must never be dark (children, readability). Each station gets one warm `PointLight` (range 28, brightness 0.5, colour 255/214/170) hidden in a lantern or the shaft; the Heart gets two. `Lighting.Ambient` is global and shared with the island, so cave darkness is only the ceiling shadow; a `ColorCorrection` is **not** added for the cave (it would tint the island).
 - **Lava glow**: three orange `PointLights` (range 36, brightness 0.45, colour 255/140/70) behind the falls and at the pool, plus a `SurfaceLight` on the pool face. The forge ring: one `PointLight` amber 0.35 range 18, pulsing slowly (period 4 s, amplitude 0.08; static under Reduce Motion).
 - **Crystals**: `Neon` is too hard; crystals use `SurfaceAppearance`-free `Glass` material with a soft inner `PointLight` (lavender/teal, brightness 0.3, range 16).
-- **Weather**: the cave is outside the island weather volume; `WeatherVisuals` already skips the hub by `Location == Sanctuary` (verify in BD-270); rain never falls indoors; aurora is visible through the holes (free, nice).
+- **Weather**: the cave is outside the island weather volume; `WeatherVisuals` already skips the hub by `Location == Sanctuary` (verify in BD-286); rain never falls indoors; aurora is visible through the holes (free, nice).
 - Budget: at most 16 lights in the whole cave, none casting shadows except the sun.
 
 ## 5. Lava waterfall FX (existing textures only)
@@ -104,7 +104,7 @@ Each station is one entry in `CaveHubLayout.Stations` with: `id`, rail destinati
 | `potions` | POTIONS -> `potions` | POTIONS | market stall (canopy + counter, one mesh), 4 potion models (docs/77), crate x3, barrel x1, cauldron with bubbles (`smokeSheet` 3/s, lavender), hanging board sign, lantern x2 |
 | `fusion` | FUSION -> `openFusion()` | FUSE | forge altar (anvil-stone with glowing seam), floor ring (flat disc mesh, amber glow), pedestal x3, chain hooks x2, ember emitter (`sparkSheet` 4/s), "FUSE" iron sign, crate x2 |
 | `style` | SHOP -> `auras` (tabs stay inside the UI) | SHOP | crystal cluster large x2, crystal cluster small x5, stone counter with 5 egg stands (Conditions preview eggs), mirror pedestal (a round stone plinth where the player's equipped aura/trail is shown on a dino statue clone), gem chest, "SHOP" crystal sign, lantern x2 |
-| `index` | DINOS -> `collection` / `detail` | DINOS | statue plinth x6 with `landmark_dino_statue` at 0.4 scale (later: one statue per class, BD-278), stone banner x3 (SurfaceGui species silhouettes = existing dino icons), lectern "book" mesh, bench x2 |
+| `index` | DINOS -> `collection` / `detail` | DINOS | statue plinth x6 with `landmark_dino_statue` at 0.4 scale (later: one statue per class, BD-294), stone banner x3 (SurfaceGui species silhouettes = existing dino icons), lectern "book" mesh, bench x2 |
 | `settings` | SETTINGS -> `settings` | QUIET SPOT | bench, lantern on a post, small gong on a stand, moss cushion x2 |
 | `fame` | (walk-up only) | TOP DINOS | carved wall frame x3 holding the existing leaderboard SurfaceGuis, torch-lantern x2 |
 | `gate` | EXPLORE ISLAND (HomeButton) | ISLAND | stone arch (one mesh), mossy boulder x2 (existing), wooden arrow sign "ISLAND", flower patch x3 (kit `world_flowers_a`) |
@@ -126,7 +126,7 @@ New remote `HubTravel` in `BeDinoRemotes`, payload `{station: string}`; a `HubTr
 - **Arriving by teleport**: the station UI opens as the fade clears (the same `open(destination)` / `openFusion()` as today, so every existing screen is reused unchanged). While it is open the dino stands at the arrival spot; the camera does not change.
 - **Arriving on foot**: each pad has a `ProximityPrompt` on the sign (hold 0, action text = the station name, `MaxActivationDistance 10`, touch-friendly 96 px) **and** a dwell rule: standing inside the pad radius for 0.5 s opens the UI once (`HubStation` attribute changes on the client). Leaving the pad resets the dwell so walking past never spams menus.
 - **Closing**: closing the UI returns full control at the same spot; nothing teleports back. A small "Back to the middle" chip appears on the HUD while `HubStation` is set (teleports to the Heart, same validation). 
-- **Nests / hatch**: the hatch reveal stays the existing 2D/viewport sequence (5 s per egg, skippable); the nest alcove is the backdrop. Later (BD-278) the nest meshes can wobble in sync with the reveal; not required for v1.
+- **Nests / hatch**: the hatch reveal stays the existing 2D/viewport sequence (5 s per egg, skippable); the nest alcove is the backdrop. Later (BD-294) the nest meshes can wobble in sync with the reveal; not required for v1.
 - **Mirror pedestal (Style Grotto)**: while the SHOP UI is open, the player's own dino preview on the pedestal shows the aura/trail being hovered or equipped (client-only clone, no server state). Optional in v1.
 - The rail marker (`ActiveTab`) already highlights the open destination; it also highlights the station the player is standing at.
 
@@ -202,34 +202,34 @@ All are **Roblox generate_mesh in the owner's Studio**, matte low-poly, soft rou
 
 Totals: 35 new meshes, about 250 placed instances (within the 290 prop parts of section 3.1). Generate in three batches (rocks and moss, lava and lights, station props) so each batch is reviewed on a contact sheet before the next (same gate as BD-199). The mesh generator ignores "glow"; emissive looks come from lights and materials at placement.
 
-## 14. Phased, kanban-ready task list (BD-263 to BD-278)
+## 14. Phased, kanban-ready task list (BD-279 to BD-294)
 Everything behind `Config.CaveHub = false` until Phase 5 passes. Pure modules in `src/shared` with `tools/verify_*.py` tests (same pattern as `verify_sanctuary_decor.py`, `verify_spawn.py`).
 
 **Phase 1, layout and shell (no visible change with the flag off)**
-- BD-263 `CaveHubLayout` pure module: footprint blob, floor height function, ceiling, holes, stations (pads, six arrival spots, sign, camera yaw), paths, prop rows (key, position, yaw, scale), budgets. `tools/verify_cave_hub.py`: stations inside the floor, >= 48 studs apart, paths flat (<= 8 degrees), no prop on a path, every station reachable from the Heart on flat ground (WATER class), part/triangle budget, old hub numbers when the flag is off.
-- BD-264 Flag + one geometry source: `Config.CaveHub`, `CaveHubLayout.hub(config)` feeding `SpawnGeometry`, `BiomePlacement.Sanctuary`, `Leaderboards`; `verify_spawn.py` and `verify_biome` style tests pass in both flag states.
-- BD-265 Cave shell terrain writer (`src/server/CaveTerrain.luau`): voxels from the layout (floor, walls, ceiling, four holes, lava basin, moss patches), `Baked` skip; Studio evidence: screenshot from the Heart, part count, voxel count, walk from the Heart to every pad with a Compy and a (no-jump) Plesiosaurus stand-in.
+- BD-279 `CaveHubLayout` pure module: footprint blob, floor height function, ceiling, holes, stations (pads, six arrival spots, sign, camera yaw), paths, prop rows (key, position, yaw, scale), budgets. `tools/verify_cave_hub.py`: stations inside the floor, >= 48 studs apart, paths flat (<= 8 degrees), no prop on a path, every station reachable from the Heart on flat ground (WATER class), part/triangle budget, old hub numbers when the flag is off.
+- BD-280 Flag + one geometry source: `Config.CaveHub`, `CaveHubLayout.hub(config)` feeding `SpawnGeometry`, `BiomePlacement.Sanctuary`, `Leaderboards`; `verify_spawn.py` and `verify_biome` style tests pass in both flag states.
+- BD-281 Cave shell terrain writer (`src/server/CaveTerrain.luau`): voxels from the layout (floor, walls, ceiling, four holes, lava basin, moss patches), `Baked` skip; Studio evidence: screenshot from the Heart, part count, voxel count, walk from the Heart to every pad with a Compy and a (no-jump) Plesiosaurus stand-in.
 
 **Phase 2, assets and atmosphere**
-- BD-266 Mesh batch A (rocks, stalagmites, stalactites, moss, light cones; rows 1-8): owner generates with the prompts above, publishes, docs/77 lines, `WorldGeneratedMeshes.Assets` keys; contact sheet review.
-- BD-267 Mesh batch B (lava and station props; rows 9-35): same flow; potion models reused.
-- BD-268 Prop placement from the layout (`Arena` cave branch, generated meshes only, invisible colliders, fallbacks), admin "Hub parts" readout; evidence screenshots per station.
-- BD-269 Lava falls FX: sheet scroll, pool swirl, three emitters with existing textures, lights, Reduce Motion variant, `FxBudget` attribute; sound brief for the owner (unheard by agents).
-- BD-270 Lighting pass: holes + cones + dust, station fill lights, crystal lights, 16-light cap, check weather stays outside, before/after screenshots at the Heart and at the forge.
+- BD-282 Mesh batch A (rocks, stalagmites, stalactites, moss, light cones; rows 1-8): owner generates with the prompts above, publishes, docs/77 lines, `WorldGeneratedMeshes.Assets` keys; contact sheet review.
+- BD-283 Mesh batch B (lava and station props; rows 9-35): same flow; potion models reused.
+- BD-284 Prop placement from the layout (`Arena` cave branch, generated meshes only, invisible colliders, fallbacks), admin "Hub parts" readout; evidence screenshots per station.
+- BD-285 Lava falls FX: sheet scroll, pool swirl, three emitters with existing textures, lights, Reduce Motion variant, `FxBudget` attribute; sound brief for the owner (unheard by agents).
+- BD-286 Lighting pass: holes + cones + dust, station fill lights, crystal lights, 16-light cap, check weather stays outside, before/after screenshots at the Heart and at the forge.
 
 **Phase 3, teleports and station UI**
-- BD-271 `HubTravel` server: remote, validation rules 1-3 of section 7, arrival-spot picking, `HubStation` attribute, rate limit; `tools/verify_hub_travel.py` (pure spot picking and validation table: in-run, ending, settled, outside hub, unknown station, rate limit).
-- BD-272 Client travel: rail buttons call `HubTravel` in the hub, fade/cue, camera turn, Reduce Motion variant, open the UI on `arrived`, "Back to the middle" chip; results "OPEN EGGS" goes to the nests.
-- BD-273 Walk-up and walk-there: prompts, dwell rule, Settings toggle "Teleport to shops", moss-trail beam; in-run rail behaviour (POTIONS and SETTINGS open, others dimmed "At home").
-- BD-274 Island Gate: arch trigger with 1.5 s countdown and cancel, same `RequestStartRun` path; Home flow unchanged test (`RequestEndRun` refusal still works; no new exit).
+- BD-287 `HubTravel` server: remote, validation rules 1-3 of section 7, arrival-spot picking, `HubStation` attribute, rate limit; `tools/verify_hub_travel.py` (pure spot picking and validation table: in-run, ending, settled, outside hub, unknown station, rate limit).
+- BD-288 Client travel: rail buttons call `HubTravel` in the hub, fade/cue, camera turn, Reduce Motion variant, open the UI on `arrived`, "Back to the middle" chip; results "OPEN EGGS" goes to the nests.
+- BD-289 Walk-up and walk-there: prompts, dwell rule, Settings toggle "Teleport to shops", moss-trail beam; in-run rail behaviour (POTIONS and SETTINGS open, others dimmed "At home").
+- BD-290 Island Gate: arch trigger with 1.5 s countdown and cancel, same `RequestStartRun` path; Home flow unchanged test (`RequestEndRun` refusal still works; no new exit).
 
 **Phase 4, multiplayer and polish**
-- BD-275 `HubDinos` collision group (hub only), six arrival spots under load, Fame Wall boards; Studio test with 4+ clients at one stall, then the existing multi-client script with 12.
-- BD-276 Station signs and copy (docs/72), hub HUD tweaks (dimmed buttons >= 44 px on phones), ProximityPrompt touch size; phone-landscape screenshots.
+- BD-291 `HubDinos` collision group (hub only), six arrival spots under load, Fame Wall boards; Studio test with 4+ clients at one stall, then the existing multi-client script with 12.
+- BD-292 Station signs and copy (docs/72), hub HUD tweaks (dimmed buttons >= 44 px on phones), ProximityPrompt touch size; phone-landscape screenshots.
 
 **Phase 5, acceptance**
-- BD-277 Real phone and 12-player test: fps at the Heart and the forge, memory, teleport round trips, Reduce Motion run-through; owner playtest by feel (docs/87 checklist); flag flip only after this passes.
-- BD-278 Later polish (Backlog): per-class statues in the Hall, nests wobbling with the reveal, mirror pedestal live preview, Blender lava crust texture, ambient cave sound bed.
+- BD-293 Real phone and 12-player test: fps at the Heart and the forge, memory, teleport round trips, Reduce Motion run-through; owner playtest by feel (docs/87 checklist); flag flip only after this passes.
+- BD-294 Later polish (Backlog): per-class statues in the Hall, nests wobbling with the reveal, mirror pedestal live preview, Blender lava crust texture, ambient cave sound bed.
 
 Dependencies: 263 -> 264 -> 265; 266 -> 268 <- 267; 268 -> 269/270; 264 -> 271 -> 272 -> 273/274; 271 -> 275; 272 -> 276; everything -> 277; 278 after 277.
 
@@ -240,7 +240,7 @@ Dependencies: 263 -> 264 -> 265; 266 -> 268 <- 267; 268 -> 269/270; 264 -> 271 -
 4. **Teleport default**: teleport ON by default with a "walk there" toggle. Or walk by default for first-time players, with teleport unlocked after the tutorial?
 5. **Lava**: purely scenic (no damage, fenced by rocks). Confirm no "hot floor" gameplay.
 6. **Station order around the plaza**: nests and potions near the entrance (most used), fusion by the lava, style shop in the crystal grotto, index opposite. Swap anything?
-7. **Hatch reveal place**: keep the 2D/viewport reveal with the nest alcove as backdrop (v1), or should the physical nest crack open in the world (bigger task, BD-278)?
+7. **Hatch reveal place**: keep the 2D/viewport reveal with the nest alcove as backdrop (v1), or should the physical nest crack open in the world (bigger task, BD-294)?
 
 ## 16. Lead decisions made on the owner's behalf (summary)
 - Shell = terrain voxels from a pure layout (testable, phone-cheap), dressing = generated meshes only; nothing code-built is visible.
