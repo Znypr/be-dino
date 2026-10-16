@@ -12,6 +12,8 @@ local Config = require(Shared:WaitForChild("Config"))
 local Rules = require(Shared:WaitForChild("HubTravelClientRules"))
 local Settings = require(Shared:WaitForChild("SettingsModel"))
 local Sfx = require(Shared:WaitForChild("Sfx"))
+local WalkUp = require(script.Parent:WaitForChild("HubWalkUpClient")) -- BD-289: sign prompts + pad dwell (no-op while the flag is off)
+local GateBar = require(script.Parent:WaitForChild("HubGateClient")) -- BD-290: "Leaving..." bar at the Island Gate (no-op while the flag is off)
 
 local Client = {}
 local player = Players.LocalPlayer
@@ -20,6 +22,7 @@ local busy = false
 local at: string? = nil -- the station this client last travelled to (cleared when a run starts); the server HubStation attribute is not cleared yet
 local serial = 0
 local overlay: Frame? = nil
+local walkUp: any = nil -- {note} from HubWalkUpClient once attached
 local chip: TextButton? = nil
 local Cream = Color3.fromRGB(255, 244, 220)
 
@@ -75,6 +78,7 @@ local function travel(station: string, onArrive: (() -> ())?)
         busy = false
         if ok then
             at = station
+            if walkUp then walkUp.note(station) end -- arriving by teleport must not also trigger the pad dwell
             if onArrive then pcall(onArrive) end
         else
             ctx.notify(Rules.refusal(reason), nil)
@@ -122,6 +126,8 @@ function Client.attach(c: any)
     if Config.CaveHub ~= true or ctx ~= nil then return end
     ctx = c
     local gui: Instance = c.gui
+    walkUp = WalkUp.attach(c, function() return busy end)
+    GateBar.attach(gui)
     local o = Instance.new("Frame")
     o.Name, o.BackgroundColor3, o.BackgroundTransparency, o.BorderSizePixel = "HubTravelFade", Cream, 1, 0
     o.Size, o.Visible, o.Active, o.ZIndex = UDim2.fromScale(1, 1), false, false, 190
