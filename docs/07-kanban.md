@@ -867,4 +867,4 @@ Feature-intake analysis only; nothing built. See [65](65-intake-notifications.md
 | BD-249 | Backlog | P1 | Per-skin gentle defeat animation hook (base, plush, clay, bricks) + quiet sound brief (owner judges by ear). | BD-244 | docs/97, docs/101 s6 |
 | BD-250 | Backlog | P1 | Idle/walk animation driver (chicken/dino waddle, folded wings) as pure pose function + `tools/verify_motion_poses.py`; implements BD-234. | BD-225 | docs/101 s11 |
 | BD-251 | Backlog | P1 | Jump/leap/dash animations per class; implements BD-233. | BD-250 | docs/101 s11 |
-| BD-252 | Backlog | P1 | 12-player phone test and balancing pass (bandwidth, fps, time-to-defeat tables), owner playtest; `CombatEnabled` stays off until it passes. | BD-244..251 | docs/101 s13 |
+| BD-252 | Review / test | P1 | 12-player phone test and balancing pass (bandwidth, fps, time-to-defeat tables), owner playtest; `CombatEnabled` stays off until it passes. Review / test: the OFFLINE SIMULATION balance pass is done (docs/101 s17, numbers only, offline simulation only); the 12-player phone test and owner playtest are NOT done. | BD-244..251 | docs/101 s13 |

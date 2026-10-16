@@ -26,8 +26,8 @@ for sc=0,30000,250 do local s=Stats.scale(sc); assert(s>=prev and s>=1 and s<=4)
 -- HP / damage anchors from docs/101
 assert(math.abs(Stats.maxHp("Ground",1)-100)<1e-9)
 assert(math.abs(Stats.maxHp("Ground",4)-606.3)<1)
-assert(math.abs(Stats.damage("Ground",1,0)-8)<1e-9)
-assert(math.abs(Stats.damage("Ground",4,0)-22.63)<0.1)
+assert(math.abs(Stats.damage("Ground",1,0)-6)<1e-9)
+assert(math.abs(Stats.damage("Ground",4,0)-7.92)<0.1)
 assert(Stats.damage("Ground",2,2)>Stats.damage("Ground",2,0),"attackTier raises damage")
 -- monotonic with size, per class
 for _,n in names do
@@ -39,8 +39,31 @@ for _,n in names do
   end
 end
 -- class multipliers apply
-assert(math.abs(Stats.maxHp("Armored",2)/Stats.maxHp("Ground",2)-1.5)<1e-9)
-assert(math.abs(Stats.maxHp("Fly",2)/Stats.maxHp("Ground",2)-0.7)<1e-9)
+assert(math.abs(Stats.maxHp("Armored",2)/Stats.maxHp("Ground",2)-1.1)<1e-9)
+assert(math.abs(Stats.maxHp("Fly",2)/Stats.maxHp("Ground",2)-0.75)<1e-9)
+-- class roles (docs/101 s17): armored = highest effective HP, slowest, lowest damage; fly fastest + fragile; water sturdy + slow
+local function eff(n) return Cfg.Classes[n].hpX/Cfg.Classes[n].damageTakenX end
+for _,n in {"Ground","Fly","Water"} do
+  assert(eff("Armored")>eff(n) and Cfg.Classes.Armored.speedX<Cfg.Classes[n].speedX and Cfg.Classes.Armored.damageDealtX<Cfg.Classes[n].damageDealtX,"armored tank vs "..n)
+end
+assert(Cfg.Classes.Fly.speedX>Cfg.Classes.Ground.speedX and Cfg.Classes.Fly.speedX>Cfg.Classes.Water.speedX)
+assert(Cfg.Classes.Fly.hpX<Cfg.Classes.Ground.hpX and Cfg.Classes.Water.hpX>Cfg.Classes.Ground.hpX and Cfg.Classes.Water.speedX<1)
+-- equal-size 1v1 is near parity: hits needed differ by <= 5%, and no class beats all three others at any size
+for _,sz in {1,Stats.scale(1500),4} do
+  for _,x in names do
+    local winsAll=true
+    for _,y in names do if x~=y then
+      local a=math.ceil(Stats.maxHp(y,sz)/Stats.hit(x,sz,y,sz,0,1)); local b=math.ceil(Stats.maxHp(x,sz)/Stats.hit(y,sz,x,sz,0,1))
+      assert(math.abs(a-b)/math.max(a,b)<=0.05,x.." vs "..y.." near parity")
+      if not (a<b) then winsAll=false end
+    end end
+    assert(not winsAll,x.." must not strictly dominate at s="..sz)
+  end
+end
+-- no one-shot kills: even the biggest hit takes at most 15% of a small target
+for _,x in names do for _,y in names do
+  assert(Stats.hit(x,4,y,1,0,1)/Stats.maxHp(y,1)<=0.15,"no one-shots")
+end end
 -- armor and damage never negative / NaN / below 1
 for _,t in names do for _,a in names do
   for _,as in {1,1.5,4} do for _,ts in {1,2,4} do
@@ -62,6 +85,6 @@ assert(Stats.classOf("Nope")==Cfg.Classes.Ground)
 -- growth keeps ratio
 assert(math.abs(Stats.rescaleHp(50,100,200)-100)<1e-9,"50% stays 50%")
 assert(Stats.rescaleHp(500,100,200)<=200 and Stats.rescaleHp(-5,100,200)==0,"rescale clamps")
-print("Combat stats passed: 4 classes, baseline 1.0, HP 100..606, damage 8..22.6, armor floor 1, finite on junk, ratio kept on growth")
+print("Combat stats passed: 4 classes, baseline 1.0, HP 100..606, damage 6..7.9, armor floor 1, finite on junk, ratio kept on growth")
 '''
 run(BODY, 'stats')
