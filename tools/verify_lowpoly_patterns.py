@@ -140,7 +140,7 @@ for _, id in Tier.Order do
     assert(e.reflectance >= 0 and e.reflectance <= Tier.MaxReflectance, id .. " gloss bounded")
     assert(e.amount >= 0.45 and e.amount <= 0.65 and e.trimAmount > e.amount, id .. " 2026-10-16: strong enough to read at a glance, trim stronger")
     assert(e.material ~= "Neon" and e.material ~= "ForceField", id .. " no neon")
-    assert(e.sparkleRate > 0 and e.sparkleRate <= Tier.MaxSparkleRate and e.sparkleSize > 0 and e.sparkleSize <= 1, id .. " sparkle bounded")
+    assert(e.sparkleRate > 0 and e.sparkleRate <= Tier.MaxSparkleRate and e.sparkleSize > 0 and e.sparkleSize <= 2, id .. " sparkle bounded")
     for i = 1, 3 do assert(e.tint[i] >= 0 and e.tint[i] <= 255 and e.sparkle[i] >= 0 and e.sparkle[i] <= 255) end
     -- the gene colour must still dominate: a red dino stays mostly red under every tier
     local r, g, b = Tier.blend(0.9, 0.15, 0.15, e, false)
@@ -176,6 +176,7 @@ for _, id in Tier.Order do
     local e = Tier.get(id)
     if prev then
         assert(e.reflectance > prev.reflectance and e.sheen > prev.sheen and e.sparkleRate > prev.sparkleRate and e.sparkleSize > prev.sparkleSize, id .. " gloss/sheen/sparkle grow per tier")
+        assert(e.sparkleCount > prev.sparkleCount and e.sparkleCount <= Tier.MaxSparkleCount, id .. " concurrent twinkles grow per tier")
     end
     prev = e
 end
@@ -191,6 +192,29 @@ for _, grey in {0.35, 0.6, 0.85} do -- the same neutral dino under each tier
     assert(sat(gr, gg, gb) > sat(dr, dg, db) and sat(er, eg, eb) > sat(dr, dg, db), "diamond is the iciest, with the rainbow shimmer on top")
     assert(luma(Tier.lift(dr, dg, db, 1.5, diamond)) >= luma(Tier.lift(gr, gg, gb, 1.5, gold)), "diamond highlights at least as bright as gold's")
 end
+-- accents: pattern / horn / claw pixels become the tier metal or gem, body colour keeps its hue, tiers differ clearly
+assert(gold.sparkleCount == 3 and emerald.sparkleCount == 5 and diamond.sparkleCount == 7 and gold.sparkleSize >= 1, "3 / 5 / 7 big twinkles")
+local blueBody = {0.15, 0.35, 0.9}
+for _, id in Tier.Order do
+    local e = Tier.get(id)
+    local br, bg, bb = Tier.blend(blueBody[1], blueBody[2], blueBody[3], e, false)
+    assert(Tier.hueDistance(hueOf(blueBody[1], blueBody[2], blueBody[3]), hueOf(br, bg, bb)) <= Tier.HueDelta + 1e-6, id .. " body hue unchanged")
+    local ar, ag, ab = Tier.accent(0.9, 0.9, 0.9, e, 1.0, 0.1)
+    local ec = e.accent
+    local want = hueOf(ec[1] / 255, ec[2] / 255, ec[3] / 255)
+    if id ~= "diamond" then
+        assert(Tier.hueDistance(hueOf(ar, ag, ab), want) <= 0.03, id .. " accent is in the tier colour")
+    else
+        assert(luma(ar, ag, ab) >= 0.6, "diamond accent icy bright")
+    end
+    assert(Tier.isAccentName("front claw_geom") and Tier.isAccentName("left horn") and not Tier.isAccentName("left eye"), "accent part names")
+end
+local ar1, ag1, ab1 = Tier.accent(0.5, 0.5, 0.5, diamond, 1, 0.0)
+local ar2, ag2, ab2 = Tier.accent(0.5, 0.5, 0.5, diamond, 1, 0.5)
+assert(math.abs(ar1 - ar2) + math.abs(ag1 - ag2) + math.abs(ab1 - ab2) > 0.05, "diamond accents are prismatic across the texture")
+-- accents are far from base: gold vs emerald vs diamond accents are mutually distinct
+local gA, eA, dA = {Tier.accent(0.5, 0.5, 0.5, gold, 1)}, {Tier.accent(0.5, 0.5, 0.5, emerald, 1)}, {Tier.accent(0.5, 0.5, 0.5, diamond, 1)}
+for _, pr in {{gA, eA}, {gA, dA}, {eA, dA}} do assert(math.abs(pr[1][1] - pr[2][1]) + math.abs(pr[1][2] - pr[2][2]) + math.abs(pr[1][3] - pr[2][3]) > 0.4, "tier accents distinct") end
 -- hue rule (coordinator, Studio evidence): blue / red / green / purple dinos keep their hue under every tier, body and pattern pixels alike
 for _, id in Tier.Order do
     local e = Tier.get(id)

@@ -110,7 +110,7 @@ local function characterVisual(character: Model)
         end
     end
     model.Parent = character
-    if lowPoly then model:SetAttribute("LPTier", if mutation ~= "base" then mutation else nil) end
+    if lowPoly then model:SetAttribute("LPTier", if mutation ~= "base" then mutation else nil) model:SetAttribute("LPOwn", character == game:GetService("Players").LocalPlayer.Character) end
     if realGenes then Appearance.apply(model,realGenes) elseif lowPoly then LowPoly.applyTier(model, mutation) end
     hideShell(character)
 

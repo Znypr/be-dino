@@ -81,13 +81,30 @@ local function sparkle(container: Instance, body: BasePart?, entry: any?)
         for i, c in entry.shimmer do pts[i] = ColorSequenceKeypoint.new((i - 1) / (#entry.shimmer - 1), Color3.fromRGB(c[1], c[2], c[3])) end
         emitter.Color = ColorSequence.new(pts)
     else emitter.Color = ColorSequence.new(Color3.fromRGB(entry.sparkle[1], entry.sparkle[2], entry.sparkle[3])) end
-    emitter.LightEmission, emitter.LightInfluence = 0.7, 0.2
-    emitter.Rate, emitter.Lifetime = entry.sparkleRate * k * (if fx == "lite" then 0.5 else 1), NumberRange.new(0.9, if entry.shimmer then 1.8 else 1.3)
-    local sz = entry.sparkleSize * k
+    emitter.LightEmission, emitter.LightInfluence = 1, 0
+    -- few but crisp: sparkleCount concurrent twinkles (Gold 3 / Emerald 5 / Diamond 7), each ~1.2 s, big enough to read at ~20 studs
+    emitter.Rate, emitter.Lifetime = entry.sparkleCount / 1.2 * (if fx == "lite" then 0.5 else 1), NumberRange.new(1.0, 1.4)
+    local sz = entry.sparkleSize * math.clamp(k, 0.9, 1.6)
     emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.4, sz), NumberSequenceKeypoint.new(1, 0)})
-    emitter.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.2), NumberSequenceKeypoint.new(1, 1)})
+    emitter.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0), NumberSequenceKeypoint.new(1, 1)})
     emitter.Speed, emitter.SpreadAngle, emitter.Rotation = NumberRange.new(0.2, 0.5), Vector2.new(180, 180), NumberRange.new(0, 360)
     emitter.Parent = body
+end
+-- Subtle tier rim: ONLY the local player's own dino and previews (budget); phones never rim remote dinos. Off under Effects Off.
+local function rim(container: Instance, entry: any?)
+    local old = container:FindFirstChild("LPTierRim")
+    if old then old:Destroy() end
+    if not entry or not container:IsA("Model") then return end
+    local own = container:GetAttribute("LPOwn") == true or container:FindFirstAncestorOfClass("ViewportFrame") ~= nil
+    if not own then return end
+    local okS, SettingsModel = pcall(function() return require(script.Parent.SettingsModel) end)
+    if okS and SettingsModel and SettingsModel.effects and SettingsModel.effects() == "off" then return end
+    local h = Instance.new("Highlight")
+    h.Name, h.Adornee = "LPTierRim", container
+    local c = entry.accent
+    h.OutlineColor, h.FillTransparency, h.OutlineTransparency = Color3.fromRGB(c[1], c[2], c[3]), 1, 0.6
+    h.DepthMode = Enum.HighlightDepthMode.Occluded
+    h.Parent = container
 end
 -- Fallback (bake denied / cache full / far away): the model's OWN texture stays (eyes, belly, claws intact, species colour). A plain
 -- MeshPart.Color is ignored on a textured MeshPart in Studio, so no tint is applied (docs/105: option 'keep the original texture').
@@ -131,11 +148,17 @@ function LowPoly.tint(container: Instance, genes: any)
                 part.Material = (Enum.Material :: any)[entry.material] or Enum.Material.Metal
                 part.Reflectance = math.min(entry.reflectance, Tier.MaxReflectance)
             else part.Material, part.Reflectance = Enum.Material.Plastic, 0 end
+            if eyeish and entry and Tier.isAccentName(part.Name) then -- claws / toes / horns are untextured parts: tint them in the tier metal / gem
+                local c = entry.accent
+                part.Color = Color3.fromRGB(c[1], c[2], c[3])
+                continue
+            end
             if eyeish or not spec then part.Color = Color3.new(1, 1, 1) continue end
             table.insert(textured, {part = part, textureId = textureId, role = role})
         end
     end
     sparkle(container, body, entry)
+    rim(container, entry)
     if not spec or #textured == 0 then return end
     local s = spec :: Texture.Spec
     local anchor = body or textured[1].part

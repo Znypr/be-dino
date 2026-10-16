@@ -185,6 +185,8 @@ function Texture.paint(src: buffer, weights: {number}, mask: {number}, spec: Spe
                 local k = Recolor.shade(r, g, bl, base)
                 r, g, bl = Recolor.pixel(r, g, bl, tr, tg, tb, base)
                 if tier then r, g, bl = Tier.lift(r, g, bl, k, tier) end -- BD-308: lit facets shine a little more on fused tiers
+                -- 2026-10-16: pattern (secondary-colour) pixels become the tier's metal / gem accent, the body keeps its own colour
+                if tier and m >= 0.5 then r, g, bl = Tier.accent(r, g, bl, tier, k, (x + y) / (2 * size)) end
             end
             buffer.writeu8(out, o, math.floor(r * 255 + 0.5))
             buffer.writeu8(out, o + 1, math.floor(g * 255 + 0.5))

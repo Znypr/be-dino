@@ -16,6 +16,8 @@ export type Entry = {
     sparkleRate: number,   -- particles per second on the body part (0 = none) at dino size 3 studs; Reduce Motion -> 0
     satKeep: number?, gain: number?, satGain: number?, -- hue-safe brightness / saturation gain after the tint (docs/114)
     sheen: number,
+    accent: {number}, accentAmount: number, -- tier metal / gem colour for horns, claws, frill and pattern pixels (body colour untouched)
+    sparkleCount: number,  -- concurrent twinkles at normal size (rate = count / lifetime)
     sparkleSize: number,   -- relative size of one spark (grows per tier)
     shimmer: {{number}}?, shimmerSpeed: number?, -- Diamond only: rainbow colours the sparks cycle through (static colours under Reduce Motion)
             -- BD-308: 0..MaxSheen lift of the facets the source texture already lit (reads as gloss in flat light)
@@ -23,17 +25,20 @@ export type Entry = {
 Tier.Order = {"gold", "emerald", "diamond"}
 Tier.MaxAmount = 0.8
 Tier.MaxSparkleRate = 10
+Tier.MaxSparkleCount = 8
+Tier.MaxAccentAmount = 0.95
+Tier.AccentWords = {"claw", "toe", "horn", "spike", "frill", "crest", "tooth", "teeth", "nail"}
 Tier.MaxReflectance = 0.3
 Tier.MaxSheen = 0.7
 Tier.Entries = {
     -- 2026-10-16 owner decision "Shiny + sparkles" (docs/115): tiers must read Base < Gold < Emerald < Diamond at a glance, in daylight AND the dim cave.
     -- Gold = rich warm gold, Emerald = deep jewel green, Diamond = icy white-blue with a rainbow shimmer. Gloss, sheen, sparkle rate and sparkle size all grow per tier.
     gold = {id = "gold", name = "Gold", tint = {255, 190, 30}, amount = 0.55, trimAmount = 0.8, material = "Metal", reflectance = 0.18,
-        sparkle = {255, 232, 140}, sparkleRate = 3, sparkleSize = 0.5, sheen = 0.5, gain = 1.1, satGain = 1.2},
+        sparkle = {255, 232, 140}, sparkleRate = 2.5, sparkleCount = 3, sparkleSize = 1.2, accent = {255, 200, 30}, accentAmount = 0.9, sheen = 0.5, gain = 1.1, satGain = 1.2},
     emerald = {id = "emerald", name = "Emerald", tint = {16, 190, 96}, amount = 0.45, trimAmount = 0.8, material = "Glass", reflectance = 0.23,
-        sparkle = {150, 255, 195}, sparkleRate = 5, sparkleSize = 0.62, sheen = 0.6, gain = 0.97, satGain = 1.25},
+        sparkle = {150, 255, 195}, sparkleRate = 4.2, sparkleCount = 5, sparkleSize = 1.4, accent = {10, 235, 120}, accentAmount = 0.9, sheen = 0.6, gain = 0.97, satGain = 1.25},
     diamond = {id = "diamond", name = "Diamond", tint = {205, 240, 255}, amount = 0.6, trimAmount = 0.8, material = "Glass", reflectance = 0.3,
-        sparkle = {235, 250, 255}, sparkleRate = 8, sparkleSize = 0.75, sheen = 0.7, gain = 1.14, satGain = 0.9,
+        sparkle = {235, 250, 255}, sparkleRate = 5, sparkleCount = 7, sparkleSize = 1.6, accent = {225, 245, 255}, accentAmount = 0.92, sheen = 0.7, gain = 1.14, satGain = 0.9,
         shimmer = {{255, 170, 215}, {170, 220, 255}, {190, 255, 215}, {255, 245, 170}}, shimmerSpeed = 0.5},
 }
 -- BD-308 baked sheen: the generated textures carry flat facet shading (k = pixel luma / species body luma, 0.3..1.6). On a fused
@@ -91,5 +96,28 @@ function Tier.blend(r: number, g: number, b: number, entry: Entry, secondary: bo
         nr, ng, nb = k + (nr - mn) * scale, k + (ng - mn) * scale, k + (nb - mn) * scale
     end
     return math.clamp(nr * gain, 0, 1), math.clamp(ng * gain, 0, 1), math.clamp(nb * gain, 0, 1)
+end
+-- Pure: tier accent (horns, frill, claws, pattern-secondary pixels): the tier's metal / gem colour, lit by the source facet shade k.
+-- u (0..1, position across the texture) walks Diamond's prismatic list so the accents shift icy pink / blue / mint / gold.
+function Tier.accent(r: number, g: number, b: number, entry: Entry, k: number, u: number?): (number, number, number)
+    local c = entry.accent
+    local ar, ag, ab = c[1] / 255, c[2] / 255, c[3] / 255
+    local sh = entry.shimmer
+    if sh and u then
+        local f = (u % 1) * #sh
+        local i = math.floor(f)
+        local a, bb = sh[i % #sh + 1], sh[(i + 1) % #sh + 1]
+        local t = f - i
+        -- icy base pulled toward the prismatic colour: still the lightest tier, but clearly not plain white
+        ar, ag, ab = ar * 0.55 + (a[1] + (bb[1] - a[1]) * t) / 255 * 0.45, ag * 0.55 + (a[2] + (bb[2] - a[2]) * t) / 255 * 0.45, ab * 0.55 + (a[3] + (bb[3] - a[3]) * t) / 255 * 0.45
+    end
+    local shade = math.clamp(0.8 + (k - 1) * 0.6, 0.65, 1.2)
+    local m = math.clamp(entry.accentAmount, 0, Tier.MaxAccentAmount)
+    return math.clamp(r + (ar * shade - r) * m, 0, 1), math.clamp(g + (ag * shade - g) * m, 0, 1), math.clamp(b + (ab * shade - b) * m, 0, 1)
+end
+function Tier.isAccentName(name: string): boolean
+    local n = string.lower(name)
+    for _, w in Tier.AccentWords do if string.find(n, w, 1, true) then return true end end
+    return false
 end
 return Tier
