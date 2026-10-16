@@ -940,6 +940,7 @@ function Seq.play(args: Args): Handle
 
         while cueIndex <= #cues and cues[cueIndex].t <= t do
             Sfx.play(cues[cueIndex].name)
+            Sfx.playLayers(cues[cueIndex].name) -- BD-437: Epic/Legendary second cue
             cueIndex += 1
         end
 
@@ -1011,7 +1012,7 @@ function Seq.play(args: Args): Handle
                 HatchFx.update(hx, vt, 1, since, revealStarted)
                 MutationReveal.update(mr, if revealStarted then math.max(0, since - revealT) else nil)
                 if not failed then
-                    if revealStarted and dinoScale then dinoScale.Scale = Timeline.revealScale((since - revealT) / .8) * (if a.big then Timeline.stamp(since - impactAt - revealT) else 1) end
+                    if revealStarted and dinoScale then dinoScale.Scale = Timeline.revealScale((since - revealT) / .8, rarity) * (if a.big then Timeline.stamp(since - impactAt - revealT) else 1) end
                     if a.big and since >= impactAt + revealT and since < impactAt + revealT + .25 then
                         local k = 1 - (since - impactAt - revealT) / .25
                         a.body.AnchorPoint = Vector2.new(.5, .5)
