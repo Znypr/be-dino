@@ -31,7 +31,7 @@ local PUBLIC: {[string]: string} = {
     EquippedEventMutation = "render", EquippedAura = "render", AccountLevel = "render",
     ProfileState = "state", ProfileMode = "state", CharacterState = "state", Location = "state", WorldReady = "state",
     IsAdmin = "state", JoinedAt = "state", HubStation = "state",
-    LastRunId = "run", LastRunEndAt = "run", LastRunEndReason = "run", LastRunCatchScore = "run", LastRunGrowthScore = "run",
+    LastRunId = "run", LastRunEndAt = "run", LastRunEndReason = "run", LastRunCatchScore = "run", LastRunKillEggs = "run", LastRunGrowthScore = "run",
     LastNestClaimAt = "status", LastExitStatusAt = "status", LastMutationToken = "status", LastPredatorUserId = "status", LeapReadyAt = "status",
     LastBiteStatus = "status", LastChestClaimStatus = "status", LastChestTestGrantStatus = "status", LastCollectionGrantStatus = "status",
     LastCrystalStatus = "status", LastEquipStatus = "status", LastExitStatus = "status", LastLeapStatus = "status",

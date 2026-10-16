@@ -15,9 +15,9 @@ function RunComplete.build(d: any)
     d.art(slot, "trophy", 10, 10, 200)
     local rows = Copy.runCompleteRows({
         eggs = d.num("LastRunCatchScore"), crystals = d.num("LastRunCrystals"), nests = d.num("LastRunNestCount"),
-        nestCrystals = d.num("LastRunNestCrystals"), growth = d.num("LastRunGrowthScore"),
+        nestCrystals = d.num("LastRunNestCrystals"), growth = d.num("LastRunGrowthScore"), killEggs = d.num("LastRunKillEggs"),
     })
-    local color = {eggs = C.blue, crystals = C.gold, nests = C.accent, nestCrystals = C.gold, growth = C.accent}
+    local color = {eggs = C.blue, crystals = C.gold, nests = C.accent, nestCrystals = C.gold, growth = C.accent, hunting = C.accent}
     local y = 20 + oops
     for _, row in rows do
         local kind = row[1]

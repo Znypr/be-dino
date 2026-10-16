@@ -14,6 +14,18 @@ local function layer(parent: GuiObject, key: string, position: Vector2, size: nu
     return image
 end
 function Art.build(parent: GuiObject, id: string, native): Frame?
+    if id == "potion_menu" then -- BD-144: menu button icon = the registered Swift Sip bottle, plain (no rarity pips/glow/bob at 40 px)
+        local uri = PotionArt.Images.speed_common
+        local root = Instance.new("Frame")
+        root.Name,root.BackgroundTransparency,root.Size = "Artwork_"..id,1,UDim2.fromOffset(42,42)
+        root.ZIndex,root.Parent = parent.ZIndex+1,parent
+        local image = Instance.new("ImageLabel")
+        image.Name,image.Image,image.BackgroundTransparency,image.ScaleType = "PotionMenuImage",uri,1,Enum.ScaleType.Fit
+        image.AnchorPoint,image.Position,image.Size = Vector2.new(.5,.5),UDim2.fromScale(.5,.5),UDim2.fromScale(1,1)
+        image.ZIndex,image.Parent = root.ZIndex+1,root
+        if uri == "" then image.Visible = false local f = native(root,"potion") if f then f.ZIndex = root.ZIndex+2 end end
+        return root
+    end
     local aura = string.match(id, "^aura_(%w+)$")
     local potion = string.match(id, "^potion_(%w+)$")
     local vialKind, vialRarity = string.match(id, "^potion_(%a+)_(%a+)$")

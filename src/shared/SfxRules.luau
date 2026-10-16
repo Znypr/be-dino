@@ -10,6 +10,10 @@ R.Priority = {
     fusion_reveal = 90, level_up = 80, run_end = 70, shop_buy = 50, shop_refresh = 50, hatch_burst = 45,
     weather_start = 40, hatch_crack = 30, hatch_crack_stage = 30, hatch_rattle = 30, run_start = 30,
     pickup = 20, pickup_hi = 20, pickup_lo = 20, ui_click = 10,
+    -- docs/120 s6 owner upload slots (silent until bound): rare hatch and mutation reveals sit with the reveal stings
+    rare_hatch_fanfare = 95, mutation_dewdrop_reveal = 90, mutation_charged_reveal = 90, mutation_frost_reveal = 90,
+    mutation_seismic_reveal = 90, mutation_ember_reveal = 90, mutation_aurora_reveal = 90, mutation_bloodmoon_reveal = 90,
+    defeat_soft = 70, cracked_fail = 45, nest_open_cue = 50, crystal_cue = 20,
 }
 R.DefaultPriority = 30
 R.MaxVoices = 2

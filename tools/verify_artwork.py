@@ -22,15 +22,24 @@ local parent={ZIndex=20}
 -- Exercise fallback explicitly even after production bindings are populated.
 for key in Assets do Assets[key]="" end
 local Navigation='''+module('src/shared/NavigationArtwork.luau')+'''
-assert(Navigation.auras=="aura_meadow" and Navigation.potions=="potion_speed_Common")
+assert(Navigation.auras=="aura_meadow" and Navigation.potions=="potion_menu")
 local root=Artwork.build(parent,Navigation.auras,native)
 assert(root.Parent==parent and #nativeCalls==2 and nativeCalls[1]=="aura" and nativeCalls[2]=="dinos")
 nativeCalls={}
 Artwork.build(parent,Navigation.potions,native)
 assert(#nativeCalls==0,"BD-176: menu potion is one vector bottle, no overlaid symbol")
+-- BD-144: the menu potion is the registered Swift Sip image, plain: one centred full-size ImageLabel, no pips/glow frames.
 assert(Artwork.build(parent,"weather",native)==nil)
 -- Stub IDs are fixtures only, never written to the upload mapping.
 for key in Assets do Assets[key]="fixture://"..key end
+created={}
+Artwork.build(parent,Navigation.potions,native)
+local menuImages,menuFrames=0,0
+for _,o in created do
+ if o.kind=="ImageLabel" then menuImages+=1 assert(o.Image==PotionArt.Images.speed_common and o.Image=="rbxassetid://110990547415973" and o.Size.X==1 and o.Position.X==.5) end
+ if o.kind=="Frame" then menuFrames+=1 end
+end
+assert(menuImages==1 and menuFrames==1,"BD-144: menu potion = root frame + one image, no pips")
 created={} nativeCalls={}
 root=Artwork.build(parent,"aura_tidal",native)
 local rings,clips,center=0,0,0
