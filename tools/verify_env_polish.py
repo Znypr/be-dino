@@ -1,6 +1,6 @@
 """BD-460 (docs/138): offline checks for the island environment polish pass, with the pinned Luau runtime.
-Covers: the contact-shadow rules (soft, capped, cheap on phones), the softer clear-daylight grade and light, the calmer terrain greens,
-the per-asset foliage tone ranges, the matte grass material variant (colour map only), and the owner's no-haze rule (docs/114 s6).
+Covers: the contact-shadow rules (soft, capped, cheap on phones), the softer clear-daylight grade and light, the warm terrain greens,
+the per-asset foliage tone ranges, the built-in grass decision (BeDino_Meadow unbound), and the owner's no-haze rule (docs/114 s6).
 Instances are not executed here; the Studio look is checked by the lead (kanban BD-460).
 """
 from pathlib import Path
@@ -23,15 +23,15 @@ assert(#R.Layers == 3, "three stacked soft discs")
 local lastSize = 2
 for i, l in R.Layers do
     assert(l.size < lastSize and l.size > .3, "discs shrink outer to inner") lastSize = l.size
-    assert(l.alpha > 0 and l.alpha <= .2, "each disc is faint, the stack is what darkens")
+    assert(l.alpha > 0 and l.alpha <= .32, "each disc is translucent, the stack is what darkens")
     assert(R.transparency(i, 1) == 1 - l.alpha and R.transparency(i, 0) == 1, "opacity 0 hides, 1 is the disc alpha")
 end
 local dark = R.centreDarkness()
-assert(dark >= .25 and dark <= .4, "soft contact shadow, not a black blob: " .. dark)
+assert(dark >= .45 and dark <= .65, "clearly visible but soft contact shadow (round 1 at .33 was invisible in Studio): " .. dark)
 assert(R.Thickness <= .1 and R.Lift >= .03 and R.Lift <= .15 and R.LayerStep > 0 and R.LayerStep < R.Lift, "flat, just above the ground, no z-fighting")
 assert(R.Color[1] > 0 or R.Color[2] > 0 or R.Color[3] > 0, "never pure black")
 local w1, l1 = R.footprint(1) local w4, l4 = R.footprint(4) local wn = R.footprint(0 / 0)
-assert(w4 > w1 and l4 > l1 and l1 > w1 and w4 <= 9 and wn == w1, "footprint grows with the dino, is bounded, NaN safe")
+assert(w1 >= 5 and w4 > w1 and l4 > l1 and l1 > w1 and w4 <= 18 and wn == w1, "footprint is wider than the 3.5-stud starting body, grows with the dino, is bounded, NaN safe")
 -- phone budget: <= 2 others, tablet <= 4, desktop <= 6; Lite halves, Off keeps only the local dino
 assert(R.maxOthers("Phone", "full") == 2 and R.maxOthers("Tablet", "full") == 4 and R.maxOthers("Desktop", "full") == 6)
 assert(R.maxOthers("Phone", "lite") == 1 and R.maxOthers("Desktop", "lite") == 3 and R.maxOthers("Phone", "off") == 0 and R.maxOthers("Desktop", "off") == 0)
@@ -49,7 +49,7 @@ assert(o0 == 1 and s0 == 1 and o5 > 0 and o5 < 1 and s5 < 1 and o9 == 0 and s9 >
 
 -- ---- softer clear daylight (no haze, less saturation, no extra contrast)
 local C = W.Looks.clear
-assert(C.sat >= 0 and C.sat <= .04, "clear grade saturation is barely positive (was +.08, BD-460): " .. C.sat)
+assert(C.sat >= .02 and C.sat <= .06, "clear grade saturation slightly positive (was +.08, +.02 made the built-in grass pale, BD-460): " .. C.sat)
 assert(C.contrast == 0, "clear grade adds no contrast (was +.04): " .. C.contrast)
 assert(C.bloom == 0 and C.dof == 0 and C.rays == 0 and C.glare == 0, "no bloom, depth of field, sun rays or glare in clear daylight")
 assert(C.density == 0 and C.haze == 0, "the clear look itself adds no atmosphere (owner 2026-10-16: no haze)")
@@ -63,13 +63,13 @@ for _, key in {"Ambient", "OutdoorAmbient"} do
 end
 assert(L.Ambient[3] - L.Ambient[1] <= 20, "neutral-ish fill, no strong blue cast")
 
--- ---- terrain greens: calmer than before (old Grass 132,170,84; LeafyGrass 62,124,78) and no dark teal patches
+-- ---- terrain greens (built-in Grass is pale and grey-green: the colour multiplier must be rich and warm; old Grass 132,170,84, LeafyGrass 62,124,78)
 local function sat(c) local hi, lo = math.max(c[1], c[2], c[3]), math.min(c[1], c[2], c[3]) return (hi - lo) / hi end
 local function val(c) return math.max(c[1], c[2], c[3]) / 255 end
 local grass, leafy = B.Colors.Grass, B.Colors.LeafyGrass
-assert(sat(grass) <= .43 and sat(grass) >= .3 and val(grass) >= .6, "meadow grass less saturated but not dull or dark")
-assert(sat(leafy) <= .38 and val(leafy) >= .49, "leafy grass lifted out of the dark teal")
-assert(leafy[3] < leafy[2], "leafy grass stays a green, not a teal")
+assert(sat(grass) >= .5 and sat(grass) <= .65 and val(grass) >= .58 and val(grass) <= .72, "meadow grass rich, not grey (BD-460)")
+assert(grass[3] <= grass[1] * .65 and grass[2] > grass[1], "meadow grass is warm: low blue, green leads")
+assert(sat(leafy) >= .45 and val(leafy) >= .45 and leafy[3] < leafy[1] and leafy[2] > leafy[1], "leafy grass warm green, no dark teal patches")
 
 -- ---- per-asset foliage tone
 local seenTone = 0
@@ -109,12 +109,14 @@ def scan():
         assert needle in shadow, 'ContactShadow.client.luau lacks ' + needle
     assert shadow.count('Instance.new') == 2, 'only the folder and the pooled disc parts are created, never per frame'
     assert 'Instance.new("Part")' in shadow and shadow.index('local function newShadow') < shadow.index('Instance.new("Part")') < shadow.index('local function hide'), 'discs are built only in newShadow'
-    # Grass material: colour map only, a smaller tile; the three unbound maps are listed for rollback.
+    # Grass: owner decision 2026-10-16 = Roblox's built-in Grass. BeDino_Meadow stays in MaterialService with all its IDs but is NOT bound.
     root = ET.fromstring((ROOT / 'resources/world-materials.rbxmx').read_text(encoding='utf-8'))
+    assert root.find("Item/Properties/string[@name='GrassName']") is None, 'MaterialService.GrassName must stay unset (built-in Grass, BD-460)'
     meadow = next(v for v in root.iter('Item') if v.attrib.get('referent') == 'BeDino_Meadow')
     names = {c.attrib['name'] for c in meadow.findall('Properties/Content')}
-    assert names == {'ColorMap'}, 'BeDino_Meadow keeps only its colour map (BD-460): ' + str(names)
-    assert float(meadow.find("Properties/float[@name='StudsPerTile']").text) <= 12
+    assert names == {'ColorMap', 'NormalMap', 'RoughnessMap', 'MetalnessMap'}, 'the unbound variant keeps all four map IDs: ' + str(names)
+    assert 'rbxassetid://94202355146046' in (ROOT / 'resources/world-materials.rbxmx').read_text(encoding='utf-8')
+    assert root.find("Item/Properties/string[@name='RockName']") is not None and root.find("Item/Properties/string[@name='WoodName']") is not None, 'rock and wood overrides unchanged'
     reg = (ROOT / 'docs/77-asset-registry.md').read_text(encoding='utf-8')
     assert 'BD-460' in reg, 'docs/77 records the grass art task (BD-460)'
 

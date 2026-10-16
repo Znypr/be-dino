@@ -7,21 +7,22 @@
 local Rules = {}
 
 -- Disc layers, outer to inner: size = share of the full footprint, alpha = how dark that disc is on its own (1 - Transparency).
--- Stacked at the centre they add up to about 0.33 darkness; the rim fades out over three steps.
+-- Stacked at the centre they add up to about 0.57 darkness; the rim fades out over three steps. (BD-460 round 2: the first version, .33 and a
+-- footprint narrower than the body, was invisible at 25 studs in Studio.)
 Rules.Layers = table.freeze({
-    table.freeze({size = 1.00, alpha = .10}),
-    table.freeze({size = .72, alpha = .12}),
-    table.freeze({size = .46, alpha = .16}),
+    table.freeze({size = 1.00, alpha = .20}),
+    table.freeze({size = .72, alpha = .24}),
+    table.freeze({size = .46, alpha = .30}),
 })
 Rules.Thickness = .05 -- studs; a flat cylinder
 Rules.LayerStep = .015 -- studs between stacked discs (no z-fighting)
 Rules.Lift = .07 -- studs above the ground surface
-Rules.Color = {22, 32, 28} -- cool dark green-navy, never pure black (docs/114 s4.3)
+Rules.Color = {12, 20, 16} -- cool dark green-navy, never pure black (docs/114 s4.3)
 
 -- Footprint in studs for a dino of this VisualScale (1 = start size, grows to about 4): width across, length along.
 function Rules.footprint(visualScale: number): (number, number)
     local s = if visualScale ~= visualScale then 1 else math.clamp(visualScale, .5, 5)
-    local width = math.clamp(2.2 * s, 1.6, 9)
+    local width = math.clamp(5.4 * s, 4, 18) -- the starting dino is about 3.5 studs wide: the outer disc must stick out past the body
     return width, width * 1.4
 end
 

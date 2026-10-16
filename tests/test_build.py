@@ -56,18 +56,12 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(len(variants), 3)
         for variant in variants:
             self.assertEqual(variant.attrib["class"], "MaterialVariant")
-            self.assertRegex(variant.find("Properties/Content[@name='ColorMap']/url").text, r"^rbxassetid://[0-9]+$")
-            for key in ("NormalMap", "RoughnessMap", "MetalnessMap"):
-                node = variant.find(f"Properties/Content[@name='{key}']/url")
-                if variant.find("Properties/string[@name='Name']").text == "BeDino_Meadow":
-                    # BD-460 (docs/138): the island grass keeps only its colour map; the other maps gave the dark wave/stripe shading.
-                    self.assertIsNone(node, key + " must stay unbound on the grass")
-                else:
-                    self.assertRegex(node.text, r"^rbxassetid://[0-9]+$")
-        meadow = next(v for v in variants if v.find("Properties/string[@name='Name']").text == "BeDino_Meadow")
-        self.assertLessEqual(float(meadow.find("Properties/float[@name='StudsPerTile']").text), 12)
-        for base in ("Grass", "Rock", "Wood"):
-            self.assertEqual(service.find(f"Properties/string[@name='{base}Name']").text, "BeDino_" + {"Grass":"Meadow", "Rock":"Stone", "Wood":"Bark"}[base])
+            for key in ("ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap"):
+                self.assertRegex(variant.find(f"Properties/Content[@name='{key}']/url").text, r"^rbxassetid://[0-9]+$")
+        # BD-460 (docs/138): the BeDino_Meadow variant stays packaged with all its IDs but is NOT bound: the island uses the built-in Grass.
+        self.assertIsNone(service.find("Properties/string[@name='GrassName']"))
+        for base in ("Rock", "Wood"):
+            self.assertEqual(service.find(f"Properties/string[@name='{base}Name']").text, "BeDino_" + {"Rock":"Stone", "Wood":"Bark"}[base])
 
     def test_visual_bindings_match_verified_manifest(self):
         spec = importlib.util.spec_from_file_location("visual_bindings", ROOT / "tools/bind_visual_assets.py")
