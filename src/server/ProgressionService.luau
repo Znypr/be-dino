@@ -8,6 +8,7 @@ local Rules=require(ReplicatedStorage.Shared.ProgressionRules)
 local Resources=require(ReplicatedStorage.Shared.ResourceModels)
 local MovementEnvelope=require(ReplicatedStorage.Shared.MovementEnvelope)
 local GameConfig=require(ReplicatedStorage.Shared.Config)
+local ClassMovement=require(ReplicatedStorage.Shared.ClassMovement)
 local ColourBonus=require(ReplicatedStorage.Shared.ColourBonus)
 local Service={}
 local PrivateState = require(script.Parent.PrivateState)
@@ -201,7 +202,10 @@ function Service.start(repository)
                     c:SetAttribute("GrowthMultiplier",growth) c:SetAttribute("WeatherLootMultiplier",loot)
                     PrivateState.set(player, "GrowthMultiplier",growth) PrivateState.set(player, "SpeedMultiplier",speed) PrivateState.set(player, "LootMultiplier",loot)
                     local h=c:FindFirstChildOfClass("Humanoid")
-                    if h then h.WalkSpeed=GameConfig.WalkSpeed*(if c:GetAttribute("RunState")=="Active" then speed else 1) end
+                    if h then
+                        local classX=if GameConfig.CombatEnabled then ClassMovement.walkSpeed(ClassMovement.classForSpecies(player:GetAttribute("EquippedSpeciesId")))/GameConfig.WalkSpeed else 1 -- BD-246, flag off = 1
+                        h.WalkSpeed=GameConfig.WalkSpeed*classX*(if c:GetAttribute("RunState")=="Active" then speed else 1)
+                    end
                     c:SetAttribute("EquippedAuraId",p.equippedAura)
                     c:SetAttribute("EquippedTrailId",p.equippedTrail or "")
                     c:SetAttribute("ShinyDinosaur",player:GetAttribute("EquippedShiny")==true)

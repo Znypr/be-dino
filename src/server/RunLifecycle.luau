@@ -5,6 +5,7 @@ local HttpService = game:GetService("HttpService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
+local SettingsModel = require(ReplicatedStorage.Shared.SettingsModel)
 
 local RunLifecycle = {}
 local PrivateState = require(script.Parent.PrivateState)
@@ -44,6 +45,15 @@ function RunLifecycle.configureSettlement(callback)
     settleRun = callback
 end
 
+-- BD-421: the saved Peaceful choice, read ONCE when a run starts and kept for that whole run (PeacefulRun attribute), so it can
+-- only change between runs. Applies to the instant "bigger eats smaller" rule AND to HP combat. Default is off (docs/115).
+function RunLifecycle.peacefulSetting(player: Player): boolean
+    local raw = PrivateState.get(player, "SettingsJson")
+    if typeof(raw) ~= "string" or raw == "" then return false end
+    local ok, decoded = pcall(function() return HttpService:JSONDecode(raw) end)
+    return ok and SettingsModel.fromStore(decoded).peaceful == true
+end
+
 function RunLifecycle.begin(player: Player, character: Model)
     if player:GetAttribute("ProfileState") ~= "Loaded" then return end
     -- BD-044: a run starts only when the egg bank and pending-nest list have room for a
@@ -60,6 +70,7 @@ function RunLifecycle.begin(player: Player, character: Model)
     for id, at in runStartedAt do if startedNow - at > 6 * 3600 then runStartedAt[id] = nil end end -- BD-363: a run that never settled cannot pin its entry forever
     runStartedAt[newRunId] = startedNow
     player:SetAttribute("Location", "Island")
+    character:SetAttribute("PeacefulRun", RunLifecycle.peacefulSetting(player)) -- BD-421: snapshot, never re-read mid-run
     character:SetAttribute("RunState", "Active")
     character:SetAttribute("GrowthScore", 0)
     character:SetAttribute("CatchScore", 0)
@@ -203,11 +214,12 @@ local function predatorNearby(player: Player, character: Model): boolean
     local rawScore = character:GetAttribute("GrowthScore")
     local score = if typeof(rawScore) == "number" then rawScore else 0
     local now = workspace:GetServerTimeNow()
-    if RunLifecycle.isProtected(character, now) then return false end
+    if RunLifecycle.isProtected(character, now) or character:GetAttribute("PeacefulRun") == true then return false end -- BD-421
     for _, other in Players:GetPlayers() do
         local otherCharacter = if other ~= player then activeCharacter(other) else nil
         local otherRoot = if otherCharacter then otherCharacter:FindFirstChild("HumanoidRootPart") else nil
-        if otherCharacter and otherRoot and otherRoot:IsA("BasePart") and not RunLifecycle.isProtected(otherCharacter, now) then
+        if otherCharacter and otherRoot and otherRoot:IsA("BasePart") and not RunLifecycle.isProtected(otherCharacter, now)
+            and otherCharacter:GetAttribute("PeacefulRun") ~= true then
             local rawOther = otherCharacter:GetAttribute("GrowthScore")
             local otherScore = if typeof(rawOther) == "number" then rawOther else 0
             if otherScore > score and otherScore >= score * Config.PredationScoreMultiplier

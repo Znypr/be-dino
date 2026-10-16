@@ -81,6 +81,10 @@ ok=CM.canStart("Ground","leap",{grounded=true,now=60,lastLeapAt=0}); assert(ok)
 ok=CM.canStart("Bogus","jump",nil); assert(not ok)
 ok=CM.canStart("Bogus","jump",{grounded=true,now=0}); assert(ok,"unknown class = Ground")
 local x,z=CM.clampToArena(1e9,-1e9); assert(x==Cfg.ArenaHalfWidth and z==-Cfg.ArenaHalfWidth)
+-- BD-246 wiring helpers
+assert(CM.classForSpecies("mosasaurus")=="Water" and CM.classForSpecies("pteranodon")=="Fly" and CM.classForSpecies("ankylosaurus")=="Armored")
+assert(CM.classForSpecies(nil)=="Ground" and CM.classForSpecies("nope")=="Ground" and CM.classForSpecies(5)=="Ground")
+assert(CM.jumpPower("Water",Cfg.JumpPower)==0 and CM.jumpPower("Ground",Cfg.JumpPower)==Cfg.JumpPower and CM.jumpPower("Fly",Cfg.JumpPower)>Cfg.JumpPower)
 print("class movement ok")
 '''
 
@@ -106,4 +110,14 @@ with tempfile.TemporaryDirectory() as d:
     result = subprocess.run([args.runner, str(path)], capture_output=True, text=True)
     print(result.stdout, end='')
     print(result.stderr, end='')
-    raise SystemExit(result.returncode)
+if result.returncode == 0:
+    # BD-246 static wiring: everything is behind Config.CombatEnabled; default config is unchanged.
+    svc = (ROOT / 'src/server/ClassMovementService.luau').read_text(encoding='utf-8')
+    assert 'if not Config.CombatEnabled then return end' in svc, 'service must be flag gated'
+    assert 'ClassMovementService' in (ROOT / 'src/server/Bootstrap.server.luau').read_text(encoding='utf-8')
+    prog = (ROOT / 'src/server/ProgressionService.luau').read_text(encoding='utf-8')
+    assert 'if GameConfig.CombatEnabled then ClassMovement.walkSpeed' in prog, 'class speed must be flag gated'
+    assert 'CombatEnabled = false' in (ROOT / 'src/shared/Config.luau').read_text(encoding='utf-8')
+    assert 'select("#", ...) ~= 0' in svc and 'MinRequestGap' in svc, 'dash remote validates args and rate limits'
+    print('class movement wiring ok')
+raise SystemExit(result.returncode)

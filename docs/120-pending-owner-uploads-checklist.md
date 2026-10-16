@@ -39,6 +39,7 @@ Note: the older fx-v2 smoke, spark and flame sheets are superseded by the upload
 | Combat HUD art, crystal pack icons, cave sign medallions (P2) | BD-248, BD-331, docs/104 | ChatGPT | see 109 E1-E3 | 1024 PNG | CombatHud, crystal cards, cave sign SurfaceGuis | CODE | 109 E1-E3 |
 | Rare hatch fanfare sound (optional, `shiny_bang` plays meanwhile) | BD-428 | Owner or sound lab (docs/110) | - | 2-3 s, .ogg/.mp3 | `Sfx.Sounds` (new `rare_hatch_fanfare`) | after upload | Bright kid-friendly celebration jingle, no harsh peak |
 | Confetti sheet (optional, fx3 sparkle tinted meanwhile) | BD-428 | Blender render | `resources/effects/fx-v3/confetti.png` | 1024x1024 4x4, white on alpha | `RareHatchClient` | after upload | Squares, ribbons and stars, 16 cells |
+| Golden Drumstick special food mesh and icon (P2) | BD-207 | Blender or Roblox generate_mesh | `food_golden_drumstick` (new, no repo file yet) | MeshPart under 500 triangles, gold tint left to the Highlight | `FoodService` special food, only while `Config.SpecialFoodsEnabled` | CODE | not drafted; the registered drumstick is reused meanwhile |
 | Cave lava crust / flow texture (BD-385, BD-294) | BD-385 | Blender render (no code-drawn art) | `resources/effects/cave-lava-crust-v1.png` | 1024 tileable, warm orange to dark crust, soft alpha edge, calm and friendly | `CaveLavaFx` falls sheet layers (today: existing swirl and flame sheets) | TODO | 104 s5 |
 
 ## 3. Hatch v2 (3D and paint flipbooks, docs/118, BD-397; flag `Config.HatchV2 = false`)
