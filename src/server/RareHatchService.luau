@@ -7,10 +7,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Rare = require(ReplicatedStorage.Shared.RareHatch)
+local CooldownMemory = require(script.Parent.CooldownMemory)
 
 local Service = {}
 local state = Rare.newState()
 local remote: RemoteEvent? = nil
+-- BD-439: the 45 s announcement cooldown is UserId-keyed memory, so leaving and rejoining does not reset it (Rare.forget only drops the open window).
+local announced = CooldownMemory.new(math.max(120, Rare.Cooldown * 2))
+local ANNOUNCE_KEY = "announce"
 
 local function getRemote(): RemoteEvent
     if remote then return remote end
@@ -46,12 +50,18 @@ function Service.record(player: Player, outcome: any)
         if eggId == "" or state.seen[eggId] then return end -- one celebration and one announcement per egg
         event:FireClient(player, {k = "me", kind = info.kind, text = Rare.ownText(info, speciesName), rarity = Config.SpeciesRarities[species] or 1})
         local text = Rare.text(player.DisplayName, info, speciesName)
-        local flushAt = Rare.offer(state, player.UserId, eggId, info, text, os.clock())
+        local flushAt = nil
+        if os.clock() - announced.last(player.UserId, ANNOUNCE_KEY) >= Rare.Cooldown then
+            flushAt = Rare.offer(state, player.UserId, eggId, info, text, os.clock())
+        else
+            state.seen[eggId] = true -- quiet: still one celebration per egg
+        end
         if flushAt then
             local userId = player.UserId
             task.delay(flushAt - os.clock(), function()
                 local out = Rare.flush(state, userId, os.clock())
                 if not out then return end
+                announced.mark(userId, ANNOUNCE_KEY, os.clock())
                 for _, other in Players:GetPlayers() do
                     if other ~= player then event:FireClient(other, {k = "all", kind = out.info.kind, text = out.text}) end
                 end

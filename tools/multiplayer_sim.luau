@@ -1076,6 +1076,36 @@ do
     check("egg origin: the badge shows only that dino's own mutation", v1.mutationId == "rainbow" and v3.mutationId == nil, tostring(v1.mutationId))
 end
 
+-------------------------------------------------------------------- L: BD-439 kill egg bonus, 20 player kills in one run
+runScenario("kill-egg-bonus", 400, function(env, server)
+    local Rules = server.require(node("src/shared/FoodCatchRules"))
+    local RunEggTags = server.require(node("src/shared/RunEggTags"))
+    local p = connect(env, 3301)
+    local runId = startRun(env, p, 0)
+    local c = p.Character
+    local paid, calls = 0, 0
+    for _ = 1, 20 do -- the same attribute steps PredationService.awardCatch performs per kill
+        local whole, carry, total = Rules.awardKill(c.attrs.PredationEggs or 0, c.attrs.PredationEggCarry or 0)
+        c:SetAttribute("PredationEggCarry", carry)
+        c:SetAttribute("PredationEggs", total)
+        if whole > 0 then
+            c:SetAttribute("CatchScore", RunEggTags.nextScore(c.attrs.CatchScore or 0, whole, server.Config.MaxCatchScore, server.Config.RunEggMaxPerRun))
+        end
+        paid += whole calls += 1
+    end
+    check("kill bonus: 20 kills pay exactly 3 whole eggs and stop", paid == 3 and c.attrs.PredationEggs == 3 and c.attrs.CatchScore == 3, string.format("paid=%d eggs=%s score=%s", paid, tostring(c.attrs.PredationEggs), tostring(c.attrs.CatchScore)))
+    env.RL.tryEnd(p, c, "ManualExit") env.RL.tryEnd(p, c, "ManualExit")
+    sleep(30)
+    local _, n = eggIdsOf(profileOf(3301))
+    check("kill bonus: the run settled exactly once", env.settleCalls[runId] == 1, tostring(env.settleCalls[runId]))
+    check("kill bonus: exactly 3 bonus eggs were credited, no more", n == 3, "eggs=" .. n)
+    disconnect(env, p)
+    sleep(20)
+    local ids, total = eggIdsOf(profileOf(3301))
+    local dup = 0 for _, k in ids do if k > 1 then dup += 1 end end
+    check("kill bonus: still 3 eggs after the leave, none duplicated", total == 3 and dup == 0, string.format("%d eggs, %d dup", total, dup))
+end)
+
 -------------------------------------------------------------------- report
 local failed = 0
 for _, c in CHECKS do

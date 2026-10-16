@@ -217,6 +217,10 @@ def static_checks():
         errors.append('the Bite remote must reject any payload (no client target or damage)')
     if 'if Config.CombatEnabled then return end' not in read('src/server/PredationService.luau'):
         errors.append('PredationService instant-eat must stop only while the flag is on')
+    if 'FoodCatchRules.awardKill(' not in read('src/server/PredationService.luau'):
+        errors.append('BD-439: a player kill must award the capped fractional egg via FoodCatchRules.awardKill')
+    if 'PredationEgg' in service:
+        errors.append('BD-439: CombatService does not award kill eggs (growth only)')
     if 'CombatService).start(RunLifecycle, Dinosaur)' not in read('src/server/Bootstrap.server.luau'):
         errors.append('server bootstrap must start CombatService')
     boot = read('src/client/Bootstrap.client.luau')
