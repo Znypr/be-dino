@@ -63,7 +63,7 @@ The hub is never culled (players stand in it with 11 others), so it has a hard b
 | Group | Parts (max) | Triangles (max) |
 |---|---:|---:|
 | Terrain shell | 0 | voxels (measure; target under 1.5 M voxel faces visible from the Heart) |
-| Rocks, stalagmites, stalactites, moss, crystals | 170 | 400 k |
+| Rocks, stalagmites, stalactites, moss, crystals | 190 (was 170; BD-384 +36 rim / edge / moss pieces) | 400 k |
 | Station props (8 stations + gate + wall) | 120 | 300 k |
 | Lava falls (sheet, pool, stones, emitters' parts) | 12 | 20 k |
 | Lights, light-shaft cones, signs, prompts, pads | 48 | 10 k |

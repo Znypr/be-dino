@@ -280,6 +280,28 @@ end
 assert(diffs==0,"voxel rules deterministic: "..diffs)
 
 local names={} for m,c in counts do names[#names+1]=string.format("%s %.0f%%",m,100*c/solid) end table.sort(names)
+-- ---- BD-384 look: cooler cave-only colours, no island Sandstone in the hall, stalactite ceiling rule
+for name,c in R.Colors do
+ if name~="CrackedLava" then
+  assert(c[1]-c[3]<=12 and c[1]<=170 and c[2]<=170,"cool soft stone, not orange: "..name)
+ end
+end
+for _,iso in {"Sandstone","Slate","Rock","Basalt","Grass","LeafyGrass"} do assert(R.Colors[iso]==nil,"island material never recoloured: "..iso) end
+local wallMats={}
+for _,p in {{-60,16},{70,30},{0,40},{-40,26},{20,10},{-90,20}} do
+ for i=1,40 do
+  local x,z=p[1]+i*1.7,C.CenterZ+p[2]*3-i*1.3
+  local col=R.column(x,z)
+  local m=R.cellAt(col,col.ceil+2)
+  if m~="Air" then wallMats[m]=true end
+ end
+end
+assert(not wallMats.Sandstone,"walls and roof use no Sandstone (island colour)")
+for _,xz in {{0,0},{30,10},{-40,60},{60,-30},{-70,20}} do
+ local x,z=xz[1],C.CenterZ+xz[2]
+ assert(math.abs(R.ceilingAt(x,z)-R.column(x,z).ceil)<1e-9,"ceilingAt is the shell ceiling")
+ assert(math.abs(R.ceilingAt(x,z)-C.ceilingY(x,z))<=R.CeilingRough+1e-6,"within the relief of the smooth ceiling")
+end
 print(string.format("Cave terrain OK: grid %dx%dx%d = %d cells, %d solid, %d chunks of <= %d cells, %d cells between yields, %d visible faces, %d flat path/pad columns (max dev %.3f), 0 air bubbles of %d air cells, eval %.2f s; mix: %s",
  nx,ny,nz,total,solid,#plan.chunks,plan.cellsPerChunk,plan.cellsBetweenYields,faces,flatCols,maxDev,airTotal,evalSeconds,table.concat(names,", ")))
 '''

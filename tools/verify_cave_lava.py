@@ -158,7 +158,25 @@ assert(Props.Warm.cave_lava_rim_rock and Props.Warm.cave_stepping_stone,"rim roc
 -- ---- budgets unchanged (300 / 410 parts)
 local budget=C.budgetTable()
 assert(budget.total.parts<=C.Budget.total.parts,"hub parts "..budget.total.parts.." <= "..C.Budget.total.parts)
-assert(Props.Lava.fxPartBudget<=2,"lava FX parts: sheet + disc only")
+assert(Props.Lava.fxPartBudget==#R.Layers+#R.Glow+1 and Props.Lava.fxPartBudget<=7,"lava FX parts: 3 sheets + 3 glow discs + pool disc")
+-- BD-385: layered sheets with soft edges
+assert(#R.Layers==3 and #R.Glow>=3,"3 layered sheets and a stepped glow")
+local lastDz,lastW=-1,1e9
+for i,layer in R.Layers do
+ local w,h=R.sheetSize(layer,F.width-2,F.height)
+ assert(layer.dz>lastDz and w<lastW and w>=4 and h>=4 and h<=F.height,"sheets step forward in depth and get narrower: "..i)
+ assert(layer.dz<=1.5,"sheets stay close together (no gap)") 
+ assert(layer.fade>=0.1 and layer.fade<=0.3,"soft vertical / sideways edge fade "..layer.name)
+ local e=R.edgeFade(layer.fade)
+ assert(e[1][2]==1 and e[#e][2]==1 and e[3][2]==0 and e[4][2]==0,"edge is fully clear at the rim and fully solid inside: "..layer.name)
+ for k=2,#e do assert(e[k][1]>e[k-1][1],"keypoints strictly increase") end
+ lastDz,lastW=layer.dz,w
+end
+local speeds={} for _,l in R.Layers do speeds[l.speed]=true assert(l.speed<=4.5,"slow scroll") end
+local nspeed=0 for _ in speeds do nspeed+=1 end
+assert(nspeed==3,"each layer has its own speed")
+for i=2,#R.Glow do assert(R.Glow[i].diameter<R.Glow[i-1].diameter and R.Glow[i].transparency<R.Glow[i-1].transparency,"glow brighter toward the middle") end
+assert(R.Glow[1].transparency>=0.75,"outer glow ring is faint (no hard rim)")
 print(string.format("cave lava ok: emitters %d/s desktop, %.1f/s phone, %d layers, boards min x %.0f vs falls edge %.0f, %d sign rows, parts %d/%d",total,phoneTotal,#R.Layers,math.min(endpoints(spots[1])),fallRight,rows,budget.total.parts,C.Budget.total.parts))
 '''
 
@@ -186,6 +204,8 @@ def static_checks():
     cfg = (ROOT / 'src/shared/Config.luau').read_text()
     assert 'CaveHub = false' in cfg, 'Config.CaveHub ships false'
     fx = (ROOT / 'src/server/CaveLavaFx.luau').read_text()
+    assert 'Instance.new("CanvasGroup")' in fx and 'Instance.new("UIGradient")' in fx and 'Rules.edgeFade' in fx and 'Rules.Glow' in fx, 'BD-385 soft-edged layered sheets and a glow pool'
+    assert fx.count('buildLayer(') == 2 and 'for i, layer in Rules.Layers do' in fx, 'one sheet (SurfaceGui) per layer'
     assert 'Instance.new("SurfaceGui")' in fx and 'Instance.new("ImageLabel")' in fx and 'Instance.new("Texture")' not in fx, \
         'layers are a SurfaceGui of ImageLabels (a Texture would fade with the part Transparency)'
     assert 'CaveLavaRules' in fx and 'Rules.Layers' in fx and 'Rules.stripY(layer, 0, true)' in fx, 'layers start at the static first frame from the rules'

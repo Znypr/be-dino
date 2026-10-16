@@ -47,11 +47,21 @@ local function emitter(parent: Instance, key: string, name: string, rule: string
     return e
 end
 
--- The scrolling layers: one Frame (clipped) per layer holding one tiled ImageLabel one tile taller / wider than the canvas.
--- Layer position at scroll 0 = the static first frame.
-local function buildLayers(sheet: Part, width: number, height: number)
+-- One scrolling layer: a SurfaceGui on its own sheet holds two nested CanvasGroups (each with a UIGradient alpha edge fade, one across,
+-- one down: soft edges, no hard rectangle) around one tiled ImageLabel one tile taller / wider than the canvas. Position at scroll 0 =
+-- the static first frame (Reduce Motion).
+local function fade(group: CanvasGroup, fraction: number, rotation: number)
+    local g = Instance.new("UIGradient")
+    local keys = {}
+    for _, k in Rules.edgeFade(fraction) do table.insert(keys, NumberSequenceKeypoint.new(k[1], k[2])) end
+    g.Transparency = NumberSequence.new(keys)
+    g.Rotation = rotation
+    g.Parent = group
+end
+
+local function buildLayer(sheet: Part, index: number, layer: any, width: number, height: number)
     local gui = Instance.new("SurfaceGui")
-    gui.Name = "LavaLayers"
+    gui.Name = "LavaLayer_" .. layer.name
     gui.Face = Enum.NormalId.Front
     gui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
     gui.CanvasSize = Vector2.new(width * Rules.CanvasPxPerStud, height * Rules.CanvasPxPerStud)
@@ -59,32 +69,30 @@ local function buildLayers(sheet: Part, width: number, height: number)
     gui.Brightness = 1.4
     gui.AlwaysOnTop = false
     gui.Parent = sheet
-    for i, layer in Rules.Layers do
-        local tile = Rules.tilePx(layer)
-        local frame = Instance.new("Frame")
-        frame.Name = "Layer_" .. layer.name
-        frame.Size = UDim2.fromScale(1, 1)
-        frame.BackgroundTransparency = 1
-        frame.BorderSizePixel = 0
-        frame.ClipsDescendants = true
-        frame.ZIndex = i
-        frame.Parent = gui
-        local image = Instance.new("ImageLabel")
-        image.Name = "Strip"
-        image.BackgroundTransparency = 1
-        image.BorderSizePixel = 0
-        image.Image = Assets.resolve(layer.key)
-        image.ImageColor3 = c3(layer.color)
-        image.ImageTransparency = layer.alpha
-        image.ScaleType = Enum.ScaleType.Tile
-        image.TileSize = UDim2.fromOffset(tile, tile)
-        image.Size = UDim2.fromOffset(width * Rules.CanvasPxPerStud + tile, height * Rules.CanvasPxPerStud + tile)
-        image.Position = UDim2.fromOffset(-((layer.offsetU * Rules.CanvasPxPerStud) % tile) - 0, Rules.stripY(layer, 0, true))
-        image.ZIndex = i
-        image:SetAttribute("LayerIndex", i)
-        image:SetAttribute("OffsetX", -((layer.offsetU * Rules.CanvasPxPerStud) % tile))
-        image.Parent = frame
-    end
+    local across = Instance.new("CanvasGroup")
+    across.Name, across.Size, across.BackgroundTransparency, across.BorderSizePixel = "FadeAcross", UDim2.fromScale(1, 1), 1, 0
+    fade(across, layer.fade, 0)
+    across.Parent = gui
+    local down = Instance.new("CanvasGroup")
+    down.Name, down.Size, down.BackgroundTransparency, down.BorderSizePixel, down.ClipsDescendants = "FadeDown", UDim2.fromScale(1, 1), 1, 0, true
+    fade(down, layer.fade, 90)
+    down.Parent = across
+    local tile = Rules.tilePx(layer)
+    local image = Instance.new("ImageLabel")
+    image.Name = "Strip"
+    image.BackgroundTransparency = 1
+    image.BorderSizePixel = 0
+    image.Image = Assets.resolve(layer.key)
+    image.ImageColor3 = c3(layer.color)
+    image.ImageTransparency = layer.alpha
+    image.ScaleType = Enum.ScaleType.Tile
+    image.TileSize = UDim2.fromOffset(tile, tile)
+    image.Size = UDim2.fromOffset(width * Rules.CanvasPxPerStud + tile, height * Rules.CanvasPxPerStud + tile)
+    image.Position = UDim2.fromOffset(-((layer.offsetU * Rules.CanvasPxPerStud) % tile) - 0, Rules.stripY(layer, 0, true))
+    image.ZIndex = index
+    image:SetAttribute("LayerIndex", index)
+    image:SetAttribute("OffsetX", -((layer.offsetU * Rules.CanvasPxPerStud) % tile))
+    image.Parent = down
 end
 
 function CaveLavaFx.build(parent: Instance): Folder
@@ -95,11 +103,17 @@ function CaveLavaFx.build(parent: Instance): Folder
     folder.Name = "LavaFalls"
     local orange = c3(L.sheetColor)
 
-    -- the falls: a thin warm sheet inside the recess, in front of the lava-painted rock, carrying the scrolling layers
+    -- the falls: three thin layered sheets (BD-385), each a little nearer, narrower and shorter than the one behind, each with its own
+    -- slowly scrolling layer and soft alpha edges. The back sheet also carries a faint warm body so the recess glows.
     local width = F.width - 2
-    local sheet = fxPart(folder, "FX_LavaSheet", Vector3.new(width, F.height, 0.4),
-        CFrame.new(F.x, fy + F.height / 2, cz + F.z + L.sheetOffsetDz), Enum.PartType.Block, orange, L.sheetTransparency)
-    buildLayers(sheet, width, F.height)
+    local sheet: Part
+    for i, layer in Rules.Layers do
+        local w, h = Rules.sheetSize(layer, width, F.height)
+        local part = fxPart(folder, "FX_LavaSheet" .. (if i == 1 then "" else tostring(i)), Vector3.new(w, h, 0.2),
+            CFrame.new(F.x, fy + h / 2, cz + F.z + L.sheetOffsetDz - layer.dz), Enum.PartType.Block, orange, if i == 1 then L.sheetTransparency else 0.97)
+        buildLayer(part, i, layer, w, h)
+        if i == 1 then sheet = part end
+    end
     local flames = emitter(sheet, "flameSheet", "LipFlames", "lipFlames")
     flames.Lifetime = NumberRange.new(2.5, 3.5)
     flames.Speed = NumberRange.new(3, 6)
@@ -127,6 +141,14 @@ function CaveLavaFx.build(parent: Instance): Folder
     mist.Shape, mist.ShapeInOut, mist.ShapeStyle = Enum.ParticleEmitterShape.Box, Enum.ParticleEmitterShapeInOut.Outward, Enum.ParticleEmitterShapeStyle.Volume
     mist.EmissionDirection = Enum.NormalId.Front
     mist.SpreadAngle = Vector2.new(20, 20)
+
+    -- glowing base pool in front of the falls: stacked flat discs, brighter in the middle (a stepped soft edge), no extra lights
+    local glowY = Layout.floorHeight(F.x, cz + F.z + 3) + 0.12
+    for i, g in Rules.Glow do
+        fxPart(folder, "FX_LavaGlow" .. i, Vector3.new(0.1, g.diameter, g.diameter),
+            CFrame.new(F.x, glowY + i * 0.02, cz + F.z + L.sheetOffsetDz - Rules.GlowFront) * CFrame.Angles(0, 0, math.pi / 2),
+            Enum.PartType.Cylinder, c3(g.color), g.transparency)
+    end
 
     -- the pool: a flat translucent disc with a slowly turning swirl, just under the rim of the 2 stud basin
     local diameter = Layout.Kinds.lava_pool_disc[1]
