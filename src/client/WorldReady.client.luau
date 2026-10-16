@@ -5,7 +5,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Layout = require(Shared:WaitForChild("IslandLayout"))
-local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
+local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes", 60) :: Folder -- BD-330: timeout, no infinite-yield warning
 local remote = remotes:WaitForChild("ClientWorldReady") :: RemoteEvent
 
 local params = RaycastParams.new()

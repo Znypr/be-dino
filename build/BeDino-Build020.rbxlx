@@ -373217,7 +373217,7 @@ end
 function T.revealScale(p: number): number
     local x = clamp01(p)
     if x &gt;= 1 then return 1 end
-    local c1 = 1.4
+    local c1 = 1.0 -- BD-327: peak about 1.03 (was 1.1): the dino no longer crosses the panel edge at the pop
     local c3 = c1 + 1
     local back = 1 + c3 * (x - 1) ^ 3 + c1 * (x - 1) ^ 2
     return .25 + .75 * back
@@ -374126,6 +374126,19 @@ function Progress.page(count: number, perPage: number, page: number)
     return {page = page, pages = pages, first = first, last = math.min(count, first + perPage - 1)}
 end
 
+-- BD-332: card sizes for the Dino Index list (design pixels). The roomy card (name, odds, big dino, counts, VIEW DINO button)
+-- is 242 + button tall, so a 326 px list showed about one row. When two roomy rows do not fit, use the compact card: the whole
+-- card is the button (no VIEW DINO bar), a shorter dino and smaller text, sized so two full rows always fit the list.
+function Progress.cardLayout(viewportScale: number, listHeight: number)
+    local button = math.max(45, 45 / math.max(0.05, viewportScale))
+    local roomy = 242 + button
+    if listHeight &gt;= 2 * roomy + 12 then
+        return {compact = false, cardHeight = roomy, rowHeight = roomy + 12, buttonHeight = button, heroY = 70, heroHeight = 128, detailY = 201}
+    end
+    local card = math.max(120, math.floor((listHeight - 12) / 2))
+    return {compact = true, cardHeight = card, rowHeight = card + 12, buttonHeight = 0, heroY = 50, heroHeight = card - 50 - 26, detailY = card - 24}
+end
+
 return Progress
 </ProtectedString>
         </Properties>
@@ -374430,7 +374443,8 @@ return Gate
 -- rarity/unlock tier (Config.SpeciesRarities, about 10% growth per tier) and shape is a per-species bulk factor (Compy, Archaeopteryx,
 -- Microraptor small; Brachiosaurus 1.6, T-Rex 1.25, Spinosaurus/Therizinosaurus/Stegosaurus 1.2 large; fly and water near 1).
 -- tier is stored per entry and tools/verify_lowpoly_dinos.py checks scale against it. Compy 2.2, Raptor 2.1, Triceratops 3.0 are the
--- original spike values (shape 1.10, 1.05, 1.24).
+-- original spike values (shape 1.10, 1.05, 1.24). BD-329: Gallimimus is a very thin generated body (about 1.2 x 3.4 x 4.0 studs at 2.0),
+-- so its shape factor is 1.45 (scale 2.9) to give it visual mass comparable to Compy and Raptor.
 return {
     compy = {assetId = 94548957808227, version = "v1", scale = 2.2, tier = 1, class = "Ground"},
     triceratops = {assetId = 107596736973492, version = "v3", scale = 3.0, tier = 3, class = "Ground"},
@@ -374443,7 +374457,7 @@ return {
     brachiosaurus = {assetId = 104593280278631, version = "v1", scale = 3.87, tier = 3, class = "Ground"},
     dimorphodon = {assetId = 117242533934118, version = "v1", scale = 1.9, tier = 1, class = "Fly"},
     elasmosaurus = {assetId = 76344726254379, version = "v1", scale = 2.66, tier = 4, class = "Water"},
-    gallimimus = {assetId = 99873366835296, version = "v1", scale = 2.0, tier = 1, class = "Ground"},
+    gallimimus = {assetId = 99873366835296, version = "v1", scale = 2.9, tier = 1, class = "Ground"},
     ichthyosaurus = {assetId = 133825037148251, version = "v1", scale = 2.3, tier = 3, class = "Water"},
     microraptor = {assetId = 137027841072493, version = "v1", scale = 1.7, tier = 1, class = "Fly"},
     mosasaurus = {assetId = 116180724806366, version = "v1", scale = 3.22, tier = 5, class = "Water"},
@@ -375531,11 +375545,11 @@ Tier.MaxAmount = 0.8
 Tier.MaxReflectance = 0.3
 Tier.MaxSheen = 0.7
 Tier.Entries = {
-    gold = {id = "gold", name = "Gold", tint = {255, 206, 92}, amount = 0.22, trimAmount = 0.75, material = "Metal", reflectance = 0.14,
+    gold = {id = "gold", name = "Gold", tint = {255, 206, 92}, amount = 0.45, trimAmount = 0.75, material = "Metal", reflectance = 0.14,
         sparkle = {255, 230, 150}, sparkleRate = 1.5, sheen = 0.45},
-    emerald = {id = "emerald", name = "Emerald", tint = {60, 220, 140}, amount = 0.20, trimAmount = 0.75, material = "Glass", reflectance = 0.10,
+    emerald = {id = "emerald", name = "Emerald", tint = {60, 220, 140}, amount = 0.40, trimAmount = 0.75, material = "Glass", reflectance = 0.10,
         sparkle = {170, 255, 205}, sparkleRate = 2, sheen = 0.35},
-    diamond = {id = "diamond", name = "Diamond", tint = {215, 244, 255}, amount = 0.26, trimAmount = 0.70, material = "Glass", reflectance = 0.22,
+    diamond = {id = "diamond", name = "Diamond", tint = {215, 244, 255}, amount = 0.35, trimAmount = 0.70, material = "Glass", reflectance = 0.22,
         sparkle = {235, 250, 255}, sparkleRate = 3, sheen = 0.6},
 }
 -- BD-308 baked sheen: the generated textures carry flat facet shading (k = pixel luma / species body luma, 0.3..1.6). On a fused
@@ -377890,6 +377904,12 @@ return table.freeze({
         {id="nova",name="Nova Ribbon",rarity="Legendary",price=6100,level=45,speed=1.16,color={180,106,255},accent={255,215,115},width=.8,lifetime=1.2,particles=10},
         {id="astra",name="Astra",rarity="Mythic",price=17000,level=60,speed=1.18,color={112,255,205},accent={255,130,232},width=.85,lifetime=1.3,particles=14},
     },
+    -- BD-143/BD-178: one slot per trail id for the owner's trail icon art. NOT uploaded yet, so every entry is nil (a Luau
+    -- table cannot store nil; absent key = nil). When an icon is uploaded add trailId="rbxassetid://..." here and in
+    -- docs/77; the shop card then shows it in the preview slot instead of the live preview. Never invent an id.
+    TrailIconAssetIds={
+        -- white=nil, fern=nil, tidal=nil, ember=nil, violet=nil, electric=nil, frost=nil, solar=nil, nova=nil, astra=nil
+    },
     -- BD-051 + docs/68 PROVISIONAL rotating Potion Shop (one block; owner-approved 2026-10-14: restock every 2 minutes).
     -- Offers derive from the window number (floor(unixSeconds/PeriodSeconds)), so every server agrees and rejoining never rerolls.
     -- Each of the OfferCount slots rolls a rarity from RarityWeights (only rarities that still have unoffered potions), then a
@@ -378923,6 +378943,74 @@ return Odds
       </Item>
       <Item class="ModuleScript" referent="RBX275">
         <Properties>
+          <string name="Name">ShopPreview</string>
+          <ProtectedString name="Source">--!strict
+-- BD-142 / BD-143 / BD-083: pure rules for the Aura and Trail shop cards (docs/72 copy, docs/103 card states).
+-- No Instances here: src/client/ShopCards.luau draws what this returns. Tested by tools/verify_shop_preview.py.
+local State = require(script.Parent.ShopCardState)
+local P = {}
+P.MinText = 14   -- docs/72: no text under 14 px
+P.Touch = 44     -- smallest tap target in px
+P.RarityColors = {
+    Common = {160, 168, 180}, Uncommon = {88, 200, 110}, Rare = {80, 150, 255},
+    Epic = {176, 100, 255}, Legendary = {255, 170, 40}, Mythic = {255, 90, 200},
+}
+P.AuraTiers = {Common = 1, Rare = 2, Legendary = 3}
+
+-- Speed in words, never "1.04x": the number only picks the word.
+function P.speedWords(speed: number): string
+    if speed &lt;= 1.001 then return "Normal speed" end
+    if speed &lt;= 1.05 then return "A little faster" end
+    if speed &lt;= 1.11 then return "Faster" end
+    if speed &lt;= 1.15 then return "Much faster" end
+    return "Super fast"
+end
+
+function P.rarityChip(rarity: string?): {text: string, color: {number}}
+    local name = rarity or "Common"
+    return {text = name, color = P.RarityColors[name] or P.RarityColors.Common}
+end
+
+-- The owner's icon id for a trail, or nil (the card then shows the live preview). ids: Config.TrailIconAssetIds.
+function P.trailIconId(ids: {[string]: string}?, trailId: string): string?
+    local id = if ids then ids[trailId] else nil
+    if type(id) == "string" and string.match(id, "^rbxassetid://%d+$") then return id end
+    return nil
+end
+
+function P.auraTier(rarity: string?): number return P.AuraTiers[rarity or "Common"] or 1 end
+function P.tierBadge(rarity: string?): string return "T" .. P.auraTier(rarity) end
+
+-- info: {owned, equipped, level}. Returns what the card prints, in short words.
+function P.trailCard(item, info)
+    local look = State.look({owned = info.owned, levelNeeded = item.level, level = info.level,
+        ownedButton = if info.equipped then "UNEQUIP" else "EQUIP", ownedActive = true}, item.price .. " Crystals")
+    return {
+        kind = look.kind, look = look, equipped = info.equipped == true, dim = look.dim,
+        name = item.name, chip = P.rarityChip(item.rarity),
+        levelText = if item.level &gt; 1 then "Level " .. item.level else "Starter",
+        speedText = P.speedWords(item.speed),
+        caption = if info.equipped then "Equipped" elseif look.kind == State.Locked then item.price .. " Crystals" else look.caption,
+        buttonText = look.buttonText, tone = if info.equipped then "equipped" else look.tone,
+    }
+end
+
+function P.auraCard(item, growthText: string?, info)
+    local look = State.look({owned = info.owned, ownedButton = if info.equipped then "UNEQUIP" else "EQUIP", ownedActive = true},
+        item.price .. " Crystals")
+    return {
+        kind = look.kind, look = look, equipped = info.equipped == true, dim = look.dim,
+        name = item.name, chip = P.rarityChip(item.rarity), tier = P.tierBadge(item.rarity),
+        growthText = growthText or "Growth", caption = if info.equipped then "Equipped" else look.caption,
+        buttonText = look.buttonText, tone = if info.equipped then "equipped" else look.tone,
+    }
+end
+return P
+</ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX276">
+        <Properties>
           <string name="Name">SpawnGeometry</string>
           <ProtectedString name="Source">--!strict
 -- BD-210: one place for every point a character is put into the world, and for "has it fallen out of the world".
@@ -378975,7 +379063,7 @@ return SpawnGeometry
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX276">
+      <Item class="ModuleScript" referent="RBX277">
         <Properties>
           <string name="Name">TouchLayout</string>
           <ProtectedString name="Source">--!strict
@@ -379177,7 +379265,7 @@ return TouchLayout
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX277">
+      <Item class="ModuleScript" referent="RBX278">
         <Properties>
           <string name="Name">TrailArtwork</string>
           <ProtectedString name="Source">--!strict
@@ -379209,7 +379297,7 @@ return Art
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX278">
+      <Item class="ModuleScript" referent="RBX279">
         <Properties>
           <string name="Name">UIFormat</string>
           <ProtectedString name="Source">--!strict
@@ -379253,7 +379341,7 @@ return UIFormat
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX279">
+      <Item class="ModuleScript" referent="RBX280">
         <Properties>
           <string name="Name">UIIconAssets</string>
           <ProtectedString name="Source">--!strict
@@ -379284,7 +379372,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX280">
+      <Item class="ModuleScript" referent="RBX281">
         <Properties>
           <string name="Name">UIIconLayout</string>
           <ProtectedString name="Source">--!strict
@@ -379308,7 +379396,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX281">
+      <Item class="ModuleScript" referent="RBX282">
         <Properties>
           <string name="Name">UITheme</string>
           <ProtectedString name="Source">--!strict
@@ -379482,7 +379570,7 @@ return Theme
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX282">
+      <Item class="ModuleScript" referent="RBX283">
         <Properties>
           <string name="Name">WeatherClock</string>
           <ProtectedString name="Source">--!strict
@@ -379513,7 +379601,7 @@ return Clock
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX283">
+      <Item class="ModuleScript" referent="RBX284">
         <Properties>
           <string name="Name">WeatherLooks</string>
           <ProtectedString name="Source">--!strict
@@ -379645,7 +379733,7 @@ return Weather
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX284">
+      <Item class="ModuleScript" referent="RBX285">
         <Properties>
           <string name="Name">WeatherSounds</string>
           <ProtectedString name="Source">--!strict
@@ -379720,7 +379808,7 @@ return Sounds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX285">
+      <Item class="ModuleScript" referent="RBX286">
         <Properties>
           <string name="Name">WorldGeneratedMeshes</string>
           <ProtectedString name="Source">--!strict
@@ -379778,7 +379866,7 @@ return Generated
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX286">
+      <Item class="ModuleScript" referent="RBX287">
         <Properties>
           <string name="Name">WorldKitData</string>
           <ProtectedString name="Source">--!strict
@@ -379829,7 +379917,7 @@ return {
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX287">
+      <Item class="ModuleScript" referent="RBX288">
         <Properties>
           <string name="Name">WorldKitMeshAssets</string>
           <ProtectedString name="Source">--!strict
@@ -379882,7 +379970,7 @@ return {
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX288">
+    <Item class="Folder" referent="RBX289">
       <Properties>
         <string name="Name">WorldKit</string>
       </Properties>
@@ -549437,15 +549525,15 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="RBX289">
+  <Item class="ServerScriptService" referent="RBX290">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="RBX290">
+    <Item class="Folder" referent="RBX291">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="RBX291">
+      <Item class="ModuleScript" referent="RBX292">
         <Properties>
           <string name="Name">AdminService</string>
           <ProtectedString name="Source">--!strict
@@ -549559,7 +549647,7 @@ return AdminService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX292">
+      <Item class="ModuleScript" referent="RBX293">
         <Properties>
           <string name="Name">Arena</string>
           <ProtectedString name="Source">--!strict
@@ -549880,7 +549968,7 @@ return Arena
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="Script" referent="RBX293">
+      <Item class="Script" referent="RBX294">
         <Properties>
           <string name="Name">Bootstrap</string>
           <ProtectedString name="Source">--!strict
@@ -550054,7 +550142,7 @@ print("[Be Dino] " .. Config.Build .. " ready. Resource redesign.")
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX294">
+      <Item class="ModuleScript" referent="RBX295">
         <Properties>
           <string name="Name">CaveLavaFx</string>
           <ProtectedString name="Source">--!strict
@@ -550242,7 +550330,7 @@ return CaveLavaFx
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX295">
+      <Item class="ModuleScript" referent="RBX296">
         <Properties>
           <string name="Name">CaveLighting</string>
           <ProtectedString name="Source">--!strict
@@ -550356,7 +550444,7 @@ return CaveLighting
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX296">
+      <Item class="ModuleScript" referent="RBX297">
         <Properties>
           <string name="Name">CaveProps</string>
           <ProtectedString name="Source">--!strict
@@ -550576,7 +550664,7 @@ return CaveProps
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX297">
+      <Item class="ModuleScript" referent="RBX298">
         <Properties>
           <string name="Name">CaveTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -550635,7 +550723,7 @@ return CaveTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX298">
+      <Item class="ModuleScript" referent="RBX299">
         <Properties>
           <string name="Name">ChestService</string>
           <ProtectedString name="Source">--!strict
@@ -550755,7 +550843,7 @@ return ChestService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX299">
+      <Item class="ModuleScript" referent="RBX300">
         <Properties>
           <string name="Name">CollectionService</string>
           <ProtectedString name="Source">--!strict
@@ -550848,7 +550936,7 @@ return CollectionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX300">
+      <Item class="ModuleScript" referent="RBX301">
         <Properties>
           <string name="Name">CombatService</string>
           <ProtectedString name="Source">--!strict
@@ -551090,7 +551178,7 @@ return CombatService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX301">
+      <Item class="ModuleScript" referent="RBX302">
         <Properties>
           <string name="Name">Dinosaur</string>
           <ProtectedString name="Source">--!strict
@@ -551226,7 +551314,7 @@ return Dinosaur
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX302">
+      <Item class="ModuleScript" referent="RBX303">
         <Properties>
           <string name="Name">DinosaurIdentity</string>
           <ProtectedString name="Source">--!strict
@@ -551440,7 +551528,7 @@ return Identity
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX303">
+      <Item class="ModuleScript" referent="RBX304">
         <Properties>
           <string name="Name">FallRecovery</string>
           <ProtectedString name="Source">--!strict
@@ -551506,7 +551594,7 @@ return FallRecovery
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX304">
+      <Item class="ModuleScript" referent="RBX305">
         <Properties>
           <string name="Name">FoodService</string>
           <ProtectedString name="Source">--!strict
@@ -551777,7 +551865,7 @@ return FoodService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX305">
+      <Item class="ModuleScript" referent="RBX306">
         <Properties>
           <string name="Name">FusionOdds</string>
           <ProtectedString name="Source">--!strict
@@ -551949,7 +552037,7 @@ return FusionOdds
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX306">
+      <Item class="ModuleScript" referent="RBX307">
         <Properties>
           <string name="Name">FusionService</string>
           <ProtectedString name="Source">--!strict
@@ -552135,7 +552223,7 @@ return FusionService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX307">
+      <Item class="ModuleScript" referent="RBX308">
         <Properties>
           <string name="Name">HubGateService</string>
           <ProtectedString name="Source">--!strict
@@ -552244,7 +552332,7 @@ return HubGateService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX308">
+      <Item class="ModuleScript" referent="RBX309">
         <Properties>
           <string name="Name">HubTravelService</string>
           <ProtectedString name="Source">--!strict
@@ -552328,7 +552416,7 @@ return HubTravelService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX309">
+      <Item class="ModuleScript" referent="RBX310">
         <Properties>
           <string name="Name">IdentityFusion</string>
           <ProtectedString name="Source">--!strict
@@ -552725,7 +552813,7 @@ return Fusion
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX310">
+      <Item class="ModuleScript" referent="RBX311">
         <Properties>
           <string name="Name">ImportedResources</string>
           <ProtectedString name="Source">--!strict
@@ -552846,7 +552934,7 @@ return Import
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX311">
+      <Item class="ModuleScript" referent="RBX312">
         <Properties>
           <string name="Name">IslandTerrain</string>
           <ProtectedString name="Source">--!strict
@@ -552926,7 +553014,7 @@ return IslandTerrain
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX312">
+      <Item class="ModuleScript" referent="RBX313">
         <Properties>
           <string name="Name">Leaderboards</string>
           <ProtectedString name="Source">--!strict
@@ -553050,7 +553138,7 @@ return Leaderboards
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX313">
+      <Item class="ModuleScript" referent="RBX314">
         <Properties>
           <string name="Name">LeapService</string>
           <ProtectedString name="Source">--!strict
@@ -553189,7 +553277,7 @@ return Leap
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX314">
+      <Item class="ModuleScript" referent="RBX315">
         <Properties>
           <string name="Name">LowPolyDinoLoader</string>
           <ProtectedString name="Source">--!strict
@@ -553242,7 +553330,7 @@ return Loader
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX315">
+      <Item class="ModuleScript" referent="RBX316">
         <Properties>
           <string name="Name">MovementGuard</string>
           <ProtectedString name="Source">--!strict
@@ -553347,7 +553435,7 @@ return MovementGuard
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX316">
+      <Item class="ModuleScript" referent="RBX317">
         <Properties>
           <string name="Name">MutationService</string>
           <ProtectedString name="Source">--!strict
@@ -553452,7 +553540,7 @@ return MutationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX317">
+      <Item class="ModuleScript" referent="RBX318">
         <Properties>
           <string name="Name">NpcPredatorService</string>
           <ProtectedString name="Source">--!strict
@@ -553720,7 +553808,7 @@ return NpcPredatorService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX318">
+      <Item class="ModuleScript" referent="RBX319">
         <Properties>
           <string name="Name">PotionModels</string>
           <ProtectedString name="Source">--!strict
@@ -553772,7 +553860,7 @@ return Models
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX319">
+      <Item class="ModuleScript" referent="RBX320">
         <Properties>
           <string name="Name">PredationService</string>
           <ProtectedString name="Source">--!strict
@@ -553909,7 +553997,7 @@ return PredationService
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX320">
+      <Item class="ModuleScript" referent="RBX321">
         <Properties>
           <string name="Name">ProfileRepository</string>
           <ProtectedString name="Source">--!strict
@@ -555731,7 +555819,7 @@ return ProfileRepository
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX321">
+      <Item class="ModuleScript" referent="RBX322">
         <Properties>
           <string name="Name">ProgressionService</string>
           <ProtectedString name="Source">--!strict
@@ -555949,7 +556037,7 @@ return Service
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX322">
+      <Item class="ModuleScript" referent="RBX323">
         <Properties>
           <string name="Name">RewardMath</string>
           <ProtectedString name="Source">--!strict
@@ -556063,7 +556151,7 @@ return RewardMath
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX323">
+      <Item class="ModuleScript" referent="RBX324">
         <Properties>
           <string name="Name">RunLifecycle</string>
           <ProtectedString name="Source">--!strict
@@ -556359,7 +556447,7 @@ return RunLifecycle
 </ProtectedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX324">
+      <Item class="ModuleScript" referent="RBX325">
         <Properties>
           <string name="Name">VisualTestService</string>
           <ProtectedString name="Source">--!strict
@@ -556431,19 +556519,19 @@ return VisualTestService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="RBX325">
+  <Item class="StarterPlayer" referent="RBX326">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="RBX326">
+    <Item class="StarterPlayerScripts" referent="RBX327">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="RBX327">
+      <Item class="Folder" referent="RBX328">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="LocalScript" referent="RBX328">
+        <Item class="LocalScript" referent="RBX329">
           <Properties>
             <string name="Name">AdminPanel</string>
             <ProtectedString name="Source">--!strict
@@ -556702,7 +556790,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX329">
+        <Item class="LocalScript" referent="RBX330">
           <Properties>
             <string name="Name">Bootstrap</string>
             <ProtectedString name="Source">--!strict
@@ -556745,7 +556833,7 @@ local FusionSelection=require(Shared.FusionSelection)
 local fusionMenuOk,FusionMenu=pcall(require,script.Parent.FusionMenu)
 local Marketplace=game:GetService("MarketplaceService")
 local C = Theme.Colors
-local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
+local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes", 60) :: Folder -- BD-330: a timeout (no infinite-yield warning); the server makes this folder after the world
 local startRun = remotes:WaitForChild("RequestStartRun") :: RemoteEvent
 local endRun = remotes:WaitForChild("RequestEndRun") :: RemoteEvent
 local equip = remotes:WaitForChild("EquipSpecies") :: RemoteEvent
@@ -556927,6 +557015,7 @@ local function pumpToasts()
     local panelRight=player:GetAttribute("AdminPanelRight") or 0
     local half,halfCard=gui.AbsoluteSize.X/2,220*toastScale.Scale
     local shift=if panelRight&gt;0 then math.clamp(panelRight+12+halfCard-half,0,math.max(0,half-halfCard)) else 0
+    player:SetAttribute("MenuOpen",shade.Visible) -- BD-328: WeatherVisuals holds its big title card while a menu is open
     local topY=if shade.Visible then 4 else 80 -- BD-304: with a menu open the toast rides the very top, clear of the menu title
     if toastLayer.Position.X.Offset~=shift or toastLayer.Position.Y.Offset~=topY then toastLayer.Position=UDim2.new(.5,shift,0,topY) end
     if NotifyQueue.update(notifyQueue,os.clock(),shade.Visible) then drawToasts() end
@@ -557265,21 +557354,16 @@ render=function(name: string)
         for i,item in (if isTrail then ProgressionConfig.Trails else ProgressionConfig.Auras) do
             if isTrail and (i&lt;(trailPage-1)*3+1 or i&gt;trailPage*3) then continue end
             local slot=if isTrail then (i-1)%3 else i-1
-            local color=Color3.fromRGB(item.color[1],item.color[2],item.color[3])
-            local card=box(body,slot*276,cardsY,264,cardsHeight,color,24)
-            label(card,item.name,6,5,252,34,25)
-            label(card,if isTrail then "Level "..item.level.." • "..(UIFormat.boost("Speed",item.speed) or "Speed") else (UIFormat.boost("Growth",item.growth) or "Growth"),4,42,256,30,19)
-            local iconSize=math.clamp(buyY-30-74,60,128) -- BD-177/BD-215: big aura and trail art fills the card icon area
-            local shown=art(card,(if isTrail then "trail_" else "aura_")..item.id,(264-iconSize)/2,74+(buyY-30-74-iconSize)/2,iconSize)
-            if shown and isTrail then shown.Position,shown.Size=UDim2.fromOffset(8,74+(buyY-30-74-iconSize)/2),UDim2.fromOffset(248,iconSize) end
-            label(card,if owned[item.id] then "Owned" else item.price.." Crystals",4,buyY-30,256,27,21,C.gold)
-            local equipped=equippedId==item.id
-            local locked=isTrail and num("AccountLevel")&lt;item.level and not owned[item.id]
-            button(card,if equipped then "UNEQUIP" elseif owned[item.id] then "EQUIP" elseif locked then "LEVEL "..item.level else "BUY",12,buyY,240,targetHeight,C.card,function()
-                if locked then notify("Requires account level "..item.level,C.gold) return end
-                if owned[item.id] then transact(if isTrail then "equipTrail" else "equipAura",if equipped then "" else item.id)
-                else chosenAura=item.id open("auraConfirm") end
-            end)
+            -- BD-142/BD-143: big live previews, rarity chip, words for speed, shared card states (src/client/ShopCards).
+            local equipped,locked=equippedId==item.id,isTrail and num("AccountLevel")&lt;item.level and not owned[item.id]
+            require(script.Parent.ShopCards).build({label=label,box=box,button=button,art=art},body,{
+                kind=if isTrail then "trail" else "aura",item=item,speciesId=str("EquippedSpeciesId","compy"),owned=owned[item.id]==true,equipped=equipped,level=num("AccountLevel"),
+                x=slot*276,y=cardsY,height=cardsHeight,buyY=buyY,targetHeight=targetHeight,
+                onPress=function()
+                    if locked then notify("Requires account level "..item.level,C.gold) return end
+                    if owned[item.id] then transact(if isTrail then "equipTrail" else "equipAura",if equipped then "" else item.id)
+                    else chosenAura=item.id open("auraConfirm") end
+                end})
         end
         local footerY=402-targetHeight
         if isTrail then
@@ -557454,9 +557538,8 @@ render=function(name: string)
         local list=Instance.new("ScrollingFrame")
         list.Name,list.Size,list.Position="DinoCards",UDim2.fromOffset(824,326),UDim2.fromOffset(0,0)
         list.BackgroundTransparency,list.BorderSizePixel,list.ScrollBarThickness=1,0,6
-        local cardButtonHeight=math.max(45,45/viewportScale())
-        local cardHeight=242+cardButtonHeight
-        local rowHeight=cardHeight+12
+        local lay=IndexProgress.cardLayout(viewportScale(),326) -- BD-332: two rows always visible (compact cards when short)
+        local cardButtonHeight,cardHeight,rowHeight=lay.buttonHeight,lay.cardHeight,lay.rowHeight
         list.CanvasSize=UDim2.fromOffset(0,math.ceil((pg.last-pg.first+1)/3)*rowHeight)
         list.ZIndex,list.Parent=24,body
         for i,id in Config.SpeciesOrder do
@@ -557469,24 +557552,30 @@ render=function(name: string)
             local look=FusionSelection.indexCard(found)
             local card=box(list,((i-pg.first)%3)*276,math.floor((i-pg.first)/3)*rowHeight,264,cardHeight,if found then rarityColors[rarity] else Color3.fromRGB(62,64,74),24)
             Theme.texture(card,264,cardHeight)
-            label(card,look.nameText or Config.SpeciesDisplayNames[id],4,8,256,35,25)
-            label(card,look.rarityText or (rarityNames[rarity].." • "..FusionSelection.pct(100*(oddsWeight[id] or 0)/oddsTotal).." of eggs"),4,44,256,25,18)
+            label(card,look.nameText or Config.SpeciesDisplayNames[id],4,if lay.compact then 3 else 8,256,if lay.compact then 26 else 35,if lay.compact then 21 else 25)
+            label(card,look.rarityText or (rarityNames[rarity].." • "..FusionSelection.pct(100*(oddsWeight[id] or 0)/oddsTotal).." of eggs"),4,if lay.compact then 28 else 44,256,if lay.compact then 20 else 25,if lay.compact then 15 else 18)
             if found then
-                hero(card,id,7,70,250,128,bestMutation(id))
-                label(card,if event then event.name.." mutation" elseif ownedTraits(id) then (require(Shared.ColourBonus).text(ProgressionConfig.EggColors,(ownedTraits(id) :: any).genes) or "Special variant") else string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond),5,201,254,25,15)
-                button(card,"VIEW DINO",12,233,240,cardButtonHeight,C.card,function() selected=id open("detail") end)
+                hero(card,id,7,lay.heroY,250,lay.heroHeight,bestMutation(id))
+                label(card,if event then event.name.." mutation" elseif ownedTraits(id) then (require(Shared.ColourBonus).text(ProgressionConfig.EggColors,(ownedTraits(id) :: any).genes) or "Special variant") else string.format("%d Base • %d Gold • %d Diamond",base,gold,diamond),5,lay.detailY,254,if lay.compact then 22 else 25,if lay.compact then 13 else 15)
+                if lay.compact then
+                    local tap=Instance.new("TextButton") -- the whole card opens the dino (no VIEW DINO bar when short)
+                    tap.Name,tap.Text,tap.BackgroundTransparency,tap.Size,tap.ZIndex,tap.Parent="ViewDino","",1,UDim2.fromScale(1,1),card.ZIndex+8,card
+                    tap.Activated:Connect(function() selected=id open("detail") end)
+                else
+                    button(card,"VIEW DINO",12,233,240,cardButtonHeight,C.card,function() selected=id open("detail") end)
+                end
             else
                 -- No button: silhouette block re-centered in the freed space. Soft edge = a faint, slightly larger
                 -- copy underneath (2 viewports max, no per-frame work); skipped when motion/effects are reduced.
-                local blockY=70+math.floor((cardButtonHeight+12)/2)
+                local blockY=if lay.compact then lay.heroY else 70+math.floor((cardButtonHeight+12)/2)
                 if motion then
                     local halo=Preview.add(card,id,"silhouette")
                     halo.Name,halo.ImageTransparency=("SilhouetteSoftEdge"),.82
-                    halo.Position,halo.Size=UDim2.fromOffset(-2,blockY-9),UDim2.fromOffset(268,146)
+                    halo.Position,halo.Size=UDim2.fromOffset(-2,blockY-9),UDim2.fromOffset(268,if lay.compact then lay.heroHeight+18 else 146)
                 end
                 local view=Preview.add(card,id,"silhouette")
-                view.Position,view.Size=UDim2.fromOffset(7,blockY),UDim2.fromOffset(250,128)
-                label(card,look.status,5,blockY+134,254,25,15)
+                view.Position,view.Size=UDim2.fromOffset(7,blockY),UDim2.fromOffset(250,if lay.compact then lay.heroHeight else 128)
+                label(card,look.status,5,if lay.compact then lay.detailY else blockY+134,254,if lay.compact then 22 else 25,if lay.compact then 13 else 15)
             end
         end
         -- BD-269: "Collected X of Y (P%)" bar with milestone ticks (src/shared/IndexProgress).
@@ -558303,7 +558392,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX330">
+        <Item class="LocalScript" referent="RBX331">
           <Properties>
             <string name="Name">CameraOcclusion</string>
             <ProtectedString name="Source">--!strict
@@ -558408,7 +558497,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX331">
+        <Item class="ModuleScript" referent="RBX332">
           <Properties>
             <string name="Name">CaveAtmosphere</string>
             <ProtectedString name="Source">--!strict
@@ -558542,7 +558631,7 @@ return Cave
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX332">
+        <Item class="ModuleScript" referent="RBX333">
           <Properties>
             <string name="Name">CaveLavaClient</string>
             <ProtectedString name="Source">--!strict
@@ -558658,7 +558747,7 @@ return Lava
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX333">
+        <Item class="ModuleScript" referent="RBX334">
           <Properties>
             <string name="Name">CombatHud</string>
             <ProtectedString name="Source">--!strict
@@ -558992,7 +559081,7 @@ return Hud
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX334">
+        <Item class="LocalScript" referent="RBX335">
           <Properties>
             <string name="Name">CosmeticVisuals</string>
             <ProtectedString name="Source">--!nonstrict
@@ -559084,7 +559173,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX335">
+        <Item class="ModuleScript" referent="RBX336">
           <Properties>
             <string name="Name">DinoDetails</string>
             <ProtectedString name="Source">--!strict
@@ -559163,7 +559252,7 @@ return DinoDetails
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX336">
+        <Item class="ModuleScript" referent="RBX337">
           <Properties>
             <string name="Name">DinoIndexPanels</string>
             <ProtectedString name="Source">--!strict
@@ -559699,7 +559788,7 @@ return Panels
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX337">
+        <Item class="LocalScript" referent="RBX338">
           <Properties>
             <string name="Name">DinoMotion</string>
             <ProtectedString name="Source">--!strict
@@ -560029,7 +560118,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX338">
+        <Item class="ModuleScript" referent="RBX339">
           <Properties>
             <string name="Name">EggPicture</string>
             <ProtectedString name="Source">--!strict
@@ -560106,7 +560195,7 @@ return EggPicture
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX339">
+        <Item class="ModuleScript" referent="RBX340">
           <Properties>
             <string name="Name">EggsScreen</string>
             <ProtectedString name="Source">--!strict
@@ -560302,7 +560391,7 @@ return EggsScreen
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX340">
+        <Item class="LocalScript" referent="RBX341">
           <Properties>
             <string name="Name">FoodGlow</string>
             <ProtectedString name="Source">--!strict
@@ -560528,7 +560617,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX341">
+        <Item class="ModuleScript" referent="RBX342">
           <Properties>
             <string name="Name">FusionMenu</string>
             <ProtectedString name="Source">--!strict
@@ -560854,14 +560943,14 @@ local function buildGrid(grid: ScrollingFrame)
         card.Activated:Connect(function() toggle(d) end)
         -- Big picture first: the real dino (lazy, culled by DinosaurPreview) with its colours.
         local view = Preview.add(card, d.speciesId or "compy", if d.stage == "base" or d.stage == nil then "base" else d.stage)
-        view.Size, view.Position = UDim2.new(1, -8, .5, 0), UDim2.new(0, 4, 0, 22)
+        view.Size, view.Position = UDim2.new(1, -8, .44, 0), UDim2.new(0, 4, 0, 28)
         PreviewTraits.add(view, {genes = if d.stage == "base" then g else nil})
-        W.label(card, speciesName(d), UDim2.new(1, -8, 0, 22), UDim2.fromOffset(4, 2), 20)
-        W.label(card, Sel.cardPattern(d, catalog), UDim2.new(1, -8, 0, 16), UDim2.new(0, 4, .5, 22), 14, C.gold)
-        W.swatch(card, g, UDim2.new(1, -16, 0, 8), UDim2.new(0, 8, .5, 40))
+        W.label(card, speciesName(d), UDim2.new(1, -8, 0, 26), UDim2.fromOffset(4, 2), 22)
+        W.label(card, Sel.cardPattern(d, catalog), UDim2.new(1, -8, 0, 20), UDim2.new(0, 4, .44, 30), 17, C.gold)
+        W.swatch(card, g, UDim2.new(1, -16, 0, 8), UDim2.new(0, 8, .44, 52))
         local traits = Sel.cardTraits(d, catalog)
-        W.label(card, table.concat(traits, " • "), UDim2.new(1, -8, 0, 16), UDim2.new(0, 4, .5, 50), 14, C.purple)
-        local status = W.label(card, "", UDim2.new(1, -(T + 8), 0, 20), UDim2.new(0, 4, 1, -24), 15)
+        W.label(card, table.concat(traits, " • "), UDim2.new(1, -8, 0, 20), UDim2.new(0, 4, .44, 62), 16, C.purple)
+        local status = W.label(card, "", UDim2.new(1, -(T + 8), 0, 44), UDim2.new(0, 4, 1, -48), 17)
         local info = W.button(card, "i", UDim2.fromOffset(T, T), UDim2.new(1, -(T + 2), 1, -(T + 2)), C.blue, function() openDetails(d.instanceId) end)
         info.Name = "Details"
         local dim = Instance.new("Frame")
@@ -560913,7 +561002,7 @@ local function fillChips(scroll: ScrollingFrame, odds)
     for _, section in formatted.sections do
         for _, chip in section.chips do
             order += 1
-            local c = W.label(scroll, chip.label, UDim2.new(), UDim2.new(), 16, C.text)
+            local c = W.label(scroll, chip.label, UDim2.new(), UDim2.new(), 18, C.text)
             c.Name, c.BackgroundTransparency, c.BackgroundColor3, c.LayoutOrder = "Chip", 0, if section.trait == "primaryColor" or section.trait == "secondaryColor" then W.colorOf(chip.id) else C.card, order
             if (section.trait == "shiny" or section.trait == "big") and chip.id == "yes" then c.BackgroundColor3 = C.purple end
             if section.trait == "mutation" and chip.id ~= "none" then c.BackgroundColor3 = C.purple end
@@ -560936,14 +561025,15 @@ updateColumn = function()
             local slot = W.button(col.slots, "", UDim2.new(), UDim2.new(), if #Sel.valuableReasons(d) &gt; 0 then C.purple else C.card, function() toggle(d) end)
             slot.Name, slot.LayoutOrder = "Slot_" .. i, i
             local view = Preview.add(slot, d.speciesId or "compy", if d.stage == "base" or d.stage == nil then "base" else d.stage)
-            view.Size, view.Position = UDim2.new(1, -4, 1, -22), UDim2.fromOffset(2, 2)
+            view.Size, view.Position = UDim2.new(1, -4, 1, -44), UDim2.fromOffset(2, 2)
             PreviewTraits.add(view, {genes = if d.stage == "base" then d.genes else nil})
-            W.swatch(slot, d.genes, UDim2.new(1, -8, 0, 6), UDim2.new(0, 4, 1, -20))
-            W.label(slot, "x", UDim2.fromOffset(20, 20), UDim2.new(1, -22, 0, 2), 14, C.red)
+            W.swatch(slot, d.genes, UDim2.new(1, -8, 0, 6), UDim2.new(0, 4, 1, -12))
+            W.label(slot, speciesName(d), UDim2.new(1, -8, 0, 24), UDim2.new(0, 4, 1, -38), 18)
+            W.label(slot, "x", UDim2.fromOffset(28, 28), UDim2.new(1, -30, 0, 2), 22, C.red)
         else
             local empty = W.box(col.slots, UDim2.new(), UDim2.new(), C.outline, 8)
             empty.Name, empty.LayoutOrder = "Empty_" .. i, i
-            W.label(empty, tostring(i), UDim2.fromScale(1, 1), UDim2.new(), 24, Dim)
+            W.label(empty, tostring(i), UDim2.fromScale(1, 1), UDim2.new(), 40, Dim)
         end
     end
     col.count.Text = string.format("%d of %d", #state.selection, need)
@@ -560954,15 +561044,15 @@ updateColumn = function()
     local ready = state.quoteStatus == "ready" and state.quote ~= nil and state.quoteKey == currentKey()
     local speciesId = if state.quote then state.quote.speciesId else (if first then first.speciesId else nil)
     resultBox(right, speciesId, state.targetStage, nil, false)
-    local guarantee = W.label(right, if recipe and recipe.approved then "Guaranteed: " .. recipe.name .. "!" else Sel.LockedStageText, UDim2.new(1, 0, 0, 24), UDim2.new(0, 0, .5, 4), 20, C.accent)
+    local guarantee = W.label(right, if recipe and recipe.approved then "Guaranteed: " .. recipe.name .. "!" else Sel.LockedStageText, UDim2.new(1, 0, 0, 28), UDim2.new(0, 0, .5, 4), 22, C.accent)
     guarantee.Name = "Guarantee"
     local chips = Instance.new("ScrollingFrame")
     chips.Name, chips.BackgroundTransparency, chips.BorderSizePixel = "Odds", 1, 0
-    chips.Size, chips.Position = UDim2.new(1, 0, .5, -(T + 40)), UDim2.new(0, 0, .5, 30)
+    chips.Size, chips.Position = UDim2.new(1, 0, .5, -(T + 44)), UDim2.new(0, 0, .5, 34)
     chips.ScrollBarThickness, chips.AutomaticCanvasSize, chips.CanvasSize = 4, Enum.AutomaticSize.Y, UDim2.new()
     chips.Parent = right
     local layout = Instance.new("UIGridLayout")
-    layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.new(.5, -4, 0, 28), UDim2.fromOffset(4, 4), Enum.SortOrder.LayoutOrder
+    layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.new(.5, -4, 0, 36), UDim2.fromOffset(4, 4), Enum.SortOrder.LayoutOrder
     layout.Parent = chips
     if ready then
         fillChips(chips, (state.quote :: any).odds)
@@ -561001,11 +561091,11 @@ local function renderBrowse()
             end)
         b.Name = "Stage_" .. s.id
         W.label(b, words.title, UDim2.new(1, -4, 0, 26), UDim2.fromOffset(2, 2), 22, if on then C.outline else C.text)
-        W.label(b, words.sub, UDim2.new(1, -4, 0, 18), UDim2.fromOffset(2, 28), 15, if on then C.outline else Dim)
+        W.label(b, words.sub, UDim2.new(1, -4, 0, 20), UDim2.fromOffset(2, 28), 16, if on then C.outline else Dim)
     end
     -- Row 2: goal sentence + one Filter button.
     local y = tabHeight + 6
-    column.goal = W.label(left, "", UDim2.new(1, -(T + 48), 0, T), UDim2.fromOffset(0, y), 18, C.gold, true)
+    column.goal = W.label(left, "", UDim2.new(1, -(T + 48), 0, T), UDim2.fromOffset(0, y), 20, C.gold, true)
     column.goal.Name = "Goal"
     local filterOn = state.filtersOpen or next(state.filters) ~= nil
     W.button(left, "Filter", UDim2.fromOffset(T + 40, T), UDim2.new(1, -(T + 40), 0, y), if filterOn then C.blue else C.card, function()
@@ -561049,7 +561139,7 @@ local function renderBrowse()
     grid.Name = "DinoGrid"
     local layout = Instance.new("UIGridLayout")
     local small = gui ~= nil and (gui :: ScreenGui).AbsoluteSize.Y &lt; 520
-    layout.CellSize = if small then UDim2.fromOffset(132, 150) else UDim2.fromOffset(160, 176)
+    layout.CellSize = if small then UDim2.fromOffset(150, 216) else UDim2.fromOffset(176, 232)
     layout.CellPadding, layout.SortOrder = UDim2.fromOffset(6, 6), Enum.SortOrder.LayoutOrder
     layout.Parent = grid
     if state.listError and state.mode == "browse" then
@@ -561061,11 +561151,11 @@ local function renderBrowse()
     -- Centre column: slots, Fill for me, Clear.
     local need = (active and active.donorCount) or 0
     local cols, rows = table.unpack(SlotGrid[state.targetStage] or {3, 2})
-    W.label(centre, if active then "Put in " .. need .. " " .. Sel.stageTitle(active.source) else "", UDim2.new(1, -90, 0, 26), UDim2.fromOffset(8, 4), 20, C.text, true)
-    column.count = W.label(centre, "", UDim2.fromOffset(80, 26), UDim2.new(1, -86, 0, 4), 20, C.gold)
+    W.label(centre, if active then "Put in " .. need .. " " .. Sel.stageTitle(active.source) else "", UDim2.new(1, -110, 0, 30), UDim2.fromOffset(8, 2), 22, C.text, true)
+    column.count = W.label(centre, "", UDim2.fromOffset(100, 30), UDim2.new(1, -106, 0, 2), 22, C.gold)
     column.count.Name = "SlotCount"
     local slots = Instance.new("Frame")
-    slots.Name, slots.BackgroundTransparency, slots.Size, slots.Position = "Slots", 1, UDim2.new(1, -12, 1, -(T + 46)), UDim2.fromOffset(6, 34)
+    slots.Name, slots.BackgroundTransparency, slots.Size, slots.Position = "Slots", 1, UDim2.new(1, -12, 1, -(T + 50)), UDim2.fromOffset(6, 36)
     slots.Parent = centre
     local slotLayout = Instance.new("UIGridLayout")
     slotLayout.CellSize = UDim2.new(1 / cols, -6, 1 / rows, -6)
@@ -561125,8 +561215,8 @@ local function renderConfirm()
     left.Name, left.BackgroundTransparency, left.Size, left.Parent = "ConfirmResult", 1, UDim2.new(.34, -6, 1, -(T + 14)), root
     resultBox(left, quote.speciesId, quote.targetStage or state.targetStage, nil, true)
     W.label(left, "Guaranteed: " .. stageName .. " " .. who .. "!", UDim2.new(1, 0, 0, 26), UDim2.new(0, 0, .62, 4), 20, C.accent)
-    W.label(left, "Pattern: " .. Sel.name(catalog, "patterns", quote.patternId), UDim2.new(1, 0, 0, 22), UDim2.new(0, 0, .62, 32), 17, C.gold)
-    W.label(left, "Colours, Shiny, BIG and mutation are rolled new.", UDim2.new(1, 0, 0, 40), UDim2.new(0, 0, .62, 56), 15, C.text)
+    W.label(left, "Pattern: " .. Sel.name(catalog, "patterns", quote.patternId), UDim2.new(1, 0, 0, 24), UDim2.new(0, 0, .62, 32), 18, C.gold)
+    W.label(left, "Colours, Shiny, BIG and mutation are rolled new.", UDim2.new(1, 0, 0, 44), UDim2.new(0, 0, .62, 56), 17, C.text)
     local list = W.scroll(root, UDim2.new(.66, -6, 1, -(T + 14)), UDim2.new(.34, 6, 0, 0))
     W.list(list, 3)
     local order = 0
@@ -561157,7 +561247,7 @@ local function renderConfirm()
     chips.Size = UDim2.new(1, -14, 0, 32 * math.ceil(sectionCount / 3))
     chips.Parent = list
     local layout = Instance.new("UIGridLayout")
-    layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.new(1 / 3, -4, 0, 28), UDim2.fromOffset(4, 4), Enum.SortOrder.LayoutOrder
+    layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.new(1 / 3, -4, 0, 36), UDim2.fromOffset(4, 4), Enum.SortOrder.LayoutOrder
     layout.Parent = chips
     fillChips(chips :: any, quote.odds)
     order += 1
@@ -561264,7 +561354,7 @@ local function reel(parent: Instance, stage, animate: boolean)
                 edge.Color, edge.Thickness, edge.Parent = C.outline, 2, block
                 block.Parent = strip
                 if seg.p / total * unit &gt; .1 then
-                    W.label(block, seg.label .. "\n" .. (math.floor(seg.p * 1000 + .5) / 10) .. "%", UDim2.fromScale(1, 1), UDim2.new(), 16)
+                    W.label(block, seg.label .. "\n" .. (math.floor(seg.p * 1000 + .5) / 10) .. "%", UDim2.fromScale(1, 1), UDim2.new(), 18)
                 end
             end
         end
@@ -561297,12 +561387,12 @@ local function finalCard(root: Frame, result, stage)
     local chips = Instance.new("Frame")
     chips.Name, chips.BackgroundTransparency, chips.Size, chips.Position, chips.Parent = "ResultChips", 1, UDim2.new(1, 0, .36, 0), UDim2.new(0, 0, .64, 0), holder
     local layout = Instance.new("UIGridLayout")
-    layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.new(.5, -4, 0, 28), UDim2.fromOffset(4, 4), Enum.SortOrder.LayoutOrder
+    layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.new(.5, -4, 0, 36), UDim2.fromOffset(4, 4), Enum.SortOrder.LayoutOrder
     layout.Parent = chips
     local n = 0
     local function chip(text: string, color: Color3)
         n += 1
-        local c = W.label(chips, text, UDim2.new(), UDim2.new(), 16, C.text)
+        local c = W.label(chips, text, UDim2.new(), UDim2.new(), 18, C.text)
         c.BackgroundTransparency, c.BackgroundColor3, c.LayoutOrder = 0, color, n
         Theme.decorate(c, 12)
     end
@@ -561324,7 +561414,7 @@ local function finalCard(root: Frame, result, stage)
     line("Pattern: " .. Sel.name(catalog, "patterns", result.patternId or g.patternId))
     line("Colours: " .. Sel.geneLine(g, catalog))
     line("No effects yet. Buy some for this new dino in the Shop.", Dim, 17)
-    line("Odds version " .. tostring(result.oddsVersion or "?"), Dim, 15)
+    line("Odds version " .. tostring(result.oddsVersion or "?"), Dim, 16)
     if stage.replay then line("Already fused: this is your saved result.", C.blue) end
 end
 
@@ -561466,7 +561556,7 @@ return FusionMenu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX342">
+        <Item class="ModuleScript" referent="RBX343">
           <Properties>
             <string name="Name">FusionWidgets</string>
             <ProtectedString name="Source">--!strict
@@ -561483,11 +561573,12 @@ local C = Theme.Colors
 local W = {}
 W.Colors = C
 W.Touch = 44
+W.MinText = 14 -- BD-083 / docs/72: no text under 14 px, even when a label is squeezed
 
 local function textConstraint(t: TextLabel | TextButton, maxSize: number)
     t.TextScaled = true
     local limit = Instance.new("UITextSizeConstraint")
-    limit.MaxTextSize, limit.MinTextSize, limit.Parent = maxSize, 9, t
+    limit.MaxTextSize, limit.MinTextSize, limit.Parent = maxSize, W.MinText, t
 end
 
 function W.label(parent: Instance, text: string, size: UDim2, position: UDim2, maxText: number?, color: Color3?, alignLeft: boolean?): TextLabel
@@ -561568,7 +561659,7 @@ return W
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX343">
+        <Item class="ModuleScript" referent="RBX344">
           <Properties>
             <string name="Name">FxRig</string>
             <ProtectedString name="Source">--!nonstrict
@@ -561934,7 +562025,7 @@ return Rig
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX344">
+        <Item class="ModuleScript" referent="RBX345">
           <Properties>
             <string name="Name">HatchFx</string>
             <ProtectedString name="Source">--!nonstrict
@@ -562145,7 +562236,7 @@ return M
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX345">
+        <Item class="ModuleScript" referent="RBX346">
           <Properties>
             <string name="Name">HatchSequence</string>
             <ProtectedString name="Source">--!strict
@@ -563260,7 +563351,7 @@ return Seq
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX346">
+        <Item class="ModuleScript" referent="RBX347">
           <Properties>
             <string name="Name">HubGateClient</string>
             <ProtectedString name="Source">--!strict
@@ -563327,7 +563418,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX347">
+        <Item class="ModuleScript" referent="RBX348">
           <Properties>
             <string name="Name">HubGuideClient</string>
             <ProtectedString name="Source">--!strict
@@ -563440,7 +563531,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX348">
+        <Item class="ModuleScript" referent="RBX349">
           <Properties>
             <string name="Name">HubTravelClient</string>
             <ProtectedString name="Source">--!strict
@@ -563614,7 +563705,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX349">
+        <Item class="ModuleScript" referent="RBX350">
           <Properties>
             <string name="Name">HubWalkUpClient</string>
             <ProtectedString name="Source">--!strict
@@ -563711,7 +563802,7 @@ return Client
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX350">
+        <Item class="ModuleScript" referent="RBX351">
           <Properties>
             <string name="Name">HudV2</string>
             <ProtectedString name="Source">--!strict
@@ -563832,7 +563923,7 @@ return Hud
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX351">
+        <Item class="ModuleScript" referent="RBX352">
           <Properties>
             <string name="Name">InspectView</string>
             <ProtectedString name="Source">--!strict
@@ -564024,7 +564115,7 @@ return InspectView
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX352">
+        <Item class="LocalScript" referent="RBX353">
           <Properties>
             <string name="Name">JumpCarry</string>
             <ProtectedString name="Source">--!strict
@@ -564082,7 +564173,7 @@ if player.Character then task.spawn(bind, player.Character) end
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX353">
+        <Item class="LocalScript" referent="RBX354">
           <Properties>
             <string name="Name">LowPolyAnimator</string>
             <ProtectedString name="Source">--!strict
@@ -564329,7 +564420,7 @@ Players.PlayerRemoving:Connect(function(player) if player.Character then untrack
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX354">
+        <Item class="ModuleScript" referent="RBX355">
           <Properties>
             <string name="Name">NpcMotion</string>
             <ProtectedString name="Source">--!strict
@@ -564399,7 +564490,7 @@ return Motion
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX355">
+        <Item class="ModuleScript" referent="RBX356">
           <Properties>
             <string name="Name">PreviewTraits</string>
             <ProtectedString name="Source">--!strict
@@ -564490,7 +564581,7 @@ return PreviewTraits
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX356">
+        <Item class="LocalScript" referent="RBX357">
           <Properties>
             <string name="Name">ResourceVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -564722,7 +564813,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX357">
+        <Item class="ModuleScript" referent="RBX358">
           <Properties>
             <string name="Name">SettingsMenu</string>
             <ProtectedString name="Source">--!strict
@@ -564825,7 +564916,7 @@ return Menu
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX358">
+        <Item class="LocalScript" referent="RBX359">
           <Properties>
             <string name="Name">SettingsSync</string>
             <ProtectedString name="Source">--!strict
@@ -564842,7 +564933,7 @@ local Theme = require(Shared:WaitForChild("UITheme"))
 local Mixer = require(Shared:WaitForChild("AudioMixer"))
 
 local player = Players.LocalPlayer
-local remote = ReplicatedStorage:WaitForChild("BeDinoRemotes"):WaitForChild("SetSettings") :: RemoteEvent
+local remote = (ReplicatedStorage:WaitForChild("BeDinoRemotes", 60) :: Folder):WaitForChild("SetSettings", 60) :: RemoteEvent -- BD-330: timeouts, no infinite-yield warning
 
 local applying = false
 local saveSerial = 0
@@ -564887,7 +564978,7 @@ task.delay(5, function() loaded = true end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX359">
+        <Item class="ModuleScript" referent="RBX360">
           <Properties>
             <string name="Name">ShopCard</string>
             <ProtectedString name="Source">--!strict
@@ -564925,7 +565016,99 @@ return Card
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="RBX360">
+        <Item class="ModuleScript" referent="RBX361">
+          <Properties>
+            <string name="Name">ShopCards</string>
+            <ProtectedString name="Source">--!strict
+-- BD-142 / BD-143: the Aura and Trail shop cards. Layout and drawing only; every word and state comes from
+-- Shared.ShopPreview (tested by tools/verify_shop_preview.py) and ShopCardState via ShopCard.
+-- ui = Bootstrap's own helpers {label, box, button, art} so the cards match the rest of the Crystal Shops.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Theme = require(Shared.UITheme)
+local Config = require(Shared.ProgressionConfig)
+local P = require(Shared.ShopPreview)
+local UIFormat = require(Shared.UIFormat)
+local Preview = require(Shared.DinosaurPreview)
+local ShopCard = require(script.Parent.ShopCard)
+local C = Theme.Colors
+
+local Cards = {}
+Cards.Width = 264
+
+local function rgb(t: {number}): Color3 return Color3.fromRGB(t[1], t[2], t[3]) end
+
+local function chip(ui, card: GuiObject, text: string, color: Color3, x: number, y: number, w: number)
+    local c = ui.box(card, x, y, w, 26, color, card.ZIndex + 1)
+    c.Name = "Chip_" .. text
+    ui.label(c, text, 0, 0, w, 26, 18, Color3.new(1, 1, 1))
+    return c
+end
+
+-- Dark rounded stage that clips the live preview (the halo and the trail never leak onto the text).
+local function stage(ui, card: GuiObject, y: number, h: number, tint: Color3, dim: boolean)
+    local s = ui.box(card, 8, y, Cards.Width - 16, h, Color3.fromRGB(18, 24, 40):Lerp(tint, .22), card.ZIndex + 1)
+    s.Name, s.ClipsDescendants = "PreviewStage", true
+    if dim then
+        local veil = Instance.new("Frame")
+        veil.Name, veil.BackgroundColor3, veil.BackgroundTransparency, veil.BorderSizePixel = "LockedVeil", Color3.fromRGB(20, 22, 30), .6, 0
+        veil.Size, veil.ZIndex, veil.Parent = UDim2.fromScale(1, 1), s.ZIndex + 40, s
+    end
+    return s
+end
+
+local function equippedRing(card: GuiObject)
+    local ring = Instance.new("UIStroke")
+    ring.Name, ring.Color, ring.Thickness, ring.ApplyStrokeMode, ring.Parent = "EquippedRing", C.gold, 4, Enum.ApplyStrokeMode.Border, card
+end
+
+-- spec: {kind="trail"|"aura", item, owned, equipped, level, x, y, height, buyY, targetHeight, onPress}
+function Cards.build(ui, parent: GuiObject, spec)
+    local item, isTrail = spec.item, spec.kind == "trail"
+    local data = if isTrail then P.trailCard(item, spec) else P.auraCard(item, UIFormat.boost("Growth", item.growth), spec)
+    local color = rgb(item.color)
+    local card = ui.box(parent, spec.x, spec.y, Cards.Width, spec.height, ShopCard.cardColor(Color3.fromRGB(40, 46, 66):Lerp(color, .62), data.look), 24)
+    card.Name = (if isTrail then "TrailCard_" else "AuraCard_") .. item.id
+    ui.label(card, item.name, 6, 4, 252, 32, 25)
+    chip(ui, card, data.chip.text, rgb(data.chip.color):Lerp(Color3.fromRGB(20, 24, 40), .3), 8, 38, 104)
+    if isTrail then
+        ui.label(card, data.levelText, 118, 38, 138, 26, 19, if data.kind == "locked" then C.gold else ShopCard.CalmText)
+    else
+        local tier = chip(ui, card, "Tier " .. string.sub(data.tier, 2), C.purple, 118, 38, 92)
+        tier.Name = "TierBadge"
+    end
+    local previewY = 68
+    local previewH = spec.buyY - 52 - previewY
+    local s = stage(ui, card, previewY, previewH, color, isTrail and data.kind == "locked")
+    local iconId = if isTrail then P.trailIconId(Config.TrailIconAssetIds, item.id) else nil
+    if iconId then
+        local img = Instance.new("ImageLabel")
+        img.Name, img.BackgroundTransparency, img.Image, img.ScaleType = "TrailIcon", 1, iconId, Enum.ScaleType.Fit
+        img.Size, img.AnchorPoint, img.Position, img.ZIndex, img.Parent = UDim2.fromScale(.9, .9), Vector2.new(.5, .5), UDim2.fromScale(.5, .5), s.ZIndex + 1, s
+    elseif isTrail then
+        local live = Theme.icon(s, "trail_" .. item.id)
+        if live then live.Position, live.Size = UDim2.fromScale(0, 0), UDim2.fromScale(1, 1) end
+        -- BD-143: the equipped dino as a dark silhouette at the head of the trail (existing DinosaurPreview, no new art).
+        local who = Preview.add(s, spec.speciesId or "compy", "silhouette")
+        who.Name, who.ZIndex = "DinoSilhouette", s.ZIndex + 6
+        who.Size, who.Position = UDim2.fromScale(.34, 1), UDim2.fromScale(.64, 0)
+    else
+        local size = math.clamp(previewH - 6, 56, 120)
+        ui.art(s, "aura_" .. item.id, (Cards.Width - 16 - size) / 2, (previewH - size) / 2, size)
+    end
+    ui.label(card, if isTrail then data.speedText else data.growthText, 6, spec.buyY - 50, 252, 24, 20, ShopCard.CalmText)
+    ui.label(card, data.caption, 4, spec.buyY - 26, 256, 24, 21, if data.tone == "equipped" then C.accent else ShopCard.captionColor(data.look))
+    local act = ui.button(card, data.buttonText, 12, spec.buyY, 240, spec.targetHeight, if data.equipped then C.accent else C.card, spec.onPress)
+    act.Name = "Action"
+    if data.equipped then equippedRing(card) end
+    return card, data
+end
+
+return Cards
+</ProtectedString>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="RBX362">
           <Properties>
             <string name="Name">VolumeSliders</string>
             <ProtectedString name="Source">--!strict
@@ -565006,7 +565189,7 @@ return Sliders
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX361">
+        <Item class="LocalScript" referent="RBX363">
           <Properties>
             <string name="Name">WeatherAudio</string>
             <ProtectedString name="Source">--!strict
@@ -565073,7 +565256,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX362">
+        <Item class="LocalScript" referent="RBX364">
           <Properties>
             <string name="Name">WeatherVisuals</string>
             <ProtectedString name="Source">--!strict
@@ -565782,8 +565965,19 @@ local sub=Instance.new("TextLabel") sub.Name="Sub" sub.AnchorPoint=Vector2.new(.
 sub.BackgroundTransparency=1 sub.Font=Enum.Font.FredokaOne sub.TextScaled=true sub.TextTransparency=1 sub.TextColor3=Color3.new(1,1,1) sub.Text="Special eggs can drop!" sub.ZIndex=5 sub.Parent=title
 local subStroke=Instance.new("UIStroke") subStroke.Thickness=3 subStroke.Color=Color3.fromRGB(14,20,34) subStroke.Transparency=1 subStroke.Parent=sub
 local titleToken=0
+-- BD-328: the big title card never draws over an open menu: it waits (up to 20 s) for the menu to close, then plays.
+local function menuOpen():boolean return player:GetAttribute("MenuOpen")==true end
+player:GetAttributeChangedSignal("MenuOpen"):Connect(function() gui.Enabled=not menuOpen() end) -- a menu opened mid-card hides it
 local function showTitle(id:string,name:string)
     titleToken+=1 local mine=titleToken
+    if menuOpen() then
+        task.spawn(function()
+            local waited=0
+            while menuOpen() and waited&lt;20 do task.wait(.25) waited+=.25 end
+            if mine==titleToken and not menuOpen() then showTitle(id,name) end
+        end)
+        return
+    end
     title.Text=string.upper(name).."!" title.TextColor3=TITLE_COLOR[id] or Color3.new(1,1,1)
     titleScale.Scale=if Theme.MotionEnabled then 2.2 else 1
     title.TextTransparency,stroke.Transparency,sub.TextTransparency,subStroke.Transparency=0,0,0,0
@@ -565974,7 +566168,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX363">
+        <Item class="LocalScript" referent="RBX365">
           <Properties>
             <string name="Name">WorldCulling</string>
             <ProtectedString name="Source">--!strict
@@ -566101,7 +566295,7 @@ end)
 </ProtectedString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="RBX364">
+        <Item class="LocalScript" referent="RBX366">
           <Properties>
             <string name="Name">WorldReady</string>
             <ProtectedString name="Source">--!strict
@@ -566111,7 +566305,7 @@ end)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Layout = require(Shared:WaitForChild("IslandLayout"))
-local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes")
+local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes", 60) :: Folder -- BD-330: timeout, no infinite-yield warning
 local remote = remotes:WaitForChild("ClientWorldReady") :: RemoteEvent
 
 local params = RaycastParams.new()
@@ -566139,7 +566333,7 @@ remote:FireServer()
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="RBX365">
+  <Item class="Workspace" referent="RBX367">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>

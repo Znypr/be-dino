@@ -9,7 +9,8 @@
 -- rarity/unlock tier (Config.SpeciesRarities, about 10% growth per tier) and shape is a per-species bulk factor (Compy, Archaeopteryx,
 -- Microraptor small; Brachiosaurus 1.6, T-Rex 1.25, Spinosaurus/Therizinosaurus/Stegosaurus 1.2 large; fly and water near 1).
 -- tier is stored per entry and tools/verify_lowpoly_dinos.py checks scale against it. Compy 2.2, Raptor 2.1, Triceratops 3.0 are the
--- original spike values (shape 1.10, 1.05, 1.24).
+-- original spike values (shape 1.10, 1.05, 1.24). BD-329: Gallimimus is a very thin generated body (about 1.2 x 3.4 x 4.0 studs at 2.0),
+-- so its shape factor is 1.45 (scale 2.9) to give it visual mass comparable to Compy and Raptor.
 return {
     compy = {assetId = 94548957808227, version = "v1", scale = 2.2, tier = 1, class = "Ground"},
     triceratops = {assetId = 107596736973492, version = "v3", scale = 3.0, tier = 3, class = "Ground"},
@@ -22,7 +23,7 @@ return {
     brachiosaurus = {assetId = 104593280278631, version = "v1", scale = 3.87, tier = 3, class = "Ground"},
     dimorphodon = {assetId = 117242533934118, version = "v1", scale = 1.9, tier = 1, class = "Fly"},
     elasmosaurus = {assetId = 76344726254379, version = "v1", scale = 2.66, tier = 4, class = "Water"},
-    gallimimus = {assetId = 99873366835296, version = "v1", scale = 2.0, tier = 1, class = "Ground"},
+    gallimimus = {assetId = 99873366835296, version = "v1", scale = 2.9, tier = 1, class = "Ground"},
     ichthyosaurus = {assetId = 133825037148251, version = "v1", scale = 2.3, tier = 3, class = "Water"},
     microraptor = {assetId = 137027841072493, version = "v1", scale = 1.7, tier = 1, class = "Fly"},
     mosasaurus = {assetId = 116180724806366, version = "v1", scale = 3.22, tier = 5, class = "Water"},

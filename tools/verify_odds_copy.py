@@ -64,6 +64,13 @@ s=Progress.summary(6,23) assert(s.percent==26 and s.ticks[1].reached and not s.t
 s=Progress.summary(23,23) assert(s.percent==100 and s.ticks[4].reached and s.fraction==1)
 s=Progress.summary(99,23) assert(s.found==23)
 assert(Progress.summary(0,0).percent==0)
+-- BD-332: two full rows of Index cards always fit the 326 px list, at any viewport scale
+for _,sc in {1,.85,.5,.2} do
+ local l=Progress.cardLayout(sc,326)
+ assert(2*l.cardHeight+12<=326 and l.rowHeight==l.cardHeight+12 and l.cardHeight>=120,"two rows fit at "..sc)
+ assert(l.compact and l.buttonHeight==0 and l.heroHeight>=40 and l.detailY+22<=l.cardHeight,"compact card geometry")
+end
+local roomy=Progress.cardLayout(1,700) assert(not roomy.compact and roomy.buttonHeight>=45 and roomy.heroHeight==128,"a tall list keeps roomy cards")
 local pg=Progress.page(200,24,1) assert(pg.pages==9 and pg.first==1 and pg.last==24)
 pg=Progress.page(200,24,99) assert(pg.page==9 and pg.first==193 and pg.last==200)
 pg=Progress.page(0,24,1) assert(pg.pages==1 and pg.last==0)

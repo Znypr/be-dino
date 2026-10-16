@@ -321,14 +321,14 @@ local function buildGrid(grid: ScrollingFrame)
         card.Activated:Connect(function() toggle(d) end)
         -- Big picture first: the real dino (lazy, culled by DinosaurPreview) with its colours.
         local view = Preview.add(card, d.speciesId or "compy", if d.stage == "base" or d.stage == nil then "base" else d.stage)
-        view.Size, view.Position = UDim2.new(1, -8, .5, 0), UDim2.new(0, 4, 0, 22)
+        view.Size, view.Position = UDim2.new(1, -8, .44, 0), UDim2.new(0, 4, 0, 28)
         PreviewTraits.add(view, {genes = if d.stage == "base" then g else nil})
-        W.label(card, speciesName(d), UDim2.new(1, -8, 0, 22), UDim2.fromOffset(4, 2), 20)
-        W.label(card, Sel.cardPattern(d, catalog), UDim2.new(1, -8, 0, 16), UDim2.new(0, 4, .5, 22), 14, C.gold)
-        W.swatch(card, g, UDim2.new(1, -16, 0, 8), UDim2.new(0, 8, .5, 40))
+        W.label(card, speciesName(d), UDim2.new(1, -8, 0, 26), UDim2.fromOffset(4, 2), 22)
+        W.label(card, Sel.cardPattern(d, catalog), UDim2.new(1, -8, 0, 20), UDim2.new(0, 4, .44, 30), 17, C.gold)
+        W.swatch(card, g, UDim2.new(1, -16, 0, 8), UDim2.new(0, 8, .44, 52))
         local traits = Sel.cardTraits(d, catalog)
-        W.label(card, table.concat(traits, " • "), UDim2.new(1, -8, 0, 16), UDim2.new(0, 4, .5, 50), 14, C.purple)
-        local status = W.label(card, "", UDim2.new(1, -(T + 8), 0, 20), UDim2.new(0, 4, 1, -24), 15)
+        W.label(card, table.concat(traits, " • "), UDim2.new(1, -8, 0, 20), UDim2.new(0, 4, .44, 62), 16, C.purple)
+        local status = W.label(card, "", UDim2.new(1, -(T + 8), 0, 44), UDim2.new(0, 4, 1, -48), 17)
         local info = W.button(card, "i", UDim2.fromOffset(T, T), UDim2.new(1, -(T + 2), 1, -(T + 2)), C.blue, function() openDetails(d.instanceId) end)
         info.Name = "Details"
         local dim = Instance.new("Frame")
@@ -380,7 +380,7 @@ local function fillChips(scroll: ScrollingFrame, odds)
     for _, section in formatted.sections do
         for _, chip in section.chips do
             order += 1
-            local c = W.label(scroll, chip.label, UDim2.new(), UDim2.new(), 16, C.text)
+            local c = W.label(scroll, chip.label, UDim2.new(), UDim2.new(), 18, C.text)
             c.Name, c.BackgroundTransparency, c.BackgroundColor3, c.LayoutOrder = "Chip", 0, if section.trait == "primaryColor" or section.trait == "secondaryColor" then W.colorOf(chip.id) else C.card, order
             if (section.trait == "shiny" or section.trait == "big") and chip.id == "yes" then c.BackgroundColor3 = C.purple end
             if section.trait == "mutation" and chip.id ~= "none" then c.BackgroundColor3 = C.purple end
@@ -403,14 +403,15 @@ updateColumn = function()
             local slot = W.button(col.slots, "", UDim2.new(), UDim2.new(), if #Sel.valuableReasons(d) > 0 then C.purple else C.card, function() toggle(d) end)
             slot.Name, slot.LayoutOrder = "Slot_" .. i, i
             local view = Preview.add(slot, d.speciesId or "compy", if d.stage == "base" or d.stage == nil then "base" else d.stage)
-            view.Size, view.Position = UDim2.new(1, -4, 1, -22), UDim2.fromOffset(2, 2)
+            view.Size, view.Position = UDim2.new(1, -4, 1, -44), UDim2.fromOffset(2, 2)
             PreviewTraits.add(view, {genes = if d.stage == "base" then d.genes else nil})
-            W.swatch(slot, d.genes, UDim2.new(1, -8, 0, 6), UDim2.new(0, 4, 1, -20))
-            W.label(slot, "x", UDim2.fromOffset(20, 20), UDim2.new(1, -22, 0, 2), 14, C.red)
+            W.swatch(slot, d.genes, UDim2.new(1, -8, 0, 6), UDim2.new(0, 4, 1, -12))
+            W.label(slot, speciesName(d), UDim2.new(1, -8, 0, 24), UDim2.new(0, 4, 1, -38), 18)
+            W.label(slot, "x", UDim2.fromOffset(28, 28), UDim2.new(1, -30, 0, 2), 22, C.red)
         else
             local empty = W.box(col.slots, UDim2.new(), UDim2.new(), C.outline, 8)
             empty.Name, empty.LayoutOrder = "Empty_" .. i, i
-            W.label(empty, tostring(i), UDim2.fromScale(1, 1), UDim2.new(), 24, Dim)
+            W.label(empty, tostring(i), UDim2.fromScale(1, 1), UDim2.new(), 40, Dim)
         end
     end
     col.count.Text = string.format("%d of %d", #state.selection, need)
@@ -421,15 +422,15 @@ updateColumn = function()
     local ready = state.quoteStatus == "ready" and state.quote ~= nil and state.quoteKey == currentKey()
     local speciesId = if state.quote then state.quote.speciesId else (if first then first.speciesId else nil)
     resultBox(right, speciesId, state.targetStage, nil, false)
-    local guarantee = W.label(right, if recipe and recipe.approved then "Guaranteed: " .. recipe.name .. "!" else Sel.LockedStageText, UDim2.new(1, 0, 0, 24), UDim2.new(0, 0, .5, 4), 20, C.accent)
+    local guarantee = W.label(right, if recipe and recipe.approved then "Guaranteed: " .. recipe.name .. "!" else Sel.LockedStageText, UDim2.new(1, 0, 0, 28), UDim2.new(0, 0, .5, 4), 22, C.accent)
     guarantee.Name = "Guarantee"
     local chips = Instance.new("ScrollingFrame")
     chips.Name, chips.BackgroundTransparency, chips.BorderSizePixel = "Odds", 1, 0
-    chips.Size, chips.Position = UDim2.new(1, 0, .5, -(T + 40)), UDim2.new(0, 0, .5, 30)
+    chips.Size, chips.Position = UDim2.new(1, 0, .5, -(T + 44)), UDim2.new(0, 0, .5, 34)
     chips.ScrollBarThickness, chips.AutomaticCanvasSize, chips.CanvasSize = 4, Enum.AutomaticSize.Y, UDim2.new()
     chips.Parent = right
     local layout = Instance.new("UIGridLayout")
-    layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.new(.5, -4, 0, 28), UDim2.fromOffset(4, 4), Enum.SortOrder.LayoutOrder
+    layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.new(.5, -4, 0, 36), UDim2.fromOffset(4, 4), Enum.SortOrder.LayoutOrder
     layout.Parent = chips
     if ready then
         fillChips(chips, (state.quote :: any).odds)
@@ -468,11 +469,11 @@ local function renderBrowse()
             end)
         b.Name = "Stage_" .. s.id
         W.label(b, words.title, UDim2.new(1, -4, 0, 26), UDim2.fromOffset(2, 2), 22, if on then C.outline else C.text)
-        W.label(b, words.sub, UDim2.new(1, -4, 0, 18), UDim2.fromOffset(2, 28), 15, if on then C.outline else Dim)
+        W.label(b, words.sub, UDim2.new(1, -4, 0, 20), UDim2.fromOffset(2, 28), 16, if on then C.outline else Dim)
     end
     -- Row 2: goal sentence + one Filter button.
     local y = tabHeight + 6
-    column.goal = W.label(left, "", UDim2.new(1, -(T + 48), 0, T), UDim2.fromOffset(0, y), 18, C.gold, true)
+    column.goal = W.label(left, "", UDim2.new(1, -(T + 48), 0, T), UDim2.fromOffset(0, y), 20, C.gold, true)
     column.goal.Name = "Goal"
     local filterOn = state.filtersOpen or next(state.filters) ~= nil
     W.button(left, "Filter", UDim2.fromOffset(T + 40, T), UDim2.new(1, -(T + 40), 0, y), if filterOn then C.blue else C.card, function()
@@ -516,7 +517,7 @@ local function renderBrowse()
     grid.Name = "DinoGrid"
     local layout = Instance.new("UIGridLayout")
     local small = gui ~= nil and (gui :: ScreenGui).AbsoluteSize.Y < 520
-    layout.CellSize = if small then UDim2.fromOffset(132, 150) else UDim2.fromOffset(160, 176)
+    layout.CellSize = if small then UDim2.fromOffset(150, 216) else UDim2.fromOffset(176, 232)
     layout.CellPadding, layout.SortOrder = UDim2.fromOffset(6, 6), Enum.SortOrder.LayoutOrder
     layout.Parent = grid
     if state.listError and state.mode == "browse" then
@@ -528,11 +529,11 @@ local function renderBrowse()
     -- Centre column: slots, Fill for me, Clear.
     local need = (active and active.donorCount) or 0
     local cols, rows = table.unpack(SlotGrid[state.targetStage] or {3, 2})
-    W.label(centre, if active then "Put in " .. need .. " " .. Sel.stageTitle(active.source) else "", UDim2.new(1, -90, 0, 26), UDim2.fromOffset(8, 4), 20, C.text, true)
-    column.count = W.label(centre, "", UDim2.fromOffset(80, 26), UDim2.new(1, -86, 0, 4), 20, C.gold)
+    W.label(centre, if active then "Put in " .. need .. " " .. Sel.stageTitle(active.source) else "", UDim2.new(1, -110, 0, 30), UDim2.fromOffset(8, 2), 22, C.text, true)
+    column.count = W.label(centre, "", UDim2.fromOffset(100, 30), UDim2.new(1, -106, 0, 2), 22, C.gold)
     column.count.Name = "SlotCount"
     local slots = Instance.new("Frame")
-    slots.Name, slots.BackgroundTransparency, slots.Size, slots.Position = "Slots", 1, UDim2.new(1, -12, 1, -(T + 46)), UDim2.fromOffset(6, 34)
+    slots.Name, slots.BackgroundTransparency, slots.Size, slots.Position = "Slots", 1, UDim2.new(1, -12, 1, -(T + 50)), UDim2.fromOffset(6, 36)
     slots.Parent = centre
     local slotLayout = Instance.new("UIGridLayout")
     slotLayout.CellSize = UDim2.new(1 / cols, -6, 1 / rows, -6)
@@ -592,8 +593,8 @@ local function renderConfirm()
     left.Name, left.BackgroundTransparency, left.Size, left.Parent = "ConfirmResult", 1, UDim2.new(.34, -6, 1, -(T + 14)), root
     resultBox(left, quote.speciesId, quote.targetStage or state.targetStage, nil, true)
     W.label(left, "Guaranteed: " .. stageName .. " " .. who .. "!", UDim2.new(1, 0, 0, 26), UDim2.new(0, 0, .62, 4), 20, C.accent)
-    W.label(left, "Pattern: " .. Sel.name(catalog, "patterns", quote.patternId), UDim2.new(1, 0, 0, 22), UDim2.new(0, 0, .62, 32), 17, C.gold)
-    W.label(left, "Colours, Shiny, BIG and mutation are rolled new.", UDim2.new(1, 0, 0, 40), UDim2.new(0, 0, .62, 56), 15, C.text)
+    W.label(left, "Pattern: " .. Sel.name(catalog, "patterns", quote.patternId), UDim2.new(1, 0, 0, 24), UDim2.new(0, 0, .62, 32), 18, C.gold)
+    W.label(left, "Colours, Shiny, BIG and mutation are rolled new.", UDim2.new(1, 0, 0, 44), UDim2.new(0, 0, .62, 56), 17, C.text)
     local list = W.scroll(root, UDim2.new(.66, -6, 1, -(T + 14)), UDim2.new(.34, 6, 0, 0))
     W.list(list, 3)
     local order = 0
@@ -624,7 +625,7 @@ local function renderConfirm()
     chips.Size = UDim2.new(1, -14, 0, 32 * math.ceil(sectionCount / 3))
     chips.Parent = list
     local layout = Instance.new("UIGridLayout")
-    layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.new(1 / 3, -4, 0, 28), UDim2.fromOffset(4, 4), Enum.SortOrder.LayoutOrder
+    layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.new(1 / 3, -4, 0, 36), UDim2.fromOffset(4, 4), Enum.SortOrder.LayoutOrder
     layout.Parent = chips
     fillChips(chips :: any, quote.odds)
     order += 1
@@ -731,7 +732,7 @@ local function reel(parent: Instance, stage, animate: boolean)
                 edge.Color, edge.Thickness, edge.Parent = C.outline, 2, block
                 block.Parent = strip
                 if seg.p / total * unit > .1 then
-                    W.label(block, seg.label .. "\n" .. (math.floor(seg.p * 1000 + .5) / 10) .. "%", UDim2.fromScale(1, 1), UDim2.new(), 16)
+                    W.label(block, seg.label .. "\n" .. (math.floor(seg.p * 1000 + .5) / 10) .. "%", UDim2.fromScale(1, 1), UDim2.new(), 18)
                 end
             end
         end
@@ -764,12 +765,12 @@ local function finalCard(root: Frame, result, stage)
     local chips = Instance.new("Frame")
     chips.Name, chips.BackgroundTransparency, chips.Size, chips.Position, chips.Parent = "ResultChips", 1, UDim2.new(1, 0, .36, 0), UDim2.new(0, 0, .64, 0), holder
     local layout = Instance.new("UIGridLayout")
-    layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.new(.5, -4, 0, 28), UDim2.fromOffset(4, 4), Enum.SortOrder.LayoutOrder
+    layout.CellSize, layout.CellPadding, layout.SortOrder = UDim2.new(.5, -4, 0, 36), UDim2.fromOffset(4, 4), Enum.SortOrder.LayoutOrder
     layout.Parent = chips
     local n = 0
     local function chip(text: string, color: Color3)
         n += 1
-        local c = W.label(chips, text, UDim2.new(), UDim2.new(), 16, C.text)
+        local c = W.label(chips, text, UDim2.new(), UDim2.new(), 18, C.text)
         c.BackgroundTransparency, c.BackgroundColor3, c.LayoutOrder = 0, color, n
         Theme.decorate(c, 12)
     end
@@ -791,7 +792,7 @@ local function finalCard(root: Frame, result, stage)
     line("Pattern: " .. Sel.name(catalog, "patterns", result.patternId or g.patternId))
     line("Colours: " .. Sel.geneLine(g, catalog))
     line("No effects yet. Buy some for this new dino in the Shop.", Dim, 17)
-    line("Odds version " .. tostring(result.oddsVersion or "?"), Dim, 15)
+    line("Odds version " .. tostring(result.oddsVersion or "?"), Dim, 16)
     if stage.replay then line("Already fused: this is your saved result.", C.blue) end
 end
 

@@ -29,4 +29,17 @@ function Progress.page(count: number, perPage: number, page: number)
     return {page = page, pages = pages, first = first, last = math.min(count, first + perPage - 1)}
 end
 
+-- BD-332: card sizes for the Dino Index list (design pixels). The roomy card (name, odds, big dino, counts, VIEW DINO button)
+-- is 242 + button tall, so a 326 px list showed about one row. When two roomy rows do not fit, use the compact card: the whole
+-- card is the button (no VIEW DINO bar), a shorter dino and smaller text, sized so two full rows always fit the list.
+function Progress.cardLayout(viewportScale: number, listHeight: number)
+    local button = math.max(45, 45 / math.max(0.05, viewportScale))
+    local roomy = 242 + button
+    if listHeight >= 2 * roomy + 12 then
+        return {compact = false, cardHeight = roomy, rowHeight = roomy + 12, buttonHeight = button, heroY = 70, heroHeight = 128, detailY = 201}
+    end
+    local card = math.max(120, math.floor((listHeight - 12) / 2))
+    return {compact = true, cardHeight = card, rowHeight = card + 12, buttonHeight = 0, heroY = 50, heroHeight = card - 50 - 26, detailY = card - 24}
+end
+
 return Progress

@@ -75,6 +75,12 @@ return table.freeze({
         {id="nova",name="Nova Ribbon",rarity="Legendary",price=6100,level=45,speed=1.16,color={180,106,255},accent={255,215,115},width=.8,lifetime=1.2,particles=10},
         {id="astra",name="Astra",rarity="Mythic",price=17000,level=60,speed=1.18,color={112,255,205},accent={255,130,232},width=.85,lifetime=1.3,particles=14},
     },
+    -- BD-143/BD-178: one slot per trail id for the owner's trail icon art. NOT uploaded yet, so every entry is nil (a Luau
+    -- table cannot store nil; absent key = nil). When an icon is uploaded add trailId="rbxassetid://..." here and in
+    -- docs/77; the shop card then shows it in the preview slot instead of the live preview. Never invent an id.
+    TrailIconAssetIds={
+        -- white=nil, fern=nil, tidal=nil, ember=nil, violet=nil, electric=nil, frost=nil, solar=nil, nova=nil, astra=nil
+    },
     -- BD-051 + docs/68 PROVISIONAL rotating Potion Shop (one block; owner-approved 2026-10-14: restock every 2 minutes).
     -- Offers derive from the window number (floor(unixSeconds/PeriodSeconds)), so every server agrees and rejoining never rerolls.
     -- Each of the OfferCount slots rolls a rarity from RarityWeights (only rarities that still have unoffered potions), then a

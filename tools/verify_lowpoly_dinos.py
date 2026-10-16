@@ -67,6 +67,9 @@ def check_registry():
     assert re.search(r'^\s*LowPolyDinos = false,', config, re.M), "Config.LowPolyDinos must default to false"
     for name in names:
         assert re.search(r'\b' + name + r'\b', config), f"{name} is not a game species"
+    gal = next(float(e[3]) for e in entries if e[0] == 'gallimimus')
+    compy = next(float(e[3]) for e in entries if e[0] == 'compy')
+    assert gal >= 0.9 * compy, f"BD-329 gallimimus scale {gal} must give mass comparable to compy {compy}"
     return entries
 
 
