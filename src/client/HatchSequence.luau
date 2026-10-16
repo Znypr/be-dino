@@ -841,6 +841,7 @@ function Seq.play(args: Args): Handle
         pill.BackgroundColor3, pillStroke.Color = glow:Lerp(Color3.new(0, 0, 0), .4), glow:Lerp(WHITE, .25)
         if r.shiny then addRibbon("SHINY", Theme.Colors.gold, 100, 52, 170, -7) end
         if r.big then addRibbon("BIG", Theme.Colors.purple, 724, 52, 150, 7) end
+        if r.newFind and not failed then addRibbon("NEW!", Theme.Colors.gold, 724, if r.big then 108 else 52, 130, 5) end -- BD-436: a first-time colour, pattern or mutation
         if r.mutationName and r.mutationId and not failed then mr = MutationReveal.begin(fx.front, r.mutationId, motion) end
         if r.mutationName then addRibbon(string.upper(r.mutationName), r.mutationColor or Theme.Colors.gold, 116, if r.shiny then 108 else 52, 210, -4) end
         hint.Text = Timeline.hint(r.remaining)
@@ -940,6 +941,7 @@ function Seq.play(args: Args): Handle
 
         while cueIndex <= #cues and cues[cueIndex].t <= t do
             Sfx.play(cues[cueIndex].name)
+            Sfx.playLayers(cues[cueIndex].name) -- BD-437: Epic/Legendary second cue
             cueIndex += 1
         end
 
@@ -1011,7 +1013,7 @@ function Seq.play(args: Args): Handle
                 HatchFx.update(hx, vt, 1, since, revealStarted)
                 MutationReveal.update(mr, if revealStarted then math.max(0, since - revealT) else nil)
                 if not failed then
-                    if revealStarted and dinoScale then dinoScale.Scale = Timeline.revealScale((since - revealT) / .8) * (if a.big then Timeline.stamp(since - impactAt - revealT) else 1) end
+                    if revealStarted and dinoScale then dinoScale.Scale = Timeline.revealScale((since - revealT) / .8, rarity) * (if a.big then Timeline.stamp(since - impactAt - revealT) else 1) end
                     if a.big and since >= impactAt + revealT and since < impactAt + revealT + .25 then
                         local k = 1 - (since - impactAt - revealT) / .25
                         a.body.AnchorPoint = Vector2.new(.5, .5)

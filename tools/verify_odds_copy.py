@@ -35,14 +35,19 @@ for level=0,#Progression.ConditionWeights-1 do
  local exact=ShopOdds.conditionPercents(level)
  for i,row in groups[3].rows do assert(math.abs(row.percent-exact[i])<=0.0101,"condition "..i) end
  -- hatch group matches the failure chance
- assert(math.abs(groups[1].rows[2].percent-100*Outcomes.failure(level))<=0.0101)
+ -- BD-430: "chance an egg IS Cracked" (condition weight) and "chance a Cracked egg HATCHES" (20%) are labelled apart and come from config
+ local crackedRow,crackedCfg=groups[3].rows[1],Progression.Conditions[1]
+ assert(crackedCfg.id=="cracked" and crackedRow.name=="Cracked" and groups[3].title=="Is the egg Cracked?")
+ assert(math.abs(groups[1].rows[1].percent-100*crackedCfg.hatchChance)<=0.0101 and groups[1].title=="Does a Cracked egg hatch?")
+ assert(groups[1].rows[1].name:find("Cracked") and groups[1].rows[2].name:find("Cracked"))
+ local overall=100*(1-Outcomes.failure(level)) assert(math.abs(Copy.overallHatchPercent(level)-overall)<=0.0101)
  assert(#Copy.upgradeGroups(level)==1 and near(sumOf(Copy.upgradeGroups(level)[1].rows),100))
 end
 -- BD-301: the Buy Egg confirm sentence and the Egg Odds panel come from the same numbers
 for level=0,#Progression.ConditionWeights-1 do
- local hatch=Copy.hatchGroup(level).rows[1]
+ local hatchPercent=Copy.overallHatchPercent(level)
  local sentence=Copy.hatchSentence(level)
- assert(sentence:find(string.format("%g",hatch.percent).." of every 100 eggs hatch",1,true),"sentence "..sentence)
+ assert(sentence:find(string.format("%g",hatchPercent).." of every 100 eggs hatch",1,true),"sentence "..sentence)
  assert(#sentence<=80 and not sentence:find("success"))
 end
 -- BD-303: plain unlock words
@@ -62,6 +67,8 @@ assert(sold.dim and not sold.active and sold.buttonText=="SOLD OUT" and sold.ton
 local owned=State.look({owned=true},"30 Crystals") assert(owned.caption=="Owned" and owned.tone=="calm")
 local normal=State.look({left=3},"30 Crystals") assert(normal.active and normal.caption=="30 Crystals  3 left" and normal.tone=="price")
 assert(State.look({levelNeeded=6,level=2},"x").buttonText=="LEVEL 6")
+-- BD-430: Crystals tab prices
+assert(State.packButton(99)=="R$ 99" and State.packButton(nil)=="Price soon" and State.packButton(0)=="Price soon")
 -- index progress
 local s=Progress.summary(0,23) assert(s.percent==0 and s.text=="Collected 0 of 23  (0%)" and not s.ticks[1].reached)
 s=Progress.summary(6,23) assert(s.percent==26 and s.ticks[1].reached and not s.ticks[2].reached)

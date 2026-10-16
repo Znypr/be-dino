@@ -1,10 +1,12 @@
 --!strict
--- BD-246 (docs/101 s2, s11-12): applies the class movement rules to the player's Humanoid. Runs ONLY while Config.CombatEnabled
+-- BD-246 (docs/101 s2, s11-12): applies the class movement rules to the player's Humanoid. Runs ONLY while Config.ClassMovementEnabled
 -- is true; with the flag off start() returns before touching anything (no remote, no loop), so default behaviour is unchanged.
 --  * JumpPower = Config.JumpPower x class powerX (Water 0 = cannot jump). The WalkSpeed class multiplier lives in ProgressionService.
 --  * FLY hover cap: while airborne the upward speed is cut at the class height cap above the ground (ClassMovement.limitVertical).
 --  * WATER dash: remote "ClassDash" (no arguments). The server validates and answers the SAME player with the velocity; the client
 --    applies it (it owns its physics, like the leap). Rate limited, cooldown from ClassMovement, grounded, Water only, never upward.
+--  * FLY glide (BD-246 remainder): remote "ClassGlide" (one boolean: jump held). While held, airborne, Fly and under the glide
+--    seconds budget, the fall speed is capped at glideFallSpeed. The same hover cap still applies; the client never sets a speed.
 -- Every number is PROVISIONAL (docs/101); they all come from Shared/ClassMovement and CombatConfig.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,6 +21,12 @@ local function classOf(player: Player): string
     return CM.classForSpecies(player:GetAttribute("EquippedSpeciesId"))
 end
 
+-- Pure decision for the glide (offline tested): may a Fly dino glide now? glidedFor = glide seconds spent this airtime.
+function Service.glideDecision(class: string, held: boolean, grounded: boolean, glidedFor: number): boolean
+    if class ~= "Fly" or held ~= true or grounded then return false end
+    return glidedFor < CM.rules(class).jump.glideSeconds
+end
+
 -- Pure decision for the dash remote (offline tested): returns ok, reason.
 function Service.dashDecision(class: string, state: any): (boolean, string)
     if class ~= "Water" then return false, "class" end
@@ -28,12 +36,18 @@ function Service.dashDecision(class: string, state: any): (boolean, string)
 end
 
 function Service.start()
-    if not Config.CombatEnabled then return end
+    if not Config.ClassMovementEnabled then return end
     local remote = Instance.new("RemoteEvent")
     remote.Name = "ClassDash"
     remote.Parent = ReplicatedStorage:WaitForChild("BeDinoRemotes")
     local lastRequest: {[Player]: number} = {}
     local lastDash: {[Player]: number} = {}
+    local glideRemote = Instance.new("RemoteEvent")
+    glideRemote.Name = "ClassGlide"
+    glideRemote.Parent = remote.Parent
+    local glideHeld: {[Player]: boolean} = {}
+    local glideUsed: {[Player]: number} = {} -- seconds of glide spent in the current airtime
+    local lastGlideRequest: {[Player]: number} = {}
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Include
     params.FilterDescendantsInstances = {workspace.Terrain, workspace:FindFirstChild("BeDinoArena") or workspace.Terrain}
@@ -58,7 +72,15 @@ function Service.start()
     end
     Players.PlayerAdded:Connect(hookPlayer)
     for _, p in Players:GetPlayers() do hookPlayer(p) end
-    Players.PlayerRemoving:Connect(function(p) lastRequest[p] = nil lastDash[p] = nil end)
+    Players.PlayerRemoving:Connect(function(p) lastRequest[p] = nil lastDash[p] = nil
+        glideHeld[p] = nil glideUsed[p] = nil lastGlideRequest[p] = nil end)
+    glideRemote.OnServerEvent:Connect(function(player: Player, ...)
+        if select("#", ...) ~= 1 or typeof((...)) ~= "boolean" then return end
+        local now = workspace:GetServerTimeNow()
+        if now - (lastGlideRequest[player] or -math.huge) < 0.1 then return end
+        lastGlideRequest[player] = now
+        glideHeld[player] = (...) :: boolean
+    end)
 
     remote.OnServerEvent:Connect(function(player: Player, ...)
         if select("#", ...) ~= 0 then return end
@@ -87,17 +109,20 @@ function Service.start()
     end)
 
     -- FLY hover cap: server-side vertical speed clamp for airborne Fly dinos.
-    RunService.Heartbeat:Connect(function()
+    RunService.Heartbeat:Connect(function(dt)
         for _, player in Players:GetPlayers() do
             local c = player.Character
             if c and c:GetAttribute("RunState") == "Active" and classOf(player) == "Fly" then
                 local root = c:FindFirstChild("HumanoidRootPart")
                 local h = c:FindFirstChildOfClass("Humanoid")
+                if h and h.FloorMaterial ~= Enum.Material.Air then glideUsed[player] = 0 end
                 if root and root:IsA("BasePart") and h and h.FloorMaterial == Enum.Material.Air then
                     local hit = workspace:Raycast(root.Position, Vector3.new(0, -60, 0), params)
                     if hit then
                         local v = root.AssemblyLinearVelocity
-                        local limited = CM.limitVertical("Fly", "jump", v.Y, root.Position.Y - hit.Position.Y, false)
+                        local gliding = Service.glideDecision("Fly", glideHeld[player] == true, false, glideUsed[player] or 0)
+                        if gliding and v.Y < 0 then glideUsed[player] = (glideUsed[player] or 0) + dt end
+                        local limited = CM.limitVertical("Fly", "jump", v.Y, root.Position.Y - hit.Position.Y, gliding)
                         if limited ~= v.Y then root.AssemblyLinearVelocity = Vector3.new(v.X, limited, v.Z) end
                     end
                 end

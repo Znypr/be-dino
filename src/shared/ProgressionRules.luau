@@ -106,6 +106,78 @@ function Rules.upgrade(profile)
     if p.conditionLevel==nil then p.conditionLevel=0 end
     return profile.progression
 end
+-- BD-436: permanent discovery log (progression.discovered = {colours={id=true}, patterns={..}, mutations={..}}). ADDITIVE and
+-- optional: older builds ignore the field (docs/111), a missing field reads as empty and is filled lazily. Ids are only ever ADDED, so
+-- fusing a dino away never un-discovers its colour. Sets are capped so the profile cannot grow without bound.
+Rules.DiscoveredMaxPerKind=64
+local DISCOVERY_KEYS={"colours","patterns","mutations"}
+local function discoveryLog(progress)
+    local log=progress.discovered
+    if typeof(log)~="table" then log={} progress.discovered=log end -- junk in our own optional field is replaced
+    for _,key in DISCOVERY_KEYS do
+        if typeof(log[key])~="table" then log[key]={} end
+    end
+    return log
+end
+local function markDiscovered(set,id): boolean
+    if typeof(id)~="string" or id=="" or id=="none" or #id>40 or set[id]~=nil then return false end
+    local n=0
+    for _ in set do n+=1 end
+    if n>=Rules.DiscoveredMaxPerKind then return false end
+    set[id]=true
+    return true
+end
+-- Records one dino's colour / pattern / mutation. Returns {colour=true, pattern=true, mutation=true} for FIRST-time finds only.
+function Rules.discover(profile,genes,mutationId)
+    local log=discoveryLog(Rules.upgrade(profile))
+    local g=if typeof(genes)=="table" then genes else {}
+    local fresh={}
+    if markDiscovered(log.colours,g.primaryColorId) then fresh.colour=true end
+    if markDiscovered(log.patterns,g.patternId) then fresh.pattern=true end
+    if markDiscovered(log.mutations,mutationId) then fresh.mutation=true end
+    return fresh
+end
+-- Lazy backfill on load: adds what the player owns right now (collection variants/events, identity instances). Idempotent, add-only.
+function Rules.backfillDiscovered(profile)
+    local log=discoveryLog(Rules.upgrade(profile))
+    local function add(genes,mutationId)
+        local g=if typeof(genes)=="table" then genes else {}
+        markDiscovered(log.colours,g.primaryColorId)
+        markDiscovered(log.patterns,g.patternId)
+        markDiscovered(log.mutations,mutationId)
+    end
+    if typeof(profile.collection)=="table" then
+        for _,entry in profile.collection do
+            if typeof(entry)=="table" then
+                if typeof(entry.events)=="table" then for id,n in entry.events do if typeof(n)=="number" and n>0 then markDiscovered(log.mutations,id) end end end
+                if typeof(entry.variants)=="table" then
+                    for _,v in entry.variants do
+                        if typeof(v)=="table" and typeof(v.count)=="number" and v.count>0 then add(v.genes,v.mutationId) end
+                    end
+                end
+            end
+        end
+    end
+    local identity=profile.dinosaurIdentity
+    if typeof(identity)=="table" and typeof(identity.instances)=="table" then
+        for _,inst in identity.instances do
+            if typeof(inst)=="table" then add(inst.genes,inst.mutationId) end
+        end
+    end
+    return log
+end
+-- Counts for the owner-only PrivateState (never the id lists).
+function Rules.discoveryCounts(profile)
+    local p=profile.progression
+    local log=if typeof(p)=="table" and typeof(p.discovered)=="table" then p.discovered else {}
+    local out={}
+    for _,key in DISCOVERY_KEYS do
+        local n=0
+        if typeof(log[key])=="table" then for _ in log[key] do n+=1 end end
+        out[key]=n
+    end
+    return out
+end
 function Rules.valid(p): boolean
     if p==nil then return true end -- historical profiles are migrated on load
     if typeof(p)~="table" or not finite(p.crystals) or p.crystals<0 or p.crystals>Config.MaxCrystals or p.crystals%1~=0 then return false end

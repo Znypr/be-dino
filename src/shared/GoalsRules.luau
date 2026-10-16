@@ -15,16 +15,30 @@ local function whole(n: any): number
     return math.max(0, math.floor(tonumber(n) or 0))
 end
 
--- opts.found / opts.total: species found in the Dino Index.
+-- Whole collection (owner vision): species + colours + patterns + mutations. opts.found / opts.total = species found in the
+-- Dino Index; opts.parts (optional, from indexCounts) = {colours, patterns, mutations}, each {found, total}.
+local HINTS = {colours = "Find new colours", patterns = "Find new patterns", mutations = "Find a weather mutation"}
 function Goals.collect(opts: any)
     local total, found = whole(opts.total), whole(opts.found)
     found = math.min(found, total)
-    if total > 0 and found >= total then
-        return {id = "collect", title = "COLLECT", progress = "All dinos found!", step = "Now hunt rare colours", fraction = 1, done = true}
+    local worst, worstFraction = if total > 0 and found < total then "species" else nil, if total > 0 then found / total else 1
+    local parts = if type(opts.parts) == "table" then opts.parts else {}
+    for _, key in {"colours", "patterns", "mutations"} do
+        local p = parts[key]
+        local pt = if type(p) == "table" then whole(p.total) else 0
+        if pt > 0 then
+            local pf = math.min(whole(p.found), pt)
+            total += pt
+            found += pf
+            if pf < pt and (worst == nil or pf / pt < worstFraction) then worst, worstFraction = key, pf / pt end
+        end
     end
-    local left = total - found
-    return {id = "collect", title = "COLLECT", progress = string.format("%d of %d dinos", found, total),
-        step = if left == 1 then "1 dino left to find" else "Hatch eggs to find more", fraction = if total > 0 then found / total else 0, done = false}
+    local fraction = if total > 0 then found / total else 0
+    if total > 0 and found >= total then
+        return {id = "collect", title = "COLLECT", progress = "Everything found!", step = "You did it!", fraction = 1, done = true}
+    end
+    local step = if total - found == 1 then "1 more to find" elseif worst == nil or worst == "species" then "Hatch eggs to find more" else HINTS[worst]
+    return {id = "collect", title = "COLLECT", progress = string.format("%d of %d found", found, total), step = step, fraction = fraction, done = false}
 end
 
 -- opts.dinos: FusionAction list rows (or nil), opts.stages, speciesName, patternName (same shape as NextGoal.fusion).
@@ -80,6 +94,49 @@ function Goals.speciesCounts(collection: any, order: any, extraFound: any)
         if copies > 0 or extra(id) then found += 1 end
     end
     return {found = found, owned = owned, total = #ids}
+end
+
+-- speciesCounts plus parts: colours / patterns seen on dinos the player owns now (list rows: genes.primaryColorId,
+-- genes.patternId, mutationId) and mutations from the collection events/variants. Derived only; nothing is saved or
+-- rewritten. BD-436: `discovered` (optional, owner-only DiscoveryJson counts {colours, patterns, mutations}) is the permanent log; when it
+-- is present each part uses max(log, derived) so a dino fused away never un-discovers its colour; absent = derived only (older saves).
+-- totals = {colours, patterns, mutations}.
+function Goals.indexCounts(collection: any, order: any, extraFound: any, dinos: any, totals: any, discovered: any)
+    local out = Goals.speciesCounts(collection, order, extraFound)
+    local t = if type(totals) == "table" then totals else {}
+    local colours, patterns, mutations = {}, {}, {}
+    if type(dinos) == "table" then
+        for _, d in dinos do
+            if type(d) == "table" then
+                local g = if type(d.genes) == "table" then d.genes else {}
+                if type(g.primaryColorId) == "string" then colours[g.primaryColorId] = true end
+                if type(g.patternId) == "string" and g.patternId ~= "" then patterns[g.patternId] = true end
+                if type(d.mutationId) == "string" and d.mutationId ~= "" and d.mutationId ~= "none" then mutations[d.mutationId] = true end
+            end
+        end
+    end
+    if type(collection) == "table" then
+        for _, e in collection do
+            if type(e) == "table" then
+                if type(e.events) == "table" then for id, n in e.events do if whole(n) > 0 then mutations[id] = true end end end
+                if type(e.variants) == "table" then
+                    for _, v in e.variants do
+                        if type(v) == "table" and whole(v.count) > 0 and type(v.mutationId) == "string" then mutations[v.mutationId] = true end
+                    end
+                end
+            end
+        end
+    end
+    local log = if type(discovered) == "table" then discovered else nil
+    local function count(set: any, total: any, logged: any)
+        local n = 0
+        for _ in set do n += 1 end
+        if log ~= nil then n = math.max(n, whole(logged)) end
+        return {found = math.min(n, whole(total)), total = whole(total)}
+    end
+    local l = log or {}
+    out.parts = {colours = count(colours, t.colours, l.colours), patterns = count(patterns, t.patterns, l.patterns), mutations = count(mutations, t.mutations, l.mutations)}
+    return out
 end
 
 return Goals

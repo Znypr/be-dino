@@ -566,7 +566,7 @@ render=function(name: string)
                     label(card,tostring(product.amount),92,6,166,44,32,C.gold)
                     label(card,"Crystals",92,48,166,26,19)
                     local tag=label(card,"",92,74,166,20,15,C.accent) tag.Visible=false
-                    local b=button(card,if Config.CrystalPacksEnabled then "..." else "Coming soon",8,100,248,38,C.gold:Lerp(C.panel,.35),function() end)
+                    local b=button(card,"...",8,100,248,38,C.gold:Lerp(C.panel,.35),function() end)
                     b.TextSize=19 b.Active=false
                     cards[i]={button=b,tag=tag}
                 end
@@ -584,7 +584,7 @@ render=function(name: string)
                         if price and Config.CrystalPacksEnabled==true then
                             c.button.Text="R$ "..price c.button.Active=true c.button.BackgroundColor3=C.gold:Lerp(C.panel,.1)
                             c.button.Activated:Connect(function() Marketplace:PromptProductPurchase(player,product.id) end)
-                        else c.button.Text=if price and not Config.CrystalPacksEnabled then "R$ "..price.."  Coming soon" else "Coming soon" end
+                        else c.button.Text=require(Shared.ShopCardState).packButton(price) end
                         if price and baseRate and i>1 then
                             local bonus=math.floor((product.amount/price/baseRate-1)*100+.5)
                             if bonus>=1 then c.tag.Text="+"..bonus.."% extra" c.tag.Visible=true end
@@ -807,7 +807,7 @@ render=function(name: string)
             label(card,look.rarityText or (rarityNames[rarity].." • "..FusionSelection.pct(100*(oddsWeight[id] or 0)/oddsTotal).." of eggs"),4,if lay.compact then 28 else 44,256,if lay.compact then 20 else 25,if lay.compact then 15 else 18)
             if found then
                 hero(card,id,7,lay.heroY,250,lay.heroHeight,bestMutation(id))
-                label(card,if event then "" elseif ownedTraits(id) then (require(Shared.ColourBonus).text(ProgressionConfig.EggColors,(ownedTraits(id) :: any).genes) or "Special variant") else require(Shared.FtueP1).indexCount(base,gold,diamond),5,lay.detailY,254,if lay.compact then 22 else 25,if lay.compact then 14 else 16)
+                label(card,if event then "" elseif ownedTraits(id) then (require(Shared.ColourBonus).text(ProgressionConfig.EggColors,(ownedTraits(id) :: any).genes) or "Special variant") else require(Shared.ClassInfo).Labels[require(Shared.ClassInfo).forSpecies(id).class].." • "..require(Shared.FtueP1).indexCount(base,gold,diamond),5,lay.detailY,254,if lay.compact then 22 else 25,if lay.compact then 14 else 16)
                 if event then require(script.Parent.MutationBadge).chip(card,event.id,UDim2.new(0.5,0,0,lay.detailY),Vector2.new(0.5,0)) end -- BD-352: real badge, not 9 px text
                 if lay.compact then
                     local tap=Instance.new("TextButton") -- the whole card opens the dino (no VIEW DINO bar when short)
@@ -881,7 +881,8 @@ render=function(name: string)
         label(stage,rarityNames[index].." • "..FusionSelection.pct(100*(oddsWeight[selected] or 0)/oddsTotal).." of eggs",0,302,380,42,28)
         label(body,"YOUR COLLECTION",414,0,400,42,28)
         label(body,string.format("Base: %d • Gold: %d\nDiamond: %d",base,gold,diamond),414,62,400,92,25)
-        label(body,if event then event.name.." • "..table.concat(UIFormat.boostLines(event.growth,event.speed,1)," • ") else "Cosmetic fusion: 6 Base → Gold; 3 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,76,22,C.gold)
+        label(body,if event then event.name.." • "..table.concat(UIFormat.boostLines(event.growth,event.speed,1)," • ") else "Cosmetic fusion: 6 Base → Gold; 3 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,66,22,C.gold)
+        label(body,require(Shared.ClassInfo).line(selected),414,241,400,28,22,C.accent) -- BD-423: class + one-line feel hint
         local equipped=str("EquippedSpeciesId","compy")==selected
         button(body,if equipped then "EQUIPPED" elseif not owned then "LOCKED" else "EQUIP",426,273,372,52,if owned then C.accent else C.card,function()
             if not owned then notify("Hatch eggs to find this dino") return end
@@ -1018,6 +1019,7 @@ render=function(name: string)
                 dino=view,rarity=rarity,color=rarityColors[rarity],failed=failed,
                 shiny=not failed and PrivateState.get("LastChestShiny")==true,big=not failed and PrivateState.get("LastChestBig")==true,
                 mutationName=if mutation and not failed then mutation.name else nil,mutationColor=mutationColor,mutationId=if mutation and not failed then mutation.id else nil,
+                newFind=not failed and next(decoded("LastChestNewJson","{}"))~=nil, -- BD-436: first colour/pattern/mutation
                 remaining=remainingAfter,genes=if geneticsOk then genes else nil,colorReveal=colorReveal,patternReveal=patternReveal,paintColors=paintColors,
                 secondReveal=if geneticsOk then HatchTimeline.colorReveal(ProgressionConfig.EggColors,genes,"secondary") else nil, -- BD-220: right bucket
             })
@@ -1218,49 +1220,7 @@ local function refreshCrystals()
 end
 PrivateState.onChanged("Crystals", refreshCrystals)
 refreshCrystals()
--- Polish: persistent "next goal" line under the crystal HUD (top-right, clear of the thumbstick/jump area).
-local goalHUD=box(gui,0,0,260,30,C.panel,2)
-local goalScale=Instance.new("UIScale") goalScale.Parent=goalHUD
-goalHUD.Name,goalHUD.BackgroundTransparency="NextGoal",.15
-local goalText=label(goalHUD,"",8,0,244,30,17,C.gold)
-goalText.TextScaled=true
-local goalLimit=Instance.new("UITextSizeConstraint") goalLimit.MaxTextSize=17 goalLimit.Parent=goalText
-local goalDinos=nil -- latest FusionAction list; nil = unavailable (falls back to level XP)
-local function refreshGoal()
-    local goal=NextGoal.pick({dinos=goalDinos,level=num("AccountLevel"),xp=num("AccountXP"),perLevel=ProgressionConfig.AccountXPPerLevel,
-        maxLevel=ProgressionConfig.AccountMaxLevel,stages=FusionSelection.Stages,
-        speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName})
-    require(script.Parent.GoalsPanel).setDinos(goalDinos) -- BD-427: hub Goals panel reuses this list and the Index counts
-    require(script.Parent.GoalsPanel).setSpecies(require(Shared.GoalsRules).speciesCounts(decoded("CollectionJson","{}"),Config.SpeciesOrder,function(id) return eventMutation(id)~=nil or ownedTraits(id)~=nil end))
-    goalText.Text,goalText.TextColor3=(if touchMode() or require(Shared.PhoneScale).isCompact(gui.AbsoluteSize.Y) then "" else "Goal  ")..goal.text,if goal.ready then C.accent else C.gold
-end
-local goalQueued=false
-local function loadGoalDinos()
-    if goalQueued then return end
-    goalQueued=true
-    task.delay(2,function() -- debounce bursts of hatches; one request, up to 5 pages, never blocks the UI
-        goalQueued=false
-        local folder=ReplicatedStorage:FindFirstChild("BeDinoRemotes")
-        local fn=folder and folder:FindFirstChild("FusionAction")
-        if not fn or not fn:IsA("RemoteFunction") then goalDinos=nil refreshGoal() return end
-        local all,cursor,pages={},nil,0
-        repeat
-            local ok,response=pcall(function() return (fn :: RemoteFunction):InvokeServer({action="list",cursor=cursor,limit=200}) end)
-            if not ok or typeof(response)~="table" or response.ok~=true or typeof(response.dinosaurs)~="table" then goalDinos=nil refreshGoal() return end
-            for _,d in response.dinosaurs do table.insert(all,d) end
-            cursor=response.nextCursor
-            pages+=1
-        until cursor==nil or pages>=5
-        goalDinos=all
-        refreshGoal()
-    end)
-end
-for _,attribute in {"CollectionJson","AccountLevel","AccountXP"} do
-    PrivateState.onChanged(attribute, function() refreshGoal() if attribute=="CollectionJson" then loadGoalDinos() end end)
-end
-require(script.Parent.GoalsPanel).attach(gui,goalHUD,{stages=FusionSelection.Stages,speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName}) -- BD-427
-refreshGoal()
-loadGoalDinos()
+local goalHUD,goalScale,goalText,goalLimit=require(script.Parent.GoalHud).build({gui=gui,box=box,label=label,C=C,num=num,touchMode=touchMode,decoded=decoded,eventMutation=eventMutation,ownedTraits=ownedTraits}) -- next-goal HUD line + Goals panel
 local timers=Instance.new("Frame")
 timers.BackgroundTransparency,timers.Size,timers.AnchorPoint,timers.Position,timers.Parent=1,UDim2.fromOffset(286,220),Vector2.new(1,1),UDim2.new(1,-20,1,-100),gui
 local timerScale=Instance.new("UIScale") timerScale.Parent=timers
