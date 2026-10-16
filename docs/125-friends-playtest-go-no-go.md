@@ -9,7 +9,7 @@ PR state used below (checked with `gh pr list` at writing time): **merged** #244
 - **GO, second session, only after the first is clean:** up to 8 players, and after merging #243 and #247 so the rare-hatch moment and the telemetry numbers are available.
 - **NO-GO** for: phones (never measured, BD-085/168/322); more than 8 players; the cave hub (`CaveHub` off, BD-293 device test pending); HP combat and Bite (`CombatEnabled` off, BD-252/316 no two-player test); low-poly gameplay claims beyond "it loads" (BD-097/309); Robux packs, paid random items, any product; public or unsupervised play; balance judgements (everything economic is PROVISIONAL).
 - Tell friends: private test, progress may be reset, no Robux, phone is experimental, the economy numbers are placeholders.
-- Hard stop before inviting anyone: the **rollback drill on the real place** (section 7) and the **owner smoke run** (section 6 steps 8 to 10). Without a published rollback you cannot undo a bad build.
+- Hard stop before inviting anyone: the **rollback drill on the real place** (section 7) and the **owner smoke run** (section 6 steps 8 to 10; ordered per-place list with BLOCKS / NICE marks: [129 owner Studio smoke checklist](129-owner-studio-smoke-checklist.md)). Without a published rollback you cannot undo a bad build.
 
 ## 2. What the playtest profile contains
 `python tools/build.py --profile playtest` (`tools/release_profiles.py`). Flags are `Config.luau` constants baked in per build; none can be flipped at runtime.
