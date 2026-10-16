@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "place_sha256": "a3e535cbfc3f86543515638c16df48ea74f8e72ffac4a5de6a580b4235683d9c",
+  "place_sha256": "00f96a784528ebaececa0f173b7a6553dadc16056c49a934e8f34d32740f9fa7",
   "sources": {
     "src/loading/Loading.client.luau": "4bfa9067e245e4901d4b7bec5a1b11d4ceb84a841d55383cd7483311c65571ed",
     "src/shared/AdminRules.luau": "5fe6d61e1d5e5a5ad34a1ff7c0d2f924dba03c0490abf40e4528a9141f4fb266",
@@ -317,9 +317,9 @@
     "src/client/CaveAtmosphere.luau": "31321733539061b22831af20c7f781881bd40d4c0d6e5d68f1020641e0da5fa2",
     "src/client/CaveLavaClient.luau": "c2716b84148ffaf4860c529ee884faf0753ffc12d50929404799dd6f01fbeaf6",
     "src/client/CombatHud.luau": "fc416a13bb0435fc87bdf955d9bb92262d19e183b07bb6b6d3d5df3690b7cdd2",
-    "src/client/CosmeticVisuals.client.luau": "14472f893118c993f1257be98d661dd73bf1213e61d851c5747b028abfa8b8a2",
+    "src/client/CosmeticVisuals.client.luau": "d3f0fcccb59b6eb8a1767a1f098ccfd3b3718089e1f8a67b666de6ef54512455",
     "src/client/DinoDetails.luau": "7f3a9fa573921e2956787f274eff35a00fda47ed562ee75ec6bf67e65554047c",
-    "src/client/DinoIndexPanels.luau": "b572fd636d2fd5ce0e6dfdacdb99a57961c86e50020b4b72b42057a896728a3b",
+    "src/client/DinoIndexPanels.luau": "d98fc67cd7bb5bf36a3910d56fc52746e5ab9f11bafd72c34bc8399440acce42",
     "src/client/DinoMotion.client.luau": "b8b8b1a5f85b8a328739d077ef9b1dd74c26341aaab375634115bb5c86963ee8",
     "src/client/EggPicture.luau": "66ff407ca10ea1297356217e40eb01e70370096eb48ec4d5635381ac627a7657",
     "src/client/EggsScreen.luau": "de3a8a6b90c8eb81ec18b4009f8d3f6c70d286fad0c6245ac9073bdc77dcfa87",
