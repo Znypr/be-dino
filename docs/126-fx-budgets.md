@@ -1,4 +1,4 @@
-# 124 FX budgets and the offline audit (BD-429, code side, 2026-10-16)
+# 126 FX budgets and the offline audit (BD-429, code side, 2026-10-16)
 
 Status: PROVISIONAL budgets, CURRENT tool. Companion of [123 anime FX plan](123-anime-3d-fx-research-and-plan.md) (PR #252, phase 0). Labels: **CURRENT** = in code today, **PROVISIONAL** = a guess until a real phone is measured.
 
