@@ -12,6 +12,7 @@ local PhoneScale = require(Shared.PhoneScale)
 local EggGenetics = require(Shared.EggGenetics)
 local PrivateState = require(script.Parent.PrivateState)
 local GoalsPanel = require(script.Parent.GoalsPanel)
+local FtueRules = require(Shared.FtueRules)
 
 local GoalHud = {}
 function GoalHud.build(ctx: any): (Frame, UIScale, TextLabel, UITextSizeConstraint)
@@ -24,6 +25,9 @@ function GoalHud.build(ctx: any): (Frame, UIScale, TextLabel, UITextSizeConstrai
     local goalLimit=Instance.new("UITextSizeConstraint") goalLimit.MaxTextSize=17 goalLimit.Parent=goalText
     local goalDinos=nil -- latest FusionAction list; nil = unavailable (falls back to level XP)
     local function refreshGoal()
+        -- BD-440: hidden until the first egg (the Goals panel follows this frame's Visible)
+        goalHUD.Visible=FtueRules.showGoals({activeEggs=PrivateState.get("ActiveChestCount"),waitingEggs=PrivateState.get("QueuedEggsWaiting"),
+            lastRunEggs=PrivateState.get("LastRunEggCount"),copies=FtueRules.collectionCopies(ctx.decoded("CollectionJson","{}"))})
         local goal=NextGoal.pick({dinos=goalDinos,level=num("AccountLevel"),xp=num("AccountXP"),perLevel=ProgressionConfig.AccountXPPerLevel,
             maxLevel=ProgressionConfig.AccountMaxLevel,stages=FusionSelection.Stages,
             speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName})
@@ -52,7 +56,7 @@ function GoalHud.build(ctx: any): (Frame, UIScale, TextLabel, UITextSizeConstrai
             refreshGoal()
         end)
     end
-    for _,attribute in {"CollectionJson","AccountLevel","AccountXP","DiscoveryJson"} do
+    for _,attribute in {"CollectionJson","AccountLevel","AccountXP","DiscoveryJson","ActiveChestCount","QueuedEggsWaiting","LastRunEggCount"} do
         PrivateState.onChanged(attribute, function() refreshGoal() if attribute=="CollectionJson" then loadGoalDinos() end end)
     end
     GoalsPanel.attach(gui,goalHUD,{stages=FusionSelection.Stages,speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName}) -- BD-427
