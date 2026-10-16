@@ -41,7 +41,10 @@ function EggPicture.add(parent: GuiObject, genes: any, size: number): Frame
     if valid and genes.conditionId then
         local look = Overlays.describe(genes.conditionId)
         if look.assetId ~= "" then
-            layer("EggCondition", "rbxassetid://" .. look.assetId, root.ZIndex + 1)
+            -- BD-141: faint looks (Rainbow, Astra) repeat their registered layer (ConditionOverlays `stack`, same as the 3D decal) so they read at card size.
+            for copy = 1, math.min((look :: any).stack or 1, 4) do
+                layer(if copy == 1 then "EggCondition" else "EggConditionBoost", "rbxassetid://" .. look.assetId, root.ZIndex + copy)
+            end
         end
     end
     return root

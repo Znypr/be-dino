@@ -531,9 +531,10 @@ render=function(name: string)
                 local tile=box(body,x,cardsY+62,155,144,Color3.fromRGB(122,148,112):Lerp(C.panel,.25),24)
                 if staged then tile.BackgroundTransparency=1 end
                 if not (staged and require(script.Parent.ConditionStage).egg(tile,row.id)) then
-                    local view=ModelPreview.add(tile,"egg")
-                    view:SetAttribute("InspectZoom",require(Shared.ConditionOverlays).ShopZoom) -- BD-394: large egg so cracks, smudges, streaks and stars read at card size
-                    EggAppearance.apply(view,EggGenetics.neutral(row.id),true)
+                    -- BD-141: the flat official egg render + this condition's registered overlay (docs/77) fills the tile. The 3D viewport egg
+                    -- could fall back to a plain cream shape, so the tile uses the deterministic image path (never a bare box).
+                    local pic=require(script.Parent.EggPicture).add(tile,EggGenetics.neutral(row.id),150)
+                    pic.Name,pic.AnchorPoint,pic.Position="ConditionEggPicture",Vector2.new(.5,.5),UDim2.fromScale(.5,.5)
                 end
                 label(body,string.format("%g%%",weights[i]),x,cardsY+210,155,34,24,C.blue)
             end
