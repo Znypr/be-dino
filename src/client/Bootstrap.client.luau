@@ -1218,49 +1218,7 @@ local function refreshCrystals()
 end
 PrivateState.onChanged("Crystals", refreshCrystals)
 refreshCrystals()
--- Polish: persistent "next goal" line under the crystal HUD (top-right, clear of the thumbstick/jump area).
-local goalHUD=box(gui,0,0,260,30,C.panel,2)
-local goalScale=Instance.new("UIScale") goalScale.Parent=goalHUD
-goalHUD.Name,goalHUD.BackgroundTransparency="NextGoal",.15
-local goalText=label(goalHUD,"",8,0,244,30,17,C.gold)
-goalText.TextScaled=true
-local goalLimit=Instance.new("UITextSizeConstraint") goalLimit.MaxTextSize=17 goalLimit.Parent=goalText
-local goalDinos=nil -- latest FusionAction list; nil = unavailable (falls back to level XP)
-local function refreshGoal()
-    local goal=NextGoal.pick({dinos=goalDinos,level=num("AccountLevel"),xp=num("AccountXP"),perLevel=ProgressionConfig.AccountXPPerLevel,
-        maxLevel=ProgressionConfig.AccountMaxLevel,stages=FusionSelection.Stages,
-        speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName})
-    require(script.Parent.GoalsPanel).setDinos(goalDinos) -- BD-427: hub Goals panel reuses this list and the Index counts
-    require(script.Parent.GoalsPanel).setSpecies(require(Shared.GoalsRules).indexCounts(decoded("CollectionJson","{}"),Config.SpeciesOrder,function(id) return eventMutation(id)~=nil or ownedTraits(id)~=nil end,goalDinos,{colours=#ProgressionConfig.EggColors,patterns=#require(Shared.EggGenetics).Patterns,mutations=#ProgressionConfig.EventMutations}))
-    goalText.Text,goalText.TextColor3=(if touchMode() or require(Shared.PhoneScale).isCompact(gui.AbsoluteSize.Y) then "" else "Goal  ")..goal.text,if goal.ready then C.accent else C.gold
-end
-local goalQueued=false
-local function loadGoalDinos()
-    if goalQueued then return end
-    goalQueued=true
-    task.delay(2,function() -- debounce bursts of hatches; one request, up to 5 pages, never blocks the UI
-        goalQueued=false
-        local folder=ReplicatedStorage:FindFirstChild("BeDinoRemotes")
-        local fn=folder and folder:FindFirstChild("FusionAction")
-        if not fn or not fn:IsA("RemoteFunction") then goalDinos=nil refreshGoal() return end
-        local all,cursor,pages={},nil,0
-        repeat
-            local ok,response=pcall(function() return (fn :: RemoteFunction):InvokeServer({action="list",cursor=cursor,limit=200}) end)
-            if not ok or typeof(response)~="table" or response.ok~=true or typeof(response.dinosaurs)~="table" then goalDinos=nil refreshGoal() return end
-            for _,d in response.dinosaurs do table.insert(all,d) end
-            cursor=response.nextCursor
-            pages+=1
-        until cursor==nil or pages>=5
-        goalDinos=all
-        refreshGoal()
-    end)
-end
-for _,attribute in {"CollectionJson","AccountLevel","AccountXP"} do
-    PrivateState.onChanged(attribute, function() refreshGoal() if attribute=="CollectionJson" then loadGoalDinos() end end)
-end
-require(script.Parent.GoalsPanel).attach(gui,goalHUD,{stages=FusionSelection.Stages,speciesName=function(id) return Config.SpeciesDisplayNames[id] or id end,patternName=FusionSelection.patternName}) -- BD-427
-refreshGoal()
-loadGoalDinos()
+local goalHUD,goalScale,goalText,goalLimit=require(script.Parent.GoalHud).build({gui=gui,box=box,label=label,C=C,num=num,touchMode=touchMode,decoded=decoded,eventMutation=eventMutation,ownedTraits=ownedTraits}) -- next-goal HUD line + Goals panel
 local timers=Instance.new("Frame")
 timers.BackgroundTransparency,timers.Size,timers.AnchorPoint,timers.Position,timers.Parent=1,UDim2.fromOffset(286,220),Vector2.new(1,1),UDim2.new(1,-20,1,-100),gui
 local timerScale=Instance.new("UIScale") timerScale.Parent=timers
