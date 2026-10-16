@@ -103,3 +103,7 @@ Extracted from the kanban owner log, AGENTS.md, docs and the lead sessions. "LEA
   - Dino stripes are runtime-baked EditableImages, so PBR maps cannot sit on the stripe surface. The tier coat is a separate, slightly inflated shell with an alpha-mapped SurfaceAppearance over the stripes ("approach C"). A plain transparent shell without maps washes the stripes out; a solid single mesh keeps stripes but cannot shine.
   - At graphics quality 1, metal/foil reflections are off entirely, so the tint and outline must still read as the tier at low quality (phones).
   - Test maps were uploaded to the owner's account with the owner's OK (ids in the lead's notes; one test metal map failed to fetch).
+
+## 2026-10-16 (mutation badge icons and FX textures)
+- OWNER 2026-10-16: the 7 mutation badge icons (BD-190, `resources/ui/v2/icons/mutation-<id>-v1.png`; symbol outlines modelled by a script in Blender, then extruded, bevelled and rendered there) are APPROVED AS IS as final UI art. This is an explicit, scoped exception to the 2026-10-15 'no code-built models' rule, like the V3 trees; it covers only these 7 icons. The owner saw the contact sheet at 128/64/32 px (docs/evidence/2026-10-16-vfx/) and chose not to simplify the snowflake, pebble and ribbon for 32 px.
+- OWNER 2026-10-16: the BD-186/BD-188 glow plate and ring textures (Blender renders, PR #308) are approved; both art PRs merge, and the game is unchanged until the owner uploads them.
