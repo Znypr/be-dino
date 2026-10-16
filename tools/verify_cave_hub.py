@@ -344,7 +344,7 @@ assert(math.abs(C.ceilingY(0,580)-(6+58))<1.5,"about 58 studs over the Heart cen
 assert(C.Fall.crackHeight+2<=C.ceilingY(C.Fall.x,C.Fall.z+580)-C.FloorY,"lava crack under the cavern ceiling")
 assert(C.Fall.width==40 and C.Fall.height==32 and C.Pool.r>=10,"lava falls 40 x 32 into a pool (BD-295: fits under the cavern ceiling)")
 assert(counts.cave_lava_fall==1 and counts.lava_pool_disc==1 and counts.cave_lava_rim_rock==6 and counts.cave_stepping_stone==4,"lava props present")
-assert(#L.lights<=C.MaxLights,"<= 16 lights: "..#L.lights)
+assert(#L.lights<=C.MaxLights,"within the light cap (30): "..#L.lights)
 
 -- ---- BD-284: every layout prop key is a registered published mesh, an existing mesh, or an explicit non-mesh (FX)
 local P=CaveHubProps

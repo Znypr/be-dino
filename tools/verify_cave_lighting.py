@@ -1,6 +1,6 @@
 """BD-286 / BD-295 / BD-296 offline check of the Cave lighting and the lava-fall fit (docs/104 s4, s5). Runs the real
 CaveHubLayout, CaveTerrainRules and CaveLightingRules in Luau (pure numbers, never Studio):
- * light budget: the light list equals the layout's, never above CaveHubLayout.MaxLights (16), every light inside the hall and
+ * light budget: the light list equals the layout's, never above CaveHubLayout.MaxLights (30), every light inside the hall and
    under the ceiling, one fill per station, the gate arch light is the strongest fill; FX parts (beams + dust volumes + gate glow)
    stay tiny and the whole hub stays under the 410 part budget (lights use Attachments, no extra Parts);
  * shaft alignment: one shaft per ceiling hole, centred on it, narrower than the hole, standing in AIR from just above the floor to
@@ -30,7 +30,7 @@ local function dist(ax,az,bx,bz) return math.sqrt((ax-bx)^2+(az-bz)^2) end
 
 -- ---- lights: counts and placement
 assert(#D.lights==#L.lights,"the light list is the layout's light list")
-assert(#D.lights<=C.MaxLights,"<= 16 lights: "..#D.lights)
+assert(#D.lights<=C.MaxLights,"within the light cap (30): "..#D.lights)
 local owners={}
 for _,l in D.lights do owners[l.owner]=(owners[l.owner] or 0)+1 end
 assert(owners.heart==2 and owners.lava==3 and owners.crystal==2 and owners.forge==1,"heart 2, lava 3, crystal 2, forge 1")
@@ -48,7 +48,7 @@ local shadowN=0
 for _,l in D.lights do if l.shadows then shadowN+=1 end end
 assert(shadowN==4,"PointLight.Shadows on exactly the 4 strongest lights: "..shadowN)
 local look=R.Look
-assert(look.ambient[1]<=80 and look.ambient[2]<=70 and look.brightness>=1.2 and look.brightness<=1.5,"BD-398 cave ambient warm-dim, Brightness 1.2-1.5")
+assert(look.ambient[1]<=112 and look.ambient[2]<=100 and look.brightness>=1.2 and look.brightness<=1.5,"BD-398 + brighten pass: cave ambient warm and soft (<= 112), Brightness 1.2-1.5")
 assert(look.grade.brightness<=-0.03 and look.grade.brightness>=-0.1 and look.grade.contrast>=0.05,"BD-398 grade dim with contrast")
 assert(look.atmosphere.density<=0.05 and look.atmosphere.haze==0 and look.grade.saturation>=0 and look.grade.saturation<=0.1 and look.fogStart>=150 and look.fogEnd>=800,"clear warm cave: no milky haze or desaturation (docs/114)")
 -- the blend ramps to exactly 1 inside within blendSeconds (and in half that with Reduce Motion)
@@ -122,7 +122,7 @@ for _,p in L.props do if p.key=="lava_pool_disc" then assert(not p.walk and p.w<
 
 -- ---- BD-296 wall material: Limestone is the only cave-only wall material (Sandstone / Slate / Rock colours are the island's, set globally)
 local Col=Terrain.Colors
-assert(Col.Limestone and Col.Limestone[1]>=140 and Col.Limestone[1]<=175 and Col.Limestone[1]-Col.Limestone[3]<=12,"BD-384: soft cool grey Limestone walls (the warm lamps carry the colour)")
+assert(Col.Limestone and Col.Limestone[1]>=160 and Col.Limestone[1]<=195 and Col.Limestone[1]-Col.Limestone[3]<=45,"brighten pass: light warm Limestone walls")
 for _,m in {"Sandstone","Slate","Rock","Basalt","Grass","LeafyGrass","Mud","Ground","Sand"} do assert(Col[m]==nil,"cave never recolours the island material "..m) end
 
 -- ---- cave look

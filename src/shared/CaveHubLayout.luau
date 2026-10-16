@@ -23,7 +23,7 @@ CaveHubLayout.WallNoise = 3.2 -- +- studs of wall relief (two noise octaves): no
 CaveHubLayout.RockThickness = 12 -- plan distance the rock shell reaches beyond the open cave
 CaveHubLayout.TunnelRadius = 11 -- tunnel half width (22 wide); the flat laid-stone path in it is 8 wide
 CaveHubLayout.PathHalf = 4
-CaveHubLayout.MaxLights = 16
+CaveHubLayout.MaxLights = 30 -- 16 fills + 13 wall lantern niches (owner 2026-10-16: brighten before merge; docs/104 s17); only the 4 strongest lights cast shadows
 
 local LEGACY = {halfX = 55, halfZ = 47.5, floorY = 6, biomeHalf = 48}
 
@@ -612,6 +612,12 @@ function CaveHubLayout.get(): any
     for _, s in stations do
         if s.id ~= "heart" then lights[#lights + 1] = {owner = s.id} end
     end
+    -- wall lantern niches: a warm light on the winding path in every tunnel link (the middle waypoint) and 3 around the far side of the Heart
+    for _, link in LINKS do
+        local wp = link[3][math.ceil(#link[3] / 2)]
+        lights[#lights + 1] = {owner = "tunnel", x = wp[1], z = wp[2]}
+    end
+    for _, p in {{-23, 8}, {10, -23}, {22, -8}} do lights[#lights + 1] = {owner = "heartwall", x = p[1], z = p[2]} end
     built.lights = lights
     -- run-exit gate
     local g = station("gate")

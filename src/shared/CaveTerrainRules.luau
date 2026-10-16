@@ -30,7 +30,7 @@ Rules.FallRecess = {halfWidth = 20, front = -1, back = 7} -- dz range around Lay
 -- BD-384 look pass: cooler, softer grey-lilac stone (the warm lamps and the cave grade carry the colour) instead of hot orange
 -- cracked sandstone. Only Cobblestone, Limestone and CrackedLava are recoloured (terrain colours are place-wide, and the island uses
 -- Sandstone, Slate, Rock and Basalt), so the walls and floor are built from those two only; the island palette is untouched.
-Rules.Colors = {Cobblestone = {138, 132, 138}, Limestone = {160, 154, 158}, CrackedLava = {255, 120, 40}}
+Rules.Colors = {Cobblestone = {158, 142, 126}, Limestone = {186, 170, 150}, CrackedLava = {255, 120, 40}}
 Rules.Materials = {"Air", "Rock", "Limestone", "Sandstone", "Slate", "Basalt", "Cobblestone", "Grass", "LeafyGrass", "CrackedLava"}
 
 local FLOOR_BAND = 6 -- studs below the floor top that carry the floor surface mix
@@ -139,12 +139,12 @@ local function material(col: any, y: number, air: number): string
     if -air > 10 then return "Rock" end
     -- walls: soft blotches of three stones, no horizontal strata (owner 2026-10-16: no striped brick look). Cobblestone (tile grid) stays rare.
     local v = relief(x * 0.8 + y * 0.45, z * 0.8 - y * 0.45, 13, 12.9)
-    -- BD: Limestone's texture shows fine horizontal lines on tall walls, so it is only blotches; the bulk is Rock and Slate, mixed by 3D noise
+    -- Brighten pass (owner 2026-10-16): lighter warm stone. Limestone leads; Rock (darker island colour) only breaks up its fine horizontal
+    -- texture lines in blotches, and Slate is gone from the walls.
     local w = relief(x * 0.6 - y * 0.5, z * 0.6 + y * 0.35, 29, 41.7)
-    if w > 0.86 then return "Cobblestone" end
-    if v < 0.22 then return "Limestone" end
-    if v < 0.6 then return "Rock" end
-    return "Slate"
+    if w > 0.84 then return "Cobblestone" end
+    if v < 0.28 then return "Rock" end
+    return "Limestone"
 end
 
 -- (material name, occupancy 0..1) for a cell given its column constants and the height of its centre.
