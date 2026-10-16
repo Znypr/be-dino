@@ -48,7 +48,7 @@ local function calm(res, label)
         if l.kind == "ring" or l.kind == "spiral" then assert(l.radius >= TIME.minRingRadius, w .. " stays outside the body") end
         if l.kind == "emitter" or l.kind == "burst" then
             assert(l.size <= TIME.maxParticleSize + 1e-6, w .. " size " .. l.size)
-            if l.tex == "smokeSheet" then assert(l.alpha <= TIME.maxMistAlpha, w .. " smoke stays see-through") else assert(l.alpha <= TIME.maxSparkAlpha, w .. " alpha") end
+            if l.tex == "smokeSheet" or l.tex == "smokeDense" or l.tex == "smokeWispy" then assert(l.alpha <= TIME.maxMistAlpha, w .. " smoke stays see-through") else assert(l.alpha <= TIME.maxSparkAlpha, w .. " alpha") end
         end
         assert(#l.color >= 1 and #l.color == #l.grad, w .. " colours")
         for _, c in l.color do for i = 1, 3 do assert(c[i] >= 0 and c[i] <= 255.0001, w .. " rgb range") end end
@@ -190,6 +190,127 @@ do
         end
     end
 end
+-- 9. BD-186..189 mutation textures (docs/92). R.MutationTex names the Blender key per mutation and slot; a key is used ONLY while its slot
+-- holds a valid upload (`real`). Empty slots keep exactly today's layers; a real slot swaps the texture and plays the 4x4 flipbook.
+do
+    local function same(a, b)
+        if type(a) ~= type(b) then return false end
+        if type(a) ~= "table" then return a == b end
+        for k, v in a do if not same(v, b[k]) then return false end end
+        for k in b do if a[k] == nil then return false end end
+        return true
+    end
+    local none = function(_key: string) return false end
+    local MAPPED = {"glowPlateRound", "glowPlateDroplet", "glowPlateCrescent", "ringSeismic", "smokeDense", "smokeWispy", "motifDroplets",
+        "motifSoftSparks", "motifSnowCrystals", "motifPebbles", "motifEmbers", "motifAurora", "motifCrimson"}
+    local SHEETS = {"smokeDense", "smokeWispy", "motifDroplets", "motifSoftSparks", "motifSnowCrystals", "motifPebbles", "motifEmbers", "motifAurora", "motifCrimson"}
+    -- (a) the table: every mutation maps, every mapped key is a known slot, every one of the 13 slots has a mutation reading it
+    local used = {}
+    for _, id in Look.Order do
+        local m = R.MutationTex[id]
+        assert(m and m.glow and m.motif, id .. " maps a glow plate and a motif sheet")
+        for slot, key in m do
+            assert(slot == "glow" or slot == "ring" or slot == "smoke" or slot == "motif", id .. " slot " .. slot)
+            assert(Assets.Requested[key], id .. "." .. slot .. " -> " .. key .. " is not an EffectAssets slot")
+            used[key] = true
+        end
+    end
+    for _, key in MAPPED do assert(used[key], key .. " has a reader (a mutation maps it)") end
+    local expected = {dewdrop = {"glowPlateDroplet", "motifDroplets"}, charged = {"glowPlateRound", "motifSoftSparks"}, frost = {"glowPlateRound", "motifSnowCrystals"},
+        seismic = {"glowPlateRound", "motifPebbles"}, ember = {"glowPlateRound", "motifEmbers"}, aurora = {"glowPlateRound", "motifAurora"}, bloodmoon = {"glowPlateCrescent", "motifCrimson"}}
+    for id, pair in expected do assert(R.MutationTex[id].glow == pair[1] and R.MutationTex[id].motif == pair[2], id .. " glow / motif mapping") end
+    assert(R.MutationTex.frost.smoke == "smokeWispy" and R.MutationTex.seismic.smoke == "smokeDense" and R.MutationTex.ember.smoke == "smokeDense" and R.MutationTex.seismic.ring == "ringSeismic")
+    assert(R.MutationTexColoured.motifAurora and not R.MutationTexColoured.motifDroplets, "only Aurora art is coloured")
+    -- (b) empty id: nothing changes, anywhere (every mutation, device, detail, Reduce Motion)
+    assert(R.mutationTex("frost", "motif", none) == nil and R.mutationTex("frost", "motif", nil) == nil)
+    assert(R.mutationTex("nope", "motif", function() return true end) == nil and R.mutationTex("frost", "ring", function() return true end) == nil)
+    for _, id in Look.Order do
+        local e = Look.get(id)
+        for _, dev in R.DeviceOrder do
+            for _, reduce in {false, true} do
+                for _, detail in {"full", "lite"} do
+                    local base = R.resolve("mutation", e, {device = dev, reduce = reduce, detail = detail})
+                    local empty = R.resolve("mutation", e, {device = dev, reduce = reduce, detail = detail, real = none})
+                    assert(same(base.layers, empty.layers) and same(base.cost, empty.cost), id .. " " .. dev .. " empty slots keep today's look")
+                    for _, l in base.layers do assert(not l.coloured, "no coloured layer without art") end
+                end
+            end
+        end
+    end
+    -- aura and trail never read these slots
+    for _, a in Config.Auras do
+        assert(same(R.resolve("aura", a, {device = "desktop"}).layers, R.resolve("aura", a, {device = "desktop", real = function() return true end}).layers), a.id .. " aura ignores mutation art")
+    end
+    -- (c) a real slot: the mapped texture is used, with the right flipbook layout (512 px, 4 x 4, 128 px cells) and mode
+    local saved = {}
+    for _, key in MAPPED do saved[key] = Assets.Requested[key].id Assets.Requested[key].id = "rbxassetid://" .. tostring(900000000 + #key) end
+    for _, key in SHEETS do
+        assert(Assets.isSheet(key) and Assets.Sheets[key].size == 512 and Assets.Sheets[key].grid == 4, key .. " is a 512 px 4x4 sheet")
+        local x, y, px = Assets.cellRect(key, 1) assert(x == 0 and y == 0 and px == 128, key .. " cell 1")
+        x, y, px = Assets.cellRect(key, 16) assert(x == 384 and y == 384 and px == 128, key .. " cell 16")
+        assert(Assets.mode(key) == (if key == "motifAurora" then "Loop" else "OneShot"), key .. " flipbook mode")
+        assert(Assets.frameAt(key, 0, 0, 1) == (if key == "motifAurora" then 2 else 1) and Assets.frameAt(key, 0.999, 0, 1) == (if key == "motifAurora" then 2 else 16), key .. " frames")
+    end
+    for _, key in {"glowPlateRound", "glowPlateDroplet", "glowPlateCrescent", "ringSeismic"} do assert(Assets.isReal(key) and not Assets.isSheet(key), key .. " is a single image, no flipbook") end
+    for _, id in Look.Order do
+        local e, map = Look.get(id), R.MutationTex[id]
+        for _, dev in R.DeviceOrder do
+            local budget = R.Devices[dev]
+            local base = R.resolve("mutation", e, {device = dev})
+            local full = R.resolve("mutation", e, {device = dev, real = Assets.isReal})
+            local lite = R.resolve("mutation", e, {device = dev, detail = "lite", real = Assets.isReal})
+            local litePlain = R.resolve("mutation", e, {device = dev, detail = "lite"})
+            local motif = layerById(full, "motif")
+            assert(motif.tex == map.motif and Assets.isSheet(motif.tex), id .. " " .. dev .. " motif uses " .. map.motif .. " as a flipbook sheet")
+            assert((motif.coloured == true) == (map.motif == "motifAurora"), id .. " coloured only for Aurora")
+            if motif.coloured then assert(#motif.color == 1 and motif.color[1][1] == 255 and motif.color[1][2] == 255 and motif.color[1][3] == 255, "coloured art is not tinted") end
+            local mist = layerById(full, "mist")
+            assert(mist.tex == (map.smoke or "smokeSheet"), id .. " mist texture")
+            if map.smoke then assert(Assets.isSheet(mist.tex)) end
+            local ripple = layerById(full, "ripple")
+            assert((ripple ~= nil) == (map.ring ~= nil), id .. " only a real ring texture adds the ground ripple")
+            if ripple then
+                assert(ripple.tex == "ringSeismic" and ripple.shape == "Disc" and ripple.alpha <= TIME.maxSparkAlpha and ripple.life <= TIME.maxLife, "seismic ground ring is a soft Disc ripple")
+                assert(full.cost.emitters == base.cost.emitters + 1, "the ripple is exactly one extra emitter")
+            else assert(same(full.cost, base.cost), id .. " cost is unchanged when no ring is mapped") end
+            -- same rates and sizes otherwise (only textures and the optional ripple differ)
+            assert(#full.layers == #base.layers + (if ripple then 1 else 0), id .. " layer count")
+            for i, l in base.layers do
+                local f = full.layers[i]
+                assert(f.id == l.id and f.rate == l.rate and f.size == l.size and f.life == l.life and f.alpha == l.alpha, id .. "." .. l.id .. " rates and sizes are unchanged")
+            end
+            -- Lite: the caps hold, nothing gets bigger than today's lite look, no extra ground ripple
+            assert(#lite.layers <= R.MutationLiteLayers and not layerById(lite, "ripple") and layerById(lite, "ring") and layerById(lite, "glow"), id .. " lite keeps glow + ring + motif only")
+            assert(same(lite.cost, litePlain.cost), id .. " " .. dev .. " lite cost equals today's lite cost")
+            assert(lite.cost.alive <= full.cost.alive + 1e-6 and lite.cost.emitters <= full.cost.emitters, "lite never costs more than full")
+            assert(layerById(lite, "motif").tex == map.motif, id .. " lite motif also uses the art")
+            for _, res in {full, lite} do
+                for k, v in res.cost do if budget[k] then assert(v <= budget[k] + 1e-6, id .. " " .. dev .. " " .. k .. " " .. v .. " > budget " .. budget[k]) end end
+                calm(res, "art." .. id .. "." .. dev)
+            end
+            -- Reduce Motion: no particles, no textures read at all
+            local still = R.resolve("mutation", e, {device = dev, reduce = true, real = Assets.isReal})
+            assert(still.cost.emitters == 0 and still.cost.burst == 0 and not layerById(still, "ripple") and same(still.layers, R.resolve("mutation", e, {device = dev, reduce = true}).layers), id .. " Reduce Motion unchanged")
+        end
+    end
+    -- (d) the stacked worst case (mutation full + aura lite + trail lite) still fits the device with ALL art uploaded; the phone is the tight one
+    local aura, trail = Config.Auras[#Config.Auras], Config.Trails[#Config.Trails]
+    for _, dev in R.DeviceOrder do
+        local cap = R.Devices[dev].alive
+        local auraLite, trailLite = R.resolve("aura", aura, {device = dev, detail = "lite"}), R.resolve("trail", trail, {device = dev, detail = "lite"})
+        for _, id in Look.Order do
+            local e = Look.get(id)
+            local full = R.resolve("mutation", e, {device = dev, real = Assets.isReal})
+            local lite = R.resolve("mutation", e, {device = dev, detail = "lite", real = Assets.isReal})
+            local stack = full.cost.alive + auraLite.cost.alive + trailLite.cost.alive
+            assert(stack <= cap + 1e-6, id .. " " .. dev .. " stacked alive with art " .. stack .. " > " .. cap)
+            assert(lite.cost.alive + auraLite.cost.alive + trailLite.cost.alive <= cap + 1e-6, id .. " " .. dev .. " lite stack with art")
+            if dev == "phone" and id == "seismic" then print(string.format("seismic phone with all art: mutation %.1f alive, stack %.1f/%d, emitters %d/%d", full.cost.alive, stack, cap, full.cost.emitters, R.Devices.phone.emitters)) end
+        end
+    end
+    for _, key in MAPPED do Assets.Requested[key].id = saved[key] end
+    assert(not Assets.isReal("motifAurora") and R.resolve("mutation", Look.get("aurora"), {device = "desktop", real = Assets.isReal}).layers[3].tex == "sparkSheet", "slots restored")
+end
 print(string.format("FxRecipes passed: %d resolutions (auras %d, trails %d, mutations %d) x 3 devices, tiers monotonic, phone rate x0.5, Reduce Motion light/ribbon only",
     count, #Config.Auras, #Config.Trails, #Look.Order))
 '''
@@ -224,6 +345,10 @@ def scan():
         assert 'rbxassetid://' + i in registry, i + ' must be in the asset registry'
     # Bootstrap is at Luau's 200 local-register limit: it must not gain top-level locals for this feature.
     assert 'FxRig' not in (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8')
+    # BD-186..189: the world rig hands the recipe the slot check, and the recipe owns the one mutation -> texture table
+    rig = (ROOT / 'src/client/FxRig.luau').read_text(encoding='utf-8')
+    assert rig.count(', real = Assets.isReal})') == 2, 'FxRig.cost and FxRig.attach must both pass real = Assets.isReal'
+    assert 'R.MutationTex = {' in (ROOT / 'src/shared/FxRecipes.luau').read_text(encoding='utf-8')
     print('Source scan passed: world dino and shop previews use the FX framework, no invented asset ids')
 
 

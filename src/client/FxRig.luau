@@ -98,7 +98,7 @@ end
 -- Cost of a look as the global budget sees it (FxRecipes cost plus shells), without building anything.
 function Rig.cost(kind: string, item, opts)
     opts = opts or {}
-    local resolved = Recipes.resolve(kind, item, {device = opts.device or Rig.device(), reduce = opts.reduce, detail = opts.detail})
+    local resolved = Recipes.resolve(kind, item, {device = opts.device or Rig.device(), reduce = opts.reduce, detail = opts.detail, real = Assets.isReal})
     local out = {}
     for k, v in resolved.cost do out[k] = v end
     out.shells = if wantsShell(kind, resolved, opts) then 1 else 0
@@ -111,7 +111,8 @@ local FEET = -1.7 -- anchor height below the root part (studs at scale 1)
 function Rig.attach(root: BasePart, kind: string, item, opts)
     opts = opts or {}
     local device = opts.device or Rig.device()
-    local resolved = Recipes.resolve(kind, item, {device = device, reduce = opts.reduce, detail = opts.detail})
+    -- real = Assets.isReal: a mutation uses its Blender textures (FxRecipes.MutationTex) only for slots that hold a valid upload.
+    local resolved = Recipes.resolve(kind, item, {device = device, reduce = opts.reduce, detail = opts.detail, real = Assets.isReal})
     local self = setmetatable({root = root, resolved = resolved, scale = 1, lastScale = -1, age = 0, wasMoving = false, lastPop = -10,
         objects = {}, emitters = {}, moving = {}, orbits = {}, trails = {}, beams = {}, lights = {}, bursts = {}, pillars = {}, alive = true}, Rig)
 

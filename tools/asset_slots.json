@@ -77,7 +77,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "glowPlateDroplet",
    "group": "Requested.glowPlateDroplet",
-   "pending": "BD-186 mutation glow variants"
+   "reader": [
+    "src/shared/FxRecipes.luau",
+    "glowPlateDroplet"
+   ]
   },
   {
    "name": "glowPlateCrescent",
@@ -86,7 +89,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "glowPlateCrescent",
    "group": "Requested.glowPlateCrescent",
-   "pending": "BD-186 mutation glow variants"
+   "reader": [
+    "src/shared/FxRecipes.luau",
+    "glowPlateCrescent"
+   ]
   },
   {
    "name": "glowPlateRound",
@@ -95,7 +101,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "glowPlateRound",
    "group": "Requested.glowPlateRound",
-   "pending": "BD-186 mutation glow variants"
+   "reader": [
+    "src/shared/FxRecipes.luau",
+    "glowPlateRound"
+   ]
   },
   {
    "name": "ringSeismic",
@@ -104,7 +113,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "ringSeismic",
    "group": "Requested.ringSeismic",
-   "pending": "BD-188 seismic ring"
+   "reader": [
+    "src/shared/FxRecipes.luau",
+    "ringSeismic"
+   ]
   },
   {
    "name": "smokeSoft",
@@ -122,7 +134,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "smokeDense",
    "group": "Requested.smokeDense",
-   "pending": "BD-187 smoke variants"
+   "reader": [
+    "src/shared/FxRecipes.luau",
+    "smokeDense"
+   ]
   },
   {
    "name": "smokeWispy",
@@ -131,7 +146,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "smokeWispy",
    "group": "Requested.smokeWispy",
-   "pending": "BD-187 smoke variants"
+   "reader": [
+    "src/shared/FxRecipes.luau",
+    "smokeWispy"
+   ]
   },
   {
    "name": "motifDroplets",
@@ -140,7 +158,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "motifDroplets",
    "group": "Requested.motifDroplets",
-   "pending": "BD-189 / BD-162 motif sheets"
+   "reader": [
+    "src/shared/FxRecipes.luau",
+    "motifDroplets"
+   ]
   },
   {
    "name": "motifSoftSparks",
@@ -149,7 +170,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "motifSoftSparks",
    "group": "Requested.motifSoftSparks",
-   "pending": "BD-189 / BD-162 motif sheets"
+   "reader": [
+    "src/shared/FxRecipes.luau",
+    "motifSoftSparks"
+   ]
   },
   {
    "name": "motifSnowCrystals",
@@ -158,7 +182,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "motifSnowCrystals",
    "group": "Requested.motifSnowCrystals",
-   "pending": "BD-189 / BD-162 motif sheets"
+   "reader": [
+    "src/shared/FxRecipes.luau",
+    "motifSnowCrystals"
+   ]
   },
   {
    "name": "motifPebbles",
@@ -167,7 +194,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "motifPebbles",
    "group": "Requested.motifPebbles",
-   "pending": "BD-189 / BD-162 motif sheets"
+   "reader": [
+    "src/shared/FxRecipes.luau",
+    "motifPebbles"
+   ]
   },
   {
    "name": "motifEmbers",
@@ -176,7 +206,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "motifEmbers",
    "group": "Requested.motifEmbers",
-   "pending": "BD-189 / BD-162 motif sheets"
+   "reader": [
+    "src/shared/FxRecipes.luau",
+    "motifEmbers"
+   ]
   },
   {
    "name": "motifAurora",
@@ -185,7 +218,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "motifAurora",
    "group": "Requested.motifAurora",
-   "pending": "BD-189 / BD-162 motif sheets"
+   "reader": [
+    "src/shared/FxRecipes.luau",
+    "motifAurora"
+   ]
   },
   {
    "name": "motifCrimson",
@@ -194,7 +230,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "motifCrimson",
    "group": "Requested.motifCrimson",
-   "pending": "BD-189 / BD-162 motif sheets"
+   "reader": [
+    "src/shared/FxRecipes.luau",
+    "motifCrimson"
+   ]
   },
   {
    "name": "confetti",

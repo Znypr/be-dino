@@ -173,6 +173,31 @@ R.Motifs = {
     bloodmoon = {tex = "glowPlate", rise = 0.3, speed = 0.3, size = 1.3, rate = 0.7},    -- slow round crimson motes
 }
 
+-- BD-186..189 / docs/92: which Blender texture each mutation uses, per slot. Semantic EffectAssets keys only. A key is used ONLY while
+-- its slot holds a valid upload (the caller passes `real`); otherwise the layer keeps exactly today's key and look.
+--   glow  = the soft plate behind the hatch dino (hatch reveal only: the world glow is a PointLight, it has no texture)
+--   ring  = the ground ring (world: a Disc ripple emitter; hatch: the thin expanding ring)
+--   smoke = the mist puffs (world mist layer; hatch puffs)
+--   motif = the floating details (world motif emitter; hatch motif sprites)
+R.MutationTex = {
+    dewdrop   = {glow = "glowPlateDroplet",                                         motif = "motifDroplets"},
+    charged   = {glow = "glowPlateRound",                                           motif = "motifSoftSparks"},
+    frost     = {glow = "glowPlateRound",                      smoke = "smokeWispy", motif = "motifSnowCrystals"},
+    seismic   = {glow = "glowPlateRound", ring = "ringSeismic", smoke = "smokeDense", motif = "motifPebbles"},
+    ember     = {glow = "glowPlateRound",                      smoke = "smokeDense", motif = "motifEmbers"},
+    aurora    = {glow = "glowPlateRound",                                           motif = "motifAurora"},
+    bloodmoon = {glow = "glowPlateCrescent",                                        motif = "motifCrimson"},
+}
+-- Coloured textures are drawn white (no tint); every other mutation texture is white or neutral and is tinted from MutationLook.
+R.MutationTexColoured = {motifAurora = true}
+-- Pure: the mapped key for (mutation, slot) when `real(key)` says its slot holds a valid upload; nil keeps today's look.
+function R.mutationTex(id: string, slot: string, real: ((string) -> boolean)?): string?
+    local entry = R.MutationTex[id]
+    local key = if entry then entry[slot] else nil
+    if key and real and real(key) then return key end
+    return nil
+end
+
 -- ---------------------------------------------------------------- cost and resolve
 local function newCost() return {emitters = 0, beams = 0, trails = 0, parts = 0, lights = 0, alive = 0, burst = 0, sprites = 0} end
 function R.layerCost(layer)
@@ -207,7 +232,9 @@ end
 local function copy(t) local o = {} for k, v in t do o[k] = v end return o end
 
 -- item: the ProgressionConfig row (aura/trail: id, rarity, color, accent, width, lifetime, particles) or a MutationLook entry
--- (mutation: id, spark, rim, mist). kind: "aura" | "trail" | "mutation". opts: {device="desktop", reduce=bool, detail="full"|"lite"}.
+-- (mutation: id, spark, rim, mist). kind: "aura" | "trail" | "mutation". opts: {device="desktop", reduce=bool, detail="full"|"lite",
+-- real=function(key)->bool}. `real` (mutations only) says which texture keys hold a valid upload; without it, or while a slot is
+-- empty, the mutation keeps exactly today's layers (R.MutationTex).
 function R.resolve(kind: string, item, opts)
     opts = opts or {}
     local device = R.Devices[opts.device or "desktop"] or R.Devices.desktop
@@ -271,8 +298,13 @@ function R.resolve(kind: string, item, opts)
     local rateF = (1 + 0.1 * (tier - 1)) * (if lite then 0.6 else 1) * device.rateScale
     local sizeF = 1 + 0.05 * (tier - 1)
     local motif = if kind == "mutation" then R.Motifs[item.id] else nil
+    local real = if kind == "mutation" then opts.real else nil
     for _, tpl in templates do
-        if #out.layers + skipped >= limit then break end
+        if kind == "mutation" and tpl.id == "ripple" then
+            -- Only a real ring texture (Seismic: ringSeismic) earns the ground ripple, as one EXTRA full-look layer. The lite look stops
+            -- at its layer limit before it gets here, so lite and Reduce Motion are exactly as before. The device budget still applies.
+            if not R.mutationTex(item.id, "ring", real) then continue end
+        elseif #out.layers + skipped >= limit then break end
         if tpl.minTier and tier < tpl.minTier then continue end
         if phoneLite and kind == "aura" and (tpl.kind == "glow" or tpl.kind == "ring" or tpl.kind == "spiral") then skipped += 1 continue end
         local layer = copy(tpl)
@@ -289,6 +321,8 @@ function R.resolve(kind: string, item, opts)
             layer.size *= motif.size layer.rate *= motif.rate
             if motif.hues then layer.grad = {"primary", "hueA", "hueB"} end
         end
+        local mapped = if kind == "mutation" then R.mutationTex(item.id, if layer.id == "motif" then "motif" elseif layer.id == "mist" then "smoke" elseif layer.id == "ripple" then "ring" else "", real) else nil
+        if mapped then layer.tex = mapped end
         if tier >= 5 and layer.kind == "emitter" and layer.id ~= "mist" and #layer.grad >= 2 then
             layer.grad = {"light", "primary", "accent", "deep"} -- full-spectrum cycle for the top tiers
         end
@@ -298,6 +332,9 @@ function R.resolve(kind: string, item, opts)
             local usable = false
             for j = 1, colorCount do if R.PaletteNames[j] == name then usable = true end end
             layer.color[i] = if usable then base else named.primary
+        end
+        if mapped and R.MutationTexColoured[mapped] then
+            layer.grad, layer.color, layer.coloured = {"primary"}, {{255, 255, 255}}, true -- coloured art: no tint
         end
         local candidate = copy(out.layers)
         table.insert(candidate, layer)
