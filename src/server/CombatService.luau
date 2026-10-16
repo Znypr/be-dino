@@ -7,29 +7,19 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Cfg = require(ReplicatedStorage.Shared.CombatConfig)
 local Rules = require(ReplicatedStorage.Shared.CombatRules)
-local SettingsModel = require(ReplicatedStorage.Shared.SettingsModel)
 local TeamUp = require(ReplicatedStorage.Shared.CombatTeamUp)
 local NpcRules = require(ReplicatedStorage.Shared.NpcPredatorRules)
 
 local CombatService = {}
-local PrivateState = require(script.Parent.PrivateState)
 local CooldownMemory = require(script.Parent.CooldownMemory)
 local biteMemory = CooldownMemory.new(120) -- BD-363: bite cooldown keyed by UserId, a rejoin does not reset it
 
 local function numberAttribute(instance: Instance, name: string, fallback: number): number
     local value = instance:GetAttribute(name)
     return if typeof(value) == "number" then value else fallback
-end
-
-local function peacefulFor(player: Player): boolean
-    local raw = PrivateState.get(player, "SettingsJson")
-    if typeof(raw) ~= "string" or raw == "" then return false end
-    local ok, decoded = pcall(function() return HttpService:JSONDecode(raw) end)
-    return ok and SettingsModel.fromStore(decoded).peaceful
 end
 
 -- BD-311: planar half-size of a model's bounding box (the server measures it; the client never sends a size).
@@ -77,7 +67,6 @@ function CombatService.start(runLifecycle, dinosaur): any?
             userId = player.UserId, runId = runId,
             class = Rules.classForSpecies(player:GetAttribute("EquippedSpeciesId")),
             score = numberAttribute(character, "GrowthScore", 0), now = now,
-            peaceful = if typeof(character:GetAttribute("PeacefulRun")) == "boolean" then character:GetAttribute("PeacefulRun") == true else peacefulFor(player), -- BD-421: the run-start snapshot wins
             protectedUntil = numberAttribute(character, "SpawnProtectionEndsAt", 0),
         })
         if not d then return end
@@ -90,7 +79,6 @@ function CombatService.start(runLifecycle, dinosaur): any?
             character:SetAttribute("SpawnProtectionEndsAt", d.protectedUntil)
         end
         character:SetAttribute("CombatClass", d.class)
-        character:SetAttribute("CombatPeaceful", d.peaceful)
         character:SetAttribute("HpByte", Cfg.HpByteMax)
         d.hpSentByte, d.hpSentAt = Cfg.HpByteMax, now
         local list = {}
@@ -128,7 +116,7 @@ function CombatService.start(runLifecycle, dinosaur): any?
             for _, assister in TeamUp.assisters(victim.ledger, victim.state.maxHp, now) do
                 local d = world.dinos[assister.id]
                 local c = characterOf[assister.id]
-                if d and c and not api.npcs[assister.id] and c:GetAttribute("RunState") == "Active" and not d.peaceful then
+                if d and c and not api.npcs[assister.id] and c:GetAttribute("RunState") == "Active" then
                     growthOf[assister.id], userOf[assister.id] = numberAttribute(c, "GrowthScore", 0), d.userId
                     table.insert(assisters, assister)
                 end

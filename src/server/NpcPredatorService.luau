@@ -3,7 +3,7 @@
 -- tools/verify_npc_predators.py); this file only builds models, feeds real positions in, drives Humanoids and writes attributes.
 -- With Config.CombatEnabled (or Config.NpcPredatorsEnabled) false, start() returns before creating anything: no folder, no
 -- models, no loop, no connection. NPC bites are CombatRules.attack calls in the SAME world as players, so HP, class, damage,
--- cooldown, spawn protection, Peaceful and the exactly-once defeat/settlement path are the ones CombatService already enforces.
+-- cooldown, spawn protection and the exactly-once defeat/settlement path are the ones CombatService already enforces.
 -- This file never touches eggs, catches, growth or run settlement.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -180,7 +180,7 @@ function NpcPredatorService.start(combat: any?)
                         key = key, character = character, x = root.Position.X, y = root.Position.Y, z = root.Position.Z, radius = math.clamp(math.max(size.X, size.Z) / 2, 0, 14),
                         alive = dino.state.phase == "Alive" and humanoid.Health > 0,
                         active = character:GetAttribute("RunState") == "Active",
-                        peaceful = dino.peaceful, protectedUntil = dino.protectedUntil,
+                        protectedUntil = dino.protectedUntil,
                     })
                 end
             end

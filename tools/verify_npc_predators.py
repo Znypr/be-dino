@@ -1,7 +1,7 @@
 """BD-245 NPC predators (src/shared/NpcPredatorRules.luau, the pure core of src/server/NpcPredatorService.luau).
 
 Runs the module with the pinned Luau runtime: flag-off identity, state transitions (patrol/alert/chase/windup/bite/retreat),
-aggro range, give-up, leash, dodge, soft cooldown + grace + bite cap, never-targeting rules (peaceful, protected, dead,
+aggro range, give-up, leash, dodge, soft cooldown + grace + bite cap, never-targeting rules (protected, dead,
 inactive, safe meadow, recently bitten), hard NPC cap and player-scaled count, spawn points from BiomePlacement/BiomeMap
 rules (away from players, off water, allowed biomes, spread), respawn timers, defeat exactly once, capped assist bonus,
 never-one-shot across all classes, determinism with a seeded RNG, sleeping NPCs, a 12-player fuzz. Static checks prove the
@@ -180,10 +180,10 @@ do
   assert(sawWindup and missed and pd.state.hp==pd.state.maxHp and w.grace[pd.key]==nil,"dodge: no damage, no grace")
 end
 
--- 7. D: never-targeting rules (peaceful, protected, dead, inactive, safe meadow, grace) + combat-level backstop
+-- 7. D: never-targeting rules (protected, dead, inactive, safe meadow, grace) + combat-level backstop
 do
   local cases={
-    {"peaceful",{peaceful=true}},{"protected",{protectedUntil=1e9}},{"dead",{alive=false}},{"inactive",{active=false}},
+    {"protected",{protectedUntil=1e9}},{"dead",{alive=false}},{"inactive",{active=false}},
   }
   for _,case in cases do
     local w,cw,n=setup(4)
@@ -204,12 +204,8 @@ do
   assert(Npc.valid(w,{key="k",x=200,z=200},0)==false,"missing flags are not eligible")
   -- grace: a just-bitten player is skipped by every NPC
   w.grace["g"]=50; assert(Npc.canBite(w,P("g",200,200),10)==false and Npc.canBite(w,P("g",200,200),50)==true)
-  -- the performBite candidate filter drops ineligible players even if passed in; combat world re-checks peaceful too
+  -- the performBite candidate filter drops ineligible players even if passed in
   local w2,cw2,n2=setup(5)
-  local pd=R.join(cw2,{userId=1,runId="r",class="Ground",score=0,now=0,peaceful=true})
-  local pl=P(pd.key,OX+2,OZ,{peaceful=false}) -- stale snapshot says not peaceful; combat world says peaceful
-  n2.faceX,n2.faceZ=1,0
-  local res=Npc.performBite(w2,cw2,{slot=1,npcKey=n2.key},10,{pl}); assert(res.ok==false and res.reason=="no_target","combat world protects peaceful too")
   local pd2=R.join(cw2,{userId=2,runId="r",class="Ground",score=0,now=0,protectedUntil=999})
   local pl2=P(pd2.key,OX+2,OZ+0.1,{protectedUntil=0})
   local res2=Npc.performBite(w2,cw2,{slot=1,npcKey=n2.key},11,{pl2}); assert(res2.ok==false,"combat world protects spawn-protected players too")
@@ -334,7 +330,7 @@ for seed=1,3 do
   local people={}
   for i=1,12 do
     local x,z=(rnd()-0.5)*700,(rnd()-0.5)*700
-    local d=R.join(cw,{userId=i,runId="r",class=({"Ground","Fly","Water","Armored"})[i%4+1],score=rnd()*3000,now=0,peaceful=(i%6==0)})
+    local d=R.join(cw,{userId=i,runId="r",class=({"Ground","Fly","Water","Armored"})[i%4+1],score=rnd()*3000,now=0})
     people[i]={d=d,x=x,z=z,wx=(rnd()-0.5)*700,wz=(rnd()-0.5)*700,speed=(i%3==0) and 0 or 22,prot=(i%5==0) and 60 or 0}
   end
   local joined={}
@@ -346,7 +342,7 @@ for seed=1,3 do
         local dx,dz=p.wx-p.x,p.wz-p.z; local m=math.sqrt(dx*dx+dz*dz)
         if m<5 then p.wx,p.wz=(rnd()-0.5)*700,(rnd()-0.5)*700 else p.x+=dx/m*p.speed*DT; p.z+=dz/m*p.speed*DT end
       end
-      table.insert(players,P(p.d.key,p.x,p.z,{alive=p.d.state.phase=="Alive",active=p.d.state.phase=="Alive",peaceful=p.d.peaceful,protectedUntil=p.prot}))
+      table.insert(players,P(p.d.key,p.x,p.z,{alive=p.d.state.phase=="Alive",active=p.d.state.phase=="Alive",protectedUntil=p.prot}))
     end
     if step%40==0 then -- curious players wander over to an NPC (and sometimes get chased)
       local pick=people[1+math.floor(rnd()*12)]
@@ -362,13 +358,13 @@ for seed=1,3 do
       if res.ok then
         hitsTotal+=1
         local victim; for _,p in players do if p.key==res.targetKey then victim=p end end
-        assert(victim and victim.alive and victim.active and not victim.peaceful and t>=victim.protectedUntil and not Npc.inSafeZone(victim.x,victim.z),"NPC bit an ineligible player")
+        assert(victim and victim.alive and victim.active and t>=victim.protectedUntil and not Npc.inSafeZone(victim.x,victim.z),"NPC bit an ineligible player")
         assert(res.damage/ cw.dinos[res.targetKey].state.maxHp<=0.25,"never one-shot")
       end
     end
     -- some players fight back at NPCs in reach
     for i,p in people do
-      if p.d.state.phase=="Alive" and not p.d.peaceful and step%3==i%3 then
+      if p.d.state.phase=="Alive" and step%3==i%3 then
         for _,n in w.slots do
           if joined[n.key] and math.sqrt((n.x-p.x)^2+(n.z-p.z)^2)<4 then
             R.attack(cw,p.d.key,t,{X=p.x,Y=0,Z=p.z},{X=n.x-p.x,Y=0,Z=n.z-p.z},{{key=n.key,pos={X=n.x,Y=0,Z=n.z}}}); break
@@ -500,7 +496,7 @@ def static_checks():
         errors.append('the Run Complete modal must start with the gentle defeat copy (BD-315)')
     if 'Oops! Good try!' in re.sub(r'--[^\n]*', '', hud):
         errors.append('CombatHud must not show the defeat toast any more: it was covered by the Run Complete modal (BD-315)')
-    for needle in ('CHOMP', 'PeacefulBadge', 'KeyHint', 'AlertBubble', 'NpcMotion'):
+    for needle in ('CHOMP', 'KeyHint', 'AlertBubble', 'NpcMotion'):
         if needle not in hud:
             errors.append('CombatHud is missing ' + needle + ' (BD-314/BD-312)')
     if 'BITE [F]' in hud:
