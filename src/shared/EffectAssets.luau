@@ -49,10 +49,13 @@ Assets.Requested = {
     motifCrimson = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); read by FxRecipes.MutationTex (docs/92); empty = today's look
     confetti = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
     lavaCrust = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
-    flameTongue = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
-    starPop = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
-    domeGradient = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
-    speedStreaks = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
+    -- BD-430 / BD-431 anime FX (Blender renders in resources/effects/fx-v2, docs/77 fx_*, docs/123 s3): white on alpha, tinted at runtime.
+    flameTongue = {id = "", fallback = "fire"}, -- owner upload slot (docs/120): soft flame-tongue flipbook 4x4 of 128 px (calm aura base); NOT read yet (BD-432 aura flame swap)
+    starPop = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): four-point twinkle pop flipbook 4x4 of 128 px, OneShot; read by RareHatchClient (the rare banner pops); empty = no pop
+    domeGradient = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): UV gradient of the shock dome mesh (slot shock_dome_mesh), 512 px; NOT read yet (BD-433 equip pop / landing)
+    speedStreaks = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): four soft speed streaks, 512x512 sheet; NOT read yet (BD-432 Epic+ trails)
+    shaftGradient = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): vertical light-shaft gradient 256x512 (also the UV texture of shaft_cone_mesh); read by HatchFx (Epic+ hatch light shaft); empty = no shaft
+    shellEdge = {id = "", fallback = "spark"}, -- owner upload slot (docs/120): soft UV band of the aura / mutation shell (slot aura_shell_mesh), 512 px; read by FxRig; empty = untextured shell
     rainbowStrip = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
     rimRingUi = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
     paintCrown = {id = "", fallback = "spark"}, -- owner upload slot (docs/120); empty = built-in sprite
@@ -113,6 +116,10 @@ Assets.LoopFps = 10
 -- Inert until an id is bound: cellRect / isSheet return nil / false while the key resolves to a built-in sprite.
 for _, key in {"snowFlakeSheet", "ashFlake", "emberSpark", "dustSand", "bloodMoonMotes"} do
     Assets.Sheets[key], Assets.FlipbookMode[key] = {size = 512, grid = 4}, "Random"
+end
+-- BD-430 anime FX flipbooks: 512 px sheets of 16 cells of 128 px, both grow / rest / shrink once per particle life (OneShot).
+for _, key in {"flameTongue", "starPop"} do
+    Assets.Sheets[key], Assets.FlipbookMode[key] = {size = 512, grid = 4}, "OneShot"
 end
 Assets.Sheets.auroraCurtain, Assets.FlipbookMode.auroraCurtain = {size = 512, grid = 4}, "Loop"
 -- Studio check 2026-10-16 (AssetService EditableImage): the five fx3 uploads are OPAQUE on black (no alpha), unlike the

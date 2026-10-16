@@ -54,6 +54,8 @@ Most flat textures are already tracked as BD-186..190 (glow plates, smoke, rings
 | P2 | **Rainbow-shift gradient strip** (grey ramp so runtime hue works) | Legendary / Mythic trails, banners (T4 / T8) | 1024x64 |
 | P2 | **Soft vignette rim ring (UI)** | hatch and banner glow (T8) | 1024 ring |
 
+**Status 2026-10-17 (BD-430, BD-431):** the P0 and P1 assets are rendered (Review / test, not uploaded): `flameTongue`, `starPop` (512 px, 4x4 of 128, not the 1024 / 256 sizes planned above), `domeGradient` (512), `shaftGradient` (256x512), `shellEdge` (512), `speedStreaks` (512), and the three meshes `shock-dome` (112 tris), `shaft-cone` (80), `aura-shell` (144) in `assets/blender/fx/`; see docs/77 `fx_*` and `fx_mesh_*` lines and the contact sheet in `docs/evidence/2026-10-17-vfx/`. Readers wired behind empty slots (empty id = today's exact look): hatch light shaft (2D gradient, `HatchFx`), star pop on the own rare banner (`RareHatchClient`), aura and mutation shell (`FxRig`). Not read yet: `flameTongue` (BD-432), `domeGradient` + `shock_dome_mesh` (BD-433 equip pop), `speedStreaks` (BD-432), `shaft_cone_mesh` (BD-434 cave shafts). The hatch panel is 2D, so the hatch shaft uses the gradient texture, not the cone mesh; the banner sweep is not built.
+
 ## 4. Phased plan
 
 | Phase | Goal | Content | Exit evidence |

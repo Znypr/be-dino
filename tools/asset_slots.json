@@ -260,7 +260,7 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "flameTongue",
    "group": "Requested.flameTongue",
-   "pending": "BD-430 anime FX code"
+   "pending": "BD-432 aura flame swap (BD-430 flipbook rendered, not read yet)"
   },
   {
    "name": "starPop",
@@ -269,7 +269,10 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "starPop",
    "group": "Requested.starPop",
-   "pending": "BD-430 anime FX code"
+   "reader": [
+    "src/client/RareHatchClient.client.luau",
+    "starPop"
+   ]
   },
   {
    "name": "domeGradient",
@@ -278,7 +281,7 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "domeGradient",
    "group": "Requested.domeGradient",
-   "pending": "BD-433 anime FX code"
+   "pending": "BD-433 shock dome code (BD-430 texture rendered, not read yet)"
   },
   {
    "name": "speedStreaks",
@@ -287,7 +290,31 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "speedStreaks",
    "group": "Requested.speedStreaks",
-   "pending": "BD-432 anime FX code"
+   "pending": "BD-432 Epic+ trail streaks (BD-431 sheet rendered, not read yet)"
+  },
+  {
+   "name": "shaftGradient",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "shaftGradient",
+   "group": "Requested.shaftGradient",
+   "reader": [
+    "src/client/HatchFx.luau",
+    "shaftGradient"
+   ]
+  },
+  {
+   "name": "shellEdge",
+   "kind": "image",
+   "target": "effect",
+   "file": "src/shared/EffectAssets.luau",
+   "key": "shellEdge",
+   "group": "Requested.shellEdge",
+   "reader": [
+    "src/client/FxRig.luau",
+    "shellEdge"
+   ]
   },
   {
    "name": "rainbowStrip",
@@ -1101,7 +1128,7 @@
    "key": "shock_dome_mesh",
    "group": "Meshes.shock_dome_mesh",
    "table": "Meshes",
-   "pending": "BD-433 mesh"
+   "pending": "BD-433 shock dome code (assets/blender/fx/shock-dome.fbx baked, not uploaded)"
   },
   {
    "name": "shaft_cone_mesh",
@@ -1111,7 +1138,7 @@
    "key": "shaft_cone_mesh",
    "group": "Meshes.shaft_cone_mesh",
    "table": "Meshes",
-   "pending": "BD-432 mesh"
+   "pending": "BD-434 cave light shafts / BD-433 (assets/blender/fx/shaft-cone.fbx baked, not uploaded)"
   },
   {
    "name": "aura_shell_mesh",
@@ -1121,7 +1148,10 @@
    "key": "aura_shell_mesh",
    "group": "Meshes.aura_shell_mesh",
    "table": "Meshes",
-   "pending": "BD-433 mesh"
+   "reader": [
+    "src/client/FxRig.luau",
+    "aura_shell_mesh"
+   ]
   },
   {
    "name": "sfx_rare_hatch_fanfare",

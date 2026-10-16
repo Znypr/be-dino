@@ -89,11 +89,13 @@ end
 local function ribbonTexture(): string
     return if Assets.isReal("ribbonSoft") then Assets.resolve("ribbonSoft") else ""
 end
--- The aura shell is a slightly inflated Blender mesh (slot aura_shell_mesh). It exists only when that slot holds a real upload,
--- on Epic+ auras at the full look, never with Reduce Motion. Empty slot = no shell, no fallback shape.
-local SHELL_MIN_TIER = 4
+-- The shell is a slightly inflated Blender mesh (slot aura_shell_mesh, 144 triangles, about 4 studs across at scale 1). It exists only
+-- when that slot holds a real upload, at the full look, never with Reduce Motion (FxRecipes.wantsShell): Epic+ auras wear it for as
+-- long as the aura lives, an event mutation wears it for its reveal (FxRecipes.ShellSeconds). Empty slot = no shell, no fallback shape.
+-- BD-431: the soft UV band texture (slot shellEdge) is put on the mesh only when that slot holds a real upload too.
+local SHELL_NATIVE = 4 -- the mesh is about 4 studs across (radius 2): Scale = wanted size / 4
 local function wantsShell(kind: string, resolved, opts): boolean
-    return kind == "aura" and not resolved.reduced and opts.detail ~= "lite" and (resolved.tier or 0) >= SHELL_MIN_TIER and Slots.mesh("aura_shell_mesh") ~= nil
+    return Recipes.wantsShell(kind, resolved.tier, resolved.reduced, opts.detail, Slots.mesh("aura_shell_mesh") ~= nil)
 end
 -- Cost of a look as the global budget sees it (FxRecipes cost plus shells), without building anything.
 function Rig.cost(kind: string, item, opts)
@@ -281,16 +283,17 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
         local mesh = Slots.mesh("aura_shell_mesh")
         local shell = Instance.new("Part")
         shell.Name = "FxShell"
-        shell.Size = Vector3.new(4, 4, 4)
+        shell.Size = Vector3.new(SHELL_NATIVE, SHELL_NATIVE, SHELL_NATIVE) -- a FileMesh draws at its own size x Scale: the part only carries it
         shell.Transparency, shell.Anchored, shell.CanCollide, shell.CanTouch, shell.CanQuery, shell.CastShadow = 0.88, true, false, false, false, false
         shell.Material, shell.Color = Enum.Material.Neon, c3(resolved.layers[1].color[#resolved.layers[1].color])
         local special = Instance.new("SpecialMesh")
         special.MeshType, special.MeshId, special.Scale = Enum.MeshType.FileMesh, mesh, Vector3.new(1, 1, 1)
+        if Assets.isReal("shellEdge") then special.TextureId = Assets.resolve("shellEdge") end
         special.Parent = shell
         local folder = workspace:FindFirstChild("LocalDinoFX")
         if not folder then folder = Instance.new("Folder") folder.Name = "LocalDinoFX" folder.Parent = workspace end
         shell.Parent = folder
-        self.shell = shell
+        self.shell, self.shellMesh, self.shellKind = shell, special, kind
     end
     self._anchorPart = anchor
     self.fade = 0
@@ -320,11 +323,17 @@ function Rig:update(scale: number, time: number, moving: boolean)
         if rebuild then anchor.Size = Vector3.new(2.6 * scale, 0.2, 2.6 * scale) end
     end
     local pulse = if reduced then 0.5 else Recipes.pulse(time)
-    if self.shell then -- slow breathing, always soft and see-through (calm rule)
-        self.shell.CFrame = root.CFrame
-        local size = (4.2 + 0.25 * pulse) * scale
-        self.shell.Size = Vector3.new(size, size, size)
-        self.shell.Transparency = 1 - 0.14 * fade
+    if self.shell then -- slow breathing, always soft and see-through (calm rule); a mutation shell fades away after its reveal
+        local shellFade = Recipes.shellFade(self.shellKind, self.age)
+        if shellFade <= 0 and self.age > 1 then
+            self.shell:Destroy()
+            self.shell, self.shellMesh = nil, nil
+        else
+            self.shell.CFrame = root.CFrame
+            local size = (4.2 + 0.25 * pulse) * scale
+            self.shellMesh.Scale = Vector3.new(size / SHELL_NATIVE, size / SHELL_NATIVE, size / SHELL_NATIVE)
+            self.shell.Transparency = 1 - 0.14 * math.min(fade, shellFade)
+        end
     end
     for _, entry in self.lights do
         entry.light.Brightness = entry.layer.brightness * (0.75 + 0.25 * pulse) * fade

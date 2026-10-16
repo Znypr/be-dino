@@ -52,12 +52,19 @@ end
 
 -- Client plan: how big the celebration is for the Effects setting (full / lite / off) and Reduce Motion (calm).
 -- Off and Calm keep a banner and the sound but no confetti; Lite draws fewer pieces. Counts are capped for phones.
+-- BD-430 / BD-433: `pop` = how many star pops (the starPop Blender flipbook) flank the own banner: two at Full, one at Lite, none at Off or
+-- Calm. The client draws them ONLY while the starPop slot holds a real upload, so an empty slot keeps exactly the banner and confetti.
 R.Confetti = table.freeze({full = 36, lite = 14, off = 0})
-function R.plan(effects: string, calm: boolean, kind: string): {confetti: number, banner: boolean, sound: string}
+R.Pop = table.freeze({full = 2, lite = 1, off = 0})
+R.PopLife = 0.9 -- seconds one star pop plays (16 frames, played once)
+R.PopSize = 64 -- px
+function R.plan(effects: string, calm: boolean, kind: string): {confetti: number, banner: boolean, sound: string, pop: number}
     local n = R.Confetti[effects]
     if n == nil then n = R.Confetti.full end
-    if calm then n = 0 end
-    return {confetti = n, banner = true, sound = "shiny_bang"}
+    local pop = R.Pop[effects]
+    if pop == nil then pop = R.Pop.full end
+    if calm then n, pop = 0, 0 end
+    return {confetti = n, banner = true, sound = "shiny_bang", pop = pop}
 end
 
 export type State = {
