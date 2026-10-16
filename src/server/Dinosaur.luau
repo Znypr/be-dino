@@ -7,6 +7,8 @@ local PrivateState = require(script.Parent.PrivateState)
 local Visual = require(ReplicatedStorage.Shared.DinosaurVisual)
 local Config = require(ReplicatedStorage.Shared.Config)
 local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
+local HubScale = require(ReplicatedStorage.Shared.HubScaleRules)
+local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 local function groundHeight(character: Model, root: BasePart, humanoid: Humanoid): number
     local height = root.Size.Y / 2 + humanoid.HipHeight
     if humanoid.RigType == Enum.HumanoidRigType.R6 then
@@ -34,8 +36,30 @@ function Dinosaur.render(character: Model, scale: number, speciesId: string?, go
     Visual.render(character, scale, speciesId, gold)
     placeCollider(character, scale)
 end
-local function scaleForScore(score: number): number
-    return math.min(4, math.sqrt(1 + math.max(0, score) / 50))
+-- BD-480 (OWNER 2026-10-16): the one place a character's drawn size is decided. Growth curve x BIG on the island; exactly 1 in
+-- the cave hub (flag Config.CaveHub, root inside the hub footprint), whatever the BIG trait, potions or growth. Every render
+-- path below (equip refresh, growth, attach, run-state change, hub tick) goes through here, so the hub size cannot drift.
+local function desiredScale(character: Model): number
+    local root = character:FindFirstChild("HumanoidRootPart")
+    local inHub = false
+    if root and root:IsA("BasePart") then
+        local p = root.Position
+        inHub = SpawnGeometry.inHub(Config, p.X, p.Z)
+    end
+    return HubScale.scale({
+        caveHub = Config.CaveHub == true, inHub = inHub, score = character:GetAttribute("GrowthScore"),
+        big = character:GetAttribute("BigDinosaur") == true, bigMultiplier = Config.BigScaleMultiplier,
+    })
+end
+
+-- Re-render at the size the character should have right now (cheap no-op when it already has it). Returns true when it rendered.
+function Dinosaur.syncScale(character: Model): boolean
+    if character:GetAttribute("DinoAttached") ~= true then return false end
+    local scale = desiredScale(character)
+    local current = character:GetAttribute("VisualScale")
+    if typeof(current) == "number" and math.abs(current - scale) < 1e-6 then return false end
+    Dinosaur.render(character, scale, nil, character:GetAttribute("MutationVisual") or "base")
+    return true
 end
 if not PhysicsService:IsCollisionGroupRegistered("DinoControllers") then
     PhysicsService:RegisterCollisionGroup("DinoControllers")
@@ -58,8 +82,7 @@ function Dinosaur.refreshForPlayer(character: Model, player: Player)
     -- Genes first so the client repaint triggered by SpeciesId/MutationVisual already sees the new equip.
     character:SetAttribute("GenesJson", player:GetAttribute("EquippedGenesJson") or "null")
     character:SetAttribute("BigDinosaur", player:GetAttribute("EquippedBig") == true)
-    local factor = if character:GetAttribute("BigDinosaur") then Config.BigScaleMultiplier else 1
-    Dinosaur.render(character, scaleForScore(character:GetAttribute("GrowthScore") or 0) * factor, speciesId, mutation)
+    Dinosaur.render(character, desiredScale(character), speciesId, mutation)
 end
 
 function Dinosaur.addGrowth(character: Model, points: number)
@@ -67,7 +90,7 @@ function Dinosaur.addGrowth(character: Model, points: number)
     local current = character:GetAttribute("GrowthScore")
     local score = (if typeof(current) == "number" then current else 0) + points * math.clamp(character:GetAttribute("GrowthMultiplier") or 1,.1,8)
     character:SetAttribute("GrowthScore", score)
-    local scale = scaleForScore(score) * (if character:GetAttribute("BigDinosaur") then Config.BigScaleMultiplier else 1)
+    local scale = desiredScale(character)
     if character:GetAttribute("VisualScale") ~= scale then
         local gold = character:GetAttribute("MutationVisual") or "base"
         Dinosaur.render(character, scale, nil, gold)
@@ -126,6 +149,8 @@ function Dinosaur.attach(character: Model, walkSpeed: number, player: Player)
     weld.Parent = collider
     Dinosaur.refreshForPlayer(character, player)
     character:SetAttribute("DinoAttached", true)
+    -- BD-480: entering the island (RunState Sanctuary -> Active, after the teleport) restores the growth/BIG size at once.
+    character:GetAttributeChangedSignal("RunState"):Connect(function() Dinosaur.syncScale(character) end)
 end
 
 return Dinosaur

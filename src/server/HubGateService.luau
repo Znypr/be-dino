@@ -5,7 +5,8 @@
 --   * gate: a Sanctuary player who stands in the arch zone for 1.5 s starts the run through RunLifecycle.requestStart, the
 --     very function the RequestStartRun remote calls (so there is no second start path, and begin() stays exactly-once);
 --   * collisions: characters at home inside the cave join HubDinos (does not collide with itself); they get their own group
---     back as soon as a run starts or they leave the hub.
+--     back as soon as a run starts or they leave the hub;
+--   * size (BD-480): Dinosaur.syncScale keeps every dinosaur at exactly 1x while it is inside the cave (docs/104 s2.4).
 local Players = game:GetService("Players")
 local PhysicsService = game:GetService("PhysicsService")
 local RunService = game:GetService("RunService")
@@ -14,6 +15,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Rules = require(ReplicatedStorage.Shared.CaveGateRules)
 local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 local RunLifecycle = require(script.Parent.RunLifecycle)
+local Dinosaur = require(script.Parent.Dinosaur)
 local HubGateService = {}
 HubGateService.TickSeconds = 0.1
 local sessions: {[Player]: any} = {}
@@ -68,6 +70,9 @@ function HubGateService.tick(player: Player, now: number)
         session.scanAt, session.group = -math.huge, nil
         sessions[player] = session
     end
+    -- BD-480 (OWNER 2026-10-16): every dinosaur is 1x in the hub. Safety net for any move between hub and island (the equip
+    -- and run-state hooks in Dinosaur.luau cover the normal ones); a no-op when the size is already right.
+    Dinosaur.syncScale(character)
     local group = Rules.groupFor(state)
     -- Re-scan when the wanted group changes, and once a second so parts added later (a new dino model) follow too.
     if group ~= session.group or now - session.scanAt >= 1 then

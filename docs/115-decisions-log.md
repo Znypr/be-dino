@@ -96,6 +96,9 @@ Extracted from the kanban owner log, AGENTS.md, docs and the lead sessions. "LEA
 - OWNER (2026-10-16) Q5 art: Blender is ALLOWED for colossal and redesigned tree art. Separately the owner approved the script-built V3 trees (broadleaf, conifer, palm) as a scoped exception, recorded by the tree test PR (docs/140-tree-quality-test.md). Resolves docs/116 C-26 for trees; D8/D15 (generated meshes only) otherwise unchanged.
 - ~~Still OPEN from docs/139: Q3 (are regular trees outgrown), Q4 (mix), Q6 (giant collision), Q7-Q9 (camera risk, screen share, fog), Q10-Q12.~~ All decided by the LEAD under the owner's delegation, see "LEAD decisions 2026-10-16 (owner delegated)" at the end of this file.
 
+## 2026-10-16 (dino size in the cave hub, BD-480)
+- OWNER (2026-10-16): ALL dinosaurs are exactly 1x scale in the cave hub, whatever their BIG trait, potions or growth. Built as BD-480 behind `Config.CaveHub` (docs/104 s2.4, `HubScaleRules`, `tools/verify_hub_scale.py`). Potion effects and timers are unchanged (they only change growth speed); the island size, including BIG x1.2 and the growth curve, is unchanged and is restored on leaving the hub. The old line in docs/139 s3.1 ("the hub dino is s = 1 because GrowthScore resets") is now a guaranteed rule, not a side effect.
+
 ## 2026-10-16 (board hygiene, BD-235 and BD-004)
 - OWNER (2026-10-16) BD-235 (a): a Cracked egg that fails to hatch during weather gives NOTHING. Its weather mutation is simply gone; no consolation, no hint. The code already behaves this way (docs/99 G2).
 - OWNER (2026-10-16) BD-235 (b): a bonus nest carries the weather from the moment it was FOUND during the run. The owner thought this was current behaviour; it is not (the code uses the weather at settlement, docs/99 G4), so BD-479 is the Backlog code row.
