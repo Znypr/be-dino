@@ -878,7 +878,7 @@ render=function(name: string)
         label(body,"YOUR COLLECTION",414,0,400,42,28)
         label(body,string.format("Base: %d • Gold: %d\nDiamond: %d",base,gold,diamond),414,62,400,92,25)
         label(body,if event then event.name.." • "..table.concat(UIFormat.boostLines(event.growth,event.speed,1)," • ") else "Cosmetic fusion: 6 Base → Gold; 3 Gold → Emerald; 2 Emerald → Diamond. Highest owned variant equips.",414,173,400,66,22,C.gold)
-        do local line=label(body,require(Shared.ClassInfo).line(selected),414,241,400,28,22,C.accent) -- BD-423: class + one-line feel hint
+        do local line=label(body,require(Shared.ClassInfo).line(selected),414,241,400,28,22,require(Shared.ClassInfo).Colors[require(Shared.ClassInfo).forSpecies(selected).class]) -- BD-423: class + one-line feel hint
             line.TextScaled,line.TextWrapped=true,false -- BD-443: shrink to fit one line on a phone, never clip
             local fit=Instance.new("UITextSizeConstraint") fit.MinTextSize,fit.MaxTextSize,fit.Parent=14,22,line end
         local equipped=str("EquippedSpeciesId","compy")==selected

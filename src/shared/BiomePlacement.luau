@@ -154,70 +154,72 @@ BiomePlacement.Layers = {
 -- Placed-part budget at density 1: MeshPart props cost 1 part (+ their invisible collider boxes); a prop whose mesh is not
 -- available costs the native fallback (2 wedge parts per triangle + colliders), so a failed upload thins the world instead
 -- of blowing the phone budget. Whole-scene accounting (food, hub, rigs) is in docs/68 and tools/verify_world_art.py.
-BiomePlacement.PartBudget = 3700
+BiomePlacement.UndergrowthChance = .5 -- per placed tree
+BiomePlacement.UndergrowthCap = 190 -- companion plants at density 1
+BiomePlacement.PartBudget = 3800 -- BD-167: +100 at density 1 (+125 parts at the playtest 1.25) pays for tree undergrowth; see docs/68 'World density v3'
 
 -- Per-biome density multiplier for each layer and the weighted kit picks. A pick is {id, weight}; tree/giant picks use
 -- family names ("canopy", ...) that get a size appended, log picks always lie a dead tree on its side.
 BiomePlacement.Biomes = {
     meadow = {
         tree = .55, giant = .15, log = .6, rock = .45, shrub = .75, groundcover = 1.3,
-        trees = {{"canopy", .55}, {"conifer", .25}, {"cycad", .2}},
+        trees = {{"canopy", .5}, {"conifer", .22}, {"cycad", .2}, {"dead", .04}},
         giants = {{"canopy", 1}},
-        rocks = {{"mossy", .65}, {"bare", .35}},
-        shrubs = {{"world_bush_a", .22}, {"world_bush_b", .2}, {"world_fern_b", .14}, {"world_fern_a", .1}, {"world_mushrooms_a", .06}, {"world_horsetail_a", .05}, {"world_bush_a", .23}},
-        cover = {{"world_grass_a", .34}, {"world_grass_b", .3}, {"world_flowers_a", .36}},
+        rocks = {{"mossy", .6}, {"bare", .4}},
+        shrubs = {{"world_bush_a", .22}, {"world_bush_b", .2}, {"world_fern_b", .14}, {"world_fern_a", .1}, {"world_mushrooms_a", .08}, {"world_horsetail_a", .05}, {"world_bush_b", .21}},
+        cover = {{"world_grass_a", .3}, {"world_grass_b", .28}, {"world_flowers_a", .42}},
         bloom = .85,
     },
     fern = {
         tree = 1.35, giant = 1.0, log = 1.4, rock = .5, shrub = 1.7, groundcover = .9,
-        trees = {{"canopy", .5}, {"cycad", .26}, {"conifer", .19}, {"dead", .05}},
+        trees = {{"canopy", .46}, {"cycad", .28}, {"conifer", .19}, {"dead", .07}},
         giants = {{"canopy", .6}, {"cycad", .4}},
-        rocks = {{"mossy", 1}},
+        rocks = {{"mossy", .82}, {"bare", .18}},
         shrubs = {{"world_fern_a", .3}, {"world_fern_b", .3}, {"world_bush_a", .08}, {"world_bush_b", .08}, {"world_mushrooms_a", .12}, {"world_horsetail_a", .12}},
         cover = {{"world_grass_a", .4}, {"world_grass_b", .4}, {"world_flowers_a", .2}},
         bloom = .35,
     },
     conifer = {
         tree = 1.5, giant = 1.4, log = 1.0, rock = 1.25, shrub = 1.0, groundcover = .6,
-        trees = {{"conifer", .82}, {"dead", .1}, {"canopy", .08}},
+        trees = {{"conifer", .76}, {"dead", .1}, {"canopy", .08}, {"cycad", .06}},
         giants = {{"conifer", 1}},
-        rocks = {{"bare", .55}, {"mossy", .45}},
+        rocks = {{"bare", .5}, {"mossy", .5}},
         shrubs = {{"world_fern_a", .22}, {"world_fern_b", .2}, {"world_mushrooms_a", .2}, {"world_bush_a", .14}, {"world_bush_b", .14}, {"world_horsetail_a", .1}},
         cover = {{"world_grass_b", .6}, {"world_grass_a", .3}, {"world_flowers_a", .1}},
         bloom = .1,
     },
     marsh = {
         tree = .75, giant = .6, log = 1.7, rock = .35, shrub = 1.7, groundcover = 1.0,
-        trees = {{"cycad", .5}, {"canopy", .25}, {"dead", .25}},
+        trees = {{"cycad", .46}, {"canopy", .25}, {"dead", .25}, {"conifer", .04}},
         giants = {{"cycad", .55}, {"canopy", .45}},
-        rocks = {{"mossy", 1}},
+        rocks = {{"mossy", .85}, {"bare", .15}},
         shrubs = {{"world_horsetail_a", .5}, {"world_fern_a", .12}, {"world_fern_b", .1}, {"world_bush_a", .08}, {"world_bush_b", .08}, {"world_mushrooms_a", .12}},
         cover = {{"world_grass_a", .48}, {"world_grass_b", .37}, {"world_flowers_a", .15}},
         bloom = .3,
     },
     badlands = {
         tree = .2, giant = .2, log = .6, rock = 2.3, shrub = .32, groundcover = .26,
-        trees = {{"dead", .6}, {"conifer", .4}},
+        trees = {{"dead", .55}, {"conifer", .35}, {"cycad", .1}},
         giants = {{"dead", 1}},
-        rocks = {{"bare", 1}},
-        shrubs = {{"world_bush_b", .7}, {"world_fern_a", .1}, {"world_horsetail_a", .1}, {"world_bush_a", .1}},
+        rocks = {{"bare", .88}, {"mossy", .12}},
+        shrubs = {{"world_bush_b", .6}, {"world_fern_a", .1}, {"world_horsetail_a", .1}, {"world_bush_a", .1}, {"world_mushrooms_a", .1}},
         cover = {{"world_grass_b", .85}, {"world_flowers_a", .15}},
         bloom = .05,
     },
     volcanic = {
         tree = .13, giant = .35, log = .5, rock = 2.0, shrub = .1, groundcover = .06,
-        trees = {{"dead", 1}},
+        trees = {{"dead", .88}, {"conifer", .12}},
         giants = {{"dead", 1}},
-        rocks = {{"bare", 1}},
-        shrubs = {{"world_bush_b", .8}, {"world_mushrooms_a", .2}},
+        rocks = {{"bare", .92}, {"mossy", .08}},
+        shrubs = {{"world_bush_b", .7}, {"world_mushrooms_a", .2}, {"world_fern_a", .1}},
         cover = {{"world_grass_b", 1}},
         bloom = 0,
     },
 }
 -- Scale ranges per layer (min, max): trees are mature (sizes s/m/l are already different), giants are 2.4x-4x.
 BiomePlacement.Scales = {
-    tree = {.95, 1.5}, giant = {2.4, 4}, log = {.9, 1.5}, rock = {.9, 1.7},
-    shrub = {1.25, 2.1}, groundcover = {1.7, 2.9}, landmark = {1.4, 1.4},
+    tree = {.9, 1.6}, giant = {2.4, 4}, log = {.9, 1.5}, rock = {.85, 1.8},
+    shrub = {1.1, 2.3}, groundcover = {1.6, 3.0}, landmark = {1.4, 1.4},
 }
 
 local function mul32(a: number, b: number): number
@@ -289,6 +291,22 @@ local function field(seed: number, k: number, x: number, z: number, scale: numbe
 end
 BiomePlacement.field = field
 
+-- BD-167 colour variation: a small multiplicative tint on the (white) MeshPart so the same mesh never repeats exactly. Pure math,
+-- deterministic from the placement hash; every channel stays in [0.80, 1.0] so the vertex-colour palette is only dimmed/warmed.
+BiomePlacement.TintMin = .8
+BiomePlacement.BiomeWarmth = { -- extra (r, g, b) multipliers per sub-biome, each in [0.9, 1.0]
+    meadow = {1, 1, .95}, fern = {.95, 1, .95}, conifer = {.93, .98, 1}, marsh = {.92, 1, .97},
+    badlands = {1, .96, .9}, volcanic = {1, .92, .9},
+}
+function BiomePlacement.tint(biome: string, h1: number, h2: number): (number, number, number)
+    local w = BiomePlacement.BiomeWarmth[biome] or {1, 1, 1}
+    local v = BiomePlacement.TintMin + (1 - BiomePlacement.TintMin) * h1 -- brightness
+    local hueShift = (h2 - .5) * .1 -- warm (+) vs cool (-)
+    return math.clamp(v * w[1] * (1 + hueShift), BiomePlacement.TintMin * .9, 1),
+        math.clamp(v * w[2], BiomePlacement.TintMin * .9, 1),
+        math.clamp(v * w[3] * (1 - hueShift), BiomePlacement.TintMin * .9, 1)
+end
+
 export type Placement = {id: string, x: number, y: number, z: number, yaw: number, roll: number, scale: number, radius: number, layer: string, biome: string}
 
 -- options: {seed, density, extent, height=(x,z)->y, kit=WorldKitData, meshes=WorldKitMeshAssets (ids that are real MeshParts),
@@ -350,6 +368,7 @@ function BiomePlacement.generate(options): {Placement}
         end
         add(site.id, bx, bz, BiomePlacement.hash(seed, 99, i) * math.pi * 2, sc, "landmark", .04, "meadow", nil, nil, math.sqrt(data.extent[1] ^ 2 + data.extent[3] ^ 2) * .5 * sc) -- BD-410: keep-clear radius = half the footprint DIAGONAL (a yawed box reaches that far)
     end
+    local undergrowth, undergrowthCap = 0, math.floor(BiomePlacement.UndergrowthCap * density)
     for li, layer in BiomePlacement.Layers do
         local count, cap = 0, math.floor(layer.cap * density)
         local cells = math.floor(2 * extent / layer.cell)
@@ -452,6 +471,25 @@ function BiomePlacement.generate(options): {Placement}
                 local sink = if lay == "rock" or lay == "giant" and kit[id].kind == "rock" then .12 elseif lay == "tree" or lay == "giant" then .03 else .02 + .03 * sinkRoll
                 add(id, x, z, yaw, scale, lay, sink, biome)
                 count += 1
+                -- BD-167 undergrowth: ferns, bushes and mushrooms gather around a tree foot (small, never on the trunk, never on a
+                -- walkway), limited by its own cap and the part budget. Layer "shrub" so PropGround treats them as plants.
+                if lay == "tree" and undergrowth < undergrowthCap and BiomePlacement.hash(seed, li, ix, iz, 70) < BiomePlacement.UndergrowthChance then
+                    local trunk = math.max(PropGround.trunkRadius(data, scale, r * .4), .6)
+                    for c = 1, (if BiomePlacement.hash(seed, li, ix, iz, 71) < .45 then 2 else 1) do
+                        local a = BiomePlacement.hash(seed, li, ix, iz, 72 + c) * math.pi * 2
+                        local d = trunk + 1.6 + 2.6 * BiomePlacement.hash(seed, li, ix, iz, 74 + c)
+                        local ux, uz = x + math.cos(a) * d, z + math.sin(a) * d
+                        local uid = BiomePlacement.substitute(pick(def.shrubs, BiomePlacement.hash(seed, li, ix, iz, 76 + c)), kit, meshes)
+                        if kit[uid] and parts + BiomePlacement.partCost(uid, kit, meshes) <= budget and undergrowth < undergrowthCap
+                            and BiomePlacement.pathClearance(ux, uz) >= 1.5 and BiomePlacement.keepOutClearance(ux, uz, false) >= 0
+                            and math.max(math.abs(ux), math.abs(uz)) + 3 < extent and not inWater(ux, uz, 1.5)
+                            and BiomePlacement.slope(height, ux, uz) <= 30 and clear(ux, uz, 1.6, false) then
+                            local us = BiomePlacement.Scales.shrub[1] * (.8 + .5 * BiomePlacement.hash(seed, li, ix, iz, 78 + c))
+                            add(uid, ux, uz, BiomePlacement.hash(seed, li, ix, iz, 80 + c) * math.pi * 2, us, "shrub", .02 + .03 * sinkRoll, biome)
+                            undergrowth += 1
+                        end
+                    end
+                end
                 if lay == "groundcover" and BiomePlacement.hash(seed, li, ix, iz, 11) < .6 and count < cap then
                     -- Tufts grow in clumps: one or two smaller companions a stride away (irregular, never gridded).
                     for c = 1, (if BiomePlacement.hash(seed, li, ix, iz, 12) < .4 then 2 else 1) do

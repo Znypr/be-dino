@@ -52,6 +52,11 @@ end
 local sky:Sky?=Lighting:FindFirstChildOfClass("Sky")
 local baseAmbient,baseOutdoor=Lighting.Ambient,Lighting.OutdoorAmbient
 local baseShiftTop,baseShiftBottom,baseExposure=Lighting.ColorShift_Top,Lighting.ColorShift_Bottom,Lighting.ExposureCompensation
+-- BD-055 cloud cover: Terrain.Clouds follows the event look (cover, density, colour) with the same ramp as the grade. No texture is needed;
+-- a place without Clouds gets one that starts invisible (cover 0), so clear weather looks exactly as before.
+local clouds:Clouds=workspace.Terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
+if not clouds.Parent then clouds.Name="WeatherClouds" clouds.Cover,clouds.Density=0,.5 clouds.Parent=workspace.Terrain end
+local baseCloud={cover=clouds.Cover,density=clouds.Density,color=clouds.Color}
 local baseStars=if sky then sky.StarCount else 0
 -- BD-213 soft visibility: clear weather keeps a gentle haze, and FogEnd stays inside this device's prop cull radius
 -- (same device classes as WorldCulling.client.luau), so culled props are already lost in the haze and never pop.
@@ -98,11 +103,16 @@ local WIDE=Vector3.new(90,1,90)
 local FEET=Vector3.new(0,-2.8,0)
 -- distance fog: four large soft smoke volumes in a ring around the player (60 to 250 studs); the middle stays empty so the near play area is clear
 local RING={Vector3.new(125,-1,0),Vector3.new(-125,-1,0),Vector3.new(0,-1,125),Vector3.new(0,-1,-125)}
+-- BD-055: soft cloud sprite for the fog banks once the owner uploads one (docs/120 weatherCloud); until then the built-in smoke
+local BANK_TEX=(function()
+    local Assets=require(Shared.EffectAssets)
+    return if Assets.isReal("weatherCloud") then Assets.resolve("weatherCloud") else TEX_SMOKE
+end)()
 local function fogBanks(id:string,color:ColorSequence,props:{[string]:any}?)
     for _,offset in RING do
         local part=volume(Vector3.new(150,10,150))
         local p:{[string]:any}={
-            Texture=TEX_SMOKE,Speed=NumberRange.new(2,6),EmissionDirection=Enum.NormalId.Top,SpreadAngle=Vector2.new(180,180),Size=seq(80,120,150),
+            Texture=BANK_TEX,Speed=NumberRange.new(2,6),EmissionDirection=Enum.NormalId.Top,SpreadAngle=Vector2.new(180,180),Size=seq(80,120,150),
             Transparency=seq(1,.84,1),Color=color,Rotation=NumberRange.new(0,360),RotSpeed=NumberRange.new(-4,4),Drag=.4,
         }
         if props then for key,value in props do p[key]=value end end
@@ -868,6 +878,10 @@ RunService.Heartbeat:Connect(function(dt)
     Lighting.ColorShift_Top=baseShiftTop:Lerp(shiftOf(baseShiftTop,shiftTop),t)
     Lighting.ColorShift_Bottom=baseShiftBottom:Lerp(shiftOf(baseShiftBottom,shiftBottom),t)
     Lighting.ExposureCompensation=baseExposure+lerpNum(0,look.exposure,t)+flash*.9*outside
+    if look.cloudCover>=0 then
+        clouds.Cover=lerpNum(baseCloud.cover,look.cloudCover,t) clouds.Density=lerpNum(baseCloud.density,look.cloudDensity,t)
+        clouds.Color=baseCloud.color:Lerp(c3(look.cloudColor),t)
+    else clouds.Cover,clouds.Density,clouds.Color=baseCloud.cover,baseCloud.density,baseCloud.color end
     if sky then sky.CelestialBodiesShown=activeId=="clear" or k<=0 or hall end
     if sky and look.stars>=0 then
         local want=math.floor(lerpNum(baseStars,look.stars,t)/100)*100
@@ -920,6 +934,10 @@ RunService.Heartbeat:Connect(function(dt)
         end
         if nextDouble>0 and now>=nextDouble then nextDouble=0 bolt(root) end
         if now>=nextFar then nextFar=now+random:NextNumber(1.2,3) flash=math.max(flash,.3) end
+    end
+    -- thunder with Reduce Motion: no bolts or flashes, only a slow soft swell of light (never a strobe)
+    if not Theme.MotionEnabled and not hall and activeId=="thunder" and k>.4 then
+        flash=math.max(flash,WL.Swell.peak*(1+math.sin(now*WL.Swell.rate))/2)
     end
     -- quake: tremor pulses open ground cracks in view, with a gentle rumble synced to each pulse (none with Reduce Motion)
     if root and not hall and activeId=="quake" and k>.3 then

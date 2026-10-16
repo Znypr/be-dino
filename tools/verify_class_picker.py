@@ -28,6 +28,9 @@ local w=M.ClassBadge.spec("mosasaurus") assert(w.image=="rbxassetid://123" and n
 M.AssetSlots.Images.class_water="not an id" assert(M.ClassBadge.spec("mosasaurus").placeholder,"malformed id falls back")
 M.AssetSlots.Images.class_water=""
 assert(M.ClassBadge.spec(nil).class=="Ground","unknown species is Ground")
+local hex={Ground={47,158,68},Fly={30,136,229},Water={15,143,128},Armored={168,100,58}}
+for c,h in hex do local k=CI.Colors[c] assert(k and k[1]==h[1] and k[2]==h[2] and k[3]==h[3],"colour "..c) end
+for id,class in Combat.SpeciesClasses do assert(M.ClassBadge.spec(id).color==CI.Colors[class],"badge colour "..id) end
 print("class picker ok")
 '''
 
@@ -39,7 +42,7 @@ def module(n):
 p = argparse.ArgumentParser()
 p.add_argument('--runner', required=True)
 a = p.parse_args()
-src = '\n'.join(['local M={}', 'local Color3={fromRGB=function() return 0 end,new=function() return 0 end}','local script={Parent=M}', 'local require=function(x) return x end']
+src = '\n'.join(['local M={}', 'local Color3={fromRGB=function(r,g,b) return {r,g,b} end,new=function() return 0 end}','local script={Parent=M}', 'local require=function(x) return x end']
                 + [f'M.{n}={module(n)}' for n in MODULES] + [BODY])
 with tempfile.TemporaryDirectory() as d:
     f = Path(d) / 'cp.luau'
@@ -56,6 +59,9 @@ if r.returncode == 0:
         assert 'ClassMovementEnabled' in t, q
         assert 'Config.CombatEnabled' not in t.replace('GameConfig.CombatEnabled', ''), q + ' still gated on combat'
     assert 'ClassInfo' in read('src/client/Bootstrap.client.luau'), 'picker uses ClassInfo'
+    assert 'ClassInfo.Colors[spec.class]' in read('src/shared/ClassBadge.luau'), 'badge uses class colour'
+    assert 'PlaceholderFill' not in read('src/shared/ClassBadge.luau'), 'neutral fill gone'
+    assert '.Colors[' in read('src/client/Bootstrap.client.luau'), 'picker line uses class colour'
     rp = read('tools/release_profiles.py')
     assert '_flag_off("ClassMovementEnabled"' in rp and 'Rule("ClassMovementEnabled", "set", True' in rp
     cb = read('src/shared/ClassBadge.luau')
