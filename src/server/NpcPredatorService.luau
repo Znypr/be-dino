@@ -15,6 +15,7 @@ local CombatRules = require(ReplicatedStorage.Shared.CombatRules)
 local Visual = require(ReplicatedStorage.Shared.DinosaurVisual)
 local LowPoly = require(ReplicatedStorage.Shared.LowPolyDinos)
 local NpcLowPoly = require(ReplicatedStorage.Shared.NpcLowPoly)
+local HitRadius = require(script.Parent.HitRadius) -- BD-514: the one hit-size rule (players and wild predators)
 
 local NpcPredatorService = {}
 
@@ -142,11 +143,12 @@ function NpcPredatorService.start(combat: any?)
                 end
             end
         end
-        local size = model:GetExtentsSize()
-        npc.radius = math.clamp(math.max(size.X, size.Z) / 2, 1, 14) -- BD-311: the measured body size, used for chase and bite reach
+        -- BD-311 / BD-514: the body size used for chase and bite reach. LowPolyDinos on: the species size from ScaleLadder x the drawn scale
+        -- (the same HitSize rule a player of this species gets); off: the measured bounding box, as before.
+        npc.radius = math.clamp(HitRadius.of(model, npc.species, npc.visualScale), 1, 14)
         local joined = Rules.joinCombat(world, combat.world, npc, now)
         if not joined then model:Destroy() return false end
-        combat.addNpc(npc.key, model)
+        combat.addNpc(npc.key, model, if HitRadius.lowPolyOn() then npc.radius else nil) -- flag off: CombatService measures the model itself, as before
         entries[npc.slot] = {model = model, humanoid = humanoid, root = root, lastState = "patrol"}
         return true
     end
@@ -173,11 +175,10 @@ function NpcPredatorService.start(combat: any?)
             local runId = if character then character:GetAttribute("RunId") else nil
             if character and root and root:IsA("BasePart") and humanoid and typeof(runId) == "string" then
                 local key = CombatRules.key(player.UserId, runId)
-                local size = character:GetExtentsSize()
                 local dino = combat.world.dinos[key] -- only players CombatService tracks can be targeted at all
                 if dino then
                     table.insert(list, {
-                        key = key, character = character, x = root.Position.X, y = root.Position.Y, z = root.Position.Z, radius = math.clamp(math.max(size.X, size.Z) / 2, 0, 14),
+                        key = key, character = character, x = root.Position.X, y = root.Position.Y, z = root.Position.Z, radius = math.clamp(HitRadius.of(character), 0, 14), -- BD-514: same rule CombatService uses for a bite on this player
                         alive = dino.state.phase == "Alive" and humanoid.Health > 0,
                         active = character:GetAttribute("RunState") == "Active",
                         protectedUntil = dino.protectedUntil,
