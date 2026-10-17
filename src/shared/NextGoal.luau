@@ -68,8 +68,25 @@ function NextGoal.level(opts: any)
     return {kind = "level", text = string.format("Level %d: %d/%d XP", level, into, nextXp - floorXp), fraction = into / (nextXp - floorXp)}
 end
 
--- opts: dinos (list or nil), level, xp, perLevel, maxLevel, stages, speciesName(id), patternName(id)
+-- BD-076 (docs/66 s19): opts.objective is the top objective already worded and fitted for the line ({text, claimable, fraction}) or nil.
+-- Only while Config.ObjectivesEnabled is true does a caller pass one; nil (flag off, no answer yet, nothing to show) = the line is exactly the old one.
+local function asObjective(o: any)
+    return {kind = "objective", text = o.text, fraction = tonumber(o.fraction) or 0, ready = o.claimable == true, claimable = o.claimable == true}
+end
+
+-- Priority, highest first (one rule, docs/66 s19):
+--   1. a CLAIMABLE objective            ("Done! Claim ..."), it is free crystals waiting
+--   2. the fusion goal                  (best in-progress or ready recipe), beats an unfinished objective
+--   3. an unfinished objective          ("Hatch 3 eggs: 1/3"), beats the level fallback
+--   4. level XP progress                (the fallback)
+-- opts: dinos (list or nil), level, xp, perLevel, maxLevel, stages, speciesName(id), patternName(id), objective (optional, see above)
 function NextGoal.pick(opts: any)
-    return NextGoal.fusion(opts.dinos, opts) or NextGoal.level(opts)
+    local objective = opts.objective
+    local usable = type(objective) == "table" and type(objective.text) == "string" and objective.text ~= ""
+    if usable and objective.claimable == true then return asObjective(objective) end
+    local fusion = NextGoal.fusion(opts.dinos, opts)
+    if fusion then return fusion end
+    if usable then return asObjective(objective) end
+    return NextGoal.level(opts)
 end
 return NextGoal
