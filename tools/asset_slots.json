@@ -281,7 +281,7 @@
    "file": "src/shared/EffectAssets.luau",
    "key": "domeGradient",
    "group": "Requested.domeGradient",
-   "pending": "BD-433 shock dome code (BD-430 texture rendered, not read yet)"
+   "pending": "BD-433 shock dome reads it (FxRig, needs the shock_dome_mesh slot too); rendered, not uploaded"
   },
   {
    "name": "speedStreaks",

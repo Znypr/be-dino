@@ -4,6 +4,8 @@
 -- {k = "all"} to everyone else (short HUD banner, text already built and cut on the server). Nothing here is sent back.
 -- Confetti reuses the uploaded fx3 sparkle sheet (EffectAssets starFour), tinted: no new art. Effects Off or Reduce Motion
 -- (calm) draws no confetti; Lite draws fewer pieces. The sound is Sfx "shiny_bang" (docs/77, docs/110).
+-- BD-433: the OWN banner (never the others') also gets one soft light sweep at Full (RareHatch.plan().sweep), drawn from the shaftGradient render
+-- only while that slot holds a real upload. A mutation hatch also lights the own dino's rim for 1.5 s (MomentRim: its own Full / Lite / Off rules).
 -- BD-430 / BD-433: when the Blender starPop flipbook slot holds a real upload, the own banner gets star pops at its two ends (one at Lite,
 -- none at Off or with Reduce Motion): the 16-frame twinkle plays once (EffectAssets.frameAt, OneShot) and is gone. Empty slot = today's banner.
 local Players = game:GetService("Players")
@@ -15,6 +17,7 @@ local Settings = require(Shared:WaitForChild("SettingsModel"))
 local Sfx = require(Shared:WaitForChild("Sfx"))
 local Assets = require(Shared:WaitForChild("EffectAssets"))
 local Timeline = require(Shared:WaitForChild("HatchTimeline"))
+local MomentRim = require(script.Parent:WaitForChild("MomentRim"))
 
 local player = Players.LocalPlayer
 local remote = (ReplicatedStorage:WaitForChild("BeDinoRemotes", 60) :: Folder):WaitForChild("RareHatch", 60)
@@ -48,7 +51,47 @@ local function banner(text: string, big: boolean)
     task.delay(if big then 4.5 else 3.5, function()
         if label.Parent then label:Destroy() end
     end)
-    return label
+    return label, (if big then 420 else 360), (if big then 56 else 40)
+end
+
+-- One soft light sweep across the own banner (BD-433). The vertical shaftGradient render (bright at its top) is turned on its side and slid from
+-- the left to the right end, clipped by the banner; it is gone after Rare.SweepLife seconds. Plain stock instances, no drawing in code.
+local sweeps = {}
+local sweepConn = nil
+local function stepSweeps(dt: number)
+    for i = #sweeps, 1, -1 do
+        local s = sweeps[i]
+        s.age += dt
+        if s.age >= Rare.SweepLife or not s.obj.Parent then
+            s.obj:Destroy()
+            table.remove(sweeps, i)
+        else
+            local progress, alpha = Rare.sweepAt(s.age)
+            s.obj.Position = UDim2.fromOffset(-s.len * 0.5 + (s.width + s.len) * progress, s.height * 0.5)
+            s.obj.ImageTransparency = 1 - alpha
+        end
+    end
+    if #sweeps == 0 and sweepConn then sweepConn:Disconnect() sweepConn = nil end
+end
+local function sweep(label, width: number, height: number)
+    if not Assets.isRealUi("shaftGradient") then return end
+    label.ClipsDescendants = true
+    local len = width * Rare.SweepWidth
+    local img = Instance.new("ImageLabel")
+    img.BackgroundTransparency, img.BorderSizePixel = 1, 0
+    img.AnchorPoint = Vector2.new(0.5, 0.5)
+    img.Image = Assets.resolveUi("shaftGradient")
+    img.ImageColor3 = Color3.fromRGB(255, 244, 204)
+    img.Rotation = 90 -- bright end (top of the render) leads, to the right
+    img.Size = UDim2.fromOffset(height * 1.4, len) -- turned 90 degrees: this width is the band's height, this height its length
+    img.ImageTransparency = 1
+    img.ZIndex = 6
+    local soft = Instance.new("UIGradient") -- the render tiles around its sides: this fades the band's top and bottom edges
+    soft.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.28, 0), NumberSequenceKeypoint.new(0.72, 0), NumberSequenceKeypoint.new(1, 1)})
+    soft.Parent = img
+    img.Parent = label
+    table.insert(sweeps, {obj = img, age = 0, len = len, width = width, height = height})
+    if not sweepConn then sweepConn = RunService.Heartbeat:Connect(stepSweeps) end
 end
 
 -- Star pops flanking the own banner (BD-430). At most 2 alive at once; each plays the starPop flipbook once over Rare.PopLife seconds.
@@ -136,7 +179,15 @@ local function celebrate(data)
     -- show it when this egg's reveal lands (not when the server settled it)
     local delay = Timeline.durations(not s.calm, tonumber(data.rarity) or 1, false, false).revealAt
     task.delay(delay, function()
-        if plan.banner then banner(tostring(data.text), true) starPops(plan.pop) end
+        if plan.banner then
+            local label, width, height = banner(tostring(data.text), true)
+            starPops(plan.pop)
+            if plan.sweep > 0 then sweep(label, width, height) end -- own banner only: the "all" path below never sweeps
+        end
+        if data.kind == "mutation" or data.mutation == true then
+            local mutationId = if type(data.mutationId) == "string" and #data.mutationId <= 24 then data.mutationId else nil
+            pcall(MomentRim.play, player.Character, {mutationId = mutationId})
+        end
         confetti(plan.confetti)
         pcall(Sfx.play, plan.sound)
     end)

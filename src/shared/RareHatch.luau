@@ -58,13 +58,31 @@ R.Confetti = table.freeze({full = 36, lite = 14, off = 0})
 R.Pop = table.freeze({full = 2, lite = 1, off = 0})
 R.PopLife = 0.9 -- seconds one star pop plays (16 frames, played once)
 R.PopSize = 64 -- px
-function R.plan(effects: string, calm: boolean, kind: string): {confetti: number, banner: boolean, sound: string, pop: number}
+-- BD-433 (docs/123 s2 T8): ONE soft light sweep across the OWN rare banner, Full only (Lite: banner only, Off none, Reduce Motion none: it moves).
+-- The client draws it ONLY while the shaftGradient Blender slot holds a real upload (the gradient is turned on its side and slid across), so an
+-- empty slot keeps exactly today's banner.
+R.Sweep = table.freeze({full = 1, lite = 0, off = 0})
+R.SweepLife = 0.9 -- seconds for one pass
+R.SweepAlpha = 0.45 -- peak opacity of the band, soft
+R.SweepWidth = 0.35 -- band length as a share of the banner width
+function R.plan(effects: string, calm: boolean, kind: string): {confetti: number, banner: boolean, sound: string, pop: number, sweep: number}
     local n = R.Confetti[effects]
     if n == nil then n = R.Confetti.full end
     local pop = R.Pop[effects]
     if pop == nil then pop = R.Pop.full end
-    if calm then n, pop = 0, 0 end
-    return {confetti = n, banner = true, sound = "shiny_bang", pop = pop}
+    local sweep = R.Sweep[effects]
+    if sweep == nil then sweep = R.Sweep.full end
+    if calm then n, pop, sweep = 0, 0, 0 end
+    return {confetti = n, banner = true, sound = "shiny_bang", pop = pop, sweep = sweep}
+end
+-- Pure: one sweep pass at `age` seconds -> (centre 0..1 across the banner, opacity 0..SweepAlpha). Eases in and out of both ends, soft at the
+-- edges, and is gone (opacity 0) once age >= SweepLife.
+function R.sweepAt(age: number): (number, number)
+    local t = math.clamp(age / R.SweepLife, 0, 1)
+    local eased = t * t * (3 - 2 * t)
+    local alpha = R.SweepAlpha * math.sin(math.pi * t) ^ 0.8
+    if t >= 1 then alpha = 0 end
+    return eased, alpha
 end
 
 export type State = {
