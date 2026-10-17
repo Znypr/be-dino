@@ -119,17 +119,29 @@ function RewardMath.speciesWeights(eggCount: number?)
 end
 
 -- Species roll for one egg. Quantity is now always one dinosaur.
-function RewardMath.computeChestReward(rng: Random?, eggCount: number?)
+-- `origin` (BD-604, docs/149) names where the egg comes from: "run" (earned in a run) or "nest" (a free bonus nest) are the ONLY origins that
+-- may carry a secret species, and only while Config.SecretSpeciesEnabled is true. Every other caller (the crystal shop, legacy chests) passes
+-- nothing. With the flag off or no origin this function is exactly what it was: the same random draws in the same order, the same fields, and
+-- SecretSpeciesConfig is never required.
+function RewardMath.computeChestReward(rng: Random?, eggCount: number?, origin: string?)
     local random = rng or Random.new()
     local rows = RewardMath.speciesWeights(eggCount)
     local speciesRow = weightedChoice(rows, random)
     local quantityRow = weightedChoice(Config.ChestQuantityWeights, random)
-    return {
+    local reward = {
         rewardConfigVersion = Config.RunRewardConfigVersion,
         speciesId = speciesRow.speciesId,
         mutationId = "base",
         count = quantityRow.count,
     }
+    if origin ~= nil and Config.SecretSpeciesEnabled == true then
+        -- Lazy require: the module is loaded only when the flag is on. The secret roll comes AFTER the normal draws, so the normal species,
+        -- quantity and the random state they consumed are identical either way. The normal species stays in reward.speciesId; a secret is
+        -- the additive reward.secretSpeciesId (an older reader still sees a valid egg).
+        local Secret = require(ReplicatedStorage.Shared.SecretSpeciesConfig)
+        Secret.attach(reward, random, origin)
+    end
+    return reward
 end
 
 return RewardMath

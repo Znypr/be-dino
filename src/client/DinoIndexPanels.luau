@@ -186,7 +186,7 @@ end
 -- notify(text, color?), onBack(), revision() -> number
 function Panels.species(ctx)
     local speciesId: string = ctx.speciesId
-    local speciesName = Config.SpeciesDisplayNames[speciesId] or speciesId
+    local speciesName = Config.SpeciesDisplayNames[speciesId] or require(Shared.SecretSpeciesConfig).name(speciesId) -- BD-604
     local T = math.max(W.Touch, math.ceil(W.Touch / math.max(.3, ctx.scale())))
     local root = Instance.new("Frame")
     root.Name, root.Size, root.BackgroundTransparency = "DinoIndexSpecies", UDim2.fromScale(1, 1), 1

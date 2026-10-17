@@ -179,6 +179,7 @@ jobs:
           python tools/verify_trail_icons.py
           python tools/verify_shop_tiles.py --runner /tmp/luau/luau
           python tools/verify_paid_random_gate.py --runner /tmp/luau/luau
+          python tools/verify_secret_species.py --runner /tmp/luau/luau
           python tools/verify_fx.py --runner /tmp/luau/luau
           python tools/verify_creature_genes.py --runner /tmp/luau/luau
           python tools/verify_visual_growth.py --runner /tmp/luau/luau
