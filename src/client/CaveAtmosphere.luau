@@ -38,7 +38,8 @@ local function save()
         saved.atmo = {density = atmosphere.Density, offset = atmosphere.Offset, haze = atmosphere.Haze, glare = atmosphere.Glare,
             color = atmosphere.Color, decay = atmosphere.Decay}
     end
-    local sanctuary = workspace:FindFirstChild("Sanctuary")
+    local arena = workspace:FindFirstChild("BeDinoArena") -- BD-505: Sanctuary lives under BeDinoArena, never directly in Workspace
+    local sanctuary = arena and arena:FindFirstChild("Sanctuary")
     local folder = sanctuary and sanctuary:FindFirstChild("CaveLighting")
     if folder then
         for _, d in folder:GetDescendants() do

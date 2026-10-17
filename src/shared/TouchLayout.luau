@@ -19,6 +19,10 @@ TouchLayout.CRYSTAL = {w = 260, h = 48}
 TouchLayout.TIMERS_W = 286
 TouchLayout.LEAP_H, TouchLayout.WEATHER_H, TouchLayout.BUFFS_H = 60, 62, 68
 TouchLayout.ACTION = {w = 244, h = 60}
+-- BD-507: the playtest "Tell us!" button (FeedbackClient). Fixed 120 x 48 design px, never scaled (48 >= the 44 px tap floor, 14+ px text).
+-- Desktop: straight above the egg plate (x of the plate, 8 px gap), else right of it, so it never covers "EGGS N". Touch: bottom-left corner
+-- (the egg plate is top-left there). Bootstrap publishes the rect as the FeedbackRect attribute of the BeDinoUI gui; FeedbackClient places itself on it.
+TouchLayout.FEEDBACK = {w = 120, h = 48, gap = 8}
 
 -- BD-378: where the toast stack goes. The Crystals plate (top right) has the goal line ("Level 1: 0/100 XP") right under it;
 -- the stack is TOAST.w wide, centred, and used to sit at y = 80 (y = 4 with a menu open), which covers both on any canvas
@@ -108,6 +112,25 @@ local function buttonContent(bw: number, bh: number)
         labelW = bw, labelH = bh - icon - 5, textSize = clamp(math.floor((bw - 4) / 4.7), PhoneScale.MinText, 14)}
 end
 
+local function feedbackRect(layout, width: number, height: number): Rect
+    local F, hud = TouchLayout.FEEDBACK, layout.hud
+    local hudR = TouchLayout.rendered(hud)
+    if layout.touch then
+        local m = Config.TouchSafeMargin
+        return {x = m, y = height - m - F.h, w = F.w, h = F.h}
+    end
+    local blockers = {TouchLayout.rendered(layout.action), TouchLayout.rendered(layout.rail), TouchLayout.rendered(layout.timers),
+        TouchLayout.rendered(layout.crystal)}
+    local above = {x = hudR.x, y = hudR.y - F.gap - F.h, w = F.w, h = F.h}
+    local beside = {x = hudR.x + hudR.w + F.gap, y = hudR.y + hudR.h - F.h, w = F.w, h = F.h}
+    for _, candidate in {above, beside} do
+        local clear = candidate.y >= 0 and candidate.x + candidate.w <= width
+        for _, b in blockers do if TouchLayout.overlaps(candidate, b) then clear = false end end
+        if clear then return candidate end
+    end
+    return above
+end
+
 local function desktop(width: number, height: number, count: number)
     local small = clamp(math.min(width / 1000, height / 800), 0.3, 1)
     local crystalScale = math.max(0.65, small)
@@ -117,8 +140,9 @@ local function desktop(width: number, height: number, count: number)
     action.x = math.max(width / 2 - action.w * small / 2, hud.x + hud.w * small + 12)
     local crystalX = width - 20 - TouchLayout.CRYSTAL.w * crystalScale
     local noticeW = math.min(500, 2 * (crystalX - 8 - width / 2))
-    return {
+    local result = {
         touch = false,
+        feedback = {x = 0, y = 0, w = 0, h = 0} :: Rect, -- BD-507: filled below, once the rest of the layout is known
         reserved = {},
         crystal = {x = crystalX, y = 8, scale = crystalScale, w = TouchLayout.CRYSTAL.w, h = TouchLayout.CRYSTAL.h},
         hud = hud,
@@ -133,6 +157,8 @@ local function desktop(width: number, height: number, count: number)
         notice = {x = width / 2 - noticeW / 2, y = 8, scale = 1, w = noticeW, h = 25, textSize = 14},
         toastScale = math.min(1, (width - 20) / 440),
     }
+    result.feedback = feedbackRect(result, width, height) -- BD-507
+    return result
 end
 
 function TouchLayout.compute(params: {width: number, height: number, touch: boolean, navCount: number, thumb: Rect?, jump: Rect?})
@@ -218,8 +244,9 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
         -- Seven nav buttons give a wider rail: keep the (short, touch) notice left of it.
         notice.w = math.max(60, math.min(notice.w, rail.x - m - notice.x - 1)) -- BD-080: floor 60, Bootstrap scales the text to fit
     end
-    return {
+    local result = {
         touch = true,
+        feedback = {x = 0, y = 0, w = 0, h = 0} :: Rect, -- BD-507: filled below, once the rest of the layout is known
         reserved = {thumb = thumb, jump = corner},
         crystal = crystal,
         hud = hud,
@@ -230,6 +257,8 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
         notice = notice,
         toastScale = math.min(1, (width - 20) / 440),
     }
+    result.feedback = feedbackRect(result, width, height) -- BD-507
+    return result
 end
 
 return TouchLayout
