@@ -7,6 +7,7 @@ local Players=game:GetService("Players")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 local Config=require(ReplicatedStorage.Shared.ProgressionConfig)
+local GameConfig=require(ReplicatedStorage.Shared.Config) -- BD-074: only for the ObjectivesEnabled flag
 local Leap={}
 local active={}
 local requests={}
@@ -103,6 +104,7 @@ function Leap.start()
         trail.Lifetime,trail.FaceCamera,trail.Parent=.25,true,root
         active[player]={character=c,root=root,start=root.Position,position=root.Position,lastCFrame=root.CFrame,
             startedAt=now,endsAt=now+Config.LeapDuration,trail=trail,a=a,b=b}
+        if GameConfig.ObjectivesEnabled==true then require(script.Parent.ObjectiveService).record(player,"leap_used",1) end -- BD-074: the server accepted this leap (grounded, off cooldown, no wall ahead); a later rollback still costs the cooldown penalty
     end)
 
     RunService.Heartbeat:Connect(function()

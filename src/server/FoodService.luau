@@ -22,6 +22,13 @@ local ScaleLadder = require(ReplicatedStorage.Shared.ScaleLadder) -- BD-407: foo
 local RunEggTags = require(ReplicatedStorage.Shared.RunEggTags) -- BD-236: pure catch-time tag glue (tested)
 local AdminMutationScale = require(ReplicatedStorage.Shared.AdminMutationScale) -- BD-237: per-player admin Mutation chance (docs/115)
 local RunLifecycle = require(script.Parent.RunLifecycle) -- BD-479
+-- BD-074 (docs/66 s18): food eaten feeds the objectives, batched per player per tick and only while Config.ObjectivesEnabled. The module is
+-- required lazily and every use is behind the flag, so with the flag off the tick pays one boolean test and nothing else.
+local objectiveService: any = nil
+local function objectives(): any
+    if objectiveService == nil then objectiveService = require(script.Parent.ObjectiveService) end
+    return objectiveService
+end
 local Http = game:GetService("HttpService")
 local eventRandom = Random.new()
 local FoodService = {}
@@ -244,6 +251,7 @@ function FoodService.start(dinosaur,repository)
         while true do
             task.wait(Config.FoodTickSeconds)
             local now = os.clock()
+            local trackObjectives = Config.ObjectivesEnabled == true -- BD-074: read once per tick
             local candidates = {}
             for _, player in Players:GetPlayers() do
                 local character = player.Character
@@ -264,7 +272,7 @@ function FoodService.start(dinosaur,repository)
                         local look = root.CFrame.LookVector
                         local headX, headZ = MouthReach.point(position.X, position.Z, look.X, look.Z, speciesId, scale)
                         local radius = MouthReach.radius(speciesId, scale)
-                        table.insert(candidates, {player = player, character = character, root = root, gained = 0, position = position, headX = headX, headZ = headZ, radius = radius, radiusSq = radius * radius})
+                        table.insert(candidates, {player = player, character = character, root = root, gained = 0, items = 0, position = position, headX = headX, headZ = headZ, radius = radius, radiusSq = radius * radius})
                     end
                 else previous[player] = nil end
             end
@@ -304,6 +312,7 @@ function FoodService.start(dinosaur,repository)
                 hiddenFoods[food] = true
                 show(food, false)
                 claim.candidate.gained += food.kind.points * adminFoodMultiplier
+                if trackObjectives then claim.candidate.items += 1 end -- BD-074: pickups per player this tick (summed, not reported one by one)
             end
             for _, candidate in candidates do
                 if candidate.gained > 0 then
@@ -325,6 +334,7 @@ function FoodService.start(dinosaur,repository)
                         c:SetAttribute("RunEggEvents",Http:JSONEncode(events))
                     end
                     dinosaur.addGrowth(c, candidate.gained * Config.GrowthPerFood)
+                    if trackObjectives then objectives().record(candidate.player, "food_eaten", candidate.items) end -- BD-074: after the pickups were claimed and the catch score was committed; ONE call per player per tick
                 end
             end
         end

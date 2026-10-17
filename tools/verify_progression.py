@@ -122,13 +122,16 @@ local require=function(id) assert(id=="Identity") return Identity end
 local IdentityFusion=IDENTITY_FUSION_MODULE
 local FusionOdds=FUSION_ODDS_MODULE
 local PrivateStateStub={set=function(p,k,v) p.attrs[k]=v end,get=function(p,k) return p.attrs[k] end,forget=function() end} -- BD-360: the real module is tested by verify_private_state; here owner-only values land in attrs
-local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState",RareHatchService="RareHatchService",CosmeticOwnership="Cosmetic"}}
+local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState",RareHatchService="RareHatchService",CosmeticOwnership="Cosmetic",ObjectiveService="ObjectiveService"}}
 local rewardSpecies=nil
+services.ObjectiveSpy={calls={},loads=0} -- BD-074: stands in for ObjectiveService (tools/verify_objective_hooks.py runs the real one)
+for _,fnName in {"record","recordRunSettled","recordHatched","recordFusionUse"} do services.ObjectiveSpy[fnName]=function(player,...) table.insert(services.ObjectiveSpy.calls,fnName) return true end end
 local NestQueue=NEST_QUEUE_MODULE
 local FtueRules=FTUE_RULES_MODULE
 local SettingsModel=SETTINGS_MODEL_MODULE
 local Rewards=nil
 local require=function(id)
+ if id=="ObjectiveService" then services.ObjectiveSpy.loads+=1 return services.ObjectiveSpy end
  if id=="PrivateState" then return PrivateStateStub end
  if id=="Cosmetic" then return COSMETIC_OWNERSHIP_MODULE end
  if id=="RareHatchService" then return {record=function() end} end -- BD-428: tested by verify_rare_hatch
@@ -520,8 +523,12 @@ for _,id in donors do assert(LocalRepository.dinosaurDetails(localUser,id)) end
 -- Success: one new Gold, donors consumed, grouped projection synced.
 local goldBefore=goldCount()
 rolls=0
+assert(services.ObjectiveSpy.loads==0 and #services.ObjectiveSpy.calls==0,"BD-074: every failed/refused fusion above reported nothing, and the flag is off")
+mutableConfig.ObjectivesEnabled=true
 local fusedOk,committed,fusedStatus=LocalRepository.fuseDinosaurs(localUser,request)
+mutableConfig.ObjectivesEnabled=false
 assert(fusedOk and fusedStatus=="fused" and rolls==1,tostring(fusedStatus))
+assert(#services.ObjectiveSpy.calls==1 and services.ObjectiveSpy.calls[1]=="recordFusionUse","BD-074: the committed fusion reports fusion use once, after the commit")
 assert(goldCount()==goldBefore+1)
 for _,id in donors do assert(LocalRepository.dinosaurDetails(localUser,id)==nil) end
 local gold=assert(LocalRepository.dinosaurDetails(localUser,committed.resultId))
@@ -534,6 +541,7 @@ for _,egg in gold.lineage.parentEggs do assert(egg.genes.conditionId~=nil,"paren
 -- Duplicate confirm: same result, no reroll, no second consumption.
 local dupOk,dupResult,dupStatus=LocalRepository.fuseDinosaurs(localUser,request)
 assert(dupOk and dupStatus=="duplicate" and dupResult.resultId==committed.resultId and rolls==1 and goldCount()==goldBefore+1)
+assert(#services.ObjectiveSpy.calls==1,"BD-074: a duplicate confirm reports nothing more")
 local conflictRequest=table.clone(request) conflictRequest.donorIds=table.clone(donors) conflictRequest.donorIds[1]=gold.instanceId
 assert(select(3,LocalRepository.fuseDinosaurs(localUser,conflictRequest))=="token_conflict")
 -- A second fusion reusing consumed donors fails cleanly.
@@ -722,7 +730,10 @@ local Instance={new=function(kind)
  function o:IsA(k) return k==kind end
  return setmetatable(o,{__newindex=function(t,k,v) rawset(t,k,v) if k=="Parent" and v==remoteFolder then folderChildren[t.Name]=t end end})
 end}
-local require=function(id) assert(id=="Config") return GameConfig end
+local script={Parent={ObjectiveService="ObjectiveService"}}
+local FusionObjective={calls={},loads=0} -- BD-074 spy
+FusionObjective.recordFusionUse=function(player) table.insert(FusionObjective.calls,player) end
+local require=function(id) if id=="ObjectiveService" then FusionObjective.loads+=1 return FusionObjective end assert(id=="Config") return GameConfig end
 local FusionService=FUSION_SERVICE_MODULE
 assert(FusionService.handle(pu,{action="list"}).reason=="fusion_disabled","not started")
 local remote=FusionService.start(PersistentRepository)
@@ -757,7 +768,13 @@ assert(q.ok and keys(q)=="ok,quote")
 assert(keys(q.quote)=="consentDigest,consentRequired,donorIds,lossManifest,odds,oddsVersion,patternId,quoteDigest,recipeVersion,speciesId,targetStage")
 assert(keys(q.quote.odds)=="big,mutation,noMutation,primaryColor,secondaryColor,shiny")
 assert(q.quote.oddsVersion=="fusion-odds-provisional-v2" and q.quote.odds.noMutation==1)
+assert(FusionObjective.loads==0 and #FusionObjective.calls==0,"BD-074: flag off, a priced quote reports nothing and never requires the module")
+mutableConfig.ObjectivesEnabled=true
+local q2=invoke({action="quote",targetStage="gold",donorIds=donors2}) assert(q2.ok,tostring(q2.reason)) assert(#FusionObjective.calls==1 and FusionObjective.calls[1]==pu,"calls="..#FusionObjective.calls..", loads="..FusionObjective.loads..", flag="..tostring(mutableConfig.ObjectivesEnabled)..", same="..tostring(FusionObjective.calls[1]==pu))
+assert(invoke({action="list",limit=1}).ok and invoke({action="details",instanceId=donors2[1]}).ok and #FusionObjective.calls==1,"BD-074: list and details are not fusion use (the Index and the goal line call them too)")
 local foreignIds=table.clone(donors2) foreignIds[1]="u:1/d:1"
+assert(invoke({action="quote",targetStage="gold",donorIds=foreignIds}).reason=="wrong_owner" and #FusionObjective.calls==1,"BD-074: a refused quote reports nothing")
+mutableConfig.ObjectivesEnabled=false
 assert(invoke({action="quote",targetStage="gold",donorIds=foreignIds}).reason=="wrong_owner")
 assert(invoke({action="quote",targetStage="emerald",donorIds=donors2}).reason=="wrong_donor_count") -- Emerald is approved: 3 Gold, not 6 Base
 assert(invoke({action="quote",targetStage="platinum",donorIds=donors2}).reason=="unknown_stage")
@@ -831,7 +848,7 @@ end)()
 print("Profile transactions passed: repeated transforms, duplicate grants/purchases/use, token conflicts, rejoin, outage rollback and lease loss")
 '''
  s+=r"""
-local script={Parent={ProgressionConfig="ProgressionConfig"}}
+local script={Parent={ProgressionConfig="ProgressionConfig",ObjectiveService="ObjectiveService"}}
 local require=function()return ProgressionConfig end
 local Clock=CLOCK_MODULE
 local choiceCount=0
@@ -866,9 +883,11 @@ local blocked=false
 local warnings=0
 local warn=function() warnings+=1 end
 local workspace={Terrain={},BeDinoArena={},Gravity=250,GetAttribute=function()return nil end,GetServerTimeNow=function()return leapNow end,Blockcast=function()return if blocked then {} else nil end}
-local storage={Shared={ProgressionConfig=true},BeDinoRemotes={}}
+local storage={Shared={ProgressionConfig=true,Config="LeapGameConfig"},BeDinoRemotes={}}
 local game={GetService=function(_,id)return ({Players={PlayerRemoving=removal},ReplicatedStorage=storage,RunService={Heartbeat=heartbeat}})[id]end}
-local require=function()return ProgressionConfig end
+storage.probe={cfg={ObjectivesEnabled=false},calls={},loads=0} -- BD-074: cfg stands in for the game Config (the flag lives there); script.Parent.ObjectiveService is mapped in the script table above
+storage.probe.record=function(player,kind,amount)table.insert(storage.probe.calls,{kind=kind,amount=amount}) return true end
+local require=function(id)if id=="LeapGameConfig" then return storage.probe.cfg elseif id=="ObjectiveService" then storage.probe.loads+=1 return storage.probe end return ProgressionConfig end
 CFrame.new=function(p)return {Position=p}end
 local Leap=LEAP_MODULE
 local h={Health=100,FloorMaterial="grass",WalkSpeed=22,ChangeState=function()end}
@@ -921,6 +940,19 @@ assert(user.attrs.LeapRejectCount==2 and user.attrs.LastLeapStatus=="rejected")
 leapNow=240 blocked=true activate(user) assert(user.attrs.LastLeapStatus=="blocked" and user.attrs.LeapReadyAt==240,"a wall right ahead refuses the leap and costs no extra cooldown (240 = 210 + the 30 s penalty already served)")
 blocked=false
 leapNow=300 h.FloorMaterial="air" local before=user.attrs.LeapReadyAt activate(user) assert(user.attrs.LeapReadyAt==before,"no leap from the air")
+-- BD-074: an accepted leap reports leap_used once; refused requests (cooldown, air, wall) and the flag-off server report nothing
+h.FloorMaterial="grass" blocked=false
+leapNow=400 activate(user) assert(user.attrs.LastLeapStatus=="leaping")
+assert(storage.probe.loads==0 and #storage.probe.calls==0,"flag off: an accepted leap never requires the objective module")
+leapNow=402 heartbeat.fn()
+storage.probe.cfg.ObjectivesEnabled=true
+leapNow=500 activate(user) assert(user.attrs.LastLeapStatus=="leaping" and #storage.probe.calls==1 and storage.probe.calls[1].kind=="leap_used" and storage.probe.calls[1].amount==1,"an accepted leap reports leap_used once")
+leapNow=500.1 activate(user) assert(#storage.probe.calls==1,"a request inside the spam window reports nothing")
+leapNow=502 heartbeat.fn()
+leapNow=503 activate(user) assert(user.attrs.LastLeapStatus=="cooldown" and #storage.probe.calls==1,"a cooldown refusal reports nothing")
+leapNow=700 h.FloorMaterial="air" activate(user) assert(#storage.probe.calls==1,"no leap from the air, nothing reported")
+h.FloorMaterial="grass" blocked=true leapNow=800 activate(user) assert(user.attrs.LastLeapStatus=="blocked" and #storage.probe.calls==1,"a wall ahead reports nothing")
+blocked=false storage.probe.cfg.ObjectivesEnabled=false
 print("Leap handler passed: client-owned leap (no ownership change, no server velocity), envelope distance/height/speed/lift, wall rollback, 30s penalty, cooldown and air rejection")
 """
  return s.replace('FTUE_RULES_MODULE',module('src/shared/FtueRules.luau')).replace('FUSION_ODDS_MODULE',module('src/server/FusionOdds.luau')).replace('FUSION_SERVICE_MODULE',module('src/server/FusionService.luau')).replace('IDENTITY_FUSION_MODULE',module('src/server/IdentityFusion.luau')).replace('COSMETIC_OWNERSHIP_MODULE',module('src/server/CosmeticOwnership.luau')).replace('IDENTITY_MODULE',module('src/server/DinosaurIdentity.luau')).replace('NEST_QUEUE_MODULE',module('src/shared/NestQueue.luau')).replace('SETTINGS_MODEL_MODULE',module('src/shared/SettingsModel.luau')).replace('PAID_RANDOM_GATE_MODULE',module('src/shared/PaidRandomGate.luau')).replace('REWARDS_MODULE',module('src/server/RewardMath.luau')).replace('REPO_MODULE',module('src/server/ProfileRepository.luau')).replace('CLOCK_MODULE',module('src/shared/WeatherClock.luau')).replace('LEAP_MODULE',module('src/server/LeapService.luau'))

@@ -158,6 +158,19 @@ local function seededConnect(env, userId)
 end
 
 local SCENARIO_OVERRIDES = nil -- Config overrides for the next runScenario (BD-358 contrast run)
+-- BD-074: every scenario's stored profiles are scanned for objective data when it ends (DATA is reset per scenario).
+local OBJECTIVE_PROBE = {profiles = 0, withField = 0, operations = 0}
+local function scanObjectiveWrites()
+    for _, profile in DATA do
+        if type(profile) == "table" and profile.revision ~= nil then
+            OBJECTIVE_PROBE.profiles += 1
+            if profile.objectives ~= nil then OBJECTIVE_PROBE.withField += 1 end
+            for _, operation in profile.recentOperations or {} do
+                if operation.kind == "objective" then OBJECTIVE_PROBE.operations += 1 end
+            end
+        end
+    end
+end
 local function runScenario(name, limit, fn)
     currentScenario = name
     now = 0
@@ -172,6 +185,7 @@ local function runScenario(name, limit, fn)
     local finished = false
     task.spawn(function() fn(env, server) finished = true end)
     runQueue(limit)
+    scanObjectiveWrites()
     check("scenario completed within " .. limit .. " virtual s", finished, "now=" .. now)
     check("no coroutine crashed", #crashes == 0, table.concat(crashes, " | "))
     queue = {}
@@ -1106,6 +1120,16 @@ runScenario("kill-egg-bonus", 400, function(env, server)
     local dup = 0 for _, k in ids do if k > 1 then dup += 1 end end
     check("kill bonus: still 3 eggs after the leave, none duplicated", total == 3 and dup == 0, string.format("%d eggs, %d dup", total, dup))
 end)
+
+-------------------------------------------------------------------- BD-074: the objective hooks are inert while the flag is off
+do
+    currentScenario = "objective-hooks-off"
+    check("objective hooks: the sim stored profiles to look at (all scenarios)", OBJECTIVE_PROBE.profiles >= 100, tostring(OBJECTIVE_PROBE.profiles))
+    check("objective hooks: with ObjectivesEnabled=false no profile gained an objectives field and no objective operation was written",
+        OBJECTIVE_PROBE.withField == 0 and OBJECTIVE_PROBE.operations == 0,
+        string.format("%d fields, %d operations in %d profiles", OBJECTIVE_PROBE.withField, OBJECTIVE_PROBE.operations, OBJECTIVE_PROBE.profiles))
+    check("objective hooks: with the flag off no hook site even required ObjectiveService (settle, hatch, equip, potion, fusion)", OBJECTIVE_LOADS == 0, tostring(OBJECTIVE_LOADS))
+end
 
 -------------------------------------------------------------------- report
 local failed = 0
