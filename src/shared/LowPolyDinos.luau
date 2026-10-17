@@ -195,9 +195,10 @@ local function shells(container: Instance, entry: any?)
                 local glow = Tier.CoatGlow[entry.id]
                 if glow then
                     pcall(function() -- EmissiveMaskContent is a newer API; an older client simply keeps the unlit coat
-                        (coat :: any).EmissiveMaskContent = Content.fromUri((coat :: any).ColorMap)
-                        (coat :: any).EmissiveStrength = glow.strength
-                        (coat :: any).EmissiveTint = Color3.fromRGB(glow.tint[1], glow.tint[2], glow.tint[3])
+                        local sa: any = coat
+                        sa.EmissiveMaskContent = Content.fromUri(sa.ColorMap)
+                        sa.EmissiveStrength = glow.strength
+                        sa.EmissiveTint = Color3.fromRGB(glow.tint[1], glow.tint[2], glow.tint[3])
                     end)
                 end
                 coat.Parent = shell
