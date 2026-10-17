@@ -21,8 +21,14 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 DOC = ROOT / 'docs/114-handbook.md'
 BEGIN, END = '<!-- scale-ladder:begin -->', '<!-- scale-ladder:end -->'
-# Studio bounding boxes (docs/07-kanban.md BD-329/BD-337, docs/108): the only species heights that are measured, not estimated.
-MEASURED = {'compy': 6.6, 'gallimimus': 4.9, 'tyrannosaurus': 10.3}
+# Studio bounding boxes at scale 1 (BD-471, 2026-10-17, playtest build, LowPoly.clone then ScaleTo(1), Model:GetBoundingBox height): the
+# species heights that are measured, not estimated. All 22 are measured; an unmeasured species would follow the estimate rule below.
+MEASURED = {
+    'compy': 6.6, 'triceratops': 8.39, 'tyrannosaurus': 10.2, 'raptor': 8.4, 'stegosaurus': 4.91, 'ankylosaurus': 6.49,
+    'archaeopteryx': 5.28, 'baryonyx': 6.22, 'brachiosaurus': 10.63, 'dimorphodon': 5.7, 'elasmosaurus': 6.52, 'gallimimus': 4.92,
+    'ichthyosaurus': 3.45, 'microraptor': 5.1, 'mosasaurus': 3.29, 'pachycephalosaurus': 5.11, 'parasaurolophus': 5.54,
+    'plesiosaurus': 6.73, 'pteranodon': 6.93, 'quetzalcoatlus': 8.4, 'spinosaurus': 8.43, 'therizinosaurus': 10.93,
+}
 STAGE_COLUMNS = ('run', 'mid', 'long', 'max', 'bigMax')
 
 
@@ -340,7 +346,8 @@ def render(ladder):
     add = lines.append
     add('All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verify_scale_ladder.py --write-doc`; CI fails when this block, the Lua table or the code that builds the things drift apart. **WIRED** = the game code reads the table; **MIRRORED** = the owner module stays the source and the verifier recomputes the value from it.')
     add('')
-    add('**Dinosaurs (MIRRORED scale; height at scale 1 is MEASURED for three species and an ESTIMATE for the other 19 until BD-471 measures them in Studio).** Drawn height = height at 1 x the growth scale. In the cave hub every dinosaur is exactly 1x (docs/115).')
+    n_measured = sum(1 for sid in order if ladder[f'Dino.species.{sid}.measured'] == 'true')
+    add(f'**Dinosaurs (MIRRORED scale; height at scale 1 is MEASURED in Studio for {n_measured} of {len(order)} species, BD-471, 2026-10-17{"" if n_measured == len(order) else ", the rest are ESTIMATES"}).** Drawn height = height at 1 x the growth scale. In the cave hub every dinosaur is exactly 1x (docs/115).')
     add('')
     head = '| Species | Model scale | Height at 1 | Source | ' + ' | '.join(f'{name} x{fmt(stages[name])}' for name in STAGE_COLUMNS) + ' |'
     add(head)
@@ -349,7 +356,7 @@ def render(ladder):
         h = g(f'Dino.species.{sid}.height')
         src = 'MEASURED' if ladder[f'Dino.species.{sid}.measured'] == 'true' else 'ESTIMATE'
         cells = ' | '.join(f'{h * stages[name]:.1f}' for name in STAGE_COLUMNS)
-        add(f'| {sid} | {fmt(g(f"Dino.species.{sid}.scale"))} | {h:.1f} | {src} | {cells} |')
+        add(f'| {sid} | {fmt(g(f"Dino.species.{sid}.scale"))} | {h:.2f} | {src} | {cells} |')
     add('')
     add('Growth stages (growth = food x 0.1, `s = min(4, sqrt(1 + growth / 50))`): ' + ', '.join(
         f'{ladder[f"Dino.stages.{i}.id"]} x{fmt(g(f"Dino.stages.{i}.scale"))} (growth {fmt(g(f"Dino.stages.{i}.growth"))}{", BIG" if ladder[f"Dino.stages.{i}.big"] == "true" else ""})'
