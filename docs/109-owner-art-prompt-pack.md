@@ -172,3 +172,89 @@ Sound is not art: briefs are in docs/85 and docs/87.
 
 - AUTO or TABLE (no new code): B1 ribbon, B2 trail icons (`TrailIconAssetIds`), C2 paint bucket, E4 FX textures, D3 aura icons.
 - Need a small agent task first: A1 and A2 (BD-208), C1 (BD-190), D1 (BD-113), D2 toast, E1 (BD-248), E2, E3.
+
+## 9. BD-077: the 4 objective icons (brief ready, art pending: owner or Blender, 2026-10-17)
+
+Source: [66](66-intake-mini-objectives.md) section 9 names the four new icons of the objectives panel: **chevron toggle, tutorial arrow, crystal and star** (crystal and star are shared with the notification toasts of [65](65-intake-notifications.md), so they are made ONCE). Nothing is drawn in code: [72](72-ui-copy-and-asset-standards.md) and [AGENTS.md](../AGENTS.md) say final icons come from Blender or from the owner with ChatGPT. Status lives only in the Kanban (BD-077; the wiring is BD-561). **Never invent asset ids.**
+
+**Today** (`src/client/ObjectivesPanel.luau`, BD-075): the panel draws the registered `trophy` icon and plain text only. It has no icon-id slot of its own; it has no chevron, arrow, gem or star. With the four ids empty the panel must stay exactly as it is now (trophy, text, chip).
+
+### 9.1 What the owner makes (4 files, 512 x 512 transparent PNG each)
+
+| # | Icon | File (`resources/ui/v2/icons/`) | Slot name (`Theme.ImageIds` key) | Slot today | Made by |
+|---|---|---|---|---|---|
+| 1 | Chevron toggle | `objective-chevron-v1.png` | `objective_chevron` | NEW, empty-id slot added by BD-561 | ChatGPT or Blender |
+| 2 | Tutorial arrow | `objective-arrow-v1.png` | `objective_arrow` | NEW, empty-id slot added by BD-561 | ChatGPT or Blender |
+| 3 | Crystal (shared with [65](65-intake-notifications.md), made once) | `notify-crystal-v1.png` | `notify_crystal` | exists in `AssetSlots.Images`, id empty (BD-304) | ChatGPT or Blender |
+| 4 | Star (shared with [65](65-intake-notifications.md), made once) | `notify-star-v1.png` | `notify_star` | exists in `AssetSlots.Images`, id empty (BD-304) | ChatGPT or Blender |
+
+If icons 3 and 4 are already made for the toasts (D2 above, [83](83-playtest-asset-list.md) items 15 and 17), do NOT make them again: the same file serves both. This section is the better spec for them, because it adds the 24 px rules and the amber colour.
+
+**Colour conflict to know about (handbook wins).** [83](83-playtest-asset-list.md) item 15 and D2 above still say "faceted BLUE gem" for the crystal. [114](114-handbook.md) section 5.3 (owner 2026-10-16) and [136](136-owner-art-and-sound-quick-prompts.md) say crystal currency art is **AMBER / yellow, never blue**. This brief uses amber. The old "blue" words in 83 and D2 are superseded by 114 s5.3.
+
+### 9.2 Rules for all four
+
+- **Size and format:** the repo file is **512 x 512 RGBA PNG** (TX1 in [115](115-decisions-log.md): UI icons at 512 px max; the art reads the same at 256 px, so 256 is also allowed if the lead agrees). ChatGPT will give 1024 x 1024; downscale to 512 for the repo and upload copy. TRUE transparent background: the four corner pixels are fully transparent (no checkerboard, no white or black box, no ground, no drop-shadow plane).
+- **Readable at 24 to 44 px:** the icons show tiny (chevron 24 px, crystal 20 to 24 px, arrow and star 28 to 32 px, never above 44 px). So: ONE object, 3 to 4 big shapes, no fine detail. No lines thinner than 4% of the canvas (about 20 px at 512). No sparkle bursts, no tiny stars or glints, no text, digits or letters. Keep at least 12% empty margin on every side (the outline counts as part of the shape).
+- **Own silhouette each:** the four must be told apart by SHAPE alone at 24 px, in grey-scale. Chevron = open V, no body. Arrow = solid block arrow with a tail. Crystal = pointed faceted kite/diamond. Star = round-ish five-point star.
+- **Outline:** thick clean outline in outline/dark text **#0D0F14** (docs/114 s5.1), about 4% of the canvas wide (about 20 px at 512), even all round, rounded corners. The icons sit on the dark panel **#2A2835** and on cards **#3D3A49** (s5.1), where a dark outline alone disappears, so the FILL must be bright and light (gold, green, white highlight) and the shape reads by its fill; also add a thin white-ish rim just inside the outline.
+- **Look:** anime cel-shaded, chunky, rounded, matte (no gloss), bright light from the top-left, one flat highlight patch, one soft shade patch bottom-right. Same hand as the trophy and the mutation badges.
+- **Palette (docs/114 s5, hex values only from there):** outline **#0D0F14**; gold **#FFD22B** (s5.1); accent green **#5DED1F** (s5.1); white **#FFFFFF** (s5.1); amber **#F1A024** (s5.3, "Amber egg colour"). No blue, purple or red in any of the four (blue is for Rare and for water; red is Mythic). Colour is never the only clue.
+- **Check before sending (docs/72 bar):** put each PNG on a `#2A2835` rectangle, shrink to 24, 32 and 44 px, put the four in a row: all four must be clearly different, crisp, and not blurry. Each file under 100 KB.
+
+### 9.3 Icon 1: chevron toggle (`objective-chevron-v1.png`)
+
+- **Purpose:** the "open or fold me" hint on the objectives header. The whole 44 px header is already the tap target; the chevron is only the picture of it.
+- **Where it shows:** right end of the objectives header, folded pill AND open panel, 24 px. Drawn **pointing DOWN** ("tap to open"). The game rotates it 180 degrees when the panel is open, so the shape must be left-right symmetric and have no tail or body.
+- **Silhouette:** one bold rounded chevron "V", arms about 24% of the canvas thick, round ends, opening angle about 100 degrees, 76% of the canvas wide and 44% tall, centred. No plate, no circle, no shadow.
+- **Colours:** gold **#FFD22B** fill, **#0D0F14** outline, one white **#FFFFFF** highlight stripe on the upper-left of each arm, a soft **#F1A024** shade on the lower edge of each arm. (The baked top-left light flips when the game rotates it; at 24 px that is fine.)
+- **Prompt (copy-ready):**
+  > Be Dino! is a friendly Roblox dinosaur game for young children. Style: anime cel-shaded, bubbly and soft, saturated but harmonious colours, thick clean dark outline, rounded chunky shapes, matte (no harsh shine), bright top-left light, calm and cozy, never scary or sharp. No text, letters, digits, logos or watermark. Match my existing icons (trophy, egg nest, weather icons). One single UI icon on a square 1024 x 1024 canvas, TRUE transparent background (real alpha channel, no ground, no shadow plane, no frame, no checkerboard), at least 12% empty margin on all sides, readable when shrunk to 24 pixels, broad simple shapes. Subject: one bold chunky rounded chevron pointing DOWN, like a thick letter V with rounded ends and no tail, left-right symmetric, centred. Golden yellow fill #FFD22B, thick near-black outline #0D0F14, one white highlight stripe on the upper-left of each arm, soft amber #F1A024 shade on the lower edge. Flat front view, no 3D tilt, no extra decoration.
+- **Blender alternative:** extrude a 2D V outline with a round bevel (flat orthographic front view), matte material in #FFD22B, one top-left key light, a thin outline from an inverted-hull or Freestyle line in #0D0F14; render 512 x 512 with a transparent film. Same pattern as `tools/blender/build_mutation_badges.py` and `build_trail_icons.py` (point-list outlines, soft pillow bevel, white rim plus thin dark line).
+- **Good looks like:** at 24 px it is plainly a down-pointing chevron, not a smudge; thick enough that the dark outline is still one pixel wide.
+
+### 9.4 Icon 2: tutorial arrow (`objective-arrow-v1.png`)
+
+- **Purpose:** points the new player at "do this next" during the first tutorial tasks (T1 to T9, [66](66-intake-mini-objectives.md) s5). It is the only hint picture the tutorial gets.
+- **Where it shows:** left of the name of the first unfinished TUTORIAL row in the open panel, and next to the folded pill's task while a tutorial task is first, 28 to 32 px; the game bobs it 3 to 4 px and rotates it to point where needed (off with Reduce Motion, [114](114-handbook.md) s4.5). Never on Short or Daily rows.
+- **Silhouette:** a chunky solid block arrow pointing **RIGHT**: a fat rounded head and a short stubby tail about 45% as thick as the head; 84% of the canvas wide, 56% tall; every corner rounded; no curve, no feathers, no dashed line. It must not look like the chevron (that one is an open V; this one is solid with a tail).
+- **Colours:** accent green **#5DED1F** fill (s5.1), **#0D0F14** outline, white **#FFFFFF** highlight patch on the upper-left of the head, soft darker-green shade on the lower edge (a shade of #5DED1F, not a new hue).
+- **Prompt (copy-ready):**
+  > Be Dino! is a friendly Roblox dinosaur game for young children. Style: anime cel-shaded, bubbly and soft, saturated but harmonious colours, thick clean dark outline, rounded chunky shapes, matte (no harsh shine), bright top-left light, calm and cozy, never scary or sharp. No text, letters, digits, logos or watermark. Match my existing icons (trophy, egg nest, weather icons). One single UI icon on a square 1024 x 1024 canvas, TRUE transparent background (real alpha channel, no ground, no shadow plane, no frame, no checkerboard), at least 12% empty margin on all sides, readable when shrunk to 28 pixels, broad simple shapes. Subject: one chunky solid block arrow pointing RIGHT, a fat rounded arrowhead with a short stubby rounded tail, all corners rounded, centred, flat front view. Bright lime green fill #5DED1F, thick near-black outline #0D0F14, one white highlight patch on the upper-left of the head, a soft darker-green shade on the lower edge. No motion lines, no sparkles, no extra decoration.
+- **Blender alternative:** same as the chevron: a 2D arrow outline, extrude with a soft round bevel, matte green, orthographic front view, dark outline line, 512 x 512 transparent film.
+- **Good looks like:** at 28 px nobody needs to be told it is an arrow, and it is clearly not the chevron.
+
+### 9.5 Icon 3: crystal (`notify-crystal-v1.png`, shared with 65)
+
+- **Purpose:** "crystals" (the currency) in small spaces, so the word does not have to be spelled out each time.
+- **Where it shows:** objectives panel: after the "+10" on each task's prize line, and in the claim answer in the header ("+10", then the gem), 20 to 24 px; also the crystal toast and the "Need 150" warning of [65](65-intake-notifications.md), 28 to 32 px.
+- **Silhouette:** one faceted gem, a tall kite/diamond with a flat top "table", a slightly wider crown and a pointed bottom, 3 or 4 big facets only (no tiny facets: they turn to mud at 20 px), 66% of the canvas wide and 80% tall. Friendly low-poly, rounded edges.
+- **Colours (handbook s5.3, crystals are AMBER, never blue):** body amber **#F1A024**, light facets gold **#FFD22B**, one white **#FFFFFF** glint patch on the upper-left facet, **#0D0F14** outline. Not blue, not purple, not red.
+- **Prompt (copy-ready):**
+  > Be Dino! is a friendly Roblox dinosaur game for young children. Style: anime cel-shaded, bubbly and soft, saturated but harmonious colours, thick clean dark outline, rounded chunky shapes, matte (no harsh shine), bright top-left light, calm and cozy, never scary or sharp. Crystals and gems are AMBER / golden yellow, never blue. No text, letters, digits, logos or watermark. Match my existing icons (trophy, egg nest, weather icons). One single UI icon on a square 1024 x 1024 canvas, TRUE transparent background (real alpha channel, no ground, no shadow plane, no frame, no checkerboard), at least 12% empty margin on all sides, readable when shrunk to 20 pixels, broad simple shapes. Subject: one faceted amber gem, a kite-shaped diamond with a flat top and a pointed bottom, only 3 or 4 big chunky facets, rounded edges. Amber body #F1A024 with lighter golden facets #FFD22B, one white highlight patch on the upper-left facet, thick near-black outline #0D0F14. Front view, centred, no sparkle bursts, no shine rays.
+- **Blender alternative:** a low-poly gem (a cylinder with 6 sides, top cut flat, bottom to a point, flat shading so each facet is one colour), matte, two amber tones from #F1A024 and #FFD22B, orthographic camera, outline in #0D0F14, 512 x 512 transparent. This is the same gem language as the cave and shop crystals (amber only, s5.3).
+- **Good looks like:** at 20 px it is a small golden gem; it does not look like the star next to it.
+
+### 9.6 Icon 4: star (`notify-star-v1.png`, shared with 65)
+
+- **Purpose:** "done" and "well done" (a finished task, a completed objective), the picture of a small win.
+- **Where it shows:** left of the "Done!" chip on the folded pill when a task can be claimed; on a finished task row beside its prize; and as the icon of the "objectives done" toast of [65](65-intake-notifications.md), 28 to 32 px. (The one-line goal text "Done! Claim in Tasks" stays text only.)
+- **Silhouette:** a chunky five-point star with rounded points, fat (inner radius about 55% of the outer), pointing up, 80% of the canvas wide, centred. NO chevron inside it (that is the separate `notify_level` star). NOT a sparkle or a burst.
+- **Colours:** gold **#FFD22B** face (s5.1), **#0D0F14** outline, white **#FFFFFF** highlight patch on the upper-left point, a **#F1A024** shade on the lower-right edge.
+- **Prompt (copy-ready):**
+  > Be Dino! is a friendly Roblox dinosaur game for young children. Style: anime cel-shaded, bubbly and soft, saturated but harmonious colours, thick clean dark outline, rounded chunky shapes, matte (no harsh shine), bright top-left light, calm and cozy, never scary or sharp. No text, letters, digits, logos or watermark. Match my existing icons (trophy, egg nest, weather icons). One single UI icon on a square 1024 x 1024 canvas, TRUE transparent background (real alpha channel, no ground, no shadow plane, no frame, no checkerboard), at least 12% empty margin on all sides, readable when shrunk to 28 pixels, broad simple shapes. Subject: one simple chunky five-point star with fat rounded points, pointing up, centred, flat front view. Golden yellow face #FFD22B, thick near-black outline #0D0F14, one white highlight patch on the upper-left point, soft amber #F1A024 shade on the lower-right edge. Nothing inside the star, no sparkles, no rays, no glow.
+- **Blender alternative:** a five-point star outline with generous rounding, extrude with a soft pillow bevel, matte gold #FFD22B, top-left key light, dark outline #0D0F14, orthographic, 512 x 512 transparent.
+- **Good looks like:** at 28 px it is a solid, happy gold star, distinct from the gem and from the green arrow.
+
+### 9.7 Where the panel reads the ids, and the empty-id gate
+
+- **Reader:** all four go through the existing `Theme.ImageIds` table (`UITheme.luau` merges `AssetSlots.Images` into it; an empty id is not merged, so the key is simply absent). Slot names: `objective_chevron`, `objective_arrow` (new, added to `AssetSlots.luau`, `tools/asset_slots.json` and the [120](120-pending-owner-uploads-checklist.md) table by BD-561) and `notify_crystal`, `notify_star` (already exist, empty). Bind after upload with `python tools/bind_assets.py ids.txt` (lines `objective_chevron=rbxassetid://N`).
+- **Gate (to be written by BD-561, not here):** `ObjectivesPanel` gets one local helper, in words: "if `Theme.ImageIds[key]` is nil or empty, draw nothing and reserve no space; else `Theme.icon(parent, key)`". The header keeps `Theme.icon(header, "trophy")` always. So with all four ids empty the panel's Instance tree, text widths and `TouchLayout` rects are identical to today (`tools/verify_objectives_panel.py` gets one case for that), and each icon appears on its own as soon as its id is bound.
+- **Tight widths:** the folded pill is 190 to 300 px wide on phones (trophy 36 px + chip 68 px already); the chevron needs about 28 px more. BD-561 checks the text fit at 190 px and may shorten the title; it never shrinks the 44 px tap target or the 14 px text floor.
+
+### 9.8 After the owner has the PNGs
+
+1. Save the four files at the paths in 9.1; send them to the lead (or run the Blender session). Check them with the 24 / 32 / 44 px test of 9.2.
+2. Lead: upload (Studio, Asset Manager, Bulk Import, owner account, as **Image**), then `python tools/bind_assets.py ids.txt`; the four [77](77-asset-registry.md) "planned" lines become "uploaded, bound".
+3. BD-561 wires the panel (can be built and merged before the art exists, because empty ids change nothing).
+4. Studio screenshot of the folded pill and the open panel at desktop and 836 x 390 (BD-078); move BD-077 to Review / test only with that picture.

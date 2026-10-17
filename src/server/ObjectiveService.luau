@@ -8,26 +8,33 @@
 -- ObjectiveAction (RemoteFunction in ReplicatedStorage.BeDinoRemotes), request shapes (anything else is "bad_request"):
 --   {action = "view"}                         -> {ok = true, view = {...}}   (read-only)
 --   {action = "claim", id = "T1", token = "<opaque, 1..80>"} -> {ok = true, status, grant = {crystals, xp}, view}
+--   {action = "seen", id = "fusion_menu"}     -> {ok = true, status = "seen" | "already_seen", view}   (OB2, docs/115)
+--     "The player opened a menu": accepted only for an id a catalogue row declares (T9 "fusion_menu"), once per profile, only
+--     after the player owns a dino; any other id is "unknown_objective". The client sends no amount and no objective id.
 -- The client never sends progress, rewards, windows or amounts. Every response is a table; failures are {ok = false, reason}.
 -- Reasons: bad_request, rate_limited, disabled, profile_not_loaded, invalid_token, unknown_objective, not_done, not_active,
--- already_claimed, token_conflict, newer_version, lease_lost, save_failed. Pure rules: shared/ObjectiveRules. Rewards are
+-- already_claimed, token_conflict, newer_version, lease_lost, save_failed, no_dino, queue_full. Pure rules: shared/ObjectiveRules. Rewards are
 -- PROVISIONAL Crystals/XP only (shared/ObjectiveConfig); never Robux, never random items.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local ObjectiveConfig = require(ReplicatedStorage.Shared.ObjectiveConfig)
+local ObjectiveRules = require(ReplicatedStorage.Shared.ObjectiveRules)
 
 local ObjectiveService = {}
 ObjectiveService.MaxIdLength = 8
 
 local repository: any = nil
 local windows: {[any]: {startedAt: number, count: number}} = {}
+-- OB1: food the server saw a player eat since their last settled run (memory only, weak keys, never persisted). Reset at every settlement.
+local runFood: {[any]: number} = setmetatable({}, {__mode = "k"}) :: any
 local clock = os.clock
 
 local Shapes = {
     view = {action = true},
     claim = {action = true, id = true, token = true},
+    seen = {action = true, id = true},
 }
 
 local function fail(reason: string): any
@@ -57,6 +64,9 @@ local function validate(request: any): string?
     for key in request do
         if type(key) ~= "string" or not shape[key] then return "bad_request" end
     end
+    if request.action == "seen" then
+        if not boundedString(request.id, ObjectiveService.MaxIdLength * 4) then return "bad_request" end
+    end
     if request.action == "claim" then
         if not boundedString(request.id, ObjectiveService.MaxIdLength) or not boundedString(request.token, ObjectiveConfig.ClaimTokenMax) then
             return "bad_request"
@@ -70,6 +80,11 @@ local function handleAction(player: any, request: any)
         local view, status = repository.objectiveView(player)
         if not view then return fail(status or "disabled") end
         return {ok = true, view = view}
+    end
+    if request.action == "seen" then
+        local ok, status = repository.objectiveSeen(player, request.id)
+        if not ok then return fail(status or "save_failed") end
+        return {ok = true, status = status, view = repository.objectiveView(player)}
     end
     local ok, status, outcome = repository.objectiveClaim(player, request.id, request.token)
     if not ok or type(outcome) ~= "table" then return fail(status or "save_failed") end
@@ -99,6 +114,7 @@ end
 -- check, so with the flag off they do not even evaluate their arguments or require this module (tools/verify_objective_hooks.py).
 function ObjectiveService.record(player: any, kind: string, amount: number?, eventId: string?, value: number?): boolean
     if Config.ObjectivesEnabled ~= true or not repository then return false end
+    if kind == "food_eaten" then runFood[player] = (runFood[player] or 0) + (if type(amount) == "number" and amount >= 1 and amount < 1e6 then amount else 1) end
     return repository.objectiveRecord(player, {kind = kind, amount = amount, id = eventId, value = value})
 end
 
@@ -112,10 +128,14 @@ ObjectiveService.RareTier = 3
 -- caught during a weather event carries its weather id, a clear-weather egg "clear" (S5 "Catch an event egg"). `level` is the
 -- account level read from the committed profile (T7 uses a threshold). runSeconds rides along as the run length for later gating.
 -- All three events are id-keyed or threshold-merged, so a replayed settlement counts once.
-function ObjectiveService.recordRunSettled(player: any, runId: string, runSeconds: number?, eggs: {any}?, level: number?)
+function ObjectiveService.recordRunSettled(player: any, runId: string, runSeconds: number?, eggs: {any}?, level: number?, catchScore: number?)
     if Config.ObjectivesEnabled ~= true then return end
+    -- OB1 (docs/115): only a run that lasted RunMinSeconds and ate RunMinFood counts for T2/S3/D2. The food is what this server saw
+    -- the player eat since their last settlement (or the committed catch score, whichever is larger: a catch implies food).
+    local ate = math.max(runFood[player] or 0, if type(catchScore) == "number" and catchScore == catchScore then catchScore else 0)
+    runFood[player] = nil
     local length = if type(runSeconds) == "number" and runSeconds == runSeconds and runSeconds >= 0 and runSeconds < 1e9 then runSeconds else nil -- a non-finite length must not drop the event
-    ObjectiveService.record(player, "run_end", 1, "run:" .. runId, length)
+    if ObjectiveRules.runCounts(length, ate) then ObjectiveService.record(player, "run_end", 1, "run:" .. runId, length) end
     local eventEggs = 0
     if eggs then
         for _, egg in eggs do
@@ -146,11 +166,10 @@ function ObjectiveService.recordHatched(player: any, outcomes: {any}, freshSpeci
 end
 
 -- A fusion the server verified: a quote for a full, owned donor set (FusionService) or a committed fusion (ProfileRepository).
--- The server cannot see a menu being opened (only the player's client can), so T9 "Open the Fusion menu" and D5 "Add a dino toward
--- a fusion step" both count on this server-verified use of the menu (docs/66 section 18).
+-- D5 "Add a dino toward a fusion step" counts on this server-verified use. T9 "Open the Fusion menu" no longer does (OB2, docs/115):
+-- it is earned by the client's one-time {action = "seen", id = "fusion_menu"} request, validated in handleAction above.
 function ObjectiveService.recordFusionUse(player: any)
     if Config.ObjectivesEnabled ~= true then return end
-    ObjectiveService.record(player, "fusion_menu_opened", 1)
     ObjectiveService.record(player, "fusion_step_added", 1)
 end
 
@@ -179,6 +198,7 @@ function ObjectiveService.start(profileRepository: any): any
     end
     Players.PlayerRemoving:Connect(function(player)
         windows[player] = nil
+        runFood[player] = nil
     end)
     -- Progress is queued in memory; this loop commits it (claims and the lease release commit it too).
     task.spawn(function()

@@ -8,13 +8,13 @@ local Catalogue = {
     -- Tutorial: ordered, one-time, one shown at a time (UI shows the first unclaimed). Total 160 Crystals (docs/66).
     {id = "T1", group = "tutorial", name = "Eat 10 food", event = "food_eaten", goal = 10, reward = {crystals = 10}},
     {id = "T2", group = "tutorial", name = "Finish your first run", event = "run_end", goal = 1, reward = {crystals = 20}},
-    {id = "T3", group = "tutorial", name = "Hatch 3 eggs", event = "egg_hatched", goal = 3, reward = {crystals = 15}},
+    {id = "T3", group = "tutorial", name = "Hatch 3 eggs", event = "egg_hatched", goal = 3, reward = {crystals = 15}, note = "Cracked eggs count too"}, -- OB3 (docs/115): a failed Cracked egg counts as opened
     {id = "T4", group = "tutorial", name = "Equip a dino in the Index", event = "dino_equipped", goal = 1, reward = {crystals = 10}},
     {id = "T5", group = "tutorial", name = "Use leap once", event = "leap_used", goal = 1, reward = {crystals = 10}},
     {id = "T6", group = "tutorial", name = "Buy a potion", event = "potion_bought", goal = 1, reward = {crystals = 25}},
     {id = "T7", group = "tutorial", name = "Reach level 3", event = "level_reached", minValue = 3, goal = 1, reward = {crystals = 20}},
     {id = "T8", group = "tutorial", name = "Collect a second species", event = "species_new", goal = 1, reward = {crystals = 30}},
-    {id = "T9", group = "tutorial", name = "Open the Fusion menu", event = "fusion_menu_opened", goal = 1, reward = {crystals = 20}},
+    {id = "T9", group = "tutorial", name = "Open the Fusion menu", event = "fusion_menu_opened", seen = "fusion_menu", goal = 1, reward = {crystals = 20}},
     -- Short: 3 active at a time, rolled from the pool by the window number, reset every 30 minutes (docs/66 section 6).
     {id = "S1", group = "short", name = "Hatch 10 eggs", event = "egg_hatched", goal = 10, reward = {crystals = 15}},
     {id = "S2", group = "short", name = "Eat 40 food", event = "food_eaten", goal = 40, reward = {crystals = 10}},
@@ -58,6 +58,10 @@ return table.freeze({
     PendingMax = 64, -- server-side unflushed events per player
     FlushSeconds = 30, -- service flush cadence; claim and lease release flush too
     ClaimTokenMax = 80,
+    -- OB1 (docs/115, LEAD decision, owner may overrule): a run counts for the run objectives (T2, S3, D2) only when it lasted at
+    -- least RunMinSeconds and ate at least RunMinFood. Three instant runs must not finish "Finish 3 runs". PROVISIONAL numbers.
+    RunMinSeconds = 30,
+    RunMinFood = 1,
     -- ObjectiveAction remote limiter (fixed window per player), PROVISIONAL.
     RequestsPerWindow = 10,
     RateWindowSeconds = 10,
