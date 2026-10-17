@@ -5,7 +5,8 @@
     python tools/upload_batch.py --out DIR       # another folder (default build/upload-batch/, gitignored)
 
 Collects every repo PNG whose slot (tools/asset_slots.json) is still EMPTY: the trail shop icons, the mutation badges,
-the Blender FX textures in resources/effects/fx-v2/ and the three meadow-grass-v2 maps. Each file is checked (under 20 MB,
+the Blender FX textures in resources/effects/fx-v2/, the three meadow-grass-v2 maps and the Eggs page art
+(jungle stage JPG + five condition egg PNGs in resources/ui/v2/stage/). Each file is checked (under 20 MB,
 real PNG/JPEG, RGBA where the slot needs alpha) and copied into ONE flat folder as <slot name>.<ext>, so a local
 `python -m http.server` can serve it and the uploader can name each asset after its slot. manifest.json is
 [{"file": <repo path>, "slot": <slot name>, "url_path": <flat file name>}]. After the uploader returns its
@@ -40,6 +41,9 @@ GROUPS = [
      lambda m: m.group(1) + (m.group(2).capitalize() if m.group(2) else ''), True),
     ('meadow grass maps', 'resources/materials/meadow-grass-v2', r'meadow-grass-v2-([a-z]+)\.png',
      lambda m: 'meadow_grass_v2_' + m.group(1), False),
+    # BD-208 / BD-394: the Eggs page + Conditions shop jungle stage (opaque JPG, upload as is) and the five outlined condition eggs
+    ('egg stage', 'resources/ui/v2/stage', r'egg-stage-jungle-v1\.jpg', lambda m: 'egg_stage', False),
+    ('condition eggs', 'resources/ui/v2/stage/eggs', r'egg-0[1-5]_([a-z]+)\.png', lambda m: 'egg_cond_' + m.group(1), True),
 ]
 
 
@@ -77,7 +81,7 @@ def collect(slots):
     items, skipped = [], []
     for group, folder, pattern, slot_of, needs_alpha in GROUPS:
         d = ROOT / folder
-        for f in sorted(d.glob('*.png')) if d.is_dir() else []:
+        for f in sorted([*d.glob('*.png'), *d.glob('*.jpg')]) if d.is_dir() else []:
             m = re.fullmatch(pattern, f.name)
             if not m:
                 continue

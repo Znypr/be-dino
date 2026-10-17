@@ -72,6 +72,19 @@ assert(#L.summaryLines({total = 0, failed = 0, byRarity = {0, 0, 0, 0, 0}}) == 1
 -- Never forced into hatching.
 assert(L.afterRun() == "results")
 assert(L.afterReveal(false, 5) == "continue" and L.afterReveal(false, 0) == "eggs" and L.afterReveal(true, 3) == "continue" and L.afterReveal(true, 0) == "eggs", "BD-170: Next egg never drops back to the Eggs screen while eggs remain")
+
+-- BD-208: official stage rules. The stage is a SQUARE (phone: nothing stretched), only real rbxassetid ids count, and a half-uploaded set falls back.
+assert(SR.heroSide(300, 246) == 246 and SR.heroSide(300, 224) == 224 and SR.heroSide(900, 900) == 300 and SR.heroSide(40, 40) == 120, "square side")
+assert(SR.heroSide(300.7, 246.9) == 246, "whole pixels")
+assert(SR.conditionKey("astra") == "astra" and SR.conditionKey("cracked") == "cracked" and SR.conditionKey("normal") == "normal")
+assert(SR.conditionKey(nil) == "normal" and SR.conditionKey("stage") == "normal" and SR.conditionKey("nope") == "normal" and SR.conditionKey(5) == "normal", "unknown data is a plain egg")
+assert(SR.resolve({}, "normal").stage == nil, "empty ids: the tile floor and tinted egg stay")
+assert(SR.resolve({normal = "rbxassetid://5"}, "normal").egg == nil, "an egg picture alone is never shown")
+local both = SR.resolve({stage = "rbxassetid://9", astra = "rbxassetid://7"}, "astra")
+assert(both.stage == "rbxassetid://9" and both.egg == "rbxassetid://7")
+assert(SR.resolve({stage = "rbxassetid://9"}, "astra").egg == nil, "stage only: the tinted egg stands on the pedestal")
+local H = SR.Hero
+assert(H.EggScale == 1.25 and H.PedestalY == .74 and H.PedestalY - 0.547 * H.EggScale > 0, "enlarged egg stays inside the stage")
 print("Eggs screen checks passed: nest slots, single egg card, auto-open rules, pass gate, summary, never-forced hatching")
 '''
 
@@ -80,6 +93,7 @@ def script():
     return ('local RS=' + module('src/shared/RevealSkip.luau') + '\n'
             'local FP=' + module('src/shared/FtueP1.luau') + '\n'
             'local script={Parent={RevealSkip=RS,FtueP1=FP}}\nlocal function require(x) return x end\n'
+            'local SR=' + module('src/shared/ConditionStageRules.luau') + '\n'
             'local L=' + module('src/shared/EggsLogic.luau') + '\n' + BODY)
 
 
@@ -94,6 +108,32 @@ def static_checks():
     nest = boot[boot.index('"LastNestClaimAt"'):boot.index('"LastRewardText"')]
     assert 'hatchNext' not in nest, 'opening a nest must not auto-hatch'
     assert 'ProcessReceipt' not in boot and 'PromptGamePassPurchase' not in boot, 'no Robux purchase code'
+    # BD-208 / BD-094: the Eggs page reads the official stage + condition eggs, with the code-drawn visuals as the exact fallback
+    screen = (ROOT / 'src/client/EggsScreen.luau').read_text(encoding='utf-8')
+    assert 'ConditionStage.hero(card' in screen and 'StageRules.conditionKey(' in screen and 'StageRules.heroSide(' in screen, 'Eggs card reads the stage'
+    assert 'else' + chr(10) + '        stage = EggPicture.stage(card, stageW, stageH, accent)' in screen, 'no stage id: today tile floor stays'
+    assert 'EggPicture.add(stage, if entry and look == "genes" then entry.genes else nil, eggSize)' in screen, 'tinted egg fallback stays'
+    assert 'art(icon, "egg_nest_single"' in screen, 'nest slots read the nest icon'
+    stage_ui = (ROOT / 'src/client/ConditionStage.luau').read_text(encoding='utf-8')
+    hero = stage_ui[stage_ui.index('function Stage.hero'):]
+    assert hero.count('ScaleType.Fit') == 2 and 'Crop' not in hero and 'Stretch' not in hero, 'phone: both images Fit, never stretched'
+    assert 'if not pick.stage then return nil end' in hero, 'unbound stage returns nil (fallback)'
+    theme = (ROOT / 'src/shared/UITheme.luau').read_text(encoding='utf-8')
+    assert 'id=="egg_nest" or id=="egg_nest_single"' in theme, 'nest icon has a fallback when its id is empty'
+    # the owner files exist, and the batch uploader lists every EMPTY stage slot (bound slots are skipped)
+    import sys
+    sys.path.insert(0, str(ROOT / 'tools'))
+    import bind_assets
+    import upload_batch
+    slots = bind_assets.load_slots()
+    names = ['egg_stage', 'egg_cond_cracked', 'egg_cond_dirty', 'egg_cond_normal', 'egg_cond_rainbow', 'egg_cond_astra']
+    items, _skipped = upload_batch.collect(slots)
+    listed = {it['slot']: it for it in items}
+    for n in names:
+        current = bind_assets.current_value(slots[n], (ROOT / slots[n]['file']).read_text(encoding='utf-8'))
+        assert current or n in listed, f'upload batch misses the empty slot {n}'
+        if n in listed:
+            assert (ROOT / listed[n]['file']).exists(), f'{n} file missing'
 
 
 if __name__ == '__main__':
