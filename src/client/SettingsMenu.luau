@@ -66,6 +66,21 @@ local function drawLook(body: Instance, ctx: Context)
     ctx.label(body, "Fast mode: less sparkle for slow phones", 0, TOP + 4 * ROW, 824, 30, 20, C.gold)
 end
 
+-- BD-570 (docs/134 s13): the row "Gifts from: Everyone / Friends / Nobody". Drawn only with Config.GiftClaimEnabled and a GiftAction remote on the
+-- server; the saved value is read through GiftAction and each pick is saved there (shown at once, put back if the save fails). Returns whether a row was drawn.
+local function drawGifts(body: Instance, ctx: Context, row: number): boolean
+    local Gifts = require(script.Parent:WaitForChild("GiftSettings"))
+    if not Gifts.available() then return false end
+    local GiftUi = require(Shared:WaitForChild("GiftUiModel"))
+    local function redraw() if Gifts.rowShowing() then ctx.open("settings") end end
+    choice(body, ctx, row, GiftUi.RowLabel, GiftUi.Options, GiftUi.OptionLabels, Gifts.controller().current(), function(id)
+        task.spawn(function() if not Gifts.controller().choose(id) then redraw() end end)
+        ctx.open("settings")
+    end)
+    Gifts.refresh(redraw)
+    return true
+end
+
 local function drawControls(body: Instance, ctx: Context)
     ctx.label(body, "Camera", 0, TOP, 250, 48, 28).TextXAlignment = Enum.TextXAlignment.Left
     ctx.button(body, "RESET", 270, TOP, 180, 48, C.blue, function() ctx.cameraReset() ctx.notify("Camera reset", C.blue) end)
@@ -79,6 +94,7 @@ local function drawControls(body: Instance, ctx: Context)
     -- BD-374: the keys (or phone controls) in two short lines under the last row; read from the real input code.
     local Config = require(Shared:WaitForChild("Config"))
     local used = 2 + (if Config.CaveHub then 1 else 0)
+    if Config.GiftClaimEnabled == true and drawGifts(body, ctx, used) then used += 1 end -- BD-570: flag off = nothing drawn, nothing required, no remote call
     local lines = require(Shared:WaitForChild("FtueP1")).controlsLines(game:GetService("UserInputService").TouchEnabled, Config.CombatEnabled == true)
     for i, line in lines do
         local row = ctx.label(body, line, 0, TOP + used * ROW + 2 + (i - 1) * 26, 824, 26, 19, C.text)

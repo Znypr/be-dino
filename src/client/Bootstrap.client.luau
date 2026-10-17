@@ -1488,6 +1488,11 @@ local function scales()
     end
     gui:SetAttribute("AdminRect",Rect.new(layout.admin.x,layout.admin.y,layout.admin.x+layout.admin.w,layout.admin.y+layout.admin.h)) -- BD-531: AdminPanel puts its Admin button here (phone: not on the egg plate)
     gui:SetAttribute("ChipRect",Rect.new(layout.chip.x,layout.chip.y,layout.chip.x+layout.chip.w,layout.chip.y+layout.chip.h)) -- BD-538: HubTravelClient puts "Back to the middle" here (phone: clear of the weather column)
+    if Config.GiftClaimEnabled==true then -- BD-570: GiftPopup sits on this rect (clear of the HUD pieces); flag off = no attribute, nothing computed
+        local gift=TouchLayout.giftRect(layout,size.X,size.Y)
+        gui:SetAttribute("GiftRect",Rect.new(gift.x,gift.y,gift.x+gift.w,gift.y+gift.h))
+        gui:SetAttribute("GiftVariant",gift.variant)
+    end
     toastScale.Scale=layout.toastScale
     local wallet=TouchLayout.walletPlates(layout) -- BD-378: the toast stack keeps clear of the Crystals plate and the goal line under it
     toastLayer:SetAttribute("WalletRect",Rect.new(wallet.x,wallet.y,wallet.x+wallet.w,wallet.y+wallet.h))
