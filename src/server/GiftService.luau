@@ -312,16 +312,24 @@ end
 -- A pending gift is removed; a claimed one is taken back on the recipient's next claim (their server removes the skin and sets
 -- claimedGifts[id] = "revoked"). The tombstone also stops a re-delivered receipt from re-adding the gift. Crystals already spent are not clawed back.
 -- The caller (BD-452) has run AdminRules.isAdmin. itemHint = the catalogue id when the gift is no longer pending (the audit trail has it).
+-- BD-590: the id must EXIST first, either pending in the recipient's inbox or in their audit trail as sent (admin, queued, bought) or
+-- opened (claimed). An id nobody ever sent answers "unknown_gift" and writes nothing (no tombstone, no claimedGifts slot, no audit
+-- line), only one [BD-GIFT] log line. A repeat of a real take back stays "already_revoked". The trail keeps the last AuditUserCap
+-- events per user, so a gift older than that and already opened can no longer be proved (the admin then reads "No gift with that number").
+local SentEvents: {[string]: boolean} = {admin = true, queued = true, bought = true, claimed = true}
 function GiftService.revoke(adminId: any, recipientId: any, giftId: any, itemHint: any): (boolean, string)
     if not claimOn() or Config.AdminGiftsEnabled ~= true then return false, "disabled" end
-    if not GiftRules.validUserId(adminId) or not GiftRules.validUserId(recipientId) or not GiftRules.validId(giftId) then return false, "bad_request" end
+    if not GiftRules.validUserId(adminId) or not GiftRules.validUserId(recipientId) or not GiftRules.validIssuedId(giftId) then return false, "bad_request" end
     if itemHint ~= nil and (type(itemHint) ~= "string" or GiftRules.ById[itemHint] == nil) then return false, "bad_request" end
     local item: any = itemHint
-    if item == nil then
-        local ok, trail = readKey("audituser_" .. tostring(recipientId))
-        if ok and type(trail) == "table" then
-            for _, event in trail do
-                if type(event) == "table" and event.giftId == giftId and type(event.item) == "string" then item = event.item end
+    local trailOk, trail = readKey("audituser_" .. tostring(recipientId))
+    local seenSent, seenRevoked = false, false
+    if trailOk and type(trail) == "table" then
+        for _, event in trail do
+            if type(event) == "table" and event.giftId == giftId then
+                if SentEvents[event.ev] then seenSent = true end
+                if event.ev == "revoked" then seenRevoked = true end
+                if item == nil and type(event.item) == "string" then item = event.item end
             end
         end
     end
@@ -331,8 +339,14 @@ function GiftService.revoke(adminId: any, recipientId: any, giftId: any, itemHin
         local inbox = GiftRules.normalizeInbox(raw)
         if inbox == nil then status = "store_corrupt" return nil end
         if inbox.revoked[giftId] ~= nil then status = "already_revoked" return nil end
-        if GiftRules.count(inbox.revoked) >= Limits.RevokedCap then status = "tombstones_full" return nil end
         local pending = inbox.gifts[giftId]
+        -- Already moved to the profile by the recipient's claim: the trail remembers the take back, so a repeat is a no-op, not a new tombstone.
+        if pending == nil and seenRevoked then status = "already_revoked" return nil end
+        if pending == nil and not seenSent then
+            status = if trailOk then "unknown_gift" else "try_again"
+            return nil
+        end
+        if GiftRules.count(inbox.revoked) >= Limits.RevokedCap then status = "tombstones_full" return nil end
         if type(pending) == "table" and type(pending.item) == "string" and GiftRules.ById[pending.item] ~= nil then pendingItem = pending.item end
         inbox.gifts[giftId] = nil
         inbox.revoked[giftId] = pendingItem or item or true
@@ -342,10 +356,9 @@ function GiftService.revoke(adminId: any, recipientId: any, giftId: any, itemHin
     if not ok then return false, "try_again" end
     if status == "revoked" or status == "revoked_pending" then
         audit("revoked", adminId, recipientId, pendingItem or item, giftId, nil, nil)
-        print("[BD-GIFT] revoke admin=" .. tostring(adminId) .. " to=" .. tostring(recipientId) .. " id=" .. tostring(giftId) .. " status=" .. status)
-        return true, status
     end
-    return status == "already_revoked", status
+    print("[BD-GIFT] revoke admin=" .. tostring(adminId) .. " to=" .. tostring(recipientId) .. " id=" .. tostring(giftId) .. " status=" .. status)
+    return status == "revoked" or status == "revoked_pending" or status == "already_revoked", status
 end
 
 -- One read for the admin page (BD-452): the last AuditUserCap events where this user was sender or recipient.
@@ -378,12 +391,23 @@ local function showNext(player: any)
         return
     end
     local entry = GiftRules.ById[notice.item]
+    local itemText = if entry then entry.label else ""
+    if entry and entry.id == GiftRules.CustomCrystalsId and GiftRules.crystalAmount(entry, notice.crystals) ~= nil then
+        -- BD-579: the admin's free amount has no fixed label ("Crystals"), so the popup said no number. Say how many (1,234 style).
+        local text = tostring(notice.crystals)
+        while true do
+            local replaced, count = string.gsub(text, "^(%d+)(%d%d%d)", "%1,%2")
+            if count == 0 then break end
+            text = replaced
+        end
+        itemText = text .. (if notice.crystals == 1 then " crystal" else " crystals")
+    end
     PrivateState.set(player, "GiftNoticeJson", game:GetService("HttpService"):JSONEncode({
         id = notice.id,
         line = GiftRules.noticeLine(notice.source, notice.name),
         name = GiftRules.shownName(notice.source, notice.name), -- BD-570: for "Mute <name>"; "" for a team gift. Resolved fresh, never stored.
         kind = if entry then entry.kind else "skin", -- BD-570: picks the registered icon
-        item = if entry then entry.label else "",
+        item = itemText,
         message = GiftRules.presetText(notice.msg) or "",
         more = #(queue :: {any}) - 1,
         canMute = notice.source == "robux",
@@ -516,7 +540,7 @@ function GiftService.claim(player: any): (boolean, string, any)
         for _, applied in newlyApplied do
             local gift = applied.gift
             table.insert(fresh, {
-                id = gift.id, source = gift.source, item = gift.item, msg = gift.msg, fromId = gift.from, converted = applied.converted,
+                id = gift.id, source = gift.source, item = gift.item, msg = gift.msg, fromId = gift.from, converted = applied.converted, crystals = gift.crystals,
                 name = if gift.source == "robux" then resolveName(gift.from) else nil,
             })
         end

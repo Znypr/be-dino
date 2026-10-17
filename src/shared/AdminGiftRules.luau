@@ -88,6 +88,7 @@ local messages: {[string]: string} = {
     try_again = "Try again in a minute.",
     cant_receive = "They can't get gifts right now.",
     revoked = "That gift was taken back.",
+    unknown_gift = "No gift with that number.", -- BD-590: Take back of an id that was never sent (or is too old to find in the history)
     store_corrupt = "Their inbox looks broken. Ask the lead.",
     tombstones_full = "Too many taken back for this player.",
     profile_not_loaded = "Wait a moment, then try again.",

@@ -92,4 +92,44 @@ Offline numbers (`tools/verify_motion_poses.py`, real `LowPolyPose` and real `Lo
 
 Hip dip: `Pose.hipDip` lifts every part by the compression for 0.3 s after touch-down (local dino only; a ray 4 times a second when settled, one per frame during the window, none in flight or under Reduce Motion). Not checked offline: the real compression numbers and that the lift looks right on a hard landing.
 
-`ClassDash` (read, not yet run): see the BD-556 and BD-569 kanban rows.
+### Studio frame log (2026-10-17, 15:02 to 15:17, one window of my own, Play, memory-only profile)
+
+Build: `python tools/build.py --profile playtest` of main with #409 and #410 (the dash hold). Set-up honesty: `EquippedSpeciesId` was forced to `mosasaurus` from a server script (every 0.1 s) and `Dinosaur.refreshForPlayer` re-rendered, so the visual is the REAL Mosasaurus (`LPClass` Water, 7 posed parts) and the class logic is Water (WalkSpeed 18.7, JumpPower 0). The run was started with `RequestStartRun`. The Studio keyboard tool does not reach the game, so the dash was driven as the client script does on Space: `Humanoid.Jump = true` for 0.1 s plus the `ClassDash` remote. A Heartbeat logger (60 frames/s) recorded the rotation of every part weld (Euler XYZ of the inverse of `Weld.C1`), the root position and velocity.
+
+**NO IMAGE. The Studio window never rendered** (RenderStepped fired 0 times, `ViewportSize` 1 x 1 and every `screen_capture` timed out, in Edit and in Play, in two fresh windows, on screen 3 and briefly elsewhere). It looked like a frozen render surface, not a code problem; the logs below come from Heartbeat, which ran at 60 Hz. The surge IMAGE is still owed; the numbers are the evidence for now.
+
+| Measurement | Result |
+|---|---|
+| Dash displacement (horizontal, flat ground, 2 trials, #410 hold) | 14.6 and 15.3 studs (nominal 16.8), peak planar speed 36.2 studs/s |
+| Worst turn of any weld in one frame, whole dash | 6.9 degrees (tail, t = 0.72 s, after the surge ends: the idle/walk sway); the surge itself stays under 8 |
+| Peak angles, real Mosasaurus | tail yaw 24, head yaw 11, body yaw 5 degrees; front flippers pitch 15, back flippers pitch 19, roll 9 to 15 |
+
+Travelling wave, seconds after the dash request (degrees, yaw for head/body/tail, pitch for the front-left flipper):
+
+| t | head | body | tail | flipper FL |
+|---|---:|---:|---:|---:|
+| 0.05 | 0.3 | -0.4 | -2.9 | 0.8 |
+| 0.10 | 8.3 | 0.6 | -13.1 | 11.3 |
+| 0.15 | **10.8** | 3.7 | -4.9 | 14.7 |
+| 0.20 | 3.4 | **5.0** | 14.4 | 4.7 |
+| 0.25 | -6.9 | 2.7 | **24.4** | -9.4 |
+| 0.30 | **-10.9** | -0.9 | 17.0 | -14.9 |
+| 0.35 | -3.8 | -1.3 | 3.9 | -3.5 |
+| 0.40 | -0.1 | 0.0 | 8.6 | 6.0 |
+
+The positive peak runs head (0.15 s) then body (0.20 s) then tail (0.25 s): a wave travelling head to tail, as designed, and the flipper rows both ways. The first Water jump (before the animator was fed `Humanoid.Jump`) showed only idle sway: with the remote alone the surge pose does not play, the animator keys on the jump input / state as the real Space press does.
+
+### Hip dip on a hard landing (16 stud drop, rest gap root-to-floor 3.000)
+
+The real hip compression is **0.51 to 0.53 stud** for one frame (state Landed). Measured with the lift in (animator one frame behind, see below):
+
+| t | state | root gap | lowest visual corner over floor | body weld lift (Y) |
+|---|---|---:|---:|---:|
+| 0.282 | Freefall | 3.530 | 0.487 | -0.042 |
+| 0.299 | Landed | 2.489 | **-0.553** | -0.042 |
+| 0.316 | Landed | 2.569 | 0.006 | 0.438 |
+| 0.333 | Running | 2.741 | 0.093 | 0.358 |
+| 0.349 | Running | 2.853 | 0.029 | 0.185 |
+| 0.383 | Running | 2.956 | -0.049 | 0.006 |
+
+So the lift (0.44 stud at its peak) holds the feet at or just above the floor from the second landing frame on (without it the lowest corner would be about 0.4 stud under the floor at t = 0.316 and 0.2 at 0.333). **One frame is not covered:** the touch-down frame itself (-0.55 for 16 ms), because the animator runs in Heartbeat and only sees the compressed root position that frame; the weld change shows from the next frame. A fix would be to predict the dip from the fall speed; not done, it is one frame. The first Studio run showed the touch-down frame can still read as airborne for the animator, so rays are now cast while FALLING too (none while rising); `556.drive_hipdip` has a case for it (a mutant proves it).

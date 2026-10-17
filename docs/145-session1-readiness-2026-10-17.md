@@ -1,10 +1,95 @@
-# 145 Are we ready for friends session 1? Offline audit on main b616687 (BD-317, 2026-10-17); status updated at end of day
+# 145 Are we ready for friends session 1? Offline audit on main b616687 (BD-317, 2026-10-17); status updated at end of day and again in the evening
 
 Label: **CURRENT BUILD BEHAVIOR** audit, offline only. Nothing here was run in Studio, on a published server or on a phone, and no game code was changed. It refreshes [125 go / no-go](125-friends-playtest-go-no-go.md) and walks the items of [106](106-friends-playtest-readiness.md) and [129](129-owner-studio-smoke-checklist.md) against what is merged today. Sources: [AGENTS.md](../AGENTS.md), [55 runbook](55-playtest-release-runbook.md), [111 multiplayer](111-multiplayer-audit.md), [115 decisions](115-decisions-log.md), [120 uploads](120-pending-owner-uploads-checklist.md), [141 Studio scripts](141-board-hygiene-stuck-rows.md), `tools/release_profiles.py`, the kanban rows BD-317, BD-085, BD-322, BD-020, BD-019, BD-004, BD-319, BD-364, BD-293.
 
-> **Reading order (end of 2026-10-17).** The new section **"Status at end of 2026-10-17"** below is the current go / no-go. Everything after the line "Morning baseline" is the audit on main b616687 (PR #346) and stays as history; the notes at the end of the new section say which of its parts a later PR overtook. Nothing was deleted.
+> **Reading order (evening of 2026-10-17).** Start with **"Status update, 2026-10-17 evening"**, the current go / no-go. Next comes **"Status at end of 2026-10-17"**, the earlier go / no-go, kept as history (its closing notes say which parts later PRs overtook). Everything after the line "Morning baseline" is the audit on main b616687 (PR #346), also history. Nothing was deleted.
+
+## Status update, 2026-10-17 evening
+
+Label: **CURRENT BUILD BEHAVIOR** status on main `fc53fd14` (CI "Build generated Roblox place" green on that commit; merged PRs #381 to #415, the last ones being #410 to #415). Docs only: nothing was run in Studio or on a phone for this section; every number below is copied from the evidence it names. "Done" here means "a file on main shows it", and "merged" is still not "checked". The section "Status at end of 2026-10-17" after this one is kept as history; where the two differ, this one wins.
+
+**Verdict: still NO-GO for friends session 1, and the reason has not changed.** No code blocker is known. The lead's single-player desktop Studio pass is now mostly done (blocker 5). What is left needs the owner: an experience answer, a publish, a second account, a second client, and (only if phones may join) a phone.
+
+### 1. GO / NO-GO table (refreshed)
+
+| # | Blocker | Open? | Who must act | Evidence / where |
+| --- | --- | --- | --- | --- |
+| 1 | Which experience is the playtest one, and can a non-owner join it (BD-004) | **OPEN, NO-GO** | **Owner** (2 min) | `tools/release_ids.json` is still all `null`; Config ids unchanged; BD-004 row (Blocked). [148](148-publish-runbook.md) step 1 |
+| 2 | Creator Hub settings and the first publish | **OPEN, NO-GO** | **Owner** publishes; lead runs `python tools/release_playtest.py` first (it refuses while step 1 is unanswered) | [148](148-publish-runbook.md) steps 2 and 3; release record still empty; nothing published, nothing tagged |
+| 3 | Rollback drill (BD-020, BD-320; hard stop of [125](125-friends-playtest-go-no-go.md)) | **OPEN, NO-GO** | **Owner** | [148](148-publish-runbook.md) step 5; rule RB1 in [115](115-decisions-log.md); offline `verify_rollback` 357 checks, [111](111-rollback-drill.md) |
+| 4 | Non-owner view of the published place (no admin panel, assets load, settings and identities survive a rejoin, `ProfileMode` Persistent) | **OPEN, NO-GO** | **Owner** with an alt account | [148](148-publish-runbook.md) step 4; this is also the only live test of the identity pair ([BD-577](evidence/2026-10-17-identity/README.md): the DataStore path has never run) |
+| 5 | Lead Studio pass | **MOSTLY DONE for single-player desktop Studio; the rest is listed below the table** | Lead / agent | Done: session-1 pass ([s1-pass](evidence/2026-10-17-s1-pass/README.md): 5-minute run, 7 of 7 cave weather events clean, memory read, flag decision); 13-step regression walk, no game FAIL, 19 images ([regression-walk](evidence/2026-10-17-regression-walk/README.md)); identity and fusion review with 6 pictures ([identity](evidence/2026-10-17-identity/README.md)); phone-size HUD at 836 x 390 and 667 x 375 ([phone-fit](evidence/2026-10-17-phone-fit/README.md)); BIG camera and egg toast ([big-cam-toast](evidence/2026-10-17-big-cam-toast/README.md)); Egg Odds panel ([egg-odds](evidence/2026-10-17-egg-odds/README.md)); first look at the jump / leap / land / surge poses ([poses](evidence/2026-10-17-poses/README.md)) |
+| 6 | Multiplayer live (BD-319, BD-364, BD-502 gate 2) | **OPEN, NO-GO** | **Owner** (second client) | [111](111-multiplayer-audit.md) s5.6; offline simulation only (684 checks) |
+| 7 | Phone (BD-085, BD-322, BD-293, BD-502 gate 1) | **OPEN**; stops being a blocker only if Devices is set to Computer only | **Owner** (Android) | [146](146-phone-forecast-2026-10-17.md) (an estimate), [147](147-streaming-experiment-2026-10-17.md) s9; `StreamingEnabled` stays OFF |
+| 8 | Food pace / egg count of a normal run (BD-575, BD-418, BD-527) | **OPEN; not a blocker for the join, it is an economy decision** | **Owner** plays one run | Scripted walker: 97 eggs against the target of 15 ([s1-pass](evidence/2026-10-17-s1-pass/README.md) s1); a script is an upper bound, so a human number is missing |
+| 9 | Phone-size HUD (BD-531, BD-538) | **Window-size part DONE in Studio; touch part open** (matters only with phones) | Phone (owner) | 836 x 390 PASS; 667 x 375 residuals fixed in #389 and re-checked, see the BD-538 row and [phone-fit](evidence/2026-10-17-phone-fit/README.md); resizing a window is layout only (no touch, memory or heat) |
+| 10 | Images and sounds | Images **CLOSED**; sounds mostly unbound and unheard, not a blocker | Owner (ears) | [120](120-pending-owner-uploads-checklist.md) |
+| 11 | Code and offline checks | **CLOSED as far as known** | Lead | CI green on `fc53fd14`; telemetry now logs real raw food (#414, offline only) |
+| 12 | Fusion for testers (BD-577): may testers do an irreversible fusion on PROVISIONAL odds that the menu shows as exact? | **OPEN, owner decision; not a code blocker** | **Owner** | Section 6 below ("Identity and fusion flags"), [identity](evidence/2026-10-17-identity/README.md); no fuse-only switch exists (that is a code change) |
+
+**Blocker 5, what is still missing.** None of it needs the owner's hands; it is Studio work, or needs a phone or a published place:
+
+* The feedback send ("Tell us!" button is there; a send was never tried).
+* A Fly or Water dino in a real run. Only the poses ([poses](evidence/2026-10-17-poses/README.md)) and the Water dash with the Water class forced onto the Compy model ([water-dash](evidence/2026-10-17-water-dash/README.md)) were looked at; the Studio look at the Water surge after #409 (BD-556) and at the calm jumps of #405 is pending.
+* A pattern dino (the EditableImage path; `LowPolyImagesMiB` was never set) and several species equipped at once.
+* A fusion commit and a rejoin in Studio (the FUSE click was refused by the tool layer; one Play session cannot rejoin). Proven offline only.
+* The hall away from the Heart, the Sanctuary card after LET'S PLAY (not re-tested), the quake camera rumble, Reduce Motion together with weather, any sound.
+* The Dino Index and the Potion Shop buy after the Bootstrap split of BD-543 (#392): the regression walk ran on a build from before #392; the s1 pass ran after it and showed the HUD, a run and Run Complete working at 60 fps with no script error, but did not open those two screens.
+* A human 5-minute run (BD-575).
+
+### 2. Owner steps, in order
+
+Send every answer to the **inbox session** (the owner inbox), one line each. Times are estimates. Steps 1 to 4 gate session 1 (about 40 minutes in total); step 6 only if phones may join.
+
+1. **BD-004, which experience (2 min).** Creator Hub, Creations; for the playtest experience write `name, universe id, place id, new or legacy` ([148](148-publish-runbook.md) step 1). Send it to the inbox session.
+2. **Publish with the runbook (13 min: settings 8, publish 5).** [148](148-publish-runbook.md) steps 2 and 3, after the lead says the build and tag are ready. Send the Roblox version number.
+3. **Alt-account smoke (15 min).** [148](148-publish-runbook.md) step 4: can the alt join, no admin panel, assets load, a save survives a rejoin. Send `pass` or `fail` per line, plus a screenshot of anything wrong.
+4. **Rollback drill (10 min).** [148](148-publish-runbook.md) step 5: publish r1, restore r0, roll forward. Send both version numbers and "profile loaded both times: yes or no".
+5. **2-player run (15 min).** Studio Test > Local Server with 4 players ([111](111-multiplayer-audit.md) s5.6, 10 min), then 5 minutes with 2 clients on the streaming-on copy ([147](147-streaming-experiment-2026-10-17.md) s9.4). Send the output lines it asks for.
+6. **Phone run (45 min; only if phones may join).** [146](146-phone-forecast-2026-10-17.md) s7 and [55](55-playtest-release-runbook.md) s3, plus 10 minutes of walking on each streaming copy, radius pair 256/128 against 256/192 ([147](147-streaming-experiment-2026-10-17.md) s9.3). Send memory, part count and fps for each.
+7. **ONE normal 5-minute run (8 min; BD-575).** Studio, playtest build, play like a child: no scripts, no admin values. Send the Run Complete "Eggs found" number, whether a weather event came, and the `[BD-TELEMETRY] run_end` line (it now carries real `food_raw`). The target is about 15; the scripted walker made 97.
+8. **Fusion for testers (2 min; BD-577).** Keep both identity flags on (the lead recommends it), turn both off, or ask for a fuse-only switch (a code change). Send one word.
+9. **Grass pick, A / B / C (2 min; BD-528).** Look at `docs/evidence/2026-10-17-grass-ab/contact-sheet-A-B-C.jpg`; the lead recommends A. Send the letter.
+10. **Swimmer LEAP pick (2 min; BD-569, owner question C-46 / Q20).** [101](101-hp-combat-classes-animations.md) s19: A keep the ordinary leap, B long low dash (the lead's proposal), C dash only in water. Send the letter.
+11. **VFX packs lab walk (10 min).** `C:/Users/znypr/dtmp/VFXLab-Packs.rbxlx` (outside the repo); questions in [144](144-vfx-packs-trial.md) s8. Send go or no-go for BD-493 and whether the puff id looks right.
+12. **V3 Compy file location (1 min).** No doc or kanban row names where it lives. Send the folder or Studio place. Not needed for session 1.
+
+### 3. Built but switched off
+
+All four are off in `Config`. Objectives and gifting are pinned off in `tools/release_profiles.py` (`verify_release` fails a build that flips one); streaming ON in a shipped profile needs a gate field with an evidence file; `FoodPickupAtMouth` is only warned about by `tools/release_playtest.py` (it is not a `release_profiles.py` rule).
+
+| Feature | Rows | Flag (value today) | The one condition to switch it on |
+| --- | --- | --- | --- |
+| Objectives | BD-072 to BD-077, BD-561, BD-562 | `ObjectivesEnabled` (false) | A Studio pass with the flag on in a private copy that follows one real event to a claimed reward (the hooks of BD-074 and the goal line of BD-076 have no Studio evidence; the panel has desktop and 836 x 390 pictures in [objectives-panel](evidence/2026-10-17-objectives-panel/README.md)), then the owner accepts the PROVISIONAL rewards ([66](66-intake-mini-objectives.md)). The icons (BD-077) are art only and not needed |
+| Gifting | BD-451 core is merged; BD-452 (admin page) and BD-570 (player UI) are not built | `GiftClaimEnabled`, `AdminGiftsEnabled`, `GiftingEnabled` (all false) | The owner signs the go-live list of [134](134-gifting-spec.md) s12 (blocked-ids call checked in Studio, policy read, copy check, one audited test gift, PROVISIONAL numbers). The free admin path needs BD-452 built first and a published place for the first live test of the inbox; Robux gifting also needs BD-453. Offline only so far (`verify_gifts`) |
+| Eating at the mouth | BD-515, BD-521, BD-522, BD-527 (MR6 in [115](115-decisions-log.md)) | `FoodPickupAtMouth` (false) | Two real 5-minute Compy runs in Studio, flag off then on, read from `LastRunFood` or the telemetry line: under about 10% lift and the lead turns it on; otherwise the owner picks an option in BD-527 (the offline simulation says +18% to +37% Compy food per minute, [food-reach](evidence/2026-10-17-food-reach/README.md)) |
+| Streaming | BD-502 (ST1 and ST4 in [115](115-decisions-log.md)) | `StreamingEnabled` (not set, off) | Gate 1 (a phone run reading memory and parts after 10 minutes, 256/128 against 256/192) and gate 2 (a 2-client run) both pass; gates 3, 4 and 5 are done ([147](147-streaming-experiment-2026-10-17.md) s9). Then its own one-line PR |
+
+### 4. Today's key numbers
+
+Each line says what it is and what it is not. All Studio numbers are desktop, one player, no phone, no published server.
+
+| Number | Value | Evidence | Read it as |
+| --- | --- | --- | --- |
+| Scripted 5-minute run | **97 eggs at 5:00** (99 at the end) against the target of **about 15**; about 3,710 real food (docs/119 expects 600 to 700), +183 crystals, +4 nests; 89 eggs in clear weather | [s1-pass](evidence/2026-10-17-s1-pass/README.md) s1, `docs/evidence/2026-10-17-s1-pass/raw-numbers.txt` | An upper bound: a walker never stops. The conversion itself (`FoodCatchRate` 12/500) is exact. A human run (step 7) is what answers the pace question |
+| Water dash delivery (BD-572) | **1.1 studs before, 14.2 studs after** (14 to 15 on flat ground in 3 headings and on 12, 18 and 25 degree slopes; nominal 16.8; a tree collider stops it at 3.8) | [water-dash](evidence/2026-10-17-water-dash/README.md) | The Water class was forced onto the Compy model; keyboard and phone input were not used; no speed number changed |
+| BIG camera fill (BD-513) | Screen height filled at scale 4.8: Spinosaurus **72% to 56.3%**, T-Rex **51% to 45.7%**, Ankylosaurus **49% to 42.3%** (camera cap 75 to 90) | [big-cam-toast](evidence/2026-10-17-big-cam-toast/README.md), [camfit](evidence/2026-10-17-camfit/README.md) | Computed from the real model box and camera at 1140 x 785; the Spinosaurus sail clears the 160 px HUD line (box top 161 px) |
+| Main-chunk local variables of `Bootstrap.client.luau` (BD-543) | **198 to 144** (Luau refuses 200; the verifier warns above 170 and fails above 185) | BD-543 row in [07](07-kanban.md), `tools/verify_local_budget.py` (in CI); no evidence folder | Offline verifier, plus the s1 pass showing the HUD alive after the split; the Dino Index and Potion Shop were not re-walked after it |
+| Phone forecast (an estimate, not a measurement) | With every id filled: worst-spot triangles **452,134 to 253,480** (rule 250,000); worst-spot parts **3,434 to 3,142** (rule 3,000); parts at join **8,640 to 7,061**; cave **218 parts / 221,584 triangles** against 410 / 730,000, but **30 lights (46 with player auras) against a phone budget of 16**; textures **364 to 437 MiB at RGBA8** against a PROPOSED 200 | [146](146-phone-forecast-2026-10-17.md) s0 to s3 | Arithmetic on assumptions, can be 2x off; the generated-mesh triangle counts and the GPU compression are guesses. Desktop Studio read for comparison: 6,387 parts at join, `GraphicsTexture` 60 to 136 MB over one session ([s1-pass](evidence/2026-10-17-s1-pass/README.md) s3; the Studio total contains the editor, so no verdict) |
+
+### 5. Not verified
+
+* **Phone:** nothing measured. The 836 x 390 and 667 x 375 checks are window resizes with a mouse: layout only, no touch, memory, heat or touch-only code paths.
+* **Published server:** never published, no tag, no rollback, no non-owner asset load, no real DataStore timing; the `ProfileMode` Persistent path and the identity sidecar on the real store never ran.
+* **Multi-player:** offline simulation only; no live second client, no streaming-on 2-client run.
+* **Real saves:** no existing profile was migrated or reloaded; the playtest store is fresh by design; fusion persistence, nest timers and settings across a rejoin are checked against mocks only.
+* Also not seen: a human 5-minute run, a Fly or Water dino in a run, the pattern path, a fusion commit in Studio, eating at the mouth with a human walk (flag off), the Water surge and the calm jumps after #405 and #409, any sound by ear.
+
+**What this evening's merges overtook in the earlier section.** Its telemetry warning ("`food` is derived and overstates in weather") is fixed offline by #414 (`food_raw`, `eggs_food`, `weather_s`; `verify_telemetry`, no Studio). Its blocker 9 (phone-size HUD) is now Studio-checked at window size. Its owner steps 1 to 4 became the numbered steps of [148](148-publish-runbook.md); its step 5 (BD-527 two-run pace check) is folded into step 7 above plus the mouth-eating condition in section 3. The fusion ladder in section 6 below is 6 / 3 / 2 (D4 and L2 in [115](115-decisions-log.md)); the 15 / 4 / 2 figures in AGENTS.md are older.
 
 ## Status at end of 2026-10-17
+
+> History: written earlier on 2026-10-17. Where it differs from "Status update, 2026-10-17 evening" above, the evening update wins.
 
 Label: **CURRENT BUILD BEHAVIOR** status on main `4a9685c` (PR #379). Docs only; nothing was run in Studio or on a phone for this section. Sources: `git log origin/main` (PRs #347 to #379 merged after the 145 baseline; #374 and #291 still open), the row statuses in [07 kanban](07-kanban.md), the LEAD decisions in [115](115-decisions-log.md), [141](141-board-hygiene-stuck-rows.md) s7, [146](146-phone-forecast-2026-10-17.md) and [147](147-streaming-experiment-2026-10-17.md). CI was green on main `aba6a29` (workflow "Build generated Roblox place", `gh run list`; the run for #379 was not checked); the offline numbers of s2 below were taken on b616687 and were not re-run here. Nothing here is called Done without its evidence path, and "merged" is still not "checked".
 
