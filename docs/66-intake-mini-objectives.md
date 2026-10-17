@@ -55,7 +55,7 @@ Tutorial total 160 Crystals (about 5 runs, one random egg): a gentle gift.
 
 ## 9. Visuals, icons, animations, audio
 - Visuals (reuse): popup-body panel, header-blue, card-common rows, progress-track bars, button-green Claim, button-dark pill, reward-burst on claim. None new.
-- Icons: reuse trophy, egg, leap, dinos, fusion, home, lock, `scalable/check`, `scalable/clock`, potion. New (4): chevron toggle, tutorial arrow, crystal and star (crystal and star shared with doc 65).
+- Icons: reuse trophy, egg, leap, dinos, fusion, home, lock, `scalable/check`, `scalable/clock`, potion. New (4): chevron toggle, tutorial arrow, crystal and star (crystal and star shared with doc 65). **Art brief (BD-077, 2026-10-17): [109](109-owner-art-prompt-pack.md) section 9 gives purpose, place, size, palette, ChatGPT prompt and Blender note for each of the four; the panel reads the ids through new empty-id slots (BD-561), so an empty id keeps today's trophy-only panel.**
 - Animations: bar fill 0.2 s; row pulse and check pop on complete; claim burst 0.4 s; panel expand 0.15 s. Motion off: instant.
 - Audio (existing): shop_buy on claim, pickup_hi on complete, ui_click on toggle. No new sounds.
 
