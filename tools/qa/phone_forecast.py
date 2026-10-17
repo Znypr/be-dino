@@ -346,9 +346,9 @@ def fx_scenes(runner, cave_res):
     shafts = cl['beams'] // 2   # 2 beams per hole (haze + core)
     beams_static = min(cl['beams'], (g['caveBeams'] // shafts) * shafts) if shafts else 0
     out['cave'].update(lights_static_guarded=min(lights_static, g['caveLights']), lights_cosmetic_guarded=g['hubCosmeticLights'],
-                       beams_static_guarded=beams_static)
+                       beams_static_guarded=beams_static, beams_cosmetic_guarded=max(cos['beams'] - g['caveBeams'], 0))  # BD-507: PhoneGuards.cosmeticBeamCap
     out['cave']['lights_guarded'] = out['cave']['lights_static_guarded'] + out['cave']['lights_cosmetic_guarded']
-    out['cave']['beams_guarded'] = beams_static + cos['beams']
+    out['cave']['beams_guarded'] = beams_static + out['cave']['beams_cosmetic_guarded']   # BD-507: 4 shaft + (24 - 4) cosmetic = 24
     return out
 
 
@@ -489,8 +489,8 @@ def guard_rows(F):
     rows = ['| Guard | Metric | Before | After | Phone budget |', '|---|---|---:|---:|---:|']
     rows.append('| BD-495 cave lights | enabled lights in the hub (30 static + 16 cosmetic cap before; nearest %d + %d cosmetic after) | %d | %d | %d |'
                 % (G['caveLights'], G['hubCosmeticLights'], c['lights'], c['lights_guarded'], B['lights']['value']))
-    rows.append('| BD-495 cave beams | enabled beams in the hub (8 shaft + 24 cosmetic cap before; %d shaft after) | %d | %d | %d |'
-                % (G['caveBeams'], c['beams'], c['beams_guarded'], B['beams']['value']))
+    rows.append('| BD-495 + BD-507 cave beams | enabled beams in the hub (8 shaft + 24 cosmetic cap before; %d shaft + %d cosmetic cap after) | %d | %d | %d |'
+                % (G['caveBeams'], c['beams_cosmetic_guarded'], c['beams'], c['beams_guarded'], B['beams']['value']))
     for key, label in (('hatch', 'hatch reveal + blizzard'), ('open', 'open world + blizzard')):
         b, n = fx[key + '_before'], fx[key]
         rows.append('| BD-497 weather density 0.5 -> %g | live3d particles, %s | %s | %s | %s |'
@@ -541,6 +541,9 @@ def checks(F):
     out.append(('%s phone guards: nearest %d cave lights + %d cosmetic lights in the hub = %d <= phone light budget %d' % (
         'OK  ' if c['lights_guarded'] <= B['lights']['value'] else 'FAIL', G['caveLights'], G['hubCosmeticLights'], c['lights_guarded'], B['lights']['value']),
         c['lights_guarded'] > B['lights']['value']))
+    out.append(('%s phone guards: hub beams %d shaft + %d cosmetic cap = %d <= phone beam budget %d (BD-507)' % (
+        'OK  ' if c['beams_guarded'] <= B['beams']['value'] else 'FAIL', c['beams_static_guarded'], c['beams_cosmetic_guarded'], c['beams_guarded'], B['beams']['value']),
+        c['beams_guarded'] > B['beams']['value']))
     out.append(('%s phone guards: weather density %g <= 0.25 (risk 5) and shaft beams %d <= 4 (risk 3)' % (
         'OK  ' if G['weatherDensity'] <= 0.25 and G['caveBeams'] <= 4 else 'FAIL', G['weatherDensity'], G['caveBeams']),
         not (G['weatherDensity'] <= 0.25 and G['caveBeams'] <= 4)))
@@ -549,7 +552,7 @@ def checks(F):
         ('world parts worst-parts spot', a['worst_parts']['parts'], B['parts']['value']),
         ('world parts loaded at join', a['join_parts'], B['parts']['value']),
         ('cave lights (guarded: nearest N + hub cosmetic)', fx['cave']['lights_guarded'], B['lights']['value']),
-        ('cave beams (guarded shaft beams + cosmetic cap)', fx['cave']['beams_guarded'], B['beams']['value']),
+        ('cave beams (guarded shaft beams + hub cosmetic cap)', fx['cave']['beams_guarded'], B['beams']['value']),
         ('hatch moment live3d particles', fx['hatch']['live3d'], fxr.BUDGETS['phone']['live3d']),
     ] + [('texture MiB %s (RGBA8, new art + generated meshes + 6 dino species)' % n, s['new'] + s['world'] + lowpoly_dino_mib(6), B['textureMib']['value'])
          for n, s in F['tex']['scenes'].items()]

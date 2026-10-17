@@ -134,6 +134,32 @@ function M.header(speciesName: string, count: number): string
     return speciesName .. " x " .. count
 end
 
+-- BD-507: card layout of one "My dinos" card (design px). The SHINY / BIG pills and the mutation badge sit in a band UNDER the dino thumbnail,
+-- never over it (they used to cover the dino at the left). Everything is stacked up from the bottom: EQUIPPED tag, colour swatch, pattern name,
+-- then the badge row, then the pill row, and the thumbnail takes the height that is left (a plain dino gets the whole band, so the thumbnail
+-- only shrinks when the card really carries a ribbon). Pills are 14 px text (docs/114 s4.4), so the pill row is 17 high, the mutation badge 22.
+M.Card = {w = 120, h = 160, top = 4, tagH = 18, swatchH = 9, labelH = 17, pillH = 17, chipH = 22, gap = 2, minThumbH = 56}
+function M.cardRows(pills: number, chip: boolean)
+    local C = M.Card
+    local tagY = C.h - 2 - C.tagH
+    local swatchY = tagY - C.gap - C.swatchH
+    local labelY = swatchY - C.gap - C.labelH
+    local y = labelY - C.gap
+    local rows: {[string]: number} = {tagY = tagY, swatchY = swatchY, labelY = labelY}
+    if chip then
+        y -= C.chipH
+        rows.chipY = y
+        y -= C.gap + 1
+    end
+    if pills > 0 then
+        y -= C.pillH
+        rows.pillY = y
+        y -= C.gap
+    end
+    rows.thumbH = y - C.top -- the thumbnail runs from `top` down to just above the first ribbon row
+    return rows
+end
+
 -- Card ribbons: short words, never colour-only.
 function M.ribbons(d, catalog): {string}
     local list = {}
