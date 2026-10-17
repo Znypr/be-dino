@@ -97,6 +97,7 @@ def static_checks():
     import verify_objectives_panel
     problems = verify_objectives_panel.static_errors()
     assert not problems, 'objectives panel wiring: ' + '; '.join(problems)
+    verify_movement_mobile.static_modal_rail()  # BD-546: the menu card clears the left rail, wired through ModalCompact
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(); parser.add_argument('--runner', required=True); args = parser.parse_args()

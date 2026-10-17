@@ -62,6 +62,24 @@ def static_feedback_paths():
     print('Tell us! static paths ok: one writer (pin), run-end/respawn only flip Visible, rect republished by every layout pass')
 
 
+def static_modal_rail():
+    """BD-546: the numbers above are only worth something when the game applies them. Bootstrap hands every layout pass's rail clearance to ModalCompact,
+    the panel scale and every slide position come from ModalCompact (never a loose fromScale(.5,y) or a PhoneScale.modal call without the clearance),
+    and the layout pass re-places the panel x when the clearance changes."""
+    boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8')
+    mc = (ROOT / 'src/client/ModalCompact.luau').read_text(encoding='utf-8')
+    scales = boot[boot.index('local function scales()'):boot.index('local function characterAdded')]
+    assert 'ModalCompact).setClearLeft(TouchLayout.modalClearLeft(layout))' in scales, 'every HUD layout pass publishes the rail clearance to the modal'
+    assert scales.index('TouchLayout.compute(') < scales.index('setClearLeft('), 'the clearance comes from the layout just computed'
+    assert boot.count('ModalCompact).home(') == 3, 'open/close slide to ModalCompact.home'
+    assert 'panel.Position=UDim2.fromScale(' not in boot and 'Position=UDim2.fromScale(.5,.5)})' not in boot.replace('pic.Position', ''), 'no loose centred panel position'
+    assert 'PhoneScale).modal(' not in boot, 'Bootstrap takes the modal scale from ModalCompact.model(), which carries the clearance'
+    assert 'PhoneScale.modal(size.X, size.Y, clearLeft)' in mc, 'ModalCompact.model passes the clearance'
+    assert 'c.panel.Position = UDim2.new(0.5, m.centerDx,' in mc, 'ModalCompact.layout places the panel x from centerDx'
+    assert re.search(r'function M\.setClearLeft\(px: number\)[\s\S]*?M\.layout\(\)', mc), 'a changed clearance re-lays the open panel at once'
+    print('menu card static wiring ok: clearance published after every layout pass, panel x and scale from ModalCompact')
+
+
 def static_538_paths():
     """BD-538: the SIZE bar, its hint and the hub chip take their spots from TouchLayout (no centred constants in the views), the chip rect is
     published, and Tell us! is hidden while a menu is open on a phone canvas."""
@@ -365,6 +383,61 @@ for _, v in {{1156, 841}, {1280, 720}, {1920, 1080}, {1024, 768}, {800, 600}} do
  assert(not TouchLayout.overlaps(layout.feedback, TouchLayout.rendered(layout.hud)), string.format("%dx%d desktop: Tell us! covers the egg plate", v[1], v[2]))
  assert(layout.feedback.h >= Config.TouchMinTargetPx and layout.feedback.w >= Config.TouchMinTargetPx, "Tell us! below the 44 px target")
 end
+-- BD-546: no menu card (the Bootstrap modal panel) may cover the left rail on a desktop canvas, 1024 to 1920 wide, any height from the
+-- 500 px phone limit up. The panel is PhoneScale.modal(w, h, TouchLayout.modalClearLeft(layout)): UIScale scale, centre shifted right by centerDx.
+local function modalRect(w, h, clear)
+ local m = PhoneScale.modal(w, h, clear)
+ local pw, ph = m.panelW * m.scale, m.panelH * m.scale
+ return m, {x = w / 2 + m.centerDx - pw / 2, y = h / 2 - ph / 2, w = pw, h = ph}
+end
+local modalChecked, legacyOverlaps = 0, 0
+for w = 1024, 1920, 8 do
+ for _, h in {500, 560, 600, 640, 700, 727, 768, 785, 800, 841, 900, 1000, 1080} do
+  local layout = TouchLayout.compute({width = w, height = h, touch = false, navCount = NAV})
+  local m, panel = modalRect(w, h, TouchLayout.modalClearLeft(layout))
+  local label = string.format("%dx%d desktop modal", w, h)
+  assert(m.mode == "desktop", label .. ": desktop canvas keeps the desktop panel")
+  assert(panel.x >= 0 and panel.x + panel.w <= w + 1e-6 and panel.y >= -1e-6 and panel.y + panel.h <= h + 1e-6, label .. ": the menu card leaves the screen")
+  assert(m.scale >= 0.5, label .. ": the menu card shrank under 0.5")
+  local railBox = rect(layout.rail)
+  assert(not TouchLayout.overlaps(panel, railBox), label .. ": the menu card covers the left rail")
+  for i, p in layout.rail.positions do
+   local button = {x = layout.rail.x + p.x * layout.rail.scale, y = layout.rail.y + p.y * layout.rail.scale, w = layout.rail.button.w * layout.rail.scale, h = layout.rail.button.h * layout.rail.scale}
+   assert(not TouchLayout.overlaps(panel, button), label .. ": the menu card covers rail button " .. i)
+   assert(panel.x >= button.x + button.w + PhoneScale.ModalRailGap - 1e-6, label .. ": rail button " .. i .. " has no gap before the menu card")
+  end
+  -- where the old centred panel already cleared the rail, nothing moves (no shift, the old scale)
+  local old = PhoneScale.modal(w, h)
+  local _, oldPanel = modalRect(w, h, nil)
+  if not TouchLayout.overlaps(oldPanel, railBox) and oldPanel.x >= railBox.x + railBox.w + PhoneScale.ModalRailGap then
+   assert(m.centerDx == 0 and math.abs(m.scale - old.scale) < 1e-9, label .. ": a panel that already clears the rail must not move")
+  else
+   legacyOverlaps += 1
+  end
+  modalChecked += 1
+ end
+end
+assert(legacyOverlaps > 0, "BD-546 probe lost sensitivity: the old centred panel no longer overlaps the rail anywhere")
+do -- the owner's 1140 x 785 game view (top bar excluded: 727 tall): the old panel started at x=140 over a rail that ends at 183
+ local layout = TouchLayout.compute({width = 1140, height = 727, touch = false, navCount = NAV})
+ local _, oldPanel = modalRect(1140, 727, nil)
+ assert(TouchLayout.overlaps(oldPanel, rect(layout.rail)), "1140 x 727: the old centred card should cover the rail (the bug)")
+ local _, panel = modalRect(1140, 727, TouchLayout.modalClearLeft(layout))
+ assert(panel.x >= layout.rail.x + layout.rail.w * layout.rail.scale + 12 - 1e-6 and panel.w >= 860 * 0.99, "1140 x 727: the card clears the rail at full size")
+end
+-- Phones and tablets: unchanged. Touch layouts give clearLeft 0 and compact canvases ignore it, so the panel is the old one exactly.
+for _, v in {{800, 360}, {667, 375}, {836, 390}, {844, 390}, {915, 412}, {800, 302}, {1024, 768}, {1280, 800}, {2400, 1080}} do
+ local layout = TouchLayout.compute({width = v[1], height = v[2], touch = true, navCount = NAV})
+ assert(TouchLayout.modalClearLeft(layout) == 0, string.format("%dx%d touch: no left-rail clearance (the touch rail is a top row)", v[1], v[2]))
+ local a, b = PhoneScale.modal(v[1], v[2], TouchLayout.modalClearLeft(layout)), PhoneScale.modal(v[1], v[2])
+ assert(a.scale == b.scale and a.panelW == b.panelW and a.panelH == b.panelH and a.centerDx == 0 and b.centerDx == 0 and a.mode == b.mode, string.format("%dx%d touch modal changed", v[1], v[2]))
+end
+for _, v in {{800, 360}, {667, 375}, {836, 390}, {844, 390}, {915, 412}, {800, 302}, {700, 480}} do -- a mouse in a short window is the phone layout too
+ local layout = TouchLayout.compute({width = v[1], height = v[2], touch = false, navCount = NAV})
+ local m = PhoneScale.modal(v[1], v[2], TouchLayout.modalClearLeft(layout))
+ assert(m.mode == "compact" and m.centerDx == 0, string.format("%dx%d phone-height modal must stay compact and centred", v[1], v[2]))
+end
+print(string.format("Menu cards clear the left rail: %d desktop canvases 1024-1920 wide (13 heights each); 1140 x 727 fixed; phones, tablets and compact windows unchanged", modalChecked))
 -- A live TouchGui measured larger than the defaults is still avoided.
 check(800, 360, true, {jump = {x = 690, y = 250, w = 90, h = 90}, thumb = {x = 0, y = 110, w = 340, h = 250}})
 local phone = TouchLayout.compute({width = 800, height = 360, touch = true, navCount = NAV})
@@ -380,6 +453,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     static_feedback_paths()
     static_538_paths()
+    static_modal_rail()
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / 'verify.luau'
         path.write_text(script(), encoding='utf-8')

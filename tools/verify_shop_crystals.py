@@ -39,7 +39,37 @@ assert(n>=2,"hub_crystal_s and hub_crystal_l are covered")
 amber(Rules.CrystalColor,"CaveLightingRules.CrystalColor (Style Grotto light)")
 assert(not AP.Currency.rock_crystal and AP.DecorCrystal.rock_crystal,"rock_crystal stays decoration")
 print("shop crystals amber:",n)
+-- BD-546: the Crystals tab view follows the SAME flag the server reads (Config.CrystalPacksEnabled == true). Off, nil or any junk = one
+-- Coming soon card and no R$ button; only a real true shows the pack grid.
+for _,off in {false,nil,0,1,"true","yes",{}} do assert(SCS.packsView(off)==SCS.SoonView,"packs hidden unless exactly true: "..tostring(off)) end
+assert(SCS.packsView(true)==SCS.PacksView and SCS.PacksView~=SCS.SoonView)
+assert(SCS.SoonTitle=="Coming soon!" and #SCS.SoonLine<=40 and not string.find(SCS.SoonTitle..SCS.SoonLine,"R%$"),"soon card text is short and has no price")
+print("crystals tab view: off = Coming soon card, on = packs")
 '''
+
+
+def static_crystals_tab(boot):
+    """BD-546: while Config.CrystalPacksEnabled is off the Crystals tab draws NO R$ button. The branch decides by ShopCardState.packsView(Config.CrystalPacksEnabled),
+    returns before the pack grid, the price lookup and every button exist, and R$ text can only come from ShopCardState.packButton (never a literal)."""
+    start = boot.index('elseif cosmeticTab=="crystals" then')
+    end = boot.index('require(script.Parent.ShopCards).forHeader', start)
+    tab = boot[start:end]
+    gate = tab.index('packsView(Config.CrystalPacksEnabled)')
+    soon_return = tab.index('return', gate)
+    grid = tab.index('local products=')
+    assert gate < soon_return < grid, 'the Coming soon card returns before the pack grid is built'
+    soon = tab[gate:soon_return]
+    for banned in ('button(', 'packButton', 'R$', 'GetProductInfo', 'PromptProductPurchase', 'CrystalGrid'):
+        assert banned not in soon, 'the Coming soon card must not draw a price button or look up prices: ' + banned
+    assert 'cardRules.SoonTitle' in soon and 'cardRules.SoonLine' in soon, 'the card says the shared Coming soon text'
+    assert 'Coming soon!' not in tab, 'no loose Coming soon line above R$ buttons'
+    assert 'R$' not in tab, 'R$ text is only made by ShopCardState.packButton'
+    assert tab.count('PromptProductPurchase') == 1 and 'Config.CrystalPacksEnabled==true' in tab, 'the purchase prompt stays gated by the flag too'
+    repo = (ROOT / 'src/server/ProfileRepository.luau').read_text(encoding='utf-8')
+    assert 'Config.CrystalPacksEnabled == true' in repo, 'the server reads the same flag the same way'
+    cfg = (ROOT / 'src/shared/Config.luau').read_text(encoding='utf-8')
+    assert 'CrystalPacksEnabled = false' in cfg, 'packs stay off for the playtest (docs/43)'
+    print('crystals tab static: Coming soon card only while packs are off, no R$ button')
 
 
 def main():
@@ -48,7 +78,8 @@ def main():
     args = ap.parse_args()
     parts = ['local script={Parent={}}', 'local Layout=' + wrapped('src/shared/CaveHubLayout.luau'),
              'local Props=' + wrapped('src/shared/CaveHubProps.luau'), 'local AP=' + wrapped('src/shared/AssetPalette.luau'),
-             'local require=function() return Layout end', 'local Rules=' + wrapped('src/shared/CaveLightingRules.luau'), LUAU]
+             'local require=function() return Layout end', 'local Rules=' + wrapped('src/shared/CaveLightingRules.luau'),
+             'local SCS=' + wrapped('src/shared/ShopCardState.luau'), LUAU]
     src = chr(10).join(parts)
     with tempfile.TemporaryDirectory() as t:
         p = Path(t) / 'c.luau'
@@ -66,6 +97,7 @@ def main():
     boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8')
     assert 'b.TextScaled=true' in boot and 'UITextSizeConstraint' in boot and 'packButton(nil)' in boot, 'BD-430: pack button text scales to fit, never "..."'
     assert 'button(card,"...",' not in boot, 'no "..." placeholder on a pack button'
+    static_crystals_tab(boot)
     cue = (ROOT / 'src/client/GoCue.luau').read_text(encoding='utf-8')
     assert 'GoCueLabel' not in cue and 'SetAttribute("GoCue"' in cue and 'GoCueText' in boot, 'TAP TO GO! sits on the button face, no floating label'
     sm = (ROOT / 'src/client/SettingsMenu.luau').read_text(encoding='utf-8')
