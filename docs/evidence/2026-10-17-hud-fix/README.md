@@ -1,4 +1,4 @@
-# HUD leftovers (BD-502): before / after, desktop Studio play
+# HUD leftovers (BD-507): before / after, desktop Studio play
 
 Playtest build (`python tools/build.py --profile playtest`) of a private local copy with the dev-only DemoTrigger flag on (never committed), opened in its own Studio window; the "before" place is the BD-501 branch head, the "after" place is this branch. A Shiny + BIG Triceratops came from the DemoTrigger hatch party and was opened through the real EGGS screen. Studio `screen_capture` only. Game view 1140 x 785 (ScreenGui 1140 x 727).
 

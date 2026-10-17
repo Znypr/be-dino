@@ -59,7 +59,7 @@ function PhoneScale.floorButton(height: number, scale: number): number
     return PhoneScale.floorSize(height, scale, PhoneScale.MinButton)
 end
 
--- BD-502: a free-standing panel under its own UIScale (no modal floor pass). The smallest scale at which a `designButton` px tall tap target
+-- BD-507: a free-standing panel under its own UIScale (no modal floor pass). The smallest scale at which a `designButton` px tall tap target
 -- renders >= MinButton and a `designText` px label >= MinText, never under `base` and never above 1 (a floor is only ever raised to 1:1).
 function PhoneScale.floorScale(base: number, designButton: number, designText: number): number
     return math.min(1, math.max(base, PhoneScale.MinButton / math.max(designButton, 1), PhoneScale.MinText / math.max(designText, 1)))

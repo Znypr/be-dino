@@ -1,7 +1,7 @@
 --!strict
 -- Playtest feedback button (docs/128), behind Config.PlaytestFeedbackEnabled (default false). Own ScreenGui and module so
 -- Bootstrap.client.luau (local limit) is untouched. A small "Tell us!" button (48 px high, above the 44 px touch
--- minimum) opens three emoji ratings (Fun / Hard / Looks) and an optional short text box. BD-502: its spot comes from
+-- minimum) opens three emoji ratings (Fun / Hard / Looks) and an optional short text box. BD-507: its spot comes from
 -- TouchLayout.feedback, published by Bootstrap as the BeDinoUI FeedbackRect attribute, so it never covers the egg plate. The server filters the text and
 -- rate-limits; this script only sends {fun, level, looks, text}. Copy follows docs/72: short, plain, no jargon.
 -- PLACEHOLDER art: plain text and emoji only; final icons are a separate art task (docs/72).
@@ -39,7 +39,7 @@ end
 
 local PANEL, CARD, ACCENT = Color3.fromRGB(42, 40, 53), Color3.fromRGB(61, 58, 73), Color3.fromRGB(93, 237, 31)
 
--- BD-502: first position = straight above the egg plate (desktop rule), until Bootstrap's layout publishes the real rect.
+-- BD-507: first position = straight above the egg plate (desktop rule), until Bootstrap's layout publishes the real rect.
 local open = make("TextButton", gui, "TellUsButton", UDim2.fromOffset(120, 48), UDim2.new(0, 18, 1, -138))
 style(open, "Tell us!", Color3.fromRGB(194, 86, 255), 24)
 task.spawn(function()

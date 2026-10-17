@@ -53,7 +53,7 @@ function Lod.domeFits(device: string, live: number): boolean
 end
 
 -- Pure: does one more rig (cost = FxRecipes cost plus shells) fit next to what is already live (used)?
--- BD-502: `beamCap` (optional) replaces the beam ceiling, nothing else: PhoneGuards.cosmeticBeamCap leaves room for the cave shaft beams.
+-- BD-507: `beamCap` (optional) replaces the beam ceiling, nothing else: PhoneGuards.cosmeticBeamCap leaves room for the cave shaft beams.
 function Lod.fits(device: string, used: {[string]: number}, cost: {[string]: number}, beamCap: number?): boolean
     local cap = Lod.Live[device] or Lod.Live.desktop
     for _, k in Lod.CostKeys do

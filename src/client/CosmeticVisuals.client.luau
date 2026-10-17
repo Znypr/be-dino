@@ -13,7 +13,7 @@ local Look=require(Shared.MutationLook)
 local Recipes=require(Shared.FxRecipes)
 local Rig=require(script.Parent.FxRig)
 local Lod=require(Shared.EffectsLod) -- BD-095 distance LOD
-local Guards=require(Shared.PhoneGuards) -- BD-502: cosmetic beam ceiling inside the hub on a phone
+local Guards=require(Shared.PhoneGuards) -- BD-507: cosmetic beam ceiling inside the hub on a phone
 local Settings=require(Shared.SettingsModel)
 local Cave=require(script.Parent.CaveAtmosphere) -- BD-495: is this player inside the cave hub (phones draw no cosmetic glow light there)
 local MomentRim=require(script.Parent.MomentRim) -- BD-433: 1.5 s rim on the own dino when a mutation is revealed
@@ -45,7 +45,7 @@ RunService.Heartbeat:Connect(function(dt)
     local device=Rig.device()
     local inHub=Cave.inside()
     Rig.setInHub(inHub)
-    -- BD-502: inside the hub on a phone the 4 shaft beams share the 24-beam phone budget, so cosmetic beams stop at 24-4=20 (hub total <= 24).
+    -- BD-507: inside the hub on a phone the 4 shaft beams share the 24-beam phone budget, so cosmetic beams stop at 24-4=20 (hub total <= 24).
     -- Desktop and tablet: hubPhone is always false, beamCap is the unchanged live cap. Entering or leaving the hub rebuilds the phone's rigs once.
     local hubPhone=inHub and Guards.isPhone(device)
     local beamCap=Guards.cosmeticBeamCap(device,hubPhone,(Lod.Live[device] or Lod.Live.desktop).beams)

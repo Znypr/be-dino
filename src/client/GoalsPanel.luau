@@ -80,7 +80,7 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject, opts: any)
         local inRun = character ~= nil and character:GetAttribute("RunState") == "Active"
         root.Visible = not inRun and anchor.Visible
         if not root.Visible then return end
-        -- sit just under the goal line, right edges aligned. BD-502: the goal line is scaled down on phones (0.6), and GoalsPanel is not part
+        -- sit just under the goal line, right edges aligned. BD-507: the goal line is scaled down on phones (0.6), and GoalsPanel is not part
         -- of the ModalCompact floor pass, so the header would render 44 x 0.6 = 26 px; the panel takes the smallest scale at which the header
         -- tap target is >= 44 px and the text >= 14 px (1:1), growing LEFT from the goal line's right edge.
         local anchorScale = anchor:FindFirstChildOfClass("UIScale")

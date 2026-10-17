@@ -74,7 +74,7 @@ def static_checks():
     assert not re.search(r'^local HudV2', boot, re.M), 'no new top-level local for HudV2'
     touch = (ROOT / 'src/shared/TouchLayout.luau').read_text()
     assert 'TouchLayout.HUD = {w = 210, h = 64}' in touch, 'HUD slot is the compact egg plate'
-    # BD-502: the "Tell us!" button no longer sits on the egg plate. The rect comes from TouchLayout (rect overlap is asserted at 8 phone, 6 tablet
+    # BD-507: the "Tell us!" button no longer sits on the egg plate. The rect comes from TouchLayout (rect overlap is asserted at 8 phone, 6 tablet
     # and 7 desktop canvases, incl. 1156 x 841, in tools/verify_movement_mobile.py); Bootstrap publishes it, FeedbackClient follows it.
     assert 'result.feedback = feedbackRect(result, width, height)' in touch and touch.count('result.feedback =') == 2, 'desktop and touch layouts both place the Tell us! button'
     assert 'gui:SetAttribute("FeedbackRect"' in boot, 'Bootstrap publishes the Tell us! rect'

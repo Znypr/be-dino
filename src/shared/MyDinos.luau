@@ -134,7 +134,7 @@ function M.header(speciesName: string, count: number): string
     return speciesName .. " x " .. count
 end
 
--- BD-502: card layout of one "My dinos" card (design px). The SHINY / BIG pills and the mutation badge sit in a band UNDER the dino thumbnail,
+-- BD-507: card layout of one "My dinos" card (design px). The SHINY / BIG pills and the mutation badge sit in a band UNDER the dino thumbnail,
 -- never over it (they used to cover the dino at the left). Everything is stacked up from the bottom: EQUIPPED tag, colour swatch, pattern name,
 -- then the badge row, then the pill row, and the thumbnail takes the height that is left (a plain dino gets the whole band, so the thumbnail
 -- only shrinks when the card really carries a ribbon). Pills are 14 px text (docs/114 s4.4), so the pill row is 17 high, the mutation badge 22.

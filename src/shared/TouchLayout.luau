@@ -19,7 +19,7 @@ TouchLayout.CRYSTAL = {w = 260, h = 48}
 TouchLayout.TIMERS_W = 286
 TouchLayout.LEAP_H, TouchLayout.WEATHER_H, TouchLayout.BUFFS_H = 60, 62, 68
 TouchLayout.ACTION = {w = 244, h = 60}
--- BD-502: the playtest "Tell us!" button (FeedbackClient). Fixed 120 x 48 design px, never scaled (48 >= the 44 px tap floor, 14+ px text).
+-- BD-507: the playtest "Tell us!" button (FeedbackClient). Fixed 120 x 48 design px, never scaled (48 >= the 44 px tap floor, 14+ px text).
 -- Desktop: straight above the egg plate (x of the plate, 8 px gap), else right of it, so it never covers "EGGS N". Touch: bottom-left corner
 -- (the egg plate is top-left there). Bootstrap publishes the rect as the FeedbackRect attribute of the BeDinoUI gui; FeedbackClient places itself on it.
 TouchLayout.FEEDBACK = {w = 120, h = 48, gap = 8}
@@ -142,7 +142,7 @@ local function desktop(width: number, height: number, count: number)
     local noticeW = math.min(500, 2 * (crystalX - 8 - width / 2))
     local result = {
         touch = false,
-        feedback = {x = 0, y = 0, w = 0, h = 0} :: Rect, -- BD-502: filled below, once the rest of the layout is known
+        feedback = {x = 0, y = 0, w = 0, h = 0} :: Rect, -- BD-507: filled below, once the rest of the layout is known
         reserved = {},
         crystal = {x = crystalX, y = 8, scale = crystalScale, w = TouchLayout.CRYSTAL.w, h = TouchLayout.CRYSTAL.h},
         hud = hud,
@@ -157,7 +157,7 @@ local function desktop(width: number, height: number, count: number)
         notice = {x = width / 2 - noticeW / 2, y = 8, scale = 1, w = noticeW, h = 25, textSize = 14},
         toastScale = math.min(1, (width - 20) / 440),
     }
-    result.feedback = feedbackRect(result, width, height) -- BD-502
+    result.feedback = feedbackRect(result, width, height) -- BD-507
     return result
 end
 
@@ -246,7 +246,7 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
     end
     local result = {
         touch = true,
-        feedback = {x = 0, y = 0, w = 0, h = 0} :: Rect, -- BD-502: filled below, once the rest of the layout is known
+        feedback = {x = 0, y = 0, w = 0, h = 0} :: Rect, -- BD-507: filled below, once the rest of the layout is known
         reserved = {thumb = thumb, jump = corner},
         crystal = crystal,
         hud = hud,
@@ -257,7 +257,7 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
         notice = notice,
         toastScale = math.min(1, (width - 20) / 440),
     }
-    result.feedback = feedbackRect(result, width, height) -- BD-502
+    result.feedback = feedbackRect(result, width, height) -- BD-507
     return result
 end
 

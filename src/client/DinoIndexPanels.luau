@@ -351,7 +351,7 @@ function Panels.species(ctx)
         button.Parent = parent
         button.Activated:Connect(function() selectCopy(d.instanceId) end)
         local g = d.genes or {}
-        -- BD-502: ribbons first, because the thumbnail takes the height that is left above them (MyDinos.cardRows).
+        -- BD-507: ribbons first, because the thumbnail takes the height that is left above them (MyDinos.cardRows).
         local ribbons = MyDinos.ribbons(d, catalog)
         local mutationId: string? = nil
         local pills: {string} = {}
@@ -378,7 +378,7 @@ function Panels.species(ctx)
             entryRef.mounted = false
         end
         pill(button, string.upper(Sel.stageTitle(d.stage)), StageColors[d.stage] or StageColors.base, UDim2.fromOffset(74, 17), UDim2.new(1, -80, 0, 7), if d.stage == "base" then C.text else C.outline)
-        -- BD-502: SHINY / BIG pills in one row, the mutation badge in its own row, both UNDER the thumbnail (never over the dino).
+        -- BD-507: SHINY / BIG pills in one row, the mutation badge in its own row, both UNDER the thumbnail (never over the dino).
         local pillX = 4
         for _, text in pills do
             local width = if text == "SHINY" then 54 else 40

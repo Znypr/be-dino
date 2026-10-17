@@ -163,7 +163,7 @@ for total = 1, 80 do
         assert(last - first + 1 <= M.MaxLivePreviews and first >= 1 and last <= total, "window bounded")
     end
 end
--- BD-502: card rows. Ribbons (SHINY / BIG pills, mutation badge) sit UNDER the thumbnail, never over the dino.
+-- BD-507: card rows. Ribbons (SHINY / BIG pills, mutation badge) sit UNDER the thumbnail, never over the dino.
 do
     local C = M.Card
     for pills = 0, 2 do
@@ -260,7 +260,7 @@ def check_wiring():
     for needle in ('InspectView.attach', 'MyDinos.PageSize', 'MyDinos.window', 'entry.unmount()', 'No dinos match, clear filters', 'Not discovered yet', 'action = "details"', 'action = "list"', 'EQUIPPED', 'MyDinos.cardRows(#pills, mutationId ~= nil)', 'rows.thumbH'):
         assert needle in panels, needle
     assert 'Badge.Height = 22' in read('src/client/MutationBadge.luau'), 'MyDinos.Card.chipH matches the mutation badge height'
-    assert 'fromOffset(7, y)' not in panels, 'BD-502: no pill sits at a fixed spot over the thumbnail'
+    assert 'fromOffset(7, y)' not in panels, 'BD-507: no pill sits at a fixed spot over the thumbnail'
     assert 'Instance.new("ViewportFrame")' not in panels, 'previews come from DinosaurPreview (patient loading)'
     boot = read('src/client/Bootstrap.client.luau')
     assert 'DinoIndexPanels.supported()' in boot and 'equip:FireServer(speciesId,Http:GenerateGUID(false),variantKey)' in boot
