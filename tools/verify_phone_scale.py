@@ -44,6 +44,13 @@ assert(math.abs(oldRule(844,330)-0.5577)<.001)
 assert(P.modal(844,330).scale>=.95 and P.modal(740,300).scale>=.8)
 assert(P.floorText(20,1)==20 and P.floorText(10,1)==14 and P.floorButton(30,1)==44 and P.floorButton(60,.5)==88)
 assert(P.toastAnchor(330)=="top" and P.toastAnchor(684)=="default")
+-- BD-507: GoalsPanel (44 px header, 14 px text) is not in the ModalCompact pass; its UIScale follows the goal line (0.6 on a phone).
+for _,line in {0.3,0.55,0.6,0.65,0.8,0.99} do
+    local s=P.floorScale(line,44,14)
+    assert(s==1 and 44*s>=44-1e-9 and 14*s>=14-1e-9,"GoalsPanel header >= 44 px and text >= 14 px at goal-line scale "..line)
+end
+assert(P.floorScale(1,44,14)==1 and P.floorScale(0.6,80,28)==0.6 and math.abs(P.floorScale(0.2,80,28)-44/80)<1e-9,"floorScale only raises, never above 1")
+assert(P.floorScale(2,44,14)==1,"never above 1:1")
 assert(P.hudScale(.41,22,1)>=14/22 and P.hudScale(.9,22,1)==.9 and P.hudScale(.2,10,.5)==.5)
 for _,line in seen do print(line) end
 print("phone scale: modal policy, desktop identity, floors ok")
