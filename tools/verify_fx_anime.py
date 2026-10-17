@@ -320,6 +320,7 @@ local function scenario(effects, calm, bound, width)
     local task = {delay = function(t, fn) delayed[#delayed + 1] = {t = t, fn = fn} end}
     ;(function()
         local game, task, require = env, task, function(x) return x end
+        local script = {Parent = {WaitForChild = function() return {play = function() return false end} end}} -- MomentRim (BD-433) is audited by verify_fx_moments.py
 --@@RARESRC
     end)()
     assert(handler, "the client connected to the RareHatch remote")

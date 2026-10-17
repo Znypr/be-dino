@@ -373,4 +373,24 @@ function R.shellFade(kind: string, age: number): number
     return fadeIn * math.clamp((life - age) / 1.0, 0, 1)
 end
 
+-- BD-433 (docs/123 s3): the shock dome. ONE soft one-shot half sphere (mesh slot shock_dome_mesh, UV texture domeGradient) that swells and fades
+-- at the big moments: an Epic+ aura equip pop and a Seismic event-mutation reveal. Pure decision, so it is verified offline. It needs the real
+-- mesh (meshReady: an empty slot keeps today's look), never shows with Reduce Motion or in the lite look, and the scene caps it (EffectsLod.Domes).
+R.DomeMinTier = 4
+R.DomeMutations = {seismic = true}
+R.DomeSeconds = 0.9 -- the whole swell, then it is gone
+R.DomeGap = 2 -- seconds between two domes on one client, whatever the moment
+R.DomeSize = {from = 1.5, to = 7} -- studs across the base at dino scale 1
+function R.wantsDome(kind: string, id: string?, tier: number?, reduced: boolean?, detail: string?, meshReady: boolean?): boolean
+    if not meshReady or reduced or detail == "lite" then return false end
+    if kind == "aura" then return (tier or 0) >= R.DomeMinTier end
+    if kind == "mutation" then return id ~= nil and R.DomeMutations[id] == true end
+    return false
+end
+-- age (seconds) -> growth 0..1 (eases out: a quick swell that settles) and part transparency (soft at the start, clear by the end).
+function R.domeLook(age: number): (number, number)
+    local t = math.clamp(age / R.DomeSeconds, 0, 1)
+    return R.easeOutCubic(t), 0.6 + 0.4 * t * t
+end
+
 return R

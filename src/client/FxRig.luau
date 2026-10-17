@@ -12,6 +12,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Recipes = require(Shared.FxRecipes)
 local Assets = require(Shared.EffectAssets)
 local Slots = require(Shared.AssetSlots)
+local Lod = require(Shared.EffectsLod)
 
 local Rig = {}
 Rig.__index = Rig
@@ -97,6 +98,16 @@ local SHELL_NATIVE = 4 -- the mesh is about 4 studs across (radius 2): Scale = w
 local function wantsShell(kind: string, resolved, opts): boolean
     return Recipes.wantsShell(kind, resolved.tier, resolved.reduced, opts.detail, Slots.mesh("aura_shell_mesh") ~= nil)
 end
+-- BD-433 shock dome (docs/123 s3): ONE soft one-shot half sphere at the feet for an Epic+ aura equip pop and a Seismic mutation reveal. It exists only
+-- when the mesh slot shock_dome_mesh holds a real upload (FxRecipes.wantsDome), the full look, no Reduce Motion; the scene runs at most
+-- EffectsLod.Domes of them (phone 1) with FxRecipes.DomeGap seconds between two. The UV texture domeGradient is put on only when that slot is real too.
+-- The mesh is 4 studs across (radius 2, pivot at the base centre): Scale = wanted diameter / 4.
+local DOME_NATIVE = 4
+local liveDomes, lastDomeAt = 0, -100
+local function wantsDome(kind: string, resolved, opts): boolean
+    return Recipes.wantsDome(kind, resolved.id, resolved.tier, resolved.reduced, opts.detail, Slots.mesh("shock_dome_mesh") ~= nil)
+end
+Rig.wantsDome = wantsDome
 -- Cost of a look as the global budget sees it (FxRecipes cost plus shells), without building anything.
 function Rig.cost(kind: string, item, opts)
     opts = opts or {}
@@ -295,6 +306,30 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
         shell.Parent = folder
         self.shell, self.shellMesh, self.shellKind = shell, special, kind
     end
+    if wantsDome(kind, resolved, opts) and Lod.domeFits(device, liveDomes) and os.clock() - lastDomeAt >= Recipes.DomeGap then
+        local mesh = Slots.mesh("shock_dome_mesh")
+        local dome = Instance.new("Part")
+        dome.Name = "FxDome"
+        dome.Size = Vector3.new(DOME_NATIVE, DOME_NATIVE, DOME_NATIVE) -- a FileMesh draws at its own size x Scale: the part only carries it
+        dome.Transparency, dome.Anchored, dome.CanCollide, dome.CanTouch, dome.CanQuery, dome.CastShadow = 0.6, true, false, false, false, false
+        dome.Material = Enum.Material.Neon
+        local tint = c3(resolved.named.primary)
+        dome.Color = tint
+        local special = Instance.new("SpecialMesh")
+        special.MeshType, special.MeshId, special.Scale = Enum.MeshType.FileMesh, mesh, Vector3.new(1, 1, 1)
+        if Assets.isReal("domeGradient") then
+            special.TextureId = Assets.resolve("domeGradient")
+            special.VertexColor = Vector3.new(tint.R, tint.G, tint.B) -- the white-on-alpha render is tinted by vertex colour
+        end
+        special.Parent = dome
+        local folder = workspace:FindFirstChild("LocalDinoFX")
+        if not folder then folder = Instance.new("Folder") folder.Name = "LocalDinoFX" folder.Parent = workspace end
+        dome.CFrame = CFrame.new(root.Position + Vector3.new(0, FEET, 0))
+        dome.Parent = folder
+        liveDomes += 1
+        lastDomeAt = os.clock()
+        self.dome, self.domeMesh, self.domeAge = dome, special, 0
+    end
     self._anchorPart = anchor
     self.fade = 0
     if not opts.reduce then self:burst() end -- equip pop (aura / mutation); trails pop when they start moving
@@ -302,6 +337,13 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
 end
 
 -- ---------------------------------------------------------------- runtime
+function Rig:_endDome()
+    if not self.dome then return end
+    self.dome:Destroy()
+    self.dome, self.domeMesh, self.domeAge = nil, nil, nil
+    liveDomes = math.max(0, liveDomes - 1)
+end
+
 function Rig:burst()
     if not self.alive or self.resolved.reduced then return end
     for _, entry in self.bursts do
@@ -323,6 +365,17 @@ function Rig:update(scale: number, time: number, moving: boolean)
         if rebuild then anchor.Size = Vector3.new(2.6 * scale, 0.2, 2.6 * scale) end
     end
     local pulse = if reduced then 0.5 else Recipes.pulse(time)
+    if self.dome then -- a short swell that fades; fixed where it started, then gone
+        self.domeAge += 1 / 30
+        if self.domeAge >= Recipes.DomeSeconds then
+            self:_endDome()
+        else
+            local grow, clear = Recipes.domeLook(self.domeAge)
+            local size = (Recipes.DomeSize.from + (Recipes.DomeSize.to - Recipes.DomeSize.from) * grow) * scale
+            self.domeMesh.Scale = Vector3.new(size / DOME_NATIVE, size / DOME_NATIVE, size / DOME_NATIVE)
+            self.dome.Transparency = clear
+        end
+    end
     if self.shell then -- slow breathing, always soft and see-through (calm rule); a mutation shell fades away after its reveal
         local shellFade = Recipes.shellFade(self.shellKind, self.age)
         if shellFade <= 0 and self.age > 1 then
@@ -409,6 +462,7 @@ function Rig:destroy()
     self.alive = false
     for _, inst in self.objects do release(inst) end
     self.objects = {}
+    self:_endDome()
     if self._anchorPart then self._anchorPart:Destroy() end
     if self.shell then self.shell:Destroy() self.shell = nil end
 end
