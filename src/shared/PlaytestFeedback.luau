@@ -84,8 +84,11 @@ end
 
 -- BD-441 (docs/132): "Tell us!" stays hidden on minute zero. Shown only once a run has ended (sawRunEnd), or for a returning
 -- player who already has eggs/dinos from before (foundEgg) and is not in a run right now.
+-- BD-538: on a phone-landscape canvas (compact) the button sat on the lower-left of every open menu (over the egg card's rarity and condition
+-- chips), so it is hidden while a menu is open there (menuOpen and compact). Desktop menus are centred and leave the corner free: unchanged.
 function PlaytestFeedback.showButton(info: any): boolean
     if type(info) ~= "table" then return false end
+    if info.menuOpen == true and info.compact == true then return false end
     if info.sawRunEnd == true then return true end
     return info.foundEgg == true and info.runActive ~= true
 end

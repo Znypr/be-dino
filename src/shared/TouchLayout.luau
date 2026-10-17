@@ -30,6 +30,12 @@ TouchLayout.ADMIN = {w = 120, h = 48, desktopX = 14, desktopY = 8}
 -- PhoneScale.floorScale gives (1:1 on phones). On the phone layout the FOLDED header is only as wide as the wallet (at least MinW), so it
 -- never reaches under the rail; the panel grows to its 260 px width only while the player has it open. Bootstrap publishes the rect as GoalsRect.
 TouchLayout.GOALS = {w = 260, h = 44, dy = 34, minW = 130}
+-- BD-538: the in-run SIZE bar and the one-line goal hint under it (HudV2) and the hub "Back to the middle" chip (HubTravelClient). They used to
+-- sit at the screen centre on every canvas, which on a 667-wide phone put them 4 to 9 px under the weather/LEAP column. Both now come from
+-- the layout: centred when clear, else slid left of the right-hand column. Sizes are design px (the bar and hint carry a UIScale); the chip
+-- is 240 x 48, `bottom` px above the screen bottom (HubTravelClientRules.ChipBottom, asserted equal by tools/verify_movement_mobile.py).
+TouchLayout.SIZEBAR = {w = 250, h = 34, hintW = 360, hintH = 28, hintDy = 38, gap = 4}
+TouchLayout.CHIP = {w = 240, h = 48, bottom = 96, gap = 4}
 
 -- BD-378: where the toast stack goes. The Crystals plate (top right) has the goal line ("Level 1: 0/100 XP") right under it;
 -- the stack is TOAST.w wide, centred, and used to sit at y = 80 (y = 4 with a menu open), which covers both on any canvas
@@ -139,6 +145,34 @@ local function buttonContent(bw: number, bh: number)
         labelW = bw, labelH = bh - icon - 5, textSize = clamp(math.floor((bw - 4) / 4.7), PhoneScale.MinText, 14)}
 end
 
+-- BD-538: SIZE bar + hint rects. `top` = y of the bar; `column` = the right-hand weather/LEAP column (or nil). Centred on the canvas unless a piece
+-- would touch the column, then both slide left together (one common centre) so their right edge stops `gap` px before it.
+local function sizeBarRects(width: number, top: number, scale: number, column: Rect?)
+    local S = TouchLayout.SIZEBAR
+    local bw, bh, hw, hh = S.w * scale, S.h * scale, S.hintW * scale, S.hintH * scale
+    local hy = top + S.hintDy * scale
+    local centre = width / 2
+    if column then
+        local limit = column.x - S.gap
+        local c0 = centre
+        if TouchLayout.overlaps({x = c0 - bw / 2, y = top, w = bw, h = bh}, column) then centre = math.min(centre, limit - bw / 2) end
+        if TouchLayout.overlaps({x = c0 - hw / 2, y = hy, w = hw, h = hh}, column) then centre = math.min(centre, limit - hw / 2) end
+    end
+    centre = math.max(centre, hw / 2)
+    return {x = centre - bw / 2, y = top, scale = scale, w = S.w, h = S.h}, {x = centre - hw / 2, y = hy, scale = scale, w = S.hintW, h = S.hintH}
+end
+
+-- BD-538: where the "Back to the middle" chip goes: bottom centre, or slid left until it stops short of the column / Goals header on its right.
+local function chipRect(width: number, height: number, blockers: {Rect}): Rect
+    local C = TouchLayout.CHIP
+    local y = height - C.bottom - C.h
+    local x = width / 2 - C.w / 2
+    for _, b in blockers do
+        if TouchLayout.overlaps({x = x, y = y, w = C.w, h = C.h}, b) then x = math.min(x, b.x - C.gap - C.w) end
+    end
+    return {x = math.max(x, Config.TouchSafeMargin), y = y, w = C.w, h = C.h}
+end
+
 local function feedbackRect(layout, width: number, height: number): Rect
     local F, hud = TouchLayout.FEEDBACK, layout.hud
     local hudR = TouchLayout.rendered(hud)
@@ -186,6 +220,9 @@ local function desktop(width: number, height: number, count: number)
         toastScale = math.min(1, (width - 20) / 440),
     }
     result.feedback = feedbackRect(result, width, height) -- BD-507
+    local barScale = clamp(hud.scale, 0.7, 1) -- BD-538: the SIZE bar sits under the build badge at y 64 (HudV2 used to compute this itself)
+    result.sizeBar, result.sizeHint = sizeBarRects(width, 64, barScale, TouchLayout.rendered(result.timers))
+    result.chip = chipRect(width, height, {TouchLayout.rendered(result.timers)})
     return result
 end
 
@@ -295,6 +332,12 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
     }
     result.feedback = feedbackRect(result, width, height) -- BD-507
     result.admin = {x = result.feedback.x + result.feedback.w + TouchLayout.FEEDBACK.gap, y = result.feedback.y, w = TouchLayout.ADMIN.w, h = TouchLayout.ADMIN.h} -- BD-531
+    local column = TouchLayout.rendered(timers)
+    local blockers = {column}
+    if goals then table.insert(blockers, goals) end
+    -- BD-538: SIZE bar under the rail (HudV2 used to compute this itself, centred), clear of the weather column; the hub chip clear of column and Goals header
+    result.sizeBar, result.sizeHint = sizeBarRects(width, rail.y + rail.h * rail.scale + 4, clamp(rail.scale, 0.7, 1), column)
+    result.chip = chipRect(width, height, blockers)
     return result
 end
 

@@ -80,6 +80,27 @@ def static_modal_rail():
     print('menu card static wiring ok: clearance published after every layout pass, panel x and scale from ModalCompact')
 
 
+def static_538_paths():
+    """BD-538: the SIZE bar, its hint and the hub chip take their spots from TouchLayout (no centred constants in the views), the chip rect is
+    published, and Tell us! is hidden while a menu is open on a phone canvas."""
+    hud = (ROOT / 'src/client/HudV2.luau').read_text(encoding='utf-8')
+    layout_fn = hud[hud.index('function Hud.layout'):hud.index('return Hud')]
+    assert 'layout.sizeBar' in layout_fn and 'layout.sizeHint' in layout_fn and 'UDim2.new(0.5, 0, 0' not in layout_fn, 'HudV2.layout uses the TouchLayout rects'
+    assert re.search(r'BAR_W, BAR_H = 250, 34', hud) and 'SIZEBAR = {w = 250, h = 34, hintW = 360, hintH = 28' in (ROOT / 'src/shared/TouchLayout.luau').read_text(encoding='utf-8')
+    assert 'UDim2.fromOffset(360, 28)' in hud, 'hint is 360 x 28 design px'
+    chip_client = (ROOT / 'src/client/HubTravelClient.luau').read_text(encoding='utf-8')
+    assert 'gui:GetAttribute("ChipRect")' in chip_client and 'GetAttributeChangedSignal("ChipRect")' in chip_client, 'chip follows the published rect'
+    boot = (ROOT / 'src/client/Bootstrap.client.luau').read_text(encoding='utf-8')
+    assert boot.count('SetAttribute("ChipRect"') == 1, 'Bootstrap publishes ChipRect once per layout pass'
+    rules = (ROOT / 'src/shared/HubTravelClientRules.luau').read_text(encoding='utf-8')
+    bottom = re.search(r'Rules\.ChipBottom = (\d+)', rules).group(1)
+    assert f'CHIP = {{w = 240, h = 48, bottom = {bottom},' in (ROOT / 'src/shared/TouchLayout.luau').read_text(encoding='utf-8'), 'TouchLayout.CHIP matches HubTravelClientRules.ChipBottom and the 240 x 48 button'
+    assert 'UDim2.fromOffset(240, 48)' in chip_client
+    fb = (ROOT / 'src/client/FeedbackClient.client.luau').read_text(encoding='utf-8')
+    assert 'menuOpen = menuOpen(), compact = compactCanvas()' in fb and 'ModalScrim' in fb, 'Tell us! hides behind an open menu on a phone canvas'
+    print('BD-538 static paths ok: SIZE bar/hint/chip follow the layout, chip rect published, Tell us! hidden behind a phone menu')
+
+
 def script():
     return 'local Config = ' + wrapped('src/shared/Config.luau') + '\nlocal PhoneScale = ' + wrapped('src/shared/PhoneScale.luau') + '\n' + '''
 local script = {Parent = {Config = "Config", PhoneScale = "PhoneScale"}}
@@ -212,6 +233,14 @@ local function elements(layout)
  if layout.goals then table.insert(list, {name = "goals", interactive = true, thumbOk = true, r = {x = layout.goals.x, y = layout.goals.y, w = layout.goals.w, h = layout.goals.h}}) end
  table.insert(list, {name = "goalline", r = {x = layout.crystal.x, y = layout.crystal.y + layout.crystal.h * layout.crystal.scale + TouchLayout.GOAL_GAP, w = layout.crystal.w * layout.crystal.scale, h = TouchLayout.GOAL_H * layout.crystal.scale}})
  table.insert(list, {name = "notice", r = rect(layout.notice)})
+ -- BD-538: the in-run SIZE bar and its goal hint (HudV2) and the hub "Back to the middle" chip (HubTravelClient) come from the layout now. They used to be
+ -- centred and put 9 x 30 px (bar) and 4 x 44 px (chip) under the weather/LEAP column at 667 x 317. Included for every canvas (more than the game ever shows
+ -- at once), so a piece that comes back onto the column, the rail, the egg plate, Tell us!, Admin or Home fails here. The chip is a 48 px tap target.
+ if not layout.goals then -- the SIZE bar and hint are in-run only; the Goals header is hub-only (never on screen together)
+  table.insert(list, {name = "sizebar", thumbOk = true, r = rect(layout.sizeBar)})
+  table.insert(list, {name = "sizehint", thumbOk = true, r = rect(layout.sizeHint)})
+ end
+ table.insert(list, {name = "chip", interactive = true, thumbOk = true, r = {x = layout.chip.x, y = layout.chip.y, w = layout.chip.w, h = layout.chip.h}})
  local rail = layout.rail
  for i, p in rail.positions do
   table.insert(list, {name = "nav" .. i, interactive = true, button = true,
@@ -228,9 +257,12 @@ local function check(width, height, touch, measured, goals)
  for i, a in list do
   assert(inside(a.r, width, height), label .. ": " .. a.name .. " leaves the safe canvas")
   for j = i + 1, #list do
-   assert(not TouchLayout.overlaps(a.r, list[j].r), label .. ": " .. a.name .. " overlaps " .. list[j].name)
+   -- The Studio-only "STUDIO PREVIEW" notice can touch the SIZE bar on 1000+ px tablet canvases (it did before BD-538 too, and the notice is not in the shipped
+   -- game); phone canvases (under 1000 px wide) must be clean.
+   local studioNotice = width >= 1000 and ((a.name == "notice" and string.sub(list[j].name, 1, 4) == "size") or (list[j].name == "notice" and string.sub(a.name, 1, 4) == "size"))
+   assert(studioNotice or not TouchLayout.overlaps(a.r, list[j].r), label .. ": " .. a.name .. " overlaps " .. list[j].name)
   end
-  if touch then
+  if layout.touch then
    for zone, r in layout.reserved do
     assert(a.thumbOk or not TouchLayout.overlaps(a.r, r), label .. ": " .. a.name .. " intrudes on Roblox " .. zone .. " zone")
    end
@@ -239,7 +271,7 @@ local function check(width, height, touch, measured, goals)
    end
   end
  end
- if touch then
+ if layout.touch then
   assert(layout.rail.button.textSize >= 10, label .. ": nav label too small")
   assert(30 * layout.hud.scale >= 11, label .. ": HUD eggs text below 11 px")
   assert(layout.action.w * layout.action.scale >= 2 * Config.TouchMinTargetPx, label .. ": Home too narrow")
@@ -269,7 +301,7 @@ for _, v in {{836, 390}, {667, 375}} do
    for _, touch in {true, false} do -- Studio / a PC window this short reports a mouse: it still gets the phone layout (PhoneScale.isCompact)
     local layout = TouchLayout.compute({width = v[1], height = v[2] - bar, touch = touch, navCount = NAV, goals = goals})
     assert(layout.touch, "short canvas uses the phone layout")
-    if touch then check(v[1], v[2] - bar, true, nil, goals) end
+    check(v[1], v[2] - bar, touch, nil, goals) -- BD-538: the mouse case too (a PC window this short gets the phone layout)
     local e = TouchLayout.rendered(layout.hud)
     assert(e.w > 0 and e.h > 0 and e.x >= 0 and e.y >= 0, "egg plate visible")
     assert(layout.timers.weatherVisible, "weather chip stays visible")
@@ -277,6 +309,27 @@ for _, v in {{836, 390}, {667, 375}} do
     if goals then assert(g and g.y + g.h <= layout.timers.y + 1e-6 or g.x + g.w <= layout.timers.x, "Goals header clear of the weather column") end
    end
   end
+ end
+end
+-- BD-538: at 667 x 317 (the Studio small-phone size) the centred SIZE bar / hint / chip WOULD touch the weather column: the probe keeps this test honest,
+-- and the real rects must differ from the centred ones exactly there (and equal them wherever nothing is in the way, e.g. 836 x 332 and desktop).
+do
+ local S, C = TouchLayout.SIZEBAR, TouchLayout.CHIP
+ local run = TouchLayout.compute({width = 667, height = 317, touch = true, navCount = NAV}) -- in a run: SIZE bar + hint, no Goals header
+ local hub = TouchLayout.compute({width = 667, height = 317, touch = true, navCount = NAV, goals = true}) -- in the hub: the chip
+ local runCol, hubCol = rect(run.timers), rect(hub.timers)
+ local centredBar = {x = 667 / 2 - S.w / 2, y = run.sizeBar.y, w = S.w, h = S.h}
+ local centredChip = {x = 667 / 2 - C.w / 2, y = 317 - C.bottom - C.h, w = C.w, h = C.h}
+ assert(TouchLayout.overlaps(centredBar, runCol) and TouchLayout.overlaps(centredChip, hubCol), "probe lost sensitivity: centred bar/chip no longer touch the column")
+ assert(not TouchLayout.overlaps(rect(run.sizeBar), runCol) and not TouchLayout.overlaps(rect(run.sizeHint), runCol), "667 x 317: bar and hint clear of the column")
+ assert(not TouchLayout.overlaps(hub.chip, hubCol) and not TouchLayout.overlaps(hub.chip, hub.goals), "667 x 317: chip clear of the column and the Goals header")
+ assert(run.chip.w * 1 >= Config.TouchMinTargetPx and run.chip.h >= Config.TouchMinTargetPx and hub.chip.x >= 0, "chip is a 44 px target, on the canvas")
+ local wide = TouchLayout.compute({width = 836, height = 332, touch = true, navCount = NAV, goals = true})
+ assert(math.abs(wide.chip.x - (836 / 2 - C.w / 2)) < 1e-6 and math.abs(wide.sizeBar.x - (836 / 2 - S.w * wide.sizeBar.scale / 2)) < 1e-6, "836 x 332 keeps the centred spots")
+ for _, v in {{1280, 720}, {1366, 768}, {1920, 1080}, {1156, 841}, {800, 600}, {1024, 768}} do
+  local d = TouchLayout.compute({width = v[1], height = v[2], touch = false, navCount = NAV})
+  assert(math.abs(d.chip.x - (v[1] / 2 - C.w / 2)) < 1e-6 and math.abs(d.chip.y - (v[2] - C.bottom - C.h)) < 1e-6, "desktop chip unchanged " .. v[1])
+  assert(math.abs(d.sizeBar.x - (v[1] / 2 - S.w * d.sizeBar.scale / 2)) < 1e-6 and d.sizeBar.y == 64, "desktop SIZE bar unchanged " .. v[1])
  end
 end
 -- BD-507: 1156 x 841 is the Studio game view of the owner review pictures (Tell us! sat on "EGGS 0" there); 800 x 600 is a small desktop window (a canvas under 500 px tall is the phone layout).
@@ -355,6 +408,7 @@ if __name__ == '__main__':
     parser.add_argument('--runner', required=True)
     args = parser.parse_args()
     static_feedback_paths()
+    static_538_paths()
     static_modal_rail()
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / 'verify.luau'

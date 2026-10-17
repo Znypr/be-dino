@@ -43,7 +43,9 @@ local function ensureScroller(c: Ctx): ScrollingFrame
     local s = Instance.new("ScrollingFrame")
     s.Name, s.BackgroundTransparency, s.BorderSizePixel, s.ClipsDescendants = "BodyScroll", 1, 0, true
     s.ScrollBarThickness, s.ScrollBarImageColor3, s.ZIndex = 8, Theme.Colors.gold, 23
-    s.ScrollingDirection, s.CanvasSize, s.Visible = Enum.ScrollingDirection.XY, UDim2.new(), false
+    s.ScrollingDirection, s.CanvasSize, s.Visible = Enum.ScrollingDirection.Y, UDim2.new(), false -- BD-538: never sideways, the body is fitted to the width (PhoneScale.modal.fit)
+    local fit = Instance.new("UIScale") -- BD-538: scales the whole scroller so a 836 px screen fits a narrow panel (667 px phone); 1 on wider canvases
+    fit.Name, fit.Parent = "BodyFit", s
     pcall(function() s.ElasticBehavior = Enum.ElasticBehavior.Never end)
     s.Parent = c.panel
     scroller = s
@@ -74,7 +76,10 @@ function M.layout()
     c.closeButton.Size = UDim2.fromOffset(PhoneScale.floorButton(80, m.scale), PhoneScale.floorButton(m.headerH - 6, m.scale))
     local s = ensureScroller(c)
     s.Visible = true
-    s.Position, s.Size = UDim2.fromOffset(4, m.bodyTop), UDim2.fromOffset(m.panelW - 8, m.bodyH)
+    -- BD-538: the scroller is innerW x innerH inside its own UIScale `fit`, so on screen it is still (panelW - 8) x bodyH design px wide and tall
+    s.Position, s.Size = UDim2.fromOffset(4, m.bodyTop), UDim2.fromOffset(m.innerW, m.innerH)
+    local fitScale = s:FindFirstChild("BodyFit")
+    if fitScale and fitScale:IsA("UIScale") then fitScale.Scale = m.fit end
     if c.body.Parent ~= s then c.body.Parent = s end
     c.body.Size = UDim2.fromOffset(824, 402)
     task.defer(M.enforce) -- the canvas may have been resized while a screen is open
@@ -82,15 +87,16 @@ end
 
 -- BD-531: the body height (design px) that is on screen without scrolling: 402 on desktop, the scroller height on a phone canvas. Screens that
 -- can fit a short canvas (Eggs, Go home) lay themselves out inside it instead of relying on the scroll.
+-- BD-538: in the scroller's own units (innerH), and bodyScale is the scale a screen's px really render at (scale * fit).
 function M.bodyHeight(): number
     local m = if ctx then M.model() else nil
-    if m and m.mode == "compact" then return math.floor(m.bodyH) end
+    if m and m.mode == "compact" then return math.floor(m.innerH) end
     return 402
 end
 
 function M.bodyScale(): number
     local m = if ctx then M.model() else nil
-    return if m then m.scale else 1
+    return if m then m.effScale else 1
 end
 
 -- Body position for open(): desktop slides from y=106 to 98, compact slides from 8 to 0 inside the scroller.
@@ -145,8 +151,8 @@ function M.enforce()
     end
     local s = scroller
     if s then
-        local width = if m.scrollX then 4 + 824 + 8 else 0
-        s.CanvasSize = UDim2.fromOffset(width, if bottom <= m.bodyH then 0 else bottom + 12) -- BD-531: content that fits the scroller gets no scroll
+        -- BD-538: no horizontal canvas at all (the body is fitted to the width); BD-531: content that fits the scroller gets no scroll either
+        s.CanvasSize = UDim2.fromOffset(0, if bottom <= m.innerH then 0 else bottom + 12)
     end
 end
 

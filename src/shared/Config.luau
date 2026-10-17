@@ -285,6 +285,9 @@ return table.freeze({
     IdentityFusionPreviewEnabled = false,
     -- BD-059 phases 1-2 (docs/121): per-dino aura/trail ownership. On: buy/equip via ProgressionAction bind to the equipped dino; off: Build 020 account-wide behaviour.
     PerDinoCosmeticsEnabled = false,
+    -- BD-072/073 (docs/66): mini objectives (daily/short/tutorial goals paid in Crystals/XP). false = the profile is never read or written for it,
+    -- no remote exists. Pinned OFF in the default AND playtest release profiles (tools/release_profiles.py); no UI until BD-075.
+    ObjectivesEnabled = false,
     -- Milestone 1 private playtest (fresh, empty DataStore): identity sidecar, hatch
     -- credit and reconciliation for persistent profiles. Keep false in committed builds.
     IdentityPersistentEnabled = false,

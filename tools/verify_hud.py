@@ -82,6 +82,12 @@ def static_checks():
     assert 'GetAttribute("FeedbackRect")' in feedback and 'UDim2.new(0, 12, 1, -68)' not in feedback, 'Tell us! follows the layout rect (no fixed bottom-left spot over the egg plate)'
     import verify_movement_mobile  # BD-524: every path that can move the button (run end, respawn, toasts, Admin) uses the published rect
     verify_movement_mobile.static_feedback_paths()
+    # BD-538: the SIZE bar and its goal hint take their rects from TouchLayout in BOTH layouts (so the 667 x 317 phone keeps them off the weather
+    # column; zero overlaps are asserted at 667 x 375 and 836 x 390 minus 0/36/44/58 px in tools/verify_movement_mobile.py)
+    assert touch.count('result.sizeBar, result.sizeHint = sizeBarRects(') == 2 and touch.count('result.chip = chipRect(') == 2, 'desktop and phone layouts both return the SIZE bar, hint and chip'
+    hud_src = (ROOT / 'src/client/HudV2.luau').read_text(encoding='utf-8')
+    assert 'layout.rail.scale' not in hud_src and 'top + (BAR_H + 4) * scale' not in hud_src, 'HudV2 no longer centres the bar itself'
+    verify_movement_mobile.static_538_paths()
     verify_movement_mobile.static_modal_rail()  # BD-546: the menu card clears the left rail, wired through ModalCompact
 
 if __name__ == '__main__':

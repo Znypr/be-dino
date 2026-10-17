@@ -92,6 +92,7 @@ VisualTestService.start(Dinosaur)
 require(script.Parent.ProgressionService).start(ProfileRepository)
 require(script.Parent.RareHatchService).start() -- BD-428
 require(script.Parent.FusionService).start(ProfileRepository)
+require(script.Parent.ObjectiveService).start(ProfileRepository) -- BD-073: returns at once (no remote, no profile access) while Config.ObjectivesEnabled is false
 workspace.Gravity=require(game:GetService("ReplicatedStorage").Shared.Config).Gravity
 require(script.Parent.LeapService).start()
 require(script.Parent.HubTravelService).start() -- BD-287: creates the HubTravel remote only while Config.CaveHub is true

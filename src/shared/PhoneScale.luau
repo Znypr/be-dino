@@ -18,12 +18,14 @@ PhoneScale.ModalRailGap = 12 -- BD-546: px between the desktop left rail and a d
 PhoneScale.ModalRightMargin = 20 -- px between a desktop modal and the right screen edge (the old (w - 40) / 860 rule is 20 on each side)
 PhoneScale.RailLabelW = 60 -- px a rail button needs for a 14 px label (SETTINGS is about 58 px), else icon-only
 PhoneScale.BodyTop = 56 -- compact body scroller top inside the panel (design px) (BD-531: was 66, 8 px more body on a 332 px phone canvas)
+PhoneScale.BodyW = 836 -- BD-538: width a screen needs inside the scroller: 4 px left + the 824 px body + 8 px for the scroll bar
 
 export type Modal = {
     mode: string, scale: number, panelW: number, panelH: number, -- panelW/H in design px (before UIScale)
     bodyW: number, bodyH: number, scrollX: boolean, headerH: number, bodyTop: number,
     centerDx: number, -- BD-546: px the panel centre sits right of the screen centre (desktop, to keep clear of the left rail); 0 elsewhere
     minText: number, minButton: number,
+    fit: number, innerW: number, innerH: number, effScale: number, -- BD-538: body fit (see PhoneScale.modal)
 }
 
 function PhoneScale.isCompact(h: number): boolean
@@ -47,14 +49,23 @@ function PhoneScale.modal(w: number, h: number, clearLeft: number?): Modal
             dx = math.max(0, clearLeft + PhoneScale.DesktopW * scale / 2 - w / 2)
         end
         return {mode = "desktop", scale = scale, panelW = 860, panelH = 520, bodyW = 824, bodyH = 402,
-            scrollX = false, headerH = 78, bodyTop = 98, centerDx = dx, minText = PhoneScale.MinText, minButton = PhoneScale.MinButton}
+            scrollX = false, headerH = 78, bodyTop = 98, centerDx = dx, minText = PhoneScale.MinText, minButton = PhoneScale.MinButton,
+            fit = 1, innerW = 824, innerH = 402, effScale = scale}
     end
     local scale = math.clamp((w - 2 * PhoneScale.Margin) / PhoneScale.DesktopW, PhoneScale.CompactFloor, 1)
     local panelW = (w - 2 * PhoneScale.Margin) / scale
     local panelH = (h - PhoneScale.Margin) / scale
+    -- BD-538: on a canvas narrower than ~700 px the 0.8 floor makes the panel narrower than the 824 px screens (667 px: panel 814 design px), which
+    -- used to be a sideways scroll (836 px canvas at 0.8 = 668 px in a 644 px body: the 5th nest slot and the hint text were cut). The scroller
+    -- now carries a UIScale `fit` = (panel width - 8) / 836 (< 1 only on those canvases), so a screen's 824 px body fits the width exactly and
+    -- there is no horizontal scroll. Its inner size is innerW x innerH design px (the visible body, in the scroller's own units); screens lay
+    -- themselves out in innerH and the floor pass uses effScale = scale * fit, so text still renders >= 14 px and buttons >= 44 px.
+    local bodyH = panelH - PhoneScale.BodyTop - 4
+    local fit = math.min(1, (panelW - 8) / PhoneScale.BodyW)
     return {mode = "compact", scale = scale, panelW = panelW, panelH = panelH, bodyW = math.min(panelW - 8, 842),
-        bodyH = panelH - PhoneScale.BodyTop - 4, scrollX = panelW < 850, headerH = PhoneScale.HeaderH,
-        bodyTop = PhoneScale.BodyTop, centerDx = 0, minText = PhoneScale.MinText, minButton = PhoneScale.MinButton}
+        bodyH = bodyH, scrollX = false, headerH = PhoneScale.HeaderH,
+        bodyTop = PhoneScale.BodyTop, centerDx = 0, minText = PhoneScale.MinText, minButton = PhoneScale.MinButton,
+        fit = fit, innerW = (panelW - 8) / fit, innerH = bodyH / fit, effScale = scale * fit}
 end
 
 -- Design-space size that renders at least `floor` px on screen under `scale`.

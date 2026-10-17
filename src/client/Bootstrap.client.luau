@@ -1482,6 +1482,7 @@ local function scales()
     gui:SetAttribute("FeedbackRect",Rect.new(layout.feedback.x,layout.feedback.y,layout.feedback.x+layout.feedback.w,layout.feedback.y+layout.feedback.h)) -- BD-507: FeedbackClient puts its Tell us! button here, clear of the egg plate
     gui:SetAttribute("GoalsRect",if layout.goals then Rect.new(layout.goals.x,layout.goals.y,layout.goals.x+layout.goals.w,layout.goals.y+layout.goals.h) else nil) -- BD-531: GoalsPanel sits on the reserved spot (nil = its own desktop formula)
     gui:SetAttribute("AdminRect",Rect.new(layout.admin.x,layout.admin.y,layout.admin.x+layout.admin.w,layout.admin.y+layout.admin.h)) -- BD-531: AdminPanel puts its Admin button here (phone: not on the egg plate)
+    gui:SetAttribute("ChipRect",Rect.new(layout.chip.x,layout.chip.y,layout.chip.x+layout.chip.w,layout.chip.y+layout.chip.h)) -- BD-538: HubTravelClient puts "Back to the middle" here (phone: clear of the weather column)
     toastScale.Scale=layout.toastScale
     local wallet=TouchLayout.walletPlates(layout) -- BD-378: the toast stack keeps clear of the Crystals plate and the goal line under it
     toastLayer:SetAttribute("WalletRect",Rect.new(wallet.x,wallet.y,wallet.x+wallet.w,wallet.y+wallet.h))
