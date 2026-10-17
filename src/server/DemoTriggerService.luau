@@ -103,7 +103,11 @@ end
 -- Puts the character on the ground at (x, z) facing (fx, fz) with the same ownership-safe teleport the run start uses.
 local function placeOnGround(player: Player, spec: any)
     local character = player.Character
-    if not character or typeof(spec) ~= "table" or typeof(spec.x) ~= "number" or typeof(spec.z) ~= "number" then return end
+    if not character or typeof(spec) ~= "table" then return end
+    -- BD-618 (g): every number must be finite and a sane size (NaN, inf or 1e308 would reach the raycast and the teleport)
+    local function finite(v: any, limit: number): boolean return typeof(v) == "number" and v == v and math.abs(v) <= limit end
+    if not finite(spec.x, 10000) or not finite(spec.z, 10000) then return end
+    if (spec.fx ~= nil and not finite(spec.fx, 1000)) or (spec.fz ~= nil and not finite(spec.fz, 1000)) then return end
     local params = RaycastParams.new()
     params.IgnoreWater = true
     params.FilterType = Enum.RaycastFilterType.Include

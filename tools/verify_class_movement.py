@@ -316,7 +316,9 @@ if result.returncode == 0:
     assert 'if GameConfig.ClassMovementEnabled then ClassMovement.walkSpeed' in prog, 'class speed must be flag gated'
     assert 'ClassMovementEnabled = false' in (ROOT / 'src/shared/Config.luau').read_text(encoding='utf-8')
     assert 'select("#", ...) ~= 0' in svc and 'MinRequestGap' in svc, 'dash remote validates args and rate limits'
-    assert 'ClassGlide' in svc and 'glideDecision' in svc and 'typeof((...)) ~= "boolean"' in svc, 'glide remote validates a single boolean'
+    assert 'ClassGlide' in svc and 'glideDecision' in svc, 'glide marker remote and the pure glideDecision stay'
+    assert 'glideRemote.OnServerEvent' not in svc and 'glideHeld' not in svc and 'lastGlideRequest' not in svc, 'BD-618 (a): the server has no handler or store for ClassGlide (it never read the flag)'
+    assert 'FireServer' not in (ROOT / 'src/client/ClassGlide.client.luau').read_text(encoding='utf-8'), 'BD-618 (a): the glide client sends nothing'
     assert 'Heartbeat' not in svc and 'AssemblyLinearVelocity' not in svc and 'limitVertical' not in svc, 'BD-595: the dead server hover/glide loop is gone (the character is client-owned)'
     assert (ROOT / 'src/client/ClassGlide.client.luau').exists()
     for f in ('CombatService', 'PredationService', 'MovementGuard'):
@@ -342,7 +344,6 @@ if result.returncode == 0:
         ('h.HipHeight, root.Size.Y', 'BD-595: the cap is measured at the feet'),
         ('isLeaping(c)', 'BD-595: a leap is exempt'),
         ('RunState") ~= "Active"', 'only during a run'),
-        ('remote:FireServer(value)', 'server is still told (one boolean)'),
     ):
         assert needle in glide, 'ClassGlide.client: ' + why
     assert glide.count('AssemblyLinearVelocity = Vector3.new(') == 1, 'ClassGlide.client: single write site'

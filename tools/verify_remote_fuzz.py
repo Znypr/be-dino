@@ -66,7 +66,7 @@ REVIEWED_SITES = {
     ("AdminGifts.luau", "invoke"): 1, ("AdminService.luau", "invoke"): 1, ("DemoTriggerService.luau", "invoke"): 1,
     ("FusionService.luau", "invoke"): 1, ("GiftService.luau", "invoke"): 1, ("HubTravelService.luau", "invoke"): 1,
     ("ObjectiveService.luau", "invoke"): 1, ("SkinService.luau", "invoke"): 1,
-    ("ChestService.luau", "event"): 5, ("ClassMovementService.luau", "event"): 2, ("CollectionService.luau", "event"): 2,
+    ("ChestService.luau", "event"): 5, ("ClassMovementService.luau", "event"): 1, ("CollectionService.luau", "event"): 2,
     ("CombatService.luau", "event"): 1, ("FeedbackService.luau", "event"): 1, ("LeapService.luau", "event"): 1,
     ("MutationService.luau", "event"): 2, ("PrivateState.luau", "event"): 1, ("ProgressionService.luau", "event"): 1,
     ("QaService.luau", "event"): 1, ("RunLifecycle.luau", "event"): 3, ("VisualTestService.luau", "event"): 1,
@@ -102,12 +102,12 @@ FALL_RECOVERY_STUB = "\n".join([
     "    if root then root.Position = cf.Position root.CFrame = cf end",
     "end, check = function() return false end, start = function() end, reset = function() end}",
 ])
-CASE_FILES = ["remote_fuzz_cases.luau", "remote_fuzz_cases2.luau", "remote_fuzz_cases3.luau", "remote_fuzz_cases4.luau", "remote_fuzz_cases5.luau", "remote_fuzz_tail.luau"]
+CASE_FILES = ["remote_fuzz_cases.luau", "remote_fuzz_cases2.luau", "remote_fuzz_cases3.luau", "remote_fuzz_cases4.luau", "remote_fuzz_cases5.luau", "remote_fuzz_cases6.luau", "remote_fuzz_cases7.luau", "remote_fuzz_tail.luau"]
 # Every scenario that a full run must have produced (a deleted scenario must not pass silently).
 SCENARIOS = ["slot-fuzz", "sanity", "empty-handed", "races", "races-no-write-budget", "races-lossy-store", "storm-1-hostile-of-12",
              "storm-2-hostile-of-12", "storm-4-hostile-of-12", "published-pins", "test-grants-flag-on", "test-grants-one-flag",
              "demo-trigger-studio", "dormant-handlers", "fusion-and-isolation", "cross-player", "run-lifecycle", "equip-next-run", "findings",
-             "show-off-prompt", "dormant-valid", "movement-handlers", "claim-lost-ack", "sequence-11", "sequence-4242", "sequence-90210", "skin-action"]
+             "show-off-prompt", "dormant-valid", "movement-handlers", "claim-lost-ack", "sequence-11", "sequence-4242", "sequence-90210", "skin-action", "hygiene-618", "empty-run-no-write"]
 
 
 def lua_literal(value) -> str:
@@ -192,11 +192,11 @@ def strip_comments(text: str) -> str:
 
 
 # Every profile write (a `store:UpdateAsync(` in ProfileRepository) is classified. A new write must be put in one set on purpose:
-ROUTINE_WRITES_WITH_ADMIT = {"fuseDinosaurs", "claimNest", "equipSpecies", "claimChest", "mutateSpecies", "progressionAction", "objectiveFlush", "objectiveClaim"}
+ROUTINE_WRITES_WITH_ADMIT = {"fuseDinosaurs", "claimNest", "equipSpecies", "claimChest", "mutateSpecies", "progressionAction", "objectiveFlush", "objectiveClaim", "applySkin"}
 ADMIT_AT_CALLER = {"writeRevealSkip", "writeSettings"}  # setRevealSkip / setSettings / the coalescing flush call admit() first
 PRIORITY_WRITES = {"load", "commitRunSettlement", "purchase", "renew", "release", "applyGifts"}  # never starved by a flooding client
 FLAG_GATED_WRITES = {"grantCollectionTestSpecies", "grantChestTest", "setMutationTestCopies", "demoGrantEggs", "demoEquip", "demoAddCrystals"}
-KNOWN_UNBUDGETED = {"applySkin": "BD-618 (i): flag off; limited by SkinService's own 10-per-10-s window"}
+KNOWN_UNBUDGETED: dict[str, str] = {}  # BD-618 (i): applySkin moved into the budgeted set; nothing is deliberately unbudgeted any more
 NO_LEASE_CHECK = {"load"}  # load ACQUIRES the lease
 
 

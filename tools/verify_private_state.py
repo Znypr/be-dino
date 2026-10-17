@@ -191,15 +191,20 @@ check("hello gives one snapshot to the owner only", #sentLog == 1 and #sa == 1 a
 check("snapshot holds all three values", sa[1].d.CollectionJson ~= nil and sa[1].d.Crystals == 120 and sa[1].d.NextChestId == "egg-1")
 check("snapshot never holds another player's value", sa[1].d.Crystals ~= 5)
 check("get reads the server copy", Server.get(a, "Crystals") == 120 and Server.get(b, "Crystals") == 5 and Server.get(a, "Nope") == nil)
-hello(a) -- inside the 0.5 s guard: ignored
-check("a repeated hello inside 0.5 s is ignored", #sentLog == 1, #sentLog)
+hello(a) -- BD-618 (c): inside the 2 s floor: queued, not answered now
+hello(a) hello(a)
+check("repeated hellos inside 2 s send nothing at once", #sentLog == 1, #sentLog)
 advance(1)
+check("still nothing 1 s later", #sentLog == 1, #sentLog)
+advance(1.1)
+check("one trailing snapshot after the 2 s floor, however many hellos came (a resync is never lost)", #sentTo(a) == 2 and #sentLog == 2, #sentTo(a))
+advance(2.5)
 hello(a)
-check("a later hello resends a snapshot (resync)", #sentTo(a) == 2)
+check("a hello after the floor is answered at once", #sentTo(a) == 3)
 
 -- client cache applies it
 local cache = Core.newCache()
-local changed, problem = Core.apply(cache, sentTo(a)[2])
+local changed, problem = Core.apply(cache, sentTo(a)[#sentTo(a)])
 check("client applies the snapshot", problem == nil and cache.received and cache.values.Crystals == 120 and #changed == 3, tostring(problem) .. #changed)
 
 -- 3. coalescing: many sets inside one window leave as ONE delta, in set order, only final values

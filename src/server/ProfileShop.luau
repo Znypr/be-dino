@@ -30,6 +30,26 @@ local store = shared.store
 local syncAttributes = shared.syncAttributes
 local trimOperations = shared.trimOperations
 
+-- BD-618 (h): recentOperations keeps the last 50 operations of the profile, so a purchase token replayed after 50 newer operations ran again
+-- (it cost again; no gain). The tokens this server has committed for a user are also remembered in memory (never written to the profile, so no
+-- schema or rollback change); a replay of one that has left the profile's ring is answered as a duplicate instead of running a second time.
+local TOKEN_MEMORY_LIMIT = 400
+local committedTokens: {[number]: {order: {string}, byId: {[string]: {action: string, item: string}}}} = {}
+
+local function rememberToken(userId: number, operationId: string, action: string, item: string)
+    local memory = committedTokens[userId]
+    if not memory then
+        memory = {order = {}, byId = {}}
+        committedTokens[userId] = memory
+    end
+    if memory.byId[operationId] then return end
+    memory.byId[operationId] = {action = action, item = item}
+    table.insert(memory.order, operationId)
+    while #memory.order > TOKEN_MEMORY_LIMIT do
+        memory.byId[table.remove(memory.order, 1) :: string] = nil
+    end
+end
+
 function ProfileRepository.progressionAction(player: Player, action: string, id: string, token: string, replace: boolean?, amount: number?)
     if not ProfileRepository.isLoaded(player) then return false,"profile_not_loaded" end
     if typeof(token)~="string" or #token<1 or #token>80 then return false,"invalid_token" end
@@ -47,6 +67,12 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
         egg.reward=RewardMath.computeChestReward(Random.new(),1)
     end
     local operationId="progression:"..token
+    local cachedProfile=profiles[player]
+    local remembered=if cachedProfile and not findOperation(cachedProfile,operationId) and committedTokens[player.UserId] then committedTokens[player.UserId].byId[operationId] else nil
+    if remembered then -- BD-618 (h): committed earlier this server, but trimmed out of the profile's operation ring
+        if remembered.action~=action or remembered.item~=id then return false,"token_conflict" end
+        return true,"duplicate"
+    end
     local now=os.time()
     local denied="save_failed"
     local duplicate=false
@@ -91,6 +117,7 @@ function ProfileRepository.progressionAction(player: Player, action: string, id:
     if not ok then player:SetAttribute("ProfileState","SaveFailed") return false,"save_failed" end
     if leaseLost then player:SetAttribute("ProfileState","LeaseLost") return false,"lease_lost" end
     if not updated then return false,denied end
+    if not duplicate then rememberToken(player.UserId,operationId,action,id) end
     if not player.Parent then return true,if duplicate then "duplicate" else outcome.status end
     adopt(player, updated)
     if player.Parent and profiles[player] then syncAttributes(player,profiles[player]) end

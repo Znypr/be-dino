@@ -86,6 +86,7 @@ function CollectionService.start(profileRepository, dinosaur)
         if ok then pendingEquip[player] = nil end -- an equip at home replaces any pick made during the run
         player:SetAttribute("LastEquipStatus", status)
         if not ok then return end
+        if status == "already_equipped" then return end -- BD-618 (d): nothing changed, so there is nothing to render again
 
         local character = player.Character
         if character and character:GetAttribute("DinoAttached") then

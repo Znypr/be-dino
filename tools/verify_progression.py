@@ -844,7 +844,11 @@ local other=newUser(6161)
 assert(remote.OnServerInvoke(other,{action="list"}).reason~="rate_limited","limit is per player")
 now=mutableConfig.FusionRateWindowSeconds
 assert(remote.OnServerInvoke(pu,{action="list",limit=1}).ok,"window resets")
-removing(pu)
+-- BD-618 (f): the window is keyed by UserId and survives a leave and rejoin (a fresh Player object of the same account does not get a fresh window)
+for _=2,limit do assert(remote.OnServerInvoke(pu,{action="list",limit=1}).ok,"refill the window") end
+assert(remote.OnServerInvoke(pu,{action="list",limit=1}).reason=="rate_limited")
+local rejoined=newUser(4242)
+assert(remote.OnServerInvoke(rejoined,{action="list"}).reason=="rate_limited","a rejoin does not reset the request window")
 -- Disabled flag: every action answers fusion_disabled.
 mutableConfig.IdentityFusionPreviewEnabled=false
 now+=1000

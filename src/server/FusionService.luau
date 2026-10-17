@@ -56,10 +56,16 @@ end
 -- Fixed-window per-player limiter (PROVISIONAL Config values).
 local function allowed(player: any): boolean
     local now = clock()
-    local window = windows[player]
+    -- BD-618 (f): keyed by UserId and kept after the player leaves, so a rejoin does not give a fresh window (memory only; stale windows are pruned below).
+    local okId, userId = pcall(function() return player.UserId end)
+    local key = if okId and type(userId) == "number" then userId else player
+    local window = windows[key]
     if not window or now - window.startedAt >= Config.FusionRateWindowSeconds then
+        for other, old in windows do
+            if now - old.startedAt >= 2 * Config.FusionRateWindowSeconds then windows[other] = nil end
+        end
         window = {startedAt = now, count = 0}
-        windows[player] = window
+        windows[key] = window
     end
     window.count += 1
     return window.count <= Config.FusionRequestsPerWindow
@@ -173,9 +179,6 @@ function FusionService.start(profileRepository)
     remote.OnServerInvoke = function(player, ...)
         return FusionService.handle(player, ...)
     end
-    Players.PlayerRemoving:Connect(function(player)
-        windows[player] = nil
-    end)
     return remote
 end
 
