@@ -53,7 +53,9 @@ local function characterVisual(character: Model)
         hideShell(character)
         if previous:GetAttribute("GenesJson")~=genesJson then
             local ok,genes=pcall(function() return Http:JSONDecode(genesJson) end)
-            if ok and typeof(genes)=="table" and (mutation=="base" or previous:GetAttribute("LowPoly")==true) then Appearance.apply(previous,genes) if mutation=="base" then MutationLook.apply(previous,character:GetAttribute("EventMutationId")) end end
+            if ok and typeof(genes)=="table" and (mutation=="base" or previous:GetAttribute("LowPoly")==true) then
+                if mutation=="base" and previous:GetAttribute("LowPoly")==true then LowPoly.setMutation(previous,character:GetAttribute("EventMutationId")) end -- BD-518: baked in, set before the genes bake
+                Appearance.apply(previous,genes) if mutation=="base" then MutationLook.apply(previous,character:GetAttribute("EventMutationId")) end end
             previous:SetAttribute("GenesJson",genesJson)
         end
         return

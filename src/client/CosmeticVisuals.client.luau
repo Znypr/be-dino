@@ -10,6 +10,7 @@ local Rules=require(Shared.ProgressionRules)
 local Theme=require(Shared.UITheme)
 local Shiny=require(Shared.ShinyEffects)
 local Look=require(Shared.MutationLook)
+local LowPoly=require(Shared.LowPolyDinos) -- BD-518: a low-poly body is a baked texture, the event mutation tint is baked in (Part.Color does nothing there)
 local Recipes=require(Shared.FxRecipes)
 local Rig=require(script.Parent.FxRig)
 local Lod=require(Shared.EffectsLod) -- BD-095 distance LOD
@@ -20,7 +21,10 @@ local MomentRim=require(script.Parent.MomentRim) -- BD-433: 1.5 s rim on the own
 local function destroy(state)
     for _,rig in state.rigs do rig:destroy() end
     if state.glints then state.glints.Destroy() end
-    if state.visual and state.visual.Parent and state.mutationId~="" then Look.apply(state.visual,nil) end -- restore the body colour
+    if state.visual and state.visual.Parent and state.mutationId~="" then -- restore the body colour
+        Look.apply(state.visual,nil)
+        if state.visual:GetAttribute("LowPoly")==true then LowPoly.setMutation(state.visual,nil) end
+    end
 end
 local states={}
 local lastOwnMutation=nil -- BD-433: the own dino's mutation as last seen (nil = not seen yet, so joining with one worn gives no rim)
@@ -106,7 +110,9 @@ RunService.Heartbeat:Connect(function(dt)
                 add("mutation",Look.get(mutationId))
                 add("trail",Rules.item(Config.Trails,trailId))
                 if visual and visual:IsA("Model") then
-                    if (visual:GetAttribute("Mutation") or "base")=="base" then Look.apply(visual,mutationId) end -- BD-155: soft body tint, always (also with Reduce Motion)
+                    if (visual:GetAttribute("Mutation") or "base")=="base" then -- BD-155: soft body tint, always (also with Reduce Motion)
+                        if visual:GetAttribute("LowPoly")==true then LowPoly.setMutation(visual,mutationId) else Look.apply(visual,mutationId) end
+                    end
                     if shiny then state.glints=Shiny.Create(visual,"rbxassetid://70885382548001",reduce) end
                 end
                 states[player]=state
