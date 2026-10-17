@@ -18,7 +18,7 @@ runScenario("published-pins", {DemoDirectorEnabled = true}, function(server)
     for _, n in names do if not expected[n] then table.insert(extra, n) end end
     for _, n in EXPECTED do if not seen[n] then table.insert(missing, n) end end
     check("published-pins: the remotes of a playtest server are exactly the reviewed inventory", #extra == 0 and #missing == 0, "unreviewed: " .. table.concat(extra, ",") .. " missing: " .. table.concat(missing, ","))
-    for _, n in {"DemoTrigger", "QaMark", "PreviewDinosaurArt", "CombatBite", "ObjectiveAction", "GiftAction", "AdminGiftAction", "TestGrantChests", "TestGrantSpecies", "TestSetMutationCopies"} do
+    for _, n in {"DemoTrigger", "QaMark", "PreviewDinosaurArt", "CombatBite", "ObjectiveAction", "GiftAction", "AdminGiftAction", "SkinAction", "TestGrantChests", "TestGrantSpecies", "TestSetMutationCopies"} do
         check("published-pins: " .. n .. " does not exist on a published server", server.remotes[n] == nil, "")
     end
     local p = connect(server, 1001)
@@ -82,10 +82,10 @@ runScenario("demo-trigger-studio", {DemoDirectorEnabled = true}, function(server
 end, {studio = true})
 
 ---------------------------------------------------------------- 7. the dormant handlers (every flag that ships off, switched on): same attacks
-local DORMANT = {ObjectivesEnabled = true, GiftClaimEnabled = true, AdminGiftsEnabled = true, CombatEnabled = true, QaOverlayEnabled = true, ArtTestHarnessEnabled = true, PaidRandomItemsEnabled = true}
+local DORMANT = {ObjectivesEnabled = true, GiftClaimEnabled = true, AdminGiftsEnabled = true, CombatEnabled = true, QaOverlayEnabled = true, ArtTestHarnessEnabled = true, PaidRandomItemsEnabled = true, DinoSkinsEnabled = true}
 runScenario("dormant-handlers", DORMANT, function(server)
     startServices(server)
-    local expected = {"ObjectiveAction", "GiftAction", "AdminGiftAction", "CombatBite", "QaMark", "PreviewDinosaurArt"}
+    local expected = {"ObjectiveAction", "GiftAction", "AdminGiftAction", "SkinAction", "CombatBite", "QaMark", "PreviewDinosaurArt"}
     for _, n in expected do check("dormant-handlers: " .. n .. " exists once its flag is on", server.remotes[n] ~= nil, "") end
     check("dormant-handlers: every service started", server.startErrors == nil, table.concat(server.startErrors or {}, " | "))
     local hostile = seeded(server, 1002, function(profile)

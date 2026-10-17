@@ -121,6 +121,7 @@ local function templates(server, p)
         TestSetMutationCopies = function() return {50} end,
         ObjectiveAction = function() return {{action = "view"}} end,
         GiftAction = function() return {{action = "get"}} end,
+        SkinAction = function() return {{action = "get"}} end,
         AdminGiftAction = function() return {{action = "audit", userId = 5}} end,
         CombatBite = function() return {} end,
         QaMark = function() return {{label = "x", fps = 60}} end,

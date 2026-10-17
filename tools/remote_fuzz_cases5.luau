@@ -51,6 +51,8 @@ runScenario("dormant-valid", DORMANT, function(server)
     check("dormant-valid: an admin gift to someone who was not picked and confirmed is refused", type(send) == "table" and send.ok == false, type(send) == "table" and tostring(send.reason) or tostring(send))
     sleep(1)
     local c = admin.Character
+    local skins = fireNow(server, "SkinAction", p, {action = "get"})
+    check("dormant-valid: SkinAction get answers ok with the owned list", type(skins) == "table" and skins.ok == true and type(skins.owned) == "table", type(skins) == "table" and tostring(skins.reason) or tostring(skins))
     local bite = fireNow(server, "CombatBite", p)
     check("dormant-valid: CombatBite is a no-op answer for a player who is not in a run", bite == nil, tostring(bite))
     reportErrors("dormant-valid", takeErrors())
@@ -239,3 +241,45 @@ local function sequenceScenario(seed)
     end
 end
 for _, seed in {11, 4242, 90210} do runScenario("sequence-" .. seed, {PaidRandomItemsEnabled = true}, sequenceScenario(seed)) end
+
+---------------------------------------------------------------- 15. SkinAction (BD-456, behind DinoSkinsEnabled): ownership, instances of other players, no free skin
+runScenario("skin-action", {DinoSkinsEnabled = true}, function(server)
+    startServices(server)
+    check("skin-action: the SkinAction remote exists with its flag on", server.remotes.SkinAction ~= nil, "")
+    local a = connect(server, 1001)
+    local b = connect(server, 1002)
+    hatchEverything(server, a, 40)
+    hatchEverything(server, b, 40)
+    local ownA, ownB = nil, nil
+    for id, inst in profileOf(1001).dinosaurIdentity.instances do ownA = id break end
+    for id, inst in profileOf(1002).dinosaurIdentity.instances do ownB = id break end
+    local before = wealth(1001) .. "|" .. wealth(1002)
+    local function call(p, request) sleep(1.2) return fireNow(server, "SkinAction", p, request) end
+    -- skins are an entitlement the account owns: a request cannot grant one
+    local r1 = call(a, {action = "equip", instanceId = ownA, skin = "Plush"})
+    local r2 = call(a, {action = "setDefault", skin = "Clay"})
+    local r3 = call(a, {action = "equip", instanceId = ownB, skin = "Base"})
+    local r4 = call(a, {action = "get", instanceId = ownB})
+    check("skin-action: a skin the account does not own cannot be worn or made the default", r1.ok == false and r2.ok == false, tostring(r1.reason) .. "/" .. tostring(r2.reason))
+    check("skin-action: another player's dinosaur id is refused for equip and get", r3.ok == false and r4.ok == false, tostring(r3.reason) .. "/" .. tostring(r4.reason))
+    local ownedAfter = profileOf(1001).ownedSkins
+    check("skin-action: no request ever writes ownedSkins", ownedAfter == nil or next(ownedAfter) == nil, canon(ownedAfter))
+    -- the free Base look works on an own dinosaur
+    local r5 = call(a, {action = "equip", instanceId = ownA, skin = "Base"})
+    check("skin-action: the free Base look can be worn on an own dinosaur", r5.ok == true, tostring(r5.reason))
+    -- an entitlement granted by the server (a gift or receipt) still needs a MODEL: no species has one yet
+    server.Repo.release(a) disconnect(server, a)
+    DATA[keyOf(1001)].ownedSkins = {Plush = true}
+    a = connect(server, 1001)
+    local ownA2 = nil
+    for id in profileOf(1001).dinosaurIdentity.instances do ownA2 = id break end
+    local r6 = call(a, {action = "equip", instanceId = ownA2, skin = "Plush"})
+    check("skin-action: an owned skin without a species model is refused (no_model)", r6.ok == false and r6.reason == "no_model", tostring(r6.reason))
+    -- a hostile storm of equips changes nothing but the dinosaur's own skin field
+    for i = 1, 40 do
+        sleep(1.2)
+        fireNow(server, "SkinAction", a, {action = "equip", instanceId = (if i % 2 == 0 then ownB else ownA2), skin = ({"Plush", "Clay", "Bricks", "Balloon", "Base", "x"})[1 + i % 6]})
+    end
+    check("skin-action: the other player's profile never changed", wealth(1002) == string.match(before, "|(.*)$"), "")
+    reportErrors("skin-action", takeErrors())
+end)

@@ -56,7 +56,7 @@ EXPECTED_PLAYTEST_REMOTES = [
 ]
 SERVER_TO_CLIENT_ONLY = ["ProgressionResult", "RareHatch"]
 # Behind a flag that is off in every release profile (or Studio-only): they exist only when the flag is on.
-DORMANT_REMOTES = ["ObjectiveAction", "GiftAction", "AdminGiftAction", "CombatBite", "QaMark", "PreviewDinosaurArt", "DemoTrigger",
+DORMANT_REMOTES = ["ObjectiveAction", "GiftAction", "AdminGiftAction", "SkinAction", "CombatBite", "QaMark", "PreviewDinosaurArt", "DemoTrigger",
                    "TestGrantChests", "TestGrantSpecies", "TestSetMutationCopies"]
 OTHER_ENTRY_POINTS = ["ProcessReceipt", "ShowOffSpot"]
 
@@ -64,7 +64,7 @@ OTHER_ENTRY_POINTS = ["ProcessReceipt", "ShowOffSpot"]
 REVIEWED_SITES = {
     ("AdminGifts.luau", "invoke"): 1, ("AdminService.luau", "invoke"): 1, ("DemoTriggerService.luau", "invoke"): 1,
     ("FusionService.luau", "invoke"): 1, ("GiftService.luau", "invoke"): 1, ("HubTravelService.luau", "invoke"): 1,
-    ("ObjectiveService.luau", "invoke"): 1,
+    ("ObjectiveService.luau", "invoke"): 1, ("SkinService.luau", "invoke"): 1,
     ("ChestService.luau", "event"): 5, ("ClassMovementService.luau", "event"): 2, ("CollectionService.luau", "event"): 2,
     ("CombatService.luau", "event"): 1, ("FeedbackService.luau", "event"): 1, ("LeapService.luau", "event"): 1,
     ("MutationService.luau", "event"): 2, ("PrivateState.luau", "event"): 1, ("ProgressionService.luau", "event"): 1,
@@ -81,7 +81,7 @@ SITE_PATTERNS = {
 # Debug and dormant switches that must be false in EVERY release profile (tools/release_profiles.py is the single place).
 PINNED_OFF = ["ChestTestGrantEnabled", "CollectionTestGrantEnabled", "MutationTestSetupEnabled", "SecurityTestHarnessEnabled",
               "ArtTestHarnessEnabled", "QaOverlayEnabled", "DemoDirectorEnabled", "ObjectivesEnabled", "GiftingEnabled",
-              "AdminGiftsEnabled", "GiftClaimEnabled"]
+              "AdminGiftsEnabled", "GiftClaimEnabled", "DinoSkinsEnabled"]
 # Source guards that keep a debug path out of a published server even if a flag were flipped by mistake.
 GUARDS = [
     ("src/server/DemoTriggerService.luau", r"RunService:IsStudio\(\)\s+and\s+game\.GameId\s*==\s*0\s+and\s+Config\.DemoDirectorEnabled\s*==\s*true", "DemoTrigger needs unpublished Studio AND the flag"),
@@ -105,7 +105,7 @@ CASE_FILES = ["remote_fuzz_cases.luau", "remote_fuzz_cases2.luau", "remote_fuzz_
 SCENARIOS = ["slot-fuzz", "sanity", "empty-handed", "races", "races-no-write-budget", "races-lossy-store", "storm-1-hostile-of-12",
              "storm-2-hostile-of-12", "storm-4-hostile-of-12", "published-pins", "test-grants-flag-on", "test-grants-one-flag",
              "demo-trigger-studio", "dormant-handlers", "fusion-and-isolation", "cross-player", "run-lifecycle", "findings",
-             "show-off-prompt", "dormant-valid", "movement-handlers", "claim-lost-ack", "sequence-11", "sequence-4242", "sequence-90210"]
+             "show-off-prompt", "dormant-valid", "movement-handlers", "claim-lost-ack", "sequence-11", "sequence-4242", "sequence-90210", "skin-action"]
 
 
 def lua_literal(value) -> str:
