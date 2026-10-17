@@ -8,6 +8,10 @@ local Layout = require(Shared:WaitForChild("IslandLayout"))
 local remotes = ReplicatedStorage:WaitForChild("BeDinoRemotes", 60) :: Folder -- BD-330: timeout, no infinite-yield warning
 local remote = remotes:WaitForChild("ClientWorldReady") :: RemoteEvent
 
+-- BD-498 (docs/150): with StreamingEnabled the island is not loaded while the player is in the cave hub, so this check could never pass. The server
+-- streams the spawn area in itself before every run start (RunLifecycle.requestStart), so there is nothing to wait for here.
+if workspace.StreamingEnabled then remote:FireServer() return end
+
 local params = RaycastParams.new()
 params.FilterType = Enum.RaycastFilterType.Include
 params.FilterDescendantsInstances = {workspace.Terrain}
