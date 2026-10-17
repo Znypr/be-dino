@@ -401,7 +401,7 @@ local function hero(parent: GuiObject,id: string,x: number,y: number,w: number,h
 end
 local rarityColors=Theme.RarityColors
 local rarityNames=Config.SpeciesRarityNames
-local function speciesIndex(id: string): number return Config.SpeciesRarities[id] or 1 end
+local function speciesIndex(id: string): number return Config.SpeciesRarities[id] or require(Shared.SecretSpeciesConfig).displayTier(id) or 1 end -- BD-604: a secret species wears the calm Legendary look, it is not a tier
 local oddsWeight,oddsTotal={},0 -- base chance of one purchased egg, shown on Dino Index cards (docs/85)
 for _,row in Config.ChestSpeciesWeights do oddsWeight[row.speciesId]=row.weight oddsTotal+=row.weight end
 local function meter(parent: GuiObject,x: number,y: number,w: number,value: number,maxValue: number,color: Color3,text: string)
@@ -494,7 +494,7 @@ render=function(name: string)
         local heroCard=box(body,0,0,290,330,C.card,24)
         local id=str("EquippedSpeciesId","compy")
         hero(heroCard,id,8,8,274,230,bestMutation(id))
-        label(heroCard,Config.SpeciesDisplayNames[id],0,244,290,42,30)
+        label(heroCard,Config.SpeciesDisplayNames[id] or require(Shared.SecretSpeciesConfig).name(id),0,244,290,42,30)
         label(heroCard,"Equipped dinosaur",0,296,290,26,18,C.accent)
         label(body,"Ready for an adventure?",320,0,495,58,32)
         label(body,require(Shared.FtueCopy).sanctuaryTip1,330,74,474,85,22)
@@ -855,7 +855,11 @@ render=function(name: string)
         local unlocked=0
         -- BD-269: at most 24 cards are built per page, so a long Index stays light on phones (pager shows only if >1 page).
         local IndexProgress=require(Shared.IndexProgress)
-        local pg=IndexProgress.page(#Config.SpeciesOrder,24,IndexProgress.state.page)
+        -- BD-604 (docs/149 SS4): with Config.SecretSpeciesEnabled the secret cards follow the normal 22 (same table when the flag is off);
+        -- secrets are counted apart ("2 / 7 secrets found") and never enter the normal "Collected X of 22" number.
+        local Secret=require(Shared.SecretSpeciesConfig)
+        local order=Secret.indexOrder(Config.SpeciesOrder,Config.SecretSpeciesEnabled)
+        local pg=IndexProgress.page(#order,24,IndexProgress.state.page)
         IndexProgress.state.page=pg.page
         local list=Instance.new("ScrollingFrame")
         list.Name,list.Size,list.Position="DinoCards",UDim2.fromOffset(824,326),UDim2.fromOffset(0,0)
@@ -864,14 +868,15 @@ render=function(name: string)
         local cardButtonHeight,cardHeight,rowHeight=lay.buttonHeight,lay.cardHeight,lay.rowHeight
         list.CanvasSize=UDim2.fromOffset(0,math.ceil((pg.last-pg.first+1)/3)*rowHeight)
         list.ZIndex,list.Parent=24,body
-        for i,id in Config.SpeciesOrder do
+        for i,id in order do
             local base,gold,diamond=copies(id)
             local event=eventMutation(id)
             local rarity=speciesIndex(id)
             local found=base+gold+diamond>0 or event~=nil or ownedTraits(id)~=nil
-            if found then unlocked+=1 end
+            local secret=i>#Config.SpeciesOrder
+            if found and not secret then unlocked+=1 end
             if i<pg.first or i>pg.last then continue end
-            local look=FusionSelection.indexCard(found)
+            local look=if secret then Secret.indexCard(id,found) else FusionSelection.indexCard(found)
             local card=box(list,((i-pg.first)%3)*276,math.floor((i-pg.first)/3)*rowHeight,264,cardHeight,if found then rarityColors[rarity] else Color3.fromRGB(62,64,74),24)
             Theme.texture(card,264,cardHeight)
             label(card,look.nameText or Config.SpeciesDisplayNames[id],4,if lay.compact then 3 else 8,256,if lay.compact then 26 else 35,if lay.compact then 21 else 25)
@@ -891,13 +896,17 @@ render=function(name: string)
                 -- No button: silhouette block re-centered in the freed space. Soft edge = a faint, slightly larger
                 -- copy underneath (2 viewports max, no per-frame work); skipped when motion/effects are reduced.
                 local blockY=if lay.compact then lay.heroY else 70+math.floor((cardButtonHeight+12)/2)
-                if motion then
+                if secret and not look.silhouette then
+                    label(card,"?",7,blockY,250,if lay.compact then lay.heroHeight else 128,if lay.compact then 44 else 72) -- a secret with no model yet: a plain mark, never a broken dino
+                elseif motion then
                     local halo=Preview.add(card,id,"silhouette")
                     halo.Name,halo.ImageTransparency=("SilhouetteSoftEdge"),.82
                     halo.Position,halo.Size=UDim2.fromOffset(-2,blockY-9),UDim2.fromOffset(268,if lay.compact then lay.heroHeight+18 else 146)
                 end
-                local view=Preview.add(card,id,"silhouette")
-                view.Position,view.Size=UDim2.fromOffset(7,blockY),UDim2.fromOffset(250,if lay.compact then lay.heroHeight else 128)
+                if not secret or look.silhouette then
+                    local view=Preview.add(card,id,"silhouette")
+                    view.Position,view.Size=UDim2.fromOffset(7,blockY),UDim2.fromOffset(250,if lay.compact then lay.heroHeight else 128)
+                end
                 label(card,look.status,5,if lay.compact then lay.detailY else blockY+134,254,if lay.compact then 22 else 25,if lay.compact then 14 else 15)
             end
         end
@@ -905,6 +914,7 @@ render=function(name: string)
         local progress=IndexProgress.summary(unlocked,#Config.SpeciesOrder)
         local meterWidth=if pg.pages>1 then 420 else 600
         meter(body,0,356,meterWidth,unlocked,#Config.SpeciesOrder,C.accent,progress.text)
+        if Config.SecretSpeciesEnabled==true then label(body,Secret.summary(Secret.countFound(decoded("CollectionJson","{}"))).text,0,328,420,24,18,C.gold) end -- BD-604 SS4: secrets counted apart from the 22
         if pg.pages>1 then
             button(body,"<",430,350,50,44,C.blue,function() IndexProgress.state.page=pg.page-1 open("collection") end)
             label(body,pg.page.." / "..pg.pages,482,350,60,44,20)
@@ -924,7 +934,7 @@ render=function(name: string)
         local index=speciesIndex(selected)
         local base,gold,diamond=copies(selected)
         local event=eventMutation(selected)
-        heading.Text,header.BackgroundColor3=Config.SpeciesDisplayNames[selected],rarityColors[index]
+        heading.Text,header.BackgroundColor3=Config.SpeciesDisplayNames[selected] or require(Shared.SecretSpeciesConfig).name(selected),rarityColors[index]
         DinoIndexPanels.species({
             body=body,speciesId=selected,color=rarityColors[index],
             owned=base+gold+diamond>0 or event~=nil or ownedTraits(selected)~=nil,
@@ -946,7 +956,7 @@ render=function(name: string)
         local base,gold,diamond=copies(selected)
         local event=eventMutation(selected)
         local owned=base+gold+diamond>0 or event~=nil or ownedTraits(selected)~=nil
-        heading.Text,header.BackgroundColor3=Config.SpeciesDisplayNames[selected],rarityColors[index]
+        heading.Text,header.BackgroundColor3=Config.SpeciesDisplayNames[selected] or require(Shared.SecretSpeciesConfig).name(selected),rarityColors[index]
         local stage=box(body,0,0,380,360,rarityColors[index],24)
         hero(stage,selected,0,20,380,280,bestMutation(selected))
         label(stage,rarityNames[index].." • "..FusionSelection.pct(100*(oddsWeight[selected] or 0)/oddsTotal).." of eggs",0,302,380,42,28)
@@ -1047,7 +1057,7 @@ render=function(name: string)
             if not genesOk or typeof(genes)~="table" then genes=nil end
             local geneticsOk=genes~=nil and EggGenetics.valid(genes)
             local id=string.match(reward,"x (%w+)") or "compy"
-            if not Config.SpeciesDisplayNames[id] then id="compy" end
+            if not Config.SpeciesDisplayNames[id] and not require(Shared.SecretSpeciesConfig).isSecret(id) then id="compy" end -- BD-604: a hatched secret keeps its own name
             -- The dinosaur view only exists from here on and stays transparent until the burst. BD-174: PreviewTraits draws
             -- colours and pattern only, never the egg condition.
             local view=Preview.add(body,id,"base")
@@ -1058,10 +1068,10 @@ render=function(name: string)
             local rarity=speciesIndex(id)
             shownReason=if failed then nil else EggsLogic.shownReason(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen(),rarity,genes)
             local count=tonumber(string.match(reward,"^(%d+)x")) or 1
-            local displayName=Config.SpeciesDisplayNames[id] or id
+            local displayName=Config.SpeciesDisplayNames[id] or require(Shared.SecretSpeciesConfig).name(id)
             rewardLabel.Text=if failed then HatchTimeline.FailTitle elseif count>1 then count.."x "..displayName else displayName
             rewardLabel.TextColor3=if failed then C.gold else rarityColors[rarity]
-            oddsLabel.Text=if failed then HatchTimeline.FailSub else HatchTimeline.oddsLine(rarityNames[rarity],HatchTimeline.speciesPct(Config.ChestSpeciesWeights,id),(FusionSelection :: any).pct or HatchTimeline.pct)
+            oddsLabel.Text=if failed then HatchTimeline.FailSub else HatchTimeline.oddsLine(if require(Shared.SecretSpeciesConfig).isSecret(id) then require(Shared.SecretSpeciesConfig).RarityLabel else rarityNames[rarity],HatchTimeline.speciesPct(Config.ChestSpeciesWeights,id),(FusionSelection :: any).pct or HatchTimeline.pct)
             local mutation=ProgressionRules.item(ProgressionConfig.EventMutations,str("LastChestEventMutation"))
             local detailText,detailColor="",C.gold
             local mutationColor=if mutation then Color3.fromRGB(mutation.color[1],mutation.color[2],mutation.color[3]) else nil
@@ -1178,7 +1188,7 @@ render=function(name: string)
         local lines=EggsLogic.summaryLines(summary)
         label(body,table.concat(lines,"\n"),24,16,760,90,24)
         local notes={}
-        for _,entry in summary.notable do table.insert(notes,Config.SpeciesDisplayNames[entry.speciesId] or entry.speciesId) end
+        for _,entry in summary.notable do table.insert(notes,Config.SpeciesDisplayNames[entry.speciesId] or require(Shared.SecretSpeciesConfig).name(entry.speciesId)) end
         label(body,if #notes>0 then "Notable finds: "..table.concat(notes,", ") else "All saved in your collection!",24,120,760,120,22,C.gold)
         button(body,"COLLECTION",24,300,370,64,C.blue,function() skippedEntries={} open("collection") end)
         button(body,"DONE",424,300,370,64,C.accent,function() skippedEntries={} open("eggs") end)
@@ -1665,7 +1675,7 @@ PrivateState.onChanged("LastClaimedChestId", function()
     local skip,parsed=EggsLogic.autoOpenDecision(decoded("RevealSkipJson","[]"),Config.AutoOpenRequiresPass,ownsAutoOpen(),str("LastChestRewardText"),Config.SpeciesRarities,outcome,skipAllReveals)
     local species=parsed or "compy"
     local rarity=speciesIndex(species)
-    table.insert(batchEntries,{rarity=rarity,name=Config.SpeciesDisplayNames[species] or species,failed=outcome.failed,shiny=outcome.shiny==true,big=outcome.big==true})
+    table.insert(batchEntries,{rarity=rarity,name=Config.SpeciesDisplayNames[species] or require(Shared.SecretSpeciesConfig).name(species),failed=outcome.failed,shiny=outcome.shiny==true,big=outcome.big==true})
     if autoHatching and skip then
         table.insert(skippedEntries,{rarity=rarity,speciesId=species,outcome=outcome})
         HatchTimeline.batchStep(HatchTimeline.session,HatchTimeline.remaining(str("NextChestId")~="",num("ActiveChestCount"),num("QueuedEggsWaiting"),num("BufferedRevealCount")),os.clock()) -- BD-444: a quickly opened egg still counts

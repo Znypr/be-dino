@@ -109,6 +109,7 @@ COMMON_RULES = [
     _flag_off("HatchV2Preview", "docs/118 s9 Studio-only preview toggle; the owner flips it locally, never committed"),
     _flag_off("DuplicateSettlementProbe", "historical settlement probe"),
     _flag_off("ObjectivesEnabled", "BD-072/073 mini objectives (docs/66): server rules only, no UI (BD-075) or event hooks (BD-074) yet; PROVISIONAL rewards; owner flips it after Studio evidence"),
+    _flag_off("SecretSpeciesEnabled", "BD-604/BD-228 secret silly creatures (docs/149, docs/115 SS1..SS6): roll, lazy collection entries and Index cards; PROVISIONAL 0.5% chance and model slots still empty; owner flips it after models and Studio evidence"),
     _flag_off("GiftingEnabled", "BD-451/BD-453 Robux gifting (docs/134 s12); enabling needs the owner's explicit go-ahead and the go-live review"),
     _flag_off("AdminGiftsEnabled", "BD-451/BD-452 free admin gifts (docs/134); owner flips it for the first live test of the gift inbox"),
     _flag_off("GiftClaimEnabled", "BD-451 gift claim path (Gifts DataStore inbox -> profile); required by both gift senders, owner go-ahead only"),
