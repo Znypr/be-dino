@@ -20,8 +20,8 @@ ScaleLadder.Unit = "studs"
 -- and width/height/length = the Studio bounding box of LowPolyDinos.clone(species) at spawn (growth scale 1), template pose, 2 decimals
 -- (BD-471 method, re-measured after the BD-232 scale change; docs/evidence/2026-10-17-species-sizes/). That box IS the in-game spawn size:
 -- the clone bakes `scale` into the parts and DinosaurVisual.render only multiplies by the growth scale (1 at spawn, HubScaleRules 1 in the hub).
--- measured = true for ALL 22 species. EXCEPTION until the Studio re-measure (docs/evidence/2026-10-17-water-bulk/): the box, snout and headLength of the three
--- Water species (C-39, bulk instead of length) are the old measured values x new scale / old scale (exact for a uniform clone scale), not yet re-read in Studio.
+-- measured = true for ALL 22 species. The three Water species (C-39, bulk instead of length) were re-read in Studio on 2026-10-17 after the scale change
+-- (docs/evidence/2026-10-17-water-bulk/): the boxes equal old box x new scale / old scale to 2 decimals.
 -- BD-515 (docs/115 MR1-MR3): snout = how far the snout tip is ahead of the model centre (the root) at spawn, and headLength = the length of the
 -- `head` MeshPart along the body, both from the same Studio measurement (the part's bounding box in the model frame, 2 decimals). snout equals
 -- length / 2 for all species but Microraptor (its template wings reach further forward than the head). The generated head parts include neck,
@@ -59,10 +59,10 @@ ScaleLadder.Dino = {
         gallimimus = {scale = 3.89, tier = 1, basis = "height", target = 6.60, width = 2.42, height = 6.61, length = 7.78, snout = 3.89, headLength = 2.52, measured = true},
         ichthyosaurus = {scale = 3.71, tier = 3, basis = "bulk", target = 6.71, width = 4.89, height = 5.57, length = 11.13, snout = 5.57, headLength = 5.11, measured = true},
         microraptor = {scale = 1.52, tier = 1, basis = "bulk", target = 5.55, width = 7.11, height = 4.56, length = 5.29, snout = 2.31, headLength = 0.32, measured = true},
-        mosasaurus = {scale = 5.64, tier = 5, basis = "bulk", target = 8.12, width = 5.48, height = 5.77, length = 16.92, snout = 8.47, headLength = 4.37, measured = true},
+        mosasaurus = {scale = 5.64, tier = 5, basis = "bulk", target = 8.12, width = 5.48, height = 5.77, length = 16.92, snout = 8.46, headLength = 4.37, measured = true},
         pachycephalosaurus = {scale = 2.81, tier = 2, basis = "height", target = 7.26, width = 4.51, height = 7.25, length = 8.43, snout = 4.21, headLength = 3.54, measured = true},
         parasaurolophus = {scale = 3.03, tier = 2, basis = "height", target = 7.26, width = 5.30, height = 7.27, length = 9.09, snout = 4.54, headLength = 3.94, measured = true},
-        plesiosaurus = {scale = 2.78, tier = 3, basis = "bulk", target = 6.71, width = 4.66, height = 7.74, length = 8.34, snout = 4.17, headLength = 3.91, measured = true},
+        plesiosaurus = {scale = 2.78, tier = 3, basis = "bulk", target = 6.71, width = 4.66, height = 7.74, length = 8.34, snout = 4.17, headLength = 3.92, measured = true},
         pteranodon = {scale = 1.54, tier = 2, basis = "bulk", target = 6.10, width = 7.07, height = 4.62, length = 6.89, snout = 3.45, headLength = 2.29, measured = true},
         quetzalcoatlus = {scale = 2.04, tier = 4, basis = "bulk", target = 7.38, width = 8.20, height = 6.12, length = 8.04, snout = 4.02, headLength = 3.41, measured = true},
         spinosaurus = {scale = 4.02, tier = 5, basis = "height", target = 9.66, width = 5.53, height = 9.66, length = 12.06, snout = 6.03, headLength = 4.54, measured = true},

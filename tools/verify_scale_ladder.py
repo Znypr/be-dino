@@ -26,7 +26,7 @@ BEGIN, END = '<!-- scale-ladder:begin -->', '<!-- scale-ladder:end -->'
 # Studio bounding boxes of LowPolyDinos.clone(species) at spawn (growth scale 1), playtest build, template pose, Model:GetBoundingBox
 # (width, height, length) in studs: BD-471 (2026-10-17) measured them at the BD-225 scales, BD-232 (2026-10-17) re-measured them after the
 # per-species scale change (docs/evidence/2026-10-17-species-sizes/). C-39 (docs/116): the three Water species are now sized by BULK; their boxes
-# below are the old Studio boxes x new scale / old scale (an exact uniform clone scale) until the Studio re-measure (docs/evidence/2026-10-17-water-bulk/).
+# below were re-read in Studio after the change (docs/evidence/2026-10-17-water-bulk/).
 MEASURED = {
     'compy': (3.49, 6.60, 7.69),
     'triceratops': (5.79, 8.00, 8.58),
