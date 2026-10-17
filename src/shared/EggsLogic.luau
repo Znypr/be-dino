@@ -63,6 +63,34 @@ function L.effective(selection: any, requiresPass: boolean, ownsPass: boolean): 
     if L.locked(requiresPass, ownsPass) then return {} end
     return RevealSkip.normalize(selection)
 end
+-- BD-525: the species id out of the server's "<count>x <species>" text (LastChestRewardText), or nil when the text is not that shape.
+-- Species ids are lower-case letters and digits (underscore allowed for later ones).
+function L.parseSpecies(text: any): string?
+    if typeof(text) ~= "string" then return nil end
+    return string.match(text, "^%d+x ([%w_]+)$")
+end
+
+-- BD-525: one egg arrives: should its reveal be skipped? rarities = Config.SpeciesRarities (species id -> rarity number).
+-- Returns skip, species, rarity. An egg whose species cannot be read or is unknown is NEVER skipped (it used to count as a
+-- Common "compy"): unknown data is shown, never hidden.
+function L.autoOpenDecision(selection: any, requiresPass: boolean, ownsPass: boolean, rewardText: any, rarities: {[string]: number}, outcome: any, openAll: boolean): (boolean, string?, number?)
+    local species = L.parseSpecies(rewardText)
+    local rarity = if species then rarities[species] else nil
+    if rarity == nil then return false, species, nil end
+    return L.shouldAutoOpen(selection, requiresPass, ownsPass, rarity, outcome, openAll), species, rarity
+end
+
+-- BD-525: the hatched dinosaur never shows its egg's condition (BD-174), so a Rainbow/Astra Common egg that stays on screen
+-- although Common is on AUTO looked like a plain Common one. When the player's setting covers this rarity and the egg is shown
+-- only because it is Rainbow or Astra, the reveal heading says so. nil = keep the normal heading.
+function L.shownReason(selection: any, requiresPass: boolean, ownsPass: boolean, rarity: number, genes: any): string?
+    if not RevealSkip.set(L.effective(selection, requiresPass, ownsPass))[rarity] then return nil end
+    if typeof(genes) ~= "table" then return nil end
+    if genes.conditionId == "rainbow" then return "Rainbow egg! Always shown" end
+    if genes.conditionId == "astra" then return "Astra egg! Always shown" end
+    return nil
+end
+
 -- Never auto-opens Shiny, BIG, event mutations, Rainbow/Astra (RevealSkip.isNotable). openAll = the optional
 -- "Open all" convenience (every rarity, same never-skip rules).
 function L.shouldAutoOpen(selection: any, requiresPass: boolean, ownsPass: boolean, rarity: number, outcome: any, openAll: boolean): boolean

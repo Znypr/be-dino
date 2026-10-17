@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history: the kanban merge check needs the merge base and main's row history
       - name: Fail on merge conflict markers
         run: |
           if git grep -InE '^(<<<<<<< |>>>>>>> |=======$)' -- . ':!*.rbxlx'; then
@@ -27,16 +29,13 @@ jobs:
         run: python tools/verify_doc_ids.py
       - name: Handbook checks (docs/114 UI floors, sound cap, palette, PR template; BD-408)
         run: python tools/verify_handbook.py
-      - name: Check kanban board summary counts (warning only)
-        # Never blocks: parallel PRs make counts stale. The board-summary-refresh
-        # workflow regenerates them on main after merge.
+      - name: Kanban merge safety (duplicate BD ids, stale rows put back; PRs only)
+        if: github.event_name == 'pull_request'
         run: |
-          if ! python tools/board_summary.py --check; then
-            python tools/board_summary.py
-            git diff -- docs/07-kanban.md || true
-            git checkout -- docs/07-kanban.md
-            echo "::warning::Board summary counts are stale; main will refresh them automatically after merge. No action needed."
-          fi
+          git fetch --no-tags origin "${{ github.base_ref }}"
+          python tools/verify_kanban_merge.py --base "origin/${{ github.base_ref }}" --head "${{ github.event.pull_request.head.sha }}"
+      - name: Board counts (job summary only; the kanban stores no counts)
+        run: python tools/board_summary.py >> "$GITHUB_STEP_SUMMARY"
       - name: Verify image bindings
         run: python tools/bind_artwork.py --check
       - name: Install pinned Luau tools
