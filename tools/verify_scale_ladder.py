@@ -8,7 +8,9 @@ CaveHubLayout, ScaleLadder) and fails when:
   2. ORDER: the ladder order breaks (food taller than the smallest dino, a colossal tree not clearly above a normal tree or the tallest
      maxed dino, a normal-run dino taller than the biggest normal tree, the dino door lower than the largest hub dino, ...);
   3. DOC: the table in docs/114 section 8.1.1 differs from the one generated from the Lua table (rewrite it with --write-doc).
-Not Studio evidence: heights of unmeasured species are ESTIMATES until BD-471 measures them (see Dino.species[..].measured).
+  4. SIZING (BD-232): every species is within 2% of the owner rule (about 10% growth per unlock tier: ground by height from the 6.6 Compy,
+     fly by bulk, water by length, the T-Rex on top), higher tiers are bigger, no ground dino is below the Compy or above the T-Rex.
+Not Studio evidence: heights of unmeasured species are ESTIMATES (see Dino.species[..].measured); all 22 are measured since BD-471.
 Usage: python tools/verify_scale_ladder.py --runner luau.exe [--write-doc] [--print]
 """
 from pathlib import Path
@@ -21,14 +23,34 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 DOC = ROOT / 'docs/114-handbook.md'
 BEGIN, END = '<!-- scale-ladder:begin -->', '<!-- scale-ladder:end -->'
-# Studio bounding boxes at scale 1 (BD-471, 2026-10-17, playtest build, LowPoly.clone then ScaleTo(1), Model:GetBoundingBox height): the
-# species heights that are measured, not estimated. All 22 are measured; an unmeasured species would follow the estimate rule below.
+# Studio bounding boxes of LowPolyDinos.clone(species) at spawn (growth scale 1), playtest build, template pose, Model:GetBoundingBox
+# (width, height, length) in studs: BD-471 (2026-10-17) measured them at the BD-225 scales, BD-232 (2026-10-17) re-measured them after the
+# per-species scale change (docs/evidence/2026-10-17-species-sizes/). All 22 are measured; an unmeasured species would follow the estimate rule.
 MEASURED = {
-    'compy': 6.6, 'triceratops': 8.39, 'tyrannosaurus': 10.2, 'raptor': 8.4, 'stegosaurus': 4.91, 'ankylosaurus': 6.49,
-    'archaeopteryx': 5.28, 'baryonyx': 6.22, 'brachiosaurus': 10.63, 'dimorphodon': 5.7, 'elasmosaurus': 6.52, 'gallimimus': 4.92,
-    'ichthyosaurus': 3.45, 'microraptor': 5.1, 'mosasaurus': 3.29, 'pachycephalosaurus': 5.11, 'parasaurolophus': 5.54,
-    'plesiosaurus': 6.73, 'pteranodon': 6.93, 'quetzalcoatlus': 8.4, 'spinosaurus': 8.43, 'therizinosaurus': 10.93,
+    'compy': (3.49, 6.60, 7.69),
+    'triceratops': (5.79, 8.00, 8.58),
+    'tyrannosaurus': (5.31, 9.67, 10.41),
+    'raptor': (3.49, 6.60, 7.74),
+    'stegosaurus': (5.25, 7.25, 11.70),
+    'ankylosaurus': (7.78, 8.78, 14.40),
+    'archaeopteryx': (7.17, 5.31, 5.92),
+    'baryonyx': (3.99, 7.99, 9.33),
+    'brachiosaurus': (3.73, 8.00, 8.73),
+    'dimorphodon': (5.76, 5.13, 5.73),
+    'elasmosaurus': (3.95, 8.78, 10.74),
+    'gallimimus': (2.42, 6.61, 7.78),
+    'ichthyosaurus': (3.78, 4.31, 8.61),
+    'microraptor': (7.11, 4.56, 5.29),
+    'mosasaurus': (3.37, 3.55, 10.41),
+    'pachycephalosaurus': (4.51, 7.25, 8.43),
+    'parasaurolophus': (5.30, 7.27, 9.09),
+    'plesiosaurus': (4.81, 7.99, 8.61),
+    'pteranodon': (7.07, 4.62, 6.89),
+    'quetzalcoatlus': (8.20, 6.12, 8.04),
+    'spinosaurus': (5.53, 9.66, 12.06),
+    'therizinosaurus': (4.91, 8.78, 10.24),
 }
+TOLERANCE = 0.02  # BD-232: allowed relative gap between a species size and the 10%-per-tier rule
 STAGE_COLUMNS = ('run', 'mid', 'long', 'max', 'bigMax')
 
 
@@ -53,7 +75,16 @@ for id in LowPoly do ids[#ids + 1] = id end
 table.sort(ids)
 out("lowpoly.ids", table.concat(ids, ","))
 out("order", table.concat(Config.SpeciesOrder, ","))
-for id, row in LowPoly do out("species." .. id .. ".scale", row.scale) end
+for id, row in LowPoly do
+    out("species." .. id .. ".scale", row.scale)
+    out("species." .. id .. ".class", row.class)
+    out("species." .. id .. ".tier", row.tier)
+    out("species." .. id .. ".rarity", Config.SpeciesRarities[id])
+end
+for _, basis in {"height", "bulk", "length"} do
+    for tier = 1, 5 do out("rule." .. basis .. "." .. tier, Ladder.targetSize(basis, tier)) end
+end
+out("rule.sizeOf.bulk", Ladder.sizeOf("bulk", 2, 3, 4))
 out("Dino.hubScale", Hub.HubScale)
 out("Dino.maxScale", Hub.MaxGrowthScale)
 out("Dino.bigMultiplier", Config.BigScaleMultiplier)
@@ -198,15 +229,90 @@ def check_drift(ladder, code, errors):
         measured = ladder[f'Dino.species.{sid}.measured'] == 'true'
         if measured != (sid in MEASURED):
             errors.append(f'{sid}: measured flag {measured} disagrees with the Studio-measured list {sorted(MEASURED)}')
-        elif measured and not close(row_h, MEASURED[sid], 1e-9):
-            errors.append(f'{sid}: measured height {row_h} differs from the Studio bounding box {MEASURED[sid]}')
-        elif not measured and not close(row_h, row_s * est, 0.05 + 1e-9):
+        elif measured:
+            box = tuple(num(ladder, f'Dino.species.{sid}.{k}') for k in ('width', 'height', 'length'))
+            if any(not close(x, y, 1e-9) for x, y in zip(box, MEASURED[sid])):
+                errors.append(f'{sid}: ladder box {box} differs from the Studio bounding box {MEASURED[sid]}')
+        elif not close(row_h, row_s * est, 0.05 + 1e-9):
             errors.append(f'{sid}: estimated height {row_h} is not scale {row_s} x {est} (rounded to 0.1)')
     # Arena colossal and growth formula text checks for the parts that need a require chain
     terrain = (ROOT / 'src/shared/CaveTerrainRules.luau').read_text(encoding='utf-8')
     m = re.search(r'^Rules\.GateHeight = ([\d.]+)', terrain, re.M)
     if not m or not close(float(m.group(1)), num(ladder, 'Hub.gate.mouthHeight'), 1e-9):
         errors.append(f'DRIFT Hub.gate.mouthHeight: ladder {ladder["Hub.gate.mouthHeight"]} but CaveTerrainRules.GateHeight is {m.group(1) if m else "missing"}')
+
+
+def size_of(basis, box):
+    w, h, l = box
+    return {'height': h, 'length': l, 'bulk': (w * h * l) ** (1 / 3)}[basis]
+
+
+def check_sizing(ladder, code, errors):
+    """BD-232 owner rule: about 10% growth per unlock tier (ground by height, fly by bulk, water by length, T-Rex on top)."""
+    g = lambda k: num(ladder, k)
+    order = [ladder[f'Dino.order.{i}'] for i in range(1, 23)]
+    growth, tol, top = g('Sizing.growthPerTier'), g('Sizing.tolerance'), int(g('Sizing.topTier'))
+    if not close(growth, 1.1, 1e-9) or not close(tol, TOLERANCE, 1e-9) or top != 5:
+        errors.append(f'SIZING the rule constants must be growth 1.1, tolerance {TOLERANCE}, top tier 5 (owner BD-232), found {growth}, {tol}, {top}')
+    rule = {
+        'height': lambda t: g('Sizing.height.tier1') * growth ** (t - 1),
+        'bulk': lambda t: g('Sizing.bulk.top') / growth ** (top - t),
+        'length': lambda t: g('Sizing.length.top') / growth ** (top - t),
+    }
+    # the Lua helper equals the rule, and growth between tiers is the owner's 10%
+    for basis, fn in rule.items():
+        for tier in range(1, 6):
+            if not close(num(code, f'rule.{basis}.{tier}'), fn(tier), 1e-9):
+                errors.append(f'SIZING ScaleLadder.targetSize({basis}, {tier}) differs from the rule')
+        for tier in range(1, 5):
+            ratio = fn(tier + 1) / fn(tier)
+            if not close(ratio, 1.1, 0.005):
+                errors.append(f'SIZING {basis} targets must grow 10% per tier, tier {tier} to {tier + 1} is x{ratio:.3f}')
+    if not close(num(code, 'rule.sizeOf.bulk'), 24 ** (1 / 3), 1e-9):
+        errors.append('SIZING ScaleLadder.sizeOf bulk must be the cube root of width x height x length')
+    if not close(g('Sizing.height.tier1'), g('Dino.species.compy.height'), 0.005):
+        errors.append('SIZING Compy (tier 1) must be the height anchor 6.6')
+    box = {sid: tuple(g(f'Dino.species.{sid}.{k}') for k in ('width', 'height', 'length')) for sid in order}
+    rex = box['tyrannosaurus']
+    if not close(size_of('bulk', rex), g('Sizing.bulk.top'), 0.005 * g('Sizing.bulk.top')) or not close(rex[2], g('Sizing.length.top'), 0.005):
+        errors.append('SIZING the T-Rex must be the top: its bulk and length equal Sizing.bulk.top and Sizing.length.top')
+    expect_basis = {'Fly': 'bulk', 'Water': 'length'}
+    by_tier = {}
+    for sid in order:
+        tier, basis = int(g(f'Dino.species.{sid}.tier')), ladder[f'Dino.species.{sid}.basis']
+        if tier != int(num(code, f'species.{sid}.rarity')) or tier != int(num(code, f'species.{sid}.tier')):
+            errors.append(f'SIZING {sid}: tier {tier} differs from Config.SpeciesRarities {code[f"species.{sid}.rarity"]} / LowPolyDinoAssets tier {code[f"species.{sid}.tier"]}')
+        if basis != expect_basis.get(code[f'species.{sid}.class'], 'height'):
+            errors.append(f'SIZING {sid}: basis {basis} does not fit class {code[f"species.{sid}.class"]} (Ground and Armored height, Fly bulk, Water length)')
+        want = rule[basis](tier)
+        target = g(f'Dino.species.{sid}.target')
+        if not close(target, want, 0.006):
+            errors.append(f'SIZING {sid}: target {target} is not the rule value {want:.3f} for {basis} tier {tier}')
+        got = size_of(basis, box[sid])
+        if abs(got - want) > tol * want:
+            errors.append(f'SIZING {sid} ({basis}, tier {tier}): size {got:.2f} is more than {tol:.0%} from the rule {want:.2f}; set its LowPolyDinoAssets scale')
+        by_tier.setdefault((basis, tier), []).append(got)
+    # unlock order: every higher tier is bigger than every lower tier by about 10% per step (ground height; fly bulk; water length)
+    for basis in ('height', 'bulk', 'length'):
+        tiers = sorted(t for b, t in by_tier if b == basis)
+        for lo, hi in zip(tiers, tiers[1:]):
+            small, big = max(by_tier[(basis, lo)]), min(by_tier[(basis, hi)])
+            floor = (growth ** (hi - lo)) * (1 - tol) / (1 + tol)
+            if big < small * floor - 1e-9:
+                errors.append(f'SIZING {basis}: tier {hi} smallest {big:.2f} is not about {growth ** (hi - lo):.2f}x tier {lo} largest {small:.2f} (needs >= x{floor:.3f})')
+    # the starter is the smallest ground dino, the T-Rex is the tallest ground dino
+    ground = [sid for sid in order if ladder[f'Dino.species.{sid}.basis'] == 'height']
+    compy_h, rex_h = box['compy'][1], box['tyrannosaurus'][1]
+    for sid in ground:
+        if box[sid][1] < compy_h * (1 - tol):
+            errors.append(f'SIZING ground {sid} ({box[sid][1]:.2f}) is below the starter Compy ({compy_h})')
+        if box[sid][1] > rex_h * (1 + tol):
+            errors.append(f'SIZING ground {sid} ({box[sid][1]:.2f}) is taller than the T-Rex ({rex_h})')
+    for sid in order:  # fly and water: never above the T-Rex on their own basis
+        basis = ladder[f'Dino.species.{sid}.basis']
+        top_v = {'bulk': g('Sizing.bulk.top'), 'length': g('Sizing.length.top')}.get(basis)
+        if top_v and size_of(basis, box[sid]) > top_v * (1 + tol):
+            errors.append(f'SIZING {sid} {basis} {size_of(basis, box[sid]):.2f} is above the T-Rex top {top_v}')
 
 
 def check_wiring(errors):
@@ -347,20 +453,21 @@ def render(ladder):
     add('All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verify_scale_ladder.py --write-doc`; CI fails when this block, the Lua table or the code that builds the things drift apart. **WIRED** = the game code reads the table; **MIRRORED** = the owner module stays the source and the verifier recomputes the value from it.')
     add('')
     n_measured = sum(1 for sid in order if ladder[f'Dino.species.{sid}.measured'] == 'true')
-    add(f'**Dinosaurs (MIRRORED scale; height at scale 1 is MEASURED in Studio for {n_measured} of {len(order)} species, BD-471, 2026-10-17{"" if n_measured == len(order) else ", the rest are ESTIMATES"}).** Drawn height = height at 1 x the growth scale. In the cave hub every dinosaur is exactly 1x (docs/115).')
+    add(f'**Dinosaurs (MIRRORED scale; the box at spawn is MEASURED in Studio for {n_measured} of {len(order)} species, BD-471 and BD-232, 2026-10-17{"" if n_measured == len(order) else ", the rest are ESTIMATES"}).** Drawn height = height at spawn x the growth scale. Sizes follow the BD-232 rule (docs/115): about 10% growth per unlock tier, ground by height from the 6.6 Compy, fly by bulk (cube root of W x H x L), water by length, the T-Rex on top. In the cave hub every dinosaur is exactly 1x (docs/115).')
     add('')
-    head = '| Species | Model scale | Height at 1 | Source | ' + ' | '.join(f'{name} x{fmt(stages[name])}' for name in STAGE_COLUMNS) + ' |'
+    head = '| Species | Tier | Basis | Target | Model scale | W x H x L at spawn | Source | ' + ' | '.join(f'{name} height x{fmt(stages[name])}' for name in STAGE_COLUMNS) + ' |'
     add(head)
-    add('| --- | ---: | ---: | --- | ' + ' | '.join('---:' for _ in STAGE_COLUMNS) + ' |')
+    add('| --- | ---: | --- | ---: | ---: | --- | --- | ' + ' | '.join('---:' for _ in STAGE_COLUMNS) + ' |')
     for sid in order:
         h = g(f'Dino.species.{sid}.height')
         src = 'MEASURED' if ladder[f'Dino.species.{sid}.measured'] == 'true' else 'ESTIMATE'
         cells = ' | '.join(f'{h * stages[name]:.1f}' for name in STAGE_COLUMNS)
-        add(f'| {sid} | {fmt(g(f"Dino.species.{sid}.scale"))} | {h:.2f} | {src} | {cells} |')
+        dims = ' x '.join(f'{g(f"Dino.species.{sid}.{k}"):.2f}' for k in ('width', 'height', 'length'))
+        add(f'| {sid} | {int(g(f"Dino.species.{sid}.tier"))} | {ladder[f"Dino.species.{sid}.basis"]} | {g(f"Dino.species.{sid}.target"):.2f} | {fmt(g(f"Dino.species.{sid}.scale"))} | {dims} | {src} | {cells} |')
     add('')
     add('Growth stages (growth = food x 0.1, `s = min(4, sqrt(1 + growth / 50))`): ' + ', '.join(
         f'{ladder[f"Dino.stages.{i}.id"]} x{fmt(g(f"Dino.stages.{i}.scale"))} (growth {fmt(g(f"Dino.stages.{i}.growth"))}{", BIG" if ladder[f"Dino.stages.{i}.big"] == "true" else ""})'
-        for i in range(1, 7)) + f'. Hub scale {fmt(g("Dino.hubScale"))}. BIG multiplier {fmt(g("Dino.bigMultiplier"))}. Torso collider {fmt(g("Dino.collider.width"))} wide x {fmt(g("Dino.collider.length"))} long, top {fmt(g("Dino.collider.topPerScale"))} x scale above the floor. Estimate rule: model scale x {fmt(g("HeightPerScaleEstimate"))}.')
+        for i in range(1, 7)) + f'. Hub scale {fmt(g("Dino.hubScale"))}. BIG multiplier {fmt(g("Dino.bigMultiplier"))}. Torso collider {fmt(g("Dino.collider.width"))} wide x {fmt(g("Dino.collider.length"))} long, top {fmt(g("Dino.collider.topPerScale"))} x scale above the floor. Size rule: growth {fmt(g("Sizing.growthPerTier"))} per tier, tolerance {g("Sizing.tolerance"):.0%}, height tier 1 = {fmt(g("Sizing.height.tier1"))}, bulk top {fmt(g("Sizing.bulk.top"))}, length top {fmt(g("Sizing.length.top"))}.')
     add('')
     add('**World, food and hub (height in studs unless stated).**')
     add('')
@@ -419,6 +526,7 @@ def main():
     errors = []
     check_drift(ladder, code, errors)
     check_wiring(errors)
+    check_sizing(ladder, code, errors)
     check_order(ladder, errors)
     check_doc(ladder, args.write_doc, errors)
     if errors:

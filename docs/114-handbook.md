@@ -132,7 +132,7 @@ Known violations: [110](110-sound-audit.md) flags legendary .43, fusion .375, ha
 ### 8.1 Any 3D asset or prop
 1. Generated mesh (Roblox generate_mesh or the approved pipeline), never code-built ([AGENTS.md](../AGENTS.md); BD-206). The only exception is the scoped owner-approved V3 trees; Blender is also allowed for world and colossal-tree art (8.4.2).
 2. Low-poly flat facets, chunky/rounded, matte; shared eye style (4.2).
-3. **Scale ladder**: a normal-run dino (size up to about 2) still feels small next to big trees ([87](87-vision-and-feel-guide.md)); only a long-run giant (size 3 or more) outgrows ordinary trees, and colossal ancient trees stay taller (LEAD decision 2026-10-16, docs/139 Q3). The numeric table is section 8.1.1 (`src/shared/ScaleLadder.luau`, BD-407), checked by `tools/verify_scale_ladder.py`; every new prop's size must fit it.
+3. **Scale ladder**: a normal-run dino (size up to about 2) still feels small next to big trees ([87](87-vision-and-feel-guide.md)); only a long-run giant (size 3 or more) outgrows ordinary trees, and colossal ancient trees stay taller (LEAD decision 2026-10-16, docs/139 Q3). Species sizes follow the BD-232 rule (about 10% growth per unlock tier; ground by height from the 6.6 Compy, fly by bulk, water by length, T-Rex on top; LEAD decision in docs/115, SZ1). The numeric table is section 8.1.1 (`src/shared/ScaleLadder.luau`, BD-407), checked by `tools/verify_scale_ladder.py`; every new prop's size must fit it.
 4. **Grounded**: the bottom touches the floor at all slopes (raycast per prop); nothing sunk or floating (OWNER 2026-10-16: trees were sunk, BD-395).
 5. **No overlap** with other solid props, paths, pads or the lava basin (`tools/verify_cave_overlap.py`; OWNER 2026-10-16).
 6. Looks real under its place's lighting (section 6): judge a screenshot in that lighting, not the Studio edit light.
@@ -145,34 +145,34 @@ Source of truth: `src/shared/ScaleLadder.luau`. The block below is generated fro
 <!-- scale-ladder:begin -->
 All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verify_scale_ladder.py --write-doc`; CI fails when this block, the Lua table or the code that builds the things drift apart. **WIRED** = the game code reads the table; **MIRRORED** = the owner module stays the source and the verifier recomputes the value from it.
 
-**Dinosaurs (MIRRORED scale; height at scale 1 is MEASURED in Studio for 22 of 22 species, BD-471, 2026-10-17).** Drawn height = height at 1 x the growth scale. In the cave hub every dinosaur is exactly 1x (docs/115).
+**Dinosaurs (MIRRORED scale; the box at spawn is MEASURED in Studio for 22 of 22 species, BD-471 and BD-232, 2026-10-17).** Drawn height = height at spawn x the growth scale. Sizes follow the BD-232 rule (docs/115): about 10% growth per unlock tier, ground by height from the 6.6 Compy, fly by bulk (cube root of W x H x L), water by length, the T-Rex on top. In the cave hub every dinosaur is exactly 1x (docs/115).
 
-| Species | Model scale | Height at 1 | Source | run x1.52 | mid x2 | long x3 | max x4 | bigMax x4.8 |
-| --- | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: |
-| compy | 2.2 | 6.60 | MEASURED | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
-| triceratops | 3 | 8.39 | MEASURED | 12.8 | 16.8 | 25.2 | 33.6 | 40.3 |
-| tyrannosaurus | 3.66 | 10.20 | MEASURED | 15.5 | 20.4 | 30.6 | 40.8 | 49.0 |
-| raptor | 2.1 | 8.40 | MEASURED | 12.8 | 16.8 | 25.2 | 33.6 | 40.3 |
-| stegosaurus | 2.64 | 4.91 | MEASURED | 7.5 | 9.8 | 14.7 | 19.6 | 23.6 |
-| ankylosaurus | 2.66 | 6.49 | MEASURED | 9.9 | 13.0 | 19.5 | 26.0 | 31.2 |
-| archaeopteryx | 1.76 | 5.28 | MEASURED | 8.0 | 10.6 | 15.8 | 21.1 | 25.3 |
-| baryonyx | 2.42 | 6.22 | MEASURED | 9.5 | 12.4 | 18.7 | 24.9 | 29.9 |
-| brachiosaurus | 3.87 | 10.63 | MEASURED | 16.2 | 21.3 | 31.9 | 42.5 | 51.0 |
-| dimorphodon | 1.9 | 5.70 | MEASURED | 8.7 | 11.4 | 17.1 | 22.8 | 27.4 |
-| elasmosaurus | 2.66 | 6.52 | MEASURED | 9.9 | 13.0 | 19.6 | 26.1 | 31.3 |
-| gallimimus | 2.9 | 4.92 | MEASURED | 7.5 | 9.8 | 14.8 | 19.7 | 23.6 |
-| ichthyosaurus | 2.3 | 3.45 | MEASURED | 5.2 | 6.9 | 10.4 | 13.8 | 16.6 |
-| microraptor | 1.7 | 5.10 | MEASURED | 7.8 | 10.2 | 15.3 | 20.4 | 24.5 |
-| mosasaurus | 3.22 | 3.29 | MEASURED | 5.0 | 6.6 | 9.9 | 13.2 | 15.8 |
-| pachycephalosaurus | 1.98 | 5.11 | MEASURED | 7.8 | 10.2 | 15.3 | 20.4 | 24.5 |
-| parasaurolophus | 2.31 | 5.54 | MEASURED | 8.4 | 11.1 | 16.6 | 22.2 | 26.6 |
-| plesiosaurus | 2.42 | 6.73 | MEASURED | 10.2 | 13.5 | 20.2 | 26.9 | 32.3 |
-| pteranodon | 2.31 | 6.93 | MEASURED | 10.5 | 13.9 | 20.8 | 27.7 | 33.3 |
-| quetzalcoatlus | 2.8 | 8.40 | MEASURED | 12.8 | 16.8 | 25.2 | 33.6 | 40.3 |
-| spinosaurus | 3.51 | 8.43 | MEASURED | 12.8 | 16.9 | 25.3 | 33.7 | 40.5 |
-| therizinosaurus | 3.19 | 10.93 | MEASURED | 16.6 | 21.9 | 32.8 | 43.7 | 52.5 |
+| Species | Tier | Basis | Target | Model scale | W x H x L at spawn | Source | run height x1.52 | mid height x2 | long height x3 | max height x4 | bigMax height x4.8 |
+| --- | ---: | --- | ---: | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| compy | 1 | height | 6.60 | 2.2 | 3.49 x 6.60 x 7.69 | MEASURED | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
+| triceratops | 3 | height | 7.99 | 2.86 | 5.79 x 8.00 x 8.58 | MEASURED | 12.2 | 16.0 | 24.0 | 32.0 | 38.4 |
+| tyrannosaurus | 5 | height | 9.66 | 3.47 | 5.31 x 9.67 x 10.41 | MEASURED | 14.7 | 19.3 | 29.0 | 38.7 | 46.4 |
+| raptor | 1 | height | 6.60 | 1.65 | 3.49 x 6.60 x 7.74 | MEASURED | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
+| stegosaurus | 2 | height | 7.26 | 3.9 | 5.25 x 7.25 x 11.70 | MEASURED | 11.0 | 14.5 | 21.8 | 29.0 | 34.8 |
+| ankylosaurus | 4 | height | 8.78 | 3.6 | 7.78 x 8.78 x 14.40 | MEASURED | 13.3 | 17.6 | 26.3 | 35.1 | 42.1 |
+| archaeopteryx | 2 | bulk | 6.10 | 1.77 | 7.17 x 5.31 x 5.92 | MEASURED | 8.1 | 10.6 | 15.9 | 21.2 | 25.5 |
+| baryonyx | 3 | height | 7.99 | 3.11 | 3.99 x 7.99 x 9.33 | MEASURED | 12.1 | 16.0 | 24.0 | 32.0 | 38.4 |
+| brachiosaurus | 3 | height | 7.99 | 2.91 | 3.73 x 8.00 x 8.73 | MEASURED | 12.2 | 16.0 | 24.0 | 32.0 | 38.4 |
+| dimorphodon | 1 | bulk | 5.55 | 1.71 | 5.76 x 5.13 x 5.73 | MEASURED | 7.8 | 10.3 | 15.4 | 20.5 | 24.6 |
+| elasmosaurus | 4 | height | 8.78 | 3.58 | 3.95 x 8.78 x 10.74 | MEASURED | 13.3 | 17.6 | 26.3 | 35.1 | 42.1 |
+| gallimimus | 1 | height | 6.60 | 3.89 | 2.42 x 6.61 x 7.78 | MEASURED | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
+| ichthyosaurus | 3 | length | 8.60 | 2.87 | 3.78 x 4.31 x 8.61 | MEASURED | 6.6 | 8.6 | 12.9 | 17.2 | 20.7 |
+| microraptor | 1 | bulk | 5.55 | 1.52 | 7.11 x 4.56 x 5.29 | MEASURED | 6.9 | 9.1 | 13.7 | 18.2 | 21.9 |
+| mosasaurus | 5 | length | 10.41 | 3.47 | 3.37 x 3.55 x 10.41 | MEASURED | 5.4 | 7.1 | 10.6 | 14.2 | 17.0 |
+| pachycephalosaurus | 2 | height | 7.26 | 2.81 | 4.51 x 7.25 x 8.43 | MEASURED | 11.0 | 14.5 | 21.8 | 29.0 | 34.8 |
+| parasaurolophus | 2 | height | 7.26 | 3.03 | 5.30 x 7.27 x 9.09 | MEASURED | 11.1 | 14.5 | 21.8 | 29.1 | 34.9 |
+| plesiosaurus | 3 | length | 8.60 | 2.87 | 4.81 x 7.99 x 8.61 | MEASURED | 12.1 | 16.0 | 24.0 | 32.0 | 38.4 |
+| pteranodon | 2 | bulk | 6.10 | 1.54 | 7.07 x 4.62 x 6.89 | MEASURED | 7.0 | 9.2 | 13.9 | 18.5 | 22.2 |
+| quetzalcoatlus | 4 | bulk | 7.38 | 2.04 | 8.20 x 6.12 x 8.04 | MEASURED | 9.3 | 12.2 | 18.4 | 24.5 | 29.4 |
+| spinosaurus | 5 | height | 9.66 | 4.02 | 5.53 x 9.66 x 12.06 | MEASURED | 14.7 | 19.3 | 29.0 | 38.6 | 46.4 |
+| therizinosaurus | 4 | height | 8.78 | 2.56 | 4.91 x 8.78 x 10.24 | MEASURED | 13.3 | 17.6 | 26.3 | 35.1 | 42.1 |
 
-Growth stages (growth = food x 0.1, `s = min(4, sqrt(1 + growth / 50))`): spawn x1 (growth 0), run x1.52 (growth 65), mid x2 (growth 150), long x3 (growth 400), max x4 (growth 750), bigMax x4.8 (growth 750, BIG). Hub scale 1. BIG multiplier 1.2. Torso collider 2.6 wide x 3.2 long, top 2.6 x scale above the floor. Estimate rule: model scale x 2.84.
+Growth stages (growth = food x 0.1, `s = min(4, sqrt(1 + growth / 50))`): spawn x1 (growth 0), run x1.52 (growth 65), mid x2 (growth 150), long x3 (growth 400), max x4 (growth 750), bigMax x4.8 (growth 750, BIG). Hub scale 1. BIG multiplier 1.2. Torso collider 2.6 wide x 3.2 long, top 2.6 x scale above the floor. Size rule: growth 1.1 per tier, tolerance 2%, height tier 1 = 6.6, bulk top 8.12, length top 10.41.
 
 **World, food and hub (height in studs unless stated).**
 
