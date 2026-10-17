@@ -102,6 +102,8 @@ W.steps[2] = function(ctx)
     add(c, player:GetAttribute("Location") == "Island", "Location is " .. tostring(player:GetAttribute("Location")))
     add(c, r ~= nil and SpawnGeometry ~= nil and not SpawnGeometry.inHub(Config, r.Position.X, r.Position.Z), "the dino is on the island, not in the hub")
     local home = W.gui():FindFirstChild("HomeButton")
+    -- the label flips to HOME a moment (about 0.15 s in a 2026-10-17 run) after RunState turns Active: wait for it, do not read it at once
+    W.wait(function() return home ~= nil and home.Text == "HOME" end, 3)
     add(c, home ~= nil and home.Text == "HOME", "home button now says " .. (home and home.Text or "(missing)"))
     local bar = W.gui():FindFirstChild("SizeBar")
     add(c, W.wait(function() return bar and W.visible(bar) end, 3) ~= nil, "SIZE bar shows during the run")

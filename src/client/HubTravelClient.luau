@@ -199,6 +199,15 @@ function Client.attach(c: any)
     local stroke = Instance.new("UIStroke") stroke.Thickness, stroke.Color = 3, Color3.fromRGB(40, 28, 70) stroke.Parent = b
     b.Parent = gui
     chip = b
+    -- BD-538: the spot comes from TouchLayout (published as the BeDinoUI ChipRect attribute): bottom centre, or slid left of the weather/LEAP
+    -- column on a narrow phone. Until the first layout pass it keeps the old bottom-centre numbers above.
+    local function pinChip()
+        local r = gui:GetAttribute("ChipRect")
+        if typeof(r) ~= "Rect" then return end
+        b.AnchorPoint, b.Position, b.Size = Vector2.zero, UDim2.fromOffset(r.Min.X, r.Min.Y), UDim2.fromOffset(r.Width, r.Height)
+    end
+    gui:GetAttributeChangedSignal("ChipRect"):Connect(pinChip)
+    pinChip()
     b.Activated:Connect(function()
         if ctx.close then ctx.close() end
         travel(Rules.HeartStation, nil)

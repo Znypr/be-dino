@@ -11,6 +11,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 if (Config :: any).PlaytestFeedbackEnabled ~= true then return end
 local Rules = require(Shared:WaitForChild("PlaytestFeedback"))
+local PhoneScale = require(Shared:WaitForChild("PhoneScale"))
 
 local folder = ReplicatedStorage:WaitForChild("BeDinoRemotes", 15)
 local remote = if folder then folder:WaitForChild("PlaytestFeedback", 15) else nil
@@ -127,6 +128,17 @@ send.TextColor3 = Color3.fromRGB(13, 15, 20)
 local close = make("TextButton", panel, "FeedbackClose", UDim2.fromOffset(190, 48), UDim2.fromOffset(218, 276))
 style(close, "CLOSE", CARD, 24)
 
+-- BD-538: on a phone-landscape canvas the button is hidden while a game menu is open (the ModalScrim of BeDinoUI, like the Admin button), because it
+-- covered the lower-left of the menu (the egg card's chips). Both inputs re-run refresh() below when they change.
+local menuScrim: GuiObject? = nil
+local function menuOpen(): boolean
+    return menuScrim ~= nil and (menuScrim :: GuiObject).Visible
+end
+local function compactCanvas(): boolean
+    local height = if uiRoot then (uiRoot :: any).AbsoluteSize.Y else 0
+    return height > 0 and PhoneScale.isCompact(height)
+end
+
 -- BD-441: watch the character's RunState. Active then anything else = a run ended. Own state, no Bootstrap locals.
 do
     local Ftue = require(Shared:WaitForChild("FtueRules"))
@@ -139,7 +151,7 @@ do
         local okJson, decoded = pcall(function() return game:GetService("HttpService"):JSONDecode(PrivateState.str("CollectionJson", "{}")) end)
         local found = Ftue.hasFoundEgg({activeEggs = PrivateState.get("ActiveChestCount"), waitingEggs = PrivateState.get("QueuedEggsWaiting"),
             lastRunEggs = PrivateState.get("LastRunEggCount"), copies = Ftue.collectionCopies(if okJson then decoded else {})})
-        open.Visible = Rules.showButton({sawRunEnd = sawRunEnd, foundEgg = found, runActive = active})
+        open.Visible = Rules.showButton({sawRunEnd = sawRunEnd, foundEgg = found, runActive = active, menuOpen = menuOpen(), compact = compactCanvas()})
         if not open.Visible then panel.Visible = false end
     end
     local function watch(c: Model)
@@ -150,6 +162,16 @@ do
     if player.Character then watch(player.Character) end
     for _, name in {"CollectionJson", "ActiveChestCount", "QueuedEggsWaiting", "LastRunEggCount"} do PrivateState.onChanged(name, refresh) end
     refresh()
+    task.spawn(function()
+        local ui = player:WaitForChild("PlayerGui"):WaitForChild("BeDinoUI", 30)
+        local scrim = if ui then ui:WaitForChild("ModalScrim", 30) else nil
+        if not ui or not scrim or not scrim:IsA("GuiObject") then return end
+        menuScrim = scrim
+        scrim:GetPropertyChangedSignal("Visible"):Connect(refresh)
+        local root: any = ui
+        root:GetPropertyChangedSignal("AbsoluteSize"):Connect(refresh)
+        refresh()
+    end)
 end
 
 open.Activated:Connect(function() status.Text = "" panel.Visible = not panel.Visible end)

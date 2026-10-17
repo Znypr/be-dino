@@ -7,10 +7,18 @@ local HttpService = game:GetService("HttpService")
 local player = W.player
 local add = W.add
 
+-- Hatched copies live in e.variants[key].count (base stays 0 for them), so count both; the 2026-10-17 run saw "1 -> 1" without this.
+local function ownedCount(e)
+    local n = (e.base or 0) + (e.gold or 0) + (e.emerald or 0) + (e.diamond or 0)
+    if type(e.variants) == "table" then
+        for _, v in e.variants do if type(v) == "table" then n += v.count or 0 end end
+    end
+    return n
+end
 local function copiesTotal()
     local total = 0
     for _, e in W.json("CollectionJson") or {} do
-        if type(e) == "table" then total += (e.base or 0) + (e.gold or 0) + (e.emerald or 0) + (e.diamond or 0) end
+        if type(e) == "table" then total += ownedCount(e) end
     end
     return total
 end
@@ -210,7 +218,7 @@ W.steps[8] = function(ctx)
     local cur = player:GetAttribute("EquippedSpeciesId") or "compy"
     local ids = {}
     for id, e in W.json("CollectionJson") or {} do
-        if id ~= cur and type(e) == "table" and (e.base or 0) + (e.gold or 0) + (e.emerald or 0) + (e.diamond or 0) > 0 then table.insert(ids, id) end
+        if id ~= cur and type(e) == "table" and ownedCount(e) > 0 then table.insert(ids, id) end
     end
     table.sort(ids)
     if not add(c, if #ids > 0 then true else nil, if #ids > 0 then "another species is owned: " .. ids[1] else "only " .. cur .. " is owned: hatch more eggs (step 7) and re-run") then return name, c end
@@ -227,6 +235,7 @@ W.steps[8] = function(ctx)
     local function visual() local ch = player.Character return ch and ch:FindFirstChild("LocalMeshVisual") end
     local rendered = W.wait(function() local v = visual() return v and v:GetAttribute("SpeciesId") == pick end, 8)
     add(c, if rendered then true else nil, if rendered then "the new dino model is built (" .. pick .. ")" else "no LocalMeshVisual for " .. pick .. " (legacy visual?): framing checks skipped")
+    if workspace.CurrentCamera then workspace.CurrentCamera.CameraType = Enum.CameraType.Custom end -- execute_luau leaves it on Fixed after every call (the box test then saw the dino 82 studs away)
     task.wait(1.5) -- the zoom limits and the camera settle
     char = player.Character
     if not char then add(c, false, "no character after the equip") return name, c end
