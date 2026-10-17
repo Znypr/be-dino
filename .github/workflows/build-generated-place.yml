@@ -111,6 +111,7 @@ jobs:
           python tools/verify_combat_teamup.py --runner /tmp/luau/luau
           python tools/verify_npc_predators.py --runner /tmp/luau/luau
           python tools/verify_hit_sizes.py --runner /tmp/luau/luau
+          python tools/verify_hit_zone.py --runner /tmp/luau/luau
           # first-time player
           python tools/verify_ftue_copy.py --runner /tmp/luau/luau
           python tools/verify_ftue_p1.py --runner /tmp/luau/luau

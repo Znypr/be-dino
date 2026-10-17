@@ -267,7 +267,67 @@ The owner delegated these on 2026-10-16: "just merge, take full autonomy, do dec
 
 ### Task effects (2026-10-17, server hit sizes)
 - BD-514 (Review / test): `Shared/HitSize`, `Server/HitRadius`, the `CombatService` and `NpcPredatorService` switch, `tools/verify_hit_sizes.py` (CI). Offline only: combat is OFF in the playtest build (`Config.CombatEnabled` false), so no Studio run and no bite was seen; nothing ships differently while the flag is off.
-- Consequence for BD-245 (balance, not changed here): at growth scale 2 and above most species reach the existing 14 stud cap (`BodyRadiusMax`), so large players all hit at the same radius; Ankylosaurus is capped from scale 2, Compy only at scale 4. Whether the cap should rise, or become a share of the species size, is a combat balance question to decide before combat is switched on. The reach of a bite is still `BiteRangeBase + BiteRangePerScale x s + slack` plus both radii, unchanged.
+- Consequence for BD-245 (balance, not changed here): at growth scale 2 and above most species reach the existing 14 stud cap (`BodyRadiusMax`), so large players all hit at the same radius; Ankylosaurus is capped from scale 2, Compy only at scale 4. Whether the cap should rise, or become a share of the species size, is a combat balance question to decide before combat is switched on. A proposal with tables (a body capsule instead of a capped circle, default off) is in the next section, HZ1. The reach of a bite is still `BiteRangeBase + BiteRangePerScale x s + slack` plus both radii, unchanged.
+
+## PROPOSAL 2026-10-17 (for the OWNER, NOT a decision): the shape of a hit zone (BD-245, HZ1)
+Status: a proposal and offline analysis only. Combat feel is the owner's call; nothing here is a LEAD decision. `CombatEnabled` stays false and the new switch `CombatConfig.HitZoneRule` defaults to `"circle"` (today's HS1 rule), so no bite changes. Not tried in Studio (Studio was stuck; no hit was seen); the numbers are geometry from the measured `ScaleLadder` boxes.
+
+**Problem (from the BD-514 follow-up).** HS1 gives every dinosaur a round hit zone of radius `max(width, length) / 2 x growth`, capped at `BodyRadiusMax` 14. Two things go wrong:
+1. **The cap flattens growth.** It starts at growth 1.94 (Ankylosaurus), 2.3 to 2.7 (Spinosaurus, Stegosaurus, Elasmosaurus, Mosasaurus, T-Rex, Therizinosaurus), 3.0 to 3.4 (most others), 3.64 (Compy, not 4), 3.9 to 4.0 (the three small fliers) and 4.86 (Dimorphodon). At growth 4 and at 4.8, **21 of 22 species have the same zone (14)**, so a BIG Ankylosaurus and a Compy that has grown are hit alike. Worse, at growth 4.8 the cap is **smaller than the visible body**: an Ankylosaurus is 37.3 wide x 69.1 long but its zone is a 28 x 28 circle (the tail and the snout are outside it; Quetzalcoatlus, 39 wingspan, also).
+2. **A circle is as wide as the body is long.** A Spinosaurus at growth 2 is 11.1 wide x 24.1 long, but its zone is a 24.1 wide circle: a dinosaur 6.5 studs beside the middle of its flank can be bitten at the same range as one at the snout. Long bodies get a round hit zone, short wide ones do not.
+
+**Candidates tried (all numbers from the real boxes; "side" = how far the zone sticks out beside the body, "nose" = zone reach minus the real half-length; 0 is exact):**
+| Rule | Ankylosaurus growth 2 | Ankylosaurus growth 4.8 | Compy growth 4.8 | Verdict |
+|---|---|---|---|---|
+| Today: circle, cap 14 | side +6.2, nose -0.4 | side -4.7, nose -20.6 (zone inside the body) | side +5.6, nose -4.5 | flat above growth 2 to 4, rounds long bodies |
+| Cap that grows with the scale (7 x growth): circle | side +6.2, nose -0.4 | side +14.9, nose -1.0 (a 67 stud disc) | side +10.1, nose 0 | ordered by size again, but zones grow huge and still hit far beside the body |
+| Circle of `(width + length) / 4 x growth` | side +3.3, nose -3.3 | side +7.9, nose -7.9 | side +5.0, nose -5.0 | smaller and ordered, but a long dinosaur's snout and tail miss while its flank is still hit; Compy at growth 1 changes (2.79 vs 3.85) |
+| **Capsule along the body (recommended)** | side 0, nose 0 | side 0, nose 0 | side 0, nose 0 | the zone IS the body footprint; ordered by size; no cap needed |
+
+**Recommended rule (a PROPOSAL): the body capsule.** The zone is a straight spine through the dinosaur's root along its facing, with a round end: `radius = width / 2 x growth`, `halfSpan = max(0, (length - width) / 2) x growth`. The zone is exactly as wide and as long as the body, so a bigger body is always a bigger zone, a big dinosaur is never hit beside its body, and nothing flattens it (the old cap becomes two safety limits that no real body reaches: radius 20, half-spine 24; widest real body 19.7 and longest spine 16.9 at growth 4.8). Along the body it reaches exactly as far as today's uncapped rule (`radius + halfSpan = length / 2 x growth`), so **Compy at growth 1 is the same lengthwise (3.85) and only the sideways reach shrinks to the real width (1.75)**. A flier is wider than long (its width is the wingspan), so its zone stays a circle of half the wingspan.
+
+Pure code, not wired: `HitSize.capsule(species, scale)` returns `(radius, halfSpan)`; `HitSize.zone(species, scale, rule?)` follows `CombatConfig.HitZoneRule` (`"circle"` returns today's `HitSize.radius, 0`); `HitSize.reach(radius, halfSpan)`; `HitSize.gap(radius, halfSpan, dx, dz, hx, hz)` = planar gap from a point to the zone surface (0 inside). Wiring later (a separate task, after the owner picks): the bite test `planar <= range + attackerRadius + targetRadius` of `CombatRules.attack` becomes `gap(target zone, attacker position relative to the target root, target facing) <= range + attacker reach`, with the target's planar facing sent in the candidate list by the server; `NpcPredatorService` aggro and bite reach and any client bite preview must call the same functions. `tools/verify_hit_zone.py` (CI) checks: default is today's rule; capsule formula; zone never wider than the body + 1 stud; strictly growing and proportional to growth (each step at least 15% bigger); wider-and-longer never has the smaller zone; Compy parity at growth 1; gap geometry (a point 14 studs beside an Ankylosaurus at growth 2 is inside today's circle and 6.2 studs outside the capsule); junk scales and unknown species.
+
+**Table 1, the 6 species (today's capped radius vs the capsule `radius + halfSpan`, studs):**
+| Species | growth 1 | growth 2 | growth 3 | growth 4 | growth 4.8 |
+|---|---|---|---|---|---|
+| compy | 3.8 vs 1.7+2.1 | 7.7 vs 3.5+4.2 | 11.5 vs 5.2+6.3 | 14.0 vs 7.0+8.4 | 14.0 vs 8.4+10.1 |
+| stegosaurus | 5.8 vs 2.6+3.2 | 11.7 vs 5.2+6.4 | 14.0 vs 7.9+9.7 | 14.0 vs 10.5+12.9 | 14.0 vs 12.6+15.5 |
+| ankylosaurus | 7.2 vs 3.9+3.3 | 14.0 vs 7.8+6.6 | 14.0 vs 11.7+9.9 | 14.0 vs 15.6+13.2 | 14.0 vs 18.7+15.9 |
+| spinosaurus | 6.0 vs 2.8+3.3 | 12.1 vs 5.5+6.5 | 14.0 vs 8.3+9.8 | 14.0 vs 11.1+13.1 | 14.0 vs 13.3+15.7 |
+| mosasaurus | 5.2 vs 1.7+3.5 | 10.4 vs 3.4+7.0 | 14.0 vs 5.1+10.6 | 14.0 vs 6.7+14.1 | 14.0 vs 8.1+16.9 |
+| quetzalcoatlus | 4.1 vs 4.1+0.0 | 8.2 vs 8.2+0.0 | 12.3 vs 12.3+0.0 | 14.0 vs 16.4+0.0 | 14.0 vs 19.7+0.0 |
+
+**Table 2, all 22 species (body width x length at growth 1; cell = raw radius / capped radius (today) / capsule `radius+halfSpan`; studs):**
+| Species (body W x L at growth 1) | growth 1 | growth 2 | growth 3 | growth 4 | growth 4.8 |
+|---|---|---|---|---|---|
+| microraptor (7.1 x 5.3) | 3.6 / 3.6 / 3.6+0.0 | 7.1 / 7.1 / 7.1+0.0 | 10.7 / 10.7 / 10.7+0.0 | 14.2 / 14.0 / 14.2+0.0 | 17.1 / 14.0 / 17.1+0.0 |
+| dimorphodon (5.8 x 5.7) | 2.9 / 2.9 / 2.9+0.0 | 5.8 / 5.8 / 5.8+0.0 | 8.6 / 8.6 / 8.6+0.0 | 11.5 / 11.5 / 11.5+0.0 | 13.8 / 13.8 / 13.8+0.0 |
+| archaeopteryx (7.2 x 5.9) | 3.6 / 3.6 / 3.6+0.0 | 7.2 / 7.2 / 7.2+0.0 | 10.8 / 10.8 / 10.8+0.0 | 14.3 / 14.0 / 14.3+0.0 | 17.2 / 14.0 / 17.2+0.0 |
+| pteranodon (7.1 x 6.9) | 3.5 / 3.5 / 3.5+0.0 | 7.1 / 7.1 / 7.1+0.0 | 10.6 / 10.6 / 10.6+0.0 | 14.1 / 14.0 / 14.1+0.0 | 17.0 / 14.0 / 17.0+0.0 |
+| compy (3.5 x 7.7) | 3.8 / 3.8 / 1.7+2.1 | 7.7 / 7.7 / 3.5+4.2 | 11.5 / 11.5 / 5.2+6.3 | 15.4 / 14.0 / 7.0+8.4 | 18.5 / 14.0 / 8.4+10.1 |
+| raptor (3.5 x 7.7) | 3.9 / 3.9 / 1.7+2.1 | 7.7 / 7.7 / 3.5+4.2 | 11.6 / 11.6 / 5.2+6.4 | 15.5 / 14.0 / 7.0+8.5 | 18.6 / 14.0 / 8.4+10.2 |
+| gallimimus (2.4 x 7.8) | 3.9 / 3.9 / 1.2+2.7 | 7.8 / 7.8 / 2.4+5.4 | 11.7 / 11.7 / 3.6+8.0 | 15.6 / 14.0 / 4.8+10.7 | 18.7 / 14.0 / 5.8+12.9 |
+| quetzalcoatlus (8.2 x 8.0) | 4.1 / 4.1 / 4.1+0.0 | 8.2 / 8.2 / 8.2+0.0 | 12.3 / 12.3 / 12.3+0.0 | 16.4 / 14.0 / 16.4+0.0 | 19.7 / 14.0 / 19.7+0.0 |
+| pachycephalosaurus (4.5 x 8.4) | 4.2 / 4.2 / 2.3+2.0 | 8.4 / 8.4 / 4.5+3.9 | 12.6 / 12.6 / 6.8+5.9 | 16.9 / 14.0 / 9.0+7.8 | 20.2 / 14.0 / 10.8+9.4 |
+| triceratops (5.8 x 8.6) | 4.3 / 4.3 / 2.9+1.4 | 8.6 / 8.6 / 5.8+2.8 | 12.9 / 12.9 / 8.7+4.2 | 17.2 / 14.0 / 11.6+5.6 | 20.6 / 14.0 / 13.9+6.7 |
+| ichthyosaurus (3.8 x 8.6) | 4.3 / 4.3 / 1.9+2.4 | 8.6 / 8.6 / 3.8+4.8 | 12.9 / 12.9 / 5.7+7.2 | 17.2 / 14.0 / 7.6+9.7 | 20.7 / 14.0 / 9.1+11.6 |
+| plesiosaurus (4.8 x 8.6) | 4.3 / 4.3 / 2.4+1.9 | 8.6 / 8.6 / 4.8+3.8 | 12.9 / 12.9 / 7.2+5.7 | 17.2 / 14.0 / 9.6+7.6 | 20.7 / 14.0 / 11.5+9.1 |
+| brachiosaurus (3.7 x 8.7) | 4.4 / 4.4 / 1.9+2.5 | 8.7 / 8.7 / 3.7+5.0 | 13.1 / 13.1 / 5.6+7.5 | 17.5 / 14.0 / 7.5+10.0 | 21.0 / 14.0 / 9.0+12.0 |
+| parasaurolophus (5.3 x 9.1) | 4.5 / 4.5 / 2.6+1.9 | 9.1 / 9.1 / 5.3+3.8 | 13.6 / 13.6 / 7.9+5.7 | 18.2 / 14.0 / 10.6+7.6 | 21.8 / 14.0 / 12.7+9.1 |
+| baryonyx (4.0 x 9.3) | 4.7 / 4.7 / 2.0+2.7 | 9.3 / 9.3 / 4.0+5.3 | 14.0 / 14.0 / 6.0+8.0 | 18.7 / 14.0 / 8.0+10.7 | 22.4 / 14.0 / 9.6+12.8 |
+| therizinosaurus (4.9 x 10.2) | 5.1 / 5.1 / 2.5+2.7 | 10.2 / 10.2 / 4.9+5.3 | 15.4 / 14.0 / 7.4+8.0 | 20.5 / 14.0 / 9.8+10.7 | 24.6 / 14.0 / 11.8+12.8 |
+| mosasaurus (3.4 x 10.4) | 5.2 / 5.2 / 1.7+3.5 | 10.4 / 10.4 / 3.4+7.0 | 15.6 / 14.0 / 5.1+10.6 | 20.8 / 14.0 / 6.7+14.1 | 25.0 / 14.0 / 8.1+16.9 |
+| tyrannosaurus (5.3 x 10.4) | 5.2 / 5.2 / 2.7+2.6 | 10.4 / 10.4 / 5.3+5.1 | 15.6 / 14.0 / 8.0+7.7 | 20.8 / 14.0 / 10.6+10.2 | 25.0 / 14.0 / 12.7+12.2 |
+| elasmosaurus (4.0 x 10.7) | 5.4 / 5.4 / 2.0+3.4 | 10.7 / 10.7 / 4.0+6.8 | 16.1 / 14.0 / 5.9+10.2 | 21.5 / 14.0 / 7.9+13.6 | 25.8 / 14.0 / 9.5+16.3 |
+| stegosaurus (5.2 x 11.7) | 5.8 / 5.8 / 2.6+3.2 | 11.7 / 11.7 / 5.2+6.4 | 17.5 / 14.0 / 7.9+9.7 | 23.4 / 14.0 / 10.5+12.9 | 28.1 / 14.0 / 12.6+15.5 |
+| spinosaurus (5.5 x 12.1) | 6.0 / 6.0 / 2.8+3.3 | 12.1 / 12.1 / 5.5+6.5 | 18.1 / 14.0 / 8.3+9.8 | 24.1 / 14.0 / 11.1+13.1 | 28.9 / 14.0 / 13.3+15.7 |
+| ankylosaurus (7.8 x 14.4) | 7.2 / 7.2 / 3.9+3.3 | 14.4 / 14.0 / 7.8+6.6 | 21.6 / 14.0 / 11.7+9.9 | 28.8 / 14.0 / 15.6+13.2 | 34.6 / 14.0 / 18.7+15.9 |
+
+**Open for the owner (combat feel):** (a) does a body-shaped zone feel fair on a phone, or does a flat margin help (up to 0.5 stud per side keeps the "not wider than the body" check)? (b) fliers are hit across the whole wingspan (their real width); the alternative is the body length, which shrinks them. (c) keep the capped circle as the default, or switch to the capsule once a Studio hit test exists? Until the owner picks, the switch stays `"circle"`.
+
+### Task effects (2026-10-17, hit zone proposal)
+- BD-245 (Review / test): `HitSize.capsule / zone / reach / gap`, `CombatConfig.HitZoneRule` (default `"circle"`), `HitCapsuleRadiusMax`, `HitCapsuleSpanMax`, `tools/verify_hit_zone.py` (CI). Offline only; combat is OFF and not changed.
 
 ## LEAD decision (owner delegated 2026-10-16) on 2026-10-17: BIG dinosaurs and the camera distance cap (BD-513)
 | # | Decision | Why | Source |
