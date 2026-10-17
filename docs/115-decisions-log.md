@@ -198,3 +198,13 @@ The owner delegated these on 2026-10-16: "just merge, take full autonomy, do dec
 
 ### Task effects (2026-10-17, admin Mutation chance)
 - BD-237 stays Review / test: still only the lead's Studio check is open (now: the owner's own eggs mutate at x10 and a friend's do not). Overrules the earlier "server-wide by design" note in docs/79 and docs/111 s8.
+
+## LEAD decisions 2026-10-17 (owner delegated): rollback rule and texture upload size
+| # | Decision | Why | Source |
+|---|---|---|---|
+| RB1 | **LEAD (owner delegated):** accept the BD-354 rollback lock-out as the rule. A rollback goes only to the **previous playtest tag**, never to Build 020 once anyone has caught an Epic/Legendary or bought a newer potion; Build 020 keeps refusing those profiles fail-closed (`SchemaError`). No rollback-safe floor field is written, and no stored value is changed. | Failing closed protects saves; a floor field would be a new persistent write for a case the playtest does not need. Revisit before a public release. | docs/111, BD-354 |
+| TX1 | **LEAD (owner delegated):** new UI, FX and weather textures are uploaded at **512 px max** per side (256 px when the art reads the same on a phone), unless the art needs more and the reason is written in docs/77. | docs/146 forecast: the 55 still-empty slots cost 199 MiB at source size versus 56 MiB at 512 px, against a proposed 200 MiB phone scene budget. | docs/146 risk 1 |
+
+### Task effects (2026-10-17, rollback and textures)
+- BD-354 is decided (RB1). The BD-320 owner drill still runs against the previous playtest tag.
+- Upload batches (tools/upload_batch.py, docs/120) follow TX1. Dino part textures at 512 px on phone stay a separate code task under BD-085.

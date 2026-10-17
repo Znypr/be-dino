@@ -33,7 +33,10 @@ PLAYERS, SPAWN, HALF = 12, (0, 30), 416  # HALF = Config.ArenaHalfWidth (260 x 1
 # 'shipped' = the ids in the source file (all empty today, so nothing new is placed and the world is exactly the pre-BD-463 grammar; after the owner
 # pastes ids it measures the real thing), 'empty' = every id blanked (the legacy reference), 'fake' = every id filled with a made-up numeric id to preview
 # the placement of the new Blender plants and ground props before the upload (tools/verify_world_props.py). Fake ids are never written to a file.
+# 'all' = 'fake' PLUS fake ids for the V3 tree replacements (Generated.Replacements): the replaced kit ids then cost the V3 FBX triangles (726 / 462 / 700,
+# measured in Blender) instead of the GEN_TRIS estimate of a Roblox-generated mesh. Used by tools/qa/phone_forecast.py ("everything uploaded", docs/146).
 PROPS_IDS = 'shipped'
+EMIT_VIS = False  # True: also dump the visual mesh key of every kit id (V lines), for the draw-call lower bound in tools/qa/phone_forecast.py
 HP_UPDATE_BYTES = 24  # ESTIMATE: one SetAttribute("HpByte") replication (name + byte + instance ref + framing)
 
 
@@ -46,6 +49,19 @@ for _,p in a do print(string.format("P %s %s %.2f %.2f %s",p.layer,p.id,p.x,p.z,
 for id,d in Kit do
  local gen=(Generated.KitMap[id]~=nil or Generated.BareIds[id]~=nil)
  print(string.format("K %s %d %d %d",id,d.triangles,#d.colliders,if gen then 1 else 0))
+end
+'''
+
+# 'all' mode (or EMIT_VIS): "R <kit id> <V3 key>" for the kit ids whose generated tree mesh is replaced by a V3 FBX (Arena.generatedProp: Generated.visualFor ->
+# replacementFor), and "V <kit id> <visual mesh key>" for every kit id (the mesh it is drawn with: V3 key, else the generated key, else itself;
+# tools/qa/phone_forecast.py counts the unique ones as the instanced draw-call lower bound). The triangles of a V3 key come from v3_tris().
+# The colossal layer is excluded on the Python side (ancient meshes or stand-ins decide those, see COLOSSAL_DUMP).
+REPL_DUMP = r'''
+for id,_ in Kit do
+ local key=Generated.KitMap[id]
+ local v3=if key then Generated.replacementFor(key) else nil
+ if v3 then print(string.format("R %s %s",id,v3)) end
+ print(string.format("V %s %s",id,v3 or key or id))
 end
 '''
 
@@ -90,14 +106,25 @@ def luau_script(cfg_text, density_from_config, colossal=False):
     pre += 'local Generated=' + vwa.wrapped('src/shared/WorldGeneratedMeshes.luau') + '\n'
     pre += 'local Rules=' + vwa.wrapped('src/shared/ColossalRules.luau') + '\n'
     pre += 'local DENSITY=%s\n' % ('Config.WorldArtDensity' if density_from_config else '1')
-    if PROPS_IDS == 'fake':
+    if PROPS_IDS in ('fake', 'all'):
         pre += 'do local n=0 for _,e in Generated.Props do n+=1 e.assetId=tostring(100000000+n) end end\n'
+        if PROPS_IDS == 'all':
+            pre += 'do local n=0 for _,e in Generated.Replacements do n+=1 e.assetId=tostring(200000000+n) end end\n'
     elif PROPS_IDS == 'empty':
         pre += 'for _,e in Generated.Props do e.assetId="" end\n'
     pre += 'Kit=Biome.withProps(Kit,Generated.Props)\nMeshes=Biome.propMeshes(Meshes,Generated.Props)\n'
     pre += ('local a=Biome.generate({seed=Config.WorldArtSeed,density=DENSITY,extent=Config.ArenaHalfWidth,height=Layout.height,'
             'kit=Kit,meshes=Meshes,map=BiomeMap,layout=Layout,props=Generated.Props})\n')
-    return pre + DUMP + (COLOSSAL_DUMP if colossal else '')
+    return pre + DUMP + (REPL_DUMP if PROPS_IDS == 'all' or EMIT_VIS else '') + (COLOSSAL_DUMP if colossal else '')
+
+
+def v3_tris():
+    """V3 tree key -> triangles of its Blender FBX (the source table has no tris field, only the comment 'world_tree_x_v3.fbx, 726 tris')."""
+    src = (ROOT / 'src/shared/WorldGeneratedMeshes.luau').read_text()
+    pat = r'(tree_\w+_v3) = \{assetId = "\d*", placed = true, replaces = "\w+"\}, -- \S+, (\d+) tris'
+    out = {m.group(1): int(m.group(2)) for m in re.finditer(pat, src)}
+    assert len(out) == 3, 'three V3 tree replacements with a triangle count in their comment: %s' % sorted(out)
+    return out
 
 
 def run_profile(runner, name):
@@ -109,7 +136,7 @@ def run_profile(runner, name):
         out = subprocess.run([runner, str(p)], capture_output=True, text=True)
         if out.returncode:
             raise SystemExit(out.stdout[-1500:] + out.stderr)
-    props, kit, colossal = [], {}, {}
+    props, kit, colossal, repl, vis = [], {}, {}, {}, {}
     for l in out.stdout.splitlines():
         f = l.split()
         if not f:
@@ -121,12 +148,31 @@ def run_profile(runner, name):
             props.append(dict(layer=f[1], id=f[2], x=float(f[3]), z=float(f[4]), biome=f[5]))
         elif f[0] == 'K':
             kit[f[1]] = dict(tris=int(f[2]), colliders=int(f[3]), gen=f[4] == '1')
+        elif f[0] == 'R':
+            repl[f[1]] = f[2]
+        elif f[0] == 'V':
+            vis[f[1]] = f[2]
+    for k, v in vis.items():
+        kit[k]['vis'] = v
+    if repl:
+        tris = v3_tris()
+        for k, v in repl.items():
+            kit[k]['v3'] = tris[v]
     return props, kit, cfg, colossal
 
 
-def tris_of(p, kit):
+def eff(p, kit):
+    """(generated-mesh estimate?, measured triangles) of one placement. A V3 tree replacement ('all' mode only) is a measured FBX, not an estimate;
+    the colossal layer is never replaced this way (ancient meshes or stand-ins decide it, COLOSSAL_DUMP)."""
     k = kit[p['id']]
-    return GEN_TRIS if k['gen'] else k['tris']  # all kit ids are MeshParts now (verify_world_art asserts it)
+    if 'v3' in k and p['layer'] != 'colossal':
+        return False, k['v3']
+    return k['gen'], k['tris']
+
+
+def tris_of(p, kit):
+    gen, tris = eff(p, kit)
+    return GEN_TRIS if gen else tris  # all kit ids are MeshParts now (verify_world_art asserts it)
 
 
 def culling(props, kit, radius, budget, hyst, centre):
@@ -135,8 +181,9 @@ def culling(props, kit, radius, budget, hyst, centre):
     order = sorted((((p['x'] - centre[0]) ** 2 + (p['z'] - centre[1]) ** 2), i) for i, p in enumerate(props))
     inside = [i for d, i in order if d <= r2]
     within, kept = len(inside), inside[:budget]
-    gen = sum(1 for i in kept if kit[props[i]['id']]['gen'])
-    fixed = sum(kit[props[i]['id']]['tris'] for i in kept if not kit[props[i]['id']]['gen'])  # measured kit meshes
+    effs = [eff(props[i], kit) for i in kept]
+    gen = sum(1 for g, _ in effs if g)
+    fixed = sum(t for g, t in effs if not g)  # measured kit meshes
     return within, len(kept), fixed + gen * GEN_TRIS, gen, fixed
 
 
@@ -159,7 +206,7 @@ def estimate(runner):
                 row['props'] += 1
                 row['colliders'] += kit[p['id']]['colliders']
                 row['tris'] += tris_of(p, kit)
-                row['gen'] += kit[p['id']]['gen']
+                row['gen'] += eff(p, kit)[0]
         P['mesh_parts'] = len(props)
         P['collider_parts'] = sum(r['colliders'] for r in P['by_kind'].values())
         P['tris_total'] = sum(r['tris'] for r in P['by_kind'].values())
