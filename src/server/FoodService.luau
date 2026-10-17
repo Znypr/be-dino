@@ -159,7 +159,8 @@ function FoodService.start(dinosaur,repository)
                 local meshPickup = false
                 if kitMode then
                     local ok, model = pcall(Resources.clone, artId)
-                    local mesh = if ok and model then model:FindFirstChildWhichIsA("MeshPart") else nil
+                    if not ok then model = nil end -- a clone that RAISES leaves the error string in `model`; never call :Destroy() on it (docs/152)
+                    local mesh = if model then model:FindFirstChildWhichIsA("MeshPart") else nil
                     -- BD-387: every second fruit is the generated drumstick (WorldGeneratedMeshes.food_drumstick, same 4 points).
                     -- Missing/failed load keeps the kit fruit; the roll is deterministic so placement never changes.
                     local drum = generated and generated:FindFirstChild("food_drumstick")
