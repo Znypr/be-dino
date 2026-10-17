@@ -10,7 +10,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Feedback = require(ReplicatedStorage.Shared.PlaytestFeedback)
 
 local FeedbackService = {}
-local sessions: {[Player]: {[string]: any}} = {}
+local sessions: {[number]: {[string]: any}} = {} -- BD-618 (f): keyed by UserId and kept after a leave, so a rejoin does not reset the 1-per-2-min / 10-per-session limits (memory only)
 
 local function enabled(): boolean
     return (Config :: any).PlaytestFeedbackEnabled == true
@@ -38,19 +38,23 @@ function FeedbackService.start()
     local remote = Instance.new("RemoteEvent")
     remote.Name = "PlaytestFeedback"
     remote.Parent = folder
+    local hooked: {[Player]: boolean} = setmetatable({}, {__mode = "k"}) :: any
     local function join(player: Player)
-        if sessions[player] then return end
-        local session = Feedback.newSession()
-        sessions[player] = session
+        if hooked[player] then return end
+        hooked[player] = true
+        local session = sessions[player.UserId]
+        if not session then
+            session = Feedback.newSession()
+            sessions[player.UserId] = session
+        end
         player:GetAttributeChangedSignal("Location"):Connect(function()
             if player:GetAttribute("Location") == "Island" then session.runs += 1 end
         end)
     end
     Players.PlayerAdded:Connect(join)
     for _, player in Players:GetPlayers() do join(player) end
-    Players.PlayerRemoving:Connect(function(player) sessions[player] = nil end)
     remote.OnServerEvent:Connect(function(player: Player, payload: any)
-        local session = sessions[player]
+        local session = sessions[player.UserId]
         local clean = Feedback.sanitize(payload)
         if not session or not clean then return end
         local ok, reason = Feedback.allow(session, os.clock())

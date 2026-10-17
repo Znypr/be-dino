@@ -762,6 +762,20 @@ local function advanceNests(profile: any, now: number)
     if typeof(profile.eggNests) == "table" then NestQueue.advance(profile.eggNests, now, Config.NestIncubationSeconds) end
 end
 
+-- BD-615 (docs/151 F5): would a settlement that earns NOTHING still change the stored profile? Its transaction also moves time-driven state forward
+-- (the run-egg bank into the queue, the one-at-a-time nest incubation). True when that would change anything, so such a settlement keeps its write;
+-- false means the empty write would only add a ledger entry, so commitRunSettlement may skip it. Reads only, never mutates the profile.
+local function settlementAdvancesState(profile: any, now: number): boolean
+    if typeof(profile.runEggBank) == "table" and #profile.runEggBank > 0 then return true end
+    if typeof(profile.pendingChestGrants) == "number" and profile.pendingChestGrants > 0 then return true end
+    if typeof(profile.eggNests) == "table" then
+        local copy = {}
+        for i, nest in profile.eggNests do copy[i] = if typeof(nest) == "table" then table.clone(nest) else nest end
+        if NestQueue.advance(copy, now, Config.NestIncubationSeconds) then return true end
+    end
+    return false
+end
+
 -- Old (Build 020) nests/pendingNests become v2 records that keep their precommitted eggs, so
 -- nothing is lost: ready ones are ready, the first unready slotted one keeps its readyAt and
 -- incubates, everything else waits in the one-at-a-time queue. Idempotent (fields are cleared).
@@ -1092,6 +1106,7 @@ local shared = {
     findOperation = findOperation,
     handleLeaseLost = handleLeaseLost,
     hasSettledRun = hasSettledRun,
+    settlementAdvancesState = settlementAdvancesState,
     identityAvailable = identityAvailable,
     identityPersistent = identityPersistent,
     isValidProfile = isValidProfile,

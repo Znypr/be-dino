@@ -17,6 +17,7 @@ local RewardMath = shared.RewardMath
 local admit = shared.admit
 local adopt = shared.adopt
 local advanceNests = shared.advanceNests
+local settlementAdvancesState = shared.settlementAdvancesState
 local bankEggs = shared.bankEggs
 local findOperation = shared.findOperation
 local handleLeaseLost = shared.handleLeaseLost
@@ -89,6 +90,12 @@ local function runRewardText(outcome): string
     return table.concat(parts, " + ")
 end
 
+-- BD-615 (docs/151 F5): a run that earned nothing (0 eggs, 0 crystals, 0 nests, 0 XP, no egg events) is settled in memory when the stored profile would
+-- not change anyway (no banked eggs, no nest to advance, state Loaded): the ledger entry it would write is the only difference. Its run id is
+-- remembered for the session so a repeat is answered "duplicate" exactly like a stored one. Everything else about the settlement is unchanged.
+local emptyRunsSettled: {[Player]: {order: {string}, byId: {[string]: any}}} = setmetatable({}, {__mode = "k"}) :: any
+local EMPTY_RUN_MEMORY = 64
+
 -- BD-044 settlement: catches -> exactly that many run eggs (capped per run), plus
 -- deterministic crystals and separate bonus nests. Every random draw is committed
 -- before UpdateAsync; settledRuns + recentOperations make the run exactly-once.
@@ -119,6 +126,13 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
         PrivateState.set(player, "LastSettledRunId", runId)
         return true, if cachedOperation then cachedOperation.outcome else nil, "duplicate"
     end
+    local emptyMemory = emptyRunsSettled[player]
+    if emptyMemory and emptyMemory.byId[runId] ~= nil then
+        PrivateState.set(player, "LastSettledRunId", runId)
+        return true, emptyMemory.byId[runId], "duplicate" -- an empty run settled in memory earlier this session (BD-615)
+    end
+    local skipWrite = priorState == "Loaded" and eggCount == 0 and outcome.crystals == 0 and nestsEarned == 0 and (outcome.accountXP or 0) == 0
+        and (eggEvents == nil or #eggEvents == 0) and not settlementAdvancesState(cached, os.time())
 
     -- BD-479: `nestWeather` is the run's per-nest ledger ({"rain", "clear", ...}, index = nest ordinal, recorded when each nest was
     -- found) or, from legacy callers, one weather id for every nest. Each nest below takes its own entry through
@@ -157,7 +171,19 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     local duplicateOutcome = nil
     local now = os.time()
 
-    local ok, updated = retrySettlement("run settlement", function()
+    local ok, updated = true, cached
+    if skipWrite then
+        outcome.nestCount, outcome.nestFull, outcome.nestCrystals = 0, false, 0 -- what the transaction below would record for a run with nothing earned
+        local memory = emptyRunsSettled[player]
+        if not memory then
+            memory = {order = {}, byId = {}}
+            emptyRunsSettled[player] = memory
+        end
+        memory.byId[runId] = outcome
+        table.insert(memory.order, runId)
+        while #memory.order > EMPTY_RUN_MEMORY do memory.byId[table.remove(memory.order, 1) :: string] = nil end
+    else
+    ok, updated = retrySettlement("run settlement", function()
         return store:UpdateAsync(keyFor(player), function(profileValue)
             leaseLost, invalid, duplicate, duplicateOutcome = false, false, false, nil
             if not isValidProfile(profileValue) then invalid = true return nil end
@@ -213,6 +239,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
             return profileValue
         end)
     end, maxAttempts)
+    end
 
     if not ok or updated == nil then
         if leaseLost then
@@ -231,8 +258,10 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
 
     local pendingRun = pendingSettlements[player]
     if pendingRun and pendingRun.runId == runId then pendingSettlements[player] = nil end
-    adopt(player, updated)
-    if profiles[player] then syncAttributes(player, profiles[player]) end
+    if not skipWrite then
+        adopt(player, updated)
+        if profiles[player] then syncAttributes(player, profiles[player]) end
+    end
     local committedOutcome = if duplicate then duplicateOutcome else outcome
     if committedOutcome then
         PrivateState.set(player, "LastRewardText", runRewardText(committedOutcome))

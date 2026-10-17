@@ -1,5 +1,5 @@
 --!strict
--- BD-246: Fly glide and (BD-595) Fly hover cap. Holding jump in the air tells the server (one boolean) and, since BD-593, slows the fall HERE: the character is
+-- BD-246: Fly glide and (BD-595) Fly hover cap. Holding jump in the air slows the fall HERE (BD-618 (a): nothing is sent to the server any more, it never read the flag): the character is
 -- owned by this client, so the server's own velocity write (ClassMovementService hover loop) never reached it (measured: fall 40 to 58
 -- studs/s with the glide held, cap 12). The per-frame decision is Shared/ClassMovement.glideStep (pure, tools/verify_class_movement.py).
 -- BD-595: the hover cap (6.5 studs, measured at the FEET, not the root centre; a leap is exempt) is applied here in the same single write,
@@ -14,14 +14,12 @@ local CM = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ClassM
 local player = Players.LocalPlayer
 local folder = ReplicatedStorage:WaitForChild("BeDinoRemotes", 60)
 local found = if folder then folder:WaitForChild("ClassGlide", 5) else nil
-if not found or not found:IsA("RemoteEvent") then return end
-local remote: RemoteEvent = found
+if not found or not found:IsA("RemoteEvent") then return end -- the RemoteEvent is only the "class rules are on" marker; the server has no handler for it
 
 local held = false
 local function set(value: boolean)
     if held == value then return end
     held = value
-    remote:FireServer(value)
 end
 local function isFly(): boolean
     return CM.classForSpecies(player:GetAttribute("EquippedSpeciesId")) == "Fly"
