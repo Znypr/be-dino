@@ -63,6 +63,19 @@ function M.layout()
     task.defer(M.enforce) -- the canvas may have been resized while a screen is open
 end
 
+-- BD-531: the body height (design px) that is on screen without scrolling: 402 on desktop, the scroller height on a phone canvas. Screens that
+-- can fit a short canvas (Eggs, Go home) lay themselves out inside it instead of relying on the scroll.
+function M.bodyHeight(): number
+    local m = if ctx then M.model() else nil
+    if m and m.mode == "compact" then return math.floor(m.bodyH) end
+    return 402
+end
+
+function M.bodyScale(): number
+    local m = if ctx then M.model() else nil
+    return if m then m.scale else 1
+end
+
 -- Body position for open(): desktop slides from y=106 to 98, compact slides from 8 to 0 inside the scroller.
 function M.place(settled: boolean, motion: boolean): UDim2
     local m = model or M.model()
@@ -85,7 +98,7 @@ function M.enforce()
     local c, m = ctx, model
     if not c or not m or m.mode ~= "compact" then return end
     local body = c.body
-    local bottom = 402
+    local bottom = 0 -- BD-531: content that fits the scroller no longer gets a scroll bar from a 402 px minimum (see the Y-scale case below)
     for _, d in body:GetDescendants() do
         if d:IsA("TextLabel") or d:IsA("TextButton") then
             local object = d :: TextLabel
@@ -109,12 +122,14 @@ function M.enforce()
     for _, child in body:GetChildren() do
         if child:IsA("GuiObject") and child.Visible and child.Size.Y.Scale == 0 and child.Position.Y.Scale == 0 then
             bottom = math.max(bottom, child.Position.Y.Offset + child.Size.Y.Offset)
+        elseif child:IsA("GuiObject") and child.Visible then
+            bottom = math.max(bottom, 402) -- scale-sized or scale-placed children keep the old full-body canvas
         end
     end
     local s = scroller
     if s then
         local width = if m.scrollX then 4 + 824 + 8 else 0
-        s.CanvasSize = UDim2.fromOffset(width, bottom + 12)
+        s.CanvasSize = UDim2.fromOffset(width, if bottom <= m.bodyH then 0 else bottom + 12) -- BD-531: content that fits the scroller gets no scroll
     end
 end
 

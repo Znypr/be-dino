@@ -12,7 +12,7 @@ local Theme = require(Shared:WaitForChild("UITheme"))
 local PhoneScale = require(Shared:WaitForChild("PhoneScale"))
 
 local Panel = {}
-local state = {dinos = nil :: any, species = {found = 0, owned = 0, total = 0} :: any, dirty = true}
+local state = {dinos = nil :: any, species = {found = 0, owned = 0, total = 0} :: any, dirty = true, width = 260}
 
 -- Bootstrap feeds data through these two calls (no new top-level locals there).
 function Panel.setDinos(dinos: any) state.dinos, state.dirty = dinos, true end
@@ -66,7 +66,7 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject, opts: any)
             r.fill.BackgroundColor3 = if l.done then C.gold else C.accent
             r.line.Visible, r.step.Visible, r.bar.Visible = not folded, not folded, not folded
         end
-        root.Size = UDim2.fromOffset(260, if folded then HEADER_H else HEADER_H + 2 + #rows * 56)
+        root.Size = UDim2.fromOffset(state.width, if folded then HEADER_H else HEADER_H + 2 + #rows * 56)
         header.Text = Rules.Title .. (if folded then "  (tap)" else "")
     end
     header.Activated:Connect(function() folded = not folded render() end)
@@ -88,6 +88,18 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject, opts: any)
         local s = PhoneScale.floorScale(lineScale, HEADER_H, 14)
         scale.Scale = s
         root.Position = UDim2.fromOffset(anchor.Position.X.Offset + anchor.Size.X.Offset * lineScale - 260 * s, anchor.Position.Y.Offset + 34 * lineScale)
+        -- BD-531: on the phone layout TouchLayout reserves the folded header's spot (wallet width, clear of the rail and the weather column) and
+        -- publishes it as GoalsRect; the panel grows to its full 260 px only while it is open.
+        local reserved = gui:GetAttribute("GoalsRect")
+        if typeof(reserved) == "Rect" then
+            s = reserved.Height / HEADER_H
+            scale.Scale = s
+            state.width = if folded then reserved.Width / s else 260
+            root.Position = UDim2.fromOffset(reserved.Max.X - state.width * s, reserved.Min.Y)
+            root.Size = UDim2.fromOffset(state.width, root.Size.Y.Offset)
+        else
+            state.width = 260
+        end
         if state.dirty then
             state.dirty = false
             render()

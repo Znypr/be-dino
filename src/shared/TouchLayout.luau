@@ -23,6 +23,13 @@ TouchLayout.ACTION = {w = 244, h = 60}
 -- Desktop: straight above the egg plate (x of the plate, 8 px gap), else right of it, so it never covers "EGGS N". Touch: bottom-left corner
 -- (the egg plate is top-left there). Bootstrap publishes the rect as the FeedbackRect attribute of the BeDinoUI gui; FeedbackClient places itself on it.
 TouchLayout.FEEDBACK = {w = 120, h = 48, gap = 8}
+-- BD-531: the Studio/admin "Admin" button (AdminPanel). Desktop keeps its old top-left spot (14, 8); on the phone layout that spot is the
+-- egg plate, so it goes in the bottom-left row next to Tell us! (never on a HUD piece). Bootstrap publishes it as the AdminRect attribute.
+TouchLayout.ADMIN = {w = 120, h = 48, desktopX = 14, desktopY = 8}
+-- BD-531: the hub Goals panel (GoalsPanel.luau): a 44 px tall header under the goal line, right edge on the wallet's right edge, at the scale
+-- PhoneScale.floorScale gives (1:1 on phones). On the phone layout the FOLDED header is only as wide as the wallet (at least MinW), so it
+-- never reaches under the rail; the panel grows to its 260 px width only while the player has it open. Bootstrap publishes the rect as GoalsRect.
+TouchLayout.GOALS = {w = 260, h = 44, dy = 34, minW = 130}
 
 -- BD-378: where the toast stack goes. The Crystals plate (top right) has the goal line ("Level 1: 0/100 XP") right under it;
 -- the stack is TOAST.w wide, centred, and used to sit at y = 80 (y = 4 with a menu open), which covers both on any canvas
@@ -30,9 +37,22 @@ TouchLayout.FEEDBACK = {w = 120, h = 48, gap = 8}
 -- unchanged when it already is, else slid left of the plates (if it still fits on screen), else dropped below them.
 TouchLayout.TOAST = {w = 440, h = 186, runY = 80, menuY = 4, gap = 8}
 TouchLayout.GOAL_H, TouchLayout.GOAL_GAP = 30, 4 -- Bootstrap places the goal line at crystal.y + crystal.h * scale + GOAL_GAP, GOAL_H * scale tall
+function TouchLayout.goalsRect(crystal): Rect
+    local G = TouchLayout.GOALS
+    local s = PhoneScale.floorScale(crystal.scale, G.h, 14)
+    local w = math.max(crystal.w * crystal.scale, G.minW)
+    local right = crystal.x + crystal.w * crystal.scale
+    return {x = right - w, y = crystal.y + crystal.h * crystal.scale + TouchLayout.GOAL_GAP + G.dy * crystal.scale, w = w, h = G.h * s}
+end
 function TouchLayout.walletPlates(layout): Rect
     local c = layout.crystal
-    return {x = c.x, y = c.y, w = c.w * c.scale, h = c.h * c.scale + TouchLayout.GOAL_GAP + TouchLayout.GOAL_H * c.scale}
+    local plates = {x = c.x, y = c.y, w = c.w * c.scale, h = c.h * c.scale + TouchLayout.GOAL_GAP + TouchLayout.GOAL_H * c.scale}
+    local g = layout.goals -- BD-531: the hub Goals header hangs under the goal line and reaches further left than the wallet
+    if g then
+        local x, y = math.min(plates.x, g.x), math.min(plates.y, g.y)
+        plates = {x = x, y = y, w = math.max(plates.x + plates.w, g.x + g.w) - x, h = math.max(plates.y + plates.h, g.y + g.h) - y}
+    end
+    return plates
 end
 -- Returns (x shift from the screen centre, top y). `shift` is the caller's own slide (the admin panel); `plates` may be nil.
 function TouchLayout.toastPlacement(width: number, toastScale: number, plates: Rect?, menuOpen: boolean, shift: number): (number, number)
@@ -143,6 +163,7 @@ local function desktop(width: number, height: number, count: number)
     local result = {
         touch = false,
         feedback = {x = 0, y = 0, w = 0, h = 0} :: Rect, -- BD-507: filled below, once the rest of the layout is known
+        admin = {x = TouchLayout.ADMIN.desktopX, y = TouchLayout.ADMIN.desktopY, w = TouchLayout.ADMIN.w, h = TouchLayout.ADMIN.h} :: Rect, -- BD-531: desktop spot unchanged
         reserved = {},
         crystal = {x = crystalX, y = 8, scale = crystalScale, w = TouchLayout.CRYSTAL.w, h = TouchLayout.CRYSTAL.h},
         hud = hud,
@@ -161,7 +182,8 @@ local function desktop(width: number, height: number, count: number)
     return result
 end
 
-function TouchLayout.compute(params: {width: number, height: number, touch: boolean, navCount: number, thumb: Rect?, jump: Rect?})
+-- `goals` (BD-531): true while the hub Goals header is on screen (out of a run, after the first egg); the right-hand column then starts under it.
+function TouchLayout.compute(params: {width: number, height: number, touch: boolean, navCount: number, thumb: Rect?, jump: Rect?, goals: boolean?})
     local width, height, count = params.width, params.height, params.navCount
     -- BD-333: a short canvas (phone landscape) always gets the phone layout, even when Studio/PC reports a mouse.
     if not (params.touch or PhoneScale.isCompact(height)) then return desktop(width, height, count) end
@@ -214,6 +236,11 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
     local columnX = width - m - TouchLayout.TIMERS_W * timersScale
     local top = crystal.y + crystal.h * crystal.scale + m
     if rail.x + rail.w > columnX then top = math.max(top, rail.y + rail.h + m) end
+    local goals: Rect? = if params.goals then TouchLayout.goalsRect(crystal) else nil
+    if goals and goals.x < rail.x + rail.w and rail.x < goals.x + goals.w and goals.y < rail.y + rail.h + m then
+        goals.y = rail.y + rail.h + m -- BD-531: on a narrow canvas the header reaches under the rail: it starts below the rail (GoalsPanel follows the GoalsRect attribute)
+    end
+    if goals and goals.x + goals.w > columnX then top = math.max(top, goals.y + goals.h + m) end -- BD-531: weather/leap never sit under the Goals header
     local bottom = corner.y - 1 -- 1 px guard against float rounding at the shared edge
     local designH = math.min(220, (bottom - top) / timersScale)
     local leapY = designH - TouchLayout.LEAP_H
@@ -247,6 +274,8 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
     local result = {
         touch = true,
         feedback = {x = 0, y = 0, w = 0, h = 0} :: Rect, -- BD-507: filled below, once the rest of the layout is known
+        admin = {x = 0, y = 0, w = TouchLayout.ADMIN.w, h = TouchLayout.ADMIN.h} :: Rect, -- BD-531: filled below, next to Tell us!
+        goals = goals,
         reserved = {thumb = thumb, jump = corner},
         crystal = crystal,
         hud = hud,
@@ -258,6 +287,7 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
         toastScale = math.min(1, (width - 20) / 440),
     }
     result.feedback = feedbackRect(result, width, height) -- BD-507
+    result.admin = {x = result.feedback.x + result.feedback.w + TouchLayout.FEEDBACK.gap, y = result.feedback.y, w = TouchLayout.ADMIN.w, h = TouchLayout.ADMIN.h} -- BD-531
     return result
 end
 

@@ -13,9 +13,9 @@ PhoneScale.DesktopW, PhoneScale.DesktopH = 860, 520
 PhoneScale.CompactBelow = 500 -- gui height under this is "compact" (phone landscape; 1080x720 and bigger stay desktop)
 PhoneScale.CompactFloor = 0.8 -- never shrink a compact modal under this
 PhoneScale.Margin = 8 -- px gap between the compact panel and the screen edge
-PhoneScale.HeaderH = 56 -- compact header height (design px), desktop is 78
+PhoneScale.HeaderH = 48 -- compact header height (design px), desktop is 78 (BD-531: was 56; the close button still floors to 44 px)
 PhoneScale.RailLabelW = 60 -- px a rail button needs for a 14 px label (SETTINGS is about 58 px), else icon-only
-PhoneScale.BodyTop = 66 -- compact body scroller top inside the panel (design px)
+PhoneScale.BodyTop = 56 -- compact body scroller top inside the panel (design px) (BD-531: was 66, 8 px more body on a 332 px phone canvas)
 
 export type Modal = {
     mode: string, scale: number, panelW: number, panelH: number, -- panelW/H in design px (before UIScale)
@@ -68,6 +68,26 @@ end
 -- HUD pieces: the smallest UIScale at which a text of `designText` design px reads >= MinText, capped at `ceiling`.
 function PhoneScale.hudScale(base: number, designText: number, ceiling: number): number
     return math.min(ceiling, math.max(base, PhoneScale.MinText / math.max(designText, 1)))
+end
+
+-- BD-531: phone-landscape layouts (design px inside the visible compact body, `bodyH` = Modal.bodyH) of the two screens that used to need a
+-- scroll for their main action. Pure numbers, used by EggsScreen / Bootstrap's Go home confirm and asserted in tools/verify_phone_scale.py:
+-- everything lies inside [0, bodyH], buttons are >= MinButton / CompactFloor tall so they stay >= 44 px on screen, nothing overlaps.
+function PhoneScale.eggsLayout(bodyH: number, hint: boolean, scale: number)
+    local slotY, nestH = 30, 68
+    local cardY = slotY + nestH + 6
+    local cardH = bodyH - cardY
+    local hintH = if hint then 22 else 0
+    local openY = 46 + hintH
+    local buttonH = PhoneScale.floorButton(0, scale) + 2 -- renders >= 44 px; Bootstrap's floor pass would only grow a smaller one
+    local gearY = cardH - 8 - buttonH
+    return {slotY = slotY, nestH = nestH, cardY = cardY, cardH = cardH, hintH = hintH, hintY = 46, openY = openY,
+        openH = math.max(buttonH, gearY - 4 - openY), gearY = gearY, gearH = buttonH, rowH = 34}
+end
+
+function PhoneScale.exitLayout(bodyH: number, scale: number)
+    local buttonH = PhoneScale.floorButton(0, scale) + 2
+    return {artY = 10, artSize = 150, lineY = 4, lineH = 84, totalsY = 92, totalsH = 48, buttonH = buttonH, buttonsY = bodyH - buttonH - 8}
 end
 
 -- Toasts sit under the top bar on phones so they never cover the bottom action row (Fill/Clear/FUSE, Home).

@@ -41,6 +41,7 @@ def script():
         ('@@NEST_QUEUE@@', 'src/shared/NestQueue.luau'),
         ('@@FTUE_RULES@@', 'src/shared/FtueRules.luau'),
         ('@@SETTINGS_MODEL@@', 'src/shared/SettingsModel.luau'),
+        ('@@PAID_RANDOM_GATE@@', 'src/shared/PaidRandomGate.luau'),
         ('@@REWARD_MATH@@', 'src/server/RewardMath.luau'),
         ('@@IDENTITY_FUSION_MODULE@@', 'src/server/IdentityFusion.luau'),
         ('@@IDENTITY_MODULE@@', 'src/server/DinosaurIdentity.luau'),

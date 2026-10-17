@@ -52,13 +52,47 @@ end
 assert(P.floorScale(1,44,14)==1 and P.floorScale(0.6,80,28)==0.6 and math.abs(P.floorScale(0.2,80,28)-44/80)<1e-9,"floorScale only raises, never above 1")
 assert(P.floorScale(2,44,14)==1,"never above 1:1")
 assert(P.hudScale(.41,22,1)>=14/22 and P.hudScale(.9,22,1)==.9 and P.hudScale(.2,10,.5)==.5)
+-- BD-531: the Eggs screen and the Go home confirm fit the VISIBLE compact body at the real phone canvases (836 x 390 and 667 x 375 minus a 0 to 58 px
+-- top bar), so their main buttons need no scroll: everything inside [0, bodyH], buttons >= 44 px on screen, no two pieces overlap.
+local function inside(y,h,bodyH,what) assert(y>=0 and y+h<=bodyH+1e-6,what.." inside the visible body") end
+for _,s in {{836,390},{667,375}} do
+    for _,bar in {0,36,44,58} do
+        local w,h=s[1],s[2]-bar
+        local m=P.modal(w,h)
+        assert(m.mode=="compact")
+        local bodyH=math.floor(m.bodyH)
+        for _,hint in {false,true} do
+            local L=P.eggsLayout(bodyH,hint,m.scale)
+            local tag=string.format("Eggs %dx%d (bar %d) hint %s body %d",s[1],s[2],bar,tostring(hint),bodyH)
+            inside(L.slotY,L.nestH,bodyH,tag.." nests")
+            inside(L.cardY,L.cardH,bodyH,tag.." card")
+            -- inside the card: row 1 (waiting + status pill), optional hint, OPEN, AUTO, in this order and not touching
+            assert(L.rowH+8<=L.hintY or L.hintY>=8+L.rowH,tag.." row 1 above the hint line")
+            assert(L.openY>=8+L.rowH and L.openY>=L.hintY+L.hintH,tag.." OPEN under the status row and the hint")
+            assert(L.openY+L.openH<=L.gearY,tag.." OPEN does not touch AUTO")
+            assert(L.gearY+L.gearH<=L.cardH,tag.." AUTO inside the card")
+            assert(L.openH*m.scale>=44-1e-9 and L.gearH*m.scale>=44-1e-9,tag.." OPEN and AUTO >= 44 px")
+            assert(L.nestH*m.scale>=44,tag.." nest slots are tap targets")
+            assert(L.slotY+L.nestH<=L.cardY,tag.." nests above the card")
+        end
+        local X=P.exitLayout(bodyH,m.scale)
+        local tag=string.format("Go home %dx%d (bar %d) body %d",s[1],s[2],bar,bodyH)
+        inside(X.artY,X.artSize,bodyH,tag.." picture")
+        inside(X.lineY,X.lineH,bodyH,tag.." line")
+        inside(X.totalsY,X.totalsH,bodyH,tag.." totals")
+        inside(X.buttonsY,X.buttonH,bodyH,tag.." buttons")
+        assert(X.lineY+X.lineH<=X.totalsY and X.totalsY+X.totalsH<=X.buttonsY,tag.." text above the buttons")
+        assert(X.buttonH*m.scale>=44-1e-9,tag.." GO HOME and CANCEL >= 44 px")
+        assert(X.artY+X.artSize<=bodyH,tag.." picture fits")
+    end
+end
 for _,line in seen do print(line) end
 print("phone scale: modal policy, desktop identity, floors ok")
 '''
 
 TOUCH = r'''
 local T=TouchLayout
-for _,s in {{844,390},{740,360},{667,375},{844,330},{740,300}} do
+for _,s in {{844,390},{836,390},{740,360},{667,375},{844,330},{740,300}} do
     for _,touch in {true,false} do
         local l=T.compute({width=s[1],height=s[2]-(if s[2]>=360 then 36 else 0),touch=touch,navCount=6})
         assert(l.touch==true,"short viewports use the phone layout even without PreferredInput touch "..s[1].."x"..s[2])

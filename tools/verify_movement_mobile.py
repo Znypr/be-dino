@@ -189,6 +189,10 @@ local function elements(layout)
  -- BD-507: the Tell us! button (FeedbackClient) must never touch the egg plate ("hud") or any other HUD piece. On touch it sits in the bottom-left
  -- corner, which is inside Roblox's thumbstick zone (a 120 x 48 button there only swallows taps on itself), so only that zone check is skipped.
  table.insert(list, {name = "feedback", interactive = true, thumbOk = true, r = {x = layout.feedback.x, y = layout.feedback.y, w = layout.feedback.w, h = layout.feedback.h}})
+ -- BD-531: the Admin button (Studio/admin only) and the hub Goals header must not sit on any HUD piece either (it covered the egg plate at 836 x 390).
+ table.insert(list, {name = "admin", interactive = true, thumbOk = true, r = {x = layout.admin.x, y = layout.admin.y, w = layout.admin.w, h = layout.admin.h}})
+ if layout.goals then table.insert(list, {name = "goals", interactive = true, thumbOk = true, r = {x = layout.goals.x, y = layout.goals.y, w = layout.goals.w, h = layout.goals.h}}) end
+ table.insert(list, {name = "goalline", r = {x = layout.crystal.x, y = layout.crystal.y + layout.crystal.h * layout.crystal.scale + TouchLayout.GOAL_GAP, w = layout.crystal.w * layout.crystal.scale, h = TouchLayout.GOAL_H * layout.crystal.scale}})
  table.insert(list, {name = "notice", r = rect(layout.notice)})
  local rail = layout.rail
  for i, p in rail.positions do
@@ -198,11 +202,11 @@ local function elements(layout)
  return list
 end
 local NAV = 7
-local function check(width, height, touch, measured)
+local function check(width, height, touch, measured, goals)
  local layout = TouchLayout.compute({width = width, height = height, touch = touch, navCount = NAV,
-  thumb = measured and measured.thumb, jump = measured and measured.jump})
+  thumb = measured and measured.thumb, jump = measured and measured.jump, goals = goals})
  local list = elements(layout)
- local label = string.format("%dx%d %s", width, height, if touch then "touch" else "desktop")
+ local label = string.format("%dx%d %s%s", width, height, if touch then "touch" else "desktop", if goals then " hub" else "")
  for i, a in list do
   assert(inside(a.r, width, height), label .. ": " .. a.name .. " leaves the safe canvas")
   for j = i + 1, #list do
@@ -221,7 +225,7 @@ local function check(width, height, touch, measured)
   assert(layout.rail.button.textSize >= 10, label .. ": nav label too small")
   assert(30 * layout.hud.scale >= 11, label .. ": HUD eggs text below 11 px")
   assert(layout.action.w * layout.action.scale >= 2 * Config.TouchMinTargetPx, label .. ": Home too narrow")
-  assert(layout.timers.weatherVisible, label .. ": weather hidden")
+  assert(goals or layout.timers.weatherVisible, label .. ": weather hidden") -- BD-531: with the hub Goals header a very small canvas may drop the weather chip (never overlap it); the target phones below must keep it
   local centre = layout.action.x + layout.action.w * layout.action.scale / 2
   assert(math.abs(centre - width / 2) < 1, label .. ": Home is not bottom-centre")
  else
@@ -235,8 +239,28 @@ local function check(width, height, touch, measured)
 end
 local phones = {{800, 360}, {640, 360}, {667, 375}, {732, 412}, {844, 390}, {915, 412}, {800, 302}, {760, 360}}
 local tablets = {{1024, 768}, {1280, 720}, {1280, 800}, {1366, 1024}, {1920, 1080}, {2400, 1080}}
-for _, v in phones do check(v[1], v[2], true) end
-for _, v in tablets do check(v[1], v[2], true) end
+for _, v in phones do check(v[1], v[2], true) check(v[1], v[2], true, nil, true) end
+for _, v in tablets do check(v[1], v[2], true) check(v[1], v[2], true, nil, true) end
+-- BD-531: the real phone-landscape canvases. A 836 x 390 / 667 x 375 screen minus the Roblox top bar (36 to 58 px; the ScreenGui uses
+-- CoreUISafeInsets, which is what AbsoluteSize reports) is what TouchLayout sees; in a run and in the hub (Goals header on screen), mouse or touch.
+-- Every HUD element must be on the canvas and clear of every other one: egg plate ("hud"), wallet, goal line, Goals header, weather/leap/buffs
+-- column, rail, Home/Explore, Tell us!, Admin button.
+for _, v in {{836, 390}, {667, 375}} do
+ for _, bar in {0, 36, 44, 58} do
+  for _, goals in {false, true} do
+   for _, touch in {true, false} do -- Studio / a PC window this short reports a mouse: it still gets the phone layout (PhoneScale.isCompact)
+    local layout = TouchLayout.compute({width = v[1], height = v[2] - bar, touch = touch, navCount = NAV, goals = goals})
+    assert(layout.touch, "short canvas uses the phone layout")
+    if touch then check(v[1], v[2] - bar, true, nil, goals) end
+    local e = TouchLayout.rendered(layout.hud)
+    assert(e.w > 0 and e.h > 0 and e.x >= 0 and e.y >= 0, "egg plate visible")
+    assert(layout.timers.weatherVisible, "weather chip stays visible")
+    local g = layout.goals
+    if goals then assert(g and g.y + g.h <= layout.timers.y + 1e-6 or g.x + g.w <= layout.timers.x, "Goals header clear of the weather column") end
+   end
+  end
+ end
+end
 -- BD-507: 1156 x 841 is the Studio game view of the owner review pictures (Tell us! sat on "EGGS 0" there); 800 x 600 is a small desktop window (a canvas under 500 px tall is the phone layout).
 for _, v in {{1280, 720}, {1366, 768}, {1920, 1080}, {2400, 1080}, {1024, 768}, {1156, 841}, {800, 600}} do check(v[1], v[2], false) end
 for _, v in {{1156, 841}, {1280, 720}, {1920, 1080}, {1024, 768}, {800, 600}} do
