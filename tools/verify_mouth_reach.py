@@ -10,6 +10,9 @@ It runs the REAL pure module in Luau (with the real Config and ScaleLadder) and 
      and uses no Instance / game API, so the server and any client preview run the same code; FoodService no longer reads FoodPickupRadius;
   6. DATA: ScaleLadder has snout and headLength for all 22 species (snout equals half the body length except where the head is not the front);
   7. FLAGS: Config.FoodPickupAtMouth is on (it only acts with LowPolyDinos) and Config.PredationAtMouth is off (predation change verified offline only).
+  8. CAP (BD-521, docs/115 MR4): the zone (front edge ahead of the root, radius) never exceeds Config.FoodReachCapCompy x the Compy's at the same scale
+     (checked at 6 scales for all 22 species), the Compy and every species under the cap keep the uncapped BD-515 zone, the head point is never behind the root,
+     a berry at the zone's front edge is eaten, and the cap factor stays inside the parity band 1.0 to 1.10 (tools/simulate_food_reach.py measures food/min).
 Not Studio evidence by itself: docs/evidence/2026-10-17-mouth-pickup/ has the Studio captures (a real eat at the mouth).
 Usage: python tools/verify_mouth_reach.py --runner luau.exe [--print]
 """
@@ -55,7 +58,8 @@ for _, id in ids do
             line[#line + 1] = string.format("%d%d%d%d%d", eaten(id, s, ang, snout, 0), eaten(id, s, ang, head, 0), eaten(id, s, ang, snout, 0.5 * r),
                 eaten(id, s, ang, -(half + 1), 0), eaten(id, s, ang, 0, 0))
         end
-        print(string.format("R\t%s\t%s\t%.4f\t%.4f\t%.4f\t%s\t%.4f", id, tostring(s), snout, head, r, table.concat(line, ","), M.legacyRadius(s)))
+        print(string.format("R\t%s\t%s\t%.4f\t%.4f\t%.4f\t%s\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f", id, tostring(s), snout, head, r, table.concat(line, ","), M.legacyRadius(s),
+            M.uncappedFront(id, s), M.uncappedRadius(id, s), M.uncappedHeadOffset(id, s), eaten(id, s, 0.3, head + r - 0.05, 0)))
     end
 end
 -- legacy fallbacks
@@ -91,6 +95,30 @@ for _, id in ids do
     end
 end
 print("FLAGS\t" .. tostring(Config.FoodPickupAtMouth) .. "\t" .. tostring(Config.PredationAtMouth))
+print("CAPK\t" .. tostring(M.capFactor()))
+-- cap behaviour on its own (explicit factors, independent of the config value)
+for _, k in {1, 1.1, 1.25} do
+    for _, id in ids do
+        for _, s in {1, 1.5, 2, 3, 4, 4.8} do
+            local off, r = M.zone(id, s, k)
+            local coff, cr = M.zone("compy", s, k)
+            assert(r <= k * cr + 1e-9 and off + r <= k * (coff + cr) + 1e-9, id .. " zone exceeds the cap at " .. s .. " k " .. k)
+            assert(off >= -1e-9, id .. " head point behind the root at " .. s)
+            local uoff, ur = M.uncappedHeadOffset(id, s), M.uncappedRadius(id, s)
+            if ur <= k * cr + 1e-9 and uoff + ur <= k * (coff + cr) + 1e-9 then
+                assert(near(off, uoff) and near(r, ur), id .. " is under the cap and must keep the uncapped zone at " .. s .. " k " .. k)
+            end
+            assert(near(cr, M.uncappedRadius("compy", s)) and near(coff, M.uncappedHeadOffset("compy", s)), "compy is never capped")
+        end
+    end
+end
+-- a huge factor is exactly the BD-515 zone
+for _, id in ids do
+    for _, s in {1, 2, 4} do
+        local off, r = M.zone(id, s, 1e6)
+        assert(near(off, M.uncappedHeadOffset(id, s)) and near(r, M.uncappedRadius(id, s)), id .. " uncapped zone changed")
+    end
+end
 print("OK")
 '''
 
@@ -116,45 +144,55 @@ def main():
     args = parser.parse_args()
     rows = {}
     flags = None
+    capk = None
     count = 0
     for line in run(args.runner):
         p = line.split('\t')
         if p[0] == 'R':
-            rows[(p[1], float(p[2]))] = (float(p[3]), float(p[4]), float(p[5]), p[6].split(','), float(p[7]))
+            rows[(p[1], float(p[2]))] = (float(p[3]), float(p[4]), float(p[5]), p[6].split(','), float(p[7]), float(p[8]), float(p[9]), float(p[10]), p[11])
         elif p[0] == 'FLAGS':
             flags = (p[1], p[2])
         elif p[0] == 'N':
             count = int(p[1])
+        elif p[0] == 'CAPK':
+            capk = None if p[1] == 'nil' else float(p[1])
     problems = []
     if count != 22:
         problems.append('expected 22 species in ScaleLadder, found %d' % count)
+    if capk is None or not 1.0 <= capk <= 1.10:
+        problems.append('Config.FoodReachCapCompy is %s, expected a number in the parity band 1.0 to 1.10 (docs/115 MR4)' % (capk,))
     if flags != ('true', 'false'):
         problems.append('Config.FoodPickupAtMouth / PredationAtMouth are %s, expected true / false' % (flags,))
-    for (species, s), (snout, head, r, dirs, legacy) in sorted(rows.items()):
+    for (species, s), (snout, head, r, dirs, legacy, ufront, urad, uhead, edge) in sorted(rows.items()):
         for d in dirs:
-            if d[0] != '1':
+            if d[0] != '1' and snout <= head + r + 1e-6:
                 problems.append('%s at %s: a berry at the snout tip is not eaten' % (species, s))
             if d[1] != '1':
                 problems.append('%s at %s: a berry at the head point is not eaten' % (species, s))
-            if d[2] != '1':
+            if d[2] != '1' and (snout - head) ** 2 + (0.5 * r) ** 2 <= r * r - 1e-6:
                 problems.append('%s at %s: a berry beside the snout (half a radius) is not eaten' % (species, s))
             if d[3] != '0':
                 problems.append('%s at %s: a berry 1 stud behind the tail IS eaten' % (species, s))
             if d[4] != '0' and head > r:
                 problems.append('%s at %s: a berry at the root is eaten although the head point is %.2f away (radius %.2f)' % (species, s, head, r))
-        if snout - head > r + 1e-6:
-            problems.append('%s at %s: the snout is outside the zone' % (species, s))
+        if snout - head > r + 1e-6 and ufront <= head + r + 1e-6:
+            problems.append('%s at %s: the snout is outside the zone although the zone is not capped' % (species, s))
+        if float(edge) != 1.0:
+            problems.append('%s at %s: a berry at the front edge of the zone is not eaten' % (species, s))
+        if head < -1e-9:
+            problems.append('%s at %s: the pickup point is behind the root' % (species, s))
     # 3 COMPY
     for s in (1.0, 2.0, 4.0):
-        snout, head, r, dirs, legacy = rows[('compy', s)]
+        snout, head, r, dirs, legacy = rows[('compy', s)][:5]
         if abs(r - legacy) > 0.10 * legacy:
             problems.append('compy at %s: radius %.3f differs from the old %.3f by more than 10%%' % (s, r, legacy))
     if abs(rows[('compy', 1.0)][2] - 2.25) > 1e-6:
         problems.append('compy radius at scale 1 is not 2.25')
     # long bodies: the head point is far ahead of the root, the radius follows the head, not the body
-    anky, spino, compy, trex = (rows[(k, 1.0)] for k in ('ankylosaurus', 'spinosaurus', 'compy', 'tyrannosaurus'))
-    if not anky[1] > compy[1] * 1.5 or not spino[1] > anky[1] - 1:
-        problems.append('head offsets do not follow the body length: %s' % ((compy[1], anky[1], spino[1]),))
+    anky, spino, compy, trex = (rows[(k, 1.0)][:5] for k in ('ankylosaurus', 'spinosaurus', 'compy', 'tyrannosaurus'))
+    # BD-521: under the cap a long body's pickup point is only slightly ahead of the Compy's (it used to follow the body length, BD-515)
+    if anky[1] < compy[1] - 1e-6 or spino[1] < compy[1] - 1e-6 or anky[1] > compy[1] * 1.3 or spino[1] > compy[1] * 1.3:
+        problems.append('long bodies must keep the pickup point within 30%% of the Compy (cap): %s' % ((compy[1], anky[1], spino[1]),))
     if anky[2] > 1.7 * compy[2] or trex[2] > 1.5 * compy[2] or spino[2] > 1.6 * compy[2]:
         problems.append('radius grows too much with the head: compy %.2f anky %.2f trex %.2f spino %.2f' % (compy[2], anky[2], trex[2], spino[2]))
     # 5 SAME FUNCTION
@@ -188,9 +226,9 @@ def main():
         raise SystemExit(1)
     if args.print:
         print('species, scale: snout offset / head offset / radius (old root rule radius)')
-        for (species, s), (snout, head, r, dirs, legacy) in sorted(rows.items()):
+        for (species, s), (snout, head, r, dirs, legacy, *_rest) in sorted(rows.items()):
             print('%-20s %-4s snout %6.2f head %6.2f radius %5.2f (old %.2f)' % (species, s, snout, head, r, legacy))
-    print('Mouth reach passed: 22 species x scales 1, 2, 4, 4.8 x 4 directions (snout, head point, beside the snout eaten; 1 stud behind the tail not eaten), Compy radius within 10%, legacy fallbacks, one shared function, flags')
+    print('Mouth reach passed: 22 species x scales 1, 2, 4, 4.8 x 4 directions (snout, head point, beside the snout eaten; 1 stud behind the tail not eaten), Compy radius within 10%, zone cap (front edge and radius <= Config.FoodReachCapCompy x the Compy, parity band 1.0 to 1.10), legacy fallbacks, one shared function, flags')
 
 
 if __name__ == '__main__':
