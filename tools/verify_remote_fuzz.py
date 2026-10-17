@@ -26,7 +26,7 @@ reviewed entry has a row in docs/151; the debug flags are pinned off in tools/re
 
     python tools/verify_remote_fuzz.py --runner /path/to/luau            # everything (about a minute)
     python tools/verify_remote_fuzz.py --runner /path/to/luau --only races
-    python tools/verify_remote_fuzz.py --runner /path/to/luau --selftest  # five mutants must each make a named check fail
+    python tools/verify_remote_fuzz.py --runner /path/to/luau --selftest  # six mutants must each make a named check fail
 
 Limits: mocks prove validation, ordering, idempotency and budget behaviour of the server code. They do not prove Roblox networking, the
 client-owned character physics (speed and teleport limits are Studio work), real DataStore latency, or anything about a phone.
@@ -295,6 +295,9 @@ MUTANTS = [
     ("AdminAction answers a non-admin", "published-pins", {
         "src/server/AdminService": ('if admins[player] ~= true then return false, "not_admin" end', "")},
      "published-pins: a non-admin gets not_admin"),
+    ("BD-614 reverted: a full server-wide share rejects every player again", "storm-4", {
+        "src/server/ProfileRepository": ("Config.WriteFairShareEnabled ~= false", "false")},
+     "storm-4-hostile-of-12: honest players' routine writes answered rate_limited at most 2%"),
 ]
 
 
@@ -320,7 +323,7 @@ def main(argv=None) -> int:
     parser.add_argument("--only", default="", help="run only scenarios whose name contains this text")
     parser.add_argument("--keep", help="write the generated script here")
     parser.add_argument("--storm-seconds", type=int, default=60, help="length of the request storms (default 60; 120 gives the numbers quoted in docs/151)")
-    parser.add_argument("--selftest", action="store_true", help="prove the checks bite: five source mutants must each fail a named check")
+    parser.add_argument("--selftest", action="store_true", help="prove the checks bite: six source mutants must each fail a named check")
     parser.add_argument("--verbose", action="store_true", help="print every check")
     args = parser.parse_args(argv)
     if args.selftest:

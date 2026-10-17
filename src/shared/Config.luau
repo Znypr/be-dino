@@ -173,6 +173,10 @@ return table.freeze({
     WriteBurst = 6,
     WriteRefillPerSecond = 1,
     WriteBudgetReserve = 0.4,
+    -- BD-614: a player under their fair part (share / players per 60 s) is still admitted when the server-wide share is full, until the
+    -- window reaches this fraction of 60 + 10 x players. Kill switch: WriteFairShareEnabled = false restores the old all-or-nothing share.
+    WriteFairShareEnabled = true,
+    WriteFairCeiling = 0.8,
     -- BD-359: run settlement is retried longer than other writes: up to 6 attempts, exponential back-off with jitter
     -- (0.6, 1.2, 2.4, 4.8, 9.6 s, about 19 s in all plus request time), never past the window. Still failing = SaveFailed + a pending record that
     -- the lease renew tick retries (2 attempts per tick, exactly once by run id) while the player is present.
