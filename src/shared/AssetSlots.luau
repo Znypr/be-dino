@@ -58,6 +58,18 @@ Slots.Images = {
     station_settings = "",
     fame_plaque = "",
     golden_drumstick_icon = "",
+    potion_icon_speed_common = "rbxassetid://82050795396595",
+    potion_icon_growth_common = "rbxassetid://128211480010242",
+    potion_icon_loot_common = "rbxassetid://83330672989081",
+    potion_icon_speed_uncommon = "rbxassetid://135451701316768",
+    potion_icon_growth_uncommon = "rbxassetid://94136880505512",
+    potion_icon_speed_rare = "rbxassetid://74980985405918",
+    potion_icon_growth_rare = "rbxassetid://87451572767074",
+    potion_icon_loot_rare = "rbxassetid://113928284582871",
+    potion_icon_growth_epic = "rbxassetid://122890057142150",
+    potion_icon_loot_epic = "rbxassetid://94780850187438",
+    potion_icon_speed_legendary = "rbxassetid://71253957039051",
+    potion_icon_growth_legendary = "rbxassetid://94190575742218",
     -- bind:end Images
 }
 Slots.Meshes = {

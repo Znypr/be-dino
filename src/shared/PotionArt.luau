@@ -31,14 +31,29 @@ local function stroke(parent: GuiObject, color: Color3, thickness: number)
     return s
 end
 -- Owner 2026-10-16: 2D glossy glass icons drawn by the owner (ChatGPT), keyed "<kind>_<rarity lowercase>" = potion id.
--- They replace the BD-214 3D models (clay look). The vector flask above stays only as the fallback if an image fails.
-PotionArt.Images = {
-    speed_common="rbxassetid://110990547415973", growth_common="rbxassetid://71099361385349", loot_common="rbxassetid://72613159820037",
-    speed_uncommon="rbxassetid://123857884398526", growth_uncommon="rbxassetid://73663109855534",
-    speed_rare="rbxassetid://136790833155040", growth_rare="rbxassetid://76241844530193", loot_rare="rbxassetid://99599838090394",
-    growth_epic="rbxassetid://82640088651748", loot_epic="rbxassetid://120610332067181",
-    speed_legendary="rbxassetid://137961257014166", growth_legendary="rbxassetid://121220773132781",
-}
+-- BD-101 2026-10-17: the ids live in AssetSlots.Images.potion_icon_<id> (tools/bind_assets.py slots, 512 px uploads).
+-- An empty or malformed slot is left out, so the code-drawn vector flask below stays as the fallback for that potion.
+local AssetSlots = require(script.Parent.AssetSlots)
+PotionArt.Images = {} :: {[string]: string}
+for _, id in {"speed_common","growth_common","loot_common","speed_uncommon","growth_uncommon","speed_rare","growth_rare","loot_rare",
+    "growth_epic","loot_epic","speed_legendary","growth_legendary"} do
+    local uri = (AssetSlots.Images :: {[string]: string})["potion_icon_" .. id]
+    if uri and string.match(uri, "^rbxassetid://%d+$") then PotionArt.Images[id] = uri end
+end
+-- Image uri for a potion id ("speed_common"), or nil when no valid id is bound (callers keep the code bottle).
+function PotionArt.imageFor(potionId: string): string?
+    return PotionArt.Images[potionId]
+end
+-- Small plain icon (inventory buttons, active-potion chips). ScaleType Fit, never stretched. Returns nil without an id.
+function PotionArt.icon(parent: GuiObject, potionId: string, size: UDim2, position: UDim2, z: number): ImageLabel?
+    local uri = PotionArt.Images[potionId]
+    if not uri then return nil end
+    local image = Instance.new("ImageLabel")
+    image.Name, image.Image, image.BackgroundTransparency = "PotionIcon", uri, 1
+    image.ScaleType, image.AnchorPoint = Enum.ScaleType.Fit, Vector2.new(0, .5)
+    image.Size, image.Position, image.ZIndex, image.Parent = size, position, z, parent
+    return image
+end
 PotionArt.UseModels = false -- dormant BD-214 3D path; keep false
 -- BD-214 (dormant): textured 3D models (Roblox generate_mesh, docs/77). The server caches stripped copies in
 -- ReplicatedStorage.PotionModels (Server/PotionModels); the vector flask above stays as the fallback.
