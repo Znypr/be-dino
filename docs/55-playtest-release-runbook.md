@@ -7,6 +7,8 @@ document has been published to Roblox. The offline load results below show how
 ProfileRepository transactions and DataStore budgets behave. They are **not** device,
 frame-time or live-DataStore evidence.
 
+**2026-10-17:** the owner's click-by-click version of s4 and s8, with time estimates, and the one-command lead preparation (`python tools/release_playtest.py`) are in [148](148-publish-runbook.md). The BD-004 answer is recorded in `tools/release_ids.json`. This document stays the reference for the rules.
+
 Owner decisions this follows: Milestone 1 is a **private playtest that includes fusion**,
 in a **new private experience with a fresh, empty DataStore**. **All Robux and
 paid-random features stay off.** Target devices are **desktop and one Android phone**.

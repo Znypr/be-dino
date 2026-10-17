@@ -1,0 +1,7 @@
+{
+  "_readme": "BD-004 answer slot (docs/148). The ONLY place the owner's answer is recorded before publishing. Leave null until the owner has opened Creator Hub and said which experience is the playtest one. tools/release_playtest.py refuses to run while an id is null. When filled, src/shared/Config.luau PlaytestUniverseId / PlaytestPlaceId must hold the same numbers (verify_release_ids.py checks), in the same PR.",
+  "PlaytestUniverseId": null,
+  "PlaytestPlaceId": null,
+  "ExperienceKind": null,
+  "AnsweredOn": null
+}
