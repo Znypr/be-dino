@@ -124,13 +124,50 @@ end
 
 -- BD-378 egg-found toast ---------------------------------------------------------------------------------------------------
 -- ONE toast for every egg that landed in a tick. Returns text (<= NotifyQueue.MaxText 30) and a body (<= 44).
-function P.foundToast(eggs: number, mutationName: string?): (string, string?)
+-- BD-508: `mutations` is a weather name ("Ember", one egg) or a count per weather name ({Ember = 2, Frost = 1}) for the eggs of this
+-- tick. Several eggs of one kind: "You found 7 eggs!" + "2 Ember eggs! Hatch them at Home". Mixed kinds: the most common one + "and more".
+P.FoundBodyTail = " Hatch them at Home"
+P.FoundBodyOne = "A weather egg! Hatch it at Home"
+local function article(name: string): string
+    return if string.find(string.sub(name, 1, 1), "[AEIOUaeiou]") then "an" else "a"
+end
+local function withTail(head: string): string
+    local full = head .. P.FoundBodyTail
+    return if #full <= 44 then full else head -- a long name drops the tail rather than being cut mid-word
+end
+function P.foundToast(eggs: number, mutations: (string | {[string]: number})?): (string, string?)
     local n = math.max(1, math.floor(eggs))
-    if mutationName and mutationName ~= "" then
-        local text = if n == 1 then "You found a " .. mutationName .. " egg!" else string.format("You found %d eggs!", n)
-        return text, "A weather egg! Hatch it at Home"
+    local counts: {[string]: number} = {}
+    if typeof(mutations) == "string" then
+        if mutations ~= "" then counts[mutations] = 1 end
+    elseif typeof(mutations) == "table" then
+        for name, k in mutations do
+            if typeof(name) == "string" and name ~= "" and typeof(k) == "number" and k >= 1 then counts[name] = math.floor(k) end
+        end
     end
-    return if n == 1 then "You found an egg!" else string.format("You found %d eggs!", n), nil
+    local kinds, total, best, bestCount = 0, 0, "", 0
+    for name, k in counts do
+        kinds += 1
+        total += k
+        if k > bestCount or (k == bestCount and name < best) then best, bestCount = name, k end
+    end
+    if kinds == 0 then
+        return if n == 1 then "You found an egg!" else string.format("You found %d eggs!", n), nil
+    end
+    if n == 1 then
+        return "You found " .. article(best) .. " " .. best .. " egg!", P.FoundBodyOne
+    end
+    local text = string.format("You found %d eggs!", n)
+    local shown = math.min(bestCount, n) -- never claim more weather eggs than eggs
+    local head: string
+    if kinds > 1 then
+        head = string.format("%d %s %s and more!", shown, best, if shown == 1 then "egg" else "eggs")
+    elseif shown == 1 then
+        head = string.upper(string.sub(article(best), 1, 1)) .. string.sub(article(best), 2) .. " " .. best .. " egg!"
+    else
+        head = string.format("%d %s eggs!", shown, best)
+    end
+    return text, withTail(head)
 end
 -- Toasts ride the top centre, clear of the Crystals / XP plate (top right) and the HUD bars.
 P.ToastTopY = 4

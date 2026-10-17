@@ -89,7 +89,7 @@ function Hud.attach(hud: Frame, gui: ScreenGui, hooks: any?)
     hintLabel = hint
     local sessionCatch, nearFood, lastNear = false, false, -10
     local lastMoment, momentsThisRun, wasRunning = nil :: number?, 0, false
-    local pendingEggs, pendingMutation, tagsSeen = 0, nil :: string?, 0 -- BD-378: eggs found since the last toast (merged into one)
+    local pendingEggs, pendingMutations, tagsSeen = 0, {} :: {[string]: number}, 0 -- BD-508: weather eggs by name; BD-378: eggs found since the last toast (merged into one)
     local function foundBefore(): boolean
         local copies = 0
         local ok, collection = pcall(function() return game:GetService("HttpService"):JSONDecode(PrivateState.get("CollectionJson") :: string) end)
@@ -131,7 +131,7 @@ function Hud.attach(hud: Frame, gui: ScreenGui, hooks: any?)
             Theme.animate(pop, Rules.PopSeconds, {Scale = 1}, Enum.EasingStyle.Back)
         end
         -- BD-367: a clear, calm "you found an egg" moment (sparkle, soft cue, toast); one at a time, Reduce Motion: no sparkle.
-        if running and not wasRunning then momentsThisRun, pendingEggs, pendingMutation, tagsSeen = 0, 0, nil, 0 end
+        if running and not wasRunning then momentsThisRun, pendingEggs, pendingMutations, tagsSeen = 0, 0, {}, 0 end
         wasRunning = running
         local nowEggs = if typeof(eggs) == "number" then eggs else 0
         local special = false
@@ -143,7 +143,7 @@ function Hud.attach(hud: Frame, gui: ScreenGui, hooks: any?)
             if ok and typeof(tags) == "table" then
                 for i = #tags, tagsSeen + 1, -1 do
                     local mutation = ProgressionRules.item(ProgressionConfig.EventMutations, (tags[i] :: any).mutationId or "")
-                    if mutation and not pendingMutation then pendingMutation, special = mutation.name, true end
+                    if mutation then pendingMutations[mutation.name], special = (pendingMutations[mutation.name] or 0) + 1, true end
                 end
                 tagsSeen = #tags
             end
@@ -152,8 +152,8 @@ function Hud.attach(hud: Frame, gui: ScreenGui, hooks: any?)
             lastMoment, momentsThisRun = os.clock(), momentsThisRun + 1
             if character then sparkle(character) end
             Sfx.playAlias(Ftue.SoundAlias)
-            local toastText, toastBody = Copy.foundToast(pendingEggs, pendingMutation)
-            pendingEggs, pendingMutation = 0, nil
+            local toastText, toastBody = Copy.foundToast(pendingEggs, pendingMutations)
+            pendingEggs, pendingMutations = 0, {}
             if hooks and hooks.notify then hooks.notify(toastText, C.gold, {key = "egg_found", icon = "egg", body = toastBody}) end
         end
         previous = nowEggs

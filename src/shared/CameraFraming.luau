@@ -12,7 +12,7 @@ CameraFraming.ReferenceHeight = 6.6 -- the Compy at spawn (ScaleLadder.Sizing: g
 CameraFraming.ReferenceLength = 7.7 -- the Compy's measured length at spawn (BD-471: 7.69)
 CameraFraming.LengthWeight = 0.65 -- how much of the body length counts as "size": a long body reaches toward the lens (fit to Studio shots, BD-500)
 CameraFraming.LiftPerStud = 2 / 6.6 -- aim lift per stud of body height above the Compy: 2 studs per growth step of a Compy, as before
-CameraFraming.MaxDistance = 75 -- never pull the minimum zoom past this; CameraOcclusion switches off beyond 80 studs from the dino
+CameraFraming.MaxDistance = 90 -- never pull the minimum zoom past this; CameraOcclusion switches off beyond 100 (BD-513: was 75 / 80, which pinned a BIG dino at growth scale 4.8 to 72% of the screen; the widest body at 4.8 needs 89.2)
 
 -- One number for "how big does this body look": the diagonal of its height and weighted length (width is ignored: fliers' wings are
 -- spread in the template pose but folded in game, and the camera is rarely square-on to a flank).

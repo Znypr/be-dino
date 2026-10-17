@@ -4,7 +4,8 @@ It runs the REAL pure module in Luau and fails when:
   1. COMPY: a Compy is framed any differently from the old growth-only rule (minimum zoom 12 x growth scale, aim lift 2 x (scale - 1));
   2. NEVER CLOSER: any species (all 22 boxes below) is ever framed closer than 12 x growth scale, so small and flat bodies (fliers,
      swimmers, Raptor, Gallimimus) keep the old view, and a bigger or longer body only pushes the camera back (monotonic in the box);
-  3. CAP: the minimum zoom stays at or below MaxDistance (75, under the CameraOcclusion range of 80) unless the old rule already exceeded it;
+  3. CAP: the minimum zoom stays at or below MaxDistance (90, BD-513; was 75) unless the old rule already exceeded it, the cap is at least what
+     the widest body needs at the BIG maximum growth scale 4.8 (89.2, Ankylosaurus), and CameraOcclusion.MaxRange stays above it by 10 or more;
   4. STUDIO: the minimum zoom and the lift the module gives for every species at growth scale 1, 2, 4 match the numbers recorded in the
      Studio default-camera sweep (docs/evidence/2026-10-17-camfit/), and the recorded screen fill and top margin of that sweep are in the
      band (fill 25% to 56% of the screen height, dino top at 160 px or more from the top, i.e. clear of the HUD title, SIZE bar and hint). Change the module and these fail until the sweep is redone.
@@ -14,6 +15,7 @@ Usage: python tools/verify_camera_framing.py --runner luau.exe [--print]
 from pathlib import Path
 import argparse
 import subprocess
+import re
 import sys
 import tempfile
 
@@ -22,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from verify_scale_ladder import MEASURED  # noqa: E402  (W, H, L at spawn of all 22 species, Studio-measured BD-471 / BD-500)
 
 BASE = 12  # Config.CameraMinZoom
+CAP = 90  # CameraFraming.MaxDistance (BD-513)
 SCALES = (1, 2, 4)
 
 # Studio sweep 2026-10-17 (own copy camfit.rbxlx, playtest build of this branch, Play, default zoom reset to the minimum, camera pitch -15,
@@ -115,8 +118,8 @@ def main():
     for (species, s), (z, lift) in rows.items():
         if z < BASE * s - 1e-6:
             problems.append('%s at %s: min zoom %.2f is closer than the old %.2f' % (species, s, z, BASE * s))
-        if z > 75 + 1e-6 and z > BASE * s + 1e-6:
-            problems.append('%s at %s: min zoom %.2f is past the 75 stud cap' % (species, s, z))
+        if z > CAP + 1e-6 and z > BASE * s + 1e-6:
+            problems.append('%s at %s: min zoom %.2f is past the %d stud cap' % (species, s, z, CAP))
         if lift < -1e-9:
             problems.append('%s at %s: negative lift' % (species, s))
     if guard is None or abs(guard[0] - 24) > 1e-6 or abs(guard[1] - 12) > 1e-6 or abs(guard[2] - 24) > 1e-6 or abs(guard[3]) > 1e-9:
@@ -144,6 +147,23 @@ def main():
     missing = [sp for sp in MEASURED if sp not in STUDIO]
     if missing:
         problems.append('no Studio sweep row for: %s' % ', '.join(missing))
+    # BD-513 BIG: at the BIG maximum growth scale 4.8 no species is held back by the cap: the camera distance is the size rule's own number
+    # (12 x max(scale, size ratio), never below 12 x 4.8), so the screen share is the same ratio as at scale 4 (<= 56%) and not the old 72%.
+    for species in MEASURED:
+        z, _ = rows[(species, 4.8)]
+        h, l = MEASURED[species][1] * 4.8, MEASURED[species][2] * 4.8
+        wanted = max(BASE * 4.8, BASE * ((h * h + (0.65 * l) ** 2) ** 0.5) / 8.2831)
+        if z < BASE * 4.8 - 1e-6 or abs(z - wanted) > 0.02 * wanted:
+            problems.append('%s at 4.8: min zoom %.2f is not the size rule (%.2f): the cap still binds' % (species, z, wanted))
+    widest = max(rows[(sp, 4.8)][0] for sp in MEASURED)
+    if widest > CAP:
+        problems.append('the widest body at 4.8 needs %.1f, past the cap %d' % (widest, CAP))
+    occlusion = (ROOT / 'src/shared/CameraOcclusion.luau').read_text(encoding='utf-8')
+    found = re.search(r'M\.MaxRange = (\d+)', occlusion)
+    if not found or int(found.group(1)) < CAP + 10:
+        problems.append('CameraOcclusion.MaxRange (%s) must be at least the cap %d + 10, else props stop fading for a BIG dino' % (found and found.group(1), CAP))
+    if not re.search(r'CameraFraming\.MaxDistance = %d' % CAP, (ROOT / 'src/shared/CameraFraming.luau').read_text(encoding='utf-8')):
+        problems.append('CameraFraming.MaxDistance is not %d' % CAP)
     if args.print:
         for sp in sorted(MEASURED):
             print(sp, ' '.join('s%s %.1f/%.1f' % (s, *rows[(sp, float(s))]) for s in (1, 2, 4)))
@@ -152,7 +172,7 @@ def main():
         for p in problems:
             print(' -', p)
         raise SystemExit(1)
-    print('camera framing ok: Compy unchanged, 22 species never closer than 12 x scale, capped at 75, %d Studio sweep rows match' % sum(len(v) for v in STUDIO.values()))
+    print('camera framing ok: Compy unchanged, 22 species never closer than 12 x scale, capped at 90 and never capped at 4.8, %d Studio sweep rows match' % sum(len(v) for v in STUDIO.values()))
 
 
 if __name__ == '__main__':
