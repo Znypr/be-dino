@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
+local MovementWindow = require(ReplicatedStorage.Shared.MovementWindow)
 local Resources = require(ReplicatedStorage.Shared.ResourceModels)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local FoodCatchRules = require(ReplicatedStorage.Shared.FoodCatchRules)
@@ -251,10 +252,11 @@ function FoodService.start(dinosaur,repository)
     workspace:SetAttribute("FoodSpawnStatus", if #foods > 0 then "Ready" else "No valid ground")
     if #foods == 0 then warn("[Be Dino] Food placement failed: no valid terrain hits") end
     local previous = {}
+    local windows = {} -- BD-611: per-player sliding displacement window (sustained speed); the per-tick check below only sees one step
     local grid = PointGrid.new(8)
     local hiddenFoods = {} -- foods waiting to respawn (small set), so the tick never walks all 2,400 just to look at readyAt
     for _, food in foods do local p = food.part.Position PointGrid.insert(grid, food, p.X, p.Z) end
-    Players.PlayerRemoving:Connect(function(player) previous[player] = nil AdminMutationScale.clear(adminMutationScales, player) end)
+    Players.PlayerRemoving:Connect(function(player) previous[player] = nil AdminMutationScale.clear(adminMutationScales, player) windows[player] = nil end)
     task.spawn(function()
         while true do
             task.wait(Config.FoodTickSeconds)
@@ -269,8 +271,12 @@ function FoodService.start(dinosaur,repository)
                 if character and root and root:IsA("BasePart") and humanoid and humanoid.Health > 0
                     and character:GetAttribute("DinoAttached") and character:GetAttribute("RunState") == "Active" then
                     local last, position = previous[player], root.Position
+                    local limit = character:GetAttribute("MovementSpeedLimit") or humanoid.WalkSpeed
                     local plausible = last and last.character == character
-                        and MovementEnvelope.plausible(position - last.position, now - last.time, 2, 2, root.AssemblyLinearVelocity.Y, character:GetAttribute("MovementSpeedLimit") or humanoid.WalkSpeed)
+                        and MovementEnvelope.plausible(position - last.position, now - last.time, 2, 2, root.AssemblyLinearVelocity.Y, limit)
+                    local window = windows[player]
+                    if not window or not plausible then window = MovementWindow.new() windows[player] = window end -- a teleport or a new character starts a new window
+                    if not MovementWindow.push(window, now, position, limit) then plausible = false end -- BD-611: too fast over the last seconds, no pickup
                     previous[player] = {character = character, position = position, time = now}
                     if plausible then
                         -- BD-354: per-candidate values hoisted out of the food loop (was 2,400 foods x players GetAttribute calls per tick).
@@ -283,7 +289,7 @@ function FoodService.start(dinosaur,repository)
                         local radius = MouthReach.radius(speciesId, scale)
                         table.insert(candidates, {player = player, character = character, root = root, gained = 0, items = 0, position = position, headX = headX, headZ = headZ, radius = radius, radiusSq = radius * radius})
                     end
-                else previous[player] = nil end
+                else previous[player] = nil windows[player] = nil end
             end
             for food in hiddenFoods do
                 if now >= food.readyAt then

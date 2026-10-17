@@ -128,5 +128,22 @@ runScenario("findings", nil, function(server)
     report(string.format("FINDING movement-envelope: WalkSpeed %d; MovementGuard accepts a sustained %.0f studs/s (x%.1f), food pickup %.0f studs/s (x%.1f), crystal pickup %.0f studs/s (x%.1f); with a x2.2 speed potion the guard accepts %.0f studs/s",
         walk, guard, guard / walk, food, food / walk, crystal, crystal / walk, sustained(walk * 2.2, cfg.MovementGuardTickSeconds, cfg.MovementGuardSpeedTolerance, cfg.MovementGuardBurstStuds)))
     check("findings: the envelope numbers above are what MovementEnvelope.plausible really accepts", insideGuard == true and outsideGuard == false, tostring(insideGuard) .. "/" .. tostring(outsideGuard))
+    -- BD-611: the sliding window (shared/MovementWindow.luau) closes most of that. The per-tick numbers above are what each tick alone accepts; the window bounds the SUSTAINED speed.
+    local Win = loadMod(server, "src/shared/MovementWindow")
+    local windowed = Win.sustained(walk)
+    local function cheatRejectedAfter(studsPerSecond, tick)
+        local w, t, x = Win.new(), 0, 0
+        while t <= 10 do
+            x += studsPerSecond * tick
+            if not Win.push(w, t, Vector3.new(x, 0, 0), walk, x) then return t end
+            t += tick
+        end
+        return nil
+    end
+    local g, f, c = cheatRejectedAfter(guard, cfg.MovementGuardTickSeconds), cheatRejectedAfter(food, cfg.FoodTickSeconds), cheatRejectedAfter(crystal, 0.25)
+    report(string.format("FINDING movement-envelope-window (BD-611): sliding window accepts a sustained %.0f studs/s (x%.2f); the old guard/food/crystal cheats (%.0f/%.0f/%.0f studs/s) are rejected after %.1f/%.1f/%.1f s; Studio must still measure real replication jitter",
+        windowed, windowed / walk, guard, food, crystal, g or -1, f or -1, c or -1))
+    check("findings: the old 106 / 69 / 52 studs/s cheats are rejected by the sliding window within 2 s", g ~= nil and g <= 2 and f ~= nil and f <= 2 and c ~= nil and c <= 2, tostring(g) .. "/" .. tostring(f) .. "/" .. tostring(c))
+    check("findings: the sliding window accepts at most 2x WalkSpeed sustained", windowed <= walk * 2, tostring(windowed))
     server.findingSpeed = guard / walk
 end)
