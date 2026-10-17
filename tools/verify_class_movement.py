@@ -2,7 +2,7 @@
 import argparse, subprocess, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
-MODULES = ['Config', 'ProgressionConfig', 'CombatConfig', 'ClassMovement']
+MODULES = ['Config', 'ProgressionConfig', 'CombatConfig', 'ClassMovement', 'DashHold']
 
 BODY = r'''
 local CM,Cfg,Prog,Combat=M.ClassMovement,M.Config,M.ProgressionConfig,M.CombatConfig
@@ -86,6 +86,89 @@ assert(CM.classForSpecies("mosasaurus")=="Water" and CM.classForSpecies("pterano
 assert(CM.classForSpecies(nil)=="Ground" and CM.classForSpecies("nope")=="Ground" and CM.classForSpecies(5)=="Ground")
 assert(CM.jumpPower("Water",Cfg.JumpPower)==0 and CM.jumpPower("Ground",Cfg.JumpPower)==Cfg.JumpPower and CM.jumpPower("Fly",Cfg.JumpPower)>Cfg.JumpPower)
 print("class movement ok")
+
+-- BD-571 client delivery of the Water dash (Shared/DashHold + src/client/ClassDash.client.luau).
+local DH=M.DashHold
+local wj2=CM.rules("Water").jump
+assert(wj2.dashSpeed==48 and wj2.dashSeconds==0.35 and wj2.cooldown==3,"BD-571 changes no speed numbers (48 studs/s, 0.35 s, 3 s)")
+local dvx,dvy,dvz=CM.launchVelocity("Water","jump",1,0)
+local dsec=CM.duration("Water","jump")
+local want=dvx*dsec -- 16.8 studs
+assert(math.abs(want-16.8)<1e-9 and dvy==0 and dvz==0,"dash is about 17 studs")
+-- junk answers never start a hold
+for _,j in {{0/0,0},{math.huge,0},{0,0},{1000,0},{"a",1},{1,nil}} do assert(DH.begin(j[1],j[2],0,dsec)==nil,"junk answer refused") end
+assert(DH.begin(dvx,dvz,0,0)==nil and DH.begin(dvx,dvz,0,-1)==nil and DH.begin(dvx,dvz,0/0,dsec)==nil,"bad duration/time refused")
+assert(DH.begin(dvx,dvz,5,100).untilAt-5==DH.MaxSeconds,"hold length capped")
+-- 60 Hz delivery against a stand-in for the Humanoid ground controller: velocity decays by exp(-K dt) every frame (target 0 = worst
+-- case, the player is not steering). The sim writes like the client: Heartbeat step, then the physics step moves and damps.
+local K,DT=12,1/60
+local function deliver(stepFn,wallAtFrame,aliveUntil)
+  local hold=DH.begin(dvx,dvz,0,dsec)
+  local pos,vel,vy=0,0,0
+  local writes,ended,after,frames=0,false,0,0
+  for k=0,90 do
+    local action,vx,y,vz
+    if not ended then
+      frames+=1
+      action,vx,y,vz=stepFn(hold,k*DT,vy,wallAtFrame~=nil and k>=wallAtFrame,aliveUntil==nil or k<aliveUntil)
+      if action~="end" then vel=vx; writes+=1; assert(y<=0,"never upward") end
+      if action~="hold" then ended=true end
+    else after+=1 end
+    pos+=vel*DT; vel=vel*math.exp(-K*DT)
+  end
+  return pos,writes,ended,frames
+end
+local function single(hold,now,vy,blocked,alive)
+  if now==0 then return "hold",hold.vx,0,hold.vz end -- the old client: one write, then nothing (ends at once)
+  return "end",0,0,0
+end
+local pos,writes,ended,frames=deliver(DH.step)
+assert(ended and writes==math.ceil(dsec/DT) and frames==writes+1,"velocity written every frame for the duration, then one clean end ("..writes..","..frames..")")
+assert(pos>=want*0.9 and pos<=want*1.3,"held dash travels ~17 studs (plus a short coast) through a damping controller ("..pos..")")
+local pos1=deliver(single)
+assert(pos1<want*0.35 and pos>3*pos1,"CONTROL: a single write barely moves the dino ("..pos1.." vs "..pos..")")
+-- ends cleanly: after the end no further writes (steps return end for any later time)
+for _,t in {dsec,dsec+0.01,dsec*3,1e9} do local a=DH.step(DH.begin(dvx,dvz,0,dsec),t,0,false,true); assert(a=="end","no write after the duration") end
+-- wall: stops at once, one zero write, no more holding; blocked from frame 0 never moves the dino
+local posw,writesw,endedw=deliver(DH.step,6)
+assert(endedw and writesw==7 and posw<want*0.5,"wall stops the dash ("..posw..", "..writesw..")")
+local ax,avx,ay,avz,why=DH.step(DH.begin(dvx,dvz,0,dsec),0.1,0,true,true)
+assert(ax=="stop" and avx==0 and avz==0 and why=="wall","wall = planar stop")
+local pos0=deliver(DH.step,0); assert(pos0<=0.01,"wall at the start: no travel")
+-- not alive (died, run ended, changed dino): nothing written
+local posd,writesd,endedd=deliver(DH.step,nil,5)
+assert(endedd and writesd==5 and posd<want*0.5,"dash ends when the dino is no longer alive/Water")
+assert(DH.step(DH.begin(dvx,dvz,0,dsec),0.1,0,false,false)=="end","dead = end without a write")
+-- vertical: never above 0, falling kept, junk vertical -> 0
+for _,vyIn in {50,3,0,-9,-300,0/0,math.huge,-math.huge} do
+  local a,_,y=DH.step(DH.begin(dvx,dvz,0,dsec),0.1,vyIn,false,true)
+  assert(a=="hold" and y<=0 and y==y and (vyIn>=0 or vyIn~=vyIn or vyIn==math.huge or y==vyIn or vyIn==-math.huge),"vertical clamp "..tostring(vyIn))
+end
+-- MovementGuard: the dash is plausible at every sampling interval, with the dash MovementSpeedLimit AND (expired / late) walk speed only
+local limit=CM.speedLimit("Water","jump"); local walk=CM.walkSpeed("Water")
+assert(limit==48 and walk*Cfg.MovementGuardSpeedTolerance>=48,"walk-speed envelope alone already covers 48 studs/s")
+for i=1,40 do
+  local dt=math.max(i*0.0125,tick*0.5)
+  local dist=math.min(dvx*dt,want)
+  assert(dist<=limit*dt*Cfg.MovementGuardSpeedTolerance+Cfg.MovementGuardBurstStuds,"guard accepts dash at dt "..dt)
+  assert(dist<=walk*dt*Cfg.MovementGuardSpeedTolerance+Cfg.MovementGuardBurstStuds,"guard accepts dash on walk speed alone at dt "..dt)
+end
+assert(CM.guardAllowsPlanar(48,tick*0.5,limit) and CM.guardAllowsPlanar(48,tick*0.5,walk),"guardAllowsPlanar agrees")
+-- MUTANTS: the delivery checks above must fail for broken steppers
+local function caught(stepFn,label,wall)
+  local ok=pcall(function()
+    local p,w,e,f=deliver(stepFn,wall)
+    assert(e and w==math.ceil(dsec/DT) and f==w+1,"every frame then end")
+    assert(p>=want*0.9 and p<=want*1.3,"distance")
+    if wall then assert(p<want*0.5,"wall") end
+  end)
+  assert(not ok,"MUTANT not caught: "..label)
+end
+caught(single,"single write")
+caught(function(h,n,vy,b,a) local r={DH.step(h,n,vy,b,a)}; if r[1]=="hold" and n>=0.1 then return "end",0,0,0 end return table.unpack(r) end,"stops early")
+caught(function(h,n,vy,b,a) local r={DH.step(h,n+10,vy,b,a)}; if r[1]=="end" then return "hold",h.vx,0,h.vz end return table.unpack(r) end,"never ends")
+caught(function(h,n,vy,b,a) return DH.step(h,n,vy,false,a) end,"ignores wall",6)
+print("dash delivery ok")
 '''
 
 
@@ -124,5 +207,18 @@ if result.returncode == 0:
     assert (ROOT / 'src/client/ClassGlide.client.luau').exists()
     for f in ('CombatService', 'PredationService', 'MovementGuard'):
         assert 'CooldownMemory' in (ROOT / f'src/server/{f}.luau').read_text(encoding='utf-8'), f + ' clocks keyed by UserId (BD-363)'
+    dash = (ROOT / 'src/client/ClassDash.client.luau').read_text(encoding='utf-8')
+    for needle, why in (
+        ('RunService.Heartbeat:Connect', 'dash velocity is re-applied every frame'),
+        ('DashHold.step(', 'per-frame decision comes from the pure module'),
+        ('DashHold.begin(', 'the answer starts a hold'),
+        ('workspace:Blockcast(', 'wall check each frame'),
+        ('CM.duration("Water", "jump")', 'hold length is the class dash duration'),
+        ('isWater()', 'Water only'),
+        ('remote:FireServer()', 'server stays authoritative: the request still goes to the server'),
+    ):
+        assert needle in dash, 'ClassDash.client: ' + why
+    assert dash.count('AssemblyLinearVelocity = Vector3.new(') == 1 and 'math.min(v.Y, 0)' not in dash, 'single write site, vertical clamp lives in DashHold'
+    assert 'remote:FireClient(player, vx, vy, vz)' in svc and 'dist' in svc and 'Blockcast' in svc, 'server answer + wall check unchanged'
     print('class movement wiring ok')
 raise SystemExit(result.returncode)
