@@ -20,6 +20,8 @@ local PRIVATE = {
     -- run and hatch summaries
     "LastChestBig", "LastChestShiny", "LastChestFailed", "LastChestNewJson", "LastChestGenesJson", "LastChestRewardText", "LastChestEventMutation",
     "LastClaimedChestId", "LastSettledRunId", "LastRewardText", "LastRunCrystals", "LastRunCrystalBox", "LastRunEggCount", "LastRunNestCount", "LastRunNestFull", "LastRunNestCrystals",
+    -- BD-451 gifting core: the "You got a gift from <name>!" popup payload (JSON), empty string when nothing is waiting
+    "GiftNoticeJson",
     -- owner-only multipliers and policy flags
     "GrowthMultiplier", "SpeedMultiplier", "LootMultiplier", "ColourGrowthPercent", "StudioTestWallet", "PaidRandomEligible",
 }
