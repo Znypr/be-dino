@@ -27,6 +27,10 @@ local ok2,why2=F.allow(s,1e6) assert(not ok2 and why2=="limit")
 assert(not F.showButton(nil) and not F.showButton({}) and not F.showButton({runActive=true,foundEgg=true}))
 assert(not F.showButton({foundEgg=false,runActive=false,sawRunEnd=false}))
 assert(F.showButton({sawRunEnd=true,runActive=false}) and F.showButton({foundEgg=true,runActive=false}))
+-- BD-538: hidden while a menu is open on a phone canvas (it covered the egg card's chips); desktop and no-menu cases unchanged
+assert(not F.showButton({sawRunEnd=true,runActive=false,menuOpen=true,compact=true}) and not F.showButton({foundEgg=true,runActive=false,menuOpen=true,compact=true}))
+assert(F.showButton({sawRunEnd=true,runActive=false,menuOpen=true,compact=false}) and F.showButton({sawRunEnd=true,runActive=false,menuOpen=false,compact=true}))
+assert(F.showButton({sawRunEnd=true,menuOpen=false,compact=true}) and not F.showButton({menuOpen=true,compact=true}) and F.showButton({sawRunEnd=true,runActive=false,menuOpen=nil,compact=nil}))
 -- event and line: whitelisted keys, escaping, no ids
 local e=F.event({fun=3,level=2,looks=1,filteredText='say "hi" \\ ###\nnew',runs=3,location="Run",species="trex",extra="x"})
 assert(e.location=="Run" and e.runs==3 and e.species=="trex" and e.extra==nil)
