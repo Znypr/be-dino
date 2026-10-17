@@ -33,7 +33,7 @@ end
 
 local function installMocks(server)
     server.PlayersService = {PlayerAdded = signal(), PlayerRemoving = signal(), GetPlayers = function() return table.clone(server.players) end}
-    server.workspace = {GetServerTimeNow = function() return 1.7e9 + now end, GetAttribute = function() return nil end, SetAttribute = function() end}
+    server.workspace = {GetServerTimeNow = function() return 1.7e9 + now end, GetAttribute = function() return nil end, SetAttribute = function() end, GetAttributeChangedSignal = function() return signal() end}
     server.created, server.fired = {}, {}
     server.Instance = {new = function(className)
         local o = {ClassName = className, Name = className, OnServerEvent = signal(), children = {}}

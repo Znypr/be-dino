@@ -34,3 +34,10 @@ UI: the Home guide text "Eat 500 food to earn %d eggs" reads the rate, so it now
 * Fusion pacing ([docs/90](90-fusion-ladder-v2.md)) gets about 3x faster per run; `tools/simulate_fusion_ladder.py` defaults (4 eggs per run) were not re-tuned and need an owner review.
 * One run now yields 12+ eggs against a queue of 5: the rest go to the run egg bank (up to 1000), revealed one at a time; reveal time and UI for 12-15 eggs need a Studio/phone check.
 * Existing saves are not rewritten.
+
+## 5. How to read pacing from the friends session log (BD-575)
+1. Run the playtest build (`RunTelemetryEnabled` is on only in that profile), export the server log, then `python tools/telemetry_report.py server.log`. Each `run_end` line is one run.
+2. Trust `food/min` only when it has no `~`: that is `food_raw`, the real raw food points added up from the server pickups. A `~` means the old derived figure (eggs / `FoodCatchRate`), which weather multiplies (thunder x1.4) and so overstates.
+3. `eggs/500 food` is 12.0 in calm weather; higher means a weather or potion bonus (or kill eggs). `weather min` and the `food-only` columns (`eggs_food` = eggs from food at x1) show how much of a run's eggs the weather added.
+4. Read the `vs target (15 eggs / 5 min)` column for the owner target: 1.00x is on target, 2.00x means twice the target. Use the `food-only` column for the clear-weather answer.
+5. Compare `food/min` with the 120 to 140 estimate over several normal runs (ignore the `*` runs under 20 s and any run with admin food or potion boosts), then decide: keep 12/500 or lower it (BD-527 option B, owner approval).

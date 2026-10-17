@@ -29,6 +29,13 @@ local function objectives(): any
     if objectiveService == nil then objectiveService = require(script.Parent.ObjectiveService) end
     return objectiveService
 end
+-- BD-575 (docs/119, docs/122): real raw food eaten per run for the playtest telemetry, batched per player per tick and only while
+-- Config.RunTelemetryEnabled. Same pattern as the objectives: lazy require, read-once flag, one call per player per tick, memory only.
+local telemetryService: any = nil
+local function telemetry(): any
+    if telemetryService == nil then telemetryService = require(script.Parent.TelemetryService) end
+    return telemetryService
+end
 local Http = game:GetService("HttpService")
 local eventRandom = Random.new()
 local FoodService = {}
@@ -252,6 +259,7 @@ function FoodService.start(dinosaur,repository)
             task.wait(Config.FoodTickSeconds)
             local now = os.clock()
             local trackObjectives = Config.ObjectivesEnabled == true -- BD-074: read once per tick
+            local trackTelemetry = Config.RunTelemetryEnabled == true -- BD-575: read once per tick, false = zero further cost
             local candidates = {}
             for _, player in Players:GetPlayers() do
                 local character = player.Character
@@ -312,6 +320,7 @@ function FoodService.start(dinosaur,repository)
                 hiddenFoods[food] = true
                 show(food, false)
                 claim.candidate.gained += food.kind.points * adminFoodMultiplier
+                if trackTelemetry then claim.candidate.raw = (claim.candidate.raw or 0) + food.kind.points end -- BD-575: pickup value BEFORE the admin multiplier
                 if trackObjectives then claim.candidate.items += 1 end -- BD-074: pickups per player this tick (summed, not reported one by one)
             end
             for _, candidate in candidates do
@@ -333,6 +342,7 @@ function FoodService.start(dinosaur,repository)
                         RunEggTags.apply(events,weatherId,before,after,function() return eventRandom:NextNumber() end,FoodService.adminMutationScale(candidate.player))
                         c:SetAttribute("RunEggEvents",Http:JSONEncode(events))
                     end
+                    if trackTelemetry then telemetry().noteFood(candidate.player, c:GetAttribute("RunId"), candidate.raw or 0, candidate.gained) end -- BD-575: ONE call per player per tick
                     dinosaur.addGrowth(c, candidate.gained * Config.GrowthPerFood)
                     if trackObjectives then objectives().record(candidate.player, "food_eaten", candidate.items) end -- BD-074: after the pickups were claimed and the catch score was committed; ONE call per player per tick
                 end

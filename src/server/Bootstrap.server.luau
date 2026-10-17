@@ -57,7 +57,7 @@ local leaving = LeaveCoordinator.new({
 RunLifecycle.configureSettlement(function(player: Player, runId: string, catchScore: number, reason: string, eggEvents, runSeconds, nestWeather)
     -- BD-156 / BD-479: each nest carries the weather active when it was FOUND in the run (the snapshot's per-nest ledger), not the settlement weather
     local ok, settledOutcome = ProfileRepository.commitRunSettlement(player, runId, catchScore, eggEvents, runSeconds, nestWeather)
-    if ok then Telemetry.runSettled(player, reason, runSeconds, settledOutcome) end -- BD-426: read-only, flag-gated
+    if ok then Telemetry.runSettled(player, reason, runSeconds, settledOutcome, runId) end -- BD-426: read-only, flag-gated
     if not ok then
         warn(string.format("[Be Dino] settlement failed for %s (%s)", player.Name, reason))
         leaving.settlementFinished(player) -- a failed settlement of a departed player must still release the lease
