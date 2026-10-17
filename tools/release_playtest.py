@@ -220,7 +220,7 @@ def rollback_plan(previous: str | None, proposal: str, cwd: Path = ROOT) -> list
         return [
             "Rollback target: NONE YET. No playtest tag exists, so this is the first playtest publish and there is no previous tag to go back to.",
             "  RB1: a rollback never goes to Build 020 once anyone has caught an Epic/Legendary or bought a newer potion (Build 020 fails closed: SchemaError).",
-            f"  First publish: stop the damage by setting the experience to Private / shutting down all servers; do the BD-320 drill as docs/148 step 6 says",
+            f"  First publish: stop the damage by setting the experience to Private / shutting down all servers; do the BD-320 drill as docs/148 step 5 says",
             f"  (publish {proposal}, publish the same file again as a second Roblox version, restore the first in Version History, roll forward).",
             f"  From the next release on, the target is {proposal}.",
         ]
