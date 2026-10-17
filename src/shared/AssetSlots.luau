@@ -70,6 +70,16 @@ Slots.Images = {
     potion_icon_loot_epic = "rbxassetid://94780850187438",
     potion_icon_speed_legendary = "rbxassetid://71253957039051",
     potion_icon_growth_legendary = "rbxassetid://94190575742218",
+    shop_tab_auras = "",
+    shop_tab_trails = "",
+    shop_tab_conditions = "",
+    shop_tab_crystals = "",
+    egg_green_spotted = "",
+    shop_tile_auras = "",
+    shop_tile_trails = "",
+    shop_tile_eggs = "",
+    shop_tile_conditions = "",
+    shop_tile_crystals = "",
     -- bind:end Images
 }
 Slots.Meshes = {
