@@ -1,10 +1,13 @@
 # 125 Friends playtest go / no-go (BD-317, written 2026-10-16 on main 73442de)
 
+> **PARTLY SUPERSEDED 2026-10-17.** The current readiness doc is [145 session 1 readiness](145-session1-readiness-2026-10-17.md) (offline audit on main b616687, verdict NOT READY until a lead Studio pass and the owner steps). This doc stays as history. Stale here: s1 NO-GO items for the cave hub and class movement, and the s2 table (`CaveHub`, `ClassMovementEnabled`, `RunTelemetryEnabled` are now ON in the playtest profile; 145 s3 has the current table); the 8-player second session (session 1 is 4 players); the PR list. Its closing "Owner decisions" addendum was already the override. Still valid: s5 risks, s7 rollback and the s8 gate to close BD-317.
+
 Label: **CURRENT BUILD BEHAVIOR** readiness audit, read from code, tools and docs. Nothing here was run on a published server or a phone. It **refreshes [106](106-friends-playtest-readiness.md)** (written at main 3e3e932): 106 stays as history for the flag table and the 15-step smoke script; this doc is the current go / no-go. Sources: [AGENTS.md](../AGENTS.md), [114](114-handbook.md) (section 1.1 is in open PR #242), [115](115-decisions-log.md), [55](55-playtest-release-runbook.md), [107](107-offline-mobile-budget.md), [111 audit](111-multiplayer-audit.md) and [111 rollback](111-rollback-drill.md), `tools/release_profiles.py`.
 
 PR state used below (checked with `gh pr list` at writing time): **merged** #244 (Peaceful), #245 (Goals panel), #249 (Robux line guard), #234 (class movement wiring), #235 (nests unlimited), #241 (special foods, flag off), #240 (mutation reveal). **Open** #239 (multiplayer audit, checklist s7.1), #242 (vision answers, handbook 1.1), #243 (rare hatch celebration), #247 (telemetry, docs/122), #248, #250 (class feel), #251 (cave cosy pass), #236. Anything "open" is NOT in a build made from main today.
 
 ## 1. Recommendation (read this first)
+*(Superseded by [145](145-session1-readiness-2026-10-17.md) s1 and by the "Owner decisions" addendum at the end of this doc: the cave hub is in session 1.)*
 - **GO** for a small, private, owner-supervised friends playtest of the **playtest profile on desktop**: owner plus 1 to 3 friends (4 players max for the first session), 1 to 2 hours, no Robux, progress disposable. Scope = the core loop: run, eggs, hatch party, nests, shops with earned crystals, Peaceful choice, fusion on persistent profiles, goals panel.
 - **GO, second session, only after the first is clean:** up to 8 players, and after merging #243 and #247 so the rare-hatch moment and the telemetry numbers are available.
 - **NO-GO** for: phones (never measured, BD-085/168/322); more than 8 players; the cave hub (`CaveHub` off, BD-293 device test pending); HP combat and Bite (`CombatEnabled` off, BD-252/316 no two-player test); low-poly gameplay claims beyond "it loads" (BD-097/309); Robux packs, paid random items, any product; public or unsupervised play; balance judgements (everything economic is PROVISIONAL).
@@ -12,6 +15,7 @@ PR state used below (checked with `gh pr list` at writing time): **merged** #244
 - Hard stop before inviting anyone: the **rollback drill on the real place** (section 7) and the **owner smoke run** (section 6 steps 8 to 10; ordered per-place list with BLOCKS / NICE marks: [129 owner Studio smoke checklist](129-owner-studio-smoke-checklist.md)). Without a published rollback you cannot undo a bad build.
 
 ## 2. What the playtest profile contains
+*(Superseded by [145](145-session1-readiness-2026-10-17.md) s3: `CaveHub`, `ClassMovementEnabled`, `RunTelemetryEnabled` and `PlaytestFeedbackEnabled` are ON; `CombatEnabled`, `SpecialFoodsEnabled`, `PerDinoCosmeticsEnabled` and `FastTravelPerk` are required false by the playtest profile.)*
 `python tools/build.py --profile playtest` (`tools/release_profiles.py`). Flags are `Config.luau` constants baked in per build; none can be flipped at runtime.
 
 | Flag | Default build | Playtest build |
