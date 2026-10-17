@@ -6,7 +6,7 @@ Label: **CURRENT BUILD BEHAVIOR** audit, offline only. Nothing here was run in S
 
 ## Status at end of 2026-10-17
 
-Label: **CURRENT BUILD BEHAVIOR** status on main `aba6a29` (PR #378). Docs only; nothing was run in Studio or on a phone for this section. Sources: `git log origin/main` (PRs #347 to #378 merged after the 145 baseline; #374, #379 and #291 still open), the row statuses in [07 kanban](07-kanban.md), the LEAD decisions in [115](115-decisions-log.md), [141](141-board-hygiene-stuck-rows.md) s7, [146](146-phone-forecast-2026-10-17.md) and [147](147-streaming-experiment-2026-10-17.md). CI on main `aba6a29` is green (workflow "Build generated Roblox place", `gh run list`); the offline numbers of s2 below were taken on b616687 and were not re-run here. Nothing here is called Done without its evidence path, and "merged" is still not "checked".
+Label: **CURRENT BUILD BEHAVIOR** status on main `4a9685c` (PR #379). Docs only; nothing was run in Studio or on a phone for this section. Sources: `git log origin/main` (PRs #347 to #379 merged after the 145 baseline; #374 and #291 still open), the row statuses in [07 kanban](07-kanban.md), the LEAD decisions in [115](115-decisions-log.md), [141](141-board-hygiene-stuck-rows.md) s7, [146](146-phone-forecast-2026-10-17.md) and [147](147-streaming-experiment-2026-10-17.md). CI was green on main `aba6a29` (workflow "Build generated Roblox place", `gh run list`; the run for #379 was not checked); the offline numbers of s2 below were taken on b616687 and were not re-run here. Nothing here is called Done without its evidence path, and "merged" is still not "checked".
 
 **Verdict: still NO-GO for friends session 1.** No code blocker is known, and the lead's single-player Studio checks of today passed or found and fixed what they found. Every remaining blocker needs the owner (experience, publish, a second client, a phone) or a lead Studio pass that has not been done as a whole.
 
@@ -24,7 +24,7 @@ Label: **CURRENT BUILD BEHAVIOR** status on main `aba6a29` (PR #378). Docs only;
 | 8 | Food pace with eating at the mouth (BD-527, BD-522) | **OPEN, not a blocker while OFF** | **Owner** picks; lead flips the flag only after | `Config.FoodPickupAtMouth = false` ([115](115-decisions-log.md) MR6); the simulation says +18% to +37% Compy food per minute if it were on; the two Studio runs are not done |
 | 9 | Phone-size HUD (BD-531): EGGS plate missing in a run at 836 x 390, hub HUD overlaps | **OPEN** (matters only with phones) | **Agent** | BD-531 row; [evidence](evidence/2026-10-17-stuck-BD-148/README.md) |
 | 10 | The 16 unbound images; sounds | Images **CLOSED** (bound by #349); sounds still mostly unbound and unheard, not a blocker | Owner (ears) for sounds | `python tools/upload_batch.py --list` to confirm; [120](120-pending-owner-uploads-checklist.md), [136](136-owner-art-and-sound-quick-prompts.md) |
-| 11 | Code and offline checks | **CLOSED as far as known** | Lead | CI green on `aba6a29`; s2 and s8 below |
+| 11 | Code and offline checks | **CLOSED as far as known** | Lead | CI green on `aba6a29` (not re-checked for #379); s2 and s8 below |
 
 ### 2. Owner hands-on steps, in order
 
@@ -47,7 +47,7 @@ Times are estimates. Steps 1 to 3 gate session 1 (step 4 too if phones may join)
 4. **BD-035** (P1) modular Blender egg, pattern, condition and mutation render passes.
 5. **BD-048** (P1) Blender world VFX and the six trail rarity categories (the ten trail icons are BD-178, Review / test).
 
-Also agent-sized, lower priority: BD-532 (BUY EGG can never succeed in the playtest, P2), BD-504 (P3), BD-508 (P3), and Studio checks not yet run: the BD-372 level-3 Conditions tab, the BD-148 "Some eggs can crack!" line, BD-164 / BD-255 camera rattle (needs a quiet machine). BD-503 shipped in #365 but its row reads Backlog until open PR #374 restores it. The P0 Backlog rows (BD-021, BD-085, BD-293, BD-317, BD-322) all wait on the owner, a publish or a phone.
+Also agent-sized, lower priority: BD-532 (BUY EGG can never succeed in the playtest, P2), BD-504 (P3), and Studio checks not yet run: the BD-372 level-3 Conditions tab, the BD-148 "Some eggs can crack!" line, BD-164 / BD-255 camera rattle (needs a quiet machine). BD-503 shipped in #365 but its row reads Backlog until open PR #374 restores it. The P0 Backlog rows (BD-021, BD-085, BD-293, BD-317, BD-322) all wait on the owner, a publish or a phone.
 
 ### 4. Not verified
 
@@ -57,7 +57,7 @@ Also agent-sized, lower priority: BD-532 (BUY EGG can never succeed in the playt
 - **Real saves:** no existing profile was migrated or reloaded in this audit; the playtest store is fresh by design (`BeDino_Playtest_M1_v1`). Fusion persistence, nest timers and settings across a rejoin are checked against mocks only.
 - Also not seen: eating at the mouth with a real human walk (flag OFF), fliers and swimmers in a real run, server hit sizes in a bite (combat flag OFF), and any sound by ear.
 
-### 5. What merged on 2026-10-17 since the 145 baseline (PRs #347 to #378; statuses follow the kanban)
+### 5. What merged on 2026-10-17 since the 145 baseline (PRs #347 to #379; statuses follow the kanban)
 
 | Area | PRs and rows | Status and evidence |
 | --- | --- | --- |
@@ -69,7 +69,7 @@ Also agent-sized, lower priority: BD-532 (BUY EGG can never succeed in the playt
 | Mouth reach | BD-515 #367, BD-521 #368, BD-522 #372 | Built, **OFF** per MR6; simulation in [food-reach](evidence/2026-10-17-food-reach/README.md); owner choice BD-527 |
 | Mutation tint | BD-518 #369 | Review / test; [ember-tint](evidence/2026-10-17-ember-tint/README.md) |
 | Eggs and hatch | BD-154 #364 (Done), BD-519 and BD-525 #375, BD-381 #353 | BD-154 Done with [evidence](evidence/2026-10-17-bd154-unseeded/README.md); [egg-reveal-fixes](evidence/2026-10-17-egg-reveal-fixes/README.md) |
-| UI and HUD | BD-501 UI floor sweep #361, BD-507 #363, BD-524 #371, BD-408 `verify_handbook` #357 | Review / test; [ui-floor](evidence/2026-10-17-ui-floor/README.md), [hud-fix](evidence/2026-10-17-hud-fix/README.md), folder `docs/evidence/2026-10-17-bd524/` |
+| UI and HUD | BD-501 UI floor sweep #361, BD-507 #363, BD-524 #371, BD-408 `verify_handbook` #357, BD-508 toast and BD-513 BIG camera cap #379 (Studio images in `docs/evidence/2026-10-17-big-cam-toast/`) | Review / test; [ui-floor](evidence/2026-10-17-ui-floor/README.md), [hud-fix](evidence/2026-10-17-hud-fix/README.md), folder `docs/evidence/2026-10-17-bd524/` |
 | Shop | BD-529 and BD-530 in #378, potion end-to-end verifier #352 | Review / test; [BD-445](evidence/2026-10-17-stuck-BD-445/README.md), folder `docs/evidence/2026-10-17-shop/` |
 | Stuck rows, rounds 1 and 2 | #369, #378 | Done, each with its evidence folder ([141](141-board-hygiene-stuck-rows.md) s7): BD-170, 440, 442, 169, 094, 371, 382, 420, 146. BD-148, 365, 445, 101, 289, 490 stay Review / test with their remaining items listed there |
 | Decisions | #355 (RB1 rollback rule, TX1 512 px uploads), #333 (gifting to anyone) | [115](115-decisions-log.md) |
