@@ -15,6 +15,7 @@ local NpcRules = require(ReplicatedStorage.Shared.NpcPredatorRules)
 
 local CombatService = {}
 local CooldownMemory = require(script.Parent.CooldownMemory)
+local HitRadius = require(script.Parent.HitRadius)
 local biteMemory = CooldownMemory.new(120) -- BD-363: bite cooldown keyed by UserId, a rejoin does not reset it
 
 local function numberAttribute(instance: Instance, name: string, fallback: number): number
@@ -22,11 +23,11 @@ local function numberAttribute(instance: Instance, name: string, fallback: numbe
     return if typeof(value) == "number" then value else fallback
 end
 
--- BD-311: planar half-size of a model's bounding box (the server measures it; the client never sends a size).
+-- BD-311 / BD-514 (docs/115 HS1): the body radius. The server decides it (the client never sends a size); with Config.LowPolyDinos on it
+-- comes from the measured low-poly species size x growth scale (Shared/HitSize), the same rule the wild predators use; the hidden legacy
+-- shell is not measured. With the flag off it is the old bounding-box measure. See src/server/HitRadius.
 local function radiusOf(model: Model): number
-    local ok, size = pcall(function() return model:GetExtentsSize() end)
-    if not ok then return 0 end
-    return math.max(size.X, size.Z) / 2
+    return HitRadius.of(model)
 end
 
 -- Returns nil while the flag is off. With it on, the returned api lets NpcPredatorService (BD-245) put wild predators into the SAME
@@ -34,7 +35,7 @@ end
 function CombatService.start(runLifecycle, dinosaur): any?
     if not Config.CombatEnabled then return end
     local world = Rules.new(true)
-    local api: any = {world = world, npcs = {}, onNpcDefeated = nil, npcRewards = NpcRules.newRewardLimiter()}
+    local api: any = {world = world, npcs = {}, npcRadius = {}, onNpcDefeated = nil, npcRewards = NpcRules.newRewardLimiter()}
     local tracked: {[Model]: string} = {}
     local connections: {[Model]: {RBXScriptConnection}} = {}
     local characterOf: {[string]: Model} = {}
@@ -95,12 +96,14 @@ function CombatService.start(runLifecycle, dinosaur): any?
         end))
     end
 
-    function api.addNpc(key: string, model: Model)
+    function api.addNpc(key: string, model: Model, radius: number?)
         api.npcs[key] = model
+        api.npcRadius[key] = radius -- BD-514: the wild predator's own hit radius (HitRadius.of with its species and drawn scale); nil = derive from the model
         characterOf[key] = model
     end
     function api.removeNpc(key: string)
         api.npcs[key] = nil
+        api.npcRadius[key] = nil
         characterOf[key] = nil
         Rules.leave(world, key)
     end
@@ -154,7 +157,7 @@ function CombatService.start(runLifecycle, dinosaur): any?
         if not character or not key or not humanoid or humanoid.Health <= 0 or not root or not root:IsA("BasePart")
             or not runLifecycle.isActive(character) then return end
         local now = workspace:GetServerTimeNow()
-        -- BD-354: refuse a bite that is still on cooldown BEFORE the O(players) candidate scan (GetExtentsSize per model);
+        -- BD-354: refuse a bite that is still on cooldown BEFORE the O(players) candidate scan (one radius per model);
         -- otherwise one client spamming the remote makes the server do that scan on every request.
         local biter = Rules.get(world, key)
         if biter and now - biter.lastBiteAt < Cfg.BiteCooldownSeconds then player:SetAttribute("LastBiteStatus", "cooldown") return end
@@ -167,7 +170,7 @@ function CombatService.start(runLifecycle, dinosaur): any?
         end
         for npcKey, npcModel in api.npcs do -- wild predators are bite targets too (BD-245)
             local npcRoot = if npcModel.Parent then npcModel:FindFirstChild("HumanoidRootPart") else nil
-            if npcRoot and npcRoot:IsA("BasePart") then table.insert(candidates, {key = npcKey, pos = npcRoot.Position, radius = radiusOf(npcModel)}) end
+            if npcRoot and npcRoot:IsA("BasePart") then table.insert(candidates, {key = npcKey, pos = npcRoot.Position, radius = api.npcRadius[npcKey] or radiusOf(npcModel)}) end
         end
         local leaping = now < numberAttribute(character, "LeapUntil", 0)
         local result = Rules.attack(world, key, now, root.Position, root.CFrame.LookVector, candidates, leaping, radiusOf(character))
