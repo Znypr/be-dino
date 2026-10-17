@@ -112,7 +112,7 @@ Roblox upload (all groups): Studio, View > Asset Manager > Bulk Import, owner ac
 - What: crystal gem, level star, task star, mutation egg, warning triangle, plus a 9-slice toast plate (the toast has an empty icon box today, BD-304).
 - Format: icons 1024 RGBA (readable at 32 px); `toast-body-v1.png` **512 x 128**, white-to-light-grey rounded panel (radius about 40 px), darker 6 px rim, 9-slice centre 48 px in from each edge, no icon or text.
 - Files (`resources/ui/v2/icons/`): `notify-crystal-v1.png`, `notify-level-v1.png`, `notify-star-v1.png`, `notify-mutation-egg-v1.png`, `notify-warning-v1.png`, `toast-body-v1.png`.
-- Prompts: shared + ICON block + subjects "a faceted blue gem" / "a rounded gold star with a white up-chevron" / "a simple chunky five-point gold star" / "an ivory egg with a swirling coloured flame band" / "a rounded orange-red triangle with a white bar and dot". Plate: shared + "a flat empty rounded-rectangle UI panel, 512 x 128, white to light grey with a darker rim, transparent outside".
+- Prompts: shared + ICON block + subjects "a faceted AMBER / golden-yellow gem, never blue (corrected 2026-10-17 per handbook s5.3; it said \"a faceted blue gem\" before)" / "a rounded gold star with a white up-chevron" / "a simple chunky five-point gold star" / "an ivory egg with a swirling coloured flame band" / "a rounded orange-red triangle with a white bar and dot". Plate: shared + "a flat empty rounded-rectangle UI panel, 512 x 128, white to light grey with a darker rim, transparent outside".
 - Bind: CODE: keys `notify_*`, `toast_body` in `UIIconAssets`, toast code change (BD-304 follow-up).
 
 ### D3. Aura icons and potion frames (BD-101)
@@ -133,7 +133,7 @@ Roblox upload (all groups): Studio, View > Asset Manager > Bulk Import, owner ac
 - Bind: CODE (BD-248).
 
 ### E2. Crystal pack art (Crystal Shop, BD-331; packs stay off while `Config.CrystalPacksEnabled = false`)
-- Four icons: `resources/ui/v2/icons/crystals-{s,m,l,xl}-v1.png`, 1024 coloured transparent. Prompt: shared + ICON block + "a pile of faceted blue gems in a [small cloth pouch / bigger cloth bag / wooden chest / golden vault], more gems for bigger packs".
+- Four icons: `resources/ui/v2/icons/crystals-{s,m,l,xl}-v1.png`, 1024 coloured transparent. Prompt: shared + ICON block + "a pile of faceted AMBER / golden-yellow gems (corrected 2026-10-17 per handbook s5.3; it said \"blue\" before) in a [small cloth pouch / bigger cloth bag / wooden chest / golden vault], more gems for bigger packs".
 - Bind: CODE (crystal cards in `Bootstrap.client.luau`). This art does not enable Robux packs (docs/43).
 
 ### E3. Fame Wall and cave signs (docs/104)
@@ -190,7 +190,7 @@ Source: [66](66-intake-mini-objectives.md) section 9 names the four new icons of
 
 If icons 3 and 4 are already made for the toasts (D2 above, [83](83-playtest-asset-list.md) items 15 and 17), do NOT make them again: the same file serves both. This section is the better spec for them, because it adds the 24 px rules and the amber colour.
 
-**Colour conflict to know about (handbook wins).** [83](83-playtest-asset-list.md) item 15 and D2 above still say "faceted BLUE gem" for the crystal. [114](114-handbook.md) section 5.3 (owner 2026-10-16) and [136](136-owner-art-and-sound-quick-prompts.md) say crystal currency art is **AMBER / yellow, never blue**. This brief uses amber. The old "blue" words in 83 and D2 are superseded by 114 s5.3.
+**Colour conflict to know about (handbook wins).** [83](83-playtest-asset-list.md) item 15 and D2 above still say "faceted BLUE gem" for the crystal. [114](114-handbook.md) section 5.3 (owner 2026-10-16) and [136](136-owner-art-and-sound-quick-prompts.md) say crystal currency art is **AMBER / yellow, never blue**. This brief uses amber. The old "blue" words in 83 and D2 are superseded by 114 s5.3. **Corrected 2026-10-17 (BD-561):** the "blue" words in [83](83-playtest-asset-list.md) item 15, D2 above, E2 (crystal packs) and [65](65-intake-notifications.md) now say amber, each with a "corrected 2026-10-17 per handbook s5.3" note; this paragraph keeps the old wording as the record of what the conflict was.
 
 ### 9.2 Rules for all four
 
@@ -249,8 +249,8 @@ If icons 3 and 4 are already made for the toasts (D2 above, [83](83-playtest-ass
 ### 9.7 Where the panel reads the ids, and the empty-id gate
 
 - **Reader:** all four go through the existing `Theme.ImageIds` table (`UITheme.luau` merges `AssetSlots.Images` into it; an empty id is not merged, so the key is simply absent). Slot names: `objective_chevron`, `objective_arrow` (new, added to `AssetSlots.luau`, `tools/asset_slots.json` and the [120](120-pending-owner-uploads-checklist.md) table by BD-561) and `notify_crystal`, `notify_star` (already exist, empty). Bind after upload with `python tools/bind_assets.py ids.txt` (lines `objective_chevron=rbxassetid://N`).
-- **Gate (to be written by BD-561, not here):** `ObjectivesPanel` gets one local helper, in words: "if `Theme.ImageIds[key]` is nil or empty, draw nothing and reserve no space; else `Theme.icon(parent, key)`". The header keeps `Theme.icon(header, "trophy")` always. So with all four ids empty the panel's Instance tree, text widths and `TouchLayout` rects are identical to today (`tools/verify_objectives_panel.py` gets one case for that), and each icon appears on its own as soon as its id is bound.
-- **Tight widths:** the folded pill is 190 to 300 px wide on phones (trophy 36 px + chip 68 px already); the chevron needs about 28 px more. BD-561 checks the text fit at 190 px and may shorten the title; it never shrinks the 44 px tap target or the 14 px text floor.
+- **Gate (WRITTEN by BD-561, 2026-10-17, offline only; text below is the spec it follows):** `ObjectivesPanel` gets one local helper, in words: "if `Theme.ImageIds[key]` is nil or empty, draw nothing and reserve no space; else `Theme.icon(parent, key)`". The header keeps `Theme.icon(header, "trophy")` always. So with all four ids empty the panel's Instance tree, text widths and `TouchLayout` rects are identical to today (`tools/verify_objectives_panel.py` gets one case for that), and each icon appears on its own as soon as its id is bound.
+- **Tight widths:** the folded pill is 190 to 300 px wide on phones (trophy 36 px + chip 68 px already); the chevron needs about 28 px more. BD-561 checks the text fit at 190 px and may shorten the title; it never shrinks the 44 px tap target or the 14 px text floor. **As built (BD-561):** with the chevron the 190 px pill gives the task name about 52 px, so the name is cut at a WHOLE word ("Hatch...", "Finish...") by `ObjectivePanelRules.fitWords` (one fallback word "Task" when not even the first word fits); the chip and the chevron always stay. The tutorial arrow and the Done-chip star sit in the folded pill only when the name keeps at least 72 px (`Rules.MinTitle`), i.e. on pills of about 242 px and wider: today that is the desktop and 836 x 390 pill (300 px); the 667 x 375 pill (203 to 220 px) shows the name and chip instead, and the arrow and star still show in the open rows (the arrow only if the name still fits two lines beside it). Gem: after the prize number on every row ("+10" then the gem; the words "+10 crystals" when the gem does not fit) and after the number in the claim answer. Star: left of the Done chip, and left of the prize on a finished row. The chevron turns 180 degrees when the panel is open; the arrow bobs 3 px every half second unless Reduce Motion is on.
 
 ### 9.8 After the owner has the PNGs
 

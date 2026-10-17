@@ -4,6 +4,12 @@ Static (python): flag-off identity of the client wiring (ObjectivesPanel is only
 side effect, asks the server only inside one function, Bootstrap publishes the panel rects only under the flag), the client never computes a
 reward, text >= 14 px and buttons >= 44 px, existing UI parts only (no asset ids, no image labels, the registered "trophy" icon).
 
+BD-561 (docs/109 section 9): four OPTIONAL icons (objective_chevron, objective_arrow, notify_crystal, notify_star), each behind an empty-id gate. Static: the
+slots exist and are empty in source, the panel creates icons only through one gated helper. Luau: the pure geometry (fitWords, wrapLines, headerLayout,
+prizeLayout) and the REAL panel with the ids empty (the Instance tree and every number identical to a panel without the feature, whatever else is in
+Theme.ImageIds) and with fake ids (icons in their documented spots, no overlap, text inside its box, whole-word cuts) on desktop, 836 x 390, 667 x 375
+and at the 190 / 220 / 250 / 300 px pills.
+
 Luau (real modules): the pure ObjectivePanelRules (which 3 rows, T8 versus the Goals PLAY line, the folded line, "New tasks soon" words,
 claim answers, token reuse, docs/72 copy rules on every string it can produce) and the REAL src/client/ObjectivesPanel.luau executed against a
 small mock of the Roblox GUI classes and a fake ObjectiveAction remote fed by the REAL ObjectiveRules view: folded and open states, the CLAIM
@@ -176,6 +182,15 @@ def static_errors() -> list[str]:
     for word in ('rbxassetid', 'ImageLabel', 'ImageButton', 'ViewportFrame', 'Polygon', 'ParticleEmitter'):
         if word in panel:
             errors.append(f'ObjectivesPanel: {word}: no new art; use Theme plates and registered icons only')
+    # BD-561: every other icon goes through ONE gated helper (empty id = no Instance); the slots exist and are empty in source
+    if panel.count('Theme.icon(') != 2 or not re.search(r'local function makeIcon\(.*?\n        if not art\[which\] then return nil end\n        local icon = Theme\.icon\(parent, Rules\.Slots\[which\]\)', panel, re.S):
+        errors.append('ObjectivesPanel: Theme.icon is called twice only (the trophy, and makeIcon behind `if not art[which] then return nil end`)')
+    slots = read('src/shared/AssetSlots.luau')
+    for key in ('objective_chevron', 'objective_arrow', 'notify_crystal', 'notify_star'):
+        if not re.search(rf'^\s*{key} = "",', slots, re.M):
+            errors.append(f'AssetSlots.Images.{key} must exist and be empty in source (art pending, never an invented id)')
+    if 'Rules.Slots' not in panel or 'chevron = "objective_chevron", arrow = "objective_arrow", crystal = "notify_crystal", star = "notify_star"' not in read('src/shared/ObjectivePanelRules.luau'):
+        errors.append('ObjectivePanelRules.Slots must name the four Theme.ImageIds keys of docs/109 section 9')
     if 'Theme.icon(header, "trophy")' not in panel or not re.search(r'^\s*trophy = "rbxassetid://\d+"', read('src/shared/UIIconAssets.luau'), re.M):
         errors.append('ObjectivesPanel: the header icon is the already-registered "trophy"')
     return errors
@@ -474,9 +489,12 @@ gui.attrs = {}
 gui.GetAttribute = function(self, name) return self.attrs[name] end
 local anchor = newInstance("Frame") anchor.Visible = true
 
-local Panel = (function(game, Instance, UDim2, Vector2, Enum, Rect, typeof, task, os)
+local function loadPanel(gameObject)
+ return (function(game, Instance, UDim2, Vector2, Enum, Rect, typeof, task, os)
  @@PANEL_SRC@@
-end)(gameMock, Instance_, UDim2_, Vector2_, Enum_, Rect_, typeof, task_, os_)
+ end)(gameObject, Instance_, UDim2_, Vector2_, Enum_, Rect_, typeof, task_, os_)
+end
+local Panel = loadPanel(gameMock)
 
 -- Nothing is asked before attach, and attach alone sends nothing: with the panel not shown there are no remote calls.
 assert(#calls == 0 and #tasks == 0, "attach has no side effect")
@@ -822,6 +840,418 @@ do
  print("Seen passed: real ObjectiveSeen.luau: flag off sends nothing and looks nothing up, one shape {action, id}, spawned, once per session, retries only on not-yet answers")
 end
 print("Panel passed: real ObjectivesPanel.luau on a GUI mock: folded one-liner and chip, open rows, CLAIM only on a finished task (>= 44 px), claim request {action,id,token}, waiting state, retry with the same token, fresh token after a definite answer, silent in a run and before the first egg")
+
+---------------------------------------------------------------- 6. BD-561: the four optional icons (docs/109 section 9)
+;(function()
+local FAKE = "rbxassetid://1234567"
+local ALL_FAKE = {objective_chevron = FAKE, objective_arrow = FAKE, notify_crystal = FAKE, notify_star = FAKE}
+local P, GAP = Rules.IconPx, Rules.IconGap
+local function boxOverlap(a, b) return a.x0 < b.x1 - 0.01 and b.x0 < a.x1 - 0.01 and a.y0 < b.y1 - 0.01 and b.y0 < a.y1 - 0.01 end
+
+-- 6a. pure geometry
+assert(Rules.Slots.chevron == "objective_chevron" and Rules.Slots.arrow == "objective_arrow" and Rules.Slots.crystal == "notify_crystal" and Rules.Slots.star == "notify_star")
+for key, px in P do assert(px <= 44 and px >= 20, "docs/109 s9: icons are 20 to 44 px: " .. key) end
+assert(Rules.fitWords("Equip a dino in the Index", 1000, 15) == "Equip a dino in the Index")
+assert(Rules.fitWords("Equip a dino in the Index", 90, 15) == "Equip a dino..." or Rules.fitWords("Equip a dino in the Index", 90, 15) == "Equip...", "whole words")
+assert(Rules.fitWords("Equip a dino in the Index", 5, 15) == nil and Rules.fitWords("", 0, 15) == "")
+assert(Rules.wrapLines("Hatch 3 eggs", 1000, 15) == 1 and Rules.wrapLines("Hatch 3 eggs", 70, 15) == 2 and Rules.wrapLines("Supercalifragilisticexpialidocious", 60, 15) == math.huge)
+local fitChecked = 0
+for _, e in Cfg.Catalogue do
+ for width = 20, 320, 7 do
+  local out = Rules.fitWords(e.name, width, 15)
+  if out ~= nil then
+   fitChecked += 1
+   assert(Rules.textWidth(out, 15) <= width, "fits: " .. out)
+   local words, outWords = wordsOf(e.name), wordsOf((string.gsub(out, "%.%.%.$", "")))
+   for i, word in outWords do assert(word == words[i], "whole words only: '" .. out .. "' from '" .. e.name .. "'") end
+   assert(not string.find(out, " a%.%.%.") and not string.find(out, " the%.%.%.") and not string.find(out, " toward%.%.%.") and Rules.copyOk(out))
+  end
+ end
+end
+assert(fitChecked > 100)
+
+-- The header geometry: no overlap, inside the panel, the chevron and the chip keep their places, the arrow / star yield first.
+local function range(x, w) return {x0 = x, x1 = x + w, y0 = 0, y1 = 1} end
+local legacy = Rules.headerLayout(220, {chip = true})
+assert(legacy.chipX == 220 - 64 and legacy.titleX == 42 and legacy.titleW == 220 - 42 - 68 and legacy.chevronX == nil and legacy.arrowX == nil and legacy.starX == nil, "no icon: today's numbers")
+local legacyOpen = Rules.headerLayout(300, {open = true})
+assert(legacyOpen.waitInset == 10 and legacyOpen.titleW == 0.38 * 300 - 42 and legacyOpen.waitW == 0.62 * 300 - 10, "open, no icon: today's numbers")
+local hdrCases = 0
+for width = 150, 400, 5 do
+ for mask = 0, 15 do
+  local has = {chevron = mask % 2 == 1, arrow = mask // 2 % 2 == 1, star = mask // 4 % 2 == 1, chip = mask // 8 % 2 == 1}
+  for _, isOpen in {false, true} do
+   has.open = isOpen
+   local lay = Rules.headerLayout(width, has)
+   hdrCases += 1
+   assert(lay.titleW >= 0 and (lay.chevronX ~= nil) == has.chevron, "chevron keeps its place")
+   if has.chevron then assert(lay.chevronX + P.chevron <= width - 8 + 1e-9 and lay.chevronX >= 0) end
+   if isOpen then
+    assert(lay.starX == nil and lay.arrowX == nil and lay.chipX == nil)
+    assert(math.abs(lay.titleX + lay.titleW - (width - lay.waitInset - lay.waitW)) < 1e-6, "open: the title ends where the words start")
+    assert(not has.chevron or width - lay.waitInset <= lay.chevronX - GAP + 1e-9, "open: the words stop before the chevron")
+   else
+    assert((lay.chipX ~= nil) == has.chip)
+    assert(not (lay.starX and lay.arrowX), "star and arrow never together")
+    if lay.arrowX then assert(has.arrow and lay.titleW >= Rules.MinTitle, "arrow only with room") end
+    if lay.starX then assert(has.star and has.chip and lay.titleW >= Rules.MinTitle, "star only with room, beside the chip") end
+    local items = {range(8, 28), range(lay.titleX, lay.titleW)}
+    if lay.arrowX then table.insert(items, range(lay.arrowX, P.arrow)) end
+    if lay.starX then table.insert(items, range(lay.starX, P.star)) end
+    if lay.chipX then table.insert(items, range(lay.chipX, Rules.ChipW)) end
+    if lay.chevronX then table.insert(items, range(lay.chevronX, P.chevron)) end
+    for i = 1, #items do
+     assert(items[i].x0 >= 0 and items[i].x1 <= width + 1e-9, "inside the panel")
+     for j = i + 1, #items do assert(not boxOverlap(items[i], items[j]), "no overlap in the folded header at " .. width .. " mask " .. mask) end
+    end
+   end
+  end
+ end
+end
+
+-- The prize line: every piece inside its span, nothing overlaps, the words always fit; the star leaves first, then the gem.
+local plain = Rules.prizeLayout({crystals = 10}, 100, false, {})
+assert(plain.words == "+10 crystals" and plain.text.x == 0 and plain.text.w == 100 and plain.gem == nil and plain.star == nil, "no icon: today's words")
+local prizeCases, withBoth, withoutStar, withoutGem = 0, 0, 0, 0
+for span = 30, 320, 2 do
+ for _, claimable in {false, true} do
+  for _, reward in {{crystals = 10}, {crystals = 150, xp = 5}} do
+   for mask = 0, 3 do
+    local lay = Rules.prizeLayout(reward, span, claimable, {star = mask % 2 == 1, gem = mask // 2 == 1})
+    prizeCases += 1
+    assert(lay.words ~= "" and Rules.copyOk(lay.words))
+    local items = {{x0 = lay.text.x, x1 = lay.text.x + lay.text.w, y0 = 0, y1 = 1}}
+    if lay.star then assert(claimable and mask % 2 == 1, "star only on a finished task") table.insert(items, {x0 = lay.star, x1 = lay.star + P.row, y0 = 0, y1 = 1}) end
+    if lay.gem then assert(mask // 2 == 1) table.insert(items, {x0 = lay.gem, x1 = lay.gem + P.row, y0 = 0, y1 = 1}) end
+    if lay.gem or lay.star then
+     assert(Rules.textWidth(lay.words, 14) <= lay.text.w + 1e-9 or lay.words == Rules.rewardText(reward) and not lay.gem, "text inside its box")
+    end
+    for i = 1, #items do
+     assert(items[i].x0 >= -1e-9 and items[i].x1 <= span + 1e-9, "inside the span " .. span)
+     for j = i + 1, #items do assert(not boxOverlap(items[i], items[j]), "no overlap in the prize line, span " .. span) end
+    end
+    if lay.gem and lay.star then withBoth += 1 elseif lay.gem and mask % 2 == 1 and claimable then withoutStar += 1 elseif mask // 2 == 1 and not lay.gem then withoutGem += 1 end
+   end
+  end
+ end
+end
+assert(withBoth > 0 and withoutStar > 0 and withoutGem > 0, "the table covers both icons, the star dropped first, then the gem")
+assert(Rules.rewardWords({crystals = 10}, true) == "+10" and Rules.rewardWords({crystals = 10, xp = 5}, true) == "+5 XP +10" and Rules.rewardWords({crystals = 10}, false) == "+10 crystals")
+
+-- 6b. the REAL panel in a fresh mock world per run
+local DEFAULT = copy(v0)
+local function makeEnv(ids)
+ modules.UITheme.ImageIds = ids
+ modules.UITheme.MotionEnabled = true
+ local hb = signal()
+ local rem = newInstance("RemoteFunction") rem.Name = "ObjectiveAction"
+ local st = {view = copy(DEFAULT), after = copy(afterClaimView)}
+ rem.InvokeServer = function(_, request)
+  if request.action == "view" then return {ok = true, view = copy(st.view)} end
+  return {ok = true, status = "claimed", grant = {crystals = 10, xp = 0}, view = copy(st.after)}
+ end
+ local folder = newInstance("Folder") folder.Name = "BeDinoRemotes" rem.Parent = folder
+ local rep = {WaitForChild = function() return sharedFolder end, FindFirstChild = function(_, n) if n == "BeDinoRemotes" then return folder end return nil end}
+ local g = {GetService = function(_, name)
+  if name == "HttpService" then return {GenerateGUID = function() guidCount += 1 return "guid-" .. guidCount end} end
+  if name == "Players" then return {LocalPlayer = {Character = {GetAttribute = function() return "Idle" end}}} end
+  if name == "ReplicatedStorage" then return rep end
+  if name == "RunService" then return {Heartbeat = hb} end
+  error("service " .. tostring(name))
+ end}
+ local gui2 = newInstance("ScreenGui") gui2.attrs = {}
+ gui2.GetAttribute = function(self, name) return self.attrs[name] end
+ local anchor2 = newInstance("Frame") anchor2.Visible = true
+ local panel2 = loadPanel(g)
+ panel2.setPlayActive(false)
+ panel2.attach(gui2, anchor2)
+ local e = {gui = gui2, st = st}
+ e.root = find(gui2, "ObjectivesPanel")
+ e.header, e.body = find(e.root, "Header"), find(e.root, "Body")
+ function e.tick() clockNow += 0.6 hb:fire(0.6) pump() end
+ function e.place(pill, sheet) gui2.attrs.ObjectivesRect, gui2.attrs.ObjectivesOpenRect = pill, sheet end
+ function e.toggle() e.header.Activated:fire() pump() e.tick() end
+ return e
+end
+
+local function serialize(v)
+ if type(v) ~= "table" then return tostring(v) end
+ local keys = {}
+ for k in v do table.insert(keys, tostring(k)) end
+ table.sort(keys)
+ local out = {}
+ for _, k in keys do table.insert(out, k .. "=" .. serialize(v[k])) end
+ return "{" .. table.concat(out, ",") .. "}"
+end
+local PROPS = {"Position", "Size", "AnchorPoint", "Rotation", "Text", "TextSize", "TextXAlignment", "Visible", "BackgroundTransparency", "ZIndex"}
+local function dump(node, path, lines)
+ local parts = {path .. "/" .. node.Name, node.ClassName}
+ for _, key in PROPS do local v = rawget(node, key) if v ~= nil then table.insert(parts, key .. ":" .. serialize(v)) end end
+ table.insert(lines, table.concat(parts, "|"))
+ for _, child in node.Children do dump(child, path .. "/" .. node.Name, lines) end
+end
+local function treeText(e) local lines = {} dump(e.root, "", lines) return table.concat(lines, "\n") end
+
+-- The same walk for every state: folded, open, a finished task (folded + open), the answer to a claim.
+local function walk(e, pill, sheet, viewA, viewB, visit)
+ e.st.view = viewA
+ e.place(pill, sheet)
+ e.tick() e.tick()
+ visit(e, "folded")
+ e.toggle() visit(e, "open")
+ e.toggle()
+ e.st.view = viewB
+ e.toggle() visit(e, "open_ready")
+ e.toggle() visit(e, "folded_ready")
+ e.toggle()
+ local claimButton = find(find(e.body, "Row1"), "Claim")
+ if claimButton.Visible then claimButton.Activated:fire() pump() end
+ visit(e, "message")
+end
+
+-- 6c. every id empty = the panel without the feature: whatever else sits in Theme.ImageIds, the tree and every number are the same, and no icon exists
+local rectPill, rectSheet = Rect_.new(278, 72, 498, 116), Rect_.new(278, 72, 559, 261)
+local function record(e, label, into) into[label] = treeText(e) end
+local reference
+for name, ids in {nothing = false, empty = {}, unrelated = {trophy = "rbxassetid://5", paint_bucket = "rbxassetid://7"}, blanks = {objective_chevron = "", objective_arrow = "", notify_crystal = "", notify_star = ""}} do
+ local e = makeEnv(if ids == false then nil else ids)
+ local seen = {}
+ walk(e, rectPill, rectSheet, DEFAULT, v1, function(env, label) record(env, label, seen) end)
+ local text = ""
+ for _, label in {"folded", "open", "open_ready", "folded_ready", "message"} do text ..= "## " .. label .. "\n" .. seen[label] .. "\n" end
+ local noted = copy(DEFAULT) noted.tutorial.name, noted.tutorial.note = "Hatch 3 eggs", "Cracked eggs count too" -- a row with a hint (OB3)
+ local e2, seen2 = makeEnv(if ids == false then nil else ids), {}
+ walk(e2, rectPill, rectSheet, noted, v1, function(env, label) record(env, label, seen2) end)
+ for _, label in {"folded", "open", "open_ready", "folded_ready", "message"} do text ..= "## noted " .. label .. "\n" .. seen2[label] .. "\n" end
+ reference = reference or text
+ assert(text == reference, "ids " .. name .. ": the tree is not the one without the feature")
+ for _, label in {"folded", "open", "message"} do assert(not string.find(seen[label], "objective_", 1, true) and not string.find(seen[label], "notify_", 1, true), "no icon Instance") end
+ local count = 0 for _ in string.gmatch(seen.folded, "Icon_") do count += 1 end
+ assert(count == 1 and string.find(seen.folded, "Icon_trophy", 1, true), "only the trophy exists")
+end
+-- today's numbers, spelled out
+do
+ local e = makeEnv(nil)
+ e.place(rectPill, rectSheet)
+ e.st.view = DEFAULT e.tick() e.tick()
+ local title, chip, wait = find(e.header, "Title"), find(e.header, "Chip"), find(e.header, "Wait")
+ assert(serialize(title.Position) == serialize(UDim2_.fromOffset(42, 0)) and serialize(title.Size) == serialize(UDim2_.new(1, -110, 1, 0)), "folded title as before")
+ assert(serialize(chip.Position) == serialize(UDim2_.new(1, -64, 0, 8)) and serialize(chip.Size) == serialize(UDim2_.fromOffset(56, 28)) and title.Text == "Eat 10 food", "folded chip as before")
+ e.toggle()
+ assert(serialize(wait.Position) == serialize(UDim2_.new(1, -10, 0.5, 0)) and serialize(wait.Size) == serialize(UDim2_.new(0.62, -10, 1, 0)) and serialize(title.Size) == serialize(UDim2_.new(0.38, -42, 1, 0)), "open words as before")
+ local r1 = find(e.body, "Row1")
+ local leftW = 281 - 124
+ assert(serialize(find(r1, "Name").Position) == serialize(UDim2_.fromOffset(8, 3)) and serialize(find(r1, "Name").Size) == serialize(UDim2_.fromOffset(leftW, 32)), "row name as before")
+ assert(find(r1, "Reward").Text == "+10 crystals" and serialize(find(r1, "Reward").Position) == serialize(UDim2_.new(1, -108, 0, 30)) and serialize(find(r1, "Reward").Size) == serialize(UDim2_.fromOffset(100, 22)), "row prize as before")
+end
+
+-- 6d. fake ids: icons in their documented spots, no overlap, text inside its box
+local function boxOf(inst, pw, ph)
+ local ax, ay = 0, 0
+ if inst.AnchorPoint then ax, ay = inst.AnchorPoint.X, inst.AnchorPoint.Y end
+ local w, h = inst.Size.X.Scale * pw + inst.Size.X.Offset, inst.Size.Y.Scale * ph + inst.Size.Y.Offset
+ local x, y = inst.Position.X.Scale * pw + inst.Position.X.Offset - ax * w, inst.Position.Y.Scale * ph + inst.Position.Y.Offset - ay * h
+ return {x0 = x, y0 = y, x1 = x + w, y1 = y + h}
+end
+local function textBox(label, pw, ph)
+ local b = boxOf(label, pw, ph)
+ local w = math.min(Rules.textWidth(label.Text, label.TextSize), b.x1 - b.x0)
+ if label.TextXAlignment == Enum_.TextXAlignment.Right then b.x0 = b.x1 - w
+ elseif label.TextXAlignment == Enum_.TextXAlignment.Center then local c = (b.x0 + b.x1) / 2 b.x0, b.x1 = c - w / 2, c + w / 2
+ else b.x1 = b.x0 + w end
+ return b
+end
+local function icon(parent, key) return find(parent, "Icon_" .. key) end
+local function shown(node) return node ~= nil and node.Visible == true end
+local stats = {arrowNote = 0, noteCut = 0, arrowFolded = 0, starFolded = 0, arrowRow = 0, starRow = 0, gemRow = 0, gemMessage = 0, cuts = 0, canvases = 0}
+local GROUP = {}
+for _, e in Cfg.Catalogue do GROUP[e.name] = e.group end
+
+local function checkNoOverlap(items, w, h, what)
+ for i = 1, #items do
+  local a = items[i]
+  assert(a.x0 >= -0.01 and a.x1 <= w + 0.01 and a.y0 >= -0.01 and a.y1 <= h + 0.01, what .. ": " .. items[i].name .. " leaves the panel")
+  for j = i + 1, #items do assert(not boxOverlap(a, items[j]), what .. ": " .. a.name .. " overlaps " .. items[j].name) end
+ end
+end
+
+local function checkHeader(e, label)
+ local W = e.root.Size.X.Offset
+ local title, chip, wait = find(e.header, "Title"), find(e.header, "Chip"), find(e.header, "Wait")
+ local chevron, arrow, star, gem = icon(e.header, "objective_chevron"), icon(e.header, "objective_arrow"), icon(e.header, "notify_star"), icon(e.header, "notify_crystal")
+ local isOpen = e.body.Visible
+ local items = {{name = "trophy", x0 = 8, y0 = 8, x1 = 36, y1 = 36}}
+ local function add(name, b) b.name = name table.insert(items, b) end
+ local t = textBox(title, W, 44) t.y0, t.y1 = 8, 36 add("title", t)
+ if isOpen then local w = textBox(wait, W, 44) w.y0, w.y1 = 8, 36 add("words", w) end
+ if chip.Visible then add("chip", boxOf(chip, W, 44)) end
+ for name, node in {chevron = chevron, arrow = arrow, star = star, gem = gem} do
+  if shown(node) then local b = boxOf(node, W, 44) add(name, b) end
+ end
+ checkNoOverlap(items, W, 44, label .. " header @" .. W)
+ -- the chevron is always there and turns over when open; the arrow lives on a folded tutorial task, the star beside a Done chip
+ assert(shown(chevron) and chevron.Rotation == (if isOpen then 180 else 0), label .. ": chevron at the right end, turned when open")
+ assert(boxOf(chevron, W, 44).x1 == W - 8 and chevron.Size.X.Offset == P.chevron, "chevron 24 px, 8 px from the right edge")
+ if isOpen then assert(not shown(arrow) and not shown(star), "open: arrow and star belong to the rows") end
+ if shown(arrow) then assert(not isOpen and chip.Visible, "folded arrow beside the task") stats.arrowFolded += 1 end
+ if shown(star) then assert(not isOpen and find(chip, "ChipText").Text == "Done!", "folded star beside the Done chip") stats.starFolded += 1 end
+ if shown(gem) then assert(isOpen and wait.Text == "+10", "gem only after a reward number") stats.gemMessage += 1 end
+ if not isOpen then
+  local cut = find(chip, "ChipText").Text
+  -- text fits its box by the pure estimate, or it is the single fallback word
+  assert(Rules.textWidth(title.Text, title.TextSize) <= title.Size.X.Offset + 0.01 or title.Text == "Task", label .. ": folded text fits " .. title.Text)
+  if string.sub(title.Text, -3) == "..." then stats.cuts += 1 end
+ end
+end
+
+local ROW = TouchLayout.OBJECTIVES.rowH
+local function glyph(label, pw, lines) -- the box of the glyphs: one text line is about 1.15 x the font size high (the label box is taller)
+ local b = textBox(label, pw, ROW)
+ b.y1 = b.y0 + math.ceil(label.TextSize * 1.15) * lines
+ return b
+end
+local function checkRows(e, label)
+ local W = e.root.Size.X.Offset
+ for i = 1, 3 do
+  local row = find(e.body, "Row" .. i)
+  if row.Visible then
+   local name, note, count, reward, claim, bar = find(row, "Name"), find(row, "Note"), find(row, "Count"), find(row, "Reward"), find(row, "Claim"), find(row, "Bar")
+   local arrow, star, gem = icon(row, "objective_arrow"), icon(row, "notify_star"), icon(row, "notify_crystal")
+   local items = {}
+   local function add(n, b) b.name = n table.insert(items, b) end
+   local nb = boxOf(name, W, ROW)
+   local maxLines = if note.Visible then 1 else 2
+   add("name", nb) -- the whole label box, as in the row-layout test above (stricter than its glyphs)
+   if note.Visible then add("note", glyph(note, W, 1)) end
+   if count.Visible then add("count", glyph(count, W, 1)) end
+   add("prize", glyph(reward, W, 1))
+   if claim.Visible then add("claim", boxOf(claim, W, ROW)) end
+   if bar.Visible then add("bar", boxOf(bar, W, ROW)) end
+   for n, node in {arrow = arrow, star = star, gem = gem} do if shown(node) then add(n, boxOf(node, W, ROW)) end end
+   checkNoOverlap(items, W, ROW, label .. " row " .. i .. " @" .. W)
+   if shown(arrow) then
+    assert(GROUP[name.Text] == "tutorial" and not claim.Visible, "the arrow is only on an unfinished tutorial task")
+    assert(Rules.wrapLines(name.Text, name.Size.X.Offset, 15) <= maxLines, "the name still fits beside the arrow: " .. name.Text)
+    assert(not note.Visible or Rules.textWidth(note.Text, note.TextSize) <= note.Size.X.Offset + 0.01, "the hint still fits beside the arrow")
+    assert(arrow.Size.X.Offset == P.arrow and boxOf(arrow, W, ROW).x0 == 8, "arrow 28 px at the row's left")
+    stats.arrowRow += 1
+    if note.Visible then stats.arrowNote += 1 if string.sub(note.Text, -3) == "..." then stats.noteCut += 1 end end
+   end
+   if GROUP[name.Text] ~= "tutorial" then assert(not shown(arrow), "never an arrow on a short or daily task") end
+   if shown(star) then assert(claim.Visible, "the star only on a finished task") stats.starRow += 1 end
+   if claim.Visible == false then assert(not shown(star)) end
+   if shown(gem) then assert(Rules.copyOk(reward.Text) and not string.find(reward.Text, "crystals", 1, true), "the gem replaces the word") stats.gemRow += 1 end
+  end
+ end
+end
+
+local function visitor(e, label)
+ checkHeader(e, label)
+ if e.body.Visible then checkRows(e, label) end
+end
+
+local function rect(r) return Rect_.new(r.x, r.y, r.x + r.w, r.y + r.h) end
+local function canvasRects(width, height, touch)
+ local layout = TouchLayout.compute({width = width, height = height, touch = touch, navCount = 7, goals = true, objectives = true})
+ assert(layout.objectives and layout.objectivesOpen, "layout gives the rects")
+ return rect(layout.objectives), rect(layout.objectivesOpen)
+end
+
+local sets = {}
+for _, v in {{1280, 720}, {1920, 1080}, {836, 390}, {667, 375}} do
+ for _, bar in (if v[1] > 1000 then {0} else {0, 36, 58}) do
+  for _, touch in {true, false} do
+   local pill, sheet = canvasRects(v[1], v[2] - bar, touch)
+   table.insert(sets, {label = v[1] .. "x" .. (v[2] - bar) .. (if touch then " touch" else " mouse"), pill = pill, sheet = sheet})
+  end
+ end
+end
+for _, w in {190, 220, 250, 300} do table.insert(sets, {label = "pill " .. w, pill = Rect_.new(10, 10, 10 + w, 54), sheet = Rect_.new(10, 10, 10 + w, 248)}) end
+
+local pillWidths = {}
+for _, s in sets do
+ stats.canvases += 1
+ pillWidths[s.pill.Width] = true
+ walk(makeEnv(ALL_FAKE), s.pill, s.sheet, DEFAULT, v1, visitor)
+end
+local widths = {} for w in pillWidths do table.insert(widths, w) end table.sort(widths)
+
+-- every catalogue task as the first / only task, at the narrow pills and the widest one
+local function oneRowView(entry)
+ local view = {tutorialDone = true, short = {}, daily = {}, carry = {}}
+ local row = {id = entry.id, name = entry.name, note = entry.note, progress = 0, goal = entry.goal, reward = copy(entry.reward), done = false, claimed = false}
+ if entry.group == "tutorial" then view.tutorial, view.tutorialDone = row, false else table.insert(view[entry.group], row) end
+ return view
+end
+local doneView = function(entry) local view = oneRowView(entry) local r = view.tutorial or view[entry.group][1] r.progress, r.done = entry.goal, true return view end
+local nameRuns = 0
+for _, w in {190, 220, 250, 300} do
+ for _, entry in Cfg.Catalogue do
+  local pill, sheet = Rect_.new(10, 10, 10 + w, 54), Rect_.new(10, 10, 10 + w, 248)
+  local e = makeEnv(ALL_FAKE)
+  walk(e, pill, sheet, oneRowView(entry), doneView(entry), visitor)
+  nameRuns += 1
+  -- folded text: the full name, or a whole-word cut, or the one fallback word; at 190 nothing but trophy, title, chip and chevron
+  local e2 = makeEnv(ALL_FAKE)
+  e2.place(pill, sheet) e2.st.view = oneRowView(entry) e2.tick() e2.tick()
+  local title = find(find(e2.root, "Header"), "Title")
+  local words = wordsOf((string.gsub(title.Text, "%.%.%.$", "")))
+  local nameWords = wordsOf(entry.name)
+  if title.Text ~= "Task" then for i, word in words do assert(word == nameWords[i], "whole words only at " .. w .. ": '" .. title.Text .. "' from '" .. entry.name .. "'") end end
+  if w == 190 then
+   assert(not shown(icon(find(e2.root, "Header"), "objective_arrow")) and not shown(icon(find(e2.root, "Header"), "notify_star")), "190 px: no room for the arrow, the chevron and the chip stay")
+   assert(shown(icon(find(e2.root, "Header"), "objective_chevron")) and find(find(e2.root, "Header"), "Chip").Visible)
+  end
+ end
+end
+assert(stats.arrowNote > 0 and stats.arrowFolded > 0 and stats.starFolded > 0 and stats.arrowRow > 0 and stats.starRow > 0 and stats.gemRow > 0 and stats.gemMessage > 0 and stats.cuts > 0, "the walk covers every icon: " .. serialize(stats))
+
+-- the documented spots at the widest pill, and the arrow's rules
+do
+ local e = makeEnv(ALL_FAKE)
+ local pill, sheet = Rect_.new(10, 10, 310, 54), Rect_.new(10, 10, 310, 248)
+ e.place(pill, sheet) e.st.view = DEFAULT e.tick() e.tick()
+ local header = e.header
+ assert(shown(icon(header, "objective_arrow")) and find(header, "Title").Text == "Eat 10 food", "folded: the arrow beside the first tutorial task")
+ assert(boxOf(icon(header, "objective_arrow"), 300, 44).x1 <= find(header, "Title").Position.X.Offset, "the arrow is left of the name")
+ e.toggle()
+ local r1, r2, r3 = find(e.body, "Row1"), find(e.body, "Row2"), find(e.body, "Row3")
+ assert(shown(icon(r1, "objective_arrow")) and not shown(icon(r2, "objective_arrow")) and not shown(icon(r3, "objective_arrow")), "open: the arrow on the tutorial row only")
+ assert(shown(icon(r1, "notify_crystal")) and shown(icon(r2, "notify_crystal")) and shown(icon(r3, "notify_crystal")) and find(r1, "Reward").Text == "+10", "the gem follows the prize number on every row")
+ assert(not shown(icon(r1, "notify_star")), "no star before the task is finished")
+ e.toggle() e.st.view = v1 e.toggle()
+ local ready = find(e.body, "Row1")
+ assert(find(ready, "Claim").Visible and shown(icon(ready, "notify_star")) and shown(icon(ready, "notify_crystal")) and not shown(icon(ready, "objective_arrow")), "finished: star + prize + gem, no arrow")
+ assert(boxOf(icon(ready, "notify_star"), 300, 60).x1 <= boxOf(icon(ready, "notify_crystal"), 300, 60).x0, "star, then the prize, then the gem")
+ e.toggle()
+ assert(shown(icon(e.header, "notify_star")) and find(find(e.header, "Chip"), "ChipText").Text == "Done!" and not shown(icon(e.header, "objective_arrow")), "folded: the star left of the Done chip")
+ assert(boxOf(icon(e.header, "notify_star"), 300, 44).x1 <= find(e.header, "Chip").Position.X.Offset, "the star is left of the chip")
+ e.toggle()
+ find(find(e.body, "Row1"), "Claim").Activated:fire() pump()
+ local wait = find(e.header, "Wait")
+ assert(wait.Text == "+10" and shown(icon(e.header, "notify_crystal")), "the answer to a claim: the number, then the gem")
+ local gemBox, numberBox = boxOf(icon(e.header, "notify_crystal"), 300, 44), textBox(wait, 300, 44)
+ assert(numberBox.x1 <= gemBox.x0 and gemBox.x0 - numberBox.x1 <= 4 and gemBox.x1 == 300 - 8 - P.chevron - GAP, "the gem sits right after the number, before the chevron")
+end
+do -- the bob: 3 px every half second, still when motion is off
+ local e = makeEnv(ALL_FAKE)
+ e.place(Rect_.new(10, 10, 310, 54), Rect_.new(10, 10, 310, 248)) e.st.view = DEFAULT e.tick() e.tick()
+ local arrow = icon(e.header, "objective_arrow")
+ local ys = {}
+ for _ = 1, 6 do e.tick() ys[arrow.Position.Y.Offset] = true end
+ local count = 0 for _ in ys do count += 1 end
+ assert(count == 2 and ys[8] and ys[11], "the arrow bobs between two heights 3 px apart")
+ modules.UITheme.MotionEnabled = false
+ ys = {}
+ for _ = 1, 6 do e.tick() ys[arrow.Position.Y.Offset] = true end
+ count = 0 for _ in ys do count += 1 end
+ assert(count == 1 and ys[8], "Reduce Motion: no bob")
+ modules.UITheme.MotionEnabled = true
+end
+
+print(string.format("Icons passed: slots empty = the same Instance tree and numbers as a panel without icons (4 ImageIds variants, 5 states); fake ids on %d canvases and pills (%s px wide): header %d cases, prize line %d cases, no overlap, whole-word cuts (%d cut titles), %d name runs; arrows %d folded / %d rows, stars %d folded / %d rows, gems %d rows / %d answers",
+ stats.canvases, table.concat(widths, "/"), hdrCases, prizeCases, stats.cuts, nameRuns, stats.arrowFolded, stats.arrowRow, stats.starFolded, stats.starRow, stats.gemRow, stats.gemMessage))
+end)()
 '''
 
 
@@ -860,8 +1290,8 @@ def main(argv=None) -> int:
         result = subprocess.run([args.runner, str(path)], capture_output=True, text=True, encoding='utf-8')
         print(result.stdout, end='')
         print(result.stderr, end='')
-        if result.returncode == 0 and 'Panel passed' in result.stdout and 'Goal line passed' in result.stdout:
-            print('Objectives panel verification passed (BD-075, BD-076).')
+        if result.returncode == 0 and 'Panel passed' in result.stdout and 'Goal line passed' in result.stdout and 'Icons passed' in result.stdout:
+            print('Objectives panel verification passed (BD-075, BD-076, BD-561).')
             return 0
         return result.returncode or 1
 

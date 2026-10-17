@@ -130,6 +130,30 @@ Pose.TuckTime = 0.18 -- seconds for the airborne tuck to settle
 -- and the push-off then (they used to fold, unfold and fold the legs again inside 0.4 s, up to 14 degrees in one frame) and eases from whatever
 -- pose the dino has into the airborne tuck over DirectBlend seconds (ctx.direct). Tuned so no part turns 8 degrees or more in one 60 Hz frame.
 Pose.DirectBlend = 0.4
+-- BD-556 (Water surge): a swim burst. A body wave runs from the head to the tail (each part lags the one before it by a phase offset, radians), and
+-- the flippers row in a stroke. All angles in radians, absolute from the rest pose; they are bounded below the 8 degree per 60 Hz frame limit
+-- (the verifier checks the real numbers). The wave is a left-right undulation (yaw about each joint, so no part slides off its neighbour); the body
+-- part itself only sways a few degrees (the flippers sit on it).
+Pose.SurgeWaveLag = {head = 0, neck = 0.4, body = 1.1, tail = 2.3} -- phase lag head -> tail
+Pose.SurgeWaveAmp = {head = 0.25, neck = 0.25, body = 0.09, tail = 0.45}
+Pose.SurgeFlipperLag = 1.0 -- the back flippers stroke this far (radians) after the front ones
+-- Wave cycles over one surge: a jump surge (0.40 s) swims 1 undulation, a leap surge (0.55 s) 1.4, so the speed of the wave is about the same.
+function Pose.surgeCycles(aggr: number): number return 1.0 + 0.4 * math.clamp(finite(aggr), 0, 1) end
+-- Wave value (-1..1) of a part with phase lag `lag`, p = 0..1 progress of the surge. Fades in and out with the surge (0 at both ends).
+function Pose.surgeWave(lag: number, p: number, aggr: number): number
+    p = math.clamp(finite(p), 0, 1)
+    return math.sin(2 * math.pi * Pose.surgeCycles(aggr) * p - finite(lag)) * math.sin(math.pi * p)
+end
+-- BD-556: the humanoid's hip spring compresses for a frame or two when the dino lands hard, which pushes the whole visual (feet included) into the ground
+-- by up to half a stud. restGap = root height over the floor when settled, gap = now (studs). Returns how far (studs, 0..MaxHipDip) to lift every part
+-- by the same amount so the feet stay on the ground while the landing squash plays. A small dead zone ignores ray noise; junk = 0.
+Pose.MaxHipDip = 0.7
+Pose.HipDipDeadZone = 0.03
+Pose.HipDipWindow = 0.3 -- seconds after touch-down in which the animator looks for the dip
+function Pose.hipDip(restGap: number, gap: number): number
+    if typeof(restGap) ~= "number" or typeof(gap) ~= "number" or restGap ~= restGap or gap ~= gap or math.abs(restGap) > 1e6 or math.abs(gap) > 1e6 then return 0 end
+    return math.clamp(restGap - gap - Pose.HipDipDeadZone, 0, Pose.MaxHipDip)
+end
 local CLASS_SCALE = { -- q = crouch/squash depth, s = push-off stretch, t = airborne tuck, l = landing squash
     Ground = {q = 1, s = 1, t = 1, l = 1}, Armored = {q = 1.3, s = 0.4, t = 0.5, l = 1.5},
     Fly = {q = 0.5, s = 0.7, t = 0.8, l = 0.6}, Water = {q = 0, s = 0, t = 0, l = 0}}
@@ -191,12 +215,15 @@ function Pose.sampleAction(role: string, side: number, lead: boolean, ctx: Ctx, 
     local aggr = math.clamp(finite(ctx.aggr), 0, 1)
     local cls = CLASS_SCALE[class or "Ground"] or CLASS_SCALE.Ground
     local q, st, tk, W, flap = 0, 0, 0, 0, 0 -- squash, stretch, tuck, wings open (0..1), wing flap
-    local lunge, snap, kick = 0, 0, 0
+    local lunge, snap, wave, stroke, row = 0, 0, 0, 0, 0
     if class == "Water" then
         if ph == "surge" then
             lunge = math.sin(math.pi * p)
             snap = math.sin(math.pi * math.clamp((p - 0.3) / 0.4, 0, 1)) * aggr
-            kick = math.sin(2 * math.pi * p) * math.sin(math.pi * p)
+            wave = Pose.surgeWave(Pose.SurgeWaveLag[role] or 0, p, aggr) * (Pose.SurgeWaveAmp[role] or 0)
+            -- flipper stroke: a rowing circle (pitch back and forth, roll out and in a quarter turn later); the back pair follows the front pair
+            local theta = 2 * math.pi * Pose.surgeCycles(aggr) * p - (if lead then 0 else Pose.SurgeFlipperLag)
+            stroke, row = math.sin(theta) * lunge, math.cos(theta) * lunge
         end
     elseif ph == "bite" then -- BD-324: lunge + snap for any class (the Water surge shape)
         lunge = math.sin(math.pi * p)
@@ -233,22 +260,24 @@ function Pose.sampleAction(role: string, side: number, lead: boolean, ctx: Ctx, 
     if role == "body" then
         dy = -0.05 * q + 0.03 * st - 0.01 * lunge
         pitch = -0.05 * q + (0.10 + 0.06 * aggr) * st + 0.02 * tk - 0.06 * lunge
+        yaw = wave
         dz = -0.02 * st * L - 0.045 * lunge * (1 + 0.6 * aggr)
     elseif role == "head" or role == "neck" then
         dy = -0.02 * q
         pitch = 0.18 * st * (1 + 0.5 * aggr) - 0.08 * tk + 0.10 * lunge - 0.35 * snap
         dz = -0.03 * st * L - 0.03 * lunge * L
+        yaw = wave
     elseif role == "tail" then
         pitch = 0.15 * q - 0.20 * st + 0.12 * tk + 0.20 * lunge
-        yaw = 0.45 * (1 + 0.5 * aggr) * kick
+        yaw = wave
     elseif role == "leg" then
         pitch = 0.55 * q - 0.45 * st + 0.70 * tk
         dy = 0.01 * q
     elseif role == "arm" then
         pitch = 0.20 * q - 0.50 * st + 0.50 * tk
     elseif role == "flipper" then
-        pitch = 0.5 * lunge
-        roll = s * 0.3 * lunge
+        pitch = 0.34 * stroke
+        roll = s * (0.2 * lunge + 0.18 * row)
     end
     local fold = 0
     if role == "wing" then
