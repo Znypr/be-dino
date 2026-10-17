@@ -15,6 +15,9 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402  (docs/150: ProfileRepository plus its parts)
 sys.path.insert(0, str(ROOT / "tools"))
 import release_profiles  # noqa: E402
 
@@ -107,7 +110,7 @@ def static_checks():
     assert head.index("IsStudio") < head.index("DemoDirectorEnabled"), "Studio check first"
     assert re.search(r"Config\.DemoDirectorEnabled ~= true then return end", head), "director must bail out when the flag is off"
     # Server side (docs/133): only DemoTriggerService (+ the guarded demo* repository functions) may mention the flag.
-    allowed_server = {"DemoTriggerService.luau", "ProfileRepository.luau", "Bootstrap.server.luau"}
+    allowed_server = {"DemoTriggerService.luau", "ProfileRepository.luau", "ProfileTestGrants.luau", "Bootstrap.server.luau"}
     for path in (ROOT / "src/server").glob("*.luau"):
         if path.name not in allowed_server:
             assert "DemoDirector" not in path.read_text(encoding="utf-8"), f"server script {path.name} must not reference the director"
@@ -120,7 +123,7 @@ def static_checks():
     assert service.count('Instance.new("RemoteFunction")') == 1 and "RemoteEvent" not in service, "one RemoteFunction only"
     assert 'remote.Name = "DemoTrigger"' in service
     assert "player ~= owner" in service, "owner-local check"
-    repo = (ROOT / "src/server/ProfileRepository.luau").read_text(encoding="utf-8")
+    repo = profile_sources.repository_text()
     assert re.search(r"^local demoActive = localPreview and Config\.DemoDirectorEnabled == true", repo, re.M), "demoActive must require localPreview"
     assert re.search(r"^local localPreview = RunService:IsStudio\(\) and game\.GameId == 0 and Config\.StudioLocalProfilesEnabled", repo, re.M)
     demo_fns = re.findall(r"^function ProfileRepository\.(demo\w+)\(", repo, re.M)
@@ -128,7 +131,8 @@ def static_checks():
     for name in demo_fns:
         body = repo.split(f"function ProfileRepository.{name}(", 1)[1].split("\n", 2)[1].strip()
         assert body == 'if not demoActive then return false, "disabled" end', f"{name} must check demoActive first"
-    assert repo.count("demoActive") == 1 + len(demo_fns), "demoActive used nowhere else"
+    # docs/150: lines naming it = the declaration + the hand-over to the part + the part's local alias + the first line of each demo function
+    assert len(re.findall(r"^.*demoActive.*$", repo, re.M)) == 3 + len(demo_fns), "demoActive used nowhere else"
     grant = repo.split("function ProfileRepository.demoGrantEggs", 1)[1].split("function ProfileRepository.demoEquip", 1)[0]
     assert "bankEggs(profileValue, batch, now)" in grant, "party eggs must use the real bankEggs path"
     # release gate: the flag is a Studio-local flag (guard enforced by verify_release) and a stray unguarded read is caught.

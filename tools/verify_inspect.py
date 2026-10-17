@@ -13,6 +13,9 @@ import re
 import subprocess
 import tempfile
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402  (docs/150: ProfileRepository plus its parts)
 
 
 def module(path):
@@ -267,7 +270,7 @@ def check_wiring():
     # Server: the optional variant key is validated twice (event handler shape, repository ownership).
     service = read('src/server/CollectionService.luau')
     assert 'invalid_variant' in service and 'profileRepository.equipSpecies(player, speciesId, variantKey)' in service
-    repo = read('src/server/ProfileRepository.luau')
+    repo = profile_sources.repository_text()
     assert repo.count('not_owned') >= 1 and 'profileValue.equippedVariantKey = variantKey' in repo
     assert 'EggTraits.selected(collection[equippedId], equippedKey)' in repo and 'local function equippedOf' in repo  # BD-606: the dino actually played (a secret species sits beside the fallback pair)
     workflow = read('.github/workflows/build-generated-place.yml')

@@ -4,7 +4,10 @@ Mocks validate logic/transactions, not Studio physics or rendering.
 from pathlib import Path
 import argparse,subprocess,tempfile
 ROOT=Path(__file__).resolve().parents[1]
-def module(path):return '(function()\n'+(ROOT/path).read_text()+'\nend)()'
+import sys
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+import profile_sources
+def module(path):return profile_sources.module(path) # docs/150: ProfileRepository plus the parts it installs
 def script():
  s='local ProgressionConfig='+module('src/shared/ProgressionConfig.luau')+'\nlocal GameConfig='+module('src/shared/Config.luau')+'\n'
  s+='local script={Parent={ProgressionConfig="ProgressionConfig"}}\nlocal require=function(_)return ProgressionConfig end\nlocal Genetics='+module('src/shared/EggGenetics.luau')+'\n'
