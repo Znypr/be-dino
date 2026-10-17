@@ -5,6 +5,8 @@
 -- What a gift is: a fixed, named catalogue item (a skin or crystals, nothing else), an optional PRESET message id (never free text), a
 -- sender UserId and a source ("robux" = BD-453 later, "admin" = BD-452). Names and message text are never stored (GF13/GF17).
 -- Everything marked PROVISIONAL is a number or an item the owner has not approved.
+local SkinCatalog = require(script.Parent.SkinCatalog) -- BD-456: the one skin catalogue (the gift items for skins are built from it)
+
 local GiftRules = {}
 
 GiftRules.SchemaVersion = 1
@@ -39,16 +41,20 @@ local Limits = GiftRules.Limits
 -- adminOnly: the free-form admin crystal grant ("crystals_custom", amount in the gift, 1..AdminMaxCrystals).
 -- Never giftable, by construction (no entry can exist for them): eggs, dinos, species, rarity, luck, stat or fusion advantages.
 export type Entry = {id: string, kind: string, label: string, skin: string?, crystals: number?, launch: boolean, adminOnly: boolean?}
-local catalogue: {Entry} = {
-    {id = "skin_plush", kind = "skin", skin = "Plush", label = "Plushy skin", launch = true},
-    {id = "skin_clay", kind = "skin", skin = "Clay", label = "Clay skin", launch = true},
-    {id = "skin_bricks", kind = "skin", skin = "Bricks", label = "Bricks skin", launch = true},
-    {id = "skin_balloon", kind = "skin", skin = "Balloon", label = "Balloon skin", launch = true},
+-- BD-456: the skin items are NOT written out here. They are built from SkinCatalog.Ownable (the one skin catalogue, docs/137 s7), so a skin
+-- id, its label and its order exist in exactly one place: item id "skin_" + lower-case skin id ("skin_plush"), label "<skin label> skin".
+local catalogue: {Entry} = {}
+for _, skin in SkinCatalog.Ownable do
+    table.insert(catalogue, {id = "skin_" .. string.lower(skin.id), kind = "skin", skin = skin.id, label = skin.label .. " skin", launch = true})
+end
+for _, entry in ({
     {id = "crystals_100", kind = "crystals", crystals = 100, label = "100 crystals", launch = false},
     {id = "crystals_500", kind = "crystals", crystals = 500, label = "500 crystals", launch = false},
     {id = "crystals_2000", kind = "crystals", crystals = 2000, label = "2,000 crystals", launch = false},
     {id = "crystals_custom", kind = "crystals", label = "Crystals", launch = true, adminOnly = true},
-}
+} :: {Entry}) do
+    table.insert(catalogue, entry)
+end
 GiftRules.Catalogue = table.freeze(catalogue)
 local byId: {[string]: Entry} = {}
 for _, entry in catalogue do byId[entry.id] = entry end
