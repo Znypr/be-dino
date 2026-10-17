@@ -1,0 +1,2 @@
+# BD-371 after "Oops! Splat!" (2026-10-17, Studio)
+A Cracked egg that did not hatch (egg 8 and egg 25 of 32): "Oops! Splat!" with the splat art, "This cracked egg did not hatch", "Cracked eggs hatch 1 time in 5", and a real green NEXT EGG button with dark text (01-splat-next-egg-button.jpg). At the end of the batch the same button reads DONE (seen live; hatch result with DONE in ../2026-10-17-stuck-BD-148 is image 11-hatch-result-tap-for-next.jpg for the tap hint). Not seen: a "TRY AGAIN" button (it only exists when no eggs are left).

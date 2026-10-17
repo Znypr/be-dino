@@ -44,6 +44,22 @@ for _, id in Look.Order do
     local forced = Look.blend(base, id, 5) -- caller cannot exceed the ceiling
     assert(math.abs(forced[1] - base[1]) <= math.abs(e.tint[1] - base[1]) * Look.MaxAmount + 1e-6)
 end
+-- BD-518: the per-pixel pull used by the low-poly bake equals Look.blend (so previews and the world agree), stays gentle, identity for unknown ids
+for _, id in Look.Order do
+    local e = Look.get(id)
+    for _, c in {{0.9, 0.88, 0.7}, {0.15, 0.45, 0.85}, {0.05, 0.05, 0.05}, {1, 1, 1}} do
+        local r, g, b = Look.pull(c[1], c[2], c[3], id)
+        local ref = Look.blend({c[1] * 255, c[2] * 255, c[3] * 255}, id)
+        assert(math.abs(r * 255 - ref[1]) < 1e-6 and math.abs(g * 255 - ref[2]) < 1e-6 and math.abs(b * 255 - ref[3]) < 1e-6, id .. " pull == blend")
+        assert(r >= 0 and r <= 1 and g >= 0 and g <= 1 and b >= 0 and b <= 1, id .. " pull stays a colour")
+        -- the base colour must stay recognisable: no channel moves by more than MaxAmount of the distance to the tint
+        assert(math.abs(r - c[1]) <= Look.MaxAmount + 1e-9 and math.abs(g - c[2]) <= Look.MaxAmount + 1e-9 and math.abs(b - c[3]) <= Look.MaxAmount + 1e-9)
+    end
+    -- a pale cream body really moves (the tint must be VISIBLE, not zero): at least 4 of 255 on some channel
+    local r, g, b = Look.pull(0.9, 0.88, 0.7, id)
+    assert(math.max(math.abs(r - 0.9), math.abs(g - 0.88), math.abs(b - 0.7)) * 255 >= 4, id .. " visible on cream")
+end
+do local r, g, b = Look.pull(0.3, 0.4, 0.5, "nope") assert(r == 0.3 and g == 0.4 and b == 0.5) end
 local same = Look.blend(base, "nope")
 assert(same[1] == 100 and same[2] == 100 and same[3] == 100)
 print("MutationLook passed: " .. #Look.Order .. " mutations, matte, gentle tint (<= " .. Look.MaxAmount .. "), badge colours match config")
@@ -57,7 +73,28 @@ def script():
     return s
 
 
+def scan_lowpoly_bake():
+    """BD-518: MeshPart.Color is ignored on a baked (TextureContent) part, so on low-poly dinos the event mutation has to be baked
+    into the texture. Guard the wiring: spec field, cache key, paint, the container attribute and every call site."""
+    tex = (ROOT / 'src/shared/LowPolyTexture.luau').read_text(encoding='utf-8')
+    assert 'mutation: string?' in tex, 'Texture.Spec needs the mutation field'
+    key = tex.split('function Texture.key', 1)[1].split('\nend', 1)[0]
+    assert 'spec.mutation' in key, 'the bake cache key must change with the mutation (else two looks share one image)'
+    paint = tex.split('function Texture.paint', 1)[1].split('local function yielder', 1)[0]
+    assert 'Look.pull(' in paint and 'if tier then nil else spec.mutation' in paint, 'paint must bake the mutation and skip fused tiers'
+    dinos = (ROOT / 'src/shared/LowPolyDinos.luau').read_text(encoding='utf-8')
+    assert 'function LowPoly.setMutation' in dinos and 'mutation = mutationOf(container, entry)' in dinos, 'tint must pass the container mutation into the spec'
+    assert '"LPMutation"' in dinos
+    cos = (ROOT / 'src/client/CosmeticVisuals.client.luau').read_text(encoding='utf-8')
+    assert 'LowPoly.setMutation(visual,mutationId)' in cos and 'LowPoly.setMutation(state.visual,nil)' in cos, 'world dino: set and clear the baked tint'
+    assert 'LowPoly.setMutation(previous,' in (ROOT / 'src/client/ResourceVisuals.client.luau').read_text(encoding='utf-8'), 'equip path sets the baked tint before the genes bake'
+    assert '"LPMutation"' in (ROOT / 'src/shared/DinosaurPreview.luau').read_text(encoding='utf-8'), 'previews carry the baked tint'
+    assert 'LowPoly.setMutation(item,' in (ROOT / 'src/client/PreviewTraits.luau').read_text(encoding='utf-8'), 'hatch / Index / details previews bake the tint (PreviewTraits)'
+    print('Low-poly bake scan passed: the mutation tint is baked into the texture (key, paint, world, equip and previews)')
+
+
 def scan():
+    scan_lowpoly_bake()
     checks = {
         'src/shared/MutationEffects.luau': 'MutationLook',
         'src/shared/DinosaurPreview.luau': 'MutationLook.apply',
