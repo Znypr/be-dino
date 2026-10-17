@@ -9,12 +9,16 @@ and src/client/CaveAtmosphere.luau (no Luau runner needed):
 """
 from pathlib import Path
 import re
+import sys
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import weather_sources  # noqa: E402  (docs/153: WeatherVisuals plus the parts it requires)
 
 
 def main():
-    src = (ROOT / 'src/client/WeatherVisuals.client.luau').read_text(encoding='utf-8')
-    loop = src[src.index('RunService.Heartbeat:Connect'):]
+    main_src = weather_sources.main_text()
+    src = weather_sources.weather_text()  # main script first, then the parts (rigs, sky, one-shots, quake, title card)
+    loop = main_src[main_src.index('RunService.Heartbeat:Connect'):]
     assert 'local hall=Cave.inside() or Cave.amount()>.01' in loop, 'hall flag'
     assert 'local outside=1-Cave.amount()' in loop, 'outside factor'
     assert 'local t=WL.strength(k,Theme.MotionEnabled)*outside' in loop, 'weather strength must fade by outside'
@@ -39,14 +43,16 @@ def main():
     assert 'if hall then softenTitle() end' in loop, 'a big card already up shrinks to the soft toast when the cave is entered'
     assert 'soft=soft or inHall()' in src and 'titleBig=not soft' in src, 'showTitle re-checks the cave: no big card or bonus line inside'
     assert re.search(r'if mine~=titleToken then return end\s*titleBig=false', src), 'a faded card clears titleBig, so entering the cave cannot revive it as a stuck RAIN! (BD-541)'
-    assert 'if hall then shake=0 end' in loop, 'no camera shake inside, not even for a quake'
+    assert 'if hall then fx.shake=0 end' in loop, 'no camera shake inside, not even for a quake'
     assert 'if root and not hall and activeId=="quake"' in loop, 'quake cracks gated by hall'
     assert 'local moonOn=live and' in loop and 'local auroraOn=live and' in loop, 'moon / aurora gated by live'
     for name in ('on=motion and weatherId==activeId', 'live and root and activeId=="volcano"', 'live and root and activeId=="thunder"'):
         assert name in loop, 'gate missing: ' + name
     # BD-131: the textured weather rigs ride the same gates (nothing new can show inside the hall)
     assert 'addRig("aurora",skyBand,Vector3.new(0,70,0),{curtain})' in src, 'textured aurora curtain is a normal rig (gated by motion / not hall)'
-    moon = loop[loop.index('local moonOn=live and'):loop.index('-- aurora: full-sky rays')]
+    assert 'updateMoon(root,now,moonOn,k)' in loop, 'the moon is drawn by WeatherSky.updateMoon, called with the live gate'
+    sky_src = weather_sources.read('src/client/WeatherSky.luau')
+    moon = sky_src[sky_src.index('local function updateMoon'):]
     assert moon.count('moonBoard.Enabled=true') == 1 and 'if moonBoard then moonBoard.Enabled=false end' in moon, 'textured moon disc only while moonOn, hidden otherwise'
     assert moon.index('moonBoard.Enabled=true') < moon.index('\n    else\n'), 'disc is shown inside the moonOn branch only'
     assert 'if slot.trunk then slot.trunk.Enabled=on end' in src and 'for _,slot in bolts do slot.active=false setBolt(slot,false) end' in src, 'textured bolt trunk is switched by setBolt, which stopOneShots clears'
@@ -57,7 +63,7 @@ def main():
     cave = (ROOT / 'src/client/CaveAtmosphere.luau').read_text(encoding='utf-8')
     assert 'dof.Enabled = false' in cave and 'function Cave.amount()' in cave
     # weather writes Lighting only inside the Heartbeat loop (setup-time reads of base values are fine)
-    before = src[:src.index('RunService.Heartbeat:Connect')]
+    before = main_src[:main_src.index('RunService.Heartbeat:Connect')] + weather_sources.parts_text()
     assert not re.search(r'Lighting\.(Ambient|OutdoorAmbient|FogStart|FogEnd|FogColor|ColorShift_\w+|ExposureCompensation|Brightness)\s*=[^=]', before), \
         'Lighting overrides must live in the gated Heartbeat loop'
     print('verify_cave_weather: weather never affects the cave interior (BD-403)')

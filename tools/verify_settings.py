@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 import sys as _sys  # noqa: E402
 _sys.path.insert(0, str(Path(__file__).resolve().parent))
 import profile_sources  # noqa: E402  (docs/150: ProfileRepository plus its parts)
+import weather_sources  # noqa: E402  (docs/153: WeatherVisuals plus its parts)
 
 BODY = r'''
 local D = M.Defaults
@@ -92,7 +93,7 @@ def static_checks():
     sync = read('src/client/SettingsSync.client.luau')
     if 'Theme.MotionEnabled = not s.calm' not in sync or 'SetSettings' not in sync:
         errors.append('SettingsSync must wire Calm motion to Theme.MotionEnabled and send changes')
-    if 'SettingsModel' not in read('src/client/WeatherVisuals.client.luau'):
+    if 'SettingsModel' not in weather_sources.weather_text():
         errors.append('WeatherVisuals must read the Weather setting')
     if 'SettingsModel' not in read('src/client/CosmeticVisuals.client.luau'):
         errors.append('CosmeticVisuals must read the Effects setting')

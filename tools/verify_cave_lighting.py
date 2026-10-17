@@ -224,7 +224,8 @@ def static_checks():
     assert step.lstrip().startswith('if not Config.CaveHub then return end'), 'flag off: the client look returns before touching anything'
     assert 'ColorCorrectionEffect' in client and 'grade:Destroy()' in client, 'ColorCorrection only while inside, destroyed on leaving'
     assert 'WeatherDof' in client and 'dof.Enabled = false' in client and 's.dof ~= nil' in client, 'weather DepthOfField off in the cave, restored outside'
-    weather = (ROOT / 'src/client/WeatherVisuals.client.luau').read_text()
+    import weather_sources  # docs/153: WeatherVisuals plus the parts it requires
+    weather = weather_sources.weather_text()
     assert 'Cave.step(dt)' in weather and 'local hall=Cave.inside() or Cave.amount()>.01' in weather, 'weather calls the cave look last and keeps its rigs outside'
     # BD-383: every additive weather effect (WeatherGrade / Bloom / Rays / haze / exposure / lamps) scales by the weather strength t,
     # and t is multiplied by (1 - Cave.amount()), so inside the hall the weather writes neutral values (grey Blizzard cave).
@@ -237,7 +238,7 @@ def static_checks():
     assert 'local motion=Theme.MotionEnabled and root~=nil and not hall' in weather, 'BD-398 rigs/one-shots off inside'
     assert 'local live=motion and root~=nil and not hall' in weather and 'not hall and activeId=="quake"' in weather, 'BD-398 live effects off inside'
     assert 'showTitle(id,workspace:GetAttribute("WeatherName") or id,hall)' in weather and 'if soft then name' in weather, 'BD-398 soft toast inside'
-    assert 'if hall then shake=0 end' in weather, 'BD-403 no camera shake inside the hall'
+    assert 'if hall then fx.shake=0 end' in weather, 'BD-403 no camera shake inside the hall'
     assert 'Lighting.Brightness = saved.brightness' in client and 'Lighting.ShadowSoftness' in client, 'BD-398 cave brightness and shadow softness, restored'
     assert 'spec.shadows == true' in server, 'BD-398 shadows only on flagged lights'
     assert 'Rules.archLight()' in server and 'GeneratedMeshes.CaveForms.cave_gate_arch_v3.assetId ~= ""' in server and 'count < Layout.MaxLights' in server, 'BD-296 the arch lantern light is added only with the arch mesh id and under the cap'

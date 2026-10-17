@@ -51,6 +51,10 @@ offline tests only. No trait odds, UI, Studio acceptance or persistent rollout.
 
 [ProfileRepository split](150-profile-repository-split.md): `src/server/ProfileRepository.luau` keeps the store, lease, retry, write budget, load / migration and save path, and installs the transaction groups from `ProfileEggs`, `ProfileFusion`, `ProfileObjectives`, `ProfileGifts`, `ProfileSkins`, `ProfileShop`, `ProfileCollection`, `ProfilePrefs` and `ProfileTestGrants` (same public API, function bodies unchanged). Verifiers that read the source use `tools/profile_sources.py`; `tools/verify_profile_golden.py` proves the stored profile did not change.
 
+## Where the client weather code lives (BD-627)
+
+[WeatherVisuals split](153-weather-visuals-split.md): `src/client/WeatherVisuals.client.luau` keeps the Lighting grade, atmosphere, clouds, lamp, main loop and camera shake and builds `WeatherKit`, `WeatherRigs`, `WeatherSky`, `WeatherStrikes`, `WeatherQuake` and `WeatherTitle` (same code, moved). Verifiers that read it as text use `tools/weather_sources.py`.
+
 ## Historical documents: keep for traceability, not as active instructions
 
 Do **not** delete build snapshots or test evidence just to make them look current. Retain their specific facts and outputs, with clear historical notices. Older strings like "this is the current build", "persistence is not implemented", "GitHub main is Build 013", "three-species only" and "60-second newly earned egg timing" are scoped to their original dates/builds.

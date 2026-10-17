@@ -265,10 +265,15 @@ def static_checks(printed):
     assert (shaft, live, total) == (guards['caveBeams']['value'], phone['beams']['value'], phone['beams']['value']), 'hub beams: shaft + cosmetic cap == the phone beam budget'
 
     # weather
-    weather = read('src/client/WeatherVisuals.client.luau')
+    sys.path.insert(0, str(ROOT / 'tools'))
+    import weather_sources  # docs/153: WeatherVisuals (main script first) plus the parts it requires
+    weather = weather_sources.weather_text()
     assert 'local DENSITY=if phone then Guards.weatherDensity(deviceClass) else 1' in weather, 'weather density comes from PhoneGuards (phone only)'
     assert 'then .5 else 1' not in weather, 'the old fixed phone density .5 is gone'
     assert weather.index('local DENSITY=') > weather.index('local deviceClass=') and weather.index('local DENSITY=') < weather.index('rate=spec.rate*(share or 1)*DENSITY'), 'DENSITY is defined after the device class and before the emitters use it'
+    main_w = weather_sources.main_text()
+    assert main_w.index('local DENSITY=') < main_w.index('local kit=Kit(ctx)') and 'DENSITY=DENSITY' in main_w, 'DENSITY reaches the emitter kit through the context, built after it is defined (docs/153)'
+    assert 'local DENSITY:number=ctx.DENSITY' in weather_sources.read('src/client/WeatherKit.luau'), 'the kit reads that DENSITY'
 
     # colliders
     cull = read('src/client/WorldCulling.client.luau')
