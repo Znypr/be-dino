@@ -473,7 +473,7 @@ local cosmeticTab="auras"
 local trailPage=1
 local oddsLevelOverride=nil
 local outcomeState={page=1,filters={}}
-local chosenPotion="speed_common"
+local potionChoice={id="speed_common",window=0} -- BD-539: window was the global chosenPotionWindow; it is the shop window the offers were drawn from
 local pendingShop=nil
 local function transact(action,id,replace)
     if pendingShop then notify("Purchase is still processing",C.gold) return end
@@ -760,7 +760,7 @@ render=function(name: string)
         local p=progression()
         -- BD-051: server-clock rotation. Offers/stock come from the shared deterministic rules; the server re-checks every purchase.
         local window=ProgressionRules.shopWindow(workspace:GetServerTimeNow())
-        chosenPotionWindow=window
+        potionChoice.window=window
         local restock=label(body,"",0,0,824,32,21,C.gold)
         local function header_text()
             local left=math.max(0,math.ceil(ProgressionRules.shopEndsAt(window)-workspace:GetServerTimeNow()))
@@ -800,7 +800,7 @@ render=function(name: string)
             label(card,UIFormat.potion(item.kind,item.multiplier,item.duration),74,26,186,36,15)
             label(card,if left>0 then left.." left" else look.caption,74,62,186,20,15,ShopCard.captionColor(look))
             local buy=button(card,look.buttonText,8,84,248,44,color:Lerp(C.panel,.45),function() -- docs/114 s4.4: 44 px target
-                if left>0 then chosenPotion=item.id open("potionConfirm") end
+                if left>0 then potionChoice.id=item.id open("potionConfirm") end
             end)
             ShopCard.styleButton(buy,look,color:Lerp(C.panel,.45))
             buy.TextSize=16
@@ -814,7 +814,7 @@ render=function(name: string)
                 local x=(slot%3)*276 local y=338+math.floor(slot/3)*50
                 slot+=1
                 local useButton=button(scroller,item.name.." x"..owned.."  USE",x,y,264,44,C.purple,function()
-                    chosenPotion=item.id
+                    potionChoice.id=item.id
                     local buff=p.buffs[item.kind]
                     if buff and buff.expiresAt>workspace:GetServerTimeNow() then open("potionReplace") else transact("usePotion",item.id,false) end
                 end)
@@ -829,14 +829,14 @@ render=function(name: string)
         if slot==0 then label(scroller,"No potions yet. Buy from this restock's offers above.",0,338,824,32,18) end
         scroller.CanvasSize=UDim2.fromOffset(0,338+math.max(1,math.ceil(slot/3))*50+8)
     elseif name=="potionConfirm" or name=="potionReplace" then
-        local item=ProgressionRules.item(ProgressionConfig.Potions,chosenPotion)
+        local item=ProgressionRules.item(ProgressionConfig.Potions,potionChoice.id)
         local replacing=name=="potionReplace"
         heading.Text,header.BackgroundColor3=if replacing then "Replace Active Potion?" else "Buy Potion?",C.accent
         art(body,"potion_"..item.kind.."_"..item.rarity,30,22,220)
         label(body,item.name.." • "..UIFormat.potion(item.kind,item.multiplier,item.duration),290,15,510,62,28)
         label(body,if replacing then "Your current "..item.kind.." potion ends immediately. Its remaining time is lost. Consume 1 potion for a fresh "..UIFormat.duration(item.duration).."?" else UIFormat.duration(item.duration).." • "..item.price.." Crystals\nBalance after purchase: "..(num("Crystals")-item.price),290,101,510,135,24,C.gold)
         button(body,if replacing then "REPLACE & USE" else "BUY POTION",290,263,510,58,C.accent,function()
-            if replacing then transact("usePotion",item.id,true) else transact("buyPotion",item.id.."@"..chosenPotionWindow,false) end
+            if replacing then transact("usePotion",item.id,true) else transact("buyPotion",item.id.."@"..potionChoice.window,false) end
             open("potions")
         end)
         button(body,"CANCEL",290,339,510,44,C.red,function() open("potions") end)
@@ -1214,6 +1214,9 @@ render=function(name: string)
         button(body,"LET'S PLAY",212,324,400,62,C.accent,function() seenTutorial=true open("home") end)
     end
 end
+-- BD-539: Luau allows 200 locals per function and this main chunk was at 198. Everything from here to the end of the script runs inside
+-- one function so its locals (about 56) count against that function instead. Same order, same code, nothing is reindented.
+do local function mountHud()
 local buildBadge=label(gui,"BUILD "..Config.Build,0,0,250,24,15,C.blue)
 buildBadge.Name,buildBadge.AnchorPoint,buildBadge.Position="BuildBadge",Vector2.new(.5,0),UDim2.new(.5,0,0,36)
 local foodDiagnostic=label(gui,"",0,0,450,22,14,C.accent)
@@ -1735,3 +1738,4 @@ Input.InputBegan:Connect(function(input,processed)
     elseif input.KeyCode==Enum.KeyCode.C then open("collection")
     elseif input.KeyCode==Enum.KeyCode.B then open("eggs") end
 end)
+end mountHud() end
