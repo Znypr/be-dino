@@ -9,6 +9,7 @@ The ONE deduplicated list of every art item the owner still has to make or uploa
 Two sub-blocks, pick one per item:
 
 - **ICON block:** "One single object, three-quarter view slightly from above, centred on a square 1024x1024 canvas, whole object visible, at least 12% empty margin on all sides, TRUE transparent background (no ground, no shadow plane, no frame), readable at 64 px, broad simple shapes."
+- **TX1 (narrowed, audit C-41):** the upload cap of 512 px max per side (256 px when it reads the same) in docs/115 TX1 is for **UI icons, badges and shop/egg art** only. The owner still makes the 1024 px icon masters below; the cap applies to the upload copy. **Flipbook sheets and ribbons are NOT capped by TX1: they keep this document's spec** (4 x 4 cells of 256 px = 1024 px sheet, ribbon 2048 x 512).
 - **FX block (white on alpha):** "Pure WHITE shapes on a fully transparent background, no colour, no black background, soft feathered edges that fade to fully transparent before touching the image border, anime cel style with a bright core and softer outer edge. The game tints it at runtime."
 
 Always ask ChatGPT for a **transparent PNG**. If it returns a black or white background, tell the lead; the lead can run the alpha clean-up used for the fx-v3 sheets (docs/77 fx3_* rows). Check: open the PNG, the corners must be fully transparent.
@@ -144,7 +145,7 @@ Roblox upload (all groups): Studio, View > Asset Manager > Bulk Import, owner ac
 ### E4. FX v2 leftovers (white on alpha)
 - Rendered, upload only (docs/77 `fx_*`, `resources/effects/fx-v2/`): glowPlate, ringSoft, ringShock, speedLine, crystalSheet (512, 4x4: snow crystals, pebbles, droplets). `starFour` is already served by the fx3 sparkle sheet; `ribbonSoft` is B1. All AUTO: set `Requested.<key>.id` in `EffectAssets.luau`.
 - Not rendered yet (BD-186..189): droplet and crescent glow variants, dense smoke and breath variants, thick seismic ring, mutation motif sheets (Aurora is the only coloured one: green, blue, violet, magenta).
-- Flipbook rule: **4 x 4 cells of 256 px = 1024 px sheet** (as fx-v3), 16 frames, first frame top-left, 15 % cell margin, faded borders, real alpha, under 400 KB.
+- Flipbook rule (TX1 does NOT shrink flipbooks, audit C-41): **4 x 4 cells of 256 px = 1024 px sheet** (as fx-v3), 16 frames, first frame top-left, 15 % cell margin, faded borders, real alpha, under 400 KB.
 - Prompt: shared + FX block + "a 4 x 4 grid sheet (16 equal cells) of [motif] animation frames, each centred in its own cell with margin, growing then shrinking". Motifs: droplets and bubbles (Dewdrop), soft zigzag sparks (Charged), six-point snow crystals (Frost), round pebbles and dust (Seismic), embers and flame wisps (Ember), ribbon wisps (Aurora), crimson motes and crescent shimmer (Blood Moon).
 
 Sound is not art: briefs are in docs/85 and docs/87.

@@ -9,7 +9,7 @@ CaveHubLayout, ScaleLadder) and fails when:
      maxed dino, a normal-run dino taller than the biggest normal tree, the dino door lower than the largest hub dino, ...);
   3. DOC: the table in docs/114 section 8.1.1 differs from the one generated from the Lua table (rewrite it with --write-doc).
   4. SIZING (BD-232): every species is within 2% of the owner rule (about 10% growth per unlock tier: ground by height from the 6.6 Compy,
-     fly by bulk, water by length, the T-Rex on top), higher tiers are bigger, no ground dino is below the Compy or above the T-Rex.
+     fly and water by bulk, the T-Rex on top), higher tiers are bigger, no ground dino is below the Compy or above the T-Rex.
 Not Studio evidence: heights of unmeasured species are ESTIMATES (see Dino.species[..].measured); all 22 are measured since BD-471.
 Usage: python tools/verify_scale_ladder.py --runner luau.exe [--write-doc] [--print]
 """
@@ -25,7 +25,8 @@ DOC = ROOT / 'docs/114-handbook.md'
 BEGIN, END = '<!-- scale-ladder:begin -->', '<!-- scale-ladder:end -->'
 # Studio bounding boxes of LowPolyDinos.clone(species) at spawn (growth scale 1), playtest build, template pose, Model:GetBoundingBox
 # (width, height, length) in studs: BD-471 (2026-10-17) measured them at the BD-225 scales, BD-232 (2026-10-17) re-measured them after the
-# per-species scale change (docs/evidence/2026-10-17-species-sizes/). All 22 are measured; an unmeasured species would follow the estimate rule.
+# per-species scale change (docs/evidence/2026-10-17-species-sizes/). C-39 (docs/116): the three Water species are now sized by BULK; their boxes
+# below were re-read in Studio after the change (docs/evidence/2026-10-17-water-bulk/).
 MEASURED = {
     'compy': (3.49, 6.60, 7.69),
     'triceratops': (5.79, 8.00, 8.58),
@@ -39,12 +40,12 @@ MEASURED = {
     'dimorphodon': (5.76, 5.13, 5.73),
     'elasmosaurus': (3.95, 8.78, 10.74),
     'gallimimus': (2.42, 6.61, 7.78),
-    'ichthyosaurus': (3.78, 4.31, 8.61),
+    'ichthyosaurus': (4.89, 5.57, 11.13),
     'microraptor': (7.11, 4.56, 5.29),
-    'mosasaurus': (3.37, 3.55, 10.41),
+    'mosasaurus': (5.48, 5.77, 16.92),
     'pachycephalosaurus': (4.51, 7.25, 8.43),
     'parasaurolophus': (5.30, 7.27, 9.09),
-    'plesiosaurus': (4.81, 7.99, 8.61),
+    'plesiosaurus': (4.66, 7.74, 8.34),
     'pteranodon': (7.07, 4.62, 6.89),
     'quetzalcoatlus': (8.20, 6.12, 8.04),
     'spinosaurus': (5.53, 9.66, 12.06),
@@ -276,14 +277,14 @@ def check_sizing(ladder, code, errors):
     rex = box['tyrannosaurus']
     if not close(size_of('bulk', rex), g('Sizing.bulk.top'), 0.005 * g('Sizing.bulk.top')) or not close(rex[2], g('Sizing.length.top'), 0.005):
         errors.append('SIZING the T-Rex must be the top: its bulk and length equal Sizing.bulk.top and Sizing.length.top')
-    expect_basis = {'Fly': 'bulk', 'Water': 'length'}
+    expect_basis = {'Fly': 'bulk', 'Water': 'bulk'}
     by_tier = {}
     for sid in order:
         tier, basis = int(g(f'Dino.species.{sid}.tier')), ladder[f'Dino.species.{sid}.basis']
         if tier != int(num(code, f'species.{sid}.rarity')) or tier != int(num(code, f'species.{sid}.tier')):
             errors.append(f'SIZING {sid}: tier {tier} differs from Config.SpeciesRarities {code[f"species.{sid}.rarity"]} / LowPolyDinoAssets tier {code[f"species.{sid}.tier"]}')
         if basis != expect_basis.get(code[f'species.{sid}.class'], 'height'):
-            errors.append(f'SIZING {sid}: basis {basis} does not fit class {code[f"species.{sid}.class"]} (Ground and Armored height, Fly bulk, Water length)')
+            errors.append(f'SIZING {sid}: basis {basis} does not fit class {code[f"species.{sid}.class"]} (Ground and Armored height, Fly and Water bulk)')
         want = rule[basis](tier)
         target = g(f'Dino.species.{sid}.target')
         if not close(target, want, 0.006):
@@ -292,7 +293,7 @@ def check_sizing(ladder, code, errors):
         if abs(got - want) > tol * want:
             errors.append(f'SIZING {sid} ({basis}, tier {tier}): size {got:.2f} is more than {tol:.0%} from the rule {want:.2f}; set its LowPolyDinoAssets scale')
         by_tier.setdefault((basis, tier), []).append(got)
-    # unlock order: every higher tier is bigger than every lower tier by about 10% per step (ground height; fly bulk; water length)
+    # unlock order: every higher tier is bigger than every lower tier by about 10% per step (ground height; fly and water bulk)
     for basis in ('height', 'bulk', 'length'):
         tiers = sorted(t for b, t in by_tier if b == basis)
         for lo, hi in zip(tiers, tiers[1:]):
@@ -453,7 +454,7 @@ def render(ladder):
     add('All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verify_scale_ladder.py --write-doc`; CI fails when this block, the Lua table or the code that builds the things drift apart. **WIRED** = the game code reads the table; **MIRRORED** = the owner module stays the source and the verifier recomputes the value from it.')
     add('')
     n_measured = sum(1 for sid in order if ladder[f'Dino.species.{sid}.measured'] == 'true')
-    add(f'**Dinosaurs (MIRRORED scale; the box at spawn is MEASURED in Studio for {n_measured} of {len(order)} species, BD-471 and BD-232, 2026-10-17{"" if n_measured == len(order) else ", the rest are ESTIMATES"}).** Drawn height = height at spawn x the growth scale. Sizes follow the BD-232 rule (docs/115): about 10% growth per unlock tier, ground by height from the 6.6 Compy, fly by bulk (cube root of W x H x L), water by length, the T-Rex on top. In the cave hub every dinosaur is exactly 1x (docs/115).')
+    add(f'**Dinosaurs (MIRRORED scale; the box at spawn is MEASURED in Studio for {n_measured} of {len(order)} species, BD-471 and BD-232, 2026-10-17{"" if n_measured == len(order) else ", the rest are ESTIMATES"}).** Drawn height = height at spawn x the growth scale. Sizes follow the BD-232 rule (docs/115): about 10% growth per unlock tier, ground by height from the 6.6 Compy, fly and water by bulk (cube root of W x H x L), the T-Rex on top (C-39: water was by length until 2026-10-17). In the cave hub every dinosaur is exactly 1x (docs/115).')
     add('')
     head = '| Species | Tier | Basis | Target | Model scale | W x H x L at spawn | Source | ' + ' | '.join(f'{name} height x{fmt(stages[name])}' for name in STAGE_COLUMNS) + ' |'
     add(head)

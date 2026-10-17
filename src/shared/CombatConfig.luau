@@ -57,8 +57,8 @@ local CombatConfig = {
     -- capped by BodyRadiusMax); "capsule" = the body footprint (half width round a spine as long as the body). Default "circle": nothing reads
     -- "capsule" yet (CombatRules still calls HitSize.radius). The owner decides combat feel; do not flip this without a Studio hit test.
     HitZoneRule = "circle",
-    HitCapsuleRadiusMax = 20, -- capsule safety caps, above every real body at growth 4.8 (widest 19.7, longest spine 16.9)
-    HitCapsuleSpanMax = 24,
+    HitCapsuleRadiusMax = 20, -- capsule safety caps, above every real body at growth 4.8 (widest 19.7; longest spine 27.5, Mosasaurus after the C-39 water-by-bulk resize)
+    HitCapsuleSpanMax = 32,
     BiteConeDegrees = 70, -- full cone angle in front of the attacker
     BiteVerticalLimit = 7, -- same as PredationVerticalLimit
     BiteRequestsPerSecond = 2, -- rate limit per player (sliding 1 s window)
