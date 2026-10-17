@@ -297,11 +297,15 @@ def script():
 
 
 def scan():
-    src = (ROOT / 'src/client/WeatherVisuals.client.luau').read_text(encoding='utf-8')
+    import sys
+    sys.path.insert(0, str(ROOT / 'tools'))
+    import weather_sources  # docs/153: the main script first, then the parts it requires (rigs, sky, one-shots, quake, title card)
+    main_src = weather_sources.main_text()
+    src = weather_sources.weather_text()
     assert 'WeatherLooks' in src and 'Theme.MotionEnabled' in src
-    # everything runtime-created must sit before the main loop: no Instance.new / :Clone() after the Heartbeat connection
-    loop = src.index('RunService.Heartbeat:Connect')
-    tail = src[loop:]
+    # everything runtime-created must sit before the main loop: no Instance.new / :Clone() after the Heartbeat connection (the parts only build, inside their factory)
+    loop = main_src.index('RunService.Heartbeat:Connect')
+    tail = main_src[loop:]
     assert 'Instance.new' not in tail and ':Clone()' not in tail, 'no Instance creation inside the per-frame loop'
     # pooled updates must not create Instances either
     for name in ('local function updateBolts', 'local function updateRings', 'local function updateBursts', 'local function updateBombs', 'local function updateAurora'):
@@ -316,7 +320,7 @@ def scan():
     for gone in ('QuakeRing', 'quakeChips', 'quakeBurst(', 'rubble'):
         assert gone not in src, 'old quake effect still present: ' + gone
     assert 'Instance.new("WedgePart")' in src and 'QuakeCrackGlow' in src and 'cracksPhone' in src, 'quake cracks are pooled wedge shapes with a glow'
-    assert 'if motion and now<quakeUntil then shake=' in src, 'quake rumble is synced to pulses and off with Reduce Motion'
+    assert 'if motion and now<quakeUntil then fx.shake=' in src, 'quake rumble is synced to pulses and off with Reduce Motion'
     assert 'openCrack(root,not motion)' in src, 'Reduce Motion keeps static cracks'
     stop = src[src.index('local function stopOneShots()'):]
     assert 'stopQuake()' not in stop[:stop.index('\nend\n')],'Reduce Motion must not hide the (static) quake cracks'

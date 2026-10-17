@@ -50,6 +50,9 @@ def scan_sources():
             missing.append(name)
             continue
         text = path.read_text(encoding='utf-8')
+        if name == 'WeatherVisuals.client':  # docs/153: one row for the main script plus the parts it requires (same totals as before the split)
+            import weather_sources
+            text = weather_sources.weather_text()
         counts = {c: len(re.findall(r'(?:Instance\.new|acquire)\(\s*"%s"' % c, text)) for c in CLASSES}
         rates = [float(x) for x in re.findall(r'\.Rate\s*=\s*(\d+(?:\.\d+)?)\b', text)]
         rows.append((path.relative_to(ROOT).as_posix(), counts, max(rates) if rates else 0, len(re.findall(r'\bEmit\(', text))))

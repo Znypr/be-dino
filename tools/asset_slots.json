@@ -1619,7 +1619,7 @@
    "key": "weatherCloud",
    "group": "Requested.weatherCloud",
    "reader": [
-    "src/client/WeatherVisuals.client.luau",
+    "src/client/WeatherRigs.luau",
     "weatherCloud"
    ]
   },
@@ -1631,7 +1631,7 @@
    "key": "lightningBolt",
    "group": "Requested.lightningBolt",
    "reader": [
-    "src/client/WeatherVisuals.client.luau",
+    "src/client/WeatherStrikes.luau",
     "lightningBolt"
    ]
   },
@@ -1643,7 +1643,7 @@
    "key": "rainStreak",
    "group": "Requested.rainStreak",
    "reader": [
-    "src/client/WeatherVisuals.client.luau",
+    "src/client/WeatherRigs.luau",
     "rainStreak"
    ]
   },
@@ -1655,7 +1655,7 @@
    "key": "snowFlakeSheet",
    "group": "Requested.snowFlakeSheet",
    "reader": [
-    "src/client/WeatherVisuals.client.luau",
+    "src/client/WeatherRigs.luau",
     "snowFlakeSheet"
    ]
   },
@@ -1667,7 +1667,7 @@
    "key": "ashFlake",
    "group": "Requested.ashFlake",
    "reader": [
-    "src/client/WeatherVisuals.client.luau",
+    "src/client/WeatherRigs.luau",
     "ashFlake"
    ]
   },
@@ -1679,7 +1679,7 @@
    "key": "bloodMoonDisc",
    "group": "Requested.bloodMoonDisc",
    "reader": [
-    "src/client/WeatherVisuals.client.luau",
+    "src/client/WeatherSky.luau",
     "bloodMoonDisc"
    ]
   },
@@ -1691,7 +1691,7 @@
    "key": "emberSpark",
    "group": "Requested.emberSpark",
    "reader": [
-    "src/client/WeatherVisuals.client.luau",
+    "src/client/WeatherRigs.luau",
     "emberSpark"
    ]
   },
@@ -1703,7 +1703,7 @@
    "key": "dustSand",
    "group": "Requested.dustSand",
    "reader": [
-    "src/client/WeatherVisuals.client.luau",
+    "src/client/WeatherRigs.luau",
     "dustSand"
    ]
   },
@@ -1715,7 +1715,7 @@
    "key": "auroraCurtain",
    "group": "Requested.auroraCurtain",
    "reader": [
-    "src/client/WeatherVisuals.client.luau",
+    "src/client/WeatherRigs.luau",
     "auroraCurtain"
    ]
   },
@@ -1727,7 +1727,7 @@
    "key": "bloodMoonMotes",
    "group": "Requested.bloodMoonMotes",
    "reader": [
-    "src/client/WeatherVisuals.client.luau",
+    "src/client/WeatherRigs.luau",
     "bloodMoonMotes"
    ]
   },
