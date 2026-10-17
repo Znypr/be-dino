@@ -12,7 +12,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 
 # PROVISIONAL budgets per device class (docs/123 s6). A real phone number from fx_probe replaces a guess.
-# live3d = ParticleEmitter particles alive at once in the whole 3D world; big = large soft sprites (overdraw);
+# live3d = ParticleEmitter particles alive at once in the whole 3D world, weather included (Rate x mean Lifetime; NOT the cosmetic-only 'about 300' of docs/107, docs/115 PB1); big = large soft sprites (overdraw);
 # beams / trails / lights = instances enabled at once; ui = on-screen UI FX frames (hatch + mutation panel).
 BUDGETS = {
     'phone':   {'live3d': 3300, 'big': 120, 'beams': 48, 'trails': 14, 'lights': 24, 'ui': 130},
@@ -24,6 +24,11 @@ import json
 _PB = json.loads((ROOT / 'tools' / 'qa' / 'phone_budgets.json').read_text(encoding='utf-8'))['phone']
 BUDGETS['phone']['lights'] = _PB['lights']['value']
 BUDGETS['phone']['beams'] = _PB['beams']['value']
+# BD-497 (docs/146 s10): phone weather density now comes from the same file ("guards"; src/shared/PhoneGuards.luau, verify_phone_guards checks they agree).
+# Before the guard it was 0.5; the forecast passes that value explicitly to print before / after.
+_GUARDS = json.loads((ROOT / 'tools' / 'qa' / 'phone_budgets.json').read_text(encoding='utf-8'))['guards']
+PHONE_WEATHER_DENSITY = _GUARDS['weatherDensity']['value']
+PHONE_WEATHER_DENSITY_BEFORE = 0.5
 PLAYERS = 12  # EffectsLod.MaxDinos.full: effect dinos in one view
 
 CLIENT_FILES = ['HatchSequence', 'MutationReveal', 'RareHatchClient', 'CosmeticVisuals.client', 'WeatherVisuals.client',
@@ -112,7 +117,7 @@ def run_model(runner):
     return rows
 
 
-def moments(rows):
+def moments(rows, phone_density=None):
     dino, devcap, lod, weather, ui, hatch_ui, tier_spark = {}, {}, {}, {}, {}, 0, {}
     keys = ['alive', 'beams', 'trails', 'lights', 'burst']
     for r in rows:
@@ -126,7 +131,7 @@ def moments(rows):
         elif k == 'MUTUI': ui[r[1]] = int(r[2])
     out = {}
     for dev in ['phone', 'tablet', 'desktop']:
-        dens = 0.5 if dev == 'phone' else 1.0
+        dens = (PHONE_WEATHER_DENSITY if phone_density is None else phone_density) if dev == 'phone' else 1.0
         wid = max(weather, key=lambda i: weather[i][0])
         wtot, wbig = weather[wid][0] * dens, weather[wid][1] * dens
         fullN = min(devcap[dev], PLAYERS)

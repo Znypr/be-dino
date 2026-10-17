@@ -14,6 +14,7 @@ local Recipes=require(Shared.FxRecipes)
 local Rig=require(script.Parent.FxRig)
 local Lod=require(Shared.EffectsLod) -- BD-095 distance LOD
 local Settings=require(Shared.SettingsModel)
+local Cave=require(script.Parent.CaveAtmosphere) -- BD-495: is this player inside the cave hub (phones draw no cosmetic glow light there)
 local MomentRim=require(script.Parent.MomentRim) -- BD-433: 1.5 s rim on the own dino when a mutation is revealed
 local function destroy(state)
     for _,rig in state.rigs do rig:destroy() end
@@ -41,6 +42,7 @@ RunService.Heartbeat:Connect(function(dt)
     local keep={}
     local count=0
     local device=Rig.device()
+    Rig.setInHub(Cave.inside())
     local fullDinos=Recipes.Devices[device].fullDinos
     -- Own equipment wins the distance budget; nearest dinos get full detail, the rest a lite look. Never unbounded pools.
     local distance={}

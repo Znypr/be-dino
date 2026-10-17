@@ -7,5 +7,12 @@
     "triangles": {"value": 250000, "why": "docs/107 s1 rule of thumb: triangles in the scene"},
     "memMb": {"value": 1200, "why": "docs/107 s1: total client memory on a 3 GB phone (crashes start near 1.5 GB)"},
     "textureMib": {"value": 200, "why": "PROPOSAL (docs/146): about one sixth of the 1,200 MB client rule for ALL decoded images and mesh textures together, counted as RGBA8 before any GPU compression; replace with the Developer Console texture / PlaceMemory reading from BD-085"}
+  },
+  "guards": {
+    "_note": "BD-495..497 (docs/146 s10): the cheap phone-only guards in src/shared/PhoneGuards.luau. tools/verify_phone_guards.py checks that the Luau module and these numbers agree. PROVISIONAL until BD-085.",
+    "caveLights": {"value": 12, "why": "nearest cave point lights enabled at once on a phone (30 in the layout); 12 + 0 cosmetic lights in the hub stays under the 16 light budget"},
+    "caveBeams": {"value": 4, "why": "cave shaft beams on a phone (8 on desktop): one per hole"},
+    "hubCosmeticLights": {"value": 0, "why": "aura / mutation glow lights inside the hub on a phone"},
+    "weatherDensity": {"value": 0.25, "why": "phone multiplier of every weather emitter rate (was 0.5)"}
   }
 }

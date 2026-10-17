@@ -13,6 +13,8 @@ local Recipes = require(Shared.FxRecipes)
 local Assets = require(Shared.EffectAssets)
 local Slots = require(Shared.AssetSlots)
 local Lod = require(Shared.EffectsLod)
+local Guards = require(Shared.PhoneGuards)
+local Players = game:GetService("Players")
 
 local Rig = {}
 Rig.__index = Rig
@@ -26,6 +28,11 @@ function Rig.device(): string
     deviceName = Recipes.deviceClass(UserInputService.TouchEnabled, UserInputService.MouseEnabled, math.min(size.X, size.Y))
     return deviceName
 end
+
+-- BD-495 (docs/146 risk 3): on a phone no aura / mutation glow LIGHT shines while its owner is inside the cave hub (the hub already has its own
+-- 12 lights there). CosmeticVisuals feeds this flag from CaveAtmosphere.inside(); the rules are PhoneGuards.cosmeticLightWanted. Particles stay.
+local hubInside = false
+function Rig.setInHub(inside: boolean) hubInside = inside end
 
 -- ---------------------------------------------------------------- pool
 local POOL_CAP = 64
@@ -126,7 +133,7 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
     local device = opts.device or Rig.device()
     -- real = Assets.isReal: a mutation uses its Blender textures (FxRecipes.MutationTex) only for slots that hold a valid upload.
     local resolved = Recipes.resolve(kind, item, {device = device, reduce = opts.reduce, detail = opts.detail, real = Assets.isReal})
-    local self = setmetatable({root = root, resolved = resolved, scale = 1, lastScale = -1, age = 0, wasMoving = false, lastPop = -10,
+    local self = setmetatable({root = root, resolved = resolved, device = device, scale = 1, lastScale = -1, age = 0, wasMoving = false, lastPop = -10,
         objects = {}, emitters = {}, moving = {}, orbits = {}, trails = {}, beams = {}, lights = {}, bursts = {}, pillars = {}, alive = true}, Rig)
 
     local function own(inst: Instance) table.insert(self.objects, inst) return inst end
@@ -160,7 +167,7 @@ function Rig.attach(root: BasePart, kind: string, item, opts)
             local light = Instance.new("PointLight")
             light.Color, light.Range, light.Shadows, light.Brightness, light.Parent = c3(layer.color[1]), layer.range, false, 0, a
             own(light)
-            table.insert(self.lights, {light = light, layer = layer})
+            table.insert(self.lights, {light = light, layer = layer, off = false})
         elseif k == "emitter" or k == "burst" then
             local parent: Instance
             local emitsMoving = layer.onlyMoving == true
@@ -388,7 +395,16 @@ function Rig:update(scale: number, time: number, moving: boolean)
             self.shell.Transparency = 1 - 0.14 * math.min(fade, shellFade)
         end
     end
+    local lightOn = true
+    if hubInside and Guards.isPhone(self.device) then
+        local me = Players.LocalPlayer
+        lightOn = Guards.cosmeticLightWanted(self.device, true, reduced, me ~= nil and me.Character ~= nil and root.Parent == me.Character)
+    end
     for _, entry in self.lights do
+        if entry.off == lightOn then
+            entry.off = not lightOn
+            entry.light.Enabled = lightOn
+        end
         entry.light.Brightness = entry.layer.brightness * (0.75 + 0.25 * pulse) * fade
         if rebuild then entry.light.Range = entry.layer.range * scale end
     end

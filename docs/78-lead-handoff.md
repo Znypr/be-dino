@@ -8,7 +8,7 @@ For a new lead session (for example a chat in the Claude project "Be Dino!"). Re
 - Owner's only to-do list = things only they can do (upload assets, phone test, Roblox login actions). Do everything else yourself (IDs lookup, merging, uploads via Studio MCP).
 - Audience is children: short obvious text ('5 min', 'Speed +20%', never '5m 0s' or '1.25x'). Hidden rules stay hidden. No code-generated UI art as final: art = brief, 2D drafts, review, final, upload (docs/72). CHECK docs/39 and the repo/evidence BEFORE commissioning art (a wasted task happened because accepted condition looks already existed).
 - Owner values a cohesive, polished, fun game over fine-tuned numbers. Numbers are provisional.
-- Usage discipline: Sonnet or Haiku agents only (never Opus), at most 2 agents at once, narrow single-purpose briefs, agents run only the checks for the files they touch (CI runs the full suite), no screenshots unless needed, no long polling in the lead chat (run merge loops in the background), batch owner feedback into backlog PRs.
+- Usage discipline: ~~Sonnet or Haiku agents only (never Opus), at most 2 agents at once~~ (SUPERSEDED 2026-10-17 on usage limits, docs/116 C-19: keep 3 agents, Sonnet by default, Fable for hard tasks, docs/114 s12), narrow single-purpose briefs, agents run only the checks for the files they touch (CI runs the full suite), no screenshots unless needed, no long polling in the lead chat (run merge loops in the background), batch owner feedback into backlog PRs.
 - Merge policy: lead squash-merges PRs once CI is green (works with `gh pr merge`). Never push to main directly. Commit as Znypr noreply (62771035+Znypr@users.noreply.github.com), trailer Co-Authored-By.
 
 ## Owner decisions on record

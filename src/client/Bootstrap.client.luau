@@ -861,7 +861,7 @@ render=function(name: string)
                 end
                 local view=Preview.add(card,id,"silhouette")
                 view.Position,view.Size=UDim2.fromOffset(7,blockY),UDim2.fromOffset(250,if lay.compact then lay.heroHeight else 128)
-                label(card,look.status,5,if lay.compact then lay.detailY else blockY+134,254,if lay.compact then 22 else 25,if lay.compact then 13 else 15)
+                label(card,look.status,5,if lay.compact then lay.detailY else blockY+134,254,if lay.compact then 22 else 25,if lay.compact then 14 else 15)
             end
         end
         -- BD-269: "Collected X of Y (P%)" bar with milestone ticks (src/shared/IndexProgress).

@@ -11,11 +11,12 @@ Low-end Android phone (about 3 GB RAM, 2019-2021 class). These are community-sty
 | Triangles in the scene | about 250,000 |
 | Total client memory | about 1,200 MB (crashes start near 1.5 GB on 3 GB devices) |
 | Network receive | about 30 KB/s sustained |
-| Live particles | about 300 |
+| Live particles, cosmetic (dino auras, trails, event mutations; no weather) | about 300 |
+| Live particles, whole scene incl. weather (docs/126, `fx_budget_report.py`) | 3,300 (PROVISIONAL ratchet) |
 | Dynamic lights | 16 (docs/104) |
 
 ## 2. What the world places (playtest profile = BiomeKit, density 1.25; default = legacy art)
-Placement output at seed 1404, density 1.25. Colliders are invisible parts that are never culled. **Triangles are the weakest number:** 1,175 of 3,551 playtest props use Roblox-generated meshes (`WorldGeneratedMeshes`) whose face counts are not recorded anywhere; I use 1,630 each (the cave hub's own provisional average, `CaveHubLayout`), range 500 to 3,000. The other props use the measured Blender kit counts.
+Placement output at seed 1404, density 1.25. Colliders are invisible parts that are never culled (**phone class only since BD-496, 2026-10-17: culled by the prop radius**, [146](146-phone-forecast-2026-10-17.md) s10; the counts below are the unculled model). **Triangles are the weakest number:** 1,175 of 3,551 playtest props use Roblox-generated meshes (`WorldGeneratedMeshes`) whose face counts are not recorded anywhere; I use 1,630 each (the cave hub's own provisional average, `CaveHubLayout`), range 500 to 3,000. The other props use the measured Blender kit counts.
 
 | Kind | props | colliders | tris (est, 1,630 per generated mesh) |
 | --- | ---: | ---: | ---: |
@@ -68,7 +69,7 @@ Peak 12 players + 5 NPCs (`NpcPredatorRules`: 2 + (12 - 1) // 3) = **17 dinos in
 
 Legacy dinos dwarf the whole world (24 k to 41 k parts vs 7.6 k for props, colliders and food together). This is the largest single risk for any 12-player phone test, and **the playtest profile ships with legacy dinos**. Other species with no baked model in `resources/roblox` may differ.
 
-Particles per second: cave 25 desktop / 10 phone (docs/104, flag off by default), cosmetics up to about 32 per dino (aura 8 to 12, trail ESTIMATE 20) x 17 = about 544/s if every dino wears both, weather concurrent cap 6,000 with phone density 0.5 (client). Lifetimes of 0.5 to 1 s put cosmetic live particles near 300, at the phone rule of thumb.
+Particles per second: cave 25 desktop / 10 phone (docs/104, flag off by default), cosmetics up to about 32 per dino (aura 8 to 12, trail ESTIMATE 20) x 17 = about 544/s if every dino wears both, weather concurrent cap 6,000 with phone density 0.5 (client; **0.25 since BD-497**, tablet 0.5, desktop 1). Lifetimes of 0.5 to 1 s put cosmetic live particles near 300, at the phone rule of thumb. **Reconciled 2026-10-17 (BD-499, [115](115-decisions-log.md) PB1):** the 300 above is the COSMETIC figure only (model: 168 live with 12 players, clear sky); the whole scene including weather is counted as live particles = emitter Rate x mean Lifetime against 3,300 (docs/126), and the QA overlay's particles per second is a proxy of the cosmetic number. They are different measures, not two values of one budget. Weather alone is 2,536 live at the old phone density 0.5 and 1,268 at the BD-497 density 0.25 ([146](146-phone-forecast-2026-10-17.md) s10).
 
 Combat replication (`CombatEnabled` is off in both profiles): HP is one byte per dino, `HpSendHz = 5`, sent as an attribute change (ESTIMATE 24 bytes each with overhead). Worst case 17 dinos all changing = 17 x 5 x 24 = **2.0 KB/s**; a typical fight of 6 = 0.7 KB/s. Far under 30 KB/s; combat is not a bandwidth risk. Join replication of 7.6 k parts is the real network load.
 

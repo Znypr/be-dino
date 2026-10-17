@@ -78,9 +78,9 @@ Auras: Meadow #62EC70 (98,236,112), Tidal #50D6FF (80,214,255), Royal #B46AFF (1
 ### 5.8 Biomes (terrain, `BiomeMap.Colors`)
 Grass #84A644 (132,166,68; was #84AA54; BD-460 candidate C, owner pick, for the built-in Grass, see 138); LeafyGrass #58843E (88,132,62; was #3E7C4E, BD-460 no dark teal patches); Mud #5C4C37 (92,76,55); Ground #706442 (112,100,66); Sand #D6BE88 (214,190,136); Sandstone #BA7A50 (186,122,80); Slate #5C666C (92,102,108); Basalt #322F37 (50,47,55); Rock #728589 (114,133,137). Biomes: meadow, fern, conifer, marsh, badlands, volcanic (`BiomeMap.Rock`).
 ### 5.9 Weather looks (`WeatherLooks.luau`, tint / fog)
-Rain #96B6E8 / #78869C; Thunder #A0AEDE / #586084 (violet glow #A08CFF); Blizzard #D6E8FF / #E2EAF6; Volcano #FFE4CD / #96543B (glow #FF8C46); Aurora #B0FFE6 / #28C8AA (glow #3CFFAA); Quake #E8C89C / #C6B092; Blood Moon #FF8C96 / #420E18 (glow #FF2846). Far fog is colour, not a wall ([87](87-vision-and-feel-guide.md)).
+Rain #96B6E8 / #78869C; Thunder #A0AEDE / #586084 (violet glow #A08CFF); Blizzard #D6E8FF / #E2EAF6; Volcano #FFE4CD / #965438 (glow #FF8C46); Aurora #B0FFE6 / #28C8AA (glow #3CFFAA); Quake #E8C89C / #C6B092; Blood Moon #FF8C96 / #420E18 (glow #FF2846). Far fog is colour, not a wall ([87](87-vision-and-feel-guide.md)).
 ### 5.10 Cave (`CaveLightingRules.luau`)
-Warm cream shafts #FFECBE (255,236,190); fill lamp #FFD6AA (255,214,170); lava #FF8C46 (255,140,70) (sheet layers #FF7828, #FFB45A, #FFCE6E); crystal light #FFC450 (255,196,80) amber (BD-401; was lavender #C4AAFF); forge #FFBE5A (255,190,90); gate glow #FFD6A0; look: ambient (70,62,60), fog colour (72,56,46), grade tint (255,226,196). Walls: matte Concrete (186,170,150, BD-296; Limestone was dropped for its horizontal strata stripes) with cave-only Cobblestone (158,142,126) on the floor (BD-384); the floor must not be hot orange (BD-384).
+Warm cream shafts #FFECBE (255,236,190); fill lamp #FFD6AA (255,214,170); lava #FF8C46 (255,140,70) (glow layers #FF7828, #FF963C, #FFBE64; the old sheet layers were dropped by #277); crystal light #FFC450 (255,196,80) amber (BD-401; was lavender #C4AAFF); forge #FFBE5A (255,190,90); gate glow #FFD6A0; look: ambient (62,52,44; was (70,62,60) before the BD-296 dim pass #323, owner 'too bright', D25), fog colour (72,56,46), grade tint (255,226,196). Walls: matte Concrete (124,104,86; was (186,170,150) before the BD-296 dim pass #323; Limestone was dropped for its horizontal strata stripes) with cave-only Cobblestone (110,92,76; was (158,142,126)) on the floor (BD-384); the floor must not be hot orange (BD-384).
 ### 5.11 Classes and HP bar
 HP bar fill green above 50%, yellow 25-50%, soft orange below 25%, plus a heart icon (full/half/small) so colour is never the only signal ([101](101-hp-combat-classes-animations.md) line 85). Per-class colours are decided (owner 2026-10-16, 'Nature set'; C-18 / Q2 resolved). One source: `ClassInfo.Colors` (`src/shared/ClassInfo.luau`), used by `ClassBadge` and the class picker line. Hex values are the darkened, white-text-safe versions of the C-18 proposal (white label/icon contrast about 3.7:1 or better, fine for the big bold 1-letter badge; colour is never the only signal, the label and letter always show).
 
@@ -99,7 +99,7 @@ The palette sits under the place's lighting; a shared grade tames pastel props b
 | Place | Rule | Source / code |
 |---|---|---|
 | Island (default) | bright daylight: ClockTime 14, Brightness 1.8, Ambient (146,155,158), OutdoorAmbient (140,150,153) (`Config.IslandLight`, BD-460: softer contrast, was Brightness 2 / Ambient 130,143,148); **no haze in clear daylight** (owner 2026-10-16: no screenshot may look milky): Atmosphere density .1, haze .3, glare 0, no far blur, no bloom, saturation +0.04, contrast 0 (BD-460: was +0.08 / +0.04), fog colour = sky-horizon blue; desktop fog 400 to 1400, tablet 250 to 700, phone tight (capped by its cull radius 190); the old 374-stud desktop cap was removed (it milked the mid-distance); UI blur only while a modal is open, reset to 0 otherwise; DepthOfField stays at zero intensity | `Bootstrap.server.luau` 22-24, BD-213 |
-| Cave hub (Sanctuary) | **DIM, lamp-lit**: warm lamps and ceiling light shafts are the main lights; ambient (70,62,60), Brightness 1.3, exposure -0.25; at most 16 lights, shadows on the 4 strongest; **weather never affects the inside**; assets must look real and grounded in this light | OWNER 2026-10-16; `CaveLightingRules.Look`; BD-398, BD-399 |
+| Cave hub (Sanctuary) | **DIM, lamp-lit**: warm lamps and ceiling light shafts are the main lights; ambient (62,52,44), Brightness 1.3, exposure -0.6 (BD-296 dim pass #323: measured luminance 0.57 to 0.30, inside the 0.15-0.35 band of 6.1); at most 16 lights, shadows on the 4 strongest; **weather never affects the inside**; assets must look real and grounded in this light | OWNER 2026-10-16; `CaveLightingRules.Look`; BD-398, BD-399 |
 | Weather events | per-event grade, haze, soft fog; everything fades to neutral with `1 - Cave.amount()` inside the hall | [84](84-weather-events-v2.md), BD-383, BD-398 |
 | Volcanic biome | orange glare, heavy bloom, ash and embers, but soft visibility (no flat red wall) | [84](84-weather-events-v2.md), BD-213 |
 | Eggs and dinos in UI | lit warmly on a stage/tile floor, never cubes | [87](87-vision-and-feel-guide.md) |
@@ -132,14 +132,78 @@ Known violations: [110](110-sound-audit.md) flags legendary .43, fusion .375, ha
 ### 8.1 Any 3D asset or prop
 1. Generated mesh (Roblox generate_mesh or the approved pipeline), never code-built ([AGENTS.md](../AGENTS.md); BD-206). The only exception is the scoped owner-approved V3 trees; Blender is also allowed for world and colossal-tree art (8.4.2).
 2. Low-poly flat facets, chunky/rounded, matte; shared eye style (4.2).
-3. **Scale ladder**: a normal-run dino (size up to about 2) still feels small next to big trees ([87](87-vision-and-feel-guide.md)); only a long-run giant (size 3 or more) outgrows ordinary trees, and colossal ancient trees stay taller (LEAD decision 2026-10-16, docs/139 Q3). No numeric scale table exists yet (BD-407, built as BD-471).
+3. **Scale ladder**: a normal-run dino (size up to about 2) still feels small next to big trees ([87](87-vision-and-feel-guide.md)); only a long-run giant (size 3 or more) outgrows ordinary trees, and colossal ancient trees stay taller (LEAD decision 2026-10-16, docs/139 Q3). The numeric table is section 8.1.1 (`src/shared/ScaleLadder.luau`, BD-407), checked by `tools/verify_scale_ladder.py`; every new prop's size must fit it.
 4. **Grounded**: the bottom touches the floor at all slopes (raycast per prop); nothing sunk or floating (OWNER 2026-10-16: trees were sunk, BD-395).
 5. **No overlap** with other solid props, paths, pads or the lava basin (`tools/verify_cave_overlap.py`; OWNER 2026-10-16).
 6. Looks real under its place's lighting (section 6): judge a screenshot in that lighting, not the Studio edit light.
 7. Palette fit (section 5); amber for currency crystals.
-8. Budget ([107](107-offline-mobile-budget.md)): phone about 3,000 parts and 250 k tris in range, hub 410 parts / 730 k tris, 16 lights, about 300 live particles, 12 players + 5 NPCs.
-9. Pivot at the bottom centre; collision is a separate invisible part (colliders are never culled).
+8. Budget ([107](107-offline-mobile-budget.md)): phone about 3,000 parts and 250 k tris in range, hub 410 parts / 730 k tris, 16 lights, about 300 live COSMETIC particles (auras, trails, mutations) and 3,300 live particles in the whole scene including weather (two measures, not one budget: [115](115-decisions-log.md) PB1), 12 players + 5 NPCs. Phone guards (BD-495..497, [146](146-phone-forecast-2026-10-17.md) s10): the 12 nearest cave lights and 4 shaft beams, no cosmetic glow light in the hub, weather density 0.25.
+9. Pivot at the bottom centre; collision is a separate invisible part (colliders are never culled; on a PHONE the far ones are culled with the props beyond the cull radius, BD-496).
 10. Registry line in [77](77-asset-registry.md); no invented asset IDs.
+### 8.1.1 Scale ladder table (BD-407, CODE numbers)
+Source of truth: `src/shared/ScaleLadder.luau`. The block below is generated from it and checked in CI by `tools/verify_scale_ladder.py` (code drift, ladder order, this table). **Not Studio evidence:** 19 of 22 species heights are ESTIMATES until the Studio bounding-box measurement in BD-471 replaces them. A new prop or species adds a row to the Lua table, then `python tools/verify_scale_ladder.py --runner luau.exe --write-doc`.
+<!-- scale-ladder:begin -->
+All sizes in studs. Generated from `src/shared/ScaleLadder.luau` by `tools/verify_scale_ladder.py --write-doc`; CI fails when this block, the Lua table or the code that builds the things drift apart. **WIRED** = the game code reads the table; **MIRRORED** = the owner module stays the source and the verifier recomputes the value from it.
+
+**Dinosaurs (MIRRORED scale; height at scale 1 is MEASURED in Studio for 22 of 22 species, BD-471, 2026-10-17).** Drawn height = height at 1 x the growth scale. In the cave hub every dinosaur is exactly 1x (docs/115).
+
+| Species | Model scale | Height at 1 | Source | run x1.52 | mid x2 | long x3 | max x4 | bigMax x4.8 |
+| --- | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| compy | 2.2 | 6.60 | MEASURED | 10.0 | 13.2 | 19.8 | 26.4 | 31.7 |
+| triceratops | 3 | 8.39 | MEASURED | 12.8 | 16.8 | 25.2 | 33.6 | 40.3 |
+| tyrannosaurus | 3.66 | 10.20 | MEASURED | 15.5 | 20.4 | 30.6 | 40.8 | 49.0 |
+| raptor | 2.1 | 8.40 | MEASURED | 12.8 | 16.8 | 25.2 | 33.6 | 40.3 |
+| stegosaurus | 2.64 | 4.91 | MEASURED | 7.5 | 9.8 | 14.7 | 19.6 | 23.6 |
+| ankylosaurus | 2.66 | 6.49 | MEASURED | 9.9 | 13.0 | 19.5 | 26.0 | 31.2 |
+| archaeopteryx | 1.76 | 5.28 | MEASURED | 8.0 | 10.6 | 15.8 | 21.1 | 25.3 |
+| baryonyx | 2.42 | 6.22 | MEASURED | 9.5 | 12.4 | 18.7 | 24.9 | 29.9 |
+| brachiosaurus | 3.87 | 10.63 | MEASURED | 16.2 | 21.3 | 31.9 | 42.5 | 51.0 |
+| dimorphodon | 1.9 | 5.70 | MEASURED | 8.7 | 11.4 | 17.1 | 22.8 | 27.4 |
+| elasmosaurus | 2.66 | 6.52 | MEASURED | 9.9 | 13.0 | 19.6 | 26.1 | 31.3 |
+| gallimimus | 2.9 | 4.92 | MEASURED | 7.5 | 9.8 | 14.8 | 19.7 | 23.6 |
+| ichthyosaurus | 2.3 | 3.45 | MEASURED | 5.2 | 6.9 | 10.4 | 13.8 | 16.6 |
+| microraptor | 1.7 | 5.10 | MEASURED | 7.8 | 10.2 | 15.3 | 20.4 | 24.5 |
+| mosasaurus | 3.22 | 3.29 | MEASURED | 5.0 | 6.6 | 9.9 | 13.2 | 15.8 |
+| pachycephalosaurus | 1.98 | 5.11 | MEASURED | 7.8 | 10.2 | 15.3 | 20.4 | 24.5 |
+| parasaurolophus | 2.31 | 5.54 | MEASURED | 8.4 | 11.1 | 16.6 | 22.2 | 26.6 |
+| plesiosaurus | 2.42 | 6.73 | MEASURED | 10.2 | 13.5 | 20.2 | 26.9 | 32.3 |
+| pteranodon | 2.31 | 6.93 | MEASURED | 10.5 | 13.9 | 20.8 | 27.7 | 33.3 |
+| quetzalcoatlus | 2.8 | 8.40 | MEASURED | 12.8 | 16.8 | 25.2 | 33.6 | 40.3 |
+| spinosaurus | 3.51 | 8.43 | MEASURED | 12.8 | 16.9 | 25.3 | 33.7 | 40.5 |
+| therizinosaurus | 3.19 | 10.93 | MEASURED | 16.6 | 21.9 | 32.8 | 43.7 | 52.5 |
+
+Growth stages (growth = food x 0.1, `s = min(4, sqrt(1 + growth / 50))`): spawn x1 (growth 0), run x1.52 (growth 65), mid x2 (growth 150), long x3 (growth 400), max x4 (growth 750), bigMax x4.8 (growth 750, BIG). Hub scale 1. BIG multiplier 1.2. Torso collider 2.6 wide x 3.2 long, top 2.6 x scale above the floor. Estimate rule: model scale x 2.84.
+
+**World, food and hub (height in studs unless stated).**
+
+| Rung | Size | Where it comes from |
+| --- | --- | --- |
+| Food berry / fruit / egg / amber (largest side) | 0.7 / 1 / 1.3 / 1.5, drawn x0.86 to x1.16 | WIRED: `FoodService.TYPES` |
+| Golden Drumstick (flag off) | 1.9; the drumstick mesh is drawn x1.45, so up to 3.2 | WIRED: `SpecialFoods`, `FoodService` |
+| Food pickup reach | 2.25 | MIRRORED: `Config.FoodPickupRadius` |
+| Egg Nest pad (w x h x d) | 5 x 1 x 5 | WIRED: Arena legacy hub; MIRRORED: `CaveHubLayout.Kinds.nest` |
+| Nest ledge behind the station (w x h x d) | 12 x 12 x 6.4 | MIRRORED: `CaveHubLayout.Kinds.hub_nest_ledge` |
+| Ground cover (grass, flowers) | 1.9 to 4.8 | MIRRORED: kit extent x `BiomePlacement.Scales.groundcover` |
+| Small band plants (ferns, bushes, mushrooms) | 4.2 to 12 | MIRRORED: `BiomePlacement.SmallBand` |
+| Rocks (boulders to 10.6, spires and ledges to the top) | 1.7 to 25.6 | MIRRORED: kit extent x `BiomePlacement.Scales.rock` (0.85 to 1.8) |
+| Ground rocks, Blender (small / medium / mossy; ids empty) | 1.2 / 2.3 / 3.2 | MIRRORED: `WorldGeneratedMeshes.Props` |
+| Landmarks (statue, fossil, arch, altar) | 9.4 to 25.8 | MIRRORED: kit extent x `BiomePlacement.LandmarkScale` 1.4 |
+| Normal trees | 4.7 to 42 | MIRRORED: kit extent 5.24 to 26.22 x `Scales.tree` 0.9 to 1.6 |
+| V3 Blender trees (broadleaf, conifer, palm) | 4.7 to 42 | fitted inside the same kit box (`Arena.generatedProp`), so the same range |
+| Colossal ancient trees | 80 to 140, crown at most 100; ancient mesh 117.59 / 117.29 / 105.03 | MIRRORED: `BiomePlacement.Colossal`, `WorldGeneratedMeshes.Colossal` |
+| Dino door: gate mouth (w x h) | 30 x 20; frame mesh 39.79 x 25.79 x 9.77 | MIRRORED: `CaveHubLayout.get().gate`, `CaveTerrainRules.GateHeight`, `Kinds.cave_gate_frame` |
+| Hub tunnel (width, ceiling, path) | 22, 30, 8 | MIRRORED: `CaveHubLayout.TunnelRadius`, tunnel height, `PathHalf` |
+| Station pad radius | fame 12, fusion 20, gate 15, heart 18, index 20, nests 17, potions 15, settings 10, style 18 | MIRRORED: `CaveHubLayout` stations |
+| Signs (w x h x d): stone / arrow / legacy board | 5.5 x 5.5 x 2 / 5 x 5 x 0.8 / 30 x 7 x 1 | MIRRORED: `CaveHubLayout.Kinds`; the legacy board is WIRED in `Arena` |
+| Station props (w x h x d) | Potion stall 14 x 10 x 7; Forge altar 8 x 5 x 5; Shop counter 8.8 x 7 x 4.5; Lectern 3 x 4 x 3; Wall frame 3.8 x 4.5 x 0.7 | MIRRORED: `CaveHubLayout.Kinds` |
+<!-- scale-ladder:end -->
+Code against docs, found while building the table (the code value is in the table; none of this changes the game):
+- Tree height: docs/139 s3.3 lists 5.0 to 41.9 (seed 1404 placements, truncated); the rule bounds are kit extent x scale, 5.235 x 0.9 = 4.7 and 26.222 x 1.6 = 41.96 (table 4.7 to 42).
+- Rocks: docs/139 s3.3 lists a 20.8 maximum (seed 1404 placements); the rule bound is the spire 14.228 x 1.8 = 25.6. Ground cover: docs/139 lists 1.3 to 4.8; the code gives 1.184 x 1.6 = 1.9 to 4.8.
+- docs/139 s3.3 shrubs 1.1 to 10.2 and giants 33.5 to 99 are the pre-BD-473 layout; the code is the Small band 4.2 to 12 and the colossal band 80 to 140 (docs/139 s17 already says so).
+- Hub dino size: docs/139 s3.1 calls 1x a side effect of the GrowthScore reset; docs/115 (BD-480) makes it a guaranteed rule, which is what the table uses.
+- Dino door: `CaveHubLayout.Kinds.hub_gate_arch` is 24 x 24 x 8.7 and `CaveHubProps` records a final size of 16 x 15.9 x 5.8, but no station places that prop any more; the door is the terrain mouth 30 x 20 (`CaveTerrainRules.GateHeight`) with the `cave_gate_frame` mesh 39.79 x 25.79 x 9.77 (docs/140 gives the opening as 29.2 x 19.6).
+- Only Compy, Gallimimus and Tyrannosaurus heights are Studio-measured (the `LowPolyDinoAssets` comment still mentions the old 1.2 x 3.4 x 4.0 Gallimimus at scale 2.0). The other 19 are ESTIMATES until BD-471.
 ### 8.2 Any UI screen
 Text >= 14 px; targets >= 44 px; contrast >= 4.5:1; kid words per [72](72-ui-copy-and-asset-standards.md); checked on phone landscape (844x390) and desktop; one idea per screen; final art is an asset task, not code drawing; shared `TextStyle`; lead screenshots it before merge.
 ### 8.3 Any FX
@@ -263,6 +327,7 @@ Robux buys **looks and convenience**, never exclusive power. Enforced in CI by `
 - Keep 3 agents running (lead instruction; kanban log says 3-4, [78](78-lead-handoff.md) says at most 2: C-19). Sonnet by default; Fable for hard tasks (BD-397).
 - Do not rewrite history: mark SUPERSEDED, keep rows; never mark Done without evidence; status only in the kanban.
 - Say plainly what was not verified (Studio, phone, hearing).
+- **Automated handbook check (BD-408, CI):** `python tools/verify_handbook.py` fails on (a) a UI rule constant or literal under the s4.4 floors (text 14 px, tap target 44 px; the known pre-existing offenders are a counted baseline `UI_KNOWN`, docs/116 C-37, and it only shrinks), (b) a cue louder than `Sfx.MaxCueVolume` or a played/listed cue missing from `Sfx.Sounds`, (c) any hex in s5 (and the s6 island/cave colour numbers) that differs from the code table that owns it (`UITheme`, `RarityColors`, `EggColors`, `MutationLook`, `ProgressionConfig` auras/trails, `BiomeMap`, `WeatherLooks`, `CaveLightingRules`, `CaveLavaRules`, `CaveTerrainRules`, `ClassInfo`), (d) a missing PR template. When it reports a palette mismatch, change the side that is older: the doc when the code is the newer owner-approved value (check [115](115-decisions-log.md)), the code when it breaks the handbook.
 
 ## 13. Handbook compliance checklist (paste into every PR body)
 ```
