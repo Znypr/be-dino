@@ -2,11 +2,14 @@
 -- BD-168 distance culling for decorative world props and food (docs/89). Client-only visuals: collision proxies
 -- (parts named *Collider), crystals, the hub and server food logic are untouched. Props beyond the radius are parented
 -- to nil (not rendered, no scene cost); food is hidden with LocalTransparencyModifier so server writes still land.
+-- BD-497 (docs/146 risk 2): on a PHONE only, the invisible prop colliders are culled by the same radius (PhoneGuards.colliderWanted). They only block trees,
+-- rocks, logs and landmarks for the local dino, which never reaches one beyond the radius; the ground is Terrain and stays. Other devices: unchanged.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local ColossalRules = require(ReplicatedStorage.Shared:WaitForChild("ColossalRules"))
+local PhoneGuards = require(ReplicatedStorage.Shared:WaitForChild("PhoneGuards"))
 local settings = Config.WorldCulling
 if not settings or not settings.Enabled then return end
 local player = Players.LocalPlayer
@@ -30,6 +33,9 @@ local props: {Prop} = {}
 type Colossal = {item: Model, folder: Instance, lod0: BasePart, lod1: BasePart, pos: Vector3, tris0: number, tris1: number, state: string, alpha: number}
 local colossals: {Colossal} = {}
 local colossalSettings = ColossalRules.settings(settings, class)
+type Collider = {part: BasePart, folder: Instance, pos: Vector3, shown: boolean}
+local cullColliders = PhoneGuards.cullColliders(class)
+local colliders: {Collider} = {} -- stays empty off the phone class, so nothing below changes there
 local foods: {[BasePart]: boolean} = {}
 local foodShown: {[BasePart]: boolean} = {}
 local dirty = true -- new props arrive over several frames: re-evaluate even if the player stands still
@@ -65,7 +71,15 @@ local function addColossal(folder: Instance, item: Model, tries: number?): boole
     return true
 end
 addProp = function(folder: Instance, item: Instance, tries: number?)
-    if known[item] or string.sub(item.Name, -8) == "Collider" then return end
+    if string.sub(item.Name, -8) == "Collider" then
+        if cullColliders and not known[item] and item:IsA("BasePart") then
+            known[item] = true
+            dirty = true
+            table.insert(colliders, {part = item, folder = folder, pos = item.Position, shown = true})
+        end
+        return
+    end
+    if known[item] then return end
     if item:IsA("Model") and item:GetAttribute("ColossalKey") ~= nil and addColossal(folder, item, tries) then return end
     -- A model can replicate before its mesh child: locate the first part, retrying briefly if it has not arrived yet.
     local first: BasePart? = if item:IsA("BasePart") then item else item:FindFirstChildWhichIsA("BasePart", true)
@@ -184,6 +198,18 @@ task.spawn(function()
                 end
                 used += stats.parts
                 player:SetAttribute("CullColossal", stats.lod0 .. "/" .. stats.lod1 .. "/" .. #colossals .. " " .. stats.tris)
+            end
+            if cullColliders then
+                local keptColliders = 0
+                for _, c in colliders do
+                    local want = PhoneGuards.colliderWanted(class, c.shown, (c.pos - origin).Magnitude, radius, settings.Hysteresis)
+                    if want ~= c.shown then
+                        c.shown = want
+                        c.part.Parent = if want then c.folder else nil
+                    end
+                    if want then keptColliders += 1 end
+                end
+                player:SetAttribute("CullColliders", keptColliders .. "/" .. #colliders)
             end
             local foodRadius = radius * settings.FoodRadiusFactor
             for pickup in foods do

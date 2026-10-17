@@ -137,8 +137,8 @@ Known violations: [110](110-sound-audit.md) flags legendary .43, fusion .375, ha
 5. **No overlap** with other solid props, paths, pads or the lava basin (`tools/verify_cave_overlap.py`; OWNER 2026-10-16).
 6. Looks real under its place's lighting (section 6): judge a screenshot in that lighting, not the Studio edit light.
 7. Palette fit (section 5); amber for currency crystals.
-8. Budget ([107](107-offline-mobile-budget.md)): phone about 3,000 parts and 250 k tris in range, hub 410 parts / 730 k tris, 16 lights, about 300 live particles, 12 players + 5 NPCs.
-9. Pivot at the bottom centre; collision is a separate invisible part (colliders are never culled).
+8. Budget ([107](107-offline-mobile-budget.md)): phone about 3,000 parts and 250 k tris in range, hub 410 parts / 730 k tris, 16 lights, about 300 live COSMETIC particles (auras, trails, mutations) and 3,300 live particles in the whole scene including weather (two measures, not one budget: [115](115-decisions-log.md) PB1), 12 players + 5 NPCs. Phone guards (BD-495..497, [146](146-phone-forecast-2026-10-17.md) s10): the 12 nearest cave lights and 4 shaft beams, no cosmetic glow light in the hub, weather density 0.25.
+9. Pivot at the bottom centre; collision is a separate invisible part (colliders are never culled; on a PHONE the far ones are culled with the props beyond the cull radius, BD-496).
 10. Registry line in [77](77-asset-registry.md); no invented asset IDs.
 ### 8.1.1 Scale ladder table (BD-407, CODE numbers)
 Source of truth: `src/shared/ScaleLadder.luau`. The block below is generated from it and checked in CI by `tools/verify_scale_ladder.py` (code drift, ladder order, this table). **Not Studio evidence:** 19 of 22 species heights are ESTIMATES until the Studio bounding-box measurement in BD-471 replaces them. A new prop or species adds a row to the Lua table, then `python tools/verify_scale_ladder.py --runner luau.exe --write-doc`.
