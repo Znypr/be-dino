@@ -558,9 +558,18 @@ function ProfileRepository.claimChest(player: Player, chestId: string)
     adopt(player, updated)
     if profiles[player] then syncAttributes(player, profiles[player]) end
     local committedOutcome = duplicateOutcome or outcome
-    if not duplicateOutcome and #pageOutcomes > 0 then
-        local pageBuffer = {}
-        for _, pageOutcome in pageOutcomes do table.insert(pageBuffer, {eggId = pageOutcome.eggId, outcome = pageOutcome}) end
+    -- BD-609: a retry after a LOST ACKNOWLEDGEMENT finds its own earlier commit and answers "duplicate", but the hatch page that commit
+    -- credited is still ours to reveal (pageOutcomes survives from the pass that wrote it). So a duplicate buffers the page too when every
+    -- outcome's operation record is in the adopted profile and no page is already waiting; a plain duplicate claim has no pageOutcomes.
+    local pageBuffer = {}
+    if #pageOutcomes > 0 and not (duplicateOutcome and revealBuffer[player] and #revealBuffer[player] > 0) then
+        for _, pageOutcome in pageOutcomes do
+            if not duplicateOutcome or findOperation(updated, "chest:" .. tostring(pageOutcome.eggId)) then
+                table.insert(pageBuffer, {eggId = pageOutcome.eggId, outcome = pageOutcome})
+            end
+        end
+    end
+    if #pageBuffer > 0 then
         revealBuffer[player] = pageBuffer
         if profiles[player] then syncAttributes(player, profiles[player]) end
     end

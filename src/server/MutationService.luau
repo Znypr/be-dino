@@ -33,7 +33,8 @@ function MutationService.start(profileRepository, dinosaur)
     end
 
     local mutate = getRemote(folder, "MutateSpecies")
-    local setupTest = getRemote(folder, "TestSetMutationCopies")
+    -- BD-610: exists ONLY while its flag is on (pinned off in every release profile); the flag is still re-checked inside the handler.
+    local setupTest = if Config.MutationTestSetupEnabled == true then getRemote(folder, "TestSetMutationCopies") else nil
 
     mutate.OnServerEvent:Connect(function(player: Player, speciesId, targetMutation, requestToken, ...)
         if select("#", ...) ~= 0 then return end
@@ -65,28 +66,30 @@ function MutationService.start(profileRepository, dinosaur)
         end
     end)
 
-    setupTest.OnServerEvent:Connect(function(player: Player, baseCount, ...)
-        if select("#", ...) ~= 0 then return end
-        if not Config.MutationTestSetupEnabled then return end
-        if typeof(baseCount) ~= "number" or baseCount % 1 ~= 0 then
-            player:SetAttribute("LastMutationSetupStatus", "bad_count")
-            return
-        end
-        if not allowed(lastSetup, player) then
-            player:SetAttribute("LastMutationSetupStatus", "rate_limited")
-            return
-        end
-        local ok, status = profileRepository.setMutationTestCopies(
-            player, Config.MutationTestSpeciesId, baseCount
-        )
-        player:SetAttribute("LastMutationSetupStatus", status)
-        if ok then
-            local character = player.Character
-            if character and character:GetAttribute("DinoAttached") then
-                dinosaur.refreshForPlayer(character, player)
+    if setupTest then
+        setupTest.OnServerEvent:Connect(function(player: Player, baseCount, ...)
+            if select("#", ...) ~= 0 then return end
+            if not Config.MutationTestSetupEnabled then return end
+            if typeof(baseCount) ~= "number" or baseCount % 1 ~= 0 then
+                player:SetAttribute("LastMutationSetupStatus", "bad_count")
+                return
             end
-        end
-    end)
+            if not allowed(lastSetup, player) then
+                player:SetAttribute("LastMutationSetupStatus", "rate_limited")
+                return
+            end
+            local ok, status = profileRepository.setMutationTestCopies(
+                player, Config.MutationTestSpeciesId, baseCount
+            )
+            player:SetAttribute("LastMutationSetupStatus", status)
+            if ok then
+                local character = player.Character
+                if character and character:GetAttribute("DinoAttached") then
+                    dinosaur.refreshForPlayer(character, player)
+                end
+            end
+        end)
+    end
 end
 
 return MutationService
