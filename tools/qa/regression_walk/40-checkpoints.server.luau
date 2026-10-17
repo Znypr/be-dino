@@ -60,7 +60,8 @@ add(c, player:GetAttribute("ProfileState") ~= "SaveFailed" and player:GetAttribu
 local errors = 0
 local first
 for _, e in LogService:GetLogHistory() do
-    if e.messageType == Enum.MessageType.MessageError and e.timestamp >= (S.base.errTime or 0) then errors += 1 first = first or e.message end
+    -- BD-596: Studio's own "Failed to upload TexturePack" lines (unpublished place) are not game errors
+    if e.messageType == Enum.MessageType.MessageError and e.timestamp >= (S.base.errTime or 0) and string.sub(e.message, 1, 28) ~= "Failed to upload TexturePack" then errors += 1 first = first or e.message end
 end
 add(c, errors == 0, if errors == 0 then "no server errors since the baseline" else errors .. " server error(s): " .. string.sub(first, 1, 100))
 

@@ -85,6 +85,7 @@ jobs:
           python tools/verify_eggs_screen.py --runner /tmp/luau/luau
           python tools/verify_egg_origin.py --runner /tmp/luau/luau
           python tools/verify_load_gate.py --runner /tmp/luau/luau
+          python tools/verify_surface_maps.py
           python tools/verify_mesh_sanity.py --runner /tmp/luau/luau
           python tools/verify_dino_motion.py --runner /tmp/luau/luau
           python tools/verify_hub_scale.py --runner /tmp/luau/luau
