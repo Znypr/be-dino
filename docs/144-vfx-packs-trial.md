@@ -1,0 +1,106 @@
+# 144 Fire VFX from Creator Store packs: trial lab (BD-493, owner decision 2026-10-17)
+
+Status: RESEARCH + TRIAL (docs only, nothing bound to a game slot, no `src/` change). Labels: **MEASURED** (seen in a Studio capture or read from instance properties), **ESTIMATE** (instance counts and craft knowledge, no phone run), **PROPOSED**. Builds on [87](87-vision-and-feel-guide.md) (calm, bubbly, readable), [123](123-anime-3d-fx-research-and-plan.md) (technique catalogue T1-T11), [143](143-vfx-lab-fire.md) (the in-house lab the owner rated "extremely poor") and `tools/qa/phone_budgets.json` (phone: 24 beams, 16 lights, PROVISIONAL). Targets: the owner's references `docs/reference/vfx-fire-aura-ref.webp`, `vfx-fire-trail-ref.webp`, `vfx-fire-footsteps-ref.webp` (bold orange cel-shaded tongues with a hot yellow core, a ring of fire on the ground, cream smoke puffs, glowing orange foot pads).
+
+**OWNER DECISION 2026-10-17:** start from professional fire VFX packs on the Roblox Creator Store, compare them in a lab, then adapt the best to the game's style and phone limits.
+
+**Bottom line (honest).** The free Creator Store did not give a pack that matches the references. One pack (Fire Particle VFX Pack) uses the right techniques and comes closest; the rest are blast / explosion packs, blow out in daylight, draw nothing, or are not fire. The tool that searches the store returns only 5 results per query with no ratings, so "well rated" could not be checked; free results are dominated by near-identical re-uploads. Use the best pack as a base and expect the adaptation to be the real work.
+
+## 1. Roblox stylised VFX techniques (research, sources are data only)
+
+What strong Roblox VFX artists do for stylised / anime fire, and what the docs confirm. "Doc" = Creator Hub page; "Forum" = DevForum thread. Anything the page did not state is marked "not stated".
+
+| Technique | What the sources say | Source |
+|---|---|---|
+| Flipbooks | `FlipbookLayout` 2x2, 4x4, 8x8 or custom; leave transparent spacing between frames; custom textures cost memory and low-memory clients (older phones) turn flipbooks off; `FlipbookFramerate` can be randomised, up to 30 fps. Release post: square power-of-two textures 8x8 to 1024x1024. | [Particle emitters](https://create.roblox.com/docs/effects/particle-emitters), [Flipbook release](https://devforum.roblox.com/t/particles%E2%80%99-flipbook-release/2029388) |
+| Curves over lifetime | Colour, Size and Transparency can each be a sequence over life; fade in and out near the edges, transparency "is one of the most important properties because it prevents popping"; larger particles cost more fill-rate. Typical flame: size 0 > peak > 0. | [Particle emitters](https://create.roblox.com/docs/effects/particle-emitters), [Intro to VFX: Particles](https://devforum.roblox.com/t/introduction-to-vfx-particles/2068650) |
+| LightEmission | 0 = normal blend, 1 = additive; "higher values make particles glow, even in low light"; for greyscale textures without alpha use 1 to hide dark regions. Additive sprites **vanish on bright backgrounds** (MEASURED here, section 4). | [Particle emitters](https://create.roblox.com/docs/effects/particle-emitters) |
+| Brightness and LightInfluence | `Brightness` only shows once `LightInfluence` is below 1; LightInfluence 0 ignores world lighting. The best pack here (P1) pairs LightInfluence 0 with Brightness 2-5 and a low LightEmission (0.1-0.5): it glows without turning white. | [Intro to VFX: Particles](https://devforum.roblox.com/t/introduction-to-vfx-particles/2068650), [ParticleEmitter reference](https://create.roblox.com/docs/reference/engine/classes/ParticleEmitter) (property list; no behaviour text) |
+| Orientation, Squash | `Orientation` FacingCamera, FacingCameraWorldUp, VelocityParallel, VelocityPerpendicular; `Squash` stretches a sprite (positive or negative, or a sequence). A DevForum aurora tutorial uses one emitter with VelocityPerpendicular, LightEmission 1, Squash 2 or more for ribbon-like shapes (one author's numbers, not official). | [Intro to VFX: Particles](https://devforum.roblox.com/t/introduction-to-vfx-particles/2068650), [aurora tutorial](https://devforum.roblox.com/t/how-to-make-aurora-borealis-northern-lights-using-one-particle-emitter/3929731) |
+| ZOffset (layering order) | Higher draws in front; the forum example has fire at 1 and smoke at 0. | [Intro to VFX: Particles](https://devforum.roblox.com/t/introduction-to-vfx-particles/2068650) |
+| Layering core / glow / sparks / smoke | Not documented as a named technique on the pages read; every pack that looked good was built that way (several emitters, each with its own size curve). `ZOffset` is the only doc-level hook. | (inferred from the packs below) |
+| Rate and lifetime limits | One emitter maxes at 400/s, **100/s on mobile**; lifetime is capped at 20 s; "keep Rate as low as possible and get the look from size and other properties"; overdraw from stacked transparent layers is costly; test at the lowest and highest Editor Quality Level. | [Particle emitters](https://create.roblox.com/docs/effects/particle-emitters) |
+| Beams | Texture tiling via `TextureLength` / `TextureMode`; `FaceCamera` keeps a beam visible from any angle; `CurveSize0/1` bend it as a Bezier; `Segments` and screen area drive cost; width clamps at 0. `TextureSpeed` and `LightEmission` are not covered on that page. | [Beams](https://create.roblox.com/docs/effects/beams) |
+| Trails | Texture along the length, `TextureMode`, `Lifetime` (lower = shorter and looks faster), transparency sequence, `FaceCamera`. | [Trails](https://create.roblox.com/docs/effects/trails) |
+| Not stated by the sources read | `TimeScale`, `LockedToPart` behaviour and `Brightness` semantics beyond the forum note. Verified here by use instead: `LockedToPart = false` makes particles stay in the world (a trail); true keeps them on the dino (an aura). | n/a |
+| Custom textures | A stylised look needs hand-made sprites; forum advice is to draw your own frames and keep each sprite's position consistent across the sheet. | [Stylised VFX thread](https://devforum.roblox.com/t/how-do-i-actually-make-a-sprite/2027793) |
+
+So the recipe the lab looks for: **flame flipbook sprites with size 0 > peak > 0 and fade in/out, LightInfluence 0, modest LightEmission and a Brightness lift, velocity-perpendicular tongues, a low Rate, a few layers (core, tongues, sparks, smoke)**. Each lab sign names the technique that makes that pack work.
+
+## 2. Finding and vetting packs
+
+- `search_asset` (Creator Store, free) with about 25 queries ("fire aura", "flame trail", "fire footsteps", "anime fire", and so on). 5 results per query, no rating, no download counts; results are mostly unrelated models, duplicates and spam titles. **"Well rated" could not be verified.** Several free packs exist under 2-3 different uploader names with identical content (the Fire Particle pack, the Impact pack, the Black Flame Void aura, the Fire Glow pack); only one copy of each was kept.
+- **Trust warning:** three results (Amaterasu, Ring of Fire, Sukuna Fire Arrow) are uploaded by an account named "Roblox" followed by blank characters, i.e. a look-alike of the official name. Not used beyond the lab, and never for the game.
+- 15 free models were inserted. 8 packs were kept (the ones that actually contain emitters or beams that read as fire or can be mounted on a dino). Dropped: Ring of Fire (18 legacy `Fire` objects, a realistic blobby pillar), Black Flame Void (dark aura, 3 copies), Ball Particle and Fire Ice (meshes only, no emitters), the duplicate uploads, Sukuna Fire Arrow (446 emitters, a map with scripts).
+
+## 3. Security: what was removed (mandatory step)
+
+Free models can hide malware. After every insert, **all** `Script`, `LocalScript`, `ModuleScript` were deleted, plus everything that is not a visual instance. Kept: ParticleEmitter, Beam, Trail, Attachment, Part, MeshPart, SpecialMesh, Decal, Texture, Light, Model, Folder, Weld. No pack code was run. Searching the sources found **no `require(<asset id>)`**; the `require` calls were of sibling modules (the shared "LightConfig / EasyConfiguration" scaffold that several packs carry). Final check in the saved place: the only scripts are the two I wrote (`ServerStorage.LabKit`, `StarterPlayerScripts.PacksLabDriver`).
+
+| Pack | Scripts removed | Other non-visual removed |
+|---|---|---|
+| 1 Fire Particle VFX Pack | 2 Script, 5 LocalScript (CoreValidation uses `require` of a sibling, Check, small helpers) | 7 SurfaceGui, Dialog + DialogChoice, Camera, SunRays, Bloom, Bool/Int/NumberValue |
+| 2 Fire Glow VFX | 4 Script, 4 ModuleScript, 1 LocalScript (LightConfig and qPerfectionWeld use `require`) | ScreenGui, TextBox, Bloom, StyleSheet, Camera, PlaneConstraint |
+| 3 Rengoku Fire Demon aura | 1 Script (CoreValidation), 5 LocalScript | ScreenGui, 2 SunRays, Camera |
+| 4 Impact VFX | 1 Script (LightConfig), 2 ModuleScript | Camera, NumberPose |
+| 5 Rainbow Fire Effect | 1 Script, 2 ModuleScript | Camera |
+| 6 Fire Wind Force | 2 Script + 2 LocalScript (identical "Runtime" 5.6 KB and "ScreenBuilder" 35.6 KB) | 2 ScreenGui (about 100 UI frames), 2 RemoteFunction, InputAction / InputBinding / InputContext, Sound |
+| 7 Amaterasu | same Runtime + ScreenBuilder pair | ScreenGui, RemoteFunction, input bindings, Sound |
+| 8 Particle Effects Kit | 1 Script (LightConfig), 2 ModuleScript | Camera, NumberPose |
+
+Packs 6 and 7 (and the dropped Ring of Fire) carry byte-identical large UI-builder scripts with input bindings and a RemoteFunction: nothing you would want in a kids' game. Treat the whole family as hostile and take only the emitter properties.
+
+## 4. The lab
+
+`C:/Users/znypr/dtmp/VFXLab-Packs.rbxlx` (outside the repo: size, asset ids). Open it in Studio, press Play, walk the walkway at the front (spawn at the left). Bright clear daylight, no haze, no bloom, flat lighting (no shadows) so nothing is hidden.
+
+- **3 rows**: Auras (front, dino stands still), Trails (middle, dino runs a 28-stud loop), Footprints (back, dino runs; a burst fires on every footstep). **9 columns**: 8 packs plus column 9, the owner's three kept in-house pieces.
+- Every cell has a low-poly dino stand-in, a pad, and a sign (pack, creator, asset id, native and mounted emitter / beam / light counts, a phone note, the technique that makes it look good, and a one-line "look vs reference").
+- Packs are stored in `ServerStorage.PackSources` (scripts stripped). The lab clones **only emitter properties** onto the dino: auras on the body, trails on the tail tip (`LockedToPart = false`), footprints on both feet (Rate 0, a burst per step). Sizes and rates were scaled or capped where a blast pack hid the dino (noted on that sign). `LabKit` and `PacksLabDriver` are my own code.
+- **Practical lessons (MEASURED).** (1) Particle textures stream in lazily: a cell can look empty for 10-20 s after Play starts, and emitters only start when the camera first sees them, so give each cell a couple of seconds. (2) A `PointLight` parented to a *Model* (not a part) sits at the world origin and lit one whole cell: this happened with the Fire Glow pack. (3) Additive effects wash out on the bright sky and pale ground. (4) Console: some emitter textures in the big pack are "not approved for the requester" (private uploads) and draw nothing; none of those are in the mounted sets.
+- Camera left in Custom. The window was moved to screen 3 without stealing focus and the place saved.
+
+### Evidence (`docs/evidence/review-2026-10-17/`)
+`33-vfx-packs-auras.jpg`, `33-vfx-packs-trails.jpg`, `33-vfx-packs-footprints.jpg` are one montage per row (four Studio captures, two columns each: top left = columns 1-2, top right = 3-4, bottom left = 5-6, bottom right = 7-8). The single captures are `33-vfx-packs-<row>-1-2.jpg`, `-3-4`, `-5-6`, `-7-8`; `33-vfx-packs-footprints-9.jpg` shows the in-house footprint stamps. Captures were taken in Play (Studio screen capture), one moment each, so a cell can look emptier than it is.
+
+## 5. Results per pack
+
+Cost = counts in the mounted cell (ESTIMATE of live sprites = Rate x average lifetime; bursts x lifetime x 1.8 steps/s; no phone run). Phone budgets: `tools/qa/phone_budgets.json` 24 beams, 16 lights, and the Creator Hub 100 particles/s mobile cap per emitter.
+
+| # | Pack (creator, id) | Native | Look vs reference (my reading of the captures) | Aura / trail / footprint cost | Technique that makes it work |
+|---|---|---|---|---|---|
+| 1 | **Fire Particle VFX Pack** (Plikbyt9947, 126470813643435) | 147 emitters, 102 beams | **Closest.** Orange flame tongues, swirl rings round the dino, flame streaks behind, flame-shaped bursts at the feet. Smoke is dark / black, not cream. Still reads as VFX, not cel art. | 7 emitters about 55 live / 6 about 59 / 10 about 33 (all OK) | Flipbook (Grid4x4) tongues turned by `Orientation = VelocityPerpendicular`, Brightness 2-5 with LightEmission 0.1-0.5, LightInfluence 0, size 0 > peak > 0. Rates are 1-3/s, so cheap. |
+| 2 | Fire Glow VFX (PulseluBeasthuCyber1, 116885547917398) | 22 emitters, 23 beams, 7 lights | Spiky comic flames, a yellow streak trail, small embers at the feet. Its lights wash out the pad. Not the soft anime look. | 8 em + 9 beams + 2 lights about 570 / 5 + 7 beams about 1,877 / 3 about 825 (TOO HEAVY; Rate 300-500 emitters) | Brute-force additive layering (LE 1-2, Rate 300-500), Squash shards, twisted Beams. |
+| 3 | Rengoku Fire Demon aura (Blackspark3681, 99329319804811) | 20 emitters | Native effect is a huge fire-and-smoke column. After capping size (4 studs) and rate (x0.3): aura = a small flame blob, trail = a rising column of embers, **footprints = chunky orange flame pads with a crescent** (the closest to the footsteps reference). | 13 em about 469 / 6 about 280 (both heavy even adapted) / 12 about 33 (OK) | Layered anime stack: Flame sprites (LE 0.5), Main sprites (LE 0.1), Lines / Crescents / Specks (LE 0.4-1), a ground set made for impacts. |
+| 4 | Impact VFX sparks, smoke, fire (WraithSFStr3amt11855, 138905955573210) | 6 emitters | A blast, not an aura: aura = a few sparks; trail = a fire jet with heavy black smoke; footsteps = shockwave + smoke puffs. Too loud for calm. | 3 about 43 (OK) / 3 about 500 (heavy) / 10 about 44 (OK) | Six layers (sparks, orange core, glow, glare, shockwave ring: LE 1; smoke matte) each with its own size curve. |
+| 5 | Rainbow Fire Effect (Xz_Bladew7LavaZ7Tech, 118960501620143) | 1 emitter | **Draws almost nothing in daylight** (an additive rainbow sprite on a bright background); not usable. | 1 about 41 / 1 about 41 / 2 about 12 | One emitter, ColorSequence over life, LE 0.75. |
+| 6 | Fire Wind Force (Toniroke89, 101383006828012) | 6 emitters, 36 beams | A gold spinning disc that blows out to white (LightEmission up to 3). A power-up look, not fire. | 6 + 36 beams about 440 (beam cap is 24: does not fit) | Scrolling-texture Beams plus LE 3 sprites. |
+| 7 | Amaterasu black flame (look-alike "Roblox" uploader, 90711132158929) | 8 emitters | **Right method, wrong colour:** big Grid4x4 flame flipbooks with soft edges, but black and purple. Shows what a finished flame flipbook trail looks like. | 6 about 272 / 3 about 109 / 4 about 15 | Large Grid4x4 flipbooks, matte (LE 0) body, one LE 0.45 layer, LE 1 glow dots. |
+| 8 | Particle Effects Kit, 30 days of VFX (Byte56Oblivi0nm19343, 99784663041487) | 85 emitters | Not fire. The orange-yellow Glow / Flare / Rays layers vanish in daylight (nothing visible in the capture). Keep only as a layering lesson. | 9 about 34 / 9 about 34 / 22 about 42 | Core / Glow / Flare / Rays layering, all LE 1, tiny rates (1-8/s), long lifetimes. |
+| 9 | **In-house, owner kept** (F3, T2 dust, A3 smoke) | n/a | **Rebuilt from the docs/143 recipes** (the saved `VFXLab-Fire.rbxlx` held no content, so the pieces could not be copied). F3: glowing foot-pad decals that cool white > orange > dark red plus a 5-spark burst: **works** (`33-vfx-packs-footprints-9.jpg`). A3 warm puff and T2 tan dust: **drew nothing in this place** (the puff sheet id 134899601591965 renders empty here even in a plain test emitter, while a default sparkles texture renders); that is a texture / upload issue to check, not a recipe issue. | 1 about 4 / 1 about 6 / 2 + 10 decals about 18 (ESTIMATE) | Neutral grey puff tinted at runtime (smoke); stamped decal with a colour-over-life (footprints). |
+
+## 6. Licence and usage
+
+- Creator Store free models are inserted into Studio and used in your own experience; the Creator Hub page does not state a licence, attribution rule or redistribution terms for free models. **Restricted** assets only load when the creator has granted the experience permission; "Open Use" assets always load. Redistributing (selling, re-listing) assets you did not create is not allowed, and composite assets must not carry Restricted dependencies you do not own. Source: [Creator Store](https://create.roblox.com/docs/production/publishing/creator-store). The same page warns about malicious scripts (`require(assetId)`, `loadstring`, `InsertService:LoadAsset`) and about assets that "load another 'virus' asset at runtime".
+- **Attribution:** none of the 8 pack descriptions asks for credit. The only request is the Rengoku / Particle packs' "Please Like, Favorite, and Leave a Comment" boilerplate (not a licence term). Several descriptions are keyword-stuffed tag lists, which suggests bulk uploads.
+- **Texture ownership:** the packs reference image assets uploaded by their authors. Using the pack means depending on those asset ids staying available; some ids in the big pack already fail for us ("not approved for the requester"). **PROPOSED:** copy only technique and numbers into our own emitters and re-render the textures in Blender (the owner's art rule in AGENTS.md: Blender renders or owner art, no code-drawn textures), rather than shipping the packs' assets.
+- Do not use anything from the look-alike "Roblox" uploads in the game.
+
+## 7. Recommendation per effect (PROPOSED, my opinion, not owner-judged)
+
+| Effect | Top pick | Why | What to adapt |
+|---|---|---|---|
+| **Aura** | **Pack 1, Fire Particle VFX Pack**: FlameSwirl + FlameSlice + FlamebitsFlipbook (+ the FlareFlipbook, kept small) | Only set with real flame flipbooks and the right property recipe (VelocityPerpendicular, Brightness over LightEmission, LightInfluence 0); about 55 live sprites, no beams, no lights. | Make the smoke cream and soft (pack 9 puff once the texture works, or ours); add the ground ring decal from [143](143-vfx-lab-fire.md); replace the textures with Blender renders in our palette; tint and scale per rarity from `FxRecipes`. |
+| **Trail** | **Pack 1**: FlameArrow + FlameSlice at the tail tip, world space, rate raised to 8-10/s | Reads as flame streaks with a soft smoke tail at about 59 live sprites. Second: pack 3's ember column as a sparks layer (needs the x0.3 cut). | Lighter smoke colour; shorten life; Lite = one emitter; Off = none. |
+| **Footprints** | **Pack 3, Rengoku ground set** (chunky orange pads and crescent) + the **in-house F3 decal stamps** for the mark that stays on the ground | Closest to the footsteps reference; pack 3 is 12 emitters about 33 live per step bursts; F3 is the only stamp that persists on the floor. | Cap rate; our own foot-pad texture; pool the stamps (10 parts). Pack 1's flamebits burst is the fallback. |
+
+None of the packs is "done": every one needs our textures, a Lite and Reduce-Motion variant, and a phone run. Do not enable anything in the game from this document.
+
+## 8. Not verified / open questions
+
+- No phone run, no owner judgement of these cells (my reading is from small Studio captures). Costs are instance counts.
+- "Well rated" was not checkable with the available tool; the choice was by content and look.
+- The in-house A3 and T2 smoke could not be reproduced (empty-rendering texture id); F3 works. Ask the owner whether the `vfx_lab_puff` upload is the right asset (an Image id rather than a Decal id?).
+- Did not try real 3D flame meshes with scrolling UVs (cone, shell, ribbon); [143](143-vfx-lab-fire.md) names this as the likely way to close the gap to the references.
+- The lab file is not in the repo; the builder code lives only in the place (`ServerStorage.LabKit`, `StarterPlayerScripts.PacksLabDriver`).
+- Question for the owner: should we spend effort adapting pack 1 (about a day, still not the reference look), or commission / render original flame sheets in Blender and use only the property recipe from pack 1?
