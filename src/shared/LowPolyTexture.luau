@@ -163,7 +163,7 @@ function Texture.key(textureId: string, spec: Spec): string
 end
 -- Pure pixel pass (shared with the verifier through LowPolyRecolor/LowPolyPattern/LowPolyTier): writes the baked RGBA into out.
 -- size defaults to Pattern.Size.
-function Texture.paint(src: buffer, weights: {number}, mask: {number}, spec: Spec, base: {number}, out: buffer, onRow: ((number) -> ())?, size: number?)
+function Texture.paint(src: buffer, weights: {number}, mask: {number}, spec: Spec, base: {number}, out: buffer, onRow: ((number) -> ())?, size: number?, pos: buffer?, species: string?)
     local size = size or Pattern.Size
     local a, b = spec.primary, spec.secondary
     local ar, ag, ab, br, bg, bb = a.R, a.G, a.B, b.R, b.G, b.B
@@ -180,14 +180,22 @@ function Texture.paint(src: buffer, weights: {number}, mask: {number}, spec: Spe
             local i = y * size + x
             local o = i * 4
             local r, g, bl = buffer.readu8(src, o) / 255, buffer.readu8(src, o + 1) / 255, buffer.readu8(src, o + 2) / 255
-            if weights[i + 1] > 0 then
+            local accent = false
+            if tier and pos and species and buffer.readu8(pos, o + 3) == 255 and (r + r + r + g + g + g + bl) / 7 > 0.15 then -- dark texels = eyes: never
+                local px, py, pz = buffer.readu8(pos, o) / 127.5 - 1, buffer.readu8(pos, o + 1) / 127.5 - 1, buffer.readu8(pos, o + 2) / 127.5 - 1
+                if Tier.inAccentRegion(species, px, py, pz) then
+                    accent = true
+                    r, g, bl = Tier.regionColor(r, g, bl, tier, Recolor.shade(r, g, bl, base), (x + y) / (2 * size), py, px, pz)
+                end
+            end
+            -- 2026-10-16 FINAL owner rule: body and pattern texels are the dino's own colours at EVERY tier (identical to base);
+            -- the tier is the translucent glossy shell (LowPolyDinos) plus these solid horn / claw texels.
+            if accent then -- horns / claws painted in the tier metal or gem (base tier never gets here)
+            elseif weights[i + 1] > 0 then
                 local m = mask[i + 1]
                 local tr, tg, tb = ar + (br - ar) * m, ag + (bg - ag) * m, ab + (bb - ab) * m
-                if tier then tr, tg, tb = Tier.blend(tr, tg, tb, tier, m >= 0.5) end
                 if mutationId then tr, tg, tb = Look.pull(tr, tg, tb, mutationId) end -- BD-518: Part.Color cannot tint a baked texture, so the event mutation is baked in
-                local k = Recolor.shade(r, g, bl, base)
                 r, g, bl = Recolor.pixel(r, g, bl, tr, tg, tb, base)
-                if tier then r, g, bl = Tier.lift(r, g, bl, k, tier) end -- BD-308: lit facets shine a little more on fused tiers
             end
             buffer.writeu8(out, o, math.floor(r * 255 + 0.5))
             buffer.writeu8(out, o + 1, math.floor(g * 255 + 0.5))
@@ -236,7 +244,7 @@ function Texture.acquire(part: Instance, textureId: string, speciesId: string, s
         local okMask, mask = pcall(Pattern.compute, spec.patternId, Pattern.seed(spec.seedName), src.weights, spec.primaryShare, spec.same, yielder(), src.pos, size)
         if not okMask then mask = table.create(size * size, 0) end -- pattern failure: plain colours, never nothing
         local out = buffer.create(size * size * 4)
-        Texture.paint(src.buf, src.weights, mask, spec, src.base or Recolor.baseOf(speciesId), out, yielder(), size)
+        Texture.paint(src.buf, src.weights, mask, spec, src.base or Recolor.baseOf(speciesId), out, yielder(), size, src.pos, speciesId)
         if not cache:reserve() then return nil end
         local img = AssetService:CreateEditableImage({Size = Vector2.new(size, size)})
         if not img then return nil end -- budget (shared with every EditableImage/EditableMesh in the game): tint fallback

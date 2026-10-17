@@ -146,6 +146,7 @@ jobs:
           python tools/verify_mouth_reach.py --runner /tmp/luau/luau
           python tools/verify_lowpoly_budget.py --runner /tmp/luau/luau
           python tools/verify_lowpoly_patterns.py --runner /tmp/luau/luau
+          python tools/verify_tier_coat.py --runner /tmp/luau/luau
           python tools/verify_pattern_atlas.py --runner /tmp/luau/luau
           python tools/verify_fx_textures.py
           python tools/verify_equip_visual.py

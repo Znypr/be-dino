@@ -9,6 +9,7 @@ local Genetics = require(script.Parent.EggGenetics)
 local Texture = require(script.Parent.LowPolyTexture)
 local Pose = require(script.Parent.LowPolyPose)
 local Tier = require(script.Parent.LowPolyTier)
+local Lod = require(script.Parent.EffectsLod)
 local MutationLook = require(script.Parent.MutationLook)
 local Recolor = require(script.Parent.LowPolyRecolor)
 local Ready = require(script.Parent.LowPolyReady)
@@ -79,7 +80,10 @@ end
 local function sparkle(container: Instance, body: BasePart?, entry: any?)
     local old = container:FindFirstChild("LPTierSparkle", true)
     if old then old:Destroy() end
-    if not entry or not body or entry.sparkleRate <= 0 or not motionEnabled() then return end
+    -- Effects Off: no particles at all (the material, gloss and baked sheen still carry the tier); Lite: half the sparks.
+    local okS, SettingsModel = pcall(function() return require(script.Parent.SettingsModel) end)
+    local fx = if okS and SettingsModel and SettingsModel.effects then SettingsModel.effects() else "full"
+    if not entry or not body or entry.sparkleRate <= 0 or not motionEnabled() or fx == "off" then return end
     local Effects = require(script.Parent.EffectAssets)
     local longest = 6 -- a Compy is about 6 studs long after LowPolyDinoAssets.scale, a T-Rex about 12
     if container:IsA("Model") then local _, size = container:GetBoundingBox() longest = math.max(size.X, size.Y, size.Z, 1) end
@@ -90,13 +94,76 @@ local function sparkle(container: Instance, body: BasePart?, entry: any?)
     if Effects.isSheet("sparkSheet") then
         emitter.FlipbookLayout, emitter.FlipbookMode = Enum.ParticleFlipbookLayout.Grid4x4, Enum.ParticleFlipbookMode.OneShot
     end
-    emitter.Color = ColorSequence.new(Color3.fromRGB(entry.sparkle[1], entry.sparkle[2], entry.sparkle[3]))
-    emitter.LightEmission, emitter.LightInfluence = 0.6, 0.3
-    emitter.Rate, emitter.Lifetime = entry.sparkleRate * k, NumberRange.new(0.8, 1.2)
-    emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.4, 0.55 * k), NumberSequenceKeypoint.new(1, 0)})
-    emitter.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.2), NumberSequenceKeypoint.new(1, 1)})
+    if entry.shimmer then -- Diamond: slow icy rainbow shimmer (the spark colour drifts through the list over its life)
+        local pts = {}
+        for i, c in entry.shimmer do pts[i] = ColorSequenceKeypoint.new((i - 1) / (#entry.shimmer - 1), Color3.fromRGB(c[1], c[2], c[3])) end
+        emitter.Color = ColorSequence.new(pts)
+    else emitter.Color = ColorSequence.new(Color3.fromRGB(entry.sparkle[1], entry.sparkle[2], entry.sparkle[3])) end
+    emitter.LightEmission, emitter.LightInfluence = 1, 0
+    -- few but crisp: sparkleCount concurrent twinkles (Gold 3 / Emerald 5 / Diamond 7), each ~1.2 s, big enough to read at ~20 studs
+    emitter.Rate, emitter.Lifetime = entry.sparkleCount / Tier.SparkleBase * (if fx == "lite" then 0.5 else 1), NumberRange.new(Tier.SparkleLife[1], Tier.SparkleLife[2])
+    local sz = entry.sparkleSize * math.clamp(k, 0.9, 1.6)
+    -- short glint flash: the spark pops to 1.5x in the first 12 % of its life, settles to full size, then fades (bright at once, not a slow fade-in)
+    emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.12, sz * 1.5), NumberSequenceKeypoint.new(0.4, sz), NumberSequenceKeypoint.new(1, 0)})
+    emitter.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(0.12, 0), NumberSequenceKeypoint.new(0.7, 0.1), NumberSequenceKeypoint.new(1, 1)})
+    emitter.ZOffset = 1
     emitter.Speed, emitter.SpreadAngle, emitter.Rotation = NumberRange.new(0.2, 0.5), Vector2.new(180, 180), NumberRange.new(0, 360)
     emitter.Parent = body
+end
+-- Glowing tier rim (2026-10-16 round 7, docs/114): a thin lit outline round the whole silhouette in the tier colour. The local player's dino
+-- and previews always get a real Highlight; other fused dinos get one while under EffectsLod.RimHighlights (far below Roblox's 31), the rest
+-- get the cheap glow (one slightly larger Neon shell on the body part). Effects Off = no rim. Material look (gloss, horns, claws) stays.
+local liveRims: {[Instance]: boolean} = {}
+local function rimCount(): number local n = 0 for _ in liveRims do n += 1 end return n end
+local function rim(container: Instance, entry: any?, body: BasePart?)
+    for _, name in {"LPTierRim", "LPTierGlow"} do
+        local old = container:FindFirstChild(name, true)
+        if old then liveRims[old] = nil old:Destroy() end
+    end
+    if not entry or not container:IsA("Model") then return end
+    local mode = "full"
+    local okS, SettingsModel = pcall(function() return require(script.Parent.SettingsModel) end)
+    if okS and SettingsModel and SettingsModel.effects then mode = SettingsModel.effects() end
+    local own = container:GetAttribute("LPOwn") == true or container:FindFirstAncestorOfClass("ViewportFrame") ~= nil
+    local c = entry.rim
+    local col = Color3.fromRGB(c[1], c[2], c[3])
+    local trans = math.clamp(entry.rimTransparency, Tier.RimTransparency[1], Tier.RimTransparency[2])
+    local cap = math.min((Lod.RimHighlights :: any)[mode] or 0, Lod.RimHighlightHardCap - 1)
+    if own or rimCount() < cap then
+        local h = Instance.new("Highlight")
+        h.Name, h.Adornee = "LPTierRim", container
+        local o = entry.outline
+        local outlineCol = if o then Color3.fromRGB(o[1], o[2], o[3]) else col:Lerp(Color3.new(1, 1, 1), Tier.HighlightWhiten)
+        h.FillColor, h.OutlineColor, h.FillTransparency, h.OutlineTransparency = col, outlineCol, entry.rimFill or Tier.HighlightFill, 0
+        h.DepthMode = Enum.HighlightDepthMode.Occluded
+        h.Parent = container
+        liveRims[h] = true
+        h.Destroying:Once(function() liveRims[h] = nil end)
+    end
+    if mode == "off" then return end
+    -- soft glow (round 8): inflated Neon shell copies on EVERY textured part (body, head, tail, legs, arms); two layers = gradient falloff
+    -- (Effects Lite: the outer soft layer only). Mostly seen at the silhouette; high transparency keeps the dino's own colours.
+    if not Tier.UseGlowShells then return end
+    local layers = if mode == "lite" then {Tier.GlowLayers[2]} else Tier.GlowLayers
+    for _, p in container:GetDescendants() do
+        local texId = if p:IsA("MeshPart") then p:GetAttribute("LPTexture") else nil
+        if p:IsA("MeshPart") and type(texId) == "string" and texId ~= "" and not Tier.isAccentName(p.Name) then
+            for i, layer in layers do
+                local shell = p:Clone()
+                for _, ch in shell:GetChildren() do ch:Destroy() end
+                shell.Name, shell.TextureID = "LPTierGlow", ""
+                shell:SetAttribute("LPTexture", nil) shell:SetAttribute("LPRole", nil)
+                shell.Size, shell.Color, shell.Material, shell.Reflectance = p.Size * layer[1], col, Enum.Material.Neon, 0
+                shell.Transparency = layer[2]
+                shell.CanCollide, shell.CanQuery, shell.CanTouch, shell.Massless, shell.CastShadow = false, false, false, true, false
+                shell.CFrame = p.CFrame
+                local w = Instance.new("WeldConstraint")
+                w.Part0, w.Part1 = p, shell
+                w.Parent = shell
+                shell.Parent = p
+            end
+        end
+    end
 end
 -- Fallback (bake denied / cache full / far away): the model's OWN texture stays (eyes, belly, claws intact, species colour). A plain
 -- MeshPart.Color is ignored on a textured MeshPart in Studio, so no tint is applied (docs/105: option 'keep the original texture').
@@ -108,6 +175,59 @@ local function partBake(container: Instance, species: string, part: MeshPart, te
     if not part.Parent or container:GetAttribute("LPLookKey") ~= key then return end
     if content then part.TextureContent, part.Color = content, Color3.new(1, 1, 1) part:SetAttribute("LPLod", "texture")
     else part.TextureID = textureId part.Color = Color3.new(1, 1, 1) part:SetAttribute("LPLod", "tint") end
+end
+-- Template lookup: ReplicatedStorage.TierCoatTemplates is written by tools/build.py (tools/tier_coat.py) from Tier.Maps.
+local function coatTemplate(species: string, partName: string, tierId: string): Instance?
+    local folder = ReplicatedStorage:FindFirstChild(Tier.TemplateFolder)
+    local item = if folder then folder:FindFirstChild(Tier.templateName(species, partName, tierId)) else nil
+    return if item and item:IsA("SurfaceAppearance") then item else nil
+end
+-- 2026-10-16 FINAL owner rule: "same exact colours and pattern, plus a semi-translucent glossy tier layer over it". The layer is a second,
+-- slightly inflated copy of each textured body MeshPart (same mesh, welded, no collision / query / touch, Massless): +1 part per textured part
+-- (a 7-part dino stays well inside the low-poly part budget; tris double only on those parts, no extra textures). Previews/ViewportFrames get it too.
+local function shells(container: Instance, entry: any?)
+    for _, old in container:GetDescendants() do if old.Name == "LPTierShell" then old:Destroy() end end
+    if not entry then return end
+    for _, p in container:GetDescendants() do
+        local texId = if p:IsA("MeshPart") then p:GetAttribute("LPTexture") else nil
+        if p:IsA("MeshPart") and type(texId) == "string" and texId ~= "" and not Tier.isAccentName(p.Name) then
+            local shell = p:Clone()
+            for _, ch in shell:GetChildren() do ch:Destroy() end
+            shell.Name = "LPTierShell"
+            shell.TextureID = ""
+            shell:SetAttribute("LPTexture", nil) shell:SetAttribute("LPRole", nil)
+            shell.Size = p.Size * Tier.ShellScale
+            shell.Color = Color3.fromRGB(entry.shell[1], entry.shell[2], entry.shell[3])
+            shell.Material = (Enum.Material :: any)[entry.shellMaterial] or Enum.Material.SmoothPlastic
+            shell.Reflectance = math.min(entry.shellReflectance, Tier.MaxShellReflectance)
+            shell.Transparency = math.clamp(entry.shellTransparency, Tier.ShellTransparency[1], Tier.ShellTransparency[2])
+            -- approach C (docs/115): the SurfaceAppearance is a TEMPLATE authored in the place at build time (a runtime-made one does not render)
+            -- and only CLONED here. No template for this species / part / tier (no map yet) = the plain translucent shell above, unchanged.
+            local tpl = coatTemplate(tostring(container:GetAttribute("LPSpecies") or container.Name), p.Name, entry.id)
+            if tpl then -- alpha lives in the ColorMap (AlphaMode Transparency), so the part itself is opaque and its look comes from the maps
+                shell.Material, shell.Reflectance, shell.Color, shell.Transparency = Enum.Material.SmoothPlastic, 0, Color3.new(1, 1, 1), 0
+                local coat = tpl:Clone()
+                -- Owner 2026-10-17: "the sides / corners aren't glowing enough" -> the coat's own ColorMap is its emissive mask (edge-weighted
+                -- alpha), so the tier edges glow without washing the stripes. Lead Studio tuning: strength 6.
+                local glow = Tier.CoatGlow[entry.id]
+                if glow then
+                    pcall(function() -- EmissiveMaskContent is a newer API; an older client simply keeps the unlit coat
+                        local sa: any = coat
+                        sa.EmissiveMaskContent = Content.fromUri(sa.ColorMap)
+                        sa.EmissiveStrength = glow.strength
+                        sa.EmissiveTint = Color3.fromRGB(glow.tint[1], glow.tint[2], glow.tint[3])
+                    end)
+                end
+                coat.Parent = shell
+            end
+            shell.CanCollide, shell.CanQuery, shell.CanTouch, shell.Massless, shell.CastShadow = false, false, false, true, false
+            shell.CFrame = p.CFrame
+            local w = Instance.new("WeldConstraint")
+            w.Part0, w.Part1 = p, shell
+            w.Parent = shell
+            shell.Parent = p
+        end
+    end
 end
 -- BD-518: the event mutation (ember, frost ...) rides on the container attribute LPMutation and is BAKED into the body-colour pixels
 -- (MeshPart.Color is ignored on a baked texture, so MutationLook.apply alone shows nothing on a low-poly dino). Never on fused tiers.
@@ -136,7 +256,7 @@ function LowPoly.tint(container: Instance, genes: any)
         spec = {primary = primary, secondary = Color3.fromRGB(b[1], b[2], b[3]), same = genes.primaryColorId == genes.secondaryColorId,
             primaryShare = math.clamp((genes.blend or 50) / 100, 0, 1), patternId = patternId, tier = if entry then entry.id else nil, seedName = "",
             mutation = mutationOf(container, entry)}
-    elseif not entry then return end
+    elseif not entry then shells(container, nil) return end
     if not spec then -- no genes (Index stage tiles, fusion previews): a fused tier still bakes over the species' own colour, so the tier reads (BD-326)
         local own = Color3.new(1, 1, 1)
         spec = {primary = own, secondary = own, same = false, primaryShare = 1, patternId = "01_blank", tier = (entry :: any).id, seedName = "", own = true}
@@ -145,21 +265,30 @@ function LowPoly.tint(container: Instance, genes: any)
     local body: BasePart? = nil
     local textured: {{part: MeshPart, textureId: string, role: string}} = {}
     for _, part in container:GetDescendants() do
-        if part:IsA("MeshPart") then
+        if part:IsA("MeshPart") and part.Name ~= "LPTierShell" and part.Name ~= "LPTierGlow" then
             local textureId = part:GetAttribute("LPTexture")
             local role = tostring(part:GetAttribute("LPRole") or "body")
             if role == "body" and not body then body = part end
             local eyeish = type(textureId) ~= "string" or textureId == ""
             -- BD-173: base dinos matte; only a fused tier gets Metal/Glass + reflectance, and only on textured body-colour parts.
-            if entry and not eyeish then
-                part.Material = (Enum.Material :: any)[entry.material] or Enum.Material.Metal
-                part.Reflectance = math.min(entry.reflectance, Tier.MaxReflectance)
-            else part.Material, part.Reflectance = Enum.Material.Plastic, 0 end
+            part.Material, part.Reflectance = Enum.Material.Plastic, 0
+            if entry and not eyeish then part.Material, part.Reflectance = Enum.Material.SmoothPlastic, Tier.BodyGloss end -- fused: glossy highlights, texture stays
+            if entry and Tier.isAccentName(part.Name) and eyeish then -- claws / toes / horns are untextured parts: tint them in the tier metal / gem
+                local c = entry.accent
+                part.Color = Color3.fromRGB(c[1], c[2], c[3])
+                part.Material = (Enum.Material :: any)[entry.accentMaterial] or Enum.Material.SmoothPlastic
+                part.Reflectance = Tier.MaxReflectance
+                if eyeish then continue end
+                part.TextureID = ""
+                continue
+            end
             if eyeish or not spec then part.Color = Color3.new(1, 1, 1) continue end
             table.insert(textured, {part = part, textureId = textureId, role = role})
         end
     end
+    shells(container, entry)
     sparkle(container, body, entry)
+    rim(container, entry, body)
     if not spec or #textured == 0 then return end
     local s = spec :: Texture.Spec
     local anchor = body or textured[1].part
