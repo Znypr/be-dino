@@ -75,3 +75,21 @@ Same method as above, one Studio window per build (main before, the fix after), 
 | # | Image | Result | Look | Notes |
 |---|---|---|---|---|
 | 18 | [18-compy-jump-air-after-bd555.jpg](18-compy-jump-air-after-bd555.jpg) | PASS | 5 | Compy 0.3 s into a jump (root anchored in the air for the shot): legs and arms tucked, tail up, head up, no crouch pose. |
+
+## Follow-up: BD-556 Water surge swim wave, flipper stroke, hip-dip cover (PR claude/bd566-water-surge)
+
+**CURRENT BUILD BEHAVIOR after this PR (offline verified; Studio look PENDING until the lead frees Studio).**
+
+| Part | Before | After |
+|---|---|---|
+| Tail | one kick, 20 degrees (jump) / 30 (leap) | wave, yaw 26 degrees, lags the head by 2.3 rad |
+| Body | no yaw | wave, yaw 5 degrees, lag 1.1 rad |
+| Head / neck | pitch lunge only | lunge plus wave, yaw 14 degrees, lag 0 / 0.4 rad |
+| Flippers | one pull, 33 degrees, held | rowing stroke (pitch +-19 degrees, roll flare), back pair 1.0 rad after the front pair |
+| Cycles | 1 | 1 undulation (jump, 0.40 s) or 1.4 (leap, 0.55 s) |
+
+Offline numbers (`tools/verify_motion_poses.py`, real `LowPolyPose` and real `LowPolyAnimator`): worst turn of any part 7.7 degrees per 60 Hz frame in the pose maths, 7.2 through the animator (jump), 6.5 (leap); Reduce Motion: every weld identity through a jump and a leap surge. New checks 556.surge_wave (phase lag fitted from the real samples grows head, neck, body, tail), 556.surge_amp, 556.surge_smooth, 556.hipdip, 556.drive_surge, 556.drive_hipdip; 14 new `--selftest` breaks, all caught.
+
+Hip dip: `Pose.hipDip` lifts every part by the compression for 0.3 s after touch-down (local dino only; a ray 4 times a second when settled, one per frame during the window, none in flight or under Reduce Motion). Not checked offline: the real compression numbers and that the lift looks right on a hard landing.
+
+`ClassDash` (read, not yet run): see the BD-556 and BD-569 kanban rows.
