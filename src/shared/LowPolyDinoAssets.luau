@@ -9,8 +9,8 @@
 -- models are all normalised to about 3 studs, so scale restores the intended size: scale = target size / the model's size at scale 1, where
 -- the target comes from src/shared/ScaleLadder.luau Sizing (tier = Config.SpeciesRarities, the unlock tier):
 --   Ground and Armored (and Elasmosaurus, a normal Ground dino): HEIGHT 6.6 x 1.1^(tier - 1), Compy tier 1 = 6.6.
---   Fly: BULK = cube root of the bounding-box volume, the T-Rex's bulk at tier 5 and 10% less per tier below.
---   Water: LENGTH, the T-Rex's length at tier 5 and 10% less per tier below (long low swimmers are not forced tall).
+--   Fly and Water: BULK = cube root of the bounding-box volume, the T-Rex's bulk at tier 5 and 10% less per tier below (C-39, docs/116: Water was
+--   sized by length until the owner's wording "fly/water scaled by bulk" was applied; a long low swimmer is now chunkier and much longer).
 -- tools/verify_scale_ladder.py checks every species against that rule (tolerance 2%) and that this table equals ScaleLadder.
 -- Compy 2.2 is the original spike value and the anchor. tier is stored per entry and tools/verify_lowpoly_dinos.py checks it against
 -- Config.SpeciesRarities. History: BD-225 first used scale = 2.0 * 1.1^(tier - 1) * shape; the Studio boxes (BD-471) showed that shape
@@ -29,12 +29,12 @@ return {
     dimorphodon = {assetId = 117242533934118, version = "v1", scale = 1.71, tier = 1, class = "Fly"},
     elasmosaurus = {assetId = 76344726254379, version = "v1", scale = 3.58, tier = 4, class = "Ground"},
     gallimimus = {assetId = 99873366835296, version = "v1", scale = 3.89, tier = 1, class = "Ground"},
-    ichthyosaurus = {assetId = 133825037148251, version = "v1", scale = 2.87, tier = 3, class = "Water"},
+    ichthyosaurus = {assetId = 133825037148251, version = "v1", scale = 3.71, tier = 3, class = "Water"},
     microraptor = {assetId = 137027841072493, version = "v1", scale = 1.52, tier = 1, class = "Fly"},
-    mosasaurus = {assetId = 116180724806366, version = "v1", scale = 3.47, tier = 5, class = "Water"},
+    mosasaurus = {assetId = 116180724806366, version = "v1", scale = 5.64, tier = 5, class = "Water"},
     pachycephalosaurus = {assetId = 75417530223759, version = "v1", scale = 2.81, tier = 2, class = "Ground"},
     parasaurolophus = {assetId = 125203763120290, version = "v1", scale = 3.03, tier = 2, class = "Ground"},
-    plesiosaurus = {assetId = 107885207120586, version = "v1", scale = 2.87, tier = 3, class = "Water"},
+    plesiosaurus = {assetId = 107885207120586, version = "v1", scale = 2.78, tier = 3, class = "Water"},
     pteranodon = {assetId = 101283644467729, version = "v1", scale = 1.54, tier = 2, class = "Fly"},
     quetzalcoatlus = {assetId = 126028097030256, version = "v1", scale = 2.04, tier = 4, class = "Fly"},
     spinosaurus = {assetId = 94005222354362, version = "v1", scale = 4.02, tier = 5, class = "Ground"},
