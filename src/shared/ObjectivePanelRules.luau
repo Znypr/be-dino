@@ -101,7 +101,8 @@ function Rules.folded(rows: {any}): any
     local first = rows[1]
     if first == nil then return {text = "All done!", chip = "", claimable = false, empty = true} end
     local more = Rules.claimableCount(rows)
-    return {text = first.name, chip = if first.claimable then "Done!" else Rules.progressText(first), claimable = more > 0, empty = false, claimableCount = more}
+    return {text = first.name, chip = if first.claimable then "Done!" else Rules.progressText(first), claimable = more > 0, empty = false, claimableCount = more,
+        tutorial = first.group == "tutorial" and not first.claimable}
 end
 
 -- docs/72: round and drop zeros, never "5m 0s". Under a minute (or unknown) it is just "soon".
@@ -226,6 +227,113 @@ function Rules.goalLine(rows: {any}, fit: any): any?
         text = if Rules.fitsLine(fallback, fit) then fallback elseif progress ~= "" then progress else "Task"
     end
     return {kind = "objective", text = text, claimable = false, ready = false, fraction = first.fraction, id = first.id}
+end
+
+-- BD-561 (docs/109 section 9): the four optional icons of the panel. Pure geometry: the panel passes the numbers in and draws what comes back.
+-- Every slot is read through Theme.ImageIds (AssetSlots.Images); an EMPTY id means "draw nothing and reserve no space", so with all four empty none
+-- of the functions below is called and the panel is exactly the one without icons. Sizes are the docs/109 s9 sizes (never above 44 px).
+Rules.Slots = {chevron = "objective_chevron", arrow = "objective_arrow", crystal = "notify_crystal", star = "notify_star"} :: {[string]: string}
+Rules.IconPx = {chevron = 24, arrow = 28, crystal = 20, star = 24, row = 20} :: {[string]: number} -- row = the gem and the star on a task row's prize line
+Rules.IconGap = 4
+Rules.ChipW = 56 -- the progress chip of the folded line (ObjectivesPanel)
+Rules.MinTitle = 72 -- folded: the arrow or the star is left out when the task name would get less than this many px
+
+-- Longest whole-word start of `text` that fits `width` px at `font` px ("Equip a dino in the Index" -> "Equip a dino..."), never a word cut in half and
+-- never ending on a dangling "a" / "the". If not even "...": the first word alone when it fits, else nil (the caller picks a fallback).
+function Rules.fitWords(text: string, width: number, font: number): string?
+    if Rules.textWidth(text, font) <= width then return text end
+    local words = {}
+    for word in string.gmatch(text, "%S+") do table.insert(words, word) end
+    for n = #words - 1, 1, -1 do
+        local keep = n
+        while keep > 1 and DANGLING[string.lower(words[keep])] do keep -= 1 end
+        local candidate = table.concat(words, " ", 1, keep) .. "..."
+        if Rules.textWidth(candidate, font) <= width then return candidate end
+    end
+    if #words >= 1 and Rules.textWidth(words[1], font) <= width then return words[1] end
+    return nil
+end
+
+-- Lines the text needs when wrapped at whole words in `width` px (math.huge when one word alone is wider than the line).
+function Rules.wrapLines(text: string, width: number, font: number): number
+    local lines, current = 1, 0
+    local space = Rules.textWidth(" ", font)
+    for word in string.gmatch(text, "%S+") do
+        local w = Rules.textWidth(word, font)
+        if w > width then return math.huge end
+        if current > 0 and current + space + w > width then lines += 1 current = w else current = if current > 0 then current + space + w else w end
+    end
+    return lines
+end
+
+-- Header geometry. width = panel width; has = {chevron, arrow, star, chip, open} (booleans: that piece is wanted now AND its art exists).
+-- Folded: [trophy][arrow?] title [star?][chip][chevron?]; open: [trophy] title ... words [chevron]. The chevron always keeps its place, then the chip;
+-- the arrow (tutorial task first) or the star (Done chip) is dropped when the title would get less than MinTitle px.
+-- Returns x (px from the panel's left edge) of each piece that is shown, plus titleX / titleW and, open, waitInset (px from the right edge).
+function Rules.headerLayout(width: number, has: any): any
+    local P, gap = Rules.IconPx, Rules.IconGap
+    local out: any = {titleX = 42}
+    local right = width - 8
+    if has.chevron then out.chevronX = right - P.chevron right = out.chevronX - gap end
+    if has.open then
+        out.waitInset = if has.chevron then width - right else 10
+        out.titleW = math.max(0, 0.38 * width - 42)
+        out.waitW = math.max(0, 0.62 * width - out.waitInset)
+        return out
+    end
+    if has.chip then out.chipX = right - Rules.ChipW right = out.chipX - gap end
+    local left = out.titleX
+    if has.star and has.chip then
+        if right - gap - P.star - left >= Rules.MinTitle then out.starX = right - P.star right = out.starX - gap end
+    elseif has.arrow then
+        if right - (left + P.arrow + gap) >= Rules.MinTitle then out.arrowX = left left += P.arrow + gap end
+    end
+    out.titleX, out.titleW = left, math.max(0, right - left)
+    return out
+end
+
+-- "+10" (the gem follows) instead of "+10 crystals"; XP, when the catalogue gives any, stays words in front: "+5 XP +10".
+function Rules.rewardWords(reward: any, gem: boolean): string
+    if not gem then return Rules.rewardText(reward) end
+    local r = if type(reward) == "table" then reward else {}
+    local text = string.format("+%d", whole(r.crystals))
+    if whole(r.xp) > 0 then text = string.format("+%d XP ", whole(r.xp)) .. text end
+    return text
+end
+
+-- The prize line of a task row, in a span of `span` px starting at x = 0. claimable: left aligned under the name, [star?] "+10" [gem];
+-- otherwise right aligned: "+10" [gem] at the end of the span. want = {star, gem}. Nothing that does not fit is drawn: the star goes first, then the gem
+-- (the words "+10 crystals" come back), so the line is always readable. Returns {words, text = {x, w}, star = x?, gem = x?}.
+function Rules.prizeLayout(reward: any, span: number, claimable: boolean, want: any): any
+    local R, gap = Rules.IconPx.row, Rules.IconGap
+    local full = Rules.rewardText(reward)
+    local plain = {words = full, text = {x = 0, w = span}}
+    local wantGem = want.gem == true
+    local wantStar = want.star == true and claimable
+    if not wantGem and not wantStar then return plain end
+    if not claimable then
+        local words = Rules.rewardWords(reward, true)
+        local avail = span - R - 2
+        if Rules.textWidth(words, MIN_FONT) <= avail then return {words = words, text = {x = 0, w = avail}, gem = span - R} end
+        return plain
+    end
+    local tries = if wantStar then {true, false} else {false}
+    for _, useStar in tries do
+        local x = if useStar then R + gap else 0
+        local out: any = {star = if useStar then 0 else nil}
+        if wantGem then
+            local words = Rules.rewardWords(reward, true)
+            local w = math.ceil(Rules.textWidth(words, MIN_FONT))
+            if x + w + 2 + R <= span then
+                out.words, out.text, out.gem = words, {x = x, w = w}, x + w + 2
+                return out
+            end
+        elseif x + math.ceil(Rules.textWidth(full, MIN_FONT)) <= span then
+            out.words, out.text = full, {x = x, w = span - x}
+            return out
+        end
+    end
+    return plain
 end
 
 -- True when a string follows the docs/72 copy rules (used by tools/verify_objectives_panel.py on every string this module can produce).

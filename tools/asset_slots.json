@@ -816,7 +816,11 @@
    "key": "notify_crystal",
    "group": "Images.notify_crystal",
    "table": "Images",
-   "pending": "BD-304 notification icons"
+   "pending": "BD-304 notification icons",
+   "reader": [
+    "src/shared/ObjectivePanelRules.luau",
+    "notify_crystal"
+   ]
   },
   {
    "name": "notify_level",
@@ -836,7 +840,11 @@
    "key": "notify_star",
    "group": "Images.notify_star",
    "table": "Images",
-   "pending": "BD-304 notification icons"
+   "pending": "BD-304 notification icons",
+   "reader": [
+    "src/shared/ObjectivePanelRules.luau",
+    "notify_star"
+   ]
   },
   {
    "name": "notify_mutation_egg",
@@ -867,6 +875,32 @@
    "group": "Images.toast_body",
    "table": "Images",
    "pending": "BD-304 toast plate"
+  },
+  {
+   "name": "objective_chevron",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "objective_chevron",
+   "group": "Images.objective_chevron",
+   "table": "Images",
+   "reader": [
+    "src/shared/ObjectivePanelRules.luau",
+    "objective_chevron"
+   ]
+  },
+  {
+   "name": "objective_arrow",
+   "kind": "image",
+   "target": "slot",
+   "file": "src/shared/AssetSlots.luau",
+   "key": "objective_arrow",
+   "group": "Images.objective_arrow",
+   "table": "Images",
+   "reader": [
+    "src/shared/ObjectivePanelRules.luau",
+    "objective_arrow"
+   ]
   },
   {
    "name": "frame_common",
