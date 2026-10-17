@@ -29,6 +29,25 @@ STORE_NAME_PATTERN = re.compile(r"^BeDino_Playtest_[A-Za-z0-9]+_v[0-9]+$")
 DEVELOPMENT_STORE_NAME = "BeDino_PrivateTest_v1"
 MAX_DATASTORE_NAME = 50  # Roblox DataStore name limit (characters).
 
+# BD-502 gate 4 (docs/147 s6): Workspace.StreamingEnabled / StreamingTargetRadius / StreamingMinRadius / StreamingIntegrityMode are
+# NOT scriptable at runtime (Studio and the server cannot set them), so the build writes them into the .rbxlx. Every shipped profile
+# keeps streaming OFF. A shipped profile may turn it on only with an explicit gate field naming the BD-502 evidence; a scratch
+# profile (never published) may turn it on for measurement. Enum StreamingIntegrityMode: Default 0, Disabled 1, MinimumRadiusPause 2,
+# PauseOutsideLoadedArea 3 (checked in Studio, docs/147-addendum in the BD-503 PR).
+STREAMING_INTEGRITY_MODES = {"Default": 0, "Disabled": 1, "MinimumRadiusPause": 2, "PauseOutsideLoadedArea": 3}
+STREAMING_GATE_PATTERN = re.compile(r"^BD-502:(docs/[A-Za-z0-9_./-]+)$")
+
+
+@dataclass(frozen=True)
+class Streaming:
+    """Per-profile Workspace streaming setting. Default: OFF (nothing is written into the place)."""
+    enabled: bool = False
+    target_radius: int = 256   # PROPOSAL (docs/115 ST3)
+    min_radius: int = 128      # PROPOSAL (docs/115 ST3)
+    integrity_mode: str = "Default"
+    gate: str = ""             # "BD-502:docs/<evidence file>"; required for a shipped profile that turns streaming on
+    scratch: bool = False      # scratch profiles are never published (only for Studio measurement)
+
 
 @dataclass(frozen=True)
 class Rule:
@@ -149,6 +168,58 @@ PROFILES: dict[str, list[Rule]] = {
         # Rule("<FusionFlagName>", "set", True, missing="warn", reason="BD-064 fusion server"),
     ],
 }
+
+
+# The playtest-streaming scratch profile is the playtest with Workspace streaming ON (PROPOSAL radii 256 / 128). It is for Studio
+# sessions of the BD-502 gates only: never published, never uploaded by CI. ReleaseProfile stays "playtest" so the game behaves as in
+# the playtest build.
+PROFILES["playtest-streaming"] = list(PROFILES["playtest"])
+
+STREAMING: dict[str, Streaming] = {
+    "default": Streaming(),
+    "playtest": Streaming(),
+    "playtest-streaming": Streaming(enabled=True, target_radius=256, min_radius=128, scratch=True),
+}
+
+
+def streaming_for(profile: str) -> Streaming:
+    return STREAMING.get(profile, Streaming())
+
+
+def streaming_config_errors(profile: str, root: Any = None) -> list[str]:
+    """Static rules for the profile's streaming setting (BD-502 gate 4)."""
+    from pathlib import Path
+    root = Path(root) if root is not None else Path(__file__).resolve().parents[1]
+    setting = streaming_for(profile)
+    errors: list[str] = []
+    if setting.integrity_mode not in STREAMING_INTEGRITY_MODES:
+        errors.append(f"streaming integrity mode {setting.integrity_mode!r} is unknown (choose from {sorted(STREAMING_INTEGRITY_MODES)})")
+    for label, value in (("target", setting.target_radius), ("min", setting.min_radius)):
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            errors.append(f"streaming {label} radius must be a positive integer, got {value!r}")
+    if not errors and setting.min_radius > setting.target_radius:
+        errors.append(f"streaming min radius {setting.min_radius} is above the target radius {setting.target_radius}")
+    if setting.enabled and not setting.scratch:
+        match = STREAMING_GATE_PATTERN.match(setting.gate)
+        if not match:
+            errors.append(f"profile {profile!r} turns StreamingEnabled ON but is a shipped profile without a gate field "
+                          "('BD-502:docs/<evidence file>'): shipped profiles keep streaming OFF until the BD-502 gates are met")
+        elif not (root / match.group(1)).is_file():
+            errors.append(f"profile {profile!r}: streaming gate evidence {match.group(1)} does not exist")
+    if setting.scratch and profile in ("default", "playtest"):
+        errors.append(f"profile {profile!r} is shipped and cannot be marked scratch")
+    return errors
+
+
+def workspace_properties(profile: str) -> list[tuple[str, str, str]]:
+    """(xml tag, property name, text) triples the build writes onto the Workspace item. Empty = the place is unchanged (streaming off)."""
+    setting = streaming_for(profile)
+    if not setting.enabled:
+        return []
+    return [("bool", "StreamingEnabled", "true"),
+            ("int", "StreamingTargetRadius", str(setting.target_radius)),
+            ("int", "StreamingMinRadius", str(setting.min_radius)),
+            ("token", "StreamingIntegrityMode", str(STREAMING_INTEGRITY_MODES[setting.integrity_mode]))]
 
 
 def rules_for(profile: str) -> list[Rule]:

@@ -46,6 +46,46 @@ def config_from_place(data: bytes) -> str:
     return config.find("Properties/ProtectedString[@name='Source']").text or ""
 
 
+def workspace_streaming_from_place(data: bytes) -> dict:
+    """Workspace streaming properties of a generated place; an absent property is the engine default (off, 256, 128, Default)."""
+    root = ET.fromstring(data)
+    workspaces = [n for n in root.findall("Item") if n.attrib.get("class") == "Workspace"]
+    if len(workspaces) > 1:
+        raise ValueError(f"Expected at most one Workspace in generated place, found {len(workspaces)}")
+    props = workspaces[0].find("Properties") if workspaces else None  # no Workspace item (a minimal test project) = engine defaults
+
+    def read(tag, name):
+        found = props.find(f"{tag}[@name='{name}']") if props is not None else None
+        return found.text if found is not None else None
+
+    enabled = read("bool", "StreamingEnabled")
+    target, minimum, mode = read("int", "StreamingTargetRadius"), read("int", "StreamingMinRadius"), read("token", "StreamingIntegrityMode")
+    return {"enabled": enabled == "true", "target_radius": int(target) if target is not None else None,
+            "min_radius": int(minimum) if minimum is not None else None,
+            "integrity_mode": int(mode) if mode is not None else None}
+
+
+def streaming_place_errors(data: bytes, profile: str, root: Path = ROOT) -> tuple[list[str], list[str]]:
+    """BD-502 gate 4: the place must carry exactly the streaming setting the profile declares; shipped profiles keep it OFF unless gated."""
+    errors = [f"streaming: {e}" for e in profiles.streaming_config_errors(profile, root)]
+    setting = profiles.streaming_for(profile)
+    actual = workspace_streaming_from_place(data)
+    if actual["enabled"] != setting.enabled:
+        errors.append(f"streaming: Workspace.StreamingEnabled is {actual['enabled']} in the place but profile {profile!r} declares {setting.enabled} "
+                      "(a hand-edited place?); shipped profiles must have it false")
+    elif setting.enabled:
+        wanted = {"target_radius": setting.target_radius, "min_radius": setting.min_radius,
+                  "integrity_mode": profiles.STREAMING_INTEGRITY_MODES.get(setting.integrity_mode)}
+        for key, value in wanted.items():
+            if actual[key] != value:
+                errors.append(f"streaming: place {key} is {actual[key]!r}, profile {profile!r} declares {value!r}")
+    warnings = []
+    if setting.scratch:
+        warnings.append(f"streaming: profile {profile!r} is a SCRATCH profile (StreamingEnabled ON, {setting.target_radius}/{setting.min_radius}): "
+                        "for Studio measurement only, never publish this place")
+    return errors, warnings
+
+
 def studio_guard_errors(server_dir: Path = ROOT / "src/server") -> list[str]:
     """Studio-local flags must only be read behind the unpublished-Studio guard."""
     errors = []
@@ -65,6 +105,9 @@ def studio_guard_errors(server_dir: Path = ROOT / "src/server") -> list[str]:
 
 def verify_place(data: bytes, profile: str, manifest: dict | None = None, allow_dirty: bool = False):
     report = profiles.verify_source(config_from_place(data), profile)
+    stream_errors, stream_warnings = streaming_place_errors(data, profile)
+    report.errors.extend(stream_errors)
+    report.warnings.extend(stream_warnings)
     if manifest is not None:
         if manifest.get("place_sha256") != hashlib.sha256(data).hexdigest():
             report.errors.append("manifest place_sha256 does not match the place bytes")
