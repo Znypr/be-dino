@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local ColossalRules = require(ReplicatedStorage.Shared:WaitForChild("ColossalRules"))
 local settings = Config.WorldCulling
 if not settings or not settings.Enabled then return end
 local player = Players.LocalPlayer
@@ -23,6 +24,12 @@ local radius, budget = limits.radius, (if typeof(override) == "number" then over
 
 type Prop = {item: Instance, folder: Instance, pos: Vector3, parts: number, shown: boolean}
 local props: {Prop} = {}
+-- BD-475 (docs/142): colossal ancient trees (BD-474 meshes, ids pasted) carry two meshes, LOD0 near and LOD1 far; exactly one is parented at a
+-- time. They are decided by ColossalRules (own radius, swap distance, LOD0 cap, triangle budget) and never enter `props`. With empty mesh ids no
+-- model has the ColossalKey attribute, `colossals` stays empty and nothing below changes.
+type Colossal = {item: Model, folder: Instance, lod0: BasePart, lod1: BasePart, pos: Vector3, tris0: number, tris1: number, state: string, alpha: number}
+local colossals: {Colossal} = {}
+local colossalSettings = ColossalRules.settings(settings, class)
 local foods: {[BasePart]: boolean} = {}
 local foodShown: {[BasePart]: boolean} = {}
 local dirty = true -- new props arrive over several frames: re-evaluate even if the player stands still
@@ -33,8 +40,33 @@ local function countParts(item: Instance): number
     for _, d in item:GetDescendants() do if d:IsA("BasePart") then n += 1 end end
     return n
 end
-local function addProp(folder: Instance, item: Instance, tries: number?)
+local addProp: (folder: Instance, item: Instance, tries: number?) -> () -- forward: addColossal retries through it
+local function addColossal(folder: Instance, item: Model, tries: number?): boolean
+    -- Both meshes must have replicated; retry briefly, then give up and let the model be a plain prop (LOD0 only).
+    local lod1 = item:FindFirstChild("ColossalLod1")
+    local lod0: BasePart? = nil
+    for _, child in item:GetChildren() do
+        if child:IsA("BasePart") and child ~= lod1 then lod0 = child break end
+    end
+    if not (lod1 and lod1:IsA("BasePart") and lod0 and colossalSettings) then
+        local left = (tries or 0) + 1
+        if left <= 8 then
+            task.delay(.5, function() addProp(folder, item, left) end)
+            return true
+        end
+        return false
+    end
+    known[item] = true
+    dirty = true
+    lod1.Parent = nil -- LOD0 is the shown one until the first evaluation
+    table.insert(colossals, {item = item, folder = folder, lod0 = lod0, lod1 = lod1, pos = item:GetPivot().Position,
+        tris0 = tonumber(item:GetAttribute("ColossalTris0")) or 4000, tris1 = tonumber(item:GetAttribute("ColossalTris1")) or 1000,
+        state = "lod0", alpha = 0})
+    return true
+end
+addProp = function(folder: Instance, item: Instance, tries: number?)
     if known[item] or string.sub(item.Name, -8) == "Collider" then return end
+    if item:IsA("Model") and item:GetAttribute("ColossalKey") ~= nil and addColossal(folder, item, tries) then return end
     -- A model can replicate before its mesh child: locate the first part, retrying briefly if it has not arrived yet.
     local first: BasePart? = if item:IsA("BasePart") then item else item:FindFirstChildWhichIsA("BasePart", true)
     if not first then
@@ -68,6 +100,29 @@ task.spawn(function()
         food.ChildAdded:Connect(function(item) if item:IsA("BasePart") then foods[item] = true end end)
         food.ChildRemoved:Connect(function(item) if item:IsA("BasePart") then foods[item] = nil foodShown[item] = nil end end)
     end
+    -- BD-475: colossal trees fade out over the last share of their radius instead of popping (docs/139 Q12), a few times a second. This uses
+    -- Transparency (client-local), the camera occlusion fade uses LocalTransparencyModifier, so the two never fight over one property.
+    task.spawn(function()
+        while true do
+            task.wait(.15)
+            local character = player.Character
+            local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+            if colossalSettings and #colossals > 0 and root and root:IsA("BasePart") then
+                local at = root.Position
+                for _, tree in colossals do
+                    if tree.state ~= "off" then
+                        local dx, dz = tree.pos.X - at.X, tree.pos.Z - at.Z
+                        local alpha = ColossalRules.fadeAlpha(math.sqrt(dx * dx + dz * dz), colossalSettings.radius, colossalSettings.fade)
+                        if alpha ~= tree.alpha then
+                            tree.alpha = alpha
+                            local mesh = if tree.state == "lod0" then tree.lod0 else tree.lod1
+                            mesh.Transparency = alpha
+                        end
+                    end
+                end
+            end
+        end
+    end)
     local last: Vector3? = nil
     local lastBudget = budget
     while true do
@@ -103,6 +158,32 @@ task.spawn(function()
                     prop.shown = false
                     prop.item.Parent = nil
                 end
+            end
+            -- BD-475 colossal ancient trees: after the ordinary props, so a far one only gets in while the part budget still allows it.
+            if colossalSettings and #colossals > 0 then
+                local items: {ColossalRules.Item} = {}
+                for i, tree in colossals do
+                    local dx, dz = tree.pos.X - origin.X, tree.pos.Z - origin.Z -- horizontal: the pivot is the trunk base, a 100 stud tree is not "50 up"
+                    items[i] = {d = math.sqrt(dx * dx + dz * dz), state = tree.state, tris0 = tree.tris0, tris1 = tree.tris1}
+                end
+                local states, stats = ColossalRules.assign(items, colossalSettings, settings.Hysteresis, budget - used)
+                for i, tree in colossals do
+                    local want = states[i]
+                    if want ~= tree.state then
+                        if want == "off" then
+                            tree.item.Parent = nil
+                        else
+                            local shown, hidden = if want == "lod0" then tree.lod0 else tree.lod1, if want == "lod0" then tree.lod1 else tree.lod0
+                            hidden.Parent = nil
+                            shown.Parent = tree.item
+                            shown.Transparency = tree.alpha
+                            if tree.item.Parent == nil then tree.item.Parent = tree.folder end
+                        end
+                        tree.state = want
+                    end
+                end
+                used += stats.parts
+                player:SetAttribute("CullColossal", stats.lod0 .. "/" .. stats.lod1 .. "/" .. #colossals .. " " .. stats.tris)
             end
             local foodRadius = radius * settings.FoodRadiusFactor
             for pickup in foods do

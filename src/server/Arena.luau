@@ -16,6 +16,7 @@ local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local KitData = require(ReplicatedStorage.Shared.WorldKitData)
 local KitMeshes = require(ReplicatedStorage.Shared.WorldKitMeshAssets)
 local Generated = require(ReplicatedStorage.Shared.WorldGeneratedMeshes)
+local ColossalRules = require(ReplicatedStorage.Shared.ColossalRules)
 local Arena = {}
 local function part(parent: Instance, name: string, size: Vector3, position: Vector3, color: Color3, material: Enum.Material, solid: boolean): Part
     local p = Instance.new("Part")
@@ -90,11 +91,23 @@ end
 -- invisible kit colliders still match, pivot = bottom centre. nil (flag off, id not mapped, mesh failed to load) means the
 -- caller keeps the current kit model, so a failed asset never leaves a hole.
 local generatedCache: {[string]: Model} = {}
-local function generatedProp(id: string, biome: string, roll: number): Model?
+local function generatedProp(id: string, biome: string, roll: number, layer: string?): Model?
     if not Config.WorldGeneratedMeshes then return nil end
     local key = Generated.visualFor(id, biome, roll)
     local folder = ReplicatedStorage:FindFirstChild("GeneratedWorld")
     local template = nil
+    -- BD-474: the `colossal` layer gets the ancient-tree mesh (only once its asset id is filled in AND it loaded). Ordinary size-l trees share
+    -- the same kit id, so the layer decides; no id or a failed load keeps the stand-in below (the current generated mesh scaled up).
+    -- BD-475: the ancient tree is only used as a PAIR: LOD0 and its LOD1 must both have loaded (the client swaps them by distance and the
+    -- triangle budget counts on the light one), else the stand-in below stays.
+    local colossalKey = if layer == "colossal" then Generated.colossalFor(id) else nil
+    local lodTemplate: Instance? = nil
+    if colossalKey and folder then
+        local near, far = folder:FindFirstChild(colossalKey), folder:FindFirstChild(ColossalRules.lod1Key(colossalKey))
+        if near and near:IsA("MeshPart") and far and far:IsA("MeshPart") then
+            template, lodTemplate, key = near, far, colossalKey
+        end
+    end
     -- BD-462: owner-approved V3 tree first (only once its asset id is filled in AND it loaded); otherwise the current generated mesh.
     local v3Key = if key then Generated.replacementFor(key) else nil
     if v3Key and folder then
@@ -121,18 +134,43 @@ local function generatedProp(id: string, biome: string, roll: number): Model?
         model.WorldPivot = CFrame.new()
         model.Name = id
         model:SetAttribute("GeneratedMesh", key)
+        if lodTemplate and lodTemplate:IsA("MeshPart") then
+            -- BD-475: the far mesh rides along as a second part. Same height as LOD0, centre moved so both trunks stand on the same point
+            -- (the pivot is each mesh's bbox bottom centre and the two bboxes differ by up to ~5 studs). WorldCulling parents ONE of them.
+            local e0, e1 = Generated.Colossal[key], Generated.Colossal[ColossalRules.lod1Key(key)]
+            local far = lodTemplate:Clone()
+            local k = mesh.Size.Y / far.Size.Y
+            far.Size = far.Size * k
+            local dx, dz = ColossalRules.lod1Offset(e0, e1, mesh.Size.Y)
+            far.Name = "ColossalLod1"
+            far.Anchored, far.CanCollide, far.CanTouch, far.CanQuery, far.Massless = true, false, false, false, true
+            far.CFrame = CFrame.new(dx, far.Size.Y / 2, dz)
+            far.Parent = model
+            model:SetAttribute("ColossalKey", key)
+            model:SetAttribute("ColossalTris0", e0.tris)
+            model:SetAttribute("ColossalTris1", e1.tris)
+        end
         generatedCache[cacheKey] = model
     end
     workspace:SetAttribute("WorldGeneratedProps", (workspace:GetAttribute("WorldGeneratedProps") or 0) + 1)
     return generatedCache[cacheKey]:Clone()
 end
 -- One kit prop = the uploaded MeshPart model (1 part) plus simplified invisible box colliders scaled with it.
-local function kitProp(folder: Instance, id: string, pivot: CFrame, scale: number, biome: string?, roll: number?, made: Model?): boolean
+local function kitProp(folder: Instance, id: string, pivot: CFrame, scale: number, biome: string?, roll: number?, made: Model?, fitted: {{number}}?): boolean
     local model = made or generatedProp(id, biome or "meadow", roll or .5) or Resources.clone(id)
     if model then
         if not made then model:ScaleTo(scale) end
         model:PivotTo(pivot)
         model.Parent = folder
+    end
+    if fitted then
+        -- BD-475: trunk colliders re-fitted from the colossal mesh's own trunk numbers (pivot-local studs, already scaled).
+        for _, c in fitted do
+            local collider = part(folder, id .. "Collider", Vector3.new(c[4], c[5], c[6]), Vector3.zero, Color3.fromRGB(113, 133, 139), Enum.Material.Slate, true)
+            collider.CFrame = pivot * CFrame.new(c[1], c[2], c[3]) * CFrame.Angles(0, c[7], 0)
+            collider.Transparency = 1
+        end
+        return model ~= nil
     end
     for _, c in KitData[id].colliders do
         local collider = part(folder, id .. "Collider", Vector3.new(c[4], c[5], c[6]) * scale, Vector3.zero,
@@ -141,6 +179,12 @@ local function kitProp(folder: Instance, id: string, pivot: CFrame, scale: numbe
         collider.Transparency = 1
     end
     return model ~= nil
+end
+-- BD-475: the re-fitted trunk colliders of a colossal ancient tree (nil for every other prop, so they keep their kit colliders).
+local function ancientColliders(made: Model?): {{number}}?
+    local entry = if made then Generated.Colossal[made:GetAttribute("ColossalKey") :: any] else nil
+    if not entry or not made or not made.PrimaryPart then return nil end
+    return ColossalRules.colliders(entry, made.PrimaryPart.Size.Y)
 end
 -- BD-049 BiomeKit dressing (world v2): sub-biome driven kit props, colossal trees (BD-473, was giants), fallen logs, a 4-12 stud Small band, clearings and ground cover.
 local function biomeKit(parent: Instance)
@@ -171,7 +215,7 @@ local function biomeKit(parent: Instance)
         -- fitted inside the kit extent, so extent * scale over-estimates it), with the per-kind policy of BiomePlacement.Ground.
         local made: Model? = nil
         if p.layer ~= "log" then
-            made = generatedProp(p.id, p.biome or "meadow", Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77)) or Resources.clone(p.id)
+            made = generatedProp(p.id, p.biome or "meadow", Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77), p.layer) or Resources.clone(p.id)
             if made then made:ScaleTo(p.scale) end
             -- BD-167: per-prop colour variation (a tint of the white MeshPart; landmarks keep their art colours).
             if made and made.PrimaryPart and p.layer ~= "landmark" then
@@ -183,12 +227,15 @@ local function biomeKit(parent: Instance)
         if (Ground.Raised[p.layer] and data.kind ~= "rock") or rayLayer == "rock" or p.layer == "landmark" then
             local hits = {}
             local size = if made and made.PrimaryPart then made.PrimaryPart.Size else Vector3.new(data.extent[1], data.extent[2], data.extent[3]) * p.scale
-            local footprint = Ground.footprintRadius(rayLayer, size.X, size.Z)
-            for _, pt in Ground.samplePoints(p.x, p.z, footprint) do
+            -- BD-475: a colossal ancient tree is grounded on its real trunk footprint (9 rays, the LOWEST one wins), not the 1-stud centre ray.
+            local ancient = if made then Generated.Colossal[made:GetAttribute("ColossalKey") :: any] else nil
+            local points = if ancient then ColossalRules.groundPoints(p.x, p.z, p.yaw, ancient, size.Y)
+                else Ground.samplePoints(p.x, p.z, Ground.footprintRadius(rayLayer, size.X, size.Z))
+            for _, pt in points do
                 local result = workspace:Raycast(Vector3.new(pt[1], p.y + 40, pt[2]), Vector3.new(0, -90, 0), rayParams)
                 table.insert(hits, if result then result.Position.Y else nil)
             end
-            local y = Ground.corrected(p.y, hits, rayLayer, size.Y, 1)
+            local y = if ancient then ColossalRules.groundY(p.y, hits) else Ground.corrected(p.y, hits, rayLayer, size.Y, 1)
             if math.abs(y - p.y) > .05 then rayMoved += 1 end
             p.y = y
         end
@@ -203,7 +250,7 @@ local function biomeKit(parent: Instance)
                 Color3.fromRGB(113, 133, 139), Enum.Material.Slate, true)
             collider.CFrame = pivot * CFrame.new(0, data.extent[2] * .45 * p.scale, 0)
             collider.Transparency = 1
-        elseif not kitProp(folder, p.id, pivot, p.scale, p.biome, Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77), made) then
+        elseif not kitProp(folder, p.id, pivot, p.scale, p.biome, Biome.hash(math.floor(p.x * 8), math.floor(p.z * 8), 77), made, ancientColliders(made)) then
             missing += 1
         end
         if i % 40 == 0 then task.wait() end

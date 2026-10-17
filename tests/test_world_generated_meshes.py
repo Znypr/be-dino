@@ -11,6 +11,7 @@ END = chr(10) + "}" + chr(10)
 ASSETS_BLOCK = SRC.split("Generated.Assets = {")[1].split(END)[0]
 REPLACEMENTS_BLOCK = SRC.split("Generated.Replacements = {")[1].split(END)[0]
 PROPS_BLOCK = SRC.split("Generated.Props = {")[1].split(END)[0]
+COLOSSAL_BLOCK = SRC.split("Generated.Colossal = {")[1].split(END)[0]
 EXPECTED = {
     "137262237243889", "123860208068220", "115520379209668", "132703556702568", "100306166052872", "71416776916365",
     "135107793396569", "101039067942415", "122546672856917", "84690157197711", "118262268018795", "125187345067740",
@@ -76,10 +77,10 @@ class WorldGeneratedMeshTests(unittest.TestCase):
     def test_ground_props_are_baked_but_unbound_and_unplaced(self):
         """BD-464 step 1: eight ground props, empty ids (not uploaded), never placed, FBX + registry rows exist, loader skips empty ids."""
         entries = re.findall(r'^\s{4}(\w+) = \{assetId = "(\d*)", placed = (true|false)\}', PROPS_BLOCK, re.M)
-        keys = {k for k, _, _ in entries}
+        keys = {k for k, _, _ in entries if k.startswith("ground_")}
         self.assertEqual(keys, {"ground_rock_small_v3", "ground_rock_medium_v3", "ground_rock_mossy_v3", "ground_log_fallen_v3",
                                 "ground_stump_roots_v3", "ground_mushrooms_v3", "ground_bush_round_v3", "ground_bush_berry_v3"})
-        for key, asset_id, placed in entries:
+        for key, asset_id, placed in [e for e in entries if e[0].startswith("ground_")]:
             self.assertEqual(placed, "false", f"{key} must not be marked placed before BD-464 step 2")
             if asset_id:
                 self.assertRegex(asset_id, r"^[1-9][0-9]{8,17}$")
@@ -91,6 +92,64 @@ class WorldGeneratedMeshTests(unittest.TestCase):
         arena = (ROOT / "src/server/Arena.luau").read_text()
         self.assertNotIn("Generated.Props", arena, "nothing may place the ground props before step 2")
         self.assertNotIn("GeneratedMeshes.Props", (ROOT / "src/shared/BiomePlacement.luau").read_text() if (ROOT / "src/shared/BiomePlacement.luau").exists() else "")
+
+    def test_colossal_ancient_trees_are_baked_but_unbound_and_gated_to_the_colossal_layer(self):
+        """BD-474: three colossal trees x LOD0/LOD1, empty ids (not uploaded), a safe stand-in fallback, used by the colossal layer only."""
+        entries = re.findall(r'^\s{4}(\w+) = \{assetId = "(\d*)", placed = (true|false), lod = (0|1), kit = "(\w+)", standIn = "(\w+)", tris = (\d+)', COLOSSAL_BLOCK, re.M)
+        keys = {k for k, *_ in entries}
+        self.assertEqual(keys, {"tree_colossal_broadleaf_v3", "tree_colossal_pine_v3", "tree_colossal_palm_v3",
+                                "tree_colossal_broadleaf_v3_lod1", "tree_colossal_pine_v3_lod1", "tree_colossal_palm_v3_lod1"})
+        fbx_name = {"broadleaf": "broad", "pine": "pine", "palm": "palm"}
+        for key, asset_id, placed, lod, kit, stand_in, tris in entries:
+            self.assertEqual(placed, "true", f"{key}: BD-475 swaps LOD0 and LOD1 by distance, both are used")
+            self.assertEqual(key.endswith("_lod1"), lod == "1")
+            self.assertIn(f"{kit}=", KIT, f"{key}: unknown kit id {kit}")
+            self.assertTrue(kit.endswith("_l"), "colossal meshes stand in for the size-l kit trees")
+            self.assertIn(stand_in, self.assets, f"{key}: stand-in {stand_in} is not a current generated mesh")
+            if asset_id:
+                self.assertRegex(asset_id, r"^[1-9][0-9]{8,17}$")
+                self.assertNotIn(asset_id, self.assets.values(), "colossal id duplicates a current generated id")
+            fam = key.split("_")[2]
+            fbx = f"world_tree_colossal_{fbx_name[fam]}_v3" + ("_lod1" if lod == "1" else "")
+            self.assertTrue((ROOT / f"assets/blender/world/fbx_v3/{fbx}.fbx").exists(), fbx)
+            self.assertIn(fbx, REGISTRY)
+            # docs/139 s9: LOD0 about 4,000 tris (at most 4,200), LOD1 about 1,000 (800 to 1,100)
+            if lod == "0":
+                self.assertTrue(3500 <= int(tris) <= 4200, f"{key} LOD0 tris {tris}")
+            else:
+                self.assertTrue(800 <= int(tris) <= 1100, f"{key} LOD1 tris {tris}")
+        self.assertEqual({e[4] for e in entries}, {"world_tree_canopy_l", "world_tree_conifer_l", "world_tree_cycad_l"})
+        self.assertIn('info.lod == 0 and info.kit == kitId and info.assetId ~= ""', SRC, "colossalFor must ignore empty ids and LOD1")
+        arena = (ROOT / "src/server/Arena.luau").read_text()
+        self.assertIn('local colossalKey = if layer == "colossal" then Generated.colossalFor(id) else nil', arena, "ordinary size-l trees must keep their meshes")
+        self.assertIn("p.layer) or Resources.clone(p.id)", arena, "the placement layer must reach generatedProp")
+        # BD-475: the ancient tree is only used as a LOD0 + LOD1 pair; sizes and trunk numbers feed ColossalRules
+        self.assertIn('if near and near:IsA("MeshPart") and far and far:IsA("MeshPart") then', arena, "a LOD0 without its LOD1 keeps the stand-in")
+        for key, *_ in entries:
+            row = [line for line in COLOSSAL_BLOCK.splitlines() if line.strip().startswith(key + " = ")][0]
+            self.assertRegex(row, r"size = \{[\d., ]+\}, base = \{[-\d., ]+\}", f"{key} needs size and base for the LOD1 pivot shift")
+        self.assertIn("if not template and key and folder then template = folder:FindFirstChild(key) end", arena, "stand-in fallback")
+        loader = (ROOT / "src/server/ImportedResources.luau").read_text()
+        self.assertIn('for key,asset in GeneratedMeshes.Colossal do if asset.assetId~="" then', loader, "loader must skip empty colossal ids")
+
+    def test_plants_are_baked_but_unbound_and_unplaced(self):
+        """BD-463 step 1: eight plants (grass tufts, jungle plant, flower clusters, fern), empty ids (not uploaded), never placed,
+        FBX + registry + slot rows exist, loader skips empty ids, nothing reads the keys for placement."""
+        entries = re.findall(r'^\s{4}(plant_\w+) = \{assetId = "(\d*)", placed = (true|false)\}', PROPS_BLOCK, re.M)
+        self.assertEqual({k for k, _, _ in entries}, {"plant_grass_broad_v3", "plant_grass_arch_v3", "plant_grass_low_v3", "plant_jungle_leaf_v3",
+                                                      "plant_flowers_daisy_v3", "plant_flowers_yellow_v3", "plant_flowers_red_v3", "plant_fern_arch_v3"})
+        slots = (ROOT / "tools/asset_slots.json").read_text()
+        for key, asset_id, placed in entries:
+            self.assertEqual(placed, "false", f"{key} must not be marked placed before BD-463 step 2")
+            if asset_id:
+                self.assertRegex(asset_id, r"^[1-9][0-9]{8,17}$")
+                self.assertNotIn(asset_id, self.assets.values(), "plant id duplicates a current generated id")
+            self.assertTrue((ROOT / f"assets/blender/world/fbx_v3/{key}.fbx").exists())
+            self.assertIn(key, REGISTRY)
+            self.assertIn(f'"name": "{key}"', slots)
+        for path in ("src/server/Arena.luau", "src/shared/BiomePlacement.luau"):
+            file = ROOT / path
+            if file.exists(): self.assertNotIn("plant_", file.read_text(), "nothing may place the plants before step 2")
 
     def test_fallback_and_flag_are_wired(self):
         arena = (ROOT / "src/server/Arena.luau").read_text()

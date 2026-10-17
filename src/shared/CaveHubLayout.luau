@@ -74,6 +74,16 @@ local LINKS = {
     {"settings", "fusion", {{-28, 68}}},
     {"heart", "fusion", {{-6, 26}}},
 }
+-- The 13 wall-lantern niche spots (local x, dz): the middle waypoint of every tunnel link plus 3 around the far side of the Heart. The lights (below) and
+-- the dressing pass read this one list, so the moss and glow accents always sit at the lamps.
+local HEART_LAMPS = {{-23, 8}, {10, -23}, {22, -8}}
+local function lampSpots(): {{number}}
+    local out = {}
+    for _, link in LINKS do out[#out + 1] = link[3][math.ceil(#link[3] / 2)] end
+    for _, p in HEART_LAMPS do out[#out + 1] = p end
+    return out
+end
+
 local function ellipseSd(x: number, dz: number, r: any): number
     local dx, dy = (x - r[2]) / r[4], (dz - r[3]) / r[5]
     return (1 - math.sqrt(dx * dx + dy * dy)) * math.min(r[4], r[5])
@@ -221,6 +231,14 @@ local KINDS: {[string]: any} = {
     nest = {5, 1, 5, 2500, "station", walk = true}, -- existing mesh 102765517629578
     landmark_dino_statue = {4, 5, 4, 8000, "station"}, -- existing, scaled 0.4
     potion_model = {1, 2, 1, 2500, "station", walk = true}, -- existing; stands on the counter
+    -- BD-296 dressing pass: small plants, ground props and glow accents that grow out of the wall base (owner "dress"; sources in CaveHubProps.Kit / .Slots).
+    -- Kit meshes are the island's own 16-60 triangle meshes (WorldKitData), so the dressing is cheap; w, h, d are the target box after fitFactor.
+    world_fern_a = {5.2, 1.9, 4.7, 48, "rocks", walk = true}, world_fern_b = {5.6, 2.4, 5.6, 52, "rocks", walk = true},
+    world_horsetail_a = {2, 6.7, 2.4, 56, "rocks", walk = true},
+    dress_mushrooms = {4.2, 3.6, 3.2, 303, "rocks", walk = true},
+    dress_rock_small = {3, 2.2, 2.6, 68, "rocks"}, dress_rock_mossy = {4.6, 3.6, 3.6, 262, "rocks"}, dress_rock_medium = {5, 3.6, 4.2, 278, "rocks"},
+    dress_bush = {5.4, 3.6, 3.6, 340, "rocks", walk = true}, dress_log = {7.9, 2.8, 3, 199, "rocks"}, dress_stump = {6.4, 5.3, 2.7, 199, "rocks"},
+    dress_crystal = {2.4, 3.2, 2.4, 1500, "rocks", walk = true},
 }
 CaveHubLayout.Kinds = KINDS
 
@@ -244,11 +262,14 @@ local STATION_PROPS: {[string]: {{any}}} = {
 local SCATTER = {
     -- docs/104 s17 (owner 2026-10-16): decor is reduced and grows out of the rock. Wall pieces, clusters and moss hug the cave wall
     -- (zone "wall"/"edge"); only a few free-standing floor rocks remain, and nothing reads as furniture dropped on the floor.
-    {"cave_stalagmite_l", 4, "edge"}, {"cave_stalagmite_s", 6}, {"cave_rock_round", 6, "edge"}, {"cave_rock_flat", 3, "edge"},
-    {"rock_mossy_boulder", 3, "edge"}, {"rock_crystal", 4, "edge"}, {"rock_pebbles", 6}, {"cave_moss_patch", 10, "edge"},
-    {"cave_stalactite", 24}, {"cave_moss_hang", 10},
+    -- BD-296 dressing pass (net-neutral on parts): fewer loose stalactites / stalagmites / pebbles / flat slabs, the random edge moss patches, the
+    -- cool rock crystals and the random wall moss curtains are replaced by the placed dressing below (lamp-side moss, amber crystals and glow
+    -- mushrooms, vines on the tunnel jambs, ferns / small rocks / bushes at the base of the wall boulders).
+    {"cave_stalagmite_l", 4, "edge"}, {"cave_stalagmite_s", 4}, {"cave_rock_round", 5, "edge"}, {"cave_rock_flat", 2, "edge"},
+    {"rock_mossy_boulder", 3, "edge"}, {"rock_pebbles", 3},
+    {"cave_stalactite", 20},
     {"cave_stalagmite_cluster", 4, "wall"}, {"cave_wall_boulder_l", 16, "wall"},
-    {"cave_stalagmite_cluster", 4, "edge"}, {"cave_stalagmite_s", 4, "edge"}, {"cave_moss_patch", 8, "lava"},
+    {"cave_stalagmite_cluster", 4, "edge"}, {"cave_stalagmite_s", 3, "edge"}, {"cave_moss_patch", 8, "lava"},
 }
 local WALLPIECES = {cave_wall_boulder_l = true, cave_wall_pillar = true, cave_wall_arch_small = true} -- put against the cave wall
 local LAVA_PROPS = {rim = 6, steps = 4}
@@ -395,11 +416,13 @@ function CaveHubLayout.get(): any
         seed = (seed * 1103515245 + 12345) % 2147483648
         return seed / 2147483648
     end
-    local function addProp(key: string, x: number, z: number, yaw: number, scale: number, owner: string, y: number?)
+    local function addProp(key: string, x: number, z: number, yaw: number, scale: number, owner: string, y: number?, extra: any?)
         local k = KINDS[key]
-        props[#props + 1] = {key = key, x = x, z = z, yaw = yaw, scale = scale, owner = owner, group = k[5],
+        local row: any = {key = key, x = x, z = z, yaw = yaw, scale = scale, owner = owner, group = k[5],
             w = k[1] * scale, h = k[2] * scale, d = k[3] * scale, y = y, walk = k.walk == true, hang = k.hang == true,
             collider = k.collider == true, colliders = k.colliders or 0, tris = k[4]}
+        if extra then for name, v in extra do row[name] = v end end
+        props[#props + 1] = row
     end
     -- station props
     for _, s in stations do
@@ -596,6 +619,171 @@ function CaveHubLayout.get(): any
             end
         end
     end
+    -- ---------------------------------------------------------------- BD-296 dressing pass (owner 2026-10-16: cosy, mossy, slightly magical; handbook:
+    -- intentional shapes, ground props that connect assets to the terrain, a few plant families, clear lanes). Pure, deterministic, own random
+    -- stream (the scatter above never moves). Everything is owner "dress", registered kit / slot meshes only (CaveHubProps.Kit / .Slots), no lights.
+    -- Lanes: nothing stands within PathHalf + 1 of a path, on a pad, ledge, the lava basin, or in the gate lane; every row is inside the floor.
+    local dressed: {{any}} = {}
+    do
+        local dseed = 2217
+        local function drand(): number
+            dseed = (dseed * 1103515245 + 12345) % 2147483648
+            return dseed / 2147483648
+        end
+        -- unit vector pointing from the wall INTO the cave (the direction sd rises); 0, 0 where the field is flat
+        local function inward(x: number, z: number): (number, number)
+            local gx = ((caveField(x + 1, z)) - (caveField(x - 1, z))) / 2
+            local gz = ((caveField(x, z + 1)) - (caveField(x, z - 1))) / 2
+            local l = math.sqrt(gx * gx + gz * gz)
+            if l < 0.05 then return 0, 0 end
+            return gx / l, gz / l
+        end
+        -- walk from (x, z) down the sd gradient to the wall at sd = target: wall point and its inward unit normal, or nil
+        local function toWall(x: number, z: number, target: number): (number?, number?, number?, number?)
+            local px, pz = x, z
+            for _ = 1, 80 do
+                local sd = caveField(px, pz)
+                local nx, nz = inward(px, pz)
+                if nx == 0 and nz == 0 then return nil, nil, nil, nil end
+                if sd <= target + 0.25 then return px, pz, nx, nz end
+                local step = math.min(sd - target, 3)
+                px, pz = px - nx * step, pz - nz * step
+            end
+            return nil, nil, nil, nil
+        end
+        local function nearestPath(x: number, z: number): (number, number, number)
+            local bd, bx, bz = math.huge, 0, 0
+            for _, pa in built.paths do
+                local vx, vz = pa.bx - pa.ax, pa.bz - pa.az
+                local l2 = vx * vx + vz * vz
+                local t = if l2 > 0 then math.clamp(((x - pa.ax) * vx + (z - pa.az) * vz) / l2, 0, 1) else 0
+                local qx, qz = pa.ax + vx * t, pa.az + vz * t
+                local d = dist(x, z, qx, qz)
+                if d < bd then bd, bx, bz = d, qx, qz end
+            end
+            return bx, bz, bd
+        end
+        local gateS = station("gate")
+        local function dressClear(x: number, z: number, r: number, soft: boolean): boolean
+            if not insideFloorLocal(x, z, math.max(0.9, r * 0.45)) then return false end
+            for _, s in stations do
+                if dist(x, z, s.x, s.z) < s.r + r * 0.6 + 1.5 then return false end
+            end
+            for _, pa in built.paths do
+                if segDist(x, z, pa.ax, pa.az, pa.bx, pa.bz) < pa.half + r * 0.7 + 1.0 then return false end
+            end
+            for _, lg in built.ledges do
+                if boxDist(x, z, lg) < r * 0.6 + 0.4 then return false end
+            end
+            if dist(x, z, POOL.x, POOL.z) < POOL.r + r + 4 then return false end
+            if z > FALL.z - 14 then return false end
+            if z < gateS.z - 16 and math.abs(x) < 24 then return false end -- the gate lane stays clear
+            for _, q in placed do
+                if dist(x, z, q[1], q[2]) < q[3] * 0.7 + r * 0.5 then return false end
+            end
+            for _, q in dressed do -- flat moss clumps may sit under mushrooms and ferns; they only keep apart from each other
+                if q[4] == soft and dist(x, z, q[1], q[2]) < (r + q[3]) * 0.75 then return false end
+            end
+            return true
+        end
+        local function drop(key: string, x: number, z: number, yaw: number, scale: number, extra: any?): boolean
+            local r = boundRadius(KINDS[key]) * scale
+            local soft = key == "cave_moss_patch"
+            if not dressClear(x, z, r, soft) then return false end
+            dressed[#dressed + 1] = {x, z, r, soft}
+            addProp(key, x, z, yaw, scale, "dress", nil, extra)
+            return true
+        end
+        -- try a few offsets around a wall point until one fits: wall point W, inward n, tangent t = (-nz, nx)
+        local function dropAt(key: string, wx: number, wz: number, nx: number, nz: number, d: number, s: number, scale: number, yaw: number?, extra: any?): boolean
+            for _, tweak in {{0, 0}, {0.6, 0}, {0, 1.5}, {0, -1.5}, {1.2, 0}, {0.6, 3}, {0.6, -3}, {1.8, 0}, {0.6, 4.5}, {0.6, -4.5}, {1.2, 6}, {1.2, -6}} do
+                local dd, ss = d + tweak[1], s + tweak[2]
+                local x, z = wx + nx * dd - nz * ss, wz + nz * dd + nx * ss
+                if drop(key, x, z, yaw or drand() * 2 * math.pi, scale, extra) then return true end
+            end
+            return false
+        end
+        local GLOW = {glow = true}
+
+        -- 1. Lamp sides (the magic and the moisture): at 8 of the 13 niches, glow mushrooms by the wall, an amber crystal or a fern, and a moss clump.
+        local sites = lampSpots()
+        local skip = {[3] = true, [6] = true, [9] = true, [12] = true, [13] = true}
+        for i, wp in sites do
+            if not skip[i] then
+                local wx, wz, nx, nz = toWall(wp[1], wp[2], 2.0)
+                if wx and wz and nx and nz then
+                    dropAt("dress_mushrooms", wx, wz, nx, nz, 0.6, if i % 2 == 0 then -1.8 else 1.8, 0.85 + drand() * 0.3, yawTo(nx, nz) + (drand() - 0.5) * 0.8, GLOW)
+                    if i % 2 == 1 then
+                        dropAt("dress_crystal", wx, wz, nx, nz, 0.4, if i % 2 == 0 then 2.4 else -2.4, 0.9 + drand() * 0.3, nil, GLOW)
+                    else
+                        dropAt(if i % 4 == 2 then "world_fern_a" else "world_fern_b", wx, wz, nx, nz, 0.8, 4.4, 1, nil, nil)
+                    end
+                    dropAt("cave_moss_patch", wx, wz, nx, nz, 0, if i % 2 == 0 then 6.2 else -6.2, 0.9 + drand() * 0.3, nil, nil)
+                end
+            end
+        end
+
+        -- 2. Wall bases: a few wall boulders / clusters / mossy boulders get a fern on the lane side, a small rock leaning on the other and a
+        -- third piece (mushrooms, bush, log or stump) so the big rocks grow out of the ground instead of standing on it.
+        local anchors = {}
+        for _, p in props do
+            if p.owner == "scatter" and not p.hang and (p.key == "cave_wall_boulder_l" or p.key == "cave_stalagmite_cluster" or p.key == "rock_mossy_boulder" or p.key == "cave_stalagmite_l") then
+                local _, _, d = nearestPath(p.x, p.z)
+                if d < 34 then anchors[#anchors + 1] = p end
+            end
+        end
+        local want, taken = 8, 0
+        local stride = math.max(1, #anchors // want)
+        local third = {"dress_mushrooms", "dress_bush", "dress_log", "dress_mushrooms", "dress_stump", "dress_bush", "dress_log", "dress_stump"}
+        for n = 1, #anchors, stride do
+            if taken >= want then break end
+            local a = anchors[n]
+            local qx, qz = nearestPath(a.x, a.z)
+            local base = math.atan2(qz - a.z, qx - a.x)
+            local function ring(key: string, deg: number, scale: number, extra: any?): boolean
+                local r = boundRadius(KINDS[key]) * scale
+                for _, jig in {0, 18, -18, 36, -36, 70, -70} do
+                    local ang = base + math.rad(deg + jig)
+                    for dd = 3, 16, 0.5 do -- march outward until the piece clears the anchor's own footprint (oriented box), then it leans on it
+                        local x, z = a.x + math.cos(ang) * dd, a.z + math.sin(ang) * dd
+                        if boxDist(x, z, a) >= r * 0.8 + 0.3 then
+                            if drop(key, x, z, drand() * 2 * math.pi, scale, extra) then return true end
+                        end
+                    end
+                end
+                return false
+            end
+            ring(if n % 2 == 0 then "world_fern_a" else "world_fern_b", 40, 0.95 + drand() * 0.25)
+            ring("dress_rock_small", -45, 0.9 + drand() * 0.35)
+            ring(third[taken % #third + 1], 100, 0.95)
+            if taken % 2 == 0 then ring("world_horsetail_a", -110, 1) end
+            taken += 1
+        end
+
+        -- 3. Tunnel and gate mouths: hanging vines (the moss curtains) on the two jambs, with a fern or a horsetail at their feet.
+        local function jamb(mx: number, mz: number, side: number, tx: number, tz: number, idx: number, reach: number?)
+            local wx, wz, nx, nz = toWall(mx + tx * side * (reach or 7), mz + tz * side * (reach or 7), 2.0)
+            if not (wx and wz and nx and nz) then return end
+            local sd = caveField(wx, wz)
+            if sd >= 1.2 and sd <= 3.2 and not (wz < gateS.z - 16 and math.abs(wx) < 14) then
+                addProp("cave_moss_hang", wx, wz, yawTo(nx, nz), 1.25, "dress", nil, {face = true})
+            end
+            dropAt(if idx % 2 == 0 then "world_horsetail_a" else "world_fern_b", wx, wz, nx, nz, 0.6, 2.6 * side, 1, nil, nil)
+        end
+        for i, link in LINKS do
+            if link[1] == "heart" then
+                local wp = link[3][1]
+                local len = math.sqrt(wp[1] * wp[1] + wp[2] * wp[2])
+                local ux, uz = wp[1] / len, wp[2] / len
+                -- the mouth is where the tunnel leaves the 31 stud Heart room
+                jamb(ux * 31, uz * 31, -1, -uz, ux, i)
+                jamb(ux * 31, uz * 31, 1, -uz, ux, i + 1)
+            end
+        end
+        jamb(0, gateS.z - 22, -1, 1, 0, 1, 14.5)
+        jamb(0, gateS.z - 22, 1, 1, 0, 2, 14.5)
+    end
+
     -- invisible colliders: one per flagged prop, plus the lava fence and the gate pillars
     local colliders = {}
     for _, p in props do
@@ -613,11 +801,7 @@ function CaveHubLayout.get(): any
         if s.id ~= "heart" then lights[#lights + 1] = {owner = s.id} end
     end
     -- wall lantern niches: a warm light on the winding path in every tunnel link (the middle waypoint) and 3 around the far side of the Heart
-    for _, link in LINKS do
-        local wp = link[3][math.ceil(#link[3] / 2)]
-        lights[#lights + 1] = {owner = "tunnel", x = wp[1], z = wp[2]}
-    end
-    for _, p in {{-23, 8}, {10, -23}, {22, -8}} do lights[#lights + 1] = {owner = "heartwall", x = p[1], z = p[2]} end
+    for i, wp in lampSpots() do lights[#lights + 1] = {owner = if i <= #LINKS then "tunnel" else "heartwall", x = wp[1], z = wp[2]} end
     built.lights = lights
     -- run-exit gate
     local g = station("gate")

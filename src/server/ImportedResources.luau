@@ -53,6 +53,8 @@ function Import.loadGeneratedWorld(): (number, number)
     for key,asset in GeneratedMeshes.Replacements do if asset.assetId~="" then table.insert(entries,{key=key,asset=asset}) end end
     -- BD-464 step 1: ground props load the same way once an id is pasted; empty = skipped silently, and nothing places them yet.
     for key,asset in GeneratedMeshes.Props do if asset.assetId~="" then table.insert(entries,{key=key,asset=asset}) end end
+    -- BD-474/BD-475: colossal ancient trees (LOD0 near and LOD1 far, used together as a pair by the colossal layer) load the same way; empty ids are skipped silently.
+    for key,asset in GeneratedMeshes.Colossal do if asset.assetId~="" then table.insert(entries,{key=key,asset=asset}) end end
     for _,entry in entries do
         local key,asset=entry.key,entry.asset
         pending+=1

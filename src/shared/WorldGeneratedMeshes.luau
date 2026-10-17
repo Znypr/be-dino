@@ -36,6 +36,8 @@ Generated.Replacements = {
 -- NEW kinds, not replacements: assetId = "" means NOT uploaded yet, nothing is loaded and nothing is placed. Nothing reads these keys for
 -- placement until step 2 (placement grammar plus the net-neutral replacement of small clutter, after the owner uploads and picks).
 -- Pasting an id here only makes ImportedResources load the mesh into ReplicatedStorage.GeneratedWorld; Arena does not place it yet.
+-- BD-463 step 1 (docs/140, docs/120) adds the eight plant_*_v3 kinds (grass tufts, jungle plant, flower clusters, fern) to this table the same way:
+-- empty ids, placed = false, nothing places them until BD-463 step 2 (placement that REPLACES some existing clutter, net-neutral on the phone triangle budget).
 Generated.Props = {
     ground_rock_small_v3 = {assetId = "", placed = false}, -- ground_rock_small_v3.fbx, 68 tris
     ground_rock_medium_v3 = {assetId = "", placed = false}, -- ground_rock_medium_v3.fbx, 278 tris
@@ -45,7 +47,42 @@ Generated.Props = {
     ground_mushrooms_v3 = {assetId = "", placed = false}, -- ground_mushrooms_v3.fbx, 303 tris
     ground_bush_round_v3 = {assetId = "", placed = false}, -- ground_bush_round_v3.fbx, 340 tris
     ground_bush_berry_v3 = {assetId = "", placed = false}, -- ground_bush_berry_v3.fbx, 304 tris
+    plant_grass_broad_v3 = {assetId = "", placed = false}, -- plant_grass_broad_v3.fbx, 120 tris
+    plant_grass_arch_v3 = {assetId = "", placed = false}, -- plant_grass_arch_v3.fbx, 105 tris
+    plant_grass_low_v3 = {assetId = "", placed = false}, -- plant_grass_low_v3.fbx, 90 tris
+    plant_jungle_leaf_v3 = {assetId = "", placed = false}, -- plant_jungle_leaf_v3.fbx, 168 tris
+    plant_flowers_daisy_v3 = {assetId = "", placed = false}, -- plant_flowers_daisy_v3.fbx, 258 tris
+    plant_flowers_yellow_v3 = {assetId = "", placed = false}, -- plant_flowers_yellow_v3.fbx, 201 tris
+    plant_flowers_red_v3 = {assetId = "", placed = false}, -- plant_flowers_red_v3.fbx, 201 tris
+    plant_fern_arch_v3 = {assetId = "", placed = false}, -- plant_fern_arch_v3.fbx, 189 tris
 }
+-- BD-474 (docs/140 "Colossal ancient trees"): colossal ancient trees for the `colossal` placement layer (BiomePlacement.Colossal, 80-140 studs), Blender FBX in
+-- assets/blender/world/fbx_v3/. Today the layer shows the stand-ins (the _l kit models, i.e. the existing generated meshes scaled 3-8x).
+-- assetId = "" means NOT uploaded: nothing is loaded, colossalFor() returns nil and the stand-in keeps being used. Fill a LOD0 id AND its _lod1 id
+-- (BD-475: the tree is only used as a PAIR, a LOD0 without its LOD1 keeps the stand-in) and Arena.generatedProp uses that mesh for colossal
+-- placements ONLY (ordinary size-l trees keep their meshes). Each mesh is fitted into the kit extent box like every generated tree (by height),
+-- so the colossal height rule (80-140) and the placement stay as they are. WorldCulling swaps LOD0 and LOD1 by distance (ColossalRules).
+-- Per entry (numbers of the Blender build, docs/140 and docs/evidence/2026-10-17-colossal/tris.txt, intended size in studs):
+-- size = bbox {x, y, z} in Blender axes; base = trunk base offset from the bbox centre {x, y} (the pivot is the bbox bottom centre, so LOD0 and
+-- LOD1 stand on different points: ColossalRules.lod1Offset moves LOD1 so the trunks coincide); trunk (LOD0 only) = {trunk diameter at about 15% of
+-- the height, height of the bare trunk below the crown}, from which ColossalRules.colliders re-fits the invisible trunk colliders (BD-475).
+Generated.Colossal = {
+    tree_colossal_broadleaf_v3 = {assetId = "", placed = true, lod = 0, kit = "world_tree_canopy_l", standIn = "tree_jungle_giant", tris = 4154, size = {108.55, 105.84, 117.59}, base = {3.08, -0.87}, trunk = {26, 47}}, -- world_tree_colossal_broad_v3.fbx
+    tree_colossal_pine_v3 = {assetId = "", placed = true, lod = 0, kit = "world_tree_conifer_l", standIn = "tree_pine", tris = 4052, size = {74.39, 80.34, 117.29}, base = {-0.67, -3.04}, trunk = {23, 36}}, -- world_tree_colossal_pine_v3.fbx
+    tree_colossal_palm_v3 = {assetId = "", placed = true, lod = 0, kit = "world_tree_cycad_l", standIn = "tree_palm", tris = 3834, size = {118.55, 106.61, 105.03}, base = {-0.49, -0.38}, trunk = {21, 80}}, -- world_tree_colossal_palm_v3.fbx
+    tree_colossal_broadleaf_v3_lod1 = {assetId = "", placed = true, lod = 1, kit = "world_tree_canopy_l", standIn = "tree_jungle_giant", tris = 925, size = {110.2, 95.34, 116.81}, base = {3.67, 3.4}}, -- world_tree_colossal_broad_v3_lod1.fbx
+    tree_colossal_pine_v3_lod1 = {assetId = "", placed = true, lod = 1, kit = "world_tree_conifer_l", standIn = "tree_pine", tris = 927, size = {73.16, 77.66, 117.23}, base = {-4.16, -6.17}}, -- world_tree_colossal_pine_v3_lod1.fbx
+    tree_colossal_palm_v3_lod1 = {assetId = "", placed = true, lod = 1, kit = "world_tree_cycad_l", standIn = "tree_palm", tris = 966, size = {118.55, 106.61, 105.02}, base = {-0.49, -0.38}}, -- world_tree_colossal_palm_v3_lod1.fbx
+}
+-- The LOD0 colossal key to try first for a kit id (e.g. "world_tree_canopy_l" -> "tree_colossal_broadleaf_v3"), or nil while its id is empty.
+-- Callers must only ask for placements of the colossal layer; the same kit id is also used by ordinary size-l trees.
+function Generated.colossalFor(kitId: string): string?
+    local entries: {[string]: any} = Generated.Colossal
+    for key, info in entries do
+        if info.lod == 0 and info.kit == kitId and info.assetId ~= "" then return key end
+    end
+    return nil
+end
 -- Returns the V3 key to try first for a current key (e.g. "tree_palm" -> "tree_palm_v3"), or nil while that V3 id is still empty.
 function Generated.replacementFor(key: string): string?
     for replacementKey, info in Generated.Replacements do

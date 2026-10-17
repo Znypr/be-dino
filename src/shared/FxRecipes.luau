@@ -354,4 +354,23 @@ function R.deviceClass(touch: boolean, mouse: boolean, shortSidePixels: number):
     return "desktop"
 end
 
+-- BD-431 / BD-433 (docs/123 s3): the optional shell mesh (slot aura_shell_mesh) around the dino. Pure, so it is verified offline.
+-- It needs the real mesh (meshReady), and never shows with Reduce Motion or in the lite look (Effects Lite, extra or distant dinos).
+-- Auras wear it from Epic up for as long as the aura lives; an event mutation wears it only for ShellSeconds.mutation after it
+-- appears (the reveal), then it fades away. An empty slot means no shell at all, exactly as before.
+R.ShellMinTier = 4
+R.ShellSeconds = {mutation = 6}
+function R.wantsShell(kind: string, tier: number?, reduced: boolean?, detail: string?, meshReady: boolean?): boolean
+    if not meshReady or reduced or detail == "lite" then return false end
+    if kind == "aura" then return (tier or 0) >= R.ShellMinTier end
+    return kind == "mutation"
+end
+-- Opacity multiplier 0..1 of a shell `age` seconds after it appeared: fades in over fadeIn, and (mutation only) fades out over its last second.
+function R.shellFade(kind: string, age: number): number
+    local fadeIn = math.clamp(age / R.Timing.fadeIn, 0, 1)
+    local life = R.ShellSeconds[kind]
+    if not life then return fadeIn end
+    return fadeIn * math.clamp((life - age) / 1.0, 0, 1)
+end
+
 return R
