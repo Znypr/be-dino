@@ -285,7 +285,7 @@ class LoadHarnessTests(unittest.TestCase):
                  "maxKeyBytesPerMinute": 200000, "maxProfileBytes": 15000, "ops": {"claim": 12, "settle": 10}}
         self.assertEqual(verify_load.gate(clean), [])
         self.assertEqual(len(verify_load.gate(dict(clean, failures={"claim:save_failed": 1}, ratioA=1.2))), 2)
-        # docs/149: a run that never hatched would leave the hatch writes out of every request number
+        # docs/152: a run that never hatched would leave the hatch writes out of every request number
         self.assertTrue(any("no hatch claim" in p for p in verify_load.gate(dict(clean, ops={"settle": 10}))))
 
 

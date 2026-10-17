@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static guards for the switch-on rehearsal (docs/149). No Luau needed.
+"""Static guards for the switch-on rehearsal (docs/152). No Luau needed.
 
     python tools/verify_switch_on.py
 
@@ -172,7 +172,7 @@ def check_rules() -> None:
     guards = len(re.findall(r"Config\.ObjectivesEnabled == true", repo))
     if sites < 5 or guards < sites:
         fail(f"ProfileRepository has {sites} objective hook sites but {guards} ObjectivesEnabled guards")
-    # CombatEnabled replaces instant predation, so PredationAtMouth is moot while combat is on (documented in docs/149).
+    # CombatEnabled replaces instant predation, so PredationAtMouth is moot while combat is on (documented in docs/152).
     predation = (ROOT / "src/server/PredationService.luau").read_text(encoding="utf-8")
     if "if Config.CombatEnabled then return end" not in predation:
         fail("PredationService no longer returns while CombatEnabled: PredationAtMouth + CombatEnabled would both act")
@@ -183,13 +183,13 @@ def check_rules() -> None:
     food = (ROOT / "src/server/FoodService.luau").read_text(encoding="utf-8")
     if "Config.FoodPickupAtMouth == true and lowPolyOn()" not in food:
         fail("FoodService: FoodPickupAtMouth must stay tied to LowPolyDinos")
-    # A kit food clone that raises must not leave an error string where a model is expected (docs/149).
+    # A kit food clone that raises must not leave an error string where a model is expected (docs/152).
     if "if not ok then model = nil end" not in food:
         fail("FoodService: a raising Resources.clone must set model = nil before :Destroy() is called")
     # The load harness must really hatch (BD-360 moved NextChestId out of Player attributes).
     load = (ROOT / "tools/verify_load.py").read_text(encoding="utf-8")
     if 'PrivateState.get(p, "NextChestId")' not in load:
-        fail("tools/verify_load.py reads NextChestId from player attributes again: no hatch claim would ever run (docs/149)")
+        fail("tools/verify_load.py reads NextChestId from player attributes again: no hatch claim would ever run (docs/152)")
 
 
 def main() -> int:

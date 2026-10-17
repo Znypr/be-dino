@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Server cost of switching the built-but-off features on (docs/149 s5): DataStore requests, repository calls per minute.
+"""Server cost of switching the built-but-off features on (docs/152 s5): DataStore requests, repository calls per minute.
 
     python tools/measure_switch_on_cost.py --runner C:/.../luau.exe [--seeds 3] [--json out.json]
 

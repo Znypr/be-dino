@@ -239,7 +239,7 @@ local function newServer(name, jobId, overrides)
         server.cache["src/shared/Config"] = table.freeze(config)
     end
     server.Repository = load(node("src/server/ProfileRepository"))
-    server.PrivateState = load(node("src/server/PrivateState")) -- BD-360: NextChestId lives here, not in Player attributes (docs/149)
+    server.PrivateState = load(node("src/server/PrivateState")) -- BD-360: NextChestId lives here, not in Player attributes (docs/152)
     server.Config = load(node("src/shared/Config"))
     server.Rules = load(node("src/shared/ProgressionRules"))
     return server
@@ -301,7 +301,7 @@ local function loadWithRetry(server, p)
     return false
 end
 
--- docs/149 (switch-on rehearsal): with Config.ObjectivesEnabled the real server queues objective events in memory (the hooks call
+-- docs/152 (switch-on rehearsal): with Config.ObjectivesEnabled the real server queues objective events in memory (the hooks call
 -- ProfileRepository.objectiveRecord after each commit) and ObjectiveService flushes every ObjectiveConfig.FlushSeconds. The harness
 -- does not start ObjectiveService (it needs Roblox instances), so it plays the same two roles: one queued event per pickup tick, per
 -- settlement and per hatch claim, and one flush thread per joined player. Flag off (every committed profile): nothing here runs.
@@ -656,7 +656,7 @@ def gate(result: dict) -> list[str]:
     if result["crashes"]:
         problems.append(f"{result['crashes']} coroutine crash(es)")
     if result["ops"].get("claim", 0) == 0:
-        # docs/149: since BD-360 the next egg id is owner-only state; a harness that reads it from Player attributes sees nothing and
+        # docs/152: since BD-360 the next egg id is owner-only state; a harness that reads it from Player attributes sees nothing and
         # silently never hatches, which hides the biggest write source (hatch pages) from every request number below.
         problems.append("no hatch claim ran: the load numbers would leave out the hatch writes")
     if result["failures"]:

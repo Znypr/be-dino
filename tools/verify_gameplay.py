@@ -104,7 +104,7 @@ assert(Workspace.attrs.FoodCount>1400 and Workspace.attrs.FoodPlacementFallbacks
 missingTerrain=false artFailure=true
 Food.start({})
 assert(Workspace.attrs.FoodCount>1400,"broken art must not remove food")
--- docs/149 (switch-on rehearsal): the playtest profile runs FoodArtMode = "Kit". A kit clone that RAISES used to leave the error string in `model`
+-- docs/152 (switch-on rehearsal): the playtest profile runs FoodArtMode = "Kit". A kit clone that RAISES used to leave the error string in `model`
 -- and the loop then called :Destroy() on it, so one bad mesh stopped the whole food spawn. Kit mode is not the committed default, so flip it here.
 FoodConfig.FoodArtMode="Kit"
 Food.start({})

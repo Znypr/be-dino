@@ -181,13 +181,13 @@ PROFILES: dict[str, list[Rule]] = {
 # the playtest build.
 PROFILES["playtest-streaming"] = list(PROFILES["playtest"])
 
-# The all-on-rehearsal scratch profile (docs/149) is the playtest with EVERY built-but-off gameplay flag ON at once, so the offline
+# The all-on-rehearsal scratch profile (docs/152) is the playtest with EVERY built-but-off gameplay flag ON at once, so the offline
 # suites can be run against the combined Config (tools/run_rehearsal.py). It is never built into a published place and never
 # uploaded; it is not a shipped profile (its Streaming entry is scratch, which is how release_playtest.shipped_profiles and the
 # shipped-profile hard stops skip it). It keeps the paid/Robux line closed: CrystalPacksEnabled and PaidRandomItemsEnabled stay
 # required-false, so no Robux product can sell and no paid random item can exist even in the rehearsal. Test/demo/QA/preview
 # switches (grants, harnesses, QA overlay, DemoDirector, HatchV2Preview) are not gameplay and stay required-false too.
-# SecretSpeciesEnabled is not on main yet (docs/149 s1): add it here when its PR merges.
+# A new built-but-off flag must be added here (or to EXCLUDED in tools/verify_switch_on.py, with a reason): that check fails until it is.
 REHEARSAL_ON = [
     ("ObjectivesEnabled", "BD-072..077 mini objectives"),
     ("GiftClaimEnabled", "BD-451 gift claim path"),
@@ -200,6 +200,8 @@ REHEARSAL_ON = [
     ("PerDinoCosmeticsEnabled", "BD-059 per-dino cosmetics"),
     ("FastTravelPerk", "BD-391/405 fast travel perk"),
     ("HatchV2", "BD-397 v2 hatch (falls back to v1 per egg)"),
+    ("SecretSpeciesEnabled", "BD-604/BD-228 secret silly creatures (a secret hatches only once its model slot is filled)"),
+    ("DinoSkinsEnabled", "BD-456 dino skins data model and equip (shares profile.ownedSkins with gifting)"),
 ]
 _REHEARSAL_ON_KEYS = {key for key, _ in REHEARSAL_ON}
 

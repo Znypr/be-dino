@@ -1,4 +1,4 @@
-"""docs/149: the all-on-rehearsal profile, its scratch-tree runner and the static switch-on guards."""
+"""docs/152: the all-on-rehearsal profile, its scratch-tree runner and the static switch-on guards."""
 import os
 from pathlib import Path
 import subprocess
@@ -31,7 +31,8 @@ class RehearsalProfileTests(unittest.TestCase):
             self.assertIs(values[key], True, key)
         for key in ("ObjectivesEnabled", "GiftClaimEnabled", "AdminGiftsEnabled", "GiftingEnabled", "FoodPickupAtMouth", "PredationAtMouth",
                     "CombatEnabled", "SpecialFoodsEnabled", "PerDinoCosmeticsEnabled", "FastTravelPerk", "HatchV2",
-                    "CaveHub", "ClassMovementEnabled", "LowPolyDinos", "IdentityPersistentEnabled", "IdentityFusionPreviewEnabled"):
+                    "CaveHub", "ClassMovementEnabled", "LowPolyDinos", "IdentityPersistentEnabled", "IdentityFusionPreviewEnabled",
+                    "SecretSpeciesEnabled", "DinoSkinsEnabled"):
             self.assertIs(values[key], True, key)
 
     def test_the_paid_line_and_the_test_switches_stay_closed(self):

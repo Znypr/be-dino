@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Switch-on rehearsal runner (docs/149): run the offline verifiers against a release profile's Config values.
+"""Switch-on rehearsal runner (docs/152): run the offline verifiers against a release profile's Config values.
 
     python tools/run_rehearsal.py --runner C:/.../luau.exe --compiler C:/.../luau-compile.exe
     python tools/run_rehearsal.py --runner ... --profile all-on-rehearsal --only multiplayer,gifts
@@ -18,7 +18,7 @@ The all-on-rehearsal profile is a SCRATCH profile: never built into a published 
 Many verifiers assert that a flag SHIPS false ("Config.CombatEnabled must stay false"). Those lines are expected to fail when the
 flag is on; they are reported as `shipped-state` failures (a regexp over the output), not as interactions. Every other failure is
 compared with the same command on the committed tree: a failure that is new only under the rehearsal is an `INTERACTION` and gets
-a root-cause note in docs/149.
+a root-cause note in docs/152.
 """
 from __future__ import annotations
 

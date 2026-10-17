@@ -61,7 +61,7 @@ local PrivateStateStub={
  set=function(p,k,v) p.attrs[k]=v client.cache[k]=v table.insert(client.log,k) end,
  get=function(p,k) return p.attrs[k] end,forget=function() end}
 local script={Parent={RewardMath="Rewards",DinosaurIdentity="Identity",IdentityFusion="IdentityFusion",FusionOdds="FusionOdds",PrivateState="PrivateState",RareHatchService="RareHatchService",CosmeticOwnership="Cosmetic",ObjectiveService="ObjectiveService"}}
-local ObjectiveSpy=setmetatable({loads=0},{__index=function() return function() return true end end}) -- docs/149: stands in for the lazily required ObjectiveService when Config.ObjectivesEnabled is on
+local ObjectiveSpy=setmetatable({loads=0},{__index=function() return function() return true end end}) -- docs/152: stands in for the lazily required ObjectiveService when Config.ObjectivesEnabled is on
 local rewardSpecies=nil
 local NestQueue=NEST_QUEUE_MODULE
 local FtueRules=FTUE_RULES_MODULE
