@@ -442,6 +442,64 @@ local mossHangScatter=0 for _,p in L.props do if p.key=="cave_moss_hang" and p.o
 assert(mossHangScatter==0,"no random wall curtains: vines only on the jambs")
 print(string.format("dressing OK: %d rows (%d parts, %d est. triangles): %d ferns, %d horsetails, %d mushrooms (%d glow), %d amber crystals, %d moss clumps, %d vines, %d small rocks, %d bushes, %d log, %d stump",#dress,dressParts,dressTris,(byKey.world_fern_a or 0)+(byKey.world_fern_b or 0),byKey.world_horsetail_a or 0,byKey.dress_mushrooms or 0,glows,byKey.dress_crystal or 0,byKey.cave_moss_patch or 0,byKey.cave_moss_hang or 0,byKey.dress_rock_small or 0,byKey.dress_bush or 0,byKey.dress_log or 0,byKey.dress_stump or 0))
 
+-- ---- BD-296 wall rock forms + gate arch frame (docs/140): the rows always exist; a mesh is placed only once its id is pasted (empty = the cave as today)
+local forms,formKeys,archRows={},{},{}
+for _,p in L.props do
+ if p.owner=="rockform" then forms[#forms+1]=p formKeys[p.key]=(formKeys[p.key] or 0)+1 end
+ if p.owner=="gatearch" then archRows[#archRows+1]=p end
+end
+assert(#forms>=8 and #forms<=14,"8-14 wall rock forms: "..#forms)
+local nFormKinds=0 for _ in formKeys do nFormKinds+=1 end
+assert(nFormKinds>=4,"at least 4 different rock forms: "..nFormKinds)
+local formIds={cave_form_slabs="cave_rockform_slabs_v3",cave_form_buttress="cave_rockform_buttress_v3",cave_form_ledge="cave_rockform_ledge_v3",cave_form_tumble="cave_rockform_tumble_v3",cave_form_fins="cave_rockform_fins_v3",cave_form_terrace="cave_rockform_terrace_v3",cave_gate_frame="cave_gate_arch_v3"}
+local function cornersOf(p,w,d) -- 3 x 3 sample points of the oriented footprint
+ local c,s=math.cos(p.yaw),math.sin(p.yaw)
+ local out={}
+ for _,sx in {-1,0,1} do for _,sz in {-1,0,1} do out[#out+1]={p.x+c*sx*w/2+s*sz*d/2,p.z-s*sx*w/2+c*sz*d/2} end end
+ return out
+end
+for _,p in forms do
+ assert(formIds[p.key] and P.Slots[p.key] and P.Matte[p.key],"rock form is a slot, shown matte: "..p.key)
+ assert(not p.collider and p.colliders==0 and not p.walk and not p.hang,"no collider: it would exist without the mesh: "..p.key)
+ local longest=math.max(p.w,p.h,p.d)
+ assert(longest>=8 and longest<=21,"rock form is 8-20 studs: "..p.key.." "..longest)
+ -- the front direction (Roblox yaw: front = (-sin, -cos)); the back plane lies against the wall, the front on the floor, the dome clears the form
+ local fx,fz=-math.sin(p.yaw),-math.cos(p.yaw)
+ local bsd=C.caveSd(p.x-fx*p.d/2,p.z-fz*p.d/2+C.CenterZ)
+ assert(bsd>=-5.5 and bsd<=2.5,"rock form back stands against the wall: "..p.key.." sd "..bsd)
+ assert(C.caveSd(p.x+fx*p.d*0.4,p.z+fz*p.d*0.4+C.CenterZ)>=1.0,"rock form front stands on the floor: "..p.key)
+ assert(C.ceilingY(p.x,p.z+C.CenterZ)-C.FloorY+1.5>=p.h,"rock form fits under the dome: "..p.key)
+ for _,q in cornersOf(p,p.w,p.d) do
+  assert(not (q[2]<L.byId.gate.z-16 and math.abs(q[1])<24),"rock form off the gate lane: "..p.key)
+  assert(q[2]<=C.Fall.z-14,"rock form clear of the lava falls: "..p.key)
+ end
+ for _,pa in L.paths do
+  for i=0,14 do
+   local t=i/14
+   assert(C.boxDist(pa.ax+(pa.bx-pa.ax)*t,pa.az+(pa.bz-pa.az)*t,p)>=pa.half+3.5,"rock form keeps off the walking path "..pa.id..": "..p.key)
+  end
+ end
+ for _,st in L.stations do assert(C.boxDist(st.x,st.z,p)>=st.r,"rock form off the pad "..st.id..": "..p.key) end
+ assert(C.boxDist(C.Pool.x,C.Pool.z,p)>=C.Pool.r+6,"rock form off the lava basin: "..p.key)
+end
+for i,a in forms do for j=i+1,#forms do
+ local b=forms[j]
+ for _,q in cornersOf(a,a.w,a.d) do assert(C.boxDist(q[1],q[2],b)>0,"two rock forms overlap: "..a.key.." / "..b.key) end
+end end
+assert(#archRows==1 and archRows[1].key=="cave_gate_frame","one gate arch frame row")
+local arch,gate=archRows[1],L.byId.gate
+assert(L.gateArch and arch.x==0 and math.abs(arch.yaw-math.pi)<1e-9 and arch.z<gate.z-16,"the gate frame stands in the gate wall, facing the cave (yaw pi)")
+assert(C.caveSd(0,L.gateArch.frontZ+C.CenterZ)<=1.05 and C.caveSd(0,L.gateArch.frontZ+3.5+C.CenterZ)>=1.0,"arch front face stands at the gate wall surface")
+assert(arch.w>=36 and arch.w<=42 and arch.h>=24 and arch.h<=28,"the arch frame is sized for the 30 wide x 20 high mouth (inner 29 x 19.6): "..arch.w.." x "..arch.h)
+assert(L.gateArch.lightZ<gate.z and C.insideFloor(L.gateArch.x,L.gateArch.lightZ+C.CenterZ,0),"the arch lantern light stands inside the gate room")
+local none={}
+for key,mesh in formIds do
+ assert(P.sourceFor(key,none,kitSet)==nil,"no id = nothing placed (the cave is as today): "..key)
+ local got=P.sourceFor(key,{[mesh]={assetId="123456789012"}},kitSet)
+ assert(got and got.kind=="generated" and got.id=="123456789012" and got.key==mesh,"a pasted id places the mesh: "..key)
+end
+print(string.format("rock forms OK: %d forms of %d kinds against the wall (no id yet: placed nothing), gate arch frame at z %.1f, %d rows total",#forms,nFormKinds,arch.z,#forms+1))
+
 -- ---- budgets (docs/104 s3.1)
 local B=C.budgetTable()
 local lines={}
@@ -573,6 +631,24 @@ def static_checks():
     legacy = arena.index('local cz = CaveHubLayout.hub(Config).centerZ')
     assert start < arena.index('CaveProps.build(hub)') < legacy and start < arena.index('CaveLavaFx.build(hub)') < legacy, 'props and lava FX only in the flag-on cave branch'
     assert 'cave_lava_fall' not in server.replace('NotMeshes', ''), 'the chunky lava block is never placed as the waterfall'
+    # BD-296 wall rock forms + gate arch frame (docs/140): their own table, empty ids, FBX + registry rows, layout boxes equal the registered mesh sizes
+    forms_tbl = gen.split('Generated.CaveForms = {')[1].split(chr(10) + '}' + chr(10))[0]
+    form_rows = re.findall(r'^\s{4}(cave_\w+_v3) = \{assetId = "(\d*)", placed = false, tris = (\d+), size = \{([\d., ]+)\}\}', forms_tbl, re.M)
+    assert len(form_rows) == 7, 'six rock forms and the gate arch frame in WorldGeneratedMeshes.CaveForms'
+    cave_slots = dict(re.findall(r'(cave_(?:form|gate)_\w+) = \{"(\w+)"\}', props.split('Props.Slots = {')[1].split('Props.Matte')[0]))
+    assert len(cave_slots) == 7, 'Props.Slots maps the 7 cave form / frame layout keys'
+    by_mesh = {row[0]: row for row in form_rows}
+    for slot, mesh in cave_slots.items():
+        key, aid, tris, size = by_mesh[mesh]
+        assert aid == '' or re.fullmatch(r'[1-9][0-9]{8,17}', aid), 'empty (not uploaded) or a real id, never invented: ' + key
+        assert (ROOT / ('assets/blender/world/fbx_v3/%s.fbx' % key)).exists(), 'FBX exists: ' + key
+        assert key in registry, 'docs/77 row: ' + key
+        dims = [float(v) for v in size.split(',')]
+        assert kind_box(slot) == dims, 'layout kind %s box equals the registered mesh size %s' % (slot, dims)
+        m = re.search(r'\b' + slot + r' = \{[\d., ]+?, (\d+), "', kinds_src)
+        assert m and m.group(1) == tris, 'layout kind tris equals the FBX tris: ' + slot
+    assert 'GeneratedMeshes.CaveForms' in server_src, 'CaveProps resolves slots against the CaveForms table'
+    assert 'CaveForms' not in (ROOT / 'src/server/Arena.luau').read_text() and 'CaveForms' not in (ROOT / 'src/shared/BiomePlacement.luau').read_text(), 'the island never sees the cave forms'
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(); p.add_argument('--runner', required=True); args = p.parse_args()

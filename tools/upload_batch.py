@@ -7,8 +7,10 @@
 Collects every repo PNG whose slot (tools/asset_slots.json) is still EMPTY: the trail shop icons, the mutation badges,
 the Crystal Shop tab icons, tiles and green-spotted egg (BD-047),
 the Blender FX textures in resources/effects/fx-v2/, the three meadow-grass-v2 maps and the Eggs page art
-(jungle stage JPG + five condition egg PNGs in resources/ui/v2/stage/). Each file is checked (under 20 MB,
-real PNG/JPEG, RGBA where the slot needs alpha) and copied into ONE flat folder as <slot name>.<ext>, so a local
+(jungle stage JPG + five condition egg PNGs in resources/ui/v2/stage/), plus (BD-296) the seven Blender cave meshes
+(6 wall rock forms and the gate arch frame, assets/blender/world/fbx_v3/cave_*_v3.fbx, slot kind `mesh`: uploaded as a Model, the
+id is bound as bare digits). Each file is checked (under 20 MB, real PNG/JPEG, RGBA where the slot needs alpha; a binary FBX header
+for meshes) and copied into ONE flat folder as <slot name>.<ext>, so a local
 `python -m http.server` can serve it and the uploader can name each asset after its slot. manifest.json is
 [{"file": <repo path>, "slot": <slot name>, "url_path": <flat file name>}]. After the uploader returns its
 {"http://localhost:PORT/<file>": "rbxassetid://N"} map, bind everything in one go:
@@ -48,6 +50,11 @@ GROUPS = [
     ('egg stage', 'resources/ui/v2/stage', r'egg-stage-jungle-v1\.jpg', lambda m: 'egg_stage', False),
     ('condition eggs', 'resources/ui/v2/stage/eggs', r'egg-0[1-5]_([a-z]+)\.png', lambda m: 'egg_cond_' + m.group(1), True),
 ]
+# Mesh groups (BD-296): FBX files whose slot kind is `mesh` (WorldGeneratedMeshes.CaveForms). group name -> (folder, file name regex -> slot name builder).
+MESH_GROUPS = [
+    ('cave meshes', 'assets/blender/world/fbx_v3', r'(cave_(?:rockform|gate)_\w+_v3)\.fbx', lambda m: m.group(1)),
+]
+FBX_SIG = b'Kaydara FBX Binary  \x00'
 
 
 def png_info(data):
@@ -67,6 +74,10 @@ def check_file(path, needs_alpha):
     if size >= MAX_BYTES:
         problems.append(f'{size / 1048576:.1f} MB, over the 20 MB limit')
     head = path.read_bytes()[:4096] if size else b''
+    if path.suffix.lower() == '.fbx':
+        if not head.startswith(FBX_SIG):
+            problems.append('not a binary FBX')
+        return problems, size, None
     info = png_info(head)
     if info is None:
         if head[:3] == b'\xff\xd8\xff':
@@ -102,6 +113,26 @@ def collect(slots):
                 skipped.append((rel, f'slot {slot} already bound ({current})'))
                 continue
             items.append({'group': group, 'file': rel, 'slot': slot, 'ext': f.suffix, 'needs_alpha': needs_alpha})
+    for group, folder, pattern, slot_of in MESH_GROUPS:
+        d = ROOT / folder
+        for f in sorted(d.glob('*.fbx')) if d.is_dir() else []:
+            m = re.fullmatch(pattern, f.name)
+            if not m:
+                continue
+            slot = slot_of(m)
+            rel = f.relative_to(ROOT).as_posix()
+            if slot not in slots:
+                skipped.append((rel, 'no slot (not registered)'))
+                continue
+            s = slots[slot]
+            if s['kind'] != 'mesh':
+                skipped.append((rel, f'slot {slot} is {s["kind"]}, not a mesh'))
+                continue
+            current = bind_assets.current_value(s, (ROOT / s['file']).read_text(encoding='utf-8'))
+            if current:
+                skipped.append((rel, f'slot {slot} already bound ({current})'))
+                continue
+            items.append({'group': group, 'file': rel, 'slot': slot, 'ext': f.suffix, 'needs_alpha': False})
     return items, skipped
 
 
@@ -120,7 +151,7 @@ def main(argv=None):
         failed |= bool(problems)
         counts[it['group']] = counts.get(it['group'], 0) + 1
         total += size
-        dims = f'{info[0]}x{info[1]}' if info else '?'
+        dims = f'{info[0]}x{info[1]}' if info else ('FBX' if it['ext'] == '.fbx' else '?')
         print(f'{"FAIL" if problems else "ok  "} {it["slot"]:28s} {dims:>9s} {size / 1024:7.0f} KB  {it["file"]}'
               + (('  <- ' + '; '.join(problems)) if problems else ''))
     for rel, why in skipped:

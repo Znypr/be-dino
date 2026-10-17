@@ -15,6 +15,10 @@ Rules.Beam = {outerFrac = 0.82, coreFrac = 0.5, outerAlpha = 0.92, coreAlpha = 0
 Rules.GateGlow = {rate = 4, size = {12, 18}, alpha = 0.7, color = {255, 214, 160}, lift = 8, out = 12} -- out = studs from the pad centre into the mouth (the mouth is open from 10 studs past the pad centre)
 Rules.FillColor, Rules.LavaColor, Rules.CrystalColor, Rules.ForgeColor = {255, 214, 170}, {255, 140, 70}, {255, 196, 80}, {255, 190, 90}
 Rules.Forge = {period = 4, amplitude = 0.1, base = 0.6}
+-- BD-296 gate arch frame (docs/140): ONE warm lantern light between the two iron hooks, in front of the arch. It is the 30th light (the 29 of Rules.get() + 1 =
+-- CaveHubLayout.MaxLights) and CaveLighting adds it ONLY once the arch mesh id exists (WorldGeneratedMeshes.CaveForms.cave_gate_arch_v3), so today's cave has
+-- exactly the lights it has now. It breathes like the other lamps (Rules.Lamp), never casts shadows (the 4 shadow lights stay the 4 strongest of Rules.get()).
+Rules.ArchLight = {color = {255, 196, 118}, range = 40, brightness = 1.1, phase = 1.3, period = 3.4}
 Rules.ShadowLights = 4
 -- Cosy pass (docs/104 s14, owner 2026-10-16: a warm, safe, lamp-lit den). All PROVISIONAL, behind the CaveHub flag.
 -- Lamp flicker: the warm fill, Heart and crystal lights breathe by at most `amplitude` (a fraction of their own brightness), slowly and
@@ -112,6 +116,15 @@ function Rules.get(): any
         gate = {x = gate.x, z = gate.z + cz - Rules.GateGlow.out, y = FY + Rules.GateGlow.lift, mouthWidth = g.mouthWidth},
         fxParts = #shafts + 1, fxBeams = #shafts * Rules.Beam.beamsPerShaft}
     return cache
+end
+
+-- The arch lantern light spec (same shape as a Rules.get() light, world coordinates), or nil when the layout has no gate arch row.
+function Rules.archLight(): any?
+    local arch = Layout.get().gateArch
+    if not arch then return nil end
+    local A = Rules.ArchLight
+    return {owner = "gatearch", x = arch.x, y = arch.lightY, z = arch.lightZ + Layout.CenterZ, color = A.color, range = A.range, brightness = A.brightness,
+        lamp = true, phase = A.phase, period = A.period, arch = false}
 end
 
 -- Lamp brightness at time `t` (seconds): base x (1 +- amplitude), two slow sines so it breathes instead of ticking. calm = base.

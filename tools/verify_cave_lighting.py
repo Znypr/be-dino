@@ -73,6 +73,13 @@ assert(arch and dist(arch.x,arch.z-CZ,gate.x,gate.z)<=8,"arch light stands at th
 assert(D.gate.z-CZ<gate.z and math.abs(D.gate.x-gate.x)<1,"gate glow sits in the gate mouth, on its centre line")
 assert(R.GateGlow.alpha>=0.65,"gate glow is soft (very transparent)")
 for _,l in D.lights do if l.owner=="lava" then assert(l.color[1]>=240 and l.color[3]<=90,"lava glow is orange") end end
+-- BD-296: the gate arch frame's ONE extra warm lantern light (CaveLighting adds it only once the arch mesh id exists): the 30th light, in the hall, warm, calm, no shadows
+local AL=R.archLight()
+assert(AL and #D.lights+1<=C.MaxLights,"the arch lantern light fits the light cap: "..(#D.lights+1).." of "..C.MaxLights)
+assert(C.insideFloor(AL.x,AL.z,0) and AL.y>C.floorHeight(AL.x,AL.z) and AL.y<C.ceilingY(AL.x,AL.z)-4,"arch lantern light between floor and ceiling")
+assert(AL.color[1]>=240 and AL.color[3]>=70 and AL.color[3]<=140 and AL.range>=14 and AL.range<=48 and AL.brightness>0.25 and AL.brightness<=1.2,"arch lantern light is warm and calm")
+assert(AL.brightness<archBrightness and not AL.shadows and AL.lamp==true,"arch lantern light is weaker than the arch fill, casts no shadow, breathes like a lamp")
+assert(dist(AL.x,AL.z-CZ,L.gateArch.x,L.gateArch.frontZ)<=8,"arch lantern light stands just in front of the arch")
 
 -- ---- FX parts and budgets
 assert(#D.shafts+1==D.fxParts and D.fxParts<=R.FxPartBudget and D.fxBeams==#D.shafts*2,"FX parts tiny (BD-296: 1 dust Part per hole + gate anchor, 2 Beams per hole): "..D.fxParts)
@@ -233,6 +240,7 @@ def static_checks():
     assert 'if hall then shake=0 end' in weather, 'BD-403 no camera shake inside the hall'
     assert 'Lighting.Brightness = saved.brightness' in client and 'Lighting.ShadowSoftness' in client, 'BD-398 cave brightness and shadow softness, restored'
     assert 'spec.shadows == true' in server, 'BD-398 shadows only on flagged lights'
+    assert 'Rules.archLight()' in server and 'GeneratedMeshes.CaveForms.cave_gate_arch_v3.assetId ~= ""' in server and 'count < Layout.MaxLights' in server, 'BD-296 the arch lantern light is added only with the arch mesh id and under the cap'
     assert 'CastShadow = not p.walk' in (ROOT / 'src/server/CaveProps.luau').read_text(), 'BD-398 props cast shadows'
     assert 'CaveShowOff.build(hub)' in on and 'CaveShowOff' not in off.replace('local CaveShowOff', ''), 'cosy pass: show-off prompt only in the flag-on cave branch'
     assert 'lampBrightness(base' in client and 'calm)' in client, 'cosy pass: lamp flicker is Reduce Motion aware'
