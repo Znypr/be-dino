@@ -804,7 +804,10 @@ def scan():
     assert re.search(r'shock_dome_mesh = "",', slots), 'shock_dome_mesh must stay empty until uploaded'
     ea = src('src/shared/EffectAssets.luau')
     for key in ['domeGradient', 'shaftGradient']:
-        assert re.search(key + r' = \{id = "", fallback', ea), key + ' slot must be empty until the owner uploads it'
+        m = re.search(key + r' = \{id = "(rbxassetid://\d+)?", fallback', ea)
+        assert m, key + ' slot must be empty or one valid rbxassetid'
+        if m.group(1):  # bound after the 2026-10-17 batch upload: the id must be a registered docs/77 row, never invented
+            assert m.group(1).split('//')[1] in src('docs/77-asset-registry.md'), key + ' bound id is not in the asset registry'
     print('Source scan passed: moment FX wired to the pure plans, sweep only on the own banner, one Highlight, no invented asset ids, slots empty')
 
 

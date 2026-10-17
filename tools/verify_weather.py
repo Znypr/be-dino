@@ -265,7 +265,8 @@ withIds(allSlots(FAKE), function()
     assert(checked >= 8, "level checks ran for the textured rigs: " .. checked)
 end)
 -- 4. one slot filled, the rest empty: only that texture is in use
-withIds({rainStreak = FAKE}, function()
+local onlyRain = allSlots("") onlyRain.rainStreak = FAKE -- 2026-10-17: the other slots are bound to real uploads now, so empty them explicitly
+withIds(onlyRain, function()
     assert(WT.plan(Assets, "rainStreak", "streaks") and not WT.plan(Assets, "snowFlakeSheet", "snow") and not WT.plan(Assets, "lightningBolt", "trunk"))
 end)
 -- 5. phone beam budget: a textured bolt is 1 trunk + 2 forks (the built-in bolt is 18 + 2); all bolts together fit the phone budget

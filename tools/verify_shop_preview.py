@@ -30,7 +30,12 @@ end end
 assert(P.rarityChip(nil).text=="Common")
 -- icon slot: nil entries fall back to the live preview; only real asset ids pass
 assert(Config.TrailIconAssetIds~=nil)
-for _,t in Config.Trails do assert(P.trailIconId(Config.TrailIconAssetIds,t.id)==nil,"no icon is uploaded yet: "..t.id) end
+-- 2026-10-17: the ten icons are uploaded and bound; a trail icon is absent (live preview) OR one valid registered rbxassetid.
+for _,t in Config.Trails do
+ local got=P.trailIconId(Config.TrailIconAssetIds,t.id)
+ assert(got==nil or (type(got)=="string" and got:match("^rbxassetid://%d+$")~=nil),"icon is empty or a valid id: "..t.id)
+ assert(got==nil or got==Config.TrailIconAssetIds[t.id],"the helper returns the bound id unchanged: "..t.id)
+end
 assert(P.trailIconId({fern="rbxassetid://123"},"fern")=="rbxassetid://123")
 assert(P.trailIconId({fern="junk"},"fern")==nil and P.trailIconId(nil,"fern")==nil)
 -- trail card states

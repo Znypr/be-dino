@@ -116,7 +116,12 @@ game = {GetService = function(_, name)
 end}
 
 --@@LOAD
+-- 2026-10-17: the base plates (glowPlate / ringShock / smokeSheet ...) are bound to owner uploads now. "Empty" clears them too
+-- (today's native disc and stroked ring), "real" restores the genuinely bound ids next to the fake mutation ids.
+local BASE = {}
+for _, key in {"glowPlate", "ringShock", "ringSoft"} do BASE[key] = Assets.Requested[key].id end
 local function setReal(on: boolean)
+    for key, id in BASE do Assets.Requested[key].id = if on then id else "" end
     for key, req in Assets.Requested do
         if string.match(key, "^glowPlate[RDC]") or key == "ringSeismic" or key == "smokeDense" or key == "smokeWispy" or string.match(key, "^motif") then
             if on then req.id = "rbxassetid://" .. tostring(700000000 + #key * 1000 + string.byte(key, #key)) else req.id = "" end
