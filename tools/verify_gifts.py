@@ -1088,6 +1088,7 @@ do
   local okc,status,summary=S.claim(u)
   check(okc and summary.applied==1 and wallet(u)==w0+250,"first join: granted once")
   check(noticeOf(u).line=="A gift from the Be Dino team!" and noticeOf(u).message=="Thank you!" and noticeOf(u).canMute==false,"popup: the fixed team label, no admin name")
+  check(noticeOf(u).item=="250 crystals","popup: the custom admin amount is named (BD-579), not just 'Crystals'")
   Repository.release(u)
   local l0=W.lookups
   for _,name in {"ab","a b c",string.rep("x",21),"","bad-name!",5,"semi;colon"} do

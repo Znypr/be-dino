@@ -378,12 +378,23 @@ local function showNext(player: any)
         return
     end
     local entry = GiftRules.ById[notice.item]
+    local itemText = if entry then entry.label else ""
+    if entry and entry.id == GiftRules.CustomCrystalsId and GiftRules.crystalAmount(entry, notice.crystals) ~= nil then
+        -- BD-579: the admin's free amount has no fixed label ("Crystals"), so the popup said no number. Say how many (1,234 style).
+        local text = tostring(notice.crystals)
+        while true do
+            local replaced, count = string.gsub(text, "^(%d+)(%d%d%d)", "%1,%2")
+            if count == 0 then break end
+            text = replaced
+        end
+        itemText = text .. (if notice.crystals == 1 then " crystal" else " crystals")
+    end
     PrivateState.set(player, "GiftNoticeJson", game:GetService("HttpService"):JSONEncode({
         id = notice.id,
         line = GiftRules.noticeLine(notice.source, notice.name),
         name = GiftRules.shownName(notice.source, notice.name), -- BD-570: for "Mute <name>"; "" for a team gift. Resolved fresh, never stored.
         kind = if entry then entry.kind else "skin", -- BD-570: picks the registered icon
-        item = if entry then entry.label else "",
+        item = itemText,
         message = GiftRules.presetText(notice.msg) or "",
         more = #(queue :: {any}) - 1,
         canMute = notice.source == "robux",
@@ -516,7 +527,7 @@ function GiftService.claim(player: any): (boolean, string, any)
         for _, applied in newlyApplied do
             local gift = applied.gift
             table.insert(fresh, {
-                id = gift.id, source = gift.source, item = gift.item, msg = gift.msg, fromId = gift.from, converted = applied.converted,
+                id = gift.id, source = gift.source, item = gift.item, msg = gift.msg, fromId = gift.from, converted = applied.converted, crystals = gift.crystals,
                 name = if gift.source == "robux" then resolveName(gift.from) else nil,
             })
         end
