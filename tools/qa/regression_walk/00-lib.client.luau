@@ -220,16 +220,31 @@ function W.add(list, ok, text) -- ok: true = pass, false = fail, nil = odd (cann
     table.insert(list, {ok, text})
     return ok
 end
+-- BD-596: Studio itself (not the game) prints about 40 "Failed to upload TexturePack ... HTTP 429" lines at each Play in an unpublished
+-- place (one per SurfaceAppearance under Resources). They are counted and named in the report, never mixed into the game's errors.
+W.StudioNoise = "Failed to upload TexturePack"
+function W.isStudioNoise(message)
+    return string.sub(message, 1, #W.StudioNoise) == W.StudioNoise
+end
 function W.errors(since)
     local out = {}
     for _, e in LogService:GetLogHistory() do
-        if e.messageType == Enum.MessageType.MessageError and e.timestamp >= since then table.insert(out, e.message) end
+        if e.messageType == Enum.MessageType.MessageError and e.timestamp >= since and not W.isStudioNoise(e.message) then table.insert(out, e.message) end
     end
     return out
+end
+function W.studioNoise(since)
+    local n = 0
+    for _, e in LogService:GetLogHistory() do
+        if e.messageType == Enum.MessageType.MessageError and e.timestamp >= since and W.isStudioNoise(e.message) then n += 1 end
+    end
+    return n
 end
 function W.errCheck(list, since)
     local e = W.errors(since)
     W.add(list, #e == 0, if #e == 0 then "no new errors" else string.format("%d new error(s): %s", #e, string.sub(e[1], 1, 90)))
+    local noise = W.studioNoise(since)
+    if noise > 0 then W.add(list, true, "Studio TexturePack upload lines not counted: " .. noise .. " (BD-596)") end
 end
 function W.capture(n, note)
     local cam = workspace.CurrentCamera

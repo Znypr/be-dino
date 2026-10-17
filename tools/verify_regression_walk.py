@@ -218,6 +218,11 @@ def main() -> int:
     expect(failures, any(" FAIL " in l and "new error" in l for l in lines if l.startswith("WALK ")), "errors: a logged error must FAIL the step it happened in")
     print("errors: a logged error fails its step")
 
+    lines = run_scenario(args.runner, "studionoise")
+    expect(failures, not any(" FAIL " in l and "new error" in l for l in lines if l.startswith("WALK ")), "studionoise: Studio's own TexturePack upload lines must not fail a step (BD-596)")
+    expect(failures, any("TexturePack" in l and "not counted" in l for l in lines if l.startswith("WALK ")), "studionoise: the lines are named in the report, not silently dropped")
+    print("studionoise: Studio TexturePack lines are named, not counted as game errors")
+
     lines = run_scenario(args.runner, "clipped")
     v = verdicts(lines)
     expect(failures, v.get(8, ("", ""))[0] == "FAIL" and "corners" in v.get(8, ("", ""))[1], "clipped: a dino cut off by the camera must FAIL step 8")
