@@ -151,6 +151,41 @@ function ClassMovement.limitVertical(class: any, action: string, vy: any, height
     return v
 end
 
+-- BD-593: the Fly glide, one frame, PURE. The character is owned by its client, so a velocity written by the server (the hover loop in
+-- ClassMovementService) has no effect on it; the local client applies this instead (ClassGlide.client.luau), like the dash and the leap.
+-- held = jump button held; grounded = standing on something; vy = current vertical speed; used = glide seconds spent this airtime;
+-- dt = frame seconds. Returns the vertical speed to write and the new `used`. Only a FALL is slowed (never a rise), only while held,
+-- only for `glideSeconds` per airtime, and only for Fly. The height cap is NOT applied here (height 0 is passed): a cap measured to
+-- the root centre would shorten the Fly jump below the Ground jump (docs/145, BD-593).
+function ClassMovement.glideStep(class: any, held: any, grounded: any, vy: any, used: any, dt: any): (number, number)
+    local v, u = num(vy, 0), math.max(0, num(used, 0))
+    if grounded == true then return v, 0 end
+    local r = ClassMovement.Classes[classKey(class)].jump
+    if held ~= true or r.glideFallSpeed <= 0 or v >= 0 or u >= r.glideSeconds then return v, u end
+    return ClassMovement.limitVertical(class, "jump", v, 0, true), u + math.clamp(num(dt, 0), 0, 0.25)
+end
+
+-- BD-595 (LEAD decision FH1, docs/101 s20): the Fly hover cap, one frame, PURE. Measured at the FEET, not at the root centre: the root
+-- centre already sits HipHeight + Size.Y / 2 (3 to 4 studs) above the ground while standing, so a cap on it would cut the Fly jump
+-- (apex 6.05) to about 3 studs, below the Ground jump (5.0). The cap number is the class table's own heightCap (6.5); no new number.
+function ClassMovement.feetHeight(rootHeightAboveGround: any, hipHeight: any, rootSizeY: any): number
+    return num(rootHeightAboveGround, 0) - (num(hipHeight, 0) + num(rootSizeY, 0) / 2)
+end
+
+-- Returns the vertical speed to write. It can only LOWER an upward speed (never raises any speed, never touches a fall): a rise is
+-- held so that the feet end exactly at the cap (v * dt never carries them past it). A leap (leaping = LeapUntil active) is exempt.
+-- Classes without a finite jump cap (Ground, Armored) and Water (dash) are never touched.
+function ClassMovement.hoverStep(class: any, vy: any, rootHeightAboveGround: any, hipHeight: any, rootSizeY: any, leaping: any, dt: any): number
+    local v = num(vy, 0)
+    if leaping == true or v <= 0 then return v end
+    local r = ClassMovement.Classes[classKey(class)].jump
+    if r.kind ~= "jump" or r.heightCap == math.huge then return v end
+    local room = r.heightCap - ClassMovement.feetHeight(rootHeightAboveGround, hipHeight, rootSizeY)
+    if room <= 0 then return 0 end
+    local step = math.clamp(num(dt, 0), 1 / 240, 0.25)
+    return math.min(v, room / step)
+end
+
 -- Map bounds: planar position never leaves the arena square (Config.ArenaHalfWidth).
 function ClassMovement.clampToArena(x: any, z: any): (number, number)
     local h = Config.ArenaHalfWidth
