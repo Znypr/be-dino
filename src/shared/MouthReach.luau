@@ -11,8 +11,7 @@
 --                head used here is that length as a fraction of the body, clamped to [MinHeadFraction, MaxHeadFraction] (about a quarter at most);
 --   length     = the body box length (spawn size, template pose).
 -- Head point = the centre of the head = snout - headLength / 2, scaled by the growth scale. radius = headLength / 2 (so the snout tip is always
--- inside) + Slack. Slack = FoodPickupRadius - the Compy's half head, so a Compy at scale 1 keeps exactly the old 2.25, and because its half head
--- grows about 0.8 stud per scale (the old rule gave 0.75) a Compy stays within 5% of the old radius at every growth scale.
+-- inside) + RadiusPad. BD-515 set both slack and pad to FoodPickupRadius - the Compy's half head (1.425); BD-522 (MR5) lowers them, see below.
 local Config = require(script.Parent.Config)
 local ScaleLadder = require(script.Parent.ScaleLadder)
 
@@ -23,6 +22,14 @@ MouthReach.VerticalLimit = 6 -- studs of height difference between the root and 
 MouthReach.LegacyGrowthBonus = 0.75 -- studs per growth scale of the old rule (used for species without a measured row)
 MouthReach.LegacyMaxRadius = 5
 MouthReach.RefSpecies = "compy"
+-- BD-522 (docs/115 MR5, LEAD): the BD-515 zone (slack 1.425 = Config.FoodPickupRadius - the Compy half head, radius = half head x scale + 1.425) made every species,
+-- the Compy too, eat +27% to +44% more food per minute than the Build 020 root rule (the walker eats where the NOSE is, 3.8 studs ahead of the root at scale 1, 8.6 at
+-- growth 2.25, instead of 2.25 from the root). Parity needs a front edge of about HALF the snout distance, which would leave the nose outside the zone, so the snout rule
+-- wins and these two numbers are the smallest zone that still eats a berry at the snout; docs/evidence/2026-10-17-food-reach/ has the sweep and the trade-off.
+-- Fields (not locals) so tools/simulate_food_reach.py can sweep them; the game never writes them.
+MouthReach.SlackStuds = 0.25 -- studs the zone reaches beyond the snout tip (a berry touching the nose is eaten); was 1.425
+MouthReach.RadiusPad = 1.0 -- studs added to (RadiusFactor x half head x scale) for the radius; was 1.425. Kept above half a walking step (0.9 to 1.1 studs per 0.08 s tick) so a berry cannot be skipped between two ticks
+MouthReach.RadiusFactor = 1 -- share of the half head (it grows with the scale) in the radius
 
 local function finite(v: any, fallback: number): number
     return if typeof(v) == "number" and v == v and v > -1e9 and v < 1e9 then v else fallback
@@ -44,6 +51,12 @@ local function headLength1(row: any): number
     return fraction * row.length
 end
 
+-- Half the head length in studs at a growth scale (the radius of the zone is this plus the pad).
+function MouthReach.headHalf(speciesId: any, scale: any): number
+    local row = rowOf(speciesId)
+    return if row then headLength1(row) / 2 * growthOf(scale) else 0
+end
+
 function MouthReach.has(speciesId: any): boolean
     return rowOf(speciesId) ~= nil
 end
@@ -59,24 +72,23 @@ function MouthReach.legacyRadius(scale: any): number
     return math.min(MouthReach.LegacyMaxRadius, Config.FoodPickupRadius + (growthOf(scale) - 1) * MouthReach.LegacyGrowthBonus)
 end
 
--- Studs the zone reaches beyond the snout tip: the old 2.25 minus the Compy's half head (1.425). The FRONT EDGE of the zone is always snout + slack.
+-- Studs the zone reaches beyond the snout tip (BD-522: 0.25, BD-515: the old 2.25 minus the Compy's half head = 1.425). The FRONT EDGE of the zone is always snout + slack.
 function MouthReach.slack(): number
-    local ref = rowOf(MouthReach.RefSpecies)
-    return Config.FoodPickupRadius - (if ref then headLength1(ref) / 2 else 0)
+    return MouthReach.SlackStuds
 end
 
 -- BD-515 radius before the BD-521 cap (docs/115 MR2): follows the head size, plus the old growth bonus.
 function MouthReach.uncappedRadius(speciesId: any, scale: any): number
     local row = rowOf(speciesId)
     if not row then return MouthReach.legacyRadius(scale) end
-    return headLength1(row) / 2 * growthOf(scale) + MouthReach.slack()
+    return headLength1(row) / 2 * growthOf(scale) * MouthReach.RadiusFactor + MouthReach.RadiusPad
 end
 
--- BD-515 head point offset before the cap: the centre of the head (snout - half the head).
+-- Head point offset before the cap: the front edge minus the radius (BD-515: the centre of the head, snout - half the head, while slack == pad; BD-522: a little
+-- ahead of it because the radius pad is larger than the slack).
 function MouthReach.uncappedHeadOffset(speciesId: any, scale: any): number
-    local row = rowOf(speciesId)
-    if not row then return 0 end
-    return (row.snout - headLength1(row) / 2) * growthOf(scale)
+    if not rowOf(speciesId) then return 0 end
+    return MouthReach.uncappedFront(speciesId, scale) - MouthReach.uncappedRadius(speciesId, scale)
 end
 
 -- BD-521 (docs/115 MR4): the cap factor k = Config.FoodReachCapCompy (nil or not a number >= 1 = no cap). A species never gets a zone that reaches
