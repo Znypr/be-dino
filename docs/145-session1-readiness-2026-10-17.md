@@ -77,6 +77,51 @@ Also agent-sized, lower priority: BD-532 (BUY EGG can never succeed in the playt
 
 **What the older sections of this doc look like now.** Section 1 (verdict and top-5): blocker 2 (nobody has walked the loop) is PARTLY DONE, see blocker 5 above; the other four stand. Section 3: the "16 files still empty" is closed by #349. Sections 4 and 5: the item table and the 15-step list are still the right checklist, with the steps named in blocker 5 done in part. Section 6: replaced by the numbered list above (same steps; the rollback drill is folded into step 2; the 2-player run, BD-527, grass, VFX and V3 Compy steps did not exist this morning). Section 7 and 8: unchanged.
 
+### 6. Identity and fusion flags: what they change and the verdict (BD-577, 2026-10-17)
+
+Label: **CURRENT BUILD BEHAVIOR**, offline verifiers plus a single-player Studio pass. Evidence and numbers: [docs/evidence/2026-10-17-identity/](evidence/2026-10-17-identity/README.md). No flag was changed; flipping one is the owner's call (one `Rule(...)` line in `tools/release_profiles.py`, one PR, rebuild, republish; never a hot fix).
+
+**The two flags are not independent.** Read from `src/server/ProfileRepository.luau`:
+
+| `IdentityPersistentEnabled` | `IdentityFusionPreviewEnabled` | On a published server |
+| --- | --- | --- |
+| true | true | **Playtest profile today.** Sidecar written, Dino Details / My dinos / goal line / Fusion menu work, fusion commits |
+| true | false | Sidecar is still written on every save, but `fusionEnabled()` is false, so `list`, `details`, `quote` and `fuse` all answer `fusion_disabled`: the player sees nothing for it. All cost, no benefit. Do not ship this combination |
+| false | true | `fusionEnabled()` needs the persistent flag on a published server, so same as both off |
+| false | false | Build 020 behaviour: no sidecar, no per-dino list, Fusion rail says "Fusion is coming soon", Dino Details lose the original-egg lines, the Next Goal line falls back to level XP (it asks the same remote) |
+
+**What `IdentityPersistentEnabled` changes in the saved profile (published servers only; Studio always runs the memory path):**
+
+* Every `UpdateAsync` of the profile (load, 30 s lease renew, crystal pickup, hatch page, run settlement, equip, settings) is wrapped by `persistentIdentityTransform`. It rebuilds `profile.dinosaurIdentity` from the grouped `collection` in the same transaction, then checks the whole profile against 3.8 MB (`IdentityProfileHardLimitBytes`).
+* Fields written: `dinosaurIdentity` = `{version, ownerKey, nextId, instances{id -> species, stage, genes, big, shiny, mutationId, origin, cosmetics}, eggs{eggId -> original egg snapshot}, fusions{ledger with parentIds / parentEggIds}, suspendedReason}`. The first write for a new player creates it with one `legacy_unknown` instance (the starter Compy). A hatch adds one instance and one egg snapshot per hatched (not Cracked) egg, about 765 bytes together.
+* A fusion also changes `collection[species].gold / emerald / diamond` (and removes six), appends a `recentOperations` entry of kind `identity_fusion`, and adds the result to `progression.discovered`.
+* Failure behaviour is fail-closed for identity only: over 3,000 dinos (`identity_capacity`), a grouped/sidecar mismatch, a wrong owner or the byte limit sets `suspendedReason` and keeps the last good sidecar; the player keeps playing, hatching and saving, but Dino Details, My dinos and Fusion answer "unavailable". The only case that cancels a write is a profile that is still over 3.8 MB without any identity growth, which the egg bank (about 0.5 MB for 1,000 eggs) cannot reach.
+
+**What `IdentityFusionPreviewEnabled` changes for the player:** it turns on the `FusionAction` remote answers (list / details / quote / fuse). Fusion consumes six same-species Base dinos (Gold), 3 Gold (Emerald), 2 Emerald (Diamond) for one NEW dino with freshly rolled traits using the PROVISIONAL `fusion-odds-provisional-v2` roller; the odds are shown before FUSE (picture 06) and the roll is committed once. It is blocked when `CrystalPacksEnabled` is on or the profile ever spent Robux (`paidRandomBlocked`); both are off in the playtest, so nothing blocks it there.
+
+**Can the rollback target still load a session-1 save? Yes, and no P0 was found.**
+
+* **RB1 target = the previous playtest tag.** None exists yet (nothing is published); when r1 follows r0 it reads the same store `BeDino_Playtest_M1_v1`. `verify_rollback` (357 checks, both flags ON): the Build 020 reader loads a profile with sidecar, ledger, settings, nests and bank, keeps every unknown field byte for byte through load, claim, renew and release, and a later roll forward reconciles the sidecar. Same code with both flags turned OFF: loads, sidecar and ledger untouched; turned ON again: reconciled. A corrupt or oversize sidecar never fails profile validation (`isValidProfile` does not read it).
+* **Build 020 itself** uses a different store (`BeDino_PrivateTest_v1`), so it would not see any session-1 save at all (everyone looks reset; nothing is deleted or unreadable). If someone pointed it at the playtest store, the sidecar and `emerald` counters are ignored and kept. What locks Build 020 out of that store is **not these flags**: `metrics.rarest` 4 or 5 (an Epic or Legendary catch) and newer potion ids, which the playtest profile writes with both flags OFF too. Picture 04 shows a real Epic hatching in a one-minute run, so any rollback to Build 020 after session 1 starts is already ruled out by RB1.
+* **Residual rollback risk:** a Build 020 session that hatches or fuses desyncs the sidecar; the current code reconciles it, but a larger desync (for example a Build 020 Gold decrement of a protected fused dino) suspends identity for that player until the counts match. Only reachable by rolling back to Build 020, which RB1 forbids.
+
+**Findings (none is a blocker for session 1):**
+
+1. **No evidence of the real persistent path exists, and none can exist offline or in unpublished Studio.** `localPreview` wins over the flag in Studio, so Studio exercised only the memory path (works: 25 dinos, original-egg details, fusion preview with exact odds, no errors). The DataStore path is covered by mocks only (`verify_load`, `verify_rollback`, `verify_progression`, `verify_session1_smoke`: 2,145 writes, 0 throttled).
+2. **Per-key write volume grows with the sidecar and no test models it.** Every save rewrites the whole profile. The existing worst case already reaches about 3.5 to 4.0 MB per minute on one key with a 0.5 MB profile ([59](59-egg-rate-40.md) risk 1, limit 4 MB per minute as cited there, not re-verified against the current Roblox page). The sidecar adds about 0.77 MB per 1,000 dinos. Arithmetic, not measured: a profile of 1,000 dinos written 9 times a minute is about 7 MB per minute during a big reveal, and renews plus crystal pickups alone are about 3 to 5 MB per minute. A scripted 99-egg run hatches about 60 dinos, so 1,000 dinos is about 17 hard runs; a child at the docs/119 pace (about 15 eggs per run) needs far more. Not a session-1 risk; a later-weeks one (the 3,000 cap, 2.3 MB, is reached after about 50 hard runs).
+3. **The identity cost is small in CPU:** 24 ms (1,000 dinos) to 76 ms (3,000) per write, server only.
+4. **The fusion odds are shown as exact but are PROVISIONAL** (`fusion-odds-provisional-v2`); the menu does not say "test odds". Fusion is destructive (six dinos gone) and was not committed in Studio (the click was blocked by the tool permission layer; commit, replay, consent and rollback are proven offline).
+5. **No rejoin evidence:** one Studio Play session cannot rejoin. Identities surviving release and load are proven offline only. This is the live check of blocker 4 above.
+
+**Verdicts for session 1 (recommendations; the owner decides):**
+
+| Flag | Verdict | Why | Condition / how to undo |
+| --- | --- | --- | --- |
+| `IdentityPersistentEnabled` | **Keep on** | Offline evidence is strong (357 rollback checks, 684 multiplayer checks, 132 smoke checks, all additive, previous-tag rollback loads). Turning it off removes Dino Details, My dinos, the goal line list and fusion for everyone, and the playtest exists to test them. The damage it could do is bounded: a fresh private store, extra bytes, an unavailable menu, recovery by store rotation | **Gate:** the first non-owner join must show `ProfileMode` "Persistent", a fusion-menu list that returns dinos, and the same identities after leaving and rejoining (blocker 4). If any of the three fails: remove the one `Rule` line, rebuild, republish, rotate the store if a profile was damaged |
+| `IdentityFusionPreviewEnabled` | **Needs owner** (lead recommendation: keep on) | It is the switch for all per-dino screens, not only fusion, so "off" is a bigger product change than it sounds. What the owner should decide is whether session 1 testers may do an irreversible six-for-one fusion on provisional odds that the menu shows as exact. The paid-random policy is not triggered while Robux features stay off | If the owner says no to fusion but yes to the per-dino screens, that needs a code change (a fuse-only gate), not a flag flip; there is no such switch today |
+
+If the owner wants the smallest possible risk for session 1 and accepts losing those screens, turn **both** off together (never one: Persistent on with Preview off writes the sidecar for nothing).
+
 ---
 
 ## Morning baseline below (2026-10-17, main b616687), kept as history
