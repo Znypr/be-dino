@@ -127,7 +127,7 @@ Label: **BOARD AUDIT (docs only).** Every P0 and P1 row in `Review / test` (243 
 | BD-404, BD-409, BD-410, BD-411, BD-413 | the QA gates of [117](117-asset-quality-audit.md) (`tools/qa/*`, `verify_world_overlap.py`, `verify_world_budget.py`, CI) with the measured before/after tables in 117 s2 |
 | BD-419 | `git ls-files build` has no Build020 file; `.gitignore` lines 15-16 |
 
-Deliberately NOT moved although the row says the offline half is finished: BD-412 (the luminance bands are the lead's guess, owner must confirm, 117 s6 Q1), BD-357..BD-359 (a real server was never used), BD-494..BD-497 (phone forecast and guards, phone run open), BD-250/BD-251 (the verifier named in the row does not exist), BD-301 (no after-picture of the Egg Odds panel).
+Deliberately NOT moved although the row says the offline half is finished: BD-412 (the luminance bands are the lead's guess, owner must confirm, 117 s6 Q1), BD-357..BD-359 (a real server was never used), BD-494..BD-497 (phone forecast and guards, phone run open), BD-250/BD-251 (the verifier named in the row did not exist then; it does now, see s8.3), BD-301 (no after-picture of the Egg Odds panel).
 
 **Superseded (3):** BD-056 by BD-080 (BD-080 is the "BD-056 spec" HUD rework, HudV2, PR #166, `evidence/2026-10-16-hud-rework/`); BD-163 by BD-432 (docs/93 plan table row 2 and docs/123 moved aura/trail anime depth to BD-432; the row's base, PR #45, was closed unmerged); BD-424 by BD-428 (built as BD-428, PR #243; the earlier audit already called it a duplicate).
 
@@ -142,9 +142,9 @@ Every (d) row either needs the owner (uploads, ears, eyes, publish, a yes/no), a
 ### 8.3 Findings
 
 - **BD-179 duplicates the still-Backlog BD-140** (crystal pack cards, built under BD-179); BD-140 is P2 and was not touched.
-- **BD-081 and BD-343, BD-391 and BD-405** are marked "near-duplicate, kept" by the 2026-10-16 audit; not superseded here because each pair splits a different owner task.
+- **BD-081 and BD-343, BD-391 and BD-405** were marked "near-duplicate, kept" by the 2026-10-16 audit and left alone here. **Pair check (claude/verify-motion-poses, 2026-10-17): both pairs are one job each, so BD-343 is Superseded by BD-081 and BD-405 by BD-391.** BD-343 is the same Sound Lab page and the same open job (owner picks by ear, uploads); its only extra, the A/B/C variants of the 22 docs/110 candidates, moved into BD-081's row. BD-405 is the same perk with the same code and tests (`FastTravelPerk`, every file says "BD-391/405"); the owner answer it waited for is already recorded (docs/115 D22, docs/116 C-1 RESOLVED), and BD-391 carries the open items (price 500 PROVISIONAL, Studio/phone acceptance, shop card layout).
 - **BD-091 text is stale**: it says 8 catches for the hidden nest gate, code uses `NestMinCatches` 1 (BD-147 audit).
-- **BD-248 art does not exist** (BD-247 still says PLACEHOLDER); BD-250/BD-251 cite `verify_motion_poses.py`, which was never created (checks are in `verify_lowpoly_dinos.py`).
+- **BD-248 art does not exist** (BD-247 still says PLACEHOLDER); BD-250/BD-251 cited `verify_motion_poses.py`, which was never created. **Now created (2026-10-17, claude/verify-motion-poses):** `tools/verify_motion_poses.py` (CI) checks every offline item of both rows against the real `LowPolyPose` and the real `LowPolyAnimator`, and it found that the animator never stored `character` in the player rig, so no jump, leap, land, Water surge or defeat pose had ever played; fixed in one line. Both rows stay Review / test for the Studio/phone look only.
 - The ID lists in the small table above the board in 07-kanban (Backlog / Ready / ... columns) are old and were not touched; `python tools/board_summary.py` is the live count.
 - No code, no Studio, no Place1.rbxl were touched; the CI evidence is the five latest green runs on main plus `verify_cave_weather.py` run locally (the other verifiers need Luau, which this PC lacks).
 
