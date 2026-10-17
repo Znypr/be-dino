@@ -565,7 +565,8 @@ render=function(name: string)
             local weights=ShopOdds.conditionPercents(p.conditionLevel or 0) -- BD-045: normalized percents
             local upgrade=ProgressionConfig.ConditionUpgrades[(p.conditionLevel or 0)+1]
             -- docs/73: plain egg per condition on a floor swatch; chance only (no stats text, no odds screen).
-            label(body,require(Shared.FtueP1).ConditionsHeader,0,cardsY,824,30,20,C.gold) -- BD-372: the safe-first-eggs note, no level number
+            local safeLine=require(Shared.OddsCopy).safeEggsLine(require(Shared.FtueRules).safeEggsLeftView(require(Shared.FtueRules).collectionCopies(decoded("CollectionJson","{}")),num("ActiveChestCount"),num("QueuedEggsWaiting")))
+            if safeLine then label(body,safeLine,0,cardsY,824,30,20,C.gold) end -- BD-372/365: the safe-first-eggs note, only while true
             -- BD-394: the owner's Blender stage (jungle backdrop + condition eggs) when uploaded (ConditionStageAssetIds); else the live egg tiles, bigger.
             local staged=require(script.Parent.ConditionStage).background(body,0,cardsY+62,824,144)
             for i,row in ProgressionConfig.Conditions do
@@ -682,7 +683,7 @@ render=function(name: string)
         local OddsCopy=require(Shared.OddsCopy)
         local upgradeOdds=oddsLevelOverride~=nil
         heading.Text,header.BackgroundColor3=if upgradeOdds then "Upgrade Odds" else "Egg Odds",C.blue
-        local groups=if upgradeOdds then OddsCopy.upgradeGroups(oddsLevelOverride :: number) else OddsCopy.eggGroups(progression().conditionLevel or 0)
+        local groups=if upgradeOdds then OddsCopy.upgradeGroups(oddsLevelOverride :: number) else OddsCopy.eggGroups(progression().conditionLevel or 0,require(Shared.FtueRules).safeEggsLeftView(require(Shared.FtueRules).collectionCopies(decoded("CollectionJson","{}")),num("ActiveChestCount"),num("QueuedEggsWaiting"))) -- BD-365: the safe-eggs line only while true
         local list=Instance.new("ScrollingFrame") list.Name,list.BackgroundTransparency,list.BorderSizePixel,list.Size,list.ScrollBarThickness,list.ZIndex,list.Parent="OddsSimple",1,0,UDim2.fromOffset(824,308),8,24,body
         local lineY=0
         for _,group in groups do
@@ -692,7 +693,7 @@ render=function(name: string)
                 label(list,row.text,560,lineY,220,30,22,C.blue).TextXAlignment=Enum.TextXAlignment.Right
                 lineY+=32
             end
-            if group.note then label(list,group.note,10,lineY,790,28,18) lineY+=30 end
+            if group.note then label(list,group.note,10,lineY,790,28,OddsCopy.NoteTextSize) lineY+=30 end
             label(list,"Total: 100%",10,lineY,790,26,17,C.gold) lineY+=36
         end
         for _,note in OddsCopy.notes(not upgradeOdds) do label(list,note,10,lineY,790,28,19) lineY+=32 end

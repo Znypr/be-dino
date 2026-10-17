@@ -53,11 +53,21 @@ function Copy.speciesGroup()
     return group("Which dino?", names, weights)
 end
 
-function Copy.conditionGroup(level: number)
+-- BD-365: the safe first eggs. The number is Progression.SafeEggs (the server rule in FtueRules is checked equal by
+-- tools/verify_safe_eggs_line.py). The rule only covers eggs found on RUNS (shop and nest eggs roll the normal odds), so the
+-- line says "from runs", and it only shows while the profile still has all its safe eggs left (safeLeft comes from
+-- FtueRules.safeEggsLeftView). Plain words for children (docs/72); drawn at NoteTextSize, never below FtueP1.MinTextSize.
+Copy.NoteTextSize = 18
+function Copy.safeEggsLine(safeLeft: number?): string?
+    if safeLeft == nil or safeLeft < Progression.SafeEggs then return nil end
+    return string.format("Your first %d eggs from runs are always safe.", Progression.SafeEggs)
+end
+
+function Copy.conditionGroup(level: number, safeLeft: number?)
     local percents = ShopOdds.conditionPercents(level)
     local names = {}
     for _, row in Progression.Conditions do table.insert(names, row.name) end
-    return group("Is the egg Cracked?", names, percents, Progression.SafeEggsLine)
+    return group("Is the egg Cracked?", names, percents, Copy.safeEggsLine(safeLeft))
 end
 
 -- Two different numbers, never mixed up: "chance an egg IS Cracked" is the Cracked weight in the Egg condition group;
@@ -102,8 +112,8 @@ function Copy.biggestGain(oldLevel: number, newLevel: number): string
 end
 
 -- Egg shop: groups in reading order.
-function Copy.eggGroups(level: number)
-    return {Copy.hatchGroup(level), Copy.speciesGroup(), Copy.conditionGroup(level)}
+function Copy.eggGroups(level: number, safeLeft: number?)
+    return {Copy.hatchGroup(level), Copy.speciesGroup(), Copy.conditionGroup(level, safeLeft)}
 end
 
 -- Condition upgrade confirm: the chances your eggs will have AFTER the upgrade.
