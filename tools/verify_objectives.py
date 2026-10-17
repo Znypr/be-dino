@@ -327,6 +327,32 @@ assert(#view.short==3 and #view.daily==3 and view.shortResetsIn==1700 and view.d
 local allDone=newState(DAY0+100)
 for _,id in Rules.TutorialOrder do local e=C.ById[id] allDone.tutorial.claimed[id]=true end
 assert(Rules.view(allDone,DAY0+100).tutorialDone==true and Rules.view(allDone,DAY0+100).tutorial==nil)
+-- OB1: which runs count (pure): >= RunMinSeconds AND >= RunMinFood, nothing else
+assert(C.RunMinSeconds==30 and C.RunMinFood==1)
+assert(Rules.runCounts(30,1)==true and Rules.runCounts(300,50)==true)
+assert(Rules.runCounts(29.9,1)==false and Rules.runCounts(5,3)==false and Rules.runCounts(0,0)==false and Rules.runCounts(300,0)==false)
+for _,junk in {"x",{},0/0,-1} do assert(Rules.runCounts(junk,1)==false and Rules.runCounts(60,junk)==false,"junk never counts") end
+assert(Rules.runCounts(nil,1)==false and Rules.runCounts(60,nil)==false)
+-- OB2: a "seen" report is accepted only for a catalogue row that declares it (T9 "fusion_menu"); the rest is the server's
+assert(Rules.seenEntry("fusion_menu")==C.ById.T9 and C.ById.T9.event=="fusion_menu_opened")
+for _,forged in {"T9","D5","fusion","index","",5,{},false} do assert(Rules.seenEntry(forged)==nil,"forged seen id") end
+local seenCount=0 for _,entry in C.Catalogue do if entry.seen~=nil then seenCount+=1 assert(entry.group=="tutorial","seen objectives are tutorial steps") end end
+assert(seenCount==1,"exactly one seen objective today")
+do
+ local s=newState(DAY0+100)
+ local done,status=Rules.seenDone(s,"fusion_menu",DAY0+100,{})
+ assert(done==false and status=="ok","fresh: not seen yet")
+ assert(select(2,Rules.seenDone(s,"index",DAY0+100,{}))=="unknown_objective")
+ assert((Rules.seenDone(s,"fusion_menu",DAY0+100,{{kind="fusion_menu_opened",amount=1,id=Rules.seenEventId("fusion_menu")}})),"a pending report counts as seen")
+ assert(Rules.seenEventId("fusion_menu")=="seen:fusion_menu")
+ Rules.applyEvents(s,{{kind="fusion_menu_opened",amount=1,id=Rules.seenEventId("fusion_menu")}},DAY0+100)
+ assert(s.tutorial.progress.T9==1 and (Rules.seenDone(s,"fusion_menu",DAY0+100,{})),"stored progress = seen")
+ Rules.applyEvents(s,{{kind="fusion_menu_opened",amount=1,id=Rules.seenEventId("fusion_menu")}},DAY0+100)
+ assert(s.tutorial.progress.T9==1,"the same event id counts once")
+ local c=newState(DAY0+100) c.tutorial.claimed.T9=true
+ assert((Rules.seenDone(c,"fusion_menu",DAY0+100,{})),"a claimed T9 is seen")
+ assert(select(2,Rules.seenDone({v=C.SchemaVersion+1},"fusion_menu",DAY0+100,{}))=="newer_version")
+end
 print("Migration passed: nil/corrupt -> empty, newer version untouched, round-trip identity, sanitising, idempotent batches, atomic denied claim, read-only view")
 '''
 
@@ -343,7 +369,7 @@ do
   return inst
  end
  local rsFake=newInstance("Folder")
- rsFake.Shared={Config="GameConfig",ObjectiveConfig="ObjectiveConfig"}
+ rsFake.Shared={Config="GameConfig",ObjectiveConfig="ObjectiveConfig",ObjectiveRules="ObjectiveRules"}
  servicesFake.ReplicatedStorage=rsFake
  local players={}
  servicesFake.Players={GetPlayers=function() return players end,PlayerRemoving={Connect=function() end}}
@@ -359,7 +385,7 @@ do
  end}
  local svcConfig={ObjectivesEnabled=false}
  local script={Parent={}}
- local require=function(id) if id=="GameConfig" then return svcConfig elseif id=="ObjectiveConfig" then return ObjectiveConfig end error("unexpected "..tostring(id)) end
+ local require=function(id) if id=="GameConfig" then return svcConfig elseif id=="ObjectiveConfig" then return ObjectiveConfig elseif id=="ObjectiveRules" then return Rules end error("unexpected "..tostring(id)) end
  local game=gameFake
  local task={spawn=function() end,wait=function() end}
  local warn=function() end
@@ -378,6 +404,7 @@ do
   objectiveView=function() return {tutorial={id="T1"}},"ok" end,
   objectiveClaim=function(_,id,token) if failing then error("boom") end return true,"claimed",{id=id,status="claimed",crystals=10,xp=0} end,
   objectiveRecord=function(_,event) table.insert(recorded,event) return true end,
+  objectiveSeen=function(_,seenId) if seenId=="fusion_menu" then return true,"seen" end return false,"unknown_objective" end,
   objectiveFlush=function() return true,"nothing" end,
  }
  local remote=Service.start(repo)
@@ -397,6 +424,17 @@ do
  end
  reset()
  assert(Service.handle(player,{action="view"},"extra").reason=="bad_request","extra arguments are rejected")
+ -- OB2: the "seen" request has its own strict shape: {action, id} and nothing else
+ reset()
+ local seenResponse=Service.handle(player,{action="seen",id="fusion_menu"}) assert(seenResponse.ok==true and seenResponse.status=="seen" and seenResponse.view~=nil)
+ reset()
+ local forgedSeen=Service.handle(player,{action="seen",id="T9"}) assert(forgedSeen.ok==false and forgedSeen.reason=="unknown_objective")
+ for _,bad in {{action="seen"},{action="seen",id=5},{action="seen",id=""},{action="seen",id=string.rep("x",33)},{action="seen",id="fusion_menu",amount=1},{action="seen",id="fusion_menu",token="t"},{action="seen",id="fusion_menu",objective="T9"}} do
+  reset()
+  local response=Service.handle(player,bad) assert(response.ok==false and response.reason=="bad_request","seen shape: "..tostring(bad.id))
+ end
+ reset()
+ assert(Service.handle(player,{action="seen",id="fusion_menu"},"extra").reason=="bad_request")
  -- the limiter: RequestsPerWindow per RateWindowSeconds, then it opens again
  now=1000 Service.setClock(function() return now end)
  local okCount=0 local limited=0

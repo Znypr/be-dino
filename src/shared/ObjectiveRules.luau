@@ -207,6 +207,29 @@ local function build(cfg: any)
         return true
     end
 
+    -- OB1 (docs/115): does a settled run count for the run objectives (T2, S3, D2)? It must have lasted at least RunMinSeconds and
+    -- eaten at least RunMinFood. Both numbers come from the server (run clock, food ticks), never from the client.
+    function Rules.runCounts(runSeconds: any, foodEaten: any): boolean
+        if type(runSeconds) ~= "number" or runSeconds ~= runSeconds or runSeconds < cfg.RunMinSeconds then return false end
+        if type(foodEaten) ~= "number" or foodEaten ~= foodEaten or foodEaten < cfg.RunMinFood then return false end
+        return true
+    end
+
+    -- OB2 (docs/115): a "seen" report ("the player opened the menu") is accepted only for a catalogue row that declares it
+    -- (`seen = "<id>"`, today T9 "fusion_menu"). Returns the catalogue entry or nil (a forged id is refused).
+    local seenEntries: {[string]: any} = {}
+    for _, entry in cfg.Catalogue do
+        if entry.seen ~= nil and entry.group == "tutorial" then seenEntries[entry.seen] = entry end
+    end
+    function Rules.seenEntry(seenId: any): any
+        if type(seenId) ~= "string" then return nil end
+        return seenEntries[seenId]
+    end
+    -- Event id used for the report: it makes a repeat count once while it is in the bounded `seen` ring.
+    function Rules.seenEventId(seenId: string): string
+        return "seen:" .. seenId
+    end
+
     local function bump(entry: any, current: number, amount: number, value: any): number
         if entry.minValue ~= nil and (type(value) ~= "number" or value < entry.minValue) then return current end
         return math.min(cap(entry), current + amount)
@@ -359,6 +382,17 @@ local function build(cfg: any)
         end
         view.crystalsLeftToday = math.max(0, cfg.WindowCrystalCapPerDay - state.earned.crystals)
         return view, "ok"
+    end
+
+    -- OB2: has this seen-objective already been reported (or claimed)? Read-only; pending = the unflushed queue. A repeat report is
+    -- "already_seen" and queues nothing, so the report counts at most once per profile. Returns done, status.
+    function Rules.seenDone(raw: any, seenId: any, now: number, pending: {any}?): (boolean, string)
+        local entry = Rules.seenEntry(seenId)
+        if entry == nil then return false, "unknown_objective" end
+        local state, status = Rules.load(raw)
+        if state == nil then return false, status end
+        Rules.applyEvents(state, pending or {}, now)
+        return state.tutorial.claimed[entry.id] == true or (state.tutorial.progress[entry.id] or 0) >= entry.goal, "ok"
     end
 
     return Rules

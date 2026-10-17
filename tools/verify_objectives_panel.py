@@ -59,11 +59,27 @@ def static_errors() -> list[str]:
         errors.append('GoalHud: exactly one require of ObjectivesPanel')
     for path in sorted((ROOT / 'src').rglob('*.luau')):
         rel = path.relative_to(ROOT).as_posix()
-        if rel in ('src/client/ObjectivesPanel.luau', 'src/client/GoalHud.luau'):
+        if rel in ('src/client/ObjectivesPanel.luau', 'src/client/GoalHud.luau', 'src/client/ObjectiveSeen.luau', 'src/client/FusionMenu.luau'):
             continue
         text = code_only(path.read_text(encoding='utf-8'))
         if 'ObjectivesPanel' in text or ('ObjectiveAction' in text and not rel.startswith('src/server/')):
             errors.append(f'{rel}: only GoalHud may reach ObjectivesPanel and only the panel may call ObjectiveAction on the client')
+    # --- OB2 (docs/115): the one-time "seen" report. Only FusionMenu calls it, behind the flag; it sends one shape; flag off = silent ---------------
+    seen = code_only(read('src/client/ObjectiveSeen.luau'))
+    menu = code_only(read('src/client/FusionMenu.luau'))
+    if 'ObjectiveAction' in menu or 'InvokeServer({action' in menu:
+        errors.append('FusionMenu must not call ObjectiveAction itself (it calls ObjectiveSeen.report)')
+    if len(re.findall(r'^.*ObjectiveSeen.*$', menu, re.M)) != 1 or             'if Config.ObjectivesEnabled == true then require(script.Parent.ObjectiveSeen).report("fusion_menu") end' not in menu:
+        errors.append('FusionMenu: exactly one use of ObjectiveSeen, `if Config.ObjectivesEnabled == true then require(script.Parent.ObjectiveSeen).report("fusion_menu") end`')
+    if re.findall(r'action\s*=\s*"([a-z_]+)"', seen) != ['seen'] or seen.count('InvokeServer') != 1 or seen.count('{action = "seen", id = seenId}') != 1:
+        errors.append('ObjectiveSeen: the only request is {action = "seen", id = seenId}')
+    if not re.search(r'function ObjectiveSeen\.report\(seenId: string\)\n    if Config\.ObjectivesEnabled ~= true then return end\n', seen):
+        errors.append('ObjectiveSeen.report must return first thing while the flag is not true (flag off sends nothing)')
+    for number, line in enumerate(seen.splitlines(), 1):
+        if line and not line[0].isspace() and not re.match(r'(local |function |return|end\b|--!)', line):
+            errors.append(f'ObjectiveSeen.luau:{number}: top-level statement runs on require: {line[:60]}')
+    if 'FindFirstChild("ObjectiveAction")' not in seen or 'WaitForChild' in seen:
+        errors.append('ObjectiveSeen: the remote is looked up with FindFirstChild (it exists only while the server flag is on)')
     # no top-level statement besides local/function/return (nothing runs when the module is required)
     for number, line in enumerate(panel.splitlines(), 1):
         if line and not line[0].isspace() and not re.match(r'(local |function |return|end\b|--!)', line):
@@ -451,13 +467,68 @@ for _ = 1, 60 do tick() end
 assert(root.Visible == false and #calls == callsHidden, "Goals hidden (first session): the panel is hidden and silent")
 anchor.Visible = true
 -- the server says disabled / failing: the panel stays out of the way
+---------------------------------------------------------------- OB2: the real ObjectiveSeen.luau (FusionMenu's one-time T9 report)
+do
+ local seenCfg = {ObjectivesEnabled = false}
+ local lookups, sent, queued = 0, {}, {}
+ local seenAnswer = function(_) return {ok = true, status = "seen"} end
+ local seenRemote = {IsA = function(_, c) return c == "RemoteFunction" end,
+  InvokeServer = function(_, request) table.insert(sent, copy(request)) return seenAnswer(request) end}
+ local hasRemote = true
+ local seenFolder = {FindFirstChild = function(_, name) if name == "ObjectiveAction" and hasRemote then return seenRemote end return nil end}
+ local seenRepl = {Shared = {Config = "Config"}, FindFirstChild = function(_, name) lookups += 1 if name == "BeDinoRemotes" then return seenFolder end return nil end}
+ local seenGame = {GetService = function(_, name) assert(name == "ReplicatedStorage") return seenRepl end}
+ local seenTask = {spawn = function(fn) table.insert(queued, fn) end}
+ local seenRequire = function(id) assert(id == "Config") return seenCfg end
+ local function loadSeen() return (function(game, task, require) @@SEEN_SRC@@ end)(seenGame, seenTask, seenRequire) end
+ local function drain() while #queued > 0 do table.remove(queued, 1)() end end
+ local Seen = loadSeen()
+ assert(lookups == 0 and #sent == 0, "requiring the module does nothing")
+ -- flag off: nothing is looked up, nothing is spawned, nothing is sent, however often the menu opens
+ for _ = 1, 5 do Seen.report("fusion_menu") end
+ drain()
+ assert(lookups == 0 and #sent == 0 and #queued == 0, "flag off: the client sends nothing and does not even look for the remote")
+ -- flag on but the server flag is off (no remote): still nothing
+ seenCfg.ObjectivesEnabled = true
+ hasRemote = false
+ Seen.report("fusion_menu") drain()
+ assert(#sent == 0, "no ObjectiveAction remote: nothing sent")
+ hasRemote = true
+ -- flag on: exactly one request of exactly one shape, and the menu does not wait for it (it is spawned)
+ Seen.report("fusion_menu")
+ assert(#sent == 0 and #queued == 1, "the request is spawned, never made inline")
+ Seen.report("fusion_menu")
+ assert(#queued == 1, "a second open while the first is in flight sends nothing")
+ drain()
+ assert(#sent == 1 and sent[1].action == "seen" and sent[1].id == "fusion_menu", "the report")
+ local keys = 0 for _ in sent[1] do keys += 1 end
+ assert(keys == 2, "no amount, no objective id, no reward: only {action, id}")
+ for _ = 1, 3 do Seen.report("fusion_menu") end drain()
+ assert(#sent == 1, "after an answer it is never sent again this session")
+ -- "not yet" answers are asked again on the next open; a definite refusal is not
+ for _, reason in {"rate_limited", "no_dino"} do
+  sent = {} Seen = loadSeen()
+  seenAnswer = function(_) return {ok = false, reason = reason} end
+  Seen.report("fusion_menu") drain() Seen.report("fusion_menu") drain()
+  assert(#sent == 2, reason .. ": asked again on the next open")
+ end
+ sent = {} Seen = loadSeen()
+ seenAnswer = function(_) return nil end
+ Seen.report("fusion_menu") drain() Seen.report("fusion_menu") drain()
+ assert(#sent == 2, "no answer: retry on the next open")
+ sent = {} Seen = loadSeen()
+ seenAnswer = function(_) return {ok = false, reason = "unknown_objective"} end
+ Seen.report("fusion_menu") drain() Seen.report("fusion_menu") drain()
+ assert(#sent == 1, "a definite refusal is final")
+ print("Seen passed: real ObjectiveSeen.luau: flag off sends nothing and looks nothing up, one shape {action, id}, spawned, once per session, retries only on not-yet answers")
+end
 print("Panel passed: real ObjectivesPanel.luau on a GUI mock: folded one-liner and chip, open rows, CLAIM only on a finished task (>= 44 px), claim request {action,id,token}, waiting state, retry with the same token, fresh token after a definite answer, silent in a run and before the first egg")
 '''
 
 
 def script() -> str:
     panel_src = read('src/client/ObjectivesPanel.luau')
-    text = LUAU
+    text = LUAU.replace('@@SEEN_SRC@@', read('src/client/ObjectiveSeen.luau'))
     for token, path in [
         ('@@CONFIG@@', 'src/shared/Config.luau'),
         ('@@PHONE_SCALE@@', 'src/shared/PhoneScale.luau'),

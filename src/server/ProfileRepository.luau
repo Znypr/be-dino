@@ -1212,7 +1212,7 @@ function ProfileRepository.commitRunSettlement(player: Player, runId: string, ca
     if priorState == "SaveFailed" and player:GetAttribute("ProfileState") == "SaveFailed" then player:SetAttribute("ProfileState", "Loaded") end
     if Config.ObjectivesEnabled == true then -- BD-074: after the committed + adopted settlement (also for the in-call duplicate of a lost acknowledgement; the run id makes a replay count once)
         local progress = ProfileRepository.progression(player)
-        objectives().recordRunSettled(player, runId, runSeconds, runEggs, if progress then ProgressionRules.level(progress) else nil)
+        objectives().recordRunSettled(player, runId, runSeconds, runEggs, if progress then ProgressionRules.level(progress) else nil, catchScore)
     end
     return true, committedOutcome, if duplicate then "duplicate" else "committed"
 end
@@ -2158,6 +2158,31 @@ function ProfileRepository.objectiveRecord(player: Player, event: any): boolean
     local pending = objectivePending[player]
     if pending == nil then pending = {} objectivePending[player] = pending end
     return objectiveRules().queue(pending :: any, event)
+end
+
+-- OB2 (docs/115): the player's client says it opened a menu ("seen"). The server accepts it only for a catalogue row that declares
+-- that id (T9 "fusion_menu"), only once per profile (the stored/pending progress is checked first, so a repeat queues nothing) and
+-- only after the player owns at least one dino. It queues the row's own event with a fixed event id; the client sends no amount.
+-- Returns ok, status: seen | already_seen | no_dino | unknown_objective | queue_full | disabled | profile_not_loaded | newer_version.
+function ProfileRepository.objectiveSeen(player: Player, seenId: any): (boolean, string)
+    if Config.ObjectivesEnabled ~= true then return false, "disabled" end
+    if not ProfileRepository.isLoaded(player) then return false, "profile_not_loaded" end
+    local rules = objectiveRules()
+    local entry = rules.seenEntry(seenId)
+    if entry == nil then return false, "unknown_objective" end
+    local cached = profiles[player]
+    local owns = false
+    if typeof(cached.collection) == "table" then
+        for _, collected in cached.collection do
+            if ownsAny(collected) or (typeof(collected) == "table" and typeof(collected.emerald) == "number" and collected.emerald > 0) then owns = true break end
+        end
+    end
+    if not owns then return false, "no_dino" end
+    local done, status = rules.seenDone(cached.objectives, seenId, os.time(), objectivePending[player])
+    if status ~= "ok" then return false, status end
+    if done then return true, "already_seen" end
+    if not ProfileRepository.objectiveRecord(player, {kind = entry.event, amount = 1, id = rules.seenEventId(seenId)}) then return false, "queue_full" end
+    return true, "seen"
 end
 
 -- Read-only (never writes, never rolls a window into the stored profile): the stored state plus the unflushed queue at os.time().
