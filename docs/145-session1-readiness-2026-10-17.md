@@ -1,8 +1,75 @@
-# 145 Are we ready for friends session 1? Offline audit on main b616687 (BD-317, 2026-10-17); status updated at end of day and again in the evening
+# 145 Are we ready for friends session 1? Offline audit on main b616687 (BD-317, 2026-10-17); status updated at end of day, in the evening and on 2026-10-18
 
 Label: **CURRENT BUILD BEHAVIOR** audit, offline only. Nothing here was run in Studio, on a published server or on a phone, and no game code was changed. It refreshes [125 go / no-go](125-friends-playtest-go-no-go.md) and walks the items of [106](106-friends-playtest-readiness.md) and [129](129-owner-studio-smoke-checklist.md) against what is merged today. Sources: [AGENTS.md](../AGENTS.md), [55 runbook](55-playtest-release-runbook.md), [111 multiplayer](111-multiplayer-audit.md), [115 decisions](115-decisions-log.md), [120 uploads](120-pending-owner-uploads-checklist.md), [141 Studio scripts](141-board-hygiene-stuck-rows.md), `tools/release_profiles.py`, the kanban rows BD-317, BD-085, BD-322, BD-020, BD-019, BD-004, BD-319, BD-364, BD-293.
 
-> **Reading order (evening of 2026-10-17).** Start with **"Status update, 2026-10-17 evening"**, the current go / no-go. Next comes **"Status at end of 2026-10-17"**, the earlier go / no-go, kept as history (its closing notes say which parts later PRs overtook). Everything after the line "Morning baseline" is the audit on main b616687 (PR #346), also history. Nothing was deleted.
+> **Reading order (2026-10-18).** Start with **"Status update, 2026-10-18"** (the newest; what changed overnight and the short go / no-go list). It does not replace the evening update: the numbered owner steps and the blocker table of **"Status update, 2026-10-17 evening"** still stand where the 2026-10-18 section does not say otherwise.
+>
+> **Earlier reading order (evening of 2026-10-17).** Then **"Status update, 2026-10-17 evening"**, the detailed go / no-go. Next comes **"Status at end of 2026-10-17"**, the earlier go / no-go, kept as history (its closing notes say which parts later PRs overtook). Everything after the line "Morning baseline" is the audit on main b616687 (PR #346), also history. Nothing was deleted.
+
+## Status update, 2026-10-18
+
+Label: **CURRENT BUILD BEHAVIOR** status on main `7ab110d3` (PR #449 is the newest merge; PR #450 was still open when this was written). Docs only: nothing was run in Studio, on a phone or on a published server for this section, and the CI result of `7ab110d3` was not checked. Every fact below is copied from the doc or kanban row it names. "Done offline" means a verifier passes against a mock; it does not mean "checked in Studio". The sections after this one are kept as written; where they differ, this one wins.
+
+**Verdict: still NO-GO for friends session 1.** The code side got safer overnight and no code blocker is known. The reasons to wait are the same kind as yesterday: the owner has to answer, publish and join, and a few Studio, phone and human-run checks have not happened.
+
+### (a) What changed in the last day
+
+* **Security audit: no P0.** Every one of the 29 server remote handlers was attacked with the real code in a test harness ([151](151-remote-audit-2026-10-17.md), BD-608). No way was found to get free currency, items or another player's data. 3 P1, 4 P2 and a P3 bundle were found; all are in the table in 151 and on the board. Two small bugs were fixed at once: a lost reply dropped the nine extra reveals of a hatch page (BD-609) and three test-grant remotes existed on published servers although they were switched off (BD-610). Offline only; the engine, real DataStore timing and phones are not covered.
+* **Hostile-client fairness (BD-614, Review / test).** With 2 or 4 cheating players out of 12, honest players' routine saves were refused 16% and 41% of the time. After the fix 0 of 208 and 0 of 174 were refused; run settlements were never affected. The total DataStore ceiling was not raised. Kill switch `Config.WriteFairShareEnabled`. Offline mock only.
+* **Movement speed window (BD-611, Review / test).** A cheater could move 3 to 5 times faster than normal and still pass (guard 106 studs/s, food 69, crystals 52). New two-second sliding window (`src/shared/MovementWindow.luau`) used by the guard, food and crystal pickups: sustained speed is bounded to about 1.75 times walk speed (38 studs/s; 81 with the x2.2 potion). The default is ON; kill switch `Config.MovementGuardWindowEnabled`. The slack numbers are not measured with real lag (see (b)).
+* **Mid-run dino swap now applies next run (BD-613).** Before: picking another dino in the middle of a run changed speed, glide and dash at once. The fix is in **open PR #450** (with BD-616: the T9 and D5 objective rewards need a real action). Not merged when this was written; check the kanban row before relying on it.
+* **Objectives write volume (BD-625, Review / test).** With objectives on, the server made 36% more DataStore requests (64.6 to 87.8 a minute for 12 players). The objective batch now rides the lease-renew save: 64.6 again, peak window 49%. Objectives stay OFF.
+* **Smaller server fixes (Review / test).** An empty run (nothing earned) no longer costs a save when the stored profile would not change (BD-615: 1 write in 6 start-and-home cycles, was 7). Hygiene bundle BD-618: `PrivateState` replies at most every 2 seconds, rate limits survive a rejoin, a few public attributes removed; `IsAdmin` stays public on purpose.
+* **13-flag switch-on rehearsal (BD-624, [152](152-switch-on-rehearsal.md)).** All 13 built-but-off flags were turned ON together in a scratch copy (never shipped, no flag in `Config.luau` changed): 134 of 150 offline suites pass; the other 16 fail on purpose because they check that the real Config has the flag OFF. The control run (real Config) is 150 of 150. It found and fixed one real bug (one bad food mesh stopped all food spawning in the Kit art mode) and a load test that had not hatched an egg since BD-360. Paid flags (`CrystalPacksEnabled`, `PaidRandomItemsEnabled`) stay off by rule. Offline only: no phone, no published server, no real DataStore.
+* **Code split into smaller files, behaviour unchanged.** `ProfileRepository` is split into nine focused modules (BD-607, [150](150-profile-repository-split.md); a 181-step scripted session gives byte-identical stored profiles before and after). `WeatherVisuals.client` is split into six modules, main chunk 147 to 85 locals (BD-627, [153](153-weather-visuals-split.md)). New size guards over all of `src/` (BD-623): fail above 120 KB per file, warn above 90 KB, locals warn from 140, `Bootstrap.client.luau` capped at 127 KB. No Studio run for either split.
+* **Fusion audit (BD-617, [155](155-fusion-ladder-source-vs-docs-audit.md), no code change).** The new fusion menu and its tests all say 6 Base / 3 Gold / 2 Emerald, as AGENTS.md says. The OLD 50-copy `MutateSpecies` path is still live in every profile, including the playtest one (see (b), fusion).
+
+### (b) What still gates a friends playtest
+
+Gate letters: **O** = owner, **Q** = QA / human run, **P** = phone, **S** = Studio (lead or agent).
+
+| Item | Gate | What is needed | Where |
+| --- | --- | --- | --- |
+| BD-004 which experience, publish, rollback drill, alt-account join | **O** | Unchanged from the evening update: owner steps 1 to 4 | [148](148-publish-runbook.md); section "2026-10-17 evening" |
+| **BD-612 Creator Hub check of the crystal-pack products** | **O** (2 min) | Open the playtest experience in Creator Hub, Monetization, Developer Products; confirm the six product ids in the BD-612 row are absent or off sale; send the answer to the inbox session. The server grants crystals for those ids even with the packs switched off, and a game cannot safely refuse the purchase (the buyer would pay and get nothing). | BD-612 row, [151](151-remote-audit-2026-10-17.md) F2 |
+| **BD-611 Studio lag measurement** | **S** | Two Studio clients with simulated lag: `MovementRejectCount` must stay 0 for walking, continuous jumping, leap, dash and a potion, then tighten the numbers. The window is ON by default; if honest play gets rubber-banded, set `Config.MovementGuardWindowEnabled = false` (one-line PR, rebuild). A cheat just under the window still moves 1.75 times faster; the owner question "is that acceptable for a friends test?" is open in the row. | BD-611 row, [151](151-remote-audit-2026-10-17.md) s5 |
+| **Fusion for testers** (BD-617 and the BD-577 decision) | **O** | Two questions. (1) Evening step 8: may testers do an irreversible fusion on PROVISIONAL odds? (2) Q20 to Q22 in [116](116-handbook-conflicts.md) section J: confirm the ladder is 6 / 3 / 2, and decide what happens to the old 50-copy fusion (remove it, keep it behind a flag pinned OFF, or keep it). Until that is decided a tester can fire the old path by hand, and the default build's FUSION button opens a panel that says 6 / 3 / 2 but charges 50. The fix is a code change (BD-617 stays Backlog). | [155](155-fusion-ladder-source-vs-docs-audit.md) s5 to s7 |
+| **BD-575 a human 5-minute run** | **Q** (8 min; the owner or a child) | One normal run on the playtest build, no scripts, no admin values. Send "Eggs found", whether weather came and the `[BD-TELEMETRY] run_end` line. The scripted walker made 97 eggs against a target of about 15; a human number decides whether `FoodCatchRate` 12/500 stays. | BD-575 row, evening step 7 |
+| **Weather Studio play-through (BD-627)** | **S** | Play Rain, Thunder, Blizzard, Volcano, Quake, Aurora and Blood Moon once each and look for the same particles, title card and camera shake as before the split. Never run in Studio. | BD-627 row, [153](153-weather-visuals-split.md) |
+| **Other Studio acceptance items from the PRs** | **S** | BD-611 above; BD-613 (#450) swap during a run once merged; the rest of the evening list (Water surge, calm jumps, a fusion commit and rejoin, Sanctuary card, quake rumble, sounds); the real-Config re-run of anything touched by the module splits (BD-607, BD-627, BD-623 were checked offline only) | evening update blocker 5; BD-607, BD-623, BD-627 rows |
+| **Phone measurement (BD-085, BD-322)** | **P** (45 min; owner, Android) | Needed only if phones may join session 1; otherwise set Devices to Computer only in Creator Hub. Also the phone guards BD-495 to BD-497 and `StreamingEnabled` gate 1. | [146](146-phone-forecast-2026-10-17.md) s7; evening step 6 |
+| Multiplayer live (BD-319, BD-364, BD-502 gate 2) | **O** | A second client; also the live test of the new fair write share (BD-614) and the movement window | [111](111-multiplayer-audit.md) s5.6; evening step 5 |
+| **Cockatoo (BD-621) and eagle (BD-622) models** | **S**; not a gate for the join | Both rows are Backlog: only references and prepared prompts exist, no accepted model and no game entry. Model work resumes when a Studio window is free. They do not block a playtest. | BD-621, BD-622 rows |
+| **Place1 unsaved work** | **O** | Work in the owner's open Place1 window (for example the cockatoo test models) is UNSAVED until the owner presses Ctrl+S. The BD-621 row says the first cockatoo candidates sit in an unsaved folder in the owner's Place 1. This is a lead memory note plus that row; no other doc states the Ctrl+S rule. | BD-621 row; label: not verified in a doc |
+
+### (c) Go / no-go checklist (2026-10-18)
+
+"Verified" = a file on main shows it. Anything marked "not verified" could not be confirmed from the docs and kanban alone.
+
+| # | Check | Status | Who acts | Note |
+| --- | --- | --- | --- | --- |
+| 1 | Which experience; non-owner can join (BD-004) | **NO-GO** (open) | Owner | `tools/release_ids.json` all `null` in the evening update; not re-checked today |
+| 2 | Creator Hub settings and first publish | **NO-GO** (open) | Owner | [148](148-publish-runbook.md) |
+| 3 | Rollback drill (BD-020, BD-320) | **NO-GO** (open) | Owner | hard stop of [125](125-friends-playtest-go-no-go.md) |
+| 4 | Alt-account view of the published place | **NO-GO** (open) | Owner | also the first live test of the identity pair |
+| 5 | Security audit, no P0 | **Done offline** | Lead | BD-608, [151](151-remote-audit-2026-10-17.md); engine and real DataStore not covered |
+| 6 | Crystal-pack products absent or off sale (BD-612) | **NO-GO** (open) | Owner, 2 min | Creator Hub; the row names the six ids |
+| 7 | Hostile-client fairness (BD-614) | **Done offline**, Review / test | Lead | mock of 12 players only |
+| 8 | Movement window honest-lag check (BD-611) | **Open, needs Studio** | Lead (two clients) | default ON with a kill switch; Review / test, not Done |
+| 9 | Dino swap mid-run (BD-613) | **Open**: fix is in PR #450, merge not verified | Lead | Studio look still to do after the merge |
+| 10 | Fusion for testers: old 50-copy path and odds disclosure (BD-617, BD-577; Q20 to Q22) | **NO-GO until the owner decides** | Owner, then a code PR | 6 / 3 / 2 path is correct; legacy path is live |
+| 11 | Human 5-minute run pace (BD-575) | **Open** (economy decision, not a join blocker) | Owner or a child | evening step 7 |
+| 12 | Weather play-through after the split (BD-627) | **Open, needs Studio** | Lead | never run in Studio |
+| 13 | Phone measurement (BD-085, BD-322) | **Open**; a blocker only if phones may join | Owner (Android) | otherwise Computer only |
+| 14 | Multiplayer live (BD-319, BD-364, BD-502 gate 2) | **NO-GO** (open) | Owner (second client) | offline simulation only |
+| 15 | Switch-on rehearsal, 13 flags together | **Done offline** | Lead | 134 of 150, the other 16 are expected pins; no flag was changed; nothing is switched on |
+| 16 | Objectives write volume | **Done offline** (BD-625) | Lead | objectives still OFF |
+| 17 | Module splits and size guards (BD-607, BD-627, BD-623) | **Done offline** | Lead | behaviour proven by verifiers, not by a Studio run |
+| 18 | CI green on main `7ab110d3` | **Not verified** | Lead | last checked commit in this doc is `fc53fd14` (evening update); the GitHub API was not queried for this section |
+| 19 | Cockatoo and eagle models | **Not a gate** | Lead, when a Studio window is free | Backlog, no model yet |
+| 20 | Place1 unsaved work saved | **Open**, source is a note | Owner (Ctrl+S) | not verified in a doc |
+
+**What would turn this to GO.** Items 1 to 4 and 14 (owner, about 55 minutes in total), 6 (2 minutes) and 10 (one answer). Items 8, 9 and 12 are Studio checks the lead can do before the owner finishes. Items 11 and 13 are not join blockers: 11 is an economy decision, 13 disappears if Devices is set to Computer only.
 
 ## Status update, 2026-10-17 evening
 
