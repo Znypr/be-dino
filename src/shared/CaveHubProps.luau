@@ -88,6 +88,18 @@ Props.Slots = {
     dress_log = {"ground_log_fallen_v3"}, -- no kit stand-in: placed only once the owner uploads it (docs/120)
     dress_stump = {"ground_stump_roots_v3"}, -- same
     dress_crystal = {"hub_crystal_s"}, -- the published amber stopgap crystal, used as a small lamp-side glow accent
+    -- BD-296 wall rock forms and the gate arch frame (Blender, docs/140): no stand-in at all, so each places NOTHING until the owner uploads its FBX and
+    -- the id is pasted into WorldGeneratedMeshes.Props (docs/120). The cave is exactly as it is today until then.
+    cave_form_slabs = {"cave_rockform_slabs_v3"}, cave_form_buttress = {"cave_rockform_buttress_v3"}, cave_form_ledge = {"cave_rockform_ledge_v3"},
+    cave_form_tumble = {"cave_rockform_tumble_v3"}, cave_form_fins = {"cave_rockform_fins_v3"}, cave_form_terrace = {"cave_rockform_terrace_v3"},
+    cave_gate_frame = {"cave_gate_arch_v3"},
+}
+-- The rock forms and the arch frame carry their own warm vertex colours (the cave wall Concrete 124,104,86 with lighter edges and moss tops): they are shown
+-- matte (SmoothPlastic) with a white MeshPart.Color so the vertex colours are not tinted. Both keys are Blender meshes with the wall at their back (-Y of
+-- the mesh = the Roblox +Z side): the layout yaw faces the front into the cave.
+Props.Matte = {
+    cave_form_slabs = true, cave_form_buttress = true, cave_form_ledge = true, cave_form_tumble = true, cave_form_fins = true, cave_form_terrace = true,
+    cave_gate_frame = true,
 }
 -- Glowing accents (no lights: lights are capped at CaveHubLayout.MaxLights): the mesh is shown with this material and a colour multiplier. Neon with
 -- the vertex colours kept (mushrooms) or the flat amber of the shop crystals. To turn a glow off set material = "SmoothPlastic".
@@ -99,6 +111,7 @@ Props.Glow = {
 Props.SinkFrac = {
     dress_rock_small = 0.3, dress_rock_mossy = 0.25, dress_rock_medium = 0.25, dress_log = 0.2, dress_stump = 0.12,
     dress_mushrooms = 0.12, dress_bush = 0.12, world_fern_a = 0.1, world_fern_b = 0.1, world_horsetail_a = 0.06, dress_crystal = 0.15,
+    cave_form_slabs = 0.04, cave_form_buttress = 0.04, cave_form_ledge = 0.05, cave_form_tumble = 0.05, cave_form_fins = 0.04, cave_form_terrace = 0.05, cave_gate_frame = 0,
 }
 -- cave_moss_hang placed on a wall jamb (a Rim piece): drapes from this many studs over the floor, facing the wall's own inward direction
 Props.HangBottom = 4.5

@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Rules = require(ReplicatedStorage.Shared.CaveLightingRules)
 local Layout = require(ReplicatedStorage.Shared.CaveHubLayout)
 local Assets = require(ReplicatedStorage.Shared.EffectAssets)
+local GeneratedMeshes = require(ReplicatedStorage.Shared.WorldGeneratedMeshes)
 local CaveLighting = {}
 
 local function c3(c: {number}): Color3 return Color3.fromRGB(c[1], c[2], c[3]) end
@@ -127,6 +128,12 @@ function CaveLighting.build(parent: Instance): Folder
     local count = 0
     for _, spec in data.lights do
         light(spec)
+        count += 1
+    end
+    -- BD-296: the one warm lantern light of the gate arch frame, only once that mesh's id is pasted (empty = today's cave, no extra light); 29 + 1 = the cap
+    local archSpec = Rules.archLight()
+    if archSpec and GeneratedMeshes.CaveForms.cave_gate_arch_v3.assetId ~= "" and count < Layout.MaxLights then
+        light(archSpec)
         count += 1
     end
     folder:SetAttribute("LightCount", count)

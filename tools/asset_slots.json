@@ -2223,6 +2223,97 @@
     "src/shared/PotionArt.luau",
     "AssetSlots"
    ]
+  },
+  {
+   "name": "cave_rockform_slabs_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "cave_rockform_slabs_v3",
+   "group": "CaveForms.cave_rockform_slabs_v3",
+   "table": "CaveForms",
+   "reader": [
+    "src/server/CaveProps.luau",
+    "GeneratedMeshes.CaveForms"
+   ]
+  },
+  {
+   "name": "cave_rockform_buttress_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "cave_rockform_buttress_v3",
+   "group": "CaveForms.cave_rockform_buttress_v3",
+   "table": "CaveForms",
+   "reader": [
+    "src/server/CaveProps.luau",
+    "GeneratedMeshes.CaveForms"
+   ]
+  },
+  {
+   "name": "cave_rockform_ledge_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "cave_rockform_ledge_v3",
+   "group": "CaveForms.cave_rockform_ledge_v3",
+   "table": "CaveForms",
+   "reader": [
+    "src/server/CaveProps.luau",
+    "GeneratedMeshes.CaveForms"
+   ]
+  },
+  {
+   "name": "cave_rockform_tumble_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "cave_rockform_tumble_v3",
+   "group": "CaveForms.cave_rockform_tumble_v3",
+   "table": "CaveForms",
+   "reader": [
+    "src/server/CaveProps.luau",
+    "GeneratedMeshes.CaveForms"
+   ]
+  },
+  {
+   "name": "cave_rockform_fins_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "cave_rockform_fins_v3",
+   "group": "CaveForms.cave_rockform_fins_v3",
+   "table": "CaveForms",
+   "reader": [
+    "src/server/CaveProps.luau",
+    "GeneratedMeshes.CaveForms"
+   ]
+  },
+  {
+   "name": "cave_rockform_terrace_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "cave_rockform_terrace_v3",
+   "group": "CaveForms.cave_rockform_terrace_v3",
+   "table": "CaveForms",
+   "reader": [
+    "src/server/CaveProps.luau",
+    "GeneratedMeshes.CaveForms"
+   ]
+  },
+  {
+   "name": "cave_gate_arch_v3",
+   "kind": "mesh",
+   "target": "worldmesh",
+   "file": "src/shared/WorldGeneratedMeshes.luau",
+   "key": "cave_gate_arch_v3",
+   "group": "CaveForms.cave_gate_arch_v3",
+   "table": "CaveForms",
+   "reader": [
+    "src/server/CaveProps.luau",
+    "GeneratedMeshes.CaveForms"
+   ]
   }
  ]
 }

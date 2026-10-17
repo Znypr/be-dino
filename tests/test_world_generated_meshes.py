@@ -114,6 +114,33 @@ class WorldGeneratedMeshTests(unittest.TestCase):
         self.check_prop_entries(entries, "BD-463")
         self.check_placement_gate()
 
+    def test_cave_forms_are_wired_but_unbound(self):
+        """BD-296: six cave wall rock forms and the gate arch frame live in their OWN table (the island never sees them), empty ids (not uploaded),
+        FBX + registry + slot rows exist, CaveProps resolves them through CaveHubProps.Slots, nothing places them while the id is empty."""
+        block = SRC.split("Generated.CaveForms = {")[1].split(END)[0]
+        entries = re.findall(r'^\s{4}(\w+) = \{assetId = "(\d*)", placed = false, tris = (\d+), size = \{([\d., ]+)\}\}', block, re.M)
+        self.assertEqual({e[0] for e in entries}, {"cave_rockform_slabs_v3", "cave_rockform_buttress_v3", "cave_rockform_ledge_v3", "cave_rockform_tumble_v3",
+                                                   "cave_rockform_fins_v3", "cave_rockform_terrace_v3", "cave_gate_arch_v3"})
+        slots = (ROOT / "tools/asset_slots.json").read_text()
+        props = (ROOT / "src/shared/CaveHubProps.luau").read_text()
+        for key, asset_id, tris, size in entries:
+            if asset_id:
+                self.assertRegex(asset_id, r"^[1-9][0-9]{8,17}$")
+                self.assertNotIn(asset_id, self.assets.values(), "cave form id duplicates a current generated id")
+            self.assertTrue((ROOT / f"assets/blender/world/fbx_v3/{key}.fbx").exists())
+            self.assertIn(key, REGISTRY)
+            self.assertIn(f'"name": "{key}"', slots)
+            self.assertIn(f'"table": "CaveForms"', slots)
+            self.assertIn(f'"{key}"', props.split("Props.Slots = {")[1].split("Props.Matte")[0], f"{key} is a CaveHubProps slot source")
+            self.assertIn(f"{tris} tris", block.split(f"{key} = ")[1].split(chr(10))[0], f"{key}: tris field and comment disagree")
+            dims = [float(v) for v in size.split(",")]
+            self.assertTrue(all(5 < d < 41 for d in dims), f"{key}: size {dims} is not a plausible cave form size in studs")
+        self.assertNotIn("CaveForms", (ROOT / "src/server/Arena.luau").read_text(), "the island never places the cave forms")
+        self.assertNotIn("CaveForms", (ROOT / "src/shared/BiomePlacement.luau").read_text())
+        server = (ROOT / "src/server/CaveProps.luau").read_text()
+        self.assertIn("GeneratedMeshes.CaveForms", server)
+        self.assertIn("Props.sourceFor(p.key, generated, kitKeys)", server)
+
     def check_placement_gate(self):
         bp = (ROOT / "src/shared/BiomePlacement.luau").read_text()
         arena = (ROOT / "src/server/Arena.luau").read_text()
