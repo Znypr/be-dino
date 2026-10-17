@@ -41,7 +41,6 @@ text, ok = P.upgradeButton(up, 3, 50) assert(text == "Need 120 Crystals" and ok 
 text, ok = P.upgradeButton(up, 3, 120) assert(text == "UPGRADE: 120 CRYSTALS" and ok == true)
 text, ok = P.upgradeButton(nil, 9, 0) assert(text == "MAX LEVEL" and ok == false)
 assert(P.upgradeHint(up, 1) ~= "Reach level 3 to buy this." and P.upgradeHint(up, 3) == "Ready to buy!" and P.upgradeHint(nil, 3) == "Top level reached")
-assert(P.ConditionsHeader:find("first 2 eggs are safe") and not P.ConditionsHeader:lower():find("tier"))
 
 -- BD-445 shop tabs and the no-crystals hint
 local function has(list, v) for _, x in list do if x == v then return true end end return false end

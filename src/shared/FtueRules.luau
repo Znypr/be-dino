@@ -6,8 +6,7 @@ local Rules = {}
 
 -- BD-365 (lead decision 2026-10-16): the first SafeEggs eggs a new profile gets are never Cracked ("safe"). After that the
 -- normal Cracked odds apply (owner target 50% at tier 0, docs/09). Derived from existing data: no new persistent field.
-Rules.SafeEggs = 2
-Rules.SafeEggsLine = "Your first 2 eggs are safe: they are never Cracked."
+Rules.SafeEggs = 2 -- same number as ProgressionConfig.SafeEggs (verify_ftue_rules); the player-facing line is OddsCopy.safeEggsLine
 
 local function copiesOf(entry: any): number
     if type(entry) ~= "table" then return 0 end
@@ -63,6 +62,15 @@ end
 -- How many of the NEXT eggs rolled for this profile must be non-Cracked. 0 for any veteran profile.
 function Rules.safeEggsLeft(profile: any): number
     return math.max(0, Rules.SafeEggs - Rules.hatchedEggs(profile) - Rules.waitingEggs(profile))
+end
+
+-- Client view of the same rule. The client does not hold recentOperations, so it uses what it can see: any copy beyond the
+-- starter Compy means an egg was already hatched (nothing left); otherwise the eggs in the line and the banked ones
+-- (ActiveChestCount, QueuedEggsWaiting) have already used the safe slots, exactly like waitingEggs above.
+-- Only run eggs are covered (ProfileRepository run settlement); shop and nest eggs roll the normal odds.
+function Rules.safeEggsLeftView(copies: number, activeEggs: number, waitingEggs: number): number
+    if copies > 1 then return 0 end
+    return math.max(0, Rules.SafeEggs - math.max(0, activeEggs) - math.max(0, waitingEggs))
 end
 
 -- Condition weights with Cracked removed (its weight set to 0); the other weights keep their proportions because the

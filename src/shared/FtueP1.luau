@@ -89,7 +89,7 @@ function P.upgradeHint(upgrade: any, level: number): string
     if level < upgrade.requiredLevel then return "Keep playing to level up!" end
     return "Ready to buy!"
 end
-P.ConditionsHeader = "Your first 2 eggs are safe: they are never Cracked."
+-- (BD-365: the "first eggs are safe" line is OddsCopy.safeEggsLine, shown only while it is true.)
 
 -- BD-374 Settings > Controls -----------------------------------------------------------------------------------------------
 -- Two short lines of keys (desktop) or touch controls (phone). Read from the real input code in Bootstrap

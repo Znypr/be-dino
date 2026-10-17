@@ -101,15 +101,18 @@ local sum = 0 for _, v in Ftue.withoutCracked(w, 1) do sum += v end
 assert(sum == rest and Ftue.withoutCracked(w, 1) ~= w and w[1] == 5000, "input table untouched")
 local pct = 0 for i = 2, 5 do pct += 100 * w[i] / rest end
 assert(math.abs(pct - 100) < 1e-9)
-assert(Progression.SafeEggs == Ftue.SafeEggs and Progression.SafeEggsLine == Ftue.SafeEggsLine)
-assert(Ftue.SafeEggs == 2 and Ftue.SafeEggsLine:find("first 2 eggs are safe"))
+assert(Progression.SafeEggs == Ftue.SafeEggs and Ftue.SafeEggs == 2, "one number, two modules that must agree")
+-- client view of the rule (BD-365): fresh = all safe eggs left; a hatched copy or waiting eggs use them up
+assert(Ftue.safeEggsLeftView(1, 0, 0) == 2 and Ftue.safeEggsLeftView(2, 0, 0) == 0 and Ftue.safeEggsLeftView(1, 1, 0) == 1)
+assert(Ftue.safeEggsLeftView(1, 40, 0) == 0 and Ftue.safeEggsLeftView(1, 0, 5) == 0 and Ftue.safeEggsLeftView(0, -3, -3) == 2)
+assert(Ftue.safeEggsLeftView(1, 0, 0) == Ftue.safeEggsLeft(brand()), "client view equals the server rule on a brand-new profile")
 
 -- BD-366 hint
 assert(Ftue.hint({running = true, hasFoundEgg = false}) == "Eat food to grow. Bigger dinos find eggs!")
 assert(Ftue.hint({running = true, hasFoundEgg = false, nearSpecialFood = true}) == "Look for a glowing egg!")
 assert(Ftue.hint({running = true, hasFoundEgg = true, nearSpecialFood = true}) == nil, "gone after the first egg")
 assert(Ftue.hint({running = false, hasFoundEgg = false}) == nil and Ftue.hint(nil) == nil)
-for _, line in {Ftue.HintGrow, Ftue.HintNear, Ftue.FoundText, Ftue.SafeEggsLine, Ftue.MenuChipText} do
+for _, line in {Ftue.HintGrow, Ftue.HintNear, Ftue.FoundText, Ftue.MenuChipText} do
     assert(not line:lower():find("catch") and not line:lower():find("bank") and not line:find("%dm") and not line:find("%dx"), line)
 end
 assert(#Ftue.HintGrow <= 44 and #Ftue.HintNear <= 30)
@@ -165,7 +168,7 @@ def static_checks():
     hud = (ROOT / 'src/client/HudV2.luau').read_text(encoding='utf-8')
     assert 'rbxassetid' not in hud and 'Ftue.sparkle(Theme.MotionEnabled)' in hud and 'Ftue.momentAllowed' in hud
     odds = (ROOT / 'src/shared/OddsCopy.luau').read_text(encoding='utf-8')
-    assert 'Progression.SafeEggsLine' in odds, 'the odds panel says the first eggs are safe'
+    assert 'Copy.safeEggsLine(safeLeft)' in odds, 'the odds panel says the first eggs are safe (tools/verify_safe_eggs_line.py)'
 
 
 if __name__ == '__main__':
