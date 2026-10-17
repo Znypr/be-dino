@@ -22,6 +22,9 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402  (docs/150: ProfileRepository plus its parts)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import verify_rewards  # noqa: E402  (the mocked DataStore + real ProfileRepository harness)
 
@@ -163,7 +166,7 @@ def check_wiring():
     boot = read('src/client/Bootstrap.client.luau')
     hud = read('src/client/HudV2.luau')
     core = read('src/shared/PrivateStateCore.luau')
-    repo = read('src/server/ProfileRepository.luau')
+    repo = profile_sources.repository_text()
     # BD-380: server publishes the buffered count, the client adds it at every call site.
     assert '"BufferedRevealCount"' in core, 'BufferedRevealCount must be a classified PrivateState name'
     assert 'PrivateState.set(player, "BufferedRevealCount"' in repo, 'the server publishes its reveal buffer size'

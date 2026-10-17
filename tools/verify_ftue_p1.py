@@ -6,6 +6,9 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402  (docs/150: ProfileRepository plus its parts)
 BODY = r'''
 -- BD-369 Eggs screen
 assert(P.waitingText(1, 0) == "Eggs waiting: 1", "a READY card is counted")
@@ -131,7 +134,7 @@ def check_wiring():
     hatch = read('src/client/HatchSequence.luau')
     hud = read('src/client/HudV2.luau')
     settings = read('src/client/SettingsMenu.luau')
-    server = read('src/server/ProfileRepository.luau')
+    server = profile_sources.repository_text()
     for needle, where, name in (
         ('Copy.waitingText', eggs, 'Eggs screen count'), ('Copy.NestLine', eggs, 'nest line'), ('Copy.crackedHintShown', eggs, 'cracked hint'),
         ('ctx.explore()', eggs, 'explore button'), ('Copy.hatchButtons', hatch, 'end buttons'), ('onAgain', hatch, 'try again'),

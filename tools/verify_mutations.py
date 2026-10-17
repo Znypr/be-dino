@@ -3,6 +3,9 @@ Runs the real ProgressionRules.eventEgg/validEgg and the real FoodService-style 
 from pathlib import Path
 import argparse,subprocess,tempfile
 ROOT=Path(__file__).resolve().parents[1]
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402  (docs/150: ProfileRepository plus its parts)
 def module(path):return '(function()\n'+(ROOT/path).read_text()+'\nend)()'
 def script():
  s='local ProgressionConfig='+module('src/shared/ProgressionConfig.luau')+'\n'
@@ -79,7 +82,7 @@ print("Event mutation audit passed: "..#ProgressionConfig.Weather.." weathers x 
 '''
  return s
 def scans():
-  tags=chr(10).join(l.split('--')[0] for l in (ROOT/'src/shared/RunEggTags.luau').read_text().splitlines());food=(ROOT/'src/server/FoodService.luau').read_text();repo=(ROOT/'src/server/ProfileRepository.luau').read_text()
+  tags=chr(10).join(l.split('--')[0] for l in (ROOT/'src/shared/RunEggTags.luau').read_text().splitlines());food=(ROOT/'src/server/FoodService.luau').read_text();repo=profile_sources.repository_text()
   assert 'RunEggTags.apply(' in food and 'RunEggTags.nextScore(' in food and 'eventEgg(' not in food,'FoodService must use the tested RunEggTags glue only'
   for word in ('condition','Cracked','genes','hatchSuccess'):
    assert word not in tags,'RunEggTags must not know the egg condition: '+word

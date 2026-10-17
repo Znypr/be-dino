@@ -12,6 +12,9 @@ import re
 import subprocess
 import tempfile
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402  (docs/150: ProfileRepository plus its parts)
 
 BODY = r'''
 local LEG = 5
@@ -96,7 +99,7 @@ def script():
 def scan():
     svc = (ROOT / 'src/server/RareHatchService.luau').read_text(encoding='utf-8')
     cli = (ROOT / 'src/client/RareHatchClient.client.luau').read_text(encoding='utf-8')
-    repo = (ROOT / 'src/server/ProfileRepository.luau').read_text(encoding='utf-8')
+    repo = profile_sources.repository_text()
     assert 'RareHatchService.record(player, committedOutcome)' in repo, 'publishHatch must hand the settled outcome to the service'
     assert 'OnServerEvent' not in svc, 'the RareHatch remote is server -> client only: never trust a client message'
     assert 'FireServer' not in cli, 'the client sends nothing'

@@ -31,6 +31,9 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import profile_sources  # noqa: E402  (docs/150: ProfileRepository plus its parts)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import release_profiles  # noqa: E402
 import verify_load  # noqa: E402
@@ -126,7 +129,7 @@ def build_harness(overrides: dict) -> str:
 def static_checks() -> list[str]:
     problems = []
     for rel, pattern, label in STATIC:
-        if not re.search(pattern, (ROOT / rel).read_text(encoding="utf-8")):
+        if not re.search(pattern, profile_sources.repository_text() if rel == "src/server/ProfileRepository.luau" else (ROOT / rel).read_text(encoding="utf-8")):
             problems.append(f"static: {label} ({rel})")
     return problems
 

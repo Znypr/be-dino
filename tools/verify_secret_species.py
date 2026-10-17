@@ -32,6 +32,7 @@ sys.path.insert(0, str(ROOT / 'tools'))
 import verify_rewards  # noqa: E402  (reuses the mocked-DataStore prefix)
 import verify_rollback  # noqa: E402  (the frozen Build 020 reader)
 import release_profiles  # noqa: E402
+import profile_sources  # noqa: E402
 
 # Hash of RewardMath.computeChestReward over seeds 1..400 x run sizes {1, 40, 120, 400} x 10 rolls, taken from the UNMODIFIED module
 # (origin/main 18a9d665) with the same harness. If this changes, the flag-off egg rolls are no longer identical to Build 020 as shipped.
@@ -43,7 +44,7 @@ def read(path):
 
 
 def module(path):
-    return '(function()\n' + read(path) + '\nend)()'
+    return profile_sources.module(path)  # docs/150: ProfileRepository plus the parts it installs
 
 
 # ---------------------------------------------------------------------------------------------------------------- part A
@@ -782,12 +783,12 @@ def static():
     need(any('Random.new(),1)' in c[2] for c in without), 'the crystal shop roll passes no origin')
 
     # SecretSpeciesConfig is required lazily on the server (never at the top of a module) and only behind the flag.
-    for path in ('src/server/RewardMath.luau', 'src/server/ProfileRepository.luau'):
+    for path in ['src/server/RewardMath.luau'] + profile_sources.files():
         text = read(path)
         need(not re.search(r'^local \w+ = require\(.*SecretSpeciesConfig\)', text, re.M), path + ' must not require SecretSpeciesConfig at module level')
     rm = read('src/server/RewardMath.luau')
     need('if origin ~= nil and Config.SecretSpeciesEnabled == true then' in rm, 'RewardMath hook is behind the flag')
-    repo = read('src/server/ProfileRepository.luau')
+    repo = profile_sources.repository_text()
     need('if Config.SecretSpeciesEnabled == true and outcome.secretSpeciesId ~= nil and not (chest.genes ~= nil and not chest.genes.hatchSuccess) then' in repo, 'the hatch hook is behind the flag and skips failed Cracked eggs')
     need('secretSpecies().resolve(outcome)' in repo, 'the hatch asks resolve (the model gate)')
     need('Config.SpeciesRarities[outcome.speciesId] or 0' in repo, 'a secret species never raises metrics.rarest')
