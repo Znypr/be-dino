@@ -338,6 +338,15 @@ Pure code, not wired: `HitSize.capsule(species, scale)` returns `(radius, halfSp
 - BD-532 (Review / test): `Shared/PaidRandomGate`, the `ProfileRepository` call, the Bootstrap shop Eggs and Conditions tabs, `ShopTiles.info` and `ShopArt.subtitle`, `tools/verify_paid_random_gate.py` (CI). Studio: the egg tile at 836 x 390 in [evidence](evidence/2026-10-17-phone-fit/README.md) (pictures pending the Studio window).
 - Not changed: `PaidRandomItemsEnabled` (false), `DeveloperProducts`, the server refusal and its copy, `FusionService` and its own `random_items_unavailable` path. Opening the gate later (a release decision with the PolicyService disclosure work) turns the tile green again with no code change.
 
+## LEAD decision 2026-10-17 (owner delegated 2026-10-16): the Random Egg BUY tile in the playtest (BD-532)
+| # | Decision | Why | Source |
+|---|---|---|---|
+| EG1 | **LEAD (owner delegated 2026-10-16):** the paid-random policy gate is NOT loosened. `ProfileRepository.progressionAction` keeps refusing `buyEgg` and `upgradeCondition` with `random_items_unavailable` while `Config.DeveloperProducts` is non-empty and (`PaidRandomItemsEnabled` is off or the player is not `PaidRandomEligible`). The defect was only that the client showed a green BUY EGG that can never succeed (the playtest always answers "Not available yet" after the tap). When the gate would refuse, the tile is shown as clearly unavailable BEFORE the tap: grey, "Coming soon" (docs/72 copy), no confirm and no tap to waste; the Shop landing tile for Eggs says "Coming soon" instead of the price, and the Conditions upgrade button (same server gate) is grey "Coming soon" too. The client uses the same rule as the server through ONE pure function, `Shared/PaidRandomGate` (`blocked(developerProducts, enabled, eligible)`, `guards(action)`); the server and the client both call it, no copy of the rule remains. | Roblox treats a random item that costs crystals as a paid random item while the experience sells Robux products; AGENTS.md says never enable Robux packs or loosen the paid-random gate. Lead decision (owner delegated), may be overruled. | BD-532, docs/121, [verify_paid_random_gate.py](../tools/verify_paid_random_gate.py) |
+
+### Task effects (2026-10-17, Random Egg tile)
+- BD-532 (Review / test): `Shared/PaidRandomGate`, the `ProfileRepository` call, the Bootstrap shop Eggs and Conditions tabs, `ShopTiles.info` and `ShopArt.subtitle`, `tools/verify_paid_random_gate.py` (CI). Studio: the egg tile at 836 x 390 in [evidence](evidence/2026-10-17-phone-fit/README.md) (pictures pending the Studio window).
+- Not changed: `PaidRandomItemsEnabled` (false), `DeveloperProducts`, the server refusal and its copy, `FusionService` and its own `random_items_unavailable` path. Opening the gate later (a release decision with the PolicyService disclosure work) turns the tile green again with no code change.
+
 ## LEAD decision (owner delegated 2026-10-16) on 2026-10-17: BIG dinosaurs and the camera distance cap (BD-513)
 | # | Decision | Why | Source |
 |---|---|---|---|
