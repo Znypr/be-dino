@@ -32,7 +32,7 @@ def main():
     for b in bad:
         print("FAIL:", b)
     if bad:
-        print("Pick a free number: check origin/main AND open PR branches (AGENTS.md 'Picking numbers').")
+        print("Pick a free number with `python tools/next_bd_id.py` (BD id) or `python tools/next_bd_id.py --doc` (docs/NN); see AGENTS.md 'Picking numbers'.")
         return 1
     print("doc ids ok: %d prefixes, %d BD ids" % (len(by), len(ids)))
     return 0
