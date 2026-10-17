@@ -177,3 +177,8 @@ The owner delegated these on 2026-10-16: "just merge, take full autonomy, do dec
 - Done with "evidence: decisions recorded in docs/115 LEAD decisions 2026-10-16": BD-450 (gifting), BD-454 (skins), BD-470 (giant dinos).
 - Priorities: BD-224 and BD-455 P1 -> P2 (no skin can be sold in session 1, the P1 backlog is already 30 rows; BD-455 still goes first when a generator slot is free). BD-453 now also depends on BD-459. BD-471, BD-473 stay P2; BD-472, BD-474 to BD-478 stay P3 (reasons in docs/139 s15). BD-451, BD-452 stay P2, BD-456 to BD-458 P2, BD-459 P3.
 - Not decided here: docs/116 Q1, Q4, Q6, Q7, Q9, Q10 (price already 500), Q11, Q12 and the PROVISIONAL numbers (prices, Robux amounts) stay open.
+
+## 2026-10-17 (fused tier look BENCHED)
+- OWNER 2026-10-17: after walking the Studio test (v2 edge-glow coats, emissive strength 6, plus a live Neon halo + bloom test): "it looks like a plastic shell, not a metal gloss effect. bench for now. do something else." The tier look is BENCHED; PR #291 (tier-shiny) stays open and unmerged.
+- State at bench: build-time SurfaceAppearance templates (21, raptor gold/emerald/diamond v2 maps uploaded), per-tier roughness, warm gold tint, emissive edge glow. Owner liked: colours and pattern preserved perfectly. Owner disliked: plastic-shell read, weak reflections, hard part-seam bands, no soft blurry glow like the 4-panel reference.
+- Untested ideas for when it resumes: real metal/roughness maps viewed at max graphics quality (Studio ran at quality 1 throughout), a soft halo (Neon inflated hull + bloom; live test softened stripes), silhouette-only edge glow (no seams between parts), crystal facet highlights. The gold metalness bake agent was stopped mid-way.
