@@ -362,6 +362,8 @@ if SCENARIO == "overlap" then plate.AbsolutePosition = Vector2.new(30, 590) feed
 fusionGui = new("ScreenGui", "BeDinoFusionUI", player.PlayerGui, {Enabled = false, AbsoluteSize = Vector2.new(1280, 684)})
 local fpanel = box("Frame", "FusionPanel", fusionGui, 216, 30, 1000, 600)
 for _, n in {"Browse", "Ingredients", "ResultColumn"} do box("Frame", n, fpanel, 220, 40, 300, 500) end
+local fusionX = box("TextButton", "X", fusionGui, 1150, 30, 56, 48, {Text = "X", ZIndex = 5}) -- the real menu has a TextButton "X" (BD-541 run: module close() is a different instance)
+fusionX.tap = function() fusionGui.Enabled = false end
 
 local modal
 local function mtext(text, x, y, w, h, name, props) local o = box("TextLabel", name or "T", scrim, x, y, w, h, props or {}) o.Text = text o.ZIndex = 30 return o end
