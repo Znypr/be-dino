@@ -1505,9 +1505,11 @@ RunService.RenderStepped:Connect(function(dt)
     else
         humanoid.AutoRotate=true
     end
-    local target=((character :: Model):GetAttribute("VisualScale") or 1)-1
+    -- BD-500: the aim lift follows the dinosaur's REAL height (the measured model box, Shared/CameraFraming), not only its growth step;
+    -- a Compy gets exactly the old 2 x (scale - 1). cameraLift is in studs now.
+    local target=require(script.Parent.CameraFit).lift(character :: Model)
     cameraLift+=(target-cameraLift)*(1-math.exp(-dt*Config.CameraLiftSharpness))
-    cameraLiftY=cameraLift*2
+    cameraLiftY=cameraLift
 end)
 -- BD-164: terrain bumps move the root ~1 stud per step and the camera followed it 1:1 (rattle). Low-pass only the vertical
 -- follow (Config.CameraVerticalSmoothing); horizontal follow is untouched (no steering lag). Runs just before the
@@ -1552,7 +1554,8 @@ RunService.Heartbeat:Connect(function(dt)
     actionPadding.PaddingRight=UDim.new(0,6)
     if active=="exit" and state~="Active" then close() end
     if character then
-        player.CameraMinZoomDistance=Config.CameraMinZoom*(character:GetAttribute("VisualScale") or 1)
+        -- BD-500: the minimum zoom frames the real model size (height and length), never closer than the old 12 x growth scale.
+        player.CameraMinZoomDistance=require(script.Parent.CameraFit).minZoom(Config.CameraMinZoom,character)
     end
     if state~=lastRunState then
         if lastRunState=="Sanctuary" and state=="Active" then Sfx.play("run_start") elseif lastRunState=="Active" and state=="Sanctuary" then Sfx.playCue("run_end") end
