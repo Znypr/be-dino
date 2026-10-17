@@ -322,6 +322,19 @@ return table.freeze({
     MovementGuardSpeedTolerance = 3,
     MovementGuardBurstStuds = 4,
     MovementGuardRejectCooldownSeconds = 0.75,
+    -- BD-611 sliding displacement window (shared/MovementWindow.luau; MovementGuard, food pickup and crystal pickup). Over every span S <= WindowSeconds
+    -- a character may cover at most  limit x WindowSpeedFactor x (S + WindowJitterSeconds) + WindowSlackStuds  studs (limit = MovementSpeedLimit or
+    -- WalkSpeed, the peak over the window plus LimitHoldSeconds). The per-tick tolerance above still catches teleports; this catches SUSTAINED speed.
+    -- PROVISIONAL and OFFLINE-derived (docs/151 section 5, tools/verify_movement_speed.py): SpeedFactor 1.4 = the 1.3 JumpForwardCarry (client JumpCarry,
+    -- the fastest honest sustained horizontal speed) plus 8% headroom; JitterSeconds 0.3 = how stale a replicated position may be against a fresh one; SlackStuds
+    -- = collision push-out and terrain steps; LimitHoldSeconds = a lowered WalkSpeed (potion over) reaches the client late. The jitter and the slack are
+    -- NOT measured yet (needs a second Studio client, BD-611 acceptance). A rollback goes to the oldest trusted sample of the window, so a speed cheat gains nothing.
+    MovementGuardWindowEnabled = true,
+    MovementGuardWindowSeconds = 2,
+    MovementGuardWindowSpeedFactor = 1.4,
+    MovementGuardWindowJitterSeconds = 0.3,
+    MovementGuardWindowSlackStuds = 6,
+    MovementGuardLimitHoldSeconds = 0.5,
     -- BD-210 spawn safety: a run only starts once this client reports the island terrain under the spawn as loaded
     -- (or after this many seconds in the hub, so a slow client is never locked out); falls are checked every tick.
     WorldReadyTimeoutSeconds = 20,

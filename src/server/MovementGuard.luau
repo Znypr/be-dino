@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local MovementEnvelope = require(ReplicatedStorage.Shared.MovementEnvelope)
+local MovementWindow = require(ReplicatedStorage.Shared.MovementWindow)
 local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local SpawnGeometry = require(ReplicatedStorage.Shared.SpawnGeometry)
 
@@ -17,6 +18,7 @@ local states: {[Player]: {
     position: Vector3,
     sampleAt: number,
     blockedUntil: number,
+    window: MovementWindow.Window, -- BD-611: sliding displacement budget (sustained speed), see shared/MovementWindow.luau
 }} = {}
 local started = false
 
@@ -64,7 +66,9 @@ function MovementGuard.start()
                         position = root.Position,
                         sampleAt = now,
                         blockedUntil = now + Config.MovementGuardTickSeconds,
+                        window = MovementWindow.new(),
                     }
+                    MovementWindow.push(states[player].window, now, root.Position, character:GetAttribute("MovementSpeedLimit") or humanoid.WalkSpeed, root.CFrame)
                     player:SetAttribute("MovementSecurityStatus", "WARMUP")
                     local rejectedAt = rejects.last(player.UserId, "reject")
                     if now - rejectedAt < Config.MovementGuardRejectCooldownSeconds then -- rejoined right after a rejection
@@ -76,11 +80,24 @@ function MovementGuard.start()
                 local dt = math.max(now - state.sampleAt, Config.MovementGuardTickSeconds * 0.5)
                 -- Same envelope as the Humanoid: walk speed (incl. potions/trails/leap limit),
                 -- slope climb rate up to MaxSlopeAngle, jumps and falls (BD-053).
-                if not MovementEnvelope.plausible(root.Position - state.position, dt, Config.MovementGuardSpeedTolerance, Config.MovementGuardBurstStuds, root.AssemblyLinearVelocity.Y, character:GetAttribute("MovementSpeedLimit") or humanoid.WalkSpeed) then
+                local limit = character:GetAttribute("MovementSpeedLimit") or humanoid.WalkSpeed
+                local rollback: CFrame? = nil
+                if not MovementEnvelope.plausible(root.Position - state.position, dt, Config.MovementGuardSpeedTolerance, Config.MovementGuardBurstStuds, root.AssemblyLinearVelocity.Y, limit) then
+                    rollback = state.cframe -- a teleport-sized step: back to the last trusted baseline
+                else
+                    -- BD-611: a step that is fine on its own can still be too fast for the last two seconds. The cheater goes back to where the window began.
+                    local ok, target = MovementWindow.push(state.window, now, root.Position, limit, root.CFrame)
+                    if not ok and typeof(target) == "CFrame" then rollback = target end
+                end
+                if rollback then
                     -- Server correction: never promote the impossible location to the trusted baseline.
-                    root.CFrame = state.cframe
+                    root.CFrame = rollback
                     root.AssemblyLinearVelocity = Vector3.zero
                     root.AssemblyAngularVelocity = Vector3.zero
+                    state.cframe = rollback
+                    state.position = rollback.Position
+                    MovementWindow.reset(state.window)
+                    MovementWindow.push(state.window, now, rollback.Position, limit, rollback)
                     state.sampleAt = now
                     state.blockedUntil = now + Config.MovementGuardRejectCooldownSeconds
                     rejects.mark(player.UserId, "reject", now)

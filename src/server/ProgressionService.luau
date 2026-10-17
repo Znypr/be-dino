@@ -7,6 +7,7 @@ local Config=require(ReplicatedStorage.Shared.ProgressionConfig)
 local Rules=require(ReplicatedStorage.Shared.ProgressionRules)
 local Resources=require(ReplicatedStorage.Shared.ResourceModels)
 local MovementEnvelope=require(ReplicatedStorage.Shared.MovementEnvelope)
+local MovementWindow=require(ReplicatedStorage.Shared.MovementWindow)
 local GameConfig=require(ReplicatedStorage.Shared.Config)
 local ClassMovement=require(ReplicatedStorage.Shared.ClassMovement)
 local ColourBonus=require(ReplicatedStorage.Shared.ColourBonus)
@@ -108,7 +109,8 @@ local function crystalSpawns(repository)
     end
     workspace:SetAttribute("CrystalPickupCount",#entries)
     local previous={}
-    Players.PlayerRemoving:Connect(function(p) previous[p]=nil end)
+    local windows={} -- BD-611: per-player sliding displacement window (sustained speed)
+    Players.PlayerRemoving:Connect(function(p) previous[p]=nil windows[p]=nil end)
     task.spawn(function()
         while true do
             task.wait(.25)
@@ -120,10 +122,14 @@ local function crystalSpawns(repository)
                 local h=if c then c:FindFirstChildOfClass("Humanoid") else nil
                 if c and root and root:IsA("BasePart") and h and h.Health>0 and c:GetAttribute("RunState")=="Active" then
                     local last=previous[player]
-                    if last and last.character==c and MovementEnvelope.plausible(root.Position-last.position,now-last.time,2,2,root.AssemblyLinearVelocity.Y,c:GetAttribute("MovementSpeedLimit") or h.WalkSpeed)
-                        and player:GetAttribute("MovementSecurityStatus")=="OK" and repository.isLoaded(player) then eligible[player]=true end
+                    local limit=c:GetAttribute("MovementSpeedLimit") or h.WalkSpeed
+                    local stepOk=last and last.character==c and MovementEnvelope.plausible(root.Position-last.position,now-last.time,2,2,root.AssemblyLinearVelocity.Y,limit)
+                    local window=windows[player]
+                    if not window or not stepOk then window=MovementWindow.new() windows[player]=window end -- a teleport or a new character starts a new window
+                    local windowOk=MovementWindow.push(window,now,root.Position,limit) -- BD-611: sustained speed over the last seconds
+                    if stepOk and windowOk and player:GetAttribute("MovementSecurityStatus")=="OK" and repository.isLoaded(player) then eligible[player]=true end
                     previous[player]={character=c,position=root.Position,time=now}
-                else previous[player]=nil end
+                else previous[player]=nil windows[player]=nil end
             end
             for _,entry in entries do
                 if entry.busy then continue end
