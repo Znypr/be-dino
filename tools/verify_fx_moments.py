@@ -773,7 +773,7 @@ def rare_script():
 def rig_script():
     mods = load_mods([('FxRecipes', 'src/shared/FxRecipes.luau', None), ('EffectAssets', 'src/shared/EffectAssets.luau', None),
                       ('AssetSlots', 'src/shared/AssetSlots.luau', None), ('EffectsLod', 'src/shared/EffectsLod.luau', None),
-                      ('MutationLook', 'src/shared/MutationLook.luau', None)])
+                      ('MutationLook', 'src/shared/MutationLook.luau', None), ('PhoneGuards', 'src/shared/PhoneGuards.luau', None)])
     return INST + RIG.replace('--@@MODS', mods).replace('--@@RIGSRC', src('src/client/FxRig.luau'))
 
 

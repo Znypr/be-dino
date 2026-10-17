@@ -65,7 +65,7 @@ end
 for _, id in {"volcano", "quake", "rain", "thunder", "bloodmoon", "aurora"} do assert(W.Looks[id].fogStart >= 40, id .. " keeps 40 studs clear") end
 assert(W.Looks.volcano.fog[1] <= 170 and W.Looks.volcano.sat <= .3 and W.Looks.volcano.bloom <= .7, "volcano is a brown-orange haze, not a red wall")
 assert(W.Looks.volcano.density <= .45 and W.Looks.quake.density <= .5 and W.Looks.blizzard.density <= .85, "atmosphere density stays readable")
--- phone density halves every rate, so the phone budget is half
+-- phone density was .5 (halved every rate) and is .25 since BD-497 (src/shared/PhoneGuards.luau, tools/verify_phone_guards.py); the half-budget check below is the looser, older bound
 for _, id in IDS do local c = W.concurrent(id) assert(c * .5 <= W.Budget.concurrent / 2) end
 assert(W.Budget.bolts >= 3 and W.Budget.bombs >= 5 and W.Budget.beams <= 160)
 -- earthquake v2 (owner 2026-10-15): a world event, not an aura. No falling rubble streaks; capped, pooled cracks away from the dino
@@ -89,14 +89,14 @@ assert(W.Aurora.baseY <= 0 and W.Aurora.alpha <= .65 and W.Aurora.horizonGlow >=
 assert(W.Rigs.aurora.bank.rate >= 12, "aurora horizon band")
 assert(W.Quake.feetPuff >= 4 and W.Quake.feetPuffPhone >= 2 and W.Quake.decalAhead[1] >= 6 and W.Quake.decalAhead[2] < W.Quake.minDist, "quake puff at the feet, decal close and in front")
 assert(W.Quake.shake <= .3, "tiny camera shake")
--- BD-349: emitted rate and steady-state concurrent particles per Weather level (Full 1, Lite .5, Off 0) and device (phone .5 of desktop)
+-- BD-349: emitted rate and steady-state concurrent particles per Weather level (Full 1, Lite .5, Off 0) and device (phone .25 of desktop since BD-497; .5 before)
 local LEVEL = {full = 1, lite = .5, off = 0}
 for _, id in IDS do
     local c = W.concurrent(id)
     for level, f in LEVEL do
         assert(c * f <= W.Budget.concurrent and c * f * .5 <= W.Budget.concurrent / 2, id .. " " .. level .. " within budget")
     end
-    print(("weather particles %-9s desktop full %5d lite %5d off 0 | phone full %5d lite %5d"):format(id, c, c * .5, c * .5, c * .25))
+    print(("weather particles %-9s desktop full %5d lite %5d off 0 | phone full %5d lite %5d"):format(id, c, c * .5, c * .25, c * .125))
 end
 -- aurora: palette loops, stays bright, passes through green, teal, violet and magenta, and cycles in 20..30 s
 assert(W.AuroraPeriod >= 20 and W.AuroraPeriod <= 30)
