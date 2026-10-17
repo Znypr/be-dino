@@ -9,7 +9,7 @@ others add ONE feature, the last adds all of them. Everything but the Config ove
 every variant, so a difference is the feature. Numbers are averaged over the seeds and printed per minute for the whole server.
 
 What it measures (offline, virtual time):
-  * DataStore UpdateAsync requests on the profile key (loads, renews, settlements, hatch pages, purchases, objective flushes);
+  * DataStore UpdateAsync requests on the profile key (loads, renews, settlements, hatch pages, purchases; objectives ride the renew since BD-625);
   * repository calls ("ops"): every call a remote or a server loop makes into ProfileRepository, the closest offline number to
     "remotes per minute" (the harness has no RemoteEvent layer);
   * the share of the per-server budget used at the peak 60 s window.
@@ -50,7 +50,7 @@ def variants() -> list[tuple[str, dict, dict, str]]:
     burst = {"duration": 1200, "catchesPerMinute": 100}  # egg-burst-400-x12 of verify_load: 400-egg hatches at once
     return [
         ("playtest (base)", with_({}), {}, "the profile the friends would get"),
-        ("+ObjectivesEnabled", with_({"ObjectivesEnabled": True}), {}, "food/run/hatch events queue in memory, one flush per 30 s while the queue is not empty"),
+        ("+ObjectivesEnabled", with_({"ObjectivesEnabled": True}), {}, "food/run/hatch events queue in memory and ride the lease renew write (BD-625); no write of their own"),
         ("+gifts (3 flags)", with_(gifts), {}, "harness cannot run GiftService; see the derived Gifts-store reads below"),
         ("+PerDinoCosmeticsEnabled", with_({"PerDinoCosmeticsEnabled": True}), {}, "same purchase write as the account-wide one"),
         ("+FastTravelPerk+CaveHub", with_({"FastTravelPerk": True, "CaveHub": True}), {}, "one buyPerk write per player, ever (harness does not buy it)"),

@@ -874,6 +874,25 @@ local function objectiveRules(): any
     return require(ReplicatedStorage.Shared.ObjectiveRules)
 end
 
+-- The queued batch leaves memory only inside a transaction that commits it (flush, claim, lease renew, lease release). BD-625: the
+-- lease renew carries it, so objectives cost no write of their own.
+local function takeObjectiveBatch(player: Player): {any}
+    local batch = objectivePending[player] or {}
+    objectivePending[player] = {}
+    return batch
+end
+
+-- A batch that did not commit goes back in FRONT of whatever queued meanwhile. A player who left (release cleared the queue) drops it.
+local function requeueObjectiveBatch(player: Player, batch: {any})
+    local live = objectivePending[player]
+    if live == nil then return end
+    local rules = objectiveRules()
+    local merged: {any} = {}
+    for _, event in batch do rules.queue(merged, event) end
+    for _, event in live do rules.queue(merged, event) end
+    objectivePending[player] = merged
+end
+
 -- BD-359: retry the settlement that exhausted its window. Called by the renew tick; one at a time per player.
 -- Two attempts per tick keep a long outage from adding more than ~2 requests / 30 s per stuck player. Returns true when nothing
 -- is pending any more.
@@ -923,11 +942,25 @@ function ProfileRepository.renew(player: Player): boolean
     if not profiles[player] or (state ~= "Loaded" and state ~= "SaveFailed") then return false end
     local leaseLost = false
     local now = os.time()
+    -- BD-625: while ObjectivesEnabled, the queued objective progress is committed by THIS write (no separate flush request).
+    -- Flag off or nothing queued: batch stays nil and the transform below is exactly the old one (profile bytes unchanged).
+    local queuedObjectives = if Config.ObjectivesEnabled == true then objectivePending[player] else nil
+    local batch: {any}? = nil
+    local batchId: string? = nil
+    if queuedObjectives ~= nil and #queuedObjectives > 0 then
+        batch = takeObjectiveBatch(player)
+        batchId = HttpService:GenerateGUID(false)
+    end
     local ok, updated = retry("lease renew", function()
         return store:UpdateAsync(keyFor(player), function(profileValue)
             if not isValidProfile(profileValue) or not ownSession(profileValue) then
                 leaseLost = true
                 return nil
+            end
+            if batch ~= nil then
+                -- A rules bug or a newer build's objectives field must never block the lease renew: applyToProfile only assigns on
+                -- success, pcall absorbs a throw (the batch is then dropped like a "newer_version" one, never retried forever).
+                pcall(function() objectiveRules().applyToProfile(profileValue, batch :: {any}, now, batchId) end)
             end
             profileValue.session.expiresAt = now + Config.ProfileLeaseSeconds
             local since = profileValue.session.metricsAt or now
@@ -938,6 +971,7 @@ function ProfileRepository.renew(player: Player): boolean
         end)
     end)
     if not ok or updated == nil then
+        if batch ~= nil then requeueObjectiveBatch(player, batch) end -- not committed: the next renew (or the release) carries it
         if leaseLost then handleLeaseLost(player) else player:SetAttribute("ProfileState", "SaveFailed") end
         return false
     end
@@ -1048,6 +1082,7 @@ local shared = {
     profiles = profiles,
     recordSettledRun = recordSettledRun,
     refillFromBank = refillFromBank,
+    requeueObjectiveBatch = requeueObjectiveBatch,
     retry = retry,
     retrySettlement = retrySettlement,
     revealBuffer = revealBuffer,
@@ -1055,6 +1090,7 @@ local shared = {
     settlementStats = settlementStats,
     store = store,
     syncAttributes = syncAttributes,
+    takeObjectiveBatch = takeObjectiveBatch,
     takePrefSeq = takePrefSeq,
     trimOperations = trimOperations,
 }

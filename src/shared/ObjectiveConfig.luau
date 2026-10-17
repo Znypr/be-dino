@@ -56,7 +56,6 @@ return table.freeze({
     -- Bounded state.
     SeenMax = 48, -- remembered event ids (egg:<outcomeId>, run:<runId>) so a replayed event never counts twice
     PendingMax = 64, -- server-side unflushed events per player
-    FlushSeconds = 30, -- service flush cadence; claim and lease release flush too
     ClaimTokenMax = 80,
     -- OB1 (docs/115, LEAD decision, owner may overrule): a run counts for the run objectives (T2, S3, D2) only when it lasted at
     -- least RunMinSeconds and ate at least RunMinFood. Three instant runs must not finish "Finish 3 runs". PROVISIONAL numbers.
