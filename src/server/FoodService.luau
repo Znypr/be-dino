@@ -8,6 +8,7 @@ local Layout = require(ReplicatedStorage.Shared.IslandLayout)
 local FoodCatchRules = require(ReplicatedStorage.Shared.FoodCatchRules)
 local PointGrid = require(ReplicatedStorage.Shared.PointGrid) -- BD-361: pickups are found per player through a grid, not by scanning every food
 local SpecialFoods = require(ReplicatedStorage.Shared.SpecialFoods) -- BD-207 (flag off by default)
+local ScaleLadder = require(ReplicatedStorage.Shared.ScaleLadder) -- BD-407: food sizes in studs live in the one scale ladder
 local RunEggTags = require(ReplicatedStorage.Shared.RunEggTags) -- BD-236: pure catch-time tag glue (tested)
 local AdminMutationScale = require(ReplicatedStorage.Shared.AdminMutationScale) -- BD-237: per-player admin Mutation chance (docs/115)
 local RunLifecycle = require(script.Parent.RunLifecycle) -- BD-479
@@ -27,10 +28,10 @@ function FoodService.clearAdminMutationMultiplier(player: Player) AdminMutationS
 function FoodService.clearAllAdminMutationMultipliers() AdminMutationScale.clearAll(adminMutationScales) end
 function FoodService.adminMutationScale(player: Player): number return AdminMutationScale.get(adminMutationScales, player) end
 local TYPES = {
-    {id = "berry", weight = 70, points = 1, size = 0.7, color = Color3.fromRGB(224, 99, 118)},
-    {id = "fruit", weight = 20, points = 4, size = 1.0, color = Color3.fromRGB(244, 186, 83)},
-    {id = "egg", weight = 7, points = 15, size = 1.3, color = Color3.fromRGB(245, 230, 187)},
-    {id = "amber", weight = 3, points = 50, size = 1.5, color = Color3.fromRGB(255, 219, 139)},
+    {id = "berry", weight = 70, points = 1, size = ScaleLadder.Food.berry.size, color = Color3.fromRGB(224, 99, 118)},
+    {id = "fruit", weight = 20, points = 4, size = ScaleLadder.Food.fruit.size, color = Color3.fromRGB(244, 186, 83)},
+    {id = "egg", weight = 7, points = 15, size = ScaleLadder.Food.egg.size, color = Color3.fromRGB(245, 230, 187)},
+    {id = "amber", weight = 3, points = 50, size = ScaleLadder.Food.amber.size, color = Color3.fromRGB(255, 219, 139)},
 }
 function FoodService.start(dinosaur,repository)
     workspace:SetAttribute("FoodSpawnStatus", "Building")
@@ -145,7 +146,7 @@ function FoodService.start(dinosaur,repository)
                     end
                     if mesh then
                         mesh.Parent = nil
-                        mesh.Size *= kind.size * (if mesh:GetAttribute("Drumstick") then 1.45 else 1) * random:NextNumber(.86, 1.16) / math.max(mesh.Size.X, mesh.Size.Y, mesh.Size.Z) -- natural size variety
+                        mesh.Size *= kind.size * (if mesh:GetAttribute("Drumstick") then ScaleLadder.Food.drumstickScale else 1) * random:NextNumber(ScaleLadder.Food.variety[1], ScaleLadder.Food.variety[2]) / math.max(mesh.Size.X, mesh.Size.Y, mesh.Size.Z) -- natural size variety
                         mesh.CFrame = CFrame.Angles(0, random:NextNumber(0, math.pi * 2), 0)
                         mesh.Name = kind.id
                         mesh.Color = Color3.new(1, 1, 1)
