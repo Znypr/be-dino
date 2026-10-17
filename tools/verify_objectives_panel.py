@@ -153,10 +153,22 @@ def static_errors() -> list[str]:
         errors.append('TouchLayout.OBJECTIVES.h (the header button) must be >= 44')
     elif int(o.group(4)) < 44 + 4:
         errors.append('TouchLayout.OBJECTIVES.rowH must hold a 44 px CLAIM button')
-    claim_size = re.search(r'UDim2\.fromOffset\(CLAIM_W, (\d+)\)', panel)
+    claim_size = re.search(r'^local CLAIM_H = (\d+)', panel, re.M)
     claim_w = re.search(r'^local CLAIM_W = (\d+)', panel, re.M)
     if not claim_size or int(claim_size.group(1)) < 44 or not claim_w or int(claim_w.group(1)) < 44:
         errors.append('ObjectivesPanel: the CLAIM button is >= 44 x 44')
+    # --- BD-075 row layout (docs/66 s18): fixed row height, gap 4..6 px, a divider in the UITheme card colour, CLAIM centred in its row ------
+    gaps = re.search(r'rowGap = (\d+)\}', layout)
+    if not gaps or not 4 <= int(gaps.group(1)) <= 6:
+        errors.append('TouchLayout.OBJECTIVES.rowGap must be 4..6 px')
+    if '(O.rows - 1) * O.rowGap' not in layout:
+        errors.append('TouchLayout.objectivesOpenH must count the row gaps')
+    if 'divider.Name, divider.BackgroundColor3, divider.BorderSizePixel, divider.ZIndex = "Divider", C.card, 0, body.ZIndex' not in panel:
+        errors.append('ObjectivesPanel: each row has a Divider in the UITheme card colour (no art)')
+    if '(ROW_H - CLAIM_H) / 2' not in panel:
+        errors.append('ObjectivesPanel: CLAIM is vertically centred in its row ((ROW_H - CLAIM_H) / 2)')
+    if 'C.text:Lerp(C.card' not in panel:
+        errors.append('ObjectivesPanel: the row note uses UITheme colours only (text toned toward card)')
     if 'UIScale' in panel:
         errors.append('ObjectivesPanel is drawn 1:1 (no UIScale): text and buttons keep their real pixel size')
 
@@ -435,7 +447,7 @@ local Rect_ = {new = function(x0, y0, x1, y1) return {__type = "Rect", Min = {X 
 local function typeof(v) if type(v) == "table" and rawget(v, "__type") then return v.__type end return type(v) end
 local task_ = {spawn = function(fn, ...) table.insert(tasks, {fn, ...}) end, delay = function(_, fn) table.insert(tasks, {fn}) end}
 local os_ = {clock = function() return clockNow end}
-local Colors = {panel = "panel", card = "card", gold = "gold", accent = "accent", text = "text", outline = "outline", red = "red"}
+local Colors = {panel = "panel", card = "card", gold = "gold", accent = "accent", text = setmetatable({}, {__index = {Lerp = function() return "muted" end}}), outline = "outline", red = "red"}
 modules.UITheme = {Colors = Colors, decorate = function() end, TextStyle = {apply = function() end},
  icon = function(parent, id) local f = newInstance("Frame") f.Name = "Icon_" .. id f.Parent = parent return f end,
  animate = function(target, _, goals) for k, v in goals do target[k] = v end end}
@@ -636,6 +648,124 @@ assert(Panel.goalLine(fitHub) == nil, "PLAY line on screen: an unfinished T8 giv
 Panel.setPlayActive(false)
 assert(Panel.goalLine({width = 600, font = 17, prefix = ""}).text == "Collect a second species" and Panel.goalLine({width = 200, font = 17, prefix = ""}).text == "Collect a second...", Panel.goalLine({width = 200, font = 17, prefix = ""}).text)
 -- the server says disabled / failing: the panel stays out of the way
+---------------------------------------------------------------- 7. row layout: no text rect overlaps another (1..3 rows, with and without CLAIM and a note)
+-- The mock has no layout engine, so the rects are computed from Position / Size / AnchorPoint exactly as Roblox does for UDim2 (offset + scale of the
+-- parent), for a visible label, button or progress bar inside the panel. A label's rect is its whole box, which is stricter than its glyphs.
+local function rectOf(node, parent)
+ local pos, size, anchor = node.Position, node.Size, node.AnchorPoint or {X = 0, Y = 0}
+ local w = size.X.Scale * parent.w + size.X.Offset
+ local h = size.Y.Scale * parent.h + size.Y.Offset
+ return {x = parent.x + pos.X.Scale * parent.w + pos.X.Offset - anchor.X * w, y = parent.y + pos.Y.Scale * parent.h + pos.Y.Offset - anchor.Y * h, w = w, h = h}
+end
+local function strictlyOverlap(a, b) return a.x < b.x + b.w - 0.01 and b.x < a.x + a.w - 0.01 and a.y < b.y + b.h - 0.01 and b.y < a.y + a.h - 0.01 end
+local function collect(rootNode)
+ local rootRect = {x = 0, y = 0, w = rootNode.Size.X.Offset, h = rootNode.Size.Y.Offset}
+ local items, rowRects = {}, {}
+ local function walk(node, rect, rowIndex)
+  for _, child in node.Children do
+   if child.Visible ~= false and child.Size ~= nil and child.Position ~= nil then
+    local r = rectOf(child, rect)
+    local row = rowIndex
+    local index = string.match(child.Name, "^Row(%d)$")
+    if index then row = tonumber(index) rowRects[row] = r end
+    local isText = (child.ClassName == "TextLabel" or child.ClassName == "TextButton") and child.Text ~= nil and child.Text ~= ""
+    if isText or child.Name == "Bar" then table.insert(items, {name = child.Name, r = r, row = row, node = child, text = isText}) end
+    if child.Name ~= "Fill" then walk(child, r, row) end
+   end
+  end
+ end
+ walk(rootNode, rootRect, nil)
+ return items, rowRects, rootRect
+end
+local function fakeRow(id, name, done, note)
+ return {id = id, name = name, note = note, progress = if done then 5 else 2, goal = 5, reward = {crystals = 10, xp = 0}, done = done, claimed = false, carried = false}
+end
+local function fakeView(n, claimMode, withNote)
+ local note = if withNote then "Cracked eggs count too" else nil
+ local long = "Hatch five eggs from the very first nest" -- 40 characters: the catalogue maximum
+ local function done(i) return claimMode == "all" or (claimMode == "first" and i == 1) end
+ local v = {tutorial = fakeRow("T1", long, done(1), note), short = {}, daily = {}, carry = {}, shortResetsIn = 1800, dailyResetsIn = 7200}
+ if n >= 2 then v.short = {fakeRow("S1", "Eat 40 food", done(2), note)} end
+ if n >= 3 then v.daily = {fakeRow("D1", "Hatch a Rare or better", done(3), note)} end
+ return v
+end
+local function layoutSheet(width, height, touch)
+ local l = TouchLayout.compute({width = width, height = height, touch = touch, navCount = 7, goals = true, objectives = true})
+ local o = l.objectivesOpen
+ assert(o and l.objectives, "layout gives the objectives rects at " .. width .. "x" .. height)
+ return Rect_.new(o.x, o.y, o.x + o.w, o.y + o.h), Rect_.new(l.objectives.x, l.objectives.y, l.objectives.x + l.objectives.w, l.objectives.y + l.objectives.h)
+end
+local O = TouchLayout.OBJECTIVES
+assert(O.rowGap >= 4 and O.rowGap <= 6 and O.rowH >= 48 and TouchLayout.objectivesOpenH() == O.h + 2 + O.rows * O.rowH + (O.rows - 1) * O.rowGap + 4, "open height counts rows and gaps")
+local sizes = {{"desktop 1156x783", 1156, 783, false}, {"phone 836x390", 836, 390, true}, {"phone 667x375", 667, 375, true}}
+local checked = 0
+for _, size in sizes do
+ local sheet, pill = layoutSheet(size[2], size[3], size[4])
+ gui.attrs.ObjectivesRect, gui.attrs.ObjectivesOpenRect = pill, sheet
+ for n = 1, 3 do
+  for _, claimMode in {"none", "first", "all"} do
+   for _, withNote in {false, true} do
+    local label = string.format("%s, %d rows, claim %s%s", size[1], n, claimMode, if withNote then ", note" else "")
+    view = fakeView(n, claimMode, withNote)
+    -- open (asks for the fresh view), inspect, then fold again so the next case opens it anew
+    header.Activated:fire() pump() tick()
+    assert(body.Visible == true and root.Size.X.Offset == sheet.Width, label .. ": open")
+    local items, rowRects, rootRect = collect(root)
+    local seenRows = 0
+    for _ in rowRects do seenRows += 1 end
+    assert(seenRows == n, label .. ": rows shown " .. seenRows)
+    for i = 1, n do
+     assert(rowRects[i].h == O.rowH, label .. ": every row has the same fixed height")
+     if i > 1 then
+      local gap = rowRects[i].y - (rowRects[i - 1].y + rowRects[i - 1].h)
+      assert(gap >= 4 and gap <= 6, label .. ": gap between rows is 4..6 px, got " .. gap)
+     end
+     local divider = find(row(i), "Divider")
+     assert(divider and divider.BackgroundColor3 == Colors.card and divider.Visible == (i < n), label .. ": divider under every row but the last, UITheme card colour")
+     if divider.Visible then
+      local d = rectOf(divider, rowRects[i])
+      assert(d.y >= rowRects[i].y + rowRects[i].h - 0.01 and d.y + d.h <= rowRects[i].y + rowRects[i].h + O.rowGap + 0.01, label .. ": the divider sits in the gap")
+     end
+    end
+    for a = 1, #items do
+     local item = items[a]
+     if item.text then
+      assert(item.node.TextSize >= 14, label .. ": " .. item.name .. " text >= 14 px")
+      assert(item.r.h >= item.node.TextSize, label .. ": " .. item.name .. " box is at least one line high")
+      if item.name == "Claim" then assert(item.r.w >= 44 and item.r.h >= 44, label .. ": CLAIM >= 44 x 44") end
+     end
+     assert(item.r.x >= -0.01 and item.r.x + item.r.w <= rootRect.w + 0.01, label .. ": " .. item.name .. " inside the panel width")
+     if item.row then
+      local rr = rowRects[item.row]
+      assert(item.r.y >= rr.y - 0.01 and item.r.y + item.r.h <= rr.y + rr.h + 0.01, label .. ": " .. item.name .. " inside its row (row " .. item.row .. ")")
+      if item.name == "Claim" then
+       assert(math.abs((item.r.y + item.r.h / 2) - (rr.y + rr.h / 2)) <= 0.5, label .. ": CLAIM vertically centred in its own row")
+      end
+     end
+     for b = a + 1, #items do
+      assert(not strictlyOverlap(item.r, items[b].r), string.format("%s: %s (%.0f,%.0f %.0fx%.0f) overlaps %s (%.0f,%.0f %.0fx%.0f)", label, item.name, item.r.x, item.r.y, item.r.w, item.r.h, items[b].name, items[b].r.x, items[b].r.y, items[b].r.w, items[b].r.h))
+     end
+    end
+    for i = 1, n do
+     local r = find(row(i), "Note")
+     assert((r.Visible == true) == withNote, label .. ": the note shows exactly when the row has one")
+     if withNote then assert(r.Text == "Cracked eggs count too" and r.TextSize >= 14 and r.TextColor3 ~= Colors.text, label .. ": note is small, >= 14 px and in the toned UITheme colour") end
+    end
+    -- the scroll canvas holds every row; the desktop sheet shows all of them without scrolling
+    local bodyTop = O.h + 2
+    assert(body.CanvasSize.Y.Offset >= rowRects[n].y + rowRects[n].h - bodyTop - 0.01, label .. ": canvas holds the rows")
+    if not size[4] then
+     assert(rowRects[n].y + rowRects[n].h <= rootRect.h + 0.01, label .. ": the desktop sheet is tall enough for " .. n .. " rows")
+    end
+    header.Activated:fire() pump() tick()
+    assert(body.Visible == false, label .. ": folds")
+    checked += 1
+   end
+  end
+ end
+end
+assert(checked == 3 * 3 * 3 * 2)
+print("Rows passed: " .. checked .. " layouts (1 to 3 rows, no / first / every CLAIM, with and without a note) at desktop, 836x390 and 667x375: no text or bar rect overlaps another, equal fixed row height, 4..6 px gaps with a divider, CLAIM centred and >= 44 px, text >= 14 px, note >= 14 px")
 ---------------------------------------------------------------- OB2: the real ObjectiveSeen.luau (FusionMenu's one-time T9 report)
 do
  local seenCfg = {ObjectivesEnabled = false}

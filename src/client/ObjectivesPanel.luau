@@ -46,7 +46,11 @@ end
 local HEADER_H = TouchLayout.OBJECTIVES.h -- 44: the header is a button (docs/114 s4.4 tap-target floor)
 local ROW_H = TouchLayout.OBJECTIVES.rowH
 local ROWS = TouchLayout.OBJECTIVES.rows
+local ROW_GAP = TouchLayout.OBJECTIVES.rowGap
+local PITCH = ROW_H + ROW_GAP -- one row plus its gap (the divider sits in the gap)
+local CANVAS_H = ROWS * ROW_H + (ROWS - 1) * ROW_GAP
 local CLAIM_W = 100
+local CLAIM_H = 44
 local TEXT = 15 -- row text; the smallest text anywhere in the panel is PhoneScale.MinText (14)
 
 function Panel.attach(gui: ScreenGui, anchor: GuiObject)
@@ -86,14 +90,16 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
     local body = Instance.new("ScrollingFrame")
     body.Name, body.BackgroundTransparency, body.BorderSizePixel, body.ScrollBarThickness = "Body", 1, 0, 6
     body.ScrollBarImageColor3, body.ScrollingDirection, body.ZIndex = C.gold, Enum.ScrollingDirection.Y, root.ZIndex + 1
-    body.Position, body.Size, body.CanvasSize, body.Parent = UDim2.fromOffset(0, HEADER_H + 2), UDim2.new(1, 0, 1, -(HEADER_H + 2)), UDim2.fromOffset(0, ROWS * ROW_H), root
+    body.Position, body.Size, body.CanvasSize, body.Parent = UDim2.fromOffset(0, HEADER_H + 2), UDim2.new(1, 0, 1, -(HEADER_H + 2)), UDim2.fromOffset(0, CANVAS_H), root
     pcall(function() body.ElasticBehavior = Enum.ElasticBehavior.Never end)
     local rows = {}
     for i = 1, ROWS do
         local row = Instance.new("Frame")
-        row.Name, row.BackgroundTransparency, row.Position, row.Size, row.ZIndex, row.Parent = "Row" .. i, 1, UDim2.fromOffset(0, (i - 1) * ROW_H), UDim2.new(1, 0, 0, ROW_H), body.ZIndex, body
+        row.Name, row.BackgroundTransparency, row.Position, row.Size, row.ZIndex, row.Parent = "Row" .. i, 1, UDim2.fromOffset(0, (i - 1) * PITCH), UDim2.new(1, 0, 0, ROW_H), body.ZIndex, body
         local name = text(row, "Name", TEXT, C.text, Enum.TextXAlignment.Left)
         name.TextWrapped, name.TextTruncate, name.TextYAlignment = true, Enum.TextTruncate.AtEnd, Enum.TextYAlignment.Top
+        local note = text(row, "Note", PhoneScale.MinText, C.text:Lerp(C.card, 0.3), Enum.TextXAlignment.Left) -- optional hint: UITheme text colour toned toward the card colour
+        note.TextTruncate, note.Visible = Enum.TextTruncate.AtEnd, false
         local bar = Instance.new("Frame")
         bar.Name, bar.BackgroundColor3, bar.ZIndex, bar.Parent = "Bar", C.card, body.ZIndex + 1, row
         Theme.decorate(bar, 3)
@@ -106,7 +112,10 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
         claim.Name, claim.Text, claim.TextSize, claim.TextColor3, claim.BackgroundColor3, claim.ZIndex = "Claim", "CLAIM", 18, C.text, C.accent, body.ZIndex + 2
         claim.Visible, claim.Parent = false, row
         Theme.decorate(claim, 6)
-        rows[i] = {frame = row, name = name, bar = bar, fill = fill, count = count, reward = reward, claim = claim, id = nil :: string?, fraction = -1}
+        local divider = Instance.new("Frame") -- 2 px line in the gap under the row (UITheme card colour, no art); hidden under the last shown row
+        divider.Name, divider.BackgroundColor3, divider.BorderSizePixel, divider.ZIndex = "Divider", C.card, 0, body.ZIndex
+        divider.Position, divider.Size, divider.Parent = UDim2.fromOffset(8, ROW_H + ROW_GAP / 2 - 1), UDim2.new(1, -16, 0, 2), row
+        rows[i] = {frame = row, divider = divider, name = name, note = note, bar = bar, fill = fill, count = count, reward = reward, claim = claim, id = nil :: string?, fraction = -1}
     end
 
     local open = false
@@ -172,8 +181,18 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
                 local width = body.AbsoluteSize.X
                 if width <= 0 then width = root.Size.X.Offset end
                 local leftW = width - CLAIM_W - 24
-                r.name.Position, r.name.Size, r.name.Text = UDim2.fromOffset(8, 2), UDim2.fromOffset(leftW, 32), data.name
-                r.bar.Position, r.bar.Size = UDim2.fromOffset(8, 38), UDim2.fromOffset(leftW, 8)
+                local rightX = -(CLAIM_W + 8)
+                -- Fixed row (ROW_H). No note: name 3..35 (two lines at most), bar 43..51 or the prize 38..58 (finished). With a note: name 3..23 (one
+                -- line), note 23..41, bar 46..54 or the prize 41..59. On the right: count 8..30 + prize 30..52, or a 44 px CLAIM centred in the row.
+                -- Nothing shares a pixel with another label (tools/verify_objectives_panel.py).
+                local hasNote = data.note ~= nil
+                r.divider.Visible = i < #shown
+                r.name.Position, r.name.Size, r.name.Text = UDim2.fromOffset(8, 3), UDim2.fromOffset(leftW, if hasNote then 20 else 32), data.name
+                r.note.Visible = hasNote
+                if hasNote then
+                    r.note.Position, r.note.Size, r.note.Text = UDim2.fromOffset(8, 23), UDim2.fromOffset(leftW, 18), data.note
+                end
+                r.bar.Position, r.bar.Size = UDim2.fromOffset(8, if hasNote then 46 else 43), UDim2.fromOffset(leftW, 8)
                 if r.fraction ~= data.fraction then
                     r.fraction = data.fraction
                     Theme.animate(r.fill, 0.2, {Size = UDim2.fromScale(math.clamp(data.fraction, 0, 1), 1)})
@@ -181,18 +200,18 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
                 r.fill.BackgroundColor3 = if data.claimable then C.gold else C.accent
                 local mode = Rules.buttonState(data, busy[data.id] == true)
                 r.claim.Visible = mode ~= "none"
-                r.claim.Position, r.claim.Size = UDim2.new(1, -(CLAIM_W + 8), 0, 4), UDim2.fromOffset(CLAIM_W, 44)
+                r.claim.Position, r.claim.Size = UDim2.new(1, rightX, 0, (ROW_H - CLAIM_H) / 2), UDim2.fromOffset(CLAIM_W, CLAIM_H)
                 r.claim.Text = if mode == "wait" then "..." else "CLAIM"
                 r.claim.BackgroundColor3 = if mode == "wait" then C.card else C.accent
                 r.claim.Active = mode == "claim"
                 -- Progress: bar + "3/10" + the prize on the right. Finished: the full bar gives way to the prize under the name, next to CLAIM.
                 r.bar.Visible, r.count.Visible = not data.claimable, not data.claimable
-                r.count.Position, r.count.Size, r.count.Text = UDim2.new(1, -(CLAIM_W + 8), 0, 2), UDim2.fromOffset(CLAIM_W, 22), Rules.progressText(data)
+                r.count.Position, r.count.Size, r.count.Text = UDim2.new(1, rightX, 0, 8), UDim2.fromOffset(CLAIM_W, 22), Rules.progressText(data)
                 r.reward.Text = Rules.rewardText(data.reward)
                 if data.claimable then
-                    r.reward.Position, r.reward.Size, r.reward.TextXAlignment = UDim2.fromOffset(8, 34), UDim2.fromOffset(leftW, 18), Enum.TextXAlignment.Left
+                    r.reward.Position, r.reward.Size, r.reward.TextXAlignment = UDim2.fromOffset(8, if hasNote then 41 else 38), UDim2.fromOffset(leftW, if hasNote then 18 else 20), Enum.TextXAlignment.Left
                 else
-                    r.reward.Position, r.reward.Size, r.reward.TextXAlignment = UDim2.new(1, -(CLAIM_W + 8), 0, 24), UDim2.fromOffset(CLAIM_W, 22), Enum.TextXAlignment.Right
+                    r.reward.Position, r.reward.Size, r.reward.TextXAlignment = UDim2.new(1, rightX, 0, 30), UDim2.fromOffset(CLAIM_W, 22), Enum.TextXAlignment.Right
                 end
             end
         end
@@ -274,7 +293,7 @@ function Panel.attach(gui: ScreenGui, anchor: GuiObject)
             local height = if open then rect.Height else HEADER_H
             root.Position = UDim2.fromOffset(rect.Min.X, rect.Min.Y)
             Theme.animate(root, 0.15, {Size = UDim2.fromOffset(rect.Width, height)})
-            body.CanvasSize = UDim2.fromOffset(0, ROWS * ROW_H)
+            body.CanvasSize = UDim2.fromOffset(0, CANVAS_H)
             render()
         end
         render() -- countdown words and the message timeout; ~2 text updates a second, no allocation

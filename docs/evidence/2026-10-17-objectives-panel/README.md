@@ -21,5 +21,5 @@ Rects (BeDinoUI px): desktop pill (568, 92) 300 x 44, open (568, 92) 300 x 206, 
 - **Claim answer was cut** ("+10 crys..." in picture 04): it was drawn in the 38% title slot. It now takes the wide right-hand label for 2.5 s (`verify_objectives_panel.py` asserts it there). Not re-shot; the pictures here are the "before" for that one label.
 
 ## Seen, not fixed
-- Open rows have no divider; the prize line of one row sits close to the name of the next (03). Polish.
+- Open rows had no divider and the prize line of one row ran into the name of the next (03): fixed by BD-562 (fixed row height, gap, divider, centred CLAIM; verifier-checked). Pictures 02, 03, 06 and 07 are the "before"; re-shoot pending "Studio free".
 - Not covered: a real phone (touch, thumbstick, 44 px by finger) is BD-078 / BD-085; Studio's mouse stands in. BD-074 hooks were not on main, so progress was injected with the private hook above.
