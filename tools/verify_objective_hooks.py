@@ -1,4 +1,4 @@
-"""BD-074 objective event hooks (docs/66 section 18): offline verifier.
+"""BD-074 objective event hooks (docs/66 section 19): offline verifier.
 
 Static (source scan):
   * each of the 20 docs/66 objectives maps to at least one hook; the table is printed
@@ -68,6 +68,7 @@ SITES = [
 ]
 # Files that may mention ObjectiveService at all (everything else, in particular src/client, must not).
 ALLOWED_FILES = {REPO, FOOD, LEAP, FUSION, SERVICE, 'src/server/Bootstrap.server.luau', 'src/shared/ObjectiveConfig.luau', 'src/shared/ObjectiveRules.luau'}
+CLIENT_PANEL_FILES = {'src/client/ObjectivesPanel.luau'}
 
 
 def read_lines(path: str) -> list[str]:
@@ -182,8 +183,13 @@ def static_report() -> tuple[list[str], list[str]]:
         mentions = 'ObjectiveService' in code or re.search(r'\bobjectives\(\)', code)
         if mentions and rel not in ALLOWED_FILES:
             errors.append(f'{rel} mentions ObjectiveService: objective facts are reported by the server only')
-        if rel.startswith('src/client/') and re.search(r'Objective(Service|Action)', code):
-            errors.append(f'{rel}: no client code may touch objectives in BD-074 (no client-reported events, UI is BD-075)')
+        # BD-075: the client panel may read the view and send claims through ObjectiveAction; it never reports events.
+        if rel.startswith('src/client/') and re.search(r'ObjectiveService', code):
+            errors.append(f'{rel}: client code must not reference ObjectiveService (facts are reported by the server only)')
+        if rel.startswith('src/client/') and re.search(r'ObjectiveAction', code) and rel not in CLIENT_PANEL_FILES:
+            errors.append(f'{rel}: only the objectives panel may use ObjectiveAction (view/claim), no client-reported events')
+        if rel in CLIENT_PANEL_FILES and re.search(r'action\s*=\s*"(record|event|progress)"', code):
+            errors.append(f'{rel}: the panel may only view and claim, never report progress')
         if rel in ALLOWED_FILES and rel != SERVICE:
             count = len(re.findall(r'(objectives\(\)|ObjectiveService\))\.(record|recordRunSettled|recordHatched|recordFusionUse)\(', code))
             declared = per_file.get(rel, 0)
@@ -494,7 +500,7 @@ def main(argv=None) -> int:
     parser.add_argument('--runner', required=True)
     args = parser.parse_args(argv)
     errors, table = static_report()
-    print('Objective-to-hook table (docs/66 section 18):')
+    print('Objective-to-hook table (docs/66 section 19):')
     print('| # | Objective | Event | Hook site(s) |')
     print('| --- | --- | --- | --- |')
     for row in table:

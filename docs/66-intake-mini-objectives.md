@@ -1,6 +1,6 @@
 # 66 - Intake: mini objectives
 
-Template: [64](64-feature-intake-template.md). Status: **BD-072/BD-073/BD-074 built behind `ObjectivesEnabled=false` (2026-10-17, offline-tested only, Studio pending, see sections 17 and 18)**; BD-075 to BD-078 are Backlog (no UI). All numbers PROVISIONAL.
+Template: [64](64-feature-intake-template.md). Status: **BD-072/BD-073/BD-074 built behind `ObjectivesEnabled=false` (2026-10-17, offline-tested only, Studio pending, see sections 17 and 19); BD-075 panel built behind the same flag (offline-tested, Studio pictures pending, see section 18)**; BD-076 to BD-078 are Backlog. All numbers PROVISIONAL.
 
 ## 1-3. Intention, new vs extension, fit
 - **Intention:** teach the loop in the first 15 minutes, then give veterans small reasons to try leap, potions, fusion without a grind wall. Loop moments: run, hatch, shop, collection, fusion.
@@ -111,7 +111,30 @@ Question: do the docs/66 mini objectives duplicate the Goals panel / goal line, 
 
 **Evidence.** `python tools/verify_objectives.py --runner <luau>` (CI step added): runs the real modules and the real `ProfileRepository` against the mocked store. It covers schema and docs/66 parity, picks, rollover and carry, counters and caps, claim-once, migration (nil / corrupt / newer), flag-off identity (not one store request, no field created, an existing field left byte-identical), reconnect, lost acknowledgements, outage, wallet clamp, write budget and the rate-limited remote. Offline only: no Studio, no real DataStore, no phone.
 
-## 18. Implementation status BD-074: the event hooks (2026-10-17, offline only)
+## 18. Implementation status BD-075: the objectives panel (2026-10-17, offline only, behind `ObjectivesEnabled`)
+**All of this is OFF** with the flag (default false, pinned by `release_profiles`): `GoalHud` only requires `ObjectivesPanel` inside `if Config.ObjectivesEnabled==true`, `Bootstrap` passes `objectives=false` to the layout and publishes no rect, so with the flag off the HUD layout is byte-for-byte the old one (`verify_movement_mobile` compares 68 canvases against the previous `TouchLayout`) and no remote is looked up or called.
+
+| Piece | File | Notes |
+| --- | --- | --- |
+| Pure panel rules | `src/shared/ObjectivePanelRules.luau` | Which (at most 3) rows to show, the folded one-liner, the "New tasks soon" words, claim answers, token reuse, copy check. No Instances, no clock, no reward maths. |
+| Panel (client only) | `src/client/ObjectivesPanel.luau` | GoalsPanel pattern. Reads the SERVER view through `ObjectiveAction {action="view"}` (on first show, on open, every 20 s while shown, after a claim answer); sends only `{action="claim", id, token}`. Existing UI parts only: `Theme.decorate` plates, the registered `trophy` icon, no new art, no asset ids. |
+| Layout | `TouchLayout.OBJECTIVES`, `compute{objectives=true}`, `objectives` / `objectivesOpen` rects | Bootstrap publishes them as the `ObjectivesRect` / `ObjectivesOpenRect` attributes (only under the flag). |
+| Wiring | `GoalHud.luau` | Attaches the panel; feeds it the Goals PLAY state. |
+
+**What the player sees.** Folded: ONE 44 px line: trophy, the nearest task ("Hatch 3 eggs"), a chip "1/3" (or "Done!" in green when something is ready). Open: header "TASKS" with "New tasks in 20 min" (docs/72: "New tasks soon" under a minute, never "5m 0s"), then the 3 active tasks, each with name, progress bar, "1/3" and "+10 crystals"; a finished task shows a 100 x 44 **CLAIM** button instead. Tap sends the claim; "..." while the answer is out; the answer shows in the header for 2.5 s ("+10 crystals", "Already got it!", "Try again"). A lost answer is retried with the SAME token (claim-once), a definite answer frees the id for a new token.
+
+**Which 3 tasks.** Finished tasks first (tutorial, carried, short, daily), then the tutorial task, then short and daily in turns, closest to done first, so a Daily is never starved by the 30 minute Shorts. Claimed tasks leave the list. Hidden: an UNFINISHED **T8 "Collect a second species"** while the Goals panel PLAY line is on screen and not finished (docs/66 s16 watch item: one species nudge, not two). A finished T8 is a reward, so it is shown to claim. D4 "Collect a new species" is kept (it is a daily reward, not a first-session nudge).
+
+**Where.** Hub only: hidden during a run and until the Goals panel appears (after the first egg, BD-440), exactly like the Goals panel; so the first screen and every run HUD are untouched. (docs/66 s4 "auto-collapses 5 s after a run starts" is therefore not needed: it is simply not shown in a run. Showing a folded line in a run is a later decision, it needs a spot on the crowded run HUD.)
+- **Desktop** (height 500 px or more): straight LEFT of the Goals panel, same top edge, 300 px wide; clear of the rail and of the OPEN Goals panel too.
+- **Phone / tablet touch and short canvases** (the TouchLayout phone layout): a new rect under the rail, between the thumbstick zone (or the egg plate / build badge) and the Goals header, 190 to 300 px wide; the weather column starts under it when they would touch. The folded rect is clear of EVERY HUD piece at 8 phones, 6 tablets and the 836 x 390 / 667 x 375 sizes minus 0/36/44/58 px of top bar. **The OPEN sheet on a phone** grows right and down from the pill and, because a phone has no free room for 3 tasks, may cover exactly three hub pieces while the player has it open: the Goals header, the weather column and the "Back to the middle" chip. It never covers the egg plate, wallet, goal line, rail, Home, Tell us!, Admin, the thumbstick zone or the jump corner; where it is shorter than 3 rows it scrolls.
+- Text is 14 px or more and every button is 44 px or more at 1:1 (the panel carries no UIScale).
+
+**Not done here.** Rewards stay the server's (`ObjectiveService`); NextGoal feed (BD-076); the real event hooks (BD-074: until then `record` is never called, so progress only moves in tests); the claim-burst, check-pop and row-pulse animations and the audio cues of s9 (no new art or sound without an asset task); the four new icons (BD-077; the panel uses the existing `trophy`); Studio pictures and Android acceptance (BD-078).
+
+**Evidence.** `python tools/verify_objectives_panel.py --runner <luau>` (pure rules, then the REAL `ObjectivesPanel.luau` on a GUI mock fed by the REAL `ObjectiveRules` view: folded/open/claimable states, claim request shape, waiting state, same-token retry, silent in a run and before the first egg, copy rules), plus the extended `verify_movement_mobile.py` / `verify_hud.py` (panel rect versus every HUD piece). Studio pictures (folded, open, claimable at desktop and 836 x 390) go to `docs/evidence/2026-10-17-objectives-panel/` once the lead frees Studio.
+
+## 19. Implementation status BD-074: the event hooks (2026-10-17, offline only)
 **Still OFF.** Every hook sits behind `Config.ObjectivesEnabled` (false in every committed build, pinned by `release_profiles`). With the flag off a hook site is ONE boolean test: no argument is evaluated, `ObjectiveService` is never required, nothing is allocated, no profile is read or written. Hooks report a fact only AFTER the server committed it (the profile transaction and `adopt`, or the server-side accept), never from client input; no client file touches objectives.
 
 | Objective(s) | Event | Hook site (server) | Reported when |
