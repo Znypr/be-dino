@@ -413,4 +413,100 @@ function TouchLayout.compute(params: {width: number, height: number, touch: bool
     return result
 end
 
+-- BD-570 (docs/134 s13): where the gift popup (GiftPopup.client, behind Config.GiftClaimEnabled) goes. It shows in the cave hub only, as real pixels
+-- (never scaled; text >= 14, buttons >= 44), so it needs a free rectangle. `GIFT` lists its sizes from the roomiest to the narrowest (the same w x h as
+-- GiftUiModel.Variants, asserted by tools/verify_gift_ui.py). giftRect tries, in this order, until a spot is free:
+--   1. touching no HUD piece and no Roblox thumbstick / jump zone,   2. touching no HUD piece (may sit over the zones),
+--   3. covering only SOFT pieces (the "Back to the middle" chip and the weather / buffs tiles) and no zone,   4. soft pieces and the zones.
+-- Hard pieces (egg plate, wallet, goal line, Goals header, objectives pill, rail, Home, LEAP, Tell us!, Admin, badge) are NEVER covered; `covers` says
+-- which tier won (0 = none, 1 = soft pieces) so the verifier can list the phone canvases that are too crowded for tiers 1 and 2. Among free spots it
+-- takes the one nearest the upper middle of the screen; candidates come from the edges of the pieces, so the result is exact and cheap. Bootstrap
+-- publishes it as the GiftRect / GiftVariant attributes of the BeDinoUI gui, only while the flag is on (flag off = layout and attributes as before).
+TouchLayout.GIFT = {{name = "roomy", w = 480, h = 146}, {name = "compact", w = 420, h = 104}, {name = "tight", w = 372, h = 104}, {name = "stacked", w = 340, h = 156}}
+TouchLayout.GIFT_GAP = 6
+function TouchLayout.giftBlockers(layout): ({Rect}, {Rect})
+    local hard: {Rect}, soft: {Rect} = {}, {}
+    local function add(list: {Rect}, r: Rect?) if r and r.w > 0 and r.h > 0 then table.insert(list, r) end end
+    local t = layout.timers
+    add(hard, {x = t.x, y = t.y + t.leapY * t.scale, w = t.w * t.scale, h = TouchLayout.LEAP_H * t.scale})
+    if t.weatherVisible then add(soft, {x = t.x, y = t.y + t.weatherY * t.scale, w = t.w * t.scale, h = TouchLayout.WEATHER_H * t.scale}) end
+    if t.buffsVisible then add(soft, {x = t.x, y = t.y + t.buffsY * t.scale, w = t.w * t.scale, h = t.buffsH * t.scale}) end
+    add(hard, TouchLayout.rendered(layout.hud))
+    add(hard, TouchLayout.rendered(layout.crystal))
+    add(hard, {x = layout.crystal.x, y = layout.crystal.y + layout.crystal.h * layout.crystal.scale + TouchLayout.GOAL_GAP, w = layout.crystal.w * layout.crystal.scale, h = TouchLayout.GOAL_H * layout.crystal.scale})
+    add(hard, TouchLayout.rendered(layout.action))
+    add(hard, TouchLayout.rendered(layout.badge))
+    add(hard, TouchLayout.rendered(layout.notice))
+    add(hard, layout.feedback)
+    add(hard, layout.admin)
+    add(soft, layout.chip)
+    add(hard, TouchLayout.rendered(layout.rail))
+    -- The hub Goals header: the touch layout gives it; the desktop panel follows GoalsPanel's own formula (folded, and as tall as it grows when open).
+    if layout.goals then add(hard, layout.goals) end
+    if layout.goalsPanelOpen then add(hard, layout.goalsPanelOpen)
+    elseif not layout.touch then
+        local _, open = TouchLayout.goalsDesktop(layout.crystal)
+        add(hard, open)
+    end
+    add(hard, layout.objectives) -- the folded pill only; the open sheet is something the player asked for
+    return hard, soft
+end
+function TouchLayout.giftRect(layout, width: number, height: number): {x: number, y: number, w: number, h: number, variant: string, clear: boolean, covers: number, overZones: boolean}
+    local gap, m = TouchLayout.GIFT_GAP, Config.TouchSafeMargin
+    local hard, soft = TouchLayout.giftBlockers(layout)
+    local both: {Rect} = {}
+    for _, r in hard do table.insert(both, r) end
+    for _, r in soft do table.insert(both, r) end
+    local zones: {Rect} = {}
+    if layout.reserved then
+        for _, zone in layout.reserved do table.insert(zones, zone) end
+    end
+    local cx, cy = width / 2, height * 0.42
+    local function free(r: Rect, list: {Rect}, pad: number): boolean
+        for _, b in list do
+            if TouchLayout.overlaps(r, {x = b.x - pad, y = b.y - pad, w = b.w + 2 * pad, h = b.h + 2 * pad}) then return false end
+        end
+        return true
+    end
+    local function best(variant, blockers: {Rect}, avoidZones: boolean): Rect?
+        local w, h = variant.w, variant.h
+        if w > width - 2 * m or h > height - 2 * m then return nil end
+        local xs, ys = {cx - w / 2, m, width - m - w}, {cy - h / 2, m, height - m - h}
+        for _, b in blockers do
+            table.insert(xs, b.x - gap - w) table.insert(xs, b.x + b.w + gap)
+            table.insert(ys, b.y - gap - h) table.insert(ys, b.y + b.h + gap)
+        end
+        local found: Rect? = nil
+        local score = math.huge
+        for _, x0 in xs do
+            local x = clamp(x0, m, width - m - w)
+            for _, y0 in ys do
+                local y = clamp(y0, m, height - m - h)
+                local r = {x = x, y = y, w = w, h = h}
+                if free(r, blockers, gap - 1e-6) and (not avoidZones or free(r, zones, 0)) then
+                    local dx, dy = x + w / 2 - cx, y + h / 2 - cy
+                    local d = dx * dx + dy * dy
+                    if d < score then found, score = r, d end
+                end
+            end
+        end
+        return found
+    end
+    for _, tier in {{both, true, 0}, {both, false, 0}, {hard, true, 1}, {hard, false, 1}} do
+        if not (tier[2] == false and #zones == 0) then -- no zones (desktop): the "may sit over the zones" searches repeat the one before
+            for _, variant in TouchLayout.GIFT do
+                local r = best(variant, tier[1] :: {Rect}, tier[2] :: boolean)
+                if r then
+                    return {x = r.x, y = r.y, w = r.w, h = r.h, variant = variant.name, clear = true, covers = tier[3] :: number,
+                        overZones = not free(r, zones, 0)}
+                end
+            end
+        end
+    end
+    -- Not even the hard pieces leave room: the narrowest popup, bottom-centre above Home. Never reached on the canvases verify_gift_ui.py checks.
+    local last = TouchLayout.GIFT[#TouchLayout.GIFT]
+    return {x = clamp((width - last.w) / 2, m, math.max(m, width - m - last.w)), y = clamp(layout.action.y - gap - last.h, m, math.max(m, height - m - last.h)),
+        w = last.w, h = last.h, variant = last.name, clear = false, covers = 2, overZones = true}
+end
+
 return TouchLayout

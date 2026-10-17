@@ -415,10 +415,14 @@ end
 
 -- ------------------------------------------------------------------ popup text
 -- The sender's display name is resolved fresh at popup time and never stored (GF13). Admin gifts never show an admin name.
+-- BD-570: the name the popup shows for a gift from another player (the same cut and fallback as the line). Admin gifts have none.
+function GiftRules.shownName(source: string, displayName: any): string
+    if source == "admin" then return "" end
+    return if type(displayName) == "string" and #displayName >= 1 then string.sub(displayName, 1, Limits.MaxNameLength) else GiftRules.FallbackName
+end
 function GiftRules.noticeLine(source: string, displayName: any): string
     if source == "admin" then return GiftRules.TeamLine end
-    local name = if type(displayName) == "string" and #displayName >= 1 then string.sub(displayName, 1, Limits.MaxNameLength) else GiftRules.FallbackName
-    return "You got a gift from " .. name .. "!"
+    return "You got a gift from " .. GiftRules.shownName(source, displayName) .. "!"
 end
 
 return GiftRules
