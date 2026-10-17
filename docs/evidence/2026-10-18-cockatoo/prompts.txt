@@ -1,11 +1,13 @@
-A (384 chars):
-sulphur-crested cockatoo bird, tall slim upright body, all white plumage with soft layered feather facets on wings and back, curved yellow crest feathers swept up and forward over the forehead, short grey hooked beak, small solid black round eye with pale ring, small grey feet with long toes, long white tail, clean low-poly, few large flat facets, matte pastel, kids game, side pose
+Prompts for the cockatoo (BD-621), rewritten 2026-10-18 for the owner's PRIMARY reference docs/reference/cockatoo-owner-ref-2-raptor-pose.webp
+(the earlier candidates A-D from the photo and the first draft prompts are obsolete; they are kept in git history, commit 44f9903f and cdcdd788).
+Use generate_mesh: text only, segmentation=explicit, partNames "body, head, crest, left wing, right wing, left leg, right leg, tail" (the wings are the small feathered arms), run async, delete duplicate generations. Each prompt is under 490 characters.
+Say colours positively (the generator ignored negations like "not orange" on the budgie). Suggested size x 5, y 8, z 8.
 
-B (371 chars):
-cute chunky friendly cockatoo dinosaur bird, plump round white body, big round white head, tall curved yellow crest swept forward over the forehead, short grey hooked beak, big solid black round eye, tiny pale yellow cheek, small white wings, short white tail, small grey feet, clean low-poly, few large flat facets, chunky proportions, matte pastel, kids game, side pose
+A (429 chars):
+soft fluffy feathered raptor-style cockatoo dinosaur in a low crouching run, leaning forward on two strong grey scaly legs with big black curved claws, small feathered arms with black claws held forward, cream-white layered feathers, swept-back pale yellow crest of long feather blades, yellow-tipped tail feathers, hooked dark grey beak, big round brown eye, chunky tail, cute rounded low-poly, soft facets, kids game, side pose
 
-C (284 chars):
-simple cockatoo perched upright, white body and white head, one curved yellow crest swept forward, short grey beak, solid black eye, white wings folded on the sides, short white tail, two small grey feet, very simple low-poly, few large flat facets, matte pastel, kids game, side pose
+B (397 chars):
+chubby friendly cockatoo dinosaur standing on two sturdy grey legs with black curved claws, small cream-white feathered arms with black claws forward, round fluffy cream-white body with layered feathers, big head, tall swept-back pale yellow feather crest, hooked dark grey beak, big round brown eye, yellow-tipped white tail, cute rounded low-poly, soft facets, matte pastel, kids game, side pose
 
-D (draft-following, 2026-10-18 after the owner's stylised draft; size 5 x 8 x 8, asset 83223847018251):
-cute cockatoo dinosaur standing on two strong legs with big dark curved claws, dark grey scaly feet, small white feathered arms held forward with dark claws, plump white feathered body with layered feathers, big yellow crest swept up and back, yellow-tipped white tail feathers, big round brown eye, dark grey hooked beak, upright theropod stance, clean low-poly, few large flat facets, matte pastel, kids game, side pose
+C (302 chars):
+simple cockatoo raptor dinosaur, upright, cream-white body, swept-back yellow crest, dark grey hooked beak, big brown eye, small white arms with black claws, two grey legs with big black claws, white tail with yellow tips, very simple low-poly, few large soft facets, matte pastel, kids game, side pose
