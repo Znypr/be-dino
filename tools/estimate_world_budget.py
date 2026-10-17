@@ -29,6 +29,11 @@ LOWPOLY_PARTS = 7    # docs/105: one MeshPart per body part
 LOWPOLY_FACES = 154_660 / 22  # measured, docs/105 s3: 22 species total 154,660 faces
 IMG_MIB_PER_DINO = 0.8  # measured, docs/105 s3 (12 distinct dinos = 9.75 MiB)
 PLAYERS, SPAWN, HALF = 12, (0, 30), 416  # HALF = Config.ArenaHalfWidth (260 x 1.6), asserted by verify_world_art
+# BD-463/464 step 2: the harness hands WorldGeneratedMeshes.Props to BiomePlacement as options.props. PROPS_IDS picks which asset ids the run sees:
+# 'shipped' = the ids in the source file (all empty today, so nothing new is placed and the world is exactly the pre-BD-463 grammar; after the owner
+# pastes ids it measures the real thing), 'empty' = every id blanked (the legacy reference), 'fake' = every id filled with a made-up numeric id to preview
+# the placement of the new Blender plants and ground props before the upload (tools/verify_world_props.py). Fake ids are never written to a file.
+PROPS_IDS = 'shipped'
 HP_UPDATE_BYTES = 24  # ESTIMATE: one SetAttribute("HpByte") replication (name + byte + instance ref + framing)
 
 
@@ -50,8 +55,13 @@ def luau_script(cfg_text, density_from_config):
     pre = head[:head.index('local PLAYTEST=')]
     pre += 'local Generated=' + vwa.wrapped('src/shared/WorldGeneratedMeshes.luau') + '\n'
     pre += 'local DENSITY=%s\n' % ('Config.WorldArtDensity' if density_from_config else '1')
+    if PROPS_IDS == 'fake':
+        pre += 'do local n=0 for _,e in Generated.Props do n+=1 e.assetId=tostring(100000000+n) end end\n'
+    elif PROPS_IDS == 'empty':
+        pre += 'for _,e in Generated.Props do e.assetId="" end\n'
+    pre += 'Kit=Biome.withProps(Kit,Generated.Props)\nMeshes=Biome.propMeshes(Meshes,Generated.Props)\n'
     pre += ('local a=Biome.generate({seed=Config.WorldArtSeed,density=DENSITY,extent=Config.ArenaHalfWidth,height=Layout.height,'
-            'kit=Kit,meshes=Meshes,map=BiomeMap,layout=Layout})\n')
+            'kit=Kit,meshes=Meshes,map=BiomeMap,layout=Layout,props=Generated.Props})\n')
     return pre + DUMP
 
 

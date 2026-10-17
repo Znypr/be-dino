@@ -73,43 +73,61 @@ class WorldGeneratedMeshTests(unittest.TestCase):
             self.assertTrue((ROOT / f"assets/blender/world/fbx_v3/{fbx}.fbx").exists())
             self.assertIn(fbx, REGISTRY)
 
-    def test_ground_props_are_baked_but_unbound_and_unplaced(self):
-        """BD-464 step 1: eight ground props, empty ids (not uploaded), never placed, FBX + registry rows exist, loader skips empty ids."""
-        entries = re.findall(r'^\s{4}(\w+) = \{assetId = "(\d*)", placed = (true|false)\}', PROPS_BLOCK, re.M)
-        keys = {k for k, _, _ in entries if k.startswith("ground_")}
-        self.assertEqual(keys, {"ground_rock_small_v3", "ground_rock_medium_v3", "ground_rock_mossy_v3", "ground_log_fallen_v3",
-                                "ground_stump_roots_v3", "ground_mushrooms_v3", "ground_bush_round_v3", "ground_bush_berry_v3"})
-        for key, asset_id, placed in [e for e in entries if e[0].startswith("ground_")]:
-            self.assertEqual(placed, "false", f"{key} must not be marked placed before BD-464 step 2")
+    PROP_ENTRY = r'^\s{4}(\w+) = \{assetId = "(\d*)", placed = (true|false), tris = (\d+), size = \{([\d., ]+)\}\}'
+
+    def prop_entries(self, prefix):
+        return [e for e in re.findall(self.PROP_ENTRY, PROPS_BLOCK, re.M) if e[0].startswith(prefix)]
+
+    def check_prop_entries(self, entries, step):
+        slots = (ROOT / "tools/asset_slots.json").read_text()
+        for key, asset_id, placed, tris, size in entries:
+            self.assertEqual(placed, "true", f"{key}: placed = true means a placement rule reads it once the id is filled ({step} step 2)")
             if asset_id:
                 self.assertRegex(asset_id, r"^[1-9][0-9]{8,17}$")
                 self.assertNotIn(asset_id, self.assets.values(), "prop id duplicates a current generated id")
             self.assertTrue((ROOT / f"assets/blender/world/fbx_v3/{key}.fbx").exists())
             self.assertIn(key, REGISTRY)
+            self.assertIn(f'"name": "{key}"', slots)
+            self.assertIn(f"{tris} tris", PROPS_BLOCK.split(f"{key} = ")[1].split(chr(10))[0], f"{key}: tris field and comment disagree")
+            dims = [float(v) for v in size.split(",")]
+            self.assertEqual(len(dims), 3)
+            self.assertTrue(all(0.5 < d < 12 for d in dims), f"{key}: size {dims} is not a plausible mesh size in studs")
+
+    def test_ground_props_are_wired_for_placement_but_unbound(self):
+        """BD-464 step 2: eight ground props, empty ids (not uploaded) so nothing is placed; FBX, registry, slot rows and sizes exist; the
+        loader skips empty ids; Arena and BiomePlacement place a key only when its id is valid (and its template loaded)."""
+        entries = self.prop_entries("ground_")
+        self.assertEqual({e[0] for e in entries}, {"ground_rock_small_v3", "ground_rock_medium_v3", "ground_rock_mossy_v3", "ground_log_fallen_v3",
+                                                   "ground_stump_roots_v3", "ground_mushrooms_v3", "ground_bush_round_v3", "ground_bush_berry_v3"})
+        self.check_prop_entries(entries, "BD-464")
         loader = (ROOT / "src/server/ImportedResources.luau").read_text()
         self.assertIn('for key,asset in GeneratedMeshes.Props do if asset.assetId~="" then', loader, "loader must skip empty prop ids")
-        arena = (ROOT / "src/server/Arena.luau").read_text()
-        self.assertNotIn("Generated.Props", arena, "nothing may place the ground props before step 2")
-        self.assertNotIn("GeneratedMeshes.Props", (ROOT / "src/shared/BiomePlacement.luau").read_text() if (ROOT / "src/shared/BiomePlacement.luau").exists() else "")
+        self.check_placement_gate()
 
-    def test_plants_are_baked_but_unbound_and_unplaced(self):
-        """BD-463 step 1: eight plants (grass tufts, jungle plant, flower clusters, fern), empty ids (not uploaded), never placed,
-        FBX + registry + slot rows exist, loader skips empty ids, nothing reads the keys for placement."""
-        entries = re.findall(r'^\s{4}(plant_\w+) = \{assetId = "(\d*)", placed = (true|false)\}', PROPS_BLOCK, re.M)
-        self.assertEqual({k for k, _, _ in entries}, {"plant_grass_broad_v3", "plant_grass_arch_v3", "plant_grass_low_v3", "plant_jungle_leaf_v3",
-                                                      "plant_flowers_daisy_v3", "plant_flowers_yellow_v3", "plant_flowers_red_v3", "plant_fern_arch_v3"})
-        slots = (ROOT / "tools/asset_slots.json").read_text()
-        for key, asset_id, placed in entries:
-            self.assertEqual(placed, "false", f"{key} must not be marked placed before BD-463 step 2")
-            if asset_id:
-                self.assertRegex(asset_id, r"^[1-9][0-9]{8,17}$")
-                self.assertNotIn(asset_id, self.assets.values(), "plant id duplicates a current generated id")
-            self.assertTrue((ROOT / f"assets/blender/world/fbx_v3/{key}.fbx").exists())
-            self.assertIn(key, REGISTRY)
-            self.assertIn(f'"name": "{key}"', slots)
-        for path in ("src/server/Arena.luau", "src/shared/BiomePlacement.luau"):
-            file = ROOT / path
-            if file.exists(): self.assertNotIn("plant_", file.read_text(), "nothing may place the plants before step 2")
+    def test_plants_are_wired_for_placement_but_unbound(self):
+        """BD-463 step 2: eight plants (grass tufts, jungle plant, flower clusters, fern), empty ids (not uploaded) so nothing is placed;
+        FBX + registry + slot rows exist; placement is gated on a valid id."""
+        entries = self.prop_entries("plant_")
+        self.assertEqual({e[0] for e in entries}, {"plant_grass_broad_v3", "plant_grass_arch_v3", "plant_grass_low_v3", "plant_jungle_leaf_v3",
+                                                   "plant_flowers_daisy_v3", "plant_flowers_yellow_v3", "plant_flowers_red_v3", "plant_fern_arch_v3"})
+        self.check_prop_entries(entries, "BD-463")
+        self.check_placement_gate()
+
+    def check_placement_gate(self):
+        bp = (ROOT / "src/shared/BiomePlacement.luau").read_text()
+        arena = (ROOT / "src/server/Arena.luau").read_text()
+        self.assertNotRegex(bp, r"require\([^)]*WorldGeneratedMeshes", "BiomePlacement stays pure: it only sees options.props")
+        self.assertIn("function BiomePlacement.validAssetId", bp)
+        self.assertIn("BiomePlacement.validAssetId(entry.assetId)", bp, "a key is live only with a valid pasted id")
+        self.assertIn("BiomePlacement.withProps(options.kit, options.props)", bp)
+        self.assertIn("props = propEntries", arena, "Arena hands only the live keys to generate")
+        self.assertIn("Generated.validId(entry.assetId)", arena)
+        self.assertIn("if Config.WorldGeneratedMeshes and generatedFolder then", arena, "no generated meshes -> no new props")
+        self.assertIn("template and template:IsA(\"MeshPart\")", arena, "a key whose template failed to load is never placed")
+        self.assertIn("function Generated.validId", SRC)
+        # the two id rules agree
+        for fn in (bp, SRC):
+            self.assertIn('#id >= 9 and #id <= 18 and string.match(id, "^[1-9]%d*$") == id', fn)
 
     def test_fallback_and_flag_are_wired(self):
         arena = (ROOT / "src/server/Arena.luau").read_text()
